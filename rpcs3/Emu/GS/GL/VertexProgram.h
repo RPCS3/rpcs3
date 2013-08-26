@@ -72,8 +72,7 @@ struct VertexDecompilerThread : public ThreadBase
 			u32	end				: 1;
 			u32 index_const		: 1;
 			u32 dst				: 5;
-			u32 sca_dst			: 5;
-			u32 sca_result		: 1;
+			u32 sca_dst_tmp		: 6;
 			u32 vec_writemask_w : 1;
 			u32 vec_writemask_z : 1;
 			u32 vec_writemask_y : 1;
@@ -93,17 +92,37 @@ struct VertexDecompilerThread : public ThreadBase
 
 	union SRC
 	{
-		u16 HEX;
+		union
+		{
+			u32 HEX;
+
+			struct
+			{
+				u32 src0l		: 9;
+				u32 src0h		: 8;
+			};
+
+			struct
+			{
+				u32 src1 : 17;
+			};
+
+			struct
+			{
+				u32 src2l		: 11;
+				u32 src2h		: 6;
+			};
+		};
 
 		struct
 		{
-			u16 reg_type	: 2;
-			u16 tmp_src		: 5;
-			u16 swz_w		: 2;
-			u16 swz_z		: 2;
-			u16 swz_y		: 2;
-			u16 swz_x		: 2;
-			u16 neg			: 1;
+			u32 reg_type	: 2;
+			u32 tmp_src		: 6;
+			u32 swz_w		: 2;
+			u32 swz_z		: 2;
+			u32 swz_y		: 2;
+			u32 swz_x		: 2;
+			u32 neg			: 1;
 		};
 	} src[3];
 
@@ -120,12 +139,14 @@ struct VertexDecompilerThread : public ThreadBase
 	{
 	}
 
+	wxString GetMask(bool is_sca);
 	wxString GetVecMask();
 	wxString GetScaMask();
-	wxString GetDST(bool isSca = false);
-	wxString GetSRC(const u32 n, bool isSca = false);
-	void AddVecCode(wxString code, bool src_mask = true);
-	void AddScaCode(wxString code, bool src_mask = true);
+	wxString GetDST(bool is_sca = false);
+	wxString GetSRC(const u32 n, bool is_sca = false);
+	void AddCode(bool is_sca, wxString code, bool src_mask = true);
+	void AddVecCode(const wxString& code, bool src_mask = true);
+	void AddScaCode(const wxString& code);
 	wxString BuildCode();
 
 	virtual void Task();
@@ -139,14 +160,6 @@ struct VertexProgram
 
 	VertexProgram();
 	~VertexProgram();
-
-	struct Constant4
-	{
-		u32 id;
-		float x, y, z, w;
-	};
-
-	Array<Constant4> constants4;
 
 	Array<u32> data;
 	ParamArray parr;
@@ -165,20 +178,19 @@ struct VertexProgram
 
 struct VertexData
 {
-	u32 index;
 	u32 frequency;
 	u32 stride;
 	u32 size;
 	u32 type;
 	u32 addr;
+	u32 constant_count;
 
 	Array<u8> data;
 
-	VertexData() { memset(this, 0, sizeof(*this)); }
-	~VertexData() { data.Clear(); }
+	VertexData();
 
+	void Reset();
 	bool IsEnabled() { return size > 0; }
-
 	void Load(u32 start, u32 count);
 
 	u32 GetTypeSize();

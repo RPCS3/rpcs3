@@ -47,6 +47,7 @@ enum DbgCommand
 	DID_EXEC_THREAD,
 	DID_REGISTRED_CALLBACK,
 	DID_UNREGISTRED_CALLBACK,
+	DID_EXIT_THR_SYSCALL,
 
 	DID_LAST_COMMAND,
 };
@@ -57,7 +58,7 @@ public:
 	MainFrame* m_MainFrame;
 	DebuggerPanel* m_debugger_frame;
 
-    virtual bool OnInit();
+	virtual bool OnInit();
 	virtual void Exit();
 
 	void SendDbgCommand(DbgCommand id, PPCThread* thr=nullptr);

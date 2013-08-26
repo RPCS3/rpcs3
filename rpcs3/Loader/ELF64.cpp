@@ -155,8 +155,8 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 	shdr_name_arr.Clear();
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
 	{
-		ConLog.Error("LoadShdr64 error: Section header offset is null!");
-		return false;
+		ConLog.Warning("LoadShdr64 error: Section header offset is null!");
+		return true;
 	}
 
 	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);
@@ -206,6 +206,16 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
 		phdr_arr[i].Show();
+
+		if(phdr_arr[i].p_vaddr < min_addr)
+		{
+			min_addr = phdr_arr[i].p_vaddr;
+		}
+
+		if(phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz > max_addr)
+		{
+			max_addr = phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz;
+		}
 
 		if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 		{
@@ -329,7 +339,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						Module* module = GetModuleByName(module_name);
 						if(module)
 						{
-							module->SetLoaded();
+							//module->SetLoaded();
 						}
 						else
 						{
@@ -372,7 +382,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 							mem32_t out_tbl(tbl + i*8);
 							out_tbl += dst + i*section;
-							out_tbl += nid;
+							out_tbl += GetFuncNumById(nid);
 
 							mem32_t out_dst(dst + i*section);
 							out_dst += OR(11, 2, 2, 0);
@@ -425,6 +435,22 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 
 		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
 
+		if(shdr.sh_addr < min_addr)
+		{
+			min_addr = shdr.sh_addr;
+		}
+
+		if(shdr.sh_addr + shdr.sh_size > max_addr)
+		{
+			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
+
+		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
+		{
+			ConLog.Error("ELF64 ERROR: Relocation");
+			continue;
+		}
+
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
@@ -436,6 +462,10 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 			elf64_f.Seek(shdr.sh_offset);
 			elf64_f.Read(&Memory[addr], shdr.sh_size);
 			*/
+		break;
+
+		case SHT_RELA:
+			ConLog.Warning("ELF64: RELA");
 		break;
 		}
 	}

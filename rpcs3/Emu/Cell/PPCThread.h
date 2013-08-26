@@ -6,6 +6,17 @@ enum PPCThreadType
 {
 	PPC_THREAD_PPU,
 	PPC_THREAD_SPU,
+	PPC_THREAD_RAW_SPU,
+};
+
+enum PPCThreadStatus
+{
+	PPCThread_Ready,
+	PPCThread_Running,
+	PPCThread_Paused,
+	PPCThread_Stopped,
+	PPCThread_Sleeping,
+	PPCThread_Break,
 };
 
 class PPCThread : public ThreadBase
@@ -17,12 +28,14 @@ protected:
 	wxWindow* DisAsmFrame;
 	u32 m_id;
 	PPCThreadType m_type;
-	u64 m_arg;
+	u64 m_args[4];
 	u64 m_prio;
 	bool m_joinable;
 	bool m_joining;
 	Array<u64> argv_addr;
 	u64 m_offset;
+	u32 m_exit_status;
+	bool m_free_data;
 
 public:
 	u64 stack_size;
@@ -37,13 +50,17 @@ public:
 	virtual u64 GetStackAddr() const { return stack_addr; }
 	virtual u64 GetStackSize() const { return stack_size; }
 	virtual u64 GetFreeStackSize() const=0;
-	void SetArg(const u64 arg) { m_arg = arg; }
+	void SetArg(const uint pos, const u64 arg) { assert(pos < 4); m_args[pos] = arg; }
 
+	
 	void SetId(const u32 id);
 	void SetName(const wxString& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
 	void SetOffset(const u64 offset) { m_offset = offset; }
+	void SetExitStatus(const u32 status) { m_exit_status = status; }
 
+	u64 GetOffset() const { return m_offset; }
+	u32 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 	wxString GetName() const { return m_name; }
 	wxString GetFName() const
@@ -62,6 +79,7 @@ public:
 		{
 		case PPC_THREAD_PPU: return "PPU";
 		case PPC_THREAD_SPU: return "SPU";
+		case PPC_THREAD_RAW_SPU: return "RawSPU";
 		}
 
 		return "Unknown";
@@ -88,6 +106,25 @@ protected:
 public:
 	~PPCThread();
 
+	u32 m_wait_thread_id;
+
+	wxCriticalSection m_cs_sync;
+	bool m_sync_wait;
+	void Wait(bool wait);
+	void Wait(const PPCThread& thr);
+	bool Sync();
+
+	template<typename T>
+	void WaitFor(T func)
+	{
+		while(func(ThreadStatus()))
+		{
+			Sleep(1);
+		}
+	}
+
+	int ThreadStatus();
+
 	void NextPc();
 	void NextBranchPc();
 	void PrevPc();
@@ -100,7 +137,6 @@ public:
 	static wxArrayString ErrorToString(const u32 error);
 	wxArrayString ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsSPU()	const { return m_type == PPC_THREAD_SPU; }
 	bool IsOk()		const { return m_error == 0; }
 	bool IsRunned()		const { return m_status == Runned; }
 	bool IsPaused()		const { return m_status == Paused; }
@@ -113,6 +149,7 @@ public:
 
 	u32 GetError() const { return m_error; }
 	u32 GetId() const { return m_id; }
+	PPCThreadType GetType()	const { return m_type; }
 
 	void Reset();
 	void Close();
@@ -135,6 +172,7 @@ protected:
 	virtual void DoResume()=0;
 	virtual void DoStop()=0;
 
+public:
 	virtual void Task();
 	
 private:

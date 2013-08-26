@@ -135,6 +135,16 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 
 		if(phdr_arr[i].p_type == 0x00000001) //LOAD
 		{
+			if(phdr_arr[i].p_vaddr < min_addr)
+			{
+				min_addr = phdr_arr[i].p_vaddr;
+			}
+
+			if(phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz > max_addr)
+			{
+				max_addr = phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz;
+			}
+
 			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 			{
 				ConLog.Warning
@@ -147,6 +157,47 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 			Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz);
 			elf32_f.Seek(phdr_arr[i].p_offset);
 			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
+		}
+		else if(phdr_arr[i].p_type == 0x00000004)
+		{
+			elf32_f.Seek(phdr_arr[i].p_offset);
+			Elf32_Note note;
+			note.Load(elf32_f);
+
+			if(note.type != 1)
+			{
+				ConLog.Error("ELF32: Bad NOTE type (%d)", note.type);
+				break;
+			}
+
+			if(note.namesz != sizeof(note.name))
+			{
+				ConLog.Error("ELF32: Bad NOTE namesz (%d)", note.namesz);
+				break;
+			}
+
+			if(note.descsz != sizeof(note.desc) && note.descsz != 32)
+			{
+				ConLog.Error("ELF32: Bad NOTE descsz (%d)", note.descsz);
+				break;
+			}
+
+			//if(note.desc.flags)
+			//{
+			//	ConLog.Error("ELF32: Bad NOTE flags (0x%x)", note.desc.flags);
+			//	break;
+			//}
+
+			if(note.descsz == sizeof(note.desc))
+			{
+				ConLog.Warning("name = %s", note.name);
+				ConLog.Warning("ls_size = %d", note.desc.ls_size);
+				ConLog.Warning("stack_size = %d", note.desc.stack_size);
+			}
+			else
+			{
+				ConLog.Warning("desc = '%s'", note.desc_text);
+			}
 		}
 #ifdef LOADER_DEBUG
 		ConLog.SkipLn();
@@ -161,27 +212,28 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
+
 #ifdef LOADER_DEBUG
 		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
 		shdr.Show();
 		ConLog.SkipLn();
 #endif
+		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
+		{
+			ConLog.Error("ELF32 ERROR: Relocation");
+			continue;
+		}
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
-		//const s64 addr = shdr.sh_addr;
-		//const s64 size = shdr.sh_size;
-		//MemoryBlock* mem = nullptr;
-
-		/*
-		switch(shdr.sh_type)
+		if(shdr.sh_addr < min_addr)
 		{
-		case SHT_NOBITS:
-			if(size == 0) continue;
-			memset(&Memory[addr + offset], 0, size);
-		case SHT_PROGBITS:
-		break;
+			min_addr = shdr.sh_addr;
 		}
-		*/
+
+		if(shdr.sh_addr + shdr.sh_size > max_addr)
+		{
+			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
 	}
 
 	//TODO

@@ -88,7 +88,7 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 
 bool MemoryBlock::IsMyAddress(const u64 addr)
 {
-	return addr >= GetStartAddr() && addr < GetEndAddr();
+	return mem && addr >= GetStartAddr() && addr < GetEndAddr();
 }
 
 __forceinline const u8 MemoryBlock::FastRead8(const u64 addr) const
@@ -466,24 +466,52 @@ u8* DynamicMemoryBlock::GetMem(u64 addr) const
 	return nullptr;
 }
 
+#define DEBUG_RAWSPU_MEM 1
 //MemoryBase
 void MemoryBase::Write8(u64 addr, const u8 data)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Write8(addr=0x%llx,data=0x%x)", addr, data);
+	}
+#endif
 	GetMemByAddr(addr).Write8(addr, data);
 }
 
 void MemoryBase::Write16(u64 addr, const u16 data)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Write16(addr=0x%llx,data=0x%x)", addr, data);
+	}
+#endif
+
 	GetMemByAddr(addr).Write16(addr, data);
 }
 
 void MemoryBase::Write32(u64 addr, const u32 data)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Write32(addr=0x%llx,data=0x%x)", addr, data);
+	}
+#endif
+
 	GetMemByAddr(addr).Write32(addr, data);
 }
 
 void MemoryBase::Write64(u64 addr, const u64 data)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Write64(addr=0x%llx,data=0x%llx)", addr, data);
+	}
+#endif
+
 	GetMemByAddr(addr).Write64(addr, data);
 }
 
@@ -529,6 +557,13 @@ bool MemoryBase::Write128NN(u64 addr, const u128 data)
 
 u8 MemoryBase::Read8(u64 addr)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Read8(addr=0x%llx)", addr);
+	}
+#endif
+
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -540,6 +575,13 @@ u8 MemoryBase::Read8(u64 addr)
 
 u16 MemoryBase::Read16(u64 addr)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Read16(addr=0x%llx)", addr);
+	}
+#endif
+
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -551,6 +593,13 @@ u16 MemoryBase::Read16(u64 addr)
 
 u32 MemoryBase::Read32(u64 addr)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr) && !(GetCurrentPPCThread() && GetCurrentPPCThread()->GetType() == PPC_THREAD_RAW_SPU))
+	{
+		ConLog.Warning("Read32(addr=0x%llx)", addr);
+	}
+#endif
+
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -562,6 +611,13 @@ u32 MemoryBase::Read32(u64 addr)
 
 u64 MemoryBase::Read64(u64 addr)
 {
+#if DEBUG_RAWSPU_MEM
+	if(SpuRawMem.IsMyAddress(addr))
+	{
+		ConLog.Warning("Read64(addr=0x%llx)", addr);
+	}
+#endif
+
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{

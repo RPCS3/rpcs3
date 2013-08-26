@@ -43,6 +43,48 @@ public:
 
 	void Create();
 	void Bind() const;
+	static void Unbind();
+	void Delete();
+	bool IsCreated() const;
+};
+
+class GLrbo
+{
+protected:
+	Array<GLuint> m_id;
+
+public:
+	GLrbo();
+	~GLrbo();
+
+	void Create(u32 count = 1);
+	void Bind(u32 num = 0) const;
+	void Storage(u32 format, u32 width, u32 height);
+	static void Unbind();
+	void Delete();
+	bool IsCreated() const;
+	u32 GetId(u32 num) const;
+};
+
+class GLfbo
+{
+protected:
+	GLuint m_id;
+	GLuint m_type;
+
+public:
+	GLfbo();
+	~GLfbo();
+
+	void Create();
+	void Bind(u32 type = GL_FRAMEBUFFER, int id = -1);
+	void Texture1D(u32 attachment, u32 texture, int level = 0);
+	void Texture2D(u32 attachment, u32 texture, int level = 0);
+	void Texture3D(u32 attachment, u32 texture, int zoffset = 0, int level = 0);
+	void Renderbuffer(u32 attachment, u32 renderbuffer);
+	void Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter);
+	void Unbind();
+	static void Unbind(u32 type);
 	void Delete();
 	bool IsCreated() const;
 };

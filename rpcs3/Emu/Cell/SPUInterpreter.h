@@ -27,18 +27,22 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		Emu.Pause();
+		if(code & 0x2000)
+		{
+			CPU.SetExitStatus(code & 0xfff);
+			CPU.Stop();
+		}
 	}
 	void LNOP()
 	{
 	}
 	void SYNC(u32 Cbit)
 	{
-		UNIMPLEMENTED();
+		//UNIMPLEMENTED();
 	}
 	void DSYNC()
 	{
-		UNIMPLEMENTED();
+		//UNIMPLEMENTED();
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
@@ -51,7 +55,7 @@ private:
 	void RCHCNT(u32 rt, u32 ra)
 	{
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] = CPU.GetChannelCount(ra);
+		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
@@ -280,16 +284,15 @@ private:
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.LSA = CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0];
-		CPU.WriteLSA128(CPU.GPR[rt]._u128);
+		CPU.WriteLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0], CPU.GPR[rt]._u128);
 	}
 	void BI(u32 ra)
 	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 	}
 	void BISL(u32 rt, u32 ra)
 	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[0] = CPU.PC + 4;
 	}
@@ -353,8 +356,7 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.LSA = CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0];
-		CPU.GPR[rt]._u128 = CPU.ReadLSA128();
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]);
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
@@ -870,8 +872,6 @@ private:
 		UNIMPLEMENTED();
 	}
 
-
-
 	//0 - 9
 	void CFLTS(u32 rt, u32 ra, s32 i8)
 	{
@@ -890,35 +890,31 @@ private:
 		UNIMPLEMENTED();
 	}
 
-
-
 	//0 - 8
 	void BRZ(u32 rt, s32 i16)
 	{
-		if(!CPU.GPR[rt]._u32[0]) CPU.SetBranch(branchTarget(CPU.PC, i16));
+		if(!CPU.GPR[rt]._u32[3]) CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void STQA(u32 rt, s32 i16)
 	{
-		CPU.LSA = i16 << 2;
-		CPU.WriteLSA128(CPU.GPR[rt]._u128);
+		CPU.WriteLS128(i16 << 2, CPU.GPR[rt]._u128);
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
-		if(CPU.GPR[rt]._u32[0] != 0) 
+		if(CPU.GPR[rt]._u32[3] != 0) 
 			CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
-		if(!CPU.GPR[rt]._u16[0]) CPU.SetBranch(branchTarget(CPU.PC, i16));
+		if(!CPU.GPR[rt]._u16[7]) CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
-		if(CPU.GPR[rt]._u16[0]) CPU.SetBranch(branchTarget(CPU.PC, i16));
+		if(CPU.GPR[rt]._u16[7]) CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void STQR(u32 rt, s32 i16)
 	{
-		CPU.LSA = branchTarget(CPU.PC, i16);
-		CPU.WriteLSA128(CPU.GPR[rt]._u128);
+		CPU.WriteLS128(branchTarget(CPU.PC, i16), CPU.GPR[rt]._u128);
 	}
 	void BRA(s32 i16)
 	{
@@ -926,14 +922,7 @@ private:
 	}
 	void LQA(u32 rt, s32 i16)
 	{
-		CPU.LSA = i16 << 2;
-		if(!Memory.IsGoodAddr(CPU.LSA))
-		{
-			ConLog.Warning("LQA: Bad addr: 0x%x", CPU.LSA);
-			return;
-		}
-
-		CPU.GPR[rt]._u128 = CPU.ReadLSA128();
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(i16 << 2);
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
@@ -964,19 +953,12 @@ private:
 	void BRSL(u32 rt, s32 i16)
 	{
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] = CPU.PC + 4;
+		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
 		CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void LQR(u32 rt, s32 i16)
 	{
-		CPU.LSA = branchTarget(CPU.PC, i16);
-		if(!Memory.IsGoodAddr(CPU.LSA))
-		{
-			ConLog.Warning("LQR: Bad addr: 0x%x", CPU.LSA);
-			return;
-		}
-
-		CPU.GPR[rt]._u128 = CPU.ReadLSA128();
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(branchTarget(CPU.PC, i16));
 	}
 	void IL(u32 rt, s32 i16)
 	{
@@ -988,7 +970,7 @@ private:
 	void ILHU(u32 rt, s32 i16)
 	{
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u16[w*2] = i16;
+			CPU.GPR[rt]._u16[w*2 + 1] = i16;
 	}
 	void ILH(u32 rt, s32 i16)
 	{
@@ -1061,13 +1043,11 @@ private:
 	}
 	void STQD(u32 rt, s32 i10, u32 ra)
 	{
-		CPU.LSA = branchTarget(0, i10 + CPU.GPR[ra]._u32[0]);
-		CPU.WriteLSA128(CPU.GPR[rt]._u128);
+		CPU.WriteLS128(CPU.GPR[ra]._u32[3] + i10, CPU.GPR[rt]._u128);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra)
 	{
-		CPU.LSA = branchTarget(0, i10 + CPU.GPR[ra]._u32[0]);
-		CPU.GPR[rt]._u128 = CPU.ReadLSA128();
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[3] + i10);
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
 	{
@@ -1167,10 +1147,6 @@ private:
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
-		UNIMPLEMENTED();
-		//CHECK ME
-		//CPU.GPR[0]._u64[0] = branchTarget(CPU.PC, i16);
-		//CPU.SetBranch(branchTarget(CPU.PC, ro));
 	}
 	void ILA(u32 rt, s32 i18)
 	{
@@ -1189,14 +1165,8 @@ private:
 				( CPU.GPR[rc]._u32[i] & CPU.GPR[rb]._u32[i]) |
 				(~CPU.GPR[rc]._u32[i] & CPU.GPR[ra]._u32[i]);
 		}
-		/*
-		CPU.GPR[rt] = _mm_or_si128(
-				_mm_and_si128(CPU.GPR[rc], CPU.GPR[rb]),
-				_mm_andnot_si128(CPU.GPR[rc], CPU.GPR[ra])
-			);
-		*/
 	}
-	void SHUFB(u32 rc, u32 ra, u32 rb, u32 rt)
+	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		ConLog.Warning("SHUFB");
 	}
@@ -1205,7 +1175,7 @@ private:
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2 + 1] * CPU.GPR[rb]._i16[w*2 + 1] + CPU.GPR[rc]._i32[w];
 	}
-	void FNMS(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		UNIMPLEMENTED();
 	}

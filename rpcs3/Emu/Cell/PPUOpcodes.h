@@ -318,7 +318,6 @@ namespace PPU_opcodes
 		DST		= 0x156, //Data Stream Touch
 		LHAX 	= 0x157,
 		LVXL 	= 0x167, //Load Vector Indexed Last
-		ABS 	= 0x168,
 		MFTB 	= 0x173,
 		DSTST	= 0x176, //Data Stream Touch for Store
 		LHAUX 	= 0x177,
@@ -436,8 +435,8 @@ public:
 
 	static u64 branchTarget(const u64 pc, const u64 imm)
 	{
-		return pc + (imm & ~0x3);
-    }
+		return pc + (imm & ~0x3ULL);
+	}
 
 	virtual void NULL_OP() = 0;
 	virtual void NOP() = 0;
@@ -498,7 +497,7 @@ public:
 	virtual void VCTUXS(u32 vd, u32 uimm5, u32 vb) = 0;
 	virtual void VEXPTEFP(u32 vd, u32 vb) = 0;
 	virtual void VLOGEFP(u32 vd, u32 vb) = 0;
-	virtual void VMADDFP(u32 vd, u32 va, u32 vb, u32 vc) = 0;
+	virtual void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb) = 0;
 	virtual void VMAXFP(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMAXSB(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMAXSH(u32 vd, u32 va, u32 vb) = 0;
@@ -536,7 +535,7 @@ public:
 	virtual void VMULOSH(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMULOUB(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMULOUH(u32 vd, u32 va, u32 vb) = 0;
-	virtual void VNMSUBFP(u32 vd, u32 va, u32 vb, u32 vc) = 0;
+	virtual void VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb) = 0;
 	virtual void VNOR(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VOR(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VPERM(u32 vd, u32 va, u32 vb, u32 vc) = 0;
@@ -675,7 +674,7 @@ public:
 	virtual void STVEBX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
-	virtual void MTOCRF(u32 crm, u32 rs) = 0;
+	virtual void MTOCRF(u32 l, u32 crm, u32 rs) = 0;
 	virtual void STDX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWCX_(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWX(u32 rs, u32 ra, u32 rb) = 0;
@@ -701,7 +700,6 @@ public:
 	virtual void DST(u32 ra, u32 rb, u32 strm, u32 t) = 0;
 	virtual void LHAX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LVXL(u32 vd, u32 ra, u32 rb) = 0;
-	virtual void ABS(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void MFTB(u32 rd, u32 spr) = 0;
 	virtual void DSTST(u32 ra, u32 rb, u32 strm, u32 t) = 0;
 	virtual void LHAUX(u32 rd, u32 ra, u32 rb) = 0;
@@ -741,7 +739,7 @@ public:
 	virtual void SRADI1(u32 ra, u32 rs, u32 sh, bool rc) = 0;
 	virtual void SRADI2(u32 ra, u32 rs, u32 sh, bool rc) = 0;
 	virtual void EIEIO() = 0;
-	virtual void STVLXL(u32 sd, u32 ra, u32 rb) = 0;
+	virtual void STVLXL(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void EXTSH(u32 ra, u32 rs, bool rc) = 0;
 	virtual void STVRXL(u32 sd, u32 ra, u32 rb) = 0;
 	virtual void EXTSB(u32 ra, u32 rs, bool rc) = 0;

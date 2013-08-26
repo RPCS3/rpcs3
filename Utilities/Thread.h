@@ -1,5 +1,9 @@
 #pragma once
 #include "Array.h"
+#include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 class ThreadExec;
 
@@ -59,7 +63,7 @@ public:
 
 		m_parent = nullptr;
 
-		//if(wait)
+		if(wait)
 		{
 			Delete();
 			//wxCriticalSectionLocker lock(m_wait_for_exit);

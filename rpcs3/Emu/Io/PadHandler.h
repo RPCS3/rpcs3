@@ -90,9 +90,11 @@ struct Button
 	u32 m_keyCode;
 	u32 m_outKeyCode;
 	bool m_pressed;
+	bool m_flush;
 
 	Button(u32 offset, u32 keyCode, u32 outKeyCode)
 		: m_pressed(false)
+		, m_flush(false)
 		, m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
@@ -169,8 +171,8 @@ struct Pad
 struct PadInfo
 {
 	u32 max_connect;
-    u32 now_connect;
-    u32 system_info;
+	u32 now_connect;
+	u32 system_info;
 };
 
 class PadHandlerBase
@@ -191,7 +193,14 @@ public:
 			{
 				Button& button = GetButtons(p).Get(b);
 				if(button.m_keyCode != code) continue;
-				button.m_pressed = pressed;
+				if(button.m_pressed && !pressed)
+				{
+					button.m_flush = true;
+				}
+				else
+				{
+					button.m_pressed = pressed;
+				}
 			}
 		}
 	}

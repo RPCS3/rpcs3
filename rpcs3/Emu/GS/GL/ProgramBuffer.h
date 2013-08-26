@@ -8,8 +8,8 @@ struct BufferInfo
 	u32 vp_id;
 	Array<u8> fp_data;
 	Array<u32> vp_data;
-	wxString fp_shader;
-	wxString vp_shader;
+	ArrayString fp_shader;
+	ArrayString vp_shader;
 };
 
 struct ProgramBuffer

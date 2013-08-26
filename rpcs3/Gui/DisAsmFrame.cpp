@@ -135,7 +135,7 @@ public:
 
 		*done = false;
 
-		if(Emu.GetCPU().GetThreads()[0].IsSPU())
+		if(Emu.GetCPU().GetThreads()[0].GetType() != PPC_THREAD_PPU)
 		{
 			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
 			decoder = new SPU_Decoder(dis_asm);
@@ -341,7 +341,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	PPC_DisAsm* disasm;
 	PPC_Decoder* decoder;
 
-	if(Emu.GetCPU().GetThreads()[0].IsSPU())
+	if(Emu.GetCPU().GetThreads()[0].GetType() != PPC_THREAD_PPU)
 	{
 		SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
 		decoder = new SPU_Decoder(dis_asm);
