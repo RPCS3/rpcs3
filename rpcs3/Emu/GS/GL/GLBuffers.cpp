@@ -178,7 +178,7 @@ u32 GLrbo::GetId(u32 num) const
 	return m_id[num];
 }
 
-GLfbo::GLfbo()
+GLfbo::GLfbo() : m_id(0)
 {
 }
 
@@ -188,7 +188,7 @@ GLfbo::~GLfbo()
 
 void GLfbo::Create()
 {
-	if(m_id)
+	if(IsCreated())
 	{
 		return;
 	}

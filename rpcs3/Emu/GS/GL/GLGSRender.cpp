@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPCInstrTable.h"
 
 #define CMD_DEBUG 0
-#define DUMP_VERTEX_DATA 1
+#define DUMP_VERTEX_DATA 0
 
 #if	CMD_DEBUG
 	#define CMD_LOG ConLog.Write
@@ -477,9 +477,7 @@ void GLGSRender::InitFragmentData()
 	{
 		const TransformConstant& c = m_fragment_constants[i];
 
-		u32 id = c.id - m_cur_shader_prog->offset;
-		if(id < 32)
-			id = 32;
+		u32 id = c.id - m_cur_shader_prog->offset + 2 * 4 * 4;
 
 		const wxString name = wxString::Format("fc%u", id);
 		const int l = m_program.GetLocation(name);
@@ -563,13 +561,15 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 						m_fbo.Bind(GL_READ_FRAMEBUFFER);
 						m_fbo.Bind(GL_DRAW_FRAMEBUFFER, 0);
 						m_fbo.Blit(
-							0, 0, m_width, m_height,
-							0, 0, m_width, m_height,
+							m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
+							m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
 							GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 						m_fbo.Bind();
+						checkForGlError("m_fbo.Blit");
 					}
 
 					m_frame->Flip();
+					glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				}
 
 				m_gcm_current_buffer = args[0];
@@ -708,7 +708,20 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
-		//TODO
+	{
+		GLTexture& tex = m_frame->GetTexture(index);
+		u32 a0 = args[0];
+		u16 bias = a0 & 0x1fff;
+		u8 conv = (a0 >> 13) & 0xf;
+		u8 min = (a0 >> 16) & 0x7;
+		u8 mag = (a0 >> 24) & 0x7;
+		u8 a_signed = (a0 >> 28) & 0x1;
+		u8 r_signed = (a0 >> 29) & 0x1;
+		u8 g_signed = (a0 >> 30) & 0x1;
+		u8 b_signed = (a0 >> 31) & 0x1;
+
+		tex.SetFilter(bias, min, mag, conv, a_signed, r_signed, g_signed, b_signed);
+	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
@@ -801,7 +814,11 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		}
 		*/
 
-		if(0)
+		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		m_width = re(buffers[m_gcm_current_buffer].width);
+		m_height = re(buffers[m_gcm_current_buffer].height);
+
+		if(1)
 		{
 			m_rbo.Create(2);
 			checkForGlError("m_rbo.Create");
@@ -809,7 +826,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			m_rbo.Storage(GL_RGBA, m_width, m_height);
 			checkForGlError("m_rbo.Storage(GL_RGBA)");
 			m_rbo.Bind(1);
-			m_rbo.Storage(GL_DEPTH_STENCIL, m_width, m_height);
+			m_rbo.Storage(GL_DEPTH24_STENCIL8, m_width, m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 			m_fbo.Create();
 			checkForGlError("m_fbo.Create");
@@ -854,11 +871,24 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_ALPHA_FUNC:
-		glAlphaFunc(args[0], args[1]);
+		m_set_alpha_func = true;
+		m_alpha_func = args[0];
+
+		if(count >= 2)
+		{
+			m_set_alpha_ref = true;
+			m_alpha_ref = args[1];
+		}
+	break;
+
+	case NV4097_SET_ALPHA_REF:
+		m_set_alpha_ref = true;
+		m_alpha_ref = args[0];
 	break;
 
 	case NV4097_SET_CULL_FACE:
-		glCullFace(args[0]);
+		m_set_cull_face = true;
+		m_cull_face = args[0];
 	break;
 
 	case NV4097_SET_VIEWPORT_VERTICAL:
@@ -922,6 +952,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		if (a0 & 0x2) f |= GL_STENCIL_BUFFER_BIT;
 		if (a0 & 0xF0) f |= GL_COLOR_BUFFER_BIT;
 		glClear(f);
+		checkForGlError("glClear");
 		/*
 		if(m_set_clear_surface)
 		{
@@ -1088,6 +1119,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 				m_clear_color_g / 255.0f,
 				m_clear_color_b / 255.0f,
 				m_clear_color_a / 255.0f);
+		checkForGlError("glClearColor");
 	}
 	break;
 
@@ -1190,7 +1222,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_CULL_FACE_ENABLE:
-		m_set_cull_face = args[0] ? true : false;
+		m_set_cull_face_enable = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_DITHER_ENABLE:
@@ -1546,9 +1578,46 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
+	{
+		u32 clear_valuei = args[0];
+		//double clear_valuef = (double)clear_valuei / 0xffffffff;
+		//glClearDepth(clear_valuef);
+		glClearStencil(clear_valuei);
+		glClear(GL_STENCIL_BUFFER_BIT);
+	}
+	break;
+
 	case NV4097_SET_ZCULL_CONTROL0:
+	{
+		m_set_depth_func = true;
+		m_depth_func = args[0] >> 4;
+	}
+	break;
+
 	case NV4097_SET_ZCULL_CONTROL1:
+	{
+		//TODO
+	}
+	break;
+
 	case NV4097_SET_SCULL_CONTROL:
+	{
+		u32 a0 = args[0];
+		m_set_stencil_func = m_set_stencil_func_ref = m_set_stencil_func_mask = true;
+
+		m_stencil_func = a0 & 0xffff;
+		m_stencil_func_ref = (a0 >> 16) & 0xff;
+		m_stencil_func_mask = (a0 >> 24) & 0xff;
+	}
+	break;
+
+	case NV4097_SET_ZCULL_EN:
+	{
+		u32 a0 = args[0];
+
+		m_depth_test_enable = a0 & 0x1 ? true : false;
+		m_set_stencil_test = a0 & 0x2 ? true : false;
+	}
 	break;
 
 	case NV4097_GET_REPORT:
@@ -1800,8 +1869,9 @@ bool GLGSRender::LoadProgram()
 	else
 	{
 		m_program.Create(m_cur_vertex_prog->id, m_cur_shader_prog->id);
+		checkForGlError("m_program.Create");
 		m_prog_buffer.Add(m_program, *m_cur_shader_prog, *m_cur_vertex_prog);
-
+		checkForGlError("m_prog_buffer.Add");
 		m_program.Use();
 
 		GLint r = GL_FALSE;
@@ -1833,9 +1903,7 @@ void GLGSRender::ExecCMD()
 	{
 		if(m_set_surface_clip_horizontal && m_set_surface_clip_vertical)
 		{
-			m_width = m_surface_clip_w;
-			m_height = m_surface_clip_h;
-			//ConLog.Write("width: %d, height: %d, x: %d, y: %d", m_width, m_height, m_surface_clip_x, m_surface_clip_y);
+			//ConLog.Write("surface clip width: %d, height: %d, x: %d, y: %d", m_width, m_height, m_surface_clip_x, m_surface_clip_y);
 		}
 
 		if(m_set_color_mask)
@@ -1885,7 +1953,7 @@ void GLGSRender::ExecCMD()
 		Enable(m_set_depth_bounds_test, GL_DEPTH_CLAMP);
 		Enable(m_set_blend, GL_BLEND);
 		Enable(m_set_logic_op, GL_LOGIC_OP);
-		Enable(m_set_cull_face, GL_CULL_FACE);
+		Enable(m_set_cull_face_enable, GL_CULL_FACE);
 		Enable(m_set_dither, GL_DITHER);
 		Enable(m_set_stencil_test, GL_STENCIL_TEST);
 		Enable(m_set_line_smooth, GL_LINE_SMOOTH);
@@ -1991,15 +2059,30 @@ void GLGSRender::ExecCMD()
 			checkForGlError("glBlendColor");
 		}
 
+		if(m_set_cull_face)
+		{
+			glCullFace(m_cull_face);
+			checkForGlError("glCullFace");
+		}
+
+		if(m_set_alpha_func && m_set_alpha_ref)
+		{
+			glAlphaFunc(m_alpha_func, m_alpha_ref);
+			checkForGlError("glAlphaFunc");
+		}
+
 		if(m_set_fog_mode)
 		{
 			glFogi(GL_FOG_MODE, m_fog_mode);
+			checkForGlError("glFogi(GL_FOG_MODE)");
 		}
 
 		if(m_set_fog_params)
 		{
 			glFogf(GL_FOG_START, m_fog_param0);
+			checkForGlError("glFogf(GL_FOG_START)");
 			glFogf(GL_FOG_END, m_fog_param1);
+			checkForGlError("glFogf(GL_FOG_END)");
 		}
 
 		if(m_indexed_array.m_count && m_draw_array_count)

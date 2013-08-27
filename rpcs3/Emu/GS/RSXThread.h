@@ -22,7 +22,7 @@ public:
 	bool m_set_depth_bounds_test;
 	bool m_depth_test_enable;
 	bool m_set_logic_op;
-	bool m_set_cull_face;
+	bool m_set_cull_face_enable;
 	bool m_set_dither;
 	bool m_set_stencil_test;
 	bool m_set_line_smooth;
@@ -196,6 +196,15 @@ public:
 	u16 m_surface_clip_y;
 	u16 m_surface_clip_h;
 
+	bool m_set_cull_face;
+	u32 m_cull_face;
+
+	bool m_set_alpha_func;
+	u32 m_alpha_func;
+
+	bool m_set_alpha_ref;
+	u32 m_alpha_ref;
+
 	u8 m_begin_end;
 
 public:
@@ -222,7 +231,7 @@ public:
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
 		m_set_logic_op = false;
-		m_set_cull_face = false;
+		m_set_cull_face_enable = false;
 		m_set_dither = false;
 		m_set_stencil_test = false;
 		m_set_stencil_mask = false;
@@ -259,6 +268,9 @@ public:
 		m_set_context_dma_z = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
+		m_set_cull_face = false;
+		m_set_alpha_func = false;
+		m_set_alpha_ref = false;
 		m_begin_end = 0;
 	}
 

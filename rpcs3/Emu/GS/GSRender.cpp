@@ -94,6 +94,7 @@ u32 GSRender::GetAddress(u32 offset, u8 location)
 	}
 
 	ConLog.Error("GetAddress(offset=0x%x, location=0x%x", location);
+	assert(0);
 	return 0;
 }
 

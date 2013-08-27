@@ -41,6 +41,15 @@ class GLTexture
 	u8 m_aniso_bias;
 	u8 m_signed_remap;
 
+	u16 m_bias;
+	u8 m_min_filter;
+	u8 m_mag_filter;
+	u8 m_conv;
+	u8 m_a_signed;
+	u8 m_r_signed;
+	u8 m_g_signed;
+	u8 m_b_signed;
+
 	u32 m_remap;
 	
 public:
@@ -125,6 +134,18 @@ public:
 	{
 		m_depth = depth;
 		m_pitch = pitch;
+	}
+
+	void SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_signed, u8 g_signed, u8 b_signed)
+	{
+		m_bias = bias;
+		m_min_filter = min;
+		m_mag_filter = mag;
+		m_conv = conv;
+		m_a_signed = a_signed;
+		m_r_signed = r_signed;
+		m_g_signed = g_signed;
+		m_b_signed = b_signed;
 	}
 
 	u32 GetFormat() const { return m_format; }
@@ -289,13 +310,25 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(m_wrapr));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[m_zfunc]);
 
-		glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, m_aniso_bias);
+		glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, m_bias);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, m_minlod);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, m_maxlod);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_maxaniso);
 
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		static const int gl_tex_filter[] =
+		{
+			GL_NEAREST,
+			GL_NEAREST,
+			GL_LINEAR,
+			GL_NEAREST_MIPMAP_NEAREST,
+			GL_LINEAR_MIPMAP_NEAREST,
+			GL_NEAREST_MIPMAP_LINEAR,
+			GL_LINEAR_MIPMAP_LINEAR,
+			GL_NEAREST,
+		};
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[m_min_filter]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[m_mag_filter]);
 		//Unbind();
 	}
 
