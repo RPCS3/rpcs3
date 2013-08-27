@@ -206,4 +206,4 @@ enum Status
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"
-#define _PRGVER_ "0.0.0.3"
+#define _PRGVER_ "0.0.0.4"
