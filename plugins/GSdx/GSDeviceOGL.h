@@ -509,6 +509,7 @@ class GSDeviceOGL : public GSDevice
 	GSDepthStencilOGL* m_om_dss[1<<6];
 	hash_map<uint32, GLuint > m_ps;
 	hash_map<uint32, GSBlendStateOGL* > m_om_bs;
+	GLuint m_apitrace;
 
 	GLuint m_palette_ss;
 	GLuint m_rt_ss;

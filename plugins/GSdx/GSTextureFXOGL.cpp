@@ -56,6 +56,9 @@ void GSDeviceOGL::CreateTextureFX()
 
 	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++)
 		m_om_dss[key] = CreateDepthStencil(OMDepthStencilSelector(key));
+
+	// Help to debug FS in apitrace
+	m_apitrace = CompilePS(PSSelector());
 }
 
 GSDepthStencilOGL* GSDeviceOGL::CreateDepthStencil(OMDepthStencilSelector dssel)

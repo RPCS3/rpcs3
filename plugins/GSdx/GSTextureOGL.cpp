@@ -204,9 +204,9 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 
 	// Bunch of constant parameter
 	switch (m_format) {
-		case GL_R32UI:
+		case GL_R32I:
 			m_int_format    = GL_RED_INTEGER;
-			m_int_type      = GL_UNSIGNED_INT;
+			m_int_type      = GL_INT;
 			m_int_alignment = 4;
 			m_int_shift     = 2;
 			break;
@@ -559,7 +559,7 @@ void GSTextureOGL::SaveRaw(const string& fn, const void* image, uint32 pitch)
 
 	for(int h = m_size.y; h > 0; h--) {
 		for (int w = m_size.x; w > 0; w--, data += 1) {
-			if (*data == 0xffffffff)
+			if (*data > 0xffffff)
 				fprintf(fp, "");
 			else {
 				fprintf(fp, "%x", *data);
@@ -594,11 +594,11 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, image);
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	} else if(m_format == GL_R32UI) {
+	} else if(m_format == GL_R32I) {
 		gl_ActiveTexture(GL_TEXTURE0 + 6);
 		glBindTexture(GL_TEXTURE_2D, m_texture_id);
 
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, image);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_INT, image);
 		SaveRaw(fn, image, pitch);
 
 		// Not supported in Save function

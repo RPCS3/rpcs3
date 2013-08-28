@@ -826,7 +826,8 @@ EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
 	string s = "GSdx";
 
-	if(s_gs != NULL) // TODO: this gets called from a different thread concurrently with GSOpen (on linux)
+	// TODO: this gets called from a different thread concurrently with GSOpen (on linux)
+	if(s_gs == NULL) return;
 
 	if(s_gs->m_GStitleInfoBuffer[0])
 	{

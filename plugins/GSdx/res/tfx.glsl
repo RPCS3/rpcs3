@@ -307,7 +307,7 @@ layout(binding = 1) uniform sampler2D PaletteSampler;
 #ifndef DISABLE_GL42_image
 #if PS_DATE > 0
 // FIXME how to declare memory access
-layout(r32ui, binding = 0) coherent uniform uimage2D img_prim_min;
+layout(r32i, binding = 0) coherent uniform iimage2D img_prim_min;
 #endif
 #else
 // use basic stencil
@@ -806,6 +806,16 @@ void ps_main()
 #if !GL_ES
 void ps_main()
 {
+#if PS_DATE == 3 && !defined(DISABLE_GL42_image)
+    int stencil_ceil = imageLoad(img_prim_min, ivec2(gl_FragCoord.xy));
+    // Note gl_PrimitiveID == stencil_ceil will be the primitive that will update
+    // the bad alpha value so we must keep it.
+
+	if (gl_PrimitiveID > stencil_ceil) {
+		discard;
+	}
+#endif
+
     vec4 c = ps_color();
 
     float alpha = c.a * 2.0;
@@ -837,33 +847,11 @@ void ps_main()
     }
 #endif
 
-    // TODO
-    // warning non uniform flow ???
-#if PS_DATE == 3 && !defined(DISABLE_GL42_image)
-    uint stencil_ceil = imageLoad(img_prim_min, ivec2(gl_FragCoord.xy));
-    // Note gl_PrimitiveID == stencil_ceil will be the primitive that will update
-    // the bad alpha value so we must keep it.
-#if 0
-	if (stencil_ceil > 0)
-		c = vec4(1.0, 0.0, 0.0, 1.0);
-	else
-		c = vec4(0.0, 1.0, 0.0, 1.0);
-#endif
-
-#if 1
-	if (gl_PrimitiveID > stencil_ceil) {
-		discard;
-	}
-#endif
-
-#endif
-
 
 #if (PS_DATE == 2 || PS_DATE == 1) && !defined(DISABLE_GL42_image)
     // Don't write anything on the framebuffer
     // Note: you can't use discard because it will also drop
     // image operation
-    // Note2: output will be disabled too in opengl
 #else
     SV_Target0 = c;
     SV_Target1 = vec4(alpha, alpha, alpha, alpha);

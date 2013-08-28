@@ -108,6 +108,7 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_ps_cb;
 	gl_DeleteSamplers(1, &m_palette_ss);
 	delete m_vb;
+	m_shader->Delete(m_apitrace);
 
 	for (uint32 key = 0; key < VSSelector::size(); key++) m_shader->Delete(m_vs[key]);
 	m_shader->Delete(m_gs);
@@ -296,10 +297,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	m_date.dss->SetStencil(GL_ALWAYS, GL_REPLACE);
 
 	m_date.bs = new GSBlendStateOGL();
-#ifndef ENABLE_OGL_STENCIL_DEBUG
-	// Only keep stencil data
-	m_date.bs->SetMask(false, false, false, false);
-#endif
+	// FIXME impact image load?
+//#ifndef ENABLE_OGL_STENCIL_DEBUG
+//	// Only keep stencil data
+//	m_date.bs->SetMask(false, false, false, false);
+//#endif
 
 	// ****************************************************************
 	// HW renderer shader
@@ -538,9 +540,9 @@ void GSDeviceOGL::InitPrimDateTexture(int w, int h)
 {
 	// Create a texture to avoid the useless clean@0
 	if (m_date.t == NULL)
-		m_date.t = CreateTexture(w, h, GL_R32UI);
+		m_date.t = CreateTexture(w, h, GL_R32I);
 
-	ClearRenderTarget_ui(m_date.t, 0xFFFFFFFF);
+	ClearRenderTarget_ui(m_date.t, 0x0FFFFFFF);
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
 	gl_ActiveTexture(GL_TEXTURE0 + 5);
@@ -557,9 +559,9 @@ void GSDeviceOGL::BindDateTexture()
 	// TODO: multibind?
 	// GLuint textures[1] = {static_cast<GSTextureOGL*>(m_date.t)->GetID()};
 	// gl_BindImageTextures(0, 1, textures);
-	//gl_BindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+	//gl_BindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_R32I);
 
-	gl_BindImageTexture(0, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32UI);
+	gl_BindImageTexture(0, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32I);
 }
 
 void GSDeviceOGL::RecycleDateTexture()

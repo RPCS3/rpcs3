@@ -268,10 +268,11 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	om_bsel.wrgba = ~GSVector4i::load((int)context->FRAME.FBMSK).eq8(GSVector4i::xffffffff()).mask();
 
 	// TODO
-	//if (UserHacks_DateGL4 && DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
-	if (UserHacks_DateGL4 && DATE) {
+	if (UserHacks_DateGL4 && DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
 		//if (!(context->FBA.FBA && context->TEST.DATM == 1))
-		advance_DATE = true;
+
+		//advance_DATE = true;
+		advance_DATE = GLLoader::found_GL_ARB_shader_image_load_store;
 	}
 
 	// vs
@@ -500,8 +501,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->SetupCB(&vs_cb, &ps_cb);
 
 	if (advance_DATE) {
-		// Create an r32ui image that will contain primitive ID
-		// Note: do it at the beginning because the clean will dirty the state
+		// Create an r32i image that will contain primitive ID
+		// Note: do it at the beginning because the clean will dirty the FBO state
 		//dev->InitPrimDateTexture(rtsize.x, rtsize.y);
 
 		// Don't write anything on the color buffer

@@ -89,6 +89,7 @@ void GSShaderOGL::PS(GLuint s, GLuint sub_count)
 
 		GLState::ps = s;
 		GLState::dirty_prog = true;
+		GLState::dirty_subroutine_ps = true;
 #ifndef ENABLE_GLES
 		if (GLLoader::found_GL_ARB_separate_shader_objects) {
 			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, s);
@@ -278,10 +279,10 @@ GLuint GSShaderOGL::LinkNewProgram()
 void GSShaderOGL::UseProgram()
 {
 	if (GLState::dirty_prog) {
-		GLState::dirty_subroutine_ps = true;
-		GLState::dirty_ressources = true;
-
 		if (!GLLoader::found_GL_ARB_separate_shader_objects) {
+			GLState::dirty_subroutine_ps = true;
+			GLState::dirty_ressources = true;
+
 			hash_map<uint64, GLuint >::iterator it;
 			// Note: shader are integer lookup pointer. They start from 1 and incr
 			// every time you create a new shader OR a new program.
@@ -340,19 +341,22 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	}
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
 		// Need GL version 410
-		header += "#extension GL_ARB_separate_shader_objects : require\n";
+		header += "#extension GL_ARB_separate_shader_objects: require\n";
 	} else {
 		header += "#define DISABLE_SSO\n";
 	}
 	if (GLLoader::found_only_gl30) {
 		// Need version 330
-		header += "#extension GL_ARB_explicit_attrib_location : require\n";
+		header += "#extension GL_ARB_explicit_attrib_location: require\n";
 		// Need version 140
-		header += "#extension GL_ARB_uniform_buffer_object : require\n";
+		header += "#extension GL_ARB_uniform_buffer_object: require\n";
 	}
-	if (GLLoader::found_GL_ARB_shader_subroutine) {
+	if (GLLoader::found_GL_ARB_shader_subroutine && GLLoader::found_GL_ARB_explicit_uniform_location) {
 		// Need GL version 400
 		header += "#define SUBROUTINE_GL40 1\n";
+		header += "#extension GL_ARB_shader_subroutine: require\n";
+		// Need GL version 430
+		header += "#extension GL_ARB_explicit_uniform_location: require\n";
 	}
 #ifdef ENABLE_OGL_STENCIL_DEBUG
 	header += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
@@ -413,7 +417,7 @@ GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& ent
 
 	std::string header = GenGlslHeader(entry, type, macro_sel);
 	int shader_nb = 1;
-#if 0
+#if 1
 	sources[0] = header.c_str();
 	sources[1] = glsl_h_code;
 	shader_nb++;

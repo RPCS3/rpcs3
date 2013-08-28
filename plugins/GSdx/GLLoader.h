@@ -279,4 +279,5 @@ namespace GLLoader {
 	extern bool found_GL_ARB_buffer_storage;
 	extern bool found_GL_ARB_shader_subroutine;
 	extern bool found_GL_ARB_bindless_texture;
+	extern bool found_GL_ARB_explicit_uniform_location;
 }

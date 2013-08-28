@@ -132,6 +132,7 @@ namespace GLLoader {
 	bool found_only_gl30	= false; // Drop it when mesa support GLSL330
 	bool found_GL_ARB_clear_texture = false; // Don't know if GL3 GPU can support it
 	bool found_GL_ARB_buffer_storage = false;
+	bool found_GL_ARB_explicit_uniform_location = false; // need by subroutine
 	// GL4 hardware
 	bool found_GL_ARB_copy_image = false; // Not sure actually maybe GL3 GPU can do it
 	bool found_GL_ARB_gpu_shader5 = false;
@@ -233,6 +234,8 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
 #if 0
+				// Erratum: on nvidia implementation, gain is very nice : 42.5 fps => 46.5 fps
+				//
 				// Strangely it doesn't provide the speed boost as expected.
 				// Note: only atst/colclip was replaced with subroutine for the moment. It replace 2000 program switch on
 				// colin mcrae 3 by 2100 uniform, but code is slower!
@@ -243,6 +246,7 @@ namespace GLLoader {
 
 				if (ext.compare("GL_ARB_shader_subroutine") == 0) found_GL_ARB_shader_subroutine = true;
 #endif
+				if (ext.compare("GL_ARB_explicit_uniform_location") == 0) found_GL_ARB_explicit_uniform_location = true;
 #ifdef GL44 // Need to debug the code first
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
 				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
@@ -268,6 +272,7 @@ namespace GLLoader {
 		status &= status_and_override(found_GL_ARB_clear_texture,"GL_ARB_clear_texture");
 		status &= status_and_override(found_GL_ARB_buffer_storage,"GL_ARB_buffer_storage");
 		status &= status_and_override(found_GL_ARB_shader_subroutine,"GL_ARB_shader_subroutine");
+		status &= status_and_override(found_GL_ARB_explicit_uniform_location,"GL_ARB_explicit_uniform_location");
 
 		status &= status_and_override(found_GL_ARB_texture_storage, "GL_ARB_texture_storage", true);
 		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");
