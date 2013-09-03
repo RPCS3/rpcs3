@@ -46,813 +46,861 @@ private:
 	}
 
 private:
+	wxString& FixOp(wxString& op)
+	{
+		op.Append(' ', max<int>(10 - (int)op.Len(), 0));
+		return op;
+	}
+	void DisAsm(const char* op)
+	{
+		Write(op);
+	}
+	void DisAsm(wxString op, u32 a1)
+	{
+		Write(wxString::Format("%s 0x%x", FixOp(op), a1));
+	}
+	void DisAsm(wxString op, const char* a1)
+	{
+		Write(wxString::Format("%s %s", FixOp(op), a1));
+	}
+	void DisAsm(wxString op, const char* a1, const char* a2)
+	{
+		Write(wxString::Format("%s %s,%s", FixOp(op), a1, a2));
+	}
+	void DisAsm(wxString op, int a1, const char* a2)
+	{
+		Write(wxString::Format("%s 0x%x,%s", FixOp(op), a1, a2));
+	}
+	void DisAsm(wxString op, const char* a1, int a2)
+	{
+		Write(wxString::Format("%s %s,0x%x", FixOp(op), a1, a2));
+	}
+	void DisAsm(wxString op, int a1, int a2)
+	{
+		Write(wxString::Format("%s 0x%x,0x%x", FixOp(op), a1, a2));
+	}
+	void DisAsm(wxString op, const char* a1, const char* a2, const char* a3)
+	{
+		Write(wxString::Format("%s %s,%s,%s", FixOp(op), a1, a2, a3));
+	}
+	void DisAsm(wxString op, const char* a1, int a2, const char* a3)
+	{
+		Write(wxString::Format("%s %s,0x%x(%s)", FixOp(op), a1, a2, a3));
+	}
+	void DisAsm(wxString op, const char* a1, const char* a2, int a3)
+	{
+		Write(wxString::Format("%s %s,%s,0x%x", FixOp(op), a1, a2, a3));
+	}
+	void DisAsm(wxString op, const char* a1, const char* a2, const char* a3, const char* a4)
+	{
+		Write(wxString::Format("%s %s,%s,%s,%s", FixOp(op), a1, a2, a3, a4));
+	}
 	//0 - 10
 	void STOP(u32 code)
 	{
-		Write(wxString::Format("stop 0x%x", code));
+		DisAsm("stop", code);
 	}
 	void LNOP()
 	{
-		Write("lnop");
+		DisAsm("lnop");
 	}
 	void SYNC(u32 Cbit)
 	{
-		Write(wxString::Format("sync %d", Cbit));
+		DisAsm("sync", Cbit);
 	}
 	void DSYNC()
 	{
-		Write("dsync");
+		DisAsm("dsync");
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		Write(wxString::Format("mfspr %s,%s", spu_reg_name[rt], spu_reg_name[sa]));   // Are SPR mapped on the GPR or are there 128 additional registers ?
+		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ?
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("rdch %s,%s", spu_reg_name[rt], spu_ch_name[ra]));
+		DisAsm("rdch", spu_reg_name[rt], spu_ch_name[ra]);
 	}
 	void RCHCNT(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("rchcnt %s,%s", spu_reg_name[rt], spu_ch_name[ra]));
+		DisAsm("rchcnt", spu_reg_name[rt], spu_ch_name[ra]);
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("sf %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("sf", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void OR(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("or %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("or", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void BG(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("bg %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("bg", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SFH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("sfh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("sfh", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void NOR(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("nor %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("nor", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ABSDB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("absdb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("absdb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rot %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rot", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTM(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotm %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotm", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotma %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotma", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("shl %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("shl", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("roth %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("roth", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTHM(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rothm %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rothm", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTMAH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotmah %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotmah", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SHLH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("shlh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("shlh", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("roti %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("roti", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTMI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotmi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotmi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotmai %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotmai", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void SHLI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("shli %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("shli", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rothi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rothi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rothmi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rothmi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotmahi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotmahi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void SHLHI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("shlhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("shlhi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void A(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("a %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("a", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void AND(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("and %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("and", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CG(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cg %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cg", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void AH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("ah %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("ah", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void NAND(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("nand %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("nand", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void AVGB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("avgb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("avgb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		Write(wxString::Format("mtspr %s,%s", spu_reg_name[rt], spu_reg_name[sa]));
+		DisAsm("mtspr", spu_reg_name[rt], spu_reg_name[sa]);
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
-		Write(wxString::Format("wrch %s,%s", spu_ch_name[ra], spu_reg_name[rt]));
+		DisAsm("wrch", spu_ch_name[ra], spu_reg_name[rt]);
 	}
 	void BIZ(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("biz %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("biz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void BINZ(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("binz %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("binz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void BIHZ(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("bihz %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("bihz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void BIHNZ(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("bihnz %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("bihnz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("bihnz %s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("bihnz", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("stqx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("stqx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void BI(u32 ra)
 	{
-		Write(wxString::Format("bi %s", spu_reg_name[ra]));
+		DisAsm("bi", spu_reg_name[ra]);
 	}
 	void BISL(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("bisl %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("bisl", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void IRET(u32 ra)
 	{
-		Write(wxString::Format("iret %s", spu_reg_name[ra]));
+		DisAsm("iret", spu_reg_name[ra]);
 	}
 	void BISLED(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("bisled %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("bisled", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void HBR(u32 p, u32 ro, u32 ra)
 	{
-		Write(wxString::Format("hbr 0x%x,%s", DisAsmBranchTarget(ro), spu_reg_name[ra]));
+		DisAsm("hbr", DisAsmBranchTarget(ro), spu_reg_name[ra]);
 	}
 	void GB(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("gb %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("gb", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void GBH(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("gbh %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("gbh", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void GBB(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("gbb %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("gbb", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FSM(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("fsm %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("fsm", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FSMH(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("fsmh %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("fsmh", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FSMB(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("fsmb %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("fsmb", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FREST(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("frest %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("frest", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FRSQEST(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("frsqest %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("frsqest", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("lqx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("lqx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqbybi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqbybi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqmbybi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqmbybi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SHLQBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("shlqbybi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("shlqbybi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CBX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cbx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cbx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CHX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("chx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("chx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CWX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cwx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cwx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CDX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cdx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cdx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqbi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqbi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQMBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqmbi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqmbi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SHLQBI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("shlqbi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("shlqbi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQBY(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqby %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqby", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ROTQMBY(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("rotqmby %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("rotqmby", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SHLQBY(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("shlqby %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("shlqby", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ORX(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("orx %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("orx", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void CBD(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("cbd %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("cbd", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void CHD(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("chd %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("chd", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void CWD(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("cwd %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("cwd", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void CDD(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("cdd %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("cdd", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTQBII(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotqbii %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotqbii", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTQMBII(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotqmbii %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotqmbii", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void SHLQBII(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("shlqbii %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("shlqbii", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTQBYI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotqbyi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotqbyi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void ROTQMBYI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("rotqmbyi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("rotqmbyi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void SHLQBYI(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("shlqbyi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("shlqbyi", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void NOP(u32 rt)
 	{
-		Write(wxString::Format("nop %s", spu_reg_name[rt]));
+		DisAsm("nop", spu_reg_name[rt]);
 	}
 	void CGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void XOR(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("xor %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("xor", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CGTH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cgth %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cgth", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void EQV(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("eqv %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("eqv", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CGTB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cgtb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cgtb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SUMB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("sumb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("sumb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void HGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("hgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("hgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("clz %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("clz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("xswd %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("xswd", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void XSHW(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("xshw %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("xshw", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("cntb %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("cntb", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void XSBH(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("xsbh %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("xsbh", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void CLGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("clgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("clgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ANDC(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("andc %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("andc", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FCGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fcgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fcgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFCGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfcgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfcgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fa %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fa", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FS(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fs %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fs", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FM(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fm %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fm", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CLGTH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("clgth %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("clgth", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ORC(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("orc %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("orc", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fcmgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fcmgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfcmgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfcmgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfa %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfa", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFS(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfs %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfs", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFM(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfm %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfm", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CLGTB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("clgtb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("clgtb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void HLGT(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("hlgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("hlgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfma %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfma", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFMS(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfms %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfms", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFNMS(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfnms %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfnms", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFNMA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfnma %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfnma", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("ceq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("ceq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYHHU(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyhhu %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyhhu", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void ADDX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("addx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("addx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void SFX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("sfx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("sfx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CGX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("cgx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("cgx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void BGX(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("bgx %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("bgx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYHHA(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyhha %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyhha", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYHHAU(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyhhau %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyhhau", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FSCRRD(u32 rt)
 	{
-		Write(wxString::Format("fscrrd %s", spu_reg_name[rt]));
+		DisAsm("fscrrd", spu_reg_name[rt]);
 	}
 	void FESD(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("fesd %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("fesd", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FRDS(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("frds %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("frds", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		Write(wxString::Format("fscrwr %s,%s", spu_reg_name[rt], spu_reg_name[ra]));
+		DisAsm("fscrwr", spu_reg_name[rt], spu_reg_name[ra]);
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{
-		Write(wxString::Format("dftsv %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
+		DisAsm("dftsv", spu_reg_name[rt], spu_reg_name[ra], i7);
 	}
 	void FCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fceq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fceq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfceq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfceq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPY(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpy %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpy", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyh", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYHH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyhh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyhh", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYS(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpys %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpys", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CEQH(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("ceqh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("ceqh", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fcmeq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fcmeq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void DFCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("dfcmeq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("dfcmeq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("mpyu %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("mpyu", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void CEQB(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("ceqb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("ceqb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void FI(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("fi %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("fi", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
-		Write(wxString::Format("heq %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
+		DisAsm("heq", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
 
 	//0 - 9
 	void CFLTS(u32 rt, u32 ra, s32 i8)
 	{
-		Write(wxString::Format("cflts %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i8));
+		DisAsm("cflts", spu_reg_name[rt], spu_reg_name[ra], i8);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
-		Write(wxString::Format("cfltu %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i8));
+		DisAsm("cfltu", spu_reg_name[rt], spu_reg_name[ra], i8);
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		Write(wxString::Format("csflt %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i8));
+		DisAsm("csflt", spu_reg_name[rt], spu_reg_name[ra], i8);
 	}
 	void CUFLT(u32 rt, u32 ra, s32 i8)
 	{
-		Write(wxString::Format("cuflt %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i8));
+		DisAsm("cuflt", spu_reg_name[rt], spu_reg_name[ra], i8);
 	}
 
 	//0 - 8
 	void BRZ(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brz %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brz", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void STQA(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("stqa %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("stqa", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brnz %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brnz", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brhz %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brhz", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brhnz %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brhnz", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void STQR(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("stqr %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("stqr", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BRA(s32 i16)
 	{
-		Write(wxString::Format("bra 0x%x", DisAsmBranchTarget(i16)));
+		DisAsm("bra", DisAsmBranchTarget(i16));
 	}
 	void LQA(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("lqa %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("lqa", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brasl %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brasl", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void BR(s32 i16)
 	{
-		Write(wxString::Format("br 0x%x", DisAsmBranchTarget(i16)));
+		DisAsm("br", DisAsmBranchTarget(i16));
 	}
 	void FSMBI(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("fsmbi %s,%d", spu_reg_name[rt], i16));
+		DisAsm("fsmbi", spu_reg_name[rt], i16);
 	}
 	void BRSL(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("brsl %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("brsl", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void LQR(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("lqr %s,0x%x", spu_reg_name[rt], DisAsmBranchTarget(i16)));
+		DisAsm("lqr", spu_reg_name[rt], DisAsmBranchTarget(i16));
 	}
 	void IL(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("il %s,%d", spu_reg_name[rt], i16));
+		DisAsm("il", spu_reg_name[rt], i16);
 	}
 	void ILHU(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("ilhu %s,%d", spu_reg_name[rt], i16));
+		DisAsm("ilhu", spu_reg_name[rt], i16);
 	}
 	void ILH(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("ilh %s,%d", spu_reg_name[rt], i16));
+		DisAsm("ilh", spu_reg_name[rt], i16);
 	}
 	void IOHL(u32 rt, s32 i16)
 	{
-		Write(wxString::Format("iolh %s,%d", spu_reg_name[rt], i16));
+		DisAsm("iolh", spu_reg_name[rt], i16);
 	}
-	
 
 	//0 - 7
 	void ORI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ori %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ori", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void ORHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("orhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("orhi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void ORBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("orbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("orbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void SFI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("sfi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("sfi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void SFHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("sfhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("sfhi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void ANDI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("andi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("andi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void ANDHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("andhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("andhi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void ANDBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("andbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("andbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void AI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ai %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ai", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void AHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ahi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ahi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void STQD(u32 rt, s32 i10, u32 ra)
 	{
-		Write(wxString::Format("stqd %s,%d(%s)", spu_reg_name[rt], i10, spu_reg_name[ra]));
+		DisAsm("stqd", spu_reg_name[rt], i10, spu_reg_name[ra]);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra)
 	{
-		Write(wxString::Format("lqd %s,%d(%s)", spu_reg_name[rt], i10, spu_reg_name[ra]));
+		DisAsm("lqd", spu_reg_name[rt], i10, spu_reg_name[ra]);
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("xori %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("xori", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void XORHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("xorhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("xorhi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void XORBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("xorbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("xorbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CGTI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("cgti %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("cgti", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CGTHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("cgthi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("cgthi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CGTBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("cgtbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("cgtbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void HGTI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("hgti %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("hgti", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("clgti %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("clgti", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CLGTHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("clgthi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("clgthi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CLGTBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("clgtbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("clgtbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void HLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("hlgti %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("hlgti", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void MPYI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("mpyi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("mpyi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void MPYUI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("mpyui %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("mpyui", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CEQI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ceqi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ceqi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CEQHI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ceqhi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ceqhi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void CEQBI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("ceqbi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("ceqbi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 	void HEQI(u32 rt, u32 ra, s32 i10)
 	{
-		Write(wxString::Format("heqi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
+		DisAsm("heqi", spu_reg_name[rt], spu_reg_name[ra], i10);
 	}
 
 	//0 - 6
 	void HBRA(s32 ro, s32 i16)
 	{
-		Write(wxString::Format("hbra 0x%x,0x%x", DisAsmBranchTarget(ro), DisAsmBranchTarget(i16)));
+		DisAsm("hbra", DisAsmBranchTarget(ro), DisAsmBranchTarget(i16));
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
-		Write(wxString::Format("hbrr 0x%x,0x%x", DisAsmBranchTarget(ro), DisAsmBranchTarget(i16)));
+		DisAsm("hbrr", DisAsmBranchTarget(ro), DisAsmBranchTarget(i16));
 	}
 	void ILA(u32 rt, s32 i18)
 	{
-		Write(wxString::Format("ila %s,%d", spu_reg_name[rt], i18));
+		DisAsm("ila", spu_reg_name[rt], i18);
 	}
 
 	//0 - 3
 	void SELB(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("selb %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("selb", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 	void SHUFB(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("shufb %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("shufb", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 	void MPYA(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("mpya %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("mpya", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 	void FNMS(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("fnms %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("fnms", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 	void FMA(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("fma %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("fma", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 	void FMS(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		Write(wxString::Format("fms %s,%s,%s,%s", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]));
+		DisAsm("fms", spu_reg_name[rc], spu_reg_name[ra], spu_reg_name[rb], spu_reg_name[rt]);
 	}
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
@@ -860,6 +908,3 @@ private:
 		Write(wxString::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 };
-
-#undef START_OPCODES_GROUP
-#undef END_OPCODES_GROUP

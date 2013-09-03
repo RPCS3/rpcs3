@@ -8,7 +8,7 @@ int ProgramBuffer::SearchFp(ShaderProgram& fp)
 		if(memcmp(&m_buf[i].fp_data[0], &Memory[fp.addr], m_buf[i].fp_data.GetCount()) != 0) continue;
 
 		fp.id = m_buf[i].fp_id;
-		fp.shader = m_buf[i].fp_shader;
+		fp.shader = m_buf[i].fp_shader.GetPtr();
 
 		return i;
 	}
@@ -21,10 +21,10 @@ int ProgramBuffer::SearchVp(VertexProgram& vp)
 	for(u32 i=0; i<m_buf.GetCount(); ++i)
 	{
 		if(m_buf[i].vp_data.GetCount() != vp.data.GetCount()) continue;
-		if(memcmp(&m_buf[i].vp_data[0], &vp.data[0], vp.data.GetCount() * 4) != 0) continue;
+		if(memcmp(m_buf[i].vp_data.GetPtr(), vp.data.GetPtr(), vp.data.GetCount() * 4) != 0) continue;
 
 		vp.id = m_buf[i].vp_id;
-		vp.shader = m_buf[i].vp_shader;
+		vp.shader = m_buf[i].vp_shader.GetPtr();
 
 		return i;
 	}
@@ -35,18 +35,30 @@ int ProgramBuffer::SearchVp(VertexProgram& vp)
 bool ProgramBuffer::CmpVP(const u32 a, const u32 b) const
 {
 	if(m_buf[a].vp_data.GetCount() != m_buf[b].vp_data.GetCount()) return false;
-	return memcmp(&m_buf[a].vp_data[0], &m_buf[b].vp_data[0], m_buf[a].vp_data.GetCount() * 4) == 0;
+	return memcmp(m_buf[a].vp_data.GetPtr(), m_buf[b].vp_data.GetPtr(), m_buf[a].vp_data.GetCount() * 4) == 0;
 }
 
 bool ProgramBuffer::CmpFP(const u32 a, const u32 b) const
 {
 	if(m_buf[a].fp_data.GetCount() != m_buf[b].fp_data.GetCount()) return false;
-	return memcmp(&m_buf[a].fp_data[0], &m_buf[b].fp_data[0], m_buf[a].fp_data.GetCount()) == 0;
+	return memcmp(m_buf[a].fp_data.GetPtr(), m_buf[b].fp_data.GetPtr(), m_buf[a].fp_data.GetCount()) == 0;
 }
 
 u32 ProgramBuffer::GetProg(u32 fp, u32 vp) const
 {
-	if(fp == vp) return m_buf[fp].prog_id;
+	if(fp == vp)
+	{
+		/*
+		ConLog.Write("Get program (%d):", fp);
+		ConLog.Write("*** prog id = %d", m_buf[fp].prog_id);
+		ConLog.Write("*** vp id = %d", m_buf[fp].vp_id);
+		ConLog.Write("*** fp id = %d", m_buf[fp].fp_id);
+
+		ConLog.Write("*** vp shader = \n%s", m_buf[fp].vp_shader);
+		ConLog.Write("*** fp shader = \n%s", m_buf[fp].fp_shader);
+		*/
+		return m_buf[fp].prog_id;
+	}
 
 	for(u32 i=0; i<m_buf.GetCount(); ++i)
 	{
@@ -54,13 +66,15 @@ u32 ProgramBuffer::GetProg(u32 fp, u32 vp) const
 
 		if(CmpVP(vp, i) && CmpFP(fp, i))
 		{
+			/*
 			ConLog.Write("Get program (%d):", i);
 			ConLog.Write("*** prog id = %d", m_buf[i].prog_id);
 			ConLog.Write("*** vp id = %d", m_buf[i].vp_id);
 			ConLog.Write("*** fp id = %d", m_buf[i].fp_id);
 
-			ConLog.Write("*** vp shader = %s\n", m_buf[i].vp_shader);
-			ConLog.Write("*** fp shader = %s\n", m_buf[i].fp_shader);
+			ConLog.Write("*** vp shader = \n%s", m_buf[i].vp_shader);
+			ConLog.Write("*** fp shader = \n%s", m_buf[i].fp_shader);
+			*/
 			return m_buf[i].prog_id;
 		}
 	}
@@ -79,8 +93,8 @@ void ProgramBuffer::Add(Program& prog, ShaderProgram& fp, VertexProgram& vp)
 	ConLog.Write("*** vp data size = %d", vp.data.GetCount() * 4);
 	ConLog.Write("*** fp data size = %d", fp.size);
 
-	ConLog.Write("*** vp shader = %s\n", vp.shader);
-	ConLog.Write("*** fp shader = %s\n", fp.shader);
+	ConLog.Write("*** vp shader = \n%s", vp.shader);
+	ConLog.Write("*** fp shader = \n%s", fp.shader);
 
 	new_buf.prog_id = prog.id;
 	new_buf.vp_id = vp.id;

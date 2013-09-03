@@ -63,16 +63,16 @@ public:
 		*/
 	}
 
-	template<typename T> static __forceinline T Reverse(T val);
-	template<> static __forceinline u8 Reverse(u8 val) { return val; };
-	template<> static __forceinline u16 Reverse(u16 val) { return Reverse16(val); };
-	template<> static __forceinline u32 Reverse(u32 val) { return Reverse32(val); };
-	template<> static __forceinline u64 Reverse(u64 val) { return Reverse64(val); };
+	template<int size> static __forceinline u64 ReverseData(u64 val);
+	template<> static __forceinline u64 ReverseData<1>(u64 val) { return val; }
+	template<> static __forceinline u64 ReverseData<2>(u64 val) { return Reverse16(val); }
+	template<> static __forceinline u64 ReverseData<4>(u64 val) { return Reverse32(val); }
+	template<> static __forceinline u64 ReverseData<8>(u64 val) { return Reverse64(val); }
 
-	template<> static __forceinline s8 Reverse(s8 val) { return val; };
-	template<> static __forceinline s16 Reverse(s16 val) { return Reverse16(val); };
-	template<> static __forceinline s32 Reverse(s32 val) { return Reverse32(val); };
-	template<> static __forceinline s64 Reverse(s64 val) { return Reverse64(val); };
+	template<typename T> static __forceinline T Reverse(T val)
+	{
+		return (T)ReverseData<sizeof(T)>(val);
+	};
 
 	MemoryBlock& GetMemByNum(const u8 num)
 	{
@@ -326,6 +326,32 @@ public:
 	bool Free(const u64 addr)
 	{
 		return PRXMem.Free(addr);
+	}
+
+	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
+	{
+		if(IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
+		{
+			return false;
+		}
+
+		MemoryBlocks.Add((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
+		ConLog.Warning("memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
+		return true;
+	}
+
+	bool Unmap(const u64 addr)
+	{
+		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		{
+			if(MemoryBlocks[i].IsMirror())
+			{
+				if(MemoryBlocks[i].GetStartAddr() == addr)
+				{
+					MemoryBlocks.RemoveFAt(i);
+				}
+			}
+		}
 	}
 
 	u8* operator + (const u64 vaddr)

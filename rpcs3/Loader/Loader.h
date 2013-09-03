@@ -144,11 +144,15 @@ class LoaderBase
 {
 protected:
 	u32 entry;
+	u32 min_addr;
+	u32 max_addr;
 	Elf_Machine machine;
 
 	LoaderBase()
 		: machine(MACHINE_Unknown)
 		, entry(0)
+		, min_addr(0)
+		, max_addr(0)
 	{
 	}
 
@@ -157,6 +161,8 @@ public:
 	virtual bool LoadData(u64 offset = 0) { return false; }
 	Elf_Machine GetMachine() { return machine; }
 	u32 GetEntry() { return entry; }
+	u32 GetMinAddr() { return min_addr; }
+	u32 GetMaxAddr() { return min_addr; }
 };
 
 class Loader : public LoaderBase

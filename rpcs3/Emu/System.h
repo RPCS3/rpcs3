@@ -8,6 +8,7 @@
 #include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
 #include "SysCalls/Callback.h"
+#include "SysCalls/Modules.h"
 
 struct EmuInfo
 {
@@ -45,6 +46,14 @@ public:
 	u64 GetTLSMemsz() const { return tls_memsz; }
 };
 
+class ModuleInitializer
+{
+public:
+	ModuleInitializer();
+
+	virtual void Init() = 0;
+};
+
 class Emulator
 {
 	enum Mode
@@ -62,6 +71,7 @@ class Emulator
 	u32 m_ppu_thr_exit;
 	MemoryViewerPanel* m_memory_viewer;
 	//ArrayF<CPUThread> m_cpu_threads;
+	ArrayF<ModuleInitializer> m_modules_init;
 
 	Array<u64> m_break_points;
 	Array<u64> m_marked_points;
@@ -93,6 +103,11 @@ public:
 	VFS&				GetVFS()				{ return m_vfs; }
 	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
 	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
+	
+	void AddModuleInit(ModuleInitializer* m)
+	{
+		m_modules_init.Add(m);
+	}
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{

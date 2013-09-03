@@ -231,8 +231,8 @@ class SPU_Opcodes
 public:
 	static u32 branchTarget(const u64 pc, const s32 imm)
 	{
-		return (pc + ((imm << 2) & ~0x3)) & 0x3fff0;
-    }
+		return (pc + (imm << 2)) & 0x3fffc;
+	}
 	
 	virtual void Exit()=0;
 

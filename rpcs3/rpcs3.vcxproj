@@ -196,10 +196,12 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="AppConnector.cpp" />
+    <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
     <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
+    <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
@@ -218,11 +220,13 @@
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\GS\GSRender.cpp" />
     <ClCompile Include="Emu\GS\RSXThread.cpp" />
+    <ClCompile Include="Emu\HDD\HDD.cpp" />
     <ClCompile Include="Emu\Io\Pad.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
@@ -239,7 +243,11 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
@@ -253,6 +261,9 @@
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
+    <ClCompile Include="Gui\TextInputDialog.cpp" />
+    <ClCompile Include="Gui\VFSManager.cpp" />
+    <ClCompile Include="Gui\VHDDManager.cpp" />
     <ClCompile Include="Ini.cpp" />
     <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\ELF32.cpp" />

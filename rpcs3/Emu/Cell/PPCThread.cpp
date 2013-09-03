@@ -10,13 +10,15 @@ PPCThread* GetCurrentPPCThread()
 PPCThread::PPCThread(PPCThreadType type)
 	: ThreadBase(true, "PPCThread")
 	, m_type(type)
-	, DisAsmFrame(NULL)
-	, m_arg(0)
-	, m_dec(NULL)
+	, DisAsmFrame(nullptr)
+	, m_dec(nullptr)
 	, stack_size(0)
 	, stack_addr(0)
 	, m_prio(0)
 	, m_offset(0)
+	, m_sync_wait(false)
+	, m_wait_thread_id(-1)
+	, m_free_data(false)
 {
 }
 
@@ -27,17 +29,27 @@ PPCThread::~PPCThread()
 
 void PPCThread::Close()
 {
-	Stop();
+	if(IsAlive())
+	{
+		m_free_data = true;
+	}
+
 	if(DisAsmFrame)
 	{
 		DisAsmFrame->Close();
 		DisAsmFrame = nullptr;
 	}
+
+	Stop();
 }
 
 void PPCThread::Reset()
 {
 	CloseStack();
+
+	m_sync_wait = 0;
+	m_wait_thread_id = -1;
+	memset(m_args, 0, sizeof(u64) * 4);
 
 	SetPc(0);
 	cycle = 0;
@@ -83,13 +95,51 @@ void PPCThread::CloseStack()
 void PPCThread::SetId(const u32 id)
 {
 	m_id = id;
-	ID& thread = Emu.GetIdManager().GetIDData(m_id);
-	thread.m_name = GetName();
 }
 
 void PPCThread::SetName(const wxString& name)
 {
 	m_name = name;
+}
+
+void PPCThread::Wait(bool wait)
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+	m_sync_wait = wait;
+}
+
+void PPCThread::Wait(const PPCThread& thr)
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+	m_wait_thread_id = thr.GetId();
+	m_sync_wait = true;
+}
+
+bool PPCThread::Sync()
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+
+	return m_sync_wait;
+}
+
+int PPCThread::ThreadStatus()
+{
+	if(Emu.IsStopped())
+	{
+		return PPCThread_Stopped;
+	}
+
+	if(TestDestroy())
+	{
+		return PPCThread_Break;
+	}
+
+	if(Emu.IsPaused() || Sync())
+	{
+		return PPCThread_Sleeping;
+	}
+
+	return PPCThread_Running;
 }
 
 void PPCThread::NextBranchPc()
@@ -127,9 +177,9 @@ void PPCThread::SetEntry(const u64 pc)
 
 void PPCThread::SetBranch(const u64 pc)
 {
-	if(!Memory.IsGoodAddr(pc))
+	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), pc, PC);
+		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), m_offset+ pc, m_offset + PC);
 		Emu.Pause();
 	}
 	nPC = pc;
@@ -151,7 +201,7 @@ void PPCThread::SetError(const u32 error)
 wxArrayString PPCThread::ErrorToString(const u32 error)
 {
 	wxArrayString earr;
-	earr.Clear();
+
 	if(error == 0) return earr;
 
 	earr.Add("Unknown error");
@@ -217,11 +267,10 @@ void PPCThread::Stop()
 	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
 
 	m_status = Stopped;
+	ThreadBase::Stop(false);
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
-
-	ThreadBase::Stop();
 
 	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
 }
@@ -230,6 +279,7 @@ void PPCThread::Exec()
 {
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 	ThreadBase::Start();
+	//std::thread thr(std::bind(std::mem_fn(&PPCThread::Task), this));
 }
 
 void PPCThread::ExecOnce()
@@ -240,7 +290,7 @@ void PPCThread::ExecOnce()
 
 void PPCThread::Task()
 {
-	ConLog.Write("%s enter", PPCThread::GetFName());
+	//ConLog.Write("%s enter", PPCThread::GetFName());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -255,9 +305,16 @@ void PPCThread::Task()
 			}
 		}
 
-		while(!Emu.IsStopped() && !TestDestroy())
+		while(true)
 		{
-			if(Emu.IsPaused())
+			int status = ThreadStatus();
+
+			if(status == PPCThread_Stopped || status == PPCThread_Break)
+			{
+				break;
+			}
+
+			if(status == PPCThread_Sleeping)
 			{
 				Sleep(1);
 				continue;
@@ -285,5 +342,8 @@ void PPCThread::Task()
 		ConLog.Error("Exception: %s", e);
 	}
 
-	ConLog.Write("%s leave", PPCThread::GetFName());
+	//ConLog.Write("%s leave", PPCThread::GetFName());
+
+	if(m_free_data)
+		free(this);
 }

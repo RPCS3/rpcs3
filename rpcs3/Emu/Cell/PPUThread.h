@@ -18,6 +18,18 @@ enum
 	CR_SO = 0x1,
 };
 
+enum
+{
+	PPU_THREAD_STATUS_IDLE		= (1 << 0),
+	PPU_THREAD_STATUS_RUNNABLE	= (1 << 1),
+	PPU_THREAD_STATUS_ONPROC	= (1 << 2),
+	PPU_THREAD_STATUS_SLEEP		= (1 << 3),
+	PPU_THREAD_STATUS_STOP		= (1 << 4),
+	PPU_THREAD_STATUS_ZOMBIE	= (1 << 5),
+	PPU_THREAD_STATUS_DELETED	= (1 << 6),
+	PPU_THREAD_STATUS_UNKNOWN	= (1 << 7),
+};
+
 enum FPSCR_EXP
 {
 	FPSCR_FX		= 0x80000000,
@@ -286,11 +298,11 @@ union VSCRhdr
 
 enum FPRType
 {
-	FPR_NORM,
-	FPR_ZERO,
-	FPR_SNAN,
+	//FPR_NORM,
+	//FPR_ZERO,
+	//FPR_SNAN,
 	//FPR_QNAN,
-	FPR_INF,
+	//FPR_INF,
 	FPR_PZ   = 0x2,
 	FPR_PN   = 0x4,
 	FPR_PINF = 0x5,
@@ -301,6 +313,9 @@ enum FPRType
 	FPR_PD   = 0x14,
 	FPR_ND   = 0x18,
 };
+
+static const u64 FPR_NAN_I = 0x7FF8000000000000ULL;
+static const double& FPR_NAN = (double&)FPR_NAN_I;
 
 struct PPCdouble
 {
@@ -342,7 +357,7 @@ struct PPCdouble
 
 		switch(fpc)
 		{
-		case _FPCLASS_SNAN:		return FPR_SNAN;
+		case _FPCLASS_SNAN://		return FPR_SNAN;
 		case _FPCLASS_QNAN:		return FPR_QNAN;
 		case _FPCLASS_NINF:		return FPR_NINF;
 		case _FPCLASS_NN:		return FPR_NN;
@@ -652,6 +667,30 @@ public:
 		SetCR_SO(n, XER.SO);
 	}
 
+	void UpdateCRnU(const u8 l, const u8 n, const u64 a, const u64 b)
+	{
+		if(l)
+		{
+			UpdateCRn<u64>(n, a, b);
+		}
+		else
+		{
+			UpdateCRn<u32>(n, a, b);
+		}
+	}
+
+	void UpdateCRnS(const u8 l, const u8 n, const u64 a, const u64 b)
+	{
+		if(l)
+		{
+			UpdateCRn<s64>(n, a, b);
+		}
+		else
+		{
+			UpdateCRn<s32>(n, a, b);
+		}
+	}
+
 	template<typename T> void UpdateCR0(const T val)
 	{
 		UpdateCRn<T>(0, val, 0);
@@ -683,7 +722,7 @@ public:
 	void SetFPSCR_FI(const u32 val)
 	{
 		if(val) SetFPSCRException(FPSCR_XX);
-        FPSCR.FI = val;
+		FPSCR.FI = val;
 	}
 
 	virtual wxString RegsToString()

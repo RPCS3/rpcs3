@@ -78,9 +78,10 @@ void GSFrame::SetSize(int width, int height)
 
 
 GSRender::GSRender()
-	: m_ctrl(NULL)
+	: m_ctrl(nullptr)
 	, m_flip_status(0)
 	, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
+	, m_main_mem_addr(0)
 {
 }
 
@@ -88,9 +89,12 @@ u32 GSRender::GetAddress(u32 offset, u8 location)
 {
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return offset;
+	case CELL_GCM_LOCATION_LOCAL: return m_local_mem_addr + offset;
+	case CELL_GCM_LOCATION_MAIN: return m_main_mem_addr + offset;
 	}
+
+	ConLog.Error("GetAddress(offset=0x%x, location=0x%x", location);
+	assert(0);
 	return 0;
 }
 

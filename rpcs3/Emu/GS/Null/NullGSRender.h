@@ -71,7 +71,7 @@ private:
 		m_ioAddress = ioAddress;
 		m_ctrlAddress = ctrlAddress;
 		m_ioSize = ioSize;
-		m_localAddress = localAddress;
+		m_local_mem_addr = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
 		(m_rsx_thread = new NullRSXThread(this))->Start();

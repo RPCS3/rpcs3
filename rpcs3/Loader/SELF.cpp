@@ -30,12 +30,15 @@ bool SELFLoader::LoadData(u64 offset)
 	if( !l.LoadEhdrInfo(self_hdr.se_elfoff) ||
 		!l.LoadPhdrInfo(self_hdr.se_phdroff) ||
 		!l.LoadShdrInfo(self_hdr.se_shdroff) ||
-		!l.LoadData(offset) )
+		!l.LoadData(self_hdr.se_appinfooff) )
 	{
 		ConLog.Error("Broken SELF file.");
 
 		return false;
 	}
+
+	machine = l.GetMachine();
+	entry = l.GetEntry();
 
 	return true;
 

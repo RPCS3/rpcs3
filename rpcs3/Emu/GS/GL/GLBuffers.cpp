@@ -36,6 +36,7 @@ void GLBufferObject::Delete()
 
 void GLBufferObject::Bind(u32 type, u32 num)
 {
+	assert(num < m_id.GetCount());
 	glBindBuffer(type, m_id[num]);
 }
 
@@ -105,15 +106,147 @@ void GLvao::Bind() const
 	glBindVertexArray(m_id);
 }
 
+void GLvao::Unbind()
+{
+	glBindVertexArray(0);
+}
+
 void GLvao::Delete()
 {
 	if(!IsCreated()) return;
 
+	Unbind();
 	glDeleteVertexArrays(1, &m_id);
 	m_id = 0;
 }
 
 bool GLvao::IsCreated() const
+{
+	return m_id != 0;
+}
+
+GLrbo::GLrbo()
+{
+}
+
+GLrbo::~GLrbo()
+{
+}
+
+void GLrbo::Create(u32 count)
+{
+	if(m_id.GetCount())
+	{
+		return;
+	}
+
+	m_id.SetCount(count);
+	glGenRenderbuffers(count, m_id.GetPtr());
+}
+
+void GLrbo::Bind(u32 num) const
+{
+	assert(num < m_id.GetCount());
+
+	glBindRenderbuffer(GL_RENDERBUFFER, m_id[num]);
+}
+
+void GLrbo::Storage(u32 format, u32 width, u32 height)
+{
+	glRenderbufferStorage(GL_RENDERBUFFER, format, width, height);
+}
+
+void GLrbo::Unbind()
+{
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+void GLrbo::Delete()
+{
+	glDeleteRenderbuffers(m_id.GetCount(), m_id.GetPtr());
+	m_id.Clear();
+}
+
+bool GLrbo::IsCreated() const
+{
+	return m_id.GetCount();
+}
+
+u32 GLrbo::GetId(u32 num) const
+{
+	assert(num < m_id.GetCount());
+	return m_id[num];
+}
+
+GLfbo::GLfbo() : m_id(0)
+{
+}
+
+GLfbo::~GLfbo()
+{
+}
+
+void GLfbo::Create()
+{
+	if(IsCreated())
+	{
+		return;
+	}
+
+	glGenFramebuffers(1, &m_id);
+}
+
+void GLfbo::Bind(u32 type, int id)
+{
+	if(id != -1)
+		assert(m_id);
+
+	m_type = type;
+	glBindFramebuffer(m_type, id == -1 ? m_id : id);
+}
+
+void GLfbo::Texture1D(u32 attachment, u32 texture, int level)
+{
+	glFramebufferTexture1D(m_type, attachment, GL_TEXTURE_1D, texture, level);
+}
+
+void GLfbo::Texture2D(u32 attachment, u32 texture, int level)
+{
+	glFramebufferTexture2D(m_type, attachment, GL_TEXTURE_2D, texture, level);
+}
+
+void GLfbo::Texture3D(u32 attachment, u32 texture, int zoffset, int level)
+{
+	glFramebufferTexture3D(m_type, attachment, GL_TEXTURE_3D, texture, level, zoffset);
+}
+
+void GLfbo::Renderbuffer(u32 attachment, u32 renderbuffer)
+{
+	glFramebufferRenderbuffer(m_type, attachment, GL_RENDERBUFFER, renderbuffer);
+}
+
+void GLfbo::Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter)
+{
+	glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+}
+
+void GLfbo::Unbind()
+{
+	Unbind(m_type);
+}
+
+void GLfbo::Unbind(u32 type)
+{
+	glBindFramebuffer(type, 0);
+}
+
+void GLfbo::Delete()
+{
+	glDeleteFramebuffers(1, &m_id);
+	m_id = 0;
+}
+
+bool GLfbo::IsCreated() const
 {
 	return m_id != 0;
 }

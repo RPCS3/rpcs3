@@ -5,161 +5,7 @@
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
-class func_caller
-{
-public:
-	virtual void operator()() = 0;
-};
-
-static func_caller *null_func = nullptr;
-
-//TODO
-struct ModuleFunc
-{
-	u32 id;
-	func_caller* func;
-
-	ModuleFunc(u32 id, func_caller* func)
-		: id(id)
-		, func(func)
-	{
-	}
-};
-
-class Module
-{
-	const char* m_name;
-	const u16 m_id;
-	bool m_is_loaded;
-
-public:
-	Array<ModuleFunc> m_funcs_list;
-
-	Module(const char* name, u16 id);
-
-	void Load();
-	void UnLoad();
-	bool Load(u32 id);
-	bool UnLoad(u32 id);
-
-	void SetLoaded(bool loaded = true)
-	{
-		m_is_loaded = loaded;
-	}
-
-	bool IsLoaded() const
-	{
-		return m_is_loaded;
-	}
-
-	u16 GetID() const
-	{
-		return m_id;
-	}
-
-	wxString GetName() const
-	{
-		return m_name;
-	}
-
-public:
-	void Log(const u32 id, wxString fmt, ...)
-	{
-#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
-		va_end(list);
-#endif
-	}
-
-	void Log(wxString fmt, ...)
-	{
-#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
-		va_end(list);
-#endif
-	}
-
-	void Warning(const u32 id, wxString fmt, ...)
-	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
-		va_end(list);
-//#endif
-	}
-
-	void Warning(wxString fmt, ...)
-	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list));
-		va_end(list);
-//#endif
-	}
-
-	void Error(const u32 id, wxString fmt, ...)
-	{
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id) + wxString::FormatV(fmt, list));
-		va_end(list);
-	}
-
-	void Error(wxString fmt, ...)
-	{
-		va_list list;
-		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list));
-		va_end(list);
-	}
-
-	bool CheckId(u32 id) const
-	{
-		return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetIDData(id).m_name.Cmp(GetName());
-	}
-
-	bool CheckId(u32 id, ID& _id) const
-	{
-		return Emu.GetIdManager().CheckID(id) && !(_id = Emu.GetIdManager().GetIDData(id)).m_name.Cmp(GetName());
-	}
-
-	template<typename T> bool CheckId(u32 id, T*& data)
-	{
-		ID id_data;
-
-		if(!CheckId(id, id_data)) return false;
-
-		data = (T*)id_data.m_data;
-
-		return true;
-	}
-
-	u32 GetNewId(void* data = nullptr, u8 flags = 0)
-	{
-		return Emu.GetIdManager().GetNewID(GetName(), data, flags);
-	}
-
-//protected:
-	__forceinline void AddFunc(u32 id, func_caller* func)
-	{
-		m_funcs_list.Move(new ModuleFunc(id, func));
-	}
-};
-
-static s64 null_function() { return 0; }
-
-bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 id);
-bool UnloadFunc(u32 id);
-void UnloadModules();
-Module* GetModuleByName(const wxString& name);
-Module* GetModuleById(u16 id);
+extern bool enable_log;
 
 class SysCallBase //Module
 {
@@ -178,22 +24,24 @@ public:
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
-#ifdef SYSCALLS_DEBUG
+		if(enable_log)
+		{
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
 		va_end(list);
-#endif
+		}
 	}
 
 	void Log(wxString fmt, ...)
 	{
-#ifdef SYSCALLS_DEBUG
+		if(enable_log)
+		{
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
 		va_end(list);
-#endif
+		}
 	}
 
 	void Warning(const u32 id, wxString fmt, ...)
@@ -259,39 +107,18 @@ public:
 	}
 };
 
-/*
-static bool CmpPath(const wxString& path1, const wxString& path2)
-{
-	return path1.Len() >= path2.Len() && path1(0, path2.Len()).CmpNoCase(path2) == 0;
-}
-
-static wxString GetWinPath(const wxString& path)
-{
-	if(!CmpPath(path, "/") && CmpPath(path(1, 1), ":")) return path;
-
-	wxString ppath = wxFileName(Emu.m_path).GetPath() + '/' + wxFileName(path).GetFullName();
-	if(wxFileExists(ppath)) return ppath;
-
-	if (CmpPath(path, "/dev_hdd0/") ||
-		CmpPath(path, "/dev_hdd1/") ||
-		CmpPath(path, "/dev_bdvd/") ||
-		CmpPath(path, "/dev_usb001/") ||
-		CmpPath(path, "/ps3_home/") ||
-		CmpPath(path, "/app_home/") ||
-		CmpPath(path, "/dev_flash/") ||
-		CmpPath(path, "/dev_flash2/") ||
-		CmpPath(path, "/dev_flash3/")
-		) return wxGetCwd() + path;
-
-	return wxFileName(Emu.m_path).GetPath() + (path[0] == '/' ? path : "/" + path);
-}
-*/
-
 //process
 extern int sys_process_getpid();
 extern int sys_process_exit(int errorcode);
 extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags );
+
+//sys_event
+extern int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_queue_key, int size);
+extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
+extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
+extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
 
 //sys_semaphore
 extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);
@@ -333,7 +160,9 @@ extern int sys_ppu_thread_get_stack_information(u32 info_addr);
 extern int sys_ppu_thread_stop(u32 thread_id);
 extern int sys_ppu_thread_restart(u32 thread_id);
 extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
-extern int sys_ppu_thread_get_id();
+extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
+extern int sys_ppu_thread_get_id(const u32 id_addr);
+extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 
 //memory
 extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
@@ -388,25 +217,7 @@ extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 
 //cellGcm
-extern int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress);
-extern int cellGcmMapMainMemory(u32 address, u32 size, u32 offset_addr);
 extern int cellGcmCallback(u32 context_addr, u32 count);
-extern int cellGcmGetConfiguration(u32 config_addr);
-extern int cellGcmAddressToOffset(u32 address, u32 offset_addr);
-extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern u32 cellGcmGetLabelAddress(u32 index);
-extern u32 cellGcmGetControlRegister();
-extern int cellGcmFlush(u32 ctx, u32 id);
-extern void cellGcmSetTile(u32 index, u32 location, u32 offset, u32 size, u32 pitch, u32 comp, u32 base, u32 bank);
-extern int cellGcmBindTile(u32 index);
-extern int cellGcmBindZcull(u32 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask);
-extern int cellGcmGetFlipStatus();
-extern int cellGcmResetFlipStatus();
-extern u32 cellGcmGetTiledPitchSize(u32 size);
-extern int cellGcmSetFlipMode(u32 mode);
-extern u32 cellGcmGetDefaultCommandWordSize();
-extern u32 cellGcmGetDefaultSegmentWordSize();
-extern int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize);
 
 //sys_tty
 extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
@@ -421,15 +232,24 @@ extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
 
 //sys_spu
+extern int sys_spu_image_open(u32 img_addr, u32 path_addr);
+extern int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_addr, u32 attr_addr, u32 arg_addr);
+extern int sys_spu_thread_set_argument(u32 id, u32 arg_addr);
+extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr);
 extern int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg, int prio, u32 stacksize, u64 flags, u64 threadname_addr);
 extern int sys_raw_spu_create(u32 id_addr, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
+extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
+extern int sys_spu_thread_read_ls(u32 id, u32 address, u32 value_addr, u32 type);
+extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 
 //sys_time
 extern int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
 extern s64 sys_time_get_system_time();
 extern u64 sys_time_get_timebase_frequency();
+
+#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
 
 #define SC_ARGS_1			CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
@@ -469,7 +289,7 @@ protected:
 	~SysCalls();
 
 public:
-	s64 DoSyscall(u32 code);
+	void DoSyscall(u32 code);
 	s64 DoFunc(const u32 id);
 };
 

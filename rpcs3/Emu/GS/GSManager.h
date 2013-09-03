@@ -38,14 +38,7 @@ struct gcmBuffer
 	u32 pitch;
 	u32 width;
 	u32 height;
-	bool update;
-
-	gcmBuffer() : update(false)
-	{
-	}
 };
-
-extern gcmBuffer gcmBuffers[2];
 
 class GSManager
 {

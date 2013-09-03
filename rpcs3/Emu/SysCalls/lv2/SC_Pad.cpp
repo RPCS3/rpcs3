@@ -87,6 +87,12 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		case CELL_PAD_BTN_OFFSET_DIGITAL1: if(!(d1 & buttons[i].m_outKeyCode)){d1 |= buttons[i].m_outKeyCode; len++;} break;
 		case CELL_PAD_BTN_OFFSET_DIGITAL2: if(!(d2 & buttons[i].m_outKeyCode)){d2 |= buttons[i].m_outKeyCode; len++;} break;
 		}
+
+		if(buttons[i].m_flush)
+		{
+			buttons[i].m_pressed = false;
+			buttons[i].m_flush = false;
+		}
 	}
 
 	data.len = re(len);
