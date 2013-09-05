@@ -126,19 +126,19 @@ void MainFrame::DoSettings(bool load)
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 {
-	bool stoped = false;
+	bool stopped = false;
 
 	if(Emu.IsRunning())
 	{
 		Emu.Pause();
-		stoped = true;
+		stopped = true;
 	}
 
 	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stoped) Emu.Resume();
+		if(stopped) Emu.Resume();
 		return;
 	}
 
@@ -171,12 +171,12 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 {
-	bool stoped = false;
+	bool stopped = false;
 
 	if(Emu.IsRunning())
 	{
 		Emu.Pause();
-		stoped = true;
+		stopped = true;
 	}
 
 	wxFileDialog ctrl(this, L"Select ELF", wxEmptyString, wxEmptyString, "*.*",
@@ -184,7 +184,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stoped) Emu.Resume();
+		if(stopped) Emu.Resume();
 		return;
 	}
 
@@ -200,12 +200,12 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 {
-	bool stoped = false;
+	bool stopped = false;
 
 	if(Emu.IsRunning())
 	{
 		Emu.Pause();
-		stoped = true;
+		stopped = true;
 	}
 
 	wxFileDialog ctrl(this, L"Select SELF", wxEmptyString, wxEmptyString, "*.*",
@@ -213,7 +213,7 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stoped) Emu.Resume();
+		if(stopped) Emu.Resume();
 		return;
 	}
 
@@ -394,7 +394,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 			break;
 
 			case DID_STOP_EMU:
-			case DID_STOPED_EMU:
+			case DID_STOPPED_EMU:
 				is_running = false;
 				is_stopped = true;
 				is_ready = false;

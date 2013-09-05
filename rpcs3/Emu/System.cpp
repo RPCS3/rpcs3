@@ -268,7 +268,7 @@ void Emulator::Stop()
 	Memory.Close();
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
-	wxGetApp().SendDbgCommand(DID_STOPED_EMU);
+	wxGetApp().SendDbgCommand(DID_STOPPED_EMU);
 }
 
 void Emulator::SavePoints(const wxString& path)
