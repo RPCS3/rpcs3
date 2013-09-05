@@ -233,7 +233,8 @@ void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 	IniEntry( FramerateNTSC );
 	IniEntry( FrameratePAL );
 
-	static const wxChar * const ntsc_pal_str[2] =  { L"ntsc", L"pal" };
+	// WARNING: array must be NULL terminated to compute it size
+	static const wxChar * const ntsc_pal_str[3] =  { L"ntsc", L"pal", NULL };
 	ini.EnumEntry( L"DefaultRegionMode", DefaultRegionMode, ntsc_pal_str, DefaultRegionMode );
 
 	IniEntry( FramesToDraw );

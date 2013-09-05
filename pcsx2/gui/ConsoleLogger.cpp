@@ -323,6 +323,7 @@ public:
 	}
 };
 
+// WARNING ConsoleLogSources & ConLogDefaults must have the same size
 static ConsoleLogSource* const ConLogSources[] =
 {
 	(ConsoleLogSource*)&SysConsole.eeConsole,
@@ -335,6 +336,7 @@ static ConsoleLogSource* const ConLogSources[] =
 	(ConsoleLogSource*)&pxConLog_Thread,
 };
 
+// WARNING ConsoleLogSources & ConLogDefaults must have the same size
 static const bool ConLogDefaults[] =
 {
 	true,
@@ -343,6 +345,8 @@ static const bool ConLogDefaults[] =
 	true,
 	false,
 	false,
+	false,
+	false
 };
 
 void ConLog_LoadSaveSettings( IniInterface& ini )

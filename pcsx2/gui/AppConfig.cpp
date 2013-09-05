@@ -518,6 +518,8 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 	{
 		L"User",
 		L"Custom",
+		// WARNING: array must be NULL terminated to compute it size
+		NULL
 	};
 
 	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, (InstallationMode == InstallMode_Registered) ? DocsFolder_User : DocsFolder_Custom);
@@ -822,6 +824,8 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 		L"Stretch",
 		L"4:3",
 		L"16:9",
+		// WARNING: array must be NULL terminated to compute it size
+		NULL
 	};
 
 	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, AspectRatio );
