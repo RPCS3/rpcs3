@@ -138,7 +138,7 @@ public:
 	wxArrayString ErrorToString() { return ErrorToString(m_error); }
 
 	bool IsOk()		const { return m_error == 0; }
-	bool IsRunned()		const { return m_status == Runned; }
+	bool IsRunning()		const { return m_status == Running; }
 	bool IsPaused()		const { return m_status == Paused; }
 	bool IsStopped()	const { return m_status == Stopped; }
 

@@ -232,13 +232,13 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			wxColour colour;
 
-			if((!CPU->IsRunned() || !Emu.IsRunned()) && PC == CPU->PC)
-			{
-				colour = wxColour("Green");
-			}
-			else
-			{
-				colour = wxColour("White");
+		if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
+		{
+			colour = wxColour("Green");
+		}
+		else
+		{
+			colour = wxColour("White");
 
 				for(u32 i=0; i<Emu.GetMarkedPoints().GetCount(); ++i)
 				{
@@ -301,7 +301,7 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 	{
 		switch(event.GetId())
 		{
-		case DID_STOPED_EMU:
+		case DID_STOPPED_EMU:
 			UpdateUnitList();
 		break;
 
@@ -521,7 +521,7 @@ void InterpreterDisAsmFrame::Task()
 		{
 			CPU->ExecOnce();
 		}
-		while(CPU->IsRunned() && Emu.IsRunned() && !TestDestroy() && !IsBreakPoint(CPU->PC) && dump_status == dump_enable);
+		while(CPU->IsRunning() && Emu.IsRunning() && !TestDestroy() && !IsBreakPoint(CPU->PC) && dump_status == dump_enable);
 	}
 	catch(const wxString& e)
 	{

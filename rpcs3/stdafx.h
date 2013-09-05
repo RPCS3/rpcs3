@@ -179,7 +179,7 @@ static void safe_realloc(T* ptr, uint new_size)
 
 enum Status
 {
-	Runned,
+	Running,
 	Paused,
 	Stopped,
 	Ready,

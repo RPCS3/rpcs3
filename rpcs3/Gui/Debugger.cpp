@@ -47,7 +47,7 @@ public:
 
 	void OnRun(wxCommandEvent& event)
 	{
-		if(Emu.IsRunned())
+		if(Emu.IsRunning())
 		{
 			Emu.Pause();
 		}

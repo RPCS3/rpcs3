@@ -22,9 +22,9 @@ static bool StringToBool(const wxString str)
 
 static wxString BoolToString(const bool b)
 {
-	if(b) return "enable";
+	if(b) return "true";
 
-	return "disable";
+	return "false";
 }
 
 static wxSize StringToSize(const wxString str)
