@@ -33,8 +33,7 @@
 /rpcs3/Debug
 /rpcs3/Release
 
-/wxWidgets/lib/vc_lib/mswd/wx/msw/rcdefs.h
-/wxWidgets/lib/vc_lib/mswd/wx/setup.h
+/wxWidgets/lib
 /bin/rpcs3.ini
 /bin/FragmentProgram.txt
 /bin/VertexProgram.txt
