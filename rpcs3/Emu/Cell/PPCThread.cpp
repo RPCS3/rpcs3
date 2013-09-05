@@ -211,7 +211,7 @@ wxArrayString PPCThread::ErrorToString(const u32 error)
 
 void PPCThread::Run()
 {
-	if(IsRunned()) Stop();
+	if(IsRunning()) Stop();
 	if(IsPaused())
 	{
 		Resume();
@@ -220,7 +220,7 @@ void PPCThread::Run()
 	
 	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
 
-	m_status = Runned;
+	m_status = Running;
 
 	SetPc(entry);
 	InitStack();
@@ -237,7 +237,7 @@ void PPCThread::Resume()
 
 	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
 
-	m_status = Runned;
+	m_status = Running;
 	DoResume();
 	Emu.CheckStatus();
 
@@ -248,7 +248,7 @@ void PPCThread::Resume()
 
 void PPCThread::Pause()
 {
-	if(!IsRunned()) return;
+	if(!IsRunning()) return;
 
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 

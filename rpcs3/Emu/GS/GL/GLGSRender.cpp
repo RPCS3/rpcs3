@@ -141,7 +141,7 @@ void GLRSXThread::Task()
 
 		const u32 get = re(p.m_ctrl->get);
 		const u32 put = re(p.m_ctrl->put);
-		if(put == get || !Emu.IsRunned())
+		if(put == get || !Emu.IsRunning())
 		{
 			if(put == get)
 				SemaphorePostAndWait(p.m_sem_flush);

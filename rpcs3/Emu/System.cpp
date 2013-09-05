@@ -162,7 +162,7 @@ void Emulator::Run()
 		if(!IsReady()) return;
 	}
 
-	if(IsRunned()) Stop();
+	if(IsRunning()) Stop();
 	if(IsPaused())
 	{
 		Resume();
@@ -173,7 +173,7 @@ void Emulator::Run()
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	//ConLog.Write("run...");
-	m_status = Runned;
+	m_status = Running;
 
 	m_vfs.Init(m_path);
 	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
@@ -214,7 +214,7 @@ void Emulator::Run()
 
 void Emulator::Pause()
 {
-	if(!IsRunned()) return;
+	if(!IsRunning()) return;
 	//ConLog.Write("pause...");
 	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
 
@@ -230,10 +230,10 @@ void Emulator::Resume()
 	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
 
 	wxCriticalSectionLocker lock(m_cs_status);
-	m_status = Runned;
+	m_status = Running;
 
 	CheckStatus();
-	if(IsRunned() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+	if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
 	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
 }
 
@@ -268,7 +268,7 @@ void Emulator::Stop()
 	Memory.Close();
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
-	wxGetApp().SendDbgCommand(DID_STOPED_EMU);
+	wxGetApp().SendDbgCommand(DID_STOPPED_EMU);
 }
 
 void Emulator::SavePoints(const wxString& path)
