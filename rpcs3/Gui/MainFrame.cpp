@@ -144,59 +144,29 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	const wxString& elf0  = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
-	const wxString& elf1  = ctrl.GetPath() + "\\USRDIR\\BOOT.BIN";
-	const wxString& elf2  = ctrl.GetPath() + "\\BOOT.BIN";
-	const wxString& self0 = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
-	const wxString& self1 = ctrl.GetPath() + "\\USRDIR\\EBOOT.BIN";
-	const wxString& self2 = ctrl.GetPath() + "\\EBOOT.BIN";
+	wxString elf[6] = {
+		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
+		"\\USRDIR\\BOOT.BIN",
+		"\\BOOT.BIN",
+		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
+		"\\USRDIR\\EBOOT.BIN",
+		"\\EBOOT.BIN"
+	};
 
-	if(wxFile::Access(elf0, wxFile::read))
+	for(int i=0;i<6;i++)
 	{
-		Emu.SetPath(elf0);
-		ConLog.Write("Elf: booting...");
+		if(wxFile::Access(ctrl.GetPath() + elf[i], wxFile::read))
+		{
+			Emu.SetPath(ctrl.GetPath() + elf[i]);
+			ConLog.Write("Elf: booting...");
+			Emu.Load();
+			ConLog.Write("Game: boot done.");
+			return;
+		}
 	}
-	else if(wxFile::Access(elf1, wxFile::read))
-	{
-		Emu.SetPath(elf1);
-		ConLog.Write("Elf: booting...");
-	}
-	else if(wxFile::Access(elf2, wxFile::read))
-	{
-		Emu.SetPath(elf2);
-		ConLog.Write("Elf: booting...");
-	}
-	else if(wxFile::Access(self0, wxFile::read))
-	{
-		goto _ELF_NOT_FOUND_;
-		Emu.SetPath(self0);
-		ConLog.Warning("Self: booting...");
-	}
-	else if(wxFile::Access(self1, wxFile::read))
-	{
-		goto _ELF_NOT_FOUND_;
-		Emu.SetPath(self1);
-		ConLog.Warning("Self: booting...");
-	}
-	else if(wxFile::Access(self2, wxFile::read))
-	{
-		goto _ELF_NOT_FOUND_;
-		Emu.SetPath(self2);
-		ConLog.Warning("Self: booting...");
-	}
-	else
-	{
-		ConLog.Error("Not found ps3 game in selected folder! (%s)", ctrl.GetPath());
-		return;
-	}
-
-	Emu.Load();
-
-	ConLog.Write("Game: boot done.");
+	
+	ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath());
 	return;
-
-_ELF_NOT_FOUND_:
-	ConLog.Error("Elf not found!");
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
