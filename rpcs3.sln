@@ -63,6 +63,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lodepng", "lodepng", "{4867
 		lodepng\lodepng.h = lodepng\lodepng.h
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "jpeg-compressor", "jpeg-compressor", "{9D9C8EDB-4469-42B3-A3C7-712CDABC43B0}"
+	ProjectSection(SolutionItems) = preProject
+		jpeg-compressor\jpgd.cpp = jpeg-compressor\jpgd.cpp
+		jpeg-compressor\jpgd.h = jpeg-compressor\jpgd.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

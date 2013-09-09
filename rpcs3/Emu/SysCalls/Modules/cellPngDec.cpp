@@ -2,7 +2,6 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-#include "lodepng/lodepng.h"
 #include "lodepng/lodepng.cpp"
 
 void cellPngDec_init();
@@ -37,7 +36,7 @@ struct CellPngDecInfo
 struct CellPngDecSrc
 {
     u32 srcSelect;			// CellPngDecStreamSrcSel
-    u32 fileName_addr;		// const char*
+    u32 fileName;			// const char*
     u64 fileOffset;			// int64_t
     u32 fileSize;
     u32 streamPtr;
@@ -64,7 +63,7 @@ int cellPngDecDestroy(u32 mainHandle)
 int cellPngDecOpen(u32 mainHandle, u32 subHandle_addr, u32 src_addr, u32 openInfo)
 {
 	//current_src.srcSelect       = Memory.Read32(src_addr);
-	current_src.fileName_addr   = Memory.Read32(src_addr+4);
+	current_src.fileName		  = Memory.Read32(src_addr+4);
 	//current_src.fileOffset      = Memory.Read32(src_addr+8);
 	//current_src.fileSize        = Memory.Read32(src_addr+12);
 	//current_src.streamPtr       = Memory.Read32(src_addr+16);
@@ -72,7 +71,7 @@ int cellPngDecOpen(u32 mainHandle, u32 subHandle_addr, u32 src_addr, u32 openInf
 	//current_src.spuThreadEnable = Memory.Read32(src_addr+24);
 
 	u32& fd_addr = subHandle_addr;						// Set file descriptor as sub handler of the decoder
-	int ret = cellFsOpen(current_src.fileName_addr, 0, fd_addr, NULL, 0);
+	int ret = cellFsOpen(current_src.fileName, 0, fd_addr, NULL, 0);
 	if(ret != 0) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 	return CELL_OK;
@@ -96,18 +95,21 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
 	if(fileSize < 29) return CELL_PNGDEC_ERROR_HEADER;	// Error: The file is smaller than the length of a PNG header
 	
-
 	//Write the header to buffer
 	u32 buffer = Memory.Alloc(34,1);					// Alloc buffer for PNG header
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
 	cellFsRead(fd, buffer, 34, NULL);
 
-	if (Memory.Read32(buffer) != 0x89504E47 || Memory.Read32(buffer+4) != 0x0D0A1A0A)
-		return CELL_PNGDEC_ERROR_HEADER; // Error: The first 8 bytes are not a valid PNG signature
-
-	if (Memory.Read32(buffer+12) != 0x49484452)
-		return CELL_PNGDEC_ERROR_HEADER; // Error: The PNG file does not start with an IHDR chunk
+	if (Memory.Read32(buffer) != 0x89504E47 ||
+		Memory.Read32(buffer+4) != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
+		Memory.Read32(buffer+12) != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
+	{
+		Memory.Free(sb_addr);
+		Memory.Free(pos_addr);
+		Memory.Free(buffer);
+		return CELL_PNGDEC_ERROR_HEADER; 
+	}
 
 	current_info.imageWidth       = Memory.Read32(buffer+16);
 	current_info.imageHeight      = Memory.Read32(buffer+20);
@@ -137,33 +139,18 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 {
 	u32& fd = subHandle;
 
-	//Check size of file
+	//Get size of file
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
 	cellFsFstat(fd, sb_addr);
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
-	if(fileSize < 29) return CELL_PNGDEC_ERROR_HEADER;	// Error: The file is smaller than the length of a PNG header 
 
-	//Write the header to buffer
-	u32 buffer = Memory.Alloc(34,1);					// Alloc buffer for PNG header
+	//Copy the PNG file to a buffer
+	u32 buffer = Memory.Alloc(fileSize,1);  			// Alloc buffer for PNG header
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
-	cellFsRead(fd, buffer, 34, NULL);
-	
-	if (Memory.Read32(buffer) != 0x89504E47 || Memory.Read32(buffer+4) != 0x0D0A1A0A)
-		return CELL_PNGDEC_ERROR_HEADER; // Error: The first 8 bytes are not a valid PNG signature
-
-	if (Memory.Read32(buffer+12) != 0x49484452)
-		return CELL_PNGDEC_ERROR_HEADER; // Error: The PNG file does not start with an IHDR chunk
-
-	current_info.imageWidth       = Memory.Read32(buffer+16);
-	current_info.imageHeight      = Memory.Read32(buffer+20);
-	Memory.Free(buffer);
-
-	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
-	buffer = Memory.Alloc(fileSize,1);
-	cellFsLseek(fd,0,0,pos_addr);
 	cellFsRead(fd, buffer, fileSize, NULL);
 
+	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	std::vector<unsigned char> png;    // PNG buffer
 	std::vector<unsigned char> image;  // Raw buffer
 	
@@ -174,8 +161,16 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	}
 
 	//Decode
-	lodepng::decode(image, current_info.imageWidth, current_info.imageHeight, png);
-	
+	unsigned width, height;
+	unsigned error = lodepng::decode(image, width, height, png);
+	if (error)
+	{
+		Memory.Free(sb_addr);
+		Memory.Free(pos_addr);
+		Memory.Free(buffer);
+		return CELL_PNGDEC_ERROR_STREAM_FORMAT; 
+	}
+
 	u32 image_size = image.size();
 	for(u32 i = 0; i < image_size; i+=4){
 		Memory.Write8(data_addr+i+0, image[i+3]);
@@ -196,7 +191,6 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, u32 inParam, u32 outPa
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
 }
-
 
 void cellPngDec_init()
 {

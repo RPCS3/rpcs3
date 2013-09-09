@@ -29,7 +29,7 @@ static const g_module_list[] =
 	{0x000c, "cellSheap"},
 	{0x000d, "sys_sync"},
 	{0x000e, "sys_fs"},
-	{0x000f, "sys_jpgdec"},
+	{0x000f, "cellJpgDec"},
 	{0x0010, "cellGcmSys"},
 	{0x0011, "cellAudio"},
 	{0x0012, "cellPamf"},
