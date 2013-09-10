@@ -2,7 +2,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-#include "jpeg-compressor/jpgd.cpp"
+#include "stblib/stb_image.h"
 
 void cellJpgDec_init();
 Module cellJpgDec(0x000f, cellJpgDec_init);
@@ -50,7 +50,7 @@ int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 	return CELL_OK;
 }
 
-int cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
+int cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
@@ -95,18 +95,18 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
 	cellFsFstat(fd, sb_addr);
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
+	Memory.Free(sb_addr);
 
 	//Copy the JPG file to a buffer
 	u32 buffer = Memory.Alloc(fileSize,1);
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
 	cellFsRead(fd, buffer, fileSize, NULL);
+	Memory.Free(pos_addr);
 
 	if (Memory.Read32(buffer) != 0xFFD8FFE0 ||			// Error: Not a valid SOI header
 		Memory.Read32(buffer+6) != 0x4A464946)			// Error: Not a valid JFIF string
 	{
-		Memory.Free(sb_addr);
-		Memory.Free(pos_addr);
 		Memory.Free(buffer);
 		return CELL_JPGDEC_ERROR_HEADER; 
 	}
@@ -116,9 +116,17 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	while(i < fileSize)
 	{
             i += block_length;															// Increase the file index to get to the next block
-            if (i >= fileSize)						return CELL_JPGDEC_ERROR_HEADER;    // Check to protect against segmentation faults
-            if(Memory.Read8(buffer+i) != 0xFF) 		return CELL_JPGDEC_ERROR_HEADER;    // Check that we are truly at the start of another block
-            if(Memory.Read8(buffer+i+1) == 0xC0)	break;								// 0xFFC0 is the "Start of frame" marker which contains the file size
+            if (i >= fileSize){
+				Memory.Free(buffer);
+				return CELL_JPGDEC_ERROR_HEADER;										// Check to protect against segmentation faults
+			}
+            if(Memory.Read8(buffer+i) != 0xFF){
+				Memory.Free(buffer);
+				return CELL_JPGDEC_ERROR_HEADER;										// Check that we are truly at the start of another block
+			}																			
+            if(Memory.Read8(buffer+i+1) == 0xC0){
+				break;																	// 0xFFC0 is the "Start of frame" marker which contains the file size
+			}
             i += 2;                                                                     // Skip the block marker
             block_length = Memory.Read8(buffer+i)*0xFF + Memory.Read8(buffer+i+1);      // Go to the next block
     } 
@@ -133,9 +141,6 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	info += current_info.imageHeight;
 	info += current_info.numComponents;
 	info += current_info.colorSpace;
-
-	Memory.Free(sb_addr);
-	Memory.Free(pos_addr);
 	Memory.Free(buffer);
 	
 	return CELL_OK;
@@ -149,20 +154,28 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
 	cellFsFstat(fd, sb_addr);
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
+	Memory.Free(sb_addr);
 
 	//Copy the JPG file to a buffer
 	u32 buffer = Memory.Alloc(fileSize,1);
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
 	cellFsRead(fd, buffer, fileSize, NULL);
+	Memory.Free(pos_addr);
 
+	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
 	unsigned char *jpg =  new unsigned char [fileSize];
 	for(u32 i = 0; i < fileSize; i++){
 		jpg[i] = Memory.Read8(buffer+i);
 	}
 
-	unsigned char *image = jpgd::decompress_jpeg_image_from_memory((const unsigned char*)jpg, fileSize, &width, &height, &actual_components, 4);
+	unsigned char *image = stbi_load_from_memory((const unsigned char*)jpg, fileSize, &width, &height, &actual_components, 4);
+	if (!image)
+	{
+		Memory.Free(buffer);
+		return CELL_JPGDEC_ERROR_STREAM_FORMAT; 
+	}
 	u32 image_size = width * height * 4;
 	for(u32 i = 0; i < image_size; i+=4){
 		Memory.Write8(data_addr+i+0, image[i+3]);
@@ -170,9 +183,6 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 		Memory.Write8(data_addr+i+2, image[i+1]);
 		Memory.Write8(data_addr+i+3, image[i+2]);
 	}
-
-	Memory.Free(sb_addr);
-	Memory.Free(pos_addr);
 	Memory.Free(buffer);
 
 	return CELL_OK;

@@ -57,16 +57,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xml", "wxWidgets\build\msw\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xrc", "wxWidgets\build\msw\wx_xrc.vcxproj", "{8BECCA95-C7D7-CFF8-FDB1-4950E9F8E8E6}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lodepng", "lodepng", "{48675C2D-D949-400D-8758-E22FB6DF3D58}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stblib", "stblib", "{9D839DFB-76E6-4F10-8EED-BA2AC7CC3FB6}"
 	ProjectSection(SolutionItems) = preProject
-		lodepng\lodepng.cpp = lodepng\lodepng.cpp
-		lodepng\lodepng.h = lodepng\lodepng.h
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "jpeg-compressor", "jpeg-compressor", "{9D9C8EDB-4469-42B3-A3C7-712CDABC43B0}"
-	ProjectSection(SolutionItems) = preProject
-		jpeg-compressor\jpgd.cpp = jpeg-compressor\jpgd.cpp
-		jpeg-compressor\jpgd.h = jpeg-compressor\jpgd.h
+		stblib\stb_image.c = stblib\stb_image.c
+		stblib\stb_image.h = stblib\stb_image.h
 	EndProjectSection
 EndProject
 Global

@@ -2,7 +2,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-#include "lodepng/lodepng.cpp"
+#include "stblib/stb_image.h"
 
 void cellPngDec_init();
 Module cellPngDec(0x0018, cellPngDec_init);
@@ -93,6 +93,7 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
 	cellFsFstat(fd, sb_addr);
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
+	Memory.Free(sb_addr);
 	if(fileSize < 29) return CELL_PNGDEC_ERROR_HEADER;	// Error: The file is smaller than the length of a PNG header
 	
 	//Write the header to buffer
@@ -100,13 +101,12 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
 	cellFsRead(fd, buffer, 34, NULL);
+	Memory.Free(pos_addr);
 
 	if (Memory.Read32(buffer) != 0x89504E47 ||
 		Memory.Read32(buffer+4) != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
 		Memory.Read32(buffer+12) != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
 	{
-		Memory.Free(sb_addr);
-		Memory.Free(pos_addr);
 		Memory.Free(buffer);
 		return CELL_PNGDEC_ERROR_HEADER; 
 	}
@@ -127,9 +127,6 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	info += current_info.bitDepth;
 	info += current_info.interlaceMethod;
 	info += current_info.chunkInformation;
-
-	Memory.Free(sb_addr);
-	Memory.Free(pos_addr);
 	Memory.Free(buffer);
 	
 	return CELL_OK;
@@ -143,44 +140,35 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
 	cellFsFstat(fd, sb_addr);
 	u64 fileSize = Memory.Read64(sb_addr+36);			// Get CellFsStat.st_size
+	Memory.Free(sb_addr);
 
 	//Copy the PNG file to a buffer
-	u32 buffer = Memory.Alloc(fileSize,1);  			// Alloc buffer for PNG header
+	u32 buffer = Memory.Alloc(fileSize,1);
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
 	cellFsRead(fd, buffer, fileSize, NULL);
+	Memory.Free(pos_addr);
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
-	std::vector<unsigned char> png;    // PNG buffer
-	std::vector<unsigned char> image;  // Raw buffer
-	
-	//Load contents in png buffer
-	png.resize(size_t(fileSize));
+	int width, height, actual_components;
+	unsigned char *png =  new unsigned char [fileSize];
 	for(u32 i = 0; i < fileSize; i++){
 		png[i] = Memory.Read8(buffer+i);
 	}
-
-	//Decode
-	unsigned width, height;
-	unsigned error = lodepng::decode(image, width, height, png);
-	if (error)
+	
+	unsigned char *image = stbi_load_from_memory((const unsigned char*)png, fileSize, &width, &height, &actual_components, 4);
+	if (!image)
 	{
-		Memory.Free(sb_addr);
-		Memory.Free(pos_addr);
 		Memory.Free(buffer);
 		return CELL_PNGDEC_ERROR_STREAM_FORMAT; 
 	}
-
-	u32 image_size = image.size();
+	u32 image_size = width * height * 4;
 	for(u32 i = 0; i < image_size; i+=4){
 		Memory.Write8(data_addr+i+0, image[i+3]);
 		Memory.Write8(data_addr+i+1, image[i+0]);
 		Memory.Write8(data_addr+i+2, image[i+1]);
 		Memory.Write8(data_addr+i+3, image[i+2]);
 	}
-
-	Memory.Free(sb_addr);
-	Memory.Free(pos_addr);
 	Memory.Free(buffer);
 
 	return CELL_OK;
