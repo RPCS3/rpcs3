@@ -46,6 +46,20 @@ namespace HostMemoryMap
 	static const uptr sVU0rec	= _256mb - (_8mb*3);
 	static const uptr sVU1rec	= _256mb - (_8mb*2);
 
+#ifdef ASAN_WORKAROUND
+	// address sanitizer uses a shadow memory to monitor the state of the memory. Shadow is computed
+	// as S = (M >> 3) + 0x20000000. So PCSX2 can't use 0x20000000 to 0x3FFFFFFF... Just add another
+	// 0x20000000 offset to avoid conflict.
+	static const uptr EEmem		= 0x40000000;
+	static const uptr IOPmem	= 0x44000000;
+	static const uptr VUmem		= 0x48000000;
+	static const uptr EErec		= 0x50000000;
+	static const uptr IOPrec	= 0x54000000;
+	static const uptr VIF0rec	= 0x56000000;
+	static const uptr VIF1rec	= 0x58000000;
+	static const uptr mVU0rec	= 0x5C000000;
+	static const uptr mVU1rec	= 0x60000000;
+#else
 	// PS2 main memory, SPR, and ROMs
 	static const uptr EEmem		= 0x20000000;
 
@@ -72,6 +86,7 @@ namespace HostMemoryMap
 
 	// microVU0 recompiler code cache area (64mb)
 	static const uptr mVU1rec	= 0x40000000;
+#endif
 	
 }
 

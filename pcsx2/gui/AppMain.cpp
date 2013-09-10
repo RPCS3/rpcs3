@@ -356,6 +356,11 @@ public:
 #ifdef __LINUX__
 	wxString GetUserLocalDataDir() const
 	{
+		// I got memory corruption inside wxGetEnv when I heavily toggle the GS renderer (F9). It seems wxGetEnv
+		// isn't thread safe? To avoid any issue on this read only variable, I cache the result.
+		static wxString cache_dir;
+		if (!cache_dir.IsEmpty()) return cache_dir;
+
 		// Note: GetUserLocalDataDir() on linux return $HOME/.pcsx2 unfortunately it does not follow the XDG standard
 		// So we re-implement it, to follow the standard.
 		wxDirName user_local_dir;
@@ -371,7 +376,10 @@ public:
 			// variable do not exist
 			user_local_dir = (wxDirName)Path::Combine( GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
 		}
-		return user_local_dir.ToString();
+
+		cache_dir = user_local_dir.ToString();
+
+		return cache_dir;
 	}
 #endif
 };

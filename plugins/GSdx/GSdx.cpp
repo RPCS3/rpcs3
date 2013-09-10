@@ -172,12 +172,15 @@ GSdxApp::GSdxApp()
 #ifdef _LINUX
 void GSdxApp::ReloadConfig()
 {
+	if (m_configuration_map.empty()) return;
+
 	auto file = m_configuration_map.find("inifile");
 	if (file == m_configuration_map.end()) return;
 
 	// A map was built so reload it
+	std::string filename = file->second;
 	m_configuration_map.clear();
-	BuildConfigurationMap(file->second.c_str());
+	BuildConfigurationMap(filename.c_str());
 }
 
 void GSdxApp::BuildConfigurationMap(const char* lpFileName)
