@@ -98,22 +98,21 @@ int targetIPS=750;
 //#define NEWSTRETCHER_USE_DYNAMIC_TUNING
 
 
-//running average can be implemented in O(1) time. 
+//running average can be implemented in O(1) time.
 //For the sake of simplicity, this average is calculated in O(<buffer-size>). Possibly improve later.
 //
-//Additional performance note: if MAX_STRETCH_AVERAGE_LEN = 128 (or any power of 2), the '%' below 
-//could be replaced with a faster '&'. However analysis of NEWSTRETCHER_USE_DYNAMIC_TUNING impact must be done
-#define MAX_STRETCH_AVERAGE_LEN 100
+// Use a power of 2 numbers so the compiler can optimize 'modulo' as 'and'
+#define MAX_STRETCH_AVERAGE_LEN 128
 int STRETCH_AVERAGE_LEN=50.0 *targetIPS/750;
 //adds a value to the running average buffer, and return new running average.
 float addToAvg(float val){
 	static float avg_fullness[MAX_STRETCH_AVERAGE_LEN]={0};
-	static int nextAvgPos=0;
+	static uint nextAvgPos=0;
 
 	avg_fullness[nextAvgPos]=val;
-	nextAvgPos=(nextAvgPos+1)%STRETCH_AVERAGE_LEN;
+	nextAvgPos=(nextAvgPos+1)%MAX_STRETCH_AVERAGE_LEN;
 	float sum=0;
-	for(int c=0, i=(nextAvgPos+STRETCH_AVERAGE_LEN-1)%STRETCH_AVERAGE_LEN; c<STRETCH_AVERAGE_LEN; c++, i=(i+STRETCH_AVERAGE_LEN-1)%STRETCH_AVERAGE_LEN)
+	for(int c=0, i=(nextAvgPos+MAX_STRETCH_AVERAGE_LEN-1)%MAX_STRETCH_AVERAGE_LEN; c<STRETCH_AVERAGE_LEN; c++, i=(i+MAX_STRETCH_AVERAGE_LEN-1)%MAX_STRETCH_AVERAGE_LEN)
 		sum+=avg_fullness[i];
 
 	sum= (float)sum/(float)STRETCH_AVERAGE_LEN;
