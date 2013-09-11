@@ -3,6 +3,7 @@
 #include "Gui/MemoryViewer.h"
 #include "Emu/Cell/PPCThreadManager.h"
 #include "Emu/Io/Pad.h"
+#include "Emu/Io/Keyboard.h"
 #include "Emu/GS/GSManager.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/DbgConsole.h"
@@ -78,6 +79,7 @@ class Emulator
 
 	PPCThreadManager m_thread_manager;
 	PadManager m_pad_manager;
+	KeyboardManager m_keyboard_manager;
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
@@ -96,6 +98,7 @@ public:
 
 	PPCThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }
+	KeyboardManager&	GetKeyboardManager()	{ return m_keyboard_manager; }
 	IdManager&			GetIdManager()			{ return m_id_manager; }
 	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
 	GSManager&			GetGSManager()			{ return m_gs_manager; }

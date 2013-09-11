@@ -261,6 +261,7 @@ void Emulator::Stop()
 	//SysCallsManager.Close();
 	GetIdManager().Clear();
 	GetPadManager().Close();
+	GetKeyboardManager().Close();
 	GetCallbackManager().Clear();
 	UnloadModules();
 

@@ -98,6 +98,7 @@ public:
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<u8> PadHandlerMode;
+	IniEntry<u8> KeyboardHandlerMode;
 
 public:
 	Inis() : DefPath("EmuSettings")
@@ -113,8 +114,9 @@ public:
 		GSAspectRatio.Init("AspectRatio", path);
 		GSVSyncEnable.Init("VSyncEnable", path);
 
-		path = DefPath + "\\" + "Pad";
-		PadHandlerMode.Init("HandlerMode", path);
+		path = DefPath + "\\" + "IO";
+		PadHandlerMode.Init("PadHandlerMode", path);
+		KeyboardHandlerMode.Init("KeyboardHandlerMode", path);
 	}
 
 	void Load()
@@ -125,6 +127,7 @@ public:
 		GSAspectRatio.Load(1);
 		GSVSyncEnable.Load(false);
 		PadHandlerMode.Load(0);
+		KeyboardHandlerMode.Load(0);
 	}
 
 	void Save()
@@ -135,6 +138,7 @@ public:
 		GSAspectRatio.Save();
 		GSVSyncEnable.Save();
 		PadHandlerMode.Save();
+		KeyboardHandlerMode.Save();
 	}
 };
 

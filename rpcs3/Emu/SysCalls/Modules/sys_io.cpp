@@ -15,4 +15,15 @@ void sys_io_init()
 	sys_io.AddFunc(0xf65544ee, cellPadSetActDirect);
 	sys_io.AddFunc(0xa703a51d, cellPadGetInfo2);
 	sys_io.AddFunc(0x578e3c98, cellPadSetPortSetting);
+
+	sys_io.AddFunc(0x433f6ec0, cellKbInit);
+	sys_io.AddFunc(0xbfce3285, cellKbEnd);
+	sys_io.AddFunc(0x2073b7f6, cellKbClearBuf);
+	sys_io.AddFunc(0x4ab1fa77, cellKbCnvRawCode);
+	sys_io.AddFunc(0x2f1774d5, cellKbGetInfo);
+	sys_io.AddFunc(0xff0a21b7, cellKbRead);
+	sys_io.AddFunc(0xa5f85e4d, cellKbSetCodeType);
+	sys_io.AddFunc(0x3f72c56e, cellKbSetLEDStatus);
+	sys_io.AddFunc(0xdeefdfa7, cellKbSetReadMode);
+	sys_io.AddFunc(0x1f71ecbe, cellKbGetConfiguration);
 }
