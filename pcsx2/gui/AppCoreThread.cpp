@@ -354,16 +354,17 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	}
 
   ResetCheatsCount();
+	// regular cheat patches
 	if (EmuConfig.EnableCheats) {
     if (numberLoadedCheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
 			gameCheats.Printf(L" [%d Cheats]", numberLoadedCheats);
 		}
 	}
 
-	// FIXME: we should have a widescreen hacks config
+	// wide screen patches
 	if (EmuConfig.EnableWideScreenPatches) {
 		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
-			gameWsHacks.Printf(L" [%d WS hacks]", numberLoadedWideScreenPatches);
+			gameWsHacks.Printf(L" [%d widescreen hacks]", numberLoadedWideScreenPatches);
 		}
 	}
 

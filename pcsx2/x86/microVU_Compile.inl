@@ -173,7 +173,9 @@ __fi void mVUcheckBadOp(mV) {
 }
 
 // Prints msg when exiting block early if 1st op was a bad opcode (Dawn of Mana Level 2)
+// #ifdef PCSX2_DEVBUILD because starting with SVN R5586 we get log spam in releases (Shadow Hearts battles)  
 __fi void handleBadOp(mV, int count) {
+#ifdef PCSX2_DEVBUILD
 	if (mVUinfo.isBadOp) {
 		mVUbackupRegs(mVU, true);
 		xMOV(gprT2, mVU.prog.cur->idx);
@@ -182,6 +184,7 @@ __fi void handleBadOp(mV, int count) {
 		else		xCALL(mVUbadOp1);
 		mVUrestoreRegs(mVU, true);
 	}
+#endif
 }
 
 __ri void branchWarning(mV) {
@@ -562,7 +565,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	mVUbranch = 0;
 	u32 x = 0;
 	for( ; x < endCount; x++) {
-		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
+		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; } // handleBadOp currently just prints a warning
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
 		mVUexecuteInstruction(mVU);
 		if(!mVUinfo.isBdelay && !mVUlow.branch) //T/D Bit on branch is handled after the branch, branch delay slots are executed.

@@ -289,7 +289,8 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 
 	
 
-	if((addr + size *4) > (idx ? 0x4000 : 0x1000))
+	// Don't forget the Unsigned designator for these checks
+	if((addr + size *4) > (idx ? 0x4000U : 0x1000U))
 	{
 		//DevCon.Warning("Handling split MPG");
 		if (!idx)  CpuVU0->Clear(addr, (idx ? 0x4000 : 0x1000) - addr);
