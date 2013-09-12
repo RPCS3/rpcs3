@@ -25,7 +25,7 @@ static const int LATENCY_MAX = 750;
 #endif
 
 static const int LATENCY_MIN = 3;
-static const int LATENCY_MIN_TS = 50;
+static const int LATENCY_MIN_TS = 30;
 
 // MIXING
 int Interpolation = 4;

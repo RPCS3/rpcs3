@@ -18,6 +18,7 @@
 #include "Global.h"
 #include "soundtouch/SoundTouch.h"
 #include <wx/datetime.h>
+#include <algorithm>
 
 //Uncomment the next line to use the old time stretcher
 //#define SPU2X_USE_OLD_STRETCHER
@@ -75,12 +76,12 @@ float SndBuffer::GetStatusPct()
 //Keeping the buffer at required latency:
 //  This algorithm stabilises when the actual latency is <speed>*<required_latency>. While this is just fine at 100% speed,
 //  it's problematic especially for slow speeds, as the number of actual samples at the buffer gets very small on that case,
-//  which may lead to underruns (or just too much latency when running very fast fast).
+//  which may lead to underruns (or just too much latency when running very fast).
 //To compensate for that, the algorithm has a slowly moving compensation factor which will eventually bring the actual latency to the required one.
 //compensationDivider defines how slow this compensation changes. By default it's set to 100,
 //  which will finalize the compensation after about 200 iterations.
 //
-// Note, this algorithm is intentionally simplified by not taking extreme actions at extreme scenarios (mostly underruns when speed dtops sharply),
+// Note, this algorithm is intentionally simplified by not taking extreme actions at extreme scenarios (mostly underruns when speed drops sharply),
 //  and let's the overrun/underrun protections do what they should (doesn't happen much though in practice, even at big FPS variations).
 //
 //  These params were tested to show good respond and stability, on all audio systems (dsound, wav, port audio, xaudio2),
@@ -89,7 +90,7 @@ float SndBuffer::GetStatusPct()
 int targetIPS=750;
 
 //Dynamic tuning changes the values of the base algorithm parameters (derived from targetIPS) to adapt, in real time, to
-//  diferent number of invocations/sec (mostly affects number of iterations to average).
+//  different number of invocations/sec (mostly affects number of iterations to average).
 //  Dynamic tuning can have a slight negative effect on the behavior of the algorithm, so it's preferred to have it off.
 //Currently it looks like it's around 750/sec on all systems when playing at 100% speed (50/60fps),
 //  and proportional to that speed otherwise.
@@ -98,25 +99,45 @@ int targetIPS=750;
 //#define NEWSTRETCHER_USE_DYNAMIC_TUNING
 
 
-//running average can be implemented in O(1) time.
-//For the sake of simplicity, this average is calculated in O(<buffer-size>). Possibly improve later.
-//
-// Use a power of 2 numbers so the compiler can optimize 'modulo' as 'and'
-#define MAX_STRETCH_AVERAGE_LEN 128
-int STRETCH_AVERAGE_LEN=50.0 *targetIPS/750;
-//adds a value to the running average buffer, and return new running average.
+//Additional performance note: since MAX_STRETCH_AVERAGE_LEN = 128 (or any power of 2), the '%' below 
+//could be replaced with a faster '&'. The compiler is highly likely to do it since all the values are unsigned.
+#define AVERAGING_BUFFER_SIZE 256U
+unsigned int AVERAGING_WINDOW = 50.0 * targetIPS/750;
+
+
+#define STRETCHER_RESET_THRESHOLD 5
+int gRequestStretcherReset = STRETCHER_RESET_THRESHOLD;
+//Adds a value to the running average buffer, and return the new running average.
 float addToAvg(float val){
-	static float avg_fullness[MAX_STRETCH_AVERAGE_LEN]={0};
-	static uint nextAvgPos=0;
+	static float avg_fullness[AVERAGING_BUFFER_SIZE];
+	static unsigned int nextAvgPos = 0;
+  static unsigned int available = 0; // Make sure we're not averaging AVERAGING_WINDOW items if we inserted less.
+  if (gRequestStretcherReset >= STRETCHER_RESET_THRESHOLD)
+    available = 0;
 
-	avg_fullness[nextAvgPos]=val;
-	nextAvgPos=(nextAvgPos+1)%MAX_STRETCH_AVERAGE_LEN;
-	float sum=0;
-	for(int c=0, i=(nextAvgPos+MAX_STRETCH_AVERAGE_LEN-1)%MAX_STRETCH_AVERAGE_LEN; c<STRETCH_AVERAGE_LEN; c++, i=(i+MAX_STRETCH_AVERAGE_LEN-1)%MAX_STRETCH_AVERAGE_LEN)
-		sum+=avg_fullness[i];
+  if (available < AVERAGING_BUFFER_SIZE)
+    available++;
 
-	sum= (float)sum/(float)STRETCH_AVERAGE_LEN;
-	return sum?sum:1;
+	avg_fullness[nextAvgPos] = val;
+  nextAvgPos = (nextAvgPos + 1U) % AVERAGING_BUFFER_SIZE;
+	
+  unsigned int actualWindow = std::min(available, AVERAGING_WINDOW);
+  unsigned int first = (nextAvgPos - actualWindow + AVERAGING_BUFFER_SIZE)
+                                                  % AVERAGING_BUFFER_SIZE;
+
+  // Possible optimization: if we know that actualWindow hasn't changed since
+  // last invocation, we could calculate the running average in O(1) instead of O(N)
+  // by keeping a running sum between invocations, and then
+  // do "runningSum = runningSum + val - avg_fullness[(first-1)%...]" instead of the following loop.
+  // Few gotchas: val overwrites first-1, handling actualWindow changes, etc.
+  // However, this isn't hot code, so unless proven otherwise, we can live with unoptimized code.
+  float sum = 0;
+	for(unsigned int i = first; i < first + actualWindow; i++) {
+		sum += avg_fullness[i % AVERAGING_BUFFER_SIZE];
+  }
+	sum = sum / actualWindow;
+
+  return sum ? sum : 1; // 1 because that's the 100% perfect speed value
 }
 
 template <class T>
@@ -134,9 +155,15 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	float baseTargetFullness=(double)targetSamplesReservoir;///(double)m_size;//0.05;
 
 	//state vars
-	static bool inside_hysteresis=false;
-	static int hys_ok_count=0;
-	static float dynamicTargetFullness=baseTargetFullness;
+	static bool inside_hysteresis;//=false;
+	static int hys_ok_count;//=0;
+	static float dynamicTargetFullness;//=baseTargetFullness;
+  if (gRequestStretcherReset >= STRETCHER_RESET_THRESHOLD) {
+    ConLog("______> stretch: Reset.\n");
+    inside_hysteresis=false;
+    hys_ok_count=0;
+    dynamicTargetFullness=baseTargetFullness;
+  }
 
 	int data = _GetApproximateDataInBuffer();
 	float bufferFullness=(float)data;///(float)m_size;
@@ -149,10 +176,10 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		wxTimeSpan delta = unow.Subtract(last);
 		if( delta.GetMilliseconds()>500 ){
 			int pot_targetIPS=1000.0/delta.GetMilliseconds().ToDouble()*iters;
-			if(pot_targetIPS != clamp(pot_targetIPS, int((float)targetIPS/1.3f), int((float)targetIPS*1.3f)) ){
+			if(!IsInRange(pot_targetIPS, int((float)targetIPS/1.3f), int((float)targetIPS*1.3f)) ){
 				if(MsgOverruns()) ConLog("Stretcher: setting iters/sec from %d to %d\n", targetIPS, pot_targetIPS);
 				targetIPS=pot_targetIPS;
-				STRETCH_AVERAGE_LEN=clamp((int)(50.0f *(float)targetIPS/750.0f), 3, MAX_STRETCH_AVERAGE_LEN);
+				AVERAGING_WINDOW=GetClamped((int)(50.0f *(float)targetIPS/750.0f), 3, (int)AVERAGING_BUFFER_SIZE);
 			}
 			last=unow;
 			iters=0;
@@ -171,8 +198,10 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	float avgerage = addToAvg(tempoAdjust);
 	tempoAdjust = avgerage;
 	tempoAdjust = GetClamped( tempoAdjust, 0.05f, 10.0f);
-
-
+  
+  if (tempoAdjust < 1)
+    baseTargetFullness /= sqrt(tempoAdjust); // slightly increase latency when running slow.
+  
 	dynamicTargetFullness += (baseTargetFullness/tempoAdjust - dynamicTargetFullness)/(double)compensationDivider;
 	if( IsInRange(tempoAdjust, 0.9f, 1.1f) && IsInRange( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f) )
 		dynamicTargetFullness=baseTargetFullness;
@@ -206,9 +235,9 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		wxTimeSpan delta = unow.Subtract(last);
 
 		if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
-			ConLog("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d)\n", 
+			ConLog("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d) reset:%d\n", 
 				(int)(data/48), (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)(dynamicTargetFullness/baseTargetFullness), iters, (int)targetIPS
-				, STRETCH_AVERAGE_LEN, hys_min_ok_count, compensationDivider
+				, AVERAGING_WINDOW, hys_min_ok_count, compensationDivider, gRequestStretcherReset
 				);
 			last=unow;
 			iters=0;
@@ -217,6 +246,8 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	}
 
 	pSoundTouch->setTempo(tempoAdjust);
+  if (gRequestStretcherReset >= STRETCHER_RESET_THRESHOLD)
+    gRequestStretcherReset = 0;
 
 	return;
 }
@@ -383,12 +414,14 @@ void SndBuffer::UpdateTempoChangeAsyncMixing()
 
 void SndBuffer::timeStretchUnderrun()
 {
+  gRequestStretcherReset++;
 	// timeStretcher failed it's job.  We need to slow down the audio some.
 
 	cTempo -= (cTempo * 0.12f);
 	eTempo -= (eTempo * 0.30f);
 	if( eTempo < 0.1f ) eTempo = 0.1f;
-	pSoundTouch->setTempo( eTempo );
+//	pSoundTouch->setTempo( eTempo );
+  //pSoundTouch->setTempoChange(-30); // temporary (until stretcher is called) slow down
 }
 
 s32 SndBuffer::timeStretchOverrun()
@@ -398,11 +431,12 @@ s32 SndBuffer::timeStretchOverrun()
 	cTempo += cTempo * 0.12f;
 	eTempo += eTempo * 0.40f;
 	if( eTempo > 7.5f ) eTempo = 7.5f;
-	pSoundTouch->setTempo( eTempo );
+	//pSoundTouch->setTempo( eTempo );
+  //pSoundTouch->setTempoChange(30);// temporary (until stretcher is called) speed up
 
 	// Throw out just a little bit (two packets worth) to help
 	// give the TS some room to work:
-
+  gRequestStretcherReset++;
 	return SndOutPacketSize*2;
 }
 
