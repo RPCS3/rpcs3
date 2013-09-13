@@ -68,7 +68,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	if (rawcode == 0x58) return 0x0A | 0x4000;									// '\n'
 
 	// ASCII
-	if (rawcode >= 0x04 && rawcode <= 0x1D) return rawcode + 0x3D;				// 'A' - 'Z'
+	if (rawcode >= 0x04 && rawcode <= 0x1D)										// 'A' - 'Z'
+	{
+		rawcode -= 
+			(mkey&(CELL_KB_MKEY_L_SHIFT|CELL_KB_MKEY_R_SHIFT)) ? 
+			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20) :
+			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
+		return rawcode + 0x5D;
+	}				
 	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;				// '1' - '9'
 	if (rawcode == 0x27) return 0x30;											// '0'
 	if (rawcode == 0x28) return 0x0A;											// '\n'
@@ -76,6 +83,10 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	if (rawcode == 0x2C) return 0x20;											// ' '
 	if (rawcode == 0x2D) return 0x2D;											// '-'
 	if (rawcode == 0x2E) return 0x3D;											// '='
+	if (rawcode == 0x36) return 0x2C;											// ','
+	if (rawcode == 0x37) return 0x2E;											// '.'
+	if (rawcode == 0x38) return 0x2F;											// '/'
+	if (rawcode == 0x87) return 0x5C;											// '\'
 
 	// (TODO: Add more cases)
 

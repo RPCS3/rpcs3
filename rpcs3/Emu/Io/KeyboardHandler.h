@@ -16,8 +16,17 @@ enum CellKbReadMode
 
 enum CellKbCodeType
 {
-  CELL_KB_CODETYPE_RAW   = 0,
-  CELL_KB_CODETYPE_ASCII = 1,
+  CELL_KB_CODETYPE_RAW    = 0,
+  CELL_KB_CODETYPE_ASCII  = 1,
+};
+
+enum KbLedCodes
+{
+	CELL_KB_LED_NUM_LOCK	= 0x00000001,
+	CELL_KB_LED_CAPS_LOCK	= 0x00000002,
+	CELL_KB_LED_SCROLL_LOCK = 0x00000004,
+	CELL_KB_LED_COMPOSE	    = 0x00000008,
+	CELL_KB_LED_KANA	    = 0x00000016,
 };
 
 enum KbMetaKeys
@@ -203,7 +212,7 @@ struct CellKbData
 		: led(0)
 		, mkey(0)
 		, len(0)
-	{
+	{ // (TODO: Set initial state of led)
 	}
 };
 
@@ -226,11 +235,9 @@ struct KbButton
 	u32 m_keyCode;
 	u32 m_outKeyCode;
 	bool m_pressed;
-	//bool m_flush;
 
 	KbButton(u32 keyCode, u32 outKeyCode)
 		: m_pressed(false)
-		//, m_flush(false)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
 	{
@@ -276,17 +283,40 @@ public:
 
 				if (pressed)
 				{
-					u16 kcode;
-					if (config.code_type == CELL_KB_CODETYPE_RAW)
-					{
-						kcode = button.m_outKeyCode;
+
+					if (code == 308 || code == 307 || code == 306 || 
+						code == 393 || code == 396 || code == 394)
+					{	// Meta Keys
+						data.mkey |= button.m_outKeyCode;
 					}
-					else //config.code_type == CELL_KB_CODETYPE_ASCII
+					else
 					{
-						kcode =  cellKbCnvRawCode(config.arrange, data.mkey, data.led, button.m_outKeyCode);
+						// Led Keys
+						if (code == 364) data.led ^= CELL_KB_LED_NUM_LOCK;
+						if (code == 311) data.led ^= CELL_KB_LED_CAPS_LOCK;
+						if (code == 365) data.led ^= CELL_KB_LED_SCROLL_LOCK;
+
+						u16 kcode;
+						if (config.code_type == CELL_KB_CODETYPE_RAW)
+						{
+							kcode = button.m_outKeyCode;
+						}
+						else //config.code_type == CELL_KB_CODETYPE_ASCII
+						{
+							kcode =  cellKbCnvRawCode(config.arrange, data.mkey, data.led, button.m_outKeyCode);
+						}
+						data.keycode[data.len % CELL_KB_MAX_KEYCODES] = kcode;
+						data.len++;
 					}
-					data.keycode[data.len % CELL_KB_MAX_KEYCODES] = kcode;
-					data.len++;
+				}
+
+				if (!pressed)
+				{
+					if (code == 308 || code == 307 || code == 306 || 
+						code == 393 || code == 396 || code == 394)
+					{	// Meta Keys
+						data.mkey &= ~button.m_outKeyCode;
+					}
 				}
 
 			}

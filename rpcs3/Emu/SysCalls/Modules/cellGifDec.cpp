@@ -106,9 +106,9 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	current_info.SWidth						= Memory.Read8(buffer+6) + Memory.Read8(buffer+7) * 256;
 	current_info.SHeight					= Memory.Read8(buffer+8) + Memory.Read8(buffer+9) * 256;
 	current_info.SGlobalColorTableFlag		= packedField >> 7;
-	current_info.SColorResolution			= (packedField >> 4) & 7;
+	current_info.SColorResolution			= ((packedField >> 4) & 7)+1;
 	current_info.SSortFlag					= (packedField >> 3) & 1;
-	current_info.SSizeOfGlobalColorTable	= packedField & 7;
+	current_info.SSizeOfGlobalColorTable	= (packedField & 7)+1;
 	current_info.SBackGroundColor			= Memory.Read8(buffer+11);
 	current_info.SPixelAspectRatio			= Memory.Read8(buffer+12);
 
@@ -170,6 +170,9 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 		Memory.Write8(data_addr+i+3, image[i+2]);
 	}
 	Memory.Free(buffer);
+
+	//The output data is an image (dataOutInfo.recordType = 1)
+	Memory.Write32(dataOutInfo_addr, 1);
 
 	return CELL_OK;
 }

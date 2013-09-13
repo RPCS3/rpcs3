@@ -40,6 +40,17 @@ public:
 
 	void LoadSettings()
 	{
+		// Meta Keys
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_CONTROL, CELL_KB_MKEY_L_CTRL));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_SHIFT, CELL_KB_MKEY_L_SHIFT));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_ALT, CELL_KB_MKEY_L_ALT));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_WINDOWS_LEFT, CELL_KB_MKEY_L_WIN));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_COMMAND, CELL_KB_MKEY_L_WIN));
+		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KB_MKEY_R_CTRL));
+		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KB_MKEY_R_SHIFT));
+		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KB_MKEY_R_ALT));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_WINDOWS_RIGHT, CELL_KB_MKEY_R_WIN));
+
 		// CELL_KB_RAWDAT
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_NO_EVENT));
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_E_ROLLOVER));
@@ -47,7 +58,7 @@ public:
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_E_UNDEF));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_ESCAPE, CELL_KEYC_ESCAPE));
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_106_KANJI));
-		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_CAPS_LOCK));
+		m_keyboards[0].m_buttons.Move(new KbButton(WXK_CAPITAL, CELL_KEYC_CAPS_LOCK));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_F1, CELL_KEYC_F1));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_F2, CELL_KEYC_F2));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_F3, CELL_KEYC_F3));
@@ -73,7 +84,7 @@ public:
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_LEFT, CELL_KEYC_LEFT_ARROW));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_DOWN, CELL_KEYC_DOWN_ARROW));
 		m_keyboards[0].m_buttons.Move(new KbButton(WXK_UP, CELL_KEYC_UP_ARROW));
-		m_keyboards[0].m_buttons.Move(new KbButton(WXK_NUMLOCK, CELL_KEYC_NUM_LOCK));
+		//m_keyboards[0].m_buttons.Move(new KbButton(WXK_NUMLOCK, CELL_KEYC_NUM_LOCK));
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_APPLICATION));
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_KANA));
 		//m_keyboards[0].m_buttons.Move(new KbButton(, CELL_KEYC_HENKAN));

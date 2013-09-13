@@ -274,7 +274,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 
-	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
+	wxBoxSizer* s_subpanel1(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxVERTICAL));
 
 	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, &diag, _("CPU") ) );
 	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Decoder") ) );
@@ -284,7 +286,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_gs_res( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default resolution") ) );
 	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default aspect ratio") ) );
 
-	wxStaticBoxSizer* s_round_pad( new wxStaticBoxSizer( wxVERTICAL, &diag, _("IO") ) );
+	wxStaticBoxSizer* s_round_io( new wxStaticBoxSizer( wxVERTICAL, &diag, _("IO") ) );
 	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad Handler") ) );
 	wxStaticBoxSizer* s_round_keyboard_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Keyboard Handler") ) );
 
@@ -343,8 +345,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad->Add(s_round_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad->Add(s_round_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -353,10 +355,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	//wxBoxSizer* s_conf_panel(new wxBoxSizer(wxHORIZONTAL));
 
-	s_panel->Add(s_round_cpu, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_round_gs, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_round_pad, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
+	s_subpanel1->Add(s_round_cpu, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel1->Add(s_round_gs, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel2->Add(s_round_io, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel1->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
+
+	s_subpanel2->AddSpacer(200);
+	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	diag.SetSizerAndFit( s_panel );
 	
