@@ -127,7 +127,7 @@ public:
 			{
 				CellMouseData& data = GetData(p);
 				data.update = CELL_MOUSE_DATA_UPDATE;
-				data.wheel = rotation;
+				data.wheel = rotation/120; //120=event.GetWheelDelta()
 			}
 		}
 	}

@@ -197,20 +197,19 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	for(u32 i = 0; i < fileSize; i++){
 		gif[i] = Memory.Read8(buffer+i);
 	}
+	Memory.Free(buffer);
 
 	unsigned char *image = stbi_load_from_memory((const unsigned char*)gif, fileSize, &width, &height, &actual_components, 4);
-	if (!image)
-	{
-		Memory.Free(buffer);
-		return CELL_GIFDEC_ERROR_STREAM_FORMAT; 
-	}
+	delete[] gif;
+	if (!image)	return CELL_GIFDEC_ERROR_STREAM_FORMAT;
+
 	u32 image_size = width * height * 4;
 	if (inParam.colorSpace == CELL_GIFDEC_RGBA){
 		for(u32 i = 0; i < image_size; i+=4){
 			Memory.Write8(data_addr+i+0, image[i+0]);
 			Memory.Write8(data_addr+i+1, image[i+1]);
 			Memory.Write8(data_addr+i+2, image[i+2]);
-			Memory.Write8(data_addr+i+3, image[i+3]); // (This can be optimized by using Write32)
+			Memory.Write8(data_addr+i+3, image[i+3]);
 		}
 	}
 	if (inParam.colorSpace == CELL_GIFDEC_ARGB){
@@ -221,7 +220,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 			Memory.Write8(data_addr+i+3, image[i+2]);
 		}
 	}
-	Memory.Free(buffer);
+	delete[] image;
 
 	//The output data is an image (dataOutInfo.recordType = 1)
 	Memory.Write32(dataOutInfo_addr, 1);

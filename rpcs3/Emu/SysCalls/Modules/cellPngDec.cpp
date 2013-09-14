@@ -202,13 +202,12 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	for(u32 i = 0; i < fileSize; i++){
 		png[i] = Memory.Read8(buffer+i);
 	}
+	Memory.Free(buffer);
 	
 	unsigned char *image = stbi_load_from_memory((const unsigned char*)png, fileSize, &width, &height, &actual_components, 4);
-	if (!image)
-	{
-		Memory.Free(buffer);
-		return CELL_PNGDEC_ERROR_STREAM_FORMAT; 
-	}
+	delete[] png;
+	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
+
 	u32 image_size = width * height * 4;
 	if (inParam.outputColorSpace == CELL_PNGDEC_RGBA){
 		for(u32 i = 0; i < image_size; i+=4){
@@ -226,7 +225,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 			Memory.Write8(data_addr+i+3, image[i+2]);
 		}
 	}
-	Memory.Free(buffer);
+	delete[] image;
 
 	return CELL_OK;
 }
