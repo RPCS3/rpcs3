@@ -262,6 +262,7 @@ void Emulator::Stop()
 	GetIdManager().Clear();
 	GetPadManager().Close();
 	GetKeyboardManager().Close();
+	GetMouseManager().Close();
 	GetCallbackManager().Clear();
 	UnloadModules();
 

@@ -99,6 +99,7 @@ public:
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<u8> PadHandlerMode;
 	IniEntry<u8> KeyboardHandlerMode;
+	IniEntry<u8> MouseHandlerMode;
 
 public:
 	Inis() : DefPath("EmuSettings")
@@ -117,6 +118,7 @@ public:
 		path = DefPath + "\\" + "IO";
 		PadHandlerMode.Init("PadHandlerMode", path);
 		KeyboardHandlerMode.Init("KeyboardHandlerMode", path);
+		MouseHandlerMode.Init("MouseHandlerMode", path);
 	}
 
 	void Load()
@@ -128,6 +130,7 @@ public:
 		GSVSyncEnable.Load(false);
 		PadHandlerMode.Load(0);
 		KeyboardHandlerMode.Load(0);
+		MouseHandlerMode.Load(0);
 	}
 
 	void Save()
@@ -139,6 +142,7 @@ public:
 		GSVSyncEnable.Save();
 		PadHandlerMode.Save();
 		KeyboardHandlerMode.Save();
+		MouseHandlerMode.Save();
 	}
 };
 

@@ -26,4 +26,15 @@ void sys_io_init()
 	sys_io.AddFunc(0x3f72c56e, cellKbSetLEDStatus);
 	sys_io.AddFunc(0xdeefdfa7, cellKbSetReadMode);
 	sys_io.AddFunc(0x1f71ecbe, cellKbGetConfiguration);
+
+	sys_io.AddFunc(0xc9030138, cellMouseInit);
+	sys_io.AddFunc(0x3ef66b95, cellMouseClearBuf);
+	sys_io.AddFunc(0xe10183ce, cellMouseEnd);
+	sys_io.AddFunc(0x5baf30fb, cellMouseGetInfo);
+	sys_io.AddFunc(0x4d0b3b1f, cellMouseInfoTabletMode);
+	sys_io.AddFunc(0x3138e632, cellMouseGetData);
+	sys_io.AddFunc(0x6bd131f0, cellMouseGetDataList);
+	sys_io.AddFunc(0x2d16da4f, cellMouseSetTabletMode);
+	sys_io.AddFunc(0x21a62e9b, cellMouseGetTabletDataList);
+	sys_io.AddFunc(0xa328cc35, cellMouseGetRawData);
 }
