@@ -185,7 +185,8 @@ void DisplayDialog()
     mod_box = gtk_combo_box_new_text ();
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "0 - No Sound (emulate SPU2 only)");
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "1 - PortAudio (cross-platform)");
-    //gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "2 - Alsa (probably doesn't work)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "2 - SDL Audio (recommanded for pulseaudio");
+    //gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "3 - Alsa (probably doesn't work)");
     gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), OutputModule);
 
     api_label = gtk_label_new ("PortAudio API:");

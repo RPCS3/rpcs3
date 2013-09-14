@@ -92,6 +92,9 @@ SndOutModule* mods[]=
 	WaveOut,
 #endif
 	PortaudioOut,
+#if defined(SPU2X_SDL) || defined(SPU2X_SDL2)
+  SDLOut,
+#endif
 #ifdef __LINUX__
 	AlsaOut,
 #endif

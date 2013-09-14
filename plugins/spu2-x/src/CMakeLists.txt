@@ -97,8 +97,26 @@ set(spu2xLinuxHeaders
     Linux/Dialogs.h)
 
 # add additional include directories
-include_directories(.
-					Linux)
+include_directories(.  Linux)
+
+### Don't use yet c11 feature. I will bump gcc requirement to 4.7 when 4.9 is out.
+### Note: actually it might work on 4.6 too
+# # If compiling on GCC Version 4.7 or higher we build SDLMod in C++11 mode
+# if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+#     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+#     if(GCC_VERSION VERSION_GREATER 4.7)
+#         set_source_files_properties(SndOut_SDL.cpp PROPERTIES COMPILE_FLAGS -std=c++11)
+#         message(STATUS "GCC has C++11 support for SDLAudioMod")
+#     endif(GCC_VERSION VERSION_GREATER 4.7)
+# endif()
+
+if(SDL_FOUND)
+  add_definitions(-DSPU2X_SDL)
+  list(APPEND spu2xSources SndOut_SDL.cpp)
+  #elseif(SDL2_FOUND)
+  #  add_definitions(-DSPU2X_SDL2)
+  #  list(APPEND spu2xSources SndOut_SDL.cpp)
+endif()
 
 # add library
 add_library(${Output} SHARED
@@ -107,15 +125,13 @@ add_library(${Output} SHARED
 			${spu2xLinuxSources}
 			${spu2xLinuxHeaders})
 
-
 # link target with project internal libraries
 target_link_libraries(${Output} Utilities)
 
-# link target with ALSA
+# link target with various backend
 target_link_libraries(${Output} ${ALSA_LIBRARIES})
-
-# link target with PortAudio
 target_link_libraries(${Output} ${PORTAUDIO_LIBRARIES})
+target_link_libraries(${Output} ${SDL_LIBRARY})
 
 # link target with SoundTouch
 target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})
