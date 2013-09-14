@@ -274,7 +274,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 
-	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
+	wxBoxSizer* s_subpanel1(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxVERTICAL));
 
 	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, &diag, _("CPU") ) );
 	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Decoder") ) );
@@ -284,14 +286,18 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_gs_res( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default resolution") ) );
 	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default aspect ratio") ) );
 
-	wxStaticBoxSizer* s_round_pad( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad") ) );
-	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Handler") ) );
+	wxStaticBoxSizer* s_round_io( new wxStaticBoxSizer( wxVERTICAL, &diag, _("IO") ) );
+	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad Handler") ) );
+	wxStaticBoxSizer* s_round_keyboard_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Keyboard Handler") ) );
+	wxStaticBoxSizer* s_round_mouse_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Mouse Handler") ) );
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_aspect = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_pad_handler = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_keyboard_handler = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_mouse_handler = new wxComboBox(&diag, wxID_ANY);
 
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
 
@@ -315,6 +321,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_pad_handler->Append("Windows");
 	//cbox_pad_handler->Append("DirectInput");
 
+	cbox_keyboard_handler->Append("Null");
+	cbox_keyboard_handler->Append("Windows");
+	//cbox_pad_handler->Append("DirectInput");
+
+	cbox_mouse_handler->Append("Null");
+	cbox_mouse_handler->Append("Windows");
+	//cbox_pad_handler->Append("DirectInput");
+
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
@@ -322,6 +336,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_gs_resolution->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
 	cbox_pad_handler->SetSelection(Ini.PadHandlerMode.GetValue());
+	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
+	cbox_mouse_handler->SetSelection(Ini.MouseHandlerMode.GetValue());
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -335,7 +351,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_gs->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5));
 
 	s_round_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad->Add(s_round_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_mouse_handler->Add(cbox_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -344,10 +364,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	//wxBoxSizer* s_conf_panel(new wxBoxSizer(wxHORIZONTAL));
 
-	s_panel->Add(s_round_cpu, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_round_gs, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_round_pad, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
+	s_subpanel1->Add(s_round_cpu, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel1->Add(s_round_gs, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel2->Add(s_round_io, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel1->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
+
+	s_subpanel2->AddSpacer(180);
+	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	diag.SetSizerAndFit( s_panel );
 	
@@ -359,6 +383,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
+		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
+		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 
 		Ini.Save();
 	}
