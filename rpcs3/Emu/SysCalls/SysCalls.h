@@ -216,6 +216,30 @@ extern int cellPadSetActDirect(u32 port_no, u32 param_addr);
 extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 
+//cellKb
+extern int cellKbInit(u32 max_connect);
+extern int cellKbEnd();
+extern int cellKbClearBuf(u32 port_no);
+extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode);
+extern int cellKbGetInfo(u32 info_addr);
+extern int cellKbRead(u32 port_no, u32 data_addr);
+extern int cellKbSetCodeType(u32 port_no, u32 type);
+extern int cellKbSetLEDStatus(u32 port_no, u8 led);
+extern int cellKbSetReadMode(u32 port_no, u32 rmode);
+extern int cellKbGetConfiguration(u32 port_no, u32 config_addr);
+
+//cellMouse
+extern int cellMouseInit(u32 max_connect);
+extern int cellMouseClearBuf(u32 port_no);
+extern int cellMouseEnd();
+extern int cellMouseGetInfo(u32 info_addr);
+extern int cellMouseInfoTabletMode(u32 port_no, u32 info_addr);
+extern int cellMouseGetData(u32 port_no, u32 data_addr);
+extern int cellMouseGetDataList(u32 port_no, u32 data_addr);
+extern int cellMouseSetTabletMode(u32 port_no, u32 mode);
+extern int cellMouseGetTabletDataList(u32 port_no, u32 data_addr);
+extern int cellMouseGetRawData(u32 port_no, u32 data_addr);
+
 //cellGcm
 extern int cellGcmCallback(u32 context_addr, u32 count);
 

@@ -221,6 +221,8 @@
     <ClCompile Include="Emu\GS\GSRender.cpp" />
     <ClCompile Include="Emu\GS\RSXThread.cpp" />
     <ClCompile Include="Emu\HDD\HDD.cpp" />
+    <ClCompile Include="Emu\Io\Keyboard.cpp" />
+    <ClCompile Include="Emu\Io\Mouse.cpp" />
     <ClCompile Include="Emu\Io\Pad.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
@@ -230,8 +232,10 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Keyboard.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
@@ -245,6 +249,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellJpgDec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
