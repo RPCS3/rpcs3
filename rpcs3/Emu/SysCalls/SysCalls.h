@@ -189,6 +189,9 @@ extern int cellFsRename(u32 from_addr, u32 to_addr);
 extern int cellFsRmdir(u32 path_addr);
 extern int cellFsUnlink(u32 path_addr);
 extern int cellFsLseek(u32 fd, s64 offset, u32 whence, u32 pos_addr);
+extern int cellFsFtruncate(u32 fd, u64 size);
+extern int cellFsTruncate(u32 path_addr, u64 size);
+extern int cellFsFGetBlockSize(u32 fd, u32 sector_size_addr, u32 block_size_addr);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);

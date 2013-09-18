@@ -21,4 +21,7 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x2796fdf3, cellFsRmdir);
 	sys_fs.AddFunc(0x7f4677a8, cellFsUnlink);
 	sys_fs.AddFunc(0xa397d042, cellFsLseek);
+	sys_fs.AddFunc(0x0e2939e5, cellFsFtruncate);
+	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
+	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
 }
