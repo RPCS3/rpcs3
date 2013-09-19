@@ -198,14 +198,9 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	unsigned char *png =  new unsigned char [fileSize];
-	for(u32 i = 0; i < fileSize; i++){
-		png[i] = Memory.Read8(buffer+i);
-	}
+	unsigned char *png = (unsigned char*)Memory.VirtualToRealAddr(buffer);
+	unsigned char *image = stbi_load_from_memory(png, fileSize, &width, &height, &actual_components, 4);
 	Memory.Free(buffer);
-	
-	unsigned char *image = stbi_load_from_memory((const unsigned char*)png, fileSize, &width, &height, &actual_components, 4);
-	delete[] png;
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
 	u32 image_size = width * height * 4;
