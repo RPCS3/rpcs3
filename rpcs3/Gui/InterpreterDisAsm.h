@@ -46,6 +46,7 @@ public:
 	void DoRun(wxCommandEvent& event);
 	void DoPause(wxCommandEvent& event);
 	void DoStep(wxCommandEvent& event);
+	void InstrKey(wxListEvent& event);
 	void DClick(wxListEvent& event);
 
 	void MouseWheel(wxMouseEvent& event);
