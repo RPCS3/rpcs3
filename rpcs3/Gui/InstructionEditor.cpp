@@ -1,5 +1,20 @@
-#include "stdafx.h"
-#include "InstructionEditor.h"
+class InstructionEditorDialog
+	: public wxDialog
+{
+	u64 pc;
+	PPC_DisAsm* disasm;
+	PPC_Decoder* decoder;
+	wxTextCtrl* t2_instr;
+	wxStaticText* t3_preview;
+
+public:
+	PPCThread* CPU;
+
+public:
+	InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm);
+
+	void updatePreview(wxCommandEvent& event);
+};
 
 InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit instruction", wxDefaultPosition)
@@ -56,7 +71,7 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCTh
 	s_panel_margin_x->AddSpacer(12);
 
 	this->Connect(wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InstructionEditorDialog::updatePreview));
-	t2_instr->SetValue(wxString::Format("%08x",	Memory.Read32(pc)));
+	t2_instr->SetValue(wxString::Format("%08x",	Memory.Read32(CPU->GetOffset() + pc)));
 
 	this->SetSizerAndFit(s_panel_margin_x);
 

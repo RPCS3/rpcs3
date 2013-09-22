@@ -265,7 +265,6 @@
     <ClCompile Include="Gui\Debugger.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
     <ClCompile Include="Gui\GameViewer.cpp" />
-    <ClCompile Include="Gui\InstructionEditor.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />

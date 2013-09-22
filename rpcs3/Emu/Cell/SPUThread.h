@@ -249,6 +249,37 @@ public:
 		return ret;
 	}
 
+	virtual wxString ReadRegString(wxString reg)
+	{
+		if (reg.Contains("["))
+		{
+			long reg_index;
+			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
+			if (reg.StartsWith("GPR")) return wxString::Format("%032x", GPR[reg_index]);
+		}
+		return wxEmptyString;
+	}
+
+	bool WriteRegString(wxString reg, wxString value) {
+		while (value.Len() < 32) value = "0"+value;
+		if (reg.Contains("["))
+		{
+			long reg_index;
+			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
+			if (reg.StartsWith("GPR"))
+			{
+				unsigned long long reg_value0;
+				unsigned long long reg_value1;
+				if (!value.SubString(16,32).ToULongLong(&reg_value0, 16)) return false;
+				if (!value.SubString(0,16).ToULongLong(&reg_value1, 16)) return false;
+				GPR[reg_index]._u64[0] = (u64)reg_value0;
+				GPR[reg_index]._u64[1] = (u64)reg_value1;
+				return true;
+			}
+		}
+		return false;
+	}
+
 public:
 	virtual void InitRegs(); 
 	virtual u64 GetFreeStackSize() const;

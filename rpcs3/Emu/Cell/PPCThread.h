@@ -159,6 +159,8 @@ public:
 	void Stop();
 
 	virtual wxString RegsToString() { return wxEmptyString; }
+	virtual wxString ReadRegString(wxString reg) { return wxEmptyString; }
+	virtual bool WriteRegString(wxString reg, wxString value) { return false; }
 
 	virtual void Exec();
 	void ExecOnce();

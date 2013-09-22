@@ -307,9 +307,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Gui\InstructionEditor.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

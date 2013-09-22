@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
-#include "InstructionEditor.h"
+
+#include "InstructionEditor.cpp"
+#include "RegisterEditor.cpp"
 
 //static const int show_lines = 30;
 
@@ -456,6 +458,10 @@ void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 	{
 	case 'E':
 		InstructionEditorDialog(this, pc, CPU, decoder, disasm);
+		DoUpdate();
+		return;
+	case 'R':
+		RegisterEditorDialog(this, pc, CPU, decoder, disasm);
 		DoUpdate();
 		return;
 	}
