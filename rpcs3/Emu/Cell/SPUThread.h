@@ -255,7 +255,7 @@ public:
 		{
 			long reg_index;
 			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR")) return wxString::Format("%032x", GPR[reg_index]);
+			if (reg.StartsWith("GPR")) return wxString::Format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
 		}
 		return wxEmptyString;
 	}
@@ -270,8 +270,8 @@ public:
 			{
 				unsigned long long reg_value0;
 				unsigned long long reg_value1;
-				if (!value.SubString(16,32).ToULongLong(&reg_value0, 16)) return false;
-				if (!value.SubString(0,16).ToULongLong(&reg_value1, 16)) return false;
+				if (!value.SubString(16,31).ToULongLong(&reg_value0, 16)) return false;
+				if (!value.SubString(0,15).ToULongLong(&reg_value1, 16)) return false;
 				GPR[reg_index]._u64[0] = (u64)reg_value0;
 				GPR[reg_index]._u64[1] = (u64)reg_value1;
 				return true;

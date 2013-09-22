@@ -759,14 +759,14 @@ public:
 		{
 			long reg_index;
 			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR")) return wxString::Format("%016x", GPR[reg_index]);
-			if (reg.StartsWith("FPR")) return wxString::Format("%016x", FPR[reg_index]);
-			if (reg.StartsWith("VPR")) return wxString::Format("%032x", VPR[reg_index]);
+			if (reg.StartsWith("GPR")) return wxString::Format("%016llx", GPR[reg_index]);
+			if (reg.StartsWith("FPR")) return wxString::Format("%016llx", FPR[reg_index]);
+			if (reg.StartsWith("VPR")) return wxString::Format("%016llx%016llx", VPR[reg_index]._u64[1], VPR[reg_index]._u64[0]);
 		}
 		if (reg == "CR")	return wxString::Format("%08x", CR);
-		if (reg == "LR")	return wxString::Format("%016x", LR);
-		if (reg == "CTR")	return wxString::Format("%016x", CTR);
-		if (reg == "XER")	return wxString::Format("%016x", XER);
+		if (reg == "LR")	return wxString::Format("%016llx", LR);
+		if (reg == "CTR")	return wxString::Format("%016llx", CTR);
+		if (reg == "XER")	return wxString::Format("%016llx", XER);
 		if (reg == "FPSCR")	return wxString::Format("%08x", FPSCR);
 		return wxEmptyString;
 	}
@@ -780,7 +780,7 @@ public:
 			if (reg.StartsWith("GPR") || (reg.StartsWith("FPR")))
 			{
 				unsigned long long reg_value;
-				if (!value.SubString(16,32).ToULongLong(&reg_value, 16)) return false;
+				if (!value.SubString(16,31).ToULongLong(&reg_value, 16)) return false;
 				if (reg.StartsWith("GPR")) GPR[reg_index] = (u64)reg_value;
 				if (reg.StartsWith("FPR")) FPR[reg_index] = (u64)reg_value;
 				return true;
@@ -789,8 +789,8 @@ public:
 			{
 				unsigned long long reg_value0;
 				unsigned long long reg_value1;
-				if (!value.SubString(16,32).ToULongLong(&reg_value0, 16)) return false;
-				if (!value.SubString(0,16).ToULongLong(&reg_value1, 16)) return false;
+				if (!value.SubString(16,31).ToULongLong(&reg_value0, 16)) return false;
+				if (!value.SubString(0,15).ToULongLong(&reg_value1, 16)) return false;
 				VPR[reg_index]._u64[0] = (u64)reg_value0;
 				VPR[reg_index]._u64[1] = (u64)reg_value1;
 				return true;
@@ -799,7 +799,7 @@ public:
 		if (reg == "LR" || reg == "CTR" || reg == "XER")
 		{
 			unsigned long long reg_value;
-			if (!value.SubString(16,32).ToULongLong(&reg_value, 16)) return false;
+			if (!value.SubString(16,31).ToULongLong(&reg_value, 16)) return false;
 			if (reg == "LR") LR = (u64)reg_value;
 			if (reg == "CTR") CTR = (u64)reg_value;
 			if (reg == "XER") XER.XER = (u64)reg_value;
@@ -808,7 +808,7 @@ public:
 		if (reg == "CR" || reg == "FPSCR")
 		{
 			unsigned long reg_value;
-			if (!value.SubString(24,32).ToULong(&reg_value, 16)) return false;
+			if (!value.SubString(24,31).ToULong(&reg_value, 16)) return false;
 			if (reg == "CR") CR.CR = (u32)reg_value;
 			if (reg == "FPSCR") FPSCR.FPSCR = (u32)reg_value;
 			return true;

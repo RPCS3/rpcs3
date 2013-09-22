@@ -682,15 +682,27 @@ private:
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[ra]._u32[w] + *(float*)&CPU.GPR[rb]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 	void FS(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[ra]._u32[w] - *(float*)&CPU.GPR[rb]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 	void FM(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[ra]._u32[w] * *(float*)&CPU.GPR[rb]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 	void CLGTH(u32 rt, u32 ra, u32 rb)
 	{
@@ -712,15 +724,27 @@ private:
 	}
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[ra]._u64[w] + *(double*)&CPU.GPR[rb]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void DFS(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[ra]._u64[w] - *(double*)&CPU.GPR[rb]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void DFM(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[ra]._u64[w] * *(double*)&CPU.GPR[rb]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void CLGTB(u32 rt, u32 ra, u32 rb)
 	{
