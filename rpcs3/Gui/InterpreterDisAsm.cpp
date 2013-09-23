@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
 
+#include "InstructionEditor.cpp"
+#include "RegisterEditor.cpp"
+
 //static const int show_lines = 30;
 
 u64 InterpreterDisAsmFrame::CentrePc(const u64 pc) const
@@ -67,6 +70,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	Connect(m_btn_step->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoStep));
 	Connect(m_btn_run->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
 	Connect(m_btn_pause->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
+	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_KEY_DOWN,	wxListEventHandler(InterpreterDisAsmFrame::InstrKey));
 	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
 	Connect(m_choice_units->GetId(),wxEVT_COMMAND_CHOICE_SELECTED,	wxCommandEventHandler(InterpreterDisAsmFrame::OnSelectUnit));
 	Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
@@ -440,6 +444,27 @@ void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
 	ThreadBase::Start();
+}
+
+void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
+{
+	long i = m_list->GetFirstSelected();
+	if(i < 0) return;
+
+	const u64 start_pc = PC - m_item_count*4;
+	const u64 pc = start_pc + i*4;
+
+	switch(event.GetKeyCode())
+	{
+	case 'E':
+		InstructionEditorDialog(this, pc, CPU, decoder, disasm);
+		DoUpdate();
+		return;
+	case 'R':
+		RegisterEditorDialog(this, pc, CPU, decoder, disasm);
+		DoUpdate();
+		return;
+	}
 }
 
 void InterpreterDisAsmFrame::DClick(wxListEvent& event)
