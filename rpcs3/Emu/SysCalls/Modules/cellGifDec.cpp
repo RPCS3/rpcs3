@@ -193,14 +193,9 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	unsigned char *gif =  new unsigned char [fileSize];
-	for(u32 i = 0; i < fileSize; i++){
-		gif[i] = Memory.Read8(buffer+i);
-	}
+	unsigned char *gif = (unsigned char*)Memory.VirtualToRealAddr(buffer);
+	unsigned char *image = stbi_load_from_memory(gif, fileSize, &width, &height, &actual_components, 4);
 	Memory.Free(buffer);
-
-	unsigned char *image = stbi_load_from_memory((const unsigned char*)gif, fileSize, &width, &height, &actual_components, 4);
-	delete[] gif;
 	if (!image)	return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
 	u32 image_size = width * height * 4;

@@ -247,6 +247,16 @@ int cellFsStat(const u32 path_addr, const u32 sb_addr)
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb_addr);
 
+	// Check if path is a mount point. (TODO: Add information in sb_addr)
+	for(u32 i=0; i<Emu.GetVFS().m_devices.GetCount(); ++i)
+	{
+		if  (path == Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1))
+		{
+			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path);
+			return CELL_OK;
+		}
+	}
+
 	vfsStream* f = Emu.GetVFS().Open(path, vfsRead);
 	if(!f || !f->IsOpened())
 	{
@@ -322,7 +332,9 @@ int cellFsFstat(u32 fd, u32 sb_addr)
 
 int cellFsMkdir(u32 path_addr, u32 mode)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const wxString& ps3_path = Memory.ReadString(path_addr);
+	wxString path;
+	Emu.GetVFS().GetDevice(ps3_path, path);
 	sys_fs.Log("cellFsMkdir(path: %s, mode: 0x%x)", path, mode);
 	if(wxDirExists(path)) return CELL_EEXIST;
 	if(!wxMkdir(path)) return CELL_EBUSY;
@@ -331,27 +343,36 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 
 int cellFsRename(u32 from_addr, u32 to_addr)
 {
-	const wxString& from = Memory.ReadString(from_addr);
-	const wxString& to = Memory.ReadString(to_addr);
+	const wxString& ps3_from = Memory.ReadString(from_addr);
+	const wxString& ps3_to = Memory.ReadString(to_addr);
+	wxString from;
+	wxString to;
+	Emu.GetVFS().GetDevice(ps3_from, from);
+	Emu.GetVFS().GetDevice(ps3_to, to);
+
 	sys_fs.Log("cellFsRename(from: %s, to: %s)", from, to);
 	if(!wxFileExists(from)) return CELL_ENOENT;
 	if(wxFileExists(to)) return CELL_EEXIST;
-	if(!wxRenameFile(from, to)) return CELL_EBUSY;
+	if(!wxRenameFile(from, to)) return CELL_EBUSY; // (TODO: RenameFile(a,b) = CopyFile(a,b) + RemoveFile(a), therefore file "a" will not be removed if it is opened)
 	return CELL_OK;
 }
 
 int cellFsRmdir(u32 path_addr)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const wxString& ps3_path = Memory.ReadString(path_addr);
+	wxString path;
+	Emu.GetVFS().GetDevice(ps3_path, path);
 	sys_fs.Log("cellFsRmdir(path: %s)", path);
 	if(!wxDirExists(path)) return CELL_ENOENT;
-	if(!wxRmdir(path)) return CELL_EBUSY;
+	if(!wxRmdir(path)) return CELL_EBUSY; // (TODO: Under certain conditions it is not able to delete the folder)
 	return CELL_OK;
 }
 
 int cellFsUnlink(u32 path_addr)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const wxString& ps3_path = Memory.ReadString(path_addr);
+	wxString path;
+	Emu.GetVFS().GetDevice(ps3_path, path);
 	sys_fs.Error("cellFsUnlink(path: %s)", path);
 	return CELL_OK;
 }
@@ -373,5 +394,86 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, u32 pos_addr)
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsStream& file = *(vfsStream*)id.m_data;
 	Memory.Write64(pos_addr, file.Seek(offset, seek_mode));
+	return CELL_OK;
+}
+
+int cellFsFtruncate(u32 fd, u64 size)
+{
+	sys_fs.Log("cellFsFtruncate(fd: %d, size: %lld)", fd, size);
+	ID id;
+	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	vfsStream& file = *(vfsStream*)id.m_data;
+	u64 initialSize = file.GetSize();
+
+	if (initialSize < size)  // Is there any better way to fill the remaining bytes with 0, without allocating huge buffers in memory, or writing such a spaghetti code?
+	{
+		u64 last_pos = file.Tell();
+		file.Seek(0, vfsSeekEnd);
+		char* nullblock = (char*)calloc(4096, sizeof(char));
+		for(u64 i = (size-initialSize)/4096; i > 0; i--){
+			file.Write(nullblock, 4096);
+		}
+		free(nullblock);
+		char nullbyte = 0;
+		for(u64 i = (size-initialSize)%4096; i > 0; i--){
+			file.Write(&nullbyte, 1);
+		}
+		file.Seek(last_pos, vfsSeekSet);
+	}
+
+	if (initialSize > size)
+	{
+		// (TODO)
+	}
+
+	return CELL_OK;
+}
+
+int cellFsTruncate(u32 path_addr, u64 size)
+{
+	const wxString& path = Memory.ReadString(path_addr);
+	sys_fs.Log("cellFsTruncate(path_addr: %s, size: %lld)", path, size);
+
+	vfsStream* f = Emu.GetVFS().Open(path, vfsRead);
+	if(!f || !f->IsOpened())
+	{
+		sys_fs.Warning("cellFsTruncate: '%s' not found.", path);
+		Emu.GetVFS().Close(f);
+		return CELL_ENOENT;
+	}
+	u64 initialSize = f->GetSize();
+
+	if (initialSize < size)  // Is there any better way to fill the remaining bytes with 0, without allocating huge buffers in memory, or writing such a spaghetti code?
+	{
+		u64 last_pos = f->Tell();
+		f->Seek(0, vfsSeekEnd);
+		char* nullblock = (char*)calloc(4096, sizeof(char));
+		for(u64 i = (size-initialSize)/4096; i > 0; i--){
+			f->Write(nullblock, 4096);
+		}
+		free(nullblock);
+		char nullbyte = 0;
+		for(u64 i = (size-initialSize)%4096; i > 0; i--){
+			f->Write(&nullbyte, 1);
+		}
+		f->Seek(last_pos, vfsSeekSet);
+	}
+
+	if (initialSize > size)
+	{
+		// (TODO)
+	}
+
+	Emu.GetVFS().Close(f);
+	return CELL_OK;
+}
+
+int cellFsFGetBlockSize(u32 fd, u32 sector_size_addr, u32 block_size_addr)
+{
+	sys_fs.Log("cellFsFGetBlockSize(fd: %d, sector_size_addr: 0x%x, block_size_addr: 0x%x)", fd, sector_size_addr, block_size_addr);
+	
+	Memory.Write64(sector_size_addr, 4096);	// ?
+	Memory.Write64(block_size_addr, 4096);	// ?
+
 	return CELL_OK;
 }

@@ -213,14 +213,9 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	unsigned char *jpg =  new unsigned char [fileSize];
-	for(u32 i = 0; i < fileSize; i++){
-		jpg[i] = Memory.Read8(buffer+i);
-	}
+	unsigned char *jpg = (unsigned char*)Memory.VirtualToRealAddr(buffer);
+	unsigned char *image = stbi_load_from_memory(jpg, fileSize, &width, &height, &actual_components, 4);
 	Memory.Free(buffer);
-
-	unsigned char *image = stbi_load_from_memory((const unsigned char*)jpg, fileSize, &width, &height, &actual_components, 4);
-	delete[] jpg;
 	if (!image) return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	u32 image_size = width * height * 4;

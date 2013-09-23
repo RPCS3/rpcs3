@@ -110,6 +110,8 @@ union SPU_GPR_hdr
 	s16 _i16[8];
 	u8  _u8[16];
 	s8  _i8[16];
+	double _d[2];
+	float _f[4];
 
 	SPU_GPR_hdr() {}
 
@@ -247,6 +249,37 @@ public:
 		wxString ret = PPCThread::RegsToString();
 		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString());
 		return ret;
+	}
+
+	virtual wxString ReadRegString(wxString reg)
+	{
+		if (reg.Contains("["))
+		{
+			long reg_index;
+			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
+			if (reg.StartsWith("GPR")) return wxString::Format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
+		}
+		return wxEmptyString;
+	}
+
+	bool WriteRegString(wxString reg, wxString value) {
+		while (value.Len() < 32) value = "0"+value;
+		if (reg.Contains("["))
+		{
+			long reg_index;
+			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
+			if (reg.StartsWith("GPR"))
+			{
+				unsigned long long reg_value0;
+				unsigned long long reg_value1;
+				if (!value.SubString(16,31).ToULongLong(&reg_value0, 16)) return false;
+				if (!value.SubString(0,15).ToULongLong(&reg_value1, 16)) return false;
+				GPR[reg_index]._u64[0] = (u64)reg_value0;
+				GPR[reg_index]._u64[1] = (u64)reg_value1;
+				return true;
+			}
+		}
+		return false;
 	}
 
 public:
