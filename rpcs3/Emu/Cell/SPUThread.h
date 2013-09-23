@@ -110,6 +110,8 @@ union SPU_GPR_hdr
 	s16 _i16[8];
 	u8  _u8[16];
 	s8  _i8[16];
+	double _d[2];
+	float _f[4];
 
 	SPU_GPR_hdr() {}
 
