@@ -674,11 +674,13 @@ private:
 	}
 	void FCGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+			CPU.GPR[rt]._u32[w] = *(float*)&CPU.GPR[ra]._u32[w] > *(float*)&CPU.GPR[rb]._u32[w] ? 0xffffffff : 0;
 	}
 	void DFCGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+			CPU.GPR[rt]._u64[w] = *(double*)&CPU.GPR[ra]._u64[w] > *(float*)&CPU.GPR[rb]._u64[w] ? 0xffffffffffffffff : 0;
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
@@ -716,11 +718,13 @@ private:
 	}
 	void FCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+			CPU.GPR[rt]._u32[w] = fabs(*(float*)&CPU.GPR[ra]._u32[w]) > fabs(*(float*)&CPU.GPR[rb]._u32[w]) ? 0xffffffff : 0;
 	}
 	void DFCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+			CPU.GPR[rt]._u64[w] = fabs(*(double*)&CPU.GPR[ra]._u64[w]) > fabs(*(float*)&CPU.GPR[rb]._u64[w]) ? 0xffffffffffffffff : 0;
 	}
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
@@ -757,19 +761,35 @@ private:
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[ra]._u64[w] * *(double*)&CPU.GPR[rb]._u64[w] + *(double*)&CPU.GPR[rt]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void DFMS(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[ra]._u64[w] * *(double*)&CPU.GPR[rb]._u64[w] - *(double*)&CPU.GPR[rt]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void DFNMS(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(double*)&CPU.GPR[rt]._u64[w] - *(double*)&CPU.GPR[ra]._u64[w] * *(double*)&CPU.GPR[rb]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void DFNMA(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = - *(double*)&CPU.GPR[ra]._u64[w] * *(double*)&CPU.GPR[rb]._u64[w] - *(double*)&CPU.GPR[rt]._u64[w];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void CEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -822,11 +842,20 @@ private:
 	}
 	void FESD(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			double d = *(float*)&CPU.GPR[ra]._u32[w*2];
+			CPU.GPR[rt]._u64[w] = *(u64*)&d;
+		}
 	}
 	void FRDS(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+		{
+			float f = *(double*)&CPU.GPR[ra]._u64[w];
+			CPU.GPR[rt]._u32[w*2] = *(u32*)&f;
+			CPU.GPR[rt]._u32[w*2+1] = 0x00000000;
+		}
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
@@ -838,11 +867,13 @@ private:
 	}
 	void FCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+			CPU.GPR[rt]._u32[w] = *(float*)&CPU.GPR[ra]._u32[w] == *(float*)&CPU.GPR[rb]._u32[w] ? 0xffffffff : 0;
 	}
 	void DFCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+			CPU.GPR[rt]._u64[w] = *(double*)&CPU.GPR[ra]._u64[w] == *(float*)&CPU.GPR[rb]._u64[w] ? 0xffffffffffffffff : 0;
 	}
 	void MPY(u32 rt, u32 ra, u32 rb)
 	{
@@ -871,11 +902,13 @@ private:
 	}
 	void FCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+			CPU.GPR[rt]._u32[w] = fabs(*(float*)&CPU.GPR[ra]._u32[w]) == fabs(*(float*)&CPU.GPR[rb]._u32[w]) ? 0xffffffff : 0;
 	}
 	void DFCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 2; w++)
+			CPU.GPR[rt]._u64[w] = fabs(*(double*)&CPU.GPR[ra]._u64[w]) > fabs(*(float*)&CPU.GPR[rb]._u64[w]) ? 0xffffffffffffffff : 0;
 	}
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
@@ -1201,15 +1234,27 @@ private:
 	}
 	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[rc]._u32[w] - *(float*)&CPU.GPR[ra]._u32[w] * *(float*)&CPU.GPR[rb]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 	void FMA(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[ra]._u32[w] * *(float*)&CPU.GPR[rb]._u32[w] + *(float*)&CPU.GPR[rc]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 	void FMS(u32 rc, u32 ra, u32 rb, u32 rt)
 	{
-		UNIMPLEMENTED();
+		for (int w = 0; w < 4; w++)
+		{
+			float f = *(float*)&CPU.GPR[ra]._u32[w] * *(float*)&CPU.GPR[rb]._u32[w] - *(float*)&CPU.GPR[rc]._u32[w];
+			CPU.GPR[rt]._u32[w] = *(u32*)&f;
+		}
 	}
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
