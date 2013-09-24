@@ -17,7 +17,7 @@ void vfsStreamMemory::Open(u64 addr)
 	vfsStream::Reset();
 }
 
-u32 vfsStreamMemory::Write(const void* src, u32 size)
+u64 vfsStreamMemory::Write(const void* src, u64 size)
 {
 	if(!Memory.IsGoodAddr(m_addr + Tell(), size)) return 0;
 
@@ -26,7 +26,7 @@ u32 vfsStreamMemory::Write(const void* src, u32 size)
 	return vfsStream::Write(src, size);
 }
 
-u32 vfsStreamMemory::Read(void* dst, u32 size)
+u64 vfsStreamMemory::Read(void* dst, u64 size)
 {
 	if(!Memory.IsGoodAddr(m_addr + Tell(), size)) return 0;
 

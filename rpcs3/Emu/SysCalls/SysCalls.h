@@ -175,23 +175,23 @@ extern int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr);
 extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
 
 //cellFs
-extern int cellFsOpen(u32 path_addr, int flags, u32 fd_addr, u32 arg_addr, u64 size);
-extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, u32 nread_addr);
-extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, u32 nwrite_addr);
+extern int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size);
+extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread_addr);
+extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite_addr);
 extern int cellFsClose(u32 fd);
-extern int cellFsOpendir(u32 path_addr, u32 fd_addr);
-extern int cellFsReaddir(u32 fd, u32 dir_addr, u32 nread_addr);
+extern int cellFsOpendir(u32 path_addr, mem32_t fd);
+extern int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread);
 extern int cellFsClosedir(u32 fd);
-extern int cellFsStat(u32 path_addr, u32 sb_addr);
-extern int cellFsFstat(u32 fd, u32 sb_addr);
+extern int cellFsStat(u32 path_addr, mem_class_t sb);
+extern int cellFsFstat(u32 fd, mem_class_t sb);
 extern int cellFsMkdir(u32 path_addr, u32 mode);
 extern int cellFsRename(u32 from_addr, u32 to_addr);
 extern int cellFsRmdir(u32 path_addr);
 extern int cellFsUnlink(u32 path_addr);
-extern int cellFsLseek(u32 fd, s64 offset, u32 whence, u32 pos_addr);
+extern int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos);
 extern int cellFsFtruncate(u32 fd, u64 size);
 extern int cellFsTruncate(u32 path_addr, u64 size);
-extern int cellFsFGetBlockSize(u32 fd, u32 sector_size_addr, u32 block_size_addr);
+extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);

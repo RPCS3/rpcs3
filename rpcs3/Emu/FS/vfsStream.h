@@ -22,8 +22,8 @@ public:
 
 	virtual u64 GetSize();
 
-	virtual u32 Write(const void* src, u32 size);
-	virtual u32 Read(void* dst, u32 size);
+	virtual u64 Write(const void* src, u64 size);
+	virtual u64 Read(void* dst, u64 size);
 
 	virtual u64 Seek(s64 offset, vfsSeekMode mode = vfsSeekSet);
 	virtual u64 Tell() const;

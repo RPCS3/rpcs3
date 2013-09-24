@@ -380,11 +380,11 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 #endif
 							Memory.Write32(stub.s_text + i*4, tbl + i*8);
 
-							mem32_t out_tbl(tbl + i*8);
+							mem32_ptr_t out_tbl(tbl + i*8);
 							out_tbl += dst + i*section;
 							out_tbl += GetFuncNumById(nid);
 
-							mem32_t out_dst(dst + i*section);
+							mem32_ptr_t out_dst(dst + i*section);
 							out_dst += OR(11, 2, 2, 0);
 							out_dst += SC(2);
 							out_dst += BCLR(0x10 | 0x04, 0, 0, 0);

@@ -69,12 +69,12 @@ u64 vfsLocalFile::GetSize()
 	return m_file.Length();
 }
 
-u32 vfsLocalFile::Write(const void* src, u32 size)
+u64 vfsLocalFile::Write(const void* src, u64 size)
 {
 	return m_file.Write(src, size);
 }
 
-u32 vfsLocalFile::Read(void* dst, u32 size)
+u64 vfsLocalFile::Read(void* dst, u64 size)
 {
 	return m_file.Read(dst, size);
 }

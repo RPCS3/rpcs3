@@ -11,8 +11,8 @@ public:
 	vfsFileBase();
 	virtual ~vfsFileBase();
 
-	virtual bool Open(const wxString& path, vfsOpenMode mode);
-	virtual bool Close();
+	virtual bool Open(const wxString& path, vfsOpenMode mode) override;
+	virtual bool Close() override;
 	/*
 	virtual bool Create(const wxString& path)=0;
 	virtual bool Exists(const wxString& path)=0;

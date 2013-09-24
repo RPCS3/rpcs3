@@ -122,6 +122,7 @@ union s128
 	}
 };
 
+#include <memory>
 #include <emmintrin.h>
 
 //TODO: SSE style

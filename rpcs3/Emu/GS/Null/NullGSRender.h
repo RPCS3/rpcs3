@@ -78,7 +78,7 @@ private:
 	}
 
 public:
-	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
+	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count)
 	{
 		switch(cmd)
 		{
@@ -179,7 +179,7 @@ wxThread::ExitCode NullRSXThread::Entry()
 			continue;
 		}
 
-		p.DoCmd(cmd, cmd & 0x3ffff, mem32_t(p.m_ioAddress + get + 4), count);
+		p.DoCmd(cmd, cmd & 0x3ffff, mem32_ptr_t(p.m_ioAddress + get + 4), count);
 		re(p.m_ctrl->get, get + (count + 1) * 4);
 	}
 

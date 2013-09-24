@@ -191,7 +191,7 @@ void GLRSXThread::Task()
 			continue;
 		}
 
-		mem32_t args(p.m_ioAddress + get + 4);
+		mem32_ptr_t args(p.m_ioAddress + get + 4);
 
 		if(!draw)
 		{
@@ -508,7 +508,7 @@ void GLGSRender::InitFragmentData()
 	index = (cmd - a) / m; \
 	case a \
 
-void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
+void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count)
 {
 #if	CMD_DEBUG
 		wxString debug = GetMethodName(cmd);

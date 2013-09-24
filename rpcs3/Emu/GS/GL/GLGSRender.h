@@ -558,7 +558,7 @@ private:
 	bool LoadProgram();
 
 public:
-	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);
+	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);
 	void CloseOpenGL();
 
 	virtual void ExecCMD();

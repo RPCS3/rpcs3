@@ -369,15 +369,91 @@ public:
 
 extern MemoryBase Memory;
 
-template<typename T> class mem_t
+class MemoryAllocator
 {
-	u64 addr;
-	const u64 iaddr;
+	u32 m_addr;
 
 public:
-	mem_t(u64 _addr)
-		: addr(_addr)
-		, iaddr(_addr)
+	MemoryAllocator(u32 size, u32 align = 1)
+	{
+		m_addr = Memory.Alloc(size, align);
+	}
+
+	~MemoryAllocator()
+	{
+		Memory.Free(m_addr);
+	}
+
+	operator u32() const
+	{
+		return m_addr;
+	}
+};
+
+template<typename T> class mem_t
+{
+	const u32 m_addr;
+
+public:
+	mem_t(u64 addr) : m_addr(addr)
+	{
+	}
+
+	mem_t& operator = (T right)
+	{
+		switch(sizeof(T))
+		{
+		case 1: Memory.Write8(m_addr, right); return *this;
+		case 2: Memory.Write16(m_addr, right); return *this;
+		case 4: Memory.Write32(m_addr, right); return *this;
+		case 8: Memory.Write64(m_addr, right); return *this;
+		}
+
+		assert(0);
+		return *this;
+	}
+
+	operator const T() const
+	{
+		switch(sizeof(T))
+		{
+		case 1: return Memory.Read8(m_addr);
+		case 2: return Memory.Read16(m_addr);
+		case 4: return Memory.Read32(m_addr);
+		case 8: return Memory.Read64(m_addr);
+		}
+
+		assert(0);
+	}
+
+	mem_t& operator += (T right) { return *this = (*this) + right; }
+	mem_t& operator -= (T right) { return *this = (*this) - right; }
+	mem_t& operator *= (T right) { return *this = (*this) * right; }
+	mem_t& operator /= (T right) { return *this = (*this) / right; }
+	mem_t& operator %= (T right) { return *this = (*this) % right; }
+	mem_t& operator &= (T right) { return *this = (*this) & right; }
+	mem_t& operator |= (T right) { return *this = (*this) | right; }
+	mem_t& operator ^= (T right) { return *this = (*this) ^ right; }
+	mem_t& operator <<= (T right) { return *this = (*this) << right; }
+	mem_t& operator >>= (T right) { return *this = (*this) >> right; }
+
+	u64 GetAddr() const { return m_addr; }
+
+	bool IsGood() const
+	{
+		return Memory.IsGoodAddr(m_addr, sizeof(T));
+	}
+};
+
+template<typename T> class mem_ptr_t
+{
+	u64 m_addr;
+	const u64 m_iaddr;
+
+public:
+	mem_ptr_t(u64 addr)
+		: m_addr(addr)
+		, m_iaddr(addr)
 	{
 	}
 
@@ -385,47 +461,40 @@ public:
 	{
 		switch(sizeof(T))
 		{
-		case 1: Memory.Write8(addr, right); return;
-		case 2: Memory.Write16(addr, right); return;
-		case 4: Memory.Write32(addr, right); return;
-		case 8: Memory.Write64(addr, right); return;
+		case 1: Memory.Write8(m_addr, right); return;
+		case 2: Memory.Write16(m_addr, right); return;
+		case 4: Memory.Write32(m_addr, right); return;
+		case 8: Memory.Write64(m_addr, right); return;
 		}
 
-		ConLog.Error("Bad mem_t size! (%d : 0x%llx)", sizeof(T), addr);
+		ConLog.Error("Bad mem_t size! (%d : 0x%llx)", sizeof(T), m_addr);
 	}
 
-	operator u8() const { return Memory.Read8(addr); }
-	operator u16() const { return Memory.Read16(addr); }
-	operator u32() const { return Memory.Read32(addr); }
-	operator u64() const { return Memory.Read64(addr); }
+	operator u8() const { return Memory.Read8(m_addr); }
+	operator u16() const { return Memory.Read16(m_addr); }
+	operator u32() const { return Memory.Read32(m_addr); }
+	operator u64() const { return Memory.Read64(m_addr); }
 
-	/*
-	u64 operator += (u64 right)
-	{
-		addr += right;
-		return addr;
-	}
-	*/
 	u64 operator += (T right)
 	{
 		*this = right;
-		addr += sizeof(T);
-		return addr;
+		m_addr += sizeof(T);
+		return m_addr;
 	}
 
-	T operator [] (u64 i)
+	const T operator [] (u64 i) const
 	{
 		const u64 offset = i*sizeof(T);
-		addr += offset;
+		(*(mem_ptr_t*)this).m_addr += offset;
 		const T ret = *this;
-		addr -= offset;
+		(*(mem_ptr_t*)this).m_addr -= offset;
 		return ret;
 	}
 
-	void Reset() { addr = iaddr; }
-	u64 GetCurAddr() const { return addr; }
-	u64 GetAddr() const { return iaddr; }
-	u64 SetOffset(const u32 offset) { return addr += offset; }
+	void Reset() { m_addr = m_iaddr; }
+	u64 GetCurAddr() const { return m_addr; }
+	u64 GetAddr() const { return m_iaddr; }
+	u64 SetOffset(const u32 offset) { return m_addr += offset; }
 };
 
 class mem_class_t
@@ -466,3 +535,8 @@ typedef mem_t<u8> mem8_t;
 typedef mem_t<u16> mem16_t;
 typedef mem_t<u32> mem32_t;
 typedef mem_t<u64> mem64_t;
+
+typedef mem_ptr_t<u8> mem8_ptr_t;
+typedef mem_ptr_t<u16> mem16_ptr_t;
+typedef mem_ptr_t<u32> mem32_ptr_t;
+typedef mem_ptr_t<u64> mem64_ptr_t;

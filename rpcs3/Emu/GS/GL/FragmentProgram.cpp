@@ -115,7 +115,7 @@ wxString FragmentDecompilerThread::AddCond(int fp16)
 
 wxString FragmentDecompilerThread::AddConst()
 {
-	mem32_t data(m_addr + m_size + m_offset);
+	mem32_ptr_t data(m_addr + m_size + m_offset);
 
 	m_offset += 4 * 4;
 	u32 x = GetData(data[0]);
@@ -221,7 +221,7 @@ wxString FragmentDecompilerThread::BuildCode()
 
 void FragmentDecompilerThread::Task()
 {
-	mem32_t data(m_addr);
+	mem32_ptr_t data(m_addr);
 	m_size = 0;
 
 	while(true)

@@ -92,11 +92,22 @@ class Emulator
 
 public:
 	wxString m_path;
+	wxString m_elf_path;
 
 	Emulator();
 
 	void Init();
-	void SetPath(const wxString& path);
+	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
+
+	std::shared_ptr<vfsFileBase> OpenFile(const wxString& path, vfsOpenMode mode = vfsRead)
+	{
+		return std::shared_ptr<vfsFileBase>((vfsFileBase*)m_vfs.Open(path, mode));
+	}
+
+	std::shared_ptr<vfsStream> OpenStream(const wxString& path, vfsOpenMode mode = vfsRead)
+	{
+		return std::shared_ptr<vfsStream>(m_vfs.Open(path, mode));
+	}
 
 	PPCThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }

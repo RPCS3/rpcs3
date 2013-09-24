@@ -105,7 +105,7 @@ void PPUThread::InitRegs()
 		stack_point -= 0xc + 4 * argc;
 		u64 argv = stack_point;
 
-		mem64_t argv_list(argv);
+		mem64_ptr_t argv_list(argv);
 		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
 
 		GPR[3] = argc;

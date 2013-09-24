@@ -36,9 +36,10 @@ void Emulator::Init()
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
 
-void Emulator::SetPath(const wxString& path)
+void Emulator::SetPath(const wxString& path, const wxString& elf_path)
 {
 	m_path = path;
+	m_elf_path = elf_path;
 }
 
 void Emulator::CheckStatus()
@@ -84,10 +85,30 @@ void Emulator::Load()
 	ConLog.Write("loading '%s'...", m_path);
 	Memory.Init();
 	GetInfo().Reset();
+	m_vfs.Init(m_path);
+	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
+	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
+
+	ConLog.SkipLn();
+	ConLog.Write("Mount info:");
+	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
+	{
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
+	}
+	ConLog.SkipLn();
+
+	const auto f = m_elf_path.Len() ? OpenFile(m_elf_path) : std::shared_ptr<vfsLocalFile>(new vfsLocalFile(m_path));
+
+	if(!f->IsOpened())
+	{
+		ConLog.Error("Elf not found! (%s - %s)", m_path, m_elf_path);
+		return;
+	}
 
 	bool is_error;
-	vfsLocalFile f(m_path);
-	Loader l(f);
+	Loader l(*f);
 
 	try
 	{
@@ -133,19 +154,32 @@ void Emulator::Load()
 		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
 		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
 
-		mem32_t callback_data(m_rsx_callback);
+		mem32_ptr_t callback_data(m_rsx_callback);
 		callback_data += ADDI(11, 0, 0x3ff);
 		callback_data += SC(2);
 		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
 		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 4);
 
-		mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
+		mem32_ptr_t ppu_thr_exit_data(m_ppu_thr_exit);
 		ppu_thr_exit_data += ADDI(3, 0, 0);
 		ppu_thr_exit_data += ADDI(11, 0, 41);
 		ppu_thr_exit_data += SC(2);
 		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
 	}
+
+	if(!m_dbg_console)
+	{
+		m_dbg_console = new DbgConsole();
+	}
+	else
+	{
+		GetDbgCon().Close();
+		GetDbgCon().Clear();
+	}
+
+	GetGSManager().Init();
+	GetCallbackManager().Init();
 
 	thread.Run();
 
@@ -175,38 +209,11 @@ void Emulator::Run()
 	//ConLog.Write("run...");
 	m_status = Running;
 
-	m_vfs.Init(m_path);
-	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
-
-	ConLog.SkipLn();
-	ConLog.Write("Mount info:");
-	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
-	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
-	}
-	ConLog.SkipLn();
-
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 
 	//m_memory_viewer->SetPC(loader.GetEntry());
 	//m_memory_viewer->Show();
 	//m_memory_viewer->ShowPC();
-
-	if(!m_dbg_console)
-	{
-		m_dbg_console = new DbgConsole();
-	}
-	else
-	{
-		GetDbgCon().Close();
-		GetDbgCon().Clear();
-	}
-
-	GetGSManager().Init();
-	GetCallbackManager().Init();
 
 	GetCPU().Exec();
 	wxGetApp().SendDbgCommand(DID_STARTED_EMU);

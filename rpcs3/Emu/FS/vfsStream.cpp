@@ -32,14 +32,14 @@ u64 vfsStream::GetSize()
 	return size;
 }
 
-u32 vfsStream::Write(const void* src, u32 size)
+u64 vfsStream::Write(const void* src, u64 size)
 {
 	m_pos += size;
 
 	return size;
 }
 
-u32 vfsStream::Read(void* dst, u32 size)
+u64 vfsStream::Read(void* dst, u64 size)
 {
 	m_pos += size;
 
