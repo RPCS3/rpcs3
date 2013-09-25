@@ -80,11 +80,9 @@ struct CellJpgDecSubHandle	//Custom struct
 {
 	u32 fd;
 	u64 fileSize;
-	CellJpgDecInParam inParam;
+	CellJpgDecInfo info;
+	CellJpgDecOutParam outParam;
 };
-
-CellJpgDecInfo	current_info;
-CellJpgDecSrc	current_src;
 
 
 int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
@@ -105,33 +103,33 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, u32 subHandle_addr, u32 src_addr, u32 openInfo)
+int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo)
 {
-	//current_src.srcSelect       = Memory.Read32(src_addr);
-	current_src.fileName		  = Memory.Read32(src_addr+4);
-	//current_src.fileOffset      = Memory.Read32(src_addr+8);
-	//current_src.fileSize        = Memory.Read32(src_addr+12);
-	//current_src.streamPtr       = Memory.Read32(src_addr+16);
-	//current_src.streamSize      = Memory.Read32(src_addr+20);
-	//current_src.spuThreadEnable = Memory.Read32(src_addr+24);
+	//u32 srcSelect       = Memory.Read32(src_addr);
+	u32 fileName		  = Memory.Read32(src_addr+4);
+	//u64 fileOffset      = Memory.Read32(src_addr+8);
+	//u32 fileSize        = Memory.Read32(src_addr+12);
+	//u32 streamPtr       = Memory.Read32(src_addr+16);
+	//u32 streamSize      = Memory.Read32(src_addr+20);
+	//u32 spuThreadEnable = Memory.Read32(src_addr+24);
 
-	CellJpgDecSubHandle *subHandle = new CellJpgDecSubHandle;
+	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
 	// Get file descriptor
 	u32 fd_addr = Memory.Alloc(sizeof(u32), 1);
-	int ret = cellFsOpen(current_src.fileName, 0, fd_addr, NULL, 0);
-	subHandle->fd = Memory.Read32(fd_addr);
+	int ret = cellFsOpen(fileName, 0, fd_addr, NULL, 0);
+	current_subHandle->fd = Memory.Read32(fd_addr);
 	Memory.Free(fd_addr);
 	if(ret != 0) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
 	// Get size of file
 	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
-	cellFsFstat(subHandle->fd, sb_addr);
-	subHandle->fileSize = Memory.Read64(sb_addr+36);	// Get CellFsStat.st_size
+	cellFsFstat(current_subHandle->fd, sb_addr);
+	current_subHandle->fileSize = Memory.Read64(sb_addr+36);	// Get CellFsStat.st_size
 	Memory.Free(sb_addr);
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	Memory.Write32(subHandle_addr, (u32)subHandle);
+	subHandle += (u32)current_subHandle;
 
 	return CELL_OK;
 }
@@ -144,16 +142,19 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
+int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_class_t info)
 {
 	const u32& fd = ((CellJpgDecSubHandle*)subHandle)->fd;
 	const u64& fileSize = ((CellJpgDecSubHandle*)subHandle)->fileSize;
+	CellJpgDecInfo& current_info = ((CellJpgDecSubHandle*)subHandle)->info;
 
 	//Copy the JPG file to a buffer
 	u32 buffer = Memory.Alloc(fileSize,1);
+	u32 nread = Memory.Alloc(8,1);
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
-	cellFsRead(fd, buffer, fileSize, NULL);
+	cellFsRead(fd, buffer, fileSize, nread);
+	Memory.Free(nread);
 	Memory.Free(pos_addr);
 
 	if (Memory.Read32(buffer) != 0xFFD8FFE0 ||			// Error: Not a valid SOI header
@@ -185,10 +186,9 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 
 	current_info.imageWidth       = Memory.Read8(buffer+i+7)*256 + Memory.Read8(buffer+i+8);
 	current_info.imageHeight      = Memory.Read8(buffer+i+5)*256 + Memory.Read8(buffer+i+6);
-	current_info.numComponents    = 0;							// Unimplemented
-	current_info.colorSpace       = 3;							// Unimplemented
+	current_info.numComponents    = 3;							// Unimplemented
+	current_info.colorSpace       = CELL_JPG_RGB;				// Unimplemented
 
-	mem_class_t info(info_addr);
 	info += current_info.imageWidth;
 	info += current_info.imageHeight;
 	info += current_info.numComponents;
@@ -198,17 +198,19 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, u32 info_addr)
 	return CELL_OK;
 }
 
-int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataCtrlParam_addr, u32 dataOutInfo_addr)
+int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, u32 dataCtrlParam_addr, u32 dataOutInfo_addr)
 {
 	const u32& fd = ((CellJpgDecSubHandle*)subHandle)->fd;
 	const u64& fileSize = ((CellJpgDecSubHandle*)subHandle)->fileSize;
-	const CellJpgDecInParam& inParam = ((CellJpgDecSubHandle*)subHandle)->inParam; // (TODO: We should use the outParam)
+	const CellJpgDecOutParam& current_outParam = ((CellJpgDecSubHandle*)subHandle)->outParam; // (TODO: We should use the outParam)
 
 	//Copy the JPG file to a buffer
 	u32 buffer = Memory.Alloc(fileSize,1);
+	u32 nread = Memory.Alloc(8,1);
 	u32 pos_addr = Memory.Alloc(8,1);
 	cellFsLseek(fd, 0, 0, pos_addr);
-	cellFsRead(fd, buffer, fileSize, NULL);
+	cellFsRead(fd, buffer, fileSize, nread);
+	Memory.Free(nread);
 	Memory.Free(pos_addr);
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
@@ -219,20 +221,20 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	if (!image) return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	u32 image_size = width * height * 4;
-	if (inParam.outputColorSpace == CELL_JPG_RGBA){
+	if (current_outParam.outputColorSpace == CELL_JPG_RGBA){
 		for(u32 i = 0; i < image_size; i+=4){
-			Memory.Write8(data_addr+i+0, image[i+0]);
-			Memory.Write8(data_addr+i+1, image[i+1]);
-			Memory.Write8(data_addr+i+2, image[i+2]);
-			Memory.Write8(data_addr+i+3, image[i+3]);
+			data += image[i+0];
+			data += image[i+1];
+			data += image[i+2];
+			data += image[i+3];
 		}
 	}
-	else if (inParam.outputColorSpace == CELL_JPG_ARGB){
+	else if (current_outParam.outputColorSpace == CELL_JPG_ARGB){
 		for(u32 i = 0; i < image_size; i+=4){
-			Memory.Write8(data_addr+i+0, image[i+3]);
-			Memory.Write8(data_addr+i+1, image[i+0]);
-			Memory.Write8(data_addr+i+2, image[i+1]);
-			Memory.Write8(data_addr+i+3, image[i+2]);
+			data += image[i+3];
+			data += image[i+0];
+			data += image[i+1];
+			data += image[i+2];
 		}
 	}
 	delete[] image;
@@ -240,12 +242,39 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, u32 data_addr, u32 dataC
 	return CELL_OK;
 }
 
-int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, u32 inParam_addr, u32 outParam_addr)
+int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, u32 inParam_addr, mem_class_t outParam)
 {
-	CellJpgDecInParam& inParam = ((CellJpgDecSubHandle*)subHandle)->inParam;
-	inParam.outputColorSpace = Memory.Read32(inParam_addr+16);
+	CellJpgDecInfo& current_info = ((CellJpgDecSubHandle*)subHandle)->info;
+	CellJpgDecOutParam& current_outParam = ((CellJpgDecSubHandle*)subHandle)->outParam;
 
-	// (TODO)
+	current_outParam.outputWidthByte	= (current_info.imageWidth * current_info.numComponents);
+	current_outParam.outputWidth		= current_info.imageWidth;
+	current_outParam.outputHeight		= current_info.imageHeight;
+	current_outParam.outputColorSpace	= Memory.Read32(inParam_addr+16);
+	switch (current_outParam.outputColorSpace)
+	{
+	case CELL_JPG_GRAYSCALE:				current_outParam.outputComponents = 1; break;
+	case CELL_JPG_RGB:						current_outParam.outputComponents = 3; break;
+	case CELL_JPG_YCbCr:					current_outParam.outputComponents = 3; break;
+	case CELL_JPG_RGBA:						current_outParam.outputComponents = 4; break;
+	case CELL_JPG_UPSAMPLE_ONLY:			current_outParam.outputComponents = current_info.numComponents; break;
+	case CELL_JPG_ARGB:						current_outParam.outputComponents = 4; break;
+	case CELL_JPG_GRAYSCALE_TO_ALPHA_RGBA:	current_outParam.outputComponents = 4; break;
+	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB:	current_outParam.outputComponents = 4; break;
+	default: return CELL_JPGDEC_ERROR_ARG;		// Not supported color space
+	}
+	current_outParam.outputMode			= Memory.Read32(inParam_addr+12);
+	current_outParam.downScale			= Memory.Read32(inParam_addr+4);
+	current_outParam.useMemorySpace		= 0;	// Unimplemented
+
+	outParam += current_outParam.outputWidthByte;
+	outParam += current_outParam.outputWidth;
+	outParam += current_outParam.outputHeight;
+	outParam += current_outParam.outputComponents;
+	outParam += current_outParam.outputMode;
+	outParam += current_outParam.outputColorSpace;
+	outParam += current_outParam.downScale;
+	outParam += current_outParam.useMemorySpace;
 
 	return CELL_OK;
 }
