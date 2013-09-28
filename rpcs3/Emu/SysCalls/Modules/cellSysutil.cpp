@@ -111,7 +111,7 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {
 	cellSysutil.Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
 
-	if(!Memory.IsGoodAddr(value.IsGood()))
+	if(!value.IsGood())
 	{
 		return CELL_EFAULT;
 	}
