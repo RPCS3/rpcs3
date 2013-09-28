@@ -93,13 +93,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	return 0x0000;
 }
 
-int cellKbGetInfo(u32 info_addr)
+int cellKbGetInfo(mem_class_t info)
 {
-	sys_io.Log("cellKbGetInfo(info_addr=0x%x)", info_addr);
+	sys_io.Log("cellKbGetInfo(info_addr=0x%x)", info.GetAddr());
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 
 	const KbInfo& current_info = Emu.GetKeyboardManager().GetInfo();
-	mem_class_t info(info_addr);
 	info += current_info.max_connect;
 	info += current_info.now_connect;
 	info += current_info.info;
@@ -111,17 +110,15 @@ int cellKbGetInfo(u32 info_addr)
 	return CELL_OK;
 }
 
-int cellKbRead(u32 port_no, u32 data_addr)
+int cellKbRead(u32 port_no, mem_class_t data)
 {
-	sys_io.Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data_addr);
+	sys_io.Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.GetAddr());
 
 	const Array<Keyboard>& keyboards = Emu.GetKeyboardManager().GetKeyboards();
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 	if(port_no >= keyboards.GetCount()) return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	CellKbData& current_data = Emu.GetKeyboardManager().GetData(port_no);
-		
-	mem_class_t data(data_addr);
 	data += current_data.led;
 	data += current_data.mkey;
 	data += min((u32)current_data.len, CELL_KB_MAX_KEYCODES);
@@ -162,13 +159,12 @@ int cellKbSetReadMode(u32 port_no, u32 rmode)
 	return CELL_OK;
 }
 
-int cellKbGetConfiguration(u32 port_no, u32 config_addr)
+int cellKbGetConfiguration(u32 port_no, mem_class_t config)
 {
-	sys_io.Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config_addr);
+	sys_io.Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config.GetAddr());
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 
 	const CellKbConfig& current_config = Emu.GetKeyboardManager().GetConfig(port_no);
-	mem_class_t config(config_addr);
 	config += current_config.arrange;
 	config += current_config.read_mode;
 	config += current_config.code_type;
