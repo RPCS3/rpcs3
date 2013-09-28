@@ -107,11 +107,11 @@ void cellVideoOutGetDeviceInfo()
 	UNIMPLEMENTED_FUNC(cellSysutil);
 }
 
-int cellSysutilGetSystemParamInt(int id, u32 value_addr)
+int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {
-	cellSysutil.Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value_addr);
+	cellSysutil.Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
 
-	if(!Memory.IsGoodAddr(value_addr))
+	if(!Memory.IsGoodAddr(value.IsGood()))
 	{
 		return CELL_EFAULT;
 	}
@@ -120,77 +120,77 @@ int cellSysutilGetSystemParamInt(int id, u32 value_addr)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
-		Memory.Write32(value_addr, CELL_SYSUTIL_LANG_ENGLISH_US);
+		value = CELL_SYSUTIL_LANG_ENGLISH_US;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
-		Memory.Write32(value_addr, CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS);
+		value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
-		Memory.Write32(value_addr, CELL_SYSUTIL_DATE_FMT_DDMMYYYY);
+		value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
-		Memory.Write32(value_addr, CELL_SYSUTIL_TIME_FMT_CLOCK24);
+		value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
-		Memory.Write32(value_addr, 3);
+		value = 3;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
-		Memory.Write32(value_addr, 1);
+		value = 1;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
-		Memory.Write32(value_addr, CELL_SYSUTIL_GAME_PARENTAL_OFF);
+		value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
-		Memory.Write32(value_addr, CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF);
+		value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
-		Memory.Write32(value_addr, 0);
+		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
-		Memory.Write32(value_addr, CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED);
+		value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
-		Memory.Write32(value_addr, CELL_SYSUTIL_PAD_RUMBLE_OFF);
+		value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
-		Memory.Write32(value_addr, 0);
+		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
-		Memory.Write32(value_addr, 0);
+		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
-		Memory.Write32(value_addr, 0);
+		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
-		Memory.Write32(value_addr, 0);
+		value = 0;
 	break;
 
 	default:
