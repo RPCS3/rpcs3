@@ -307,18 +307,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
