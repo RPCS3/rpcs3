@@ -61,39 +61,28 @@ CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER   = 0x80310202,
 CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED = 0x80310203, 
 };
 
-#define __CSTD
-typedef __CSTD uint32_t sys_timer_t;
-typedef __CSTD int64_t system_time_t;    
-typedef __CSTD uint64_t usecond_t;       
-typedef __CSTD uint32_t second_t;
-typedef __CSTD uint32_t sys_event_queue_t;
-typedef __CSTD uint32_t sys_event_port_t;
-typedef __CSTD uint32_t sys_event_type_t;
-typedef __CSTD uint64_t sys_ipc_key_t; 
-typedef __CSTD uintptr_t lparaddr_t;
-typedef __CSTD uintptr_t sys_addr_t;
-typedef __CSTD uint32_t sys_memory_t;
-typedef __CSTD uint32_t sys_memory_container_t;
-#undef __CSTD
 
 //libaudio datatyps
 struct CellAudioPortParam
 { 
-uint64_t nChannel; 
-uint64_t nBlock; 
-uint64_t attr; 
+u64 nChannel; 
+u64 nBlock; 
+u64 attr; 
 float level; 
 }; 
 
 struct CellAudioPortConfig
 { 
-sys_addr_t readIndexAddr; 
-uint32_t status; 
-uint64_t nChannel; 
-uint64_t nBlock; 
-uint32_t portSize; 
-sys_addr_t portAddr; 
+u32 readIndexAddr; 
+u32 status; 
+u64 nChannel; 
+u64 nBlock; 
+u32 portSize; 
+u32 portAddr; 
 };
+
+CellAudioPortParam current_AudioPortParam;
+CellAudioPortConfig current_AudioPortConfig;
 
 //libmixer datatypes
 
@@ -102,23 +91,25 @@ typedef void * CellAANHandle;
 
 struct CellSSPlayerConfig 
 {
-uint32_t channels; 
-uint32_t outputMode; 
+u32 channels; 
+u32 outputMode; 
 }; 
 
 struct CellSSPlayerWaveParam 
 { 
 void *addr; 
 int format; 
-uint32_t samples; 
-uint32_t loopStartOffset; 
-uint32_t startOffset; 
+u32 samples; 
+u32 loopStartOffset; 
+u32 startOffset; 
 };
+
+CellSSPlayerWaveParam current_SSPlayerWaveParam;
 
 struct CellSSPlayerCommonParam 
 { 
-uint32_t loopMode; 
-uint32_t attackMode; 
+u32 loopMode; 
+u32 attackMode; 
 };
 
 struct CellSurMixerPosition 
@@ -137,16 +128,16 @@ CellSurMixerPosition position;
 
 struct CellSurMixerConfig 
 { 
-int32_t priority; 
-uint32_t chStrips1; 
-uint32_t chStrips2; 
-uint32_t chStrips6; 
-uint32_t chStrips8; 
+s32 priority; 
+u32 chStrips1; 
+u32 chStrips2; 
+u32 chStrips6; 
+u32 chStrips8; 
 };
 
 struct CellSurMixerChStripParam 
 { 
-uint32_t param; 
+u32 param; 
 void *attribute; 
 int dBSwitch; 
 float floatVal; 
@@ -158,105 +149,120 @@ int intVal;
 
 struct CellSnd3DataCtx
 { 
-int8_t system;  //[CELL_SND3_DATA_CTX_SIZE], unknown identifier
+s8 system;  //[CELL_SND3_DATA_CTX_SIZE], unknown identifier
 }; 
 
 struct CellSnd3SmfCtx
 { 
-int8_t system;  //[CELL_SND3_SMF_CTX_SIZE],  unknown identifier
+s8 system;  //[CELL_SND3_SMF_CTX_SIZE],  unknown identifier
 };
 
 struct CellSnd3KeyOnParam
 { 
-uint8_t vel; 
-uint8_t pan; 
-uint8_t panEx; 
-int32_t addPitch; 
+u8 vel; 
+u8 pan; 
+u8 panEx; 
+s32 addPitch; 
 };
 
 struct CellSnd3VoiceBitCtx
 { 
-uint32_t core;  //[CELL_SND3_MAX_CORE],  unknown identifier
+u32 core;  //[CELL_SND3_MAX_CORE],  unknown identifier
 };
 
 struct CellSnd3RequestQueueCtx
 { 
 void *frontQueue; 
-uint32_t frontQueueSize; 
+u32 frontQueueSize; 
 void *rearQueue; 
-uint32_t rearQueueSize; 
+u32 rearQueueSize; 
 };
 
 //libsynt2 datatypes
 struct  CellSoundSynth2EffectAttr
 { 
-uint16_t core; 
-uint16_t mode; 
-int16_t depth_L; 
-int16_t depth_R; 
-uint16_t delay; 
-uint16_t feedback; 
+u16 core; 
+u16 mode; 
+s16 depth_L; 
+s16 depth_R; 
+u16 delay; 
+u16 feedback; 
 };
-
 
 														//*libaudio functions*//
 
+bool g_is_audio_initialized = false;
 int cellAudioInit (void)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
+	if(g_is_audio_initialized) return CELL_AUDIO_ERROR_ALREADY_INIT;
+	g_is_audio_initialized = true;
 	return CELL_OK;
 }
 
-int32_t cellAudioQuit(void)
+s32 cellAudioQuit(void)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
+	if (g_is_audio_initialized) return CELL_AUDIO_ERROR_NOT_INIT;
+	g_is_audio_initialized = false;
 	return CELL_OK;
 }
 
 // Audio Ports Setting/Operation Functions
-int cellAudioPortOpen () //CellAudioPortParam *audioParam, uint32_t *portNum
+
+bool g_is_audio_port_open = false;
+int cellAudioPortOpen () //CellAudioPortParam *audioParam, u32 *portNum
+{
+	UNIMPLEMENTED_FUNC(cellAudio);
+	if(g_is_audio_port_open) return CELL_AUDIO_ERROR_PORT_OPEN;
+	g_is_audio_port_open = true;
+	return CELL_OK;
+}
+
+int cellAudioPortClose (u32 portNum)
+{
+	UNIMPLEMENTED_FUNC(cellAudio);
+	if(g_is_audio_port_open) return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	g_is_audio_port_open = false;
+	return CELL_OK;
+}
+
+bool g_is_audio_port_start = false;
+int cellAudioPortStart (u32 portNum)
+{
+	UNIMPLEMENTED_FUNC(cellAudio);
+	if(g_is_audio_port_start) return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
+	g_is_audio_port_start = true;
+	return CELL_OK;
+}
+
+int cellAudioPortStop (u32 portNum)
+{
+	UNIMPLEMENTED_FUNC(cellAudio);
+	if(g_is_audio_port_start) return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	g_is_audio_port_start = false;
+	return CELL_OK;
+}
+
+int cellAudioGetPortTimestamp () //u32 portNum, u64 tag, u64 *stamp
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioPortStart (uint32_t portNum)
+int cellAudioGetPortConfig () //u32 portNum, CellAudioPortConfig *portConfig
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioPortClose (uint32_t portNum)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK;
-}
-
-int cellAudioPortStop (uint32_t portNum)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK;
-}
-
-int cellAudioGetPortConfig () //uint32_t portNum, CellAudioPortConfig *portConfig
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK;
-}
-
-int cellAudioGetPortBlockTag () //uint32_t portNum, uint64_t blockNo, uint64_t *tag
+int cellAudioGetPortBlockTag () //u32 portNum, u64 blockNo, u64 *tag
 {
 	UNIMPLEMENTED_FUNC (cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioGetPortTimestamp () //uint32_t portNum, uint64_t tag, usecond_t *stamp
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK;
-}
-
-int cellAudioSetPortLevel (uint32_t portNum, float level)
+int cellAudioSetPortLevel (u32 portNum, float level)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
@@ -264,61 +270,61 @@ int cellAudioSetPortLevel (uint32_t portNum, float level)
 
 
 // Utility Functions  
-int cellAudioCreateNotifyEventQueue () //sys_event_queue_t *id, sys_ipc_key_t *key
+int cellAudioCreateNotifyEventQueue () //u32 *id, u64 *key
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioCreateNotifyEventQueueEx (sys_event_queue_t *id, sys_ipc_key_t *key, uint32_t iFlags)
+int cellAudioCreateNotifyEventQueueEx (u32 *id, u64 *key, u32 iFlags)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioSetNotifyEventQueue (sys_ipc_key_t key)
+int cellAudioSetNotifyEventQueue (u64 key)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioSetNotifyEventQueueEx (sys_ipc_key_t key, uint32_t iFlags)
+int cellAudioSetNotifyEventQueueEx (u64 key, u32 iFlags)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioRemoveNotifyEventQueue (sys_ipc_key_t key)
+int cellAudioRemoveNotifyEventQueue (u64 key)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioRemoveNotifyEventQueueEx (sys_ipc_key_t key, uint32_t iFlags)
+int cellAudioRemoveNotifyEventQueueEx (u64 key, u32 iFlags)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioAddData () //uint32_t portNum, float *src, unsigned int samples, float volume
+int cellAudioAddData () //u32 portNum, float *src, unsigned int samples, float volume
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioAdd2chData () //uint32_t portNum, float *src, unsigned int samples, float volume
+int cellAudioAdd2chData () //u32 portNum, float *src, unsigned int samples, float volume
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioMiscSetAccessoryVolume (uint32_t devNum, float volume)
+int cellAudioMiscSetAccessoryVolume (u32 devNum, float volume)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int cellAudioSendAck (uint64_t data3)
+int cellAudioSendAck (u64 data3)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
@@ -336,32 +342,33 @@ int cellAudioUnsetPersonalDevice (int iPersonalStream)
 	return CELL_OK;
 }
 
-int cellAudioAdd6chData (uint32_t portNum, float *src, float volume)
+int cellAudioAdd6chData (u32 portNum, float *src, float volume)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
 //Callback Functions 
-typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, uint32_t counter, uint32_t samples); //Currently unused.
+typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples); //Currently unused.
+
 
 
                                              //*libmixer Functions, NON active in this moment*//
 
 
-int cellAANConnect (CellAANHandle receive, uint32_t receivePortNo, CellAANHandle source, uint32_t sourcePortNo)
+int cellAANConnect (CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellAANDisconnect (CellAANHandle receive, uint32_t receivePortNo, CellAANHandle source, uint32_t sourcePortNo)
+int cellAANDisconnect (CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellAANAddData (CellAANHandle handle, uint32_t port, uint32_t offset, float *addr, uint32_t samples)
+int cellAANAddData (CellAANHandle handle, u32 port, u32 offset, float *addr, u32 samples)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0; 
@@ -379,61 +386,61 @@ int cellSSPlayerRemove (CellAANHandle handle)
 	return 0;
 }
 
-int cellSSPlayerSetWave (CellAANHandle handle, CellSSPlayerWaveParam *waveInfo, CellSSPlayerCommonParam *commonInfo)
+int cellSSPlayerSetWave () //CellAANHandle handle, CellSSPlayerWaveParam *waveInfo, CellSSPlayerCommonParam *commonInfo  //mem_class_t waveInfo
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSSPlayerPlay (CellAANHandle handle, CellSSPlayerRuntimeInfo *info)
+int cellSSPlayerPlay () //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSSPlayerStop (CellAANHandle handle, uint32_t mode)
+int cellSSPlayerStop () //CellAANHandle handle, u32 mode
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSSPlayerSetParam (CellAANHandle handle, CellSSPlayerRuntimeInfo *info)
+int cellSSPlayerSetParam () //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
  
-int32_t cellSSPlayerGetState (CellAANHandle handle)
+s32 cellSSPlayerGetState () //CellAANHandle handle
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerCreate (const CellSurMixerConfig *config)
+int cellSurMixerCreate () //const CellSurMixerConfig *config
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerGetAANHandle (CellAANHandle *handle)
+int cellSurMixerGetAANHandle () //CellAANHandle *handle
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerChStripGetAANPortNo (uint32_t *port, uint32_t type, uint32_t index)
+int cellSurMixerChStripGetAANPortNo () //u32 *port, u32 type, u32 index
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerSetNotifyCallback (CellSurMixerNotifyCallbackFunction callback, void *arg)
+int cellSurMixerSetNotifyCallback () //CellSurMixerNotifyCallbackFunction callback, void *arg
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerRemoveNotifyCallback (CellSurMixerNotifyCallbackFunction callback)
+int cellSurMixerRemoveNotifyCallback () //CellSurMixerNotifyCallbackFunction callback
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
@@ -445,43 +452,43 @@ int cellSurMixerStart(void)
 	return 0;
 }
 
-int cellSurMixerSurBusAddData (uint32_t busNo, uint32_t offset, float *addr, uint32_t samples)
+int cellSurMixerSurBusAddData () //u32 busNo, u32 offset, float *addr, u32 samples
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerSetParameter (uint32_t param, float value)
+int cellSurMixerSetParameter () //u32 param, float value
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerChStripSetParameter (uint32_t type, uint32_t index, CellSurMixerChStripParam *param)
+int cellSurMixerChStripSetParameter () //u32 type, u32 index, CellSurMixerChStripParam *param
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerPause() //uint32_t switch
+int cellSurMixerPause() //u32 switch
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerGetCurrentBlockTag (uint64_t *tag)
+int cellSurMixerGetCurrentBlockTag () //u64 *tag
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int cellSurMixerGetTimestamp (uint64_t tag, usecond_t *stamp)
+int cellSurMixerGetTimestamp () //u64 tag, u64 *stamp
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-void cellSurMixerBeep (void *arg);
+void cellSurMixerBeep (); //void *arg
 
 float cellSurMixerUtilGetLevelFromDB () //float dB
 {
@@ -509,315 +516,315 @@ int cellSurMixerFinalize(void); //Currently unused. Returns 0 (in the current re
 
 											//*libsnd3 Functions, NON active in this moment*//
 
-int32_t cellSnd3Init (uint32_t maxVoice, uint32_t samples, CellSnd3RequestQueueCtx *queue)
+s32 cellSnd3Init () //u32 maxVoice, u32 samples, CellSnd3RequestQueueCtx *queue
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3Exit (void)
+s32 cellSnd3Exit (void)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SetOutputMode (uint32_t mode)
+s32 cellSnd3SetOutputMode () //u32 mode
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3Synthesis (float *pOutL, float *pOutR)
+s32 cellSnd3Synthesis () //float *pOutL, float *pOutR
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SynthesisEx (float *pOutL, float *pOutR, float *pOutRL, float *pOutRR)
+s32 cellSnd3SynthesisEx () //float *pOutL, float *pOutR, float *pOutRL, float *pOutRR
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetReserveMode (uint32_t voiceNum, uint32_t reserveMode)
+s32 cellSnd3VoiceSetReserveMode () //u32 voiceNum, u32 reserveMode
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3BindSoundData (CellSnd3DataCtx *snd3Ctx, void *hd3, uint32_t synthMemOffset)
+s32 cellSnd3BindSoundData () //CellSnd3DataCtx *snd3Ctx, void *hd3, u32 synthMemOffset
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3UnbindSoundData (uint32_t hd3ID)
+s32 cellSnd3UnbindSoundData (u32 hd3ID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3NoteOnByTone () //uint32_t hd3ID, uint32_t toneIndex, uint32_t note, uint32_t keyOnID, CellSnd3KeyOnParam *keyOnParam
+s32 cellSnd3NoteOnByTone () //u32 hd3ID, u32 toneIndex, u32 note, u32 keyOnID, CellSnd3KeyOnParam *keyOnParam
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3KeyOnByTone () //uint32_t hd3ID, uint32_t toneIndex,  uint32_t pitch,uint32_t keyOnID,CellSnd3KeyOnParam *keyOnParam
+s32 cellSnd3KeyOnByTone () //u32 hd3ID, u32 toneIndex,  u32 pitch,u32 keyOnID,CellSnd3KeyOnParam *keyOnParam
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3VoiceNoteOnByTone () //uint32_t hd3ID, uint32_t voiceNum, uint32_t toneIndex, uint32_t note, uint32_t keyOnID, CellSnd3KeyOnParam *keyOnParam
+s32 cellSnd3VoiceNoteOnByTone () //u32 hd3ID, u32 voiceNum, u32 toneIndex, u32 note, u32 keyOnID, CellSnd3KeyOnParam *keyOnParam
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3VoiceKeyOnByTone () //uint32_t hd3ID, uint32_t voiceNum, uint32_t toneIndex, uint32_t pitch, uint32_t keyOnID, CellSnd3KeyOnParam *keyOnParam
+s32 cellSnd3VoiceKeyOnByTone () //u32 hd3ID, u32 voiceNum, u32 toneIndex, u32 pitch, u32 keyOnID, CellSnd3KeyOnParam *keyOnParam
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3VoiceSetSustainHold (uint32_t voiceNum, uint32_t sustainHold)
+s32 cellSnd3VoiceSetSustainHold (u32 voiceNum, u32 sustainHold)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceKeyOff (uint32_t voiceNum)
+s32 cellSnd3VoiceKeyOff (u32 voiceNum)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetPitch(uint32_t voiceNum, int32_t addPitch)
+s32 cellSnd3VoiceSetPitch(u32 voiceNum, s32 addPitch)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetVelocity (uint32_t voiceNum, uint32_t velocity)
+s32 cellSnd3VoiceSetVelocity (u32 voiceNum, u32 velocity)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetPanpot (uint32_t voiceNum, uint32_t panpot)
+s32 cellSnd3VoiceSetPanpot (u32 voiceNum, u32 panpot)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetPanpotEx (uint32_t voiceNum, uint32_t panpotEx)
+s32 cellSnd3VoiceSetPanpotEx (u32 voiceNum, u32 panpotEx)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceSetPitchBend (uint32_t voiceNum, uint32_t bendValue)
+s32 cellSnd3VoiceSetPitchBend (u32 voiceNum, u32 bendValue)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceAllKeyOff (void)
+s32 cellSnd3VoiceAllKeyOff (void)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceGetEnvelope (uint32_t voiceNum)
+s32 cellSnd3VoiceGetEnvelope (u32 voiceNum)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3VoiceGetStatus ()  //uint32_t voiceNum
+s32 cellSnd3VoiceGetStatus ()  //u32 voiceNum
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-uint32_t cellSnd3KeyOffByID (uint32_t keyOnID)
+u32 cellSnd3KeyOffByID (u32 keyOnID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3GetVoice (uint32_t midiChannel, uint32_t keyOnID, CellSnd3VoiceBitCtx *voiceBit)
+s32 cellSnd3GetVoice () //u32 midiChannel, u32 keyOnID, CellSnd3VoiceBitCtx *voiceBit
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3GetVoiceByID (uint32_t keyOnID, CellSnd3VoiceBitCtx *voiceBit)
+s32 cellSnd3GetVoiceByID () //u32 keyOnID, CellSnd3VoiceBitCtx *voiceBit
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3NoteOn (uint32_t hd3ID, uint32_t midiChannel, uint32_t midiProgram, uint32_t midiNote, uint32_t sustain,CellSnd3KeyOnParam *keyOnParam, uint32_t keyOnID)
+s32 cellSnd3NoteOn () //u32 hd3ID, u32 midiChannel, u32 midiProgram, u32 midiNote, u32 sustain,CellSnd3KeyOnParam *keyOnParam, u32 keyOnID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3NoteOff (uint32_t midiChannel, uint32_t midiNote, uint32_t keyOnID)
+s32 cellSnd3NoteOff (u32 midiChannel, u32 midiNote, u32 keyOnID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SetSustainHold (uint32_t midiChannel, uint32_t sustainHold, uint32_t ID)
+s32 cellSnd3SetSustainHold (u32 midiChannel, u32 sustainHold, u32 ID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SetEffectType (uint16_t effectType, int16_t returnVol, uint16_t delay, uint16_t feedback)
+s32 cellSnd3SetEffectType (u16 effectType, s16 returnVol, u16 delay, u16 feedback)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-uint16_t cellSnd3Note2Pitch ()  //uint16_t center_note, uint16_t center_fine, uint16_t note, int16_t fine
+u16 cellSnd3Note2Pitch ()  //u16 center_note, u16 center_fine, u16 note, s16 fine
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-uint16_t cellSnd3Pitch2Note ()  //uint16_t center_note, uint16_t center_fine, uint16_t pitch
+u16 cellSnd3Pitch2Note ()  //u16 center_note, u16 center_fine, u16 pitch
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFBind ()  //CellSnd3SmfCtx *smfCtx, void *smf, uint32_t hd3ID
+s32 cellSnd3SMFBind ()  //CellSnd3SmfCtx *smfCtx, void *smf, u32 hd3ID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFUnbind () //uint32_t smfID
+s32 cellSnd3SMFUnbind () //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFPlay (uint32_t smfID, uint32_t playVelocity, uint32_t playPan, uint32_t playCount)
+s32 cellSnd3SMFPlay (u32 smfID, u32 playVelocity, u32 playPan, u32 playCount)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFPlayEx (uint32_t smfID, uint32_t playVelocity, uint32_t playPan, uint32_t playPanEx, uint32_t playCount)
+s32 cellSnd3SMFPlayEx (u32 smfID, u32 playVelocity, u32 playPan, u32 playPanEx, u32 playCount)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFPause (uint32_t smfID)
+s32 cellSnd3SMFPause (u32 smfID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFResume (uint32_t smfID)
+s32 cellSnd3SMFResume (u32 smfID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFStop (uint32_t smfID)
+s32 cellSnd3SMFStop (u32 smfID)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFAddTempo (uint32_t smfID, int32_t addTempo)
+s32 cellSnd3SMFAddTempo (u32 smfID, s32 addTempo)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFGetTempo () //uint32_t smfID
+s32 cellSnd3SMFGetTempo () //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFSetPlayVelocity (uint32_t smfID, uint32_t playVelocity)
+s32 cellSnd3SMFSetPlayVelocity (u32 smfID, u32 playVelocity)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFGetPlayVelocity ()  //uint32_t smfID
+s32 cellSnd3SMFGetPlayVelocity ()  //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFSetPlayPanpot (uint32_t smfID, uint32_t playPanpot)
+s32 cellSnd3SMFSetPlayPanpot (u32 smfID, u32 playPanpot)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFSetPlayPanpotEx (uint32_t smfID, uint32_t playPanpotEx)
+s32 cellSnd3SMFSetPlayPanpotEx (u32 smfID, u32 playPanpotEx)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFGetPlayPanpot () //uint32_t smfID
+s32 cellSnd3SMFGetPlayPanpot () //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFGetPlayPanpotEx () //uint32_t smfID
+s32 cellSnd3SMFGetPlayPanpotEx () //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFGetPlayStatus ()  //uint32_t smfID
+s32 cellSnd3SMFGetPlayStatus ()  //u32 smfID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSnd3SMFSetPlayChannel (uint32_t smfID, uint32_t playChannelBit)
+s32 cellSnd3SMFSetPlayChannel (u32 smfID, u32 playChannelBit)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFGetPlayChannel (uint32_t smfID, uint32_t *playChannelBit)
+s32 cellSnd3SMFGetPlayChannel () //u32 smfID, u32 *playChannelBit
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
 }
 
-int32_t cellSnd3SMFGetKeyOnID (uint32_t smfID, uint32_t midiChannel, uint32_t *keyOnID)
+s32 cellSnd3SMFGetKeyOnID () //u32 smfID, u32 midiChannel, u32 *keyOnID
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK;
@@ -825,107 +832,106 @@ int32_t cellSnd3SMFGetKeyOnID (uint32_t smfID, uint32_t midiChannel, uint32_t *k
 
                                            //*libsynth2 Functions, NON active in this moment*//
 
-int32_t cellSoundSynth2Config (int16_t param, int32_t value)
+s32 cellSoundSynth2Config (s16 param, s32 value)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int32_t cellSoundSynth2Init( int16_t flag)
+s32 cellSoundSynth2Init( s16 flag)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int32_t cellSoundSynth2Exit(void)
+s32 cellSoundSynth2Exit(void)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-void cellSoundSynth2SetParam (uint16_t register, uint16_t value)
+void cellSoundSynth2SetParam (u16 register, u16 value)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	//TODO
 }
 
-uint16_t cellSoundSynth2GetParam () //uint16_t register
+u16 cellSoundSynth2GetParam () //u16 register
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-void cellSoundSynth2SetSwitch (uint16_t register, uint32_t value)
+void cellSoundSynth2SetSwitch (u16 register, u32 value)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	//TODO
 }
 
-uint32_t cellSoundSynth2GetSwitch () //uint16_t register
+u32 cellSoundSynth2GetSwitch () //u16 register
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-uint32_t cellSoundSynth2SetAddr (uint16_t register, uint32_t value)
+u32 cellSoundSynth2SetAddr (u16 register, u32 value)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-uint32_t cellSoundSynth2GetAddr () //uint16_t register
+u32 cellSoundSynth2GetAddr () //u16 register
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-int32_t cellSoundSynth2SetEffectAttr (int16_t bus, CellSoundSynth2EffectAttr *attr)
+s32 cellSoundSynth2SetEffectAttr () //s16 bus, CellSoundSynth2EffectAttr *attr
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int32_t cellSoundSynth2SetEffectMode (int16_t bus, CellSoundSynth2EffectAttr *attr)
+s32 cellSoundSynth2SetEffectMode () //s16 bus, CellSoundSynth2EffectAttr *attr
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-void cellSoundSynth2SetCoreAttr (uint16_t entry, uint16_t value) 
+void cellSoundSynth2SetCoreAttr (u16 entry, u16 value) 
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	//TODO
 }
 
-int32_t cellSoundSynth2Generate (uint16_t samples, float *left_buffer, float *right_buffer, float *left_rear, float *right_rear)
+s32 cellSoundSynth2Generate () //u16 samples, float *left_buffer, float *right_buffer, float *left_rear, float *right_rear
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-int32_t cellSoundSynth2VoiceTrans () //int16_t channel, uint16_t mode, uint8_t *m_addr, uint32_t s_addr, uint32_t size
+s32 cellSoundSynth2VoiceTrans () //s16 channel, u16 mode, u8 *m_addr, u32 s_addr, u32 size
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return 0;
 }
 
-uint16_t cellSoundSynth2Note2Pitch () //uint16_t center_note, uint16_t center_fine, uint16_t note, int16_t fine
+u16 cellSoundSynth2Note2Pitch () //u16 center_note, u16 center_fine, u16 note, s16 fine
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
 
-uint16_t cellSoundSynth2Pitch2Note () //uint16_t center_note, uint16_t center_fine, uint16_t pitch
+u16 cellSoundSynth2Pitch2Note () //u16 center_note, u16 center_fine, u16 pitch
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	return CELL_OK; //it's NOT real value
 	//TODO
 }
-
 
 
 void cellAudio_init ()
