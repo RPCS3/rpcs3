@@ -46,13 +46,12 @@ int cellMouseEnd()
 	return CELL_OK;
 }
 
-int cellMouseGetInfo(u32 info_addr)
+int cellMouseGetInfo(mem_class_t info)
 {
-	sys_io.Log("cellMouseGetInfo(info_addr=0x%x)", info_addr);
+	sys_io.Log("cellMouseGetInfo(info_addr=0x%x)", info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	const MouseInfo& current_info = Emu.GetMouseManager().GetInfo();
-	mem_class_t info(info_addr);
 	info += current_info.max_connect;
 	info += current_info.now_connect;
 	info += current_info.info;
@@ -63,27 +62,25 @@ int cellMouseGetInfo(u32 info_addr)
 	return CELL_OK;
 }
 
-int cellMouseInfoTabletMode(u32 port_no, u32 info_addr)
+int cellMouseInfoTabletMode(u32 port_no, mem_class_t info)
 {
-	sys_io.Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no,info_addr);
+	sys_io.Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no, info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().GetCount()) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
-	mem_class_t info(info_addr);
 	info += 0;		// Unimplemented: (0=Tablet mode is not supported)
 	info += 1;		// Unimplemented: (1=Mouse mode)
 	
 	return CELL_OK;
 }
 
-int cellMouseGetData(u32 port_no, u32 data_addr)
+int cellMouseGetData(u32 port_no, mem_class_t data)
 {
-	sys_io.Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no,data_addr);
+	sys_io.Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().GetCount()) return CELL_MOUSE_ERROR_NO_DEVICE;
 	
 	CellMouseData& current_data = Emu.GetMouseManager().GetData(port_no);
-	mem_class_t data(data_addr);
 	data += current_data.update;
 	data += current_data.buttons;
 	data += current_data.x_axis;
@@ -99,7 +96,7 @@ int cellMouseGetData(u32 port_no, u32 data_addr)
 	return CELL_OK;
 }
 
-int cellMouseGetDataList(u32 port_no, u32 data_addr)
+int cellMouseGetDataList(u32 port_no, mem_class_t data)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 	
@@ -113,23 +110,22 @@ int cellMouseSetTabletMode(u32 port_no, u32 mode)
 	return CELL_OK;
 }
 
-int cellMouseGetTabletDataList(u32 port_no, u32 data_addr)
+int cellMouseGetTabletDataList(u32 port_no, mem_class_t data)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 	
 	return CELL_OK;
 }
 
-int cellMouseGetRawData(u32 port_no, u32 data_addr)
+int cellMouseGetRawData(u32 port_no, mem_class_t data)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 
-	/*sys_io.Log("cellMouseGetRawData(port_no=%d,data_addr=0x%x)", port_no,data_addr);
+	/*sys_io.Log("cellMouseGetRawData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().GetCount()) return CELL_MOUSE_ERROR_NO_DEVICE;
 
 	CellMouseRawData& current_rawdata = Emu.GetMouseManager().GetRawData(port_no);
-	mem_class_t data(data_addr);
 	data += current_rawdata.len;
 	for(s32 i=0; i<current_rawdata.len; i++)
 	{
