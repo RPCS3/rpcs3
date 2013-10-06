@@ -310,7 +310,7 @@ void FragmentDecompilerThread::Task()
 
 		if(dst.end) break;
 
-		data.SetOffset(m_offset);
+		data.Skip(m_offset);
 	}
 
 	m_shader = BuildCode();

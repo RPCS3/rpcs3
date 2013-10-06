@@ -186,6 +186,7 @@ enum Status
 	Ready,
 };
 
+#include "Utilities/BEType.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
@@ -202,6 +203,7 @@ enum Status
 
 #include "Emu/FS/vfsFileBase.h"
 #include "Emu/FS/vfsLocalFile.h"
+#include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/FS/vfsStreamMemory.h"
 #include "rpcs3.h"

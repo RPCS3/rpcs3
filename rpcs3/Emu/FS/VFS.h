@@ -36,6 +36,7 @@ struct VFS
 	void Create(const wxString& ps3_path);
 	void Close(vfsStream*& device);
 	vfsDevice* GetDevice(const wxString& ps3_path, wxString& path);
+	vfsDevice* GetDeviceLocal(const wxString& local_path, wxString& path);
 
 	void Init(const wxString& path);
 	void SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load);

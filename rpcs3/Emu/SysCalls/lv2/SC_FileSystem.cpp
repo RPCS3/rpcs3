@@ -1,86 +1,6 @@
 #include "stdafx.h"
+#include "SC_FileSystem.h"
 #include "Emu/SysCalls/SysCalls.h"
-
-enum CellFsOflag
-{
-	LV2_O_RDONLY	= 000000,
-	LV2_O_WRONLY	= 000001,
-	LV2_O_RDWR		= 000002,
-	LV2_O_ACCMODE	= 000003,
-	LV2_O_CREAT		= 000100,
-	LV2_O_EXCL		= 000200,
-	LV2_O_TRUNC		= 001000,
-	LV2_O_APPEND	= 002000,
-	LV2_O_MSELF		= 010000,
-};
-
-#define CELL_FS_TYPE_UNKNOWN   0
-
-enum CellFsSeek
-{
-	LV2_SEEK_SET,
-	LV2_SEEK_CUR,
-	LV2_SEEK_END,
-};
-
-enum CellFsLength
-{
-	LV2_MAX_FS_PATH_LENGTH = 1024,
-	LV2_MAX_FS_FILE_NAME_LENGTH = 255,
-	LV2_MAX_FS_MP_LENGTH = 31,
-};
-
-enum
-{
-	CELL_FS_S_IFDIR = 0040000,	//directory
-	CELL_FS_S_IFREG = 0100000,	//regular
-	CELL_FS_S_IFLNK = 0120000,	//symbolic link
-	CELL_FS_S_IFWHT = 0160000,	//unknown
-
-	CELL_FS_S_IRUSR = 0000400,	//R for owner
-	CELL_FS_S_IWUSR = 0000200,	//W for owner
-	CELL_FS_S_IXUSR = 0000100,	//X for owner
-
-	CELL_FS_S_IRGRP = 0000040,	//R for group
-	CELL_FS_S_IWGRP = 0000020,	//W for group
-	CELL_FS_S_IXGRP = 0000010,	//X for group
-
-	CELL_FS_S_IROTH = 0000004,	//R for other
-	CELL_FS_S_IWOTH = 0000002,	//W for other
-	CELL_FS_S_IXOTH = 0000001,	//X for other
-};
-
-struct CellFsStat
-{
-	u32 st_mode;
-	s32 st_uid;
-	s32 st_gid;
-	u64 st_atime;
-	u64 st_mtime;
-	u64 st_ctime;
-	u64 st_size;
-	u64 st_blksize;
-};
-
-struct CellFsUtimbuf
-{
-	u64 actime;
-	u64 modtime;
-};
-
-struct CellFsDirent
-{
-	u8 d_type;
-	u8 d_namlen;
-	char d_name[LV2_MAX_FS_FILE_NAME_LENGTH + 1];
-};
-
-enum FsDirentType
-{
-	CELL_FS_TYPE_DIRECTORY	= 1,
-	CELL_FS_TYPE_REGULAR	= 2,
-	CELL_FS_TYPE_SYMLINK	= 3,
-};
 
 extern Module sys_fs;
 
@@ -94,9 +14,9 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	//ConLog.Warning("path: %s [%s]", ppath, path);
 
 	s32 _oflags = flags;
-	if(flags & LV2_O_CREAT)
+	if(flags & CELL_O_CREAT)
 	{
-		_oflags &= ~LV2_O_CREAT;
+		_oflags &= ~CELL_O_CREAT;
 		/*
 		//create path
 		for(uint p=1;p<ppath.Length();p++)
@@ -125,35 +45,35 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	vfsOpenMode o_mode;
 
-	switch(flags & LV2_O_ACCMODE)
+	switch(flags & CELL_O_ACCMODE)
 	{
-	case LV2_O_RDONLY:
-		_oflags &= ~LV2_O_RDONLY;
+	case CELL_O_RDONLY:
+		_oflags &= ~CELL_O_RDONLY;
 		o_mode = vfsRead;
 	break;
 
-	case LV2_O_WRONLY:
-		_oflags &= ~LV2_O_WRONLY;
+	case CELL_O_WRONLY:
+		_oflags &= ~CELL_O_WRONLY;
 
-		if(flags & LV2_O_APPEND)
+		if(flags & CELL_O_APPEND)
 		{
-			_oflags &= ~LV2_O_APPEND;
+			_oflags &= ~CELL_O_APPEND;
 			o_mode = vfsWriteAppend;
 		}
-		else if(flags & LV2_O_EXCL)
+		else if(flags & CELL_O_EXCL)
 		{
-			_oflags &= ~LV2_O_EXCL;
+			_oflags &= ~CELL_O_EXCL;
 			o_mode = vfsWriteExcl;
 		}
-		else //if(flags & LV2_O_TRUNC)
+		else //if(flags & CELL_O_TRUNC)
 		{
-			_oflags &= ~LV2_O_TRUNC;
+			_oflags &= ~CELL_O_TRUNC;
 			o_mode = vfsWrite;
 		}
 	break;
 
-	case LV2_O_RDWR:
-		_oflags &= ~LV2_O_RDWR;
+	case CELL_O_RDWR:
+		_oflags &= ~CELL_O_RDWR;
 		o_mode = vfsReadWrite;
 	break;
 	}
@@ -187,7 +107,10 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsStream& file = *(vfsStream*)id.m_data;
 
-	nread = file.Read(Memory.GetMemFromAddr(buf_addr), nbytes);
+	const u64 res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+
+	if(nread.IsGood())
+		nread = res;
 
 	return CELL_OK;
 }
@@ -205,7 +128,10 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
 	}
 
-	nwrite = nbytes ? file.Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	const u64 res = nbytes ? file.Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+
+	if(nwrite.IsGood())
+		nwrite = res;
 
 	return CELL_OK;
 }
@@ -242,7 +168,7 @@ int cellFsClosedir(u32 fd)
 	return CELL_OK;
 }
 
-int cellFsStat(const u32 path_addr, mem_class_t sb)
+int cellFsStat(const u32 path_addr, mem_struct_ptr_t<CellFsStat> sb)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb.GetAddr());
@@ -265,63 +191,43 @@ int cellFsStat(const u32 path_addr, mem_class_t sb)
 		return CELL_ENOENT;
 	}
 
-	CellFsStat stat;
-	stat.st_mode = 
+	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
 		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
 
-	stat.st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
-	stat.st_uid = 0;
-	stat.st_gid = 0;
-	stat.st_atime = 0; //TODO
-	stat.st_mtime = 0; //TODO
-	stat.st_ctime = 0; //TODO
-	stat.st_size = f->GetSize();
-	stat.st_blksize = 4096;
-
-	sb += stat.st_mode;
-	sb += stat.st_uid;
-	sb += stat.st_gid;
-	sb += stat.st_atime;
-	sb += stat.st_mtime;
-	sb += stat.st_ctime;
-	sb += stat.st_size;
-	sb += stat.st_blksize;
+	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
+	sb->st_uid = 0;
+	sb->st_gid = 0;
+	sb->st_atime = 0; //TODO
+	sb->st_mtime = 0; //TODO
+	sb->st_ctime = 0; //TODO
+	sb->st_size = f->GetSize();
+	sb->st_blksize = 4096;
 
 	return CELL_OK;
 }
 
-int cellFsFstat(u32 fd, mem_class_t sb)
+int cellFsFstat(u32 fd, mem_struct_ptr_t<CellFsStat> sb)
 {
 	sys_fs.Log("cellFsFstat(fd: %d, sb_addr: 0x%x)", fd, sb.GetAddr());
 	ID id;
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsStream& file = *(vfsStream*)id.m_data;
 
-	CellFsStat stat;
-	stat.st_mode = 
+	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
 		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
 
-	stat.st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
-	stat.st_uid = 0;
-	stat.st_gid = 0;
-	stat.st_atime = 0; //TODO
-	stat.st_mtime = 0; //TODO
-	stat.st_ctime = 0; //TODO
-	stat.st_size = file.GetSize();
-	stat.st_blksize = 4096;
-
-	sb += stat.st_mode;
-	sb += stat.st_uid;
-	sb += stat.st_gid;
-	sb += stat.st_atime;
-	sb += stat.st_mtime;
-	sb += stat.st_ctime;
-	sb += stat.st_size;
-	sb += stat.st_blksize;
+	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
+	sb->st_uid = 0;
+	sb->st_gid = 0;
+	sb->st_atime = 0; //TODO
+	sb->st_mtime = 0; //TODO
+	sb->st_ctime = 0; //TODO
+	sb->st_size = file.GetSize();
+	sb->st_blksize = 4096;
 
 	return CELL_OK;
 }
@@ -379,9 +285,9 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 	sys_fs.Log("cellFsLseek(fd: %d, offset: 0x%llx, whence: %d, pos_addr: 0x%x)", fd, offset, whence, pos.GetAddr());
 	switch(whence)
 	{
-	case LV2_SEEK_SET: seek_mode = vfsSeekSet; break;
-	case LV2_SEEK_CUR: seek_mode = vfsSeekCur; break;
-	case LV2_SEEK_END: seek_mode = vfsSeekEnd; break;
+	case CELL_SEEK_SET: seek_mode = vfsSeekSet; break;
+	case CELL_SEEK_CUR: seek_mode = vfsSeekCur; break;
+	case CELL_SEEK_END: seek_mode = vfsSeekEnd; break;
 	default:
 		sys_fs.Error(fd, "Unknown seek whence! (%d)", whence);
 	return CELL_EINVAL;

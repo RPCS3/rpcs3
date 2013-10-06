@@ -32,6 +32,7 @@ public:
 	void SetPath(const wxString& ps3_path, const wxString& local_path);
 
 	u32 CmpPs3Path(const wxString& ps3_path);
+	u32 CmpLocalPath(const wxString& local_path);
 
 	static wxString ErasePath(const wxString& local_path, u32 start_dir_count, u32 end_dir_count);
 	static wxString GetRoot(const wxString& local_path);

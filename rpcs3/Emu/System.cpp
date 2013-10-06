@@ -99,16 +99,21 @@ void Emulator::Load()
 	}
 	ConLog.SkipLn();
 
-	const auto f = m_elf_path.Len() ? OpenFile(m_elf_path) : std::shared_ptr<vfsLocalFile>(new vfsLocalFile(m_path));
+	if(m_elf_path.IsEmpty())
+	{
+		GetVFS().GetDeviceLocal(m_path, m_elf_path);
+	}
 
-	if(!f->IsOpened())
+	vfsFile f(m_elf_path);
+
+	if(!f.IsOpened())
 	{
 		ConLog.Error("Elf not found! (%s - %s)", m_path, m_elf_path);
 		return;
 	}
 
 	bool is_error;
-	Loader l(*f);
+	Loader l(f);
 
 	try
 	{

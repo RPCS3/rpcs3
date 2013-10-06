@@ -1,6 +1,6 @@
 #pragma once
 #include "ErrorCodes.h"
-
+#include "lv2/SC_FileSystem.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -176,14 +176,14 @@ extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
 
 //cellFs
 extern int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size);
-extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread_addr);
-extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite_addr);
+extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread);
+extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite);
 extern int cellFsClose(u32 fd);
 extern int cellFsOpendir(u32 path_addr, mem32_t fd);
 extern int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread);
 extern int cellFsClosedir(u32 fd);
-extern int cellFsStat(u32 path_addr, mem_class_t sb);
-extern int cellFsFstat(u32 fd, mem_class_t sb);
+extern int cellFsStat(u32 path_addr, mem_struct_ptr_t<CellFsStat> sb);
+extern int cellFsFstat(u32 fd, mem_struct_ptr_t<CellFsStat> sb);
 extern int cellFsMkdir(u32 path_addr, u32 mode);
 extern int cellFsRename(u32 from_addr, u32 to_addr);
 extern int cellFsRmdir(u32 path_addr);
@@ -278,18 +278,31 @@ extern u64 sys_time_get_timebase_frequency();
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
 
-#define SC_ARGS_1			CPU.GPR[3]
-#define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
-#define SC_ARGS_3 SC_ARGS_2,CPU.GPR[5]
-#define SC_ARGS_4 SC_ARGS_3,CPU.GPR[6]
-#define SC_ARGS_5 SC_ARGS_4,CPU.GPR[7]
-#define SC_ARGS_6 SC_ARGS_5,CPU.GPR[8]
-#define SC_ARGS_7 SC_ARGS_6,CPU.GPR[9]
-#define SC_ARGS_8 SC_ARGS_7,CPU.GPR[10]
-#define SC_ARGS_9 SC_ARGS_8,CPU.GPR[11]
-#define SC_ARGS_10 SC_ARGS_9,CPU.GPR[12]
-#define SC_ARGS_11 SC_ARGS_10,CPU.GPR[13]
-#define SC_ARGS_12 SC_ARGS_11,CPU.GPR[14]
+#define SC_ARG_0 CPU.GPR[3]
+#define SC_ARG_1 CPU.GPR[4]
+#define SC_ARG_2 CPU.GPR[5]
+#define SC_ARG_3 CPU.GPR[6]
+#define SC_ARG_4 CPU.GPR[7]
+#define SC_ARG_5 CPU.GPR[8]
+#define SC_ARG_6 CPU.GPR[9]
+#define SC_ARG_7 CPU.GPR[10]
+#define SC_ARG_8 CPU.GPR[11]
+#define SC_ARG_9 CPU.GPR[12]
+#define SC_ARG_10 CPU.GPR[13]
+#define SC_ARG_11 CPU.GPR[14]
+
+#define SC_ARGS_1			SC_ARG_0
+#define SC_ARGS_2 SC_ARGS_1,SC_ARG_1
+#define SC_ARGS_3 SC_ARGS_2,SC_ARG_2
+#define SC_ARGS_4 SC_ARGS_3,SC_ARG_3
+#define SC_ARGS_5 SC_ARGS_4,SC_ARG_4
+#define SC_ARGS_6 SC_ARGS_5,SC_ARG_5
+#define SC_ARGS_7 SC_ARGS_6,SC_ARG_6
+#define SC_ARGS_8 SC_ARGS_7,SC_ARG_7
+#define SC_ARGS_9 SC_ARGS_8,SC_ARG_8
+#define SC_ARGS_10 SC_ARGS_9,SC_ARG_9
+#define SC_ARGS_11 SC_ARGS_10,SC_ARG_10
+#define SC_ARGS_12 SC_ARGS_11,SC_ARG_11
 
 extern bool dump_enable;
 class PPUThread;

@@ -307,6 +307,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\FS\vfsFile.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -473,6 +476,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\BEType.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
