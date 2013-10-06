@@ -107,6 +107,12 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsStream& file = *(vfsStream*)id.m_data;
 
+	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
+	{
+		MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
+		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
+	}
+
 	const u64 res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 
 	if(nread.IsGood())
@@ -173,37 +179,39 @@ int cellFsStat(const u32 path_addr, mem_struct_ptr_t<CellFsStat> sb)
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb.GetAddr());
 
-	// Check if path is a mount point. (TODO: Add information in sb_addr)
-	for(u32 i=0; i<Emu.GetVFS().m_devices.GetCount(); ++i)
-	{
-		if  (path == Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1))
-		{
-			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path);
-			return CELL_OK;
-		}
-	}
-
-	auto f = Emu.OpenFile(path);
-
-	if(!f->IsOpened())
-	{
-		sys_fs.Warning("cellFsFstat: '%s' not found.", path);
-		return CELL_ENOENT;
-	}
-
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
 		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
 
-	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
 	sb->st_uid = 0;
 	sb->st_gid = 0;
 	sb->st_atime = 0; //TODO
 	sb->st_mtime = 0; //TODO
 	sb->st_ctime = 0; //TODO
-	sb->st_size = f->GetSize();
 	sb->st_blksize = 4096;
+
+	// Check if path is a mount point. (TODO: Add information in sb_addr)
+	for(u32 i=0; i<Emu.GetVFS().m_devices.GetCount(); ++i)
+	{
+		if(path.CmpNoCase(Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1)) == 0)
+		{
+			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path);
+			sb->st_mode |= CELL_FS_S_IFDIR;
+			return CELL_OK;
+		}
+	}
+
+	vfsFile f(path);
+
+	if(!f.IsOpened())
+	{
+		sys_fs.Warning("cellFsFstat: '%s' not found.", path);
+		return CELL_ENOENT;
+	}
+
+	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
+	sb->st_size = f.GetSize();
 
 	return CELL_OK;
 }
@@ -307,19 +315,13 @@ int cellFsFtruncate(u32 fd, u64 size)
 	vfsStream& file = *(vfsStream*)id.m_data;
 	u64 initialSize = file.GetSize();
 
-	if (initialSize < size)  // Is there any better way to fill the remaining bytes with 0, without allocating huge buffers in memory, or writing such a spaghetti code?
+	if (initialSize < size)
 	{
 		u64 last_pos = file.Tell();
 		file.Seek(0, vfsSeekEnd);
-		char* nullblock = (char*)calloc(4096, sizeof(char));
-		for(u64 i = (size-initialSize)/4096; i > 0; i--){
-			file.Write(nullblock, 4096);
-		}
-		free(nullblock);
-		char nullbyte = 0;
-		for(u64 i = (size-initialSize)%4096; i > 0; i--){
-			file.Write(&nullbyte, 1);
-		}
+		static const char nullbyte = 0;
+		file.Seek(size-initialSize-1, vfsSeekCur);
+		file.Write(&nullbyte, sizeof(char));
 		file.Seek(last_pos, vfsSeekSet);
 	}
 
@@ -336,29 +338,22 @@ int cellFsTruncate(u32 path_addr, u64 size)
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsTruncate(path: %s, size: %lld)", path, size);
 
-	vfsStream* f = Emu.GetVFS().Open(path, vfsRead);
-	if(!f || !f->IsOpened())
+	vfsFile f(path, vfsReadWrite);
+	if(!f.IsOpened())
 	{
 		sys_fs.Warning("cellFsTruncate: '%s' not found.", path);
-		Emu.GetVFS().Close(f);
 		return CELL_ENOENT;
 	}
-	u64 initialSize = f->GetSize();
+	u64 initialSize = f.GetSize();
 
-	if (initialSize < size)  // Is there any better way to fill the remaining bytes with 0, without allocating huge buffers in memory, or writing such a spaghetti code?
+	if (initialSize < size)
 	{
-		u64 last_pos = f->Tell();
-		f->Seek(0, vfsSeekEnd);
-		char* nullblock = (char*)calloc(4096, sizeof(char));
-		for(u64 i = (size-initialSize)/4096; i > 0; i--){
-			f->Write(nullblock, 4096);
-		}
-		free(nullblock);
-		char nullbyte = 0;
-		for(u64 i = (size-initialSize)%4096; i > 0; i--){
-			f->Write(&nullbyte, 1);
-		}
-		f->Seek(last_pos, vfsSeekSet);
+		u64 last_pos = f.Tell();
+		f.Seek(0, vfsSeekEnd);
+		static const char nullbyte = 0;
+		f.Seek(size-initialSize-1, vfsSeekCur);
+		f.Write(&nullbyte, sizeof(char));
+		f.Seek(last_pos, vfsSeekSet);
 	}
 
 	if (initialSize > size)
@@ -366,7 +361,6 @@ int cellFsTruncate(u32 path_addr, u64 size)
 		// (TODO)
 	}
 
-	Emu.GetVFS().Close(f);
 	return CELL_OK;
 }
 

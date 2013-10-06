@@ -35,7 +35,7 @@ public:
 		switch(sizeof(T))
 		{
 		case 1:
-			res = m_data;
+			(u8&)res = (u8&)m_data;
 		break;
 
 		case 2:
@@ -68,7 +68,7 @@ public:
 		switch(sizeof(T))
 		{
 		case 1:
-			m_data = value;
+			(u8&)m_data = (u8&)value;
 		return;
 
 		case 2:

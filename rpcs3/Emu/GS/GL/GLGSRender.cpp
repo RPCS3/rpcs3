@@ -569,7 +569,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 					}
 
 					m_frame->Flip();
-					glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					//glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				}
 
 				m_gcm_current_buffer = args[0];
@@ -773,67 +773,50 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 		m_surface_offset_b = args[4];
 		m_surface_pitch_b = args[5];
 
-		/*
-		ConLog.Write("surface color format: 0x%x", m_surface_color_format);
-		ConLog.Write("surface depth format: 0x%x", m_surface_depth_format);
-		ConLog.Write("surface type: 0x%x", m_surface_type);
-		ConLog.Write("surface antialias: 0x%x", m_surface_antialias);
-		ConLog.Write("surface width: 0x%x", m_surface_width);
-		ConLog.Write("surface height: 0x%x", m_surface_height);
-		ConLog.Write("surface pitch a: 0x%x", m_surface_pitch_a);
-		ConLog.Write("surface offset a: 0x%x", m_surface_offset_a);
-		ConLog.Write("surface offset z: 0x%x", m_surface_offset_z);
-		ConLog.Write("surface offset b: 0x%x", m_surface_offset_b);
-		ConLog.Write("surface pitch b: 0x%x", m_surface_pitch_b);
-		if(m_surface_offset_a && m_set_context_dma_color_a)
-		{
-			u32 surface_addr = GetAddress(m_surface_offset_a, (m_context_dma_color_a - 0xfeed0000));
-			auto& surface = (const CellGcmSurface&)Memory[surface_addr];
-			ConLog.Write("context_dma_color_a=0x%x", m_context_dma_color_a);
-			ConLog.Write("context a: color format: 0x%x", surface.color_format);
-			ConLog.Write("context a: depth format: 0x%x", surface.depth_format);
-			ConLog.Write("context a: type: 0x%x", surface.type);
-			ConLog.Write("context a: antialias: 0x%x", surface.antialias);
-			ConLog.Write("context a: width: 0x%x", surface.width);
-			ConLog.Write("context a: height: 0x%x", surface.height);
-		}
-		else if(m_surface_offset_z && m_set_context_dma_z)
-		{
-			u32 surface_addr = GetAddress(m_surface_offset_z, m_context_dma_z);
-			auto& surface = (const CellGcmSurface&)Memory[surface_addr];
-			ConLog.Write("m_surface_offset_z=0x%x", m_surface_offset_z);
-			ConLog.Write("context x: color format: 0x%x", surface.color_format);
-			ConLog.Write("context z: depth format: 0x%x", surface.depth_format);
-			ConLog.Write("context z: type: 0x%x", surface.type);
-			ConLog.Write("context z: antialias: 0x%x", surface.antialias);
-			ConLog.Write("context z: width: 0x%x", surface.width);
-			ConLog.Write("context z: height: 0x%x", surface.height);
-
-			m_width = surface.width;
-			m_height = surface.height;
-		}
-		*/
+		m_depth_offset = m_surface_offset_z;
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
 		m_width = re(buffers[m_gcm_current_buffer].width);
 		m_height = re(buffers[m_gcm_current_buffer].height);
 
-		if(1)
+		break;
+		m_rbo.Create(2);
+		checkForGlError("m_rbo.Create");
+		m_rbo.Bind(0);
+		m_rbo.Storage(GL_RGBA, m_width, m_height);
+		checkForGlError("m_rbo.Storage(GL_RGBA)");
+		m_rbo.Bind(1);
+
+		switch(m_surface_depth_format)
 		{
-			m_rbo.Create(2);
-			checkForGlError("m_rbo.Create");
-			m_rbo.Bind(0);
-			m_rbo.Storage(GL_RGBA, m_width, m_height);
-			checkForGlError("m_rbo.Storage(GL_RGBA)");
-			m_rbo.Bind(1);
+		case 1:
+			m_rbo.Storage(GL_DEPTH_COMPONENT16, m_width, m_height);
+		break;
+
+		case 2:
 			m_rbo.Storage(GL_DEPTH24_STENCIL8, m_width, m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
-			m_fbo.Create();
-			checkForGlError("m_fbo.Create");
-			m_fbo.Bind();
-			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId(0));
-			checkForGlError("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0)");
+		break;
+
+		default:
+			ConLog.Error("Bad depth format! (%d)", m_surface_depth_format);
+			assert(0);
+		break;
+		}
+		checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
+		m_fbo.Create();
+		checkForGlError("m_fbo.Create");
+		m_fbo.Bind();
+		m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId(0));
+		checkForGlError("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0)");
+
+		if(m_surface_depth_format == 2)
+		{
 			m_fbo.Renderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, m_rbo.GetId(1));
+			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_STENCIL_ATTACHMENT)");
+		}
+		else
+		{
+			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(1));
 			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_STENCIL_ATTACHMENT)");
 		}
 		//CMD_LOG("color_format=%d, depth_format=%d, type=%d, antialias=%d, width=%d, height=%d, pitch_a=%d, offset_a=0x%x, offset_z=0x%x, offset_b=0x%x, pitch_b=%d",
@@ -941,19 +924,10 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 	case NV4097_SET_FRONT_POLYGON_MODE:
 		m_set_front_polygon_mode = true;
 		m_front_polygon_mode = args[0];
-		//glPolygonMode(GL_FRONT, args[0]);
 	break;
 
 	case NV4097_CLEAR_SURFACE:
 	{
-		u32 a0 = args[0];
-		GLbitfield f = 0;
-		if (a0 & 0x1) f |= GL_DEPTH_BUFFER_BIT;
-		if (a0 & 0x2) f |= GL_STENCIL_BUFFER_BIT;
-		if (a0 & 0xF0) f |= GL_COLOR_BUFFER_BIT;
-		glClear(f);
-		checkForGlError("glClear");
-		/*
 		if(m_set_clear_surface)
 		{
 			m_clear_surface_mask |= args[0];
@@ -963,7 +937,6 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 			m_clear_surface_mask = args[0];
 			m_set_clear_surface = true;
 		}
-		*/
 	}
 	break;
 
@@ -1021,8 +994,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 	{
 		for(u32 c=0; c<count; ++c)
 		{
-			const u32 first = args[c] & 0xffffff;
-			const u32 _count = (args[c] >> 24) + 1;
+			u32 ac = args[c];
+			const u32 first = ac & 0xffffff;
+			const u32 _count = (ac >> 24) + 1;
 
 			LoadVertexData(first, _count);
 
@@ -1508,7 +1482,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 
 	case NV4097_SET_SURFACE_PITCH_Z:
 	{
-		//TODO
+		m_depth_pitch = args[0];
 	}
 	break;
 
@@ -1580,10 +1554,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
 	{
 		u32 clear_valuei = args[0];
-		//double clear_valuef = (double)clear_valuei / 0xffffffff;
-		//glClearDepth(clear_valuef);
+		double clear_valuef = (double)clear_valuei / 0xffffffff;
+		glClearDepth(clear_valuef);
 		glClearStencil(clear_valuei);
-		glClear(GL_STENCIL_BUFFER_BIT);
 	}
 	break;
 
@@ -1897,6 +1870,59 @@ bool GLGSRender::LoadProgram()
 	return true;
 }
 
+void GLGSRender::WriteDepthBuffer()
+{
+	if(!m_set_context_dma_z)
+	{
+		return;
+	}
+
+	u32 address = GetAddress(m_depth_offset, m_context_dma_z - 0xfeed0000);
+	if(!Memory.IsGoodAddr(address))
+	{
+		ConLog.Warning("Bad depth address: address=0x%x, offset=0x%x, dma=0x%x", address, m_depth_offset, m_context_dma_z);
+		return;
+	}
+
+	u8* dst = &Memory[address];
+	//m_fbo.Bind(GL_READ_FRAMEBUFFER);
+	//glPixelStorei(GL_PACK_ROW_LENGTH, m_depth_pitch);
+
+	m_fbo.Bind(GL_READ_FRAMEBUFFER);
+	GLuint depth_tex;
+	glGenTextures(1, &depth_tex);
+	glBindTexture(GL_TEXTURE_2D, depth_tex);
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 0, 0, m_width, m_height, 0);
+	checkForGlError("glCopyTexImage2D");
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dst);
+	checkForGlError("glGetTexImage");
+	glDeleteTextures(1, &depth_tex);
+	wxFile f("depth.raw", wxFile::write);
+	f.Write(dst, m_width * m_height * 4);
+	m_fbo.Bind();
+	/*
+	GLBufferObject pbo;
+	pbo.Create(GL_PIXEL_PACK_BUFFER);
+	pbo.Bind();
+	glReadPixels(0, 0, m_width, m_height, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	GLuint *src = (GLuint*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+	if(src)
+	{
+		wxFile f("depth.raw", wxFile::write);
+		f.Write(src, m_width * m_height * 4);
+		memcpy(dst, src, m_width * m_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
+	else
+	{
+		ConLog.Error("glMapBuffer failed.");
+	}
+	pbo.UnBind();
+	pbo.Delete();
+	*/
+	Emu.Pause();
+}
+
 void GLGSRender::ExecCMD()
 {
 	if(LoadProgram())
@@ -1938,7 +1964,7 @@ void GLGSRender::ExecCMD()
 			GLbitfield f = 0;
 			if (m_clear_surface_mask & 0x1) f |= GL_DEPTH_BUFFER_BIT;
 			if (m_clear_surface_mask & 0x2) f |= GL_STENCIL_BUFFER_BIT;
-			if (m_clear_surface_mask & 0xF0) f |= GL_COLOR_BUFFER_BIT;
+			if ((m_clear_surface_mask & 0xF0) == 0xF0) f |= GL_COLOR_BUFFER_BIT;
 			glClear(f);
 		}
 
@@ -1972,6 +1998,24 @@ void GLGSRender::ExecCMD()
 			checkForGlError("m_set_clip_plane");
 		}
 
+		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
+		{
+			glStencilOp(m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
+			checkForGlError("glStencilOp");
+		}
+
+		if(m_set_stencil_mask)
+		{
+			glStencilMask(m_stencil_mask);
+			checkForGlError("glStencilMask");
+		}
+
+		if(m_set_stencil_func && m_set_stencil_func_ref && m_set_stencil_func_mask)
+		{
+			glStencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
+			checkForGlError("glStencilFunc");
+		}
+
 		if(m_set_two_sided_stencil_test_enable)
 		{
 			if(m_set_back_stencil_fail && m_set_back_stencil_zfail && m_set_back_stencil_zpass)
@@ -1991,24 +2035,6 @@ void GLGSRender::ExecCMD()
 				glStencilFuncSeparate(GL_BACK, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask);
 				checkForGlError("glStencilFuncSeparate(GL_BACK)");
 			}
-		}
-
-		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
-		{
-			glStencilOpSeparate(GL_FRONT, m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
-			checkForGlError("glStencilOpSeparate(GL_FRONT)");
-		}
-
-		if(m_set_stencil_mask)
-		{
-			glStencilMaskSeparate(GL_FRONT, m_stencil_mask);
-			checkForGlError("glStencilMaskSeparate(GL_FRONT)");
-		}
-
-		if(m_set_stencil_func && m_set_stencil_func_ref && m_set_stencil_func_mask)
-		{
-			glStencilFuncSeparate(GL_FRONT, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
-			checkForGlError("glStencilFuncSeparate(GL_FRONT)");
 		}
 
 		if(m_set_shade_mode)
@@ -2149,6 +2175,8 @@ void GLGSRender::ExecCMD()
 		}
 
 		m_fragment_constants.Clear();
+
+		//WriteDepthBuffer();
 	}
 	else
 	{

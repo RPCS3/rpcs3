@@ -556,6 +556,7 @@ private:
 	virtual void Draw();
 	virtual void Close();
 	bool LoadProgram();
+	void WriteDepthBuffer();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);

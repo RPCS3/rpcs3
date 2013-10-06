@@ -56,6 +56,8 @@ enum FsDirentType
 	CELL_FS_TYPE_SYMLINK	= 3,
 };
 
+#pragma pack(4)
+
 struct CellFsStat
 {
 	be_t<u32> st_mode;
@@ -80,3 +82,5 @@ struct CellFsDirent
 	u8 d_namlen;
 	char d_name[CELL_MAX_FS_FILE_NAME_LENGTH + 1];
 };
+
+#pragma pack()

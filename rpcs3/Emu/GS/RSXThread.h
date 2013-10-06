@@ -47,6 +47,10 @@ public:
 
 	bool m_set_clear_surface;
 	u32 m_clear_surface_mask;
+	u8 m_clear_surface_color_r;
+	u8 m_clear_surface_color_g;
+	u8 m_clear_surface_color_b;
+	u8 m_clear_surface_color_a;
 
 	bool m_set_blend_sfactor;
 	u16 m_blend_sfactor_rgb;
@@ -205,23 +209,33 @@ public:
 	bool m_set_alpha_ref;
 	u32 m_alpha_ref;
 
+	u32 m_depth_offset;
+	u32 m_depth_pitch;
+
 	u8 m_begin_end;
 
 public:
 	ExecRSXCMDdata()
 	{
+		m_set_alpha_test = false;
+		m_set_blend = false;
+		m_set_depth_bounds_test = false;
+		m_depth_test_enable = false;
+		m_set_logic_op = false;
+		m_set_cull_face_enable = false;
+		m_set_dither = false;
+		m_set_stencil_test = false;
+		m_set_line_smooth = false;
+		m_set_poly_smooth = false;
+
 		Reset();
 	}
 
 	virtual void Reset()
 	{
 		m_set_color_mask = false;
-		m_set_alpha_test = false;
-		m_set_blend = false;
-		m_set_depth_bounds_test = false;
 		m_set_clip = false;
 		m_set_depth_func = false;
-		m_depth_test_enable = false;
 		m_set_viewport_horizontal = false;
 		m_set_viewport_vertical = false;
 		m_set_scissor_horizontal = false;
@@ -230,10 +244,6 @@ public:
 		m_set_clear_surface = false;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
-		m_set_logic_op = false;
-		m_set_cull_face_enable = false;
-		m_set_dither = false;
-		m_set_stencil_test = false;
 		m_set_stencil_mask = false;
 		m_set_stencil_func = false;
 		m_set_stencil_func_ref = false;
@@ -251,8 +261,6 @@ public:
 		m_set_back_stencil_zpass = false;
 		m_set_blend_equation = false;
 		m_set_depth_mask = false;
-		m_set_line_smooth = false;
-		m_set_poly_smooth = false;
 		m_set_line_width = false;
 		m_set_shade_mode = false;
 		m_set_blend_color = false;

@@ -449,7 +449,7 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 {
 	long i = m_list->GetFirstSelected();
-	if(i < 0) return;
+	if(i < 0 || !CPU) return;
 
 	const u64 start_pc = PC - m_item_count*4;
 	const u64 pc = start_pc + i*4;
