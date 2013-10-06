@@ -8,7 +8,7 @@ PPCThread* GetCurrentPPCThread()
 }
 
 PPCThread::PPCThread(PPCThreadType type)
-	: ThreadBase(false, "PPCThread")
+	: ThreadBase(true, "PPCThread")
 	, m_type(type)
 	, DisAsmFrame(nullptr)
 	, m_dec(nullptr)
