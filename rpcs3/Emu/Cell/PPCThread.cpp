@@ -8,7 +8,7 @@ PPCThread* GetCurrentPPCThread()
 }
 
 PPCThread::PPCThread(PPCThreadType type)
-	: ThreadBase(true, "PPCThread")
+	: ThreadBase(false, "PPCThread")
 	, m_type(type)
 	, DisAsmFrame(nullptr)
 	, m_dec(nullptr)
@@ -124,6 +124,11 @@ bool PPCThread::Sync()
 
 int PPCThread::ThreadStatus()
 {
+	if(m_is_step)
+	{
+		return PPCThread_Step;
+	}
+
 	if(Emu.IsStopped())
 	{
 		return PPCThread_Stopped;
@@ -277,6 +282,7 @@ void PPCThread::Stop()
 
 void PPCThread::Exec()
 {
+	m_is_step = false;
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 	ThreadBase::Start();
 	//std::thread thr(std::bind(std::mem_fn(&PPCThread::Task), this));
@@ -284,8 +290,12 @@ void PPCThread::Exec()
 
 void PPCThread::ExecOnce()
 {
-	DoCode(Memory.Read32(m_offset + PC));
-	NextPc();
+	m_is_step = true;
+	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
+	ThreadBase::Start();
+	if(!ThreadBase::Wait()) while(m_is_step) Sleep(1);
+	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
+	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
 void PPCThread::Task()
@@ -322,6 +332,12 @@ void PPCThread::Task()
 
 			DoCode(Memory.Read32(m_offset + PC));
 			NextPc();
+
+			if(status == PPCThread_Step)
+			{
+				m_is_step = false;
+				break;
+			}
 
 			for(uint i=0; i<bp.GetCount(); ++i)
 			{

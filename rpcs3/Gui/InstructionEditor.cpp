@@ -90,10 +90,10 @@ void InstructionEditorDialog::updatePreview(wxCommandEvent& event)
 	unsigned long opcode;
 	if (t2_instr->GetValue().ToULong(&opcode, 16))
 	{
+		disasm->dump_pc = pc;
 		decoder->Decode((u32)opcode);
 		wxString preview = disasm->last_opcode;
-		while (preview[0] != ':') preview.Remove(0,1);
-		preview.Remove(0,1);
+		preview.Remove(0, preview.Find(':') + 1);
 		t3_preview->SetLabel(preview);
 	}
 	else

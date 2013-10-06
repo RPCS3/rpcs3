@@ -17,6 +17,7 @@ enum PPCThreadStatus
 	PPCThread_Stopped,
 	PPCThread_Sleeping,
 	PPCThread_Break,
+	PPCThread_Step,
 };
 
 class PPCThread : public ThreadBase
@@ -36,6 +37,7 @@ protected:
 	u64 m_offset;
 	u32 m_exit_status;
 	bool m_free_data;
+	bool m_is_step;
 
 public:
 	u64 stack_size;

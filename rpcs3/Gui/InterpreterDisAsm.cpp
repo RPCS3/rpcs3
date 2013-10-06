@@ -13,7 +13,6 @@ u64 InterpreterDisAsmFrame::CentrePc(const u64 pc) const
 
 InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(500, 700), wxTAB_TRAVERSAL)
-	, ThreadBase(false, "DisAsmFrame Thread")
 	, PC(0)
 	, CPU(nullptr)
 	, m_item_count(30)
@@ -84,7 +83,6 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 
 InterpreterDisAsmFrame::~InterpreterDisAsmFrame()
 {
-	ThreadBase::Stop();
 }
 
 void InterpreterDisAsmFrame::UpdateUnitList()
@@ -443,13 +441,17 @@ void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	ThreadBase::Start();
+	if(CPU) CPU->ExecOnce();
 }
 
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 {
 	long i = m_list->GetFirstSelected();
-	if(i < 0 || !CPU) return;
+	if(i < 0 || !CPU)
+	{
+		event.Skip();
+		return;
+	}
 
 	const u64 start_pc = PC - m_item_count*4;
 	const u64 pc = start_pc + i*4;
@@ -465,6 +467,8 @@ void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 		DoUpdate();
 		return;
 	}
+
+	event.Skip();
 }
 
 void InterpreterDisAsmFrame::DClick(wxListEvent& event)
@@ -529,36 +533,4 @@ bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 	}
 
 	return false;
-}
-
-void InterpreterDisAsmFrame::Task()
-{
-	if(!CPU) return;
-	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, CPU);
-	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, CPU);
-	bool dump_status = dump_enable;
-
-	//CPU.InitTls();
-
-	try
-	{
-		do
-		{
-			CPU->ExecOnce();
-		}
-		while(CPU->IsRunning() && Emu.IsRunning() && !TestDestroy() && !IsBreakPoint(CPU->PC) && dump_status == dump_enable);
-	}
-	catch(const wxString& e)
-	{
-		ConLog.Error(e);
-	}
-	catch(...)
-	{
-		ConLog.Error("Unhandled exception.");
-	}
-
-	//CPU.FreeTls();
-
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, CPU);
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, CPU);
 }

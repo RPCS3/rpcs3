@@ -5,9 +5,7 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-class InterpreterDisAsmFrame
-	: public wxPanel
-	, public ThreadBase
+class InterpreterDisAsmFrame : public wxPanel
 {
 	wxListView* m_list;
 	PPC_DisAsm* disasm;
@@ -53,6 +51,4 @@ public:
 	bool IsBreakPoint(u64 pc);
 	void AddBreakPoint(u64 pc);
 	bool RemoveBreakPoint(u64 pc);
-
-	virtual void Task();
 };
