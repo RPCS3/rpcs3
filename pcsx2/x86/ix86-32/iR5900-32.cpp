@@ -1188,6 +1188,50 @@ static void iBranchTest(u32 newpc)
 	}
 }
 
+#ifdef PCSX2_DEVBUILD
+// opcode 'code' modifies:
+// 1: status
+// 2: MAC
+// 4: clip
+int cop2flags(u32 code)
+{
+	if (code >> 26 != 022)
+		return 0; // not COP2
+	if ((code >> 25 & 1) == 0)
+		return 0; // a branch or transfer instruction
+
+	switch (code >> 2 & 15)
+	{
+		case 15:
+			switch (code >> 6 & 0x1f)
+			{
+				case 4: // ITOF*
+				case 5: // FTOI*
+					return 0;
+				case 7: // MULAq, ABS, MULAi, CLIP
+					if ((code & 3) == 1) // ABS
+						return 0;
+					if ((code & 3) == 3) // CLIP
+						return 4;
+					return 3;
+				case 11: // SUBA, MSUBA, OPMULA, NOP
+					if ((code & 3) == 3) // NOP
+						return 0;
+					return 3;
+				case 14: // DIV, SQRT, RSQRT, WAITQ
+					if ((code & 3) == 3) // WAITQ
+						return 0;
+					return 1; // but different timing, ugh
+				default:
+					break;
+			}
+		default:
+			break;
+	}
+	return 3;
+}
+#endif
+
 void recompileNextInstruction(int delayslot)
 {
 	static u8 s_bFlushReg = 1;
@@ -1299,6 +1343,66 @@ void recompileNextInstruction(int delayslot)
 	}
 
 	g_maySignalException = false;
+
+#if PCSX2_DEVBUILD
+	// Stalls normally occur as necessary on the R5900, but when using COP2 (VU0 macro mode),
+	// there are some exceptions to this.  We probably don't even know all of them.
+	// We emulate the R5900 as if it was fully interlocked (which is mostly true), and
+	// in fact we don't have good enough cycle counting to do otherwise.  So for now,
+	// we'll try to identify problematic code in games create patches.
+	// Look ahead is probably the most reasonable way to do this given the deficiency
+	// of our cycle counting.  Real cycle counting is complicated and will have to wait.
+	// Instead of counting the cycles I'm going to count instructions.  There are a lot of
+	// classes of instructions which use different resources and specific restrictions on
+	// coissuing but this is just for printing a warning so I'll simplify.
+	// Even when simplified this is not simple and it is very very wrong.
+
+	// CFC2 flag register after arithmetic operation: 5 cycles
+	// CTC2 flag register after arithmetic operation... um.  TODO.
+	// CFC2 address register after increment/decrement load/store: 5 cycles TODO
+	// CTC2 CMSAR0, VCALLMSR CMSAR0: 3 cycles but I want to do some tests.
+	// Don't even want to think about DIV, SQRT, RSQRT now.
+
+	if (_Opcode_ == 022) // COP2
+	{
+		if ((cpuRegs.code >> 25 & 1) == 1 && (cpuRegs.code >> 2 & 0x1ff) == 0xdf) // [LS]Q[DI]
+			; // TODO
+		else if (_Rs_ == 6) // CTC2
+			; // TODO
+		else
+		{
+			int s = cop2flags(cpuRegs.code);
+			int all_count = 0, cop2o_count = 0, cop2m_count = 0;
+			for (u32 p = pc; s != 0 && p < s_nEndBlock && all_count < 10 && cop2m_count < 5 && cop2o_count < 5; p += 4)
+			{
+				// I am so sorry.
+				cpuRegs.code = memRead32(p);
+				if (_Rs_ == 2) // CFC2
+					// rd is fs
+					if (_Rd_ == 16 && s & 1 || _Rd_ == 17 && s & 2 || _Rd_ == 18 && s & 4)
+					{
+						std::string disasm;
+						DevCon.Warning("Possible old value used in COP2 code");
+						for (u32 i = s_pCurBlockEx->startpc; i <= p; i += 4)
+						{
+							disR5900Fasm(disasm, memRead32(i), i);
+							DevCon.Warning("%s%s", i == pc - 4 ? "*" : " ", disasm.c_str());
+						}
+						break;
+					}
+				s &= ~cop2flags(cpuRegs.code);
+				all_count++;
+				if (_Opcode_ == 022 && _Rs_ == 8) // COP2 branch, handled incorrectly like most things
+					;
+				else if (_Opcode_ == 022 && (cpuRegs.code >> 25 & 1) == 0)
+					cop2m_count++;
+				else if (_Opcode_ == 022)
+					cop2o_count++;
+			}
+		}
+	}
+	cpuRegs.code = *s_pCode;
+#endif
 
 	if (!delayslot && (xGetPtr() - recPtr > 0x1000) )
 		s_nEndBlock = pc;
