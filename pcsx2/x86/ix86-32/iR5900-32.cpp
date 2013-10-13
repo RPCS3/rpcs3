@@ -1207,6 +1207,10 @@ int cop2flags(u32 code)
 			{
 				case 4: // ITOF*
 				case 5: // FTOI*
+				case 12: // MOVE MR32
+				case 13: // LQI SQI LQD SQD
+				case 15: // MTIR MFIR ILWR ISWR
+				case 16: // RNEXT RGET RINIT RXOR
 					return 0;
 				case 7: // MULAq, ABS, MULAi, CLIP
 					if ((code & 3) == 1) // ABS
@@ -1225,6 +1229,24 @@ int cop2flags(u32 code)
 				default:
 					break;
 			}
+		case 4: // MAXbc
+		case 5: // MINbc
+		case 12: // IADD, ISUB, IADDI
+		case 13: // IAND, IOR
+		case 14: // VCALLMS, VCALLMSR
+			return 0;
+		case 7:
+			if ((code & 1) == 1) // MAXi, MINIi
+				return 0;
+			return 3;
+		case 10:
+			if ((code & 3) == 3) // MAX
+				return 0;
+			return 3;
+		case 11:
+			if ((code & 3) == 3) // MINI
+				return 0;
+			return 3;
 		default:
 			break;
 	}
