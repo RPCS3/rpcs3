@@ -1,7 +1,12 @@
 #include "nodetests.h"
 #include "yaml-cpp/yaml.h"
-#include <boost/foreach.hpp>
 #include <iostream>
+
+#include <boost/version.hpp>
+
+#if BOOST_VERSION >= 103400
+#include <boost/foreach.hpp>
+#endif
 
 namespace {
 	struct TEST {
@@ -382,7 +387,8 @@ namespace Test
             YAML_ASSERT(i == 3);
             return true;
         }
-        
+
+#ifdef BOOST_FOREACH
         TEST ForEach()
         {
             YAML::Node node = YAML::Load("[1, 3, 5, 7]");
@@ -403,6 +409,7 @@ namespace Test
             }
             return true;
         }
+#endif
         
         TEST CloneScalar()
         {
@@ -568,8 +575,10 @@ namespace Test
 		RunNodeTest(&Node::Binary, "binary", passed, total);
 		RunNodeTest(&Node::IterateSequence, "iterate sequence", passed, total);
 		RunNodeTest(&Node::IterateMap, "iterate map", passed, total);
+#ifdef BOOST_FOREACH
 		RunNodeTest(&Node::ForEach, "for each", passed, total);
 		RunNodeTest(&Node::ForEachMap, "for each map", passed, total);
+#endif
 		RunNodeTest(&Node::CloneScalar, "clone scalar", passed, total);
 		RunNodeTest(&Node::CloneSeq, "clone seq", passed, total);
 		RunNodeTest(&Node::CloneMap, "clone map", passed, total);
