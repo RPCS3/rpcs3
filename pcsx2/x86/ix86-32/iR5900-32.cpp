@@ -1395,7 +1395,7 @@ void recompileNextInstruction(int delayslot)
 		{
 			int s = cop2flags(cpuRegs.code);
 			int all_count = 0, cop2o_count = 0, cop2m_count = 0;
-			for (u32 p = pc; s != 0 && p < s_nEndBlock && all_count < 10 && cop2m_count < 5 && cop2o_count < 5; p += 4)
+			for (u32 p = pc; s != 0 && p < s_nEndBlock && all_count < 10 && cop2m_count < 5 && cop2o_count < 4; p += 4)
 			{
 				// I am so sorry.
 				cpuRegs.code = memRead32(p);
