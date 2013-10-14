@@ -2317,6 +2317,18 @@ Serial = SLUS-20152
 Name   = Ace Combat 4 - Shattered Skies
 Region = NTSC-U
 Compat = 5
+[patches = A32F7CD0]
+	comment=Rearranging COP2 ops
+	// this one seems unintuitive but I can't see how the cycles add up for the maddbc to be the source of the flags
+	patch=0,EE,0010FFC8,word,48428800
+	patch=0,EE,0010FFDC,word,4BE83A4B
+
+	// same as ace combat 5, these are definite
+	patch=0,EE,0017C6C4,word,48438800
+	patch=0,EE,0017C6D4,word,4BE4282C
+	patch=0,EE,0017C0C4,word,48438800
+	patch=0,EE,0017C0D4,word,4B0B602C
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20153
 Name   = RC Revenge Pro
@@ -5353,6 +5365,15 @@ Serial = SLUS-20851
 Name   = Ace Combat 5 - The Unsung War
 Region = NTSC-U
 Compat = 4
+[patches = 39B574F0]
+	comment=Rearranging COP2 instructions that use old results
+	
+	patch=0,EE,001A3B94,word,48498800
+	patch=0,EE,001A3B98,word,4B00682C
+	patch=0,EE,001A3BA4,word,484A8800
+	patch=0,EE,001A3BA8,word,4B0C682C
+	patch=0,EE,001A3BAC,word,484B8800
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20852
 Name   = Terminator 3, The - The Redemption
