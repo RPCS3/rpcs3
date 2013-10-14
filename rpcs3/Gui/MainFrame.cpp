@@ -60,8 +60,8 @@ MainFrame::MainFrame()
 
 	menu_boot.Append(id_boot_game, "Boot game");
 	menu_boot.AppendSeparator();
-	menu_boot.Append(id_boot_elf, "Boot Elf");
-	//menu_boot.Append(id_boot_self, "Boot Self");
+	menu_boot.Append(id_boot_elf, "Boot ELF");
+	menu_boot.Append(id_boot_self, "Boot SELF");
 
 	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
 	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
@@ -188,14 +188,14 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("Elf: booting...");
+	ConLog.Write("ELF: booting...");
 
 	Emu.Stop();
 
 	Emu.SetPath(ctrl.GetPath());
 	Emu.Load();
 
-	ConLog.Write("Elf: boot done.");
+	ConLog.Write("ELF: boot done.");
 }
 
 void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
@@ -221,8 +221,28 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	Emu.SetPath(ctrl.GetPath());
+	if (!wxFileExists("scetool.exe"))
+	{
+		ConLog.Error("Could not load SELF file: scetool.exe is missing");
+		return;
+	}
+	if (!wxFileExists("data/keys") ||
+		!wxFileExists("data/ldr_curves") ||
+		!wxFileExists("data/vsh_curves"))
+	{
+		ConLog.Error("Could not load SELF file: Key files are missing");
+		return;
+	}
+	//(TODO: This is not portable. I should feel bad for this)
+	wxString cmd = "scetool.exe -d";
+	cmd += " " + ctrl.GetPath();
+	cmd += " " + ctrl.GetPath()+".elf";
+	system(cmd.mb_str());
+
+	Emu.SetPath(ctrl.GetPath()+".elf");
 	Emu.Load();
+	if (!wxRemoveFile(ctrl.GetPath()+".elf"))
+		ConLog.Warning("Could not delete the decrypted ELF file");
 
 	ConLog.Write("SELF: boot done.");
 }
@@ -323,11 +343,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_keyboard_handler->Append("Null");
 	cbox_keyboard_handler->Append("Windows");
-	//cbox_pad_handler->Append("DirectInput");
+	//cbox_keyboard_handler->Append("DirectInput");
 
 	cbox_mouse_handler->Append("Null");
 	cbox_mouse_handler->Append("Windows");
-	//cbox_pad_handler->Append("DirectInput");
+	//cbox_mouse_handler->Append("DirectInput");
 
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 

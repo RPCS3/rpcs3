@@ -322,7 +322,7 @@ void Emulator::LoadPoints(const wxString& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
 	{
-		ConLog.Error("'%s' is borken", path);
+		ConLog.Error("'%s' is broken", path);
 		return;
 	}
 
