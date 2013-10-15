@@ -34104,6 +34104,14 @@ Region = PAL-Unk
 Serial = SLES-51345
 Name   = Run Like Hell
 Region = PAL-Unk
+[patches = 945301BE]
+	comment=swapping a COP2 op into place to make the flags work without delays
+	patch=0,EE,001D4534,word,4A0002FF
+	patch=0,EE,001D4544,word,4B07FA0B
+
+	patch=0,EE,001D4720,word,4A0002FF
+	patch=0,EE,001D4730,word,4B07FA0B
+[/patches]
 ---------------------------------------------
 Serial = SLES-51347
 Name   = Die Hard - Vendetta
