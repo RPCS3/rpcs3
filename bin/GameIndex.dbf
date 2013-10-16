@@ -6133,6 +6133,37 @@ Serial = SLUS-21006
 Name   = Ghost in the Shell - Stane Alone Complex
 Region = NTSC-U
 Compat = 4
+[patches = 95CC86EF]
+	comment=Rearranging COP2 ops to avoid macflag bad stuff
+	// Solves door problems, possibly other issues later on (nobody ever got that far :P)
+	patch=0,EE,0010BC88,word,48468800
+	patch=0,EE,0010BC8C,word,4bec682c
+	patch=0,EE,0010BC90,word,4b8d617d
+	patch=0,EE,0010BC98,word,4a6d617c
+	patch=0,EE,0012B200,word,48468800
+	patch=0,EE,0012B204,word,4bec682c
+	patch=0,EE,0012B208,word,4b8d617d
+	patch=0,EE,0012B210,word,4a6d617c
+	patch=0,EE,0012B528,word,48468800
+	patch=0,EE,0012B52C,word,4bec682c
+	patch=0,EE,0012B530,word,4b8d617d
+	patch=0,EE,0012B538,word,4a6d617c
+	patch=0,EE,00165BB0,word,48468800
+	patch=0,EE,00165BB4,word,4bec682c
+	patch=0,EE,00165BB8,word,4b8d617d
+	patch=0,EE,00165BC0,word,4a6d617c
+	patch=0,EE,001B0A3C,word,48468800
+	patch=0,EE,001B0A40,word,4bec682c
+	patch=0,EE,001B0A4C,word,4b8d617d
+	patch=0,EE,001BF4C0,word,48588800
+	patch=0,EE,001BF4D0,word,4a0002ff
+	patch=0,EE,001BFA7C,word,48588800
+	patch=0,EE,001BFA8C,word,4a0002ff
+	patch=0,EE,001BF6DC,word,48588800
+	patch=0,EE,001BF6EC,word,4a0002ff
+	patch=0,EE,001C0040,word,48588800
+	patch=0,EE,001C0050,word,4a0002ff
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21007
 Name   = Kuon
