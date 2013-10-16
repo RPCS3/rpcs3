@@ -37677,7 +37677,34 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53020
 Name   = Ghost in the Shell - Stand Alone Complex
-Region = PAL-Unk
+Region = PAL-M5
+[patches = BF6F101F]
+	comment=Rearranging COP2 ops to avoid macflag bad stuff
+	// Solves door problems, possibly other issues later on (nobody ever got that far :P)
+	patch=0,EE,0010BC88,word,48468800	
+	patch=0,EE,0010BC8C,word,4bec682c	
+	patch=0,EE,0010BC90,word,4b8d617d	
+	patch=0,EE,0010BC98,word,4a6d617c
+	patch=0,EE,0012B2CC,word,48468800	
+	patch=0,EE,0012B2D0,word,4bec682c	
+	patch=0,EE,0012B2D4,word,4b8d617d	
+	patch=0,EE,0012B2DC,word,4a6d617c
+	patch=0,EE,0012B5F4,word,48468800	
+	patch=0,EE,0012B5F8,word,4bec682c	
+	patch=0,EE,0012B5FC,word,4b8d617d	
+	patch=0,EE,0012B604,word,4a6d617c
+	patch=0,EE,001B0B58,word,48468800	
+	patch=0,EE,001B0B5C,word,4bec682c	
+	patch=0,EE,001B0B68,word,4b8d617d
+	patch=0,EE,001BF5FC,word,48588800	
+	patch=0,EE,001BF60C,word,4a0002ff
+	patch=0,EE,001BFBB8,word,48588800	
+	patch=0,EE,001BFBC8,word,4a0002ff
+	patch=0,EE,001BF818,word,48588800	
+	patch=0,EE,001BF828,word,4a0002ff
+	patch=0,EE,001C017C,word,48588800	
+	patch=0,EE,001C018C,word,4a0002ff
+[/patches]
 ---------------------------------------------
 Serial = SLES-53021
 Name   = Gunbird - Special Edition
