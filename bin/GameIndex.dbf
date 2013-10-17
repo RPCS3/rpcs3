@@ -255,6 +255,31 @@ Serial = SCUS-97140
 Name   = Mark of Kri, The
 Region = NTSC-U
 Compat = 4
+[patches = DBD09DD4]
+	comment=COP2 flag instance patch
+	// pair of vsubs with associated cfc2s
+	patch=0,EE,002EA424,word,48468801
+	patch=0,EE,002EA434,word,4BC311AC
+
+	// bunch of vclips without enough cycles before reading the clip flag
+	patch=0,EE,00329110,word,48489000
+	patch=0,EE,00329124,word,4BDAD1FF
+
+	patch=0,EE,0032916C,word,48459000
+	patch=0,EE,00329180,word,4BDAD1FF
+
+	patch=0,EE,003291DC,word,48459000
+	patch=0,EE,003291F0,word,4BDAD1FF
+
+	patch=0,EE,0032924C,word,48459000
+	patch=0,EE,00329260,word,4BDAD1FF
+
+	patch=0,EE,003292BC,word,48459000
+	patch=0,EE,003292D0,word,4BDAD1FF
+
+	patch=0,EE,0032940C,word,48459000
+	patch=0,EE,00329420,word,4BDAD1FF
+[/patches]
 ---------------------------------------------
 Serial = SCUS-97144
 Name   = PlayStation Underground 5.1
