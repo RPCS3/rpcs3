@@ -1408,7 +1408,7 @@ void recompileNextInstruction(int delayslot)
 						for (u32 i = s_pCurBlockEx->startpc; i <= p; i += 4)
 						{
 							disR5900Fasm(disasm, memRead32(i), i);
-							DevCon.Warning("%s%s", i == pc - 4 ? "*" : " ", disasm.c_str());
+							DevCon.Warning("%s%08X %s", i == pc - 4 ? "*" : i == p ? "=" : " ", memRead32(i), disasm.c_str());
 						}
 						break;
 					}
