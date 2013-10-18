@@ -367,6 +367,14 @@ vifOp(vifCode_MSCAL) {
 			vuExecMicro(idx, (u16)(vifXRegs.code) << 3); 
 			vifX.cmd = 0;
 			vifX.pass = 0;
+			if(GetVifX.vifpacketsize > 1)
+			{
+				//Warship Gunner 2 has a rather big dislike for the delays
+				if(((data[1] >> 24) & 0x60) == 0x60) // Immediate following Unpack
+				{ 
+					vifExecQueue(idx);
+				}
+			}
 		} 
 	}
 	pass3 { VifCodeLog("MSCAL"); }
