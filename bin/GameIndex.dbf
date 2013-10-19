@@ -5397,7 +5397,6 @@ Compat = 4
 	patch=0,EE,001A3B98,word,4B00682C
 	patch=0,EE,001A3BA4,word,484A8800
 	patch=0,EE,001A3BA8,word,4B0C682C
-	patch=0,EE,001A3BAC,word,484B8800
 [/patches]
 ---------------------------------------------
 Serial = SLUS-20852
@@ -30360,6 +30359,12 @@ Region = PAL-M5
 Serial = SCES-52424
 Name   = Ace Combat - Squadron Leader
 Region = PAL-E
+[patches = 1D54FEA9]
+	patch=0,EE,001A3154,word,48498800
+	patch=0,EE,001A3158,word,4B00682C
+	patch=0,EE,001A3164,word,484A8800
+	patch=0,EE,001A3168,word,4B0C682C
+[/patches]
 ---------------------------------------------
 Serial = SCES-52425
 Name   = This is Football 5
