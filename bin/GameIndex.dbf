@@ -30860,6 +30860,12 @@ Region = PAL-Unk
 Serial = SCES-54041
 Name   = Ace Combat - The Belkan War
 Region = PAL-E
+[patches = 194C9F38]
+	patch=0,EE,00131EB4,word,48498800
+	patch=0,EE,00131EB8,word,4B00682C
+	patch=0,EE,00131EC4,word,484A8800
+	patch=0,EE,00131EC8,word,4B0C682C
+[/patches]
 ---------------------------------------------
 Serial = SCES-54071
 Name   = Buzz! The Big Quiz
