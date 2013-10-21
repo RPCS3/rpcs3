@@ -7773,6 +7773,12 @@ Serial = SLUS-21346
 Name   = Ace Combat Zero - The Belkan War
 Region = NTSC-U
 Compat = 5
+[patches = 65729657]
+	patch=0,EE,00131EBC,word,48498800
+	patch=0,EE,00131EC0,word,4B00682C
+	patch=0,EE,00131ECC,word,484A8800
+	patch=0,EE,00131ED0,word,4B0C682C
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21347
 Name   = AMF Xtreme Bowling
