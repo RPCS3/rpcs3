@@ -224,7 +224,6 @@ void normBranch(mV, microFlagCycles& mFC) {
 		if(mVUlow.badBranch) 
 			DevCon.Warning("End on evil Unconditional branch! - Not implemented! - If game broken report to PCSX2 Team"); 
 		
-		DevCon.Warning("eBit branch");
 		iPC = branchAddr/4; 
 		mVUendProgram(mVU, &mFC, 1); 
 		return; 
