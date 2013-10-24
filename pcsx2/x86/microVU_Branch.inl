@@ -220,7 +220,15 @@ void normBranch(mV, microFlagCycles& mFC) {
 		eJMP.SetTarget();
 		iPC = tempPC;	
 	}
-	if (mVUup.eBit) { if(mVUlow.badBranch) DevCon.Warning("End on evil Unconditional branch! - Not implemented! - If game broken report to PCSX2 Team"); iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
+	if (mVUup.eBit) { 
+		if(mVUlow.badBranch) 
+			DevCon.Warning("End on evil Unconditional branch! - Not implemented! - If game broken report to PCSX2 Team"); 
+		
+		DevCon.Warning("eBit branch");
+		iPC = branchAddr/4; 
+		mVUendProgram(mVU, &mFC, 1); 
+		return; 
+	}
 	
 	if(mVUlow.badBranch)
 	{
@@ -329,10 +337,12 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 		iPC = tempPC;		
 	}
 	xCMP(ptr16[&mVU.branch], 0);
-	incPC(3);
-	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
-		if(mVUlow.evilBranch) DevCon.Warning("End on evil branch! - Not implemented! - If game broken report to PCSX2 Team");
 
+	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
+		if(mVUlow.evilBranch) 
+			DevCon.Warning("End on evil branch! - Not implemented! - If game broken report to PCSX2 Team");
+		
+		incPC(3);
 		mVUendProgram(mVU, &mFC, 2);
 		xForwardJump8 eJMP((JccComparisonType)JMPcc);
 			incPC(1); // Set PC to First instruction of Non-Taken Side
@@ -346,7 +356,7 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 		return;
 	}
 	else { // Normal Conditional Branch
-		
+		incPC(3);
 		if(mVUlow.evilBranch) //We are dealing with an evil evil block, so we need to process this slightly differently
 		{
 			
