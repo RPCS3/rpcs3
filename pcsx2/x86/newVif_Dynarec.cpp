@@ -64,6 +64,7 @@ VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlo
 	usn			= (vB.upkType>>5) & 1;
 	doMask		= (vB.upkType>>4) & 1;
 	doMode		= vB.mode & 3;
+	IsAligned   = vB.aligned;
 	vCL			= 0;
 }
 
@@ -166,7 +167,7 @@ void VifUnpackSSE_Dynarec::ModUnpack( int upknum, bool PostOp )
 		case 5:
 		case 6: if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration & 0x1; } break;
 
-		case 8: 	break;
+		case 8: if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration & 0x1; } 	break;
 		case 9:		break;
 		case 10: 	break;
 
@@ -193,7 +194,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	uint vNum	= vB.num ? vB.num : 256;
 	doMode		= (upkNum == 0xf) ? 0 : doMode;		// V4_5 has no mode feature.
 	MSKPATH3_LOG("Compiling new block, unpack number %x, mode %x, masking %x, vNum %x", upkNum, doMode, doMask, vNum);
-
+	
 	pxAssume(vCL == 0);
 	
 	// Value passed determines # of col regs we need to load
@@ -313,6 +314,7 @@ _vifT __fi void dVifUnpack(const u8* data, bool isFill) {
 	v.block.mode    = (u8&)vifRegs.mode;
 	v.block.cl      = vifRegs.cycle.cl;
 	v.block.wl      = vifRegs.cycle.wl;
+	v.block.aligned = !!(vif.vifpacketsize & 0x1);
 
 	// Zero out the mask parameter if it's unused -- games leave random junk
 	// values here which cause false recblock cache misses.

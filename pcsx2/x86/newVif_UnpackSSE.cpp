@@ -180,11 +180,14 @@ void VifUnpackSSE_Base::xUPK_V2_32() const {
 	if(UnpkLoopIteration == 0) 
 	{	
 		xMOV128     (workReg, ptr32[srcIndirect]);
-		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
+		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0	
+		if(IsAligned)xAND.PS( destReg, ptr128[SSEXYZWMask[0]]); //zero last word - tested on ps2
 	}
 	else
 	{
 		xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
+		if(IsAligned)xAND.PS( destReg, ptr128[SSEXYZWMask[0]]); //zero last word - tested on ps2
+		
 	}
 	
 }
@@ -241,6 +244,8 @@ void VifUnpackSSE_Base::xUPK_V2_8() const {
 void VifUnpackSSE_Base::xUPK_V3_32() const {
 
 	xMOV128    (destReg, ptr128[srcIndirect]);
+	if(UnpkLoopIteration == (1-IsAligned))  
+    	xAND.PS( destReg, ptr128[SSEXYZWMask[0]]);
 }
 
 void VifUnpackSSE_Base::xUPK_V3_16() const {

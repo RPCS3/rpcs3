@@ -36,6 +36,7 @@ public:
 	bool			doMask;			// masking write enable flag
 	int				UnpkLoopIteration;
 	int				UnpkNoOfIterations;
+	int				IsAligned;
 
 
 protected:

@@ -64,7 +64,8 @@ struct __aligned16 nVifBlock {
 	u8   cl;		// [03] CL   Field
 	u32  mask;		// [04] Mask Field
 	u8   wl;		// [08] WL   Field
-	u8	 padding[3];// [09] through [11]
+	u8   aligned;   // [09] Packet Alignment
+	u8	 padding[2];// [10] through [11]
 	uptr startPtr;	// [12] Start Ptr of RecGen Code
 }; // 16 bytes
 
