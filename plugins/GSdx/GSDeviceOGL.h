@@ -260,9 +260,10 @@ class GSDeviceOGL : public GSDevice
 			struct
 			{
 				uint32 bppz:2;
+				uint32 logz:1;
+				// Next param will be handle by subroutine
 				uint32 tme:1;
 				uint32 fst:1;
-				uint32 logz:1;
 			};
 
 			uint32 key;
@@ -333,24 +334,26 @@ class GSDeviceOGL : public GSDevice
 			struct
 			{
 				uint32 fst:1;
-				uint32 wms:2;
-				uint32 wmt:2;
 				uint32 fmt:3;
 				uint32 aem:1;
-				uint32 tfx:3;
-				uint32 tcc:1;
-				uint32 atst:3;
 				uint32 fog:1;
 				uint32 clr1:1;
 				uint32 fba:1;
 				uint32 aout:1;
-				uint32 ltf:1;
-				uint32 colclip:2;
 				uint32 date:2;
 				uint32 spritehack:1;
 				uint32 tcoffsethack:1;
 				uint32 point_sampler:1;
 				uint32 iip:1;
+				// Next param will be handle by subroutine
+				uint32 colclip:2;
+				uint32 atst:3;
+
+				uint32 tfx:3;
+				uint32 tcc:1;
+				uint32 wms:2;
+				uint32 wmt:2;
+				uint32 ltf:1;
 			};
 
 			uint32 key;
@@ -538,7 +541,7 @@ class GSDeviceOGL : public GSDevice
 	GSDeviceOGL();
 	virtual ~GSDeviceOGL();
 
-	void CheckDebugLog();
+	static void CheckDebugLog();
 	static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
 
 	bool HasStencil() { return true; }
@@ -548,6 +551,9 @@ class GSDeviceOGL : public GSDevice
 	bool Reset(int w, int h);
 	void Flip();
 	void SetVSync(bool enable);
+	// Used for opengl multithread hack
+	void AttachContext();
+	void DetachContext();
 
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();

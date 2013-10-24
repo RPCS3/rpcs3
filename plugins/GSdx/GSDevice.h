@@ -140,6 +140,10 @@ public:
 	virtual void PSSetShaderResource(int i, GSTexture* sr) {}
 	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL) {}
 
+	// Used for opengl multithread hack
+	virtual void AttachContext() {}
+	virtual void DetachContext() {}
+
 	GSTexture* GetCurrent();
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);

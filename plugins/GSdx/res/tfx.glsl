@@ -107,6 +107,60 @@ layout(std140, binding = 20) uniform cb20
 
 const float exp_min32 = exp2(-32.0f);
 
+#ifdef SUBROUTINE_GL40
+// Function pointer type
+subroutine void TextureCoordType(void);
+
+// a function pointer variable
+layout(location = 0) subroutine uniform TextureCoordType texture_coord;
+
+layout(index = 0) subroutine(TextureCoordType)
+void tme_0()
+{
+    VSout_t.xy = vec2(0.0f, 0.0f);
+    VSout_t.w = 1.0f;
+}
+
+layout(index = 1) subroutine(TextureCoordType)
+void tme_1_fst_0()
+{
+    VSout_t.xy = i_st;
+    VSout_t.w = i_q;
+}
+
+layout(index = 2) subroutine(TextureCoordType)
+void tme_1_fst_1()
+{
+    VSout_t.xy = vec2(i_uv) * TextureScale;
+    VSout_t.w = 1.0f;
+}
+
+#else
+
+void texture_coord()
+{
+    if(VS_TME != 0)
+    {
+        if(VS_FST != 0)
+        {
+            VSout_t.xy = vec2(i_uv) * TextureScale;
+            VSout_t.w = 1.0f;
+        }
+        else
+        {
+            VSout_t.xy = i_st;
+            VSout_t.w = i_q;
+        }
+    }
+    else
+    {
+        VSout_t.xy = vec2(0.0f, 0.0f);
+        VSout_t.w = 1.0f;
+    }
+}
+
+#endif
+
 void vs_main()
 {
     uint z;
@@ -132,24 +186,7 @@ void vs_main()
 
     gl_Position = vec4(p, 1.0f); // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 
-    if(VS_TME != 0)
-    {
-        if(VS_FST != 0)
-        {
-            VSout_t.xy = vec2(i_uv) * TextureScale;
-            VSout_t.w = 1.0f;
-        }
-        else
-        {
-            VSout_t.xy = i_st;
-            VSout_t.w = i_q;
-        }
-    }
-    else
-    {
-        VSout_t.xy = vec2(0.0f, 0.0f);
-        VSout_t.w = 1.0f;
-    }
+    texture_coord();
 
     VSout_c = i_c;
 	VSout_fc = i_c;
@@ -294,20 +331,23 @@ layout(location = 0, index = 0) out vec4 SV_Target0;
 layout(location = 0, index = 1) out vec4 SV_Target1;
 #endif
 
+#ifdef ENABLE_BINDLESS_TEX
+layout(bindless_sampler, location = 0) uniform sampler2D TextureSampler;
+layout(bindless_sampler, location = 1) uniform sampler2D PaletteSampler;
+#else
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
 uniform sampler2D PaletteSampler;
-//uniform sampler2D RTCopySampler;
 #else
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
-//layout(binding = 2) uniform sampler2D RTCopySampler;
+#endif
 #endif
 
 #ifndef DISABLE_GL42_image
 #if PS_DATE > 0
 // FIXME how to declare memory access
-layout(r32i, binding = 0) coherent uniform iimage2D img_prim_min;
+layout(r32i, binding = 2) coherent uniform iimage2D img_prim_min;
 #endif
 #else
 // use basic stencil
@@ -368,6 +408,87 @@ vec4 sample_rt(vec2 uv)
 }
 #endif
 
+// FIXME crash nvidia
+#if 0
+// Function pointer type
+subroutine vec4 WrapType(vec4 uv);
+
+// a function pointer variable
+layout(location = 4) subroutine uniform WrapType wrapuv;
+
+layout(index = 24) subroutine(WrapType)
+vec4 wrapuv_wms_wmt_2(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out = clamp(uv, MinMax.xyxy, MinMax.zwzw);
+    return uv_out;
+}
+
+layout(index = 25) subroutine(WrapType)
+vec4 wrapuv_wms_wmt3(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out = vec4((ivec4(uv * WH.xyxy) & ivec4(MskFix.xyxy)) | ivec4(MskFix.zwzw)) / WH.xyxy;
+    return uv_out;
+}
+
+layout(index = 26) subroutine(WrapType)
+vec4 wrapuv_wms2_wmt3(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.xz = clamp(uv.xz, MinMax.xx, MinMax.zz);
+    uv_out.yw = vec2((ivec2(uv.yw * WH.yy) & ivec2(MskFix.yy)) | ivec2(MskFix.ww)) / WH.yy;
+    return uv_out;
+}
+
+layout(index = 27) subroutine(WrapType)
+vec4 wrapuv_wms3_wmt2(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.xz = vec2((ivec2(uv.xz * WH.xx) & ivec2(MskFix.xx)) | ivec2(MskFix.zz)) / WH.xx;
+    uv_out.yw = clamp(uv.yw, MinMax.yy, MinMax.ww);
+    return uv_out;
+}
+
+layout(index = 28) subroutine(WrapType)
+vec4 wrapuv_wms2_wmtx(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.xz = clamp(uv.xz, MinMax.xx, MinMax.zz);
+    return uv_out;
+}
+
+layout(index = 29) subroutine(WrapType)
+vec4 wrapuv_wmsx_wmt3(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.yw = vec2((ivec2(uv.yw * WH.yy) & ivec2(MskFix.yy)) | ivec2(MskFix.ww)) / WH.yy;
+    return uv_out;
+}
+
+layout(index = 30) subroutine(WrapType)
+vec4 wrapuv_wms3_wmtx(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.xz = vec2((ivec2(uv.xz * WH.xx) & ivec2(MskFix.xx)) | ivec2(MskFix.zz)) / WH.xx;
+    return uv_out;
+}
+
+layout(index = 31) subroutine(WrapType)
+vec4 wrapuv_wmsx_wmt2(vec4 uv)
+{
+    vec4 uv_out = uv;
+    uv_out.yw = clamp(uv.yw, MinMax.yy, MinMax.ww);
+    return uv_out;
+}
+
+layout(index = 32) subroutine(WrapType)
+vec4 wrapuv_dummy(vec4 uv)
+{
+    return uv;
+}
+
+#else
 vec4 wrapuv(vec4 uv)
 {
     vec4 uv_out = uv;
@@ -405,7 +526,45 @@ vec4 wrapuv(vec4 uv)
 
     return uv_out;
 }
+#endif
 
+// FIXME crash nvidia
+#if 0
+// Function pointer type
+subroutine vec2 ClampType(vec2 uv);
+
+// a function pointer variable
+layout(location = 3) subroutine uniform ClampType clampuv;
+
+layout(index = 20) subroutine(ClampType)
+vec2 clampuv_wms2_wmt2(vec2 uv)
+{
+    return clamp(uv, MinF, MinMax.zw);
+}
+
+layout(index = 21) subroutine(ClampType)
+vec2 clampuv_wms2(vec2 uv)
+{
+    vec2 uv_out = uv;
+    uv_out.x = clamp(uv.x, MinF.x, MinMax.z);
+    return uv_out;
+}
+
+layout(index = 22) subroutine(ClampType)
+vec2 clampuv_wmt2(vec2 uv)
+{
+    vec2 uv_out = uv;
+    uv_out.y = clamp(uv.y, MinF.y, MinMax.w);
+    return uv_out;
+}
+
+layout(index = 23) subroutine(ClampType)
+vec2 clampuv_dummy(vec2 uv)
+{
+    return uv;
+}
+
+#else
 vec2 clampuv(vec2 uv)
 {
     vec2 uv_out = uv;
@@ -425,6 +584,7 @@ vec2 clampuv(vec2 uv)
 
     return uv_out;
 }
+#endif
 
 mat4 sample_4c(vec4 uv)
 {
@@ -533,6 +693,86 @@ vec4 sample_color(vec2 st, float q)
     return t;
 }
 
+#ifdef SUBROUTINE_GL40
+// Function pointer type
+subroutine vec4 TfxType(vec4 t, vec4 c);
+
+// a function pointer variable
+layout(location = 2) subroutine uniform TfxType tfx;
+
+layout(index = 11) subroutine(TfxType)
+vec4 tfx_0_tcc_0(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f;
+    return c_out;
+}
+
+layout(index = 12) subroutine(TfxType)
+vec4 tfx_1_tcc_0(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = t.rgb;
+    return c_out;
+}
+
+layout(index = 13) subroutine(TfxType)
+vec4 tfx_2_tcc_0(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
+    return c_out;
+}
+
+layout(index = 14) subroutine(TfxType)
+vec4 tfx_3_tcc_0(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
+    return c_out;
+}
+
+layout(index = 15) subroutine(TfxType)
+vec4 tfx_0_tcc_1(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out = c * t * 255.0f / 128.0f;
+    return c_out;
+}
+
+layout(index = 16) subroutine(TfxType)
+vec4 tfx_1_tcc_1(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out = t;
+    return c_out;
+}
+
+layout(index = 17) subroutine(TfxType)
+vec4 tfx_2_tcc_1(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
+    c_out.a += t.a;
+    return c_out;
+}
+
+layout(index = 18) subroutine(TfxType)
+vec4 tfx_3_tcc_1(vec4 t, vec4 c)
+{
+    vec4 c_out = c;
+    c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
+    c_out.a = t.a;
+    return c_out;
+}
+
+layout(index = 19) subroutine(TfxType)
+vec4 tfx_dummy(vec4 t, vec4 c)
+{
+    return c;
+}
+
+#else
 vec4 tfx(vec4 t, vec4 c)
 {
     vec4 c_out = c;
@@ -577,8 +817,10 @@ vec4 tfx(vec4 t, vec4 c)
         }
     }
 
-    return clamp(c_out, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    return c_out;
 }
+#endif
+
 
 #if 0
 void datst()
@@ -595,7 +837,6 @@ void datst()
 }
 #endif
 
-// Note layout stuff might require gl4.3
 #ifdef SUBROUTINE_GL40
 // Function pointer type
 subroutine void AlphaTestType(vec4 c);
@@ -603,7 +844,6 @@ subroutine void AlphaTestType(vec4 c);
 // a function pointer variable
 layout(location = 0) subroutine uniform AlphaTestType atst;
 
-// The function attached to AlphaTestType
 layout(index = 0) subroutine(AlphaTestType)
 void atest_never(vec4 c)
 {
@@ -774,10 +1014,12 @@ vec4 ps_color()
 {
     vec4 t = sample_color(PSin_t.xy, PSin_t.w);
 
+    vec4 zero = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    vec4 one = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 #if PS_IIP == 1
-    vec4 c = tfx(t, PSin_c);
+    vec4 c = clamp(tfx(t, PSin_c), zero, one);
 #else
-    vec4 c = tfx(t, PSin_fc);
+    vec4 c = clamp(tfx(t, PSin_fc), zero, one);
 #endif
 
     atst(c);

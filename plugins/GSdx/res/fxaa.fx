@@ -81,10 +81,14 @@ layout(std140, binding = 13) uniform cb13
 	vec4 _rcpFrameOpt;
 };
 
+#ifdef ENABLE_BINDLESS_TEX
+layout(bindless_sampler, location = 0) uniform sampler2D TextureSampler;
+#else
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
 #else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 #endif
 
 #if !GL_ES && __VERSION__ > 140

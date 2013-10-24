@@ -24,10 +24,7 @@
 #include "GSTextureOGL.h"
 #include "GLState.h"
 
-// Flush need bind/unbind
-// Barrier might sync much more
-#define BARRIER_INSTEAD_FLUSH
-
+// FIXME OGL4: investigate, only 1 unpack buffer always bound
 namespace PboPool {
 	
 	GLuint m_pool[PBO_POOL_SIZE];
@@ -46,10 +43,11 @@ namespace PboPool {
 			if (GLLoader::found_GL_ARB_buffer_storage) {
 				gl_BufferStorage(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_DYNAMIC_STORAGE_BIT | GL_CLIENT_STORAGE_BIT);
 			} else {
-				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
-				m_offset[m_current_pbo] = 0;
-				m_map[m_current_pbo] = NULL;
+				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_COPY);
 			}
+
+			m_offset[m_current_pbo] = 0;
+			m_map[m_current_pbo] = NULL;
 
 			NextPbo();
 		}
@@ -60,11 +58,7 @@ namespace PboPool {
 		if (m_map[m_current_pbo] != NULL) return;
 
 		// FIXME I'm not sure it is allowed to map another buffer after we get a pointer
-#ifdef BARRIER_INSTEAD_FLUSH
 		GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT;
-#else
-		GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
-#endif
 		for (size_t i = 0; i < countof(m_pool); i++) {
 			BindPbo();
 			m_map[m_current_pbo] = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size, flags);
@@ -107,10 +101,15 @@ namespace PboPool {
 				m_offset[m_current_pbo] = 0;
 			}
 
+			// Note: it still need it because texsubimage will access currently bound buffer
+			// Pbo ready let's get a pointer
+			BindPbo();
+
 			return m_map[m_current_pbo] + m_offset[m_current_pbo];
 		}
 	}
 
+	// FIXME: unmap buffer when the context is dettached (not sure it is required actually)
 	void UnmapAll() {
 		if (m_map[m_current_pbo] == NULL) return;
 
@@ -125,14 +124,7 @@ namespace PboPool {
 
 	void Unmap() {
 		if (GLLoader::found_GL_ARB_buffer_storage) {
-			// GL4.4 do a glMemoryBarrier? or glFlushMappedBufferRange?
-#ifdef BARRIER_INSTEAD_FLUSH
 			gl_MemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
-#else
-			BindPbo();
-			gl_FlushMappedBufferRange(GL_PIXEL_UNPACK_BUFFER, m_offset[m_current_pbo], m_size);
-			UnbindPbo();
-#endif
 		} else {
 			gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 		}
@@ -276,7 +268,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 			m_pbo_size = (m_size.x * m_size.y) << m_int_shift;
 
 			gl_BindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
-			gl_BufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
+			gl_BufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_READ);
 			gl_BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 		case GSTexture::DepthStencil:
@@ -310,7 +302,8 @@ GSTextureOGL::~GSTextureOGL()
 
 void GSTextureOGL::Clear(const void *data)
 {
-	gl_ClearTexImage(m_texture_id, 0,  m_format, m_int_type, data);
+	EnableUnit();
+	gl_ClearTexImage(m_texture_id, 0,  m_int_format, m_int_type, data);
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
@@ -340,8 +333,9 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, (const void*)PboPool::Offset());
 
-	if (!GLLoader::found_GL_ARB_buffer_storage)
-		PboPool::UnbindPbo();
+	// FIXME OGL4: investigate, only 1 unpack buffer always bound
+	//if (!GLLoader::found_GL_ARB_buffer_storage)
+	PboPool::UnbindPbo();
 
 	PboPool::EndTransfer();
 

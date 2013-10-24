@@ -248,9 +248,12 @@ namespace GLLoader {
 #endif
 				if (ext.compare("GL_ARB_explicit_uniform_location") == 0) found_GL_ARB_explicit_uniform_location = true;
 #ifdef GL44 // Need to debug the code first
+				// Need to check the clean (in particular of depth/stencil texture)
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
-				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
+				// FIXME unattach context case + perf
 				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
+				// OK but no apitrace support
+				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
 #endif
 #ifdef GLBINDLESS // Need to debug the code first
 				if (ext.compare("GL_ARB_bindless_texture") == 0) found_GL_ARB_bindless_texture = true;

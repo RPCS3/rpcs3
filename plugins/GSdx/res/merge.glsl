@@ -44,10 +44,14 @@ layout(std140, binding = 10) uniform cb10
     vec4 BGColor;
 };
 
+#ifdef ENABLE_BINDLESS_TEX
+layout(bindless_sampler, location = 0) uniform sampler2D TextureSampler;
+#else
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
 #else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 #endif
 
 void ps_main0()

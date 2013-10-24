@@ -36,7 +36,7 @@ int main ( int argc, char *argv[] )
 
 	void *handle = dlopen(argv[1], RTLD_LAZY|RTLD_GLOBAL);
 	if (handle == NULL) {
-		fprintf(stderr, "Failed to open plugin %s\n", argv[1]);
+		fprintf(stderr, "Failed to dlopen plugin %s\n", argv[1]);
 		help();
 	}
 

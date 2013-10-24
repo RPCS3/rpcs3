@@ -423,7 +423,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_sel.spritehack = tex->m_spritehack_t;
 		// FIXME the ati is currently disabled on the shader. I need to find a .gs to test that we got same
 		// bug on opengl
-		ps_sel.point_sampler = !(bilinear && simple_sample);
+		// FIXME for the moment disable it on subroutine (it will kill my perf for nothings)
+		ps_sel.point_sampler = !(bilinear && simple_sample) && !GLLoader::found_GL_ARB_shader_subroutine;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();

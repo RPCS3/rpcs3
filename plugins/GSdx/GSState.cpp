@@ -1287,7 +1287,7 @@ void GSState::GIFRegHandlerTRXDIR(const GIFReg* RESTRICT r)
 	case 1: // local -> host
 		m_tr.Init(m_env.TRXPOS.SSAX, m_env.TRXPOS.SSAY);
 #ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_wnd->DetachContext();
+		s_gs->m_dev->DetachContext();
 #endif
 		break;
 	case 2: // local -> local
@@ -1794,7 +1794,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(&m_perfmon);
 #ifdef ENABLE_OGL_MT_HACK
-	s_gs->m_wnd->AttachContext();
+	s_gs->m_dev->AttachContext();
 #endif
 
 	const uint8* start = mem;

@@ -541,13 +541,13 @@ EXPORT_C GSreadFIFO(uint8* mem)
 #ifdef ENABLE_OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO1 on opengl\n");
 #endif
-		s_gs->m_wnd->AttachContext();
+		s_gs->m_dev->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, 1);
 
 #ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_wnd->DetachContext();
+		s_gs->m_dev->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -562,13 +562,13 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 #ifdef ENABLE_OGL_MT_HACK
 		// FIXME called from EE core thread not MTGS which cause
 		// invalidate data for opengl
-		s_gs->m_wnd->AttachContext();
+		s_gs->m_dev->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, size);
 
 #ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_wnd->DetachContext();
+		s_gs->m_dev->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -642,7 +642,7 @@ EXPORT_C GSvsync(int field)
 #endif
 
 #ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_wnd->AttachContext();
+		s_gs->m_dev->AttachContext();
 #endif
 		s_gs->VSync(field);
 	}

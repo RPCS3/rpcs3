@@ -361,9 +361,30 @@ void GSDeviceOGL::Flip()
 #endif
 }
 
+void GSDeviceOGL::AttachContext()
+{
+	if (m_window)
+		m_window->AttachContext();
+}
+
+void GSDeviceOGL::DetachContext()
+{
+	// Must be done before we detach the context!
+	if (GLLoader::found_GL_ARB_buffer_storage)
+		PboPool::UnmapAll();
+
+	if (m_window)
+		m_window->DetachContext();
+
+}
+
 void GSDeviceOGL::BeforeDraw()
 {
 	m_shader->UseProgram();
+
+#ifdef _DEBUG
+	ASSERT(gl_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+#endif
 
 //#ifdef ENABLE_OGL_STENCIL_DEBUG
 //	if (m_date.t)
@@ -408,7 +429,16 @@ void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
 	if (GLLoader::found_GL_ARB_clear_texture) {
-		static_cast<GSTextureOGL*>(t)->Clear((const void*)&c);
+		if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
+			glDisable(GL_SCISSOR_TEST);
+			OMSetFBO(0);
+			// glDrawBuffer(GL_BACK); // this is the default when there is no FB
+			// 0 will select the first drawbuffer ie GL_BACK
+			gl_ClearBufferfv(GL_COLOR, 0, c.v);
+			glEnable(GL_SCISSOR_TEST);
+		} else {
+			static_cast<GSTextureOGL*>(t)->Clear((const void*)&c);
+		}
 	} else {
 		glDisable(GL_SCISSOR_TEST);
 		if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
@@ -455,10 +485,20 @@ void GSDeviceOGL::ClearRenderTarget_ui(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
-	// TODO is it possible with GL44 ClearTexture?
-	// It is seriously not clear if we can clear only the depth
-	if (GLLoader::found_GL_ARB_clear_texture) {
-		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_FLOAT, &c);
+	// TODO is it possible with GL44 ClearTexture? no the API is garbage!
+	// Anyway, stencil can be cleared to 0 (it will be only used for date)
+	if (0 && GLLoader::found_GL_ARB_clear_texture) {
+		static_cast<GSTextureOGL*>(t)->EnableUnit();
+		// Yes a very nice API to mix float and integer
+		struct clear {
+			float depth;
+			GLuint stencil;
+		} clear;
+
+		clear.depth = c;
+		clear.stencil = 0;
+
+		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, &clear);
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
@@ -478,9 +518,9 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
-	// TODO is it possible with GL44 ClearTexture?
-	// It is seriously not clear if we can clear only the stencil
+	// TODO is it possible with GL44 ClearTexture? no the API is garbage!
 	if (GLLoader::found_GL_ARB_clear_texture) {
+		static_cast<GSTextureOGL*>(t)->EnableUnit();
 		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_BYTE, &c);
 	} else {
 		OMSetFBO(m_fbo);
@@ -558,10 +598,10 @@ void GSDeviceOGL::BindDateTexture()
 {
 	// TODO: multibind?
 	// GLuint textures[1] = {static_cast<GSTextureOGL*>(m_date.t)->GetID()};
-	// gl_BindImageTextures(0, 1, textures);
-	//gl_BindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_R32I);
+	// gl_BindImageTextures(2, 1, textures);
+	//gl_BindImageTexture(2, 0, 0, true, 0, GL_READ_WRITE, GL_R32I);
 
-	gl_BindImageTexture(0, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32I);
+	gl_BindImageTexture(2, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32I);
 }
 
 void GSDeviceOGL::RecycleDateTexture()
@@ -1196,7 +1236,7 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 		fprintf(f,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType, g_draw_count, debSev,message);
 		fclose(f);
 	}
-	//if (sev_counter > 2) assert(0);
+	ASSERT(sev_counter < 3);
 #endif
 }
 

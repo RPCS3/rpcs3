@@ -65,6 +65,7 @@ namespace GLState {
 	GLuint vs = 0;
 	GLuint program = 0;
 	bool dirty_prog = false;
+	bool dirty_subroutine_vs = false;
 	bool dirty_subroutine_ps = false;
 #if 0
 	struct {
@@ -119,6 +120,7 @@ namespace GLState {
 		vs = 0;
 		program = 0;
 		dirty_prog = false;
+		dirty_subroutine_vs = false;
 		dirty_subroutine_ps = false;
 		dirty_ressources = false;
 	}

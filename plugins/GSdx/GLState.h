@@ -66,6 +66,7 @@ namespace GLState {
 	extern GLuint vs;
 	extern GLuint program; // monolith program (when sso isn't supported)
 	extern bool dirty_prog;
+	extern bool dirty_subroutine_vs;
 	extern bool dirty_subroutine_ps;
 	extern bool dirty_ressources;
 

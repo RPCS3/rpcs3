@@ -25,9 +25,11 @@ class GSShaderOGL {
 	GLuint m_pipeline;
 	hash_map<uint64, GLuint > m_single_prog;
 	const bool m_debug_shader;
-	GLuint m_sub_count;
+	GLuint m_vs_sub_count;
+	GLuint m_ps_sub_count;
 
-	GLuint m_ps_sub[2];
+	GLuint m_vs_sub[1];
+	GLuint m_ps_sub[5];
 
 	void SetupSubroutineUniform();
 	void SetupUniform();
@@ -51,7 +53,8 @@ class GSShaderOGL {
 	void PS(GLuint s, GLuint sub_count = 0);
 	void PS_subroutine(GLuint *sub);
 	void PS_ressources(GLuint64 handle[2]);
-	void VS(GLuint s);
+	void VS(GLuint s, GLuint sub_count = 0);
+	void VS_subroutine(GLuint *sub);
 
 	void UseProgram();
 
