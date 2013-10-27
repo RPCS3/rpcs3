@@ -12893,6 +12893,11 @@ Name   = Siren 2
 Region = NTSC-J
 Compat = 4
 XgKickHack = 1			//SPS.
+[patches = 626552EB]
+	comment=swapping a COP2 op into place to make the flags work without delays
+	patch=0,EE,0013AB64,word,48449000
+	patch=0,EE,0013AB6C,word,4BC949FF
+[/patches]
 ---------------------------------------------
 Serial = SCPS-15107
 Name   = Gunparade Orchestra - Midori no Shou [Limited Edition]
