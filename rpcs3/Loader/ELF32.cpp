@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ELF32.h"
 
+bool isLittleEndian;
+
 ELF32Loader::ELF32Loader(vfsStream& f)
 	: elf32_f(f)
 	, LoaderBase()
@@ -36,13 +38,21 @@ bool ELF32Loader::Close()
 
 bool ELF32Loader::LoadEhdrInfo()
 {
+	u8 endian;
+	elf32_f.Seek(5);
+	elf32_f.Read(&endian, 1);
+	isLittleEndian = (endian == 0x1);
+
+	elf32_f.Reset();
 	elf32_f.Seek(0);
-	ehdr.Load(elf32_f);
+	if (isLittleEndian) ehdr.LoadLE(elf32_f);
+	else ehdr.Load(elf32_f);
 
 	if(!ehdr.CheckMagic()) return false;
 
 	switch(ehdr.e_machine)
 	{
+	case MACHINE_MIPS:
 	case MACHINE_PPC64:
 	case MACHINE_SPU:
 		machine = (Elf_Machine)ehdr.e_machine;
@@ -76,7 +86,8 @@ bool ELF32Loader::LoadPhdrInfo()
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
 		Elf32_Phdr* phdr = new Elf32_Phdr();
-		phdr->Load(elf32_f);
+		if(isLittleEndian) phdr->LoadLE(elf32_f);
+		else phdr->Load(elf32_f);
 		phdr_arr.Move(phdr);
 	}
 
@@ -89,13 +100,14 @@ bool ELF32Loader::LoadShdrInfo()
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
 		Elf32_Shdr* shdr = new Elf32_Shdr();
-		shdr->Load(elf32_f);
+		if(isLittleEndian) shdr->LoadLE(elf32_f);
+		else shdr->Load(elf32_f);
 		shdr_arr.Move(shdr);
 	}
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
 	{
-		ConLog.Error("LoadShdr64 error: shstrndx too big!");
+		ConLog.Error("LoadShdr32 error: shstrndx too big!");
 		return false;
 	}
 
@@ -110,8 +122,7 @@ bool ELF32Loader::LoadShdrInfo()
 			if(c == 0) break;
 			name += c;
 		}
-
-		shdr_name_arr.Add(name);
+		shdr_name_arr.Add(name);	
 	}
 
 	return true;
@@ -162,7 +173,8 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 		{
 			elf32_f.Seek(phdr_arr[i].p_offset);
 			Elf32_Note note;
-			note.Load(elf32_f);
+			if(isLittleEndian) note.LoadLE(elf32_f);
+			else note.Load(elf32_f);
 
 			if(note.type != 1)
 			{
