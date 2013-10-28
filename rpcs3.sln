@@ -63,6 +63,38 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stblib", "stblib", "{9D839D
 		stblib\stb_image.h = stblib\stb_image.h
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scetool", "scetool", "{AB33A31B-6D15-45E8-B292-D512DEF0A5B1}"
+	ProjectSection(SolutionItems) = preProject
+		scetool\aes.c = scetool\aes.c
+		scetool\aes.h = scetool\aes.h
+		scetool\aes_omac.h = scetool\aes_omac.h
+		scetool\bn.cpp = scetool\bn.cpp
+		scetool\config.h = scetool\config.h
+		scetool\ecdsa.h = scetool\ecdsa.h
+		scetool\elf.h = scetool\elf.h
+		scetool\elf_inlines.h = scetool\elf_inlines.h
+		scetool\frontend.h = scetool\frontend.h
+		scetool\getopt.c = scetool\getopt.c
+		scetool\getopt.h = scetool\getopt.h
+		scetool\keys.h = scetool\keys.h
+		scetool\list.h = scetool\list.h
+		scetool\mt19937.h = scetool\mt19937.h
+		scetool\np.h = scetool\np.h
+		scetool\rvk.h = scetool\rvk.h
+		scetool\sce.h = scetool\sce.h
+		scetool\sce_inlines.h = scetool\sce_inlines.h
+		scetool\scetool.cpp = scetool\scetool.cpp
+		scetool\self.h = scetool\self.h
+		scetool\sha1.c = scetool\sha1.c
+		scetool\sha1.h = scetool\sha1.h
+		scetool\spp.h = scetool\spp.h
+		scetool\tables.h = scetool\tables.h
+		scetool\types.h = scetool\types.h
+		scetool\util.h = scetool\util.h
+		scetool\zconf.h = scetool\zconf.h
+		scetool\zlib.h = scetool\zlib.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

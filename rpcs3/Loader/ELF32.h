@@ -71,6 +71,29 @@ struct Elf32_Ehdr
 		e_shstrndx  = Read16(f);
 	}
 
+	void LoadLE(vfsStream& f)
+	{
+		e_magic		= Read32(f);
+		e_class		= Read8(f);
+		e_data		= Read8(f);
+		e_curver	= Read8(f);
+		e_os_abi	= Read8(f);
+		e_abi_ver	= Read64LE(f);
+		e_type		= Read16LE(f);
+		e_machine	= Read16LE(f);
+		e_version	= Read32LE(f);
+		e_entry		= Read32LE(f);
+		e_phoff		= Read32LE(f);
+		e_shoff		= Read32LE(f);
+		e_flags		= Read32LE(f);
+		e_ehsize	= Read16LE(f);
+		e_phentsize = Read16LE(f);
+		e_phnum		= Read16LE(f);
+		e_shentsize = Read16LE(f);
+		e_shnum		= Read16LE(f);
+		e_shstrndx  = Read16LE(f);
+	}
+
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 	u32 GetEntry() const { return e_entry; }
 };
@@ -88,6 +111,14 @@ struct Elf32_Desc
 		ls_size = Read32(f);
 		stack_size = Read32(f);
 		flags = Read32(f);
+	}
+
+	void LoadLE(vfsStream& f)
+	{
+		revision = Read32LE(f);
+		ls_size = Read32LE(f);
+		stack_size = Read32LE(f);
+		flags = Read32LE(f);
 	}
 };
 
@@ -108,6 +139,23 @@ struct Elf32_Note
 		namesz = Read32(f);
 		descsz = Read32(f);
 		type = Read32(f);
+		f.Read(name, 8);
+
+		if(descsz == 32)
+		{
+			f.Read(desc_text, descsz);
+		}
+		else
+		{
+			desc.Load(f);
+		}
+	}
+
+	void LoadLE(vfsStream& f)
+	{
+		namesz = Read32LE(f);
+		descsz = Read32LE(f);
+		type = Read32LE(f);
 		f.Read(name, 8);
 
 		if(descsz == 32)
@@ -148,6 +196,20 @@ struct Elf32_Shdr
 		sh_entsize		= Read32(f);
 	}
 
+	void LoadLE(vfsStream& f)
+	{
+		sh_name			= Read32LE(f);
+		sh_type			= Read32LE(f);
+		sh_flags		= Read32LE(f);
+		sh_addr			= Read32LE(f);
+		sh_offset		= Read32LE(f);
+		sh_size			= Read32LE(f);
+		sh_link			= Read32LE(f);
+		sh_info			= Read32LE(f);
+		sh_addralign	= Read32LE(f);
+		sh_entsize		= Read32LE(f);
+	}
+
 	void Show()
 	{
 #ifdef LOADER_DEBUG
@@ -186,6 +248,18 @@ struct Elf32_Phdr
 		p_memsz		= Read32(f);
 		p_flags		= Read32(f);
 		p_align		= Read32(f);
+	}
+
+	void LoadLE(vfsStream& f)
+	{
+		p_type		= Read32LE(f);
+		p_offset	= Read32LE(f);
+		p_vaddr		= Read32LE(f);
+		p_paddr		= Read32LE(f);
+		p_filesz	= Read32LE(f);
+		p_memsz		= Read32LE(f);
+		p_flags		= Read32LE(f);
+		p_align		= Read32LE(f);
 	}
 
 	void Show()

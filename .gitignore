@@ -22,6 +22,7 @@
 
 *.log
 *.exe
+*.dll
 *.elf
 *.lastbuildstate
 *.unsuccessfulbuild
@@ -39,4 +40,5 @@
 /bin/VertexProgram.txt
 /bin/BreakPoints.dat
 /bin/textures
+/bin/data/
 rpcs3/git-version.h

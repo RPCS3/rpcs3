@@ -8,7 +8,10 @@
 #include "Emu/GS/sysutil_video.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
+#include "Gui/AboutDialog.cpp"
 #include <wx/dynlib.h>
+
+#include "scetool/scetool.cpp"
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -26,6 +29,7 @@ enum IDs
 	id_config_emu,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
+	id_help_about,
 	id_update_dbg,
 };
 
@@ -53,15 +57,17 @@ MainFrame::MainFrame()
 	wxMenu& menu_boot(*new wxMenu());
 	wxMenu& menu_sys(*new wxMenu());
 	wxMenu& menu_conf(*new wxMenu());
+	wxMenu& menu_help(*new wxMenu());
 
 	menubar.Append(&menu_boot, "Boot");
 	menubar.Append(&menu_sys, "System");
 	menubar.Append(&menu_conf, "Config");
+	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
 	menu_boot.AppendSeparator();
-	menu_boot.Append(id_boot_elf, "Boot Elf");
-	//menu_boot.Append(id_boot_self, "Boot Self");
+	menu_boot.Append(id_boot_elf, "Boot ELF");
+	menu_boot.Append(id_boot_self, "Boot SELF");
 
 	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
 	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
@@ -73,6 +79,8 @@ MainFrame::MainFrame()
 	menu_conf.AppendSeparator();
 	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
+
+	menu_help.Append(id_help_about, "About...");
 
 	SetMenuBar(&menubar);
 
@@ -91,6 +99,8 @@ MainFrame::MainFrame()
 	Connect( id_config_emu,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
 	Connect( id_config_vfs_manager,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
 	Connect( id_config_vhdd_manager,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
+
+	Connect( id_help_about,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
 
 	Connect( id_update_dbg,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
 
@@ -188,14 +198,14 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("Elf: booting...");
+	ConLog.Write("ELF: booting...");
 
 	Emu.Stop();
 
 	Emu.SetPath(ctrl.GetPath());
 	Emu.Load();
 
-	ConLog.Write("Elf: boot done.");
+	ConLog.Write("ELF: boot done.");
 }
 
 void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
@@ -220,9 +230,15 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 	ConLog.Write("SELF: booting...");
 
 	Emu.Stop();
+	
+	wxString fileIn = ctrl.GetPath();
+	wxString fileOut = ctrl.GetPath()+".elf";
+	scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
 
-	Emu.SetPath(ctrl.GetPath());
+	Emu.SetPath(ctrl.GetPath()+".elf");
 	Emu.Load();
+	if (!wxRemoveFile(ctrl.GetPath()+".elf"))
+		ConLog.Warning("Could not delete the decrypted ELF file");
 
 	ConLog.Write("SELF: boot done.");
 }
@@ -323,11 +339,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_keyboard_handler->Append("Null");
 	cbox_keyboard_handler->Append("Windows");
-	//cbox_pad_handler->Append("DirectInput");
+	//cbox_keyboard_handler->Append("DirectInput");
 
 	cbox_mouse_handler->Append("Null");
 	cbox_mouse_handler->Append("Windows");
-	//cbox_pad_handler->Append("DirectInput");
+	//cbox_mouse_handler->Append("DirectInput");
 
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 
@@ -400,6 +416,11 @@ void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 {
 	VHDDManagerDialog(this).ShowModal();
+}
+
+void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
+{
+	AboutDialog(this).ShowModal();
 }
 
 void MainFrame::UpdateUI(wxCommandEvent& event)

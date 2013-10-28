@@ -82,7 +82,7 @@ void Emulator::CheckStatus()
 void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
-	ConLog.Write("loading '%s'...", m_path);
+	ConLog.Write("Loading '%s'...", m_path);
 	Memory.Init();
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
@@ -322,7 +322,7 @@ void Emulator::LoadPoints(const wxString& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
 	{
-		ConLog.Error("'%s' is borken", path);
+		ConLog.Error("'%s' is broken", path);
 		return;
 	}
 

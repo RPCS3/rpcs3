@@ -8,6 +8,7 @@
 enum Elf_Machine
 {
 	MACHINE_Unknown,
+	MACHINE_MIPS = 0x08,
 	MACHINE_PPC64 = 0x15,
 	MACHINE_SPU = 0x17,
 };
@@ -58,6 +59,21 @@ __forceinline static u64 Read64(vfsStream& f)
 	return ((u64)Read32(f) << 32) | (u64)Read32(f);
 }
 
+__forceinline static u16 Read16LE(vfsStream& f)
+{
+	return ((u16)Read8(f) | ((u16)Read8(f) << 8));
+}
+
+__forceinline static u32 Read32LE(vfsStream& f)
+{
+	return  Read16LE(f) | (Read16LE(f) << 16);
+}
+
+__forceinline static u64 Read64LE(vfsStream& f)
+{
+	return ((u64)Read32LE(f) | (u64)Read32LE(f) << 32);
+}
+
 __forceinline static void Write8(wxFile& f, const u8 data)
 {
 	f.Write(&data, 1);
@@ -79,6 +95,24 @@ __forceinline static void Write64(wxFile& f, const u64 data)
 {
 	Write32(f, data >> 32);
 	Write32(f, data);
+}
+
+__forceinline static void Write16LE(wxFile& f, const u16 data)
+{
+	Write8(f, data);
+	Write8(f, data >> 8);
+}
+
+__forceinline static void Write32LE(wxFile& f, const u32 data)
+{
+	Write16(f, data);
+	Write16(f, data >> 16);
+}
+
+__forceinline static void Write64LE(wxFile& f, const u64 data)
+{
+	Write32(f, data);
+	Write32(f, data >> 32);
 }
 
 
