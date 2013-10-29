@@ -30775,6 +30775,11 @@ Name   = Forbidden Siren 2
 Region = PAL-M5
 Compat = 4
 XgKickHack = 1			//SPS.
+[patches = C040B6AB]
+	comment=swapping a COP2 op into place to make the flags work without delays
+	patch=0,EE,002E2B44,word,48449000
+	patch=0,EE,002E2B4C,word,4BC949FF
+[/patches]
 ---------------------------------------------
 Serial = SCES-53879
 Name   = Buzz! The Big Quiz
