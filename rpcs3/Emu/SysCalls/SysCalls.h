@@ -1,6 +1,7 @@
 #pragma once
 #include "ErrorCodes.h"
 #include "lv2/SC_FileSystem.h"
+#include "lv2/SC_Timer.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -109,7 +110,12 @@ public:
 
 //process
 extern int sys_process_getpid();
+extern int sys_process_getppid();
+extern int sys_process_get_number_of_object(u32 object, mem32_t nump);
+extern int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size);
+extern int sys_process_get_paramsfo(mem8_ptr_t buffer);
 extern int sys_process_exit(int errorcode);
+extern int sys_process_is_stack(u32 addr); //TODO: Is this a lv2 SysCall? If so, where is its number?
 extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags );
 
@@ -275,6 +281,17 @@ extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 extern int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
 extern s64 sys_time_get_system_time();
 extern u64 sys_time_get_timebase_frequency();
+
+//sys_timer
+extern int sys_timer_create(mem32_t timer_id);
+extern int sys_timer_destroy(u32 timer_id);
+extern int sys_timer_get_information(u32 timer_id, mem_struct_ptr_t<sys_timer_information_t> info);
+extern int sys_timer_start(u32 timer_id, s64 basetime, u64 period);
+extern int sys_timer_stop(u32 timer_id);
+extern int sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
+extern int sys_timer_disconnect_event_queue(u32 timer_id);
+extern int sys_timer_sleep(u32 sleep_time);
+extern int sys_timer_usleep(u64 sleep_time);
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
 

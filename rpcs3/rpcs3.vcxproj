@@ -247,6 +247,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />

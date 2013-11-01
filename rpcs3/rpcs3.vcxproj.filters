@@ -310,6 +310,9 @@
     <ClCompile Include="Emu\FS\vfsFile.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

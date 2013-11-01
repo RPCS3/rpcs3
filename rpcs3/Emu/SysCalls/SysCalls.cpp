@@ -10,33 +10,69 @@ static func_caller* sc_table[1024] =
 {
 	null_func, bind_func(sys_process_getpid), null_func, bind_func(sys_process_exit), null_func, //4
 	null_func, null_func, null_func, null_func, null_func, //9
-	null_func, null_func, null_func, null_func, null_func, //14
-	null_func, null_func, null_func, null_func, null_func, //19
+	null_func, null_func, bind_func(sys_process_get_number_of_object), bind_func(sys_process_get_id), null_func, //14
+	null_func, null_func, null_func, bind_func(sys_process_getppid), null_func, //19
 	null_func, null_func, bind_func(sys_process_exit), null_func, null_func, //24
 	null_func, null_func, null_func, null_func, null_func, //29
-	null_func, null_func, null_func, null_func, null_func, //34
+	bind_func(sys_process_get_paramsfo), null_func, null_func, null_func, null_func, //34
 	null_func, null_func, null_func, null_func, null_func, //39
-	null_func, bind_func(sys_ppu_thread_exit), null_func, bind_func(sys_ppu_thread_yield), bind_func(sys_ppu_thread_join), //44
-	bind_func(sys_ppu_thread_detach), bind_func(sys_ppu_thread_get_join_state), bind_func(sys_ppu_thread_set_priority), bind_func(sys_ppu_thread_get_priority), bind_func(sys_ppu_thread_get_stack_information), //49
-	bind_func(sys_ppu_thread_stop), bind_func(sys_ppu_thread_restart), bind_func(sys_ppu_thread_create), null_func, null_func, //54
+	null_func,												//40  (0x028)
+	bind_func(sys_ppu_thread_exit),							//41  (0x029)
+	null_func,												//42  (0x02A)
+	bind_func(sys_ppu_thread_yield),						//43  (0x02B)
+	bind_func(sys_ppu_thread_join),							//44  (0x02C)
+	bind_func(sys_ppu_thread_detach),						//45  (0x02D)
+	bind_func(sys_ppu_thread_get_join_state),				//46  (0x02E)
+	bind_func(sys_ppu_thread_set_priority),					//47  (0x02F)
+	bind_func(sys_ppu_thread_get_priority),					//48  (0x030)
+	bind_func(sys_ppu_thread_get_stack_information),		//49  (0x031)
+	bind_func(sys_ppu_thread_stop),							//50  (0x032)
+	bind_func(sys_ppu_thread_restart),						//51  (0x033)
+	bind_func(sys_ppu_thread_create),						//52  (0x034)
+	null_func,												//53  (0x035)
+	null_func,												//54  (0x036)
 	null_func, null_func, null_func, null_func, null_func, //59
 	null_func, null_func, null_func, null_func, null_func, //64
 	null_func, null_func, null_func, null_func, null_func, //69
-	null_func, null_func, null_func, null_func, null_func, //74
-	null_func, null_func, null_func, null_func, null_func, //49
+	bind_func(sys_timer_create),							//70  (0x046)
+	bind_func(sys_timer_destroy),							//71  (0x047)
+	bind_func(sys_timer_get_information),					//72  (0x048)
+	bind_func(sys_timer_start),								//73  (0x049)
+	bind_func(sys_timer_stop),								//74  (0x04A)
+	bind_func(sys_timer_connect_event_queue),				//75  (0x04B)
+	bind_func(sys_timer_disconnect_event_queue),			//76  (0x04C)
+	null_func,												//77  (0x04D)
+	null_func,												//78  (0x04E)
+	null_func,												//79  (0x04F)
 	null_func, null_func, null_func, null_func, null_func, //84
 	null_func, null_func, null_func, null_func, null_func, //89
-	bind_func(sys_semaphore_create), bind_func(sys_semaphore_destroy), bind_func(sys_semaphore_wait), bind_func(sys_semaphore_trywait), bind_func(sys_semaphore_post), //94
-	bind_func(sys_lwmutex_create), bind_func(sys_lwmutex_destroy), bind_func(sys_lwmutex_lock), bind_func(sys_lwmutex_trylock), bind_func(sys_lwmutex_unlock), //99
-	bind_func(sys_mutex_create), bind_func(sys_mutex_destroy), bind_func(sys_mutex_lock), bind_func(sys_mutex_trylock), bind_func(sys_mutex_unlock), //104
-	bind_func(sys_cond_create), bind_func(sys_cond_destroy), bind_func(sys_cond_wait), bind_func(sys_cond_signal), bind_func(sys_cond_signal_all), //109
+	bind_func(sys_semaphore_create),						//90  (0x05A)
+	bind_func(sys_semaphore_destroy),						//91  (0x05B)
+	bind_func(sys_semaphore_wait),							//92  (0x05C)
+	bind_func(sys_semaphore_trywait),						//93  (0x05D)
+	bind_func(sys_semaphore_post),							//94  (0x05E)
+	bind_func(sys_lwmutex_create),							//95  (0x05F)
+	bind_func(sys_lwmutex_destroy),							//96  (0x060)
+	bind_func(sys_lwmutex_lock),							//97  (0x061)
+	bind_func(sys_lwmutex_trylock),							//98  (0x062)
+	bind_func(sys_lwmutex_unlock),							//99  (0x063)
+	bind_func(sys_mutex_create),							//100 (0x064)
+	bind_func(sys_mutex_destroy),							//101 (0x065)
+	bind_func(sys_mutex_lock),								//102 (0x066)
+	bind_func(sys_mutex_trylock),							//103 (0x067)
+	bind_func(sys_mutex_unlock),							//104 (0x068)
+	bind_func(sys_cond_create),								//105 (0x069)
+	bind_func(sys_cond_destroy),							//106 (0x06A)
+	bind_func(sys_cond_wait),								//107 (0x06B)
+	bind_func(sys_cond_signal),								//108 (0x06C)
+	bind_func(sys_cond_signal_all),							//109 (0x06D)
 	null_func, null_func, null_func, null_func, null_func, //114
 	null_func, null_func, null_func, null_func, null_func, //119
 	null_func, null_func, null_func, null_func, null_func, //124
 	null_func, null_func, null_func, bind_func(sys_event_queue_create), null_func, //129
 	bind_func(sys_event_queue_receive), null_func, null_func, null_func, bind_func(sys_event_port_create), //134
 	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), null_func, //139
-	null_func, null_func, null_func, null_func, null_func, //144
+	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, null_func, //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154
 	null_func, bind_func(sys_spu_image_open), null_func, null_func, null_func, //159
@@ -168,9 +204,21 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //789
 	null_func, null_func, null_func, null_func, null_func, //794
 	null_func, null_func, null_func, null_func, null_func, //799
-	null_func, bind_func(cellFsOpen), bind_func(cellFsRead), bind_func(cellFsWrite), bind_func(cellFsClose), //804
-	bind_func(cellFsOpendir), bind_func(cellFsReaddir), bind_func(cellFsClosedir), null_func, bind_func(cellFsFstat), //809
-	null_func, bind_func(cellFsMkdir), bind_func(cellFsRename), bind_func(cellFsRmdir), null_func, //814
+	null_func,												//800 (0x320)
+	bind_func(cellFsOpen),									//801 (0x321)
+	bind_func(cellFsRead),									//802 (0x322)
+	bind_func(cellFsWrite),									//803 (0x323)
+	bind_func(cellFsClose),									//804 (0x324)
+	bind_func(cellFsOpendir),								//805 (0x325)
+	bind_func(cellFsReaddir),								//806 (0x326)
+	bind_func(cellFsClosedir),								//807 (0x327)
+	bind_func(cellFsStat),									//808 (0x328)
+	bind_func(cellFsFstat),									//809 (0x329)
+	null_func,												//810 (0x32A)
+	bind_func(cellFsMkdir),									//811 (0x32B)
+	bind_func(cellFsRename),								//812 (0x32C)
+	bind_func(cellFsRmdir),									//813 (0x32D)
+	null_func,												//814 (0x32E)
 	null_func, null_func, null_func, bind_func(cellFsLseek), null_func, //819
 	null_func, null_func, null_func, null_func, null_func, //824
 	null_func, null_func, null_func, null_func, null_func, //829
