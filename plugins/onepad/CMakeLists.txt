@@ -12,6 +12,7 @@ set(Output onepad-1.1.0)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
+    -std=c++0x
     )
 
 set(OptimizationFlags
@@ -19,23 +20,21 @@ set(OptimizationFlags
     -DNDEBUG
     )
 
-# Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	# add defines
     add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
-# Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
-# Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
+if (SDL2_API)
+    add_definitions(-DONEPAD_SDL2)
+endif()
 
 # onepad sources
 set(onepadSources
@@ -82,8 +81,11 @@ add_library(${Output} SHARED
 			${onepadLinuxSources}
 			${onepadLinuxHeaders})
 
-# link target with SDL
-target_link_libraries(${Output} ${SDL_LIBRARY})
+if (SDL2_API)
+    target_link_libraries(${Output} ${SDL2_LIBRARY})
+else()
+    target_link_libraries(${Output} ${SDL_LIBRARY})
+endif()
 
 if(Linux)
 	# link target with gtk2

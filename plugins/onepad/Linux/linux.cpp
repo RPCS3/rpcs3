@@ -26,7 +26,6 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "linux.h"
-#include <gdk/gdkx.h>
 
 Display *GSdsp;
 Window	GSwin;

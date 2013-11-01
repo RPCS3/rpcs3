@@ -111,11 +111,14 @@ include_directories(.  Linux)
 # endif()
 
 if(SDL_FOUND)
-  add_definitions(-DSPU2X_SDL)
-  list(APPEND spu2xSources SndOut_SDL.cpp)
+    list(APPEND spu2xSources SndOut_SDL.cpp)
+    if(SDL2_API)
+        add_definitions(-DSPU2X_SDL)
+    else()
+        add_definitions(-DSPU2X_SDL2)
+    endif()
   #elseif(SDL2_FOUND)
   #  add_definitions(-DSPU2X_SDL2)
-  #  list(APPEND spu2xSources SndOut_SDL.cpp)
 endif()
 
 # add library
@@ -131,7 +134,11 @@ target_link_libraries(${Output} Utilities)
 # link target with various backend
 target_link_libraries(${Output} ${ALSA_LIBRARIES})
 target_link_libraries(${Output} ${PORTAUDIO_LIBRARIES})
-target_link_libraries(${Output} ${SDL_LIBRARY})
+if (SDL2_API)
+    target_link_libraries(${Output} ${SDL2_LIBRARY})
+else()
+    target_link_libraries(${Output} ${SDL_LIBRARY})
+endif()
 
 # link target with SoundTouch
 target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})

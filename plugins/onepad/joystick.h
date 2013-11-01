@@ -22,10 +22,13 @@
 #ifndef __JOYSTICK_H__
 #define __JOYSTICK_H__
 
-#include "SDL.h"
-#if SDL_VERSION_ATLEAST(1,3,0)
-#include "SDL_haptic.h"
+#ifdef ONEPAD_SDL2
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_haptic.h"
+#else
+#include "SDL/SDL.h"
 #endif
+
 
 #include "onepad.h"
 #include "controller.h"
@@ -34,12 +37,12 @@
 class JoystickInfo
 {
 	public:
-		JoystickInfo() : devname(""), _id(-1), numbuttons(0), numaxes(0), numhats(0), axisrange(0x7fff),
+		JoystickInfo() : devname(""), _id(-1), numbuttons(0), numaxes(0), numhats(0),
 		 deadzone(1500), pad(-1), joy(NULL) {
 			 vbuttonstate.clear();
 			 vaxisstate.clear();
 			 vhatstate.clear();
-#if SDL_VERSION_ATLEAST(1,3,0)
+#if SDL_MAJOR_VERSION >= 2
 			 haptic = NULL;
 			 for (int i = 0 ; i < 2 ; i++)
 				 haptic_effect_id[i] = -1;
@@ -140,17 +143,19 @@ class JoystickInfo
 
 		int GetAxisFromKey(int pad, int index);
 
+		static void UpdateReleaseState();
+
 	private:
 		string devname; // pretty device name
 		int _id;
 		int numbuttons, numaxes, numhats;
-		int axisrange, deadzone;
+		int deadzone;
 		int pad;
 
 		vector<int> vbuttonstate, vaxisstate, vhatstate;
 
 		SDL_Joystick*		joy;
-#if SDL_VERSION_ATLEAST(1,3,0)
+#if SDL_MAJOR_VERSION >= 2
 		SDL_Haptic*   		haptic;
 		SDL_HapticEffect	haptic_effect_data[2];
 		int   				haptic_effect_id[2];
@@ -160,7 +165,5 @@ class JoystickInfo
 
 extern int s_selectedpad;
 extern vector<JoystickInfo*> s_vjoysticks;
-extern void UpdateJoysticks();
-extern const char *HatName(int value);
 extern bool JoystickIdWithinBounds(int joyid);
 #endif

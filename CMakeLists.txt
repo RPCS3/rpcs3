@@ -36,6 +36,9 @@ cmake_minimum_required(VERSION 2.8.5)
 if(POLICY CMP0018)
     cmake_policy(SET CMP0018 OLD)
 endif()
+if(POLICY CMP0022)
+    cmake_policy(SET CMP0022 OLD)
+endif()
 
 # Variable to check that people use the good file
 set(TOP_CMAKE_WAS_SOURCED TRUE)

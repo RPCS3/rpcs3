@@ -304,9 +304,8 @@ void config_key(int pad, int key)
 	bool captured = false;
 	u32 key_pressed = 0;
 
-	// save the joystick states
-	UpdateJoysticks();
-
+	// I don't have any guarantee that not-yet-pressed state is egual to released state
+	JoystickInfo::UpdateReleaseState();
 	while (!captured)
 	{
 		vector<JoystickInfo*>::iterator itjoy;

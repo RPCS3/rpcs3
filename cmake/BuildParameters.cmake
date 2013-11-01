@@ -1,5 +1,5 @@
 ### TODO 
-# Hardcode GLSL_SHADER_DIR and GAMEINDEX_DIR. To check that default is fine for everybody
+# Hardcode GAMEINDEX_DIR, if default is fine for everybody
 
 ### Select the build type
 # Use Release/Devel/Debug      : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
@@ -9,6 +9,7 @@
 # Build the Replay Loaders     : -DBUILD_REPLAY_LOADERS=TRUE|FALSE
 # Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE|FALSE
 # Use EGL (vs GLX)            : -DEGL_API=TRUE|FALSE
+# Use SDL2                    ; -DSDL2_API=TRUE|FALSE
 
 ### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
@@ -94,7 +95,8 @@ set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 # Set some default compiler flags
 #-------------------------------------------------------------------------------
 set(DEFAULT_WARNINGS "-Wno-write-strings -Wno-format -Wno-unused-parameter -Wno-unused-value -Wstrict-aliasing -Wno-unused-function -Wno-attributes -Wno-unused-result -Wno-missing-field-initializers -Wno-unused-local-typedefs -Wno-parentheses")
-set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread ${DEFAULT_WARNINGS}")
+set (HARDEING_OPT "-D_FORTIFY_SOURCE=2  -Wformat -Wformat-security")
+set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread ${DEFAULT_WARNINGS} ${HARDEING_OPT}")
 set(DEFAULT_CPP_FLAG "${DEFAULT_GCC_FLAG} -Wno-invalid-offsetof")
 
 #-------------------------------------------------------------------------------
@@ -153,13 +155,8 @@ if(PACKAGE_MODE)
         set(GAMEINDEX_DIR "${CMAKE_INSTALL_PREFIX}/share/games/pcsx2")
     endif(NOT DEFINED GAMEINDEX_DIR)
 
-    if(NOT DEFINED GLSL_SHADER_DIR)
-        set(GLSL_SHADER_DIR "${CMAKE_INSTALL_PREFIX}/share/games/pcsx2")
-    endif(NOT DEFINED GLSL_SHADER_DIR)
-
     # Compile all source codes with these 3 defines
     add_definitions(-DPLUGIN_DIR_COMPILATION=${PLUGIN_DIR} -DGAMEINDEX_DIR_COMPILATION=${GAMEINDEX_DIR})
-    add_definitions(-DGLSL_SHADER_DIR_COMPILATION=${GLSL_SHADER_DIR})
 endif(PACKAGE_MODE)
 
 #-------------------------------------------------------------------------------
@@ -186,7 +183,16 @@ if(NOT DEFINED GLES_API)
 endif()
 
 #-------------------------------------------------------------------------------
-# Use the precompiled shader file by default
+# Select SDL1 by default (spu2x and onepad)
+#-------------------------------------------------------------------------------
+# FIXME do a proper detection
+set(SDL2_LIBRARY "-lSDL2")
+if(NOT DEFINED SDL2_API)
+    set(SDL2_API FALSE)
+endif()
+
+#-------------------------------------------------------------------------------
+# Use the precompiled shader file by default (both zzogl&gsdx)
 #-------------------------------------------------------------------------------
 if(NOT DEFINED REBUILD_SHADER)
 	set(REBUILD_SHADER FALSE)

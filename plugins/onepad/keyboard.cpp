@@ -155,7 +155,8 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt)
 				}
 
 				unsigned x = evt.key & 0xFFFF;
-				unsigned int value = abs(s_previous_mouse_x - x) * conf->sensibility;
+				unsigned int value = (s_previous_mouse_x > x) ? s_previous_mouse_x - x : x - s_previous_mouse_x;
+				value *= conf->sensibility;
 
 				if (x == 0)
 					key_status->press(pad, pad_x, -MAX_ANALOG_VALUE);
@@ -170,7 +171,8 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt)
 
 
 				unsigned y = evt.key >> 16;
-				value = abs(s_previous_mouse_y - y) * conf->sensibility;
+				value = (s_previous_mouse_y > y) ? s_previous_mouse_y - y : y - s_previous_mouse_y;
+				value *= conf->sensibility;
 
 				if (y == 0)
 					key_status->press(pad, pad_y, -MAX_ANALOG_VALUE);
@@ -231,12 +233,7 @@ bool PollX11KeyboardMouseEvent(u32 &pkey)
 	if (ev != NULL)
 	{
 		if (ev->type == GDK_KEY_PRESS) {
-
-			if (ev->key.keyval == GDK_Escape)
-				pkey = 0;
-			else
-				pkey = ev->key.keyval;
-
+			pkey = ev->key.keyval != GDK_Escape ? ev->key.keyval : 0;
 			return true;
 		} else if(ev->type == GDK_BUTTON_PRESS) {
 			pkey = ev->button.button;
