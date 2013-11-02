@@ -32,8 +32,16 @@ static func_caller* sc_table[1024] =
 	null_func,												//53  (0x035)
 	null_func,												//54  (0x036)
 	null_func, null_func, null_func, null_func, null_func, //59
-	null_func, null_func, null_func, null_func, null_func, //64
-	null_func, null_func, null_func, null_func, null_func, //69
+	bind_func(sys_trace_create),							//60  (0x03C)
+	bind_func(sys_trace_start),								//61  (0x03D)
+	bind_func(sys_trace_stop),								//62  (0x03E)
+	bind_func(sys_trace_update_top_index),					//63  (0x03F)
+	bind_func(sys_trace_destroy), 							//64  (0x040)
+	bind_func(sys_trace_drain), 							//65  (0x041)
+	bind_func(sys_trace_attach_process),					//66  (0x042)
+	bind_func(sys_trace_allocate_buffer), 					//67  (0x043)
+	bind_func(sys_trace_free_buffer), 						//68  (0x044)
+	bind_func(sys_trace_create2), 							//69  (0x045)
 	bind_func(sys_timer_create),							//70  (0x046)
 	bind_func(sys_timer_destroy),							//71  (0x047)
 	bind_func(sys_timer_get_information),					//72  (0x048)
@@ -68,11 +76,19 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_cond_signal_all),							//109 (0x06D)
 	null_func, null_func, null_func, null_func, null_func, //114
 	null_func, null_func, null_func, null_func, null_func, //119
-	null_func, null_func, null_func, null_func, null_func, //124
-	null_func, null_func, null_func, bind_func(sys_event_queue_create), null_func, //129
+	bind_func(sys_rwlock_create),							//120 (0x078)
+	bind_func(sys_rwlock_destroy),							//121 (0x079)
+	bind_func(sys_rwlock_rlock),							//122 (0x07A)
+	bind_func(sys_rwlock_tryrlock),							//123 (0x07B)
+	bind_func(sys_rwlock_runlock),							//124 (0x07C)
+	bind_func(sys_rwlock_wlock),							//125 (0x07D)
+	bind_func(sys_rwlock_trywlock),							//126 (0x07E)
+	bind_func(sys_rwlock_wunlock),							//127 (0x07F)
+	bind_func(sys_event_queue_create),						//128 (0x080)
+	null_func,												//129 (0x081)
 	bind_func(sys_event_queue_receive), null_func, null_func, null_func, bind_func(sys_event_port_create), //134
 	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), null_func, //139
-	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, null_func, //144
+	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, bind_func(sys_time_get_timezone), //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154
 	null_func, bind_func(sys_spu_image_open), null_func, null_func, null_func, //159
@@ -177,9 +193,21 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //654
 	null_func, null_func, null_func, null_func, null_func, //659
 	null_func, null_func, null_func, null_func, null_func, //664
-	null_func, null_func, null_func, null_func, null_func, //669
-	null_func, null_func, null_func, null_func, null_func, //674
-	null_func, null_func, null_func, null_func, null_func, //679
+	null_func,												//665 (0x299)
+	bind_func(sys_rsx_device_open),							//666 (0x29A)
+	bind_func(sys_rsx_device_close),						//667 (0x29B)
+	bind_func(sys_rsx_memory_allocate),						//668 (0x29C)
+	bind_func(sys_rsx_memory_free),							//669 (0x29D)
+	bind_func(sys_rsx_context_allocate),					//670 (0x29E)
+	bind_func(sys_rsx_context_free), 						//671 (0x29F)
+	bind_func(sys_rsx_context_iomap), 						//672 (0x2A0)
+	bind_func(sys_rsx_context_iounmap), 					//673 (0x2A1)
+	bind_func(sys_rsx_context_attribute),					//674 (0x2A2)
+	bind_func(sys_rsx_device_map), 							//675 (0x2A3)
+	bind_func(sys_rsx_device_unmap), 						//676 (0x2A4)
+	bind_func(sys_rsx_attribute), 							//677 (0x2A5)
+	null_func,												//678 (0x2A6)
+	null_func,												//679 (0x2A7)
 	null_func, null_func, null_func, null_func, null_func, //684
 	null_func, null_func, null_func, null_func, null_func, //689
 	null_func, null_func, null_func, null_func, null_func, //694

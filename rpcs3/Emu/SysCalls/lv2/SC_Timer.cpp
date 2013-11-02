@@ -103,8 +103,8 @@ int sys_timer_sleep(u32 sleep_time)
 
 int sys_timer_usleep(u64 sleep_time)
 {
-	sys_timer.Warning("TODO: sys_timer_usleep()");
+	sys_timer.Warning("sys_timer_usleep(sleep_time=%lld)", sleep_time);
 	if (sleep_time > 0xFFFFFFFFFFFF) sleep_time = 0xFFFFFFFFFFFF; //2^48-1
-	wxMicroSleep(sleep_time);
+	wxMicroSleep(sleep_time); //TODO: If (sleep_time >= 2^32) shit may happen
 	return CELL_OK;
 }

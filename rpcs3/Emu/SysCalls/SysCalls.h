@@ -2,6 +2,7 @@
 #include "ErrorCodes.h"
 #include "lv2/SC_FileSystem.h"
 #include "lv2/SC_Timer.h"
+#include "lv2/SC_Rwlock.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -278,6 +279,7 @@ extern int sys_spu_thread_read_ls(u32 id, u32 address, u32 value_addr, u32 type)
 extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 
 //sys_time
+extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);
 extern int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
 extern s64 sys_time_get_system_time();
 extern u64 sys_time_get_timebase_frequency();
@@ -292,6 +294,42 @@ extern int sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u
 extern int sys_timer_disconnect_event_queue(u32 timer_id);
 extern int sys_timer_sleep(u32 sleep_time);
 extern int sys_timer_usleep(u64 sleep_time);
+
+//sys_trace
+extern int sys_trace_create();
+extern int sys_trace_start();
+extern int sys_trace_stop();
+extern int sys_trace_update_top_index();
+extern int sys_trace_destroy();
+extern int sys_trace_drain();
+extern int sys_trace_attach_process();
+extern int sys_trace_allocate_buffer();
+extern int sys_trace_free_buffer();
+extern int sys_trace_create2();
+
+//sys_rwlock
+extern int sys_rwlock_create(mem32_t rw_lock_id, mem_struct_ptr_t<sys_rwlock_attribute_t> attr);
+extern int sys_rwlock_destroy(u32 rw_lock_id);
+extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_tryrlock(u32 rw_lock_id);
+extern int sys_rwlock_runlock(u32 rw_lock_id);
+extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_trywlock(u32 rw_lock_id);
+extern int sys_rwlock_wunlock(u32 rw_lock_id);
+
+//sys_rsx
+extern int sys_rsx_device_open();
+extern int sys_rsx_device_close();
+extern int sys_rsx_memory_allocate();
+extern int sys_rsx_memory_free();
+extern int sys_rsx_context_allocate();
+extern int sys_rsx_context_free();
+extern int sys_rsx_context_iomap();
+extern int sys_rsx_context_iounmap();
+extern int sys_rsx_context_attribute(s32 context_id, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6);
+extern int sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 a3);
+extern int sys_rsx_device_unmap();
+extern int sys_rsx_attribute();
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
 

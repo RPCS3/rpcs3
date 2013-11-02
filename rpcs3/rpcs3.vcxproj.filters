@@ -313,6 +313,15 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

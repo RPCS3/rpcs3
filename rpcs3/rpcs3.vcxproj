@@ -242,12 +242,15 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Resc.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
