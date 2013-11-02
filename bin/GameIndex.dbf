@@ -1899,6 +1899,13 @@ Serial = SLUS-20037
 Name   = Run Like Hell - Hunt or Be Hunted
 Region = NTSC-U
 Compat = 5
+[patches = F802A575]
+	comment=swapping a COP2 op into place to make the flags work without delays
+	patch=0,EE,001D249C,word,4A0002FF
+	patch=0,EE,001D24AC,word,4B07FA0B
+	patch=0,EE,001D268C,word,4A0002FF
+	patch=0,EE,001D269C,word,4B07FA0B
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20039
 Name   = Top Gear Dare Devil
