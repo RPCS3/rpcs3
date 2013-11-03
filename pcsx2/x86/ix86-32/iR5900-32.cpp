@@ -1399,7 +1399,7 @@ void recompileNextInstruction(int delayslot)
 			{
 				// I am so sorry.
 				cpuRegs.code = memRead32(p);
-				if (_Rs_ == 2) // CFC2
+				if (_Opcode_ == 022 && _Rs_ == 2) // CFC2
 					// rd is fs
 					if (_Rd_ == 16 && s & 1 || _Rd_ == 17 && s & 2 || _Rd_ == 18 && s & 4)
 					{
