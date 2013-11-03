@@ -10,14 +10,12 @@ PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
 
-	if(!thread || thread->GetType() != PPC_THREAD_PPU) throw wxString("GetCurrentPPUThread: bad thread");
+	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw wxString("GetCurrentPPUThread: bad thread");
 
 	return *(PPUThread*)thread;
 }
 
-PPUThread::PPUThread() 
-	: PPCThread(PPC_THREAD_PPU)
-	, SysCalls(*this)
+PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
 {
 	Reset();
 }
@@ -29,6 +27,8 @@ PPUThread::~PPUThread()
 
 void PPUThread::DoReset()
 {
+	PPCThread::DoReset();
+
 	//reset regs
 	memset(VPR,	 0, sizeof(VPR));
 	memset(FPR,  0, sizeof(FPR));
@@ -52,10 +52,10 @@ void PPUThread::DoReset()
 
 void PPUThread::AddArgv(const wxString& arg)
 {
-	stack_point -= arg.Len() + 1;
-	stack_point = Memory.AlignAddr(stack_point, 0x10) - 0x10;
-	argv_addr.AddCpy(stack_point);
-	Memory.WriteString(stack_point, arg);
+	m_stack_point -= arg.Len() + 1;
+	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
+	m_argv_addr.AddCpy(m_stack_point);
+	Memory.WriteString(m_stack_point, arg);
 }
 
 void PPUThread::InitRegs()
@@ -88,9 +88,9 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	stack_point = Memory.AlignAddr(stack_point, 0x200) - 0x200;
+	m_stack_point = Memory.AlignAddr(m_stack_point, 0x200) - 0x200;
 
-	GPR[1] = stack_point;
+	GPR[1] = m_stack_point;
 	GPR[2] = rtoc;
 
 	for(int i=4; i<32; ++i)
@@ -99,14 +99,14 @@ void PPUThread::InitRegs()
 			GPR[i] = (i+1) * 0x10000;
 	}
 
-	if(argv_addr.GetCount())
+	if(m_argv_addr.GetCount())
 	{
-		u64 argc = argv_addr.GetCount();
-		stack_point -= 0xc + 4 * argc;
-		u64 argv = stack_point;
+		u64 argc = m_argv_addr.GetCount();
+		m_stack_point -= 0xc + 4 * argc;
+		u64 argv = m_stack_point;
 
 		mem64_ptr_t argv_list(argv);
-		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
+		for(int i=0; i<argc; ++i) argv_list += m_argv_addr[i];
 
 		GPR[3] = argc;
 		GPR[4] = argv;
@@ -149,12 +149,12 @@ void PPUThread::DoRun()
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
-		m_dec = new PPU_Decoder(*new PPU_DisAsm(*this));
+		//m_dec = new PPUDecoder(*new PPUDisAsm());
 	break;
 
 	case 1:
 	case 2:
-		m_dec = new PPU_Decoder(*new PPU_Interpreter(*this));
+		m_dec = new PPUDecoder(*new PPUInterpreter(*this));
 	break;
 	}
 }
@@ -178,8 +178,10 @@ void PPUThread::DoStop()
 
 bool dump_enable = false;
 
-void PPUThread::DoCode(const s32 code)
+void PPUThread::DoCode()
 {
+	const u32 code = Memory.Read32(m_offset + PC);
+
 #ifdef _DEBUG
 	static bool is_last_enabled = false;
 

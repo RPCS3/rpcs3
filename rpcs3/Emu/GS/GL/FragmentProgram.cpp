@@ -72,7 +72,8 @@ void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = cond + (dst.set_cond ? AddCond(dst.fp16) : AddReg(dst.dest_reg, dst.fp16)) + mask
+	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(dst.fp16 ? "hc%d" : "rc%d", src0.cond_reg_index))
+		: AddReg(dst.dest_reg, dst.fp16)) + mask
 		+ " = " + code + (append_mask ? mask : wxEmptyString);
 
 	main += "\t" + code + ";\n";
@@ -97,20 +98,27 @@ wxString FragmentDecompilerThread::GetMask()
 
 wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-	//if(!index && !fp16) return "gl_FragColor";
-	return m_parr.AddParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
-		wxString::Format((fp16 ? "h%u" : "r%u"), index), (index || fp16) ? -1 : 0);
+	/*
+	if(HasReg(index, fp16))
+	{
+		return wxString::Format((fp16 ? "h%u" : "r%u"), index);
+	}
+	*/
+
+	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
+	return m_parr.AddParam(fp16 ? PARAM_NONE : PARAM_OUT, "vec4",
+		wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : index);
 }
 
 bool FragmentDecompilerThread::HasReg(u32 index, int fp16)
 {
-	return m_parr.HasParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
+	return m_parr.HasParam(PARAM_OUT, "vec4",
 		wxString::Format((fp16 ? "h%u" : "r%u"), index));
 }
 
 wxString FragmentDecompilerThread::AddCond(int fp16)
 {
-	return m_parr.AddParam(PARAM_NONE , "vec4", (fp16 ? "hc" : "rc"), -1);
+	return m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(fp16 ? "hc%d" : "rc%d", src0.cond_mod_reg_index));
 }
 
 wxString FragmentDecompilerThread::AddConst()
@@ -200,11 +208,6 @@ wxString FragmentDecompilerThread::BuildCode()
 {
 	wxString p = wxEmptyString;
 
-	if(!m_parr.HasParam(PARAM_OUT, "vec4", "r0") && m_parr.HasParam(PARAM_NONE, "vec4", "h0"))
-	{
-		main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "r0", 0) + " = " + "h0;\n";
-	}
-
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
 		p += m_parr.params[i].Format();
@@ -233,16 +236,18 @@ void FragmentDecompilerThread::Task()
 
 		m_offset = 4 * 4;
 
-		switch(dst.opcode | (src1.opcode_is_branch << 6))
+		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
+
+		switch(opcode)
 		{
 		case 0x00: break; //NOP
 		case 0x01: AddCode(GetSRC(src0)); break; //MOV
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
 		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
 		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
-		case 0x05: AddCode("vec4(dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)).xxxx"); break; // DP3
-		case 0x06: AddCode("vec4(dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DP4
-		case 0x07: AddCode("vec4(distance(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DST
+		case 0x05: AddCode("vec2(dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz), 0).xxxx"); break; // DP3
+		case 0x06: AddCode("vec2(dot(" + GetSRC(src0) + ", " + GetSRC(src1) + "), 0).xxxx"); break; // DP4
+		case 0x07: AddCode("vec2(distance(" + GetSRC(src0) + ", " + GetSRC(src1) + "), 0).xxxx"); break; // DST
 		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
 		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
 		case 0x0a: AddCode("vec4(lessThan(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SLT
@@ -292,7 +297,7 @@ void FragmentDecompilerThread::Task()
 		//case 0x35: break; // BEMLUM
 		//case 0x36: break; // REFL
 		//case 0x37: break; // TIMESWTEX
-		case 0x38: AddCode("vec4(dot(" + GetSRC(src0) + ".xy, " + GetSRC(src1) + ".xy)).xxxx"); break; // DP2
+		case 0x38: AddCode("vec2(dot(" + GetSRC(src0) + ".xy, " + GetSRC(src1) + ".xy)).xxxx"); break; // DP2
 		case 0x39: AddCode("normalize(" + GetSRC(src0) + ".xyz)"); break; // NRM
 		case 0x3a: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIV
 		case 0x3b: AddCode("(" + GetSRC(src0) + " / sqrt(" + GetSRC(src1) + "))"); break; // DIVSQ
@@ -301,7 +306,7 @@ void FragmentDecompilerThread::Task()
 		case 0x3e: break; // FENCB
 
 		default:
-			ConLog.Error("Unknown opcode 0x%x (inst %d)", dst.opcode, m_size / (4 * 4));
+			ConLog.Error("Unknown opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
 			Emu.Pause();
 		break;
 		}

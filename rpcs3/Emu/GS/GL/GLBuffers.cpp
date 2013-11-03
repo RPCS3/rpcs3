@@ -135,10 +135,12 @@ GLrbo::~GLrbo()
 
 void GLrbo::Create(u32 count)
 {
-	if(m_id.GetCount())
+	if(m_id.GetCount() == count)
 	{
 		return;
 	}
+
+	Delete();
 
 	m_id.SetCount(count);
 	glGenRenderbuffers(count, m_id.GetPtr());
@@ -163,6 +165,11 @@ void GLrbo::Unbind()
 
 void GLrbo::Delete()
 {
+	if(!IsCreated())
+	{
+		return;
+	}
+
 	glDeleteRenderbuffers(m_id.GetCount(), m_id.GetPtr());
 	m_id.Clear();
 }
@@ -198,11 +205,15 @@ void GLfbo::Create()
 
 void GLfbo::Bind(u32 type, int id)
 {
-	if(id != -1)
-		assert(m_id);
+	glBindFramebuffer(type, id);
+}
+
+void GLfbo::Bind(u32 type)
+{
+	assert(IsCreated());
 
 	m_type = type;
-	glBindFramebuffer(m_type, id == -1 ? m_id : id);
+	Bind(type, m_id);
 }
 
 void GLfbo::Texture1D(u32 attachment, u32 texture, int level)
@@ -242,6 +253,11 @@ void GLfbo::Unbind(u32 type)
 
 void GLfbo::Delete()
 {
+	if(!IsCreated())
+	{
+		return;
+	}
+
 	glDeleteFramebuffers(1, &m_id);
 	m_id = 0;
 }

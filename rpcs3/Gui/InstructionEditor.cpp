@@ -2,8 +2,8 @@ class InstructionEditorDialog
 	: public wxDialog
 {
 	u64 pc;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	PPCDisAsm* disasm;
+	PPCDecoder* decoder;
 	wxTextCtrl* t2_instr;
 	wxStaticText* t3_preview;
 
@@ -11,12 +11,12 @@ public:
 	PPCThread* CPU;
 
 public:
-	InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm);
+	InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm);
 
 	void updatePreview(wxCommandEvent& event);
 };
 
-InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm)
+InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit instruction", wxDefaultPosition)
 	, pc(_pc)
 	, CPU(_CPU)

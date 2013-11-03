@@ -1,79 +1,17 @@
 #pragma once
 
+#include "Emu/CPU/CPUDisAsm.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
-enum DisAsmModes
-{
-	DumpMode,
-	InterpreterMode,
-	NormalMode,
-	CompilerElfMode,
-};
-
-class PPC_DisAsm
+class PPCDisAsm : public CPUDisAsm
 {
 protected:
-	DisAsmFrame* disasm_frame;
-	const DisAsmModes m_mode;
-
-	virtual void Write(const wxString value)
+	PPCDisAsm(CPUDisAsmMode mode) : CPUDisAsm(mode)
 	{
-		switch(m_mode)
-		{
-			case DumpMode:
-			{
-				wxString mem = wxString::Format("\t%08llx:\t", dump_pc);
-				for(u8 i=0; i < 4; ++i)
-				{
-					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
-					if(i < 3) mem += " ";
-				}
-
-				last_opcode = mem + "\t" + value + "\n";
-			}
-			break;
-
-			case InterpreterMode:
-			{
-				last_opcode = wxString::Format("[%08llx]  %02x %02x %02x %02x: %s", dump_pc,
-					Memory.Read8(offset + dump_pc),
-					Memory.Read8(offset + dump_pc + 1),
-					Memory.Read8(offset + dump_pc + 2),
-					Memory.Read8(offset + dump_pc + 3), value);
-			}
-			break;
-
-			case CompilerElfMode: last_opcode = value + "\n"; break;
-
-			default: if(disasm_frame) disasm_frame->AddLine(value); break;
-		}
-	}
-
-public:
-	wxString last_opcode;
-	u64 dump_pc;
-	u64 offset;
-
-protected:
-	PPC_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode) 
-		: m_mode(mode)
-		, disasm_frame(NULL)
-		, offset(0)
-	{
-		if(m_mode != NormalMode) return;
-
-		disasm_frame = new DisAsmFrame(cpu);
-		disasm_frame->Show();
 	}
 
 	virtual u32 DisAsmBranchTarget(const s32 imm)=0;
-
-	wxString FixOp(wxString op)
-	{
-		op.Append(' ', max<int>(8 - op.Len(), 0));
-		return op;
-	}
 
 	void DisAsm_V4(const wxString& op, u32 v0, u32 v1, u32 v2, u32 v3)
 	{
@@ -153,7 +91,7 @@ protected:
 	}
 	void DisAsm_F1_R2(const wxString& op, u32 f0, u32 r0, u32 r1)
 	{
-		if(m_mode == CompilerElfMode)
+		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
 			Write(wxString::Format("%s f%d,r%d,r%d", FixOp(op), f0, r0, r1));
 			return;
@@ -163,7 +101,7 @@ protected:
 	}
 	void DisAsm_F1_IMM_R1_RC(const wxString& op, u32 f0, s32 imm0, u32 r0, bool rc)
 	{
-		if(m_mode == CompilerElfMode)
+		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
 			Write(wxString::Format("%s%s f%d,r%d,%d #%x", FixOp(op), rc ? "." : "", f0, r0, imm0, imm0));
 			return;
@@ -241,7 +179,7 @@ protected:
 	}
 	void DisAsm_R2_IMM(const wxString& op, u32 r0, u32 r1, s32 imm0)
 	{
-		if(m_mode == CompilerElfMode)
+		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
 			Write(wxString::Format("%s r%d,r%d,%d  #%x", FixOp(op), r0, r1, imm0, imm0));
 			return;

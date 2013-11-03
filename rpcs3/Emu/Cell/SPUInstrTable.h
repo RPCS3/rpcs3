@@ -39,15 +39,15 @@ namespace SPU_instr
 	static CodeField<18, 31> L_18_31;
 	static CodeField<11> L_11;
 
-	static auto rrr_list = new_list<SPU_Opcodes>(RRR);
+	static auto rrr_list = new_list<SPUOpcodes>(RRR);
 	static auto ri18_list = new_list(rrr_list, RI18);
 	static auto ri10_list = new_list(ri18_list, RI10);
 	static auto ri16_list = new_list(ri10_list, RI16);
 	static auto ri8_list = new_list(ri16_list, RI8);
-	static auto ri7_list = new_list(ri8_list, RI7, instr_bind(&SPU_Opcodes::UNK, GetCode, RRR, RI7));
+	static auto ri7_list = new_list(ri8_list, RI7, instr_bind(&SPUOpcodes::UNK, GetCode, RRR, RI7));
 
 	#define bind_instr(list, name, ...) \
-		static const auto& name = make_instr<SPU_opcodes::name>(list, #name, &SPU_Opcodes::name, ##__VA_ARGS__)
+		static const auto& name = make_instr<SPU_opcodes::name>(list, #name, &SPUOpcodes::name, ##__VA_ARGS__)
 
 	bind_instr(ri7_list, STOP, L_18_31);
 	bind_instr(ri7_list, LNOP);

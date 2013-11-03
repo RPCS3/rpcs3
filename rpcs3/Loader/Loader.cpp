@@ -5,6 +5,8 @@
 #include "PSF.h"
 #include "Emu/FS/vfsLocalFile.h"
 
+static const u64 g_spu_offset = 0x10000;
+
 const wxString Ehdr_DataToString(const u8 data)
 {
 	if(data > 1) return wxString::Format("%d's complement, big endian", data);
@@ -39,7 +41,7 @@ const wxString Ehdr_MachineToString(const u16 machine)
 {
 	switch(machine)
 	{
-	case MACHINE_MIPS: return "MIPS";
+	case MACHINE_MIPS:	return "MIPS";
 	case MACHINE_PPC64: return "PowerPC64";
 	case MACHINE_SPU:	return "SPU";
 	};
@@ -92,12 +94,22 @@ const wxString Phdr_TypeToString(const u32 type)
 	return wxString::Format("Unknown (%x)", type);
 }
 
-Loader::Loader() : m_stream(nullptr)
+Loader::Loader()
+	: m_stream(nullptr)
+	, m_loader(nullptr)
 {
 }
 
-Loader::Loader(vfsFileBase& stream) : m_stream(&stream)
+Loader::Loader(vfsFileBase& stream)
+	: m_stream(&stream)
+	, m_loader(nullptr)
 {
+}
+
+Loader::~Loader()
+{
+	delete m_loader;
+	m_loader = nullptr;
 }
 
 void Loader::Open(vfsFileBase& stream)
@@ -120,26 +132,34 @@ LoaderBase* Loader::SearchLoader()
 	return nullptr;
 }
 
-bool Loader::Load()
+bool Loader::Analyze()
 {
-	static const u64 spu_offset = 0x10000;
+	delete m_loader;
 
-	ScopedPtr<LoaderBase> l = SearchLoader();
+	m_loader = SearchLoader();
 
-	if(!l)
+	if(!m_loader)
 	{
 		ConLog.Error("Unknown file type");
 		return false;
 	}
 
-	if(!l->LoadData(l->GetMachine() == MACHINE_SPU ? spu_offset : 0))
+	machine = m_loader->GetMachine();
+	entry = m_loader->GetMachine() == MACHINE_SPU ? m_loader->GetEntry() + g_spu_offset : m_loader->GetEntry();
+
+	return true;
+}
+
+bool Loader::Load()
+{
+	if(!m_loader)
+		return false;
+
+	if(!m_loader->LoadData(m_loader->GetMachine() == MACHINE_SPU ? g_spu_offset : 0))
 	{
 		ConLog.Error("Broken file");
 		return false;
 	}
-
-	machine = l->GetMachine();
-	entry = l->GetMachine() == MACHINE_SPU ? l->GetEntry() + spu_offset : l->GetEntry();
 
 	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
 	const wxString& psf_path = root + "\\" + "PARAM.SFO";

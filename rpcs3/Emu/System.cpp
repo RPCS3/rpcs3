@@ -3,7 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Ini.h"
 
-#include "Emu/Cell/PPCThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -44,7 +43,7 @@ void Emulator::SetPath(const wxString& path, const wxString& elf_path)
 
 void Emulator::CheckStatus()
 {
-	ArrayF<PPCThread>& threads = GetCPU().GetThreads();
+	ArrayF<CPUThread>& threads = GetCPU().GetThreads();
 	if(!threads.GetCount())
 	{
 		Stop();
@@ -83,7 +82,6 @@ void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
 	ConLog.Write("Loading '%s'...", m_path);
-	Memory.Init();
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
@@ -117,7 +115,19 @@ void Emulator::Load()
 
 	try
 	{
-		is_error = !l.Load() || l.GetMachine() == MACHINE_Unknown;
+		if(!(is_error = !l.Analyze() || l.GetMachine() == MACHINE_Unknown))
+		{
+			switch(l.GetMachine())
+			{
+			case MACHINE_SPU:
+			case MACHINE_PPC64:
+				Memory.Init(Memory_PS3);
+			break;
+			}
+
+			is_error = !l.Load();
+		}
+		
 	}
 	catch(const wxString& e)
 	{
@@ -130,6 +140,21 @@ void Emulator::Load()
 		is_error = true;
 	}
 
+	CPUThreadType thread_type;
+
+	if(!is_error)
+	{
+		switch(l.GetMachine())
+		{
+		case MACHINE_PPC64: thread_type = CPU_THREAD_PPU; break;
+		case MACHINE_SPU: thread_type = CPU_THREAD_SPU; break;
+
+		default:
+			is_error = true;
+		break;
+		}
+	}
+
 	if(is_error)
 	{
 		Memory.Close();
@@ -138,17 +163,20 @@ void Emulator::Load()
 	}
 
 	LoadPoints(BreakPointsDBName);
-	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64 ? PPC_THREAD_PPU : PPC_THREAD_SPU);
 
-	if(l.GetMachine() == MACHINE_SPU)
+	CPUThread& thread = GetCPU().AddThread(thread_type);
+
+	switch(l.GetMachine())
 	{
+	case MACHINE_SPU:
 		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
 		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
 		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
-	}
-	else
+	break;
+
+	case MACHINE_PPC64:
 	{
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.Alloc(0x1000);
@@ -171,6 +199,12 @@ void Emulator::Load()
 		ppu_thr_exit_data += ADDI(11, 0, 41);
 		ppu_thr_exit_data += SC(2);
 		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+	}
+	break;
+
+	default:
+		thread.SetEntry(l.GetEntry());
+	break;
 	}
 
 	if(!m_dbg_console)

@@ -104,6 +104,7 @@ struct FragmentDecompilerThread : public ThreadBase
 	u32& m_size;
 	u32 m_const_index;
 	u32 m_offset;
+	u32 m_location;
 
 	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
 		: ThreadBase(false, "Fragment Shader Decompiler Thread")
@@ -112,6 +113,7 @@ struct FragmentDecompilerThread : public ThreadBase
 		, m_addr(addr)
 		, m_size(size) 
 		, m_const_index(0)
+		, m_location(0)
 	{
 		m_size = 0;
 	}

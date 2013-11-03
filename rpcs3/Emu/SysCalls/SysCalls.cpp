@@ -267,14 +267,6 @@ void default_syscall()
 	return;
 }
 
-SysCalls::SysCalls(PPUThread& cpu) : CPU(cpu)
-{
-}
-
-SysCalls::~SysCalls()
-{
-}
-
 void SysCalls::DoSyscall(u32 code)
 {
 	if(code < 1024)
@@ -291,5 +283,6 @@ void SysCalls::DoSyscall(u32 code)
 	//return 0;
 
 	//TODO: remove this
+	declCPU();
 	RESULT(DoFunc(code));
 }

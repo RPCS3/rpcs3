@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Loader/ELF.h"
-#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/RawSPUThread.h"
 
 SysCallBase sc_spu("sys_spu");
 
@@ -40,12 +40,12 @@ static const u32 g_spu_group_thr_count = 255;
 
 struct SpuGroupInfo
 {
-	PPCThread* threads[g_spu_group_thr_count];
+	CPUThread* threads[g_spu_group_thr_count];
 	sys_spu_thread_group_attribute& attr;
 
 	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr)
 	{
-		memset(threads, 0, sizeof(PPCThread*) * g_spu_group_thr_count);
+		memset(threads, 0, sizeof(CPUThread*) * g_spu_group_thr_count);
 	}
 };
 
@@ -150,7 +150,7 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 	ConLog.Write("a4 = 0x%x", a4);
 	ConLog.SkipLn();
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_SPU);
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	new_thread.SetOffset(g_spu_offset);
 	new_thread.SetEntry(entry - g_spu_offset);
 	new_thread.SetName(name);
@@ -170,9 +170,9 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 int sys_spu_thread_set_argument(u32 id, u32 arg_addr)
 {
 	sc_spu.Warning("sys_spu_thread_set_argument(id=0x%x, arg_addr=0x%x)", id, arg_addr);
-	PPCThread* thr = Emu.GetCPU().GetThread(id);
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || thr->GetType() == PPC_THREAD_PPU)
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
 	{
 		return CELL_ESRCH;
 	}
@@ -268,8 +268,8 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
 
 	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
-	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_RAW_SPU);
-	Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(PPC_THREAD_RAW_SPU, new_thread.GetId()));
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
+	Memory.Write32(id_addr, ((RawSPUThread&)new_thread).GetIndex());
 	new_thread.Run();
 	new_thread.Exec();
 
@@ -286,10 +286,10 @@ int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 		return CELL_EINVAL;
 	}
 
-	if(!Memory.InitSpuRawMem(max_raw_spu))
-	{
-		return CELL_ENOMEM;
-	}
+	//if(!Memory.InitSpuRawMem(max_raw_spu))
+	//{
+	//	return CELL_ENOMEM;
+	//}
 
 	//enable_log = true;
 	//dump_enable = true;
@@ -303,9 +303,9 @@ int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 	sc_spu.Warning("sys_spu_thread_write_ls(id=0x%x, address=0x%x, value=0x%llx, type=0x%x)",
 		id, address, value, type);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(id);
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || thr->GetType() == PPC_THREAD_PPU)
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
 	{
 		return CELL_ESRCH;
 	}
@@ -321,9 +321,9 @@ int sys_spu_thread_read_ls(u32 id, u32 address, u32 value_addr, u32 type)
 	sc_spu.Warning("sys_spu_thread_read_ls(id=0x%x, address=0x%x, value_addr=0x%x, type=0x%x)",
 		id, address, value_addr, type);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(id);
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || thr->GetType() == PPC_THREAD_PPU)
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
 	{
 		return CELL_ESRCH;
 	}
@@ -343,14 +343,14 @@ int sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
 	sc_spu.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(id);
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || !thr->GetType() == PPC_THREAD_PPU)
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
 	{
 		return CELL_ESRCH;
 	}
 
-	if(!(*(SPUThread*)thr).mfc.SPU_In_MBox.Push(value))
+	if(!(*(SPUThread*)thr).SPU.In_MBox.Push(value))
 	{
 		ConLog.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x): used all mbox items.");
 		return CELL_EBUSY; //?

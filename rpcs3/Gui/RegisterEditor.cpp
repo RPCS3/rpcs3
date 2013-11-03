@@ -1,9 +1,8 @@
-class RegisterEditorDialog
-	: public wxDialog
+class RegisterEditorDialog : public wxDialog
 {
 	u64 pc;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	PPCDisAsm* disasm;
+	PPCDecoder* decoder;
 	wxComboBox* t1_register;
 	wxTextCtrl* t2_value;
 	wxStaticText* t3_preview;
@@ -12,13 +11,13 @@ public:
 	PPCThread* CPU;
 
 public:
-	RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm);
+	RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm);
 
 	void updateRegister(wxCommandEvent& event);
 	void updatePreview(wxCommandEvent& event);
 };
 
-RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm)
+RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit registers", wxDefaultPosition)
 	, pc(_pc)
 	, CPU(_CPU)
@@ -64,10 +63,11 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* 
 	s_panel_margin_x->Add(s_panel_margin_y);
 	s_panel_margin_x->AddSpacer(12);
 
-	this->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(RegisterEditorDialog::updateRegister));
+	Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(RegisterEditorDialog::updateRegister));
 
-	if (CPU->GetType() == PPC_THREAD_PPU)
+	switch(CPU->GetType())
 	{
+	case CPU_THREAD_PPU:
 		for (int i=0; i<32; i++) t1_register->Append(wxString::Format("GPR[%d]",i));
 		for (int i=0; i<32; i++) t1_register->Append(wxString::Format("FPR[%d]",i));
 		for (int i=0; i<32; i++) t1_register->Append(wxString::Format("VPR[%d]",i));
@@ -76,20 +76,17 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* 
 		t1_register->Append("CTR");
 		t1_register->Append("XER");
 		t1_register->Append("FPSCR");
-	}
-	if (CPU->GetType() == PPC_THREAD_SPU)
-	{
+	break;
+
+	case CPU_THREAD_SPU:
+	case CPU_THREAD_RAW_SPU:
 		for (int i=0; i<128; i++) t1_register->Append(wxString::Format("GPR[%d]",i));
-	}
-	if (CPU->GetType() == PPC_THREAD_RAW_SPU)
-	{
-		wxMessageBox("RawSPU threads not yet supported.","Error");
-		return;
+	break;
 	}
 
-	this->SetSizerAndFit(s_panel_margin_x);
+	SetSizerAndFit(s_panel_margin_x);
 
-	if(this->ShowModal() == wxID_OK)
+	if(ShowModal() == wxID_OK)
 	{
 		wxString reg = t1_register->GetStringSelection();
 		wxString value = t2_value->GetValue();

@@ -295,10 +295,10 @@ void VertexDecompilerThread::Task()
 		case 0x02: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
 		case 0x03: AddVecCode("(" + GetSRC(0) + " + " + GetSRC(2) + ")"); break; //ADD
 		case 0x04: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
-		case 0x05: AddVecCode("vec4(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz), 0, 0, 0).xxxx"); break; //DP3
-		case 0x06: AddVecCode("vec4(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + "), 0, 0, 0).xxxx"); break; //DPH
-		case 0x07: AddVecCode("vec4(dot(" + GetSRC(0) + ", " + GetSRC(1) + "), 0, 0, 0).xxxx"); break; //DP4
-		case 0x08: AddVecCode("vec4(distance(" + GetSRC(0) + ", " + GetSRC(1) + "), 0, 0, 0).xxxx"); break; //DST
+		case 0x05: AddVecCode("vec2(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz), 0).xxxx"); break; //DP3
+		case 0x06: AddVecCode("vec2(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + "), 0).xxxx"); break; //DPH
+		case 0x07: AddVecCode("vec2(dot(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DP4
+		case 0x08: AddVecCode("vec2(distance(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DST
 		case 0x09: AddVecCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MIN
 		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
 		case 0x0b: AddVecCode("vec4(lessThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLT
@@ -306,11 +306,11 @@ void VertexDecompilerThread::Task()
 		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
 		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
 		case 0x10: AddVecCode("vec4(equal(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SEQ
-		//case 0x11: AddVecCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)"); break; //SFL
+		//case 0x11: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //SFL
 		case 0x12: AddVecCode("vec4(greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGT
 		case 0x13: AddVecCode("vec4(lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLE
 		case 0x14: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SNE
-		//case 0x15: AddVecCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)"); break; //STR
+		//case 0x15: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //STR
 		case 0x16: AddVecCode("sign(" + GetSRC(0) + ")"); break; //SSG
 
 		default:

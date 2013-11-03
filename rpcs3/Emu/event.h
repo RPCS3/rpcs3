@@ -24,7 +24,7 @@ struct EventPort
 	u64 data2;
 	u64 data3;
 	bool has_data;
-	PPCThread* thread;
+	CPUThread* thread;
 	EventQueue* queue[127];
 	int pos;
 };

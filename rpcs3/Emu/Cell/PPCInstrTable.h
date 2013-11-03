@@ -1,16 +1,5 @@
 #pragma once
-
-template<uint size, typename T> __forceinline static T sign(const T value)
-{
-	static_assert(size > 0 && size < sizeof(T) * 8, "Bad size");
-	static const T sub_value = T(1) << size;
-	if(value & (T(1) << (size - 1)))
-	{
-		return value - sub_value;
-	}
-
-	return value;
-}
+#include "Emu/CPU/CPUInstrTable.h"
 
 enum CodeFieldType
 {
@@ -20,27 +9,6 @@ enum CodeFieldType
 	FIELD_R_VPR,
 	FIELD_R_CR,
 	FIELD_BRANCH,
-};
-
-class CodeFieldBase
-{
-public:
-	CodeFieldType m_type;
-
-public:
-	CodeFieldBase(CodeFieldType type = FIELD_IMM) : m_type(type)
-	{
-	}
-
-	virtual u32 operator ()(u32 data) const=0;
-	virtual void operator()(u32& data, u32 value) const=0;
-
-	virtual u32 operator[](u32 value) const
-	{
-		u32 result = 0;
-		(*this)(result, value);
-		return result;
-	}
 };
 
 template<uint from, uint to=from>

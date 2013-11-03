@@ -130,28 +130,95 @@ class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
-	/*
-	SPUReg<1> MFC_LSA;
-	SPUReg<1> MFC_EAH;
-	SPUReg<1> MFC_EAL;
-	SPUReg<1> MFC_Size_Tag;
-	SPUReg<1> MFC_CMDStatus;
-	SPUReg<1> MFC_QStatus;
-	SPUReg<1> Prxy_QueryType;
-	SPUReg<1> Prxy_QueryMask;
-	SPUReg<1> Prxy_TagStatus;
-	SPUReg<1> SPU_Out_MBox;
-	SPUReg<4> SPU_In_MBox;
-	SPUReg<1> SPU_MBox_Status;
-	SPUReg<1> SPU_RunCntl;
-	SPUReg<1> SPU_Status;
-	SPUReg<1> SPU_NPC;
-	SPUReg<1> SPU_RdSigNotify1;
-	SPUReg<1> SPU_RdSigNotify2;
-	*/
-	SizedStack<u32, 1> SPU_OutIntr_Mbox;
+
+	template<size_t _max_count>
+	class Channel
+	{
+	public:
+		static const size_t max_count = _max_count;
+
+	private:
+		u32 m_value[max_count];
+		u32 m_index;
+
+	public:
+
+		Channel()
+		{
+			Init();
+		}
+
+		void Init()
+		{
+			m_index = 0;
+		}
+
+		__forceinline bool Pop(u32& res)
+		{
+			if(!m_index) return false;
+			res = m_value[--m_index];
+			return true;
+		}
+
+		__forceinline bool Push(u32 value)
+		{
+			if(m_index >= max_count) return false;
+			m_value[m_index++] = value;
+			return true;
+		}
+
+		u32 GetCount() const
+		{
+			return m_index;
+		}
+
+		u32 GetFreeCount() const
+		{
+			return max_count - m_index;
+		}
+
+		void SetValue(u32 value)
+		{
+			m_value[0] = value;
+		}
+
+		u32 GetValue() const
+		{
+			return m_value[0];
+		}
+	};
+
+	struct
+	{
+		Channel<1> LSA;
+		Channel<1> EAH;
+		Channel<1> EAL;
+		Channel<1> Size_Tag;
+		Channel<1> CMDStatus;
+		Channel<1> QStatus;
+	} MFC;
+
+	struct
+	{
+		Channel<1> QueryType;
+		Channel<1> QueryMask;
+		Channel<1> TagStatus;
+	} Prxy;
+
+	struct
+	{
+		Channel<1> Out_MBox;
+		Channel<1> OutIntr_Mbox;
+		Channel<4> In_MBox;
+		Channel<1> MBox_Status;
+		Channel<1> RunCntl;
+		Channel<1> Status;
+		Channel<1> NPC;
+		Channel<1> RdSigNotify1;
+		Channel<1> RdSigNotify2;
+	} SPU;
+
 	u32 LSA;
-	MFC mfc;
 
 	union
 	{
@@ -159,18 +226,20 @@ public:
 		struct { u32 EAH, EAL; };
 	};
 
+	DMAC dmac;
+
 	u32 GetChannelCount(u32 ch)
 	{
 		switch(ch)
 		{
 		case SPU_WrOutMbox:
-			return mfc.SPU_Out_MBox.GetFreeCount();
+			return SPU.Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return mfc.SPU_In_MBox.GetCount();
+			return SPU.In_MBox.GetFreeCount();
 
 		case SPU_WrOutIntrMbox:
-			return 0;//return SPU_OutIntr_Mbox.GetFreeCount();
+			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d).", __FUNCTION__, ch);
@@ -188,7 +257,7 @@ public:
 		{
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("SPU_WrOutIntrMbox = 0x%x", v);
-			if(!SPU_OutIntr_Mbox.Push(v))
+			if(!SPU.OutIntr_Mbox.Push(v))
 			{
 				ConLog.Warning("Not enought free rooms.");
 			}
@@ -196,11 +265,11 @@ public:
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("SPU_WrOutMbox = 0x%x", v);
-			if(!mfc.SPU_Out_MBox.Push(v))
+			if(!SPU.Out_MBox.Push(v))
 			{
 				ConLog.Warning("Not enought free rooms.");
 			}
-			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff) | 1);
+			SPU.Status.SetValue((SPU.Status.GetValue() & ~0xff) | 1);
 		break;
 
 		default:
@@ -217,8 +286,8 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			if(!mfc.SPU_In_MBox.Pop(v)) v = 0;
-			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff00) | (mfc.SPU_In_MBox.GetCount() << 8));
+			if(!SPU.In_MBox.Pop(v)) v = 0;
+			SPU.Status.SetValue((SPU.Status.GetValue() & ~0xff00) | (SPU.In_MBox.GetCount() << 8));
 		break;
 
 		default:
@@ -241,13 +310,15 @@ public:
 	virtual void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
 
 public:
-	SPUThread(PPCThreadType type = PPC_THREAD_SPU);
+	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
 	~SPUThread();
 
 	virtual wxString RegsToString()
 	{
-		wxString ret = PPCThread::RegsToString();
+		wxString ret;
+
 		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString());
+
 		return ret;
 	}
 
@@ -262,7 +333,8 @@ public:
 		return wxEmptyString;
 	}
 
-	bool WriteRegString(wxString reg, wxString value) {
+	bool WriteRegString(wxString reg, wxString value)
+	{
 		while (value.Len() < 32) value = "0"+value;
 		if (reg.Contains("["))
 		{
@@ -294,7 +366,7 @@ protected:
 	virtual void DoStop();
 
 protected:
-	virtual void DoCode(const s32 code);
+	virtual void DoCode();
 };
 
 SPUThread& GetCurrentSPUThread();

@@ -7,19 +7,17 @@
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
-class SPU_Interpreter : public SPU_Opcodes
+class SPUInterpreter : public SPUOpcodes
 {
 private:
 	SPUThread& CPU;
 
 public:
-	SPU_Interpreter(SPUThread& cpu) : CPU(cpu)
+	SPUInterpreter(SPUThread& cpu) : CPU(cpu)
 	{
 	}
 
 private:
-	void Exit(){}
-
 	void SysCall()
 	{
 	}

@@ -105,16 +105,15 @@ __forceinline static void Write16LE(wxFile& f, const u16 data)
 
 __forceinline static void Write32LE(wxFile& f, const u32 data)
 {
-	Write16(f, data);
-	Write16(f, data >> 16);
+	Write16LE(f, data);
+	Write16LE(f, data >> 16);
 }
 
 __forceinline static void Write64LE(wxFile& f, const u64 data)
 {
-	Write32(f, data);
-	Write32(f, data >> 32);
+	Write32LE(f, data);
+	Write32LE(f, data >> 32);
 }
-
 
 const wxString Ehdr_DataToString(const u8 data);
 const wxString Ehdr_TypeToString(const u16 type);
@@ -194,6 +193,7 @@ public:
 	virtual bool LoadInfo() { return false; }
 	virtual bool LoadData(u64 offset = 0) { return false; }
 	Elf_Machine GetMachine() { return machine; }
+
 	u32 GetEntry() { return entry; }
 	u32 GetMinAddr() { return min_addr; }
 	u32 GetMaxAddr() { return min_addr; }
@@ -202,13 +202,16 @@ public:
 class Loader : public LoaderBase
 {
 	vfsFileBase* m_stream;
+	LoaderBase* m_loader;
 
 public:
 	Loader();
 	Loader(vfsFileBase& stream);
+	~Loader();
 
 	void Open(const wxString& path);
 	void Open(vfsFileBase& stream);
+	bool Analyze();
 
 	bool Load();
 

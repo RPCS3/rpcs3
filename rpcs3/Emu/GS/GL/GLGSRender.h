@@ -189,11 +189,10 @@ public:
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
-		glPixelStorei(GL_PACK_ROW_LENGTH, m_pitch);
-
 		int format = m_format & ~(0x20 | 0x40);
 		bool is_swizzled = (m_format & 0x20) == 0;
 
+		glPixelStorei(GL_PACK_ALIGNMENT, m_pitch);
 		char* pixels = (char*)Memory.GetMemFromAddr(m_offset);
 
 		switch(format)
@@ -267,10 +266,8 @@ public:
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x | 0x%x | 0x%x)", format, m_format & 0x20, m_format & 0x40); break;
 		}
 
-		if(m_mipmap > 1)
-		{
-			glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-		}
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmap - 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, m_mipmap > 1);
 
 		if(format != 0x81 && format != 0x94)
 		{
@@ -292,7 +289,7 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, gl_remap[remap_g]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
 		}
-
+		
 		static const int gl_tex_zfunc[] =
 		{
 			GL_NEVER,
@@ -304,17 +301,16 @@ public:
 			GL_GEQUAL,
 			GL_ALWAYS,
 		};
-
+		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(m_wraps));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(m_wrapt));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(m_wrapr));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[m_zfunc]);
-
-		glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, m_bias);
+		
+		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, m_bias);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, m_minlod);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, m_maxlod);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_maxaniso);
-
+		
 		static const int gl_tex_filter[] =
 		{
 			GL_NEAREST,
@@ -496,6 +492,105 @@ struct GLRSXThread : public ThreadBase
 	virtual void Task();
 };
 
+class PostDrawObj
+{
+protected:
+	ShaderProgram m_fp;
+	VertexProgram m_vp;
+	Program m_program;
+	GLfbo m_fbo;
+	GLrbo m_rbo;
+
+public:
+	virtual void Draw()
+	{
+		static bool s_is_initialized = false;
+
+		if(!s_is_initialized)
+		{
+			s_is_initialized = true;
+			Initialize();
+		}
+	}
+
+	virtual void InitializeShaders() = 0;
+	virtual void InitializeLocations() = 0;
+
+	void Initialize()
+	{
+		InitializeShaders();
+		m_fp.Compile();
+		m_vp.Compile();
+		m_program.Create(m_vp.id, m_fp.id);
+		m_program.Use();
+		InitializeLocations();
+	}
+};
+
+class DrawCursorObj : PostDrawObj
+{
+	u32 m_tex_id;
+
+public:
+	DrawCursorObj() : m_tex_id(0)
+	{
+	}
+
+	virtual void Draw()
+	{
+		PostDrawObj::Draw();
+	}
+
+	virtual void InitializeShaders()
+	{
+		m_vp.shader =
+			"layout (location = 0) in vec4 in_pos;\n"
+			"layout (location = 1) in vec2 in_tc;\n"
+			"out vec2 tc;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"	tc = in_tc;\n"
+			"	gl_Position = in_pos;\n"
+			"}\n";
+
+		m_fp.shader =
+			"#version 330\n"
+			"\n"
+			"in vec2 tc;\n"
+			"uniform sampler2D tex;\n"
+			"layout (location = 0) out vec4 res;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"	res = texture(tex, tc);\n"
+			"}\n";
+	}
+
+	void SetTexture(void* pixels, int width, int hight)
+	{
+		glUniform2i(1, width, hight);
+		if(!m_tex_id)
+		{
+			glGenTextures(1, &m_tex_id);
+		}
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_tex_id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, hight, 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
+		m_program.SetTex(0);
+	}
+
+	void SetPosition(float x, float y, float z = 0.0f)
+	{
+		glUniform4f(0, x, y, z, 1.0f);
+	}
+
+	void InitializeLocations()
+	{
+	}
+};
+
 class GLGSRender
 	: public wxWindow
 	, public GSRender
@@ -520,6 +615,7 @@ private:
 	VertexProgram* m_cur_vertex_prog;
 	Array<TransformConstant> m_transform_constants;
 	Array<TransformConstant> m_fragment_constants;
+	ArrayF<PostDrawObj> m_post_draw_objs;
 
 	Program m_program;
 	int m_fp_buf_num;
@@ -557,6 +653,13 @@ private:
 	virtual void Close();
 	bool LoadProgram();
 	void WriteDepthBuffer();
+	void WriteColourBufferA();
+	void WriteColourBufferB();
+	void WriteColourBufferC();
+	void WriteColourBufferD();
+	void WriteBuffers();
+
+	void DrawObjects();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);

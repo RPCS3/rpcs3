@@ -17,9 +17,6 @@
       <UniqueIdentifier>{adfec460-d940-4482-9fdb-18cb0814c3d5}</UniqueIdentifier>
       <ParseFiles>true</ParseFiles>
     </Filter>
-    <Filter Include="Emu\CPU">
-      <UniqueIdentifier>{f66e37f9-5e58-443b-bcff-2e9e002ac89e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Loader">
       <UniqueIdentifier>{6c36f15e-07fd-45d6-a81c-1ab43ee1b58b}</UniqueIdentifier>
     </Filter>
@@ -46,6 +43,15 @@
     </Filter>
     <Filter Include="Emu\HDD">
       <UniqueIdentifier>{718bc358-b7ef-4988-8547-2148d14bb08b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Cell">
+      <UniqueIdentifier>{f66e37f9-5e58-443b-bcff-2e9e002ac89e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\CPU">
+      <UniqueIdentifier>{041a844e-9f8b-4b4b-a4c5-6c72ecbde475}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\ARM9">
+      <UniqueIdentifier>{bee6a4b4-6371-4c1b-8558-fc7888b1574e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -116,13 +122,10 @@
       <Filter>Loader</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPCThread.cpp">
-      <Filter>Emu\CPU</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Cell\PPCThreadManager.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\FuncList.cpp">
       <Filter>Emu\SysCalls</Filter>
@@ -188,7 +191,7 @@
       <Filter>Emu\GS</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUThread.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -251,7 +254,7 @@
       <Filter>rpcs3</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -263,10 +266,10 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\MFC.cpp">
-      <Filter>Emu\CPU</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\HDD\HDD.cpp">
       <Filter>Emu\HDD</Filter>
@@ -309,6 +312,15 @@
     </ClCompile>
     <ClCompile Include="Emu\FS\vfsFile.cpp">
       <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\CPU\CPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\CPU\CPUThreadManager.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARM9\ARM9Thread.cpp">
+      <Filter>Emu\ARM9</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

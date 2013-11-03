@@ -109,7 +109,7 @@ int sys_lwmutex_unlock(u64 lwmutex_addr)
 		if(lmtx.lock_var.info.owner = lmtx.lock_var.info.waiter)
 		{
 			lmtx.lock_var.info.waiter = 0;
-			PPCThread* thr = Emu.GetCPU().GetThread(lmtx.lock_var.info.owner);
+			CPUThread* thr = Emu.GetCPU().GetThread(lmtx.lock_var.info.owner);
 			if(thr)
 			{
 				thr->Wait(false);

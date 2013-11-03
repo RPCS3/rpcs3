@@ -8,8 +8,8 @@
 class InterpreterDisAsmFrame : public wxPanel
 {
 	wxListView* m_list;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	PPCDisAsm* disasm;
+	PPCDecoder* decoder;
 	u64 PC;
 	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;

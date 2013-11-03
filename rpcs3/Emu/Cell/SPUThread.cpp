@@ -8,13 +8,18 @@ SPUThread& GetCurrentSPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
 
-	if(!thread || thread->GetType() == PPC_THREAD_PPU) throw wxString("GetCurrentSPUThread: bad thread");
+	if(!thread || (thread->GetType() != CPU_THREAD_SPU && thread->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		throw wxString("GetCurrentSPUThread: bad thread");
+	}
 
 	return *(SPUThread*)thread;
 }
 
-SPUThread::SPUThread(PPCThreadType type) : PPCThread(type)
+SPUThread::SPUThread(CPUThreadType type) : PPCThread(type)
 {
+	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
+
 	Reset();
 }
 
@@ -24,8 +29,10 @@ SPUThread::~SPUThread()
 
 void SPUThread::DoReset()
 {
+	PPCThread::DoReset();
+
 	//reset regs
-	for(u32 i=0; i<128; ++i) GPR[i].Reset();
+	memset(GPR, 0, sizeof(SPU_GPR_hdr) * 128);
 }
 
 void SPUThread::InitRegs()
@@ -35,6 +42,16 @@ void SPUThread::InitRegs()
 	GPR[4]._u64[1] = m_args[1];
 	GPR[5]._u64[1] = m_args[2];
 	GPR[6]._u64[1] = m_args[3];
+
+	dmac.ls_offset = m_offset;
+	dmac.proxy_pos = 0;
+	dmac.queue_pos = 0;
+
+	SPU.RunCntl.SetValue(SPU_RUNCNTL_STOP);
+	SPU.Status.SetValue(SPU_STATUS_RUNNING);
+	Prxy.QueryType.SetValue(0);
+	MFC.CMDStatus.SetValue(0);
+	PC = SPU.NPC.GetValue();
 }
 
 u64 SPUThread::GetFreeStackSize() const
@@ -47,12 +64,12 @@ void SPUThread::DoRun()
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
-		m_dec = new SPU_Decoder(*new SPU_DisAsm(*this));
+		//m_dec = new SPUDecoder(*new SPUDisAsm());
 	break;
 
 	case 1:
 	case 2:
-		m_dec = new SPU_Decoder(*new SPU_Interpreter(*this));
+		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
 	break;
 	}
 }
@@ -71,7 +88,7 @@ void SPUThread::DoStop()
 	m_dec = 0;
 }
 
-void SPUThread::DoCode(const s32 code)
+void SPUThread::DoCode()
 {
-	m_dec->Decode(code);
+	m_dec->Decode(Memory.Read32(m_offset + PC));
 }

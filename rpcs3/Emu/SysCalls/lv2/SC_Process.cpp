@@ -32,7 +32,7 @@ int sys_game_process_exitspawn(	u32 path_addr, u32 argv_addr, u32 envp_addr,
 	sc_p.Log("flags: %d", flags);
 	return CELL_OK;
 }
-
+/*
 int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessWaitForChild");
@@ -73,14 +73,7 @@ int SysCalls::lv2ProcessKill(PPUThread& CPU)
 	CPU.Close();
 	return CELL_OK;
 }
-/*
-int SysCalls::lv2ProcessExit(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessExit(%lld)", CPU.GPR[3]);
-	Emu.Pause();
-	return CELL_OK;
-}
-*/
+
 int SysCalls::lv2ProcessWaitForChild2(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessWaitForChild2[r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, r6: 0x%llx, r7: 0x%llx, r8: 0x%llx]",
@@ -93,3 +86,4 @@ int SysCalls::lv2ProcessGetSdkVersion(PPUThread& CPU)
 	CPU.GPR[4] = 0x360001; //TODO
 	return CELL_OK;
 }
+*/

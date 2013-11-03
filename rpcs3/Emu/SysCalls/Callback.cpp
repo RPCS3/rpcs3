@@ -50,11 +50,11 @@ void Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	new_thread.SetEntry(m_addr);
 	new_thread.SetPrio(1001);
-	new_thread.stack_size = 0x10000;
+	new_thread.SetStackSize(0x10000);
 	new_thread.SetName("Callback");
 
 	new_thread.SetArg(0, a1);

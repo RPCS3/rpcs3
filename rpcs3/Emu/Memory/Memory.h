@@ -1,6 +1,12 @@
 #pragma once
 #include "MemoryBlock.h"
 
+enum MemoryType
+{
+	Memory_PS3,
+	Memory_Vita,
+};
+
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
@@ -126,21 +132,29 @@ public:
 		return true;
 	}
 
-	void Init()
+	void Init(MemoryType type)
 	{
 		if(m_inited) return;
 		m_inited = true;
 
 		ConLog.Write("Initing memory...");
 
-		MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
-		MemoryBlocks.Add(PRXMem.SetRange(0x30000000, 0x10000000));
-		MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
-		MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
-		MemoryBlocks.Add(StackMem.SetRange(0xD0000000, 0x10000000));
-		//MemoryBlocks.Add(SpuRawMem.SetRange(0xE0000000, 0x10000000));
-		//MemoryBlocks.Add(SpuThrMem.SetRange(0xF0000000, 0x10000000));
+		switch(type)
+		{
+		case Memory_PS3:
+			MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
+			MemoryBlocks.Add(PRXMem.SetRange(0x30000000, 0x10000000));
+			MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
+			MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
+			MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
+			MemoryBlocks.Add(StackMem.SetRange(0xD0000000, 0x10000000));
+			//MemoryBlocks.Add(SpuRawMem.SetRange(0xE0000000, 0x10000000));
+			//MemoryBlocks.Add(SpuThrMem.SetRange(0xF0000000, 0x10000000));
+		break;
+
+		case Memory_Vita:
+		break;
+		}
 
 		ConLog.Write("Memory initialized.");
 	}
@@ -179,15 +193,6 @@ public:
 		}
 
 		MemoryBlocks.Clear();
-	}
-
-	void Reset()
-	{
-		if(!m_inited) return;
-
-		ConLog.Write("Resetting memory...");
-		Close();
-		Init();
 	}
 
 	void Write8(const u64 addr, const u8 data);

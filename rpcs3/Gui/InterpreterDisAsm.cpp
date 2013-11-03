@@ -110,17 +110,24 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 	if(CPU)
 	{
-		if(CPU->GetType() != PPC_THREAD_PPU)
+		switch(CPU->GetType())
 		{
-			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*CPU, InterpreterMode);
-			decoder = new SPU_Decoder(dis_asm);
+		case CPU_THREAD_PPU:
+		{
+			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new PPUDecoder(dis_asm);
 			disasm = &dis_asm;
 		}
-		else
+		break;
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
 		{
-			PPU_DisAsm& dis_asm = *new PPU_DisAsm(*CPU, InterpreterMode);
-			decoder = new PPU_Decoder(dis_asm);
+			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new SPUDecoder(dis_asm);
 			disasm = &dis_asm;
+		}
+		break;
 		}
 	}
 

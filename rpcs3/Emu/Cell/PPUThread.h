@@ -511,9 +511,7 @@ union VPR_reg
 
 static const s32 MAX_INT_VALUE = 0x7fffffff;
 
-class PPUThread
-	: public PPCThread
-	, public SysCalls
+class PPUThread : public PPCThread
 {
 public:
 	PPCdouble FPR[32]; //Floating Point Register
@@ -727,7 +725,7 @@ public:
 
 	virtual wxString RegsToString()
 	{
-		wxString ret = PPCThread::RegsToString();
+		wxString ret;
 
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, FPR[i]);
@@ -768,6 +766,7 @@ public:
 		if (reg == "CTR")	return wxString::Format("%016llx", CTR);
 		if (reg == "XER")	return wxString::Format("%016llx", XER);
 		if (reg == "FPSCR")	return wxString::Format("%08x", FPSCR);
+
 		return wxEmptyString;
 	}
 
@@ -829,8 +828,7 @@ protected:
 	virtual void DoResume();
 	virtual void DoStop();
 
-public:
-	virtual void DoCode(const s32 code);
+	virtual void DoCode();
 };
 
 PPUThread& GetCurrentPPUThread();

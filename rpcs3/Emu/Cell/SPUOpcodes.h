@@ -226,15 +226,13 @@ namespace SPU_opcodes
 	};
 };
 
-class SPU_Opcodes
+class SPUOpcodes
 {
 public:
 	static u32 branchTarget(const u64 pc, const s32 imm)
 	{
 		return (pc + (imm << 2)) & 0x3fffc;
 	}
-	
-	virtual void Exit()=0;
 
 	//0 - 10
 	virtual void STOP(u32 code) = 0;

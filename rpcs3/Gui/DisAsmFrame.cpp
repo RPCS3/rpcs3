@@ -87,7 +87,7 @@ void DisAsmFrame::AddLine(const wxString line)
 	{
 		if(Emu.IsRunning()) Emu.Pause();
 		finished = true;
-		CPU.PrevPc();
+		CPU.PC -= 4;
 		return;
 	}
 
@@ -113,8 +113,8 @@ bool ElfType64 = false;
 class DumperThread : public ThreadBase
 {
 	volatile uint id;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	PPCDisAsm* disasm;
+	PPCDecoder* decoder;
 	volatile bool* done;
 	volatile u8 cores;
 	MTProgressDialog* prog_dial;
@@ -135,16 +135,16 @@ public:
 
 		*done = false;
 
-		if(Emu.GetCPU().GetThreads()[0].GetType() != PPC_THREAD_PPU)
+		if(Emu.GetCPU().GetThreads()[0].GetType() != CPU_THREAD_PPU)
 		{
-			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
-			decoder = new SPU_Decoder(dis_asm);
+			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_DumpMode);
+			decoder = new SPUDecoder(dis_asm);
 			disasm = &dis_asm;
 		}
 		else
 		{
-			PPU_DisAsm& dis_asm = *new PPU_DisAsm(*(PPCThread*)NULL, DumpMode);
-			decoder = new PPU_Decoder(dis_asm);
+			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+			decoder = new PPUDecoder(dis_asm);
 			disasm = &dis_asm;
 		}
 	}
@@ -338,20 +338,27 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	default: ConLog.Error("Corrupted ELF!"); return;
 	}
 
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	PPCDisAsm* disasm;
+	PPCDecoder* decoder;
 
-	if(Emu.GetCPU().GetThreads()[0].GetType() != PPC_THREAD_PPU)
+	switch(Emu.GetCPU().GetThreads()[0].GetType())
 	{
-		SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
-		decoder = new SPU_Decoder(dis_asm);
+	case CPU_THREAD_PPU:
+	{
+		PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+		decoder = new PPUDecoder(dis_asm);
 		disasm = &dis_asm;
 	}
-	else
+	break;
+
+	case CPU_THREAD_SPU:
+	case CPU_THREAD_RAW_SPU:
 	{
-		PPU_DisAsm& dis_asm = *new PPU_DisAsm(*(PPCThread*)NULL, DumpMode);
-		decoder = new PPU_Decoder(dis_asm);
+		SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_DumpMode);
+		decoder = new SPUDecoder(dis_asm);
 		disasm = &dis_asm;
+	}
+	break;
 	}
 
 	const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();

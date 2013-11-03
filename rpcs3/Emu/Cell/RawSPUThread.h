@@ -39,30 +39,34 @@ __forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)
 
 __forceinline static u32 GetRawSPURegAddrById(int id, int offset)
 {
-	return GetRawSPURegAddrByNum(Emu.GetCPU().GetThreadNumById(PPC_THREAD_RAW_SPU, id), offset);
+	return GetRawSPURegAddrByNum(Emu.GetCPU().GetThreadNumById(CPU_THREAD_RAW_SPU, id), offset);
 }
 
-
-class RawSPUThread : public SPUThread
+class RawSPUThread
+	: public SPUThread
+	, public MemoryBlock
 {
+	u32 m_index;
+
 public:
-	RawSPUThread(PPCThreadType type = PPC_THREAD_RAW_SPU);
+	RawSPUThread(u32 index, CPUThreadType type = CPU_THREAD_RAW_SPU);
 	~RawSPUThread();
 
-	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
-	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
-	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
-	virtual u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
-	virtual u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
+	virtual bool Read8(const u64 addr, u8* value) override;
+	virtual bool Read16(const u64 addr, u16* value) override;
+	virtual bool Read32(const u64 addr, u32* value) override;
+	virtual bool Read64(const u64 addr, u64* value) override;
+	virtual bool Read128(const u64 addr, u128* value) override;
 
-	virtual void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
-	virtual void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
-	virtual void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
-	virtual void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
-	virtual void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
+	virtual bool Write8(const u64 addr, const u8 value) override;
+	virtual bool Write16(const u64 addr, const u16 value) override;
+	virtual bool Write32(const u64 addr, const u32 value) override;
+	virtual bool Write64(const u64 addr, const u64 value) override;
+	virtual bool Write128(const u64 addr, const u128 value) override;
 
 public:
 	virtual void InitRegs();
+	u32 GetIndex() const;
 
 private:
 	virtual void Task();

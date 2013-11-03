@@ -305,32 +305,12 @@ extern u64 sys_time_get_timebase_frequency();
 #define SC_ARGS_12 SC_ARGS_11,SC_ARG_11
 
 extern bool dump_enable;
-class PPUThread;
 
 class SysCalls
 {
-	PPUThread& CPU;
-
 public:
-	//process
-	int lv2ProcessGetPid(PPUThread& CPU);
-	int lv2ProcessWaitForChild(PPUThread& CPU);
-	int lv2ProcessGetStatus(PPUThread& CPU);
-	int lv2ProcessDetachChild(PPUThread& CPU);
-	int lv2ProcessGetNumberOfObject(PPUThread& CPU);
-	int lv2ProcessGetId(PPUThread& CPU);
-	int lv2ProcessGetPpid(PPUThread& CPU);
-	int lv2ProcessKill(PPUThread& CPU);
-	int lv2ProcessWaitForChild2(PPUThread& CPU);
-	int lv2ProcessGetSdkVersion(PPUThread& CPU);
-
-protected:
-	SysCalls(PPUThread& cpu);
-	~SysCalls();
-
-public:
-	void DoSyscall(u32 code);
-	s64 DoFunc(const u32 id);
+	static void DoSyscall(u32 code);
+	static s64 DoFunc(const u32 id);
 };
 
 //extern SysCalls SysCallsManager;

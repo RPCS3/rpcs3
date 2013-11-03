@@ -47,7 +47,7 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 	int result;
 	auto queue_receive = [&](int status) -> bool
 	{
-		if(status == PPCThread_Stopped)
+		if(status == CPUThread_Stopped)
 		{
 			result = CELL_ECANCELED;
 			return false;
@@ -59,11 +59,11 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 			if(!equeue->ports[i]->has_data && equeue->ports[i]->thread)
 			{
 				SPUThread* thr = (SPUThread*)equeue->ports[i]->thread;
-				if(thr->SPU_OutIntr_Mbox.GetCount())
+				if(thr->SPU.OutIntr_Mbox.GetCount())
 				{
 					u32 val;
-					thr->SPU_OutIntr_Mbox.Pop(val);
-					if(!thr->mfc.SPU_Out_MBox.Pop(val)) val = 0;
+					thr->SPU.OutIntr_Mbox.Pop(val);
+					if(!thr->SPU.Out_MBox.Pop(val)) val = 0;
 					equeue->ports[i]->data1 = val;
 					equeue->ports[i]->data2 = 0;
 					equeue->ports[i]->data3 = 0;
