@@ -1,14 +1,14 @@
 #pragma once
 
-namespace ARM9_opcodes
+namespace ARMv7_opcodes
 {
-	enum ARM9_MainOpcodes
+	enum ARMv7_MainOpcodes
 	{
 
 	};
 }
 
-class ARM9Opcodes
+class ARMv7Opcodes
 {
 public:
 	virtual void NULL_OP() = 0;

@@ -50,7 +50,7 @@
     <Filter Include="Emu\CPU">
       <UniqueIdentifier>{041a844e-9f8b-4b4b-a4c5-6c72ecbde475}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\ARM9">
+    <Filter Include="Emu\ARMv7">
       <UniqueIdentifier>{bee6a4b4-6371-4c1b-8558-fc7888b1574e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -319,11 +319,11 @@
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp">
       <Filter>Emu\CPU</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\ARM9\ARM9Thread.cpp">
-      <Filter>Emu\ARM9</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp">
       <Filter>Emu\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp">
+      <Filter>Emu\ARMv7</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

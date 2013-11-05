@@ -18,6 +18,7 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_free_data(false)
 	, m_dec(nullptr)
 	, m_is_step(false)
+	, m_is_branch(false)
 {
 }
 
@@ -45,6 +46,7 @@ void CPUThread::Reset()
 
 	SetPc(0);
 	cycle = 0;
+	m_is_branch = false;
 
 	m_status = Stopped;
 	m_error = 0;
@@ -124,9 +126,18 @@ void CPUThread::SetEntry(const u64 pc)
 	entry = pc;
 }
 
-void CPUThread::NextPc()
+void CPUThread::NextPc(u8 instr_size)
 {
-	SetPc(nPC);
+	if(m_is_branch)
+	{
+		m_is_branch = false;
+
+		SetPc(nPC);
+	}
+	else
+	{
+		PC += instr_size;
+	}
 }
 
 void CPUThread::SetBranch(const u64 pc)
@@ -137,7 +148,13 @@ void CPUThread::SetBranch(const u64 pc)
 		Emu.Pause();
 	}
 
+	m_is_branch = true;
 	nPC = pc;
+}
+
+void CPUThread::SetPc(const u64 pc)
+{
+	PC = pc;
 }
 
 void CPUThread::SetError(const u32 error)
@@ -279,8 +296,7 @@ void CPUThread::Task()
 				continue;
 			}
 
-			m_dec->DecodeMemory(PC + m_offset);
-			NextPc();
+			NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 			if(status == CPUThread_Step)
 			{

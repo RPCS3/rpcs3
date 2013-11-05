@@ -4,8 +4,8 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUDisAsm.h"
-#include "Emu/ARM9/ARM9DisAsm.h"
-#include "Emu/ARM9/ARM9Decoder.h"
+#include "Emu/ARMv7/ARMv7DisAsm.h"
+#include "Emu/ARMv7/ARMv7Decoder.h"
 
 #include "InstructionEditor.cpp"
 #include "RegisterEditor.cpp"
@@ -135,10 +135,10 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 		}
 		break;
 
-		case CPU_THREAD_ARM9:
+		case CPU_THREAD_ARMv7:
 		{
-			ARM9DisAsm& dis_asm = *new ARM9DisAsm(CPUDisAsm_InterpreterMode);
-			decoder = new ARM9Decoder(dis_asm);
+			ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new ARMv7Decoder(dis_asm);
 			disasm = &dis_asm;
 		}
 		break;

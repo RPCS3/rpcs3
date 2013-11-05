@@ -59,7 +59,7 @@ bool ELF32Loader::LoadEhdrInfo()
 		return false;
 	}
 
-	entry = ehdr.GetEntry();
+	entry = ehdr.GetEntry() & ~0x3;
 	if(entry == 0)
 	{
 		ConLog.Error("elf32 error: entry is null!");
@@ -100,6 +100,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			}
 		}
 	}
+
 	return true;
 }
 

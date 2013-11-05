@@ -7,7 +7,7 @@ class PPCDecoder : public CPUDecoder
 public:
 	virtual void Decode(const u32 code)=0;
 
-	virtual void DecodeMemory(const u64 address);
+	virtual u8 DecodeMemory(const u64 address);
 };
 
 

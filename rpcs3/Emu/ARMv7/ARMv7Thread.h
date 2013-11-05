@@ -1,10 +1,10 @@
 #pragma once
 #include "Emu\CPU\CPUThread.h"
 
-class ARM9Thread : public CPUThread
+class ARMv7Thread : public CPUThread
 {
 public:
-	ARM9Thread();
+	ARMv7Thread();
 
 public:
 	virtual void InitRegs(); 
@@ -13,8 +13,6 @@ public:
 	virtual void SetArg(const uint pos, const u64 arg);
 
 public:
-	virtual void SetPc(const u64 pc);
-
 	virtual wxString RegsToString();
 	virtual wxString ReadRegString(wxString reg);
 	virtual bool WriteRegString(wxString reg, wxString value);

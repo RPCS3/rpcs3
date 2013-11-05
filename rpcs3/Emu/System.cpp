@@ -156,9 +156,10 @@ void Emulator::Load()
 		{
 		case MACHINE_PPC64: thread_type = CPU_THREAD_PPU; break;
 		case MACHINE_SPU: thread_type = CPU_THREAD_SPU; break;
-		case MACHINE_ARM: thread_type = CPU_THREAD_ARM9; break;
+		case MACHINE_ARM: thread_type = CPU_THREAD_ARMv7; break;
 
 		default:
+			ConLog.Error("Unimplemented thread type for machine.");
 			is_error = true;
 		break;
 		}

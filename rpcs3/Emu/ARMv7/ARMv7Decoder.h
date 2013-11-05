@@ -1,18 +1,19 @@
 #pragma once
 #include "Emu/CPU/CPUDecoder.h"
-#include "ARM9Opcodes.h"
+#include "ARMv7Opcodes.h"
 
 
-class ARM9Decoder : public CPUDecoder
+class ARMv7Decoder : public CPUDecoder
 {
-	ARM9Opcodes& m_op;
+	ARMv7Opcodes& m_op;
+	u8 m_last_instr_size;
 
 public:
-	ARM9Decoder(ARM9Opcodes& op) : m_op(op)
+	ARMv7Decoder(ARMv7Opcodes& op) : m_op(op)
 	{
 	}
 
-	virtual void DecodeMemory(const u64 address)
+	virtual u8 DecodeMemory(const u64 address)
 	{
 		const u16 code0 = Memory.Read16(address);
 		const u16 code1 = Memory.Read16(address + 2);
@@ -28,5 +29,7 @@ public:
 			m_op.UNK(opcode, code0, code1);
 		break;
 		}
+
+		return 2;
 	}
 };

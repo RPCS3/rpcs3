@@ -1,15 +1,15 @@
 #pragma once
-#include "Emu/ARM9/ARM9Opcodes.h"
+#include "Emu/ARMv7/ARMv7Opcodes.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
-class ARM9DisAsm
+class ARMv7DisAsm
 	: public CPUDisAsm
-	, public ARM9Opcodes
+	, public ARMv7Opcodes
 {
 public:
-	ARM9DisAsm(CPUDisAsmMode mode) : CPUDisAsm(mode)
+	ARMv7DisAsm(CPUDisAsmMode mode) : CPUDisAsm(mode)
 	{
 	}
 

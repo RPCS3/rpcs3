@@ -5,7 +5,7 @@
 class CPUDecoder
 {
 public:
-	virtual void DecodeMemory(const u64 address)=0;
+	virtual u8 DecodeMemory(const u64 address)=0;
 };
 
 template<typename TO>

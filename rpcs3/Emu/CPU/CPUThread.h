@@ -7,7 +7,7 @@ enum CPUThreadType
 	CPU_THREAD_PPU,
 	CPU_THREAD_SPU,
 	CPU_THREAD_RAW_SPU,
-	CPU_THREAD_ARM9,
+	CPU_THREAD_ARMv7,
 };
 
 enum CPUThreadStatus
@@ -86,7 +86,7 @@ public:
 		case CPU_THREAD_PPU: return "PPU";
 		case CPU_THREAD_SPU: return "SPU";
 		case CPU_THREAD_RAW_SPU: return "RawSPU";
-		case CPU_THREAD_ARM9: return "ARM9";
+		case CPU_THREAD_ARMv7: return "ARMv7";
 		}
 
 		return "Unknown";
@@ -104,6 +104,7 @@ public:
 	u64 PC;
 	u64 nPC;
 	u64 cycle;
+	bool m_is_branch;
 
 protected:
 	CPUThread(CPUThreadType type);
@@ -130,10 +131,10 @@ public:
 
 	int ThreadStatus();
 
-	virtual void NextPc();
-	virtual void SetBranch(const u64 pc);
-	virtual void SetPc(const u64 pc) = 0;
-	virtual void SetEntry(const u64 entry);
+	void NextPc(u8 instr_size);
+	void SetBranch(const u64 pc);
+	void SetPc(const u64 pc);
+	void SetEntry(const u64 entry);
 
 	void SetError(const u32 error);
 

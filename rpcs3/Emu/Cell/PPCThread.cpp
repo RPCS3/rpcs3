@@ -44,9 +44,3 @@ void PPCThread::InitStack()
 	*/
 }
 
-void PPCThread::SetPc(const u64 pc)
-{
-	PC = pc;
-	nPC = PC + 4;
-}
-

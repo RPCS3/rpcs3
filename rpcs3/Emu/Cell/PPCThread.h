@@ -26,10 +26,6 @@ protected:
 public:
 	~PPCThread();
 
-	virtual void SetPc(const u64 pc) override;
-
-	void SetError(const u32 error);
-
 protected:
 	virtual void DoReset() override;
 };

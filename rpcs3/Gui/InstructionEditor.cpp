@@ -90,9 +90,9 @@ void InstructionEditorDialog::updatePreview(wxCommandEvent& event)
 	unsigned long opcode;
 	if (t2_instr->GetValue().ToULong(&opcode, 16))
 	{
-		if(CPU->GetType() == CPU_THREAD_ARM9)
+		if(CPU->GetType() == CPU_THREAD_ARMv7)
 		{
-			t3_preview->SetLabel("Preview for ARM9Thread not implemented yet.");
+			t3_preview->SetLabel("Preview for ARMv7Thread not implemented yet.");
 		}
 		else
 		{

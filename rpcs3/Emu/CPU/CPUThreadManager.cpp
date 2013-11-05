@@ -3,7 +3,7 @@
 #include "Emu\Cell\PPUThread.h"
 #include "Emu\Cell\SPUThread.h"
 #include "Emu\Cell\RawSPUThread.h"
-#include "Emu\ARM9\ARM9Thread.h"
+#include "Emu\ARMv7\ARMv7Thread.h"
 
 CPUThreadManager::CPUThreadManager()
 	: m_raw_spu_num(0)
@@ -32,7 +32,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	case CPU_THREAD_PPU:		new_thread = new PPUThread(); break;
 	case CPU_THREAD_SPU:		new_thread = new SPUThread(); break;
 	case CPU_THREAD_RAW_SPU:	new_thread = new RawSPUThread(m_raw_spu_num++); break;
-	case CPU_THREAD_ARM9:		new_thread = new ARM9Thread(); break;
+	case CPU_THREAD_ARMv7:		new_thread = new ARMv7Thread(); break;
 	default: assert(0);
 	}
 	

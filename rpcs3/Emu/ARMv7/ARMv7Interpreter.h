@@ -1,12 +1,12 @@
 #pragma once
-#include "Emu/ARM9/ARM9Opcodes.h"
+#include "Emu/ARMv7/ARMv7Opcodes.h"
 
-class ARM9Interpreter : public ARM9Opcodes
+class ARMv7Interpreter : public ARMv7Opcodes
 {
-	ARM9Thread& CPU;
+	ARMv7Thread& CPU;
 
 public:
-	ARM9Interpreter(ARM9Thread& cpu) : CPU(cpu)
+	ARMv7Interpreter(ARMv7Thread& cpu) : CPU(cpu)
 	{
 	}
 
