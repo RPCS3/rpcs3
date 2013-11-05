@@ -1,0 +1,305 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFCP 1 "February 24, 2007" "libtiff"
+.SH NAME
+tiffcp \- copy (and possibly convert) a
+.SM TIFF
+file
+.SH SYNOPSIS
+.B tiffcp
+[
+.I options
+]
+.I "src1.tif ... srcN.tif dst.tif"
+.SH DESCRIPTION
+.I tiffcp
+combines one or more files created according
+to the Tag Image File Format, Revision 6.0
+into a single
+.SM TIFF
+file.
+Because the output file may be compressed using a different
+algorithm than the input files,
+.I tiffcp
+is most often used to convert between different compression
+schemes.
+.PP
+By default, 
+.I tiffcp
+will copy all the understood tags in a
+.SM TIFF
+directory of an input
+file to the associated directory in the output file.
+.PP
+.I tiffcp
+can be used to reorganize the storage characteristics of data
+in a file, but it is explicitly intended to not alter or convert
+the image data content in any way.
+.SH OPTIONS
+.TP
+.BI \-b " image"
+subtract the following monochrome image from all others
+processed.  This can be used to remove a noise bias
+from a set of images.  This bias image is typically an
+image of noise the camera saw with its shutter closed.
+.TP
+.B \-B
+Force output to be written with Big-Endian byte order.
+This option only has an effect when the output file is created or
+overwritten and not when it is appended to.
+.TP
+.B \-C
+Suppress the use of ``strip chopping'' when reading images
+that have a single strip/tile of uncompressed data.
+.TP
+.B \-c
+Specify the compression to use for data written to the output file:
+.B none 
+for no compression,
+.B packbits
+for PackBits compression,
+.B lzw
+for Lempel-Ziv & Welch compression,
+.B zip
+for Deflate compression,
+.B lzma
+for LZMA2 compression,
+.B jpeg
+for baseline JPEG compression,
+.B g3
+for CCITT Group 3 (T.4) compression,
+and
+.B g4
+for CCITT Group 4 (T.6) compression.
+By default
+.I tiffcp
+will compress data according to the value of the
+.I Compression
+tag found in the source file.
+.IP
+The
+.SM CCITT
+Group 3 and Group 4 compression algorithms can only
+be used with bilevel data.
+.IP
+Group 3 compression can be specified together with several
+T.4-specific options:
+.B 1d
+for 1-dimensional encoding,
+.B 2d
+for 2-dimensional encoding,
+and
+.B fill
+to force each encoded scanline to be zero-filled so that the
+terminating EOL code lies on a byte boundary.
+Group 3-specific options are specified by appending a ``:''-separated
+list to the ``g3'' option; e.g.
+.B "\-c g3:2d:fill"
+to get 2D-encoded data with byte-aligned EOL codes.
+.IP
+.SM LZW, Deflate
+and
+.SM LZMA2
+compression can be specified together with a 
+.I predictor
+value. A predictor value of 2 causes each scanline of the output image to
+undergo horizontal differencing before it is encoded; a value of 1 forces each
+scanline to be encoded without differencing. A value 3 is for floating point
+predictor which you can use if the encoded data are in floating point format.
+LZW-specific options are specified by appending a ``:''-separated list to the
+``lzw'' option; e.g.
+.B "\-c lzw:2"
+for
+.SM LZW
+compression with horizontal differencing.
+.IP
+.SM Deflate
+and
+.SM LZMA2
+encoders support various compression levels (or encoder presets) set as
+character ``p'' and a preset number. ``p1'' is the fastest one with the worst
+compression ratio and ``p9'' is the slowest but with the best possible ratio;
+e.g.
+.B "\-c zip:3:p9"
+for
+.SM Deflate
+encoding with maximum compression level and floating point predictor.
+.TP
+.B \-f
+Specify the bit fill order to use in writing output data.
+By default,
+.I tiffcp
+will create a new file with the same fill order as the original.
+Specifying
+.B "\-f lsb2msb"
+will force data to be written with the FillOrder tag set to
+.SM LSB2MSB,
+while
+.B "\-f msb2lsb"
+will force data to be written with the FillOrder tag set to
+.SM MSB2LSB.
+.TP
+.B \-i
+Ignore non-fatal read errors and continue processing of the input file.
+.TP
+.B \-l
+Specify the length of a tile (in pixels).
+.I tiffcp
+attempts to set the tile dimensions so
+that no more than 8 kilobytes of data appear in a tile.
+.TP
+.B \-L
+Force output to be written with Little-Endian byte order.
+This option only has an effect when the output file is created or
+overwritten and not when it is appended to.
+.TP
+.B \-M
+Suppress the use of memory-mapped files when reading images.
+.TP
+.B \-p
+Specify the planar configuration to use in writing image data
+that has one 8-bit sample per pixel.
+By default,
+.I tiffcp
+will create a new file with the same planar configuration as
+the original.
+Specifying
+.B "\-p contig"
+will force data to be written with multi-sample data packed
+together, while
+.B "\-p separate"
+will force samples to be written in separate planes.
+.TP
+.B \-r
+Specify the number of rows (scanlines) in each strip of data
+written to the output file.
+By default (or when value
+.B 0
+is specified),
+.I tiffcp
+attempts to set the rows/strip
+that no more than 8 kilobytes of data appear in a strip. If you specify
+special value
+.B \-1
+it will results in infinite number of the rows per strip. The entire image
+will be the one strip in that case.
+.TP
+.B \-s
+Force the output file to be written with data organized in strips
+(rather than tiles).
+.TP
+.B \-t
+Force the output file to be written with data organized in tiles (rather than
+strips). options can be used to force the resultant image to be written as
+strips or tiles of data, respectively.
+.TP
+.B \-w
+Specify the width of a tile (in pixels).
+.I tiffcp
+attempts to set the tile dimensions so that no more than 8 kilobytes of data
+appear in a tile.
+.I tiffcp
+attempts to set the tile dimensions so that no more than 8 kilobytes of data
+appear in a tile.
+.TP
+.B \-x
+Force the output file to be written with PAGENUMBER value in sequence.
+.TP
+.BI \-,= character
+substitute
+.I character
+for `,' in parsing image directory indices
+in files.  This is necessary if filenames contain commas.
+Note that
+.B \-,=
+with whitespace immediately following will disable
+the special meaning of the `,' entirely.  See examples.
+.SH EXAMPLES
+The following concatenates two files and writes the result using 
+.SM LZW
+encoding:
+.RS
+.nf
+tiffcp \-c lzw a.tif b.tif result.tif
+.fi
+.RE
+.PP
+To convert a G3 1d-encoded 
+.SM TIFF
+to a single strip of G4-encoded data the following might be used:
+.RS
+.nf
+tiffcp \-c g4 \-r 10000 g3.tif g4.tif
+.fi
+.RE
+(1000 is just a number that is larger than the number of rows in
+the source file.)
+
+To extract a selected set of images from a multi-image TIFF file, the file
+name may be immediately followed by a `,' separated list of image directory
+indices.  The first image is always in directory 0.  Thus, to copy the 1st and
+3rd images of image file ``album.tif'' to ``result.tif'':
+.RS
+.nf
+tiffcp album.tif,0,2 result.tif
+.fi
+.RE
+
+A trailing comma denotes remaining images in sequence.  The following command
+will copy all image with except the first one:
+.RS
+.nf
+tiffcp album.tif,1, result.tif
+.fi
+.RE
+
+Given file ``CCD.tif'' whose first image is a noise bias
+followed by images which include that bias,
+subtract the noise from all those images following it
+(while decompressing) with the command:
+.RS
+.nf
+tiffcp \-c none \-b CCD.tif CCD.tif,1, result.tif
+.fi
+.RE
+
+If the file above were named ``CCD,X.tif'', the
+.B \-,=
+option would
+be required to correctly parse this filename with image numbers,
+as follows:
+.RS
+.nf
+tiffcp \-c none \-,=% \-b CCD,X.tif CCD,X%1%.tif result.tif
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcmp (1),
+.BR tiffmedian (1),
+.BR tiffsplit (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

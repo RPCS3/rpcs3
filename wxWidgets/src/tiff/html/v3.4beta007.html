@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<TITLE>
+Changes in TIFF v3.4beta007
+</TITLE>
+</HEAD>
+
+<BODY>
+<FONT FACE="Arial, Helvetica, Sans">
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.4beta007<BR>
+<B>Previous Version</B>: v3.4beta004<BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.sgi.com/graphics/tiff">ftp.sgi.com (192.48.153.1), directory graphics/tiff</A><BR>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#port">Changes in the portability support</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+<LI>bit order was corrected for Pentium systems
+<LI>a new define, <TT>HOST_BIGENDIAN</TT>, was added for code that
+   wants to statically use information about native cpu byte order
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+<LI>the G3/G4 decoder was replaced by a new one that is faster and
+   has smaller state tables
+<LI>Niles Ritter's client tag extension hooks were added
+<LI>a new routine <TT>TIFFCurrentDirOffset</TT> was added for
+   applications that want to find out the file offset of a TIFF directory
+<LI>the calculation of the number of strips in an image was corected
+   for images with certain esoteric configurations
+<LI>a potential memory leak (very unlikely) was plugged
+<LI>the <TT>TIFFReadRGBAImage</TT> support was completely rewritten
+   and new, more flexible support was added for reading images into
+   a fixed-format raster
+<LI>YCbCr to RGB conversion done in the <TT>TIFFReadRGBAImage</TT> support
+   was optimized
+<LI>a bug in JPEG support calculation of strip size was corrected
+<LI>the LZW decoder was changed to initialize the code table to zero
+   to lessen potential problems that arise when invalid data is decoded
+<LI><B>tiffcomp.h</B> is now aware of OS/2
+<LI>some function prototypes in <B>tiffio.h</B> and <B>tiffiop.h</B>
+   that contained parameter
+   names have been changed to avoid complaints from certain compilers
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="port"><B><FONT SIZE=+3>C</FONT>HANGES IN THE PORTABILITY SUPPORT:</B></A>
+
+<UL>
+<LI><B>Makefile.in</B> has been corrected to use the parameters
+   chosen by the configure script
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+<LI><TT>fax2ps</TT> has been rewritten and moved over from the user
+   contributed software
+<LI>an uninitialized variable in <TT>pal2rgb</TT> has been fixed
+<LI><TT>ras2tiff</TT> now converts 24-bit RGB raster data so that
+   samples are written in the proper order
+<LI><TT>tiff2ps</TT> has been updated to include fixes
+    and enhancements from Alberto Accomazzi
+<LI><TT>tiffcp</TT> now has a <TT>-o</TT> option to select a directory
+    by file offset
+<LI><TT>tiffinfo</TT> is now capable of displaying the raw undecoded
+    image data in a file
+<LI><TT>tiffgt</TT> has been rewritten to use the new <TT>TIFFRGBAImage</TT>
+   support and to handle multiple files
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+<ADDRESS>
+<A HREF="sam.html">Sam Leffler</A> / <A HREF="mailto:sam@engr.sgi.com">sam@engr.sgi.com</A>
+Last updated $Date: 1999/08/09 20:21:21 $.
+</ADDRESS>
+
+</BODY>
+</HTML>

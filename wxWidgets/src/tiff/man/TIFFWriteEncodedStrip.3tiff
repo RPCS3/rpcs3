@@ -1,0 +1,101 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFWriteEncodedStrip 3TIFF "October 15, 1995" "libtiff"
+.SH NAME
+TIFFWritedEncodedStrip \- compress and write a strip of data to an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "tsize_t TIFFWriteEncodedStrip(TIFF *" tif ", tstrip_t " strip ", tdata_t " buf ", tsize_t " size ")"
+.SH DESCRIPTION
+Compress
+.I size
+bytes of raw data from
+.I buf
+and write the result to the specified strip; replacing any previously written
+data. Note that the value of
+.I strip
+is a ``raw strip number.'' That is, the caller must take into account whether
+or not the data are organized in separate planes (\c
+.IR PlanarConfiguration =2).
+.SH NOTES
+The library writes encoded data using the native machine byte order. Correctly
+implemented
+.SM TIFF
+readers are expected to do any necessary byte-swapping to correctly process
+image data with BitsPerSample greater than 8.
+.PP
+The strip number must be valid according to the current settings of the
+.I ImageLength
+and
+.I RowsPerStrip
+tags.
+An image may be dynamically grown by increasing the value of
+.I ImageLength
+prior to each call to
+.IR TIFFWriteEncodedStrip .
+.SH "RETURN VALUES"
+\-1 is returned if an error was encountered. Otherwise, the value of
+.IR size
+is returned.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.IR TIFFError (3TIFF)
+routine.
+.PP
+\fB%s: File not open for writing\fP. The file was opened for reading, not
+writing.
+.PP
+\fBCan not write scanlines to a tiled image\fP. The image is assumed to be
+organized in tiles because the
+.I TileWidth
+and
+.I TileLength
+tags have been set with
+.IR TIFFSetField (3TIFF).
+.PP
+\fB%s: Must set "ImageWidth" before writing data\fP.
+The image's width has not be set before the first write. See
+.IR TIFFSetField (3TIFF)
+for information on how to do this.
+.PP
+\fB%s: Must set "PlanarConfiguration" before writing data\fP.
+The organization of data has not be defined before the first write. See
+.IR TIFFSetField (3TIFF)
+for information on how to do this.
+.PP
+\fB%s: No space for strip arrays"\fP.
+There was not enough space for the arrays that hold strip offsets and byte
+counts.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFWriteScanline (3TIFF),
+.BR TIFFWriteRawStrip (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

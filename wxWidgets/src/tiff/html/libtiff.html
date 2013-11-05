@@ -1,0 +1,747 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en">
+<head>
+  <title>Using The TIFF Library</title>
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv="content-language" content="en">
+  <style type="text/css">
+  <!--
+    th {text-align: left; vertical-align: top; font-style: italic; font-weight: normal}
+  -->
+  </style>
+</head>
+<body lang="en" text="#000000" bgcolor="#ffffff" link="#0000ff" alink="#0000ff" vlink="#0000ff">
+  <table border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td style="padding-left: 1em; padding-right: 1em"><img src="images/cat.gif" width="113" height="146" alt=""></td>
+      <td>
+        <h1>Using The TIFF Library</h1>
+        <p>
+          <tt>libtiff</tt> is a set of C functions (a library) that support
+          the manipulation of TIFF image files.
+          The library requires an ANSI C compilation environment for building
+          and presumes an ANSI C environment for use.
+        </p>
+      </td>
+    </tr>
+  </table>
+  <br>
+  <p>
+    <tt>libtiff</tt>
+    provides interfaces to image data at several layers of abstraction (and cost).
+    At the highest level image data can be read into an 8-bit/sample,
+    ABGR pixel raster format without regard for the underlying data organization,
+    colorspace, or compression scheme.  Below this high-level interface
+    the library provides scanline-, strip-, and tile-oriented interfaces that
+    return data decompressed but otherwise untransformed.  These interfaces
+    require that the application first identify the organization of stored
+    data and select either a strip-based or tile-based API for manipulating
+    data.  At the lowest level the library
+    provides access to the raw uncompressed strips or tiles,
+    returning the data exactly as it appears in the file.
+  </p>
+  <p>
+    The material presented in this chapter is a basic introduction
+    to the capabilities of the library; it is not an attempt to describe
+    everything a developer needs to know about the library or about TIFF.
+    Detailed information on the interfaces to the library are given in
+    the <a href="http://www.remotesensing.org/libtiff/man/index.html">UNIX 
+    manual pages</a> that accompany this software.
+  </p>
+  <p>
+    Michael Still has also written a useful introduction to libtiff for the
+    IBM DeveloperWorks site available at
+    <a href="http://www.ibm.com/developerworks/linux/library/l-libtiff">http://www.ibm.com/developerworks/linux/library/l-libtiff</a>.
+  </p>
+  <p>
+    The following sections are found in this chapter:
+  </p>
+  <ul>
+    <li><a href="#version">How to tell which version you have</a></li>
+    <li><a href="#typedefs">Library Datatypes</a></li>
+    <li><a href="#mman">Memory Management</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#fio">Basic File Handling</a></li>
+    <li><a href="#dirs">TIFF Directories</a></li>
+    <li><a href="#tags">TIFF Tags</a></li>
+    <li><a href="#compression">TIFF Compression Schemes</a></li>
+    <li><a href="#byteorder">Byte Order</a></li>
+    <li><a href="#dataplacement">Data Placement</a></li>
+    <li><a href="#tiffrgbaimage">TIFFRGBAImage Support</a></li>
+    <li><a href="#scanlines">Scanline-based Image I/O</a></li>
+    <li><a href="#strips">Strip-oriented Image I/O</a></li>
+    <li><a href="#tiles">Tile-oriented Image I/O</a></li>
+    <li><a href="#other">Other Stuff</a></li>
+  </ul>
+  <hr>
+  <h2 id="version">How to tell which version you have</h2>
+  <p>
+    The software version can be found by looking at the file named
+    <tt>VERSION</tt>
+    that is located at the top of the source tree; the precise alpha number
+    is given in the file <tt>dist/tiff.alpha</tt>.
+    If you have need to refer to this
+    specific software, you should identify it as:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>TIFF &lt;<i>version</i>&gt; &lt;<i>alpha</i>&gt;</tt>
+  </p>
+  <p>
+    where <tt>&lt;<i>version</i>&gt;</tt> is whatever you get from
+    <tt>"cat VERSION"</tt> and <tt>&lt;<i>alpha</i>&gt;</tt> is
+    what you get from <tt>"cat dist/tiff.alpha"</tt>.
+  </p>
+  <p>
+    Within an application that uses <tt>libtiff</tt> the <tt>TIFFGetVersion</tt>
+    routine will return a pointer to a string that contains software version
+    information.
+    The library include file <tt>&lt;tiffio.h&gt;</tt> contains a C pre-processor
+    define <tt>TIFFLIB_VERSION</tt> that can be used to check library
+    version compatiblity at compile time.
+  </p>
+  <hr>
+  <h2 id="typedefs">Library Datatypes</h2>
+  <p>
+    <tt>libtiff</tt> defines a portable programming interface through the
+    use of a set of C type definitions.
+    These definitions, defined in in the files <b>tiff.h</b> and
+    <b>tiffio.h</b>,
+    isolate the <tt>libtiff</tt> API from the characteristics
+    of the underlying machine.
+    To insure portable code and correct operation, applications that use
+    <tt>libtiff</tt> should use the typedefs and follow the function
+    prototypes for the library API.
+  </p>
+  <hr>
+  <h2 id="mman">Memory Management</h2>
+  <p>
+    <tt>libtiff</tt> uses a machine-specific set of routines for managing
+    dynamically allocated memory.
+    <tt>_TIFFmalloc</tt>, <tt>_TIFFrealloc</tt>, and <tt>_TIFFfree</tt>
+    mimic the normal ANSI C routines.
+    Any dynamically allocated memory that is to be passed into the library
+    should be allocated using these interfaces in order to insure pointer
+    compatibility on machines with a segmented architecture.
+    (On 32-bit UNIX systems these routines just call the normal <tt>malloc</tt>,
+    <tt>realloc</tt>, and <tt>free</tt> routines in the C library.)
+  </p>
+  <p>
+    To deal with segmented pointer issues <tt>libtiff</tt> also provides
+    <tt>_TIFFmemcpy</tt>, <tt>_TIFFmemset</tt>, and <tt>_TIFFmemmove</tt>
+    routines that mimic the equivalent ANSI C routines, but that are
+    intended for use with memory allocated through <tt>_TIFFmalloc</tt>
+    and <tt>_TIFFrealloc</tt>.
+  </p>
+  <hr>
+  <h2 id="errors">Error Handling</h2>
+  <p>
+    <tt>libtiff</tt> handles most errors by returning an invalid/erroneous
+    value when returning from a function call.
+    Various diagnostic messages may also be generated by the library.
+    All error messages are directed to a single global error handler
+    routine that can be specified with a call to <tt>TIFFSetErrorHandler</tt>.
+    Likewise warning messages are directed to a single handler routine
+    that can be specified with a call to <tt>TIFFSetWarningHandler</tt>
+  </p>
+  <hr>
+  <h2 id="fio">Basic File Handling</h2>
+  <p>
+    The library is modeled after the normal UNIX stdio library.
+    For example, to read from an existing TIFF image the
+    file must first be opened:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("foo.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;... do stuff ...<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    }</tt>
+  </p>
+  <p>
+    The handle returned by <tt>TIFFOpen</tt> is <i>opaque</i>, that is
+    the application is not permitted to know about its contents.
+    All subsequent library calls for this file must pass the handle
+    as an argument.
+  </p>
+  <p>
+    To create or overwrite a TIFF image the file is also opened, but with
+    a <tt>"w"</tt> argument:
+  <p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("foo.tif", "w");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;... do stuff ...<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    }</tt>
+  </p>
+  <p>
+    If the file already exists it is first truncated to zero length.
+  </p>
+  <table>
+    <tr>
+      <td valign=top><img src="images/warning.gif" width="40" height="40" alt=""></td>
+      <td><i>Note that unlike the stdio library TIFF image files may not be
+        opened for both reading and writing;
+        there is no support for altering the contents of a TIFF file.</i></td>
+    </tr>
+  </table>
+  <p>
+    <tt>libtiff</tt> buffers much information associated with writing a
+    valid TIFF image.  Consequently, when writing a TIFF image it is necessary
+    to always call <tt>TIFFClose</tt> or <tt>TIFFFlush</tt> to flush any
+    buffered information to a file.  Note that if you call <tt>TIFFClose</tt>
+    you do not need to call <tt>TIFFFlush</tt>.
+  </p>
+  <hr>
+  <h2 id="dirs">TIFF Directories</h2>
+  <p>
+    TIFF supports the storage of multiple images in a single file.
+    Each image has an associated data structure termed a <i>directory</i>
+    that houses all the information about the format and content of the
+    image data.
+    Images in a file are usually related but they do not need to be; it
+    is perfectly alright to store a color image together with a black and
+    white image.
+    Note however that while images may be related their directories are
+    not.
+    That is, each directory stands on its own; their is no need to read
+    an unrelated directory in order to properly interpret the contents
+    of an image.
+  </p>
+  <p>
+    <tt>libtiff</tt> provides several routines for reading and writing
+    directories.  In normal use there is no need to explicitly
+    read or write a directory: the library automatically reads the first
+    directory in a file when opened for reading, and directory information
+    to be written is automatically accumulated and written when writing
+    (assuming <tt>TIFFClose</tt> or <tt>TIFFFlush</tt> are called).
+  </p>
+  <p>
+    For a file open for reading the <tt>TIFFSetDirectory</tt> routine can
+    be used to select an arbitrary directory; directories are referenced by
+    number with the numbering starting at 0.  Otherwise the
+    <tt>TIFFReadDirectory</tt> and <tt>TIFFWriteDirectory</tt> routines can
+    be used for sequential access to directories.
+    For example, to count the number of directories in a file the following
+    code might be used:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main(int argc, char* argv[])<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen(argv[1], "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int dircount = 0;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;do {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dircount++;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} while (TIFFReadDirectory(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;printf("%d directories in %s\n", dircount, argv[1]);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;exit(0);<br>
+    }</tt>
+  </p>
+  <p>
+    Finally, note that there are several routines for querying the
+    directory status of an open file:
+    <tt>TIFFCurrentDirectory</tt> returns the index of the current
+    directory and
+    <tt>TIFFLastDirectory</tt> returns an indication of whether the
+    current directory is the last directory in a file.
+    There is also a routine, <tt>TIFFPrintDirectory</tt>, that can
+    be called to print a formatted description of the contents of
+    the current directory; consult the manual page for complete details.
+  </p>
+  <hr>
+  <h2 id="tags">TIFF Tags</h2>
+  <p>
+    Image-related information such as the image width and height, number
+    of samples, orientation, colorimetric information, etc.
+    are stored in each image
+    directory in <i>fields</i> or <i>tags</i>.
+    Tags are identified by a number that is usually a value registered
+    with the Aldus (now Adobe) Corporation.
+    Beware however that some vendors write
+    TIFF images with tags that are unregistered; in this case interpreting
+    their contents is usually a waste of time.
+  </p>
+  <p>
+    <tt>libtiff</tt> reads the contents of a directory all at once
+    and converts the on-disk information to an appropriate in-memory
+    form.  While the TIFF specification permits an arbitrary set of
+    tags to be defined and used in a file, the library only understands
+    a limited set of tags.
+    Any unknown tags that are encountered in a file are ignored.
+    There is a mechanism to extend the set of tags the library handles
+    without modifying the library itself;
+    this is described <a href="addingtags.html">elsewhere</a>.
+  </p>
+  <p>
+    <tt>libtiff</tt> provides two interfaces for getting and setting tag
+    values: <tt>TIFFGetField</tt> and <tt>TIFFSetField</tt>.
+    These routines use a variable argument list-style interface to pass
+    parameters of different type through a single function interface.
+    The <i>get interface</i> takes one or more pointers to memory locations
+    where the tag values are to be returned and also returns one or
+    zero according to whether the requested tag is defined in the directory.
+    The <i>set interface</i> takes the tag values either by-reference or
+    by-value.
+    The TIFF specification defines
+    <i>default values</i> for some tags.
+    To get the value of a tag, or its default value if it is undefined,
+    the <tt>TIFFGetFieldDefaulted</tt> interface may be used.
+  </p>
+  <p>
+    The manual pages for the tag get and set routines specifiy the exact data types
+    and calling conventions required for each tag supported by the library.
+  </p>
+  <hr>
+  <h2 id="compression">TIFF Compression Schemes</h2>
+  <p>
+    <tt>libtiff</tt> includes support for a wide variety of
+    data compression schemes.
+    In normal operation a compression scheme is automatically used when
+    the TIFF <tt>Compression</tt> tag is set, either by opening a file
+    for reading, or by setting the tag when writing.
+  </p>
+  <p>
+    Compression schemes are implemented by software modules termed <i>codecs</i>
+    that implement decoder and encoder routines that hook into the
+    core library i/o support.
+    Codecs other than those bundled with the library can be registered
+    for use with the <tt>TIFFRegisterCODEC</tt> routine.
+    This interface can also be used to override the core-library
+    implementation for a compression scheme.
+  </p>
+  <hr>
+  <h2 id="byteorder">Byte Order</h2>
+  <p>
+    The TIFF specification says, and has always said, that
+    <em>a correct TIFF
+    reader must handle images in big-endian and little-endian byte order</em>.
+    <tt>libtiff</tt> conforms in this respect.
+    Consequently there is no means to force a specific
+    byte order for the data written to a TIFF image file (data is
+    written in the native order of the host CPU unless appending to
+    an existing file, in which case it is written in the byte order
+    specified in the file).
+  </p>
+  <hr>
+  <h2 id="dataplacement">Data Placement</h2>
+  <p>
+    The TIFF specification requires that all information except an
+    8-byte header can be placed anywhere in a file.
+    In particular, it is perfectly legitimate for directory information
+    to be written after the image data itself.
+    Consequently TIFF is inherently not suitable for passing through a
+    stream-oriented mechanism such as UNIX pipes.
+    Software that require that data be organized in a file in a particular
+    order (e.g. directory information before image data) does not
+    correctly support TIFF.
+    <tt>libtiff</tt> provides no mechanism for controlling the placement
+    of data in a file; image data is typically written before directory
+    information.
+  </p>
+  <hr>
+  <h2 id="tiffrgbaimage">TIFFRGBAImage Support</h2>
+  <p>
+    <tt>libtiff</tt> provides a high-level interface for reading image
+    data from a TIFF file.  This interface handles the details of
+    data organization and format for a wide variety of TIFF files;
+    at least the large majority of those files that one would normally
+    encounter.  Image data is, by default, returned as ABGR
+    pixels packed into 32-bit words (8 bits per sample).  Rectangular
+    rasters can be read or data can be intercepted at an intermediate
+    level and packed into memory in a format more suitable to the
+    application.
+    The library handles all the details of the format of data stored on
+    disk and, in most cases, if any colorspace conversions are required:
+    bilevel to RGB, greyscale to RGB, CMYK to RGB, YCbCr to RGB, 16-bit
+    samples to 8-bit samples, associated/unassociated alpha, etc.
+  </p>
+  <p>
+    There are two ways to read image data using this interface.  If
+    all the data is to be stored in memory and manipulated at once,
+    then the routine <tt>TIFFReadRGBAImage</tt> can be used:
+  </p>
+  <p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main(int argc, char* argv[])<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen(argv[1], "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 w, h;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;size_t npixels;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32* raster;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &amp;w);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &amp;h);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;npixels = w * h;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;raster = (uint32*) _TIFFmalloc(npixels * sizeof (uint32));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (raster != NULL) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (TIFFReadRGBAImage(tif, w, h, raster, 0)) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...process raster data...<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_TIFFfree(raster);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;exit(0);<br>
+    }</tt>
+  </p>
+  <p>
+    Note above that <tt>_TIFFmalloc</tt> is used to allocate memory for
+    the raster passed to <tt>TIFFReadRGBAImage</tt>; this is important
+    to insure the ``appropriate type of memory'' is passed on machines
+    with segmented architectures.
+  </p>
+  <p>
+    Alternatively, <tt>TIFFReadRGBAImage</tt> can be replaced with a
+    more low-level interface that permits an application to have more
+    control over this reading procedure.  The equivalent to the above
+    is:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main(int argc, char* argv[])<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen(argv[1], "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFRGBAImage img;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;char emsg[1024];<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (TIFFRGBAImageBegin(&amp;img, tif, 0, emsg)) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;size_t npixels;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32* raster;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;npixels = img.width * img.height;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;raster = (uint32*) _TIFFmalloc(npixels * sizeof (uint32));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (raster != NULL) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (TIFFRGBAImageGet(&amp;img, raster, img.width, img.height)) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...process raster data...<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_TIFFfree(raster);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFRGBAImageEnd(&amp;img);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} else<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFError(argv[1], emsg);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;exit(0);<br>
+    }</tt>
+  </p>
+  <p>
+    However this usage does not take advantage of the more fine-grained
+    control that's possible.  That is, by using this interface it is
+    possible to:
+  </p>
+  <ul>
+    <li>repeatedly fetch (and manipulate) an image without opening
+      and closing the file</li>
+    <li>interpose a method for packing raster pixel data according to
+      application-specific needs (or write the data at all)</li>
+    <li>interpose methods that handle TIFF formats that are not already
+      handled by the core library</li>
+  </ul>
+  <p>
+    The first item means that, for example, image viewers that want to
+    handle multiple files can cache decoding information in order to
+    speedup the work required to display a TIFF image.
+  </p>
+  <p>
+    The second item is the main reason for this interface.  By interposing
+    a "put method" (the routine that is called to pack pixel data in
+    the raster) it is possible share the core logic that understands how
+    to deal with TIFF while packing the resultant pixels in a format that
+    is optimized for the application.  This alternate format might be very
+    different than the 8-bit per sample ABGR format the library writes by
+    default.  For example, if the application is going to display the image
+    on an 8-bit colormap display the put routine might take the data and
+    convert it on-the-fly to the best colormap indices for display.
+  </p>
+  <p>
+    The last item permits an application to extend the library
+    without modifying the core code.
+    By overriding the code provided an application might add support
+    for some esoteric flavor of TIFF that it needs, or it might
+    substitute a packing routine that is able to do optimizations
+    using application/environment-specific information.
+  </p>
+  <p>
+    The TIFF image viewer found in <b>tools/sgigt.c</b> is an example
+    of an application that makes use of the <tt>TIFFRGBAImage</tt>
+    support.
+  </p>
+  <hr>
+  <h2 id="scanlines">Scanline-based Image I/O</h2>
+  <p>
+    The simplest interface provided by <tt>libtiff</tt> is a
+    scanline-oriented interface that can be used to read TIFF
+    images that have their image data organized in strips
+    (trying to use this interface to read data written in tiles
+    will produce errors.)
+    A scanline is a one pixel high row of image data whose width
+    is the width of the image.
+    Data is returned packed if the image data is stored with samples
+    packed together, or as arrays of separate samples if the data
+    is stored with samples separated.
+    The major limitation of the scanline-oriented interface, other
+    than the need to first identify an existing file as having a
+    suitable organization, is that random access to individual
+    scanlines can only be provided when data is not stored in a
+    compressed format, or when the number of rows in a strip
+    of image data is set to one (<tt>RowsPerStrip</tt> is one).
+  </p>
+  <p>
+    Two routines are provided for scanline-based i/o:
+    <tt>TIFFReadScanline</tt>
+    and
+    <tt>TIFFWriteScanline</tt>.
+    For example, to read the contents of a file that
+    is assumed to be organized in strips, the following might be used:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 imagelength;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 row;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &amp;imagelength);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(TIFFScanlineSize(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (row = 0; row &lt; imagelength; row++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadscanline(tif, buf, row);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_tifffree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffclose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <p>
+    <tt>TIFFScanlineSize</tt> returns the number of bytes in
+    a decoded scanline, as returned by <tt>TIFFReadScanline</tt>.
+    Note however that if the file had been create with samples
+    written in separate planes, then the above code would only
+    read data that contained the first sample of each pixel;
+    to handle either case one might use the following instead:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 imagelength;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 row;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &amp;imagelength);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &amp;config);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(TIFFScanlineSize(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (config == PLANARCONFIG_CONTIG) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (row = 0; row &lt; imagelength; row++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadscanline(tif, buf, row);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} else if (config == planarconfig_separate) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint16 s, nsamples;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffgetfield(tif, tifftag_samplesperpixel, &amp;nsamples);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (s = 0; s &lt; nsamples; s++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (row = 0; row &lt; imagelength; row++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadscanline(tif, buf, row, s);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_tifffree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffclose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <p>
+    Beware however that if the following code were used instead to
+    read data in the case <tt>PLANARCONFIG_SEPARATE</tt>,...
+  </p>
+  <p style="margin-left: 40px">
+    <tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (row = 0; row &lt; imagelength; row++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (s = 0; s &lt; nsamples; s++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadscanline(tif, buf, row, s);</tt>
+  </p>
+  <p>
+    ...then problems would arise if <tt>RowsPerStrip</tt> was not one
+    because the order in which scanlines are requested would require
+    random access to data within strips (something that is not supported
+    by the library when strips are compressed).
+  </p>
+  <hr>
+  <h2 id="strips">Strip-oriented Image I/O</h2>
+  <p>
+    The strip-oriented interfaces provided by the library provide
+    access to entire strips of data.  Unlike the scanline-oriented
+    calls, data can be read or written compressed or uncompressed.
+    Accessing data at a strip (or tile) level is often desirable
+    because there are no complications with regard to random access
+    to data within strips.
+  </p>
+  <p>
+    A simple example of reading an image by strips is:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tstrip_t strip;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(TIFFStripSize(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (strip = 0; strip &lt; tiffnumberofstrips(tif); strip++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadencodedstrip(tif, strip, buf, (tsize_t) -1);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_tifffree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffclose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <p>
+    Notice how a strip size of <tt>-1</tt> is used; <tt>TIFFReadEncodedStrip</tt>
+    will calculate the appropriate size in this case.
+  </p>
+  <p>
+    The above code reads strips in the order in which the
+    data is physically stored in the file.  If multiple samples
+    are present and data is stored with <tt>PLANARCONFIG_SEPARATE</tt>
+    then all the strips of data holding the first sample will be
+    read, followed by strips for the second sample, etc.
+  </p>
+  <p>
+    Finally, note that the last strip of data in an image may have fewer
+    rows in it than specified by the <tt>RowsPerStrip</tt> tag.  A
+    reader should not assume that each decoded strip contains a full
+    set of rows in it.
+  </p>
+  <p>
+    The following is an example of how to read raw strips of data from
+    a file:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tstrip_t strip;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32* bc;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 stripsize;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_STRIPBYTECOUNTS, &amp;bc);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stripsize = bc[0];<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(stripsize);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (strip = 0; strip &lt; tiffnumberofstrips(tif); strip++) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (bc[strip] &gt; stripsize) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFrealloc(buf, bc[strip]);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stripsize = bc[strip];<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFReadRawStrip(tif, strip, buf, bc[strip]);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_TIFFfree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFClose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <p>
+    As above the strips are read in the order in which they are
+    physically stored in the file; this may be different from the
+    logical ordering expected by an application.
+  </p>
+  <hr>
+  <h2 id="tiles">Tile-oriented Image I/O</h2>
+  <p>
+    Tiles of data may be read and written in a manner similar to strips.
+    With this interface, an image is
+    broken up into a set of rectangular areas that may have dimensions
+    less than the image width and height.  All the tiles
+    in an image have the same size, and the tile width and length must each
+    be a multiple of 16 pixels.  Tiles are ordered left-to-right and
+    top-to-bottom in an image.  As for scanlines, samples can be packed
+    contiguously or separately.  When separated, all the tiles for a sample
+    are colocated in the file.  That is, all the tiles for sample 0 appear
+    before the tiles for sample 1, etc.
+  </p>
+  <p>
+    Tiles and strips may also be extended in a z dimension to form
+    volumes.  Data volumes are organized as "slices".  That is, all the
+    data for a slice is colocated.  Volumes whose data is organized in
+    tiles can also have a tile depth so that data can be organized in
+    cubes.
+  </p>
+  <p>
+    There are actually two interfaces for tiles.
+    One interface is similar to scanlines,  to read a tiled image,
+    code of the following sort might be used:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 imageWidth, imageLength;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 tileWidth, tileLength;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uint32 x, y;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &amp;imageWidth);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &amp;imageLength);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_TILEWIDTH, &amp;tileWidth);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TIFFGetField(tif, TIFFTAG_TILELENGTH, &amp;tileLength);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(TIFFTileSize(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (y = 0; y &lt; imagelength; y += tilelength)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (x = 0; x &lt; imagewidth; x += tilewidth)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadtile(tif, buf, x, y, 0);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_tifffree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffclose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <p>
+    (once again, we assume samples are packed contiguously.)
+  </p>
+  <p>
+    Alternatively a direct interface to the low-level data is provided
+    a la strips.  Tiles can be read with
+    <tt>TIFFReadEncodedTile</tt> or <tt>TIFFReadRawTile</tt>,
+    and written with <tt>TIFFWriteEncodedTile</tt> or
+    <tt>TIFFWriteRawTile</tt>. For example, to read all the tiles in an image:
+  </p>
+  <p style="margin-left: 40px">
+    <tt>#include "tiffio.h"<br>
+    main()<br>
+    {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;TIFF* tif = TIFFOpen("myfile.tif", "r");<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;if (tif) {<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tdata_t buf;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ttile_t tile;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf = _TIFFmalloc(TIFFTileSize(tif));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (tile = 0; tile &lt; tiffnumberoftiles(tif); tile++)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffreadencodedtile(tif, tile, buf, (tsize_t) -1);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_tifffree(buf);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tiffclose(tif);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    }</tt>
+  </p>
+  <hr>
+  <h2 id="other">Other Stuff</h2>
+  <p>
+    Some other stuff will almost certainly go here...
+  </p>
+  <hr>
+  <p>
+    Last updated: $Date: 2005/12/28 06:53:18 $
+  </p>
+</body>
+</html>

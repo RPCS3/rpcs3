@@ -1,0 +1,63 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFReadRawStrip 3TIFF "October 15, 1995" "libtiff"
+.SH NAME
+TIFFReadRawStrip \- return the undecoded contents of a strip of data from an
+open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "tsize_t TIFFReadRawStrip(TIFF *" tif ", tstrip_t " strip ", tdata_t " buf ", tsize_t " size ")"
+.SH DESCRIPTION
+Read the contents of the specified strip into the (user supplied) data buffer.
+Note that the value of
+.I strip
+is a ``raw strip number.'' That is, the caller must take into account whether
+or not the data is organized in separate planes (\c
+.IR PlanarConfiguration =2).
+To read a full strip of data the data buffer should typically be at least as
+large as the number returned by
+.IR TIFFStripSize .
+.SH "RETURN VALUES"
+The actual number of bytes of data that were placed in
+.I buf
+is returned;
+.IR TIFFReadEncodedStrip
+returns \-1 if an error was encountered.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.BR TIFFError (3TIFF)
+routine.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFReadEncodedStrip (3TIFF),
+.BR TIFFReadScanline (3TIFF),
+.BR TIFFStripSize (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

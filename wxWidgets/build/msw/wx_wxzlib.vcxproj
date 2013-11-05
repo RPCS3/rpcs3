@@ -145,7 +145,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <ProgramDataBaseFileName>..\..\lib\vc_lib\wxzlibd.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)wxzlibd.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -163,6 +163,10 @@
       <OutputFile>.\..\..\lib\vc_lib\wx_wxzlib.bsc</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -179,7 +183,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <ProgramDataBaseFileName>..\..\lib\vc_lib\wxzlibd.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)wxzlibd.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -197,6 +201,10 @@
       <OutputFile>.\..\..\lib\vc_lib\wx_wxzlib.bsc</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
@@ -222,7 +230,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Lib>
-      <OutputFile>$(OutDir)wxzlib.lib</OutputFile>
+      <OutputFile>..\..\lib\vc_lib\wxzlib.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -258,7 +266,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Lib>
-      <OutputFile>$(OutDir)wxzlib.lib</OutputFile>
+      <OutputFile>..\..\lib\vc_lib\wxzlib.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -266,9 +274,9 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
     <Lib>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
-    </Lib>
+        <SuppressStartupBanner>true</SuppressStartupBanner>
+        <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+      </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DLL Debug|Win32'">
     <Midl>
@@ -285,7 +293,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <ProgramDataBaseFileName>..\..\lib\vc_lib\wxzlibd.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)wxzlibd.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -303,6 +311,10 @@
       <OutputFile>.\..\..\lib\vc_lib\wx_wxzlib.bsc</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DLL Debug|x64'">
     <Midl>
@@ -319,7 +331,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <ProgramDataBaseFileName>..\..\lib\vc_lib\wxzlibd.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)wxzlibd.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -337,6 +349,10 @@
       <OutputFile>.\..\..\lib\vc_lib\wx_wxzlib.bsc</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DLL Release|Win32'">
     <Midl>
@@ -362,7 +378,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Lib>
-      <OutputFile>$(OutDir)wxzlib.lib</OutputFile>
+      <OutputFile>..\..\lib\vc_lib\wxzlib.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -398,13 +414,17 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Lib>
-      <OutputFile>$(OutDir)wxzlib.lib</OutputFile>
+      <OutputFile>..\..\lib\vc_lib\wxzlib.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
       <OutputFile>.\..\..\lib\vc_lib\wx_wxzlib.bsc</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\..\libs\$(Configuration)\$(ProjectName).lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\zlib\adler32.c" />

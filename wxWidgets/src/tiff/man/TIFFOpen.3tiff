@@ -1,0 +1,278 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFOpen 3TIFF "July 1, 2005" "libtiff"
+.SH NAME
+TIFFOpen, TIFFFdOpen, TIFFClientOpen \- open a
+.SM TIFF
+file for reading or writing
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "TIFF* TIFFOpen(const char *" filename ", const char *" mode ")"
+.br
+.BI "TIFF* TIFFFdOpen(const int " fd ", const char *" filename ", const char *" mode ")"
+.sp
+.B "typedef tsize_t (*TIFFReadWriteProc)(thandle_t, tdata_t, tsize_t);"
+.br
+.B "typedef toff_t (*TIFFSeekProc)(thandle_t, toff_t, int);"
+.br
+.B "typedef int (*TIFFCloseProc)(thandle_t);"
+.br
+.B "typedef toff_t (*TIFFSizeProc)(thandle_t);"
+.br
+.B "typedef int (*TIFFMapFileProc)(thandle_t, tdata_t*, toff_t*);"
+.br
+.B "typedef void (*TIFFUnmapFileProc)(thandle_t, tdata_t, toff_t);"
+.sp
+.BI "TIFF* TIFFClientOpen(const char *" filename ", const char *" mode ", thandle_t " clientdata ", TIFFReadWriteProc " readproc ", TIFFReadWriteProc " writeproc ", TIFFSeekProc " seekproc ", TIFFCloseProc " closeproc ", TIFFSizeProc " sizeproc ", TIFFMapFileProc " mapproc ", TIFFUnmapFileProc " unmapproc ")"
+.SH DESCRIPTION
+.IR TIFFOpen
+opens a
+.SM TIFF
+file whose name is
+.I filename
+and returns a handle to be used in subsequent calls to routines in
+.IR libtiff .
+If the open operation fails, then zero is returned.
+The
+.I mode
+parameter specifies if the file is to be opened for reading (``r''),
+writing (``w''), or appending (``a'') and, optionally, whether
+to override certain default aspects of library operation (see below).
+When a file is opened for appending, existing data will not
+be touched; instead new data will be written as additional subfiles.
+If an existing file is opened for writing, all previous data is
+overwritten.
+.PP
+If a file is opened for reading, the first
+.SM TIFF
+directory in the file is automatically read
+(also see
+.IR TIFFSetDirectory (3TIFF)
+for reading directories other than the first).
+If a file is opened for writing or appending, a default directory
+is automatically created for writing subsequent data.
+This directory has all the default values specified in
+.SM TIFF
+Revision 6.0:
+.IR BitsPerSample =1,
+.IR ThreshHolding "=bilevel art scan,"
+.IR FillOrder =1
+(most significant bit of each data byte is filled first),
+.IR Orientation =1
+(the 0th row represents the visual top of the image, and the 0th
+column represents the visual left hand side),
+.IR SamplesPerPixel =1,
+.IR RowsPerStrip =infinity,
+.IR ResolutionUnit =2
+(inches), and
+.IR Compression =1
+(no compression).
+To alter these values, or to define values for additional fields,
+.IR TIFFSetField (3TIFF)
+must be used.
+.PP
+.IR TIFFFdOpen
+is like
+.IR TIFFOpen
+except that it opens a
+.SM TIFF
+file given an open file descriptor
+.IR fd .
+The file's name and mode must reflect that of the open descriptor.
+The object associated with the file descriptor
+.BR "must support random access" .
+.PP
+.IR TIFFClientOpen
+is like
+.IR TIFFOpen
+except that the caller supplies a collection of functions that the
+library will use to do \s-1UNIX\s+1-like I/O operations. 
+The
+.I readproc
+and
+.I writeproc
+are called to read and write data at the current file position.
+.I seekproc
+is called to change the current file position a la
+.IR lseek (2).
+.I closeproc
+is invoked to release any resources associated with an open file.
+.I sizeproc
+is invoked to obtain the size in bytes of a file.
+.I mapproc
+and
+.I unmapproc
+are called to map and unmap a file's contents in memory; c.f.
+.IR mmap (2)
+and
+.IR munmap (2).
+The
+.I clientdata
+parameter is an opaque ``handle'' passed to the client-specified
+routines passed as parameters to
+.IR TIFFClientOpen .
+.SH OPTIONS
+The open mode parameter can include the following flags in
+addition to the ``r'', ``w'', and ``a'' flags.
+Note however that option flags must follow the read-write-append
+specification.
+.TP
+.B l
+When creating a new file force information be written with
+Little-Endian byte order (but see below).
+By default the library will create new files using the native
+.SM CPU
+byte order.
+.TP
+.B b
+When creating a new file force information be written with
+Big-Endian byte order (but see below).
+By default the library will create new files using the native
+.SM CPU
+byte order.
+.TP
+.B L
+Force image data that is read or written to be treated with
+bits filled from Least Significant Bit (\s-1LSB\s+1) to
+Most Significant Bit (\s-1MSB\s+1).
+Note that this is the opposite to the way the library has
+worked from its inception.
+.TP
+.B B
+Force image data that is read or written to be treated with
+bits filled from Most Significant Bit (\s-1MSB\s+1) to
+Least Significant Bit (\s-1LSB\s+1); this is the default.
+.TP
+.B H
+Force image data that is read or written to be treated with
+bits filled in the same order as the native 
+.SM CPU.
+.TP
+.B M
+Enable the use of memory-mapped files for images opened read-only.
+If the underlying system does not support memory-mapped files
+or if the specific image being opened cannot be memory-mapped
+then the library will fallback to using the normal system interface
+for reading information.
+By default the library will attempt to use memory-mapped files.
+.TP
+.B m
+Disable the use of memory-mapped files.
+.TP
+.B C
+Enable the use of ``strip chopping'' when reading images
+that are comprised of a single strip or tile of uncompressed data.
+Strip chopping is a mechanism by which the library will automatically
+convert the single-strip image to multiple strips,
+each of which has about 8 Kilobytes of data.
+This facility can be useful in reducing the amount of memory used
+to read an image because the library normally reads each strip
+in its entirety.
+Strip chopping does however alter the apparent contents of the
+image because when an image is divided into multiple strips it
+looks as though the underlying file contains multiple separate
+strips.
+Finally, note that default handling of strip chopping is a compile-time
+configuration parameter.
+The default behaviour, for backwards compatibility, is to enable
+strip chopping.
+.TP
+.B c
+Disable the use of strip chopping when reading images.
+.TP
+.B h
+Read TIFF header only, do not load the first image directory. That could be
+useful in case of the broken first directory. We can open the file and proceed
+to the other directories.
+.SH "BYTE ORDER"
+The 
+.SM TIFF
+specification (\fBall versions\fP) states that compliant readers
+.IR "must be capable of reading images written in either byte order" .
+Nonetheless some software that claims to support the reading of
+.SM TIFF
+images is incapable of reading images in anything but the native
+.SM CPU
+byte order on which the software was written.
+(Especially notorious
+are applications written to run on Intel-based machines.)
+By default the library will create new files with the native
+byte-order of the 
+.SM CPU
+on which the application is run.
+This ensures optimal performance and is portable to any application
+that conforms to the TIFF specification.
+To force the library to use a specific byte-order when creating
+a new file the ``b'' and ``l'' option flags may be included in
+the call to open a file; for example, ``wb'' or ``wl''.
+.SH "RETURN VALUES"
+Upon successful completion 
+.IR TIFFOpen ,
+.IR TIFFFdOpen ,
+and
+.IR TIFFClientOpen
+return a 
+.SM TIFF
+pointer.
+Otherwise, NULL is returned.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.IR TIFFError (3TIFF)
+routine.
+Likewise, warning messages are directed to the
+.IR TIFFWarning (3TIFF)
+routine.
+.PP
+\fB"%s": Bad mode\fP.
+The specified
+.I mode
+parameter was not one of ``r'' (read), ``w'' (write), or ``a'' (append).
+.PP
+.BR "%s: Cannot open" .
+.IR TIFFOpen ()
+was unable to open the specified filename for read/writing.
+.PP
+.BR "Cannot read TIFF header" .
+An error occurred while attempting to read the header information.
+.PP
+.BR "Error writing TIFF header" .
+An error occurred while writing the default header information
+for a new file.
+.PP
+.BR "Not a TIFF file, bad magic number %d (0x%x)" .
+The magic number in the header was not (hex)
+0x4d4d or (hex) 0x4949.
+.PP
+.BR "Not a TIFF file, bad version number %d (0x%x)" .
+The version field in the header was not 42 (decimal).
+.PP
+.BR "Cannot append to file that has opposite byte ordering" .
+A file with a byte ordering opposite to the native byte
+ordering of the current machine was opened for appending (``a'').
+This is a limitation of the library.
+.SH "SEE ALSO"
+.IR libtiff (3TIFF),
+.IR TIFFClose (3TIFF)

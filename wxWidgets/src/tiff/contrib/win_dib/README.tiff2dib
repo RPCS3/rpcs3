@@ -1,0 +1,51 @@
+
+Date: 04 Dec 95 10:34:23 EST
+From: Philippe <100423.3705@compuserve.com>
+To: TIFF/sam Leffler <sam@cthulhu.engr.sgi.com>
+Subject: TIFF library and Windows 95
+Message-Id: <951204153422_100423.3705_BHG101-1@CompuServe.COM>
+
+Sam, 
+
+First, let me thanks all of you how have worked 
+on that great TIFF library !
+
+Here is some information that may help someone.
+
+I build the library under Windows 95 as a 32-bit library.
+The contribution of Scott Wagner (tif_win32.c) worked fine, but 
+the makefile "makefile.msc" was unsable because it was
+written for DOS or Windows 3.1 and all the files names 
+are limited to 8 characters.
+
+Here is the makefile I used : makefile.w95
+
+Also, I had to disable fax3 support because I wasn't able
+to build (as it is) the tool "mkg3states" to generate the include
+file "g3states.h". 
+This source file must be modify to be build under Windows 95.
+
+To build the library under Windows 95 with Visual C++ 2.0, 
+I had to :
+
+- undefine CCITT_SUPPORT in "tiffconf.h"
+
+- create the file version.h with this line :
+      #define VERSION "3.4beta024"
+
+- build the makefile "makefile.w95"
+
+I also join the source file "tif2dib.c" that I created, 
+it contain the function LoadTIFFinDIB that load 
+a TIFF file and build a memory DIB with it and return the 
+HANDLE (HDIB) of the memory bloc containing this DIB.
+Since DIB is the "natural" bitmap format for Windows 3.1, 95 and NT,
+this function sould be usefull for some Windows 95 (or NT) developer.
+
+
+Sorry for my approximate english ...
+
+Regards,
+
+Philippe Tenenhaus   100423.3705@compuserve.com
+Paris

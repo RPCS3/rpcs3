@@ -1,0 +1,655 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en">
+<head>
+  <title>TIFF 6.0 Specification Coverage</title>
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv="content-language" content="en">
+  <style type="text/css">
+  <!--
+    th {text-align: left; vertical-align: top; font-style: italic; font-weight: normal}
+  -->
+  </style>
+</head>
+<body lang="en" text="#000000" bgcolor="#ffffff" link="#0000ff" alink="#0000ff" vlink="#0000ff">
+  <table border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td style="padding-left: 1em; padding-right: 1em"><img src="images/strike.gif" width="128" height="100" alt=""></td>
+      <td>
+        <h1>TIFF 6.0 Specification Coverage</h1>
+        <p>
+          The library is capable of dealing with images that are written to
+          follow the 5.0 or 6.0 TIFF spec.  There is also considerable support
+          for some of the more esoteric portions of the 6.0 TIFF spec.
+        </p>
+      </td>
+    </tr>
+  </table>
+  <br>
+  <table border="1" cellspacing="0" cellpadding="5">
+    <tr>
+      <th>Core requirements</th>
+      <td>
+        <p>
+          Both <tt>"MM"</tt> and <tt>"II"</tt> byte orders are handled.
+          Both packed and separated planar configuration of samples.
+          Any number of samples per pixel (memory permitting).
+          Any image width and height (memory permitting).
+          Multiple subfiles can be read and written.
+          Editing is <b>not</b> supported in that related subfiles (e.g.
+          a reduced resolution version of an image) are not automatically
+          updated.
+        </p>
+        <p>
+          Tags handled: <tt>ExtraSamples</tt>, <tt>ImageWidth</tt>,
+          <tt>ImageLength</tt>, <tt>NewSubfileType</tt>, <tt>ResolutionUnit</tt>.
+          <tt>Rowsperstrip</tt>, <tt>StripOffsets</tt>, <tt>StripByteCounts</tt>,
+          <tt>XResolution</tt>, <tt>YResolution</tt>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <th>Tiled Images</th>
+      <td><tt>TileWidth</tt>, <tt>TileLength</tt>, <tt>TileOffsets</tt>,
+        <tt>TileByteCounts</tt></td>
+    </tr>
+    <tr>
+      <th>Image Colorimetry Information</th>
+      <td><tt>WhitePoint</tt>, <tt>PrimaryChromaticities</tt>, <tt>TransferFunction</tt>,
+        <tt>ReferenceBlackWhite</tt></td>
+    </tr>
+    <tr>
+      <th>Class B for bilevel images</th>
+      <td><tt>SamplesPerPixel</tt> = 1<br>
+        <tt>BitsPerSample</tt> = 1<br>
+        <tt>Compression</tt> = 1 (none), 2 (CCITT 1D), or 32773 (PackBits)<br>
+        <tt>PhotometricInterpretation</tt> = 0 (Min-is-White), 1 (Min-is-Black)</td>
+    </tr>
+    <tr>
+      <th>Class G for grayscale images</th>
+      <td><tt>SamplesPerPixel</tt> = 1<br>
+        <tt>BitsPerSample</tt> = 4, 8<br>
+        <tt>Compression</tt> = 1 (none) 5 (LZW)<br>
+        <tt>PhotometricInterpretation</tt> = 0 (Min-is-White), 1 (Min-is-Black)</td>
+    </tr>
+    <tr>
+      <th>Class P for palette color images</th>
+      <td><tt>SamplesPerPixel</tt> = 1<br>
+        <tt>BitsPerSample</tt> = 1-8<br>
+        <tt>Compression</tt> = 1 (none) 5 (LZW)<br>
+        <tt>PhotometricInterpretation</tt> = 3 (Palette RGB)<br>
+        <tt>ColorMap</tt></td>
+    </tr>
+    <tr>
+      <th>Class R for RGB full color images</th>
+      <td><tt>SamplesPerPixel</tt> = 3<br>
+        <tt>BitsPerSample</tt> = &lt;8,8,8&gt;<br>
+        <tt>PlanarConfiguration</tt> = 1, 2<br>
+        <tt>Compression</tt> = 1 (none) 5 (LZW)<br>
+        <tt>PhotometricInterpretation</tt> = 2 (RGB)</td>
+    </tr>
+    <tr>
+      <th>Class F for facsimile</th>
+      <td>(<i>Class B tags plus...</i>)<br>
+        <tt>Compression</tt> = 3 (CCITT Group 3), 4 (CCITT Group 4)<br>
+        <tt>FillOrder</tt> = 1 (MSB), 2 (LSB)<br>
+        <tt>Group3Options</tt> = 1 (2d encoding), 4 (zero fill), 5 (2d+fill)<br>
+        <tt>ImageWidth</tt> = 1728, 2048, 2482<br>
+        <tt>NewSubFileType</tt> = 2<br>
+        <tt>ResolutionUnit</tt> = 2 (Inch), 3 (Centimeter)<br>
+        <tt>PageNumber</tt>,
+        <tt>XResolution</tt>,
+        <tt>YResolution</tt>,
+        <tt>Software</tt>,
+        <tt>BadFaxLines</tt>,
+        <tt>CleanFaxData</tt>,
+        <tt>ConsecutiveBadFaxLines</tt>,
+        <tt>DateTime</tt>,
+        <tt>DocumentName</tt>,
+        <tt>ImageDescription</tt>,
+        <tt>Orientation</tt></td>
+    </tr>
+    <tr>
+      <th>Class S for separated images</th>
+      <td><tt>SamplesPerPixel</tt> = 4<br>
+        <tt>PlanarConfiguration</tt> = 1, 2<br>
+        <tt>Compression</tt> = 1 (none), 5 (LZW)<br>
+        <tt>PhotometricInterpretation</tt> = 5 (Separated)<br>
+        <tt>InkSet</tt> = 1 (CMYK)<br>
+        <tt>DotRange</tt>,
+        <tt>InkNames</tt>,
+        <tt>DotRange</tt>,
+        <tt>TargetPrinter</tt></td>
+    </tr>
+    <tr>
+      <th>Class Y for YCbCr images</th>
+      <td><tt>SamplesPerPixel</tt> = 3<br>
+        <tt>BitsPerSample</tt> = &lt;8,8,8&gt;<br>
+        <tt>PlanarConfiguration</tt> = 1, 2<br>
+        <tt>Compression</tt> = 1 (none),  5 (LZW), 7 (JPEG)<br>
+        <tt>PhotometricInterpretation</tt> = 6 (YCbCr)<br>
+        <tt>YCbCrCoefficients</tt>,
+        <tt>YCbCrSubsampling</tt>,
+        <tt>YCbCrPositioning</tt><br>
+        (<i>colorimetry info from Appendix H; see above</i>)</td>
+    </tr>
+    <tr>
+      <th>Class "JPEG" for JPEG images (per TTN2)</th>
+      <td><tt>PhotometricInterpretation</tt> = 1 (grayscale), 2 (RGB), 5 (CMYK), 6 (YCbCr)<br>
+        (<i>Class Y tags if YCbCr</i>)<br>
+        (<i>Class S tags if CMYK</i>)<br>
+        <tt>Compression</tt> = 7 (JPEG)</td>
+    </tr>
+  </table>
+  <p>
+    In addition, the library supports some optional compression algorithms
+    that are, in some cases, of dubious value.
+  </p>
+  <table border="0" cellspacing="0" cellpadding="2">
+    <tr><th>Compression tag value</th><th>Compression algorithm</th></tr>
+    <tr><td>32766</td><td>NeXT 2-bit encoding</td></tr>
+    <tr><td>32809</td><td>ThunderScan 4-bit encoding</td></tr>
+    <tr><td>32909</td><td>Pixar companded 11-bit ZIP encoding</td></tr>
+    <tr><td>32946</td><td>PKZIP-style Deflate encoding (experimental)</td></tr>
+    <tr><td>34676</td><td>SGI 32-bit Log Luminance encoding (experimental)</td></tr>
+    <tr><td>34677</td><td>SGI 24-bit Log Luminance encoding (experimental)</td></tr>
+  </table>
+  <br>
+  <p>
+    Note that there is no support for the JPEG-related tags defined
+    in the 6.0 specification; the JPEG support is based on the post-6.0
+    proposal given in TIFF Technical Note #2.
+  </p>
+  <table>
+    <tr>
+      <td valign=top><img src="images/info.gif" width="32" height="32" alt=""></td>
+      <td>For more information on the experimental Log Luminance encoding
+        consult the materials available at
+        <a href="http://www.anyhere.com/gward/pixformat/tiffluv.html">http://www.anyhere.com/gward/pixformat/tiffluv.html</a>.</td>
+    </tr>
+  </table>
+  <br>
+  <p>
+    The following table shows the tags that are recognized
+    and how they are used by the library.  If no use is indicated,
+    then the library reads and writes the tag, but does not use it internally.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="5">
+    <tr>
+      <th>Tag Name</th>
+      <th>Value</th>
+      <th>R/W</th>
+      <th>Library's Use (Comments)</th>
+    </tr>
+    <tr>
+      <td><tt>NewSubFileType</tt></td>
+      <td>254</td>
+      <td>R/W</td>
+      <td>none (called <tt>SubFileType</tt> in &lt;tiff.h&gt;)</td>
+    </tr>
+    <tr>
+      <td><tt>SubFileType</tt></td>
+      <td>255</td>
+      <td>R/W</td>
+      <td>none (called <tt>OSubFileType</tt> in &lt;tiff.h&gt;)</td>
+    </tr>
+    <tr>
+      <td><tt>ImageWidth</tt></td>
+      <td>256</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>ImageLength</tt></td>
+      <td>257</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>BitsPerSample</tt></td>
+      <td>258</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>Compression</tt></td>
+      <td>259</td>
+      <td>R/W</td>
+      <td>to select appropriate codec</td>
+    </tr>
+    <tr>
+      <td><tt>PhotometricInterpretation</tt></td>
+      <td>262</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>Thresholding</tt></td>
+      <td>263</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>CellWidth</tt></td>
+      <td>264</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>CellLength</tt></td>
+      <td>265</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>FillOrder</tt></td>
+      <td>266</td>
+      <td>R/W</td>
+      <td>control bit order</td>
+    </tr>
+    <tr>
+      <td><tt>DocumentName</tt></td>
+      <td>269</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ImageDescription</tt></td>
+      <td>270</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Make</tt></td>
+      <td>271</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Model</tt></td>
+      <td>272</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>StripOffsets</tt></td>
+      <td>273</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>Orientation</tt></td>
+      <td>274</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>SamplesPerPixel</tt></td>
+      <td>277</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>RowsPerStrip</tt></td>
+      <td>278</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+    <td><tt>StripByteCounts</tt></td>
+      <td>279</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>MinSampleValue</tt></td>
+      <td>280</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>MaxSampleValue</tt></td>
+      <td>281</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>XResolution</tt></td>
+      <td>282</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>YResolution</tt></td>
+      <td>283</td>
+      <td>R/W</td>
+      <td>used by Group 3 2d encoder</td>
+    </tr>
+    <tr>
+      <td><tt>PlanarConfiguration</tt></td>
+      <td>284</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>PageName</tt></td>
+      <td>285</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>XPosition</tt></td>
+      <td>286</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>YPosition</tt></td>
+      <td>286</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>FreeOffsets</tt></td>
+      <td>288</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>FreeByteCounts</tt></td>
+      <td>289</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>GrayResponseUnit</tt></td>
+      <td>290</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>GrayResponseCurve</tt></td>
+      <td>291</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>Group3Options</tt></td>
+      <td>292</td>
+      <td>R/W</td>
+      <td>used by Group 3 codec</td>
+    </tr>
+    <tr>
+      <td><tt>Group4Options</tt></td>
+      <td>293</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ResolutionUnit</tt></td>
+      <td>296</td>
+      <td>R/W</td>
+      <td>used by Group 3 2d encoder</td>
+    </tr>
+    <tr>
+      <td><tt>PageNumber</tt></td>
+      <td>297</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ColorResponseUnit</tt></td>
+      <td>300</td>
+      <td>&nbsp;</td>
+      <td>parsed but ignored</td>
+    </tr>
+    <tr>
+      <td><tt>TransferFunction</tt></td>
+      <td>301</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Software</tt></td>
+      <td>305</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>DateTime</tt></td>
+      <td>306</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Artist</tt></td>
+      <td>315</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>HostComputer</tt></td>
+      <td>316</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Predictor</tt></td>
+      <td>317</td>
+      <td>R/W</td>
+      <td>used by LZW codec</td>
+    </tr>
+    <tr>
+      <td><tt>WhitePoint</tt></td>
+      <td>318</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>PrimaryChromacities</tt></td>
+      <td>319</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ColorMap</tt></td>
+      <td>320</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>TileWidth</tt></td>
+      <td>322</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>TileLength</tt></td>
+      <td>323</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>TileOffsets</tt></td>
+      <td>324</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>TileByteCounts</tt></td>
+      <td>324</td>
+      <td>R/W</td>
+      <td>data i/o</td>
+    </tr>
+    <tr>
+      <td><tt>BadFaxLines</tt></td>
+      <td>326</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>CleanFaxData</tt></td>
+      <td>327</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ConsecutiveBadFaxLines</tt></td>
+      <td>328</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>SubIFD</tt></td>
+      <td>330</td>
+      <td>R/W</td>
+      <td>subimage descriptor support</td>
+    </tr>
+    <tr>
+      <td><tt>InkSet</tt></td>
+      <td>332</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>InkNames</tt></td>
+      <td>333</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>DotRange</tt></td>
+      <td>336</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>TargetPrinter</tt></td>
+      <td>337</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ExtraSamples</tt></td>
+      <td>338</td>
+      <td>R/W</td>
+      <td>lots</td>
+    </tr>
+    <tr>
+      <td><tt>SampleFormat</tt></td>
+      <td>339</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>SMinSampleValue</tt></td>
+      <td>340</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>SMaxSampleValue</tt></td>
+      <td>341</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>JPEGTables</tt></td>
+      <td>347</td>
+      <td>R/W</td>
+      <td>used by JPEG codec</td>
+    </tr>
+    <tr>
+      <td><tt>YCbCrCoefficients</tt></td>
+      <td>529</td>
+      <td>R/W</td>
+      <td>used by <tt>TIFFReadRGBAImage</tt> support</td>
+    </tr>
+    <tr>
+      <td><tt>YCbCrSubsampling</tt></td>
+      <td>530</td>
+      <td>R/W</td>
+      <td>tile/strip size calculations</td>
+    </tr>
+    <tr>
+      <td><tt>YCbCrPositioning</tt></td>
+      <td>531</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>ReferenceBlackWhite</tt></td>
+      <td>532</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><tt>Matteing</tt></td>
+      <td>32995</td>
+      <td>R</td>
+      <td>none (obsoleted by <tt>ExtraSamples</tt> tag)</td>
+    </tr>
+    <tr>
+      <td><tt>DataType</tt></td>
+      <td>32996</td>
+      <td>R</td>
+      <td>none (obsoleted by <tt>SampleFormat</tt> tag)</td>
+    </tr>
+    <tr>
+      <td><tt>ImageDepth</tt></td>
+      <td>32997</td>
+      <td>R/W</td>
+      <td>tile/strip calculations</td>
+    </tr>
+    <tr>
+      <td><tt>TileDepth</tt></td>
+      <td>32998</td>
+      <td>R/W</td>
+      <td>tile/strip calculations</td>
+    </tr>
+    <tr>
+      <td><tt>StoNits</tt></td>
+      <td>37439</td>
+      <td>R/W</td>
+      <td>&nbsp;</td>
+    </tr>
+  </table>
+  <p>
+    The <tt>Matteing</tt> and <tt>DataType</tt>
+    tags have been obsoleted by the 6.0
+    <tt>ExtraSamples</tt> and <tt>SampleFormat</tt> tags.
+    Consult the documentation on the
+    <tt>ExtraSamples</tt> tag and Associated Alpha for elaboration.  Note however
+    that if you use Associated Alpha, you are expected to save data that is
+    pre-multipled by Alpha.  If this means nothing to you, check out
+    Porter &amp; Duff's paper in the '84 SIGGRAPH proceedings: "Compositing Digital
+    Images".
+  </p>
+  <p>
+    The <tt>ImageDepth</tt>
+    tag is a non-standard, but registered tag that specifies
+    the Z-dimension of volumetric data.  The combination of <tt>ImageWidth</tt>,
+    <tt>ImageLength</tt>, and <tt>ImageDepth</tt>,
+    defines a 3D volume of pixels that are
+    further specified by <tt>BitsPerSample</tt> and
+    <tt>SamplesPerPixel</tt>.  The <tt>TileDepth</tt>
+    tag (also non-standard, but registered) can be used to specified a
+    subvolume "tiling" of a volume of data.
+  </p>
+  <p>
+    The Colorimetry, and CMYK tags are additions that appear in TIFF 6.0.
+    Consult the TIFF 6.0 specification included in the <b>doc</b> directory
+    and <a href="document.html">online</a>.
+  </p>
+  <p>
+    The JPEG-related tag is specified in
+    <a href="TIFFTechNote2.html">TIFF Technical Note #2</a> which defines
+    a revised JPEG-in-TIFF scheme (revised over that appendix that was
+    part of the TIFF 6.0 specification).
+  </p>
+  <hr>
+  <p>
+    Last updated: $Date: 2005/12/28 06:53:18 $
+  </p>
+</body>
+</html>
+

@@ -1,0 +1,141 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:18 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFTILE</title>
+</head>
+<body>
+
+<h1 align=center>TIFFTILE</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFTileSize, TIFFTileRowSize, TIFFVTileSize,
+TIFFDefaultTileSize, TIFFComputeTile, TIFFCheckTile,
+TIFFNumberOfTiles &minus; tile-related utility routines</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>void TIFFDefaultTileSize(TIFF *</b><i>tif</i><b>,
+uint32 *</b><i>tw</i><b>, uint32 *</b><i>th</i><b>)<br>
+tsize_t TIFFTileSize(TIFF *</b><i>tif</i><b>)<br>
+tsize_t TIFFTileRowSize(TIFF *</b><i>tif</i><b>)<br>
+tsize_t TIFFVTileSize(TIFF *</b><i>tif</i><b>, uint32</b>
+<i>nrows</i><b>)<br>
+ttile_t TIFFComputeTile(TIFF *</b><i>tif</i><b>, uint32</b>
+<i>x</i><b>, uint32</b> <i>y</i><b>, uint32</b> <i>z</i><b>,
+tsample_t</b> <i>sample</i><b>)<br>
+int TIFFCheckTile(TIFF *</b><i>tif</i><b>, uint32</b>
+<i>x</i><b>, uint32</b> <i>y</i><b>, uint32</b> <i>z</i><b>,
+tsample_t</b> <i>sample</i><b>)<br>
+ttile_t TIFFNumberOfTiles(TIFF *</b><i>tif</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>TIFFDefaultTileSize</i> returns the pixel width and
+height of a reasonable-sized tile; suitable for setting up
+the <i>TileWidth</i> and <i>TileLength</i> tags. If the
+<i>tw</i> and <i>th</i> values passed in are non-zero, then
+they are adjusted to reflect any compression-specific
+requirements. The returned width and height are constrained
+to be a multiple of 16 pixels to conform with the
+<small>TIFF</small> specification.</p>
+<!-- INDENTATION -->
+<p><i>TIFFTileSize</i> returns the equivalent size for a
+tile of data as it would be returned in a call to
+<i>TIFFReadTile</i> or as it would be expected in a call to
+<i>TIFFWriteTile</i>.</p>
+<!-- INDENTATION -->
+<p><i>TIFFVTileSize</i> returns the number of bytes in a
+row-aligned tile with <i>nrows</i> of data.</p>
+<!-- INDENTATION -->
+<p><i>TIFFTileRowSize</i> returns the number of bytes of a
+row of data in a tile.</p>
+<!-- INDENTATION -->
+<p><i>TIFFComputeTile</i> returns the tile that contains the
+specified coordinates. A valid tile is always returned;
+out-of-range coordinate values are clamped to the bounds of
+the image. The <i>x</i> and <i>y</i> parameters are always
+used in calculating a tile. The <i>z</i> parameter is used
+if the image is deeper than 1 slice
+(<i>ImageDepth</i>&gt;1). The <i>sample</i> parameter is
+used only if data are organized in separate planes
+(<i>PlanarConfiguration</i>=2).</p>
+<!-- INDENTATION -->
+<p><i>TIFFCheckTile</i> returns a non-zero value if the
+supplied coordinates are within the bounds of the image and
+zero otherwise. The <i>x</i> parameter is checked against
+the value of the <i>ImageWidth</i> tag. The <i>y</i>
+parameter is checked against the value of the
+<i>ImageLength</i> tag. The <i>z</i> parameter is checked
+against the value of the <i>ImageDepth</i> tag (if defined).
+The <i>sample</i> parameter is checked against the value of
+the <i>SamplesPerPixel</i> parameter if the data are
+organized in separate planes.</p>
+<!-- INDENTATION -->
+<p><i>TIFFNumberOfTiles</i> returns the number of tiles in
+the image.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>None.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFReadEncodedTile</b>(3TIFF),
+<b>TIFFReadRawTile</b>(3TIFF), <b>TIFFReadTile</b>(3TIFF),
+<b>TIFFWriteEncodedTile</b>(3TIFF),
+<b>TIFFWriteRawTile</b>(3TIFF), <b>TIFFWriteTile</b>(3TIFF),
+<b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

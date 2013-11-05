@@ -1,0 +1,217 @@
+#
+# Copyright (C) 2004, Andrey Kiselev <dron@ak4719.spb.edu>
+#
+# Permission to use, copy, modify, distribute, and sell this software and 
+# its documentation for any purpose is hereby granted without fee, provided
+# that (i) the above copyright notices and this permission notice appear in
+# all copies of the software and related documentation, and (ii) the names of
+# Sam Leffler and Silicon Graphics may not be used in any advertising or
+# publicity relating to the software without the specific, prior written
+# permission of Sam Leffler and Silicon Graphics.
+# 
+# THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+# EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+# WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+# 
+# IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+# ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+# OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+# LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+# OF THIS SOFTWARE.
+
+# Compile time parameters for MS Visual C++ compiler.
+# You may edit this file to specify building options.
+
+#
+###### Edit the following lines to choose a feature set you need. #######
+#
+
+# 
+# Select WINMODE_CONSOLE to build a library which reports errors to stderr, or
+# WINMODE_WINDOWED to build such that errors are reported via MessageBox().
+#
+WINMODE_CONSOLE = 1
+#WINMODE_WINDOWED = 1
+
+#
+# Comment out the following lines to disable internal codecs.
+#
+# Support for CCITT Group 3 & 4 algorithms
+CCITT_SUPPORT	= 1
+# Support for Macintosh PackBits algorithm
+PACKBITS_SUPPORT = 1
+# Support for LZW algorithm
+LZW_SUPPORT	= 1
+# Support for ThunderScan 4-bit RLE algorithm
+THUNDER_SUPPORT	= 1
+# Support for NeXT 2-bit RLE algorithm
+NEXT_SUPPORT	= 1
+# Support for LogLuv high dynamic range encoding
+LOGLUV_SUPPORT	= 1
+
+#
+# Uncomment and edit following lines to enable JPEG support.
+#
+#JPEG_SUPPORT	= 1
+#JPEGDIR 	= d:/projects/jpeg-6b
+#JPEG_INCLUDE	= -I$(JPEGDIR)
+#JPEG_LIB 	= $(JPEGDIR)/Release/jpeg.lib
+
+#
+# Uncomment and edit following lines to enable ZIP support
+# (required for Deflate compression and Pixar log-format)
+#
+#ZIP_SUPPORT	= 1
+#ZLIBDIR 	= d:/projects/zlib-1.2.1
+#ZLIB_INCLUDE	= -I$(ZLIBDIR)
+#ZLIB_LIB 	= $(ZLIBDIR)/zlib.lib
+
+#
+# Uncomment and edit following lines to enable ISO JBIG support
+#
+#JBIG_SUPPORT	= 1
+#JBIGDIR 	= d:/projects/jbigkit
+#JBIG_INCLUDE	= -I$(JBIGDIR)/libjbig
+#JBIG_LIB 	= $(JBIGDIR)/libjbig/jbig.lib
+
+#
+# Uncomment following line to enable Pixar log-format algorithm
+# (Zlib required).
+#
+#PIXARLOG_SUPPORT = 1
+
+#
+# Comment out the following lines to disable strip chopping
+# (whether or not to convert single-strip uncompressed images to mutiple
+# strips of specified size to reduce memory usage). Default strip size
+# is 8192 bytes, it can be configured via the STRIP_SIZE_DEFAULT parameter
+#
+STRIPCHOP_SUPPORT = 1
+STRIP_SIZE_DEFAULT = 8192
+
+#
+# Comment out the following lines to disable treating the fourth sample with
+# no EXTRASAMPLE_ value as being ASSOCALPHA. Many packages produce RGBA
+# files but don't mark the alpha properly.
+#
+EXTRASAMPLE_AS_ALPHA_SUPPORT = 1
+
+#
+# Comment out the following lines to disable picking up YCbCr subsampling
+# info from the JPEG data stream to support files lacking the tag.
+# See Bug 168 in Bugzilla, and JPEGFixupTestSubsampling() for details.
+#
+CHECK_JPEG_YCBCR_SUBSAMPLING = 1
+
+#
+####################### Compiler related options. #######################
+#
+
+#
+# Pick debug or optimized build flags.  We default to an optimized build
+# with no debugging information.
+# NOTE: /EHsc option required if you want to build the C++ stream API
+#
+OPTFLAGS =	/Ox /MD /EHsc /W3 /D_CRT_SECURE_NO_DEPRECATE
+#OPTFLAGS = 	/Zi 
+
+#
+# Uncomment following line to enable using Windows Common RunTime Library
+# instead of Windows specific system calls. See notes on top of tif_unix.c
+# module for details.
+#
+USE_WIN_CRT_LIB = 1
+
+# Compiler specific options. You may probably want to adjust compilation
+# parameters in CFLAGS variable. Refer to your compiler documentation
+# for the option reference.
+#
+MAKE	=	nmake /nologo
+CC	=	cl /nologo
+CXX	=	cl /nologo
+AR	=	lib /nologo
+LD	=	link /nologo
+
+CFLAGS  =	$(OPTFLAGS) $(INCL) $(EXTRAFLAGS)
+CXXFLAGS =	$(OPTFLAGS) $(INCL) $(EXTRAFLAGS)
+EXTRAFLAGS =
+LIBS	=
+
+# Name of the output shared library
+DLLNAME	= libtiff.dll
+
+#
+########### There is nothing to edit below this line normally. ###########
+#
+
+# Set the native cpu bit order
+EXTRAFLAGS	= -DFILLODER_LSB2MSB $(EXTRAFLAGS)
+
+!IFDEF WINMODE_WINDOWED
+EXTRAFLAGS	= -DTIF_PLATFORM_WINDOWED $(EXTRAFLAGS)
+LIBS		= user32.lib $(LIBS)
+!ELSE
+EXTRAFLAGS	= -DTIF_PLATFORM_CONSOLE $(EXTRAFLAGS)
+!ENDIF
+
+# Codec stuff
+!IFDEF CCITT_SUPPORT
+EXTRAFLAGS	= -DCCITT_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF PACKBITS_SUPPORT
+EXTRAFLAGS	= -DPACKBITS_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF LZW_SUPPORT
+EXTRAFLAGS	=  -DLZW_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF THUNDER_SUPPORT
+EXTRAFLAGS	= -DTHUNDER_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF NEXT_SUPPORT
+EXTRAFLAGS	= -DNEXT_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF LOGLUV_SUPPORT
+EXTRAFLAGS	= -DLOGLUV_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF JPEG_SUPPORT
+LIBS		= $(LIBS) $(JPEG_LIB)
+EXTRAFLAGS	= -DJPEG_SUPPORT -DOJPEG_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF ZIP_SUPPORT
+LIBS		= $(LIBS) $(ZLIB_LIB)
+EXTRAFLAGS	= -DZIP_SUPPORT $(EXTRAFLAGS)
+!IFDEF PIXARLOG_SUPPORT
+EXTRAFLAGS	= -DPIXARLOG_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+!ENDIF
+
+!IFDEF JBIG_SUPPORT
+LIBS		= $(LIBS) $(JBIG_LIB)
+EXTRAFLAGS	= -DJBIG_SUPPORT $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF STRIPCHOP_SUPPORT
+EXTRAFLAGS	= -DSTRIPCHOP_DEFAULT=TIFF_STRIPCHOP -DSTRIP_SIZE_DEFAULT=$(STRIP_SIZE_DEFAULT) $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF EXTRASAMPLE_AS_ALPHA_SUPPORT
+EXTRAFLAGS	= -DDEFAULT_EXTRASAMPLE_AS_ALPHA $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF CHECK_JPEG_YCBCR_SUBSAMPLING
+EXTRAFLAGS	= -DCHECK_JPEG_YCBCR_SUBSAMPLING $(EXTRAFLAGS)
+!ENDIF
+
+!IFDEF USE_WIN_CRT_LIB
+EXTRAFLAGS	= -DAVOID_WIN32_FILEIO $(EXTRAFLAGS)
+!ELSE
+EXTRAFLAGS	= -DUSE_WIN32_FILEIO $(EXTRAFLAGS)
+!ENDIF

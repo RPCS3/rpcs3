@@ -1,0 +1,69 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFWarning 3TIFF "October 15, 1995" "libtiff"
+.SH NAME
+TIFFWarning, TIFFSetWarningHandler \- library warning interface
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "void TIFFWarning(const char *" module ", const char *" fmt ", " ... ")"
+.sp
+.B "#include <stdarg.h>"
+.sp
+.BI "typedef void (*TIFFWarningHandler)(const char *" module ", const char *" fmt ", va_list " ap ");"
+.sp
+.BI "TIFFWarningHandler TIFFSetWarningHandler(TIFFWarningHandler " handler ");"
+.SH DESCRIPTION
+.I TIFFWarning
+invokes the library-wide warning handler function to (normally) write a
+warning message to the
+.BR stderr .
+The
+.I fmt
+parameter is a
+.IR printf (3S)
+format string, and any number arguments can be supplied. The
+.I module
+parameter is interpreted as a string that, if non-zero, should be printed
+before the message; it typically is used to identify the software module in
+which a warning is detected.
+.PP
+Applications that desire to capture control in the event of a warning should
+use
+.IR TIFFSetWarningHandler
+to override the default warning handler.
+A
+.SM NULL
+(0) warning handler function may be installed to suppress error messages.
+.SH "RETURN VALUES"
+.IR TIFFSetWarningHandler
+returns a reference to the previous error handling function.
+.SH "SEE ALSO"
+.BR TIFFError (3TIFF),
+.BR libtiff (3TIFF),
+.BR printf (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

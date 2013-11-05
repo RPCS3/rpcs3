@@ -1,0 +1,110 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH PAL2RGB 1 "September 20, 2005" "libtiff"
+.SH NAME
+pal2rgb \- convert a palette color
+.SM TIFF
+image to a full color image
+.SH SYNOPSIS
+.B pal2rgb
+[
+.I options
+]
+.I input.tif
+.I output.tif
+.SH DESCRIPTION
+.I Pal2rgb
+converts a palette color
+.SM TIFF
+image to a full color image by
+applying the colormap of the palette image to each sample
+to generate a full color
+.SM RGB
+image.
+.SH OPTIONS
+Options that affect the interpretation of input data are:
+.TP
+.B \-C
+This option overrides the default behavior of
+.I pal2rgb
+in determining whether or not
+colormap entries contain 16-bit or 8-bit values.
+By default the colormap is inspected and
+if no colormap entry greater than 255 is found,
+the colormap is assumed to have only 8-bit values; otherwise
+16-bit values (as required by the
+.SM TIFF
+specification) are assumed.
+The
+.B \-C
+option can be used to explicitly specify the number of
+bits for colormap entries:
+.B "\-C 8"
+for 8-bit values, 
+.B "\-C 16"
+for 16-bit values.
+.PP
+Options that affect the output file format are:
+.TP
+.B \-p
+Explicitly select the planar configuration used in organizing
+data samples in the output image:
+.B "\-p contig"
+for samples packed contiguously, and
+.B "\-p separate"
+for samples stored separately.
+By default samples are packed.
+.TP
+.B \-c
+Use the specific compression algorithm to encoded image data
+in the output file:
+.B "\-c packbits"
+for Macintosh Packbits,
+.B "\-c lzw"
+for Lempel-Ziv & Welch,
+.B "\-c zip"
+for Deflate,
+.B "\-c none"
+for no compression.
+If no compression-related option is specified, the input
+file's compression algorithm is used.
+.TP
+.B \-r
+Explicitly specify the number of rows in each strip of the
+output file.
+If the
+.B \-r
+option is not specified, a number is selected such that each
+output strip has approximately 8 kilobytes of data in it.
+.SH BUGS
+Only 8-bit images are handled.
+.SH "SEE ALSO"
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffmedian (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

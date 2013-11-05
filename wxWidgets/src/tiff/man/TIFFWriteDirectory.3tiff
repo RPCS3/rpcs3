@@ -1,0 +1,137 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFWriteDirectory 3TIFF "September 26, 2001" "libtiff"
+.SH NAME
+TIFFWriteDirectory, TIFFRewriteDirectory, TIFFCheckpointDirectory \- write the
+current directory in an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFWriteDirectory(TIFF *" tif ")"
+.br
+.BI "int TIFFRewriteDirectory(TIFF *" tif ")"
+.br
+.BI "int TIFFCheckpointDirectory(TIFF *" tif ")"
+.SH DESCRIPTION
+.IR TIFFWriteDirectory 
+will write the contents of the current directory to the file and setup to
+create a new subfile in the same file. Applications only need to call
+.IR TIFFWriteDirectory
+when writing multiple subfiles to a single
+.SM TIFF
+file.
+.IR TIFFWriteDirectory
+is automatically called by
+.IR TIFFClose
+and
+.IR TIFFFlush
+to write a modified directory if the file is open for writing.
+.PP
+The 
+.IR TIFFRewriteDirectory
+function operates similarly to 
+.IR TIFFWriteDirectory,
+but can be called with directories previously read or written that already
+have an established location in the file.  It will rewrite the directory,
+but instead of place it at it's old location (as 
+.IR TIFFWriteDirectory
+would) it will place them at the end of the file, correcting the pointer from
+the preceding directory or file header to point to it's new location.  This
+is particularly important in cases where the size of the directory and
+pointed to data has grown, so it won't fit in the space available at the
+old location.
+.PP
+The
+.IR TIFFCheckpointDirectory
+writes the current state of the tiff directory into the file to make what
+is currently in the file readable.  Unlike
+.IR TIFFWriteDirectory,
+.IR TIFFCheckpointDirectory
+does not free up the directory data structures in memory, so they can be
+updated (as strips/tiles are written) and written again.  Reading such
+a partial file you will at worst get a tiff read error for the first
+strip/tile encountered that is incomplete, but you will at least get
+all the valid data in the file before that.  When the file is complete,
+just use
+.IR TIFFWriteDirectory
+as usual to finish it off cleanly.
+.SH "RETURN VALUES"
+1 is returned when the contents are successfully written to the file.
+Otherwise, 0 is returned if an error was encountered when writing
+the directory contents.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.IR TIFFError (3TIFF)
+routine.
+.PP
+.BR "Error post-encoding before directory write" .
+Before writing the contents of the current directory, any pending data are
+flushed. This message indicates that an error occurred while doing this.
+.PP
+.BR "Error flushing data before directory write" .
+Before writing the contents of the current directory, any pending data are
+flushed. This message indicates that an error occurred while doing this.
+.PP
+.BR "Cannot write directory, out of space" .
+There was not enough space to allocate a temporary area for the directory that
+was to be written.
+.PP
+.BR "Error writing directory count" .
+A write error occurred when writing the count of fields in the directory.
+.PP
+.BR "Error writing directory contents" .
+A write error occurred when writing the directory fields.
+.PP
+.BR "Error writing directory link" .
+A write error occurred when writing the link to the next directory.
+.PP
+\fBError writing data for field "%s"\fP.
+A write error occurred when writing indirect data for the specified field.
+.PP
+.BR "Error writing TIFF header" .
+A write error occurred when re-writing header at the front of the file.
+.PP
+.BR "Error fetching directory count" .
+A read error occurred when fetching the directory count field for
+a previous directory.
+This can occur when setting up a link to the directory that is being
+written.
+.PP
+.BR "Error fetching directory link" .
+A read error occurred when fetching the directory link field for
+a previous directory.
+This can occur when setting up a link to the directory that is being
+written.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFError (3TIFF),
+.BR TIFFReadDirectory (3TIFF),
+.BR TIFFSetDirectory (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

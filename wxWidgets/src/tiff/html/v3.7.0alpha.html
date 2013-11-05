@@ -1,0 +1,249 @@
+<HTML>
+<HEAD>
+<TITLE>
+	Changes in TIFF v3.7.0alpha
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white>
+<FONT FACE="Helvetica, Arial, Sans">
+<FONT FACE="Helvetica, Arial, Sans"> 
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.7.0alpha<BR>
+<B>Previous Version</B>: <A HREF=v3.6.1.html>v3.6.1</a><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.remotesensing.org/pub/libtiff">
+ftp.remotesensing.org</a>, directory pub/libtiff</A><BR>
+<B>Master HTTP Site</B>: <A HREF="http://www.remotesensing.org/libtiff">
+http://www.remotesensing.org/libtiff</a> 
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#hightlights">Major Changes</A>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+<LI><A HREF="#contrib">Changes in the contrib area</A>
+<LI><A HREF="#lzwkit">Changes in the LZW compression kit</A>
+</UL>
+<p> 
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="highlights"><B><FONT SIZE=+3>M</FONT>AJOR CHANGES:</B></A>
+
+<ul>
+	<li> Significant changes in software configuration: we are switched
+	to GNU autotools now.
+	
+	<li> tiffset: tiffset now can set any libtiff supported tags. Tags
+	can be supplied by the mnemonic name or number.
+</ul>
+
+
+<P><HR WIDTH=65% ALIGN=left>
+<!--------------------------------------------------------------------------->
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+	<li> Get rid of the old configuration system and switch to
+	GNU autotools.
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+	<li> libtiff/tif_ojpeg.c: Fixed problem with duplicated SOI and SOF
+	markers as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=581"
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=581</a>.
+
+	<li> libtiff/{tif_open.c, tiffio.h}: New function added:
+	TIFFIsBigEndian(). Function returns nonzero if given was file written
+	in big-endian order.
+
+	<li> libtiff/tif_print.c: added (untested) support for printing
+	SSHORT, SLONG and SRATIONAL fields.
+
+	<li> libtiff/tif_fax3.c: Avoid reading CCITT compression options
+	if compression type mismatches. See
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=565">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=565</a>.
+
+	<li> libtiff/tif_strip.c: Never return 0 from the TIFFNumberOfStrips().
+
+	<li> libtiff/tif_dirread.c: Workaround for broken TIFF writers which
+	store single SampleFormat value for multisampled images. See
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=562">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=562</a>.
+
+	<li> libtiff/tif_write.c: Allow in-place updating of the compressed
+	images (don't work properly with all codecs). For details see GDAL bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=534">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=534</a>.
+
+	<li> libtiff/tif_jpeg.c: Workaround for wrong sampling factors used
+	in the Intergarph JPEG compressed TIFF images as per bug:
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=532">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=532</a>.
+
+	<li> libtiff/tif_open.c: Use dummy mmap/munmap functions in
+	TIFFClientOpen() when the appropriate client functions was not
+	supplied by user.
+
+	<li> libtiff/tif_dirread.c: Fixed problem with handling TIFF_UNDEFINED
+	tag type in TIFFFetchNormalTag() as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=508"
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=508</a>.
+
+	<li> libtiff/tif_codec.c: Fixed typo in TIFFInitPackBits name as per:
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=494">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=494</a>.
+
+	<li> libtiff/tif_fax3.c: Fixed problem, introdiced in 3.6.1 release,
+	with the CCITT encoding modes as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=483">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=483</a>.
+        We need more work on fax codec to support update mode.
+
+	<li> libtiff/tiff.h: Fixed tag definitions for TIFFTAG_YCLIPPATHUNITS
+	and TIFFTAG_INDEXED as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=475">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=475</a>.
+
+	<li> libtiff/{tif_win32.c, tif_unix.c}: Check whether the pointer is
+	NULL before proceeding further as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=474">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=474</a>.
+	Check results, returned by the TIFFFdOpen() before returning and close
+	file if TIFFFdOpen() failed as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=468">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=468</a>.
+
+	<li> libtiff/{libtiff.def, tif_close.c, tiffio.h, tif_open.c}:
+	Separate TIFFCleanup() from the TIFFClose() in order to fix the bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=468">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=468</a>.
+
+	<li> libtiff/tif_dirwrite.c: Fixed handling of writable ASCII tags
+	that are field_passcount=TRUE properly.  Arguably anonymous custom
+	tags should be declared as passcount=FALSE, but I don't want to change
+	that without a careful review.
+
+	<li> libtiff/tif_write.c: Fixed reporting size of the buffer in case
+	of stripped image in TIFFWriteBufferSetup(). As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=460">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=460</a>.
+				
+	<li> libtiff/tif_dir.c: Incomplete cleanup in TIFFFreeDirectory(),
+	patch from Gerben Koopmans.
+
+	<li> libtiff/tif_dirread.c: Check field_passcount value before setting
+	the value of undefined type, patch from Gerben Koopmans.		
+
+	<li> libtiff/{tiff.h, tif_fax3.c}:Fixes for AMD 64 platform as
+	suggested by Jeremy C. Reed.			
+
+	<li> libtiff/tif_win32.c: Fixed problem with _TIFFrealloc() when
+	the NULL pointer passed. Patch supplied by Larry Grill.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!-------------------------------------------------------------------------->
+	
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+	<li> tiffset: tiffset now can set any libtiff supported tags. Tags
+	can be supplied by the mnemonic name or number.
+
+	<li> ycbcr.c: fixed main() declaration as per:
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=513">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=513</a>.
+
+	<li> <a href=./man/tiffsplit.1.html>tiffsplit</a>: Don't forget
+	to copy Photometric Interpretation tag.
+	
+	<li> <a href=./man/tiffsplit.1.html>tiffsplit</a>: Fixed problem with
+	unproperly written multibyte files. Now output files will be written
+	using the same byte order flag as in the input image. See
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=574"
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=574</a>.
+
+	<li> <a href=./man/tiffsplit.1.html>tiffsplit</a>: Copy JPEGTables
+	tag contents for JPEG compressed images. Reported by Artem Mirolubov.
+
+	<li> <a href=./man/tiffcp.1.html>tiffcp</a>: Close output file
+	on normal exit.
+	
+	<li> <a href=./man/tiffcp.1.html>tiffcp</a>: Don't emit warnings
+	when Orientation tag does not present in the input image.
+	
+	<li> <a href=./man/tiffcp.1.html>tiffcp</a>: Properly set
+	Photometric Interpretation in case of JPEG compression of grayscale
+	images.
+	
+	<li> <a href=./man/tiffcp.1.html>tiffcp</a>: Fixed problem with wrong
+	interpretation of the InkNames tag as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=466">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=466</a>.
+	Memory leak fixed.
+
+	<li> <a href=./man/tiffcp.1.html>tiffcp</a>: Fixed problem with
+	wrong Photometric setting for non-RGB images.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN THE CONTRIB AREA:</B></A>
+
+<UL> 
+
+	<li> Outdated stuff removed.
+
+	<li> Almost all programs are sinchronized with the current libtiff
+	and should compile without problems.
+
+</UL>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="lzwkit"><B><FONT SIZE=+3>C</FONT>HANGES IN THE LZW COMPRESSION
+KIT:</B></A>
+<UL> 
+
+<li> No changes.
+
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+Last updated $Date: 2006/03/18 17:12:47 $.
+
+</BODY>
+</HTML>
