@@ -1,0 +1,267 @@
+.\"
+.\" Copyright (c) 2003, Andrey Kiselev <dron@ak4719.spb.edu>
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH COLOR 3TIFF "December 21, 2003" "libtiff"
+.SH NAME
+TIFFYCbCrToRGBInit, TIFFYCbCrtoRGB, TIFFCIELabToRGBInit, TIFFCIELabToXYZ,
+TIFFXYZToRGB \- color conversion routines.
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFYCbCrToRGBInit(TIFFYCbCrToRGB *" ycbcr ", float *" luma ", float *"refBlackWhite" );"
+.br
+.BI "void TIFFYCbCrtoRGB(TIFFYCbCrToRGB *" ycbcr ", uint32 " Y ", int32 " Cb ", int32 " Cr ", uint32 *" R ", uint32 *" G ", uint32 *" B " );"
+.sp
+.BI "int TIFFCIELabToRGBInit(TIFFCIELabToRGB *" cielab ", const TIFFDisplay *" display ", float *" refWhite ");"
+.br
+.BI "void TIFFCIELabToXYZ(TIFFCIELabToRGB *" cielab ", uint32 " L ", int32 " a ", int32 " b ", float *" X ", float *" Y ", float *" Z ");"
+.br
+.BI "void TIFFXYZToRGB(TIFFCIELabToRGB *" cielab ", float " X ", float " Y ", float " Z" , uint32 *" R ", uint32 *" G ", uint32 *" B ");"
+.SH DESCRIPTION
+TIFF supports several color spaces for images stored in that format. There is
+usually a problem of application to handle the data properly and convert
+between different colorspaces for displaying and printing purposes. To
+simplify this task libtiff implements several color conversion routines
+itself. In particular, these routines used in
+.B TIFFRGBAImage(3TIFF)
+interface.
+.PP
+.B TIFFYCbCrToRGBInit()
+used to initialize
+.I YCbCr
+to
+.I RGB
+conversion state. Allocating and freeing of the
+.I ycbcr
+structure belongs to programmer.
+.I TIFFYCbCrToRGB
+defined in
+.B tiffio.h
+as
+.PP
+.RS
+.nf
+typedef struct {                /* YCbCr->RGB support */
+        TIFFRGBValue* clamptab; /* range clamping table */
+        int*	      Cr_r_tab;
+        int*	      Cb_b_tab;
+        int32*	      Cr_g_tab;
+        int32*	      Cb_g_tab;
+        int32*        Y_tab;
+} TIFFYCbCrToRGB;
+.fi
+.RE
+.PP
+.I luma
+is a float array of three values representing proportions of the red, green
+and blue in luminance, Y (see section 21 of the TIFF 6.0 specification, where
+the YCbCr images discussed).
+.I TIFFTAG_YCBCRCOEFFICIENTS
+holds that values in TIFF file.
+.I refBlackWhite
+is a float array of 6 values which specifies a pair of headroom and footroom
+image data values (codes) for each image component (see section 20 of the
+TIFF 6.0 specification where the colorinmetry fields discussed).
+.I TIFFTAG_REFERENCEBLACKWHITE
+is responsible for storing these values in TIFF file. Following code snippet
+should helps to understand the the technique:
+.PP
+.RS
+.nf
+float *luma, *refBlackWhite;
+uint16 hs, vs;
+
+/* Initialize structures */
+ycbcr = (TIFFYCbCrToRGB*)
+	_TIFFmalloc(TIFFroundup(sizeof(TIFFYCbCrToRGB), sizeof(long))
+        	+ 4*256*sizeof(TIFFRGBValue)
+        	+ 2*256*sizeof(int)
+        	+ 3*256*sizeof(int32));
+if (ycbcr == NULL) {
+        TIFFError("YCbCr->RGB",
+		"No space for YCbCr->RGB conversion state");
+        exit(0);
+}
+
+TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRCOEFFICIENTS, &luma);
+TIFFGetFieldDefaulted(tif, TIFFTAG_REFERENCEBLACKWHITE, &refBlackWhite);
+if (TIFFYCbCrToRGBInit(ycbcr, luma, refBlackWhite) < 0)
+	exit(0);
+
+/* Start conversion */
+uint32 r, g, b;
+uint32 Y;
+int32 Cb, Cr;
+
+for each pixel in image
+	TIFFYCbCrtoRGB(img->ycbcr, Y, Cb, Cr, &r, &g, &b);
+
+/* Free state structure */
+_TIFFfree(ycbcr);
+.fi
+.RE
+.PP
+
+.PP
+.B TIFFCIELabToRGBInit()
+initializes the
+.I CIE L*a*b* 1976
+to
+.I RGB
+conversion state.
+.B TIFFCIELabToRGB
+defined as
+.PP
+.RS
+.nf
+#define CIELABTORGB_TABLE_RANGE 1500
+
+typedef struct {		     /* CIE Lab 1976->RGB support */
+	int	range;		     /* Size of conversion table */
+	float	rstep, gstep, bstep;
+	float	X0, Y0, Z0;	     /* Reference white point */
+	TIFFDisplay display;
+	float	Yr2r[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yr to r */
+	float	Yg2g[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yg to g */
+	float	Yb2b[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yb to b */
+} TIFFCIELabToRGB;
+.fi
+.RE
+.PP
+.I display
+is a display device description, declared as
+.PP
+.RS
+.nf
+typedef struct {
+	float d_mat[3][3]; /* XYZ -> luminance matrix */
+	float d_YCR;       /* Light o/p for reference white */
+	float d_YCG;
+	float d_YCB;
+	uint32 d_Vrwr;     /* Pixel values for ref. white */
+	uint32 d_Vrwg;
+	uint32 d_Vrwb;
+	float d_Y0R;       /* Residual light for black pixel */
+	float d_Y0G;
+	float d_Y0B;
+	float d_gammaR;    /* Gamma values for the three guns */
+	float d_gammaG;
+	float d_gammaB;
+} TIFFDisplay;
+.fi
+.RE
+.PP
+For example, the one can use sRGB device, which has the following parameters:
+.PP
+.RS
+.nf
+TIFFDisplay display_sRGB = {
+	{       /* XYZ -> luminance matrix */
+		{  3.2410F, -1.5374F, -0.4986F },
+		{  -0.9692F, 1.8760F, 0.0416F },
+		{  0.0556F, -0.2040F, 1.0570F }
+	},	
+	100.0F, 100.0F, 100.0F, /* Light o/p for reference white */
+	255, 255, 255,      /* Pixel values for ref. white */
+	1.0F, 1.0F, 1.0F,   /* Residual light o/p for black pixel */
+	2.4F, 2.4F, 2.4F,   /* Gamma values for the three guns */
+};
+.fi
+.RE
+.PP
+.I refWhite
+is a color temperature of the reference white. The
+.I TIFFTAG_WHITEPOINT
+contains the chromaticity of the white point of the image from where the
+reference white can be calculated using following formulae:
+.PP
+.RS
+refWhite_Y = 100.0
+.br
+refWhite_X = whitePoint_x / whitePoint_y * refWhite_Y
+.br
+refWhite_Z = (1.0 - whitePoint_x - whitePoint_y) / whitePoint_y * refWhite_X
+.br
+.RE
+.PP
+The conversion itself performed in two steps: at the first one we will convert
+.I CIE L*a*b* 1976
+to
+.I CIE XYZ
+using
+.B TIFFCIELabToXYZ()
+routine, and at the second step we will convert
+.I CIE XYZ
+to
+.I RGB
+using
+.B TIFFXYZToRGB().
+Look at the code sample below:
+.PP
+.RS
+.nf
+float   *whitePoint;
+float   refWhite[3];
+
+/* Initialize structures */
+img->cielab = (TIFFCIELabToRGB *)
+	_TIFFmalloc(sizeof(TIFFCIELabToRGB));
+if (!cielab) {
+	TIFFError("CIE L*a*b*->RGB",
+		"No space for CIE L*a*b*->RGB conversion state.");
+	exit(0);
+}
+
+TIFFGetFieldDefaulted(tif, TIFFTAG_WHITEPOINT, &whitePoint);
+refWhite[1] = 100.0F;
+refWhite[0] = whitePoint[0] / whitePoint[1] * refWhite[1];
+refWhite[2] = (1.0F - whitePoint[0] - whitePoint[1])
+	      / whitePoint[1] * refWhite[1];
+if (TIFFCIELabToRGBInit(cielab, &display_sRGB, refWhite) < 0) {
+	TIFFError("CIE L*a*b*->RGB",
+		"Failed to initialize CIE L*a*b*->RGB conversion state.");
+	_TIFFfree(cielab);
+	exit(0);
+}
+
+/* Now we can start to convert */
+uint32 r, g, b;
+uint32 L;
+int32 a, b;
+float X, Y, Z;
+
+for each pixel in image
+	TIFFCIELabToXYZ(cielab, L, a, b, &X, &Y, &Z);
+	TIFFXYZToRGB(cielab, X, Y, Z, &r, &g, &b);
+
+/* Don't forget to free the state structure */
+_TIFFfree(cielab);
+.fi
+.RE
+.PP
+.SH "SEE ALSO"
+.BR TIFFRGBAImage (3TIFF)
+.BR libtiff (3TIFF),
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

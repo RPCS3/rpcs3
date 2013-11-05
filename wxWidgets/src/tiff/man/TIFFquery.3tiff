@@ -1,0 +1,141 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH QUERY 3TIFF "October 29, 2004" "libtiff"
+.SH NAME
+TIFFCurrentRow,
+TIFFCurrentStrip,
+TIFFCurrentTile,
+TIFFCurrentDirectory,
+TIFFLastDirectory,
+TIFFFileno,
+TIFFFileName,
+TIFFGetMode,
+TIFFIsTiled,
+TIFFIsByteSwapped,
+TIFFIsUpSampled,
+TIFFIsMSB2LSB,
+TIFFGetVersion
+\- query routines
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "uint32 TIFFCurrentRow(TIFF* " tif ")"
+.br
+.BI "tstrip_t TIFFCurrentStrip(TIFF* " tif ")"
+.br
+.BI "ttile_t TIFFCurrentTile(TIFF* " tif ")"
+.br
+.BI "tdir_t TIFFCurrentDirectory(TIFF* " tif ")"
+.br
+.BI "int TIFFLastDirectory(TIFF* " tif ")"
+.br
+.BI "int TIFFFileno(TIFF* " tif ")"
+.br
+.BI "char* TIFFFileName(TIFF* " tif ")"
+.br
+.BI "int TIFFGetMode(TIFF* " tif ")"
+.br
+.BI "int TIFFIsTiled(TIFF* " tif ")"
+.br
+.BI "int TIFFIsByteSwapped(TIFF* " tif ")"
+.br
+.BI "int TIFFIsUpSampled(TIFF* " tif ")"
+.br
+.BI "int TIFFIsMSB2LSB(TIFF* " tif ")"
+.br
+.BI "const char* TIFFGetVersion(void)"
+.SH DESCRIPTION
+The following routines return status information about an open
+.SM TIFF
+file.
+.PP
+.IR TIFFCurrentDirectory
+returns the index of the current directory (directories are numbered starting
+at 0). This number is suitable for use with the
+.IR TIFFSetDirectory
+routine.
+.PP
+.IR TIFFLastDirectory
+returns a non-zero value if the current directory is the last directory in the
+file; otherwise zero is returned.
+.PP
+.IR TIFFCurrentRow ,
+.IR TIFFCurrentStrip ,
+and
+.IR TIFFCurrentTile ,
+return the current row, strip, and tile, respectively, that is being read or
+written. These values are updated each time a read or write is done.
+.PP
+.IR TIFFFileno
+returns the underlying file descriptor used to access the 
+.SM TIFF
+image in the filesystem.
+.PP
+.IR TIFFFileName
+returns the pathname argument passed to
+.IR TIFFOpen
+or
+.IR TIFFFdOpen .
+.PP
+.IR TIFFGetMode
+returns the mode with which the underlying file was opened. On
+.SM UNIX
+systems, this is the value passed to the
+.IR open (2)
+system call.
+.PP
+.IR TIFFIsTiled
+returns a non-zero value if the image data has a tiled organization. Zero is
+returned if the image data is organized in strips.
+.PP
+.IR TIFFIsByteSwapped
+returns a non-zero value if the image data was in a different byte-order than
+the host machine. Zero is returned if the TIFF file and local host byte-orders
+are the same.  Note that TIFFReadTile(), TIFFReadStrip() and
+TIFFReadScanline() functions already normally perform byte swapping to local
+host order if needed.
+.PP
+.I TIFFIsUpSampled
+returns a non-zero value if image data returned through the read interface
+routines is being up-sampled. This can be useful to applications that want to
+calculate I/O buffer sizes to reflect this usage (though the usual strip and
+tile size routines already do this).
+.PP
+.I TIFFIsMSB2LSB
+returns a non-zero value if the image data is being returned with bit 0 as the
+most significant bit.
+.PP
+.IR TIFFGetVersion
+returns an
+.SM ASCII
+string that has a version stamp for the 
+.SM TIFF
+library software.
+.SH DIAGNOSTICS
+None.
+.SH "SEE ALSO"
+.IR libtiff (3TIFF),
+.IR TIFFOpen (3TIFF),
+.IR TIFFFdOpen (3TIFF)

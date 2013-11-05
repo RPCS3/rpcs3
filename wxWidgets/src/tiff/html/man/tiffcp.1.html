@@ -1,0 +1,536 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:20 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFCP</title>
+</head>
+<body>
+
+<h1 align=center>TIFFCP</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#EXAMPLES">EXAMPLES</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>tiffcp &minus; copy (and possibly convert) a
+<small>TIFF</small> file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiffcp</b> [ <i>options</i> ] <i>src1.tif ... srcN.tif
+dst.tif</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>tiffcp</i> combines one or more files created
+according to the Tag Image File Format, Revision 6.0 into a
+single <small>TIFF</small> file. Because the output file may
+be compressed using a different algorithm than the input
+files, <i>tiffcp</i> is most often used to convert between
+different compression schemes.</p>
+<!-- INDENTATION -->
+<p>By default, <i>tiffcp</i> will copy all the understood
+tags in a <small>TIFF</small> directory of an input file to
+the associated directory in the output file.</p>
+<!-- INDENTATION -->
+<p><i>tiffcp</i> can be used to reorganize the storage
+characteristics of data in a file, but it is explicitly
+intended to not alter or convert the image data content in
+any way.</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;b</b> <i>image</i></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="19%"></td>
+<td width="80%">
+<p>subtract the following monochrome image from all others
+processed. This can be used to remove a noise bias from a
+set of images. This bias image is typically an image of
+noise the camera saw with its shutter closed.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;B</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be written with Big-Endian byte order.
+This option only has an effect when the output file is
+created or overwritten and not when it is appended to.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;C</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Suppress the use of &lsquo;&lsquo;strip
+chopping&rsquo;&rsquo; when reading images that have a
+single strip/tile of uncompressed data.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;c</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the compression to use for data written to the
+output file: <b>none</b> for no compression, <b>packbits</b>
+for PackBits compression, <b>lzw</b> for Lempel-Ziv &amp;
+Welch compression, <b>jpeg</b> for baseline JPEG
+compression, <b>zip</b> for Deflate compression, <b>g3</b>
+for CCITT Group 3 (T.4) compression, and <b>g4</b> for CCITT
+Group 4 (T.6) compression. By default <i>tiffcp</i> will
+compress data according to the value of the
+<i>Compression</i> tag found in the source file.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>The <small>CCITT</small> Group 3 and Group 4 compression
+algorithms can only be used with bilevel data.</p>
+<!-- INDENTATION -->
+<p>Group 3 compression can be specified together with
+several T.4-specific options: <b>1d</b> for 1-dimensional
+encoding, <b>2d</b> for 2-dimensional encoding, and
+<b>fill</b> to force each encoded scanline to be zero-filled
+so that the terminating EOL code lies on a byte boundary.
+Group 3-specific options are specified by appending a
+&lsquo;&lsquo;:&rsquo;&rsquo;-separated list to the
+&lsquo;&lsquo;g3&rsquo;&rsquo; option; e.g. <b>&minus;c
+g3:2d:fill</b> to get 2D-encoded data with byte-aligned EOL
+codes.</p>
+<!-- INDENTATION -->
+<p><small>LZW</small> compression can be specified together
+with a <i>predictor</i> value. A predictor value of 2 causes
+each scanline of the output image to undergo horizontal
+differencing before it is encoded; a value of 1 forces each
+scanline to be encoded without differencing. LZW-specific
+options are specified by appending a
+&lsquo;&lsquo;:&rsquo;&rsquo;-separated list to the
+&lsquo;&lsquo;lzw&rsquo;&rsquo; option; e.g. <b>&minus;c
+lzw:2</b> for <small>LZW</small> compression with horizontal
+differencing.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;f</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the bit fill order to use in writing output
+data. By default, <i>tiffcp</i> will create a new file with
+the same fill order as the original. Specifying <b>&minus;f
+lsb2msb</b> will force data to be written with the FillOrder
+tag set to <small>LSB2MSB,</small> while <b>&minus;f
+msb2lsb</b> will force data to be written with the FillOrder
+tag set to <small>MSB2LSB.</small></p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;i</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Ignore non-fatal read errors and continue processing of
+the input file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;l</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the length of a tile (in pixels). <i>tiffcp</i>
+attempts to set the tile dimensions so that no more than 8
+kilobytes of data appear in a tile.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;L</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be written with Little-Endian byte
+order. This option only has an effect when the output file
+is created or overwritten and not when it is appended
+to.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;M</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Suppress the use of memory-mapped files when reading
+images.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;p</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the planar configuration to use in writing image
+data that has one 8-bit sample per pixel. By default,
+<i>tiffcp</i> will create a new file with the same planar
+configuration as the original. Specifying <b>&minus;p
+contig</b> will force data to be written with multi-sample
+data packed together, while <b>&minus;p separate</b> will
+force samples to be written in separate planes.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;r</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the number of rows (scanlines) in each strip of
+data written to the output file. By default (or when value
+<b>0</b> is specified), <i>tiffcp</i> attempts to set the
+rows/strip that no more than 8 kilobytes of data appear in a
+strip. If you specify special value <b>&minus;1</b> it will
+results in infinite number of the rows per strip. The entire
+image will be the one strip in that case.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;s</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the output file to be written with data organized
+in strips (rather than tiles).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;t</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the output file to be written with data organized
+in tiles (rather than strips). options can be used to force
+the resultant image to be written as strips or tiles of
+data, respectively.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;w</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the width of a tile (in pixels). <i>tiffcp</i>
+attempts to set the tile dimensions so that no more than 8
+kilobytes of data appear in a tile. <i>tiffcp</i> attempts
+to set the tile dimensions so that no more than 8 kilobytes
+of data appear in a tile.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;x</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the output file to be written with PAGENUMBER value
+in sequence.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;,=</b><i>character</i></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="19%"></td>
+<td width="80%">
+<p>substitute <i>character</i> for &lsquo;,&rsquo; in
+parsing image directory indices in files. This is necessary
+if filenames contain commas. Note that <b>&minus;,=</b> with
+whitespace immediately following will disable the special
+meaning of the &lsquo;,&rsquo; entirely. See examples.</p>
+</td>
+</table>
+<a name="EXAMPLES"></a>
+<h2>EXAMPLES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The following concatenates two files and writes the
+result using <small>LZW</small> encoding:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp &minus;c lzw a.tif b.tif result.tif
+</pre>
+</td>
+</table>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>To convert a G3 1d-encoded <small>TIFF</small> to a
+single strip of G4-encoded data the following might be
+used:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp &minus;c g4 &minus;r 10000 g3.tif g4.tif
+</pre>
+</td>
+</table>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>(1000 is just a number that is larger than the number of
+rows in the source file.)</p>
+<!-- INDENTATION -->
+<p>To extract a selected set of images from a multi-image
+TIFF file, the file name may be immediately followed by a
+&lsquo;,&rsquo; separated list of image directory indices.
+The first image is always in directory 0. Thus, to copy the
+1st and 3rd images of image file
+&lsquo;&lsquo;album.tif&rsquo;&rsquo; to
+&lsquo;&lsquo;result.tif&rsquo;&rsquo;:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp album.tif,0,2 result.tif
+</pre>
+</td>
+</table>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>A trailing comma denotes remaining images in sequence.
+The following command will copy all image with except the
+first one:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp album.tif,1, result.tif
+</pre>
+</td>
+</table>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Given file &lsquo;&lsquo;CCD.tif&rsquo;&rsquo; whose
+first image is a noise bias followed by images which include
+that bias, subtract the noise from all those images
+following it (while decompressing) with the
+command:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp &minus;c none &minus;b CCD.tif CCD.tif,1, result.tif
+</pre>
+</td>
+</table>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>If the file above were named
+&lsquo;&lsquo;CCD,X.tif&rsquo;&rsquo;, the <b>&minus;,=</b>
+option would be required to correctly parse this filename
+with image numbers, as follows:</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>tiffcp &minus;c none &minus;,=% &minus;b CCD,X.tif CCD,X%1%.tif result.tif
+
+</pre>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>pal2rgb</b>(1), <b>tiffinfo</b>(1), <b>tiffcmp</b>(1),
+<b>tiffmedian</b>(1), <b>tiffsplit</b>(1),
+<b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

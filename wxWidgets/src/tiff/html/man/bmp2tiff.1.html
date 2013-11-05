@@ -1,0 +1,121 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sun Mar  6 13:59:56 2005 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>BMP2TIFF</title>
+</head>
+<body>
+
+<h1 align=center>BMP2TIFF</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>bmp2tiff &minus; create a <small>TIFF</small> file from a
+Microsoft Windows Device Independent Bitmap image file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>bmp2tiff</b> [ <i>options</i> ] <i>input.bmp
+output.tiff</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>bmp2tiff</i> converts a Microsoft Windows Device
+Independent Bitmap image file to <small>TIFF.</small> By
+default, the <small>TIFF</small> image is created with data
+samples packed (<i>PlanarConfiguration</i>=1), compressed
+with the PackBits algorithm
+(<i>Compression</i>=<i>32773),</i> and with each strip no
+more than 8 kilobytes. These characteristics can overridden,
+or explicitly specified with the options described
+below.</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="2%">
+
+<p><b>&minus;c</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify a compression scheme to use when writing image
+data: <b>&minus;c none</b> for no compression, <b>-c
+packbits</b> for the PackBits compression algorithm (the
+default), <b>-c jpeg</b> for the baseline JPEG compression
+algorithm, <b>-c zip</b> for the Deflate compression
+algorithm, and <b>&minus;c lzw</b> for Lempel-Ziv &amp;
+Welch.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;r &lt;number&gt;</b></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="19%"></td>
+<td width="80%">
+<p>Write data with a specified number of rows per strip; by
+default the number of rows/strip is selected so that each
+strip is approximately 8 kilobytes.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>gif2tiff</i>(1), <i>pal2rgb</i>(1),
+<i>ppm2tiff</i>(1), <i>raw2tiff</i>(1), <i>ras2tiff</i>(1),
+<i>sgi2tiff</i>(1), <i>libtiff</i>(3TIFF)</p>
+</td>
+</table>
+<hr>
+</body>
+</html>

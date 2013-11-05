@@ -1,0 +1,253 @@
+.\" 
+.\"  Copyright (c) 2003 Ross Finlayson
+.\" 
+.\"  Permission to use, copy, modify, distribute, and sell this software and 
+.\"  its documentation for any purpose is hereby granted without fee, provided
+.\"  that (i) the above copyright notices and this permission notice appear in
+.\"  all copies of the software and related documentation, and (ii) the name of
+.\"  Ross Finlayson may not be used in any advertising or
+.\"  publicity relating to the software without the specific, prior written
+.\"  permission of Ross Finlayson.
+.\"  
+.\"  THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\"  EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\"  WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\"  
+.\"  IN NO EVENT SHALL ROSS FINLAYSON BE LIABLE FOR
+.\"  ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\"  OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\"  WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\"  LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\"  OF THIS SOFTWARE.
+.\" 
+.\" Process this file with
+.\" groff -man -Tascii tiff2pdf.1
+.\"
+.TH TIFF2PDF 1 "April 20, 2006" "libtiff"
+.SH NAME
+tiff2pdf \- convert a TIFF image to a PDF document
+.SH SYNOPSIS
+.B tiff2pdf
+[
+.I options 
+] 
+.I input.tiff
+.SH DESCRIPTION
+.I tiff2pdf
+opens a TIFF image and writes a PDF document to standard output.
+.PP
+The program converts one TIFF file to one PDF file, including multiple page 
+TIFF files, tiled TIFF files, black and white. grayscale, and color TIFF 
+files that contain data of TIFF photometric interpretations of bilevel, 
+grayscale, RGB, YCbCr, CMYK separation, and ICC L*a*b* as supported by 
+.I libtiff 
+and PDF.
+.PP
+If you have multiple TIFF files to convert into one PDF file then use 
+.I tiffcp 
+or other program to concatenate the files into a multiple page TIFF file.  
+If the input TIFF file is of huge dimensions (greater than 10000 pixels height
+or width) convert the input image to a tiled TIFF if it is not already.
+.PP
+The standard output is standard output.  Set the output file name with the 
+.BI \-o " output.pdf"
+option.
+.PP
+All black and white files are compressed into a single strip CCITT G4 Fax
+compressed PDF, unless tiled, where tiled black and white images are
+compressed into tiled CCITT G4 Fax compressed PDF, 
+.I libtiff 
+CCITT support is assumed.
+.PP
+Color and grayscale data can be compressed using either JPEG compression,
+ITU-T T.81, or Zip/Deflate LZ77 compression.  Set the compression type using
+the 
+.B \-j
+or
+.B \-z
+options.  JPEG compression support 
+requires that 
+.I libtiff 
+be configured with JPEG support, and Zip/Deflate compression support requires
+that 
+.I libtiff 
+be configured with Zip support, in tiffconf.h.  Use only one or the other of 
+.B \-j
+and
+.B \-z.
+.PP
+If the input TIFF contains single strip CCITT G4 Fax compressed information, 
+then that is written to the PDF file without transcoding, unless the options 
+of no compression and no passthrough are set, 
+.B \-d
+and
+.B \-n.
+.PP
+If the input TIFF contains JPEG or single strip Zip/Deflate compressed 
+information, and they are configured, then that is written to the PDF file 
+without transcoding, unless the options of no compression and no passthrough 
+are set.
+.PP
+The default page size upon which the TIFF image is placed is determined by 
+the resolution and extent of the image data.  Default values for the TIFF 
+image resolution can be set using the
+.B \-x
+and
+.B \-y
+options.  The page size can be set using the
+.B \-p
+option for paper size, or
+.B \-w
+and
+.B \-l
+for paper width and length, then each page of the TIFF image is centered on
+its page.  The distance unit for default resolution and page width and
+length can be set by the
+.B \-u
+option, the default unit is inch.
+.PP
+Various items of the output document information can be set with the
+.BR \-e ,
+.BR \-c , 
+.BR \-a ,
+.BR \-t ,
+.BR \-s ,
+and
+.B \-k
+options.  Setting the argument of the option to "" for these 
+tags causes the relevant document information field to be not written.  Some 
+of the document information values otherwise get their information from the 
+input TIFF image, the software, author, document name, and image description.
+.PP
+The Portable Document Format (PDF) specification is copyrighted by Adobe 
+Systems, Incorporated.
+.SH OPTIONS
+.TP
+.BI \-o " output-file"
+Set the output to go to file.
+.I output-file
+.TP
+.B \-j  
+Compress with JPEG (requires
+.I libjpeg
+configured with
+.IR libtiff ).
+.TP
+.B \-z  
+Compress with Zip/Deflate (requires
+.I zlib
+configured with
+.IR libtiff ).
+.TP
+.BI \-q " quality"
+Set the compression quality, 1-100 for JPEG.
+.TP
+.B \-n
+Do not allow data to be converted without uncompressing, no compressed
+data passthrough.
+.TP
+.BI \-b
+Set PDF ``Interpolate'' user preference.
+.TP
+.B \-d  
+Do not compress (decompress).
+.TP
+.B \-i  
+Invert colors.
+.TP
+.BI \-p " paper-size"
+Set paper size, e.g.,
+.BR letter ,
+.BR legal ,
+.BR A4 .
+.TP
+.B \-F
+Cause the tiff to fill the PDF page.
+.TP
+.BR \-u " [" i | m ]
+Set distance unit,
+.B i
+for inch, 
+.B m
+for centimeter.
+.TP
+.BI \-w " width"
+Set width in units.
+.TP
+.BI \-l " length"
+Set length in units.
+.TP
+.BI \-x " xres"
+Set x/width resolution default.
+.TP
+.BI \-y " yres"
+Set y/length resolution default.
+.TP
+.BR \-r " [" d | o ]
+Set
+.B d
+for resolution default for images without resolution, 
+.B o
+for resolution override for all images.
+.TP
+.BI \-f
+Set PDF ``Fit Window'' user preference.
+.TP
+.BI \-e " YYYYMMDDHHMMSS"
+Set document information date, overrides image or current date/time default,
+.I YYYYMMDDHHMMSS.
+.TP
+.BI \-c " creator"
+Set document information creator, overrides image software default.
+.TP
+.BI \-a " author"
+Set document information author, overrides image artist default.
+.TP
+.BI \-t " title"
+Set document information title, overrides image document name default.
+.TP
+.BI \-s " subject"
+Set document information subject, overrides image image description default.
+.TP
+.BI \-k " keywords"
+Set document information keywords.
+.TP
+.B \-h  
+List usage reminder to stderr and exit.
+.SH EXAMPLES
+.TP
+The following example would generate the file output.pdf from input.tiff.
+.RS
+.nf
+tiff2pdf \-o output.pdf input.tiff
+.fi
+.RE
+.PP
+The following example would generate PDF output from input.tiff and write it 
+to standard output.
+.RS
+.nf
+tiff2pdf input.tiff
+.fi
+.RE
+.PP
+The following example would generate the file output.pdf from input.tiff, 
+putting the image pages on a letter sized page, compressing the output 
+with JPEG, with JPEG quality 75, setting the title to ``Document'', and setting 
+the ``Fit Window'' option.
+.RS
+.nf
+tiff2pdf \-p letter \-j \-q 75 \-t "Document" \-f \-o output.pdf input.tiff
+.fi
+.RE
+.SH BUGS
+Please report bugs via the web interface at 
+.IP
+\%http://bugzilla.remotesensing.org/enter_bug.cgi?product=libtiff
+.SH "SEE ALSO"
+.BR libtiff (3),
+.BR tiffcp (1), 
+.BR tiff2ps (1)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

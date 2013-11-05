@@ -1,0 +1,131 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFDITHER 1 "September 20, 2005" "libtiff"
+.SH NAME
+tiffdither \- convert a greyscale image to bilevel using dithering
+.SH SYNOPSIS
+.B tiffdither
+[
+.I options
+]
+.I input.tif
+.I output.tif
+.SH DESCRIPTION
+.I tiffdither
+converts a single channel 8-bit greyscale image to a bilevel image
+using Floyd-Steinberg error propagation with thresholding.
+.SH OPTIONS
+.TP
+.B \-c
+Specify the compression to use for data written to the output file:
+.B none 
+for no compression,
+.B packbits
+for PackBits compression,
+.B lzw
+for Lempel-Ziv & Welch compression,
+.B zip
+for Deflate compression,
+.B g3
+for CCITT Group 3 (T.4) compression,
+and
+.B g4
+for CCITT Group 4 (T.6) compression.
+By default
+.I tiffdither
+will compress data according to the value of the
+.I Compression
+tag found in the source file.
+.IP
+The
+.SM CCITT
+Group 3 and Group 4 compression algorithms can only
+be used with bilevel data.
+.IP
+Group 3 compression can be specified together with several
+T.4-specific options:
+.B 1d
+for 1-dimensional encoding,
+.B 2d
+for 2-dimensional encoding,
+and
+.B fill
+to force each encoded scanline to be zero-filled so that the
+terminating EOL code lies on a byte boundary.
+Group 3-specific options are specified by appending a ``:''-separated
+list to the ``g3'' option; e.g.
+.B "\-c g3:2d:fill"
+to get 2D-encoded data with byte-aligned EOL codes.
+.IP
+.SM LZW
+compression can be specified together with a 
+.I predictor
+value.
+A predictor value of 2 causes
+each scanline of the output image to undergo horizontal
+differencing before it is encoded; a value
+of 1 forces each scanline to be encoded without differencing.
+LZW-specific options are specified by appending a ``:''-separated
+list to the ``lzw'' option; e.g.
+.B "\-c lzw:2"
+for
+.SM LZW
+compression with horizontal differencing.
+.TP
+.B \-f
+Specify the bit fill order to use in writing output data.
+By default,
+.I tiffdither
+will create a new file with the same fill order as the original.
+Specifying
+.B "\-f lsb2msb"
+will force data to be written with the
+.I Fill\%Order
+tag set to
+.SM LSB2MSB ,
+while
+.B "\-f msb2lsb"
+will force data to be written with the
+.I Fill\%Order
+tag set to
+.SM MSB2LSB .
+.TP
+.B \-t
+Set the threshold value for dithering.
+By default the threshold value is 128.
+.SH NOTES
+The dither algorithm is taken from the
+.BR tiffmedian (1)
+program (written by Paul Heckbert).
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR fax2tiff (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiff2bw (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

@@ -1,0 +1,272 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.ds Ps PostScript
+.if n .po 0
+.TH TIFF2PS 1 "November 2, 2005" "libtiff"
+.SH NAME
+tiff2ps \- convert a
+.SM TIFF
+image to \*(Ps\*(Tm
+.SH SYNOPSIS
+.B tiff2ps
+[
+.I options
+]
+.I "input.tif ..."
+.SH DESCRIPTION
+.I tiff2ps
+reads
+.SM TIFF
+images and writes \*(Ps or Encapsulated \*(Ps (EPS)
+on the standard output.
+By default,
+.I tiff2ps
+writes Encapsulated \*(Ps for the first image in the specified
+.SM TIFF
+image file.
+.PP
+By default,
+.I tiff2ps
+will generate \*(Ps that fills a printed area specified
+by the 
+.SM TIFF
+tags in the input file.
+If the file does not contain
+.I XResolution
+or
+.I YResolution
+tags, then the printed area is set according to the image dimensions.
+The
+.B \-w
+and
+.B \-h
+options (see below)
+can be used to set the dimensions of the printed area in inches;
+overriding any relevant
+.SM TIFF
+tags.
+.PP
+The \*(Ps generated for
+.SM RGB,
+palette, and
+.SM CMYK
+images uses the
+.I colorimage
+operator.
+The \*(Ps generated for
+greyscale and bilevel images
+uses the
+.I image
+operator.
+When the
+.I colorimage
+operator is used, \*(Ps code to emulate this operator
+on older \*(Ps printers is also generated.
+Note that this emulation code can be very slow.
+.PP
+Color images with associated alpha data are composited over
+a white background.
+.SH OPTIONS
+.TP
+.B \-1
+Generate \*(Ps Level 1 (the default).
+.TP
+.B \-2
+Generate \*(Ps Level 2.
+.TP
+.B \-3
+Generate \*(Ps Level 3. It basically allows one to use the /flateDecode
+filter for ZIP compressed TIFF images.
+.TP
+.B \-a
+Generate output for all IFDs (pages) in the input file.
+.TP
+.B \-b
+Specify the bottom margin for the output (in inches). This does not affect
+the height of the printed image.
+.TP
+.B \-c
+Center the image in the output. This option only shows an effect if both
+the
+.B \-w
+and the
+.B \-h
+option are given.
+.TP
+.B \-d
+Set the initial
+.SM TIFF
+directory to the specified directory number.
+(NB: Directories are numbered starting at zero.)
+This option is useful for selecting individual pages in a
+multi-page (e.g. facsimile) file.
+.TP
+.B \-e
+Force the generation of Encapsulated \*(Ps (implies
+.BR \-z ).
+.TP
+.B \-h
+Specify the vertical size of the printed area (in inches).
+.TP
+.B \-H
+Specify the maximum height of image (in inches). Images with larger sizes will
+be split in several pages. Option
+.B \-L
+may be used for specifying size of split images overlapping.
+.TP
+.B \-W
+Specify the maximum width of image (in inches). Images with larger sizes will
+be split in several pages. Options
+.B \-L
+and 
+.B \-W
+are mutually exclusive.
+.B \-i
+Enable/disable pixel interpolation.  This option requires a
+single numeric value: zero to disable pixel interpolation and
+non-zero to enable.  The default is enabled.
+.TP
+.B \-L
+Specify the size of overlapping for split images (in inches). Used in
+conjunction with
+.B \-H
+option and
+.B \-W
+option.
+.TP
+.B \-l
+Specify the left margin for the output (in inches). This does not affect
+the width of the printed image.
+.TP
+.B \-m
+Where possible render using the
+.I imagemask
+\*(Ps operator instead of the
+.I image
+operator.  When this option is specified
+.I tiff2ps
+will use
+.I imagemask
+for rendering 1 bit deep images.  If this option is not specified
+or if the image depth is greater than 1 then the
+.I image
+operator is used.
+.TP
+.B \-o
+Set the initial
+.SM TIFF
+directory to the
+.SM IFD
+at the specified file offset.
+This option is useful for selecting thumbnail images and the
+like which are hidden using the
+.I SubIFD
+tag.
+.TP
+.B \-p
+Force the generation of (non-Encapsulated) \*(Ps.
+.TP
+.B \-r 90|180|270|auto
+Rotate image by 90, 180, 270 degrees or auto.  Auto picks the best
+fit for the image on the specified paper size (eg portrait
+or landscape) if -h or -w is specified. Rotation is in degrees 
+counterclockwise. Auto rotates 90 degrees ccw to produce landscape.
+.TP
+.B \-s
+Generate output for a single IFD (page) in the input file.
+.TP
+.B \-w
+Specify the horizontal size of the printed area (in inches).
+.TP
+.B \-x
+Override resolution units specified in the TIFF as centimeters.
+.TP
+.B \-y
+Override resolution units specified in the TIFF as inches.
+.TP
+.B \-z
+When generating \*(Ps Level 2, data is scaled so that it does not
+image into the 
+.I deadzone
+on a page (the outer margin that the printing device is unable to mark).
+This option suppresses this behavior.
+When \*(Ps Level 1 is generated, data is imaged to the entire printed
+page and this option has no affect.
+.SH EXAMPLES
+The following generates \*(Ps Level 2 for all pages of a facsimile:
+.RS
+.nf
+tiff2ps \-a2 fax.tif | lpr
+.fi
+.RE
+Note also that if you have version 2.6.1 or newer of Ghostscript then you
+can efficiently preview facsimile generated with the above command.
+.PP
+To generate Encapsulated \*(Ps for a the image at directory 2
+of an image use:
+.RS
+.nf
+tiff2ps \-d 1 foo.tif
+.fi
+.RE
+(Notice that directories are numbered starting at zero.)
+.PP
+If you have a long image, it may be split in several pages:
+.RS
+.nf
+tiff2ps \-h11 \-w8.5 \-H14 \-L.5 foo.tif > foo.ps
+.fi
+.RE
+The page size is set to 8.5x11 by
+.B \-w
+and
+.B \-h
+options. We will accept a small amount of vertical compression, so
+.B \-H
+set to 14. Any pages between 11 and 14 inches will be fit onto one page.
+Pages longer than 14 inches are cut off at 11 and continued on the next
+page. The
+.B \-L.5
+option says to repeat a half inch on the next page (to improve readability).
+.SH BUGS
+Because \*(Ps does not support the notion of a colormap,
+8-bit palette images produce 24-bit \*(Ps images.
+This conversion results in output that is six times
+bigger than the original image and which takes a long time
+to send to a printer over a serial line.
+Matters are even worse for 4-, 2-, and 1-bit palette images.
+.PP
+Does not handle tiled images when generating \*(Ps Level I output.
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffgt (1),
+.BR tiffmedian (1),
+.BR tiff2bw (1),
+.BR tiffsv (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

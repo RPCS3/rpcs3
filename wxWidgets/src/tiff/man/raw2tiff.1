@@ -1,0 +1,195 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH RAW2TIFF 1 "November 2, 2005" "libtiff"
+.SH NAME
+raw2tiff \- create a
+.SM TIFF
+file from a raw data
+.SH SYNOPSIS
+.B raw2tiff
+[
+.I options
+]
+.I input.raw
+.I output.tif
+.SH DESCRIPTION
+.I raw2tiff
+converts a raw byte sequence into
+.SM TIFF.
+By default, the
+.SM TIFF
+image is created with data samples packed (\c
+.IR PlanarConfiguration =1),
+compressed with the PackBits algorithm (\c
+.IR Compression =32773),
+and with each strip no more than 8 kilobytes.
+These characteristics can overridden, or explicitly specified
+with the options described below.
+.SH OPTIONS
+.TP
+.BI \-H " number"
+size of input image file header in bytes (0 by default). This amount of data
+just will be skipped from the start of file while reading.
+.TP
+.BI \-w " number"
+width of input image in pixels (can be guessed, see
+.SM
+.B "GUESSING THE IMAGE GEOMETRY"
+below).
+.TP
+.BI \-l " number"
+length of input image in lines (can be guessed, see
+.SM
+.B "GUESSING THE IMAGE GEOMETRY"
+below).
+.TP
+.BI \-b " number"
+number of bands in input image (1 by default).
+.TP
+.BI \-d " data_type"
+type of samples in input image, where
+.I data_type
+may be:
+.ta \w'\fBdouble  \fR'u
+.br
+.B byte\t
+8-bit unsigned integer (default),
+.br
+.B short\t
+16-bit unsigned integer,
+.br
+.B long\t
+32-bit unsigned integer,
+.br
+.B sbyte\t
+8-bit signed integer,
+.br
+.B sshort\t
+16-bit signed integer,
+.br
+.B slong\t
+32-bit signed integer,
+.br
+.B float\t
+32-bit IEEE floating point,
+.br
+.B double\t
+64-bit IEEE floating point.
+.TP
+.BI \-i " config"
+type of samples interleaving in input image, where
+.I config
+may be:
+.ta \w'\fBpixel  \fR'u
+.br
+.B pixel\t
+pixel interleaved data (default),
+.br
+.B band\t
+band interleaved data.
+.TP
+.BI \-p " photo"
+photometric interpretation (color space) of the input image, where
+.I photo
+may be:
+.ta \w'\fBminiswhite  \fR'u
+.br
+.B miniswhite\t
+white color represented with 0 value,
+.br
+.B minisblack\t
+black color represented with 0 value (default),
+.br
+.B rgb\t
+image has RGB color model,
+.br
+.B cmyk\t
+image has CMYK (separated) color model,
+.br
+.B ycbcr\t
+image has YCbCr color model,
+.br
+.B cielab\t
+image has CIE L*a*b color model,
+.br
+.B icclab\t
+image has ICC L*a*b color model,
+.br
+.B itulab\t
+image has ITU L*a*b color model.
+.TP
+.B \-s
+swap bytes fetched from the input file.
+.TP
+.B \-L
+input data has LSB2MSB bit order (default).
+.TP
+.B \-M
+input data has MSB2LSB bit order.
+.TP
+.B \-c
+Specify a compression scheme to use when writing image data:
+.B "\-c none"
+for no compression,
+.B "\-c packbits"
+for the PackBits compression algorithm (the default),
+.B "\-c jpeg"
+for the baseline JPEG compression algorithm,
+.B "\-c zip"
+for the Deflate compression algorithm,
+and
+.B "\-c lzw"
+for Lempel-Ziv & Welch.
+.TP
+.BI \-r " number"
+Write data with a specified number of rows per strip;
+by default the number of rows/strip is selected so that each strip
+is approximately 8 kilobytes.
+.SH GUESSING THE IMAGE GEOMETRY
+.I raw2tiff
+can guess image width and height in case one or both of these parameters are
+not specified. If you omit one of those parameters, the complementary one will
+be calculated based on the file size (taking into account header size, number
+of bands and data type). If you omit both parameters, the statistical approach
+will be used. Utility will compute correlation coefficient between two lines
+at the image center using several appropriate line sizes and the highest
+absolute value of the coefficient will indicate the right line size. That is
+why you should be cautious with the very large images, because guessing
+process may take a while (depending on your system performance). Of course, the
+utility can't guess the header size, number of bands and data type, so it
+should be specified manually. If you don't know anything about your image,
+just try with the several combinations of those options.
+.P
+There is no magic, it is just a mathematical statistics, so it can be wrong
+in some cases. But for most ordinary images guessing method will work fine.
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffmedian (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

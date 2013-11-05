@@ -1,0 +1,99 @@
+.\"	$Header: /cvs/maptools/cvsroot/libtiff/man/rgb2ycbcr.1,v 1.4 2006-04-20 12:17:19 dron Exp $
+.\"
+.\" Copyright (c) 1991-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH RGB2YCBCR 1 "November 2, 2005" "libtiff"
+.SH NAME
+rgb2ycbcr \- convert non-YCbCr
+.SM TIFF
+images to a YCbCr
+.SM TIFF
+image
+.SH SYNOPSIS
+.B rgb2ycbcr
+[
+.I options
+]
+.I "src1.tif src2.tif ... dst.tif"
+.SH DESCRIPTION
+.I rgb2ycbcr
+converts
+.SM RGB
+color, greyscale, or bi-level
+.SM TIFF
+images to YCbCr images by transforming and sampling pixel data. If multiple
+files are specified on the command line each source file is converted to a
+separate directory in the destination file.
+.PP
+By default, chrominance samples are created by sampling
+2 by 2 blocks of luminance values; this can be changed with the
+.B \-h
+and
+.B \-v
+options.
+Output data are compressed with the
+.SM PackBits
+compression scheme, by default; an alternate scheme can be selected with the
+.B \-c
+option.
+By default, output data are compressed in strips with
+the number of rows in each strip selected so that the
+size of a strip is never more than 8 kilobytes;
+the
+.B \-r
+option can be used to explicitly set the number of
+rows per strip.
+.SH OPTIONS
+.TP
+.B \-c
+Specify a compression scheme to use when writing image data:
+.B "\-c none"
+for no compression,
+.B "\-c packbits"
+for the PackBits compression algorithm (the default),
+.B "\-c jpeg"
+for the JPEG compression algorithm,
+.B "\-c zip"
+for the deflate compression algorithm,
+and
+.B "\-c lzw"
+for Lempel-Ziv & Welch.
+.TP
+.B \-h
+Set the horizontal sampling dimension to one of: 1, 2 (default), or 4.
+.TP
+.B \-r
+Write data with a specified number of rows per strip;
+by default the number of rows/strip is selected so that each strip
+is approximately 8 kilobytes.
+.TP
+.B \-v
+Set the vertical sampling dimension to one of: 1, 2 (default), or 4.
+.SH "SEE ALSO"
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff

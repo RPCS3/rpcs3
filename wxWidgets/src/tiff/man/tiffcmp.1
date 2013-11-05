@@ -1,0 +1,86 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFCMP 1 "November 2, 2005" "libtiff"
+.SH NAME
+tiffcmp \- compare two
+.SM TIFF
+files
+.SH SYNOPSIS
+.B tiffcmp
+[
+.I options
+]
+.I "file1.tif file2.tif"
+.SH DESCRIPTION
+.I Tiffcmp
+compares the tags and data in two files created according
+to the Tagged Image File Format, Revision 6.0.
+The schemes used for compressing data in each file
+are immaterial when data are compared\-data are compared on
+a scanline-by-scanline basis after decompression.
+Most directory tags are checked; notable exceptions are:
+.IR GrayResponseCurve ,
+.IR ColorResponseCurve ,
+and
+.IR ColorMap
+tags.
+Data will not be compared if any of the
+.IR BitsPerSample ,
+.IR SamplesPerPixel ,
+or
+.I ImageWidth
+values are not equal.
+By default,
+.I tiffcmp
+will terminate if it encounters any difference.
+.SH OPTIONS
+.TP
+.B \-l
+List each byte of image data that differs between the files.
+.TP
+.BI \-z " number"
+List specified number of image data bytes that differs between the files.
+.TP
+.B \-t
+Ignore any differences in directory tags.
+.SH BUGS
+Tags that are not recognized by the library are not
+compared; they may also generate spurious diagnostics.
+.PP
+The image data of tiled files is not compared, since the
+.I TIFFReadScanline()
+function is used.  An error will be reported for tiled files.
+.PP
+The pixel and/or sample number reported in differences may be off
+in some exotic cases. 
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffmedian (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

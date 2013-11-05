@@ -1,93 +1,57 @@
 #
-#	Simple MS VC++ Makefile
+# Copyright (C) 2004, Andrey Kiselev <dron@ak4719.spb.edu>
 #
-#	To build:
-#       C:\libtiff\libtiff> nmake /f makefile.vc all
-#
-
+# Permission to use, copy, modify, distribute, and sell this software and 
+# its documentation for any purpose is hereby granted without fee, provided
+# that (i) the above copyright notices and this permission notice appear in
+# all copies of the software and related documentation, and (ii) the names of
+# Sam Leffler and Silicon Graphics may not be used in any advertising or
+# publicity relating to the software without the specific, prior written
+# permission of Sam Leffler and Silicon Graphics.
 # 
-# Select _CONSOLE to build a library which reports errors to stderr, or
-# _WINDOWED to build such that errors are reported via MessageBox().
+# THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+# EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+# WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+# 
+# IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+# ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+# OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+# LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+# OF THIS SOFTWARE.
 #
-WINMODE = -DTIF_PLATFORM_CONSOLE
-#WINMODE = -DTIF_PLATFORM_WINDOWED
+# Makefile for MS Visual C and Watcom C compilers.
+# Edit nmake.opt file if you want to ajust building options.
+#
+# To build:
+# C:\libtiff> nmake /f makefile.vc 
 
-# Uncomment and edit following lines to enable JPEG support
-#JPEG_SUPPORT	= 1
-#JPEGDIR 	= d:/projects/jpeg-6b
+!INCLUDE nmake.opt
 
-CC      	= cl
-INCL		= -I.
-LIBS    	=
-EXTRAFLAGS	=
+all:	port lib tools
 
-!IFDEF JPEG_SUPPORT
-INCL		= $(INCL) -I$(JPEGDIR)
-EXTRAFLAGS	= $(EXTRAFLAGS) -DJPEG_SUPPORT
-!ENDIF
+port::
+	cd port
+	$(MAKE) /f Makefile.vc
+	cd..
 
-CFLAGS  = /nologo /W3 $(INCL) $(WINMODE) $(EXTRAFLAGS)
+lib:	port
+	cd libtiff
+	$(MAKE) /f Makefile.vc
+	cd..
 
-OBJ	= \
-	tif_aux.obj \
-	tif_close.obj \
-	tif_codec.obj \
-	tif_color.obj \
-	tif_compress.obj \
-	tif_dir.obj \
-	tif_dirinfo.obj \
-	tif_dirread.obj \
-	tif_dirwrite.obj \
-	tif_dumpmode.obj \
-	tif_error.obj \
-	tif_extension.obj \
-	tif_fax3.obj \
-	fax3sm_winnt.obj \
-	tif_getimage.obj \
-	tif_jpeg.obj \
-	tif_ojpeg.obj \
-	tif_flush.obj \
-	tif_luv.obj \
-	tif_lzw.obj \
-	tif_next.obj \
-	tif_open.obj \
-	tif_packbits.obj \
-	tif_pixarlog.obj \
-	tif_predict.obj \
-	tif_print.obj \
-	tif_read.obj \
-	tif_swab.obj \
-	tif_strip.obj \
-	tif_thunder.obj \
-	tif_tile.obj \
-	tif_win32.obj \
-	tif_version.obj \
-	tif_warning.obj \
-	tif_write.obj \
-	tif_zip.obj
-
-VERSION	= ..\VERSION
-ALPHA = ..\dist\tiff.alpha
-
-default:	libtiff.lib
-
-all:	libtiff.lib libtiff.dll
-
-libtiff.lib:	tiffvers.h $(OBJ)
-	lib /out:libtiff.lib $(OBJ)
-
-libtiff.dll:	$(OBJ)
-	link /dll /def:libtiff.def /out:libtiff.dll /implib:libtiff_i.lib \
-		$(OBJ) $(LIBS)
-	
-tiffvers.h:	$(VERSION) mkversion.c
-	$(CC) mkversion.c 
-	if exist tiffvers.h del tiffvers.h
-	.\mkversion.exe -v $(VERSION) tiffvers.h
+tools:	lib
+	cd tools
+	$(MAKE) /f Makefile.vc
+	cd ..
 
 clean:
-	del *.obj *.lib libtiff.dll
-
-tif_version.obj:	tiffvers.h
-
-
+	cd port
+	$(MAKE) /f Makefile.vc clean
+	cd..
+	cd libtiff
+	$(MAKE) /f Makefile.vc clean
+	cd..
+	cd tools
+	$(MAKE) /f Makefile.vc clean
+	cd ..

@@ -1,0 +1,130 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFTILE 3TIFF "February 14, 1992" "libtiff"
+.SH NAME
+TIFFTileSize, TIFFTileRowSize, TIFFVTileSize, TIFFDefaultTileSize,
+TIFFComputeTile, TIFFCheckTile, TIFFNumberOfTiles \- tile-related utility
+routines
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "void TIFFDefaultTileSize(TIFF *" tif ", uint32 *" tw ", uint32 *" th ")"
+.br
+.BI "tsize_t TIFFTileSize(TIFF *" tif ")"
+.br
+.BI "tsize_t TIFFTileRowSize(TIFF *" tif ")"
+.br
+.BI "tsize_t TIFFVTileSize(TIFF *" tif ", uint32 " nrows ")"
+.br
+.BI "ttile_t TIFFComputeTile(TIFF *" tif ", uint32 " x ", uint32 " y ", uint32 " z ", tsample_t " sample ")"
+.br
+.BI "int TIFFCheckTile(TIFF *" tif ", uint32 " x ", uint32 " y ", uint32 " z ", tsample_t " sample ")"
+.br
+.BI "ttile_t TIFFNumberOfTiles(TIFF *" tif ")"
+.br
+.SH DESCRIPTION
+.I TIFFDefaultTileSize
+returns the pixel width and height of a reasonable-sized tile; suitable for
+setting up the
+.I TileWidth
+and
+.I TileLength
+tags.
+If the
+.I tw
+and
+.I th
+values passed in are non-zero, then they are adjusted to reflect any
+compression-specific requirements. The returned width and height are
+constrained to be a multiple of 16 pixels to conform with the 
+.SM TIFF
+specification.
+.PP
+.I TIFFTileSize
+returns the equivalent size for a tile of data as it would be returned in a
+call to
+.I TIFFReadTile
+or as it would be expected in a call to
+.IR TIFFWriteTile .
+.PP
+.I TIFFVTileSize
+returns the number of bytes in a row-aligned tile with
+.I nrows
+of data.
+.PP
+.I TIFFTileRowSize
+returns the number of bytes of a row of data in a tile.
+.PP
+.IR TIFFComputeTile
+returns the tile that contains the specified coordinates. A valid tile is
+always returned; out-of-range coordinate values are clamped to the bounds of
+the image. The
+.I x
+and
+.I y
+parameters are always used in calculating a tile. The
+.I z
+parameter is used if the image is deeper than 1 slice (\c
+.IR ImageDepth >1).
+The
+.I sample
+parameter is used only if data are organized in separate planes (\c
+.IR PlanarConfiguration =2).
+.PP
+.IR TIFFCheckTile
+returns a non-zero value if the supplied coordinates are within the bounds of
+the image and zero otherwise. The
+.I x
+parameter is checked against the value of the
+.I ImageWidth
+tag. The
+.I y
+parameter is checked against the value of the
+.I ImageLength
+tag. The
+.I z
+parameter is checked against the value of the
+.I ImageDepth
+tag (if defined). The
+.I sample
+parameter is checked against the value of the
+.I SamplesPerPixel
+parameter if the data are organized in separate planes.
+.PP
+.IR TIFFNumberOfTiles
+returns the number of tiles in the image.
+.SH DIAGNOSTICS
+None.
+.SH "SEE ALSO"
+.BR TIFFReadEncodedTile (3TIFF),
+.BR TIFFReadRawTile (3TIFF),
+.BR TIFFReadTile (3TIFF),
+.BR TIFFWriteEncodedTile (3TIFF),
+.BR TIFFWriteRawTile (3TIFF),
+.BR TIFFWriteTile (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

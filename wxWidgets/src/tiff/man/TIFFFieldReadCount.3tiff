@@ -1,0 +1,76 @@
+.\"
+.\" Copyright (c) 2012, Tom Lane <tgl@sss.pgh.pa.us>
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFFieldReadCount 3TIFF "July 26, 2012" "libtiff"
+.SH NAME
+TIFFFieldReadCount \- Get number of values to be read from field
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFFieldReadCount(const TIFFField* " fip ")"
+.SH DESCRIPTION
+.BR TIFFFieldReadCount
+returns the number of values available to be read from the specified
+TIFF field; that is, the number of arguments that should be supplied to
+.BR TIFFGetField .
+For most field types this is a small positive integer, typically 1 or 2,
+but there are some special values:
+.br
+.BR TIFF_VARIABLE
+indicates that a variable number of values is possible; then, a
+.BR uint16
+.I count
+argument and a pointer
+.I data
+argument must be supplied to
+.BR TIFFGetField .
+.br
+.BR TIFF_VARIABLE2
+is the same as
+.BR TIFF_VARIABLE
+except that the
+.I count
+argument must have type
+.BR uint32 .
+.br
+.BR TIFF_SPP
+indicates that the number of arguments is equal to the image's
+number of samples per pixel.
+.P
+.I fip
+is a field information pointer previously returned by
+.BR TIFFFindField ,
+.BR TIFFFieldWithTag ,
+or
+.BR TIFFFieldWithName .
+.br
+.SH "RETURN VALUES"
+.br
+.BR TIFFFieldReadCount
+returns an integer.
+.br
+.SH "SEE ALSO"
+.BR libtiff (3TIFF),
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

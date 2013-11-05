@@ -1,7 +1,12 @@
-#	$Header$
+#	$Header: /cvs/libtiff/TODO,v 1.6 2002/10/10 05:28:43 warmerda Exp $
 
+o gif2tiff segaulting on selected images
 o tiffcmp read data by strip/tile instead of scanline
 o YCbCr sampling support
 o extracate colorspace conversion support
 o look at isolating all codecs from TIFF library
 o JPEG colormode order dependency problem
+o Write documentation on how do extend tags, and how the custom field
+  stuff all works. 
+
+

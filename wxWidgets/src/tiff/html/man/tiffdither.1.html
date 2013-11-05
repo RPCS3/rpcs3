@@ -1,0 +1,183 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:20 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFDITHER</title>
+</head>
+<body>
+
+<h1 align=center>TIFFDITHER</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>tiffdither &minus; convert a greyscale image to bilevel
+using dithering</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiffdither</b> [ <i>options</i> ] <i>input.tif
+output.tif</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>tiffdither</i> converts a single channel 8-bit
+greyscale image to a bilevel image using Floyd-Steinberg
+error propagation with thresholding.</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="2%">
+
+<p><b>&minus;c</b></p>
+</td>
+<td width="6%"></td>
+<td width="80%">
+
+<p>Specify the compression to use for data written to the
+output file: <b>none</b> for no compression, <b>packbits</b>
+for PackBits compression, <b>lzw</b> for Lempel-Ziv &amp;
+Welch compression, <b>zip</b> for Deflate compression,
+<b>g3</b> for CCITT Group 3 (T.4) compression, and <b>g4</b>
+for CCITT Group 4 (T.6) compression. By default
+<i>tiffdither</i> will compress data according to the value
+of the <i>Compression</i> tag found in the source file.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>The <small>CCITT</small> Group 3 and Group 4 compression
+algorithms can only be used with bilevel data.</p>
+<!-- INDENTATION -->
+<p>Group 3 compression can be specified together with
+several T.4-specific options: <b>1d</b> for 1-dimensional
+encoding, <b>2d</b> for 2-dimensional encoding, and
+<b>fill</b> to force each encoded scanline to be zero-filled
+so that the terminating EOL code lies on a byte boundary.
+Group 3-specific options are specified by appending a
+&lsquo;&lsquo;:&rsquo;&rsquo;-separated list to the
+&lsquo;&lsquo;g3&rsquo;&rsquo; option; e.g. <b>&minus;c
+g3:2d:fill</b> to get 2D-encoded data with byte-aligned EOL
+codes.</p>
+<!-- INDENTATION -->
+<p><small>LZW</small> compression can be specified together
+with a <i>predictor</i> value. A predictor value of 2 causes
+each scanline of the output image to undergo horizontal
+differencing before it is encoded; a value of 1 forces each
+scanline to be encoded without differencing. LZW-specific
+options are specified by appending a
+&lsquo;&lsquo;:&rsquo;&rsquo;-separated list to the
+&lsquo;&lsquo;lzw&rsquo;&rsquo; option; e.g. <b>&minus;c
+lzw:2</b> for <small>LZW</small> compression with horizontal
+differencing.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;f</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the bit fill order to use in writing output
+data. By default, <i>tiffdither</i> will create a new file
+with the same fill order as the original. Specifying
+<b>&minus;f lsb2msb</b> will force data to be written with
+the <i>FillOrder</i> tag set to <small>LSB2MSB ,</small>
+while <b>&minus;f msb2lsb</b> will force data to be written
+with the <i>Fill- Order</i> tag set to <small>MSB2LSB
+.</small></p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;t</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Set the threshold value for dithering. By default the
+threshold value is 128.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The dither algorithm is taken from the
+<b>tiffmedian</b>(1) program (written by Paul Heckbert).</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>pal2rgb</b>(1), <b>fax2tiff</b>(1),
+<b>tiffinfo</b>(1), <b>tiffcp</b>(1), <b>tiff2bw</b>(1),
+<b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

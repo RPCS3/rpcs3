@@ -1,0 +1,133 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:16 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFReadEncodedStrip</title>
+</head>
+<body>
+
+<h1 align=center>TIFFReadEncodedStrip</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>TIFFReadEncodedStrip &minus; read and decode a strip
+of data from an open</big> TIFF <big>file</big></p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big><b>#include &lt;tiffio.h&gt;</b></big></p>
+<!-- INDENTATION -->
+<p><big><b>tsize_t TIFFReadEncodedStrip(TIFF
+*</b><i>tif</i><b>, tstrip_t</b> <i>strip</i><b>,
+tdata_t</b> <i>buf</i><b>, tsize_t</b>
+<i>size</i><b>)</b></big></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>Read the specified strip of data and place up to
+<i>size</i> bytes of decompressed information in the (user
+supplied) data buffer.</big></p>
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>The value of <i>strip</i> is a &lsquo;&lsquo;raw
+strip number.&rsquo;&rsquo; That is, the caller must take
+into account whether or not the data are organized in
+separate planes (<i>PlanarConfiguration</i>=2). To read a
+full strip of data the data buffer should typically be at
+least as large as the number returned by
+<b>TIFFStripSize</b>(3TIFF). If the -1 passed in <i>size</i>
+parameter, the whole strip will be read. You should be sure
+you have enough space allocated for the buffer.</big></p>
+<!-- INDENTATION -->
+<p><big>The library attempts to hide bit- and byte-ordering
+differences between the image and the native machine by
+converting data to the native machine order. Bit reversal is
+done if the <i>FillOrder</i> tag is opposite to the native
+machine bit order. 16- and 32-bit samples are automatically
+byte-swapped if the file was written with a byte order
+opposite to the native machine byte order,</big></p>
+</td>
+</table>
+<a name="RETURN VALUES"></a>
+<h2>RETURN VALUES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>The actual number of bytes of data that were placed
+in <i>buf</i> is returned; <i>TIFFReadEncodedStrip</i>
+returns &minus;1 if an error was encountered.</big></p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>All error messages are directed to the
+<b>TIFFError</b>(3TIFF) routine.</big></p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big><b>TIFFOpen</b>(3TIFF),
+<b>TIFFReadRawStrip</b>(3TIFF),
+<b>TIFFReadScanline</b>(3TIFF),
+<b>libtiff</b>(3TIFF)</big></p>
+<!-- INDENTATION -->
+<p><big>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></big></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

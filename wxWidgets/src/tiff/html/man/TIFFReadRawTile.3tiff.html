@@ -1,0 +1,111 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:17 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFReadRawTile</title>
+</head>
+<body>
+
+<h1 align=center>TIFFReadRawTile</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFReadRawTile &minus; return an undecoded tile of data
+from an open <small>TIFF</small> file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>tsize_t TIFFReadRawTile(TIFF *</b><i>tif</i><b>,
+ttile_t</b> <i>tile</i><b>, tdata_t</b> <i>buf</i><b>,
+tsize_t</b> <i>size</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Read the contents of the specified tile into the (user
+supplied) data buffer. Note that the value of <i>tile</i> is
+a &lsquo;&lsquo;raw tile number.&rsquo;&rsquo; That is, the
+caller must take into account whether or not the data is
+organized in separate planes (<i>PlanarConfiguration</i>=2).
+<i>TIFFComputeTile</i> automatically does this when
+converting an (x,y,z,sample) coordinate quadruple to a tile
+number. To read a full tile of data the data buffer should
+typically be at least as large as the value returned by
+<i>TIFFTileSize</i>.</p>
+</td>
+</table>
+<a name="RETURN VALUES"></a>
+<h2>RETURN VALUES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The actual number of bytes of data that were placed in
+<i>buf</i> is returned; <i>TIFFReadEncodedTile</i> returns
+&minus;1 if an error was encountered.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>All error messages are directed to the
+<b>TIFFError</b>(3TIFF) routine.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFOpen</b>(3TIFF),
+<b>TIFFReadEncodedTile</b>(3TIFF),
+<b>TIFFReadTile</b>(3TIFF), <b>TIFFTileSize</b>(3TIFF),
+<b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

@@ -1,0 +1,244 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFGT 1 "September 20, 2005" "libtiff"
+.SH NAME
+tiffgt \- display an image stored in a
+.SM TIFF
+file (Silicon Graphics version)
+.SH SYNOPSIS
+.B tiffgt
+[
+.I options
+]
+.I "input.tif ..."
+.SH DESCRIPTION
+.I tiffgt
+displays one or more images stored using the
+Tag Image File Format, Revision 6.0.
+Each image is placed in a fixed size window that the
+user must position on the display (unless configured
+otherwise through X defaults).
+If the display has fewer than 24 bitplanes, or if the
+image does not warrant full color, then
+.SM RGB
+color values are mapped to the closest values that exist in
+the colormap (this is done using the
+.I rgbi
+routine found in the graphics utility library
+.BR \-lgutil .)
+.PP
+.I tiffgt
+correctly handles files with any of the following characteristics:
+.sp .5
+.in +0.5i
+.ta \w'\fIPhotometricInterpretation\fP  'u
+.nf
+\fIBitsPerSample\fP	1, 2, 4, 8, 16
+\fISamplesPerPixel\fP	1, 3, 4 (the 4th sample is ignored)
+\fIPhotometricInterpretation\fP	0 (min-is-white), 1 (min-is-black), 2 (RGB), 3 (palette), 6 (YCbCr)
+\fIPlanarConfiguration\fP	1 (contiguous), 2 (separate)
+\fIOrientation\fP	1 (top-left), 4 (bottom-left)
+.fi
+.in -0.5i
+.sp .5
+Data may be organized as strips or tiles and may be
+compressed with any of the compression algorithms supported
+by the 
+.IR libtiff (3)
+library.
+.PP
+For palette images (\c
+.IR PhotometricInterpretation =3),
+.I tiffgt
+inspects the colormap values and assumes either 16-bit
+or 8-bit values according to the maximum value.
+That is, if no colormap entry greater than 255 is found,
+.I tiffgt
+assumes the colormap has only 8-bit values; otherwise
+it assumes 16-bit values.
+This inspection is done to handle old images written by
+previous (incorrect) versions of
+.IR libtiff .
+.PP
+.I tiffgt
+can be used to display multiple images one-at-a-time.
+The left mouse button switches the display to the first image in the
+.I next
+file in the list of files specified on the command line.
+The right mouse button switches to the first image in the
+.I previous
+file in the list.
+The middle mouse button causes the first image in the first file
+specified on the command line to be displayed.
+In addition the following keyboard commands are recognized:
+.TP
+.B b
+Use a
+.I PhotometricInterpretation
+of MinIsBlack in displaying the current image.
+.TP
+.B l
+Use a
+.I FillOrder
+of lsb-to-msb in decoding the current image.
+.TP
+.B m
+Use a
+.I FillOrder
+of msb-to-lsb in decoding the current image.
+.TP
+.B c
+Use a colormap visual to display the current image.
+.TP
+.B r
+Use a true color (24-bit RGB) visual to display the current image.
+.TP
+.B w
+Use a
+.I PhotometricInterpretation
+of MinIsWhite in displaying the current image.
+.TP
+.B W
+Toggle (enable/disable) display of warning messages from the
+.SM TIFF
+library when decoding images.
+.TP
+.B E
+Toggle (enable/disable) display of error messages from the
+.SM TIFF
+library when decoding images.
+.TP
+.B z
+Reset all parameters to their default settings (\c
+.IR FillOrder ,
+.IR PhotometricInterpretation ,
+handling of warnings and errors).
+.TP
+.B PageUp
+Display the previous image in the current file or the last
+image in the previous file.
+.TP
+.B PageDown
+Display the next image in the current file or the first image
+in the next file.
+.TP
+.B Home
+Display the first image in the current file.
+.TP
+.B End
+Display the last image in the current file (unimplemented).
+.SH OPTIONS
+.TP
+.B \-c
+Force image display in a colormap window.
+.TP
+.B \-d
+Specify an image to display by directory number.
+By default the first image in the file is displayed.
+Directories are numbered starting at zero.
+.TP
+.B \-e
+Enable reporting of error messages from the 
+.SM TIFF
+library.
+By default
+.I tiffgt
+silently ignores images that cannot be read.
+.TP
+.B \-f
+Force 
+.I tiffgt
+to run as a foreground process.
+By default
+.I tiffgt
+will place itself in the background once it has opened the
+requested image file.
+.TP
+.B \-l
+Force the presumed bit ordering to be
+.SM LSB
+to
+.SM MSB.
+.TP
+.B \-m
+Force the presumed bit ordering to be
+.SM MSB
+to
+.SM LSB.
+.TP
+.B \-o
+Specify an image to display by directory offset.
+By default the first image in the file is displayed.
+Directories offsets may be specified using C-style syntax;
+i.e. a leading ``0x'' for hexadecimal and a leading ``0'' for octal.
+.TP
+.B \-p
+Override the value of the
+.I PhotometricInterpretation
+tag; the parameter may be one of:
+.BR miniswhite ,
+.BR minisblack ,
+.BR rgb ,
+.BR palette ,
+.BR mask ,
+.BR separated ,
+.BR ycbcr ,
+and
+.BR cielab .
+.TP
+.B \-r
+Force image display in a full color window.
+.TP
+.B \-s
+Stop on the first read error.
+By default all errors in the input data are ignored and 
+.I tiffgt
+does it's best to display as much of an image as possible.
+.TP
+.B \-w
+Enable reporting of warning messages from the 
+.SM TIFF
+library.
+By default
+.I tiffgt
+ignores warning messages generated when reading an image.
+.TP
+.B \-v
+Place information in the title bar describing
+what type of window (full color or colormap) is being
+used, the name of the input file, and the directory
+index of the image (if non-zero).
+By default, the window type is not shown in the title bar.
+.SH BUGS
+Images wider and taller than the display are silently truncated to avoid
+crashing old versions of the window manager.
+.SH "SEE ALSO"
+.BR tiffdump (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

@@ -1,0 +1,544 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH INTRO 3TIFF "November 2, 2005" "libtiff"
+.SH NAME
+libtiff \- introduction to
+.IR libtiff ,
+a library for reading and writing
+.SM TIFF
+files
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+cc file.c
+.B -ltiff
+.SH DESCRIPTION
+.I libtiff
+is a library for reading and writing data files encoded with the
+.I "Tag Image File"
+format, Revision 6.0 (or revision 5.0 or revision 4.0). This file format is
+suitable for archiving multi-color and monochromatic image data.
+.PP
+The library supports several compression algorithms, as indicated by the
+.I Compression
+field, including:
+no compression (1),
+.SM CCITT
+1D Huffman compression (2),
+.SM CCITT
+Group 3 Facsimile compression (3),
+.SM CCITT
+Group 4 Facsimile compression (4),
+Lempel-Ziv & Welch compression (5),
+baseline JPEG compression (7),
+word-aligned 1D Huffman compression (32771),
+and
+PackBits compression (32773).
+In addition, several nonstandard compression algorithms are supported: the
+4-bit compression algorithm used by the
+.I ThunderScan
+program (32809) (decompression only), NeXT's 2-bit compression algorithm
+(32766) (decompression only), an experimental LZ-style algorithm known as
+Deflate (32946), and an experimental CIE LogLuv compression scheme designed
+for images with high dynamic range (32845 for LogL and 32845 for LogLuv).
+Directory information may be in either little- or big-endian byte order\-byte
+swapping is automatically done by the library. Data bit ordering may be either
+Most Significant Bit (\c
+.SM MSB\c
+) to Least Significant Bit (\c
+.SM LSB\c
+) or
+.SM LSB
+to
+.SM MSB.
+Finally, the library does not support files in which the
+.IR BitsPerSample ,
+.IR Compression ,
+.IR MinSampleValue ,
+or
+.IR MaxSampleValue
+fields are defined differently on a per-sample basis
+(in Rev. 6.0 the
+.I Compression
+tag is not defined on a per-sample basis, so this is immaterial).
+.SH "DATA TYPES"
+The library makes extensive use of C typedefs to promote portability.
+Two sets of typedefs are used, one for communication with clients
+of the library and one for internal data structures and parsing of the
+.SM TIFF
+format.
+The following typedefs are exposed to users either through function
+definitions or through parameters passed through the varargs interfaces.
+.in +.5i
+.sp 5p
+.ta +\w'typedef unsigned <\fIthing\fP> uint32;    'u
+.nf
+typedef unsigned short uint16;	16-bit unsigned integer
+typedef unsigned <\fIthing\fP> uint32;	32-bit unsigned integer
+.sp 5p
+typedef unsigned int ttag_t;	directory tag
+typedef uint16 tdir_t;	directory index
+typedef uint16 tsample_t;	sample number
+typedef uint32 tstrip_t;	strip number
+typedef uint32 ttile_t;	tile number
+typedef int32 tsize_t;	i/o size in bytes
+typedef void* tdata_t;	image data ref
+typedef void* thandle_t;	client data handle
+typedef int32 toff_t;	file offset
+.fi
+.sp 5p
+.in -.5i
+Note that
+.IR tstrip_t ,
+.IR ttile_t ,
+and
+.I tsize_t
+are constrained to be no more than 32-bit quantities by 32-bit fields they are
+stored in in the
+.SM TIFF
+image.
+Likewise
+.I tsample_t
+is limited by the 16-bit field used to store the
+.I SamplesPerPixel
+tag.
+.I tdir_t
+constrains the maximum number of
+.SM IFDs
+that may appear in an image and may be an arbitrary size (w/o penalty). 
+.I ttag_t
+must be either int, unsigned int, pointer, or double because the library uses
+a varargs interface and
+.SM "ANSI C"
+restricts the type of the parameter before an ellipsis to be a promoted type.
+.I toff_t
+is defined as int32 because TIFF file offsets are (unsigned) 32-bit
+quantities. A signed value is used because some interfaces return \-1 on
+error. Finally, note that user-specified data references are passed as opaque
+handles and only cast at the lowest layers where their type is presumed.
+.SH "LIST OF ROUTINES"
+The following routines are part of the library. Consult specific manual pages
+for details on their operation; on most systems doing ``man function-name''
+will work.
+.sp
+.nf
+.ta \w'TIFFCheckpointDirectory'u+2n
+\fIName\fP	\fIDescription\fP
+.sp 5p
+TIFFCheckpointDirectory	writes the current state of the directory
+TIFFCheckTile		very x,y,z,sample is within image
+TIFFCIELabToRGBInit	initialize CIE L*a*b* 1976 to RGB conversion state
+TIFFCIELabToXYZ		perform CIE L*a*b* 1976 to CIE XYZ conversion
+TIFFClientOpen		open a file for reading or writing
+TIFFClose		close an open file
+TIFFComputeStrip	return strip containing y,sample
+TIFFComputeTile		return tile containing x,y,z,sample
+TIFFCurrentDirectory	return index of current directory
+TIFFCurrentRow		return index of current scanline
+TIFFCurrentStrip	return index of current strip
+TIFFCurrentTile		return index of current tile
+TIFFDataWidth 		return the size of TIFF data types
+TIFFError		library error handler
+TIFFFdOpen		open a file for reading or writing
+TIFFFieldDataType	get data type from field information
+TIFFFieldName		get field name from field information
+TIFFFieldPassCount	get whether to pass a value count to Get/SetField
+TIFFFieldReadCount	get number of values to be read from field
+TIFFFieldTag		get tag value from field information
+TIFFFieldWithName	get field information given field name
+TIFFFieldWithTag	get field information given tag
+TIFFFieldWriteCount	get number of values to be written to field
+TIFFFileName		return name of open file
+TIFFFileno		return open file descriptor
+TIFFFindCODEC		find standard codec for the specific scheme
+TIFFFindField		get field information given tag and data type
+TIFFFlush		flush all pending writes
+TIFFFlushData		flush pending data writes
+TIFFGetBitRevTable	return bit reversal table
+TIFFGetField		return tag value in current directory
+TIFFGetFieldDefaulted	return tag value in current directory
+TIFFGetMode		return open file mode
+TIFFGetVersion		return library version string
+TIFFIsCODECConfigured	check, whether we have working codec
+TIFFIsMSB2LSB		return true if image data is being returned
+			with bit 0 as the most significant bit 
+TIFFIsTiled		return true if image data is tiled
+TIFFIsByteSwapped	return true if image data is byte-swapped
+TIFFNumberOfStrips	return number of strips in an image
+TIFFNumberOfTiles	return number of tiles in an image
+TIFFOpen		open a file for reading or writing
+TIFFPrintDirectory	print description of the current directory
+TIFFReadBufferSetup	specify i/o buffer for reading
+TIFFReadDirectory	read the next directory
+TIFFReadEncodedStrip	read and decode a strip of data
+TIFFReadEncodedTile	read and decode a tile of data
+TIFFReadRawStrip	read a raw strip of data
+TIFFReadRawTile		read a raw tile of data
+TIFFReadRGBAImage	read an image into a fixed format raster
+TIFFReadScanline	read and decode a row of data
+TIFFReadTile		read and decode a tile of data
+TIFFRegisterCODEC	override standard codec for the specific scheme
+TIFFReverseBits		reverse bits in an array of bytes
+TIFFRGBAImageBegin	setup decoder state for TIFFRGBAImageGet
+TIFFRGBAImageEnd	release TIFFRGBAImage decoder state
+TIFFRGBAImageGet	read and decode an image
+TIFFRGBAImageOK		is image readable by TIFFRGBAImageGet
+TIFFScanlineSize	return size of a scanline
+TIFFSetDirectory	set the current directory
+TIFFSetSubDirectory	set the current directory
+TIFFSetErrorHandler	set error handler function
+TIFFSetField		set a tag's value in the current directory
+TIFFSetWarningHandler	set warning handler function
+TIFFStripSize		returns size of a strip
+TIFFRawStripSize	returns the number of bytes in a raw strip
+TIFFSwabShort		swap bytes of short
+TIFFSwabLong		swap bytes of long
+TIFFSwabArrayOfShort	swap bytes of an array of shorts
+TIFFSwabArrayOfLong	swap bytes of an array of longs
+TIFFTileRowSize		return size of a row in a tile
+TIFFTileSize		return size of a tile
+TIFFUnRegisterCODEC	unregisters the codec
+TIFFVGetField		return tag value in current directory
+TIFFVGetFieldDefaulted	return tag value in current directory
+TIFFVSetField		set a tag's value in the current directory
+TIFFVStripSize		returns the number of bytes in a strip
+TIFFWarning		library warning handler
+TIFFWriteDirectory	write the current directory
+TIFFWriteEncodedStrip	compress and write a strip of data
+TIFFWriteEncodedTile	compress and write a tile of data
+TIFFWriteRawStrip	write a raw strip of data
+TIFFWriteRawTile	write a raw tile of data
+TIFFWriteScanline	write a scanline of data
+TIFFWriteTile		compress and write a tile of data
+TIFFXYZToRGB		perform CIE XYZ to RGB conversion
+TIFFYCbCrToRGBInit	initialize YCbCr to RGB conversion state
+TIFFYCbCrtoRGB		perform YCbCr to RGB conversion
+.sp
+Auxiliary functions:
+_TIFFfree		free memory buffer
+_TIFFmalloc		dynamically allocate memory buffer
+_TIFFmemcmp		compare contents of the memory buffers
+_TIFFmemcpy		copy contents of the one buffer to another
+_TIFFmemset		fill memory buffer with a constant byte
+_TIFFrealloc		dynamically reallocate memory buffer
+
+.fi
+.SH "TAG USAGE"
+The table below lists the
+.SM TIFF
+tags that are recognized and handled by the library.
+If no use is indicated in the table, then the library
+reads and writes the tag, but does not use it internally.
+Note that some tags are meaningful only when a particular
+compression scheme is being used; e.g.
+.I Group3Options
+is only useful if 
+.I Compression
+is set to
+.SM CCITT
+Group 3 encoding.
+Tags of this sort are considered
+.I codec-specific
+tags and the library does not recognize them except when the
+.I Compression
+tag has been previously set to the relevant compression scheme.
+.sp
+.nf
+.ta \w'TIFFTAG_JPEGTABLESMODE'u+2n +\w'Value'u+2n +\w'R/W'u+2n
+\fITag Name\fP	\fIValue\fP	\fIR/W\fP	\fILibrary Use/Notes\fP
+.sp 5p
+.nf
+Artist	315	R/W
+BadFaxLines	326	R/W
+BitsPerSample	258	R/W	lots
+CellLength	265		parsed but ignored
+CellWidth	264		parsed but ignored
+CleanFaxData	327	R/W
+ColorMap	320	R/W
+ColorResponseUnit	300		parsed but ignored
+Compression	259	R/W	choosing codec
+ConsecutiveBadFaxLines	328	R/W
+Copyright       33432   R/W
+DataType	32996	R	obsoleted by SampleFormat tag
+DateTime	306	R/W
+DocumentName	269	R/W
+DotRange	336	R/W
+ExtraSamples	338	R/W	lots
+FaxRecvParams	34908	R/W
+FaxSubAddress	34909	R/W
+FaxRecvTime	34910	R/W
+FillOrder	266	R/W	control bit order
+FreeByteCounts	289		parsed but ignored
+FreeOffsets	288		parsed but ignored
+GrayResponseCurve	291		parsed but ignored
+GrayResponseUnit	290		parsed but ignored
+Group3Options	292	R/W	used by Group 3 codec
+Group4Options	293	R/W
+HostComputer	316	R/W
+ImageDepth	32997	R/W	tile/strip calculations
+ImageDescription 	270	R/W
+ImageLength	257	R/W	lots
+ImageWidth	256	R/W	lots
+InkNames	333	R/W
+InkSet	332	R/W
+JPEGTables	347	R/W	used by JPEG codec
+Make	271	R/W
+Matteing	32995	R	obsoleted by ExtraSamples tag
+MaxSampleValue	281	R/W
+MinSampleValue	280	R/W
+Model	272	R/W
+NewSubFileType	254	R/W	called SubFileType in spec
+NumberOfInks	334	R/W
+Orientation	274	R/W
+PageName	285	R/W
+PageNumber	297	R/W
+PhotometricInterpretation	262	R/W	used by Group 3 and JPEG codecs
+PlanarConfiguration	284	R/W	data i/o
+Predictor	317	R/W	used by LZW and Deflate codecs
+PrimaryChromacities	319	R/W
+ReferenceBlackWhite	532	R/W
+ResolutionUnit	296	R/W	used by Group 3 codec
+RowsPerStrip	278	R/W	data i/o
+SampleFormat	339	R/W
+SamplesPerPixel	277	R/W	lots
+SMinSampleValue	340	R/W
+SMaxSampleValue	341	R/W
+Software	305	R/W
+StoNits	37439	R/W
+StripByteCounts	279	R/W	data i/o
+StripOffsets	273	R/W	data i/o
+SubFileType	255	R/W	called OSubFileType in spec
+TargetPrinter	337	R/W
+Thresholding	263	R/W	
+TileByteCounts	324	R/W	data i/o
+TileDepth	32998	R/W	tile/strip calculations
+TileLength	323	R/W	data i/o
+TileOffsets	324	R/W	data i/o
+TileWidth	322	R/W	data i/o
+TransferFunction	301	R/W
+WhitePoint	318	R/W
+XPosition	286	R/W
+XResolution	282	R/W
+YCbCrCoefficients	529	R/W	used by TIFFRGBAImage support
+YCbCrPositioning	531	R/W	tile/strip size calulcations
+YCbCrSubsampling	530	R/W
+YPosition	286	R/W
+YResolution	283	R/W	used by Group 3 codec
+.SH "PSEUDO TAGS"
+In addition to the normal
+.SM TIFF
+tags the library supports a collection of 
+tags whose values lie in a range outside the valid range of 
+.SM TIFF
+tags.
+These tags are termed
+.I pseud-tags
+and are used to control various codec-specific functions within the library.
+The table below summarizes the defined pseudo-tags.
+.sp
+.nf
+.ta \w'TIFFTAG_JPEGTABLESMODE'u+2n +\w'Codec'u+2n +\w'R/W'u+2n
+\fITag Name\fP	\fICodec\fP	\fIR/W\fP	\fILibrary Use/Notes\fP
+.sp 5p
+.nf
+TIFFTAG_FAXMODE	G3	R/W	general codec operation
+TIFFTAG_FAXFILLFUNC	G3/G4	R/W	bitmap fill function
+TIFFTAG_JPEGQUALITY	JPEG	R/W	compression quality control
+TIFFTAG_JPEGCOLORMODE	JPEG	R/W	control colorspace conversions
+TIFFTAG_JPEGTABLESMODE	JPEG	R/W	control contents of \fIJPEGTables\fP tag
+TIFFTAG_ZIPQUALITY	Deflate	R/W	compression quality level
+TIFFTAG_PIXARLOGDATAFMT	PixarLog	R/W	user data format
+TIFFTAG_PIXARLOGQUALITY	PixarLog	R/W	compression quality level
+TIFFTAG_SGILOGDATAFMT	SGILog	R/W	user data format
+.fi
+.TP
+.B TIFFTAG_FAXMODE
+Control the operation of the Group 3 codec.
+Possible values (independent bits that can be combined by
+or'ing them together) are:
+FAXMODE_CLASSIC
+(enable old-style format in which the
+.SM RTC
+is written at the end of the last strip),
+FAXMODE_NORTC
+(opposite of 
+FAXMODE_CLASSIC;
+also called
+FAXMODE_CLASSF),
+FAXMODE_NOEOL
+(do not write 
+.SM EOL
+codes at the start of each row of data),
+FAXMODE_BYTEALIGN
+(align each encoded row to an 8-bit boundary),
+FAXMODE_WORDALIGN
+(align each encoded row to an 16-bit boundary),
+The default value is dependent on the compression scheme; this
+pseudo-tag is used by the various G3 and G4 codecs to share code.
+.TP
+.B TIFFTAG_FAXFILLFUNC
+Control the function used to convert arrays of black and white
+runs to packed bit arrays.
+This hook can be used to image decoded scanlines in multi-bit
+depth rasters (e.g. for display in colormap mode)
+or for other purposes.
+The default value is a pointer to a builtin function that images
+packed bilevel data.
+.TP
+.B TIFFTAG_IPTCNEWSPHOTO
+Tag contaings image metadata per the IPTC newsphoto spec: Headline, 
+captioning, credit, etc... Used by most wire services. 
+.TP
+.B TIFFTAG_PHOTOSHOP
+Tag contains Photoshop captioning information and metadata. Photoshop 
+uses in parallel and redundantly alongside IPTCNEWSPHOTO information. 
+.TP
+.B TIFFTAG_JPEGQUALITY
+Control the compression quality level used in the baseline algorithm.
+Note that quality levels are in the range 0-100 with a default value of 75.
+.TP
+.B TIFFTAG_JPEGCOLORMODE
+Control whether or not conversion is done between
+RGB and YCbCr colorspaces.
+Possible values are:
+JPEGCOLORMODE_RAW
+(do not convert), and
+JPEGCOLORMODE_RGB
+(convert to/from RGB)
+The default value is JPEGCOLORMODE_RAW.
+.TP
+.B TIFFTAG_JPEGTABLESMODE
+Control the information written in the 
+.I JPEGTables
+tag.
+Possible values (independent bits that can be combined by
+or'ing them together) are:
+JPEGTABLESMODE_QUANT
+(include quantization tables),
+and
+JPEGTABLESMODE_HUFF
+(include Huffman encoding tables).
+The default value is JPEGTABLESMODE_QUANT|JPEGTABLESMODE_HUFF.
+.TP
+.B TIFFTAG_ZIPQUALITY
+Control the compression technique used by the Deflate codec.
+Quality levels are in the range 1-9 with larger numbers yielding better
+compression at the cost of more computation.
+The default quality level is 6 which yields a good time-space tradeoff.
+.TP
+.B TIFFTAG_PIXARLOGDATAFMT
+Control the format of user data passed
+.I in
+to the PixarLog codec when encoding and passed
+.I out
+from when decoding.
+Possible values are:
+PIXARLOGDATAFMT_8BIT
+for 8-bit unsigned pixels,
+PIXARLOGDATAFMT_8BITABGR
+for 8-bit unsigned ABGR-ordered pixels,
+PIXARLOGDATAFMT_11BITLOG
+for 11-bit log-encoded raw data,
+PIXARLOGDATAFMT_12BITPICIO
+for 12-bit PICIO-compatible data,
+PIXARLOGDATAFMT_16BIT
+for 16-bit signed samples,
+and
+PIXARLOGDATAFMT_FLOAT
+for 32-bit IEEE floating point samples.
+.TP
+.B TIFFTAG_PIXARLOGQUALITY
+Control the compression technique used by the PixarLog codec.
+This value is treated identically to TIFFTAG_ZIPQUALITY; see the
+above description.
+.TP
+.B TIFFTAG_SGILOGDATAFMT
+Control the format of client data passed 
+.I in
+to the SGILog codec when encoding and passed
+.I out
+from when decoding.
+Possible values are:
+SGILOGDATAFMT_FLTXYZ
+for converting between LogLuv and 32-bit IEEE floating valued XYZ pixels,
+SGILOGDATAFMT_16BITLUV
+for 16-bit encoded Luv pixels,
+SGILOGDATAFMT_32BITRAW and SGILOGDATAFMT_24BITRAW
+for no conversion of data,
+SGILOGDATAFMT_8BITRGB
+for returning 8-bit RGB data (valid only when decoding LogLuv-encoded data),
+SGILOGDATAFMT_FLTY
+for converting between LogL and 32-bit IEEE floating valued Y pixels,
+SGILOGDATAFMT_16BITL
+for 16-bit encoded L pixels,
+and
+SGILOGDATAFMT_8BITGRY
+for returning 8-bit greyscale data
+(valid only when decoding LogL-encoded data).
+.SH DIAGNOSTICS
+All error messages are directed through the
+.IR TIFFError
+routine.
+By default messages are directed to
+.B stderr
+in the form:
+.IR "module: message\en."
+Warning messages are likewise directed through the
+.IR TIFFWarning
+routine.
+.SH "SEE ALSO"
+.BR fax2tiff (1),
+.BR gif2tiff (1),
+.BR pal2rgb (1),
+.BR ppm2tiff (1),
+.BR rgb2ycbcr (1),
+.BR ras2tiff (1),
+.BR raw2tiff (1),
+.BR sgi2tiff (1),
+.BR tiff2bw (1),
+.BR tiffdither (1),
+.BR tiffdump (1),
+.BR tiffcp (1),
+.BR tiffcmp (1),
+.BR tiffgt (1),
+.BR tiffinfo (1),
+.BR tiffmedian (1),
+.BR tiffsplit (1),
+.BR tiffsv (1).
+.PP
+.BR "Tag Image File Format Specification \(em Revision 6.0" ,
+an Aldus Technical Memorandum.
+.PP
+.BR "The Spirit of TIFF Class F" ,
+an appendix to the TIFF 5.0 specification prepared by Cygnet Technologies.
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/
+.SH BUGS
+The library does not support multi-sample images
+where some samples have different bits/sample.
+.PP
+The library does not support random access to compressed data
+that is organized with more than one row per tile or strip.

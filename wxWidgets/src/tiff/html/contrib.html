@@ -1,0 +1,209 @@
+<HTML>
+<HEAD>
+<TITLE>
+Contributed TIFF Software
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white> 
+<FONT FACE="Arial, Helvetica, Sans">
+<H1>
+<IMG SRC=images/smallliz.jpg WIDTH=144 HEIGHT=108 ALIGN=left BORDER=1 HSPACE=6>
+Contributed TIFF Software
+</H1>
+
+
+<P>
+The <B>contrib</B> directory has contributed software that
+uses the TIFF library or which is associated with the library
+(typically glue and guidance for ports to non-UNIX platforms, or tools that
+aren't directly TIFF related).
+
+<BR CLEAR=left>
+
+<P>
+<TABLE BORDER CELLPADDING=3>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/vms</B>
+</TD>
+<TD>
+scripts and files from Karsten Spang for building
+		the library and tools under VMS
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/dbs</B>
+</TD>
+<TD>
+various tools from Dan & Chris Sears, including a simple X-based viewer
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/ras</B>
+</TD>
+<TD>
+two programs by Patrick Naughton for converting
+		between Sun rasterfile format and TIFF (these
+		require <TT>libpixrect.a</TT>, as opposed to the one in
+		tools that doesn't)
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/mac-mpw</B><br>
+<B>contrib/mac-cw</B>
+</TD>
+<TD>
+scripts and files from Niles Ritter for building
+the library and tools under Macintosh/MPW C and
+code warrior.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/acorn</B>
+</TD>
+<TD>
+scripts and files from Peter Greenham for building
+		the library and tools on an Acorn RISC OS system.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/win32</B>
+</TD>
+<TD>
+scripts and files from Scott Wagner for building
+the library under Windows NT and Windows 95. (The makefile.vc in the
+libtiff/libtiff directory may be sufficient for most users.)
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/win_dib</B>
+</TD>
+<TD>
+two separate implementations of TIFF to DIB code suitable for any Win32 
+platform.  Contributed by Mark James, and Philippe Tenenhaus.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/ojpeg</B>
+</TD>
+<TD>
+Patch for IJG JPEG library related to support for some Old JPEG in TIFF files.
+Contributed by Scott Marovich.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/dosdjgpp</B>
+</TD>
+<TD>
+scripts and files from Alexander Lehmann for building
+		the library under MSDOS with the DJGPP v2 compiler.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/tags</B>
+</TD>
+<TD>
+scripts and files from Niles Ritter for adding private
+         tag support at runtime, without changing libtiff.
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/mfs</B>
+</TD>
+<TD>
+code from Mike Johnson to read+write images in memory
+without modifying the library
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/pds</B>
+</TD>
+<TD>
+various routines from Conrad Poelman; a TIFF image iterator and
+   code to support ``private sub-directories''
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/iptcutil</B>
+</TD>
+
+<TD>
+
+A utility by <A HREF=mailto:billr@corbis.com>Bill Radcliffe</a> to
+convert an extracted IPTC Newsphoto caption from a binary blob to
+ASCII text, and vice versa. IPTC binary blobs can be extracted from
+images via the <A
+HREF=http://www.ImageMagick.org/>ImageMagick</a> convert(1)
+utility.
+
+
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/addtiffo</B>
+</TD>
+
+<TD>
+
+A utility (and supporting subroutine) for building
+one or more reduce resolution
+overviews to an existing TIFF file.  Supplied by 
+<a href="http://pobox.com/~warmerdam">Frank Warmerdam</a>.
+
+</TD>
+</TR>
+
+<TR>
+<TD VALIGN=top>
+<B>contrib/stream</B>
+</TD>
+
+<TD>
+
+A class (TiffStream) for accessing TIFF files through a C++ stream 
+interface.   Supplied by <a href="mailto:avi@shutterfly.com">Avi Bleiweiss</a>.
+
+</TD>
+</TR>
+
+</TABLE>
+
+<P>
+Questions regarding these packages are usually best directed toward
+their authors. 
+
+<P>
+<HR>
+
+Last updated: $Date: 2006/01/03 01:42:30 $
+
+</BODY>
+</HTML>

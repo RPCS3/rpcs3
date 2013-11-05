@@ -1,0 +1,79 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH SWAB 3TIFF "November 04, 2004" "libtiff"
+.SH NAME
+TIFFGetBitRevTable, TIFFReverseBits, TIFFSwabShort, TIFFSwabLong,
+TIFFSwabArrayOfShort, TIFFSwabArrayOfLong \- byte- and bit-swapping routines
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "const unsigned char* TIFFGetBitRevTable(int " reversed ")"
+.br
+.BI "void TIFFReverseBits(u_char *" data ", unsigned long " nbytes ")"
+.br
+.BI "void TIFFSwabShort(uint16 *" data ")"
+.br
+.BI "void TIFFSwabLong(uint32 *" data ")"
+.br
+.BI "void TIFFSwabArrayOfShort(uint16 *" data ", unsigned long " nshorts ")"
+.br
+.BI "void TIFFSwabArrayOfLong(uint32 *" data ", unsigned long " nlongs ")"
+.SH DESCRIPTION
+The following routines are used by the library to swap
+16- and 32-bit data and to reverse the order of bits in bytes.
+.PP
+.IR TIFFSwabShort
+and
+.IR TIFFSwabLong
+swap the bytes in a single 16-bit and 32-bit item, respectively.
+.IR TIFFSwabArrayOfShort
+and
+.IR TIFFSwabArrayOfLong
+swap the bytes in an array of 16-bit and 32-bit items, respectively.
+.PP
+.IR TIFFReverseBits
+replaces each byte in
+.I data
+with the equivalent bit-reversed value. This operation is performed with a
+lookup table, which is returned using the
+.IR TIFFGetBitRevTable
+function.
+.I reversed
+parameter specifies which table should be returned. Supply
+.I 1
+if you want bit reversal table. Supply
+.I 0
+to get the table that do not reverse bit values. It is a lookup table that can
+be used as an
+.IR "identity function" ;
+i.e.
+.IR "TIFFNoBitRevTable[n] == n" .
+.SH DIAGNOSTICS
+None.
+.SH "SEE ALSO"
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

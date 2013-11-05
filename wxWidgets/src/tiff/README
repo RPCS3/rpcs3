@@ -1,18 +1,20 @@
-$Header$
+$Header: /cvs/maptools/cvsroot/libtiff/README,v 1.7 2012-02-18 21:53:27 bfriesen Exp $
 
 
 TIFF Software Distribution
 --------------------------
 This file is just a placeholder; all the documentation is now in
 HTML in the html directory.  To view the documentation point your
-favorite WWW viewer at html/index.html; e.g.
+favorite WWW viewer at html/index.html; 
 
-    netscape html/index.html
+e.g.
+
+    firefox html/index.html
 
 If you don't have an HTML viewer then you can read the HTML source
 or fetch a PostScript version of this documentation from the directory
 
-    ftp://ftp.sgi.com/graphics/tiff/doc
+    ftp://ftp.remotesensing.org/pub/libtiff/
 
 If you can't hack either of these options then basically what you
 want to do is:
@@ -22,15 +24,13 @@ want to do is:
     % su
     # make install
 
-If that doesn't do what you want, or something isn't clear then
-sorry, but you're SOL.
-
-    Sam Leffler	(sam@engr.sgi.com)
+More information, email contacts, and mailing list information can be 
+found online at http://www.remotesensing.org/libtiff/.
 
 
 Use and Copyright
 -----------------
-Silicon Graphics has seen fit to allow me to give this work away.  It
+Silicon Graphics has seen fit to allow us to give this work away.  It
 is free.  There is no support or guarantee of any sort as to its
 operations, correctness, or whatever.  If you do anything useful with
 all or parts of it you need to honor the copyright notices.   I would

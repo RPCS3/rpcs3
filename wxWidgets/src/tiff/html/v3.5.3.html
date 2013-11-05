@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>
+Changes in TIFF v3.5.3
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white>
+<FONT FACE="Arial, Helvetica, Sans">
+<FONT FACE="Arial, Helvetica, Sans"> 
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.5.3<BR>
+<B>Previous Version</B>: <A HREF=v3.5.2.html>v3.5.2</a><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.onshore.com/pub/libtiff">ftp.onshore.com</a>, directory pub/libtiff</A><BR>
+<B>Master HTTP Site</B>: <A HREF="http://www.remotesensing.org/libtiff/">http://www.remotesensing.org/libtiff</a> 
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+</UL>
+<p> 
+The ChangeLog will follow, but please note the most important change: 
+LZW compression has been removed. 
+<p>
+Unisys has the patent on LZW compression and have been very active in
+their enforcement of late, demanding payments of $5000 or more from
+websites using unlicensed software to create GIF's.  They could well
+do the same do persons using libtiff to create LZW compressed TIFF
+images.
+<p> 
+From <A HREF=http://burnallgifs.org>Burn All GIF's Day</a>:
+<br> 
+<em>The catch is that it appears to be difficult or impossible to get a
+Unisys license to use LZW in free software that complies with the Open
+Source Definition</em>
+<P>
+Unfortunatly, the removal of LZW compression means that saved image size has
+grown dramatically.  Without a change in the TIFF spec to support
+another lossless compression format, this is unavoidable.
+<P>
+The library can use zip for lossless compression, but as this is not
+part of the spec, TIFFs using zip compression may not work with other
+software
+<P> 
+We will be making a patch available that will contain the LZW
+compression code for users who have either obtained a license from
+Unisys or are willing to risk it. 
+<p> 
+LZW decompression is unchanged. 
+<p> 
+<P><HR WIDTH=65% ALIGN=left>
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+	<LI> Added zip creation to release makefile target 
+
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+
+<UL> 
+
+	<LI> Added html for TIFFWriteTile.3t man page. 
+	
+	<LI> Added some changes to tif_write.c to support rewriting existing
+	fixed sized tiles and strips.  Code mods disabled by default, only
+	enabled if REWRITE_HACK is defined for now.
+
+	<LI> Added TIFFWriteTile.3t man page.
+
+	<LI> Added notes on use of makefile.vc in build.html, and fixed 
+	email subscription address.
+
+	<LI>  Fixed apocalypse-inducing y2k bug in contrib/ras/ras2tiff.c 
+
+	<LI>  Did some casts cleaning up to reduce compiler warnings in tif_fax3.c,
+	   from Bruce Carmeron <cameron@petris.com> -- modifications of 
+	   changes made by Frank (sun cc still complained on cast). 
+
+	<LI> fixed various VC++ warnings as suggested by Gilles Vollant
+	<info@winimage.com>.  
+
+	<LI> Modified TIFFquery.3t man pages info on TIFFIsByteSwapped() to
+	not imply applications are responsible for image data swapping.
+
+	<LI>  HTML-ized the man pages, added to html/man
+	
+	<LI>  Removed LZW Compression to comply with Unisys patent extortion. 
+
+	<LI>  Corrected one remaining 16 -> 32 bit value in tif_fax3.c, 
+	   From Ivo Penzar <ivo.penzar@infolink-software.com. 
+
+	<LI>  Added patch from Ivo Penzar to have TiffAdvanceDirectory handle
+	   memory mapped files. <ivo.penzar@infolink-software.com>
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+	<LI> Fixed apocalypse-inducing y2k bug in contrib/ras/ras2tiff.c 
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+Last updated $Date: 2004/11/26 14:37:20 $.
+
+</BODY>
+</HTML>

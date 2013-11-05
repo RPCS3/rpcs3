@@ -1,0 +1,158 @@
+.\"
+.\" Copyright (c) 1991-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.ds Ps PostScript
+.if n .po 0
+.TH FAX2PS 1 "November 2, 2005" "libtiff"
+.SH NAME
+fax2ps \- convert a
+.SM TIFF
+facsimile to compressed \*(Ps\(tm
+.SH SYNOPSIS
+.B fax2ps
+[
+.I options
+] [
+.I file ...\&
+]
+.SH DESCRIPTION
+.I fax2ps
+reads one or more
+.SM TIFF
+facsimile image files and prints a compressed form of
+\*(Ps on the standard output that is suitable for printing.
+.PP
+By default, each page is scaled to reflect the
+image dimensions and resolutions stored in the file.
+The
+.B \-x
+and
+.B \-y
+options can be used to specify the horizontal and vertical
+image resolutions (lines/inch), respectively.
+If the
+.B \-S
+option is specified, each page is scaled to fill an output page.
+The default output page is 8.5 by 11 inches.
+Alternate page dimensions can be specified in inches with the
+.B \-W
+and
+.B \-H
+options.
+.PP
+By default
+.I fax2ps
+generates \*(Ps for all pages in the file.
+The
+.B \-p
+option can be used to select one or more pages from
+a multi-page document.
+.PP
+.I fax2ps
+generates a compressed form of \*(Ps that is
+optimized for sending pages of text to a \*(Ps
+printer attached to a host through a low-speed link (such
+as a serial line).
+Each output page is filled with white and then only
+the black areas are drawn.
+The \*(Ps specification of the black drawing operations
+is optimized by using a special font that encodes the
+move-draw operations required to fill
+the black regions on the page.
+This compression scheme typically results in a substantially
+reduced \*(Ps description, relative to the straightforward
+imaging of the page with a \*(Ps
+.I image
+operator.
+This algorithm can, however, be ineffective
+for continuous-tone and white-on-black images.
+For these images, it sometimes is more efficient to send
+the raster bitmap image directly; see
+.BR tiff2ps (1).
+.SH OPTIONS
+.TP 10
+.BI \-p " number"
+Print only the indicated page.
+Multiple pages may be printed by specifying
+this option more than once.
+.TP 10
+.BI \-x " resolution"
+Use
+.I resolution
+as the horizontal resolution, in dots/inch, of the image data.
+By default this value is taken from the file.
+.TP 10
+.BI \-y " resolution"
+Use
+.I resolution
+as the vertical resolution, in lines/inch, of the image data.
+By default this value is taken from the file.
+.TP 10
+.B \-S
+Scale each page of image data to fill the output page dimensions.
+By default images are presented according to the dimension
+information recorded in the 
+.SM TIFF
+file.
+.TP 10
+.BI \-W " width"
+Use
+.I width
+as the width, in inches, of the output page.
+.TP 10
+.BI \-H " height"
+Use
+.I height
+as the height, in inches, of the output page.
+.SH DIAGNOSTICS
+Some messages about malformed 
+.SM TIFF
+images come from the
+.SM TIFF
+library.
+.PP
+Various messages about badly formatted facsimile images
+may be generated due to transmission errors in received
+facsimile.
+.I fax2ps
+attempts to recover from such data errors by resynchronizing
+decoding at the end of the current scanline.
+This can result in long horizontal black lines in the resultant
+\*(Ps image.
+.SH NOTES
+If the destination printer supports \*(Ps Level II then
+it is always faster to just send the encoded bitmap generated
+by the
+.BR tiff2ps (1)
+program.
+.SH BUGS
+.I fax2ps
+should probably figure out when it is doing a poor
+job of compressing the output and just generate 
+\*(Ps to image the bitmap raster instead.
+.SH "SEE ALSO"
+.BR tiff2ps (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/
