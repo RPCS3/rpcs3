@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "ELF32.h"
 
-bool isLittleEndian;
-
 ELF32Loader::ELF32Loader(vfsStream& f)
 	: elf32_f(f)
 	, LoaderBase()
@@ -38,29 +36,26 @@ bool ELF32Loader::Close()
 
 bool ELF32Loader::LoadEhdrInfo()
 {
-	u8 endian;
-	elf32_f.Seek(5);
-	elf32_f.Read(&endian, 1);
-	isLittleEndian = (endian == 0x1);
-
-	elf32_f.Reset();
 	elf32_f.Seek(0);
-	if (isLittleEndian) ehdr.LoadLE(elf32_f);
-	else ehdr.Load(elf32_f);
+	ehdr.Load(elf32_f);
 
 	if(!ehdr.CheckMagic()) return false;
+
+	if(ehdr.IsLittleEndian())
+		ConLog.Warning("ELF32 LE");
 
 	switch(ehdr.e_machine)
 	{
 	case MACHINE_MIPS:
 	case MACHINE_PPC64:
 	case MACHINE_SPU:
+	case MACHINE_ARM:
 		machine = (Elf_Machine)ehdr.e_machine;
 	break;
 
 	default:
 		machine = MACHINE_Unknown;
-		ConLog.Error("Unknown elf32 type: 0x%x", ehdr.e_machine);
+		ConLog.Error("Unknown elf32 machine: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
@@ -86,11 +81,25 @@ bool ELF32Loader::LoadPhdrInfo()
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
 		Elf32_Phdr* phdr = new Elf32_Phdr();
-		if(isLittleEndian) phdr->LoadLE(elf32_f);
+		if(ehdr.IsLittleEndian()) phdr->LoadLE(elf32_f);
 		else phdr->Load(elf32_f);
 		phdr_arr.Move(phdr);
 	}
 
+	if(!Memory.IsGoodAddr(entry))
+	{
+		//entry is physical, convert to virtual
+
+		for(size_t i=0; i<phdr_arr.GetCount(); ++i)
+		{
+			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
+			{
+				entry += phdr_arr[i].p_vaddr;
+				ConLog.Warning("virtual entry = 0x%x", entry);
+				break;
+			}
+		}
+	}
 	return true;
 }
 
@@ -100,7 +109,7 @@ bool ELF32Loader::LoadShdrInfo()
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
 		Elf32_Shdr* shdr = new Elf32_Shdr();
-		if(isLittleEndian) shdr->LoadLE(elf32_f);
+		if(ehdr.IsLittleEndian()) shdr->LoadLE(elf32_f);
 		else shdr->Load(elf32_f);
 		shdr_arr.Move(shdr);
 	}
@@ -138,8 +147,10 @@ bool ELF32Loader::LoadEhdrData(u64 offset)
 	return true;
 }
 
-bool ELF32Loader::LoadPhdrData(u64 offset)
+bool ELF32Loader::LoadPhdrData(u64 _offset)
 {
+	const u64 offset = machine == MACHINE_SPU ? _offset : 0;
+
 	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
 		phdr_arr[i].Show();
@@ -165,7 +176,16 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 				);
 			}
 
-			Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz);
+			switch(machine)
+			{
+			case MACHINE_SPU: Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_MIPS: Memory.PSPMemory.RAM.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_ARM: Memory.PSVMemory.RAM.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+
+			default:
+				continue;
+			}
+
 			elf32_f.Seek(phdr_arr[i].p_offset);
 			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
 		}
@@ -173,7 +193,7 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 		{
 			elf32_f.Seek(phdr_arr[i].p_offset);
 			Elf32_Note note;
-			if(isLittleEndian) note.LoadLE(elf32_f);
+			if(ehdr.IsLittleEndian()) note.LoadLE(elf32_f);
 			else note.Load(elf32_f);
 
 			if(note.type != 1)

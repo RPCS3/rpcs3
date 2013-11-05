@@ -311,7 +311,7 @@ void RawSPUThread::Task()
 				SPU.Status.SetValue(SPU_STATUS_RUNNING);
 			}
 
-			DoCode();
+			m_dec->DecodeMemory(PC + m_offset);
 			NextPc();
 
 			for(uint i=0; i<bp.GetCount(); ++i)

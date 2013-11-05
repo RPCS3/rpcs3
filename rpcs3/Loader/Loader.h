@@ -11,6 +11,7 @@ enum Elf_Machine
 	MACHINE_MIPS = 0x08,
 	MACHINE_PPC64 = 0x15,
 	MACHINE_SPU = 0x17,
+	MACHINE_ARM = 0x28,
 };
 
 enum ShdrType

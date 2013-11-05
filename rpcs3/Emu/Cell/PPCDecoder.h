@@ -2,15 +2,12 @@
 #include "Emu/CPU/CPUDecoder.h"
 #include "PPCInstrTable.h"
 
-class PPCDecoder
+class PPCDecoder : public CPUDecoder
 {
-protected:
-	u32 m_code;
-
 public:
-	u32 GetCode() const { return m_code; }
-
 	virtual void Decode(const u32 code)=0;
+
+	virtual void DecodeMemory(const u64 address);
 };
 
 

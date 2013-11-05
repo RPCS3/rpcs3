@@ -4,7 +4,8 @@
 enum MemoryType
 {
 	Memory_PS3,
-	Memory_Vita,
+	Memory_PSV,
+	Memory_PSP,
 };
 
 class MemoryBase
@@ -13,6 +14,7 @@ class MemoryBase
 
 public:
 	ArrayF<MemoryBlock> MemoryBlocks;
+	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
 	DynamicMemoryBlock PRXMem;
@@ -22,6 +24,21 @@ public:
 	DynamicMemoryBlock StackMem;
 	MemoryBlock SpuRawMem;
 	MemoryBlock SpuThrMem;
+
+	struct
+	{
+		DynamicMemoryBlockLE RAM;
+		DynamicMemoryBlockLE Userspace;
+	} PSVMemory;
+
+	struct
+	{
+		DynamicMemoryBlockLE Scratchpad;
+		DynamicMemoryBlockLE VRAM;
+		DynamicMemoryBlockLE RAM;
+		DynamicMemoryBlockLE Kernel;
+		DynamicMemoryBlockLE Userspace;
+	} PSPMemory;
 
 	bool m_inited;
 
@@ -143,7 +160,7 @@ public:
 		{
 		case Memory_PS3:
 			MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
-			MemoryBlocks.Add(PRXMem.SetRange(0x30000000, 0x10000000));
+			MemoryBlocks.Add(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
 			MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
 			MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
 			MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
@@ -152,7 +169,17 @@ public:
 			//MemoryBlocks.Add(SpuThrMem.SetRange(0xF0000000, 0x10000000));
 		break;
 
-		case Memory_Vita:
+		case Memory_PSV:
+			MemoryBlocks.Add(PSVMemory.RAM.SetRange(0x81000000, 0x10000000));
+			MemoryBlocks.Add(UserMemory = PSVMemory.Userspace.SetRange(0x91000000, 0x10000000));
+		break;
+
+		case Memory_PSP:
+			MemoryBlocks.Add(PSPMemory.Scratchpad.SetRange(0x00010000, 0x00004000));
+			MemoryBlocks.Add(PSPMemory.VRAM.SetRange(0x04000000, 0x00200000));
+			MemoryBlocks.Add(PSPMemory.RAM.SetRange(0x08000000, 0x02000000));
+			MemoryBlocks.Add(PSPMemory.Kernel.SetRange(0x88000000, 0x00800000));
+			MemoryBlocks.Add(UserMemory = PSPMemory.Userspace.SetRange(0x08800000, 0x01800000));
 		break;
 		}
 
@@ -315,22 +342,22 @@ public:
 
 	u32 GetUserMemTotalSize()
 	{
-		return PRXMem.GetSize();
+		return UserMemory->GetSize();
 	}
 
 	u32 GetUserMemAvailSize()
 	{
-		return PRXMem.GetSize() - PRXMem.GetUsedSize();
+		return UserMemory->GetSize() - UserMemory->GetUsedSize();
 	}
 
 	u64 Alloc(const u32 size, const u32 align)
 	{
-		return PRXMem.Alloc(AlignAddr(size, align));
+		return UserMemory->Alloc(AlignAddr(size, align));
 	}
 
 	bool Free(const u64 addr)
 	{
-		return PRXMem.Free(addr);
+		return UserMemory->Free(addr);
 	}
 
 	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
@@ -353,7 +380,7 @@ public:
 			{
 				if(MemoryBlocks[i].GetStartAddr() == addr)
 				{
-					MemoryBlocks.RemoveFAt(i);
+					MemoryBlocks.RemoveAt(i);
 				}
 			}
 		}

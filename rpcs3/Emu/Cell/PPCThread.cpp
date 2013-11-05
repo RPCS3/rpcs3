@@ -14,9 +14,7 @@ PPCThread* GetCurrentPPCThread()
 	return (PPCThread*)thread;
 }
 
-PPCThread::PPCThread(CPUThreadType type)
-	: CPUThread(type)
-	, m_dec(nullptr)
+PPCThread::PPCThread(CPUThreadType type) : CPUThread(type)
 {
 }
 

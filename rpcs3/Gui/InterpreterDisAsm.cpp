@@ -1,5 +1,11 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/Cell/PPUDecoder.h"
+#include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/SPUDecoder.h"
+#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/ARM9/ARM9DisAsm.h"
+#include "Emu/ARM9/ARM9Decoder.h"
 
 #include "InstructionEditor.cpp"
 #include "RegisterEditor.cpp"
@@ -101,7 +107,7 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 
 void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 {
-	CPU = (PPCThread*)event.GetClientData();
+	CPU = (CPUThread*)event.GetClientData();
 
 	delete decoder;
 	//delete disasm;
@@ -125,6 +131,14 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 		{
 			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_InterpreterMode);
 			decoder = new SPUDecoder(dis_asm);
+			disasm = &dis_asm;
+		}
+		break;
+
+		case CPU_THREAD_ARM9:
+		{
+			ARM9DisAsm& dis_asm = *new ARM9DisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new ARM9Decoder(dis_asm);
 			disasm = &dis_asm;
 		}
 		break;
@@ -228,7 +242,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 			}
 
 			disasm->dump_pc = PC;
-			decoder->Decode(Memory.Read32(CPU->GetOffset() + PC));
+			decoder->DecodeMemory(CPU->GetOffset() + PC);
 
 			if(IsBreakPoint(PC))
 			{
@@ -303,7 +317,7 @@ void InterpreterDisAsmFrame::WriteRegs()
 
 void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 {
-	PPCThread* thr = (PPCThread*)event.GetClientData();
+	CPUThread* thr = (CPUThread*)event.GetClientData();
 	event.Skip();
 
 	if(!thr)

@@ -322,6 +322,9 @@
     <ClCompile Include="Emu\ARM9\ARM9Thread.cpp">
       <Filter>Emu\ARM9</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPCDecoder.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

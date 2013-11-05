@@ -827,8 +827,6 @@ protected:
 	virtual void DoPause();
 	virtual void DoResume();
 	virtual void DoStop();
-
-	virtual void DoCode();
 };
 
 PPUThread& GetCurrentPPUThread();

@@ -1,23 +1,23 @@
 class RegisterEditorDialog : public wxDialog
 {
 	u64 pc;
-	PPCDisAsm* disasm;
-	PPCDecoder* decoder;
+	CPUDisAsm* disasm;
+	CPUDecoder* decoder;
 	wxComboBox* t1_register;
 	wxTextCtrl* t2_value;
 	wxStaticText* t3_preview;
 
 public:
-	PPCThread* CPU;
+	CPUThread* CPU;
 
 public:
-	RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm);
+	RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* _CPU, CPUDecoder* _decoder, CPUDisAsm* _disasm);
 
 	void updateRegister(wxCommandEvent& event);
 	void updatePreview(wxCommandEvent& event);
 };
 
-RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPCDecoder* _decoder, PPCDisAsm* _disasm)
+RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* _CPU, CPUDecoder* _decoder, CPUDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit registers", wxDefaultPosition)
 	, pc(_pc)
 	, CPU(_CPU)
@@ -82,6 +82,10 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, PPCThread* 
 	case CPU_THREAD_RAW_SPU:
 		for (int i=0; i<128; i++) t1_register->Append(wxString::Format("GPR[%d]",i));
 	break;
+
+	default:
+		wxMessageBox("Not supported thread.", "Error");
+	return;
 	}
 
 	SetSizerAndFit(s_panel_margin_x);

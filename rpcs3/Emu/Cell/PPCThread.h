@@ -6,7 +6,6 @@
 class PPCThread : public CPUThread
 {
 protected:
-	PPCDecoder* m_dec;
 	u64 m_args[4];
 	Array<u64> m_argv_addr;
 

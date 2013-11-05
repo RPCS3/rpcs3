@@ -87,8 +87,3 @@ void SPUThread::DoStop()
 	delete m_dec;
 	m_dec = 0;
 }
-
-void SPUThread::DoCode()
-{
-	m_dec->Decode(Memory.Read32(m_offset + PC));
-}

@@ -178,45 +178,6 @@ void PPUThread::DoStop()
 
 bool dump_enable = false;
 
-void PPUThread::DoCode()
-{
-	const u32 code = Memory.Read32(m_offset + PC);
-
-#ifdef _DEBUG
-	static bool is_last_enabled = false;
-
-	if(dump_enable)
-	{
-		static wxFile f("dump.txt", wxFile::write);
-		static PPU_DisAsm disasm(*this, DumpMode);
-		static PPU_Decoder decoder(disasm);
-		
-		if(!is_last_enabled)
-		{
-			f.Write(RegsToString() + "\n");
-		}
-
-		disasm.dump_pc = PC;
-		decoder.Decode(code);
-		f.Write(disasm.last_opcode);
-
-		is_last_enabled = true;
-	}
-	else
-	{
-		is_last_enabled = false;
-	}
-#endif
-
-	if(++cycle > 220)
-	{
-		cycle = 0;
-		TB++;
-	}
-
-	m_dec->Decode(code);
-}
-
 bool FPRdouble::IsINF(PPCdouble d)
 {
 	return ((u64&)d & 0x7FFFFFFFFFFFFFFFULL) == 0x7FF0000000000000ULL;

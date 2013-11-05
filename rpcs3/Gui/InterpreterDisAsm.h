@@ -1,15 +1,13 @@
 #pragma once
-#include "Emu/Cell/PPCThread.h"
-#include "Emu/Cell/PPUDecoder.h"
-#include "Emu/Cell/PPUDisAsm.h"
-#include "Emu/Cell/SPUDecoder.h"
-#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/CPUDecoder.h"
+#include "Emu/CPU/CPUDisAsm.h"
 
 class InterpreterDisAsmFrame : public wxPanel
 {
 	wxListView* m_list;
-	PPCDisAsm* disasm;
-	PPCDecoder* decoder;
+	CPUDisAsm* disasm;
+	CPUDecoder* decoder;
 	u64 PC;
 	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
@@ -21,7 +19,7 @@ class InterpreterDisAsmFrame : public wxPanel
 	wxChoice* m_choice_units;
 
 public:
-	PPCThread* CPU;
+	CPUThread* CPU;
 
 public:
 	InterpreterDisAsmFrame(wxWindow* parent);

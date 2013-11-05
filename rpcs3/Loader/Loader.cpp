@@ -42,8 +42,9 @@ const wxString Ehdr_MachineToString(const u16 machine)
 	switch(machine)
 	{
 	case MACHINE_MIPS:	return "MIPS";
-	case MACHINE_PPC64: return "PowerPC64";
+	case MACHINE_PPC64:	return "PowerPC64";
 	case MACHINE_SPU:	return "SPU";
+	case MACHINE_ARM:	return "ARM";
 	};
 
 	return wxString::Format("Unknown (%x)", machine);

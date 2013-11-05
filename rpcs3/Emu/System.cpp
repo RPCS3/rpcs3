@@ -123,6 +123,14 @@ void Emulator::Load()
 			case MACHINE_PPC64:
 				Memory.Init(Memory_PS3);
 			break;
+
+			case MACHINE_MIPS:
+				Memory.Init(Memory_PSP);
+			break;
+
+			case MACHINE_ARM:
+				Memory.Init(Memory_PSV);
+			break;
 			}
 
 			is_error = !l.Load();
@@ -148,6 +156,7 @@ void Emulator::Load()
 		{
 		case MACHINE_PPC64: thread_type = CPU_THREAD_PPU; break;
 		case MACHINE_SPU: thread_type = CPU_THREAD_SPU; break;
+		case MACHINE_ARM: thread_type = CPU_THREAD_ARM9; break;
 
 		default:
 			is_error = true;

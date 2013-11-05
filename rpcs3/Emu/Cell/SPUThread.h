@@ -364,9 +364,6 @@ protected:
 	virtual void DoPause();
 	virtual void DoResume();
 	virtual void DoStop();
-
-protected:
-	virtual void DoCode();
 };
 
 SPUThread& GetCurrentSPUThread();

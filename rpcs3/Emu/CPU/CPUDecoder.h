@@ -2,6 +2,12 @@
 #include "CPUInstrTable.h"
 #pragma warning( disable : 4800 )
 
+class CPUDecoder
+{
+public:
+	virtual void DecodeMemory(const u64 address)=0;
+};
+
 template<typename TO>
 class InstrCaller
 {

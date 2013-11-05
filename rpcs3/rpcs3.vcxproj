@@ -203,6 +203,7 @@
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Emu\ARM9\ARM9Thread.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
+    <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />

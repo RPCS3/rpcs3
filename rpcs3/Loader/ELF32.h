@@ -48,6 +48,11 @@ struct Elf32_Ehdr
 #endif
 	}
 
+	bool IsLittleEndian() const
+	{
+		return e_data == 1;
+	}
+
 	void Load(vfsStream& f)
 	{
 		e_magic		= Read32(f);
@@ -55,43 +60,41 @@ struct Elf32_Ehdr
 		e_data		= Read8(f);
 		e_curver	= Read8(f);
 		e_os_abi	= Read8(f);
-		e_abi_ver	= Read64(f);
-		e_type		= Read16(f);
-		e_machine	= Read16(f);
-		e_version	= Read32(f);
-		e_entry		= Read32(f);
-		e_phoff		= Read32(f);
-		e_shoff		= Read32(f);
-		e_flags		= Read32(f);
-		e_ehsize	= Read16(f);
-		e_phentsize = Read16(f);
-		e_phnum		= Read16(f);
-		e_shentsize = Read16(f);
-		e_shnum		= Read16(f);
-		e_shstrndx  = Read16(f);
-	}
 
-	void LoadLE(vfsStream& f)
-	{
-		e_magic		= Read32(f);
-		e_class		= Read8(f);
-		e_data		= Read8(f);
-		e_curver	= Read8(f);
-		e_os_abi	= Read8(f);
-		e_abi_ver	= Read64LE(f);
-		e_type		= Read16LE(f);
-		e_machine	= Read16LE(f);
-		e_version	= Read32LE(f);
-		e_entry		= Read32LE(f);
-		e_phoff		= Read32LE(f);
-		e_shoff		= Read32LE(f);
-		e_flags		= Read32LE(f);
-		e_ehsize	= Read16LE(f);
-		e_phentsize = Read16LE(f);
-		e_phnum		= Read16LE(f);
-		e_shentsize = Read16LE(f);
-		e_shnum		= Read16LE(f);
-		e_shstrndx  = Read16LE(f);
+		if(IsLittleEndian())
+		{
+			e_abi_ver	= Read64LE(f);
+			e_type		= Read16LE(f);
+			e_machine	= Read16LE(f);
+			e_version	= Read32LE(f);
+			e_entry		= Read32LE(f);
+			e_phoff		= Read32LE(f);
+			e_shoff		= Read32LE(f);
+			e_flags		= Read32LE(f);
+			e_ehsize	= Read16LE(f);
+			e_phentsize = Read16LE(f);
+			e_phnum		= Read16LE(f);
+			e_shentsize = Read16LE(f);
+			e_shnum		= Read16LE(f);
+			e_shstrndx  = Read16LE(f);
+		}
+		else
+		{
+			e_abi_ver	= Read64(f);
+			e_type		= Read16(f);
+			e_machine	= Read16(f);
+			e_version	= Read32(f);
+			e_entry		= Read32(f);
+			e_phoff		= Read32(f);
+			e_shoff		= Read32(f);
+			e_flags		= Read32(f);
+			e_ehsize	= Read16(f);
+			e_phentsize = Read16(f);
+			e_phnum		= Read16(f);
+			e_shentsize = Read16(f);
+			e_shnum		= Read16(f);
+			e_shstrndx  = Read16(f);
+		}
 	}
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }

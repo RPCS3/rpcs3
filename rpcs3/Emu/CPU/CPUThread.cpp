@@ -16,6 +16,8 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_sync_wait(false)
 	, m_wait_thread_id(-1)
 	, m_free_data(false)
+	, m_dec(nullptr)
+	, m_is_step(false)
 {
 }
 
@@ -94,11 +96,6 @@ bool CPUThread::Sync()
 
 int CPUThread::ThreadStatus()
 {
-	if(m_is_step)
-	{
-		return CPUThread_Step;
-	}
-
 	if(Emu.IsStopped())
 	{
 		return CPUThread_Stopped;
@@ -107,6 +104,11 @@ int CPUThread::ThreadStatus()
 	if(TestDestroy())
 	{
 		return CPUThread_Break;
+	}
+
+	if(m_is_step)
+	{
+		return CPUThread_Step;
 	}
 
 	if(Emu.IsPaused() || Sync())
@@ -223,6 +225,7 @@ void CPUThread::Stop()
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
+	delete m_dec;
 
 	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
 }
@@ -276,7 +279,7 @@ void CPUThread::Task()
 				continue;
 			}
 
-			DoCode();
+			m_dec->DecodeMemory(PC + m_offset);
 			NextPc();
 
 			if(status == CPUThread_Step)

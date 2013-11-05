@@ -248,6 +248,86 @@ bool MemoryBlock::Write128(const u64 addr, const u128 value)
 	return true;
 }
 
+bool MemoryBlockLE::Read8(const u64 addr, u8* value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*value = *(u8*)GetMem(FixAddr(addr));
+	return true;
+}
+
+bool MemoryBlockLE::Read16(const u64 addr, u16* value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*value = *(u16*)GetMem(FixAddr(addr));
+	return true;
+}
+
+bool MemoryBlockLE::Read32(const u64 addr, u32* value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*value = *(u32*)GetMem(FixAddr(addr));
+	return true;
+}
+
+bool MemoryBlockLE::Read64(const u64 addr, u64* value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*value = *(u64*)GetMem(FixAddr(addr));
+	return true;
+}
+
+bool MemoryBlockLE::Read128(const u64 addr, u128* value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*value = *(u128*)GetMem(FixAddr(addr));
+	return true;
+}
+
+bool MemoryBlockLE::Write8(const u64 addr, const u8 value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*(u8*)GetMem(FixAddr(addr)) = value;
+	return true;
+}
+
+bool MemoryBlockLE::Write16(const u64 addr, const u16 value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*(u16*)GetMem(FixAddr(addr)) = value;
+	return true;
+}
+
+bool MemoryBlockLE::Write32(const u64 addr, const u32 value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*(u32*)GetMem(FixAddr(addr)) = value;
+	return true;
+}
+
+bool MemoryBlockLE::Write64(const u64 addr, const u64 value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*(u64*)GetMem(FixAddr(addr)) = value;
+	return true;
+}
+
+bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
+{
+	if(!IsMyAddress(addr)) return false;
+
+	*(u128*)GetMem(FixAddr(addr)) = value;
+	return true;
+}
+
 //NullMemoryBlock
 bool NullMemoryBlock::Read8(const u64 addr, u8* WXUNUSED(value))
 {
@@ -320,11 +400,13 @@ bool NullMemoryBlock::Write128(const u64 addr, const u128 value)
 }
 
 //DynamicMemoryBlock
-DynamicMemoryBlock::DynamicMemoryBlock() : m_max_size(0)
+template<typename PT>
+DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase() : m_max_size(0)
 {
 }
 
-const u32 DynamicMemoryBlock::GetUsedSize() const
+template<typename PT>
+const u32 DynamicMemoryBlockBase<PT>::GetUsedSize() const
 {
 	u32 size = 0;
 
@@ -336,17 +418,20 @@ const u32 DynamicMemoryBlock::GetUsedSize() const
 	return size;
 }
 
-bool DynamicMemoryBlock::IsInMyRange(const u64 addr)
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::IsInMyRange(const u64 addr)
 {
 	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize();
 }
 
-bool DynamicMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::IsInMyRange(const u64 addr, const u32 size)
 {
 	return IsInMyRange(addr) && IsInMyRange(addr + size - 1);
 }
 
-bool DynamicMemoryBlock::IsMyAddress(const u64 addr)
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::IsMyAddress(const u64 addr)
 {
 	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
 	{
@@ -359,7 +444,8 @@ bool DynamicMemoryBlock::IsMyAddress(const u64 addr)
 	return false;
 }
 
-MemoryBlock* DynamicMemoryBlock::SetRange(const u64 start, const u32 size)
+template<typename PT>
+MemoryBlock* DynamicMemoryBlockBase<PT>::SetRange(const u64 start, const u32 size)
 {
 	m_max_size = size;
 	MemoryBlock::SetRange(start, 0);
@@ -367,7 +453,8 @@ MemoryBlock* DynamicMemoryBlock::SetRange(const u64 start, const u32 size)
 	return this;
 }
 
-void DynamicMemoryBlock::Delete()
+template<typename PT>
+void DynamicMemoryBlockBase<PT>::Delete()
 {
 	m_used_mem.Clear();
 	m_max_size = 0;
@@ -375,7 +462,8 @@ void DynamicMemoryBlock::Delete()
 	MemoryBlock::Delete();
 }
 
-bool DynamicMemoryBlock::Alloc(u64 addr, u32 size)
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::Alloc(u64 addr, u32 size)
 {
 	if(!IsInMyRange(addr, size))
 	{
@@ -398,12 +486,14 @@ bool DynamicMemoryBlock::Alloc(u64 addr, u32 size)
 	return true;
 }
 
-void DynamicMemoryBlock::AppendUsedMem(u64 addr, u32 size)
+template<typename PT>
+void DynamicMemoryBlockBase<PT>::AppendUsedMem(u64 addr, u32 size)
 {
 	m_used_mem.Move(new MemBlockInfo(addr, size));
 }
 
-u64 DynamicMemoryBlock::Alloc(u32 size)
+template<typename PT>
+u64 DynamicMemoryBlockBase<PT>::Alloc(u32 size)
 {
 	for(u64 addr=GetStartAddr(); addr <= GetEndAddr() - size;)
 	{
@@ -430,12 +520,14 @@ u64 DynamicMemoryBlock::Alloc(u32 size)
 	return 0;
 }
 
-bool DynamicMemoryBlock::Alloc()
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::Alloc()
 {
 	return Alloc(GetSize() - GetUsedSize()) != 0;
 }
 
-bool DynamicMemoryBlock::Free(u64 addr)
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 {	
 	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
 	{
@@ -449,7 +541,8 @@ bool DynamicMemoryBlock::Free(u64 addr)
 	return false;
 }
 
-u8* DynamicMemoryBlock::GetMem(u64 addr) const
+template<typename PT>
+u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const
 {
 	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
 	{

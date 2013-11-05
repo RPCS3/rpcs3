@@ -41,6 +41,8 @@ protected:
 
 	u32 m_exit_status;
 
+	CPUDecoder* m_dec;
+
 public:
 	virtual void InitRegs()=0;
 
@@ -177,7 +179,6 @@ protected:
 
 protected:
 	virtual void Task();
-	virtual void DoCode() = 0;
 };
 
 CPUThread* GetCurrentCPUThread();
