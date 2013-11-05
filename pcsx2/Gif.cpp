@@ -520,7 +520,7 @@ void gifMFIFOInterrupt()
 				CPU_INT(DMAC_VIF1, 1);
 
 			if(!gifUnit.Path3Masked()) 
-				CPU_INT(DMAC_GIF, 16);
+				CPU_INT(DMAC_MFIFO_GIF, 16);
 			
 			if(!gspath3done || gifch.qwc > 0) return;
 		}
