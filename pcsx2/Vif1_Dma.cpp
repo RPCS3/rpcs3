@@ -294,9 +294,10 @@ __fi void vif1Interrupt()
 		|| (isDirectHL && !gifUnit.CanDoPath2HL())) {
 			GUNIT_WARN("vif1Interrupt() - Waiting for Path 2 to be ready");
 			CPU_INT(DMAC_VIF1, 128);
+			if(gifRegs.stat.APATH == 3) vif1Regs.stat.VGW = 1; //We're waiting for path 3. Gunslinger II
 			return;
 		}
-
+		vif1Regs.stat.VGW = 0; //Path 3 isn't busy so we don't need to wait for it.
 		vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
 		//Simulated GS transfer time done, clear the flags
 	}

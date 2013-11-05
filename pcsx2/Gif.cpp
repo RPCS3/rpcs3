@@ -60,18 +60,21 @@ __fi void gifInterrupt()
 		}
 
 	}
-		//Required for Path3 Masking timing!
-	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
-	{
-		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
 
+	//Required for Path3 Masking timing!
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
+			gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
+
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE)
+	{
 		if(vif1Regs.stat.VGW)
 		{
 			//Check if VIF is in a cycle or is currently "idle" waiting for GIF to come back.
 			if(!(cpuRegs.interrupt & (1<<DMAC_VIF1)))
 				CPU_INT(DMAC_VIF1, 1);
 
-			CPU_INT(DMAC_GIF, 16);
+			if(!gifUnit.Path3Masked()) 
+				CPU_INT(DMAC_GIF, 16);
 			return;
 		}
 		
@@ -506,18 +509,22 @@ void gifMFIFOInterrupt()
 	}
 
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
-	{
-		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
+			gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
 
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE)
+	{
 		if(vif1Regs.stat.VGW)
 		{
-			CPU_INT(DMAC_VIF1, 1);
+			//Check if VIF is in a cycle or is currently "idle" waiting for GIF to come back.
+			if(!(cpuRegs.interrupt & (1<<DMAC_VIF1)))
+				CPU_INT(DMAC_VIF1, 1);
 
 			if(!gifUnit.Path3Masked()) 
-				CPU_INT(DMAC_MFIFO_GIF, 16);
-
+				CPU_INT(DMAC_GIF, 16);
+			
 			if(!gspath3done || gifch.qwc > 0) return;
 		}
+		
 	}
 
 	if (dmacRegs.ctrl.MFD != MFD_GIF) {
