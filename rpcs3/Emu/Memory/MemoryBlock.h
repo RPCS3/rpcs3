@@ -198,5 +198,7 @@ private:
 	void AppendUsedMem(u64 addr, u32 size);
 };
 
+#include "DynamicMemoryBlockBase.inl"
+
 typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
 typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;
