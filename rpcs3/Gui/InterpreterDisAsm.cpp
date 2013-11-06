@@ -14,7 +14,7 @@
 
 u64 InterpreterDisAsmFrame::CentrePc(const u64 pc) const
 {
-	return pc - ((m_item_count / 2) * 4);
+	return pc/* - ((m_item_count / 2) * 4)*/;
 }
 
 InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
@@ -233,16 +233,17 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	else
 	{
 		disasm->offset = CPU->GetOffset();
-		for(uint i=0; i<m_item_count; ++i, PC += 4)
+		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
 			if(!Memory.IsGoodAddr(CPU->GetOffset() + PC, 4))
 			{
 				m_list->SetItem(i, 0, wxString::Format("[%08llx] illegal address", PC));
+				count = 2;
 				continue;
 			}
 
 			disasm->dump_pc = PC;
-			decoder->DecodeMemory(CPU->GetOffset() + PC);
+			count = decoder->DecodeMemory(CPU->GetOffset() + PC);
 
 			if(IsBreakPoint(PC))
 			{
@@ -255,13 +256,13 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			wxColour colour;
 
-		if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
-		{
-			colour = wxColour("Green");
-		}
-		else
-		{
-			colour = wxColour("White");
+			if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
+			{
+				colour = wxColour("Green");
+			}
+			else
+			{
+				colour = wxColour("White");
 
 				for(u32 i=0; i<Emu.GetMarkedPoints().GetCount(); ++i)
 				{
