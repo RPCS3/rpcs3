@@ -1,0 +1,153 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFWriteScanline 3TIFF "December 16, 1991" "libtiff"
+.SH NAME
+TIFFWriteScanline \- write a scanline to an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFWriteScanline(TIFF *" tif ", tdata_t " buf ", uint32 " row ", tsample_t " sample ")"
+.SH DESCRIPTION
+Write data to a file at the specified row. The
+.I sample
+parameter is used only if data are organized in separate planes (\c
+.IR PlanarConfiguration =2).
+The data are assumed to be uncompressed and in the native bit- and byte-order
+of the host machine. The data written to the file is compressed according to
+the compression scheme of the current
+.SM TIFF
+directory (see further below). If the current scanline is past the end of the
+current subfile, the
+.I ImageLength
+field is automatically increased to include the scanline (except
+for
+.IR PlanarConfiguration =2,
+where the
+.I ImageLength
+cannot be changed once the first data are written). If the
+.I ImageLength
+is increased, the
+.I StripOffsets
+and
+.I StripByteCounts
+fields are similarly enlarged to reflect data written past the previous end of
+image.
+.SH NOTES
+The library writes encoded data using the native machine byte order. Correctly
+implemented
+.SM TIFF
+readers are expected to do any necessary byte-swapping to correctly process
+image data with BitsPerSample greater than 8. The library attempts to hide
+bit-ordering differences between the image and the native machine by
+converting data from the native machine order.
+.PP
+In C++ the
+.I sample
+parameter defaults to 0.
+.PP
+Once data are written to a file for the current directory, the values of
+certain tags may not be altered; see
+.IR TIFFSetField (3TIFF)
+for more information.
+.PP
+It is not possible to write scanlines to a file that uses a tiled
+organization.  The routine
+.IR TIFFIsTiled
+can be used to determine if the file is organized as tiles or strips.
+.SH "RETURN VALUES"
+.IR TIFFWriteScanline
+returns \-1 if it immediately detects an error and 1 for a successful write.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.IR TIFFError (3TIFF)
+routine.
+.PP
+.BR "%s: File not open for writing .
+The file was opened for reading, not writing.
+.PP
+.BR "Can not write scanlines to a tiled image" .
+An attempt was made to write a scanline to a tiled image. The image is assumed
+to be organized in tiles because the
+.I TileWidth
+and
+.I TileLength
+tags have been set with
+.IR TIFFSetField (3TIFF).
+.PP
+.BR "Compression algorithm does not support random access" .
+Data was written in a non-sequential order to a file that uses a compression
+algorithm and that has
+.I RowsPerStrip
+greater than one. That is, data in the image is to be stored in a compressed
+form, and with multiple rows packed into a strip. In this case, the library
+does not support random access to the data. The data should either be written
+as entire strips, sequentially by rows, or the value of
+.I RowsPerStrip
+should be set to one.
+.PP
+\fB%s: Must set "ImageWidth" before writing data\fP.
+The image's width has not be set before the first write.
+See
+.BR TIFFSetField (3TIFF)
+for information on how to do this.
+.PP
+\fB%s: Must set "PlanarConfiguration" before writing data\fP.
+The organization of data has not be defined before the first write.
+See
+.BR TIFFSetField (3TIFF)
+for information on how to do this.
+.PP
+\fBCan not change "ImageLength" when using separate planes\fP. Separate image
+planes are being used (\c
+.IR PlanarConfiguration =2),
+but the number of rows has not been specified before the first write. The
+library supports the dynamic growth of an image only when data are organized
+in a contiguous manner (\c
+.IR PlanarConfiguration =1).
+.PP
+.BR "%d: Sample out of range, max %d" .
+The
+.I sample
+parameter was greater than the value of the SamplesPerPixel tag.
+.PP
+.BR "%s: No space for strip arrays .
+There was not enough space for the arrays that hold strip offsets and byte
+counts.
+.SH BUGS
+Writing subsampled YCbCR data does not work correctly because, for 
+.IR PlanarConfiguration =2
+the size of a scanline is not calculated on a per-sample basis, and for
+.IR PlanarConfiguration =1
+the library does not pack the block-interleaved samples.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFWriteEncodedStrip (3TIFF),
+.BR TIFFWriteRawStrip (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

@@ -1,0 +1,1150 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:20 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>INTRO</title>
+</head>
+<body>
+
+<h1 align=center>INTRO</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#DATA TYPES">DATA TYPES</a><br>
+<a href="#LIST OF ROUTINES">LIST OF ROUTINES</a><br>
+<a href="#TAG USAGE">TAG USAGE</a><br>
+<a href="#PSEUDO TAGS">PSEUDO TAGS</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+<a href="#BUGS">BUGS</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>libtiff &minus; introduction to <i>libtiff</i>, a
+library for reading and writing</big> TIFF
+<big>files</big></p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big><b>#include &lt;tiffio.h&gt;</b></big></p>
+<!-- INDENTATION -->
+<p><big>cc file.c <b>-ltiff</b></big></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big><i>libtiff</i> is a library for reading and writing
+data files encoded with the <i>Tag Image File</i> format,
+Revision 6.0 (or revision 5.0 or revision 4.0). This file
+format is suitable for archiving multi-color and
+monochromatic image data.</big></p>
+<!-- INDENTATION -->
+<p><big>The library supports several compression algorithms,
+as indicated by the <i>Compression</i> field, including: no
+compression (1),</big> CCITT <big>1D Huffman compression
+(2),</big> CCITT <big>Group 3 Facsimile compression
+(3),</big> CCITT <big>Group 4 Facsimile compression (4),
+Lempel-Ziv &amp; Welch compression (5), baseline JPEG
+compression (7), word-aligned 1D Huffman compression
+(32771), and PackBits compression (32773). In addition,
+several nonstandard compression algorithms are supported:
+the 4-bit compression algorithm used by the
+<i>ThunderScan</i> program (32809) (decompression only),
+NeXT&rsquo;s 2-bit compression algorithm (32766)
+(decompression only), an experimental LZ-style algorithm
+known as Deflate (32946), and an experimental CIE LogLuv
+compression scheme designed for images with high dynamic
+range (32845 for LogL and 32845 for LogLuv). Directory
+information may be in either little- or big-endian byte
+order&minus;byte swapping is automatically done by the
+library. Data bit ordering may be either Most Significant
+Bit (</big> MSB <big>) to Least Significant Bit (</big> LSB
+<big>) or</big> LSB <big>to</big> MSB. <big>Finally, the
+library does not support files in which the
+<i>BitsPerSample</i>, <i>Compression</i>,
+<i>MinSampleValue</i>, or <i>MaxSampleValue</i> fields are
+defined differently on a per-sample basis (in Rev. 6.0 the
+<i>Compression</i> tag is not defined on a per-sample basis,
+so this is immaterial).</big></p>
+</td>
+</table>
+<a name="DATA TYPES"></a>
+<h2>DATA TYPES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>The library makes extensive use of C typedefs to
+promote portability. Two sets of typedefs are used, one for
+communication with clients of the library and one for
+internal data structures and parsing of the</big> TIFF
+<big>format. The following typedefs are exposed to users
+either through function definitions or through parameters
+passed through the varargs interfaces.</big></p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="3" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef unsigned short uint16;</big></p>
+</td>
+<td width="38%">
+
+<p><big>16-bit unsigned integer</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef unsigned &lt;<i>thing</i>&gt;
+uint32;</big></p>
+</td>
+<td width="38%">
+
+<p><big>32-bit unsigned integer</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef unsigned int ttag_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>directory tag</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef uint16 tdir_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>directory index</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef uint16 tsample_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>sample number</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef uint32 tstrip_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>strip number</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef uint32 ttile_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>tile number</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef int32 tsize_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>i/o size in bytes</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef void* tdata_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>image data ref</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef void* thandle_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>client data handle</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="46%">
+
+<p><big>typedef int32 toff_t;</big></p>
+</td>
+<td width="38%">
+
+<p><big>file offset</big></p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>Note that <i>tstrip_t</i>, <i>ttile_t</i>, and
+<i>tsize_t</i> are constrained to be no more than 32-bit
+quantities by 32-bit fields they are stored in in the</big>
+TIFF <big>image. Likewise <i>tsample_t</i> is limited by the
+16-bit field used to store the <i>SamplesPerPixel</i> tag.
+<i>tdir_t</i> constrains the maximum number of</big> IFDs
+<big>that may appear in an image and may be an arbitrary
+size (w/o penalty). <i>ttag_t</i> must be either int,
+unsigned int, pointer, or double because the library uses a
+varargs interface and</big> ANSI C <big>restricts the type
+of the parameter before an ellipsis to be a promoted type.
+<i>toff_t</i> is defined as int32 because TIFF file offsets
+are (unsigned) 32-bit quantities. A signed value is used
+because some interfaces return &minus;1 on error. Finally,
+note that user-specified data references are passed as
+opaque handles and only cast at the lowest layers where
+their type is presumed.</big></p>
+</td>
+</table>
+<a name="LIST OF ROUTINES"></a>
+<h2>LIST OF ROUTINES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>The following routines are part of the library.
+Consult specific manual pages for details on their
+operation; on most systems doing &lsquo;&lsquo;man
+function-name&rsquo;&rsquo; will work.</big></p></td>
+</table>
+<!-- TABS -->
+
+<p><big><i>Name Description</i></big></p>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="3" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCheckpointDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>writes the current state of the directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCheckTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>very x,y,z,sample is within image</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCIELabToRGBInit</big></p>
+</td>
+<td width="67%">
+
+<p><big>initialize CIE L*a*b* 1976 to RGB conversion
+state</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCIELabToXYZ</big></p>
+</td>
+<td width="67%">
+
+<p><big>perform CIE L*a*b* 1976 to CIE XYZ
+conversion</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFClientOpen</big></p>
+</td>
+<td width="67%">
+
+<p><big>open a file for reading or writing</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFClose</big></p>
+</td>
+<td width="67%">
+
+<p><big>close an open file</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFComputeStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>return strip containing y,sample</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFComputeTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>return tile containing x,y,z,sample</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCurrentDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>return index of current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCurrentRow</big></p>
+</td>
+<td width="67%">
+
+<p><big>return index of current scanline</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCurrentStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>return index of current strip</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFCurrentTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>return index of current tile</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFDataWidth</big></p>
+</td>
+<td width="67%">
+
+<p><big>return the size of TIFF data types</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFError</big></p>
+</td>
+<td width="67%">
+
+<p><big>library error handler</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFdOpen</big></p>
+</td>
+<td width="67%">
+
+<p><big>open a file for reading or writing</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFileName</big></p>
+</td>
+<td width="67%">
+
+<p><big>return name of open file</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFileno</big></p>
+</td>
+<td width="67%">
+
+<p><big>return open file descriptor</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFindCODEC</big></p>
+</td>
+<td width="67%">
+
+<p><big>find standard codec for the specific
+scheme</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFlush</big></p>
+</td>
+<td width="67%">
+
+<p><big>flush all pending writes</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFFlushData</big></p>
+</td>
+<td width="67%">
+
+<p><big>flush pending data writes</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFGetBitRevTable</big></p>
+</td>
+<td width="67%">
+
+<p><big>return bit reversal table</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFGetField</big></p>
+</td>
+<td width="67%">
+
+<p><big>return tag value in current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFGetFieldDefaulted</big></p>
+</td>
+<td width="67%">
+
+<p><big>return tag value in current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFGetMode</big></p>
+</td>
+<td width="67%">
+
+<p><big>return open file mode</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFGetVersion</big></p>
+</td>
+<td width="67%">
+
+<p><big>return library version string</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFIsCODECConfigured</big></p>
+</td>
+<td width="67%">
+
+<p><big>check, whether we have working codec</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFIsMSB2LSB</big></p>
+</td>
+<td width="67%">
+
+<p><big>return true if image data is being
+returned</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%"></td>
+<td width="67%">
+
+<p><big>with bit 0 as the most significant bit</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFIsTiled</big></p>
+</td>
+<td width="67%">
+
+<p><big>return true if image data is tiled</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFIsByteSwapped</big></p>
+</td>
+<td width="67%">
+
+<p><big>return true if image data is byte-swapped</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFNumberOfStrips</big></p>
+</td>
+<td width="67%">
+
+<p><big>return number of strips in an image</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFNumberOfTiles</big></p>
+</td>
+<td width="67%">
+
+<p><big>return number of tiles in an image</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFOpen</big></p>
+</td>
+<td width="67%">
+
+<p><big>open a file for reading or writing</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFPrintDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>print description of the current
+directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadBufferSetup</big></p>
+</td>
+<td width="67%">
+
+<p><big>specify i/o buffer for reading</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>read the next directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadEncodedStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>read and decode a strip of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadEncodedTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>read and decode a tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadRawStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>read a raw strip of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadRawTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>read a raw tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadRGBAImage</big></p>
+</td>
+<td width="67%">
+
+<p><big>read an image into a fixed format raster</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadScanline</big></p>
+</td>
+<td width="67%">
+
+<p><big>read and decode a row of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReadTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>read and decode a tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRegisterCODEC</big></p>
+</td>
+<td width="67%">
+
+<p><big>override standard codec for the specific
+scheme</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFReverseBits</big></p>
+</td>
+<td width="67%">
+
+<p><big>reverse bits in an array of bytes</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRGBAImageBegin</big></p>
+</td>
+<td width="67%">
+
+<p><big>setup decoder state for TIFFRGBAImageGet</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRGBAImageEnd</big></p>
+</td>
+<td width="67%">
+
+<p><big>release TIFFRGBAImage decoder state</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRGBAImageGet</big></p>
+</td>
+<td width="67%">
+
+<p><big>read and decode an image</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRGBAImageOK</big></p>
+</td>
+<td width="67%">
+
+<p><big>is image readable by TIFFRGBAImageGet</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFScanlineSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>return size of a scanline</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSetDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>set the current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSetSubDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>set the current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSetErrorHandler</big></p>
+</td>
+<td width="67%">
+
+<p><big>set error handler function</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSetField</big></p>
+</td>
+<td width="67%">
+
+<p><big>set a tag&rsquo;s value in the current
+directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSetWarningHandler</big></p>
+</td>
+<td width="67%">
+
+<p><big>set warning handler function</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFStripSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>returns size of a strip</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFRawStripSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>returns the number of bytes in a raw
+strip</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSwabShort</big></p>
+</td>
+<td width="67%">
+
+<p><big>swap bytes of short</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSwabLong</big></p>
+</td>
+<td width="67%">
+
+<p><big>swap bytes of long</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSwabArrayOfShort</big></p>
+</td>
+<td width="67%">
+
+<p><big>swap bytes of an array of shorts</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFSwabArrayOfLong</big></p>
+</td>
+<td width="67%">
+
+<p><big>swap bytes of an array of longs</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFTileRowSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>return size of a row in a tile</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFTileSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>return size of a tile</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFUnRegisterCODEC</big></p>
+</td>
+<td width="67%">
+
+<p><big>unregisters the codec</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFVGetField</big></p>
+</td>
+<td width="67%">
+
+<p><big>return tag value in current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFVGetFieldDefaulted</big></p>
+</td>
+<td width="67%">
+
+<p><big>return tag value in current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFVSetField</big></p>
+</td>
+<td width="67%">
+
+<p><big>set a tag&rsquo;s value in the current
+directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFVStripSize</big></p>
+</td>
+<td width="67%">
+
+<p><big>returns the number of bytes in a strip</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWarning</big></p>
+</td>
+<td width="67%">
+
+<p><big>library warning handler</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteDirectory</big></p>
+</td>
+<td width="67%">
+
+<p><big>write the current directory</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteEncodedStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>compress and write a strip of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteEncodedTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>compress and write a tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteRawStrip</big></p>
+</td>
+<td width="67%">
+
+<p><big>write a raw strip of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteRawTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>write a raw tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteScanline</big></p>
+</td>
+<td width="67%">
+
+<p><big>write a scanline of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFWriteTile</big></p>
+</td>
+<td width="67%">
+
+<p><big>compress and write a tile of data</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFXYZToRGB</big></p>
+</td>
+<td width="67%">
+
+<p><big>perform CIE XYZ to RGB conversion</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFYCbCrToRGBInit</big></p>
+</td>
+<td width="67%">
+
+<p><big>initialize YCbCr to RGB conversion state</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>TIFFYCbCrtoRGB</big></p>
+</td>
+<td width="67%">
+
+<p><big>perform YCbCr to RGB conversion</big></p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>Auxiliary functions:</big></p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="3" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFfree</big></p>
+</td>
+<td width="67%">
+
+<p><big>free memory buffer</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFmalloc</big></p>
+</td>
+<td width="67%">
+
+<p><big>dynamically allocate memory buffer</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFmemcmp</big></p>
+</td>
+<td width="67%">
+
+<p><big>compare contents of the memory buffers</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFmemcpy</big></p>
+</td>
+<td width="67%">
+
+<p><big>copy contents of the one buffer to
+another</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFmemset</big></p>
+</td>
+<td width="67%">
+
+<p><big>fill memory buffer with a constant byte</big></p>
+</td>
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="23%">
+
+<p><big>_TIFFrealloc</big></p>
+</td>
+<td width="67%">
+
+<p><big>dynamically reallocate memory buffer</big></p>
+</td>
+</table>
+<a name="TAG USAGE"></a>
+<h2>TAG USAGE</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><big>The table below lists the</big> TIFF <big>tags that
+are recognized and handled by the library. If no use is
+indicated in the table, then the library reads and writes
+the tag, but does not use it internally. Note that some tags
+are meaningful only when a particul

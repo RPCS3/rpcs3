@@ -1,0 +1,607 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:18 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>FAX2TIFF</title>
+</head>
+<body>
+
+<h1 align=center>FAX2TIFF</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>fax2tiff &minus; create a <small>TIFF</small> Class F fax
+file from raw fax data</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>fax2tiff</b> [ <i>options</i> ] [ <b>&minus;o</b>
+<i>output.tif</i> ] <i>input.raw</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>Fax2tiff</i> creates a <small>TIFF</small> file
+containing <small>CCITT</small> Group 3 or Group 4 encoded
+data from one or more files containing
+&lsquo;&lsquo;raw&rsquo;&rsquo; Group 3 or Group 4 encoded
+data (typically obtained directly from a fax modem). By
+default, each row of data in the resultant
+<small>TIFF</small> file is 1-dimensionally encoded and
+padded or truncated to 1728 pixels, as needed. The resultant
+image is a set of low resolution (98 lines/inch) or medium
+resolution (196 lines/inch) pages, each of which is a single
+strip of data. The generated file conforms to the
+<small>TIFF</small> Class F ( <small>FAX</small> )
+specification for storing facsimile data. This means, in
+particular, that each page of the data does <b>not</b>
+include the trailing <i>return to control</i> (
+<small>RTC</small> ) code; as required for transmission by
+the <small>CCITT</small> Group 3 specifications. The old,
+&lsquo;&lsquo;classic&rsquo;&rsquo;, format is created if
+the <b>&minus;c</b> option is used. (The Class F format can
+also be requested with the <b>&minus;f</b> option.)</p>
+<!-- INDENTATION -->
+<p>The default name of the output image is <i>fax.tif</i>;
+this can be changed with the <b>&minus;o</b> option. Each
+input file is assumed to be a separate page of facsimile
+data from the same document. The order in which input files
+are specified on the command line is the order in which the
+resultant pages appear in the output file.</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Options that affect the interpretation of input data
+are:</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;3</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is <small>CCITT</small> Group 3
+encoded (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;4</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is <small>CCITT</small> Group 4
+encoded.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;U</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is uncompressed (Group 3 or Group
+4).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;1</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is encoded with the 1-dimensional
+version of the <small>CCITT</small> Group 3 Huffman encoding
+algorithm (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;2</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is 2-dimensional version of the
+<small>CCITT</small> Group 3 Huffman encoding algorithm.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;P</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is <b>not</b> EOL-aligned (default).
+This option has effect with Group 3 encoded input only.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;A</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data is EOL-aligned. This option has effect
+with Group 3 encoded input only.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;M</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Treat input data as having bits filled from most
+significant bit ( <small>MSB</small> ) to most least bit (
+<small>LSB</small> ).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;L</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Treat input data as having bits filled from least
+significant bit ( <small>LSB</small> ) to most significant
+bit ( <small>MSB</small> ) (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;B</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data was encoded with black as 0 and white
+as 1.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;W</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Assume input data was encoded with black as 1 and white
+as 0 (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;R</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the vertical resolution, in lines/inch, of the
+input images. By default input are assumed to have a
+vertical resolution of 196 lines/inch. If images are low
+resolution facsimile, a value of 98 lines/inch should be
+specified.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;X</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the width, in pixels, of the input images. By
+default input are assumed to have a width of 1728
+pixels.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Options that affect the output file format are:</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;o</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the name of the output file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;7</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be compressed with the
+<small>CCITT</small> Group 3 Huffman encoding algorithm
+(default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;8</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be compressed with the
+<small>CCITT</small> Group 4 Huffman encoding.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;u</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be uncompressed (Group 3 or Group
+4).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;5</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be encoded with the 1-dimensional
+version of the <small>CCITT</small> Group 3 Huffman encoding
+algorithm.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;6</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be encoded with the 2-dimensional
+version of the <small>CCITT</small> Group 3 Huffman encoding
+algorithm (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;a</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the last bit of each <i>End Of Line</i> (
+<small>EOL</small> ) code to land on a byte boundary
+(default). This &lsquo;&lsquo;zero padding&rsquo;&rsquo;
+will be reflected in the contents of the
+<i>Group3Options</i> tag of the resultant
+<small>TIFF</small> file. This option has effect with Group
+3 encoded output only.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;p</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Do not EOL-align output. This option has effect with
+Group 3 encoded output only.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;c</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Generate &quot;classic&quot; Group 3 TIFF format.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;f</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Generate TIFF Class F (TIFF/F) format (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;m</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output data to have bits filled from most
+significant bit ( <small>MSB</small> ) to most least bit (
+<small>LSB</small> ).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;l</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output data to have bits filled from least
+significant bit ( <small>LSB</small> ) to most significant
+bit ( <small>MSB</small> ) (default).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;r</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify the number of rows (scanlines) in each strip of
+data written to the output file. By default (or when value
+<b>0</b> is specified), <i>tiffcp</i> attempts to set the
+rows/strip that no more than 8 kilobytes of data appear in a
+strip (with except of G3/G4 compression schemes). If you
+specify special value <b>&minus;1</b> it will results in
+infinite number of the rows per strip. The entire image will
+be the one strip in that case. This is default in case of
+G3/G4 output compression schemes.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;s</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Stretch the input image vertically by writing each input
+row of data twice to the output file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;v</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force <i>fax2tiff</i> to print the number of rows of
+data it retrieved from the input file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;z</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force output to be compressed with the LZW encoding.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The following warnings and errors come from the decoding
+routines in the library.</p>
+<!-- INDENTATION -->
+<p><b>Warning, %s: Premature EOL at scanline %d (x
+%d).\n</b>. The input data had a row that was shorter than
+the expected width. The row is padded with white.</p>
+<!-- INDENTATION -->
+<p><b>%s: Premature EOF at scanline %d (x %d).\n</b>. The
+decoder ran out of data in the middle of a scanline. The
+resultant row is padded with white.</p>
+<!-- INDENTATION -->
+<p><b>%s: Bad code word at row %d, x %d\n</b>. An invalid
+Group 3 <i>code</i> was encountered while decoding the input
+file. The row number and horizontal position is given. The
+remainder of the input row is discarded, while the
+corresponding output row is padded with white.</p>
+<!-- INDENTATION -->
+<p><b>%s: Bad 2D code word at scanline %d.\n</b>. An invalid
+Group 4 or 2D Group 3 <i>code</i> was encountered while
+decoding the input file. The row number and horizontal
+position is given. The remainder of the input row is
+discarded, while the corresponding output row is padded with
+white.</p>
+</td>
+</table>
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Input data are assumed to have a a &lsquo;&lsquo;top
+left&rsquo;&rsquo; orientation; it should be possible to
+override this assumption from the command line.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b><small>CCITT</small> Recommendation T.4</b>
+(Standardization of Group 3 Facsimile Apparatus for Document
+Transmission).</p>
+<!-- INDENTATION -->
+<p><b>The Spirit of TIFF Class F</b>, an appendix to the
+TIFF 5.0 specification prepared by Cygnet Technologies.</p>
+<!-- INDENTATION -->
+<p><b>tiffinfo</b>(1), <b>tiffdither</b>(1),
+<b>tiffgt</b>(1), <b>libtiff</b>(3)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

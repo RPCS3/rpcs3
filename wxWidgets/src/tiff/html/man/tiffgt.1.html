@@ -1,0 +1,551 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:20 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFGT</title>
+</head>
+<body>
+
+<h1 align=center>TIFFGT</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>tiffgt &minus; display an image stored in a
+<small>TIFF</small> file (Silicon Graphics version)</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiffgt</b> [ <i>options</i> ] <i>input.tif ...</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>tiffgt</i> displays one or more images stored using
+the Tag Image File Format, Revision 6.0. Each image is
+placed in a fixed size window that the user must position on
+the display (unless configured otherwise through X
+defaults). If the display has fewer than 24 bitplanes, or if
+the image does not warrant full color, then
+<small>RGB</small> color values are mapped to the closest
+values that exist in the colormap (this is done using the
+<i>rgbi</i> routine found in the graphics utility library
+<b>&minus;lgutil</b>.)</p>
+<!-- INDENTATION -->
+<p><i>tiffgt</i> correctly handles files with any of the
+following characteristics:</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="3" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="34%">
+
+<p><i>BitsPerSample</i></p>
+</td>
+<td width="50%">
+
+<p>1, 2, 4, 8, 16</p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="34%">
+
+<p><i>SamplesPerPixel</i></p>
+</td>
+<td width="50%">
+
+<p>1, 3, 4 (the 4th sample is ignored)</p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="34%">
+
+<p><i>PhotometricInterpretation</i></p>
+</td>
+<td width="50%">
+
+<p>0 (min-is-white), 1 (min-is-black), 2 (RGB), 3
+(palette), 6 (YCbCr)</p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="34%">
+
+<p><i>PlanarConfiguration</i></p>
+</td>
+<td width="50%">
+
+<p>1 (contiguous), 2 (separate)</p>
+</td>
+<tr valign="top" align="left">
+<td width="15%"></td>
+<td width="34%">
+
+<p><i>Orientation</i></p>
+</td>
+<td width="50%">
+
+<p>1 (top-left), 4 (bottom-left)</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Data may be organized as strips or tiles and may be
+compressed with any of the compression algorithms supported
+by the <i>libtiff</i>(3) library.</p>
+<!-- INDENTATION -->
+<p>For palette images (<i>PhotometricInterpretation</i>=3),
+<i>tiffgt</i> inspects the colormap values and assumes
+either 16-bit or 8-bit values according to the maximum
+value. That is, if no colormap entry greater than 255 is
+found, <i>tiffgt</i> assumes the colormap has only 8-bit
+values; otherwise it assumes 16-bit values. This inspection
+is done to handle old images written by previous (incorrect)
+versions of <i>libtiff</i>.</p>
+<!-- INDENTATION -->
+<p><i>tiffgt</i> can be used to display multiple images
+one-at-a-time. The left mouse button switches the display to
+the first image in the <i>next</i> file in the list of files
+specified on the command line. The right mouse button
+switches to the first image in the <i>previous</i> file in
+the list. The middle mouse button causes the first image in
+the first file specified on the command line to be
+displayed. In addition the following keyboard commands are
+recognized:</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="4" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>b</b></p>
+</td>
+<td width="80%">
+
+<p>Use a <i>PhotometricInterpretation</i> of MinIsBlack in
+displaying the current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>l</b></p>
+</td>
+<td width="80%">
+
+<p>Use a <i>FillOrder</i> of lsb-to-msb in decoding the
+current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>m</b></p>
+</td>
+<td width="80%">
+
+<p>Use a <i>FillOrder</i> of msb-to-lsb in decoding the
+current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>c</b></p>
+</td>
+<td width="80%">
+
+<p>Use a colormap visual to display the current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>r</b></p>
+</td>
+<td width="80%">
+
+<p>Use a true color (24-bit RGB) visual to display the
+current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>w</b></p>
+</td>
+<td width="80%">
+
+<p>Use a <i>PhotometricInterpretation</i> of MinIsWhite in
+displaying the current image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>W</b></p>
+</td>
+<td width="80%">
+
+<p>Toggle (enable/disable) display of warning messages from
+the <small>TIFF</small> library when decoding images.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>E</b></p>
+</td>
+<td width="80%">
+
+<p>Toggle (enable/disable) display of error messages from
+the <small>TIFF</small> library when decoding images.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>z</b></p>
+</td>
+<td width="80%">
+
+<p>Reset all parameters to their default settings
+(<i>FillOrder</i>, <i>PhotometricInterpretation</i>,
+handling of warnings and errors).</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="8%">
+
+<p><b>PageUp</b></p>
+</td>
+<td width="80%">
+
+<p>Display the previous image in the current file or the
+last image in the previous file.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>PageDown</b></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="19%"></td>
+<td width="80%">
+<p>Display the next image in the current file or the first
+image in the next file.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="6%">
+
+<p><b>Home</b></p>
+</td>
+<td width="2%"></td>
+<td width="80%">
+
+<p>Display the first image in the current file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="6%">
+
+<p><b>End</b></p>
+</td>
+<td width="2%"></td>
+<td width="80%">
+
+<p>Display the last image in the current file
+(unimplemented).</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;c</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force image display in a colormap window.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;d</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify an image to display by directory number. By
+default the first image in the file is displayed.
+Directories are numbered starting at zero.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;e</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Enable reporting of error messages from the
+<small>TIFF</small> library. By default <i>tiffgt</i>
+silently ignores images that cannot be read.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;f</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force <i>tiffgt</i> to run as a foreground process. By
+default <i>tiffgt</i> will place itself in the background
+once it has opened the requested image file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;l</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the presumed bit ordering to be <small>LSB</small>
+to <small>MSB.</small></p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;m</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force the presumed bit ordering to be <small>MSB</small>
+to <small>LSB.</small></p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;o</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Specify an image to display by directory offset. By
+default the first image in the file is displayed.
+Directories offsets may be specified using C-style syntax;
+i.e. a leading &lsquo;&lsquo;0x&rsquo;&rsquo; for
+hexadecimal and a leading &lsquo;&lsquo;0&rsquo;&rsquo; for
+octal.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;p</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Override the value of the
+<i>PhotometricInterpretation</i> tag; the parameter may be
+one of: <b>miniswhite</b>, <b>minisblack</b>, <b>rgb</b>,
+<b>palette</b>, <b>mask</b>, <b>separated</b>, <b>ycbcr</b>,
+and <b>cielab</b>.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;r</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Force image display in a full color window.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;s</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Stop on the first read error. By default all errors in
+the input data are ignored and <i>tiffgt</i> does it&rsquo;s
+best to display as much of an image as possible.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;w</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Enable reporting of warning messages from the
+<small>TIFF</small> library. By default <i>tiffgt</i>
+ignores warning messages generated when reading an
+image.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="3%">
+
+<p><b>&minus;v</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>Place information in the title bar describing what type
+of window (full color or colormap) is being used, the name
+of the input file, and the directory index of the image (if
+non-zero). By default, the window type is not shown in the
+title bar.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Images wider and taller than the display are silently
+truncated to avoid crashing old versions of the window
+manager.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiffdump</b>(1), <b>tiffinfo</b>(1), <b>tiffcp</b>(1),
+<b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

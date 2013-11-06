@@ -1,0 +1,285 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH FAX2TIFF 1 "November 2, 2005" "libtiff"
+.SH NAME
+fax2tiff \- create a
+.SM TIFF
+Class F fax file from raw fax data
+.SH SYNOPSIS
+.B fax2tiff
+[
+.I options
+] [
+.B \-o
+.I output.tif
+]
+.I input.raw
+.SH DESCRIPTION
+.I Fax2tiff
+creates a
+.SM TIFF
+file containing 
+.SM CCITT
+Group 3 or Group 4 encoded data from one or more files containing ``raw''
+Group 3 or Group 4 encoded data (typically obtained directly from a fax modem).
+By default, each row of data in the resultant
+.SM TIFF
+file is 1-dimensionally encoded and
+padded or truncated to 1728 pixels, as needed.
+The resultant image is a set of low resolution (98 lines/inch)
+or medium resolution (196 lines/inch)
+pages, each of which is a single strip of data.
+The generated file conforms to the
+.SM TIFF
+Class F (\c
+.SM FAX\c
+) specification for storing facsimile data.
+This means, in particular, that each page of the data does
+.B not
+include the trailing 
+.I "return to control"
+(\c
+.SM RTC\c
+) code; as required
+for transmission by the
+.SM CCITT
+Group 3 specifications.
+The old, ``classic'', format is created if the
+.B \-c
+option is used.
+(The Class F format can also be requested with the
+.B \-f
+option.)
+.PP
+The default name of the output image is
+.IR fax.tif ;
+this can be changed with the
+.B \-o
+option.
+Each input file is assumed to be a separate page of facsimile data
+from the same document.
+The order in which input files are specified on the command
+line is the order in which the resultant pages appear in the
+output file.
+.SH OPTIONS
+Options that affect the interpretation of input data are:
+.TP
+.B \-3
+Assume input data is
+.SM CCITT
+Group 3 encoded (default).
+.TP
+.B \-4
+Assume input data is
+.SM CCITT
+Group 4 encoded.
+.TP
+.B \-U
+Assume input data is uncompressed (Group 3 or Group 4).
+.TP
+.B \-1
+Assume input data is encoded with the 1-dimensional version of the
+.SM CCITT
+Group 3 Huffman encoding algorithm (default).
+.TP
+.B \-2
+Assume input data is 2-dimensional version of the
+.SM CCITT
+Group 3 Huffman encoding algorithm.
+.TP
+.B \-P
+Assume input data is
+.B not
+EOL-aligned (default). This option has effect with Group 3 encoded input only.
+.TP
+.B \-A
+Assume input data is EOL-aligned. This option has effect with Group 3
+encoded input only.
+.TP
+.B \-M
+Treat input data as having bits filled from most significant bit (\c
+.SM MSB\c
+) to most least bit (\c
+.SM LSB\c
+).
+.TP
+.B \-L
+Treat input data as having bits filled from least significant bit (\c
+.SM LSB\c
+) to most significant bit (\c
+.SM MSB\c
+) (default).
+.TP
+.B \-B
+Assume input data was encoded with black as 0 and white as 1.
+.TP
+.B \-W
+Assume input data was encoded with black as 1 and white as 0 (default).
+.TP
+.B \-R
+Specify the vertical resolution, in lines/inch, of the input images.
+By default input are assumed to have a vertical resolution of 196 lines/inch.
+If images are low resolution facsimile, a value of 98 lines/inch should
+be specified.
+.TP
+.B \-X
+Specify the width, in pixels, of the input images.
+By default input are assumed to have a width of 1728 pixels.
+.PP
+Options that affect the output file format are:
+.TP
+.B \-o
+Specify the name of the output file.
+.TP
+.B \-7
+Force output to be compressed with the
+.SM CCITT
+Group 3 Huffman encoding algorithm (default).
+.TP
+.B \-8
+Force output to be compressed with the
+.SM CCITT
+Group 4 Huffman encoding.
+.TP
+.B \-u
+Force output to be uncompressed (Group 3 or Group 4).
+.TP
+.B \-5
+Force output to be encoded with the 1-dimensional version of the
+.SM CCITT
+Group 3 Huffman encoding algorithm.
+.TP
+.B \-6
+Force output to be encoded with the 2-dimensional version of the
+.SM CCITT
+Group 3 Huffman encoding algorithm (default).
+.TP
+.B \-a
+Force the last bit of each
+.I "End Of Line"
+(\c
+.SM EOL\c
+) code to land on a byte boundary (default). This ``zero padding'' will
+be reflected in the contents of the
+.I Group3Options
+tag of the resultant
+.SM TIFF
+file. This option has effect with Group 3 encoded output only.
+.TP
+.B \-p
+Do not EOL-align output. This option has effect with Group 3 encoded
+output only.
+.TP
+.B \-c
+Generate "classic" Group 3 TIFF format.
+.TP
+.B \-f
+Generate TIFF Class F (TIFF/F) format (default).
+.TP
+.B \-m
+Force output data to have bits filled from most significant bit (\c
+.SM MSB\c
+) to most least bit (\c
+.SM LSB\c
+).
+.TP
+.B \-l
+Force  output data to have bits filled from least significant bit (\c
+.SM LSB\c
+) to most significant bit (\c
+.SM MSB\c
+) (default).
+.TP
+.B \-r
+Specify the number of rows (scanlines) in each strip of data
+written to the output file.
+By default (or when value
+.B 0
+is specified),
+.I tiffcp
+attempts to set the rows/strip
+that no more than 8 kilobytes of data appear in a strip (with except of G3/G4
+compression schemes). If you specify special value
+.B \-1
+it will results in infinite number of the rows per strip. The entire image
+will be the one strip in that case. This is default in case of G3/G4 output
+compression schemes.
+.TP
+.B \-s
+Stretch the input image vertically by writing each input row of
+data twice to the output file.
+.TP
+.B \-v
+Force
+.I fax2tiff
+to print the number of rows of data it retrieved from the input file.
+.TP
+.B \-z
+Force output to be compressed with the LZW encoding.
+.SH DIAGNOSTICS
+The following warnings and errors come from the decoding
+routines in the library.
+.PP
+.BR "Warning, %s: Premature EOL at scanline %d (x %d).\en" .
+The input data had a row that was shorter than the expected width.
+The row is padded with white.
+.PP
+.BR "%s: Premature EOF at scanline %d (x %d).\en" .
+The decoder ran out of data in the middle of a scanline.
+The resultant row is padded with white.
+.PP
+.BR "%s: Bad code word at row %d, x %d\en" .
+An invalid Group 3 
+.I code
+was encountered while decoding the input file. 
+The row number and horizontal position is given.
+The remainder of the input row is discarded, while
+the corresponding output row is padded with white.
+.PP
+.BR "%s: Bad 2D code word at scanline %d.\en" .
+An invalid Group 4 or 2D Group 3
+.I code
+was encountered while decoding the input file. 
+The row number and horizontal position is given.
+The remainder of the input row is discarded, while
+the corresponding output row is padded with white.
+.SH BUGS
+Input data are assumed to have a a ``top left'' orientation;
+it should be possible to override this assumption
+from the command line.
+.SH "SEE ALSO"
+.BR "\s-1CCITT\s+1 Recommendation T.4"
+(Standardization of Group 3 Facsimile Apparatus for Document Transmission).
+.PP
+.BR "The Spirit of TIFF Class F",
+an appendix to the TIFF 5.0 specification prepared by Cygnet Technologies.
+.PP
+.BR tiffinfo (1),
+.BR tiffdither (1),
+.BR tiffgt (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

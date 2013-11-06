@@ -1,0 +1,129 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:17 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFSTRIP</title>
+</head>
+<body>
+
+<h1 align=center>TIFFSTRIP</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFDefaultStripSize, TIFFStripSize, TIFFVStripSize,
+TIFFRawStripSize, TIFFComputeStrip, TIFFNumberOfStrips
+&minus; strip-related utility routines</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>uint32 TIFFDefaultStripSize(TIFF *</b><i>tif</i><b>,
+uint32</b> <i>estimate</i><b>)<br>
+tsize_t TIFFStripSize(TIFF *</b><i>tif</i><b>)<br>
+tsize_t TIFFVStripSize(TIFF *</b><i>tif</i><b>, uint32</b>
+<i>nrows</i><b>)<br>
+tsize_t TIFFRawStripSize(TIFF *</b><i>tif</i><b>,
+tstrip_t</b> <i>strip</i><b>)<br>
+tstrip_t TIFFComputeStrip(TIFF *</b><i>tif</i><b>,
+uint32</b> <i>row</i><b>, tsample_t</b>
+<i>sample</i><b>)<br>
+tstrip_t TIFFNumberOfStrips(TIFF *</b><i>tif</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>TIFFDefaultStripSize</i> returns the number of rows
+for a reasonable-sized strip according to the current
+settings of the <i>ImageWidth</i>, <i>BitsPerSample</i>,
+<i>SamplesPerPixel</i>, tags and any compression-specific
+requirements. If the <i>estimate</i> parameter, if non-zero,
+then it is taken as an estimate of the desired strip size
+and adjusted according to any compression-specific
+requirements. The value returned by this function is
+typically used to define the <i>RowsPerStrip</i> tag. In
+lieu of any unusual requirements <i>TIFFDefaultStripSize</i>
+tries to create strips that have approximately 8 kilobytes
+of uncompressed data.</p>
+<!-- INDENTATION -->
+<p><i>TIFFStripSize</i> returns the equivalent size for a
+strip of data as it would be returned in a call to
+<i>TIFFReadEncodedStrip</i> or as it would be expected in a
+call to <i>TIFFWriteEncodedStrip</i>.</p>
+<!-- INDENTATION -->
+<p><i>TIFFVStripSize</i> returns the number of bytes in a
+strip with <i>nrows</i> rows of data.</p>
+<!-- INDENTATION -->
+<p><i>TIFFRawStripSize</i> returns the number of bytes in a
+raw strip (i.e. not decoded).</p>
+<!-- INDENTATION -->
+<p><i>TIFFComputeStrip</i> returns the strip that contains
+the specified coordinates. A valid strip is always returned;
+out-of-range coordinate values are clamped to the bounds of
+the image. The <i>row</i> parameter is always used in
+calculating a strip. The <i>sample</i> parameter is used
+only if data are organized in separate planes
+(<i>PlanarConfiguration</i>=2).</p>
+<!-- INDENTATION -->
+<p><i>TIFFNumberOfStrips</i> returns the number of strips in
+the image.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>None.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFReadEncodedStrip</b>(3TIFF),
+<b>TIFFReadRawStrip</b>(3TIFF),
+<b>TIFFWriteEncodedStrip</b>(3TIFF),
+<b>TIFFWriteRawStrip</b>(3TIFF), <b>libtiff</b>(3TIFF),</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

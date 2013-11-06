@@ -1,0 +1,259 @@
+<HTML>
+<HEAD>
+<TITLE>
+Changes in TIFF v3.5.7
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white>
+<FONT FACE="Helvetica, Arial, Sans">
+<FONT FACE="Helvetica, Arial, Sans"> 
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.5.7<BR>
+<B>Previous Version</B>: <A HREF=v3.5.6-beta.html>v3.5.6 Beta</a><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.remotesensing.org/pub/libtiff">ftp.remotesensing.org</a>, directory pub/libtiff</A><BR>
+<B>Master HTTP Site</B>: <A HREF="http://www.remotesensing.org/libtiff/">http://www.remotesensing.org/libtiff</a> 
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+<LI><A HREF="#lzwkit">Changes in the LZW compression kit</A>
+</UL>
+<p> 
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+<li> libtiff/libtiff.def: Brent Roman submitted new version adding
+serveral missing entry points.  Also add a few other entry points 
+later.
+
+<li> configure, Makefile.in, etc: added support for OPTIMIZER being
+	set from config.site. 
+<li> config.guess: updated wholesale to an FSF version apparently 
+	from 1998 (as opposed to 1994).  This is mainly inspired by 
+	providing for MacOS X support.
+
+<li> configure/config.site: modified to check if -lm is needed for
+	MACHDEPLIBS if not supplied by config.site.  Needed for Darwin.
+<li> libtiff/tiff.h: Applied hac to try and resolve the problem
+	with the inttypes.h include file on AIX. (Bug 39)
+
+<li> configure, *Makefile.in: Various changes to improve configuration
+	for HP/UX specifically, and also in general.  (Bug 40) They include:
+<ul>
+ <li> Try to handle /usr/bin/sh instead of /bin/sh where necessary.
+ <li> Upgrade to HP/UX 10.x+ compiler, linker and dso options.
+ <li> Fixed mmap() test to avoid MMAP_FIXED ... it isn't available on HP
+ <li> Use -${MAKEFLAGS} in sub makes from makefiles.
+ <li> Fixed SCRIPT_SH/SHELL handling.
+</ul>
+<li> configure: Changes for DSO generation on AIX provided by
+	John Marquart <jomarqua@indiana.edu>.
+
+<li> configure, libtiff/Makefile.in: Modified to build DSOs properly
+	on Darwin thanks to Robert Krajewski (rpk@alum.mit.edu) and
+	Keisuke Fujii (fujiik@jlcuxf.kek.jp).
+
+<li> configure, libtiff/Makefile.in: applied OpenBSD patches as per bug 61.
+
+<li> Makefile.in: added DESTDIR support as per bug 60.
+
+<li> libtiff/tif_jpeg.c: Define HAVE_BOOLEAN on windows if RPCNDR.H 
+	has been included.
+<li> man/Makefile.in: add TIFFClientOpen link as per debian submitted
+	bug 66.
+<li> libtiff/Makefile.in: Fixed @DSOSUB_VERSION to be @DSOSUF_VERSION@
+	in two places.
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+
+<UL> 
+<li> tif_fax3.c: keep rw_mode flag internal to fax3 state to remember
+	whether we are encoding or decoding.  This is to ensure graceful 
+	recovery if TIFFClientOpen() discovers an attempt to open a compressed
+	file for "r+" access, and subsequently close it, as it resets the 
+	tif_mode flag to O_RDONLY in this case to avoid writes, confusing the
+	compressor's concept of whether it is in encode or decode mode.
+<li> tif_luv.c/tiff.h/tiffio.h: 
+	New version of TIFF LogLuv (SGILOG) modules contributed by Greg Ward 
+	(greg@shutterfly.com).  He writes:
+
+<ol>
+	<li> I improved the gamut-mapping function in tif_luv.c for imaginary
+	colors, because some images were being super-saturated on the input 
+	side and this resulted in some strange color shifts in the output.
+
+	<li> I added a psuedotag in tiff.h to control random dithering during
+	LogLuv encoding.  This is turned off by default for 32-bit LogLuv and 
+	on for 24-bit LogLuv output.  Dithering improves the average color 
+	accuracy over the image.
+
+	<li> I added a #define for LOG_LUV_PUBLIC, which is enabled by default in
+	tiffio.h, to expose internal routines for converting between LogLuv and
+	XYZ coordinates.  This is helpful for writing more efficient,
+	specialized conversion routines, especially for reading LogLuv files.
+</ol>
+
+<li> libtiff/tif_dirinfo.c: don't declare tiffFieldInfo static on VMS.
+
+<li> Added TIFFTAG_COPYRIGHT support.
+<li> tif_getimage.c: Added support for 16bit minisblack/miniswhite 
+	images in RGBA interface.
+<li> libtiff/tif_dirinfo.c: removed duplicate TIFFTAG_PHOTOSHOP as per
+	bug 44.
+<li> libtiff/tif_dirwrite.c: Added support for TIFF_VARIABLE2 in the
+	case of writing TIFF_BYTE/TIFF_SBYTE fields as per bug 43.
+
+<li> libtiff/tif_dirinfo.c: Modified the TIFF_BYTE definition for
+	TIFFTAG_PHOTOSHOP to use a writecount of TIFF_VARIABLE2 (-3) to
+	force use of uint32 counts instead of short counts. 
+
+<li> libtiff/tif_dirinfo.c: moved pixar and copyright flags to 
+	ensure everything is in order.
+
+<li> Integrated experimental OJPEG support from Scott Marovich of HP.  
+
+<li> libtiff/tif_open.c: Seek back to zero after failed read,
+	before writing header.
+
+<li> libtiff/tiff.h, libtiff/tif_fax3.c: added check for __LP64__ 
+	when checking for 64 bit architectures as per bugzilla bug 67.
+<li> libtiff/tif_getimage.c: Use memmove() instead of TIFFmemcpy()
+	in TIFFReadRGBATile() to avoid issues in cases of overlapping
+	buffers.  See Bug 69 in Bugzilla. 
+<li> libtiff/tif_getimage.c: Don't complain for CMYK (separated)
+	images with more than four samples per pixel as per bug 73.
+
+<li> libtiff/tif_getimage.c: relax handling of contig case where
+there are extra samples that are supposed to be ignored as per bug 75.  This
+should now work for 8bit greyscale or palletted images.  
+
+<li> libtiff/tif_packbits.c: fixed memory overrun error as per bug 77.
+
+<li> libtiff/tif_getimage.c: Fixed problem with reading strips or
+tiles that don't start on a tile boundary.  Fix contributed by
+Josep Vallverdu (from HP), and further described in bug 47.
+
+<li> libtif/tif_fax3.c: Removed #ifdef PURIFY logic, and modified to
+	always use the "safe" version, even if there is a very slight
+	cost in performance as per bug 54.
+<li> libtiff/tif_lzw.c: added dummy LZWSetupEncode() to report an
+	error about LZW not being available.
+
+<li> libtiff/tif_dir.c: propagate failure to initialize compression
+	back from TIFFSetField() as an error status, so applications can 
+	detect failure.
+
+<li> libtiff/tif_lzw.c: Avoid MS VC++ 5.0 optimization bug as per bug 78.
+
+<li> libtiff/tif_dirwrite.c: added TIFFRewriteDirectory() function.
+Updated TIFFWriteDirectory man page to include TIFFRewriteDirectory.
+
+<li> libtiff/tiff.h: I have created COMPRESSION_CCITT_T4, 
+	COMPRESSION_CCITT_T6, TIFFTAG_T4OPTIONS and TIFFTAG_T6OPTIONS aliases 
+	in keeping with TIFF 6.0 standard in tiff.h as per bug 83.
+
+<li> Added PHOTOMETRIC_ITULAB as per bug 90.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!-------------------------------------------------------------------------->
+
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+<li> Brent Roman contributed updated tiffcp utility (and tiffcp.1)
+	with support for extracting subimages with the ,n syntax, and also
+	adding the -b bias removal flag. 
+<li> tiff2ps.c/tiff2ps.1: Substantial changes to tiff2ps by
+	Bruce A. Mallett, including a faster encoder, fixes for level
+	2 PostScript, and support for the imagemask operator.
+<li> fax2ps.c: Helge (libtiff at oldach.net) submitted fix
+that corrects behaviour for non-Letter paper
+sizes. (Bug 35) It fixes two problems:
+<br>
+	Without	scaling (-S) the fax is now centered on the page size specified
+	with -H	and/or -W. Before, fax2ps was using an obscure and practially
+	useless algorithm to allocate the image relative to Letter sized paper
+	which sometime sled to useless whitespace on the paper, while at the
+	same time cutting of the faxes printable area at the opposite border.
+<br>
+
+	Second, scaling now preserves aspect ratio, which makes unusual faxes
+	(in particular short ones) print properly.
+
+<li> thumbnail.c: changed default output compression
+	to packbits from LZW since LZW isn't generally available.
+<li> tiff2rgba.c: added -n flag to avoid emitting alpha component. Also added
+a man page for tiff2rgba.
+
+<li> tiffcmp.c: Fixed multi samples per pixel support for ContigCompare
+as per bug 53.
+Updated bug section of tiffcmp.1 to note tiled file issues.
+
+<li> libtiff/tif_getimage.c: Fixed so that failure is properly
+	reported by gtTileContig, gtStripContig, gtTileSeparate and 
+	gtStripSeparate as per bug 51.
+
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="lzwkit"><B><FONT SIZE=+3>C</FONT>HANGES IN THE LZW COMPRESSION KIT:</B></A>
+<UL> 
+	<LI> Rewrote lzw patching process so that is required to enable full
+	LZW support is to drop the tif_lzw.c from the 
+	libtiff-lzw-compression-kit over the one in the libtiff directory. 
+
+	<LI> Some changes were made to make recovery from failure to
+	initialize the LZW compressor more graceful.
+
+	<LI> Note that as distributed libtiff support LZW decompression, but
+        not LZW compression. 
+</UL>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN THE CONTRIB AREA:</B></A>
+<UL> 
+<li> Fixed distribution to include contrib/addtiffo/tif_ovrcache.{c,h}.
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+Last updated $Date: 2004/11/26 14:37:20 $.
+
+</BODY>
+</HTML>

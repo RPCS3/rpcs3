@@ -1,0 +1,83 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFReadTile 3TIFF "December 16, 1991" "libtiff"
+.SH NAME
+TIFFReadTile \- read and decode a tile of data from an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "tsize_t TIFFReadTile(TIFF *" tif ", tdata_t " buf ", uint32 " x ", uint32 " y ", uint32 " z ", tsample_t " sample ")"
+.SH DESCRIPTION
+Return the data for the tile
+.I containing
+the specified coordinates. The data placed in
+.I buf
+are returned decompressed and, typically, in the native byte- and
+bit-ordering, but are otherwise packed (see further below). The buffer must be
+large enough to hold an entire tile of data. Applications should call the
+routine
+.IR TIFFTileSize
+to find out the size (in bytes) of a tile buffer. The
+.I x
+and
+.I y
+parameters are always used by
+.IR TIFFReadTile .
+The
+.I z
+parameter is used if the image is deeper than 1 slice (\c
+.IR ImageDepth >1).
+The
+.I sample
+parameter is used only if data are organized in separate planes (\c
+.IR PlanarConfiguration =2).
+.SH NOTES
+The library attempts to hide bit- and byte-ordering differences between the
+image and the native machine by converting data to the native machine order.
+Bit reversal is done if the
+.I FillOrder
+tag is opposite to the native machine bit order. 16- and 32-bit samples are
+automatically byte-swapped if the file was written with a byte order opposite
+to the native machine byte order,
+.SH "RETURN VALUES"
+.IR TIFFReadTile
+returns \-1 if it detects an error; otherwise the number of bytes in the
+decoded tile is returned.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.BR TIFFError (3TIFF)
+routine.
+.SH "SEE ALSO"
+.BR TIFFCheckTile (3TIFF),
+.BR TIFFComputeTile (3TIFF),
+.BR TIFFOpen (3TIFF),
+.BR TIFFReadEncodedTile (3TIFF),
+.BR TIFFReadRawTile (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

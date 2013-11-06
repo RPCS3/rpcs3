@@ -1,0 +1,975 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:16 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>COLOR</title>
+</head>
+<body>
+
+<h1 align=center>COLOR</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFYCbCrToRGBInit, TIFFYCbCrtoRGB, TIFFCIELabToRGBInit,
+TIFFCIELabToXYZ, TIFFXYZToRGB &minus; color conversion
+routines.</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>int TIFFYCbCrToRGBInit(TIFFYCbCrToRGB
+*</b><i>ycbcr</i><b>, float *</b><i>luma</i><b>, float
+*</b><i>refBlackWhite&quot;</i><b>);&quot;<br>
+void TIFFYCbCrtoRGB(TIFFYCbCrToRGB *</b><i>ycbcr</i><b>,
+uint32</b> <i>Y</i><b>, int32</b> <i>Cb</i><b>, int32</b>
+<i>Cr</i><b>, uint32 *</b><i>R</i><b>, uint32
+*</b><i>G</i><b>, uint32 *</b><i>B</i> <b>);</b></p>
+<!-- INDENTATION -->
+<p><b>int TIFFCIELabToRGBInit(TIFFCIELabToRGB
+*</b><i>cielab</i><b>, TIFFDisplay *</b><i>display</i><b>,
+float *</b><i>refWhite</i><b>);<br>
+void TIFFCIELabToXYZ(TIFFCIELabToRGB *</b><i>cielab</i><b>,
+uint32</b> <i>L</i><b>, int32</b> <i>a</i><b>, int32</b>
+<i>b</i><b>, float *</b><i>X</i><b>, float *</b><i>Y</i><b>,
+float *</b><i>Z</i><b>);<br>
+void TIFFXYZToRGB(TIFFCIELabToRGB *</b><i>cielab</i><b>,
+float</b> <i>X</i><b>, float</b> <i>Y</i><b>, float</b>
+<i>Z&quot;</i><b>,</b><i>uint32</i><b>*&quot;</b><i>R</i><b>,
+uint32 *</b><i>G</i><b>, uint32 *</b><i>B</i><b>);</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFF supports several color spaces for images stored in
+that format. There is usually a problem of application to
+handle the data properly and convert between different
+colorspaces for displaying and printing purposes. To
+simplify this task libtiff implements several color
+conversion routines itself. In particular, these routines
+used in <b>TIFFRGBAImage(3TIFF)</b> interface.</p>
+<!-- INDENTATION -->
+<p><b>TIFFYCbCrToRGBInit()</b> used to initialize
+<i>YCbCr</i> to <i>RGB</i> conversion state. Allocating and
+freeing of the <i>ycbcr</i> structure belongs to programmer.
+<i>TIFFYCbCrToRGB</i> defined in <b>tiffio.h</b> as</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>typedef struct {                /* YCbCr-&gt;RGB support */
+        TIFFRGBValue* clamptab; /* range clamping table */
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+
+<p>int*</p>
+<td width="28%"></td>
+<td width="-3%"></td>
+<td width="12%"></td>
+<td width="6%">
+
+<p>Cr_r_tab;<br>
+int*</p>
+</td>
+<td width="56%">
+</td>
+<tr valign="top" align="left">
+<td width="28%"></td>
+<td width="-3%"></td>
+<td width="12%"></td>
+<td width="6%">
+
+<p>Cb_b_tab;<br>
+int32*</p>
+</td>
+<td width="56%">
+</td>
+<tr valign="top" align="left">
+<td width="28%"></td>
+<td width="-3%"></td>
+<td width="12%"></td>
+<td width="6%">
+
+<p>Cr_g_tab;<br>
+int32*</p>
+</td>
+<td width="56%">
+</td>
+<tr valign="top" align="left">
+<td width="28%"></td>
+<td width="-3%"></td>
+<td width="12%"></td>
+<td width="6%">
+
+<p>Cb_g_tab;</p>
+</td>
+<td width="56%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>int32* Y_tab;<br>
+} TIFFYCbCrToRGB;</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>luma</i> is a float array of three values representing
+proportions of the red, green and blue in luminance, Y (see
+section 21 of the TIFF 6.0 specification, where the YCbCr
+images discussed). <i>TIFFTAG_YCBCRCOEFFICIENTS</i> holds
+that values in TIFF file. <i>refBlackWhite</i> is a float
+array of 6 values which specifies a pair of headroom and
+footroom image data values (codes) for each image component
+(see section 20 of the TIFF 6.0 specification where the
+colorinmetry fields discussed).
+<i>TIFFTAG_REFERENCEBLACKWHITE</i> is responsible for
+storing these values in TIFF file. Following code snippet
+should helps to understand the the technique:</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>float *luma, *refBlackWhite;
+uint16 hs, vs;
+
+/* Initialize structures */
+ycbcr = (TIFFYCbCrToRGB*)
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>_TIFFmalloc(TIFFroundup(sizeof(TIFFYCbCrToRGB),
+sizeof(long))</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>+ 4*256*sizeof(TIFFRGBValue)</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>+ 2*256*sizeof(int)</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>+ 3*256*sizeof(int32));</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>if (ycbcr == NULL) {<br>
+TIFFError(&quot;YCbCr-&gt;RGB&quot;,</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="4" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>&quot;No space for YCbCr-&gt;RGB conversion
+state&quot;);</p>
+</td>
+<td width="62%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>exit(0);<br>
+}</p>
+<!-- INDENTATION -->
+<p>TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRCOEFFICIENTS,
+&amp;luma);<br>
+TIFFGetFieldDefaulted(tif, TIFFTAG_REFERENCEBLACKWHITE,
+&amp;refBlackWhite);<br>
+if (TIFFYCbCrToRGBInit(ycbcr, luma, refBlackWhite) &lt;
+0)</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>exit(0);</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>/* Start conversion */<br>
+uint32 r, g, b;<br>
+uint32 Y;<br>
+int32 Cb, Cr;</p>
+<!-- INDENTATION -->
+<p>for each pixel in image</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>TIFFYCbCrtoRGB(img-&gt;ycbcr, Y, Cb, Cr, &amp;r, &amp;g,
+&amp;b);</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>/* Free state structure */<br>
+_TIFFfree(ycbcr);</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFCIELabToRGBInit()</b> initializes the <i>CIE
+L*a*b* 1976</i> to <i>RGB</i> conversion state.
+<b>TIFFCIELabToRGB</b> defined as</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>#define CIELABTORGB_TABLE_RANGE 1500
+
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="9" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+
+<p>typedef struct {</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>/* CIE Lab 1976-&gt;RGB support */</p>
+</td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>int</p>
+</td>
+<td width="6%">
+
+<p>range;</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>/* Size of conversion table */</p>
+</td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>float</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>rstep, gstep, bstep;</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>float</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>X0, Y0, Z0;</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>/* Reference white point */</p>
+</td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>TIFFDisplay display;</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>float</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>Yr2r[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yr
+to r */</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>float</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>Yg2g[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yg
+to g */</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>float</p>
+</td>
+<td width="6%"></td>
+<td width="6%">
+
+<p>Yb2b[CIELABTORGB_TABLE_RANGE + 1]; /* Conversion of Yb
+to b */</p>
+</td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="6%"></td>
+<td width="37%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>} TIFFCIELabToRGB;</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>display</i> is a display device description, declared
+as</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>typedef struct {
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_mat[3][3]; /* XYZ -&gt; luminance matrix */</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_YCR; /* Light o/p for reference white */</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_YCG;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_YCB;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>uint32 d_Vrwr; /* Pixel values for ref. white */</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>uint32 d_Vrwg;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>uint32 d_Vrwb;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_Y0R; /* Residual light for black pixel */</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_Y0G;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_Y0B;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_gammaR; /* Gamma values for the three guns
+*/</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_gammaG;</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>float d_gammaB;</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>} TIFFDisplay;</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>For example, the one can use sRGB device, which has the
+following parameters:</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>TIFFDisplay display_sRGB = {
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>{ /* XYZ -&gt; luminance matrix */</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>{ 3.2410F, -1.5374F, -0.4986F },</p>
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>{ -0.9692F, 1.8760F, 0.0416F },</p>
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>{ 0.0556F, -0.2040F, 1.0570F }</p>
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>},</p>
+</td>
+<td width="6%">
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>100.0F, 100.0F, 100.0F, /* Light o/p for reference white
+*/</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>255, 255, 255, /* Pixel values for ref. white */</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>1.0F, 1.0F, 1.0F, /* Residual light o/p for black pixel
+*/</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>2.4F, 2.4F, 2.4F, /* Gamma values for the three guns
+*/</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>};</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>refWhite</i> is a color temperature of the reference
+white. The <i>TIFFTAG_WHITEPOINT</i> contains the
+chromaticity of the white point of the image from where the
+reference white can be calculated using following
+formulae:</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>refWhite_Y = 100.0<br>
+refWhite_X = whitePoint_x / whitePoint_y * refWhite_Y<br>
+refWhite_Z = (1.0 - whitePoint_x - whitePoint_y) /
+whitePoint_y * refWhite_X</p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The conversion itself performed in two steps: at the
+first one we will convert <i>CIE L*a*b* 1976</i> to <i>CIE
+XYZ</i> using <b>TIFFCIELabToXYZ()</b> routine, and at the
+second step we will convert <i>CIE XYZ</i> to <i>RGB</i>
+using <b>TIFFXYZToRGB().</b> Look at the code sample
+below:</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<pre>float   *whitePoint;
+float   refWhite[3];
+
+/* Initialize structures */
+img-&gt;cielab = (TIFFCIELabToRGB *)
+</pre>
+</td>
+</table>
+<!-- TABS -->
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>_TIFFmalloc(sizeof(TIFFCIELabToRGB));</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>if (!cielab) {</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>TIFFError(&quot;CIE L*a*b*-&gt;RGB&quot;,</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>&quot;No space for CIE L*a*b*-&gt;RGB conversion
+state.&quot;);</p>
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>exit(0);</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>}</p>
+<!-- INDENTATION -->
+<p>TIFFGetFieldDefaulted(tif, TIFFTAG_WHITEPOINT,
+&amp;whitePoint);<br>
+refWhite[1] = 100.0F;<br>
+refWhite[0] = whitePoint[0] / whitePoint[1] *
+refWhite[1];<br>
+refWhite[2] = (1.0F - whitePoint[0] -
+whitePoint[1])</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>/ whitePoint[1] * refWhite[1];</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>if (TIFFCIELabToRGBInit(cielab, &amp;display_sRGB,
+refWhite) &lt; 0) {</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>TIFFError(&quot;CIE L*a*b*-&gt;RGB&quot;,</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+</td>
+<td width="6%">
+
+<p>&quot;Failed to initialize CIE L*a*b*-&gt;RGB conversion
+state.&quot;);</p>
+</td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>_TIFFfree(cielab);</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="0%"></td>
+<td width="6%">
+
+<p>exit(0);</p>
+</td>
+<td width="6%"></td>
+<td width="62%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>}</p>
+<!-- INDENTATION -->
+<p>/* Now we can start to convert */<br>
+uint32 r, g, b;<br>
+uint32 L;<br>
+int32 a, b;<br>
+float X, Y, Z;</p>
+<!-- INDENTATION -->
+<p>for each pixel in image</p></td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>TIFFCIELabToXYZ(cielab, L, a, b, &amp;X, &amp;Y,
+&amp;Z);</p>
+</td>
+<tr valign="top" align="left">
+<td width="24%"></td>
+<td width="75%">
+
+<p>TIFFXYZToRGB(cielab, X, Y, Z, &amp;r, &amp;g,
+&amp;b);</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="17%"></td>
+<td width="82%">
+<p>/* Don&rsquo;t forget to free the state structure */<br>
+_TIFFfree(cielab);</p></td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFRGBAImage</b>(3TIFF) <b>libtiff</b>(3TIFF),</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

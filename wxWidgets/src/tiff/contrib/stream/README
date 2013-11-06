@@ -1,0 +1,30 @@
+Subject: tiff stream interface (contrib)
+Date: Thu, 30 Mar 2000 10:48:51 -0800
+From: "Avi Bleiweiss" <avi@shutterfly.com>
+To: <warmerda@home.com>, <mike@onshore.com>
+
+Here at Shutterfly we have augmented the file based tiff library to support
+C++ streams. The implementation is an adaptor class, which takes any C++
+stream from the user and in return it deposits i/o operation method pointers
+(e.g. read, write, seek and close) into the tiff's library client state.
+
+The class TiffStream has an overloaded factory method - makeFileStream -
+which takes the C++ stream as an argument, calls TIFFClientOpen and returns
+a tiff handle. The class retains the tiff handle in its local state and
+provides a helper function (getTiffHandle) to query the handle at any time.
+Additional helper method - getStreamSize - provides the stream size to the
+user. The implementation assumes client responsibility to delete the stream
+object. The class calls TIFFClose at destruction time.
+
+Attached are a definition (tiffstream.h) and an implementation
+(tiffstream.cpp) files of the TiffStream class. No changes are required to
+the tiff core piece and the class sits on top of the library. The code is
+fairly tested at this point and is used internally in Shutterfly imaging
+software. The code is portable across WindowsNT/Linux/Solaris.
+
+We at Shutterfly believe this software has benefits to the larger community
+of tiff library users and would like to contribute this software to be part
+of the tiff distributed package. Let me know of any issue.
+
+Thanks
+Avi

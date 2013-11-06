@@ -1,0 +1,144 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:18 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFWriteRawstrip</title>
+</head>
+<body>
+
+<h1 align=center>TIFFWriteRawstrip</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFWriteRawStrip &minus; write a strip of raw data to an
+open <small>TIFF</small> file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>tsize_t TIFFWriteRawStrip(TIFF *</b><i>tif</i><b>,
+tstrip_t</b> <i>strip</i><b>, tdata_t</b> <i>buf</i><b>,
+tsize_t</b> <i>size</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Append <i>size</i> bytes of raw data to the specified
+strip.</p>
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The strip number must be valid according to the current
+settings of the <i>ImageLength</i> and <i>RowsPerStrip</i>
+tags. An image may be dynamically grown by increasing the
+value of <i>ImageLength</i> prior to each call to
+<i>TIFFWriteRawStrip</i>.</p>
+</td>
+</table>
+<a name="RETURN VALUES"></a>
+<h2>RETURN VALUES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>&minus;1 is returned if an error occurred. Otherwise, the
+value of <i>size</i> is returned.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>All error messages are directed to the
+<b>TIFFError</b>(3TIFF) routine.</p>
+<!-- INDENTATION -->
+<p><b>%s: File not open for writing</b>. The file was opened
+for reading, not writing.</p>
+<!-- INDENTATION -->
+<p><b>Can not write scanlines to a tiled image</b>. The
+image is assumed to be organized in tiles because the
+<i>TileWidth</i> and <i>TileLength</i> tags have been set
+with <b>TIFFSetField</b>(3TIFF).</p>
+<!-- INDENTATION -->
+<p><b>%s: Must set &quot;ImageWidth&quot; before writing
+data</b>. The image&rsquo;s width has not be set before the
+first write. See <b>TIFFSetField</b>(3TIFF) for information
+on how to do this.</p>
+<!-- INDENTATION -->
+<p><b>%s: Must set &quot;PlanarConfiguration&quot; before
+writing data</b>. The organization of data has not be
+defined before the first write. See
+<b>TIFFSetField</b>(3TIFF) for information on how to do
+this.</p>
+<!-- INDENTATION -->
+<p><b>%s: No space for strip arrays&quot;</b>. There was not
+enough space for the arrays that hold strip offsets and byte
+counts.</p>
+<!-- INDENTATION -->
+<p><b>%s: Strip %d out of range, max %d</b>. The specified
+strip is not a valid strip according to the currently
+specified image dimensions.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFOpen</b>(3TIFF),
+<b>TIFFWriteEncodedStrip</b>(3TIFF),
+<b>TIFFWriteScanline</b>(3TIFF), <b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

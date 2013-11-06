@@ -1,0 +1,89 @@
+.\"
+.\" Copyright (c) 1994-1997 Sam Leffler
+.\" Copyright (c) 1994-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH THUMBNAIL 1 "November 2, 2005" "libtiff"
+.SH NAME
+thumbnail \- create a
+.SM TIFF
+file with thumbnail images
+.SH SYNOPSIS
+.B thumbnail
+[
+.I options
+]
+.I input.tif
+.I output.tif
+.SH DESCRIPTION
+.I thumbnail
+is a program written to show how one might use the
+SubIFD tag (#330) to store thumbnail images.
+.I thumbnail
+copies a
+.SM TIFF
+Class F facsimile file to the output file
+and for each image an 8-bit greyscale 
+.IR "thumbnail sketch" .
+The output file contains the thumbnail image with the associated
+full-resolution page linked below with the SubIFD tag.
+.PP
+By default, thumbnail images are 216 pixels wide by 274 pixels high.
+Pixels are calculated by sampling and filtering the input image
+with each pixel value passed through a contrast curve.
+.SH OPTIONS
+.TP
+.B \-w
+Specify the width of thumbnail images in pixels.
+.TP
+.B \-h
+Specify the height of thumbnail images in pixels.
+.TP
+.B \-c
+Specify a contrast curve to apply in generating the thumbnail images.
+By default pixels values are passed through a linear contrast curve
+that simply maps the pixel value ranges.
+Alternative curves are:
+.B exp50
+for a 50% exponential curve,
+.B exp60
+for a 60% exponential curve,
+.B exp70
+for a 70% exponential curve,
+.B exp80
+for a 80% exponential curve,
+.B exp90
+for a 90% exponential curve,
+.B exp
+for a pure exponential curve,
+.B linear
+for a linear curve.
+.SH BUGS
+There are no options to control the format of the saved thumbnail images.
+.SH "SEE ALSO"
+.BR tiffdump (1),
+.BR tiffgt (1),
+.BR tiffinfo (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<TITLE>
+	Changes in TIFF v3.9.2
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white>
+<FONT FACE="Helvetica, Arial, Sans">
+<FONT FACE="Helvetica, Arial, Sans"> 
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.9.2<BR>
+<B>Previous Version</B>: <A HREF=v3.9.1.html>v3.9.1</a><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.remotesensing.org/pub/libtiff">
+ftp.remotesensing.org</a>, directory pub/libtiff</A><BR>
+<B>Master HTTP Site</B>: <A HREF="http://www.remotesensing.org/libtiff">
+http://www.remotesensing.org/libtiff</a> 
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).  If you don't
+find something listed here, then it was not done in this timeframe, or
+it was not considered important enough to be mentioned.  The following
+information is located here:
+<UL>
+<LI><A HREF="#hightlights">Major Changes</A>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+<LI><A HREF="#contrib">Changes in the contrib area</A>
+</UL>
+<p> 
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="highlights"><B><FONT SIZE=+3>M</FONT>AJOR CHANGES:</B></A>
+
+<UL>
+
+	<li> Fixes a number of bugs present in the 3.9.1 release.
+
+        <li> OJPEG support updated to work with IJG JPEG 7 release.
+
+        <li> Tiffcrop validated for most TIFF storage subformats and sample depths.
+
+</UL>
+
+
+<P><HR WIDTH=65% ALIGN=left>
+<!--------------------------------------------------------------------------->
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+
+	<li> x86_64 now uses the same default fill order as i386.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+	<li> Writing tags with an array value of type TIFF_DOUBLE now
+	returns correct error status. The TIFFTAG_SMINSAMPLEVALUE and
+	TIFFTAG_SMAXSAMPLEVALUE tags failed to write without this fix.
+
+	<li> OJPEG decoder now works with IJG JPEG 7.  Resolves "Bug
+	2090 - OJPEG crash with libjpeg v7".
+	http://bugzilla.maptools.org/show_bug.cgi?id=2090
+
+	<li> Eliminate most GCC "dereferencing type-punned pointer"
+	warnings.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!-------------------------------------------------------------------------->
+	
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+
+        <li> New tiffcrop from Richard Nolde.  Major updates to add
+        significant functionality for reading and writing tile based
+        images with bit depths not a multiple of 8 which cannot be
+        handled by tiffcp.
+
+        <li> Allow building tools with GCC using the "-Wformat
+        -Werror=format-security" flags.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN THE CONTRIB AREA:</B></A>
+
+<UL> 
+
+	<li> None
+
+</UL>
+
+Last updated $Date: 2009-11-04 17:38:13 $.
+
+</BODY>
+</HTML>

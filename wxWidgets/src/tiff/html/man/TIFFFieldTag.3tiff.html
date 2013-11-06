@@ -1,0 +1,88 @@
+<!-- Creator     : groff version 1.21 -->
+<!-- CreationDate: Sun Jul 29 12:12:01 2012 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title>TIFFFieldTag</title>
+
+</head>
+<body>
+
+<h1 align="center">TIFFFieldTag</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+
+
+<h2>NAME
+<a name="NAME"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">TIFFFieldTag
+&minus; Get TIFF field tag value from field information</p>
+
+<h2>SYNOPSIS
+<a name="SYNOPSIS"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>#include
+&lt;tiffio.h&gt;</b></p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>uint32
+TIFFFieldTag(const TIFFField*</b> <i>fip</i><b>)</b></p>
+
+<h2>DESCRIPTION
+<a name="DESCRIPTION"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>TIFFFieldTag</b>
+returns the numeric tag value for a TIFF field. This can be
+compared to various constants exported by the <b>libtiff</b>
+header files, such as <b>TIFFTAG_IMAGEWIDTH</b>.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><i>fip</i> is a
+field information pointer previously returned by
+<b>TIFFFindField</b>, <b>TIFFFieldWithTag</b>, or
+<b>TIFFFieldWithName</b>.</p>
+
+<h2>RETURN VALUES
+<a name="RETURN VALUES"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>TIFFFieldTag</b>
+returns an integer tag value.</p>
+
+<h2>SEE ALSO
+<a name="SEE ALSO"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>libtiff</b>(3TIFF),</p>
+
+<p style="margin-left:11%; margin-top: 1em">Libtiff library
+home page: <b>http://www.remotesensing.org/libtiff/</b></p>
+<hr>
+</body>
+</html>

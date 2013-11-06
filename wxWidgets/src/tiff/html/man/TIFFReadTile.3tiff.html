@@ -1,0 +1,133 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:17 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFReadTile</title>
+</head>
+<body>
+
+<h1 align=center>TIFFReadTile</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFReadTile &minus; read and decode a tile of data from
+an open <small>TIFF</small> file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>tsize_t TIFFReadTile(TIFF *</b><i>tif</i><b>,
+tdata_t</b> <i>buf</i><b>, uint32</b> <i>x</i><b>,
+uint32</b> <i>y</i><b>, uint32</b> <i>z</i><b>,
+tsample_t</b> <i>sample</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Return the data for the tile <i>containing</i> the
+specified coordinates. The data placed in <i>buf</i> are
+returned decompressed and, typically, in the native byte-
+and bit-ordering, but are otherwise packed (see further
+below). The buffer must be large enough to hold an entire
+tile of data. Applications should call the routine
+<i>TIFFTileSize</i> to find out the size (in bytes) of a
+tile buffer. The <i>x</i> and <i>y</i> parameters are always
+used by <i>TIFFReadTile</i>. The <i>z</i> parameter is used
+if the image is deeper than 1 slice
+(<i>ImageDepth</i>&gt;1). The <i>sample</i> parameter is
+used only if data are organized in separate planes
+(<i>PlanarConfiguration</i>=2).</p>
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The library attempts to hide bit- and byte-ordering
+differences between the image and the native machine by
+converting data to the native machine order. Bit reversal is
+done if the <i>FillOrder</i> tag is opposite to the native
+machine bit order. 16- and 32-bit samples are automatically
+byte-swapped if the file was written with a byte order
+opposite to the native machine byte order,</p>
+</td>
+</table>
+<a name="RETURN VALUES"></a>
+<h2>RETURN VALUES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>TIFFReadTile</i> returns &minus;1 if it detects an
+error; otherwise the number of bytes in the decoded tile is
+returned.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>All error messages are directed to the
+<b>TIFFError</b>(3TIFF) routine.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFCheckTile</b>(3TIFF),
+<b>TIFFComputeTile</b>(3TIFF), <b>TIFFOpen</b>(3TIFF),
+<b>TIFFReadEncodedTile</b>(3TIFF),
+<b>TIFFReadRawTile</b>(3TIFF), <b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

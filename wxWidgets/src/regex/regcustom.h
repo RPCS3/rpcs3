@@ -37,7 +37,8 @@
 
 /* must include this after ctype.h inclusion for CodeWarrior/Mac */
 #include "wx/defs.h"
-#include "wx/wxchar.h"
+#include "wx/chartype.h"
+#include "wx/wxcrtbase.h"
 
 /*
  * Do not insert extras between the "begin" and "end" lines -- this

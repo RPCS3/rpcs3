@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<TITLE>
+Changes in TIFF v3.4beta016
+</TITLE>
+</HEAD>
+
+<BODY>
+<FONT FACE="Arial, Helvetica, Sans">
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.4beta016<BR>
+<B>Previous Version</B>: <A HREF=v3.4beta007.html>v3.4beta007</A><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.sgi.com/graphics/tiff">ftp.sgi.com (192.48.153.1), directory graphics/tiff</A><BR>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+<LI><A HREF="#man">Changes in the manual pages</A>
+<LI><A HREF="#html">Changes in the documentation</A>
+<LI><A HREF="#contrib">Changes in contributed software</A>
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+<LI>support was added for configuring the Deflate codec
+<LI>support was added for the HTML documentation
+<LI>codecs that are not configured for inclusion in the library
+   are no longer compiled
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+<LI>support was added for registering new codecs external to the library
+   and for overriding the codecs that are builtin to the library
+<LI>emulation support for the old <TT>DataType</TT> tag was improved
+<LI>suppport was added for the <TT>SMinSampleValue</TT>
+    and <TT>SMaxSampleValue</TT> tags
+<LI>the library no longer ignores <TT>TileWidth</TT> and <TT>TileLength</TT>
+    tags whose values are not a multiple of 16 (per the spec); this
+    permits old, improperly written, images to be read
+<LI>the support for the <TT>Predictor</TT> tag was placed in a reusable
+    module so that it can be shared by multiple codecs
+<LI>experimental compression support was added for the Deflate algorithm
+   (using the freely available zlib package)
+<LI>a new routine, <TT>TIFFWriteBufferSetup</TT> was added a la the
+   routine <TT>TIFFReadBufferSetup</TT>
+<LI>the DSO version of the library is now statically linked with the
+   JPEG and Deflate libraries; this means applications that link against
+   the DSO do not also need to link against these ancillary libraries
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+<LI>all the tools now use common code to process compress-oriented arguments
+<LI><TT>tiffdump</TT> should now compile on a Macintosh with MPW
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="man"><B><FONT SIZE=+3>C</FONT>HANGES IN THE MANUAL PAGES:</B></A>
+
+<UL>
+<LI>everything was updated
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="html"><B><FONT SIZE=+3>C</FONT>HANGES IN THE DOCUMENTATION:</B></A>
+
+<UL>
+<LI>everything was updated
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN CONTRIBUTED SOFTWARE:</B></A>
+
+<UL>
+<LI><B>contrib/dbs/xtiff</B> was made to compile
+<LI><B>contrib/mac-mpw</B> is new support for compiling the software on
+   a Macintosh under MPW; consult <A HREF=build.html#Mac>the documentation</A>
+   for details
+<LI><B>contrib/tags</B> is information on how to use the tag extenion
+   facilities; consult
+   <A HREF=../contrib/tags/README>contrib/tags/README</A> for details
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+<ADDRESS>
+<A HREF="sam.html">Sam Leffler</A> / <A HREF="mailto:sam@engr.sgi.com">sam@engr.sgi.com</A>
+Last updated $Date: 1999/08/09 20:21:21 $.
+</ADDRESS>
+
+</BODY>
+</HTML>

@@ -1,0 +1,142 @@
+	addtiffo 1.0
+	============
+
+The addtiffo utility is used to add overview pyramids to an existing 
+TIFF or GeoTIFF file.  Some applications can take advantage of these
+overviews to accelerate overview display performance of large rasters. 
+
+This release of addtiffo is primarily intended for compatibility testing
+with applications, and to see if there is interest in a cleaner release
+of the capability ... perhaps incorporation into the libtiff tools 
+distribution. 
+
+Please feel free to contact me with questions, or problems.
+
+warmerda@home.com
+http://home.gdal.org/~warmerda/
+
+
+Usage
+-----
+
+Usage: addtiffo [-r {average/nearest} [-subifd] 
+                tiff_filename [resolution_reductions]
+
+Example:
+ % addtiffo abc.tif 2 4 8 16
+
+The numeric arguments are the list of reduction factors to 
+generate.  In this example a 1/2, 1/4 1/8 and 1/16 
+
+
+
+Limitations
+-----------
+
+See tif_overview.cpp for up to date details. 
+
+  o Currently only images with bits_per_sample of a multiple of eight
+    will work.
+
+  o The code will attempt to use the same kind of compression,
+    photometric interpretation, and organization as the source image, but
+    it doesn't copy geotiff tags to the reduced resolution images.
+
+  o Reduced resolution overviews for multi-sample files will currently
+    always be generated as PLANARCONFIG_SEPARATE.  This could be fixed
+    reasonable easily if needed to improve compatibility with other
+    packages.  Many don't properly support PLANARCONFIG_SEPARATE. 
+
+  o Overviews are always written as appended IFDs, rather than using the
+    ``tree of tree's'' approach using the SUBIFD tag.  I wanted to implement
+    both, but it isn't currently easy to add a SUBIFD tag to an existing
+    main tiff IFD with libtiff.  I hope to try this again later. 
+
+
+TIFF File Tags
+--------------
+
+The results of running addtiffo on a 1024x1024 tiled greyscale file 
+with the arguments ``2 4 8 16'' is to add four additional TIFF directories
+appended on the file with the SUBFILETYPE flag to 0x1 indicating the extra
+items are reduced resolution images. 
+
+The tiffinfo output of such a file might look like this:
+
+TIFF Directory at offset 0x118008
+  Image Width: 1024 Image Length: 1024
+  Tile Width: 256 Tile Length: 112
+  Bits/Sample: 8
+  Compression Scheme: none
+  Photometric Interpretation: min-is-black
+  Samples/Pixel: 1
+  Planar Configuration: single image plane
+TIFF Directory at offset 0x15e1d2
+  Subfile Type: reduced-resolution image (1 = 0x1)
+  Image Width: 512 Image Length: 512
+  Tile Width: 256 Tile Length: 112
+  Bits/Sample: 8
+  Compression Scheme: none
+  Photometric Interpretation: min-is-black
+  Samples/Pixel: 1
+  Planar Configuration: separate image planes
+TIFF Directory at offset 0x1732b8
+  Subfile Type: reduced-resolution image (1 = 0x1)
+  Image Width: 256 Image Length: 256
+  Tile Width: 256 Tile Length: 112
+  Bits/Sample: 8
+  Compression Scheme: none
+  Photometric Interpretation: min-is-black
+  Samples/Pixel: 1
+  Planar Configuration: separate image planes
+TIFF Directory at offset 0x17a366
+  Subfile Type: reduced-resolution image (1 = 0x1)
+  Image Width: 128 Image Length: 128
+  Tile Width: 128 Tile Length: 112
+  Bits/Sample: 8
+  Compression Scheme: none
+  Photometric Interpretation: min-is-black
+  Samples/Pixel: 1
+  Planar Configuration: separate image planes
+TIFF Directory at offset 0x17b40c
+  Subfile Type: reduced-resolution image (1 = 0x1)
+  Image Width: 64 Image Length: 64
+  Tile Width: 64 Tile Length: 64
+  Bits/Sample: 8
+  Compression Scheme: none
+  Photometric Interpretation: min-is-black
+  Samples/Pixel: 1
+  Planar Configuration: separate image planes
+
+
+Building
+--------
+
+You will need a C compiler.  You will need to have libtiff already
+built and installed.  The provided Makefile should work on most Unix systems.
+A similar file will be needed for Windows, but is not provided. 
+
+The CFLAGS and LIBS macros in the Makefile will have to be updated to 
+point to the correct location of the libtiff include files, and library.
+
+
+Credits
+-------
+
+ o Intergraph Corporation for partially funding the work. 
+
+ o Global Geomatics for partially funding reorganization of the overview
+   building ability as a separate utility.
+
+ o Orrin Long, and Ed Grissom of Intergraph for explaining what needed to 
+   be done. 
+
+ o Max Martinez of Erdas for his discussion of external overviews. 
+
+ o Atlantis Scientific who supported adding averaging, and some other
+   generalizations. 
+
+ o Frank Warmerdam for writing the bulk of the code. 
+
+ o Sam Leffler since this only exists because of his libtiff. 
+

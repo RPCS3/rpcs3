@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>
+Changes in TIFF v3.4beta029
+</TITLE>
+</HEAD>
+
+<BODY>
+<FONT FACE="Arial, Helvetica, Sans">
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.4beta029<BR>
+<B>Previous Version</B>: <A HREF=v3.4beta028.html>v3.4beta028</A><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.sgi.com/graphics/tiff">ftp.sgi.com (192.48.153.1), directory graphics/tiff</A><BR>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#contrib">Changes in the contributed software</A>
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+<LI><B>configure</B> now relativizes pathname references given in
+   <TT>-L</TT> options (as frequently specified when configuring
+   ancillary packages)
+<LI>problems related to configuring the software on Ultrix 4.4 have
+   been corrected
+<LI>the shell to use in Makefiles and scripts can now be set with the
+   <TT>SCRIPT_SH</TT> configuration parameter
+<LI>comments in <B>config.site</B> now correctly indicate how to setup the
+   use of ancillary packages
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+<LI>mods for building the software on a Mac using the
+   MetroWerks CodeWarrior compilers
+<LI>a bug in the CCITT T.4/T.6 decoder was fixed where the last codeword in
+   a strip/tile might not be decoded; this was seen only when decoding
+   multi-strip images
+<LI>a bug in the CCITT RLE codecs was fixed whereby the pseudo tags were not
+   being properly registered
+</UL>
+
+<P><HR WIDTH=65% ALIGN=right>
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN THE CONTRIBUTED SOFTWARE:</B></A>
+
+<UL>
+<LI><B>contrib/mac-cw</B> contains information and code from Niles Ritter
+    <A HREF=mailto:ndr@tazboy.jpl.nasa.gov>&lt;ndr@tazboy.jpl.nasa.gov&gt;</A>
+    about building the software with the MetroWerks CodeWarrior compilers
+    on Macintosh systems
+</UL>
+
+<A HREF="index.html"><IMG SRC="images/back.gif"></A> TIFF home page.<BR>
+
+<HR>
+
+<ADDRESS>
+<A HREF="sam.html">Sam Leffler</A> / <A HREF="mailto:sam@engr.sgi.com">sam@engr.sgi.com</A>
+Last updated $Date: 1999/08/09 20:21:21 $.
+</ADDRESS>
+
+</BODY>
+</HTML>

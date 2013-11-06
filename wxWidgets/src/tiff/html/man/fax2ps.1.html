@@ -1,0 +1,252 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:18 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>FAX2PS</title>
+</head>
+<body>
+
+<h1 align=center>FAX2PS</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>fax2ps &minus; convert a <small>TIFF</small> facsimile to
+compressed PostScript&trade;</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>fax2ps</b> [ <i>options</i> ] [ <i>file ...</i> ]</p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>fax2ps</i> reads one or more <small>TIFF</small>
+facsimile image files and prints a compressed form of
+PostScript on the standard output that is suitable for
+printing.</p>
+<!-- INDENTATION -->
+<p>By default, each page is scaled to reflect the image
+dimensions and resolutions stored in the file. The
+<b>&minus;x</b> and <b>&minus;y</b> options can be used to
+specify the horizontal and vertical image resolutions
+(lines/inch), respectively. If the <b>&minus;S</b> option is
+specified, each page is scaled to fill an output page. The
+default output page is 8.5 by 11 inches. Alternate page
+dimensions can be specified in inches with the
+<b>&minus;W</b> and <b>&minus;H</b> options.</p>
+<!-- INDENTATION -->
+<p>By default <i>fax2ps</i> generates PostScript for all
+pages in the file. The <b>&minus;p</b> option can be used to
+select one or more pages from a multi-page document.</p>
+<!-- INDENTATION -->
+<p><i>fax2ps</i> generates a compressed form of PostScript
+that is optimized for sending pages of text to a PostScript
+printer attached to a host through a low-speed link (such as
+a serial line). Each output page is filled with white and
+then only the black areas are drawn. The PostScript
+specification of the black drawing operations is optimized
+by using a special font that encodes the move-draw
+operations required to fill the black regions on the page.
+This compression scheme typically results in a substantially
+reduced PostScript description, relative to the
+straightforward imaging of the page with a PostScript
+<i>image</i> operator. This algorithm can, however, be
+ineffective for continuous-tone and white-on-black images.
+For these images, it sometimes is more efficient to send the
+raster bitmap image directly; see <b>tiff2ps</b>(1).</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="4" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="11%">
+
+<p><b>&minus;p</b> <i>number</i></p>
+</td>
+<td width="76%">
+
+<p>Print only the indicated page. Multiple pages may be
+printed by specifying this option more than once.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;x</b> <i>resolution</i></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="23%"></td>
+<td width="76%">
+<p>Use <i>resolution</i> as the horizontal resolution, in
+dots/inch, of the image data. By default this value is taken
+from the file.</p>
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;y</b> <i>resolution</i></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="23%"></td>
+<td width="76%">
+<p>Use <i>resolution</i> as the vertical resolution, in
+lines/inch, of the image data. By default this value is
+taken from the file.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="4" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="12%">
+
+<p><b>&minus;S</b></p>
+</td>
+<td width="76%">
+
+<p>Scale each page of image data to fill the output page
+dimensions. By default images are presented according to the
+dimension information recorded in the <small>TIFF</small>
+file.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="12%">
+
+<p><b>&minus;W</b> <i>width</i></p>
+</td>
+<td width="76%">
+
+<p>Use <i>width</i> as the width, in inches, of the output
+page.</p>
+</td>
+<td width="0%">
+</td>
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="12%">
+
+<p><b>&minus;H</b> <i>height</i></p>
+</td>
+<td width="76%">
+
+<p>Use <i>height</i> as the height, in inches, of the
+output page.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Some messages about malformed <small>TIFF</small> images
+come from the <small>TIFF</small> library.</p>
+<!-- INDENTATION -->
+<p>Various messages about badly formatted facsimile images
+may be generated due to transmission errors in received
+facsimile. <i>fax2ps</i> attempts to recover from such data
+errors by resynchronizing decoding at the end of the current
+scanline. This can result in long horizontal black lines in
+the resultant PostScript image.</p>
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>If the destination printer supports PostScript Level II
+then it is always faster to just send the encoded bitmap
+generated by the <b>tiff2ps</b>(1) program.</p>
+</td>
+</table>
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>fax2ps</i> should probably figure out when it is doing
+a poor job of compressing the output and just generate
+PostScript to image the bitmap raster instead.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiff2ps</b>(1), <b>libtiff</b>(3)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

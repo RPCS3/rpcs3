@@ -1,0 +1,292 @@
+<HTML>
+<HEAD>
+<TITLE>
+Modifying The TIFF Library
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white> 
+<FONT FACE="Arial, Helvetica, Sans">
+
+<H1>
+Defining New TIFF Tags
+</H1>
+
+Libtiff has built-in knowledge of all the standard TIFF tags, as
+well as extentions.  The following describes how to add knowledge of
+new tags as builtins to libtiff, or how to application specific tags can
+be used by applications without modifying libtiff. 
+<p>
+
+<h2>TIFFFieldInfo</h2>
+
+How libtiff manages specific tags is primarily controlled by the 
+definition for that tag value stored internally as a TIFFFieldInfo structure. 
+This structure looks like this:
+<p>
+
+<pre>
+typedef	struct {
+  ttag_t    field_tag;          /* field's tag */
+  short	    field_readcount;    /* read count/TIFF_VARIABLE/TIFF_SPP */
+  short	    field_writecount;   /* write count/TIFF_VARIABLE */
+  TIFFDataType field_type;      /* type of associated data */
+  unsigned short field_bit;     /* bit in fieldsset bit vector */
+  unsigned char field_oktochange;/* if true, can change while writing */
+  unsigned char field_passcount;/* if true, pass dir count on set */
+  char	*field_name;		/* ASCII name */
+} TIFFFieldInfo;
+</pre>
+
+<ul>
+<li> <b>field_tag</b>: the tag number.  For instance 277 for the
+SamplesPerPixel tag.  Builtin tags will generally have a #define in
+tiff.h for each known tag. <p>
+
+<li> <b>field_readcount</b>: The number of values which should be read.
+The special value TIFF_VARIABLE (-1) indicates that a variable number of
+values may be read.  The special value TIFFTAG_SPP (-2) indicates that there
+should be one value for each sample as defined by TIFFTAG_SAMPLESPERPIXEL.  
+The special value TIFF_VARIABLE2 (-3) is presumably similar to TIFF_VARIABLE
+though I am not sure what the distinction in behaviour is.  This field
+is TIFF_VARIABLE for variable length ascii fields.<p>
+
+<li> <b>field_writecount</b>: The number of values which should be written.
+Generally the same as field_readcount.  A few built-in exceptions exist, but
+I haven't analysed why they differ. <p>
+
+<li> <b>field_type</b>: Type of the field.  One of TIFF_BYTE, TIFF_ASCII,
+TIFF_SHORT, TIFF_LONG, TIFF_RATIONAL, TIFF_SBYTE, TIFF_UNDEFINED, 
+TIFF_SSHORT, TIFF_SLONG, TIFF_SRATIONAL, TIFF_FLOAT, TIFF_DOUBLE or
+TIFF_IFD.  Note that some fields can support more than one type (for 
+instance short and long).  These fields should have multiple TIFFFieldInfos. 
+<p>
+
+<li> <b>field_bit</b>: Built-in tags stored in special fields in the 
+TIFF structure have assigned field numbers to distinguish them (ie. 
+FIELD_SAMPLESPERPIXEL).  New tags should generally just use 
+FIELD_CUSTOM indicating they are stored in the generic tag list.<p>
+
+<li> <b>field_oktochange</b>: TRUE if it is OK to change this tag value
+while an image is being written.  FALSE for stuff that must be set once
+and then left unchanged (like ImageWidth, or PhotometricInterpretation for
+instance).<p>
+
+<li> <b>field_passcount</b>: If TRUE, then the count value must be passed
+in TIFFSetField(), and TIFFGetField(), otherwise the count is not required.
+This should generally be TRUE for non-ascii variable count tags unless
+the count is implicit (such as with the colormap).<p>
+
+<li> <b>field_name</b>: A name for the tag.  Normally mixed case (studly caps) 
+like "StripByteCounts" and relatively short. <p>
+
+</ul>
+
+A TIFFFieldInfo definition exists for each built-in tag in the tif_dirinfo.c
+file.  Some tags which support multiple data types have more than one
+definition, one per data type supported. <p>
+
+Various functions exist for getting the internal TIFFFieldInfo definitions,
+including _TIFFFindFieldInfo(), and _TIFFFindFieldInfoByName().  See
+tif_dirinfo.c for details.  There must be some mechanism to get the whole
+list, though I don't see it off hand.<p>
+
+<h2>Default Tag Auto-registration</h2>
+
+In libtiff 3.6.0 a new mechanism was introduced allowing libtiff to 
+read unrecognised tags automatically.  When an unknown tags is encountered, 
+it is automatically internally defined with a default name and a type 
+derived from the tag value in the file.  Applications only need to predefine
+application specific tags if they need to be able to set them in a file, or
+if particular calling conventions are desired for TIFFSetField() and 
+TIFFGetField().<p>
+
+When tags are autodefined like this the <b>field_readcount</b> and
+<b>field_writecount</b> values are always TIFF_VARIABLE.  The 
+<b>field_passcount</b> is always TRUE, and the <b>field_bit</b> is 
+FIELD_CUSTOM.  The field name will be "Tag %d" where the %d is the tag 
+number.<p>  
+
+<h2>Defining Application Tags</h2>
+
+For various reasons, it is common for applications to want to define
+their own tags to store information outside the core TIFF specification. 
+This is done by calling TIFFMergeFieldInfo() with one or more TIFFFieldInfos. 
+<p>
+
+The libgeotiff library provides geospatial information extentions within
+a TIFF file.  First, a set of TIFFFieldInfo's is prepared with information
+on the new tags:<p>
+
+<pre>
+static const TIFFFieldInfo xtiffFieldInfo[] = {
+  
+  /* XXX Insert Your tags here */
+    { TIFFTAG_GEOPIXELSCALE,	-1,-1, TIFF_DOUBLE,	FIELD_CUSTOM,
+      TRUE,	TRUE,	"GeoPixelScale" },
+    { TIFFTAG_GEOTRANSMATRIX,	-1,-1, TIFF_DOUBLE,	FIELD_CUSTOM,
+      TRUE,	TRUE,	"GeoTransformationMatrix" },
+    { TIFFTAG_GEOTIEPOINTS,	-1,-1, TIFF_DOUBLE,	FIELD_CUSTOM,
+      TRUE,	TRUE,	"GeoTiePoints" },
+    { TIFFTAG_GEOKEYDIRECTORY, -1,-1, TIFF_SHORT,	FIELD_CUSTOM,
+      TRUE,	TRUE,	"GeoKeyDirectory" },
+    { TIFFTAG_GEODOUBLEPARAMS,	-1,-1, TIFF_DOUBLE,	FIELD_CUSTOM,
+      TRUE,	TRUE,	"GeoDoubleParams" },
+    { TIFFTAG_GEOASCIIPARAMS,	-1,-1, TIFF_ASCII,	FIELD_CUSTOM,
+      TRUE,	FALSE,	"GeoASCIIParams" }
+};
+</pre>
+
+In order to define the tags, we call TIFFMergeFieldInfo() on the
+desired TIFF handle with the list of TIFFFieldInfos.<p>
+
+<pre>
+#define	N(a)	(sizeof (a) / sizeof (a[0]))
+
+    /* Install the extended Tag field info */
+    TIFFMergeFieldInfo(tif, xtiffFieldInfo, N(xtiffFieldInfo));
+</pre>
+
+The tags need to be defined for each TIFF file opened - and when reading
+they should be defined before the tags of the file are read, yet a valid
+TIFF * is needed to merge the tags against.   In order to get them 
+registered at the appropriate part of the setup process, it is necessary
+to register our merge function as an extender callback with libtiff. 
+This is done with TIFFSetTagExtender().  We also keep track of the 
+previous tag extender (if any) so that we can call it from our extender
+allowing a chain of customizations to take effect. <P>
+
+<pre>
+static TIFFExtendProc _ParentExtender = NULL;
+
+static
+void _XTIFFInitialize(void)
+{
+    static int first_time=1;
+	
+    if (! first_time) return; /* Been there. Done that. */
+    first_time = 0;
+	
+    /* Grab the inherited method and install */
+    _ParentExtender = TIFFSetTagExtender(_XTIFFDefaultDirectory);
+}
+</pre>
+
+The extender callback is looks like this.  It merges in our new fields
+and then calls the next extender if there is one in effect.<p>
+
+<pre>
+static void
+_XTIFFDefaultDirectory(TIFF *tif)
+{
+    /* Install the extended Tag field info */
+    TIFFMergeFieldInfo(tif, xtiffFieldInfo, N(xtiffFieldInfo));
+
+    /* Since an XTIFF client module may have overridden
+     * the default directory method, we call it now to
+     * allow it to set up the rest of its own methods.
+     */
+
+    if (_ParentExtender) 
+        (*_ParentExtender)(tif);
+}
+</pre>
+
+The above approach ensures that our new definitions are used when reading
+or writing any TIFF file.  However, since on reading we already have 
+default definitions for tags, it is usually not critical to pre-define them.
+If tag definitions are only required for writing custom tags, you can just
+call TIFFMergeFieldInfo() before setting new tags.  The whole extender
+architecture can then be avoided.<p>
+
+<A NAME=AddingTags><P><H2>Adding New Builtin Tags</H2></A>
+
+A similar approach is taken to the above.  However, the TIFFFieldInfo 
+should be added to the tiffFieldInfo[] list in tif_dirinfo.c.  Ensure that
+new tags are added in sorted order by the tag number.<p>
+
+Normally new built-in tags should be defined with FIELD_CUSTOM; however, if
+it is desirable for the tag value to have it's own field in the TIFFDirectory
+structure, then you will need to #define a new FIELD_ value for it, and
+add appropriate handling as follows:
+
+
+<OL>
+<LI>Define the tag in <B>tiff.h</B>.
+<LI>Add a field to the directory structure in <B>tif_dir.h</B>
+   and define a <TT>FIELD_*</TT> bit (also update the definition of
+   <TT>FIELD_CODEC</TT> to reflect your addition).
+<LI>Add an entry in the <TT>TIFFFieldInfo</TT> array defined at the top of
+   <B>tif_dirinfo.c</B>. 
+   Note that you must keep this array sorted by tag
+   number and that the widest variant entry for a tag should come
+   first (e.g. <TT>LONG</TT> before <TT>SHORT</TT>).
+<LI>Add entries in <TT>_TIFFVSetField()</TT> and <TT>_TIFFVGetField()</TT>
+   for the new tag.
+<LI>(<I>optional</I>) If the value associated with the tag is not a scalar value
+   (e.g. the array for <TT>TransferFunction</TT>) and requires
+   special processing,
+   then add the appropriate code to <TT>TIFFReadDirectory()</TT> and
+   <TT>TIFFWriteDirectory()</TT>.  You're best off finding a similar tag and
+   cribbing code.
+<LI>Add support to <TT>TIFFPrintDirectory()</TT> in <B>tif_print.c</B>
+    to print the tag's value.
+</OL>
+
+<P>
+If you want to maintain portability, beware of making assumptions
+about data types.  Use the typedefs (<TT>uint16</TT>, etc. when dealing with
+data on disk and <TT>t*_t</TT> when stuff is in memory) and be careful about
+passing items through printf or similar vararg interfaces.
+
+<A NAME=AddingCODECTags><P><H2>Adding New Codec-private Tags</H2></A>
+
+To add tags that are meaningful <EM>only when a particular compression
+algorithm is used</EM> follow these steps:
+
+<OL>
+<LI>Define the tag in <B>tiff.h</B>.
+<LI>Allocate storage for the tag values in the private state block of
+   the codec.
+<LI>Insure the state block is created when the codec is initialized.
+<LI>At <TT>TIFFInitfoo</TT> time override the method pointers in the
+    TIFF structure
+   for getting, setting and printing tag values.  For example,
+<PRE>
+    sp->vgetparent = tif->tif_vgetfield;
+    tif->tif_vgetfield = fooVGetField;	/* hook for codec tags */
+    sp->vsetparent = tif->tif_vsetfield;
+    tif->tif_vsetfield = fooVSetField;	/* hook for codec tags */
+    tif->tif_printdir = fooPrintDir;	/* hook for codec tags */
+</PRE>
+   (Actually you may decide not to override the
+   <TT>tif_printdir</TT> method, but rather just specify it).
+<LI>Create a private <TT>TIFFFieldInfo</TT> array for your tags and
+    merge them into the core tags at initialization time using
+    <TT>_TIFFMergeFieldInfo</TT>; e.g.
+<PRE>
+    _TIFFMergeFieldInfo(tif, fooFieldInfo, N(fooFieldInfo));
+</PRE>
+   (where <TT>N</TT> is a macro used liberaly throughout the distributed code).
+<LI>Fill in the get and set routines.  Be sure to call the parent method
+   for tags that you are not handled directly.  Also be sure to set the
+   <TT>FIELD_*</TT> bits for tags that are to be written to the file.  Note that
+   you can create ``pseudo-tags'' by defining tags that are processed
+   exclusively in the get/set routines and never written to file (see
+   the handling of <TT>TIFFTAG_FAXMODE</TT> in <B>tif_fax3.c</B>
+   for an example of this).
+<LI>Fill in the print routine, if appropriate.
+</OL>
+
+Note that space has been allocated in the <TT>FIELD_*</TT> bit space for
+codec-private tags.  Define your bits as <TT>FIELD_CODEC+&lt;offset&gt;</TT> to
+keep them away from the core tags.  If you need more tags than there
+is room for, just increase <TT>FIELD_SETLONGS</TT> at the top of
+<B>tiffiop.h</B>.
+
+<HR>
+
+Last updated: $Date: 2004/09/10 14:43:18 $
+
+</BODY>
+
+</HTML>

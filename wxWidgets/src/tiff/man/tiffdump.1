@@ -1,0 +1,80 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFDUMP 1 "October 23, 2005" "libtiff"
+.SH NAME
+tiffdump \- print verbatim information about
+.SM TIFF
+files
+.SH SYNOPSIS
+.B tiffdump
+[
+.I options
+]
+.I "name \&..."
+.SH DESCRIPTION
+.I tiffdump
+displays directory information from files created according
+to the Tag Image File Format, Revision 6.0.
+The header of each
+.SM TIFF
+file (magic number, version, and first directory offset)
+is displayed, followed by the tag contents of each directory in the file.
+For each tag, the name, data type, count, and value(s) is displayed.
+When the symbolic name for a tag or data type is known, the symbolic
+name is displayed followed by it's numeric (decimal) value.
+Tag values are displayed enclosed in ``<>'' characters immediately
+preceded by the value of the count field.
+For example, an
+.I ImageWidth
+tag might be displayed as ``ImageWidth (256) SHORT (3) 1<800>''.
+.PP
+.I tiffdump
+is particularly useful for investigating the contents of
+.SM TIFF
+files that
+.I libtiff
+does not understand.
+.SH OPTIONS
+.TP
+.B \-h
+Force numeric data to be printed in hexadecimal rather than the
+default decimal.
+.TP
+.BI \-m " items"
+Change the number of indirect data items that are printed. By default, this
+will be 24.
+.TP
+.BI \-o " offset"
+Dump the contents of the 
+.SM IFD
+at the a particular file offset.
+The file offset may be specified using the usual C-style syntax;
+i.e. a leading ``0x'' for hexadecimal and a leading ``0'' for octal.
+.SH "SEE ALSO"
+.BR tiffinfo (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

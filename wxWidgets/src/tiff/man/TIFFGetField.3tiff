@@ -1,0 +1,228 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFGetField 3TIFF "March 18, 2005" "libtiff"
+.SH NAME
+TIFFGetField, TIFFVGetField \- get the value(s) of a tag in an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFGetField(TIFF *" tif ", ttag_t " tag ", " ... ")"
+.sp
+.B "#include <stdarg.h>"
+.sp
+.BI "int TIFFVGetField(TIFF *" tif ", ttag_t " tag ", va_list " ap ")"
+.br
+.BI "int TIFFGetFieldDefaulted(TIFF *" tif ", ttag_t " tag ", " ... ")"
+.br
+.BI "int TIFFVGetFieldDefaulted(TIFF *" tif ", ttag_t " tag ", va_list " ap ")"
+.SH DESCRIPTION
+.IR TIFFGetField
+returns the value of a tag or pseudo-tag associated with the the current
+directory of the opened
+.SM TIFF
+file
+.IR tif .
+(A
+.I pseudo-tag 
+is a parameter that is used to control the operation of the
+.SM TIFF
+library but whose value is not read or written to the underlying file.) The
+file must have been previously opened with
+.IR TIFFOpen (3TIFF).
+The tag is identified by
+.IR tag ,
+one of the values defined in the include file
+.B tiff.h
+(see also the table below). The type and number of values returned is
+dependent on the tag being requested. The programming interface uses a
+variable argument list as prescribed by the
+.IR stdarg (3)
+interface. The returned values should only be interpreted if
+.IR TIFFGetField
+returns 1.
+.PP
+.IR TIFFVGetField
+is functionally equivalent to
+.IR TIFFGetField
+except that it takes a pointer to a variable argument list.
+.I TIFFVGetField
+is useful for layering interfaces on top of the functionality provided by
+.IR TIFFGetField .
+.PP
+.IR TIFFGetFieldDefaulted
+and
+.IR TIFFVGetFieldDefaulted
+are identical to 
+.IR TIFFGetField
+and
+.IR TIFFVGetField ,
+except that if a tag is not defined in the current directory and it has a
+default value, then the default value is returned.
+.PP
+The tags understood by
+.IR libtiff(3TIFF),
+the number of parameter values, and the types for the returned values are
+shown below. The data types are specified as in C and correspond to the types
+used to specify tag values to
+.IR TIFFSetField (3TIFF).
+Remember that
+.IR TIFFGetField
+returns parameter values, so all the listed data types are pointers to storage
+where values should be returned.
+Consult the
+.SM TIFF
+specification (or relevant industry specification) for information on the
+meaning of each tag and their possible values.
+.PP
+.nf
+.ta \w'TIFFTAG_CONSECUTIVEBADFAXLINES'u+2n +\w'Count'u+2n +\w'TIFFFaxFillFunc*'u+2n
+\fITag Name\fP	\fICount\fP	\fITypes\fP	\fINotes\fP
+.sp 5p
+TIFFTAG_ARTIST	1	char**
+TIFFTAG_BADFAXLINES	1	uint32*
+TIFFTAG_BITSPERSAMPLE	1	uint16*
+TIFFTAG_CLEANFAXDATA	1	uint16*
+TIFFTAG_COLORMAP	3	uint16**	1<<BitsPerSample arrays
+TIFFTAG_COMPRESSION	1	uint16*
+TIFFTAG_CONSECUTIVEBADFAXLINES	1	uint32*
+TIFFTAG_COPYRIGHT	1	char**
+TIFFTAG_DATATYPE	1	uint16*
+TIFFTAG_DATETIME	1	char**
+TIFFTAG_DOCUMENTNAME	1	char**
+TIFFTAG_DOTRANGE	2	uint16*
+TIFFTAG_EXTRASAMPLES	2	uint16*,uint16**	count & types array
+TIFFTAG_FAXFILLFUNC	1	TIFFFaxFillFunc*	G3/G4 compression pseudo-tag
+TIFFTAG_FAXMODE	1	int*	G3/G4 compression pseudo-tag
+TIFFTAG_FILLORDER	1	uint16*
+TIFFTAG_GROUP3OPTIONS	1	uint32*
+TIFFTAG_GROUP4OPTIONS	1	uint32*
+TIFFTAG_HALFTONEHINTS	2	uint16*
+TIFFTAG_HOSTCOMPUTER	1	char**
+TIFFTAG_ICCPROFILE	2	uint32*,void**	count, profile data
+TIFFTAG_IMAGEDEPTH	1	uint32*
+TIFFTAG_IMAGEDESCRIPTION	1	char**
+TIFFTAG_IMAGELENGTH	1	uint32*
+TIFFTAG_IMAGEWIDTH	1	uint32*
+TIFFTAG_INKNAMES	1	char**
+TIFFTAG_INKSET	1	uint16*
+TIFFTAG_JPEGCOLORMODE	1	int*	JPEG pseudo-tag
+TIFFTAG_JPEGQUALITY	1	int*	JPEG pseudo-tag
+TIFFTAG_JPEGTABLES	2	uint32*,void**	count & tables
+TIFFTAG_JPEGTABLESMODE	1	int*	JPEG pseudo-tag
+TIFFTAG_MAKE	1	char**
+TIFFTAG_MATTEING	1	uint16*
+TIFFTAG_MAXSAMPLEVALUE	1	uint16*
+TIFFTAG_MINSAMPLEVALUE	1	uint16*
+TIFFTAG_MODEL	1	char**
+TIFFTAG_ORIENTATION	1	uint16*
+TIFFTAG_PAGENAME	1	char**
+TIFFTAG_PAGENUMBER	2	uint16*
+TIFFTAG_PHOTOMETRIC	1	uint16*
+TIFFTAG_PHOTOSHOP	2	uint32*,void**	count, data
+TIFFTAG_PLANARCONFIG	1	uint16*
+TIFFTAG_PREDICTOR	1	uint16*
+TIFFTAG_PRIMARYCHROMATICITIES	1	float**	6-entry array
+TIFFTAG_REFERENCEBLACKWHITE	1	float**	6-entry array
+TIFFTAG_RESOLUTIONUNIT	1	uint16*
+TIFFTAG_RICHTIFFIPTC	2	uint32*,void**	count, data
+TIFFTAG_ROWSPERSTRIP	1	uint32*
+TIFFTAG_SAMPLEFORMAT	1	uint16*
+TIFFTAG_SAMPLESPERPIXEL	1	uint16*
+TIFFTAG_SMAXSAMPLEVALUE	1	double*
+TIFFTAG_SMINSAMPLEVALUE	1	double*
+TIFFTAG_SOFTWARE	1	char**
+TIFFTAG_STONITS	1	double**
+TIFFTAG_STRIPBYTECOUNTS	1	uint32**
+TIFFTAG_STRIPOFFSETS	1	uint32**
+TIFFTAG_SUBFILETYPE	1	uint32*
+TIFFTAG_SUBIFD	2	uint16*,uint32**	count & offsets array
+TIFFTAG_TARGETPRINTER	1	char**
+TIFFTAG_THRESHHOLDING	1	uint16*
+TIFFTAG_TILEBYTECOUNTS	1	uint32**
+TIFFTAG_TILEDEPTH	1	uint32*
+TIFFTAG_TILELENGTH	1	uint32*
+TIFFTAG_TILEOFFSETS	1	uint32**
+TIFFTAG_TILEWIDTH	1	uint32*
+TIFFTAG_TRANSFERFUNCTION	1 or 3\(dg	uint16**1<<BitsPerSample entry arrays
+TIFFTAG_WHITEPOINT	1	float**	2-entry array
+TIFFTAG_XMLPACKET	2	uint32*,void**	count, data
+TIFFTAG_XPOSITION	1	float*
+TIFFTAG_XRESOLUTION	1	float*
+TIFFTAG_YCBCRCOEFFICIENTS	1	float**	3-entry array
+TIFFTAG_YCBCRPOSITIONING	1	uint16*
+TIFFTAG_YCBCRSUBSAMPLING	2	uint16*
+TIFFTAG_YPOSITION	1	float*
+TIFFTAG_YRESOLUTION	1	float*\(dd
+.fi
+\(dg If
+.I SamplesPerPixel
+is one, then a single array is returned; otherwise three arrays are returned.
+.fi
+\(dd The contents of this field are quite complex.  See 
+.IR "The ICC Profile Format Specification" ,
+Annex B.3 "Embedding ICC Profiles in TIFF Files" (available at
+http://www.color.org) for an explanation.
+.SH AUTOREGISTERED TAGS
+If you can't find the tag in the table above that means this is an unsupported
+tag and is not directly supported by
+.BR libtiff(3TIFF)
+library. You will still be able to read it's value if you know the data type of
+that tag. For example, if you want to read the LONG value from the tag 33424
+and ASCII string from the tag 36867 you can use the following code:
+.PP
+.RS
+.nf
+uint32  count;
+void    *data;
+
+TIFFGetField(tiff, 33424, &count, &data);
+printf("Tag %d: %d, count %d\n", 33424, *(uint32 *)data, count);
+TIFFGetField(tiff, 36867, &count, &data);
+printf("Tag %d: %s, count %d\n", 36867, (char *)data, count);
+.fi
+.RE
+.PP
+.SH RETURN VALUES
+1 is returned if the tag is defined in the current directory; otherwise a 0 is
+returned.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.BR TIFFError (3TIFF)
+routine.
+.PP
+.BR "Unknown field, tag 0x%x" .
+An unknown tag was supplied.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFSetField (3TIFF),
+.BR TIFFSetDirectory (3TIFF),
+.BR TIFFReadDirectory (3TIFF),
+.BR TIFFWriteDirectory (3TIFF)
+.BR libtiff (3TIFF),
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

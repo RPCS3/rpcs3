@@ -1,0 +1,95 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFSET 1 "November 21, 2004" "libtiff"
+.SH NAME
+tiffset \- set a field in a
+.SM TIFF
+header
+.SH SYNOPSIS
+.B tiffset
+[
+.I options
+]
+.I filename.tif
+.SH DESCRIPTION
+.I Tiffset
+sets the value of a
+.SM TIFF
+header to a specified value.
+.SH OPTIONS
+.TP
+.BI \-d " dirnumber"
+change the current directory (starting at 0).
+.TP
+.BI \-s " tagnumber" "\fR [\fP" " count" "\fR ]\fP" " value ..."
+Set the value of the named tag to the value or values specified.
+.TP
+.BI \-sd " diroffset"
+change the current directory by offset.
+.TP
+.BI \-sf " tagnumber filename"
+Set the value of the tag to the contents of filename.  This option is
+supported for ASCII tags only.
+.SH EXAMPLES
+The following example sets the image description tag (270) of a.tif to
+the contents of the file descrip:
+.RS
+.nf
+tiffset \-sf 270 descrip a.tif
+.fi
+.RE
+.PP
+The following example sets the artist tag (315) of a.tif to the string
+``Anonymous'':
+.RS
+.nf
+tiffset \-s 315 Anonymous a.tif
+.fi
+.RE
+.PP
+This example sets the resolution of the file a.tif to 300 dpi:
+.RS
+.nf
+tiffset \-s 296 2 a.tif
+tiffset \-s 282 300.0 a.tif
+tiffset \-s 283 300.0 a.tif
+.fi
+.RE
+.PP
+Set the photometric interpretation of the third page of a.tif to
+min-is-black (ie. inverts it):
+.RS
+.nf
+tiffset -d 2 -s 262 1 a.tif
+.fi
+.RE
+.SH "SEE ALSO"
+.BR tiffdump (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

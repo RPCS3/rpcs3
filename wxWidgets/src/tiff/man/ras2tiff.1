@@ -1,0 +1,95 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH RAS2TIFF 1 "November 2, 2005" "libtiff"
+.SH NAME
+ras2tiff \- create a
+.SM TIFF
+file from a Sun rasterfile
+.SH SYNOPSIS
+.B ras2tiff
+[
+.I options
+]
+.I input.ras
+.I output.tif
+.SH DESCRIPTION
+.I ras2tiff
+converts a file in the Sun rasterfile format to
+.SM TIFF.
+By default, the
+.SM TIFF
+image is created with data samples packed (\c
+.IR PlanarConfiguration =1),
+compressed with the Lempel-Ziv & Welch algorithm (\c
+.IR Compression =5),
+and with each strip no more than 8 kilobytes.
+These characteristics can overridden, or explicitly specified
+with the options described below.
+.PP
+Any colormap information in the rasterfile is carried over to the
+.SM TIFF
+file by including a
+.I Colormap
+tag in the output file.
+If the rasterfile has a colormap, the
+.I PhotometricInterpretation
+tag is set to 3 (palette);
+otherwise it is set to 2 (RGB) if the depth
+is 24 or 1 (min-is-black) if the depth is not 24.
+.SH OPTIONS
+.TP
+.B \-c
+Specify a compression scheme to use when writing image data:
+.B "\-c none"
+for no compression,
+.B "\-c packbits"
+for the PackBits compression algorithm,
+.B "\-c jpeg"
+for the baseline JPEG compression algorithm,
+.B "\-c zip
+for the Deflate compression algorithm,
+and
+.B "\-c lzw"
+for Lempel-Ziv & Welch (the default).
+.TP
+.B \-r
+Write data with a specified number of rows per strip;
+by default the number of rows/strip is selected so that each strip
+is approximately 8 kilobytes.
+.SH BUGS
+Does not handle all possible rasterfiles.
+In particular, 
+.I ras2tiff
+does not handle run-length encoded images.
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffmedian (1),
+.BR libtiff (3)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/
+

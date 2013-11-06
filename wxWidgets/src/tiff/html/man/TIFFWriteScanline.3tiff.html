@@ -1,0 +1,206 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:18 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFWriteScanline</title>
+</head>
+<body>
+
+<h1 align=center>TIFFWriteScanline</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#NOTES">NOTES</a><br>
+<a href="#RETURN VALUES">RETURN VALUES</a><br>
+<a href="#DIAGNOSTICS">DIAGNOSTICS</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>TIFFWriteScanline &minus; write a scanline to an open
+<small>TIFF</small> file</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>#include &lt;tiffio.h&gt;</b></p>
+<!-- INDENTATION -->
+<p><b>int TIFFWriteScanline(TIFF *</b><i>tif</i><b>,
+tdata_t</b> <i>buf</i><b>, uint32</b> <i>row</i><b>,
+tsample_t</b> <i>sample</i><b>)</b></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Write data to a file at the specified row. The
+<i>sample</i> parameter is used only if data are organized
+in separate planes (<i>PlanarConfiguration</i>=2). The data
+are assumed to be uncompressed and in the native bit- and
+byte-order of the host machine. The data written to the file
+is compressed according to the compression scheme of the
+current <small>TIFF</small> directory (see further below).
+If the current scanline is past the end of the current
+subfile, the <i>ImageLength</i> field is automatically
+increased to include the scanline (except for
+<i>PlanarConfiguration</i>=2, where the <i>ImageLength</i>
+cannot be changed once the first data are written). If the
+<i>ImageLength</i> is increased, the <i>StripOffsets</i> and
+<i>StripByteCounts</i> fields are similarly enlarged to
+reflect data written past the previous end of image.</p>
+</td>
+</table>
+<a name="NOTES"></a>
+<h2>NOTES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>The library writes encoded data using the native machine
+byte order. Correctly implemented <small>TIFF</small>
+readers are expected to do any necessary byte-swapping to
+correctly process image data with BitsPerSample greater than
+8. The library attempts to hide bit-ordering differences
+between the image and the native machine by converting data
+from the native machine order.</p>
+<!-- INDENTATION -->
+<p>In C++ the <i>sample</i> parameter defaults to 0.</p>
+<!-- INDENTATION -->
+<p>Once data are written to a file for the current
+directory, the values of certain tags may not be altered;
+see <i>TIFFSetField</i>(3TIFF) for more information.</p>
+<!-- INDENTATION -->
+<p>It is not possible to write scanlines to a file that uses
+a tiled organization. The routine <i>TIFFIsTiled</i> can be
+used to determine if the file is organized as tiles or
+strips.</p>
+</td>
+</table>
+<a name="RETURN VALUES"></a>
+<h2>RETURN VALUES</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>TIFFWriteScanline</i> returns &minus;1 if it
+immediately detects an error and 1 for a successful
+write.</p>
+</td>
+</table>
+<a name="DIAGNOSTICS"></a>
+<h2>DIAGNOSTICS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>All error messages are directed to the
+<i>TIFFError</i>(3TIFF) routine.</p>
+<!-- INDENTATION -->
+<p><b>%s: File not open for writing .</b> The file was
+opened for reading, not writing.</p>
+<!-- INDENTATION -->
+<p><b>Can not write scanlines to a tiled image</b>. An
+attempt was made to write a scanline to a tiled image. The
+image is assumed to be organized in tiles because the
+<i>TileWidth</i> and <i>TileLength</i> tags have been set
+with <i>TIFFSetField</i>(3TIFF).</p>
+<!-- INDENTATION -->
+<p><b>Compression algorithm does not support random
+access</b>. Data was written in a non-sequential order to a
+file that uses a compression algorithm and that has
+<i>RowsPerStrip</i> greater than one. That is, data in the
+image is to be stored in a compressed form, and with
+multiple rows packed into a strip. In this case, the library
+does not support random access to the data. The data should
+either be written as entire strips, sequentially by rows, or
+the value of <i>RowsPerStrip</i> should be set to one.</p>
+<!-- INDENTATION -->
+<p><b>%s: Must set &quot;ImageWidth&quot; before writing
+data</b>. The image&rsquo;s width has not be set before the
+first write. See <b>TIFFSetField</b>(3TIFF) for information
+on how to do this.</p>
+<!-- INDENTATION -->
+<p><b>%s: Must set &quot;PlanarConfiguration&quot; before
+writing data</b>. The organization of data has not be
+defined before the first write. See
+<b>TIFFSetField</b>(3TIFF) for information on how to do
+this.</p>
+<!-- INDENTATION -->
+<p><b>Can not change &quot;ImageLength&quot; when using
+separate planes</b>. Separate image planes are being used
+(<i>PlanarConfiguration</i>=2), but the number of rows has
+not been specified before the first write. The library
+supports the dynamic growth of an image only when data are
+organized in a contiguous manner
+(<i>PlanarConfiguration</i>=1).</p>
+<!-- INDENTATION -->
+<p><b>%d: Sample out of range, max %d</b>. The <i>sample</i>
+parameter was greater than the value of the SamplesPerPixel
+tag.</p>
+<!-- INDENTATION -->
+<p><b>%s: No space for strip arrays .</b> There was not
+enough space for the arrays that hold strip offsets and byte
+counts.</p>
+</td>
+</table>
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Writing subsampled YCbCR data does not work correctly
+because, for <i>PlanarConfiguration</i>=2 the size of a
+scanline is not calculated on a per-sample basis, and for
+<i>PlanarConfiguration</i>=1 the library does not pack the
+block-interleaved samples.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>TIFFOpen</b>(3TIFF),
+<b>TIFFWriteEncodedStrip</b>(3TIFF),
+<b>TIFFWriteRawStrip</b>(3TIFF), <b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

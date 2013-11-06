@@ -1,0 +1,81 @@
+.\"
+.\" Copyright (c) 1995 Sam Leffler
+.\" Copyright (c) 1995 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH CODEC 3TIFF "October 29, 2004" "libtiff"
+.SH NAME
+TIFFFindCODEC, TIFFRegisterCODEC, TIFFUnRegisterCODEC, TIFFIsCODECConfigured
+\- codec-related utility routines
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "const TIFFCodec* TIFFFindCODEC(uint16 " scheme ");"
+.br
+.BI "TIFFCodec* TIFFRegisterCODEC(uint16 " scheme ", const char *" method ", TIFFInitMethod " init ");"
+.br
+.BI "void TIFFUnRegisterCODEC(TIFFCodec *" codec ");"
+.br
+.BI "int TIFFIsCODECConfigured(uint16 " scheme ");"
+.SH DESCRIPTION
+.I libtiff
+supports a variety of compression schemes implemented by software
+.IR codecs .
+Each codec adheres to a modular interface that provides for
+the decoding and encoding of image data; as well as some other
+methods for initialization, setup, cleanup, and the control
+of default strip and tile sizes.
+Codecs are identified by the associated value of the 
+.SM TIFF
+.I Compression
+tag; e.g. 5 for
+.SM LZW
+compression.
+.PP
+The
+.I TIFFRegisterCODEC
+routine can be used to
+augment or override the set of codecs available to an application.
+If the specified
+.I scheme
+already has a registered codec then it is
+.I overridden
+and any images with data encoded with this
+compression scheme will be decoded using the supplied codec.
+.PP
+.I TIFFIsCODECConfigured
+returns 1 if the codec is configured and working. Otherwise 0 will be returned.
+.SH DIAGNOSTICS
+.BR "No space to register compression scheme %s" .
+.I TIFFRegisterCODEC
+was unable to allocate memory for the data structures needed
+to register a codec.
+.PP
+.BR "Cannot remove compression scheme %s; not registered" .
+.I TIFFUnRegisterCODEC
+did not locate the specified codec in the table of registered 
+compression schemes.
+.SH "SEE ALSO"
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

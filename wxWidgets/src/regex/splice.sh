@@ -3,7 +3,6 @@
 # Name:        splice
 # Purpose:     Splice a marked section of regcustom.h into regex.h
 # Author:      Mike Wetherell
-# RCS-ID:      $Id: splice.sh 25868 2004-02-19 17:28:56Z VS $
 # Copyright:   (c) 2004 Mike Wetherell
 # Licence:     wxWindows licence
 #############################################################################

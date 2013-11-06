@@ -1,0 +1,98 @@
+.\"
+.\" Copyright (c) 1992-1997 Sam Leffler
+.\" Copyright (c) 1992-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFSTRIP 3TIFF "October 15, 1995" "libtiff"
+.SH NAME
+TIFFDefaultStripSize, TIFFStripSize, TIFFVStripSize, TIFFRawStripSize,
+TIFFComputeStrip, TIFFNumberOfStrips \- strip-related utility routines
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "uint32 TIFFDefaultStripSize(TIFF *" tif ", uint32 " estimate ")"
+.br
+.BI "tsize_t TIFFStripSize(TIFF *" tif ")"
+.br
+.BI "tsize_t TIFFVStripSize(TIFF *" tif ", uint32 " nrows ")"
+.br
+.BI "tsize_t TIFFRawStripSize(TIFF *" tif ", tstrip_t " strip ")"
+.br
+.BI "tstrip_t TIFFComputeStrip(TIFF *" tif ", uint32 " row ", tsample_t " sample ")"
+.br
+.BI "tstrip_t TIFFNumberOfStrips(TIFF *" tif ")"
+.SH DESCRIPTION
+.I TIFFDefaultStripSize
+returns the number of rows for a reasonable-sized strip according to the
+current settings of the
+.IR ImageWidth ,
+.IR BitsPerSample ,
+.IR SamplesPerPixel ,
+tags and any compression-specific requirements. If the
+.I estimate
+parameter, if non-zero, then it is taken as an estimate of the desired strip
+size and adjusted according to any compression-specific requirements. The
+value returned by this function is typically used to define the
+.I RowsPerStrip
+tag. In lieu of any unusual requirements
+.I TIFFDefaultStripSize
+tries to create strips that have approximately
+8 kilobytes of uncompressed data.
+.PP
+.IR TIFFStripSize
+returns the equivalent size for a strip of data as it would be returned in a
+call to
+.IR TIFFReadEncodedStrip
+or as it would be expected in a call to
+.IR TIFFWriteEncodedStrip .
+.PP
+.I TIFFVStripSize
+returns the number of bytes in a strip with
+.I nrows
+rows of data.
+.PP
+.I TIFFRawStripSize
+returns the number of bytes in a raw strip (i.e. not decoded).
+.PP
+.IR TIFFComputeStrip
+returns the strip that contains the specified coordinates. A valid strip is
+always returned; out-of-range coordinate values are clamped to the bounds of
+the image. The
+.I row
+parameter is always used in calculating a strip. The
+.I sample
+parameter is used only if data are organized in separate planes (\c
+.IR PlanarConfiguration =2).
+.PP
+.IR TIFFNumberOfStrips
+returns the number of strips in the image.
+.SH DIAGNOSTICS
+None.
+.SH "SEE ALSO"
+.BR TIFFReadEncodedStrip (3TIFF),
+.BR TIFFReadRawStrip (3TIFF),
+.BR TIFFWriteEncodedStrip (3TIFF),
+.BR TIFFWriteRawStrip (3TIFF),
+.BR libtiff (3TIFF),
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

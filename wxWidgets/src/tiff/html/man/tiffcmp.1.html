@@ -1,0 +1,156 @@
+<!-- Creator     : groff version 1.18.1 -->
+<!-- CreationDate: Sat Feb 24 18:37:19 2007 -->
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta name="Content-Style" content="text/css">
+<title>TIFFCMP</title>
+</head>
+<body>
+
+<h1 align=center>TIFFCMP</h1>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+<a name="NAME"></a>
+<h2>NAME</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>tiffcmp &minus; compare two <small>TIFF</small> files</p>
+</td>
+</table>
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>tiffcmp</b> [ <i>options</i> ] <i>file1.tif
+file2.tif</i></p>
+</td>
+</table>
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><i>Tiffcmp</i> compares the tags and data in two files
+created according to the Tagged Image File Format, Revision
+6.0. The schemes used for compressing data in each file are
+immaterial when data are compared&minus;data are compared on
+a scanline-by-scanline basis after decompression. Most
+directory tags are checked; notable exceptions are:
+<i>GrayResponseCurve</i>, <i>ColorResponseCurve</i>, and
+<i>ColorMap</i> tags. Data will not be compared if any of
+the <i>BitsPerSample</i>, <i>SamplesPerPixel</i>, or
+<i>ImageWidth</i> values are not equal. By default,
+<i>tiffcmp</i> will terminate if it encounters any
+difference.</p>
+</td>
+</table>
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="2%">
+
+<p><b>&minus;l</b></p>
+</td>
+<td width="5%"></td>
+<td width="80%">
+
+<p>List each byte of image data that differs between the
+files.</p>
+</td>
+<td width="0%">
+</td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>&minus;z</b> <i>number</i></p></td>
+</table>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="19%"></td>
+<td width="80%">
+<p>List specified number of image data bytes that differs
+between the files.</p>
+</td>
+</table>
+<!-- TABS -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="5" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="10%"></td>
+<td width="2%">
+
+<p><b>&minus;t</b></p>
+</td>
+<td width="11%"></td>
+<td width="52%">
+
+<p>Ignore any differences in directory tags.</p>
+</td>
+<td width="23%">
+</td>
+</table>
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p>Tags that are not recognized by the library are not
+compared; they may also generate spurious diagnostics.</p>
+<!-- INDENTATION -->
+<p>The image data of tiled files is not compared, since the
+<i>TIFFReadScanline()</i> function is used. An error will be
+reported for tiled files.</p>
+<!-- INDENTATION -->
+<p>The pixel and/or sample number reported in differences
+may be off in some exotic cases.</p>
+</td>
+</table>
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+<!-- INDENTATION -->
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="8%"></td>
+<td width="91%">
+<p><b>pal2rgb</b>(1), <b>tiffcp</b>(1),
+<b>tiffmedian</b>(1), <b>libtiff</b>(3TIFF)</p>
+<!-- INDENTATION -->
+<p>Libtiff library home page:
+<b>http://www.remotesensing.org/libtiff/</b></p>
+</td>
+</table>
+<hr>
+</body>
+</html>

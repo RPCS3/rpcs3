@@ -1,0 +1,217 @@
+<HTML>
+<HEAD>
+<TITLE>
+	Changes in TIFF v3.8.1
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=white>
+<FONT FACE="Helvetica, Arial, Sans">
+<FONT FACE="Helvetica, Arial, Sans"> 
+
+<BASEFONT SIZE=4>
+<B><FONT SIZE=+3>T</FONT>IFF <FONT SIZE=+2>C</FONT>HANGE <FONT SIZE=+2>I</FONT>NFORMATION</B>
+<BASEFONT SIZE=3>
+
+<UL>
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+<B>Current Version</B>: v3.8.1<BR>
+<B>Previous Version</B>: <A HREF=v3.8.0.html>v3.8.0</a><BR>
+<B>Master FTP Site</B>: <A HREF="ftp://ftp.remotesensing.org/pub/libtiff">
+ftp.remotesensing.org</a>, directory pub/libtiff</A><BR>
+<B>Master HTTP Site</B>: <A HREF="http://www.remotesensing.org/libtiff">
+http://www.remotesensing.org/libtiff</a> 
+<HR SIZE=4 WIDTH=65% ALIGN=left>
+</UL>
+
+<P>
+This document describes the changes made to the software between the
+<I>previous</I> and <I>current</I> versions (see above).
+If you don't find something listed here, then it was not done in this
+timeframe, or it was not considered important enough to be mentioned.
+The following information is located here:
+<UL>
+<LI><A HREF="#hightlights">Major Changes</A>
+<LI><A HREF="#configure">Changes in the software configuration</A>
+<LI><A HREF="#libtiff">Changes in libtiff</A>
+<LI><A HREF="#tools">Changes in the tools</A>
+<LI><A HREF="#contrib">Changes in the contrib area</A>
+</UL>
+<p> 
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="highlights"><B><FONT SIZE=+3>M</FONT>AJOR CHANGES:</B></A>
+
+<UL>
+	<li> Bug-fix release.
+</UL>
+
+
+<P><HR WIDTH=65% ALIGN=left>
+<!--------------------------------------------------------------------------->
+
+<A NAME="configure"><B><FONT SIZE=+3>C</FONT>HANGES IN THE SOFTWARE CONFIGURATION:</B></A>
+
+<UL>
+	<li> libtool related stuff updated from the 2.1a branch.
+
+	<li> Fix with_default_strip_size comparison as reported by
+	Norihiko Murase.
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="libtiff"><B><FONT SIZE=+3>C</FONT>HANGES IN LIBTIFF:</B></A>
+
+<UL>
+
+	<li> tif_dirread.c: Fixed error reporting in TIFFFetchAnyArray()
+	function as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1102">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1102</a>
+
+	<li> tif_jpeg.c, tif_pixarlog.c, tif_fax3.c, tif_zip.c:
+	Properly restore setfield/getfield methods in cleanup functions. As
+	per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1102">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1102</a>
+
+	<li> tif_lzw.c, tif_pixarlog.c, tif_zip.c: Use
+	TIFFPredictorCleanup() in codec cleanup methods. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1102">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1102</a>
+
+	<li> tif_predict.c, tif_predict.h: Added new function
+	TIFFPredictorCleanup() to restore parent decode/encode/field methods.
+
+	<li> tif_dirread.c: Fixed integer overflow condition in
+	TIFFFetchData() function. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1102">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1102</a>
+
+	<li> tif_ojpeg.c: Set the ReferenceBlackWhite with the
+	TIFFSetField() method, not directly. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1043">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1043</a>
+
+	<li> tif_write.c: Small code rearrangement in TIFFWriteScanline()
+	to avoid crash as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1081">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1081</a>
+
+	<li> tif_dirwrite.c: Properly write TIFFTAG_DOTRANGE tag as per
+	bug <a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1088">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1088</a>
+
+	<li> tif_print.c: Properly read TIFFTAG_PAGENUMBER,
+	TIFFTAG_HALFTONEHINTS, TIFFTAG_YCBCRSUBSAMPLING and TIFFTAG_DOTRANGE
+	tags as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1088">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1088</a>
+
+	<li> tif_tile.c: Fix error reporting in TIFFCheckTile() as per
+	bug <a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1063">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1063</a>
+
+	<li> tif_color.c: Avoid overflow in case of wrong input as per
+	bug <a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1065">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1065</a>
+
+	<li> tif_dirinfo.c: Use TIFF_NOTYPE instead of 0 when
+	appropriate. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1033">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1033</a>
+
+	<li> tif_aux.c: Fixed type of temporary variable in
+	_TIFFCheckMalloc() as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=103">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=103</a>
+
+	<li> tif_aux.c: Return static array when fetching default
+	YCbCrCoefficients (another problem, reported a the
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1029">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1029</a>
+	entry).
+
+	<li> tif_dir.c: Special handling for PageNumber, HalftoneHints,
+	YCbCrSubsampling and DotRange tags as per bugs
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1029">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1029</a>
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1034">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1034</a>
+
+	<li> tif_dirread.c: Use _TIFFGetExifFieldInfo() instead of
+	_TIFFGetFieldInfo() in TIFFReadEXIFDirectory() call as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1026">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1026</a>
+
+	<li> tif_dirinfo.c: Change definitions for TIFFTAG_ICCPROFILE,
+	TIFFTAG_PHOTOSHOP, TIFFTAG_RICHTIFFIPTC, TIFFTAG_XMLPACKET:
+	readcount should be uint32 value.
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!-------------------------------------------------------------------------->
+	
+<A NAME="tools"><B><FONT SIZE=+3>C</FONT>HANGES IN THE TOOLS:</B></A>
+
+<UL>
+	<li> ppm2tiff.c: Added support for PBM files as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1044">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1044</a>
+
+	<li> tiff2pdf.c: Functions t2p_sample_rgbaa_to_rgb() and
+	t2p_sample_rgba_to_rgb() was used in place of each other, that was
+	resulted in problems with RGBA images with associated alpha.
+	As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1097">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1097</a>
+
+	<li> tiff2ps.c: Properly scale all the pages when converting
+	multipage TIFF with /width/height/center options set. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1080">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1080</a>
+
+	<li> tiff2pdf.c: Do not create output file until all option checks
+	will be done. As per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1072">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1072</a>
+
+	<li> bmp2tiff.c: Added ability to create multipage TIFFs from the
+	list of input files as per bug
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1077">
+	http://bugzilla.remotesensing.org/show_bug.cgi?id=1077</a>
+
+	<li> tiffgt.c: Avoid crashing in case of image unsupported by
+	TIFFRGBAImage interface.
+
+	<li> tiff2pdf.c: Fixed support for non-YCbCr encoded JPEG
+	compressed TIFF files, per submission from Dan Cobra.
+
+	<li> bmp2tiff, pal2rgb, ppm2tiff, ras2tiff, raw2tiff, sgi2tiff,
+	tiff2bw, tiffcp: Fixed jpeg option processing so -c jpeg:r:50 works
+	properly as per bug:
+	<a href="http://bugzilla.remotesensing.org/show_bug.cgi?id=1025">
+		http://bugzilla.remotesensing.org/show_bug.cgi?id=1025</a>
+
+</UL>
+
+<P><HR WIDTH=65% ALIGN=left>
+
+<!--------------------------------------------------------------------------->
+
+<A NAME="contrib"><B><FONT SIZE=+3>C</FONT>HANGES IN THE CONTRIB AREA:</B></A>
+
+<UL> 
+</UL>
+
+Last updated $Date: 2006/03/13 14:52:12 $.
+
+</BODY>
+</HTML>

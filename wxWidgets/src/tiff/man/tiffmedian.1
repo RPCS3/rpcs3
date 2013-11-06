@@ -1,0 +1,111 @@
+.\"
+.\" Copyright (c) 1990-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFMEDIAN 1 "November 2, 2005" "libtiff"
+.SH NAME
+tiffmedian \- apply the median cut algorithm to data in a
+.SM TIFF
+file
+.SH SYNOPSIS
+.B tiffmedian
+[
+.I options
+]
+.I input.tif
+.I output.tif
+.SH DESCRIPTION
+.I tiffmedian
+applies the median cut algorithm to an
+.SM RGB
+image in
+.I input.tif
+to generate a palette image that is written to
+.IR output.tif .
+The generated colormap has, by default, 256 entries.
+The image data is quantized by mapping each
+pixel to the closest color values in the colormap.
+.SH OPTIONS
+.TP
+.B \-c
+Specify the compression to use for data written to the output file:
+.B none 
+for no compression,
+.B packbits
+for PackBits compression,
+.B lzw
+for Lempel-Ziv & Welch compression,
+and
+.B zip
+for Deflate compression.
+By default
+.I tiffmedian
+will compress data according to the value of the
+.I Compression
+tag found in the source file.
+.IP
+.SM LZW
+compression can be specified together with a 
+.I predictor
+value.
+A predictor value of 2 causes
+each scanline of the output image to undergo horizontal
+differencing before it is encoded; a value
+of 1 forces each scanline to be encoded without differencing.
+LZW-specific options are specified by appending a ``:''-separated
+list to the ``lzw'' option; e.g.
+.B "\-c lzw:2"
+for
+.SM LZW
+compression with horizontal differencing.
+.TP
+.B \-C
+Specify the number of entries to use in the generated colormap.
+By default all 256 entries/colors are used.
+.TP
+.B \-f
+Apply Floyd-Steinberg dithering before selecting a colormap entry.
+.TP
+.B \-r
+Specify the number of rows (scanlines) in each strip of data
+written to the output file.
+By default,
+.I tiffmedian
+attempts to set the rows/strip
+that no more than 8 kilobytes of data appear in a strip.
+.SH NOTES
+This program is derived from Paul Heckbert's
+.I median
+program.
+.SH "SEE ALSO"
+.BR pal2rgb (1),
+.BR tiffinfo (1),
+.BR tiffcp (1),
+.BR tiffcmp (1),
+.BR libtiff (3TIFF)
+.PP
+.BR "Color Image Quantization for Frame Buffer Display",
+Paul Heckbert, SIGGRAPH proceedings, 1982, pp. 297-307.
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/

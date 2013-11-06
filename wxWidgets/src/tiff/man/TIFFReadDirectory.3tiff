@@ -1,0 +1,163 @@
+.\"
+.\" Copyright (c) 1988-1997 Sam Leffler
+.\" Copyright (c) 1991-1997 Silicon Graphics, Inc.
+.\"
+.\" Permission to use, copy, modify, distribute, and sell this software and 
+.\" its documentation for any purpose is hereby granted without fee, provided
+.\" that (i) the above copyright notices and this permission notice appear in
+.\" all copies of the software and related documentation, and (ii) the names of
+.\" Sam Leffler and Silicon Graphics may not be used in any advertising or
+.\" publicity relating to the software without the specific, prior written
+.\" permission of Sam Leffler and Silicon Graphics.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+.\" EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+.\" WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+.\" 
+.\" IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+.\" ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+.\" OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+.\" WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+.\" LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+.\" OF THIS SOFTWARE.
+.\"
+.if n .po 0
+.TH TIFFReadDirectory 3TIFF "October 15, 1995" "libtiff"
+.SH NAME
+TIFFReadDirectory \- get the contents of the next directory in an open
+.SM TIFF
+file
+.SH SYNOPSIS
+.B "#include <tiffio.h>"
+.sp
+.BI "int TIFFReadDirectory(TIFF *" tif ")"
+.SH DESCRIPTION
+Read the next directory in the specified file and make it the current
+directory. Applications only need to call
+.I TIFFReadDirectory
+to read multiple subfiles in a single
+.SM TIFF
+file\(em
+the first directory in a file is automatically read when
+.IR TIFFOpen
+is called.
+.SH NOTES
+If the library is compiled with 
+.SM STRIPCHOP_SUPPORT
+enabled, then images that have a single uncompressed strip or tile of data are
+automatically treated as if they were made up of multiple strips or tiles of
+approximately 8 kilobytes each. This operation is done only in-memory; it does
+not alter the contents of the file. However, the construction of the ``chopped
+strips'' is visible to the application through the number of strips [tiles]
+returned by 
+.I TIFFNumberOfStrips
+[\c
+.IR TIFFNumberOfTiles ].
+.SH "RETURN VALUES"
+If the next directory was successfully read, 1 is returned. Otherwise, 0 is
+returned if an error was encountered, or if there are no more directories to
+be read.
+.SH DIAGNOSTICS
+All error messages are directed to the
+.IR TIFFError (3TIFF)
+routine.
+All warning messages are directed to the
+.IR TIFFWarning (3TIFF)
+routine.
+.PP
+\fBSeek error accessing TIFF directory\fP.
+An error occurred while positioning to the location of the
+directory.
+.PP
+\fBWrong data type %d for field "%s"\fP.
+The tag entry in the directory had an incorrect data type.
+For example, an
+.I ImageDescription
+tag with a
+.SM SHORT
+data type.
+.PP
+\fBTIFF directory is missing required "%s" field\fP.
+The specified tag is required to be present by the
+.SM TIFF
+5.0 specification, but is missing.
+The directory is (usually) unusable.
+.PP
+\fB%s: Rational with zero denominator\fP.
+A directory tag has a
+.SM RATIONAL
+value whose denominator is zero.
+.PP
+\fBIncorrect count %d for field "%s" (%lu, expecting %lu); tag ignored\fP.
+The specified tag's count field is bad.
+For example, a count other than 1 for a
+.I SubFileType
+tag.
+.PP
+\fBCannot handle different per-sample values for field "%s"\fP.
+The tag has
+.I SamplesPerPixel
+values and they are not all the same; e.g.
+.IR BitsPerSample .
+The library is unable to handle images of this sort.
+.PP
+\fBCount mismatch for field "%s"; expecting %d, got %d\fP.
+The count field in a
+tag does not agree with the number expected by the library.
+This should never happen, so if it does, the library refuses to
+read the directory.
+.PP
+\fBInvalid TIFF directory; tags are not sorted in ascending order\fP.
+The directory tags are not properly sorted as specified
+in the
+.SM TIFF
+5.0 specification.
+This error is not fatal.
+.PP
+\fBIgnoring unknown field with tag %d (0x%x)\fP.
+An unknown tag was encountered in the directory;
+the library ignores all such tags.
+.PP
+\fBTIFF directory is missing required "ImageLength" field\fP.
+The image violates the specification by not having a necessary field.
+There is no way for the library to recover from this error.
+.PP
+\fBTIFF directory is missing required "PlanarConfig" field\fP.
+The image violates the specification by not having a necessary field.
+There is no way for the library to recover from this error.
+.PP
+\fBTIFF directory is missing required "StripOffsets" field\fP.
+The image has multiple strips, but is missing the tag that
+specifies the file offset to each strip of data.
+There is no way for the library to recover from this error.
+.PP
+\fBTIFF directory is missing required "TileOffsets" field\fP.
+The image has multiple tiles, but is missing the tag that
+specifies the file offset to each tile of data.
+There is no way for the library to recover from this error.
+.PP
+\fBTIFF directory is missing required "StripByteCounts" field\fP.
+The image has multiple strips, but is missing the tag that
+specifies the size of each strip of data.
+There is no way for the library to recover from this error.
+.PP
+\fBTIFF directory is missing required "StripByteCounts" field, calculating from imagelength\fP.
+The image violates the specification by not having a necessary field.
+However, when the image is comprised of only one strip or tile, the
+library will estimate the missing value based on the file size.
+.PP
+\fBBogus "StripByteCounts" field, ignoring and calculating from imagelength\fP.
+Certain vendors violate the specification by writing zero for
+the StripByteCounts tag when they want to leave the value
+unspecified.
+If the image has a single strip, the library will estimate
+the missing value based on the file size.
+.SH "SEE ALSO"
+.BR TIFFOpen (3TIFF),
+.BR TIFFWriteDirectory (3TIFF),
+.BR TIFFSetDirectory (3TIFF),
+.BR TIFFSetSubDirectory (3TIFF),
+.BR libtiff (3TIFF)
+.PP
+Libtiff library home page:
+.BR http://www.remotesensing.org/libtiff/
