@@ -1,4 +1,8 @@
-#if defined(_WIN32) || defined(__OS2__)
+/* This test added by JACS as a quick fix. What should we do
+ * to make it work with configure?
+ */
+
+#if defined(_MSC_VER) || defined(__BORLANDC__) || defined (__DMC__)
 #include "jconfig.vc"
 #else
 
@@ -6,8 +10,38 @@
 /* jconfig.cfg --- source file edited by configure script */
 /* see jconfig.doc for explanations */
 
+/* If using MetroWerks on Mac define __WXMAC__ if it isn't already
+   FIXME: Is this necessary any longer? */
+#ifdef __MWERKS__
+#if (__MWERKS__ < 0x0900) || macintosh || defined ( __MACH__ )
+#   ifndef __WXMAC__
+#       define __WXMAC__
+#   endif
+#endif
+#endif
+
 /* use wxWidgets' configure */
 #include "wx/setup.h"
+
+/* If using Metrowerks and not using configure-generated setup */
+#if defined(__MWERKS__) && !defined(__WX_SETUP_H__)
+#if (__MWERKS__ < 0x0900) || macintosh || defined ( __MACH__ )
+
+#   define USE_MAC_MEMMGR
+
+#   ifdef __MACH__
+#       include <ansi_prefix.mach.h>
+#       include <msl_c_version.h>
+#       include <stdint.h>
+#       undef WCHAR_MAX
+#       include <machine/ansi.h>
+#   endif
+
+/* automatically includes MacHeaders */
+#elif (__MWERKS__ >= 0x0900) && __INTEL__
+    #define __WXMSW__
+#endif
+#endif
 
 #define HAVE_PROTOTYPES
 #define HAVE_UNSIGNED_CHAR
@@ -25,14 +59,8 @@
   #undef CHAR_IS_UNSIGNED
 #endif
 
-#ifndef HAVE_STDDEF_H
 #define HAVE_STDDEF_H
-#endif
-
-#ifndef HAVE_STDLIB_H
 #define HAVE_STDLIB_H
-#endif
-
 #undef NEED_BSD_STRINGS
 #undef NEED_SYS_TYPES_H
 #undef NEED_FAR_POINTERS

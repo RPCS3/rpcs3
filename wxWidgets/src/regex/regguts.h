@@ -53,9 +53,7 @@
 /* assertions */
 #ifndef assert
 #	ifndef REG_DEBUG
-#	ifndef NDEBUG
 #	define	NDEBUG		/* no assertions */
-#	endif
 #	endif
 #include <assert.h>
 #endif

@@ -569,7 +569,7 @@ chr *start;
 	struct arcp ap;
 	struct arcp lastap;
 	color co;
-    lastap.ss = NULL; lastap.co = 0; // WX: suppress dummy gcc warnings
+
 	ss = pickss(v, d, cp, start);
 	assert(!(ss->flags&LOCKED));
 

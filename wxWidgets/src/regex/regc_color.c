@@ -37,7 +37,7 @@
 
 
 #define	CISERR()	VISERR(cm->v)
-#define	CERR(e)		(void)VERR(cm->v, (e))
+#define	CERR(e)		VERR(cm->v, (e))
 
 
 

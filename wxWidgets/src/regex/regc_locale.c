@@ -9,15 +9,14 @@
  * See the file "license.terms" for information on usage and redistribution
  * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
+ * RCS: @(#) $Id: regc_locale.c 65053 2010-07-23 11:56:53Z VZ $
  *
  * wxWidgets:
  *  The Scriptics license can be found in the file COPYRIGHT. Modifications
- *  for wxWidgets are under the wxWindows licence, see README for details.
+ *  for wxWidgets are under the wxWidgets licence, see README for details.
  */
 
-#ifndef CONST
 #define CONST const
-#endif
 
 /* ASCII character-name table */
 
@@ -635,9 +634,9 @@ static struct cclass {
  */
 
 #define Tcl_UniChar wxChar
-Tcl_UniChar Tcl_UniCharToUpper(int ch) { return wxCRT_ToupperNative(ch); }
-Tcl_UniChar Tcl_UniCharToLower(int ch) { return wxCRT_TolowerNative(ch); }
-Tcl_UniChar Tcl_UniCharToTitle(int ch) { return wxCRT_ToupperNative(ch); }
+Tcl_UniChar Tcl_UniCharToUpper(int ch) { return wxToupper(ch); }
+Tcl_UniChar Tcl_UniCharToLower(int ch) { return wxTolower(ch); }
+Tcl_UniChar Tcl_UniCharToTitle(int ch) { return wxToupper(ch); }
 
 #endif  /* !wxUSE_UNICODE */
 
@@ -704,7 +703,7 @@ element(v, startp, endp)
 
     /* search table */
     for (cn=cnames; cn->name!=NULL; cn++) {
-	if (wxCRT_StrlenNative(cn->name)==len && wxCRT_StrncmpNative(cn->name, startp, len)==0) {
+	if (wxStrlen_(cn->name)==len && wxStrncmp(cn->name, startp, len)==0) {
 	    break;			/* NOTE BREAK OUT */
 	}
     }
@@ -872,8 +871,8 @@ cclass(v, startp, endp, cases)
      * Remap lower and upper to alpha if the match is case insensitive.
      */
 
-    if (cases && len == 5 && (wxCRT_StrncmpNative(wxT("lower"), np, 5) == 0
-	    || wxCRT_StrncmpNative(wxT("upper"), np, 5) == 0)) {
+    if (cases && len == 5 && (wxStrncmp(wxT("lower"), np, 5) == 0
+	    || wxStrncmp(wxT("upper"), np, 5) == 0)) {
 	np = wxT("alpha");
     }
 
@@ -883,7 +882,7 @@ cclass(v, startp, endp, cases)
 
     index = -1;
     for (namePtr=classNames,i=0 ; *namePtr!=NULL ; namePtr++,i++) {
-	if ((wxCRT_StrlenNative(*namePtr) == len) && (wxCRT_StrncmpNative(*namePtr, np, len) == 0)) {
+	if ((wxStrlen_(*namePtr) == len) && (wxStrncmp(*namePtr, np, len) == 0)) {
 	    index = i;
 	    break;
 	}
@@ -1058,11 +1057,11 @@ int cases;                      /* case-independent? */
     /* find the name */
     len = endp - startp;
     np = startp;
-    if (cases && len == 5 && (wxCRT_StrncmpNative(wxT("lower"), np, 5) == 0 ||
-                                    wxCRT_StrncmpNative(wxT("upper"), np, 5) == 0))
+    if (cases && len == 5 && (wxStrncmp(wxT("lower"), np, 5) == 0 ||
+                                    wxStrncmp(wxT("upper"), np, 5) == 0))
             np = wxT("alpha");
     for (cc = cclasses; cc->name != NULL; cc++)
-            if (wxCRT_StrlenNative(cc->name) == len && wxCRT_StrncmpNative(cc->name, np, len) == 0)
+            if (wxStrlen_(cc->name) == len && wxStrncmp(cc->name, np, len) == 0)
                     break;          /* NOTE BREAK OUT */
     if (cc->name == NULL) {
             ERR(REG_ECTYPE);

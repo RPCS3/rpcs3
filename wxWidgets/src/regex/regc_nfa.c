@@ -36,7 +36,7 @@
  */
 
 #define	NISERR()	VISERR(nfa->v)
-#define	NERR(e)		(void)VERR(nfa->v, (e))
+#define	NERR(e)		VERR(nfa->v, (e))
 
 
 /*
