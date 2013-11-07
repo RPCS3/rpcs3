@@ -39,10 +39,10 @@ public:
 			CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
 			CELL_PAD_DEV_TYPE_STANDARD));
 
-		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'Q', CELL_PAD_CTRL_LEFT));
+		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'A', CELL_PAD_CTRL_LEFT));
 		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'S', CELL_PAD_CTRL_DOWN));
 		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'D', CELL_PAD_CTRL_RIGHT));
-		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'Z', CELL_PAD_CTRL_UP));
+		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'W', CELL_PAD_CTRL_UP));
 		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, WXK_RETURN, CELL_PAD_CTRL_START));
 		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'X', CELL_PAD_CTRL_R3));
 		m_pads[0].m_buttons.Move(new Button(CELL_PAD_BTN_OFFSET_DIGITAL1, 'Z', CELL_PAD_CTRL_L3));
