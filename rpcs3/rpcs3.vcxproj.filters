@@ -307,7 +307,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-<<<<<<< HEAD
     <ClCompile Include="Emu\FS\vfsFile.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
@@ -322,10 +321,9 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
-=======
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
->>>>>>> f8193fd784da9ca57eec37100f30977b6966d846
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
