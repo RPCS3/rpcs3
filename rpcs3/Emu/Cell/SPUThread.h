@@ -22,6 +22,25 @@ static const wxString spu_reg_name[128] =
 	"$112", "$113", "$114", "$115", "$116", "$117", "$118", "$119",
 	"$120", "$121", "$122", "$123", "$124", "$125", "$126", "$127",
 };
+//SPU reg $0 is a dummy reg, and is used for certain instructions.
+static const wxString spu_specialreg_name[128] = {
+	"$0",  "$1",  "$2",   "$3",   "$4",   "$5",   "$6",   "$7",
+	"$8",   "$9",   "$10",  "$11",  "$12",  "$13",  "$14",  "$15",
+	"$16",  "$17",  "$18",  "$19",  "$20",  "$21",  "$22",  "$23",
+	"$24",  "$25",  "$26",  "$27",  "$28",  "$29",  "$30",  "$31",
+	"$32",  "$33",  "$34",  "$35",  "$36",  "$37",  "$38",  "$39",
+	"$40",  "$41",  "$42",  "$43",  "$44",  "$45",  "$46",  "$47",
+	"$48",  "$49",  "$50",  "$51",  "$52",  "$53",  "$54",  "$55",
+	"$56",  "$57",  "$58",  "$59",  "$60",  "$61",  "$62",  "$63",
+	"$64",  "$65",  "$66",  "$67",  "$68",  "$69",  "$70",  "$71",
+	"$72",  "$73",  "$74",  "$75",  "$76",  "$77",  "$78",  "$79",
+	"$80",  "$81",  "$82",  "$83",  "$84",  "$85",  "$86",  "$87",
+	"$88",  "$89",  "$90",  "$91",  "$92",  "$93",  "$94",  "$95",
+	"$96",  "$97",  "$98",  "$99",  "$100", "$101", "$102", "$103",
+	"$104", "$105", "$106", "$107", "$108", "$109", "$110", "$111",
+	"$112", "$113", "$114", "$115", "$116", "$117", "$118", "$119",
+	"$120", "$121", "$122", "$123", "$124", "$125", "$126", "$127",
+};
 
 static const wxString spu_ch_name[128] =
 {
@@ -98,6 +117,89 @@ enum
 	SPU_STATUS_SINGLE_STEP			= 0x10,
 };
 
+//Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
+//Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
+class FPSCR
+{
+public:
+	u64 low;
+	u64 hi;
+
+	FPSCR() {}
+
+	wxString ToString() const
+	{
+		return "FPSCR writer not yet implemented"; //wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+	}
+
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	//slice -> 0 - 1 (4 slices total, only two have rounding)
+	//0 -> round even
+	//1 -> round towards zero (truncate)
+	//2 -> round towards positive inf
+	//3 -> round towards neg inf
+	void setSliceRounding(u8 slice, u8 roundTo)
+	{
+		u64 mask = roundTo;
+		switch(slice)
+		{
+		case 0:
+			mask = mask << 20;
+			break;
+		case 1:
+			mask = mask << 22;
+			break;	
+		}
+
+		//rounding is located in the low end of the FPSCR
+		this->low = this->low & mask;
+	}
+	//Slice 0 or 1
+	u8 checkSliceRounding(u8 slice)
+	{
+		switch(slice)
+		{
+		case 0:
+			return this->low >> 20 & 0x3;
+		
+		case 1:
+			return this->low >> 22 & 0x3;
+		}
+	}
+
+	//Single Precision Exception Flags (all 3 slices)
+	//slice -> slice number (0-3)
+	//exception: 1 -> Overflow 2 -> Underflow 4-> Diff (could be IE^3 non compliant)
+	void setSinglePrecisionExceptionFlags(u8 slice, u8 exception)
+	{
+		u64 mask = exception;
+		switch(slice)
+		{
+		case 0:
+			mask = mask << 29;
+			this->low = this->low & mask;
+			break;
+		case 1: 
+			mask = mask << 61;
+			this->low = this->low & mask;
+			break;
+		case 2:
+			mask = mask << 29;
+			this->hi = this->hi & mask;
+			break;
+		case 3:
+			mask = mask << 61;
+			this->hi = this->hi & mask;
+			break;
+		}
+		
+	}
+	
+};
+
 union SPU_GPR_hdr
 {
 	u128 _u128;
@@ -126,10 +228,31 @@ union SPU_GPR_hdr
 	}
 };
 
+union SPU_SPR_hdr
+{
+	u128 _u128;
+	s128 _i128;
+	
+
+	SPU_SPR_hdr() {}
+
+	wxString ToString() const
+	{
+		return wxString::Format("%16%16", _u128.hi, _u128.lo);
+	}
+
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+};
+
 class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
+	SPU_SPR_hdr SPR[128]; //Special-Purpose Registers
+	FPSCR FPSCR;
 
 	template<size_t _max_count>
 	class Channel
