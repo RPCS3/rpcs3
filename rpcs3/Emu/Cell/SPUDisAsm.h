@@ -94,7 +94,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ?
+		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ? Yes, there are also 128 SPR making 256 registers total
 	}
 	void RDCH(u32 rt, u32 ra)
 	{

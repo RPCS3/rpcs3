@@ -44,7 +44,17 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED();
+		//If register is a dummy register (register labeled 0x0)
+		if(sa == 0)
+		{
+			CPU.GPR[rt]._u128.hi = 0x0;
+			CPU.GPR[rt]._u128.lo = 0x0;
+		}
+		else
+		{
+			CPU.GPR[rt]._u128.hi =  CPU.SPR[sa]._u128.hi;
+			CPU.GPR[rt]._u128.lo =  CPU.SPR[sa]._u128.lo;
+		}
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -890,7 +900,7 @@ private:
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2 + 1] * CPU.GPR[rb]._u16[w*2 + 1];
+			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w];
 	}
 	void CEQB(u32 rt, u32 ra, u32 rb)
 	{
