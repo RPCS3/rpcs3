@@ -13,6 +13,8 @@
 
 gcmBuffer gcmBuffers[8];
 
+int last_width = 0, last_height = 0, last_depth_format = 0;
+
 void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
@@ -223,6 +225,10 @@ void GLGSRender::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddre
 	m_skip_frames = 0;
 	m_width = 720;
 	m_height = 576;
+
+	last_width = 0;
+	last_height = 0;
+	last_depth_format = 0;
 
 	m_frame->Show();
 
@@ -1981,8 +1987,6 @@ void GLGSRender::ExecCMD()
 {
 	if(LoadProgram())
 	{
-		static int last_width = 0, last_height = 0, last_depth_format = 0;
-
 		if(m_width != last_width || m_height != last_height || last_depth_format != m_surface_depth_format)
 		{
 			ConLog.Warning("New FBO (%dx%d)", m_width, m_height);
