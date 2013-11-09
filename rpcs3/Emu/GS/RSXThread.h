@@ -527,7 +527,6 @@ protected:
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
 
-		m_clear_surface_mask = 0;
 		m_clear_color_r = 0;
 		m_clear_color_g = 0;
 		m_clear_color_b = 0;
@@ -583,6 +582,8 @@ protected:
 		m_set_cull_face = false;
 		m_set_alpha_func = false;
 		m_set_alpha_ref = false;
+
+		m_clear_surface_mask = 0;
 		m_begin_end = 0;
 	}
 
