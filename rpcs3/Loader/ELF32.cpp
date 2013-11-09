@@ -59,7 +59,7 @@ bool ELF32Loader::LoadEhdrInfo()
 		return false;
 	}
 
-	entry = ehdr.GetEntry() & ~0x3;
+	entry = ehdr.GetEntry();
 	if(entry == 0)
 	{
 		ConLog.Error("elf32 error: entry is null!");
@@ -86,9 +86,11 @@ bool ELF32Loader::LoadPhdrInfo()
 		phdr_arr.Move(phdr);
 	}
 
-	if(!Memory.IsGoodAddr(entry))
+	if(/*!Memory.IsGoodAddr(entry)*/ entry & 0x1)
 	{
 		//entry is physical, convert to virtual
+
+		entry &= ~0x1;
 
 		for(size_t i=0; i<phdr_arr.GetCount(); ++i)
 		{
