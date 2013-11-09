@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "FragmentProgram.h"
+#include "GLFragmentProgram.h"
 
-void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
+void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
@@ -79,7 +79,7 @@ void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 	main += "\t" + code + ";\n";
 }
 
-wxString FragmentDecompilerThread::GetMask()
+wxString GLFragmentDecompilerThread::GetMask()
 {
 	wxString ret = wxEmptyString;
 
@@ -96,7 +96,7 @@ wxString FragmentDecompilerThread::GetMask()
 	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxEmptyString : ("." + ret);
 }
 
-wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
+wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
 	/*
 	if(HasReg(index, fp16))
@@ -110,18 +110,18 @@ wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 		wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : index);
 }
 
-bool FragmentDecompilerThread::HasReg(u32 index, int fp16)
+bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
 {
 	return m_parr.HasParam(PARAM_OUT, "vec4",
 		wxString::Format((fp16 ? "h%u" : "r%u"), index));
 }
 
-wxString FragmentDecompilerThread::AddCond(int fp16)
+wxString GLFragmentDecompilerThread::AddCond(int fp16)
 {
 	return m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(fp16 ? "hc%d" : "rc%d", src0.cond_mod_reg_index));
 }
 
-wxString FragmentDecompilerThread::AddConst()
+wxString GLFragmentDecompilerThread::AddConst()
 {
 	mem32_ptr_t data(m_addr + m_size + m_offset);
 
@@ -134,12 +134,12 @@ wxString FragmentDecompilerThread::AddConst()
 		wxString::Format("vec4(%f, %f, %f, %f)", (float&)x, (float&)y, (float&)z, (float&)w));
 }
 
-wxString FragmentDecompilerThread::AddTex()
+wxString GLFragmentDecompilerThread::AddTex()
 {
 	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", wxString::Format("tex%d", dst.tex_num));
 }
 
-template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
+template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 {
 	wxString ret = wxEmptyString;
 
@@ -204,7 +204,7 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	return ret;
 }
 
-wxString FragmentDecompilerThread::BuildCode()
+wxString GLFragmentDecompilerThread::BuildCode()
 {
 	wxString p = wxEmptyString;
 
@@ -222,7 +222,7 @@ wxString FragmentDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-void FragmentDecompilerThread::Task()
+void GLFragmentDecompilerThread::Task()
 {
 	mem32_ptr_t data(m_addr);
 	m_size = 0;
@@ -322,13 +322,13 @@ void FragmentDecompilerThread::Task()
 	main.Clear();
 }
 
-ShaderProgram::ShaderProgram() 
+GLShaderProgram::GLShaderProgram() 
 	: m_decompiler_thread(nullptr)
 	, id(0)
 {
 }
 
-ShaderProgram::~ShaderProgram()
+GLShaderProgram::~GLShaderProgram()
 {
 	if(m_decompiler_thread)
 	{
@@ -345,7 +345,7 @@ ShaderProgram::~ShaderProgram()
 	Delete();
 }
 
-void ShaderProgram::Decompile()
+void GLShaderProgram::Decompile(RSXShaderProgram& prog)
 {
 #if 0
 	FragmentDecompilerThread(shader, parr, addr).Entry();
@@ -362,12 +362,12 @@ void ShaderProgram::Decompile()
 		m_decompiler_thread = nullptr;
 	}
 
-	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr, size);
+	m_decompiler_thread = new GLFragmentDecompilerThread(shader, parr, prog.addr, prog.size);
 	m_decompiler_thread->Start();
 #endif
 }
 
-void ShaderProgram::Compile()
+void GLShaderProgram::Compile()
 {
 	if(id) glDeleteShader(id);
 
@@ -401,7 +401,7 @@ void ShaderProgram::Compile()
 	//else ConLog.Write("Shader compiled successfully!");
 }
 
-void ShaderProgram::Delete()
+void GLShaderProgram::Delete()
 {
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{

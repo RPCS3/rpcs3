@@ -1,8 +1,8 @@
 #pragma once
-#include "VertexProgram.h"
-#include "FragmentProgram.h"
+#include "GLVertexProgram.h"
+#include "GLFragmentProgram.h"
 
-struct Program
+struct GLProgram
 {
 private:
 	struct Location
@@ -16,7 +16,7 @@ private:
 public:
 	u32 id;
 
-	Program();
+	GLProgram();
 
 	int GetLocation(const wxString& name);
 	bool IsCreated() const;

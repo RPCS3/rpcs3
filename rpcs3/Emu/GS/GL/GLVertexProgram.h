@@ -1,7 +1,8 @@
 #pragma once
-#include "ShaderParam.h"
+#include "GLShaderParam.h"
+#include "Emu/GS/RSXVertexProgram.h"
 
-struct VertexDecompilerThread : public ThreadBase
+struct GLVertexDecompilerThread : public ThreadBase
 {
 	union D0
 	{
@@ -129,9 +130,9 @@ struct VertexDecompilerThread : public ThreadBase
 	wxString main;
 	wxString& m_shader;
 	Array<u32>& m_data;
-	ParamArray& m_parr;
+	GLParamArray& m_parr;
 
-	VertexDecompilerThread(Array<u32>& data, wxString& shader, ParamArray& parr)
+	GLVertexDecompilerThread(Array<u32>& data, wxString& shader, GLParamArray& parr)
 		: ThreadBase(false, "Vertex Shader Decompiler Thread")
 		, m_data(data)
 		, m_shader(shader)
@@ -152,17 +153,16 @@ struct VertexDecompilerThread : public ThreadBase
 	virtual void Task();
 };
 
-struct VertexProgram
-{
-	wxString shader;
+struct GLVertexProgram
+{ 
+	GLVertexDecompilerThread* m_decompiler_thread;
+
+	GLVertexProgram();
+	~GLVertexProgram();
+
+	GLParamArray parr;
 	u32 id;
-	VertexDecompilerThread* m_decompiler_thread;
-
-	VertexProgram();
-	~VertexProgram();
-
-	Array<u32> data;
-	ParamArray parr;
+	wxString shader;
 
 	void Wait()
 	{
@@ -171,27 +171,8 @@ struct VertexProgram
 			m_decompiler_thread->Wait();
 		}
 	}
-	void Decompile();
+
+	void Decompile(RSXVertexProgram& prog);
 	void Compile();
 	void Delete();
-};
-
-struct VertexData
-{
-	u32 frequency;
-	u32 stride;
-	u32 size;
-	u32 type;
-	u32 addr;
-	u32 constant_count;
-
-	Array<u8> data;
-
-	VertexData();
-
-	void Reset();
-	bool IsEnabled() { return size > 0; }
-	void Load(u32 start, u32 count);
-
-	u32 GetTypeSize();
 };

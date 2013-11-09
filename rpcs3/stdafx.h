@@ -198,8 +198,8 @@ enum Status
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
-#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 
 #include "Emu/FS/vfsFileBase.h"
