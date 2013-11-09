@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -250,13 +250,18 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Resc.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellJpgDec.cpp" />

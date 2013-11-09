@@ -18,6 +18,21 @@ enum
 	CELL_PHOTO_DECODE_ERROR_DECODE			= 0x8002c906,
 };
 
+// Datatypes
+struct CellPhotoDecodeSetParam
+{ 
+	u32 dstBuffer_addr;
+	u16 width;
+	u16 height;
+};
+
+struct CellPhotoDecodeReturnParam
+{ 
+	u16 width;
+	u16 height;
+};
+
+// Functions
 int cellPhotoDecodeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoDecode);

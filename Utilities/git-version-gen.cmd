@@ -13,7 +13,7 @@ rem // A copy of the GPL 2.0 should have been included with the program.
 rem // If not, see http://www.gnu.org/licenses/
 
 rem // Official git repository and contact information can be found at
-rem // https://github.com/hrydgard/RPCS3 and http://www.RPCS3.org/.
+rem // https://github.com/DHrpcs3/rpcs3 and http://code.google.com/p/rpcs3/.
 
 setlocal ENABLEDELAYEDEXPANSION
 
