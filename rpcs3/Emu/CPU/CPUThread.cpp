@@ -33,6 +33,11 @@ void CPUThread::Close()
 	{
 		m_free_data = true;
 	}
+	else
+	{
+		delete m_dec;
+		m_dec = nullptr;
+	}
 
 	Stop();
 }
@@ -242,7 +247,6 @@ void CPUThread::Stop()
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
-	delete m_dec;
 
 	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
 }
@@ -326,5 +330,9 @@ void CPUThread::Task()
 	//ConLog.Write("%s leave", CPUThread::GetFName());
 
 	if(m_free_data)
+	{
+		delete m_dec;
+		m_dec = nullptr;
 		free(this);
+	}
 }
