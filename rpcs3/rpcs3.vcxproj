@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -28,13 +28,13 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -49,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
     <CLRSupport>false</CLRSupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -219,13 +219,13 @@
     <ClCompile Include="Emu\FS\vfsLocalFile.cpp" />
     <ClCompile Include="Emu\FS\vfsStream.cpp" />
     <ClCompile Include="Emu\FS\vfsStreamMemory.cpp" />
-    <ClCompile Include="Emu\GS\GL\FragmentProgram.cpp" />
     <ClCompile Include="Emu\GS\GL\GLBuffers.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\GS\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLProgram.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLProgramBuffer.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp" />
-    <ClCompile Include="Emu\GS\GL\Program.cpp" />
-    <ClCompile Include="Emu\GS\GL\ProgramBuffer.cpp" />
-    <ClCompile Include="Emu\GS\GL\VertexProgram.cpp" />
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\GS\GSRender.cpp" />
     <ClCompile Include="Emu\GS\RSXThread.cpp" />
