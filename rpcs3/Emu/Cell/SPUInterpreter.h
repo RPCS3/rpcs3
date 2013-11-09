@@ -916,7 +916,7 @@ private:
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w];
+			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w*2];
 	}
 	void CEQB(u32 rt, u32 ra, u32 rb)
 	{
