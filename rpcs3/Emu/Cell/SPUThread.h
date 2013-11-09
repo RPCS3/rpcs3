@@ -117,6 +117,89 @@ enum
 	SPU_STATUS_SINGLE_STEP			= 0x10,
 };
 
+//Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
+//Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
+class FPSCR
+{
+public:
+	u64 low;
+	u64 hi;
+
+	FPSCR() {}
+
+	wxString ToString() const
+	{
+		return "FPSCR writer not yet implemented"; //wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+	}
+
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	//slice -> 0 - 1 (4 slices total, only two have rounding)
+	//0 -> round even
+	//1 -> round towards zero (truncate)
+	//2 -> round towards positive inf
+	//3 -> round towards neg inf
+	void setSliceRounding(u8 slice, u8 roundTo)
+	{
+		u64 mask = roundTo;
+		switch(slice)
+		{
+		case 0:
+			mask = mask << 20;
+			break;
+		case 1:
+			mask = mask << 22;
+			break;	
+		}
+
+		//rounding is located in the low end of the FPSCR
+		this->low = this->low & mask;
+	}
+	//Slice 0 or 1
+	u8 checkSliceRounding(u8 slice)
+	{
+		switch(slice)
+		{
+		case 0:
+			return this->low >> 20 & 0x3;
+		
+		case 1:
+			return this->low >> 22 & 0x3;
+		}
+	}
+
+	//Single Precision Exception Flags (all 3 slices)
+	//slice -> slice number (0-3)
+	//exception: 1 -> Overflow 2 -> Underflow 4-> Diff (could be IE^3 non compliant)
+	void setSinglePrecisionExceptionFlags(u8 slice, u8 exception)
+	{
+		u64 mask = exception;
+		switch(slice)
+		{
+		case 0:
+			mask = mask << 29;
+			this->low = this->low & mask;
+			break;
+		case 1: 
+			mask = mask << 61;
+			this->low = this->low & mask;
+			break;
+		case 2:
+			mask = mask << 29;
+			this->hi = this->hi & mask;
+			break;
+		case 3:
+			mask = mask << 61;
+			this->hi = this->hi & mask;
+			break;
+		}
+		
+	}
+	
+};
+
 union SPU_GPR_hdr
 {
 	u128 _u128;
@@ -169,6 +252,7 @@ class SPUThread : public PPCThread
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
 	SPU_SPR_hdr SPR[128]; //Special-Purpose Registers
+	FPSCR FPSCR;
 
 	template<size_t _max_count>
 	class Channel

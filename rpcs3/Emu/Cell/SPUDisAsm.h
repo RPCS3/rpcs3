@@ -428,7 +428,7 @@ private:
 	{
 		DisAsm("sumb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
-	void HGT(u32 rt, u32 ra, u32 rb)
+	void HGT(u32 rt, s32 ra, s32 rb)
 	{
 		DisAsm("hgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}

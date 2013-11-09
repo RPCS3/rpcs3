@@ -323,7 +323,7 @@ public:
 	virtual void EQV(u32  rt, u32  ra, u32  rb) = 0;
 	virtual void CGTB(u32  rt, u32  ra, u32  rb) = 0;
 	virtual void SUMB(u32  rt, u32  ra, u32  rb) = 0;
-	virtual void HGT(u32  rt, u32  ra, u32  rb) = 0;
+	virtual void HGT(u32  rt, s32  ra, s32  rb) = 0;
 	virtual void CLZ(u32  rt, u32  ra) = 0;
 	virtual void XSWD(u32  rt, u32  ra) = 0;
 	virtual void XSHW(u32  rt, u32  ra) = 0;
