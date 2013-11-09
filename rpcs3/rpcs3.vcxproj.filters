@@ -160,19 +160,10 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\GS\GL\FragmentProgram.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\GS\GL\GLBuffers.cpp">
       <Filter>Emu\GS\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\GS\GL\GLGSRender.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\Program.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\VertexProgram.cpp">
       <Filter>Emu\GS\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp">
@@ -180,9 +171,6 @@
     </ClCompile>
     <ClCompile Include="Emu\GS\GSRender.cpp">
       <Filter>Emu\GS</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\ProgramBuffer.cpp">
-      <Filter>Emu\GS\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -342,6 +330,18 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLFragmentProgram.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLProgram.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLProgramBuffer.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLVertexProgram.cpp">
+      <Filter>Emu\GS\GL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

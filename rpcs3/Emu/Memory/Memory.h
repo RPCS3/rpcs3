@@ -219,7 +219,7 @@ public:
 			MemoryBlocks[i].Delete();
 		}
 
-		MemoryBlocks.Clear();
+		MemoryBlocks.ClearF();
 	}
 
 	void Write8(const u64 addr, const u8 data);

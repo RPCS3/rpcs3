@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Program.h"
+#include "GLProgram.h"
 #include "GLGSRender.h"
 
-Program::Program() : id(0)
+GLProgram::GLProgram() : id(0)
 {
 }
 
-int Program::GetLocation(const wxString& name)
+int GLProgram::GetLocation(const wxString& name)
 {
 	for(u32 i=0; i<m_locations.GetCount(); ++i)
 	{
@@ -24,12 +24,12 @@ int Program::GetLocation(const wxString& name)
 	return m_locations[pos].loc;
 }
 
-bool Program::IsCreated() const
+bool GLProgram::IsCreated() const
 {
 	return id > 0;
 }
 
-void Program::Create(const u32 vp, const u32 fp)
+void GLProgram::Create(const u32 vp, const u32 fp)
 {
 	if(IsCreated()) Delete();
 	id = glCreateProgram();
@@ -74,19 +74,19 @@ void Program::Create(const u32 vp, const u32 fp)
 	}
 }
 
-void Program::UnUse()
+void GLProgram::UnUse()
 {
 	id = 0;
 	m_locations.Clear();
 }
 
-void Program::Use()
+void GLProgram::Use()
 {
 	glUseProgram(id);
 	checkForGlError("glUseProgram");
 }
 
-void Program::SetTex(u32 index)
+void GLProgram::SetTex(u32 index)
 {
 	int loc = GetLocation(wxString::Format("tex%u", index));
 	checkForGlError(wxString::Format("GetLocation(tex%u)", index));
@@ -94,7 +94,7 @@ void Program::SetTex(u32 index)
 	checkForGlError(wxString::Format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
-void Program::Delete()
+void GLProgram::Delete()
 {
 	if(!IsCreated()) return;
 	glDeleteProgram(id);

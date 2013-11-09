@@ -9,7 +9,6 @@ Module cellRecs(0x001f, cellRecs_init);
 int cellRescSetConvertAndFlip(s32 indx)
 {
 	cellRecs.Log("cellRescSetConvertAndFlip(indx=0x%x)", indx);
-	Emu.GetGSManager().GetRender().Draw();
 
 	return CELL_OK;
 }

@@ -32,6 +32,7 @@ void GSManager::Close()
 	if(m_render)
 	{
 		m_render->Close();
+		delete m_render;
 		m_render = nullptr;
 	}
 }

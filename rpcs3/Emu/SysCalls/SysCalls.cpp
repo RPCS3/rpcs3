@@ -312,13 +312,6 @@ void default_syscall()
 		case 23: RESULT(lv2ProcessWaitForChild2(CPU)); return;
 		case 25: RESULT(lv2ProcessGetSdkVersion(CPU)); return;
 		*/
-		//timer
-		case 141:
-		case 142:
-			std::this_thread::sleep_for(std::chrono::nanoseconds(SC_ARGS_1));
-			RESULT(0);
-		return;
-
 		//tty
 		case 988:
 			ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",

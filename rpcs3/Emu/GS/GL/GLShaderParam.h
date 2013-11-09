@@ -1,7 +1,7 @@
 #pragma once
 #include "OpenGL.h"
 
-enum ParamFlag
+enum GLParamFlag
 {
 	PARAM_IN,
 	PARAM_OUT,
@@ -10,13 +10,13 @@ enum ParamFlag
 	PARAM_NONE,
 };
 
-struct ParamItem
+struct GLParamItem
 {
 	ArrayString name;
 	ArrayString location;
 	ArrayString value;
 
-	ParamItem(const wxString& _name, int _location, const wxString& _value = wxEmptyString)
+	GLParamItem(const wxString& _name, int _location, const wxString& _value = wxEmptyString)
 		: name(_name)
 		, location(_location > -1 ? wxString::Format("layout (location = %d) ", _location) : "")
 		, value(_value)
@@ -24,13 +24,13 @@ struct ParamItem
 	}
 };
 
-struct ParamType
+struct GLParamType
 {
-	const ParamFlag flag;
+	const GLParamFlag flag;
 	ArrayString type;
-	Array<ParamItem> items;
+	Array<GLParamItem> items;
 
-	ParamType(const ParamFlag _flag, const wxString& _type)
+	GLParamType(const GLParamFlag _flag, const wxString& _type)
 		: type(_type)
 		, flag(_flag)
 	{
@@ -68,11 +68,11 @@ struct ParamType
 	}
 };
 
-struct ParamArray
+struct GLParamArray
 {
-	Array<ParamType> params;
+	Array<GLParamType> params;
 
-	ParamType* SearchParam(const wxString& type)
+	GLParamType* SearchParam(const wxString& type)
 	{
 		for(u32 i=0; i<params.GetCount(); ++i)
 		{
@@ -82,7 +82,7 @@ struct ParamArray
 		return nullptr;
 	}
 
-	wxString GetParamFlag(const ParamFlag flag)
+	wxString GetParamFlag(const GLParamFlag flag)
 	{
 		switch(flag)
 		{
@@ -95,46 +95,46 @@ struct ParamArray
 		return wxEmptyString;
 	}
 
-	bool HasParam(const ParamFlag flag, wxString type, const wxString& name)
+	bool HasParam(const GLParamFlag flag, wxString type, const wxString& name)
 	{
 		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		GLParamType* t = SearchParam(type);
 		return t && t->SearchName(name);
 	}
 
-	wxString AddParam(const ParamFlag flag, wxString type, const wxString& name, const wxString& value)
+	wxString AddParam(const GLParamFlag flag, wxString type, const wxString& name, const wxString& value)
 	{
 		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		GLParamType* t = SearchParam(type);
 
 		if(t)
 		{
-			if(!t->SearchName(name)) t->items.Move(new ParamItem(name, -1, value));
+			if(!t->SearchName(name)) t->items.Move(new GLParamItem(name, -1, value));
 		}
 		else
 		{
 			const u32 num = params.GetCount();
-			params.Move(new ParamType(flag, type));
-			params[num].items.Move(new ParamItem(name, -1, value));
+			params.Move(new GLParamType(flag, type));
+			params[num].items.Move(new GLParamItem(name, -1, value));
 		}
 
 		return name;
 	}
 
-	wxString AddParam(const ParamFlag flag, wxString type, const wxString& name, int location = -1)
+	wxString AddParam(const GLParamFlag flag, wxString type, const wxString& name, int location = -1)
 	{
 		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		GLParamType* t = SearchParam(type);
 
 		if(t)
 		{
-			if(!t->SearchName(name)) t->items.Move(new ParamItem(name, location));
+			if(!t->SearchName(name)) t->items.Move(new GLParamItem(name, location));
 		}
 		else
 		{
 			const u32 num = params.GetCount();
-			params.Move(new ParamType(flag, type));
-			params[num].items.Move(new ParamItem(name, location));
+			params.Move(new GLParamType(flag, type));
+			params[num].items.Move(new GLParamItem(name, location));
 		}
 
 		return name;
