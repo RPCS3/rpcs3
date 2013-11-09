@@ -49,7 +49,7 @@ int sys_ppu_thread_detach(u32 thread_id)
 {
 	sysPrxForUser.Error("sys_ppu_thread_detach(thread_id=%d)", thread_id);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	if(!thr->IsJoinable())
