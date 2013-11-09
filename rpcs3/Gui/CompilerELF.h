@@ -3,7 +3,6 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "wx/aui/aui.h"
 #include "Loader/ELF64.h"
-#include <wx/richtext/richtextctrl.h>
 
 class CompilerELF : public FrameBase
 {
