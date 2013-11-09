@@ -13,6 +13,7 @@
 #include <wx/dir.h>
 #include <wx/generic/progdlgg.h>
 #include <wx/spinctrl.h>
+#include <wx/datetime.h>
 #include <wx/filepicker.h>
 
 #include <wx/wxprec.h>
