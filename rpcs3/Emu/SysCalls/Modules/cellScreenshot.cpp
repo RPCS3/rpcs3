@@ -16,13 +16,22 @@ enum
 	CELL_SCREENSHOT_ERROR_UNSUPPORTED_COLOR_FORMAT	= 0x8002d105,
 };
 
-int cellScreenShotSetParameter()
+// Datatypes
+struct CellScreenShotSetParam
+{
+	const char *photo_title;
+	const char *game_title;
+	const char *game_comment;
+};
+
+// Functions
+int cellScreenShotSetParameter() //const CellScreenShotSetParam *param
 {
 	UNIMPLEMENTED_FUNC(cellScreenshot);
 	return CELL_OK;
 }
 
-int cellScreenShotSetOverlayImage()
+int cellScreenShotSetOverlayImage() //const char *srcDir, const char *srcFile, s32 offset_x, s32 offset_y
 {
 	UNIMPLEMENTED_FUNC(cellScreenshot);
 	return CELL_OK;

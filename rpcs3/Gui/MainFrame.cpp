@@ -233,7 +233,12 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 	
 	wxString fileIn = ctrl.GetPath();
 	wxString fileOut = ctrl.GetPath()+".elf";
-	scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
+
+	if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
+	{
+		ConLog.Write("SELF: Could not decrypt file");
+		return;
+	}
 
 	Emu.SetPath(ctrl.GetPath()+".elf");
 	Emu.Load();

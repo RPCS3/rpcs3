@@ -170,6 +170,11 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "$(EmulatorDir)\\dev_hdd0\\";
 			res[idx].mount = "/dev_hdd0/";
 			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(EmulatorDir)\\dev_hdd1\\";
+			res[idx].mount = "/dev_hdd1/";
+			res[idx].device = vfsDevice_LocalFile;
 			/*
 			idx = res.Move(new VFSManagerEntry());
 			res[idx].path = "$(GameDir)";
