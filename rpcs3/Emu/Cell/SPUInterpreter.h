@@ -44,7 +44,17 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED();
+		//If register is a dummy register (register labeled 0x0)
+		if(sa == 0x0)
+		{
+			CPU.GPR[rt]._u128.hi = 0x0;
+			CPU.GPR[rt]._u128.lo = 0x0;
+		}
+		else
+		{
+			CPU.GPR[rt]._u128.hi =  CPU.SPR[sa]._u128.hi;
+			CPU.GPR[rt]._u128.lo =  CPU.SPR[sa]._u128.lo;
+		}
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -250,7 +260,11 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED();
+		if(sa != 0)
+		{
+			CPU.SPR[sa]._u128.hi = CPU.GPR[rt]._u128.hi;
+			CPU.SPR[sa]._u128.lo = CPU.GPR[rt]._u128.lo;
+		}
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
@@ -297,7 +311,7 @@ private:
 	void IRET(u32 ra)
 	{
 		UNIMPLEMENTED();
-		// SetBranch(SRR0);
+		//SetBranch(SRR0);
 	}
 	void BISLED(u32 rt, u32 ra)
 	{
@@ -618,9 +632,13 @@ private:
 			CPU.GPR[rt]._u16[w*2 + 1] = CPU.GPR[rb]._u8[w*4] + CPU.GPR[rb]._u8[w*4 + 1] + CPU.GPR[rb]._u8[w*4 + 2] + CPU.GPR[rb]._u8[w*4 + 3];
 		}
 	}
-	void HGT(u32 rt, u32 ra, u32 rb)
+	//HGT uses signed values.  HLGT uses unsigned values
+	void HGT(u32 rt, s32 ra, s32 rb)
 	{
-		UNIMPLEMENTED();
+		if(CPU.GPR[ra]._i32[0] > CPU.GPR[rb]._i32[0])
+		{
+			CPU.Stop();
+		}
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
@@ -747,7 +765,10 @@ private:
 	}
 	void HLGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		if(CPU.GPR[ra]._u32[0] > CPU.GPR[rb]._u32[0])
+		{
+			CPU.Stop();
+		}
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb)
 	{
@@ -814,8 +835,13 @@ private:
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] += CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w*2];
 	}
+	//Forced bits to 0, hence the shift:
+	
 	void FSCRRD(u32 rt)
 	{
+		/*CPU.GPR[rt]._u128.lo = 
+			CPU.FPSCR.Exception0 << 20 &
+			CPU.FPSCR.*/
 		UNIMPLEMENTED();
 	}
 	void FESD(u32 rt, u32 ra)
@@ -890,7 +916,7 @@ private:
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2 + 1] * CPU.GPR[rb]._u16[w*2 + 1];
+			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w];
 	}
 	void CEQB(u32 rt, u32 ra, u32 rb)
 	{
