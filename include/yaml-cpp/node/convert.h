@@ -89,7 +89,7 @@ namespace YAML
             const std::string& input = node.Scalar();\
 			std::stringstream stream(input);\
             stream.unsetf(std::ios::dec);\
-			if((stream >> rhs) && (stream >> std::ws).eof())\
+			if((stream >> std::noskipws >> rhs) && (stream >> std::ws).eof())\
                 return true;\
             if(std::numeric_limits<type>::has_infinity) {\
                 if(conversion::IsInfinity(input)) {\
