@@ -98,8 +98,30 @@ public:
 	const u64 GetStartAddr() const { return range_start; }
 	const u64 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
 	virtual const u32 GetSize() const { return range_size; }
+	virtual const u32 GetUsedSize() const { return GetSize(); }
 	u8* GetMem() const { return mem; }
 	virtual u8* GetMem(u64 addr) const { return mem + addr; }
+
+	virtual bool Alloc(u64 addr, u32 size) { return false; }
+	virtual u64 Alloc(u32 size) { return 0; }
+	virtual bool Alloc() { return false; }
+	virtual bool Free(u64 addr) { return false; }
+};
+
+class MemoryBlockLE : public MemoryBlock
+{
+public:
+	virtual bool Read8(const u64 addr, u8* value) override;
+	virtual bool Read16(const u64 addr, u16* value) override;
+	virtual bool Read32(const u64 addr, u32* value) override;
+	virtual bool Read64(const u64 addr, u64* value) override;
+	virtual bool Read128(const u64 addr, u128* value) override;
+
+	virtual bool Write8(const u64 addr, const u8 value) override;
+	virtual bool Write16(const u64 addr, const u16 value) override;
+	virtual bool Write32(const u64 addr, const u32 value) override;
+	virtual bool Write64(const u64 addr, const u64 value) override;
+	virtual bool Write128(const u64 addr, const u128 value) override;
 };
 
 class MemoryMirror : public MemoryBlock
@@ -145,32 +167,38 @@ class NullMemoryBlock : public MemoryBlock
 	virtual bool Write128(const u64 addr, const u128 value);
 };
 
-class DynamicMemoryBlock : public MemoryBlock
+template<typename PT>
+class DynamicMemoryBlockBase : public PT
 {
 	Array<MemBlockInfo> m_used_mem;
 	u32 m_max_size;
 
 public:
-	DynamicMemoryBlock();
+	DynamicMemoryBlockBase();
 
 	const u32 GetSize() const { return m_max_size; }
 	const u32 GetUsedSize() const;
 
-	bool IsInMyRange(const u64 addr);
-	bool IsInMyRange(const u64 addr, const u32 size);
-	bool IsMyAddress(const u64 addr);
+	virtual bool IsInMyRange(const u64 addr);
+	virtual bool IsInMyRange(const u64 addr, const u32 size);
+	virtual bool IsMyAddress(const u64 addr);
 
-	MemoryBlock* SetRange(const u64 start, const u32 size);
+	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 
 	virtual void Delete();
 
-	bool Alloc(u64 addr, u32 size);
-	u64 Alloc(u32 size);
-	bool Alloc();
-	bool Free(u64 addr);
+	virtual bool Alloc(u64 addr, u32 size);
+	virtual u64 Alloc(u32 size);
+	virtual bool Alloc();
+	virtual bool Free(u64 addr);
 
 	virtual u8* GetMem(u64 addr) const;
 
 private:
 	void AppendUsedMem(u64 addr, u32 size);
 };
+
+#include "DynamicMemoryBlockBase.inl"
+
+typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
+typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;

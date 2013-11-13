@@ -101,6 +101,28 @@ vfsDevice* VFS::GetDevice(const wxString& ps3_path, wxString& path)
 	return &m_devices[max_i];
 }
 
+vfsDevice* VFS::GetDeviceLocal(const wxString& local_path, wxString& path)
+{
+	u32 max_eq;
+	s32 max_i=-1;
+
+	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	{
+		const u32 eq = m_devices[i].CmpLocalPath(local_path);
+
+		if(max_i < 0 || eq > max_eq)
+		{
+			max_eq = eq;
+			max_i = i;
+		}
+	}
+
+	if(max_i < 0) return nullptr;
+
+	path = vfsDevice::GetPs3Path(m_devices[max_i].GetPs3Path(), local_path(max_eq, local_path.Len() - max_eq));
+	return &m_devices[max_i];
+}
+
 void VFS::Init(const wxString& path)
 {
 	Array<VFSManagerEntry> entries;
@@ -148,7 +170,12 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "$(EmulatorDir)\\dev_hdd0\\";
 			res[idx].mount = "/dev_hdd0/";
 			res[idx].device = vfsDevice_LocalFile;
-		
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(EmulatorDir)\\dev_hdd1\\";
+			res[idx].mount = "/dev_hdd1/";
+			res[idx].device = vfsDevice_LocalFile;
+			/*
 			idx = res.Move(new VFSManagerEntry());
 			res[idx].path = "$(GameDir)";
 			res[idx].mount = "";
@@ -158,6 +185,7 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "$(GameDir)";
 			res[idx].mount = "/";
 			res[idx].device = vfsDevice_LocalFile;
+			*/
 
 			idx = res.Move(new VFSManagerEntry());
 			res[idx].path = "$(GameDir)";

@@ -102,9 +102,21 @@ enum
 void cellSysutil_init();
 Module cellSysutil(0x0015, cellSysutil_init);
 
-void cellVideoOutGetDeviceInfo()
+int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_struct_ptr_t<CellVideoOutDeviceInfo> info)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil.Error("Unimplemented function: cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
+		videoOut, deviceIndex, info.GetAddr());
+
+	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+
+	//info->portType = CELL_VIDEO_OUT_PORT_HDMI;
+	info->colorSpace = Emu.GetGSManager().GetColorSpace();
+	//info->latency = ;
+	//info->availableModeCount = ;
+	//info->state = CELL_VIDEO_OUT_DEVICE_STATE_AVAILABLE;
+	//info->rgbOutputRange = ;
+	
+	return CELL_OK;
 }
 
 int cellSysutilGetSystemParamInt(int id, mem32_t value)

@@ -226,15 +226,13 @@ namespace SPU_opcodes
 	};
 };
 
-class SPU_Opcodes
+class SPUOpcodes
 {
 public:
 	static u32 branchTarget(const u64 pc, const s32 imm)
 	{
 		return (pc + (imm << 2)) & 0x3fffc;
 	}
-	
-	virtual void Exit()=0;
 
 	//0 - 10
 	virtual void STOP(u32 code) = 0;
@@ -325,7 +323,7 @@ public:
 	virtual void EQV(u32  rt, u32  ra, u32  rb) = 0;
 	virtual void CGTB(u32  rt, u32  ra, u32  rb) = 0;
 	virtual void SUMB(u32  rt, u32  ra, u32  rb) = 0;
-	virtual void HGT(u32  rt, u32  ra, u32  rb) = 0;
+	virtual void HGT(u32  rt, s32  ra, s32  rb) = 0;
 	virtual void CLZ(u32  rt, u32  ra) = 0;
 	virtual void XSWD(u32  rt, u32  ra) = 0;
 	virtual void XSHW(u32  rt, u32  ra) = 0;

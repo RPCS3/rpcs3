@@ -32,49 +32,68 @@ enum CellPngDecColorSpace
 	CELL_PNGDEC_ARGB				= 20,
 };
 
+enum CellPngDecDecodeStatus
+{
+	CELL_PNGDEC_DEC_STATUS_FINISH	= 0,	//Decoding finished
+	CELL_PNGDEC_DEC_STATUS_STOP		= 1,	//Decoding halted
+};
+
+struct CellPngDecDataOutInfo
+{
+	be_t<u32> chunkInformation;
+	be_t<u32> numText;
+	be_t<u32> numUnknownChunk;
+	be_t<u32> status;
+};
+
+struct CellPngDecDataCtrlParam
+{
+	be_t<u64> outputBytesPerLine;
+};
+
 struct CellPngDecInfo
 {
-    u32 imageWidth;
-    u32 imageHeight;
-    u32 numComponents;
-    u32 colorSpace;			// CellPngDecColorSpace
-    u32 bitDepth;
-	u32 interlaceMethod;	// CellPngDecInterlaceMode
-	u32 chunkInformation;
+	be_t<u32> imageWidth;
+	be_t<u32> imageHeight;
+	be_t<u32> numComponents;
+	be_t<u32> colorSpace;			// CellPngDecColorSpace
+	be_t<u32> bitDepth;
+	be_t<u32> interlaceMethod;		// CellPngDecInterlaceMode
+	be_t<u32> chunkInformation;
 };
 
 struct CellPngDecSrc
 {
-    u32 srcSelect;			// CellPngDecStreamSrcSel
-    u32 fileName;			// const char*
-    u64 fileOffset;			// int64_t
-    u32 fileSize;
-    u32 streamPtr;
-    u32 streamSize;
-    u32 spuThreadEnable;	// CellPngDecSpuThreadEna
+	be_t<u32> srcSelect;			// CellPngDecStreamSrcSel
+	be_t<u32> fileName;				// const char*
+	be_t<u64> fileOffset;			// int64_t
+	be_t<u32> fileSize;
+	be_t<u32> streamPtr;
+	be_t<u32> streamSize;
+	be_t<u32> spuThreadEnable;		// CellPngDecSpuThreadEna
 };
 
 struct CellPngDecInParam
 {
-	u32 *commandPtr;
-	u32 outputMode;			// CellPngDecOutputMode
-	u32 outputColorSpace;	// CellPngDecColorSpace
-	u32 outputBitDepth;
-	u32 outputPackFlag;		// CellPngDecPackFlag
-	u32 outputAlphaSelect;	// CellPngDecAlphaSelect
-	u32 outputColorAlpha;
+	be_t<u32> commandPtr;
+	be_t<u32> outputMode;			// CellPngDecOutputMode
+	be_t<u32> outputColorSpace;	// CellPngDecColorSpace
+	be_t<u32> outputBitDepth;
+	be_t<u32> outputPackFlag;		// CellPngDecPackFlag
+	be_t<u32> outputAlphaSelect;	// CellPngDecAlphaSelect
+	be_t<u32> outputColorAlpha;
 };
 
 struct CellPngDecOutParam
 {
-	u64 outputWidthByte;
-	u32 outputWidth;
-	u32 outputHeight;
-	u32 outputComponents;
-	u32 outputBitDepth;
-	u32 outputMode;			// CellPngDecOutputMode
-	u32 outputColorSpace;	// CellPngDecColorSpace
-	u32 useMemorySpace;
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputWidth;
+	be_t<u32> outputHeight;
+	be_t<u32> outputComponents;
+	be_t<u32> outputBitDepth;
+	be_t<u32> outputMode;			// CellPngDecOutputMode
+	be_t<u32> outputColorSpace;	// CellPngDecColorSpace
+	be_t<u32> useMemorySpace;
 };
 
 struct CellPngDecSubHandle //Custom struct
@@ -84,7 +103,6 @@ struct CellPngDecSubHandle //Custom struct
 	CellPngDecInfo info;
 	CellPngDecOutParam outParam;
 };
-
 
 int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -102,7 +120,7 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo
 {
 	//u32 srcSelect       = Memory.Read32(src_addr);
 	u32 fileName		  = Memory.Read32(src_addr+4);
-	//u64 fileOffset      = Memory.Read32(src_addr+8);
+	//u32 fileOffset      = Memory.Read32(src_addr+8);
 	//u32 fileSize        = Memory.Read32(src_addr+12);
 	//u32 streamPtr       = Memory.Read32(src_addr+16);
 	//u32 streamSize      = Memory.Read32(src_addr+20);
@@ -111,160 +129,183 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 
 	// Get file descriptor
-	u32 fd_addr = Memory.Alloc(sizeof(u32), 1);
-	int ret = cellFsOpen(fileName, 0, fd_addr, NULL, 0);
-	current_subHandle->fd = Memory.Read32(fd_addr);
-	Memory.Free(fd_addr);
-	if(ret != 0) return CELL_PNGDEC_ERROR_OPEN_FILE;
+	MemoryAllocator<be_t<u32>> fd;
+	int ret = cellFsOpen(fileName, 0, fd, NULL, 0);
+	current_subHandle->fd = fd->ToLE();
+	if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 	// Get size of file
-	u32 sb_addr = Memory.Alloc(52,1);					// Alloc a CellFsStat struct
-	cellFsFstat(current_subHandle->fd, sb_addr);
-	current_subHandle->fileSize = Memory.Read64(sb_addr+36);	// Get CellFsStat.st_size
-	Memory.Free(sb_addr);
+	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
+	ret = cellFsFstat(current_subHandle->fd, sb);
+	if(ret != CELL_OK) return ret;
+	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle += (u32)current_subHandle;
+	subHandle = cellPngDec.GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
 
 int cellPngDecClose(u32 mainHandle, u32 subHandle)
 {
-	cellFsClose( ((CellPngDecSubHandle*)subHandle)->fd );
-	delete (CellPngDecSubHandle*)subHandle;
+	ID sub_handle_id_data;
+	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
+		return CELL_PNGDEC_ERROR_FATAL;
+
+	auto subHandle_data = (CellPngDecSubHandle*)sub_handle_id_data.m_data;
+
+	cellFsClose(subHandle_data->fd);
+	Emu.GetIdManager().RemoveID(subHandle);
 
 	return CELL_OK;
 }
 
-int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_class_t info)
+int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellPngDecInfo> info)
 {
-	const u32& fd = ((CellPngDecSubHandle*)subHandle)->fd;
-	const u64& fileSize = ((CellPngDecSubHandle*)subHandle)->fileSize;
-	CellPngDecInfo& current_info = ((CellPngDecSubHandle*)subHandle)->info;
+	cellPngDec.Log("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	ID sub_handle_id_data;
+	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
+		return CELL_PNGDEC_ERROR_FATAL;
+
+	auto subHandle_data = (CellPngDecSubHandle*)sub_handle_id_data.m_data;
+
+	const u32& fd = subHandle_data->fd;
+	const u64& fileSize = subHandle_data->fileSize;
+	CellPngDecInfo& current_info = subHandle_data->info;
 
 	//Check size of file
 	if(fileSize < 29) return CELL_PNGDEC_ERROR_HEADER;	// Error: The file is smaller than the length of a PNG header
 	
 	//Write the header to buffer
-	u32 buffer = Memory.Alloc(34,1);					// Alloc buffer for PNG header
-	u32 nread = Memory.Alloc(8,1);
-	u32 pos_addr = Memory.Alloc(8,1);
-	cellFsLseek(fd, 0, 0, pos_addr);
-	cellFsRead(fd, buffer, 34, nread);
-	Memory.Free(nread);
-	Memory.Free(pos_addr);
+	MemoryAllocator<be_t<u32>> buffer(34); // Alloc buffer for PNG header
+	MemoryAllocator<be_t<u64>> pos, nread;
 
-	if (Memory.Read32(buffer) != 0x89504E47 ||
-		Memory.Read32(buffer+4) != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
-		Memory.Read32(buffer+12) != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
+	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+
+	if (buffer[0] != 0x89504E47 ||
+		buffer[1] != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
+		buffer[3] != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
 	{
-		Memory.Free(buffer);
 		return CELL_PNGDEC_ERROR_HEADER; 
 	}
 
-	current_info.imageWidth       = Memory.Read32(buffer+16);
-	current_info.imageHeight      = Memory.Read32(buffer+20);						
-	switch (Memory.Read8(buffer+25))
+	switch (buffer.To<u8>()[25])
 	{
-	case 0:  current_info.colorSpace = CELL_PNGDEC_GRAYSCALE;		current_info.numComponents = 1; break;
-	case 2:  current_info.colorSpace = CELL_PNGDEC_RGB;				current_info.numComponents = 3; break;
-	case 3:  current_info.colorSpace = CELL_PNGDEC_PALETTE;			current_info.numComponents = 1; break;
-	case 4:  current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA; current_info.numComponents = 2; break;
-	case 6:	 current_info.colorSpace = CELL_PNGDEC_RGBA;			current_info.numComponents = 4; break;
+	case 0: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE;		current_info.numComponents = 1; break;
+	case 2: current_info.colorSpace = CELL_PNGDEC_RGB;				current_info.numComponents = 3; break;
+	case 3: current_info.colorSpace = CELL_PNGDEC_PALETTE;			current_info.numComponents = 1; break;
+	case 4: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA;	current_info.numComponents = 2; break;
+	case 6: current_info.colorSpace = CELL_PNGDEC_RGBA;				current_info.numComponents = 4; break;
 	default: return CELL_PNGDEC_ERROR_HEADER; // Not supported color type
 	}
-	current_info.bitDepth         = Memory.Read8(buffer+24);
-	current_info.interlaceMethod  = Memory.Read8(buffer+28);
-	current_info.chunkInformation = 0;							// Unimplemented
 
-	info += current_info.imageWidth;
-	info += current_info.imageHeight;
-	info += current_info.numComponents;
-	info += current_info.colorSpace;
-	info += current_info.bitDepth;
-	info += current_info.interlaceMethod;
-	info += current_info.chunkInformation;
-	Memory.Free(buffer);
-	
+	current_info.imageWidth			= buffer[4];
+	current_info.imageHeight		= buffer[5];
+	current_info.bitDepth			= buffer.To<u8>()[24];
+	current_info.interlaceMethod	= buffer.To<u8>()[28];
+	current_info.chunkInformation	= 0; // Unimplemented
+
+	info = current_info;
+
 	return CELL_OK;
 }
 
-int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, u32 dataCtrlParam_addr, mem_class_t dataOutInfo)
+int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_struct_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam, mem_struct_ptr_t<CellPngDecDataOutInfo> dataOutInfo)
 {
-	const u32& fd = ((CellPngDecSubHandle*)subHandle)->fd;
-	const u64& fileSize = ((CellPngDecSubHandle*)subHandle)->fileSize;
-	const CellPngDecOutParam& current_outParam = ((CellPngDecSubHandle*)subHandle)->outParam;
+	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
+	ID sub_handle_id_data;
+	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
+		return CELL_PNGDEC_ERROR_FATAL;
+
+	auto subHandle_data = (CellPngDecSubHandle*)sub_handle_id_data.m_data;
+
+	const u32& fd = subHandle_data->fd;
+	const u64& fileSize = subHandle_data->fileSize;
+	const CellPngDecOutParam& current_outParam = subHandle_data->outParam;
 
 	//Copy the PNG file to a buffer
-	u32 buffer = Memory.Alloc(fileSize,1);
-	u32 nread = Memory.Alloc(8,1);
-	u32 pos_addr = Memory.Alloc(sizeof(u64),1);
-	cellFsLseek(fd, 0, 0, pos_addr);
-	cellFsRead(fd, buffer, fileSize, nread);
-	Memory.Free(nread);
-	Memory.Free(pos_addr);
+	MemoryAllocator<unsigned char> png(fileSize);
+	MemoryAllocator<u64> pos, nread;
+	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+	cellFsRead(fd, png.GetAddr(), png.GetSize(), nread);
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	unsigned char *png = (unsigned char*)Memory.VirtualToRealAddr(buffer);
-	unsigned char *image = stbi_load_from_memory(png, fileSize, &width, &height, &actual_components, 4);
-	Memory.Free(buffer);
+	std::shared_ptr<unsigned char> image(stbi_load_from_memory(png, fileSize, &width, &height, &actual_components, 4));
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
-	u32 image_size = width * height * 4;
-	if (current_outParam.outputColorSpace == CELL_PNGDEC_RGBA){
-		for(u32 i = 0; i < image_size; i+=4){
-			data += image[i+0];
-			data += image[i+1];
-			data += image[i+2];
-			data += image[i+3];
+	uint image_size = width * height;
+	switch(current_outParam.outputColorSpace)
+	{
+	case CELL_PNGDEC_RGB:
+	case CELL_PNGDEC_RGBA:
+		image_size *= current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
+		memcpy(data, image.get(), image_size);
+	break;
+
+	case CELL_PNGDEC_ARGB:
+		image_size *= 4;
+
+		for(uint i = 0; i < image_size; i+=4)
+		{
+			data += image.get()[i+3];
+			data += image.get()[i+0];
+			data += image.get()[i+1];
+			data += image.get()[i+2];
 		}
+	break;
+
+	case CELL_PNGDEC_GRAYSCALE:
+	case CELL_PNGDEC_PALETTE:
+	case CELL_PNGDEC_GRAYSCALE_ALPHA:
+		cellPngDec.Error("cellPngDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+	break;
+
+	default:
+		return CELL_PNGDEC_ERROR_ARG;
 	}
-	else if (current_outParam.outputColorSpace == CELL_PNGDEC_ARGB){
-		for(u32 i = 0; i < image_size; i+=4){
-			data += image[i+3];
-			data += image[i+0];
-			data += image[i+1];
-			data += image[i+2];
-		}
-	}
-	delete[] image;
+
+	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_FINISH;
 
 	return CELL_OK;
 }
 
-int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, u32 inParam_addr, mem_class_t outParam)
+int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t<CellPngDecInParam> inParam, mem_struct_ptr_t<CellPngDecOutParam> outParam)
 {
-	CellPngDecInfo& current_info = ((CellPngDecSubHandle*)subHandle)->info;
-	CellPngDecOutParam& current_outParam = ((CellPngDecSubHandle*)subHandle)->outParam;
+	ID sub_handle_id_data;
+	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
+		return CELL_PNGDEC_ERROR_FATAL;
 
-	current_outParam.outputWidthByte	= (current_info.imageWidth * current_info.numComponents * current_info.bitDepth)/8;
+	auto subHandle_data = (CellPngDecSubHandle*)sub_handle_id_data.m_data;
+
+	CellPngDecInfo& current_info = subHandle_data->info;
+	CellPngDecOutParam& current_outParam = subHandle_data->outParam;
+
+	current_outParam.outputWidthByte	= (current_info.imageWidth * current_info.numComponents * current_info.bitDepth) / 8;
 	current_outParam.outputWidth		= current_info.imageWidth;
 	current_outParam.outputHeight		= current_info.imageHeight;
-	current_outParam.outputColorSpace	= Memory.Read32(inParam_addr+8);
+	current_outParam.outputColorSpace	= inParam->outputColorSpace;
 	switch (current_outParam.outputColorSpace)
 	{
+	case CELL_PNGDEC_PALETTE:
 	case CELL_PNGDEC_GRAYSCALE:			current_outParam.outputComponents = 1; break;
+
 	case CELL_PNGDEC_GRAYSCALE_ALPHA:	current_outParam.outputComponents = 2; break;
-	case CELL_PNGDEC_PALETTE:			current_outParam.outputComponents = 1; break;
+
 	case CELL_PNGDEC_RGB:				current_outParam.outputComponents = 3; break;
-	case CELL_PNGDEC_RGBA:				current_outParam.outputComponents = 4; break;
+
+	case CELL_PNGDEC_RGBA:
 	case CELL_PNGDEC_ARGB:				current_outParam.outputComponents = 4; break;
-	default: return CELL_PNGDEC_ERROR_ARG;		// Not supported color space
+
+	default: return CELL_PNGDEC_ERROR_ARG;	// Not supported color space
 	}
-	current_outParam.outputBitDepth		= Memory.Read32(inParam_addr+12);
-	current_outParam.outputMode			= Memory.Read32(inParam_addr+4); 
+
+	current_outParam.outputBitDepth		= inParam->outputBitDepth;
+	current_outParam.outputMode			= inParam->outputMode;
 	current_outParam.useMemorySpace		= 0;	// Unimplemented
 
-	outParam += current_outParam.outputWidthByte;
-	outParam += current_outParam.outputWidth;
-	outParam += current_outParam.outputHeight;
-	outParam += current_outParam.outputComponents;
-	outParam += current_outParam.outputBitDepth;
-	outParam += current_outParam.outputMode;
-	outParam += current_outParam.outputColorSpace;
-	outParam += current_outParam.useMemorySpace;
+	outParam = current_outParam;
 
 	return CELL_OK;
 }

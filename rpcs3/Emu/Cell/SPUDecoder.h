@@ -4,18 +4,17 @@
 #include "Emu/Cell/PPCDecoder.h"
 #include "Emu/Cell/SPUInstrtable.h"
 
-class SPU_Decoder : public PPC_Decoder
+class SPUDecoder : public PPCDecoder
 {
-	SPU_Opcodes* m_op;
+	SPUOpcodes* m_op;
 	
 public:
-	SPU_Decoder(SPU_Opcodes& op) : m_op(&op)
+	SPUDecoder(SPUOpcodes& op) : m_op(&op)
 	{
 	}
 
-	~SPU_Decoder()
+	~SPUDecoder()
 	{
-		m_op->Exit();
 		delete m_op;
 	}
 

@@ -362,7 +362,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		return;
 	}
 
-	if(GetInstruction<PPU_Opcodes>(str))
+	if(GetInstruction<PPUOpcodes>(str))
 	{
 		arg.type = ARG_INSTR;
 		return;
@@ -1397,17 +1397,9 @@ void CompilePPUProgram::Compile()
 
 		LoadArgs();
 
-		auto instr = GetInstruction<PPU_Opcodes>(op);
+		auto instr = GetInstruction<PPUOpcodes>(op);
 		if(instr)
 		{
-			/*
-			FIELD_IMM,
-			FIELD_R_GPR,
-			FIELD_R_FPR,
-			FIELD_R_VPR,
-			FIELD_R_CR,
-			FIELD_BRANCH,
-			*/
 			uint type[] =
 			{
 				ARG_IMM,

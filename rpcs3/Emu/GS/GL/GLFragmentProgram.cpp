@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "FragmentProgram.h"
+#include "GLFragmentProgram.h"
 
-void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
+void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
@@ -72,13 +72,14 @@ void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = cond + (dst.set_cond ? AddCond(dst.fp16) : AddReg(dst.dest_reg, dst.fp16)) + mask
+	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(dst.fp16 ? "hc%d" : "rc%d", src0.cond_reg_index))
+		: AddReg(dst.dest_reg, dst.fp16)) + mask
 		+ " = " + code + (append_mask ? mask : wxEmptyString);
 
 	main += "\t" + code + ";\n";
 }
 
-wxString FragmentDecompilerThread::GetMask()
+wxString GLFragmentDecompilerThread::GetMask()
 {
 	wxString ret = wxEmptyString;
 
@@ -95,25 +96,32 @@ wxString FragmentDecompilerThread::GetMask()
 	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxEmptyString : ("." + ret);
 }
 
-wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
+wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-	//if(!index && !fp16) return "gl_FragColor";
-	return m_parr.AddParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
-		wxString::Format((fp16 ? "h%u" : "r%u"), index), (index || fp16) ? -1 : 0);
+	/*
+	if(HasReg(index, fp16))
+	{
+		return wxString::Format((fp16 ? "h%u" : "r%u"), index);
+	}
+	*/
+
+	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
+	return m_parr.AddParam(fp16 ? PARAM_NONE : PARAM_OUT, "vec4",
+		wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : index);
 }
 
-bool FragmentDecompilerThread::HasReg(u32 index, int fp16)
+bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
 {
-	return m_parr.HasParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
+	return m_parr.HasParam(PARAM_OUT, "vec4",
 		wxString::Format((fp16 ? "h%u" : "r%u"), index));
 }
 
-wxString FragmentDecompilerThread::AddCond(int fp16)
+wxString GLFragmentDecompilerThread::AddCond(int fp16)
 {
-	return m_parr.AddParam(PARAM_NONE , "vec4", (fp16 ? "hc" : "rc"), -1);
+	return m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(fp16 ? "hc%d" : "rc%d", src0.cond_mod_reg_index));
 }
 
-wxString FragmentDecompilerThread::AddConst()
+wxString GLFragmentDecompilerThread::AddConst()
 {
 	mem32_ptr_t data(m_addr + m_size + m_offset);
 
@@ -126,12 +134,12 @@ wxString FragmentDecompilerThread::AddConst()
 		wxString::Format("vec4(%f, %f, %f, %f)", (float&)x, (float&)y, (float&)z, (float&)w));
 }
 
-wxString FragmentDecompilerThread::AddTex()
+wxString GLFragmentDecompilerThread::AddTex()
 {
 	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", wxString::Format("tex%d", dst.tex_num));
 }
 
-template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
+template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 {
 	wxString ret = wxEmptyString;
 
@@ -196,14 +204,9 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	return ret;
 }
 
-wxString FragmentDecompilerThread::BuildCode()
+wxString GLFragmentDecompilerThread::BuildCode()
 {
 	wxString p = wxEmptyString;
-
-	if(!m_parr.HasParam(PARAM_OUT, "vec4", "r0") && m_parr.HasParam(PARAM_NONE, "vec4", "h0"))
-	{
-		main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "r0", 0) + " = " + "h0;\n";
-	}
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
@@ -219,7 +222,7 @@ wxString FragmentDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-void FragmentDecompilerThread::Task()
+void GLFragmentDecompilerThread::Task()
 {
 	mem32_ptr_t data(m_addr);
 	m_size = 0;
@@ -233,16 +236,18 @@ void FragmentDecompilerThread::Task()
 
 		m_offset = 4 * 4;
 
-		switch(dst.opcode | (src1.opcode_is_branch << 6))
+		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
+
+		switch(opcode)
 		{
 		case 0x00: break; //NOP
 		case 0x01: AddCode(GetSRC(src0)); break; //MOV
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
 		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
 		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
-		case 0x05: AddCode("vec4(dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)).xxxx"); break; // DP3
-		case 0x06: AddCode("vec4(dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DP4
-		case 0x07: AddCode("vec4(distance(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DST
+		case 0x05: AddCode("vec2(dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz), 0).xxxx"); break; // DP3
+		case 0x06: AddCode("vec2(dot(" + GetSRC(src0) + ", " + GetSRC(src1) + "), 0).xxxx"); break; // DP4
+		case 0x07: AddCode("vec2(distance(" + GetSRC(src0) + ", " + GetSRC(src1) + "), 0).xxxx"); break; // DST
 		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
 		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
 		case 0x0a: AddCode("vec4(lessThan(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SLT
@@ -292,7 +297,7 @@ void FragmentDecompilerThread::Task()
 		//case 0x35: break; // BEMLUM
 		//case 0x36: break; // REFL
 		//case 0x37: break; // TIMESWTEX
-		case 0x38: AddCode("vec4(dot(" + GetSRC(src0) + ".xy, " + GetSRC(src1) + ".xy)).xxxx"); break; // DP2
+		case 0x38: AddCode("vec2(dot(" + GetSRC(src0) + ".xy, " + GetSRC(src1) + ".xy)).xxxx"); break; // DP2
 		case 0x39: AddCode("normalize(" + GetSRC(src0) + ".xyz)"); break; // NRM
 		case 0x3a: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIV
 		case 0x3b: AddCode("(" + GetSRC(src0) + " / sqrt(" + GetSRC(src1) + "))"); break; // DIVSQ
@@ -301,7 +306,7 @@ void FragmentDecompilerThread::Task()
 		case 0x3e: break; // FENCB
 
 		default:
-			ConLog.Error("Unknown opcode 0x%x (inst %d)", dst.opcode, m_size / (4 * 4));
+			ConLog.Error("Unknown opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
 			Emu.Pause();
 		break;
 		}
@@ -310,20 +315,20 @@ void FragmentDecompilerThread::Task()
 
 		if(dst.end) break;
 
-		data.SetOffset(m_offset);
+		data.Skip(m_offset);
 	}
 
 	m_shader = BuildCode();
 	main.Clear();
 }
 
-ShaderProgram::ShaderProgram() 
+GLShaderProgram::GLShaderProgram() 
 	: m_decompiler_thread(nullptr)
 	, id(0)
 {
 }
 
-ShaderProgram::~ShaderProgram()
+GLShaderProgram::~GLShaderProgram()
 {
 	if(m_decompiler_thread)
 	{
@@ -340,7 +345,7 @@ ShaderProgram::~ShaderProgram()
 	Delete();
 }
 
-void ShaderProgram::Decompile()
+void GLShaderProgram::Decompile(RSXShaderProgram& prog)
 {
 #if 0
 	FragmentDecompilerThread(shader, parr, addr).Entry();
@@ -357,12 +362,12 @@ void ShaderProgram::Decompile()
 		m_decompiler_thread = nullptr;
 	}
 
-	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr, size);
+	m_decompiler_thread = new GLFragmentDecompilerThread(shader, parr, prog.addr, prog.size);
 	m_decompiler_thread->Start();
 #endif
 }
 
-void ShaderProgram::Compile()
+void GLShaderProgram::Compile()
 {
 	if(id) glDeleteShader(id);
 
@@ -396,7 +401,7 @@ void ShaderProgram::Compile()
 	//else ConLog.Write("Shader compiled successfully!");
 }
 
-void ShaderProgram::Delete()
+void GLShaderProgram::Delete()
 {
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{

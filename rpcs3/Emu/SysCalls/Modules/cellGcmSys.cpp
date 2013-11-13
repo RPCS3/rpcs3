@@ -433,7 +433,7 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	cellGcmSys.Warning("cellGcmSetTileInfo(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
 
-	if(index >= g_tiles_count || base >= 800 || bank >= 4)
+	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
@@ -470,7 +470,7 @@ int cellGcmBindTile(u8 index)
 {
 	cellGcmSys.Warning("cellGcmBindTile(index=%d)", index);
 
-	if(index >= g_tiles_count)
+	if(index >= RSXThread::m_tiles_count)
 	{
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
@@ -485,7 +485,7 @@ int cellGcmUnbindTile(u8 index)
 {
 	cellGcmSys.Warning("cellGcmUnbindTile(index=%d)", index);
 
-	if(index >= g_tiles_count)
+	if(index >= RSXThread::m_tiles_count)
 	{
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}

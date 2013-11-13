@@ -428,11 +428,9 @@ namespace PPU_opcodes
 	};
 }
 
-class PPU_Opcodes
+class PPUOpcodes
 {
 public:
-	virtual void Exit()=0;
-
 	static u64 branchTarget(const u64 pc, const u64 imm)
 	{
 		return pc + (imm & ~0x3ULL);

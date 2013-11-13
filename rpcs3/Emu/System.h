@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Gui/MemoryViewer.h"
-#include "Emu/Cell/PPCThreadManager.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
@@ -78,7 +78,7 @@ class Emulator
 	Array<u64> m_break_points;
 	Array<u64> m_marked_points;
 
-	PPCThreadManager m_thread_manager;
+	CPUThreadManager m_thread_manager;
 	PadManager m_pad_manager;
 	KeyboardManager m_keyboard_manager;
 	MouseManager m_mouse_manager;
@@ -109,7 +109,7 @@ public:
 		return std::shared_ptr<vfsStream>(m_vfs.Open(path, mode));
 	}
 
-	PPCThreadManager&	GetCPU()				{ return m_thread_manager; }
+	CPUThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }
 	KeyboardManager&	GetKeyboardManager()	{ return m_keyboard_manager; }
 	MouseManager&		GetMouseManager()		{ return m_mouse_manager; }

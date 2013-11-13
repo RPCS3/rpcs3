@@ -1,5 +1,11 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/Cell/PPUDecoder.h"
+#include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/SPUDecoder.h"
+#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/ARMv7/ARMv7DisAsm.h"
+#include "Emu/ARMv7/ARMv7Decoder.h"
 
 #include "InstructionEditor.cpp"
 #include "RegisterEditor.cpp"
@@ -8,12 +14,11 @@
 
 u64 InterpreterDisAsmFrame::CentrePc(const u64 pc) const
 {
-	return pc - ((m_item_count / 2) * 4);
+	return pc/* - ((m_item_count / 2) * 4)*/;
 }
 
 InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(500, 700), wxTAB_TRAVERSAL)
-	, ThreadBase(false, "DisAsmFrame Thread")
 	, PC(0)
 	, CPU(nullptr)
 	, m_item_count(30)
@@ -84,7 +89,6 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 
 InterpreterDisAsmFrame::~InterpreterDisAsmFrame()
 {
-	ThreadBase::Stop();
 }
 
 void InterpreterDisAsmFrame::UpdateUnitList()
@@ -103,7 +107,7 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 
 void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 {
-	CPU = (PPCThread*)event.GetClientData();
+	CPU = (CPUThread*)event.GetClientData();
 
 	delete decoder;
 	//delete disasm;
@@ -112,17 +116,32 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 	if(CPU)
 	{
-		if(CPU->GetType() != PPC_THREAD_PPU)
+		switch(CPU->GetType())
 		{
-			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*CPU, InterpreterMode);
-			decoder = new SPU_Decoder(dis_asm);
+		case CPU_THREAD_PPU:
+		{
+			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new PPUDecoder(dis_asm);
 			disasm = &dis_asm;
 		}
-		else
+		break;
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
 		{
-			PPU_DisAsm& dis_asm = *new PPU_DisAsm(*CPU, InterpreterMode);
-			decoder = new PPU_Decoder(dis_asm);
+			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new SPUDecoder(dis_asm);
 			disasm = &dis_asm;
+		}
+		break;
+
+		case CPU_THREAD_ARMv7:
+		{
+			ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
+			decoder = new ARMv7Decoder(dis_asm);
+			disasm = &dis_asm;
+		}
+		break;
 		}
 	}
 
@@ -214,16 +233,17 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	else
 	{
 		disasm->offset = CPU->GetOffset();
-		for(uint i=0; i<m_item_count; ++i, PC += 4)
+		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
 			if(!Memory.IsGoodAddr(CPU->GetOffset() + PC, 4))
 			{
 				m_list->SetItem(i, 0, wxString::Format("[%08llx] illegal address", PC));
+				count = 2;
 				continue;
 			}
 
 			disasm->dump_pc = PC;
-			decoder->Decode(Memory.Read32(CPU->GetOffset() + PC));
+			count = decoder->DecodeMemory(CPU->GetOffset() + PC);
 
 			if(IsBreakPoint(PC))
 			{
@@ -236,13 +256,13 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			wxColour colour;
 
-		if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
-		{
-			colour = wxColour("Green");
-		}
-		else
-		{
-			colour = wxColour("White");
+			if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
+			{
+				colour = wxColour("Green");
+			}
+			else
+			{
+				colour = wxColour("White");
 
 				for(u32 i=0; i<Emu.GetMarkedPoints().GetCount(); ++i)
 				{
@@ -298,7 +318,7 @@ void InterpreterDisAsmFrame::WriteRegs()
 
 void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 {
-	PPCThread* thr = (PPCThread*)event.GetClientData();
+	CPUThread* thr = (CPUThread*)event.GetClientData();
 	event.Skip();
 
 	if(!thr)
@@ -443,13 +463,17 @@ void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	ThreadBase::Start();
+	if(CPU) CPU->ExecOnce();
 }
 
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 {
 	long i = m_list->GetFirstSelected();
-	if(i < 0) return;
+	if(i < 0 || !CPU)
+	{
+		event.Skip();
+		return;
+	}
 
 	const u64 start_pc = PC - m_item_count*4;
 	const u64 pc = start_pc + i*4;
@@ -465,6 +489,8 @@ void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 		DoUpdate();
 		return;
 	}
+
+	event.Skip();
 }
 
 void InterpreterDisAsmFrame::DClick(wxListEvent& event)
@@ -529,36 +555,4 @@ bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 	}
 
 	return false;
-}
-
-void InterpreterDisAsmFrame::Task()
-{
-	if(!CPU) return;
-	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, CPU);
-	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, CPU);
-	bool dump_status = dump_enable;
-
-	//CPU.InitTls();
-
-	try
-	{
-		do
-		{
-			CPU->ExecOnce();
-		}
-		while(CPU->IsRunning() && Emu.IsRunning() && !TestDestroy() && !IsBreakPoint(CPU->PC) && dump_status == dump_enable);
-	}
-	catch(const wxString& e)
-	{
-		ConLog.Error(e);
-	}
-	catch(...)
-	{
-		ConLog.Error("Unhandled exception.");
-	}
-
-	//CPU.FreeTls();
-
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, CPU);
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, CPU);
 }

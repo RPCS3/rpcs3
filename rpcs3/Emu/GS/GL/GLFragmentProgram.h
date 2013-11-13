@@ -1,7 +1,8 @@
 #pragma once
-#include "ShaderParam.h"
+#include "GLShaderParam.h"
+#include "Emu/GS/RSXFragmentProgram.h"
 
-struct FragmentDecompilerThread : public ThreadBase
+struct GLFragmentDecompilerThread : public ThreadBase
 {
 	union OPDEST
 	{
@@ -99,19 +100,21 @@ struct FragmentDecompilerThread : public ThreadBase
 
 	wxString main;
 	wxString& m_shader;
-	ParamArray& m_parr;
+	GLParamArray& m_parr;
 	u32 m_addr;
 	u32& m_size;
 	u32 m_const_index;
 	u32 m_offset;
+	u32 m_location;
 
-	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
+	GLFragmentDecompilerThread(wxString& shader, GLParamArray& parr, u32 addr, u32& size)
 		: ThreadBase(false, "Fragment Shader Decompiler Thread")
 		, m_shader(shader)
 		, m_parr(parr)
 		, m_addr(addr)
 		, m_size(size) 
 		, m_const_index(0)
+		, m_location(0)
 	{
 		m_size = 0;
 	}
@@ -133,18 +136,15 @@ struct FragmentDecompilerThread : public ThreadBase
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
 };
 
-struct ShaderProgram
+struct GLShaderProgram
 {
-	ShaderProgram();
-	~ShaderProgram();
+	GLShaderProgram();
+	~GLShaderProgram();
 
-	FragmentDecompilerThread* m_decompiler_thread;
+	GLFragmentDecompilerThread* m_decompiler_thread;
 
-	ParamArray parr;
+	GLParamArray parr;
 
-	u32 size;
-	u32 addr;
-	u32 offset;
 	wxString shader;
 
 	u32 id;
@@ -156,7 +156,7 @@ struct ShaderProgram
 			m_decompiler_thread->Wait();
 		}
 	}
-	void Decompile();
+	void Decompile(RSXShaderProgram& prog);
 	void Compile();
 
 	void Delete();

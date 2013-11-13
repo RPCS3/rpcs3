@@ -18,6 +18,30 @@ enum
 	CELL_PHOTO_IMPORT_ERROR_INITIALIZE		= 0x8002c706,
 };
 
+// Datatypes
+struct CellPhotoImportFileDataSub
+{ 
+	int width;
+	int height;
+	//CellPhotoImportFormatType format; 
+	//CellPhotoImportTexRot rotate; 
+}; 
+
+struct CellPhotoImportFileData
+{ 
+	char dstFileName;	//[CELL_FS_MAX_FS_FILE_NAME_LENGTH]; 
+	char photo_title;	//[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH*3]; 
+	char game_title;	//[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE]; 
+	char game_comment;	//[CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE]; 
+	CellPhotoImportFileDataSub* data_sub; 
+};
+
+struct CellPhotoImportSetParam
+{ 
+	unsigned int fileSizeMax;
+};
+
+// Functions
 int _cellPhotoImport()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoImport);

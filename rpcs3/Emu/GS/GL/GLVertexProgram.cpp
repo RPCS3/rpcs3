@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "VertexProgram.h"
+#include "GLVertexProgram.h"
 
-wxString VertexDecompilerThread::GetMask(bool is_sca)
+wxString GLVertexDecompilerThread::GetMask(bool is_sca)
 {
 	wxString ret = wxEmptyString;
 
@@ -23,17 +23,17 @@ wxString VertexDecompilerThread::GetMask(bool is_sca)
 	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
 }
 
-wxString VertexDecompilerThread::GetVecMask()
+wxString GLVertexDecompilerThread::GetVecMask()
 {
 	return GetMask(false);
 }
 
-wxString VertexDecompilerThread::GetScaMask()
+wxString GLVertexDecompilerThread::GetScaMask()
 {
 	return GetMask(true);
 }
 
-wxString VertexDecompilerThread::GetDST(bool isSca)
+wxString GLVertexDecompilerThread::GetDST(bool isSca)
 {
 	static const wxString reg_table[] = 
 	{
@@ -73,7 +73,7 @@ wxString VertexDecompilerThread::GetDST(bool isSca)
 	return ret;
 }
 
-wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
+wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 {
 	static const wxString reg_table[] = 
 	{
@@ -151,7 +151,7 @@ wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	return ret;
 }
 
-void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
+void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 {
 	if(d0.cond == 0) return;
 	enum
@@ -215,17 +215,17 @@ void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 	main += "\t" + code + ";\n";
 }
 
-void VertexDecompilerThread::AddVecCode(const wxString& code, bool src_mask)
+void GLVertexDecompilerThread::AddVecCode(const wxString& code, bool src_mask)
 {
 	AddCode(false, code, src_mask);
 }
 
-void VertexDecompilerThread::AddScaCode(const wxString& code)
+void GLVertexDecompilerThread::AddScaCode(const wxString& code)
 {
 	AddCode(true, code, false);
 }
 
-wxString VertexDecompilerThread::BuildCode()
+wxString GLVertexDecompilerThread::BuildCode()
 {
 	wxString p = wxEmptyString;
 
@@ -243,7 +243,7 @@ wxString VertexDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-void VertexDecompilerThread::Task()
+void GLVertexDecompilerThread::Task()
 {
 	for(u32 i=0;;)
 	{
@@ -295,10 +295,10 @@ void VertexDecompilerThread::Task()
 		case 0x02: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
 		case 0x03: AddVecCode("(" + GetSRC(0) + " + " + GetSRC(2) + ")"); break; //ADD
 		case 0x04: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
-		case 0x05: AddVecCode("vec4(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)).xxxx"); break; //DP3
-		case 0x06: AddVecCode("vec4(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + ")).xxxx"); break; //DPH
-		case 0x07: AddVecCode("vec4(dot(" + GetSRC(0) + ", " + GetSRC(1) + ")).xxxx"); break; //DP4
-		case 0x08: AddVecCode("vec4(distance(" + GetSRC(0) + ", " + GetSRC(1) + ")).xxxx"); break; //DST
+		case 0x05: AddVecCode("vec2(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz), 0).xxxx"); break; //DP3
+		case 0x06: AddVecCode("vec2(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + "), 0).xxxx"); break; //DPH
+		case 0x07: AddVecCode("vec2(dot(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DP4
+		case 0x08: AddVecCode("vec2(distance(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DST
 		case 0x09: AddVecCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MIN
 		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
 		case 0x0b: AddVecCode("vec4(lessThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLT
@@ -306,11 +306,11 @@ void VertexDecompilerThread::Task()
 		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
 		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
 		case 0x10: AddVecCode("vec4(equal(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SEQ
-		//case 0x11: AddVecCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)"); break; //SFL
+		//case 0x11: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //SFL
 		case 0x12: AddVecCode("vec4(greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGT
 		case 0x13: AddVecCode("vec4(lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLE
 		case 0x14: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SNE
-		//case 0x15: AddVecCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)"); break; //STR
+		//case 0x15: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //STR
 		case 0x16: AddVecCode("sign(" + GetSRC(0) + ")"); break; //SSG
 
 		default:
@@ -327,13 +327,13 @@ void VertexDecompilerThread::Task()
 	main = wxEmptyString;
 }
 
-VertexProgram::VertexProgram()
+GLVertexProgram::GLVertexProgram()
 	: m_decompiler_thread(nullptr)
 	, id(0)
 {
 }
 
-VertexProgram::~VertexProgram()
+GLVertexProgram::~GLVertexProgram()
 {
 	if(m_decompiler_thread)
 	{
@@ -350,10 +350,10 @@ VertexProgram::~VertexProgram()
 	Delete();
 }
 
-void VertexProgram::Decompile()
+void GLVertexProgram::Decompile(RSXVertexProgram& prog)
 {
 #if 0
-	VertexDecompilerThread(data, shader, parr).Entry();
+	GLVertexDecompilerThread(data, shader, parr).Entry();
 #else
 	if(m_decompiler_thread)
 	{
@@ -367,12 +367,12 @@ void VertexProgram::Decompile()
 		m_decompiler_thread = nullptr;
 	}
 
-	m_decompiler_thread = new VertexDecompilerThread(data, shader, parr);
+	m_decompiler_thread = new GLVertexDecompilerThread(prog.data, shader, parr);
 	m_decompiler_thread->Start();
 #endif
 }
 
-void VertexProgram::Compile()
+void GLVertexProgram::Compile()
 {
 	if(id) glDeleteShader(id);
 
@@ -407,9 +407,8 @@ void VertexProgram::Compile()
 
 }
 
-void VertexProgram::Delete()
+void GLVertexProgram::Delete()
 {
-	data.Clear();
 	parr.params.Clear();
 	shader.Clear();
 
@@ -418,80 +417,4 @@ void VertexProgram::Delete()
 		glDeleteShader(id);
 		id = 0;
 	}
-}
-
-VertexData::VertexData()
-	: frequency(0)
-	, stride(0)
-	, size(0)
-	, type(0)
-	, addr(0)
-	, data()
-{
-}
-
-void VertexData::Reset()
-{
-	frequency = 0;
-	stride = 0;
-	size = 0;
-	type = 0;
-	addr = 0;
-	data.ClearF();
-}
-
-void VertexData::Load(u32 start, u32 count)
-{
-	if(!addr) return;
-
-	const u32 tsize = GetTypeSize();
-
-	data.SetCount((start + count) * tsize * size);
-
-	for(u32 i=start; i<start + count; ++i)
-	{
-		const u8* src = Memory.GetMemFromAddr(addr) + stride * i;
-		u8* dst = &data[i * tsize * size];
-
-		switch(tsize)
-		{
-		case 1:
-		{
-			memcpy(dst, src, size);
-		}
-		break;
-
-		case 2:
-		{
-			const u16* c_src = (const u16*)src;
-			u16* c_dst = (u16*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
-		}
-		break;
-
-		case 4:
-		{
-			const u32* c_src = (const u32*)src;
-			u32* c_dst = (u32*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
-		}
-		break;
-		}
-	}
-}
-
-u32 VertexData::GetTypeSize()
-{
-	switch (type)
-	{
-	case 1: return 2;
-	case 2: return 4;
-	case 3: return 2;
-	case 4: return 1;
-	case 5: return 2;
-	case 7: return 1;
-	}
-
-	ConLog.Error("Bad vertex data type! %d", type);
-	return 1;
 }

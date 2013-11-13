@@ -61,7 +61,7 @@ public:
 	virtual bool OnInit();
 	virtual void Exit();
 
-	void SendDbgCommand(DbgCommand id, PPCThread* thr=nullptr);
+	void SendDbgCommand(DbgCommand id, CPUThread* thr=nullptr);
 };
 
 DECLARE_APP(Rpcs3App)

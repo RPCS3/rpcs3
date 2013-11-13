@@ -2,21 +2,21 @@ class InstructionEditorDialog
 	: public wxDialog
 {
 	u64 pc;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	CPUDisAsm* disasm;
+	CPUDecoder* decoder;
 	wxTextCtrl* t2_instr;
 	wxStaticText* t3_preview;
 
 public:
-	PPCThread* CPU;
+	CPUThread* CPU;
 
 public:
-	InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm);
+	InstructionEditorDialog(wxPanel *parent, u64 _pc, CPUThread* _CPU, CPUDecoder* _decoder, CPUDisAsm* _disasm);
 
 	void updatePreview(wxCommandEvent& event);
 };
 
-InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, PPCThread* _CPU, PPC_Decoder* _decoder, PPC_DisAsm* _disasm)
+InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, CPUThread* _CPU, CPUDecoder* _decoder, CPUDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit instruction", wxDefaultPosition)
 	, pc(_pc)
 	, CPU(_CPU)
@@ -90,11 +90,18 @@ void InstructionEditorDialog::updatePreview(wxCommandEvent& event)
 	unsigned long opcode;
 	if (t2_instr->GetValue().ToULong(&opcode, 16))
 	{
-		decoder->Decode((u32)opcode);
-		wxString preview = disasm->last_opcode;
-		while (preview[0] != ':') preview.Remove(0,1);
-		preview.Remove(0,1);
-		t3_preview->SetLabel(preview);
+		if(CPU->GetType() == CPU_THREAD_ARMv7)
+		{
+			t3_preview->SetLabel("Preview for ARMv7Thread not implemented yet.");
+		}
+		else
+		{
+			disasm->dump_pc = pc;
+			((PPCDecoder*)decoder)->Decode((u32)opcode);
+			wxString preview = disasm->last_opcode;
+			preview.Remove(0, preview.Find(':') + 1);
+			t3_preview->SetLabel(preview);
+		}
 	}
 	else
 	{

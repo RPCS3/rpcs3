@@ -45,13 +45,13 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 #define rotl64 _rotl64
 #define rotr64 _rotr64
 
-class PPU_Interpreter : public PPU_Opcodes
+class PPUInterpreter : public PPUOpcodes
 {
 private:
 	PPUThread& CPU;
 
 public:
-	PPU_Interpreter(PPUThread& cpu) : CPU(cpu)
+	PPUInterpreter(PPUThread& cpu) : CPU(cpu)
 	{
 		InitRotateMask();
 	}
@@ -61,7 +61,7 @@ private:
 
 	void SysCall()
 	{
-		CPU.DoSyscall(CPU.GPR[11]);
+		SysCalls::DoSyscall(CPU.GPR[11]);
 
 		if(enable_log)
 			ConLog.Warning("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);

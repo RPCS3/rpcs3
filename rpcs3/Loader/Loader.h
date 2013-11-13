@@ -8,8 +8,10 @@
 enum Elf_Machine
 {
 	MACHINE_Unknown,
+	MACHINE_MIPS = 0x08,
 	MACHINE_PPC64 = 0x15,
 	MACHINE_SPU = 0x17,
+	MACHINE_ARM = 0x28,
 };
 
 enum ShdrType
@@ -58,6 +60,21 @@ __forceinline static u64 Read64(vfsStream& f)
 	return ((u64)Read32(f) << 32) | (u64)Read32(f);
 }
 
+__forceinline static u16 Read16LE(vfsStream& f)
+{
+	return ((u16)Read8(f) | ((u16)Read8(f) << 8));
+}
+
+__forceinline static u32 Read32LE(vfsStream& f)
+{
+	return  Read16LE(f) | (Read16LE(f) << 16);
+}
+
+__forceinline static u64 Read64LE(vfsStream& f)
+{
+	return ((u64)Read32LE(f) | (u64)Read32LE(f) << 32);
+}
+
 __forceinline static void Write8(wxFile& f, const u8 data)
 {
 	f.Write(&data, 1);
@@ -81,6 +98,23 @@ __forceinline static void Write64(wxFile& f, const u64 data)
 	Write32(f, data);
 }
 
+__forceinline static void Write16LE(wxFile& f, const u16 data)
+{
+	Write8(f, data);
+	Write8(f, data >> 8);
+}
+
+__forceinline static void Write32LE(wxFile& f, const u32 data)
+{
+	Write16LE(f, data);
+	Write16LE(f, data >> 16);
+}
+
+__forceinline static void Write64LE(wxFile& f, const u64 data)
+{
+	Write32LE(f, data);
+	Write32LE(f, data >> 32);
+}
 
 const wxString Ehdr_DataToString(const u8 data);
 const wxString Ehdr_TypeToString(const u16 type);
@@ -160,6 +194,7 @@ public:
 	virtual bool LoadInfo() { return false; }
 	virtual bool LoadData(u64 offset = 0) { return false; }
 	Elf_Machine GetMachine() { return machine; }
+
 	u32 GetEntry() { return entry; }
 	u32 GetMinAddr() { return min_addr; }
 	u32 GetMaxAddr() { return min_addr; }
@@ -168,13 +203,16 @@ public:
 class Loader : public LoaderBase
 {
 	vfsFileBase* m_stream;
+	LoaderBase* m_loader;
 
 public:
 	Loader();
 	Loader(vfsFileBase& stream);
+	~Loader();
 
 	void Open(const wxString& path);
 	void Open(vfsFileBase& stream);
+	bool Analyze();
 
 	bool Load();
 

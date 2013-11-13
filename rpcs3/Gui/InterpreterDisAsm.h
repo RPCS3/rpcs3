@@ -1,17 +1,13 @@
 #pragma once
-#include "Emu/Cell/PPCThread.h"
-#include "Emu/Cell/PPUDecoder.h"
-#include "Emu/Cell/PPUDisAsm.h"
-#include "Emu/Cell/SPUDecoder.h"
-#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/CPUDecoder.h"
+#include "Emu/CPU/CPUDisAsm.h"
 
-class InterpreterDisAsmFrame
-	: public wxPanel
-	, public ThreadBase
+class InterpreterDisAsmFrame : public wxPanel
 {
 	wxListView* m_list;
-	PPC_DisAsm* disasm;
-	PPC_Decoder* decoder;
+	CPUDisAsm* disasm;
+	CPUDecoder* decoder;
 	u64 PC;
 	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
@@ -23,7 +19,7 @@ class InterpreterDisAsmFrame
 	wxChoice* m_choice_units;
 
 public:
-	PPCThread* CPU;
+	CPUThread* CPU;
 
 public:
 	InterpreterDisAsmFrame(wxWindow* parent);
@@ -53,6 +49,4 @@ public:
 	bool IsBreakPoint(u64 pc);
 	void AddBreakPoint(u64 pc);
 	bool RemoveBreakPoint(u64 pc);
-
-	virtual void Task();
 };

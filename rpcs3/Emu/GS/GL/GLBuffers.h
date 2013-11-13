@@ -77,12 +77,13 @@ public:
 	~GLfbo();
 
 	void Create();
-	void Bind(u32 type = GL_FRAMEBUFFER, int id = -1);
+	static void Bind(u32 type, int id);
+	void Bind(u32 type = GL_FRAMEBUFFER);
 	void Texture1D(u32 attachment, u32 texture, int level = 0);
 	void Texture2D(u32 attachment, u32 texture, int level = 0);
 	void Texture3D(u32 attachment, u32 texture, int zoffset = 0, int level = 0);
 	void Renderbuffer(u32 attachment, u32 renderbuffer);
-	void Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter);
+	static void Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter);
 	void Unbind();
 	static void Unbind(u32 type);
 	void Delete();

@@ -38,7 +38,7 @@ int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr_addr);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	GetCurrentPPUThread().Wait(*thr);
@@ -48,6 +48,13 @@ int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr)
 int sys_ppu_thread_detach(u32 thread_id)
 {
 	sysPrxForUser.Error("sys_ppu_thread_detach(thread_id=%d)", thread_id);
+
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	if(!thr) return CELL_ESRCH;
+
+	if(!thr->IsJoinable())
+		return CELL_EINVAL;
+	thr->SetJoinable(false);
 
 	return CELL_OK;
 }
@@ -62,7 +69,7 @@ int sys_ppu_thread_set_priority(u32 thread_id, int prio)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_set_priority(thread_id=%d, prio=%d)", thread_id, prio);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->SetPrio(prio);
@@ -74,7 +81,7 @@ int sys_ppu_thread_get_priority(u32 thread_id, u32 prio_addr)
 {
 	sysPrxForUser.Log("sys_ppu_thread_get_priority(thread_id=%d, prio_addr=0x%x)", thread_id, prio_addr);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 	if(!Memory.IsGoodAddr(prio_addr)) return CELL_EFAULT;
 
@@ -101,7 +108,7 @@ int sys_ppu_thread_stop(u32 thread_id)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_stop(thread_id=%d)", thread_id);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->Stop();
@@ -113,7 +120,7 @@ int sys_ppu_thread_restart(u32 thread_id)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_restart(thread_id=%d)", thread_id);
 
-	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->Stop();
@@ -132,13 +139,13 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 		return CELL_EFAULT;
 	}
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	Memory.Write32(thread_id_addr, new_thread.GetId());
 	new_thread.SetEntry(entry);
 	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
-	new_thread.stack_size = stacksize;
+	new_thread.SetStackSize(stacksize);
 	//new_thread.flags = flags;
 	new_thread.SetName(Memory.ReadString(threadname_addr));
 	new_thread.Run();
@@ -155,7 +162,7 @@ void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
 	{
 		Memory.Write32(once_ctrl_addr, SYS_PPU_THREAD_DONE_INIT);
 
-		PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
+		CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		new_thread.SetEntry(entry);
 		new_thread.Run();
 		new_thread.Exec();

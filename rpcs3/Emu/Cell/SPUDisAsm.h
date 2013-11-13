@@ -6,43 +6,23 @@
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
-class SPU_DisAsm 
-	: public SPU_Opcodes
-	, public PPC_DisAsm
+class SPUDisAsm 
+	: public SPUOpcodes
+	, public PPCDisAsm
 {
 public:
-	PPCThread& CPU;
-
-	SPU_DisAsm()
-		: PPC_DisAsm(*(PPCThread*)NULL, DumpMode)
-		, CPU(*(PPCThread*)NULL)
+	SPUDisAsm(CPUDisAsmMode mode) : PPCDisAsm(mode)
 	{
 	}
 
-	SPU_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode)
-		: PPC_DisAsm(cpu, mode)
-		, CPU(cpu)
-	{
-	}
-
-	~SPU_DisAsm()
+	~SPUDisAsm()
 	{
 	}
 
 private:
-	void Exit()
-	{
-		if(m_mode == NormalMode && !disasm_frame->exit)
-		{
-			disasm_frame->Close();
-		}
-
-		this->~SPU_DisAsm();
-	}
-
 	virtual u32 DisAsmBranchTarget(const s32 imm)
 	{
-		return branchTarget(m_mode == NormalMode ? CPU.PC : dump_pc, imm);
+		return branchTarget(dump_pc, imm);
 	}
 
 private:
@@ -114,7 +94,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ?
+		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ? Yes, there are also 128 SPR making 256 registers total
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -448,7 +428,7 @@ private:
 	{
 		DisAsm("sumb", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
-	void HGT(u32 rt, u32 ra, u32 rb)
+	void HGT(u32 rt, s32 ra, s32 rb)
 	{
 		DisAsm("hgt", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}

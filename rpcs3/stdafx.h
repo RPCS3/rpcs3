@@ -13,6 +13,7 @@
 #include <wx/dir.h>
 #include <wx/generic/progdlgg.h>
 #include <wx/spinctrl.h>
+#include <wx/datetime.h>
 #include <wx/filepicker.h>
 
 #include <wx/wxprec.h>
@@ -186,6 +187,7 @@ enum Status
 	Ready,
 };
 
+#include "Utilities/BEType.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
@@ -196,12 +198,13 @@ enum Status
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
-#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 
 #include "Emu/FS/vfsFileBase.h"
 #include "Emu/FS/vfsLocalFile.h"
+#include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/FS/vfsStreamMemory.h"
 #include "rpcs3.h"

@@ -45,7 +45,7 @@ void Rpcs3App::Exit()
 	wxApp::Exit();
 }
 
-void Rpcs3App::SendDbgCommand(DbgCommand id, PPCThread* thr)
+void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 {
 	wxCommandEvent event(wxEVT_DBG_COMMAND, id);
 	event.SetClientData(thr);
