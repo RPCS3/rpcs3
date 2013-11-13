@@ -203,17 +203,16 @@ static void print_pkg_header(pkg_header *header)
 	ConLog.Write( "KLicensee: %s\n", kl);
 }
 
-static void *pkg_info(const char *fname, pkg_header **h_ptr)
+static void *pkg_info(const char *fname,  pkg_header **h_ptr)
 {
 	FILE *f;
-	FILE *g;
 	pkg_header *header;
 	
 	f = (FILE*) pkg_open(fname);
 	if (f == NULL)
 		return NULL;
 	
-	if (pkg_sanity_check(f, g, &header, fname))
+	if (pkg_sanity_check(f, NULL, &header, fname))
 		return NULL;
 	
 	print_pkg_header(header);
