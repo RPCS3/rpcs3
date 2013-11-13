@@ -20,6 +20,7 @@ private:
 	void OnQuit(wxCloseEvent& event);
 
 	void BootGame(wxCommandEvent& event);
+	void BootPkg(wxCommandEvent& event);
 	void BootElf(wxCommandEvent& event);
 	void BootSelf(wxCommandEvent& event);
 	void Pause(wxCommandEvent& event);
