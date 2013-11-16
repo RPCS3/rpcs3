@@ -19,6 +19,30 @@ enum
 	CELL_RESC_ERROR_BAD_COMBINATION     = 0x80210307,
 };
 
+enum
+{
+	COLOR_BUFFER_ALIGNMENT        = 128,
+	VERTEX_BUFFER_ALIGNMENT       = 4,
+	FRAGMENT_SHADER_ALIGNMENT     = 64,
+	VERTEX_NUMBER_NORMAL          = 4,
+
+	SRC_BUFFER_NUM                = 8,
+	MAX_DST_BUFFER_NUM            = 6,
+};
+
+static const float
+	PICTURE_SIZE                  = (1.0f),
+	UV_DELTA_PS                   = (1.f / 8.f),
+	UV_DELTA_LB                   = (1.f / 6.f);
+
+
+struct RescVertex_t
+{
+	be_t<float> Px, Py;
+	be_t<float> u, v;
+	be_t<float> u2, v2;
+};
+
 // Defines
 #define roundup(x,a) (((x)+(a)-1)&(~((a)-1)))
 
@@ -648,7 +672,7 @@ int cellRescGcmSurface2RescSrc(mem_struct_ptr_t<CellGcmSurface> gcmSurface, mem_
 
 int cellRescSetSrc(s32 idx, mem_struct_ptr_t<CellRescSrc> src)
 {
-	cellResc.Warning("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
+	cellResc.Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -657,11 +681,11 @@ int cellRescSetSrc(s32 idx, mem_struct_ptr_t<CellRescSrc> src)
 	if(src->width < 1 || 4096 < src->width || src->height < 1 || 4096 < src->height)
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 
-	cellResc.Warning(" *** format=0x%x", src->format.ToLE());
-	cellResc.Warning(" *** pitch=%d", src->pitch.ToLE());
-	cellResc.Warning(" *** width=%d", src->width.ToLE());
-	cellResc.Warning(" *** height=%d", src->height.ToLE());
-	cellResc.Warning(" *** offset=0x%x", src->offset.ToLE());
+	cellResc.Log(" *** format=0x%x", src->format.ToLE());
+	cellResc.Log(" *** pitch=%d", src->pitch.ToLE());
+	cellResc.Log(" *** width=%d", src->width.ToLE());
+	cellResc.Log(" *** height=%d", src->height.ToLE());
+	cellResc.Log(" *** offset=0x%x", src->offset.ToLE());
 	//Emu.GetGSManager().GetRender().SetData(src.offset, 800, 600);
 	//Emu.GetGSManager().GetRender().Draw();
 
@@ -674,7 +698,7 @@ int cellRescSetSrc(s32 idx, mem_struct_ptr_t<CellRescSrc> src)
 
 int cellRescSetConvertAndFlip(mem_struct_ptr_t<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc.Warning("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
+	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -696,7 +720,7 @@ int cellRescSetConvertAndFlip(mem_struct_ptr_t<CellGcmContextData> cntxt, s32 id
 
 int cellRescSetWaitFlip()
 {
-	cellResc.Warning("cellRescSetWaitFlip()");
+	cellResc.Log("cellRescSetWaitFlip()");
 	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
 
 	return CELL_OK;
@@ -751,6 +775,20 @@ int cellRescSetFlipHandler(u32 handler_addr)
 	return CELL_OK;
 }
 
+void cellRescResetFlipStatus()
+{
+	cellResc.Log("cellRescResetFlipStatus()");
+
+	Emu.GetGSManager().GetRender().m_flip_status = 1;
+}
+
+int cellRescGetFlipStatus()
+{
+	cellResc.Log("cellRescGetFlipStatus()");
+
+	return Emu.GetGSManager().GetRender().m_flip_status;
+}
+
 void cellResc_init()
 {
 	cellResc.AddFunc(0x25c107e6, cellRescSetConvertAndFlip);
@@ -759,7 +797,7 @@ void cellResc_init()
 	cellResc.AddFunc(0x01220224, cellRescGcmSurface2RescSrc);
 	cellResc.AddFunc(0x0a2069c7, cellRescGetNumColorBuffers);
 	cellResc.AddFunc(0x10db5b1a, cellRescSetDsts);
-	//cellResc.AddFunc(0x129922a0, cellRescResetFlipStatus);
+	cellResc.AddFunc(0x129922a0, cellRescResetFlipStatus);
 	cellResc.AddFunc(0x19a2a967, cellRescSetPalInterpolateDropFlexRatio);
 	//cellResc.AddFunc(0x1dd3c4cd, cellRescGetRegisterCount);
 	cellResc.AddFunc(0x22ae06d8, cellRescAdjustAspectRatio);
@@ -771,7 +809,7 @@ void cellResc_init()
 	cellResc.AddFunc(0x6cd0f95f, cellRescSetSrc);
 	//cellResc.AddFunc(0x7af8a37f, cellRescSetRegisterCount);
 	cellResc.AddFunc(0x8107277c, cellRescSetBufferAddress);
-	//cellResc.AddFunc(0xc47c5c22, cellRescGetFlipStatus);
+	cellResc.AddFunc(0xc47c5c22, cellRescGetFlipStatus);
 	cellResc.AddFunc(0xd1ca0503, cellRescVideoOutResolutionId2RescBufferMode);
 	//cellResc.AddFunc(0xd3758645, cellRescSetVBlankHandler);
 	//cellResc.AddFunc(0xe0cef79e, cellRescCreateInterlaceTable);

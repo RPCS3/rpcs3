@@ -156,7 +156,7 @@ int cellGcmAddressToOffset(u32 address, u32 offset_addr)
 
 int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
-	cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
+	cellGcmSys.Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
 		id, offset, width ? pitch/width : pitch, width, height);
 	if(id > 7) return CELL_EINVAL;
 

@@ -1,29 +1,5 @@
 #pragma once
 
-enum
-{
-	COLOR_BUFFER_ALIGNMENT        = 128,
-	VERTEX_BUFFER_ALIGNMENT       = 4,
-	FRAGMENT_SHADER_ALIGNMENT     = 64,
-	VERTEX_NUMBER_NORMAL          = 4,
-
-	SRC_BUFFER_NUM                = 8,
-	MAX_DST_BUFFER_NUM            = 6,
-};
-
-static const float
-	PICTURE_SIZE                  = (1.0f),
-	UV_DELTA_PS                   = (1.f / 8.f),
-	UV_DELTA_LB                   = (1.f / 6.f);
-
-
-struct RescVertex_t
-{
-	be_t<float> Px, Py;
-	be_t<float> u, v;
-	be_t<float> u2, v2;
-};
-
 enum CellRescBufferMode
 {
 	CELL_RESC_720x480					= 0x1, 
