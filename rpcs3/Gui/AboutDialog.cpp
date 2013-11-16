@@ -45,9 +45,10 @@ AboutDialog::AboutDialog(wxWindow *parent)
 
 	//Credits
 	wxBoxSizer* s_panel_credits(new wxBoxSizer(wxHORIZONTAL));
-	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea", wxDefaultPosition, wxSize(156,160));
+	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil", wxDefaultPosition, wxSize(156,160));
 	wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon", wxDefaultPosition, wxSize(156,160));
-	wxStaticText* t_section3 = new wxStaticText(this, wxID_ANY, "\nExternal code:\n\n - SELF Decrypter based on scetool (C) 2011-2013 by naehrwert", wxDefaultPosition, wxSize(156,160));
+	wxStaticText* t_section3 = new wxStaticText(this, wxID_ANY, "\nExternal code:\n\n - SELF Decrypter based on scetool (C) 2011-2013 by naehrwert\n - PKG Installer based on ps3pkgtool (C) 2011-2013 by avtolstoy and PKG Finalize (C) by geohot", wxDefaultPosition, wxSize(156,160));
+
 	s_panel_credits->AddSpacer(12);
 	s_panel_credits->Add(t_section1);
 	s_panel_credits->AddSpacer(8);

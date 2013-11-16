@@ -12,6 +12,7 @@
 #include <wx/dynlib.h>
 
 #include "scetool/scetool.cpp"
+#include "unpkg/unpkg.c"
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -22,6 +23,7 @@ enum IDs
 	id_boot_elf = 0x555,
 	id_boot_self,
 	id_boot_game,
+	id_boot_pkg,
 	id_sys_pause,
 	id_sys_stop,
 	id_sys_send_open_menu,
@@ -65,6 +67,7 @@ MainFrame::MainFrame()
 	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
+	menu_boot.Append(id_boot_pkg, "Install PKG");
 	menu_boot.AppendSeparator();
 	menu_boot.Append(id_boot_elf, "Boot ELF");
 	menu_boot.Append(id_boot_self, "Boot SELF");
@@ -88,6 +91,7 @@ MainFrame::MainFrame()
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
 	
 	Connect( id_boot_game,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
+	Connect( id_boot_pkg,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootPkg) );
 	Connect( id_boot_elf,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
 	Connect( id_boot_self,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
 
@@ -167,9 +171,19 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	{
 		if(wxFile::Access(ctrl.GetPath() + elf[i], wxFile::read))
 		{
-			Emu.SetPath(ctrl.GetPath() + elf[i]);
-			ConLog.Write("Elf: booting...");
+			ConLog.Write("SELF: booting...");
+
+			Emu.Stop();
+	
+			wxString fileIn = ctrl.GetPath()+elf[i]; 
+			wxString fileOut = (ctrl.GetPath()+elf[i])+".elf";
+			scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
+
+			Emu.SetPath((ctrl.GetPath()+elf[i])+".elf");
 			Emu.Load();
+			if (!wxRemoveFile((ctrl.GetPath()+elf[i])+".elf"))
+				ConLog.Warning("Could not delete the decrypted ELF file");
+
 			ConLog.Write("Game: boot done.");
 			return;
 		}
@@ -177,6 +191,39 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 	ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath());
 	return;
+}
+
+
+void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
+{
+	bool stopped = false;
+
+	if(Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "*.*",
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	
+	if(ctrl.ShowModal() == wxID_CANCEL)
+	{
+		if(stopped) Emu.Resume();
+		return;
+	}
+
+	ConLog.Write("PKG: extracting...");
+
+	Emu.Stop();
+
+	wxString fileName = ctrl.GetPath();
+	pkg_unpack((const char *)fileName.mb_str());
+
+	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
+		ConLog.Warning("Could not delete the decoded DEC file");
+
+	ConLog.Write("PKG: extract done.");
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))

@@ -92,13 +92,13 @@ void PPUThread::InitRegs()
 
 	GPR[1] = m_stack_point;
 	GPR[2] = rtoc;
-
+	/*
 	for(int i=4; i<32; ++i)
 	{
 		if(i != 6)
 			GPR[i] = (i+1) * 0x10000;
 	}
-
+	*/
 	if(m_argv_addr.GetCount())
 	{
 		u64 argc = m_argv_addr.GetCount();

@@ -300,6 +300,7 @@ void CPUThread::Task()
 				continue;
 			}
 
+			Step();
 			NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 			if(status == CPUThread_Step)

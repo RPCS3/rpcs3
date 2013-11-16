@@ -1,0 +1,41 @@
+wxWindows regex
+---------------
+This is a version of Henry Spencer's regex, which was taken from the
+source of TCL (Toolkit Command Language).  It implements POSIX regular
+expressions and also supports Unicode and some Perl5 extensions.
+
+The modifications made by the wxWindows team are as follows:
+
+regcustom.h
+-----------
+Types and constants appropriate for our use of the library are defined
+here.
+
+regex.h
+-------
+This is unmodified. Note though, that a portion of it (clearly marked)
+is copied from regcustom.h as part of the build process.
+
+regc_locale.c
+-------------
+This module provides character classifications.
+
+The current version from Tcl supports only a Unicode build. The
+original code from Henry Spencer, on the other hand, was ASCII only.
+Therefore, in order to support both, code from the ASCII version has been
+incorporated into the Unicode version, conditionally compiled depending
+on wxUSE_UNICODE.
+
+The only non-trivial dependencies were: Tcl_UniCharToUpper,
+Tcl_UniCharToLower and Tcl_UniCharToTitle. The implementations of these
+have also been incorporated (from Tcl). These in turn depend only the data
+tables in tclUniData.c (which is unmodified). At some point wxWindows
+may have it's own Unicode character classification code, at which point
+these should be used instead.
+
+Other dependencies (on Tcl_DString) have been eliminated using wxWindows
+wxChar functions.
+
+The ASCII version has also been extended to support character
+classifications based on the current locale rather than ASCII only.
+

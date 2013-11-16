@@ -815,18 +815,28 @@ public:
 		return false;
 	}
 
-	virtual void AddArgv(const wxString& arg);
+	virtual void AddArgv(const wxString& arg) override;
 
 public:
 	virtual void InitRegs(); 
 	virtual u64 GetFreeStackSize() const;
 
 protected:
-	virtual void DoReset();
-	virtual void DoRun();
-	virtual void DoPause();
-	virtual void DoResume();
-	virtual void DoStop();
+	virtual void DoReset() override;
+	virtual void DoRun() override;
+	virtual void DoPause() override;
+	virtual void DoResume() override;
+	virtual void DoStop() override;
+
+protected:
+	virtual void Step() override
+	{
+		//if(++cycle > 20)
+		{
+			TB++;
+			//cycle = 0;
+		}
+	}
 };
 
 PPUThread& GetCurrentPPUThread();

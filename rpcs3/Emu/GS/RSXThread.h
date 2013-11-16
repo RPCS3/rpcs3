@@ -264,7 +264,7 @@ public:
 	u32 m_local_mem_addr, m_main_mem_addr;
 	Array<MemInfo> m_main_mem_info;
 
-protected:
+public:
 	uint m_draw_mode;
 
 	u32 m_width, m_height;
