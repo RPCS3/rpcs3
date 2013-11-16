@@ -138,17 +138,17 @@ public:
 	template<typename T1> be_t operator | (const be_t<T1>& right) const { be_t<T> res; res.FromBE(ToBE() | right.ToBE()); return res; }
 	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { be_t<T> res; res.FromBE(ToBE() ^ right.ToBE()); return res; }
 
-	template<typename T1> bool operator == (T1 right) const { return ToLE() == right; }
+	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
 	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (T1 right) const { return ToLE() >  right; }
-	template<typename T1> bool operator <  (T1 right) const { return ToLE() <  right; }
-	template<typename T1> bool operator >= (T1 right) const { return ToLE() >= right; }
-	template<typename T1> bool operator <= (T1 right) const { return ToLE() <= right; }
+	template<typename T1> bool operator >  (T1 right) const { return (T1)ToLE() >  right; }
+	template<typename T1> bool operator <  (T1 right) const { return (T1)ToLE() <  right; }
+	template<typename T1> bool operator >= (T1 right) const { return (T1)ToLE() >= right; }
+	template<typename T1> bool operator <= (T1 right) const { return (T1)ToLE() <= right; }
 
 	template<typename T1> bool operator == (const be_t<T1>& right) const { return ToBE() == right.ToBE(); }
 	template<typename T1> bool operator != (const be_t<T1>& right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (const be_t<T1>& right) const { return ToLE() >  right.ToLE(); }
-	template<typename T1> bool operator <  (const be_t<T1>& right) const { return ToLE() <  right.ToLE(); }
-	template<typename T1> bool operator >= (const be_t<T1>& right) const { return ToLE() >= right.ToLE(); }
-	template<typename T1> bool operator <= (const be_t<T1>& right) const { return ToLE() <= right.ToLE(); }
+	template<typename T1> bool operator >  (const be_t<T1>& right) const { return (T1)ToLE() >  right.ToLE(); }
+	template<typename T1> bool operator <  (const be_t<T1>& right) const { return (T1)ToLE() <  right.ToLE(); }
+	template<typename T1> bool operator >= (const be_t<T1>& right) const { return (T1)ToLE() >= right.ToLE(); }
+	template<typename T1> bool operator <= (const be_t<T1>& right) const { return (T1)ToLE() <= right.ToLE(); }
 };

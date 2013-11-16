@@ -63,7 +63,7 @@ public:
 	static void Unbind();
 	void Delete();
 	bool IsCreated() const;
-	u32 GetId(u32 num) const;
+	u32 GetId(u32 num = 0) const;
 };
 
 class GLfbo

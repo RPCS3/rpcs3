@@ -179,6 +179,7 @@ protected:
 	virtual void DoStop()=0;
 
 protected:
+	virtual void Step() {}
 	virtual void Task();
 };
 

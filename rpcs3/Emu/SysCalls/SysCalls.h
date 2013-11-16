@@ -257,10 +257,6 @@ extern int cellGcmCallback(u32 context_addr, u32 count);
 extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
 extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 
-//cellResc
-extern int cellRescSetSrc(const int idx, const u32 src_addr);
-extern int cellRescSetBufferAddress(const u32 colorBuffers_addr, const u32 vertexArray_addr, const u32 fragmentShader_addr);
-
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);

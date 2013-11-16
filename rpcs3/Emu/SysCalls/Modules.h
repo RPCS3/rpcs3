@@ -1,4 +1,5 @@
 #pragma once
+#include "Modules/cellResc.h"
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
