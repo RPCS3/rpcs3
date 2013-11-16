@@ -27,13 +27,15 @@ class Module
 	wxString m_name;
 	const u16 m_id;
 	bool m_is_loaded;
+	void (*m_load_func)();
+	void (*m_unload_func)();
 
 public:
 	Array<ModuleFunc> m_funcs_list;
 
 	Module(u16 id, const char* name);
-	Module(const char* name, void (*init)());
-	Module(u16 id, void (*init)());
+	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
 
 	void Load();
 	void UnLoad();

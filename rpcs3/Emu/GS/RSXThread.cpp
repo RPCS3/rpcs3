@@ -333,6 +333,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
+		if(args[0]) ConLog.Warning("NV4097_SET_COLOR_MASK_MRT: %x", args[0]);
+	}
+	break;
+
+	case NV4097_SET_BLEND_ENABLE_MRT:
+	{
+		if(args[0]) ConLog.Warning("NV4097_SET_BLEND_ENABLE_MRT: %x", args[0]);
 	}
 	break;
 

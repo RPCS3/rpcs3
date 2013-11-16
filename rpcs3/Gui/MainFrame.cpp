@@ -367,6 +367,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_mouse_handler = new wxComboBox(&diag, wxID_ANY);
 
+	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
+	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
 
 	//cbox_cpu_decoder->Append("DisAsm");
@@ -397,6 +399,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_mouse_handler->Append("Windows");
 	//cbox_mouse_handler->Append("DirectInput");
 
+	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
+	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
@@ -416,6 +420,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_gs->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5));
+	s_round_gs->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5));
 	s_round_gs->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5));
 
 	s_round_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -450,6 +456,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
+		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
+		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());

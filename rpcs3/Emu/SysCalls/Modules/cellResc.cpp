@@ -5,7 +5,8 @@
 #include "cellResc.h"
 
 void cellResc_init();
-Module cellResc(0x001f, cellResc_init);
+void cellResc_unload();
+Module cellResc(0x001f, cellResc_init, nullptr, cellResc_unload);
 
 // Error Codes
 enum
@@ -551,12 +552,8 @@ int cellRescSetDisplayMode(u32 displayMode)
 	return CELL_OK;
 }
 
-int cellRescAdjustAspectRatio()
+int cellRescAdjustAspectRatio(float horizontal, float vertical)
 {
-	declCPU();
-	float horizontal = CPU.FPR[1];
-	float vertical   = CPU.FPR[2];
-
 	cellResc.Warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
 
 	if(!s_rescInternalInstance->m_bInitialized)
@@ -578,11 +575,8 @@ int cellRescAdjustAspectRatio()
 	return CELL_OK;
 }
 
-int cellRescSetPalInterpolateDropFlexRatio()
+int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 {
-	declCPU();
-	float ratio = CPU.FPR[1];
-
 	cellResc.Warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
 
 	if(!s_rescInternalInstance->m_bInitialized)
@@ -747,10 +741,13 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	MemoryAllocator<u32> dstOffset;
 	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset.GetAddr());
 
-	for(int i=0; i<GetNumColorBuffers(); i++){
+	for(int i=0; i<GetNumColorBuffers(); i++)
+	{
 		s_rescInternalInstance->m_dstOffsets[i] = dstOffset + i * s_rescInternalInstance->m_dstBufInterval;
 	}
-	for(int i=0; i<GetNumColorBuffers(); i++){
+
+	for(int i=0; i<GetNumColorBuffers(); i++)
+	{
 		int ret = cellGcmSetDisplayBuffer(i, s_rescInternalInstance->m_dstOffsets[i], s_rescInternalInstance->m_dstPitch, s_rescInternalInstance->m_dstWidth, s_rescInternalInstance->m_dstHeight);
 		if (ret) return ret;
 	}
@@ -767,7 +764,7 @@ int cellRescSetFlipHandler(u32 handler_addr)
 {
 	cellResc.Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler_addr);
 
-	if(!Memory.IsGoodAddr(handler_addr) && handler_addr != 0)
+	if(handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 		return CELL_EFAULT;
 
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
@@ -813,4 +810,9 @@ void cellResc_init()
 	cellResc.AddFunc(0xd1ca0503, cellRescVideoOutResolutionId2RescBufferMode);
 	//cellResc.AddFunc(0xd3758645, cellRescSetVBlankHandler);
 	//cellResc.AddFunc(0xe0cef79e, cellRescCreateInterlaceTable);
+}
+
+void cellResc_unload()
+{
+	s_rescInternalInstance->m_bInitialized = false;
 }
