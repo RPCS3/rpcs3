@@ -31,6 +31,7 @@ enum IDs
 	id_config_emu,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
+	id_compiler,
 	id_help_about,
 	id_update_dbg,
 };
@@ -59,11 +60,13 @@ MainFrame::MainFrame()
 	wxMenu& menu_boot(*new wxMenu());
 	wxMenu& menu_sys(*new wxMenu());
 	wxMenu& menu_conf(*new wxMenu());
+	wxMenu& menu_compiler(*new wxMenu());
 	wxMenu& menu_help(*new wxMenu());
 
 	menubar.Append(&menu_boot, "Boot");
 	menubar.Append(&menu_sys, "System");
 	menubar.Append(&menu_conf, "Config");
+	menubar.Append(&menu_compiler, "Compiler");
 	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
@@ -82,6 +85,8 @@ MainFrame::MainFrame()
 	menu_conf.AppendSeparator();
 	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
+
+	menu_compiler.Append(id_compiler, "ELF Compiler");
 
 	menu_help.Append(id_help_about, "About...");
 
@@ -103,6 +108,8 @@ MainFrame::MainFrame()
 	Connect( id_config_emu,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
 	Connect( id_config_vfs_manager,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
 	Connect( id_config_vhdd_manager,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
+
+	Connect( id_compiler,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
 
 	Connect( id_help_about,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
 
@@ -476,6 +483,11 @@ void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 {
 	VHDDManagerDialog(this).ShowModal();
+}
+
+void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
+{
+	(new CompilerELF(this)) -> Show();
 }
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
