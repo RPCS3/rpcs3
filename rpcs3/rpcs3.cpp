@@ -22,7 +22,7 @@ bool Rpcs3App::OnInit()
 	SetTopWindow(m_MainFrame);
 	Emu.Init();
 
-	// (new CompilerELF(m_MainFrame))->Show();
+	(new CompilerELF(m_MainFrame))->Show();
 	m_debugger_frame = new DebuggerPanel(m_MainFrame);
 	ConLogFrame = new LogFrame(m_MainFrame);
 
