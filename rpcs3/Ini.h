@@ -97,6 +97,8 @@ public:
 	IniEntry<int> GSResolution;
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<bool> GSVSyncEnable;
+	IniEntry<bool> GSDumpColorBuffers;
+	IniEntry<bool> GSDumpDepthBuffer;
 	IniEntry<u8> PadHandlerMode;
 	IniEntry<u8> KeyboardHandlerMode;
 	IniEntry<u8> MouseHandlerMode;
@@ -114,6 +116,8 @@ public:
 		GSResolution.Init("Resolution", path);
 		GSAspectRatio.Init("AspectRatio", path);
 		GSVSyncEnable.Init("VSyncEnable", path);
+		GSDumpColorBuffers.Init("DumpColorBuffers", path);
+		GSDumpDepthBuffer.Init("DumpDepthBuffer", path);
 
 		path = DefPath + "\\" + "IO";
 		PadHandlerMode.Init("PadHandlerMode", path);
@@ -128,6 +132,8 @@ public:
 		GSResolution.Load(4);
 		GSAspectRatio.Load(1);
 		GSVSyncEnable.Load(false);
+		GSDumpColorBuffers.Load(true);
+		GSDumpDepthBuffer.Load(true);
 		PadHandlerMode.Load(0);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
@@ -140,6 +146,8 @@ public:
 		GSResolution.Save();
 		GSAspectRatio.Save();
 		GSVSyncEnable.Save();
+		GSDumpColorBuffers.Save();
+		GSDumpDepthBuffer.Save();
 		PadHandlerMode.Save();
 		KeyboardHandlerMode.Save();
 		MouseHandlerMode.Save();

@@ -155,7 +155,7 @@ bool UnloadFunc(u32 id)
 	{
 		if(g_modules_funcs_list[i].id == id)
 		{
-			g_modules_funcs_list.RemoveAt(i);
+			g_modules_funcs_list.RemoveFAt(i);
 
 			return true;
 		}
@@ -179,21 +179,14 @@ u32 GetFuncNumById(u32 id)
 
 void UnloadModules()
 {
-	for(u32 i=0; i<g_max_module_id; ++i)
+	for(u32 i=0; i<3; ++i)
 	{
-		if(g_modules[0][i])
+		for(u32 j=0; j<g_max_module_id; ++j)
 		{
-			g_modules[0][i]->SetLoaded(false);
-		}
-
-		if(g_modules[1][i])
-		{
-			g_modules[1][i]->SetLoaded(false);
-		}
-
-		if(g_modules[2][i])
-		{
-			g_modules[2][i]->SetLoaded(false);
+			if(g_modules[i][j])
+			{
+				g_modules[i][j]->UnLoad();
+			}
 		}
 	}
 
@@ -292,22 +285,28 @@ Module::Module(u16 id, const char* name)
 	: m_is_loaded(false)
 	, m_name(name)
 	, m_id(id)
+	, m_load_func(nullptr)
+	, m_unload_func(nullptr)
 {
 	SetModule(m_id, this, false);
 }
 
-Module::Module(const char* name, void (*init)())
+Module::Module(const char* name, void (*init)(), void (*load)(), void (*unload)())
 	: m_is_loaded(false)
 	, m_name(name)
 	, m_id(-1)
+	, m_load_func(load)
+	, m_unload_func(unload)
 {
 	SetModule(m_id, this, init != nullptr);
 	if(init) init();
 }
 
-Module::Module(u16 id, void (*init)())
+Module::Module(u16 id, void (*init)(), void (*load)(), void (*unload)())
 	: m_is_loaded(false)
 	, m_id(id)
+	, m_load_func(load)
+	, m_unload_func(unload)
 {
 	SetModule(m_id, this, init != nullptr);
 	if(init) init();
@@ -315,20 +314,34 @@ Module::Module(u16 id, void (*init)())
 
 void Module::Load()
 {
+	if(IsLoaded())
+		return;
+
+	if(m_load_func) m_load_func();
+
 	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
 	{
 		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
 
 		g_modules_funcs_list.Add(m_funcs_list[i]);
 	}
+
+	SetLoaded(true);
 }
 
 void Module::UnLoad()
 {
+	if(!IsLoaded())
+		return;
+
+	if(m_unload_func) m_unload_func();
+
 	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
 	{
 		UnloadFunc(m_funcs_list[i].id);
 	}
+
+	SetLoaded(false);
 }
 
 bool Module::Load(u32 id)

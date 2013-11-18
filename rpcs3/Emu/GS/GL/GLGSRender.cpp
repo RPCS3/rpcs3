@@ -717,7 +717,8 @@ void GLGSRender::ExecCMD()
 	}
 		
 	m_fbo.Bind();
-	WriteDepthBuffer();
+	if(Ini.GSDumpDepthBuffer.GetValue())
+		WriteDepthBuffer();
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
 	switch(m_surface_colour_target)
@@ -1025,7 +1026,8 @@ void GLGSRender::ExecCMD()
 		m_draw_array_count = 0;
 	}
 
-	WriteBuffers();
+	if(Ini.GSDumpColorBuffers.GetValue())
+		WriteBuffers();
 }
 
 void GLGSRender::Flip()
