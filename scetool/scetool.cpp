@@ -15,6 +15,8 @@
 #else
 #include <unistd.h>
 #include <getopt.h>
+#define _access access
+#define _strdup strdup
 #endif
 
 #include "types.h"

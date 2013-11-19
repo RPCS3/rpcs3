@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/GS/GSRender.h"
 #include "Emu/GS/RSXThread.h"
-#include "wx/glcanvas.h"
+#include <wx/glcanvas.h>
 #include "GLBuffers.h"
 #include "GLProgram.h"
 #include "OpenGL.h"

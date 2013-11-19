@@ -20,8 +20,8 @@ namespace scetool{
 	typedef __int64 s64;
 	typedef unsigned __int64 u64;
 	#else
-	typedef long long int scetool::s64;
-	typedef unsigned long long int scetool::u64;
+	typedef long long int s64;
+	typedef unsigned long long int u64;
 	#endif
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "GameViewer.h"
-#include "wx/aui/aui.h"
+#include <wx/aui/aui.h>
 
 class MainFrame : public FrameBase
 {

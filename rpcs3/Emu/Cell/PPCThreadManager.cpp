@@ -4,7 +4,8 @@
 #include "SPUThread.h"
 #include "RawSPUThread.h"
 
-PPCThreadManager::PPCThreadManager()
+PPCThreadManager::PPCThreadManager() :
+m_raw_spu_num(0)
 {
 }
 
@@ -28,7 +29,7 @@ PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
 	{
 	case PPC_THREAD_PPU:		new_thread = new PPUThread(); name = "PPU"; break;
 	case PPC_THREAD_SPU:		new_thread = new SPUThread(); name = "SPU"; break;
-	case PPC_THREAD_RAW_SPU:	new_thread = new RawSPUThread(); name = "RawSPU"; break;
+	case PPC_THREAD_RAW_SPU:	new_thread = new RawSPUThread(m_raw_spu_num++); name = "RawSPU"; break;
 	default: assert(0);
 	}
 	

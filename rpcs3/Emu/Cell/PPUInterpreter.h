@@ -6,7 +6,12 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3.h"
 #include <stdint.h>
+#ifdef _MSC_VER
 #include <intrin.h>
+#else
+#include <x86intrin.h>
+#define _rotl64(x,r) (((u64)x << r) | ((u64)x >> (64 - r)))
+#endif
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
@@ -85,9 +90,14 @@ private:
 	{
 		if(!CPU.VSCR.NJ) return v;
 
-		int fpc = _fpclass(v);
+		const int fpc = _fpclass(v);
+#ifdef __GNUG__
+        if(fpc == FP_SUBNORMAL)
+            return signbit(v) ? -0.0f : 0.0f;
+#else
 		if(fpc & _FPCLASS_ND) return -0.0f;
 		if(fpc & _FPCLASS_PD) return  0.0f;
+#endif
 
 		return v;
 	}
@@ -1459,7 +1469,7 @@ private:
 		for (uint w = 0; w < 4; w++)
 		{
 			float f;
-			modf(CPU.VPR[vb]._f[w], &f);
+			modff(CPU.VPR[vb]._f[w], &f);
 			CPU.VPR[vd]._f[w] = f;
 		}
 	}
@@ -3259,7 +3269,11 @@ private:
 	{
 		double res;
 
+#ifdef _MSVC_VER
 		if(_fpclass(CPU.FPR[frb]) >= _FPCLASS_NZ)
+#else
+        if(_fpclass(CPU.FPR[frb]) == FP_ZERO || signbit(CPU.FPR[frb]) == 0)
+#endif
 		{
 			res = static_cast<float>(1.0 / CPU.FPR[frb]);
 			if(FPRdouble::IsINF(res) && CPU.FPR[frb] != 0.0)
@@ -3835,7 +3849,7 @@ private:
 
 		for(uint i=0; i<32; ++i) ConLog.Write("r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) ConLog.Write("f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true), CPU.VPR[i].ToString());
+		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).mb_str(), CPU.VPR[i].ToString().mb_str());
 		ConLog.Write("CR = 0x%08x", CPU.CR);
 		ConLog.Write("LR = 0x%llx", CPU.LR);
 		ConLog.Write("CTR = 0x%llx", CPU.CTR);

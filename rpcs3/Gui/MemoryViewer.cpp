@@ -26,8 +26,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 
 	wxStaticBoxSizer& s_tools_mem_bytes = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Bytes");
 	sc_bytes = new wxSpinCtrl(this, wxID_ANY, "16", wxDefaultPosition, wxSize(44,-1));
-	sc_bytes->SetMax(16);
-	sc_bytes->SetMin(1);
+    sc_bytes->SetRange(1, 16);
 	s_tools_mem_bytes.Add(sc_bytes);
 
 	wxStaticBoxSizer& s_tools_mem_buttons = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Control");
@@ -54,10 +53,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	s_tools_img_size.Add(new wxStaticText(this, wxID_ANY, " x "));
 	s_tools_img_size.Add(sc_img_size_y);
 
-	sc_img_size_x->SetMax(8192);
-	sc_img_size_y->SetMax(8192);
-	sc_img_size_x->SetMin(1);
-	sc_img_size_y->SetMin(1);
+    sc_img_size_x->SetRange(1, 8192);
+	sc_img_size_y->SetRange(1, 8192);
 
 	wxStaticBoxSizer& s_tools_img_mode = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Mode");
 	cbox_img_mode = new wxComboBox(this, wxID_ANY);

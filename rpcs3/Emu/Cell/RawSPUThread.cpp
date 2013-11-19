@@ -269,7 +269,7 @@ u32 RawSPUThread::GetIndex() const
 
 void RawSPUThread::Task()
 {
-	ConLog.Write("%s enter", PPCThread::GetFName());
+	ConLog.Write("%s enter", PPCThread::GetFName().mb_str());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -339,12 +339,12 @@ void RawSPUThread::Task()
 	}
 	catch(const wxString& e)
 	{
-		ConLog.Error("Exception: %s", e);
+		ConLog.Error("Exception: %s", e.mb_str());
 	}
 	catch(const char* e)
 	{
 		ConLog.Error("Exception: %s", e);
 	}
 
-	ConLog.Write("%s leave", PPCThread::GetFName());
+	ConLog.Write("%s leave", PPCThread::GetFName().mb_str());
 }

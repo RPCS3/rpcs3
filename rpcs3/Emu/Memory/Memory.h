@@ -87,10 +87,6 @@ public:
 	}
 
 	template<int size> static __forceinline u64 ReverseData(u64 val);
-	template<> static __forceinline u64 ReverseData<1>(u64 val) { return val; }
-	template<> static __forceinline u64 ReverseData<2>(u64 val) { return Reverse16(val); }
-	template<> static __forceinline u64 ReverseData<4>(u64 val) { return Reverse32(val); }
-	template<> static __forceinline u64 ReverseData<8>(u64 val) { return Reverse64(val); }
 
 	template<typename T> static __forceinline T Reverse(T val)
 	{
@@ -125,11 +121,11 @@ public:
 
 	u64 RealToVirtualAddr(const void* addr)
 	{
-		const u32 raddr = (u32)addr;
+		const u64 raddr = (u64)addr;
 		for(u32 i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
 			MemoryBlock& b = MemoryBlocks[i];
-			const u32 baddr = (u32)b.GetMem();
+			const u64 baddr = (u64)b.GetMem();
 
 			if(raddr >= baddr && raddr < baddr + b.GetSize())
 			{
@@ -430,97 +426,97 @@ public:
 
 	T* operator -> ()
 	{
-		return (T*)&Memory[m_addr];
+		return (T*)&Memory[this->m_addr];
 	}
 
 	const T* operator -> () const
 	{
-		return (const T*)&Memory[m_addr];
+		return (const T*)&Memory[this->m_addr];
 	}
 
 	mem_ptr_t operator++ (int)
 	{
-		mem_struct_ptr_t res(m_addr);
-		m_addr += sizeof(T);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr += sizeof(T);
 		return ret;
 	}
 
 	mem_ptr_t& operator++ ()
 	{
-		m_addr += sizeof(T);
+		this->m_addr += sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t operator-- (int)
 	{
-		mem_struct_ptr_t res(m_addr);
-		m_addr -= sizeof(T);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr -= sizeof(T);
 		return ret;
 	}
 
 	mem_ptr_t& operator-- ()
 	{
-		m_addr -= sizeof(T);
+		this->m_addr -= sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t& operator += (uint count)
 	{
-		m_addr += count * sizeof(T);
+		this->m_addr += count * sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t& operator -= (uint count)
 	{
-		m_addr -= count * sizeof(T);
+		this->m_addr -= count * sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t operator + (uint count) const
 	{
-		return m_addr + count * sizeof(T);
+		return this->m_addr + count * sizeof(T);
 	}
 
 	mem_ptr_t operator - (uint count) const
 	{
-		return m_addr - count * sizeof(T);
+		return this->m_addr - count * sizeof(T);
 	}
 
 	T& operator *()
 	{
-		return (T&)Memory[m_addr];
+		return (T&)Memory[this->m_addr];
 	}
 
 	const T& operator *() const
 	{
-		return (T&)Memory[m_addr];
+		return (T&)Memory[this->m_addr];
 	}
 
 	T& operator [](uint index)
 	{
-		return (T&)Memory[m_addr + sizeof(T) * index];
+		return (T&)Memory[this->m_addr + sizeof(T) * index];
 	}
 
 	const T& operator [](uint index) const
 	{
-		return (const T&)Memory[m_addr + sizeof(T) * index];
+		return (const T&)Memory[this->m_addr + sizeof(T) * index];
 	}
 
-	operator bool() const { return m_addr == 0; }
+	operator bool() const { return this->m_addr == 0; }
 
-	bool operator == (mem_ptr_t right) const { return m_addr == right.m_addr; }
-	bool operator != (mem_ptr_t right) const { return m_addr != right.m_addr; }
-	bool operator > (mem_ptr_t right) const { return m_addr > right.m_addr; }
-	bool operator < (mem_ptr_t right) const { return m_addr < right.m_addr; }
-	bool operator >= (mem_ptr_t right) const { return m_addr >= right.m_addr; }
-	bool operator <= (mem_ptr_t right) const { return m_addr <= right.m_addr; }
+	bool operator == (mem_ptr_t right) const { return this->m_addr == right.m_addr; }
+	bool operator != (mem_ptr_t right) const { return this->m_addr != right.m_addr; }
+	bool operator > (mem_ptr_t right) const { return this->m_addr > right.m_addr; }
+	bool operator < (mem_ptr_t right) const { return this->m_addr < right.m_addr; }
+	bool operator >= (mem_ptr_t right) const { return this->m_addr >= right.m_addr; }
+	bool operator <= (mem_ptr_t right) const { return this->m_addr <= right.m_addr; }
 
-	bool operator == (T* right) const { return (T*)&Memory[m_addr] == right; }
-	bool operator != (T* right) const { return (T*)&Memory[m_addr] != right; }
-	bool operator > (T* right) const { return (T*)&Memory[m_addr] > right; }
-	bool operator < (T* right) const { return (T*)&Memory[m_addr] < right; }
-	bool operator >= (T* right) const { return (T*)&Memory[m_addr] >= right; }
-	bool operator <= (T* right) const { return (T*)&Memory[m_addr] <= right; }
+	bool operator == (T* right) const { return (T*)&Memory[this->m_addr] == right; }
+	bool operator != (T* right) const { return (T*)&Memory[this->m_addr] != right; }
+	bool operator > (T* right) const { return (T*)&Memory[this->m_addr] > right; }
+	bool operator < (T* right) const { return (T*)&Memory[this->m_addr] < right; }
+	bool operator >= (T* right) const { return (T*)&Memory[this->m_addr] >= right; }
+	bool operator <= (T* right) const { return (T*)&Memory[this->m_addr] <= right; }
 };
 
 template<typename T> static bool operator == (T* left, mem_ptr_t<T> right) { return left == (T*)&Memory[right.GetAddr()]; }
@@ -539,14 +535,14 @@ public:
 
 	mem_t& operator = (T right)
 	{
-		(be_t<T>&)Memory[m_addr] = right;
+		(be_t<T>&)Memory[this->m_addr] = right;
 
 		return *this;
 	}
 
 	operator const T() const
 	{
-		return (be_t<T>&)Memory[m_addr];
+		return (be_t<T>&)Memory[this->m_addr];
 	}
 
 	mem_t& operator += (T right) { return *this = (*this) + right; }
@@ -570,17 +566,17 @@ public:
 
 	void operator = (T right)
 	{
-		(be_t<T>&)Memory[m_addr] = right;
+		(be_t<T>&)Memory[this->m_addr] = right;
 	}
 
 	u32 operator += (T right)
 	{
 		*this = right;
-		m_addr += sizeof(T);
-		return m_addr;
+		this->m_addr += sizeof(T);
+		return this->m_addr;
 	}
 
-	u32 Skip(const u32 offset) { return m_addr += offset; }
+	u32 Skip(const u32 offset) { return this->m_addr += offset; }
 
 	operator be_t<T>*()			{ return GetPtr(); }
 	operator void*()			{ return GetPtr(); }
@@ -589,17 +585,17 @@ public:
 
 	const char* GetString() const
 	{
-		return (const char*)&Memory[m_addr];
+		return (const char*)&Memory[this->m_addr];
 	}
 
 	be_t<T>* GetPtr()
 	{
-		return (be_t<T>*)&Memory[m_addr];
+		return (be_t<T>*)&Memory[this->m_addr];
 	}
 
 	const be_t<T>* GetPtr() const
 	{
-		return (const be_t<T>*)&Memory[m_addr];
+		return (const be_t<T>*)&Memory[this->m_addr];
 	}
 };
 
@@ -718,6 +714,11 @@ public:
 	{
 		return m_ptr;
 	}
+
+    T operator [](int index)
+    {
+        return *(m_ptr + index);
+    }
 
 	template<typename T1>
 	operator const mem_t<T1>() const

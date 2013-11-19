@@ -73,9 +73,9 @@ public:
 	{
 		return 
 			wxString::Format("%s[%d] Thread%s", 
-				GetTypeString(),
+				GetTypeString().mb_str(),
 				m_id,
-				(GetName().IsEmpty() ? "" : " (" + GetName() + ")")
+				(GetName().IsEmpty() ? "" : (" (" + GetName() + ")").mb_str())
 			);
 	}
 

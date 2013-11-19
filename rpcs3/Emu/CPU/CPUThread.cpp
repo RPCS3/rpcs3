@@ -149,7 +149,7 @@ void CPUThread::SetBranch(const u64 pc, bool record_branch)
 {
 	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), m_offset + pc, m_offset + PC);
+		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().mb_str(), m_offset + pc, m_offset + PC);
 		Emu.Pause();
 	}
 
@@ -324,7 +324,7 @@ void CPUThread::Task()
 	}
 	catch(const wxString& e)
 	{
-		ConLog.Error("Exception: %s", e);
+		ConLog.Error("Exception: %s", e.mb_str());
 	}
 	catch(const char* e)
 	{

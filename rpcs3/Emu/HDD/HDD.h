@@ -474,7 +474,7 @@ public:
 
 	int OpenDir(const wxString& name)
 	{
-		ConLog.Warning("OpenDir(%s)", name);
+		ConLog.Warning("OpenDir(%s)", name.mb_str());
 		u64 entry_block;
 		if(!SearchEntry(name, entry_block))
 			return -1;
@@ -761,7 +761,7 @@ public:
 
 			if(entry.type == vfsHDD_Entry_Dir && name != "." && name != "..")
 			{
-				ConLog.Warning("removing sub folder '%s'", name);
+				ConLog.Warning("removing sub folder '%s'", name.mb_str());
 				RemoveBlocksDir(entry.data_block);
 			}
 			else if(entry.type == vfsHDD_Entry_File)

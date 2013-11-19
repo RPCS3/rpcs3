@@ -449,13 +449,13 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	glReadPixels(0, 0, m_width, m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glReadPixels");
 
 	GLuint depth_tex;
 	glGenTextures(1, &depth_tex);
 	glBindTexture(GL_TEXTURE_2D, depth_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, &Memory[address]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glTexImage2D");
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glGetTexImage");
@@ -478,7 +478,7 @@ void GLGSRender::WriteColourBufferA()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT0)");
-	glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -498,7 +498,7 @@ void GLGSRender::WriteColourBufferB()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT1)");
-	glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -518,7 +518,7 @@ void GLGSRender::WriteColourBufferC()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT2)");
-	glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -538,7 +538,7 @@ void GLGSRender::WriteColourBufferD()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT3)");
-	glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -584,8 +584,8 @@ void GLGSRender::OnInit()
 {
 	m_draw_frames = 1;
 	m_skip_frames = 0;
-	m_width = 720;
-	m_height = 576;
+	RSXThread::m_width = 720;
+	RSXThread::m_height = 576;
 
 	last_width = 0;
 	last_height = 0;
@@ -603,7 +603,15 @@ void GLGSRender::OnInitThread()
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_SCISSOR_TEST);
+
+#if defined(__GNUG__) // Hack. Should detect xorg instead
+#if 0
+    if (GLXDrawable drawable = glXGetCurrentDrawable())
+        glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+#endif
+#else
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+#endif
 }
 
 void GLGSRender::OnExitThread()
@@ -641,11 +649,11 @@ void GLGSRender::ExecCMD()
 		return;
 	}
 
-	if(!m_fbo.IsCreated() || m_width != last_width || m_height != last_height || last_depth_format != m_surface_depth_format)
+	if(!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
-		ConLog.Warning("New FBO (%dx%d)", m_width, m_height);
-		last_width = m_width;
-		last_height = m_height;
+		ConLog.Warning("New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
+		last_width = RSXThread::m_width;
+		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
 
 		m_fbo.Create();
@@ -658,7 +666,7 @@ void GLGSRender::ExecCMD()
 		for(int i=0; i<4; ++i)
 		{
 			m_rbo.Bind(i);
-			m_rbo.Storage(GL_RGBA, m_width, m_height);
+			m_rbo.Storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_RGBA)");
 		}
 
@@ -667,12 +675,12 @@ void GLGSRender::ExecCMD()
 		switch(m_surface_depth_format)
 		{
 		case 1:
-			m_rbo.Storage(GL_DEPTH_COMPONENT16, m_width, m_height);
+			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
 		break;
 
 		case 2:
-			m_rbo.Storage(GL_DEPTH24_STENCIL8, m_width, m_height);
+			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 		break;
 
@@ -701,13 +709,13 @@ void GLGSRender::ExecCMD()
 	if(!m_set_surface_clip_horizontal)
 	{
 		m_surface_clip_x = 0;
-		m_surface_clip_w = m_width;
+		m_surface_clip_w = RSXThread::m_width;
 	}
 
 	if(!m_set_surface_clip_vertical)
 	{
 		m_surface_clip_y = 0;
-		m_surface_clip_h = m_height;
+		m_surface_clip_h = RSXThread::m_height;
 	}
 		
 	m_fbo.Bind();
@@ -753,13 +761,13 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
-		glViewport(m_viewport_x, m_height-m_viewport_y-m_viewport_h, m_viewport_w, m_viewport_h);
+		glViewport(m_viewport_x, RSXThread::m_height-m_viewport_y-m_viewport_h, m_viewport_w, m_viewport_h);
 		checkForGlError("glViewport");
 	}
 
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
-		glScissor(m_scissor_x, m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
+		glScissor(m_scissor_x, RSXThread::m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
 

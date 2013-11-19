@@ -21,7 +21,7 @@ const u32 DynamicMemoryBlockBase<PT>::GetUsedSize() const
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::IsInMyRange(const u64 addr)
 {
-	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize();
+	return addr >= MemoryBlock::GetStartAddr() && addr < MemoryBlock::GetStartAddr() + GetSize();
 }
 
 template<typename PT>
@@ -95,7 +95,7 @@ void DynamicMemoryBlockBase<PT>::AppendUsedMem(u64 addr, u32 size)
 template<typename PT>
 u64 DynamicMemoryBlockBase<PT>::Alloc(u32 size)
 {
-	for(u64 addr=GetStartAddr(); addr <= GetEndAddr() - size;)
+	for(u64 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - size;)
 	{
 		bool is_good_addr = true;
 
@@ -146,7 +146,7 @@ u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const
 {
 	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
 	{
-		u64 _addr = FixAddr(m_used_mem[i].addr);
+		u64 _addr = MemoryBlock::FixAddr(m_used_mem[i].addr);
 
 		if(addr >= _addr && addr < _addr + m_used_mem[i].size)
 		{

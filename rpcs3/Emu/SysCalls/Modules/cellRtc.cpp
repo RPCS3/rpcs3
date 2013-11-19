@@ -48,8 +48,8 @@ long convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
 u64 convertToWin32FILETIME(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
 {
 	long unixtime = convertToUNIXTime(seconds, minutes, hours, days, years);
-	LONGLONG win32time = Int32x32To64(unixtime, 10000000) + 116444736000000000;
-	u64 win32filetime = (u64) win32time | win32time >> 32;
+    u64 win32time = u64(unixtime) * u64(10000000) + u64(116444736000000000);
+	u64 win32filetime = win32time | win32time >> 32;
 	return win32filetime;
 }
 

@@ -8,7 +8,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
-		path, flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	const wxString& ppath = path;
 	//ConLog.Warning("path: %s [%s]", ppath, path);
@@ -80,7 +80,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(_oflags != 0)
 	{
-		sys_fs.Error("'%s' has unknown flags! flags: 0x%08x", ppath, flags);
+		sys_fs.Error("'%s' has unknown flags! flags: 0x%08x", ppath.mb_str(), flags);
 		return CELL_EINVAL;
 	}
 
@@ -88,7 +88,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(!stream || !stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", ppath, flags);
+		sys_fs.Error("'%s' not found! flags: 0x%08x", ppath.mb_str(), flags);
 		delete stream;
 
 		return CELL_ENOENT;
@@ -156,7 +156,7 @@ int cellFsClose(u32 fd)
 int cellFsOpendir(u32 path_addr, mem32_t fd)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Error("cellFsOpendir(path_addr: 0x%x(%s), fd_addr: 0x%x)", path_addr, path, fd.GetAddr());
+	sys_fs.Error("cellFsOpendir(path_addr: 0x%x(%s), fd_addr: 0x%x)", path_addr, path.mb_str(), fd.GetAddr());
 	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood()) return CELL_EFAULT;
 
 	return CELL_OK;
@@ -177,7 +177,7 @@ int cellFsClosedir(u32 fd)
 int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb.GetAddr());
+	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path.mb_str(), sb.GetAddr());
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -186,9 +186,9 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 
 	sb->st_uid = 0;
 	sb->st_gid = 0;
-	sb->st_atime = 0; //TODO
-	sb->st_mtime = 0; //TODO
-	sb->st_ctime = 0; //TODO
+	sb->st_atime_ = 0; //TODO
+	sb->st_mtime_ = 0; //TODO
+	sb->st_ctime_ = 0; //TODO
 	sb->st_blksize = 4096;
 
 	// Check if path is a mount point. (TODO: Add information in sb_addr)
@@ -196,7 +196,7 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 	{
 		if(path.CmpNoCase(Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1)) == 0)
 		{
-			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path);
+			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path.mb_str());
 			sb->st_mode |= CELL_FS_S_IFDIR;
 			return CELL_OK;
 		}
@@ -206,7 +206,7 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 
 	if(!f.IsOpened())
 	{
-		sys_fs.Warning("cellFsFstat: '%s' not found.", path);
+		sys_fs.Warning("cellFsFstat: '%s' not found.", path.mb_str());
 		return CELL_ENOENT;
 	}
 
@@ -231,9 +231,9 @@ int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
 	sb->st_uid = 0;
 	sb->st_gid = 0;
-	sb->st_atime = 0; //TODO
-	sb->st_mtime = 0; //TODO
-	sb->st_ctime = 0; //TODO
+	sb->st_atime_ = 0; //TODO
+	sb->st_mtime_ = 0; //TODO
+	sb->st_ctime_ = 0; //TODO
 	sb->st_size = file.GetSize();
 	sb->st_blksize = 4096;
 
@@ -245,7 +245,7 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	wxString path;
 	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Log("cellFsMkdir(path: %s, mode: 0x%x)", path, mode);
+	sys_fs.Log("cellFsMkdir(path: %s, mode: 0x%x)", path.mb_str(), mode);
 	if(wxDirExists(path)) return CELL_EEXIST;
 	if(!wxMkdir(path)) return CELL_EBUSY;
 	return CELL_OK;
@@ -260,7 +260,7 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 	Emu.GetVFS().GetDevice(ps3_from, from);
 	Emu.GetVFS().GetDevice(ps3_to, to);
 
-	sys_fs.Log("cellFsRename(from: %s, to: %s)", from, to);
+	sys_fs.Log("cellFsRename(from: %s, to: %s)", from.mb_str(), to.mb_str());
 	if(!wxFileExists(from)) return CELL_ENOENT;
 	if(wxFileExists(to)) return CELL_EEXIST;
 	if(!wxRenameFile(from, to)) return CELL_EBUSY; // (TODO: RenameFile(a,b) = CopyFile(a,b) + RemoveFile(a), therefore file "a" will not be removed if it is opened)
@@ -272,7 +272,7 @@ int cellFsRmdir(u32 path_addr)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	wxString path;
 	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Log("cellFsRmdir(path: %s)", path);
+	sys_fs.Log("cellFsRmdir(path: %s)", path.mb_str());
 	if(!wxDirExists(path)) return CELL_ENOENT;
 	if(!wxRmdir(path)) return CELL_EBUSY; // (TODO: Under certain conditions it is not able to delete the folder)
 	return CELL_OK;
@@ -283,7 +283,7 @@ int cellFsUnlink(u32 path_addr)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	wxString path;
 	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Error("cellFsUnlink(path: %s)", path);
+	sys_fs.Error("cellFsUnlink(path: %s)", path.mb_str());
 	return CELL_OK;
 }
 
@@ -336,12 +336,12 @@ int cellFsFtruncate(u32 fd, u64 size)
 int cellFsTruncate(u32 path_addr, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsTruncate(path: %s, size: %lld)", path, size);
+	sys_fs.Log("cellFsTruncate(path: %s, size: %lld)", path.mb_str(), size);
 
 	vfsFile f(path, vfsReadWrite);
 	if(!f.IsOpened())
 	{
-		sys_fs.Warning("cellFsTruncate: '%s' not found.", path);
+		sys_fs.Warning("cellFsTruncate: '%s' not found.", path.mb_str());
 		return CELL_ENOENT;
 	}
 	u64 initialSize = f.GetSize();

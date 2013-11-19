@@ -355,6 +355,7 @@ struct PPCdouble
 	{
 		const int fpc = _fpclass(_double);
 
+#ifndef __GNUG__
 		switch(fpc)
 		{
 		case _FPCLASS_SNAN://		return FPR_SNAN;
@@ -368,6 +369,16 @@ struct PPCdouble
 		case _FPCLASS_PN:		return FPR_PN;
 		case _FPCLASS_PINF:		return FPR_PINF;
 		}
+#else
+        switch (fpc)
+        {
+        case FP_NAN:        return FPR_QNAN;
+        case FP_INFINITE:   return signbit(_double) ? FPR_NINF : FPR_PINF;
+        case FP_SUBNORMAL:  return signbit(_double) ? FPR_ND : FPR_PD;
+        case FP_ZERO:       return signbit(_double) ? FPR_NZ : FPR_PZ;
+        default:            return signbit(_double) ? FPR_NN : FPR_PN;
+        }
+#endif
 
 		throw wxString::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 	}
@@ -729,7 +740,7 @@ public:
 
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, FPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, VPR[i].ToString(true), VPR[i].ToString());
+		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, VPR[i].ToString(true).mb_str(), VPR[i].ToString().mb_str());
 		ret += wxString::Format("CR = 0x%08x\n", CR);
 		ret += wxString::Format("LR = 0x%llx\n", LR);
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);

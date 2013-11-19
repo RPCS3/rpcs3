@@ -494,3 +494,8 @@ u128 MemoryBase::Read128(u64 addr)
 	GetMemByAddr(addr).Read128(addr, &res);
 	return res;
 }
+
+template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }
+template<> __forceinline u64 MemoryBase::ReverseData<2>(u64 val) { return Reverse16(val); }
+template<> __forceinline u64 MemoryBase::ReverseData<4>(u64 val) { return Reverse32(val); }
+template<> __forceinline u64 MemoryBase::ReverseData<8>(u64 val) { return Reverse64(val); }

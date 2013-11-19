@@ -57,9 +57,9 @@ const wxString Phdr_FlagsToString(u32 flags)
 	enum {rsx_R = 0x1, rsx_W = 0x2, rsx_E = 0x4};
 
 #define FLAGS_TO_STRING(f) \
-	wxString(f & ##f##_R ? "R" : "-") + \
-	wxString(f & ##f##_W ? "W" : "-") + \
-	wxString(f & ##f##_E ? "E" : "-")
+	wxString(f & f##_R ? "R" : "-") + \
+	wxString(f & f##_W ? "W" : "-") + \
+	wxString(f & f##_E ? "E" : "-")
 
 	const u8 ppu = flags & 0xf;
 	const u8 spu = (flags >> 0x14) & 0xf;
@@ -72,7 +72,7 @@ const wxString Phdr_FlagsToString(u32 flags)
 	flags &= ~spu << 0x14;
 	flags &= ~rsx << 0x18;
 
-	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret, ppu, spu, rsx);
+	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret.mb_str(), ppu, spu, rsx);
 
 	ret += "PPU[" + FLAGS_TO_STRING(ppu) + "] ";
 	ret += "SPU[" + FLAGS_TO_STRING(spu) + "] ";

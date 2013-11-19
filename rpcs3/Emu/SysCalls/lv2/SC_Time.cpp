@@ -1,3 +1,10 @@
+/*
+* This file contains Nt monotonic counter code, taken from wine which is:
+* Copyright 2002 Rex Jolliff (rex@lvcablemodem.com)
+* Copyright 1999 Juergen Schmied
+* Copyright 2007 Dmitry Timoshkov
+* GNU LGPL 2.1 license
+* */
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include <sys/timeb.h>
@@ -31,18 +38,28 @@ int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr)
 s64 sys_time_get_system_time()
 {
 	sys_time.Log("sys_time_get_system_time()");
+#ifdef _WIN32
 	LARGE_INTEGER cycle;
 	QueryPerformanceCounter(&cycle);
 	return cycle.QuadPart;
+#else
+    struct timespec ts;
+    if (!clock_gettime(CLOCK_MONOTONIC, &ts))
+        return ts.tv_sec * (s64)10000000 + (s64)ts.tv_nsec / (s64)100;
+#endif
 }
 
 u64 sys_time_get_timebase_frequency()
 {
 	sys_time.Log("sys_time_get_timebase_frequency()");
 
+#ifdef _WIN32
 	static LARGE_INTEGER frequency = {0ULL};
 
 	if(!frequency.QuadPart) QueryPerformanceFrequency(&frequency);
 
 	return frequency.QuadPart;
+#else
+    return 10000000;
+#endif
 }

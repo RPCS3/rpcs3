@@ -200,7 +200,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		}
 	}
 	
-	ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath());
+	ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().mb_str());
 	return;
 }
 
@@ -336,7 +336,8 @@ void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 {
 	Emu.GetCallbackManager().m_exit_callback.Handle(m_sys_menu_opened ? 0x0132 : 0x0131, 0);
 	m_sys_menu_opened = !m_sys_menu_opened;
-	UpdateUI(wxCommandEvent());
+    wxCommandEvent ce;
+	UpdateUI(ce);
 }
 
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))

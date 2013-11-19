@@ -115,7 +115,7 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, w
 	}
 
 	if(m_logfile.IsOpened())
-		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
+		m_logfile.Write((prefix.IsEmpty() ? wxString(wxEmptyString) : "[" + prefix + "]: ") + value + "\n");
 
 	if(!ConLogFrame) return;
 

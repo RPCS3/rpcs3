@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "CPUThreadManager.h"
-#include "Emu\Cell\PPUThread.h"
-#include "Emu\Cell\SPUThread.h"
-#include "Emu\Cell\RawSPUThread.h"
-#include "Emu\ARMv7\ARMv7Thread.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/RawSPUThread.h"
+#include "Emu/ARMv7/ARMv7Thread.h"
 
 CPUThreadManager::CPUThreadManager()
 	: m_raw_spu_num(0)
@@ -36,7 +36,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	default: assert(0);
 	}
 	
-	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", new_thread->GetTypeString()), new_thread));
+	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", new_thread->GetTypeString().mb_str()), new_thread));
 
 	m_threads.Add(new_thread);
 	wxGetApp().SendDbgCommand(DID_CREATE_THREAD, new_thread);

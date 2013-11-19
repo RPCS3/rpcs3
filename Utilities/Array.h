@@ -297,17 +297,17 @@ template<typename T> struct Stack : public Array<T>
 
 	~Stack()
 	{
-		Clear();
+		Array<T>::Clear();
 	}
 
-	void Push(const T data) { AddCpy(data); }
+	void Push(const T data) { Array<T>::AddCpy(data); }
 
 	T Pop()
 	{
-		const u32 pos = GetCount() - 1;
+		const u32 pos = Array<T>::GetCount() - 1;
 
-		const T ret = Get(pos);
-		RemoveAt(pos);
+		const T ret = Array<T>::Get(pos);
+		Array<T>::RemoveAt(pos);
 
 		return ret;
 	}
