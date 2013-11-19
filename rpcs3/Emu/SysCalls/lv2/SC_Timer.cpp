@@ -25,14 +25,14 @@ int sys_timer_destroy(u32 timer_id)
 	return CELL_OK;
 }
 
-int sys_timer_get_information(u32 timer_id, mem_struct_ptr_t<sys_timer_information_t> info)
+int sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info)
 {
 	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info_addr=0x%x)", timer_id, info.GetAddr());
 	
 	timer* timer_data = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
 
-	info = timer_data->timer_information_t;
+	*info = timer_data->timer_information_t;
 	return CELL_OK;
 }
 

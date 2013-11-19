@@ -295,21 +295,10 @@ void GLGSRender::DisableVertexData()
 	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
-		m_vertex_data[i].data.Clear();
 		glDisableVertexAttribArray(i);
 		checkForGlError("glDisableVertexAttribArray");
 	}
 	m_vao.Unbind();
-}
-
-void GLGSRender::LoadVertexData(u32 first, u32 count)
-{
-	for(u32 i=0; i<m_vertex_count; ++i)
-	{
-		if(!m_vertex_data[i].IsEnabled()) continue;
-
-		m_vertex_data[i].Load(first, count);
-	}
 }
 
 void GLGSRender::InitVertexData()
@@ -1020,10 +1009,10 @@ void GLGSRender::ExecCMD()
 
 	if(m_draw_array_count)
 	{
-		glDrawArrays(m_draw_mode - 1, 0, m_draw_array_count);
+		//ConLog.Warning("glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
+		glDrawArrays(m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
 		checkForGlError("glDrawArrays");
 		DisableVertexData();
-		m_draw_array_count = 0;
 	}
 
 	if(Ini.GSDumpColorBuffers.GetValue())

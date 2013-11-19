@@ -126,7 +126,7 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, mem_struct_ptr_t<CellJpgDecOpnInfo> openInfo)
+int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
 {
 	//u32 srcSelect       = Memory.Read32(src_addr);
 	u32 fileName		  = Memory.Read32(src_addr+4);
@@ -170,7 +170,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellJpgDecInfo> info)
+int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo> info)
 {
 	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
 	ID sub_handle_id_data;
@@ -224,12 +224,12 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellJpg
 	current_info.numComponents		= 3;	// Unimplemented
 	current_info.colorSpace			= CELL_JPG_RGB;
 
-	info = current_info;
+	*info = current_info;
 
 	return CELL_OK;
 }
 
-int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_struct_ptr_t<CellJpgDecDataCtrlParam> dataCtrlParam, mem_struct_ptr_t<CellJpgDecDataOutInfo> dataOutInfo)
+int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellJpgDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellJpgDecDataOutInfo> dataOutInfo)
 {
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	ID sub_handle_id_data;
@@ -295,7 +295,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	return CELL_OK;
 }
 
-int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t<CellJpgDecInParam> inParam, mem_struct_ptr_t<CellJpgDecOutParam> outParam)
+int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJpgDecInParam> inParam, mem_ptr_t<CellJpgDecOutParam> outParam)
 {
 	ID sub_handle_id_data;
 	if(!cellJpgDec.CheckId(subHandle, sub_handle_id_data))
@@ -332,7 +332,7 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t
 	current_outParam.downScale		= inParam->downScale;
 	current_outParam.useMemorySpace	= 0;	// Unimplemented
 
-	outParam = current_outParam;
+	*outParam = current_outParam;
 
 	return CELL_OK;
 }

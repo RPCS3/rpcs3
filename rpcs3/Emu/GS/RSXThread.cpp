@@ -135,6 +135,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			}
 
 			SemaphorePostAndWait(m_sem_flip);
+
+			//Emu.Pause();
 		}
 	break;
 
@@ -190,6 +192,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u8 v2 = v >> 16;
 		u8 v3 = v >> 24;
 
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].size = 4;
 		m_vertex_data[index].type = 4;
 		m_vertex_data[index].data.AddCpy(v0);
@@ -208,6 +211,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
 		
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = 2;
 		m_vertex_data[index].size = 2;
 		m_vertex_data[index].data.SetCount(sizeof(float) * 2);
@@ -230,6 +234,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		float v2 = (float&)a2;
 		float v3 = (float&)a3;
 
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = 2;
 		m_vertex_data[index].size = 4;
 		m_vertex_data[index].data.SetCount(sizeof(float) * 4);
@@ -440,6 +445,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_front_polygon_mode = args[0];
 	break;
 
+	case NV4097_CLEAR_ZCULL_SURFACE:
+	{
+		u32 a0 = args[0];
+
+		if(a0 & 0x01) m_clear_surface_z = m_clear_z;
+		if(a0 & 0x02) m_clear_surface_s = m_clear_s;
+
+		m_clear_surface_mask |= a0 & 0x3;
+	}
+	break;
+
 	case NV4097_CLEAR_SURFACE:
 	{
 		u32 a0 = args[0];
@@ -513,8 +529,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			const u32 first = ac & 0xffffff;
 			const u32 _count = (ac >> 24) + 1;
 
+			//ConLog.Warning("NV4097_DRAW_ARRAYS: %d - %d", first, _count);
+
 			LoadVertexData(first, _count);
 
+			if(first < m_draw_array_first) m_draw_array_first = first;
 			m_draw_array_count += _count;
 		}
 	}
@@ -574,6 +593,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_BEGIN_END:
 	{
 		u32 a0 = args[0];
+
+		//ConLog.Warning("NV4097_SET_BEGIN_END: %x", a0);
 
 		if(a0)
 		{
@@ -1296,6 +1317,8 @@ void RSXThread::Begin(u32 draw_mode)
 {
 	m_begin_end = 1;
 	m_draw_mode = draw_mode;
+	m_draw_array_count = 0;
+	m_draw_array_first = ~0;
 
 	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount())
 	{
@@ -1312,11 +1335,6 @@ void RSXThread::End()
 		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
 	}
 
-	for(uint i=0; i<m_vertex_count; ++i)
-	{
-		m_vertex_data[i].Reset();
-	}
-
 	for(uint i=0; i<m_textures_count; ++i)
 	{
 		m_textures[i].m_enabled = false;
@@ -1327,7 +1345,10 @@ void RSXThread::End()
 	m_transform_constants.Clear();
 	m_cur_shader_prog_num = 0;
 
-	Reset();
+	m_clear_surface_mask = 0;
+	m_begin_end = 0;
+
+	//Reset();
 	OnReset();
 }
 

@@ -77,6 +77,8 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d2 = 0;
 
 	const Array<Button>& buttons = pads[port_no].m_buttons;
+	pads[port_no].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+
 	s32 len = 0;
 	for(uint i=0; i<buttons.GetCount(); ++i)
 	{

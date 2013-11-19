@@ -2,10 +2,19 @@
 
 #define RESULT(x) SC_ARGS_1 = (x)
 
-template<bool is_fp, typename T> struct get_arg { static __forceinline T func(PPUThread& CPU, int i) { return (T&)CPU.GPR[i + 2]; } };
-template<typename T> struct get_arg<true, T> { static __forceinline T func(PPUThread& CPU, int i) { return CPU.FPR[i]; } };
+template<bool is_fp, bool is_ptr, typename T>
+struct get_arg;
 
-#define ARG(n) get_arg<std::is_floating_point<T##n>::value, T##n>::func(CPU, n)
+template<typename T>
+struct get_arg<false, false, T>	{ static __forceinline T func(PPUThread& CPU, int i) { return (T&)CPU.GPR[i + 2]; } };
+
+template<bool is_fp, typename T>
+struct get_arg<is_fp, true, T>	{ static __forceinline T func(PPUThread& CPU, int i) { return CPU.GPR[i + 2] ? (T)&Memory[CPU.GPR[i + 2]] : nullptr; } };
+
+template<typename T>
+struct get_arg<true, false, T>	{ static __forceinline T func(PPUThread& CPU, int i) { return CPU.FPR[i]; } };
+
+#define ARG(n) get_arg<std::is_floating_point<T##n>::value, std::is_pointer<T##n>::value, T##n>::func(CPU, n)
 
 template<typename TR>
 class binder_func_0 : public func_caller

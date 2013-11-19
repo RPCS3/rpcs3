@@ -1,10 +1,48 @@
 #pragma once
-#pragma warning(disable: 4739)
 
-template<typename T>
+template<typename T, int size = sizeof(T)> struct se_t;
+template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };
+template<typename T> struct se_t<T, 2> { static __forceinline void func(T& dst, const T src) { (u16&)dst = _byteswap_ushort((u16&)src); } };
+template<typename T> struct se_t<T, 4> { static __forceinline void func(T& dst, const T src) { (u32&)dst = _byteswap_ulong((u32&)src); } };
+template<typename T> struct se_t<T, 8> { static __forceinline void func(T& dst, const T src) { (u64&)dst = _byteswap_uint64((u64&)src); } };
+
+template<typename T, __int64 _value, int size = sizeof(T)> struct const_se_t;;
+template<typename T, __int64 _value> struct const_se_t<T, _value, 1>
+{
+	static const T value = (T)_value;
+};
+
+template<typename T, __int64 _value> struct const_se_t<T, _value, 2>
+{
+	static const T value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
+};
+
+template<typename T, __int64 _value> struct const_se_t<T, _value, 4>
+{
+	static const T value = 
+		((_value >> 24) & 0x000000ff) |
+		((_value >>  8) & 0x0000ff00) |
+		((_value <<  8) & 0x00ff0000) |
+		((_value << 24) & 0xff000000);
+};
+
+template<typename T, __int64 _value> struct const_se_t<T, _value, 8>
+{
+	static const T value = 
+		((_value >> 56) & 0x00000000000000ff) |
+		((_value >> 40) & 0x000000000000ff00) |
+		((_value >> 24) & 0x0000000000ff0000) |
+		((_value >>  8) & 0x00000000ff000000) |
+		((_value <<  8) & 0x000000ff00000000) |
+		((_value << 24) & 0x0000ff0000000000) |
+		((_value << 40) & 0x00ff000000000000) |
+		((_value << 56) & 0xff00000000000000);
+};
+
+template<typename T, int size=sizeof(T)>
 class be_t
 {
-	static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Bad be_t type");
+	static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Bad be_t type");
 	T m_data;
 
 public:
@@ -32,28 +70,7 @@ public:
 	{
 		T res;
 
-		switch(sizeof(T))
-		{
-		case 1:
-			(u8&)res = (u8&)m_data;
-		break;
-
-		case 2:
-			(u16&)res = _byteswap_ushort((u16&)m_data);
-		break;
-
-		case 4:
-			(u32&)res = _byteswap_ulong((u32&)m_data);
-		break;
-
-		case 8:
-			(u64&)res = _byteswap_uint64((u64&)m_data);
-		break;
-
-		default:
-			assert(0);
-		break;
-		}
+		se_t<T>::func(res, m_data);
 
 		return res;
 	}
@@ -65,27 +82,7 @@ public:
 
 	void FromLE(const T& value)
 	{
-		switch(sizeof(T))
-		{
-		case 1:
-			(u8&)m_data = (u8&)value;
-		return;
-
-		case 2:
-			(u16&)m_data = _byteswap_ushort((u16&)value);
-		return;
-
-		case 4:
-			(u32&)m_data = _byteswap_ulong((u32&)value);
-		return;
-
-		case 8:
-			(u64&)m_data = _byteswap_uint64((u64&)value);
-		return;
-		}
-
-		assert(0);
-		m_data = value;
+		se_t<T>::func(m_data, value);
 	}
 
 	//template<typename T1>

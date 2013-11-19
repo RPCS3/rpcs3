@@ -160,7 +160,7 @@ int cellPngDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellPngDecInfo> info)
+int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo> info)
 {
 	cellPngDec.Log("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
 	ID sub_handle_id_data;
@@ -206,12 +206,12 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellPng
 	current_info.interlaceMethod	= buffer.To<u8>()[28];
 	current_info.chunkInformation	= 0; // Unimplemented
 
-	info = current_info;
+	*info = current_info;
 
 	return CELL_OK;
 }
 
-int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_struct_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam, mem_struct_ptr_t<CellPngDecDataOutInfo> dataOutInfo)
+int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellPngDecDataOutInfo> dataOutInfo)
 {
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
 	ID sub_handle_id_data;
@@ -271,7 +271,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	return CELL_OK;
 }
 
-int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t<CellPngDecInParam> inParam, mem_struct_ptr_t<CellPngDecOutParam> outParam)
+int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPngDecInParam> inParam, mem_ptr_t<CellPngDecOutParam> outParam)
 {
 	ID sub_handle_id_data;
 	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
@@ -305,7 +305,7 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t
 	current_outParam.outputMode			= inParam->outputMode;
 	current_outParam.useMemorySpace		= 0;	// Unimplemented
 
-	outParam = current_outParam;
+	*outParam = current_outParam;
 
 	return CELL_OK;
 }

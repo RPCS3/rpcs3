@@ -132,7 +132,7 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_struct_ptr_t<CellGifDecSrc> src, mem_struct_ptr_t<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
 	/*
 	vfsStream* stream;
@@ -182,7 +182,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_struct_ptr_t<Cel
 	return CELL_OK;
 }
 
-int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellGifDecInfo> info)
+int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
 {
 	ID sub_handle_id_data;
 	if(!cellGifDec.CheckId(subHandle, sub_handle_id_data))
@@ -217,12 +217,12 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_struct_ptr_t<CellGif
 	current_info.SBackGroundColor			= buffer[11];
 	current_info.SPixelAspectRatio			= buffer[12];
 
-	info = current_info;
+	*info = current_info;
 	
 	return CELL_OK;
 }
 
-int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t<CellGifDecInParam> inParam, mem_struct_ptr_t<CellGifDecOutParam> outParam)
+int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
 {
 	ID sub_handle_id_data;
 	if(!cellGifDec.CheckId(subHandle, sub_handle_id_data))
@@ -246,12 +246,12 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_struct_ptr_t
 	current_outParam.outputBitDepth	= 0;	// Unimplemented
 	current_outParam.useMemorySpace	= 0;	// Unimplemented
 
-	outParam = current_outParam;
+	*outParam = current_outParam;
 
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_struct_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_struct_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 

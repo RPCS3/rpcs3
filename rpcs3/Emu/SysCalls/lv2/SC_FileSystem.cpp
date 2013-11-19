@@ -174,7 +174,7 @@ int cellFsClosedir(u32 fd)
 	return CELL_OK;
 }
 
-int cellFsStat(const u32 path_addr, mem_struct_ptr_t<CellFsStat> sb)
+int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb.GetAddr());
@@ -216,7 +216,7 @@ int cellFsStat(const u32 path_addr, mem_struct_ptr_t<CellFsStat> sb)
 	return CELL_OK;
 }
 
-int cellFsFstat(u32 fd, mem_struct_ptr_t<CellFsStat> sb)
+int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 {
 	sys_fs.Log("cellFsFstat(fd: %d, sb_addr: 0x%x)", fd, sb.GetAddr());
 	ID id;

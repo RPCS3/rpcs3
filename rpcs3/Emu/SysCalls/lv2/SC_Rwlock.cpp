@@ -4,7 +4,7 @@
 
 SysCallBase sys_rwlock("sys_rwlock");
 
-int sys_rwlock_create(mem32_t rw_lock_id, mem_struct_ptr_t<sys_rwlock_attribute_t> attr)
+int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr)
 {
 	sys_rwlock.Warning("Unimplemented function: sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.GetAddr(), attr.GetAddr());
 	return CELL_OK;

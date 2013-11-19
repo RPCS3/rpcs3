@@ -4,6 +4,7 @@ enum PortStatus
 {
 	CELL_PAD_STATUS_DISCONNECTED	= 0x00000000,
 	CELL_PAD_STATUS_CONNECTED		= 0x00000001,
+	CELL_PAD_STATUS_ASSIGN_CHANGES	= 0x00000002,
 };
 
 enum PortSettings
@@ -193,6 +194,9 @@ public:
 			{
 				Button& button = GetButtons(p).Get(b);
 				if(button.m_keyCode != code) continue;
+
+				GetPads()[p].m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+
 				if(button.m_pressed && !pressed)
 				{
 					button.m_flush = true;

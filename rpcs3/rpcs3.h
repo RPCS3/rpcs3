@@ -11,9 +11,8 @@ template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
 #define re32(val) MemoryBase::Reverse32(val)
 #define re16(val) MemoryBase::Reverse16(val)
 
-template<typename T> T re(const T val) { return MemoryBase::Reverse(val); }
-template<typename T1, typename T2> void re(T1& dst, const T2 val) { dst = MemoryBase::Reverse<T1>(val); }
-
+template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
+template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
 
 extern const wxEventType wxEVT_DBG_COMMAND;
 

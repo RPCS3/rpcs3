@@ -76,9 +76,9 @@ CCellRescInternal* s_rescInternalInstance = new CCellRescInternal();
 // Extern Functions
 extern int cellGcmSetFlipMode(u32 mode);
 extern int cellGcmSetFlipHandler(u32 handler_addr);
-extern int cellGcmAddressToOffset(u32 address, u32 offset_addr);
+extern int cellGcmAddressToOffset(u32 address, mem32_t offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern int cellGcmSetPrepareFlip(u32 ctx, u32 id);
+extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
 int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved);
 
 // Help Functions
@@ -112,9 +112,7 @@ void BuildupVertexBufferNR()
 	float U_PS0 = UV_CENTER - U_PS;
 	float U_PS1 = UV_CENTER + U_PS;
 
-	mem_struct_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
-
-	int i = 0;
+	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
 		switch(s_rescInternalInstance->m_initConfig.ratioMode){
@@ -127,26 +125,26 @@ void BuildupVertexBufferNR()
 	}
 
 NR_FULLSCREEN:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS0; vv[i].v = V_FS0; vv[i].u2 = 0.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS1; vv[i].v = V_FS0; vv[i].u2 = 1.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS1; vv[i].v = V_FS1; vv[i].u2 = 1.0f; vv[i].v2 = 1.0f; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS0; vv[i].v = V_FS1; vv[i].u2 = 0.0f; vv[i].v2 = 1.0f; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_FS0; vv->v = V_FS0; vv->u2 = 0.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_FS1; vv->v = V_FS0; vv->u2 = 1.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_FS1; vv->v = V_FS1; vv->u2 = 1.0f; vv->v2 = 1.0f; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_FS0; vv->v = V_FS1; vv->u2 = 0.0f; vv->v2 = 1.0f; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 
 NR_LETTERBOX:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS0; vv[i].v = V_LB0; vv[i].u2 = 0.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS1; vv[i].v = V_LB0; vv[i].u2 = 1.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS1; vv[i].v = V_LB1; vv[i].u2 = 1.0f; vv[i].v2 = 1.0f; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS0; vv[i].v = V_LB1; vv[i].u2 = 0.0f; vv[i].v2 = 1.0f; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_FS0; vv->v = V_LB0; vv->u2 = 0.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_FS1; vv->v = V_LB0; vv->u2 = 1.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_FS1; vv->v = V_LB1; vv->u2 = 1.0f; vv->v2 = 1.0f; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_FS0; vv->v = V_LB1; vv->u2 = 0.0f; vv->v2 = 1.0f; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 
 NR_PANSCAN:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_PS0; vv[i].v = V_FS0; vv[i].u2 = 0.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_PS1; vv[i].v = V_FS0; vv[i].u2 = 1.0f; vv[i].v2 = 0.0f; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_PS1; vv[i].v = V_FS1; vv[i].u2 = 1.0f; vv[i].v2 = 1.0f; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_PS0; vv[i].v = V_FS1; vv[i].u2 = 0.0f; vv[i].v2 = 1.0f; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_PS0; vv->v = V_FS0; vv->u2 = 0.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_PS1; vv->v = V_FS0; vv->u2 = 1.0f; vv->v2 = 0.0f; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_PS1; vv->v = V_FS1; vv->u2 = 1.0f; vv->v2 = 1.0f; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_PS0; vv->v = V_FS1; vv->u2 = 0.0f; vv->v2 = 1.0f; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 }
@@ -190,9 +188,7 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	float U2_FS1 = s_rescInternalInstance->m_dstWidth;
 	float V2_FS1 = s_rescInternalInstance->m_dstHeight;
 
-	mem_struct_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
-
-	int i = 0;
+	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
 		switch(s_rescInternalInstance->m_initConfig.ratioMode){
@@ -205,31 +201,31 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	}
 
 UN_FULLSCREEN:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS0; vv[i].v = V_FS0; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS1; vv[i].v = V_FS0; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS1; vv[i].v = V_FS1; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS1; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS0; vv[i].v = V_FS1; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS1; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_FS0; vv->v = V_FS0; vv->u2 = U2_FS0; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_FS1; vv->v = V_FS0; vv->u2 = U2_FS1; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_FS1; vv->v = V_FS1; vv->u2 = U2_FS1; vv->v2 = V2_FS1; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_FS0; vv->v = V_FS1; vv->u2 = U2_FS0; vv->v2 = V2_FS1; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 
 UN_LETTERBOX:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS0; vv[i].v = V_LB0; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_FS1; vv[i].v = V_LB0; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS1; vv[i].v = V_LB1; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS1; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_FS0; vv[i].v = V_LB1; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS1; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_FS0; vv->v = V_LB0; vv->u2 = U2_FS0; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_FS1; vv->v = V_LB0; vv->u2 = U2_FS1; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_FS1; vv->v = V_LB1; vv->u2 = U2_FS1; vv->v2 = V2_FS1; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_FS0; vv->v = V_LB1; vv->u2 = U2_FS0; vv->v2 = V2_FS1; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 
 UN_PANSCAN:
-	vv[i].Px = -PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_PS0; vv[i].v = V_FS0; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py =  PY_FS; vv[i].u = U_PS1; vv[i].v = V_FS0; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS0; i++;
-	vv[i].Px =  PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_PS1; vv[i].v = V_FS1; vv[i].u2 = U2_FS1; vv[i].v2 = V2_FS1; i++;
-	vv[i].Px = -PX_FS; vv[i].Py = -PY_FS; vv[i].u = U_PS0; vv[i].v = V_FS1; vv[i].u2 = U2_FS0; vv[i].v2 = V2_FS1; i++;
+	vv->Px = -PX_FS; vv->Py =  PY_FS; vv->u = U_PS0; vv->v = V_FS0; vv->u2 = U2_FS0; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py =  PY_FS; vv->u = U_PS1; vv->v = V_FS0; vv->u2 = U2_FS1; vv->v2 = V2_FS0; ++vv;
+	vv->Px =  PX_FS; vv->Py = -PY_FS; vv->u = U_PS1; vv->v = V_FS1; vv->u2 = U2_FS1; vv->v2 = V2_FS1; ++vv;
+	vv->Px = -PX_FS; vv->Py = -PY_FS; vv->u = U_PS0; vv->v = V_FS1; vv->u2 = U2_FS0; vv->v2 = V2_FS1; ++vv;
 	s_rescInternalInstance->m_nVertex = VERTEX_NUMBER_NORMAL;
 	return;
 }
 
-inline int InternalVersion(mem_struct_ptr_t<CellRescInitConfig> conf)
+inline int InternalVersion(mem_ptr_t<CellRescInitConfig> conf)
 {
 	switch (conf->size)
 	{
@@ -335,7 +331,7 @@ int CalculateMaxColorBuffersSize()
 	return maxBufSize;
 }
 
-bool CheckInitConfig(mem_struct_ptr_t<CellRescInitConfig> initConfig)
+bool CheckInitConfig(mem_ptr_t<CellRescInitConfig> initConfig)
 {
 	if( (initConfig->resourcePolicy & ~((u32)0x3)) ||
 		(initConfig->supportModes & 0xF) == 0 ||
@@ -360,7 +356,7 @@ void InitMembers()
 {
 }
 
-void InitContext(mem_struct_ptr_t<CellGcmContextData>& cntxt)
+void InitContext(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
@@ -406,7 +402,7 @@ void InitContext(mem_struct_ptr_t<CellGcmContextData>& cntxt)
 	}
 }
 
-void InitVertex(mem_struct_ptr_t<CellGcmContextData>& cntxt)
+void InitVertex(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
@@ -415,7 +411,7 @@ void InitVertex(mem_struct_ptr_t<CellGcmContextData>& cntxt)
 }
 
 // Module Functions
-int cellRescInit(mem_struct_ptr_t<CellRescInitConfig> initConfig)
+int cellRescInit(mem_ptr_t<CellRescInitConfig> initConfig)
 {
 	cellResc.Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.GetAddr());
 
@@ -425,7 +421,7 @@ int cellRescInit(mem_struct_ptr_t<CellRescInitConfig> initConfig)
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 
 	InitMembers();
-	s_rescInternalInstance->m_initConfig = initConfig; // TODO: This may be incompatible with older binaries
+	s_rescInternalInstance->m_initConfig = *initConfig; // TODO: This may be incompatible with older binaries
 	s_rescInternalInstance->m_bInitialized = true;
 
 	return CELL_OK;
@@ -461,7 +457,7 @@ int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, mem32_t buffer
 	return CELL_OK;
 }
 
-int cellRescSetDsts(u32 dstsMode, mem_struct_ptr_t<CellRescDsts> dsts)
+int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
 {
 	cellResc.Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.GetAddr());
 
@@ -474,7 +470,7 @@ int cellRescSetDsts(u32 dstsMode, mem_struct_ptr_t<CellRescDsts> dsts)
 	   (dstsMode != CELL_RESC_1280x720) && (dstsMode != CELL_RESC_1920x1080))
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 
-	s_rescInternalInstance->m_rescDsts[GetRescDestsIndex(dstsMode)] = dsts;
+	s_rescInternalInstance->m_rescDsts[GetRescDestsIndex(dstsMode)] = *dsts;
 
 	return CELL_OK;
 }
@@ -636,7 +632,7 @@ int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 		: 2;
 }
 
-int cellRescGcmSurface2RescSrc(mem_struct_ptr_t<CellGcmSurface> gcmSurface, mem_struct_ptr_t<CellRescSrc> rescSrc)
+int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<CellRescSrc> rescSrc)
 {
 	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)",
 		gcmSurface.GetAddr(), rescSrc.GetAddr());
@@ -664,7 +660,7 @@ int cellRescGcmSurface2RescSrc(mem_struct_ptr_t<CellGcmSurface> gcmSurface, mem_
 	return CELL_OK;
 }
 
-int cellRescSetSrc(s32 idx, mem_struct_ptr_t<CellRescSrc> src)
+int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 {
 	cellResc.Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
 
@@ -683,14 +679,14 @@ int cellRescSetSrc(s32 idx, mem_struct_ptr_t<CellRescSrc> src)
 	//Emu.GetGSManager().GetRender().SetData(src.offset, 800, 600);
 	//Emu.GetGSManager().GetRender().Draw();
 
-	s_rescInternalInstance->m_rescSrc[idx] = src;
+	s_rescInternalInstance->m_rescSrc[idx] = *src;
 
 	cellGcmSetDisplayBuffer(idx, src->offset, src->pitch, src->width, src->height);
 
 	return 0;
 }
 
-int cellRescSetConvertAndFlip(mem_struct_ptr_t<CellGcmContextData> cntxt, s32 idx)
+int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 {
 	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
 
@@ -707,7 +703,7 @@ int cellRescSetConvertAndFlip(mem_struct_ptr_t<CellGcmContextData> cntxt, s32 id
 
 	//TODO: ?
 
-	cellGcmSetPrepareFlip(cntxt.GetAddr(), idx);
+	cellGcmSetPrepareFlip(cntxt, idx);
 
 	return CELL_OK;
 }
@@ -738,12 +734,12 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	s_rescInternalInstance->m_vertexArrayEA_addr   = vertexArray.GetAddr();
 	s_rescInternalInstance->m_fragmentUcodeEA_addr = fragmentShader.GetAddr();
 
-	MemoryAllocator<u32> dstOffset;
-	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset.GetAddr());
+	MemoryAllocator<be_t<u32>> dstOffset;
+	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset);
 
 	for(int i=0; i<GetNumColorBuffers(); i++)
 	{
-		s_rescInternalInstance->m_dstOffsets[i] = dstOffset + i * s_rescInternalInstance->m_dstBufInterval;
+		s_rescInternalInstance->m_dstOffsets[i] = dstOffset->ToLE() + i * s_rescInternalInstance->m_dstBufInterval;
 	}
 
 	for(int i=0; i<GetNumColorBuffers(); i++)

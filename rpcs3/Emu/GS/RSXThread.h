@@ -269,6 +269,7 @@ public:
 
 	u32 m_width, m_height;
 	u32 m_draw_array_count;
+	u32 m_draw_array_first;
 
 public:
 	wxCriticalSection m_cs_main;
@@ -512,6 +513,7 @@ protected:
 		, m_local_mem_addr(0)
 		, m_draw_mode(0)
 		, m_draw_array_count(0)
+		, m_draw_array_first(~0)
 	{
 		m_set_alpha_test = false;
 		m_set_blend = false;

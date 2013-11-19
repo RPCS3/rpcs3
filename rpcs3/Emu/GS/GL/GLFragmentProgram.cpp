@@ -106,8 +106,9 @@ wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 	*/
 
 	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
+
 	return m_parr.AddParam(fp16 ? PARAM_NONE : PARAM_OUT, "vec4",
-		wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : index);
+			wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : (!index ? 0 : ((index >= 2 && index <= 4) ? (index - 1) : -1)));
 }
 
 bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
@@ -226,6 +227,7 @@ void GLFragmentDecompilerThread::Task()
 {
 	mem32_ptr_t data(m_addr);
 	m_size = 0;
+	m_location = 0;
 
 	while(true)
 	{
@@ -320,6 +322,7 @@ void GLFragmentDecompilerThread::Task()
 
 	m_shader = BuildCode();
 	main.Clear();
+	m_parr.params.Clear();
 }
 
 GLShaderProgram::GLShaderProgram() 

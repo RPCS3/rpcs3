@@ -401,23 +401,31 @@ public:
 
 extern MemoryBase Memory;
 
-template<typename T> class mem_struct_ptr_t
+template<typename T>
+class mem_base_t
 {
-	const u32 m_addr;
+protected:
+	u32 m_addr;
 
 public:
-	mem_struct_ptr_t(u32 addr) : m_addr(addr)
+	mem_base_t(u32 addr) : m_addr(addr)
 	{
 	}
 
-	operator T&()
-	{
-		return (T&)Memory[m_addr];
-	}
+	u32 GetAddr() const { return m_addr; }
 
-	operator const T&() const
+	bool IsGood() const
 	{
-		return (const T&)Memory[m_addr];
+		return Memory.IsGoodAddr(m_addr, sizeof(T));
+	}
+};
+
+template<typename T>
+class mem_ptr_t : public mem_base_t<T>
+{
+public:
+	mem_ptr_t(u32 addr) : mem_base_t<T>(addr)
+	{
 	}
 
 	T* operator -> ()
@@ -430,6 +438,64 @@ public:
 		return (const T*)&Memory[m_addr];
 	}
 
+	mem_ptr_t operator++ (int)
+	{
+		mem_struct_ptr_t res(m_addr);
+		m_addr += sizeof(T);
+		return ret;
+	}
+
+	mem_ptr_t& operator++ ()
+	{
+		m_addr += sizeof(T);
+		return *this;
+	}
+
+	mem_ptr_t operator-- (int)
+	{
+		mem_struct_ptr_t res(m_addr);
+		m_addr -= sizeof(T);
+		return ret;
+	}
+
+	mem_ptr_t& operator-- ()
+	{
+		m_addr -= sizeof(T);
+		return *this;
+	}
+
+	mem_ptr_t& operator += (uint count)
+	{
+		m_addr += count * sizeof(T);
+		return *this;
+	}
+
+	mem_ptr_t& operator -= (uint count)
+	{
+		m_addr -= count * sizeof(T);
+		return *this;
+	}
+
+	mem_ptr_t operator + (uint count) const
+	{
+		return m_addr + count * sizeof(T);
+	}
+
+	mem_ptr_t operator - (uint count) const
+	{
+		return m_addr - count * sizeof(T);
+	}
+
+	T& operator *()
+	{
+		return (T&)Memory[m_addr];
+	}
+
+	const T& operator *() const
+	{
+		return (T&)Memory[m_addr];
+	}
+
 	T& operator [](uint index)
 	{
 		return (T&)Memory[m_addr + sizeof(T) * index];
@@ -440,26 +506,34 @@ public:
 		return (const T&)Memory[m_addr + sizeof(T) * index];
 	}
 
-	u32 GetAddr() const { return m_addr; }
+	operator bool() const { return m_addr == 0; }
 
-	bool IsGood() const
-	{
-		return Memory.IsGoodAddr(m_addr, sizeof(T));
-	}
+	bool operator == (mem_ptr_t right) const { return m_addr == right.m_addr; }
+	bool operator != (mem_ptr_t right) const { return m_addr != right.m_addr; }
+	bool operator > (mem_ptr_t right) const { return m_addr > right.m_addr; }
+	bool operator < (mem_ptr_t right) const { return m_addr < right.m_addr; }
+	bool operator >= (mem_ptr_t right) const { return m_addr >= right.m_addr; }
+	bool operator <= (mem_ptr_t right) const { return m_addr <= right.m_addr; }
 
-	mem_struct_ptr_t& operator = (const T& right)
-	{
-		memcpy(&Memory[m_addr], &right, sizeof(T));
-		return *this;
-	}
+	bool operator == (T* right) const { return (T*)&Memory[m_addr] == right; }
+	bool operator != (T* right) const { return (T*)&Memory[m_addr] != right; }
+	bool operator > (T* right) const { return (T*)&Memory[m_addr] > right; }
+	bool operator < (T* right) const { return (T*)&Memory[m_addr] < right; }
+	bool operator >= (T* right) const { return (T*)&Memory[m_addr] >= right; }
+	bool operator <= (T* right) const { return (T*)&Memory[m_addr] <= right; }
 };
 
-template<typename T> class mem_t
-{
-	const u32 m_addr;
+template<typename T> static bool operator == (T* left, mem_ptr_t<T> right) { return left == (T*)&Memory[right.GetAddr()]; }
+template<typename T> static bool operator != (T* left, mem_ptr_t<T> right) { return left != (T*)&Memory[right.GetAddr()]; }
+template<typename T> static bool operator > (T* left, mem_ptr_t<T> right) { return left > (T*)&Memory[right.GetAddr()]; }
+template<typename T> static bool operator < (T* left, mem_ptr_t<T> right) { return left < (T*)&Memory[right.GetAddr()]; }
+template<typename T> static bool operator >= (T* left, mem_ptr_t<T> right) { return left >= (T*)&Memory[right.GetAddr()]; }
+template<typename T> static bool operator <= (T* left, mem_ptr_t<T> right) { return left <= (T*)&Memory[right.GetAddr()]; }
 
+template<typename T> class mem_t : public mem_base_t<T>
+{
 public:
-	mem_t(u32 addr) : m_addr(addr)
+	mem_t(u32 addr) : mem_base_t<T>(addr)
 	{
 	}
 
@@ -485,21 +559,12 @@ public:
 	mem_t& operator ^= (T right) { return *this = (*this) ^ right; }
 	mem_t& operator <<= (T right) { return *this = (*this) << right; }
 	mem_t& operator >>= (T right) { return *this = (*this) >> right; }
-
-	u32 GetAddr() const { return m_addr; }
-
-	bool IsGood() const
-	{
-		return Memory.IsGoodAddr(m_addr, sizeof(T));
-	}
 };
 
-template<typename T> class mem_ptr_t
+template<typename T> class mem_list_ptr_t : public mem_base_t<T>
 {
-	u32 m_addr;
-
 public:
-	mem_ptr_t(u32 addr) : m_addr(addr)
+	mem_list_ptr_t(u32 addr) : mem_base_t<T>(addr)
 	{
 	}
 
@@ -515,7 +580,6 @@ public:
 		return m_addr;
 	}
 
-	u32 GetAddr() const { return m_addr; }
 	u32 Skip(const u32 offset) { return m_addr += offset; }
 
 	operator be_t<T>*()			{ return GetPtr(); }
@@ -661,7 +725,7 @@ public:
 		return GetAddr();
 	}
 
-	operator const mem_struct_ptr_t<T>() const
+	operator const mem_ptr_t<T>() const
 	{
 		return GetAddr();
 	}
@@ -678,7 +742,19 @@ typedef mem_t<u16> mem16_t;
 typedef mem_t<u32> mem32_t;
 typedef mem_t<u64> mem64_t;
 
-typedef mem_ptr_t<u8> mem8_ptr_t;
-typedef mem_ptr_t<u16> mem16_ptr_t;
-typedef mem_ptr_t<u32> mem32_ptr_t;
-typedef mem_ptr_t<u64> mem64_ptr_t;
+/*
+typedef mem_ptr_t<be_t<u8>> mem8_ptr_t;
+typedef mem_ptr_t<be_t<u16>> mem16_ptr_t;
+typedef mem_ptr_t<be_t<u32>> mem32_ptr_t;
+typedef mem_ptr_t<be_t<u64>> mem64_ptr_t;
+
+typedef mem_list_ptr_t<u8> mem8_lptr_t;
+typedef mem_list_ptr_t<u16> mem16_lptr_t;
+typedef mem_list_ptr_t<u32> mem32_lptr_t;
+typedef mem_list_ptr_t<u64> mem64_lptr_t;
+*/
+
+typedef mem_list_ptr_t<u8> mem8_ptr_t;
+typedef mem_list_ptr_t<u16> mem16_ptr_t;
+typedef mem_list_ptr_t<u32> mem32_ptr_t;
+typedef mem_list_ptr_t<u64> mem64_ptr_t;

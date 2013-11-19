@@ -3,6 +3,7 @@
 #include "lv2/SC_FileSystem.h"
 #include "lv2/SC_Timer.h"
 #include "lv2/SC_Rwlock.h"
+#include "lv2/SC_SPU_Thread.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -189,8 +190,8 @@ extern int cellFsClose(u32 fd);
 extern int cellFsOpendir(u32 path_addr, mem32_t fd);
 extern int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread);
 extern int cellFsClosedir(u32 fd);
-extern int cellFsStat(u32 path_addr, mem_struct_ptr_t<CellFsStat> sb);
-extern int cellFsFstat(u32 fd, mem_struct_ptr_t<CellFsStat> sb);
+extern int cellFsStat(u32 path_addr, mem_ptr_t<CellFsStat> sb);
+extern int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb);
 extern int cellFsMkdir(u32 path_addr, u32 mode);
 extern int cellFsRename(u32 from_addr, u32 to_addr);
 extern int cellFsRmdir(u32 path_addr);
@@ -257,16 +258,17 @@ extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
 
 //sys_spu
-extern int sys_spu_image_open(u32 img_addr, u32 path_addr);
-extern int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_addr, u32 attr_addr, u32 arg_addr);
-extern int sys_spu_thread_set_argument(u32 id, u32 arg_addr);
+extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
+extern int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<sys_spu_image> img, mem_ptr_t<sys_spu_thread_attribute> attr, mem_ptr_t<sys_spu_thread_argument> arg);
+extern int sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg);
 extern int sys_spu_thread_group_start(u32 id);
-extern int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr);
-extern int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg, int prio, u32 stacksize, u64 flags, u64 threadname_addr);
-extern int sys_raw_spu_create(u32 id_addr, u32 attr_addr);
+extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
+extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
+extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
+extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
-extern int sys_spu_thread_read_ls(u32 id, u32 address, u32 value_addr, u32 type);
+extern int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type);
 extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 
 //sys_time
@@ -278,7 +280,7 @@ extern u64 sys_time_get_timebase_frequency();
 //sys_timer
 extern int sys_timer_create(mem32_t timer_id);
 extern int sys_timer_destroy(u32 timer_id);
-extern int sys_timer_get_information(u32 timer_id, mem_struct_ptr_t<sys_timer_information_t> info);
+extern int sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info);
 extern int sys_timer_start(u32 timer_id, s64 basetime, u64 period);
 extern int sys_timer_stop(u32 timer_id);
 extern int sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
@@ -299,7 +301,7 @@ extern int sys_trace_free_buffer();
 extern int sys_trace_create2();
 
 //sys_rwlock
-extern int sys_rwlock_create(mem32_t rw_lock_id, mem_struct_ptr_t<sys_rwlock_attribute_t> attr);
+extern int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
 extern int sys_rwlock_destroy(u32 rw_lock_id);
 extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
 extern int sys_rwlock_tryrlock(u32 rw_lock_id);

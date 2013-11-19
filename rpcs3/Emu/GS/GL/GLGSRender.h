@@ -440,7 +440,6 @@ public:
 private:
 	void EnableVertexData(bool indexed_draw=false);
 	void DisableVertexData();
-	void LoadVertexData(u32 first, u32 count);
 	void InitVertexData();
 	void InitFragmentData();
 

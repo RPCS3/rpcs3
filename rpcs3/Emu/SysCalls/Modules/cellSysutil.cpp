@@ -331,7 +331,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_struct_ptr_t<CellVideoOutDeviceInfo> info)
+int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_ptr_t<CellVideoOutDeviceInfo> info)
 {
 	cellSysutil.Error("Unimplemented function: cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		videoOut, deviceIndex, info.GetAddr());

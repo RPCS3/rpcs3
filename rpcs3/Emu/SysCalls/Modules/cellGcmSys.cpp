@@ -26,17 +26,15 @@ struct gcm_offset
 u32 map_offset_addr = 0;
 u32 map_offset_pos = 0;
 
-int cellGcmMapMainMemory(u32 address, u32 size, u32 offset_addr)
+int cellGcmMapMainMemory(u32 address, u32 size, mem32_t offset)
 {
-	cellGcmSys.Warning("cellGcmMapMainMemory(address=0x%x,size=0x%x,offset_addr=0x%x)", address, size, offset_addr);
-	if(!Memory.IsGoodAddr(offset_addr, sizeof(u32))) return CELL_EFAULT;
+	cellGcmSys.Warning("cellGcmMapMainMemory(address=0x%x,size=0x%x,offset_addr=0x%x)", address, size, offset.GetAddr());
+	if(!offset.IsGood()) return CELL_EFAULT;
 
 	Emu.GetGSManager().GetRender().m_main_mem_addr = Emu.GetGSManager().GetRender().m_ioAddress;
 
-	u32 offset = address - Emu.GetGSManager().GetRender().m_main_mem_addr;
+	offset = address - Emu.GetGSManager().GetRender().m_main_mem_addr;
 	Emu.GetGSManager().GetRender().m_main_mem_info.AddCpy(MemInfo(address, size));
-
-	Memory.Write32(offset_addr, offset);
 
 	return CELL_OK;
 }
@@ -92,20 +90,21 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	return CELL_OK;
 }
 
-int cellGcmGetConfiguration(u32 config_addr)
+int cellGcmGetConfiguration(mem_ptr_t<CellGcmConfig> config)
 {
-	cellGcmSys.Log("cellGcmGetConfiguration(config_addr=0x%x)", config_addr);
+	cellGcmSys.Log("cellGcmGetConfiguration(config_addr=0x%x)", config.GetAddr());
 
-	if(!Memory.IsGoodAddr(config_addr, sizeof(CellGcmConfig))) return CELL_EFAULT;
+	if(!config.IsGood()) return CELL_EFAULT;
 
-	Memory.WriteData(config_addr, current_config);
+	*config = current_config;
+
 	return CELL_OK;
 }
 
-int cellGcmAddressToOffset(u32 address, u32 offset_addr)
+int cellGcmAddressToOffset(u32 address, mem32_t offset)
 {
-	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset_addr);
-	if(!Memory.IsGoodAddr(offset_addr, sizeof(u32))) return CELL_EFAULT;
+	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.GetAddr());
+	if(!offset.IsGood()) return CELL_EFAULT;
 	
 	if(!map_offset_addr)
 	{
@@ -144,12 +143,10 @@ int cellGcmAddressToOffset(u32 address, u32 offset_addr)
 		//ConLog.Warning("cellGcmAddressToOffset: io memory: offset = 0x%x - 0x%x = 0x%x", address, sa, address - sa);
 	}
 
-	u32 offset = address - sa;
+	offset = address - sa;
 	//Memory.Write16(map_offset_addr + map_offset_pos + 0, ea);
 	//Memory.Write16(map_offset_addr + map_offset_pos + 2, offset);
 	//map_offset_pos += 4;
-
-	Memory.Write32(offset_addr, offset);
 
 	return CELL_OK;
 }
@@ -188,9 +185,9 @@ u32 cellGcmGetControlRegister()
 	return gcm_info.control_addr;
 }
 
-int cellGcmSetPrepareFlip(u32 ctx, u32 id)
+int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 {
-	cellGcmSys.Log("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctx, id);
+	cellGcmSys.Log("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctxt.GetAddr(), id);
 
 	if(id >= 8)
 	{
@@ -198,22 +195,22 @@ int cellGcmSetPrepareFlip(u32 ctx, u32 id)
 	}
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
-	CellGcmContextData& ctxt = (CellGcmContextData&)Memory[ctx];
-	u32 current = re(ctxt.current);
-	u32 end = re(ctxt.end);
+
+	u32 current = re(ctxt->current);
+	u32 end = re(ctxt->end);
 
 	if(current + 8 >= end)
 	{
 		ConLog.Warning("bad flip!");
-		cellGcmCallback(ctx, current + 8 - end);
+		cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
 	}
 
-	current = re(ctxt.current);
+	current = re(ctxt->current);
 	Memory.Write32(current, 0x3fead | (1 << 18));
 	Memory.Write32(current + 4, id);
-	re(ctxt.current, current + 8);
+	re(ctxt->current, current + 8);
 
-	if(ctx == gcm_info.context_addr)
+	if(ctxt.GetAddr() == gcm_info.context_addr)
 	{
 		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
 		re(ctrl.put, re(ctrl.put) + 8);
@@ -331,13 +328,13 @@ u64 cellGcmGetTimeStamp(u32 index)
 int cellGcmSetFlipHandler(u32 handler_addr)
 {
 	cellGcmSys.Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
-	if(!Memory.IsGoodAddr(handler_addr) && handler_addr != 0)
+	if(handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 	{
 		return CELL_EFAULT;
 	}
 
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
-	return 0;
+	return CELL_OK;
 }
 
 s64 cellGcmFunc15()
