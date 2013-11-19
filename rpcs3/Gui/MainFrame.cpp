@@ -86,10 +86,6 @@ MainFrame::MainFrame()
 	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
 
-        menu_langague.Append(id_langague, "English");        
-	menu_langague.Append(id_langague, "Français");
-
-
 	menu_help.Append(id_help_about, "About...");
 
 	SetMenuBar(&menubar);
