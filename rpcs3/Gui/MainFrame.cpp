@@ -31,6 +31,7 @@ enum IDs
 	id_config_emu,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
+        id_langague,
 	id_help_about,
 	id_update_dbg,
 };
@@ -59,11 +60,13 @@ MainFrame::MainFrame()
 	wxMenu& menu_boot(*new wxMenu());
 	wxMenu& menu_sys(*new wxMenu());
 	wxMenu& menu_conf(*new wxMenu());
+        wxMenu& menu_langague(*new wxMenu());
 	wxMenu& menu_help(*new wxMenu());
 
 	menubar.Append(&menu_boot, "Boot");
 	menubar.Append(&menu_sys, "System");
 	menubar.Append(&menu_conf, "Config");
+        menubar.Append(&menu_langague, "Language");
 	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
