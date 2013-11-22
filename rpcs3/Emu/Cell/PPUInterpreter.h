@@ -2368,7 +2368,7 @@ private:
 	{
 		const u32 n = CPU.GPR[rb] & 0x3f;
 		const u64 r = rotl64(CPU.GPR[rs], n);
-		const u64 m = (CPU.GPR[rb] & 0x30) ? 0 : rotate_mask[0][63 - n];
+		const u64 m = (CPU.GPR[rb] & 0x40) ? 0 : rotate_mask[0][63 - n];
 
 		CPU.GPR[ra] = r & m;
 
@@ -2890,7 +2890,7 @@ private:
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
 		u64 r = rotl32((u32)CPU.GPR[rs], 64 - n);
-		u64 m = CPU.GPR[rb] & 0x20 ? 0 : rotate_mask[32 + n][63];
+		u64 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32 + n][63];
 		CPU.GPR[ra] = r & m;
 		
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
@@ -2899,7 +2899,7 @@ private:
 	{
 		u32 n = CPU.GPR[rb] & 0x3f;
 		u64 r = rotl64(CPU.GPR[rs], 64 - n);
-		u64 m = CPU.GPR[rb] & 0x40 ? 0 : rotate_mask[n][63];
+		u64 m = (CPU.GPR[rb] & 0x40) ? 0 : rotate_mask[n][63];
 		CPU.GPR[ra] = r & m;
 		
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
