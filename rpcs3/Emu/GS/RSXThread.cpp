@@ -499,6 +499,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		const u32 addr = GetAddress(args[0] & 0x7fffffff, args[0] >> 31);
 		CMD_LOG("num=%d, addr=0x%x", index, addr);
 		m_vertex_data[index].addr = addr;
+		m_vertex_data[index].data.ClearF();
 	}
 	break;
 

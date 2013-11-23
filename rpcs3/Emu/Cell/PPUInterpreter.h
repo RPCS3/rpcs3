@@ -6,6 +6,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3.h"
 #include <stdint.h>
+#include <intrin.h>
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
@@ -2272,6 +2273,11 @@ private:
 	}
 	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
+#ifdef _M_X64
+		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
+#else
+		ConLog.Warning("MULHDU");
+
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 
@@ -2292,12 +2298,15 @@ private:
 		mid += (a0 + a1) * (b0 + b1) - (lo + hi);
 
 		CPU.GPR[rd] = RD._u64[1];
+#endif
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-		CPU.GPR[rd] = (CPU.GPR[ra] * CPU.GPR[rb]) >> 32;
+		u32 a = CPU.GPR[ra];
+		u32 b = CPU.GPR[rb];
+		CPU.GPR[rd] = ((u64)a * (u64)b) >> 32;
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
 	}
 	void MFOCRF(u32 a, u32 rd, u32 crm)
@@ -2344,9 +2353,9 @@ private:
 	}
 	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
-		const u32 n = CPU.GPR[rb] & 0x1f;
-		const u32 r = rotl32((u32)CPU.GPR[rs], n);
-		const u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32][63 - n];
+		u32 n = CPU.GPR[rb] & 0x1f;
+		u32 r = rotl32((u32)CPU.GPR[rs], n);
+		u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32][63 - n];
 
 		CPU.GPR[ra] = r & m;
 
@@ -2357,18 +2366,18 @@ private:
 		u32 i;
 		for(i=0; i < 32; i++)
 		{
-			if(CPU.GPR[rs] & (0x80000000 >> i)) break;
+			if(CPU.GPR[rs] & (1ULL << (31 - i))) break;
 		}
 
 		CPU.GPR[ra] = i;
 
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.SetCRBit(CR_LT, false);
 	}
 	void SLD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
-		const u32 n = CPU.GPR[rb] & 0x3f;
-		const u64 r = rotl64(CPU.GPR[rs], n);
-		const u64 m = (CPU.GPR[rb] & 0x40) ? 0 : rotate_mask[0][63 - n];
+		u32 n = CPU.GPR[rb] & 0x3f;
+		u64 r = rotl64(CPU.GPR[rs], n);
+		u64 m = (CPU.GPR[rb] & 0x40) ? 0 : rotate_mask[0][63 - n];
 
 		CPU.GPR[ra] = r & m;
 
@@ -2435,15 +2444,14 @@ private:
 	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
 	{
-		u32 i = 0;
-			
-		for(u64 mask = 1ULL << 63; i < 64; i++, mask >>= 1)
+		u32 i;
+		for(i=0; i < 64; i++)
 		{
-			if(CPU.GPR[rs] & mask) break;
+			if(CPU.GPR[rs] & (1ULL << (63 - i))) break;
 		}
 
 		CPU.GPR[ra] = i;
-		if(rc) CPU.UpdateCR0<u64>(CPU.GPR[ra]);
+		if(rc) CPU.SetCRBit(CR_LT, false);
 	}
 	void ANDC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2459,6 +2467,10 @@ private:
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
+#ifdef _M_X64
+		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
+#else
+		ConLog.Warning("MULHD");
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
 
@@ -2479,13 +2491,16 @@ private:
 		mid += (a0 + a1) * (b0 + b1) - (lo + hi);
 
 		CPU.GPR[rd] = RT._u64[1];
+#endif
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHW(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-		CPU.GPR[rd] = (s64)(s32)((CPU.GPR[ra] * CPU.GPR[rb]) >> 32);
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		s32 a = CPU.GPR[ra];
+		s32 b = CPU.GPR[rb];
+		CPU.GPR[rd] = ((s64)a * (s64)b) >> 32;
+		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
 	}
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2889,8 +2904,8 @@ private:
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
-		u64 r = rotl32((u32)CPU.GPR[rs], 64 - n);
-		u64 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32 + n][63];
+		u32 r = rotl32((u32)CPU.GPR[rs], 64 - n);
+		u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32 + n][63];
 		CPU.GPR[ra] = r & m;
 		
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);

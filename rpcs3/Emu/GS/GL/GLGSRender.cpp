@@ -124,16 +124,21 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	static u32 offset_list[m_vertex_count];
 	u32 cur_offset = 0;
 
+	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
+
 	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		offset_list[i] = cur_offset;
 
 		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
 
-		cur_offset += m_vertex_data[i].data.GetCount();
+		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
+		const size_t data_size = m_vertex_data[i].data.GetCount() - data_offset * item_size;
 		const u32 pos = m_vdata.GetCount();
-		m_vdata.InsertRoomEnd(m_vertex_data[i].data.GetCount());
-		memcpy(&m_vdata[pos], &m_vertex_data[i].data[0], m_vertex_data[i].data.GetCount());
+
+		cur_offset += data_size;
+		m_vdata.InsertRoomEnd(data_size);
+		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
 	}
 
 	m_vao.Create();
@@ -1010,7 +1015,7 @@ void GLGSRender::ExecCMD()
 	if(m_draw_array_count)
 	{
 		//ConLog.Warning("glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
-		glDrawArrays(m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
+		glDrawArrays(m_draw_mode - 1, 0, m_draw_array_count);
 		checkForGlError("glDrawArrays");
 		DisableVertexData();
 	}
