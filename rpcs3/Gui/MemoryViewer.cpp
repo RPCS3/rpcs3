@@ -55,6 +55,11 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	s_tools_img_size.Add(new wxStaticText(this, wxID_ANY, " x "));
 	s_tools_img_size.Add(sc_img_size_y);
 
+	sc_img_size_x->SetMax(8192);
+	sc_img_size_y->SetMax(8192);
+	sc_img_size_x->SetMin(1);
+	sc_img_size_y->SetMin(1);
+
 	wxStaticBoxSizer& s_tools_img_mode = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Mode");
 	cbox_img_mode = new wxComboBox(this, wxID_ANY);
 	cbox_img_mode->Append("RGB");
@@ -169,10 +174,7 @@ void MemoryViewerPanel::OnChangeToolsBytes(wxCommandEvent& event)
 
 void MemoryViewerPanel::OnScrollMemory(wxMouseEvent& event)
 {
-	if (event.GetWheelRotation() < 0)
-		m_addr += m_colcount;
-	else
-		m_addr -= m_colcount;
+	m_addr -= (event.ControlDown() ? m_rowcount : 1) * m_colcount * (event.GetWheelRotation() / event.GetWheelDelta());
 
 	t_addr->SetValue(wxString::Format("%08x", m_addr));
 	ShowMemory();
@@ -190,7 +192,6 @@ void MemoryViewerPanel::ShowMemory()
 		t_mem_addr_str += wxString::Format("%08x ", addr);
 	}
 
-
 	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr++)
 	{
 		if (Memory.IsGoodAddr(addr))
@@ -198,18 +199,18 @@ void MemoryViewerPanel::ShowMemory()
 			const u8 rmem = Memory.Read8(addr);
 			t_mem_hex_str += wxString::Format("%02x ", rmem);
 			const wxString c_rmem = wxString::Format("%c", rmem);
-			t_mem_ascii_str += c_rmem.IsEmpty() ? "." : c_rmem;;
+			t_mem_ascii_str += c_rmem.IsEmpty() ? "." : c_rmem;
 		}
 		else
 		{
 			t_mem_hex_str += "?? ";
 			t_mem_ascii_str += "?";
 		}
-
-		t_mem_addr->SetValue(t_mem_addr_str);
-		t_mem_hex->SetValue(t_mem_hex_str);
-		t_mem_ascii->SetValue(t_mem_ascii_str);
 	}
+
+	t_mem_addr->SetValue(t_mem_addr_str);
+	t_mem_hex->SetValue(t_mem_hex_str);
+	t_mem_ascii->SetValue(t_mem_ascii_str);
 }
 
 void MemoryViewerPanel::Next (wxCommandEvent& WXUNUSED(event)) { m_addr += m_colcount; ShowMemory(); }
