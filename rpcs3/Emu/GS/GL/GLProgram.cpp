@@ -20,7 +20,7 @@ int GLProgram::GetLocation(const wxString& name)
 	m_locations[pos].name = name;
 
 	m_locations[pos].loc = glGetUniformLocation(id, name);
-	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name));
+	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name.mb_str()));
 	return m_locations[pos].loc;
 }
 

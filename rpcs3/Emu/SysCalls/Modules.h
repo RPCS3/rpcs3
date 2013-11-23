@@ -67,11 +67,7 @@ public:
 
 	u32 GetNewId(void* data = nullptr, u8 flags = 0);
 
-	template<typename T>
-	__forceinline void AddFunc(u32 id, T func)
-	{
-		m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
-	}
+	template<typename T> __forceinline void AddFunc(u32 id, T func);
 };
 
 bool IsLoadedFunc(u32 id);

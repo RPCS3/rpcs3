@@ -57,7 +57,7 @@ class DoubleCodeField : public CodeField<from1, to1>
 	static_assert(to2 <= 31, "too big to2 value");
 
 public:
-	DoubleCodeField(CodeFieldType type = FIELD_IMM) : CodeField(type)
+	DoubleCodeField(CodeFieldType type = FIELD_IMM) : CodeField<from1, to1>(type)
 	{
 	}
 
@@ -66,13 +66,13 @@ public:
 	
 	static __forceinline void encode(u32& data, u32 value)
 	{
-		data &= ~(mask | mask2);
-		data |= ((value << shift) & mask) | (((value >> offset) << shift2) & mask2);
+		data &= ~(CodeField<from1, to1>::mask | mask2);
+		data |= ((value << CodeField<from1, to1>::shift) & CodeField<from1, to1>::mask) | (((value >> offset) << shift2) & mask2);
 	}
 
 	static __forceinline u32 decode(u32 data)
 	{
-		return ((data & mask) >> shift) | (((data & mask2) >> shift2) << offset);
+		return ((data & CodeField<from1, to1>::mask) >> CodeField<from1, to1>::shift) | (((data & mask2) >> shift2) << offset);
 	}
 
 	virtual u32 operator ()(u32 data) const
@@ -90,7 +90,7 @@ template<uint from, uint to = from, uint _size = to - from + 1>
 class CodeFieldSigned : public CodeField<from, to>
 {
 public:
-	CodeFieldSigned(CodeFieldType type = FIELD_IMM) : CodeField(type)
+	CodeFieldSigned(CodeFieldType type = FIELD_IMM) : CodeField<from, to>(type)
 	{
 	}
 
@@ -98,7 +98,7 @@ public:
 
 	static __forceinline u32 decode(u32 data)
 	{
-		return sign<size>((data & mask) >> shift);
+		return sign<size>((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift);
 	}
 
 	virtual u32 operator ()(u32 data) const
@@ -113,19 +113,19 @@ class CodeFieldOffset : public CodeField<from, to>
 	static const int offset = _offset;
 
 public:
-	CodeFieldOffset(CodeFieldType type = FIELD_IMM) : CodeField(type)
+	CodeFieldOffset(CodeFieldType type = FIELD_IMM) : CodeField<from, to>(type)
 	{
 	}
 
 	static __forceinline u32 decode(u32 data)
 	{
-		return ((data & mask) >> shift) << offset;
+		return ((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift) << offset;
 	}
 
 	static __forceinline void encode(u32& data, u32 value)
 	{
-		data &= ~mask;
-		data |= ((value >> offset) << shift) & mask;
+		data &= ~CodeField<from, to>::mask;
+		data |= ((value >> offset) << CodeField<from, to>::shift) & CodeField<from, to>::mask;
 	}
 
 	virtual u32 operator ()(u32 data) const
@@ -145,19 +145,19 @@ class CodeFieldSignedOffset : public CodeFieldSigned<from, to, size>
 	static const int offset = _offset;
 
 public:
-	CodeFieldSignedOffset(CodeFieldType type = FIELD_IMM) : CodeFieldSigned(type)
+	CodeFieldSignedOffset(CodeFieldType type = FIELD_IMM) : CodeFieldSigned<from, to, size>(type)
 	{
 	}
 
 	static __forceinline u32 decode(u32 data)
 	{
-		return sign<size>((data & mask) >> shift) << offset;
+		return sign<size>((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift) << offset;
 	}
 
 	static __forceinline void encode(u32& data, u32 value)
 	{
-		data &= ~mask;
-		data |= ((value >> offset) << shift) & mask;
+		data &= ~CodeField<from, to>::mask;
+		data |= ((value >> offset) << CodeField<from, to>::shift) & CodeField<from, to>::mask;
 	}
 
 	virtual u32 operator ()(u32 data) const

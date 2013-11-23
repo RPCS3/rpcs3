@@ -54,12 +54,12 @@ protected:
 
 	void PUSH(u16 regs_list)
 	{
-		Write(wxString::Format("push {%s}", GetRegsListString(regs_list)));
+		Write(wxString::Format("push {%s}", GetRegsListString(regs_list).mb_str()));
 	}
 
 	void POP(u16 regs_list)
 	{
-		Write(wxString::Format("pop {%s}", GetRegsListString(regs_list)));
+		Write(wxString::Format("pop {%s}", GetRegsListString(regs_list).mb_str()));
 	}
 
 	void NOP()

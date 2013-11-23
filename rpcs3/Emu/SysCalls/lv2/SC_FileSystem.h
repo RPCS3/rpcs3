@@ -63,9 +63,9 @@ struct CellFsStat
 	be_t<u32> st_mode;
 	be_t<s32> st_uid;
 	be_t<s32> st_gid;
-	be_t<u64> st_atime;
-	be_t<u64> st_mtime;
-	be_t<u64> st_ctime;
+	be_t<u64> st_atime_;
+	be_t<u64> st_mtime_;
+	be_t<u64> st_ctime_;
 	be_t<u64> st_size;
 	be_t<u64> st_blksize;
 };

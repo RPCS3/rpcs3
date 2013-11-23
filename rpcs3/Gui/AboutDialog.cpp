@@ -1,3 +1,5 @@
+#include "stdafx.h"
+
 class AboutDialog
 	: public wxDialog
 {

@@ -18,17 +18,19 @@
 
 #include <wx/wxprec.h>
 
+#include <cstdint>
+
 typedef unsigned int uint;
 
-typedef unsigned __int8 u8;
-typedef unsigned __int16 u16;
-typedef unsigned __int32 u32;
-typedef unsigned __int64 u64;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-typedef signed __int8 s8;
-typedef signed __int16 s16;
-typedef signed __int32 s32;
-typedef signed __int64 s64;
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
 
 union u128
 {
@@ -97,13 +99,13 @@ union s128
 
 	operator bool() const { return _i64[0] != 0 || _i64[1] != 0; }
 
-	static s128 From64( u64 src )
+	static s128 From64( s64 src )
 	{
 		s128 ret = {src, 0};
 		return ret;
 	}
 
-	static s128 From32( u32 src )
+	static s128 From32( s32 src )
 	{
 		s128 ret;
 		ret._i32[0] = src;

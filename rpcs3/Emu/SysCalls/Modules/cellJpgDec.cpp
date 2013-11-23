@@ -146,7 +146,7 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, mem_ptr_t<Ce
 
 	// Get size of file
 	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-	ret = cellFsFstat(current_subHandle->fd, sb);
+	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
 	if(ret != CELL_OK) return ret;
 	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 

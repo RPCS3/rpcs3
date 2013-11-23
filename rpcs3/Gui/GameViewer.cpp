@@ -94,7 +94,7 @@ void GameViewer::DClick(wxListEvent& event)
 	const wxString& path = m_path + "\\" + m_game_data[i].root + "\\" + "USRDIR" + "\\" + "BOOT.BIN";
 	if(!wxFileExists(path))
 	{
-		ConLog.Error("Boot error: elf not found! [%s]", path);
+		ConLog.Error("Boot error: elf not found! [%s]", path.mb_str());
 		return;
 	}
 

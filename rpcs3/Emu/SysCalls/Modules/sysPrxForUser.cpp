@@ -43,7 +43,7 @@ s64 sys_prx_exitspawn_with_level()
 s64 sys_strlen(u32 addr)
 {
 	const wxString& str = Memory.ReadString(addr);
-	sysPrxForUser.Log("sys_strlen(0x%x - \"%s\")", addr, str);
+	sysPrxForUser.Log("sys_strlen(0x%x - \"%s\")", addr, str.mb_str());
 	return str.Len();
 }
 

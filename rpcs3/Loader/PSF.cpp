@@ -20,7 +20,7 @@ bool PSFLoader::Load(bool show)
 		ConLog.SkipLn();
 		for(uint i=0; i<m_table.GetCount(); ++i)
 		{
-			ConLog.Write("%s", m_table[i]);
+			ConLog.Write("%s", m_table[i].mb_str());
 		}
 		ConLog.SkipLn();
 	}
@@ -162,19 +162,19 @@ bool PSFLoader::LoadValuesTable()
 		if(!m_table[i].Cmp("TITLE_ID"))
 		{
 			m_info.serial = PsfHelper::ReadString(psf_f);
-			m_table[i].Append(wxString::Format(": %s", m_info.serial));
+			m_table[i].Append(wxString::Format(": %s", m_info.serial.mb_str()));
 			PsfHelper::GoToNN(psf_f);
 		}
 		else if(!m_table[i](0, 5).Cmp("TITLE"))
 		{
 			m_info.name = PsfHelper::FixName(PsfHelper::ReadString(psf_f));
-			m_table[i].Append(wxString::Format(": %s", m_info.name));
+			m_table[i].Append(wxString::Format(": %s", m_info.name.mb_str()));
 			PsfHelper::GoToNN(psf_f);
 		}
 		else if(!m_table[i].Cmp("APP_VER"))
 		{
 			m_info.app_ver = PsfHelper::ReadString(psf_f, sizeof(u64));
-			m_table[i].Append(wxString::Format(": %s", m_info.app_ver));
+			m_table[i].Append(wxString::Format(": %s", m_info.app_ver.mb_str()));
 		}
 		else if(!m_table[i].Cmp("ATTRIBUTE"))
 		{
@@ -184,7 +184,7 @@ bool PSFLoader::LoadValuesTable()
 		else if(!m_table[i].Cmp("CATEGORY"))
 		{
 			m_info.category = PsfHelper::ReadString(psf_f, sizeof(u32));
-			m_table[i].Append(wxString::Format(": %s", m_info.category));
+			m_table[i].Append(wxString::Format(": %s", m_info.category.mb_str()));
 		}
 		else if(!m_table[i].Cmp("BOOTABLE"))
 		{
@@ -193,7 +193,7 @@ bool PSFLoader::LoadValuesTable()
 		}
 		else if(!m_table[i].Cmp("LICENSE"))
 		{
-			m_table[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf_f)));
+			m_table[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf_f).mb_str()));
 			psf_f.Seek(psf_f.Tell() + (sizeof(u64) * 7 * 2) - 1);
 		}
 		else if(!m_table[i](0, 14).Cmp("PARENTAL_LEVEL"))
@@ -209,7 +209,7 @@ bool PSFLoader::LoadValuesTable()
 		else if(!m_table[i].Cmp("PS3_SYSTEM_VER"))
 		{
 			m_info.fw =  PsfHelper::ReadString(psf_f, sizeof(u64));
-			m_table[i].Append(wxString::Format(": %s", m_info.fw));
+			m_table[i].Append(wxString::Format(": %s", m_info.fw.mb_str()));
 		}
 		else if(!m_table[i].Cmp("SOUND_FORMAT"))
 		{
@@ -223,7 +223,7 @@ bool PSFLoader::LoadValuesTable()
 		}
 		else
 		{
-			m_table[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf_f)));
+			m_table[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf_f).mb_str()));
 			PsfHelper::GoToNN(psf_f);
 		}
 	}

@@ -223,7 +223,7 @@ enum CellVideoOutRGBOutputRange
 
 static const CellVideoOutResolution ResolutionTable[] =
 {
-	{-1, -1},		//0 - 0
+	{(u16)-1, (u16)-1},		//0 - 0
 	{1920, 1080},	//1 - 1
 	{1280, 720},	//2 - 2
 	{720, 480},		//4 - 3

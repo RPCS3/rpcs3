@@ -141,7 +141,7 @@ void VHDDExplorer::Export(const wxString& path, const wxString& to)
 {
 	if(!m_hdd->Open(path))
 	{
-		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", path));
+		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", path.mb_str()));
 		return;
 	}
 
@@ -188,7 +188,7 @@ void VHDDExplorer::OnDropFiles(wxDropFilesEvent& event)
 
 	for(int i=0; i<count; ++i)
 	{
-		ConLog.Write("Importing '%s'", dropped[i]);
+		ConLog.Write("Importing '%s'", dropped[i].mb_str());
 		Import(dropped[i], wxFileName(dropped[i]).GetFullName());
 	}
 
@@ -347,12 +347,10 @@ VHDDSetInfoDialog::VHDDSetInfoDialog(wxWindow* parent) : wxDialog(parent, wxID_A
 	m_ch_type->Append("MB");
 	m_ch_type->Append("GB");
 
-	m_spin_size->SetMin(1);
-	m_spin_size->SetMax(0x7fffffff);
+    m_spin_size->SetRange(1, 0x7fffffff);
 	m_spin_size->SetValue(64);
 	m_ch_type->SetSelection(3);
-	m_spin_block_size->SetMin(64);
-	m_spin_block_size->SetMax(0x7fffffff);
+    m_spin_block_size->SetRange(64, 0x7fffffff);
 	m_spin_block_size->SetValue(2048);
 	Connect(wxID_OK, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VHDDSetInfoDialog::OnOk));
 }

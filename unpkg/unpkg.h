@@ -21,6 +21,10 @@
 #include "scetool/aes.h"
 #include "scetool/sha1.h"
 
+#ifdef __GNUG__
+#include <arpa/inet.h>
+#endif
+
 #define ntohll(x) (((u64) ntohl (x) << 32) | (u64) ntohl (x >> 32) )
 #define htonll(x) (((u64) htonl (x) << 32) | (u64) htonl (x >> 32) )
 #define conv_ntohl(x) { x = ntohl(x); }

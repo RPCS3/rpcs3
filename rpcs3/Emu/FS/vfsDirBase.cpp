@@ -1,3 +1,3 @@
 #include "stdafx.h"
-#include "vfsDirBase.cpp"
+#include "vfsDirBase.h"
 

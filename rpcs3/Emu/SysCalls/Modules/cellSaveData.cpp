@@ -94,9 +94,9 @@ struct CellSaveDataSystemFileParam
 
 struct CellSaveDataDirStat
 { 
-	s64 st_atime;
-	s64 st_mtime;
-	s64 st_ctime;
+	s64 st_atime_;
+	s64 st_mtime_;
+	s64 st_ctime_;
 	char dirName; //[CELL_SAVEDATA_DIRNAME_SIZE]; 
 };
 
@@ -105,9 +105,9 @@ struct CellSaveDataFileStat
 	unsigned int fileType;
 	char reserved1[4];
 	u64 st_size;
-	s64 st_atime;
-	s64 st_mtime;
-	s64 st_ctime;
+	s64 st_atime_;
+	s64 st_mtime_;
+	s64 st_ctime_;
 	char fileName; //[CELL_SAVEDATA_FILENAME_SIZE]; 
 	char reserved2[3];
 };

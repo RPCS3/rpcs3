@@ -38,14 +38,14 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file, vfsRead);
+		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.mb_str(), vfsRead);
 		delete packed_stream;
 		return CELL_ENOENT;
 	}
 
 	if(!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file, vfsWrite);
+		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.mb_str(), vfsWrite);
 		delete unpacked_stream;
 		return CELL_ENOENT;
 	}
@@ -114,7 +114,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsSdataOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
-		path, flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	if (!fd.IsGood() || (!arg.IsGood() && size))
 		return CELL_EFAULT;

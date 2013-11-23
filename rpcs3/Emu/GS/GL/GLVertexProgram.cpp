@@ -20,7 +20,7 @@ wxString GLVertexDecompilerThread::GetMask(bool is_sca)
 		if(d3.vec_writemask_w) ret += "w";
 	}
 
-	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
+	return ret.IsEmpty() || ret == "xyzw" ? wxString(wxEmptyString) : ("." + ret);
 }
 
 wxString GLVertexDecompilerThread::GetVecMask()
@@ -179,7 +179,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		}
 
 		//ConLog.Error("cond! %d (%d %s %d %d)", d0.cond, d0.dst_tmp, cond, d1.input_src, d1.const_src);
-		cond = wxString::Format("if(tmp%d.x %s 0) ", d0.dst_tmp, cond);
+		cond = wxString::Format("if(tmp%d.x %s 0) ", d0.dst_tmp, cond.mb_str());
 	}
 
 	wxString value = src_mask ? code + GetMask(is_sca) : code;
@@ -240,7 +240,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 		"%s\n"
 		"void main()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s}\n";
 
-	return wxString::Format(prot, p, main);
+	return wxString::Format(prot, p.mb_str(), main.mb_str());
 }
 
 void GLVertexDecompilerThread::Task()

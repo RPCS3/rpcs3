@@ -1,23 +1,25 @@
 #pragma once
 
+#include "Utilities/GNU.h"
+
 template<typename T, int size = sizeof(T)> struct se_t;
 template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };
 template<typename T> struct se_t<T, 2> { static __forceinline void func(T& dst, const T src) { (u16&)dst = _byteswap_ushort((u16&)src); } };
 template<typename T> struct se_t<T, 4> { static __forceinline void func(T& dst, const T src) { (u32&)dst = _byteswap_ulong((u32&)src); } };
 template<typename T> struct se_t<T, 8> { static __forceinline void func(T& dst, const T src) { (u64&)dst = _byteswap_uint64((u64&)src); } };
 
-template<typename T, __int64 _value, int size = sizeof(T)> struct const_se_t;;
-template<typename T, __int64 _value> struct const_se_t<T, _value, 1>
+template<typename T, s64 _value, int size = sizeof(T)> struct const_se_t;;
+template<typename T, s64 _value> struct const_se_t<T, _value, 1>
 {
 	static const T value = (T)_value;
 };
 
-template<typename T, __int64 _value> struct const_se_t<T, _value, 2>
+template<typename T, s64 _value> struct const_se_t<T, _value, 2>
 {
 	static const T value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
 };
 
-template<typename T, __int64 _value> struct const_se_t<T, _value, 4>
+template<typename T, s64 _value> struct const_se_t<T, _value, 4>
 {
 	static const T value = 
 		((_value >> 24) & 0x000000ff) |
@@ -26,7 +28,7 @@ template<typename T, __int64 _value> struct const_se_t<T, _value, 4>
 		((_value << 24) & 0xff000000);
 };
 
-template<typename T, __int64 _value> struct const_se_t<T, _value, 8>
+template<typename T, s64 _value> struct const_se_t<T, _value, 8>
 {
 	static const T value = 
 		((_value >> 56) & 0x00000000000000ff) |

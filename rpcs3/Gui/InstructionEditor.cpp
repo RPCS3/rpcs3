@@ -1,3 +1,6 @@
+#include "stdafx.h"
+#include "Emu/CPU/CPUDisAsm.h"
+
 class InstructionEditorDialog
 	: public wxDialog
 {

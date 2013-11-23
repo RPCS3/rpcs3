@@ -2,7 +2,7 @@
 
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Cell/PPCDecoder.h"
-#include "Emu/Cell/SPUInstrtable.h"
+#include "Emu/Cell/SPUInstrTable.h"
 
 class SPUDecoder : public PPCDecoder
 {

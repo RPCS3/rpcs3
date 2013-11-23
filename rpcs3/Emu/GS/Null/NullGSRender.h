@@ -8,19 +8,27 @@ struct NullGSFrame : public GSFrame
 		Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick));
 	}
 
-	void Draw() { Draw(wxClientDC(this)); }
+	void Draw()
+    {
+        wxClientDC dc(this);
+        Draw(&dc);
+    }
 
 private:
-	virtual void OnPaint(wxPaintEvent& event) { Draw(wxPaintDC(this)); }
+	virtual void OnPaint(wxPaintEvent& event)
+    {
+        wxPaintDC dc(this);
+        Draw(&dc);
+    }
 	virtual void OnSize(wxSizeEvent& event)
 	{
 		GSFrame::OnSize(event);
 		Draw();
 	}
 
-	void Draw(wxDC& dc)
+	void Draw(wxDC* dc)
 	{
-		dc.DrawText("Null GS output", 0, 0);
+		dc->DrawText("Null GS output", 0, 0);
 	}
 };
 

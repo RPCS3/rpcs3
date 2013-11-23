@@ -24,7 +24,7 @@ protected:
 					Memory.Read8(offset + dump_pc),
 					Memory.Read8(offset + dump_pc + 1),
 					Memory.Read8(offset + dump_pc + 2),
-					Memory.Read8(offset + dump_pc + 3), value);
+					Memory.Read8(offset + dump_pc + 3), value.mb_str());
 			break;
 
 			case CPUDisAsm_InterpreterMode:
@@ -32,7 +32,7 @@ protected:
 					Memory.Read8(offset + dump_pc),
 					Memory.Read8(offset + dump_pc + 1),
 					Memory.Read8(offset + dump_pc + 2),
-					Memory.Read8(offset + dump_pc + 3), value);
+					Memory.Read8(offset + dump_pc + 3), value.mb_str());
 			break;
 
 			case CPUDisAsm_CompilerElfMode:

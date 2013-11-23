@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "VFS.h"
-#include "Emu\HDD\HDD.h"
+#include "Emu/HDD/HDD.h"
 
 int sort_devices(const void* _a, const void* _b)
 {

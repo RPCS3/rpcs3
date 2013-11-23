@@ -12,7 +12,7 @@ template<typename TO>
 class InstrCaller
 {
 public:
-	virtual ~InstrCaller()
+	virtual ~InstrCaller<TO>()
 	{
 	}
 
@@ -32,7 +32,7 @@ class InstrBinder_0 : public InstrCaller<TO>
 
 public:
 	InstrBinder_0(func_t func)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 	{
 	}
@@ -52,7 +52,7 @@ class InstrBinder_1 : public InstrCaller<TO>
 
 public:
 	InstrBinder_1(func_t func, const CodeFieldBase& arg_func_1)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 	{
@@ -74,7 +74,7 @@ class InstrBinder_2 : public InstrCaller<TO>
 
 public:
 	InstrBinder_2(func_t func, const CodeFieldBase& arg_func_1, const CodeFieldBase& arg_func_2)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 		, m_arg_func_2(arg_func_2)
@@ -104,7 +104,7 @@ public:
 		const CodeFieldBase& arg_func_1,
 		const CodeFieldBase& arg_func_2,
 		const CodeFieldBase& arg_func_3)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 		, m_arg_func_2(arg_func_2)
@@ -138,7 +138,7 @@ public:
 		const CodeFieldBase& arg_func_2,
 		const CodeFieldBase& arg_func_3,
 		const CodeFieldBase& arg_func_4)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 		, m_arg_func_2(arg_func_2)
@@ -176,7 +176,7 @@ public:
 		const CodeFieldBase& arg_func_3,
 		const CodeFieldBase& arg_func_4,
 		const CodeFieldBase& arg_func_5)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 		, m_arg_func_2(arg_func_2)
@@ -218,7 +218,7 @@ public:
 		const CodeFieldBase& arg_func_4,
 		const CodeFieldBase& arg_func_5,
 		const CodeFieldBase& arg_func_6)
-		: InstrCaller()
+		: InstrCaller<TO>()
 		, m_func(func)
 		, m_arg_func_1(arg_func_1)
 		, m_arg_func_2(arg_func_2)
@@ -487,7 +487,7 @@ class Instr0 : public InstrBase<TO>
 public:
 	Instr0(InstrList<count, TO>* list, const wxString& name,
 			void (TO::*func)())
-		: InstrBase(name, opcode, 0)
+		: InstrBase<TO>(name, opcode, 0)
 		, m_list(*list)
 	{
 		m_list.set_instr(opcode, instr_bind(func), this);
@@ -500,7 +500,7 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode);
 	}
 
@@ -524,10 +524,10 @@ public:
 	Instr1(InstrList<count, TO>* list, const wxString& name,
 			void (TO::*func)(T1),
 			CodeFieldBase& arg_1)
-		: InstrBase(name, opcode, 1)
+		: InstrBase<TO>(name, opcode, 1)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[0] = &arg_1;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1), this);
 	}
@@ -539,13 +539,13 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
-		return m_list.encode(opcode) | (*m_args[0])[args[0]];
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]];
 	}
 
 	u32 encode(T1 a1) const
 	{
-		return m_list.encode(opcode) | (*m_args[0])[a1];
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[a1];
 	}
 	
 	u32 operator()(T1 a1) const
@@ -564,11 +564,11 @@ public:
 			void (TO::*func)(T1, T2),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2)
-		: InstrBase(name, opcode, 2)
+		: InstrBase<TO>(name, opcode, 2)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
-		m_args[1] = &arg_2;
+		InstrBase<TO>::m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[1] = &arg_2;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1, arg_2), this);
 	}
@@ -580,13 +580,13 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
-		return m_list.encode(opcode) | (*m_args[0])[args[0]] | (*m_args[1])[args[1]];
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]] | (*InstrBase<TO>::m_args[1])[args[1]];
 	}
 
 	u32 encode(T1 a1, T2 a2) const
 	{
-		return m_list.encode(opcode) | (*m_args[0])[a1] | (*m_args[1])[a2];
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[a1] | (*InstrBase<TO>::m_args[1])[a2];
 	}
 	
 	u32 operator()(T1 a1, T2 a2) const
@@ -606,12 +606,12 @@ public:
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2,
 			CodeFieldBase& arg_3)
-		: InstrBase(name, opcode, 3)
+		: InstrBase<TO>(name, opcode, 3)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
-		m_args[1] = &arg_2;
-		m_args[2] = &arg_3;
+		InstrBase<TO>::m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[1] = &arg_2;
+		InstrBase<TO>::m_args[2] = &arg_3;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1, arg_2, arg_3), this);
 	}
@@ -623,13 +623,13 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
-		return m_list.encode(opcode) | (*m_args[0])[args[0]] | (*m_args[1])[args[1]] | (*m_args[2])[args[2]];
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]] | (*InstrBase<TO>::m_args[1])[args[1]] | (*InstrBase<TO>::m_args[2])[args[2]];
 	}
 
 	u32 encode(T1 a1, T2 a2, T3 a3) const
 	{
-		return m_list.encode(opcode) | (*m_args[0])[a1] | (*m_args[1])[a2] | (*m_args[2])[a3];
+		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[a1] | (*InstrBase<TO>::m_args[1])[a2] | (*InstrBase<TO>::m_args[2])[a3];
 	}
 	
 	u32 operator()(T1 a1, T2 a2, T3 a3) const
@@ -650,13 +650,13 @@ public:
 			CodeFieldBase& arg_2,
 			CodeFieldBase& arg_3,
 			CodeFieldBase& arg_4)
-		: InstrBase(name, opcode, 4)
+		: InstrBase<TO>(name, opcode, 4)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
-		m_args[1] = &arg_2;
-		m_args[2] = &arg_3;
-		m_args[3] = &arg_4;
+		InstrBase<TO>::m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[1] = &arg_2;
+		InstrBase<TO>::m_args[2] = &arg_3;
+		InstrBase<TO>::m_args[3] = &arg_4;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1, arg_2, arg_3, arg_4), this);
 	}
@@ -668,21 +668,21 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
-			(*m_args[0])[args[0]] |
-			(*m_args[1])[args[1]] |
-			(*m_args[2])[args[2]] |
-			(*m_args[3])[args[3]];
+			(*InstrBase<TO>::m_args[0])[args[0]] |
+			(*InstrBase<TO>::m_args[1])[args[1]] |
+			(*InstrBase<TO>::m_args[2])[args[2]] |
+			(*InstrBase<TO>::m_args[3])[args[3]];
 	}
 
 	u32 encode(T1 a1, T2 a2, T3 a3, T4 a4) const
 	{
 		return m_list.encode(opcode) |
-			(*m_args[0])[a1] |
-			(*m_args[1])[a2] |
-			(*m_args[2])[a3] |
-			(*m_args[3])[a4];
+			(*InstrBase<TO>::m_args[0])[a1] |
+			(*InstrBase<TO>::m_args[1])[a2] |
+			(*InstrBase<TO>::m_args[2])[a3] |
+			(*InstrBase<TO>::m_args[3])[a4];
 	}
 	
 	u32 operator()(T1 a1, T2 a2, T3 a3, T4 a4) const
@@ -704,14 +704,14 @@ public:
 			CodeFieldBase& arg_3,
 			CodeFieldBase& arg_4,
 			CodeFieldBase& arg_5)
-		: InstrBase(name, opcode, 5)
+		: InstrBase<TO>(name, opcode, 5)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
-		m_args[1] = &arg_2;
-		m_args[2] = &arg_3;
-		m_args[3] = &arg_4;
-		m_args[4] = &arg_5;
+		InstrBase<TO>::m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[1] = &arg_2;
+		InstrBase<TO>::m_args[2] = &arg_3;
+		InstrBase<TO>::m_args[3] = &arg_4;
+		InstrBase<TO>::m_args[4] = &arg_5;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1, arg_2, arg_3, arg_4, arg_5), this);
 	}
@@ -723,23 +723,23 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
-			(*m_args[0])[args[0]] |
-			(*m_args[1])[args[1]] |
-			(*m_args[2])[args[2]] |
-			(*m_args[3])[args[3]] |
-			(*m_args[4])[args[4]];
+			(*InstrBase<TO>::m_args[0])[args[0]] |
+			(*InstrBase<TO>::m_args[1])[args[1]] |
+			(*InstrBase<TO>::m_args[2])[args[2]] |
+			(*InstrBase<TO>::m_args[3])[args[3]] |
+			(*InstrBase<TO>::m_args[4])[args[4]];
 	}
 
 	u32 encode(T1 a1, T2 a2, T3 a3, T4 a4, T5 a5) const
 	{
 		return m_list.encode(opcode) |
-			(*m_args[0])[a1] |
-			(*m_args[1])[a2] |
-			(*m_args[2])[a3] |
-			(*m_args[3])[a4] |
-			(*m_args[4])[a5];
+			(*InstrBase<TO>::m_args[0])[a1] |
+			(*InstrBase<TO>::m_args[1])[a2] |
+			(*InstrBase<TO>::m_args[2])[a3] |
+			(*InstrBase<TO>::m_args[3])[a4] |
+			(*InstrBase<TO>::m_args[4])[a5];
 	}
 	
 	u32 operator()(T1 a1, T2 a2, T3 a3, T4 a4, T5 a5) const
@@ -762,15 +762,15 @@ public:
 			CodeFieldBase& arg_4,
 			CodeFieldBase& arg_5,
 			CodeFieldBase& arg_6)
-		: InstrBase(name, opcode, 6)
+		: InstrBase<TO>(name, opcode, 6)
 		, m_list(*list)
 	{
-		m_args[0] = &arg_1;
-		m_args[1] = &arg_2;
-		m_args[2] = &arg_3;
-		m_args[3] = &arg_4;
-		m_args[4] = &arg_5;
-		m_args[5] = &arg_6;
+		InstrBase<TO>::m_args[0] = &arg_1;
+		InstrBase<TO>::m_args[1] = &arg_2;
+		InstrBase<TO>::m_args[2] = &arg_3;
+		InstrBase<TO>::m_args[3] = &arg_4;
+		InstrBase<TO>::m_args[4] = &arg_5;
+		InstrBase<TO>::m_args[5] = &arg_6;
 
 		m_list.set_instr(opcode, instr_bind(func, arg_1, arg_2, arg_3, arg_4, arg_5, arg_6), this);
 	}
@@ -782,25 +782,25 @@ public:
 
 	virtual u32 encode(const Array<u32>& args) const
 	{
-		assert(args.GetCount() == m_args_count);
+		assert(args.GetCount() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
-			(*m_args[0])[args[0]] |
-			(*m_args[1])[args[1]] |
-			(*m_args[2])[args[2]] |
-			(*m_args[3])[args[3]] |
-			(*m_args[4])[args[4]] |
-			(*m_args[5])[args[5]];
+			(*InstrBase<TO>::m_args[0])[args[0]] |
+			(*InstrBase<TO>::m_args[1])[args[1]] |
+			(*InstrBase<TO>::m_args[2])[args[2]] |
+			(*InstrBase<TO>::m_args[3])[args[3]] |
+			(*InstrBase<TO>::m_args[4])[args[4]] |
+			(*InstrBase<TO>::m_args[5])[args[5]];
 	}
 
 	u32 encode(T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T5 a6) const
 	{
 		return m_list.encode(opcode) |
-			(*m_args[0])[a1] |
-			(*m_args[1])[a2] |
-			(*m_args[2])[a3] |
-			(*m_args[3])[a4] |
-			(*m_args[4])[a5] |
-			(*m_args[5])[a6];
+			(*InstrBase<TO>::m_args[0])[a1] |
+			(*InstrBase<TO>::m_args[1])[a2] |
+			(*InstrBase<TO>::m_args[2])[a3] |
+			(*InstrBase<TO>::m_args[3])[a4] |
+			(*InstrBase<TO>::m_args[4])[a5] |
+			(*InstrBase<TO>::m_args[5])[a6];
 	}
 	
 	u32 operator()(T1 a1, T2 a2, T3 a3, T4 a4, T4 a5, T4 a6) const

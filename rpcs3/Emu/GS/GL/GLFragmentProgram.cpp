@@ -43,7 +43,7 @@ void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 			cond = "equal";
 		}
 
-		cond = wxString::Format("if(all(%s(%s.%s, vec4(0, 0, 0, 0)))) ", cond, AddCond(dst.no_dest), swizzle);
+		cond = wxString::Format("if(all(%s(%s.%s, vec4(0, 0, 0, 0)))) ", cond.mb_str(), AddCond(dst.no_dest).mb_str(), swizzle.mb_str());
 		//ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
 		//Emu.Pause();
 		//return;
@@ -74,7 +74,7 @@ void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 
 	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(dst.fp16 ? "hc%d" : "rc%d", src0.cond_reg_index))
 		: AddReg(dst.dest_reg, dst.fp16)) + mask
-		+ " = " + code + (append_mask ? mask : wxEmptyString);
+		+ " = " + code + (append_mask ? mask : wxString(wxEmptyString));
 
 	main += "\t" + code + ";\n";
 }
@@ -93,7 +93,7 @@ wxString GLFragmentDecompilerThread::GetMask()
 	if(dst.mask_z) ret += dst_mask[2];
 	if(dst.mask_w) ret += dst_mask[3];
 
-	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxEmptyString : ("." + ret);
+	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxString(wxEmptyString) : ("." + ret);
 }
 
 wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
@@ -220,7 +220,7 @@ wxString GLFragmentDecompilerThread::BuildCode()
 		"%s\n"
 		"void main()\n{\n%s}\n";
 
-	return wxString::Format(prot, p, main);
+	return wxString::Format(prot, p.mb_str(), main.mb_str());
 }
 
 void GLFragmentDecompilerThread::Task()
