@@ -132,7 +132,7 @@ public:
 	int ThreadStatus();
 
 	void NextPc(u8 instr_size);
-	void SetBranch(const u64 pc);
+	void SetBranch(const u64 pc, bool record_branch = false);
 	void SetPc(const u64 pc);
 	void SetEntry(const u64 entry);
 
@@ -171,13 +171,48 @@ public:
 	virtual void Exec();
 	void ExecOnce();
 
-	Stack<u64> m_call_stack;
+	struct CallStackItem
+	{
+		u64 pc;
+		u64 branch_pc;
+	};
+
+	Stack<CallStackItem> m_call_stack;
+
 	wxString CallStackToString()
 	{
 		wxString ret = "Call Stack:\n==========\n";
+
 		for(uint i=0; i<m_call_stack.GetCount(); ++i)
-			ret += wxString::Format("0x%llx\n", m_call_stack.Get(i));
+		{
+			ret += wxString::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
+		}
+
 		return ret;
+	}
+
+	void CallStackBranch(u64 pc)
+	{
+		for(int i=m_call_stack.GetCount() - 1; i >= 0; --i)
+		{
+			if(CallStackGetNextPC(m_call_stack[i].pc) == pc)
+			{
+				m_call_stack.RemoveAt(i, m_call_stack.GetCount() - i);
+				return;
+			}
+		}
+
+		CallStackItem new_item;
+
+		new_item.branch_pc = pc;
+		new_item.pc = PC;
+
+		m_call_stack.AddCpy(new_item);
+	}
+
+	virtual u64 CallStackGetNextPC(u64 pc)
+	{
+		return pc + 4;
 	}
 
 protected:

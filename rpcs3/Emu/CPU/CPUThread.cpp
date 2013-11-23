@@ -145,7 +145,7 @@ void CPUThread::NextPc(u8 instr_size)
 	}
 }
 
-void CPUThread::SetBranch(const u64 pc)
+void CPUThread::SetBranch(const u64 pc, bool record_branch)
 {
 	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
@@ -155,6 +155,9 @@ void CPUThread::SetBranch(const u64 pc)
 
 	m_is_branch = true;
 	nPC = pc;
+
+	if(record_branch)
+		CallStackBranch(pc);
 }
 
 void CPUThread::SetPc(const u64 pc)

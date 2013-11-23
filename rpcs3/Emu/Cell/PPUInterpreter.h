@@ -2059,7 +2059,7 @@ private:
 	void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk)
 	{
 		if(!CheckCondition(bo, bi)) return;
-		CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd));
+		CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void SC(s32 sc_code)
@@ -2074,9 +2074,8 @@ private:
 	}
 	void B(s32 ll, u32 aa, u32 lk)
 	{
-		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll));
+		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
 		if(lk) CPU.LR = CPU.PC + 4;
-		CPU.m_call_stack.Push(branchTarget(aa ? 0 : CPU.PC, ll)); //This does not affect emulation
 	}
 	void MCRF(u32 crfd, u32 crfs)
 	{
@@ -2085,9 +2084,8 @@ private:
 	void BCLR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
 		if(!CheckCondition(bo, bi)) return;
-		CPU.SetBranch(branchTarget(0, CPU.LR));
+		CPU.SetBranch(branchTarget(0, CPU.LR), true);
 		if(lk) CPU.LR = CPU.PC + 4;
-		CPU.m_call_stack.Pop(); //This does not affect emulation
 	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
 	{
@@ -2136,7 +2134,7 @@ private:
 	{
 		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
 		{
-			CPU.SetBranch(branchTarget(0, CPU.CTR));
+			CPU.SetBranch(branchTarget(0, CPU.CTR), true);
 			if(lk) CPU.LR = CPU.PC + 4;
 		}
 	}	
