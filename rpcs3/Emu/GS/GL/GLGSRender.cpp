@@ -604,14 +604,7 @@ void GLGSRender::OnInitThread()
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_SCISSOR_TEST);
 
-#if defined(__GNUG__) // Hack. Should detect xorg instead
-#if 0
-    if (GLXDrawable drawable = glXGetCurrentDrawable())
-        glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-#endif
-#else
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-#endif
 }
 
 void GLGSRender::OnExitThread()
