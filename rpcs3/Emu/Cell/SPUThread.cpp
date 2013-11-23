@@ -37,7 +37,7 @@ void SPUThread::DoReset()
 
 void SPUThread::InitRegs()
 {
-	//GPR[1]._u64[0] = stack_point;
+	GPR[1]._u32[3] = 0x40000 - 120;
 	GPR[3]._u64[1] = m_args[0];
 	GPR[4]._u64[1] = m_args[1];
 	GPR[5]._u64[1] = m_args[2];
@@ -56,7 +56,7 @@ void SPUThread::InitRegs()
 
 u64 SPUThread::GetFreeStackSize() const
 {
-	return (GetStackAddr() + GetStackSize()) - GPR[1]._u64[0];
+	return (GetStackAddr() + GetStackSize()) - GPR[1]._u64[3];
 }
 
 void SPUThread::DoRun()
@@ -72,6 +72,9 @@ void SPUThread::DoRun()
 		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
 	break;
 	}
+
+	Pause();
+	//Emu.Pause();
 }
 
 void SPUThread::DoResume()
@@ -85,5 +88,5 @@ void SPUThread::DoPause()
 void SPUThread::DoStop()
 {
 	delete m_dec;
-	m_dec = 0;
+	m_dec = nullptr;
 }

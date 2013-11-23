@@ -1,6 +1,6 @@
 #pragma once
 #include "Emu/Memory/MemoryBlock.h"
-#include "Emu/Cell/PPCDecoder.h"
+#include "Emu/CPU/CPUDecoder.h"
 
 enum CPUThreadType
 {

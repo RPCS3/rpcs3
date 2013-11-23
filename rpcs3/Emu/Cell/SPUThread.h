@@ -359,7 +359,7 @@ public:
 			return SPU.Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return SPU.In_MBox.GetFreeCount();
+			return SPU.In_MBox.GetCount();
 
 		case SPU_WrOutIntrMbox:
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
@@ -380,19 +380,20 @@ public:
 		{
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("SPU_WrOutIntrMbox = 0x%x", v);
-			if(!SPU.OutIntr_Mbox.Push(v))
+
+			while(!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped())
 			{
-				ConLog.Warning("Not enought free rooms.");
+				Sleep(1);
 			}
 		break;
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("SPU_WrOutMbox = 0x%x", v);
-			if(!SPU.Out_MBox.Push(v))
+
+			while(!SPU.Out_MBox.Push(v) && !Emu.IsStopped())
 			{
-				ConLog.Warning("Not enought free rooms.");
+				Sleep(1);
 			}
-			SPU.Status.SetValue((SPU.Status.GetValue() & ~0xff) | 1);
 		break;
 
 		default:
@@ -410,7 +411,7 @@ public:
 		{
 		case SPU_RdInMbox:
 			if(!SPU.In_MBox.Pop(v)) v = 0;
-			SPU.Status.SetValue((SPU.Status.GetValue() & ~0xff00) | (SPU.In_MBox.GetCount() << 8));
+			ConLog.Warning("%s: SPU_RdInMbox(0x%x).", __FUNCTION__, v);
 		break;
 
 		default:
@@ -419,7 +420,7 @@ public:
 		}
 	}
 
-	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset); }
+	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }
 	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
 	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
 	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
@@ -478,7 +479,7 @@ public:
 	}
 
 public:
-	virtual void InitRegs(); 
+	virtual void InitRegs();
 	virtual u64 GetFreeStackSize() const;
 
 protected:

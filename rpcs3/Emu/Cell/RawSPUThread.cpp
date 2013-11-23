@@ -11,7 +11,14 @@ RawSPUThread::RawSPUThread(u32 index, CPUThreadType type)
 
 RawSPUThread::~RawSPUThread()
 {
-	MemoryBlock::Delete();
+	for(int i=0; i<Memory.MemoryBlocks.GetCount(); ++i)
+	{
+		if(&Memory.MemoryBlocks[i] == this)
+		{
+			Memory.MemoryBlocks.RemoveFAt(i);
+			return;
+		}
+	}
 }
 
 bool RawSPUThread::Read8(const u64 addr, u8* value)
@@ -59,9 +66,13 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	case Prxy_QueryType_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_QueryType)", m_index);	*value = Prxy.QueryType.GetValue(); break;
 	case Prxy_QueryMask_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_QueryMask)", m_index);	*value = Prxy.QueryMask.GetValue(); break;
 	case Prxy_TagStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_TagStatus)", m_index);	*value = Prxy.TagStatus.GetValue(); break;
-	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);		*value = SPU.Out_MBox.GetValue(); break;
+	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);		while(!SPU.Out_MBox.Pop(*value) && !Emu.IsStopped()) Sleep(1); break;
 	case SPU_In_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_In_MBox)", m_index);		*value = SPU.In_MBox.GetValue(); break;
-	case SPU_MBox_Status_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_MBox_Status)", m_index);	*value = SPU.MBox_Status.GetValue(); break;
+	case SPU_MBox_Status_offs:		//ConLog.Warning("RawSPUThread[%d]: Read32(SPU_MBox_Status)", m_index);
+		SPU.MBox_Status.SetValue(SPU.Out_MBox.GetCount() ? SPU.MBox_Status.GetValue() | 1 : SPU.MBox_Status.GetValue() & ~1);
+		SPU.MBox_Status.SetValue((SPU.MBox_Status.GetValue() & ~0xff00) | (SPU.In_MBox.GetCount() << 8));
+		*value = SPU.MBox_Status.GetValue();
+		break;
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);		*value = SPU.RunCntl.GetValue(); break;
 	case SPU_Status_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Status)", m_index);		*value = SPU.Status.GetValue(); break;
 	case SPU_NPC_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(SPU_NPC)", m_index);			*value = SPU.NPC.GetValue(); break;
@@ -201,7 +212,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	break;
 	case Prxy_QueryMask_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_QueryMask, 0x%x)", m_index, value);		Prxy.QueryMask.SetValue(value); break;
 	case Prxy_TagStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_TagStatus, 0x%x)", m_index, value);		Prxy.TagStatus.SetValue(value); break;
-	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Out_MBox, 0x%x)", m_index, value);		SPU.Out_MBox.SetValue(value); break;
+	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Out_MBox, 0x%x)", m_index, value);		while(!SPU.Out_MBox.Push(value) && !Emu.IsStopped()) Sleep(1); break;
 	case SPU_In_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_In_MBox, 0x%x)", m_index, value);			SPU.In_MBox.SetValue(value); break;
 	case SPU_MBox_Status_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_MBox_Status, 0x%x)", m_index, value);		SPU.MBox_Status.SetValue(value); break;
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RunCntl, 0x%x)", m_index, value);			SPU.RunCntl.SetValue(value); break;
@@ -247,7 +258,7 @@ bool RawSPUThread::Write128(const u64 addr, const u128 value)
 
 void RawSPUThread::InitRegs()
 {
-	m_offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
+	dmac.ls_offset = m_offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
 	SPUThread::InitRegs();
 }
 
@@ -289,6 +300,8 @@ void RawSPUThread::Task()
 				continue;
 			}
 
+			dmac.DoCmd();
+
 			if(SPU.RunCntl.GetValue() != SPU_RUNCNTL_RUNNABLE)
 			{
 				if(!is_last_paused)
@@ -311,6 +324,7 @@ void RawSPUThread::Task()
 				SPU.Status.SetValue(SPU_STATUS_RUNNING);
 			}
 
+			Step();
 			NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 			for(uint i=0; i<bp.GetCount(); ++i)

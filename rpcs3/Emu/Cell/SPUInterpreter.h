@@ -30,6 +30,11 @@ private:
 			CPU.SetExitStatus(code & 0xfff);
 			CPU.Stop();
 		}
+		else
+		{
+			ConLog.Warning("STOP: 0x%x", code);
+			Emu.Pause();
+		}
 	}
 	void LNOP()
 	{
@@ -272,23 +277,23 @@ private:
 	}
 	void BIZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u32[0] == 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		if(CPU.GPR[rt]._u32[3] == 0)
+			CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 	}
 	void BINZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u32[0] != 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		if(CPU.GPR[rt]._u32[3] != 0)
+			CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 	}
 	void BIHZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[0] == 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		if(CPU.GPR[rt]._u16[7] == 0)
+			CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 	}
 	void BIHNZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[0] != 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
+		if(CPU.GPR[rt]._u16[7] != 0)
+			CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
@@ -296,7 +301,15 @@ private:
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.WriteLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0], CPU.GPR[rt]._u128);
+		u32 lsa = CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3];
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("STQX: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void BI(u32 ra)
 	{
@@ -368,7 +381,15 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]);
+		u32 lsa = CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3];
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("LQX: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
@@ -957,7 +978,15 @@ private:
 	}
 	void STQA(u32 rt, s32 i16)
 	{
-		CPU.WriteLS128(i16 << 2, CPU.GPR[rt]._u128);
+		u32 lsa = i16 << 2;
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("STQA: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
@@ -974,7 +1003,15 @@ private:
 	}
 	void STQR(u32 rt, s32 i16)
 	{
-		CPU.WriteLS128(branchTarget(CPU.PC, i16), CPU.GPR[rt]._u128);
+		u32 lsa = branchTarget(CPU.PC, i16);
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("STQR: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void BRA(s32 i16)
 	{
@@ -982,7 +1019,15 @@ private:
 	}
 	void LQA(u32 rt, s32 i16)
 	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(i16 << 2);
+		u32 lsa = i16 << 2;
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("LQA: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
@@ -1018,7 +1063,15 @@ private:
 	}
 	void LQR(u32 rt, s32 i16)
 	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(branchTarget(CPU.PC, i16));
+		u32 lsa = branchTarget(CPU.PC, i16);
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("LQR: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
 	void IL(u32 rt, s32 i16)
 	{
@@ -1103,11 +1156,26 @@ private:
 	}
 	void STQD(u32 rt, s32 i10, u32 ra)
 	{
-		CPU.WriteLS128(CPU.GPR[ra]._u32[3] + i10, CPU.GPR[rt]._u128);
+		u32 lsa = CPU.GPR[ra]._u32[3] + i10;
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("STQD: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra)
 	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[3] + i10);
+		u32 lsa = CPU.GPR[ra]._u32[3] + i10;
+		if(!CPU.IsGoodLSA(lsa))
+		{
+			ConLog.Error("LQD: bad lsa (0x%x)", lsa);
+			Emu.Pause();
+			return;
+		}
+
+		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
 	{
@@ -1203,7 +1271,6 @@ private:
 	void HBRA(s32 ro, s32 i16)
 	{
 		UNIMPLEMENTED();
-		UNIMPLEMENTED();
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
@@ -1228,7 +1295,7 @@ private:
 	}
 	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		ConLog.Warning("SHUFB");
+		//ConLog.Warning("SHUFB");
 	}
 	void MPYA(u32 rc, u32 ra, u32 rb, u32 rt)
 	{

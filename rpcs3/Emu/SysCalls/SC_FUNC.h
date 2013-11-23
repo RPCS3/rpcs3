@@ -255,7 +255,7 @@ class binder_func_10<void, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : public fun
 
 public:
 	binder_func_10(func_t call) : func_caller(), m_call(call) {}
-	virtual void operator()() { declCPU(); m_call(ARG(1), ARG(2), ARG(3), ARG(4), ARG(5), ARG(6), ARG(7), ARG(8), ARG(9), ARG(10), ARG(11)); }
+	virtual void operator()() { declCPU(); m_call(ARG(1), ARG(2), ARG(3), ARG(4), ARG(5), ARG(6), ARG(7), ARG(8), ARG(9), ARG(10)); }
 };
 
 template<typename TR, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11>

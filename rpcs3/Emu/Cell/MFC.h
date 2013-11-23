@@ -163,16 +163,16 @@ struct DMAC
 		if(proxy_pos)
 		{
 			DMAC_Proxy p = proxy[0];
-			memcpy(proxy, proxy + 1, proxy_pos--);
+			memcpy(proxy, proxy + 1, --proxy_pos * sizeof(DMAC_Proxy));
 
 			switch(p.cmd)
 			{
 			case MFC_PUT_CMD:
-				memcpy(Memory + ls_offset + p.lsa, Memory + p.ea, p.size);
+				memcpy(Memory + p.ea, Memory + ls_offset + p.lsa, p.size);
 			break;
 
 			case MFC_GET_CMD:
-				memcpy(Memory + p.ea, Memory + ls_offset + p.lsa, p.size);
+				memcpy(Memory + ls_offset + p.lsa, Memory + p.ea, p.size);
 			break;
 
 			default:
