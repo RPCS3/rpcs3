@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MainFrame.h"
 #include "CompilerELF.h"
+#include "MemoryViewer.h"
 
 #include "git-version.h"
 #include "Emu/System.h"
@@ -31,7 +32,8 @@ enum IDs
 	id_config_emu,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
-	id_compiler,
+	id_tools_compiler,
+	id_tools_memory_viewer,
 	id_help_about,
 	id_update_dbg,
 };
@@ -60,13 +62,13 @@ MainFrame::MainFrame()
 	wxMenu& menu_boot(*new wxMenu());
 	wxMenu& menu_sys(*new wxMenu());
 	wxMenu& menu_conf(*new wxMenu());
-	wxMenu& menu_compiler(*new wxMenu());
+	wxMenu& menu_tools(*new wxMenu());
 	wxMenu& menu_help(*new wxMenu());
 
 	menubar.Append(&menu_boot, "Boot");
 	menubar.Append(&menu_sys, "System");
 	menubar.Append(&menu_conf, "Config");
-	menubar.Append(&menu_compiler, "Compiler");
+	menubar.Append(&menu_tools, "Tools");
 	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
@@ -86,7 +88,8 @@ MainFrame::MainFrame()
 	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
 
-	menu_compiler.Append(id_compiler, "ELF Compiler");
+	menu_tools.Append(id_tools_compiler, "ELF Compiler");
+	menu_tools.Append(id_tools_memory_viewer, "Memory Viewer");
 
 	menu_help.Append(id_help_about, "About...");
 
@@ -109,7 +112,8 @@ MainFrame::MainFrame()
 	Connect( id_config_vfs_manager,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
 	Connect( id_config_vhdd_manager,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
 
-	Connect( id_compiler,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
+	Connect( id_tools_compiler,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
+	Connect( id_tools_memory_viewer,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
 
 	Connect( id_help_about,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
 
@@ -488,6 +492,11 @@ void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 {
 	(new CompilerELF(this)) -> Show();
+}
+
+void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
+{
+	(new MemoryViewerPanel(this)) -> Show();
 }
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))

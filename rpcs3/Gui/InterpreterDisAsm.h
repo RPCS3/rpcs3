@@ -11,6 +11,7 @@ class InterpreterDisAsmFrame : public wxPanel
 	u64 PC;
 	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
+	wxTextCtrl* m_calls;
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
@@ -34,6 +35,7 @@ public:
 	void DoUpdate();
 	void ShowAddr(const u64 addr);
 	void WriteRegs();
+	void WriteCallStack();
 
 	void HandleCommand(wxCommandEvent& event);
 	void OnUpdate(wxCommandEvent& event);

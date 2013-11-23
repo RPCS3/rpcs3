@@ -171,6 +171,15 @@ public:
 	virtual void Exec();
 	void ExecOnce();
 
+	Stack<u64> m_call_stack;
+	wxString CallStackToString()
+	{
+		wxString ret = "Call Stack:\n==========\n";
+		for(uint i=0; i<m_call_stack.GetCount(); ++i)
+			ret += wxString::Format("0x%llx\n", m_call_stack.Get(i));
+		return ret;
+	}
+
 protected:
 	virtual void DoReset()=0;
 	virtual void DoRun()=0;

@@ -50,12 +50,20 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	m_regs->SetMinSize(wxSize(495, 100));
 	m_regs->SetEditable(false);
 
-	m_list->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
-	m_regs->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	//Call Stack
+	m_calls = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
+		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
+	m_calls->SetMinSize(wxSize(495, 100));
+	m_calls->SetEditable(false);
+
+	m_list ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_regs ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_calls->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	wxBoxSizer& s_w_list = *new wxBoxSizer(wxHORIZONTAL);
 	s_w_list.Add(m_list, 2, wxEXPAND | wxLEFT | wxDOWN, 5);
 	s_w_list.Add(m_regs, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
+	s_w_list.Add(m_calls,1, wxEXPAND | wxRIGHT | wxDOWN, 5);
 
 	s_p_main.Add(&s_b_main, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
 	s_p_main.Add(&s_w_list, 1, wxEXPAND | wxDOWN, 5);
@@ -216,6 +224,7 @@ void InterpreterDisAsmFrame::DoUpdate()
 {
 	Show_PC(wxCommandEvent());
 	WriteRegs();
+	WriteCallStack();
 }
 
 void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
@@ -314,6 +323,22 @@ void InterpreterDisAsmFrame::WriteRegs()
 	m_regs->Clear();
 	m_regs->WriteText(data);
 	m_regs->Thaw();
+}
+
+void InterpreterDisAsmFrame::WriteCallStack()
+{
+	if(!CPU)
+	{
+		m_calls->Clear();
+		return;
+	}
+
+	const wxString data = CPU->CallStackToString();
+
+	m_calls->Freeze();
+	m_calls->Clear();
+	m_calls->WriteText(data);
+	m_calls->Thaw();
 }
 
 void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)

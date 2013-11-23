@@ -31,6 +31,7 @@ private:
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
+	void OpenMemoryViewer(wxCommandEvent& evt);
 	void AboutDialogHandler(wxCommandEvent& event);
 	void UpdateUI(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);

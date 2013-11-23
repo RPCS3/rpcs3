@@ -725,7 +725,7 @@ public:
 
 	virtual wxString RegsToString()
 	{
-		wxString ret;
+		wxString ret = "Registers:\n=========\n";
 
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, FPR[i]);

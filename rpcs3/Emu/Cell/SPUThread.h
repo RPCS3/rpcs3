@@ -438,7 +438,7 @@ public:
 
 	virtual wxString RegsToString()
 	{
-		wxString ret;
+		wxString ret = "Registers:\n=========\n";
 
 		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString());
 

@@ -324,7 +324,7 @@ extern int sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 a3);
 extern int sys_rsx_device_unmap();
 extern int sys_rsx_attribute();
 
-#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", __FUNCTION__)
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]

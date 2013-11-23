@@ -39,7 +39,7 @@ void ARMv7Thread::SetArg(const uint pos, const u64 arg)
 
 wxString ARMv7Thread::RegsToString()
 {
-	wxString result;
+	wxString result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
 		result += wxString::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);

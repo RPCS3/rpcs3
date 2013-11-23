@@ -2076,6 +2076,7 @@ private:
 	{
 		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll));
 		if(lk) CPU.LR = CPU.PC + 4;
+		CPU.m_call_stack.Push(branchTarget(aa ? 0 : CPU.PC, ll)); //This does not affect emulation
 	}
 	void MCRF(u32 crfd, u32 crfs)
 	{
@@ -2086,6 +2087,7 @@ private:
 		if(!CheckCondition(bo, bi)) return;
 		CPU.SetBranch(branchTarget(0, CPU.LR));
 		if(lk) CPU.LR = CPU.PC + 4;
+		CPU.m_call_stack.Pop(); //This does not affect emulation
 	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
 	{
