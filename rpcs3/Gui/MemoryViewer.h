@@ -42,6 +42,7 @@ public:
 	virtual void fPrev(wxCommandEvent& event);
 
 	virtual void ShowMemory();
+	virtual void ShowImage(wxCommandEvent& WXUNUSED(event));
 
 	void SetPC(const uint pc) { m_addr = pc; }
 };
