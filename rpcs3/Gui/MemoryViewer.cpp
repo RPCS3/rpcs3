@@ -4,7 +4,6 @@
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
 	: wxFrame(parent, wxID_ANY, "Memory Viewer", wxDefaultPosition, wxSize(700, 450))
-	//wxSYSTEM_MENU | wxRESIZE_BORDER | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN)
 {
 	exit = false;
 	m_addr = 0;
@@ -65,6 +64,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	cbox_img_mode->Append("RGB");
 	cbox_img_mode->Append("ARGB");
 	cbox_img_mode->Append("RGBA");
+	cbox_img_mode->Select(1); //ARGB
 	s_tools_img_mode.Add(cbox_img_mode);
 
 	s_tools_img.Add(&s_tools_img_size);
@@ -72,8 +72,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 
 	//Tools: Run tools
 	wxStaticBoxSizer& s_tools_buttons = *new wxStaticBoxSizer(wxVERTICAL, this, "Tools");
-	wxButton* b_tools_img_view = new wxButton(this, wxID_ANY, "View\nimage", wxDefaultPosition, wxSize(52,-1));
-	s_tools_buttons.Add(b_tools_img_view);
+	wxButton* b_img = new wxButton(this, wxID_ANY, "View\nimage", wxDefaultPosition, wxSize(52,-1));
+	s_tools_buttons.Add(b_img);
 
 	//Tools: Tools = Memory Viewer Options + Raw Image Preview Options + Buttons
 	s_tools.AddSpacer(10);
@@ -131,6 +131,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	Connect(b_next->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::Next));
 	Connect(b_fprev->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::fPrev));
 	Connect(b_fnext->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::fNext));
+	Connect(b_img->GetId(),   wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::ShowImage));
 
 	t_mem_addr ->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(MemoryViewerPanel::OnScrollMemory), NULL, this);
 	t_mem_hex  ->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(MemoryViewerPanel::OnScrollMemory), NULL, this);
@@ -211,6 +212,60 @@ void MemoryViewerPanel::ShowMemory()
 	t_mem_addr->SetValue(t_mem_addr_str);
 	t_mem_hex->SetValue(t_mem_hex_str);
 	t_mem_ascii->SetValue(t_mem_ascii_str);
+}
+
+void MemoryViewerPanel::ShowImage(wxCommandEvent& WXUNUSED(event))
+{
+	wxString title = wxString::Format("Raw Image @ 0x%x", m_addr);
+	int mode = cbox_img_mode->GetSelection();
+	int sizex = sc_img_size_x->GetValue();
+	int sizey = sc_img_size_y->GetValue();
+
+	wxFrame* f_image_viewer = new wxFrame(this, wxID_ANY,  title, wxDefaultPosition, wxDefaultSize,
+		wxSYSTEM_MENU | wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN);
+	f_image_viewer->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
+	f_image_viewer->SetAutoLayout(true);
+	f_image_viewer->SetClientSize(wxSize(sizex,sizey));
+    f_image_viewer->Show();
+
+	wxClientDC* dc_canvas = new wxClientDC(f_image_viewer);
+	u32 addr = m_addr;
+	for(int y = 0; y < sizex; y++)
+	{
+		for(int x = 0; x < sizey; x++)
+		{
+			char R,G,B;
+			switch(mode)
+			{
+			case(0): //RGB
+				R = Memory.IsGoodAddr(addr+0) ? Memory.Read8(addr+0) : 0;
+				G = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
+				B = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
+				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas->DrawPoint(x,y);
+				addr += 3;
+				break;
+			case(1): //ARGB
+				//A = Memory.IsGoodAddr(addr+0) ? Memory.Read8(addr+0) : 0;
+				R = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
+				G = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
+				B = Memory.IsGoodAddr(addr+3) ? Memory.Read8(addr+3) : 0;
+				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas->DrawPoint(x,y);
+				addr += 4;
+				break;
+			case(2): //RGBA
+				R = Memory.IsGoodAddr(addr+0) ? Memory.Read8(addr+0) : 0;
+				G = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
+				B = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
+				//A = Memory.IsGoodAddr(addr+3) ? Memory.Read8(addr+3) : 0;
+				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas->DrawPoint(x,y);
+				addr += 4;
+				break;
+			}
+		}
+	}
 }
 
 void MemoryViewerPanel::Next (wxCommandEvent& WXUNUSED(event)) { m_addr += m_colcount; ShowMemory(); }
