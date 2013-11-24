@@ -4,7 +4,7 @@
 #include "Loader/ELF.h"
 #include "Emu/Cell/RawSPUThread.h"
 
-SysCallBase sc_spu("sys_spu");
+static SysCallBase sc_spu("sys_spu");
 extern SysCallBase sys_event;
 
 static const u32 g_spu_group_thr_count = 255;

@@ -1,6 +1,3 @@
-#include "stdafx.h"
-#include "Emu/CPU/CPUDisAsm.h"
-
 class RegisterEditorDialog : public wxDialog
 {
 	u64 pc;

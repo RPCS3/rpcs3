@@ -2,7 +2,9 @@
 #include <GL/gl.h>
 #include "GL/glext.h"
 
+#ifdef _WIN32
 typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
+#endif
 
 #define OPENGL_PROC(p, n) extern p gl##n
 #define OPENGL_PROC2(p, n, tn) OPENGL_PROC(p, n)

@@ -9,7 +9,7 @@
 #include "Emu/GS/sysutil_video.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
-#include "Gui/AboutDialog.cpp"
+#include "Gui/AboutDialog.h"
 #include <wx/dynlib.h>
 
 #include "scetool/scetool.cpp"
