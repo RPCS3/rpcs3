@@ -290,6 +290,9 @@ public:
 
 	bool m_set_depth_func;
 	int m_depth_func;
+	bool m_set_depth_bounds;
+	float m_depth_bounds_min;
+	float m_depth_bounds_max;
 
 	bool m_set_alpha_test;
 	bool m_set_blend;
@@ -301,6 +304,12 @@ public:
 	bool m_set_stencil_test;
 	bool m_set_line_smooth;
 	bool m_set_poly_smooth;
+	bool m_set_poly_offset_fill;
+	bool m_set_poly_offset_line;
+	bool m_set_poly_offset_point;
+
+	bool m_set_restart_index;
+	u32 m_restart_index;
 
 	bool m_set_viewport_horizontal;
 	bool m_set_viewport_vertical;
@@ -536,6 +545,10 @@ protected:
 		m_clear_z = 0xffffff;
 		m_clear_s = 0;
 
+		m_depth_bounds_min = 0.0;
+		m_depth_bounds_max = 1.0;
+		m_restart_index = 0xffffffff;
+
 		Reset();
 	}
 
@@ -544,6 +557,7 @@ protected:
 		m_set_color_mask = false;
 		m_set_clip = false;
 		m_set_depth_func = false;
+		m_set_depth_bounds = false;
 		m_set_viewport_horizontal = false;
 		m_set_viewport_vertical = false;
 		m_set_scissor_horizontal = false;
@@ -584,6 +598,10 @@ protected:
 		m_set_cull_face = false;
 		m_set_alpha_func = false;
 		m_set_alpha_ref = false;
+		m_set_poly_offset_fill = false;
+		m_set_poly_offset_line = false;
+		m_set_poly_offset_point = false;
+		m_set_restart_index = false;
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;

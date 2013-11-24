@@ -812,6 +812,10 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
+	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
+	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
+	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
+	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); //Requires OpenGL 3.1+
 
 	if(m_set_clip_plane)
 	{
@@ -904,6 +908,12 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glDepthFunc");
 	}
 
+	if(m_set_depth_bounds)
+	{
+		glDepthRange(m_depth_bounds_min, m_depth_bounds_max);
+		checkForGlError("glDepthRange");
+	}
+
 	if(m_set_clip)
 	{
 		glDepthRangef(m_clip_min, m_clip_max);
@@ -958,6 +968,13 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glFogf(GL_FOG_START)");
 		glFogf(GL_FOG_END, m_fog_param1);
 		checkForGlError("glFogf(GL_FOG_END)");
+	}
+
+	if(m_set_restart_index)
+	{
+		ConLog.Warning("m_set_restart_index requires glPrimitiveRestartIndex()");
+		//glPrimitiveRestartIndex(m_restart_index); //Requires OpenGL 3.1+
+		//checkForGlError("glPrimitiveRestartIndex");
 	}
 
 	if(m_indexed_array.m_count && m_draw_array_count)

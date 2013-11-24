@@ -372,6 +372,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_set_depth_bounds_test = args[0] ? true : false;
 	break;
 
+	case NV4097_SET_DEPTH_BOUNDS_MIN:
+	{
+		m_set_depth_bounds = true;
+		const u32 depth_bounds_min = args[0];
+		m_depth_bounds_min = (float&)depth_bounds_min;
+		if (count > 1)
+		{
+			const u32 depth_bounds_max = args[1];
+			m_depth_bounds_max = (float&)depth_bounds_max;
+		}
+	}
+	break;
+
 	case NV4097_SET_ALPHA_FUNC:
 		m_set_alpha_func = true;
 		m_alpha_func = args[0];
@@ -826,11 +839,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
-		if(args[0]) ConLog.Error("NV4097_SET_POLY_OFFSET_FILL_ENABLE");
+		m_set_poly_offset_fill = args[0] ? true : false;
+	break;
+
+	case NV4097_SET_POLY_OFFSET_LINE_ENABLE:
+		m_set_poly_offset_line = args[0] ? true : false;
+	break;
+
+	case NV4097_SET_POLY_OFFSET_POINT_ENABLE:
+		m_set_poly_offset_point = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_RESTART_INDEX_ENABLE:
-		if(args[0]) ConLog.Error("NV4097_SET_RESTART_INDEX_ENABLE");
+		m_set_restart_index = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_POINT_PARAMS_ENABLE:
@@ -943,9 +964,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_RESTART_INDEX:
-	{
-		//TODO
-	}
+		m_restart_index = args[0];
 	break;
 
 	case NV4097_INVALIDATE_L2:
