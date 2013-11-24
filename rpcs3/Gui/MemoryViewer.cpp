@@ -223,9 +223,9 @@ void MemoryViewerPanel::ShowImage(wxCommandEvent& WXUNUSED(event))
 	f_image_viewer->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	f_image_viewer->SetAutoLayout(true);
 	f_image_viewer->SetClientSize(wxSize(sizex,sizey));
-    f_image_viewer->Show();
+	f_image_viewer->Show();
 
-	wxClientDC* dc_canvas = new wxClientDC(f_image_viewer);
+	wxClientDC dc_canvas(f_image_viewer);
 	u32 addr = m_addr;
 	for(int y = 0; y < sizex; y++)
 	{
@@ -238,8 +238,8 @@ void MemoryViewerPanel::ShowImage(wxCommandEvent& WXUNUSED(event))
 				R = Memory.IsGoodAddr(addr+0) ? Memory.Read8(addr+0) : 0;
 				G = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
 				B = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
-				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
-				dc_canvas->DrawPoint(x,y);
+				dc_canvas.SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas.DrawPoint(x,y);
 				addr += 3;
 				break;
 			case(1): //ARGB
@@ -247,8 +247,8 @@ void MemoryViewerPanel::ShowImage(wxCommandEvent& WXUNUSED(event))
 				R = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
 				G = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
 				B = Memory.IsGoodAddr(addr+3) ? Memory.Read8(addr+3) : 0;
-				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
-				dc_canvas->DrawPoint(x,y);
+				dc_canvas.SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas.DrawPoint(x,y);
 				addr += 4;
 				break;
 			case(2): //RGBA
@@ -256,8 +256,8 @@ void MemoryViewerPanel::ShowImage(wxCommandEvent& WXUNUSED(event))
 				G = Memory.IsGoodAddr(addr+1) ? Memory.Read8(addr+1) : 0;
 				B = Memory.IsGoodAddr(addr+2) ? Memory.Read8(addr+2) : 0;
 				//A = Memory.IsGoodAddr(addr+3) ? Memory.Read8(addr+3) : 0;
-				dc_canvas->SetPen(wxPen(wxColour(R,G,B), 3));
-				dc_canvas->DrawPoint(x,y);
+				dc_canvas.SetPen(wxPen(wxColour(R,G,B), 3));
+				dc_canvas.DrawPoint(x,y);
 				addr += 4;
 				break;
 			}

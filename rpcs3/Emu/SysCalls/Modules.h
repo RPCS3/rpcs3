@@ -70,6 +70,12 @@ public:
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 };
 
+template<typename T>
+__forceinline void Module::AddFunc(u32 id, T func)
+{
+	m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
+}
+
 bool IsLoadedFunc(u32 id);
 bool CallFunc(u32 num);
 bool UnloadFunc(u32 id);

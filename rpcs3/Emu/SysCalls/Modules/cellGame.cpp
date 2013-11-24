@@ -110,14 +110,13 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 		return CELL_GAME_ERROR_PARAM;
 
 	// TODO: Locate the PARAM.SFO. The following path is in most cases wrong.
-	vfsStream* f = Emu.GetVFS().Open("/app_home/PARAM.SFO", vfsRead);
-	PSFLoader psf(*f);
+	vfsFile f("/app_home/PARAM.SFO");
+	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
-	psf.Close();
 
 	switch(id)
-	{										// TODO: Is the endianness right?
+	{
 	case CELL_GAME_PARAMID_PARENTAL_LEVEL:	value = psf.m_info.parental_lvl;	break;
 	case CELL_GAME_PARAMID_RESOLUTION:		value = psf.m_info.resolution;		break;
 	case CELL_GAME_PARAMID_SOUND_FORMAT:	value = psf.m_info.sound_format;	break;
@@ -137,11 +136,10 @@ int cellGameGetParamString(u32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 		return CELL_GAME_ERROR_PARAM;
 
 	// TODO: Locate the PARAM.SFO. The following path is in most cases wrong.
-	vfsStream* f = Emu.GetVFS().Open("/app_home/PARAM.SFO", vfsRead);
-	PSFLoader psf(*f);
+	vfsFile f("/app_home/PARAM.SFO");
+	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
-	psf.Close();
 
 	switch(id)
 	{

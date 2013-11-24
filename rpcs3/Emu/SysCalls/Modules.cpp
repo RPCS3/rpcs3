@@ -470,9 +470,3 @@ u32 Module::GetNewId(void* data, u8 flags)
 {
 	return Emu.GetIdManager().GetNewID(GetName(), data, flags);
 }
-
-template<typename T>
-__forceinline void Module::AddFunc(u32 id, T func)
-{
-    m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
-}

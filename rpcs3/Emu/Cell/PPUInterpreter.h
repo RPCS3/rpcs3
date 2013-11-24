@@ -3269,10 +3269,10 @@ private:
 	{
 		double res;
 
-#ifdef _MSVC_VER
+#ifdef _MSC_VER
 		if(_fpclass(CPU.FPR[frb]) >= _FPCLASS_NZ)
 #else
-        if(_fpclass(CPU.FPR[frb]) == FP_ZERO || signbit(CPU.FPR[frb]) == 0)
+		if(_fpclass(CPU.FPR[frb]) == FP_ZERO || signbit(CPU.FPR[frb]) == 0)
 #endif
 		{
 			res = static_cast<float>(1.0 / CPU.FPR[frb]);
