@@ -7,8 +7,8 @@
 #include "Emu/ARMv7/ARMv7DisAsm.h"
 #include "Emu/ARMv7/ARMv7Decoder.h"
 
-#include "InstructionEditor.cpp"
-#include "RegisterEditor.cpp"
+#include "InstructionEditor.h"
+#include "RegisterEditor.h"
 
 //static const int show_lines = 30;
 

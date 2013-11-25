@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-SysCallBase sc_spu("sys_spu");
+static SysCallBase sc_spu("sys_spu");
 
 u32 _max_usable_spu = 0;
 u32 _max_raw_spu = 0;
