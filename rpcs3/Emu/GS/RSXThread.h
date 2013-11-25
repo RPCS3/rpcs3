@@ -252,6 +252,9 @@ public:
 	u32 m_ioAddress, m_ioSize, m_ctrlAddress;
 	int m_flip_status;
 	int m_flip_mode;
+	int m_debug_level;
+	int m_frequency_mode;
+
 
 	u32 m_tiles_addr;
 	u32 m_zculls_addr;
@@ -518,6 +521,8 @@ protected:
 		, m_ctrl(nullptr)
 		, m_flip_status(0)
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
+		, m_debug_level(CELL_GCM_DEBUG_LEVEL0)
+		, m_frequency_mode(CELL_GCM_DISPLAY_FREQUENCY_DISABLE)
 		, m_main_mem_addr(0)
 		, m_local_mem_addr(0)
 		, m_draw_mode(0)

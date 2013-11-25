@@ -79,6 +79,7 @@ extern int cellGcmSetFlipHandler(u32 handler_addr);
 extern int cellGcmAddressToOffset(u32 address, mem32_t offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
+extern int cellGcmSetSecondVFrequency(u32 freq);
 int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved);
 
 // Help Functions
@@ -522,7 +523,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 		//int ret = InitSystemResource();
 		//if (ret) return ret;
 		//InitLabels();
-		//cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
+		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(CCellRescInternal::IntrHandler50);
 		//cellGcmSetSecondVHandler(CCellRescInternal::IntrHandler60);
 		cellGcmSetFlipHandler(NULL);
@@ -530,14 +531,14 @@ int cellRescSetDisplayMode(u32 displayMode)
 	else if (IsPalDrop())
 	{
 		//InitLabels();
-		//cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
+		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(NULL);
 		//cellGcmSetSecondVHandler(CCellRescInternal::IntrHandler60Drop);
 		cellGcmSetFlipHandler(NULL);
 	} 
 	else if (IsPal60Hsync())
 	{
-		//cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
+		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(NULL);
 	}
 
