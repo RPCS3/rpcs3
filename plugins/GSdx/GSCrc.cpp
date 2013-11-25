@@ -154,6 +154,7 @@ CRC::Game CRC::m_games[] =
 	{0x7B2DE9CC, WildArms4, EU, 0},
 	{0x8B029334, Manhunt2, NoRegion, 0},
 	{0x09F49E37, CrashBandicootWoC, NoRegion, 0},
+	{0x103B5706, CrashBandicootWoC, NoRegion, 0},
 	{0x75182BE5, CrashBandicootWoC, US, 0},
 	{0x5188ABCA, CrashBandicootWoC, US, 0},
 	{0x3A03D62F, CrashBandicootWoC, EU, 0},
