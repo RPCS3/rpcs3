@@ -128,13 +128,13 @@ public:
 	void Load()
 	{
 		CPUDecoderMode.Load(2);
-		GSRenderMode.Load(0);
+		GSRenderMode.Load(1);
 		GSResolution.Load(4);
-		GSAspectRatio.Load(1);
+		GSAspectRatio.Load(2);
 		GSVSyncEnable.Load(false);
 		GSDumpColorBuffers.Load(true);
 		GSDumpDepthBuffer.Load(true);
-		PadHandlerMode.Load(0);
+		PadHandlerMode.Load(1);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
 	}

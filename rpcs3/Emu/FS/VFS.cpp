@@ -191,6 +191,11 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "$(GameDir)";
 			res[idx].mount = "/app_home/";
 			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "";
+			res[idx].mount = "/host_root/";
+			res[idx].device = vfsDevice_LocalFile;
 			return;
 		}
 

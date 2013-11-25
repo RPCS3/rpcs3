@@ -511,6 +511,38 @@ u32 cellGcmGetReportDataAddressLocation(u8 location, u32 index)
 	return Emu.GetGSManager().GetRender().m_report_main_addr;
 }
 
+int cellGcmSetDebugOutputLevel (int level)
+{
+	cellGcmSys.Warning("cellGcmSetDebugOutputLevel(level=%d)", level);
+	
+	switch (level)
+	{
+		case CELL_GCM_DEBUG_LEVEL0:
+		case CELL_GCM_DEBUG_LEVEL1:
+		case CELL_GCM_DEBUG_LEVEL2:
+			Emu.GetGSManager().GetRender().m_debug_level = level;
+		break;
+
+		default: return CELL_EINVAL;
+	}
+}
+
+int cellGcmSetSecondVFrequency (u32 freq)
+{
+	cellGcmSys.Warning("cellGcmSetSecondVFrequency(level=%d)", freq);
+	
+	switch (freq)
+	{
+		case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
+		case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
+		case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
+			Emu.GetGSManager().GetRender().m_frequency_mode = freq;
+		break;
+
+		default: return CELL_EINVAL;
+	}
+}
+
 void cellGcmSys_init()
 {
 	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
@@ -555,4 +587,6 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x657571f7, cellGcmGetTileInfo);
 	cellGcmSys.AddFunc(0xcaabd992, cellGcmInitDefaultFifoMode);
 	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
+	cellGcmSys.AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
+	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
 }
