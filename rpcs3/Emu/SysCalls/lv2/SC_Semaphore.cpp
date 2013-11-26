@@ -67,6 +67,7 @@ int sys_semaphore_wait(u32 sem, u64 timeout)
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
 
+	sem_data->sem_count = 0;  // Reset internal counter for sys_semaphore_get_value.
 	sem_data->sem.WaitTimeout(timeout ? timeout : INFINITE);
 
 	return CELL_OK;
@@ -79,6 +80,7 @@ int sys_semaphore_trywait(u32 sem)
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
 
+	sem_data->sem_count = 0;  // Reset internal counter for sys_semaphore_get_value.
 	if(sem_data->sem.TryWait()) return 1;
 
 	return CELL_OK;
