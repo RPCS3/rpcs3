@@ -188,8 +188,55 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 			wxString fileIn = ctrl.GetPath()+elf[i]; 
 			wxString fileOut = (ctrl.GetPath()+elf[i])+".elf";
-			scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
 
+			// Check if the data really needs to be decrypted.
+			FILE *f;
+			if((f = fopen(fileIn.mb_str(), "rb")) == NULL)
+			{
+				ConLog.Error("Could not open game boot file!");
+				return;
+			}
+			
+			// Get the key version.
+			fseek(f, 0x08, SEEK_SET);
+			s16 key_version;
+			fread(&key_version, 1, sizeof(key_version), f);
+			be_t<u16> key_version_be;
+			key_version_be.FromLE(key_version);
+
+			// Get the real elf offset.
+			fseek(f, 0x10, SEEK_SET);
+			s64 elf_offset;
+			fread(&elf_offset, 1, sizeof(elf_offset), f);
+			be_t<u64> elf_offset_be;
+			elf_offset_be.FromLE(elf_offset);
+
+			fclose(f);
+
+			if(key_version_be.ToBE() == 0x8000)
+			{
+				ConLog.Warning("Debug SELF detected! Removing fake header...");
+				FILE *in;
+				FILE *out;
+				in = fopen(fileIn, "rb");
+				out = fopen(fileOut, "wb");
+
+				// Start at the real elf offset.
+				fseek(in, elf_offset_be.ToBE(), SEEK_SET);
+				
+				// Copy the data.
+				int c;
+				while ((c = fgetc(in)) != EOF)
+					fputc(c, out);
+
+				fclose(out);
+				fclose(in);
+			}
+			else
+			{
+				scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
+			}
+			
 			Emu.SetPath((ctrl.GetPath()+elf[i])+".elf");
 			Emu.Load();
 			if (!wxRemoveFile((ctrl.GetPath()+elf[i])+".elf"))
@@ -292,10 +339,56 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 	wxString fileIn = ctrl.GetPath();
 	wxString fileOut = ctrl.GetPath()+".elf";
 
-	if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
+	// Check if the data really needs to be decrypted.
+	FILE *f;
+	if((f = fopen(fileIn.mb_str(), "rb")) == NULL)
 	{
-		ConLog.Write("SELF: Could not decrypt file");
+		ConLog.Error("Could not open SELF file!");
 		return;
+	}
+			
+	// Get the key version.
+	fseek(f, 0x08, SEEK_SET);
+	s16 key_version;
+	fread(&key_version, 1, sizeof(key_version), f);
+	be_t<u16> key_version_be;
+	key_version_be.FromLE(key_version);
+
+	// Get the real elf offset.
+	fseek(f, 0x10, SEEK_SET);
+	s64 elf_offset;
+	fread(&elf_offset, 1, sizeof(elf_offset), f);
+	be_t<u64> elf_offset_be;
+	elf_offset_be.FromLE(elf_offset);
+
+	fclose(f);
+
+	if(key_version_be.ToBE() == 0x8000)
+	{
+		ConLog.Warning("Debug SELF detected! Removing fake header...");
+		FILE *in;
+		FILE *out;
+		in = fopen(fileIn, "rb");
+		out = fopen(fileOut, "wb");
+
+		// Start at the real elf offset.
+		fseek(in, elf_offset_be.ToBE(), SEEK_SET);
+			
+		// Copy the data.
+		int c;
+		while ((c = fgetc(in)) != EOF)
+			fputc(c, out);
+		
+		fclose(out);
+		fclose(in);
+	}
+	else
+	{
+		if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
+		{
+			ConLog.Write("SELF: Could not decrypt file");
+			return;
+		}
 	}
 
 	Emu.SetPath(ctrl.GetPath()+".elf");

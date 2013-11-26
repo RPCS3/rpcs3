@@ -74,8 +74,9 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_cond_wait),								//107 (0x06B)
 	bind_func(sys_cond_signal),								//108 (0x06C)
 	bind_func(sys_cond_signal_all),							//109 (0x06D)
-	null_func, null_func, null_func, null_func, null_func, //114
-	null_func, null_func, null_func, null_func, null_func, //119
+	null_func, null_func, null_func, null_func,             //110 (0x06E)
+	bind_func(sys_semaphore_get_value),                     //114 (0x072)
+	null_func, null_func, null_func, null_func, null_func,  //119 (0x077)
 	bind_func(sys_rwlock_create),							//120 (0x078)
 	bind_func(sys_rwlock_destroy),							//121 (0x079)
 	bind_func(sys_rwlock_rlock),							//122 (0x07A)

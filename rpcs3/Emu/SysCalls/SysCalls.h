@@ -134,6 +134,7 @@ extern int sys_semaphore_destroy(u32 sem);
 extern int sys_semaphore_wait(u32 sem, u64 timeout);
 extern int sys_semaphore_trywait(u32 sem);
 extern int sys_semaphore_post(u32 sem, int count);
+extern int sys_semaphore_get_value(u32 sem, u32 count_addr);
 
 //sys_lwmutex
 extern int sys_lwmutex_create(u64 lwmutex_addr, u64 lwmutex_attr_addr);

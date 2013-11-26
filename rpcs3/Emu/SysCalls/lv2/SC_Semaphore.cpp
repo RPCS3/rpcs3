@@ -17,6 +17,7 @@ struct semaphore
 {
 	wxSemaphore sem;
 	semaphore_attr attr;
+	int sem_count;
 
 	semaphore(int initial_count, int max_count, semaphore_attr attr)
 		: sem(initial_count, max_count)
@@ -90,7 +91,23 @@ int sys_semaphore_post(u32 sem, int count)
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
 
-	while(count--) sem_data->sem.Post();
+	while(count--)
+	{
+		sem_data->sem_count++;  // Increment internal counter for sys_semaphore_get_value.
+		sem_data->sem.Post();
+	}
+
+	return CELL_OK;
+}
+
+int sys_semaphore_get_value(u32 sem, u32 count_addr)
+{
+	sys_sem.Log("sys_semaphore_get_value(sem=0x%x, count_addr=0x%x)", sem, count_addr);
+
+	semaphore* sem_data = nullptr;
+	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
+
+	Memory.Write32(count_addr, sem_data->sem_count);
 
 	return CELL_OK;
 }
