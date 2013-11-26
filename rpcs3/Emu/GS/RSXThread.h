@@ -511,6 +511,8 @@ public:
 	u8 m_shader_window_origin;
 	u16 m_shader_window_pixel_centers;
 
+	u16 m_point_x, m_point_y;
+
 	u32 m_surface_colour_target;
 
 	u8 m_begin_end;
@@ -553,6 +555,9 @@ protected:
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
+
+		m_point_x = 0;
+		m_point_y = 0;
 
 		Reset();
 	}

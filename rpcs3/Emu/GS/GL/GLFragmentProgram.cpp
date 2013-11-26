@@ -107,13 +107,13 @@ wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 
 	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
 
-	return m_parr.AddParam(fp16 ? PARAM_NONE : PARAM_OUT, "vec4",
-			wxString::Format((fp16 ? "h%u" : "r%u"), index), fp16 ? -1 : (!index ? 0 : ((index >= 2 && index <= 4) ? (index - 1) : -1)));
+	return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
+			wxString::Format((fp16 ? "h%u" : "r%u"), index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
 }
 
 bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
 {
-	return m_parr.HasParam(PARAM_OUT, "vec4",
+	return m_parr.HasParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
 		wxString::Format((fp16 ? "h%u" : "r%u"), index));
 }
 
@@ -207,6 +207,10 @@ template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 
 wxString GLFragmentDecompilerThread::BuildCode()
 {
+	//main += wxString::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
+	main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "ocol", 0) + " = " + (m_ctrl & 0x40 ? "r0" : "h0") + ";\n";
+	if(m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
+
 	wxString p = wxEmptyString;
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
@@ -365,7 +369,7 @@ void GLShaderProgram::Decompile(RSXShaderProgram& prog)
 		m_decompiler_thread = nullptr;
 	}
 
-	m_decompiler_thread = new GLFragmentDecompilerThread(shader, parr, prog.addr, prog.size);
+	m_decompiler_thread = new GLFragmentDecompilerThread(shader, parr, prog.addr, prog.size, prog.ctrl);
 	m_decompiler_thread->Start();
 #endif
 }

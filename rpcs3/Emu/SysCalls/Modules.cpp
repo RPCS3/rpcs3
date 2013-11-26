@@ -142,11 +142,16 @@ bool IsLoadedFunc(u32 id)
 
 bool CallFunc(u32 num)
 {
-	if(num - 1024 >= g_modules_funcs_list.GetCount())
-		return false;
+	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	{
+		if(g_modules_funcs_list[i].id == num)
+		{
+			(*g_modules_funcs_list[i].func)();
+			return true;
+		}
+	}
 
-	(*g_modules_funcs_list[num - 1024].func)();
-	return true;
+	return false;
 }
 
 bool UnloadFunc(u32 id)
@@ -166,14 +171,6 @@ bool UnloadFunc(u32 id)
 
 u32 GetFuncNumById(u32 id)
 {
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
-	{
-		if(g_modules_funcs_list[i].id == id)
-		{
-			return 1024 + i;
-		}
-	}
-
 	return id;
 }
 

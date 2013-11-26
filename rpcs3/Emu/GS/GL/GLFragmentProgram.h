@@ -106,8 +106,9 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	u32 m_const_index;
 	u32 m_offset;
 	u32 m_location;
+	u32 m_ctrl;
 
-	GLFragmentDecompilerThread(wxString& shader, GLParamArray& parr, u32 addr, u32& size)
+	GLFragmentDecompilerThread(wxString& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
 		: ThreadBase(false, "Fragment Shader Decompiler Thread")
 		, m_shader(shader)
 		, m_parr(parr)
@@ -115,6 +116,7 @@ struct GLFragmentDecompilerThread : public ThreadBase
 		, m_size(size) 
 		, m_const_index(0)
 		, m_location(0)
+		, m_ctrl(ctrl)
 	{
 		m_size = 0;
 	}

@@ -333,16 +333,20 @@ void GLGSRender::InitFragmentData()
 	{
 		const RSXTransformConstant& c = m_fragment_constants[i];
 
-		u32 id = c.id - m_cur_shader_prog->offset + 2 * 4 * 4;
+		u32 id = c.id - m_cur_shader_prog->offset;
+
+		//ConLog.Warning("fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
 
 		const wxString name = wxString::Format("fc%u", id);
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
-		//ConLog.Write(name + " x: %.02f y: %.02f z: %.02f w: %.02f", c.x, c.y, c.z, c.w);
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + wxString::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
+
+	//if(m_fragment_constants.GetCount())
+	//	ConLog.SkipLn();
 }
 
 bool GLGSRender::LoadProgram()
@@ -804,7 +808,7 @@ void GLGSRender::ExecCMD()
 
 	Enable(m_depth_test_enable, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
-	Enable(m_set_depth_bounds_test, GL_DEPTH_CLAMP);
+	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
 	Enable(m_set_blend, GL_BLEND);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face_enable, GL_CULL_FACE);
@@ -815,7 +819,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); //Requires OpenGL 3.1+
+	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); //Requires OpenGL 3.1+
 
 	if(m_set_clip_plane)
 	{
@@ -905,17 +909,20 @@ void GLGSRender::ExecCMD()
 	if(m_set_depth_func)
 	{
 		glDepthFunc(m_depth_func);
+		//ConLog.Warning("glDepthFunc(0x%x)", m_depth_func);
 		checkForGlError("glDepthFunc");
 	}
 
 	if(m_set_depth_bounds)
 	{
-		glDepthRange(m_depth_bounds_min, m_depth_bounds_max);
+		//ConLog.Warning("glDepthRange(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
+		glDepthBounds(m_depth_bounds_min, m_depth_bounds_max);
 		checkForGlError("glDepthRange");
 	}
 
 	if(m_set_clip)
 	{
+		//ConLog.Warning("glDepthRangef(%f, %f)", m_clip_min, m_clip_max);
 		glDepthRangef(m_clip_min, m_clip_max);
 		checkForGlError("glDepthRangef");
 	}

@@ -314,7 +314,7 @@ void CPUThread::Task()
 
 			for(uint i=0; i<bp.GetCount(); ++i)
 			{
-				if(bp[i] == m_offset + PC)
+				if(bp[i] == PC)
 				{
 					Emu.Pause();
 					break;

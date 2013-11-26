@@ -205,9 +205,6 @@
     <ClCompile Include="Emu\FS\vfsStreamMemory.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\FS\vfsDevice.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>

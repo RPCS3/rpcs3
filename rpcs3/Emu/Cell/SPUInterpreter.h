@@ -317,9 +317,9 @@ private:
 	}
 	void BISL(u32 rt, u32 ra)
 	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
+		CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] = CPU.PC + 4;
+		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
 	}
 	void IRET(u32 ra)
 	{
@@ -393,10 +393,19 @@ private:
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		const int nShift = (CPU.GPR[rb]._u32[0] >> 3) & 0xf;
+		const int s = (CPU.GPR[rb]._u32[0] >> 3) & 0xf;
 
 		for (int b = 0; b < 8; b++)
-			CPU.GPR[rt]._u8[b] = nShift == 0 ? CPU.GPR[ra]._u8[b] : (CPU.GPR[ra]._u8[b] << nShift) | (CPU.GPR[ra]._u8[b] >> (16 - nShift));
+		{
+			if(b + s < 16)
+			{
+				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
+			}
+			else
+			{
+				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s - 16];
+			}
+		}
 	}
 	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
 	{

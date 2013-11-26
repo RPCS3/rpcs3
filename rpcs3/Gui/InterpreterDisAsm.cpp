@@ -248,8 +248,8 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 		{
 			if(!Memory.IsGoodAddr(CPU->GetOffset() + PC, 4))
 			{
-				m_list->SetItem(i, 0, wxString::Format("[%08llx] illegal address", PC));
-				count = 2;
+				m_list->SetItem(i, 0, wxString(IsBreakPoint(PC) ? ">>> " : "    ") + wxString::Format("[%08llx] illegal address", PC));
+				count = 4;
 				continue;
 			}
 
@@ -528,8 +528,6 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 	const u64 start_pc = PC - m_item_count*4;
 	const u64 pc = start_pc + i*4;
 	//ConLog.Write("pc=0x%llx", pc);
-
-	if(!Memory.IsGoodAddr(pc, 4)) return;
 
 	if(IsBreakPoint(pc))
 	{

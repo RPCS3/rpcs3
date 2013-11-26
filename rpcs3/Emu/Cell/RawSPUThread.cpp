@@ -284,7 +284,7 @@ void RawSPUThread::Task()
 			}
 		}
 
-		bool is_last_paused = false;
+		bool is_last_paused = SPU.RunCntl.GetValue() == SPU_RUNCNTL_STOP;
 		while(true)
 		{
 			int status = ThreadStatus();
@@ -327,9 +327,15 @@ void RawSPUThread::Task()
 			Step();
 			NextPc(m_dec->DecodeMemory(PC + m_offset));
 
+			if(status == CPUThread_Step)
+			{
+				m_is_step = false;
+				break;
+			}
+
 			for(uint i=0; i<bp.GetCount(); ++i)
 			{
-				if(bp[i] == m_offset + PC)
+				if(bp[i] == PC)
 				{
 					Emu.Pause();
 					break;

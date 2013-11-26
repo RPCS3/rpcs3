@@ -166,6 +166,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			location = 1;
 		}
 		u32 tex_addr = GetAddress(offset, location);
+		if(!Memory.IsGoodAddr(tex_addr))
+			ConLog.Error("Bad texture[%d] addr = 0x%x #offset = 0x%x, location=%d", index, tex_addr, offset, location);
 		//ConLog.Warning("texture addr = 0x%x #offset = 0x%x, location=%d", tex_addr, offset, location);
 		tex.SetOffset(tex_addr);
 		tex.SetFormat(cubemap, dimension, format, mipmap);
@@ -637,6 +639,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u32 a0 = args[0];
 		m_cur_shader_prog->offset = a0 & ~0x3;
 		m_cur_shader_prog->addr = GetAddress(m_cur_shader_prog->offset, (a0 & 0x3) - 1);
+		m_cur_shader_prog->ctrl = 0x40;
 	}
 	break;
 
@@ -649,11 +652,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SHADER_CONTROL:
 	{
-		const u32 arg0 = args[0];
+		if(!m_cur_shader_prog)
+		{
+			ConLog.Error("NV4097_SET_SHADER_CONTROL: m_cur_shader_prog == NULL");
+			break;
+		}
 
-		//const u8 controlTxp = (arg0 >> 15) & 0x1;
-		//FragmentData.prog.registerCount = arg0 >> 24;
-		//FragmentData.prog.
+		m_cur_shader_prog->ctrl = args[0];
 	}
 	break;
 
@@ -1118,8 +1123,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{
-		m_set_depth_func = true;
-		m_depth_func = args[0] >> 4;
+		//m_set_depth_func = true;
+		//m_depth_func = args[0] >> 4;
 	}
 	break;
 
@@ -1180,7 +1185,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV308A_COLOR:
 	{
 		RSXTransformConstant c;
-		c.id = m_dst_offset;
+		c.id = m_dst_offset | ((u32)m_point_x << 2);
 
 		if(count >= 1)
 		{
@@ -1221,7 +1226,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV308A_POINT:
-		//TODO
+	{
+		u32 a0 = args[0];
+		m_point_x = a0 & 0xffff;
+		m_point_y = a0 >> 16;
+	}
 	break;
 
 	case NV3062_SET_COLOR_FORMAT:
