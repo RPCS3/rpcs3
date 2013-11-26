@@ -511,6 +511,17 @@ u32 cellGcmGetReportDataAddressLocation(u8 location, u32 index)
 	return Emu.GetGSManager().GetRender().m_report_main_addr;
 }
 
+int cellGcmSetFlip(u32 address, u32 buf)
+{
+	CellGcmContextData* ctx = (CellGcmContextData*)Memory.GetMemFromAddr(address);
+
+	Memory.Write32(re32(ctx->current), (0x3fead | 1 << 18));
+	Memory.Write32(re32(ctx->current)+4, buf);
+	ctx->current = re32(re32(ctx->current)+8);
+
+	return CELL_OK;
+}
+
 void cellGcmSys_init()
 {
 	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
@@ -555,4 +566,5 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x657571f7, cellGcmGetTileInfo);
 	cellGcmSys.AddFunc(0xcaabd992, cellGcmInitDefaultFifoMode);
 	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
+	cellGcmSys.AddFunc(0xdc09357e, cellGcmSetFlip);
 }
