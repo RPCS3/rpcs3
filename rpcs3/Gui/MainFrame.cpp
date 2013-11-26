@@ -340,47 +340,36 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 	wxString fileOut = ctrl.GetPath()+".elf";
 
 	// Check if the data really needs to be decrypted.
-	FILE *f;
-	if((f = fopen(fileIn.mb_str(), "rb")) == NULL)
+	if(!wxFileExists(fileIn))
 	{
 		ConLog.Error("Could not open SELF file!");
 		return;
 	}
-			
+	
+	wxFile f(fileIn);
 	// Get the key version.
-	fseek(f, 0x08, SEEK_SET);
-	s16 key_version;
-	fread(&key_version, 1, sizeof(key_version), f);
-	be_t<u16> key_version_be;
-	key_version_be.FromLE(key_version);
+	f.Seek(0x08);
+	be_t<u16> key_version;
+	f.Read(&key_version, sizeof(key_version));
 
-	// Get the real elf offset.
-	fseek(f, 0x10, SEEK_SET);
-	s64 elf_offset;
-	fread(&elf_offset, 1, sizeof(elf_offset), f);
-	be_t<u64> elf_offset_be;
-	elf_offset_be.FromLE(elf_offset);
-
-	fclose(f);
-
-	if(key_version_be.ToBE() == 0x8000)
+	if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
 	{
 		ConLog.Warning("Debug SELF detected! Removing fake header...");
-		FILE *in;
-		FILE *out;
-		in = fopen(fileIn, "rb");
-		out = fopen(fileOut, "wb");
+
+		// Get the real elf offset.
+		f.Seek(0x10);
+		be_t<u64> elf_offset;
+		f.Read(&elf_offset, sizeof(elf_offset));
 
 		// Start at the real elf offset.
-		fseek(in, elf_offset_be.ToBE(), SEEK_SET);
-			
+		f.Seek(elf_offset);
+
+		wxFile out(fileOut, wxFile::write);
+
 		// Copy the data.
-		int c;
-		while ((c = fgetc(in)) != EOF)
-			fputc(c, out);
-		
-		fclose(out);
-		fclose(in);
+		char buf[2048];
+		while (ssize_t size = f.Read(buf, 2048))
+			out.Write(buf, size);
 	}
 	else
 	{
@@ -391,9 +380,11 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 		}
 	}
 
-	Emu.SetPath(ctrl.GetPath()+".elf");
+	f.Close();
+
+	Emu.SetPath(fileOut);
 	Emu.Load();
-	if (!wxRemoveFile(ctrl.GetPath()+".elf"))
+	if (!wxRemoveFile(fileOut))
 		ConLog.Warning("Could not delete the decrypted ELF file");
 
 	ConLog.Write("SELF: boot done.");
