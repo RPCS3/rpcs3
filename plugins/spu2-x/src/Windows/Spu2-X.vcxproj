@@ -276,12 +276,6 @@
     <ClInclude Include="..\SndOut.h" />
     <ClInclude Include="..\Linux\Alsa.h" />
     <ClInclude Include="..\spdif.h" />
-    <ClInclude Include="..\3rdparty\liba52\a52.h" />
-    <ClInclude Include="..\3rdparty\liba52\a52_internal.h" />
-    <ClInclude Include="..\3rdparty\liba52\attributes.h" />
-    <ClInclude Include="..\3rdparty\liba52\mm_accel.h" />
-    <ClInclude Include="..\3rdparty\liba52\tables.h" />
-    <ClInclude Include="..\3rdparty\liba52\tendra.h" />
     <ClInclude Include="..\defs.h" />
     <ClInclude Include="..\Dma.h" />
     <ClInclude Include="..\regs.h" />
@@ -289,7 +283,6 @@
     <ClInclude Include="dsp.h" />
     <ClInclude Include="..\Linux\Config.h" />
     <ClInclude Include="..\Linux\Dialogs.h" />
-    <ClInclude Include="..\Linux\Linux.h" />
     <ClInclude Include="Dialogs.h" />
     <ClInclude Include="Hyperlinks.h" />
     <ClInclude Include="WinConfig.h" />
@@ -417,12 +410,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\Linux\Dialogs.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugStrict|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\Linux\Linux.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugStrict|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>

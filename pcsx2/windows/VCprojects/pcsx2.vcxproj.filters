@@ -153,29 +153,8 @@
     <None Include="..\..\Utilities\folderdesc.txt">
       <Filter>Misc</Filter>
     </None>
-    <None Include="..\..\Docs\ChangeLog.txt">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\..\Docs\devblog.txt">
-      <Filter>Docs</Filter>
-    </None>
     <None Include="..\..\Docs\License.txt">
       <Filter>Docs</Filter>
-    </None>
-    <None Include="..\..\Docs\PCSX2 FAQ 0.9.6.rtf">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\..\Docs\PCSX2 readme 0.9.6.rtf">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\..\x86\aMicroVU.S">
-      <Filter>System\Linux</Filter>
-    </None>
-    <None Include="..\..\x86\ix86-32\aR5900-32.S">
-      <Filter>System\Linux</Filter>
-    </None>
-    <None Include="..\..\x86\aVif.S">
-      <Filter>System\Linux</Filter>
     </None>
     <None Include="..\..\x86\aVUzerorec.S">
       <Filter>System\Linux</Filter>
@@ -218,9 +197,6 @@
     </None>
     <None Include="..\..\x86\microVU_Upper.inl">
       <Filter>System\Ps2\EmotionEngine\VU\Dynarec\microVU</Filter>
-    </None>
-    <None Include="..\..\Vif_Unpack.inl">
-      <Filter>System\Ps2\EmotionEngine\DMAC\Vif\Unpack</Filter>
     </None>
     <None Include="..\..\gui\Dialogs\BaseConfigurationDialog.inl">
       <Filter>AppHost\Dialogs</Filter>
@@ -274,9 +250,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Elfheader.cpp">
       <Filter>System\ISO</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Linux\LnxHostSys.cpp">
-      <Filter>System\Linux</Filter>
     </ClCompile>
     <ClCompile Include="..\..\x86\BaseblockEx.cpp">
       <Filter>System\Ps2</Filter>
@@ -840,9 +813,6 @@
     <ClInclude Include="..\..\Utilities\AsciiFile.h">
       <Filter>Misc\Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\StringUtils.h">
-      <Filter>Misc\Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Elfheader.h">
       <Filter>System\ISO</Filter>
     </ClInclude>
@@ -862,12 +832,6 @@
       <Filter>System\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\NakedAsm.h">
-      <Filter>System\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\System\PageFaultSource.h">
-      <Filter>System\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Paths.h">
       <Filter>System\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Plugins.h">
@@ -958,9 +922,6 @@
       <Filter>System\Ps2\EmotionEngine\DMAC\Vif\Unpack</Filter>
     </ClInclude>
     <ClInclude Include="..\..\x86\newVif.h">
-      <Filter>System\Ps2\EmotionEngine\DMAC\Vif\Unpack\newVif</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\x86\newVif_BlockBuffer.h">
       <Filter>System\Ps2\EmotionEngine\DMAC\Vif\Unpack\newVif</Filter>
     </ClInclude>
     <ClInclude Include="..\..\x86\newVif_HashBucket.h">
@@ -1143,9 +1104,6 @@
     <ClInclude Include="..\..\gui\Panels\LogOptionsPanels.h">
       <Filter>AppHost\Panels</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\Panels\MemoryCardListView.h">
-      <Filter>AppHost\Panels</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\gui\App.h">
       <Filter>AppHost\Include</Filter>
     </ClInclude>
@@ -1174,12 +1132,6 @@
       <Filter>AppHost\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\gui\Resources\EmbeddedImage.h">
-      <Filter>AppHost\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\HostGui.h">
-      <Filter>AppHost\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gui\IniInterface.h">
       <Filter>AppHost\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\gui\IsoDropTarget.h">

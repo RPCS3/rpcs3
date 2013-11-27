@@ -73,9 +73,6 @@
     <ClInclude Include="..\USB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\qemu-usb\usb-ohci.h">
-      <Filter>Header Files\qemu-usb</Filter>
-    </ClInclude>
     <ClInclude Include="..\qemu-usb\usb.h">
       <Filter>Header Files\qemu-usb</Filter>
     </ClInclude>

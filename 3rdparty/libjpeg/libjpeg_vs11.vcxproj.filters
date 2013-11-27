@@ -179,6 +179,5 @@
     <None Include="change.log" />
     <None Include="filelist.txt" />
     <None Include="README" />
-    <None Include="readme.pcsx2.txt" />
   </ItemGroup>
 </Project>

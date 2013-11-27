@@ -157,7 +157,6 @@
     <None Include="change.log" />
     <None Include="filelist.txt" />
     <None Include="README" />
-    <None Include="readme.pcsx2.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

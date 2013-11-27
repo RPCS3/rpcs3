@@ -47,18 +47,12 @@
     <None Include="GSsoftdx.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="Pcsx2.ico">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="zerogs.bmp">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="ps2fx.dat" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\avcodec.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="aviUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -66,9 +60,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Mem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="plugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Regs.h">

@@ -168,16 +168,13 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
     </CustomBuild>
-    <None Include="Pcsx2.ico" />
     <None Include="zerogs.bmp" />
     <None Include="ps2fx.dat" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\avcodec.h" />
     <ClInclude Include="aviUtil.h" />
     <ClInclude Include="..\GS.h" />
     <ClInclude Include="..\Mem.h" />
-    <ClInclude Include="plugin.h" />
     <ClInclude Include="..\Regs.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resrc1.h" />

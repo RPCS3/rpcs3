@@ -1927,7 +1927,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="comptr.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="GLLoader.h" />
     <ClInclude Include="GLState.h" />

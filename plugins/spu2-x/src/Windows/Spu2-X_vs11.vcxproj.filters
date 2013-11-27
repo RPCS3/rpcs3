@@ -79,24 +79,6 @@
     <ClInclude Include="..\spdif.h">
       <Filter>Source Files\decoder</Filter>
     </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\a52.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\a52_internal.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\attributes.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\mm_accel.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\tables.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\tendra.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
     <ClInclude Include="..\defs.h">
       <Filter>Source Files\SPU2</Filter>
     </ClInclude>
@@ -116,9 +98,6 @@
       <Filter>Source Files\GUI\Linux\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Linux\Dialogs.h">
-      <Filter>Source Files\GUI\Linux\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Linux\Linux.h">
       <Filter>Source Files\GUI\Linux\Include</Filter>
     </ClInclude>
     <ClInclude Include="Dialogs.h">
@@ -208,9 +187,6 @@
       <Filter>Source Files\GUI\Linux</Filter>
     </ClCompile>
     <ClCompile Include="..\Linux\Dialogs.cpp">
-      <Filter>Source Files\GUI\Linux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Linux\Linux.cpp">
       <Filter>Source Files\GUI\Linux</Filter>
     </ClCompile>
     <ClCompile Include="AboutBox.cpp">

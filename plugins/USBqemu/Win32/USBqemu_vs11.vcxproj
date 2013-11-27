@@ -157,7 +157,6 @@
     <ClInclude Include="CfgHelpers.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\USB.h" />
-    <ClInclude Include="..\qemu-usb\usb-ohci.h" />
     <ClInclude Include="..\qemu-usb\usb.h" />
     <ClInclude Include="..\qemu-usb\vl.h" />
   </ItemGroup>

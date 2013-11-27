@@ -172,7 +172,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\wx\msw\setup.h" />
     <ClInclude Include="..\..\include\wx\univ\setup.h" />
     <ClInclude Include="..\..\include\wx\msw\datectrl.h" />
     <ClInclude Include="..\..\include\wx\msw\genrcdefs.h" />

@@ -161,14 +161,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
     </CustomBuild>
     <None Include="..\..\Utilities\folderdesc.txt" />
-    <None Include="..\..\Docs\ChangeLog.txt" />
-    <None Include="..\..\Docs\devblog.txt" />
     <None Include="..\..\Docs\License.txt" />
-    <None Include="..\..\Docs\PCSX2 FAQ 0.9.6.rtf" />
-    <None Include="..\..\Docs\PCSX2 readme 0.9.6.rtf" />
-    <None Include="..\..\x86\aMicroVU.S" />
-    <None Include="..\..\x86\ix86-32\aR5900-32.S" />
-    <None Include="..\..\x86\aVif.S" />
     <None Include="..\..\x86\aVUzerorec.S" />
     <None Include="..\..\x86\microVU_Alloc.inl" />
     <None Include="..\..\x86\microVU_Analyze.inl" />
@@ -183,7 +176,6 @@
     <None Include="..\..\x86\microVU_Misc.inl" />
     <None Include="..\..\x86\microVU_Tables.inl" />
     <None Include="..\..\x86\microVU_Upper.inl" />
-    <None Include="..\..\Vif_Unpack.inl" />
     <None Include="..\..\gui\Dialogs\BaseConfigurationDialog.inl" />
     <CustomBuild Include="..\..\gui\Resources\AppIcon16.png">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -445,11 +437,6 @@
     <ClCompile Include="..\..\System\SysThreadBase.cpp" />
     <ClCompile Include="..\..\Elfheader.cpp" />
     <ClCompile Include="..\..\CDVD\InputIsoFile.cpp" />
-    <ClCompile Include="..\..\Linux\LnxHostSys.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\x86\BaseblockEx.cpp" />
     <ClCompile Include="..\..\ps2\BiosTools.cpp" />
     <ClCompile Include="..\..\Counters.cpp" />
@@ -696,7 +683,6 @@
     <ClInclude Include="..\..\Patch_Obsolete.h" />
     <ClInclude Include="..\..\PrecompiledHeader.h" />
     <ClInclude Include="..\..\Utilities\AsciiFile.h" />
-    <ClInclude Include="..\..\StringUtils.h" />
     <ClInclude Include="..\..\Elfheader.h" />
     <ClInclude Include="..\..\CDVD\IsoFileFormats.h" />
     <ClInclude Include="..\..\Common.h" />
@@ -704,8 +690,6 @@
     <ClInclude Include="..\..\Dump.h" />
     <ClInclude Include="..\..\IopCommon.h" />
     <ClInclude Include="..\..\NakedAsm.h" />
-    <ClInclude Include="..\..\System\PageFaultSource.h" />
-    <ClInclude Include="..\..\Paths.h" />
     <ClInclude Include="..\..\Plugins.h" />
     <ClInclude Include="..\..\SamplProf.h" />
     <ClInclude Include="..\..\SaveState.h" />
@@ -737,7 +721,6 @@
     <ClInclude Include="..\..\Vif_Dma.h" />
     <ClInclude Include="..\..\Vif_Unpack.h" />
     <ClInclude Include="..\..\x86\newVif.h" />
-    <ClInclude Include="..\..\x86\newVif_BlockBuffer.h" />
     <ClInclude Include="..\..\x86\newVif_HashBucket.h" />
     <ClInclude Include="..\..\x86\newVif_UnpackSSE.h" />
     <ClInclude Include="..\..\SPR.h" />
@@ -833,7 +816,6 @@
     <ClInclude Include="..\resource.h" />
     <ClInclude Include="..\..\gui\Panels\ConfigurationPanels.h" />
     <ClInclude Include="..\..\gui\Panels\LogOptionsPanels.h" />
-    <ClInclude Include="..\..\gui\Panels\MemoryCardListView.h" />
     <ClInclude Include="..\..\gui\App.h" />
     <ClInclude Include="..\..\gui\AppCommon.h" />
     <ClInclude Include="..\..\gui\AppConfig.h" />
@@ -847,8 +829,6 @@
     <ClInclude Include="..\..\gui\CpuUsageProvider.h" />
     <ClInclude Include="..\..\gui\Resources\EmbeddedImage.h" />
     <ClInclude Include="..\..\gui\GSFrame.h" />
-    <ClInclude Include="..\..\HostGui.h" />
-    <ClInclude Include="..\..\gui\IniInterface.h" />
     <ClInclude Include="..\..\gui\IsoDropTarget.h" />
     <ClInclude Include="..\..\gui\MainFrame.h" />
     <ClInclude Include="..\..\gui\pxEventThread.h" />

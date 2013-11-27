@@ -649,6 +649,7 @@ extern "C"
 #   include <process.h>
 #endif
 
+#if _MSC_VER < 1800
 static INLINE void* _InterlockedExchangePointer( void* volatile* target, void* value )
 {
 #ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
@@ -657,6 +658,7 @@ static INLINE void* _InterlockedExchangePointer( void* volatile* target, void* v
 	return (void*)_InterlockedExchange( (LONG_PTR*)target, (LONG_PTR)value );
 #endif
 }
+#endif
 
 #if _MSC_VER < 1700
 static INLINE void* _InterlockedCompareExchangePointer( void* volatile* target, void* value, void* comparand )

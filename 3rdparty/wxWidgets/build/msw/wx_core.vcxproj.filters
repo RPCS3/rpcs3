@@ -759,124 +759,7 @@
     <ClCompile Include="..\..\src\generic\vscroll.cpp">
       <Filter>Generic Sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\univ\bmpbuttn.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\button.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\checkbox.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\checklst.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\choice.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\colschem.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\combobox.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\univ\control.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\ctrlrend.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\dialog.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\framuniv.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\gauge.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\themes\gtk.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\inpcons.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\inphand.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\listbox.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\menu.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\themes\metal.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\themes\mono.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\notebook.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\radiobox.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\radiobut.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\scrarrow.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\scrolbar.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\scrthumb.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\slider.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\spinbutt.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\statbmp.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\statbox.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\statline.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\stattext.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\statusbr.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\stdrend.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\textctrl.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\tglbtn.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\theme.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\toolbar.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\topluniv.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\themes\win32.cpp">
-      <Filter>wxUniv Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\univ\winuniv.cpp">
       <Filter>wxUniv Sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\png\png.c">
@@ -1146,9 +1029,6 @@
       <Filter>MSW Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\wx\msw\radiobut.h">
-      <Filter>MSW Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\wx\msw\rcdefs.h">
       <Filter>MSW Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\wx\msw\region.h">
@@ -1802,9 +1682,6 @@
     <ClInclude Include="..\..\include\wx\grid.h">
       <Filter>Common Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\wx\help.h">
-      <Filter>Common Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\wx\helpbase.h">
       <Filter>Common Headers</Filter>
     </ClInclude>
@@ -2330,6 +2207,7 @@
     <ClInclude Include="..\..\src\png\pngconf.h">
       <Filter>png</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\wx\help.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\msw\version.rc">

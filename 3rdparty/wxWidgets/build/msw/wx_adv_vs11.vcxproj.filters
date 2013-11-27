@@ -112,9 +112,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\wx\msw\setup.h">
-      <Filter>Setup Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\wx\univ\setup.h">
       <Filter>Setup Headers</Filter>
     </ClInclude>
