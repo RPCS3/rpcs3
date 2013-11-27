@@ -9,18 +9,18 @@
 LogWriter ConLog;
 LogFrame* ConLogFrame;
 
-wxCriticalSection g_cs_conlog;
+std::mutex g_cs_conlog;
 
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
 
 struct LogPacket
 {
-	wxString m_prefix;
-	wxString m_text;
-	wxString m_colour;
+	std::string m_prefix;
+	std::string m_text;
+	std::string m_colour;
 
-	LogPacket(const wxString& prefix, const wxString& text, const wxString& colour)
+	LogPacket(const std::string& prefix, const std::string& text, const std::string& colour)
 		: m_prefix(prefix)
 		, m_text(text)
 		, m_colour(colour)
@@ -41,9 +41,9 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 	void _push(const LogPacket& data)
 	{
-		const u32 sprefix	= data.m_prefix.Len();
-		const u32 stext		= data.m_text.Len();
-		const u32 scolour	= data.m_colour.Len();
+		const u32 sprefix	= data.m_prefix.length();
+		const u32 stext		= data.m_text.length();
+		const u32 scolour	= data.m_colour.length();
 
 		m_buffer.Reserve(
 			sizeof(u32) + sprefix +
@@ -79,17 +79,20 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 		const u32& sprefix = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if(sprefix) memcpy(wxStringBuffer(ret.m_prefix, sprefix), &m_buffer[c_get], sprefix);
+		ret.m_prefix.resize(sprefix);
+		if(sprefix) memcpy((void*)ret.m_prefix.c_str(), &m_buffer[c_get], sprefix);
 		c_get += sprefix;
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if(stext) memcpy(wxStringBuffer(ret.m_text, stext), &m_buffer[c_get], stext);
+		ret.m_text.resize(stext);
+		if(stext) memcpy((void*)ret.m_text.c_str(), &m_buffer[c_get], stext);
 		c_get += stext;
 
 		const u32& scolour = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if(scolour) memcpy(wxStringBuffer(ret.m_colour, scolour), &m_buffer[c_get], scolour);
+		ret.m_colour.resize(scolour);
+		if(scolour) memcpy((void*)ret.m_colour.c_str(), &m_buffer[c_get], scolour);
 		c_get += scolour;
 
 		m_get = c_get;
@@ -103,25 +106,32 @@ LogWriter::LogWriter()
 {
 	if(!m_logfile.Open(_PRGNAME_ ".log", wxFile::write))
 	{
-		wxMessageBox("Cann't create log file! (" _PRGNAME_ ".log)", wxMessageBoxCaptionStr, wxICON_ERROR);
+#ifndef QT_UI
+		wxMessageBox("Can't create log file! (" _PRGNAME_ ".log)", wxMessageBoxCaptionStr, wxICON_ERROR);
+#endif
 	}
 }
 
-void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour*/)
+void LogWriter::WriteToLog(std::string prefix, std::string value, std::string colour/*, wxColour bgcolour*/)
 {
 	if(ThreadBase* thr = GetCurrentNamedThread())
 	{
-		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetThreadName();
+		prefix = (prefix.empty() ? "" : prefix + " : ") + thr->GetThreadName();
 	}
 
 	if(m_logfile.IsOpened())
-		m_logfile.Write((prefix.IsEmpty() ? wxString(wxEmptyString) : "[" + prefix + "]: ") + value + "\n");
+		m_logfile.Write((prefix.empty() ? wxString(wxEmptyString) : std::string("[" + prefix + "]: ") + value + "\n").c_str());
 
 	if(!ConLogFrame) return;
 
-	wxCriticalSectionLocker lock(g_cs_conlog);
+	std::lock_guard<std::mutex> lock(g_cs_conlog);
 
+#ifdef QT_UI
+	// TODO: Use ThreadBase instead, track main thread id
+	if(QThread::currentThread() == qApp->thread())
+#else
 	if(wxThread::IsMain())
+#endif
 	{
 		while(LogBuffer.IsBusy()) wxYieldIfNeeded();
 	}
@@ -161,7 +171,7 @@ void LogWriter::Write(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("!", frmt, "White");
+	WriteToLog("!", frmt.mb_str(), "White");
 }
 
 void LogWriter::Error(const wxString fmt, ...)
@@ -173,7 +183,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("E", frmt, "Red");
+	WriteToLog("E", frmt.mb_str(), "Red");
 }
 
 void LogWriter::Warning(const wxString fmt, ...)
@@ -185,12 +195,12 @@ void LogWriter::Warning(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("W", frmt, "Yellow");
+	WriteToLog("W", frmt.mb_str(), "Yellow");
 }
 
 void LogWriter::SkipLn()
 {
-	WriteToLog(wxEmptyString, wxEmptyString, "Black");
+	WriteToLog("", "", "Black");
 }
 
 BEGIN_EVENT_TABLE(LogFrame, wxPanel)
@@ -210,7 +220,7 @@ LogFrame::LogFrame(wxWindow* parent)
 	s_main.Add(&m_log, 1, wxEXPAND);
 	SetSizer(&s_main);
 	Layout();
-
+	
 	Show();
 	ThreadBase::Start();
 }
@@ -250,9 +260,9 @@ void LogFrame::Task()
 
 		const int cur_item = m_log.GetItemCount();
 
-		m_log.InsertItem(cur_item, item.m_prefix);
-		m_log.SetItem(cur_item, 1, item.m_text);
-		m_log.SetItemTextColour(cur_item, item.m_colour);
+		m_log.InsertItem(cur_item, item.m_prefix.c_str());
+		m_log.SetItem(cur_item, 1, item.m_text.c_str());
+		m_log.SetItemTextColour(cur_item, item.m_colour.c_str());
 		m_log.SetColumnWidth(0, -1);
 		m_log.SetColumnWidth(1, -1);
 

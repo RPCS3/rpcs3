@@ -6,9 +6,11 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
+#include <cstdlib>
+#include <fstream>
 using namespace PPU_instr;
 
-static const wxString& BreakPointsDBName = "BreakPoints.dat";
+static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 
 ModuleInitializer::ModuleInitializer()
@@ -234,7 +236,9 @@ void Emulator::Load()
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Ready;
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_READY_EMU);
+#endif
 }
 
 void Emulator::Run()
@@ -251,8 +255,9 @@ void Emulator::Run()
 		Resume();
 		return;
 	}
-
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_START_EMU);
+#endif
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	//ConLog.Write("run...");
@@ -265,32 +270,42 @@ void Emulator::Run()
 	//m_memory_viewer->ShowPC();
 
 	GetCPU().Exec();
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STARTED_EMU);
+#endif
 }
 
 void Emulator::Pause()
 {
 	if(!IsRunning()) return;
 	//ConLog.Write("pause...");
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
+#endif
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Paused;
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
+#endif
 }
 
 void Emulator::Resume()
 {
 	if(!IsPaused()) return;
 	//ConLog.Write("resume...");
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
+#endif
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Running;
 
 	CheckStatus();
 	if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
+#endif
 }
 
 void Emulator::Stop()
@@ -298,7 +313,9 @@ void Emulator::Stop()
 	if(IsStopped()) return;
 	//ConLog.Write("shutdown...");
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOP_EMU);
+#endif
 	{
 		wxCriticalSectionLocker lock(m_cs_status);
 		m_status = Stopped;
@@ -326,60 +343,63 @@ void Emulator::Stop()
 	Memory.Close();
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOPPED_EMU);
+#endif
 }
 
-void Emulator::SavePoints(const wxString& path)
+void Emulator::SavePoints(const std::string& path)
 {
-	wxFile f(path, wxFile::write);
+	std::ofstream f(path, std::ios::binary | std::ios::trunc);
 
 	u32 break_count = m_break_points.GetCount();
 	u32 marked_count = m_marked_points.GetCount();
 
-	f.Write(&bpdb_version, sizeof(u16));
-	f.Write(&break_count, sizeof(u32));
-	f.Write(&marked_count, sizeof(u32));
-
+	f << bpdb_version << break_count << marked_count;
+	
 	if(break_count)
 	{
-		f.Write(&m_break_points[0], sizeof(u64) * break_count);
+		f.write(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
 	}
 
 	if(marked_count)
 	{
-		f.Write(&m_marked_points[0], sizeof(u64) * marked_count);
+		f.write(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
 	}
 }
 
-void Emulator::LoadPoints(const wxString& path)
+void Emulator::LoadPoints(const std::string& path)
 {
-	if(!wxFileExists(path)) return;
-
-	wxFile f(path);
-
+	struct stat buf;
+	if (!stat(path.c_str(), &buf))
+		return;
+	std::ifstream f(path, std::ios::binary);
+	if (!f.is_open())
+		return;
+	f.seekg(0, std::ios::end);
+    int length = f.tellg();
+	f.seekg(0, std::ios::beg);
 	u32 break_count, marked_count;
 	u16 version;
-	f.Read(&version, sizeof(u16));
-	f.Read(&break_count, sizeof(u32));
-	f.Read(&marked_count, sizeof(u32));
+	f >> version >> break_count >> marked_count;
 
 	if(version != bpdb_version ||
-		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
+		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", path.mb_str());
+		ConLog.Error("'%s' is broken", path.c_str());
 		return;
 	}
 
 	if(break_count > 0)
 	{
 		m_break_points.SetCount(break_count);
-		f.Read(&m_break_points[0], sizeof(u64) * break_count);
+		f.read(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
 	}
 
 	if(marked_count > 0)
 	{
 		m_marked_points.SetCount(marked_count);
-		f.Read(&m_marked_points[0], sizeof(u64) * marked_count);
+		f.read(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
 	}
 }
 

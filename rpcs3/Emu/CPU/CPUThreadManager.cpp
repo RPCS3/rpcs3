@@ -39,7 +39,9 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", new_thread->GetTypeString().mb_str()), new_thread));
 
 	m_threads.Add(new_thread);
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_CREATE_THREAD, new_thread);
+#endif
 
 	return *new_thread;
 }
@@ -59,7 +61,9 @@ void CPUThreadManager::RemoveThread(const u32 id)
 		if(m_threads[i].GetId() != id) continue;
 
 		CPUThread* thr = &m_threads[i];
+#ifndef QT_UI
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, thr);
+#endif
 		if(thr->IsAlive())
 		{
 			thr->Close();

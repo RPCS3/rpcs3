@@ -35,7 +35,7 @@ wxString GLVertexDecompilerThread::GetScaMask()
 
 wxString GLVertexDecompilerThread::GetDST(bool isSca)
 {
-	static const wxString reg_table[] = 
+	static const std::string reg_table[] = 
 	{
 		"gl_Position",
 		"col0", "col1",
@@ -54,7 +54,7 @@ wxString GLVertexDecompilerThread::GetDST(bool isSca)
 	break;
 
 	case 0x1f:
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%u", isSca ? d3.sca_dst_tmp : d0.dst_tmp));
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
 	break;
 
 	default:
@@ -75,7 +75,7 @@ wxString GLVertexDecompilerThread::GetDST(bool isSca)
 
 wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 {
-	static const wxString reg_table[] = 
+	static const std::string reg_table[] = 
 	{
 		"in_pos", "in_weight", "in_normal",
 		"in_col0", "in_col1",
@@ -90,7 +90,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	switch(src[n].reg_type)
 	{
 	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%u", src[n].tmp_src));
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(src[n].tmp_src));
 	break;
 	case 2: //input
 		if(d1.input_src < WXSIZEOF(reg_table))
@@ -104,7 +104,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		}
 	break;
 	case 3: //const
-		ret += m_parr.AddParam(PARAM_UNIFORM, "vec4", wxString::Format("vc%u", d1.const_src));
+		ret += m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("vc") + std::to_string(d1.const_src));
 	break;
 
 	default:

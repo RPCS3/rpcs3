@@ -53,9 +53,9 @@ VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry
 	Connect(m_btn_select_dev_path->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectDevPath));
 	Connect(wxID_OK,						wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnOk));
 
-	m_tctrl_dev_path->SetValue(m_entry.device_path.GetPtr());
-	m_tctrl_path->SetValue(m_entry.path.GetPtr());
-	m_tctrl_mount->SetValue(m_entry.mount.GetPtr());
+	m_tctrl_dev_path->SetValue(m_entry.device_path);
+	m_tctrl_path->SetValue(m_entry.path);
+	m_tctrl_mount->SetValue(m_entry.mount);
 	m_ch_type->SetSelection(m_entry.device);
 
     wxCommandEvent ce;
@@ -95,9 +95,9 @@ void VFSEntrySettingsDialog::OnSelectDevPath(wxCommandEvent& event)
 
 void VFSEntrySettingsDialog::OnOk(wxCommandEvent& event)
 {
-	m_entry.device_path = m_tctrl_dev_path->GetValue();
-	m_entry.path = m_tctrl_path->GetValue();
-	m_entry.mount = m_tctrl_mount->GetValue();
+	m_entry.device_path = strdup( m_tctrl_dev_path->GetValue().c_str());
+	m_entry.path = strdup(m_tctrl_path->GetValue().c_str());
+	m_entry.mount = strdup(m_tctrl_mount->GetValue().c_str());
 	m_entry.device = (vfsDeviceType)m_ch_type->GetSelection();
 
 	EndModal(wxID_OK);
@@ -143,9 +143,9 @@ void VFSManagerDialog::UpdateList()
 	m_list->DeleteAllItems();
 	for(uint i=0; i<m_entries.GetCount(); ++i)
 	{
-		m_list->InsertItem(i, m_entries[i].mount.GetPtr());
-		m_list->SetItem(i, 1, m_entries[i].path.GetPtr());
-		m_list->SetItem(i, 2, m_entries[i].device_path.GetPtr());
+		m_list->InsertItem(i, m_entries[i].mount);
+		m_list->SetItem(i, 1, m_entries[i].path);
+		m_list->SetItem(i, 2, m_entries[i].device_path);
 		m_list->SetItem(i, 3, vfsDeviceTypeNames[m_entries[i].device]);
 	}
 	m_list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);

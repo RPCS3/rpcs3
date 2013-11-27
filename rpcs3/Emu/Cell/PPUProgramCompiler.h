@@ -19,22 +19,22 @@ enum ArgType
 
 struct Arg
 {
-	ArrayString string;
+	std::string string;
 	u32 value;
 	ArgType type;
 
 	Arg(const wxString& _string, const u32 _value = 0, const ArgType _type = ARG_ERR)
-		: string(_string)
-		, value(_value)
+		: value(_value)
 		, type(_type)
 	{
+		string =  _string.c_str();
 	}
 };
 
 struct SectionInfo
 {
 	Elf64_Shdr shdr;
-	ArrayString name;
+	std::string name;
 	Array<u8> code;
 	u32 section_num;
 
@@ -62,25 +62,25 @@ class CompilePPUProgram
 {
 	struct Branch
 	{
-		ArrayString m_name;
+		std::string m_name;
 		s32 m_pos;
 		s32 m_id;
 		s32 m_addr;
 
 		Branch(const wxString& name, s32 pos)
-			: m_name(name)
-			, m_pos(pos)
+			: m_pos(pos)
 			, m_id(-1)
 			, m_addr(-1)
 		{
+			m_name = name.c_str();
 		}
 
 		Branch(const wxString& name, u32 id, u32 addr)
-			: m_name(name)
-			, m_pos(-1)
+			: m_pos(-1)
 			, m_id(id)
 			, m_addr(addr)
 		{
+			m_name = name.c_str();
 		}
 	};
 
@@ -101,13 +101,13 @@ class CompilePPUProgram
 
 	struct SpData
 	{
-		ArrayString m_data;
+		std::string m_data;
 		u32 m_addr;
 
 		SpData(const wxString& data, u32 addr)
-			: m_data(data)
-			, m_addr(addr)
+			: m_addr(addr)
 		{
+			m_data = data.c_str();
 		}
 	};
 

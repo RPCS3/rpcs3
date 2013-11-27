@@ -35,18 +35,18 @@ u32 LoadSpuImage(vfsStream& stream)
 //156
 int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 {
-	const wxString& path = Memory.ReadString(path_addr);
-	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.mb_str());
+	const std::string& path = Memory.ReadString(path_addr).mb_str();
+	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path);
 
 	if(!img.IsGood() || !Memory.IsGoodAddr(path_addr))
 	{
 		return CELL_EFAULT;
 	}
 
-	vfsFile f(path);
+	vfsFile f(path.c_str());
 	if(!f.IsOpened())
 	{
-		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path.mb_str());
+		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path);
 		return CELL_ENOENT;
 	}
 
@@ -94,7 +94,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	}
 
 	u32 entry = img->entry_point;
-	wxString name = Memory.ReadString(attr->name_addr, attr->name_len);
+	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
 	u64 a3 = arg->arg3;
@@ -102,7 +102,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	ConLog.Write("New SPU Thread:");
 	ConLog.Write("entry = 0x%x", entry);
-	ConLog.Write("name = %s", name.mb_str());
+	ConLog.Write("name = %s", name);
 	ConLog.Write("a1 = 0x%x", a1);
 	ConLog.Write("a2 = 0x%x", a2);
 	ConLog.Write("a3 = 0x%x", a3);
@@ -190,10 +190,10 @@ int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu
 	ConLog.Write("*** attr.type=%d", attr->type.ToLE());
 	ConLog.Write("*** attr.option.ct=%d", attr->option.ct.ToLE());
 
-	const wxString& name = Memory.ReadString(attr->name_addr, attr->name_len);
-	ConLog.Write("*** name='%s'", name.mb_str());
+	const std::string& name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
+	ConLog.Write("*** name='%s'", name);
 
-	id = Emu.GetIdManager().GetNewID(wxString::Format("sys_spu_thread_group '%s'", name.mb_str()), new SpuGroupInfo(*attr));
+	id = Emu.GetIdManager().GetNewID(wxString::Format("sys_spu_thread_group '%s'", name), new SpuGroupInfo(*attr));
 
 	return CELL_OK;
 }

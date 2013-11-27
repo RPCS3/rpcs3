@@ -12,54 +12,53 @@ enum GLParamFlag
 
 struct GLParamItem
 {
-	ArrayString name;
-	ArrayString location;
-	ArrayString value;
+	std::string name;
+	std::string location;
+	std::string value;
 
-	GLParamItem(const wxString& _name, int _location, const wxString& _value = wxEmptyString)
+	GLParamItem(const std::string& _name, int _location, const std::string& _value = "")
 		: name(_name)
-		, location(_location > -1 ? wxString::Format("layout (location = %d) ", _location) : "")
 		, value(_value)
 	{
+		if (_location > -1)
+			location = "layout (location = " + std::to_string(_location) + ") ";
+		else
+			location = "";
 	}
 };
 
 struct GLParamType
 {
 	const GLParamFlag flag;
-	ArrayString type;
+	std::string type;
 	Array<GLParamItem> items;
 
-	GLParamType(const GLParamFlag _flag, const wxString& _type)
-		: type(_type)
-		, flag(_flag)
+	GLParamType(const GLParamFlag _flag, const std::string& _type)
+		: flag(_flag)
+		, type(_type)
 	{
 	}
 
-	bool SearchName(const wxString& name)
+	bool SearchName(const std::string& name)
 	{
 		for(u32 i=0; i<items.GetCount(); ++i)
 		{
-			if(name.Cmp(items[i].name.GetPtr()) == 0) return true;
+			if(items[i].name.compare(name) == 0) return true;
 		}
 
 		return false;
 	}
 
-	wxString Format()
+	std::string Format()
 	{
-		wxString ret = wxEmptyString;
+		std::string ret = "";
 
 		for(u32 n=0; n<items.GetCount(); ++n)
 		{
-			ret += items[n].location.GetPtr();
-			ret += type.GetPtr();
-			ret += " ";
-			ret += items[n].name.GetPtr();
-			if(items[n].value.GetCount())
+			ret += items[n].location + type + " " + items[n].name;
+			if(!items[n].value.empty())
 			{
-				ret += " = ";
-				ret += items[n].value.GetPtr();
+				ret += " = " + items[n].value;
 			}
 			ret += ";\n";
 		}
@@ -72,17 +71,18 @@ struct GLParamArray
 {
 	Array<GLParamType> params;
 
-	GLParamType* SearchParam(const wxString& type)
+	GLParamType* SearchParam(const std::string& type)
 	{
 		for(u32 i=0; i<params.GetCount(); ++i)
 		{
-			if(type.Cmp(params[i].type.GetPtr()) == 0) return &params[i];
+			if (params[i].type.compare(type) == 0)
+				return &params[i];
 		}
 
 		return nullptr;
 	}
 
-	wxString GetParamFlag(const GLParamFlag flag)
+	std::string GetParamFlag(const GLParamFlag flag)
 	{
 		switch(flag)
 		{
@@ -92,17 +92,17 @@ struct GLParamArray
 		case PARAM_CONST:	return "const ";
 		}
 
-		return wxEmptyString;
+		return "";
 	}
 
-	bool HasParam(const GLParamFlag flag, wxString type, const wxString& name)
+	bool HasParam(const GLParamFlag flag, std::string type, const std::string& name)
 	{
 		type = GetParamFlag(flag) + type;
 		GLParamType* t = SearchParam(type);
 		return t && t->SearchName(name);
 	}
 
-	wxString AddParam(const GLParamFlag flag, wxString type, const wxString& name, const wxString& value)
+	std::string AddParam(const GLParamFlag flag, std::string type, const std::string& name, const std::string& value)
 	{
 		type = GetParamFlag(flag) + type;
 		GLParamType* t = SearchParam(type);
@@ -121,7 +121,7 @@ struct GLParamArray
 		return name;
 	}
 
-	wxString AddParam(const GLParamFlag flag, wxString type, const wxString& name, int location = -1)
+	std::string AddParam(const GLParamFlag flag, std::string type, const std::string& name, int location = -1)
 	{
 		type = GetParamFlag(flag) + type;
 		GLParamType* t = SearchParam(type);

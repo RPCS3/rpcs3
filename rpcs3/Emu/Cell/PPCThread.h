@@ -15,9 +15,9 @@ public:
 
 	virtual void SetArg(const uint pos, const u64 arg) { assert(pos < 4); m_args[pos] = arg; }
 
-	virtual wxString GetThreadName() const
+	virtual std::string GetThreadName() const
 	{
-		return GetFName() + wxString::Format("[0x%08llx]", PC);
+		return (GetFName() + wxString::Format("[0x%08llx]", PC)).mb_str();
 	}
 
 protected:
