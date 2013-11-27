@@ -33,88 +33,88 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wx", "wx", "{62BF822E-6A12-
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{2D6F0A62-A247-4CCF-947F-FCD54BE16103}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcsx2", "pcsx2\windows\VCprojects\pcsx2_vs11.vcxproj", "{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcsx2", "pcsx2\windows\VCprojects\pcsx2_vs2012.vcxproj", "{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGS", "plugins\zerogs\dx\Windows\zerogs_vs11.vcxproj", "{5C6B7D28-E73D-4F71-8FC0-17ADA640EBD8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGS", "plugins\zerogs\dx\Windows\zerogs_vs2012.vcxproj", "{5C6B7D28-E73D-4F71-8FC0-17ADA640EBD8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47} = {2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDiso", "plugins\CDVDiso\src\Windows\CDVDiso_vs11.vcxproj", "{5F78E90B-BD22-47B1-9CA5-7A80F4DF5EF3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDiso", "plugins\CDVDiso\src\Windows\CDVDiso_vs2012.vcxproj", "{5F78E90B-BD22-47B1-9CA5-7A80F4DF5EF3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPU2-X", "plugins\spu2-x\src\Windows\Spu2-X_vs11.vcxproj", "{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPU2-X", "plugins\spu2-x\src\Windows\Spu2-X_vs2012.vcxproj", "{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSdx", "plugins\GSdx\GSdx_vs11.vcxproj", "{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSdx", "plugins\GSdx\GSdx_vs2012.vcxproj", "{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundTouch", "3rdparty\SoundTouch\SoundTouch_vs11.vcxproj", "{E9B51944-7E6D-4BCD-83F2-7BBD5A46182D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundTouch", "3rdparty\SoundTouch\SoundTouch_vs2012.vcxproj", "{E9B51944-7E6D-4BCD-83F2-7BBD5A46182D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "3rdparty\zlib\zlib_vs11.vcxproj", "{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "3rdparty\zlib\zlib_vs2012.vcxproj", "{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "3rdparty\bzip2\bzip2_vs11.vcxproj", "{F4EB4AB2-C595-4B05-8BC0-059024BC796C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "3rdparty\bzip2\bzip2_vs2012.vcxproj", "{F4EB4AB2-C595-4B05-8BC0-059024BC796C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LilyPad", "plugins\LilyPad\LilyPad_vs11.vcxproj", "{E4081455-398C-4610-A87C-90A8A7D72DC3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LilyPad", "plugins\LilyPad\LilyPad_vs2012.vcxproj", "{E4081455-398C-4610-A87C-90A8A7D72DC3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads.v4", "3rdparty\w32pthreads\pthreads_vs11.vcxproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads.v4", "3rdparty\w32pthreads\pthreads_vs2012.vcxproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "plugins\zerospu2\Windows\ZeroSPU2_vs11.vcxproj", "{7F059854-568D-4E08-9D00-1E78E203E4DC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "plugins\zerospu2\Windows\ZeroSPU2_vs2012.vcxproj", "{7F059854-568D-4E08-9D00-1E78E203E4DC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E9B51944-7E6D-4BCD-83F2-7BBD5A46182D} = {E9B51944-7E6D-4BCD-83F2-7BBD5A46182D}
 		{26511268-2902-4997-8421-ECD7055F9E28} = {26511268-2902-4997-8421-ECD7055F9E28}
 		{7E9B2BE7-CEC3-4F14-847B-0AB8D562FB86} = {7E9B2BE7-CEC3-4F14-847B-0AB8D562FB86}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xpad", "plugins\xpad\xpad_vs11.vcxproj", "{6F3C4136-5801-4EBC-AC6E-37DF6FAB150A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xpad", "plugins\xpad\xpad_vs2012.vcxproj", "{6F3C4136-5801-4EBC-AC6E-37DF6FAB150A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDolio", "plugins\CDVDolio\cdvd_vs11.vcxproj", "{FCDF5AE2-EA47-4CC6-9F20-23A0517FEBCB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDolio", "plugins\CDVDolio\cdvd_vs2012.vcxproj", "{FCDF5AE2-EA47-4CC6-9F20-23A0517FEBCB}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDnull", "plugins\CDVDnull\Windows\CDVDnull_vs11.vcxproj", "{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDnull", "plugins\CDVDnull\Windows\CDVDnull_vs2012.vcxproj", "{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "USBnull", "plugins\USBnull\Windows\USBnull_vs11.vcxproj", "{BF7B81A5-E348-4F7C-A69F-F74C8EEEAD70}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "USBnull", "plugins\USBnull\Windows\USBnull_vs2012.vcxproj", "{BF7B81A5-E348-4F7C-A69F-F74C8EEEAD70}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FWnull", "plugins\FWnull\Windows\FWnull_vs11.vcxproj", "{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FWnull", "plugins\FWnull\Windows\FWnull_vs2012.vcxproj", "{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9null", "plugins\dev9null\Windows\DEV9null_vs11.vcxproj", "{04439C5F-05FB-4A9C-AAD1-5388C25377DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9null", "plugins\dev9null\Windows\DEV9null_vs2012.vcxproj", "{04439C5F-05FB-4A9C-AAD1-5388C25377DB}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxBase28", "3rdparty\wxWidgets\build\msw\wx_base_vs11.vcxproj", "{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxBase28", "3rdparty\wxWidgets\build\msw\wx_base_vs2012.vcxproj", "{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxCore28", "3rdparty\wxWidgets\build\msw\wx_core_vs11.vcxproj", "{0318BA30-EF48-441A-9E10-DC85EFAE39F0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxCore28", "3rdparty\wxWidgets\build\msw\wx_core_vs2012.vcxproj", "{0318BA30-EF48-441A-9E10-DC85EFAE39F0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxConfig28", "3rdparty\wxWidgets\build\msw\wx_config_vs11.vcxproj", "{C34487AF-228A-4D11-8E50-27803DF76873}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxConfig28", "3rdparty\wxWidgets\build\msw\wx_config_vs2012.vcxproj", "{C34487AF-228A-4D11-8E50-27803DF76873}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "x86emitter", "common\build\x86emitter\x86emitter_vs11.vcxproj", "{A51123F5-9505-4EAE-85E7-D320290A272C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "x86emitter", "common\build\x86emitter\x86emitter_vs2012.vcxproj", "{A51123F5-9505-4EAE-85E7-D320290A272C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "utilities", "common\build\Utilities\utilities_vs11.vcxproj", "{4639972E-424E-4E13-8B07-CA403C481346}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "utilities", "common\build\Utilities\utilities_vs2012.vcxproj", "{4639972E-424E-4E13-8B07-CA403C481346}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxAdv28", "3rdparty\wxWidgets\build\msw\wx_adv_vs11.vcxproj", "{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxAdv28", "3rdparty\wxWidgets\build\msw\wx_adv_vs2012.vcxproj", "{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "tools\bin2cpp\bin2c_vs11.vcxproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "tools\bin2cpp\bin2c_vs2012.vcxproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libjpeg7", "3rdparty\libjpeg\libjpeg_vs11.vcxproj", "{BC236261-77E8-4567-8D09-45CD02965EB6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libjpeg7", "3rdparty\libjpeg\libjpeg_vs2012.vcxproj", "{BC236261-77E8-4567-8D09-45CD02965EB6}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads_lib", "3rdparty\w32pthreads\pthreads_lib_vs11.vcxproj", "{7E9B2BE7-CEC3-4F14-847B-0AB8D562FB86}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads_lib", "3rdparty\w32pthreads\pthreads_lib_vs2012.vcxproj", "{7E9B2BE7-CEC3-4F14-847B-0AB8D562FB86}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cdvdGigaherz", "plugins\cdvdGigaherz\src\Windows\cdvdGigaherz_vs11.vcxproj", "{5CF88D5F-64DD-4EDC-9F1A-436BD502940A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cdvdGigaherz", "plugins\cdvdGigaherz\src\Windows\cdvdGigaherz_vs2012.vcxproj", "{5CF88D5F-64DD-4EDC-9F1A-436BD502940A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSnull", "plugins\GSnull\Windows\GSnull_vs11.vcxproj", "{5FCBD521-5A0B-4D97-A823-A97E6BAB9101}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSnull", "plugins\GSnull\Windows\GSnull_vs2012.vcxproj", "{5FCBD521-5A0B-4D97-A823-A97E6BAB9101}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PadSSSPSX", "plugins\SSSPSXPAD\PadSSSPSX_vs11.vcxproj", "{6C8D28E4-447E-4856-BD9E-6B8F5E7C58C9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PadSSSPSX", "plugins\SSSPSXPAD\PadSSSPSX_vs2012.vcxproj", "{6C8D28E4-447E-4856-BD9E-6B8F5E7C58C9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Padnull", "plugins\PadNull\Windows\PadNull_vs11.vcxproj", "{6BC4D85D-A399-407E-96A9-CD5416A54269}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Padnull", "plugins\PadNull\Windows\PadNull_vs2012.vcxproj", "{6BC4D85D-A399-407E-96A9-CD5416A54269}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "portaudio", "3rdparty\portaudio\build\msvc\portaudio_vs11.vcxproj", "{0A18A071-125E-442F-AFF7-A3F68ABECF99}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "portaudio", "3rdparty\portaudio\build\msvc\portaudio_vs2012.vcxproj", "{0A18A071-125E-442F-AFF7-A3F68ABECF99}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZZOgl", "plugins\zzogl-pg\opengl\Win32\zerogsogl_vs11.vcxproj", "{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZZOgl", "plugins\zzogl-pg\opengl\Win32\zerogsogl_vs2012.vcxproj", "{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{4639972E-424E-4E13-8B07-CA403C481346} = {4639972E-424E-4E13-8B07-CA403C481346}
 		{BC236261-77E8-4567-8D09-45CD02965EB6} = {BC236261-77E8-4567-8D09-45CD02965EB6}
 		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47} = {2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "USBqemu", "plugins\USBqemu\Win32\USBqemu_vs11.vcxproj", "{E613DA9F-41B4-4613-9911-E418EF5533BC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "USBqemu", "plugins\USBqemu\Win32\USBqemu_vs2012.vcxproj", "{E613DA9F-41B4-4613-9911-E418EF5533BC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZZOgl-cg", "plugins\zzogl-pg-cg\opengl\Win32\zerogsogl-cg_vs11.vcxproj", "{019773FA-2DAA-4C12-9511-BD2D4EB2A718}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZZOgl-cg", "plugins\zzogl-pg-cg\opengl\Win32\zerogsogl-cg_vs2012.vcxproj", "{019773FA-2DAA-4C12-9511-BD2D4EB2A718}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9ghzdrk", "plugins\dev9ghzdrk\Win32\DEV9ghzdrk_vs11.vcxproj", "{BBE4E5FB-530A-4D18-A633-35AF0577B7F3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9ghzdrk", "plugins\dev9ghzdrk\Win32\DEV9ghzdrk_vs2012.vcxproj", "{BBE4E5FB-530A-4D18-A633-35AF0577B7F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

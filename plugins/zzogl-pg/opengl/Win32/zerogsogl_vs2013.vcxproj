@@ -231,7 +231,7 @@
     <ResourceCompile Include="zerogs.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\3rdparty\libjpeg\libjpeg_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\libjpeg\libjpeg_vs2013.vcxproj">
       <Project>{bc236261-77e8-4567-8d09-45cd02965eb6}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -239,7 +239,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_vs2013.vcxproj">
       <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -247,7 +247,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_lib_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_lib_vs2013.vcxproj">
       <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -255,7 +255,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_base_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_base_vs2013.vcxproj">
       <Project>{48ad7e0a-25b1-4974-a1e3-03f8c438d34f}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -263,7 +263,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_core_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_core_vs2013.vcxproj">
       <Project>{0318ba30-ef48-441a-9e10-dc85efae39f0}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -271,7 +271,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\zlib\zlib_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\zlib\zlib_vs2013.vcxproj">
       <Project>{2f6c0388-20cb-4242-9f6c-a6ebb6a83f47}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -279,7 +279,7 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\common\build\Utilities\utilities_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\common\build\Utilities\utilities_vs2013.vcxproj">
       <Project>{4639972e-424e-4e13-8b07-ca403c481346}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

@@ -850,39 +850,39 @@
     <ResourceCompile Include="..\wxResources.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\3rdparty\w32pthreads\pthreads_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\w32pthreads\pthreads_vs2012.vcxproj">
       <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\3rdparty\w32pthreads\pthreads_lib_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\w32pthreads\pthreads_lib_vs2012.vcxproj">
       <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_adv_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_adv_vs2012.vcxproj">
       <Project>{0e231fb1-f3c9-4724-accb-de8bcb3c089e}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_base_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_base_vs2012.vcxproj">
       <Project>{48ad7e0a-25b1-4974-a1e3-03f8c438d34f}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_core_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_core_vs2012.vcxproj">
       <Project>{0318ba30-ef48-441a-9e10-dc85efae39f0}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\3rdparty\zlib\zlib_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\zlib\zlib_vs2012.vcxproj">
       <Project>{2f6c0388-20cb-4242-9f6c-a6ebb6a83f47}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\common\build\Utilities\utilities_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\common\build\Utilities\utilities_vs2012.vcxproj">
       <Project>{4639972e-424e-4e13-8b07-ca403c481346}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\common\build\x86emitter\x86emitter_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\common\build\x86emitter\x86emitter_vs2012.vcxproj">
       <Project>{a51123f5-9505-4eae-85e7-d320290a272c}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\tools\bin2cpp\bin2c_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\tools\bin2cpp\bin2c_vs2012.vcxproj">
       <Project>{677b7d11-d5e1-40b3-88b1-9a4df83d2213}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

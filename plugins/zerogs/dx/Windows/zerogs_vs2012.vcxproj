@@ -193,7 +193,7 @@
     <ResourceCompile Include="zerogs.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\3rdparty\zlib\zlib_vs11.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\zlib\zlib_vs2012.vcxproj">
       <Project>{2f6c0388-20cb-4242-9f6c-a6ebb6a83f47}</Project>
       <Private>true</Private>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
