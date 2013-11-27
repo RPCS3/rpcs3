@@ -72,10 +72,10 @@ private:
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[rb]._u32[0] + ~CPU.GPR[ra]._u32[0] + 1;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[rb]._u32[1] + ~CPU.GPR[ra]._u32[1] + 1;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[rb]._u32[2] + ~CPU.GPR[ra]._u32[2] + 1;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[rb]._u32[3] + ~CPU.GPR[ra]._u32[3] + 1;
+		CPU.GPR[rt]._u32[0] = CPU.GPR[rb]._u32[0] - CPU.GPR[ra]._u32[0];
+		CPU.GPR[rt]._u32[1] = CPU.GPR[rb]._u32[1] - CPU.GPR[ra]._u32[1];
+		CPU.GPR[rt]._u32[2] = CPU.GPR[rb]._u32[2] - CPU.GPR[ra]._u32[2];
+		CPU.GPR[rt]._u32[3] = CPU.GPR[rb]._u32[3] - CPU.GPR[ra]._u32[3];
 	}
 	void OR(u32 rt, u32 ra, u32 rb)
 	{
