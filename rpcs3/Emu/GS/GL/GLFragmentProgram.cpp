@@ -1,18 +1,18 @@
 #include "stdafx.h"
 #include "GLFragmentProgram.h"
 
-void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
+void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	const wxString mask = GetMask();
-	wxString cond = wxEmptyString;
+	const std::string mask = GetMask().c_str();
+	std::string cond = "";
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
 		static const char f[4] = {'x', 'y', 'z', 'w'};
 
-		wxString swizzle = wxEmptyString;
+		std::string swizzle = "";
 		swizzle += f[src0.cond_swizzle_x];
 		swizzle += f[src0.cond_swizzle_y];
 		swizzle += f[src0.cond_swizzle_z];
@@ -43,7 +43,7 @@ void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 			cond = "equal";
 		}
 
-		cond = wxString::Format("if(all(%s(%s.%s, vec4(0, 0, 0, 0)))) ", cond.mb_str(), AddCond(dst.no_dest).mb_str(), swizzle.mb_str());
+		cond = std::string("if(all(" + cond + "(" + AddCond(dst.no_dest) + "." + swizzle +", vec4(0, 0, 0, 0)))) ");
 		//ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
 		//Emu.Pause();
 		//return;
@@ -72,16 +72,16 @@ void GLFragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(dst.fp16 ? "hc%d" : "rc%d", src0.cond_reg_index))
+	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", std::string(dst.fp16 ? "hc" : "rc") + std::to_string(src0.cond_reg_index))
 		: AddReg(dst.dest_reg, dst.fp16)) + mask
-		+ " = " + code + (append_mask ? mask : wxString(wxEmptyString));
+		+ " = " + code + (append_mask ? mask : "");
 
 	main += "\t" + code + ";\n";
 }
 
-wxString GLFragmentDecompilerThread::GetMask()
+std::string GLFragmentDecompilerThread::GetMask()
 {
-	wxString ret = wxEmptyString;
+	std::string ret = "";
 
 	static const char dst_mask[4] =
 	{
@@ -93,10 +93,10 @@ wxString GLFragmentDecompilerThread::GetMask()
 	if(dst.mask_z) ret += dst_mask[2];
 	if(dst.mask_w) ret += dst_mask[3];
 
-	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxString(wxEmptyString) : ("." + ret);
+	return ret.empty() || strncmp(ret.c_str(), dst_mask, 4) == 0 ? "" : ("." + ret);
 }
 
-wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
+std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
 	/*
 	if(HasReg(index, fp16))
@@ -108,21 +108,21 @@ wxString GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
 
 	return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
-			wxString::Format((fp16 ? "h%u" : "r%u"), index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
+			std::string(fp16 ? "h" : "r") + std::to_string(index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
 }
 
 bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
 {
 	return m_parr.HasParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
-		wxString::Format((fp16 ? "h%u" : "r%u"), index));
+		std::string(fp16 ? "h" : "r") + std::to_string(index));
 }
 
-wxString GLFragmentDecompilerThread::AddCond(int fp16)
+std::string GLFragmentDecompilerThread::AddCond(int fp16)
 {
-	return m_parr.AddParam(PARAM_NONE , "vec4", wxString::Format(fp16 ? "hc%d" : "rc%d", src0.cond_mod_reg_index));
+	return m_parr.AddParam(PARAM_NONE , "vec4", std::string(fp16 ? "hc" : "rc") + std::to_string(src0.cond_mod_reg_index));
 }
 
-wxString GLFragmentDecompilerThread::AddConst()
+std::string GLFragmentDecompilerThread::AddConst()
 {
 	mem32_ptr_t data(m_addr + m_size + m_offset);
 
@@ -131,18 +131,19 @@ wxString GLFragmentDecompilerThread::AddConst()
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
-	return m_parr.AddParam(PARAM_UNIFORM, "vec4", wxString::Format("fc%u", m_size + 4 * 4),
-		wxString::Format("vec4(%f, %f, %f, %f)", (float&)x, (float&)y, (float&)z, (float&)w));
+	return m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("fc") + std::to_string(m_size + 4 * 4),
+		std::string("vec4(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
+		+ ", " + std::to_string((float&)z) + ", " + std::to_string((float&)w) + ")");
 }
 
-wxString GLFragmentDecompilerThread::AddTex()
+std::string GLFragmentDecompilerThread::AddTex()
 {
-	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", wxString::Format("tex%d", dst.tex_num));
+	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
 }
 
-template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
+template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 {
-	wxString ret = wxEmptyString;
+	std::string ret = "";
 
 	switch(src.reg_type)
 	{
@@ -152,7 +153,7 @@ template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 
 	case 1: //input
 	{
-		static const wxString reg_table[] =
+		static const std::string reg_table[] =
 		{
 			"gl_Position",
 			"col0", "col1",
@@ -164,7 +165,7 @@ template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 		{
 		case 0x00: ret += reg_table[0]; break;
 		default:
-			if(dst.src_attr_reg_num < WXSIZEOF(reg_table))
+			if(dst.src_attr_reg_num < sizeof(reg_table)/sizeof(reg_table[0]))
 			{
 				ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[dst.src_attr_reg_num]);
 			}
@@ -191,13 +192,13 @@ template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 
 	static const char f[4] = {'x', 'y', 'z', 'w'};
 
-	wxString swizzle = wxEmptyString;
+	std::string swizzle = "";
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
 	swizzle += f[src.swizzle_w];
 
-	if(strncmp(swizzle, f, 4) != 0) ret += "." + swizzle;
+	if(strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
 	if(src.abs) ret = "abs(" + ret + ")";
 	if(src.neg) ret = "-" + ret;
@@ -205,26 +206,23 @@ template<typename T> wxString GLFragmentDecompilerThread::GetSRC(T src)
 	return ret;
 }
 
-wxString GLFragmentDecompilerThread::BuildCode()
+std::string GLFragmentDecompilerThread::BuildCode()
 {
 	//main += wxString::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 	main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "ocol", 0) + " = " + (m_ctrl & 0x40 ? "r0" : "h0") + ";\n";
 	if(m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
 
-	wxString p = wxEmptyString;
+	std::string p = "";
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
 
-	static const wxString& prot = 
-		"#version 330\n"
-		"\n"
-		"%s\n"
-		"void main()\n{\n%s}\n";
-
-	return wxString::Format(prot, p.mb_str(), main.mb_str());
+	return std::string("#version 330\n"
+					   "\n"
+					   + p + "\n"
+					   "void main()\n{\n" + main + "}\n");
 }
 
 void GLFragmentDecompilerThread::Task()
@@ -325,7 +323,7 @@ void GLFragmentDecompilerThread::Task()
 	}
 
 	m_shader = BuildCode();
-	main.Clear();
+	main.clear();
 	m_parr.params.Clear();
 }
 
@@ -381,7 +379,7 @@ void GLShaderProgram::Compile()
 	id = glCreateShader(GL_FRAGMENT_SHADER);
 
 	const char* str = shader.c_str();
-	const int strlen = shader.Len();
+	const int strlen = shader.length();
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
@@ -402,7 +400,7 @@ void GLShaderProgram::Compile()
 			delete[] buf;
 		}
 
-		ConLog.Write(shader);
+		ConLog.Write(shader.c_str());
 		Emu.Pause();
 	}
 	//else ConLog.Write("Shader compiled successfully!");
@@ -413,11 +411,11 @@ void GLShaderProgram::Delete()
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{
 		parr.params[i].items.Clear();
-		parr.params[i].type.Clear();
+		parr.params[i].type.clear();
 	}
 
 	parr.params.Clear();
-	shader.Clear();
+	shader.clear();
 
 	if(id)
 	{

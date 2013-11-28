@@ -15,9 +15,9 @@ static const char* vfsDeviceTypeNames[] =
 
 struct VFSManagerEntry
 {
-	ArrayString device_path;
-	ArrayString path;
-	ArrayString mount;
+	char* device_path;
+	char* path;
+	char* mount;
 	vfsDeviceType device;
 
 	VFSManagerEntry() : device(vfsDevice_LocalFile)

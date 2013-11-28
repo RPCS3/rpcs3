@@ -150,8 +150,8 @@ public:
 	void Resume();
 	void Stop();
 
-	void SavePoints(const wxString& path);
-	void LoadPoints(const wxString& path);
+	void SavePoints(const std::string& path);
+	void LoadPoints(const std::string& path);
 
 	__forceinline bool IsRunning()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Running; }
 	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }

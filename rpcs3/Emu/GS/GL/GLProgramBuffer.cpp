@@ -8,7 +8,7 @@ int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& g
 		if(memcmp(&m_buf[i].fp_data[0], &Memory[rsx_fp.addr], m_buf[i].fp_data.GetCount()) != 0) continue;
 
 		gl_fp.id = m_buf[i].fp_id;
-		gl_fp.shader = m_buf[i].fp_shader.GetPtr();
+		gl_fp.shader = m_buf[i].fp_shader.c_str();
 
 		return i;
 	}
@@ -24,7 +24,7 @@ int GLProgramBuffer::SearchVp(const RSXVertexProgram& rsx_vp, GLVertexProgram& g
 		if(memcmp(m_buf[i].vp_data.GetPtr(), rsx_vp.data.GetPtr(), rsx_vp.data.GetCount() * 4) != 0) continue;
 
 		gl_vp.id = m_buf[i].vp_id;
-		gl_vp.shader = m_buf[i].vp_shader.GetPtr();
+		gl_vp.shader = m_buf[i].vp_shader.c_str();
 
 		return i;
 	}
@@ -93,8 +93,8 @@ void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProg
 	ConLog.Write("*** vp data size = %d", rsx_vp.data.GetCount() * 4);
 	ConLog.Write("*** fp data size = %d", rsx_fp.size);
 
-	ConLog.Write("*** vp shader = \n%s", gl_vp.shader.mb_str());
-	ConLog.Write("*** fp shader = \n%s", gl_fp.shader.mb_str());
+	ConLog.Write("*** vp shader = \n%s", gl_vp.shader.c_str());
+	ConLog.Write("*** fp shader = \n%s", gl_fp.shader.c_str());
 
 	new_buf.prog_id = prog.id;
 	new_buf.vp_id = gl_vp.id;
@@ -120,8 +120,8 @@ void GLProgramBuffer::Clear()
 		m_buf[i].fp_data.Clear();
 		m_buf[i].vp_data.Clear();
 
-		m_buf[i].vp_shader.Clear();
-		m_buf[i].fp_shader.Clear();
+		m_buf[i].vp_shader.clear();
+		m_buf[i].fp_shader.clear();
 	}
 
 	m_buf.Clear();

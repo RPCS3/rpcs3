@@ -8,8 +8,8 @@ struct GLBufferInfo
 	u32 vp_id;
 	Array<u8> fp_data;
 	Array<u32> vp_data;
-	ArrayString fp_shader;
-	ArrayString vp_shader;
+	std::string fp_shader;
+	std::string vp_shader;
 };
 
 struct GLProgramBuffer

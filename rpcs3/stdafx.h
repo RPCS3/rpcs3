@@ -2,6 +2,7 @@
 
 #define NOMINMAX
 
+#ifndef QT_UI
 #include <wx/string.h>
 
 #include <wx/wx.h>
@@ -17,6 +18,7 @@
 #include <wx/filepicker.h>
 
 #include <wx/wxprec.h>
+#endif
 
 #include <cstdint>
 

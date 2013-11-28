@@ -59,7 +59,7 @@ public:
 	virtual void SetArg(const uint pos, const u64 arg) = 0;
 
 	void SetId(const u32 id);
-	void SetName(const wxString& name);
+	void SetName(const std::string& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
 	void SetOffset(const u64 offset) { m_offset = offset; }
 	void SetExitStatus(const u32 status) { m_exit_status = status; }
@@ -68,14 +68,14 @@ public:
 	u32 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 
-	wxString GetName() const { return m_name; }
+	std::string GetName() const { return m_name; }
 	wxString GetFName() const
 	{
 		return 
 			wxString::Format("%s[%d] Thread%s", 
 				GetTypeString().mb_str(),
 				m_id,
-				(GetName().IsEmpty() ? "" : (" (" + GetName() + ")").mb_str())
+				(GetName().empty() ? "" : std::string(" (" + GetName() + ")").c_str())
 			);
 	}
 
@@ -94,9 +94,9 @@ public:
 
 	wxString GetTypeString() const { return CPUThreadTypeToString(m_type); }
 
-	virtual wxString GetThreadName() const
+	virtual std::string GetThreadName() const
 	{
-		return GetFName() + wxString::Format("[0x%08llx]", PC);
+		return (GetFName() + wxString::Format("[0x%08llx]", PC)).mb_str();
 	}
 
 public:

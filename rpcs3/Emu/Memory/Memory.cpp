@@ -329,35 +329,35 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 }
 
 //NullMemoryBlock
-bool NullMemoryBlock::Read8(const u64 addr, u8* WXUNUSED(value))
+bool NullMemoryBlock::Read8(const u64 addr, u8* )
 {
 	ConLog.Error("Read8 from null block: [%08llx]", addr);
 	Emu.Pause();
 	return false;
 }
 
-bool NullMemoryBlock::Read16(const u64 addr, u16* WXUNUSED(value))
+bool NullMemoryBlock::Read16(const u64 addr, u16* )
 {
 	ConLog.Error("Read16 from null block: [%08llx]", addr);
 	Emu.Pause();
 	return false;
 }
 
-bool NullMemoryBlock::Read32(const u64 addr, u32* WXUNUSED(value))
+bool NullMemoryBlock::Read32(const u64 addr, u32* )
 {
 	ConLog.Error("Read32 from null block: [%08llx]", addr);
 	Emu.Pause();
 	return false;
 }
 
-bool NullMemoryBlock::Read64(const u64 addr, u64* WXUNUSED(value))
+bool NullMemoryBlock::Read64(const u64 addr, u64* )
 {
 	ConLog.Error("Read64 from null block: [%08llx]", addr);
 	Emu.Pause();
 	return false;
 }
 
-bool NullMemoryBlock::Read128(const u64 addr, u128* WXUNUSED(value))
+bool NullMemoryBlock::Read128(const u64 addr, u128* )
 {
 	ConLog.Error("Read128 from null block: [%08llx]", addr);
 	Emu.Pause();

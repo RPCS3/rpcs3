@@ -10,14 +10,14 @@ class ThreadExec;
 class ThreadBase
 {
 protected:
-	wxString m_name;
+	std::string m_name;
 	bool m_detached;
 
 public:
-	wxMutex m_main_mutex;
+	std::mutex m_main_mutex;
 
 protected:
-	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase");
+	ThreadBase(bool detached = true, const std::string& name = "Unknown ThreadBase");
 
 public:
 	ThreadExec* m_executor;
@@ -34,15 +34,15 @@ public:
 	virtual bool IsPaused() const;
 	virtual bool IsAlive() const;
 	virtual bool TestDestroy() const;
-	virtual wxString GetThreadName() const;
-	virtual void SetThreadName(const wxString& name);
+	virtual std::string GetThreadName() const;
+	virtual void SetThreadName(const std::string& name);
 };
 
 ThreadBase* GetCurrentNamedThread();
 
 class ThreadExec : public wxThread
 {
-	wxCriticalSection m_wait_for_exit;
+	std::mutex m_wait_for_exit;
 	volatile bool m_alive;
 
 public:
@@ -66,13 +66,13 @@ public:
 		if(wait)
 		{
 			Delete();
-			//wxCriticalSectionLocker lock(m_wait_for_exit);
+			//std::lock_guard<std::mutex> lock(m_wait_for_exit);
 		}
 	}
 
 	ExitCode Entry()
 	{
-		//wxCriticalSectionLocker lock(m_wait_for_exit);
+		//std::lock_guard<std::mutex> lock(m_wait_for_exit);
 		m_parent->Task();
 		m_alive = false;
 		if(m_parent) m_parent->m_executor = nullptr;
@@ -89,7 +89,7 @@ protected:
 	volatile u32 m_put, m_get;
 	Array<u8> m_buffer;
 	u32 m_max_buffer_size;
-	mutable wxCriticalSection m_cs_main;
+	mutable std::recursive_mutex m_cs_main;
 
 	void CheckBusy()
 	{
@@ -110,7 +110,7 @@ public:
 
 	void Flush()
 	{
-		wxCriticalSectionLocker lock(m_cs_main);
+		std::lock_guard<std::recursive_mutex> lock(m_cs_main);
 		m_put = m_get = 0;
 		m_buffer.Clear();
 		m_busy = false;
@@ -123,17 +123,17 @@ private:
 public:
 	void Push(const T& v)
 	{
-		wxCriticalSectionLocker lock(m_cs_main);
+		std::lock_guard<std::recursive_mutex> lock(m_cs_main);
 		_push(v);
 	}
 
 	T Pop()
 	{
-		wxCriticalSectionLocker lock(m_cs_main);
+		std::lock_guard<std::recursive_mutex> lock(m_cs_main);
 		return _pop();
 	}
 
-	bool HasNewPacket() const { wxCriticalSectionLocker lock(m_cs_main); return m_put != m_get; }
+	bool HasNewPacket() const { std::lock_guard<std::recursive_mutex> lock(m_cs_main); return m_put != m_get; }
 	bool IsBusy() const { return m_busy; }
 };
 

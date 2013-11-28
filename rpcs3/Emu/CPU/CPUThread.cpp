@@ -76,7 +76,7 @@ void CPUThread::SetId(const u32 id)
 	m_id = id;
 }
 
-void CPUThread::SetName(const wxString& name)
+void CPUThread::SetName(const std::string& name)
 {
 	m_name = name;
 }
@@ -197,7 +197,9 @@ void CPUThread::Run()
 		return;
 	}
 	
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
+#endif
 
 	m_status = Running;
 
@@ -207,14 +209,18 @@ void CPUThread::Run()
 	DoRun();
 	Emu.CheckStatus();
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STARTED_THREAD, this);
+#endif
 }
 
 void CPUThread::Resume()
 {
 	if(!IsPaused()) return;
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
+#endif
 
 	m_status = Running;
 	DoResume();
@@ -222,28 +228,36 @@ void CPUThread::Resume()
 
 	ThreadBase::Start();
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, this);
+#endif
 }
 
 void CPUThread::Pause()
 {
 	if(!IsRunning()) return;
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
+#endif
 
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
 
 	ThreadBase::Stop(false);
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
+#endif
 }
 
 void CPUThread::Stop()
 {
 	if(IsStopped()) return;
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
+#endif
 
 	m_status = Stopped;
 	ThreadBase::Stop(false);
@@ -251,24 +265,32 @@ void CPUThread::Stop()
 	DoStop();
 	Emu.CheckStatus();
 
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
+#endif
 }
 
 void CPUThread::Exec()
 {
 	m_is_step = false;
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
+#endif
 	ThreadBase::Start();
 }
 
 void CPUThread::ExecOnce()
 {
 	m_is_step = true;
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
+#endif
 	ThreadBase::Start();
 	if(!ThreadBase::Wait()) while(m_is_step) Sleep(1);
+#ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
+#endif
 }
 
 void CPUThread::Task()

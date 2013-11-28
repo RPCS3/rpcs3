@@ -98,8 +98,8 @@ struct GLFragmentDecompilerThread : public ThreadBase
 		};
 	} src2;
 
-	wxString main;
-	wxString& m_shader;
+	std::string main;
+	std::string& m_shader;
 	GLParamArray& m_parr;
 	u32 m_addr;
 	u32& m_size;
@@ -108,7 +108,7 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	u32 m_location;
 	u32 m_ctrl;
 
-	GLFragmentDecompilerThread(wxString& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
+	GLFragmentDecompilerThread(std::string& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
 		: ThreadBase(false, "Fragment Shader Decompiler Thread")
 		, m_shader(shader)
 		, m_parr(parr)
@@ -121,17 +121,17 @@ struct GLFragmentDecompilerThread : public ThreadBase
 		m_size = 0;
 	}
 
-	wxString GetMask();
+	std::string GetMask();
 
-	void AddCode(wxString code, bool append_mask = true);
-	wxString AddReg(u32 index, int fp16);
+	void AddCode(std::string code, bool append_mask = true);
+	std::string AddReg(u32 index, int fp16);
 	bool HasReg(u32 index, int fp16);
-	wxString AddCond(int fp16);
-	wxString AddConst();
-	wxString AddTex();
+	std::string AddCond(int fp16);
+	std::string AddConst();
+	std::string AddTex();
 
-	template<typename T> wxString GetSRC(T src);
-	wxString BuildCode();
+	template<typename T> std::string GetSRC(T src);
+	std::string BuildCode();
 
 	virtual void Task();
 
@@ -147,7 +147,7 @@ struct GLShaderProgram
 
 	GLParamArray parr;
 
-	wxString shader;
+	std::string shader;
 
 	u32 id;
 	
