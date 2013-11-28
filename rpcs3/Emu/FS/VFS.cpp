@@ -139,17 +139,17 @@ void VFS::Init(const wxString& path)
 		break;
 
 		case vfsDevice_HDD:
-			dev = new vfsHDD(entries[i].device_path.GetPtr());
+			dev = new vfsHDD(entries[i].device_path);
 		break;
 
 		default:
 			continue;
 		}
 		
-		wxString mpath = entries[i].path.GetPtr();
+		wxString mpath = entries[i].path;
 		mpath.Replace("$(EmulatorDir)", wxGetCwd());
 		mpath.Replace("$(GameDir)", vfsDevice::GetRoot(path));
-		Mount(entries[i].mount.GetPtr(), mpath, dev);
+		Mount(entries[i].mount, mpath, dev);
 	}
 }
 
@@ -222,16 +222,16 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 		if(is_load)
 		{
 			new (res + i) VFSManagerEntry();
-			res[i].path = entry_path.LoadValue(wxEmptyString);
-			res[i].device_path = entry_device_path.LoadValue(wxEmptyString);
-			res[i].mount = entry_mount.LoadValue(wxEmptyString);
+			res[i].path = strdup(entry_path.LoadValue(wxEmptyString).c_str());
+			res[i].device_path = strdup(entry_device_path.LoadValue(wxEmptyString).c_str());
+			res[i].mount = strdup(entry_mount.LoadValue(wxEmptyString).c_str());
 			res[i].device = (vfsDeviceType)entry_device.LoadValue(vfsDevice_LocalFile);
 		}
 		else
 		{
-			entry_path.SaveValue(res[i].path.GetPtr());
-			entry_device_path.SaveValue(res[i].device_path.GetPtr());
-			entry_mount.SaveValue(res[i].mount.GetPtr());
+			entry_path.SaveValue(res[i].path);
+			entry_device_path.SaveValue(res[i].device_path);
+			entry_mount.SaveValue(res[i].mount);
 			entry_device.SaveValue(res[i].device);
 		}
 	}

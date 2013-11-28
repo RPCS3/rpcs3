@@ -63,8 +63,9 @@ ArrayF<SectionInfo> sections_list;
 u32 section_name_offs = 0;
 u32 section_offs = 0;
 
-SectionInfo::SectionInfo(const wxString& _name) : name(_name)
+SectionInfo::SectionInfo(const wxString& _name)
 {
+	name = _name.c_str();
 	memset(&shdr, 0, sizeof(Elf64_Shdr));
 
 	section_num = sections_list.Add(this);
@@ -72,7 +73,7 @@ SectionInfo::SectionInfo(const wxString& _name) : name(_name)
 	shdr.sh_offset = section_offs;
 	shdr.sh_name = section_name_offs;
 
-	section_name_offs += name.GetCount() + 1;
+	section_name_offs += name.length() + 1;
 }
 
 void SectionInfo::SetDataSize(u32 size, u32 align)
@@ -107,11 +108,11 @@ SectionInfo::~SectionInfo()
 	for(u32 i=section_num + 1; i<sections_list.GetCount(); ++i)
 	{
 		sections_list[i].shdr.sh_offset -= code.GetCount();
-		sections_list[i].shdr.sh_name -= name.GetCount();
+		sections_list[i].shdr.sh_name -= name.length();
 	}
 
 	section_offs -= code.GetCount();
-	section_name_offs -= name.GetCount();
+	section_name_offs -= name.length();
 }
 
 CompilePPUProgram::CompilePPUProgram(
@@ -354,7 +355,7 @@ bool CompilePPUProgram::CheckEnd(bool show_err)
 
 void CompilePPUProgram::DetectArgInfo(Arg& arg)
 {
-	const wxString str = arg.string.GetPtr();
+	const wxString str = arg.string;
 
 	if(str.Len() <= 0)
 	{
@@ -372,7 +373,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	{
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(str.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+			if(str.mb_str() != m_branches[i].m_name)
+				continue;
 
 			arg.type = ARG_BRANCH;
 			arg.value = GetBranchValue(str);
@@ -468,7 +470,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		arg.string = str(1, str.Len() - 2);
+		arg.string = str(1, str.Len() - 2).c_str();
 		arg.type = ARG_TXT;
 	return;
 	}
@@ -532,7 +534,8 @@ u32 CompilePPUProgram::GetBranchValue(const wxString& branch)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(branch.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+		if(branch.mb_str() != m_branches[i].m_name)
+			continue;
 		if(m_branches[i].m_pos >= 0) return m_text_addr + m_branches[i].m_pos * 4;
 
 		return m_branches[i].m_addr;
@@ -664,7 +667,7 @@ CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const wxString& name)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+		if(name.mb_str() != m_branches[i].m_name) continue;
 
 		return m_branches[i];
 	}
@@ -684,7 +687,8 @@ void CompilePPUProgram::SetSp(const wxString& name, u32 addr, bool create)
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+		if(name.mb_str() != m_branches[i].m_name)
+			continue;
 		m_branches[i].m_addr = addr;
 	}
 }
@@ -803,7 +807,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 
 			for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 			{
-				if(src1.Cmp(m_sp_string[i].m_data.GetPtr()) != 0) continue;
+				if(src1.mb_str() != m_sp_string[i].m_data) continue;
 				*dst_branch = Branch(dst, -1, m_sp_string[i].m_addr);
 				founded = true;
 			}
@@ -827,7 +831,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 					{
 						if(m_sp_string[i].m_addr == a_src1.value)
 						{
-							*dst_branch = Branch(dst, -1, m_sp_string[i].m_data.GetCount());
+							*dst_branch = Branch(dst, -1, m_sp_string[i].m_data.length());
 							break;
 						}
 					}
@@ -957,7 +961,7 @@ void CompilePPUProgram::Compile()
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		m_branches[i].m_name.Clear();
+		m_branches[i].m_name.clear();
 	}
 
 	m_branches.Clear();
@@ -1335,7 +1339,7 @@ void CompilePPUProgram::Compile()
 
 			for(u32 i=0; i<m_branches.GetCount(); ++i)
 			{
-				if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+				if(name.mb_str() != m_branches[i].m_name) continue;
 				WriteError(wxString::Format("'%s' already declared", name.mb_str()));
 				m_error = true;
 				break;
@@ -1365,7 +1369,8 @@ void CompilePPUProgram::Compile()
 	bool has_entry = false;
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(wxString("entry").Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
+		if(m_branches[i].m_name != "entry")
+			continue;
 
 		has_entry = true;
 		break;
@@ -1502,7 +1507,7 @@ void CompilePPUProgram::Compile()
 		u32 entry_point = s_text.sh_addr;
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(wxString("entry").Cmp(m_branches[i].m_name.GetPtr()) == 0)
+			if(m_branches[i].m_name == "entry")
 			{
 				entry_point += m_branches[i].m_pos * 4;
 				break;
@@ -1553,7 +1558,7 @@ void CompilePPUProgram::Compile()
 		for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 		{
 			f.Seek(s_opd.sh_offset + (m_sp_string[i].m_addr - s_opd.sh_addr));
-			f.Write(&m_sp_string[i].m_data[0], m_sp_string[i].m_data.GetCount() + 1);
+			f.Write(&m_sp_string[i].m_data[0], m_sp_string[i].m_data.length() + 1);
 		}
 
 		f.Seek(s_sceStub_text.sh_offset);
@@ -1703,7 +1708,7 @@ void CompilePPUProgram::Compile()
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		m_branches[i].m_name.Clear();
+		m_branches[i].m_name.clear();
 	}
 
 	m_branches.Clear();

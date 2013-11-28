@@ -7,7 +7,7 @@ ThreadBase* GetCurrentNamedThread()
 	return thr ? thr->m_parent : nullptr;
 }
 
-ThreadBase::ThreadBase(bool detached, const wxString& name)
+ThreadBase::ThreadBase(bool detached, const std::string& name)
 	: m_detached(detached)
 	, m_name(name)
 	, m_executor(nullptr)
@@ -86,12 +86,12 @@ bool ThreadBase::TestDestroy() const
 	return m_executor->TestDestroy();
 }
 
-wxString ThreadBase::GetThreadName() const
+std::string ThreadBase::GetThreadName() const
 {
 	return m_name;
 }
 
-void ThreadBase::SetThreadName(const wxString& name)
+void ThreadBase::SetThreadName(const std::string& name)
 {
 	m_name = name;
 }

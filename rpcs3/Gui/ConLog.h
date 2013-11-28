@@ -8,10 +8,10 @@ class LogWriter
 	wxFile m_logfile;
 	wxColour m_txtcolour;
 
-	wxString m_prefix;
-	wxString m_value;
+	std::string m_prefix;
+	std::string m_value;
 
-	virtual void WriteToLog(wxString prefix, wxString value, wxString colour);
+	virtual void WriteToLog(std::string prefix, std::string value, std::string colour);
 
 public:
 	LogWriter();
@@ -38,7 +38,7 @@ private:
 	virtual void Task();
 
 	void OnQuit(wxCloseEvent& event);
-
+	
 	DECLARE_EVENT_TABLE();
 };
 
