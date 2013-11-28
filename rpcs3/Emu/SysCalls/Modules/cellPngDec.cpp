@@ -38,6 +38,12 @@ enum CellPngDecDecodeStatus
 	CELL_PNGDEC_DEC_STATUS_STOP		= 1,	//Decoding halted
 };
 
+enum CellPngDecStreamSrcSel
+{
+    CELL_PNGDEC_FILE      = 0, 
+    CELL_PNGDEC_BUFFER    = 1		
+};
+
 struct CellPngDecDataOutInfo
 {
 	be_t<u32> chunkInformation;
@@ -102,6 +108,7 @@ struct CellPngDecSubHandle //Custom struct
 	u64 fileSize;
 	CellPngDecInfo info;
 	CellPngDecOutParam outParam;
+	CellPngDecSrc src;
 };
 
 int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
@@ -118,27 +125,34 @@ int cellPngDecDestroy(u32 mainHandle)
 
 int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo)
 {
-	//u32 srcSelect       = Memory.Read32(src_addr);
-	u32 fileName		  = Memory.Read32(src_addr+4);
-	//u32 fileOffset      = Memory.Read32(src_addr+8);
-	//u32 fileSize        = Memory.Read32(src_addr+12);
-	//u32 streamPtr       = Memory.Read32(src_addr+16);
-	//u32 streamSize      = Memory.Read32(src_addr+20);
-	//u32 spuThreadEnable = Memory.Read32(src_addr+24);
+	CellPngDecSrc* src;
+
+	src = (CellPngDecSrc*)Memory.GetMemFromAddr(src_addr);
 
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 
-	// Get file descriptor
-	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(fileName, 0, fd, NULL, 0);
-	current_subHandle->fd = fd->ToLE();
-	if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
+	current_subHandle->fd = NULL;
+	current_subHandle->src = *src;
 
-	// Get size of file
-	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
-	if(ret != CELL_OK) return ret;
-	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+	switch(src->srcSelect.ToLE())
+	{
+	case CELL_PNGDEC_BUFFER:
+		current_subHandle->fileSize = src->streamSize.ToLE();
+		break;
+	case CELL_PNGDEC_FILE:
+		// Get file descriptor
+		MemoryAllocator<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd, NULL, 0);
+		current_subHandle->fd = fd->ToLE();
+		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
+
+		// Get size of file
+		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb);
+		if(ret != CELL_OK) return ret;
+		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+		break;
+	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
 	subHandle = cellPngDec.GetNewId(current_subHandle);
@@ -180,8 +194,16 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	MemoryAllocator<be_t<u32>> buffer(34); // Alloc buffer for PNG header
 	MemoryAllocator<be_t<u64>> pos, nread;
 
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+	switch(subHandle_data->src.srcSelect.ToLE())
+	{
+	case CELL_PNGDEC_BUFFER:
+		memcpy(Memory.VirtualToRealAddr(buffer.GetAddr()), Memory.VirtualToRealAddr(subHandle_data->src.streamPtr.ToLE()), buffer.GetSize());
+		break;
+	case CELL_PNGDEC_FILE:
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		break;
+	}
 
 	if (buffer[0] != 0x89504E47 ||
 		buffer[1] != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
@@ -227,8 +249,17 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	//Copy the PNG file to a buffer
 	MemoryAllocator<unsigned char> png(fileSize);
 	MemoryAllocator<u64> pos, nread;
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, png.GetAddr(), png.GetSize(), nread);
+
+	switch(subHandle_data->src.srcSelect.ToLE())
+	{
+	case CELL_PNGDEC_BUFFER:
+		memcpy(Memory.VirtualToRealAddr(png.GetAddr()), Memory.VirtualToRealAddr(subHandle_data->src.streamPtr.ToLE()), png.GetSize());
+		break;
+	case CELL_PNGDEC_FILE:
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, png.GetAddr(), png.GetSize(), nread);
+		break;
+	}
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
