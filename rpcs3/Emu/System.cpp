@@ -185,8 +185,7 @@ void Emulator::Load()
 		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
 		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
-		//thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
-		thread.SetEntry(l.GetTextEntry());
+		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
 	break;
 
 	case MACHINE_PPC64:

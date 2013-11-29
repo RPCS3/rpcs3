@@ -135,8 +135,6 @@ bool ELF32Loader::LoadShdrInfo()
 			name += c;
 		}
 		shdr_name_arr.Add(name);	
-		if(name == ".text") //temporary solution for SPU ELF loading
-			_text_section_offset = shdr_arr[i].sh_offset;
 	}
 
 	return true;

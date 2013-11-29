@@ -186,8 +186,6 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 		}
 
 		shdr_name_arr.Add(name);
-		if(name == ".text")
-			_text_section_offset = shdr_arr[i].sh_offset;
 	}
 
 	return true;
