@@ -147,6 +147,7 @@ bool Loader::Analyze()
 
 	machine = m_loader->GetMachine();
 	entry = m_loader->GetMachine() == MACHINE_SPU ? m_loader->GetEntry() + g_spu_offset : m_loader->GetEntry();
+	_text_section_offset = m_loader->GetTextEntry();
 
 	return true;
 }

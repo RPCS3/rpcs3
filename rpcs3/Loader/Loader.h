@@ -181,12 +181,14 @@ protected:
 	u32 min_addr;
 	u32 max_addr;
 	Elf_Machine machine;
+	u32 _text_section_offset;
 
 	LoaderBase()
 		: machine(MACHINE_Unknown)
 		, entry(0)
 		, min_addr(0)
 		, max_addr(0)
+		, _text_section_offset(0)
 	{
 	}
 
@@ -196,6 +198,7 @@ public:
 	Elf_Machine GetMachine() { return machine; }
 
 	u32 GetEntry() { return entry; }
+	u32 GetTextEntry() { return _text_section_offset; }
 	u32 GetMinAddr() { return min_addr; }
 	u32 GetMaxAddr() { return min_addr; }
 };

@@ -27,6 +27,7 @@ bool ELFLoader::LoadInfo()
 
 	entry = loader->GetEntry();
 	machine = loader->GetMachine();
+	_text_section_offset = loader->GetTextEntry();
 
 	return true;
 }
