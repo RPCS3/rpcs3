@@ -186,6 +186,8 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 		}
 
 		shdr_name_arr.Add(name);
+		if(name == ".text")
+			_text_section_offset = shdr_arr[i].sh_offset;
 	}
 
 	return true;
@@ -371,6 +373,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 								if(!module->Load(nid))
 								{
 									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name.mb_str());
+									SysCalls::DoFunc(nid);
 								}
 							}
 #ifdef LOADER_DEBUG
