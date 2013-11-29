@@ -190,56 +190,51 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 			wxString fileOut = (ctrl.GetPath()+elf[i])+".elf";
 
 			// Check if the data really needs to be decrypted.
-			FILE *f;
-			if((f = fopen(fileIn.mb_str(), "rb")) == NULL)
+			if(!wxFileExists(fileIn))
 			{
 				ConLog.Error("Could not open game boot file!");
 				return;
 			}
 			
+			wxFile f(fileIn);
 			// Get the key version.
-			fseek(f, 0x08, SEEK_SET);
-			s16 key_version;
-			fread(&key_version, 1, sizeof(key_version), f);
-			be_t<u16> key_version_be;
-			key_version_be.FromLE(key_version);
+			f.Seek(0x08);
+			be_t<u16> key_version;
+			f.Read(&key_version, sizeof(key_version));
 
-			// Get the real elf offset.
-			fseek(f, 0x10, SEEK_SET);
-			s64 elf_offset;
-			fread(&elf_offset, 1, sizeof(elf_offset), f);
-			be_t<u64> elf_offset_be;
-			elf_offset_be.FromLE(elf_offset);
-
-			fclose(f);
-
-			if(key_version_be.ToBE() == 0x8000)
+			if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
 			{
 				ConLog.Warning("Debug SELF detected! Removing fake header...");
-				FILE *in;
-				FILE *out;
-				in = fopen(fileIn, "rb");
-				out = fopen(fileOut, "wb");
+				
+				// Get the real elf offset.
+				f.Seek(0x10);
+				be_t<u64> elf_offset;
+				f.Read(&elf_offset, sizeof(elf_offset));
 
 				// Start at the real elf offset.
-				fseek(in, elf_offset_be.ToBE(), SEEK_SET);
-				
-				// Copy the data.
-				int c;
-				while ((c = fgetc(in)) != EOF)
-					fputc(c, out);
+				f.Seek(elf_offset);
 
-				fclose(out);
-				fclose(in);
+				wxFile out(fileOut, wxFile::write);
+
+				// Copy the data.
+				char buf[2048];
+				while (ssize_t size = f.Read(buf, 2048))
+					out.Write(buf, size);
 			}
 			else
 			{
-				scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str());
+				if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
+				{
+					ConLog.Write("Could not decrypt game boot file");
+					return;
+				}
 			}
-			
-			Emu.SetPath((ctrl.GetPath()+elf[i])+".elf");
+
+			f.Close();
+
+			Emu.SetPath(fileOut);
 			Emu.Load();
-			if (!wxRemoveFile((ctrl.GetPath()+elf[i])+".elf"))
+			if (!wxRemoveFile(fileOut))
 				ConLog.Warning("Could not delete the decrypted ELF file");
 
 			ConLog.Write("Game: boot done.");
@@ -463,6 +458,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_mouse_handler = new wxComboBox(&diag, wxID_ANY);
 
+	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(&diag, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
@@ -495,6 +491,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_mouse_handler->Append("Windows");
 	//cbox_mouse_handler->Append("DirectInput");
 
+	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
@@ -509,6 +506,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_cpu->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -548,6 +546,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
+		Ini.CPUIgnoreRWErrors.SetValue(chbox_cpu_ignore_rwerrors->GetValue());
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);

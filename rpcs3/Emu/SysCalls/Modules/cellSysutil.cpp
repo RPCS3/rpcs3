@@ -2,8 +2,10 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
+// Parameter IDs
 enum
 {
+	//Integers
 	CELL_SYSUTIL_SYSTEMPARAM_ID_LANG							= 0x0111,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN				= 0x0112,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT						= 0x0114,
@@ -19,6 +21,10 @@ enum
 	CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD	= 0x0154,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD	= 0x0155,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF						= 0x0156,
+
+	//Strings
+	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME						= 0x113,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME				= 0x131,
 };
 
 enum
@@ -209,6 +215,30 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
 		value = 0;
+	break;
+
+	default:
+		return CELL_EINVAL;
+	}
+
+	return CELL_OK;
+}
+
+int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
+{
+	cellSysutil.Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
+
+	if (!buf.IsGood())
+		return CELL_EFAULT;
+
+	switch(id)
+	{
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
+		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
+	break;
+
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
+		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
 	break;
 
 	default:
@@ -484,6 +514,7 @@ int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 user
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
+	cellSysutil.AddFunc(0x938013a0, cellSysutilGetSystemParamString);
 
 	cellSysutil.AddFunc(0x887572d5, cellVideoOutGetState);
 	cellSysutil.AddFunc(0xe558748d, cellVideoOutGetResolution);

@@ -31,6 +31,32 @@ enum
 	CELL_GAME_ERROR_BOOTPATH			= 0x8002cb50,
 };
 
+// Definitions
+enum
+{
+	CELL_GAME_PATH_MAX				= 128,
+	CELL_GAME_DIRNAME_SIZE			= 32,
+	CELL_GAME_THEMEFILENAME_SIZE	= 48,
+	CELL_GAME_SYSP_TITLE_SIZE		= 128,
+	CELL_GAME_SYSP_TITLEID_SIZE		= 10,
+	CELL_GAME_SYSP_VERSION_SIZE		= 6,
+	CELL_GAME_SYSP_APP_VER_SIZE		= 6,
+
+	CELL_GAME_GAMETYPE_DISC			= 1,
+	CELL_GAME_GAMETYPE_HDD			= 2,
+
+	CELL_GAME_SIZEKB_NOTCALC        = -1,
+
+	CELL_GAME_ATTRIBUTE_PATCH					= 0x1,
+	CELL_GAME_ATTRIBUTE_APP_HOME				= 0x2,
+	CELL_GAME_ATTRIBUTE_DEBUG					= 0x4,
+	CELL_GAME_ATTRIBUTE_XMBBUY					= 0x8,
+	CELL_GAME_ATTRIBUTE_COMMERCE2_BROWSER		= 0x10,
+	CELL_GAME_ATTRIBUTE_INVITE_MESSAGE			= 0x20,
+	CELL_GAME_ATTRIBUTE_CUSTOM_DATA_MESSAGE		= 0x40,
+	CELL_GAME_ATTRIBUTE_WEB_BROWSER				= 0x100,
+};
+
 //Parameter IDs of PARAM.SFO
 enum
 {
@@ -66,9 +92,28 @@ enum
 	CELL_GAME_PARAMID_APP_VER			= 106,
 };
 
-int cellGameBootCheck()
+struct CellGameContentSize
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	be_t<s32> hddFreeSizeKB;
+	be_t<s32> sizeKB;
+	be_t<s32> sysSizeKB;
+};
+
+int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameContentSize> size, mem_list_ptr_t<u8> dirName)
+{
+	cellGame.Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
+		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
+
+	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
+		return CELL_GAME_ERROR_PARAM;
+	
+	type				= CELL_GAME_GAMETYPE_DISC;
+	attributes			= 0;
+	size->hddFreeSizeKB = 40000000; //40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	size->sizeKB		= CELL_GAME_SIZEKB_NOTCALC;
+	size->sysSizeKB		= 0;
+	//TODO: dirName
+
 	return CELL_OK;
 }
 

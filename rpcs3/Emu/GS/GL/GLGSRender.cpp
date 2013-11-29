@@ -915,9 +915,9 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_depth_bounds)
 	{
-		//ConLog.Warning("glDepthRange(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
+		//ConLog.Warning("glDepthBounds(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
 		glDepthBounds(m_depth_bounds_min, m_depth_bounds_max);
-		checkForGlError("glDepthRange");
+		checkForGlError("glDepthBounds");
 	}
 
 	if(m_set_clip)
