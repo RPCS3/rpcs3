@@ -301,7 +301,7 @@ private:
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0xFFFFFFF0;
+		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQX: bad lsa (0x%x)", lsa);
@@ -317,9 +317,10 @@ private:
 	}
 	void BISL(u32 rt, u32 ra)
 	{
-		CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		const u32 NewPC = CPU.GPR[ra]._u32[3];
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.GPR[rt]._u32[3] = CPU.PC + 4;		
+		CPU.SetBranch(branchTarget(NewPC, 0));
 	}
 	void IRET(u32 ra)
 	{
@@ -335,40 +336,48 @@ private:
 	}
 	void GB(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] =	(CPU.GPR[ra]._u32[0] & 1) |
 										((CPU.GPR[ra]._u32[1] & 1) << 1) |
 										((CPU.GPR[ra]._u32[2] & 1) << 2) |
 										((CPU.GPR[ra]._u32[3] & 1) << 3);
+		CPU.GPR[rt]._u32[2] = 0;
+		CPU.GPR[rt]._u64[0] = 0;
 	}
 	void GBH(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt].Reset();
-
+		u32 temp = 0;
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u32[3] |= (CPU.GPR[ra]._u16[h] & 1) << h;
+			temp |= (CPU.GPR[ra]._u16[h] & 1) << h;
+		CPU.GPR[rt]._u32[3] = temp;
+		CPU.GPR[rt]._u32[2] = 0;
+		CPU.GPR[rt]._u64[0] = 0;
 	}
 	void GBB(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt].Reset();
-
+		u32 temp;
 		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u32[3] |= (CPU.GPR[ra]._u8[b] & 1) << b;
+			temp |= (CPU.GPR[ra]._u8[b] & 1) << b;
+		CPU.GPR[rt]._u32[3] = temp;
+		CPU.GPR[rt]._u32[2] = 0;
+		CPU.GPR[rt]._u64[0] = 0;
 	}
 	void FSM(u32 rt, u32 ra)
 	{
+		const u32 pref = CPU.GPR[ra]._u32[3];
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (CPU.GPR[ra]._u32[3] & (1 << w)) ? ~0 : 0;
+			CPU.GPR[rt]._u32[w] = (pref & (1 << w)) ? ~0 : 0;
 	}
 	void FSMH(u32 rt, u32 ra)
 	{
+		const u32 pref = CPU.GPR[ra]._u32[3];
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u32[3] & (1 << h)) ? ~0 : 0;
+			CPU.GPR[rt]._u16[h] = (pref & (1 << h)) ? ~0 : 0;
 	}
 	void FSMB(u32 rt, u32 ra)
 	{
+		const u32 pref = CPU.GPR[ra]._u32[3];
 		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = (CPU.GPR[ra]._u32[3] & (1 << b)) ? ~0 : 0;
+			CPU.GPR[rt]._u8[b] = (pref & (1 << b)) ? ~0 : 0;
 	}
 	void FREST(u32 rt, u32 ra)
 	{
@@ -386,7 +395,7 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0xFFFFFFF0;
+		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQX: bad lsa (0x%x)", lsa);
@@ -399,25 +408,25 @@ private:
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0xf;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[(b - s) & 0xf];
+			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (0 - (CPU.GPR[rb]._u32[3] >> 3)) & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = 0; b < 16 - s; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
 	}
 	void SHLQBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = s; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
 	}
 	void CBX(u32 rt, u32 ra, u32 rb)
 	{
@@ -454,57 +463,58 @@ private:
 	void ROTQBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int t = CPU.GPR[rb]._u32[3] & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << t) | (CPU.GPR[ra]._u32[3] >> (32 - t));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << t) | (CPU.GPR[ra]._u32[0] >> (32 - t));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << t) | (CPU.GPR[ra]._u32[1] >> (32 - t));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << t) | (CPU.GPR[ra]._u32[2] >> (32 - t));
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] << t) | (temp._u32[3] >> (32 - t));
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] << t) | (temp._u32[2] >> (32 - t));
 	}
 	void ROTQMBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int t = (0 - CPU.GPR[rb]._u32[3]) & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] >> t) | (CPU.GPR[ra]._u32[1] << (32 - t));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] >> t) | (CPU.GPR[ra]._u32[2] << (32 - t));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] >> t) | (CPU.GPR[ra]._u32[3] << (32 - t));
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] >> t) | (temp._u32[1] << (32 - t));
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] >> t) | (temp._u32[2] << (32 - t));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] >> t) | (temp._u32[3] << (32 - t));
 		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] >> t);
 	}
 	void SHLQBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int t = CPU.GPR[rb]._u32[3] & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << t);
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << t) | (CPU.GPR[ra]._u32[0] >> (32 - t));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << t) | (CPU.GPR[ra]._u32[1] >> (32 - t));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << t) | (CPU.GPR[ra]._u32[2] >> (32 - t));
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] << t);
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] << t) | (temp._u32[2] >> (32 - t));
 	}
 	void ROTQBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = CPU.GPR[rb]._u32[3] & 0xf;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; ++b)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[(b - s) & 0xf];
+			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (0 - CPU.GPR[rb]._u32[3]) & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = 0; b < 16 - s; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
 	}
 	void SHLQBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = CPU.GPR[rb]._u32[3] & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = s; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
 	}
 	void ORX(u32 rt, u32 ra)
 	{
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[0] | CPU.GPR[ra]._u32[1] | CPU.GPR[ra]._u32[2] | CPU.GPR[ra]._u32[3];
+		CPU.GPR[rt]._u32[3] = temp._u32[0] | temp._u32[1] | temp._u32[2] | temp._u32[3];
 	}
 	void CBD(u32 rt, u32 ra, s32 i7)
 	{
@@ -541,52 +551,52 @@ private:
 	void ROTQBII(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << s) | (CPU.GPR[ra]._u32[3] >> (32 - s));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << s) | (CPU.GPR[ra]._u32[0] >> (32 - s));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << s) | (CPU.GPR[ra]._u32[1] >> (32 - s));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << s) | (CPU.GPR[ra]._u32[2] >> (32 - s));
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] << s) | (temp._u32[3] >> (32 - s));
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] << s) | (temp._u32[2] >> (32 - s));
 	}
 	void ROTQMBII(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = (0 - i7) & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] >> s) | (CPU.GPR[ra]._u32[1] << (32 - s));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] >> s) | (CPU.GPR[ra]._u32[2] << (32 - s));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] >> s) | (CPU.GPR[ra]._u32[3] << (32 - s));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] >> s);
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] >> s) | (temp._u32[1] << (32 - s));
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] >> s) | (temp._u32[2] << (32 - s));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] >> s) | (temp._u32[3] << (32 - s));
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] >> s);
 	}
 	void SHLQBII(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << s);
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << s) | (CPU.GPR[ra]._u32[0] >> (32 - s));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << s) | (CPU.GPR[ra]._u32[1] >> (32 - s));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << s) | (CPU.GPR[ra]._u32[2] >> (32 - s));
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
+		CPU.GPR[rt]._u32[0] = (temp._u32[0] << s);
+		CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
+		CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] << s) | (temp._u32[2] >> (32 - s));
 	}
 	void ROTQBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0xf;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[(b - s) & 0xf];
+			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = (0 - i7) & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = 0; b < 16 - s; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
 	}
 	void SHLQBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0x1f;
-
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		for (int b = s; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - s];
+			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
 	}
 	void NOP(u32 rt)
 	{
@@ -618,10 +628,12 @@ private:
 	}
 	void SUMB(u32 rt, u32 ra, u32 rb)
 	{
+		const SPU_GPR_hdr _a = CPU.GPR[ra];
+		const SPU_GPR_hdr _b = CPU.GPR[rb];
 		for (int w = 0; w < 4; w++)
 		{
-			CPU.GPR[rt]._u16[w*2] = CPU.GPR[ra]._u8[w*4] + CPU.GPR[ra]._u8[w*4 + 1] + CPU.GPR[ra]._u8[w*4 + 2] + CPU.GPR[ra]._u8[w*4 + 3];
-			CPU.GPR[rt]._u16[w*2 + 1] = CPU.GPR[rb]._u8[w*4] + CPU.GPR[rb]._u8[w*4 + 1] + CPU.GPR[rb]._u8[w*4 + 2] + CPU.GPR[rb]._u8[w*4 + 3];
+			CPU.GPR[rt]._u16[w*2] = _a._u8[w*4] + _a._u8[w*4 + 1] + _a._u8[w*4 + 2] + _a._u8[w*4 + 3];
+			CPU.GPR[rt]._u16[w*2 + 1] = _b._u8[w*4] + _b._u8[w*4 + 1] + _b._u8[w*4 + 2] + _b._u8[w*4 + 3];
 		}
 	}
 	//HGT uses signed values.  HLGT uses unsigned values
@@ -654,11 +666,11 @@ private:
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
-		
 		for (int b = 0; b < 16; b++)
 			for (int i = 0; i < 8; i++)
-				CPU.GPR[rt]._u8[b] += (CPU.GPR[ra]._u8[b] & (1 << i)) ? 1 : 0;
+				CPU.GPR[rt]._u8[b] += (temp._u8[b] & (1 << i)) ? 1 : 0;
 	}
 	void XSBH(u32 rt, u32 ra)
 	{
@@ -851,50 +863,51 @@ private:
 		const u64 DoubleExpMask = 0x7ff0000000000000;
 		const u64 DoubleFracMask = 0x000fffffffffffff;
 		const u64 DoubleSignMask = 0x8000000000000000;
+		const SPU_GPR_hdr temp = CPU.GPR[ra];
 		CPU.GPR[rt].Reset();
 		if (i7 & 1) //Negative Denorm Check (-, exp is zero, frac is non-zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] & DoubleFracMask)
-					if (CPU.GPR[ra]._u64[i] & DoubleSignMask & DoubleExpMask == DoubleSignMask)
+				if (temp._u64[i] & DoubleFracMask)
+					if (temp._u64[i] & DoubleSignMask & DoubleExpMask == DoubleSignMask)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 2) //Positive Denorm Check (+, exp is zero, frac is non-zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] & DoubleFracMask)
-					if (CPU.GPR[ra]._u64[i] & DoubleSignMask & DoubleExpMask == 0)
+				if (temp._u64[i] & DoubleFracMask)
+					if (temp._u64[i] & DoubleSignMask & DoubleExpMask == 0)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 4) //Negative Zero Check (-, exp is zero, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] == DoubleSignMask)
+				if (temp._u64[i] == DoubleSignMask)
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 8) //Positive Zero Check (+, exp is zero, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] == 0)
+				if (temp._u64[i] == 0)
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 16) //Negative Infinity Check (-, exp is 0x7ff, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] == DoubleSignMask & DoubleExpMask)
+				if (temp._u64[i] == DoubleSignMask & DoubleExpMask)
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 32) //Positive Infinity Check (+, exp is 0x7ff, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] == DoubleExpMask)
+				if (temp._u64[i] == DoubleExpMask)
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 64) //Not-a-Number Check (any sign, exp is 0x7ff, frac is non-zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (CPU.GPR[ra]._u64[i] & DoubleFracMask)
-					if (CPU.GPR[ra]._u64[i] & DoubleExpMask == DoubleExpMask)
+				if (temp._u64[i] & DoubleFracMask)
+					if (temp._u64[i] & DoubleExpMask == DoubleExpMask)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 	}
@@ -992,7 +1005,7 @@ private:
 	}
 	void STQA(u32 rt, s32 i16)
 	{
-		u32 lsa = (i16 << 2) & 0xFFFFFFF0;
+		u32 lsa = (i16 << 2) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQA: bad lsa (0x%x)", lsa);
@@ -1019,7 +1032,7 @@ private:
 	}
 	void STQR(u32 rt, s32 i16)
 	{
-		u32 lsa = branchTarget(CPU.PC, (i16 << 2) & 0xFFFFFFF0);
+		u32 lsa = branchTarget(CPU.PC, i16) & 0xFFFFFFF0; 
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQR: bad lsa (0x%x)", lsa);
@@ -1035,7 +1048,7 @@ private:
 	}
 	void LQA(u32 rt, s32 i16)
 	{
-		u32 lsa = (i16 << 2) & 0xFFFFFFF0;
+		u32 lsa = (i16 << 2) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQA: bad lsa (0x%x)", lsa);
@@ -1047,9 +1060,9 @@ private:
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
-		CPU.SetBranch(branchTarget(0, i16));
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.SetBranch(branchTarget(0, i16));
 	}
 	void BR(s32 i16)
 	{
@@ -1073,13 +1086,13 @@ private:
 	}
 	void BRSL(u32 rt, s32 i16)
 	{
-		CPU.SetBranch(branchTarget(CPU.PC, i16));
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void LQR(u32 rt, s32 i16)
 	{
-		u32 lsa = branchTarget(CPU.PC, i16);
+		u32 lsa = branchTarget(CPU.PC, i16) & 0xFFFFFFF0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQR: bad lsa (0x%x)", lsa);
@@ -1164,9 +1177,9 @@ private:
 		for(u32 h = 0; h < 8; ++h)
 			CPU.GPR[rt]._i16[h] = CPU.GPR[ra]._i16[h] + i10;
 	}
-	void STQD(u32 rt, s32 i10, u32 ra) //hello_world addr=0x178, value won't be saved
+	void STQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
-		const u32 lsa = (CPU.GPR[ra]._u32[3] + (i10 << 4)) & 0xFFFFFFF0;
+		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQD: bad lsa (0x%x)", lsa);
@@ -1175,9 +1188,9 @@ private:
 		}
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
-	void LQD(u32 rt, s32 i10, u32 ra)
+	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
-		const u32 lsa = (CPU.GPR[ra]._u32[3] + (i10 << 4)) & 0xFFFFFFF0;
+		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQD: bad lsa (0x%x)", lsa);
@@ -1277,7 +1290,7 @@ private:
 
 	//0 - 6
 	void HBRA(s32 ro, s32 i16)
-	{
+	{ //i16 is shifted left by 2 while decoding
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
@@ -1293,15 +1306,17 @@ private:
 	//0 - 3
 	void SELB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		for(u32 i = 0; i < 4; ++i)
+		for(u64 i = 0; i < 2; ++i)
 		{
-			CPU.GPR[rt]._u32[i] =
-				( CPU.GPR[rc]._u32[i] & CPU.GPR[rb]._u32[i]) |
-				(~CPU.GPR[rc]._u32[i] & CPU.GPR[ra]._u32[i]);
+			CPU.GPR[rt]._u64[i] =
+				( CPU.GPR[rc]._u64[i] & CPU.GPR[rb]._u64[i]) |
+				(~CPU.GPR[rc]._u64[i] & CPU.GPR[ra]._u64[i]);
 		}
 	}
 	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
+		const SPU_GPR_hdr _a = CPU.GPR[ra];
+		const SPU_GPR_hdr _b = CPU.GPR[rb];
 		for (int i = 0; i < 16; i++)
 		{
 			u8 b = CPU.GPR[rc]._u8[i];
@@ -1315,9 +1330,9 @@ private:
 					CPU.GPR[rt]._u8[i] = 0x00;
 			} else {
 				if(b & 0x10)
-					CPU.GPR[rt]._u8[i] = CPU.GPR[rb]._u8[15 - (b & 0x0F)];
+					CPU.GPR[rt]._u8[i] = _b._u8[15 - (b & 0x0F)];
 				else
-					CPU.GPR[rt]._u8[i] = CPU.GPR[ra]._u8[15 - (b & 0x0F)];
+					CPU.GPR[rt]._u8[i] = _a._u8[15 - (b & 0x0F)];
 			}
 		}
 	}
