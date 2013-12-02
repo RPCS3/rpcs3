@@ -287,12 +287,12 @@ private:
 	}
 	void BIHZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[7] == 0)
+		if(CPU.GPR[rt]._u16[6] == 0)
 			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
 	}
 	void BIHNZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[7] != 0)
+		if(CPU.GPR[rt]._u16[6] != 0)
 			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
@@ -512,9 +512,9 @@ private:
 	}
 	void ORX(u32 rt, u32 ra)
 	{
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = temp._u32[0] | temp._u32[1] | temp._u32[2] | temp._u32[3];
+		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[0] | CPU.GPR[ra]._u32[1] | CPU.GPR[ra]._u32[2] | CPU.GPR[ra]._u32[3];
+		CPU.GPR[rt]._u32[2] = 0;
+		CPU.GPR[rt]._u64[0] = 0;
 	}
 	void CBD(u32 rt, u32 ra, s32 i7)
 	{
@@ -1022,12 +1022,12 @@ private:
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
-		if (CPU.GPR[rt]._u16[7] == 0) 
+		if (CPU.GPR[rt]._u16[6] == 0) 
 			CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
-		if (CPU.GPR[rt]._u16[7] != 0) 
+		if (CPU.GPR[rt]._u16[6] != 0) 
 			CPU.SetBranch(branchTarget(CPU.PC, i16));
 	}
 	void STQR(u32 rt, s32 i16)
