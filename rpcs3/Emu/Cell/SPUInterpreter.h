@@ -390,8 +390,8 @@ private:
 		//(SSE) RSQRTPS - Compute Reciprocals of Square Roots of Packed Single-Precision Floating-Point Values
 		//rt = approximate(1/sqrt(abs(ra)))
 		//abs(ra) === ra & FloatAbsMask
-		const __m128 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask));
+		const __m128i FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, (__m128&)FloatAbsMask));
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -869,14 +869,14 @@ private:
 			for (int i = 0; i < 2; i++)
 			{
 				if (temp._u64[i] & DoubleFracMask)
-					if (temp._u64[i] & DoubleSignMask & DoubleExpMask == DoubleSignMask)
+					if ((temp._u64[i] & (DoubleSignMask & DoubleExpMask)) == DoubleSignMask)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 2) //Positive Denorm Check (+, exp is zero, frac is non-zero)
 			for (int i = 0; i < 2; i++)
 			{
 				if (temp._u64[i] & DoubleFracMask)
-					if (temp._u64[i] & DoubleSignMask & DoubleExpMask == 0)
+					if ((temp._u64[i] & (DoubleSignMask & DoubleExpMask)) == 0)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 4) //Negative Zero Check (-, exp is zero, frac is zero)
@@ -894,7 +894,7 @@ private:
 		if (i7 & 16) //Negative Infinity Check (-, exp is 0x7ff, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (temp._u64[i] == DoubleSignMask & DoubleExpMask)
+				if (temp._u64[i] == (DoubleSignMask & DoubleExpMask))
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 32) //Positive Infinity Check (+, exp is 0x7ff, frac is zero)
@@ -907,7 +907,7 @@ private:
 			for (int i = 0; i < 2; i++)
 			{
 				if (temp._u64[i] & DoubleFracMask)
-					if (temp._u64[i] & DoubleExpMask == DoubleExpMask)
+					if ((temp._u64[i] & DoubleExpMask) == DoubleExpMask)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 	}
