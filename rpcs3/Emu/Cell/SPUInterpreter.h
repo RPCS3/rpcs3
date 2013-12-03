@@ -7,6 +7,13 @@
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
+typedef union _CRT_ALIGN(16) __u32x4 {
+	unsigned __int32 _u32[4];
+	__m128i m128i;
+	__m128 m128;
+	__m128d m128d;
+ } __u32x4;
+
 class SPUInterpreter : public SPUOpcodes
 {
 private:
@@ -390,8 +397,8 @@ private:
 		//(SSE) RSQRTPS - Compute Reciprocals of Square Roots of Packed Single-Precision Floating-Point Values
 		//rt = approximate(1/sqrt(abs(ra)))
 		//abs(ra) === ra & FloatAbsMask
-		const __m128i FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, (__m128&)FloatAbsMask));
+		const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -972,7 +979,9 @@ private:
 	}
 	void FI(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		//Floating Interpolation: ra will be ignored.
+		//It should work correctly if result of preceding FREST or FRSQEST is sufficiently exact
+		CPU.GPR[rt] = CPU.GPR[rb];
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -982,19 +991,70 @@ private:
 	//0 - 9
 	void CFLTS(u32 rt, u32 ra, s32 i8)
 	{
-		UNIMPLEMENTED();
+		const u32 scale = 173 - (i8 & 0xff); //unsigned immediate
+		for (int i = 0; i < 4; i++)
+		{
+			u32 exp = ((CPU.GPR[ra]._u32[i] >> 23) & 0xff) + scale;
+
+			if (exp > 255) 
+				exp = 255;
+
+			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
+		}
+		//(SSE2) CVTTPS2DQ - Convert with Truncation Packed Single FP to Packed Dword Int
+		CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
-		UNIMPLEMENTED();
+		const u32 scale = 173 - (i8 & 0xff); //unsigned immediate
+		for (int i = 0; i < 4; i++)
+		{
+			u32 exp = ((CPU.GPR[ra]._u32[i] >> 23) & 0xff) + scale;
+
+			if (exp > 255) 
+				exp = 255;
+
+			if (CPU.GPR[ra]._u32[i] & 0x80000000) //if negative, result = 0
+				CPU.GPR[rt]._u32[i] = 0;
+			else
+			{
+				CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
+
+				if (CPU.GPR[rt]._f[i] > 0xffffffff) //if big, result = max
+					CPU.GPR[rt]._u32[i] = 0xffffffff;
+				else
+					CPU.GPR[rt]._u32[i] = floor(CPU.GPR[rt]._f[i]);
+			}
+		}
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		UNIMPLEMENTED();
+		//(SSE2) CVTDQ2PS - Convert Packed Dword Integers to Packed Single-Precision FP Values
+		CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
+		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
+		for (int i = 0; i < 4; i++)
+		{
+			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
+
+			if (exp > 255) //< 0
+				exp = 0;
+
+			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] & 0x807fffff) | (exp << 23);
+		}
 	}
 	void CUFLT(u32 rt, u32 ra, s32 i8)
 	{
-		UNIMPLEMENTED();
+		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
+		for (int i = 0; i < 4; i++)
+		{
+			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
+			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
+
+			if (exp > 255) //< 0
+				exp = 0;
+
+			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] & 0x807fffff) | (exp << 23);
+		}
 	}
 
 	//0 - 8
@@ -1169,8 +1229,8 @@ private:
 	}
 	void AI(u32 rt, u32 ra, s32 i10)
 	{
-		for(u32 i = 0; i < 4; ++i)
-			CPU.GPR[rt]._i32[i] = CPU.GPR[ra]._i32[i] + i10;
+		const __u32x4 imm = {i10, i10, i10, i10};
+		CPU.GPR[rt]._m128i = _mm_add_epi32(CPU.GPR[ra]._m128i, imm.m128i);
 	}
 	void AHI(u32 rt, u32 ra, s32 i10)
 	{
