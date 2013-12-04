@@ -204,6 +204,8 @@ union SPU_GPR_hdr
 {
 	u128 _u128;
 	s128 _i128;
+	__m128 _m128;
+	__m128i _m128i;
 	u64 _u64[2];
 	s64 _i64[2];
 	u32 _u32[4];
@@ -232,13 +234,13 @@ union SPU_SPR_hdr
 {
 	u128 _u128;
 	s128 _i128;
-	
+	u32 _u32[4];
 
 	SPU_SPR_hdr() {}
 
 	wxString ToString() const
 	{
-		return wxString::Format("%16%16", _u128.hi, _u128.lo);
+		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
@@ -355,6 +357,34 @@ public:
 	{
 		switch(ch)
 		{
+		case SPU_RdEventStat: //Read event status with mask applied
+		case SPU_WrEventMask: //Write event mask
+		case SPU_WrEventAck: //Write end of event processing
+		case SPU_RdSigNotify1: //Signal notification 1
+		case SPU_RdSigNotify2: //Signal notification 2
+		case SPU_WrDec: //Write decrementer count
+		case SPU_RdDec: //Read decrementer count
+		case SPU_RdEventMask: //Read event mask
+		case SPU_RdMachStat: //Read SPU run status
+		case SPU_WrSRR0: //Write SPU machine state save/restore register 0 (SRR0)
+		case SPU_RdSRR0: //Read SPU machine state save/restore register 0 (SRR0)
+		case MFC_WrMSSyncReq: //Write multisource synchronization request
+		case MFC_RdTagMask: //Read tag mask
+		case MFC_LSA: //Write local memory address command parameter
+		case MFC_EAH: //Write high order DMA effective address command parameter
+		case MFC_EAL: //Write low order DMA effective address command parameter
+		case MFC_Size: //Write DMA transfer size command parameter
+		case MFC_TagID: //Write tag identifier command parameter
+		case MFC_Cmd: //Write and enqueue DMA command with associated class ID
+		case MFC_WrTagMask: //Write tag mask
+		case MFC_WrTagUpdate: //Write request for conditional or unconditional tag status update
+		case MFC_RdTagStat: //Read tag status with mask applied
+		case MFC_RdListStallStat: //Read DMA list stall-and-notify status
+		case MFC_WrListStallAck: //Write DMA list stall-and-notify acknowledge
+		case MFC_RdAtomicStat: //Read completion status of last completed immediate MFC atomic update command
+			ConLog.Error("%s error: unimplemented channel (%s).", __FUNCTION__, spu_ch_name[ch]);
+		break;
+
 		case SPU_WrOutMbox:
 			return SPU.Out_MBox.GetFreeCount();
 
@@ -378,6 +408,23 @@ public:
 
 		switch(ch)
 		{
+		case SPU_WrEventMask: //Write event mask
+		case SPU_WrEventAck: //Write end of event processing
+		case SPU_WrDec: //Write decrementer count
+		case SPU_WrSRR0: //Write SPU machine state save/restore register 0 (SRR0)
+		case MFC_WrMSSyncReq: //Write multisource synchronization request
+		case MFC_LSA: //Write local memory address command parameter
+		case MFC_EAH: //Write high order DMA effective address command parameter
+		case MFC_EAL: //Write low order DMA effective address command parameter
+		case MFC_Size: //Write DMA transfer size command parameter
+		case MFC_TagID: //Write tag identifier command parameter
+		case MFC_Cmd: //Write and enqueue DMA command with associated class ID
+		case MFC_WrTagMask: //Write tag mask
+		case MFC_WrTagUpdate: //Write request for conditional or unconditional tag status update
+		case MFC_WrListStallAck: //Write DMA list stall-and-notify acknowledge
+			ConLog.Error("%s error: unimplemented channel (%s).", __FUNCTION__, spu_ch_name[ch]);
+		break;
+
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("SPU_WrOutIntrMbox = 0x%x", v);
 
@@ -409,6 +456,20 @@ public:
 
 		switch(ch)
 		{
+		case SPU_RdEventStat: //Read event status with mask applied
+		case SPU_RdSigNotify1: //Signal notification 1
+		case SPU_RdSigNotify2: //Signal notification 2
+		case SPU_RdDec: //Read decrementer count
+		case SPU_RdEventMask: //Read event mask
+		case SPU_RdMachStat: //Read SPU run status
+		case SPU_RdSRR0: //Read SPU machine state save/restore register 0 (SRR0)
+		case MFC_RdTagMask: //Read tag mask
+		case MFC_RdTagStat: //Read tag status with mask applied
+		case MFC_RdListStallStat: //Read DMA list stall-and-notify status
+		case MFC_RdAtomicStat: //Read completion status of last completed immediate MFC atomic update command
+			ConLog.Error("%s error: unimplemented channel (%s).", __FUNCTION__, spu_ch_name[ch]);
+		break;
+
 		case SPU_RdInMbox:
 			if(!SPU.In_MBox.Pop(v)) v = 0;
 			ConLog.Warning("%s: SPU_RdInMbox(0x%x).", __FUNCTION__, v);

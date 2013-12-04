@@ -284,6 +284,12 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 	return size;
 }
 
+u32 cellGcmSetUserHandler(u32 handler)
+{
+	cellGcmSys.Warning("cellGcmSetUserHandler(handler=0x%x)", handler);
+	return handler;
+}
+
 u32 cellGcmGetDefaultCommandWordSize()
 {
 	cellGcmSys.Warning("cellGcmGetDefaultCommandWordSize()");
@@ -546,6 +552,7 @@ int cellGcmSetSecondVFrequency (u32 freq)
 void cellGcmSys_init()
 {
 	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
+	cellGcmSys.AddFunc(0x06edea9e, cellGcmSetUserHandler);
 	cellGcmSys.AddFunc(0x15bae46b, cellGcmInit);
 	cellGcmSys.AddFunc(0x21397818, cellGcmSetFlipCommand);
 	cellGcmSys.AddFunc(0x21ac3697, cellGcmAddressToOffset);

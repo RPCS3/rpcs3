@@ -51,7 +51,7 @@ void SPUThread::InitRegs()
 	SPU.Status.SetValue(SPU_STATUS_RUNNING);
 	Prxy.QueryType.SetValue(0);
 	MFC.CMDStatus.SetValue(0);
-	PC = SPU.NPC.GetValue();
+	//PC = SPU.NPC.GetValue();
 }
 
 u64 SPUThread::GetFreeStackSize() const
