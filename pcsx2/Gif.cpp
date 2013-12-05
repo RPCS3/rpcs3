@@ -73,7 +73,9 @@ __fi void gifInterrupt()
 			if(!(cpuRegs.interrupt & (1<<DMAC_VIF1)))
 				CPU_INT(DMAC_VIF1, 1);
 
-			if(!gifUnit.Path3Masked()) 
+			//Make sure it loops if the GIF packet is empty to prepare for the next packet
+			//or end if it was the end of a packet.
+			if(!gifUnit.Path3Masked() || gifch.qwc == 0) 
 				CPU_INT(DMAC_GIF, 16);
 			return;
 		}
