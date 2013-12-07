@@ -435,7 +435,7 @@ public:
 	//0 - 6
 	virtual void HBRA(s32 ro, s32 i16) = 0;
 	virtual void HBRR(s32 ro, s32 i16) = 0;
-	virtual void ILA(u32  rt, s32 i18) = 0;
+	virtual void ILA(u32  rt, u32 i18) = 0;
 
 	//0 - 3
 	virtual void SELB(u32  rc, u32  ra, u32  rb, u32  rt) = 0;

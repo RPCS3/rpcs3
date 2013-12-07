@@ -600,6 +600,7 @@ int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fra
 		colorBuffersSize  = s_rescInternalInstance->m_dstBufInterval * GetNumColorBuffers();
 		vertexArraySize   = 0x180; //sizeof(RescVertex_t) * VERTEX_NUMBER_RESERVED;
 		//fragmentUcodeSize = m_pCFragmentShader->GetUcodeSize();
+		fragmentUcodeSize = 0x300;
 	}
 	else //CELL_RESC_CONSTANT_VRAM
 	{ 

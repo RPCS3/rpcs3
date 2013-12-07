@@ -852,7 +852,7 @@ private:
 	{
 		DisAsm("hbrr", DisAsmBranchTarget(ro), DisAsmBranchTarget(i16));
 	}
-	void ILA(u32 rt, s32 i18)
+	void ILA(u32 rt, u32 i18)
 	{
 		DisAsm("ila", spu_reg_name[rt], i18);
 	}

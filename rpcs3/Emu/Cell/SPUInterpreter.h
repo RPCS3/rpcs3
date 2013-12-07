@@ -361,7 +361,7 @@ private:
 	}
 	void GBB(u32 rt, u32 ra)
 	{
-		u32 temp;
+		u32 temp = 0;
 		for (int b = 0; b < 16; b++)
 			temp |= (CPU.GPR[ra]._u8[b] & 1) << b;
 		CPU.GPR[rt]._u32[3] = temp;
@@ -402,7 +402,16 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
+		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
+
+		if(b & 0xf)
+		{
+			ConLog.Warning("LQX HACK (a[0x%x] + b[0x%x(0x%x)])", a, b << 3, b);
+			b <<= 3;
+		}
+
+		u32 lsa = (a + b) & 0x3fff0;
+
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQX: bad lsa (0x%x)", lsa);
@@ -876,14 +885,14 @@ private:
 			for (int i = 0; i < 2; i++)
 			{
 				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask & DoubleExpMask)) == DoubleSignMask)
+					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == DoubleSignMask)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 2) //Positive Denorm Check (+, exp is zero, frac is non-zero)
 			for (int i = 0; i < 2; i++)
 			{
 				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask & DoubleExpMask)) == 0)
+					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == 0)
 						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 4) //Negative Zero Check (-, exp is zero, frac is zero)
@@ -901,7 +910,7 @@ private:
 		if (i7 & 16) //Negative Infinity Check (-, exp is 0x7ff, frac is zero)
 			for (int i = 0; i < 2; i++)
 			{
-				if (temp._u64[i] == (DoubleSignMask & DoubleExpMask))
+				if (temp._u64[i] == (DoubleSignMask | DoubleExpMask))
 					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
 			}
 		if (i7 & 32) //Positive Infinity Check (+, exp is 0x7ff, frac is zero)
@@ -1092,7 +1101,7 @@ private:
 	}
 	void STQR(u32 rt, s32 i16)
 	{
-		u32 lsa = branchTarget(CPU.PC, i16) & 0xFFFFFFF0; 
+		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0; 
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQR: bad lsa (0x%x)", lsa);
@@ -1152,7 +1161,7 @@ private:
 	}
 	void LQR(u32 rt, s32 i16)
 	{
-		u32 lsa = branchTarget(CPU.PC, i16) & 0xFFFFFFF0;
+		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQR: bad lsa (0x%x)", lsa);
@@ -1355,7 +1364,7 @@ private:
 	void HBRR(s32 ro, s32 i16)
 	{
 	}
-	void ILA(u32 rt, s32 i18)
+	void ILA(u32 rt, u32 i18)
 	{
 		CPU.GPR[rt]._u32[0] = 
 			CPU.GPR[rt]._u32[1] = 
@@ -1380,15 +1389,20 @@ private:
 		for (int i = 0; i < 16; i++)
 		{
 			u8 b = CPU.GPR[rc]._u8[i];
-			if(b & 0x80) {
-				if(b & 0x40) {
+			if(b & 0x80)
+			{
+				if(b & 0x40)
+				{
 					if(b & 0x20)
 						CPU.GPR[rt]._u8[i] = 0x80;
 					else
 						CPU.GPR[rt]._u8[i] = 0xFF;
-				} else
+				}
+				else
 					CPU.GPR[rt]._u8[i] = 0x00;
-			} else {
+			}
+			else
+			{
 				if(b & 0x10)
 					CPU.GPR[rt]._u8[i] = _b._u8[15 - (b & 0x0F)];
 				else

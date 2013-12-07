@@ -233,9 +233,6 @@ extern int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 optio
 extern int cellVideoOutGetNumberOfDevice(u32 videoOut);
 extern int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option);
 
-//cellMsgDialog
-extern int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 userData, u32 extParam);
-
 //cellPad
 extern int cellPadInit(u32 max_connect);
 extern int cellPadEnd();
