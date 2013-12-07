@@ -39,9 +39,18 @@ int cellGcmMapMainMemory(u32 address, u32 size, mem32_t offset)
 	return CELL_OK;
 }
 
+int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size)
+{
+	cellGcmSys.Warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
+	//Memory.Map(io, ea, size);
+	//Emu.GetGSManager().GetRender().m_ioAddress = io;
+	Emu.GetGSManager().GetRender().m_report_main_addr = ea;
+	return CELL_OK;
+}
+
 int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
-	cellGcmSys.Log("cellGcmInit(context_addr=0x%x,cmdSize=0x%x,ioSize=0x%x,ioAddress=0x%x)", context_addr, cmdSize, ioSize, ioAddress);
+	cellGcmSys.Warning("cellGcmInit(context_addr=0x%x,cmdSize=0x%x,ioSize=0x%x,ioAddress=0x%x)", context_addr, cmdSize, ioSize, ioAddress);
 
 	const u32 local_size = 0xf900000; //TODO
 	const u32 local_addr = Memory.RSXFBMem.GetStartAddr();
@@ -144,6 +153,7 @@ int cellGcmAddressToOffset(u32 address, mem32_t offset)
 	}
 
 	offset = address - sa;
+	//ConLog.Warning("Address To Offset: 0x%x -> 0x%x", address, address - sa);
 	//Memory.Write16(map_offset_addr + map_offset_pos + 0, ea);
 	//Memory.Write16(map_offset_addr + map_offset_pos + 2, offset);
 	//map_offset_pos += 4;
@@ -153,7 +163,7 @@ int cellGcmAddressToOffset(u32 address, mem32_t offset)
 
 int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
-	cellGcmSys.Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
+	cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
 		id, offset, width ? pitch/width : pitch, width, height);
 	if(id > 7) return CELL_EINVAL;
 
@@ -308,14 +318,6 @@ int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize)
 	return CELL_OK;
 }
 
-int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size)
-{
-	cellGcmSys.Warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
-	Memory.Map(io, ea, size);
-	Emu.GetGSManager().GetRender().m_report_main_addr = ea;
-	return CELL_OK;
-}
-
 int cellGcmUnbindZcull(u8 index)
 {
 	cellGcmSys.Warning("cellGcmUnbindZcull(index=%d)", index);
@@ -353,7 +355,23 @@ int cellGcmSetFlipCommandWithWaitLabel(u32 ctx, u32 id, u32 label_index, u32 lab
 {
 	int res = cellGcmSetPrepareFlip(ctx, id);
 	Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
-	return res == CELL_GCM_ERROR_FAILURE ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+}
+
+int cellGcmSetFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
+{
+	cellGcmSys.Warning("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.GetAddr(), id);
+
+	int res = cellGcmSetPrepareFlip(ctxt, id);
+	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+}
+
+int cellGcmSetWaitFlip(mem_ptr_t<CellGcmContextData> ctxt)
+{
+	cellGcmSys.Warning("cellGcmSetWaitFlip(ctx=0x%x)", ctxt.GetAddr());
+
+	//GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
+	return CELL_OK;
 }
 
 int cellGcmInitCursor()
@@ -531,6 +549,8 @@ int cellGcmSetDebugOutputLevel (int level)
 
 		default: return CELL_EINVAL;
 	}
+
+	return CELL_OK;
 }
 
 int cellGcmSetSecondVFrequency (u32 freq)
@@ -547,6 +567,8 @@ int cellGcmSetSecondVFrequency (u32 freq)
 
 		default: return CELL_EINVAL;
 	}
+
+	return CELL_OK;
 }
 
 void cellGcmSys_init()
@@ -596,4 +618,6 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
 	cellGcmSys.AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
 	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
+	cellGcmSys.AddFunc(0xdc09357e, cellGcmSetFlip);
+	cellGcmSys.AddFunc(0x983fb9aa, cellGcmSetWaitFlip);
 }
