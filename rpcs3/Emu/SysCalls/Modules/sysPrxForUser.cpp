@@ -28,9 +28,9 @@ int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 	return 0;
 }
 
-s64 sys_prx_register_library()
+s64 sys_prx_register_library(u32 lib_addr)
 {
-	sysPrxForUser.Error("sys_prx_register_library()");
+	sysPrxForUser.Error("sys_prx_register_library(lib_addr=0x%x)");
 	return 0;
 }
 
@@ -79,4 +79,7 @@ void sysPrxForUser_init()
 	//sysPrxForUser.AddFunc(0xaede4b03, sys_heap_free);
 	//sysPrxForUser.AddFunc(0x8a561d92, sys_heap_delete_heap);
 	sysPrxForUser.AddFunc(0xb2fcf2c8, sys_heap_create_heap);
+
+	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
+	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);
 }

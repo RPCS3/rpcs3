@@ -93,11 +93,13 @@ class Emulator
 public:
 	wxString m_path;
 	wxString m_elf_path;
+	wxString m_title_id;
 
 	Emulator();
 
 	void Init();
 	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
+	void SetTitleID(const wxString& id);
 
 	std::shared_ptr<vfsFileBase> OpenFile(const wxString& path, vfsOpenMode mode = vfsRead)
 	{

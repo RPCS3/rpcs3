@@ -45,6 +45,47 @@ wxString GetPaneName()
 	return wxString::Format("Pane_%d", pane_num++);
 }
 
+bool wxMoveDir(wxString sFrom, wxString sTo)
+{
+    if (sFrom[sFrom.Len() - 1] != '\\' && sFrom[sFrom.Len() - 1] != '/') sFrom += wxFILE_SEP_PATH;
+    if (sTo[sTo.Len() - 1] != '\\' && sTo[sTo.Len() - 1] != '/') sTo += wxFILE_SEP_PATH;
+
+    if (!::wxDirExists(sFrom)) {
+        ::wxLogError(wxT("%s does not exist!\r\nCan not copy directory"), sFrom.c_str());
+        return false;
+    }
+    if (!wxDirExists(sTo)) {
+        if (!wxFileName::Mkdir(sTo, 0777, wxPATH_MKDIR_FULL)) {
+            ::wxLogError(wxT("%s could not be created!"), sTo.c_str());
+            return false;
+        }
+    }
+
+    wxDir fDir(sFrom);
+    wxString sNext = wxEmptyString;
+    bool bIsFile = fDir.GetFirst(&sNext);
+    while (bIsFile) {
+        const wxString sFileFrom = sFrom + sNext;
+        const wxString sFileTo = sTo + sNext;
+        if (::wxDirExists(sFileFrom)) {
+            wxMoveDir(sFileFrom, sFileTo);
+			::wxRmdir(sFileFrom);
+        }
+        else {
+            if (!::wxFileExists(sFileTo)) {
+                if (!::wxCopyFile(sFileFrom, sFileTo)) {
+                    ::wxLogError(wxT("Could not copy %s to %s !"), sFileFrom.c_str(), sFileTo.c_str());
+                    return false;
+                }
+            }
+			::wxRemoveFile(sFileFrom);
+        }
+        bIsFile = fDir.GetNext(&sNext);
+    }
+	::wxRmdir(sFrom);
+    return true;
+}
+
 MainFrame::MainFrame()
 	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(800, 600))
 	, m_aui_mgr(this)
@@ -276,7 +317,109 @@ void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
 	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
 		ConLog.Warning("Could not delete the decoded DEC file");
 
+	// Copy the PKG to dev_hdd0 and format the path to be identical to the PS3.
+	wxString gamePath = "\\dev_hdd0\\game\\";
+	pkg_header *header;
+	pkg_info((const char *)fileName.mb_str(), &header);
+
+	// Get the PKG title ID from the header and format it (should match TITLE ID from PARAM.SFO).
+	wxString titleID_full (header->title_id);
+	wxString titleID = titleID_full.SubString(7, 15);
+
+	// Travel to bin folder.
+	wxSetWorkingDirectory(wxGetCwd() + "\\..\\");
+
+	// Save the main dir.
+	wxString mainDir = wxGetCwd();
+
+	// Set PKG dir.
+	wxString oldPkgDir = wxT(wxGetCwd() + "\\" + titleID_full);
+	wxString newPkgDir = wxT(wxGetCwd() + gamePath + titleID);
+
+	// Move the final folder.
+	wxMoveDir(oldPkgDir, newPkgDir);
+
+	// Save the title ID.
+	Emu.SetTitleID(titleID);
+
 	ConLog.Write("PKG: extract done.");
+
+	// Travel to the installed PKG.
+	wxSetWorkingDirectory(newPkgDir);
+
+	wxString elf[6] = {
+		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
+		"\\USRDIR\\BOOT.BIN",
+		"\\BOOT.BIN",
+		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
+		"\\USRDIR\\EBOOT.BIN",
+		"\\EBOOT.BIN"
+	};
+
+	for(int i=0;i<6;i++)
+	{
+		if(wxFile::Access(wxGetCwd() + elf[i], wxFile::read))
+		{
+			ConLog.Write("SELF: booting...");
+	
+			wxString fileIn = wxGetCwd()+elf[i]; 
+			wxString fileOut = (wxGetCwd()+elf[i])+".elf";
+
+			// Check if the data really needs to be decrypted.
+			if(!wxFileExists(fileIn))
+			{
+				ConLog.Error("Could not open game boot file!");
+				return;
+			}
+			
+			wxFile f(fileIn);
+			// Get the key version.
+			f.Seek(0x08);
+			be_t<u16> key_version;
+			f.Read(&key_version, sizeof(key_version));
+
+			if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
+			{
+				ConLog.Warning("Debug SELF detected! Removing fake header...");
+				
+				// Get the real elf offset.
+				f.Seek(0x10);
+				be_t<u64> elf_offset;
+				f.Read(&elf_offset, sizeof(elf_offset));
+
+				// Start at the real elf offset.
+				f.Seek(elf_offset);
+
+				wxFile out(fileOut, wxFile::write);
+
+				// Copy the data.
+				char buf[2048];
+				while (ssize_t size = f.Read(buf, 2048))
+					out.Write(buf, size);
+			}
+			else
+			{
+				if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
+				{
+					ConLog.Write("Could not decrypt game boot file");
+					return;
+				}
+			}
+
+			f.Close();
+
+			// Set the working directory back.
+			wxSetWorkingDirectory(mainDir);
+
+			Emu.SetPath(fileOut);
+			Emu.Load();
+			if (!wxRemoveFile(fileOut))
+				ConLog.Warning("Could not delete the decrypted ELF file");
+
+			ConLog.Write("Game: boot done.");
+			return;
+		}
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))

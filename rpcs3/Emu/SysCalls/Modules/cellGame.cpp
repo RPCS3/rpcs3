@@ -107,12 +107,14 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 	
+	wxString dir ("/dev_hdd0/game/" + Emu.m_title_id + "/USRDIR");
+
 	type				= CELL_GAME_GAMETYPE_DISC;
 	attributes			= 0;
 	size->hddFreeSizeKB = 40000000; //40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	size->sizeKB		= CELL_GAME_SIZEKB_NOTCALC;
 	size->sysSizeKB		= 0;
-	//TODO: dirName
+	Memory.WriteString(dirName.GetAddr(), dir);
 
 	return CELL_OK;
 }
@@ -129,9 +131,14 @@ int cellGameDataCheck()
 	return CELL_OK;
 }
 
-int cellGameContentPermit()
+int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath,  mem_list_ptr_t<u8> usrdirPath)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
+		contentInfoPath.GetAddr(), usrdirPath.GetAddr());
+	
+	if (!contentInfoPath.IsGood() || !usrdirPath.IsGood())
+		return CELL_GAME_ERROR_PARAM;
+	
 	return CELL_OK;
 }
 

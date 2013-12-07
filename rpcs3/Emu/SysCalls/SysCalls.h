@@ -122,6 +122,14 @@ extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_add
 								u32 data, u32 data_size, int prio, u64 flags );
 
 //sys_event
+extern int sys_event_flag_create(u32 eflag_id_addr, u32 attr_addr, u64 init);
+extern int sys_event_flag_destroy(u32 eflag_id);
+extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr, u32 timeout);
+extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr);
+extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_cancel(u32 eflag_id, u32 num_addr);
+extern int sys_event_flag_get(u32 eflag_id, u32 flag_addr);
 extern int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_queue_key, int size);
 extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
 extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
@@ -182,6 +190,21 @@ extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr);
 extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
+
+//vm
+extern int sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr);
+extern int sys_vm_unmap(u32 addr);
+extern int sys_vm_append_memory(u32 addr, u32 size);
+extern int sys_vm_return_memory(u32 addr, u32 size);
+extern int sys_vm_lock(u32 addr, u32 size);
+extern int sys_vm_unlock(u32 addr, u32 size);
+extern int sys_vm_touch(u32 addr, u32 size);
+extern int sys_vm_flush(u32 addr, u32 size);
+extern int sys_vm_invalidate(u32 addr, u32 size);
+extern int sys_vm_store(u32 addr, u32 size);
+extern int sys_vm_sync(u32 addr, u32 size);
+extern int sys_vm_test(u32 addr, u32 size, u32 result_addr);
+extern int sys_vm_get_statistics(u32 addr, u32 stat_addr);
 
 //cellFs
 extern int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size);

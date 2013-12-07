@@ -133,6 +133,7 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 	{
 		if(addr == m_used_mem[i].addr)
 		{
+			if(IsLocked(m_used_mem[i].addr)) return false;
 			m_used_mem.RemoveAt(i);
 			return true;
 		}
@@ -157,4 +158,69 @@ u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const
 	ConLog.Error("GetMem(%llx) from not allocated address.", addr);
 	assert(0);
 	return nullptr;
+}
+
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::IsLocked(const u64 addr)
+{
+	for(u32 i=0; i<m_locked_mem.GetCount(); ++i)
+	{
+		if(addr == m_locked_mem[i].addr)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+template<typename PT>
+void DynamicMemoryBlockBase<PT>::AppendLockedMem(u64 addr, u32 size)
+{
+	m_locked_mem.Move(new MemBlockInfo(addr, size));
+}
+
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::Lock(u64 addr, u32 size)
+{
+	if(!IsInMyRange(addr, size))
+	{
+		assert(0);
+		return false;
+	}
+
+	if(IsMyAddress(addr) || IsMyAddress(addr + size - 1))
+	{
+		return false;
+	}
+
+	AppendLockedMem(addr, size);
+
+	return true;
+}
+
+template<typename PT>
+bool DynamicMemoryBlockBase<PT>::Unlock(u64 addr , u32 size)
+{	
+	for(u32 i=0; i<m_locked_mem.GetCount(); ++i)
+	{
+		if(addr == m_locked_mem[i].addr)
+		{
+			if(m_locked_mem.Get(i).size > size)
+			{
+				m_locked_mem.Get(i).size -= size;
+			}
+			else if(m_locked_mem.Get(i).size == size)
+			{
+				m_locked_mem.RemoveAt(i);
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+	}
+
+	return false;
 }

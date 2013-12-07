@@ -43,6 +43,11 @@ void Emulator::SetPath(const wxString& path, const wxString& elf_path)
 	m_elf_path = elf_path;
 }
 
+void Emulator::SetTitleID(const wxString& id)
+{
+	m_title_id = id;
+}
+
 void Emulator::CheckStatus()
 {
 	ArrayF<CPUThread>& threads = GetCPU().GetThreads();

@@ -70,6 +70,7 @@ public:
 
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
+	virtual bool IsLocked(const u64 addr) { return false; }
 
 	__forceinline const u8 FastRead8(const u64 addr) const;
 	__forceinline const u16 FastRead16(const u64 addr) const;
@@ -106,6 +107,8 @@ public:
 	virtual u64 Alloc(u32 size) { return 0; }
 	virtual bool Alloc() { return false; }
 	virtual bool Free(u64 addr) { return false; }
+	virtual bool Lock(u64 addr, u32 size) { return false; }
+	virtual bool Unlock(u64 addr, u32 size) { return false; }
 };
 
 class MemoryBlockLE : public MemoryBlock
@@ -171,6 +174,7 @@ template<typename PT>
 class DynamicMemoryBlockBase : public PT
 {
 	Array<MemBlockInfo> m_used_mem;
+	Array<MemBlockInfo> m_locked_mem;
 	u32 m_max_size;
 
 public:
@@ -182,6 +186,7 @@ public:
 	virtual bool IsInMyRange(const u64 addr);
 	virtual bool IsInMyRange(const u64 addr, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
+	virtual bool IsLocked(const u64 addr);
 
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 
@@ -191,11 +196,14 @@ public:
 	virtual u64 Alloc(u32 size);
 	virtual bool Alloc();
 	virtual bool Free(u64 addr);
+	virtual bool Lock(u64 addr, u32 size);
+	virtual bool Unlock(u64 addr, u32 size);
 
 	virtual u8* GetMem(u64 addr) const;
 
 private:
 	void AppendUsedMem(u64 addr, u32 size);
+	void AppendLockedMem(u64 addr, u32 size);
 };
 
 #include "DynamicMemoryBlockBase.inl"

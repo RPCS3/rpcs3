@@ -257,6 +257,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />
