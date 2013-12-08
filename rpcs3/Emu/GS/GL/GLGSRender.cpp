@@ -1058,10 +1058,22 @@ void GLGSRender::Flip()
 		u32 height = re(buffers[m_gcm_current_buffer].height);
 		u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
 
+		glRotated(90, 1, 0, 0);
+
 		if(Memory.IsGoodAddr(addr))
 		{
-			void* pixels = Memory.VirtualToRealAddr(addr);
-			glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			//TODO
+			//buffer rotating
+			static Array<u8> pixels;
+			pixels.SetCount(width * height * 4);
+			u8* src = (u8*)Memory.VirtualToRealAddr(addr);
+
+			for(u32 y=0; y<height; ++y)
+			{
+				memcpy(pixels + (height - y - 1) * width * 4, src + y * width * 4, width * 4);
+			}
+
+			glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
 		}
 	}
 	else if(m_fbo.IsCreated())
