@@ -79,13 +79,17 @@ private:
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
-		//(SSE2) PSUBD - Subtract Packed Integers
-		CPU.GPR[rt]._m128i = _mm_sub_epi32(CPU.GPR[rb]._m128i, CPU.GPR[ra]._m128i);
+		CPU.GPR[rt]._u32[0] = CPU.GPR[rb]._u32[0] - CPU.GPR[ra]._u32[0];
+		CPU.GPR[rt]._u32[1] = CPU.GPR[rb]._u32[1] - CPU.GPR[ra]._u32[1];
+		CPU.GPR[rt]._u32[2] = CPU.GPR[rb]._u32[2] - CPU.GPR[ra]._u32[2];
+		CPU.GPR[rt]._u32[3] = CPU.GPR[rb]._u32[3] - CPU.GPR[ra]._u32[3];
 	}
 	void OR(u32 rt, u32 ra, u32 rb)
 	{
-		//(SSE2) POR - Bitwise Logical Or
-		CPU.GPR[rt]._m128i = _mm_or_si128(CPU.GPR[ra]._m128i, CPU.GPR[rb]._m128i);
+		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0];
+		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1];
+		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] | CPU.GPR[rb]._u32[2];
+		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] | CPU.GPR[rb]._u32[3];
 	}
 	void BG(u32 rt, u32 ra, u32 rb)
 	{
@@ -96,24 +100,20 @@ private:
 	}
 	void SFH(u32 rt, u32 ra, u32 rb)
 	{
-		//(SSE2) PSUBW - Subtract Packed Words
-		CPU.GPR[rt]._m128i = _mm_sub_epi16(CPU.GPR[rb]._m128i, CPU.GPR[ra]._m128i);
+		for (int h = 0; h < 8; h++)
+			CPU.GPR[rt]._u16[h] = CPU.GPR[rb]._u16[h] - CPU.GPR[ra]._u16[h];
 	}
 	void NOR(u32 rt, u32 ra, u32 rb)
 	{
-		//(SSE2) POR - Bitwise Logical Or
-		//(SSE2) PXOR - Logical Exclusive Or
-		const __u32x4 InvMask = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
-		CPU.GPR[rt]._m128i = _mm_xor_si128(_mm_or_si128(CPU.GPR[ra]._m128i, CPU.GPR[rb]._m128i), InvMask.m128i);
+		CPU.GPR[rt]._u32[0] = ~(CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0]);
+		CPU.GPR[rt]._u32[1] = ~(CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1]);
+		CPU.GPR[rt]._u32[2] = ~(CPU.GPR[ra]._u32[2] | CPU.GPR[rb]._u32[2]);
+		CPU.GPR[rt]._u32[3] = ~(CPU.GPR[ra]._u32[3] | CPU.GPR[rb]._u32[3]);
 	}
 	void ABSDB(u32 rt, u32 ra, u32 rb)
 	{
-		//(SSE2) PMINUB - Minimum of Packed Unsigned Byte Integers
-		//(SSE2) PMAXUB - Maximum of Packed Unsigned Byte Integers
-		//(SSE2) PSUBB - Subtract Packed Bytes
-		const __m128i _a = CPU.GPR[ra]._m128i;
-		const __m128i _b = CPU.GPR[rb]._m128i;
-		CPU.GPR[rt]._m128i = _mm_sub_epi8(_mm_max_epu8(_a, _b), _mm_min_epu8(_a, _b));
+		for (int b = 0; b < 16; b++)
+			CPU.GPR[rt]._u8[b] = CPU.GPR[rb]._u8[b] > CPU.GPR[ra]._u8[b] ? CPU.GPR[rb]._u8[b] - CPU.GPR[ra]._u8[b] : CPU.GPR[ra]._u8[b] - CPU.GPR[rb]._u8[b];
 	}
 	void ROT(u32 rt, u32 ra, u32 rb)
 	{
