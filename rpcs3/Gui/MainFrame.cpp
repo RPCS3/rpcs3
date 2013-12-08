@@ -276,6 +276,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	// Travel to the main dir.
 	wxSetWorkingDirectory(mainDir);
 
+	m_game_viewer->Refresh();
 	Emu.BootGame(newPkgDir.c_str());
 }
 
