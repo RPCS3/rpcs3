@@ -172,8 +172,8 @@ int cellPadGetInfo(u32 info_addr)
 		if(i >= pads.GetCount()) break;
 
 		info.status[i] = re(pads[i].m_port_status);
-		info.product_id[i] = 0xdead; //TODO
-		info.vendor_id[i] = 0xbeaf; //TODO
+		info.product_id[i] = const_se_t<u16, 0x0268>::value;
+		info.vendor_id[i] = const_se_t<u16, 0x054C>::value;
 	}
 
 	Memory.WriteData(info_addr, info);

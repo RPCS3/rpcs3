@@ -30,7 +30,7 @@ int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 
 s64 sys_prx_register_library(u32 lib_addr)
 {
-	sysPrxForUser.Error("sys_prx_register_library(lib_addr=0x%x)");
+	sysPrxForUser.Error("sys_prx_register_library(lib_addr=0x%x)", lib_addr);
 	return 0;
 }
 

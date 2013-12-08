@@ -88,14 +88,13 @@ void GameViewer::DClick(wxListEvent& event)
 	long i = GetFirstSelected();
 	if(i < 0) return;
 
-	const wxString& path = m_path + "\\" + m_game_data[i].root + "\\USRDIR\\BOOT.BIN";
-	if(!wxFileExists(path))
+	const wxString& path = m_path + m_game_data[i].root;
+
+	Emu.Stop();
+	if(!Emu.BootGame(path.c_str()))
 	{
 		ConLog.Error("Boot error: elf not found! [%s]", path.mb_str());
 		return;
 	}
-
-	Emu.Stop();
-	Emu.SetPath(path);
 	Emu.Run();
 }

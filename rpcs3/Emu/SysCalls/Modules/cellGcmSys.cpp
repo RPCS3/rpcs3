@@ -362,7 +362,7 @@ int cellGcmSetFlipCommandWithWaitLabel(u32 ctx, u32 id, u32 label_index, u32 lab
 
 int cellGcmSetFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 {
-	cellGcmSys.Warning("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.GetAddr(), id);
+	cellGcmSys.Log("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.GetAddr(), id);
 
 	int res = cellGcmSetPrepareFlip(ctxt, id);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
@@ -370,7 +370,7 @@ int cellGcmSetFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 
 int cellGcmSetWaitFlip(mem_ptr_t<CellGcmContextData> ctxt)
 {
-	cellGcmSys.Warning("cellGcmSetWaitFlip(ctx=0x%x)", ctxt.GetAddr());
+	cellGcmSys.Log("cellGcmSetWaitFlip(ctx=0x%x)", ctxt.GetAddr());
 
 	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
 	return CELL_OK;

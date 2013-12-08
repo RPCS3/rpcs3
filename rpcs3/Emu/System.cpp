@@ -6,6 +6,10 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
+
+#include "scetool/scetool.h"
+
+#include "Loader/SELF.h"
 #include <cstdlib>
 #include <fstream>
 using namespace PPU_instr;
@@ -21,7 +25,7 @@ ModuleInitializer::ModuleInitializer()
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
-	, m_dbg_console(NULL)
+	, m_dbg_console(nullptr)
 	, m_rsx_callback(0)
 {
 }
@@ -85,16 +89,126 @@ void Emulator::CheckStatus()
 	}
 }
 
+bool Emulator::IsSelf(const std::string& path)
+{
+	vfsLocalFile f(path);
+
+	if(!f.IsOpened())
+		return false;
+
+	SceHeader hdr;
+	hdr.Load(f);
+
+	return hdr.CheckMagic();
+}
+
+bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
+{
+	// Check if the data really needs to be decrypted.
+	wxFile f(self.c_str());
+
+	if(!f.IsOpened())
+	{
+		ConLog.Error("Could not open SELF file! (%s)", self.c_str());
+		return false;
+	}
+	
+	// Get the key version.
+	f.Seek(0x08);
+	be_t<u16> key_version;
+	f.Read(&key_version, sizeof(key_version));
+
+	if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
+	{
+		ConLog.Warning("Debug SELF detected! Removing fake header...");
+
+		// Get the real elf offset.
+		f.Seek(0x10);
+		be_t<u64> elf_offset;
+		f.Read(&elf_offset, sizeof(elf_offset));
+
+		// Start at the real elf offset.
+		f.Seek(elf_offset);
+
+		wxFile out(elf.c_str(), wxFile::write);
+
+		if(!out.IsOpened())
+		{
+			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
+			return false;
+		}
+
+		// Copy the data.
+		char buf[2048];
+		while (ssize_t size = f.Read(buf, 2048))
+			out.Write(buf, size);
+	}
+	else
+	{
+		if (!scetool_decrypt((scetool::s8 *)self.c_str(), (scetool::s8 *)elf.c_str()))
+		{
+			ConLog.Write("SELF: Could not decrypt file");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool Emulator::BootGame(const std::string& path)
+{
+	static const char* elf_path[6] =
+	{
+		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
+		"\\USRDIR\\BOOT.BIN",
+		"\\BOOT.BIN",
+		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
+		"\\USRDIR\\EBOOT.BIN",
+		"\\EBOOT.BIN",
+	};
+
+	for(int i=0; i<sizeof(elf_path) / sizeof(*elf_path);i++)
+	{
+		const wxString& curpath = path + elf_path[i];
+
+		if(wxFile::Access(curpath, wxFile::read))
+		{
+			SetPath(curpath);
+			Load();
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
+
+	if(IsSelf(m_path.c_str()))
+	{
+		std::string self_path = m_path;
+		std::string elf_path = wxFileName(m_path).GetPath().c_str();
+
+		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
+		{
+			elf_path += "\\BOOT.BIN";
+		}
+		else
+		{
+			elf_path += "\\" + wxFileName(m_path).GetName() + ".elf";
+		}
+
+		DecryptSelf(elf_path, self_path);
+
+		m_path = elf_path;
+	}
+
 	ConLog.Write("Loading '%s'...", m_path.mb_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
-	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
 
 	ConLog.SkipLn();
 	ConLog.Write("Mount info:");
@@ -382,7 +496,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if (!f.is_open())
 		return;
 	f.seekg(0, std::ios::end);
-    int length = f.tellg();
+	int length = f.tellg();
 	f.seekg(0, std::ios::beg);
 	u32 break_count, marked_count;
 	u16 version;

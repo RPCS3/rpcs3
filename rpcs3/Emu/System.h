@@ -146,6 +146,10 @@ public:
 
 	void CheckStatus();
 
+	bool IsSelf(const std::string& path);
+	bool DecryptSelf(const std::string& elf, const std::string& self);
+	bool BootGame(const std::string& path);
+
 	void Load();
 	void Run();
 	void Pause();
