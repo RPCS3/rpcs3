@@ -1058,8 +1058,6 @@ void GLGSRender::Flip()
 		u32 height = re(buffers[m_gcm_current_buffer].height);
 		u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
 
-		glRotated(90, 1, 0, 0);
-
 		if(Memory.IsGoodAddr(addr))
 		{
 			//TODO
