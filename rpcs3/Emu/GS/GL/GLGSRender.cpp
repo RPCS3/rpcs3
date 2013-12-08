@@ -1051,7 +1051,20 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
-	if(m_fbo.IsCreated())
+	if(m_read_buffer)
+	{
+		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		u32 width = re(buffers[m_gcm_current_buffer].width);
+		u32 height = re(buffers[m_gcm_current_buffer].height);
+		u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
+
+		if(Memory.IsGoodAddr(addr))
+		{
+			void* pixels = Memory.VirtualToRealAddr(addr);
+			glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+		}
+	}
+	else if(m_fbo.IsCreated())
 	{
 		m_fbo.Bind(GL_READ_FRAMEBUFFER);
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
