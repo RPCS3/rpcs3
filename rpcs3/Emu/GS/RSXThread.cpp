@@ -126,15 +126,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			Flip();
 
 			m_gcm_current_buffer = args[0];
-
+			m_read_buffer = true;
 			m_flip_status = 0;
+
 			if(m_flip_handler)
 			{
 				m_flip_handler.Handle(1, 0, 0);
 				m_flip_handler.Branch(false);
 			}
-
-			SemaphorePostAndWait(m_sem_flip);
 
 			//Emu.Pause();
 		}
@@ -611,6 +610,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u32 a0 = args[0];
 
 		//ConLog.Warning("NV4097_SET_BEGIN_END: %x", a0);
+
+		m_read_buffer = false;
 
 		if(a0)
 		{
@@ -1396,7 +1397,12 @@ void RSXThread::Task()
 		if(put == get || !Emu.IsRunning())
 		{
 			if(put == get)
+			{
+				if(m_flip_status == 0)
+					SemaphorePostAndWait(m_sem_flip);
+
 				SemaphorePostAndWait(m_sem_flush);
+			}
 
 			Sleep(1);
 			continue;

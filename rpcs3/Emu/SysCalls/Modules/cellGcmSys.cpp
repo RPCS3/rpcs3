@@ -55,6 +55,8 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	const u32 local_size = 0xf900000; //TODO
 	const u32 local_addr = Memory.RSXFBMem.GetStartAddr();
 
+	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
+
 	map_offset_addr = 0;
 	map_offset_pos = 0;
 	current_config.ioSize = re32(ioSize);
@@ -370,7 +372,7 @@ int cellGcmSetWaitFlip(mem_ptr_t<CellGcmContextData> ctxt)
 {
 	cellGcmSys.Warning("cellGcmSetWaitFlip(ctx=0x%x)", ctxt.GetAddr());
 
-	//GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
+	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
 	return CELL_OK;
 }
 

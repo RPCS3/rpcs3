@@ -516,6 +516,7 @@ public:
 	u32 m_surface_colour_target;
 
 	u8 m_begin_end;
+	bool m_read_buffer;
 
 protected:
 	RSXThread()
@@ -530,6 +531,8 @@ protected:
 		, m_draw_mode(0)
 		, m_draw_array_count(0)
 		, m_draw_array_first(~0)
+		, m_gcm_current_buffer(0)
+		, m_read_buffer(true)
 	{
 		m_set_alpha_test = false;
 		m_set_blend = false;
