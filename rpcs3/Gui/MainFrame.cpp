@@ -12,7 +12,6 @@
 #include "Gui/AboutDialog.h"
 #include <wx/dynlib.h>
 
-#include "scetool/scetool.cpp"
 #include "unpkg/unpkg.c"
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
@@ -22,9 +21,8 @@ END_EVENT_TABLE()
 enum IDs
 {
 	id_boot_elf = 0x555,
-	id_boot_self,
 	id_boot_game,
-	id_boot_pkg,
+	id_install_pkg,
 	id_sys_pause,
 	id_sys_stop,
 	id_sys_send_open_menu,
@@ -47,43 +45,43 @@ wxString GetPaneName()
 
 bool wxMoveDir(wxString sFrom, wxString sTo)
 {
-    if (sFrom[sFrom.Len() - 1] != '\\' && sFrom[sFrom.Len() - 1] != '/') sFrom += wxFILE_SEP_PATH;
-    if (sTo[sTo.Len() - 1] != '\\' && sTo[sTo.Len() - 1] != '/') sTo += wxFILE_SEP_PATH;
+	if (sFrom[sFrom.Len() - 1] != '\\' && sFrom[sFrom.Len() - 1] != '/') sFrom += wxFILE_SEP_PATH;
+	if (sTo[sTo.Len() - 1] != '\\' && sTo[sTo.Len() - 1] != '/') sTo += wxFILE_SEP_PATH;
 
-    if (!::wxDirExists(sFrom)) {
-        ::wxLogError(wxT("%s does not exist!\r\nCan not copy directory"), sFrom.c_str());
-        return false;
-    }
-    if (!wxDirExists(sTo)) {
-        if (!wxFileName::Mkdir(sTo, 0777, wxPATH_MKDIR_FULL)) {
-            ::wxLogError(wxT("%s could not be created!"), sTo.c_str());
-            return false;
-        }
-    }
+	if (!::wxDirExists(sFrom)) {
+		::wxLogError(wxT("%s does not exist!\r\nCan not copy directory"), sFrom.c_str());
+		return false;
+	}
+	if (!wxDirExists(sTo)) {
+		if (!wxFileName::Mkdir(sTo, 0777, wxPATH_MKDIR_FULL)) {
+			::wxLogError(wxT("%s could not be created!"), sTo.c_str());
+			return false;
+		}
+	}
 
-    wxDir fDir(sFrom);
-    wxString sNext = wxEmptyString;
-    bool bIsFile = fDir.GetFirst(&sNext);
-    while (bIsFile) {
-        const wxString sFileFrom = sFrom + sNext;
-        const wxString sFileTo = sTo + sNext;
-        if (::wxDirExists(sFileFrom)) {
-            wxMoveDir(sFileFrom, sFileTo);
+	wxDir fDir(sFrom);
+	wxString sNext = wxEmptyString;
+	bool bIsFile = fDir.GetFirst(&sNext);
+	while (bIsFile) {
+		const wxString sFileFrom = sFrom + sNext;
+		const wxString sFileTo = sTo + sNext;
+		if (::wxDirExists(sFileFrom)) {
+			wxMoveDir(sFileFrom, sFileTo);
 			::wxRmdir(sFileFrom);
-        }
-        else {
-            if (!::wxFileExists(sFileTo)) {
-                if (!::wxCopyFile(sFileFrom, sFileTo)) {
-                    ::wxLogError(wxT("Could not copy %s to %s !"), sFileFrom.c_str(), sFileTo.c_str());
-                    return false;
-                }
-            }
+		}
+		else {
+			if (!::wxFileExists(sFileTo)) {
+				if (!::wxCopyFile(sFileFrom, sFileTo)) {
+					::wxLogError(wxT("Could not copy %s to %s !"), sFileFrom.c_str(), sFileTo.c_str());
+					return false;
+				}
+			}
 			::wxRemoveFile(sFileFrom);
-        }
-        bIsFile = fDir.GetNext(&sNext);
-    }
+		}
+		bIsFile = fDir.GetNext(&sNext);
+	}
 	::wxRmdir(sFrom);
-    return true;
+	return true;
 }
 
 MainFrame::MainFrame()
@@ -113,10 +111,9 @@ MainFrame::MainFrame()
 	menubar.Append(&menu_help, "Help");
 
 	menu_boot.Append(id_boot_game, "Boot game");
-	menu_boot.Append(id_boot_pkg, "Install PKG");
+	menu_boot.Append(id_install_pkg, "Install PKG");
 	menu_boot.AppendSeparator();
-	menu_boot.Append(id_boot_elf, "Boot ELF");
-	menu_boot.Append(id_boot_self, "Boot SELF");
+	menu_boot.Append(id_boot_elf, "Boot (S)ELF");
 
 	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
 	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
@@ -140,9 +137,8 @@ MainFrame::MainFrame()
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
 	
 	Connect( id_boot_game,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_boot_pkg,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootPkg) );
+	Connect( id_install_pkg,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
 	Connect( id_boot_elf,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
-	Connect( id_boot_self,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
 
 	Connect( id_sys_pause,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
 	Connect( id_sys_stop,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
@@ -209,87 +205,20 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 
 	Emu.Stop();
-
-	wxString elf[6] = {
-		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
-		"\\USRDIR\\BOOT.BIN",
-		"\\BOOT.BIN",
-		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
-		"\\USRDIR\\EBOOT.BIN",
-		"\\EBOOT.BIN"
-	};
-
-	for(int i=0;i<6;i++)
+	
+	if(Emu.BootGame(ctrl.GetPath().c_str()))
 	{
-		if(wxFile::Access(ctrl.GetPath() + elf[i], wxFile::read))
-		{
-			ConLog.Write("SELF: booting...");
-
-			Emu.Stop();
-	
-			wxString fileIn = ctrl.GetPath()+elf[i]; 
-			wxString fileOut = (ctrl.GetPath()+elf[i])+".elf";
-
-			// Check if the data really needs to be decrypted.
-			if(!wxFileExists(fileIn))
-			{
-				ConLog.Error("Could not open game boot file!");
-				return;
-			}
-			
-			wxFile f(fileIn);
-			// Get the key version.
-			f.Seek(0x08);
-			be_t<u16> key_version;
-			f.Read(&key_version, sizeof(key_version));
-
-			if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
-			{
-				ConLog.Warning("Debug SELF detected! Removing fake header...");
-				
-				// Get the real elf offset.
-				f.Seek(0x10);
-				be_t<u64> elf_offset;
-				f.Read(&elf_offset, sizeof(elf_offset));
-
-				// Start at the real elf offset.
-				f.Seek(elf_offset);
-
-				wxFile out(fileOut, wxFile::write);
-
-				// Copy the data.
-				char buf[2048];
-				while (ssize_t size = f.Read(buf, 2048))
-					out.Write(buf, size);
-			}
-			else
-			{
-				if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
-				{
-					ConLog.Write("Could not decrypt game boot file");
-					return;
-				}
-			}
-
-			f.Close();
-
-			Emu.SetPath(fileOut);
-			Emu.Load();
-			if (!wxRemoveFile(fileOut))
-				ConLog.Warning("Could not delete the decrypted ELF file");
-
-			ConLog.Write("Game: boot done.");
-			return;
-		}
+		ConLog.Write("Game: boot done.");
 	}
-	
-	ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().mb_str());
-	return;
+	else
+	{
+		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().mb_str());
+	}
 }
 
-
-void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
+void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
+	//TODO: progress bar
 	bool stopped = false;
 
 	if(Emu.IsRunning())
@@ -298,7 +227,7 @@ void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
 		stopped = true;
 	}
 
-	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "*.*",
+	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "*.pkg",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -333,8 +262,8 @@ void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
 	wxString mainDir = wxGetCwd();
 
 	// Set PKG dir.
-	wxString oldPkgDir = wxT(wxGetCwd() + "\\" + titleID_full);
-	wxString newPkgDir = wxT(wxGetCwd() + gamePath + titleID);
+	wxString oldPkgDir = wxT(mainDir + "\\" + titleID_full);
+	wxString newPkgDir = wxT(mainDir + gamePath + titleID);
 
 	// Move the final folder.
 	wxMoveDir(oldPkgDir, newPkgDir);
@@ -344,82 +273,10 @@ void MainFrame::BootPkg(wxCommandEvent& WXUNUSED(event))
 
 	ConLog.Write("PKG: extract done.");
 
-	// Travel to the installed PKG.
-	wxSetWorkingDirectory(newPkgDir);
+	// Travel to the main dir.
+	wxSetWorkingDirectory(mainDir);
 
-	wxString elf[6] = {
-		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
-		"\\USRDIR\\BOOT.BIN",
-		"\\BOOT.BIN",
-		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
-		"\\USRDIR\\EBOOT.BIN",
-		"\\EBOOT.BIN"
-	};
-
-	for(int i=0;i<6;i++)
-	{
-		if(wxFile::Access(wxGetCwd() + elf[i], wxFile::read))
-		{
-			ConLog.Write("SELF: booting...");
-	
-			wxString fileIn = wxGetCwd()+elf[i]; 
-			wxString fileOut = (wxGetCwd()+elf[i])+".elf";
-
-			// Check if the data really needs to be decrypted.
-			if(!wxFileExists(fileIn))
-			{
-				ConLog.Error("Could not open game boot file!");
-				return;
-			}
-			
-			wxFile f(fileIn);
-			// Get the key version.
-			f.Seek(0x08);
-			be_t<u16> key_version;
-			f.Read(&key_version, sizeof(key_version));
-
-			if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
-			{
-				ConLog.Warning("Debug SELF detected! Removing fake header...");
-				
-				// Get the real elf offset.
-				f.Seek(0x10);
-				be_t<u64> elf_offset;
-				f.Read(&elf_offset, sizeof(elf_offset));
-
-				// Start at the real elf offset.
-				f.Seek(elf_offset);
-
-				wxFile out(fileOut, wxFile::write);
-
-				// Copy the data.
-				char buf[2048];
-				while (ssize_t size = f.Read(buf, 2048))
-					out.Write(buf, size);
-			}
-			else
-			{
-				if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
-				{
-					ConLog.Write("Could not decrypt game boot file");
-					return;
-				}
-			}
-
-			f.Close();
-
-			// Set the working directory back.
-			wxSetWorkingDirectory(mainDir);
-
-			Emu.SetPath(fileOut);
-			Emu.Load();
-			if (!wxRemoveFile(fileOut))
-				ConLog.Warning("Could not delete the decrypted ELF file");
-
-			ConLog.Write("Game: boot done.");
-			return;
-		}
-	}
+	Emu.BootGame(newPkgDir.c_str());
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
@@ -432,7 +289,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		stopped = true;
 	}
 
-	wxFileDialog ctrl(this, L"Select ELF", wxEmptyString, wxEmptyString, "*.*",
+	wxFileDialog ctrl(this, L"Select (S)ELF", wxEmptyString, wxEmptyString, "*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -441,91 +298,14 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("ELF: booting...");
+	ConLog.Write("(S)ELF: booting...");
 
 	Emu.Stop();
 
 	Emu.SetPath(ctrl.GetPath());
 	Emu.Load();
 
-	ConLog.Write("ELF: boot done.");
-}
-
-void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
-{
-	bool stopped = false;
-
-	if(Emu.IsRunning())
-	{
-		Emu.Pause();
-		stopped = true;
-	}
-
-	wxFileDialog ctrl(this, L"Select SELF", wxEmptyString, wxEmptyString, "*.*",
-		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-
-	if(ctrl.ShowModal() == wxID_CANCEL)
-	{
-		if(stopped) Emu.Resume();
-		return;
-	}
-
-	ConLog.Write("SELF: booting...");
-
-	Emu.Stop();
-	
-	wxString fileIn = ctrl.GetPath();
-	wxString fileOut = ctrl.GetPath()+".elf";
-
-	// Check if the data really needs to be decrypted.
-	if(!wxFileExists(fileIn))
-	{
-		ConLog.Error("Could not open SELF file!");
-		return;
-	}
-	
-	wxFile f(fileIn);
-	// Get the key version.
-	f.Seek(0x08);
-	be_t<u16> key_version;
-	f.Read(&key_version, sizeof(key_version));
-
-	if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
-	{
-		ConLog.Warning("Debug SELF detected! Removing fake header...");
-
-		// Get the real elf offset.
-		f.Seek(0x10);
-		be_t<u64> elf_offset;
-		f.Read(&elf_offset, sizeof(elf_offset));
-
-		// Start at the real elf offset.
-		f.Seek(elf_offset);
-
-		wxFile out(fileOut, wxFile::write);
-
-		// Copy the data.
-		char buf[2048];
-		while (ssize_t size = f.Read(buf, 2048))
-			out.Write(buf, size);
-	}
-	else
-	{
-		if (!scetool_decrypt((scetool::s8 *)fileIn.mb_str(), (scetool::s8 *)fileOut.mb_str()))
-		{
-			ConLog.Write("SELF: Could not decrypt file");
-			return;
-		}
-	}
-
-	f.Close();
-
-	Emu.SetPath(fileOut);
-	Emu.Load();
-	//if (!wxRemoveFile(fileOut))
-	//	ConLog.Warning("Could not delete the decrypted ELF file");
-
-	ConLog.Write("SELF: boot done.");
+	ConLog.Write("(S)ELF: boot done.");
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))

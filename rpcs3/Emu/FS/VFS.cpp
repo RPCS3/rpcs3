@@ -175,17 +175,16 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "$(EmulatorDir)\\dev_hdd1\\";
 			res[idx].mount = "/dev_hdd1/";
 			res[idx].device = vfsDevice_LocalFile;
-			/*
+
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)";
-			res[idx].mount = "";
+			res[idx].path = "$(EmulatorDir)\\dev_usb000\\";
+			res[idx].mount = "/dev_usb000/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)";
-			res[idx].mount = "/";
+			res[idx].path = "$(EmulatorDir)\\dev_usb000\\";
+			res[idx].mount = "/dev_usb/";
 			res[idx].device = vfsDevice_LocalFile;
-			*/
 
 			idx = res.Move(new VFSManagerEntry());
 			res[idx].path = "$(GameDir)";
@@ -196,6 +195,12 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].path = "";
 			res[idx].mount = "/host_root/";
 			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(GameDir)";
+			res[idx].mount = "/";
+			res[idx].device = vfsDevice_LocalFile;
+
 			return;
 		}
 

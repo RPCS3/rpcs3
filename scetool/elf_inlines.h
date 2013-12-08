@@ -8,6 +8,7 @@
 
 #include <string.h>
 
+#define NOCOMPILE
 #include "types.h"
 #include "elf.h"
 
