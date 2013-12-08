@@ -1238,8 +1238,10 @@ private:
 	}
 	void AI(u32 rt, u32 ra, s32 i10)
 	{
-		const __u32x4 imm = {i10, i10, i10, i10};
-		CPU.GPR[rt]._m128i = _mm_add_epi32(CPU.GPR[ra]._m128i, imm.m128i);
+		CPU.GPR[rt]._i32[0] = CPU.GPR[ra]._i32[0] + i10;
+		CPU.GPR[rt]._i32[1] = CPU.GPR[ra]._i32[1] + i10;
+		CPU.GPR[rt]._i32[2] = CPU.GPR[ra]._i32[2] + i10;
+		CPU.GPR[rt]._i32[3] = CPU.GPR[ra]._i32[3] + i10;
 	}
 	void AHI(u32 rt, u32 ra, s32 i10)
 	{

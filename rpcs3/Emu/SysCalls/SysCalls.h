@@ -240,6 +240,7 @@ extern int cellPadClearBuf(u32 port_no);
 extern int cellPadGetData(u32 port_no, u32 data_addr);
 extern int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr);
 extern int cellPadSetActDirect(u32 port_no, u32 param_addr);
+extern int cellPadGetInfo(u32 info_addr);
 extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 

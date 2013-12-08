@@ -522,8 +522,8 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	Emu.SetPath(fileOut);
 	Emu.Load();
-	if (!wxRemoveFile(fileOut))
-		ConLog.Warning("Could not delete the decrypted ELF file");
+	//if (!wxRemoveFile(fileOut))
+	//	ConLog.Warning("Could not delete the decrypted ELF file");
 
 	ConLog.Write("SELF: boot done.");
 }
@@ -558,7 +558,7 @@ void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 {
 	Emu.GetCallbackManager().m_exit_callback.Handle(m_sys_menu_opened ? 0x0132 : 0x0131, 0);
 	m_sys_menu_opened = !m_sys_menu_opened;
-    wxCommandEvent ce;
+	wxCommandEvent ce;
 	UpdateUI(ce);
 }
 
