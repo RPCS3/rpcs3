@@ -210,7 +210,7 @@ __forceinline void MemoryBlock::FastWrite128(const u64 addr, const u128 value)
 
 bool MemoryBlock::Write8(const u64 addr, const u8 value)
 {
-	if(!IsMyAddress(addr)) return false;
+	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
 	FastWrite8(FixAddr(addr), value);
 	return true;
@@ -218,7 +218,7 @@ bool MemoryBlock::Write8(const u64 addr, const u8 value)
 
 bool MemoryBlock::Write16(const u64 addr, const u16 value)
 {
-	if(!IsMyAddress(addr)) return false;
+	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
 	FastWrite16(FixAddr(addr), value);
 	return true;
@@ -226,7 +226,7 @@ bool MemoryBlock::Write16(const u64 addr, const u16 value)
 
 bool MemoryBlock::Write32(const u64 addr, const u32 value)
 {
-	if(!IsMyAddress(addr)) return false;
+	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
 	FastWrite32(FixAddr(addr), value);
 	return true;
@@ -234,7 +234,7 @@ bool MemoryBlock::Write32(const u64 addr, const u32 value)
 
 bool MemoryBlock::Write64(const u64 addr, const u64 value)
 {
-	if(!IsMyAddress(addr)) return false;
+	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
 	FastWrite64(FixAddr(addr), value);
 	return true;
@@ -242,7 +242,7 @@ bool MemoryBlock::Write64(const u64 addr, const u64 value)
 
 bool MemoryBlock::Write128(const u64 addr, const u128 value)
 {
-	if(!IsMyAddress(addr)) return false;
+	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
 	FastWrite128(FixAddr(addr), value);
 	return true;

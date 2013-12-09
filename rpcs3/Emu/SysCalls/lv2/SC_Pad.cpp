@@ -24,6 +24,16 @@ struct CellPadData
 	u16 button[CELL_PAD_MAX_CODES];
 };
 
+struct CellPadInfo
+{
+	u32 max_connect;
+	u32 now_connect;
+	u32 system_info;
+	u16 vendor_id[CELL_MAX_PADS];
+	u16 product_id[CELL_MAX_PADS];
+	u8  status[CELL_MAX_PADS];
+};
+
 struct CellPadInfo2
 {
 	u32 max_connect;
@@ -139,6 +149,35 @@ int cellPadSetActDirect(u32 port_no, u32 param_addr)
 	sys_io.Log("cellPadSetActDirect(port_no=%d, param_addr=0x%x)", port_no, param_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	return CELL_OK;
+}
+
+int cellPadGetInfo(u32 info_addr)
+{
+	sys_io.Log("cellPadGetInfo(info_addr=0x%x)", info_addr);
+	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	CellPadInfo info;
+	memset(&info, 0, sizeof(CellPadInfo));
+
+	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
+	info.max_connect = re(rinfo.max_connect);
+	info.now_connect = re(rinfo.now_connect);
+	info.system_info = re(rinfo.system_info);
+
+	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
+
+	for(u32 i=0; i<CELL_MAX_PADS; ++i)
+	{
+		if(i >= pads.GetCount()) break;
+
+		info.status[i] = re(pads[i].m_port_status);
+		info.product_id[i] = const_se_t<u16, 0x0268>::value;
+		info.vendor_id[i] = const_se_t<u16, 0x054C>::value;
+	}
+
+	Memory.WriteData(info_addr, info);
+
 	return CELL_OK;
 }
 

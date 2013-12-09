@@ -386,17 +386,32 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 
 int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_ptr_t<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil.Error("Unimplemented function: cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil.Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		videoOut, deviceIndex, info.GetAddr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
+	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
 	info->colorSpace = Emu.GetGSManager().GetColorSpace();
-	//info->latency = ;
-	//info->availableModeCount = ;
+	info->latency = 1000;
+	info->availableModeCount = 1;
 	info->state = CELL_VIDEO_OUT_DEVICE_STATE_AVAILABLE;
-	//info->rgbOutputRange = ;
+	info->rgbOutputRange = 1;
+	info->colorInfo.blueX = 0xFFFF;
+	info->colorInfo.blueY = 0xFFFF;
+	info->colorInfo.greenX = 0xFFFF;
+	info->colorInfo.greenY = 0xFFFF;
+	info->colorInfo.redX = 0xFFFF;
+	info->colorInfo.redY = 0xFFFF;
+	info->colorInfo.whiteX = 0xFFFF;
+	info->colorInfo.whiteY = 0xFFFF;
+	info->colorInfo.gamma = 100;
+	info->availableModes[0].aspect = 0;
+	info->availableModes[0].conversion = 0;
+	info->availableModes[0].refreshRates = 0xF;
+	info->availableModes[0].resolutionId = 1;
+	info->availableModes[0].scanMode = 0;
 	
 	return CELL_OK;
 }

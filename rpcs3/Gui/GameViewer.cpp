@@ -8,7 +8,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	LoadSettings();
 	m_columns.Show(this);
 
-	m_path = wxGetCwd(); //TODO
+	m_path = wxGetCwd() + "\\dev_hdd0\\game\\"; //TODO
 
 	Connect(GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(GameViewer::DClick));
 
@@ -34,16 +34,13 @@ void GameViewer::LoadGames()
 	if(!dir.HasSubDirs()) return;
 
 	wxString buf;
-	if(!dir.GetFirst(&buf)) return;
-	if(wxDirExists(buf)) m_games.Add(buf);
-
-	for(;;)
+	for(bool ok = dir.GetFirst(&buf); ok; ok = dir.GetNext(&buf))
 	{
-		if(!dir.GetNext(&buf)) break;
-		if(wxDirExists(buf)) m_games.Add(buf);
+		if(wxDirExists(m_path + buf))
+			m_games.Add(buf);
 	}
 
-	//ConLog.Write("path: %s", m_path);
+	//ConLog.Write("path: %s", m_path.c_str());
 	//ConLog.Write("folders count: %d", m_games.GetCount());
 }
 
@@ -52,7 +49,7 @@ void GameViewer::LoadPSF()
 	m_game_data.Clear();
 	for(uint i=0; i<m_games.GetCount(); ++i)
 	{
-		const wxString& path = m_games[i] + "\\" + "PARAM.SFO";
+		const wxString& path = m_path + m_games[i] + "\\PARAM.SFO";
 		if(!wxFileExists(path)) continue;
 		vfsLocalFile f(path);
 		PSFLoader psf(f);
@@ -91,14 +88,13 @@ void GameViewer::DClick(wxListEvent& event)
 	long i = GetFirstSelected();
 	if(i < 0) return;
 
-	const wxString& path = m_path + "\\" + m_game_data[i].root + "\\" + "USRDIR" + "\\" + "BOOT.BIN";
-	if(!wxFileExists(path))
+	const wxString& path = m_path + m_game_data[i].root;
+
+	Emu.Stop();
+	if(!Emu.BootGame(path.c_str()))
 	{
 		ConLog.Error("Boot error: elf not found! [%s]", path.mb_str());
 		return;
 	}
-
-	Emu.Stop();
-	Emu.SetPath(path);
 	Emu.Run();
 }

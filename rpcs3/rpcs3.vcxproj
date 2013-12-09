@@ -199,6 +199,12 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\scetool\scetool.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
@@ -257,6 +263,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />
@@ -323,6 +330,7 @@
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
+    <ClInclude Include="Emu\Cell\RawSPUThread.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInterpreter.h" />

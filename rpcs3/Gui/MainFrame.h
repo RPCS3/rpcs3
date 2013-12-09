@@ -20,9 +20,8 @@ private:
 	void OnQuit(wxCloseEvent& event);
 
 	void BootGame(wxCommandEvent& event);
-	void BootPkg(wxCommandEvent& event);
+	void InstallPkg(wxCommandEvent& event);
 	void BootElf(wxCommandEvent& event);
-	void BootSelf(wxCommandEvent& event);
 	void Pause(wxCommandEvent& event);
 	void Stop(wxCommandEvent& event);
 	void SendExit(wxCommandEvent& event);

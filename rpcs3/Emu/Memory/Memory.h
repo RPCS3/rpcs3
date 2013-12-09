@@ -356,6 +356,16 @@ public:
 		return UserMemory->Free(addr);
 	}
 
+	bool Lock(const u64 addr, const u32 size)
+	{
+		return UserMemory->Lock(addr, size);
+	}
+
+	bool Unlock(const u64 addr, const u32 size)
+	{
+		return UserMemory->Unlock(addr, size);
+	}
+
 	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
 	{
 		if(IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))

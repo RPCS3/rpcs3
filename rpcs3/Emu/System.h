@@ -93,11 +93,13 @@ class Emulator
 public:
 	wxString m_path;
 	wxString m_elf_path;
+	wxString m_title_id;
 
 	Emulator();
 
 	void Init();
 	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
+	void SetTitleID(const wxString& id);
 
 	std::shared_ptr<vfsFileBase> OpenFile(const wxString& path, vfsOpenMode mode = vfsRead)
 	{
@@ -143,6 +145,10 @@ public:
 	u32 GetPPUThreadExit() const { return m_ppu_thr_exit; }
 
 	void CheckStatus();
+
+	bool IsSelf(const std::string& path);
+	bool DecryptSelf(const std::string& elf, const std::string& self);
+	bool BootGame(const std::string& path);
 
 	void Load();
 	void Run();

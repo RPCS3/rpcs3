@@ -1,25 +1,8 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "SC_Memory.h"
 
 SysCallBase sc_mem("memory");
-
-enum
-{
-	SYS_MEMORY_PAGE_SIZE_1M = 0x400,
-	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
-};
-
-struct MemoryContainerInfo
-{
-	u64 addr;
-	u32 size;
-
-	MemoryContainerInfo(u64 addr, u32 size)
-		: addr(addr)
-		, size(size)
-	{
-	}
-};
 
 int sys_memory_container_create(u32 cid_addr, u32 yield_size)
 {
@@ -93,29 +76,32 @@ int sys_memory_free(u32 start_addr)
 	return CELL_OK;
 }
 
-struct mmapper_info
-{
-	u64 addr;
-	u32 size;
-	u32 flags;
-
-	mmapper_info(u64 _addr, u32 _size, u32 _flags)
-		: addr(_addr)
-		, size(_size)
-		, flags(_flags)
-	{
-	}
-
-	mmapper_info()
-	{
-	}
-};
-
 int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr)
 {
 	sc_mem.Warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%llx, alignment=0x%x, alloc_addr=0x%x)", size, flags, alignment, alloc_addr);
 
-	Memory.Write32(alloc_addr, Memory.Alloc(size, 4));
+	if(!Memory.IsGoodAddr(alloc_addr)) return CELL_EFAULT;
+
+	if(!alignment)
+		alignment = 1;
+
+	u32 addr;
+
+	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
+	{
+	default:
+	case SYS_MEMORY_PAGE_SIZE_1M:
+		if(Memory.AlignAddr(size, alignment) & 0xfffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x100000);
+	break;
+
+	case SYS_MEMORY_PAGE_SIZE_64K:
+		if(Memory.AlignAddr(size, alignment) & 0xffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x10000);
+	break;
+	}
+
+	Memory.Write32(alloc_addr, addr);
 
 	return CELL_OK;
 }
@@ -126,7 +112,22 @@ int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr)
 
 	if(!Memory.IsGoodAddr(mem_id_addr)) return CELL_EFAULT;
 
-	u64 addr = Memory.Alloc(size, 1);
+	u32 addr;
+	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
+	{
+	case SYS_MEMORY_PAGE_SIZE_1M:
+		if(size & 0xfffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x100000);
+	break;
+
+	case SYS_MEMORY_PAGE_SIZE_64K:
+		if(size & 0xffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x10000);
+	break;
+
+	default:
+		return CELL_EINVAL;
+	}
 
 	if(!addr)
 		return CELL_ENOMEM;
@@ -147,16 +148,9 @@ int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 	{
 		sc_mem.Error("sys_mmapper_map_memory failed!");
 	}
-	//Memory.MemoryBlocks.Add((new MemoryBlock())->SetRange(start_addr, info->size));
 
 	return CELL_OK;
 }
-
-struct sys_memory_info
-{
-	u32 total_user_memory;
-	u32 available_user_memory;
-};
 
 int sys_memory_get_user_memory_size(u32 mem_info_addr)
 {

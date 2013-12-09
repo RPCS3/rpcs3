@@ -3,6 +3,8 @@
 * This file is released under the GPLv2.
 */
 
+#include "stdafx.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 

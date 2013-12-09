@@ -53,6 +53,9 @@
     <Filter Include="Emu\ARMv7">
       <UniqueIdentifier>{bee6a4b4-6371-4c1b-8558-fc7888b1574e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utilities\scetool">
+      <UniqueIdentifier>{52b11fe8-a967-4d52-bf88-a3210d4ffb27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -340,6 +343,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellGame.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\scetool\scetool.cpp">
+      <Filter>Utilities\scetool</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -512,6 +521,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\BEType.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\RawSPUThread.h">
+      <Filter>Include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
