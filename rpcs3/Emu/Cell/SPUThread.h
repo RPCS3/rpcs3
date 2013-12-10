@@ -265,6 +265,7 @@ public:
 	private:
 		u32 m_value[max_count];
 		u32 m_index;
+		u32 m_lock;
 
 	public:
 
@@ -276,19 +277,32 @@ public:
 		void Init()
 		{
 			m_index = 0;
+			m_lock = 0; //simple lock
 		}
 
 		__forceinline bool Pop(u32& res)
 		{
-			if(!m_index) return false;
+			while (_InterlockedCompareExchange(&m_lock,  1, 0));
+			if(!m_index) 
+			{
+				m_lock = 0; //release lock
+				return false;
+			}
 			res = m_value[--m_index];
+			m_lock = 0;
 			return true;
 		}
 
 		__forceinline bool Push(u32 value)
 		{
-			if(m_index >= max_count) return false;
+			while (_InterlockedCompareExchange(&m_lock,  1, 0));
+			if(m_index >= max_count) 
+			{
+				m_lock = 0; //release lock
+				return false;
+			}
 			m_value[m_index++] = value;
+			m_lock = 0;
 			return true;
 		}
 
@@ -313,7 +327,7 @@ public:
 		}
 	};
 
-	struct
+	struct MFCReg
 	{
 		Channel<1> LSA;
 		Channel<1> EAH;
@@ -321,7 +335,7 @@ public:
 		Channel<1> Size_Tag;
 		Channel<1> CMDStatus;
 		Channel<1> QStatus;
-	} MFC;
+	} MFC1, MFC2;
 
 	struct
 	{
@@ -353,9 +367,9 @@ public:
 
 	DMAC dmac;
 
-	void DoMfcCmd()
+	void EnqMfcCmd(MFCReg& MFCArgs)
 	{
-		u32 cmd = MFC.CMDStatus.GetValue();
+		u32 cmd = MFCArgs.CMDStatus.GetValue();
 		u16 op = cmd & MFC_MASK_CMD;
 
 		switch(op & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
@@ -363,21 +377,13 @@ public:
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			u32 lsa = MFC.LSA.GetValue();
-			u64 ea = (u64)MFC.EAL.GetValue() | ((u64)MFC.EAH.GetValue() << 32);
-			u32 size_tag = MFC.Size_Tag.GetValue();
+			u32 lsa = MFCArgs.LSA.GetValue();
+			u64 ea = (u64)MFCArgs.EAL.GetValue() | ((u64)MFCArgs.EAH.GetValue() << 32);
+			u32 size_tag = MFCArgs.Size_Tag.GetValue();
 			u16 tag = (u16)size_tag;
 			u16 size = size_tag >> 16;
 
-			ConLog.Warning("DMA %s:", op & MFC_PUT_CMD ? "PUT" : "GET");
-			ConLog.Warning("*** lsa  = 0x%x", lsa);
-			ConLog.Warning("*** ea   = 0x%llx", ea);
-			ConLog.Warning("*** tag  = 0x%x", tag);
-			ConLog.Warning("*** size = 0x%x", size);
-			ConLog.Warning("*** cmd  = 0x%x", cmd);
-			ConLog.SkipLn();
-
-			MFC.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 		}
 		break;
 
@@ -401,20 +407,20 @@ public:
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
 
 		case MFC_LSA:
-			return MFC.LSA.max_count;
+			return MFC1.LSA.max_count;
 
 		case MFC_EAH:
-			return MFC.EAH.max_count;
+			return MFC1.EAH.max_count;
 
 		case MFC_EAL:
-			return MFC.EAL.max_count;
+			return MFC1.EAL.max_count;
 
 		case MFC_Size:
 		case MFC_TagID:
-			return MFC.Size_Tag.max_count;
+			return MFC1.Size_Tag.max_count;
 		
 		case MFC_Cmd:
-			return MFC.CMDStatus.max_count;
+			return MFC1.CMDStatus.max_count;
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
@@ -455,28 +461,28 @@ public:
 		break;
 
 		case MFC_LSA:
-			MFC.LSA.SetValue(v);
+			MFC1.LSA.SetValue(v);
 		break;
 
 		case MFC_EAH:
-			MFC.EAH.SetValue(v);
+			MFC1.EAH.SetValue(v);
 		break;
 
 		case MFC_EAL:
-			MFC.EAL.SetValue(v);
+			MFC1.EAL.SetValue(v);
 		break;
 
 		case MFC_Size:
-			MFC.Size_Tag.SetValue((MFC.Size_Tag.GetValue() & 0xffff) | (v << 16));
+			MFC1.Size_Tag.SetValue((MFC1.Size_Tag.GetValue() & 0xffff) | (v << 16));
 		break;
 
 		case MFC_TagID:
-			MFC.Size_Tag.SetValue((MFC.Size_Tag.GetValue() & ~0xffff) | (v & 0xffff));
+			MFC1.Size_Tag.SetValue((MFC1.Size_Tag.GetValue() & ~0xffff) | (v & 0xffff));
 		break;
 
 		case MFC_Cmd:
-			MFC.CMDStatus.SetValue(v);
-			DoMfcCmd();
+			MFC1.CMDStatus.SetValue(v);
+			EnqMfcCmd(MFC1);
 		break;
 
 		default:
