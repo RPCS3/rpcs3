@@ -3592,7 +3592,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x4643ba6e: FUNC_LOG_ERROR("TODO: sys_mmapper_unmap_memory");
 	case 0x4a071d98: FUNC_LOG_ERROR("TODO: sys_interrupt_thread_disestablish");
 	case 0x4b2f301a: FUNC_LOG_ERROR("TODO: _sys_tolower");
-	case 0x4f7172c9: FUNC_LOG_ERROR("TODO: sys_process_is_stack");
 	case 0x5267cb35: FUNC_LOG_ERROR("TODO: sys_spinlock_unlock");
 	case 0x52aadadf: FUNC_LOG_ERROR("TODO: sys_lwcond_signal_to");
 	case 0x5fdfb2fe: FUNC_LOG_ERROR("TODO: _sys_spu_printf_detach_group");
