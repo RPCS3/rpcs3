@@ -163,14 +163,17 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		while (_InterlockedCompareExchange(&proxy_lock,  1, 0));
+		while (_InterlockedExchange(&proxy_lock, 1));
+		_mm_lfence();
 		DMAC_Proxy& p = proxy[proxy_pos];
 		p.cmd = cmd;
 		p.tag = tag;
 		p.lsa = lsa;
 		p.ea = ea;
 		p.size = size;
+		_mm_sfence(); //for DoCmd()
 		proxy_pos++;
+		_mm_sfence();
 		proxy_lock = 0;
 
 		return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
@@ -178,8 +181,10 @@ struct DMAC
 
 	void ClearCmd()
 	{
-		while (_InterlockedCompareExchange(&proxy_lock,  1, 0));
+		while (_InterlockedExchange(&proxy_lock, 1));
+		_mm_lfence();
 		memcpy(proxy, proxy + 1, --proxy_pos * sizeof(DMAC_Proxy));
+		_mm_sfence();
 		proxy_lock = 0; //release lock
 	}
 

@@ -282,37 +282,69 @@ public:
 
 		__forceinline bool Pop(u32& res)
 		{
-			while (_InterlockedCompareExchange(&m_lock,  1, 0));
+			while (_InterlockedExchange(&m_lock, 1));
+			_mm_lfence();
 			if(!m_index) 
 			{
 				m_lock = 0; //release lock
 				return false;
 			}
 			res = m_value[--m_index];
+			_mm_sfence();
 			m_lock = 0;
 			return true;
 		}
 
 		__forceinline bool Push(u32 value)
 		{
-			while (_InterlockedCompareExchange(&m_lock,  1, 0));
+			while (_InterlockedExchange(&m_lock, 1));
+			_mm_lfence();
 			if(m_index >= max_count) 
 			{
 				m_lock = 0; //release lock
 				return false;
 			}
 			m_value[m_index++] = value;
+			_mm_sfence();
 			m_lock = 0;
 			return true;
 		}
 
+		__forceinline void PushUncond(u32 value)
+		{
+			while (_InterlockedExchange(&m_lock, 1));
+			_mm_lfence();
+			if(m_index >= max_count) 
+				m_value[max_count-1] = value; //last message is overwritten
+			else
+				m_value[m_index++] = value;
+			_mm_sfence();
+			m_lock = 0;
+		}
+
+		__forceinline void PopUncond(u32& res)
+		{
+			while (_InterlockedExchange(&m_lock, 1));
+			_mm_lfence();
+			if(!m_index) 
+				res = 0; //result is undefined
+			else
+				res = m_value[--m_index];
+			_mm_sfence();
+			m_lock = 0;
+		}
+
 		u32 GetCount() const
 		{
+			while (m_lock);
+			_mm_lfence();
 			return m_index;
 		}
 
 		u32 GetFreeCount() const
 		{
+			while (m_lock);
+			_mm_lfence();
 			return max_count - m_index;
 		}
 
@@ -383,6 +415,14 @@ public:
 			u16 tag = (u16)size_tag;
 			u16 size = size_tag >> 16;
 
+			ConLog.Warning("DMA %s:", op & MFC_PUT_CMD ? "PUT" : "GET");
+			ConLog.Warning("*** lsa  = 0x%x", lsa);
+			ConLog.Warning("*** ea   = 0x%llx", ea);
+			ConLog.Warning("*** tag  = 0x%x", tag);
+			ConLog.Warning("*** size = 0x%x", size);
+			ConLog.Warning("*** cmd  = 0x%x", cmd);
+			ConLog.SkipLn();
+
 			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 		}
 		break;
@@ -405,22 +445,6 @@ public:
 
 		case SPU_WrOutIntrMbox:
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
-
-		case MFC_LSA:
-			return MFC1.LSA.max_count;
-
-		case MFC_EAH:
-			return MFC1.EAH.max_count;
-
-		case MFC_EAL:
-			return MFC1.EAL.max_count;
-
-		case MFC_Size:
-		case MFC_TagID:
-			return MFC1.Size_Tag.max_count;
-		
-		case MFC_Cmd:
-			return MFC1.CMDStatus.max_count;
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
