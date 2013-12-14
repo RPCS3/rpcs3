@@ -1399,6 +1399,10 @@ private:
 	{
 		DisAsm_R3("stdux", rs, ra, rb);
 	}
+	void STBUX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("stbux", rs, ra, rb);
+	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("stvewx", vs, ra, rb);

@@ -78,7 +78,7 @@ namespace PPU_instr
 	static CodeField<11, 15> BI;
 
 	//Immediate field specifying a 14-bit signed two's complement branch displacement that is concatenated on the
-	//right with ‘00’ and sign-extended to 64 bits.
+	//right with '00' and sign-extended to 64 bits.
 	static CodeFieldSigned<16, 31> BD(FIELD_BRANCH);
 
 	//
@@ -179,9 +179,9 @@ namespace PPU_instr
 	Record bit.
 	0		Does not update the condition register (CR).
 	1		Updates the CR to reflect the result of the operation.
-			For integer instructions, CR bits [0–2] are set to reflect the result as a signed quantity and CR bit [3] 
+			For integer instructions, CR bits [0-2] are set to reflect the result as a signed quantity and CR bit [3] 
 			receives a copy of the summary overflow bit, XER[SO]. The result as an unsigned quantity or a bit 
-			string can be deduced from the EQ bit. For floating-point instructions, CR bits [4–7] are set to reflect 
+			string can be deduced from the EQ bit. For floating-point instructions, CR bits [4-7] are set to reflect 
 			floating-point exception, floating-point enabled exception, floating-point invalid operation exception, 
 			and floating-point overflow exception. 
 	*/
@@ -482,6 +482,7 @@ namespace PPU_instr
 	/*0x097*/bind_instr(g1f_list, STWX, RS, RA, RB);
 	/*0x0a7*/bind_instr(g1f_list, STVEHX, VS, RA, RB);
 	/*0x0b5*/bind_instr(g1f_list, STDUX, RS, RA, RB);
+	/*0x0f7*/bind_instr(g1f_list, STBUX, RS, RA, RB);
 	/*0x0c7*/bind_instr(g1f_list, STVEWX, VS, RA, RB);
 	/*0x0ca*/bind_instr(g1f_list, ADDZE, RD, RA, OE, RC);
 	/*0x0d6*/bind_instr(g1f_list, STDCX_, RS, RA, RB);

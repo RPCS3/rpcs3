@@ -2650,6 +2650,12 @@ private:
 		Memory.Write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
+	void STBUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write8(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
+	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;

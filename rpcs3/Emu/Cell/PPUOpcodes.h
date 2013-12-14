@@ -297,6 +297,7 @@ namespace PPU_opcodes
 		STWX 	= 0x097,
 		STVEHX	= 0x0a7, //Store Vector Element Halfword Indexed
 		STDUX 	= 0x0b5,
+		STBUX   = 0x0f7,
 		STVEWX	= 0x0c7, //Store Vector Element Word Indexed
 		ADDZE 	= 0x0ca,
 		STDCX_ 	= 0x0d6,
@@ -678,6 +679,7 @@ public:
 	virtual void STWX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVEHX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void STDUX(u32 rs, u32 ra, u32 rb) = 0;
+	virtual void STBUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVEWX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void ADDZE(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void STDCX_(u32 rs, u32 ra, u32 rb) = 0;
