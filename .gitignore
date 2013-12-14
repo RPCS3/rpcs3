@@ -40,5 +40,13 @@
 /bin/VertexProgram.txt
 /bin/BreakPoints.dat
 /bin/textures
-/bin/data/
 rpcs3/git-version.h
+
+# Copyrighted files
+/bin/data/
+/bin/dev_flash/data/font
+
+# Ignore installed games except test homebrews
+!/bin/dev_hdd0/game/
+/bin/dev_hdd0/game/*
+!/bin/dev_hdd0/game/TEST12345/

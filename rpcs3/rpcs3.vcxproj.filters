@@ -349,6 +349,9 @@
     <ClCompile Include="..\scetool\scetool.cpp">
       <Filter>Utilities\scetool</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

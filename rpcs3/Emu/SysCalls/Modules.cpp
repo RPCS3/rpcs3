@@ -40,7 +40,7 @@ static const g_module_list[] =
 	{0x0017, "sys_io"},
 	{0x0018, "cellPngDec"},
 	{0x0019, "cellFont"},
-	{0x001a, "cellFontFt"},
+	{0x001a, "cellFontFT"},
 	{0x001b, "cellFreetype"},
 	{0x001c, "cellUsbd"},
 	{0x001d, "cellSail"},

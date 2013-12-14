@@ -267,6 +267,7 @@
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGame.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp" />
