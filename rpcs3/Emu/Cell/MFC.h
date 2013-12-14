@@ -148,8 +148,8 @@ struct DMAC
 	u64 ls_offset;
 	u32 queue_pos;
 	u32 proxy_pos;
-	u32 queue_lock;
-	u32 proxy_lock;
+	long queue_lock;
+	long proxy_lock;
 
 	u32 Cmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{

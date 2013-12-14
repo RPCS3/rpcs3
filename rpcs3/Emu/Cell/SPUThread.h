@@ -265,7 +265,7 @@ public:
 	private:
 		u32 m_value[max_count];
 		u32 m_index;
-		u32 m_lock;
+		long m_lock;
 
 	public:
 
