@@ -11,7 +11,11 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     add_definitions(-fpermissive) # TODO: remove me
 endif()
 
-find_package(wxWidgets)
+add_definitions(-DGL_GLEXT_PROTOTYPES)
+add_definitions(-DGLX_GLXEXT_PROTOTYPES)
+
+find_package(wxWidgets REQUIRED)
+find_package(OpenGL REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
 
@@ -34,4 +38,4 @@ ${CMAKE_SOURCE_DIR}/../Utilities/*
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})

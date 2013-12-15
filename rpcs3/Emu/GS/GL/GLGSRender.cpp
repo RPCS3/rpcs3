@@ -608,7 +608,12 @@ void GLGSRender::OnInitThread()
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_SCISSOR_TEST);
 
+#ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+#else
+    if (GLXDrawable drawable = glXGetCurrentDrawable())
+        glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+#endif
 }
 
 void GLGSRender::OnExitThread()
@@ -916,7 +921,7 @@ void GLGSRender::ExecCMD()
 	if(m_set_depth_bounds)
 	{
 		//ConLog.Warning("glDepthBounds(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
-		glDepthBounds(m_depth_bounds_min, m_depth_bounds_max);
+		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
 		checkForGlError("glDepthBounds");
 	}
 

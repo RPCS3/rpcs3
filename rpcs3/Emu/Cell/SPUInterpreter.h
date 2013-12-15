@@ -8,7 +8,7 @@
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
 typedef union _CRT_ALIGN(16) __u32x4 {
-	unsigned __int32 _u32[4];
+	u32 _u32[4];
 	__m128i m128i;
 	__m128 m128;
 	__m128d m128d;

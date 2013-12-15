@@ -70,11 +70,13 @@ public:
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 };
 
+#ifdef _MSC_VER
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
 	m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
 }
+#endif
 
 bool IsLoadedFunc(u32 id);
 bool CallFunc(u32 num);
