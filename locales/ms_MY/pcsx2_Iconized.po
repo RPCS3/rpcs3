@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2012-05-23 10:01+0800\n"
 "Last-Translator: \n"
 "Language-Team: kohaku2421 <kohaku2421@gmail.com>\n"
@@ -29,7 +29,7 @@ msgstr ""
 "Memori maya tidak mencukupi, atau pengalamatan memori maya yang diperlukan "
 "telah ditempah oleh proses lain, servis dan DLL."
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -52,7 +52,7 @@ msgstr ""
 "Anda juga boleh mengurangkan saiz cache utk recompiler PCSX2, dibawah Host "
 "Settings."
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -89,7 +89,7 @@ msgstr ""
 "kemungkinan perlu menghidupkan semula secara manual recompiler dlm senarai "
 "di atas, jika anda dapat menyelesaikan masalah anda kelak."
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -99,7 +99,7 @@ msgstr ""
 "*MENDAPATKAN* BIOS dari PS2 MILIK ANDA SENDIRI. Sila rujuk FAQ dan panduan "
 "utk maklumat lanjut."
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -300,7 +300,7 @@ msgstr ""
 "\n"
 "(nota: tidak termasuk seting utk plugin)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "

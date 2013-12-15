@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2012-08-11 14:07+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
@@ -31,7 +31,7 @@ msgstr ""
 "이용가능한 충분한 가상 메모리가 없거나, 필요한 가상 메모리 매핑이 이미 다른 "
 "프로세서, 서비스 또는 DLL에 의해 예정되어 있습니다."
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -53,7 +53,7 @@ msgstr ""
 "니다. 또는 많은 메모리를 점유하는 다른 프로그램 때문에도 일어납니다. PCSX2 리"
 "컴파일러를 위한 캐시크기를 기본값으로 줄이고 다시 시도할 수 있습니다."
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -86,7 +86,7 @@ msgstr ""
 "레이션 속도를 크게 높여줍니다. 에러를 해결하려면 위의 리컴파일러를 수동으로 "
 "다시 사용하게 해야 합니다."
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -96,7 +96,7 @@ msgstr ""
 "소유한(빌린것은 안됨) 실제 PS2 기계에서 얻어야 합니다. 자세한 설명은 포럼의 "
 "질문답변에 문의하세요."
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -289,7 +289,7 @@ msgstr ""
 "\n"
 "(주의: 플러그인 설정은 영향받지 않습니다)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "

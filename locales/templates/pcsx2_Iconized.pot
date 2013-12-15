@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,7 +26,7 @@ msgstr ""
 msgid "There is not enough virtual memory available, or necessary virtual memory mappings have already been reserved by other processes, services, or DLLs."
 msgstr ""
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid "Playstation game discs are not supported by PCSX2.  If you want to emulate PSX games then you'll have to download a PSX-specific emulator, such as ePSXe or PCSX."
 msgstr ""
 
@@ -34,7 +34,7 @@ msgstr ""
 msgid "This recompiler was unable to reserve contiguous memory required for internal caches.  This error can be caused by low virtual memory resources, such as a small or disabled swapfile, or by another program that is hogging a lot of memory."
 msgstr ""
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close out some memory hogging background tasks and try again."
 msgstr ""
 
@@ -50,11 +50,11 @@ msgstr ""
 msgid "Note: Recompilers are not necessary for PCSX2 to run, however they typically improve emulation speed substantially. You may have to manually re-enable the recompilers listed above, if you resolve the errors."
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't count).  Please consult the FAQs and Guides for further instructions."
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -152,7 +152,7 @@ msgid ""
 "(note: settings for plugins are unaffected)"
 msgstr ""
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the problem\n"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2011-09-09 11:52+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -26,7 +26,7 @@ msgstr ""
 "可用的虛擬記憶體不足，\n"
 "或必備的虛擬記憶體映射已經被其他處理程序、服務，或 DLL 保留。"
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -48,7 +48,7 @@ msgstr ""
 "或由另一個獨占大量記憶體的程式引起。\n"
 "您也可以嘗試減少 PCSX2 全部反編譯裝置的預設快取大小，位於 Host 設定。"
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -80,7 +80,7 @@ msgstr ""
 "注意：反編譯裝置並非執行 PCSX2 所必須的，但反編譯裝置大幅提升遊戲速度。\n"
 "若錯誤已經解決，您可能必須手動重新啟用上面列出的反編譯裝置。"
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -92,7 +92,7 @@ msgstr ""
 "（借的 PS2 不算）。\n"
 "進一步的說明請洽 FAQ 和指南。"
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -279,7 +279,7 @@ msgstr ""
 "\n"
 "（注意：各個插件自身的設定不受影響）"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "

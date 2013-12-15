@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -32,7 +32,7 @@ msgstr ""
 "มีหน่วยความจำเสมือนที่ไม่เพียงพอ หรือการแม็พหน่วยความจำเสมือน\n"
 "ที่จำเป็นได้ถูกเก็บไว้โดยกระบวน, บริการ หรือ DLL อื่นๆ"
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -52,7 +52,7 @@ msgstr ""
 "หรือ swapfile ไม่ถูกใช้งาน หรือเพราะโปรแกรมอื่นใช้หน่วยความจำมาก \n"
 "คุณสามารถลองลดขนาดแค็ชสำหรับรีคอมไพเลอร์ PCSX2 ทั้งหมด ซึ่งพบได้ที่การตั้งค่าโฮสต์"
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -86,7 +86,7 @@ msgstr ""
 "มันจะช่วยปรับปรุงความเร็วของการจำลองอย่างเห็นได้\n"
 "คุณอาจจะลองใช้งานรีคอมไพเลอร์ที่ระบุไว้ด้านบนอีกครั้ง หากคุณต้องการจะแก้ปัญหา"
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -96,7 +96,7 @@ msgstr ""
 "เอาไบออสมาจากตัว PS2 ที่แท้จริงของคุณเอง (ไม่นับการยืม)\n"
 "โปรดศึกษาจากแนวทางและคำถามที่พบบ่อยสำหรับคำแนะนำเพิ่มเติม"
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -290,7 +290,7 @@ msgstr ""
 "\n"
 "(หมายเหตุ: การตั้งค่าสำหรับปลั๊กอินไม่ได้รับผลกระทบ)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "

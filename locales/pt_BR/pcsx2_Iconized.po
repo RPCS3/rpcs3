@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2012-08-20 00:59-0300\n"
 "Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
@@ -31,7 +31,7 @@ msgstr ""
 "virtual necessários já foram reservados para outros processos, serviços ou "
 "DLLs."
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -56,7 +56,7 @@ msgstr ""
 "reduzir os tamanhos padrões de caches para todos recompiladores do PCSX2, "
 "encontrado nas Configurações da Máquina."
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -94,7 +94,7 @@ msgstr ""
 "você tenha que ativar novamente os recompiladores listados acima, se você "
 "solucionar os erros."
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -104,7 +104,7 @@ msgstr ""
 "*deve* obter uma BIOS de uma unidade PS2 que você possua (pegar emprestado "
 "não conta). Por favor consulte os FAQs e os Guias para mais instruções."
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -315,7 +315,7 @@ msgstr ""
 "\n"
 "(nota: configurações dos plug-ins não serão afetadas)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "

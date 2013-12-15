@@ -2,12 +2,12 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 1.1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
-"PO-Revision-Date: 2012-08-28 01:03+0100\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"PO-Revision-Date: 2013-04-26 16:35+0100\n"
 "Last-Translator: Leucos\n"
-"Language-Team: Leucos\n"
+"Language-Team: Leucos <http://forums.pcsx2.net/User-Leucos>\n"
 "Language: it_IT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -15,6 +15,7 @@ msgstr ""
 "X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ..\\..\\..\\PCSX2 Checkout\n"
+"X-Generator: Poedit 1.5.5\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -26,7 +27,7 @@ msgstr ""
 "Non c'è abbastanza memoria virtuale disponibile o gli spazi della memoria "
 "virtuale necessari sono già stati riservati ad altri processi, servizi o DLL."
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -37,7 +38,6 @@ msgstr ""
 "come ePSXe o PCSX."
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
@@ -47,11 +47,9 @@ msgstr ""
 "Questo ricompilatore non è stato in grado di riservare la memoria contigua "
 "necessaria per le cache interne. Questo errore può essere causato da risorse "
 "di memoria virtuale insufficiente, come un file di scambio piccolo o "
-"disattivato, o da un altro programma che sta occupando molta memoria. Puoi "
-"anche provare a ridurre le dimensioni predefinite delle cache dei "
-"ricompilatori di PCSX2, che si trovano in Impostazioni Host."
+"disattivato, o da un altro programma che sta occupando molta memoria."
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -66,9 +64,9 @@ msgid ""
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
 "will be *very* slow."
 msgstr ""
-"Attenzione: il tuo computer non supporta le SSE2, che sono richieste da "
-"molti plugin e ricompilatori di PCSX2. Le tue opzioni saranno limitate e "
-"l'emulazione sarà *molto* lenta."
+"Attenzione: il tuo computer non supporta le SSE2, richieste da molti plugin "
+"e ricompilatori di PCSX2. Le tue opzioni saranno limitate e l'emulazione "
+"sarà *molto* lenta."
 
 #: pcsx2/gui/AppInit.cpp:160
 msgid ""
@@ -89,7 +87,7 @@ msgstr ""
 "risolvere gli errori, sarà necessario riabilitare i ricompilatori elencati "
 "qui sopra manualmente."
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -100,7 +98,7 @@ msgstr ""
 "prestito non conta). Per favore consulta le FAQ e le guide per ulteriori "
 "istruzioni."
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -313,7 +311,7 @@ msgstr ""
 "\n"
 "(nota: le impostazioni dei singoli plugin non saranno cancellate)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -371,7 +369,7 @@ msgid ""
 msgstr ""
 "Zoom = 100: L'immagine riempie l'intera finestra senza essere ritagliata.\n"
 "Al di sopra/sotto di 100: Aumenta/diminuisce lo Zoom\n"
-"0: Zoom automatico affinche siano rimossi i bordi neri (la proporzione "
+"0: Zoom automatico affinché siano rimossi i bordi neri (la proporzione "
 "aspetto viene mantenuta, parte dell'immagine potrebbe essere fuori dallo "
 "schermo).\n"
 "  NOTA: Alcuni giochi possono disegnare i propri bordi neri, che non saranno "
@@ -420,12 +418,12 @@ msgid ""
 "if using the mouse as a primary control device for gaming.  By default the "
 "mouse auto-hides after 2 seconds of inactivity."
 msgstr ""
-"Spunta questa opzione per forzare l'invisibilità del cursore all'interno "
-"della finestra GS. \n"
+"Spunta questa opzione per forzare l'invisibilità del puntatore del mouse "
+"all'interno della finestra GS. \n"
 "Utile se impieghi il mouse come periferica di controllo principale nei "
 "giochi. Per impostazione \n"
-"predefinita il mouse viene nascosto automaticamente dopo due secondi di "
-"inattività."
+"predefinita il puntatore del mouse viene nascosto automaticamente dopo due "
+"secondi di inattività."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:67
 msgid ""
@@ -528,7 +526,6 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Fallita! La memory card di destinazione '%s' è in uso"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
@@ -538,7 +535,7 @@ msgstr ""
 "Per favore seleziona il percorso predefinito dei documenti utente di PCSX2 "
 "in questa sezione (sono incluse memory card, screenshot, impostazioni e "
 "salvataggi di stato). Questa impostazione potrà essere modificata "
-"successivamente utilizzando il pannello d'Impostazioni Core."
+"successivamente utilizzando il pannello Selettore Plugin/BIOS."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
 msgid ""
@@ -557,7 +554,7 @@ msgid ""
 "This folder is where PCSX2 records savestates; which are recorded either by "
 "using menus/toolbars, or by pressing F1/F3 (save/load)."
 msgstr ""
-"Questa è la cartella dove PCSX2 registra i salvataggi di stato, che possonoe "
+"Questa è la cartella dove PCSX2 registra i salvataggi di stato, che possono "
 "essere creati utilizzando i menu/barre degli strumenti, o premendo F1/F3 "
 "(carica/salva)."
 
@@ -757,9 +754,9 @@ msgid ""
 "Check HDLoader compatibility lists for known games that have issues with "
 "this. (Often marked as needing 'mode 1' or 'slow DVD'"
 msgstr ""
-"Controlla la lista compatibilità di HDLoader per sapere quali giochi creano "
+"Consulta la lista compatibilità di HDLoader per sapere quali giochi hanno "
 "problemi \n"
-"con questo SpeedHack. (spesso indicati con 'mode 1' o 'slow DVD' necessario)"
+"con questo SpeedHack (spesso indicati con 'mode 1' o 'slow DVD' necessario)."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
 msgid ""

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-06-16 11:54+0200\n"
+"POT-Creation-Date: 2013-12-15 13:24+0100\n"
 "PO-Revision-Date: 2012-10-28 12:37+0200\n"
 "Last-Translator: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -30,7 +30,7 @@ msgstr ""
 "Yetersiz sanal bellek miktarı veya gerekli sanal bellek diğer işlemler, "
 "hizmetler ya da DLL'ler tarafından ayrılmış."
 
-#: pcsx2/CDVD/CDVD.cpp:389
+#: pcsx2/CDVD/CDVD.cpp:396
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -52,7 +52,7 @@ msgstr ""
 "bırakılması nedeniyle düşük sanal bellek miktarı olan bilgisayarlarda veya "
 "başka bir programın hafızanın tamamı kullanması nedeniyle olur."
 
-#: pcsx2/System.cpp:344
+#: pcsx2/System.cpp:342
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -88,7 +88,7 @@ msgstr ""
 "hızını oldukça artırırlar. Sorun ortadan kalktıktan sonra yukarıda "
 "listelenen derleyicileri el ile yeniden etkinleştirmeniz gerekebilir."
 
-#: pcsx2/gui/AppMain.cpp:575
+#: pcsx2/gui/AppMain.cpp:583
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -98,7 +98,7 @@ msgstr ""
 "dolayı BIOS dosyasını *kendi* PS2 konsolunuzdan almalısınız. Daha fazla "
 "talimat için lütfen SSS ve kullanma kılavuzlarına danışın."
 
-#: pcsx2/gui/AppMain.cpp:655
+#: pcsx2/gui/AppMain.cpp:663
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -305,7 +305,7 @@ msgstr ""
 "\n"
 "(not: eklentilerin ayarları etkilenmez)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:79
+#: pcsx2/gui/MemoryCardFile.cpp:80
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
