@@ -1328,7 +1328,6 @@ msgid "Enable Cheats"
 msgstr "チート有効化"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "スピードハック有効化"
 

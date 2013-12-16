@@ -1370,7 +1370,6 @@ msgid "Enable Cheats"
 msgstr "Activer les codes de triche"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Activer les speedhacks"
 

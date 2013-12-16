@@ -1334,7 +1334,6 @@ msgid "Enable Cheats"
 msgstr "Aktifkan Cheats"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Aktifkan speedhacks"
 

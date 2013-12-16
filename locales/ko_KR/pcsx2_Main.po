@@ -1311,7 +1311,6 @@ msgid "Enable Cheats"
 msgstr "치트 사용"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "스피드핵 사용"
 

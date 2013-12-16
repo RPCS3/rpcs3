@@ -1346,7 +1346,6 @@ msgid "Enable Cheats"
 msgstr "Aktywuj Cheaty"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Aktywuj łatki przyspieszające"
 

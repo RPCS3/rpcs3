@@ -1319,7 +1319,6 @@ msgid "Enable Cheats"
 msgstr "تفغيل الغش "
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "تفعيل الـ Speedhacks ( هاكات السرعة )"
 

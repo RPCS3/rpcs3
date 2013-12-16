@@ -1277,7 +1277,6 @@ msgid "Enable Cheats"
 msgstr "启用作弊码"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "启用补丁"
 

@@ -1362,7 +1362,6 @@ msgid "Enable Cheats"
 msgstr "Включить читы"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Включить спидхаки"
 

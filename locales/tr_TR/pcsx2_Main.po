@@ -1333,7 +1333,6 @@ msgid "Enable Cheats"
 msgstr "Hileleri Etkinleştir"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Yamaları Etkinleştir"
 

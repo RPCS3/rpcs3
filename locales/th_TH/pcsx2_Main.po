@@ -1282,7 +1282,6 @@ msgid "Enable Cheats"
 msgstr "ใช้การโกงเกม"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "ใช้ speedhack"
 

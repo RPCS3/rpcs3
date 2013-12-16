@@ -1376,7 +1376,6 @@ msgid "Enable Cheats"
 msgstr "Activar trampas"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Activar arreglos para velocidad"
 

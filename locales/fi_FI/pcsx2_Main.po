@@ -1361,7 +1361,6 @@ msgid "Enable Cheats"
 msgstr "Ota huijaukset käyttöön"
 
 #: pcsx2/gui/MainFrame.cpp:427
-#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Ota käyttöön nopeusviritelmät"
 
