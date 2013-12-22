@@ -58,7 +58,6 @@ int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 	img->entry_point = entry;
 	img->segs_addr = 0x0;
 	img->nsegs = 0;
-	img->_img_offs = g_spu_offset;
 
 	return CELL_OK;
 }
@@ -96,7 +95,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EBUSY;
 	}
 
-	u32 ls_entry = img->entry_point - img->_img_offs;
+	u32 ls_entry = img->entry_point - g_spu_offset;
 	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
@@ -105,11 +104,10 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//copy SPU image:
-	g_spu_alloc_size = 256 * 1024;
-	g_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
-	memcpy(Memory + g_spu_offset, Memory + img->_img_offs, g_spu_alloc_size);
+	u32 spu_offset = Memory.MainMem.Alloc(256 * 1024);
+	memcpy(Memory + spu_offset, Memory + g_spu_offset, 256 * 1024);
 	//initialize from new place:
-	new_thread.SetOffset(g_spu_offset);
+	new_thread.SetOffset(spu_offset);
 	new_thread.SetEntry(ls_entry);
 	new_thread.SetName(name);
 	new_thread.SetArg(0, a1);

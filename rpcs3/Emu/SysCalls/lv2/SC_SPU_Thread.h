@@ -29,5 +29,4 @@ struct sys_spu_image
 	be_t<u32> entry_point;
 	be_t<u32> segs_addr;
 	be_t<int> nsegs;
-	u64 _img_offs;
 };
