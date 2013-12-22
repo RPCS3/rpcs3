@@ -82,8 +82,8 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);		*value = SPU.RunCntl.GetValue(); break;
 	case SPU_Status_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Status)", m_index);		*value = SPU.Status.GetValue(); break;
 	case SPU_NPC_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(SPU_NPC)", m_index);			*value = SPU.NPC.GetValue(); break;
-	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify1)", m_index);	*value = SPU.RdSigNotify1.GetValue(); break;
-	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify2)", m_index);	*value = SPU.RdSigNotify2.GetValue(); break;
+	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify1)", m_index);	*value = SPU.SNR[0].GetValue(); break;
+	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify2)", m_index);	*value = SPU.SNR[1].GetValue(); break;
 
 	default:
 		ConLog.Error("RawSPUThread[%d]: Read32(0x%x)", m_index, offset);
@@ -197,8 +197,8 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RunCntl, 0x%x)", m_index, value);			SPU.RunCntl.SetValue(value); break;
 	case SPU_Status_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Status, 0x%x)", m_index, value);			SPU.Status.SetValue(value); break;
 	case SPU_NPC_offs:				ConLog.Warning("RawSPUThread[%d]: Write32(SPU_NPC, 0x%x)", m_index, value);				SPU.NPC.SetValue(value); break;
-	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify1, 0x%x)", m_index, value);	SPU.RdSigNotify1.SetValue(value); break;
-	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify2, 0x%x)", m_index, value);	SPU.RdSigNotify2.SetValue(value); break;
+	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify1, 0x%x)", m_index, value);	SPU.SNR[0].SetValue(value); break;
+	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify2, 0x%x)", m_index, value);	SPU.SNR[1].SetValue(value); break;
 
 	default:
 		ConLog.Error("RawSPUThread[%d]: Write32(0x%x, 0x%x)", m_index, offset, value);

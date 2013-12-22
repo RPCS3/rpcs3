@@ -249,12 +249,30 @@ union SPU_SPR_hdr
 	}
 };
 
+union SPU_SNRConfig_hdr
+{
+	u64 value;
+
+	SPU_SNRConfig_hdr() {}
+
+	wxString ToString() const
+	{
+		return wxString::Format("%01x", value);
+	}
+
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+};
+
 class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
 	SPU_SPR_hdr SPR[128]; //Special-Purpose Registers
 	FPSCR FPSCR;
+	SPU_SNRConfig_hdr cfg; //Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
 	template<size_t _max_count>
 	class Channel
@@ -316,6 +334,18 @@ public:
 			_mm_lfence();
 			if(m_index >= max_count) 
 				m_value[max_count-1] = value; //last message is overwritten
+			else
+				m_value[m_index++] = value;
+			_mm_sfence();
+			m_lock = 0;
+		}
+
+		__forceinline void PushUncond_OR(u32 value)
+		{
+			while (_InterlockedExchange(&m_lock, 1));
+			_mm_lfence();
+			if(m_index >= max_count) 
+				m_value[max_count-1] |= value; //last message is logically ORed
 			else
 				m_value[m_index++] = value;
 			_mm_sfence();
@@ -385,8 +415,7 @@ public:
 		Channel<1> RunCntl;
 		Channel<1> Status;
 		Channel<1> NPC;
-		Channel<1> RdSigNotify1;
-		Channel<1> RdSigNotify2;
+		Channel<1> SNR[2];
 	} SPU;
 
 	u32 LSA;
@@ -404,31 +433,29 @@ public:
 		u32 cmd = MFCArgs.CMDStatus.GetValue();
 		u16 op = cmd & MFC_MASK_CMD;
 
+		u32 lsa = MFCArgs.LSA.GetValue();
+		u64 ea = (u64)MFCArgs.EAL.GetValue() | ((u64)MFCArgs.EAH.GetValue() << 32);
+		u32 size_tag = MFCArgs.Size_Tag.GetValue();
+		u16 tag = (u16)size_tag;
+		u16 size = size_tag >> 16;
+
 		switch(op & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
 		{
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			u32 lsa = MFCArgs.LSA.GetValue();
-			u64 ea = (u64)MFCArgs.EAL.GetValue() | ((u64)MFCArgs.EAH.GetValue() << 32);
-			u32 size_tag = MFCArgs.Size_Tag.GetValue();
-			u16 tag = (u16)size_tag;
-			u16 size = size_tag >> 16;
-
-			ConLog.Warning("DMA %s:", op & MFC_PUT_CMD ? "PUT" : "GET");
-			ConLog.Warning("*** lsa  = 0x%x", lsa);
-			ConLog.Warning("*** ea   = 0x%llx", ea);
-			ConLog.Warning("*** tag  = 0x%x", tag);
-			ConLog.Warning("*** size = 0x%x", size);
-			ConLog.Warning("*** cmd  = 0x%x", cmd);
-			ConLog.SkipLn();
-
+			ConLog.Warning("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+				op & MFC_PUT_CMD ? "PUT" : "GET",
+				op & MFC_BARRIER_MASK ? "B" : "", 
+				op & MFC_FENCE_MASK ? "F" : "", 
+				lsa, ea, tag, size, cmd);
 			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 		}
 		break;
 
 		default:
-			ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x)", op, cmd);
+			ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)", 
+				op, cmd, lsa, ea, tag, size);
 		break;
 		}
 	}
@@ -446,6 +473,15 @@ public:
 		case SPU_WrOutIntrMbox:
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
 
+		case MFC_RdTagStat:
+			return Prxy.TagStatus.GetCount();
+
+		case SPU_RdSigNotify1:
+			return SPU.SNR[0].GetCount();
+
+		case SPU_RdSigNotify2:
+			return SPU.SNR[1].GetCount();
+
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
@@ -458,30 +494,26 @@ public:
 	{
 		const u32 v = r._u32[3];
 
-		ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
-			while(!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped())
-			{
-				Sleep(1);
-			}
+			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped()) _mm_pause();
 		break;
 
 		case SPU_WrOutMbox:
-			while(!SPU.Out_MBox.Push(v) && !Emu.IsStopped())
-			{
-				Sleep(1);
-			}
+			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) _mm_pause();
 		break;
 
 		case MFC_WrTagMask:
+			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			Prxy.QueryMask.SetValue(v);
 		break;
 
 		case MFC_WrTagUpdate:
-			Prxy.TagStatus.SetValue(Prxy.QueryMask.GetValue());
+			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			Prxy.TagStatus.PushUncond(Prxy.QueryMask.GetValue());
 		break;
 
 		case MFC_LSA:
@@ -523,19 +555,30 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			if(!SPU.In_MBox.Pop(v)) v = 0;
+			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) _mm_pause();
+			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case MFC_RdTagStat:
-			v = Prxy.TagStatus.GetValue();
+			while (dmac.proxy_pos) dmac.DoCmd(); //probably incompatible with MFC lists
+			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) _mm_pause();
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+		break;
+
+		case SPU_RdSigNotify1:
+			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) _mm_pause();
+			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+		break;
+
+		case SPU_RdSigNotify2:
+			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) _mm_pause();
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
-
-		ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }

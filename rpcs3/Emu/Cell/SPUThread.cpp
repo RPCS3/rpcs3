@@ -43,6 +43,8 @@ void SPUThread::InitRegs()
 	GPR[5]._u64[1] = m_args[2];
 	GPR[6]._u64[1] = m_args[3];
 
+	cfg.Reset();
+
 	dmac.ls_offset = m_offset;
 	dmac.proxy_pos = 0;
 	dmac.queue_pos = 0;

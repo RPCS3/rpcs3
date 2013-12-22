@@ -35,24 +35,24 @@ private:
 		if(code & 0x2000)
 		{
 			CPU.SetExitStatus(code & 0xfff);
-			CPU.Stop();
 		}
 		else
 		{
 			ConLog.Warning("STOP: 0x%x", code);
-			Emu.Pause();
+			//Emu.Pause();
 		}
+		CPU.Stop();
 	}
 	void LNOP()
 	{
 	}
 	void SYNC(u32 Cbit)
 	{
-		//UNIMPLEMENTED();
+		_mm_mfence();
 	}
 	void DSYNC()
 	{
-		//UNIMPLEMENTED();
+		_mm_mfence();
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
