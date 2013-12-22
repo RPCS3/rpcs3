@@ -721,6 +721,16 @@ Name   = Syphon Filter - The Omega Strain
 Region = NTSC-U
 Compat = 5
 EETimingHack = 1		//random hangs
+[patches = D5605611]
+	comment=COP2 patch by Refraction
+	patch=0,EE,001CD0A8,word,48428800
+	patch=0,EE,001CD0AC,word,4A24514B
+	patch=0,EE,001CD0B4,word,4B8503BD
+	
+	patch=0,EE,003735F8,word,48438000
+	patch=0,EE,003735FC,word,4B06521B	
+[/patches]
+
 ---------------------------------------------
 Serial = SCUS-97265
 Name   = Jak II
