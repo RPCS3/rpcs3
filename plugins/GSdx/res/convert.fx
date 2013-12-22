@@ -115,6 +115,17 @@ float4 ps_crt(PS_INPUT input, int i)
 	return sample_c(input.t) * saturate(mask[i] + 0.5f);
 }
 
+float4 ps_scanlines(PS_INPUT input, int i)
+{
+	float4 mask[2] =
+	{
+		float4(1, 1, 1, 0),
+		float4(0, 0, 0, 0)
+	};
+
+	return sample_c(input.t) * saturate(mask[i] + 0.5f);
+}
+
 #if SHADER_MODEL >= 0x400
 
 uint ps_main1(PS_INPUT input) : SV_Target0
@@ -171,13 +182,14 @@ PS_OUTPUT ps_main5(PS_INPUT input) // triangular
 	return output;
 }
 
-PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal (repurposed for scanlines for now)
 {
 	PS_OUTPUT output;
-	
+
 	uint4 p = (uint4)input.p;
 
-	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
+	output.c = ps_scanlines(input, p.y % 2); // scanlines
+	//output.c = ps_crt(input, (p.x + (p.y % 3)) % 3); // diagonal
 
 	return output;
 }
@@ -240,14 +252,15 @@ PS_OUTPUT ps_main5(PS_INPUT input) // triangular
 	return output;
 }
 
-PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal (repurposed for scanlines for now)
 {
 	PS_OUTPUT output;
-	
+
 	int4 p = (int4)input.p;
 
-	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
-	
+	output.c = ps_scanlines(input, p.y % 2); // scanlines
+	//output.c = ps_crt(input, (p.x + (p.y % 3)) % 3); // diagonal
+
 	return output;
 }
 
