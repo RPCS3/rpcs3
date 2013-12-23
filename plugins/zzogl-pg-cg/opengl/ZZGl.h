@@ -47,6 +47,16 @@ inline void* wglGetProcAddress(const char* x)
 
 #endif
 
+// FIX compilation issue with Mesa 10
+// Note it might be possible to do better with the right include 
+// in the rigth order but I don't have time
+#ifndef APIENTRY
+#define APIENTRY
+#endif
+#ifndef APIENTRYP
+#define APIENTRYP APIENTRY *
+#endif
+
 extern u32 s_stencilfunc, s_stencilref, s_stencilmask;
 // Defines
 
