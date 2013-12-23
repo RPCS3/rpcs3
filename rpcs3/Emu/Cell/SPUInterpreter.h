@@ -191,18 +191,8 @@ private:
 	{
 		const u32 s = i7 & 0x3f;
 
-		for(u32 j = 0; j < 4; ++j)
-		{
-			const u32 t = CPU.GPR[ra]._u32[j];
-			u32 r = 0;
-
-			for(u32 b = 0; b + s < 32; ++b)
-			{
-				r |= t & (1 << (b + s));
-			}
-
-			CPU.GPR[rt]._u32[j] = r;
-		}
+		for (u32 j = 0; j < 4; ++j)
+			CPU.GPR[rt]._u32[j] = CPU.GPR[ra]._u32[j] << s;
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
@@ -1412,7 +1402,7 @@ private:
 			}
 		}
 	}
-	void MPYA(u32 rc, u32 ra, u32 rb, u32 rt)
+	void MPYA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2] * CPU.GPR[rb]._i16[w*2] + CPU.GPR[rc]._i32[w];
@@ -1424,14 +1414,14 @@ private:
 		CPU.GPR[rt]._f[2] = CPU.GPR[rc]._f[2] - CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2];
 		CPU.GPR[rt]._f[3] = CPU.GPR[rc]._f[3] - CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3];
 	}
-	void FMA(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FMA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0] + CPU.GPR[rc]._f[0];
 		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1] + CPU.GPR[rc]._f[1];
 		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2] + CPU.GPR[rc]._f[2];
 		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3] + CPU.GPR[rc]._f[3];
 	}
-	void FMS(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0] - CPU.GPR[rc]._f[0];
 		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1] - CPU.GPR[rc]._f[1];
