@@ -1291,7 +1291,7 @@ private:
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-			DisAsm_R3_OE_RC("subf", rd, ra, rb, oe, rc);
+		DisAsm_R3_OE_RC("subf", rd, ra, rb, oe, rc);
 	}
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -1300,6 +1300,10 @@ private:
 	void DCBST(u32 ra, u32 rb)
 	{
 		DisAsm_R2("dcbst", ra, rb);
+	}
+	void LWZUX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("lwzux", rd, ra, rb);
 	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
 	{
@@ -1482,6 +1486,10 @@ private:
 		default: DisAsm_R1_IMM("mfspr", rd, spr); break;
 		}
 	}
+	void LWAX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("lwax", rd, ra, rb);
+	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
 		if(t)
@@ -1510,6 +1518,10 @@ private:
 		case 269: DisAsm_R1("mftbu", rd); break;
 		default: DisAsm_R1_IMM("mftb", rd, spr); break;
 		}
+	}
+	void LWAUX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("lwaux", rd, ra, rb);
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -1630,9 +1642,13 @@ private:
 	{
 		DisAsm_F1_R2("lfdux", frd, ra, rb);
 	}
-	void STVLX(u32 sd, u32 ra, u32 rb)
+	void STVLX(u32 vs, u32 ra, u32 rb)
 	{
-		DisAsm_V1_R2("stvlx", sd, ra, rb);
+		DisAsm_V1_R2("stvlx", vs, ra, rb);
+	}
+	void STWBRX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("stwbrx", rs, ra, rb);
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -1693,9 +1709,13 @@ private:
 	{
 		Write("eieio");
 	}
-	void STVLXL(u32 sd, u32 ra, u32 rb)
+	void STVLXL(u32 vs, u32 ra, u32 rb)
 	{
-		DisAsm_V1_R2("stvlxl", sd, ra, rb);
+		DisAsm_V1_R2("stvlxl", vs, ra, rb);
+	}
+	void STHBRX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("sthbrx", rs, ra, rb);
 	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
@@ -1762,6 +1782,14 @@ private:
 	{
 		DisAsm_R2_IMM("lhzu", rs, ra, d);
 	}
+	void LHA(u32 rs, u32 ra, s32 d)
+	{
+		DisAsm_R2_IMM("lha", rs, ra, d);
+	}
+	void LHAU(u32 rs, u32 ra, s32 d)
+	{
+		DisAsm_R2_IMM("lhau", rs, ra, d);
+	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		DisAsm_R2_IMM("sth", rs, ra, d);
@@ -1817,6 +1845,10 @@ private:
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		DisAsm_R2_IMM("ldu", rd, ra, ds);
+	}
+	void LWA(u32 rd, u32 ra, s32 ds)
+	{
+		DisAsm_R2_IMM("lwa", rd, ra, ds);
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{

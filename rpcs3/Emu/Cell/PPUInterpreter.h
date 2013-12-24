@@ -2452,6 +2452,12 @@ private:
 	{
 		//UNK("dcbst", false);
 	}
+	void LWZUX(u32 rd, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		CPU.GPR[rd] = Memory.Read32(addr);
+		CPU.GPR[ra] = addr;
+	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
 	{
 		u32 i;
@@ -2773,6 +2779,10 @@ private:
 	{
 		CPU.GPR[rd] = GetRegBySPR(spr);
 	}
+	void LWAX(u32 rd, u32 ra, u32 rb)
+	{
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
 	}
@@ -2794,6 +2804,12 @@ private:
 		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
 		default: UNK(wxString::Format("mftb r%d, %d", rd, spr)); break;
 		}
+	}
+	void LWAUX(u32 rd, u32 ra, u32 rb)
+	{
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(addr);
+		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -2981,6 +2997,10 @@ private:
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
 	}
+	void STWBRX(u32 rs, u32 ra, u32 rb)
+	{
+		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
 		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.FPR[frs].To32());
@@ -3065,6 +3085,10 @@ private:
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
 	}
+	void STHBRX(u32 rs, u32 ra, u32 rb)
+	{
+		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s16)CPU.GPR[rs];
@@ -3146,6 +3170,16 @@ private:
 		CPU.GPR[rd] = Memory.Read16(addr);
 		CPU.GPR[ra] = addr;
 	}
+	void LHA(u32 rd, u32 ra, s32 d)
+	{
+		CPU.GPR[rd] = (s64)(s16)Memory.Read16(ra ? CPU.GPR[ra] + d : d);
+	}
+	void LHAU(u32 rd, u32 ra, s32 d)
+	{
+		const u64 addr = CPU.GPR[ra] + d;
+		CPU.GPR[rd] = (s64)(s16)Memory.Read16(addr);
+		CPU.GPR[ra] = addr;
+	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		Memory.Write16(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
@@ -3224,6 +3258,10 @@ private:
 		const u64 addr = CPU.GPR[ra] + ds;
 		CPU.GPR[rd] = Memory.Read64(addr);
 		CPU.GPR[ra] = addr;
+	}
+	void LWA(u32 rd, u32 ra, s32 ds)
+	{
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + ds : ds);
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{

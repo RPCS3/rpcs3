@@ -276,6 +276,7 @@ namespace PPU_opcodes
 		SUBF 	= 0x028,
 		LDUX 	= 0x035, //Load Doubleword with Update Indexed
 		DCBST 	= 0x036,
+		LWZUX	= 0x037,
 		CNTLZD 	= 0x03a,
 		ANDC 	= 0x03c,
 		LVEWX 	= 0x047, //Load Vector Element Word Indexed
@@ -317,10 +318,12 @@ namespace PPU_opcodes
 		LHZUX 	= 0x137,
 		XOR 	= 0x13c,
 		MFSPR 	= 0x153,
+		LWAX 	= 0x155,
 		DST		= 0x156, //Data Stream Touch
 		LHAX 	= 0x157,
 		LVXL 	= 0x167, //Load Vector Indexed Last
 		MFTB 	= 0x173,
+		LWAUX 	= 0x175,
 		DSTST	= 0x176, //Data Stream Touch for Store
 		LHAUX 	= 0x177,
 		STHX	= 0x197, //Store Halfword Indexed
@@ -347,6 +350,7 @@ namespace PPU_opcodes
 		LFDX 	= 0x257,
 		LFDUX	= 0x277,
 		STVLX	= 0x287, //Store Vector Left Indexed
+		STWBRX 	= 0x296,
 		STFSX 	= 0x297,
 		STVRX	= 0x2a7, //Store Vector Right Indexed
 		STFDX	= 0x2d7, //Store Floating-Point Double Indexed
@@ -361,6 +365,7 @@ namespace PPU_opcodes
 		SRADI2 	= 0x33b, //sh_5 != 0
 		EIEIO	= 0x356,
 		STVLXL	= 0x387, //Store Vector Left Indexed Last
+		STHBRX 	= 0x396,
 		EXTSH 	= 0x39a,
 		STVRXL	= 0x3a7, //Store Vector Right Indexed Last
 		EXTSB 	= 0x3ba,
@@ -374,6 +379,7 @@ namespace PPU_opcodes
 	{
 		LD 	= 0x0,
 		LDU	= 0x1,
+		LWA = 0x2,
 	};
 
 	enum G_3bOpcodes //Field 26 - 30
@@ -660,6 +666,7 @@ public:
 	virtual void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void LDUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void DCBST(u32 ra, u32 rb) = 0;
+	virtual void LWZUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void CNTLZD(u32 ra, u32 rs, bool rc) = 0;
 	virtual void ANDC(u32 ra, u32 rs, u32 rb, bool rc) = 0;
 	virtual void LVEWX(u32 vd, u32 ra, u32 rb) = 0;
@@ -700,10 +707,12 @@ public:
 	virtual void LHZUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void XOR(u32 rs, u32 ra, u32 rb, bool rc) = 0;
 	virtual void MFSPR(u32 rd, u32 spr) = 0;
+	virtual void LWAX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void DST(u32 ra, u32 rb, u32 strm, u32 t) = 0;
 	virtual void LHAX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LVXL(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void MFTB(u32 rd, u32 spr) = 0;
+	virtual void LWAUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void DSTST(u32 ra, u32 rb, u32 strm, u32 t) = 0;
 	virtual void LHAUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void STHX(u32 rs, u32 ra, u32 rb) = 0;
@@ -730,6 +739,7 @@ public:
 	virtual void LFDX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void LFDUX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void STVLX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STVRX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void STFDX(u32 frs, u32 ra, u32 rb) = 0;
@@ -744,6 +754,7 @@ public:
 	virtual void SRADI2(u32 ra, u32 rs, u32 sh, bool rc) = 0;
 	virtual void EIEIO() = 0;
 	virtual void STVLXL(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STHBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void EXTSH(u32 ra, u32 rs, bool rc) = 0;
 	virtual void STVRXL(u32 sd, u32 ra, u32 rb) = 0;
 	virtual void EXTSB(u32 ra, u32 rs, bool rc) = 0;
@@ -761,6 +772,8 @@ public:
 	virtual void STBU(u32 rs, u32 ra, s32 d) = 0;
 	virtual void LHZ(u32 rd, u32 ra, s32 d) = 0;
 	virtual void LHZU(u32 rd, u32 ra, s32 d) = 0;
+	virtual void LHA(u32 rs, u32 ra, s32 d) = 0;
+	virtual void LHAU(u32 rs, u32 ra, s32 d) = 0;
 	virtual void STH(u32 rs, u32 ra, s32 d) = 0;
 	virtual void STHU(u32 rs, u32 ra, s32 d) = 0;
 	virtual void LMW(u32 rd, u32 ra, s32 d) = 0;
@@ -775,6 +788,7 @@ public:
 	virtual void STFDU(u32 frs, u32 ra, s32 d) = 0;
 	virtual void LD(u32 rd, u32 ra, s32 ds) = 0;
 	virtual void LDU(u32 rd, u32 ra, s32 ds) = 0;
+	virtual void LWA(u32 rd, u32 ra, s32 ds) = 0;
 	virtual void FDIVS(u32 frd, u32 fra, u32 frb, bool rc) = 0;
 	virtual void FSUBS(u32 frd, u32 fra, u32 frb, bool rc) = 0;
 	virtual void FADDS(u32 frd, u32 fra, u32 frb, bool rc) = 0;
