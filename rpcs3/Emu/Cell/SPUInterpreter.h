@@ -7,12 +7,12 @@
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
-typedef union _CRT_ALIGN(16) __u32x4 {
-	unsigned __int32 _u32[4];
+/* typedef union _CRT_ALIGN(16) __u32x4 {
+	u32 _u32[4];
 	__m128i m128i;
 	__m128 m128;
 	__m128d m128d;
- } __u32x4;
+ } __u32x4; */
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -378,17 +378,16 @@ private:
 	}
 	void FREST(u32 rt, u32 ra)
 	{
-		//(SSE) RCPPS - Compute Reciprocals of Packed Single-Precision Floating-Point Values
-		//rt = approximate(1/ra)
-		CPU.GPR[rt]._m128 = _mm_rcp_ps(CPU.GPR[ra]._m128);
+		//CPU.GPR[rt]._m128 = _mm_rcp_ps(CPU.GPR[ra]._m128);
+		for (int i = 0; i < 4; i++)
+			CPU.GPR[rt]._f[i] = 1 / CPU.GPR[ra]._f[i];
 	}
 	void FRSQEST(u32 rt, u32 ra)
 	{
-		//(SSE) RSQRTPS - Compute Reciprocals of Square Roots of Packed Single-Precision Floating-Point Values
-		//rt = approximate(1/sqrt(abs(ra)))
-		//abs(ra) === ra & FloatAbsMask
-		const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
+		//const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+		//CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
+		for (int i = 0; i < 4; i++)
+			CPU.GPR[rt]._f[i] = 1 / sqrt(abs(CPU.GPR[ra]._f[i]));
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -999,9 +998,10 @@ private:
 				exp = 255;
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
+
+			CPU.GPR[rt]._u32[i] = (u32)CPU.GPR[rt]._f[i]; //trunc
 		}
-		//(SSE2) CVTTPS2DQ - Convert with Truncation Packed Single FP to Packed Dword Int
-		CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
+		//CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
@@ -1028,11 +1028,12 @@ private:
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		//(SSE2) CVTDQ2PS - Convert Packed Dword Integers to Packed Single-Precision FP Values
-		CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
+		//CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
 		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
+			CPU.GPR[rt]._f[i] = (s32)CPU.GPR[ra]._i32[i];
+
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
 			if (exp > 255) //< 0
