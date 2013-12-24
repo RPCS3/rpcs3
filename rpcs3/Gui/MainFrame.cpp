@@ -218,7 +218,6 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
-	//TODO: progress bar
 	bool stopped = false;
 
 	if(Emu.IsRunning())
@@ -227,7 +226,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 		stopped = true;
 	}
 
-	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "*.pkg",
+	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -241,7 +240,11 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 
 	wxString fileName = ctrl.GetPath();
-	pkg_unpack((const char *)fileName.mb_str());
+
+	{
+		wxProgressDialog pdlg("Please wait", "Installing PKG...", 0, this, wxPD_APP_MODAL);
+		pkg_unpack((const char *)fileName.mb_str());
+	}
 
 	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
 		ConLog.Warning("Could not delete the decoded DEC file");
@@ -290,7 +293,13 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		stopped = true;
 	}
 
-	wxFileDialog ctrl(this, L"Select (S)ELF", wxEmptyString, wxEmptyString, "*.*",
+	wxFileDialog ctrl(this, L"Select (S)ELF", wxEmptyString, wxEmptyString,
+		"(S)ELF files (*BOOT.BIN;*.elf;*.self)|*BOOT.BIN;*.elf;*.self"
+		"|ELF files (BOOT.BIN;*.elf)|BOOT.BIN;*.elf"
+		"|SELF files (EBOOT.BIN;*.self)|EBOOT.BIN;*.self"
+		"|BOOT files (*BOOT.BIN)|*BOOT.BIN"
+		"|BIN files (*.bin)|*.bin"
+		"|All files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)

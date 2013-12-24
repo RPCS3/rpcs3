@@ -6,7 +6,7 @@ extern Module sys_fs;
 
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const wxString& path = wxString(Memory.ReadString(path_addr), wxConvUTF8);
 	sys_fs.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
 		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
