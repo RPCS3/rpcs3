@@ -1399,6 +1399,10 @@ private:
 	{
 		DisAsm_R3("stdux", rs, ra, rb);
 	}
+	void STWUX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("stwux", rs, ra, rb);
+	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("stvewx", vs, ra, rb);
@@ -1434,6 +1438,10 @@ private:
 	void DCBTST(u32 th, u32 ra, u32 rb)
 	{
 		DisAsm_R3("dcbtst", th, ra, rb);
+	}
+	void STBUX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("stbux", rs, ra, rb);
 	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -1529,6 +1537,10 @@ private:
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
 		DisAsm_R3("ecowx", rs, ra, rb);
+	}
+	void STHUX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("sthux", rs, ra, rb);
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
 	{

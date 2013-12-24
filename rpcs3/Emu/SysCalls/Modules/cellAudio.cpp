@@ -8,74 +8,74 @@ Module cellAudio(0x0011, cellAudio_init);
 enum
 {
 	//libaudio Error Codes
-	CELL_AUDIO_ERROR_ALREADY_INIT				= 0x80310701,  
-	CELL_AUDIO_ERROR_AUDIOSYSTEM				= 0x80310702, 
-	CELL_AUDIO_ERROR_NOT_INIT					= 0x80310703, 
-	CELL_AUDIO_ERROR_PARAM						= 0x80310704, 
-	CELL_AUDIO_ERROR_PORT_FULL					= 0x80310705,   
-	CELL_AUDIO_ERROR_PORT_ALREADY_RUN			= 0x80310706, 
-	CELL_AUDIO_ERROR_PORT_NOT_OPEN				= 0x80310707,  
-	CELL_AUDIO_ERROR_PORT_NOT_RUN				= 0x80310708,   
-	CELL_AUDIO_ERROR_TRANS_EVENT				= 0x80310709, 
-	CELL_AUDIO_ERROR_PORT_OPEN					= 0x8031070a,  
-	CELL_AUDIO_ERROR_SHAREDMEMORY				= 0x8031070b, 
-	CELL_AUDIO_ERROR_MUTEX						= 0x8031070c, 
-	CELL_AUDIO_ERROR_EVENT_QUEUE				= 0x8031070d,  
-	CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND      = 0x8031070e,
+	CELL_AUDIO_ERROR_ALREADY_INIT				= 0x80310701,
+	CELL_AUDIO_ERROR_AUDIOSYSTEM				= 0x80310702,
+	CELL_AUDIO_ERROR_NOT_INIT					= 0x80310703,
+	CELL_AUDIO_ERROR_PARAM						= 0x80310704,
+	CELL_AUDIO_ERROR_PORT_FULL					= 0x80310705,
+	CELL_AUDIO_ERROR_PORT_ALREADY_RUN			= 0x80310706,
+	CELL_AUDIO_ERROR_PORT_NOT_OPEN				= 0x80310707,
+	CELL_AUDIO_ERROR_PORT_NOT_RUN				= 0x80310708,
+	CELL_AUDIO_ERROR_TRANS_EVENT				= 0x80310709,
+	CELL_AUDIO_ERROR_PORT_OPEN					= 0x8031070a,
+	CELL_AUDIO_ERROR_SHAREDMEMORY				= 0x8031070b,
+	CELL_AUDIO_ERROR_MUTEX						= 0x8031070c,
+	CELL_AUDIO_ERROR_EVENT_QUEUE				= 0x8031070d,
+	CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND		= 0x8031070e,
 	CELL_AUDIO_ERROR_TAG_NOT_FOUND				= 0x8031070f,
 
 	//libmixer Error Codes
-	CELL_LIBMIXER_ERROR_NOT_INITIALIZED         = 0x80310002,
-	CELL_LIBMIXER_ERROR_INVALID_PARAMATER       = 0x80310003,
+	CELL_LIBMIXER_ERROR_NOT_INITIALIZED			= 0x80310002,
+	CELL_LIBMIXER_ERROR_INVALID_PARAMATER		= 0x80310003,
 	CELL_LIBMIXER_ERROR_NO_MEMORY				= 0x80310005,
-	CELL_LIBMIXER_ERROR_ALREADY_EXIST		    = 0x80310006, 
+	CELL_LIBMIXER_ERROR_ALREADY_EXIST			= 0x80310006,
 	CELL_LIBMIXER_ERROR_FULL					= 0x80310007,
-	CELL_LIBMIXER_ERROR_NOT_EXIST				= 0x80310008, 
-	CELL_LIBMIXER_ERROR_TYPE_MISMATCH			= 0x80310009, 
-	CELL_LIBMIXER_ERROR_NOT_FOUND				= 0x8031000a, 
+	CELL_LIBMIXER_ERROR_NOT_EXIST				= 0x80310008,
+	CELL_LIBMIXER_ERROR_TYPE_MISMATCH			= 0x80310009,
+	CELL_LIBMIXER_ERROR_NOT_FOUND				= 0x8031000a,
 
 	//libsnd3 Error Codes
-	CELL_SND3_ERROR_PARAM					    = 0x80310301,
-	CELL_SND3_ERROR_CREATE_MUTEX				= 0x80310302, 
-	CELL_SND3_ERROR_SYNTH					    = 0x80310303, 
-	CELL_SND3_ERROR_ALREADY					    = 0x80310304, 
+	CELL_SND3_ERROR_PARAM						= 0x80310301,
+	CELL_SND3_ERROR_CREATE_MUTEX				= 0x80310302,
+	CELL_SND3_ERROR_SYNTH						= 0x80310303,
+	CELL_SND3_ERROR_ALREADY						= 0x80310304,
 	CELL_SND3_ERROR_NOTINIT						= 0x80310305,
-	CELL_SND3_ERROR_SMFFULL					    = 0x80310306, 
-	CELL_SND3_ERROR_HD3ID					    = 0x80310307,
-	CELL_SND3_ERROR_SMF						    = 0x80310308,
-	CELL_SND3_ERROR_SMFCTX					    = 0x80310309, 
-	CELL_SND3_ERROR_FORMAT					    = 0x8031030a,
-	CELL_SND3_ERROR_SMFID						= 0x8031030b, 
+	CELL_SND3_ERROR_SMFFULL						= 0x80310306,
+	CELL_SND3_ERROR_HD3ID						= 0x80310307,
+	CELL_SND3_ERROR_SMF							= 0x80310308,
+	CELL_SND3_ERROR_SMFCTX						= 0x80310309,
+	CELL_SND3_ERROR_FORMAT						= 0x8031030a,
+	CELL_SND3_ERROR_SMFID						= 0x8031030b,
 	CELL_SND3_ERROR_SOUNDDATAFULL				= 0x8031030c,
-	CELL_SND3_ERROR_VOICENUM					= 0x8031030d, 
-	CELL_SND3_ERROR_RESERVEDVOICE				= 0x8031030e, 
-	CELL_SND3_ERROR_REQUESTQUEFULL			    = 0x8031030f, 
-	CELL_SND3_ERROR_OUTPUTMODE				    = 0x80310310,
+	CELL_SND3_ERROR_VOICENUM					= 0x8031030d,
+	CELL_SND3_ERROR_RESERVEDVOICE				= 0x8031030e,
+	CELL_SND3_ERROR_REQUESTQUEFULL				= 0x8031030f,
+	CELL_SND3_ERROR_OUTPUTMODE					= 0x80310310,
 
 	//libsynt2 Error Codes
-	CELL_SOUND_SYNTH2_ERROR_FATAL			    = 0x80310201,
-	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER   = 0x80310202, 
-	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED = 0x80310203, 
+	CELL_SOUND_SYNTH2_ERROR_FATAL				= 0x80310201,
+	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER	= 0x80310202,
+	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED	= 0x80310203,
 };
 
 
 //libaudio datatypes
 struct CellAudioPortParam
 { 
-	u64 nChannel; 
-	u64 nBlock; 
-	u64 attr; 
-	float level; 
+	be_t<u64> nChannel;
+	be_t<u64> nBlock;
+	be_t<u64> attr;
+	be_t<float> level;
 }; 
 
 struct CellAudioPortConfig
 { 
-	u32 readIndexAddr; 
-	u32 status; 
-	u64 nChannel; 
-	u64 nBlock; 
-	u32 portSize; 
-	u32 portAddr; 
+	be_t<u32> readIndexAddr;
+	be_t<u32> status;
+	be_t<u64> nChannel;
+	be_t<u64> nBlock;
+	be_t<u32> portSize;
+	be_t<u32> portAddr;
 };
 
 CellAudioPortParam current_AudioPortParam;
@@ -84,57 +84,57 @@ CellAudioPortConfig current_AudioPortConfig;
 //libmixer datatypes
 typedef void * CellAANHandle;
 
-struct CellSSPlayerConfig 
+struct CellSSPlayerConfig
 {
-	u32 channels; 
-	u32 outputMode; 
+	u32 channels;
+	u32 outputMode;
 }; 
 
 struct CellSSPlayerWaveParam 
 { 
 	void *addr;
-	int format; 
-	u32 samples; 
-	u32 loopStartOffset; 
-	u32 startOffset; 
+	int format;
+	u32 samples;
+	u32 loopStartOffset;
+	u32 startOffset;
 };
 
 struct CellSSPlayerCommonParam 
 { 
-	u32 loopMode; 
-	u32 attackMode; 
+	u32 loopMode;
+	u32 attackMode;
 };
 
 struct CellSurMixerPosition 
 { 
-	float x; 
-	float y; 
+	float x;
+	float y;
 	float z;
 };
 
 struct CellSSPlayerRuntimeInfo 
 { 
-	float level; 
-	float speed; 
+	float level;
+	float speed;
 	CellSurMixerPosition position;
 };
 
 struct CellSurMixerConfig 
 { 
-	s32 priority; 
-	u32 chStrips1; 
-	u32 chStrips2; 
-	u32 chStrips6; 
-	u32 chStrips8; 
+	s32 priority;
+	u32 chStrips1;
+	u32 chStrips2;
+	u32 chStrips6;
+	u32 chStrips8;
 };
 
 struct CellSurMixerChStripParam 
 { 
-	u32 param; 
-	void *attribute; 
-	int dBSwitch; 
-	float floatVal; 
-	int intVal; 
+	u32 param;
+	void *attribute;
+	int dBSwitch;
+	float floatVal;
+	int intVal;
 };
 
 CellSSPlayerWaveParam current_SSPlayerWaveParam;
@@ -152,10 +152,10 @@ struct CellSnd3SmfCtx
 
 struct CellSnd3KeyOnParam
 { 
-	u8 vel; 
-	u8 pan; 
-	u8 panEx; 
-	s32 addPitch; 
+	u8 vel;
+	u8 pan;
+	u8 panEx;
+	s32 addPitch;
 };
 
 struct CellSnd3VoiceBitCtx
@@ -165,21 +165,21 @@ struct CellSnd3VoiceBitCtx
 
 struct CellSnd3RequestQueueCtx
 { 
-	void *frontQueue; 
-	u32 frontQueueSize; 
-	void *rearQueue; 
-	u32 rearQueueSize; 
+	void *frontQueue;
+	u32 frontQueueSize;
+	void *rearQueue;
+	u32 rearQueueSize;
 };
 
 //libsynt2 datatypes
-struct  CellSoundSynth2EffectAttr
+struct CellSoundSynth2EffectAttr
 { 
-	u16 core; 
-	u16 mode; 
-	s16 depth_L; 
-	s16 depth_R; 
-	u16 delay; 
-	u16 feedback; 
+	u16 core;
+	u16 mode;
+	s16 depth_L;
+	s16 depth_R;
+	u16 delay;
+	u16 feedback;
 };
 
 // libaudio Functions
@@ -205,7 +205,7 @@ int cellAudioQuit()
 bool g_is_audio_port_open = false;
 bool g_is_audio_port_start = false;
 
-int cellAudioPortOpen() //CellAudioPortParam *audioParam, u32 *portNum
+int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
 	if(g_is_audio_port_open) return CELL_AUDIO_ERROR_PORT_OPEN;
@@ -243,9 +243,18 @@ int cellAudioGetPortTimestamp() //u32 portNum, u64 tag, u64 *stamp
 	return CELL_OK;
 }
 
-int cellAudioGetPortConfig() //u32 portNum, CellAudioPortConfig *portConfig
+int cellAudioGetPortConfig(mem32_t portNum, mem_ptr_t<CellAudioPortConfig> portConfig)
 {
 	UNIMPLEMENTED_FUNC(cellAudio);
+	//TODO
+	portConfig->nBlock = 8;
+	portConfig->nChannel = 2;
+	portConfig->portSize = 256 * portConfig->nBlock * portConfig->nChannel;
+	portConfig->portAddr = Memory.Alloc(portConfig->portSize, 4); //WARNING: Memory leak.
+	portConfig->readIndexAddr = Memory.Alloc(8, 4); //WARNING: Memory leak.
+	portConfig->status = 2;
+	Memory.Write64(portConfig->readIndexAddr, 1);
+
 	return CELL_OK;
 }
 

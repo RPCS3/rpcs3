@@ -125,6 +125,8 @@ int cellPngDecDestroy(u32 mainHandle)
 
 int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo)
 {
+	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x,subHandle=0x%x,src_addr=0x%x,openInfo=0x%x)", mainHandle, subHandle.GetAddr(), src_addr, openInfo);
+
 	CellPngDecSrc* src;
 
 	src = (CellPngDecSrc*)Memory.GetMemFromAddr(src_addr);
@@ -134,12 +136,13 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo
 	current_subHandle->fd = NULL;
 	current_subHandle->src = *src;
 
-	switch(src->srcSelect.ToLE())
+	switch(src->srcSelect.ToBE())
 	{
-	case CELL_PNGDEC_BUFFER:
+	case const_se_t<u32, CELL_PNGDEC_BUFFER>::value:
 		current_subHandle->fileSize = src->streamSize.ToLE();
 		break;
-	case CELL_PNGDEC_FILE:
+
+	case const_se_t<u32, CELL_PNGDEC_FILE>::value:
 		// Get file descriptor
 		MemoryAllocator<be_t<u32>> fd;
 		int ret = cellFsOpen(src->fileName, 0, fd, NULL, 0);
@@ -162,6 +165,8 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo
 
 int cellPngDecClose(u32 mainHandle, u32 subHandle)
 {
+	cellPngDec.Warning("cellPngDecClose(mainHandle=0x%x,subHandle=0x%x)", mainHandle, subHandle);
+
 	ID sub_handle_id_data;
 	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
 		return CELL_PNGDEC_ERROR_FATAL;
@@ -176,7 +181,7 @@ int cellPngDecClose(u32 mainHandle, u32 subHandle)
 
 int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo> info)
 {
-	cellPngDec.Log("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	cellPngDec.Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
 	ID sub_handle_id_data;
 	if(!cellPngDec.CheckId(subHandle, sub_handle_id_data))
 		return CELL_PNGDEC_ERROR_FATAL;

@@ -201,7 +201,8 @@ void Emulator::Load()
 			elf_path += "\\" + wxFileName(m_path).GetName() + ".elf";
 		}
 
-		DecryptSelf(elf_path, self_path);
+		if(!DecryptSelf(elf_path, self_path))
+			return;
 
 		m_path = elf_path;
 	}
@@ -312,7 +313,7 @@ void Emulator::Load()
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.Alloc(0x1000);
 		thread.InitStack();
-		thread.AddArgv(m_path);
+		thread.AddArgv(m_elf_path);
 		//thread.AddArgv("-emu");
 
 		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;

@@ -476,7 +476,7 @@ int cellSysutilUnregisterCallback(int slot)
 	return CELL_OK;
 }
 
-int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, char* msgString, u32 callback_addr, u32 userData, u32 extParam)
 {
 	long style = 0;
 
@@ -498,7 +498,7 @@ int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 user
 		style |= wxOK;
 	}
 
-	int res = wxMessageBox(Memory.ReadString(msgString_addr), wxGetApp().GetAppName(), style);
+	int res = wxMessageBox(wxString(msgString, wxConvUTF8), wxGetApp().GetAppName(), style);
 
 	u64 status;
 

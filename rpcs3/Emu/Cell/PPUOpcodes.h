@@ -256,7 +256,7 @@ namespace PPU_opcodes
 	{
 		CMP 	= 0x000,
 		TW 		= 0x004,
-		LVSL		= 0x006, //Load Vector for Shift Left
+		LVSL	= 0x006, //Load Vector for Shift Left
 		LVEBX 	= 0x007, //Load Vector Element Byte Indexed
 		SUBFC 	= 0x008, //Subtract from Carrying
 		MULHDU 	= 0x009,
@@ -297,6 +297,7 @@ namespace PPU_opcodes
 		STWX 	= 0x097,
 		STVEHX	= 0x0a7, //Store Vector Element Halfword Indexed
 		STDUX 	= 0x0b5,
+		STWUX 	= 0x0b7,
 		STVEWX	= 0x0c7, //Store Vector Element Word Indexed
 		ADDZE 	= 0x0ca,
 		STDCX_ 	= 0x0d6,
@@ -306,6 +307,7 @@ namespace PPU_opcodes
 		ADDME 	= 0x0ea,
 		MULLW 	= 0x0eb,
 		DCBTST 	= 0x0f6,
+		STBUX	= 0x0f7,
 		DOZ 	= 0x108,
 		ADD 	= 0x10a,
 		DCBT 	= 0x116,
@@ -324,6 +326,7 @@ namespace PPU_opcodes
 		STHX	= 0x197, //Store Halfword Indexed
 		ORC 	= 0x19c, //OR with Complement
 		ECOWX 	= 0x1b6,
+		STHUX	= 0x1b7,
 		OR 		= 0x1bc,
 		DIVDU 	= 0x1c9,
 		DIVWU 	= 0x1cb,
@@ -678,6 +681,7 @@ public:
 	virtual void STWX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVEHX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void STDUX(u32 rs, u32 ra, u32 rb) = 0;
+	virtual void STWUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVEWX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void ADDZE(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void STDCX_(u32 rs, u32 ra, u32 rb) = 0;
@@ -687,6 +691,7 @@ public:
 	virtual void ADDME(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DCBTST(u32 th, u32 ra, u32 rb) = 0;
+	virtual void STBUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DCBT(u32 ra, u32 rb, u32 th) = 0;
 	virtual void LHZX(u32 rd, u32 ra, u32 rb) = 0;
@@ -704,6 +709,7 @@ public:
 	virtual void STHX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void ORC(u32 rs, u32 ra, u32 rb, bool rc) = 0;
 	virtual void ECOWX(u32 rs, u32 ra, u32 rb) = 0;
+	virtual void STHUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void OR(u32 ra, u32 rs, u32 rb, bool rc) = 0;
 	virtual void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;

@@ -92,8 +92,8 @@ private:
 
 		const int fpc = _fpclass(v);
 #ifdef __GNUG__
-        if(fpc == FP_SUBNORMAL)
-            return signbit(v) ? -0.0f : 0.0f;
+		if(fpc == FP_SUBNORMAL)
+			return signbit(v) ? -0.0f : 0.0f;
 #else
 		if(fpc & _FPCLASS_ND) return -0.0f;
 		if(fpc & _FPCLASS_PD) return  0.0f;
@@ -2650,6 +2650,12 @@ private:
 		Memory.Write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
+	void STWUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write32(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
+	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
@@ -2718,6 +2724,12 @@ private:
 	void DCBTST(u32 th, u32 ra, u32 rb)
 	{
 		//UNK("dcbtst", false);
+	}
+	void STBUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write8(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
 	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2806,6 +2818,12 @@ private:
 	{
 		//HACK!
 		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+	}
+	void STHUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write16(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
 	{

@@ -482,6 +482,7 @@ namespace PPU_instr
 	/*0x097*/bind_instr(g1f_list, STWX, RS, RA, RB);
 	/*0x0a7*/bind_instr(g1f_list, STVEHX, VS, RA, RB);
 	/*0x0b5*/bind_instr(g1f_list, STDUX, RS, RA, RB);
+	/*0x0b7*/bind_instr(g1f_list, STWUX, RS, RA, RB);
 	/*0x0c7*/bind_instr(g1f_list, STVEWX, VS, RA, RB);
 	/*0x0ca*/bind_instr(g1f_list, ADDZE, RD, RA, OE, RC);
 	/*0x0d6*/bind_instr(g1f_list, STDCX_, RS, RA, RB);
@@ -491,6 +492,7 @@ namespace PPU_instr
 	/*0x0ea*/bind_instr(g1f_list, ADDME, RD, RA, OE, RC);
 	/*0x0eb*/bind_instr(g1f_list, MULLW, RD, RA, RB, OE, RC);
 	/*0x0f6*/bind_instr(g1f_list, DCBTST, TH, RA, RB);
+	/*0x0f7*/bind_instr(g1f_list, STBUX, RS, RA, RB);
 	/*0x10a*/bind_instr(g1f_list, ADD, RD, RA, RB, OE, RC);
 	/*0x116*/bind_instr(g1f_list, DCBT, RA, RB, TH);
 	/*0x117*/bind_instr(g1f_list, LHZX, RD, RA, RB);
@@ -508,6 +510,7 @@ namespace PPU_instr
 	/*0x197*/bind_instr(g1f_list, STHX, RS, RA, RB);
 	/*0x19c*/bind_instr(g1f_list, ORC, RA, RS, RB, RC);
 	/*0x1b6*/bind_instr(g1f_list, ECOWX, RS, RA, RB);
+	/*0x1b7*/bind_instr(g1f_list, STHUX, RS, RA, RB);
 	/*0x1bc*/bind_instr(g1f_list, OR, RA, RS, RB, RC);
 	/*0x1c9*/bind_instr(g1f_list, DIVDU, RD, RA, RB, OE, RC);
 	/*0x1cb*/bind_instr(g1f_list, DIVWU, RD, RA, RB, OE, RC);
