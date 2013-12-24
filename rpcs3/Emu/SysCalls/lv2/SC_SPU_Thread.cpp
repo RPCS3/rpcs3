@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SC_SPU_Thread.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/SC_FUNC.h"
 #include "Loader/ELF.h"
 #include "Emu/Cell/RawSPUThread.h"
 
