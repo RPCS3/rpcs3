@@ -21,18 +21,17 @@ struct SpuGroupInfo
 	}
 };
 
-u64 g_spu_offset = 0;
-u64 g_spu_alloc_size = 0;
+u64 g_last_spu_offset = 0;
 
 u32 LoadSpuImage(vfsStream& stream)
 {
 	ELFLoader l(stream);
 	l.LoadInfo();
-	g_spu_alloc_size = 0xFFFFED - stream.GetSize();
-	g_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
-	l.LoadData(g_spu_offset);
+	u32 alloc_size = 0xFFFFED - stream.GetSize();
+	g_last_spu_offset = Memory.MainMem.Alloc(alloc_size);
+	l.LoadData(g_last_spu_offset);
 
-	return g_spu_offset + l.GetEntry();
+	return g_last_spu_offset + l.GetEntry();
 }
 
 //156
@@ -96,7 +95,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EBUSY;
 	}
 
-	u32 ls_entry = img->entry_point - g_spu_offset;
+	u32 ls_entry = img->entry_point - g_last_spu_offset;
 	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
@@ -106,7 +105,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//copy SPU image:
 	u32 spu_offset = Memory.MainMem.Alloc(256 * 1024);
-	memcpy(Memory + spu_offset, Memory + g_spu_offset, 256 * 1024);
+	memcpy(Memory + spu_offset, Memory + g_last_spu_offset, 256 * 1024);
 	//initialize from new place:
 	new_thread.SetOffset(spu_offset);
 	new_thread.SetEntry(ls_entry);
@@ -396,7 +395,7 @@ int sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	if ((*(SPUThread*)thr).cfg.value & (1<<number))
+	if ((*(SPUThread*)thr).cfg.value & ((u64)1<<number))
 	{ //logical OR
 		(*(SPUThread*)thr).SPU.SNR[number].PushUncond_OR(value);
 	}

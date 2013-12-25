@@ -279,10 +279,20 @@ public:
 	{
 	public:
 		static const size_t max_count = _max_count;
+#ifdef _M_X64
+		static const bool x86 = false;
+#else
+		static const bool x86 = true;
+#endif
 
 	private:
-		u32 m_value[max_count];
-		u32 m_index;
+		union _CRT_ALIGN(8) {
+			struct {
+				u32 m_index;
+				u32 m_value[max_count];
+			};
+			u64 m_indval;
+		};
 		long m_lock;
 
 	public:
@@ -300,81 +310,149 @@ public:
 
 		__forceinline bool Pop(u32& res)
 		{
-			while (_InterlockedExchange(&m_lock, 1));
-			_mm_lfence();
-			if(!m_index) 
+			if (max_count > 1 || x86)
 			{
-				m_lock = 0; //release lock
-				return false;
+				while (_InterlockedExchange(&m_lock, 1));
+				_mm_lfence();
+				if(!m_index) 
+				{
+					m_lock = 0; //release lock
+					return false;
+				}
+				res = m_value[--m_index];
+				m_value[m_index] = 0;
+				_mm_sfence();
+				m_lock = 0;
+				return true;
 			}
-			res = m_value[--m_index];
-			_mm_sfence();
-			m_lock = 0;
-			return true;
+			else
+			{ //lock-free
+				if(!m_index)
+					return false;
+				else
+				{
+					res = (m_indval >> 32);
+					m_indval = 0;
+					return true;
+				}				
+			}
 		}
 
 		__forceinline bool Push(u32 value)
 		{
-			while (_InterlockedExchange(&m_lock, 1));
-			_mm_lfence();
-			if(m_index >= max_count) 
+			if (max_count > 1 || x86)
 			{
-				m_lock = 0; //release lock
-				return false;
+				while (_InterlockedExchange(&m_lock, 1));
+				_mm_lfence();
+				if(m_index >= max_count) 
+				{
+					m_lock = 0; //release lock
+					return false;
+				}
+				m_value[m_index++] = value;
+				_mm_sfence();
+				m_lock = 0;
+				return true;
 			}
-			m_value[m_index++] = value;
-			_mm_sfence();
-			m_lock = 0;
-			return true;
+			else
+			{ //lock-free
+				if(m_index)
+					return false;
+				else
+				{
+					m_indval = ((u64)value << 32) | 1;
+					return true;
+				}
+			}
 		}
 
 		__forceinline void PushUncond(u32 value)
 		{
-			while (_InterlockedExchange(&m_lock, 1));
-			_mm_lfence();
-			if(m_index >= max_count) 
-				m_value[max_count-1] = value; //last message is overwritten
+			if (max_count > 1 || x86)
+			{
+				while (_InterlockedExchange(&m_lock, 1));
+				_mm_lfence();
+				if(m_index >= max_count) 
+					m_value[max_count-1] = value; //last message is overwritten
+				else
+					m_value[m_index++] = value;
+				_mm_sfence();
+				m_lock = 0;
+			}
 			else
-				m_value[m_index++] = value;
-			_mm_sfence();
-			m_lock = 0;
+			{ //lock-free
+				m_indval = ((u64)value << 32) | 1;
+			}
 		}
 
 		__forceinline void PushUncond_OR(u32 value)
 		{
-			while (_InterlockedExchange(&m_lock, 1));
-			_mm_lfence();
-			if(m_index >= max_count) 
-				m_value[max_count-1] |= value; //last message is logically ORed
+			if (max_count > 1 || x86)
+			{
+				while (_InterlockedExchange(&m_lock, 1));
+				_mm_lfence();
+				if(m_index >= max_count) 
+					m_value[max_count-1] |= value; //last message is logically ORed
+				else
+					m_value[m_index++] = value;
+				_mm_sfence();
+				m_lock = 0;
+			}
 			else
-				m_value[m_index++] = value;
-			_mm_sfence();
-			m_lock = 0;
+			{
+#ifdef _M_X64
+				_InterlockedOr64((volatile __int64*)m_indval, ((u64)value << 32) | 1);
+#else
+				ConLog.Error("PushUncond_OR(): no code compiled");
+#endif
+			}
 		}
 
 		__forceinline void PopUncond(u32& res)
 		{
-			while (_InterlockedExchange(&m_lock, 1));
-			_mm_lfence();
-			if(!m_index) 
-				res = 0; //result is undefined
+			if (max_count > 1 || x86)
+			{
+				while (_InterlockedExchange(&m_lock, 1));
+				_mm_lfence();
+				if(!m_index) 
+					res = 0; //result is undefined
+				else
+				{
+					res = m_value[--m_index];
+					m_value[m_index] = 0;
+				}
+				_mm_sfence();
+				m_lock = 0;
+			}
 			else
-				res = m_value[--m_index];
-			_mm_sfence();
-			m_lock = 0;
+			{ //lock-free
+				if(!m_index)
+					res = 0;
+				else
+				{
+					res = (m_indval >> 32);
+					m_indval = 0;
+				}
+			}
 		}
 
 		u32 GetCount() const
 		{
-			while (m_lock);
-			_mm_lfence();
+			if (max_count > 1 || x86)
+			{
+				while (m_lock);
+				_mm_lfence();	
+			}
 			return m_index;
 		}
 
 		u32 GetFreeCount() const
 		{
-			while (m_lock);
-			_mm_lfence();
+			if (max_count > 1 || x86)
+			{
+				while (m_lock);
+				_mm_lfence();			
+			}
 			return max_count - m_index;
 		}
 
@@ -471,6 +549,7 @@ public:
 			return SPU.In_MBox.GetCount();
 
 		case SPU_WrOutIntrMbox:
+			ConLog.Warning("GetChannelCount(%s) = 0", spu_ch_name[ch]);
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
 
 		case MFC_RdTagStat:
@@ -498,12 +577,12 @@ public:
 		{
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped()) _mm_pause();
+			if (!SPU.OutIntr_Mbox.Push(v)) do _mm_pause(); while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped());
 		break;
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) _mm_pause();
+			if (!SPU.Out_MBox.Push(v)) do _mm_pause(); while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped());
 		break;
 
 		case MFC_WrTagMask:
@@ -555,23 +634,22 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) _mm_pause();
+			if (!SPU.In_MBox.Pop(v)) do _mm_pause(); while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped());
 			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case MFC_RdTagStat:
-			while (dmac.proxy_pos) dmac.DoCmd(); //probably incompatible with MFC lists
-			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) _mm_pause();
+			if (!Prxy.TagStatus.Pop(v)) do _mm_pause(); while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped());
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify1:
-			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) _mm_pause();
-			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+			if (!SPU.SNR[0].Pop(v)) do _mm_pause(); while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped());
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify2:
-			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) _mm_pause();
+			if (!SPU.SNR[1].Pop(v)) do _mm_pause(); while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped());
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 

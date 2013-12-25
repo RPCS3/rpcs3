@@ -151,6 +151,27 @@ struct DMAC
 	long queue_lock;
 	long proxy_lock;
 
+	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
+	{
+		//returns true if the command should be deleted from the queue
+		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
+
+		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
+		{
+		case MFC_PUT_CMD:
+			memcpy(Memory + ea, Memory + ls_offset + lsa, size);
+		return true;
+
+		case MFC_GET_CMD:
+			memcpy(Memory + ls_offset + lsa, Memory + ea, size);
+		return true;
+
+		default:
+			ConLog.Error("Unknown DMA cmd.");
+		return true;
+		}
+	}
+
 	u32 Cmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 		if(!Memory.IsGoodAddr(ls_offset + lsa, size) || !Memory.IsGoodAddr(ea, size))
@@ -163,7 +184,7 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		while (_InterlockedExchange(&proxy_lock, 1));
+		/* while (_InterlockedExchange(&proxy_lock, 1));
 		_mm_lfence();
 		DMAC_Proxy& p = proxy[proxy_pos];
 		p.cmd = cmd;
@@ -174,7 +195,8 @@ struct DMAC
 		_mm_sfence(); //for DoCmd()
 		proxy_pos++;
 		_mm_sfence();
-		proxy_lock = 0;
+		proxy_lock = 0; */
+		ProcessCmd(cmd, tag, lsa, ea, size);
 
 		return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
 	}
@@ -193,22 +215,9 @@ struct DMAC
 		if(proxy_pos)
 		{
 			const DMAC_Proxy& p = proxy[0];
-
-			switch(p.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) //barrier/fence ignored
+			if (ProcessCmd(p.cmd, p.tag, p.lsa, p.ea, p.size))
 			{
-			case MFC_PUT_CMD:
-				memcpy(Memory + p.ea, Memory + ls_offset + p.lsa, p.size);
 				ClearCmd();
-			break;
-
-			case MFC_GET_CMD:
-				memcpy(Memory + ls_offset + p.lsa, Memory + p.ea, p.size);
-				ClearCmd();
-			break;
-
-			default:
-				ConLog.Error("Unknown DMA cmd.");
-			break;
 			}
 		}
 	}
