@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/Audio/sysutil_audio.h"
 
 // Parameter IDs
 enum
@@ -526,6 +527,255 @@ int cellMsgDialogOpen2(u32 type, char* msgString, u32 callback_addr, u32 userDat
 	return CELL_OK;
 }
 
+
+int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
+{
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d,type=%d,fs=%d,option=%d)", 
+						audioOut,type,fs,option);
+
+	option = 0;
+
+	switch(fs)
+	{
+		case CELL_AUDIO_OUT_FS_32KHZ:
+		case CELL_AUDIO_OUT_FS_44KHZ:
+		case CELL_AUDIO_OUT_FS_48KHZ:
+		case CELL_AUDIO_OUT_FS_88KHZ:
+		case CELL_AUDIO_OUT_FS_96KHZ:
+		case CELL_AUDIO_OUT_FS_176KHZ:
+		case CELL_AUDIO_OUT_FS_192KHZ:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	}
+
+	switch(type)
+	{
+		case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
+		case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	}
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY: return 1;
+		case CELL_AUDIO_OUT_SECONDARY: return 0;
+	}
+
+	CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+
+}
+
+int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
+{
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d,type=%d,fs=%d,ch=%d,option=%d)", 
+						audioOut,type,fs,ch,option);
+
+	option = 0;
+
+	switch(fs)
+	{
+		case CELL_AUDIO_OUT_FS_32KHZ:
+		case CELL_AUDIO_OUT_FS_44KHZ:
+		case CELL_AUDIO_OUT_FS_48KHZ:
+		case CELL_AUDIO_OUT_FS_88KHZ:
+		case CELL_AUDIO_OUT_FS_96KHZ:
+		case CELL_AUDIO_OUT_FS_176KHZ:
+		case CELL_AUDIO_OUT_FS_192KHZ:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	}
+
+	switch(ch)
+	{
+		case 2:
+		case 6:
+		case 8:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	}
+
+	switch(type)
+	{
+		case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
+		case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	}
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY: return 1;
+		case CELL_AUDIO_OUT_SECONDARY: return 0;
+	}
+
+	CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+
+}
+
+int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
+{
+	cellSysutil.Warning("cellAudioOutGetState(audioOut=0x%x,deviceIndex=0x%x,state_addr=0x%x)",audioOut,deviceIndex,state_addr);
+	CellAudioOutState state;
+	memset(&state, 0, sizeof(CellAudioOutState));
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY:
+		{
+			state.state = Emu.GetAudioManager().GetState();
+			state.soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
+			state.soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
+			state.soundMode.fs = Emu.GetAudioManager().GetInfo().mode.fs;
+			state.soundMode.layout = Emu.GetAudioManager().GetInfo().mode.layout;
+
+			Memory.WriteData(state_addr, state);
+		}
+		return CELL_AUDIO_OUT_SUCCEEDED;
+
+		case CELL_AUDIO_OUT_SECONDARY:
+		{
+			state.state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+
+			Memory.WriteData(state_addr, state);
+		}
+		return CELL_AUDIO_OUT_SUCCEEDED;
+	}
+
+	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+}
+
+int cellAudioOutConfigure(u32 audioOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+{
+	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
+		audioOut, config_addr, option_addr, waitForEvent);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration)))
+	{
+		return CELL_EFAULT;
+	}
+
+	CellAudioOutConfiguration& config = (CellAudioOutConfiguration&)Memory[config_addr];
+
+	switch(audioOut)
+	{
+	case CELL_AUDIO_OUT_PRIMARY:
+		if(config.channel)
+		{
+			Emu.GetAudioManager().GetInfo().mode.channel = config.channel;
+		}
+
+		Emu.GetAudioManager().GetInfo().mode.encoder = config.encoder;
+
+		if(config.downMixer)
+		{
+			Emu.GetAudioManager().GetInfo().mode.downMixer = config.downMixer;
+		}
+
+		return CELL_AUDIO_OUT_SUCCEEDED;
+
+	case CELL_AUDIO_OUT_SECONDARY:
+		return CELL_AUDIO_OUT_SUCCEEDED;
+	}
+
+	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+}
+
+int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
+{
+	cellSysutil.Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)",
+		audioOut, config_addr, option_addr);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration))) return CELL_EFAULT;
+
+	CellAudioOutConfiguration config;
+	memset(&config, 0, sizeof(CellAudioOutConfiguration));
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY:
+		config.channel = Emu.GetAudioManager().GetInfo().mode.channel;
+		config.encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
+		config.downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
+
+		Memory.WriteData(config_addr, config);
+
+		return CELL_AUDIO_OUT_SUCCEEDED;
+
+	case CELL_AUDIO_OUT_SECONDARY:
+		Memory.WriteData(config_addr, config);
+
+		return CELL_AUDIO_OUT_SUCCEEDED;
+	}
+
+	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+}
+
+int cellAudioOutGetNumberOfDevice(u32 audioOut)
+{
+	cellSysutil.Warning("cellAudioOutGetNumberOfDevice(videoOut=%d)",audioOut);
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY: return 1;
+		case CELL_AUDIO_OUT_SECONDARY: return 0;
+	}
+
+	CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+}
+
+int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
+{
+	cellSysutil.Error("Unimplemented function: cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
+		audioOut, deviceIndex, info.GetAddr());
+
+	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
+
+	info->portType = CELL_AUDIO_OUT_PORT_HDMI;
+	info->availableModeCount = 1;
+	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
+	info->latency = 1000;
+	info->availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_2;
+	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
+	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+
+	return CELL_AUDIO_OUT_SUCCEEDED;
+}
+
+int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
+{
+	cellSysutil.Warning("cellAudioOutSetCopyControl(audioOut=%d,control=%d)",audioOut,control);
+
+	switch(audioOut)
+	{
+		case CELL_AUDIO_OUT_PRIMARY:
+		case CELL_AUDIO_OUT_SECONDARY:
+			break;
+
+		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	}
+
+	switch(control)
+	{
+		case CELL_AUDIO_OUT_COPY_CONTROL_COPY_FREE:
+		case CELL_AUDIO_OUT_COPY_CONTROL_COPY_ONCE:
+		case CELL_AUDIO_OUT_COPY_CONTROL_COPY_NEVER:
+			break;
+			
+		default: CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	return CELL_AUDIO_OUT_SUCCEEDED;
+}
+
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -544,4 +794,13 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
 
 	cellSysutil.AddFunc(0x7603d3db, cellMsgDialogOpen2);
+
+	cellSysutil.AddFunc(0xf4e3caa0, cellAudioOutGetState);
+	cellSysutil.AddFunc(0x4692ab35, cellAudioOutConfigure);
+	cellSysutil.AddFunc(0xc01b4e7c, cellAudioOutGetSoundAvailability);
+	cellSysutil.AddFunc(0x2beac488, cellAudioOutGetSoundAvailability2);
+	cellSysutil.AddFunc(0x7663e368, cellAudioOutGetDeviceInfo);
+	cellSysutil.AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
+	cellSysutil.AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
+	cellSysutil.AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
 }
