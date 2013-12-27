@@ -117,7 +117,6 @@ extern int sys_process_get_number_of_object(u32 object, mem32_t nump);
 extern int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size);
 extern int sys_process_get_paramsfo(mem8_ptr_t buffer);
 extern int sys_process_exit(int errorcode);
-extern int sys_process_is_stack(u32 addr); //TODO: Is this a lv2 SysCall? If so, where is its number?
 extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags );
 

@@ -22,6 +22,15 @@ s64 sys_process_at_Exitspawn()
 	return 0;
 }
 
+int sys_process_is_stack(u32 p)
+{
+	PPCThread* CPU = GetCurrentPPCThread();
+	if (p >= CPU->GetStackAddr() && p <= CPU->GetStackAddr() + CPU->GetStackSize())
+		return 1;
+
+	return 0;
+}
+
 int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 {
 	sysPrxForUser.Warning("sys_spu_printf_initialize(0x%x, 0x%x, 0x%x, 0x%x, 0x%x)", a1, a2, a3, a4, a5);
@@ -62,6 +71,7 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0xe6f2c1e7, sys_process_exit);
 	sysPrxForUser.AddFunc(0x2c847572, sys_process_atexitspawn);
 	sysPrxForUser.AddFunc(0x96328741, sys_process_at_Exitspawn);
+	sysPrxForUser.AddFunc(0x4f7172c9, sys_process_is_stack);
 
 	sysPrxForUser.AddFunc(0x24a1ea07, sys_ppu_thread_create);
 	sysPrxForUser.AddFunc(0x350d454e, sys_ppu_thread_get_id);
