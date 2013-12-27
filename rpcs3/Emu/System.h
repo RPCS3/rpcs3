@@ -6,6 +6,7 @@
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
 #include "Emu/GS/GSManager.h"
+#include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
@@ -85,6 +86,7 @@ class Emulator
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
+	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
 	VFS m_vfs;
 
@@ -118,6 +120,7 @@ public:
 	IdManager&			GetIdManager()			{ return m_id_manager; }
 	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
 	GSManager&			GetGSManager()			{ return m_gs_manager; }
+	AudioManager&		GetAudioManager()		{ return m_audio_manager; }
 	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
 	VFS&				GetVFS()				{ return m_vfs; }
 	Array<u64>&			GetBreakPoints()		{ return m_break_points; }

@@ -351,6 +351,7 @@ void Emulator::Load()
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
+	GetAudioManager().Init();
 
 	thread.Run();
 
@@ -450,6 +451,7 @@ void Emulator::Stop()
 	m_vfs.UnMountAll();
 
 	GetGSManager().Close();
+	GetAudioManager().Close();
 	GetCPU().Close();
 	//SysCallsManager.Close();
 	GetIdManager().Clear();

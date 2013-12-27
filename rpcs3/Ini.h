@@ -103,6 +103,24 @@ public:
 	IniEntry<u8> PadHandlerMode;
 	IniEntry<u8> KeyboardHandlerMode;
 	IniEntry<u8> MouseHandlerMode;
+	IniEntry<u8> AudioOutMode;
+
+	IniEntry<int> PadHandlerLeft;
+	IniEntry<int> PadHandlerDown;
+	IniEntry<int> PadHandlerRight;
+	IniEntry<int> PadHandlerUp;
+	IniEntry<int> PadHandlerStart;
+	IniEntry<int> PadHandlerR3;
+	IniEntry<int> PadHandlerL3;
+	IniEntry<int> PadHandlerSelect;
+	IniEntry<int> PadHandlerSquare;
+	IniEntry<int> PadHandlerCross;
+	IniEntry<int> PadHandlerCircle;
+	IniEntry<int> PadHandlerTriangle;
+	IniEntry<int> PadHandlerR1;
+	IniEntry<int> PadHandlerL1;
+	IniEntry<int> PadHandlerR2;
+	IniEntry<int> PadHandlerL2;
 
 public:
 	Inis() : DefPath("EmuSettings")
@@ -125,6 +143,27 @@ public:
 		PadHandlerMode.Init("PadHandlerMode", path);
 		KeyboardHandlerMode.Init("KeyboardHandlerMode", path);
 		MouseHandlerMode.Init("MouseHandlerMode", path);
+
+		path = DefPath + "\\" + "ControlSetings";
+		PadHandlerLeft.Init("PadHandlerLeft", path);
+		PadHandlerDown.Init("PadHandlerDown", path);
+		PadHandlerRight.Init("PadHandlerRight", path);
+		PadHandlerUp.Init("PadHandlerUp", path);
+		PadHandlerStart.Init("PadHandlerStart", path);
+		PadHandlerR3.Init("PadHandlerR3", path);
+		PadHandlerL3.Init("PadHandlerL3", path);
+		PadHandlerSelect.Init("PadHandlerSelect", path);
+		PadHandlerSquare.Init("PadHandlerSquare", path);
+		PadHandlerCross.Init("PadHandlerCross", path);
+		PadHandlerCircle.Init("PadHandlerCircle", path);
+		PadHandlerTriangle.Init("PadHandlerTriangle", path);
+		PadHandlerR1.Init("PadHandlerR1", path);
+		PadHandlerL1.Init("PadHandlerL1", path);
+		PadHandlerR2.Init("PadHandlerR2", path);
+		PadHandlerL2.Init("PadHandlerL2", path);
+
+		path = DefPath + "\\" + "Audio";
+		AudioOutMode.Init("AudioOutMode", path);
 	}
 
 	void Load()
@@ -140,6 +179,24 @@ public:
 		PadHandlerMode.Load(1);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
+		AudioOutMode.Load(0);
+
+		PadHandlerLeft.Load(static_cast<int>('A'));
+		PadHandlerDown.Load(static_cast<int>('S'));
+		PadHandlerRight.Load(static_cast<int>('D'));
+		PadHandlerUp.Load(static_cast<int>('W'));
+		PadHandlerStart.Load(0);
+		PadHandlerR3.Load(static_cast<int>('C'));
+		PadHandlerL3.Load(static_cast<int>('Z'));
+		PadHandlerSelect.Load(0);
+		PadHandlerSquare.Load(static_cast<int>('L'));
+		PadHandlerCross.Load(static_cast<int>('K'));
+		PadHandlerCircle.Load(static_cast<int>('J'));
+		PadHandlerTriangle.Load(static_cast<int>('I'));
+		PadHandlerR1.Load(static_cast<int>('3'));
+		PadHandlerL1.Load(static_cast<int>('1'));
+		PadHandlerR2.Load(static_cast<int>('E'));
+		PadHandlerL2.Load(static_cast<int>('Q'));
 	}
 
 	void Save()
@@ -155,6 +212,24 @@ public:
 		PadHandlerMode.Save();
 		KeyboardHandlerMode.Save();
 		MouseHandlerMode.Save();
+		AudioOutMode.Save();
+
+		PadHandlerLeft.Save();
+		PadHandlerDown.Save();
+		PadHandlerRight.Save();
+		PadHandlerUp.Save();
+		PadHandlerStart.Save();
+		PadHandlerR3.Save();
+		PadHandlerL3.Save();
+		PadHandlerSelect.Save();
+		PadHandlerSquare.Save();
+		PadHandlerCross.Save();
+		PadHandlerCircle.Save();
+		PadHandlerTriangle.Save();
+		PadHandlerR1.Save();
+		PadHandlerL1.Save();
+		PadHandlerR2.Save();
+		PadHandlerL2.Save();
 	}
 };
 

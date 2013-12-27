@@ -19,6 +19,7 @@ public:
 	virtual void Write(const wxString fmt, ...);
 	virtual void Error(const wxString fmt, ...);
 	virtual void Warning(const wxString fmt, ...);
+	virtual void Success(const wxString fmt, ...);
 	virtual void SkipLn();	
 };
 

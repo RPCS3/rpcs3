@@ -27,6 +27,7 @@ private:
 	void SendExit(wxCommandEvent& event);
 	void SendOpenCloseSysMenu(wxCommandEvent& event);
 	void Config(wxCommandEvent& event);
+	void ConfigPad(wxCommandEvent& event);
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
