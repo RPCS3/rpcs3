@@ -3427,6 +3427,7 @@ private:
 	void MTFSB1(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
+		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
 		CPU.FPSCR.FPSCR |= mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3440,6 +3441,7 @@ private:
 	void MTFSB0(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
+		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
 		CPU.FPSCR.FPSCR &= ~mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3450,10 +3452,12 @@ private:
 
 		if(i)
 		{
+			if ((crfd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
 			CPU.FPSCR.FPSCR |= mask;
 		}
 		else
 		{
+			if ((crfd == 29) && CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
 			CPU.FPSCR.FPSCR &= ~mask;
 		}
 
@@ -3472,7 +3476,15 @@ private:
 			if(flm & (1 << i)) mask |= 0xf << (i * 4);
 		}
 
+		const u32 oldNI = CPU.FPSCR.NI;
 		CPU.FPSCR.FPSCR = (CPU.FPSCR.FPSCR & ~mask) | ((u32&)CPU.FPR[frb] & mask);
+		if (CPU.FPSCR.NI != oldNI)
+		{
+			if (oldNI)
+				ConLog.Warning("Non-IEEE mode disabled");
+			else
+				ConLog.Warning("Non-IEEE mode enabled");
+		}
 		if(rc) UNK("mtfsf.");
 	}
 	void FCMPU(u32 crfd, u32 fra, u32 frb)

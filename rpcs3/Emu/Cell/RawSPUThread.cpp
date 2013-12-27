@@ -57,16 +57,22 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
 	switch(offset)
 	{
-	case MFC_LSA_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_LSA)", m_index);			*value = MFC.LSA.GetValue(); break;
-	case MFC_EAH_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_EAH)", m_index);			*value = MFC.EAH.GetValue(); break;
-	case MFC_EAL_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_EAL)", m_index);			*value = MFC.EAL.GetValue(); break;
-	case MFC_Size_Tag_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(MFC_Size_Tag)", m_index);		*value = MFC.Size_Tag.GetValue(); break;
-	case MFC_CMDStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(MFC_CMDStatus)", m_index);		*value = MFC.CMDStatus.GetValue(); break;
-	case MFC_QStatus_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(MFC_QStatus)", m_index);		*value = MFC.QStatus.GetValue(); break;
+	case MFC_LSA_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_LSA)", m_index);			*value = MFC2.LSA.GetValue(); break;
+	case MFC_EAH_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_EAH)", m_index);			*value = MFC2.EAH.GetValue(); break;
+	case MFC_EAL_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(MFC_EAL)", m_index);			*value = MFC2.EAL.GetValue(); break;
+	case MFC_Size_Tag_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(MFC_Size_Tag)", m_index);		*value = MFC2.Size_Tag.GetValue(); break;
+	case MFC_CMDStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(MFC_CMDStatus)", m_index);		*value = MFC2.CMDStatus.GetValue(); break;
+	case MFC_QStatus_offs:		
+		ConLog.Warning("RawSPUThread[%d]: Read32(MFC_QStatus)", m_index);
+		*value = MFC2.QStatus.GetValue(); 
+	break;
 	case Prxy_QueryType_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_QueryType)", m_index);	*value = Prxy.QueryType.GetValue(); break;
 	case Prxy_QueryMask_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_QueryMask)", m_index);	*value = Prxy.QueryMask.GetValue(); break;
 	case Prxy_TagStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_TagStatus)", m_index);	*value = Prxy.TagStatus.GetValue(); break;
-	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);		while(!SPU.Out_MBox.Pop(*value) && !Emu.IsStopped()) Sleep(1); break;
+	case SPU_Out_MBox_offs:			
+		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);
+		SPU.Out_MBox.PopUncond(*value); //if Out_MBox is empty yet, the result will be undefined 
+	break;
 	case SPU_In_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_In_MBox)", m_index);		while(!SPU.In_MBox.Pop(*value)  && !Emu.IsStopped()) Sleep(1); break;
 	case SPU_MBox_Status_offs:		//ConLog.Warning("RawSPUThread[%d]: Read32(SPU_MBox_Status)", m_index);
 		//SPU.MBox_Status.SetValue(SPU.Out_MBox.GetCount() ? SPU.MBox_Status.GetValue() | 1 : SPU.MBox_Status.GetValue() & ~1);
@@ -76,8 +82,8 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);		*value = SPU.RunCntl.GetValue(); break;
 	case SPU_Status_offs:			ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Status)", m_index);		*value = SPU.Status.GetValue(); break;
 	case SPU_NPC_offs:				ConLog.Warning("RawSPUThread[%d]: Read32(SPU_NPC)", m_index);			*value = SPU.NPC.GetValue(); break;
-	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify1)", m_index);	*value = SPU.RdSigNotify1.GetValue(); break;
-	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify2)", m_index);	*value = SPU.RdSigNotify2.GetValue(); break;
+	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify1)", m_index);	*value = SPU.SNR[0].GetValue(); break;
+	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify2)", m_index);	*value = SPU.SNR[1].GetValue(); break;
 
 	default:
 		ConLog.Error("RawSPUThread[%d]: Read32(0x%x)", m_index, offset);
@@ -151,16 +157,15 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 
 	switch(offset)
 	{
-	case MFC_LSA_offs:				ConLog.Warning("RawSPUThread[%d]: Write32(MFC_LSA, 0x%x)", m_index, value);				MFC.LSA.SetValue(value); break;
-	case MFC_EAH_offs:				ConLog.Warning("RawSPUThread[%d]: Write32(MFC_EAH, 0x%x)", m_index, value);				MFC.EAH.SetValue(value); break;
-	case MFC_EAL_offs:				ConLog.Warning("RawSPUThread[%d]: Write32(MFC_EAL, 0x%x)", m_index, value);				MFC.EAL.SetValue(value); break;
-	case MFC_Size_Tag_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(MFC_Size_Tag, 0x%x)", m_index, value);		MFC.Size_Tag.SetValue(value); break;
+	case MFC_LSA_offs:	MFC2.LSA.SetValue(value); break;
+	case MFC_EAH_offs:	MFC2.EAH.SetValue(value); break;
+	case MFC_EAL_offs:	MFC2.EAL.SetValue(value); break;
+	case MFC_Size_Tag_offs:	MFC2.Size_Tag.SetValue(value); break;
 	case MFC_CMDStatus_offs:
-		ConLog.Warning("RawSPUThread[%d]: Write32(MFC_CMDStatus, 0x%x)", m_index, value);
-		MFC.CMDStatus.SetValue(value);
-		DoMfcCmd();
+		MFC2.CMDStatus.SetValue(value);
+		EnqMfcCmd(MFC2);
 	break;
-	case MFC_QStatus_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(MFC_QStatus, 0x%x)", m_index, value);			MFC.QStatus.SetValue(value); break;
+	case MFC_QStatus_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(MFC_QStatus, 0x%x)", m_index, value);			MFC2.QStatus.SetValue(value); break;
 	case Prxy_QueryType_offs:
 	{
 		ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_QueryType, 0x%x)", m_index, value);
@@ -178,19 +183,22 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 		}
 
 		Prxy.QueryType.SetValue(0);
-		MFC.QStatus.SetValue(Prxy.QueryMask.GetValue());
+		MFC2.QStatus.SetValue(Prxy.QueryMask.GetValue());
 	}
 	break;
 	case Prxy_QueryMask_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_QueryMask, 0x%x)", m_index, value);		Prxy.QueryMask.SetValue(value); break;
 	case Prxy_TagStatus_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_TagStatus, 0x%x)", m_index, value);		Prxy.TagStatus.SetValue(value); break;
 	case SPU_Out_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Out_MBox, 0x%x)", m_index, value);		while(!SPU.Out_MBox.Push(value) && !Emu.IsStopped()) Sleep(1); break;
-	case SPU_In_MBox_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_In_MBox, 0x%x)", m_index, value);			while(!SPU.In_MBox.Push(value) && !Emu.IsStopped()) Sleep(1); break;
+	case SPU_In_MBox_offs:			
+		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_In_MBox, 0x%x)", m_index, value);
+		SPU.In_MBox.PushUncond(value); //if In_MBox is already full, the last message will be overwritten  
+	break;
 	case SPU_MBox_Status_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_MBox_Status, 0x%x)", m_index, value);		SPU.MBox_Status.SetValue(value); break;
 	case SPU_RunCntl_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RunCntl, 0x%x)", m_index, value);			SPU.RunCntl.SetValue(value); break;
 	case SPU_Status_offs:			ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Status, 0x%x)", m_index, value);			SPU.Status.SetValue(value); break;
 	case SPU_NPC_offs:				ConLog.Warning("RawSPUThread[%d]: Write32(SPU_NPC, 0x%x)", m_index, value);				SPU.NPC.SetValue(value); break;
-	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify1, 0x%x)", m_index, value);	SPU.RdSigNotify1.SetValue(value); break;
-	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify2, 0x%x)", m_index, value);	SPU.RdSigNotify2.SetValue(value); break;
+	case SPU_RdSigNotify1_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify1, 0x%x)", m_index, value);	SPU.SNR[0].SetValue(value); break;
+	case SPU_RdSigNotify2_offs:		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_RdSigNotify2, 0x%x)", m_index, value);	SPU.SNR[1].SetValue(value); break;
 
 	default:
 		ConLog.Error("RawSPUThread[%d]: Write32(0x%x, 0x%x)", m_index, offset, value);

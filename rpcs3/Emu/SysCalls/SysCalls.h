@@ -291,6 +291,9 @@ extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
 extern int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type);
 extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
+extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
+extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
+extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
 
 //sys_time
 extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);

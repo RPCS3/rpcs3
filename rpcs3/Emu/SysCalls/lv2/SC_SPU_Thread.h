@@ -1,5 +1,7 @@
 #pragma once
 
+u32 LoadSpuImage(vfsStream& stream);
+
 struct sys_spu_thread_group_attribute
 {
 	be_t<u32> name_len;
@@ -29,4 +31,12 @@ struct sys_spu_image
 	be_t<u32> entry_point;
 	be_t<u32> segs_addr;
 	be_t<int> nsegs;
+};
+
+struct sys_spu_segment
+{
+	be_t<int> type;
+	be_t<u32> ls_start;
+	be_t<int> size;
+	be_t<u64> src;
 };

@@ -354,7 +354,6 @@ void Emulator::Load()
 
 	thread.Run();
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Ready;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_READY_EMU);
@@ -379,7 +378,6 @@ void Emulator::Run()
 	wxGetApp().SendDbgCommand(DID_START_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	//ConLog.Write("run...");
 	m_status = Running;
 
@@ -403,7 +401,6 @@ void Emulator::Pause()
 	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Paused;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
@@ -418,7 +415,6 @@ void Emulator::Resume()
 	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Running;
 
 	CheckStatus();
@@ -436,10 +432,7 @@ void Emulator::Stop()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOP_EMU);
 #endif
-	{
-		wxCriticalSectionLocker lock(m_cs_status);
-		m_status = Stopped;
-	}
+	m_status = Stopped;
 
 	m_rsx_callback = 0;
 

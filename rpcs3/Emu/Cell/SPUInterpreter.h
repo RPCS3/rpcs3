@@ -7,12 +7,12 @@
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
-typedef union _CRT_ALIGN(16) __u32x4 {
-	unsigned __int32 _u32[4];
+/* typedef union _CRT_ALIGN(16) __u32x4 {
+	u32 _u32[4];
 	__m128i m128i;
 	__m128 m128;
 	__m128d m128d;
- } __u32x4;
+ } __u32x4; */
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -35,24 +35,24 @@ private:
 		if(code & 0x2000)
 		{
 			CPU.SetExitStatus(code & 0xfff);
-			CPU.Stop();
 		}
 		else
 		{
 			ConLog.Warning("STOP: 0x%x", code);
-			Emu.Pause();
+			//Emu.Pause();
 		}
+		CPU.Stop();
 	}
 	void LNOP()
 	{
 	}
 	void SYNC(u32 Cbit)
 	{
-		//UNIMPLEMENTED();
+		_mm_mfence();
 	}
 	void DSYNC()
 	{
-		//UNIMPLEMENTED();
+		_mm_mfence();
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
@@ -191,18 +191,8 @@ private:
 	{
 		const u32 s = i7 & 0x3f;
 
-		for(u32 j = 0; j < 4; ++j)
-		{
-			const u32 t = CPU.GPR[ra]._u32[j];
-			u32 r = 0;
-
-			for(u32 b = 0; b + s < 32; ++b)
-			{
-				r |= t & (1 << (b + s));
-			}
-
-			CPU.GPR[rt]._u32[j] = r;
-		}
+		for (u32 j = 0; j < 4; ++j)
+			CPU.GPR[rt]._u32[j] = CPU.GPR[ra]._u32[j] << s;
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
@@ -388,27 +378,20 @@ private:
 	}
 	void FREST(u32 rt, u32 ra)
 	{
-		//(SSE) RCPPS - Compute Reciprocals of Packed Single-Precision Floating-Point Values
-		//rt = approximate(1/ra)
-		CPU.GPR[rt]._m128 = _mm_rcp_ps(CPU.GPR[ra]._m128);
+		//CPU.GPR[rt]._m128 = _mm_rcp_ps(CPU.GPR[ra]._m128);
+		for (int i = 0; i < 4; i++)
+			CPU.GPR[rt]._f[i] = 1 / CPU.GPR[ra]._f[i];
 	}
 	void FRSQEST(u32 rt, u32 ra)
 	{
-		//(SSE) RSQRTPS - Compute Reciprocals of Square Roots of Packed Single-Precision Floating-Point Values
-		//rt = approximate(1/sqrt(abs(ra)))
-		//abs(ra) === ra & FloatAbsMask
-		const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-		CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
+		//const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+		//CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
+		for (int i = 0; i < 4; i++)
+			CPU.GPR[rt]._f[i] = 1 / sqrt(abs(CPU.GPR[ra]._f[i]));
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
 		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
-
-		if(b & 0xf)
-		{
-			ConLog.Warning("LQX HACK (a[0x%x] + b[0x%x(0x%x)])", a, b << 3, b);
-			b <<= 3;
-		}
 
 		u32 lsa = (a + b) & 0x3fff0;
 
@@ -1009,9 +992,10 @@ private:
 				exp = 255;
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
+
+			CPU.GPR[rt]._u32[i] = (u32)CPU.GPR[rt]._f[i]; //trunc
 		}
-		//(SSE2) CVTTPS2DQ - Convert with Truncation Packed Single FP to Packed Dword Int
-		CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
+		//CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
@@ -1038,11 +1022,12 @@ private:
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		//(SSE2) CVTDQ2PS - Convert Packed Dword Integers to Packed Single-Precision FP Values
-		CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
+		//CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
 		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
+			CPU.GPR[rt]._f[i] = (s32)CPU.GPR[ra]._i32[i];
+
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
 			if (exp > 255) //< 0
@@ -1412,7 +1397,7 @@ private:
 			}
 		}
 	}
-	void MPYA(u32 rc, u32 ra, u32 rb, u32 rt)
+	void MPYA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2] * CPU.GPR[rb]._i16[w*2] + CPU.GPR[rc]._i32[w];
@@ -1424,14 +1409,14 @@ private:
 		CPU.GPR[rt]._f[2] = CPU.GPR[rc]._f[2] - CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2];
 		CPU.GPR[rt]._f[3] = CPU.GPR[rc]._f[3] - CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3];
 	}
-	void FMA(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FMA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0] + CPU.GPR[rc]._f[0];
 		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1] + CPU.GPR[rc]._f[1];
 		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2] + CPU.GPR[rc]._f[2];
 		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3] + CPU.GPR[rc]._f[3];
 	}
-	void FMS(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0] - CPU.GPR[rc]._f[0];
 		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1] - CPU.GPR[rc]._f[1];
