@@ -393,12 +393,6 @@ private:
 	{
 		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
 
-		if(b & 0xf)
-		{
-			ConLog.Warning("LQX HACK (a[0x%x] + b[0x%x(0x%x)])", a, b << 3, b);
-			b <<= 3;
-		}
-
 		u32 lsa = (a + b) & 0x3fff0;
 
 		if(!CPU.IsGoodLSA(lsa))

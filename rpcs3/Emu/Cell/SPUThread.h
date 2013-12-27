@@ -288,12 +288,12 @@ public:
 	private:
 		union _CRT_ALIGN(8) {
 			struct {
-				u32 m_index;
+				volatile u32 m_index;
 				u32 m_value[max_count];
 			};
-			u64 m_indval;
+			volatile u64 m_indval;
 		};
-		long m_lock;
+		volatile long m_lock;
 
 	public:
 
@@ -577,12 +577,12 @@ public:
 		{
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			if (!SPU.OutIntr_Mbox.Push(v)) do _mm_pause(); while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped());
+			while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			if (!SPU.Out_MBox.Push(v)) do _mm_pause(); while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped());
+			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		case MFC_WrTagMask:
@@ -634,22 +634,22 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			if (!SPU.In_MBox.Pop(v)) do _mm_pause(); while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped());
+			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
 			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case MFC_RdTagStat:
-			if (!Prxy.TagStatus.Pop(v)) do _mm_pause(); while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped());
+			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify1:
-			if (!SPU.SNR[0].Pop(v)) do _mm_pause(); while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped());
+			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify2:
-			if (!SPU.SNR[1].Pop(v)) do _mm_pause(); while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped());
+			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 

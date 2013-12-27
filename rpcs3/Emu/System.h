@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include "Gui/MemoryViewer.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Io/Pad.h"
@@ -64,9 +65,8 @@ class Emulator
 		InterpreterDisAsm,
 		Interpreter,
 	};
-
-	mutable wxCriticalSection m_cs_status;
-	Status m_status;
+		
+	volatile uint m_status;
 	uint m_mode;
 
 	u32 m_rsx_callback;
@@ -159,10 +159,10 @@ public:
 	void SavePoints(const std::string& path);
 	void LoadPoints(const std::string& path);
 
-	__forceinline bool IsRunning()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Running; }
-	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
-	__forceinline bool IsStopped()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
-	__forceinline bool IsReady()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Ready; }
+	__forceinline bool IsRunning()	const { return m_status == Running; }
+	__forceinline bool IsPaused()	const { return m_status == Paused; }
+	__forceinline bool IsStopped()	const { return m_status == Stopped; }
+	__forceinline bool IsReady()	const { return m_status == Ready; }
 };
 
 extern Emulator Emu;
