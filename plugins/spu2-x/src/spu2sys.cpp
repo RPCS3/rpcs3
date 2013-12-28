@@ -798,7 +798,8 @@ static void __fastcall RegWrite_VoiceParams( u16 value )
 			{
 				thisvol.Mode = (value & 0xF000)>>12;
 				thisvol.Increment = (value & 0x7F);
-				//printf("slides Mode = %x, Increment = %x\n",thisvol.Mode,thisvol.Increment);
+				// We're not sure slides work 100%
+				if( IsDevBuild ) ConLog("* SPU2: Voice uses Slides in Mode = %x, Increment = %x\n",thisvol.Mode,thisvol.Increment);
 			}
 			else
 			{

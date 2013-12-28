@@ -26,6 +26,8 @@
 
 static const KeyAcceleratorCode FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL=KeyAcceleratorCode( WXK_RETURN ).Alt();
 
+#define GSWindowScaleDebug
+
 void GSPanel::InitDefaultAccelerators()
 {
 	// Note!  These don't really work yet due to some hacks to get things working for
@@ -175,6 +177,9 @@ void GSPanel::DoResize()
 	GetPosition(&cx, &cy);
 	float unit = .01*(float)min(viewport.x, viewport.y);
 	SetPosition( wxPoint( cx + unit*g_Conf->GSWindow.OffsetX.ToFloat(), cy + unit*g_Conf->GSWindow.OffsetY.ToFloat() ) );
+#ifdef GSWindowScaleDebug
+	Console.WriteLn(Color_Yellow, "GSWindowScaleDebug: zoom %f, viewport.x %d, viewport.y %d", zoom, viewport.GetX(), viewport.GetY());
+#endif
 }
 
 void GSPanel::OnResize(wxSizeEvent& event)
