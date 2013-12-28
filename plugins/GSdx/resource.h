@@ -2,31 +2,6 @@
 // Microsoft Visual C++ generated include file.
 // Used by GSdx.rc
 //
-/*
- *	Copyright (C) 2007-2009 Gabest
- *	http://www.gabest.org
- *
- *  This Program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  This Program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA USA.
- *  http://www.gnu.org/copyleft/gpl.html
- *
- */
-
-#ifndef IDC_STATIC
-#define IDC_STATIC				-1
-#endif
-
 #define IDC_NATIVERES                   2001
 #define IDC_PALTEX                      2003
 #define IDC_LOGZ                        2004
@@ -91,6 +66,7 @@
 #define IDC_TCOFFSETX2                  2083
 #define IDC_TCOFFSETY                   2084
 #define IDC_TCOFFSETY2                  2085
+#define IDC_FXAA                        2086
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
@@ -102,6 +78,7 @@
 #define IDD_SHADEBOOST                  10007
 #define IDR_SHADEBOOST_FX               10009
 #define IDD_HACKS                       10011
+#define IDC_STATIC                      -1
 
 // Next default values for new objects
 // 
@@ -109,7 +86,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10012
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2086
+#define _APS_NEXT_CONTROL_VALUE         2087
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

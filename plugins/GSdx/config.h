@@ -25,6 +25,8 @@
 
 #define ENABLE_JIT_RASTERIZER
 
+#define EXTERNAL_SHADER_LOADING 1
+
 //#define ENABLE_DYNAMIC_CRC_HACK
 #define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
 

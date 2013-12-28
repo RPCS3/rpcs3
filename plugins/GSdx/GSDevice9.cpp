@@ -359,14 +359,16 @@ bool GSDevice9::Create(GSWnd* wnd)
 	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);	
 
 	// fxaa
-
+#if EXTERNAL_SHADER_LOADING
 	try { 
 		CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps); 
 	} 
 	catch (GSDXRecoverableError) {
 		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps); 
 	}
-
+#else
+	CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+#endif
 	// create shader layout
 
 	VSSelector sel;

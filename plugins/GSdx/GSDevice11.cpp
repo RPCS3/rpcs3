@@ -271,13 +271,17 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
 
+#if EXTERNAL_SHADER_LOADING
 	try { 
 		CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps); 
 	} 
 	catch (GSDXRecoverableError) {
 		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps); 
 	}
-
+#else
+	// internal shader
+	CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+#endif
 	//
 
 	memset(&rd, 0, sizeof(rd));

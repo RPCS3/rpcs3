@@ -160,6 +160,9 @@ void GSSettingsDlg::OnInit()
 
 	// Shade Boost
 	CheckDlgButton(m_hWnd, IDC_SHADEBOOST, theApp.GetConfig("ShadeBoost", 0));
+
+	// FXAA shader
+	CheckDlgButton(m_hWnd, IDC_FXAA, theApp.GetConfig("Fxaa", 0));
 	
 	// Hacks
 	CheckDlgButton(m_hWnd, IDC_HACKS_ENABLED, theApp.GetConfig("UserHacks", 0));
@@ -268,7 +271,9 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			// Shade Boost
 			theApp.SetConfig("ShadeBoost", (int)IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST));
 
-			// Hacks
+			// FXAA shader
+			theApp.SetConfig("Fxaa", (int)IsDlgButtonChecked(m_hWnd, IDC_FXAA));
+
 			theApp.SetConfig("UserHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_HACKS_ENABLED));
 		}
 		break;
