@@ -421,7 +421,6 @@ SIO_WRITE memcardSector(u8 data)
 {
 	static u8 xor_check = 0;
 	static bool sectorDone = false;
-	static u16 length = 0;
 
 	if(!sectorDone)
 	{
@@ -433,12 +432,12 @@ SIO_WRITE memcardSector(u8 data)
 		case 5: mcd->sectorAddr |= data << 24; xor_check ^= data; break;
 		case 6: mcd->goodSector = data == xor_check; break;
 		case 8: mcd->transferAddr = (512+16) * mcd->sectorAddr; break;
-		case 9: memset8<0xFF>(sio.buf); sectorDone = true; length = 9;
+		case 9: memset8<0xFF>(sio.buf); sectorDone = true;
 		}
 	}
 	else
 	{
-		if(length > 0xFF && data == 0x81) // SET_SECTOR End
+		if (data == 0x81) // SET_SECTOR End
 		{
 			SIO_STAT_READY();
 			sectorDone = false;
@@ -446,8 +445,6 @@ SIO_WRITE memcardSector(u8 data)
 			siomode = SIO_MEMCARD_TRANSFER;
 		};
 	}
-
-	length++;
 }
 
 SIO_WRITE memcardInit()
