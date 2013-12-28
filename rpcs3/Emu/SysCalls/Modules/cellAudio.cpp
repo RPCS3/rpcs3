@@ -217,7 +217,7 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 	UNIMPLEMENTED_FUNC(cellAudio);
 
 	if(!audioParam.IsGood() || !portNum.IsGood()) return CELL_AUDIO_ERROR_PORT_OPEN;
-	m_config->g_is_audio_port_open == true;
+	m_config->g_is_audio_port_open = true;
 	
 	m_param->nChannel = audioParam->nChannel;
 	m_param->nBlock = audioParam->nBlock;
