@@ -163,6 +163,7 @@ int sys_memory_get_user_memory_size(u32 mem_info_addr)
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a)
 {
 	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr=0x%x)", addr, a);
@@ -172,6 +173,8 @@ int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a)
 	a -> access_right = 0;
 	a -> pad = 0;
 =======
+=======
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
 =======
 >>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
 int sys_memory_get_page_attribute(u32 addr, u32 a)
@@ -187,6 +190,9 @@ int sys_memory_get_page_attribute(u32 addr, u32 a)
 	
 	Memory.WriteData(a, attr);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
+=======
 >>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
 =======
 >>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
