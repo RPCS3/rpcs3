@@ -303,46 +303,22 @@ SIO_WRITE memcardAuth(u8 data)
 	}
 }
 
-SIO_WRITE memcardTransfer(u8 data)
+SIO_WRITE memcardErase(u8 data)
 {
-	static MEMCARD_TRANSFER mode;
-	static u8 subCmd = 0;
-	static u8 checksum_pos = 0;
-	static u8 transfer_size = 0;
-
 	switch(sio.bufCount)
 	{
-	case 0: break;
+	case 0:
+		if(data != 0x81) sio.bufCount = -1;
+		break;
+
 	case 1: 
 		{
 			u8 header[] = {0xFF, 0xFF, 0xFF, 0x2B, mcd->term};
+
 			switch(data)
 			{
-			case 0x42: // Write
-				memcpy_fast(sio.buf, header, 4);
-				mode = MEM_WRITE;
-				break;
-
-			case 0x43: // Read
-				memcpy_fast(sio.buf, header, 4);
-				mode = MEM_READ;
-				break;
-
-			case 0x81: // Commit
-				siomode = SIO_DUMMY; // Nothing more to do here.
-				mode = MEM_COMMIT;
-				memcpy_fast(sio.buf, &header[1], 4);
-				sio.bufSize = 3;
-
-				if(subCmd == 0x42) sio2.packet.recvVal1 = 0x1600; // Writing
-				if(subCmd == 0x43) sio2.packet.recvVal1 = 0x1700; // Reading
-
-				sio2.packet.recvVal3 = 0x8C;
-				break;
-
 			case 0x82: // Erase
-				siomode = SIO_DUMMY; // Nothing more to do here.
-				mode = MEM_ERASE;
+				//siomode = SIO_DUMMY; // Nothing more to do here.
 				memcpy_fast(sio.buf, &header[1], 4);
 				sio.bufSize = 3;
 				mcd->EraseBlock();
@@ -350,13 +326,73 @@ SIO_WRITE memcardTransfer(u8 data)
 
 			default:
 				DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
-				mode = MEM_INVALID;
-				sio.bufSize = 3;
-				sio.bufCount = 4;
+				sio.bufCount = -1;
+				//sio.bufSize = 3;
+				//sio.bufCount = 4;
+				break;
+			}
+		}
+		SIO_INT();
+		break;
+
+	default:
+		if(sio.bufCount > sio.bufSize)
+		{
+			if(data == 0x81)
+			{
+				SIO_STAT_READY();
+				sio.bufCount = 0x00;
+			}
+		}
+		break;
+	}
+}
+
+SIO_WRITE memcardWrite(u8 data)
+{
+	static u8 checksum_pos = 0;
+	static u8 transfer_size = 0;
+	static bool once = false;
+
+	switch(sio.bufCount)
+	{
+	case 0:
+		if(data != 0x81) sio.bufCount = -1;
+		break;
+
+	case 1: 
+		{
+			u8 header[] = {0xFF, 0xFF, 0xFF, 0x2B, mcd->term};
+
+			switch(data)
+			{
+			case 0x42: // Write
+				memcpy_fast(sio.buf, header, 4);
+				once = true;
+				break;
+
+			case 0x81: // Commit
+				if(once)
+				{
+					siomode = SIO_DUMMY; // Nothing more to do here.
+					memcpy_fast(sio.buf, &header[1], 4);
+					sio.bufSize = 3;
+
+					sio2.packet.recvVal1 = 0x1600; // Writing
+					sio2.packet.recvVal3 = 0x8C;
+
+					once = false;
+					break;
+				}
+
+			default:
+				DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
+				sio.bufCount = -1;
+				//sio.bufSize = 3;
+				//sio.bufCount = 4;
 				break;
 			}
 
-			subCmd = data;
 		}
 		SIO_INT();
 		break;
@@ -364,45 +400,27 @@ SIO_WRITE memcardTransfer(u8 data)
 	case 2:
 		transfer_size = data;
 
-		switch(mode)
-		{
-		case MEM_WRITE:
-			sio.buf[data + 5] = mcd->term;
-			sio.bufSize = data + 5;
-			checksum_pos = data + 4;
-			break;
-
-		case MEM_READ:
-			mcd->Read(&sio.buf[4], transfer_size);
-			mcd->transferAddr += transfer_size;
-
-			sio.buf[transfer_size + 4] = mcd->DoXor(&sio.buf[4], transfer_size);
-			sio.buf[transfer_size + 5] = mcd->term;
-			sio.bufSize = transfer_size + 5;
-			break;
-		}
+		sio.buf[data + 5] = mcd->term;
+		sio.bufSize = data + 5;
+		checksum_pos = data + 4;
 		break;
 
 	default:
-		switch(mode)
-		{
-		case MEM_WRITE:
-			if(sio.bufCount < checksum_pos)
-			{
-				sio.buf[sio.bufCount+1] = data;
-			}
-			else if(sio.bufCount == checksum_pos)
-			{
-				u8 xor_check = mcd->DoXor(&sio.buf[4], checksum_pos - 4);
-				
-				if(xor_check != sio.buf[sio.bufCount])
-					Console.Warning("MemWrite: Checksum invalid! XOR: %02X, IN: %02X\n", xor_check, sio.buf[sio.bufCount]);
 
-				sio.buf[sio.bufCount] = xor_check;
-				mcd->Write(&sio.buf[4], transfer_size);
-				mcd->transferAddr += transfer_size;
-			}
-			break;
+		if(sio.bufCount < checksum_pos)
+		{
+			sio.buf[sio.bufCount+1] = data;
+		}
+		else if(sio.bufCount == checksum_pos)
+		{
+			u8 xor_check = mcd->DoXor(&sio.buf[4], checksum_pos - 4);
+				
+			if(xor_check != sio.buf[sio.bufCount])
+				Console.Warning("MemWrite: Checksum invalid! XOR: %02X, IN: %02X\n", xor_check, sio.buf[sio.bufCount]);
+
+			sio.buf[sio.bufCount] = xor_check;
+			mcd->Write(&sio.buf[4], transfer_size);
+			mcd->transferAddr += transfer_size;
 		}
 
 		if(sio.bufCount > sio.bufSize)
@@ -417,33 +435,103 @@ SIO_WRITE memcardTransfer(u8 data)
 	}
 }
 
+SIO_WRITE memcardRead(u8 data)
+{
+	static u8 checksum_pos = 0;
+	static u8 transfer_size = 0;
+	static bool once = false;
+
+	switch(sio.bufCount)
+	{
+	case 0:
+		if(data != 0x81) sio.bufCount = -1;
+		break;
+
+	case 1: 
+		{
+			u8 header[] = {0xFF, 0xFF, 0xFF, 0x2B, mcd->term};
+
+			switch(data)
+			{
+			case 0x43: // Read
+				memcpy_fast(sio.buf, header, 4);
+				once = true;
+				break;
+
+			case 0x81: // Commit
+				if(once)
+				{
+					siomode = SIO_DUMMY; // Nothing more to do here.
+					memcpy_fast(sio.buf, &header[1], 4);
+					sio.bufSize = 3;
+
+					sio2.packet.recvVal1 = 0x1700; // Reading
+					sio2.packet.recvVal3 = 0x8C;
+
+					once = false;
+					break;
+				}
+
+			default:
+				DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
+				sio.bufCount = -1;
+				//sio.bufSize = 3;
+				//sio.bufCount = 4;
+				break;
+			}
+		}
+		SIO_INT();
+		break;
+
+	case 2:
+		transfer_size = data;
+
+		mcd->Read(&sio.buf[4], transfer_size);
+		mcd->transferAddr += transfer_size;
+
+		sio.buf[transfer_size + 4] = mcd->DoXor(&sio.buf[4], transfer_size);
+		sio.buf[transfer_size + 5] = mcd->term;
+		sio.bufSize = transfer_size + 5;
+		break;
+
+	default:
+		if(sio.bufCount > sio.bufSize)
+		{
+			if(data == 0x81)
+			{
+				SIO_STAT_READY();
+				sio.bufCount = 0x00;
+			}
+		}
+		break;
+	}
+}
+
+
 SIO_WRITE memcardSector(u8 data)
 {
 	static u8 xor_check = 0;
-	static bool sectorDone = false;
-
-	if(!sectorDone)
+	
+	switch(sio.bufCount)
 	{
-		switch(sio.bufCount)
-		{
 		case 2: mcd->sectorAddr  = data <<  0; xor_check  = data; break;
 		case 3: mcd->sectorAddr |= data <<  8; xor_check ^= data; break;
 		case 4: mcd->sectorAddr |= data << 16; xor_check ^= data; break;
 		case 5: mcd->sectorAddr |= data << 24; xor_check ^= data; break;
 		case 6: mcd->goodSector = data == xor_check; break;
 		case 8: mcd->transferAddr = (512+16) * mcd->sectorAddr; break;
-		case 9: memset8<0xFF>(sio.buf); sectorDone = true;
-		}
-	}
-	else
-	{
-		if (data == 0x81) // SET_SECTOR End
-		{
-			SIO_STAT_READY();
-			sectorDone = false;
-			sio.bufCount = 0;
-			siomode = SIO_MEMCARD_TRANSFER;
-		};
+		case 9:
+			{
+				switch(sio.cmd)
+				{
+				case 0x21: siomode = SIO_MEMCARD_ERASE; break;
+				case 0x22: siomode = SIO_MEMCARD_WRITE; break;
+				case 0x23: siomode = SIO_MEMCARD_READ; break;
+				}
+
+				memset8<0xFF>(sio.buf);
+				sio.bufCount = -1;
+			}
 	}
 }
 
@@ -500,8 +588,6 @@ SIO_WRITE memcardInit()
 
 SIO_WRITE sioWriteMemcard(u8 data)
 {
-	static u8 siocmd = 0;
-
 	switch(sio.bufCount)
 	{
 	case 0:
@@ -511,7 +597,7 @@ SIO_WRITE sioWriteMemcard(u8 data)
 		break;
 
 	case 1:
-		siocmd = data;
+		sio.cmd = data;
 		switch(data)
 		{
 		case 0x21: // SET_SECTOR_ERASE
@@ -585,7 +671,7 @@ SIO_WRITE sioWriteMemcard(u8 data)
 		break;
 
 	case 2:
-		switch(siocmd)
+		switch(sio.cmd)
 		{
 		case 0x27: // SET_TERMINATOR
 			mcd->term = data;
@@ -598,8 +684,6 @@ SIO_WRITE sioWriteMemcard(u8 data)
 
 SIO_WRITE sioWriteMemcardPSX(u8 data)
 {
-	static u8 siocmd = 0;
-
 	switch(sio.bufCount)
 	{
 	case 0: // Same init stuff...
@@ -609,7 +693,7 @@ SIO_WRITE sioWriteMemcardPSX(u8 data)
 		break;
 
 	case 1:
-		siocmd = data; 
+		sio.cmd = data; 
 		switch(data) 
 		{
 		case 0x53: // PSX 'S'tate // haven't seen it happen yet
@@ -655,7 +739,7 @@ SIO_WRITE sioWriteMemcardPSX(u8 data)
 		break;
 
 	case 6:
-		if(siocmd == 0x52)
+		if(sio.cmd == 0x52)
 		{
 			// READ
 
@@ -724,7 +808,9 @@ static void sioWrite8inl(u8 data)
 	case SIO_INFRARED: sioWriteInfraRed(data); break;
 	case SIO_MEMCARD: sioWriteMemcard(data); break;
 	case SIO_MEMCARD_AUTH: memcardAuth(data); break;
-	case SIO_MEMCARD_TRANSFER: memcardTransfer(data); break;
+	case SIO_MEMCARD_ERASE: memcardErase(data); break;
+	case SIO_MEMCARD_WRITE: memcardWrite(data); break;
+	case SIO_MEMCARD_READ: memcardRead(data); break;
 	case SIO_MEMCARD_SECTOR: memcardSector(data); break;
 	case SIO_MEMCARD_PSX: sioWriteMemcardPSX(data); break;
 	case SIO_DUMMY: break;

@@ -94,7 +94,8 @@ struct _sio
 
 	u8 buf[256];
 	u8 ret; // default return value;
-	
+	u8 cmd; // command backup
+
 	u16 bufCount; // current buffer counter
 	u16 bufSize;  // supposed buffer size
 
