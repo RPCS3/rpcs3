@@ -160,3 +160,15 @@ int sys_memory_get_user_memory_size(u32 mem_info_addr)
 	Memory.WriteData(mem_info_addr, info);
 	return CELL_OK;
 }
+
+int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a)
+{
+	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr=0x%x)", addr, a);
+
+	a -> attribute = 0;
+	a -> page_size = 0;
+	a -> access_right = 0;
+	a -> pad = 0;
+
+	return CELL_OK;
+}
