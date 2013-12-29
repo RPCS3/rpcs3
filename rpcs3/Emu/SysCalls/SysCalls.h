@@ -186,6 +186,7 @@ extern int sys_memory_container_destroy(u32 cid);
 extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
 extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
+extern int sys_memory_get_page_attribute(u32 addr, u32 a);
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr);
 extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
