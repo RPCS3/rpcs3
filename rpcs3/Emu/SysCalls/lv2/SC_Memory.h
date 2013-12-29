@@ -57,3 +57,11 @@ struct sys_vm_statistics {
 	u32 physical_mem_used;
 	u64 timestamp;
 };
+
+struct sys_page_attr_t
+{
+	u64 attribute;
+	u64 access_right;
+	u32 page_size;
+	u32 pad;
+};

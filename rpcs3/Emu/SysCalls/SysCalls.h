@@ -1,6 +1,7 @@
 #pragma once
 #include "ErrorCodes.h"
 #include "lv2/SC_FileSystem.h"
+#include "lv2/SC_Memory.h"
 #include "lv2/SC_Timer.h"
 #include "lv2/SC_Rwlock.h"
 #include "lv2/SC_SPU_Thread.h"
@@ -186,6 +187,19 @@ extern int sys_memory_container_destroy(u32 cid);
 extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
 extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a);
+=======
+extern int sys_memory_get_page_attribute(u32 addr, u32 a);
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
+=======
+extern int sys_memory_get_page_attribute(u32 addr, u32 a);
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
+=======
+extern int sys_memory_get_page_attribute(u32 addr, u32 a);
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr);
 extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
