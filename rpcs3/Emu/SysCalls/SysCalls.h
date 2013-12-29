@@ -188,7 +188,11 @@ extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
 extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
 <<<<<<< HEAD
+<<<<<<< HEAD
 extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a);
+=======
+extern int sys_memory_get_page_attribute(u32 addr, u32 a);
+>>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
 =======
 extern int sys_memory_get_page_attribute(u32 addr, u32 a);
 >>>>>>> ddf73ea2bea5f9b4a622bb9c60fd5ec89fe20b82
