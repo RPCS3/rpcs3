@@ -1,0 +1,24 @@
+gametitle=Mercenaries - Playground of Destruction (NTSC-U) (SLUS-20932)
+comment=Widescreen Hack by ElHecht
+
+// 16:9 
+patch=1,EE,0033b0a0,word,3c013f00 // 00000000 hor fov
+
+// 16:10 
+//patch=1,EE,0033b0a0,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0033b0a4,word,34215555 // 00000000 hor fov
+
+// 16:9 and 16:10 main modifications
+// no need to change anything here! all modifications are calculated
+// based on the hor fov value in the upper 16:9/16:10 section
+patch=1,EE,0033b0a8,word,4481f000 // 00000000 fov
+patch=1,EE,0033b0e8,word,4600f306 // 44816000 fov
+patch=1,EE,0033ef74,word,461e0843 // 3c013f80 renderfix 1 objects
+patch=1,EE,0033ef78,word,46010d43 // 4481a800 renderfix 1 objects
+patch=1,EE,00346e60,word,4600f306 // 44816000 renderfix 2 smoke and fire
+patch=1,EE,00339a00,word,0813cbee // 46030842 hud-identification fix
+patch=1,EE,00339a04,word,00000000 // 46030002 hud-identification fix
+patch=1,EE,004f2fb8,word,46030842 // 00000000 hud-identification fix
+patch=1,EE,004f2fbc,word,46030002 // 00000000 hud-identification fix
+patch=1,EE,004f2fc0,word,461e0002 // 00000000 hud-identification fix
+patch=1,EE,004f2fc4,word,080ce681 // 00000000 hud-identification fix

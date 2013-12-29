@@ -1,0 +1,20 @@
+gametitle=Armored Core - Nexus - Disc 1 - Evolution (PAL-M5) (SLES-82036)
+gametitle=Armored Core - Nexus - Disc 2 - Revolution (PAL-M5) (SLES-82037)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,0024070c,word,3c013f40 // 00000000 hor fov menu
+patch=1,EE,00240718,word,44810000 // 00000000
+patch=1,EE,0024071c,word,4600c602 // 00000000
+patch=1,EE,001211d0,word,3c033f19 // 3c033f4c hor fov gameplay
+patch=1,EE,001211d8,word,3462999a // 3462cccd hor fov gameplay
+patch=1,EE,00158880,word,3c0243d6 // 3c0243a0 renderfix
+
+// 16:10
+//patch=1,EE,0024070c,word,3c013f55 // 00000000 hor fov menu
+//patch=1,EE,00240710,word,34215555 // 00000000 hor fov menu
+//patch=1,EE,00240718,word,44810000 // 00000000
+//patch=1,EE,0024071c,word,4600c602 // 00000000
+//patch=1,EE,001211d0,word,3c033f2a // 3c033f4c hor fov gameplay
+//patch=1,EE,001211d8,word,3462aaab // 3462cccd hor fov gameplay
+//patch=1,EE,00158880,word,3c0243c1 // 3c0243a0 renderfix

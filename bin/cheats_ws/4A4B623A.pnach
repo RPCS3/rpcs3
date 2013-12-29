@@ -1,0 +1,4 @@
+﻿gametitle=Kakutou Bijin Wulong [NTSC-J] (SLPS-25657) 
+comment=Widescreen hack
+
+patch=1,EE,203C9EB0,extended,3FE37FA9

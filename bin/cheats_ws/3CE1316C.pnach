@@ -1,0 +1,23 @@
+gametitle=Baroque (J) (SLPM_66747)
+comment=Widescreen hack by ElHecht (pnach NTSC-J by Arapapa)
+
+// 16:9(803f033c 00c0053c 00288344 00000000 83280246)
+patch=1,EE,00398fe4,word,3c033f40 // 3c033f80 hor fov
+patch=1,EE,00398fec,word,4483f000 // 44832800
+patch=1,EE,00398ff0,word,461ef143 // 00000000
+patch=1,EE,00398ff4,word,4602f083 // 46022883
+
+//NTSC-J... did not found "3f947ae1" 
+//patch=1,EE,0044cf30,word,3f5eb852 // 3f947ae1 subtitle hor fov
+
+//(6040053c c040033c 2c0085ac)
+patch=1,EE,00164830,word,3c054028 // 3c054060 hud hp/vt
+
+//(2040053c c040033c 2c0085ac)
+patch=1,EE,00164870,word,3c053ff0 // 3c054020 hud hp/vt
+
+// effects(803f013c 00108144 42180546)
+patch=1,EE,00231ed4,word,3c014500 // 3c013f80 remove ghosting effect
+
+//b000a427 803f023c 00688344 00888244
+patch=1,EE,0010f6e0,word,3c023e80 // 3c023f80 remove grain effect

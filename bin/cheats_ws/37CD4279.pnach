@@ -1,0 +1,12 @@
+gametitle=The Lord of the Rings - The Third Age (K) (SLKA_252.37)
+comment=Widescreen Hack (NTSC-K by Arapapa)
+
+
+//0000803F 5555953F 0000803F
+patch=1,EE,20C40380,word,3f400000
+
+//0000803F B76D5B3F 0000803F
+patch=1,EE,20C40390,word,3fb00000
+
+//0000803F B76D5B3F 0000803F
+patch=1,EE,20C40398,word,3fb00000

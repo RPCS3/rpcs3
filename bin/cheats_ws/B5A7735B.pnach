@@ -1,0 +1,41 @@
+gametitle=Dot Hack Part 1 - Infection (PAL-M5) (SLES-52237)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0010a64c,word,3c023f40 // 3c023f80 hor fov 1
+patch=1,EE,001eed6c,word,3c0a3f40 // 00000000 hor fov 2
+
+// 16:10
+//patch=1,EE,0010a628,word,3c193f55 // 00000000 hor fov 1
+//patch=1,EE,0010a64c,word,37395555 // 3c023f80 hor fov 1
+//patch=1,EE,0010a660,word,44999000 // 44829000
+//patch=1,EE,001eed6c,word,3c0a3f55 // 00000000 hor fov 2
+//patch=1,EE,001eed70,word,354a5555 // 00000000 hor fov 2
+
+// 16:9 and 16:10 modifications
+// no need to change anything here! all modifications are calculated
+// based on the hor fov value in the upper 16:9/16:10 section
+patch=1,EE,001c1734,word,0807bb58 // xxxxxxxx offset
+patch=1,EE,001c1738,word,00000000 // xxxxxxxx offset
+patch=1,EE,001eed60,word,46006346 // 00000000
+patch=1,EE,001eed64,word,3c093f80 // 00000000
+patch=1,EE,001eed68,word,44899800 // 00000000
+patch=1,EE,001eed74,word,448a9000 // 00000000
+patch=1,EE,001eed78,word,10490006 // 00000000
+patch=1,EE,001eed7c,word,00000000 // 00000000
+patch=1,EE,001eed80,word,3c0b0000 // 00000000
+patch=1,EE,001eed84,word,356b0000 // 00000000
+patch=1,EE,001eed88,word,3c0c001c // 00000000
+patch=1,EE,001eed8c,word,ad8b1740 // 00000000
+patch=1,EE,001eed90,word,ad8b1748 // 00000000
+patch=1,EE,001eed94,word,080705ce // 00000000
+
+// Note
+// In general the code for this game would look like this :
+//   patch=1,EE,0010a64c,word,3c023f40 // 3c023f80 hor fov 1
+//   patch=1,EE,001c172c,word,3c023f40 // 3c023f80 hor fov 2
+//   patch=1,EE,001c1738,word,461294c3 // 460094c6 
+// Unfortunately the game uses a different elf file for each language
+// and the spanish version (HACK.01S) has an offset for the
+// hor fov 2. So i wrote a fix which implements the hor fov modification
+// and corrects the screwed up code caused by the offset.

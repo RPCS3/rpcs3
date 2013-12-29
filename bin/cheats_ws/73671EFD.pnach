@@ -1,0 +1,49 @@
+gametitle=Downhill Domination (PAL-M5) [SLES-52202]
+comment=Downhill Domination Widescreen Hacks (by Aced14)
+
+//16:9 Widescreen
+
+patch=1,EE,101BDC50,extended,00004401 //3C01442C - Shell Menu Master X FOV
+
+//patch=1,EE,2028B080,extended,43870000 //43B40000 - Loading Screen Master X FOV
+//patch=1,EE,2028B0A0,extended,3F360B16 //3F088851 - Loading Screen Master Y FOV
+
+patch=1,EE,101BA55C,extended,00004401 //3C01442C - Title Menu Master X FOV
+patch=1,EE,20272790,extended,434FC000 //438A8000 - Tree Sprite Width #1
+patch=1,EE,202728D0,extended,434FC000 //438A8000 - Tree Sprite Width #2
+patch=1,EE,20272928,extended,434FC000 //438A8000 - Tree Sprite Width #3
+
+patch=1,EE,101FD7E0,extended,00004401 //3C01442C - Bike Shop Menu Goggles Default Master X FOV (added to close-up float by game engine to produce a "final" close-up X FOV)
+patch=1,EE,101FD7C8,extended,000044D8 //3C014510 - Bike Shop Menu Goggles Close-up Master X FOV #1
+patch=1,EE,101FD7CC,extended,0000C000 //34218000 - Bike Shop Menu Goggles Close-up Master X FOV #2
+patch=1,EE,E0030002,extended,00A095D0 //Conditional live memory fixes for Bike Shop menu
+patch=1,EE,20A095D0,extended,3FAA3D71 //00000000 - Bike Shop Top HUD Width (Live Memory)
+patch=1,EE,20A09610,extended,3FAA3D71 //00000000 - Bike Shop Bottom HUD Width (Live Memory)
+patch=1,EE,20A5FD58,extended,C2DE0000 //00000000 - Bike Shop Shadow Shape/Width (Live Memory)
+
+patch=1,EE,2028AC20,extended,3F360B5E //3F088888 - Menu Master Y FOV
+
+patch=1,EE,1016D258,extended,0000434F //3C01438A - 1P P1 Master X FOV #1
+patch=1,EE,1016D25C,extended,0000C000 //34218000 - 1P P1 Master X FOV #2
+patch=1,EE,2028A860,extended,3F360B15 //3F088851 - 1P P1 Master Y FOV
+
+patch=1,EE,2028AA80,extended,43268000 //435E0000 - 2P Vertical P1 Master X FOV
+patch=1,EE,2028AAA0,extended,3F360B16 //3F088851 - 2P Vertical P1 Master Y FOV
+patch=1,EE,2028AB40,extended,43268000 //435E0000 - 2P Vertical P2 Master X FOV
+patch=1,EE,2028AB60,extended,3F360B16 //3F088851 - 2P Vertical P2 Master Y FOV
+
+patch=1,EE,2028A900,extended,434FC000 //438A8000 - 2P Horizontal P1 Master X FOV
+patch=1,EE,2028A920,extended,3F360B16 //3F088851 - 2P Horizontal P1 Master Y FOV
+patch=1,EE,2028A9C0,extended,434FC000 //438A8000 - 2P Horizontal P2 Master X FOV
+patch=1,EE,2028A9E0,extended,3F360B16 //3F088883 - 2P Horizontal P2 Master Y FOV
+
+patch=1,EE,2028ACC0,extended,431D8000 //43520000 - 4P P1 Master X FOV
+patch=1,EE,2028ACE0,extended,3F360B60 //3F088888 - 4P P1 Master Y FOV
+patch=1,EE,2028AD80,extended,431D8000 //43520000 - 4P P2 Master X FOV
+patch=1,EE,2028ADA0,extended,3F360B59 //3F088883 - 4P P2 Master Y FOV
+patch=1,EE,2028AE40,extended,431D8000 //43520000 - 4P P3 Master X FOV
+patch=1,EE,2028AE60,extended,3F360B59 //3F088883 - 4P P3 Master Y FOV
+patch=1,EE,2028AF00,extended,431D8000 //43520000 - 4P P4 Master X FOV
+patch=1,EE,2028AF20,extended,3F360B59 //3F088883 - 4P P4 Master Y FOV
+
+patch=1,EE,2028A840,extended,434FC000 //438A8000 - 2-4P P1-4 Paused Master X FOV

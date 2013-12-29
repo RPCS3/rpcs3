@@ -1,0 +1,6 @@
+gametitle=Seven Samurai 20XX (U) (SLUS_206.21)
+comment=Widescreen Hack (16:9) by ElHecht (pnach by Arapapa)
+
+// 16:9
+patch=1,EE,001bcdd4,word,3c094455 // 00000000 hor fov
+patch=1,EE,001bce0c,word,35235555 // 3c034420 hor fov

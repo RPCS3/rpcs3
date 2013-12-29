@@ -1,0 +1,9 @@
+gametitle=Shin Megami Tensei - Devil Summoner 2 (SLPM_666.79)
+comment=Widescreen Hack by Arapapa
+
+
+//fields and battles
+patch=1,EE,20427064,extended,3fc65461  // 3f951eb8
+
+//event
+patch=1,EE,20427414,extended,3fc65461  // 3f951eb8

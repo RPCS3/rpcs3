@@ -1,0 +1,5 @@
+comment=Dirge of Cerberus - Final Fantasy VII International Widescreen Hack (16:9) (NTSC-J)
+
+patch=1,EE,0040c5f8,word,3C013FC9
+patch=1,EE,0040c5fc,word,342162D8
+patch=1,EE,0040d1f0,word,3C013EC0

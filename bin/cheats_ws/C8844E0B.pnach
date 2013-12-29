@@ -1,0 +1,18 @@
+gametitle=Samurai Warriors 2 (PAL-E) (SLES-54340)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,00179f58,word,3c023f19 // 3c023f4c hor fov 1-player
+patch=1,EE,00179f60,word,3442999a // 3442cccd hor fov 1-player
+patch=1,EE,0017a118,word,3c033f19 // 3c033f4c hor fov 2-players
+patch=1,EE,0017a120,word,3463999a // 3463cccd hor fov 2-players
+patch=1,EE,0017a3e4,word,3c03440a // 3c0343cf renderfix enemies 1-player
+patch=1,EE,0017a384,word,3c03440a // 3c0343cf renderfix enemies 2-players
+
+// 16:10
+//patch=1,EE,00179f58,word,3c023f2a // 3c023f4c hor fov 1-player
+//patch=1,EE,00179f60,word,3442aaab // 3442cccd hor fov 1-player
+//patch=1,EE,0017a118,word,3c033f2a // 3c033f4c hor fov 2-players
+//patch=1,EE,0017a120,word,3463aaab // 3463cccd hor fov 2-players
+//patch=1,EE,0017a3e4,word,3c0343f9 // 3c0343cf renderfix enemies 1-player
+//patch=1,EE,0017a384,word,3c0343f9 // 3c0343cf renderfix enemies 2-players

@@ -1,0 +1,5 @@
+gametitle=Wild Arms 5 PAL
+comment=Widescreen Hack
+patch=1,EE,00153984,word,3C024500
+patch=1,EE,00153a20,word,3C023F40
+patch=1,EE,0015390c,word,3C02442B

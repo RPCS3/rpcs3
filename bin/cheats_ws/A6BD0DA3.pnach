@@ -1,0 +1,9 @@
+gametitle=Tsukiyo ni Saraba (SLPM-65826)
+comment=Widescreen hack by sergx12 (NTSC-J by Arapapa)
+
+// 16:9
+//803f013c 00088144 0000a3c7 00000000 00000000 43080046
+patch=1,EE,005da8c4,word,3c013faa // 3c013f80
+
+//803f013c 00588144 82310446 40080746
+patch=1,EE,005daadc,word,3c013faa // 3c013f80

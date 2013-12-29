@@ -1,0 +1,6 @@
+gametitle=God Hand (K) (SCKA_20090)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//16:9 (6e3f013c efee2134 00288144 5900023c cc5ae6ac)
+patch=1,EE,0030fda0,word,3c013f9f // 3c013f6e
+patch=1,EE,0030fda4,word,342149f1 // 3421eeef

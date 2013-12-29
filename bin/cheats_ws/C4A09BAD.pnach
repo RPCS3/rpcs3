@@ -1,0 +1,49 @@
+gametitle=MTBikers: Bakusou Mountain Bikers (NTSC-J) [SCPS-15062]
+comment=MTBikers: Bakusou Mountain Bikers Widescreen Hacks (by Aced14)
+
+//16:9 Widescreen
+
+patch=1,EE,101BBF70,extended,00004401 //3C01442C - Shell Menu Master X FOV
+
+//patch=1,EE,20284FD0,extended,434FC000 //438A8000 - Loading Screen Master X FOV
+//patch=1,EE,20284FF0,extended,3F471C26 //3F15551D - Loading Screen Master Y FOV
+
+patch=1,EE,101B897C,extended,00004401 //3C01442C - Title Menu Master X FOV
+patch=1,EE,2026FBD0,extended,434FC000 //438A8000 - Tree Sprite Width #1
+patch=1,EE,2026FD10,extended,434FC000 //438A8000 - Tree Sprite Width #2
+patch=1,EE,2026FD68,extended,434FC000 //438A8000 - Tree Sprite Width #3
+
+patch=1,EE,101FAE80,extended,00004401 //3C01442C - Bike Shop Menu Goggles Default Master X FOV (added to close-up float by game engine to produce a "final" close-up X FOV)
+patch=1,EE,101FAE68,extended,000044D8 //3C014510 - Bike Shop Menu Goggles Close-up Master X FOV #1
+patch=1,EE,101FAE6C,extended,0000C000 //34218000 - Bike Shop Menu Goggles Close-up Master X FOV #2
+patch=1,EE,E0030002,extended,00A095D0 //Conditional live memory fixes for Bike Shop menu
+patch=1,EE,20A095D0,extended,3FAA3D71 //00000000 - Bike Shop Top HUD Width (Live Memory)
+patch=1,EE,20A09610,extended,3FAA3D71 //00000000 - Bike Shop Bottom HUD Width (Live Memory)
+patch=1,EE,20A60168,extended,C2DE0000 //00000000 - Bike Shop Shadow Shape/Width (Live Memory)
+
+patch=1,EE,20284B70,extended,3F206D3A //3EF0A3D7 - Menu Master Y FOV
+
+patch=1,EE,1016C6B0,extended,0000434F //3C01438A - 1P P1 Master X FOV #1
+patch=1,EE,1016C6B4,extended,0000C000 //34218000 - 1P P1 Master X FOV #2
+patch=1,EE,202847B0,extended,3F471C26 //3F15551D - 1P P1 Master Y FOV
+
+patch=1,EE,202849D0,extended,43268000 //435E0000 - 2P Vertical P1 Master X FOV
+patch=1,EE,202849F0,extended,3F471C26 //3F15551D - 2P Vertical P1 Master Y FOV
+patch=1,EE,20284A90,extended,43268000 //435E0000 - 2P Vertical P2 Master X FOV
+patch=1,EE,20284AB0,extended,3F471C26 //3F15551D - 2P Vertical P2 Master Y FOV
+
+patch=1,EE,20284850,extended,434FC000 //438A8000 - 2P Horizontal P1 Master X FOV
+patch=1,EE,20284870,extended,3F471C6A //3F155550 - 2P Horizontal P1 Master Y FOV
+patch=1,EE,20284910,extended,434FC000 //438A8000 - 2P Horizontal P2 Master X FOV
+patch=1,EE,20284930,extended,3F471C6A //3F155550 - 2P Horizontal P2 Master Y FOV
+
+patch=1,EE,20284C10,extended,431D8000 //43520000 - 4P P1 Master X FOV
+patch=1,EE,20284C30,extended,3F206D3A //3EF0A3D7 - 4P P1 Master Y FOV
+patch=1,EE,20284CD0,extended,431D8000 //43520000 - 4P P2 Master X FOV
+patch=1,EE,20284CF0,extended,3F206D3A //3EF0A3D7 - 4P P2 Master Y FOV
+patch=1,EE,20284D90,extended,431D8000 //43520000 - 4P P3 Master X FOV
+patch=1,EE,20284DB0,extended,3F206D3A //3EF0A3D7 - 4P P3 Master Y FOV
+patch=1,EE,20284E50,extended,431D8000 //43520000 - 4P P4 Master X FOV
+patch=1,EE,20284E70,extended,3F206D3A //3EF0A3D7 - 4P P4 Master Y FOV
+
+patch=1,EE,20284790,extended,434FC000 //438A8000 - 2-4P P1-4 Paused Master X FOV

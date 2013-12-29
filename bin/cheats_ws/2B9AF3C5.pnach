@@ -1,0 +1,11 @@
+gametitle=Romancing SaGa (NTSC-J) (SLPM_659.20)
+comment=Widescreen Hack (16:9) by ElHecht (pnach by Arapapa)
+
+// 16:9 
+patch=1,EE,0027f7b4,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0027f7b8,word,44810000 // 00000000 hor fov
+patch=1,EE,0027f7c0,word,4600c602 // 00000000 hor fov
+patch=1,EE,0018285c,word,3c014430 // 3c014400 bg-fix for battles
+//
+// Compass
+patch=1,EE,20416300,extended,43C00000 // 44000000 hor Compass

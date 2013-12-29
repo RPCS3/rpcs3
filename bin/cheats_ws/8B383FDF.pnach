@@ -1,0 +1,4 @@
+gametitle=Shining Force EXA (J) (SLPM_666.46)
+comment=Widescreen Hack (pnach by Arapapa)
+
+patch=1,EE,210FE8AC,extended,3ff3cf35 // 3fb6db6e

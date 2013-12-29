@@ -1,0 +1,3 @@
+Gametitle=Makai Kingdom: Chronicles of the Sacred Tome (NTSC-U)
+Comment=Widescreen Hack by JLB
+patch=1,EE,20332070,word,45700000 // 45A00000 (battle background)

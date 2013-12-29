@@ -1,0 +1,4 @@
+﻿gametitle=One Piece Grand Battle! Rush [NTSC-J] (SLPS-25473)
+comment=Widescreen Hack
+
+patch=1,EE,20425CB8,extended,3F400000

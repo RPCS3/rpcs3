@@ -1,0 +1,3 @@
+﻿gametitle=Spy Fiction [NTSC-J] (SLPS-25311)
+comment=Widescreen Hack
+patch=1,EE,001CAADC,word,3F2AAAAB

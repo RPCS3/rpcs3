@@ -1,0 +1,4 @@
+gametitle=Simple 2000 Series Vol. 81 - The Chikyuu Boueigun 2 [NTSC-J] (SLPM-62652)
+comment=Widescreen Hack 
+
+patch=1,EE,20992AC0,extended,3F400000

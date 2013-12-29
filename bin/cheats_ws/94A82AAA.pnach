@@ -11,6 +11,10 @@ patch=1,EE,00106e44,word,00000000
 patch=1,EE,00106e48,word,24630004
 patch=1,EE,00106e4c,word,3c043f80
 
+//persona art fix
+patch=1,EE,00114a1c,word,3c033ec0
+patch=1,EE,00114a2c,word,3c023f90
+
 //FMV's fix by nemesis2000
 patch=1,EE,0010afd0,word,1462000a
 patch=1,EE,0010afd8,word,3c02c294

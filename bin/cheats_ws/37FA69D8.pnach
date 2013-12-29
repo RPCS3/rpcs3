@@ -1,0 +1,5 @@
+gametitle=Mission Impossible - Operation Surma (K) (SLKA-25028)
+comment=Widescreen patch by Arapapa
+
+// 16:9 (0000803f 00000000 00000000 00000000 00000080)
+patch=1,EE,20657FE0,word,3F400000 // 3F800000

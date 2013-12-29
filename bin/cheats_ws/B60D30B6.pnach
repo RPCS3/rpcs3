@@ -1,0 +1,12 @@
+gametitle=Mana Khemia: Alchemists of Al-Revis (SLPM_66748)
+comment=Widescreen hack by nemesis2000 (NTSC-J by Arapapa)
+
+//3D scenes
+patch=1,EE,00468da4,word,3c013f40 //hor value
+patch=1,EE,00468da8,word,44810000
+patch=1,EE,00468db0,word,4600c602
+
+//battle's fix
+patch=1,EE,00b8c1b4,word,44400000 //right side fix
+patch=1,EE,00b8c1bc,word,c4400000 //left side fix
+patch=1,EE,00b8b4fc,word,3faaaaab //menu fix

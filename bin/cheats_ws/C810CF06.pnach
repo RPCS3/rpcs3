@@ -1,0 +1,6 @@
+gametitle=Simple 2000 Series Vol. 105 - The Maid Fuku to Kikanjuu [NTSC-J] (SLPS-20464)
+comment=Widescreen Hack
+
+patch=1,EE,001c53ac,word,3c013f40
+patch=1,EE,001c53b0,word,44810000
+patch=1,EE,001c53b8,word,4600c602

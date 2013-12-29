@@ -1,0 +1,10 @@
+gametitle=The Adventures of Cookie & Cream (NTSC) SLUS_201.70
+comment=Widescreen hack by flameofrecca
+//pnach must be loaded before level, else codes won't work
+
+patch=1,EE,00100278,word,3c013f40 //horizontal fov fix in-game camera only
+
+//-----Some Useful Addresses for HUD fixing-----
+//patch=1,EE,0011bf44,word,3c013f22 //controller buttons HUD vertical size
+//patch=1,EE,0011d7ac,word,3c013f22 //timer HUD vertical size
+//patch=1,EE,0011d824,word,3c013f22 //timer HUD vertical size

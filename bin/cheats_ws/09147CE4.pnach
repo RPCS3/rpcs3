@@ -1,0 +1,6 @@
+gametitle=Fire Warrior Warhammer 400000 SLES_509.58 (widescreen by Some Chump)
+
+// Widescreen is always enabled no matter what ingame setting is selected
+
+patch=1,EE,206680ec,extended,3f400000
+patch=1,EE,206680f0,extended,3f800000

@@ -1,0 +1,10 @@
+gametitle=Sky Odyssey (PAL-M5) (SCES-50105)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0028ab58,word,3f400000 // 3f800000 hor fov
+patch=1,EE,00273400,word,43d55555 // 43a00000 increase hor fov
+
+// 16:10
+//patch=1,EE,0028ab58,word,3f555555 // 3f800000 hor fov
+//patch=1,EE,00273400,word,43c00000 // 43a00000 increase hor fov

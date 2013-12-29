@@ -1,0 +1,13 @@
+gametitle=Neo Contra (PAL-M3) (SLES-52510)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0035a3ec,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0035a3f8,word,44810000 // 00000000
+patch=1,EE,0035a3fc,word,4600c602 // 00000000
+
+// 16:10
+//patch=1,EE,0035a3ec,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0035a3f0,word,34215555 // 00000000 hor fov
+//patch=1,EE,0035a3f8,word,44810000 // 00000000
+//patch=1,EE,0035a3fc,word,4600c602 // 00000000

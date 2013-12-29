@@ -1,0 +1,4 @@
+gametitle=Metal Gear Solid 2 - Son Of Liberty (K)
+comment=Widescreen Hack (pnach NTSC-K by Arapapa)
+
+patch=1,EE,0011f0e8,word,3c013f40

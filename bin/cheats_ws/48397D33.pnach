@@ -1,0 +1,5 @@
+gametitle=Tamamayu Monogatari 2 (K) (SLKA_25042)
+comment=Widescreen Hack by synce (pnach by Arapapa)
+
+//16:9 (0000803f d9eeee3e 00080000)
+patch=1,EE,21E17B3C,extended,3F400000 // 3f800000

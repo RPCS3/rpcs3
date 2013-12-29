@@ -1,0 +1,39 @@
+gametitle=Shin Megami Tensei: Persona 3 (J) (SLPM_66445)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//16:9
+patch=1,EE,007b179c,word,3fe38e38 // 3faaaaab
+
+//partial HUD fix by nemesis2000
+patch=1,EE,00106958,word,3c043f40
+patch=1,EE,00106960,word,00701821 // 2463982c($1)
+patch=1,EE,00106964,word,2463982c // recall $1 (NTSC-U 24637dac)
+patch=1,EE,0010696c,word,00000000
+patch=1,EE,00106970,word,24630004
+patch=1,EE,00106974,word,3c043f80
+
+//FMV's fix by nemesis2000
+patch=1,EE,0010aac0,word,1462000a
+patch=1,EE,0010aac8,word,3c02c294
+patch=1,EE,0010aacc,word,10000008
+patch=1,EE,0010aad0,word,00000000
+patch=1,EE,0010aaec,word,3c02c1a8
+patch=1,EE,0010ab00,word,00000000
+
+//persona art fix by devina and nemesis2000
+//003f033c 3001a3af 3401a0af 7001a0af 803f023c
+patch=1,EE,0011455c,word,3c033ec0 // 3c033f00
+patch=1,EE,0011456c,word,3c023f90 // 3c023f80
+
+//Font fix by nemesis2000 (causes spacing errors)
+//patch=1,EE,0039ce64,word,00118903
+//patch=1,EE,0039ce68,word,02338818
+//patch=1,EE,0039ce70,word,8E93001c
+//patch=1,EE,0039cf18,word,82970003
+//patch=1,EE,0039d064,word,24130015
+
+//patch=1,EE,0039f2ec,word,2415000c
+//patch=1,EE,0039f304,word,3c0241a8
+//patch=1,EE,0039f330,word,01154018
+//patch=1,EE,0039f334,word,00084103
+//patch=1,EE,0039f338,word,0100a82d

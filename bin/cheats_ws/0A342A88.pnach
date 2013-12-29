@@ -1,0 +1,6 @@
+gametitle= Futurama (NTSC-U) (SLUS-20439)
+comment= Widescreen Hack by VIRGIN KLM
+
+//Widescreen - Sides Extension
+patch=1,EE,20619AC4,word,BFAAAAA9 // 3F7FFFFF
+patch=1,EE,20619AC8,word,3FAAAAA9 // 3F7FFFFF

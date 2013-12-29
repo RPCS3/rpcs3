@@ -1,4 +1,15 @@
-gametitle=Drakengard 2 SLUS_213.73
-comment=Widescreen Hack
+gametitle=Drakengard 2 (NTSC-U)
+comment=Widescreen hack by ElHecht
+
 patch=1,EE,204cf458,extended,3FE38E32 // 3Faaaaaa
 patch=1,EE,20560f94,extended,44550000 // 44200000
+
+// 16:9
+//patch=1,EE,002a1610,word,3c013f40 // 00000000 hor fov
+//patch=1,EE,002a1618,word,4481f000 // 00000000
+//patch=1,EE,002a161c,word,c783c51c // 00000000
+//patch=1,EE,002a1674,word,461e18c3 // c783c51c
+//patch=1,EE,002d2b0c,word,3c014456 // 3c014420 renderfix
+
+// black border fix
+patch=1,EE,003323dc,word,3c010000 // 3c014300

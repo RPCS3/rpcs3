@@ -1,0 +1,5 @@
+gametitle=Shin Megami Tensei - Nocturne (K) (SLKA_25076)
+comment=Widescreen hack (pnach by Arapapa)
+
+//16:9(03000000 b81e953f 00000000)
+patch=1,EE,202db814,word,3FC6D395 // 3f95a1eb8

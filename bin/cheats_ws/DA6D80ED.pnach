@@ -1,0 +1,6 @@
+gametitle=Drag-on Dragoon 2 (J) (SLPM_659.99)
+comment=Widescreen Hack (NTSC-J by Arapapa)
+
+// 16:9
+patch=1,EE,2055C898,extended,3FE38E32 // 3FAAAAAA
+patch=1,EE,205F3F94,extended,44550000 // 44200000

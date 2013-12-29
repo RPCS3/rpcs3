@@ -1,0 +1,5 @@
+gametitle=Burnout Revenge (K) (SLKA-25304) 
+comment=Widescreen Hack (16:9) by Dread (pnach by Arapapa)
+
+patch=1,EE,21bfca94,extended,3FE34000 // 3FAAAAAB // Y-axis
+patch=1,EE,21bfca90,extended,3FAAAAAB // 3F800000 // Zoom

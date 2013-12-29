@@ -1,0 +1,10 @@
+﻿gametitle=Rhapsodia [NTSC-J] (SLPM-66105)
+comment=Original Widescreen Hack by nemesis2000 (pnach by nemesis2000 )
+
+patch=1,EE,0037e62c,word,3c013f40 //hor value
+patch=1,EE,0037e630,word,44810000
+patch=1,EE,0037e638,word,4600c602
+
+//FMV's fix
+patch=1,EE,003bb24c,word,24101E00 //width
+patch=1,EE,003bb400,word,24110190 //x-pos

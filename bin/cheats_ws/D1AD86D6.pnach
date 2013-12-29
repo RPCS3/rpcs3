@@ -1,0 +1,4 @@
+﻿gametitle=Kuon [NTSC-J] (SLPS-25329)
+comment=Widescreen hack
+patch=1,EE,00138104,extended,3c023f19
+patch=1,EE,00138108,extended,3443999a

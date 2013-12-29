@@ -1,0 +1,9 @@
+gametitle=Maximo vs Army of Zin (K) (SLKA-25072)
+comment=Widescreen hack by No.47 (pnach NTSC-K by Arapapa)
+
+//16:9
+//f628ac3f 00007042
+patch=1,EE,202C38DC,word,3FE58BF0 // 3fac28f6
+
+//3333b33f 0000803f 
+patch=1,EE,202CF054,word,3FEEEEEE // 3fb33333

@@ -1,14 +1,7 @@
 gametitle=Dirge of Cerberus: Final Fantasy VII (PAL-M5) (SLES-54185)
-comment=Widescreen Hack (16:9) by devina40/ElHecht
-// 16:9
+comment=Widescreen Hack (16:9) by ElHecht
+
 patch=1,EE,0040c40c,word,3c013fff // 3c013fc0 ver fov
 patch=1,EE,0040c410,word,3421ff99 // 44810000 ver fov
 patch=1,EE,0040c414,word,44810000 // 00000000 
 patch=1,EE,0040cff0,word,3c013ec0 // 3c013f00 zoom
-// 
-//Note: Comparing NTSC-U and PAL versions, NTSC-U has a slightly narrower default FOV than PAL version.
-//Likewise, the PAL version is slightly wider than the NTSC-U version.
-//
-//old values
-//patch=1,EE,204B1730,extended,3FC00000 //zoom out
-//patch=1,EE,204FCAC8,extended,3FFFFF99 //vert (but also zooms in) (any value closer to 2 seems to cause glitches)

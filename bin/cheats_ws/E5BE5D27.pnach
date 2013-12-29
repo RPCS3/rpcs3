@@ -1,0 +1,6 @@
+gametitle=Enter the Matrix (SLKA_25032) Ver. 2.0
+comment=Widescreen hack by nemesis2000 (NTSC-K by Arapapa)
+
+//built-in widescreen
+//d00b74a2 d00b60a2
+patch=1,EE,001ce30c,word,a2740bcc // a2740bd0

@@ -1,0 +1,6 @@
+gametitle=Simple 2000 Series Vol. 114 - The Onna Okappichi Torimonochou - Oharuchan Go Go Go! [NTSC-J] (SLPS-20489)
+comment=Widescreen Hack
+
+patch=1,EE,001af3ec,word,3c013f40
+patch=1,EE,001af3f0,word,44810000
+patch=1,EE,001af3f8,word,4600c602

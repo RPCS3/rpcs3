@@ -1,0 +1,9 @@
+gametitle=Altered Beast (K) (SLKA_251.31)
+comment=Widescreen Hack (pnach NTSC-K by Arapapa)
+
+//fov (NTSC-U 60038046 AA3F033C 233D023C ABAA6434)
+patch=1,EE,00156be0,extended,3c033fe3 // 3c03f0aa (00000000 AA3F033C(*) 233D023C ABAA6434(*))
+patch=1,EE,00156be8,extended,34648e38 // 3464AAAB
+
+//render fix (NTSC-U 003F033C 5A00013C)
+patch=1,EE,005d0210,extended,3c033f20 // 3c033f00 (003F033C 5900013C)

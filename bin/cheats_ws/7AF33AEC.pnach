@@ -1,0 +1,4 @@
+gametitle=Time Crisis - Crisis Zone (K) (SCKA_200.38)
+comment=Widescreen Hack (pnach by Arapapa)
+
+patch=1,EE,00100658,word,3c033f40 // 3c033f80

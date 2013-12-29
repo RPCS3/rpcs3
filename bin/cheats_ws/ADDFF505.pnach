@@ -1,0 +1,11 @@
+gametitle=BLACK (PAL) (SLES_538.86)
+comment=Widescreen Converted from NTSC hack by No.47 (pnach by Some Chump)
+
+patch=1,EE,203BE8BC,word,00000001 //00000000
+patch=1,EE,204BC950,word,00000001 //00000000
+patch=1,EE,204BD98C,word,00000101 //00000000
+patch=1,EE,204CAD54,word,3FE38E39 //3FAAAAAB
+patch=1,EE,204CADF0,word,3FAAAAAB //3F800000
+patch=1,EE,204CADF4,word,3FE38E39 //3FAAAAAB
+patch=1,EE,204CAE94,word,3FE38E39 //3FAAAAAB
+patch=1,EE,205BCB90,word,3F400000 //3F800000

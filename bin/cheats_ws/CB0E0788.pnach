@@ -1,0 +1,12 @@
+gametitle=The Lord of the Rings - The Return of the King (K) (SLKA_250.98)
+comment=Widescreen Hack (NTSC-K by Arapapa)
+
+
+//0000803f 0000803f 00000044, 
+patch=1,EE,21016610,extended,3F400000 // 3F800000
+
+//00000044 0000e043 0000803f
+patch=1,EE,21016620,extended,442b0000 // 44000000
+
+//0000803f 0000803f 0000603f
+patch=1,EE,21016628,extended,3fab0000 // 3f800000

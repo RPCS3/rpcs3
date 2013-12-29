@@ -1,0 +1,5 @@
+gametitle=Hudson Selection Vol 4 - Takahashi Meijin no Bouken Jima (K) (SLKA-15009)
+comment=Widescreen hack by Arapapa
+
+// 16:9 (713d8a3f efeeee3e 00000045)
+patch=1,EE,206f1c60,word,3F4F5C29 // 3f8a3d71

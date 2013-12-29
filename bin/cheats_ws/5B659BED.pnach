@@ -1,0 +1,12 @@
+gametitle=Grandia III (J) (SLPM_659.76)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//both fov+
+patch=1,EE,0013b450,word,3c033f27
+
+//vert fov-
+patch=1,EE,0013b4a0,word,3c013f40
+patch=1,EE,0013b4a4,word,4481a000
+patch=1,EE,0013b4a8,word,46146d83
+patch=1,EE,0013b4ac,word,46007546
+patch=1,EE,0013b4b0,word,46007e86

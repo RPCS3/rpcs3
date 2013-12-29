@@ -1,0 +1,5 @@
+﻿gametitle=Shin Contra [NTSC-J] (SLPM-62264)
+comment=Widescreen hack
+patch=1,EE,005dc404,word,3c013f40 // hor fov
+patch=1,EE,005dc408,word,44810000
+patch=1,EE,005dc410,word,4600c602

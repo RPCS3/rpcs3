@@ -1,0 +1,5 @@
+﻿gametitle=Saru Get You 3 [NTSC-J] （SCPS-15096)
+comment=Widescreen hack
+
+patch=1,EE,20762BB0,extended,3F100000
+patch=1,EE,206F2734,extended,3FCF5C29

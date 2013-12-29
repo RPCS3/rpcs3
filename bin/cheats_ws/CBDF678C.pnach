@@ -1,0 +1,6 @@
+gametitle=Sonic Riders - Zero Gravity (PAL-M5) (SLES-54915)
+comment=Widescreen hack by jordenlb/ElHecht
+
+// 16:9
+patch=1,EE,005fe9a0,word,43700000 // 43a00000 hor fov
+patch=1,EE,00149964,word,3c023fab // 3c023f80 renderfix

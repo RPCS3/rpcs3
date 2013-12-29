@@ -1,0 +1,25 @@
+﻿gametitle=Atelier Iris-Eternal Mana 2 [NTSC-J](SLPM-65985)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//3D scenes
+patch=1,EE,002abc0c,word,3c013f40 //hor value
+patch=1,EE,002abc10,word,44810000
+patch=1,EE,002abc18,word,4600c602
+
+//battle's fix
+patch=1,EE,007cc1ac,word,44400000 //right side fix
+patch=1,EE,007cc1b4,word,c4400000 //left side fix
+
+//2D scenes
+patch=1,EE,001913a0,word,3c014440 //hor value
+patch=1,EE,001913a4,word,44810800
+patch=1,EE,001913a8,word,46010002
+patch=1,EE,001913ac,word,e7c00090
+patch=1,EE,001913b0,word,3c014480 //vert value
+patch=1,EE,001913b4,word,44810800
+patch=1,EE,001913b8,word,c60000e8
+patch=1,EE,001913bc,word,46010002
+patch=1,EE,001913c0,word,e7c000a4
+patch=1,EE,001913c4,word,c60000e8
+patch=1,EE,001913c8,word,3c01c440
+patch=1,EE,001913cc,word,44810800

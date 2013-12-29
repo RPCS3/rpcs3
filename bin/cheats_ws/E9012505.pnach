@@ -1,0 +1,5 @@
+gametitle=Wara Ryuomiyo - Pride of the Dragon Peace (J) (SCPS-15080)
+comment=Widescreen hack by Arapapa
+
+// 16:9 (0000803f 0000803f 0000803f 00008047)
+patch=1,EE,2052EAB8,word,3f400000 // 3f800000

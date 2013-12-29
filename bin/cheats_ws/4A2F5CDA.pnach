@@ -1,0 +1,20 @@
+gametitle=Soul Nomad & the World Eaters (PAL)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//gameplay
+patch=1,EE,001048e4,word,3c013f40 //00000000
+patch=1,EE,001048e8,word,44810000 //00000000
+patch=1,EE,001048f0,word,4600c602 //00000000
+
+//sprite fix
+patch=1,EE,00150fa0,word,3c033f40 //3c033f80
+patch=1,EE,00150fb4,word,3c033f80 //ac830010
+patch=1,EE,00150fb8,word,ac830010 //ac800014
+patch=1,EE,00150fbc,word,ac800014 //ac800018
+patch=1,EE,00150fc0,word,ac800018 //ac80001c
+patch=1,EE,00150fc4,word,ac80001c //03e00008
+patch=1,EE,00150fc8,word,03e00008 //ac830020
+patch=1,EE,00150fcc,word,ac830020 //00000000
+
+//text width
+patch=1,EE,0012faa4,word,3c023f40 //3c023f80

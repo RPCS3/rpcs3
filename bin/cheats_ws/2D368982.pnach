@@ -1,0 +1,7 @@
+gametitle=PaRappa the Rapper 2 (NTSC-U)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,00166114,word,3c013f40
+patch=1,EE,00166120,word,44810000
+patch=1,EE,00166124,word,4600c602

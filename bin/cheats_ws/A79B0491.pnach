@@ -1,0 +1,5 @@
+﻿gametitle=NanoBreaker [NTSC-J] (SLPM-65809)
+comment=Widescreen hack
+patch=1,EE,001041f4,word,3c013f40
+patch=1,EE,001041f8,word,44810000
+patch=1,EE,00104200,word,4600c602

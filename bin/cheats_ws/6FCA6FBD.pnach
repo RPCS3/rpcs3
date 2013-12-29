@@ -1,3 +1,17 @@
-gametitle=Biohazard Outbreak File 2
-comment=NTSC-J Widescreen Hack by synce
+gametitle=BioHazard Outbreak File #2 [NTSC-J] (SLPM-65692)
+
+//gameplay by synce
 patch=1,EE,202491fc,extended,3fe28f5c
+
+//FMV's fix by nemesis2000
+patch=1,EE,0034C5E8,word,24060015
+
+patch=1,EE,0034C784,word,01262818
+patch=1,EE,0034C788,word,24061c00
+patch=1,EE,0034C78c,word,00c55822
+
+patch=1,EE,0034C7B8,word,000b5843
+patch=1,EE,0034C7Bc,word,14620003
+patch=1,EE,0034C7c0,word,00ab2820
+
+patch=1,EE,001bb2b4,word,00000000

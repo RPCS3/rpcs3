@@ -1,0 +1,10 @@
+gametitle=Capcom vs. SNK 2: Mark of the Millennium 2001 (SLUS-20246)
+comment=Widescreen patch by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,00142E40,word,3C023FAA
+patch=1,EE,001430B4,word,3C023FAA
+patch=1,EE,00124FA0,word,AC83003C
+patch=1,EE,00124FA4,word,3C033F40
+patch=1,EE,00124FA8,word,03E00008
+patch=1,EE,00124FAC,word,AC830000
+patch=1,EE,0012489C,word,3C023FE3

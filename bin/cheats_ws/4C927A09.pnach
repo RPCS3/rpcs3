@@ -1,0 +1,5 @@
+gametitle=RahXephon (J) (SLPS-25265)
+comment=Widescreen Hack by Arapapa)
+
+//16:9 (0000803f 6666e63e)
+patch=1,EE,2031A120,word,3F400000 // 3f800000

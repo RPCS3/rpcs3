@@ -1,3 +1,17 @@
-comment=Silent Hill 4 - The Room (PAL-M5) (SLES-52445) Widescreen Hack (16:9) by ElHecht
-patch=1,EE,2045CA38,extended,3F15FD8B // 3F480000 Y-Axis
-patch=1,EE,2045CA34,extended,3F400000 // 3F800000 Camera-Zoom
+gametitle=Silent Hill 4 - The Room (PAL-M5) (SLES-52445)
+comment=Widescreen hack by ElHecht
+comment=FMV hack by Pelvicthrustman
+comment=Black borders fix by nemesis2000
+
+// 16:9
+patch=1,EE,001485c4,word,3c013f40 // 00000000 hor fov
+patch=1,EE,001485d0,word,4481f000 // 00000000
+patch=1,EE,00148600,word,461ed683 // 4600d647
+patch=1,EE,00148614,word,4600d647 // 00000000
+
+//By Pelvicthrustman
+patch=1,EE,002f9e44,word,3c0203c0 // 3c020008 FMV top
+patch=1,EE,002f9e7c,word,340201a4 // 2662ffe0 FMV bottom
+
+//By Nemesis2000
+patch=1,EE,001a9980,word,24030000 // 24030001 Black borders fix

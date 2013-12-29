@@ -1,0 +1,24 @@
+gametitle=Phantasy Star Universe (NTSC-J) (SLPM-66031)
+comment=Widescreen Hack (16:9) by ElHecht (pnach NTSC-J by Arapapa)
+
+//search values
+//00007f43 00008043 000060c3 0e01804b (2nd) 20865BB0
+//02630046 00000000 00000000 03630146 (2nd. 3rd) 20692874, 20692878
+//02630046 00000000 00000000 04000c46 (2nd, 3rd) 206928C0, 206928C4
+
+// 16:9
+patch=1,EE,20865BB0,word,43400000 // 43800000 hor fov
+patch=1,EE,20692874,word,3c093c02 // 00000000
+patch=1,EE,20692878,word,35293fab // 00000000 renderfix
+patch=1,EE,206928C0,word,3c0a0028 // 00000000
+patch=1,EE,206928C4,word,ad493d78 // 00000000
+
+// 16:9
+//patch=1,EE,20865BB0,word,43555555 // 43800000 hor fov
+//patch=1,EE,20692874,word,3c093c02 // 00000000
+//patch=1,EE,20692878,word,35293f9a // 00000000 renderfix
+//patch=1,EE,206928C0,word,3c0a0028 // 00000000
+//patch=1,EE,206928C4,word,ad493d78 // 00000000
+
+//optional cut-scenes black bar removal
+//patch=1,EE,00766e44,word,40000000

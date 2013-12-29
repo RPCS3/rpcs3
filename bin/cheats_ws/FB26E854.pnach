@@ -1,0 +1,10 @@
+gametitle=WWE SmackDown vs. Raw 2009 (PAL-M5) (SLES-55251)
+comment=Widescreen hack by nemesis2000
+// Ported to PAL, added 16:10 support (ElHecht)
+
+// 16:9
+patch=1,EE,002a2cb0,word,3c033f40 // 3c033f80 hor fov
+
+// 16:10
+//patch=1,EE,001003c4,word,3c1b3f55 // 00000000 hor fov
+//patch=1,EE,002a2cb0,word,37635555 // 4481a000 hor fov

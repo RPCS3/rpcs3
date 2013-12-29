@@ -1,0 +1,14 @@
+gametitle=Tom Clancy's Ghost Recon (SLES_511.81)
+comment=Widescreen hack by nemesis2000 (Converted to PAL by Somechump)
+
+//sp
+patch=1,EE,003a89c4,word,3c023f40
+patch=1,EE,003a89e4,word,3c0243d6
+
+//mp
+patch=1,EE,003a8ae4,word,3c023f40
+patch=1,EE,003a8b04,word,3c0243d6
+
+//menu
+patch=1,EE,0053ba44,word,3c023f0c
+patch=1,EE,0053ba54,word,3c0243d6

@@ -1,0 +1,6 @@
+gametitle=Arc the Lad - Twilight of the Spirits (K) (SCKA_20012)
+comment=Widescreen hack (pnach by Arapapa)
+
+//16:9
+patch=1,EE,20256884,extended,3F19999A // 3f4ccccd
+patch=1,EE,20256d40,extended,3F19999A // 3f4ccccd

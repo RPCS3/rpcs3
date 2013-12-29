@@ -1,0 +1,22 @@
+gametitle=Onimusha: Dawn of Dreams (Disc 1) (SLPM-66275) / Onimusha: Dawn of Dreams (Disc 2) (SLUS-21362)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//gameplay
+
+//val1
+patch=1,EE,0012f8a0,word,3c033f19
+patch=1,EE,0012f8a8,word,34649999
+
+//val2
+patch=1,EE,0012fa78,word,3c033f19
+patch=1,EE,0012fa80,word,34639999
+
+//val3
+patch=1,EE,00167f58,word,3c023f19
+patch=1,EE,00167f5c,word,34439999
+
+//rfix1
+patch=1,EE,0012faf0,word,3c02c3d6
+
+//rfix1
+patch=1,EE,0012f9e0,word,3c024527

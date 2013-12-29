@@ -1,0 +1,5 @@
+﻿gametitle=Digimon Battle Chronicle NTSC-J (SLPS-25383)
+comment=Widescreen Hack
+patch=1,EE,0029aee8,word,3c013f22
+patch=1,EE,0021fe74,word,3c013f22
+patch=1,EE,20563CB0,word,44550000

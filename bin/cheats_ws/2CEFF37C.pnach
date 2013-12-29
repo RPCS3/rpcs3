@@ -1,0 +1,5 @@
+gametitle= Digimon World 4 (PAL) (SLES-53405)
+comment= Widescreen Hack by VIRGIN KLM
+
+//Widescreen - 3D Elements
+patch=1,EE,206EBCBC,word,3FBAAAAB // 3FF8E38F

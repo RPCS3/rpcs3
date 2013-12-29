@@ -3,12 +3,6 @@ gametitle=Shin Megami Tensei: Persona 4 (SLUS-21782B)
 //16:9 by pavachan
 patch=1,EE,0076111c,word,3fe38e38
 
-//less 16:9 by Luna (hides some moonwalkers)
-//patch=1,EE,0076111c,word,3fc38e38
-
-//even less 16:9 by Luna (hides most moonwalkers)
-//patch=1,EE,0076111c,word,3fb38e38
-
 //partial HUD fix by nemesis2000
 patch=1,EE,00104680,word,3c043f40
 patch=1,EE,00104688,word,00731821
@@ -25,7 +19,7 @@ patch=1,EE,0046958c,word,00000000
 patch=1,EE,004695a8,word,3c03c1a8
 patch=1,EE,004695bc,word,00000000
 
-//Font fix by nemesis2000 (causes spacing errors)
+//Font fix by nemesis2000
 patch=1,EE,002732b4,word,00118903
 patch=1,EE,002732b8,word,02338818
 patch=1,EE,002732c0,word,8E93001c
@@ -37,6 +31,48 @@ patch=1,EE,00275dd4,word,3c0241a8
 patch=1,EE,00275e00,word,01154018
 patch=1,EE,00275e04,word,00084103
 patch=1,EE,00275e08,word,0100a82d
+
+//zoom fix by nemesis2000
+patch=1,EE,0026c620,word,0c0fa77c
+patch=1,EE,0026c624,word,0220202d
+patch=1,EE,0026c628,word,0220202d
+patch=1,EE,0026c62c,word,0200282d
+patch=1,EE,0026c630,word,0000302d
+patch=1,EE,0026c634,word,0c0fa72c
+patch=1,EE,0026c638,word,00000000
+patch=1,EE,0026c63c,word,0c0f83d0
+patch=1,EE,0026c640,word,0200202d
+patch=1,EE,0026c644,word,0240202d
+patch=1,EE,0026c648,word,3c013f80 // 3c013f95 for moonwalk fix
+patch=1,EE,0026c64c,word,44810000
+patch=1,EE,0026c650,word,c66c0140
+patch=1,EE,0026c654,word,0c115df4
+patch=1,EE,0026c658,word,46006303
+
+//personas art fix by nemesis2000
+patch=1,EE,0011dc6c,word,10400032
+patch=1,EE,0011dc78,word,1060002f
+
+patch=1,EE,0011dd28,word,3c013f02
+patch=1,EE,0011dd2c,word,44810800
+patch=1,EE,0011dd30,word,0c04756c
+patch=1,EE,0011dd34,word,46016b43
+patch=1,EE,0011dd38,word,dfbf0020
+patch=1,EE,0011dd3c,word,7bb00010
+patch=1,EE,0011dd40,word,c7b40000
+patch=1,EE,0011dd44,word,27bd0030
+patch=1,EE,0011dd48,word,03e00008
+
+patch=1,EE,0011D724,word,3C024340
+
+patch=1,EE,0011A114,word,00000000
+patch=1,EE,001369B0,word,00000000
+
+//characters art fix by nemesis2000
+patch=1,EE,00354CE4,word,3C024340
+
+//partial HUD text fix by nemesis2000
+patch=1,EE,00123430,word,24020BF6
 
 //Progressive Scan & 60fps
 patch=1,EE,0041751c,word,3c050000

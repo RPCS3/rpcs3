@@ -1,0 +1,4 @@
+gametitle=International Cue Club (PAL-M5) (SLES_509.14)
+comment=Widescreen Hack by El_Patas
+
+patch=1,EE,2031EBFC,extended,3F400000 // 3F800000

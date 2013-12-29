@@ -1,0 +1,11 @@
+comment=Final Fantasy X-2 (PAL-Europe/Australia) (SLES-51817) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,001b49cc,word,3c013f19
+patch=1,EE,001b49d0,word,3421999a
+// Render-Fix
+patch=1,EE,0012369c,word,3c014440
+patch=1,EE,00185f7c,word,3c01442b
+
+//portraits, dressphere and cursor width on menu
+patch=1,EE,0021aa64,word,3c013f40

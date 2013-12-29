@@ -1,0 +1,48 @@
+gametitle=Kingdom Hearts (PAL-G) (SCES-50969)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,00110634,word,3c1b3f40 // 00000000 hor fov gameplay
+patch=1,EE,0011066c,word,449bf800 // 00000000 
+patch=1,EE,001106a0,word,461f6e42 // 46006e46
+patch=1,EE,00110670,word,461fe703 // 00000000 renderfix calculation
+
+//matrix hack
+patch=1,EE,002627ac,word,3c013f40 // 00000000
+patch=1,EE,002627b8,word,44810000 // 00000000 
+patch=1,EE,002627bc,word,4600c602 // 00000000
+
+//textbox calculation
+patch=1,EE,0010b010,word,46000383 // 3c013f80
+patch=1,EE,0010b014,word,449b6800 // 44816800
+patch=1,EE,0010b030,word,460d7343 // 46006b86
+patch=1,EE,0010b040,word,46007446 // 46006c46
+
+//position fix weapon select
+patch=1,EE,00207a98,word,3c0144fa // 3c014500
+
+//font fix hud and menu
+patch=1,EE,001eedbc,word,24100020 // 24100018
+patch=1,EE,001f7cd0,word,24090020 // 24090018
+
+//font fix subtitle and text box
+//patch=1,EE,0010c980,word,24426fb0 // 24427000
+//patch=1,EE,0010d3d4,word,3c013f1f // 3c013f55
+//patch=1,EE,0010d3d8,word,3421fffc // 3421554f
+//patch=1,EE,0010d3f8,word,3c013f40 // 3c013f80
+//patch=1,EE,0010d820,word,3c014216 // 3c0141e0
+
+//numbers fix
+patch=1,EE,001f998c,word,240b0020 // 240b0018
+patch=1,EE,001f9710,word,24030020 // 24030018
+
+//fmv fix
+patch=1,EE,0010629c,word,3c071900 // 3c071c08
+patch=1,EE,002a1588,word,70007000 // 74007000
+
+//black border fix
+patch=1,EE,0010430c,word,00000000 // ac510e48
+patch=1,EE,0010442c,word,00000000 // ac450e48
+
+//60fps
+//patch=1,EE,001104d8,word,24820000 // 24820001

@@ -1,6 +1,15 @@
-gametitle=FF10-INT-NTSC-J
-comment=FF10-INT-NTSC-J-Widescreen(16:9)
+gametitle=Final Fantasy X International (NTSC-J)
+comment=Widescreen hack
 patch=1,EE,001a5854,word,3c013f19
 patch=1,EE,001a5858,word,3421999a
 patch=1,EE,0011973c,word,3c014440
 patch=1,EE,00176124,word,3c01442b
+
+//world map
+patch=1,EE,00262e40,word,3c013f40 //3c013f80
+
+//sphere grid
+patch=1,EE,0026479c,word,3c013f40 //3c013f80
+
+//force English
+patch=1,EE,0031ce5e,byte,00000001

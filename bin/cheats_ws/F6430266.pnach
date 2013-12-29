@@ -1,0 +1,11 @@
+gametitle=Wild Arms Alter Code F (J) (SCPS_170.02)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+patch=1,EE,00118ba0,word,3c024455
+patch=1,EE,00118e4c,word,3c023f40
+patch=1,EE,00118f18,word,3c023f40
+patch=1,EE,00118fc4,word,3c033f40
+patch=1,EE,00118FD8,word,3c034505
+patch=1,EE,00118ff4,word,3c023f40
+patch=1,EE,00119008,word,3c0243d9
+patch=1,EE,00119250,word,3c064455

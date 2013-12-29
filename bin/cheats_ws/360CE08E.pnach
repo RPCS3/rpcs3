@@ -1,0 +1,6 @@
+gametitle=Fullmetal Alchemist 2 - Curse of the Crimson Elixir(J) (SLPM_657.08)
+comment=Widescreen Hack (pnach NTSC-J by Arapapa)
+
+//Wide hack 16:9 
+patch=1,EE,00180c58,word,3c023f28 //613f023c (Search e043033c 613f023c 2c00043c af474234)
+patch=1,EE,00180c60,word,3442f5c3 //af474234

@@ -1,3 +1,10 @@
-gametitle=Clock Tower 3
+gametitle=Clock Tower 3 [NTSC-J] (SLPM-65221)
 comment=NTSC-J Widescreen Hack by parotaku
 patch=1,EE,21938FA8,extended,3F1FBE77 // 3F54FDF4
+
+//FMV's fix by nemesis2000
+patch=1,EE,018bce88,word,3c026fa0
+patch=1,EE,018bced8,word,34028260
+
+//black borders fix by nemesis2000
+patch=1,EE,018f2b14,word,3c030000

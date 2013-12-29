@@ -1,0 +1,6 @@
+﻿gametitle=RockMan X8 [NTSC-J] (SLPM-65730)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0010f10c,word,3c013f40 //hor value
+patch=1,EE,0010f110,word,44810000
+patch=1,EE,0010f118,word,4600c602

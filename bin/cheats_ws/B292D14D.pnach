@@ -1,3 +1,22 @@
-gametitle=Zero II Akai Chou
-comment=NTSC-J Widescreen Hack by synce
-patch=1,EE,203FF6BC,extended,3F400000
+﻿gametitle=Zero II AkaiChou 零 紅蝶 (SLPS_253)
+
+//Widescreen Hack by synce
+patch=1,EE,203FF6BC,extended,3F400000 
+
+//FMV's fix
+patch=1,EE,001e526c,word,3c013f40 // width (1.0f = 640)
+patch=1,EE,001e5270,word,0c079418
+patch=1,EE,001e5274,word,44811800
+patch=1,EE,001e5278,word,8f84bdcc
+patch=1,EE,001e527c,word,0c079d30
+patch=1,EE,001e5280,word,0040802d
+patch=1,EE,001e5284,word,0200102d
+patch=1,EE,001e5288,word,dfbf0008
+patch=1,EE,001e528c,word,27bd0010
+patch=1,EE,001e5290,word,03e00008
+patch=1,EE,001e5294,word,dfb00000
+
+patch=1,EE,001e5114,word,01c02820
+patch=1,EE,001e5118,word,e4830030
+
+patch=1,EE,0033a908,word,0000006a //x-pos = (640-640*width)/(2*width) Hex

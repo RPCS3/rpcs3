@@ -4,3 +4,9 @@ patch=1,EE,001a51cc,word,3c013f19
 patch=1,EE,001a51d0,word,3421999a
 patch=1,EE,0011973c,word,3c014440
 patch=1,EE,00175a64,word,3c01442b
+
+//world map
+patch=1,EE,00260538,word,3c013f40 //3c013f80
+
+//sphere grid
+patch=1,EE,00261e94,word,3c013f40 //3c013f80

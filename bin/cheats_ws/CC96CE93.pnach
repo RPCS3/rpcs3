@@ -1,2 +1,31 @@
-comment=Valkyrie Profile 2: Silmeria (16:9) (NTSC-U)
-patch=1,EE,00150948,word,3f11eb85 //3eaaaaab
+gametitle=Valkyrie Profile 2: Silmeria (SLUS-21452)
+comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,00379844,word,3c033f40
+patch=1,EE,00379848,word,34640000
+
+//old widescreen hack
+//patch=1,EE,00150948,word,3f11eb85 //3eaaaaab
+
+//Ignore GameGuard (prevents freezing)
+patch=1,EE,FE129B51,extended,800813BF
+patch=1,EE,000FFFFE,extended,0000022D
+patch=1,EE,000FFFFF,extended,0000022D
+patch=1,EE,9013A550,extended,0C04E8FC
+patch=1,EE,E0033B40,extended,0035EC8C
+patch=1,EE,104234AA,extended,00001000
+patch=1,EE,10423662,extended,00001000
+patch=1,EE,1042382A,extended,00001000
+patch=1,EE,E0027EC0,extended,0049550C
+patch=1,EE,2049BCB0,extended,03E00008
+patch=1,EE,2049BCB4,extended,00000000
+patch=1,EE,E007E140,extended,0036D90C
+patch=1,EE,203683D4,extended,00000000
+patch=1,EE,103AD16A,extended,00001000
+patch=1,EE,103AD61E,extended,00001000
+patch=1,EE,10430B76,extended,00001000
+patch=1,EE,10430BE2,extended,00001000
+patch=1,EE,10431A66,extended,00001000
+patch=1,EE,10431C1E,extended,00001000
+patch=1,EE,D0397CAC,extended,0000102A
+patch=1,EE,20397CB0,extended,00000000

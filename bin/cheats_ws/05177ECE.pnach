@@ -1,25 +1,19 @@
 // ==========
-// pgert@130626
+// pgert@131125
 // http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
 // ==========
 
 ; ==========
  gametitle=Tomb Raider - Legend * SLES-53908 * PAL/Europe * 05177ECE
- comment=Tomb Raider - Legend * SLES-53908 * PAL/Europe * 05177ECE
- comment=- Widescreen enforcement by pgert.
+ comment= Tomb Raider - Legend * SLES-53908 * PAL/Europe * 05177ECE
+ comment=- Widescreen enforcement lazy-hack by pgert.
  patch=1,EE,203921F0,extended,3F800000 // 00000000
  patch=1,EE,203B9080,extended,00000001 // 00000000
  patch=1,EE,2046ED64,extended,3F800000 // 00000000
  patch=1,EE,20977390,extended,00000001 // 00000000
  patch=1,EE,2098EFA0,extended,00000001 // 00000000
 ; ==========
- patch=1,EE,0016C688,word,3C01BF55 // 3C01BF40 - upper blackbar of Cinematics.
- patch=1,EE,8016C688,word,3C01BF55 // 3C01BF40 - a clone from 0016C688.
- patch=1,EE,A016C688,word,3C01BF55 // 3C01BF40 - a clone from 0016C688.
- //
- patch=1,EE,0016C694,word,3C013F55 // 3C013F40 - lower blackbar of Cinematics.
- patch=1,EE,8016C694,word,3C013F55 // 3C013F40 - a clone from 0016C694.
- patch=1,EE,A016C694,word,3C013F55 // 3C013F40 - a clone from 0016C694.
+
 ; ==========
 // comment=- 16:10 support by pgert.
 // //
@@ -32,6 +26,14 @@
 // patch=1,EE,0014EF28,word,3C013F95 // 3C013F80 - max width of some "Checking Memory Card" text.
 // patch=1,EE,8014EF28,word,3C013F95 // 3C013F80 - a clone from 0014EF28.
 // patch=1,EE,A014EF28,word,3C013F95 // 3C013F80 - a clone from 0014EF28.
+// //
+// patch=1,EE,0016C688,word,3C01BF55 // 3C01BF40 - upper blackbar of Cinematics.
+// patch=1,EE,8016C688,word,3C01BF55 // 3C01BF40 - a clone from 0016C688.
+// patch=1,EE,A016C688,word,3C01BF55 // 3C01BF40 - a clone from 0016C688.
+// //
+// patch=1,EE,0016C694,word,3C013F55 // 3C013F40 - lower blackbar of Cinematics.
+// patch=1,EE,8016C694,word,3C013F55 // 3C013F40 - a clone from 0016C694.
+// patch=1,EE,A016C694,word,3C013F55 // 3C013F40 - a clone from 0016C694.
 // //
 // patch=1,EE,0018B56C,word,3C013F53 // 3C013F49 - Y-axis placement of Subtitles & SubtitlesBackground.
 // patch=1,EE,8018B56C,word,3C013F53 // 3C013F49 - a clone from 0018B56C.
@@ -51,7 +53,7 @@
 // patch=1,EE,8018B59C,word,3C010000 // 3421999A - a clone from 0018B59C.
 // patch=1,EE,A018B59C,word,3C010000 // 3421999A - a clone from 0018B59C.
 // //
-// patch=1,EE,001B67F4,word,3C013F68 // 3C013F80 - GameMenu & GamePlay Zoom - 001B67E8 can be used as alternative.
+// patch=1,EE,001B67F4,word,3C013F68 // 3C013F80 - GameMenu & GamePlay Zoom.
 // patch=1,EE,801B67F4,word,3C013F68 // 3C013F80 - a clone from 001B67F4.
 // patch=1,EE,A01B67F4,word,3C013F68 // 3C013F80 - a clone from 001B67F4.
 // patch=1,EE,204A4C6C,extended,3F680000 // 3F800000 - HOW set from 001B67F4.
@@ -72,24 +74,6 @@
 // patch=1,EE,A0362660,word,3C013F83 // 3C013F00 - a clone from 00362660.
 ; ==========
 
-; ==========
-// Notes (by pgert) - do not use.
-// Additional Widescreen enforcement patches,
-//  constant, but assumably superfluous:
-// patch=1,EE,21FDD21C,extended,43CB374B // 42890000
-// patch=1,EE,21FDD260,extended,4344DD2F // 69656874
-// patch=1,EE,21FDD2AC,extended,43CA774B // 00000000
-// patch=1,EE,21FDD2E4,extended,01006E4F // 00000000
-// patch=1,EE,21FDD2F0,extended,4344DD2F // 00000000
-// patch=1,EE,21FDD348,extended,43C9574B // 00000000
-// patch=1,EE,21FDD38C,extended,4344DD2F // 00000000
-// patch=1,EE,21FDD3E8,extended,43C9574B // 00000000
-// patch=1,EE,21FDD42C,extended,42BE703C // 00000000
-// patch=1,EE,21FDD474,extended,432EB7CF // 00000000
-// patch=1,EE,21FDD4B8,extended,42BE703C // 00000000
-// patch=1,EE,21FDD500,extended,432EB7CF // 00000000
-// patch=1,EE,21FDD544,extended,42BE703C // 00000000
-// patch=1,EE,21FDD590,extended,432EB7CF // 00000000
 ; ==========
 // Notes (by pgert) - do not use.
 // 16:10 support without Y-axis hack:

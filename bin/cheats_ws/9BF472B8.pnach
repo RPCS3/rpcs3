@@ -1,4 +1,8 @@
-gametitle=Silent Hill 4 The Room
+gametitle=Silent Hill 4 - The Room [NTSC-J] (SLPM-65574)
 comment=NTSC-J Widescreen Hack by synce
 patch=1,EE,2045a2b4,extended,3f400000
 patch=1,EE,2045a2b8,extended,3f15fd8b
+
+//FMV fix by pelvicthrustman
+patch=1,EE,002f7954,word,3c020320 //Top
+patch=1,EE,002f7998,word,34021820 //Bottom

@@ -1,3 +1,14 @@
-gametitle=Silent Hill 3
+gametitle=Silent Hill 3 [NTSC-J] (SLPM-65257)
 comment=NTSC-J Widescreen Hack by synce
 patch=1,EE,21e54570,extended,3F400000
+
+//Oringal FMV's fix by nemesis2000
+patch=1,EE,002b6078,word,24112550 //fmv height
+patch=1,EE,002b6064,word,24106D50 //fmv y-pos
+patch=1,EE,002b619c,word,24100000 //fmv black borders
+patch=1,EE,002b61a4,word,24100000 //fmv black borders
+
+patch=1,EE,002b607c,word,24032000 //fmv height
+patch=1,EE,002b6068,word,24037000 //fmv y-pos
+patch=1,EE,002b61bc,word,24100000 //fmv black borders
+patch=1,EE,002b61c0,word,24100000 //fmv black borders

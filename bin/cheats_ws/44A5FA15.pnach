@@ -1,6 +1,5 @@
 comment=Dirge of Cerberus - Final Fantasy VII Widescreen Hack (16:9) (NTSC-U)
-patch=1,EE,204B0830,extended,3FC00000 //zoom out
-patch=1,EE,204FB248,extended,3FC962FD //vert (but also zooms in)
 
-//Note: Comparing NTSC-U and PAL versions, NTSC-U has a slightly narrower default FOV than PAL version.
-//Likewise, the PAL version is slightly wider than the NTSC-U version.
+patch=1,EE,0040B628,word,3C013FC9
+patch=1,EE,0040B62C,word,342162D8
+patch=1,EE,0040C220,word,3C013EC0

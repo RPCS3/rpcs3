@@ -1,0 +1,4 @@
+gametitle=Kunoichi (K) (SLKA-25135)
+comment=NTSC-J Widescreen Hack by synce (pnach NTSC-K by Arapapa)
+
+patch=1,EE,21A3EAC0,extended,3f248b43

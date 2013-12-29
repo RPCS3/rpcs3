@@ -1,0 +1,5 @@
+﻿gametitle=SkyGunner [NTSC-J] (SCPS-11006)
+comment=Widescreen Hack 
+patch=1,EE,00126724,word,3c013f40
+patch=1,EE,00126728,word,44810000
+patch=1,EE,00126730,word,4600c602

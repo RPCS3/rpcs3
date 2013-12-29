@@ -11,3 +11,6 @@ patch=1,EE,0010629c,word,3c071900
 //black border fix
 patch=1,EE,0010430c,word,00000000
 patch=1,EE,0010442c,word,00000000
+
+//60 FPS
+//patch=1,EE,002B67CC,extended,00000000

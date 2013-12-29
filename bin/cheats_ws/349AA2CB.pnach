@@ -1,5 +1,0 @@
-gametitle=Panzer Elite Action - Fields of Glory (PAL-M5) (SLES-53444)
-comment=Widescreen Hack (16:9) by ElHecht
-// 16:9
-patch=1,EE,003d2ce4,word,3c0143c0 // 00000000
-patch=1,EE,003d2ce8,word,44810800 // c4a10008

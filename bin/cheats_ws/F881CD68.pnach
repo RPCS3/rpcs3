@@ -1,0 +1,6 @@
+gametitle=Sonic Riders (PAL-M5) (SLES-53560)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,0044eab8,word,43700000 // 43a00000 hor fov
+patch=1,EE,00134e4c,word,3c023fab // 3c023f80 renderfix

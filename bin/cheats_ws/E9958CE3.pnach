@@ -1,0 +1,15 @@
+gametitle=Choro Q (J) (SLPM-657.24)
+comment=Widescreen hack by ElHecht (pnach by Arapapa)
+
+// 16:9 (search 00000000 00000000 43ad1346 00000000)
+patch=1,EE,001ffb74,word,3c013f40 // 00000000 hor fov
+patch=1,EE,001ffb78,word,44810000 // 00000000
+patch=1,EE,001ffb80,word,4600c602 // 00000000
+patch=1,EE,001b7c1c,word,3c0140a7 // 3c01407a renderfix
+
+// 16:10
+//patch=1,EE,001f1d74,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,001f1d78,word,34215555 // 00000000 hor fov
+//patch=1,EE,001f1d80,word,44810000 // 00000000
+//patch=1,EE,001f1d84,word,4600c602 // 00000000
+//patch=1,EE,001b549c,word,3c014097 // 3c01407a renderfix

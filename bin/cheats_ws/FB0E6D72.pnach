@@ -1,5 +1,5 @@
-gametitle=God of War (PAL)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+gametitle=God of War PAL [SCES_531.33]
+comment=Widescreen converted from nemesis2000's NTSC hack (PAL by Some Chump)
 
 patch=1,EE,00169268,word,3c013f11
 patch=1,EE,0016926c,word,342135fc
@@ -29,7 +29,7 @@ patch=1,EE,001692c8,word,c605037c
 patch=1,EE,001692cc,word,3c020033
 patch=1,EE,001692d0,word,3c013f40
 patch=1,EE,001692d4,word,44810800
-patch=1,EE,001692d8,word,c442f1b0
+patch=1,EE,001692d8,word,c4421330
 patch=1,EE,001692dc,word,46020842
 patch=1,EE,001692e0,word,46012942
 patch=1,EE,001692e4,word,e605037c
@@ -130,4 +130,4 @@ patch=1,EE,0016945c,word,7c820030
 patch=1,EE,00169460,word,03e00008
 patch=1,EE,00169464,word,27bd0090
 
-//patch=1,EE,00169280,word,3c013f22  //old value
+patch=1,EE,0112222C,word,00000000 // Removes Title screen flames

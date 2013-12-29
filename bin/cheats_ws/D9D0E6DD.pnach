@@ -1,0 +1,5 @@
+gametitle=Naruto - Ultimate Ninja 2 (NTSC-U) (SLUS_21575)
+comment=Widescreen Hack (NTSC-U by Arapapa)
+
+//16:9 (0000803f 0000803f 00008043)
+patch=1,EE,20A47A00,word,3f400000 // 3f800000

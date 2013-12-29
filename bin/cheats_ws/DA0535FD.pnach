@@ -1,13 +1,25 @@
 gametitle=Kingdom Hearts II NTSC-U
 comment=KH2 - NTSC-U
 
-// 16:9 hack by - cassidy1991
-patch=1,EE,203B223C,word,3F19999A // 3F4CCCCC (hor axis)
-patch=1,EE,20378100,word,43C00000 // 44000000 (zoom)
-patch=1,EE,2037F484,word,3F19999A // 3F4CCCCC (character menu proportions)
-patch=1,EE,203B233C,word,3F19999A // 3F4CCCCC (continue screen proportions)
-patch=1,EE,203840D0,word,3F19999A // 3F4CCCCC (world map cutscene proportions)
-patch=1,EE,20378104,word,43e00000 // 43d00000 (optional zoom for cutscenes, 43f90000 = pan and scan) 
+// old 16:9 hack by - cassidy1991
+//patch=1,EE,203B223C,word,3F19999A // 3F4CCCCC (hor axis)
+//patch=1,EE,20378100,word,43C00000 // 44000000 (zoom)
+//patch=1,EE,2037F484,word,3F19999A // 3F4CCCCC (character menu proportions)
+//patch=1,EE,203B233C,word,3F19999A // 3F4CCCCC (continue screen proportions)
+//patch=1,EE,203840D0,word,3F19999A // 3F4CCCCC (world map cutscene proportions)
+
+// new 16:9 hack by - ElHecht
+patch=1,EE,00106c70,word,3c013f4c // c480004c
+patch=1,EE,00106c88,word,3421cccc // 4600a7c6
+patch=1,EE,00106c8c,word,4481f800 // 00000000
+patch=1,EE,00106c90,word,461fa503 // 4600a503
+patch=1,EE,00106cb4,word,3c1b3f40 // 00000000 hor fov
+patch=1,EE,00106cc0,word,449bf000 // 00000000
+patch=1,EE,00106cd0,word,461effc2 // 00000000
+patch=1,EE,00106cd4,word,e61f004c // 00000000
+
+//optional zoom for cutscenes
+patch=1,EE,20378104,word,43f90000 // 43d00000
 
 //font fix
 patch=1,EE,2037ae44,word,3F400000 // 3F800000
@@ -20,5 +32,11 @@ patch=1,EE,0014ab18,word,24050000
 patch=1,EE,0014ab40,word,24050000
 patch=1,EE,0014ab70,word,24050000
 
+//lower subtitles
+patch=1,EE,001aae88,word,240a017d
+
 //subtitles off
 //patch=1,EE,002274cc,word,11e00019
+
+//60 FPS
+//patch=1,EE,00356F4C,extended,00000000

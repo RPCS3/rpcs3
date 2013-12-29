@@ -1,2 +1,9 @@
-comment=Resident Evil - Outbreak (PAL-M5) (SLES-51589) Widescreen Hack (16:9) by ElHecht
-patch=1,EE,2034D0F8,extended,3FE374BC // 3FAAAAAB X-RES
+gametitle=Resident Evil: Outbreak (SLES-51589)
+
+patch=1,EE,0034D0F8,word,3fe38e39
+
+//FMV's fix (requires hex patch)
+patch=1,EE,001b34d4,word,00000000
+patch=1,EE,0033a57c,word,24060015
+patch=1,EE,0033a754,word,000b5843
+patch=1,EE,0033a75c,word,00ab2820

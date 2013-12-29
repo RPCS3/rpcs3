@@ -1,0 +1,12 @@
+gametitle=The Bard's Tale (K) (SLKA_252.46)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//hor fov+
+patch=1,EE,0011cbc4,word,3c023f40
+patch=1,EE,0012f09c,word,3c033f40
+patch=1,EE,00144aa8,word,3c053f40
+patch=1,EE,00144b24,word,3c033f40
+patch=1,EE,00144b74,word,3c023f40
+
+//render fix
+patch=1,EE,0013e380,word,3c023f2b

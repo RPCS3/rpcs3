@@ -1,34 +1,54 @@
 // ==========
-// pgert@130701
+// pgert@131104
 // http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
 // ==========
 
 ; ==========
  gametitle=Splinter Cell * SLES-51466 * PAL-M5 * A7705A52
- comment=Splinter Cell * SLES-51466 * PAL-M5 * A7705A52
- comment=- Widescreen hack by sergx12.
- patch=1,EE,001CF890,word,3C053F40 // 3C053F80 - X-axis of GamePlay.
- patch=1,EE,801CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890 - pgert.
- patch=1,EE,A01CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890 - pgert.
+ comment= Splinter Cell * SLES-51466 * PAL-M5 * A7705A52
+ // Clone patches by pgert.
 ; ==========
-// comment=- 16:10 support by pgert.
-// patch=1,EE,001CF880,word,3C023F8A // 3C023FB6 - HOW - Y-axis of GamePlay.
-// patch=1,EE,001CF884,word,34449246 // 3444DB6E - LOW - Y-axis of GamePlay.
-// patch=1,EE,002962E8,word,3C023F8A // 3C023FB6 - assumably related to Y-axis of GamePlay.
-// patch=1,EE,002962F8,word,34429246 // 3442DB6E - assumably related to Y-axis of GamePlay.
+
+; ==========
+ comment=- 16:9 Widescreen hack by sergx12.
+ patch=1,EE,001CF890,word,3C053F40 // 3C053F80 - X-axis
+ patch=1,EE,801CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890.
+ patch=1,EE,A01CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890.
+; ==========
+
+; ==========
+// comment=- False 16:10 Widescreen hack by ElHecht.
+// patch=1,EE,001CF890,word,3C053F55 // 3C053F80 - X-axis
+// patch=1,EE,801CF890,word,3C053F55 // 3C053F80 - a clone from 001CF890.
+// patch=1,EE,A01CF890,word,3C053F55 // 3C053F80 - a clone from 001CF890.
+// patch=1,EE,001CF930,word,34A55555 // AC450088 - X-axis
+// patch=1,EE,801CF930,word,34A55555 // 3C053F80 - a clone from 001CF930.
+// patch=1,EE,A01CF930,word,34A55555 // 3C053F80 - a clone from 001CF930.
+// patch=1,EE,001CF934,word,AC450088 // 8FA2005C
+// patch=1,EE,801CF934,word,AC450088 // 3C053F80 - a clone from 001CF934.
+// patch=1,EE,A01CF934,word,AC450088 // 3C053F80 - a clone from 001CF934.
+; ==========
+
+; ==========
+// comment=- True but unreliable 16:10 Widescreen hack by pgert.
+// comment=- Fast boot recommended.
+// patch=1,EE,001CF880,word,3C023F8A // 3C023FB6 - HOW - Y-axis
 // patch=1,EE,801CF880,word,3C023F8A // 3C023FB6 - a clone from 001CF880.
 // patch=1,EE,A01CF880,word,3C023F8A // 3C023FB6 - a clone from 001CF880.
+// patch=1,EE,001CF884,word,34449246 // 3444DB6E - LOW - Y-axis
 // patch=1,EE,801CF884,word,34449246 // 3444DB6E - a clone from 001CF884.
 // patch=1,EE,A01CF884,word,34449246 // 3444DB6E - a clone from 001CF884.
-// patch=1,EE,802962E8,word,3C023F8A // 3C023FB6 - a clone from 002962E8.
-// patch=1,EE,A02962E8,word,3C023F8A // 3C023FB6 - a clone from 002962E8.
-// patch=1,EE,802962F8,word,34429246 // 3442DB6E - a clone from 002962F8.
-// patch=1,EE,A02962F8,word,34429246 // 3442DB6E - a clone from 002962F8.
+// comment=- X-axis patch by sergx12.
+// patch=1,EE,001CF890,word,3C053F40 // 3C053F80 - X-axis
+// patch=1,EE,801CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890.
+// patch=1,EE,A01CF890,word,3C053F40 // 3C053F80 - a clone from 001CF890.
 ; ==========
 
 ; ==========
 // Notes (by pgert) - do not use.
+// patch=1,EE,002962E8,word,3C023F8A // 3C023FB6 - assumably related to 001CF880.
+// patch=1,EE,002962F8,word,34429246 // 3442DB6E - assumably related to 001CF884.
 // patch=1,EE,204B1EC0,extended,3F400000 // 3F800000 - X-axis
-// patch=1,EE,204B1ED4,extended,3F666666 // 3F800000 - GamePlay Zoom
+// patch=1,EE,204B1ED4,extended,3F666666 // 3F800000 - Zoom
 // patch=1,EE,204B1EE8,extended,3F8E38E4 // 3F800000 - Y-axis
 ; ==========

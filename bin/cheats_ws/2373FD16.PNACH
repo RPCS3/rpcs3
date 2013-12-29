@@ -10,3 +10,9 @@ patch=1,EE,001ea004,word,46061983 //00000000
 //Render Fix
 patch=1,EE,001e873c,word,340f02ab //962f0038
 patch=1,EE,001292b8,word,240e02ab //240e0200
+
+//Remove post processing (fixes bad ghosting in PCSX2 hardware mode)
+patch=1,EE,20369F4C,word,00000000 //3f400000
+
+//Removes blue shadows (PCSX2 hardware mode)
+patch=1,EE,2112C014,word,00000000 //3f400000

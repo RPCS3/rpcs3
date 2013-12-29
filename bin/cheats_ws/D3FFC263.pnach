@@ -1,0 +1,5 @@
+gametitle=Shin Megami Tensei - Nocturne Maniax (K) (SLKA-25160)
+comment=Widescreen hack (pnach by Arapapa)
+
+//16:9(03000000 b81e953f 00000000)
+patch=1,EE,202f9934,word,3FC6D395 // 3f95a1eb8

@@ -1,0 +1,9 @@
+gametitle=Beet the Vandel Buster - Darkness Century (Bouken -ou Beat - Dark Next Century) (J) (SLPS-25470)
+comment=Widescreen hack by Arapapa
+
+// 16:9 (0000803f 0000803f 0f070600)
+patch=1,EE,202C11C0,word,3f400000 // 3f800000
+
+// 16:9 (a little zoom out)
+//patch=1,EE,202C11C0,word,3f100000 // 3f800000
+//patch=1,EE,202C11C4,word,3f400000 // 3f800000

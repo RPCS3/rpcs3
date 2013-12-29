@@ -1,0 +1,4 @@
+gametitle=Stella Deus - The Gate of Eternity (J) (SLPM_656.85)
+comment=Widescreen Hack (pnach NTSC-J by Arapapa)
+
+patch=1,EE,202F8450,extended,44c00000 // 45000000

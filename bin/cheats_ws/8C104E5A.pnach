@@ -1,0 +1,9 @@
+gametitle=Makai Senki Disgaea (SLPS-20251)
+comment=Widescreen hack by nemesis2000
+patch=1,EE,0014c39c,word,3c033f40
+patch=1,EE,0014c3a4,word,e7a000e4
+patch=1,EE,0014c3a8,word,46000003
+patch=1,EE,0014c3ac,word,e7a000e8
+patch=1,EE,0010509c,word,3c013f40
+patch=1,EE,001050a0,word,44810000
+patch=1,EE,001050a8,word,4600c602

@@ -1,0 +1,5 @@
+gametitle=The Sopranos - Road to Respect (U) (SLUS-21388)
+comment=Widescreen hack by Arapapa
+
+//Wide 16:9 (00000000 3f90a3d7 3fc00000)
+patch=1,EE,20429870,word,3fc0d938 // 3f90a3d7

@@ -1,0 +1,12 @@
+gametitle=Eureka Seven-Vol 2 (SLPS_25646)
+comment=Widescreen Hack (NTSC-J by Arapapa)
+
+//680402c6 2044033c
+patch=1,EE,00111144,word,3c034455 // 3c034420
+
+//a043033c 7043023c 700403ae
+patch=1,EE,001118d4,word,3c0343f0 // 3c0343a0
+
+//0000a043 00007043
+patch=1,EE,203D25E8,word,43f00000 // 43a00000
+patch=1,EE,203D2B08,word,43f00000 // 43a00000

@@ -1,0 +1,9 @@
+gametitle=Marvel vs. Capcom 2: New Age of Heroes (SLUS-20486)
+comment=Widescreen patch by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,00414284,word,3C023FAA
+patch=1,EE,003DDB10,word,AC83003C
+patch=1,EE,003DDB14,word,3C033F40
+patch=1,EE,003DDB18,word,03E00008
+patch=1,EE,003DDB1C,word,AC830000
+patch=1,EE,003DD480,word,3C023FE3

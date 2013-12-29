@@ -1,0 +1,11 @@
+﻿gametitle=Mana Khemia 2: Fall of Alchemy [NTSC-J](SLPM-55005)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//3D scenes
+patch=1,EE,005e1594,word,3c013f40 //hor value
+patch=1,EE,005e1598,word,44810000
+patch=1,EE,005e15a0,word,4600c602
+
+//battle's fix
+patch=1,EE,00c80d44,word,44400000 //right side fix
+patch=1,EE,00c80d4c,word,c4400000 //left side fix

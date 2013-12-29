@@ -1,0 +1,5 @@
+gametitle=The Lord of the Rings - The Two Towers (K) (SLPS-25026)
+comment=Widescreen Hack by Arapapa
+
+//0000803F 00000000 00000000 00000000 00000000 00000000 0000803F
+patch=1,EE,20388B40,word,3f400000 // 3f800000

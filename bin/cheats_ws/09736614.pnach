@@ -1,0 +1,4 @@
+gametitle=Road Rage 3 (PAL-E) (SLES_519.30)
+comment=Widescreen Hack by El_Patas
+
+patch=1,EE,20435588,extended,3F400000 // 3F800000 hor fov

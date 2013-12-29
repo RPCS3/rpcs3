@@ -1,0 +1,5 @@
+gametitle=Soul Eater Battle Resonance (J) (SLPS-25912)
+comment=Widescreen Hack by Arapapa
+
+// 16:9 ~16:10 (Maximum value 3FFFFFFF)  
+patch=1,EE,204aa348,word,3fffffff // 3fe24c60

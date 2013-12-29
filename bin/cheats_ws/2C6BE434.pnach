@@ -1,0 +1,12 @@
+gametitle=Grand Theft Auto: San Andreas (SLUS-20946GH) / Ver 3.00
+comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
+
+//widescreen fix
+patch=1,EE,001130BC,word,3C013F9D
+patch=1,EE,001130C0,word,44810000
+patch=1,EE,001130C4,word,46006302
+patch=1,EE,001130C8,word,03E00008
+patch=1,EE,001130CC,word,E78C9A90
+
+patch=1,EE,0021DFE4,word,0C044C2F
+patch=1,EE,00242DB4,word,0C044C32

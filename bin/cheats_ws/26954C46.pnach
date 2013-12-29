@@ -1,0 +1,13 @@
+gametitle=Grand Theft Auto: Vice City SLES_510.61 / Ver 3
+comment=Widescreen converted from NTSC fix by nemesis2000 (pnach by Some Chump)
+
+//widescreen fix
+patch=1,EE,001324BC,word,3C013F9D
+patch=1,EE,001324C0,word,44810000
+patch=1,EE,001324C4,word,46006302
+patch=1,EE,001324C8,word,03E00008
+patch=1,EE,001324CC,word,E78C87F8
+
+patch=1,EE,002485dc,word,0C04C92F
+patch=1,EE,002764AC,word,0C04C932
+patch=1,EE,00276A7C,word,0C04C932

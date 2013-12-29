@@ -1,0 +1,16 @@
+gametitle=Tenchu - Wrath of Heaven (PAL-G) (SLES-51402)
+comment=Widescreen hack
+
+// 16:9
+patch=1,EE,00154998,word,3c033f40 // 3c033f80 hor fov
+patch=1,EE,001549e0,word,3c033f40 // 3c033f80 hor fov
+patch=1,EE,00155168,word,3c024458 // 3c024422 render fix
+patch=1,EE,001553d0,word,3c024458 // 3c024422 render fix
+
+// 16:10
+//patch=1,EE,002453d0,word,3c1b3f55 // 00000000 hor fov
+//patch=1,EE,002453d8,word,377b5555 // 00000000 hor fov
+//patch=1,EE,001549bc,word,ac5b0000 // ac430000
+//patch=1,EE,00154a04,word,ac5b0000 // ac430000
+//patch=1,EE,00155168,word,3c024443 // 3c024422 render fix
+//patch=1,EE,001553d0,word,3c024443 // 3c024422 render fix

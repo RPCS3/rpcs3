@@ -1,0 +1,8 @@
+gametitle=Project - Snowblind (NTSC-U)
+comment=Widescreen hack by ElHecht
+
+// 16:9 single player mode
+patch=1,EE,001d87b8,word,3c013fe3 //3c013faa
+patch=1,EE,001d87bc,word,34218e39 //3421aaab
+patch=1,EE,003327f0,word,3c013fe3 //3c013faa
+patch=1,EE,003327f4,word,34218e39 //3421aaab

@@ -1,0 +1,27 @@
+gametitle=Baroque (PAL-E) (SLES-55216)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,0039f504,word,3c033f40 // 3c033f80 hor fov
+patch=1,EE,0039f50c,word,4483f000 // 44832800
+patch=1,EE,0039f510,word,461ef143 // 00000000
+patch=1,EE,0039f514,word,4602f083 // 46022883
+patch=1,EE,0044cf30,word,3f5eb852 // 3f947ae1 subtitle hor fov
+patch=1,EE,00166ff0,word,3c054028 // 3c054060 hud hp/vt
+patch=1,EE,00167030,word,3c053ff0 // 3c054020 hud hp/vt
+
+// 16:10
+//patch=1,EE,0039f504,word,3c033f55 // 3c033f80 hor fov
+//patch=1,EE,0039f508,word,34635555 // 3c033f80
+//patch=1,EE,0039f50c,word,4483f000 // 44832800
+//patch=1,EE,0039f510,word,461ef143 // 00000000
+//patch=1,EE,0039f514,word,4602f083 // 46022883
+//patch=1,EE,0039f578,word,3c05c000 // 44850000
+//patch=1,EE,0039f57c,word,44850000 // 00000000
+//patch=1,EE,0044cf30,word,3f777777 // 3f947ae1 subtitle hor fov
+//patch=1,EE,00166ff0,word,3c05403b // 3c054060 hud hp/vt
+//patch=1,EE,00167030,word,3c054006 // 3c054020 hud hp/vt
+
+// effects
+patch=1,EE,002386d4,word,3c014500 // 3c013f80 remove ghosting effect
+patch=1,EE,0010fc60,word,3c023e80 // 3c023f80 remove grain effect

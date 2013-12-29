@@ -1,2 +1,12 @@
-comment=Resident Evil - Code Veronica (PAL-M4) (SLES-50306) Widescreen Hack (16:9) by ElHecht
-patch=1,EE,21140300,extended,3F400000 // 3F800000
+gametitle=Resident Evil - Code Veronica X (PAL-M4) (SLES-50306)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,21140300,extended,3f400000 // 3f800000 hor fov
+patch=1,EE,00336174,word,01aa0280 // 01400280 fmv fix
+patch=1,EE,00336170,word,000c0000 // 00400000 fmv fix
+
+// 16:10
+//patch=1,EE,21140300,extended,3f555555 // 3f800000 hor fov
+//patch=1,EE,00336174,word,01800280 // 01400280 fmv fix
+//patch=1,EE,00336170,word,00200000 // 00400000 fmv fix

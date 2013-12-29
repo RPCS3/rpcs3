@@ -1,0 +1,6 @@
+gametitle=Chaos Wars (J) (SLPM_665.53)
+comment=Widescreen Hack (pnach by Arapapa)
+
+patch=1,EE,00137494,word,3c033f19 // 4c3f033c
+patch=1,EE,00137498,word,3463999a // cdcc6334
+patch=1,EE,001374b4,word,3c0343f7 // b943033c

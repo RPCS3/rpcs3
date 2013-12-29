@@ -1,0 +1,15 @@
+gametitle=Wild Arms 3 (J) (SCPS_150.24) 
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//towns and maps
+patch=1,EE,00115c90,word,3c023f40
+patch=1,EE,00115ca0,word,3c023f40
+
+//render fix
+patch=1,EE,00115e4c,word,3c054455
+
+//battles
+patch=1,EE,00115a74,word,3c023f40
+
+//render fix
+patch=1,EE,00115ae8,word,3c024455

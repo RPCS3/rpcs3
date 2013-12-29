@@ -1,0 +1,10 @@
+gametitle= Winning Eleven 7 - International (NTSC-J) (SLPM-65498)
+comment= Widescreen pnach by Arapapa
+
+// 16:9 (00000000 00000000 43ad1346 00000000)
+patch=1,EE,010c458c,word,3c013f40 // 00000000 hor fov
+patch=1,EE,010c4590,word,44810000 // 00000000
+patch=1,EE,010c4598,word,4600c602 // 00000000
+
+// Render fix (c2081546 803f023c)
+patch=1,EE,01104cc8,word,3C023FAB // 3c023f80

@@ -1,0 +1,10 @@
+gametitle= Winning Eleven 2012 (NTSC-J) (SLPM_55294)
+comment= Widescreen pnach (NTSC-J by Arapapa)
+
+// 16:9 (00000000 00000000 43ad1346 00000000)
+patch=1,EE,001043fc,word,3c013f40 // 00000000 hor fov
+patch=1,EE,00104400,word,44810000 // 00000000
+patch=1,EE,00104408,word,4600c602 // 00000000
+
+// Render fix by El_Patas (42091746 803f053c)
+patch=1,EE,00125f4c,word,3C053FAB //3C053F80 (increases hor. render area)

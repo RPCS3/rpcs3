@@ -1,0 +1,5 @@
+gametitle=Future Boy Conan (J) (Mirai Shounen Conan) (SLPM-65973)
+comment=Widescreen hack by Arapapa
+
+// 16:9 
+patch=1,EE,203EC404,word,3f400000 // 3f800000

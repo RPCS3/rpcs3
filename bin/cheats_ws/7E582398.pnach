@@ -1,3 +1,6 @@
-gametitle=Digimon world Data Squad SLUS_215.98
-comment=Widescreen Hack
-patch=1,EE,20BEBB64,extended,3F19999A // 3F4CCCCD
+gametitle=Digimon Data Squad (NTSC-U) (16:9)
+comment=Digimon Data Squad
+
+// 16:9 hack
+patch=1,EE,2033A9C0,extended,3FAAAAAA // 3F800000
+patch=1,EE,2033A9D0,extended,3F400000 // 3F800000

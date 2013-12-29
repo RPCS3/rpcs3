@@ -1,0 +1,21 @@
+gametitle=Silent Hill 4 - The Room (K) (SLKA_25149)
+comment=Widescreen hack by ElHecht (NTSC-K by Arapapa)
+comment=FMV hack by Pelvicthrustman
+comment=Black borders fix by nemesis2000
+
+// 16:9
+//00000000(*) 03050146 00000000 00000000(*)
+patch=1,EE,00148564,word,3c013f40 // 00000000 hor fov
+patch=1,EE,00148570,word,4481f000 // 00000000
+
+//47d60046 0424050c
+patch=1,EE,001485a0,word,461ed683 // 4600d647
+
+//00000000 32b00046
+patch=1,EE,001485b4,word,4600d647 // 00000000
+
+//0800023c 7000a427, 08002226 08000326
+patch=1,EE,202f79e4,extended,3c020380 // 3c020008 FMV top
+patch=1,EE,202f7a28,extended,34021880 // 26220008 FMV bottom
+
+// NTSC-K is not require "black bar fix"

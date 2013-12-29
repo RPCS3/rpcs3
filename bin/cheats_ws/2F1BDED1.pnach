@@ -1,0 +1,9 @@
+gametitle=Area 51 (J) (SLPM_664.68)
+comment=Widescreen Hack by ElHecht (pnach by Arapapa)
+
+// 16:9
+patch=1,EE,00396748,word,3c193f40 // 00000000 hor fov (00000000 00000000 03ad0046)
+patch=1,EE,00396760,word,4499f000 // 00000000
+patch=1,EE,00396764,word,461ea502 // 00000000
+patch=1,EE,00396e30,word,461ebb03 // 4600bb06 renderfix calculation
+patch=1,EE,00396e1c,word,461eab83 // 4600ab86 renderfix calculation

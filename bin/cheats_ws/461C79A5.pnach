@@ -1,0 +1,18 @@
+gametitle=Return to Castle Wolfenstein: Operation Resurrection (PAL SLES_514.49)
+comment=Widescreen hack by nemesis2000 (Converted to PAL by Somechump)
+
+patch=1,EE,00170728,word,3c0142d4 //hor fov
+patch=1,EE,0017072c,word,44816000
+patch=1,EE,00170730,word,461405c2
+patch=1,EE,00170734,word,0c07eb92
+patch=1,EE,00170738,word,46156302
+patch=1,EE,0017073c,word,4614c041
+patch=1,EE,00170740,word,3c013f00
+patch=1,EE,00170744,word,4481a800
+patch=1,EE,00170748,word,46140002
+patch=1,EE,0017074c,word,460c6583
+
+patch=1,EE,00170818,word,3c013c0f
+patch=1,EE,0017081c,word,4481a800
+patch=1,EE,00170820,word,3c0142d4 //render fix
+patch=1,EE,00170824,word,44810000

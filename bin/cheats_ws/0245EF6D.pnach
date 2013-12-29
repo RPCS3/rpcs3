@@ -1,2 +1,10 @@
-comment=Resident Evil - Outbreak - Widescreen (16:9) (NTSC-U) // by Hyakki
-patch=1,EE,2038CA7A,extended,3FDF
+gametitle=Resident Evil: Outbreak (SLUS-20765) 
+comment = Version 2.00
+
+patch=1,EE,0038ca78,word,3fe38e39
+
+//FMV's fix (requires hex patch)
+patch=1,EE,001bbb04,word,00000000
+patch=1,EE,0037968c,word,24060015
+patch=1,EE,00379864,word,000b5843
+patch=1,EE,0037986c,word,00ab2820

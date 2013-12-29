@@ -1,0 +1,10 @@
+gametitle=Disaster Report 2 (J) (SLPS_25606)
+comment=Widescreen hack (NTSC-J by Arapapa)
+
+// 16:9 gameplay
+//0000803f d7a3703f 00000045 00000045
+patch=1,EE,0048ab28,word,3f400000 // 3f800000
+
+// render fix(0000a043 00007043 cdcc4c3e)
+patch=1,EE,003a7c60,word,43e00000 //43a00000
+patch=1,EE,003a7c80,word,43e00000 //43a00000

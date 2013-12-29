@@ -1,0 +1,5 @@
+gametitle=Ring of Red (J) (SLPM_620.13)
+comment=Widescreen Hack (pnach by Arapapa)
+
+//16:9 (803f013c 00008144 b0ffbd27)
+patch=1,EE,001059c4,extended,3c013f60 // 3c013f80

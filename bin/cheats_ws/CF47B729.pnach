@@ -1,0 +1,12 @@
+gametitle=Bujingai - Swordmaster (PAL-M5) (SLES-52495)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,001219b4,word,3c023f40 // 3c023f80 hor fov
+
+// 16:10
+//patch=1,EE,001219b4,word,3c193f55 // 3c023f80 hor fov
+//patch=1,EE,001219c8,word,37395555 // ac226b00 hor fov
+//patch=1,EE,00121a5c,word,ac396b00 // 03e00008
+//patch=1,EE,00121a60,word,03e00008 // 27bd0010
+//patch=1,EE,00121a64,word,27bd0010 // 00000000

@@ -1,0 +1,19 @@
+gametitle=Rogue Galaxy - Director's Cut (J) (SCPS_170.13)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//gameplay
+patch=1,EE,001c5aa0,word,3c023f10 //403F023C(*) 00608244 FC08050C 2D200002
+
+//compass
+patch=1,EE,0037413c,word,3c023f10 //F055050C 9004A0E7 A004AFC7 403F023C(*)
+
+//black border fix
+patch=1,EE,00261050,word,3c020000
+
+//FMV's fix
+patch=1,EE,001d4a3c,word,24060000 //top 
+patch=1,EE,001D4A8C,word,240201c0 //bottom 
+
+//hor FMV's fix
+//patch=1,EE,001d4a2c,word,24030040 //left
+//patch=1,EE,001d4a88,word,240301c0 //right

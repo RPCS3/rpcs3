@@ -1,0 +1,19 @@
+gametitle=Disgaea - Hour of Darkness (PAL-E) (SLES-52458)
+comment=Widescreen Hack by nemesis2000
+// Ported to PAL, added 16:10 support (ElHecht)
+
+// 16:9
+patch=1,EE,0010598c,word,3c013f40 // 00000000 hor fov 1
+patch=1,EE,00105998,word,44810000 // 00000000
+patch=1,EE,0010599c,word,4600c602 // 00000000
+patch=1,EE,001511c4,word,3c093f40 // 00000000 hor fov 2
+patch=1,EE,001511cc,word,afa900dc // e7a000dc
+
+// 16:10
+;patch=1,EE,0010598c,word,3c013f55 // 00000000 hor fov 1
+;patch=1,EE,00105990,word,34215555 // 00000000 hor fov 1
+;patch=1,EE,00105998,word,44810000 // 00000000
+;patch=1,EE,0010599c,word,4600c602 // 00000000
+;patch=1,EE,00150ec0,word,3c093f55 // 00000000 hor fov 2
+;patch=1,EE,00150edc,word,35295555 // 00000000 hor fov 2
+;patch=1,EE,001511cc,word,afa900dc // e7a000dc

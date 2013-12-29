@@ -1,0 +1,16 @@
+gametitle=Tales of Rebirth (NTSC-J)
+comment=Widescreen hack
+
+//gameplay
+patch=1,EE,0015c8e8,word,00000000
+patch=1,EE,0015c8f0,word,3c013f40
+patch=1,EE,0015c8f4,word,4481c800
+patch=1,EE,0015c8fc,word,46196b42
+patch=1,EE,0015c900,word,e7ad0040
+
+//sprite fix
+patch=1,EE,001574a4,word,3c013f20
+patch=1,EE,001574a8,word,34216d3a
+
+//render fix
+patch=1,EE,0015c964,word,3c0143d6

@@ -1,0 +1,4 @@
+gametitle=Simple 2000 Series Vol. 31 - The Chikyuu Boueigun [NTSC-J] (SLPM-62344)
+comment=Widescreen Hack
+
+patch=1,EE,2097D7E0,extended,3F400000

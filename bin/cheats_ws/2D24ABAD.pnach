@@ -1,0 +1,5 @@
+gametitle=Headhunter - Redemption SLES_516.82
+comment=Widescreen Hack
+patch=1,EE,00190620,word,3c014310
+patch=1,EE,00190650,word,3c013fe3
+patch=1,EE,00190654,word,34218e38

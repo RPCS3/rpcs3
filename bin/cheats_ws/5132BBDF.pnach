@@ -1,0 +1,86 @@
+gametitle=Shin Megami Tensei: Persona 4 (K) (SCKA_201.32)
+comment=Widescreen hack by nemesis2000 and pavachan (pnach by Arapapa)
+
+//16:9 by pavachan
+patch=1,EE,0076201c,word,3fe38e38
+
+//partial HUD fix by nemesis2000
+patch=1,EE,00104680,word,3c043f40
+patch=1,EE,00104688,word,00731821 // 246379a8($1) 
+patch=1,EE,0010468c,word,246379a8 // recall $1 (NTSC-U 24636728)
+patch=1,EE,00104694,word,00000000
+patch=1,EE,00104698,word,24630004
+patch=1,EE,0010469c,word,3c043f80
+
+//FMV's fix by nemesis2000
+patch=1,EE,0046b51c,word,1460000a
+patch=1,EE,0046b524,word,3c03c294
+patch=1,EE,0046b528,word,10000008
+patch=1,EE,0046b52c,word,00000000
+patch=1,EE,0046b548,word,3c03c1a8
+patch=1,EE,0046b55c,word,00000000
+
+//zoom fix by nemesis2000
+//2d202002($1) 74af0f0c($2) 00000000 2d202002 2d280002($3) 2d300000($4) 24af0f0c($5) 00000000 2d200002 c88b0f0c($6) 00000000 2d204002($7) 40016cc6 e465110c 00000000
+patch=1,EE,0026c660,word,0c0faf74 // recall $2 (NTSC-U 0c0fa77c)
+patch=1,EE,0026c664,word,0220202d // recall $1
+patch=1,EE,0026c668,word,0220202d // recall $1
+patch=1,EE,0026c66c,word,0200282d // recall $3
+patch=1,EE,0026c670,word,0000302d // recall $4
+patch=1,EE,0026c674,word,0c0faf24 // recall $5
+patch=1,EE,0026c678,word,00000000 // 0c0faf24
+patch=1,EE,0026c67c,word,0c0f8bc8 // recall $6 (NTSC-U 0c0f83d0)
+patch=1,EE,0026c680,word,0200202d
+patch=1,EE,0026c684,word,0240202d // recall $7
+patch=1,EE,0026c688,word,3c013f80 // 3c013f95 for moonwalk fix
+patch=1,EE,0026c68c,word,44810000 // 0240202d
+patch=1,EE,0026c690,word,c66c0140 
+patch=1,EE,0026c694,word,0c1165e4 // NTSC-U 0c115df4
+patch=1,EE,0026c698,word,46006303 // 00000000
+
+//personas art fix by nemesis2000
+patch=1,EE,0011dd0c,word,10400032
+patch=1,EE,0011dd18,word,1060002f
+
+//9475040c($1) 00000000($2) 2000bfdf($3) 1000b07b($4) 0000b4c7($5) 3000bd27($6) 0800e003($7) 00000000 00000000
+patch=1,EE,0011ddc8,word,3c013f02
+patch=1,EE,0011ddcc,word,44810800
+patch=1,EE,0011ddd0,word,0c047594 // recall $1 (NTSC-U 0c04756c)
+patch=1,EE,0011ddd4,word,46016b43
+patch=1,EE,0011ddd8,word,dfbf0020 // recall $3
+patch=1,EE,0011dddc,word,7bb00010 // recall $4
+patch=1,EE,0011dde0,word,c7b40000 // recall $5
+patch=1,EE,0011dde4,word,27bd0030 // recall $6
+patch=1,EE,0011dde8,word,03e00008 // recall $7 
+
+patch=1,EE,0011d7c4,word,3C024340
+
+//f804048e 7c77040c
+patch=1,EE,0011a1b4,word,00000000
+
+//2D202002 7c77040c
+patch=1,EE,00136a80,word,00000000
+
+//characters art fix by nemesis2000
+patch=1,EE,00356cb4,word,3C024340
+
+//partial HUD text fix by nemesis2000
+patch=1,EE,00123500,word,24020BF6
+
+//Progressive Scan & 60fps
+patch=1,EE,004194fc,word,3c050000
+patch=1,EE,00419504,word,3c060050
+patch=1,EE,0041950c,word,3c070001
+
+//Font fix by nemesis2000
+//patch=1,EE,002732b4,word,00118903
+//patch=1,EE,002732b8,word,02338818
+//patch=1,EE,002732c0,word,8E93001c
+//patch=1,EE,00273368,word,82970003
+//patch=1,EE,0027343c,word,24130015
+
+//patch=1,EE,00275dbc,word,2415000c
+//patch=1,EE,00275dd4,word,3c0241a8
+//patch=1,EE,00275e00,word,01154018
+//patch=1,EE,00275e04,word,00084103
+//patch=1,EE,00275e08,word,0100a82d

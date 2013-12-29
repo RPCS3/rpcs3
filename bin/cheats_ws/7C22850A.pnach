@@ -1,3 +1,23 @@
 gametitle=Mortal Kombat: Deception (SLUS-20881)
-comment=Widescreen hack
-patch=1,EE,21EAF310,word,3F842256 // 3FB02DC8 X-Axis
+comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
+
+//zoom for arcade mode (widescreen)
+patch=1,EE,00222144,word,3c0342c0
+
+//aspect correction for widescreen mode
+patch=1,EE,001875e4,word,3c0143f0
+patch=1,EE,001875e8,word,46800860
+patch=1,EE,001875ec,word,44810000
+patch=1,EE,001875f0,word,46150842
+patch=1,EE,001875f4,word,46000803
+patch=1,EE,001875f8,word,46140003
+
+//black borders fix
+patch=1,EE,0017c5d0,word,46000001
+patch=1,EE,0017c5e0,word,46000001
+patch=1,EE,0017c620,word,46000001
+patch=1,EE,0017c630,word,46000001
+
+//widescreen switch fix
+patch=1,EE,00222320,word,24020340
+patch=1,EE,00222360,word,24020340

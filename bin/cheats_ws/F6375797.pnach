@@ -1,0 +1,10 @@
+gametitle=Boxing Champions (PAL-E) (SLES_517.17)
+comment=Widescreen Hack by El_Patas
+
+patch=1,EE,0016165C,word,3C013F40 //00000000
+patch=1,EE,00161660,word,44810000 //00000000
+patch=1,EE,00161668,word,4600C602 //00000000
+patch=1,EE,0016BFAC,word,3C013F40 //00000000
+patch=1,EE,0016BFB0,word,44810000 //00000000
+patch=1,EE,0016BFB8,word,4600C602 //00000000
+

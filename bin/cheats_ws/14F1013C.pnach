@@ -1,0 +1,6 @@
+gametitle=Silpheed - The Lost Planet (NTSC-J) (SLPS-25447)
+comment=Widescreen hack by Arapapa
+
+
+// 16:9 (0000803f d7a3703f 0000f943)
+patch=1,EE,20431B08,word,3F400000 // 3F800000

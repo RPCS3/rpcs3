@@ -1,0 +1,5 @@
+gametitle=Dark Cloud 2 (NTSC-K) (SCKA_20014)
+comment=Widescreen hack by nemesis2000 (NTSC-K by Arapapa)
+
+//803f023c d000a426 d000a2ae
+patch=1,EE,00139004,word,3c023f40 // 3c023f80

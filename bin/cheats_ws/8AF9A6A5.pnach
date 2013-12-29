@@ -1,0 +1,17 @@
+gametitle=Harvest Moon - A Wonderful Life - Special Edition (PAL-E) (SLES-53480)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0043c8ec,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0043c8f8,word,44810000 // 00000000
+patch=1,EE,0043c8fc,word,4600c602 // 00000000
+patch=1,EE,00403028,word,3c043fab // 3c043f80 renderfix 1
+patch=1,EE,00403030,word,3c05bfab // 3c05bf80 renderfix 2
+
+// 16:10
+//patch=1,EE,0043c8ec,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0043c8f0,word,34215555 // 00000000 hor fov
+//patch=1,EE,0043c8f8,word,44810000 // 00000000
+//patch=1,EE,0043c8fc,word,4600c602 // 00000000
+//patch=1,EE,00403028,word,3c043f9a // 3c043f80 renderfix 1
+//patch=1,EE,00403030,word,3c05bf9a // 3c05bf80 renderfix 2

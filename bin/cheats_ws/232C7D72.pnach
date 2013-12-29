@@ -1,4 +1,5 @@
 gametitle=Shin Megami Tensei: Persona 3 FES (SLPM_666)
+comment=Widescreen hack by CeruleansBlue, devina and nemesis2000 (pnach by Arapapa)
 
 //16:9 by CeruleansBlue
 patch=1,EE,007ccc1c,word,3fe38e38
@@ -10,6 +11,11 @@ patch=1,EE,00106cbc,word,24634b2c
 patch=1,EE,00106cc4,word,00000000 
 patch=1,EE,00106cc8,word,24630004
 patch=1,EE,00106ccc,word,3c043f80
+
+//persona art fix by devina and nemesis2000
+//003f033c 3001a3af 3401a0af 7001a0af 803f023c
+patch=1,EE,0011486c,word,3c033ec0 // 3c033f00
+patch=1,EE,0011487c,word,3c023f90 // 3c023f80
 
 //FMV's fix by nemesis2000
 patch=1,EE,0010ae10,word,1462000a

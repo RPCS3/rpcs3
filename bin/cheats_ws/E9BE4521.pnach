@@ -1,0 +1,4 @@
+﻿gametitle=One Piece Grand Battle! 3 [NTSC-J] (SLPS-25315)
+comment=Widescreen Hack
+patch=1,EE,2035CCF0,extended,3f400000  //battle
+//patch=1,EE,2036E430,extended,43B40000  //UI fix,but needs a render fix

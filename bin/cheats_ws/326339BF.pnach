@@ -1,0 +1,13 @@
+gametitle=PaRappa the Rapper 2 (PAL-M5) (SCES-50408)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,001666d4,word,3c013f40
+patch=1,EE,001666e0,word,44810000
+patch=1,EE,001666e4,word,4600c602
+
+// 16:10
+//patch=1,EE,001666d4,word,3c013f55
+//patch=1,EE,001666d8,word,34215555
+//patch=1,EE,001666e0,word,44810000
+//patch=1,EE,001666e4,word,4600c602

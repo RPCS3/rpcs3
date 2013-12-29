@@ -1,0 +1,14 @@
+gametitle=Klonoa 2:Lunatea's Veil (SLPS_25033)
+comment=Widescreen fix by synce (NTSC-K by Arapapa)
+
+//16:9 (00000000 00000000 43ad1346 00000000)
+patch=1,EE,00303fac,word,3c013f40
+patch=1,EE,00303fb0,word,44810000
+patch=1,EE,00303fb8,word,4600c602
+
+//Partial HUD fix 
+//0000803f(*) 0000803f 0000803f 0000803f (search *4)
+patch=1,EE,20518000,word,3f400000 
+patch=1,EE,20519000,word,3f400000
+patch=1,EE,2051A000,word,3f400000
+patch=1,EE,2051B000,word,3f400000

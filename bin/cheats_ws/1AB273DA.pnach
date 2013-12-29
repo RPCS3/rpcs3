@@ -1,0 +1,20 @@
+﻿gametitle=Soul Nomad & the World Eaters [NTSC-J](SLPS-25739)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//gameplay
+patch=1,EE,00104d74,word,3c013f40
+patch=1,EE,00104d78,word,44810000
+patch=1,EE,00104d80,word,4600c602
+
+//sprite fix
+patch=1,EE,00151ee0,word,3c033f40
+patch=1,EE,00151ef4,word,3c033f80
+patch=1,EE,00151ef8,word,ac830010
+patch=1,EE,00151efc,word,ac800014
+patch=1,EE,00151f00,word,ac800018
+patch=1,EE,00151f04,word,ac80001c
+patch=1,EE,00151f08,word,03e00008
+patch=1,EE,00151f0c,word,ac830020
+
+//text width
+patch=1,EE,001302f4,word,3c023f40

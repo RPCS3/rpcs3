@@ -1,0 +1,15 @@
+gametitle=WWE SmackDown vs. Raw (PAL-E) (SLES-52781)
+comment=Widescreen hack by ElHecht
+
+// 16:9
+patch=1,EE,0011a434,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0011a440,word,4481f000 // 00000000
+patch=1,EE,0011a444,word,461ec602 // 00000000
+patch=1,EE,001d809c,word,3c023f08 // 3c023f80 camera fix
+
+// 16:10
+//patch=1,EE,0011a434,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0011a438,word,34215555 // 00000000 hor fov
+//patch=1,EE,0011a440,word,4481f000 // 00000000
+//patch=1,EE,0011a444,word,461ec602 // 00000000
+//patch=1,EE,001d809c,word,3c023f30 // 3c023f80 camera fix

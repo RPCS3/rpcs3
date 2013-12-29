@@ -1,0 +1,3 @@
+gametitle=Dawn of Mana (NTSC-U)
+comment=Widescreen hack
+patch=1,EE,0012ae74,word,3c013f40

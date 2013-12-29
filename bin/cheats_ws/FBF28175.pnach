@@ -1,79 +1,19 @@
-gametitle=Red Faction (SLUS-20073)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+gametitle=Red Faction (NTSC-U) (SLUS-20073)
+comment=Widescreen hack by ElHecht
 
-//weapon
-patch=1,EE,001acea8,word,1060000f
-patch=1,EE,001aceb4,word,1040000c
-patch=1,EE,001aceb8,word,8fa200c8
-patch=1,EE,001acebc,word,24060001
-patch=1,EE,001acec0,word,70c03e28
-patch=1,EE,001acec4,word,70c04628
-patch=1,EE,001acec8,word,24440704
-patch=1,EE,001acecc,word,8fa200d0
-patch=1,EE,001aced0,word,c44c006c
-patch=1,EE,001aced4,word,8fa200c8
-patch=1,EE,001aced8,word,0c081c14
-patch=1,EE,001acedc,word,244506f8
-patch=1,EE,001acee0,word,1000000d
-patch=1,EE,001acee4,word,72a02628
-patch=1,EE,001acee8,word,8fa200c8
-patch=1,EE,001aceec,word,24060001
-patch=1,EE,001acef0,word,70c03e28
-patch=1,EE,001acef4,word,70c04628
-patch=1,EE,001acef8,word,24440704
-patch=1,EE,001acefc,word,8fa200d0
-patch=1,EE,001acf00,word,c44c0068
-patch=1,EE,001acf04,word,8fa200c8
-patch=1,EE,001acf08,word,3c013f4c //weapon fov
-patch=1,EE,001acf0c,word,44811800
-patch=1,EE,001acf10,word,46036303
-patch=1,EE,001acf14,word,0c081c14
-patch=1,EE,001acf18,word,244506f8
-patch=1,EE,001acf1c,word,0c069a0c
-patch=1,EE,001acf20,word,72a02628
-patch=1,EE,001acf24,word,104000b3
-patch=1,EE,001acf28,word,240400ff
-patch=1,EE,001acf2c,word,8ea30230
-patch=1,EE,001acf30,word,2402ffff
-patch=1,EE,001acf34,word,146200ae
-patch=1,EE,001acf38,word,27a40110
-patch=1,EE,001acf3c,word,3c020010
+// 16:9
+patch=1,EE,002071c4,word,3c013f40 // 00000000 hor fov
+patch=1,EE,002071d0,word,4481f000 // 00000000
+patch=1,EE,002072e0,word,461ea502 // 00000000
+patch=1,EE,002072e8,word,461ead43 // 00000000
+patch=1,EE,0023a444,word,3c024309 // 3c024334 shadow fix
+patch=1,EE,0023a34c,word,461e0303 // 44826000 shadow fix
 
-//gameplay
-patch=1,EE,001611c8,word,14400020
-patch=1,EE,00161220,word,1220000c
-patch=1,EE,00161230,word,10400006
-
-patch=1,EE,00161240,word,14830002
-patch=1,EE,00161244,word,70402628
-patch=1,EE,00161248,word,0c0627dc
-patch=1,EE,0016124c,word,92a20194
-patch=1,EE,00161250,word,24060001
-patch=1,EE,00161254,word,1446000b
-patch=1,EE,00161258,word,3c0241f0
-patch=1,EE,0016125c,word,44826000
-patch=1,EE,00161260,word,70c03e28
-patch=1,EE,00161264,word,3c020080
-patch=1,EE,00161268,word,24445690
-patch=1,EE,0016126c,word,3c020080
-patch=1,EE,00161270,word,24455678
-patch=1,EE,00161274,word,0c081c14
-patch=1,EE,00161278,word,70c04628
-patch=1,EE,0016127c,word,1000000c
-patch=1,EE,00161280,word,36940002
-patch=1,EE,00161284,word,3c020080
-patch=1,EE,00161288,word,24445690
-patch=1,EE,0016128c,word,c78c80f0
-patch=1,EE,00161290,word,3c0342d5 //fov
-patch=1,EE,00161294,word,3c0100c2
-patch=1,EE,00161298,word,ac23e558
-patch=1,EE,0016129c,word,3c020080
-patch=1,EE,001612a0,word,24455678
-patch=1,EE,001612a4,word,70c03e28
-patch=1,EE,001612a8,word,0c081c14
-patch=1,EE,001612ac,word,70c04628
-patch=1,EE,001612b0,word,12000049
-
-patch=1,EE,002071c4,word,3c033f40 // ver fov
-patch=1,EE,002071cc,word,3c01009c
-patch=1,EE,002071d0,word,ac232738
+// 16:10
+//patch=1,EE,002071c4,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,002071cc,word,34215555 // 00000000 hor fov
+//patch=1,EE,002071d0,word,4481f000 // 00000000
+//patch=1,EE,002072e0,word,461ea502 // 00000000
+//patch=1,EE,002072e8,word,461ead43 // 00000000
+//patch=1,EE,0023a444,word,3c024318 // 3c024334 shadow fix
+//patch=1,EE,0023a34c,word,461e0303 // 44826000 shadow fix

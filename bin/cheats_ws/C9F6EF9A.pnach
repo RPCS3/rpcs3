@@ -1,0 +1,7 @@
+gametitle=Beat Down - Fists of Vengeance (U) (SLUS-21150)
+comment=Widescreen Hack (16:9) by ElHecht (pnach NTSC-U by Arapapa)
+
+//16:9 (42081546 43080046 00000000 00008244 00000000(*) 030b0046 00000000 00000000(*) da95040c 00000000(*))
+patch=1,EE,00375388,word,3c013f40 // 00000000 hor fov
+patch=1,EE,00375394,word,4481f000 // 00000000
+patch=1,EE,0037539c,word,461ea503 // 00000000

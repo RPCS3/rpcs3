@@ -1,0 +1,4 @@
+gametitle=Simple 2000 Series Vol. 63 - The Suieitaikai [NTSC-J] (SLPM-62534)
+comment=Widescreen Hack
+
+patch=1,EE,20C91D28,extended,3F400000

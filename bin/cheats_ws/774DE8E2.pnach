@@ -1,0 +1,5 @@
+﻿gametitle=Valkyrie Profile 2 - Silmeria [NTSC-J] (SLPM-66419)
+comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0037F014,word,3c033f40
+patch=1,EE,0037F018,word,34640000

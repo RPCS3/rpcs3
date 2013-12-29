@@ -1,0 +1,15 @@
+gametitle=Rayman 2 - Revolution (PAL-M5) (SLES-50044)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,0018c690,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0018c6a0,word,4481f000 // 00000000
+patch=1,EE,0018c6a4,word,461e0842 // 00000000
+patch=1,EE,001180ec,word,461e6303 // 00000000 renderfix calculation
+
+// 16:10
+//patch=1,EE,0018c690,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0018c694,word,34215555 // 00000000 hor fov
+//patch=1,EE,0018c6a0,word,4481f000 // 00000000
+//patch=1,EE,0018c6a4,word,461e0842 // 00000000
+//patch=1,EE,001180ec,word,461e6303 // 00000000 renderfix calculation

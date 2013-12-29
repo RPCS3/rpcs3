@@ -1,0 +1,3 @@
+gametitle=Mace Griffin - Bounty Hunter (SLES_516.53 Pal)
+comment=Widescreen Hack By Some Chump
+patch=1,EE,0055c308,word,439991ec // 43ccc290

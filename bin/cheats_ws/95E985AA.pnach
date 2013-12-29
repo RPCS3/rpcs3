@@ -1,0 +1,21 @@
+gametitle=Samurai Warriors - Xtreme Legends (PAL-G) (SLES-53004)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,0013fa48,word,3c024328 // 3c024360 zoom
+patch=1,EE,0013fc38,word,3c013f40 // 8f838520 ver fov
+patch=1,EE,0013fc3c,word,4481f000 // 03e00008
+patch=1,EE,0013fc40,word,461e6b43 // e46d02bc
+patch=1,EE,0013fc44,word,03e00008 // 00000000
+patch=1,EE,0013fc48,word,e46d02bc // 00000000
+
+// 16:10
+//patch=1,EE,0013fa48,word,3c02433a // 3c024360 zoom
+//patch=1,EE,0013fa50,word,3442aaab // 44820800
+//patch=1,EE,0013fa54,word,44820800 // 00000000
+//patch=1,EE,0013fc38,word,3c013f55 // 8f838520 ver fov
+//patch=1,EE,0013fc3c,word,34215555 // 03e00008 ver fov
+//patch=1,EE,0013fc40,word,4481f000 // e46d02bc
+//patch=1,EE,0013fc44,word,461e6b43 // 00000000
+//patch=1,EE,0013fc48,word,03e00008 // 00000000
+//patch=1,EE,0013fc4c,word,e46d02bc // 00000000

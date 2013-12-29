@@ -1,5 +1,0 @@
-gametitle=Sly Raccoon SCUS_971.98
-comment=Widescreen Hack
-patch=1,EE,00143564,word,3c013f22
-patch=1,EE,001435e8,word,3c0143ab // 3c014360
-patch=1,EE,0014470c,word,3c0143ab // 3c014360

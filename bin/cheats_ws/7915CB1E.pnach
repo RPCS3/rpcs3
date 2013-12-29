@@ -1,0 +1,4 @@
+﻿gametitle=Digimon Savers - Another Mission [NTSC-J] (SLPS-25716)
+comment=Widescreen
+patch=1,EE,203649C0,word,3FAAAAAA
+patch=1,EE,203649D0,word,3F400000

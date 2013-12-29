@@ -1,0 +1,5 @@
+gametitle=Ace Combat 04: Shattered Skies (J) (SLPS_25052)
+comment=Widescreen fix by nemesis2000 (pnach NTSC-J by Arapapa)
+
+//widescreen fix
+patch=1,EE,003cf4cc,word,441CF7AE

@@ -1,0 +1,5 @@
+gametitle=.hackG.U. Vol. 1 (J) (SLPS_256.51)
+comment=Widescreen Hack (16:9)  (cloudalmasai) (pnach by Arapapa)
+
+//16:9 (0000803f 0000803f 00008043 00004043)
+patch=1,EE,2094D414,extended,3F400000 // 3f800000

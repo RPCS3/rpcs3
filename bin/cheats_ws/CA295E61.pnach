@@ -1,0 +1,16 @@
+gametitle=Atelier Iris 3: Grand Phantasm(J)  (SLPM-66436)
+comment=Widescreen hack by nemesis2000 (NTSC-J by Arapapa)
+
+//3D scenes
+patch=1,EE,0035d89c,word,3c013f40 //hor value
+patch=1,EE,0035d8a0,word,44810000
+patch=1,EE,0035d8a8,word,4600c602
+
+//battle's fix
+patch=1,EE,008f1108,word,44400000 //right side fix
+patch=1,EE,008f1110,word,c4400000 //left side fix
+patch=1,EE,008f03a8,word,3faaaaab //menu fix
+
+//2D scenes (8a00013c f09a20c4)
+patch=1,EE,001af9f4,word,3c014440 //hor value
+patch=1,EE,001af9f8,word,44810000

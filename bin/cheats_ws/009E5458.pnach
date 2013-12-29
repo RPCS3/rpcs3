@@ -1,0 +1,5 @@
+gametitle=Musou Orochi:Maou Sairin(=Warriors Orochi 2) (SLKA_254.43) (NTSC-K)
+comment=16:9 widescreen hack
+//16:9 widescreen hack by 99skull
+patch=1,EE,001AC2F8,word,3C023F19 //3C023F4C wide
+patch=1,EE,001AC300,word,3442999A //3442CCCD wide

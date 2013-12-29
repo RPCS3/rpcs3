@@ -1,0 +1,13 @@
+gametitle=Grand Theft Auto: Vice City (SLUS-20552) / Ver 1.40
+comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
+
+//widescreen fix
+patch=1,EE,001325BC,word,3C013F9D
+patch=1,EE,001325C0,word,44810000
+patch=1,EE,001325C4,word,46006302
+patch=1,EE,001325C8,word,03E00008
+patch=1,EE,001325CC,word,E78C86F8
+
+patch=1,EE,002434EC,word,0C04C96F
+patch=1,EE,0026FE1C,word,0C04C972
+patch=1,EE,002703F4,word,0C04C972

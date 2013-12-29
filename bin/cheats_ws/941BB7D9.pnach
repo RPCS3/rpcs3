@@ -8,3 +8,9 @@ patch=1,EE,0011973C,word,3C014440
 patch=1,EE,00176144,word,3C01442B
 // Progressive Scan
 patch=1,EE,002D98B4,word,3C050000
+
+//world map
+patch=1,EE,00263068,word,3c013f40 //3c013f80
+
+//sphere grid
+patch=1,EE,002649c4,word,3c013f40 //3c013f80

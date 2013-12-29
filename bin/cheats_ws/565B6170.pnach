@@ -1,0 +1,9 @@
+gametitle=Wild Arms 4 (J) (SCPS_15092)
+comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
+
+//hor fov+
+patch=1,EE,00159430,extended,3c064500
+patch=1,EE,001594cc,extended,3c023f40
+
+//render fix
+patch=1,EE,001592D4,extended,3c05442b
