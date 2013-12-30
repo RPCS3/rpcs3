@@ -124,6 +124,7 @@ namespace GLLoader {
 
 	bool fglrx_buggy_driver = false;
 	bool nvidia_buggy_driver = false;
+	bool intel_buggy_driver = false;
 	bool in_replayer = false;
 
 	// Optional
