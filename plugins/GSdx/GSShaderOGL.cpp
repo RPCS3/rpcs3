@@ -406,6 +406,13 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	header += "#define DISABLE_GL42_image\n";
 #endif
 
+#ifndef ENABLE_GLES
+	// Some driver define the MACRO to 0, others keep it undefined...
+	header += "#ifndef GL_ES\n";
+	header += "#define GL_ES 0\n";
+	header += "#endif\n";
+#endif
+
 	// Allow to puts several shader in 1 files
 	switch (type) {
 		case GL_VERTEX_SHADER:
