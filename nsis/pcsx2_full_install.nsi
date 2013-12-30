@@ -15,8 +15,12 @@
   !define INC_CRT_2010  1
 !endif
 
+ShowInstDetails nevershow
+ShowUninstDetails nevershow
+
 !define OUTFILE_POSTFIX "setup"
 !include "SharedBase.nsh"
+!include "AVGPage.nsdinc"
 
 ; Reserve features for improved performance with solid archiving.
 ;  (uncomment if we add our own install options ini files)
@@ -24,6 +28,7 @@
 ;!insertmacro MUI_RESERVEFILE_LANGDLL
 
 !insertmacro MUI_PAGE_COMPONENTS 
+Page custom fnc_AVGPage_Show
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
   
