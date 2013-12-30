@@ -358,6 +358,9 @@
     <ClCompile Include="Emu\Audio\AudioManager.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\RSXDebugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

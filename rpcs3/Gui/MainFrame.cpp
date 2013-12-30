@@ -2,6 +2,7 @@
 #include "MainFrame.h"
 #include "CompilerELF.h"
 #include "MemoryViewer.h"
+#include "RSXDebugger.h"
 
 #include "git-version.h"
 #include "Emu/System.h"
@@ -33,6 +34,7 @@ enum IDs
 	id_config_vhdd_manager,
 	id_tools_compiler,
 	id_tools_memory_viewer,
+	id_tools_rsx_debugger,
 	id_help_about,
 	id_update_dbg,
 };
@@ -150,6 +152,7 @@ MainFrame::MainFrame()
 
 	menu_tools.Append(id_tools_compiler, "ELF Compiler");
 	menu_tools.Append(id_tools_memory_viewer, "Memory Viewer");
+	menu_tools.Append(id_tools_rsx_debugger, "RSX Debugger");
 
 	menu_help.Append(id_help_about, "About...");
 
@@ -158,26 +161,27 @@ MainFrame::MainFrame()
 	m_game_viewer = new GameViewer(this);
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
 	
-	Connect( id_boot_game,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_install_pkg,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
-	Connect( id_boot_elf,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
+	Connect( id_boot_game,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
+	Connect( id_install_pkg,		 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
+	Connect( id_boot_elf,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
 
-	Connect( id_sys_pause,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
-	Connect( id_sys_stop,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
-	Connect( id_sys_send_open_menu,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
-	Connect( id_sys_send_exit,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
+	Connect( id_sys_pause,           wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
+	Connect( id_sys_stop,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
+	Connect( id_sys_send_open_menu,	 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
+	Connect( id_sys_send_exit,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
 
-	Connect( id_config_emu,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
-	Connect( id_config_pad,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigPad) );
-	Connect( id_config_vfs_manager,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
-	Connect( id_config_vhdd_manager,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
+	Connect( id_config_emu,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
+	Connect( id_config_pad,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigPad) );
+	Connect( id_config_vfs_manager,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
+	Connect( id_config_vhdd_manager, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
 
-	Connect( id_tools_compiler,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
-	Connect( id_tools_memory_viewer,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
+	Connect( id_tools_compiler,		 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
+	Connect( id_tools_memory_viewer, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
+	Connect( id_tools_rsx_debugger,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenRSXDebugger));
 
-	Connect( id_help_about,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
+	Connect( id_help_about,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
 
-	Connect( id_update_dbg,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
+	Connect( id_update_dbg,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
 
 	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
 	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(MainFrame::UpdateUI), (wxObject*)0, this);
@@ -737,6 +741,11 @@ void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
 {
 	(new MemoryViewerPanel(this)) -> Show();
+}
+
+void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
+{
+	(new RSXDebugger(this)) -> Show();
 }
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))

@@ -161,14 +161,17 @@ int sys_memory_get_user_memory_size(u32 mem_info_addr)
 	return CELL_OK;
 }
 
-int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a)
+int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 {
-	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr=0x%x)", addr, a.GetAddr());
+	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.GetAddr());
 
-	a -> attribute = 0;
-	a -> page_size = 0;
-	a -> access_right = 0;
-	a -> pad = 0;
+	if (!attr.IsGood())
+		return CELL_EFAULT;
+
+	attr->attribute = 0;
+	attr->page_size = 0;
+	attr->access_right = 0;
+	attr->pad = 0;
 
 	return CELL_OK;
 }

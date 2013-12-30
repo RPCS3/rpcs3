@@ -527,6 +527,109 @@ int cellMsgDialogOpen2(u32 type, char* msgString, u32 callback_addr, u32 userDat
 	return CELL_OK;
 }
 
+int cellMsgDialogOpenErrorCode(u32 errorCode, u32 callback_addr, u32 userData, u32 extParam)
+{
+	cellSysutil.Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=%d, extParam=%d)",
+		errorCode, callback_addr, userData, extParam);
+
+	std::string errorMessage;
+	switch(errorCode)
+	{
+	// Generic errors
+	case 0x80010001: errorMessage = "The resource is temporarily unavailable."; break;
+	case 0x80010002: errorMessage = "Invalid argument or flag."; break;
+	case 0x80010003: errorMessage = "The feature is not yet implemented."; break;
+	case 0x80010004: errorMessage = "Memory allocation failed."; break;
+	case 0x80010005: errorMessage = "The resource with the specified identifier does not exist."; break;
+	case 0x80010006: errorMessage = "The file does not exist."; break;
+	case 0x80010007: errorMessage = "The file is in unrecognized format / The file is not a valid ELF file."; break;
+	case 0x80010008: errorMessage = "Resource deadlock is avoided."; break;
+	case 0x80010009: errorMessage = "Operation not permitted."; break;
+	case 0x8001000A: errorMessage = "The device or resource is bus."; break;
+	case 0x8001000B: errorMessage = "The operation is timed ou."; break;
+	case 0x8001000C: errorMessage = "The operation is aborte."; break;
+	case 0x8001000D: errorMessage = "Invalid memory access."; break;
+	case 0x8001000F: errorMessage = "State of the target thread is invalid."; break;
+	case 0x80010010: errorMessage = "Alignment is invalid."; break;
+	case 0x80010011: errorMessage = "Shortage of the kernel resources."; break;
+	case 0x80010012: errorMessage = "The file is a directory."; break;
+	case 0x80010013: errorMessage = "Operation canceled."; break;
+	case 0x80010014: errorMessage = "Entry already exists."; break;
+	case 0x80010015: errorMessage = "Port is already connected."; break;
+	case 0x80010016: errorMessage = "Port is not connected."; break;
+	case 0x80010017: errorMessage = "Failure in authorizing SELF. Program authentication fail."; break;
+	case 0x80010018: errorMessage = "The file is not MSELF."; break;
+	case 0x80010019: errorMessage = "System version error."; break;
+	case 0x8001001A: errorMessage = "Fatal system error occurred while authorizing SELF. SELF auth failure."; break;
+	case 0x8001001B: errorMessage = "Math domain violation."; break;
+	case 0x8001001C: errorMessage = "Math range violation."; break;
+	case 0x8001001D: errorMessage = "Illegal multi-byte sequence in input."; break;
+	case 0x8001001E: errorMessage = "File position error."; break;
+	case 0x8001001F: errorMessage = "Syscall was interrupted."; break;
+	case 0x80010020: errorMessage = "File too large."; break;
+	case 0x80010021: errorMessage = "Too many links."; break;
+	case 0x80010022: errorMessage = "File table overflow."; break;
+	case 0x80010023: errorMessage = "No space left on device."; break;
+	case 0x80010024: errorMessage = "Not a TTY."; break;
+	case 0x80010025: errorMessage = "Broken pipe."; break;
+	case 0x80010026: errorMessage = "Read-only filesystem."; break;
+	case 0x80010027: errorMessage = "Illegal seek."; break;
+	case 0x80010028: errorMessage = "Arg list too long."; break;
+	case 0x80010029: errorMessage = "Access violation."; break;
+	case 0x8001002A: errorMessage = "Invalid file descriptor."; break;
+	case 0x8001002B: errorMessage = "Filesystem mounting failed."; break;
+	case 0x8001002C: errorMessage = "Too many files open."; break;
+	case 0x8001002D: errorMessage = "No device."; break;
+	case 0x8001002E: errorMessage = "Not a directory."; break;
+	case 0x8001002F: errorMessage = "No such device or IO."; break;
+	case 0x80010030: errorMessage = "Cross-device link error."; break;
+	case 0x80010031: errorMessage = "Bad Message."; break;
+	case 0x80010032: errorMessage = "In progress."; break;
+	case 0x80010033: errorMessage = "Message size error."; break;
+	case 0x80010034: errorMessage = "Name too long."; break;
+	case 0x80010035: errorMessage = "No lock."; break;
+	case 0x80010036: errorMessage = "Not empty."; break;
+	case 0x80010037: errorMessage = "Not supported."; break;
+	case 0x80010038: errorMessage = "File-system specific error."; break;
+	case 0x80010039: errorMessage = "Overflow occured."; break;
+	case 0x8001003A: errorMessage = "Filesystem not mounted."; break;
+	case 0x8001003B: errorMessage = "Not SData."; break;
+	case 0x8001003C: errorMessage = "Incorrect version in sys_load_param."; break;
+	case 0x8001003D: errorMessage = "Pointer is null."; break;
+	case 0x8001003E: errorMessage = "Pointer is null."; break;
+	default: errorMessage = "An error has occurred."; break;
+	}
+
+	char errorCodeHex [9];
+	sprintf(errorCodeHex, "%08x", errorCode);
+	errorMessage.append("\n(");
+	errorMessage.append(errorCodeHex);
+	errorMessage.append(")\n");
+
+	u64 status;
+	int res = wxMessageBox(errorMessage, wxGetApp().GetAppName(), wxICON_ERROR | wxOK);
+	switch(res)
+	{
+	case wxOK: status = CELL_MSGDIALOG_BUTTON_OK; break;
+	default:
+		if(res)
+		{
+			status = CELL_MSGDIALOG_BUTTON_INVALID;
+			break;
+		}
+
+		status = CELL_MSGDIALOG_BUTTON_NONE;
+	break;
+	}
+
+	// TODO: The following lines produce an infinite loop of cellMsgDialogOpenErrorCode's
+	/*Callback2 callback(0, callback_addr, userData);
+	callback.Handle(status);
+	callback.Branch(true);*/
+
+	return CELL_OK;
+}
+
 
 int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
@@ -794,6 +897,7 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
 
 	cellSysutil.AddFunc(0x7603d3db, cellMsgDialogOpen2);
+	cellSysutil.AddFunc(0x3e22cb4b, cellMsgDialogOpenErrorCode);
 
 	cellSysutil.AddFunc(0xf4e3caa0, cellAudioOutGetState);
 	cellSysutil.AddFunc(0x4692ab35, cellAudioOutConfigure);
