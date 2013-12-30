@@ -52,7 +52,7 @@ do
   	esac
 done
 
-rm install_log.txt
+rm -f install_log.txt
 
 if [ "$flags" != "" ]; then
 	echo "Building pcsx2 with $flags"

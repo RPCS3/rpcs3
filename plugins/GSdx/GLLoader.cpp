@@ -181,6 +181,8 @@ namespace GLLoader {
 			fglrx_buggy_driver = true;
 		if (strstr(vendor, "NVIDIA Corporation"))
 			nvidia_buggy_driver = true;
+		if (strstr(vendor, "Intel"))
+			intel_buggy_driver = true;
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -194,7 +196,7 @@ namespace GLLoader {
 			fprintf(stderr, "Geometry shaders are not supported. Required openGL 3.2\n");
 			found_geometry_shader = false;
 		}
-		if (nvidia_buggy_driver) {
+		if (nvidia_buggy_driver || intel_buggy_driver) {
 			fprintf(stderr, "Buggy driver detected. Geometry shaders will be disabled\n");
 			found_geometry_shader = false;
 		}

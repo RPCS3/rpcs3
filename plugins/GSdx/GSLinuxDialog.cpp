@@ -121,7 +121,7 @@ GtkWidget* CreateInterlaceComboBox()
 }
 
 GtkWidget* CreateMsaaComboBox()
-{
+{ 
 	GtkWidget  *combo_box;
 	combo_box = gtk_combo_box_new_text ();
 	
@@ -216,6 +216,19 @@ int get_hex_entry(GtkWidget *text_box) {
 	return hex_value;
 }
 
+GtkWidget* CreateGlComboBox(const char* option)
+{
+	GtkWidget* combo;
+	combo = gtk_combo_box_new_text();
+
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "Auto");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "Force-Disabled");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "Force-Enabled");
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), theApp.GetConfig(option, -1) + 1);
+	return combo;
+}
+
 bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
@@ -228,6 +241,7 @@ bool RunLinuxDialog()
 	GtkWidget *hack_table, *hack_skipdraw_label, *hack_box, *hack_frame;
 	GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check;
 	GtkWidget *hack_tco_label, *hack_tco_entry;
+	GtkWidget *gl_box, *gl_frame, *gl_table;
 
 	int return_value;
 	
@@ -425,6 +439,53 @@ bool RunLinuxDialog()
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), filter_box, 0, 1, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), paltex_check, 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), fba_check, 1, 2, 1, 2);
+
+	// The GL advance options
+	gl_box = gtk_vbox_new(false, 5);
+	gl_frame = gtk_frame_new ("OpenGL Very Advanced Custom Settings");
+	gtk_container_add(GTK_CONTAINER(gl_frame), gl_box);
+	gl_table = gtk_table_new(10, 2, false);
+	gtk_container_add(GTK_CONTAINER(gl_box), gl_table);
+
+	// For later
+#if 0
+	GtkWidget* gl_ct_label = gtk_label_new("Clear Texture:");
+	GtkWidget* gl_ct_combo = CreateGlComboBox("override_GL_ARB_clear_texture");
+	GtkWidget* gl_bt_label = gtk_label_new("Bindless Texture:");
+	GtkWidget* gl_bt_combo = CreateGlComboBox("override_GL_ARB_bindless_texture");
+#endif
+	GtkWidget* gl_bs_label = gtk_label_new("Buffer Storage:");
+	GtkWidget* gl_bs_combo = CreateGlComboBox("override_GL_ARB_buffer_storage");
+	GtkWidget* gl_mb_label = gtk_label_new("Multi bind:");
+	GtkWidget* gl_mb_combo = CreateGlComboBox("override_GL_ARB_multi_bind");
+	GtkWidget* gl_sso_label = gtk_label_new("Separate Shader:");
+	GtkWidget* gl_sso_combo = CreateGlComboBox("override_GL_ARB_separate_shader_objects");
+	GtkWidget* gl_ss_label = gtk_label_new("Shader Subroutine:");
+	GtkWidget* gl_ss_combo = CreateGlComboBox("override_GL_ARB_shader_subroutine");
+	GtkWidget* gl_gs_label = gtk_label_new("Geometry Shader:");
+	GtkWidget* gl_gs_combo = CreateGlComboBox("override_geometry_shader");
+	GtkWidget* gl_ils_label = gtk_label_new("Image Load Store:");
+	GtkWidget* gl_ils_combo = CreateGlComboBox("override_GL_ARB_shader_image_load_store");
+
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_gs_label, 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_gs_combo, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_bs_label, 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_bs_combo, 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_mb_label, 0, 1, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_mb_combo, 1, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_sso_label, 0, 1, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_sso_combo, 1, 2, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_ss_label, 0, 1, 4, 5);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_ss_combo, 1, 2, 4, 5);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_ils_label, 0, 1, 5, 6);
+	gtk_table_attach_defaults(GTK_TABLE(gl_table), gl_ils_combo, 1, 2, 5, 6);
+	// those one are properly detected so no need a gui
+#if 0
+override_GL_ARB_copy_image = -1
+override_GL_ARB_explicit_uniform_location = -1
+override_GL_ARB_gpu_shader5 = -1
+override_GL_ARB_shading_language_420pack = -1
+#endif
 	
 	// Put everything in the big box.
 	gtk_container_add(GTK_CONTAINER(main_box), renderer_box);
@@ -438,6 +499,8 @@ bool RunLinuxDialog()
 	{
 		gtk_container_add(GTK_CONTAINER(main_box), hack_frame);
 	}
+
+	gtk_container_add(GTK_CONTAINER(main_box), gl_frame);
 
 	g_signal_connect(render_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
 	g_signal_connect(fsaa_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
@@ -501,6 +564,18 @@ bool RunLinuxDialog()
 		theApp.SetConfig("UserHacks_SpriteHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_sprite_check)));
 		theApp.SetConfig("UserHacks", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_enble_check)));
 		theApp.SetConfig("UserHacks_TCOffset", get_hex_entry(hack_tco_entry));
+
+	// For later
+#if 0
+		theApp.SetConfig("override_GL_ARB_clear_texture", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_ct_combo)) - 1);
+		theApp.SetConfig("override_GL_ARB_bindless_texture", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_bt_combo)) - 1);
+#endif
+		theApp.SetConfig("override_GL_ARB_buffer_storage", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_bs_combo)) - 1);
+		theApp.SetConfig("override_GL_ARB_multi_bind", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_mb_combo)) - 1);
+		theApp.SetConfig("override_GL_ARB_separate_shader_objects", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_sso_combo)) - 1);
+		theApp.SetConfig("override_GL_ARB_shader_subroutine", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_ss_combo)) - 1);
+		theApp.SetConfig("override_geometry_shader", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_gs_combo)) - 1);
+		theApp.SetConfig("override_GL_ARB_shader_image_load_store", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(gl_ils_combo)) - 1);
 
 		// NOT supported yet
 		theApp.SetConfig("msaa", 0);

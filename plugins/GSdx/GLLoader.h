@@ -265,6 +265,7 @@ namespace GLLoader {
 
 	extern bool fglrx_buggy_driver;
 	extern bool nvidia_buggy_driver;
+	extern bool intel_buggy_driver;
 	extern bool in_replayer;
 
 	extern bool found_GL_ARB_separate_shader_objects;
