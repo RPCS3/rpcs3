@@ -73,7 +73,6 @@
 			Name="Release|Win32"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
-			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
 			>
