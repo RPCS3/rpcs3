@@ -42,6 +42,11 @@
     File                                            ..\bin\Cheats\*
     !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
     
+    SetOutPath "$INSTDIR\Cheats_ws"
+    !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+    File                                            ..\bin\Cheats_ws\*
+    !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+    
     SetOutPath "$INSTDIR\Docs"
     !insertmacro UNINSTALL.LOG_OPEN_INSTALL
     File                                            ..\bin\docs\*
@@ -79,3 +84,4 @@
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoModify" 1
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoRepair" 1
   WriteUninstaller "${UNINST_EXE}"
+  Call fnc_AVGPage_InstallBar
