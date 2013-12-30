@@ -163,7 +163,7 @@ int sys_memory_get_user_memory_size(u32 mem_info_addr)
 
 int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a)
 {
-	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr=0x%x)", addr, a);
+	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr=0x%x)", addr, a.GetAddr());
 
 	a -> attribute = 0;
 	a -> page_size = 0;
