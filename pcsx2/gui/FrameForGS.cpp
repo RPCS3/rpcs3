@@ -26,7 +26,7 @@
 
 static const KeyAcceleratorCode FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL=KeyAcceleratorCode( WXK_RETURN ).Alt();
 
-#define GSWindowScaleDebug
+//#define GSWindowScaleDebug
 
 void GSPanel::InitDefaultAccelerators()
 {
