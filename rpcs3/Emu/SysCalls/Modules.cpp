@@ -90,6 +90,7 @@ static const g_module_list[] =
 	{0x0050, "cellSpursJq"},
 	{0x0052, "cellPngEnc"},
 	{0x0053, "cellMusicDecode2"},
+	{0x0054, "cellSync"},
 	{0x0055, "cellSync2"},
 	{0x0056, "cellNpUtil"},
 	{0x0057, "cellRudp"},

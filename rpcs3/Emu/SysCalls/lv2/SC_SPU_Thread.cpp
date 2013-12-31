@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Loader/ELF.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include <atomic>
 
 static SysCallBase sc_spu("sys_spu");
 extern SysCallBase sys_event;
@@ -14,8 +15,9 @@ struct SpuGroupInfo
 {
 	CPUThread* threads[g_spu_group_thr_count];
 	sys_spu_thread_group_attribute& attr;
+	volatile long lock;
 
-	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr)
+	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr), lock(0)
 	{
 		memset(threads, 0, sizeof(CPUThread*) * g_spu_group_thr_count);
 	}
@@ -45,7 +47,7 @@ int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 		return CELL_EFAULT;
 	}
 
-	vfsFile f(path.c_str());
+	vfsFile f(path);
 	if(!f.IsOpened())
 	{
 		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path);
@@ -182,6 +184,31 @@ int sys_spu_thread_group_start(u32 id)
 	return CELL_OK;
 }
 
+//174
+int sys_spu_thread_group_suspend(u32 id)
+{
+	sc_spu.Warning("sys_spu_thread_group_suspend(id=0x%x)", id);
+
+	if(!Emu.GetIdManager().CheckID(id))
+	{
+		return CELL_ESRCH;
+	}
+
+	ID& id_data = Emu.GetIdManager().GetIDData(id);
+	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
+
+	//Emu.Pause();
+	for(int i=0; i<g_spu_group_thr_count; i++)
+	{
+		if(group_info.threads[i])
+		{
+			group_info.threads[i]->Pause();
+		}
+	}
+
+	return CELL_OK;
+}
+
 //170
 int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr)
 {
@@ -201,6 +228,39 @@ int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu
 
 	id = Emu.GetIdManager().GetNewID(wxString::Format("sys_spu_thread_group '%s'", name), new SpuGroupInfo(*attr));
 
+	return CELL_OK;
+}
+
+//178
+int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
+{
+	sc_spu.Warning("sys_spu_thread_group_join(id=0x%x, cause_addr=0x%x, status_addr=0x%x)", id, cause.GetAddr(), status.GetAddr());
+
+	if(!Emu.GetIdManager().CheckID(id))
+	{
+		return CELL_ESRCH;
+	}
+
+	ID& id_data = Emu.GetIdManager().GetIDData(id);
+	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
+
+	if (_InterlockedCompareExchange(&group_info.lock, 1, 0)) //get lock
+	{
+		return CELL_EBUSY;
+	}
+
+	cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+	status = 0; //unspecified because of ALL_THREADS_EXIT
+
+	for(int i=0; i<g_spu_group_thr_count; i++)
+	{
+		if(group_info.threads[i])
+		{
+			while (!group_info.threads[i]->IsStopped()) Sleep(1);
+		}
+	}
+
+	_InterlockedExchange(&group_info.lock, 0); //release lock
 	return CELL_OK;
 }
 

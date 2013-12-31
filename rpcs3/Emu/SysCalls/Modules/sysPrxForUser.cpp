@@ -91,6 +91,12 @@ int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
 	return CELL_OK;
 }
 
+int sys_spu_image_close(mem_ptr_t<sys_spu_image> img)
+{
+	sysPrxForUser.Warning("sys_spu_image_close(img=0x%x)", img.GetAddr());
+	return CELL_OK;
+}
+
 int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
 {
 	const wxString path = Memory.ReadString(path_addr).mb_str();
@@ -166,6 +172,7 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0x1ed454ce, sys_spu_elf_get_information);
 	sysPrxForUser.AddFunc(0xdb6b3250, sys_spu_elf_get_segments);
 	sysPrxForUser.AddFunc(0xebe5f72f, sys_spu_image_import);
+	sysPrxForUser.AddFunc(0xe0da8efd, sys_spu_image_close);
 
 	sysPrxForUser.AddFunc(0x893305fa, sys_raw_spu_load);
 	sysPrxForUser.AddFunc(0xb995662e, sys_raw_spu_image_load);

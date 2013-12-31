@@ -2,6 +2,13 @@
 
 u32 LoadSpuImage(vfsStream& stream);
 
+enum
+{
+	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT = 0x0001,
+	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
+	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
+};
+
 struct sys_spu_thread_group_attribute
 {
 	be_t<u32> name_len;

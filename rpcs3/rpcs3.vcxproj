@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -276,6 +276,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
