@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2011-04-25 19:40+0100\n"
 "Last-Translator: Bukhartsev Dmitriy <bukhartsev.dm@gmail.com>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -1203,7 +1203,7 @@ msgstr "Нажмите \"Закрыть\" для завершения работ
 msgid "Terminate App"
 msgstr "Закрыть"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "Вывод видеоданных отключен!"
 

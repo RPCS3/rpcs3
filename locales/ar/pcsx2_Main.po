@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2012-08-14 09:51+0200\n"
 "Last-Translator: abdo123 <abdoabdo1234567890@hotmail.com>\n"
 "Language-Team: Abdo 123 <abdoabdo1234567890@hotmail.com>\n"
@@ -1163,7 +1163,7 @@ msgstr "إضغط إنهاء لقتل العملية فورا !"
 msgid "Terminate App"
 msgstr "إنهاء البرنامج"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "إن الإخراج من GS  معطل"
 

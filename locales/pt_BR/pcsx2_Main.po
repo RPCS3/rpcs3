@@ -1,14 +1,14 @@
-# This is a translation file for Portuguese (Brazil), or pt_BR.
-# Copyright (C) 2011 PCSX2_Dev_Team
+# Brazilian Portuguese Translation for pcsx2 (Main)
+# Copyright (C) 2013 PCSX2_Dev_Team
 # This file is distributed under the same license as the PCSX2 package.
-# Rafael Ferreira <rafael.f.f1@gmail.com>, 2011.
+# Rafael Ferreira <rafael.f.f1@gmail.com>, 2011, 2012, 2013.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 trunk (r5789)\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
-"PO-Revision-Date: 2012-08-20 00:59-0300\n"
+"POT-Creation-Date: 2013-12-31 04:59-0200\n"
+"PO-Revision-Date: 2013-12-31 05:07-0300\n"
 "Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
 "Language: pt_BR\n"
@@ -17,10 +17,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"Plural-Forms: nplurals=2; plural=(n > 1)\n"
-"X-Poedit-Basepath: pcsx2\\\n"
-"X-Poedit-SearchPath-0: pcsx2\n"
-"X-Poedit-SearchPath-1: common\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.6.3\n"
 
 #: common/include/Utilities/Exceptions.h:187
 msgid "No reason given."
@@ -190,7 +188,7 @@ msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr ""
-"O Plug-in de %s definido não é um plug-in válido de PCXSX2, ou é para uma "
+"O Plug-in de %s definido não é um plug-in válido de PCSX2, ou é para uma "
 "versão antiga ou sem suporte do PCSX2."
 
 #: pcsx2/PluginManager.cpp:1358
@@ -273,8 +271,8 @@ msgstr ""
 #: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
 msgstr ""
-"Registra  somente acessos não conhecidos, não mapeados ou não implementados "
-"de registradores."
+"Registra apenas acessos não conhecidos, não mapeados ou não implementados de "
+"registradores."
 
 #: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
@@ -705,7 +703,7 @@ msgid ""
 "directory manually."
 msgstr ""
 "Tente remover manualmente o arquivo \"portable.ini\" do seu diretório de "
-"instalação"
+"instalação."
 
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
@@ -713,7 +711,7 @@ msgstr "Não foi possível aplicar novas configurações. Uma delas é inválida
 
 #: pcsx2/gui/ConsoleLogger.cpp:120
 msgid "Save log question"
-msgstr "Pergunta sobre armazanento de log"
+msgstr "Pergunta sobre armazenamento de log"
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Fits a lot of log in a microcosmically small area."
@@ -930,8 +928,8 @@ msgid ""
 "The popup will not be shown again.  This setting can be undone from the "
 "settings panels."
 msgstr ""
-"Esse pop-up não vai ser exibido denovo. Essa configuração pode ser desfeita "
-"no painel de configurações."
+"Esse pop-up não vai ser exibido novamente. Essa configuração pode ser "
+"desfeita no painel de configurações."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:247
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:292
@@ -1220,7 +1218,7 @@ msgstr "Pressione Terminar para matar %s imediatamente."
 msgid "Terminate App"
 msgstr "Terminar Aplicativo"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "Saída do GS está Desativada!"
 
@@ -1379,7 +1377,7 @@ msgstr "Habilitar Cheats"
 
 #: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Widescreen Patches"
-msgstr "Habilitar hacks de velocidade"
+msgstr "Habilitar Patches de Tela Cheia"
 
 #: pcsx2/gui/MainFrame.cpp:430
 msgid "Enable Host Filesystem"
@@ -1507,7 +1505,7 @@ msgstr "Pausar"
 
 #: pcsx2/gui/MainFrame.cpp:593
 msgid "Safely pauses emulation and preserves the PS2 state."
-msgstr "Pausa com seguraça a emulação e preserva o estado do PS2."
+msgstr "Pausa com segurança a emulação e preserva o estado do PS2."
 
 #: pcsx2/gui/MainFrame.cpp:600
 msgid "Resume"
@@ -2062,6 +2060,7 @@ msgstr ""
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
 msgstr ""
+"Trocar para renderização por software do GSdx quando um FMV é reproduzido"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
@@ -2292,7 +2291,7 @@ msgstr "Formatado"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr ""
+msgstr "Tipo"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
@@ -2311,14 +2310,12 @@ msgid "Yes"
 msgstr "Sim"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PS2"
-msgstr "FPS"
+msgstr "PS2"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PSX"
-msgstr "FPS"
+msgstr "PSX"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
@@ -2334,7 +2331,7 @@ msgstr "Seleção de Modo de Usuário"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:44
 msgid "User Documents (recommended)"
-msgstr "Documentos do Usuário (recommendado)"
+msgstr "Documentos do Usuário (recomendado)"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:45
 msgid "Location: "
@@ -2426,7 +2423,7 @@ msgstr ""
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:473
 #, c-format
 msgid "Please select a valid plugin for the %s."
-msgstr "Por favor selecione um plugin válido para o %s."
+msgstr "Por favor selecione um plug-in válido para o %s."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:511
 #, c-format
@@ -2595,7 +2592,7 @@ msgid ""
 "valid floating point numerics."
 msgstr ""
 "Erro enquanto analisava as configurações de taxas de frame de NTSC ou PAL. "
-"As cofigurações devem ser pontos flutuantes numéricos válidos."
+"As configurações devem ser pontos flutuantes numéricos válidos."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:182
 msgid "Disabled [default]"

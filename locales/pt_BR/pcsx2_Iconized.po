@@ -1,14 +1,14 @@
-# This is a translation file for Portuguese (Brazil), or pt_BR.
-# Copyright (C) 2011 PCSX2_Dev_Team
+# Brazilian Portuguese Translation for pcsx2 (Iconized)
+# Copyright (C) 2013 PCSX2_Dev_Team
 # This file is distributed under the same license as the PCSX2 package.
-# Rafael Ferreira <rafael.f.f1@gmail.com>, 2011.
+# Rafael Ferreira <rafael.f.f1@gmail.com>, 2011, 2012, 2013.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 trunk (r5789)\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2013-12-15 13:24+0100\n"
-"PO-Revision-Date: 2012-08-20 00:59-0300\n"
+"PO-Revision-Date: 2013-12-31 05:02-0300\n"
 "Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
 "Language: pt_BR\n"
@@ -17,10 +17,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"Plural-Forms: nplurals=2; plural=(n > 1)\n"
-"X-Poedit-Basepath: pcsx2\\\n"
-"X-Poedit-SearchPath-0: pcsx2\n"
-"X-Poedit-SearchPath-1: common\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.6.3\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
 msgid ""
@@ -42,7 +40,6 @@ msgstr ""
 "especificamente para PSX, como ePSXe ou PCSX."
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
@@ -52,9 +49,7 @@ msgstr ""
 "Esse recompilador não conseguiu reservar memória contígua necessária para os "
 "caches internos. Esse erro pode ser causado por baixo recurso de memória "
 "virtual, como um arquivo de memória swap pequeno ou desabilitado, ou por "
-"outro programa que está ocupando muita memória. Você também pode tentar "
-"reduzir os tamanhos padrões de caches para todos recompiladores do PCSX2, "
-"encontrado nas Configurações da Máquina."
+"outro programa que está ocupando muita memória."
 
 #: pcsx2/System.cpp:342
 msgid ""
@@ -164,7 +159,7 @@ msgid ""
 "and BIOS.  It is recommended if this is your first time installing %s that "
 "you view the readme and configuration guide."
 msgstr ""
-"Esse assistente vai guiá-lo nas configurações de plugins, cartões de "
+"Esse assistente vai guiá-lo nas configurações de plug-ins, cartões de "
 "memórias e BIOS. É recomendado se for a sua primeira instalando %s que veja "
 "o readme e o guia de configuração."
 
@@ -513,7 +508,6 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Falhou: O cartão de memória destinatário '%s' está em uso."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
@@ -523,7 +517,7 @@ msgstr ""
 "Por favor selecione o seu local padrão preferido para os documentos de nível "
 "de usuário do PCSX2 aqui (inclui cartões de memória, capturas de tela, "
 "configurações e savestates). A localização dessas pastas podem ser "
-"substituídas a qualquer tempo usando o painel de Configurações Centrais."
+"substituídas a qualquer tempo usando o painel de Seleção de Plug-in/BIOS."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
 msgid ""

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2012-08-12 09:43+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1186,7 +1186,7 @@ msgstr "Trykk Terminer for å stoppe %s med en gang."
 msgid "Terminate App"
 msgstr "Terminer Applikasjon"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS Ut strømen er deaktivert"
 

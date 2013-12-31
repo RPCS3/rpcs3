@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2012-05-04 22:04+0700\n"
 "Last-Translator: \n"
 "Language-Team: ikazu <ikazu.kevin@gmail.com>\n"
@@ -1178,7 +1178,7 @@ msgstr "Tekan Gagalkan untuk membunuh %s secepatnya."
 msgid "Terminate App"
 msgstr "Gagalkan Aplikasi"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "Output GS di Nonaktifkan!"
 

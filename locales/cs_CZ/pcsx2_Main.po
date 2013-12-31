@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2012-09-09 20:41+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -1182,7 +1182,7 @@ msgstr "Stiskněte Ukončit pro okamžité ukončení %s."
 msgid "Terminate App"
 msgstr "Ukončit Aplikaci"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "Výstup GS je Zakázán!"
 

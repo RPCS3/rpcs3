@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
-"PO-Revision-Date: 2012-10-14 19:24+0100\n"
-"Last-Translator: Víctor González <pajaroloco_2@hotmail.com>\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
+"PO-Revision-Date: 2013-12-30 11:43+0100\n"
+"Last-Translator: Víctor González Fraile <victor.gonfraile@hotmail.es>\n"
 "Language-Team: \n"
 "Language: es_ES\n"
 "MIME-Version: 1.0\n"
@@ -19,7 +19,7 @@ msgstr ""
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: C:\\Program Files\\PCSX2 Tradu\\Volcado PCSX2 - Export"
 "\\Volcado PCSX2\n"
-"X-Generator: Poedit 1.5.3\n"
+"X-Generator: Poedit 1.5.7\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -1218,7 +1218,7 @@ msgstr "Pulsa Abortar para eliminar %s inmediatamente."
 msgid "Terminate App"
 msgstr "Abortar aplicación"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "¡Se ha desactivado la salida de GS!"
 
@@ -1377,7 +1377,7 @@ msgstr "Activar trampas"
 
 #: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Widescreen Patches"
-msgstr "Activar arreglos para velocidad"
+msgstr "Activar parches para imagen panorámica"
 
 #: pcsx2/gui/MainFrame.cpp:430
 msgid "Enable Host Filesystem"
@@ -2288,7 +2288,7 @@ msgstr "Formateada"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr ""
+msgstr "Tipo"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
@@ -2307,14 +2307,12 @@ msgid "Yes"
 msgstr "Sí"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PS2"
-msgstr "FPS (Fotogramas por segundo)"
+msgstr "PS2"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PSX"
-msgstr "FPS (Fotogramas por segundo)"
+msgstr "PSX"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"

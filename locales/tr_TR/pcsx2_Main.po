@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2012-10-28 12:37+0200\n"
 "Last-Translator: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -1177,7 +1177,7 @@ msgstr "%s 'ı sonlandırmak için Sonlandır'a basın."
 msgid "Terminate App"
 msgstr "Uygulamayı Sonlandır"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS Çıkışı devre dışı!"
 

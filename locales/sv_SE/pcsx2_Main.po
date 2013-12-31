@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2013-12-31 18:12+0100\n"
 "PO-Revision-Date: 2013-12-12 23:41+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: http://forums.pcsx2.net/Thread-Swedish-GUI-translation-for-"
@@ -1186,7 +1186,7 @@ msgstr "Tryck ''Avsluta'' för att avsluta %s omedelebart."
 msgid "Terminate App"
 msgstr "Avsluta Tillämpning"
 
-#: pcsx2/gui/FrameForGS.cpp:379
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS Utsignal är Spärrad!"
 
