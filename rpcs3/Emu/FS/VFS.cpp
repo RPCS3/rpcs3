@@ -177,6 +177,11 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(EmulatorDir)\\dev_flash\\";
+			res[idx].mount = "/dev_flash/";
+			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
 			res[idx].path = "$(EmulatorDir)\\dev_usb000\\";
 			res[idx].mount = "/dev_usb000/";
 			res[idx].device = vfsDevice_LocalFile;

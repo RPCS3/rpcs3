@@ -132,7 +132,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //339
 	null_func, bind_func(sys_memory_container_create), bind_func(sys_memory_container_destroy), null_func, null_func, //344
 	null_func, null_func, null_func, bind_func(sys_memory_allocate), bind_func(sys_memory_free), //349
-	null_func, null_func, bind_func(sys_memory_get_user_memory_size), null_func, null_func, //354
+	null_func, bind_func(sys_memory_get_page_attribute), bind_func(sys_memory_get_user_memory_size), null_func, null_func, //354
 	null_func, null_func, null_func, null_func, null_func, //359
 	null_func, null_func, null_func, null_func, null_func, //364
 	null_func, null_func, null_func, null_func, null_func, //369
