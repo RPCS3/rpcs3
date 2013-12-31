@@ -113,6 +113,9 @@ Function un.onUninstSuccess
   
   StrCpy $0 "$INSTDIR\Cheats"
   Call un.DeleteDirIfEmpty
+  
+  StrCpy $0 "$INSTDIR\Cheats_ws"
+  Call un.DeleteDirIfEmpty
 
   StrCpy $0 "$INSTDIR"
   Call un.DeleteDirIfEmpty

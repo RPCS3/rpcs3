@@ -44,7 +44,7 @@
 ;   uninstall folders.  
 
 !ifndef APP_VERSION
-  !define APP_VERSION      "1.1.0"
+  !define APP_VERSION      "1.2.0"
 !endif
 
 !define APP_NAME         "PCSX2 ${APP_VERSION} (r${SVNREV_PACKAGE})"
