@@ -266,7 +266,9 @@ void LogFrame::Task()
 		m_log.SetColumnWidth(0, -1);
 		m_log.SetColumnWidth(1, -1);
 
+#ifdef _WIN32
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
+#endif
 	}
 
 	LogBuffer.Flush();
