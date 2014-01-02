@@ -207,6 +207,7 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="AppConnector.cpp" />
+    <ClCompile Include="Emu\Audio\AudioManager.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
@@ -290,6 +291,7 @@
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
+    <ClCompile Include="Gui\RSXDebugger.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
@@ -318,6 +320,8 @@
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="Emu\Audio\AudioManager.h" />
+    <ClInclude Include="Emu\Audio\cellAudio.h" />
     <ClInclude Include="Emu\Cell\PPCDecoder.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPCInstrTable.h" />

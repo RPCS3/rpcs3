@@ -56,6 +56,9 @@
     <Filter Include="Utilities\scetool">
       <UniqueIdentifier>{52b11fe8-a967-4d52-bf88-a3210d4ffb27}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Audio">
+      <UniqueIdentifier>{46cb6261-7ba2-4511-b576-4b491c04bed8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -352,6 +355,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\AudioManager.cpp">
+      <Filter>Emu\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\RSXDebugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -523,6 +532,12 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\RawSPUThread.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\cellAudio.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\AudioManager.h">
       <Filter>Include</Filter>
     </ClInclude>
   </ItemGroup>

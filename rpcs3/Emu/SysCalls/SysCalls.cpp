@@ -97,8 +97,8 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, bind_func(sys_spu_initialize), //169
 	bind_func(sys_spu_thread_group_create), bind_func(sys_spu_thread_set_argument), bind_func(sys_spu_thread_initialize), bind_func(sys_spu_thread_group_start), null_func, //174
 	null_func, null_func, null_func, null_func, null_func, //179
-	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, null_func, //184
-	null_func, null_func, null_func, null_func, null_func, //189
+	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, bind_func(sys_spu_thread_write_snr), //184
+	null_func, null_func, bind_func(sys_spu_thread_set_spu_cfg), bind_func(sys_spu_thread_get_spu_cfg), null_func, //189
 	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, null_func, null_func, //194
 	null_func, null_func, null_func, null_func, null_func, //199
 	null_func, null_func, null_func, null_func, null_func, //204
@@ -131,7 +131,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //339
 	null_func, bind_func(sys_memory_container_create), bind_func(sys_memory_container_destroy), null_func, null_func, //344
 	null_func, null_func, null_func, bind_func(sys_memory_allocate), bind_func(sys_memory_free), //349
-	null_func, null_func, bind_func(sys_memory_get_user_memory_size), null_func, null_func, //354
+	null_func, bind_func(sys_memory_get_page_attribute), bind_func(sys_memory_get_user_memory_size), null_func, null_func, //354
 	null_func, null_func, null_func, null_func, null_func, //359
 	null_func, null_func, null_func, null_func, null_func, //364
 	null_func, null_func, null_func, null_func, null_func, //369

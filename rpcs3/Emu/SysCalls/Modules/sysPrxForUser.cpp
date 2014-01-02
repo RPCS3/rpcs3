@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/lv2/SC_SPU_Thread.h"
+#include "Loader/ELF.h"
+#include "Emu/Cell/RawSPUThread.h"
 
 void sysPrxForUser_init();
 Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
@@ -13,31 +16,40 @@ void sys_initialize_tls()
 s64 sys_process_atexitspawn()
 {
 	sysPrxForUser.Log("sys_process_atexitspawn()");
-	return 0;
+	return CELL_OK;
 }
 
 s64 sys_process_at_Exitspawn()
 {
 	sysPrxForUser.Log("sys_process_at_Exitspawn");
+	return CELL_OK;
+}
+
+int sys_process_is_stack(u32 p)
+{
+	PPCThread* CPU = GetCurrentPPCThread();
+	if (p >= CPU->GetStackAddr() && p <= CPU->GetStackAddr() + CPU->GetStackSize())
+		return 1;
+
 	return 0;
 }
 
 int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 {
 	sysPrxForUser.Warning("sys_spu_printf_initialize(0x%x, 0x%x, 0x%x, 0x%x, 0x%x)", a1, a2, a3, a4, a5);
-	return 0;
+	return CELL_OK;
 }
 
 s64 sys_prx_register_library(u32 lib_addr)
 {
 	sysPrxForUser.Error("sys_prx_register_library(lib_addr=0x%x)", lib_addr);
-	return 0;
+	return CELL_OK;
 }
 
 s64 sys_prx_exitspawn_with_level()
 {
 	sysPrxForUser.Log("sys_prx_exitspawn_with_level()");
-	return 0;
+	return CELL_OK;
 }
 
 s64 sys_strlen(u32 addr)
@@ -45,6 +57,73 @@ s64 sys_strlen(u32 addr)
 	const wxString& str = Memory.ReadString(addr);
 	sysPrxForUser.Log("sys_strlen(0x%x - \"%s\")", addr, str.mb_str());
 	return str.Len();
+}
+
+int sys_spu_elf_get_information(u32 elf_img, mem32_t entry, mem32_t nseg)
+{
+	sysPrxForUser.Warning("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.GetAddr(), nseg.GetAddr());
+	return CELL_OK;
+}
+
+int sys_spu_elf_get_segments(u32 elf_img, mem_ptr_t<sys_spu_segment> segments, int nseg)
+{
+	sysPrxForUser.Warning("sys_spu_elf_get_segments(elf_img=0x%x, segments_addr=0x%x, nseg=0x%x)", elf_img, segments.GetAddr(), nseg);
+	return CELL_OK;
+}
+
+int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
+{
+	sysPrxForUser.Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=0x%x)", img.GetAddr(), src, type);
+
+	if(!img.IsGood() || !Memory.IsGoodAddr(src))
+	{
+		return CELL_EFAULT;
+	}
+
+	vfsStreamMemory f(src);
+	u32 entry = LoadSpuImage(f);
+
+	img->type = 1;
+	img->entry_point = entry;
+	img->segs_addr = 0x0;
+	img->nsegs = 0;
+
+	return CELL_OK;
+}
+
+int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
+{
+	const wxString path = Memory.ReadString(path_addr).mb_str();
+	sysPrxForUser.Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
+		id, path_addr, path, entry.GetAddr());
+
+	vfsFile f(path.c_str());
+	if(!f.IsOpened())
+	{
+		sysPrxForUser.Error("sys_raw_spu_load error: '%s' not found!", path);
+		return CELL_ENOENT;
+	}
+
+	ELFLoader l(f);
+	l.LoadInfo();
+	l.LoadData(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
+
+	entry = l.GetEntry();
+
+	return CELL_OK;
+}
+
+extern u64 g_last_spu_offset;
+
+int sys_raw_spu_image_load(int id, mem_ptr_t<sys_spu_image> img)
+{
+	sysPrxForUser.Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.GetAddr());
+
+	memcpy(Memory + RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, Memory + g_last_spu_offset, 256 * 1024);
+	Memory.Write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, 
+		img->entry_point - g_last_spu_offset);
+
+	return CELL_OK;
 }
 
 void sysPrxForUser_init()
@@ -62,6 +141,7 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0xe6f2c1e7, sys_process_exit);
 	sysPrxForUser.AddFunc(0x2c847572, sys_process_atexitspawn);
 	sysPrxForUser.AddFunc(0x96328741, sys_process_at_Exitspawn);
+	sysPrxForUser.AddFunc(0x4f7172c9, sys_process_is_stack);
 
 	sysPrxForUser.AddFunc(0x24a1ea07, sys_ppu_thread_create);
 	sysPrxForUser.AddFunc(0x350d454e, sys_ppu_thread_get_id);
@@ -82,4 +162,11 @@ void sysPrxForUser_init()
 
 	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
 	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);
+
+	sysPrxForUser.AddFunc(0x1ed454ce, sys_spu_elf_get_information);
+	sysPrxForUser.AddFunc(0xdb6b3250, sys_spu_elf_get_segments);
+	sysPrxForUser.AddFunc(0xebe5f72f, sys_spu_image_import);
+
+	sysPrxForUser.AddFunc(0x893305fa, sys_raw_spu_load);
+	sysPrxForUser.AddFunc(0xb995662e, sys_raw_spu_image_load);
 }

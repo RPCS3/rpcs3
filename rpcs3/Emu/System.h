@@ -1,11 +1,13 @@
 #pragma once
 
+#include <atomic>
 #include "Gui/MemoryViewer.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
 #include "Emu/GS/GSManager.h"
+#include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
@@ -64,9 +66,8 @@ class Emulator
 		InterpreterDisAsm,
 		Interpreter,
 	};
-
-	mutable wxCriticalSection m_cs_status;
-	Status m_status;
+		
+	volatile uint m_status;
 	uint m_mode;
 
 	u32 m_rsx_callback;
@@ -85,6 +86,7 @@ class Emulator
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
+	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
 	VFS m_vfs;
 
@@ -118,6 +120,7 @@ public:
 	IdManager&			GetIdManager()			{ return m_id_manager; }
 	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
 	GSManager&			GetGSManager()			{ return m_gs_manager; }
+	AudioManager&		GetAudioManager()		{ return m_audio_manager; }
 	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
 	VFS&				GetVFS()				{ return m_vfs; }
 	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
@@ -159,10 +162,10 @@ public:
 	void SavePoints(const std::string& path);
 	void LoadPoints(const std::string& path);
 
-	__forceinline bool IsRunning()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Running; }
-	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
-	__forceinline bool IsStopped()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
-	__forceinline bool IsReady()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Ready; }
+	__forceinline bool IsRunning()	const { return m_status == Running; }
+	__forceinline bool IsPaused()	const { return m_status == Paused; }
+	__forceinline bool IsStopped()	const { return m_status == Stopped; }
+	__forceinline bool IsReady()	const { return m_status == Ready; }
 };
 
 extern Emulator Emu;

@@ -198,6 +198,18 @@ void LogWriter::Warning(const wxString fmt, ...)
 	WriteToLog("W", frmt.mb_str(), "Yellow");
 }
 
+void LogWriter::Success(const wxString fmt, ...)
+{
+	va_list list;
+	va_start(list, fmt);
+
+	const wxString& frmt = FormatV(fmt, list);
+
+	va_end(list);
+
+	WriteToLog("S", frmt.mb_str(), "Green");
+}
+
 void LogWriter::SkipLn()
 {
 	WriteToLog("", "", "Black");

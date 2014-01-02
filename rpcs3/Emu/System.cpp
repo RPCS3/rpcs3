@@ -201,7 +201,8 @@ void Emulator::Load()
 			elf_path += "\\" + wxFileName(m_path).GetName() + ".elf";
 		}
 
-		DecryptSelf(elf_path, self_path);
+		if(!DecryptSelf(elf_path, self_path))
+			return;
 
 		m_path = elf_path;
 	}
@@ -312,7 +313,7 @@ void Emulator::Load()
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.Alloc(0x1000);
 		thread.InitStack();
-		thread.AddArgv(m_path);
+		thread.AddArgv(m_elf_path);
 		//thread.AddArgv("-emu");
 
 		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
@@ -350,10 +351,10 @@ void Emulator::Load()
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
+	GetAudioManager().Init();
 
 	thread.Run();
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Ready;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_READY_EMU);
@@ -378,7 +379,6 @@ void Emulator::Run()
 	wxGetApp().SendDbgCommand(DID_START_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	//ConLog.Write("run...");
 	m_status = Running;
 
@@ -402,7 +402,6 @@ void Emulator::Pause()
 	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Paused;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
@@ -417,7 +416,6 @@ void Emulator::Resume()
 	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
 #endif
 
-	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Running;
 
 	CheckStatus();
@@ -435,10 +433,7 @@ void Emulator::Stop()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_STOP_EMU);
 #endif
-	{
-		wxCriticalSectionLocker lock(m_cs_status);
-		m_status = Stopped;
-	}
+	m_status = Stopped;
 
 	m_rsx_callback = 0;
 
@@ -449,6 +444,7 @@ void Emulator::Stop()
 	m_vfs.UnMountAll();
 
 	GetGSManager().Close();
+	GetAudioManager().Close();
 	GetCPU().Close();
 	//SysCallsManager.Close();
 	GetIdManager().Clear();

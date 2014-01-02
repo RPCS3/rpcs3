@@ -30,7 +30,11 @@ u32 vfsDevice::CmpPs3Path(const wxString& ps3_path)
 
 	for(u32 i=0; i<lim; ++i, ++ret)
 	{
-		if(m_ps3_path[i] != ps3_path[i]) break;
+		if(m_ps3_path[i] != ps3_path[i]) 
+		{
+			ret = 0;
+			break;
+		}
 	}
 
 	return ret;

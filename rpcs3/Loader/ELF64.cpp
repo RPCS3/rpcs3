@@ -436,7 +436,7 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 
 		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
 
-		if(shdr.sh_addr < min_addr)
+		if(shdr.sh_addr && shdr.sh_addr < min_addr)
 		{
 			min_addr = shdr.sh_addr;
 		}
@@ -455,18 +455,13 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
-			memset(&Memory[offset + addr], 0, size);
+			//ConLog.Warning("SHT_NOBITS: addr=0x%llx, size=0x%llx", offset + addr, size);
+			//memset(&Memory[offset + addr], 0, size);
 		break;
 
 		case SHT_PROGBITS:
-			/*
-			elf64_f.Seek(shdr.sh_offset);
-			elf64_f.Read(&Memory[addr], shdr.sh_size);
-			*/
-		break;
-
-		case SHT_RELA:
-			ConLog.Warning("ELF64: RELA");
+			//elf64_f.Seek(shdr.sh_offset);
+			//elf64_f.Read(&Memory[offset + addr], shdr.sh_size);
 		break;
 		}
 	}

@@ -3,9 +3,22 @@
 
 enum
 {
-	MFC_PUT_CMD		= 0x20,
-	MFC_GET_CMD		= 0x40,
-	MFC_MASK_CMD	= 0xffff,
+	MFC_PUT_CMD      = 0x20,	MFC_PUTB_CMD     = 0x21,	MFC_PUTF_CMD     = 0x22,
+	MFC_GET_CMD      = 0x40,	MFC_GETB_CMD     = 0x41,	MFC_GETF_CMD     = 0x42,
+	MFC_PUTL_CMD     = 0x24,	MFC_PUTLB_CMD    = 0x25,	MFC_PUTLF_CMD    = 0x26,
+	MFC_GETL_CMD     = 0x44,	MFC_GETLB_CMD    = 0x45,	MFC_GETLF_CMD    = 0x46,
+	MFC_GETLLAR_CMD  = 0xD0,
+	MFC_PUTLLC_CMD   = 0xB4,
+	MFC_PUTLLUC_CMD  = 0xB0,
+	MFC_PUTQLLUC_CMD = 0xB8,
+	MFC_SNDSIG_CMD   = 0xA0,	MFC_SNDSIGB_CMD  = 0xA1,	MFC_SNDSIGF_CMD  = 0xA2,
+	MFC_BARRIER_CMD  = 0xC0,
+	MFC_EIEIO_CMD    = 0xC8,
+	MFC_SYNC_CMD     = 0xCC,
+
+	MFC_BARRIER_MASK = 0x01,
+	MFC_FENCE_MASK   = 0x02,
+	MFC_MASK_CMD     = 0xffff,
 };
 
 enum
@@ -130,11 +143,34 @@ public:
 
 struct DMAC
 {
-	DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE];
-	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE];
+	//DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE]; //not used yet
+	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE+MFC_SPU_MAX_QUEUE_SPACE]; //temporarily 24
 	u64 ls_offset;
-	std::atomic<u32> queue_pos;
-	std::atomic<u32> proxy_pos;
+	u32 queue_pos;
+	u32 proxy_pos;
+	long queue_lock;
+	volatile std::atomic<int> proxy_lock;
+
+	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
+	{
+		//returns true if the command should be deleted from the queue
+		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
+
+		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
+		{
+		case MFC_PUT_CMD:
+			memcpy(Memory + ea, Memory + ls_offset + lsa, size);
+		return true;
+
+		case MFC_GET_CMD:
+			memcpy(Memory + ls_offset + lsa, Memory + ea, size);
+		return true;
+
+		default:
+			ConLog.Error("Unknown DMA cmd.");
+		return true;
+		}
+	}
 
 	u32 Cmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
@@ -148,36 +184,40 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		DMAC_Proxy& p = proxy[proxy_pos++];
+		/* while (std::atomic_exchange(&proxy_lock, 1));
+		_mm_lfence();
+		DMAC_Proxy& p = proxy[proxy_pos];
 		p.cmd = cmd;
 		p.tag = tag;
 		p.lsa = lsa;
 		p.ea = ea;
 		p.size = size;
+		_mm_sfence(); //for DoCmd()
+		proxy_pos++;
+		_mm_sfence();
+		proxy_lock = 0; */
+		ProcessCmd(cmd, tag, lsa, ea, size);
 
 		return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+	}
+
+	void ClearCmd()
+	{
+		while (std::atomic_exchange(&proxy_lock, 1));
+		_mm_lfence();
+		memcpy(proxy, proxy + 1, --proxy_pos * sizeof(DMAC_Proxy));
+		_mm_sfence();
+		proxy_lock = 0; //release lock
 	}
 
 	void DoCmd()
 	{
 		if(proxy_pos)
 		{
-			DMAC_Proxy p = proxy[0];
-			memcpy(proxy, proxy + 1, --proxy_pos * sizeof(DMAC_Proxy));
-
-			switch(p.cmd)
+			const DMAC_Proxy& p = proxy[0];
+			if (ProcessCmd(p.cmd, p.tag, p.lsa, p.ea, p.size))
 			{
-			case MFC_PUT_CMD:
-				memcpy(Memory + p.ea, Memory + ls_offset + p.lsa, p.size);
-			break;
-
-			case MFC_GET_CMD:
-				memcpy(Memory + ls_offset + p.lsa, Memory + p.ea, p.size);
-			break;
-
-			default:
-				ConLog.Error("Unknown DMA cmd.");
-			break;
+				ClearCmd();
 			}
 		}
 	}

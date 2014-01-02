@@ -245,15 +245,6 @@ int sys_process_get_paramsfo(mem8_ptr_t buffer)
 	return CELL_OK;*/
 }
 
-int sys_process_is_stack(u32 p)
-{
-	PPCThread* CPU = GetCurrentPPCThread();
-	if (p >= CPU->GetStackAddr() && p <= CPU->GetStackAddr() + CPU->GetStackSize())
-		return 1;
-
-	return 0;
-}
-
 /*
 int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 {

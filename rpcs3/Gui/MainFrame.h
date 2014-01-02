@@ -27,10 +27,12 @@ private:
 	void SendExit(wxCommandEvent& event);
 	void SendOpenCloseSysMenu(wxCommandEvent& event);
 	void Config(wxCommandEvent& event);
+	void ConfigPad(wxCommandEvent& event);
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);
+	void OpenRSXDebugger(wxCommandEvent& evt);
 	void AboutDialogHandler(wxCommandEvent& event);
 	void UpdateUI(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);

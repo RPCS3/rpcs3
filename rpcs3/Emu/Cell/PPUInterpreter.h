@@ -92,8 +92,8 @@ private:
 
 		const int fpc = _fpclass(v);
 #ifdef __GNUG__
-        if(fpc == FP_SUBNORMAL)
-            return signbit(v) ? -0.0f : 0.0f;
+		if(fpc == FP_SUBNORMAL)
+			return signbit(v) ? -0.0f : 0.0f;
 #else
 		if(fpc & _FPCLASS_ND) return -0.0f;
 		if(fpc & _FPCLASS_PD) return  0.0f;
@@ -2452,6 +2452,12 @@ private:
 	{
 		//UNK("dcbst", false);
 	}
+	void LWZUX(u32 rd, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		CPU.GPR[rd] = Memory.Read32(addr);
+		CPU.GPR[ra] = addr;
+	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
 	{
 		u32 i;
@@ -2650,6 +2656,12 @@ private:
 		Memory.Write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
+	void STWUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write32(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
+	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
@@ -2719,6 +2731,12 @@ private:
 	{
 		//UNK("dcbtst", false);
 	}
+	void STBUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write8(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
+	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		const u64 RA = CPU.GPR[ra];
@@ -2761,6 +2779,10 @@ private:
 	{
 		CPU.GPR[rd] = GetRegBySPR(spr);
 	}
+	void LWAX(u32 rd, u32 ra, u32 rb)
+	{
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
 	}
@@ -2782,6 +2804,12 @@ private:
 		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
 		default: UNK(wxString::Format("mftb r%d, %d", rd, spr)); break;
 		}
+	}
+	void LWAUX(u32 rd, u32 ra, u32 rb)
+	{
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(addr);
+		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -2806,6 +2834,12 @@ private:
 	{
 		//HACK!
 		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+	}
+	void STHUX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write16(addr, CPU.GPR[rs]);
+		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2963,6 +2997,10 @@ private:
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
 	}
+	void STWBRX(u32 rs, u32 ra, u32 rb)
+	{
+		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
 		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.FPR[frs].To32());
@@ -3047,6 +3085,10 @@ private:
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
 	}
+	void STHBRX(u32 rs, u32 ra, u32 rb)
+	{
+		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s16)CPU.GPR[rs];
@@ -3128,6 +3170,16 @@ private:
 		CPU.GPR[rd] = Memory.Read16(addr);
 		CPU.GPR[ra] = addr;
 	}
+	void LHA(u32 rd, u32 ra, s32 d)
+	{
+		CPU.GPR[rd] = (s64)(s16)Memory.Read16(ra ? CPU.GPR[ra] + d : d);
+	}
+	void LHAU(u32 rd, u32 ra, s32 d)
+	{
+		const u64 addr = CPU.GPR[ra] + d;
+		CPU.GPR[rd] = (s64)(s16)Memory.Read16(addr);
+		CPU.GPR[ra] = addr;
+	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		Memory.Write16(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
@@ -3206,6 +3258,10 @@ private:
 		const u64 addr = CPU.GPR[ra] + ds;
 		CPU.GPR[rd] = Memory.Read64(addr);
 		CPU.GPR[ra] = addr;
+	}
+	void LWA(u32 rd, u32 ra, s32 ds)
+	{
+		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + ds : ds);
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
@@ -3371,6 +3427,7 @@ private:
 	void MTFSB1(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
+		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
 		CPU.FPSCR.FPSCR |= mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3384,6 +3441,7 @@ private:
 	void MTFSB0(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
+		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
 		CPU.FPSCR.FPSCR &= ~mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3394,10 +3452,12 @@ private:
 
 		if(i)
 		{
+			if ((crfd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
 			CPU.FPSCR.FPSCR |= mask;
 		}
 		else
 		{
+			if ((crfd == 29) && CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
 			CPU.FPSCR.FPSCR &= ~mask;
 		}
 
@@ -3416,7 +3476,15 @@ private:
 			if(flm & (1 << i)) mask |= 0xf << (i * 4);
 		}
 
+		const u32 oldNI = CPU.FPSCR.NI;
 		CPU.FPSCR.FPSCR = (CPU.FPSCR.FPSCR & ~mask) | ((u32&)CPU.FPR[frb] & mask);
+		if (CPU.FPSCR.NI != oldNI)
+		{
+			if (oldNI)
+				ConLog.Warning("Non-IEEE mode disabled");
+			else
+				ConLog.Warning("Non-IEEE mode enabled");
+		}
 		if(rc) UNK("mtfsf.");
 	}
 	void FCMPU(u32 crfd, u32 fra, u32 frb)

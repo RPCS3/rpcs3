@@ -78,7 +78,7 @@ namespace PPU_instr
 	static CodeField<11, 15> BI;
 
 	//Immediate field specifying a 14-bit signed two's complement branch displacement that is concatenated on the
-	//right with ‘00’ and sign-extended to 64 bits.
+	//right with '00' and sign-extended to 64 bits.
 	static CodeFieldSigned<16, 31> BD(FIELD_BRANCH);
 
 	//
@@ -179,9 +179,9 @@ namespace PPU_instr
 	Record bit.
 	0		Does not update the condition register (CR).
 	1		Updates the CR to reflect the result of the operation.
-			For integer instructions, CR bits [0–2] are set to reflect the result as a signed quantity and CR bit [3] 
+			For integer instructions, CR bits [0-2] are set to reflect the result as a signed quantity and CR bit [3] 
 			receives a copy of the summary overflow bit, XER[SO]. The result as an unsigned quantity or a bit 
-			string can be deduced from the EQ bit. For floating-point instructions, CR bits [4–7] are set to reflect 
+			string can be deduced from the EQ bit. For floating-point instructions, CR bits [4-7] are set to reflect 
 			floating-point exception, floating-point enabled exception, floating-point invalid operation exception, 
 			and floating-point overflow exception. 
 	*/
@@ -250,6 +250,8 @@ namespace PPU_instr
 	bind_instr(main_list, STBU, RS, RA, D);
 	bind_instr(main_list, LHZ, RD, RA, D);
 	bind_instr(main_list, LHZU, RD, RA, D);
+	bind_instr(main_list, LHA, RD, RA, D);
+	bind_instr(main_list, LHAU, RD, RA, D);
 	bind_instr(main_list, STH, RS, RA, D);
 	bind_instr(main_list, STHU, RS, RA, D);
 	bind_instr(main_list, LMW, RD, RA, D);
@@ -460,7 +462,9 @@ namespace PPU_instr
 	/*0x026*/bind_instr(g1f_list, LVSR, VD, RA, RB);
 	/*0x027*/bind_instr(g1f_list, LVEHX, VD, RA, RB);
 	/*0x028*/bind_instr(g1f_list, SUBF, RD, RA, RB, OE, RC);
+	/*0x035*/bind_instr(g1f_list, LDUX, RD, RA, RB);
 	/*0x036*/bind_instr(g1f_list, DCBST, RA, RB);
+	/*0x037*/bind_instr(g1f_list, LWZUX, RD, RA, RB);
 	/*0x03a*/bind_instr(g1f_list, CNTLZD, RA, RS, RC);
 	/*0x03c*/bind_instr(g1f_list, ANDC, RA, RS, RB, RC);
 	/*0x047*/bind_instr(g1f_list, LVEWX, VD, RA, RB);
@@ -482,6 +486,7 @@ namespace PPU_instr
 	/*0x097*/bind_instr(g1f_list, STWX, RS, RA, RB);
 	/*0x0a7*/bind_instr(g1f_list, STVEHX, VS, RA, RB);
 	/*0x0b5*/bind_instr(g1f_list, STDUX, RS, RA, RB);
+	/*0x0b7*/bind_instr(g1f_list, STWUX, RS, RA, RB);
 	/*0x0c7*/bind_instr(g1f_list, STVEWX, VS, RA, RB);
 	/*0x0ca*/bind_instr(g1f_list, ADDZE, RD, RA, OE, RC);
 	/*0x0d6*/bind_instr(g1f_list, STDCX_, RS, RA, RB);
@@ -491,6 +496,7 @@ namespace PPU_instr
 	/*0x0ea*/bind_instr(g1f_list, ADDME, RD, RA, OE, RC);
 	/*0x0eb*/bind_instr(g1f_list, MULLW, RD, RA, RB, OE, RC);
 	/*0x0f6*/bind_instr(g1f_list, DCBTST, TH, RA, RB);
+	/*0x0f7*/bind_instr(g1f_list, STBUX, RS, RA, RB);
 	/*0x10a*/bind_instr(g1f_list, ADD, RD, RA, RB, OE, RC);
 	/*0x116*/bind_instr(g1f_list, DCBT, RA, RB, TH);
 	/*0x117*/bind_instr(g1f_list, LHZX, RD, RA, RB);
@@ -499,15 +505,18 @@ namespace PPU_instr
 	/*0x137*/bind_instr(g1f_list, LHZUX, RD, RA, RB);
 	/*0x13c*/bind_instr(g1f_list, XOR, RA, RS, RB, RC);
 	/*0x153*/bind_instr(g1f_list, MFSPR, RD, SPR);
+	/*0x155*/bind_instr(g1f_list, LWAX, RD, RA, RB);
 	/*0x156*/bind_instr(g1f_list, DST, RA, RB, STRM, L_6);
 	/*0x157*/bind_instr(g1f_list, LHAX, RD, RA, RB);
 	/*0x167*/bind_instr(g1f_list, LVXL, VD, RA, RB);
 	/*0x173*/bind_instr(g1f_list, MFTB, RD, SPR);
+	/*0x175*/bind_instr(g1f_list, LWAUX, RD, RA, RB);
 	/*0x176*/bind_instr(g1f_list, DSTST, RA, RB, STRM, L_6);
 	/*0x177*/bind_instr(g1f_list, LHAUX, RD, RA, RB);
 	/*0x197*/bind_instr(g1f_list, STHX, RS, RA, RB);
 	/*0x19c*/bind_instr(g1f_list, ORC, RA, RS, RB, RC);
 	/*0x1b6*/bind_instr(g1f_list, ECOWX, RS, RA, RB);
+	/*0x1b7*/bind_instr(g1f_list, STHUX, RS, RA, RB);
 	/*0x1bc*/bind_instr(g1f_list, OR, RA, RS, RB, RC);
 	/*0x1c9*/bind_instr(g1f_list, DIVDU, RD, RA, RB, OE, RC);
 	/*0x1cb*/bind_instr(g1f_list, DIVWU, RD, RA, RB, OE, RC);
@@ -528,6 +537,7 @@ namespace PPU_instr
 	/*0x257*/bind_instr(g1f_list, LFDX, FRD, RA, RB);
 	/*0x277*/bind_instr(g1f_list, LFDUX, FRD, RA, RB);
 	/*0x287*/bind_instr(g1f_list, STVLX, VS, RA, RB);
+	/*0x296*/bind_instr(g1f_list, STWBRX, RS, RA, RB);
 	/*0x297*/bind_instr(g1f_list, STFSX, FRS, RA, RB);
 	/*0x2a7*/bind_instr(g1f_list, STVRX, VS, RA, RB);
 	/*0x2d7*/bind_instr(g1f_list, STFDX, FRS, RA, RB);
@@ -542,6 +552,7 @@ namespace PPU_instr
 	/*0x33b*/bind_instr(g1f_list, SRADI2, RA, RS, sh, RC);
 	/*0x356*/bind_instr(g1f_list, EIEIO);
 	/*0x387*/bind_instr(g1f_list, STVLXL, VS, RA, RB);
+	/*0x396*/bind_instr(g1f_list, STHBRX, RS, RA, RB);
 	/*0x39a*/bind_instr(g1f_list, EXTSH, RA, RS, RC);
 	/*0x387*/bind_instr(g1f_list, STVRXL, VS, RA, RB);
 	/*0x3ba*/bind_instr(g1f_list, EXTSB, RA, RS, RC);
@@ -552,6 +563,7 @@ namespace PPU_instr
 
 	bind_instr(g3a_list, LD, RD, RA, DS);
 	bind_instr(g3a_list, LDU, RD, RA, DS);
+	bind_instr(g3a_list, LWA, RD, RA, DS);
 
 	bind_instr(g3b_list, FDIVS, FRD, FRA, FRB, RC);
 	bind_instr(g3b_list, FSUBS, FRD, FRA, FRB, RC);
