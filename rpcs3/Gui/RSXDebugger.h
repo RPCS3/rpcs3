@@ -53,7 +53,7 @@ public:
 
 	virtual void SetFlags(wxListEvent& event);
 	
-	wxString ParseGCMEnum(u32 value, u32 type);
+	const char* ParseGCMEnum(u32 value, u32 type);
 	wxString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
 	
 

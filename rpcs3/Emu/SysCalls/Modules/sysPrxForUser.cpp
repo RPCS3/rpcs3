@@ -95,12 +95,12 @@ int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
 {
 	const wxString path = Memory.ReadString(path_addr).mb_str();
 	sysPrxForUser.Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
-		id, path_addr, path, entry.GetAddr());
+		id, path_addr, path.mb_str(), entry.GetAddr());
 
 	vfsFile f(path.c_str());
 	if(!f.IsOpened())
 	{
-		sysPrxForUser.Error("sys_raw_spu_load error: '%s' not found!", path);
+		sysPrxForUser.Error("sys_raw_spu_load error: '%s' not found!", path.mb_str());
 		return CELL_ENOENT;
 	}
 

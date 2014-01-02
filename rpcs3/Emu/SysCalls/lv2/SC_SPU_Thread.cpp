@@ -122,7 +122,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	ConLog.Write("New SPU Thread:");
 	ConLog.Write("ls_entry = 0x%x", ls_entry);
-	ConLog.Write("name = %s", wxString(name));
+	ConLog.Write("name = %s", name.c_str());
 	ConLog.Write("a1 = 0x%x", a1);
 	ConLog.Write("a2 = 0x%x", a2);
 	ConLog.Write("a3 = 0x%x", a3);

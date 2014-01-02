@@ -410,52 +410,52 @@ void RSXDebugger::GetSettings()
 
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
-		ParseGCMEnum(render.m_alpha_func, CELL_GCM)));
+		ParseGCMEnum(render.m_alpha_func, CELL_GCM)).mb_str());
 	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		render.m_blend_color_r,
 		render.m_blend_color_g,
 		render.m_blend_color_b,
-		render.m_blend_color_a));
-	LIST_SETTINGS_ADD("Clipping", wxString::Format("Min:%f, Max:%f", render.m_clip_min, render.m_clip_max));
+		render.m_blend_color_a).mb_str());
+	LIST_SETTINGS_ADD("Clipping", wxString::Format("Min:%f, Max:%f", render.m_clip_min, render.m_clip_max).mb_str());
 	LIST_SETTINGS_ADD("Color mask", !(render.m_set_color_mask) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		render.m_color_mask_r,
 		render.m_color_mask_g,
 		render.m_color_mask_b,
-		render.m_color_mask_a));
-	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render.m_context_dma_color_a));
-	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render.m_context_dma_color_b));
-	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c));
-	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d));
+		render.m_color_mask_a).mb_str());
+	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render.m_context_dma_color_a).mb_str());
+	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render.m_context_dma_color_b).mb_str());
+	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c).mb_str());
+	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d).mb_str());
 	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render.m_context_dma_z));
 	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_depth_func,
-		ParseGCMEnum(render.m_depth_func, CELL_GCM)));
+		ParseGCMEnum(render.m_depth_func, CELL_GCM)).mb_str());
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
 		render.m_draw_mode,
-		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE)));
+		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE)).mb_str());
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,
 		render.m_scissor_w,
-		render.m_scissor_h));
+		render.m_scissor_h).mb_str());
 	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_stencil_func,
-		ParseGCMEnum(render.m_stencil_func, CELL_GCM)));
-	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
-	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
-	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
-	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", render.m_surface_pitch_d));
-	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", render.m_surface_pitch_z));
-	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", render.m_surface_offset_a));
-	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", render.m_surface_offset_b));
-	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", render.m_surface_offset_c));
-	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render.m_surface_offset_d));
-	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render.m_surface_offset_z));
+		ParseGCMEnum(render.m_stencil_func, CELL_GCM)).mb_str());
+	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a).mb_str());
+	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b).mb_str());
+	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c).mb_str());
+	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", render.m_surface_pitch_d).mb_str());
+	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", render.m_surface_pitch_z).mb_str());
+	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", render.m_surface_offset_a).mb_str());
+	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", render.m_surface_offset_b).mb_str());
+	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", render.m_surface_offset_c).mb_str());
+	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render.m_surface_offset_d).mb_str());
+	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render.m_surface_offset_z).mb_str());
 	LIST_SETTINGS_ADD("Viewport", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_viewport_x,
 		render.m_viewport_y,
 		render.m_viewport_w,
-		render.m_viewport_h));
+		render.m_viewport_h).mb_str());
 
 #undef LIST_SETTINGS_ADD
 }
@@ -483,7 +483,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	UpdateInformation();
 }
 
-wxString RSXDebugger::ParseGCMEnum(u32 value, u32 type)
+const char* RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 {
 	switch(type)
 	{
