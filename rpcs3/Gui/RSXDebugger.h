@@ -5,11 +5,7 @@
 class RSXDebugger : public wxFrame
 {
 	u32 m_addr;
-	u32 m_colcount;
-	u32 m_rowcount;
 
-	u32 m_buffers_width;
-	u32 m_buffers_height;
 	u32 m_panel_width;
 	u32 m_panel_height;
 	u32 m_text_width;
@@ -30,7 +26,7 @@ class RSXDebugger : public wxFrame
 	wxPanel* p_buffer_colorD;
 	wxPanel* p_buffer_depth;
 	wxPanel* p_buffer_stencil;
-	wxPanel* p_buffer_text;
+	wxPanel* p_buffer_tex;
 
 public:
 	bool exit;
@@ -48,11 +44,18 @@ public:
 	virtual void GoToPut(wxCommandEvent& event);
 
 	virtual void UpdateInformation();
-	virtual void ShowMemory();
-	virtual void ShowBuffers();
-	virtual void ShowFlags();
+	virtual void GetMemory();
+	virtual void GetBuffers();
+	virtual void GetFlags();
+	virtual void GetLightning();
+	virtual void GetTexture();
+	virtual void GetSettings();
 
-	virtual void ModifyFlags(wxListEvent& event);
+	virtual void SetFlags(wxListEvent& event);
+	
+	wxString ParseGCMEnum(u32 value, u32 type);
+	wxString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
+	
 
 	bool RSXReady();
 	void SetPC(const uint pc) { m_addr = pc; }
