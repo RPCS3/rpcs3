@@ -2,7 +2,9 @@
 #include "rpcs3.h"
 #include "Ini.h"
 #include "Emu/System.h"
+#ifdef _WIN32
 #include <wx/msw/wrapwin.h>
+#endif
 #include "Gui/CompilerELF.h"
 
 const wxEventType wxEVT_DBG_COMMAND = wxNewEventType();

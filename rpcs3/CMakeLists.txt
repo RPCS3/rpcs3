@@ -11,7 +11,12 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     add_definitions(-fpermissive) # TODO: remove me
 endif()
 
-find_package(wxWidgets)
+add_definitions(-DGL_GLEXT_PROTOTYPES)
+add_definitions(-DGLX_GLXEXT_PROTOTYPES)
+
+find_package(wxWidgets COMPONENTS core base net aui gl REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(ZLIB REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
 
@@ -27,11 +32,15 @@ ${CMAKE_SOURCE_DIR}/..
 file(
 GLOB_RECURSE
 RPCS3_SRC
+${CMAKE_SOURCE_DIR}/rpcs3.cpp
+${CMAKE_SOURCE_DIR}/AppConnector.cpp
+${CMAKE_SOURCE_DIR}/Ini.cpp
 ${CMAKE_SOURCE_DIR}/Emu/*
 ${CMAKE_SOURCE_DIR}/Gui/*
 ${CMAKE_SOURCE_DIR}/Loader/*
 ${CMAKE_SOURCE_DIR}/../Utilities/*
+${CMAKE_SOURCE_DIR}/../scetool/scetool.cpp
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${ZLIB_LIBRARIES})

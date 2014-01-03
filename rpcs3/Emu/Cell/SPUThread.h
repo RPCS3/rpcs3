@@ -293,7 +293,7 @@ public:
 			};
 			volatile u64 m_indval;
 		};
-		volatile long m_lock;
+		volatile std::atomic<int> m_lock;
 
 	public:
 
@@ -312,7 +312,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
+				while (std::atomic_exchange(&m_lock, 1));
 				_mm_lfence();
 				if(!m_index) 
 				{
@@ -342,7 +342,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
+				while (std::atomic_exchange(&m_lock, 1));
 				_mm_lfence();
 				if(m_index >= max_count) 
 				{
@@ -370,7 +370,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
+				while (std::atomic_exchange(&m_lock, 1));
 				_mm_lfence();
 				if(m_index >= max_count) 
 					m_value[max_count-1] = value; //last message is overwritten
@@ -389,7 +389,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
+				while (std::atomic_exchange(&m_lock, 1));
 				_mm_lfence();
 				if(m_index >= max_count) 
 					m_value[max_count-1] |= value; //last message is logically ORed
@@ -412,7 +412,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
+				while (std::atomic_exchange(&m_lock, 1));
 				_mm_lfence();
 				if(!m_index) 
 					res = 0; //result is undefined
