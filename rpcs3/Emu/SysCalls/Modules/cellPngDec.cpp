@@ -123,13 +123,10 @@ int cellPngDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, u32 openInfo)
+int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo)
 {
-	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x,subHandle=0x%x,src_addr=0x%x,openInfo=0x%x)", mainHandle, subHandle.GetAddr(), src_addr, openInfo);
-
-	CellPngDecSrc* src;
-
-	src = (CellPngDecSrc*)Memory.GetMemFromAddr(src_addr);
+	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 

@@ -17,15 +17,21 @@ enum
 	CELL_PAMF_ERROR_EP_NOT_FOUND		= 0x80610507,
 };
 
-int cellPamfGetHeaderSize()
+int cellPamfGetHeaderSize(mem8_ptr_t pAddr, u64 fileSize, mem64_t pSize)
 {
-	UNIMPLEMENTED_FUNC(cellPamf);
+	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)",
+		pAddr.GetAddr(), fileSize, pSize.GetAddr());
+
+	pSize = 2048; // PAMF headers seem to be always 2048 bytes in size
 	return CELL_OK;
 }
 
-int cellPamfGetHeaderSize2()
+int cellPamfGetHeaderSize2(mem8_ptr_t pAddr, u64 fileSize, u32 attribute, mem64_t pSize)
 {
-	UNIMPLEMENTED_FUNC(cellPamf);
+	cellPamf.Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=%d, pSize_addr=0x%x)",
+		pAddr.GetAddr(), fileSize, attribute, pSize.GetAddr());
+
+	pSize = 2048; // PAMF headers seem to be always 2048 bytes in size
 	return CELL_OK;
 }
 

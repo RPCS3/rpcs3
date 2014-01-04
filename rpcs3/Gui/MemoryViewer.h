@@ -4,13 +4,9 @@
 
 class MemoryViewerPanel : public wxFrame
 {
-	//static const uint LINE_COUNT = 50;
-	//static const uint COL_COUNT  = 17;
-
 	u32 m_addr;
 	u32 m_colcount;
 	u32 m_rowcount;
-	//wxListView* hex_wind;
 
 	wxTextCtrl* t_addr;
 	wxSpinCtrl* sc_bytes;
@@ -31,10 +27,10 @@ public:
 		exit = true;
 	}
 
-	//virtual void OnResize(wxSizeEvent& event);
 	virtual void OnChangeToolsAddr(wxCommandEvent& event);
 	virtual void OnChangeToolsBytes(wxCommandEvent& event);
 	virtual void OnScrollMemory(wxMouseEvent& event);
+	virtual void OnShowImage(wxCommandEvent& WXUNUSED(event));
 
 	virtual void Next(wxCommandEvent& event);
 	virtual void Prev(wxCommandEvent& event);
@@ -42,7 +38,8 @@ public:
 	virtual void fPrev(wxCommandEvent& event);
 
 	virtual void ShowMemory();
-	virtual void ShowImage(wxCommandEvent& WXUNUSED(event));
-
 	void SetPC(const uint pc) { m_addr = pc; }
+
+	//Static methods
+	static void ShowImage(wxWindow* parent, u32 addr, int mode, int sizex, int sizey, bool flipv);
 };

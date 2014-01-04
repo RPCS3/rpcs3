@@ -361,6 +361,9 @@
     <ClCompile Include="Gui\RSXDebugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPamf.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

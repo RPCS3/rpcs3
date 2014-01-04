@@ -177,7 +177,7 @@ int cellFsClosedir(u32 fd)
 int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path.mb_str(), sb.GetAddr());
+	sys_fs.Log("cellFsStat(path: %s, sb_addr: 0x%x)", path.mb_str(), sb.GetAddr());
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -196,22 +196,34 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 	{
 		if(path.CmpNoCase(Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1)) == 0)
 		{
-			sys_fs.Log("cellFsFstat: '%s' is a mount point.", path.mb_str());
+			sys_fs.Log("cellFsStat: '%s' is a mount point.", path.mb_str());
 			sb->st_mode |= CELL_FS_S_IFDIR;
 			return CELL_OK;
 		}
 	}
 
-	vfsFile f(path);
-
-	if(!f.IsOpened())
+	// TODO: Temporary solution until vfsDir is implemented
+	wxString real_path;
+	Emu.GetVFS().GetDevice(path, real_path);
+	struct stat s;
+	if(stat(real_path.c_str(), &s) == 0)
 	{
-		sys_fs.Warning("cellFsFstat: '%s' not found.", path.mb_str());
+		if(s.st_mode & S_IFDIR)
+		{
+			sb->st_mode |= CELL_FS_S_IFDIR;
+		}
+		else if(s.st_mode & S_IFREG)
+		{
+			vfsFile f(path);
+			sb->st_mode |= CELL_FS_S_IFREG;
+			sb->st_size = f.GetSize();
+		}
+	}
+	else
+	{
+		sys_fs.Warning("cellFsStat: '%s' not found.", path.mb_str());
 		return CELL_ENOENT;
 	}
-
-	sb->st_mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
-	sb->st_size = f.GetSize();
 
 	return CELL_OK;
 }
