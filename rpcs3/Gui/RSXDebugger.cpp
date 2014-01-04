@@ -4,10 +4,12 @@
 #include "Emu/GS/sysutil_video.h"
 #include "Emu/GS/GCM.h"
 
+#include "MemoryViewer.h"
+
 enum GCMEnumTypes
 {
-	CELL_GCM,
-	CELL_GCM_PRIMITIVE,
+	CELL_GCM_ENUM,
+	CELL_GCM_PRIMITIVE_ENUM,
 };
 
 RSXDebugger::RSXDebugger(wxWindow* parent) 
@@ -95,14 +97,14 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	m_list_commands->InsertColumn(1, "Value", 0, 80);
 	m_list_commands->InsertColumn(2, "Command", 0, 250);
 	m_list_commands->InsertColumn(3, "Count", 0, 40);
-	m_list_flags->InsertColumn(0, "Name", 0, 150);
-	m_list_flags->InsertColumn(1, "Value", 0, 300);
-	m_list_lightning->InsertColumn(0, "Name", 0, 150);
-	m_list_lightning->InsertColumn(1, "Value", 0, 300);
-	m_list_texture->InsertColumn(0, "Name", 0, 150);
-	m_list_texture->InsertColumn(1, "Value", 0, 300);
-	m_list_settings->InsertColumn(0, "Name", 0, 150);
-	m_list_settings->InsertColumn(1, "Value", 0, 300);
+	m_list_flags->InsertColumn(0, "Name", 0, 170);
+	m_list_flags->InsertColumn(1, "Value", 0, 270);
+	m_list_lightning->InsertColumn(0, "Name", 0, 170);
+	m_list_lightning->InsertColumn(1, "Value", 0, 270);
+	m_list_texture->InsertColumn(0, "Name", 0, 170);
+	m_list_texture->InsertColumn(1, "Value", 0, 270);
+	m_list_settings->InsertColumn(0, "Name", 0, 170);
+	m_list_settings->InsertColumn(1, "Value", 0, 270);
 
 	// Fill list
 	for(u32 i=0; i<m_item_count; i++)
@@ -186,6 +188,14 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	Connect(b_goto_get->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToGet));
 	Connect(b_goto_put->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToPut));
 
+	p_buffer_colorA->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), NULL, this);
+	p_buffer_colorB->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), NULL, this);
+	p_buffer_colorC->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), NULL, this);
+	p_buffer_colorD->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), NULL, this);
+	//Connect(p_buffer_depth->GetId(),   wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
+	//Connect(p_buffer_stencil->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
+	p_buffer_tex->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), NULL, this);
+
 	m_list_commands->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(RSXDebugger::OnScrollMemory), NULL, this);
 	m_list_flags->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetFlags), NULL, this);
 	
@@ -215,6 +225,32 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 	t_addr->SetValue(wxString::Format("%08x", m_addr));
 	UpdateInformation();
 	event.Skip();
+}
+
+void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
+{
+	if (!RSXReady()) return;
+	const GSRender& render = Emu.GetGSManager().GetRender();
+	const mem_ptr_t<gcmBuffer> buffers = render.m_gcm_buffers_addr;
+
+	// TODO: Is there any better way to choose the color buffers
+#define SHOW_BUFFER(id) \
+	MemoryViewerPanel::ShowImage(this, render.m_local_mem_addr + re(buffers[id].offset), \
+	3, re(buffers[id].width), re(buffers[id].height), true);
+
+	if (event.GetId() == p_buffer_colorA->GetId()) SHOW_BUFFER(0);
+	if (event.GetId() == p_buffer_colorB->GetId()) SHOW_BUFFER(1);
+	if (event.GetId() == p_buffer_colorC->GetId()) SHOW_BUFFER(2);
+	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
+	if (event.GetId() == p_buffer_tex->GetId())
+	{
+		MemoryViewerPanel::ShowImage(this,
+			render.m_textures[0].m_offset, 0,
+			render.m_textures[0].m_width,
+			render.m_textures[0].m_height, false);
+	}
+
+#undef SHOW_BUFFER
 }
 
 void RSXDebugger::GoToGet(wxCommandEvent& event)
@@ -391,6 +427,13 @@ void RSXDebugger::GetTexture()
 	m_list_texture->InsertItem(i, name); m_list_texture->SetItem(i, 1, value); i++;
 
 	LIST_TEXTURE_ADD("Texture #0 Address:", wxString::Format("0x%x", render.m_textures[0].m_offset));
+	LIST_TEXTURE_ADD("Texture #0 Cubemap:", render.m_textures[0].m_cubemap ? "True" : "False");
+	LIST_TEXTURE_ADD("Texture #0 Depth:", wxString::Format("0x%x", render.m_textures[0].m_depth));
+	LIST_TEXTURE_ADD("Texture #0 Dimension:", wxString::Format("0x%x", render.m_textures[0].m_dimension));
+	LIST_TEXTURE_ADD("Texture #0 Enabled:", render.m_textures[0].m_enabled ? "True" : "False");
+	LIST_TEXTURE_ADD("Texture #0 Format:", wxString::Format("0x%x", render.m_textures[0].m_format));
+	LIST_TEXTURE_ADD("Texture #0 Mipmap:", wxString::Format("0x%x", render.m_textures[0].m_mipmap));
+	LIST_TEXTURE_ADD("Texture #0 Pitch:", wxString::Format("0x%x", render.m_textures[0].m_pitch));
 	LIST_TEXTURE_ADD("Texture #0 Size:", wxString::Format("%d x %d",
 		render.m_textures[0].m_width,
 		render.m_textures[0].m_height));
@@ -410,7 +453,7 @@ void RSXDebugger::GetSettings()
 
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
-		ParseGCMEnum(render.m_alpha_func, CELL_GCM)));
+		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		render.m_blend_color_r,
 		render.m_blend_color_g,
@@ -427,12 +470,13 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c));
 	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d));
 	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render.m_context_dma_z));
+	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
 	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_depth_func,
-		ParseGCMEnum(render.m_depth_func, CELL_GCM)));
+		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
 		render.m_draw_mode,
-		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE)));
+		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,
@@ -440,7 +484,7 @@ void RSXDebugger::GetSettings()
 		render.m_scissor_h));
 	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_stencil_func,
-		ParseGCMEnum(render.m_stencil_func, CELL_GCM)));
+		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
 	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
 	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
@@ -487,7 +531,7 @@ wxString RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 {
 	switch(type)
 	{
-	case CELL_GCM:
+	case CELL_GCM_ENUM:
 	{
 		switch(value)
 		{
@@ -528,7 +572,7 @@ wxString RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 		default: return "Wrong Value!";
 		}
 	}
-	case CELL_GCM_PRIMITIVE:
+	case CELL_GCM_PRIMITIVE_ENUM:
 	{
 		switch(value)
 		{

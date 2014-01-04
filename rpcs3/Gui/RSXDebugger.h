@@ -39,6 +39,7 @@ public:
 	virtual void OnKeyDown(wxKeyEvent& event);
 	virtual void OnChangeToolsAddr(wxCommandEvent& event);
 	virtual void OnScrollMemory(wxMouseEvent& event);
+	virtual void OnClickBuffer(wxMouseEvent& event);
 
 	virtual void GoToGet(wxCommandEvent& event);
 	virtual void GoToPut(wxCommandEvent& event);

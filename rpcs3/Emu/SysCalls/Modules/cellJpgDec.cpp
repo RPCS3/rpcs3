@@ -126,21 +126,16 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, u32 src_addr, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
+int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
 {
-	//u32 srcSelect       = Memory.Read32(src_addr);
-	u32 fileName		  = Memory.Read32(src_addr+4);
-	//u32 fileOffset      = Memory.Read32(src_addr+8);
-	//u32 fileSize        = Memory.Read32(src_addr+12);
-	//u32 streamPtr       = Memory.Read32(src_addr+16);
-	//u32 streamSize      = Memory.Read32(src_addr+20);
-	//u32 spuThreadEnable = Memory.Read32(src_addr+24);
+	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
 	// Get file descriptor
 	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(fileName, 0, fd, NULL, 0);
+	int ret = cellFsOpen(src->fileName, 0, fd, NULL, 0);
 	current_subHandle->fd = fd->ToLE();
 	if(ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
