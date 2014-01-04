@@ -155,4 +155,6 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x0e2939e5, cellFsFtruncate);
 	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
 	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
+
+	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 }

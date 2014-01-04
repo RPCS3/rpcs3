@@ -48,8 +48,8 @@ int cellSyncMutexLock(mem32_t mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	//aggressive spin-wait
-	while (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1));
+	while (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24));
+	//need to check how does SPU work with these mutexes, also obtainment order is not guaranteed
 	_mm_lfence();
 	return CELL_OK;
 }
@@ -65,7 +65,8 @@ int cellSyncMutexTryLock(mem32_t mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	if (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1))
+	//check cellSyncMutexLock
+	if (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24))
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -84,8 +85,9 @@ int cellSyncMutexUnlock(mem32_t mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
+	//check cellSyncMutexLock
 	_mm_sfence();
-	mutex = 0;
+	_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 0);
 	return CELL_OK;
 }
 

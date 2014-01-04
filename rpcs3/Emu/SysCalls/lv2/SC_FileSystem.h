@@ -84,3 +84,12 @@ struct CellFsDirent
 };
 
 #pragma pack()
+
+struct CellFsAio
+{
+	be_t<u32> fd;
+	be_t<u64> offset;
+	be_t<u32> buf_addr;
+	be_t<u64> size;
+	be_t<u64> user_data;
+};

@@ -225,6 +225,7 @@ extern int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos);
 extern int cellFsFtruncate(u32 fd, u64 size);
 extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
+extern int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t id, u32 func_addr);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
@@ -244,6 +245,8 @@ extern int cellPadSetActDirect(u32 port_no, u32 param_addr);
 extern int cellPadGetInfo(u32 info_addr);
 extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
+extern int cellPadInfoPressMode(u32 port_no);
+extern int cellPadInfoSensorMode(u32 port_no);
 
 //cellKb
 extern int cellKbInit(u32 max_connect);
