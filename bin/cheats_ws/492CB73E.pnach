@@ -20,4 +20,4 @@ patch=1,EE,002c4744,word,44810000
 patch=1,EE,003892B8,word,24020002
 
 //noise off
-patch=1,EE,2047ADC0,extended,00000000
+//patch=1,EE,2047ADC0,extended,00000000
