@@ -84,6 +84,6 @@
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoModify" 1
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoRepair" 1
   WriteUninstaller "${UNINST_EXE}"
-  !if ${EXC_AVG} > 0
+  !if ${INC_AVG} > 0
  			Call fnc_AVGPage_InstallBar
   !endif
