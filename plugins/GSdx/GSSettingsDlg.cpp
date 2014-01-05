@@ -522,6 +522,7 @@ void GSHacksDlg::OnInit()
 	CheckDlgButton(m_hWnd, IDC_WILDHACK, theApp.GetConfig("UserHacks_WildHack", 0));
 	CheckDlgButton(m_hWnd, IDC_AGGRESSIVECRC, theApp.GetConfig("UserHacks_AggressiveCRC", 0));
 	CheckDlgButton(m_hWnd, IDC_ALPHASTENCIL, theApp.GetConfig("UserHacks_AlphaStencil", 0));
+	CheckDlgButton(m_hWnd, IDC_CHECK_NVIDIA_HACK, theApp.GetConfig("UserHacks_NVIDIAHack", 0));
 	CheckDlgButton(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS, theApp.GetConfig("UserHacks_DisableCrcHacks", 0));
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
@@ -601,6 +602,12 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 						  "Improves many shadows which are normally overdrawn in parts, may affect other effects.\n"
 						  "Will disable partial transparency in some games or even prevent drawing some elements altogether.";
 				break;
+			case IDC_CHECK_NVIDIA_HACK:
+				helpstr = "This is a hack to work around problems with recent NVIDIA drivers causing odd stretching problems in DirectX 11 only"
+						  "when using Upscaling.\n\n"
+						  "Try not to use this unless your game Videos or 2D screens are stretching outside the frame.\n\n"
+						  "If you have an AMD/ATi graphics card you should not needs this.";
+				break;
 			case IDC_CHECK_DISABLE_ALL_HACKS:
 				helpstr = "FOR TESTING ONLY!!\n\n"
 						  "Disable all CRC hacks - will break many games. Overrides CrcHacksExclusion at gsdx.ini\n"
@@ -648,6 +655,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			theApp.SetConfig("UserHacks_WildHack", (int)IsDlgButtonChecked(m_hWnd, IDC_WILDHACK));
 			theApp.SetConfig("UserHacks_AggressiveCRC", (int)IsDlgButtonChecked(m_hWnd, IDC_AGGRESSIVECRC));
 			theApp.SetConfig("UserHacks_AlphaStencil", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHASTENCIL));
+			theApp.SetConfig("UserHacks_NVIDIAHack", (int)IsDlgButtonChecked(m_hWnd, IDC_CHECK_NVIDIA_HACK));
 			theApp.SetConfig("UserHacks_DisableCrcHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS));
 
 			unsigned int TCOFFSET  =  SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETX), UDM_GETPOS, 0, 0) & 0xFFFF;

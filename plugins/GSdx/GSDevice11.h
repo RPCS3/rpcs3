@@ -81,6 +81,8 @@ class GSDevice11 : public GSDeviceDX
 public: // TODO
 	CComPtr<ID3D11RasterizerState> m_rs;
 
+	bool UserHacks_NVIDIAHack;
+
 	struct
 	{
 		CComPtr<ID3D11InputLayout> il;

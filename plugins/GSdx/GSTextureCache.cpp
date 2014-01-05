@@ -28,7 +28,7 @@ GSTextureCache::GSTextureCache(GSRenderer* r)
 	m_spritehack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SpriteHack", 0) : 0;
 	
 	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks", 0) && !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
-
+	UserHacks_NVIDIAHack = !!theApp.GetConfig("UserHacks_NVIDIAHack", 0) && !!theApp.GetConfig("UserHacks", 0);
 	m_paltex = !!theApp.GetConfig("paltex", 0);
 
 	m_temp = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
@@ -219,7 +219,15 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 			if(ww > 0 && hh > 0)
 			{
-				dst->m_texture->SetScale(GSVector2((float)w / ww, (float)h / hh));
+				if(UserHacks_NVIDIAHack)
+				{
+					//Nvidia hackage!! to revert to original remove both " - 0.01f"'s
+					dst->m_texture->SetScale(GSVector2((float)w / ww - 0.01f, (float)h / hh - 0.01f));
+				}
+				else
+				{
+					dst->m_texture->SetScale(GSVector2((float)w / ww, (float)h / hh));
+				}
 			}
 		}
 	}

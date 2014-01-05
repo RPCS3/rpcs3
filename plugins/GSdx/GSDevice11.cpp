@@ -31,6 +31,8 @@ GSDevice11::GSDevice11()
 	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 
+	UserHacks_NVIDIAHack = !!theApp.GetConfig("UserHacks_NVIDIAHack", 0) && !!theApp.GetConfig("UserHacks", 0);
+
 	m_state.topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	m_state.bf = -1;
 }
@@ -655,7 +657,19 @@ void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
 		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
 	};
-
+	
+	/* NVIDIA HACK!!!!
+	  For some reason this function ball's up on drivers after 320.18 causing a weird stretching issue.
+	  The only way around this seems to be adding a small value to the x, y coords for part of the 
+	  vertex data but doing it only on the first vertex of the 4 seems to do it (it doesn't seem to matter)*/
+	if(UserHacks_NVIDIAHack)
+	{
+		//Smallest value i could get away with before it starts stretching again :(
+		vertices[0].p.x += 0.000002f;
+		vertices[0].p.y += 0.000002f;
+	}
+	/*END OF HACK*/
+	
 	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 	IASetInputLayout(m_convert.il);
 	IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

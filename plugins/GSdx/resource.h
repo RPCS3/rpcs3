@@ -67,6 +67,7 @@
 #define IDC_TCOFFSETY                   2084
 #define IDC_TCOFFSETY2                  2085
 #define IDC_FXAA                        2086
+#define IDC_CHECK_NVIDIA_HACK           2087
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
