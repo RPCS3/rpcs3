@@ -13,8 +13,14 @@
   !define INC_ZZOGL	    0
 !endif
 
+!ifndef INC_AVG
+  ; We aren't including the AVG installer with the web setup, so we need to tell it that.
+  !define INC_AVG	    0
+!endif
+
 !define OUTFILE_POSTFIX "websetup"
 !include "SharedBase.nsh"
+!include "x64.nsh"
 
 !insertmacro MUI_PAGE_COMPONENTS 
 !insertmacro MUI_PAGE_DIRECTORY
@@ -218,7 +224,13 @@ Section "Microsoft Visual C++ 2013 SP1 Redist" SEC_CRT2013
   ; http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe
 
   ClearErrors
-  ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86" "Installed"
+  
+  ${If} ${RunningX64}
+  	ReadRegDword $R0 HKLM "SOFTWARE\Wow6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x86" "Installed"
+	${Else}
+		ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86" "Installed"
+	${EndIf}
+	
   IfErrors 0 +2
   DetailPrint "Visual C++ 2013 Redistributable registry key was not found; assumed to be uninstalled."
   StrCmp $R0 "1" 0 +3

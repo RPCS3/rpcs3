@@ -20,12 +20,18 @@
   !define INC_CRT_2013  1
 !endif
 
+!ifndef INC_AVG
+  ; We are including the AVG SafeGuard with the full installer.
+  !define INC_AVG	    1
+!endif
+
 ShowInstDetails nevershow
 ShowUninstDetails nevershow
 
 !define OUTFILE_POSTFIX "setup"
 !include "SharedBase.nsh"
 !include "AVGPage.nsdinc"
+!include "x64.nsh"
 
 ; Reserve features for improved performance with solid archiving.
 ;  (uncomment if we add our own install options ini files)
@@ -167,7 +173,13 @@ Section "Microsoft Visual C++ 2013 Redist" SEC_CRT2013
   ;   http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe
 
   ClearErrors
-  ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\x86" "Installed"
+  
+  ${If} ${RunningX64}
+  	ReadRegDword $R0 HKLM "SOFTWARE\Wow6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x86" "Installed"
+	${Else}
+		ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86" "Installed"
+	${EndIf}
+	
   IfErrors 0 +2
   DetailPrint "Visual C++ 2013 Redistributable registry key was not found; assumed to be uninstalled."
   StrCmp $R0 "1" 0 +3
