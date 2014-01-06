@@ -64,6 +64,73 @@ struct CellCodecEsFilterId {
 	be_t<u32> supplementalInfo2;
 };
 
+// AVC (MPEG4 AVC Video) Specific Information
+struct CellPamfAvcInfo {
+	u8 profileIdc;
+	u8 levelIdc;
+	u8 frameMbsOnlyFlag;
+	u8 videoSignalInfoFlag;
+	u8 frameRateInfo;
+	u8 aspectRatioIdc;
+	be_t<u16> sarWidth; //reserved
+	be_t<u16> sarHeight; //reserved
+	be_t<u16> horizontalSize; //multiple of 16
+	be_t<u16> verticalSize; //multiple of 16
+	be_t<u16> frameCropLeftOffset; //reserved
+	be_t<u16> frameCropRightOffset; //reserved
+	be_t<u16> frameCropTopOffset; //reserved
+	be_t<u16> frameCropBottomOffset; 
+	u8 videoFormat; //reserved
+	u8 videoFullRangeFlag;
+	u8 colourPrimaries;
+	u8 transferCharacteristics;
+	u8 matrixCoefficients;
+	u8 entropyCodingModeFlag; //reserved
+	u8 deblockingFilterFlag;
+	u8 minNumSlicePerPictureIdc; //reserved
+	u8 nfwIdc; //reserved
+	u8 maxMeanBitrate; //reserved
+};
+
+// M2V (MPEG2 Video) Specific Information
+struct CellPamfM2vInfo {
+	u8 profileAndLevelIndication;
+	be_t<bool> progressiveSequence;
+	u8 videoSignalInfoFlag;
+	u8 frameRateInfo;
+	u8 aspectRatioIdc;
+	be_t<u16> sarWidth;
+	be_t<u16> sarHeight;
+	be_t<u16> horizontalSize;
+	be_t<u16> verticalSize;
+	be_t<u16> horizontalSizeValue;
+	be_t<u16> verticalSizeValue;
+	u8 videoFormat;
+	u8 videoFullRangeFlag;
+	u8 colourPrimaries;
+	u8 transferCharacteristics;
+	u8 matrixCoefficients;
+};
+
+// LPCM Audio Specific Information
+struct CellPamfLpcmInfo {
+	be_t<u32> samplingFrequency;
+	u8 numberOfChannels;
+	be_t<u16> bitsPerSample;
+};
+
+// ATRAC3+ Audio Specific Information
+struct CellPamfAtrac3plusInfo {
+	be_t<u32> samplingFrequency;
+	u8 numberOfChannels;
+};
+
+// AC3 Audio Specific Information
+struct CellPamfAc3Info {
+	be_t<u32> samplingFrequency;
+	u8 numberOfChannels;
+};
+
 #pragma pack(push, 1) //file data
 
 struct PamfStreamHeader_AVC { //AVC information
@@ -72,8 +139,8 @@ struct PamfStreamHeader_AVC { //AVC information
 	u8 unk0;
 	u8 unk1; //1
 	u32 unk2; //0
-	be_t<u16> horizontalSize; //multiplied by 16
-	be_t<u16> verticalSize; //multiplied by 16
+	be_t<u16> horizontalSize; //divided by 16
+	be_t<u16> verticalSize; //divided by 16
 	u32 unk3; //0
 	u32 unk4; //0
 	u8 unk5; //0xA0
@@ -415,7 +482,24 @@ int cellPamfReaderGetStreamInfo(mem_ptr_t<CellPamfReader> pSelf, u32 pInfo_addr,
 	//TODO
 	switch (pAddr->stream_headers[pSelf->stream].type)
 	{
-	case 0x1b: /*CELL_PAMF_STREAM_TYPE_AVC*/ break;
+	case 0x1b: /*CELL_PAMF_STREAM_TYPE_AVC*/
+		{
+			//target structure
+			mem_ptr_t<CellPamfAvcInfo> pInfo(pInfo_addr);
+			//file data structure (fixed offset 0x98, fixed step 0x30)
+			mem_ptr_t<PamfStreamHeader_AVC> pAVC(pSelf->pAddr + 0x98 + pSelf->stream * 0x30);
+			if (size != sizeof(CellPamfAvcInfo)) {
+				cellPamf.Error("cellPamfReaderGetStreamInfo: incorrect AVC data size(%d)", size);
+				break;
+			}
+			//TODO
+			pInfo->profileIdc = pAVC->profileIdc;
+			pInfo->levelIdc = pAVC->levelIdc;
+
+			pInfo->horizontalSize = pAVC->horizontalSize;
+			pInfo->verticalSize = pAVC->verticalSize;
+		}
+		break;
 	case 0xdc: /*CELL_PAMF_STREAM_TYPE_ATRAC3PLUS*/ break;
 	case 0x80: /*CELL_PAMF_STREAM_TYPE_PAMF_LPCM*/ break;
 	case 0xdd: /*CELL_PAMF_STREAM_TYPE_USER_DATA*/ break;
