@@ -5,16 +5,17 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2013-12-15 13:24+0100\n"
-"PO-Revision-Date: 2012-07-04 11:45+0100\n"
+"PO-Revision-Date: 2014-01-06 09:06+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
-"Language: \n"
+"Language: de_DE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: ..\\..\\\n"
+"X-Generator: Poedit 1.6.3\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -34,7 +35,6 @@ msgid ""
 msgstr "PlayStation 1 (PSX) Spiele werden von PCSX2 noch nicht unterstützt!"
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
@@ -186,12 +186,12 @@ msgstr ""
 "nach einer Memory Card zu suchen."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "The thread '%s' is not responding.  It could be deadlocked, or it might just "
 "be running *really* slowly."
 msgstr ""
-"Der Thread antwortet nicht. Er könnte festgefroren sein, oder aber sehr "
+"Der Thread '%s' antwortet nicht. Er könnte festgefroren sein, oder aber sehr "
 "langsam reagieren."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
@@ -402,12 +402,12 @@ msgstr ""
 "Sie sollten aber nur für diese Spiele aktiviert werden."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
 "card will be lost!  Are you absolutely and quite positively sure?"
 msgstr ""
-"Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir "
+"Hiermit wird die komplette Memory Card in Slot %s gelöscht. Bist du dir "
 "absolut sicher?"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
@@ -418,18 +418,21 @@ msgstr ""
 "erlaubt."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
-#, fuzzy, c-format
+#, c-format
 msgid "Failed: Destination memory card '%s' is in use."
-msgstr "Konnte die Memory Card nicht kopieren. Die Zieldatei ist in Benutzung."
+msgstr ""
+"Konnte die Memory Card nicht kopieren. Die Zieldatei '%s' ist in Benutzung."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
 "folder locations can be overridden at any time using the Plugin/BIOS "
 "Selector panel."
-msgstr "Du kannst den Standardordner für PCSX2 und Plugins hier einstellen."
+msgstr ""
+"Bitte wähle den Standardspeicherpfad für PCSX2 Benutzerdateien (Memory "
+"Cards, Screenshots, Einstellungen und SaveStates). Du kannst diese "
+"Einstellungen später noch anpassen."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
 msgid ""
@@ -478,14 +481,15 @@ msgstr ""
 "Bist du dir sicher das du die Änderung jetzt anwenden möchtest?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "All plugins must have valid selections for %s to run.  If you are unable to "
 "make a valid selection due to missing plugins or an incomplete install of "
 "%s, then press Cancel to close the Configuration panel."
 msgstr ""
-"Alle Plugins müssen korrekt eingestellt sein, ansonsten kann PCSX2 nicht "
-"funktionieren. Falls du keine gültige Konfiguration erstellen kannst, drücke "
+"Alle Plugins müssen korrekt eingestellt sein, ansonsten kann %s nicht "
+"funktionieren. Falls du wegen fehlender Plugins oder einer unvollständigen "
+"%s Installation keine gültige Konfiguration erstellen kannst, wähle "
 "Abbrechen."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
