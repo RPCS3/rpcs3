@@ -221,3 +221,15 @@ int cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	return CELL_OK;
 }
+
+int cellPadInfoPressMode(u32 port_no)
+{
+	sys_io.Log("cellPadInfoPressMode(port_no=%d)", port_no);
+	return CELL_OK;
+}
+
+int cellPadInfoSensorMode(u32 port_no)
+{
+	sys_io.Log("cellPadInfoSensorMode(port_no=%d)", port_no);
+	return CELL_OK;
+}

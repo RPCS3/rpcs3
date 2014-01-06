@@ -293,7 +293,7 @@ public:
 			};
 			volatile u64 m_indval;
 		};
-		volatile long m_lock;
+		wxCriticalSection m_lock;
 
 	public:
 
@@ -305,24 +305,19 @@ public:
 		void Init()
 		{
 			m_index = 0;
-			m_lock = 0; //simple lock
 		}
 
 		__forceinline bool Pop(u32& res)
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
-				_mm_lfence();
+				wxCriticalSectionLocker lock(m_lock);
 				if(!m_index) 
 				{
-					m_lock = 0; //release lock
 					return false;
 				}
 				res = m_value[--m_index];
 				m_value[m_index] = 0;
-				_mm_sfence();
-				m_lock = 0;
 				return true;
 			}
 			else
@@ -342,16 +337,12 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
-				_mm_lfence();
+				wxCriticalSectionLocker lock(m_lock);
 				if(m_index >= max_count) 
 				{
-					m_lock = 0; //release lock
 					return false;
 				}
 				m_value[m_index++] = value;
-				_mm_sfence();
-				m_lock = 0;
 				return true;
 			}
 			else
@@ -370,14 +361,11 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
-				_mm_lfence();
+				wxCriticalSectionLocker lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] = value; //last message is overwritten
 				else
 					m_value[m_index++] = value;
-				_mm_sfence();
-				m_lock = 0;
 			}
 			else
 			{ //lock-free
@@ -389,14 +377,11 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
-				_mm_lfence();
+				wxCriticalSectionLocker lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] |= value; //last message is logically ORed
 				else
 					m_value[m_index++] = value;
-				_mm_sfence();
-				m_lock = 0;
 			}
 			else
 			{
@@ -412,8 +397,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				while (_InterlockedExchange(&m_lock, 1));
-				_mm_lfence();
+				wxCriticalSectionLocker lock(m_lock);
 				if(!m_index) 
 					res = 0; //result is undefined
 				else
@@ -421,8 +405,6 @@ public:
 					res = m_value[--m_index];
 					m_value[m_index] = 0;
 				}
-				_mm_sfence();
-				m_lock = 0;
 			}
 			else
 			{ //lock-free
@@ -436,24 +418,30 @@ public:
 			}
 		}
 
-		u32 GetCount() const
+		__forceinline u32 GetCount()
 		{
 			if (max_count > 1 || x86)
 			{
-				while (m_lock);
-				_mm_lfence();	
+				wxCriticalSectionLocker lock(m_lock);
+				return m_index;
 			}
-			return m_index;
+			else
+			{
+				return m_index;
+			}
 		}
 
-		u32 GetFreeCount() const
+		__forceinline u32 GetFreeCount()
 		{
 			if (max_count > 1 || x86)
 			{
-				while (m_lock);
-				_mm_lfence();			
+				wxCriticalSectionLocker lock(m_lock);
+				return max_count - m_index;
 			}
-			return max_count - m_index;
+			else
+			{
+				return max_count - m_index;
+			}
 		}
 
 		void SetValue(u32 value)

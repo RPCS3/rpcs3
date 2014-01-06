@@ -141,10 +141,10 @@ struct Pad
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
 
-		, m_analog_left_x(0)
-		, m_analog_left_y(0)
-		, m_analog_right_x(0)
-		, m_analog_right_y(0)
+		, m_analog_left_x(128)
+		, m_analog_left_y(128)
+		, m_analog_right_x(128)
+		, m_analog_right_y(128)
 
 		, m_press_right(0)
 		, m_press_left(0)
