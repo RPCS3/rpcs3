@@ -14,9 +14,7 @@
 ||																				 ||
 |#################################################################################|
 \*===============================================================================*/
-
-#if defined(SHADER_MODEL) // make safe to include in resource file to enforce dependency
-
+#ifdef SHADER_MODEL
 /*------------------------------------------------------------------------------
 [DEFINITIONS & ON/OFF OPTIONS]
 ------------------------------------------------------------------------------*/
@@ -32,10 +30,10 @@
 #define GAUSSIAN_FILTERING			 0		//#Gaussian Fullscreen Texture Filtering. BiLinear filtering - strong to extra strong filtering of textures. [2D]
 
 //-#[LIGHTING & COLOUR] 	    [1=ON|0=OFF]  #READ: These can all be turned on & off independently of each other. [For High Dynamic Range(HDR) - use Bloom, Tonemapping, & Gamma Correction together]
-#define BLENDED_BLOOM				 1		//#High Quality Bloom, using blend techniques. Blooms naturally, per environment. [For best results: use bloom, tone mapping, & gamma together].
-#define SCENE_TONEMAPPING			 1		//#Scene Tonemapping & RGB Colour Correction. [For best results: use bloom, tone mapping, & gamma together].
+#define BLENDED_BLOOM				 0		//#High Quality Bloom, using blend techniques. Blooms naturally, per environment. [For best results: use bloom, tone mapping, & gamma together].
+#define SCENE_TONEMAPPING			 0		//#Scene Tonemapping & RGB Colour Correction. [For best results: use bloom, tone mapping, & gamma together].
 #define GAMMA_CORRECTION			 1		//#RGB Post Gamma Correction Curve. [For best results: use bloom, tone mapping, & gamma together].
-#define S_CURVE_CONTRAST			 1		//#S-Curve Scene Contrast Enhancement. Naturally adjusts contrast using S-curves.
+#define S_CURVE_CONTRAST			 0		//#S-Curve Scene Contrast Enhancement. Naturally adjusts contrast using S-curves.
 #define TEXTURE_SHARPENING			 1		//#HQ Luma-Based Texture Sharpen, looks similar to a negative mip LOD Bias, enhances texture fidelity.
 #define PIXEL_VIBRANCE			 	 0		//#Pixel Vibrance. Intelligently adjusts pixel vibrance depending on original saturation.
 #define COLOR_GRADING				 0		//#Post-Complement Colour Grading. Alters individual colour components on a scene, to enhance selected colour tones.
@@ -64,8 +62,8 @@
 #define PixelOffset 0.0						//[0.0 to 1.5] Pixel offset amount. If you want to use an st offset, 0.5 is generally recommended. 0.0 is off.
 
 //-[GAUSSIAN OPTIONS]
-#define FilterAmount 0.75					//[0.10 to 1.50] Gaussian filtering strength. Controls the overall strength of the filtering.
-#define GaussianSpread 1.00					//[0.50 to 4.00] The filtering spread & offset levels. Controls the sampling spread of the filtering.
+#define FilterAmount 1.00					//[0.10 to 1.50] Gaussian filtering strength. Controls the overall strength of the filtering.
+#define GaussianSpread 0.75					//[0.50 to 4.00] The filtering spread & offset levels. Controls the sampling spread of the filtering.
 
 //-[BLOOM OPTIONS]
 #define BloomType BlendScreen				//[BlendScreen, BlendOverlay, BlendAddLight] The type of blend for the bloom (Default: BlendScreen). If using BlendOverlay set ToneAmount to 2.20, or it may be too dark.
@@ -90,7 +88,7 @@
 #define CurvesFormula 1						//[1|2] The contrast s-curve you want to use. 1 is a softer curve. 2 is a harsher curve.
 
 //-[SHARPEN OPTIONS]
-#define SharpeningType 2					//[1 or 2] The type of sharpening to use. Type 1 is the original High Pass Gaussian, and type 2 is a new Bicubic Sampling type.
+#define SharpeningType 1					//[1 or 2] The type of sharpening to use. Type 1 is the original High Pass Gaussian, and type 2 is a new Bicubic Sampling type.
 #define SharpenStrength 0.75	   			//[0.10 to 2.00] Strength of the texture sharpening effect. This is the maximum strength that will be used. The clamp below limits the minimum, and maximum that is allowed per pixel.
 #define SharpenClamp 0.020					//[0.005 to 0.500] Reduces the clamping/limiting on the maximum amount of sharpening each pixel recieves. Raise this to reduce the clamping.
 #define SharpenBias 1.25 					//[1.00 to 4.00] Sharpening edge bias. Lower values for clean subtle sharpen, and higher values for a deeper textured sharpen. For SharpeningType 2, best stay under ~2.00, or it may look odd.
@@ -127,7 +125,7 @@
 //-[VIGNETTE OPTIONS]
 #define VignetteRatio 1.77  				//[0.15 to 6.00] Sets the espect ratio of the vignette. 1.77 for 16:9, 1.60 for 16:10, 1.33 for 4:3, 1.00 for 1:1.
 #define VignetteRadius 1.00  				//[0.50 to 3.00] Radius of the vignette effect. Lower values for stronger radial effect from center
-#define VignetteAmount 0.75  				//[0.00 to 2.00] Strength of black edge occlusion. Increase for higher strength, decrease for lower.
+#define VignetteAmount 0.50  				//[0.00 to 2.00] Strength of black edge occlusion. Increase for higher strength, decrease for lower.
 #define VignetteSlope 8 					//[2|4|8|12|16] How far away from the center the vignetting will start.
 
 //-[DITHERING OPTIONS]
@@ -138,11 +136,12 @@
 /*------------------------------------------------------------------------------
 [GLOBALS|FUNCTIONS]
 ------------------------------------------------------------------------------*/
+#if (SHADER_MODEL >= 0x400)
 
 #if (SHADER_MODEL == 0x500)
 #define VS_VERSION vs_5_0
 #define PS_VERSION ps_5_0
-#else
+#elif (SHADER_MODEL == 0x400)
 #define VS_VERSION vs_4_0
 #define PS_VERSION ps_4_0
 #endif
@@ -156,9 +155,12 @@ SamplerState TextureSampler : register(PS_VERSION, s0)
 	AddressV = Clamp;
 };
 
+#define TextureSample(Tex, uv) Texture.Sample(Tex, uv)
+
 cbuffer cb0
 {
-	float4 _rcpFrame : VIEWPORT : register(PS_VERSION, b0);
+	float4 _rcpFrame : VIEWPORT : register(PS_VERSION, c0);
+	float4 _rcpFrameOpt : register(c1);
 	matrix<float, 4, 4>worldMatrix : WORLD;
 	matrix<float, 4, 4>viewMatrix : VIEW;
 	matrix<float, 4, 4>projectionMatrix : PROJECTION;
@@ -181,6 +183,40 @@ struct PS_OUTPUT
 {
 	float4 c : SV_Target0;
 };
+
+#else
+
+texture2D Texture : register(t0);
+sampler2D TextureSampler : register(s0);
+
+#define TextureSample(Tex, uv) tex2D(Tex, uv)
+#define SamplerState sampler2D
+
+float4 _rcpFrame : register(c0);
+float4 _rcpFrameOpt : register(c1);
+static const float GammaConst = 2.2;
+
+struct VS_INPUT
+{
+	float4 p : POSITION;
+	float2 t : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+#if SHADER_MODEL < 0x300
+	float4 p : TEXCOORD1;
+#else
+	float4 p : VPOS;
+#endif
+	float2 t : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+	float4 c : COLOR;
+};
+#endif
 
 //experimental, not used currently.
 float TrueLuminance(float3 color)
@@ -235,7 +271,7 @@ float LinearToRGBGamma(float color, float gamma)
 
 #define PixelSize float2(_rcpFrame.x, _rcpFrame.y)
 #define GammaCorrection(color, gamma) pow(color, gamma)
-#define InverseGammaCorrection(color, gamma) pow(color, 1.0/gamma)
+#define InverseGammaCorrection(color, gamma) pow(color, 1.0/gamma) 
 
 /*------------------------------------------------------------------------------
 [VERTEX CODE SECTION]
@@ -245,9 +281,6 @@ VS_OUTPUT vs_main(VS_INPUT input)
 {
 	VS_OUTPUT output;
 
-	output.p = mul(input.p, worldMatrix);
-	output.p = mul(input.p, viewMatrix);
-	output.p = mul(input.p, projectionMatrix);
 	output.p = input.p;
 	output.t = input.t;
 
@@ -260,7 +293,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 float4 PreGammaPass(float4 color, float2 uv0)
 {
-	color = Texture.Sample(TextureSampler, uv0);
+	color = TextureSample(TextureSampler, uv0);
 
 	color.r = RGBGammaToLinear(color.r, GammaConst);
 	color.g = RGBGammaToLinear(color.g, GammaConst);
@@ -284,6 +317,9 @@ float4 PreGammaPass(float4 color, float2 uv0)
 #define FXAA_GATHER4_ALPHA 1
 #elif (SHADER_MODEL == 0x400)
 #define FXAA_HLSL_4 1
+#define FXAA_GATHER4_ALPHA 0
+#else
+#define FXAA_HLSL_3 1
 #define FXAA_GATHER4_ALPHA 0
 #endif
 
@@ -357,15 +393,19 @@ struct FxaaTex { SamplerState smpl; Texture2D tex; };
 #define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)
 #define FxaaTexAlpha4(t, p) t.tex.GatherAlpha(t.smpl, p)
 #define FxaaTexOffAlpha4(t, p, o) t.tex.GatherAlpha(t.smpl, p, o)
-#define FxaaDiscard clip(-1)
 #define FxaaSat(x) saturate(x)
 
 #elif (FXAA_HLSL_4 == 1)
 struct FxaaTex { SamplerState smpl; Texture2D tex; };
 #define FxaaTexTop(t, p) t.tex.SampleLevel(t.smpl, p, 0.0)
 #define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)
-#define FxaaDiscard clip(-1)
 #define FxaaSat(x) saturate(x)
+#elif (FXAA_HLSL_3 == 1)
+#define FxaaTex sampler2D
+#define int2 float2
+#define FxaaSat(x) saturate(x)
+#define FxaaTexTop(t, p) tex2Dlod(t, float4(p, 0.0, 0.0))
+#define FxaaTexOff(t, p, o, r) tex2Dlod(t, float4(p + (o * r), 0, 0))
 #endif
 
 float FxaaLuma(float4 rgba)
@@ -710,15 +750,19 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	return float4(FxaaTexTop(tex, posM).xyz, lumaM);
 }
 
-float4 FxaaPass(float4 FxaaColor : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 FxaaPass(float4 FxaaColor : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	FxaaTex tex;
+
+#if (SHADER_MODEL >= 0x400)
 	tex.tex = Texture;
 	tex.smpl = TextureSampler;
-
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
-
 	FxaaColor = FxaaPixelShader(uv0, tex, 1.0 / PixelSize.xy, FxaaSubpixMax, FxaaEdgeThreshold, FxaaEdgeThresholdMin);
+#else
+	tex = TextureSampler;
+	FxaaColor = FxaaPixelShader(uv0, tex, PixelSize.xy, FxaaSubpixMax, FxaaEdgeThreshold, FxaaEdgeThresholdMin);
+#endif
 
 	return FxaaColor;
 }
@@ -832,12 +876,16 @@ float Cubic(float x)
 ------------------------------------------------------------------------------*/
 
 #if (BICUBIC_FILTERING == 1)
-float4 BiCubicFilter(SamplerState texSample, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 BiCubicFilter(SamplerState texSample, float2 uv0 : TEXCOORD0)
 {
+#if (SHADER_MODEL >= 0x400)
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
-
 	float texelSizeX = 1.0 / PixelSize.x;
 	float texelSizeY = 1.0 / PixelSize.y;
+#else
+	float texelSizeX = PixelSize.x;
+	float texelSizeY = PixelSize.y;
+#endif
 
 	float4 nSum = (float4)0.0;
 		float4 nDenom = (float4)0.0;
@@ -848,30 +896,34 @@ float4 BiCubicFilter(SamplerState texSample, float2 uv0 : TEXCOORD0) : SV_Target
 	int nX = int(uv0.x * PixelSize.x);
 	int nY = int(uv0.y * PixelSize.y);
 
+#if (SHADER_MODEL >= 0x400)
 	float2 TexCoord1 = float2(float(nX) / PixelSize.x + PixelOffset / PixelSize.x,
 		float(nY) / PixelSize.y + PixelOffset / PixelSize.y);
+#else
+	float2 TexCoord1 = uv0;
+#endif
 
-	for (int m = -1; m <= 2; m++)
-	{
-		for (int n = -1; n <= 2; n++)
+		for (int m = -1; m <= 2; m++)
 		{
-			float4 Samples = Texture.Sample(texSample, TexCoord1 +
-				float2(texelSizeX * float(m), texelSizeY * float(n)));
+			for (int n = -1; n <= 2; n++)
+			{
+				float4 Samples = TextureSample(texSample, TexCoord1 +
+					float2(texelSizeX * float(m), texelSizeY * float(n)));
 
-			float vc1 = Interpolation(float(m) - a);
-			float4 vecCoeff1 = float4(vc1, vc1, vc1, vc1);
+				float vc1 = Interpolation(float(m) - a);
+				float4 vecCoeff1 = float4(vc1, vc1, vc1, vc1);
 
-				float vc2 = Interpolation(-(float(n) - b));
-			float4 vecCoeff2 = float4(vc2, vc2, vc2, vc2);
+					float vc2 = Interpolation(-(float(n) - b));
+				float4 vecCoeff2 = float4(vc2, vc2, vc2, vc2);
 
-				nSum = nSum + (Samples * vecCoeff2 * vecCoeff1);
-			nDenom = nDenom + (vecCoeff2 * vecCoeff1);
+					nSum = nSum + (Samples * vecCoeff2 * vecCoeff1);
+				nDenom = nDenom + (vecCoeff2 * vecCoeff1);
+			}
 		}
-	}
 	return nSum / nDenom;
 }
 
-float4 BiCubicPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 BiCubicPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	color = BiCubicFilter(TextureSampler, uv0);
 	return color;
@@ -883,25 +935,34 @@ float4 BiCubicPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 ------------------------------------------------------------------------------*/
 
 #if (BILINEAR_FILTERING == 1)
-float4 SampleBiLinear(SamplerState texSample, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 SampleBiLinear(SamplerState texSample, float2 uv0 : TEXCOORD0)
 {
+#if (SHADER_MODEL >= 0x400)
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
-
 	float texelSizeX = 1.0 / PixelSize.x;
 	float texelSizeY = 1.0 / PixelSize.y;
+#else
+	float texelSizeX = PixelSize.x;
+	float texelSizeY = PixelSize.y;
+#endif
 
 	int nX = int(uv0.x * PixelSize.x);
 	int nY = int(uv0.y * PixelSize.y);
 
-	float2 texCoord_New = float2((float(nX) + OffsetAmount) / PixelSize.x,
-		(float(nY) + OffsetAmount) / PixelSize.y);
-	// Take nearest two data in current row.
-	float4 SampleA = Texture.Sample(texSample, texCoord_New);
-		float4 SampleB = Texture.Sample(texSample, texCoord_New + float2(texelSizeX, 0.0));
+#if (SHADER_MODEL >= 0x400)
+	float2 texCoord_New = float2(float(nX) / PixelSize.x + PixelOffset / PixelSize.x,
+		float(nY) / PixelSize.y + PixelOffset / PixelSize.y);
+#else
+	float2 texCoord_New = uv0;
+#endif
+
+		// Take nearest two data in current row.
+		float4 SampleA = TextureSample(texSample, texCoord_New);
+		float4 SampleB = TextureSample(texSample, texCoord_New + float2(texelSizeX, 0.0));
 
 		// Take nearest two data in bottom row.
-		float4 SampleC = Texture.Sample(texSample, texCoord_New + float2(0.0, texelSizeY));
-		float4 SampleD = Texture.Sample(texSample, texCoord_New + float2(texelSizeX, texelSizeY));
+		float4 SampleC = TextureSample(texSample, texCoord_New + float2(0.0, texelSizeY));
+		float4 SampleD = TextureSample(texSample, texCoord_New + float2(texelSizeX, texelSizeY));
 
 		float LX = frac(uv0.x * PixelSize.x); //Get Interpolation factor for X direction.
 
@@ -928,46 +989,54 @@ float4 BiLinearPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 ------------------------------------------------------------------------------*/
 
 #if (GAUSSIAN_FILTERING == 1)
-float4 GaussianPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 GaussianPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
+#if (SHADER_MODEL >= 0x400)
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
+#endif
 
+#if (SHADER_MODEL >= 0x400)
 	float2 dx = float2(1.0 / PixelSize.x * GaussianSpread, 0.0);
 		float2 dy = float2(0.0, 1.0 / PixelSize.y * GaussianSpread);
+#else
+	float2 dx = float2(PixelSize.x * GaussianSpread, 0.0);
+		float2 dy = float2(0.0, PixelSize.y * GaussianSpread);
+#endif
+
 
 		float2 dx2 = 2.0 * dx;
 		float2 dy2 = 2.0 * dy;
 
-		float4 gaussian = Texture.Sample(TextureSampler, uv0);
+		float4 gaussian = TextureSample(TextureSampler, uv0);
 
-		gaussian += Texture.Sample(TextureSampler, uv0 - dx2 + dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx + dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx + dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx2 + dy2);
+		gaussian += TextureSample(TextureSampler, uv0 - dx2 + dy2);
+	gaussian += TextureSample(TextureSampler, uv0 - dx + dy2);
+	gaussian += TextureSample(TextureSampler, uv0 + dy2);
+	gaussian += TextureSample(TextureSampler, uv0 + dx + dy2);
+	gaussian += TextureSample(TextureSampler, uv0 + dx2 + dy2);
 
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx2 + dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx + dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx + dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx2 + dy);
+	gaussian += TextureSample(TextureSampler, uv0 - dx2 + dy);
+	gaussian += TextureSample(TextureSampler, uv0 - dx + dy);
+	gaussian += TextureSample(TextureSampler, uv0 + dy);
+	gaussian += TextureSample(TextureSampler, uv0 + dx + dy);
+	gaussian += TextureSample(TextureSampler, uv0 + dx2 + dy);
 
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx2);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx2);
+	gaussian += TextureSample(TextureSampler, uv0 - dx2);
+	gaussian += TextureSample(TextureSampler, uv0 - dx);
+	gaussian += TextureSample(TextureSampler, uv0 + dx);
+	gaussian += TextureSample(TextureSampler, uv0 + dx2);
 
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx2 - dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx - dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx - dy);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx2 - dy);
+	gaussian += TextureSample(TextureSampler, uv0 - dx2 - dy);
+	gaussian += TextureSample(TextureSampler, uv0 - dx - dy);
+	gaussian += TextureSample(TextureSampler, uv0 - dy);
+	gaussian += TextureSample(TextureSampler, uv0 + dx - dy);
+	gaussian += TextureSample(TextureSampler, uv0 + dx2 - dy);
 
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx2 - dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dx - dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 - dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx - dy2);
-	gaussian += Texture.Sample(TextureSampler, uv0 + dx2 - dy2);
+	gaussian += TextureSample(TextureSampler, uv0 - dx2 - dy2);
+	gaussian += TextureSample(TextureSampler, uv0 - dx - dy2);
+	gaussian += TextureSample(TextureSampler, uv0 - dy2);
+	gaussian += TextureSample(TextureSampler, uv0 + dx - dy2);
+	gaussian += TextureSample(TextureSampler, uv0 + dx2 - dy2);
 
 	gaussian /= 25.0;
 
@@ -982,7 +1051,7 @@ float4 GaussianPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 ------------------------------------------------------------------------------*/
 
 #if (GAMMA_CORRECTION == 1)
-float4 PostGammaPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 PostGammaPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	color.r = RGBGammaToLinear(color.r, GammaConst);
 	color.g = RGBGammaToLinear(color.g, GammaConst);
@@ -1003,17 +1072,26 @@ float4 PostGammaPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 ------------------------------------------------------------------------------*/
 
 #if (TEXTURE_SHARPENING == 1)
+#if (SHADER_MODEL >= 0x400)
 #define px 1.0 / PixelSize.x
 #define py 1.0 / PixelSize.y
+#else
+#define px PixelSize.x
+#define py PixelSize.y
+#endif
 #define SharpenLumCoeff float3(0.2126729, 0.7151522, 0.0721750)
 
 #if(SharpeningType == 2)
 float4 SampleBiCubic(SamplerState texSample, float2 uv0)
 {
+#if (SHADER_MODEL >= 0x400)
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
-
 	float texelSizeX = 1.0 / PixelSize.x * SharpenBias;
 	float texelSizeY = 1.0 / PixelSize.y * SharpenBias;
+#else
+	float texelSizeX = PixelSize.x * SharpenBias;
+	float texelSizeY = PixelSize.y * SharpenBias;
+#endif
 
 	float4 nSum = (float4)0.0;
 		float4 nDenom = (float4)0.0;
@@ -1024,13 +1102,17 @@ float4 SampleBiCubic(SamplerState texSample, float2 uv0)
 	int nX = int(uv0.x * PixelSize.x);
 	int nY = int(uv0.y * PixelSize.y);
 
+#if (SHADER_MODEL >= 0x400)
 	float2 uv1 = float2(float(nX) / PixelSize.x, float(nY) / PixelSize.y);
+#else
+	float2 uv1 = uv0;
+#endif
 
 		for (int m = -1; m <= 2; m++)
 		{
 			for (int n = -1; n <= 2; n++)
 			{
-				float4 Samples = Texture.Sample(texSample, uv1 +
+				float4 Samples = TextureSample(texSample, uv1 +
 					float2(texelSizeX * float(m), texelSizeY * float(n)));
 
 				float vc1 = Cubic(float(m) - a);
@@ -1046,14 +1128,14 @@ float4 SampleBiCubic(SamplerState texSample, float2 uv0)
 	return nSum / nDenom;
 }
 
-float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float3 calcSharpen = (SharpenLumCoeff * SharpenStrength);
 
-	float4 blurredColor = SampleBiCubic(TextureSampler, uv0);
-	float3 sharpenedColor = (color.rgb - blurredColor.rgb);
+		float4 blurredColor = SampleBiCubic(TextureSampler, uv0);
+		float3 sharpenedColor = (color.rgb - blurredColor.rgb);
 
-	float sharpenLuma = dot(sharpenedColor, calcSharpen);
+		float sharpenLuma = dot(sharpenedColor, calcSharpen);
 	sharpenLuma = clamp(sharpenLuma, -SharpenClamp, SharpenClamp);
 
 	color.rgb = color.rgb + sharpenLuma;
@@ -1067,21 +1149,23 @@ float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target
 }
 #else
 
-float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float3 blurredColor;
 
+#if (SHADER_MODEL >= 0x400)
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
+#endif
 
-	blurredColor = Texture.SampleLevel(TextureSampler, uv0 + float2(-px, py) * SharpenBias, 0.0).rgb;	//North West
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(px, -py) * SharpenBias, 0.0).rgb;	//South East
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(-px, -py) * SharpenBias, 0.0).rgb;	//South West
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(px, py) * SharpenBias, 0.0).rgb;	//North East
+	blurredColor = TextureSample(TextureSampler, uv0 + float2(-px, py) * SharpenBias).rgb;	//North West
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(px, -py) * SharpenBias).rgb;	//South East
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(-px, -py) * SharpenBias).rgb;	//South West
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(px, py) * SharpenBias).rgb;	//North East
 
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(0.0, py) * SharpenBias, 0.0).rgb;	//North
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(0.0, -py) * SharpenBias, 0.0).rgb;	//South
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(-px, 0.0) * SharpenBias, 0.0).rgb;	//West
-	blurredColor += Texture.SampleLevel(TextureSampler, uv0 + float2(px, 0.0) * SharpenBias, 0.0).rgb;	//East
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(0.0, py) * SharpenBias).rgb;	//North
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(0.0, -py) * SharpenBias).rgb;	//South
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(-px, 0.0) * SharpenBias).rgb;	//West
+	blurredColor += TextureSample(TextureSampler, uv0 + float2(px, 0.0) * SharpenBias).rgb;	//East
 
 	blurredColor /= 8.0;
 
@@ -1108,7 +1192,7 @@ float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target
 ------------------------------------------------------------------------------*/
 
 #if (PIXEL_VIBRANCE == 1)
-float4 VibrancePass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 VibrancePass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float luma = RGBLuminance(color.rgb);
 
@@ -1149,46 +1233,50 @@ float3 BlendOverlay(float3 color, float3 bloom)
 		: (1.0 - 2.0 * (1.0 - bloom.z) * (1.0 - color.z)));
 }
 
-float4 BloomPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 BloomPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float4 bloom;
-
+#if (SHADER_MODEL >= 0x400)
 	float2 dx = float2(1.0 / PixelSize.x * BlendSpread, 0.0);
 		float2 dy = float2(0.0, 1.0 / PixelSize.y * BlendSpread);
+#else
+	float2 dx = float2(PixelSize.x * BlendSpread, 0.0);
+		float2 dy = float2(0.0, PixelSize.y * BlendSpread);
+#endif
 
 		float2 dx2 = 2.0 * dx;
 		float2 dy2 = 2.0 * dy;
 
 		float4 bloomBlend = color * 0.22520613262190495;
 
-		bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 - dx2 + dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 - dx + dy2);
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 + dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 + dx + dy2);
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 + dx2 + dy2);
+		bloomBlend += 0.002589001911021066 * TextureSample(TextureSampler, uv0 - dx2 + dy2);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 - dx + dy2);
+	bloomBlend += 0.024146616900339800 * TextureSample(TextureSampler, uv0 + dy2);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 + dx + dy2);
+	bloomBlend += 0.002589001911021066 * TextureSample(TextureSampler, uv0 + dx2 + dy2);
 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 - dx2 + dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 - dx + dy);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 + dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 + dx + dy);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 + dx2 + dy);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 - dx2 + dy);
+	bloomBlend += 0.044875475183061630 * TextureSample(TextureSampler, uv0 - dx + dy);
+	bloomBlend += 0.100529757860782610 * TextureSample(TextureSampler, uv0 + dy);
+	bloomBlend += 0.044875475183061630 * TextureSample(TextureSampler, uv0 + dx + dy);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 + dx2 + dy);
 
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 - dx2);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 - dx);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 + dx);
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 + dx2);
+	bloomBlend += 0.024146616900339800 * TextureSample(TextureSampler, uv0 - dx2);
+	bloomBlend += 0.100529757860782610 * TextureSample(TextureSampler, uv0 - dx);
+	bloomBlend += 0.100529757860782610 * TextureSample(TextureSampler, uv0 + dx);
+	bloomBlend += 0.024146616900339800 * TextureSample(TextureSampler, uv0 + dx2);
 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 - dx2 - dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 - dx - dy);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 - dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 + dx - dy);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 + dx2 - dy);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 - dx2 - dy);
+	bloomBlend += 0.044875475183061630 * TextureSample(TextureSampler, uv0 - dx - dy);
+	bloomBlend += 0.100529757860782610 * TextureSample(TextureSampler, uv0 - dy);
+	bloomBlend += 0.044875475183061630 * TextureSample(TextureSampler, uv0 + dx - dy);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 + dx2 - dy);
 
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 - dx2 - dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 - dx - dy2);
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 - dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 + dx - dy2);
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 + dx2 - dy2);
+	bloomBlend += 0.002589001911021066 * TextureSample(TextureSampler, uv0 - dx2 - dy2);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 - dx - dy2);
+	bloomBlend += 0.024146616900339800 * TextureSample(TextureSampler, uv0 - dy2);
+	bloomBlend += 0.010778807494659370 * TextureSample(TextureSampler, uv0 + dx - dy2);
+	bloomBlend += 0.002589001911021066 * TextureSample(TextureSampler, uv0 + dx2 - dy2);
 
 	bloomBlend = lerp(color, bloomBlend, BlendPower);
 	bloom.rgb = BloomType(color.rgb, bloomBlend.rgb);
@@ -1249,11 +1337,11 @@ float3 ColorCorrection(float3 color)
 	return color;
 }
 
-float4 TonemapPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 TonemapPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float3 luminanceFactor = 1.0 / FilmicTonemap(Luminance);
 
-	color.rgb = ColorCorrection(color.rgb);
+		color.rgb = ColorCorrection(color.rgb);
 	color.rgb = FilmicTonemap(Exposure * color.rgb);
 	color.rgb = color.rgb * luminanceFactor;
 
@@ -1321,7 +1409,7 @@ float4 TonemapPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 ------------------------------------------------------------------------------*/
 
 #if (S_CURVE_CONTRAST == 1)
-float4 SCurvePass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 SCurvePass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float CurveBlend = CurvesContrast;
 
@@ -1442,7 +1530,7 @@ float GetCelLuminance(float3 rgb)
 	return dot(rgb, celLumaCoef);
 }
 
-float4 CelPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 CelPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float3 yuv;
 	float3 sum = color.rgb;
@@ -1465,7 +1553,7 @@ float4 CelPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 
 	for (int i = 0; i < NUM; i++)
 	{
-		col[i] = Texture.Sample(TextureSampler, uv0 + c[i] * RoundingOffset).rgb;
+		col[i] = TextureSample(TextureSampler, uv0 + c[i] * RoundingOffset).rgb;
 
 #if (ColorRounding == 1)
 		col[i].r = saturate(round(col[i].r * thresholds.r) / thresholds.r);
@@ -1493,11 +1581,11 @@ float4 CelPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 
 	float3 shadedColor = (sum / NUM);
 
-		float edgeX = dot(Texture.Sample(TextureSampler, uv0 + pixel).rgb, celLumaCoef);
-	edgeX = dot(float4(Texture.Sample(TextureSampler, uv0 - pixel).rgb, edgeX), float4(celLumaCoef, -1.0));
+		float edgeX = dot(TextureSample(TextureSampler, uv0 + pixel).rgb, celLumaCoef);
+	edgeX = dot(float4(TextureSample(TextureSampler, uv0 - pixel).rgb, edgeX), float4(celLumaCoef, -1.0));
 
-	float edgeY = dot(Texture.Sample(TextureSampler, uv0 + float2(pixel.x, -pixel.y)).rgb, celLumaCoef);
-	edgeY = dot(float4(Texture.Sample(TextureSampler, uv0 + float2(-pixel.x, pixel.y)).rgb, edgeY), float4(celLumaCoef, -1.0));
+	float edgeY = dot(TextureSample(TextureSampler, uv0 + float2(pixel.x, -pixel.y)).rgb, celLumaCoef);
+	edgeY = dot(float4(TextureSample(TextureSampler, uv0 + float2(-pixel.x, pixel.y)).rgb, edgeY), float4(celLumaCoef, -1.0));
 
 	float edge = dot(float2(edgeX, edgeY), float2(edgeX, edgeY));
 
@@ -1591,10 +1679,10 @@ float HueLerp(float h1, float h2, float v)
 	}
 }
 
-float4 ColorGrading(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
+float4 ColorGrading(float4 color : COLOR0, float2 uv0 : TEXCOORD0)
 {
 	float3 guide = float3(RedGrading, GreenGrading, BlueGrading);
-	float amount = GradingStrength;
+		float amount = GradingStrength;
 	float correlation = Correlation;
 	float concentration = 2.00;
 
@@ -1634,7 +1722,7 @@ float4 ColorGrading(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 ------------------------------------------------------------------------------*/
 
 #if (SCANLINES == 1)
-float4 ScanlinesPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0, float4 FragCoord : SV_Position) : SV_Target0
+float4 ScanlinesPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0, float4 FragCoord : SV_Position)
 {
 
 #if (ScanlineType == 3)
