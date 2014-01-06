@@ -32,7 +32,7 @@ GSDevice11::GSDevice11()
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 
 	UserHacks_NVIDIAHack = !!theApp.GetConfig("UserHacks_NVIDIAHack", 0) && !!theApp.GetConfig("UserHacks", 0);
-
+	Use_FXAA_Shader = !!theApp.GetConfig("Fxaa", 0);
 	m_state.topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	m_state.bf = -1;
 }
@@ -273,17 +273,20 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
 
+	if (Use_FXAA_Shader)
+	{
 #if EXTERNAL_SHADER_LOADING
-	try { 
-		CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps); 
-	} 
-	catch (GSDXRecoverableError) {
-		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps); 
-	}
+		try {
+			CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps);
+		}
+		catch (GSDXRecoverableError) {
+			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+		}
 #else
-	// internal shader
-	CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+		// internal shader
+		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
 #endif
+	}
 	//
 
 	memset(&rd, 0, sizeof(rd));

@@ -113,6 +113,8 @@ class GSDevice9 : public GSDeviceDX
 
 public: // TODO
 
+	bool Use_FXAA_Shader;
+
 	struct
 	{
 		CComPtr<IDirect3DVertexDeclaration9> il;
