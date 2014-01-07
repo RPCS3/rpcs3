@@ -113,7 +113,7 @@ class GSDevice9 : public GSDeviceDX
 
 public: // TODO
 
-	bool Use_FXAA_Shader;
+	bool FFXA_Compiled;
 
 	struct
 	{

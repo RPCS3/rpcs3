@@ -32,7 +32,8 @@ GSDevice11::GSDevice11()
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 
 	UserHacks_NVIDIAHack = !!theApp.GetConfig("UserHacks_NVIDIAHack", 0) && !!theApp.GetConfig("UserHacks", 0);
-	Use_FXAA_Shader = !!theApp.GetConfig("Fxaa", 0);
+	FFXA_Compiled = false;
+
 	m_state.topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	m_state.bf = -1;
 }
@@ -273,6 +274,8 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
 
+	FFXA_Compiled = false;
+	/*
 	if (Use_FXAA_Shader)
 	{
 #if EXTERNAL_SHADER_LOADING
@@ -286,7 +289,8 @@ bool GSDevice11::Create(GSWnd* wnd)
 		// internal shader
 		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
 #endif
-	}
+		FFXA_Compiled = true;
+	}*/
 	//
 
 	memset(&rd, 0, sizeof(rd));
@@ -745,6 +749,20 @@ void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
 
 	FXAAConstantBuffer cb;
 
+	if (!FFXA_Compiled)
+	{
+#if EXTERNAL_SHADER_LOADING
+			try {
+				CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps);
+			}
+			catch (GSDXRecoverableError) {
+				CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+			}
+#else
+			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+#endif
+			FFXA_Compiled = true;
+	}
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
 

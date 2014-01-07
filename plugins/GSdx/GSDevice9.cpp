@@ -28,8 +28,7 @@ GSDevice9::GSDevice9()
 	: m_lost(false)
 {
 	m_rbswapped = true;
-
-	Use_FXAA_Shader = !!theApp.GetConfig("Fxaa", 0);
+	FFXA_Compiled = false;
 
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
@@ -360,6 +359,8 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);	
 
+	FFXA_Compiled = false;
+	/*
 	// fxaa
 	if (Use_FXAA_Shader)
 	{	
@@ -373,7 +374,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 #else
 		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
 #endif
-	}
+	}*/
 	// create shader layout
 
 	VSSelector sel;
@@ -941,6 +942,21 @@ void GSDevice9::DoFXAA(GSTexture* st, GSTexture* dt)
 	GSVector4 dr(0, 0, s.x, s.y);
 
 	FXAAConstantBuffer cb;
+
+	if (!FFXA_Compiled)
+	{
+#if EXTERNAL_SHADER_LOADING
+			try {
+				CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps);
+			}
+			catch (GSDXRecoverableError) {
+				CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+			}
+#else
+			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+#endif
+			FFXA_Compiled = true;
+	}
 
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
