@@ -8,18 +8,17 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2013-12-31 18:12+0100\n"
-"PO-Revision-Date: 2012-08-11 14:08+0900\n"
+"PO-Revision-Date: 2014-01-06 17:23+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
-"Language: \n"
+"Language: ko_KR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
-"X-Poedit-Language: Korean\n"
-"X-Poedit-Country: KOREA, REPUBLIC OF\n"
+"X-Generator: Poedit 1.6\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -422,7 +421,7 @@ msgstr "윈도우GS 모드 사용"
 
 #: pcsx2/gui/AppInit.cpp:238
 msgid "disables display of the gui while running games"
-msgstr "게임 실행중 GUI 표시를 사용안함"
+msgstr "게임 실행중 GUI 표시를 사용 안함"
 
 #: pcsx2/gui/AppInit.cpp:239
 msgid "executes an ELF image"
@@ -438,15 +437,15 @@ msgstr "CDVD 플러그인으로 부팅(Iso파일 변수보다 우선함)"
 
 #: pcsx2/gui/AppInit.cpp:243
 msgid "disables all speedhacks"
-msgstr "모든 스피드핵을 사용안함"
+msgstr "모든 스피드핵을 사용 안함"
 
 #: pcsx2/gui/AppInit.cpp:244
 msgid "use the specified comma or pipe-delimited list of gamefixes."
-msgstr "지정된 콤마 또는 게임수정의 파이프-한계정의 목록을 사용함."
+msgstr "게임수정 리스트에서 지정된 콤마 또는 파이프 구분문자를 사용."
 
 #: pcsx2/gui/AppInit.cpp:245
 msgid "disables fast booting"
-msgstr "빠른 부팅을 사용안함"
+msgstr "빠른 부팅을 사용 안함"
 
 #: pcsx2/gui/AppInit.cpp:247
 msgid "changes the configuration file path"
@@ -560,7 +559,7 @@ msgstr "&저장"
 
 #: pcsx2/gui/AppInit.cpp:687
 msgid "Save &As..."
-msgstr "저장 &다른이름..."
+msgstr "저장 &다른이름"
 
 #: pcsx2/gui/AppInit.cpp:688
 msgid "&Help"
@@ -613,7 +612,7 @@ msgstr "종료"
 
 #: pcsx2/gui/AppMain.cpp:993
 msgid "Executing PS2 Virtual Machine..."
-msgstr "PS2 가상머신 실행..."
+msgstr "PS2 가상머신 실행 중..."
 
 #: pcsx2/gui/AppRes.cpp:72
 msgid "Browse for an Iso that is not in your recent history."
@@ -621,7 +620,7 @@ msgstr "최근 사용기록에 없는 Iso 찾아보기."
 
 #: pcsx2/gui/AppRes.cpp:72
 msgid "Browse..."
-msgstr "찾아보기..."
+msgstr "찾아보기"
 
 #: pcsx2/gui/AppUserMode.cpp:94
 msgid "The following folders exist, but are not writable:"
@@ -699,7 +698,7 @@ msgstr "정말 높은 해상도의 화면장치를 가지고 있는 경우."
 
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Default soft-tone color scheme."
-msgstr "기본의 부드러운 색감 테마."
+msgstr "기본값인 부드러운 색감 테마."
 
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Light theme"
@@ -726,7 +725,7 @@ msgstr "이것이 체크되면 로그 화면이 다른 화면들 위로 보일 �
 
 #: pcsx2/gui/ConsoleLogger.cpp:434
 msgid "&Save..."
-msgstr "&저장..."
+msgstr "&저장"
 
 #: pcsx2/gui/ConsoleLogger.cpp:434
 msgid "Save log contents to file"
@@ -782,7 +781,7 @@ msgstr "모두 안보기"
 
 #: pcsx2/gui/ConsoleLogger.cpp:462
 msgid "Disables all log source filters."
-msgstr "모든 로그소스 필터 사용안함."
+msgstr "모든 로그소스 필터 사용 안함."
 
 #: pcsx2/gui/ConsoleLogger.cpp:464
 msgid "&Log"
@@ -1044,7 +1043,7 @@ msgstr "로그 추적"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:38
 msgid "Auto-eject memory cards when loading savestates"
-msgstr "상태저장 불러올 때 메모리카드 자동-삽입"
+msgstr "상태저장 불러올 때 메모리카드 자동-배출"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:92
 msgid "MemoryCard Manager"
@@ -1157,7 +1156,7 @@ msgstr "App 제거"
 
 #: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
-msgstr "GS 출력 사용안함!"
+msgstr "GS 출력 사용 안함!"
 
 #: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
@@ -1288,7 +1287,7 @@ msgstr "초기화 중..."
 
 #: pcsx2/gui/MainFrame.cpp:403
 msgid "Run ELF..."
-msgstr "ELF 구동..."
+msgstr "ELF 구동"
 
 #: pcsx2/gui/MainFrame.cpp:404
 msgid "For running raw PS2 binaries directly"
@@ -1312,7 +1311,7 @@ msgstr "치트 사용"
 
 #: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Widescreen Patches"
-msgstr "스피드핵 사용"
+msgstr "와이드화면 패치 사용"
 
 #: pcsx2/gui/MainFrame.cpp:430
 msgid "Enable Host Filesystem"
@@ -1417,7 +1416,7 @@ msgstr "멀티탭 2"
 
 #: pcsx2/gui/MainFrame.cpp:484
 msgid "Clear all settings..."
-msgstr "모든설정 지우기..."
+msgstr "모든설정 지우기"
 
 #: pcsx2/gui/MainFrame.cpp:485
 #, c-format
@@ -1430,7 +1429,7 @@ msgstr "에뮬에 대해"
 
 #: pcsx2/gui/MainFrame.cpp:515
 msgid "Logging..."
-msgstr "로그기록..."
+msgstr "로그기록 중..."
 
 #: pcsx2/gui/MainFrame.cpp:592
 msgid "Pause"
@@ -1506,7 +1505,7 @@ msgstr "플러그인이 없음"
 
 #: pcsx2/gui/MainFrame.cpp:716
 msgid "Core GS Settings..."
-msgstr "핵심 GS 설정..."
+msgstr "핵심 GS 설정"
 
 #: pcsx2/gui/MainFrame.cpp:717
 msgid ""
@@ -1516,7 +1515,7 @@ msgstr "PCSX2 핵심 가상머신에 의한 정규화 된 하드웨어 에뮬레
 
 #: pcsx2/gui/MainFrame.cpp:719
 msgid "Window Settings..."
-msgstr "화면 설정..."
+msgstr "화면 설정"
 
 #: pcsx2/gui/MainFrame.cpp:720
 msgid "Modify window and appearance options, including aspect ratio."
@@ -1524,7 +1523,7 @@ msgstr "화면비율을 포함한 창과 형태 옵션을 변경."
 
 #: pcsx2/gui/MainFrame.cpp:727
 msgid "Plugin Settings..."
-msgstr "플러그인 설정..."
+msgstr "플러그인 설정"
 
 #: pcsx2/gui/MainFrame.cpp:728
 #, c-format
@@ -1581,11 +1580,11 @@ msgstr "모든 파일 (*.*)"
 
 #: pcsx2/gui/MainMenuClicks.cpp:269
 msgid "Select CDVD source iso..."
-msgstr "iso 선택..."
+msgstr "iso 선택"
 
 #: pcsx2/gui/MainMenuClicks.cpp:286
 msgid "Select ELF file..."
-msgstr "ELF 파일 선택..."
+msgstr "ELF 파일 선택"
 
 #: pcsx2/gui/MainMenuClicks.cpp:312
 msgid "ISO file not found!"
@@ -1731,7 +1730,7 @@ msgstr "추가"
 #: pcsx2/gui/Panels/CpuPanel.cpp:116 pcsx2/gui/Panels/CpuPanel.cpp:125
 #: pcsx2/gui/Panels/CpuPanel.cpp:182
 msgid "Interpreter"
-msgstr "번역기"
+msgstr "인터프리터"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:117
 msgid "Quite possibly the slowest thing in the universe."
@@ -1763,7 +1762,7 @@ msgstr "EE캐시 사용(느려짐)"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Interpreter only; provided for diagnostic"
-msgstr "번역기에만 분석을 위해서 사용"
+msgstr "인터프리터에만 분석을 위해서 사용"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:169 pcsx2/gui/Panels/CpuPanel.cpp:221
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:99
@@ -1774,7 +1773,7 @@ msgstr "기본값 복구"
 msgid ""
 "Vector Unit Interpreter. Slow and not very compatible. Only use for "
 "diagnostics."
-msgstr "벡터 유닛 번역기. 느리고 호환성도 없음. 분석을 위해서만 사용."
+msgstr "벡터 유닛 인터프리터. 느리고 호환성도 없음. 분석을 위해서만 사용."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:185
 msgid "microVU Recompiler"
@@ -1787,7 +1786,7 @@ msgstr "호환성이 크게 증가된 새 벡터 유닛 리컴파일러. 권장�
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:188
 msgid "superVU Recompiler [legacy]"
-msgstr "슈퍼VU 리컴파일러 [예전것]"
+msgstr "슈퍼VU 리컴파일러 [예전 것]"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:189
 msgid ""
@@ -1833,7 +1832,7 @@ msgstr "와이드 (16:9)"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:46
 msgid "Disable window resize border"
-msgstr "창크기 변경시 경계 사용안함"
+msgstr "창크기 변경시 경계 사용 안함"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:47
 msgid "Always hide mouse cursor"
@@ -1957,7 +1956,7 @@ msgstr "경로3 전송에서 버스방향을 무시 - 핫휠을 위해 사용"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
-msgstr ""
+msgstr "FMV 동영상 재생시 GSdx 소프트웨어 렌더링으로 자동전환"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
@@ -2017,11 +2016,11 @@ msgstr "카드: "
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:531
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:564
 msgid "Create a new memory card."
-msgstr "새 메모리카드 만들기."
+msgstr "새 메모리카드 만들기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:544
 msgid "Rename this memory card ..."
-msgstr "이 메모리카드 이름변경 ..."
+msgstr "이 메모리카드 이름변경"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Insert ..."
@@ -2033,11 +2032,11 @@ msgstr "이 포트에서 카드 꺼내기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Insert this card to a port ..."
-msgstr "포트에 카드 삽입 ..."
+msgstr "포트에 카드 삽입"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:553
 msgid "Create a duplicate of this memory card ..."
-msgstr "이 메모리카드 사본 만들기 ..."
+msgstr "이 메모리카드 사본 만들기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Delete"
@@ -2142,15 +2141,15 @@ msgstr "카드 꺼내기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Insert card ..."
-msgstr "카드 삽입 ..."
+msgstr "카드 삽입"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1067
 msgid "Duplicate card ..."
-msgstr "카드 복사 ..."
+msgstr "카드 복사"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1068
 msgid "Rename card ..."
-msgstr "카드 이름변경 ..."
+msgstr "카드 이름변경"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
 msgid "Delete card"
@@ -2159,7 +2158,7 @@ msgstr "카드 삭제"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1072
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1076
 msgid "Create a new card ..."
-msgstr "새카드 만들기 ..."
+msgstr "새카드 만들기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1080
 msgid "Refresh List"
@@ -2183,7 +2182,7 @@ msgstr "포맷 상태"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr ""
+msgstr "유형"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
@@ -2202,14 +2201,12 @@ msgid "Yes"
 msgstr "예"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PS2"
-msgstr "FPS"
+msgstr "PS2"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PSX"
-msgstr "FPS"
+msgstr "PSX"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
@@ -2282,7 +2279,7 @@ msgstr "로그/덤프 폴더 선택"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:230
 msgid "Applying settings..."
-msgstr "설정 적용..."
+msgstr "설정 적용 중..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:240
 msgid "Shutdown PS2 virtual machine?"
@@ -2294,7 +2291,7 @@ msgstr "최선을 다하고 있습니다!(스타트랙 패러디)"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:318
 msgid "Enumerating available plugins..."
-msgstr "사용가능한 플러그인 검색중..."
+msgstr "사용가능한 플러그인 검색 중..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:351
 msgid "Plugins Search Path:"
@@ -2332,7 +2329,7 @@ msgstr ""
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:722
 msgid "Completing tasks..."
-msgstr "작업 완료중..."
+msgstr "작업 완료 중..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:87
 msgid "Enable speedhacks"
@@ -2347,7 +2344,7 @@ msgstr "안전하고 쉬운 방법은 모든 스피드핵을 사용안하는 것
 msgid ""
 "Resets all speedhack options to their defaults, which consequently turns "
 "them all OFF."
-msgstr "모든 스피드핵 옵션을 기본값으로 합니다, 그 결과 모두 사용안합니다."
+msgstr "모든 스피드핵 옵션을 기본값으로 합니다, 그 결과 모두 사용 안합니다."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:109
 msgid "EE Cyclerate [Not Recommended]"
@@ -2368,7 +2365,8 @@ msgstr "mVU 플래그 핵"
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:148
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
-msgstr "좋은 속도 상승과 높은 호환성; 그래픽문제 유발 가능...[권장]"
+msgstr ""
+"어느 정도 속도가 상승하고 높은 호환성을 지님; 그래픽문제 발생 가능...[권장]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "MTVU (Multi-Threaded microVU1)"
@@ -2378,7 +2376,9 @@ msgstr "MTVU (멀티-스레드 마이크로VU1)"
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
-msgstr "좋은 속도 상승과 높은 호환성; 멈춤 유발 가능...[3코어 이상에서 권장]"
+msgstr ""
+"어느 정도 속도가 상승하고 높은 호환성을 지님; 게임이 멈출 수도 있음...[3코어 "
+"이상에서 권장]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:162
 msgid "Other Hacks"
@@ -2392,7 +2392,7 @@ msgstr "INTC 스핀발견 사용"
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
-msgstr "일부게임에 큰 속도상승, 호환성 부작용 거의 없음.[권장]"
+msgstr "일부게임에서 큰 속도상승, 호환성 부작용 거의 없음.[권장]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid "Enable Wait Loop Detection"
@@ -2401,7 +2401,7 @@ msgstr "대기루프 탐색 사용"
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:168
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
-msgstr "일부게임에 약간의 속도상승, 알려진 부작용 없음.[권장]"
+msgstr "일부게임에서 약간의 속도상승, 알려진 부작용 없음.[권장]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
 msgid "Enable fast CDVD"
@@ -2431,24 +2431,24 @@ msgstr "가상 테마 선택:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:34
 msgid "Disable Framelimiting"
-msgstr "프레임제한 사용안함"
+msgstr "프레임제한 사용 안함"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:35
 msgid ""
 "Useful for running benchmarks. Toggle this option in-game by pressing F4."
-msgstr "벤치마킹에 유용함. F4를 눌러서 게임중 전환가능."
+msgstr "벤치마킹에 유용. F4를 눌러서 게임중 전환가능."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:59
 msgid "Base Framerate Adjust:"
-msgstr "기본 프레임비율 조정:"
+msgstr "기본모드 속도조정:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:65
 msgid "Slow Motion Adjust:"
-msgstr "슬로우모드 조정:"
+msgstr "느린모드 속도조정(단축키 Shift+tab):"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:71
 msgid "Turbo Adjust:"
-msgstr "터보모드 조정:"
+msgstr "터보모드 속도조정(단축키 tab):"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:86
 msgid "NTSC Framerate:"
@@ -2471,7 +2471,7 @@ msgstr ""
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:182
 msgid "Disabled [default]"
-msgstr "사용안함[기본]"
+msgstr "사용 안함[기본]"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:186
 msgid "Skip when on Turbo only (TAB to enable)"
@@ -2505,19 +2505,19 @@ msgstr "동기화된 MTGS 사용"
 msgid ""
 "For troubleshooting potential bugs in the MTGS only, as it is potentially "
 "very slow."
-msgstr "매우 느리기 때문에, MTGS에서만 잠재적인 문제해결을 위해 사용."
+msgstr "매우 느리기 때문에, MTGS에서만 잠재적인 문제해결을 위해 사용합니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
-msgstr "모든 GS 출력 사용안함"
+msgstr "모든 GS 출력 사용 안함"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:299
 msgid ""
 "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 "components."
 msgstr ""
-"모든 GS 플러그인 활동을 완전히 사용안함; EE코어 요소의 이상적인 벤치마킹을 위"
-"함."
+"모든 GS 플러그인 활동을 완전히 사용 안함; EE코어 요소의 이상적인 벤치마킹을 "
+"위한 것입니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
