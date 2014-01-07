@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void cellSync_init();
-Module cellSync(0x0054, cellSync_init);
+Module cellSync("cellSync", cellSync_init);
 
 // Return Codes
 enum
@@ -24,6 +24,7 @@ enum
 
 int cellSyncMutexInitialize(mem32_t mutex)
 {
+	cellSync.Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
 	const u32 mutex_addr = mutex.GetAddr();
 	if (!mutex_addr)
 	{
@@ -34,11 +35,13 @@ int cellSyncMutexInitialize(mem32_t mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 	mutex = 0;
+	_mm_sfence();
 	return CELL_OK;
 }
 
 int cellSyncMutexLock(mem32_t mutex)
 {
+	cellSync.Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
 	const u32 mutex_addr = mutex.GetAddr();
 	if (!mutex_addr)
 	{
@@ -48,7 +51,7 @@ int cellSyncMutexLock(mem32_t mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	while (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24));
+	while (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1 << 24));
 	//need to check how does SPU work with these mutexes, also obtainment order is not guaranteed
 	_mm_lfence();
 	return CELL_OK;
@@ -56,6 +59,7 @@ int cellSyncMutexLock(mem32_t mutex)
 
 int cellSyncMutexTryLock(mem32_t mutex)
 {
+	cellSync.Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
 	const u32 mutex_addr = mutex.GetAddr();
 	if (!mutex_addr)
 	{
@@ -66,7 +70,7 @@ int cellSyncMutexTryLock(mem32_t mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 	//check cellSyncMutexLock
-	if (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24))
+	if (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1 << 24))
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -76,6 +80,7 @@ int cellSyncMutexTryLock(mem32_t mutex)
 
 int cellSyncMutexUnlock(mem32_t mutex)
 {
+	cellSync.Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
 	const u32 mutex_addr = mutex.GetAddr();
 	if (!mutex_addr)
 	{
@@ -87,7 +92,7 @@ int cellSyncMutexUnlock(mem32_t mutex)
 	}
 	//check cellSyncMutexLock
 	_mm_sfence();
-	_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 0);
+	_InterlockedExchange((volatile long*)(Memory + mutex_addr), 0);
 	return CELL_OK;
 }
 

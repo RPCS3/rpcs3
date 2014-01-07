@@ -23,7 +23,17 @@ struct SpuGroupInfo
 	}
 };
 
-u64 g_last_spu_offset = 0;
+u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
+{
+	ELFLoader l(stream);
+	l.LoadInfo();
+	const u32 alloc_size = 256 * 1024 /*0x1000000 - stream.GetSize()*/;
+	u32 spu_offset = Memory.MainMem.Alloc(alloc_size);
+	l.LoadData(spu_offset);
+	spu_ep = l.GetEntry();
+	return spu_offset;
+}
+/*u64 g_last_spu_offset = 0;
 static const u64 g_spu_alloc_size = 0x1000000;
 
 u32 LoadSpuImage(vfsStream& stream, u64 address)
@@ -39,7 +49,7 @@ u32 LoadSpuImage(vfsStream& stream)
 {
 	g_last_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
 	return LoadSpuImage(stream, g_last_spu_offset);
-}
+}*/
 
 //156
 int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
@@ -59,11 +69,12 @@ int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 		return CELL_ENOENT;
 	}
 
-	u32 entry = LoadSpuImage(f);
+	u32 entry;
+	u32 offset = LoadSpuImage(f, entry);
 
 	img->type = 1;
 	img->entry_point = entry;
-	img->segs_addr = 0x0;
+	img->segs_addr = offset;
 	img->nsegs = 0;
 
 	return CELL_OK;
@@ -102,7 +113,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EBUSY;
 	}
 
-	u32 ls_entry = img->entry_point - g_last_spu_offset;
+	u32 spu_ep = (u32)img->entry_point;
 	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
@@ -112,10 +123,10 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//copy SPU image:
 	u32 spu_offset = Memory.MainMem.Alloc(256 * 1024);
-	memcpy(Memory + spu_offset, Memory + g_last_spu_offset, 256 * 1024);
+	memcpy(Memory + spu_offset, Memory + (u32)img->segs_addr, 256 * 1024);
 	//initialize from new place:
 	new_thread.SetOffset(spu_offset);
-	new_thread.SetEntry(ls_entry);
+	new_thread.SetEntry(spu_ep);
 	new_thread.SetName(name);
 	new_thread.SetArg(0, a1);
 	new_thread.SetArg(1, a2);
@@ -128,7 +139,8 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	group_info.threads[spu_num] = &new_thread;
 
 	ConLog.Write("New SPU Thread:");
-	ConLog.Write("ls_entry = 0x%x", ls_entry);
+	ConLog.Write("SPU img offset = 0x%x", (u32)img->segs_addr);
+	ConLog.Write("entry_point = 0x%x", spu_ep);
 	ConLog.Write("name = %s", name.c_str());
 	ConLog.Write("a1 = 0x%x", a1);
 	ConLog.Write("a2 = 0x%x", a2);
