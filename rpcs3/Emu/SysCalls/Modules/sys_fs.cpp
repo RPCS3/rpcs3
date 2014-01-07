@@ -135,6 +135,32 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
+struct CellFsAio
+{
+	be_t<u32> fd;
+	be_t<u64> offset;
+	be_t<u32> buf_addr;
+	be_t<u64> size;
+	be_t<u64> user_data;
+};
+
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t id, mem32_t func_addr)
+{
+	if(!aio.IsGood() || !id.IsGood() || !func_addr.IsGood())
+		return CELL_EFAULT;
+
+	//CellFsAio *xaio, CellFsErrno error, int xid, uint64_t size;
+	Callback callback;
+	callback.SetAddr(func_addr);
+	callback.SetName("cellFsAioReadCallback");
+	MemoryAllocator<be_t<u64>> nread;
+	int error = cellFsRead(aio->fd, id.GetAddr(), aio->size, nread);
+	callback.Handle(aio.GetAddr(), error, id, *nread);
+	callback.Branch(true);
+
+	return CELL_OK;
+}
+
 void sys_fs_init()
 {
 	sys_fs.AddFunc(0x718bf5f8, cellFsOpen);
@@ -155,6 +181,5 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x0e2939e5, cellFsFtruncate);
 	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
 	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
-
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 }

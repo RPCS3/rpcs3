@@ -24,16 +24,21 @@ struct SpuGroupInfo
 };
 
 u64 g_last_spu_offset = 0;
+static const u64 g_spu_alloc_size = 0x1000000;
 
-u32 LoadSpuImage(vfsStream& stream)
+u32 LoadSpuImage(vfsStream& stream, u64 address)
 {
 	ELFLoader l(stream);
 	l.LoadInfo();
-	u32 alloc_size = 0xFFFFED - stream.GetSize();
-	g_last_spu_offset = Memory.MainMem.Alloc(alloc_size);
-	l.LoadData(g_last_spu_offset);
+	l.LoadData(address);
 
-	return g_last_spu_offset + l.GetEntry();
+	return address + l.GetEntry();
+}
+
+u32 LoadSpuImage(vfsStream& stream)
+{
+	g_last_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
+	return LoadSpuImage(stream, g_last_spu_offset);
 }
 
 //156

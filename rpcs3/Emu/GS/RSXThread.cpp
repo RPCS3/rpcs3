@@ -104,6 +104,41 @@ u32 RSXVertexData::GetTypeSize()
 	index = (cmd - a) / m; \
 	case a \
 
+#define case_32(a, m) \
+	case a + m: \
+	case a + m * 2: \
+	case a + m * 3: \
+	case a + m * 4: \
+	case a + m * 5: \
+	case a + m * 6: \
+	case a + m * 7: \
+	case a + m * 8: \
+	case a + m * 9: \
+	case a + m * 10: \
+	case a + m * 11: \
+	case a + m * 12: \
+	case a + m * 13: \
+	case a + m * 14: \
+	case a + m * 15: \
+	case a + m * 16: \
+	case a + m * 17: \
+	case a + m * 18: \
+	case a + m * 19: \
+	case a + m * 20: \
+	case a + m * 21: \
+	case a + m * 22: \
+	case a + m * 23: \
+	case a + m * 24: \
+	case a + m * 25: \
+	case a + m * 26: \
+	case a + m * 27: \
+	case a + m * 28: \
+	case a + m * 29: \
+	case a + m * 30: \
+	case a + m * 31: \
+	index = (cmd - a) / m; \
+	case a \
+
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count)
 {
 #if	CMD_DEBUG
@@ -170,6 +205,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		//ConLog.Warning("texture addr = 0x%x #offset = 0x%x, location=%d", tex_addr, offset, location);
 		tex.SetOffset(tex_addr);
 		tex.SetFormat(cubemap, dimension, format, mipmap);
+
+		if(!tex.m_width || !tex.m_height)
+		{
+			gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			if(!tex.m_width) tex.m_width = re(buffers[m_gcm_current_buffer].width);
+			if(!tex.m_height) tex.m_height = re(buffers[m_gcm_current_buffer].height);
+		}
 	}
 	break;
 
@@ -308,10 +350,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		RSXTexture& tex = m_textures[index];
 
-		const u16 height = args[0] & 0xffff;
-		const u16 width = args[0] >> 16;
+		u16 height = args[0] & 0xffff;
+		u16 width = args[0] >> 16;
 		CMD_LOG("width=%d, height=%d", width, height);
+
+		if(!width || !height)
+		{
+			ConLog.Warning("Bad texture rect: %dx%d (%dx%d)", width, height, tex.m_width, tex.m_height);
+			for(int i=0; i<count; ++i)
+			{
+				ConLog.Warning("*** 0x%x", args[i]);
+			}
+
+			if(!width) width = tex.m_width;
+			if(!height) height = tex.m_height;
+		}
 		tex.SetRect(width, height);
+
+
 	}
 	break;
 
@@ -665,6 +721,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
 	{
+		//ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_LOAD: prog = %d", args[0]);
+
 		m_cur_vertex_prog = &m_vertex_progs[args[0]];
 		m_cur_vertex_prog->data.Clear();
 
@@ -677,8 +735,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_SET_TRANSFORM_PROGRAM:
+	case_32(NV4097_SET_TRANSFORM_PROGRAM, 4):
 	{
+		//ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM[%d](%d)", index, count);
+
 		if(!m_cur_vertex_prog)
 		{
 			ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM: m_cur_vertex_prog == NULL");
