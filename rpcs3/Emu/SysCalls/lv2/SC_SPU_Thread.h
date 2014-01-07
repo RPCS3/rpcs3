@@ -1,12 +1,19 @@
 #pragma once
 
-u32 LoadSpuImage(vfsStream& stream);
+u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 enum
 {
 	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT = 0x0001,
 	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
 	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
+};
+
+enum
+{
+	SYS_SPU_SEGMENT_TYPE_COPY = 0x0001,
+	SYS_SPU_SEGMENT_TYPE_FILL = 0x0002,
+	SYS_SPU_SEGMENT_TYPE_INFO = 0x0004,
 };
 
 struct sys_spu_thread_group_attribute
@@ -35,8 +42,8 @@ struct sys_spu_thread_argument
 struct sys_spu_image
 {
 	be_t<u32> type;
-	be_t<u32> entry_point;
-	be_t<u32> segs_addr;
+	be_t<u32> entry_point; 
+	be_t<u32> segs_addr; //temporarily used as offset of LS image after elf loading
 	be_t<int> nsegs;
 };
 

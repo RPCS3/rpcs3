@@ -186,7 +186,8 @@ struct PamfHeader
 	be_t<u32> mux_rate_max; //== 0x01D470 (400 bps per unit, == 48000000 bps)
 	be_t<u32> mux_rate_min; //== 0x0107AC (?????)
 	u16 reserved2; // ?????
-	be_t<u16> stream_count; //total stream count
+	u8 reserved3;
+	u8 stream_count; //total stream count (reduced to 1 byte)
 	be_t<u16> unk1; //== 1 (?????)
 	be_t<u32> table_data_size; //== table_size - 0x20 == 0x14 + (0x30 * total_stream_num) (?????)
 	//TODO: check relative offset of stream structs (could be from 0x0c to 0x14, currently 0x14)
@@ -245,7 +246,8 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 	cellPamf.Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pOffset.GetAddr(), pSize.GetAddr());
 
-	pOffset = (u64)pAddr->data_offset << 11;
+	const u64 size = (u64)pAddr->data_offset << 11;
+	pOffset = size;
 	pSize = (u64)pAddr->data_size << 11;
 	return CELL_OK;
 }
@@ -327,6 +329,9 @@ int cellPamfReaderGetNumberOfSpecificStreams(mem_ptr_t<CellPamfReader> pSelf, u8
 
 	int counts[6] = {0, 0, 0, 0, 0, 0};
 
+	/*if (!pAddr->magic)
+		return 1; /*hack*/
+
 	for (int i = 0; i < pAddr->stream_count; i++)
 	{
 		switch (pAddr->stream_headers[i].type)
@@ -338,6 +343,7 @@ int cellPamfReaderGetNumberOfSpecificStreams(mem_ptr_t<CellPamfReader> pSelf, u8
 		default:
 			cellPamf.Error("cellPamfReaderGetNumberOfSpecificStreams: unsupported stream type found(0x%x)",
 				pAddr->stream_headers[i].type);
+			break;
 		}
 	}
 
@@ -356,7 +362,7 @@ int cellPamfReaderGetNumberOfSpecificStreams(mem_ptr_t<CellPamfReader> pSelf, u8
 		return counts[CELL_PAMF_STREAM_TYPE_ATRAC3PLUS] + 
 			counts[CELL_PAMF_STREAM_TYPE_PAMF_LPCM] + counts[CELL_PAMF_STREAM_TYPE_AC3];
 	default:
-		return 0;
+			return 0;
 	}
 }
 
@@ -393,6 +399,9 @@ int cellPamfReaderSetStreamWithTypeAndIndex(mem_ptr_t<CellPamfReader> pSelf, u8 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
 	u32 found = 0;
+
+	/*if (!pAddr->magic)
+		return 0; /*hack*/
 
 	for (int i = 0; i < pAddr->stream_count; i++)
 	{

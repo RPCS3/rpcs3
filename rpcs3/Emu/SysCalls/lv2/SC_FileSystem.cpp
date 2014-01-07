@@ -390,14 +390,12 @@ std::atomic<u32> g_FsAioReadID = 0;
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, u32 func_addr)
 {
-	sys_fs.Warning("cellFsAioRead(aio_addr: 0x%x, id_addr: 0x%x, func_addr: 0x%x)", aio.GetAddr(), aio_id.GetAddr(), func_addr);
-
 	ID id;
 	u32 fd = (u32)aio->fd;
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsFileBase& orig_file = *(vfsFileBase*)id.m_data;
 	//open the file again (to prevent access conflicts roughly)
-	vfsStream file = *Emu.GetVFS().Open(orig_file.GetPath(), vfsRead);
+	vfsStream& file = vfsLocalFile(orig_file.GetPath().AfterFirst('/'), vfsRead);
 
 	u64 nbytes = (u64)aio->size;
 	const u32 buf_addr = (u32)aio->buf_addr;
@@ -416,8 +414,11 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, u32 func_addr)
 	const u32 xid = g_FsAioReadID++;
 	aio_id = xid;
 
+	sys_fs.Warning("cellFsAioRead(aio_addr: 0x%x[%s], id_addr: 0x%x, func_addr: 0x%x[res=%d, addr=0x%x])", aio.GetAddr(), 
+		orig_file.GetPath().c_str(), aio_id.GetAddr(), func_addr, res, (u32)aio->buf_addr);
+
 	//TODO: init the callback
-	/*CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	new_thread.SetEntry(func_addr);
 	new_thread.SetPrio(1001);
 	new_thread.SetStackSize(0x10000);
@@ -427,7 +428,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, u32 func_addr)
 	new_thread.SetArg(2, xid); //xid (unique id)
 	new_thread.SetArg(3, res); //size (bytes read)
 	new_thread.Run();
-	new_thread.Exec();*/
+	new_thread.Exec();
 	
 	return CELL_OK;
 }
