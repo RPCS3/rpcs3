@@ -188,7 +188,7 @@ void VFSManagerDialog::OnAdd(wxCommandEvent& event)
 		m_list->SetItemState(i, i == idx ? wxLIST_STATE_SELECTED : ~wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 	}
 
-    wxCommandEvent ce;
+	wxCommandEvent ce;
 	OnEntryConfig(ce);
 }
 

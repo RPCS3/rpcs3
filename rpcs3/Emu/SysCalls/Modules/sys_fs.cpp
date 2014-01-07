@@ -135,6 +135,79 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
+/*struct CellFsAio
+{
+	be_t<u32> fd;
+	be_t<u64> offset;
+	be_t<u32> buf_addr;
+	be_t<u64> size;
+	be_t<u64> user_data;
+};
+
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t id, mem32_t func_addr)
+{
+	if(!aio.IsGood() || !id.IsGood() || !func_addr.IsGood())
+		return CELL_EFAULT;
+
+	//CellFsAio *xaio, CellFsErrno error, int xid, uint64_t size;
+	Callback callback;
+	callback.SetAddr(func_addr);
+	callback.SetName("cellFsAioReadCallback");
+	MemoryAllocator<be_t<u64>> nread;
+	int error = cellFsRead(aio->fd, id.GetAddr(), aio->size, nread);
+	callback.Handle(aio.GetAddr(), error, id, *nread);
+	callback.Branch(true);
+
+	return CELL_OK;
+}*/
+
+std::atomic<u32> g_FsAioReadID = 0;
+
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, u32 func_addr)
+{
+	ID id;
+	u32 fd = (u32)aio->fd;
+	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	vfsFileBase& orig_file = *(vfsFileBase*)id.m_data;
+	//open the file again (to prevent access conflicts roughly)
+	vfsStream& file = vfsLocalFile(orig_file.GetPath().AfterFirst('/'), vfsRead);
+
+	u64 nbytes = (u64)aio->size;
+	const u32 buf_addr = (u32)aio->buf_addr;
+	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
+	{
+		MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
+		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
+	}
+
+	//read data immediately (actually it should be read in special thread)
+	file.Seek((u64)aio->offset);
+	const u64 res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	file.Close();
+
+	//get a unique id for the callback
+	const u32 xid = g_FsAioReadID++;
+	aio_id = xid;
+
+	sys_fs.Warning("cellFsAioRead(aio_addr: 0x%x[%s], id_addr: 0x%x, func_addr: 0x%x[res=%d, addr=0x%x])", aio.GetAddr(), 
+		orig_file.GetPath().c_str(), aio_id.GetAddr(), func_addr, res, (u32)aio->buf_addr);
+
+	//TODO: init the callback
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	new_thread.SetEntry(func_addr);
+	new_thread.SetPrio(1001);
+	new_thread.SetStackSize(0x10000);
+	new_thread.SetName("FsAioReadCallback");
+	new_thread.SetArg(0, aio.GetAddr()); //xaio
+	new_thread.SetArg(1, CELL_OK); //error code
+	new_thread.SetArg(2, xid); //xid (unique id)
+	new_thread.SetArg(3, res); //size (bytes read)
+	new_thread.Run();
+	new_thread.Exec();
+	
+	return CELL_OK;
+}
+
 void sys_fs_init()
 {
 	sys_fs.AddFunc(0x718bf5f8, cellFsOpen);
@@ -155,6 +228,5 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x0e2939e5, cellFsFtruncate);
 	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
 	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
-
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 }

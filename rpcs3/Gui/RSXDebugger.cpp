@@ -493,7 +493,7 @@ void RSXDebugger::GetTexture()
 		m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].m_format));
 		m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].m_mipmap));
 		m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
-		m_list_texture->SetItem(i, 8, wxString::Format("%d x %d",
+		m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
 			render.m_textures[i].m_width,
 			render.m_textures[i].m_height));
 

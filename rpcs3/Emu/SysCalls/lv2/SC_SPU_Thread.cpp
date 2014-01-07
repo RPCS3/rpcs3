@@ -33,6 +33,23 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 	spu_ep = l.GetEntry();
 	return spu_offset;
 }
+/*u64 g_last_spu_offset = 0;
+static const u64 g_spu_alloc_size = 0x1000000;
+
+u32 LoadSpuImage(vfsStream& stream, u64 address)
+{
+	ELFLoader l(stream);
+	l.LoadInfo();
+	l.LoadData(address);
+
+	return address + l.GetEntry();
+}
+
+u32 LoadSpuImage(vfsStream& stream)
+{
+	g_last_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
+	return LoadSpuImage(stream, g_last_spu_offset);
+}*/
 
 //156
 int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)

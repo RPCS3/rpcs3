@@ -20,7 +20,11 @@ struct VFSManagerEntry
 	char* mount;
 	vfsDeviceType device;
 
-	VFSManagerEntry() : device(vfsDevice_LocalFile)
+	VFSManagerEntry()
+		: device(vfsDevice_LocalFile)
+		, device_path("")
+		, path("")
+		, mount("")
 	{
 	}
 };
