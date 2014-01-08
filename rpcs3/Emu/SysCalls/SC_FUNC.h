@@ -302,6 +302,8 @@ public:
 	virtual void operator()() { declCPU(); m_call(ARG(1), ARG(2), ARG(3), ARG(4), ARG(5), ARG(6), ARG(7), ARG(8), ARG(9), ARG(10), ARG(11), ARG(12)); }
 };
 
+#undef ARG
+
 template<typename TR>
 func_caller* bind_func(TR (*call)())
 {
@@ -379,5 +381,3 @@ func_caller* bind_func(TR (*call)(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
 	return new binder_func_12<TR, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(call);
 }
-
-#undef ARG(n)
