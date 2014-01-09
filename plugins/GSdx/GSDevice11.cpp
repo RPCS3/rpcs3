@@ -740,15 +740,10 @@ void GSDevice11::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool line
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
 }
 
-void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
+// This shouldn't be necessary, we have some bug corrupting memory
+// and for some reason isolating this code makes the plugin not crash
+void GSDevice11::InitFXAA()
 {
-	GSVector2i s = dt->GetSize();
-
-	GSVector4 sr(0, 0, 1, 1);
-	GSVector4 dr(0, 0, s.x, s.y);
-
-	FXAAConstantBuffer cb;
-
 	if (!FFXA_Compiled)
 	{
 #if EXTERNAL_SHADER_LOADING
@@ -763,6 +758,18 @@ void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
 #endif
 			FFXA_Compiled = true;
 	}
+}
+
+void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	FXAAConstantBuffer cb;
+
+	InitFXAA();
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
 

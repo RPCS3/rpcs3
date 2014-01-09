@@ -39,6 +39,8 @@ class GSDevice11 : public GSDeviceDX
 	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 
+	void InitFXAA(); // Bug workaround! Stack corruption? Heap corruption? No idea
+
 	//
 
 	CComPtr<ID3D11Device> m_dev;
