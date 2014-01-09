@@ -138,10 +138,10 @@
 ------------------------------------------------------------------------------*/
 #if (SHADER_MODEL >= 0x400)
 
-#if (SHADER_MODEL == 0x500)
+#if (SHADER_MODEL >= 0x500)
 #define VS_VERSION vs_5_0
 #define PS_VERSION ps_5_0
-#elif (SHADER_MODEL == 0x400)
+#elif (SHADER_MODEL >= 0x400)
 #define VS_VERSION vs_4_0
 #define PS_VERSION ps_4_0
 #endif
@@ -312,10 +312,10 @@ float4 PreGammaPass(float4 color, float2 uv0)
 ------------------------------------------------------------------------------*/
 
 #if (UHQ_FXAA == 1)
-#if (SHADER_MODEL == 0x500)
+#if (SHADER_MODEL >= 0x500)
 #define FXAA_HLSL_5 1
 #define FXAA_GATHER4_ALPHA 1
-#elif (SHADER_MODEL == 0x400)
+#elif (SHADER_MODEL >= 0x400)
 #define FXAA_HLSL_4 1
 #define FXAA_GATHER4_ALPHA 0
 #else
