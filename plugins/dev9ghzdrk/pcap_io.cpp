@@ -69,6 +69,11 @@ int pcap_io_init(char *adapter)
 	emu_printf("Opening adapter '%s'...",adapter);
 
 	GetMACAddress(adapter,&host_mac);
+	
+	//Lets take the hosts first 3 bytes to bytes to make it unique
+	virtual_mac.bytes[0] = host_mac.bytes[0]; 
+	virtual_mac.bytes[1] = host_mac.bytes[1];
+	virtual_mac.bytes[2] = host_mac.bytes[2];
 		
 	/* Open the adapter */
 	if ((adhandle= pcap_open_live(adapter,	// name of the device
