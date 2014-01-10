@@ -143,7 +143,6 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	u32 fd = (u32)aio->fd;
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsFileBase& orig_file = *(vfsFileBase*)id.m_data;
-	//open the file again (to prevent access conflicts roughly)
 
 	u64 nbytes = (u64)aio->size;
 	const u32 buf_addr = (u32)aio->buf_addr;
@@ -153,7 +152,8 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	if(Memory.IsGoodAddr(buf_addr))
 	{
-		vfsFile file(orig_file.GetPath().AfterFirst('/'), vfsRead);
+		//open the file again (to prevent access conflicts roughly)
+		vfsLocalFile file(orig_file.GetPath().AfterFirst('/'), vfsRead);
 		if(!Memory.IsGoodAddr(buf_addr, nbytes))
 		{
 			MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
@@ -178,8 +178,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	sys_fs.Warning("cellFsAioRead(aio_addr: 0x%x[%s], id_addr: 0x%x, func_addr: 0x%x[res=%d, addr=0x%x])", aio.GetAddr(), 
 		orig_file.GetPath().c_str(), aio_id.GetAddr(), func.GetAddr(), res, (u32)aio->buf_addr);
 
-	if(func)
-		func(aio, error, xid, res);
+	//if(func) func.async(aio, error, xid, res);
 
 	return CELL_OK;
 }

@@ -21,6 +21,15 @@ enum
 	MFC_MASK_CMD     = 0xffff,
 };
 
+// Atomic Status Update
+enum
+{
+	MFC_PUTLLC_SUCCESS = 0,
+	MFC_PUTLLC_FAILURE = 1, //reservation was lost
+	MFC_PUTLLUC_SUCCESS = 2,
+	MFC_GETLLAR_SUCCESS = 4,
+};
+
 enum
 {
 	MFC_SPU_TO_PPU_MAILBOX_STATUS_MASK		= 0x000000FF,

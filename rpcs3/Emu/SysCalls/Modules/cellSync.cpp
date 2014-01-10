@@ -4,6 +4,7 @@
 
 void cellSync_init();
 Module cellSync("cellSync", cellSync_init);
+wxMutex g_SyncMutex;
 
 // Return Codes
 enum
@@ -22,77 +23,93 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE	= 0x80410114,
 };
 
-int cellSyncMutexInitialize(mem32_t mutex)
+struct CellSyncMutex {
+	be_t<u16> m_freed;
+	be_t<u16> m_order;
+	/*
+	(???) Lock: increase m_order and wait until m_freed == old m_order
+	(???) Unlock: increase m_freed
+	(???) TryLock: ?????
+	*/
+};
+
+int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
 	cellSync.Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	mutex = 0;
-	_mm_sfence();
+	{
+		wxMutexLocker lock(g_SyncMutex);
+		mutex->m_freed = 0;
+		mutex->m_order = 0;
+	}
 	return CELL_OK;
 }
 
-int cellSyncMutexLock(mem32_t mutex)
+int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	while (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1 << 24));
-	//need to check how does SPU work with these mutexes, also obtainment order is not guaranteed
-	_mm_lfence();
+
+	be_t<u16> old_order;
+	{
+		wxMutexLocker lock(g_SyncMutex);
+		cellSync.Log("cellSyncMutexLock(mutex=0x%x[order=%d,freed=%d])", mutex.GetAddr(), (u16)mutex->m_order, (u16)mutex->m_freed);
+		old_order = mutex->m_order;
+		mutex->m_order = mutex->m_order + 1;
+	}
+	while (old_order != mutex->m_freed) Sleep(1);
 	return CELL_OK;
 }
 
-int cellSyncMutexTryLock(mem32_t mutex)
+int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	//check cellSyncMutexLock
-	if (_InterlockedExchange((volatile long*)(Memory + mutex_addr), 1 << 24))
+
+	wxMutexLocker lock(g_SyncMutex);
+	cellSync.Log("cellSyncMutexTryLock(mutex=0x%x[order=%d,freed=%d])", mutex.GetAddr(), (u16)mutex->m_order, (u16)mutex->m_freed);
+	if (mutex->m_order != mutex->m_freed)
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
-	_mm_lfence();
+	mutex->m_order = mutex->m_order + 1;
 	return CELL_OK;
 }
 
-int cellSyncMutexUnlock(mem32_t mutex)
+int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	//check cellSyncMutexLock
-	_mm_sfence();
-	_InterlockedExchange((volatile long*)(Memory + mutex_addr), 0);
+
+	wxMutexLocker lock(g_SyncMutex);
+	cellSync.Log("cellSyncMutexUnlock(mutex=0x%x[order=%d,freed=%d])", mutex.GetAddr(), (u16)mutex->m_order, (u16)mutex->m_freed);
+	mutex->m_freed = mutex->m_freed + 1;
 	return CELL_OK;
 }
 

@@ -470,6 +470,7 @@ public:
 		Channel<1> QueryType;
 		Channel<1> QueryMask;
 		Channel<1> TagStatus;
+		Channel<1> AtomicStat;
 	} Prxy;
 
 	struct
@@ -519,6 +520,58 @@ public:
 		}
 		break;
 
+		case MFC_GETLLAR_CMD:
+		case MFC_PUTLLC_CMD:
+		case MFC_PUTLLUC_CMD:
+		{
+			extern wxMutex g_SyncMutex;
+			const CPUThread& current = *GetCurrentPPCThread();
+			if (op == MFC_GETLLAR_CMD) 
+			{
+				g_SyncMutex.Lock();
+				/* for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
+				{
+					CPUThread& t = *Emu.GetCPU().GetThread(i);
+					if (&t != &current && &t)
+					{
+						while (!t.IsRunning()) Sleep(1);
+						t.Pause();
+					}
+				}
+				for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
+				{
+					CPUThread& t = *Emu.GetCPU().GetThread(i);
+					if (&t != &current && &t)
+					{
+						if (!t.IsPaused()) Sleep(1);
+					}
+				} */
+			}
+			
+			ConLog.Warning("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : "PUTLLUC",
+				lsa, ea, tag, size, cmd);
+			//draft implementation
+			_mm_mfence();
+			dmac.ProcessCmd(op == MFC_GETLLAR_CMD ? MFC_GET_CMD : MFC_PUT_CMD, tag, lsa, ea, 128);
+			Prxy.AtomicStat.PushUncond(op == MFC_GETLLAR_CMD ? MFC_GETLLAR_SUCCESS : op == MFC_PUTLLC_CMD ? MFC_PUTLLC_SUCCESS : MFC_PUTLLUC_SUCCESS);
+			_mm_mfence();
+
+			if (op != MFC_GETLLAR_CMD) 
+			{
+				/*for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
+				{
+					CPUThread& t = *Emu.GetCPU().GetThread(i);
+					if (&t != &current && &t)
+					{
+						t.Resume(); //it's wrong (some threads shall not be resumed)
+					}
+				}*/
+				g_SyncMutex.Unlock();
+			}
+		}
+		break;
+
 		default:
 			ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)", 
 				op, cmd, lsa, ea, tag, size);
@@ -548,6 +601,9 @@ public:
 
 		case SPU_RdSigNotify2:
 			return SPU.SNR[1].GetCount();
+
+		case MFC_RdAtomicStat:
+			return Prxy.AtomicStat.GetCount();
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
@@ -639,6 +695,10 @@ public:
 		case SPU_RdSigNotify2:
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+		break;
+
+		case MFC_RdAtomicStat:
+			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		default:
