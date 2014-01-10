@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "RSXDebugger.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/GS/sysutil_video.h"
 #include "Emu/GS/GCM.h"
 
@@ -26,7 +25,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxBoxSizer& s_tools = *new wxBoxSizer(wxVERTICAL);
 
 	// Controls
-	wxStaticBoxSizer& s_controls = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
+	wxStaticBoxSizer& s_controls = *new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
 
 	// Controls: Address
 	wxStaticBoxSizer& s_controls_addr = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");

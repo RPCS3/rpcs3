@@ -4,7 +4,8 @@
 #include "Emu/Audio/cellAudio.h"
 
 void cellAudio_init();
-Module cellAudio(0x0011, cellAudio_init);
+void cellAudio_unload();
+Module cellAudio(0x0011, cellAudio_init, nullptr, cellAudio_unload);
 
 enum
 {
@@ -81,9 +82,9 @@ struct CellAudioPortConfig
 
 struct CellAudioConfig  //custom structure
 {
-	bool g_is_audio_initialized;
-	bool g_is_audio_port_open;
-	bool g_is_audio_port_started;
+	bool m_is_audio_initialized;
+	bool m_is_audio_port_open;
+	bool m_is_audio_port_started;
 };
 
 CellAudioPortParam* m_param = new CellAudioPortParam;
@@ -95,55 +96,55 @@ typedef void * CellAANHandle;
 
 struct CellSSPlayerConfig
 {
-	u32 channels;
-	u32 outputMode;
+	be_t<u32> channels;
+	be_t<u32> outputMode;
 }; 
 
 struct CellSSPlayerWaveParam 
 { 
 	void *addr;
-	int format;
-	u32 samples;
-	u32 loopStartOffset;
-	u32 startOffset;
+	be_t<s32> format;
+	be_t<u32> samples;
+	be_t<u32> loopStartOffset;
+	be_t<u32> startOffset;
 };
 
 struct CellSSPlayerCommonParam 
 { 
-	u32 loopMode;
-	u32 attackMode;
+	be_t<u32> loopMode;
+	be_t<u32> attackMode;
 };
 
 struct CellSurMixerPosition 
 { 
-	float x;
-	float y;
-	float z;
+	be_t<float> x;
+	be_t<float> y;
+	be_t<float> z;
 };
 
 struct CellSSPlayerRuntimeInfo 
 { 
-	float level;
-	float speed;
+	be_t<float> level;
+	be_t<float> speed;
 	CellSurMixerPosition position;
 };
 
 struct CellSurMixerConfig 
 { 
-	s32 priority;
-	u32 chStrips1;
-	u32 chStrips2;
-	u32 chStrips6;
-	u32 chStrips8;
+	be_t<s32> priority;
+	be_t<u32> chStrips1;
+	be_t<u32> chStrips2;
+	be_t<u32> chStrips6;
+	be_t<u32> chStrips8;
 };
 
 struct CellSurMixerChStripParam 
 { 
-	u32 param;
+	be_t<u32> param;
 	void *attribute;
-	int dBSwitch;
-	float floatVal;
-	int intVal;
+	be_t<s32> dBSwitch;
+	be_t<float> floatVal;
+	be_t<s32> intVal;
 };
 
 CellSSPlayerWaveParam current_SSPlayerWaveParam;
@@ -164,31 +165,31 @@ struct CellSnd3KeyOnParam
 	u8 vel;
 	u8 pan;
 	u8 panEx;
-	s32 addPitch;
+	be_t<s32> addPitch;
 };
 
 struct CellSnd3VoiceBitCtx
 { 
-	u32 core;  //[CELL_SND3_MAX_CORE],  unknown identifier
+	be_t<u32> core;  //[CELL_SND3_MAX_CORE],  unknown identifier
 };
 
 struct CellSnd3RequestQueueCtx
 { 
 	void *frontQueue;
-	u32 frontQueueSize;
+	be_t<u32> frontQueueSize;
 	void *rearQueue;
-	u32 rearQueueSize;
+	be_t<u32> rearQueueSize;
 };
 
 //libsynt2 datatypes
 struct CellSoundSynth2EffectAttr
 { 
-	u16 core;
-	u16 mode;
-	s16 depth_L;
-	s16 depth_R;
-	u16 delay;
-	u16 feedback;
+	be_t<u16> core;
+	be_t<u16> mode;
+	be_t<s16> depth_L;
+	be_t<s16> depth_R;
+	be_t<u16> delay;
+	be_t<u16> feedback;
 };
 
 // libaudio Functions
@@ -196,28 +197,26 @@ struct CellSoundSynth2EffectAttr
 int cellAudioInit()
 {
 	cellAudio.Warning("cellAudioInit()");
-	if(m_config->g_is_audio_initialized == true) return CELL_AUDIO_ERROR_ALREADY_INIT;
-	m_config->g_is_audio_initialized = true;
+	if(m_config->m_is_audio_initialized == true) return CELL_AUDIO_ERROR_ALREADY_INIT;
+	m_config->m_is_audio_initialized = true;
 	return CELL_OK;
 }
 
 int cellAudioQuit()
 {
 	cellAudio.Warning("cellAudioQuit()");
-	if (m_config->g_is_audio_initialized == false) return CELL_AUDIO_ERROR_NOT_INIT;
-	m_config->g_is_audio_initialized = false;
+	if (m_config->m_is_audio_initialized == false) return CELL_AUDIO_ERROR_NOT_INIT;
+	m_config->m_is_audio_initialized = false;
 
-	delete m_config;
 	return CELL_OK;
 }
 
 int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 {
 	cellAudio.Warning("cellAudioPortOpen(audioParam_addr=0x%x,portNum_addr=0x%x)",audioParam.GetAddr(),portNum.GetAddr());
-	UNIMPLEMENTED_FUNC(cellAudio);
 
 	if(!audioParam.IsGood() || !portNum.IsGood()) return CELL_AUDIO_ERROR_PORT_OPEN;
-	m_config->g_is_audio_port_open = true;
+	m_config->m_is_audio_port_open = true;
 	
 	m_param->nChannel = audioParam->nChannel;
 	m_param->nBlock = audioParam->nBlock;
@@ -235,20 +234,22 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 	if(!portConfig.IsGood()) 
 	{
 		return CELL_AUDIO_ERROR_PARAM;
-	};
+	}
 
 	//if(portNum > 7) return CELL_AUDIO_ERROR_PORT_FULL;
 
-	if(m_config->g_is_audio_port_open == false)
+	if(m_config->m_is_audio_port_open == false)
 	{
 		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
 		return CELL_OK;
-	};
+	}
 
-	if(m_config->g_is_audio_port_started == true)
+	if(m_config->m_is_audio_port_started == true)
+	{
 		portConfig->status = CELL_AUDIO_STATUS_RUN;
-
+	}
 	else
+	{
 		portConfig->status = CELL_AUDIO_STATUS_READY;
 		portConfig->nChannel = m_param->nChannel;
 		portConfig->nBlock = m_param->nBlock;
@@ -258,36 +259,41 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 
 		// portAddr - readIndexAddr ==  0xFFF0 on ps3
 		Memory.Write64(portConfig->readIndexAddr, 1);
-		return CELL_OK;
+	}
+
+	return CELL_OK;
 }
 
 int cellAudioPortStart(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortStart(portNum=0x%x)",portNum);
 
-	if (m_config->g_is_audio_port_open == false) return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-		m_config->g_is_audio_port_started = true;
-
+	if (m_config->m_is_audio_port_open == true)
+		return CELL_AUDIO_ERROR_PORT_OPEN;
+	
+	m_config->m_is_audio_port_started = true;
 	return CELL_OK;
 }
 
 int cellAudioPortClose(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortClose(portNum=0x%x)",portNum);
-	if (m_config->g_is_audio_port_open == false) return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-		m_config->g_is_audio_port_open = false;
-
-	UNIMPLEMENTED_FUNC(cellAudio);
+	
+	if (m_config->m_is_audio_port_open == false)
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	
+	m_config->m_is_audio_port_open = false;
 	return CELL_OK;
 }
 
 int cellAudioPortStop(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortStop(portNum=0x%x)",portNum);
-	if (m_config->g_is_audio_port_started == false) return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-		m_config->g_is_audio_port_started = false;
-
-	UNIMPLEMENTED_FUNC(cellAudio);
+	
+	if (m_config->m_is_audio_port_started == false)
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	
+	m_config->m_is_audio_port_started = false;
 	return CELL_OK;
 }
 
@@ -1005,4 +1011,11 @@ void cellAudio_init()
 	cellAudio.AddFunc(0xff3626fd, cellAudioRemoveNotifyEventQueue);
 
 	//TODO: Find addresses for libmixer, libsnd3 and libsynth2 functions
+}
+
+void cellAudio_unload()
+{
+	m_config->m_is_audio_initialized = false;
+	m_config->m_is_audio_port_open = false;
+	m_config->m_is_audio_port_started = false;
 }
