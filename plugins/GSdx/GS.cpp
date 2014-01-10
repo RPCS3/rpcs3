@@ -416,7 +416,13 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 {
+#ifdef _LINUX
+	// Use ogl renderer as default otherwise it crash at startup
+	// GSRenderOGL only GSDeviceOGL (not GSDeviceNULL)
+	int renderer = theApp.GetConfig("renderer", 12);
+#else
 	int renderer = theApp.GetConfig("renderer", 0);
+#endif
 
 	if(flags & 4)
 	{
