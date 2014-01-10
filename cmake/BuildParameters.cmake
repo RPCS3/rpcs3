@@ -34,14 +34,10 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
 endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 
+# Initially stip was disabled on release build but it is not stackstrace friendly!
+# It only cost several MB so disbable it by default
 if(NOT DEFINED CMAKE_BUILD_STRIP)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_BUILD_STRIP TRUE)
-        message(STATUS "Enable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
-    else(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_BUILD_STRIP FALSE)
-        message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
-    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_BUILD_STRIP FALSE)
 endif(NOT DEFINED CMAKE_BUILD_STRIP)
 
 if(NOT DEFINED CMAKE_BUILD_PO)

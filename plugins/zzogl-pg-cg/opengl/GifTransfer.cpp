@@ -97,7 +97,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 				if (path->tag.PRE && (path->tag.FLG == GIF_FLG_PACKED))
 				{
-					u32 tagprim = path->tag.PRIM;
+					u64 tagprim = path->tag.PRIM;
 					GIFRegHandlerPRIM((u32*)&tagprim);
 				}
 			}
