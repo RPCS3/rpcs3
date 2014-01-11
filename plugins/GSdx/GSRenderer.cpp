@@ -550,7 +550,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 				m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case VK_F7:
-			m_shader = (m_shader + 3 + step) % 3;
+			m_shader = (m_shader + 4 + step) % 4;
 			printf("GSdx: Set shader %d.\n", (int)m_shader);
 			return;
 		case VK_DELETE:

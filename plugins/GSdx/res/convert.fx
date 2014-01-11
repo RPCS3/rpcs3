@@ -170,26 +170,36 @@ PS_OUTPUT ps_main4(PS_INPUT input)
 	return output;
 }
 
-PS_OUTPUT ps_main5(PS_INPUT input) // triangular
+PS_OUTPUT ps_main5(PS_INPUT input) // scanlines
 {
 	PS_OUTPUT output;
 	
 	uint4 p = (uint4)input.p;
 
-	// output.c = ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
-	output.c = ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
+	output.c = ps_scanlines(input, p.y % 2);
 
 	return output;
 }
 
-PS_OUTPUT ps_main6(PS_INPUT input) // diagonal (repurposed for scanlines for now)
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
 {
 	PS_OUTPUT output;
 
 	uint4 p = (uint4)input.p;
 
-	output.c = ps_scanlines(input, p.y % 2); // scanlines
-	//output.c = ps_crt(input, (p.x + (p.y % 3)) % 3); // diagonal
+	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
+
+	return output;
+}
+
+PS_OUTPUT ps_main8(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+
+	uint4 p = (uint4)input.p;
+
+	// output.c = ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
+	output.c = ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
 
 	return output;
 }
@@ -240,26 +250,36 @@ PS_OUTPUT ps_main4(PS_INPUT input)
 	return output;
 }
 
-PS_OUTPUT ps_main5(PS_INPUT input) // triangular
+PS_OUTPUT ps_main5(PS_INPUT input) // scanlines
 {
 	PS_OUTPUT output;
 	
+	int4 p = (int4)input.p;
+
+	output.c = ps_scanlines(input, p.y % 2);
+
+	return output;
+}
+
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
+{
+	PS_OUTPUT output;
+
+	int4 p = (int4)input.p;
+
+	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
+
+	return output;
+}
+
+PS_OUTPUT ps_main8(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+
 	int4 p = (int4)input.p;
 
 	// output.c = ps_crt(input, ((p.x + (p.y % 2) * 3) / 2) % 3);
 	output.c = ps_crt(input, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
-	
-	return output;
-}
-
-PS_OUTPUT ps_main6(PS_INPUT input) // diagonal (repurposed for scanlines for now)
-{
-	PS_OUTPUT output;
-
-	int4 p = (int4)input.p;
-
-	output.c = ps_scanlines(input, p.y % 2); // scanlines
-	//output.c = ps_crt(input, (p.x + (p.y % 3)) % 3); // diagonal
 
 	return output;
 }
