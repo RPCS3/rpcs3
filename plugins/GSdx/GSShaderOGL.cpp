@@ -406,11 +406,14 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	header += "#define DISABLE_GL42_image\n";
 #endif
 
-#ifndef ENABLE_GLES
-	// Some driver define the MACRO to 0, others keep it undefined...
-	header += "#ifndef GL_ES\n";
-	header += "#define GL_ES 0\n";
-	header += "#endif\n";
+	// Stupid GL implementation (can't use GL_ES)
+	// AMD/nvidia define it to 0
+	// intel window don't define it
+	// intel linux refuse to define it
+#ifdef ENABLE_GLES
+	header += "#define pGL_ES 1\n";
+#else
+	header += "#define pGL_ES 0\n";
 #endif
 
 	// Allow to puts several shader in 1 files

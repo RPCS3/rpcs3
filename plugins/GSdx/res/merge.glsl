@@ -6,7 +6,7 @@ struct vertex_basic
     vec2 t;
 };
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 in SHADER
 {

@@ -14,7 +14,7 @@ struct vertex_basic
 
 #ifdef FRAGMENT_SHADER
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 in SHADER
 {

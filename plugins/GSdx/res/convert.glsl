@@ -9,7 +9,7 @@ struct vertex_basic
 
 #ifdef VERTEX_SHADER
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 out gl_PerVertex {
     vec4 gl_Position;
     float gl_PointSize;
@@ -28,7 +28,7 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 out SHADER
 {
@@ -64,7 +64,7 @@ void vs_main()
 
 #ifdef FRAGMENT_SHADER
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 in SHADER
 {

@@ -56,7 +56,7 @@ layout(location = 4) in uint  i_z;
 layout(location = 5) in uvec2 i_uv;
 layout(location = 6) in vec4  i_f;
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 out SHADER
 {
@@ -86,7 +86,7 @@ flat layout(location = 2) out vec4 SHADERfc;
 
 #endif
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 out gl_PerVertex {
     invariant vec4 gl_Position;
     float gl_PointSize;
@@ -293,7 +293,7 @@ void gs_main()
 
 #ifdef FRAGMENT_SHADER
 
-#if !GL_ES && __VERSION__ > 140
+#if !pGL_ES && __VERSION__ > 140
 
 in SHADER
 {
@@ -324,7 +324,7 @@ flat layout(location = 2) in vec4 SHADERfc;
 #endif
 
 // Same buffer but 2 colors for dual source blending
-#if GL_ES
+#if pGL_ES
 layout(location = 0) out vec4 SV_Target0;
 #else
 layout(location = 0, index = 0) out vec4 SV_Target0;
@@ -1036,7 +1036,7 @@ vec4 ps_color()
     return c;
 }
 
-#if GL_ES
+#if pGL_ES
 void ps_main()
 {
     vec4 c = ps_color();
@@ -1045,7 +1045,7 @@ void ps_main()
 }
 #endif
 
-#if !GL_ES
+#if !pGL_ES
 void ps_main()
 {
 #if PS_DATE == 3 && !defined(DISABLE_GL42_image)
@@ -1100,6 +1100,6 @@ void ps_main()
 #endif
 
 }
-#endif // !GL_ES
+#endif // !pGL_ES
 
 #endif
