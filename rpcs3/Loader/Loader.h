@@ -2,7 +2,7 @@
 #include "Emu/FS/vfsFileBase.h"
 
 #ifdef _DEBUG	
-	#define LOADER_DEBUG
+	//#define LOADER_DEBUG
 #endif
 
 enum Elf_Machine

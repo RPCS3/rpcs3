@@ -524,50 +524,23 @@ public:
 		case MFC_PUTLLC_CMD:
 		case MFC_PUTLLUC_CMD:
 		{
-			extern wxMutex g_SyncMutex;
-			const CPUThread& current = *GetCurrentPPCThread();
+			extern std::mutex g_SyncMutex;
+			//can provide compatability for CellSyncMutex through SPU<>PPU and SPU<>SPU
 			if (op == MFC_GETLLAR_CMD) 
 			{
-				g_SyncMutex.Lock();
-				/* for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
-				{
-					CPUThread& t = *Emu.GetCPU().GetThread(i);
-					if (&t != &current && &t)
-					{
-						while (!t.IsRunning()) Sleep(1);
-						t.Pause();
-					}
-				}
-				for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
-				{
-					CPUThread& t = *Emu.GetCPU().GetThread(i);
-					if (&t != &current && &t)
-					{
-						if (!t.IsPaused()) Sleep(1);
-					}
-				} */
+				g_SyncMutex.lock();
 			}
 			
 			ConLog.Warning("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : "PUTLLUC",
 				lsa, ea, tag, size, cmd);
-			//draft implementation
-			_mm_mfence();
+
 			dmac.ProcessCmd(op == MFC_GETLLAR_CMD ? MFC_GET_CMD : MFC_PUT_CMD, tag, lsa, ea, 128);
 			Prxy.AtomicStat.PushUncond(op == MFC_GETLLAR_CMD ? MFC_GETLLAR_SUCCESS : op == MFC_PUTLLC_CMD ? MFC_PUTLLC_SUCCESS : MFC_PUTLLUC_SUCCESS);
-			_mm_mfence();
 
-			if (op != MFC_GETLLAR_CMD) 
+			if (op == MFC_PUTLLC_CMD || op == MFC_PUTLLUC_CMD) 
 			{
-				/*for (u32 i = 0; i < Emu.GetCPU().GetThreads().GetCount(); i++)
-				{
-					CPUThread& t = *Emu.GetCPU().GetThread(i);
-					if (&t != &current && &t)
-					{
-						t.Resume(); //it's wrong (some threads shall not be resumed)
-					}
-				}*/
-				g_SyncMutex.Unlock();
+				g_SyncMutex.unlock();
 			}
 		}
 		break;

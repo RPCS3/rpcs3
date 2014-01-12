@@ -3,6 +3,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 extern Module sys_fs;
+extern Array<vfsStream*> FDs;
 
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
@@ -94,7 +95,8 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(stream, flags);
+	fd = FDs.AddCpy(stream);
+	//fd = sys_fs.GetNewId(stream, flags);
 	sys_fs.Warning("cellFsOpen(path: %s): fd == %d", path.mb_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -104,9 +106,12 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 {
 	sys_fs.Log("cellFsRead(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nread_addr: 0x%x)",
 		fd, buf_addr, nbytes, nread.GetAddr());
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
 
 	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
 	{
@@ -126,9 +131,13 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 {
 	sys_fs.Log("cellFsWrite(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nwrite_addr: 0x%x)",
 		fd, buf_addr, nbytes, nwrite.GetAddr());
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
+
 	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
 	{
 		MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
@@ -145,12 +154,17 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 
 int cellFsClose(u32 fd)
 {
-	sys_fs.Log("cellFsClose(fd: %d)", fd);
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	sys_fs.Warning("cellFsClose(fd: %d)", fd);
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
 	file.Close();
-	Emu.GetIdManager().RemoveID(fd);
+	delete FDs[fd];
+	//Emu.GetIdManager().RemoveID(fd);
+	FDs[fd] = nullptr;
 	return CELL_OK;
 }
 
@@ -232,9 +246,12 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 {
 	sys_fs.Log("cellFsFstat(fd: %d, sb_addr: 0x%x)", fd, sb.GetAddr());
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -313,9 +330,12 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 		sys_fs.Error(fd, "Unknown seek whence! (%d)", whence);
 	return CELL_EINVAL;
 	}
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
 	pos = file.Seek(offset, seek_mode);
 	return CELL_OK;
 }
@@ -323,9 +343,12 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 int cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs.Log("cellFsFtruncate(fd: %d, size: %lld)", fd, size);
-	ID id;
-	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	vfsStream& file = *(vfsStream*)id.m_data;
+	//ID id;
+	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
+	if (fd >= FDs.GetCount()) return CELL_ESRCH;
+	if (FDs[fd] == nullptr) return CELL_ESRCH;
+	//vfsStream& file = *(vfsStream*)id.m_data;
+	vfsStream& file = *(vfsStream*)FDs[fd];
 	u64 initialSize = file.GetSize();
 
 	if (initialSize < size)
