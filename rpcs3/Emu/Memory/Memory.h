@@ -425,9 +425,9 @@ public:
 		return Memory.IsGoodAddr(m_addr, sizeof(T));
 	}
 
-	__forceinline operator bool() const
+	__forceinline operator u32() const
 	{
-		return m_addr != 0;
+		return m_addr;
 	}
 
 	__forceinline bool operator != (nullptr_t) const
@@ -590,6 +590,11 @@ public:
 		(be_t<T>&)Memory[this->m_addr] = right;
 
 		return *this;
+	}
+
+	__forceinline T GetValue()
+	{
+		return (be_t<T>&)Memory[this->m_addr];
 	}
 
 	operator const T() const

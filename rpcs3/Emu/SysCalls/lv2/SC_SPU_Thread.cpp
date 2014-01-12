@@ -138,7 +138,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	group_info.threads[spu_num] = &new_thread;
 
-	ConLog.Write("New SPU Thread:");
+	/*ConLog.Write("New SPU Thread:");
 	ConLog.Write("SPU img offset = 0x%x", (u32)img->segs_addr);
 	ConLog.Write("entry_point = 0x%x", spu_ep);
 	ConLog.Write("name = %s", name.c_str());
@@ -147,7 +147,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	ConLog.Write("a3 = 0x%x", a3);
 	ConLog.Write("a4 = 0x%x", a4);
 	ConLog.Write("ls_offset = 0x%x", ((SPUThread&)new_thread).dmac.ls_offset);
-	ConLog.SkipLn();
+	ConLog.SkipLn();*/
 
 	return CELL_OK;
 }

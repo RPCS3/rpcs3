@@ -6,19 +6,25 @@ SysCallBase sc_mem("memory");
 
 int sys_memory_container_create(u32 cid_addr, u32 yield_size)
 {
-	sc_mem.Warning("sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
+	sc_mem.Warning("(HACK!) sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
 
 	if(!Memory.IsGoodAddr(cid_addr, 4))
 	{
 		return CELL_EFAULT;
 	}
 
-	u64 addr = Memory.Alloc(yield_size, 1);
+	yield_size &= ~0xfffff; //round down to 1 MB granularity
+
+	//alignment hack (Memory.Alloc does not support alignment yet): alloc size is increased
+	u64 addr = Memory.Alloc(yield_size + 0x100000, 0x100000); //1 MB alignment (???)
 
 	if(!addr)
 	{
 		return CELL_ENOMEM;
 	}
+
+	//fix alignment:
+	addr = (addr + 0x100000) & ~0xfffff;
 
 	Memory.Write32(cid_addr, sc_mem.GetNewId(new MemoryContainerInfo(addr, yield_size)));
 	return CELL_OK;
@@ -43,18 +49,20 @@ int sys_memory_container_destroy(u32 cid)
 int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 {
 	//0x30000100;
-	sc_mem.Log("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
+	sc_mem.Warning("(HACK!) sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
 	u32 addr;
 	switch(flags)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = Memory.Alloc(size + 0x100000, 0x100000);
+		addr = (addr + 0x100000) & ~0xfffff;
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = Memory.Alloc(size + 0x10000, 0x10000);
+		addr = (addr + 0x10000) & ~0xffff;
 	break;
 
 	default: return CELL_EINVAL;
