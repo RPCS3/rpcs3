@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "MemoryViewer.h"
-#include "Emu/Memory/Memory.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
 	: wxFrame(parent, wxID_ANY, "Memory Viewer", wxDefaultPosition, wxSize(700, 450))
