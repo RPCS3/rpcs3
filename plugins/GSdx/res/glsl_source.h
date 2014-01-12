@@ -1747,7 +1747,7 @@ static const char* fxaa_fx =
 	"#endif\n"
 	"#endif\n"
 	"\n"
-	"#if !GL_ES && __VERSION__ > 140\n"
+	"#if !pGL_ES && __VERSION__ > 140\n"
 	"\n"
 	"in SHADER\n"
 	"{\n"
