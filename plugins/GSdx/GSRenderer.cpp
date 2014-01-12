@@ -533,6 +533,9 @@ void GSRenderer::EndCapture()
 
 void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
+	const unsigned int interlace_nb = 8;
+	const unsigned int post_shader_nb = 4;
+	const unsigned int aspect_ratio_nb = 3;
 #ifdef _WINDOWS
 	if(e->type == KEYPRESS)
 	{
@@ -542,15 +545,15 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		switch(e->key)
 		{
 		case VK_F5:
-			m_interlace = (m_interlace + 8 + step) % 8;
+			m_interlace = (m_interlace + interlace_nb + step) % interlace_nb;
 			printf("GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case VK_F6:
 			if( m_wnd->IsManaged() )
-				m_aspectratio = (m_aspectratio + 3 + step) % 3;
+				m_aspectratio = (m_aspectratio + aspect_ratio_nb + step) % aspect_ratio_nb;
 			return;
 		case VK_F7:
-			m_shader = (m_shader + 4 + step) % 4;
+			m_shader = (m_shader + post_shader_nb + step) % post_shader_nb;
 			printf("GSdx: Set shader %d.\n", (int)m_shader);
 			return;
 		case VK_DELETE:
@@ -576,15 +579,15 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		switch(e->key)
 		{
 		case XK_F5:
-			m_interlace = (m_interlace + 7 + step) % 7;
+			m_interlace = (m_interlace + interlace_nb + step) % interlace_nb;
 			fprintf(stderr, "GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case XK_F6:
 			if( m_wnd->IsManaged() )
-				m_aspectratio = (m_aspectratio + 3 + step) % 3;
+				m_aspectratio = (m_aspectratio + aspect_ratio_nb + step) % aspect_ratio_nb;
 			return;
 		case XK_F7:
-			m_shader = (m_shader + 3 + step) % 3;
+			m_shader = (m_shader + post_shader_nb + step) % post_shader_nb;
 			fprintf(stderr,"GSdx: Set shader %d.\n", (int)m_shader);
 			return;
 		case XK_Delete:

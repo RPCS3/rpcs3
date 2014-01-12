@@ -132,6 +132,17 @@ vec4 ps_crt(uint i)
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 
+vec4 ps_scanlines(int i)
+{
+	float4 mask[2] =
+	{
+		float4(1, 1, 1, 0),
+		float4(0, 0, 0, 0)
+	};
+
+	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
+}
+
 #ifdef ps_main0
 void ps_main0()
 {
@@ -164,11 +175,11 @@ void ps_main7()
 #endif
 
 #ifdef ps_main5
-void ps_main5() // triangular
+void ps_main5() // scanlines
 {
 	highp uvec4 p = uvec4(PSin_p);
 
-	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
+	vec4 c = ps_scanlines(p.y % 2u);
 
     SV_Target0 = c;
 }
@@ -180,6 +191,17 @@ void ps_main6() // diagonal
 	uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt((p.x + (p.y % 3u)) % 3u);
+
+    SV_Target0 = c;
+}
+#endif
+
+#ifdef ps_main8
+void ps_main8() // triangular
+{
+	uvec4 p = uvec4(PSin_p);
+
+	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
 
     SV_Target0 = c;
 }

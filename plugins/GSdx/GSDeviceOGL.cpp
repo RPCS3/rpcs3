@@ -69,19 +69,19 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete (m_vb_sr);
 
 	// Clean m_merge_obj
-	for (uint32 i = 0; i < 2; i++)
+	for (size_t i = 0; i < countof(m_merge_obj.ps); i++)
 		m_shader->Delete(m_merge_obj.ps[i]);
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
 
 	// Clean m_interlace
-	for (uint32 i = 0; i < 2; i++)
+	for (size_t i = 0; i < countof(m_interlace.ps); i++)
 		m_shader->Delete(m_interlace.ps[i]);
 	delete (m_interlace.cb);
 
 	// Clean m_convert
 	m_shader->Delete(m_convert.vs);
-	for (uint32 i = 0; i < 2; i++)
+	for (size_t i = 0; i < countof(m_convert.ps); i++)
 		m_shader->Delete(m_convert.ps[i]);
 	delete m_convert.dss;
 	delete m_convert.bs;

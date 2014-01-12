@@ -476,7 +476,7 @@ class GSDeviceOGL : public GSDevice
 
 	struct {
 		GLuint vs;		// program object
-		GLuint ps[8];	// program object
+		GLuint ps[9];	// program object
 		GLuint ln;		// sampler object
 		GLuint pt;		// sampler object
 		GSDepthStencilOGL* dss;
