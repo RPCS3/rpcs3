@@ -204,6 +204,21 @@ PS_OUTPUT ps_main8(PS_INPUT input) // triangular
 	return output;
 }
 
+static const float PI = 3.14159265359f;
+PS_OUTPUT ps_main9(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+
+	float2 texdim, halfpixel; 
+	Texture.GetDimensions(texdim.x, texdim.y); 
+	if (ddy(input.t.y) * texdim.y > 0.5) 
+		output.c = sample_c(input.t); 
+	else
+		output.c = (0.5 - 0.5 * cos(2 * PI * input.t.y * texdim.y)) * sample_c(float2(input.t.x, (floor(input.t.y * texdim.y) + 0.5) / texdim.y));
+
+	return output;
+}
+
 #elif SHADER_MODEL <= 0x300
 
 PS_OUTPUT ps_main1(PS_INPUT input)
@@ -280,6 +295,21 @@ PS_OUTPUT ps_main8(PS_INPUT input) // triangular
 
 	// output.c = ps_crt(input, ((p.x + (p.y % 2) * 3) / 2) % 3);
 	output.c = ps_crt(input, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
+
+	return output;
+}
+
+static const float PI = 3.14159265359f;
+PS_OUTPUT ps_main9(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+
+	float2 texdim, halfpixel; 
+	Texture.GetDimensions(texdim.x, texdim.y); 
+	if (ddy(input.t.y) * texdim.y > 0.5) 
+		output.c = sample_c(input.t); 
+	else
+		output.c = (0.5 - 0.5 * cos(2 * PI * input.t.y * texdim.y)) * sample_c(float2(input.t.x, (floor(input.t.y * texdim.y) + 0.5) / texdim.y));
 
 	return output;
 }

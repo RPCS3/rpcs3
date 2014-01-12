@@ -106,7 +106,7 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 
 	if(m_current)
 	{
-		static int s_shader[4] = {0, 5, 6, 8}; // FIXME
+		static int s_shader[5] = {0, 5, 6, 8, 9}; // FIXME
 
 		Present(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}

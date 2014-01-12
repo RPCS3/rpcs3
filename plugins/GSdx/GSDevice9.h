@@ -119,7 +119,7 @@ public: // TODO
 	{
 		CComPtr<IDirect3DVertexDeclaration9> il;
 		CComPtr<IDirect3DVertexShader9> vs;
-		CComPtr<IDirect3DPixelShader9> ps[9];
+		CComPtr<IDirect3DPixelShader9> ps[10];
 		Direct3DSamplerState9 ln;
 		Direct3DSamplerState9 pt;
 		Direct3DDepthStencilState9 dss;

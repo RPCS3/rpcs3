@@ -534,7 +534,7 @@ void GSRenderer::EndCapture()
 void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
 	const unsigned int interlace_nb = 8;
-	const unsigned int post_shader_nb = 4;
+	const unsigned int post_shader_nb = 5;
 	const unsigned int aspect_ratio_nb = 3;
 #ifdef _WINDOWS
 	if(e->type == KEYPRESS)
