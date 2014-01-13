@@ -2889,6 +2889,14 @@ Serial = SLUS-20275
 Name   = Kessen 2
 Region = NTSC-U
 Compat = 4
+[patches = 53A803AF]
+	comment=COP2 flag instance patch by refraction
+	// a mac flag check just after a vsub which gets in the way, rearranging
+	patch=0,EE,0016EFB0,word,48438800
+	patch=0,EE,0016EFB4,word,4BE521AC
+	patch=0,EE,0016EFB8,word,30848000
+	patch=0,EE,0016EFBC,word,4BE72B3C
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20277
 Name   = Dynasty Warriors 3
