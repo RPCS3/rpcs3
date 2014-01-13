@@ -304,12 +304,18 @@ PS_OUTPUT ps_main9(PS_INPUT input) // triangular
 {
 	PS_OUTPUT output;
 
-	float2 texdim, halfpixel; 
+	// Needs DX9 conversion
+	/*float2 texdim, halfpixel; 
 	Texture.GetDimensions(texdim.x, texdim.y); 
 	if (ddy(input.t.y) * texdim.y > 0.5) 
 		output.c = sample_c(input.t); 
 	else
 		output.c = (0.5 - 0.5 * cos(2 * PI * input.t.y * texdim.y)) * sample_c(float2(input.t.x, (floor(input.t.y * texdim.y) + 0.5) / texdim.y));
+*/
+
+	// replacement shader
+	int4 p = (int4)input.p;
+	output.c = ps_crt(input, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
 
 	return output;
 }
