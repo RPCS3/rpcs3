@@ -5,6 +5,7 @@
 void sys_fs_init();
 void sys_fs_unload();
 Module sys_fs(0x000e, sys_fs_init, nullptr, sys_fs_unload);
+std::atomic<u32> g_FsAioReadID = 0;
 Array<vfsStream*> FDs;
 
 bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
@@ -137,11 +138,10 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
-std::atomic<u32> g_FsAioReadID = 0;
-
-void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
+void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(u32 xaio_addr, u32 error, int xid, u64 size)> func)
 {
 	vfsFileBase& orig_file = *(vfsFileBase*)FDs[fd];
+	const wxString path = orig_file.GetPath().AfterFirst('/');
 
 	u64 nbytes = (u64)aio->size;
 	const u32 buf_addr = (u32)aio->buf_addr;
@@ -152,14 +152,13 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<
 	if(Memory.IsGoodAddr(buf_addr))
 	{
 		//open the file again (to prevent access conflicts roughly)
-		vfsLocalFile file(orig_file.GetPath().AfterFirst('/'), vfsRead);
+		vfsLocalFile file(path, vfsRead);
 		if(!Memory.IsGoodAddr(buf_addr, nbytes))
 		{
 			MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
 			nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
 		}
 
-		//read data immediately (actually it should be read in special thread)
 		file.Seek((u64)aio->offset);
 		res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 		error = CELL_OK;
@@ -170,17 +169,17 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<
 		error = CELL_EFAULT;
 	}
 
-	//get a unique id for the callback
-	const u32 xid = g_FsAioReadID++;
-	aio_id = xid;
-
 	//start callback thread
-	if(func) 
-		func.async(aio.GetAddr(), error, xid, res);
+	//if(func)
+		//func.async(aio.GetAddr(), error, xid, res);
+
+	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(u32 xaio_addr, u32 error, int xid, u64 size)> func)
 {
+	sys_fs.Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
 	//ID id;
 	u32 fd = (u32)aio->fd;
 	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
@@ -189,12 +188,27 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	//vfsFileBase& orig_file = *(vfsFileBase*)id.m_data;
 	vfsFileBase& orig_file = *(vfsFileBase*)FDs[fd];
 
-	std::thread t(fsAioRead, fd, aio, aio_id, func);
-	t.detach();	
+	//get a unique id for the callback
+	const u32 xid = g_FsAioReadID++;
+	aio_id = xid;
 
-	sys_fs.Warning("cellFsAioRead(aio_addr: 0x%x[%s, addr=0x%x], id_addr: 0x%x, func_addr: 0x%x)", aio.GetAddr(), 
-		orig_file.GetPath().c_str(), (u32)aio->buf_addr, aio_id.GetAddr(), func.GetAddr());
+	//std::thread t(fsAioRead, fd, aio, xid, func);
+	//t.detach();
+	//read data immediately (actually it should be read in special thread):
+	fsAioRead(fd, aio, xid, func);
 
+	return CELL_OK;
+}
+
+int cellFsAioInit(mem8_ptr_t mount_point)
+{
+	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x)", mount_point.GetAddr());
+	return CELL_OK;
+}
+
+int cellFsAioFinish(mem8_ptr_t mount_point)
+{
+	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x)", mount_point.GetAddr());
 	return CELL_OK;
 }
 
@@ -219,6 +233,8 @@ void sys_fs_init()
 	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
 	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
+	sys_fs.AddFunc(0xdb869f20, cellFsAioInit);
+	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
 }
 
 void sys_fs_unload()

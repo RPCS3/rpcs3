@@ -2,6 +2,9 @@
 #include "PPCThread.h"
 #include "Emu/event.h"
 #include "MFC.h"
+#include <mutex>
+
+extern std::mutex g_SyncMutex; //can provide compatability for CellSyncMutex through SPU<>PPU and SPU<>SPU
 
 static const char* spu_reg_name[128] =
 {
@@ -293,7 +296,7 @@ public:
 			};
 			volatile u64 m_indval;
 		};
-		wxCriticalSection m_lock;
+		std::mutex m_lock;
 
 	public:
 
@@ -311,7 +314,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
 				{
 					return false;
@@ -322,7 +325,7 @@ public:
 			}
 			else
 			{ //lock-free
-				if(!m_index)
+				if ((m_indval & 0xffffffff) == 0)
 					return false;
 				else
 				{
@@ -337,7 +340,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 				{
 					return false;
@@ -347,11 +350,12 @@ public:
 			}
 			else
 			{ //lock-free
-				if(m_index)
+				if (m_indval & 0xffffffff)
 					return false;
 				else
 				{
-					m_indval = ((u64)value << 32) | 1;
+					const u64 new_value = ((u64)value << 32) | 1;
+					m_indval = new_value;
 					return true;
 				}
 			}
@@ -361,7 +365,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] = value; //last message is overwritten
 				else
@@ -369,7 +373,8 @@ public:
 			}
 			else
 			{ //lock-free
-				m_indval = ((u64)value << 32) | 1;
+				const u64 new_value = ((u64)value << 32) | 1;
+				m_indval = new_value;
 			}
 		}
 
@@ -377,7 +382,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] |= value; //last message is logically ORed
 				else
@@ -397,7 +402,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
 					res = 0; //result is undefined
 				else
@@ -422,7 +427,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				return m_index;
 			}
 			else
@@ -435,7 +440,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				return max_count - m_index;
 			}
 			else
@@ -524,8 +529,6 @@ public:
 		case MFC_PUTLLC_CMD:
 		case MFC_PUTLLUC_CMD:
 		{
-			extern std::mutex g_SyncMutex;
-			//can provide compatability for CellSyncMutex through SPU<>PPU and SPU<>SPU
 			if (op == MFC_GETLLAR_CMD) 
 			{
 				g_SyncMutex.lock();

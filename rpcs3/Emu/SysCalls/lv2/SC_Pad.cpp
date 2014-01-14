@@ -107,13 +107,36 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		}
 	}
 
+	u16 lx = 128;
+	u16 ly = 128;
+	u16 rx = 128;
+	u16 ry = 128;
+	const Array<AnalogStick>& sticks = pads[port_no].m_sticks;
+	for (u32 s = 0; s < sticks.GetCount(); s++)
+	{
+		u16* res;
+		switch (sticks[s].m_offset)
+		{
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: res = &lx; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: res = &ly; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: res = &rx; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: res = &ry; break;
+		default: continue;
+		}
+
+		if (sticks[s].m_max_pressed && !sticks[s].m_min_pressed)
+			*res = 255;
+		if (sticks[s].m_min_pressed && !sticks[s].m_max_pressed)
+			*res = 0;
+	}
+
 	data.len = re(len);
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]		= re(d1);
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]		= re(d2);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = re(pad.m_analog_right_x);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = re(pad.m_analog_right_y);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]	= re(pad.m_analog_left_x);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]	= re(pad.m_analog_left_y);
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = re(rx);
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = re(ry);
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]	= re(lx);
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]	= re(ly);
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]	= re(pad.m_press_right);
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]		= re(pad.m_press_left);
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_UP]		= re(pad.m_press_up);

@@ -25,9 +25,15 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE	= 0x80410114,
 };
 
+#pragma pack(push, 1)
 struct CellSyncMutex {
-	be_t<u16> m_freed;
-	be_t<u16> m_order;
+	union { 
+		struct {
+			be_t<u16> m_freed;
+			be_t<u16> m_order;
+		};
+		volatile u32 m_data;
+	};
 	/*
 	(???) Initialize: set zeros
 	(???) Lock: increase m_order and wait until m_freed == old m_order
@@ -35,6 +41,7 @@ struct CellSyncMutex {
 	(???) TryLock: ?????
 	*/
 };
+#pragma pack(pop)
 
 int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
@@ -49,10 +56,9 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	{ /* global mutex */
+	{ // global mutex
 		std::lock_guard<std::mutex> lock(g_SyncMutex); //???
-		mutex->m_freed = 0;
-		mutex->m_order = 0;
+		mutex->m_data = 0;
 		return CELL_OK;
 	}
 }
@@ -71,14 +77,14 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 	}
 
 	be_t<u16> old_order;
-	{ /* global mutex */ 
+	{ // global mutex
 		std::lock_guard<std::mutex> lock(g_SyncMutex);
 		old_order = mutex->m_order;
 		mutex->m_order = mutex->m_order + 1;
 	}
 
 	int counter = 0;
-	while (old_order != mutex->m_freed) 
+	while (*(u16*)&old_order != *(u16*)&mutex->m_freed) 
 	{
 		Sleep(1);
 		if (++counter >= 5000)
@@ -89,6 +95,8 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 			break;
 		}
 	}
+	//while (_InterlockedExchange((volatile long*)&mutex->m_data, 1)) Sleep(1);
+	_mm_mfence();
 	return CELL_OK;
 }
 

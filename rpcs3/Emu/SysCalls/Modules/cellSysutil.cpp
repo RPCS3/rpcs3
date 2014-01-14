@@ -234,6 +234,8 @@ int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 	if (!buf.IsGood())
 		return CELL_EFAULT;
 
+	memset(buf, 0, bufsize);
+
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:

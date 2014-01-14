@@ -19,7 +19,7 @@ static const g_module_list[] =
 	{0x0002, "cellHttpUtil"},
 	{0x0003, "cellSsl"},
 	{0x0004, "cellHttps"},
-	{0x0005, "cellVdec"},
+	{0x0005, "libvdec"},
 	{0x0006, "cellAdec"},
 	{0x0007, "cellDmux"},
 	{0x0008, "cellVpost"},

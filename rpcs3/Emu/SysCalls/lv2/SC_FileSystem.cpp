@@ -97,7 +97,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	fd = FDs.AddCpy(stream);
 	//fd = sys_fs.GetNewId(stream, flags);
-	sys_fs.Warning("cellFsOpen(path: %s): fd == %d", path.mb_str(), fd.GetValue());
+	ConLog.Warning("*** cellFsOpen(path: %s): fd=%d", path.mb_str(), fd.GetValue());
 
 	return CELL_OK;
 }
