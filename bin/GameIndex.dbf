@@ -32619,6 +32619,15 @@ Region = PAL-Unk
 Serial = SLES-50578
 Name   = Kessen II
 Region = PAL-Unk
+[patches = 9FAC4FF3]
+	comment=COP2 flag instance patch by refraction
+	// a mac flag check just after a vsub which gets in the way, rearranging
+	patch=0,EE,00170F20,word,48438800
+	patch=0,EE,00170F24,word,4BE521AC
+	patch=0,EE,00170F28,word,30848000
+	patch=0,EE,00170F2C,word,4BE72B3C
+[/patches]
+
 ---------------------------------------------
 Serial = SLES-50579
 Name   = Kessen II
