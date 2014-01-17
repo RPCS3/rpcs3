@@ -24,6 +24,7 @@ public:
 	DynamicMemoryBlock StackMem;
 	MemoryBlock SpuRawMem;
 	MemoryBlock SpuThrMem;
+	VirtualMemoryBlock RSXIOMem;
 
 	struct
 	{
