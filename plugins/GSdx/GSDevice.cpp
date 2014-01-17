@@ -31,6 +31,7 @@ GSDevice::GSDevice()
 	, m_merge(NULL)
 	, m_weavebob(NULL)
 	, m_blend(NULL)
+	, m_shaderfx(NULL)
 	, m_fxaa(NULL)
 	, m_shadeboost(NULL)
 	, m_1x1(NULL)
@@ -48,6 +49,7 @@ GSDevice::~GSDevice()
 	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
+	delete m_shaderfx;
 	delete m_fxaa;
 	delete m_shadeboost;
 	delete m_1x1;
@@ -70,6 +72,7 @@ bool GSDevice::Reset(int w, int h)
 	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
+	delete m_shaderfx;
 	delete m_fxaa;
 	delete m_shadeboost;
 	delete m_1x1;
@@ -78,6 +81,7 @@ bool GSDevice::Reset(int w, int h)
 	m_merge = NULL;
 	m_weavebob = NULL;
 	m_blend = NULL;
+	m_shaderfx = NULL;
 	m_fxaa = NULL;
 	m_shadeboost = NULL;
 	m_1x1 = NULL;
@@ -299,6 +303,26 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 	}
 }
 
+void GSDevice::ExternalFX()
+{
+	GSVector2i s = m_current->GetSize();
+
+	if (m_shaderfx == NULL || m_shaderfx->GetSize() != s)
+	{
+		delete m_shaderfx;
+		m_shaderfx = CreateRenderTarget(s.x, s.y, false);
+	}
+
+	if (m_shaderfx != NULL)
+	{
+		GSVector4 sr(0, 0, 1, 1);
+		GSVector4 dr(0, 0, s.x, s.y);
+
+		StretchRect(m_current, sr, m_shaderfx, dr, 7, false);
+		DoExternalFX(m_shaderfx, m_current);
+	}
+}
+
 void GSDevice::FXAA()
 {
 	GSVector2i s = m_current->GetSize();
@@ -306,7 +330,6 @@ void GSDevice::FXAA()
 	if(m_fxaa == NULL || m_fxaa->GetSize() != s)
 	{
 		delete m_fxaa;
-
 		m_fxaa = CreateRenderTarget(s.x, s.y, false);
 	}
 
@@ -316,7 +339,6 @@ void GSDevice::FXAA()
 		GSVector4 dr(0, 0, s.x, s.y);
 
 		StretchRect(m_current, sr, m_fxaa, dr, 7, false);
-
 		DoFXAA(m_fxaa, m_current);
 	}
 }

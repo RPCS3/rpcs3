@@ -73,6 +73,7 @@ class GSDevice9 : public GSDeviceDX
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
+	void DoExternalFX(GSTexture* st, GSTexture* dt);
 
 	//
 
@@ -114,6 +115,7 @@ class GSDevice9 : public GSDeviceDX
 public: // TODO
 
 	bool FFXA_Compiled;
+	bool ExShader_Compiled;
 
 	struct
 	{
@@ -136,6 +138,11 @@ public: // TODO
 	{
 		CComPtr<IDirect3DPixelShader9> ps[4];
 	} m_interlace;
+
+	struct
+	{
+		CComPtr<IDirect3DPixelShader9> ps;
+	} m_shaderfx;
 
 	struct
 	{

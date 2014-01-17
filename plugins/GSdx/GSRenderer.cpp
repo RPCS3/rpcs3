@@ -41,6 +41,7 @@ GSRenderer::GSRenderer()
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
+	m_shaderfx = !!theApp.GetConfig("shaderfx", 0);
 	m_shadeboost = !!theApp.GetConfig("ShadeBoost", 0);
 }
 
@@ -277,6 +278,11 @@ bool GSRenderer::Merge(int field)
 		if(m_shadeboost)
 		{
 			m_dev->ShadeBoost();
+		}
+
+		if (m_shaderfx)
+		{
+			m_dev->ExternalFX();
 		}
 
 		if(m_fxaa)
@@ -566,7 +572,11 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_PRIOR:
 			m_fxaa = !m_fxaa;
-			printf("GSdx: Post-processing shader is now %s.\n", m_fxaa ? "enabled" : "disabled");
+			printf("GSdx: FXAA anti-aliasing is now %s.\n", m_fxaa ? "enabled" : "disabled");
+			return;
+		case VK_HOME:
+			m_shaderfx = !m_shaderfx;
+			printf("GSdx: External post-processing is now %s.\n", m_shaderfx ? "enabled" : "disabled");
 			return;
 		}
 

@@ -38,9 +38,11 @@ class GSDevice11 : public GSDeviceDX
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
+	void DoExternalFX(GSTexture* st, GSTexture* dt);
 
+	void InitExternalFX();
 	void InitFXAA(); // Bug workaround! Stack corruption? Heap corruption? No idea
-
+	
 	//
 
 	CComPtr<ID3D11Device> m_dev;
@@ -85,6 +87,7 @@ public: // TODO
 
 	bool UserHacks_NVIDIAHack;
 	bool FFXA_Compiled;
+	bool ExShader_Compiled;
 
 	struct
 	{
@@ -109,6 +112,12 @@ public: // TODO
 		CComPtr<ID3D11PixelShader> ps[4];
 		CComPtr<ID3D11Buffer> cb;
 	} m_interlace;
+
+	struct
+	{
+		CComPtr<ID3D11PixelShader> ps;
+		CComPtr<ID3D11Buffer> cb;
+	} m_shaderfx;
 
 	struct 
 	{

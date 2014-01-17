@@ -37,6 +37,7 @@ GPURenderer::GPURenderer(GSDevice* dev)
 	m_aspectratio = theApp.GetConfig("AspectRatio", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
+	m_shaderfx = !!theApp.GetConfig("shaderfx", 0);
 	m_scale = m_mem.GetScale();
 	m_shadeboost = !!theApp.GetConfig("ShadeBoost", 0);
 
@@ -124,7 +125,12 @@ bool GPURenderer::Merge()
 	{
 		m_dev->ShadeBoost();
 	}
-	
+
+	if (m_shaderfx)
+	{
+		m_dev->ExternalFX();
+	}
+
 	if(m_fxaa)
 	{
 		m_dev->FXAA();
@@ -251,6 +257,9 @@ LRESULT GPURenderer::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		case VK_PRIOR:
 			m_fxaa = !m_fxaa;
+			return 0;
+		case VK_HOME:
+			m_shaderfx = !m_shaderfx;
 			return 0;
 		}
 	}

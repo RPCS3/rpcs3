@@ -264,7 +264,19 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);
 
-	// fxaa
+	// External fx shader
+
+	memset(&bd, 0, sizeof(bd));
+
+	bd.ByteWidth = sizeof(ExternalFXConstantBuffer);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_shaderfx.cb);
+
+	ExShader_Compiled = false;
+
+	// Fxaa
 
 	memset(&bd, 0, sizeof(bd));
 
@@ -275,23 +287,6 @@ bool GSDevice11::Create(GSWnd* wnd)
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
 
 	FFXA_Compiled = false;
-	/*
-	if (Use_FXAA_Shader)
-	{
-#if EXTERNAL_SHADER_LOADING
-		try {
-			CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps);
-		}
-		catch (GSDXRecoverableError) {
-			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-		}
-#else
-		// internal shader
-		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-#endif
-		FFXA_Compiled = true;
-	}*/
-	//
 
 	memset(&rd, 0, sizeof(rd));
 
@@ -740,23 +735,53 @@ void GSDevice11::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool line
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
 }
 
+//Included an init function for this also. Just to be safe.
+void GSDevice11::InitExternalFX()
+{
+	if (!ExShader_Compiled)
+	{
+		try {
+			CompileShader("shader.fx", "ps_main", NULL, &m_shaderfx.ps);
+		}
+		catch (GSDXRecoverableError) {
+			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
+		}
+		ExShader_Compiled = true;
+	}
+}
+
+void GSDevice11::DoExternalFX(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	ExternalFXConstantBuffer cb;
+
+	InitExternalFX();
+
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	m_ctx->UpdateSubresource(m_shaderfx.cb, 0, NULL, &cb, 0, 0);
+
+	StretchRect(st, sr, dt, dr, m_shaderfx.ps, m_shaderfx.cb, true);
+}
+
 // This shouldn't be necessary, we have some bug corrupting memory
 // and for some reason isolating this code makes the plugin not crash
 void GSDevice11::InitFXAA()
 {
 	if (!FFXA_Compiled)
 	{
-#if EXTERNAL_SHADER_LOADING
-			try {
-				CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps);
-			}
-			catch (GSDXRecoverableError) {
-				CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-			}
-#else
+		try {
 			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-#endif
-			FFXA_Compiled = true;
+		}
+		catch (GSDXRecoverableError) {
+			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
+		}
+		FFXA_Compiled = true;
 	}
 }
 
@@ -770,6 +795,7 @@ void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
 	FXAAConstantBuffer cb;
 
 	InitFXAA();
+
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
 

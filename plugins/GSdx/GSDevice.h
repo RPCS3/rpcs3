@@ -46,6 +46,15 @@ public:
 	InterlaceConstantBuffer() {memset(this, 0, sizeof(*this));}
 };
 
+class ExternalFXConstantBuffer
+{
+public:
+	GSVector4 rcpFrame;
+	GSVector4 rcpFrameOpt;
+
+	ExternalFXConstantBuffer() { memset(this, 0, sizeof(*this)); }
+};
+
 class FXAAConstantBuffer
 {
 public:
@@ -78,6 +87,7 @@ protected:
 	GSTexture* m_merge;
 	GSTexture* m_weavebob;
 	GSTexture* m_blend;
+	GSTexture* m_shaderfx;
 	GSTexture* m_fxaa;
 	GSTexture* m_shadeboost;
 	GSTexture* m_1x1;
@@ -93,6 +103,7 @@ protected:
 	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
 	virtual void DoFXAA(GSTexture* st, GSTexture* dt) {}
 	virtual void DoShadeBoost(GSTexture* st, GSTexture* dt) {}
+	virtual void DoExternalFX(GSTexture* st, GSTexture* dt) {}
 
 public:
 	GSDevice();
@@ -150,6 +161,7 @@ public:
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
 	void FXAA();
 	void ShadeBoost();
+	void ExternalFX();
 
 	bool ResizeTexture(GSTexture** t, int w, int h);
 

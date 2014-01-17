@@ -38,6 +38,7 @@ protected:
 	int m_dither;
 	int m_aspectratio;
 	bool m_vsync;
+	bool m_shaderfx;
 	bool m_fxaa;
 	bool m_shadeboost;
 	GSVector2i m_scale;
