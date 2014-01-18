@@ -509,3 +509,199 @@ template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }
 template<> __forceinline u64 MemoryBase::ReverseData<2>(u64 val) { return Reverse16(val); }
 template<> __forceinline u64 MemoryBase::ReverseData<4>(u64 val) { return Reverse32(val); }
 template<> __forceinline u64 MemoryBase::ReverseData<8>(u64 val) { return Reverse64(val); }
+
+VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock()
+{
+}
+
+bool VirtualMemoryBlock::IsInMyRange(const u64 addr)
+{
+	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize();
+}
+
+bool VirtualMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
+{
+	return IsInMyRange(addr) && IsInMyRange(addr + size - 1);
+}
+
+bool VirtualMemoryBlock::IsMyAddress(const u64 addr)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
+{
+	if(addr)
+	{
+		if(!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
+			return 0;
+
+		m_mapped_memory.Move(new VirtualMemInfo(addr, realaddr, size));
+		return addr;
+	}
+	else
+	{
+		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - size;)
+		{
+			bool is_good_addr = true;
+
+			for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+			{
+				if((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
+					(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
+				{
+					is_good_addr = false;
+					addr = m_mapped_memory[i].addr + m_mapped_memory[i].size;
+					break;
+				}
+			}
+
+			if(!is_good_addr) continue;
+
+			m_mapped_memory.Move(new VirtualMemInfo(addr, realaddr, size));
+
+			return addr;
+		}
+
+		return 0;
+	}
+}
+
+bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(m_mapped_memory[i].realAddress == realaddr)
+		{
+			m_mapped_memory.RemoveAt(i);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool VirtualMemoryBlock::UnmapAddress(u64 addr)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(m_mapped_memory[i].addr == addr)
+		{
+			m_mapped_memory.RemoveAt(i);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool VirtualMemoryBlock::Read8(const u64 addr, u8* value)
+{
+	u64 realAddr;
+	*value = Memory.Read8(realAddr = getRealAddr(addr));
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Read16(const u64 addr, u16* value)
+{
+	u64 realAddr;
+	*value = Memory.Read16(realAddr = getRealAddr(addr));
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
+{
+	u64 realAddr;
+	*value = Memory.Read32(realAddr = getRealAddr(addr));
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Read64(const u64 addr, u64* value)
+{
+	u64 realAddr;
+	*value = Memory.Read64(realAddr = getRealAddr(addr));
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Read128(const u64 addr, u128* value)
+{
+	u64 realAddr;
+	*value = Memory.Read128(realAddr = getRealAddr(addr));
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Write8(const u64 addr, const u8 value)
+{
+	u64 realAddr;
+	Memory.Write8(realAddr = getRealAddr(addr), value);
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Write16(const u64 addr, const u16 value)
+{
+	u64 realAddr;
+	Memory.Write16(realAddr = getRealAddr(addr), value);
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Write32(const u64 addr, const u32 value)
+{
+	u64 realAddr;
+	Memory.Write32(realAddr = getRealAddr(addr), value);
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Write64(const u64 addr, const u64 value)
+{
+	u64 realAddr;
+	Memory.Write64(realAddr = getRealAddr(addr), value);
+	return realAddr != 0;
+}
+
+bool VirtualMemoryBlock::Write128(const u64 addr, const u128 value)
+{
+	u64 realAddr;
+	Memory.Write128(realAddr = getRealAddr(addr), value);
+	return realAddr != 0;
+}
+
+u64 VirtualMemoryBlock::getRealAddr(u64 addr)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
+		{
+			return m_mapped_memory[i].realAddress + (addr - m_mapped_memory[i].addr);
+		}
+	}
+
+	return 0;
+}
+
+u64 VirtualMemoryBlock::getMappedAddress(u64 realAddress)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
+		{
+			return m_mapped_memory[i].addr + (realAddress - m_mapped_memory[i].realAddress);
+		}
+	}
+
+	return 0;
+}
+
+void VirtualMemoryBlock::Delete()
+{
+	m_mapped_memory.Clear();
+
+	MemoryBlock::Delete();
+}
