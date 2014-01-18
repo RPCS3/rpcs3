@@ -127,7 +127,17 @@ struct GLVertexDecompilerThread : public ThreadBase
 		};
 	} src[3];
 
-	wxString main;
+	struct FuncInfo
+	{
+		u32 offset;
+		wxString name;
+	};
+
+	wxArrayString m_body;
+
+	ArrayF<FuncInfo> m_funcs;
+
+	//wxString main;
 	wxString& m_shader;
 	Array<u32>& m_data;
 	GLParamArray& m_parr;
@@ -138,6 +148,10 @@ struct GLVertexDecompilerThread : public ThreadBase
 		, m_shader(shader)
 		, m_parr(parr)
 	{
+		m_funcs.Add(new FuncInfo());
+		m_funcs[0].offset = 0;
+		m_funcs[0].name = "main";
+		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 	}
 
 	wxString GetMask(bool is_sca);
@@ -145,9 +159,11 @@ struct GLVertexDecompilerThread : public ThreadBase
 	wxString GetScaMask();
 	wxString GetDST(bool is_sca = false);
 	wxString GetSRC(const u32 n, bool is_sca = false);
-	void AddCode(bool is_sca, wxString code, bool src_mask = true);
-	void AddVecCode(const wxString& code, bool src_mask = true);
-	void AddScaCode(const wxString& code);
+	wxString GetFunc();
+	void AddCode(bool is_sca, wxString code, bool src_mask = true, bool set_dst = true);
+	void AddVecCode(const wxString& code, bool src_mask = true, bool set_dst = true);
+	void AddScaCode(const wxString& code, bool set_dst = true);
+	wxString BuildFuncBody(const FuncInfo& func);
 	wxString BuildCode();
 
 	virtual void Task();

@@ -419,11 +419,26 @@ public:
 	{
 	}
 
-	u32 GetAddr() const { return m_addr; }
+	__forceinline u32 GetAddr() const { return m_addr; }
 
-	bool IsGood() const
+	__forceinline bool IsGood() const
 	{
 		return Memory.IsGoodAddr(m_addr, sizeof(T));
+	}
+
+	__forceinline operator u32() const
+	{
+		return m_addr;
+	}
+
+	__forceinline bool operator != (nullptr_t) const
+	{
+		return m_addr != 0;
+	}
+
+	__forceinline bool operator == (nullptr_t) const
+	{
+		return m_addr == 0;
 	}
 };
 
@@ -434,6 +449,9 @@ public:
 	mem_ptr_t(u32 addr) : mem_base_t<T>(addr)
 	{
 	}
+
+	template<typename NT> operator mem_ptr_t<NT>&() { return (mem_ptr_t<NT>&)*this; }
+	template<typename NT> operator const mem_ptr_t<NT>&() const { return (const mem_ptr_t<NT>&)*this; }
 
 	T* operator -> ()
 	{
@@ -513,8 +531,6 @@ public:
 		return (const T&)Memory[this->m_addr + sizeof(T) * index];
 	}
 
-	operator bool() const { return this->m_addr == 0; }
-
 	bool operator == (mem_ptr_t right) const { return this->m_addr == right.m_addr; }
 	bool operator != (mem_ptr_t right) const { return this->m_addr != right.m_addr; }
 	bool operator > (mem_ptr_t right) const { return this->m_addr > right.m_addr; }
@@ -528,6 +544,32 @@ public:
 	bool operator < (T* right) const { return (T*)&Memory[this->m_addr] < right; }
 	bool operator >= (T* right) const { return (T*)&Memory[this->m_addr] >= right; }
 	bool operator <= (T* right) const { return (T*)&Memory[this->m_addr] <= right; }
+};
+
+template<>
+class mem_ptr_t<void> : public mem_base_t<u8>
+{
+public:
+	mem_ptr_t(u32 addr) : mem_base_t<u8>(addr)
+	{
+	}
+
+	template<typename NT> operator mem_ptr_t<NT>&() { return (mem_ptr_t<NT>&)*this; }
+	template<typename NT> operator const mem_ptr_t<NT>&() const { return (const mem_ptr_t<NT>&)*this; }
+
+	bool operator == (mem_ptr_t right) const { return this->m_addr == right.m_addr; }
+	bool operator != (mem_ptr_t right) const { return this->m_addr != right.m_addr; }
+	bool operator > (mem_ptr_t right) const { return this->m_addr > right.m_addr; }
+	bool operator < (mem_ptr_t right) const { return this->m_addr < right.m_addr; }
+	bool operator >= (mem_ptr_t right) const { return this->m_addr >= right.m_addr; }
+	bool operator <= (mem_ptr_t right) const { return this->m_addr <= right.m_addr; }
+
+	bool operator == (void* right) const { return (void*)&Memory[this->m_addr] == right; }
+	bool operator != (void* right) const { return (void*)&Memory[this->m_addr] != right; }
+	bool operator > (void* right) const { return (void*)&Memory[this->m_addr] > right; }
+	bool operator < (void* right) const { return (void*)&Memory[this->m_addr] < right; }
+	bool operator >= (void* right) const { return (void*)&Memory[this->m_addr] >= right; }
+	bool operator <= (void* right) const { return (void*)&Memory[this->m_addr] <= right; }
 };
 
 template<typename T> static bool operator == (T* left, mem_ptr_t<T> right) { return left == (T*)&Memory[right.GetAddr()]; }
@@ -549,6 +591,11 @@ public:
 		(be_t<T>&)Memory[this->m_addr] = right;
 
 		return *this;
+	}
+
+	__forceinline T GetValue()
+	{
+		return (be_t<T>&)Memory[this->m_addr];
 	}
 
 	operator const T() const
@@ -638,6 +685,123 @@ public:
 	u64 GetAddr() const { return m_addr; }
 	void SetAddr(const u64 addr) { m_addr = addr; }
 };
+
+template<typename T> class mem_func_ptr_t;
+
+template<typename RT>
+class mem_func_ptr_t<RT (*)()> : public mem_base_t<u64>
+{
+	__forceinline void call_func(bool is_async)
+	{
+		Callback cb;
+		cb.SetAddr(m_addr);
+		cb.Branch(!is_async);
+	}
+
+public:
+	__forceinline void operator()()
+	{
+		call_func(false);
+	}
+
+	__forceinline void async()
+	{
+		call_func(true);
+	}
+};
+
+template<typename RT, typename T1>
+class mem_func_ptr_t<RT (*)(T1)> : public mem_base_t<u64>
+{
+	__forceinline void call_func(bool is_async, T1 a1)
+	{
+		Callback cb;
+		cb.SetAddr(m_addr);
+		cb.Handle(a1);
+		cb.Branch(!is_async);
+	}
+
+public:
+	__forceinline void operator()(T1 a1)
+	{
+		call_func(false, a1);
+	}
+
+	__forceinline void async(T1 a1)
+	{
+		call_func(true, a1);
+	}
+};
+
+template<typename RT, typename T1, typename T2>
+class mem_func_ptr_t<RT (*)(T1, T2)> : public mem_base_t<u64>
+{
+	__forceinline void call_func(bool is_async, T1 a1, T2 a2)
+	{
+		Callback cb;
+		cb.SetAddr(m_addr);
+		cb.Handle(a1, a2);
+		cb.Branch(!is_async);
+	}
+
+public:
+	__forceinline void operator()(T1 a1, T2 a2)
+	{
+		call_func(false, a1, a2);
+	}
+
+	__forceinline void async(T1 a1, T2 a2)
+	{
+		call_func(true, a1, a2);
+	}
+};
+
+template<typename RT, typename T1, typename T2, typename T3>
+class mem_func_ptr_t<RT (*)(T1, T2, T3)> : public mem_base_t<u64>
+{
+	__forceinline void call_func(bool is_async, T1 a1, T2 a2, T3 a3)
+	{
+		Callback cb;
+		cb.SetAddr(m_addr);
+		cb.Handle(a1, a2, a3);
+		cb.Branch(!is_async);
+	}
+
+public:
+	__forceinline void operator()(T1 a1, T2 a2, T3 a3)
+	{
+		call_func(false, a1, a2, a3);
+	}
+
+	__forceinline void async(T1 a1, T2 a2, T3 a3)
+	{
+		call_func(true, a1, a2, a3);
+	}
+};
+
+template<typename RT, typename T1, typename T2, typename T3, typename T4>
+class mem_func_ptr_t<RT (*)(T1, T2, T3, T4)> : public mem_base_t<u64>
+{
+	__forceinline void call_func(bool is_async, T1 a1, T2 a2, T3 a3, T4 a4)
+	{
+		Callback cb;
+		cb.SetAddr(m_addr);
+		cb.Handle(a1, a2, a3, a4);
+		cb.Branch(!is_async);
+	}
+
+public:
+	__forceinline void operator()(T1 a1, T2 a2, T3 a3, T4 a4)
+	{
+		call_func(false, a1, a2, a3, a4);
+	}
+
+	__forceinline void async(T1 a1, T2 a2, T3 a3, T4 a4)
+	{
+		call_func(true, a1, a2, a3, a4);
+	}
+};
+
 
 template<typename T>
 class MemoryAllocator

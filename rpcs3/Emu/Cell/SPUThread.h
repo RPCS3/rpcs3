@@ -2,6 +2,9 @@
 #include "PPCThread.h"
 #include "Emu/event.h"
 #include "MFC.h"
+#include <mutex>
+
+extern std::mutex g_SyncMutex; //can provide compatability for CellSyncMutex through SPU<>PPU and SPU<>SPU
 
 static const char* spu_reg_name[128] =
 {
@@ -293,7 +296,7 @@ public:
 			};
 			volatile u64 m_indval;
 		};
-		wxCriticalSection m_lock;
+		std::mutex m_lock;
 
 	public:
 
@@ -311,7 +314,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
 				{
 					return false;
@@ -322,7 +325,7 @@ public:
 			}
 			else
 			{ //lock-free
-				if(!m_index)
+				if ((m_indval & 0xffffffff) == 0)
 					return false;
 				else
 				{
@@ -337,7 +340,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 				{
 					return false;
@@ -347,11 +350,12 @@ public:
 			}
 			else
 			{ //lock-free
-				if(m_index)
+				if (m_indval & 0xffffffff)
 					return false;
 				else
 				{
-					m_indval = ((u64)value << 32) | 1;
+					const u64 new_value = ((u64)value << 32) | 1;
+					m_indval = new_value;
 					return true;
 				}
 			}
@@ -361,7 +365,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] = value; //last message is overwritten
 				else
@@ -369,7 +373,8 @@ public:
 			}
 			else
 			{ //lock-free
-				m_indval = ((u64)value << 32) | 1;
+				const u64 new_value = ((u64)value << 32) | 1;
+				m_indval = new_value;
 			}
 		}
 
@@ -377,7 +382,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
 					m_value[max_count-1] |= value; //last message is logically ORed
 				else
@@ -397,7 +402,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
 					res = 0; //result is undefined
 				else
@@ -422,7 +427,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				return m_index;
 			}
 			else
@@ -435,7 +440,7 @@ public:
 		{
 			if (max_count > 1 || x86)
 			{
-				wxCriticalSectionLocker lock(m_lock);
+				std::lock_guard<std::mutex> lock(m_lock);
 				return max_count - m_index;
 			}
 			else
@@ -470,6 +475,7 @@ public:
 		Channel<1> QueryType;
 		Channel<1> QueryMask;
 		Channel<1> TagStatus;
+		Channel<1> AtomicStat;
 	} Prxy;
 
 	struct
@@ -519,6 +525,29 @@ public:
 		}
 		break;
 
+		case MFC_GETLLAR_CMD:
+		case MFC_PUTLLC_CMD:
+		case MFC_PUTLLUC_CMD:
+		{
+			if (op == MFC_GETLLAR_CMD) 
+			{
+				g_SyncMutex.lock();
+			}
+			
+			ConLog.Warning("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : "PUTLLUC",
+				lsa, ea, tag, size, cmd);
+
+			dmac.ProcessCmd(op == MFC_GETLLAR_CMD ? MFC_GET_CMD : MFC_PUT_CMD, tag, lsa, ea, 128);
+			Prxy.AtomicStat.PushUncond(op == MFC_GETLLAR_CMD ? MFC_GETLLAR_SUCCESS : op == MFC_PUTLLC_CMD ? MFC_PUTLLC_SUCCESS : MFC_PUTLLUC_SUCCESS);
+
+			if (op == MFC_PUTLLC_CMD || op == MFC_PUTLLUC_CMD) 
+			{
+				g_SyncMutex.unlock();
+			}
+		}
+		break;
+
 		default:
 			ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)", 
 				op, cmd, lsa, ea, tag, size);
@@ -548,6 +577,9 @@ public:
 
 		case SPU_RdSigNotify2:
 			return SPU.SNR[1].GetCount();
+
+		case MFC_RdAtomicStat:
+			return Prxy.AtomicStat.GetCount();
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
@@ -639,6 +671,10 @@ public:
 		case SPU_RdSigNotify2:
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+		break;
+
+		case MFC_RdAtomicStat:
+			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		default:

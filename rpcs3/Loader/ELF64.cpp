@@ -169,8 +169,8 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
 	{
-		ConLog.Error("LoadShdr64 error: shstrndx too big!");
-		return false;
+		ConLog.Warning("LoadShdr64 error: shstrndx too big!");
+		return true;
 	}
 
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)

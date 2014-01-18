@@ -415,6 +415,44 @@ void cellGcmSetFlipStatus()
 	Emu.GetGSManager().GetRender().m_flip_status = 0;
 }
 
+int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
+{
+	cellGcmSys.Warning("cellGcmSetTile(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
+		index, location, offset, size, pitch, comp, base, bank);
+	//copied form cellGcmSetTileInfo
+	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
+	{
+		return CELL_GCM_ERROR_INVALID_VALUE;
+	}
+
+	if(offset & 0xffff || size & 0xffff || pitch & 0xf)
+	{
+		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if(location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
+	{
+		return CELL_GCM_ERROR_INVALID_ENUM;
+	}
+
+	if(comp)
+	{
+		cellGcmSys.Error("cellGcmSetTileInfo: bad comp! (%d)", comp);
+	}
+
+	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
+	tile.m_location = location;
+	tile.m_offset = offset;
+	tile.m_size = size;
+	tile.m_pitch = pitch;
+	tile.m_comp = comp;
+	tile.m_base = base;
+	tile.m_bank = bank;
+	Memory.WriteData(Emu.GetGSManager().GetRender().m_tiles_addr + sizeof(CellGcmTileInfo) * index, tile.Pack());
+
+	return CELL_OK;
+}
+
 int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
 {
 	cellGcmSys.Warning("cellGcmSetTileInfo(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
@@ -720,6 +758,7 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x93806525, cellGcmGetCurrentDisplayBufferId);
 	cellGcmSys.AddFunc(0xbc982946, cellGcmSetDefaultCommandBuffer);
 	cellGcmSys.AddFunc(0xa47c09ff, cellGcmSetFlipStatus);
+	cellGcmSys.AddFunc(0xd0b1d189, cellGcmSetTile);
 	cellGcmSys.AddFunc(0xbd100dbc, cellGcmSetTileInfo);
 	cellGcmSys.AddFunc(0x4524cccd, cellGcmBindTile);
 	cellGcmSys.AddFunc(0x0b4b62d5, cellGcmSetPrepareFlip);

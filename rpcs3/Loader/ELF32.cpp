@@ -119,8 +119,8 @@ bool ELF32Loader::LoadShdrInfo()
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
 	{
-		ConLog.Error("LoadShdr32 error: shstrndx too big!");
-		return false;
+		ConLog.Warning("LoadShdr32 error: shstrndx too big!");
+		return true;
 	}
 
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)

@@ -4,6 +4,8 @@
 
 class RSXDebugger : public wxFrame
 {
+	AppConnector m_app_connector;
+
 	u32 m_addr;
 
 	u32 m_panel_width;
@@ -27,6 +29,8 @@ class RSXDebugger : public wxFrame
 	wxPanel* p_buffer_depth;
 	wxPanel* p_buffer_stencil;
 	wxPanel* p_buffer_tex;
+
+	uint m_cur_texture;
 
 public:
 	bool exit;
@@ -53,7 +57,8 @@ public:
 	virtual void GetSettings();
 
 	virtual void SetFlags(wxListEvent& event);
-	
+	virtual void OnSelectTexture(wxListEvent& event);
+
 	wxString ParseGCMEnum(u32 value, u32 type);
 	wxString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
 	

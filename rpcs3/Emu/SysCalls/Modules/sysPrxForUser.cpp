@@ -81,11 +81,12 @@ int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
 	}
 
 	vfsStreamMemory f(src);
-	u32 entry = LoadSpuImage(f);
+	u32 entry;
+	u32 offset = LoadSpuImage(f, entry);
 
-	img->type = 1;
+	img->type = type;
 	img->entry_point = entry;
-	img->segs_addr = 0x0;
+	img->segs_addr = offset;
 	img->nsegs = 0;
 
 	return CELL_OK;
@@ -119,15 +120,13 @@ int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
 	return CELL_OK;
 }
 
-extern u64 g_last_spu_offset;
-
 int sys_raw_spu_image_load(int id, mem_ptr_t<sys_spu_image> img)
 {
 	sysPrxForUser.Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.GetAddr());
 
-	memcpy(Memory + RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, Memory + g_last_spu_offset, 256 * 1024);
+	memcpy(Memory + RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, Memory + (u32)img->segs_addr, 256 * 1024);
 	Memory.Write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, 
-		img->entry_point - g_last_spu_offset);
+		(u32)img->entry_point);
 
 	return CELL_OK;
 }

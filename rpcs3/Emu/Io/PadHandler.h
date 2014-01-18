@@ -103,6 +103,24 @@ struct Button
 	}
 };
 
+struct AnalogStick
+{
+	u32 m_offset;
+	u32 m_keyCodeMin;
+	u32 m_keyCodeMax;
+	bool m_min_pressed;
+	bool m_max_pressed;
+
+	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
+		: m_min_pressed(false)
+		, m_max_pressed(false)
+		, m_offset(offset)
+		, m_keyCodeMin(keyCodeMin)
+		, m_keyCodeMax(keyCodeMax)
+	{
+	}
+};
+
 struct Pad
 {
 	u32 m_port_status;
@@ -111,6 +129,7 @@ struct Pad
 	u32 m_device_type;
 
 	Array<Button> m_buttons;
+	Array<AnalogStick> m_sticks;
 
 	s16 m_analog_left_x;
 	s16 m_analog_left_y;
@@ -166,7 +185,7 @@ struct Pad
 	{
 	}
 
-	~Pad() { m_buttons.Clear(); }
+	~Pad() { m_buttons.Clear(); m_sticks.Clear(); }
 };
 
 struct PadInfo
@@ -206,10 +225,29 @@ public:
 					button.m_pressed = pressed;
 				}
 			}
+			for(u32 s = 0; s < GetSticks(p).GetCount(); s++)
+			{
+				AnalogStick& stick = GetSticks(p).Get(s);
+				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code) continue;
+
+				GetPads()[p].m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+
+				if (stick.m_keyCodeMax == code)
+				{
+					stick.m_min_pressed = false; //!!! need fix !!!
+					stick.m_max_pressed = pressed;
+				}
+				if (stick.m_keyCodeMin == code)
+				{
+					stick.m_max_pressed = false; //!!!
+					stick.m_min_pressed = pressed;
+				}
+			}
 		}
 	}
 
 	PadInfo& GetInfo() { return m_info; }
 	Array<Pad>& GetPads() { return m_pads; }
 	Array<Button>& GetButtons(const u32 pad) { return GetPads()[pad].m_buttons; }
+	Array<AnalogStick>& GetSticks(const u32 pad) { return GetPads()[pad].m_sticks; }
 };

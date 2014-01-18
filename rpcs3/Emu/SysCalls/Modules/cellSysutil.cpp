@@ -106,9 +106,6 @@ enum
 	CELL_SYSUTIL_PAD_RUMBLE_ON	= 1,
 };
 
-void cellSysutil_init();
-Module cellSysutil(0x0015, cellSysutil_init);
-
 
 enum
 {
@@ -131,6 +128,11 @@ enum CellMsgDialogType
 	CELL_MSGDIALOG_DEFAULT_CURSOR_YES	= 0x00000000,
 	CELL_MSGDIALOG_DEFAULT_CURSOR_NO	= 0x00000100,
 };
+
+typedef void (*CellMsgDialogCallback)(int buttonType, mem_ptr_t<void> userData);
+
+void cellSysutil_init();
+Module cellSysutil(0x0015, cellSysutil_init);
 
 int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {
@@ -232,14 +234,18 @@ int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 	if (!buf.IsGood())
 		return CELL_EFAULT;
 
+	memset(buf, 0, bufsize);
+
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
 		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
+		memcpy(buf, "Unknown", 8); //for example
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
 		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
+		memcpy(buf, "Unknown", 8);
 	break;
 
 	default:
@@ -477,7 +483,7 @@ int cellSysutilUnregisterCallback(int slot)
 	return CELL_OK;
 }
 
-int cellMsgDialogOpen2(u32 type, char* msgString, u32 callback_addr, u32 userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
 	long style = 0;
 
@@ -520,17 +526,16 @@ int cellMsgDialogOpen2(u32 type, char* msgString, u32 callback_addr, u32 userDat
 	break;
 	}
 
-	Callback2 callback(0, callback_addr, userData);
-	callback.Handle(status);
-	callback.Branch(true);
+	if(callback)
+		callback(status, userData);
 
 	return CELL_OK;
 }
 
-int cellMsgDialogOpenErrorCode(u32 errorCode, u32 callback_addr, u32 userData, u32 extParam)
+int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
 	cellSysutil.Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=%d, extParam=%d)",
-		errorCode, callback_addr, userData, extParam);
+		errorCode, callback.GetAddr(), userData, extParam);
 
 	std::string errorMessage;
 	switch(errorCode)
@@ -622,10 +627,8 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, u32 callback_addr, u32 userData, u
 	break;
 	}
 
-	// TODO: The following lines produce an infinite loop of cellMsgDialogOpenErrorCode's
-	/*Callback2 callback(0, callback_addr, userData);
-	callback.Handle(status);
-	callback.Branch(true);*/
+	if(callback)
+		callback(status, userData);
 
 	return CELL_OK;
 }
@@ -649,7 +652,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 		case CELL_AUDIO_OUT_FS_192KHZ:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(type)
@@ -659,7 +662,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(audioOut)
@@ -668,8 +671,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
-	CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
-
+	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 }
 
 int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
@@ -690,7 +692,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 		case CELL_AUDIO_OUT_FS_192KHZ:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(ch)
@@ -700,7 +702,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 		case 8:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(type)
@@ -710,7 +712,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(audioOut)
@@ -719,8 +721,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
-	CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
-
+	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 }
 
 int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
@@ -831,7 +832,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
-	CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 }
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
@@ -863,7 +864,7 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 		case CELL_AUDIO_OUT_SECONDARY:
 			break;
 
-		default: CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 	}
 
 	switch(control)
@@ -873,7 +874,7 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 		case CELL_AUDIO_OUT_COPY_CONTROL_COPY_NEVER:
 			break;
 			
-		default: CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+		default: return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
 	return CELL_AUDIO_OUT_SUCCEEDED;

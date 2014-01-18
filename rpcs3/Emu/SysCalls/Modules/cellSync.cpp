@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include <mutex>
 
 void cellSync_init();
-Module cellSync(0x0054, cellSync_init);
+void cellSync_unload();
+Module cellSync("cellSync", cellSync_init, nullptr, cellSync_unload);
+std::mutex g_SyncMutex;
 
 // Return Codes
 enum
@@ -22,73 +25,122 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE	= 0x80410114,
 };
 
-int cellSyncMutexInitialize(mem32_t mutex)
+#pragma pack(push, 1)
+struct CellSyncMutex {
+	union { 
+		struct {
+			be_t<u16> m_freed;
+			be_t<u16> m_order;
+		};
+		volatile u32 m_data;
+	};
+	/*
+	(???) Initialize: set zeros
+	(???) Lock: increase m_order and wait until m_freed == old m_order
+	(???) Unlock: increase m_freed
+	(???) TryLock: ?????
+	*/
+};
+#pragma pack(pop)
+
+int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	cellSync.Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
+
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	mutex = 0;
+
+	{ // global mutex
+		std::lock_guard<std::mutex> lock(g_SyncMutex); //???
+		mutex->m_data = 0;
+		return CELL_OK;
+	}
+}
+
+int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
+{
+	cellSync.Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
+
+	if (!mutex.IsGood())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (mutex.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	be_t<u16> old_order;
+	{ // global mutex
+		std::lock_guard<std::mutex> lock(g_SyncMutex);
+		old_order = mutex->m_order;
+		mutex->m_order = mutex->m_order + 1;
+	}
+
+	int counter = 0;
+	while (*(u16*)&old_order != *(u16*)&mutex->m_freed) 
+	{
+		Sleep(1);
+		if (++counter >= 5000)
+		{
+			Emu.Pause();
+			cellSync.Error("cellSyncMutexLock(mutex=0x%x, old_order=%d, order=%d, freed=%d): TIMEOUT", 
+				mutex.GetAddr(), (u16)old_order, (u16)mutex->m_order, (u16)mutex->m_freed);
+			break;
+		}
+	}
+	//while (_InterlockedExchange((volatile long*)&mutex->m_data, 1)) Sleep(1);
+	_mm_mfence();
 	return CELL_OK;
 }
 
-int cellSyncMutexLock(mem32_t mutex)
+int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	cellSync.Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
+
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	while (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24));
-	//need to check how does SPU work with these mutexes, also obtainment order is not guaranteed
-	_mm_lfence();
-	return CELL_OK;
+	{ /* global mutex */
+		std::lock_guard<std::mutex> lock(g_SyncMutex);
+		if (mutex->m_order != mutex->m_freed)
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+		mutex->m_order = mutex->m_order + 1;
+		return CELL_OK;
+	}
 }
 
-int cellSyncMutexTryLock(mem32_t mutex)
+int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
-	{
-		return CELL_SYNC_ERROR_NULL_POINTER;
-	}
-	if (mutex_addr % 4)
-	{
-		return CELL_SYNC_ERROR_ALIGN;
-	}
-	//check cellSyncMutexLock
-	if (_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 1 << 24))
-	{
-		return CELL_SYNC_ERROR_BUSY;
-	}
-	_mm_lfence();
-	return CELL_OK;
-}
+	cellSync.Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
 
-int cellSyncMutexUnlock(mem32_t mutex)
-{
-	const u32 mutex_addr = mutex.GetAddr();
-	if (!mutex_addr)
+	if (!mutex.IsGood())
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex_addr % 4)
+	if (mutex.GetAddr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	//check cellSyncMutexLock
-	_mm_sfence();
-	_InterlockedExchange((volatile long*)Memory.VirtualToRealAddr(mutex_addr), 0);
-	return CELL_OK;
+
+	{ /* global mutex */
+		std::lock_guard<std::mutex> lock(g_SyncMutex);
+		mutex->m_freed = mutex->m_freed + 1;
+		return CELL_OK;
+	}
 }
 
 void cellSync_init()
@@ -97,4 +149,9 @@ void cellSync_init()
 	cellSync.AddFunc(0x1bb675c2, cellSyncMutexLock);
 	cellSync.AddFunc(0xd06918c4, cellSyncMutexTryLock);
 	cellSync.AddFunc(0x91f2b7b0, cellSyncMutexUnlock);
+}
+
+void cellSync_unload()
+{
+	g_SyncMutex.unlock();
 }
