@@ -686,6 +686,19 @@ u64 VirtualMemoryBlock::getRealAddr(u64 addr)
 	return 0;
 }
 
+u64 VirtualMemoryBlock::getMappedAddress(u64 realAddress)
+{
+	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	{
+		if(realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
+		{
+			return m_mapped_memory[i].addr + (realAddress - m_mapped_memory[i].realAddress);
+		}
+	}
+
+	return 0;
+}
+
 void VirtualMemoryBlock::Delete()
 {
 	m_mapped_memory.Clear();

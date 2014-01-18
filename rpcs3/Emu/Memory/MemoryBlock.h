@@ -259,6 +259,9 @@ public:
 
 	// return the real address given a mapped address, if not mapped return 0
 	u64 getRealAddr(u64 addr);
+
+	// return the mapped address given a real address, if not mapped return 0
+	u64 getMappedAddress(u64 realAddress);
 };
 
 #include "DynamicMemoryBlockBase.inl"
