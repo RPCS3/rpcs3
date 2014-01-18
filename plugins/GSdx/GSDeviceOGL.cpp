@@ -286,7 +286,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		fxaa_macro += "#define FXAA_GATHER4_ALPHA 1\n";
 	}
 	m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
-	m_fxaa.ps = m_shader->Compile("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, fxaa_fx, fxaa_macro);
+	m_fxaa.ps = m_shader->Compile("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, old_fxaa_fx, fxaa_macro);
 
 	// ****************************************************************
 	// DATE

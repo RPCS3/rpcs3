@@ -111,15 +111,6 @@ vec4 sample_c()
     return texture(TextureSampler, PSin_t );
 }
 
-//uniform vec4 mask[4] = vec4[4]
-//(
-//		vec4(1, 0, 0, 0),
-//		vec4(0, 1, 0, 0),
-//		vec4(0, 0, 1, 0),
-//		vec4(1, 1, 1, 0)
-//);
-
-
 vec4 ps_crt(uint i)
 {
     vec4 mask[4] = vec4[4]
@@ -132,12 +123,12 @@ vec4 ps_crt(uint i)
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 
-vec4 ps_scanlines(int i)
+vec4 ps_scanlines(uint i)
 {
-	float4 mask[2] =
+	vec4 mask[2] =
 	{
-		float4(1, 1, 1, 0),
-		float4(0, 0, 0, 0)
+		vec4(1, 1, 1, 0),
+		vec4(0, 0, 0, 0)
 	};
 
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
@@ -188,7 +179,7 @@ void ps_main5() // scanlines
 #ifdef ps_main6
 void ps_main6() // diagonal
 {
-	uvec4 p = uvec4(PSin_p);
+	highp uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt((p.x + (p.y % 3u)) % 3u);
 
@@ -199,9 +190,29 @@ void ps_main6() // diagonal
 #ifdef ps_main8
 void ps_main8() // triangular
 {
-	uvec4 p = uvec4(PSin_p);
+	highp uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
+
+    SV_Target0 = c;
+}
+#endif
+
+#ifdef ps_main9
+void ps_main9()
+{
+
+    const float PI = 3.14159265359f;
+
+	vec2 texdim = vec2(textureSize(TextureSampler, 0)); 
+
+    vec4 c;
+    if (dFdy(PSin_t.y) * PSin_t.y > 0.5f) {
+        c = sample_c(); 
+    } else {
+        float factor = (0.9f - 0.4f * cos(2.0f * PI * PSin_t.y * texdim.y));
+		c =  factor * texture(TextureSampler, vec2(PSin_t.x, (floor(PSin_t.y * texdim.y) + 0.5f) / texdim.y));
+    }
 
     SV_Target0 = c;
 }

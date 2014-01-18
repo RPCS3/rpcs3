@@ -20,13 +20,11 @@ eval {
     print "Disable MD5\n";
 };
 
-my @gsdx_res = qw/convert.glsl interlace.glsl merge.glsl shadeboost.glsl tfx.glsl fxaa.fx/;
+# Keep the old FXAA for now
+my @gsdx_res = qw/convert.glsl interlace.glsl merge.glsl shadeboost.glsl tfx.glsl old_fxaa.fx/;
 my $gsdx_path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "GSdx", "res");
 my $gsdx_out = File::Spec->catdir($gsdx_path, "glsl_source.h");
-# Keep the old FXAA for now
-print "Warning: the rebuilding of GSdx ogl shader was temporary disabled\n";
-print "It will be reenabled when we got time to test Asmodean new fxaa shader\n";
-#glsl2h($gsdx_path, $gsdx_out, \@gsdx_res);
+glsl2h($gsdx_path, $gsdx_out, \@gsdx_res);
 
 my @zz_res  = qw/ps2hw_gl4.glsl/;
 my $zz_path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "zzogl-pg", "opengl");
