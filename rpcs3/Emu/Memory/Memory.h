@@ -305,12 +305,12 @@ public:
 
 		if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
 
-		return ret;
+		return wxString(ret, wxConvUTF8);
 	}
 
 	wxString ReadString(const u64 addr)
 	{
-		return wxString((const char*)GetMemFromAddr(addr));
+		return wxString((const char*)GetMemFromAddr(addr), wxConvUTF8);
 	}
 
 	void WriteString(const u64 addr, const wxString& str)
@@ -737,7 +737,7 @@ class mem_func_ptr_t<RT (*)(T1)> : public mem_base_t<u64>
 	{
 		Callback cb;
 		cb.SetAddr(m_addr);
-		cb.Handle(_get_func_arg(a1));
+		cb.Handle(_func_arg<T1>::get_value(a1));
 		cb.Branch(!is_async);
 	}
 

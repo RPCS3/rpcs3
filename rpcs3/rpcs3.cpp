@@ -32,6 +32,7 @@ bool Rpcs3App::OnInit()
 	m_MainFrame->Show();
 
 	m_MainFrame->DoSettings(true);
+
 	return true;
 }
 

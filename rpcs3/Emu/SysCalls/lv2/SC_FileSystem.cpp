@@ -6,7 +6,7 @@ extern Module sys_fs;
 
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
-	const wxString& path = wxString(Memory.ReadString(path_addr), wxConvUTF8);
+	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
 		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
@@ -17,29 +17,6 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	if(flags & CELL_O_CREAT)
 	{
 		_oflags &= ~CELL_O_CREAT;
-		/*
-		//create path
-		for(uint p=1;p<ppath.Length();p++)
-		{
-			for(;p<ppath.Length(); p++) if(ppath[p] == '/') break;
-			
-			if(p == ppath.Length()) break;
-			const wxString& dir = ppath(0, p);
-			if(!wxDirExists(dir))
-			{
-				ConLog.Write("create dir: %s", dir);
-				wxMkdir(dir);
-			}
-		}
-		//create file
-		if(!wxFileExists(ppath))
-		{	
-			wxFile f;
-			f.Create(ppath);
-			f.Close();
-		}
-		*/
-
 		Emu.GetVFS().Create(ppath);
 	}
 
