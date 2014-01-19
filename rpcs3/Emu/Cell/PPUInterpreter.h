@@ -2109,6 +2109,7 @@ private:
 	}
 	void ISYNC()
 	{
+		_mm_mfence();
 	}
 	void CRXOR(u32 crbd, u32 crba, u32 crbb)
 	{
@@ -2979,6 +2980,7 @@ private:
 	}
 	void SYNC(u32 l)
 	{
+		_mm_mfence();
 	}
 	void LFDX(u32 frd, u32 ra, u32 rb)
 	{
