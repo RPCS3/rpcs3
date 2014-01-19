@@ -1,7 +1,9 @@
 
 //DynamicMemoryBlockBase
 template<typename PT>
-DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase() : m_max_size(0)
+DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase()
+	: PT()
+	, m_max_size(0)
 {
 }
 

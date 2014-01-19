@@ -86,12 +86,11 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	sc_spu.Warning("sys_spu_thread_initialize(thread_addr=0x%x, group=0x%x, spu_num=%d, img_addr=0x%x, attr_addr=0x%x, arg_addr=0x%x)",
 		thread.GetAddr(), group, spu_num, img.GetAddr(), attr.GetAddr(), arg.GetAddr());
 
-	if(!Emu.GetIdManager().CheckID(group))
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(group, group_info))
 	{
 		return CELL_ESRCH;
 	}
-
-	SpuGroupInfo& group_info = *(SpuGroupInfo*)Emu.GetIdManager().GetIDData(group).m_data;
 
 	if(!thread.IsGood() || !img.IsGood() || !attr.IsGood() || !attr.IsGood())
 	{
@@ -108,7 +107,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EINVAL;
 	}
 	
-	if(group_info.threads[spu_num])
+	if(group_info->threads[spu_num])
 	{
 		return CELL_EBUSY;
 	}
@@ -136,7 +135,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	thread = new_thread.GetId();
 
-	group_info.threads[spu_num] = &new_thread;
+	group_info->threads[spu_num] = &new_thread;
 
 	/*ConLog.Write("New SPU Thread:");
 	ConLog.Write("SPU img offset = 0x%x", (u32)img->segs_addr);
@@ -186,15 +185,18 @@ int sys_spu_thread_group_start(u32 id)
 		return CELL_ESRCH;
 	}
 
-	ID& id_data = Emu.GetIdManager().GetIDData(id);
-	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
 
 	//Emu.Pause();
 	for(int i=0; i<g_spu_group_thr_count; i++)
 	{
-		if(group_info.threads[i])
+		if(group_info->threads[i])
 		{
-			group_info.threads[i]->Exec();
+			group_info->threads[i]->Exec();
 		}
 	}
 
@@ -206,20 +208,18 @@ int sys_spu_thread_group_suspend(u32 id)
 {
 	sc_spu.Warning("sys_spu_thread_group_suspend(id=0x%x)", id);
 
-	if(!Emu.GetIdManager().CheckID(id))
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
 	{
 		return CELL_ESRCH;
 	}
 
-	ID& id_data = Emu.GetIdManager().GetIDData(id);
-	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
-
 	//Emu.Pause();
 	for(int i=0; i<g_spu_group_thr_count; i++)
 	{
-		if(group_info.threads[i])
+		if(group_info->threads[i])
 		{
-			group_info.threads[i]->Pause();
+			group_info->threads[i]->Pause();
 		}
 	}
 
@@ -253,15 +253,13 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 {
 	sc_spu.Warning("sys_spu_thread_group_join(id=0x%x, cause_addr=0x%x, status_addr=0x%x)", id, cause.GetAddr(), status.GetAddr());
 
-	if(!Emu.GetIdManager().CheckID(id))
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
 	{
 		return CELL_ESRCH;
 	}
 
-	ID& id_data = Emu.GetIdManager().GetIDData(id);
-	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
-
-	if (_InterlockedCompareExchange(&group_info.lock, 1, 0)) //get lock
+	if (_InterlockedCompareExchange(&group_info->lock, 1, 0)) //get lock
 	{
 		return CELL_EBUSY;
 	}
@@ -271,13 +269,13 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 
 	for(int i=0; i<g_spu_group_thr_count; i++)
 	{
-		if(group_info.threads[i])
+		if(group_info->threads[i])
 		{
-			while (!group_info.threads[i]->IsStopped()) Sleep(1);
+			while (!group_info->threads[i]->IsStopped()) Sleep(1);
 		}
 	}
 
-	_InterlockedExchange(&group_info.lock, 0); //release lock
+	_InterlockedExchange(&group_info->lock, 0); //release lock
 	return CELL_OK;
 }
 
@@ -490,7 +488,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 		id, eq, req, spup_addr);
 
 	EventQueue* equeue;
-	if(!Emu.GetIdManager().CheckID(id) || !sys_event.CheckId(eq, equeue))
+	if(!sys_event.CheckId(eq, equeue))
 	{
 		return CELL_ESRCH;
 	}
@@ -500,7 +498,11 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 		return CELL_EINVAL;
 	}
 
-	SpuGroupInfo* group = (SpuGroupInfo*)Emu.GetIdManager().GetIDData(id).m_data;
+	SpuGroupInfo* group;
+	if(!Emu.GetIdManager().GetIDData(id, group))
+	{
+		return CELL_ESRCH;
+	}
 	
 	for(int i=0; i<g_spu_group_thr_count; ++i)
 	{

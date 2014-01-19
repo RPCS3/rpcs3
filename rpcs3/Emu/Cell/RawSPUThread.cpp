@@ -3,22 +3,25 @@
 
 RawSPUThread::RawSPUThread(u32 index, CPUThreadType type)
 	: SPUThread(type)
+	, MemoryBlock()
 	, m_index(index)
 {
-	Memory.MemoryBlocks.Add(MemoryBlock::SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_OFFSET));
+	Memory.MemoryBlocks.push_back(SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_OFFSET));
 	Reset();
 }
 
 RawSPUThread::~RawSPUThread()
 {
-	for(int i=0; i<Memory.MemoryBlocks.GetCount(); ++i)
+	for(int i=0; i<Memory.MemoryBlocks.size(); ++i)
 	{
-		if(&Memory.MemoryBlocks[i] == this)
+		if(Memory.MemoryBlocks[i]->GetStartAddr() == GetStartAddr())
 		{
-			Memory.MemoryBlocks.RemoveFAt(i);
-			return;
+			Memory.MemoryBlocks.erase(Memory.MemoryBlocks.begin() + i);
+			break;
 		}
 	}
+
+	Close();
 }
 
 bool RawSPUThread::Read8(const u64 addr, u8* value)

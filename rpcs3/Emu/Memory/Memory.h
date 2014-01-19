@@ -13,7 +13,7 @@ class MemoryBase
 	NullMemoryBlock NullMem;
 
 public:
-	ArrayF<MemoryBlock> MemoryBlocks;
+	std::vector<MemoryBlock*> MemoryBlocks;
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
@@ -96,15 +96,15 @@ public:
 
 	MemoryBlock& GetMemByNum(const u8 num)
 	{
-		if(num >= MemoryBlocks.GetCount()) return NullMem;
-		return MemoryBlocks.Get(num);
+		if(num >= MemoryBlocks.size()) return NullMem;
+		return *MemoryBlocks[num];
 	}
 
 	MemoryBlock& GetMemByAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
-			if(MemoryBlocks.Get(i).IsMyAddress(addr)) return MemoryBlocks[i];
+			if(MemoryBlocks[i]->IsMyAddress(addr)) return *MemoryBlocks[i];
 		}
 
 		return NullMem;
@@ -123,9 +123,9 @@ public:
 	u64 RealToVirtualAddr(const void* addr)
 	{
 		const u64 raddr = (u64)addr;
-		for(u32 i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(u32 i=0; i<MemoryBlocks.size(); ++i)
 		{
-			MemoryBlock& b = MemoryBlocks[i];
+			MemoryBlock& b = *MemoryBlocks[i];
 			const u64 baddr = (u64)b.GetMem();
 
 			if(raddr >= baddr && raddr < baddr + b.GetSize())
@@ -141,7 +141,7 @@ public:
 	{
 		//if(SpuRawMem.GetSize()) return false;
 
-		MemoryBlocks.Add(SpuRawMem.SetRange(0xe0000000, 0x100000 * max_spu_raw));
+		MemoryBlocks.push_back(SpuRawMem.SetRange(0xe0000000, 0x100000 * max_spu_raw));
 
 		return true;
 	}
@@ -156,27 +156,27 @@ public:
 		switch(type)
 		{
 		case Memory_PS3:
-			MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
-			MemoryBlocks.Add(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
-			MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-			MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
-			MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
-			MemoryBlocks.Add(StackMem.SetRange(0xD0000000, 0x10000000));
-			//MemoryBlocks.Add(SpuRawMem.SetRange(0xE0000000, 0x10000000));
-			//MemoryBlocks.Add(SpuThrMem.SetRange(0xF0000000, 0x10000000));
+			MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
+			MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
+			MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
+			MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
+			MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
+			MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
+			//MemoryBlocks.push_back(SpuRawMem.SetRange(0xE0000000, 0x10000000));
+			//MemoryBlocks.push_back(SpuThrMem.SetRange(0xF0000000, 0x10000000));
 		break;
 
 		case Memory_PSV:
-			MemoryBlocks.Add(PSVMemory.RAM.SetRange(0x81000000, 0x10000000));
-			MemoryBlocks.Add(UserMemory = PSVMemory.Userspace.SetRange(0x91000000, 0x10000000));
+			MemoryBlocks.push_back(PSVMemory.RAM.SetRange(0x81000000, 0x10000000));
+			MemoryBlocks.push_back(UserMemory = PSVMemory.Userspace.SetRange(0x91000000, 0x10000000));
 		break;
 
 		case Memory_PSP:
-			MemoryBlocks.Add(PSPMemory.Scratchpad.SetRange(0x00010000, 0x00004000));
-			MemoryBlocks.Add(PSPMemory.VRAM.SetRange(0x04000000, 0x00200000));
-			MemoryBlocks.Add(PSPMemory.RAM.SetRange(0x08000000, 0x02000000));
-			MemoryBlocks.Add(PSPMemory.Kernel.SetRange(0x88000000, 0x00800000));
-			MemoryBlocks.Add(UserMemory = PSPMemory.Userspace.SetRange(0x08800000, 0x01800000));
+			MemoryBlocks.push_back(PSPMemory.Scratchpad.SetRange(0x00010000, 0x00004000));
+			MemoryBlocks.push_back(PSPMemory.VRAM.SetRange(0x04000000, 0x00200000));
+			MemoryBlocks.push_back(PSPMemory.RAM.SetRange(0x08000000, 0x02000000));
+			MemoryBlocks.push_back(PSPMemory.Kernel.SetRange(0x88000000, 0x00800000));
+			MemoryBlocks.push_back(UserMemory = PSPMemory.Userspace.SetRange(0x08800000, 0x01800000));
 		break;
 		}
 
@@ -185,9 +185,9 @@ public:
 
 	bool IsGoodAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
-			if(MemoryBlocks[i].IsMyAddress(addr)) return true;
+			if(MemoryBlocks[i]->IsMyAddress(addr)) return true;
 		}
 
 		return false;
@@ -195,10 +195,10 @@ public:
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
-			if( MemoryBlocks[i].IsMyAddress(addr) &&
-				MemoryBlocks[i].IsMyAddress(addr + size - 1) ) return true;
+			if( MemoryBlocks[i]->IsMyAddress(addr) &&
+				MemoryBlocks[i]->IsMyAddress(addr + size - 1) ) return true;
 		}
 
 		return false;
@@ -211,12 +211,12 @@ public:
 
 		ConLog.Write("Closing memory...");
 
-		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
-			MemoryBlocks[i].Delete();
+			MemoryBlocks[i]->Delete();
 		}
 
-		MemoryBlocks.ClearF();
+		MemoryBlocks.clear();
 	}
 
 	void Write8(const u64 addr, const u8 data);
@@ -247,9 +247,7 @@ public:
 			return;
 		}
 
-		u32 offs = mem.FixAddr(addr);
-
-		for(u32 i=0; i<size; ++i) dst[size - 1 - i] = mem.FastRead8(offs + i);
+		for(u32 i=0; i<size; ++i) mem.Read8(addr + i, dst + size - 1 - i);
 	}
 
 	void WriteLeft(const u64 addr, const u32 size, const u8* src)
@@ -262,9 +260,7 @@ public:
 			return;
 		}
 
-		u32 offs = mem.FixAddr(addr);
-
-		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + i, src[size - 1 - i]);
+		for(u32 i=0; i<size; ++i) mem.Write8(addr + i, src[size - 1 - i]);
 	}
 
 	void ReadRight(u8* dst, const u64 addr, const u32 size)
@@ -277,9 +273,7 @@ public:
 			return;
 		}
 
-		u32 offs = mem.FixAddr(addr);
-
-		for(u32 i=0; i<size; ++i) dst[i] = mem.FastRead8(offs + (size - 1 - i));
+		for(u32 i=0; i<size; ++i) mem.Read8(addr + (size - 1 - i), dst + i);
 	}
 
 	void WriteRight(const u64 addr, const u32 size, const u8* src)
@@ -292,9 +286,7 @@ public:
 			return;
 		}
 
-		u32 offs = mem.FixAddr(addr);
-
-		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + (size - 1 - i), src[i]);
+		for(u32 i=0; i<size; ++i) mem.Write8(addr + (size - 1 - i), src[i]);
 	}
 
 	template<typename T> void WriteData(const u64 addr, const T* data)
@@ -374,20 +366,21 @@ public:
 			return false;
 		}
 
-		MemoryBlocks.Add((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
+		MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
 		ConLog.Warning("memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
 		return true;
 	}
 
 	bool Unmap(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
-			if(MemoryBlocks[i].IsMirror())
+			if(MemoryBlocks[i]->IsMirror())
 			{
-				if(MemoryBlocks[i].GetStartAddr() == addr)
+				if(MemoryBlocks[i]->GetStartAddr() == addr)
 				{
-					MemoryBlocks.RemoveAt(i);
+					delete MemoryBlocks[i];
+					MemoryBlocks.erase(MemoryBlocks.begin() + i);
 				}
 			}
 		}
@@ -426,9 +419,9 @@ public:
 		return Memory.IsGoodAddr(m_addr, sizeof(T));
 	}
 
-	__forceinline operator u32() const
+	__forceinline operator bool() const
 	{
-		return m_addr;
+		return m_addr != 0;
 	}
 
 	__forceinline bool operator != (nullptr_t) const
@@ -686,6 +679,33 @@ public:
 	void SetAddr(const u64 addr) { m_addr = addr; }
 };
 
+template<typename T>
+struct _func_arg
+{
+	__forceinline static u64 get_value(const T& arg)
+	{
+		return arg;
+	}
+};
+
+template<typename T>
+struct _func_arg<mem_base_t<T>>
+{
+	__forceinline static u64 get_value(const mem_base_t<T>& arg)
+	{
+		return arg.GetAddr();
+	}
+};
+
+template<typename T>
+struct _func_arg<be_t<T>>
+{
+	__forceinline static u64 get_value(const be_t<T>& arg)
+	{
+		return arg.ToLE();
+	}
+};
+
 template<typename T> class mem_func_ptr_t;
 
 template<typename RT>
@@ -717,7 +737,7 @@ class mem_func_ptr_t<RT (*)(T1)> : public mem_base_t<u64>
 	{
 		Callback cb;
 		cb.SetAddr(m_addr);
-		cb.Handle(a1);
+		cb.Handle(_get_func_arg(a1));
 		cb.Branch(!is_async);
 	}
 
@@ -740,7 +760,7 @@ class mem_func_ptr_t<RT (*)(T1, T2)> : public mem_base_t<u64>
 	{
 		Callback cb;
 		cb.SetAddr(m_addr);
-		cb.Handle(a1, a2);
+		cb.Handle(_func_arg<T1>::get_value(a1), _func_arg<T2>::get_value(a2));
 		cb.Branch(!is_async);
 	}
 
@@ -763,7 +783,7 @@ class mem_func_ptr_t<RT (*)(T1, T2, T3)> : public mem_base_t<u64>
 	{
 		Callback cb;
 		cb.SetAddr(m_addr);
-		cb.Handle(a1, a2, a3);
+		cb.Handle(_func_arg<T1>::get_value(a1), _func_arg<T2>::get_value(a2), _func_arg<T3>::get_value(a3));
 		cb.Branch(!is_async);
 	}
 
@@ -786,7 +806,7 @@ class mem_func_ptr_t<RT (*)(T1, T2, T3, T4)> : public mem_base_t<u64>
 	{
 		Callback cb;
 		cb.SetAddr(m_addr);
-		cb.Handle(a1, a2, a3, a4);
+		cb.Handle(_func_arg<T1>::get_value(a1), _func_arg<T2>::get_value(a2), _func_arg<T3>::get_value(a3), _func_arg<T4>::get_value(a4));
 		cb.Branch(!is_async);
 	}
 
@@ -801,7 +821,6 @@ public:
 		call_func(true, a1, a2, a3, a4);
 	}
 };
-
 
 template<typename T>
 class MemoryAllocator

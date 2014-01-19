@@ -81,7 +81,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 	InitOffsetTable();
 	Memory.RSXCMDMem.Alloc(cmdSize);
-	Memory.MemoryBlocks.Add(Memory.RSXIOMem.SetRange(0xE0000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0xE0000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
 	cellGcmMapEaIoAddress(ioAddress, ioSize, 0);
 
 	u32 ctx_begin = ioAddress/* + 0x1000*/;

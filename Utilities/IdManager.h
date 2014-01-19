@@ -1,21 +1,58 @@
 #pragma once
-#include "Array.h"
+#include <unordered_map>
 
 typedef u32 ID_TYPE;
 
+class IDData
+{
+protected:
+	void* m_ptr;
+	std::function<void(void*)> m_destr;
+
+public:
+	IDData(void* ptr, std::function<void(void*)> destr)
+		: m_ptr(ptr)
+		, m_destr(destr)
+	{
+	}
+
+	~IDData()
+	{
+		m_destr(m_ptr);
+	}
+
+	template<typename T> T* get()
+	{
+		return (T*)m_ptr;
+	}
+
+	template<typename T> const T* get() const
+	{
+		return (const T*)m_ptr;
+	}
+};
+
 struct ID
 {
-	bool m_used;
 	wxString m_name;
 	u8 m_attr;
-	void* m_data;
+	IDData* m_data;
 
-	ID(bool used = false, const wxString& name = wxEmptyString, void* data = NULL, const u8 attr = 0)
-		: m_used(used)
-		, m_name(name)
-		, m_data(data)
+	template<typename T>
+	ID(const wxString& name, T* data, const u8 attr)
+		: m_name(name)
 		, m_attr(attr)
 	{
+		m_data = new IDData(data, [](void *ptr) -> void { delete (T*)ptr; });
+	}
+
+	ID() : m_data(nullptr)
+	{
+	}
+
+	void Kill()
+	{
+		delete m_data;
 	}
 };
 
@@ -23,21 +60,16 @@ class IdManager
 {
 	ArrayF<ID> IDs;
 
-	static const u64 first_id = 1;
+	static const ID_TYPE s_first_id = 1;
+	static const ID_TYPE s_max_id = -1;
 
-	void Cleanup()
-	{
-		while(IDs.GetCount())
-		{
-			const u32 num = IDs.GetCount()-1;
-			ID& id = IDs[num];
-			if(id.m_used) break;
-			IDs.RemoveAt(num);
-		}
-	}
-	
+	std::unordered_map<ID_TYPE, ID> m_id_map;
+	std::mutex m_mtx_main;
+
+	ID_TYPE m_cur_id;
+
 public:
-	IdManager()
+	IdManager() : m_cur_id(s_first_id)
 	{
 	}
 	
@@ -45,92 +77,82 @@ public:
 	{
 		Clear();
 	}
-	
-	static ID_TYPE GetMaxID()
-	{
-		return (ID_TYPE)-1;
-	}
-	
-	bool CheckID(const u64 id)
-	{
-		if(id == 0 || id > (u64)NumToID(IDs.GetCount()-1) || id >= GetMaxID()) return false;
 
-		return IDs[IDToNum(id)].m_used;
-	}
-	
-	__forceinline const ID_TYPE NumToID(const ID_TYPE num) const
+	bool CheckID(const ID_TYPE id)
 	{
-		return num + first_id;
-	}
-	
-	__forceinline const ID_TYPE IDToNum(const ID_TYPE id) const
-	{
-		return id - first_id;
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		return m_id_map.find(id) != m_id_map.end();
 	}
 
 	void Clear()
 	{
-		IDs.Clear();
-	}
-	
-	virtual ID_TYPE GetNewID(const wxString& name = wxEmptyString, void* data = NULL, const u8 attr = 0)
-	{
-		for(uint i=0; i<IDs.GetCount(); ++i)
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		for(auto& i : m_id_map)
 		{
-			if(IDs[i].m_used) continue;
-			return NumToID(i);
+			i.second.Kill();
 		}
 
-		const ID_TYPE pos = IDs.GetCount();
-		if(NumToID(pos) >= GetMaxID()) return 0;
-		IDs.Add(new ID(true, name, data, attr));
-		return NumToID(pos);
+		m_id_map.clear();
+		m_cur_id = s_first_id;
 	}
 	
-	ID& GetIDData(const ID_TYPE _id)
+	template<typename T>
+	ID_TYPE GetNewID(const wxString& name = wxEmptyString, T* data = nullptr, const u8 attr = 0)
 	{
-		//if(!CheckID(_id)) return IDs.Get(0); //TODO
-		return IDs[IDToNum(_id)];
-	}
-	
+		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-	bool GetFirst(ID& dst, ID_TYPE* _id = NULL)
+		m_id_map[m_cur_id] = std::move(ID(name, data, attr));
+
+		return m_cur_id++;
+	}
+	
+	ID& GetID(const ID_TYPE id)
 	{
-		u32 pos = 0;
-		return GetNext(pos, dst, _id);
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		return m_id_map[id];
+	}
+
+	template<typename T>
+	bool GetIDData(const ID_TYPE id, T*& result)
+	{
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		auto f = m_id_map.find(id);
+
+		if(f == m_id_map.end())
+		{
+			return false;
+		}
+
+		result = f->second.m_data->get<T>();
+
+		return true;
 	}
 
 	bool HasID(const s64 id)
 	{
-		if(id == wxID_ANY) return IDs.GetCount() != 0;
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		if(id == wxID_ANY)
+			return m_id_map.begin() != m_id_map.end();
+
 		return CheckID(id);
 	}
 
-	bool GetNext(u32& pos, ID& dst, ID_TYPE* _id = NULL)
+	bool RemoveID(const ID_TYPE id)
 	{
-		while(pos < IDs.GetCount())
-		{
-			ID& id = IDs[pos++];
-			if(!id.m_used) continue;
-			dst = id;
-			if(_id) *_id = NumToID(pos - 1);
-			return true;
-		}
+		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		return false;
-	}
+		auto item = m_id_map.find(id);
 
-	virtual bool RemoveID(const ID_TYPE _id, bool free_data = true)
-	{
-		if(!CheckID(_id)) return false;
-		ID& id = IDs[IDToNum(_id)];
-		if(!id.m_used) return false;
-		id.m_used = false;
-		id.m_attr = 0;
-		id.m_name.Clear();
-		if(free_data) delete id.m_data;
-		id.m_data = NULL;
-		if(IDToNum(_id) == IDs.GetCount()-1) Cleanup();
+		if(item == m_id_map.end()) return false;
+
+		item->second.Kill();
+		m_id_map.erase(item);
+
 		return true;
 	}
 };

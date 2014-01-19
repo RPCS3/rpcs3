@@ -32,14 +32,13 @@ void CPUThread::Close()
 	if(IsAlive())
 	{
 		m_free_data = true;
+		ThreadBase::Stop(false);
 	}
 	else
 	{
 		delete m_dec;
 		m_dec = nullptr;
 	}
-
-	Stop();
 }
 
 void CPUThread::Reset()

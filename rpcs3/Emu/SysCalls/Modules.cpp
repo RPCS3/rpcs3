@@ -442,28 +442,12 @@ void Module::Error(wxString fmt, ...)
 	va_end(list);
 }
 
-bool Module::CheckId(u32 id) const
+bool Module::CheckID(u32 id) const
 {
-	return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetIDData(id).m_name.Cmp(GetName());
+	return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetID(id).m_name.Cmp(GetName());
 }
 
-bool Module::CheckId(u32 id, ID& _id) const
+bool Module::CheckID(u32 id, ID*& _id) const
 {
-	return Emu.GetIdManager().CheckID(id) && !(_id = Emu.GetIdManager().GetIDData(id)).m_name.Cmp(GetName());
-}
-
-template<typename T> bool Module::CheckId(u32 id, T*& data)
-{
-	ID id_data;
-
-	if(!CheckId(id, id_data)) return false;
-
-	data = (T*)id_data.m_data;
-
-	return true;
-}
-
-u32 Module::GetNewId(void* data, u8 flags)
-{
-	return Emu.GetIdManager().GetNewID(GetName(), data, flags);
+	return Emu.GetIdManager().CheckID(id) && !(_id = &Emu.GetIdManager().GetID(id))->m_name.Cmp(GetName());
 }

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Memory.h"
 #include "MemoryBlock.h"
+#include <atomic>
 
 MemoryBase Memory;
 
@@ -27,14 +28,14 @@ void MemoryBlock::InitMemory()
 {
 	if(!range_size) return;
 
-	safe_delete(mem);
+	if(mem) safe_free(mem);
 	mem = (u8*)malloc(range_size);
 	memset(mem, 0, range_size);
 }
 
 void MemoryBlock::Delete()
 {
-	safe_delete(mem);
+	if(mem) safe_free(mem);
 	Init();
 }
 
@@ -127,7 +128,8 @@ bool MemoryBlock::Read8(const u64 addr, u8* value)
 		return false;
 	}
 
-	*value = FastRead8(FixAddr(addr));
+	*value = std::atomic_load((volatile std::atomic<u8>*)GetMem(FixAddr(addr)));
+
 	return true;
 }
 
@@ -139,7 +141,8 @@ bool MemoryBlock::Read16(const u64 addr, u16* value)
 		return false;
 	}
 
-	*value = FastRead16(FixAddr(addr));
+	se_t<u16>::func(*value, std::atomic_load((volatile std::atomic<u16>*)GetMem(FixAddr(addr))));
+
 	return true;
 }
 
@@ -151,7 +154,7 @@ bool MemoryBlock::Read32(const u64 addr, u32* value)
 		return false;
 	}
 
-	*value = FastRead32(FixAddr(addr));
+	se_t<u32>::func(*value, std::atomic_load((volatile std::atomic<u32>*)GetMem(FixAddr(addr))));
 	return true;
 }
 
@@ -163,7 +166,7 @@ bool MemoryBlock::Read64(const u64 addr, u64* value)
 		return false;
 	}
 
-	*value = FastRead64(FixAddr(addr));
+	se_t<u64>::func(*value, std::atomic_load((volatile std::atomic<u64>*)GetMem(FixAddr(addr))));
 	return true;
 }
 
@@ -175,7 +178,9 @@ bool MemoryBlock::Read128(const u64 addr, u128* value)
 		return false;
 	}
 
-	*value = FastRead128(FixAddr(addr));
+	u64 f_addr = FixAddr(addr);
+	se_t<u64>::func(value->lo, std::atomic_load((volatile std::atomic<u64>*)GetMem(f_addr)));
+	se_t<u64>::func(value->hi, std::atomic_load((volatile std::atomic<u64>*)GetMem(f_addr + 8)));
 	return true;
 }
 
@@ -212,7 +217,7 @@ bool MemoryBlock::Write8(const u64 addr, const u8 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	FastWrite8(FixAddr(addr), value);
+	std::atomic_store((std::atomic<u8>*)GetMem(FixAddr(addr)), value);
 	return true;
 }
 
@@ -220,7 +225,9 @@ bool MemoryBlock::Write16(const u64 addr, const u16 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	FastWrite16(FixAddr(addr), value);
+	u16 re_value;
+	se_t<u16>::func(re_value, value);
+	std::atomic_store((std::atomic<u16>*)GetMem(FixAddr(addr)), re_value);
 	return true;
 }
 
@@ -228,7 +235,9 @@ bool MemoryBlock::Write32(const u64 addr, const u32 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	FastWrite32(FixAddr(addr), value);
+	u32 re_value;
+	se_t<u32>::func(re_value, value);
+	std::atomic_store((std::atomic<u32>*)GetMem(FixAddr(addr)), re_value);
 	return true;
 }
 
@@ -236,7 +245,9 @@ bool MemoryBlock::Write64(const u64 addr, const u64 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	FastWrite64(FixAddr(addr), value);
+	u64 re_value;
+	se_t<u64>::func(re_value, value);
+	std::atomic_store((std::atomic<u64>*)GetMem(FixAddr(addr)), re_value);
 	return true;
 }
 
@@ -244,7 +255,12 @@ bool MemoryBlock::Write128(const u64 addr, const u128 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	FastWrite128(FixAddr(addr), value);
+	u64 f_addr = FixAddr(addr);
+	u64 re_value;
+	se_t<u64>::func(re_value, value.lo);
+	std::atomic_store((std::atomic<u64>*)GetMem(f_addr), re_value);
+	se_t<u64>::func(re_value, value.hi);
+	std::atomic_store((std::atomic<u64>*)GetMem(f_addr + 8), re_value);
 	return true;
 }
 
