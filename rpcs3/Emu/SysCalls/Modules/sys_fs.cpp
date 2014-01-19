@@ -175,8 +175,8 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	}
 
 	//start callback thread
-	if(func)
-		func.async(aio.GetAddr(), error, xid, res);
+	//if(func)
+		//func.async(aio.GetAddr(), error, xid, res);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());

@@ -75,6 +75,7 @@ struct CellDmuxResourceEx
 	be_t<u32> maxContention;
 };
 
+/*
 struct CellDmuxResource2Ex
 {
 	bool isResourceEx; //true
@@ -86,18 +87,42 @@ struct CellDmuxResource2NoEx
 	bool isResourceEx; //false
 	CellDmuxResource resource;
 };
+*/
+
+struct CellDmuxResource2
+{
+	bool isResourceEx;
+	be_t<u32> memAddr;
+	be_t<u32> memSize;
+	be_t<u32> ppuThreadPriority;
+	be_t<u32> ppuThreadStackSize;
+	union
+	{
+		struct
+		{
+			be_t<u32> spuThreadPriority;
+			be_t<u32> numOfSpus;
+		};
+		struct
+		{
+			be_t<u32> ex_spurs_addr;
+			u8 ex_priority[8];
+			be_t<u32> ex_maxContention;
+		};
+	};
+};
 
 struct CellDmuxCb
 {
 	// CellDmuxCbMsg callback
-	mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, mem_ptr_t<CellDmuxMsg> demuxerMsg, u32 cbArg_addr)> cbMsgFunc; 
+	be_t<mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, mem_ptr_t<CellDmuxMsg> demuxerMsg, u32 cbArg_addr)>> cbMsgFunc; 
 	be_t<u32> cbArg_addr;
 };
 
 struct CellDmuxEsCb
 {
 	// CellDmuxCbEsMsg callback
-	mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, u32 esHandle_addr, mem_ptr_t<CellDmuxEsMsg> esMsg, u32 cbArg_addr)> cbEsMsgFunc;
+	be_t<mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, u32 esHandle_addr, mem_ptr_t<CellDmuxEsMsg> esMsg, u32 cbArg_addr)>> cbEsMsgFunc;
 	be_t<u32> cbArg_addr;
 };
 

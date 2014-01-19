@@ -122,7 +122,7 @@ int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSi
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pSize = offset ? offset : 2048; //hack
+	pSize = offset /*? offset : 2048*/; //hack
 	return CELL_OK;
 }
 
@@ -139,7 +139,7 @@ int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attrib
 	return CELL_OK;
 }
 
-u32 hack_LastHeader = 0;
+//u32 hack_LastHeader = 0;
 
 int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pOffset, mem64_t pSize)
 {
@@ -150,10 +150,10 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pOffset = offset ? offset : 2048; //hack
+	pOffset = offset /*? offset : 2048*/; //hack
 	const u64 size = (u64)pAddr->data_size << 11;
-	pSize = size ? size : (fileSize - 2048); //hack
-	if (!(u32)pAddr->magic) hack_LastHeader = pAddr.GetAddr();
+	pSize = size /*? size : (fileSize - 2048)*/; //hack
+	//if (!(u32)pAddr->magic) hack_LastHeader = pAddr.GetAddr();
 	return CELL_OK;
 }
 
@@ -177,7 +177,7 @@ int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHead
 		pSelf->fileSize = ((u64)pAddr->data_offset << 11) + ((u64)pAddr->data_size << 11);
 	}
 	pSelf->pAddr = pAddr.GetAddr();
-	if (hack_LastHeader) memcpy(Memory + pAddr.GetAddr(), Memory + hack_LastHeader, 2048);
+	//if (hack_LastHeader) memcpy(Memory + pAddr.GetAddr(), Memory + hack_LastHeader, 2048);
 	if (attribute & CELL_PAMF_ATTRIBUTE_VERIFY_ON)
 	{
 		//TODO

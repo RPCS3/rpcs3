@@ -35,11 +35,11 @@ int cellDmuxOpenEx(mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellDmuxResour
 	return CELL_OK;
 }
 
-int cellDmuxOpen2(mem_ptr_t<CellDmuxType2> demuxerType2, u32 demuxerResource2_addr, 
+int cellDmuxOpen2(mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<CellDmuxResource2> demuxerResource2, 
 				  mem_ptr_t<CellDmuxCb> demuxerCb, u32 demuxerHandle_addr)
 {
 	cellDmux.Error("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
-		demuxerType2.GetAddr(), demuxerResource2_addr, demuxerCb.GetAddr(), demuxerHandle_addr);
+		demuxerType2.GetAddr(), demuxerResource2.GetAddr(), demuxerCb.GetAddr(), demuxerHandle_addr);
 	return CELL_OK;
 }
 
