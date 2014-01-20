@@ -93,8 +93,7 @@ wxString vfsDevice::ErasePath(const wxString& path, u32 start_dir_count, u32 end
 
 wxString vfsDevice::GetRoot(const wxString& path)
 {
-	return wxFileName(path, wxPATH_UNIX).GetPath();
-	/*
+	//return wxFileName(path, wxPATH_UNIX).GetPath();
 	if(path.IsEmpty()) return wxEmptyString;
 
 	u32 first_dir = path.Len() - 1;
@@ -119,7 +118,6 @@ wxString vfsDevice::GetRoot(const wxString& path)
 	}
 
 	return path(0, first_dir + 1);
-	*/
 }
 
 wxString vfsDevice::GetRootPs3(const wxString& path)
