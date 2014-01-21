@@ -66,20 +66,20 @@ void CPUThreadManager::RemoveThread(const u32 id)
 #endif
 		if(thr->IsAlive())
 		{
-			thr->Close();
+			//thr->Close();
 		}
 		else
 		{
-			thr->Close();
-			delete thr;
+			//thr->Close();
+			//delete thr;
 		}
 
 
 		m_threads.RemoveFAt(i);
-		i--;
+		break;
 	}
 
-	Emu.GetIdManager().RemoveID(id, false);
+	Emu.GetIdManager().RemoveID(id);
 	Emu.CheckStatus();
 }
 

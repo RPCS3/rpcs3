@@ -1452,8 +1452,12 @@ void RSXThread::Task()
 	{
 		wxCriticalSectionLocker lock(m_cs_main);
 
-		const u32 get = re(m_ctrl->get);
+		//u32 put, get;
+		//se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
+		//se_t<u32>::func(get, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
 		const u32 put = re(m_ctrl->put);
+		const u32 get = re(m_ctrl->get);
+
 		if(put == get || !Emu.IsRunning())
 		{
 			if(put == get)

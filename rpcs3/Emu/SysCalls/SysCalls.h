@@ -5,6 +5,8 @@
 #include "lv2/SC_Timer.h"
 #include "lv2/SC_Rwlock.h"
 #include "lv2/SC_SPU_Thread.h"
+#include "Emu/event.h"
+
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -86,28 +88,29 @@ public:
 
 	bool CheckId(u32 id) const
 	{
-		return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetIDData(id).m_name.Cmp(GetName());
-	}
-
-	bool CheckId(u32 id, ID& _id) const
-	{
-		return Emu.GetIdManager().CheckID(id) && !(_id = Emu.GetIdManager().GetIDData(id)).m_name.Cmp(GetName());
+		return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetID(id).m_name.Cmp(GetName());
 	}
 
 	template<typename T> bool CheckId(u32 id, T*& data)
 	{
-		ID id_data;
+		ID* id_data;
 
 		if(!CheckId(id, id_data)) return false;
 
-		data = (T*)id_data.m_data;
+		data = id_data->m_data->get<T>();
 
 		return true;
 	}
 
-	u32 GetNewId(void* data = nullptr, u8 flags = 0)
+	template<> bool CheckId(u32 id, ID*& _id)
 	{
-		return Emu.GetIdManager().GetNewID(GetName(), data, flags);
+		return Emu.GetIdManager().CheckID(id) && !(_id = &Emu.GetIdManager().GetID(id))->m_name.Cmp(GetName());
+	}
+
+	template<typename T>
+	u32 GetNewId(T* data, u8 flags = 0)
+	{
+		return Emu.GetIdManager().GetNewID<T>(GetName(), data, flags);
 	}
 };
 

@@ -3,11 +3,10 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 extern Module sys_fs;
-extern Array<vfsStream*> FDs;
 
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
-	const wxString& path = wxString(Memory.ReadString(path_addr), wxConvUTF8);
+	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
 		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
@@ -18,29 +17,6 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	if(flags & CELL_O_CREAT)
 	{
 		_oflags &= ~CELL_O_CREAT;
-		/*
-		//create path
-		for(uint p=1;p<ppath.Length();p++)
-		{
-			for(;p<ppath.Length(); p++) if(ppath[p] == '/') break;
-			
-			if(p == ppath.Length()) break;
-			const wxString& dir = ppath(0, p);
-			if(!wxDirExists(dir))
-			{
-				ConLog.Write("create dir: %s", dir);
-				wxMkdir(dir);
-			}
-		}
-		//create file
-		if(!wxFileExists(ppath))
-		{	
-			wxFile f;
-			f.Create(ppath);
-			f.Close();
-		}
-		*/
-
 		Emu.GetVFS().Create(ppath);
 	}
 
@@ -95,8 +71,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_ENOENT;
 	}
 
-	fd = FDs.AddCpy(stream);
-	//fd = sys_fs.GetNewId(stream, flags);
+	fd = sys_fs.GetNewId(stream, flags);
 	ConLog.Warning("*** cellFsOpen(path: %s): fd=%d", path.mb_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -106,12 +81,8 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 {
 	sys_fs.Log("cellFsRead(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nread_addr: 0x%x)",
 		fd, buf_addr, nbytes, nread.GetAddr());
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
 
 	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
 	{
@@ -119,7 +90,7 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
 	}
 
-	const u64 res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	const u64 res = nbytes ? file->Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 
 	if(nread.IsGood())
 		nread = res;
@@ -131,12 +102,8 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 {
 	sys_fs.Log("cellFsWrite(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nwrite_addr: 0x%x)",
 		fd, buf_addr, nbytes, nwrite.GetAddr());
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
 
 	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
 	{
@@ -144,7 +111,7 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
 	}
 
-	const u64 res = nbytes ? file.Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	const u64 res = nbytes ? file->Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 
 	if(nwrite.IsGood())
 		nwrite = res;
@@ -155,16 +122,10 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 int cellFsClose(u32 fd)
 {
 	sys_fs.Warning("cellFsClose(fd: %d)", fd);
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
-	file.Close();
-	delete FDs[fd];
-	//Emu.GetIdManager().RemoveID(fd);
-	FDs[fd] = nullptr;
+
+	if(!Emu.GetIdManager().RemoveID(fd))
+		return CELL_ESRCH;
+
 	return CELL_OK;
 }
 
@@ -246,12 +207,9 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 {
 	sys_fs.Log("cellFsFstat(fd: %d, sb_addr: 0x%x)", fd, sb.GetAddr());
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -264,7 +222,7 @@ int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 	sb->st_atime_ = 0; //TODO
 	sb->st_mtime_ = 0; //TODO
 	sb->st_ctime_ = 0; //TODO
-	sb->st_size = file.GetSize();
+	sb->st_size = file->GetSize();
 	sb->st_blksize = 4096;
 
 	return CELL_OK;
@@ -330,35 +288,28 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 		sys_fs.Error(fd, "Unknown seek whence! (%d)", whence);
 	return CELL_EINVAL;
 	}
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
-	pos = file.Seek(offset, seek_mode);
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	pos = file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
 
 int cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs.Log("cellFsFtruncate(fd: %d, size: %lld)", fd, size);
-	//ID id;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsStream& file = *(vfsStream*)id.m_data;
-	vfsStream& file = *(vfsStream*)FDs[fd];
-	u64 initialSize = file.GetSize();
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	u64 initialSize = file->GetSize();
 
 	if (initialSize < size)
 	{
-		u64 last_pos = file.Tell();
-		file.Seek(0, vfsSeekEnd);
+		u64 last_pos = file->Tell();
+		file->Seek(0, vfsSeekEnd);
 		static const char nullbyte = 0;
-		file.Seek(size-initialSize-1, vfsSeekCur);
-		file.Write(&nullbyte, sizeof(char));
-		file.Seek(last_pos, vfsSeekSet);
+		file->Seek(size-initialSize-1, vfsSeekCur);
+		file->Write(&nullbyte, sizeof(char));
+		file->Seek(last_pos, vfsSeekSet);
 	}
 
 	if (initialSize > size)

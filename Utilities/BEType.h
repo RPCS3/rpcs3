@@ -63,7 +63,7 @@ public:
 		FromBE(value.ToBE());
 	}
 
-	T ToBE() const
+	const T& ToBE() const
 	{
 		return m_data;
 	}

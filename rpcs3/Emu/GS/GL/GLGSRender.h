@@ -10,8 +10,16 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gl.lib")
 
+#define RSX_DEBUG 1
+
+extern GLenum g_last_gl_error;
 void printGlError(GLenum err, const char* situation);
-void checkForGlError(const char* situation);
+
+#if RSX_DEBUG
+#define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
+#else
+#define checkForGlError(sit)
+#endif
 
 class GLTexture
 {
@@ -324,6 +332,10 @@ public:
 			s_is_initialized = true;
 			Initialize();
 		}
+		else
+		{
+			m_program.Use();
+		}
 	}
 
 	virtual void InitializeShaders() = 0;
@@ -340,25 +352,107 @@ public:
 	}
 };
 
-class DrawCursorObj : PostDrawObj
+class DrawCursorObj : public PostDrawObj
 {
 	u32 m_tex_id;
+	void* m_pixels;
+	u32 m_width, m_height;
+	double m_pos_x, m_pos_y, m_pos_z;
+	bool m_update_texture, m_update_pos;
 
 public:
-	DrawCursorObj() : m_tex_id(0)
+	DrawCursorObj() : PostDrawObj()
+		, m_tex_id(0)
+		, m_update_texture(false)
+		, m_update_pos(false)
 	{
 	}
 
 	virtual void Draw()
 	{
+		checkForGlError("PostDrawObj : Unknown error.");
+
 		PostDrawObj::Draw();
+		checkForGlError("PostDrawObj::Draw");
+
+		if(!m_fbo.IsCreated())
+		{
+			m_fbo.Create();
+			checkForGlError("DrawCursorObj : m_fbo.Create");
+			m_fbo.Bind();
+			checkForGlError("DrawCursorObj : m_fbo.Bind");
+
+			m_rbo.Create();
+			checkForGlError("DrawCursorObj : m_rbo.Create");
+			m_rbo.Bind();
+			checkForGlError("DrawCursorObj : m_rbo.Bind");
+			m_rbo.Storage(GL_RGBA, m_width, m_height);
+			checkForGlError("DrawCursorObj : m_rbo.Storage");
+
+			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId());
+			checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
+		}
+
+		m_fbo.Bind();
+		checkForGlError("DrawCursorObj : m_fbo.Bind");
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		checkForGlError("DrawCursorObj : glDrawBuffer");
+
+		m_program.Use();
+		checkForGlError("DrawCursorObj : m_program.Use");
+
+		if(m_update_texture)
+		{
+			//m_update_texture = false;
+
+			glUniform2f(m_program.GetLocation("in_tc"), m_width, m_height);
+			checkForGlError("DrawCursorObj : glUniform2f");
+			if(!m_tex_id)
+			{
+				glGenTextures(1, &m_tex_id);
+				checkForGlError("DrawCursorObj : glGenTextures");
+			}
+
+			glActiveTexture(GL_TEXTURE0);
+			checkForGlError("DrawCursorObj : glActiveTexture");
+			glBindTexture(GL_TEXTURE_2D, m_tex_id);
+			checkForGlError("DrawCursorObj : glBindTexture");
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_pixels);
+			checkForGlError("DrawCursorObj : glTexImage2D");
+			m_program.SetTex(0);
+		}
+
+		if(m_update_pos)
+		{
+			//m_update_pos = false;
+
+			glUniform4f(m_program.GetLocation("in_pos"), m_pos_x, m_pos_y, m_pos_z, 1.0f);
+			checkForGlError("DrawCursorObj : glUniform4f");
+		}
+
+		glDrawArrays(GL_QUADS, 0, 4);
+		checkForGlError("DrawCursorObj : glDrawArrays");
+
+		m_fbo.Bind(GL_READ_FRAMEBUFFER);
+		checkForGlError("DrawCursorObj : m_fbo.Bind(GL_READ_FRAMEBUFFER)");
+		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+		checkForGlError("DrawCursorObj : GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0)");
+		GLfbo::Blit(
+			0, 0, m_width, m_height,
+			0, 0, m_width, m_height,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		checkForGlError("DrawCursorObj : GLfbo::Blit");
+		m_fbo.Bind();
+		checkForGlError("DrawCursorObj : m_fbo.Bind");
 	}
 
 	virtual void InitializeShaders()
 	{
 		m_vp.shader =
-			"layout (location = 0) in vec4 in_pos;\n"
-			"layout (location = 1) in vec2 in_tc;\n"
+			"#version 330\n"
+			"\n"
+			"uniform vec4 in_pos;\n"
+			"uniform vec2 in_tc;\n"
 			"out vec2 tc;\n"
 			"\n"
 			"void main()\n"
@@ -371,36 +465,35 @@ public:
 			"#version 330\n"
 			"\n"
 			"in vec2 tc;\n"
-			"uniform sampler2D tex;\n"
+			"uniform sampler2D tex0;\n"
 			"layout (location = 0) out vec4 res;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	res = texture(tex, tc);\n"
+			"	res = texture(tex0, tc);\n"
 			"}\n";
 	}
 
-	void SetTexture(void* pixels, int width, int hight)
+	void SetTexture(void* pixels, int width, int height)
 	{
-		glUniform2i(1, width, hight);
-		if(!m_tex_id)
-		{
-			glGenTextures(1, &m_tex_id);
-		}
+		m_pixels = pixels;
+		m_width = width;
+		m_height = height;
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_tex_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, hight, 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
-		m_program.SetTex(0);
+		m_update_texture = true;
 	}
 
 	void SetPosition(float x, float y, float z = 0.0f)
 	{
-		glUniform4f(0, x, y, z, 1.0f);
+		m_pos_x = x;
+		m_pos_y = y;
+		m_pos_z = z;
+		m_update_pos = true;
 	}
 
 	void InitializeLocations()
 	{
+		//ConLog.Warning("tex0 location = 0x%x", m_program.GetLocation("tex0"));
 	}
 };
 

@@ -842,47 +842,6 @@ void MainFrame::OnQuit(wxCloseEvent& event)
 	TheApp->Exit();
 }
 
-struct state_hdr
-{
-	u32 magic;
-	u16 version;
-	u32 mem_count;
-	u32 mem_offset;
-	u32 mem_size;
-	u32 hle_count;
-	u32 hle_offset;
-};
-
-static const u32 state_magic = *(u32*)"R3SS";
-static const u32 state_version = 0x1000;
-
-void MakeSaveState(wxFile& f)
-{
-	const ArrayF<MemoryBlock>& mb = Memory.MemoryBlocks;
-	
-	state_hdr state;
-	memset(&state, 0, sizeof(state_hdr));
-	
-	state.magic = state_magic;
-	state.version = state_version;
-	state.mem_count = mb.GetCount();
-	//state.hle_count = mb.GetCount();
-	
-	state.mem_offset = sizeof(state_hdr) + 4;
-	
-	f.Seek(state.mem_offset);
-	for(u32 i=0; i<state.mem_count; ++i)
-	{
-		state.mem_size += mb[i].GetSize();
-		f.Write(mb[i].GetMem(), mb[i].GetSize());
-	}
-
-	state.hle_offset = state.mem_offset + state.mem_size + 4;
-
-	f.Seek(0);
-	f.Write(&state, sizeof(state_hdr));
-}
-
 void MainFrame::OnKeyDown(wxKeyEvent& event)
 {
 	if(wxGetActiveWindow() /*== this*/ && event.ControlDown())
