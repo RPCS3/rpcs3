@@ -541,6 +541,14 @@ VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock()
 {
 }
 
+MemoryBlock* VirtualMemoryBlock::SetRange(const u64 start, const u32 size)
+{
+	range_start = start;
+	range_size = size;
+
+	return this;
+}
+
 bool VirtualMemoryBlock::IsInMyRange(const u64 addr)
 {
 	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize() - GetResevedAmount();

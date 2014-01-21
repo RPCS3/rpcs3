@@ -231,6 +231,7 @@ class VirtualMemoryBlock : public MemoryBlock
 public:
 	VirtualMemoryBlock();
 
+	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 	virtual bool IsInMyRange(const u64 addr);
 	virtual bool IsInMyRange(const u64 addr, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
