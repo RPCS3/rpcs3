@@ -576,32 +576,34 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 	}
 }
 
-bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
+u32 VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
 {
 	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
 	{
 		if(m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
+			u32 size = m_mapped_memory[i].size;
 			m_mapped_memory.RemoveAt(i);
-			return true;
+			return size;
 		}
 	}
 
-	return false;
+	return 0;
 }
 
-bool VirtualMemoryBlock::UnmapAddress(u64 addr)
+u32 VirtualMemoryBlock::UnmapAddress(u64 addr)
 {
 	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
 	{
 		if(m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
+			u32 size = m_mapped_memory[i].size;
 			m_mapped_memory.RemoveAt(i);
-			return true;
+			return size;
 		}
 	}
 
-	return false;
+	return 0;
 }
 
 bool VirtualMemoryBlock::Read8(const u64 addr, u8* value)

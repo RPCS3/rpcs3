@@ -240,11 +240,11 @@ public:
 	// first mappable space is used)
 	virtual u64 Map(u64 realaddr, u32 size, u64 addr = 0);
 
-	// Unmap real address (please specify only starting point, no midway memory will be unmapped)
-	virtual bool UnmapRealAddress(u64 realaddr);
+	// Unmap real address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
+	virtual u32 UnmapRealAddress(u64 realaddr);
 
-	// Unmap address (please specify only starting point, no midway memory will be unmapped)
-	virtual bool UnmapAddress(u64 addr);
+	// Unmap address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
+	virtual u32 UnmapAddress(u64 addr);
 
 	// Reserve a certain amount so no one can use it, returns true on succces, false on failure
 	virtual bool Reserve(u32 size);
