@@ -226,6 +226,7 @@ private:
 class VirtualMemoryBlock : public MemoryBlock
 {
 	Array<VirtualMemInfo> m_mapped_memory;
+	u32 m_reserve_size;
 
 public:
 	VirtualMemoryBlock();
@@ -239,11 +240,20 @@ public:
 	// first mappable space is used)
 	virtual u64 Map(u64 realaddr, u32 size, u64 addr = 0);
 
-	// Unmap real address (please specify only starting point, no midway memory will be unmapped)
-	virtual bool UnmapRealAddress(u64 realaddr);
+	// Unmap real address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
+	virtual u32 UnmapRealAddress(u64 realaddr);
 
-	// Unmap address (please specify only starting point, no midway memory will be unmapped)
-	virtual bool UnmapAddress(u64 addr);
+	// Unmap address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
+	virtual u32 UnmapAddress(u64 addr);
+
+	// Reserve a certain amount so no one can use it, returns true on succces, false on failure
+	virtual bool Reserve(u32 size);
+
+	// Unreserve a certain amount of bytes, returns true on succcess, false if size is bigger than the reserved amount
+	virtual bool Unreserve(u32 size);
+
+	// Return the total amount of reserved memory
+	virtual u32 GetResevedAmount();
 
 	virtual bool Read8(const u64 addr, u8* value);
 	virtual bool Read16(const u64 addr, u16* value);
