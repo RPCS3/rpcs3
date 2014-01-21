@@ -387,6 +387,7 @@ GSRendererHW::Hacks::Hacks()
 	m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpyroNewBeginning, CRC::RegionCount, &GSRendererHW::OI_SpyroNewBeginning));
 	m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpyroEternalNight, CRC::RegionCount, &GSRendererHW::OI_SpyroEternalNight));
 	m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::TalesOfLegendia, CRC::RegionCount, &GSRendererHW::OI_TalesOfLegendia));
+	m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SMTNocturne, CRC::RegionCount, &GSRendererHW::OI_SMTNocturne));
 
 	m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::DBZBT2, CRC::RegionCount, &GSRendererHW::OO_DBZBT2));
 	m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::MajokkoALaMode2, CRC::RegionCount, &GSRendererHW::OO_MajokkoALaMode2));
@@ -813,6 +814,30 @@ bool GSRendererHW::OI_TalesOfLegendia(GSTexture* rt, GSTexture* ds, GSTextureCac
 	return true;
 }
 
+bool GSRendererHW::OI_SMTNocturne(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+{
+	uint32 FBMSK = m_context->FRAME.FBMSK;
+	uint32 FBP = m_context->FRAME.Block();
+	uint32 FBW = m_context->FRAME.FBW;
+	uint32 FPSM = m_context->FRAME.PSM;
+
+	if(FBMSK == 16777215 && m_vertex.head != 2 && m_vertex.tail != 4 && m_vertex.next != 4)
+	{
+
+		GIFRegTEX0 TEX0;
+
+		TEX0.TBP0 = FBP;
+		TEX0.TBW = FBW;
+		TEX0.PSM = FPSM;
+		if (GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, true))
+		{
+			m_dev->ClearDepth(ds->m_texture, 0);
+		}
+		return false;
+	}
+
+	return true;
+}
 
 bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 {
