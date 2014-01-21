@@ -516,7 +516,7 @@ VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock()
 
 bool VirtualMemoryBlock::IsInMyRange(const u64 addr)
 {
-	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize();
+	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize() - GetResevedAmount();
 }
 
 bool VirtualMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
@@ -549,10 +549,11 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 	}
 	else
 	{
-		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - size;)
+		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - GetResevedAmount() - size;)
 		{
 			bool is_good_addr = true;
 
+			// check if address is already mapped
 			for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
 			{
 				if((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
@@ -579,7 +580,7 @@ bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
 {
 	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
 	{
-		if(m_mapped_memory[i].realAddress == realaddr)
+		if(m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			m_mapped_memory.RemoveAt(i);
 			return true;
@@ -593,7 +594,7 @@ bool VirtualMemoryBlock::UnmapAddress(u64 addr)
 {
 	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
 	{
-		if(m_mapped_memory[i].addr == addr)
+		if(m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			m_mapped_memory.RemoveAt(i);
 			return true;
@@ -704,4 +705,27 @@ void VirtualMemoryBlock::Delete()
 	m_mapped_memory.Clear();
 
 	MemoryBlock::Delete();
+}
+
+bool VirtualMemoryBlock::Reserve(u32 size)
+{
+	if(size + GetResevedAmount() > GetEndAddr() - GetStartAddr())
+		return false;
+
+	m_reserve_size += size;
+	return true;
+}
+
+bool VirtualMemoryBlock::Unreserve(u32 size)
+{
+	if(size > GetResevedAmount())
+		return false;
+
+	m_reserve_size -= size;
+	return true;
+}
+
+u32 VirtualMemoryBlock::GetResevedAmount()
+{
+	return m_reserve_size;
 }
