@@ -76,7 +76,7 @@ CCellRescInternal* s_rescInternalInstance = new CCellRescInternal();
 // Extern Functions
 extern int cellGcmSetFlipMode(u32 mode);
 extern int cellGcmSetFlipHandler(u32 handler_addr);
-extern int cellGcmAddressToOffset(u32 address, mem32_t offset);
+extern int32_t cellGcmAddressToOffset(u64 address, mem32_t offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
 extern int cellGcmSetSecondVFrequency(u32 freq);
