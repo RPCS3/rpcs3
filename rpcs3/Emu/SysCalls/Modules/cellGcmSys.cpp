@@ -74,7 +74,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 	InitOffsetTable();
 	Memory.RSXCMDMem.Alloc(cmdSize);
-	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0xE0000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
 	cellGcmMapEaIoAddress(ioAddress, 0, ioSize);
 
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
@@ -702,12 +702,17 @@ int32_t cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
 	//check if the mapping was successfull
 	if(io = Memory.RSXIOMem.Map(ea, size, 0))
 	{
+		// convert to offset
+		io = io - Memory.RSXIOMem.GetStartAddr();
+
 		//fill the offset table
 		for(u32 i=0; i<(size >> 20); i++)
 		{
 			Memory.Write16(offsetTable.io + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
 			Memory.Write16(offsetTable.ea + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
 		}
+
+		offset = io;
 	}
 	else
 	{
