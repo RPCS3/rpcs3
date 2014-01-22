@@ -141,7 +141,7 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	Memory.Write32(thread_id_addr, new_thread.GetId());
+	Memory.Write64(thread_id_addr, new_thread.GetId());
 	new_thread.SetEntry(entry);
 	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
@@ -175,6 +175,6 @@ int sys_ppu_thread_get_id(const u32 id_addr)
 {
 	sysPrxForUser.Log("sys_ppu_thread_get_id(id_addr=0x%x)", id_addr);
 
-	Memory.Write32(id_addr, GetCurrentPPUThread().GetId());
+	Memory.Write64(id_addr, GetCurrentPPUThread().GetId());
 	return CELL_OK;
 }
