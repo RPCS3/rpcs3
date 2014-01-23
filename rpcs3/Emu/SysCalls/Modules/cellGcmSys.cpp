@@ -4,7 +4,9 @@
 #include "Emu/GS/GCM.h"
 
 void cellGcmSys_init();
-Module cellGcmSys(0x0010, cellGcmSys_init);
+void cellGcmSys_Load();
+void cellGcmSys_Unload();
+Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_Load, cellGcmSys_Unload);
 
 u32 local_size = 0;
 u32 local_addr = NULL;
@@ -53,6 +55,9 @@ u32 map_offset_pos = 0;
 int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
 	cellGcmSys.Warning("cellGcmInit(context_addr=0x%x,cmdSize=0x%x,ioSize=0x%x,ioAddress=0x%x)", context_addr, cmdSize, ioSize, ioAddress);
+
+	if(!cellGcmSys.IsLoaded())
+		cellGcmSys.Load();
 
 	if(!local_size && !local_addr)
 	{
@@ -799,9 +804,6 @@ int32_t cellGcmUnreserveIoMapSize(u32 size)
 
 void cellGcmSys_init()
 {
-	current_config.ioAddress = NULL;
-	current_config.localAddress = NULL;
-
 	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
 	cellGcmSys.AddFunc(0x06edea9e, cellGcmSetUserHandler);
 	cellGcmSys.AddFunc(0x15bae46b, cellGcmInit);
@@ -860,4 +862,16 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0xefd00f54, cellGcmUnmapEaIoAddress);
 	cellGcmSys.AddFunc(0xdb23e867, cellGcmUnmapIoAddress);
 	cellGcmSys.AddFunc(0x3b9bd5bd, cellGcmUnreserveIoMapSize);
+}
+
+void cellGcmSys_Load()
+{
+	current_config.ioAddress = NULL;
+	current_config.localAddress = NULL;
+	local_size = 0;
+	local_addr = NULL;
+}
+
+void cellGcmSys_Unload()
+{
 }
