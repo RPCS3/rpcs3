@@ -351,6 +351,11 @@ void CPUThread::Task()
 	{
 		ConLog.Error("Exception: %s", e);
 	}
+	catch(int exitcode)
+	{
+		ConLog.Success("Exit Code: %d", exitcode);
+		return;
+	}
 
 	//ConLog.Write("%s leave", CPUThread::GetFName());
 
