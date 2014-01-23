@@ -42,12 +42,18 @@ u32 vfsDevice::CmpPs3Path(const wxString& ps3_path)
 
 u32 vfsDevice::CmpLocalPath(const wxString& local_path)
 {
+	if(local_path.Len() < m_local_path.Len())
+		return 0;
+
 	const u32 lim = min(m_local_path.Len(), local_path.Len());
 	u32 ret = 0;
 
 	for(u32 i=0; i<lim; ++i, ++ret)
 	{
-		if(m_local_path[i] != local_path[i]) break;
+		if(m_local_path[i] != local_path[i])
+		{
+			return 0;
+		}
 	}
 
 	return ret;
@@ -87,6 +93,7 @@ wxString vfsDevice::ErasePath(const wxString& path, u32 start_dir_count, u32 end
 
 wxString vfsDevice::GetRoot(const wxString& path)
 {
+	//return wxFileName(path, wxPATH_UNIX).GetPath();
 	if(path.IsEmpty()) return wxEmptyString;
 
 	u32 first_dir = path.Len() - 1;

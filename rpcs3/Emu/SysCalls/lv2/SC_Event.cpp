@@ -150,7 +150,8 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 			return false;
 		}
 
-		EventQueue* equeue = (EventQueue*)Emu.GetIdManager().GetIDData(equeue_id).m_data;
+		EventQueue* equeue;
+		Emu.GetIdManager().GetIDData(equeue_id, equeue);
 		for(int i=0; i<equeue->pos; ++i)
 		{
 			if(!equeue->ports[i]->has_data && equeue->ports[i]->thread)
@@ -225,8 +226,10 @@ int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id)
 		return CELL_ESRCH;
 	}
 
-	EventPort* eport = (EventPort*)Emu.GetIdManager().GetIDData(event_port_id).m_data;
-	EventQueue* equeue = (EventQueue*)Emu.GetIdManager().GetIDData(event_queue_id).m_data;
+	EventPort* eport;
+	EventQueue* equeue;
+	Emu.GetIdManager().GetIDData(event_port_id, eport);
+	Emu.GetIdManager().GetIDData(event_queue_id, equeue);
 	equeue->ports[equeue->pos++] = eport;
 	eport->queue[eport->pos++] = equeue;
 
@@ -243,7 +246,8 @@ int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3)
 		return CELL_ESRCH;
 	}
 
-	EventPort* eport = (EventPort*)Emu.GetIdManager().GetIDData(event_port_id).m_data;
+	EventPort* eport;
+	Emu.GetIdManager().GetIDData(event_port_id, eport);
 	
 	if(!eport->pos)
 	{

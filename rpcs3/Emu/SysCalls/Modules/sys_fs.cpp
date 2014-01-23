@@ -3,10 +3,9 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void sys_fs_init();
-void sys_fs_unload();
-Module sys_fs(0x000e, sys_fs_init, nullptr, sys_fs_unload);
+Module sys_fs(0x000e, sys_fs_init);
+
 std::atomic<u32> g_FsAioReadID = 0;
-Array<vfsStream*> FDs;
 
 bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 {
@@ -138,10 +137,12 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
-void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(u32 xaio_addr, u32 error, int xid, u64 size)> func)
+void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
 {
-	vfsFileBase& orig_file = *(vfsFileBase*)FDs[fd];
-	const wxString path = orig_file.GetPath().AfterFirst('/');
+	vfsFileBase* orig_file;
+	if(!sys_fs.CheckId(fd, orig_file)) return;
+
+	const wxString path = orig_file->GetPath().AfterFirst('/');
 
 	u64 nbytes = (u64)aio->size;
 	const u32 buf_addr = (u32)aio->buf_addr;
@@ -176,22 +177,18 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 
 	//start callback thread
 	//if(func)
-		//func.async(aio.GetAddr(), error, xid, res);
+		//func.async(aio, error, xid, res);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(u32 xaio_addr, u32 error, int xid, u64 size)> func)
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
 {
 	sys_fs.Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
-	//ID id;
-	u32 fd = (u32)aio->fd;
-	//if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
-	if (fd >= FDs.GetCount()) return CELL_ESRCH;
-	if (FDs[fd] == nullptr) return CELL_ESRCH;
-	//vfsFileBase& orig_file = *(vfsFileBase*)id.m_data;
-	vfsFileBase& orig_file = *(vfsFileBase*)FDs[fd];
+	vfsFileBase* orig_file;
+	u32 fd = aio->fd;
+	if(!sys_fs.CheckId(fd, orig_file)) return CELL_ESRCH;
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
@@ -209,13 +206,13 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 int cellFsAioInit(mem8_ptr_t mount_point)
 {
-	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x)", mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), (char*)mount_point.GetPtr());
 	return CELL_OK;
 }
 
 int cellFsAioFinish(mem8_ptr_t mount_point)
 {
-	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x)", mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), (char*)mount_point.GetPtr());
 	return CELL_OK;
 }
 
@@ -242,17 +239,4 @@ void sys_fs_init()
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 	sys_fs.AddFunc(0xdb869f20, cellFsAioInit);
 	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
-}
-
-void sys_fs_unload()
-{
-	for (u32 i = 0; i < FDs.GetCount(); i++)
-	{
-		if (FDs[i])
-		{
-			FDs[i]->Close();
-			delete FDs[i];
-		}
-	}
-	FDs.Clear();
 }

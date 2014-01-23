@@ -45,7 +45,7 @@ bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 {
 	Close();
 
-	if(mode == vfsRead && !m_file.Access(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode))) return false;
+	if(!m_file.Access(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode))) return false;
 
 	return m_file.Open(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode)) &&
 		vfsFileBase::Open(vfsDevice::GetPs3Path(GetPs3Path(), path), mode);
@@ -53,10 +53,31 @@ bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 
 bool vfsLocalFile::Create(const wxString& path)
 {
-	if(wxFileExists(path)) return false;
+	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
+	for(uint p=1;p<path.Length();p++)
+	{
+		for(; path[p] != '\0'; p++)
+			if(path[p] == '\\') break;
 
-	wxFile f;
-	return f.Create(path);
+		if(path[p] == '\0')
+			break;
+
+		const wxString& dir = path(0, p);
+		if(!wxDirExists(dir))
+		{
+			ConLog.Write("create dir: %s", dir.c_str());
+			wxMkdir(dir);
+		}
+	}
+
+	//create file
+	if(path(path.Len() - 1, 1) != '\\' && !wxFileExists(path))
+	{
+		wxFile f;
+		return f.Create(path);
+	}
+
+	return true;
 }
 
 bool vfsLocalFile::Close()

@@ -15,6 +15,7 @@ gcmBuffer gcmBuffers[8];
 
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
+GLenum g_last_gl_error = GL_NO_ERROR;
 void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
@@ -22,11 +23,6 @@ void printGlError(GLenum err, const char* situation)
 		ConLog.Error("%s: opengl error 0x%04x", situation, err);
 		Emu.Pause();
 	}
-}
-
-void checkForGlError(const char* situation)
-{
-	printGlError(glGetError(), situation);
 }
 
 #if 0
@@ -415,25 +411,6 @@ bool GLGSRender::LoadProgram()
 		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_shader_prog, m_vertex_prog, *m_cur_vertex_prog);
 		checkForGlError("m_prog_buffer.Add");
 		m_program.Use();
-
-		GLint r = GL_FALSE;
-		glGetProgramiv(m_program.id, GL_VALIDATE_STATUS, &r);
-		if(r != GL_TRUE)
-		{
-			glGetProgramiv(m_program.id, GL_INFO_LOG_LENGTH, &r);
-
-			if(r)
-			{
-				char* buf = new char[r+1];
-				GLsizei len;
-				memset(buf, 0, r+1);
-				glGetProgramInfoLog(m_program.id, r, &len, buf);
-				ConLog.Error("Failed to validate program: %s", buf);
-				delete[] buf;
-			}
-
-			Emu.Pause();
-		}
 	}
 
 	return true;
@@ -639,6 +616,7 @@ void GLGSRender::OnReset()
 
 void GLGSRender::ExecCMD()
 {
+	//return;
 	if(!LoadProgram())
 	{
 		ConLog.Error("LoadProgram failed.");
@@ -1085,5 +1063,13 @@ void GLGSRender::Flip()
 		m_fbo.Bind();
 	}
 
+	for(uint i=0; i<m_post_draw_objs.GetCount(); ++i)
+	{
+		m_post_draw_objs[i].Draw();
+	}
+
 	m_frame->Flip();
+
+	if(m_fbo.IsCreated())
+		m_fbo.Bind();
 }

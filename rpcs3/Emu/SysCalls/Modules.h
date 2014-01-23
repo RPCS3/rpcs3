@@ -1,5 +1,8 @@
 #pragma once
 #include "Modules/cellResc.h"
+#include "Modules/cellPngDec.h"
+#include "Modules/cellJpgDec.h"
+#include "Modules/cellGifDec.h"
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
@@ -59,13 +62,24 @@ public:
 	void Error(const u32 id, wxString fmt, ...);
 	void Error(wxString fmt, ...);
 
-	bool CheckId(u32 id) const;
+	bool CheckID(u32 id) const;
+	template<typename T> bool CheckId(u32 id, T*& data)
+	{
+		ID* id_data;
 
-	bool CheckId(u32 id, ID& _id) const;
+		if(!CheckID(id, id_data)) return false;
 
-	template<typename T> bool CheckId(u32 id, T*& data);
+		data = id_data->m_data->get<T>();
 
-	u32 GetNewId(void* data = nullptr, u8 flags = 0);
+		return true;
+	}
+	bool CheckID(u32 id, ID*& _id) const;
+
+	template<typename T>
+	u32 GetNewId(T* data, u8 flags = 0)
+	{
+		return Emu.GetIdManager().GetNewID<T>(GetName(), data, flags);
+	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 };
