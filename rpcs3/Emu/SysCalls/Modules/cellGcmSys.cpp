@@ -596,7 +596,7 @@ void InitOffsetTable()
 
 int32_t cellGcmAddressToOffset(u64 address, mem32_t offset)
 {
-	cellGcmSys.Warning("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.GetAddr());
+	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.GetAddr());
 
 	if(address >= 0xD0000000/*not on main memory or local*/)
 		return CELL_GCM_ERROR_FAILURE;
