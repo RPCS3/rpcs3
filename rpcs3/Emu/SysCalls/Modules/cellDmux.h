@@ -100,8 +100,8 @@ struct CellDmuxResource2
 	{
 		struct
 		{
-			be_t<u32> spuThreadPriority;
-			be_t<u32> numOfSpus;
+			be_t<u32> noex_spuThreadPriority;
+			be_t<u32> noex_numOfSpus;
 		};
 		struct
 		{
@@ -161,8 +161,8 @@ struct CellDmuxAuInfoEx
 	be_t<u32> auAddr;
 	be_t<u32> auSize;
 	be_t<u32> reserved;
-    bool isRap;
+	bool isRap;
 	be_t<u64> userData;
-    CellCodecTimeStamp  pts;
-    CellCodecTimeStamp  dts;
+	CellCodecTimeStamp pts;
+	CellCodecTimeStamp dts;
 };

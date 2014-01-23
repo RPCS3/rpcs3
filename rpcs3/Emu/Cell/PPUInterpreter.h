@@ -762,15 +762,14 @@ private:
 		int nScale = 1 << uimm5;
 			
 		for (uint w = 0; w < 4; w++)
-		{
-			// C rounding = Round towards 0
-			s64 result = (s64)(CPU.VPR[vb]._f[w] * nScale);
+		{		
+			float result = CPU.VPR[vb]._f[w] * nScale;
 
 			if (result > INT_MAX)
 				CPU.VPR[vd]._s32[w] = (int)INT_MAX;
 			else if (result < INT_MIN)
 				CPU.VPR[vd]._s32[w] = (int)INT_MIN;
-			else
+			else // C rounding = Round towards 0
 				CPU.VPR[vd]._s32[w] = (int)result;
 		}
 	}
@@ -1580,7 +1579,7 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] << (CPU.VPR[vb]._u8[w*4] & 0x1f);
+			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] << (CPU.VPR[vb]._u32[w] & 0x1f);
 		}
 	}
 	void VSPLTB(u32 vd, u32 uimm5, u32 vb)
@@ -2033,9 +2032,10 @@ private:
 	}
 	void SUBFIC(u32 rd, u32 ra, s32 simm16)
 	{
-		s64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = (s64)simm16 - RA;
-		CPU.XER.CA = RA <= simm16;
+		const u64 RA = CPU.GPR[ra];
+		const u64 IMM = (u64)(s64)simm16;
+		CPU.GPR[rd] = IMM - RA;
+		CPU.XER.CA = RA > IMM;
 	}
 	void CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16)
 	{
@@ -2068,8 +2068,10 @@ private:
 	}
 	void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk)
 	{
-		if(!CheckCondition(bo, bi)) return;
-		CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+		if (CheckCondition(bo, bi))
+		{
+			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+		}
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void SC(s32 sc_code)
@@ -2093,8 +2095,10 @@ private:
 	}
 	void BCLR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
-		if(!CheckCondition(bo, bi)) return;
-		CPU.SetBranch(branchTarget(0, CPU.LR), true);
+		if (CheckCondition(bo, bi))
+		{
+			CPU.SetBranch(branchTarget(0, CPU.LR), true);
+		}
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
@@ -2146,8 +2150,8 @@ private:
 		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
 		{
 			CPU.SetBranch(branchTarget(0, CPU.CTR), true);
-			if(lk) CPU.LR = CPU.PC + 4;
 		}
+		if(lk) CPU.LR = CPU.PC + 4;
 	}	
 	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
@@ -2452,6 +2456,7 @@ private:
 	void DCBST(u32 ra, u32 rb)
 	{
 		//UNK("dcbst", false);
+		_mm_mfence();
 	}
 	void LWZUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2529,6 +2534,7 @@ private:
 	void DCBF(u32 ra, u32 rb)
 	{
 		//UNK("dcbf", false);
+		_mm_mfence();
 	}
 	void LBZX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2574,10 +2580,26 @@ private:
 	}
 	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const s64 RA = CPU.GPR[ra];
-		const s64 RB = CPU.GPR[rb];
-		CPU.GPR[rd] = RA + RB + CPU.XER.CA;
-		CPU.XER.CA = ((u64)RA + CPU.XER.CA > ~(u64)RB) | ((RA == -1) & CPU.XER.CA);
+		const u64 RA = CPU.GPR[ra];
+		const u64 RB = CPU.GPR[rb];
+		if (CPU.XER.CA)
+		{
+			if (RA == ~0ULL) //-1
+			{
+				CPU.GPR[rd] = RB;
+				CPU.XER.CA = 1;
+			}
+			else
+			{
+				CPU.GPR[rd] = RA + 1 + RB;
+				CPU.XER.CA = CPU.IsCarry(RA + 1, RB);
+			}
+		}
+		else
+		{
+			CPU.GPR[rd] = RA + RB;
+			CPU.XER.CA = CPU.IsCarry(RA, RB);
+		}
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 		if(oe) UNK("addeo");
 	}
@@ -2671,9 +2693,8 @@ private:
 	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
-		const s64 RA = CPU.GPR[ra];
+		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = RA + CPU.XER.CA;
-
 		CPU.XER.CA = CPU.IsCarry(RA, CPU.XER.CA);
 		if(oe) ConLog.Warning("addzeo");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
@@ -2709,7 +2730,7 @@ private:
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		CPU.GPR[rd] = CPU.GPR[ra] * CPU.GPR[rb];
+		CPU.GPR[rd] = (s64)((s64)CPU.GPR[ra] * (s64)CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 		if(oe) UNK("mulldo");
 	}
@@ -2731,6 +2752,7 @@ private:
 	void DCBTST(u32 th, u32 ra, u32 rb)
 	{
 		//UNK("dcbtst", false);
+		_mm_mfence();
 	}
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2750,6 +2772,7 @@ private:
 	void DCBT(u32 ra, u32 rb, u32 th)
 	{
 		//UNK("dcbt", false);
+		_mm_mfence();
 	}
 	void LHZX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2786,6 +2809,7 @@ private:
 	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
+		_mm_mfence();
 	}
 	void LHAX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2814,6 +2838,7 @@ private:
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
+		_mm_mfence();
 	}
 	void LHAUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2823,8 +2848,7 @@ private:
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		Memory.Write16(addr, CPU.GPR[rs]);
+		Memory.Write16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], CPU.GPR[rs]);
 	}
 	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3056,12 +3080,13 @@ private:
 	}
 	void DSS(u32 strm, u32 a)
 	{
+		_mm_mfence();
 	}
 	void SRAWI(u32 ra, u32 rs, u32 sh, bool rc)
 	{
-		s32 RS = CPU.GPR[rs];
+		s32 RS = (u32)CPU.GPR[rs];
 		CPU.GPR[ra] = RS >> sh;
-		CPU.XER.CA = (RS < 0) & ((CPU.GPR[ra] << sh) != RS);
+		CPU.XER.CA = (RS < 0) & ((u32)(CPU.GPR[ra] << sh) != RS);
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
@@ -3079,6 +3104,7 @@ private:
 	}
 	void EIEIO()
 	{
+		_mm_mfence();
 	}
 	void STVLXL(u32 vs, u32 ra, u32 rb)
 	{
@@ -3121,6 +3147,7 @@ private:
 	void DCBZ(u32 ra, u32 rs)
 	{
 		//UNK("dcbz", false);
+		_mm_mfence();
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
