@@ -43,7 +43,7 @@ bool postprocess_filter_enabled = 1;
 bool postprocess_filter_dealias = false;
 
 // OUTPUT
-int SndOutLatencyMS = 150;
+int SndOutLatencyMS = 100;
 int SynchMode = 0; // Time Stretch, Async or Disabled
 
 u32 OutputModule = 0;
@@ -73,7 +73,7 @@ void ReadSettings()
 		if ( FinalVolume > 1.0f) FinalVolume = 1.0f;
 	numSpeakers = CfgReadInt( L"OUTPUT", L"SpeakerConfiguration", 0);
 	dplLevel = CfgReadInt( L"OUTPUT", L"DplDecodingLevel", 0);
-	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
+	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 100);
 
 	if((SynchMode == 0) && (SndOutLatencyMS < LATENCY_MIN_TS)) // can't use low-latency with timestretcher atm
 		SndOutLatencyMS = LATENCY_MIN_TS;
@@ -81,7 +81,7 @@ void ReadSettings()
 		SndOutLatencyMS = LATENCY_MIN;
 
 	wchar_t omodid[128];
-	CfgReadStr( L"OUTPUT", L"Output_Module", omodid, 127, XAudio2Out->GetIdent() );
+	CfgReadStr(L"OUTPUT", L"Output_Module", omodid, 127, PortaudioOut->GetIdent());
 
 	// find the driver index of this module:
 	OutputModule = FindOutputModuleById( omodid );
