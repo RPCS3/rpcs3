@@ -169,7 +169,7 @@ extern int sys_mutex_trylock(u32 mutex_id);
 extern int sys_mutex_unlock(u32 mutex_id);
 
 //ppu_thread
-extern int sys_ppu_thread_exit(int errorcode);
+extern void sys_ppu_thread_exit(int errorcode);
 extern int sys_ppu_thread_yield();
 extern int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr);
 extern int sys_ppu_thread_detach(u32 thread_id);
