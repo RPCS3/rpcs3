@@ -10,7 +10,7 @@ enum
 	SYS_PPU_THREAD_DONE_INIT,
 };
 
-int sys_ppu_thread_exit(int errorcode)
+void sys_ppu_thread_exit(int errorcode)
 {
 	if(errorcode == 0)
 	{
@@ -25,7 +25,7 @@ int sys_ppu_thread_exit(int errorcode)
 	thr.SetExitStatus(errorcode);
 	Emu.GetCPU().RemoveThread(thr.GetId());
 
-	return CELL_OK;
+	throw errorcode;
 }
 
 int sys_ppu_thread_yield()
