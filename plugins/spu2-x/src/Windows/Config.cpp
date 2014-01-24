@@ -61,6 +61,20 @@ int numSpeakers = 0;
 int dplLevel = 0;
 
 /*****************************************************************************/
+BOOL IsVistaOrGreater2() // workaround for XP toolset missing VersionHelpers.h 
+{
+	OSVERSIONINFOEX osvi;
+	DWORDLONG dwlConditionMask = 0;
+	int op = VER_GREATER_EQUAL;
+
+	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+	osvi.dwMajorVersion = 6;
+
+	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, op);
+
+	return VerifyVersionInfo(&osvi, VER_MAJORVERSION, dwlConditionMask);
+}
 
 void ReadSettings()
 {
@@ -81,7 +95,13 @@ void ReadSettings()
 		SndOutLatencyMS = LATENCY_MIN;
 
 	wchar_t omodid[128];
-	CfgReadStr(L"OUTPUT", L"Output_Module", omodid, 127, PortaudioOut->GetIdent());
+
+	if ( IsVistaOrGreater2() ) {		// XA2 for WinXP, morder modern gets Portaudio
+		CfgReadStr(L"OUTPUT", L"Output_Module", omodid, 127, PortaudioOut->GetIdent());
+	}
+	else {
+		CfgReadStr(L"OUTPUT", L"Output_Module", omodid, 127, XAudio2Out->GetIdent());
+	}
 
 	// find the driver index of this module:
 	OutputModule = FindOutputModuleById( omodid );
