@@ -307,7 +307,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
 	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Emu.GetGSManager().GetRender().m_ioAddress + re(ctrl->get);
+	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + re(ctrl->get));
 	t_addr->SetValue(wxString::Format("%08x", m_addr));
 	UpdateInformation();
 	event.Skip();
@@ -317,7 +317,7 @@ void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
 	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Emu.GetGSManager().GetRender().m_ioAddress + re(ctrl->put);
+	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + re(ctrl->put));
 	t_addr->SetValue(wxString::Format("%08x", m_addr));
 	UpdateInformation();
 	event.Skip();
@@ -340,7 +340,7 @@ void RSXDebugger::GetMemory()
 	for(u32 i=0; i<m_item_count; i++)
 		m_list_commands->SetItem(i, 2, wxEmptyString);
 
-	u32 ioAddr = RSXReady() ? Emu.GetGSManager().GetRender().m_ioAddress : 0;
+	u32 ioAddr = RSXReady() ? Memory.RSXIOMem.GetStartAddr() : 0;
 
 	// Write information
 	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
