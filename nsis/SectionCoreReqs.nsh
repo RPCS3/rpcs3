@@ -34,6 +34,7 @@
   ; See above comment.
     File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\GameIndex.dbf
+    File                                            ..\bin\cheats_ws.dbf
 
 	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
