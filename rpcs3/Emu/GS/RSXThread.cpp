@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "RSXThread.h"
 
-#define ARGS(x) (Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*x)))
+#define ARGS(x) (Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
 
 RSXVertexData::RSXVertexData()
 	: frequency(0)
@@ -598,7 +598,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		for(u32 c=0; c<count; ++c)
 		{
-			u32 ac = args[c];
+			u32 ac = ARGS(c);
 			const u32 first = ac & 0xffffff;
 			const u32 _count = (ac >> 24) + 1;
 
@@ -623,8 +623,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		for(u32 c=0; c<count; ++c)
 		{
-			const u32 first = args[c] & 0xffffff;
-			const u32 _count = (args[c] >> 24) + 1;
+			const u32 first = ARGS(c) & 0xffffff;
+			const u32 _count = (ARGS(c) >> 24) + 1;
 
 			if(first < m_indexed_array.m_first) m_indexed_array.m_first = first;
 
@@ -779,10 +779,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 		for(u32 id = ARGS(0), i = 1; i<count; ++id)
 		{
-			const u32 x = args[i++];
-			const u32 y = args[i++];
-			const u32 z = args[i++];
-			const u32 w = args[i++];
+			const u32 x = ARGS(i); i++;
+			const u32 y = ARGS(i); i++;
+			const u32 z = ARGS(i); i++;
+			const u32 w = ARGS(i); i++;
 
 			RSXTransformConstant c(id, (float&)x, (float&)y, (float&)z, (float&)w);
 
