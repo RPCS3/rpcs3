@@ -22,6 +22,7 @@
 #include "GameDatabase.h"
 #include <wx/textfile.h>
 #include <wx/dir.h>
+#include <wx/textfile.h>
 
 IniPatch Patch[ MAX_PATCH ];
 IniPatch Cheat[ MAX_CHEAT ];
@@ -155,14 +156,20 @@ int InitPatches(const wxString& crc, const Game_Data& game)
 	return patchnumber;
 }
 
+void inifile_processString(const wxString& inStr)
+{
+  wxString str(inStr);
+  inifile_trim(str);
+  if (!str.IsEmpty()) inifile_command(1, str);
+}
+
 // This routine receives a file from inifile_read, trims it,
 // Then sends the command to be parsed.
 void inifile_process(wxTextFile &f1 )
 {
     for (uint i = 0; i < f1.GetLineCount(); i++)
     {
-        inifile_trim(f1[i]);
-        if (!f1[i].IsEmpty()) inifile_command(1, f1[i]);
+        inifile_processString(f1[i]);
     }
 }
 
@@ -198,6 +205,51 @@ static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, cons
 
 	return cheatnumber - before;
 }
+
+
+// This routine loads cheats from a dbf file
+// Returns number of cheats loaded
+// Note: Should be called after InitPatches()
+// expected DB format of section(s) to be loaded:
+//[patches=ABCDE1234<anything can come here upto EOL>
+// <patch file content, possibly multiline, possibly with comments>
+//[/patches]
+// DB file notes: 1. no spaces around the '='. 2. CRC should be in upper case padded with 0s to 8 chars
+int LoadCheatsFromDbf(wxString gameCRC, const wxString& cheatsDbfFilename) {
+  gameCRC.MakeUpper();
+
+  wxTextFile db(cheatsDbfFilename);
+  db.Open();
+
+  int before = cheatnumber;
+
+  wxString line;
+  bool insideCurrentGame = false;
+  bool first = true;
+
+  while (true) {
+    if (first) line = db.GetFirstLine();
+    else line = db.GetNextLine();
+    first = false;
+
+    if (insideCurrentGame) {
+      if (line.Find(L"[/patches]") == 0) {
+        insideCurrentGame = false;
+        continue;
+      }
+      inifile_processString(line);
+
+    } else if (line.Find(wxString(L"[patches=") + gameCRC) == 0) {
+      insideCurrentGame = true;
+    }
+
+    if (db.Eof()) break;
+  }
+
+  db.Close();
+  return cheatnumber - before;
+}
+
 
 // This routine loads cheats from *.pnach files
 // Returns number of cheats loaded

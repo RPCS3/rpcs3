@@ -18,6 +18,8 @@
 #include "AppSaveStates.h"
 #include "AppGameDatabase.h"
 
+#include <wx/stdpaths.h>
+
 #include "Utilities/TlsVariable.inl"
 
 #include "ps2/BiosTools.h"
@@ -312,6 +314,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	int numberLoadedCheats;
 	int numberLoadedWideScreenPatches;
+  int numberDbfCheatsLoaded;
 
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
 	if (!DiscSerial.IsEmpty()) gameSerial = L" [" + DiscSerial  + L"]";
@@ -365,7 +368,14 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	if (EmuConfig.EnableWideScreenPatches) {
 		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
 			gameWsHacks.Printf(L" [%d widescreen hacks]", numberLoadedWideScreenPatches);
-		}
+		} else {
+      // No ws cheat files found at the cheats_ws folder, try the ws cheats db file.
+      wxString cheats_wsDbf = Path::Combine(((wxFileName)wxStandardPaths::Get().GetExecutablePath()).GetPath(), L"cheats_ws.dbf");
+      if (numberDbfCheatsLoaded = LoadCheatsFromDbf(gameCRC, cheats_wsDbf)) {
+        Console.WriteLn(Color_Green, "(Wide Screen Cheats DB) Patches Loaded: %d", numberDbfCheatsLoaded);
+        gameWsHacks.Printf(L" [%d widescreen hacks]", numberDbfCheatsLoaded);
+      }
+    }
 	}
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats+gameWsHacks);
