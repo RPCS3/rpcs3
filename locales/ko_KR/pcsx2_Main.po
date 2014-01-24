@@ -2,21 +2,21 @@
 # Copyright (C) YEAR PCSX2 Dev Team
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# MrGiKILL <p695091@naver.com>, 2014.
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-31 18:12+0100\n"
-"PO-Revision-Date: 2014-01-06 17:23+0900\n"
+"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"PO-Revision-Date: 2014-01-14 19:47+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
-"Language-Team: 99skull <99skull@gmail.com>\n"
+"Language-Team: 99skull,p695091 <99skull@gmail.com>\n"
 "Language: ko_KR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
-"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: trunk\\\n"
 "X-Generator: Poedit 1.6\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
@@ -24,19 +24,19 @@ msgstr ""
 
 #: common/include/Utilities/Exceptions.h:187
 msgid "No reason given."
-msgstr "알 수 없는 원인."
+msgstr "특정한 이유가 없습니다."
 
 #: common/include/Utilities/Exceptions.h:226
 msgid "Parse error"
-msgstr "구문 오류"
+msgstr "분석 오류"
 
 #: common/include/Utilities/Exceptions.h:250
 msgid "Your machine's hardware is incapable of running PCSX2.  Sorry dood."
-msgstr "Pcsx2를 구동하기에 사양이 부족합니다. 안타깝습니다."
+msgstr "당신의 컴퓨터 하드웨어는 Pcsx2를 실행할 수 없습니다. 미안하내 친구."
 
 #: common/src/Utilities/Exceptions.cpp:219
 msgid "Oh noes! Out of memory!"
-msgstr "주의! 메모리부족!"
+msgstr "이런! 메모리가 부족합니다!"
 
 #: common/src/Utilities/Exceptions.cpp:234
 msgid ""
@@ -44,8 +44,9 @@ msgid ""
 "drivers, services, or may simply have insufficient memory or resources to "
 "meet PCSX2's lofty needs."
 msgstr ""
-"가상 메모리 맵핑 실패! 시스템에 장치드라이버, 서비스 충돌이 있거나, 단지 메모"
-"리나 리소스가 Pcsx2 구동에 불충분한 경우일 수 있습니다."
+"가상 메모리 매핑 실패! 시스템에 상반되는 장치 드라이버를 가지고 있거나, 서비"
+"스 또는 단순히 Pcsx2의 고상한 요구를 충족하기 위한 메모리 또는 자원이 불충분"
+"한지 모릅니다."
 
 #: common/src/Utilities/Exceptions.cpp:307
 msgid "Path: "
@@ -53,74 +54,78 @@ msgstr "경로:"
 
 #: common/src/Utilities/Exceptions.cpp:311
 msgid "[Unnamed or unknown]"
-msgstr "[이름이 없거나 알 수 없음]"
+msgstr "[밝혀지지 않은 이름이거나 알려지지 않음]"
 
 #: common/src/Utilities/Exceptions.cpp:331
 msgid "A file could not be created."
-msgstr "파일을 생성할 수 없습니다."
+msgstr "파일을 만들 수 없습니다."
 
 #: common/src/Utilities/Exceptions.cpp:351
 msgid "File not found."
-msgstr "파일이 없습니다."
+msgstr "파일이 발견되지 않습니다."
 
 #: common/src/Utilities/Exceptions.cpp:371
 msgid ""
 "Permission denied while trying to open file, likely due to insufficient user "
 "account rights."
-msgstr "파일을 여는데 실패했습니다, 유저의 계정 권한이 불충분한 것 같습니다."
+msgstr ""
+"파일 열기를 시도하는 동안 승인이 거절되었습니다, 불충분한 사용자 계정 권한에 "
+"의한 것같습니다."
 
 #: common/src/Utilities/Exceptions.cpp:391
 msgid ""
 "Unexpected end of file or stream encountered.  File is probably truncated or "
 "corrupted."
 msgstr ""
-"파일 또는 스트림의 예상치 못한 종료가 발생했습니다. 아마 파일이 불완전하거나 "
-"손상된 것 같습니다."
+"파일 또는 스트림의 예기치 않은 종료가 발생했습니다. 아마 잘렸거나 손상된 파일"
+"입니다."
 
 #: common/src/Utilities/ThreadTools.cpp:41
 msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "스레딩 활동: 시작, 분리, 동기화, 삭제, 기타."
+msgstr "스레딩 활동: 시작, 분리, 동기화, 삭제, 등..."
 
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
-msgstr "작업들을 대기중..."
+msgstr "작업을 기다리는 중..."
 
 #: common/src/Utilities/ThreadingDialogs.cpp:41
 msgid "Waiting for task..."
-msgstr "작업을 대기중..."
+msgstr "작업을 기다리는 중..."
 
 #: common/src/Utilities/wxAppWithHelpers.cpp:36
 msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "유휴 이벤트 과정과 다른 흔치않은 이벤트 사용들을 포함."
+msgstr "아이들 이벤트 처리 및 일부 다른 예외 이벤트 용도를 포함합니다."
 
 #: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
-msgstr "인식할 수 없는 ISO 이미지 파일포맷"
+msgstr "인식되지 않는 ISO 이미지 파일 형식입니다"
 
 #: pcsx2/Elfheader.cpp:265
 msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr ""
-"ELF 바이너리 이미지를 읽을 수 없습니다. 파일이 손상되었거나 불완전합니다."
+"ELF 바이너리 이미지를 불러올 수 없습니다. 아마 파일이 손상되었거나 불완전합니"
+"다."
 
 #: pcsx2/Elfheader.cpp:267
 msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
 "image type or a bug in PCSX2 ISO image support."
 msgstr ""
-"ISO 이미지로부터 읽어들일 때, 지원하지 않는 ISO 이미지거나 PCSX2 ISO 이미지 "
-"지원 버그로 이 에러가 발생할 수 있습니다."
+"ISO 이미지에서 불러올 경우, 이 오류는 아마 PCSX2 ISO 이미지 지원에 지원되지 "
+"않는 ISO 이미지 종류 또는 버그로 인해 발생합니다."
 
 #: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
 msgstr ""
-"MTGS 스레드는 GS 플러그인을 열기위해 기다리는 동안 반응이 늦어지게 됩니다."
+"GS 플러그인 열기를 기다리는 동안 MTGS 스레드가 응답하지 않을 수 있습니다."
 
 #: pcsx2/PluginManager.cpp:712
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
-msgstr "상태저장 파일을 불러올 수 없습니다, 파일이 손상되었거나 불완전합니다."
+msgstr ""
+"상태 저장을 불러올 수 없습니다, 손상되었거나 불완전한 것으로 나타납니다."
 
 #: pcsx2/PluginManager.cpp:722
 #, c-format
@@ -128,7 +133,7 @@ msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
 "incompatible hardware/drivers."
 msgstr ""
-"%s 플러그인을 여는데 실패했습니다. 컴퓨터 사양이 부족하거나, 하드웨어/드라이"
+"%s 플러그인 열기에 실패했습니다. 컴퓨터 자원이 불충분하거나, 하드웨어/드라이"
 "버가 호환되지 않습니다."
 
 #: pcsx2/PluginManager.cpp:729
@@ -137,18 +142,18 @@ msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
 "resources needed."
 msgstr ""
-"%s 플러그인을 초기화하는데 실패했습니다. 시스템의 메모리나 리소스가 불충분한 "
-"것 같습니다."
+"%s 플러그인 초기화에 실패했습니다. 시스템 메모리가 불충분하거나 자원이 필요할"
+"지도 모릅니다."
 
 #: pcsx2/PluginManager.cpp:835
 #, c-format
 msgid "The configured %s plugin file was not found"
-msgstr "설정된 %s 플러그인 파일이 없습니다"
+msgstr "구성된 %s 플러그인 파일이 발견되지 않았습니다"
 
 #: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
-msgstr "설정된 %s 플러그인이 유효한 동적 라이브러리가 아닙니다"
+msgstr "구성된 %s 플러그인이 유효한 동적 라이브러리가 아닙니다"
 
 #: pcsx2/PluginManager.cpp:857
 #, c-format
@@ -156,21 +161,22 @@ msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr ""
-"설정된 %s 플러그인이 PCSX2 플러그인이 아니거나, 지원되지 않는 낡은 버전의 것"
-"입니다."
+"구성된 %s 플러그인은 PCSX2 플러그인이 아니거나, PCSX의 이전 지원되지 않는 버"
+"전의 것입니다."
 
 #: pcsx2/PluginManager.cpp:882
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
-msgstr "하드웨어 또는 소프트웨어/드라이버가 지원하지 않는 플러그인입니다."
+msgstr ""
+"이 플러그인은 하드웨어 또는 소프트웨어/드라이버가 지원되지 않음을 보고합니다."
 
 #: pcsx2/PluginManager.cpp:903
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 msgstr ""
-"설정된 플러그인이 PCSX2 플러그인이 아니거나, 지원되지 않는 낡은 버전의 것입니"
-"다."
+"구성된 플러그인은 PCSX2 플러그인이 아니거나, PCSX2의 이전 지원되지 않는 버전"
+"의 것입니다."
 
 #: pcsx2/PluginManager.cpp:929
 #, c-format
@@ -178,162 +184,164 @@ msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr ""
-"설정된 %s 플러그인이 유효한 PCSX2 플러그인이 아니거나, 지원되지 않는 낡은 버"
-"전의 것입니다."
+"구성된 %s 플러그인은 유효한 PCSX2 플러그인이 아니거나, PCSX2의 이전 지원되지 "
+"않는 버전의 것입니다."
 
 #: pcsx2/PluginManager.cpp:1358
 msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "내부 메모리카드 플러그인 초기화에 실패했습니다."
+msgstr "내부 메모리 카드 플러그인 초기화에 실패했습니다."
 
 #: pcsx2/PluginManager.cpp:1755
 msgid "Unloaded Plugin"
-msgstr "로드되지 않은 플러그인"
+msgstr "불러오기 해제된 플러그인"
 
 #: pcsx2/SaveState.cpp:342
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
-"상태저장을 불러올 수 없습니다. 알수없는 파일 또는 지원하지 않는 버전입니다."
+"상태 저장 불러오기를 할 수 없습니다. 알려지지 않았거나 지원되지 않는 버전입니"
+"다."
 
 #: pcsx2/SourceLog.cpp:96
 msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "PS2 실행파일(ELF)의 세부적인 정보를 덤프합니다."
+msgstr ""
+"PS2 실행에 대한 상세한 정보를 덤프합니다 (실행 및 링크 가능 포맷: ELF)."
 
 #: pcsx2/SourceLog.cpp:101
 msgid ""
 "Logs manual protection, split blocks, and other things that might impact "
 "performance."
-msgstr "수동 보호, 블럭 분리, 기타 성능에 영향을 주는 것을 기록합니다."
+msgstr ""
+"메뉴얼 보호, 불록 분할 및 성능에 영향을 미칠 수 있는 다른 것들을 로그합니다."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
-msgstr "게임 개발자의 로그 텍스트를 보여줍니다(EE 프로세서)"
+msgstr "게임 개발자의 로깅 텍스트를 표시합니다 (이모션엔진 프로세서)"
 
 #: pcsx2/SourceLog.cpp:111
 msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "게임 개발자의 로그 텍스트를 보여줍니다(IOP 프로세서)"
+msgstr "게임 개발자의 로깅 텍스트를 표시합니다 (입출력 프로세서)"
 
 #: pcsx2/SourceLog.cpp:116
 msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "DECI2 디버깅 로그를 보여줍니다(EE 프로세서)"
+msgstr "DECI2 디버깅 로그를 표시합니다 (이모션엔진 프로세서)"
 
 #: pcsx2/SourceLog.cpp:145
 msgid "SYSCALL and DECI2 activity."
-msgstr "시스템콜과 DECI2 활동."
+msgstr "시스템 호출 및 DECI2 활동."
 
 #: pcsx2/SourceLog.cpp:151
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "알려지지 않거나 매핑되지 않은 EE 메모리 공간에 직접 메모리 접근."
+msgstr "알려지지 않았거나 매핑되지 않은 EE 메모리 공간에 직접 메모리 접근."
 
 #: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "핵심 명령어 실행의 디스어셈블(COP와 캐쉬 제외)."
+msgstr "핵심 명령어 실행을 역어셈블합니다 (COP 및 캐쉬 제외)."
 
 #: pcsx2/SourceLog.cpp:163
 msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "COP0 명령어들의 디스어셈블(MMU, cpu 와 dma 상태 등등)."
+msgstr "COP0 명령어를 역어셈블합니다 (MMU, cpu 및 dma 상태, 등)."
 
 #: pcsx2/SourceLog.cpp:169
 msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "EE의 부동 소수점 유닛(FPU)만 디스어셈블."
+msgstr "EE의 부동 소수점 유닛만을 역어셈블합니다 (FPU)."
 
 #: pcsx2/SourceLog.cpp:175
 msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "EE의 VU0매크로 보조 프로세서 명령어들의 디스어셈블."
+msgstr "EE의 VU0매크로 보조-프로세서 명령어를 역어셈블합니다."
 
 #: pcsx2/SourceLog.cpp:181
 msgid "Execution of EE cache instructions."
-msgstr "EE 캐시 명령어들의 실행."
+msgstr "이모션엔진 캐시 명령어를 실행합니다."
 
 #: pcsx2/SourceLog.cpp:187
 msgid ""
 "All known hardware register accesses (very slow!); not including sub filter "
 "options below."
 msgstr ""
-"모든 알려진 하드웨어 레지스터 접근(매우 느림!); 아래의 서브 필터 옵션들은 포"
-"함하지 않습니다."
+"알려진 모든 하드웨어 레지스터 접근 (매우 느림!); 아래에 하위 필터 옵션은 포함"
+"하지 않습니다."
 
 #: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
 msgstr ""
-"오직 알려지지 않거나, 맵핑되지 않거나, 실행되지 않은 레지스터 접근들만 기록합"
-"니다."
+"알려지지 않거나, 매핑되지 않은 또는 구현되지 않은 레지스터 접근만 로그합니다."
 
 #: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
-msgstr "오직 DMA-관계된 레지스터들만 기록합니다."
+msgstr "DMA-관계된 레지스터만 로그합니다."
 
 #: pcsx2/SourceLog.cpp:205
 msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr "IPU 활동: 하드웨어 레지스터들, 복호화 작업들, DMA 상태 등등."
+msgstr "IPU 활동: 하드웨어 레지스터, 디코딩 작업, DMA 상태, 등."
 
 #: pcsx2/SourceLog.cpp:211
 msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "모든 GIF태그 구문 활동; 경로 목차, 태그 타입 등등."
+msgstr "모든 그래픽 인터페이스 태그 분석 활동; 인덱스 경로, 태그 종류, 등."
 
 #: pcsx2/SourceLog.cpp:217
 msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "모든 VIF코드 처리과정; 명령, 태그 스타일, 인터럽트들."
+msgstr "모든 VIF 코드 처리; 명령, 태그 스타일, 인터럽트."
 
 #: pcsx2/SourceLog.cpp:223
 msgid "All processing involved in Path3 Masking"
-msgstr "경로3 마스킹을 포함한 모든 처리과정"
+msgstr "경로3 마스킹에 관련된 모든 처리"
 
 #: pcsx2/SourceLog.cpp:229
 msgid "Scratchpad's MFIFO activity."
-msgstr "Scratch패드의 MFIFO 활동."
+msgstr "스크래치패드의 MFIFO 활동."
 
 #: pcsx2/SourceLog.cpp:235
 msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "실제 데이터 전송 로그들, 버스 권한 중재, 중지 등등."
+msgstr "실제 데이터 전송 로그, 버스 권한 중재, 기능 정지, 등."
 
 #: pcsx2/SourceLog.cpp:241
 msgid "Tracks all EE counters events and some counter register activity."
-msgstr "모든 EE 카운터 이벤트와 어떤 카운터 레지스터 활동을 추적함."
+msgstr "모든 이모션엔진 카운터 이벤트 및 일부 카운터 레지스터 활동을 추적."
 
 #: pcsx2/SourceLog.cpp:247
 msgid "Dumps various VIF and VIFcode processing data."
-msgstr "다양한 VIF 와 VIF코드 처리 데이터를 덤프함."
+msgstr "다양한 VIF 와 VIF 코드 처리 데이터를 덤프."
 
 #: pcsx2/SourceLog.cpp:253
 msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "다양한 GIF와 GIF태그 구문 데이터를 덤프함."
+msgstr "다양한 GIF 및 GIF 태그 분석 데이터를 덤프."
 
 #: pcsx2/SourceLog.cpp:264
 msgid "SYSCALL and IRX activity."
-msgstr "시스템호출과 IRX 활동."
+msgstr "시스템 호출과 IRX 활동."
 
 #: pcsx2/SourceLog.cpp:270
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "알려지지 않거나 맵핑되지 않은 IOP 메모리 공간에 DMA."
+msgstr "알려지지 않은 또는 매핑되지 않은 IOP 메모리 공간에 직접 메모리 접근."
 
 #: pcsx2/SourceLog.cpp:282
 msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "IOP의 GPU 보조 프로세서 명령어의 디스어셈블."
+msgstr "IOP의 GPU 보조-프로세서 명령어를 역어셈블합니다."
 
 #: pcsx2/SourceLog.cpp:288
 msgid ""
 "All known hardware register accesses, not including the sub-filters below."
-msgstr "아래 보조-필터를 제외한, 모든 알려진 하드웨어 레지스터 접근."
+msgstr "아래에 하위-필터를 제외한, 알려진 모든 하드웨어 레지스터를 접근합니다."
 
 #: pcsx2/SourceLog.cpp:306
 msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "메모리카드 읽기, 쓰기, 지우기, 제거, 그리고 다른 과정."
+msgstr "메모리 카드 읽기, 쓰기, 지우기, 종단 및 기타 처리."
 
 #: pcsx2/SourceLog.cpp:312
 msgid "Gamepad activity on the SIO."
-msgstr "SIO에서의 게임패드 활동."
+msgstr "SIO에 게임 패드 활동."
 
 #: pcsx2/SourceLog.cpp:318
 msgid "Actual DMA event processing and data transfer logs."
-msgstr "실제 DMA 이벤트 처리와 데이터 전송 로그들."
+msgstr "실제 DMA 이벤트 처리 및 데이터 전송 로그."
 
 #: pcsx2/SourceLog.cpp:324
 msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "모든 IOP 카운터 이벤트와 어떤 카운터 레지서트 활동을 추척."
+msgstr "모든 IOP 카운터 이벤트 및 일부 카운터 레지스터 활동을 추척."
 
 #: pcsx2/SourceLog.cpp:330
 msgid "Detailed logging of CDVD hardware."
-msgstr "CDVD 하드웨어의 세부적인 로그기록."
+msgstr "CDVD 하드웨어의 상세한 로깅."
 
 #: pcsx2/System.h:221 pcsx2/System.h:222 pcsx2/System.h:223
 msgid "PCSX2 Message"
@@ -344,60 +352,60 @@ msgid ""
 "The savestate was not properly saved. The temporary file was created "
 "successfully but could not be moved to its final resting place."
 msgstr ""
-"상태저장이 제대로 저장되지 않았습니다. 임시 파일은 성공적으로 만들어 졌지만 "
-"최종 저장소로 옮겨지지 않았습니다."
+"상태 저장이 제대로 저장되지 않았습니다. 임시 파일이 성공적으로 만들어졌지만 "
+"최종 저장소로 옮길 수 없었습니다."
 
-#: pcsx2/gui/AppConfig.cpp:878
+#: pcsx2/gui/AppConfig.cpp:894
 msgid "Safest"
-msgstr "가장안전한"
+msgstr "가장 안전한"
 
-#: pcsx2/gui/AppConfig.cpp:879
+#: pcsx2/gui/AppConfig.cpp:895
 msgid "Safe (faster)"
-msgstr "안전한(더 빠른)"
+msgstr "안전한 (더 빠름)"
 
-#: pcsx2/gui/AppConfig.cpp:880
+#: pcsx2/gui/AppConfig.cpp:896
 msgid "Balanced"
-msgstr "균형잡힌"
+msgstr "균형 잡힌"
 
-#: pcsx2/gui/AppConfig.cpp:881
+#: pcsx2/gui/AppConfig.cpp:897
 msgid "Aggressive"
-msgstr "적극적인"
+msgstr "공격적인"
 
-#: pcsx2/gui/AppConfig.cpp:882
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Aggressive plus"
-msgstr "더 적극적인"
+msgstr "더 공격적인"
 
-#: pcsx2/gui/AppConfig.cpp:883
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Mostly Harmful"
-msgstr "가장 위험한"
+msgstr "대부분 유해한"
 
-#: pcsx2/gui/AppConfig.cpp:1044 pcsx2/gui/AppConfig.cpp:1050
+#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
 msgid "Failed to overwrite existing settings file; permission was denied."
-msgstr "기존 설정파일에 덮어쓰는데 실패했습니다; 접근 권한이 없습니다."
+msgstr "기존의 설정 파일 덮어 쓰기에 실패했습니다; 승인이 거부되었습니다."
 
 #: pcsx2/gui/AppCorePlugins.cpp:404
 msgid "Loading PS2 system plugins..."
-msgstr "PS2 시스템 플러그인들 로딩중..."
+msgstr "PS2 시스템 플러그인 불러오는 중입니다..."
 
 #: pcsx2/gui/AppInit.cpp:41
 msgid "PCSX2 - SSE2 Recommended"
-msgstr "PCSX2 - SSE2 권장함"
+msgstr "PCSX2 - SSE2를 권장합니다"
 
 #: pcsx2/gui/AppInit.cpp:69
 msgid ""
 "SSE extensions are not available.  PCSX2 requires a cpu that supports the "
 "SSE instruction set."
 msgstr ""
-"SSE 확장을 사용할 수 없습니다. PCSX2는 SSE 명령어 집합을 지원하는 cpu가 필요"
-"합니다."
+"유효한 SSE 확장이 없습니다. PCSX2는 SSE 명령어 집합을 지원하는 cpu가 필요합니"
+"다."
 
 #: pcsx2/gui/AppInit.cpp:152
 msgid "PCSX2 Recompiler Error(s)"
-msgstr "PCSX2 리컴파일러 에러"
+msgstr "PCSX2 리컴파일러 오류"
 
 #: pcsx2/gui/AppInit.cpp:222
 msgid "All options are for the current session only and will not be saved.\n"
-msgstr "모든 옵션들은 현제 세션에만 적용되고 저장되지 않습니다.\n"
+msgstr "모든 옵션은 현제 세션만을 위한 것으로 저장되지 않습니다.\n"
 
 #: pcsx2/gui/AppInit.cpp:232 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
@@ -405,23 +413,23 @@ msgstr "Iso파일"
 
 #: pcsx2/gui/AppInit.cpp:233
 msgid "displays this list of command line options"
-msgstr "이 커맨드라인 옵션들의 목록을 표시합니다"
+msgstr "명령 줄 옵션의 목록을 표시합니다"
 
 #: pcsx2/gui/AppInit.cpp:234
 msgid "forces the program log/console to be visible"
-msgstr "프로그램 로그/콘솔 이 보여지도록 합니다."
+msgstr "강제로 프로그램 로그/콘솔이 보이도록 합니다."
 
 #: pcsx2/gui/AppInit.cpp:235
 msgid "use fullscreen GS mode"
-msgstr "전체화면 GS 모드를 사용"
+msgstr "전체화면 GS 방식 사용"
 
 #: pcsx2/gui/AppInit.cpp:236
 msgid "use windowed GS mode"
-msgstr "윈도우GS 모드 사용"
+msgstr "창 GS 방식 사용"
 
 #: pcsx2/gui/AppInit.cpp:238
 msgid "disables display of the gui while running games"
-msgstr "게임 실행중 GUI 표시를 사용 안함"
+msgstr "게임을 실행하는 동안 GUI의 표시를 비활성화"
 
 #: pcsx2/gui/AppInit.cpp:239
 msgid "executes an ELF image"
@@ -429,50 +437,50 @@ msgstr "ELF 이미지를 실행"
 
 #: pcsx2/gui/AppInit.cpp:240
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
-msgstr "빈 dvd 트레이를 부팅; PS2 시스템 메뉴에 들어갈 때 사용"
+msgstr "빈 dvd 트레이를 부트; PS2 시스템 메뉴 입력에 사용합니다"
 
 #: pcsx2/gui/AppInit.cpp:241
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
-msgstr "CDVD 플러그인으로 부팅(Iso파일 변수보다 우선함)"
+msgstr "CDVD 플러그인에서 부트 (Iso 파일 매개 변수 무시)"
 
 #: pcsx2/gui/AppInit.cpp:243
 msgid "disables all speedhacks"
-msgstr "모든 스피드핵을 사용 안함"
+msgstr "모든 스피드 핵 비활성화"
 
 #: pcsx2/gui/AppInit.cpp:244
 msgid "use the specified comma or pipe-delimited list of gamefixes."
-msgstr "게임수정 리스트에서 지정된 콤마 또는 파이프 구분문자를 사용."
+msgstr "지정된 쉼표 또는 게임 수정의 파이프로 구분된 목록을 사용합니다."
 
 #: pcsx2/gui/AppInit.cpp:245
 msgid "disables fast booting"
-msgstr "빠른 부팅을 사용 안함"
+msgstr "빠른 부팅 비활성화"
 
 #: pcsx2/gui/AppInit.cpp:247
 msgid "changes the configuration file path"
-msgstr "설정파일 경로를 변경"
+msgstr "구성 파일 경로를 변경합니다"
 
 #: pcsx2/gui/AppInit.cpp:248
 msgid "specifies the PCSX2 configuration file to use"
-msgstr "사용할 PCSX2의 설정 파일을 지정"
+msgstr "PCSX2의 구성 파일을 사용하도록 지정합니다"
 
 #: pcsx2/gui/AppInit.cpp:249
 #, c-format
 msgid "forces %s to start the First-time Wizard"
-msgstr "최초 마법사를 시작하기 위해 %s 하도록 함"
+msgstr "강제로 %s 처음 마법사를 시작합니다"
 
 #: pcsx2/gui/AppInit.cpp:250
 msgid "enables portable mode operation (requires admin/root access)"
-msgstr "무설치 모드 동작을 사용함(관리자/루트 접근 필요)"
+msgstr "무설치 방식 작업을 활성화 (관리자/루트 접근이 필요합니다)"
 
 #: pcsx2/gui/AppInit.cpp:254
 #, c-format
 msgid "specify the file to use as the %s plugin"
-msgstr "%s 플러그인 사용을 위해 파일 지정"
+msgstr "%s 플러그인으로 사용할 파일을 지정하십시오"
 
 #: pcsx2/gui/AppInit.cpp:302
 #, c-format
 msgid "Plugin Override Error - %s"
-msgstr "플러그인 덮어쓰기 에러 - %s"
+msgstr "플러그인 무시 오류 - %s"
 
 #: pcsx2/gui/AppInit.cpp:305
 #, c-format
@@ -481,29 +489,28 @@ msgid ""
 "valid %s plugin:\n"
 "\n"
 msgstr ""
-"%s 플러그인 덮어쓰기 에러! 다음 파일이 없거나 유효한 %s 플러그인이 아닙니"
-"다:\n"
+"%s 플러그인 무시 오류! 다음 파일이 존재하지 않거나 유효한 %s 플러그인이 아닙"
+"니다:\n"
 "\n"
 
 #: pcsx2/gui/AppInit.cpp:312
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
-msgstr ""
-"기본 설정 플러그인을 쓰기 위해 확인을 누르거나, %s 닫기위해 취소를 누르세요."
+msgstr "기본 구성된 플러그인 사용은 확인, 또는 %s 닫기는 취소를 누르십시오."
 
 #: pcsx2/gui/AppInit.cpp:491
 msgid "PCSX2 Error: Hardware Deficiency"
-msgstr "PCSX2 에러: 하드웨어 결함"
+msgstr "PCSX2 오류: 하드웨어 결함"
 
 #: pcsx2/gui/AppInit.cpp:491 pcsx2/gui/AppInit.cpp:503
 #, c-format
 msgid "Press OK to close %s."
-msgstr "%s 닫으려면 확인를 누르세요."
+msgstr "%s 닫기는 확인를 누르십시오."
 
 #: pcsx2/gui/AppInit.cpp:504
 #, c-format
 msgid "%s Critical Error"
-msgstr "%s 치명적 에러"
+msgstr "%s 치명적 오류"
 
 #: pcsx2/gui/AppInit.cpp:674
 msgid "OK"
@@ -511,7 +518,7 @@ msgstr "확인"
 
 #: pcsx2/gui/AppInit.cpp:675
 msgid "&OK"
-msgstr "&확인"
+msgstr "확인"
 
 #: pcsx2/gui/AppInit.cpp:676
 msgid "Cancel"
@@ -519,35 +526,35 @@ msgstr "취소"
 
 #: pcsx2/gui/AppInit.cpp:677
 msgid "&Cancel"
-msgstr "&취소"
+msgstr "취소"
 
 #: pcsx2/gui/AppInit.cpp:678
 msgid "&Apply"
-msgstr "&적용"
+msgstr "적용"
 
 #: pcsx2/gui/AppInit.cpp:679
 msgid "&Next >"
-msgstr "&다음 >"
+msgstr "다음 >"
 
 #: pcsx2/gui/AppInit.cpp:680
 msgid "< &Back"
-msgstr "< &이전"
+msgstr "< 뒤로"
 
 #: pcsx2/gui/AppInit.cpp:681
 msgid "&Back"
-msgstr "&뒤로"
+msgstr "뒤로"
 
 #: pcsx2/gui/AppInit.cpp:682
 msgid "&Finish"
-msgstr "&종료"
+msgstr "완료"
 
 #: pcsx2/gui/AppInit.cpp:683
 msgid "&Yes"
-msgstr "&예"
+msgstr "예"
 
 #: pcsx2/gui/AppInit.cpp:684
 msgid "&No"
-msgstr "&아니오"
+msgstr "아니오"
 
 #: pcsx2/gui/AppInit.cpp:685
 msgid "Browse"
@@ -555,23 +562,23 @@ msgstr "찾아보기"
 
 #: pcsx2/gui/AppInit.cpp:686
 msgid "&Save"
-msgstr "&저장"
+msgstr "저장하기"
 
 #: pcsx2/gui/AppInit.cpp:687
 msgid "Save &As..."
-msgstr "저장 &다른이름"
+msgstr "다른 이름으로 저장..."
 
 #: pcsx2/gui/AppInit.cpp:688
 msgid "&Help"
-msgstr "&도움말"
+msgstr "도움말"
 
 #: pcsx2/gui/AppInit.cpp:689
 msgid "&Home"
-msgstr "&홈페이지"
+msgstr "홈"
 
 #: pcsx2/gui/AppInit.cpp:691
 msgid "Show about dialog"
-msgstr "다이얼로그 표시"
+msgstr "다이얼로그 정보 표시"
 
 #: pcsx2/gui/AppMain.cpp:87
 msgid ""
@@ -581,100 +588,103 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"플러그인 설정 창을 열려면 확인을 누르세요."
+"플러그인 구성 패널로 이동하려면 확인을 누르십시오."
 
 #: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
-"경고! 시스템 플러그인이 로드되지 않았습니다. PCSX2가 실행되지 않습니다."
+"경고! 시스템 플러그인을 불러오지 못했습니다. PCSX2가 작동 못할지도 모릅니다."
 
 #: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
-msgstr "%s 커맨드라인 옵션들"
+msgstr "%s 명령 줄 옵션"
 
 #: pcsx2/gui/AppMain.cpp:607
 msgid "PS2 BIOS Error"
-msgstr "PS2 바이오스 에러"
+msgstr "PS2 바이오스 오류"
 
 #: pcsx2/gui/AppMain.cpp:608
 msgid "Press Ok to go to the BIOS Configuration Panel."
-msgstr "바이오스 설정 화면을 열기위해 확인을 누르세요."
+msgstr "바이오스 구성 패널로 이동하려면 확인을 누르십시오."
 
 #: pcsx2/gui/AppMain.cpp:660
 msgid "PCSX2 Unresponsive Thread"
-msgstr "PCSX2 반응이 늦은 스레드"
+msgstr "PCSX2의 응답하지 않는 스레드"
 
 #: pcsx2/gui/AppMain.cpp:667
 msgid "Terminate"
-msgstr "종료"
+msgstr "끝내기"
 
 #: pcsx2/gui/AppMain.cpp:993
 msgid "Executing PS2 Virtual Machine..."
-msgstr "PS2 가상머신 실행 중..."
+msgstr "PS2 가상 머신 실행 중..."
 
 #: pcsx2/gui/AppRes.cpp:72
 msgid "Browse for an Iso that is not in your recent history."
-msgstr "최근 사용기록에 없는 Iso 찾아보기."
+msgstr "최근 내역에 없는 Iso를 찾아보기."
 
 #: pcsx2/gui/AppRes.cpp:72
 msgid "Browse..."
-msgstr "찾아보기"
+msgstr "찾아보기..."
 
 #: pcsx2/gui/AppUserMode.cpp:94
 msgid "The following folders exist, but are not writable:"
-msgstr "다음 폴더들은 존재는 하지만, 기록할 수는 없음:"
+msgstr "다음과 같은 폴더가 존재하지만, 쓰기가 되지 않습니다:"
 
 #: pcsx2/gui/AppUserMode.cpp:99
 msgid "The following folders are missing and cannot be created:"
-msgstr "다음 폴더들은 없거나 만들 수 없음:"
+msgstr "다음과 같은 폴더가 누락되어 만들 수 없습니다:"
 
 #: pcsx2/gui/AppUserMode.cpp:139
 #, c-format
 msgid "Portable mode error - %s"
-msgstr "무설치 모드 에러 - %s"
+msgstr "무설치 방식 오류 - %s"
 
 #: pcsx2/gui/AppUserMode.cpp:152
 msgid ""
 "PCSX2 has been installed as a portable application but cannot run due to the "
 "following errors:"
-msgstr "PCSX2 가 무설치로 설치되었지만 다음의 에러로 사용 불가능합니다:"
+msgstr ""
+"PCSX2는 무설치 응용 프로그램으로 설치되어 있지만 다음과 같은 오류로 실행할 "
+"수 없습니다:"
 
 #: pcsx2/gui/AppUserMode.cpp:160
 msgid "Switch to User Documents Mode"
-msgstr "유저 문서 모드로 전환"
+msgstr "사용자 문서 방식으로 전환"
 
 #: pcsx2/gui/AppUserMode.cpp:173
 #, c-format
 msgid "%s is switching to local install mode."
-msgstr "%s 가 지역 인스톨 모드로 전환됩니다."
+msgstr "%s 내부 설치 방식으로 전환됩니다."
 
 #: pcsx2/gui/AppUserMode.cpp:174
 msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."
-msgstr "\"portable.ini\" 파일을 설치된 폴더에서 수동으로 제거하십시오."
+msgstr ""
+"수동으로 설지된 디렉토리에서 \"portable.ini\"라는 파일을 제거하려고 합니다."
 
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
-msgstr "새로운 설정을 적용할 수 없습니다, 설정 중 일부가 부적절합니다."
+msgstr "새로운 설정을 적용할 수 없습니다, 설정 중 하나가 무효합니다."
 
 #: pcsx2/gui/ConsoleLogger.cpp:120
 msgid "Save log question"
-msgstr "로그 질문을 저장"
+msgstr "로그 문제 저장"
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Fits a lot of log in a microcosmically small area."
-msgstr "많은 로그기록을 축소해서 작은 영역에 맞춥니다."
+msgstr "축소하여 작은 영역에 로그를 많이하는데 적합합니다."
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Small"
-msgstr "작은"
+msgstr "작게"
 
 #: pcsx2/gui/ConsoleLogger.cpp:419
 msgid "It's what I use (the programmer guy)."
-msgstr "내가 쓰는 것(프로그래머)."
+msgstr "제가 사용하고 있습니다 (프로그래머)."
 
 #: pcsx2/gui/ConsoleLogger.cpp:419 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
@@ -682,23 +692,23 @@ msgstr "보통"
 
 #: pcsx2/gui/ConsoleLogger.cpp:421
 msgid "Its nice and readable."
-msgstr "좋고, 읽기 쉬운."
+msgstr "보기 좋고 읽기 쉽게."
 
 #: pcsx2/gui/ConsoleLogger.cpp:421
 msgid "Large"
-msgstr "큰"
+msgstr "크게"
 
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Huge"
-msgstr "거대한"
+msgstr "거대하게"
 
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "In case you have a really high res display."
-msgstr "정말 높은 해상도의 화면장치를 가지고 있는 경우."
+msgstr "실제로 고-해상도의 화면 표시기를 가지고 있는 경우."
 
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Default soft-tone color scheme."
-msgstr "기본값인 부드러운 색감 테마."
+msgstr "부드러운 색조 구성의 기본 테마."
 
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Light theme"
@@ -708,7 +718,8 @@ msgstr "밝은 테마"
 msgid ""
 "Classic black color scheme for people who enjoy having text seared into "
 "their optic nerves."
-msgstr "읽기 쉬운 텍스트를 선호하는 사람들을 위한 고전적인 검은 색 테마."
+msgstr ""
+"문자가 시신경에서 무감각하게 느끼고 즐길 사람들을 위한 고전적인 검은 색 테마."
 
 #: pcsx2/gui/ConsoleLogger.cpp:428
 msgid "Dark theme"
@@ -716,40 +727,40 @@ msgstr "어두운 테마"
 
 #: pcsx2/gui/ConsoleLogger.cpp:431
 msgid "Always on Top"
-msgstr "항상 위에"
+msgstr "항상 맨 위에"
 
 #: pcsx2/gui/ConsoleLogger.cpp:432
 msgid ""
 "When checked the log window will be visible over other foreground windows."
-msgstr "이것이 체크되면 로그 화면이 다른 화면들 위로 보일 것입니다."
+msgstr "이 옵션을 선택하면 로그 창이 다른 전경 창을 통해 볼 수 있습니다."
 
 #: pcsx2/gui/ConsoleLogger.cpp:434
 msgid "&Save..."
-msgstr "&저장"
+msgstr "저장하기 ..."
 
 #: pcsx2/gui/ConsoleLogger.cpp:434
 msgid "Save log contents to file"
-msgstr "로그 내용을 파일로 저장"
+msgstr "파일에 로그 내용을 저장합니다"
 
 #: pcsx2/gui/ConsoleLogger.cpp:435
 msgid "C&lear"
-msgstr "&지우기"
+msgstr "지우기"
 
 #: pcsx2/gui/ConsoleLogger.cpp:435
 msgid "Clear the log window contents"
-msgstr "로그 화면 기록을 지우기"
+msgstr "로그 창 내용을 지웁니다"
 
 #: pcsx2/gui/ConsoleLogger.cpp:437 pcsx2/gui/Dialogs/SysConfigDialog.cpp:264
 msgid "Appearance"
-msgstr "표시형태"
+msgstr "외관"
 
 #: pcsx2/gui/ConsoleLogger.cpp:439
 msgid "&Close"
-msgstr "&닫기"
+msgstr "닫기"
 
 #: pcsx2/gui/ConsoleLogger.cpp:439
 msgid "Close this log window; contents are preserved"
-msgstr "이 로그창을 닫습니다; 내용은 보존됩니다"
+msgstr "이 로그 창을 닫습니다; 내용은 보존됩니다"
 
 #: pcsx2/gui/ConsoleLogger.cpp:443
 msgid "Dev/Verbose"
@@ -757,7 +768,7 @@ msgstr "Dev/Verbose"
 
 #: pcsx2/gui/ConsoleLogger.cpp:443
 msgid "Shows PCSX2 developer logs"
-msgstr "PCSX2 개발자 기록 보기"
+msgstr "PCSX2의 개발자 로그를 표시합니다"
 
 #: pcsx2/gui/ConsoleLogger.cpp:444
 msgid "CDVD reads"
@@ -765,115 +776,116 @@ msgstr "CDVD 읽기"
 
 #: pcsx2/gui/ConsoleLogger.cpp:444
 msgid "Shows disk read activity"
-msgstr "디스크 읽기 기록 보기"
+msgstr "디스크 읽기 활동을 표시합니다"
 
 #: pcsx2/gui/ConsoleLogger.cpp:461
 msgid "Enable all"
-msgstr "모두 보기"
+msgstr "모두 활성화"
 
 #: pcsx2/gui/ConsoleLogger.cpp:461
 msgid "Enables all log source filters."
-msgstr "모든 로그소스 필터 사용."
+msgstr "모든 로그 소스 필터를 활성화합니다."
 
 #: pcsx2/gui/ConsoleLogger.cpp:462
 msgid "Disable all"
-msgstr "모두 안보기"
+msgstr "모두 비활성화"
 
 #: pcsx2/gui/ConsoleLogger.cpp:462
 msgid "Disables all log source filters."
-msgstr "모든 로그소스 필터 사용 안함."
+msgstr "모든 로그 소스 필터를 비활성화합니다."
 
 #: pcsx2/gui/ConsoleLogger.cpp:464
 msgid "&Log"
-msgstr "&로그"
+msgstr "로그(&L)"
 
 #: pcsx2/gui/ConsoleLogger.cpp:465
 msgid "&Sources"
-msgstr "&소스"
+msgstr "소스(&S)"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
 msgid "About %s"
-msgstr "%s 에 대해"
+msgstr "%s 정보"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:55
 msgid "Betatesting"
-msgstr "베타테스팅"
+msgstr "베타 검사"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:55
 msgid "Previous versions"
-msgstr "이전 버전들"
+msgstr "이전 버전"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:55
 msgid "Webmasters"
-msgstr "웹마스터들"
+msgstr "웹 마스터"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:66
 msgid "Plugin Specialists"
-msgstr "플러그인 전문가들"
+msgstr "플러그인 특화"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:66
 msgid "Special thanks to"
-msgstr "특별히 감사하는"
+msgstr "특히 감사할 분들"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:82
 msgid "Developers"
-msgstr "개발자들"
+msgstr "개발자"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:84
 msgid "Contributors"
-msgstr "도와준분들"
+msgstr "도움을 주신 분"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:98
 msgid "A Playstation 2 Emulator"
-msgstr "플스2 에뮬레이터"
+msgstr "플레이스테이션 2 에뮬레이터"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:102
 msgid "PCSX2 Official Website and Forums"
-msgstr "PCSX2 공식 웹사이트와 포럼"
+msgstr "PCSX2의 공식 웹사이트 및 포럼"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:106
 msgid "PCSX2 Official Svn Repository at Googlecode"
-msgstr "구글코드의 PCSX2 공식 Svn 버전들"
+msgstr "구글코드에 PCSX2의 공식 Svn 보관소"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:110
 msgid "I've seen enough"
-msgstr "잘 봤습니다"
+msgstr "충분히 봤어요"
 
 #: pcsx2/gui/Dialogs/AssertionDialog.cpp:23
 msgid "Assertion Failure - "
-msgstr "수행 실패 - "
+msgstr "표명 실패 - "
 
 #: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:193
 msgid "Saves a snapshot of this settings panel to a PNG file."
-msgstr "이 설정화면을 PNG 파일로 저장."
+msgstr "이 설정 패널의 스냅샷을 PNG 파일로 저장합니다."
 
 #: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:308
 msgid "Save dialog screenshots to..."
-msgstr "다이얼로그 스크린샷을 저장..."
+msgstr "다이얼로그 스냅샷을 저장합니다..."
 
 #: pcsx2/gui/Dialogs/BiosSelectorDialog.cpp:31
 msgid "BIOS Selector"
-msgstr "바이오스 선택"
+msgstr "바이오스 선택기"
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:193
 msgid "Do not show this dialog again."
-msgstr "이 다이얼로그를 다시 보지 않습니다."
+msgstr "이 다이얼로그를 다시 표시하지 마십시오."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:199
 msgid ""
 "Disables this popup and whatever response you select here will be "
 "automatically used from now on."
 msgstr ""
-"이 팝업창과 여기 선택한 것이 자동으로 실행되면서 지금부터 나오는 모든 반응을 "
-"사용하지 않습니다."
+"지금부터 여기에서 선택한 것은 자동으로 사용되며 이 팝업 및 어떠한 응답도 비활"
+"성화합니다."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:201
 msgid ""
 "The popup will not be shown again.  This setting can be undone from the "
 "settings panels."
 msgstr ""
-"팝업이 다시 보여지지 않습니다. 설정화면에서 이 설정이 완료되지 않았습니다."
+"팝업은 다시 표시되지 않을 것입니다. 이 설정은 설정 패널에서 취소할 수 있습니"
+"다."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:247
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:292
@@ -882,11 +894,11 @@ msgstr "무시"
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:278
 msgid "Reset"
-msgstr "초기화"
+msgstr "리셋"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:40
 msgid "Create a new memory card"
-msgstr "새 메모리카드를 만들기"
+msgstr "새로운 메모리 카드 만들기"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:59
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:73
@@ -896,7 +908,7 @@ msgstr "만들기"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:71
 msgid "New memory card:"
-msgstr "새 메모리카드:"
+msgstr "새로운 메모리 카드:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:72
 msgid "At folder:    "
@@ -904,22 +916,22 @@ msgstr "폴더:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:75
 msgid "Select file name: "
-msgstr "파일이름 선택:"
+msgstr "파일 이름 선택:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:149
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:866
 #, c-format
 msgid "Error (%s)"
-msgstr "에러 (%s)"
+msgstr "오류 (%s)"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:150
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
 msgid "Create memory card"
-msgstr "메모리카드 만들기"
+msgstr "메모리 카드 만들기"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:163
 msgid "Error: The memory card could not be created."
-msgstr "에러: 메모리카드가 만들어지지 않았습니다."
+msgstr "오류: 메모리 카드를 만들 수 없었습니다."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:177
 msgid "Use NTFS compression when creating this card."
@@ -934,15 +946,15 @@ msgid ""
 "This is the standard Sony-provisioned size, and is supported by all games "
 "and BIOS versions."
 msgstr ""
-"이것은 소니가 제공하는 표준 크기입니다, 그래서 모든 게임과 BIOS 버전에서 지원"
-"됩니다."
+"이것은 소니에서 제공된 표준 크기이며, 모든 게임 및 바이오스 버전에서 지원됩니"
+"다."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
 msgid ""
 "Always use this option if you want the safest and surest memory card "
 "behavior."
 msgstr ""
-"가장 안전하고 확실한 메모리카드 동작을 원한다면 항상 이 옵션을 사용하세요."
+"가장 안전하고 확실한 메모리 카드의 동작을 원하면 항상 이 옵션을 사용하십시오."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:198
 msgid "16 MB"
@@ -952,12 +964,14 @@ msgstr "16 MB"
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:202
 msgid ""
 "A typical size for 3rd-party memory cards which should work with most games."
-msgstr "대부분의 게임에서 동작하는 3rd-party 메모리카드를 위한 전형적인 크기."
+msgstr ""
+"대부분의 게임과 함께 작동하며 3rd-party 메모리 카드를 위한 전형적인 크기입니"
+"다."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 과 32 MB 카드는 대략 비슷한 호환성을 가지고 있습니다."
+msgstr "16 및 32 MB 카드는 대략 비슷한 호환 요소를 가지고 있습니다."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:202
 msgid "32 MB"
@@ -972,20 +986,21 @@ msgid ""
 "Low compatibility warning: Yes it's very big, but may not work with many "
 "games."
 msgstr ""
-"낮은 호환성 경고: 확실히 매우 크지만, 많은 게임에서 잘 동작하지 않습니다."
+"경고 낮은 호환성: 확실히 매우 크지만, 많은 게임과 함께 작동하지 않을 수 있습"
+"니다."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
 msgid ""
 "Use at your own risk.  Erratic memory card behavior is possible (though "
 "unlikely)."
 msgstr ""
-"위험을 감수하고 쓰세요. 불규칙한 메모리카드 동작의 가능성이 있습니다(불운하게"
-"도)."
+"위험을 감수하고 사용하십시오. 불규칙한 메모리 카드의 행동이 있을 수 있습니다 "
+"(예상 밖이지만)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
 msgid "Select a folder for %s settings"
-msgstr "%s 설정을 위해 폴더를 선택"
+msgstr "%s 설정을 위한 폴더를 선택하십시오"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 msgid "Settings"
@@ -1000,25 +1015,25 @@ msgid ""
 "Change the language only if you need to.\n"
 "The system default should be fine for most operating systems."
 msgstr ""
-"원하는 언어로 바꾸세요.\n"
-"대부분의 운영체제에서 시스템 기본값이 좋습니다."
+"당신이 필요한 경우에만 언어를 변경하십시오.\n"
+"대부분의 운영 체제를 위해 시스템 기본이 괜찮을 것입니다."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:85
 msgid "Welcome to PCSX2!"
-msgstr "환영합니다!"
+msgstr "PCSX2에 오신 것을 환영합니다!"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:96
 msgid "Configuration Guides (online)"
-msgstr "설정 가이드 (온라인)"
+msgstr "구성 안내 (온라인)"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:100
 msgid "Readme / FAQ (Offline/PDF)"
-msgstr "읽어보기/FAQ (오프라인/PDF)"
+msgstr "Readme / FAQ (오프라인/PDF)"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
 #, c-format
 msgid "%s First Time Configuration"
-msgstr "%s 최초의 설정"
+msgstr "%s 처음 구성"
 
 #: pcsx2/gui/Dialogs/GameDatabaseDialog.cpp:24
 #, c-format
@@ -1027,7 +1042,7 @@ msgstr "게임 데이터베이스 - %s"
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:24
 msgid "Import Existing Settings?"
-msgstr "기존 설정을 가져옵니까?"
+msgstr "기존의 설정을 가져오시겠습니까?"
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:36
 msgid "Import"
@@ -1035,23 +1050,25 @@ msgstr "가져오기"
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:37
 msgid "Overwrite"
-msgstr "덮어쓰기"
+msgstr "덮어 쓰기"
 
 #: pcsx2/gui/Dialogs/LogOptionsDialog.cpp:27
 msgid "Trace Logging"
-msgstr "로그 추적"
+msgstr "로깅 추적"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:38
 msgid "Auto-eject memory cards when loading savestates"
-msgstr "상태저장 불러올 때 메모리카드 자동-배출"
+msgstr "상태 저장을 불러들일 때 메모리 카드 자동-배출"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:92
 msgid "MemoryCard Manager"
-msgstr "메모리카드 관리자"
+msgstr "메모리 카드 관리자"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:108
 msgid "Drag cards to or from PS2-ports"
-msgstr "카드를 드래그하거나 PS2-포트에서 가져오세요"
+msgstr ""
+"메모리 카드를 끌어서 빈 포트 쪽으로 또는 PS2-포트에서 빈 포트로 끌어 넣으면 "
+"됩니다"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:109
 msgid ""
@@ -1059,66 +1076,68 @@ msgid ""
 "Note: Duplicate/Rename/Create/Delete will NOT be reverted with 'Cancel'."
 msgstr ""
 "\n"
-"주의: 복사/이름변경/만들기/삭제 는 '취소'에 의해 복구되지 않습니다."
+"주의: 복사/이름 바꾸기/만들기/삭제 등은 '취소'로 복구되지 않습니다."
 
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:24
 msgid "PCSX2 First Time configuration"
-msgstr "PCSX2 최초의 설정"
+msgstr "PCSX2 처음 구성"
 
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:29
 #, c-format
 msgid "%s is starting from a new or unknown folder and needs to be configured."
-msgstr "%s는 새로운 또는 모르는 폴더에서 시작하고 설정될 필요가 있습니다."
+msgstr "%s는 새로운 또는 알려지지 않은 폴더에서 시작하고 구성되어야 합니다."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:28
 msgid "PCSX2 Thread is not responding"
-msgstr "PCSX2 스레드가 응답이 없습니다"
+msgstr "PCSX2의 스레드가 응답하지 않습니다"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:36
 msgid "Config Overrides Warning"
-msgstr "설정 무시 경고"
+msgstr "구성 경고 무시"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:53
 msgid "Components Overrides Warning"
-msgstr "구성요소 무시 경고"
+msgstr "구성 요소 경고 무시"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:134
 msgid "Preset:"
-msgstr "프리셋:"
+msgstr "사전 설정:"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:212
 #, c-format
 msgid "Emulation Settings - %s"
-msgstr "에뮬레이터 설정 - %s"
+msgstr "에뮬레이션 설정 - %s"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:221
 msgid "EE/IOP"
-msgstr "EE/IOP"
+msgstr ""
+"이모션 엔진 및\n"
+"입출력 프로세서"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:222
 msgid "VUs"
-msgstr "VUs"
+msgstr "벡터 유닛"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:223
 msgid "GS"
-msgstr "GS"
+msgstr "그래픽 합성기"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:224
 msgid "GS Window"
-msgstr "GS 창"
+msgstr "그래픽 합성기 창"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:225
 msgid "Speedhacks"
-msgstr "스피드핵"
+msgstr "스피드 핵"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:226
 msgid "Game Fixes"
-msgstr "게임 수정들"
+msgstr "게임 수정"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
 #, c-format
 msgid "Components Selectors - %s"
-msgstr "구성요소 선택 - %s"
+msgstr "구성 요소 선택기 - %s"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:244
 msgid "Plugins"
@@ -1139,68 +1158,68 @@ msgstr "외관/테마 - %s"
 
 #: pcsx2/gui/ExecutorThread.cpp:40
 msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "PS2 가상머신에 전해진 이벤트를 기록합니다."
+msgstr "PS2 가상 머신에 전달되면 이벤트를 로그합니다."
 
 #: pcsx2/gui/ExecutorThread.cpp:430
 msgid "Press Cancel to attempt to cancel the action."
-msgstr "적용하지 않으려면 취소를 누르세요."
+msgstr "동작을 취소하려면 취소를 누르십시오."
 
 #: pcsx2/gui/ExecutorThread.cpp:431
 #, c-format
 msgid "Press Terminate to kill %s immediately."
-msgstr "%s 를 즉시 중지하려면 제거를 누르세요."
+msgstr "%s 즉시 소거하려면 끝내기를 누르십시오."
 
 #: pcsx2/gui/ExecutorThread.cpp:434
 msgid "Terminate App"
-msgstr "App 제거"
+msgstr "App 끝내기"
 
 #: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
-msgstr "GS 출력 사용 안함!"
+msgstr "GS 출력을 비활성화!"
 
 #: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
-msgstr "상태 저장"
+msgstr "상태 저장하기"
 
 #: pcsx2/gui/GlobalCommands.cpp:388
 msgid "Saves the virtual machine state to the current slot."
-msgstr "가상 머신 상태를 현재 슬롯에 저장합니다."
+msgstr "현재 슬롯에 가상 머신 상태를 저장합니다."
 
 #: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
-msgstr "상태 로드"
+msgstr "상태 불러오기"
 
 #: pcsx2/gui/GlobalCommands.cpp:394
 msgid "Loads a virtual machine state from the current slot."
-msgstr "가상 머신 상태를 현재 슬롯에서 불러옵니다."
+msgstr "현재 슬롯에서 가상 머신 상태를 불러옵니다."
 
 #: pcsx2/gui/GlobalCommands.cpp:399
 msgid "Load State Backup"
-msgstr "상태 백업 불러오기"
+msgstr "백업 상태 불러오기"
 
 #: pcsx2/gui/GlobalCommands.cpp:400
 msgid "Loads virtual machine state backup for current slot."
-msgstr "가상 머신 상태 백업을 불러옵니다."
+msgstr "현재 슬롯으로 부터 가상 머신 백업 상태를 불러옵니다."
 
 #: pcsx2/gui/GlobalCommands.cpp:405
 msgid "Cycle to next slot"
-msgstr "다음 슬롯으로 이동"
+msgstr "다음 슬롯으로 순환"
 
 #: pcsx2/gui/GlobalCommands.cpp:406
 msgid "Cycles the current save slot in +1 fashion!"
-msgstr "현재 저장슬롯을 +1 이동합니다!"
+msgstr "+1 방식으로 현재 저장 슬롯을 순환!"
 
 #: pcsx2/gui/GlobalCommands.cpp:411
 msgid "Cycle to prev slot"
-msgstr "이전 슬롯으로 이동"
+msgstr "이전 슬롯으로 순환"
 
 #: pcsx2/gui/GlobalCommands.cpp:412
 msgid "Cycles the current save slot in -1 fashion!"
-msgstr "현재 저장슬롯을 -1 이동합니다!"
+msgstr "-1 방식으로 현재 저장 슬롯을 순환!"
 
 #: pcsx2/gui/IsoDropTarget.cpp:55
 msgid "Drag and Drop Error"
-msgstr "가져다 놓기 에러"
+msgstr "끌어 놓기 오류"
 
 #: pcsx2/gui/IsoDropTarget.cpp:56
 #, c-format
@@ -1208,8 +1227,8 @@ msgid ""
 "It is an error to drop multiple files onto a %s window.  One at a time "
 "please, thank you."
 msgstr ""
-"%s 창에 여러개의 파일을 끌어놓아 오류가 납니다. 한번에 하나씩 해주세요, 감사"
-"합니다."
+"%s 창에 여러 개의 파일을 놓으면 오류가 발생합니다. 한번에 하나씩 부탁합니다, "
+"감사합니다."
 
 #: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:338
 msgid "Confirm PS2 Reset"
@@ -1221,13 +1240,13 @@ msgid ""
 "You have dropped the following ELF binary into %s:\n"
 "\n"
 msgstr ""
-"다음 ELF 바이너리 파일을 %s에 놓았습니다:\n"
+"당신은 %s에 다음 ELF 바이너리를 탈락시켰습니다:\n"
 "\n"
 
 #: pcsx2/gui/IsoDropTarget.cpp:133
 #, c-format
 msgid "You have dropped the following ISO image into %s:"
-msgstr "다음 ISO 이미지를 %s에 놓았습니다:"
+msgstr "당신은 %s에 다음 ISO 이미지를 탈락시켰습니다:"
 
 #: pcsx2/gui/MainFrame.cpp:36
 #, c-format
@@ -1240,31 +1259,31 @@ msgstr "백업"
 
 #: pcsx2/gui/MainFrame.cpp:324
 msgid "Show Console"
-msgstr "콘솔 보기"
+msgstr "콘솔 표시"
 
 #: pcsx2/gui/MainFrame.cpp:325
 msgid "Console to Stdio"
-msgstr "Stdio 에 콘솔"
+msgstr "표준 입출력에 콘솔"
 
 #: pcsx2/gui/MainFrame.cpp:338
 msgid "&System"
-msgstr "&시스템"
+msgstr "시스템(&S)"
 
 #: pcsx2/gui/MainFrame.cpp:339
 msgid "CD&VD"
-msgstr "&CDVD"
+msgstr "CDVD(&V)"
 
 #: pcsx2/gui/MainFrame.cpp:340
 msgid "&Config"
-msgstr "&설정"
+msgstr "구성(&C)"
 
 #: pcsx2/gui/MainFrame.cpp:341
 msgid "&Misc"
-msgstr "&기타"
+msgstr "기타(&M)"
 
 #: pcsx2/gui/MainFrame.cpp:343
 msgid "&Debug"
-msgstr "&디버그"
+msgstr "디버그(&D)"
 
 #: pcsx2/gui/MainFrame.cpp:355
 #, c-format
@@ -1273,7 +1292,7 @@ msgstr "%s  %d.%d.%d %s"
 
 #: pcsx2/gui/MainFrame.cpp:356
 msgid "(modded)"
-msgstr "(수정된)"
+msgstr "(편집)"
 
 #: pcsx2/gui/MainFrame.cpp:362
 #, c-format
@@ -1283,47 +1302,47 @@ msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 #: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
 #: pcsx2/gui/MainFrame.cpp:407
 msgid "Initializing..."
-msgstr "초기화 중..."
+msgstr "초기화 중입니다..."
 
 #: pcsx2/gui/MainFrame.cpp:403
 msgid "Run ELF..."
-msgstr "ELF 구동"
+msgstr "ELF 실행..."
 
 #: pcsx2/gui/MainFrame.cpp:404
 msgid "For running raw PS2 binaries directly"
-msgstr "PS2 바이너리를 직접 구동"
+msgstr "직접 원본 PS2 바이너리를 실행하기 위해 ..."
 
 #: pcsx2/gui/MainFrame.cpp:416
 msgid "Backup before save"
-msgstr "저장 전 백업"
+msgstr "백업하기 전에 저장"
 
 #: pcsx2/gui/MainFrame.cpp:421
 msgid "Automatic Gamefixes"
-msgstr "자동 게임수정"
+msgstr "자동 게임 수정"
 
 #: pcsx2/gui/MainFrame.cpp:422
 msgid "Automatically applies needed Gamefixes to known problematic games"
-msgstr "알려진 문제에 대해 필요한 게임수정을 자동으로 적용합니다"
+msgstr "알려진 문제의 게임에 필요한 게임 수정을 자동 적용합니다"
 
 #: pcsx2/gui/MainFrame.cpp:424
 msgid "Enable Cheats"
-msgstr "치트 사용"
+msgstr "치트 활성화"
 
 #: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Widescreen Patches"
-msgstr "와이드화면 패치 사용"
+msgstr "와이드 스크린 패치 활성화"
 
 #: pcsx2/gui/MainFrame.cpp:430
 msgid "Enable Host Filesystem"
-msgstr "호스트 파일시스템 사용"
+msgstr "호스트 파일 시스템 활성화"
 
 #: pcsx2/gui/MainFrame.cpp:435
 msgid "Shutdown"
-msgstr "닫기"
+msgstr "중단"
 
 #: pcsx2/gui/MainFrame.cpp:436
 msgid "Wipes all internal VM states and shuts down plugins."
-msgstr "내부 가상머신 상태를 지우고 플러그인 닫기."
+msgstr "모든 내부 가상 머신의 상태를 지우고 플러그인을 중단합니다."
 
 #: pcsx2/gui/MainFrame.cpp:438
 msgid "Exit"
@@ -1332,7 +1351,7 @@ msgstr "종료"
 #: pcsx2/gui/MainFrame.cpp:439
 #, c-format
 msgid "Closing %s may be hazardous to your health"
-msgstr "%s을 닫는 것은 건강에 안 좋습니다 :)"
+msgstr "%s를 닫는 것은 당신의 건강에 해롭습니다 :)"
 
 #: pcsx2/gui/MainFrame.cpp:446
 msgid "Iso Selector"
@@ -1348,7 +1367,7 @@ msgstr "Iso"
 
 #: pcsx2/gui/MainFrame.cpp:450
 msgid "Makes the specified ISO image the CDVD source."
-msgstr "특정 ISO 이미지를 직접 구동합니다."
+msgstr "지정된 ISO 이미지의 CDVD 소스를 만듭니다."
 
 #: pcsx2/gui/MainFrame.cpp:451
 msgid "Plugin"
@@ -1356,43 +1375,43 @@ msgstr "플러그인"
 
 #: pcsx2/gui/MainFrame.cpp:451
 msgid "Uses an external plugin as the CDVD source."
-msgstr "CDVD 소스로 외부플러그인을 사용합니다."
+msgstr "CDVD 소스로 외부 플러그인을 사용합니다."
 
 #: pcsx2/gui/MainFrame.cpp:452
 msgid "No disc"
-msgstr "디스크없음"
+msgstr "디스크 없음"
 
 #: pcsx2/gui/MainFrame.cpp:452
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
-msgstr "가상 PS2 바이오스 설정에 들어가기 위해 이것을 사용하세요."
+msgstr "가상 PS2의 바이오스 구성으로 부트하는데 이것을 사용합니다."
 
 #: pcsx2/gui/MainFrame.cpp:460
 msgid "Emulation &Settings"
-msgstr "에뮬레이션 &설정들"
+msgstr "에뮬레이션 설정"
 
 #: pcsx2/gui/MainFrame.cpp:461
 msgid "&Memory cards"
-msgstr "&메모리 카드들"
+msgstr "메모리 카드"
 
 #: pcsx2/gui/MainFrame.cpp:462
 msgid "&Plugin/BIOS Selector"
-msgstr "&플러그인/바이오스 선택"
+msgstr "플러그인/바이오스 선택"
 
 #: pcsx2/gui/MainFrame.cpp:463 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
-msgstr "게임 데이터베이스 에디터"
+msgstr "게임 데이터베이스 편집"
 
 #: pcsx2/gui/MainFrame.cpp:469
 msgid "&Video (GS)"
-msgstr "&비디오 (GS)"
+msgstr "비디오 (GS)"
 
 #: pcsx2/gui/MainFrame.cpp:470
 msgid "&Audio (SPU2)"
-msgstr "&오디오 (SPU2)"
+msgstr "오디오 (SPU2)"
 
 #: pcsx2/gui/MainFrame.cpp:471
 msgid "&Controllers (PAD)"
-msgstr "&컨트롤러 (PAD)"
+msgstr "컨트롤러 (PAD)"
 
 #: pcsx2/gui/MainFrame.cpp:472
 msgid "Dev9"
@@ -1404,7 +1423,7 @@ msgstr "USB"
 
 #: pcsx2/gui/MainFrame.cpp:474
 msgid "Firewire"
-msgstr "Firewire"
+msgstr "파이어와이어"
 
 #: pcsx2/gui/MainFrame.cpp:480
 msgid "Multitap 1"
@@ -1416,44 +1435,44 @@ msgstr "멀티탭 2"
 
 #: pcsx2/gui/MainFrame.cpp:484
 msgid "Clear all settings..."
-msgstr "모든설정 지우기"
+msgstr "모든 설정 지우기..."
 
 #: pcsx2/gui/MainFrame.cpp:485
 #, c-format
 msgid "Clears all %s settings and re-runs the startup wizard."
-msgstr "모든 %s 설정을 지우고 시작 마법사를 재구동."
+msgstr "모든 %s 설정을 지우고 시작할 때 마법사를 다시-실행합니다."
 
 #: pcsx2/gui/MainFrame.cpp:507
 msgid "About..."
-msgstr "에뮬에 대해"
+msgstr "정보..."
 
 #: pcsx2/gui/MainFrame.cpp:515
 msgid "Logging..."
-msgstr "로그기록 중..."
+msgstr "로깅..."
 
 #: pcsx2/gui/MainFrame.cpp:592
 msgid "Pause"
-msgstr "일시중지"
+msgstr "중지"
 
 #: pcsx2/gui/MainFrame.cpp:593
 msgid "Safely pauses emulation and preserves the PS2 state."
-msgstr "안전하게 에뮬을 멈추고 PS2 상태를 보전합니다."
+msgstr "PS2 상태를 유지하고 안전하게 에뮬레이션을 중지합니다."
 
 #: pcsx2/gui/MainFrame.cpp:600
 msgid "Resume"
-msgstr "게임계속"
+msgstr "재개"
 
 #: pcsx2/gui/MainFrame.cpp:601
 msgid "Resumes the suspended emulation state."
-msgstr "중지된 에뮬 상태를 계속합니다."
+msgstr "중지된 에뮬레이션 상태를 재개합니다."
 
 #: pcsx2/gui/MainFrame.cpp:605
 msgid "Pause/Resume"
-msgstr "중지/계속"
+msgstr "중지/재개"
 
 #: pcsx2/gui/MainFrame.cpp:606
 msgid "No emulation state is active; cannot suspend or resume."
-msgstr "에뮬레이션 중이 아님; 중지 또는 계속할 수 없습니다."
+msgstr "활동적인 에뮬레이션 상태가 아닙니다; 중지하거나 재개할 수 없습니다."
 
 #: pcsx2/gui/MainFrame.cpp:615
 msgid "Restart"
@@ -1461,78 +1480,79 @@ msgstr "재시작"
 
 #: pcsx2/gui/MainFrame.cpp:616
 msgid "Simulates hardware reset of the PS2 virtual machine."
-msgstr "PS2 가상머신의 리셋을 시뮬레이션 합니다."
+msgstr "PS2 가상 머신의 시뮬레이션 하드웨어를 리셋합니다."
 
 #: pcsx2/gui/MainFrame.cpp:621
 msgid "No emulation state is active; boot something first."
-msgstr "에뮬레이션 중이 아님; 먼저 부팅하세요."
+msgstr "활동적인 에뮬레이션 상태가 아닙니다; 무언가를 처음 부트하십시오."
 
 #: pcsx2/gui/MainFrame.cpp:629
 msgid "Reboot CDVD (full)"
-msgstr "CDVD 재부팅(전체)"
+msgstr "CDVD 재부트 (전체)"
 
 #: pcsx2/gui/MainFrame.cpp:630
 msgid "Hard reset of the active VM."
-msgstr "활동중인 가상머신의 하드 리셋."
+msgstr "활동적인 가상 머신의 하드를 리셋합니다."
 
 #: pcsx2/gui/MainFrame.cpp:634
 msgid "Boot CDVD (full)"
-msgstr "CDVD 부팅(전체)"
+msgstr "CDVD 부트 (전체)"
 
 #: pcsx2/gui/MainFrame.cpp:635
 msgid "Boot the VM using the current DVD or Iso source media"
-msgstr "현재 DVD 또는 Iso 이미지로 가상머신을 부팅"
+msgstr "현재의 DVD 또는 Iso 소스 미디어를 사용하여 가상 머신을 부트합니다"
 
 #: pcsx2/gui/MainFrame.cpp:643
 msgid "Reboot CDVD (fast)"
-msgstr "CDVD 재부팅(빠른)"
+msgstr "CDVD 재부트 (빠른)"
 
 #: pcsx2/gui/MainFrame.cpp:644
 msgid "Reboot using fast BOOT (skips splash screens)"
-msgstr "빠른 BOOT으로 재부팅(로고화면 생략)"
+msgstr "빠른 부트를 사용하여 재부트합니다 (스플래시 화면 생략)"
 
 #: pcsx2/gui/MainFrame.cpp:648
 msgid "Boot CDVD (fast)"
-msgstr "CDVD 부팅(빠른)"
+msgstr "CDVD 부트 (빠른)"
 
 #: pcsx2/gui/MainFrame.cpp:649
 msgid "Use fast boot to skip PS2 startup and splash screens"
-msgstr "PS2 시작과 로고화면을 생략하는 빠른 부팅"
+msgstr "PS2를 시작할 때 및 스플래시 화면 생략에 빠른 부트를 사용합니다"
 
 #: pcsx2/gui/MainFrame.cpp:711 pcsx2/gui/MainFrame.cpp:746
 msgid "No plugin loaded"
-msgstr "플러그인이 없음"
+msgstr "불러올 플러그인이 없습니다"
 
 #: pcsx2/gui/MainFrame.cpp:716
 msgid "Core GS Settings..."
-msgstr "핵심 GS 설정"
+msgstr "GS 핵심 설정..."
 
 #: pcsx2/gui/MainFrame.cpp:717
 msgid ""
 "Modify hardware emulation settings regulated by the PCSX2 core virtual "
 "machine."
-msgstr "PCSX2 핵심 가상머신에 의한 정규화 된 하드웨어 에뮬레이션 설정을 변경."
+msgstr ""
+"PCSX2 핵심 가상 머신에 의해 규제된 하드웨어 에뮬레이션 설정을 변경합니다."
 
 #: pcsx2/gui/MainFrame.cpp:719
 msgid "Window Settings..."
-msgstr "화면 설정"
+msgstr "창 설정..."
 
 #: pcsx2/gui/MainFrame.cpp:720
 msgid "Modify window and appearance options, including aspect ratio."
-msgstr "화면비율을 포함한 창과 형태 옵션을 변경."
+msgstr "화면 비율을 포함하여 창 및 외관 옵션을 변경합니다."
 
 #: pcsx2/gui/MainFrame.cpp:727
 msgid "Plugin Settings..."
-msgstr "플러그인 설정"
+msgstr "플러그인 설정..."
 
 #: pcsx2/gui/MainFrame.cpp:728
 #, c-format
 msgid "Opens the %s plugin's advanced settings dialog."
-msgstr "%s 플러그인의 고급설정 창을 엽니다."
+msgstr "%s 플러그인의 고급 설정 다이얼로그를 엽니다."
 
 #: pcsx2/gui/MainMenuClicks.cpp:108
 msgid "Reset all settings?"
-msgstr "모든설정을 초기화합니까?"
+msgstr "모든 설정을 리셋하시겠습니까?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:136
 msgid "Confirm ISO image change"
@@ -1540,29 +1560,30 @@ msgstr "ISO 이미지 변경 확인"
 
 #: pcsx2/gui/MainMenuClicks.cpp:142
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
-msgstr "디스크를 교환하거나 새 이미지로 부팅할까요(시스템 리셋으로)?"
+msgstr ""
+"디스크를 교체하거나 새로운 이미지를 부트하시겠습니까 (시스템 리셋을 통하여)?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
 msgid "Swap Disc"
-msgstr "디스크 교환"
+msgstr "디스크 교체"
 
 #: pcsx2/gui/MainMenuClicks.cpp:180
 msgid "Confirm CDVD source change"
-msgstr "CDVD 변경 확인"
+msgstr "CDVD 소스 변경 확인"
 
 #: pcsx2/gui/MainMenuClicks.cpp:183
 #, c-format
 msgid "You've selected to switch the CDVD source from %s to %s."
-msgstr "%s 에서 %s 으로 CDVD를 변경하기 위해 선택했습니다."
+msgstr "당신은 %s 에서 %s 로 CDVD 소스 전환을 선택했습니다."
 
 #: pcsx2/gui/MainMenuClicks.cpp:187
 msgid "Do you want to swap discs or boot the new image (system reset)?"
-msgstr "디스크를 교환하거나 새 이미지로 부팅할까요(시스템 리셋)?"
+msgstr "디스크를 교체하거나 새로운 이미지를 부트하시겠습니까 (시스템 리셋)?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:257
 #, c-format
 msgid "All Supported (%s)"
-msgstr "지원하는 모든 (%s)"
+msgstr "지원되는 모든 (%s)"
 
 #: pcsx2/gui/MainMenuClicks.cpp:260
 #, c-format
@@ -1572,7 +1593,7 @@ msgstr "디스크 이미지 (%s)"
 #: pcsx2/gui/MainMenuClicks.cpp:263
 #, c-format
 msgid "Blockdumps (%s)"
-msgstr "블럭덤프 (%s)"
+msgstr "블록 덤프 (%s)"
 
 #: pcsx2/gui/MainMenuClicks.cpp:266 pcsx2/gui/MainMenuClicks.cpp:287
 msgid "All Files (*.*)"
@@ -1580,32 +1601,34 @@ msgstr "모든 파일 (*.*)"
 
 #: pcsx2/gui/MainMenuClicks.cpp:269
 msgid "Select CDVD source iso..."
-msgstr "iso 선택"
+msgstr "CDVD 소스 iso를 선택하십시오..."
 
 #: pcsx2/gui/MainMenuClicks.cpp:286
 msgid "Select ELF file..."
-msgstr "ELF 파일 선택"
+msgstr "ELF 파일 선택..."
 
 #: pcsx2/gui/MainMenuClicks.cpp:312
 msgid "ISO file not found!"
-msgstr "ISO 파일 없음!"
+msgstr "ISO 파일이 발견되지 않습니다!"
 
 #: pcsx2/gui/MainMenuClicks.cpp:314
 msgid "An error occurred while trying to open the file:"
-msgstr "파일을 여는 동안 에러 발생:"
+msgstr "파일 열기를 시도하는 동안 오류가 발생했습니다:"
 
 #: pcsx2/gui/MainMenuClicks.cpp:315
 msgid ""
 "Error: The configured ISO file does not exist.  Click OK to select a new ISO "
 "source for CDVD."
-msgstr "에러: 설정된 ISO 파일이 없음. 확인을 눌러 새 ISO 파일을 선택하세요."
+msgstr ""
+"오류: 구성된 ISO 파일이 존재하지 않습니다. CDVD에 대한 새로운 ISO 소스를 선택"
+"하려면 확인을 누르십시오."
 
 #: pcsx2/gui/MainMenuClicks.cpp:386
 msgid ""
 "You have selected the following ISO image into PCSX2:\n"
 "\n"
 msgstr ""
-"다음 ISO 이미지를 선택했습니다:\n"
+"당신은 PCSX2에 다음 ISO 이미지를 선택했습니다:\n"
 "\n"
 
 #: pcsx2/gui/MemoryCardFile.cpp:183
@@ -1616,7 +1639,7 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
-"메모리카드를 만들 수 없었음: \n"
+"메모리 카드를 만들 수 없었습니다: \n"
 "\n"
 "%s\n"
 "\n"
@@ -1629,45 +1652,46 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
-"메모리카드 접근 거부: \n"
+"메모리 카드 접근이 거부되었습니다: \n"
 "\n"
 "%s\n"
 "\n"
 
 #: pcsx2/gui/MemoryCardFile.cpp:584
 msgid "File name empty or too short"
-msgstr "파일이름이 없거나 너무짧음"
+msgstr "파일 이름이 비었거나 너무 짧습니다"
 
 #: pcsx2/gui/MemoryCardFile.cpp:589
 msgid "File name outside of required directory"
-msgstr "파일이름이 필요한 디렉토리에 없음"
+msgstr "디렉토리 외부 파일 이름이 필요합니다"
 
 #: pcsx2/gui/MemoryCardFile.cpp:595
 msgid "File name already exists"
-msgstr "파일이름이 이미 존재"
+msgstr "파일 이름이 이미 존재합니다"
 
 #: pcsx2/gui/MemoryCardFile.cpp:602
 msgid "The Operating-System prevents this file from being created"
-msgstr "운영체제가 파일 생성을 막음"
+msgstr "운영-체제가 파일 만들기를 방해합니다"
 
 #: pcsx2/gui/Panels/BaseApplicableConfigPanel.cpp:103
 msgid "Cannot apply settings..."
-msgstr "설정을 적용할 수 없음..."
+msgstr "설정을 적용할 수 없습니다..."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:103
 msgid "BIOS Search Path:"
-msgstr "바이오스 탐색경로:"
+msgstr "바이오스 경로 검색:"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:104
 msgid "Select folder with PS2 BIOS roms"
-msgstr "PS2 바이오스 폴더를 선택"
+msgstr "PS2 바이오스 롬과 함께 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:111
 msgid ""
 "Click the Browse button to select a different folder where PCSX2 will look "
 "for PS2 BIOS roms."
 msgstr ""
-"찾아보기 버튼을 눌러 PS2 바이오스를 찾을 수 있는 다른 폴더를 선택하세요."
+"PCSX2는 PS2 바이오스 롬을 기다립니다.\n"
+"다른 폴더를 선택하려면 찾아보기 버튼을 누르십시오."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:171
@@ -1681,27 +1705,27 @@ msgstr "바이오스 롬 선택:"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:24
 msgid "Round Mode"
-msgstr "라운드 모드"
+msgstr "라운딩 방식"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:25
 msgid "Clamping Mode"
-msgstr "클램핑 모드"
+msgstr "클램핑 방식"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:29
 msgid "Nearest"
-msgstr "근사값"
+msgstr "근사치"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:30
 msgid "Negative"
-msgstr "음수"
+msgstr "음수 (1)"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:31
 msgid "Positive"
-msgstr "양수"
+msgstr "양수 (0)"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:32
 msgid "Chop / Zero"
-msgstr "버림 / 0"
+msgstr "삭감 / 0 "
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:37
 msgid "None"
@@ -1709,7 +1733,7 @@ msgstr "없음"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:85
 msgid "EE/FPU Advanced Recompiler Options"
-msgstr "EE/FPU 고급 리컴파일러 옵션들"
+msgstr "이모션 엔진/부동 소수점 장치 고급 리컴파일러 옵션"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:87 pcsx2/gui/Panels/CpuPanel.cpp:102
 msgid "Extra + Preserve Sign"
@@ -1721,7 +1745,7 @@ msgstr "전체"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:99
 msgid "VU0 / VU1 Advanced Recompiler Options"
-msgstr "VU0 / VU1 고급 리컴파일러 옵션들"
+msgstr "벡터 유닛 0 / 벡터 유닛 1 고급 리컴파일러 옵션"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:101
 msgid "Extra"
@@ -1734,7 +1758,9 @@ msgstr "인터프리터"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:117
 msgid "Quite possibly the slowest thing in the universe."
-msgstr "아마 세상에서 가장 느릴 것임."
+msgstr ""
+"소스 프로그램을 한 단계씩 기계어로 번역하여 실행하는 언어처리 프로그램으로 아"
+"마도 세상에서 가장 느릴 것입니다."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:119 pcsx2/gui/Panels/CpuPanel.cpp:128
 msgid "Recompiler"
@@ -1744,62 +1770,68 @@ msgstr "리컴파일러"
 msgid ""
 "Performs just-in-time binary translation of 64-bit MIPS-IV machine code to "
 "x86."
-msgstr "정확한 시간에 64-비트 MIPS-IV 머신코드를 x86으로 바이너리 번역 수행."
+msgstr ""
+"이미 컴파일된 파일을 다시 컴파일하는 프로그램으로 x86에 64-비트 MIPS-IV 기계 "
+"코드의 바이너리 번역을 때맞춰 수행합니다. "
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:126
 msgid "Pretty slow; provided for diagnostic purposes only."
-msgstr "매우느림; 분석 목적으로만 사용됨."
+msgstr "매우 느림; 오직 진단을 목적으로 제공된 것입니다."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:129
 msgid ""
 "Performs just-in-time binary translation of 32-bit MIPS-I machine code to "
 "x86."
-msgstr "정확한 시간에 32-비트 MIPS-I 머신코드를 x86으로 바이너리 번역 수행."
+msgstr "x86에 32-비트 MIPS-IV 기계 코드의 바이너리 번역을 때맞춰 수행합니다. "
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Enable EE Cache (Slower)"
-msgstr "EE캐시 사용(느려짐)"
+msgstr "이모션엔진 캐시 활성화 (느려짐)"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Interpreter only; provided for diagnostic"
-msgstr "인터프리터에만 분석을 위해서 사용"
+msgstr "인터프리터만; 진단을 목적으로 제공된 것입니다"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:169 pcsx2/gui/Panels/CpuPanel.cpp:221
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:99
 msgid "Restore Defaults"
-msgstr "기본값 복구"
+msgstr "기본 복원"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:183
 msgid ""
 "Vector Unit Interpreter. Slow and not very compatible. Only use for "
 "diagnostics."
-msgstr "벡터 유닛 인터프리터. 느리고 호환성도 없음. 분석을 위해서만 사용."
+msgstr ""
+"벡터 유닛 인터프리터. 느리고 매우 호환되지 않습니다. 오직 진단 목적으로 사용"
+"하십시오."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:185
 msgid "microVU Recompiler"
-msgstr "마이크로VU 리컴파일러"
+msgstr "마이크로 벡터 유닛 리컴파일러"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:186
 msgid ""
 "New Vector Unit recompiler with much improved compatibility. Recommended."
-msgstr "호환성이 크게 증가된 새 벡터 유닛 리컴파일러. 권장함."
+msgstr "더욱 향상된 호환성과 함께 새로운 벡터 유닛 리컴파일러. 권장합니다."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:188
 msgid "superVU Recompiler [legacy]"
-msgstr "슈퍼VU 리컴파일러 [예전 것]"
+msgstr "슈퍼 벡터 유닛 리컴파일러 [낡은 기술]"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:189
 msgid ""
 "Useful for diagnosing bugs or clamping issues in the new mVU recompiler."
-msgstr "버그분석 또는 새 mVU 리컴파일러에서 클램핑 문제해결에 유용함."
+msgstr ""
+"버그를 진단하거나 새로운 mVU 리컴파일러에서 클램핑 문제에 대하여 도움이 됩니"
+"다."
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:64
 msgid "Path does not exist"
-msgstr "경로가 없음"
+msgstr "경로가 존재하지 않습니다"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:155
 msgid "Use default setting"
-msgstr "기본설정 사용"
+msgstr "기본 설정 사용"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:174
 msgid "Open in Explorer"
@@ -1807,20 +1839,20 @@ msgstr "탐색기 열기"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:175
 msgid "Open an explorer window to this folder."
-msgstr "이 폴더의 탐색창 열기"
+msgstr "이 폴더에 탐색기 창을 엽니다."
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:266
 msgid "Create folder?"
-msgstr "폴더를 만듭니까?"
+msgstr "폴더를 만드시겠습니까?"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:267
 #, c-format
 msgid "A configured folder does not exist.  Should %s try to create it?"
-msgstr "설정된 폴더가 없음. %s를 만들까요?"
+msgstr "구성된 폴더가 존재하지 않습니다. %s 만들려고 합니까?"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:30
 msgid "Fit to Window/Screen"
-msgstr "창/화면 에 맞춤"
+msgstr "창/화면에 맞추기"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:31
 msgid "Standard (4:3)"
@@ -1828,35 +1860,35 @@ msgstr "표준 (4:3)"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:32
 msgid "Widescreen (16:9)"
-msgstr "와이드 (16:9)"
+msgstr "와이드 스크린 (16:9)"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:46
 msgid "Disable window resize border"
-msgstr "창크기 변경시 경계 사용 안함"
+msgstr "창 크기 변경 테두리를 비활성화"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:47
 msgid "Always hide mouse cursor"
-msgstr "마우스커서 항상 숨김"
+msgstr "항상 마우스 커서를 숨기기"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:48
 msgid "Hide window when paused"
-msgstr "중지시 창 숨기기"
+msgstr "중지할 때 창 숨기기"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:49
 msgid "Default to fullscreen mode on open"
-msgstr "구동시 전체화면을 기본값으로"
+msgstr "전체화면 방식으로 기본 열기"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:50
 msgid "Wait for Vsync on refresh"
-msgstr "새로고침시 수직동기 대기"
+msgstr "새로고침에 대한 수직동기를 대기"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:51
 msgid "Dynamically toggle Vsync depending on frame rate (read tooltip!)"
-msgstr "프레임비율에 따라 수직동기 동적전환 (말풍선 참고!)"
+msgstr "프레임 비율에 따라 수직동기를 동적으로 전환 (말풍선을 읽으십시오!)"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:52
 msgid "Double-click toggles fullscreen mode"
-msgstr "더블클릭으로 전체화면 전환"
+msgstr "두 번-누르면 전체 화면 방식으로 전환"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:89
 msgid "Aspect Ratio:"
@@ -1864,7 +1896,7 @@ msgstr "화면 비율:"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:91
 msgid "Custom Window Size:"
-msgstr "화면크기 직접입력:"
+msgstr "사용자 지정 창 크기:"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:94
 msgid "Zoom:"
@@ -1874,20 +1906,21 @@ msgstr "줌:"
 msgid ""
 "Invalid window dimensions specified: Size cannot contain non-numeric digits! "
 ">_<"
-msgstr "부적합한 창 해상도: 숫자로만 크기를 지정하세요!  >_<"
+msgstr "무효한 지정된 창 치수: 크기는 비-수치 숫자를 포함할 수 없습니다!  >_<"
 
 #: pcsx2/gui/Panels/GameDatabasePanel.cpp:334
 msgid "Search"
-msgstr "찾기"
+msgstr "검색"
 
 #: pcsx2/gui/Panels/GameDatabasePanel.cpp:368
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:25
 msgid "Gamefixes"
-msgstr "게임수정"
+msgstr "게임 수정"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:38
 msgid "VU Add Hack - Fixes Tri-Ace games boot crash."
-msgstr "VU 추가 핵 - 트라이-에이스사의 게임들 부팅문제 수정."
+msgstr ""
+"벡터 유닛 핵 추가 - 주식회사 트라이-에이스 게임들의 부트 충돌을 수정합니다."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:39
 msgid ""
@@ -1896,99 +1929,114 @@ msgid ""
 " * Radiata Stories\n"
 " * Valkyrie Profile 2"
 msgstr ""
-"부팅에 이 핵이 필요한 게임들:\n"
-" * 스타오션3\n"
-" * 라디아타 스토리\n"
-" * 발키리프로파일2"
+"부트에 핵이 필요한 게임들:\n"
+" * 스타 오션 3\n"
+" * 라디에이터 스토리\n"
+" * 발키리 프로파일 2"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:42
 msgid "VU Clip Flag Hack - For Persona games (SuperVU recompiler only!)"
-msgstr "VU 클립 플래그 핵 - 페르소나 게임들 (슈퍼VU 리컴파일러만!)"
+msgstr ""
+"벡터 유닛 클립 플래그 핵 - 페르소나 게임을 위해 (오직 슈퍼 벡터 유닛 리컴파일"
+"러!)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:46
 msgid "FPU Compare Hack - For Digimon Rumble Arena 2."
-msgstr "FPU 비교 핵 - 디지몬 럼블 아레나2."
+msgstr "부동 소수점 장치(FPU) 비교 핵 - 디지몬 럼블 아레나 2 게임을 위해."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:50
 msgid "FPU Multiply Hack - For Tales of Destiny."
-msgstr "FPU 멀티플라이 핵 - 테일즈 오브 데스티니."
+msgstr "부동 소수점 장치 곱하기 핵 - 테일즈 오브 데스티니 게임을 위해."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:54
 msgid "FPU Negative Div Hack - For Gundam games."
-msgstr "FPU 음수 나누기 핵 - 건담 게임들."
+msgstr "부동 소수점 장치 음수 나누기 핵 - 건담 게임들을 위해."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:58
 msgid "VU XGkick Hack - For Erementar Gerad."
-msgstr "VU XGkick 핵 - 엘르멘탈 제라드"
+msgstr "벡터 유닛 XG킥 핵 - 엘르멘탈 제라드 게임을 위해."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:62
 msgid "FFX videos fix - Fixes bad graphics overlay in FFX videos."
-msgstr "FFX 비디오 핵 - 동영상 재생시 그래픽 겹칩문제 해결."
+msgstr ""
+"FFX 비디오 수정 - 파이널 판타지 X 동영상에 잘못된 그래픽 오버레이를 수정합니"
+"다."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:66
 msgid "EE timing hack - Multi purpose hack. Try if all else fails."
-msgstr "EE 타이밍 핵 - 다양한 목적. 다른 핵이 안되면 사용."
+msgstr ""
+"이모션엔진 타이밍 핵 - 다목적 핵. 다른 모든 방법으로 안되면 사용하십시오."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:71
 msgid ""
 "Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."
-msgstr "MPEG 생략 핵 - 게임멈춤을 막기위해 게임 내 동영상/FMV 을 생략."
+msgstr ""
+"MPEG 생략 핵 - 게임이 걸리거나/동결(멈춤)을 방지하기 위해 비디오/풀 모션 비디"
+"오(FMV)를 생략."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:75
 msgid "OPH Flag hack - Try if your game freezes showing the same frame."
-msgstr "OPH 플래그 핵 - 똑같은 곳에서 게임이 멈추면 사용."
+msgstr ""
+"OPH 플래그 핵 - 게임 동결(멈춤)이 동일한 프레임에서 보일 경우 사용하십시오."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
 msgid "Ignore DMAC writes when it is busy."
-msgstr "바쁠 때 DMAC 쓰기 무시."
+msgstr "여유가 없는 직접 메모리 접근 제어기(DMAC)의 쓰기를 무시합니다."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:85
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
-msgstr "VIF1 FIFO 미리읽기 시뮬레이트. 느린 로딩을 고침."
+msgstr ""
+"벡터 유닛 인터페이스1 선입 선출(FIFO) 미리 읽기를 시뮬레이트. 느리게 불러오"
+"는 게임 수정."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:90
 msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
-msgstr "VIF1 Stalls을 지연시킴(VIF1 FIFO) - 소콤2 HUD."
+msgstr ""
+"벡터 유닛 인터페이스1 기능 정지 지연 (VIF1 FIFO) - 소콤2 HUD (헤드 업 디스플"
+"레이)를 위해."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:94
 msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
-msgstr "경로3 전송에서 버스방향을 무시 - 핫휠을 위해 사용"
+msgstr "경로3 이송에 버스 방향 무시 - 핫 휠 게임을 위해 사용됩니다"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
-msgstr "FMV 동영상 재생시 GSdx 소프트웨어 렌더링으로 자동전환"
+msgstr "풀 모션 비디오(FMV)로 재생할 때 GSdx 소프트웨어 렌더링으로 전환합니다"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
-msgstr "수동 게임수정을 사용 [권장하지 않음]"
+msgstr "수동 게임 수정 활성화 [권장하지 않습니다]"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:114
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
-msgstr "가장 안전한 방법은 모든 게임수정을 완전히 사용 안하는 것입니다."
+msgstr ""
+"모든 게임 수정이 완전히 비활성화되어 있는지 확인하는게 가장 안전한 방법입니"
+"다."
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:249
 msgid "Enable Trace Logging"
-msgstr "로그기록 추적 사용"
+msgstr "로깅 추적 활성화"
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:250
 msgid ""
 "Trace logs are all written to emulog.txt.  Toggle trace logging at any time "
 "using F10."
 msgstr ""
-"로그기록 추적은 emulog.txt 에 기록됨. F10을 이용해서 언제라도 전환가능."
+"모든 로그 추적은 emulog.txt에 쓰여져 있습니다. F10을 사용하여 언제든지 로깅 "
+"주척을 전환합니다."
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:251
 msgid ""
 "Warning: Enabling trace logs is typically very slow, and is a leading cause "
 "of 'What happened to my FPS?' problems. :)"
 msgstr ""
-"경고: 로그기록 사용은 보통 매우 느립니다, 그래서 '게임속도에 무슨일이 생긴거"
-"지?' 의문을 일으킵니다. :)"
+"경고: 로그 추적을 활성화하면 일반적으로 매우 느려지며, '내 FPS에 무슨 일이?' "
+"문제의 주된 원인입니다. :)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:166
 msgid "Select folder with PS2 memory cards"
-msgstr "PS2 메모리카드 폴더를 선택"
+msgstr "PS2 메모리 카드와 함께 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
@@ -2001,13 +2049,13 @@ msgstr "복사"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
 msgid "Rename ..."
-msgstr "이름변경"
+msgstr "이름 바꾸기..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:466
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:530
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Create ..."
-msgstr "만들기"
+msgstr "만들기 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:478
 msgid "Card: "
@@ -2016,27 +2064,27 @@ msgstr "카드: "
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:531
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:564
 msgid "Create a new memory card."
-msgstr "새 메모리카드 만들기"
+msgstr "새로운 메모리 카드를 만들 수 있습니다."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:544
 msgid "Rename this memory card ..."
-msgstr "이 메모리카드 이름변경"
+msgstr "이 메모리 카드의 이름을 변경합니다 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Insert ..."
-msgstr "삽입"
+msgstr "삽입 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Eject the card from this port"
-msgstr "이 포트에서 카드 꺼내기"
+msgstr "이 포트에서 카드를 꺼냅니다"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Insert this card to a port ..."
-msgstr "포트에 카드 삽입"
+msgstr "포트에 이 카드를 삽입합니다 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:553
 msgid "Create a duplicate of this memory card ..."
-msgstr "이 메모리카드 사본 만들기"
+msgstr "이 메모리 카드의 사본을 만듭니다 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Delete"
@@ -2044,34 +2092,35 @@ msgstr "삭제"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:560
 msgid "Permanently delete this memory card from disk (all contents are lost)"
-msgstr "이 메모리카드 영구삭제(모든 내용물을 잃습니다)"
+msgstr ""
+"디스크에서 이 메모리 카드를 영원히 삭제합니다 (모든 내용물이 없어집니다)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:562
 msgid "Create a new memory card and assign it to this Port."
-msgstr "새 메모리카드를 만들고 이 포트에 할당."
+msgstr "새로운 메모리 카드를 만들고 이 포트에 할당합니다."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:739
 msgid "Delete memory file?"
-msgstr "메모리 파일을 삭제?"
+msgstr "메모리 파일을 삭제하시겠습니까?"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:774
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:795
 msgid "Duplicate memory card"
-msgstr "메모리카드 복사"
+msgstr "메모리 카드 복사"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 msgid "Failed: Can only duplicate an existing card."
-msgstr "실패: 기존카드의 복사만 가능."
+msgstr "실패: 기존의 카드만 복사할 수 있습니다."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
 msgstr ""
-"사본의 이름을 선택\n"
-"( '.ps2' 는 자동으로 붙습니다)"
+"사본의 이름을 선택하십시오\n"
+"( '.ps2'가 자동으로 추가될 것입니다)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
 #, c-format
@@ -2085,7 +2134,7 @@ msgstr "복사 실패!"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:827
 #, c-format
 msgid "Memory card '%s' duplicated to '%s'."
-msgstr "메모리카드 '%s' 를 '%s'로 복사."
+msgstr " '%s' 메모리 카드를 '%s'로 복사."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:831
 msgid "Success"
@@ -2097,18 +2146,18 @@ msgid ""
 "Select a new name for the memory card '%s'\n"
 "( '.ps2' will be added automatically)"
 msgstr ""
-"메모리카드 새이름을 선택 '%s'\n"
-"( '.ps2' 는 자동으로 붙습니다)"
+"'%s' 메모리 카드의 새로운 이름을 선택하십시오\n"
+"( '.ps2'가 자동으로 추가될 것입니다)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:867
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Rename memory card"
-msgstr "메모리카드 이름변경"
+msgstr "메모리 카드 이름 변경"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Error: Rename could not be completed.\n"
-msgstr "에러: 이름변경이 완료되지 않았음.\n"
+msgstr "오류: 이름 변경을 완료할 수 없었습니다.\n"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:973
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:141
@@ -2129,7 +2178,7 @@ msgstr "빈공간"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
-msgstr "'%s' 위한 대상포트 선택"
+msgstr "'%s'를 위한 대상 포트를 선택하십시오"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
@@ -2141,15 +2190,15 @@ msgstr "카드 꺼내기"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Insert card ..."
-msgstr "카드 삽입"
+msgstr "카드 삽입 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1067
 msgid "Duplicate card ..."
-msgstr "카드 복사"
+msgstr "카드 복사 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1068
 msgid "Rename card ..."
-msgstr "카드 이름변경"
+msgstr "카드 이름 바꾸기 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
 msgid "Delete card"
@@ -2158,7 +2207,7 @@ msgstr "카드 삭제"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1072
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1076
 msgid "Create a new card ..."
-msgstr "새카드 만들기"
+msgstr "새로운 카드 만들기 ..."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1080
 msgid "Refresh List"
@@ -2170,7 +2219,7 @@ msgstr "PS2 포트"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:108
 msgid "Card (file) name"
-msgstr "카드(파일) 이름"
+msgstr "카드 (파일) 이름"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Card size"
@@ -2178,15 +2227,15 @@ msgstr "카드 크기"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:110
 msgid "Formatted"
-msgstr "포맷 상태"
+msgstr "포맷 여부"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr "유형"
+msgstr "종류"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
-msgstr "최종 수정"
+msgstr "마지막 변경"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:113
 msgid "Created on"
@@ -2210,19 +2259,19 @@ msgstr "PSX"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
-msgstr "[-- 사용안된 카드 --]"
+msgstr "[-- 미사용 카드 --]"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:174
 msgid "[-- No unused cards --]"
-msgstr "[-- 사용안된 카드 없음 --]"
+msgstr "[-- 미사용 카드 없음 --]"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:33
 msgid "Usermode Selection"
-msgstr "유저모드 선택"
+msgstr "사용자 방식 선택"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:44
 msgid "User Documents (recommended)"
-msgstr "유저 문서 (권장)"
+msgstr "사용자 문서 (권장합니다)"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:45
 msgid "Location: "
@@ -2230,20 +2279,20 @@ msgstr "위치:"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:49
 msgid "Custom folder:"
-msgstr "사용자 폴더:"
+msgstr "사용자 지정 폴더:"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:51
 msgid ""
 "This setting may require administration privileges from your operating "
 "system, depending on how your system is configured."
 msgstr ""
-"이 설정은 시스템이 어떻게 설정되었는지에 따라, 운영체제에서 관리자 권한이 필"
+"이 설정은 당신의 시스템 구성에 따라, 당신의 운영 시스템에서 관리자 권한이 필"
 "요할 수 있습니다."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:60
 #, c-format
 msgid "Select a document root for %s"
-msgstr "%s 를 위한 문서 루트 선택"
+msgstr "%s 를 위한 문서 루트를 선택하십시오"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:118
 msgid "Apply"
@@ -2251,15 +2300,15 @@ msgstr "적용"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:119
 msgid "Make this language my default right now!"
-msgstr "이 언어를 지금 당장 기본값으로!"
+msgstr "지금 바로 이 언어를 기본으로 만듭니다!"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:38
 msgid "Savestates:"
-msgstr "상태저장:"
+msgstr "상태 저장:"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:39
 msgid "Select folder for Savestates"
-msgstr "상태저장할 폴더 선택"
+msgstr "상태 저장을 위한 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:46
 msgid "Snapshots:"
@@ -2267,7 +2316,7 @@ msgstr "스냅샷:"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:47
 msgid "Select a folder for Snapshots"
-msgstr "스냅샷 폴더 선택"
+msgstr "스냅샷을 위한 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:54
 msgid "Logs/Dumps:"
@@ -2275,44 +2324,44 @@ msgstr "로그/덤프:"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:55
 msgid "Select a folder for logs/dumps"
-msgstr "로그/덤프 폴더 선택"
+msgstr "로그/덤프를 위한 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:230
 msgid "Applying settings..."
-msgstr "설정 적용 중..."
+msgstr "설정 적용..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:240
 msgid "Shutdown PS2 virtual machine?"
-msgstr "PS2 가상머신을 중지할까요?"
+msgstr "PS2 가상 머신을 중단하시겠습니까?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:316
 msgid "I'm givin' her all she's got, Captain!"
-msgstr "최선을 다하고 있습니다!(스타트랙 패러디)"
+msgstr "전력을 다하고 있습니다, 대장!"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:318
 msgid "Enumerating available plugins..."
-msgstr "사용가능한 플러그인 검색 중..."
+msgstr "유효한 플러그인을 열거하는 중입니다..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:351
 msgid "Plugins Search Path:"
-msgstr "플러그인 탐색 경로:"
+msgstr "플러그인 경로 검색:"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:352
 msgid "Select a folder with PCSX2 plugins"
-msgstr "PCSX2 플러그인 폴더 선택"
+msgstr "PCSX2 플러그인이 있는 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:365
 msgid "Configure..."
-msgstr "설정"
+msgstr "구성..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:374
 msgid "Click the Browse button to select a different folder for PCSX2 plugins."
-msgstr "다른 PCSX2 플러그인 폴더를 선택하려면 찾아보기를 클릭."
+msgstr "PCSX2 플러그인에 대한 다른 폴더를 선택하려면 찾아보기를 누르십시오."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:473
 #, c-format
 msgid "Please select a valid plugin for the %s."
-msgstr "%s 에 유효한 플러그인을 선택하세요."
+msgstr "%s 에 유효한 플러그인을 선택하십시오."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:511
 #, c-format
@@ -2322,63 +2371,67 @@ msgid ""
 "Reason: %s\n"
 "\n"
 msgstr ""
-"선택한 %s 플러그인 로드 실패.\n"
+"선택한 %s 플러그인 불러오기 실패.\n"
 "\n"
 "이유: %s\n"
 "\n"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:722
 msgid "Completing tasks..."
-msgstr "작업 완료 중..."
+msgstr "작업 완료 중입니다..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:87
 msgid "Enable speedhacks"
-msgstr "스피드핵 사용"
+msgstr "스피드 핵 활성화"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:91
 msgid ""
 "A safe and easy way to make sure that all speedhacks are completely disabled."
-msgstr "안전하고 쉬운 방법은 모든 스피드핵을 사용안하는 것입니다."
+msgstr ""
+"모든 스피드 핵이 비활성화되어 있는지 확인하는게 안전하고 쉬운 방법입니다."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:100
 msgid ""
 "Resets all speedhack options to their defaults, which consequently turns "
 "them all OFF."
-msgstr "모든 스피드핵 옵션을 기본값으로 합니다, 그 결과 모두 사용 안합니다."
+msgstr ""
+"모든 스피드 핵 옵션을 기본으로 리셋합니다, 결과적으로 모든 것을 끄기로 변경하"
+"는 것입니다."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:109
 msgid "EE Cyclerate [Not Recommended]"
-msgstr "EE 사이클 비율 [권장하지 않음]"
+msgstr "이모션엔진 사이클 비율 [권장하지 않습니다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:127
 msgid "VU Cycle Stealing [Not Recommended]"
-msgstr "VU 사이클 훔치기 [권장하지 않음]"
+msgstr "벡터 유닛 사이클 훔치기 [권장하지 않습니다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:145
 msgid "microVU Hacks"
-msgstr "마이크로VU 핵"
+msgstr "마이크로 벡터 유닛 핵"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:147
 msgid "mVU Flag Hack"
-msgstr "mVU 플래그 핵"
+msgstr "마이크로 벡터 유닛 플래그 핵"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:148
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
-"어느 정도 속도가 상승하고 높은 호환성을 지님; 그래픽문제 발생 가능...[권장]"
+"어느 정도 속도 상승 및 높은 호환성; 잘못된 그래픽의 원인일지 모릅니다...[권장"
+"합니다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "MTVU (Multi-Threaded microVU1)"
-msgstr "MTVU (멀티-스레드 마이크로VU1)"
+msgstr "MTVU (멀티-스레디드 마이크로 벡터 유닛 1)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:151
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
 msgstr ""
-"어느 정도 속도가 상승하고 높은 호환성을 지님; 게임이 멈출 수도 있음...[3코어 "
-"이상에서 권장]"
+"어느 정도 속도 상승 및 높은 호환성; 걸리는 원인일지 모릅니다...[코어가 3개이"
+"상인 경우 권장합니다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:162
 msgid "Other Hacks"
@@ -2386,57 +2439,63 @@ msgstr "다른 핵"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
 msgid "Enable INTC Spin Detection"
-msgstr "INTC 스핀발견 사용"
+msgstr "INTC 회전 검출 활성화"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:165
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
-msgstr "일부게임에서 큰 속도상승, 호환성 부작용 거의 없음.[권장]"
+msgstr ""
+"일부 게임에서 엄청난 속도 상승과 함께, 호환 부작용이 거의 없습니다. [권장합니"
+"다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid "Enable Wait Loop Detection"
-msgstr "대기루프 탐색 사용"
+msgstr "대기 루프 검출 활성화"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:168
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
-msgstr "일부게임에서 약간의 속도상승, 알려진 부작용 없음.[권장]"
+msgstr ""
+"일부 게임에서 적당한 속도 상승과 함께, 알려진 부작용이 없습니다. [권장합니다]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
 msgid "Enable fast CDVD"
-msgstr "빠른 CDVD 사용"
+msgstr "빠른 CDVD 활성화"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:171
 msgid "Fast disc access, less loading times. [Not Recommended]"
-msgstr "빠른 디스크 접근, 로딩 시간을 줄임.[권장하지 않음]"
+msgstr "빠른 디스크 접근, 불러오는 시간을 줄입니다. [권장하지 않습니다]"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:37
 msgid "Themes Search Path:"
-msgstr "테마 탐색 경로:"
+msgstr "테마 경로 검색:"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:38
 msgid "Select folder containing PCSX2 visual themes"
-msgstr "PCSX2 가상테마 폴더 찾기"
+msgstr "PCSX2 시각적 테마가 들어있는 폴더를 선택하십시오"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:45
 msgid ""
 "Click the Browse button to select a different folder containing PCSX2 visual "
 "themes."
-msgstr "PCSX2 가상테마가 있는 다른 폴더를 찾기위해 찾아보기를 클릭."
+msgstr ""
+"PCSX2 시각적 테마가 들어있는 다른 폴더를 선택하려면 찾아보기 버튼을 누르십시"
+"오."
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:49
 msgid "Select a visual theme:"
-msgstr "가상 테마 선택:"
+msgstr "시각적 테마 선택:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:34
 msgid "Disable Framelimiting"
-msgstr "프레임제한 사용 안함"
+msgstr "제한된 프레임 비활성화"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:35
 msgid ""
 "Useful for running benchmarks. Toggle this option in-game by pressing F4."
-msgstr "벤치마킹에 유용. F4를 눌러서 게임중 전환가능."
+msgstr ""
+"벤치마크를 실행하는데 유용합니다. 게임 내에서 F4를 눌러 이 옵션을 전환합니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:59
 msgid "Base Framerate Adjust:"
@@ -2444,7 +2503,7 @@ msgstr "기본모드 속도조정:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:65
 msgid "Slow Motion Adjust:"
-msgstr "느린모드 속도조정(단축키 Shift+tab):"
+msgstr "느린모드 속도조정(단축키 shift+tab):"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:71
 msgid "Turbo Adjust:"
@@ -2452,7 +2511,7 @@ msgstr "터보모드 속도조정(단축키 tab):"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:86
 msgid "NTSC Framerate:"
-msgstr "NTSC 프레임비율:"
+msgstr "NTSC 프레임 비율:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:89 pcsx2/gui/Panels/VideoPanel.cpp:95
 msgid "FPS"
@@ -2460,42 +2519,43 @@ msgstr "FPS"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:92
 msgid "PAL Framerate:"
-msgstr "PAL 프레임비율:"
+msgstr "PAL 프레임 비율:"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:164
 msgid ""
 "Error while parsing either NTSC or PAL framerate settings.  Settings must be "
 "valid floating point numerics."
 msgstr ""
-"NTSC 또는 PAL 프레임비율 설정에서 문법에러 발생. 설정은 실수로 해야 합니다."
+"NTSC 또는 PAL 프레임 비율 설정 중 하나를 분석하는 동안 오류가 발생했습니다. "
+"설정은 유효한 부동 점 숫자이어야 합니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:182
 msgid "Disabled [default]"
-msgstr "사용 안함[기본]"
+msgstr "비활성화 [기본]"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:186
 msgid "Skip when on Turbo only (TAB to enable)"
-msgstr "터보모드에서만 생략(TAB키 사용)"
+msgstr "오직 터보일 때 생략 (TAB으로 활성화)"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:190
 msgid "Constant skipping"
-msgstr "항상 생략"
+msgstr "일정한 생략"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:192
 msgid ""
 "Normal and Turbo limit rates skip frames.  Slow motion mode will still "
 "disable frameskipping."
 msgstr ""
-"보통과 터보모드에서 프레임 생략비율 제한. 슬로우 모드는 여전히 프레임생략을 "
-"사용안 함."
+"보통 및 터보에서 프레임 생략 비율을 제한합니다.\n"
+"느린 동작 방식은 계속 프레임 생략을 비활성화합니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:215
 msgid "Frames to Draw"
-msgstr "그려질 프레임 수"
+msgstr "그려질 프레임"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:220
 msgid "Frames to Skip"
-msgstr "생략할 프레임 수"
+msgstr "생략할 프레임"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:294
 msgid "Use Synchronized MTGS"
@@ -2505,19 +2565,21 @@ msgstr "동기화된 MTGS 사용"
 msgid ""
 "For troubleshooting potential bugs in the MTGS only, as it is potentially "
 "very slow."
-msgstr "매우 느리기 때문에, MTGS에서만 잠재적인 문제해결을 위해 사용합니다."
+msgstr ""
+"현 상황에서는 매우 느릴 수 있으며, MTGS에서만 가능한 버그 문제 해결을 위해 동"
+"기화된 MTGS를 사용합니다"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
-msgstr "모든 GS 출력 사용 안함"
+msgstr "모든 GS 출력 비활성화"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:299
 msgid ""
 "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 "components."
 msgstr ""
-"모든 GS 플러그인 활동을 완전히 사용 안함; EE코어 요소의 이상적인 벤치마킹을 "
-"위한 것입니다."
+"모든 GS 플러그인 활동을 완전히 비활성화합니다; EE 핵심 요소 벤치마킹에 가장 "
+"알맞습니다."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
@@ -2529,15 +2591,17 @@ msgstr "프레임 제한"
 
 #: pcsx2/gui/SysState.cpp:283
 msgid "Cannot load this savestate.  The state is an unsupported version."
-msgstr "상태저장을 불러올 수 없습니다. 이 상태저장은 지원되지 않는 버전입니다."
+msgstr ""
+"상태 저장을 불러올 수 없습니다. 이 상태 저장은 지원되지 않는 버전입니다."
 
 #: pcsx2/gui/SysState.cpp:290
 msgid "Cannot load this savestate. The state is an unsupported version."
-msgstr "상태저장을 불러올 수 없습니다. 이 상태저장은 지원되지 않는 버전입니다."
+msgstr ""
+"상태 저장을 불러올 수 없습니다. 이 상태 저장은 지원되지 않는 버전입니다."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
-msgstr "다운로드 또는 저장할 활동중인 가상머신 상태가 없습니다."
+msgstr "다운로드 또는 저장하기에 가상 머신 상태가 활동적이지 않습니다."
 
 #: pcsx2/gui/SysState.cpp:520
 msgid ""
@@ -2545,40 +2609,44 @@ msgid ""
 "may have been created by an older unsupported version of PCSX2, or it may be "
 "corrupted."
 msgstr ""
-"적합한 gzip 형태가 아니어서 상태저장을 불러올 수 없음. 지원하지 않는 낡은 "
-"PCSX2 버전의 상태저장이거나 손상된 것임."
+"유효한 gzip 보관이 아니기 때문에 상태 저장을 불러올 수 없습니다. PCSX2의 이"
+"전 지원되지 않는 버전에 의해 만들었거나 아마 손상되었습니다."
 
 #: pcsx2/gui/SysState.cpp:579
 msgid "This file is not a valid PCSX2 savestate.  See the logfile for details."
-msgstr "적합한 PCSX2 상태저장이 아님. 자세한 것은 로그파일을 확인."
+msgstr ""
+"이 파일은 유효한 PCSX2의 상태 저장이 아닙니다. 자세한 내용은 로그 파일을 참조"
+"하십시오."
 
 #: pcsx2/gui/SysState.cpp:598
 msgid ""
 "This savestate cannot be loaded due to missing critical components.  See the "
 "log file for details."
 msgstr ""
-"치명적인 요소누락으로 인해 상태저장을 불러올 수 없음. 자세한 것은 로그파일 확"
-"인."
+"중요한 요소의 누락으로 인해 상태 저장을 불러오지 못했습니다. 자세한 내용은 로"
+"그 파일을 참조하십시오."
 
 #: pcsx2/gui/i18n.cpp:63
 msgid " (default)"
-msgstr "(기본값)"
+msgstr " (기본)"
 
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
-msgstr "선택한 바이오스 파일은 올바른 PS2 바이오스가 아님. 재확인 바람."
+msgstr ""
+"선택한 바이오스 파일은 유효한 PS2 바이오스가 아닙니다. 다시-구성하시기 바랍니"
+"다."
 
 #: pcsx2/ps2/BiosTools.cpp:244
 msgid ""
 "The PS2 BIOS could not be loaded.  The BIOS has not been configured, or the "
 "configuration has been corrupted.  Please re-configure."
 msgstr ""
-"PS2 바이오스를 불러올 수 없음. 바이오스가 설정되지 않았거나 설정이 손상됨. 재"
-"확인 바람."
+"PS2 바이오스를 불러오지 못했습니다. 바이오스가 구성되지 않았거나 구성이 손상"
+"되었습니다. 다시-구성하시기 바랍니다."
 
 #: pcsx2/ps2/BiosTools.cpp:251
 msgid "The configured BIOS file does not exist.  Please re-configure."
-msgstr "설정된 바이오스 파일이 없음. 재확인 바람."
+msgstr "구성된 바이오스 파일이 존재하지 않습니다. 다시-구성하시기 바랍니다."
 
 #: pcsx2/x86/ix86-32/iR5900-32.cpp:578
 #, c-format
@@ -2586,8 +2654,8 @@ msgid ""
 "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "
 "MMX, SSE, and SSE2 extensions."
 msgstr ""
-"%s 확장이 없음. R5900-32 리컴파일러가 CPU의 MMX, SSE, 그리고 SSE2 확장을 요구"
-"함."
+"%s 확장이 발견되지 않습니다. R5900-32 리컴파일러는 운영 CPU와 함께 MMX, SSE, "
+"및 SSE2 확장이 필요합니다."
 
 #: pcsx2/x86/microVU.cpp:28
 #, c-format
@@ -2595,7 +2663,8 @@ msgid ""
 "%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and "
 "SSE2 extensions."
 msgstr ""
-"%s 확장이 없음. 마이크로VU가 CPU의 MMX, SSE, 그리고 SSE2 확장을 요구함."
+"%s 확장이 발견되지 않습니다. 마이크로 벡터 유닛은 운영 CPU와 함께 MMX, SSE, "
+"및 SSE2 확장이 필요합니다."
 
 #~ msgid ""
 #~ "Cannot load this savestate.  The state is from an incompatible edition of "

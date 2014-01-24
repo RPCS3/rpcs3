@@ -2,9 +2,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-31 18:12+0100\n"
-"PO-Revision-Date: 2012-10-28 12:37+0200\n"
-"Last-Translator: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
+"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"PO-Revision-Date: 2014-01-13 10:00+0200\n"
+"Last-Translator: Ceyhun Özgöç <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language: tr_TR\n"
 "MIME-Version: 1.0\n"
@@ -13,7 +13,7 @@ msgstr ""
 "X-Poedit-KeywordsList: _;pxL\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: trunk\\\n"
-"X-Generator: Poedit 1.5.4\n"
+"X-Generator: Poedit 1.5.6\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -358,31 +358,31 @@ msgstr ""
 "Kayıt konumu doğru şekilde kaydedilemedi. Geçici dosya başarıyla oluşturuldu "
 "ancak son konumuna taşınamadı."
 
-#: pcsx2/gui/AppConfig.cpp:878
+#: pcsx2/gui/AppConfig.cpp:894
 msgid "Safest"
 msgstr "En Güvenli"
 
-#: pcsx2/gui/AppConfig.cpp:879
+#: pcsx2/gui/AppConfig.cpp:895
 msgid "Safe (faster)"
 msgstr "Güvenli (Daha Hızlı)"
 
-#: pcsx2/gui/AppConfig.cpp:880
+#: pcsx2/gui/AppConfig.cpp:896
 msgid "Balanced"
 msgstr "Dengeli"
 
-#: pcsx2/gui/AppConfig.cpp:881
+#: pcsx2/gui/AppConfig.cpp:897
 msgid "Aggressive"
 msgstr "Agresif"
 
-#: pcsx2/gui/AppConfig.cpp:882
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Aggressive plus"
 msgstr "Daha Agresif"
 
-#: pcsx2/gui/AppConfig.cpp:883
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Mostly Harmful"
 msgstr "Çoğu Zaman Zararlı"
 
-#: pcsx2/gui/AppConfig.cpp:1044 pcsx2/gui/AppConfig.cpp:1050
+#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Mevcut ayarlar dosyasının üzerine yazılamadı; erişim engellendi."
 
@@ -2224,7 +2224,7 @@ msgstr "Biçimlendirilmiş"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr ""
+msgstr "Tür"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
@@ -2243,14 +2243,12 @@ msgid "Yes"
 msgstr "Evet"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PS2"
-msgstr "FPS"
+msgstr "PS2"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PSX"
-msgstr "FPS"
+msgstr "PSX"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"

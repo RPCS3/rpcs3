@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.2.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-31 18:12+0100\n"
+"POT-Creation-Date: 2014-01-24 18:44+0100\n"
 "PO-Revision-Date: 2013-12-31 16:21+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: Leucos <http://forums.pcsx2.net/User-Leucos>\n"
@@ -380,31 +380,31 @@ msgstr ""
 "temporaneo è stato creato con successo ma non è stato possibile spostarlo "
 "nel suo ultimo luogo di riposo."
 
-#: pcsx2/gui/AppConfig.cpp:878
+#: pcsx2/gui/AppConfig.cpp:894
 msgid "Safest"
 msgstr "Sicura +"
 
-#: pcsx2/gui/AppConfig.cpp:879
+#: pcsx2/gui/AppConfig.cpp:895
 msgid "Safe (faster)"
 msgstr "Sicura (più veloce)"
 
-#: pcsx2/gui/AppConfig.cpp:880
+#: pcsx2/gui/AppConfig.cpp:896
 msgid "Balanced"
 msgstr "Bilanciata"
 
-#: pcsx2/gui/AppConfig.cpp:881
+#: pcsx2/gui/AppConfig.cpp:897
 msgid "Aggressive"
 msgstr "Aggressiva"
 
-#: pcsx2/gui/AppConfig.cpp:882
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Aggressive plus"
 msgstr "Aggressiva +"
 
-#: pcsx2/gui/AppConfig.cpp:883
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Mostly Harmful"
 msgstr "Per lo più dannosa"
 
-#: pcsx2/gui/AppConfig.cpp:1044 pcsx2/gui/AppConfig.cpp:1050
+#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Sovrascrittura del file impostazioni esistente fallita: permesso negato."

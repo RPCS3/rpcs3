@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-31 18:12+0100\n"
+"POT-Creation-Date: 2014-01-24 18:44+0100\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -335,31 +335,31 @@ msgstr ""
 "บันทึกสถานภาพถูกบันทึกโดยไม่เหมาะสม ไฟล์ชั่วคราวถูกสร้างสำเร็จ "
 "แต่ไม่สามารถย้ายไปสู่จุดหมายสุดท้ายได้"
 
-#: pcsx2/gui/AppConfig.cpp:878
+#: pcsx2/gui/AppConfig.cpp:894
 msgid "Safest"
 msgstr "ปลอดภัยที่สุด"
 
-#: pcsx2/gui/AppConfig.cpp:879
+#: pcsx2/gui/AppConfig.cpp:895
 msgid "Safe (faster)"
 msgstr "ปลอดภัย (เร็วกว่า)"
 
-#: pcsx2/gui/AppConfig.cpp:880
+#: pcsx2/gui/AppConfig.cpp:896
 msgid "Balanced"
 msgstr "สมดุลย์"
 
-#: pcsx2/gui/AppConfig.cpp:881
+#: pcsx2/gui/AppConfig.cpp:897
 msgid "Aggressive"
 msgstr "รุนแรง"
 
-#: pcsx2/gui/AppConfig.cpp:882
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Aggressive plus"
 msgstr "รุนแรงกว่า"
 
-#: pcsx2/gui/AppConfig.cpp:883
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Mostly Harmful"
 msgstr "โดยมากเป็นอันตราย"
 
-#: pcsx2/gui/AppConfig.cpp:1044 pcsx2/gui/AppConfig.cpp:1050
+#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "ล้มเหลวในการเขียนทับไฟล์การตั้งค่าที่มีอยู่; การอนุญาตถูกปฏิเสธ"
 
