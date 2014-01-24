@@ -217,6 +217,10 @@ static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, cons
 // DB file notes: 1. no spaces around the '='. 2. CRC should be in upper case padded with 0s to 8 chars
 int LoadCheatsFromDbf(wxString gameCRC, const wxString& cheatsDbfFilename) {
   gameCRC.MakeUpper();
+  if (!gameCRC.Length()) {
+    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
+    gameCRC = L"00000000";
+  }
 
   wxTextFile db(cheatsDbfFilename);
   db.Open();
