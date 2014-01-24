@@ -159,12 +159,28 @@ namespace PathDefs
 
 	wxDirName GetBios()
 	{
-		return GetDocuments() + wxDirName( L"bios" );
+		// Each linux distributions have his rules for path so we give them the possibility to
+		// change it with compilation flags. -- Gregory
+#ifndef PLUGIN_DIR_COMPILATION
+		return AppRoot() + wxDirName( L"bios" );
+#else
+#define xPLUGIN_DIR_str(s) PLUGIN_DIR_str(s)
+#define PLUGIN_DIR_str(s) #s
+		return wxDirName( xPLUGIN_DIR_str(PLUGIN_DIR_COMPILATION) );
+#endif
 	}
 
 	wxDirName GetCheats()
 	{
-		return GetDocuments() + wxDirName( L"cheats" );
+		// Each linux distributions have his rules for path so we give them the possibility to
+		// change it with compilation flags. -- Gregory
+#ifndef PLUGIN_DIR_COMPILATION
+		return AppRoot() + wxDirName( L"cheats" );
+#else
+#define xPLUGIN_DIR_str(s) PLUGIN_DIR_str(s)
+#define PLUGIN_DIR_str(s) #s
+		return wxDirName( xPLUGIN_DIR_str(PLUGIN_DIR_COMPILATION) );
+#endif
 	}
 
 	wxDirName GetCheatsWS()

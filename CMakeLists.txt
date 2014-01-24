@@ -148,7 +148,10 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
 #-------------------------------------------------------------------------------
 # Install some files to ease package creation
 if(PACKAGE_MODE)
-    INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/GameIndex.dbf" DESTINATION "${GAMEINDEX_DIR}")
+    INSTALL(FILES     "${PROJECT_SOURCE_DIR}/bin/GameIndex.dbf" DESTINATION "${GAMEINDEX_DIR}")
+    INSTALL(DIRECTORY "${PROJECT_SOURCE_DIR}/bin/cheats"        DESTINATION "${GAMEINDEX_DIR}")
+    INSTALL(DIRECTORY "${PROJECT_SOURCE_DIR}/bin/cheats_ws"     DESTINATION "${GAMEINDEX_DIR}")
+
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/linux_various/pcsx2.desktop" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications")
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/linux_various/pcsx2.xpm" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps")
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/docs/PCSX2_FAQ.pdf" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/pcsx2")
