@@ -130,7 +130,7 @@ protected:
 		}
 		else // very bad!
 		{
-			printf("GSdx: failed to allocate %d bytes for verticles. We will proceed to crash now.\n", sizeof(Vertex) * maxcount);
+			printf("GSdx: failed to allocate %d bytes for verticles.\n", sizeof(Vertex) * maxcount);
 		}
 
 		m_vertices = vertices;

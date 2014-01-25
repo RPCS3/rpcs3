@@ -1212,7 +1212,9 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 	if(1)
 	{
-		GSLocalMemory mem;
+		GSLocalMemory * pMem = new GSLocalMemory();
+		GSLocalMemory& mem(*pMem);
+		
 
 		static struct {int psm; const char* name;} s_format[] =
 		{
@@ -1360,13 +1362,15 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 		}
 
 		_aligned_free(ptr);
+		delete pMem;
 	}
 
 	//
 
 	if(0)
 	{
-		GSLocalMemory mem;
+		GSLocalMemory * pMem2 = new GSLocalMemory();
+		GSLocalMemory& mem2(*pMem2);
 
 		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 32);
 
@@ -1397,7 +1401,8 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 		int x = 0;
 		int y = 0;
 
-		(mem.*wi)(x, y, ptr, trlen, BITBLTBUF, TRXPOS, TRXREG);
+		(mem2.*wi)(x, y, ptr, trlen, BITBLTBUF, TRXPOS, TRXREG);
+		delete pMem2;
 	}
 
 	//

@@ -2300,18 +2300,26 @@ void GSState::GrowVertexBuffer()
 	GSVertex* vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 32);
 	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 32); // worst case is slightly less than vertex number * 3
 
-	if(m_vertex.buff != NULL)
+	if (m_vertex.buff != NULL && vertex != NULL)
 	{
 		memcpy(vertex, m_vertex.buff, sizeof(GSVertex) * m_vertex.tail);
 
 		_aligned_free(m_vertex.buff);
 	}
+	else // very bad!
+	{
+		printf("GSdx: failed to allocate %d bytes for verticles.\n", sizeof(GSVertex) * maxcount);
+	}
 
-	if(m_index.buff != NULL)
+	if (m_index.buff != NULL && index != NULL)
 	{
 		memcpy(index, m_index.buff, sizeof(uint32) * m_index.tail);
 		
 		_aligned_free(m_index.buff);
+	}
+	else // very bad!
+	{
+		printf("GSdx: failed to allocate %d bytes for indices.\n", sizeof(uint32) * maxcount * 3);
 	}
 
 	m_vertex.buff = vertex;
