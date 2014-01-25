@@ -1050,7 +1050,7 @@ void iFlushCall(int flushtype)
 		g_cpuFlushedCode = true;
 	}
 
-	if ((flushtype & FLUSH_CAUSE) && !g_maySignalException) {
+	if ((flushtype == FLUSH_CAUSE) && !g_maySignalException) {
 		if (g_recompilingDelaySlot)
 			xOR(ptr32[&cpuRegs.CP0.n.Cause], 1 << 31); // BD
 		g_maySignalException = true;

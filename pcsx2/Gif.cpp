@@ -564,7 +564,7 @@ void gifMFIFOInterrupt()
 		return;
 	}
 
-	if ((gifstate & GIF_STATE_READY) || (gifch.qwc > 0)) {
+	if ((gifstate == GIF_STATE_READY) || (gifch.qwc > 0)) {
 		DevCon.Error("gifMFIFO Panic > Shouldn't go here!");
 		return;
 	}
