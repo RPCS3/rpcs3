@@ -72,6 +72,7 @@ static bool s_exclusive = true;
 #ifdef _WINDOWS
 static bool s_isgsopen2 = false; // boolean to remove some stuff from the config panel in new PCSX2's/
 #endif
+bool gsopen_done = false; // crash guard for GSgetTitleInfo2
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -185,6 +186,8 @@ EXPORT_C GSclose()
 	{
 		s_gs->m_wnd->Detach();
 	}
+
+	gsopen_done = false;
 }
 
 static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
@@ -411,6 +414,8 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		return -1;
 	}
 
+	gsopen_done = true;
+	
 	return 0;
 }
 
@@ -500,6 +505,8 @@ EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 	{
 		s_gs->SetMultithreaded(!!mt);
 	}
+
+	gsopen_done = true;
 
 	return retval;
 }
@@ -830,6 +837,11 @@ EXPORT_C GSgetLastTag(uint32* tag)
 
 EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
+	if (gsopen_done == false) {
+		printf("GSdx: GSgetTitleInfo but GSOpen not yet done. Ignoring\n");
+		return;
+	}
+
 	string s = "GSdx";
 
 	// TODO: this gets called from a different thread concurrently with GSOpen (on linux)
