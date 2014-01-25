@@ -2306,14 +2306,14 @@ void GSState::GrowVertexBuffer()
 		throw GSDXError();
 	}
 
-	if (m_vertex.buff != NULL && vertex != NULL)
+	if (m_vertex.buff != NULL)
 	{
 		memcpy(vertex, m_vertex.buff, sizeof(GSVertex) * m_vertex.tail);
 
 		_aligned_free(m_vertex.buff);
 	}
 
-	if (m_index.buff != NULL && index != NULL)
+	if (m_index.buff != NULL)
 	{
 		memcpy(index, m_index.buff, sizeof(uint32) * m_index.tail);
 		

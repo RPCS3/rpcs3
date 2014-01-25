@@ -129,7 +129,7 @@ protected:
 			throw GSDXError();
 		}
 
-		if (m_vertices != NULL && vertices != NULL)
+		if (m_vertices != NULL)
 		{
 			memcpy(vertices, m_vertices, sizeof(Vertex) * m_maxcount);
 			_aligned_free(m_vertices);
