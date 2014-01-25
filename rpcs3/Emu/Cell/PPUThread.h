@@ -720,7 +720,7 @@ public:
 
 	const u8 IsCR(const u32 bit) const { return (GetCR(bit >> 2) & GetCRBit(bit)) ? 1 : 0; }
 
-	bool IsCarry(const u64 a, const u64 b) { return a > (~b); }
+	bool IsCarry(const u64 a, const u64 b) { return a > (a + b); }
 
 	void SetFPSCRException(const FPSCR_EXP mask)
 	{

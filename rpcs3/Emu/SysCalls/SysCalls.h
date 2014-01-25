@@ -5,8 +5,8 @@
 #include "lv2/SC_Timer.h"
 #include "lv2/SC_Rwlock.h"
 #include "lv2/SC_SPU_Thread.h"
+#include "lv2/SC_Lwmutex.h"
 #include "Emu/event.h"
-
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -148,11 +148,11 @@ extern int sys_semaphore_post(u32 sem, int count);
 extern int sys_semaphore_get_value(u32 sem, u32 count_addr);
 
 //sys_lwmutex
-extern int sys_lwmutex_create(u64 lwmutex_addr, u64 lwmutex_attr_addr);
-extern int sys_lwmutex_destroy(u64 lwmutex_addr);
-extern int sys_lwmutex_lock(u64 lwmutex_addr, u64 timeout);
-extern int sys_lwmutex_trylock(u64 lwmutex_addr);
-extern int sys_lwmutex_unlock(u64 lwmutex_addr);
+extern int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr);
+extern int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex);
+extern int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout);
+extern int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex);
+extern int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex);
 
 //sys_cond
 extern int sys_cond_create(u32 cond_addr, u32 mutex_id, u32 attr_addr);

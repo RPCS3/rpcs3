@@ -152,16 +152,21 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 
 	if(Memory.IsGoodAddr(buf_addr))
 	{
+		/*
 		//open the file again (to prevent access conflicts roughly)
 		vfsLocalFile file(path, vfsRead);
+		*/
+		vfsStream& file = *(vfsStream*)orig_file;
 		if(!Memory.IsGoodAddr(buf_addr, nbytes))
 		{
 			MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
 			nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
 		}
 
+		const u64 old_pos = file.Tell();
 		file.Seek((u64)aio->offset);
 		res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+		file.Seek(old_pos);
 		error = CELL_OK;
 	}
 	else
@@ -185,14 +190,16 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	u32 fd = aio->fd;
 	if(!sys_fs.CheckId(fd, orig_file)) return CELL_ESRCH;
 
-	//get a unique id for the callback
+	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-	aio_id = xid;
 
+	//read data in another thread (doesn't work correctly):
 	//std::thread t(fsAioRead, fd, aio, xid, func);
 	//t.detach();
 	//read data immediately (actually it should be read in special thread):
 	fsAioRead(fd, aio, xid, func);
+
+	aio_id = xid;
 
 	return CELL_OK;
 }
