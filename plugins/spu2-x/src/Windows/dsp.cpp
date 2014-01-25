@@ -108,6 +108,7 @@ void DspCloseLibrary()
 	running=false;
 	if(WaitForSingleObject(hUpdateThread,1000)==WAIT_TIMEOUT)
 	{
+		ConLog("SPU2-X: WARNING: DSP Thread did not close itself in time. Assuming hung. Terminating.\n");
 		TerminateThread(hUpdateThread,1);
 	}
 }

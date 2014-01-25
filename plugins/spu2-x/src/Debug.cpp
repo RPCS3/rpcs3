@@ -207,8 +207,9 @@ void DoFullDump()
 			}
 			fprintf(dump,"#### END OF DUMP.\n\n");
 		}
+		fclose(dump);
 	}
-	fclose(dump);
+	
 	dump = fopen( "logs/effects.txt", "wt" );
 	if (dump)
 	{

@@ -129,6 +129,7 @@ void GSThread::CloseThread()
 	{
 		if(WaitForSingleObject(m_hThread, 5000) != WAIT_OBJECT_0)
 		{
+			printf("GSdx: WARNING: GSThread Thread did not close itself in time. Assuming hung. Terminating.\n");
 			TerminateThread(m_hThread, 1);
 		}
 
