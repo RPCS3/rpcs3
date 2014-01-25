@@ -20,9 +20,11 @@
 #include "IopCommon.h"
 #include "Patch.h"
 #include "GameDatabase.h"
+
 #include <wx/textfile.h>
 #include <wx/dir.h>
-#include <wx/textfile.h>
+#include <wx/txtstrm.h>
+#include <wx/zipstrm.h>
 
 IniPatch Patch[ MAX_PATCH ];
 IniPatch Cheat[ MAX_CHEAT ];
@@ -206,51 +208,32 @@ static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, cons
 	return cheatnumber - before;
 }
 
-
-// This routine loads cheats from a dbf file
+// This routine loads cheats from a zip file
 // Returns number of cheats loaded
 // Note: Should be called after InitPatches()
-// expected DB format of section(s) to be loaded:
-//[patches=ABCDE1234<anything can come here upto EOL>
-// <patch file content, possibly multiline, possibly with comments>
-//[/patches]
-// DB file notes: 1. no spaces around the '='. 2. CRC should be in upper case padded with 0s to 8 chars
-int LoadCheatsFromDbf(wxString gameCRC, const wxString& cheatsDbfFilename) {
+// Note: only load cheats from the root folder of the zip
+int LoadCheatsFromZip(wxString gameCRC, const wxString& cheatsArchiveFilename) {
   gameCRC.MakeUpper();
-  if (!gameCRC.Length()) {
-    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
-    gameCRC = L"00000000";
-  }
-
-  wxTextFile db(cheatsDbfFilename);
-  db.Open();
 
   int before = cheatnumber;
 
-  wxString line;
-  bool insideCurrentGame = false;
-  bool first = true;
-
-  while (true) {
-    if (first) line = db.GetFirstLine();
-    else line = db.GetNextLine();
-    first = false;
-
-    if (insideCurrentGame) {
-      if (line.Find(L"[/patches]") == 0) {
-        insideCurrentGame = false;
-        continue;
+  std::auto_ptr<wxZipEntry> entry;
+  wxFFileInputStream in(cheatsArchiveFilename);
+  wxZipInputStream zip(in);
+  while (entry.reset(zip.GetNextEntry()), entry.get() != NULL)
+  {
+    wxString name = entry->GetName();
+    name.MakeUpper();
+    if (name.Find(gameCRC) == 0 && name.Find(L".PNACH") == name.Length()-6) {
+      Console.WriteLn(Color_Gray, "Loading patch '%s' from archive '%s'",
+                      entry->GetName().To8BitData(), cheatsArchiveFilename.To8BitData());
+      wxTextInputStream pnach(zip);
+      while (!zip.Eof()) {
+        inifile_processString(pnach.ReadLine());
       }
-      inifile_processString(line);
-
-    } else if (line.Find(wxString(L"[patches=") + gameCRC) == 0) {
-      insideCurrentGame = true;
     }
-
-    if (db.Eof()) break;
   }
 
-  db.Close();
   return cheatnumber - before;
 }
 
@@ -260,11 +243,6 @@ int LoadCheatsFromDbf(wxString gameCRC, const wxString& cheatsDbfFilename) {
 // Note: Should be called after InitPatches()
 int LoadCheats(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
-	if (!name.Length()) {
-		Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
-		name = L"00000000";
-	}
-
 	int loaded = 0;
 
 	wxString filespec = name + L"*.pnach";

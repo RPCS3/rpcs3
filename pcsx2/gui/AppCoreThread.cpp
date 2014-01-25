@@ -357,6 +357,11 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	}
 
   ResetCheatsCount();
+  //Till the end of this function, emtry CRC will be 00000000
+  if (!gameCRC.Length()) {
+    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
+    gameCRC = L"00000000";
+  }
 	// regular cheat patches
 	if (EmuConfig.EnableCheats) {
     if (numberLoadedCheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
@@ -369,9 +374,9 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
 			gameWsHacks.Printf(L" [%d widescreen hacks]", numberLoadedWideScreenPatches);
 		} else {
-      // No ws cheat files found at the cheats_ws folder, try the ws cheats db file.
-      wxString cheats_wsDbf = Path::Combine(((wxFileName)wxStandardPaths::Get().GetExecutablePath()).GetPath(), L"cheats_ws.dbf");
-      if (numberDbfCheatsLoaded = LoadCheatsFromDbf(gameCRC, cheats_wsDbf)) {
+      // No ws cheat files found at the cheats_ws folder, try the ws cheats zip file.
+      wxString cheats_ws_archive = Path::Combine(((wxFileName)wxStandardPaths::Get().GetExecutablePath()).GetPath(), L"cheats_ws.zip");
+      if (numberDbfCheatsLoaded = LoadCheatsFromZip(gameCRC, cheats_ws_archive)) {
         Console.WriteLn(Color_Green, "(Wide Screen Cheats DB) Patches Loaded: %d", numberDbfCheatsLoaded);
         gameWsHacks.Printf(L" [%d widescreen hacks]", numberDbfCheatsLoaded);
       }

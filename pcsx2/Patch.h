@@ -59,7 +59,7 @@ namespace PatchFunc
 
 extern void ResetCheatsCount();
 extern int  LoadCheats(wxString name, const wxDirName& folderName, const wxString& friendlyName);
-extern int  LoadCheatsFromDbf(wxString gameCRC, const wxString& cheatsDbfFilename);
+extern int  LoadCheatsFromZip(wxString gameCRC, const wxString& cheatsArchiveFilename);
 extern void inifile_command(bool isCheat, const wxString& cmd);
 extern void inifile_trim(wxString& buffer);
 
