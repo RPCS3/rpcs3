@@ -168,6 +168,8 @@ EXPORT_C GSshutdown()
 	}
 
 #endif
+
+	gsopen_done = false;
 }
 
 EXPORT_C GSclose()
@@ -413,8 +415,6 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 		return -1;
 	}
-
-	gsopen_done = true;
 	
 	return 0;
 }
@@ -458,6 +458,8 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 
 	if (s_gs != NULL)
 		s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
+
+	gsopen_done = true;
 
 	return retval;
 }
@@ -838,7 +840,7 @@ EXPORT_C GSgetLastTag(uint32* tag)
 EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
 	if (gsopen_done == false) {
-		printf("GSdx: GSgetTitleInfo but GSOpen not yet done. Ignoring\n");
+		//printf("GSdx: GSgetTitleInfo but GSOpen not yet done. Ignoring\n");
 		return;
 	}
 
