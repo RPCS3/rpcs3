@@ -156,7 +156,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		//open the file again (to prevent access conflicts roughly)
 		vfsLocalFile file(path, vfsRead);
 		*/
-		vfsStream& file = *(vfsStream*)FDs[fd];
+		vfsStream& file = *(vfsStream*)orig_file;
 		if(!Memory.IsGoodAddr(buf_addr, nbytes))
 		{
 			MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
