@@ -123,14 +123,16 @@ protected:
 		int maxcount = std::max<int>(m_maxcount * 3 / 2, 10000);
 		Vertex* vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * maxcount, 32);
 
+		if (!vertices)
+		{
+			printf("GSdx: failed to allocate %d bytes for verticles.\n", sizeof(Vertex) * maxcount);
+			throw GSDXError();
+		}
+
 		if (m_vertices != NULL && vertices != NULL)
 		{
 			memcpy(vertices, m_vertices, sizeof(Vertex) * m_maxcount);
 			_aligned_free(m_vertices);
-		}
-		else // very bad!
-		{
-			printf("GSdx: failed to allocate %d bytes for verticles.\n", sizeof(Vertex) * maxcount);
 		}
 
 		m_vertices = vertices;
