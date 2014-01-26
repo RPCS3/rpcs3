@@ -37,7 +37,8 @@ bool GSWndWGL::CreateContext(int major, int minor)
 	}
 
 	// GL2 context are quite easy but we need GL3 which is another painful story...
-	if (!(m_context = wglCreateContext(m_NativeDisplay))) {
+	m_context = wglCreateContext(m_NativeDisplay);
+	if (!m_context) {
 		fprintf(stderr, "Failed to create a 2.0 context\n");
 		return false;
 	}
@@ -173,13 +174,14 @@ bool GSWndWGL::OpenWGLDisplay()
 		0, 0, 0									 // Layer Masks Ignored
 	};
 
-	if (!(m_NativeDisplay = GetDC(m_NativeWindow)))
+	m_NativeDisplay = GetDC(m_NativeWindow);
+	if (!m_NativeDisplay)
 	{
 		MessageBox(NULL, "(1) Can't Create A GL Device Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
-
-	if (!(PixelFormat = ChoosePixelFormat(m_NativeDisplay, &pfd)))
+	PixelFormat = ChoosePixelFormat(m_NativeDisplay, &pfd);
+	if (!PixelFormat)
 	{
 		MessageBox(NULL, "(2) Can't Find A Suitable PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;

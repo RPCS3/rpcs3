@@ -1528,7 +1528,7 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				*pb = ReadPixel4(addr + offset[x + 0]) | (ReadPixel4(addr + offset[x + 1]) << 4);
+				*pb = (uint8)(ReadPixel4(addr + offset[x + 0]) | (ReadPixel4(addr + offset[x + 1]) << 4));
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -2082,7 +2082,7 @@ uint32* GSOffset::GetPages(const GSVector4i& rect, uint32* pages, GSVector4i* bb
 		}
 	}
 
-	*p++ = EOP;
+	*p++ = (uint32)EOP;
 
 	ASSERT(p - pages <= limit);
 

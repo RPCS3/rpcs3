@@ -417,7 +417,10 @@ lstrcpynWInternal(
     ASSERT(iMaxLength);
     LPWSTR  lpReturn = lpString1;
     if (iMaxLength) {
-        while (--iMaxLength && (*lpString1++ = *lpString2++));
+		while (--iMaxLength) {
+			if (!*lpString2) break;
+			*lpString1++ = *lpString2++;			
+		};
 
         // If we ran out of room (which will be the case if
         // iMaxLength is now 0) we still need to terminate the

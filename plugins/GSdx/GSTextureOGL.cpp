@@ -228,10 +228,6 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 			m_int_alignment = 0;
 			m_int_shift     = 0;
 			break;
-			m_int_format    = 0;
-			m_int_type      = 0;
-			m_int_alignment = 0;
-			m_int_shift     = 0;
 		default:
 			ASSERT(0);
 	}

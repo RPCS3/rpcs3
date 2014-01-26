@@ -145,7 +145,7 @@ public:
 class GSDepthStencilOGL {
 	bool m_depth_enable;
 	GLenum m_depth_func;
-	GLboolean m_depth_mask;
+	bool m_depth_mask;
 	// Note front face and back might be split but it seems they have same parameter configuration
 	bool m_stencil_enable;
 	GLenum m_stencil_func;
@@ -168,7 +168,7 @@ public:
 	void EnableDepth() { m_depth_enable = true; }
 	void EnableStencil() { m_stencil_enable = true; }
 
-	void SetDepth(GLenum func, GLboolean mask) { m_depth_func = func; m_depth_mask = mask; }
+	void SetDepth(GLenum func, bool mask) { m_depth_func = func; m_depth_mask = mask; }
 	void SetStencil(GLenum func, GLenum pass) { m_stencil_func = func; m_stencil_spass_dpass_op = pass; }
 
 	void SetupDepth()
@@ -188,7 +188,7 @@ public:
 			}
 			if (GLState::depth_mask != m_depth_mask) {
 				GLState::depth_mask = m_depth_mask;
-				glDepthMask(m_depth_mask);
+				glDepthMask((GLboolean)m_depth_mask);
 			}
 		}
 	}

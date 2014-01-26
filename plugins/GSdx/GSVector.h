@@ -2458,10 +2458,11 @@ public:
 		m = _mm_cvtepi32_ps(_mm_unpacklo_epi32(_mm_cvtsi32_si128(x), _mm_cvtsi32_si128(y)));
 	}
 
-	__forceinline GSVector4(const GSVector4& v)
+	//Not currently used, just causes a compiler warning
+	/*__forceinline GSVector4(const GSVector4& v)
 	{
 		m = v.m;
-	}
+	}*/
 
 	__forceinline explicit GSVector4(const GSVector2& v)
 	{
@@ -2967,7 +2968,6 @@ public:
 
 		#endif
 
-		return *this;
 	}
 
 	template<int i> __forceinline int extract32() const

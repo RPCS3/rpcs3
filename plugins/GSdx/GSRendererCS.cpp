@@ -465,10 +465,10 @@ void GSRendererCS::Draw()
 
 	GSVector4i r2 = bbox.add32(GSVector4i(-1, -1, 1, 1)).rintersect(scissor);
 
-	m_vertex.buff[m_vertex.next + 0].XYZ.X = context->XYOFFSET.OFX + (r2.left << 4);
-	m_vertex.buff[m_vertex.next + 0].XYZ.Y = context->XYOFFSET.OFY + (r2.top << 4);
-	m_vertex.buff[m_vertex.next + 1].XYZ.X = context->XYOFFSET.OFX + (r2.right << 4);
-	m_vertex.buff[m_vertex.next + 1].XYZ.Y = context->XYOFFSET.OFY + (r2.bottom << 4);
+	m_vertex.buff[m_vertex.next + 0].XYZ.X = (uint16)(context->XYOFFSET.OFX + (r2.left << 4));
+	m_vertex.buff[m_vertex.next + 0].XYZ.Y = (uint16)(context->XYOFFSET.OFY + (r2.top << 4));
+	m_vertex.buff[m_vertex.next + 1].XYZ.X = (uint16)(context->XYOFFSET.OFX + (r2.right << 4));
+	m_vertex.buff[m_vertex.next + 1].XYZ.Y = (uint16)(context->XYOFFSET.OFY + (r2.bottom << 4));
 	
 	m_index.buff[m_index.tail + 0] = m_vertex.next + 0;
 	m_index.buff[m_index.tail + 1] = m_vertex.next + 1;
@@ -636,7 +636,7 @@ void GSRendererCS::Draw()
 
 	int step = PS_BATCH_SIZE * GSUtil::GetVertexCount(PRIM->PRIM);
 
-	for(int i = 0; i < m_index.tail; i += step)
+	for(uint32 i = 0; i < m_index.tail; i += step)
 	{
 		dev->IASetPrimitiveTopology(topology);
 		dev->GSSetShader(gs[0]);

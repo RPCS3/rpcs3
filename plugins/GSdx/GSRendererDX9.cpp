@@ -180,7 +180,7 @@ void GSRendererDX9::SetupIA()
 		GSVertex* RESTRICT s = (GSVertex*)m_vertex.buff;
 		GSVertexHW9* RESTRICT d = (GSVertexHW9*)ptr;
 
-		for(int i = 0; i < m_vertex.next; i++, s++, d++)
+		for(uint32 i = 0; i < m_vertex.next; i++, s++, d++)
 		{
 			GSVector4 p = GSVector4(GSVector4i::load(s->XYZ.u32[0]).upl16());
 

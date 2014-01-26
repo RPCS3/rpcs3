@@ -340,7 +340,7 @@ void GSSettingsDlg::UpdateControls()
 		bool dx9 = (i / 3) == 0;
 		bool dx11 = (i / 3) == 1;
 		bool hw = (i % 3) == 0;
-		bool sw = (i % 3) == 1;
+		//bool sw = (i % 3) == 1;
 		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
