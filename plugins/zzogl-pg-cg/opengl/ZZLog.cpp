@@ -123,21 +123,9 @@ void _Message(const char *str)
 	SysMessage(str);
 }
 
-void _Log(const char *str)
-{
-	if (IsLogging()) fprintf(gsLog, str);
-}
-
 void _WriteToConsole(const char *str)
 {
 	fprintf(stderr,"ZZogl-PG: %s", str);
-}
-
-void _Print(const char *str)
-{
-	fprintf(stderr,"ZZogl-PG: %s", str);
-
-	if (IsLogging()) fprintf(gsLog, str);
 }
 
 void Message(const char *fmt, ...)

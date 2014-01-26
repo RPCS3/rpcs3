@@ -1,3 +1,0 @@
-gametitle=Forever Kingdom SLUS_203.43
-comment=Widescreen Hack
-patch=1,EE,00101cc8,word,3c013f40

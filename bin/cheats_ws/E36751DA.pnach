@@ -1,5 +1,0 @@
-gametitle=DragonBall Z - Sagas  SLUS_208.74
-comment=Widescreen Hack
-patch=1,EE,205F474C,extended,3Fe38e38
-patch=1,EE,205F4860,extended,3F031c93
-patch=1,EE,205F4880,extended,bF031c93

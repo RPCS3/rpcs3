@@ -1,3 +1,0 @@
-gametitle=Eternal Ring SLUS_200.15
-comment=Widescreen Hack
-patch=1,EE,201FF100,word,43c00000

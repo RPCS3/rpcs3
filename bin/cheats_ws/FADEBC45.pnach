@@ -1,3 +1,0 @@
-gametitle=Genji (PAL-M5) (SCES-53328)
-comment=Widescreen Hack (16:9) by ElHecht
-patch=1,EE,002e2e50,word,3c014455  // 3c014420  hor fov

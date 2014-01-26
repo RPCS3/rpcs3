@@ -1,3 +1,0 @@
-gametitle=The Red Star SLUS_208.85
-comment=Widescreen Hack
-patch=1,EE,00233c9c,word,3c033f40

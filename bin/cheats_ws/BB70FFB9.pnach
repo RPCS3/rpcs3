@@ -1,4 +1,0 @@
-gametitle=Medal of Honor: European Assault  (SLUS-21199) / Medal of Honor: European Assault  (SLES-53332)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-patch=1,EE,0012927c,word,00000000

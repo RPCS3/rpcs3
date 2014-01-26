@@ -1,5 +1,0 @@
-gametitle=Naruto - Uzumaki Chronicles 2 (PAL-M6) (SLES-55090)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,001d1a58,word,3c023f13 // 3c023f44 hor fov

@@ -1,6 +1,0 @@
-gametitle=Bujingai - The Forsaken City (K) (SLKA-25150)
-comment=Widescreen Hack (pnach NTSC-K by Arapapa)
-
-patch=1,EE,204AC3C0,extended,3F400000 // 3F800000  hor+
-//patch=1,EE,2035C5F8,extended,3F990000 // 3F800000   orbs fix
-//patch=1,EE,205cdb30,extended,3F400000 // 3F800000  zoom

@@ -1,4 +1,0 @@
-comment=Metal Gear Solid 2 - Substance (PAL-M5) (SLES-82009) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0011ffd0,word,3c013f40

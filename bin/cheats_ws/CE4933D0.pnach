@@ -1,5 +1,0 @@
-gametitle=Ratchet & Clank (SCUS_97199)
-comment=Widescreen hack by No.47
-comment=additionally to this patch use the "Widescreen Helper" (by hyakki)
-comment=settings: memory range "3xxx", find "3F466666", replace "3F14CCCC"
-patch=1,EE,2016CAF0,word,3F570A3F

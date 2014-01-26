@@ -1,6 +1,0 @@
-gametitle=Tekken Tag Tournament (SCPS_560.02)
-comment=widescreen 16:9 (NTSC-K) hack by 99skull
-//credit goes to nemesis2000
-patch=1,EE,0034B56C,word,3C013F40
-patch=1,EE,0034B570,word,44810000
-patch=1,EE,0034B578,word,4600C602

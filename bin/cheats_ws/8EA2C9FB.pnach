@@ -1,4 +1,0 @@
-gametitle=NHL Hitz 2003 (SLUS_20438)
-comment=Widescreen hack by No.47
-patch=1,EE,2071FB08,word,3F248B44
-patch=1,EE,2071FC18,word,3F2AE148

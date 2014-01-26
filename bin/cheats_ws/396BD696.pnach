@@ -1,5 +1,0 @@
-gametitle=Popolocrois - Hajimari no Bouken (J) (SCPS-15027)
-comment=Widescreen hack by Arapapa
-
-//16:9 
-//patch=1,EE,2086CAF8,word,3f400000 // 3f800000

@@ -1,4 +1,0 @@
-gametitle=Blood Will Tell: Tezuka Osamu's Dororo SLES_527.55
-comment=Widescreen Hack
-patch=1,EE,001b8e0c,word,3c023f06
-patch=1,EE,001b8e14,word,34426666

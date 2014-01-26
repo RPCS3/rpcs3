@@ -1,3 +1,0 @@
-gametitle=Space Channel 5 - Part 2 (SLUS_20807)
-comment=Widescreen hack by No.47
-patch=1,EE,202E84D4,word,3F400000

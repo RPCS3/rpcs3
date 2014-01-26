@@ -1,4 +1,0 @@
-gametitle=Outlaw Volleyball SLUS_210.49
-comment=Widescreen Hack
-patch=1,EE,006128a0,word,3CBE95ED
-patch=1,EE,006128a4,word,3Fe38e38

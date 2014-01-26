@@ -1,6 +1,0 @@
-gametitle=Teenage Mutant Ninja Turtles - Mutant Melee (PAL-M5) (SLES-53127)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0016c938,word,3c013fe3 // 3c013faa hor fov
-patch=1,EE,0016c93c,word,34218e38 // 3421aaab hor fov

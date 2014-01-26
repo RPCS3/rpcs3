@@ -1,4 +1,0 @@
-gametitle=Midnight Club 3 - DUB Edition Remix SLUS_213.55
-comment=Widescreen Hack
-patch=1,EE,00527e14,word,3c013fe3
-patch=1,EE,00527e18,word,34218e34

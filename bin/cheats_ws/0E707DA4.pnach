@@ -1,5 +1,0 @@
-gametitle=X-Men Legends II - Rise of Apocalypse SLUS_211.38
-comment=Widescreen Hack
-patch=1,EE,0016080c,extended,3c023f72
-patch=1,EE,208985a4,extended,3FE38E32 
-patch=1,EE,208985d0,extended,3F199999 //fonts

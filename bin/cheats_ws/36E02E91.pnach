@@ -1,4 +1,0 @@
-gametitle=Kings Field: The Ancient City (NTSC-U)
-patch=1,EE,0022D8E4,word,3C013F40 //00000000
-patch=1,EE,0022D8E8,word,44810000 //00000000
-patch=1,EE,0022D8F0,word,4600C602 //00000000

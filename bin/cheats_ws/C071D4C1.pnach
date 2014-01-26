@@ -1,5 +1,0 @@
-comment=Naruto - Ultimate Ninja 5 (PAL-M5) (SLES-55605) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,20B3EF14,extended,3F400000 // 3F800000 X-Axis
-//patch=1,EE,20B3EF18,extended,3F800000 // 3F800000 Y-Axis

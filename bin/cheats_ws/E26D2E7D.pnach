@@ -1,3 +1,0 @@
-﻿gametitle=Evergrace II [NTSC-J] (SLPS-25044)
-comment=Widescreen hack
-patch=1,EE,00101ca8,word,3c013f40

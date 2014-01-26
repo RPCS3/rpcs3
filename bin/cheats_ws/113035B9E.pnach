@@ -1,7 +1,0 @@
-gametitle=Gungrave (K) (SCPS-56014)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (search 00000000 00000000 43ad1346 00000000)
-patch=1,EE,001be9dc,word,3c013f40 // 00000000 hor fov
-patch=1,EE,001be9e0,word,44810000 // 00000000
-patch=1,EE,001be9e8,word,4600c602 // 00000000

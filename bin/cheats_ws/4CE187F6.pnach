@@ -1,5 +1,0 @@
-gametitle=LotR The - The Return of the King  SLUS_207.70
-comment=Widescreen Hack
-patch=1,EE,21019110,extended,3F400000 // 3F800000
-patch=1,EE,21019120,extended,442b0000 // 44000000
-patch=1,EE,21019128,extended,3Fab0000 // 3F800000

@@ -1,5 +1,0 @@
-﻿gametitle=Gladiator - Road to Freedom Remix [NTSC-J] (SLPM-66132)
-comment=Widescreen hack
-
-patch=1,EE,20C86E5C,extended,43C00000
-patch=1,EE,20C86E60,extended,3FC70FB3

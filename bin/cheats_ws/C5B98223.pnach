@@ -1,4 +1,0 @@
-gametitle=Fullmetal Alchemist and the Broken Angel SLUS_209.94
-comment=Widescreen Hack
-patch=1,EE,00237d48,word,3c023f28
-patch=1,EE,00237d50,word,3442f5c3

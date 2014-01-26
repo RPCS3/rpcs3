@@ -1,3 +1,0 @@
-gametitle=Star Wars - Jedi Starfighter SLUS_202.93
-comment=Widescreen Hack
-patch=1,EE,00126c30,word,3c023f40

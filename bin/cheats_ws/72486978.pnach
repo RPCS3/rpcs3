@@ -1,5 +1,0 @@
-gametitle=Armored Core - Nine Breaker SLUS_212.00
-comment=Widescreen Hack
-patch=1,EE,00172538,word,3c023f22
-patch=1,EE,01ec2218,word,3c023f40
-patch=1,EE,202B067C,word,43c00000

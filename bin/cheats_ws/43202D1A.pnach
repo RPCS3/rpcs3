@@ -1,4 +1,0 @@
-gametitle=Digital Devil Saga Avatar Tuner 2 (SLKA_25301)
-comment=Widescreen Hack by synce (pnach NTSC-K by Arapapa)
-
-patch=1,EE,2037F7E4,word,3FC6D395 // 3f951eb8

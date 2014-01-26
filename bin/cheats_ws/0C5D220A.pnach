@@ -1,3 +1,0 @@
-gametitle=Stella Deus - The Gate of Eternity SLUS_211.32
-comment=Widescreen Hack
-patch=1,EE,202f7110,extended,44c00000 // 45000000

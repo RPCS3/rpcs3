@@ -1,4 +1,0 @@
-gametitle=Mega Man X7 (SLES-51885)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-patch=1,EE,0014e524,word,3c0244a8

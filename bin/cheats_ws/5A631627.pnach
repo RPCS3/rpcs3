@@ -1,7 +1,0 @@
-gametitle=Dynasty Warriors 5 - Xtreme Legends (PAL-G) (SLES-53862)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00146d28,word,3c0243b4 // 3c0243a0 hor fov value1
-patch=1,EE,00146ddc,word,3c0243f0 // 3c0243a0 hor fov value2
-patch=1,EE,001988cc,word,3c023f15 // 3c023f00 render fix

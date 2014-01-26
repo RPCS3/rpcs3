@@ -1,4 +1,0 @@
-gametitle=Nanobreaker SLUS_210.10
-comment=Widescreen Hack
-patch=1,EE,00498ef8,word,44550000
-patch=1,EE,00498f00,word,3ac00000

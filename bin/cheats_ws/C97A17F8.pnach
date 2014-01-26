@@ -1,3 +1,0 @@
-Gametitle=Makai Kingdom: Chronicles of the Sacred Tome (PAL) SLES-53690
-Comment=Widescreen Hack by JLB
-patch=1,EE,2032DCF0,word,45700000

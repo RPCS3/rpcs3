@@ -1,4 +1,0 @@
-gametitle=Mister Mosquito SLUS_203.75
-comment=Widescreen Hack
-patch=1,EE,001b9d20,word,3c023f40
-patch=1,EE,001b9a80,word,3c023f40

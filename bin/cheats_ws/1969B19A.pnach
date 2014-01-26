@@ -1,5 +1,0 @@
-gametitle=Tenchu Fatal Shadows PAL (Spain)
-comment=Widescreen Hack
-
-patch=1,EE,0012ef24,word,3c023f40
-patch=1,EE,0012f738,word,3c02442b

@@ -1,5 +1,0 @@
-gametitle=Naruto - Narutimett Hero 3 (NTSC-J) (SLPS_25589)
-comment=Widescreen Hack (NTSC-J by Arapapa)
-
-//16:9 (0000803f 0000803f 00008043)
-patch=1,EE,20B10B14,word,3f400000 // 3f800000

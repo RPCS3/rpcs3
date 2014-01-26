@@ -1,8 +1,0 @@
-gametitle=Kingdom Hearts Re:Chain of Memories (NTSC-J)
-comment=Widescreen hack
-
-patch=1,EE,20332FBC,word,3F19999A // 3F4CCCCD (hor axis)
-//patch=1,EE,20332FC0,word,3F8CCCCD // 3F4CCCCD (vert axis)
-
-//60 FPS
-patch=1,EE,0043C930,extended,00000000

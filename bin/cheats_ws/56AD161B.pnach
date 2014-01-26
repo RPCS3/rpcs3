@@ -1,5 +1,0 @@
-gametitle=Chaos Wars SLUS_217.22
-comment=Widescreen Hack
-patch=1,EE,001374c4,word,3c033f19
-patch=1,EE,001374c8,word,3463999a
-patch=1,EE,001374e4,word,3c0343f7

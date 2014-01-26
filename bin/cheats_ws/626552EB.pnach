@@ -1,5 +1,0 @@
-gametitle=Forbidden Siren 2 (J) (SCPS_15106)
-comment= Widescreen Hack by sergx12 (pnach by Arapapa)
-
-//gameplay by sergx12 (c80216e6 803f033c cc0217e6)
-patch=1,EE,0018a904,word,3c033f40

@@ -1,3 +1,0 @@
-gametitle=Space Channel 5 - Special Edition disc 1 SLUS_208.06
-comment=Widescreen Hack
-patch=1,EE,2024b694,word,3f400000

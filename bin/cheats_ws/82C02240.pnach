@@ -1,6 +1,0 @@
-gametitle=Dead or Alive 2 - Hard*Core (SLPS_25026)
-comment=Widescreen hack by No.47
-patch=1,EE,204588D0,word,3F400000
-patch=1,EE,20459140,word,3F400000
-patch=1,EE,204599B0,word,3F400000
-patch=1,EE,2045A220,word,3F400000

@@ -1,7 +1,0 @@
-gametitle=Final Fight: Streetwise (SLES-53853)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,00180308,word,3c043f71
-patch=1,EE,0018030c,word,3489d5a2
-patch=1,EE,00180310,word,3c03bf71
-patch=1,EE,00180314,word,346ad5a2
-patch=1,EE,001ebed0,word,3c033fab

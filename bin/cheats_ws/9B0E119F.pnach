@@ -1,7 +1,0 @@
-gametitle=DBZ Sparking Meteor (SLKA-25407) (NTSC-K)
-comment=16:9 widescreen hack
-
-//16:9 widescreen hack by sergx12, porting by 99skull
-patch=1,EE,00130BF0,word,3C013F10 //3C013F40
-patch=1,EE,002FE54C,word,3FC71C76 //3F955555
-patch=1,EE,002FE614,word,43C71C71 //43955555

@@ -1,9 +1,0 @@
-gametitle=Haunting Ground (SLUS-21075)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0010e31c,word,3c013f40
-patch=1,EE,0010e320,word,44810000
-patch=1,EE,0010e328,word,4600c602
-
-//cutscenes fix
-patch=1,EE,002ba3ec,word,34a98c00
-patch=1,EE,002ba3d4,word,34a67400

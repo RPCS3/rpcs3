@@ -1,4 +1,0 @@
-gametitle=TimeSplitters (SLES-50078)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0027e754,word,3c014340
-patch=1,EE,0027e758,word,44810000

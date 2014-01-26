@@ -1,9 +1,0 @@
-gametitle=Wild Arms 5 (J) (SCPS_151.18)
-comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
-
-//hor fov+
-patch=1,EE,00153324,word,3C024500
-patch=1,EE,00153388,word,3C023F40
-
-//render fix
-patch=1,EE,001532ac,word,3C02442B

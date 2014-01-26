@@ -1,6 +1,0 @@
-﻿gametitle=Yuu Yuu Hakusho Forever [NTSC-J](SLPS-25499)
-comment=Widescreen Hack
-
-patch=1,EE,20630240,extended,3f400000
-patch=1,EE,20651670,extended,3f400000
-patch=1,EE,20630590,extended,3f400000

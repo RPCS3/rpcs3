@@ -1,3 +1,0 @@
-gametitle=Sega Sports Tennis
-comment=Widescreen Hack
-patch=1,EE,0018FCC4,word,3C013F40 //3C013F80

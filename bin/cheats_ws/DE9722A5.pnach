@@ -1,5 +1,0 @@
-comment=God Hand (PAL-M5) (SLES-54490) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00138814,word,3c014455
-patch=1,EE,00153a38,word,3c014455

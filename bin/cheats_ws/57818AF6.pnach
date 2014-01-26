@@ -1,7 +1,0 @@
-gametitle=Shadow of Rome SLUS_209.02
-comment=Widescreen Hack
-patch=1,EE,00146bc8,word,3c023f1f
-patch=1,EE,00146bd0,word,344249f9
-patch=1,EE,00146de4,word,3c023f1f
-patch=1,EE,00146dec,word,344249f9
-patch=1,EE,001e746c,word,3c044328

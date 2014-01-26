@@ -1,5 +1,0 @@
-gametitle=Silpheed - The Lost Planet (PAL) (SLES_50193)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (0000803f d7a3703f 0000f943)
-patch=1,EE,20432848,word,3F400000 // 3F800000

@@ -1,4 +1,0 @@
-gametitle=Monster Hunter 2 (SLPM-66280)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,00377a84,word,3c023ff3
-patch=1,EE,00377a94,word,3442cf35

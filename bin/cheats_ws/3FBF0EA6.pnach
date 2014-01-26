@@ -1,7 +1,0 @@
-comment=Dino Stalker (SLUS-20485)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,202AF944,extended,3f199999
-patch=1,EE,202AF984,extended,3f199999
-patch=1,EE,202AF9c4,extended,3f199999
-patch=1,EE,0012d224,word,3c0143d6
-patch=1,EE,00117670,word,3c0143d6

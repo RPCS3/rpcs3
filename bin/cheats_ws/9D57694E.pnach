@@ -1,4 +1,0 @@
-gametitle=tsugunai
-comment=Widescreen Hack
-patch=1,EE,0017cf94,extended,3c013f40
-patch=1,EE,001c1f30,extended,3c013f40

@@ -1,5 +1,0 @@
-gametitle=Busin Zero (K) (SLKA-25221)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (6d34003d cccc8c3f(*) cccc8c3f cccc8c3f cccc8c3f)
-patch=1,EE,2050F274,word,3F533333 // 3f8ccccc

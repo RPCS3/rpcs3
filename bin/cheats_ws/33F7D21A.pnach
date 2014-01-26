@@ -1,7 +1,0 @@
-gametitle=Dirge of Cerberus: Final Fantasy VII (PAL-M5) (SLES-54185)
-comment=Widescreen Hack (16:9) by ElHecht
-
-patch=1,EE,0040c40c,word,3c013fff // 3c013fc0 ver fov
-patch=1,EE,0040c410,word,3421ff99 // 44810000 ver fov
-patch=1,EE,0040c414,word,44810000 // 00000000 
-patch=1,EE,0040cff0,word,3c013ec0 // 3c013f00 zoom

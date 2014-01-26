@@ -1,5 +1,0 @@
-gametitle=Shin Sangoku Musou 5 SP(=Dynasty warriors 6) (SLKA_350.05)
-comment=widescreen 16:9 (NTSC-K) hack by 99skull
-patch=1,EE,0014701C,word,3C024082 //Zoom 3C024049(3.1415923)
-patch=1,EE,001471B0,word,3C0543A0 //Y-Axis 3C054370(240)->(320)
-patch=1,EE,00147AF4,word,3C024082 //render fix 3C024049(3.1415923)

@@ -1,3 +1,0 @@
-comment=Burnout Dominator (NTSC-U) Widescreen Hack (16:9)
-patch=1,EE,2043E8F4,extended,3FE38E32 // 3FAAAAAB Y-Axis
-patch=1,EE,2043E8F0,extended,3FAAAAAB // 3F800000 Camera Zoom

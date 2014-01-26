@@ -1,7 +1,0 @@
-gametitle=Dynasty Warriors 5 (PAL-G) (SLES-53341)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00146c18,word,3c0243b4 // 3c0243a0 hor fov value1
-patch=1,EE,00146cc8,word,3c0243f0 // 3c0243a0 hor fov value2
-patch=1,EE,0018249c,word,3c023f15 // 3c023f00 render fix

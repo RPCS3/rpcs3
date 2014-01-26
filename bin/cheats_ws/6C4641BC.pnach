@@ -1,4 +1,0 @@
-gametitle=Tetsujin 28 GO (SLPS-25362)
-
-//16:9 Widescreen
-patch=1,EE,207AB640,extended,3F400000 // 3F800000

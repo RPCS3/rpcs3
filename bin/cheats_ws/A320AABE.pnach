@@ -1,6 +1,0 @@
-gametitle=Indigo Prophecy (K)  (SLKA_253.09)
-comment=Widescreen patch (pnach NTSC-J by Arapapa)
-
-patch=1,EE,0020a7c0,word,3c013fe3
-patch=1,EE,0020a7c4,word,34218e38
-patch=1,EE,0020a7c8,word,44810000

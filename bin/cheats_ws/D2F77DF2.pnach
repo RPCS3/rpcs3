@@ -1,3 +1,0 @@
-gametitle=Rayman 2 - Revolution (SLUS_20138)
-comment=Widescreen hack by No.47
-patch=1,EE,20FD7280,word,3F8CCCCD

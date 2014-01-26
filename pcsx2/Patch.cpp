@@ -225,8 +225,8 @@ int LoadCheatsFromZip(wxString gameCRC, const wxString& cheatsArchiveFilename) {
     wxString name = entry->GetName();
     name.MakeUpper();
     if (name.Find(gameCRC) == 0 && name.Find(L".PNACH") == name.Length()-6) {
-      Console.WriteLn(Color_Gray, "Loading patch '%s' from archive '%s'",
-                      entry->GetName().To8BitData(), cheatsArchiveFilename.To8BitData());
+      Console.WriteLn(Color_Gray, L"Loading patch '%s' from archive '%s'",
+                      entry->GetName().c_str(), cheatsArchiveFilename.c_str());
       wxTextInputStream pnach(zip);
       while (!zip.Eof()) {
         inifile_processString(pnach.ReadLine());

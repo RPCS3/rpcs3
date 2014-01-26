@@ -1,8 +1,0 @@
-gametitle=NHL Hitz Pro (PAL-E) (SLES-51840)
-comment=Widescreen Hack by ElHecht
-
-// 16:9
-patch=1,EE,003f4d14,word,3f100000 // 3f400000 hor fov
-
-// 16:10
-//patch=1,EE,003f4d14,word,3f200000 // 3f400000 hor fov

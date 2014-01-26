@@ -1,3 +1,0 @@
-﻿gametitle=Blood+ Souyoku no Battle Rondo [NTSC-J] (SCPS-15112)
-comment=Widescreen Hack
-patch=1,EE,00269E60,word,BFAAAAAA

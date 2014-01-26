@@ -1,5 +1,0 @@
-﻿gametitle=Battle of Yuu Yuu Hakusho,Shitou! Ankoku Bujutsukai! 120% [NTSC-J] (SLPS-25734)
-comment=Widescreen
-patch=1,EE,00103a84,word,3c013f40
-patch=1,EE,00103a88,word,44810000
-patch=1,EE,00103a90,word,4600c602

@@ -1,8 +1,0 @@
-﻿gametitle=Siren [NTSC-J] (SCPS-15053)
-comment=Widescreen hack
-//gameplay by sergx12
-patch=1,EE,001fb3b8,word,3c023f40
-
-//FMV's fix by nemesis2000
-patch=1,EE,001f5598,word,3c027560
-patch=1,EE,001f55e4,word,34028aa0

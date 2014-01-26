@@ -1,5 +1,0 @@
-gametitle=Harry Potter and the Sorcerer's/Philisopher's Stone [NTSC-U] [PAL]
-comment=Widescreen hack by VIRGIN KLM, same CRC and code for both regions
-
-//Widescreen
-patch=1,EE,2036D5C4,word,3F400000

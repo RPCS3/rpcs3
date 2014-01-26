@@ -1,5 +1,0 @@
-gametitle=Shin Megami Tensei - Digital Devil Saga 2 (PAL-E) (SLES-54555)
-comment=Widescreen Hack (16:9) by ElHecht
-// 16:9
-patch=1,EE,003539d4,word,3fc6d3a0 // 3f951eb8 hor fov
-patch=1,EE,00353d74,word,3fc6d3a0 // 3f951eb8 unknown

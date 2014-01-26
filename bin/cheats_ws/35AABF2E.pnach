@@ -1,4 +1,0 @@
-gametitle=Fullmetal Alchemist 2 - Curse of the Crimson Elixir SLUS_211.66
-comment=Widescreen Hack
-patch=1,EE,00181528,word,3c023f28
-patch=1,EE,00181530,word,3442f5c3

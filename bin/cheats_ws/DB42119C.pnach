@@ -1,5 +1,0 @@
-gametitle=TMNT 3 Mutant Nightmare SLUS_211.84
-comment=Widescreen Hack
-patch=1,EE,0028fd80,extended,3c023f1e
-patch=1,EE,0028fdb0,extended,3c023fe3
-patch=1,EE,0028fdb8,extended,34428e38

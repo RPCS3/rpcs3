@@ -1,5 +1,0 @@
-﻿gametitle=Neo Contra [NTSC-J] (SLPM-65752)
-comment=Widescreen hack
-patch=1,EE,00359ed4,word,3c013f40
-patch=1,EE,00359ed8,word,44810000
-patch=1,EE,00359ee0,word,4600c602

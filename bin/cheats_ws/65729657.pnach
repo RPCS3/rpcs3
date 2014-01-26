@@ -1,6 +1,0 @@
-gametitle=Ace Combat Zero: The Belkan War (SLUS-21346)
-comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
-
-//widescreen fix
-patch=1,EE,003FA350,word,43D638F3
-patch=1,EE,003FA354,word,43EB7385

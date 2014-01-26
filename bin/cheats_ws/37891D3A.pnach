@@ -1,3 +1,0 @@
-﻿gametitle=Saint Seiya - The Hades SLES_541.62
-comment=Widescreen Hack
-patch=1,EE,00161e68,word,3c033f40

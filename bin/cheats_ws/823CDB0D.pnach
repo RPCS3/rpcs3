@@ -1,7 +1,0 @@
-gametitle=Under The Skin SLES_527.19
-comment=Widescreen Hack
-patch=1,EE,00109e08,word,3c013f9f
-patch=1,EE,00109e0c,word,34213fbf
-patch=1,EE,001a6470,word,3c013f9e
-patch=1,EE,001a6474,word,34213fbf
-patch=1,EE,00109da0,word,3c014328

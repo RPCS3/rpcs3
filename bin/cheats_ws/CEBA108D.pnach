@@ -1,5 +1,0 @@
-gametitle=Teenage Mutant Ninja Turtles - Smash-Up (PAL-M5) (SLES-55565)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00443b94,word,3F249249 // 3F5B6DB7

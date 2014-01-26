@@ -1,6 +1,0 @@
-gametitle=Avatar - The Legend of Aang (PAL-M4) (SLES-54188)
-comment=Widescreen Hack (16:9) by ElHecht
-
-//16:9
-patch=1,EE,00142818,word,3c033fe3 // 3c033faa
-patch=1,EE,0014281c,word,34638e39 // 3463aaab

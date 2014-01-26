@@ -1,6 +1,0 @@
-gametitle=Gallop Racer Lucky 7 (J) (SLPS-25333)
-comment=Widescreen hack by Arapapa
-
-// 16:9(0000803f ae47613f 00000045 00000045)  
-patch=1,EE,2045CFA4,word,3f400000 // 3f800000
-patch=1,EE,2045D01C,word,3f400000 // 3f800000

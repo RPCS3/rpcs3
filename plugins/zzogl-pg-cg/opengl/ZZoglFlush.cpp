@@ -2308,17 +2308,19 @@ void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool Ch
 	} \
 } \
  
-//if( a.fix <= 0x80 ) { \
-// dwTemp = (a.fix*2)>255?255:(a.fix*2); \
-// dwTemp = dwTemp|(dwTemp<<8)|(dwTemp<<16)|0x80000000; \
-// ZZLog::Debug_Log("bfactor: %8.8x", dwTemp); \
-// glBlendColorEXT(dwTemp); \
-// } \
-// else { \
+#if 0
+if( a.fix <= 0x80 ) { \
+ dwTemp = (a.fix*2)>255?255:(a.fix*2); \
+ dwTemp = dwTemp|(dwTemp<<8)|(dwTemp<<16)|0x80000000; \
+ ZZLog::Debug_Log("bfactor: %8.8x", dwTemp); \
+ glBlendColorEXT(dwTemp); \
+ } \
+ else { \
 
-//void ResetAlphaVariables() {
-//	FUNCLOG
-//}
+void ResetAlphaVariables() {
+	FUNCLOG
+}
+#endif
 
 inline void NeedFactor(int w)
 {

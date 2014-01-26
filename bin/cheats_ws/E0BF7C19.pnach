@@ -1,4 +1,0 @@
-gametitle=Katamari Damacy 2 (K) (SCKA_200.51)
-comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
-
-patch=1,EE,001082f0,word,3c0143d6

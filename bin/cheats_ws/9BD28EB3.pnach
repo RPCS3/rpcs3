@@ -1,9 +1,0 @@
-gametitle=Shin Sangoku Musou 2(SLPM_675.23)(NTSC-K)
-comment=16:9 widescreen hack
-//16:9 widescreen hack by 99skull
-patch=1,EE,001752E8,word,3C0243B4 //3C0243F0 render fix1
-patch=1,EE,001868FC,word,3C024082 //3C024049 render fix2
-patch=1,EE,00186B7C,word,3C024370 //3C0243A0 zoom
-patch=1,EE,00186D2C,word,3C0243B4 //3C0243F0 vertical FOV
-patch=1,EE,0025FE98,word,3C023FAA //3C023F80 vertical FOV(ending scene)
-patch=1,EE,0025FEAC,word,3C023FAA //3C023F80 zoom(ending scene)

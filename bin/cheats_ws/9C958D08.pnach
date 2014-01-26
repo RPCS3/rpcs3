@@ -1,3 +1,0 @@
-gametitle=Mace Griffin - Bounty Hunter (NTSC-U)
-comment=Widescreen Hack By Some Chump
-patch=1,EE,0055C008,word,439991ec // 43ccc290

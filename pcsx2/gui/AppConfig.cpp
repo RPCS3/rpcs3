@@ -72,6 +72,12 @@ namespace PathDefs
 			return retval;
 		}
 
+		const wxDirName& CheatsWS()
+		{
+			static const wxDirName retval(L"cheats_ws");
+			return retval;
+		}
+
 		const wxDirName& Langs()
 		{
 			static const wxDirName retval( L"Langs" );
@@ -166,18 +172,18 @@ namespace PathDefs
 	{
 		// Each linux distributions have his rules for path so we give them the possibility to
 		// change it with compilation flags. -- Gregory
-#ifndef PLUGIN_DIR_COMPILATION
+#ifndef GAMEINDEX_DIR_COMPILATION
 		return AppRoot() + wxDirName( L"cheats" );
 #else
-#define xPLUGIN_DIR_str(s) PLUGIN_DIR_str(s)
-#define PLUGIN_DIR_str(s) #s
-		return wxDirName( xPLUGIN_DIR_str(PLUGIN_DIR_COMPILATION) );
+#define xGAMEINDEX_str(s) GAMEINDEX_DIR_str(s)
+#define GAMEINDEX_DIR_str(s) #s
+		return wxDirName( xGAMEINDEX_str(GAMEINDEX_DIR_COMPILATION) ) + wxDirName( L"cheats" );
 #endif
 	}
 
 	wxDirName GetCheatsWS()
 	{
-		return GetDocuments() + wxDirName( L"cheats_ws" );
+		return GetDocuments() + Base::CheatsWS();
 	}
 
 	wxDirName GetSavestates()
@@ -682,6 +688,7 @@ AppConfig::FolderOptions::FolderOptions()
 	, MemoryCards	( PathDefs::GetMemoryCards() )
 	, Langs			( PathDefs::GetLangs() )
 	, Logs			( PathDefs::GetLogs() )
+	, CheatsWS      ( PathDefs::GetCheatsWS() )
 
 	, RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
 	, RunELF( PathDefs::GetDocuments() )			// raw default is always the Documents folder.

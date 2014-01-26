@@ -1,4 +1,0 @@
-comment=Dark Chronicle (PAL-M5) (SCES-51190) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00139414,word,3c023f40

@@ -1,6 +1,0 @@
-gametitle=Ace Combat 5: The Unsung War (J) (SLPS_25418)
-comment=Widescreen fix by nemesis2000 (NTSC-J by Arapapa)
-
-//widescreen fix
-patch=1,EE,00440ba8,word,43D638F3
-patch=1,EE,00440baC,word,43EB7385

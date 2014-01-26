@@ -1,3 +1,0 @@
-gametitle=Midway Arcade Treasures 3
-comment=Widescreen Hack
-patch=1,EE,001E3E54,word,3C023F40 //3C023F80 (Hydro Thunder)

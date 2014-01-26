@@ -1,9 +1,0 @@
-comment=ObsCure II (PAL-M5) (SLES-54782) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00211b10,word,3c023f20
-patch=1,EE,00211b14,word,3441bfb1
-patch=1,EE,00211b18,word,44810000
-//
-// Render-Fix
-patch=1,EE,002561dc,word,3c023faa

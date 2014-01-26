@@ -1,6 +1,0 @@
-gametitle=Xenosaga Episode II
-comment=NTSC-J Widescreen Hack ver.2 by synce
-patch=1,EE,209542C0,extended,3F400000
-patch=1,EE,209542D0,extended,442B0000
-patch=1,EE,209542D8,extended,44008000
-patch=1,EE,209542F8,extended,442B0000

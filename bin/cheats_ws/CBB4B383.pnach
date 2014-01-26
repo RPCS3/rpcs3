@@ -1,5 +1,0 @@
-comment=Rogue Galaxy (PAL-M5) (SCES-54552) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,001c5e40,word,3c023f10
-patch=1,EE,00377f9c,word,3c023f10

@@ -1,3 +1,0 @@
-gametitle=Enthusia - Professional Racing PAL
-comment=Widescreen hack
-patch=1,EE,0038dcb8,word,3F400000

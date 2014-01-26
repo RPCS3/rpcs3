@@ -1,5 +1,0 @@
-gametitle=Armored Core 3 SLUS_204.35
-comment=Widescreen Hack
-patch=1,EE,00199924,word,3c013f22
-patch=1,EE,002c4be4,word,3c013f40
-patch=1,EE,204279EC,word,43f00000

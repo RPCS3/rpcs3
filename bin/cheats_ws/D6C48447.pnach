@@ -1,7 +1,0 @@
-gametitle=Siren SCUS_973.55
-comment=Widescreen Hack
-patch=1,EE,00201718,word,3c023f40
-
-//FMV's fix by nemesis2000
-patch=1,EE,001fb8e8,word,3c027630 // 3c027900
-patch=1,EE,001fb934,word,34028970 // 34028700

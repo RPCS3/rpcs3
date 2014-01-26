@@ -1,5 +1,0 @@
-gametitle= Rule of Rose (J) (SCPS-15093)
-comment=Widescreen patch (pnach NTSC-J by Arapapa)
-
-patch=1,EE,0013ba74,extended,3c013f12  // 003f013c 00608144 96B2090C
-patch=1,EE,0013ba9c,extended,3c013f10  // 02000146 403F013C 00088144 02000246

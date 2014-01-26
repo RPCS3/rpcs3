@@ -1,7 +1,0 @@
-gametitle=Mojib-Ribbon(NTSC-J) (SCPS-11033)
-comment=Widescreen Hack by Parotaku
-
-// 16:9
-patch=1,EE,0039f28c,word,3c013f40
-patch=1,EE,0039f298,word,44810000
-patch=1,EE,0039f29c,word,4600c602

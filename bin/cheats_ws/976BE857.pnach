@@ -1,5 +1,0 @@
-shin sangoukumusou 3 xtreme legends
-
-//WIDESCREEN
-patch=1,EE,00139920,word,3c0243d6
-patch=1,EE,0018eb90,word,3c023f2b

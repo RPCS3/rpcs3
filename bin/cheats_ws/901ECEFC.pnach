@@ -1,3 +1,0 @@
-gametitle=Van Helsing (SLUS-20738)
-comment=Wide screen patch 16:9 by paul_met
-patch=1,EE,202E7FA0,extended,3FE38E38 // 3FAAAAAA

@@ -1,7 +1,0 @@
-gametitle=The Bouncer (PAL-M6) (SCES-50241)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-//16:9
-patch=1,EE,2037EC3C,extended,3F400000 // 3F800000 hor fov
-//patch=1,EE,2037EC40,extended,3F069536 // 3F069536 ver fov
-//patch=1,EE,203A4788,extended,3F800000 // 3F800000 zoom

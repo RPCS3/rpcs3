@@ -1,6 +1,0 @@
-gametitle=Eureka Seven-Vol 1 SLUS_213.53
-comment=Widescreen Hack
-patch=1,EE,00110b24,word,3c034455
-patch=1,EE,0011129c,word,3c0343f0
-patch=1,EE,203a6cc8,word,43f00000
-patch=1,EE,203a66b8,word,43f00000

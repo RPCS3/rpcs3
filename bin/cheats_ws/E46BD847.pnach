@@ -1,4 +1,0 @@
-﻿gametitle=RockMan X7 [NTSC-J] (SLPM-65331)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-patch=1,EE,0014cbc4,word,3c0244a8

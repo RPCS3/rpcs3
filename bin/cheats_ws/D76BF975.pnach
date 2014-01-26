@@ -1,8 +1,0 @@
-gametitle=TMNT - Teenage Mutant Ninja Turtles (PAL-M5) (SLES-54478)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0041dd78,word,3c023fe3 // 3c023faa vert fov
-patch=1,EE,0041dd7c,word,34427fa9 // 34429fbe vert fov
-patch=1,EE,0041dddc,word,3c013f40 // 00000000 cam zoom
-patch=1,EE,0041dde0,word,44816000 // 46010303

@@ -1,3 +1,0 @@
-gametitle=Bloody Roar 4 (SLUS-20795)
-comment=Widescreen patch 16:9 by paul_met
-patch=1,EE,00115768,word,3c013fe3

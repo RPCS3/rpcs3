@@ -1,5 +1,0 @@
-gametitle=Resident Evil Outbreak (SLUS-20765) (NTSC-U)
-comment=Version 1.01
-
-// 16:9 hack
-patch=1,EE,2038C9F8,extended,3FE374BC

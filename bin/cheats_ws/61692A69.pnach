@@ -1,3 +1,0 @@
-gametitle=Outlaw Tennis SLUS_211.90
-comment=Widescreen Hack
-patch=1,EE,005b8068,word,3f9c67c8

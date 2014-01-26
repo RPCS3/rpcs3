@@ -1,5 +1,0 @@
-﻿gametitle=Breath of Fire: Dragon Quarter (K) (SLKA_251.00)
-comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
-
-patch=1,EE,0012dc1c,word,3c024307 //hor val
-patch=1,EE,0012dd68,word,3c034074 //render fix

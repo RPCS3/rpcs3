@@ -1,5 +1,0 @@
-gametitle=Headhunter - Redemption SLUS_208.17
-comment=Widescreen Hack
-patch=1,EE,00190618,word,3c014310
-patch=1,EE,00190648,word,3c013fe3
-patch=1,EE,0019064c,word,34218e38

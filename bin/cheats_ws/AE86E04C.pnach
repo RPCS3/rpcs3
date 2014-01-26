@@ -1,5 +1,0 @@
-gametitle=Magna Carta - Tears of Blood (K) (SCKA_20043)
-comment=Widescreen Hack by Hyakki (pnach NTSC-K by Arapapa)
-
-//16:9 (0000803f 0000803f 04000000)
-patch=1,EE,20E9C010,extended,3F400000 // 3f800000

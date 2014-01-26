@@ -1,3 +1,0 @@
-gametitle=Downforce NTSC-U
-comment=Widescreen Hack
-patch=1,EE,0010EE50,word,3C013F40 //3C013F80

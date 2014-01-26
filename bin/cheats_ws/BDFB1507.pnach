@@ -1,4 +1,0 @@
-comment=Monster Rancher EVO (NTSC-U) WS patch
-//Widescreen patch (16:9)
-patch=1,EE,204F05EC,extended,3F19999A
-patch=1,EE,20591854,extended,43D55555 //<- render fix

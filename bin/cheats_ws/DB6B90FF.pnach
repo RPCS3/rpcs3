@@ -1,4 +1,0 @@
-gametitle=Shadow of Memories (J) (SLPM_650.13)
-comment=Widescreen Hack (pnach NTSC-J by Arapapa)
-patch=1,EE,002102e8,word,3c014455 //3c014420
-patch=1,EE,00210300,word,3c013ac8 //3c013b00

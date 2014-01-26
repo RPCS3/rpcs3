@@ -1,8 +1,0 @@
-gametitle=Grandia III (SLUS-21334)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0013b450,word,3c033f27
-patch=1,EE,0013b4a0,word,3c013f40
-patch=1,EE,0013b4a4,word,4481a000
-patch=1,EE,0013b4a8,word,46146d83
-patch=1,EE,0013b4ac,word,46007546
-patch=1,EE,0013b4b0,word,46007e86

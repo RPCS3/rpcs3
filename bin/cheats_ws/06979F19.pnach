@@ -1,5 +1,0 @@
-﻿gametitle=Tekken Tag Tournament [NTSC-J] (SLPS-20015)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0034b004,word,3c013f40
-patch=1,EE,0034b008,word,44810000
-patch=1,EE,0034b010,word,4600c602

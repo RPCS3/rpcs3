@@ -1,4 +1,0 @@
-gametitle=Nanobreaker SLES_529.64
-comment=Widescreen Hack
-patch=1,EE,00499978,word,44550000
-patch=1,EE,00499980,word,3ac00000

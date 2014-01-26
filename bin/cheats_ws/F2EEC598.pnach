@@ -1,6 +1,0 @@
-gametitle=Legaia 2: Duel Saga SLUS 204.14
-comment=Widescreen Hack
-patch=1,EE,0010fef0,word,3c013f40
-patch=1,EE,0010ff7c,word,3c013f40
-patch=1,EE,00156e2c,word,3c0143d5
-patch=1,EE,00156e14,word,3c01c3d5

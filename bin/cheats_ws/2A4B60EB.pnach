@@ -1,4 +1,0 @@
-gametitle=DragonBall Z Budokai 3 SLUS_209.98
-comment=Widescreen Hack
-patch=1,EE,2047CA50,extended,3f23d706 // 3F5A740E
-patch=1,EE,20470434,extended,3f23d706 // 3F5A740E

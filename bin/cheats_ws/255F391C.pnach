@@ -1,4 +1,0 @@
-gametitle=Hunter - The Reckoning - Wayward SLUS_205.11
-comment=Widescreen Hack
-patch=1,EE,0023b1f4,extended,3c023f22
-patch=1,EE,2075d228,extended,bfaa0000

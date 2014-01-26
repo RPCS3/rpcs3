@@ -1,6 +1,0 @@
-comment=Rumble Roses (NTSC-U)
-//
-// 16:9
-patch=1,EE,00103fa4,word,3c013f40
-patch=1,EE,00103fa8,word,44810000
-patch=1,EE,00103fb0,word,4600c602

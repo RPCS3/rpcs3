@@ -1,4 +1,0 @@
-gametitle=Ratchet and Clank 3 - Up Your Arsenal (SCUS_97353)
-comment=Widescreen hack by No.47
-patch=1,EE,201439FC,word,01010100
-patch=1,EE,201E76B0,word,3F53A063

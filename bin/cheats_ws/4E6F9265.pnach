@@ -1,3 +1,0 @@
-﻿gametitle=.hack Zettai Houi Vol. 4 [NTSC-J] (SLPS-25202)
-comment=Widescreen hack
-patch=1,EE,20A920D0,word,3f400000

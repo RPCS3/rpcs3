@@ -1,5 +1,0 @@
-gametitle=Wreckless - The Yakuza Missions (NTSC-U)
-comment=Widescreen hack by ElHecht
-
-// 16:9
-patch=1,EE,00146dc4,word,3c013f40 //3c013f80

@@ -1,6 +1,0 @@
-gametitle=Need for Speed Underground SLUS 208.11
-comment=Widescreen Hack
-patch=1,EE,004ff42c,word,3f400000
-patch=1,EE,004ff434,word,3f400000
-patch=1,EE,004ff628,word,3f2aaaaa
-patch=1,EE,004ff630,word,3f2aaaaa

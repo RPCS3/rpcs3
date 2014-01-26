@@ -1,6 +1,0 @@
-gametitle=X-Men - Next Dimension SLUS_202.79
-comment=Widescreen Hack
-patch=1,EE,001a5adc,word,3c014455
-patch=1,EE,001a5af8,word,3c013fe3
-patch=1,EE,001a5afc,word,34218e38
-patch=1,EE,0019dae4,word,3c013f22

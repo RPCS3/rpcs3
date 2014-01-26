@@ -1,5 +1,0 @@
-gametitle=Zone of the Enders (J) SLPM_650.19
-comment=Widescreen Hack by synce (pnach by Arapapa)
-
-//16:9
-patch=1,EE,20450a30,extended,3c013f40

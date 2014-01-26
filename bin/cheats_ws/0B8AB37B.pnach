@@ -1,6 +1,0 @@
-gametitle=Rozen Maiden: Gebetgarten
-comment=Widescreen Hack
-//battle
-patch=1,EE,2022DBE4,extended,3F4DDDDE // 3F800000
-//3d view
-patch=1,EE,2043F564,extended,3F4DDDDE // 3F800000

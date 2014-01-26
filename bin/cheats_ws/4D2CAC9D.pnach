@@ -1,9 +1,0 @@
-gametitle=Disgaea: Hour of Darkness (SLUS-20666)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0014d6ac,word,3c033f40
-patch=1,EE,0014d6b4,word,e7a000dc
-patch=1,EE,0014d6b8,word,46000003
-patch=1,EE,0014d6bc,word,e7a000d8
-patch=1,EE,001051d4,word,3c013f40
-patch=1,EE,001051d8,word,44810000
-patch=1,EE,001051e0,word,4600c602

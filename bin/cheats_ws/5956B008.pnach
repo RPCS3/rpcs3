@@ -1,4 +1,0 @@
-gametitle=E.O.E - Eve of Extinction (K) (SLPM_67521)
-comment=Widescreen Hack (pnach by Arapapa)
-
-patch=1,EE,00291484,word,3c023ec0 // 003f023c

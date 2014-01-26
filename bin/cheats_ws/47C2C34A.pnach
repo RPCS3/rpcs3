@@ -1,9 +1,0 @@
-gametitle=Forbidden Siren (K) (SCKA_200.19)
-comment= Widescreen Hack by sergx12 (pnach by Arapapa)
-
-//gameplay by sergx12 (0000a2af 0045033c 803f023c e0000426)
-patch=1,EE,001ffd98,word,3c023f40
-
-//FMV's fix by nemesis2000 (08004634 0079023c d000a427, 25306200 00870234 d000a427)
-patch=1,EE,001f9f78,word,3c027660 // FMV Top Position    3c027900 (NTSC-U 3c027800)
-patch=1,EE,001f9fc4,word,340289a0 // FMY Bottom Position 34028700 (NTSC-U 34028800)

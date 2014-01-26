@@ -1,4 +1,0 @@
-gametitle=Tokyo Xtreme Racer 3 (SLUS-20831)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,00141248,word,3c043f53
-patch=1,EE,00141250,word,34883333

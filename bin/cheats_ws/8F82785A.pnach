@@ -1,5 +1,0 @@
-gametitle=JoJo no Kimyou na Bouken Ougon no Kaze SLPM_651.40
-comment=Widescreen Hack
-patch=1,EE,00124f64,word,3c023f22
-patch=1,EE,20361ae8,word,43f00000
-patch=1,EE,203d23c0,word,43700000

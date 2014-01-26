@@ -1,4 +1,0 @@
-gametitle=Dead or Alive 2 (SCES-50003)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-patch=1,EE,0021c21c,word,3c014534

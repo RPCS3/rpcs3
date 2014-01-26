@@ -1,3 +1,0 @@
-gametitle=Sonic Riders (NTSC-U)
-comment=Widescreen hack
-patch=1,EE,2044E6D8,word,43700000

@@ -1,9 +1,0 @@
-comment=Shadow Hearts 2 Covenant (PAL-M3) (SLES-82030) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00202cac,word,3c013f40
-patch=1,EE,00202cb0,word,44810000
-patch=1,EE,00202cb8,word,4600c602
-//
-// Render-Fix
-patch=1,EE,0022531c,word,3c033fc0

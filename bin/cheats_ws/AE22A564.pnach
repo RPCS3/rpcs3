@@ -1,7 +1,0 @@
-gametitle=Dragon Quest - Young Yangus Mysterious Dungeon (J) (SLPM-66363)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (00000000 00000000 43ad1346 00000000)
-patch=1,EE,002feb04,word,3c013f40 // 00000000 hor fov
-patch=1,EE,002feb08,word,44810000 // 00000000
-patch=1,EE,002feb10,word,4600c602 // 00000000

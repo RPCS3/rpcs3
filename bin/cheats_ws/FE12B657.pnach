@@ -1,4 +1,0 @@
-gametitle=Time Crisis 2 (K) (SCKA-20002)
-comment=Widescreen Hack (pnach by Arapapa)
-
-patch=1,EE,003cd7fc,word,3f400000 //3f800000

@@ -1,6 +1,0 @@
-﻿gametitle=Konjiki no Gashbell!! Gekitou! Saikyou no Mamonotachi [NTSC-J] (SLPS-25440)
-comment=Widescreen Hack
-
-patch=1,EE,203B4130,extended,C3F00000
-patch=1,EE,203B4C60,extended,C3F00000
-patch=1,EE,203B5790,extended,C3F00000

@@ -1,8 +1,0 @@
-gametitle=Blowout (SLUS-20850)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-patch=1,EE,001D1A3C,word,00000000
-patch=1,EE,003BB878,word,00000001
-patch=1,EE,003B8C34,word,C0222222
-patch=1,EE,003B8C4C,word,40222222
-patch=1,EE,003B8C6C,word,40222222

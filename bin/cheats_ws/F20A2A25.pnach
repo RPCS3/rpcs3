@@ -1,7 +1,0 @@
-gametitle=Teenage Mutant Ninja Turtles SLUS_207.16
-comment=Widescreen Hack
-patch=1,EE,00164370,extended,3c023fe3
-patch=1,EE,00164378,extended,34428e38
-patch=1,EE,00164658,extended,3c023fe3
-patch=1,EE,0016465c,extended,34428e38
-patch=1,EE,20463904,extended,3F2b0000

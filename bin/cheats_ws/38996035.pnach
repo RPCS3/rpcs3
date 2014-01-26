@@ -1,4 +1,0 @@
-gametitle=Ratchet & Clank - Going Commando (SCUS_97268)
-comment=Widescreen hack by No.47
-patch=1,EE,201A7BB0,word,01010100
-patch=1,EE,201BD370,word,3F56FA72

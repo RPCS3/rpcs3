@@ -71,6 +71,7 @@ bool Pcsx2App::TestUserPermissionsRights( const wxDirName& testFolder, wxString&
 		PathDefs::Base::Savestates(),
 		PathDefs::Base::Snapshots(),
 		PathDefs::Base::Logs(),
+		PathDefs::Base::CheatsWS(),
 		#ifdef PCSX2_DEVBUILD
 		PathDefs::Base::Dumps(),
 		#endif

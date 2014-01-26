@@ -1,9 +1,0 @@
-gametitle=Evergrace (NTSC-J) (SLPS_25003)
-comment=Widescreen Hack (NTSC-J by Arapapa)
-
-// Wide 16:9
-// 803f013c 00a88144 2e00043c
-patch=1,EE,002010d0,word,3c013f40 // 3c013f80
-
-// 803f013c 00a08144 c07b1646
-patch=1,EE,00201170,word,3c013f40 // 3c013f80

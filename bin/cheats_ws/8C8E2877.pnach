@@ -1,3 +1,0 @@
-gametitle=Mystic Heroes SLES_513.58
-comment=Widescreen Hack
-patch=1,EE,20326AE0,extended,3F400000 // 3F800000

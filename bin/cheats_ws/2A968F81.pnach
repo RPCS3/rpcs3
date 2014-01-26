@@ -1,5 +1,0 @@
-gametitle=Enter the Matrix (SLUS-20454) Ver. 2.0
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-//built-in widescreen
-patch=1,EE,001ccdc8,word,a2740bcc

@@ -1,3 +1,0 @@
-﻿gametitle=.hack Kansen Kakudai Vol. 1 [NTSC-J] (SLPS-25121)
-comment=Widescreen hack
-patch=1,EE,209A6A70,word,3f400000

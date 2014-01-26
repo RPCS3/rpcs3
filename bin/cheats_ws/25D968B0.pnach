@@ -1,4 +1,0 @@
-gametitle=Constantine (J) (SLPM_659.72)
-comment=Widescreen Hack (pnach NTSC-J by Arapapa)
-
-patch=1,EE,2081B7F4,extended,3F400000 // 3F800000

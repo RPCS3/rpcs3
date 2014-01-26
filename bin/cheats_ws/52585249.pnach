@@ -1,4 +1,0 @@
-gametitle= Rule of Rose SLES_542.18
-comment=Widescreen Hack
-patch=1,EE,0013bf48,extended,3c013f12
-patch=1,EE,0013bf70,extended,3c013f10

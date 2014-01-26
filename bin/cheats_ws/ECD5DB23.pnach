@@ -1,5 +1,0 @@
-﻿gametitle=Sousei no Aquarion [NTSC-J] (SLPS-25519)
-comment=Widescreen
-
-patch=1,EE,20729434,extended,3F800000
-patch=1,EE,2043F958,extended,3FD11112

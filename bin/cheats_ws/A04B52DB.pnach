@@ -1,6 +1,0 @@
-gametitle=Ace Combat Zero: The Belkan War (J) (SLPS_25629)
-comment=Widescreen fix by nemesis2000 (pnach by Arapapa)
-
-//widescreen fix
-patch=1,EE,003f9e50,word,43D638F3
-patch=1,EE,003f9e54,word,43EB7385

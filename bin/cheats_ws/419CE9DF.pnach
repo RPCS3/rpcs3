@@ -1,4 +1,0 @@
-gametitle=The Daibijin
-comment=NTSC-J Widescreen Hack by synce
-patch=1,EE,203DD46C,extended,3F998FC5
-patch=1,EE,203DD7E0,extended,3F307169

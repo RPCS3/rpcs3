@@ -1,3 +1,0 @@
-gametitle=Constantine SLUS_211.42
-comment=Widescreen Hack
-patch=1,EE,20817074,extended,3F400000 // 3F800000

@@ -1,4 +1,0 @@
-gametitle=Kuon SLUS_210.07
-comment=Widescreen Hack
-patch=1,EE,001380a4,extended,3c023f19
-patch=1,EE,001380a8,extended,3443999a

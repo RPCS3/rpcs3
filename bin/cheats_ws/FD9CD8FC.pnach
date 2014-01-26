@@ -1,3 +1,0 @@
-gametitle=Oni SLUS_200.64
-comment=Widescreen Hack
-patch=1,EE,00134bb8,word,3c013f40

@@ -1,4 +1,0 @@
-gametitle=Steambot Chronicles SLUS_213.44
-comment=Widescreen Hack
-patch=1,EE,001329c0,word,3c033f40
-patch=1,EE,00132818,word,3c0643d6

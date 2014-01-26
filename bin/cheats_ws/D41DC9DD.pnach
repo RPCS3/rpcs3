@@ -1,3 +1,0 @@
-gametitle=The King of Route 66 NTSC-U
-comment=Widescreen Hack
-patch=1,EE,0012ff00,extended,3c033f40 // 3c033f80

@@ -1,5 +1,0 @@
-gametitle=Silpheed - The Lost Planet (NTSC-U)
-comment=Widescreen hack
-
-// 16:9
-patch=1,EE,20432A48,word,3F400000 // 3F800000

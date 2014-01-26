@@ -1,6 +1,0 @@
-gametitle=Breath of Fire - Dragon Quarter (PAL-M5) (SLES-51496)
-comment=Widescreen patch by nemesis2000
-//ported to PAL (ElHecht)
-patch=1,EE,0012f71c,word,3c024306 // 3c024333 hor val
-patch=1,EE,0012f720,word,3442f940 // 3442f700 hor val
-patch=1,EE,0012f868,word,3c034074 // 3c034036 render fix

@@ -1,3 +1,0 @@
-gametitle=Jade Cocoon 2 SLUS_203.09
-comment=Widescreen Hack
-patch=1,EE,21E2EDCC,extended,3F400000 // 3F800000

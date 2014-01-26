@@ -1,6 +1,0 @@
-comment=Devil May Cry (PAL-M5) (SLES-50358) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0010338c,word,3c013f40
-patch=1,EE,00103390,word,44810000
-patch=1,EE,00103398,word,4600c602

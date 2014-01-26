@@ -1,5 +1,0 @@
-gametitle=Dynasty Warriors 5 (SLUS-21153)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,00146c48,word,3c0243d6
-patch=1,EE,00181cec,word,3c023f2b
-patch=1,EE,00146994,word,3c023e40 //cutscenes zoom (fixes Battle of Bai Di Castle - Wu crash)

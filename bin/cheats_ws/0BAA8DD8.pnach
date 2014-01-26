@@ -1,4 +1,0 @@
-comment=Dark Cloud (PAL-M5) (SCES-50295) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0012e228,word,3c023f40

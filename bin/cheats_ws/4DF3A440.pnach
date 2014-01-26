@@ -1,5 +1,0 @@
-gametitle=Naruto - Narutimett Hero International (NTSC-K) (SLKA_25232)
-comment=Widescreen Hack (NTSC-J by Arapapa)
-
-//16:9 (0000803f 0000803f 00008043)
-patch=1,EE,208F4630,word,3f400000 // 3f800000

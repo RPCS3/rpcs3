@@ -1,3 +1,0 @@
-gametitle=Battle Gear 3 (SLPM_65434)
-comment=Widescreen hack by No.47
-patch=1,EE,202C9B74,word,3F400000

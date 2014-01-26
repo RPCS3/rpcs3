@@ -1,5 +1,0 @@
-gametitle=Ace Combat 04: Shattered Skies (SLUS-20152)
-comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
-
-//widescreen fix
-patch=1,EE,0040DACC,word,441CF7AE

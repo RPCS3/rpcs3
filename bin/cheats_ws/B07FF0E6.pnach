@@ -1,5 +1,0 @@
-gametitle=.hack 2 - Mutation (K) (SLKA-25138)
-comment=Widescreen Hack (16:9)  (Hyakki) (pnach by Arapapa)
-
-//16:9 (0000803f 0000803f 00008043 00004043)
-patch=1,EE,20a67920,extended,3F400000 // 3f800000

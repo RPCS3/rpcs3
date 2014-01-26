@@ -1,3 +1,0 @@
-comment=SMT-Nocturne-NTSC-U-Widescreen Hack (16:9)
-gametitle=SMT-Nocturne
-patch=1,EE,202F56B4,word,3FD3A06D

@@ -1,4 +1,0 @@
-gametitle=Thing, The SLUS_203.71
-comment=Widescreen Hack
-patch=1,EE,0016ec34,word,3c023fe3
-patch=1,EE,0016ec38,word,34428e38

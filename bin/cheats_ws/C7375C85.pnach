@@ -1,6 +1,0 @@
-comment=Teenage Mutant Ninja Turtles 2 - Battle Nexus (PAL-M5) (SLES-53017)
-comment=Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,00234710,word,460d6302
-patch=1,EE,00234714,word,460d6b42

@@ -1,5 +1,0 @@
-gametitle=WWE SmackDown! vs. Raw 2006 (SLUS-21286)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-patch=1,EE,0011e95c,word,3c013f40
-patch=1,EE,0011e960,word,44810000
-patch=1,EE,0011e968,word,4600c602

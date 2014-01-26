@@ -181,8 +181,15 @@ __fi void vif0Interrupt()
 	if (vif0.irq && vif0.tag.size == 0 && vif0.cmd == 0)
 	{
 		vif0Regs.stat.INT = true;
+		
+		//Yakuza watches VIF_STAT so lets do this here.
+		if (((vif0Regs.code >> 24) & 0x7f) != 0x7) {
+			vif0Regs.stat.VIS = true;
+		}
+
 		hwIntcIrq(VIF0intc);
 		--vif0.irq;
+
 		if (vif0Regs.stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
 			//vif0Regs.stat.FQC = 0;

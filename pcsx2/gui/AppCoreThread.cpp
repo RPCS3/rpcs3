@@ -374,13 +374,22 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
 			gameWsHacks.Printf(L" [%d widescreen hacks]", numberLoadedWideScreenPatches);
 		} else {
-      // No ws cheat files found at the cheats_ws folder, try the ws cheats zip file.
-      wxString cheats_ws_archive = Path::Combine(((wxFileName)wxStandardPaths::Get().GetExecutablePath()).GetPath(), L"cheats_ws.zip");
-      if (numberDbfCheatsLoaded = LoadCheatsFromZip(gameCRC, cheats_ws_archive)) {
-        Console.WriteLn(Color_Green, "(Wide Screen Cheats DB) Patches Loaded: %d", numberDbfCheatsLoaded);
-        gameWsHacks.Printf(L" [%d widescreen hacks]", numberDbfCheatsLoaded);
-      }
-    }
+			// No ws cheat files found at the cheats_ws folder, try the ws cheats zip file.
+#ifndef GAMEINDEX_DIR_COMPILATION
+			wxString cheats_ws_archive = Path::Combine(((wxFileName)wxStandardPaths::Get().GetExecutablePath()).GetPath(), L"cheats_ws.zip");
+#else
+			// Each linux distributions have his rules for path so we give them the possibility to
+			// change it with compilation flags. -- Gregory
+#define xGAMEINDEX_str(s) GAMEINDEX_DIR_str(s)
+#define GAMEINDEX_DIR_str(s) #s
+			wxString cheats_ws_archive = Path::Combine(xGAMEINDEX_str(GAMEINDEX_DIR_COMPILATION), L"cheats_ws.zip");
+#endif
+
+			if (numberDbfCheatsLoaded = LoadCheatsFromZip(gameCRC, cheats_ws_archive)) {
+				Console.WriteLn(Color_Green, "(Wide Screen Cheats DB) Patches Loaded: %d", numberDbfCheatsLoaded);
+				gameWsHacks.Printf(L" [%d widescreen hacks]", numberDbfCheatsLoaded);
+			}
+		}
 	}
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats+gameWsHacks);

@@ -1,4 +1,0 @@
-gametitle=Zone of the Enders SLES
-comment=Widescreen Hack
-//16:9
-patch=1,EE,004515c0,extended,3c013f40

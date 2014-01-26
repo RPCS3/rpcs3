@@ -1,9 +1,0 @@
-gametitle=Samurai Warriors 2 [SLUS 21462] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-//patch=0,EE,0013CD10,word,24020001
-//ZeroGS patches
-zerogs=00000002
-
-//Wide screen patch by bositman using Widescreen helper
-patch=1,EE,204C4338,extended,3F2AAAAB // 3F4CCCCD

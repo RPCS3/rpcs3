@@ -81,10 +81,7 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	vifX.irqoffset.value = transferred % 4; // cannot lose the offset
 	
 	if (vifX.irq && vifX.cmd == 0) {
-		//DevCon.WriteLn("Vif IRQ!");
-		if(((vifXRegs.code >> 24) & 0x7f) != 0x7) {
-			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?			
-		}	
+		VIF_LOG("Vif%d IRQ Triggering", idx);
 		//Always needs to be set to return to the correct offset if there is data left.
 		vifX.vifstalled.enabled = VifStallEnable(vifXch);
 		vifX.vifstalled.value = VIF_IRQ_STALL;

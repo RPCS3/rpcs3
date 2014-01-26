@@ -113,6 +113,8 @@ echo "Done")
 mkdir -p $ROOT_DIR/bin;
 (cd $ROOT_DIR/bin;
     get_svn_file bin/GameIndex.dbf;
+    get_svn_file bin/cheats_ws.zip;
+    get_svn_dir  bin/cheats;
     get_svn_dir  bin/docs;)
 
 echo "Downloading Linux compatible plugins for revision ${SVN_CO_VERSION}"

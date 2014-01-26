@@ -1,6 +1,0 @@
-gametitle=Simple 2000 Series Vol. 118 - The Ochimusha - Doemu Samurai Toujou [NTSC-J] [SLPS-20491]
-comment=Widescreen Hack
-
-patch=1,EE,0022e6f4,word,3c013f40
-patch=1,EE,0022e6f8,word,44810000
-patch=1,EE,0022e700,word,4600c602

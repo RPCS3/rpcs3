@@ -1,4 +1,0 @@
-gametitle=DragonBall Z - Budokai 3 - Collector's Edition SLES_533.46
-comment=Widescreen Hack
-patch=1,EE,2044ff20,extended,3f23d706 //3f5a740e
-patch=1,EE,2042d234,extended,3f23d706 //3f5a740e

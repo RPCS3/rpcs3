@@ -1,4 +1,0 @@
-gametitle=DragonBall Z - Budokai Tenkaichi 3 SLES_549.45
-comment=Widescreen Hack
-patch=1,EE,002ff8fc,word,3fe38e34
-patch=1,EE,00130d08,word,3c013f10

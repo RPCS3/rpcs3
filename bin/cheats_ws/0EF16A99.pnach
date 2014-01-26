@@ -1,4 +1,0 @@
-gametitle=Monster Hunter (SLUS-20896)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,00137ed4,word,3c023ff3
-patch=1,EE,00137edc,word,3442cf35

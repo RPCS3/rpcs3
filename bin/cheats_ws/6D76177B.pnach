@@ -1,7 +1,0 @@
-gametitle=Auto Modellista (SLUS-20642)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-//gameplay
-patch=1,EE,0039b80c,word,3fe38e38
-patch=1,EE,0022be20,word,3c023fe3
-patch=1,EE,0022be28,word,34428e38

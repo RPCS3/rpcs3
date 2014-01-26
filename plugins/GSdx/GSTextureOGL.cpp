@@ -550,7 +550,7 @@ void GSTextureOGL::SaveRaw(const string& fn, const void* image, uint32 pitch)
 	for(int h = m_size.y; h > 0; h--) {
 		for (int w = m_size.x; w > 0; w--, data += 1) {
 			if (*data > 0xffffff)
-				fprintf(fp, "");
+				;
 			else {
 				fprintf(fp, "%x", *data);
 			}

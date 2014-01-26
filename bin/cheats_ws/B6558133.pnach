@@ -1,6 +1,0 @@
-gametitle=Fullmetal Alchemist and the Broken Angel(U) (SLUS_209.94)
-comment=Widescreen Hack (pnach NTSC-U by Arapapa)
-
-//Wide hack 16:9 
-patch=1,EE,0023d338,word,3c023f28 //613f023c (Search e043033c 613f023c 2e00043c af474234)
-patch=1,EE,00237740,word,3442f5c3 //af474234

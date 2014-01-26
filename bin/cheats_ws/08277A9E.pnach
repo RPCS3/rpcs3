@@ -1,3 +1,0 @@
-gametitle=Spartan: Total Warrior (NTSC-U)
-comment=Widescreen patch
-patch=1,EE,2057C814,extended,3F100000 // 3F400000

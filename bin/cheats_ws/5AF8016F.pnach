@@ -1,5 +1,0 @@
-﻿gametitle=幻想水滸伝 III (SLPM-65073)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
-
-patch=1,EE,016c1b04,word,460d6d42
-patch=1,EE,016c1b08,word,460d6502

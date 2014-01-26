@@ -1,6 +1,0 @@
-gametitle=FF10-NTSC-J
-comment=FF10-NTSC-J-Widescreen(16:9)
-patch=1,EE,001ce4ac,word,3c013f19
-patch=1,EE,001ce4b0,word,3421999a
-patch=1,EE,0011966c,word,3c014440
-patch=1,EE,0019f664,word,3c01442b

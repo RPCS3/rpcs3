@@ -1,6 +1,0 @@
-gametitle=Ridge Racer 5 (SLUS_20002)
-comment=Widescreen hack by No.47
-patch=1,EE,20332694,word,43C6C000
-patch=1,EE,203326B4,word,43C6C000 // replace by 43960000 for a wider camera that shows the whole car unlike the default "behind the car" camera
-patch=1,EE,20332EC4,word,3F1D0364
-patch=1,EE,20332F80,word,3F199999

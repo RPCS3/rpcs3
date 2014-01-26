@@ -1,7 +1,0 @@
-﻿gametitle=Biohazard Code Veronica Kanzenban (SLPM_650.22)
-comment=NTSC-J Widescreen Hack by synce
-patch=1,EE,21136200,extended,3F400000
-
-//FMV's fix
-patch=1,EE,21E2F340,extended,01AA0280
-patch=1,EE,21E2F344,extended,000C0000

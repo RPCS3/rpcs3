@@ -1,3 +1,0 @@
-gametitle=Dynasty Tactics 1 (SLPM_675.22) (NTSC-K)
-comment=widescreen 16:9 hack by 99skull
-patch=1,EE,0019C574,word,3C023F40 //3C023F80, wide

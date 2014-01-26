@@ -1,5 +1,0 @@
-gametitle=Kagero 2-Dark Illusion NTSC-J (SLPS-25445)
-comment=Widescreen hack
-
-patch=1,EE,00180ba8,extended,3c033f19
-patch=1,EE,001815fc,extended,3c023f19

@@ -1,7 +1,0 @@
-gametitle=Jak and Daxter - The Precursor Legacy (PAL-M6) (SCES-50361)
-comment=Widescreen Hack (16:9) by ElHecht
-
-// 16:9
-patch=1,EE,202af8b0,extended,3f1f3b64 // 3f000000 zoom
-patch=1,EE,202af85c,extended,bf1f3b64 // bf000000 hud fix for zoom
-patch=1,EE,2079f728,extended,0015130c // 0014e5c4 force native 16:9 mode

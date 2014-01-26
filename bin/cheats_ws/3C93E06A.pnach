@@ -1,3 +1,0 @@
-gametitle=Samurai Warriors 2 Xtreme Legends [SLUS 21726] (U)
-comment=Wide screen patch by bositman using Widescreen helper
-patch=1,EE,204C41D8,extended,3F2AAAAB // 3F4CCCCD

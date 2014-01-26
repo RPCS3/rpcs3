@@ -1,4 +1,0 @@
-gametitle=Steambot Chronicles SLES_541.38
-comment=Widescreen Hack  (Converted from NTSC patch by Somechump)
-patch=1,EE,00132B40,word,3c033f40  //3c033f80
-patch=1,EE,00132998,word,3c0643d6  //3C0643A0

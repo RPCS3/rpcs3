@@ -1,4 +1,0 @@
-gametitle=Evergrace SLUS_200.16
-comment=Widescreen Hack
-patch=1,EE,00101128,extended,3c013f40
-patch=1,EE,001011c8,extended,3c013f40

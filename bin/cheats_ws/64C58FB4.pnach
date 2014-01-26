@@ -1,4 +1,0 @@
-gametitle=Tenchu Fatal Shadows SLUS_211.29
-comment=Widescreen Hack
-patch=1,EE,0012ef48,word,3c023f40
-patch=1,EE,0012f738,word,3c02442b

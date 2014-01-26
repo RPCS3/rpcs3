@@ -1,3 +1,0 @@
-gametitle=Dynasty Tactics 2 (SLKA_250.88) (NTSC-K)
-comment=widescreen 16:9 hack by 99skull
-patch=1,EE,00140834,word,3C023F40 //3C023F80, wide

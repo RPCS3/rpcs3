@@ -1,4 +1,0 @@
-gametitle=Spartan: Total Warrior (J) (SLPM-66444)
-comment=Widescreen patch (pnach NTSC-J by Arapapa)
-
-patch=1,EE,2057E994,extended,3F100000 // 3F400000

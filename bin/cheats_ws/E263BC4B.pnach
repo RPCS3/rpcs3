@@ -1,6 +1,0 @@
-gametitle=Demento [NTSC-J] (SLPM-65913)
-comment=Widescreen hack
-
-patch=1,EE,0010e31c,word,3c013f40
-patch=1,EE,0010e320,word,44810000
-patch=1,EE,0010e328,word,4600c602

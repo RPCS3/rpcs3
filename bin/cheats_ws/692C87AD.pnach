@@ -1,7 +1,0 @@
-gametitle=Auto Modellista (SLES-51191)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-//gameplay
-patch=1,EE,0038972c,word,3fe38e38
-patch=1,EE,00277af0,word,3c023fe3
-patch=1,EE,00277af8,word,34428e38

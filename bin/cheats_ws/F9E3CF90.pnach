@@ -1,5 +1,0 @@
-gametitle=Half-Life
-comment=Widescreen Hack
-patch=1,EE,002aa624,extended,3c013fe3
-patch=1,EE,002aa628,extended,34218e38
-patch=1,EE,002a9e60,extended,3c013f2b

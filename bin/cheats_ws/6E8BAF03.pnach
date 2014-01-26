@@ -1,8 +1,0 @@
-gametitle=Monster Hunter (PAL-M5) (SLES-52707)
-comment=Widescreen hack by ElHecht
-
-// 16:9
-patch=1,EE,0014076c,word,0c0501f1 // 0c0501f4
-patch=1,EE,001407c4,word,3c013f40 // 00000000 hor fov
-patch=1,EE,001407cc,word,4481f000 // 00000000
-patch=1,EE,00140808,word,461e7d43 // 46007d46

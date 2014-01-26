@@ -23,7 +23,6 @@ Section "Un.Program and Plugins ${APP_NAME}"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Docs"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Cheats"
-  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Cheats_ws"
   ; Remove files and registry key that store PCSX2 paths configurations
   SetShellVarContext current
   Delete $DOCUMENTS\PCSX2\inis\PCSX2_ui.ini
@@ -42,6 +41,7 @@ SectionEnd
 Section /o "Un.User files (Memory Cards, Savestates, etc)"
   
   SetShellVarContext current
+  RMDir /r "$DOCUMENTS\PCSX2\Cheats_ws\"
   RMDir /r "$DOCUMENTS\PCSX2\inis\"
   RMDir /r "$DOCUMENTS\PCSX2\logs\"
   RMDir /r "$DOCUMENTS\PCSX2\memcards\"

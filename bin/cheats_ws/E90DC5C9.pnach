@@ -1,4 +1,0 @@
-gametitle=DragonBall Z - Infinite World SLUS_218.42
-comment=Widescreen Hack
-patch=1,EE,2052E6B0,extended,3f23d706 //3f5a740e
-patch=1,EE,2049C054,extended,3f23d706 //3f5a740e

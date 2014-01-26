@@ -1,6 +1,0 @@
-gametitle=Killer 7 (J) (SLPM_659.47)
-comment=Widescreen hack by ElHecht (NTSC-J by  Arapapa)
-
-// 16:9
-patch=1,EE,0027c090,word,3c023fe3 // 3c023faa hor fov
-patch=1,EE,0027c094,word,34428e38 // 3442aaab hor fov

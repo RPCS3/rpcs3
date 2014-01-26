@@ -1,3 +1,0 @@
-gametitle=Rogue Ops SLUS_207.46
-comment=Widescreen Hack
-patch=1,EE,20665F80,extended,3F400000 // 3F800000

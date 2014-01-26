@@ -1,8 +1,0 @@
-﻿gametitle=Zero III Shisei no Koe 零 刺青の声 (SLPS_255)
-
-//gameplay
-patch=1,EE,0032006c,word,3f400000
-
-//FMW's fix
-patch=1,EE,00368140,word,43f00000
-patch=1,EE,00368148,word,42d40000

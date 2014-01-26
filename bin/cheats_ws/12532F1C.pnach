@@ -1,6 +1,0 @@
-gametitle=TimeSplitters 2 (SLUS_20314)
-comment=Widescreen hack by No.47
-patch=1,EE,20598A08,word,3FC71C71
-patch=1,EE,205995DC,word,3FC71C71
-patch=1,EE,20599664,word,3FC71C71
-patch=1,EE,2059CA10,word,3FC71C71

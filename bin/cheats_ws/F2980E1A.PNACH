@@ -1,6 +1,0 @@
-gametitle=Speed Racer SLUS_218.12
-comment=Widescreen hack by pelvicthrustman
-
-patch=1,EE,004c314c,word,3c013f00 //00000000
-patch=1,EE,004c315c,word,4481f800 //00000000
-patch=1,EE,004c31b0,word,461f0003 //46000803

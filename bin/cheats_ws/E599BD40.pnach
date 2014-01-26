@@ -1,3 +1,0 @@
-gametitle=WWE SmackDown vs. Raw 2011 (SLUS-21939)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,0022ed0c,word,3c033f40

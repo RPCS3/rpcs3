@@ -1,5 +1,0 @@
-gametitle=Popolocrois - The Law of the Moon (J) (SCPS-15063)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (0000803f efeeee3e)
-//patch=1,EE,20340C28,word,3f400000 // 3f800000

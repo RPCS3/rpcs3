@@ -1,4 +1,0 @@
-gametitle=Colosseum - Road to Freedom SLPS_254.56
-comment=Widescreen Hack
-patch=1,EE,0046d790,extended,3c013f40
-patch=1,EE,0046d70c,extended,3c013ec0

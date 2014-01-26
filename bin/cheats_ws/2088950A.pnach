@@ -1,5 +1,0 @@
-gametitle=Xenosaga Episode III: Also sprach Zarathustra (Disc 1) (SLUS-21389) / Xenosaga Episode III: Also sprach Zarathustra (Disc 2) (SLUS-21417)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-
-//gameplay
-patch=1,EE,2054FF20,extended,3fc1f080 //original value 3f91745d

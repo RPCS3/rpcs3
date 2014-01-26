@@ -1,3 +1,0 @@
-comment=MDK2: Armageddon (SLUS-20105)
-comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
-patch=1,EE,0017B418,word,3C0140AB

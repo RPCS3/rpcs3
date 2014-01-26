@@ -1,8 +1,0 @@
-﻿gametitle=Zero 零 Zero (SLPS_250.74)
-comment=NTSC-J Widescreen Hack by synce
-patch=1,EE,20251D70,extended,3F400000
-
-//FMV's fix
-patch=1,EE,0017f520,word,24027100
-patch=1,EE,0017f530,word,24027100
-patch=1,EE,0017f538,word,24091e00

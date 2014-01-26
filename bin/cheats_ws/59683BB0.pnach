@@ -1,8 +1,0 @@
-comment=Death by Degrees (PAL-M2) (SCES-53054) Widescreen Hack (16:9) by ElHecht
-//
-// Gameplay
-patch=1,EE,00188170,word,3C023FE3
-patch=1,EE,00188178,word,34438E38
-// Cut-Scenes
-patch=1,EE,00185f8c,word,3C023FE3
-patch=1,EE,00185f90,word,34438E38

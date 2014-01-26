@@ -1,4 +1,0 @@
-gametitle=Time Crisis 3 (K) (SCKA_200.15)
-comment=Widescreen Hack (pnach by Arapapa)
-
-patch=1,EE,21EAC04C,word,3f400000 // 3f800000

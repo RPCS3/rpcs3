@@ -1,5 +1,0 @@
-gametitle=Boku to Mao (J) (PBPX-95201)
-comment=Widescreen hack by Arapapa
-
-// 16:9 (0000803f d7a3f03e 00004844)
-patch=1,EE,201F99E4,word,3f400000 // 3f800000

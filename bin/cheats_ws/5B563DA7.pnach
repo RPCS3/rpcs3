@@ -1,8 +1,0 @@
-gametitle=Katamari Damacy (K) (SCKA_200.25)
-comment=Widescreen hack by nemesis2000 (pnach by Arapapa)
-
-patch=1,EE,00168550,word,3c0143d6
-
-//FMV's fix
-patch=1,EE,0027C1A8,word,42600000
-patch=1,EE,0027C1B0,word,3faaaaab

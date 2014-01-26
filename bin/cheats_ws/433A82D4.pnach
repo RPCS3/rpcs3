@@ -1,4 +1,0 @@
-comment=Mortal Kombat - Armageddon (PAL-M5) (SLES-54156) Widescreen Hack (16:9) by ElHecht
-// 16:9
-patch=1,EE,21EB1ED0,extended,3F842256 // 3FB02DC8 X-Axis
-//patch=1,EE,21EB1ED4,extended,3FFBAF1E // 3FFBAF1E Y-Axis

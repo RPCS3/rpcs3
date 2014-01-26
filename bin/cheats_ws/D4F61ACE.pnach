@@ -1,7 +1,0 @@
-gametitle=Pro Yakyuu Spirits 2010 (SLPM_552.52) (NTSC-J)
-comment=16:9 widescreen hack
-//16:9 widescreen hack by 99skull
-patch=1,EE,0014C4C8,word,3C013F2A //vert fov
-patch=1,EE,0014C500,word,44819800 //vert fov
-patch=1,EE,0014C50C,word,46009802 //vert fov
-patch=1,EE,0014C6A8,word,3C053FAA //3C053F80 zoom

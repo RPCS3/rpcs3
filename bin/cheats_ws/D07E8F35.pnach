@@ -1,6 +1,0 @@
-comment=Tekken Tag Tournament (PAL-M5) (SCES-50001) Widescreen Hack (16:9) by ElHecht
-//
-// 16:9
-patch=1,EE,0034b014,word,3c013f40
-patch=1,EE,0034b018,word,44810000
-patch=1,EE,0034b020,word,4600c602

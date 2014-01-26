@@ -1,8 +1,0 @@
-﻿gametitle=XIII (PAL-M5) (SLES-51244)
-comment=Widescreen hack by nemesis2000 (pnach by ElHecht)
-
-// 16:9
-patch=1,EE,001d7758,word,3c013f40 // 00000000 hor fov
-patch=1,EE,001d77b0,word,ae4100a8 // ae4300a8
-patch=1,EE,00356204,word,34028aa0 // 34028800 fmv fix
-patch=1,EE,003561b8,word,3c027560 // 3c027800 fmv fix

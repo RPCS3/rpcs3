@@ -1,4 +1,0 @@
-gametitle=10,000 bullets SLES_534.81
-comment=Widescreen Hack
-patch=1,EE,005eded4,extended,3c013faa
-patch=1,EE,005ee0ec,extended,3c013faa

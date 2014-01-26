@@ -1,6 +1,0 @@
-gametitle=Ace Combat 5: The Unsung War (SLUS-20851)
-comment=Widescreen fix by nemesis2000 (pnach by nemesis2000)
-
-//widescreen fix
-patch=1,EE,00440828,word,43D638F3
-patch=1,EE,0044082C,word,43EB7385

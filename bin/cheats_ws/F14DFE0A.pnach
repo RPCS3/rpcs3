@@ -1,4 +1,0 @@
-gametitle=Shadow of Destiny SLUS_201.46
-comment=Widescreen Hack
-patch=1,EE,0020fdc8,word,3c014455
-patch=1,EE,0020fde0,word,3c013ac8

@@ -1,8 +1,0 @@
-gametitle=Red Ninja (J) (SLPM_659.45)
-comment=Widescreen hack by synce (pnach NTSC-J by Arapapa)
-
-//vert
-patch=1,EE,003634c8,word,3C014010 // 3c014040
-
-//zoom
-patch=1,EE,005c6f48,word,400e147b // 3eaaaaab
