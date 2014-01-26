@@ -247,7 +247,7 @@ static __pagealigned u8 m_IndirectDispatchers[__pagesize];
 // mode        - 0 for read, 1 for write!
 // operandsize - 0 thru 4 represents 8, 16, 32, 64, and 128 bits.
 //
-static u8* GetIndirectDispatcherPtr( int mode, int operandsize, bool sign = false )
+static u8* GetIndirectDispatcherPtr( int mode, int operandsize, int sign = 0 )
 {
 	// Each dispatcher is aligned to 64 bytes.  The actual dispatchers are only like
 	// 20-some bytes each, but 64 byte alignment on functions that are called
