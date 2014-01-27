@@ -43,6 +43,7 @@ namespace PathDefs
 	// used otherwise, in favor of the user-configurable specifications in the ini files.
 
 	extern wxDirName GetUserLocalDataDir();
+	extern wxDirName GetProgramDataDir();
 	extern wxDirName GetDocuments();
 	extern wxDirName GetDocuments( DocsModeType mode );
 	extern wxDirName GetThemes();
