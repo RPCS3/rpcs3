@@ -105,7 +105,7 @@ namespace PathDefs
 	//  relative to the exe folder, and not relative to cwd. So the exe should be default AppRoot. - avih
 	const wxDirName& AppRoot()
 	{
-		AffinityAssert_AllowFrom_MainUI();
+		//AffinityAssert_AllowFrom_MainUI();
 /*
 		if (InstallationMode == InstallMode_Registered)
 		{
