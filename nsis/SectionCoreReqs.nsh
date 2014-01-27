@@ -30,7 +30,6 @@
   ; filenames.  This allows many older plugin versions to continue to work.
 
     File                                            ..\bin\w32pthreads.v4.dll
-    File                                            ..\bin\SDL.dll
   ; See above comment.
     File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\GameIndex.dbf
