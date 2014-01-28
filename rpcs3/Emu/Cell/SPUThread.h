@@ -516,11 +516,11 @@ public:
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			/* ConLog.Warning("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+			if (enable_log)	ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
 				op & MFC_PUT_CMD ? "PUT" : "GET",
 				op & MFC_BARRIER_MASK ? "B" : "", 
 				op & MFC_FENCE_MASK ? "F" : "", 
-				lsa, ea, tag, size, cmd); */
+				lsa, ea, tag, size, cmd);
 			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 		}
 		break;

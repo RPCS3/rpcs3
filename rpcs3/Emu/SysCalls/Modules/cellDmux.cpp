@@ -1,137 +1,148 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "cellPamf.h"
+#include "cellDmux.h"
 
 void cellDmux_init();
 Module cellDmux(0x0007, cellDmux_init);
 
-// Error Codes
-enum
+int cellDmuxQueryAttr(mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellDmuxAttr> demuxerAttr)
 {
-	CELL_DMUX_ERROR_ARG		= 0x80610201,
-	CELL_DMUX_ERROR_SEQ		= 0x80610202,
-	CELL_DMUX_ERROR_BUSY	= 0x80610203,
-	CELL_DMUX_ERROR_EMPTY	= 0x80610204,
-	CELL_DMUX_ERROR_FATAL	= 0x80610205,
-};
-
-int cellDmuxQueryAttr()
-{
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxQueryAttr(demuxerType_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType.GetAddr(), demuxerAttr.GetAddr());
 	return CELL_OK;
 }
 
-int cellDmuxQueryAttr2()
+int cellDmuxQueryAttr2(mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<CellDmuxAttr> demuxerAttr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxQueryAttr2(demuxerType2_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType2.GetAddr(), demuxerAttr.GetAddr());
 	return CELL_OK;
 }
 
-int cellDmuxOpen()
+int cellDmuxOpen(mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellDmuxResource> demuxerResource, 
+				 mem_ptr_t<CellDmuxCb> demuxerCb, u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxOpen(demuxerType_addr=0x%x, demuxerResource_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
+		demuxerType.GetAddr(), demuxerResource.GetAddr(), demuxerCb.GetAddr(), demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxOpenEx()
+int cellDmuxOpenEx(mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellDmuxResourceEx> demuxerResourceEx, 
+				   mem_ptr_t<CellDmuxCb> demuxerCb, u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxOpenEx(demuxerType_addr=0x%x, demuxerResourceEx_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
+		demuxerType.GetAddr(), demuxerResourceEx.GetAddr(), demuxerCb.GetAddr(), demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxOpen2()
+int cellDmuxOpen2(mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<CellDmuxResource2> demuxerResource2, 
+				  mem_ptr_t<CellDmuxCb> demuxerCb, u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
+		demuxerType2.GetAddr(), demuxerResource2.GetAddr(), demuxerCb.GetAddr(), demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxClose()
+int cellDmuxClose(u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxClose(demuxerHandle_addr=0x%x)", demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxSetStream()
+int cellDmuxSetStream(u32 demuxerHandle_addr, u32 streamAddress, u32 streamSize, bool discontinuity, u64 userData)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxSetStream(demuxerHandle_addr=0x%x, streamAddress=0x%x, streamSize=%d, discontinuity=%d, userData=0x%llx",
+		demuxerHandle_addr, streamAddress, streamSize, discontinuity, userData);
 	return CELL_OK;
 }
 
-int cellDmuxResetStream()
+int cellDmuxResetStream(u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxResetStream(demuxerHandle_addr=0x%x)", demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxResetStreamAndWaitDone()
+int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxResetStreamAndWaitDone(demuxerHandle_addr=0x%x)", demuxerHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxQueryEsAttr()
+int cellDmuxQueryEsAttr(mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellCodecEsFilterId> esFilterId,
+						u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> esAttr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxQueryEsAttr(demuxerType_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
+		demuxerType.GetAddr(), esFilterId.GetAddr(), esSpecificInfo_addr, esAttr.GetAddr());
 	return CELL_OK;
 }
 
-int cellDmuxQueryEsAttr2()
+int cellDmuxQueryEsAttr2(mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<CellCodecEsFilterId> esFilterId,
+						 u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> esAttr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxQueryEsAttr2(demuxerType2_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
+		demuxerType2.GetAddr(), esFilterId.GetAddr(), esSpecificInfo_addr, esAttr.GetAddr());
 	return CELL_OK;
 }
 
-int cellDmuxEnableEs()
+int cellDmuxEnableEs(u32 demuxerHandle_addr, mem_ptr_t<CellCodecEsFilterId> esFilterId, 
+					 mem_ptr_t<CellDmuxEsResource> esResourceInfo, mem_ptr_t<CellDmuxEsCb> esCb,
+					 u32 esSpecificInfo_addr, u32 esHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxEnableEs(demuxerHandle_addr=0x%x, esFilterId_addr=0x%x, esResourceInfo_addr=0x%x, esCb_addr=0x%x, "
+		"esSpecificInfo_addr=0x%x, esHandle_addr=0x%x)", demuxerHandle_addr, esFilterId.GetAddr(), esResourceInfo.GetAddr(),
+		esCb.GetAddr(), esSpecificInfo_addr, esHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxDisableEs()
+int cellDmuxDisableEs(u32 esHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxDisableEs(esHandle_addr=0x%x)", esHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxResetEs()
+int cellDmuxResetEs(u32 esHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxResetEs(esHandle_addr=0x%x)", esHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxGetAu()
+int cellDmuxGetAu(u32 esHandle_addr, u32 auInfo_ptr_addr, u32 auSpecificInfo_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxGetAu(esHandle_addr=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
+		esHandle_addr, auInfo_ptr_addr, auSpecificInfo_ptr_addr);
 	return CELL_OK;
 }
 
-int cellDmuxPeekAu()
+int cellDmuxPeekAu(u32 esHandle_addr, u32 auInfo_ptr_addr, u32 auSpecificInfo_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxPeekAu(esHandle_addr=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
+		esHandle_addr, auInfo_ptr_addr, auSpecificInfo_ptr_addr);
 	return CELL_OK;
 }
 
-int cellDmuxGetAuEx()
+int cellDmuxGetAuEx(u32 esHandle_addr, u32 auInfoEx_ptr_addr, u32 auSpecificInfo_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxGetAuEx(esHandle_addr=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
+		esHandle_addr, auInfoEx_ptr_addr, auSpecificInfo_ptr_addr);
 	return CELL_OK;
 }
 
-int cellDmuxPeekAuEx()
+int cellDmuxPeekAuEx(u32 esHandle_addr, u32 auInfoEx_ptr_addr, u32 auSpecificInfo_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxPeekAuEx(esHandle_addr=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
+		esHandle_addr, auInfoEx_ptr_addr, auSpecificInfo_ptr_addr);
 	return CELL_OK;
 }
 
-int cellDmuxReleaseAu()
+int cellDmuxReleaseAu(u32 esHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxReleaseAu(esHandle_addr=0x%x)", esHandle_addr);
 	return CELL_OK;
 }
 
-int cellDmuxFlushEs()
+int cellDmuxFlushEs(u32 esHandle_addr)
 {
-	UNIMPLEMENTED_FUNC(cellDmux);
+	cellDmux.Error("cellDmuxFlushEs(esHandle_addr=0x%x)", esHandle_addr);
 	return CELL_OK;
 }
 

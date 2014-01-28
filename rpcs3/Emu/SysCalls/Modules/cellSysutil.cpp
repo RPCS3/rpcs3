@@ -457,7 +457,7 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 
 int cellSysutilCheckCallback()
 {
-	//cellSysutil.Warning("cellSysutilCheckCallback()");
+	cellSysutil.Warning("cellSysutilCheckCallback()");
 	Emu.GetCallbackManager().m_exit_callback.Check();
 
 	return CELL_OK;

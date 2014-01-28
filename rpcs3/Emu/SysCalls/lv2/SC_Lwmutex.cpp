@@ -1,122 +1,198 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/lv2/SC_Lwmutex.h"
+#include <mutex>
 
-struct lwmutex_lock_info
+SysCallBase sc_lwmutex("sys_lwmutex");
+
+std::mutex g_lwmutex;
+
+int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr)
 {
-	u32 owner;
-	u32 waiter;
-};
+	sc_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)", 
+		lwmutex.GetAddr(), attr.GetAddr());
 
-union lwmutex_variable
-{
-	lwmutex_lock_info info;
-	u64 all_info;
-};
+	if (!lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-struct lwmutex
-{
-	lwmutex_variable lock_var;
-	u32 attribute;
-	u32 recursive_count;
-	u32 sleep_queue;
-	u32 pad;
-};
-
-struct lwmutex_attr
-{
-	u32 attr_protocol;
-	u32 attr_recursive;
-	char name[8];
-};
-
-SysCallBase sc_lwmutex("sys_wmutex");
-
-int sys_lwmutex_create(u64 lwmutex_addr, u64 lwmutex_attr_addr)
-{
-	if(!Memory.IsGoodAddr(lwmutex_addr, 4) || !Memory.IsGoodAddr(lwmutex_attr_addr))
+	switch ((u32)attr->attr_recursive)
 	{
-		return CELL_EFAULT;
+	case SYS_SYNC_RECURSIVE: break;
+	case SYS_SYNC_NOT_RECURSIVE: break;
+	default: return CELL_EINVAL;
 	}
 
-	lwmutex& lmtx = (lwmutex&)Memory[lwmutex_addr];
-	lmtx.lock_var.all_info = 0;
-	lwmutex_attr& lmtx_attr = (lwmutex_attr&)Memory[lwmutex_attr_addr];
+	switch ((u32)attr->attr_protocol)
+	{
+	case SYS_SYNC_PRIORITY: break;
+	case SYS_SYNC_RETRY: sc_lwmutex.Error("TODO: SYS_SYNC_RETRY attr"); break;
+	case SYS_SYNC_PRIORITY_INHERIT: sc_lwmutex.Error("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
+	case SYS_SYNC_FIFO: sc_lwmutex.Error("TODO: SYS_SYNC_FIFO attr"); break;
+	default: return CELL_EINVAL;
+	}
+
+	lwmutex->attribute = (u32)attr->attr_protocol | (u32)attr->attr_recursive;
+	lwmutex->all_info = 0;
+	lwmutex->pad = 0;
+	lwmutex->recursive_count = 0;
+	lwmutex->sleep_queue = 0;
+
+	sc_lwmutex.Log("*** lwmutex created [%s] (protocol=0x%x, recursive=0x%x)",
+		attr->name, (u32)attr->attr_protocol, (u32)attr->attr_recursive);
 
 	return CELL_OK;
 }
 
-int sys_lwmutex_destroy(u64 lwmutex_addr)
+int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	//sc_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr = 0x%llx)", lwmutex_addr);
-
-	//lwmutex& lmtx = (lwmutex&)Memory[lwmutex_addr];
-	//Emu.GetIdManager().RemoveID(lmtx.attribute);
+	sc_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	return CELL_OK;
 }
 
-int sys_lwmutex_lock(u64 lwmutex_addr, u64 timeout)
+int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 {
-	lwmutex& lmtx = (lwmutex&)Memory[lwmutex_addr];
+	sc_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
+
+	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
 	PPCThread& thr = GetCurrentPPUThread();
+	const u32 id = thr.GetId();
 
-	if(thr.GetId() == re(lmtx.lock_var.info.owner))
-	{
-		re(lmtx.recursive_count, re(lmtx.recursive_count) + 1);
-		return CELL_OK;
-	}
+	{ // global lock
+		std::lock_guard<std::mutex> lock(g_lwmutex);
 
-	if(!lmtx.lock_var.info.owner)
-	{
-		re(lmtx.lock_var.info.owner, GetCurrentPPUThread().GetId());
-		re(lmtx.recursive_count, 1);
-	}
-	else if(!lmtx.lock_var.info.waiter)
-	{
-		thr.Wait(true);
-		re(lmtx.lock_var.info.waiter, thr.GetId());
-	}
-	else
-	{
-		ConLog.Warning("lwmutex has waiter!");
-		return CELL_EBUSY;
-	}
-
-	return CELL_OK;
-}
-
-int sys_lwmutex_trylock(u64 lwmutex_addr)
-{
-	//sc_lwmutex.Warning("sys_lwmutex_trylock(lwmutex_addr = 0x%llx)", lwmutex_addr);
-	lwmutex& lmtx = (lwmutex&)Memory[lwmutex_addr];
-	
-	if(lmtx.lock_var.info.owner) return CELL_EBUSY;
-
-	return CELL_OK;
-}
-
-int sys_lwmutex_unlock(u64 lwmutex_addr)
-{
-	//sc_lwmutex.Warning("sys_lwmutex_unlock(lwmutex_addr = 0x%llx)", lwmutex_addr);
-
-	lwmutex& lmtx = (lwmutex&)Memory[lwmutex_addr];
-
-	re(lmtx.recursive_count, re(lmtx.recursive_count) - 1);
-
-	if(!lmtx.recursive_count)
-	{
-		if(lmtx.lock_var.info.owner = lmtx.lock_var.info.waiter)
+		if ((u32)lwmutex->attribute & SYS_SYNC_RECURSIVE)
 		{
-			lmtx.lock_var.info.waiter = 0;
-			CPUThread* thr = Emu.GetCPU().GetThread(lmtx.lock_var.info.owner);
-			if(thr)
+			if (id == (u32)lwmutex->owner)
 			{
-				thr->Wait(false);
+				lwmutex->recursive_count = lwmutex->recursive_count + 1;
+				if (lwmutex->recursive_count == 0xffffffff) return CELL_EKRESOURCE;
+				return CELL_OK;
 			}
 		}
+		else // recursive not allowed
+		{
+			if (id == (u32)lwmutex->owner)
+			{
+				return CELL_EDEADLK;
+			}
+		}
+
+		if (!lwmutex->owner) // lock
+		{
+			lwmutex->owner = id; 
+			lwmutex->recursive_count = 1;
+			return CELL_OK;
+		}
+		lwmutex->waiter = id; // not used yet
 	}
 
-	return CELL_OK;
+	u32 counter = 0;
+	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	do // waiting
+	{
+		Sleep(1);
+
+		{ // global lock
+			std::lock_guard<std::mutex> lock(g_lwmutex);
+
+			if (!lwmutex->owner) // lock
+			{
+				lwmutex->owner = id; 
+				lwmutex->recursive_count = 1;
+				return CELL_OK;
+			}
+			lwmutex->waiter = id; // not used yet
+		}
+
+		if (counter++ > max_counter)
+		{
+			if (!timeout) 
+			{ // endless waiter
+				sc_lwmutex.Error("sys_lwmutex_lock(lwmutex_addr=0x%x): TIMEOUT", lwmutex.GetAddr());
+				return CELL_OK;
+			}
+			else
+			{
+				return CELL_ETIMEDOUT;
+			}
+		}
+	} while (true);
+}
+
+int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
+{
+	sc_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+
+	if (!lwmutex.IsGood()) return CELL_EFAULT;
+
+	PPCThread& thr = GetCurrentPPUThread();
+	const u32 id = thr.GetId();
+
+	{ // global lock
+		std::lock_guard<std::mutex> lock(g_lwmutex);
+
+		if ((u32)lwmutex->attribute & SYS_SYNC_RECURSIVE)
+		{
+			if (id == (u32)lwmutex->owner)
+			{
+				lwmutex->recursive_count = lwmutex->recursive_count + 1;
+				if (lwmutex->recursive_count == 0xffffffff) return CELL_EKRESOURCE;
+				return CELL_OK;
+			}
+		}
+		else // recursive not allowed
+		{
+			if (id == (u32)lwmutex->owner)
+			{
+				return CELL_EDEADLK;
+			}
+		}
+
+		if (!lwmutex->owner) // try lock
+		{
+			lwmutex->owner = id; 
+			lwmutex->recursive_count = 1;
+			return CELL_OK;
+		}
+		else
+		{
+			return CELL_EBUSY;
+		}
+	}
+}
+
+int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
+{
+	sc_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+
+	if (!lwmutex.IsGood()) return CELL_EFAULT;
+
+	PPCThread& thr = GetCurrentPPUThread();
+	const u32 id = thr.GetId();
+
+	{ // global lock
+		std::lock_guard<std::mutex> lock(g_lwmutex);
+
+		if (id != (u32)lwmutex->owner)
+		{
+			return CELL_EPERM;
+		}
+		else
+		{
+			lwmutex->recursive_count = (u32)lwmutex->recursive_count - 1;
+			if (!lwmutex->recursive_count)
+			{
+				lwmutex->waiter = 0; // not used yet
+				lwmutex->owner = 0; // release
+				/* CPUThread* thr = Emu.GetCPU().GetThread(lwmutex->owner);
+				if(thr)
+				{
+					thr->Wait(false);
+				} */
+			}
+			return CELL_OK;
+		}
+	}
 }
 
