@@ -98,17 +98,16 @@ std::string GLFragmentDecompilerThread::GetMask()
 
 std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-	/*
-	if(HasReg(index, fp16))
-	{
-		return wxString::Format((fp16 ? "h%u" : "r%u"), index);
-	}
-	*/
+  if(index >= 2 && index <= 4)
+  {
+    return m_parr.AddParam(PARAM_OUT, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), 
+                           (fp16) ? -1 : (index - 1));
+  }
 
-	//ConLog.Warning("%c%d: %d %d", (fp16 ? 'h' : 'r'), index, dst.tex_num, src2.use_index_reg);
+  return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0)");
 
-	return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
-			std::string(fp16 ? "h" : "r") + std::to_string(index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
+	//return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
+	//		std::string(fp16 ? "h" : "r") + std::to_string(index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
 }
 
 bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
@@ -219,6 +218,15 @@ std::string GLFragmentDecompilerThread::BuildCode()
 		p += m_parr.params[i].Format();
 	}
 
+	//return "#version 330\n\
+\n\
+out vec3 color;\n\
+in vec4 tc1;\n\
+\n\
+void main()\n\
+{\n\
+	color = tc1.rgb;\n\
+}";
 	return std::string("#version 330\n"
 					   "\n"
 					   + p + "\n"

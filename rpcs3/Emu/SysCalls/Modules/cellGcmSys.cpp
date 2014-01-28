@@ -107,7 +107,6 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	render.m_tiles_addr = Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
 	render.m_gcm_buffers_count = 0;
 	render.m_gcm_current_buffer = 0;
-	render.m_main_mem_info.Clear();
 	render.m_main_mem_addr = 0;
 	render.Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
 
@@ -725,7 +724,6 @@ int32_t cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
 	}
 
 	Emu.GetGSManager().GetRender().m_main_mem_addr = Emu.GetGSManager().GetRender().m_ioAddress;
-	Emu.GetGSManager().GetRender().m_main_mem_info.AddCpy(MemInfo(ea, size));
 
 	return CELL_OK;
 }
