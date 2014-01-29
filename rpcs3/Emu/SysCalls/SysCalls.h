@@ -6,6 +6,7 @@
 #include "lv2/SC_Rwlock.h"
 #include "lv2/SC_SPU_Thread.h"
 #include "lv2/SC_Lwmutex.h"
+#include "lv2/SC_Lwcond.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -146,6 +147,14 @@ extern int sys_semaphore_wait(u32 sem, u64 timeout);
 extern int sys_semaphore_trywait(u32 sem);
 extern int sys_semaphore_post(u32 sem, int count);
 extern int sys_semaphore_get_value(u32 sem, u32 count_addr);
+
+//sys_lwcond
+extern int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr);
+extern int sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id);
+extern int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout);
 
 //sys_lwmutex
 extern int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr);

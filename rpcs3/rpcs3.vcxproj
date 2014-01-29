@@ -249,6 +249,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Keyboard.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Lwcond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp" />

@@ -15,7 +15,7 @@ struct SpuGroupInfo
 {
 	CPUThread* threads[g_spu_group_thr_count];
 	sys_spu_thread_group_attribute& attr;
-	volatile long lock;
+	std::atomic<u32> lock;
 
 	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr), lock(0)
 	{
@@ -259,7 +259,7 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		return CELL_ESRCH;
 	}
 
-	if (_InterlockedCompareExchange(&group_info->lock, 1, 0)) //get lock
+	if (group_info->lock.exchange(1)) //get lock
 	{
 		return CELL_EBUSY;
 	}
@@ -275,7 +275,7 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		}
 	}
 
-	_InterlockedExchange(&group_info->lock, 0); //release lock
+	group_info->lock = 0; //release lock
 	return CELL_OK;
 }
 
