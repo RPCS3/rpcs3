@@ -151,9 +151,6 @@ msgid ""
 "and BIOS.  It is recommended if this is your first time installing %s that "
 "you view the readme and configuration guide."
 msgstr ""
-"ตัวช่วยนี้จะช่วยแนะนำคุณสู่การตั้งค่าปลั๊กอินการ์ดความจำและไบออส (BIOS)\n"
-"ขอแนะนำ ถ้านี่คือการติดตั้งครั้งแรก\n"
-"ซึ่งคุณจะได้อ่าน Readme และแนวทางการกำหนดค่า"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
 msgid ""

@@ -168,8 +168,8 @@ msgid ""
 "you view the readme and configuration guide."
 msgstr ""
 "Cette aide à la configuration vous permettra de paramétrer les plugins, les "
-"cartes mémoire et le BIOS. Il est recommandé à tout utilisateur de "
-"l'utiliser, mais également de prendre connaissance du Lisez-moi et des "
+"cartes mémoire et le BIOS. Il est recommandé, si cela est votre premiere "
+"installation de %s, de prendre connaissance du Lisez-moi et des "
 "guides de configuration traduits dans votre langue (FR : goldeng)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
@@ -193,9 +193,9 @@ msgid ""
 "\n"
 "(or press Cancel to select a different settings folder)"
 msgstr ""
-"Un historique de paramètres PCSX2 a été trouvé dans le dossier de "
+"Un historique de paramètres %s a été trouvé dans le dossier de "
 "configuration. Voulez-vous que le logiciel importe ces données ou les "
-"remplace avec les valeurs par défaut ?\n"
+"remplace avec les valeurs par défaut de %s ?\n"
 "\n"
 "(ou appuyez sur le bouton Annuler pour modifier le dossier d'installation)"
 
@@ -521,7 +521,7 @@ msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
 "card will be lost!  Are you absolutely and quite positively sure?"
 msgstr ""
-"Vous êtes sur le point de supprimer la carte mémoire du lecteur %u. Toutes "
+"Vous êtes sur le point de supprimer la carte mémoire du lecteur %s. Toutes "
 "les données présentes sur la carte seront perdues !\n"
 "Êtes-vous sûr de réaliser cette manipulation ?"
 
@@ -536,7 +536,7 @@ msgstr ""
 #, fuzzy, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr ""
-"Erreur : Impossible de copier la carte mémoire du lecteur %u. Les données "
+"Erreur : Impossible de copier la carte mémoire du lecteur %s. Les données "
 "concernées sont en cours d'utilisation."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
@@ -607,14 +607,15 @@ msgstr ""
 "Êtes-vous sûr de vouloir appliquer ces paramètres ?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "All plugins must have valid selections for %s to run.  If you are unable to "
 "make a valid selection due to missing plugins or an incomplete install of "
 "%s, then press Cancel to close the Configuration panel."
 msgstr ""
-"Votre ordinateur ne dispose pas des ressources nécessaires pour lancer "
-"l'émulateur. Essayez de libérer de l'espace-mémoire."
+"Tous les plugins doivent être corrects pour lancer %s. Si vous n'êtes pas capable"
+"d'obtenir une seélection valide à cause de plugins manquants ou d'une installation incomplète de %s"
+" alors cliquer sur Annuler pour fermer le paneau de Configuration"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid ""

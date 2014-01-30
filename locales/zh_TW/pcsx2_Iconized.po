@@ -457,7 +457,7 @@ msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
 "card will be lost!  Are you absolutely and quite positively sure?"
 msgstr ""
-"您即將刪除 %u 插槽已格式化的記憶卡。\n"
+"您即將刪除 %s 插槽已格式化的記憶卡。\n"
 "該記憶卡的全部資料將會丟失！您真的確定嗎？"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
@@ -468,7 +468,7 @@ msgstr "失敗：僅允許建立副本至空的記憶卡插口或檔案系統。
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, fuzzy, c-format
 msgid "Failed: Destination memory card '%s' is in use."
-msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
+msgstr "錯誤！無法複製記憶卡至插槽 %s。目標檔案使用中。"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 #, fuzzy

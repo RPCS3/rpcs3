@@ -519,7 +519,7 @@ msgid ""
 "valid %s plugin:\n"
 "\n"
 msgstr ""
-"Erreur ! Surcharge du plugin : le fichier n'existe pas ou n'est pas un "
+"Erreur ! Surcharge du plugin %s : le fichier n'existe pas ou n'est pas un "
 "plugin %s valide :\n"
 "\n"
 

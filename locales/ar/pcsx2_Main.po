@@ -129,7 +129,7 @@ msgid ""
 "incompatible hardware/drivers."
 msgstr ""
 "الملحق لم يعمل على ما يبدو أنه لديك موارد غير كافية أو تعريف/هاردوير غير "
-"متوافق %"
+"متوافق %s"
 
 #: pcsx2/PluginManager.cpp:729
 #, c-format
@@ -138,7 +138,7 @@ msgid ""
 "resources needed."
 msgstr ""
 "فشل الملحق s. بالقيام بعملية التهيئة ربما نظامك ليس لديه ذاكرة كافية أو "
-"الموارد اللازمة % "
+"الموارد اللازمة %s "
 
 #: pcsx2/PluginManager.cpp:835
 #, c-format
@@ -487,7 +487,7 @@ msgid ""
 "valid %s plugin:\n"
 "\n"
 msgstr ""
-"s خطأ في تجاهل الملحق ! الملف التالي ليس موجودا أو انه غير صالح كملحق %s :\n"
+"%s خطأ في تجاهل الملحق ! الملف التالي ليس موجودا أو انه غير صالح كملحق %s :\n"
 "\n"
 
 #: pcsx2/gui/AppInit.cpp:312
@@ -507,7 +507,7 @@ msgstr "إضغط نعم لإغلاق %s"
 #: pcsx2/gui/AppInit.cpp:504
 #, c-format
 msgid "%s Critical Error"
-msgstr "s خطأ حرج %"
+msgstr " خطأ حرج %s"
 
 #: pcsx2/gui/AppInit.cpp:674
 msgid "OK"
@@ -595,7 +595,7 @@ msgstr "تحذير لم يتم تشغيل ملحقات النظام . ربما P
 #: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
-msgstr "s إختيارات سطر الأوامر %"
+msgstr "%s إختيارات سطر الأوامر %"
 
 #: pcsx2/gui/AppMain.cpp:607
 msgid "PS2 BIOS Error"
@@ -653,7 +653,7 @@ msgstr "حوّل غلى وضع مستندات المستخدم"
 #: pcsx2/gui/AppUserMode.cpp:173
 #, c-format
 msgid "%s is switching to local install mode."
-msgstr "s يغّير لوضع التنصيب المحلي %"
+msgstr "%s يغّير لوضع التنصيب المحلي %"
 
 #: pcsx2/gui/AppUserMode.cpp:174
 msgid ""
@@ -803,7 +803,7 @@ msgstr "المصادر"
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
 msgid "About %s"
-msgstr "حول البرنامج"
+msgstr "%s حول البرنامج"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:55
 msgid "Betatesting"
@@ -1027,7 +1027,7 @@ msgstr "إقرأني / أسئلة يتكرر سؤالها [ أوفلاين ( ل�
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
 #, c-format
 msgid "%s First Time Configuration"
-msgstr "s معالج الضبط لأول مرّة %"
+msgstr "%s معالج الضبط لأول مرّة %"
 
 #: pcsx2/gui/Dialogs/GameDatabaseDialog.cpp:24
 #, c-format
@@ -1077,7 +1077,7 @@ msgstr "ضبط PCSX2 لأول مرة"
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:29
 #, c-format
 msgid "%s is starting from a new or unknown folder and needs to be configured."
-msgstr "يعمل من مجلد جديد أو غير معروف و يحتاج لأن يضبط"
+msgstr "يعمل من مجلد جديد أو غير معروف و يحتاج لأن يضبط %s"
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:28
 msgid "PCSX2 Thread is not responding"
@@ -1098,7 +1098,7 @@ msgstr "الضبط الأوتوماتيكي"
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:212
 #, c-format
 msgid "Emulation Settings - %s"
-msgstr "إعدادات المحاكاة"
+msgstr "%s إعدادات المحاكاة"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:221
 msgid "EE/IOP"
@@ -1127,7 +1127,7 @@ msgstr "Game Fixes إصلاحات الألعاب"
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
 #, c-format
 msgid "Components Selectors - %s"
-msgstr "مختار المكونات"
+msgstr "%s مختار المكونات"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:244
 msgid "Plugins"
@@ -1144,7 +1144,7 @@ msgstr "المجلدات"
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:257
 #, c-format
 msgid "Appearance/Themes - %s"
-msgstr "الشكل أو الثيم"
+msgstr "%s الشكل أو الثيم"
 
 #: pcsx2/gui/ExecutorThread.cpp:40
 msgid "Logs events as they are passed to the PS2 virtual machine."
@@ -1157,7 +1157,7 @@ msgstr "إضغط إلغاء لمحاولة القيام بمبادرة الإل�
 #: pcsx2/gui/ExecutorThread.cpp:431
 #, c-format
 msgid "Press Terminate to kill %s immediately."
-msgstr "إضغط إنهاء لقتل العملية فورا !"
+msgstr ""
 
 #: pcsx2/gui/ExecutorThread.cpp:434
 msgid "Terminate App"
@@ -1241,7 +1241,7 @@ msgstr "لقد قمت بترك ملف ISO التالي إلى %s:"
 #: pcsx2/gui/MainFrame.cpp:36
 #, c-format
 msgid "Slot %d"
-msgstr "فراع"
+msgstr "فراع %d"
 
 #: pcsx2/gui/MainFrame.cpp:42 pcsx2/gui/Saveslots.cpp:150
 msgid "Backup"
@@ -2093,7 +2093,7 @@ msgstr ""
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
 #, c-format
 msgid "Failed: %s"
-msgstr "فشل "
+msgstr "%s فشل "
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:819
 msgid "Copy failed!"
@@ -2146,7 +2146,7 @@ msgstr "فارغ"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
-msgstr "إختر مدخل لـ '%'s"
+msgstr "إختر مدخل لـ '%s'"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
