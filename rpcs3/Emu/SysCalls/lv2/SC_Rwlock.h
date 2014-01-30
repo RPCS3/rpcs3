@@ -39,25 +39,25 @@ struct RWLock
 	{
 	}
 
-	bool rlock_trylock(u32 id)
+	bool rlock_trylock(u32 tid)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
 		if (!wlock_thread && !wlock_queue.GetCount())
 		{
-			rlock_list.AddCpy(id);
+			rlock_list.AddCpy(tid);
 			return true;
 		}
 		return false;
 	}
 
-	bool rlock_unlock(u32 id)
+	bool rlock_unlock(u32 tid)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
 		for (u32 i = rlock_list.GetCount() - 1; ~i; i--)
 		{
-			if (rlock_list[i] == id)
+			if (rlock_list[i] == tid)
 			{
 				rlock_list.RemoveAt(i);
 				return true;
@@ -66,17 +66,17 @@ struct RWLock
 		return false;
 	}
 
-	bool wlock_check(u32 id)
+	bool wlock_check(u32 tid)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		if (wlock_thread == id)
+		if (wlock_thread == tid)
 		{
 			return false; // deadlock
 		}
 		for (u32 i = rlock_list.GetCount() - 1; ~i; i--)
 		{
-			if (rlock_list[i] == id)
+			if (rlock_list[i] == tid)
 			{
 				return false; // deadlock
 			}
@@ -84,7 +84,7 @@ struct RWLock
 		return true;
 	}
 
-	bool wlock_trylock(u32 id, bool enqueue)
+	bool wlock_trylock(u32 tid, bool enqueue)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
@@ -96,12 +96,12 @@ struct RWLock
 			}
 			for (u32 i = wlock_queue.GetCount() - 1; ~i; i--)
 			{
-				if (wlock_queue[i] == id)
+				if (wlock_queue[i] == tid)
 				{
 					return false; // already enqueued
 				}
 			}
-			wlock_queue.AddCpy(id); // enqueue new thread
+			wlock_queue.AddCpy(tid); // enqueue new thread
 			return false;
 		}
 		else
@@ -109,9 +109,9 @@ struct RWLock
 			if (wlock_queue.GetCount())
 			{
 				// SYNC_FIFO only yet
-				if (wlock_queue[0] == id)
+				if (wlock_queue[0] == tid)
 				{
-					wlock_thread = id;
+					wlock_thread = tid;
 					wlock_queue.RemoveAt(0);
 					return true;
 				}
@@ -123,28 +123,28 @@ struct RWLock
 					}
 					for (u32 i = wlock_queue.GetCount() - 1; ~i; i--)
 					{
-						if (wlock_queue[i] == id)
+						if (wlock_queue[i] == tid)
 						{
 							return false; // already enqueued
 						}
 					}
-					wlock_queue.AddCpy(id); // enqueue new thread
+					wlock_queue.AddCpy(tid); // enqueue new thread
 					return false;
 				}
 			}
 			else
 			{
-				wlock_thread = id; // easy way
+				wlock_thread = tid; // easy way
 				return true;
 			}
 		}
 	}
 
-	bool wlock_unlock(u32 id)
+	bool wlock_unlock(u32 tid)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		if (wlock_thread == id)
+		if (wlock_thread == tid)
 		{
 			wlock_thread = 0;
 			return true;

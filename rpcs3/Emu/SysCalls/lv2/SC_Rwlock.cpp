@@ -12,7 +12,7 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	switch ((u32)attr->attr_protocol)
 	{
-	case SYS_SYNC_PRIORITY: sys_rwlock.Log("TODO: SYS_SYNC_PRIORITY attr"); break;
+	case SYS_SYNC_PRIORITY: sys_rwlock.Warning("TODO: SYS_SYNC_PRIORITY attr"); break;
 	case SYS_SYNC_RETRY: sys_rwlock.Error("Invalid SYS_SYNC_RETRY attr"); break;
 	case SYS_SYNC_PRIORITY_INHERIT: sys_rwlock.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
 	case SYS_SYNC_FIFO: break;
@@ -55,10 +55,9 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
-	PPCThread& thr = GetCurrentPPUThread();
-	const u32 id = thr.GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
-	if (rw->rlock_trylock(id)) return CELL_OK;
+	if (rw->rlock_trylock(tid)) return CELL_OK;
 
 	u32 counter = 0;
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
@@ -67,7 +66,7 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
 		Sleep(1);
 
-		if (rw->rlock_trylock(id)) return CELL_OK;
+		if (rw->rlock_trylock(tid)) return CELL_OK;
 
 		if (counter++ > max_counter)
 		{
@@ -114,12 +113,11 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
-	PPCThread& thr = GetCurrentPPUThread();
-	const u32 id = thr.GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
-	if (!rw->wlock_check(id)) return CELL_EDEADLK;
+	if (!rw->wlock_check(tid)) return CELL_EDEADLK;
 
-	if (rw->wlock_trylock(id, true)) return CELL_OK;
+	if (rw->wlock_trylock(tid, true)) return CELL_OK;
 
 	u32 counter = 0;
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
@@ -128,7 +126,7 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
 		Sleep(1);
 
-		if (rw->wlock_trylock(id, true)) return CELL_OK;
+		if (rw->wlock_trylock(tid, true)) return CELL_OK;
 
 		if (counter++ > max_counter)
 		{
@@ -151,12 +149,11 @@ int sys_rwlock_trywlock(u32 rw_lock_id)
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
-	PPCThread& thr = GetCurrentPPUThread();
-	const u32 id = thr.GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
-	if (!rw->wlock_check(id)) return CELL_EDEADLK;
+	if (!rw->wlock_check(tid)) return CELL_EDEADLK;
 
-	if (!rw->wlock_trylock(id, false)) return CELL_EBUSY;
+	if (!rw->wlock_trylock(tid, false)) return CELL_EBUSY;
 
 	return CELL_OK;
 }
