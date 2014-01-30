@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"POT-Creation-Date: 2014-01-30 20:26+0100\n"
 "PO-Revision-Date: 2012-05-23 08:58+0800\n"
 "Last-Translator: \n"
 "Language-Team: kohaku2421 <kohaku2421@gmail.com>\n"
@@ -361,31 +361,31 @@ msgstr ""
 "Savestate tidak disimpan dengan betul. Fail sementara berjaya dicipta tetapi "
 "tidak boleh dipindahkan ke tempat akhirnya."
 
-#: pcsx2/gui/AppConfig.cpp:894
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Safest"
 msgstr "Paling Selamat"
 
-#: pcsx2/gui/AppConfig.cpp:895
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Safe (faster)"
 msgstr "Selamat (lebih pantas)"
 
-#: pcsx2/gui/AppConfig.cpp:896
+#: pcsx2/gui/AppConfig.cpp:900
 msgid "Balanced"
 msgstr "Sama rata"
 
-#: pcsx2/gui/AppConfig.cpp:897
+#: pcsx2/gui/AppConfig.cpp:901
 msgid "Aggressive"
 msgstr "Agresif"
 
-#: pcsx2/gui/AppConfig.cpp:898
+#: pcsx2/gui/AppConfig.cpp:902
 msgid "Aggressive plus"
 msgstr "Lebih agresif"
 
-#: pcsx2/gui/AppConfig.cpp:899
+#: pcsx2/gui/AppConfig.cpp:903
 msgid "Mostly Harmful"
 msgstr "Bahaya"
 
-#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
+#: pcsx2/gui/AppConfig.cpp:1064 pcsx2/gui/AppConfig.cpp:1070
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Gagal untuk menulis ke fail tetapan sedia ada; keizinan dinafikan."
 
@@ -623,7 +623,7 @@ msgstr "Thread PCSX2 Tiada Respons"
 msgid "Terminate"
 msgstr "Hentikan"
 
-#: pcsx2/gui/AppMain.cpp:993
+#: pcsx2/gui/AppMain.cpp:994
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Memulakan PS2 Virtual Machine..."
 
@@ -635,20 +635,20 @@ msgstr "Cari Iso yg tiada sblm ini dalam sejarah."
 msgid "Browse..."
 msgstr "Cari..."
 
-#: pcsx2/gui/AppUserMode.cpp:94
+#: pcsx2/gui/AppUserMode.cpp:95
 msgid "The following folders exist, but are not writable:"
 msgstr "Folder-folder ini wujud, tetapi tidak boleh ditulis:"
 
-#: pcsx2/gui/AppUserMode.cpp:99
+#: pcsx2/gui/AppUserMode.cpp:100
 msgid "The following folders are missing and cannot be created:"
 msgstr "Folder-folder ini hilang dan tidak boleh dibuat:"
 
-#: pcsx2/gui/AppUserMode.cpp:139
+#: pcsx2/gui/AppUserMode.cpp:140
 #, c-format
 msgid "Portable mode error - %s"
 msgstr "Ralat mod mudah alih - %s"
 
-#: pcsx2/gui/AppUserMode.cpp:152
+#: pcsx2/gui/AppUserMode.cpp:153
 msgid ""
 "PCSX2 has been installed as a portable application but cannot run due to the "
 "following errors:"
@@ -656,16 +656,16 @@ msgstr ""
 "PCSX2 tlh dipasang sbg aplikasi mudah alih tetapi tidak boleh dijalankan "
 "kerana ralat:"
 
-#: pcsx2/gui/AppUserMode.cpp:160
+#: pcsx2/gui/AppUserMode.cpp:161
 msgid "Switch to User Documents Mode"
 msgstr "Ubah ke User Documents Mode"
 
-#: pcsx2/gui/AppUserMode.cpp:173
+#: pcsx2/gui/AppUserMode.cpp:174
 #, c-format
 msgid "%s is switching to local install mode."
 msgstr "%s berubah ke local install mode."
 
-#: pcsx2/gui/AppUserMode.cpp:174
+#: pcsx2/gui/AppUserMode.cpp:175
 msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."

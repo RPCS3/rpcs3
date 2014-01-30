@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"POT-Creation-Date: 2014-01-30 20:26+0100\n"
 "PO-Revision-Date: 2013-12-30 11:43+0100\n"
 "Last-Translator: Víctor González Fraile <victor.gonfraile@hotmail.es>\n"
 "Language-Team: \n"
@@ -385,31 +385,31 @@ msgstr ""
 "El guardado rápido no se guardó correctamente.  El archivo temporal ha sido "
 "creado con éxito, pero no se pudo trasladar a su destino final."
 
-#: pcsx2/gui/AppConfig.cpp:894
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Safest"
 msgstr "Lo más seguro"
 
-#: pcsx2/gui/AppConfig.cpp:895
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Safe (faster)"
 msgstr "Seguro (más rápido)"
 
-#: pcsx2/gui/AppConfig.cpp:896
+#: pcsx2/gui/AppConfig.cpp:900
 msgid "Balanced"
 msgstr "Equilibrado"
 
-#: pcsx2/gui/AppConfig.cpp:897
+#: pcsx2/gui/AppConfig.cpp:901
 msgid "Aggressive"
 msgstr "Agresivo"
 
-#: pcsx2/gui/AppConfig.cpp:898
+#: pcsx2/gui/AppConfig.cpp:902
 msgid "Aggressive plus"
 msgstr "Muy agresivo"
 
-#: pcsx2/gui/AppConfig.cpp:899
+#: pcsx2/gui/AppConfig.cpp:903
 msgid "Mostly Harmful"
 msgstr "Muy peligroso"
 
-#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
+#: pcsx2/gui/AppConfig.cpp:1064 pcsx2/gui/AppConfig.cpp:1070
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Error al sobrescribir el archivo de configuración ya existente, permiso "
@@ -656,7 +656,7 @@ msgstr "Hilo sin respuesta de PCSX2"
 msgid "Terminate"
 msgstr "Abortar"
 
-#: pcsx2/gui/AppMain.cpp:993
+#: pcsx2/gui/AppMain.cpp:994
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Ejecutando máquina virtual de PS2..."
 
@@ -668,20 +668,20 @@ msgstr "Buscar una Iso que no esté en tu historial reciente."
 msgid "Browse..."
 msgstr "Buscar..."
 
-#: pcsx2/gui/AppUserMode.cpp:94
+#: pcsx2/gui/AppUserMode.cpp:95
 msgid "The following folders exist, but are not writable:"
 msgstr "Las siguientes carpetas existen pero no se pueden manipular:"
 
-#: pcsx2/gui/AppUserMode.cpp:99
+#: pcsx2/gui/AppUserMode.cpp:100
 msgid "The following folders are missing and cannot be created:"
 msgstr "Las siguientes carpetas faltan y no pueden ser creadas:"
 
-#: pcsx2/gui/AppUserMode.cpp:139
+#: pcsx2/gui/AppUserMode.cpp:140
 #, c-format
 msgid "Portable mode error - %s"
 msgstr "Error de modo portátil - %s"
 
-#: pcsx2/gui/AppUserMode.cpp:152
+#: pcsx2/gui/AppUserMode.cpp:153
 msgid ""
 "PCSX2 has been installed as a portable application but cannot run due to the "
 "following errors:"
@@ -689,16 +689,16 @@ msgstr ""
 "PCSX2 se ha instalado como aplicación portátil, pero no puede ejecutarse por "
 "los siguientes errores:"
 
-#: pcsx2/gui/AppUserMode.cpp:160
+#: pcsx2/gui/AppUserMode.cpp:161
 msgid "Switch to User Documents Mode"
 msgstr "Cambiar al modo documentos del usuario"
 
-#: pcsx2/gui/AppUserMode.cpp:173
+#: pcsx2/gui/AppUserMode.cpp:174
 #, c-format
 msgid "%s is switching to local install mode."
 msgstr "%s cambiará al modo de instalación local."
 
-#: pcsx2/gui/AppUserMode.cpp:174
+#: pcsx2/gui/AppUserMode.cpp:175
 msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."

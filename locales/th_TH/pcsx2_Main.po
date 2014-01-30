@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"POT-Creation-Date: 2014-01-30 20:26+0100\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -335,31 +335,31 @@ msgstr ""
 "บันทึกสถานภาพถูกบันทึกโดยไม่เหมาะสม ไฟล์ชั่วคราวถูกสร้างสำเร็จ "
 "แต่ไม่สามารถย้ายไปสู่จุดหมายสุดท้ายได้"
 
-#: pcsx2/gui/AppConfig.cpp:894
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Safest"
 msgstr "ปลอดภัยที่สุด"
 
-#: pcsx2/gui/AppConfig.cpp:895
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Safe (faster)"
 msgstr "ปลอดภัย (เร็วกว่า)"
 
-#: pcsx2/gui/AppConfig.cpp:896
+#: pcsx2/gui/AppConfig.cpp:900
 msgid "Balanced"
 msgstr "สมดุลย์"
 
-#: pcsx2/gui/AppConfig.cpp:897
+#: pcsx2/gui/AppConfig.cpp:901
 msgid "Aggressive"
 msgstr "รุนแรง"
 
-#: pcsx2/gui/AppConfig.cpp:898
+#: pcsx2/gui/AppConfig.cpp:902
 msgid "Aggressive plus"
 msgstr "รุนแรงกว่า"
 
-#: pcsx2/gui/AppConfig.cpp:899
+#: pcsx2/gui/AppConfig.cpp:903
 msgid "Mostly Harmful"
 msgstr "โดยมากเป็นอันตราย"
 
-#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
+#: pcsx2/gui/AppConfig.cpp:1064 pcsx2/gui/AppConfig.cpp:1070
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "ล้มเหลวในการเขียนทับไฟล์การตั้งค่าที่มีอยู่; การอนุญาตถูกปฏิเสธ"
 
@@ -591,7 +591,7 @@ msgstr "สายงานไม่ตอบสนอง PCSX2"
 msgid "Terminate"
 msgstr "สิ้นสุด"
 
-#: pcsx2/gui/AppMain.cpp:993
+#: pcsx2/gui/AppMain.cpp:994
 msgid "Executing PS2 Virtual Machine..."
 msgstr "กำลังปฏิบัติการเครื่องเสมือน PS2..."
 
@@ -603,35 +603,35 @@ msgstr "มองหา Iso ที่ไม่อยู่ในประวั�
 msgid "Browse..."
 msgstr "มองหา..."
 
-#: pcsx2/gui/AppUserMode.cpp:94
+#: pcsx2/gui/AppUserMode.cpp:95
 msgid "The following folders exist, but are not writable:"
 msgstr "โฟลเดอร์ต่อไปนี้มีอยู่แล้ว, แต่ไม่สามารถเขียนได้:"
 
-#: pcsx2/gui/AppUserMode.cpp:99
+#: pcsx2/gui/AppUserMode.cpp:100
 msgid "The following folders are missing and cannot be created:"
 msgstr "โฟลเดอร์ต่อไปนี้หายไป และไม่สามารถถูกสร้างได้:"
 
-#: pcsx2/gui/AppUserMode.cpp:139
+#: pcsx2/gui/AppUserMode.cpp:140
 #, c-format
 msgid "Portable mode error - %s"
 msgstr "โหมดพกพาผิดพลาด - %s"
 
-#: pcsx2/gui/AppUserMode.cpp:152
+#: pcsx2/gui/AppUserMode.cpp:153
 msgid ""
 "PCSX2 has been installed as a portable application but cannot run due to the "
 "following errors:"
 msgstr "PCSX2 ถูกติดตั้งเป็นโปรแกรมแบบพกพาได้ แต่ไม่สามารถรันได้เนื่องจากข้อผิดพลาดต่อไปนี้:"
 
-#: pcsx2/gui/AppUserMode.cpp:160
+#: pcsx2/gui/AppUserMode.cpp:161
 msgid "Switch to User Documents Mode"
 msgstr "สลับไปสู่โหมดเอกสารผู้ใช้"
 
-#: pcsx2/gui/AppUserMode.cpp:173
+#: pcsx2/gui/AppUserMode.cpp:174
 #, c-format
 msgid "%s is switching to local install mode."
 msgstr "%s กำลังสลับไปยังโหมดติดตั้งท้องถิ่น"
 
-#: pcsx2/gui/AppUserMode.cpp:174
+#: pcsx2/gui/AppUserMode.cpp:175
 msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."

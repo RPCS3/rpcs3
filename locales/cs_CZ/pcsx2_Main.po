@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"POT-Creation-Date: 2014-01-30 20:26+0100\n"
 "PO-Revision-Date: 2012-09-09 20:41+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -357,31 +357,31 @@ msgstr ""
 "Uložený stav nebyl správně uložen. Dočasný soubor byl úspěšně vytvořen ale "
 "nemohl být přesunut do svého posledního místa odpočinku."
 
-#: pcsx2/gui/AppConfig.cpp:894
+#: pcsx2/gui/AppConfig.cpp:898
 msgid "Safest"
 msgstr "Nejbezpečnější"
 
-#: pcsx2/gui/AppConfig.cpp:895
+#: pcsx2/gui/AppConfig.cpp:899
 msgid "Safe (faster)"
 msgstr "Bezpečné (rychlejší)"
 
-#: pcsx2/gui/AppConfig.cpp:896
+#: pcsx2/gui/AppConfig.cpp:900
 msgid "Balanced"
 msgstr "Vyrovnaný"
 
-#: pcsx2/gui/AppConfig.cpp:897
+#: pcsx2/gui/AppConfig.cpp:901
 msgid "Aggressive"
 msgstr "Agresivní"
 
-#: pcsx2/gui/AppConfig.cpp:898
+#: pcsx2/gui/AppConfig.cpp:902
 msgid "Aggressive plus"
 msgstr "Agresivní plus"
 
-#: pcsx2/gui/AppConfig.cpp:899
+#: pcsx2/gui/AppConfig.cpp:903
 msgid "Mostly Harmful"
 msgstr "Většinou Škodlivý"
 
-#: pcsx2/gui/AppConfig.cpp:1060 pcsx2/gui/AppConfig.cpp:1066
+#: pcsx2/gui/AppConfig.cpp:1064 pcsx2/gui/AppConfig.cpp:1070
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Nelze přepsat existující soubor nastavení; oprávnění bylo zamítnuto."
 
@@ -624,7 +624,7 @@ msgstr "Neodpovídající Vlákno PCSX2"
 msgid "Terminate"
 msgstr "Ukončit"
 
-#: pcsx2/gui/AppMain.cpp:993
+#: pcsx2/gui/AppMain.cpp:994
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Spouštím Virtuální Stroj PS2..."
 
@@ -636,20 +636,20 @@ msgstr "Procházet pro Iso, které není ve Vaši nedávné historii"
 msgid "Browse..."
 msgstr "Procházet..."
 
-#: pcsx2/gui/AppUserMode.cpp:94
+#: pcsx2/gui/AppUserMode.cpp:95
 msgid "The following folders exist, but are not writable:"
 msgstr "Následující adresáře existují, ale nejsou zapisovatelné:"
 
-#: pcsx2/gui/AppUserMode.cpp:99
+#: pcsx2/gui/AppUserMode.cpp:100
 msgid "The following folders are missing and cannot be created:"
 msgstr "Následující adresáře chybí a nemůžou být vytvořeny:"
 
-#: pcsx2/gui/AppUserMode.cpp:139
+#: pcsx2/gui/AppUserMode.cpp:140
 #, c-format
 msgid "Portable mode error - %s"
 msgstr "Chyba přenosného režimu - %s"
 
-#: pcsx2/gui/AppUserMode.cpp:152
+#: pcsx2/gui/AppUserMode.cpp:153
 msgid ""
 "PCSX2 has been installed as a portable application but cannot run due to the "
 "following errors:"
@@ -657,16 +657,16 @@ msgstr ""
 "PCSX2 byl nainstalován jako přenosná aplikace, ale nemůže být spuštěn kvůli "
 "následujícím chybám:"
 
-#: pcsx2/gui/AppUserMode.cpp:160
+#: pcsx2/gui/AppUserMode.cpp:161
 msgid "Switch to User Documents Mode"
 msgstr "Přepnout do Režimu Dokumentů Uživatele"
 
-#: pcsx2/gui/AppUserMode.cpp:173
+#: pcsx2/gui/AppUserMode.cpp:174
 #, c-format
 msgid "%s is switching to local install mode."
 msgstr "%s se přepíná do režimu místní instalace."
 
-#: pcsx2/gui/AppUserMode.cpp:174
+#: pcsx2/gui/AppUserMode.cpp:175
 msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."
