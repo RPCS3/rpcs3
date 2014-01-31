@@ -352,9 +352,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	if( PCSX2_isReleaseVersion )
 	{
 		// stable releases, with a simple title.
-		wintitle.Printf( _("%s  %d.%d.%d %s"), pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
-			SVN_MODS ? _("(modded)") : wxEmptyString
-		);
+		wintitle.Printf( _("%s  %d.%d.%d"), pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo );
 	}
 	else
 	{

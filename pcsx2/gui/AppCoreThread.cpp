@@ -314,7 +314,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	int numberLoadedCheats;
 	int numberLoadedWideScreenPatches;
-  int numberDbfCheatsLoaded;
+	int numberDbfCheatsLoaded;
 
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
 	if (!DiscSerial.IsEmpty()) gameSerial = L" [" + DiscSerial  + L"]";
@@ -356,15 +356,17 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		gameName = L"Booting PS2 BIOS... ";
 	}
 
-  ResetCheatsCount();
-  //Till the end of this function, emtry CRC will be 00000000
-  if (!gameCRC.Length()) {
-    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
-    gameCRC = L"00000000";
-  }
+	ResetCheatsCount();
+
+	//Till the end of this function, entry CRC will be 00000000
+	if (!gameCRC.Length() && (EmuConfig.EnableWideScreenPatches || EmuConfig.EnableCheats) ) {
+		Console.WriteLn(Color_Gray, "Patches: No CRC, using 00000000 instead.");
+		gameCRC = L"00000000";
+	}
+
 	// regular cheat patches
 	if (EmuConfig.EnableCheats) {
-    if (numberLoadedCheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
+		if (numberLoadedCheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
 			gameCheats.Printf(L" [%d Cheats]", numberLoadedCheats);
 		}
 	}
@@ -373,7 +375,8 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	if (EmuConfig.EnableWideScreenPatches) {
 		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
 			gameWsHacks.Printf(L" [%d widescreen hacks]", numberLoadedWideScreenPatches);
-		} else {
+		}
+		else {
 			// No ws cheat files found at the cheats_ws folder, try the ws cheats zip file.
 			wxString cheats_ws_archive = Path::Combine(PathDefs::GetProgramDataDir(), wxFileName(L"cheats_ws.zip"));
 
@@ -384,7 +387,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		}
 	}
 
-	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats+gameWsHacks);
+	Console.SetTitle(gameName + gameSerial + gameCompat + gameFixes + gamePatch + gameCheats + gameWsHacks);
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is

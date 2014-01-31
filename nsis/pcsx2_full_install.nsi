@@ -77,6 +77,7 @@ Section "!${APP_NAME} (required)" SEC_CORE
     File /nonfatal /oname=gsdx32-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx32-ssse3.dll 
     File /nonfatal /oname=gsdx32-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-sse4.dll
     File /nonfatal /oname=gsdx32-avx-r${SVNREV_GSDX}.dll     ..\bin\Plugins\gsdx32-avx.dll
+	File /nonfatal /oname=gsdx32-avx2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-avx2.dll
     File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll       ..\bin\Plugins\zerogs.dll
   
     File /nonfatal /oname=spu2-x-r${SVNREV_SPU2X}.dll      ..\bin\Plugins\spu2-x.dll

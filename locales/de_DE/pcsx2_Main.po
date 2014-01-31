@@ -2,10 +2,10 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
+"Project-Id-Version: pcsx2\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2014-01-30 20:26+0100\n"
-"PO-Revision-Date: 2014-01-06 09:01+0100\n"
+"PO-Revision-Date: 2014-01-31 11:43+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
 "Language: de_DE\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;wxLt;pxL\n"
-"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ..\\..\\\n"
 "X-Generator: Poedit 1.6.3\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
@@ -1322,7 +1322,7 @@ msgstr "Aktiviere Cheats"
 
 #: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Widescreen Patches"
-msgstr "Aktiviere Speedhacks"
+msgstr "Aktiviere Widescreen Patches"
 
 #: pcsx2/gui/MainFrame.cpp:430
 msgid "Enable Host Filesystem"
