@@ -359,8 +359,10 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	ResetCheatsCount();
 
 	//Till the end of this function, entry CRC will be 00000000
-	if (!gameCRC.Length() && (EmuConfig.EnableWideScreenPatches || EmuConfig.EnableCheats) ) {
-		Console.WriteLn(Color_Gray, "Patches: No CRC, using 00000000 instead.");
+	if (!gameCRC.Length()) {
+		if (EmuConfig.EnableWideScreenPatches || EmuConfig.EnableCheats) {
+			Console.WriteLn(Color_Gray, "Patches: No CRC, using 00000000 instead.");
+		}
 		gameCRC = L"00000000";
 	}
 
