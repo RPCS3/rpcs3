@@ -365,6 +365,8 @@ int cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId
 
 int cellPamfReaderGetStreamIndex(mem_ptr_t<CellPamfReader> pSelf)
 {
+	cellPamf.Log("cellPamfReaderGetStreamIndex(pSelf=0x%x)", pSelf.GetAddr());
+
 	return pSelf->stream;
 }
 
@@ -506,7 +508,7 @@ int cellPamfReaderGetNumberOfEp(mem_ptr_t<CellPamfReader> pSelf)
 
 int cellPamfReaderGetEpIteratorWithIndex(mem_ptr_t<CellPamfReader> pSelf, u32 epIndex, mem_ptr_t<CellPamfEpIterator> pIt)
 {
-	cellPamf.Warning("cellPamfReaderGetEpIteratorWithIndex(pSelf=0x%x (stream=%d), epIndex=%d, pIt_addr=0x%x)",
+	cellPamf.Error("cellPamfReaderGetEpIteratorWithIndex(pSelf=0x%x (stream=%d), epIndex=%d, pIt_addr=0x%x)",
 		pSelf.GetAddr(), pSelf->stream, epIndex, pIt.GetAddr());
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
@@ -516,19 +518,25 @@ int cellPamfReaderGetEpIteratorWithIndex(mem_ptr_t<CellPamfReader> pSelf, u32 ep
 
 int cellPamfReaderGetEpIteratorWithTimeStamp(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<CellCodecTimeStamp> pTimeStamp, mem_ptr_t<CellPamfEpIterator> pIt)
 {
-	UNIMPLEMENTED_FUNC(cellPamf);
+	cellPamf.Error("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=0x%x, pTimeStamp_addr=0x%x, pIt_addr=0x%x)",
+		pSelf.GetAddr(), pTimeStamp.GetAddr(), pIt.GetAddr());
+
+	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
+	//TODO:
 	return CELL_OK;
 }
 
 int cellPamfEpIteratorGetEp(mem_ptr_t<CellPamfEpIterator> pIt, mem_ptr_t<CellPamfEp> pEp)
 {
-	UNIMPLEMENTED_FUNC(cellPamf);
+	cellPamf.Error("cellPamfEpIteratorGetEp(pIt_addr=0x%x, pEp_addr=0x%x)", pIt.GetAddr(), pEp.GetAddr());
+	//TODO:
 	return CELL_OK;
 }
 
 int cellPamfEpIteratorMove(mem_ptr_t<CellPamfEpIterator> pIt, int steps, mem_ptr_t<CellPamfEp> pEp)
 {
-	UNIMPLEMENTED_FUNC(cellPamf);
+	cellPamf.Error("cellPamfEpIteratorMove(pIt_addr=0x%x, steps=%d, pEp_addr=0x%x)", pIt.GetAddr(), steps, pEp.GetAddr());
+	//TODO:
 	return CELL_OK;
 }
 

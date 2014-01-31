@@ -1,11 +1,13 @@
 #include "stdafx.h"
 #include "SysCalls.h"
 #include "SC_FUNC.h"
+#include <mutex>
 
 Module* g_modules[3][0xff] = {0};
 uint g_max_module_id = 0;
 uint g_module_2_count = 0;
 ArrayF<ModuleFunc> g_modules_funcs_list;
+std::mutex g_funcs_lock;
 
 struct ModuleInfo
 {
@@ -142,20 +144,31 @@ bool IsLoadedFunc(u32 id)
 
 bool CallFunc(u32 num)
 {
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	func_caller* func = nullptr;
 	{
-		if(g_modules_funcs_list[i].id == num)
+		std::lock_guard<std::mutex> lock(g_funcs_lock);
+
+		for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
 		{
-			(*g_modules_funcs_list[i].func)();
-			return true;
+			if(g_modules_funcs_list[i].id == num)
+			{
+				func = g_modules_funcs_list[i].func;
+				break;
+			}
 		}
 	}
-
+	if (func)
+	{
+		(*func)();
+		return true;
+	}
 	return false;
 }
 
 bool UnloadFunc(u32 id)
 {
+	std::lock_guard<std::mutex> lock(g_funcs_lock);
+
 	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
 	{
 		if(g_modules_funcs_list[i].id == id)
@@ -187,6 +200,7 @@ void UnloadModules()
 		}
 	}
 
+	std::lock_guard<std::mutex> lock(g_funcs_lock);
 	g_modules_funcs_list.Clear();
 }
 
@@ -318,8 +332,10 @@ void Module::Load()
 
 	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
 	{
-		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
+		std::lock_guard<std::mutex> lock(g_funcs_lock);
 
+		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
+		
 		g_modules_funcs_list.Add(m_funcs_list[i]);
 	}
 
@@ -343,6 +359,8 @@ void Module::UnLoad()
 
 bool Module::Load(u32 id)
 {
+	std::lock_guard<std::mutex> lock(g_funcs_lock);
+
 	if(IsLoadedFunc(id)) return false;
 
 	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)

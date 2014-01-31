@@ -162,6 +162,7 @@ int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 
 int sys_memory_get_user_memory_size(u32 mem_info_addr)
 {
+	sc_mem.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info_addr);
 	sys_memory_info info;
 	info.total_user_memory = re(Memory.GetUserMemTotalSize());
 	info.available_user_memory = re(Memory.GetUserMemAvailSize());

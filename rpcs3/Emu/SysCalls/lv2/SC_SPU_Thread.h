@@ -21,7 +21,8 @@ struct sys_spu_thread_group_attribute
 	be_t<u32> name_len;
 	be_t<u32> name_addr;
 	be_t<int> type;
-	struct{be_t<u32> ct;} option;
+	/* struct {} option; */
+	be_t<u32> ct; // memory container id
 };
 
 struct sys_spu_thread_attribute

@@ -175,4 +175,11 @@ void sysPrxForUser_init()
 
 	sysPrxForUser.AddFunc(0x893305fa, sys_raw_spu_load);
 	sysPrxForUser.AddFunc(0xb995662e, sys_raw_spu_image_load);
+
+	sysPrxForUser.AddFunc(0xda0eb71a, sys_lwcond_create);
+	sysPrxForUser.AddFunc(0x1c9a942c, sys_lwcond_destroy);
+	sysPrxForUser.AddFunc(0xef87a695, sys_lwcond_signal);
+	sysPrxForUser.AddFunc(0xe9a1bd84, sys_lwcond_signal_all);
+	sysPrxForUser.AddFunc(0x52aadadf, sys_lwcond_signal_to);
+	sysPrxForUser.AddFunc(0x2a6d9d51, sys_lwcond_wait);
 }

@@ -6,6 +6,7 @@
 #include "lv2/SC_Rwlock.h"
 #include "lv2/SC_SPU_Thread.h"
 #include "lv2/SC_Lwmutex.h"
+#include "lv2/SC_Lwcond.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -146,6 +147,14 @@ extern int sys_semaphore_wait(u32 sem, u64 timeout);
 extern int sys_semaphore_trywait(u32 sem);
 extern int sys_semaphore_post(u32 sem, int count);
 extern int sys_semaphore_get_value(u32 sem, u32 count_addr);
+
+//sys_lwcond
+extern int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr);
+extern int sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond);
+extern int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id);
+extern int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout);
 
 //sys_lwmutex
 extern int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr);
@@ -367,10 +376,12 @@ extern int sys_rsx_attribute();
 #define SC_ARG_5 CPU.GPR[8]
 #define SC_ARG_6 CPU.GPR[9]
 #define SC_ARG_7 CPU.GPR[10]
+/* // these definitions are wrong:
 #define SC_ARG_8 CPU.GPR[11]
 #define SC_ARG_9 CPU.GPR[12]
 #define SC_ARG_10 CPU.GPR[13]
 #define SC_ARG_11 CPU.GPR[14]
+*/
 
 #define SC_ARGS_1			SC_ARG_0
 #define SC_ARGS_2 SC_ARGS_1,SC_ARG_1
@@ -380,10 +391,12 @@ extern int sys_rsx_attribute();
 #define SC_ARGS_6 SC_ARGS_5,SC_ARG_5
 #define SC_ARGS_7 SC_ARGS_6,SC_ARG_6
 #define SC_ARGS_8 SC_ARGS_7,SC_ARG_7
+/*
 #define SC_ARGS_9 SC_ARGS_8,SC_ARG_8
 #define SC_ARGS_10 SC_ARGS_9,SC_ARG_9
 #define SC_ARGS_11 SC_ARGS_10,SC_ARG_10
 #define SC_ARGS_12 SC_ARGS_11,SC_ARG_11
+*/
 
 extern bool dump_enable;
 
