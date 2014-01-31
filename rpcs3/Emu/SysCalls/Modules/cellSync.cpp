@@ -81,6 +81,10 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		std::lock_guard<std::mutex> lock(g_SyncMutex);
 		old_order = mutex->m_order;
 		mutex->m_order = mutex->m_order + 1;
+		if (old_order == mutex->m_freed)
+		{
+			return CELL_OK;
+		}
 	}
 
 	int counter = 0;
@@ -89,10 +93,9 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		Sleep(1);
 		if (++counter >= 5000)
 		{
-			Emu.Pause();
-			cellSync.Error("cellSyncMutexLock(mutex=0x%x, old_order=%d, order=%d, freed=%d): TIMEOUT", 
+			counter = 0;
+			cellSync.Warning("cellSyncMutexLock(mutex=0x%x, old_order=%d, order=%d, freed=%d): TIMEOUT", 
 				mutex.GetAddr(), (u16)old_order, (u16)mutex->m_order, (u16)mutex->m_freed);
-			break;
 		}
 	}
 	//while (_InterlockedExchange((volatile long*)&mutex->m_data, 1)) Sleep(1);

@@ -28,7 +28,8 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, (u32)attr->attr_pshared, 
 		(u64)attr->key, (s32)attr->flags, *(u64*)&attr->name));
 
-	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x)", attr->name, (u32)attr->attr_protocol);
+	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id=%d", 
+		attr->name, (u32)attr->attr_protocol, rw_lock_id.GetValue());
 
 	return CELL_OK;
 }

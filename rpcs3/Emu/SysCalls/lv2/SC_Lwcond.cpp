@@ -25,7 +25,7 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	lwcond->lwmutex_addr = lwmutex.GetAddr();
 	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(protocol, *(u64*)&attr->name));
 
-	sys_lwcond.Warning("*** lwcond created [%s] (protocol=0x%x)", attr->name, protocol);
+	sys_lwcond.Warning("*** lwcond created [%s] (protocol=0x%x): id=%d", attr->name, protocol, (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }
 

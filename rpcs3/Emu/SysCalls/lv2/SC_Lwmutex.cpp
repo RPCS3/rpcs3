@@ -36,7 +36,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = 0;
 
-	sc_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x)",	attr->name, (u32)lwmutex->attribute);
+	sc_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): id=???", attr->name, (u32)lwmutex->attribute);
 
 	return CELL_OK;
 }
