@@ -376,10 +376,12 @@ extern int sys_rsx_attribute();
 #define SC_ARG_5 CPU.GPR[8]
 #define SC_ARG_6 CPU.GPR[9]
 #define SC_ARG_7 CPU.GPR[10]
+/* // these definitions are wrong:
 #define SC_ARG_8 CPU.GPR[11]
 #define SC_ARG_9 CPU.GPR[12]
 #define SC_ARG_10 CPU.GPR[13]
 #define SC_ARG_11 CPU.GPR[14]
+*/
 
 #define SC_ARGS_1			SC_ARG_0
 #define SC_ARGS_2 SC_ARGS_1,SC_ARG_1
@@ -389,10 +391,12 @@ extern int sys_rsx_attribute();
 #define SC_ARGS_6 SC_ARGS_5,SC_ARG_5
 #define SC_ARGS_7 SC_ARGS_6,SC_ARG_6
 #define SC_ARGS_8 SC_ARGS_7,SC_ARG_7
+/*
 #define SC_ARGS_9 SC_ARGS_8,SC_ARG_8
 #define SC_ARGS_10 SC_ARGS_9,SC_ARG_9
 #define SC_ARGS_11 SC_ARGS_10,SC_ARG_10
 #define SC_ARGS_12 SC_ARGS_11,SC_ARG_11
+*/
 
 extern bool dump_enable;
 

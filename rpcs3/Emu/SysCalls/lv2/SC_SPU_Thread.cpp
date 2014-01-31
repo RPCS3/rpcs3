@@ -458,6 +458,7 @@ int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value)
 //184
 int sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
+	sc_spu.Log("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
 	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))

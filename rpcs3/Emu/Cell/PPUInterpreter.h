@@ -1209,11 +1209,15 @@ private:
 	}
 	void VPERM(u32 vd, u32 va, u32 vb, u32 vc)
 	{
+		u8 tmpSRC[32];
+		memcpy(tmpSRC, CPU.VPR[vb]._u8, 16);
+		memcpy(tmpSRC + 16, CPU.VPR[va]._u8, 16);
+
 		for (uint b = 0; b < 16; b++)
 		{
 			u8 index = CPU.VPR[vc]._u8[b] & 0x1f;
 				
-			CPU.VPR[vd]._u8[b] = index < 0x10 ? CPU.VPR[va]._u8[0xf - index] : CPU.VPR[vb]._u8[0xf - (index - 0x10)];
+			CPU.VPR[vd]._u8[b] = tmpSRC[0x1f - index];
 		}
 	}
 	void VPKPX(u32 vd, u32 va, u32 vb)
@@ -1552,13 +1556,13 @@ private:
 	}
 	void VSLDOI(u32 vd, u32 va, u32 vb, u32 sh)
 	{
-		for (uint b = 0; b < 16 - sh; b++)
+		u8 tmpSRC[32];
+		memcpy(tmpSRC, CPU.VPR[vb]._u8, 16);
+		memcpy(tmpSRC + 16, CPU.VPR[va]._u8, 16);
+
+		for(uint b=0; b<16; b++)
 		{
-			CPU.VPR[vd]._u8[15 - b] = CPU.VPR[va]._u8[15 - (b + sh)];
-		}
-		for (uint b = 16 - sh; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[15 - b] = CPU.VPR[vb]._u8[15 - (b - (16 - sh))];
+			CPU.VPR[vd]._u8[15 - b] = tmpSRC[31 - (b + sh)];
 		}
 	}
 	void VSLH(u32 vd, u32 va, u32 vb)
