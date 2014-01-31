@@ -88,6 +88,8 @@ class Emulator
 	GSManager m_gs_manager;
 	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
+	CPUThread* m_ppu_callback_thr;
+
 	VFS m_vfs;
 
 	EmuInfo m_info;
@@ -125,6 +127,7 @@ public:
 	VFS&				GetVFS()				{ return m_vfs; }
 	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
 	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
+	CPUThread&			GetCallbackThread()		{ return *m_ppu_callback_thr; }
 	
 	void AddModuleInit(ModuleInitializer* m)
 	{

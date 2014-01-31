@@ -519,7 +519,7 @@ public:
 
 protected:
 	RSXThread()
-		: ThreadBase(false, "RSXThread")
+		: ThreadBase("RSXThread")
 		, m_ctrl(nullptr)
 		, m_flip_status(0)
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)

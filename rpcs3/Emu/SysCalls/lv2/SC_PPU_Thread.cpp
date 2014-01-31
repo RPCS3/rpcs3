@@ -23,9 +23,11 @@ void sys_ppu_thread_exit(int errorcode)
 	
 	PPUThread& thr = GetCurrentPPUThread();
 	thr.SetExitStatus(errorcode);
-	Emu.GetCPU().RemoveThread(thr.GetId());
+	thr.Stop();
 
-	throw errorcode;
+	//Emu.GetCPU().RemoveThread(thr.GetId());
+
+	//throw errorcode;
 }
 
 int sys_ppu_thread_yield()

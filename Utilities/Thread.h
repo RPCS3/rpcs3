@@ -3,84 +3,68 @@
 #include <functional>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <condition_variable>
 
 class ThreadExec;
 
-class ThreadBase
+class NamedThreadBase
 {
-protected:
 	std::string m_name;
-	bool m_detached;
 
 public:
-	std::mutex m_main_mutex;
+	NamedThreadBase(const std::string& name) : m_name(name)
+	{
+	}
 
-protected:
-	ThreadBase(bool detached = true, const std::string& name = "Unknown ThreadBase");
+	NamedThreadBase()
+	{
+	}
 
-public:
-	ThreadExec* m_executor;
-
-	virtual void Task()=0;
-
-	virtual void Start();
-	virtual void Resume();
-	virtual void Pause();
-	virtual void Stop(bool wait = true);
-
-	virtual bool Wait() const;
-	virtual bool IsRunning() const;
-	virtual bool IsPaused() const;
-	virtual bool IsAlive() const;
-	virtual bool TestDestroy() const;
 	virtual std::string GetThreadName() const;
 	virtual void SetThreadName(const std::string& name);
 };
 
-ThreadBase* GetCurrentNamedThread();
+NamedThreadBase* GetCurrentNamedThread();
 
-class ThreadExec : public wxThread
+class ThreadBase : public NamedThreadBase
 {
-	std::mutex m_wait_for_exit;
-	volatile bool m_alive;
+protected:
+	std::atomic<bool> m_destroy;
+	std::atomic<bool> m_alive;
+	std::thread* m_executor;
+
+	mutable std::mutex m_main_mutex;
+
+	ThreadBase(const std::string& name);
+	~ThreadBase();
 
 public:
-	ThreadBase* m_parent;
+	void Start();
+	void Stop(bool wait = true);
 
-	ThreadExec(bool detached, ThreadBase* parent)
-		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
-		, m_parent(parent)
-		, m_alive(true)
-	{
-		Create();
-		Run();
-	}
+	bool Join() const;
+	bool IsAlive() const;
+	bool TestDestroy() const;
 
-	void Stop(bool wait = true)
-	{
-		if(!m_alive) return;
-
-		m_parent = nullptr;
-
-		if(wait)
-		{
-			Delete();
-			//std::lock_guard<std::mutex> lock(m_wait_for_exit);
-		}
-	}
-
-	ExitCode Entry()
-	{
-		//std::lock_guard<std::mutex> lock(m_wait_for_exit);
-		m_parent->Task();
-		m_alive = false;
-		if(m_parent) m_parent->m_executor = nullptr;
-		return (ExitCode)0;
-	}
+	virtual void Task() = 0;
 };
 
-//ThreadBase* GetCurrentThread();
+class thread
+{
+	std::string m_name;
+	std::thread m_thr;
+
+public:
+	thread(const std::string& name, std::function<void()> func);
+	thread(const std::string& name);
+	thread();
+
+	void start(std::function<void()> func);
+	void detach();
+	void join();
+	bool joinable() const;
+};
 
 template<typename T> class MTPacketBuffer
 {

@@ -151,7 +151,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	return ret;
 }
 
-void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask, bool set_dst)
+void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask, bool set_dst, bool set_cond)
 {
 	if(d0.cond == 0) return;
 	enum
@@ -161,28 +161,42 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		gt = 0x4,
 	};
 
+	static const char* cond_string_table[(lt | gt | eq) + 1] =
+	{
+		"error",
+		"lessThan",
+		"equal",
+		"lessThanEqual",
+		"greaterThan",
+		"notEqual",
+		"greaterThanEqual",
+		"error"
+	};
+
 	wxString cond;
 
-	if(d0.cond != (lt | gt | eq))
+	if((set_cond || d0.cond_test_enable) && d0.cond != (lt | gt | eq))
 	{
-		if((d0.cond & (lt | gt)) == (lt | gt))
-		{
-			cond = "!=";
-		}
-		else
-		{
-			if(d0.cond & lt) cond = "<";
-			else if(d0.cond & gt) cond = ">";
-			else if(d0.cond & eq) cond = "=";
+		static const char f[4] = {'x', 'y', 'z', 'w'};
 
-			if(d0.cond & eq) cond += "=";
-		}
+		std::string swizzle;
+		swizzle += f[d0.mask_x];
+		swizzle += f[d0.mask_y];
+		swizzle += f[d0.mask_z];
+		swizzle += f[d0.mask_w];
 
-		//ConLog.Error("cond! %d (%d %s %d %d)", d0.cond, d0.dst_tmp, cond, d1.input_src, d1.const_src);
-		cond = wxString::Format("if(rc %s 0) ", cond.mb_str());
+		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
+
+		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
 	}
 
-	wxString value = src_mask ? code + GetMask(is_sca) : code;
+	wxString mask = GetMask(is_sca);
+	wxString value = src_mask ? code + mask : code;
+
+	if(is_sca && d0.vec_result)
+	{
+		value = "vec4(" + value + ")" + mask;
+	}
 
 	if(d0.staturate)
 	{
@@ -194,26 +208,28 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		wxString dest;
 		if(d0.cond_update_enable_0)
 		{
-			dest = m_parr.AddParam(PARAM_NONE, "float", "rc");
+			dest = m_parr.AddParam(PARAM_NONE, "vec4", "rc", "vec4(0.0)") + mask;
 		}
 		else if(d3.dst == 5 || d3.dst == 6)
 		{
-			int num = d3.dst == 5 ? 0 : 3;
-
 			if(d3.vec_writemask_x)
 			{
-				ConLog.Error("Bad clip mask.");
+				dest = "gl_FogFragCoord";
 			}
+			else
+			{
+				int num = d3.dst == 5 ? 0 : 3;
 
-			//if(d3.vec_writemask_y) num += 0;
-			if(d3.vec_writemask_z) num += 1;
-			else if(d3.vec_writemask_w) num += 2;
+				//if(d3.vec_writemask_y) num += 0;
+				if(d3.vec_writemask_z) num += 1;
+				else if(d3.vec_writemask_w) num += 2;
 
-			dest = wxString::Format(GetDST(is_sca), num);
+				dest = wxString::Format(GetDST(is_sca) + "/*" + mask + "*/", num);
+			}
 		}
 		else
 		{
-			dest = GetDST(is_sca) + GetMask(is_sca);
+			dest = GetDST(is_sca) + mask;
 		}
 
 		code = cond + dest + " = " + value;
@@ -223,7 +239,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		code = cond + value;
 	}
 
-	m_body.Add(code + wxString::Format(";//%d %d %d %d", d0.cond_reg_sel_1, d0.cond_test_enable, d0.cond_update_enable_0, d0.cond_update_enable_1));
+	m_body.Add(code + ";");
 }
 
 wxString GLVertexDecompilerThread::GetFunc()
@@ -249,9 +265,9 @@ void GLVertexDecompilerThread::AddVecCode(const wxString& code, bool src_mask, b
 	AddCode(false, code, src_mask, set_dst);
 }
 
-void GLVertexDecompilerThread::AddScaCode(const wxString& code, bool set_dst)
+void GLVertexDecompilerThread::AddScaCode(const wxString& code, bool set_dst, bool set_cond)
 {
-	AddCode(true, code, false, set_dst);
+	AddCode(true, code, false, set_dst, set_cond);
 }
 
 wxString GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
@@ -296,7 +312,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 	wxString fp = wxEmptyString;
 
-	for(int i=m_funcs.GetCount() - 1; i>=0; --i)
+	for(int i=m_funcs.GetCount() - 1; i>0; --i)
 	{
 		fp += wxString::Format("void %s();\n", m_funcs[i].name.mb_str());
 	}
@@ -339,17 +355,17 @@ void GLVertexDecompilerThread::Task()
 		{
 		case 0x00: break; // NOP
 		case 0x01: AddScaCode(GetSRC(2, true)); break; // MOV
-		case 0x02: AddScaCode("1 / (" + GetSRC(2, true) + ")"); break; // RCP
-		case 0x03: AddScaCode("clamp(1 / (" + GetSRC(2, true) + "), 5.42101e-20, 1.884467e19)"); break; // RCC
+		case 0x02: AddScaCode("1.0 / " + GetSRC(2, true)); break; // RCP
+		case 0x03: AddScaCode("clamp(1.0 / " + GetSRC(2, true) + ", 5.42101e-20, 1.884467e19)"); break; // RCC
 		case 0x04: AddScaCode("inversesqrt(" + GetSRC(2, true) + ")"); break; // RSQ
 		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
 		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
 		//case 0x07: break; // LIT
-		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; return; }", false); break; // BRA
-		case 0x09: AddScaCode("{ " + GetFunc() + "; return; }", false); break; // BRI : works differently (BRI o[1].x(TR) L0;)
-		case 0x0a: AddScaCode("/*CAL*/ " + GetFunc(), false); break; // CAL : works same as BRI
-		case 0x0b: AddScaCode("/*CLI*/ " + GetFunc(), false); break; // CLI : works same as BRI
-		case 0x0c: AddScaCode("return", false); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
+		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; return; }", false, true); break; // BRA
+		case 0x09: AddScaCode("{ " + GetFunc() + "; return; }", false, true); break; // BRI : works differently (BRI o[1].x(TR) L0;)
+		case 0x0a: AddScaCode("/*CAL*/ " + GetFunc(), false, true); break; // CAL : works same as BRI
+		case 0x0b: AddScaCode("/*CLI*/ " + GetFunc(), false, true); break; // CLI : works same as BRI
+		case 0x0c: AddScaCode("return", false, true); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
 		case 0x0d: AddScaCode("log2(" + GetSRC(2, true) + ")"); break; // LG2
 		case 0x0e: AddScaCode("exp2(" + GetSRC(2, true) + ")"); break; // EX2
 		case 0x0f: AddScaCode("sin(" + GetSRC(2, true) + ")"); break; // SIN

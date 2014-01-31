@@ -9,17 +9,17 @@ struct NullGSFrame : public GSFrame
 	}
 
 	void Draw()
-    {
-        wxClientDC dc(this);
-        Draw(&dc);
-    }
+	{
+		wxClientDC dc(this);
+		Draw(&dc);
+	}
 
 private:
 	virtual void OnPaint(wxPaintEvent& event)
-    {
-        wxPaintDC dc(this);
-        Draw(&dc);
-    }
+	{
+		wxPaintDC dc(this);
+		Draw(&dc);
+	}
 	virtual void OnSize(wxSizeEvent& event)
 	{
 		GSFrame::OnSize(event);
@@ -77,7 +77,7 @@ private:
 
 	virtual void Close()
 	{
-		if(IsAlive()) Stop();
+		Stop();
 
 		if(m_frame->IsShown()) m_frame->Hide();
 	}
