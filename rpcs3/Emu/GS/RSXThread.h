@@ -265,7 +265,6 @@ public:
 	u32 m_report_main_addr;
 
 	u32 m_local_mem_addr, m_main_mem_addr;
-	Array<MemInfo> m_main_mem_info;
 
 public:
 	uint m_draw_mode;
@@ -520,7 +519,7 @@ public:
 
 protected:
 	RSXThread()
-		: ThreadBase(false, "RSXThread")
+		: ThreadBase("RSXThread")
 		, m_ctrl(nullptr)
 		, m_flip_status(0)
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
@@ -637,7 +636,7 @@ protected:
 		switch(location)
 		{
 		case CELL_GCM_LOCATION_LOCAL: return m_local_mem_addr + offset;
-		case CELL_GCM_LOCATION_MAIN: return m_main_mem_addr + offset;
+		case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
 		}
 
 		ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);

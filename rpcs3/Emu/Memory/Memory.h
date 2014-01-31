@@ -691,11 +691,16 @@ struct _func_arg
 template<typename T>
 struct _func_arg<mem_base_t<T>>
 {
-	__forceinline static u64 get_value(const mem_base_t<T>& arg)
+	__forceinline static u64 get_value(const mem_base_t<T> arg)
 	{
 		return arg.GetAddr();
 	}
 };
+
+template<typename T> struct _func_arg<mem_ptr_t<T>> : public _func_arg<mem_base_t<T>> {};
+template<> struct _func_arg<mem_ptr_t<void>> : public _func_arg<mem_base_t<u8>> {};
+template<typename T> struct _func_arg<mem_list_ptr_t<T>> : public _func_arg<mem_base_t<T>> {};
+template<typename T> struct _func_arg<mem_t<T>> : public _func_arg<mem_base_t<T>> {};
 
 template<typename T>
 struct _func_arg<be_t<T>>

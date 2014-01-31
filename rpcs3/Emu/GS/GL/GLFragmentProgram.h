@@ -109,7 +109,7 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	u32 m_ctrl;
 
 	GLFragmentDecompilerThread(std::string& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
-		: ThreadBase(false, "Fragment Shader Decompiler Thread")
+		: ThreadBase("Fragment Shader Decompiler Thread")
 		, m_shader(shader)
 		, m_parr(parr)
 		, m_addr(addr)
@@ -155,7 +155,7 @@ struct GLShaderProgram
 	{
 		if(m_decompiler_thread && m_decompiler_thread->IsAlive())
 		{
-			m_decompiler_thread->Wait();
+			m_decompiler_thread->Join();
 		}
 	}
 	void Decompile(RSXShaderProgram& prog);

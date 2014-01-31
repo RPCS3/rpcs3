@@ -78,7 +78,7 @@ void SPUThread::DoRun()
 	break;
 	}
 
-	Pause();
+	//Pause();
 	//Emu.Pause();
 }
 

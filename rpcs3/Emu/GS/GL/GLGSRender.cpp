@@ -109,7 +109,7 @@ extern CellGcmContextData current_context;
 
 void GLGSRender::Close()
 {
-	if(IsAlive()) Stop();
+	Stop();
 
 	if(m_frame->IsShown()) m_frame->Hide();
 	m_ctrl = nullptr;

@@ -121,7 +121,7 @@ class DumperThread : public ThreadBase
 	wxArrayString** arr;
 
 public:
-	DumperThread() : ThreadBase(true, "DumperThread")
+	DumperThread() : ThreadBase("DumperThread")
 	{
 	}
 
@@ -200,7 +200,7 @@ struct WaitDumperThread : public ThreadBase
 	wxArrayString** arr;
 
 	WaitDumperThread(bool* _done, u8 _cores, wxString _patch, MTProgressDialog& _prog_dial, wxArrayString** _arr) 
-		: ThreadBase()
+		: ThreadBase("WaitDumperThread")
 		, done(_done)
 		, cores(_cores)
 		, patch(_patch)
