@@ -9,17 +9,29 @@
 static SysCallBase sc_spu("sys_spu");
 extern SysCallBase sys_event;
 
-static const u32 g_spu_group_thr_count = 255;
+static const u32 g_spu_group_thr_max = 255;
 
 struct SpuGroupInfo
 {
-	CPUThread* threads[g_spu_group_thr_count];
-	sys_spu_thread_group_attribute& attr;
-	volatile long lock;
+	Array<u32> list;
+	std::atomic<u32> lock;
+	wxString m_name;
+	int m_prio;
+	int m_type;
+	int m_ct;
 
-	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr), lock(0)
+	SpuGroupInfo(wxString name, u32 num, int prio, int type, u32 ct) 
+		: m_name(name)
+		, m_prio(prio)
+		, m_type(type)
+		, m_ct(ct)
+		, lock(0)
 	{
-		memset(threads, 0, sizeof(CPUThread*) * g_spu_group_thr_count);
+		list.SetCount(num);
+		for (u32 i = 0; i < num; i++)
+		{
+			list[i] = 0;
+		}
 	}
 };
 
@@ -102,12 +114,12 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EFAULT;
 	}
 
-	if(spu_num >= g_spu_group_thr_count)
+	if(spu_num >= g_spu_group_thr_max)
 	{
 		return CELL_EINVAL;
 	}
 	
-	if(group_info->threads[spu_num])
+	if(group_info->list[spu_num])
 	{
 		return CELL_EBUSY;
 	}
@@ -133,20 +145,10 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	new_thread.SetArg(3, a4);
 	new_thread.Run();
 
-	thread = new_thread.GetId();
+	thread = group_info->list[spu_num] = new_thread.GetId();
 
-	group_info->threads[spu_num] = &new_thread;
-
-	/*ConLog.Write("New SPU Thread:");
-	ConLog.Write("SPU img offset = 0x%x", (u32)img->segs_addr);
-	ConLog.Write("entry_point = 0x%x", spu_ep);
-	ConLog.Write("name = %s", name.c_str());
-	ConLog.Write("a1 = 0x%x", a1);
-	ConLog.Write("a2 = 0x%x", a2);
-	ConLog.Write("a3 = 0x%x", a3);
-	ConLog.Write("a4 = 0x%x", a4);
-	ConLog.Write("ls_offset = 0x%x", ((SPUThread&)new_thread).dmac.ls_offset);
-	ConLog.SkipLn();*/
+	sc_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
+		name.c_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
 
 	return CELL_OK;
 }
@@ -192,11 +194,12 @@ int sys_spu_thread_group_start(u32 id)
 	}
 
 	//Emu.Pause();
-	for(int i=0; i<g_spu_group_thr_count; i++)
+	for (int i = 0; i < group_info->list.GetCount(); i++)
 	{
-		if(group_info->threads[i])
+		CPUThread* t;
+		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
-			group_info->threads[i]->Exec();
+			t->Exec();
 		}
 	}
 
@@ -215,11 +218,12 @@ int sys_spu_thread_group_suspend(u32 id)
 	}
 
 	//Emu.Pause();
-	for(int i=0; i<g_spu_group_thr_count; i++)
+	for (int i = 0; i < group_info->list.GetCount(); i++)
 	{
-		if(group_info->threads[i])
+		CPUThread* t;
+		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
-			group_info->threads[i]->Pause();
+			t->Pause();
 		}
 	}
 
@@ -229,21 +233,23 @@ int sys_spu_thread_group_suspend(u32 id)
 //170
 int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr)
 {
-	ConLog.Write("sys_spu_thread_group_create:");
-	ConLog.Write("*** id_addr=0x%x", id.GetAddr());
-	ConLog.Write("*** num=%d", num);
-	ConLog.Write("*** prio=%d", prio);
-	ConLog.Write("*** attr_addr=0x%x", attr.GetAddr());
+	sc_spu.Warning("sys_spu_thread_group_create(id_addr=0x%x, num=%d, prio=%d, attr_addr=0x%x)",
+		id.GetAddr(), num, prio, attr.GetAddr());
 
-	ConLog.Write("*** attr.name_len=%d", attr->name_len.ToLE());
-	ConLog.Write("*** attr.name_addr=0x%x", attr->name_addr.ToLE());
-	ConLog.Write("*** attr.type=%d", attr->type.ToLE());
-	ConLog.Write("*** attr.option.ct=%d", attr->option.ct.ToLE());
+	if (!id.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	const wxString name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
-	ConLog.Write("*** name='%s'", name.c_str());
+	if (!Memory.IsGoodAddr(attr->name_addr, attr->name_len)) return CELL_EFAULT;
 
-	id = Emu.GetIdManager().GetNewID(wxString::Format("sys_spu_thread_group '%s'", name), new SpuGroupInfo(*attr));
+	if (num > g_spu_group_thr_max) return CELL_EINVAL;
+
+	if (prio < 16 || prio > 255) return CELL_EINVAL;
+
+	const wxString name = Memory.ReadString(attr->name_addr, attr->name_len);
+
+	id = sc_spu.GetNewId(new SpuGroupInfo(name, num, prio, attr->type, attr->ct));
+
+	sc_spu.Warning("*** SPU Thread Group created [%s] (type=%d, option.ct=%d): id=%d", 
+		name.c_str(), (int)attr->type, (u32)attr->ct, id.GetValue());
 
 	return CELL_OK;
 }
@@ -259,7 +265,7 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		return CELL_ESRCH;
 	}
 
-	if (_InterlockedCompareExchange(&group_info->lock, 1, 0)) //get lock
+	if (group_info->lock.exchange(1)) // acquire lock
 	{
 		return CELL_EBUSY;
 	}
@@ -267,21 +273,24 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 	cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 	status = 0; //unspecified because of ALL_THREADS_EXIT
 
-	for(int i=0; i<g_spu_group_thr_count; i++)
+	for (int i = 0; i < group_info->list.GetCount(); i++)
 	{
-		if(group_info->threads[i])
+		while (Emu.GetCPU().GetThread(group_info->list[i]))
 		{
-			while (!group_info->threads[i]->IsStopped()) Sleep(1);
+			Sleep(1);
+			if (Emu.IsStopped()) return CELL_OK;
 		}
+		group_info->list[i] = 0;
 	}
 
-	_InterlockedExchange(&group_info->lock, 0); //release lock
+	group_info->lock = 0; // release lock
 	return CELL_OK;
 }
 
 int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
-	UNIMPLEMENTED_FUNC(sc_spu);
+	sc_spu.Error("sys_spu_thread_create(thread_id_addr=0x%x, entry_addr=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x",
+		thread_id.GetAddr(), entry.GetAddr(), arg, prio, stacksize, flags, threadname_addr);
 	return CELL_OK;
 }
 
@@ -458,6 +467,7 @@ int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value)
 //184
 int sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
+	sc_spu.Log("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
 	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
@@ -504,9 +514,10 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 		return CELL_ESRCH;
 	}
 	
-	for(int i=0; i<g_spu_group_thr_count; ++i)
+	for(int i=0; i<group->list.GetCount(); ++i)
 	{
-		if(group->threads[i])
+		CPUThread* t;
+		if(t = Emu.GetCPU().GetThread(group->list[i]))
 		{
 			bool finded_port = false;
 			for(int j=0; j<equeue->pos; ++j)
@@ -514,7 +525,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 				if(!equeue->ports[j]->thread)
 				{
 					finded_port = true;
-					equeue->ports[j]->thread = group->threads[i];
+					equeue->ports[j]->thread = t;
 				}
 			}
 

@@ -457,7 +457,7 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 
 int cellSysutilCheckCallback()
 {
-	cellSysutil.Warning("cellSysutilCheckCallback()");
+	cellSysutil.Log("cellSysutilCheckCallback()");
 	Emu.GetCallbackManager().m_exit_callback.Check();
 
 	return CELL_OK;
@@ -667,7 +667,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY: return 1;
+		case CELL_AUDIO_OUT_PRIMARY: return 2;
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 

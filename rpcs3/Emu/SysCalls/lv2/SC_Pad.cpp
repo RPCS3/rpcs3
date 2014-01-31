@@ -74,7 +74,7 @@ int cellPadClearBuf(u32 port_no)
 
 int cellPadGetData(u32 port_no, u32 data_addr)
 {
-	//ConLog.Warning("cellPadGetData[port_no: %d, data_addr: 0x%x]", port_no, data_addr);
+	sys_io.Log("cellPadGetData[port_no: %d, data_addr: 0x%x]", port_no, data_addr);
 	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= pads.GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
