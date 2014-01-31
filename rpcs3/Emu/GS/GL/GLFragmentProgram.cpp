@@ -6,7 +6,7 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
 	const std::string mask = GetMask().c_str();
-	std::string cond = "";
+	std::string cond;
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
@@ -70,25 +70,21 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	if(!dst.no_dest)
-	{
-		std::string dest;
+	std::string dest;
 
+	if(dst.no_dest)
+	{
 		if(dst.set_cond)
 		{
 			dest = m_parr.AddParam(PARAM_NONE , "vec4", std::string(dst.fp16 ? "hc" : "rc") + std::to_string(src0.cond_reg_index));
 		}
-		else
-		{
-			dest = AddReg(dst.dest_reg, dst.fp16);
-		}
-
-		code = cond + dest + mask + " = " + code + (append_mask ? mask : "");
 	}
 	else
 	{
-		code = cond + code + (append_mask ? mask : "");
+		dest = AddReg(dst.dest_reg, dst.fp16);
 	}
+
+	code = cond + (dest.length() ? dest + mask + " = " : "") + code + (append_mask ? mask : "");
 
 	main += "\t" + code + ";\n";
 }

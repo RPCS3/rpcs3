@@ -214,7 +214,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		{
 			if(d3.vec_writemask_x)
 			{
-				dest = "gl_FogFragCoord";
+				dest = m_parr.AddParam(PARAM_OUT, "vec4", "fogc") + mask;
 			}
 			else
 			{
@@ -338,6 +338,8 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 void GLVertexDecompilerThread::Task()
 {
+	m_parr.params.Clear();
+
 	for(u32 i=0;;)
 	{
 		d0.HEX = m_data[i++];
