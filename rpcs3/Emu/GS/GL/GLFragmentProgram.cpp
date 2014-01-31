@@ -123,6 +123,11 @@ std::string GLFragmentDecompilerThread::AddCond(int fp16)
 
 std::string GLFragmentDecompilerThread::AddConst()
 {
+  if(m_parr.HasParam(PARAM_UNIFORM, "vec4", std::string("fc") + std::to_string(m_size + 4 * 4)))
+  {
+    return std::string("fc") + std::to_string(m_size + 4 * 4);
+  }
+
 	mem32_ptr_t data(m_addr + m_size + m_offset);
 
 	m_offset += 4 * 4;
