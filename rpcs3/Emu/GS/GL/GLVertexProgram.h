@@ -143,7 +143,7 @@ struct GLVertexDecompilerThread : public ThreadBase
 	GLParamArray& m_parr;
 
 	GLVertexDecompilerThread(Array<u32>& data, wxString& shader, GLParamArray& parr)
-		: ThreadBase(false, "Vertex Shader Decompiler Thread")
+		: ThreadBase("Vertex Shader Decompiler Thread")
 		, m_data(data)
 		, m_shader(shader)
 		, m_parr(parr)
@@ -160,9 +160,9 @@ struct GLVertexDecompilerThread : public ThreadBase
 	wxString GetDST(bool is_sca = false);
 	wxString GetSRC(const u32 n, bool is_sca = false);
 	wxString GetFunc();
-	void AddCode(bool is_sca, wxString code, bool src_mask = true, bool set_dst = true);
+	void AddCode(bool is_sca, wxString code, bool src_mask = true, bool set_dst = true, bool set_cond = true);
 	void AddVecCode(const wxString& code, bool src_mask = true, bool set_dst = true);
-	void AddScaCode(const wxString& code, bool set_dst = true);
+	void AddScaCode(const wxString& code, bool set_dst = true, bool set_cond = true);
 	wxString BuildFuncBody(const FuncInfo& func);
 	wxString BuildCode();
 
@@ -182,9 +182,9 @@ struct GLVertexProgram
 
 	void Wait()
 	{
-		if(m_decompiler_thread && m_decompiler_thread->IsRunning())
+		if(m_decompiler_thread && m_decompiler_thread->IsAlive())
 		{
-			m_decompiler_thread->Wait();
+			m_decompiler_thread->Join();
 		}
 	}
 

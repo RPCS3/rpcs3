@@ -6,17 +6,18 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
 	const std::string mask = GetMask().c_str();
-	std::string cond = "";
+	std::string cond;
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
 		static const char f[4] = {'x', 'y', 'z', 'w'};
 
-		std::string swizzle = "";
+		std::string swizzle;
 		swizzle += f[src0.cond_swizzle_x];
 		swizzle += f[src0.cond_swizzle_y];
 		swizzle += f[src0.cond_swizzle_z];
 		swizzle += f[src0.cond_swizzle_w];
+		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
 		if(src0.exec_if_gr && src0.exec_if_eq)
 		{
@@ -43,10 +44,7 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 			cond = "equal";
 		}
 
-		cond = std::string("if(all(" + cond + "(" + AddCond(dst.no_dest) + "." + swizzle +", vec4(0, 0, 0, 0)))) ");
-		//ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
-		//Emu.Pause();
-		//return;
+		cond = "if(all(" + cond + "(" + AddCond(dst.no_dest) + swizzle + ", vec4(0.0)))) ";
 	}
 
 	if(src1.scale)
@@ -72,16 +70,28 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = cond + (dst.set_cond ? m_parr.AddParam(PARAM_NONE , "vec4", std::string(dst.fp16 ? "hc" : "rc") + std::to_string(src0.cond_reg_index))
-		: AddReg(dst.dest_reg, dst.fp16)) + mask
-		+ " = " + code + (append_mask ? mask : "");
+	std::string dest;
+
+	if(dst.no_dest)
+	{
+		if(dst.set_cond)
+		{
+			dest = m_parr.AddParam(PARAM_NONE , "vec4", std::string(dst.fp16 ? "hc" : "rc") + std::to_string(src0.cond_reg_index));
+		}
+	}
+	else
+	{
+		dest = AddReg(dst.dest_reg, dst.fp16);
+	}
+
+	code = cond + (dest.length() ? dest + mask + " = " : "") + code + (append_mask ? mask : "");
 
 	main += "\t" + code + ";\n";
 }
 
 std::string GLFragmentDecompilerThread::GetMask()
 {
-	std::string ret = "";
+	std::string ret;
 
 	static const char dst_mask[4] =
 	{
@@ -98,13 +108,13 @@ std::string GLFragmentDecompilerThread::GetMask()
 
 std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-  if(index >= 2 && index <= 4)
-  {
-    return m_parr.AddParam(PARAM_OUT, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), 
-                           (fp16) ? -1 : (index - 1));
-  }
+	if(index >= 2 && index <= 4)
+	{
+		return m_parr.AddParam(PARAM_OUT, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), 
+							(fp16) ? -1 : (index - 1));
+	}
 
-  return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0)");
+	return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0, 0.0, 0.0, 0.0)");
 
 	//return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
 	//		std::string(fp16 ? "h" : "r") + std::to_string(index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));

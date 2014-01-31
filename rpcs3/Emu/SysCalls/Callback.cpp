@@ -53,23 +53,29 @@ void Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
-	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	CPUThread& thr = Emu.GetCallbackThread();
 
-	new_thread.SetEntry(m_addr);
-	new_thread.SetPrio(1001);
-	new_thread.SetStackSize(0x10000);
-	new_thread.SetName(m_name);
+	while(Emu.IsRunning() && thr.IsAlive())
+		Sleep(1);
 
-	new_thread.SetArg(0, a1);
-	new_thread.SetArg(1, a2);
-	new_thread.SetArg(2, a3);
-	new_thread.SetArg(3, a4);
-	new_thread.Run();
+	thr.Stop();
+	thr.Reset();
 
-	new_thread.Exec();
+	thr.SetEntry(m_addr);
+	thr.SetPrio(1001);
+	thr.SetStackSize(0x10000);
+	thr.SetName(m_name);
+
+	thr.SetArg(0, a1);
+	thr.SetArg(1, a2);
+	thr.SetArg(2, a3);
+	thr.SetArg(3, a4);
+	thr.Run();
+
+	thr.Exec();
 
 	if(wait)
-		GetCurrentPPCThread()->Wait(new_thread);
+		GetCurrentPPCThread()->Wait(thr);
 }
 
 void Callback::SetName(const std::string& name)

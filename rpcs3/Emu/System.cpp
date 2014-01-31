@@ -27,6 +27,7 @@ Emulator::Emulator()
 	, m_mode(DisAsm)
 	, m_dbg_console(nullptr)
 	, m_rsx_callback(0)
+	, m_ppu_callback_thr(0)
 {
 }
 
@@ -310,6 +311,8 @@ void Emulator::Load()
 
 	case MACHINE_PPC64:
 	{
+		m_ppu_callback_thr = &GetCPU().AddThread(CPU_THREAD_PPU);
+
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.Alloc(0x1000);
 		thread.InitStack();

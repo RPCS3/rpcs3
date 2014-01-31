@@ -1,97 +1,149 @@
 #include "stdafx.h"
 #include "Thread.h"
 
-ThreadBase* GetCurrentNamedThread()
-{
-	ThreadExec* thr = (ThreadExec*)::wxThread::This();
-	return thr ? thr->m_parent : nullptr;
-}
+static DWORD g_tls_this_thread = 0xFFFFFFFF;
 
-ThreadBase::ThreadBase(bool detached, const std::string& name)
-	: m_detached(detached)
-	, m_name(name)
-	, m_executor(nullptr)
+struct __init_tls
 {
-}
+	//NamedThreadBase m_main_thr;
 
-void ThreadBase::Start()
-{
-	if(m_executor) return;
-
-	m_executor = new ThreadExec(m_detached, this);
-}
-
-void ThreadBase::Resume()
-{
-	if(m_executor)
+	__init_tls()
 	{
-		m_executor->Resume();
+		g_tls_this_thread = ::TlsAlloc();
+		//m_main_thr.SetThreadName("Main Thread");
+		//::TlsSetValue(g_tls_this_thread, &m_main_thr);
+		::TlsSetValue(g_tls_this_thread, nullptr);
 	}
-}
 
-void ThreadBase::Pause()
-{
-	if(m_executor)
+	~__init_tls()
 	{
-		m_executor->Pause();
+		::TlsFree(g_tls_this_thread);
 	}
-}
+} _init_tls;
 
-void ThreadBase::Stop(bool wait)
+NamedThreadBase* GetCurrentNamedThread()
 {
-	if(!m_executor) return;
-	ThreadExec* exec = m_executor;
-	m_executor = nullptr;
-
-	if(!m_detached)
-	{
-		if(wait)
-		{
-			exec->Wait();
-		}
-
-		exec->Stop(false);
-		delete exec;
-	}
-	else
-	{
-		exec->Stop(wait);
-	}
+	return (NamedThreadBase*)::TlsGetValue(g_tls_this_thread);
 }
 
-bool ThreadBase::Wait() const
-{
-	return m_executor != nullptr && m_executor->Wait() != (wxThread::ExitCode)-1;
-}
-
-bool ThreadBase::IsRunning() const
-{
-	return m_executor != nullptr && m_executor->IsRunning();
-}
-
-bool ThreadBase::IsPaused() const
-{
-	return m_executor != nullptr && m_executor->IsPaused();
-}
-
-bool ThreadBase::IsAlive() const
-{
-	return m_executor != nullptr;
-}
-
-bool ThreadBase::TestDestroy() const
-{
-	if(!m_executor || !m_executor->m_parent) return true;
-
-	return m_executor->TestDestroy();
-}
-
-std::string ThreadBase::GetThreadName() const
+std::string NamedThreadBase::GetThreadName() const
 {
 	return m_name;
 }
 
-void ThreadBase::SetThreadName(const std::string& name)
+void NamedThreadBase::SetThreadName(const std::string& name)
 {
 	m_name = name;
+}
+
+ThreadBase::ThreadBase(const std::string& name)
+	: NamedThreadBase(name)
+	, m_executor(nullptr)
+	, m_destroy(false)
+	, m_alive(false)
+{
+}
+
+ThreadBase::~ThreadBase()
+{
+	if(IsAlive())
+		Stop(false);
+}
+
+void ThreadBase::Start()
+{
+	if(m_executor) Stop();
+
+	std::lock_guard<std::mutex> lock(m_main_mutex);
+
+	m_destroy = false;
+	m_alive = true;
+
+	m_executor = new std::thread(
+		[this]()
+		{
+			::TlsSetValue(g_tls_this_thread, this);
+
+			Task();
+
+			m_alive = false;
+		});
+}
+
+void ThreadBase::Stop(bool wait)
+{
+	std::lock_guard<std::mutex> lock(m_main_mutex);
+
+	m_destroy = true;
+
+	if(!m_executor)
+		return;
+
+	if(wait && m_executor->joinable() && m_alive)
+	{
+		m_executor->join();
+	}
+	else
+	{
+		m_executor->detach();
+	}
+
+	delete m_executor;
+	m_executor = nullptr;
+}
+
+bool ThreadBase::Join() const
+{
+	std::lock_guard<std::mutex> lock(m_main_mutex);
+	if(m_executor->joinable() && m_alive && m_executor != nullptr)
+	{
+		m_executor->join();
+		return true;
+	}
+
+	return false;
+}
+
+bool ThreadBase::IsAlive() const
+{
+	std::lock_guard<std::mutex> lock(m_main_mutex);
+	return m_alive;
+}
+
+bool ThreadBase::TestDestroy() const
+{
+	return m_destroy;
+}
+
+thread::thread(const std::string& name, std::function<void()> func) : m_name(name)
+{
+	start(func);
+}
+
+thread::thread(const std::string& name) : m_name(name)
+{
+}
+
+thread::thread()
+{
+}
+
+void thread::start(std::function<void()> func)
+{
+	m_thr = std::thread([this, func]() { NamedThreadBase info(m_name); ::TlsSetValue(g_tls_this_thread, &info); func(); });
+}
+
+void thread::detach()
+{
+	m_thr.detach();
+}
+
+void thread::join()
+{
+	m_thr.join();
+}
+
+bool thread::joinable() const
+{
+	return m_thr.joinable();
 }

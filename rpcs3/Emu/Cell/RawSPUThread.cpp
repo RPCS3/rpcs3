@@ -21,7 +21,7 @@ RawSPUThread::~RawSPUThread()
 		}
 	}
 
-	Close();
+	//Close();
 }
 
 bool RawSPUThread::Read8(const u64 addr, u8* value)

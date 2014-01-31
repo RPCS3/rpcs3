@@ -32,7 +32,6 @@ protected:
 	CPUThreadType m_type;
 	bool m_joinable;
 	bool m_joining;
-	bool m_free_data;
 	bool m_is_step;
 
 	u64 m_stack_addr;
@@ -68,7 +67,7 @@ public:
 	u32 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 
-	std::string GetName() const { return m_name; }
+	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
 	wxString GetFName() const
 	{
 		return 

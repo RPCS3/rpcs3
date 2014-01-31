@@ -7,7 +7,7 @@ CPUThread* GetCurrentCPUThread()
 }
 
 CPUThread::CPUThread(CPUThreadType type)
-	: ThreadBase(true, "CPUThread")
+	: ThreadBase("CPUThread")
 	, m_type(type)
 	, m_stack_size(0)
 	, m_stack_addr(0)
@@ -15,30 +15,24 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_prio(0)
 	, m_sync_wait(false)
 	, m_wait_thread_id(-1)
-	, m_free_data(false)
 	, m_dec(nullptr)
 	, m_is_step(false)
 	, m_is_branch(false)
+	, m_status(Stopped)
 {
 }
 
 CPUThread::~CPUThread()
 {
-	Close();
 }
 
 void CPUThread::Close()
 {
-	if(IsAlive())
-	{
-		m_free_data = true;
-		ThreadBase::Stop(false);
-	}
-	else
-	{
-		delete m_dec;
-		m_dec = nullptr;
-	}
+	ThreadBase::Stop();
+	DoStop();
+
+	delete m_dec;
+	m_dec = nullptr;
 }
 
 void CPUThread::Reset()
@@ -77,7 +71,7 @@ void CPUThread::SetId(const u32 id)
 
 void CPUThread::SetName(const std::string& name)
 {
-	m_name = name;
+	NamedThreadBase::SetThreadName(name);
 }
 
 void CPUThread::Wait(bool wait)
@@ -189,12 +183,10 @@ wxArrayString CPUThread::ErrorToString(const u32 error)
 
 void CPUThread::Run()
 {
-	if(IsRunning()) Stop();
-	if(IsPaused())
-	{
-		Resume();
-		return;
-	}
+	if(!IsStopped())
+		Stop();
+
+	Reset();
 	
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
@@ -244,7 +236,7 @@ void CPUThread::Pause()
 	DoPause();
 	Emu.CheckStatus();
 
-	ThreadBase::Stop(false);
+	ThreadBase::Stop();
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
 #endif
@@ -259,9 +251,15 @@ void CPUThread::Stop()
 #endif
 
 	m_status = Stopped;
-	ThreadBase::Stop(false);
-	Reset();
-	DoStop();
+
+	if(CPUThread* thr = GetCurrentCPUThread())
+	{
+		if(thr->GetId() != GetId())
+			ThreadBase::Stop();
+	}
+	else
+		ThreadBase::Stop();
+
 	Emu.CheckStatus();
 
 #ifndef QT_UI
@@ -275,7 +273,9 @@ void CPUThread::Exec()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 #endif
-	ThreadBase::Start();
+
+	if(IsRunning())
+		ThreadBase::Start();
 }
 
 void CPUThread::ExecOnce()
@@ -285,7 +285,7 @@ void CPUThread::ExecOnce()
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 #endif
 	ThreadBase::Start();
-	if(!ThreadBase::Wait()) while(m_is_step) Sleep(1);
+	ThreadBase::Stop();
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
@@ -294,7 +294,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	//ConLog.Write("%s enter", CPUThread::GetFName());
+	ConLog.Write("%s enter", CPUThread::GetFName());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -354,15 +354,7 @@ void CPUThread::Task()
 	catch(int exitcode)
 	{
 		ConLog.Success("Exit Code: %d", exitcode);
-		return;
 	}
 
-	//ConLog.Write("%s leave", CPUThread::GetFName());
-
-	if(m_free_data)
-	{
-		delete m_dec;
-		m_dec = nullptr;
-		free(this);
-	}
+	ConLog.Write("%s leave", CPUThread::GetFName());
 }

@@ -114,13 +114,16 @@ LogWriter::LogWriter()
 
 void LogWriter::WriteToLog(std::string prefix, std::string value, std::string colour/*, wxColour bgcolour*/)
 {
-	if(ThreadBase* thr = GetCurrentNamedThread())
+	if(!prefix.empty())
 	{
-		prefix = (prefix.empty() ? "" : prefix + " : ") + thr->GetThreadName();
+		if(NamedThreadBase* thr = GetCurrentNamedThread())
+		{
+			prefix += " : " + thr->GetThreadName();
+		}
 	}
 
 	if(m_logfile.IsOpened())
-		m_logfile.Write((prefix.empty() ? wxString(wxEmptyString) : std::string("[" + prefix + "]: ") + value + "\n").c_str());
+		m_logfile.Write((prefix.empty() ? "" : std::string("[" + prefix + "]: ") + value + "\n").c_str());
 
 	if(!ConLogFrame) return;
 
@@ -221,7 +224,7 @@ END_EVENT_TABLE()
 
 LogFrame::LogFrame(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
-	, ThreadBase(false, "LogThread")
+	, ThreadBase("LogThread")
 	, m_log(*new wxListView(this))
 {
 	m_log.InsertColumn(0, wxEmptyString);
@@ -243,8 +246,8 @@ LogFrame::~LogFrame()
 
 bool LogFrame::Close(bool force)
 {
-	Stop();
-	ConLogFrame = NULL;
+	Stop(false);
+	ConLogFrame = nullptr;
 	return wxWindowBase::Close(force);
 }
 
@@ -286,7 +289,7 @@ void LogFrame::Task()
 
 void LogFrame::OnQuit(wxCloseEvent& event)
 {
-	Stop();
-	ConLogFrame = NULL;
+	Stop(false);
+	ConLogFrame = nullptr;
 	event.Skip();
 }

@@ -193,11 +193,8 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
 
-	//read data in another thread (doesn't work correctly):
-	//std::thread t(fsAioRead, fd, aio, xid, func);
-	//t.detach();
-	//read data immediately (actually it should be read in special thread):
-	fsAioRead(fd, aio, xid, func);
+	thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
+	t.detach();
 
 	aio_id = xid;
 

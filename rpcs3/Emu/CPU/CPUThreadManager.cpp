@@ -64,16 +64,7 @@ void CPUThreadManager::RemoveThread(const u32 id)
 #ifndef QT_UI
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, thr);
 #endif
-		if(thr->IsAlive())
-		{
-			//thr->Close();
-		}
-		else
-		{
-			//thr->Close();
-			//delete thr;
-		}
-
+		thr->Close();
 
 		m_threads.RemoveFAt(i);
 		break;
