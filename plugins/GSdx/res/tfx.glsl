@@ -106,6 +106,7 @@ layout(std140, binding = 20) uniform cb20
 };
 
 const float exp_min32 = exp2(-32.0f);
+const float exp_min31 = exp2(-31.0f);
 
 #ifdef SUBROUTINE_GL40
 // Function pointer type
@@ -163,7 +164,7 @@ void texture_coord()
 
 void vs_main()
 {
-    uint z;
+    highp uint z;
     if(VS_BPPZ == 1) // 24
         z = i_z & uint(0xffffff);
     else if(VS_BPPZ == 2) // 16
@@ -175,16 +176,26 @@ void vs_main()
     // example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
     // input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
     // example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
+    vec4 p;
 
-    vec3 p = vec3(i_p, z) - vec3(0.05f, 0.05f, 0.0f);
-    p = p * vec3(VertexScale, exp_min32) - vec3(VertexOffset, 0.0f);
-
-    if(VS_LOGZ == 1)
-    {
-        p.z = log2(1.0f + float(z)) / 32.0f;
+    p.xy = vec2(i_p) - vec2(0.05f, 0.05f);
+    p.xy = p.xy * VertexScale - VertexOffset;
+    p.w = 1.0f;
+#ifdef NV_DEPTH
+    if(VS_LOGZ == 1) {
+        p.z = log2(float(1u+z)) / 32.0f;
+    } else {
+        p.z = float(z) * exp_min32;
     }
+#else
+    if(VS_LOGZ == 1) {
+        p.z = log2(float(1u+z)) / 31.0f - 1.0f;
+    } else {
+        p.z = float(z) * exp_min31 - 1.0f;
+    }
+#endif
 
-    gl_Position = vec4(p, 1.0f); // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
+    gl_Position = p;
 
     texture_coord();
 

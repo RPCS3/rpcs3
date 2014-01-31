@@ -23,8 +23,9 @@
 #include "GSShaderOGL.h"
 #include "GLState.h"
 
-GSShaderOGL::GSShaderOGL(bool debug) :
+GSShaderOGL::GSShaderOGL(bool debug, bool nv_depth) :
 	m_debug_shader(debug),
+	m_nv_depth(nv_depth),
 	m_vs_sub_count(0),
 	m_ps_sub_count(0)
 {
@@ -397,6 +398,10 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 		header += "#define ENABLE_BINDLESS_TEX\n";
 	}
 
+	if (m_nv_depth) {
+		// Specific nvidia extension that seem to help for z fighting
+		header += "#define NV_DEPTH\n";
+	}
 
 #else
 	header = "#version 300 es\n";

@@ -234,8 +234,12 @@ public:
 			switch (layout[i].type) {
 				case GL_UNSIGNED_SHORT:
 				case GL_UNSIGNED_INT:
-					// Rule: when shader use integral (not normalized) you must use gl_VertexAttribIPointer (note the extra I)
-					gl_VertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
+					if (layout[i].normalize) {
+						gl_VertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
+					} else {
+						// Rule: when shader use integral (not normalized) you must use gl_VertexAttribIPointer (note the extra I)
+						gl_VertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
+					}
 					break;
 				default:
 					gl_VertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);

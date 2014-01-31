@@ -120,6 +120,7 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_UniformHandleui64vARB) = GetProcAddress("glUniformHandleui64vARB", true);
 	*(void**)&(gl_ProgramUniformHandleui64vARB) = GetProcAddress("glProgramUniformHandleui64vARB", true);
 
+	*(void**)&(gl_DepthRangedNV) = GetProcAddress("glDepthRangedNV", true);
 
 #endif
 }

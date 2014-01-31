@@ -167,7 +167,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
-	m_shader = new GSShaderOGL(!!theApp.GetConfig("debug_ogl_shader", 1));
+	m_shader = new GSShaderOGL(!!theApp.GetConfig("debug_ogl_shader", 1), !!theApp.GetConfig("GL_NV_Depth", 0));
 
 	gl_GenFramebuffers(1, &m_fbo);
 	gl_GenFramebuffers(1, &m_fbo_read);

@@ -59,6 +59,10 @@ void GSDeviceOGL::CreateTextureFX()
 
 	// Help to debug FS in apitrace
 	m_apitrace = CompilePS(PSSelector());
+
+	if (!!theApp.GetConfig("GL_NV_Depth", 0)) {
+		gl_DepthRangedNV(-1.0f, 1.0f);
+	}
 }
 
 GSDepthStencilOGL* GSDeviceOGL::CreateDepthStencil(OMDepthStencilSelector dssel)

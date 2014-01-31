@@ -25,6 +25,7 @@ class GSShaderOGL {
 	GLuint m_pipeline;
 	hash_map<uint64, GLuint > m_single_prog;
 	const bool m_debug_shader;
+	const bool m_nv_depth;
 	GLuint m_vs_sub_count;
 	GLuint m_ps_sub_count;
 
@@ -46,7 +47,7 @@ class GSShaderOGL {
 	GLuint LinkNewProgram();
 
 	public:
-	GSShaderOGL(bool debug);
+	GSShaderOGL(bool debug, bool nv_depth);
 	~GSShaderOGL();
 
 	void GS(GLuint s);

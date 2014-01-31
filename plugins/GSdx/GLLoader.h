@@ -183,6 +183,8 @@ extern PFNGLMAKETEXTUREHANDLENONRESIDENTARBPROC gl_MakeTextureHandleNonResidentA
 extern PFNGLUNIFORMHANDLEUI64VARBPROC           gl_UniformHandleui64vARB;
 extern PFNGLPROGRAMUNIFORMHANDLEUI64VARBPROC    gl_ProgramUniformHandleui64vARB;
 
+extern PFNGLDEPTHRANGEDNVPROC                   gl_DepthRangedNV;
+
 #else
 #define gl_ActiveTexture glActiveTexture
 #define gl_BlendColor glBlendColor
