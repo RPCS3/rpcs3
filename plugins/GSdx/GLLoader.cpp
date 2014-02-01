@@ -142,6 +142,8 @@ namespace GLLoader {
 	bool found_GL_ARB_shader_image_load_store = false;
 	bool found_GL_ARB_shader_subroutine = false;
 	bool found_GL_ARB_bindless_texture = false; // GL5 GPU?
+	// Surely recent hardware
+	bool found_GL_NV_depth_buffer_float = false;
 
 	// Mandatory for FULL GL (but optional for GLES)
 	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers. Note might be deprecated by bindless_texture
@@ -155,6 +157,8 @@ namespace GLLoader {
 		if (!found) {
 			fprintf(stderr, "INFO: %s is not supported\n", name.c_str());
 			if(mandatory) return false;
+		} else {
+			fprintf(stderr, "INFO: %s is supported\n", name.c_str());
 		}
 
 		std::string opt("override_");
@@ -238,6 +242,7 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
+				if (ext.compare("GL_NV_depth_buffer_float") == 0) found_GL_NV_depth_buffer_float = true;
 #if 0
 				// Erratum: on nvidia implementation, gain is very nice : 42.5 fps => 46.5 fps
 				//
@@ -286,6 +291,8 @@ namespace GLLoader {
 		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");
 		status &= status_and_override(found_GL_ARB_multi_bind,"GL_ARB_multi_bind");
 		status &= status_and_override(found_GL_ARB_bindless_texture,"GL_ARB_bindless_texture");
+
+		status &= status_and_override(found_GL_NV_depth_buffer_float,"GL_NV_depth_buffer_float");
 
 		fprintf(stderr, "\n");
 #endif
