@@ -433,6 +433,19 @@ void GLGSRender::WriteDepthBuffer()
 	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glReadPixels");
 
+  //TODO
+	//buffer rotating
+	static Array<u8> pixels;
+	pixels.SetCount(RSXThread::m_width * RSXThread::m_height);
+	u8* src = (u8*)Memory.VirtualToRealAddr(address);
+
+	for(u32 y=0; y<RSXThread::m_height; ++y)
+	{
+		memcpy(pixels + (RSXThread::m_height - y - 1) * RSXThread::m_width, src + y * RSXThread::m_width, RSXThread::m_width);
+	}
+
+  memcpy(&Memory[address], pixels.GetPtr(), pixels.GetCount());
+
 	GLuint depth_tex;
 	glGenTextures(1, &depth_tex);
 	glBindTexture(GL_TEXTURE_2D, depth_tex);
@@ -1029,6 +1042,12 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
+  if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
+		checkForGlError("glScissor");
+	}
+
 	if(m_read_buffer)
 	{
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
@@ -1072,4 +1091,10 @@ void GLGSRender::Flip()
 
 	if(m_fbo.IsCreated())
 		m_fbo.Bind();
+
+  if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, RSXThread::m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
 }
