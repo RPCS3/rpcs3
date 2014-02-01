@@ -1427,11 +1427,6 @@ void RSXThread::End()
 		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
 	}
 
-	for(uint i=0; i<m_textures_count; ++i)
-	{
-		m_textures[i].m_enabled = false;
-	}
-
 	m_indexed_array.Reset();
 	m_fragment_constants.Clear();
 	m_transform_constants.Clear();

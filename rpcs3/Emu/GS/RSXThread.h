@@ -617,6 +617,11 @@ protected:
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
+
+    for(uint i=0; i<m_textures_count; ++i)
+	  {
+		  m_textures[i].m_enabled = false;
+	  }
 	}
 
 	void Begin(u32 draw_mode);
