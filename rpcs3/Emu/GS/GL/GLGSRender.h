@@ -52,7 +52,7 @@ public:
 		case 1: return GL_REPEAT;
 		case 2: return GL_MIRRORED_REPEAT;
 		case 3: return GL_CLAMP_TO_EDGE;
-		case 4: return GL_TEXTURE_BORDER;
+		case 4: return GL_CLAMP_TO_BORDER;
 		case 5: return GL_CLAMP_TO_EDGE;//GL_CLAMP;
 		//case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 		}
@@ -175,6 +175,8 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
 		}
 		
+    checkForGlError("GLTexture::Init() -> remap");
+
 		static const int gl_tex_zfunc[] =
 		{
 			GL_NEVER,
@@ -191,10 +193,14 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.m_wrapt));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.m_wrapr));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.m_zfunc]);
+
+    checkForGlError("GLTexture::Init() -> parameters1");
 		
 		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.m_bias);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, tex.m_minlod);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, tex.m_maxlod);
+
+    checkForGlError("GLTexture::Init() -> parameters2");
 		
 		static const int gl_tex_filter[] =
 		{
@@ -210,6 +216,9 @@ public:
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.m_min_filter]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.m_mag_filter]);
+
+    checkForGlError("GLTexture::Init() -> filters");
+
 		//Unbind();
 	}
 
