@@ -1656,7 +1656,7 @@ private:
 		{
 			CPU.VPR[vd]._u8[15] = CPU.VPR[va]._u8[15] >> sh;
 
-			for (uint b = 14; ~0; b--)
+			for (uint b = 14; ~b; b--)
 			{
 				CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] >> sh) | (CPU.VPR[va]._u8[b+1] << (8 - sh));
 			}
