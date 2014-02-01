@@ -480,7 +480,7 @@ int cellPamfReaderGetStreamInfo(mem_ptr_t<CellPamfReader> pSelf, u32 pInfo_addr,
 			pInfo->numberOfChannels = pAudio->channels;
 			pInfo->samplingFrequency = CELL_PAMF_FS_48kHz;
 
-			if (pAudio->bps = 0x40)
+			if (pAudio->bps == 0x40)
 				pInfo->bitsPerSample = CELL_PAMF_BIT_LENGTH_16;
 			else
 				//TODO: CELL_PAMF_BIT_LENGTH_24

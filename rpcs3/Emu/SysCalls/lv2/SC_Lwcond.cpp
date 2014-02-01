@@ -44,7 +44,7 @@ int sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond)
 
 int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 {
-	sys_lwcond.Warning("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.GetAddr());
+	sys_lwcond.Log("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.GetAddr());
 
 	if (!lwcond.IsGood()) return CELL_EFAULT;
 	LWCond* lwc;
@@ -58,7 +58,7 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 
 int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 {
-	sys_lwcond.Warning("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.GetAddr());
+	sys_lwcond.Log("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.GetAddr());
 
 	if (!lwcond.IsGood()) return CELL_EFAULT;
 	LWCond* lwc;
@@ -72,7 +72,7 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 
 int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
-	sys_lwcond.Warning("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.GetAddr(), ppu_thread_id);
+	sys_lwcond.Log("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.GetAddr(), ppu_thread_id);
 
 	if (!lwcond.IsGood()) return CELL_EFAULT;
 	LWCond* lwc;
@@ -86,7 +86,7 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 
 int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 {
-	sys_lwcond.Warning("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%llu)", lwcond.GetAddr(), timeout);
+	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%llu)", lwcond.GetAddr(), timeout);
 
 	if (!lwcond.IsGood()) return CELL_EFAULT;
 	LWCond* lwc;

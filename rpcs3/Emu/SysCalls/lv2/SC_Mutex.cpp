@@ -6,7 +6,7 @@ SysCallBase sys_mtx("sys_mutex");
 
 int sys_mutex_create(u32 mutex_id_addr, u32 attr_addr)
 {
-	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)",
+	sys_mtx.Warning("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)",
 		mutex_id_addr, attr_addr);
 
 	if(!Memory.IsGoodAddr(mutex_id_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;

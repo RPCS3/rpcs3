@@ -52,7 +52,7 @@ int sys_rwlock_destroy(u32 rw_lock_id)
 
 int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -86,7 +86,7 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 int sys_rwlock_tryrlock(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -98,7 +98,7 @@ int sys_rwlock_tryrlock(u32 rw_lock_id)
 
 int sys_rwlock_runlock(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -110,7 +110,7 @@ int sys_rwlock_runlock(u32 rw_lock_id)
 
 int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -146,7 +146,7 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 
 int sys_rwlock_trywlock(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -161,7 +161,7 @@ int sys_rwlock_trywlock(u32 rw_lock_id)
 
 int sys_rwlock_wunlock(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;

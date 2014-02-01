@@ -68,7 +68,7 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 {
-	sc_lwmutex.Warning("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
+	sc_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
@@ -107,7 +107,7 @@ int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 
 int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	sc_lwmutex.Warning("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+	sc_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
@@ -118,7 +118,7 @@ int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	sc_lwmutex.Warning("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+	sc_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 

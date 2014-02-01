@@ -460,6 +460,11 @@ int cellSysutilCheckCallback()
 	cellSysutil.Log("cellSysutilCheckCallback()");
 	Emu.GetCallbackManager().m_exit_callback.Check();
 
+	CPUThread& thr = Emu.GetCallbackThread();
+
+	while(Emu.IsRunning() && thr.IsAlive())
+		Sleep(1);
+
 	return CELL_OK;
 }
 

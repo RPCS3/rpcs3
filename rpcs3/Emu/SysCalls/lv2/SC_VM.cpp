@@ -108,7 +108,7 @@ int sys_vm_return_memory(u32 addr, u32 size)
 	}
 
 	// The memory size to return should not be superior to the virtual size in use minus 1MB.
-	if((current_ct->size - size - 0x100000) < 0)
+	if(current_ct->size < (size + 0x100000))
 	{
 		return CELL_EBUSY;
 	}
@@ -130,7 +130,7 @@ int sys_vm_lock(u32 addr, u32 size)
 	}
 
 	// The memory size to return should not be superior to the virtual size to lock minus 1MB.
-	if((current_ct->size - size - 0x100000) < 0)
+	if(current_ct->size < (size + 0x100000))
 	{
 		return CELL_EBUSY;
 	}

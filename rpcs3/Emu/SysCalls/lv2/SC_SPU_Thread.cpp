@@ -104,7 +104,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_ESRCH;
 	}
 
-	if(!thread.IsGood() || !img.IsGood() || !attr.IsGood() || !attr.IsGood())
+	if(!thread.IsGood() || !img.IsGood() || !attr.IsGood() || !arg.IsGood())
 	{
 		return CELL_EFAULT;
 	}
