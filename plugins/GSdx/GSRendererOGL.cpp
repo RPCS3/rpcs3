@@ -210,8 +210,10 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
 		}
+
 		// Create an r32ui image that will containt primitive ID
-		dev->InitPrimDateTexture(rtsize.x, rtsize.y);
+		if (UserHacks_DateGL4 && GLLoader::found_GL_ARB_shader_image_load_store)
+			dev->InitPrimDateTexture(rtsize.x, rtsize.y);
 	}
 
 	//
