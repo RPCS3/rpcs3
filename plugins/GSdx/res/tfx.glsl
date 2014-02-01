@@ -1013,7 +1013,7 @@ void colclip(inout vec4 c)
 }
 #endif
 
-void fog(vec4 c, float f)
+void fog(inout vec4 c, float f)
 {
     if(PS_FOG != 0)
     {

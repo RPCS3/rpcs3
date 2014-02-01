@@ -1572,7 +1572,7 @@ static const char* tfx_glsl =
 	"}\n"
 	"#endif\n"
 	"\n"
-	"void fog(vec4 c, float f)\n"
+	"void fog(inout vec4 c, float f)\n"
 	"{\n"
 	"    if(PS_FOG != 0)\n"
 	"    {\n"
