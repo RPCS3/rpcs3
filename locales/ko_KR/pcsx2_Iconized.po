@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2014-01-14 19:47+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull,p695091 <99skull@gmail.com>\n"
@@ -51,7 +51,7 @@ msgstr ""
 "오류는 작거나 비활성화된 교체 파일, 또는 메모리를 많이 점유하는 다른 프로그램"
 "에서 가상 메모리 자원 부족으로 인해 발생할 수 있습니다. "
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."

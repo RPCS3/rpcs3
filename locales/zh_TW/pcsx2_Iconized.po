@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2011-09-09 11:52+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -48,7 +48,7 @@ msgstr ""
 "或由另一個獨占大量記憶體的程式引起。\n"
 "您也可以嘗試減少 PCSX2 全部反編譯裝置的預設快取大小，位於 Host 設定。"
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -52,7 +52,7 @@ msgstr ""
 "หรือ swapfile ไม่ถูกใช้งาน หรือเพราะโปรแกรมอื่นใช้หน่วยความจำมาก \n"
 "คุณสามารถลองลดขนาดแค็ชสำหรับรีคอมไพเลอร์ PCSX2 ทั้งหมด ซึ่งพบได้ที่การตั้งค่าโฮสต์"
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
@@ -145,7 +145,7 @@ msgstr ""
 "คุณจะได้รับตัวเลือกในการนำเข้าหรือเขียนทับพวกมัน"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "This wizard will help guide you through configuring plugins, memory cards, "
 "and BIOS.  It is recommended if this is your first time installing %s that "

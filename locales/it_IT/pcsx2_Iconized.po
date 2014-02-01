@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.2.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-31 18:12+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2013-12-31 16:22+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: Leucos <http://forums.pcsx2.net/User-Leucos>\n"
@@ -49,7 +49,7 @@ msgstr ""
 "di memoria virtuale insufficiente, come un file di scambio troppo piccolo o "
 "disattivato, o da un altro programma che ha arraffato molta memoria."
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."

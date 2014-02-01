@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-30 20:26+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2012-09-09 20:41+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -1186,7 +1186,7 @@ msgstr "Ukončit Aplikaci"
 msgid "GS Output is Disabled!"
 msgstr "Výstup GS je Zakázán!"
 
-#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:412
 msgid "Save state"
 msgstr "Uložit stav"
 
@@ -1194,7 +1194,7 @@ msgstr "Uložit stav"
 msgid "Saves the virtual machine state to the current slot."
 msgstr "Uloží stav virtuálního stroje do současné pozice."
 
-#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:411
 msgid "Load state"
 msgstr "Nahrát stav"
 
@@ -1295,248 +1295,244 @@ msgid "&Debug"
 msgstr "&Ladění"
 
 #: pcsx2/gui/MainFrame.cpp:355
-#, c-format
-msgid "%s  %d.%d.%d %s"
+#, fuzzy, c-format
+msgid "%s  %d.%d.%d"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:356
-msgid "(modded)"
-msgstr "(pozměněno)"
-
-#: pcsx2/gui/MainFrame.cpp:362
+#: pcsx2/gui/MainFrame.cpp:360
 #, c-format
 msgid "%s  %d.%d.%d.%d%s (svn)  %s"
 msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
-#: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
-#: pcsx2/gui/MainFrame.cpp:407
+#: pcsx2/gui/MainFrame.cpp:397 pcsx2/gui/MainFrame.cpp:399
+#: pcsx2/gui/MainFrame.cpp:405
 msgid "Initializing..."
 msgstr "Zavádím..."
 
-#: pcsx2/gui/MainFrame.cpp:403
+#: pcsx2/gui/MainFrame.cpp:401
 msgid "Run ELF..."
 msgstr "Spustit ELF..."
 
-#: pcsx2/gui/MainFrame.cpp:404
+#: pcsx2/gui/MainFrame.cpp:402
 msgid "For running raw PS2 binaries directly"
 msgstr "Pro přímé spuštění souborů PS2"
 
-#: pcsx2/gui/MainFrame.cpp:416
+#: pcsx2/gui/MainFrame.cpp:414
 msgid "Backup before save"
 msgstr "Před uložením zálohovat"
 
-#: pcsx2/gui/MainFrame.cpp:421
+#: pcsx2/gui/MainFrame.cpp:419
 msgid "Automatic Gamefixes"
 msgstr "Automatické Herní Záplaty"
 
-#: pcsx2/gui/MainFrame.cpp:422
+#: pcsx2/gui/MainFrame.cpp:420
 msgid "Automatically applies needed Gamefixes to known problematic games"
 msgstr "Automaticky použije potřebné Herní Záplaty pro známé problematické hry"
 
-#: pcsx2/gui/MainFrame.cpp:424
+#: pcsx2/gui/MainFrame.cpp:422
 msgid "Enable Cheats"
 msgstr "Povolit Cheaty"
 
-#: pcsx2/gui/MainFrame.cpp:427
+#: pcsx2/gui/MainFrame.cpp:425
 msgid "Enable Widescreen Patches"
 msgstr "Povolit Záplaty"
 
-#: pcsx2/gui/MainFrame.cpp:430
+#: pcsx2/gui/MainFrame.cpp:428
 msgid "Enable Host Filesystem"
 msgstr "Povolit Systém Souborů Hostitele"
 
-#: pcsx2/gui/MainFrame.cpp:435
+#: pcsx2/gui/MainFrame.cpp:433
 msgid "Shutdown"
 msgstr "Vypnout"
 
-#: pcsx2/gui/MainFrame.cpp:436
+#: pcsx2/gui/MainFrame.cpp:434
 msgid "Wipes all internal VM states and shuts down plugins."
 msgstr "Smaže všechny vnitřní stavy VS a vypne zásuvné moduly."
 
-#: pcsx2/gui/MainFrame.cpp:438
+#: pcsx2/gui/MainFrame.cpp:436
 msgid "Exit"
 msgstr "Ukončit"
 
-#: pcsx2/gui/MainFrame.cpp:439
+#: pcsx2/gui/MainFrame.cpp:437
 #, c-format
 msgid "Closing %s may be hazardous to your health"
 msgstr "Zavření %s může ohrozit Vaše zdraví"
 
-#: pcsx2/gui/MainFrame.cpp:446
+#: pcsx2/gui/MainFrame.cpp:444
 msgid "Iso Selector"
 msgstr "Výběr Iso"
 
-#: pcsx2/gui/MainFrame.cpp:447
+#: pcsx2/gui/MainFrame.cpp:445
 msgid "Plugin Menu"
 msgstr "Menu Zásuvného Modulu"
 
-#: pcsx2/gui/MainFrame.cpp:450
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Iso"
 msgstr "ISO"
 
-#: pcsx2/gui/MainFrame.cpp:450
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Makes the specified ISO image the CDVD source."
 msgstr "Udělá z určeného obrazu ISO zdroj CDVD."
 
-#: pcsx2/gui/MainFrame.cpp:451
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Plugin"
 msgstr "Zásuvný modul"
 
-#: pcsx2/gui/MainFrame.cpp:451
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Uses an external plugin as the CDVD source."
 msgstr "Používá externí zásuvný modul jako zdroj CDVD."
 
-#: pcsx2/gui/MainFrame.cpp:452
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "No disc"
 msgstr "Žádný disk"
 
-#: pcsx2/gui/MainFrame.cpp:452
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
 msgstr "Toto použijte pro spuštění do nastavení BIOSu Vašeho virtuálního PS2."
 
-#: pcsx2/gui/MainFrame.cpp:460
+#: pcsx2/gui/MainFrame.cpp:458
 msgid "Emulation &Settings"
 msgstr "&Nastavení Emulace"
 
-#: pcsx2/gui/MainFrame.cpp:461
+#: pcsx2/gui/MainFrame.cpp:459
 msgid "&Memory cards"
 msgstr "&Paměťové karty"
 
-#: pcsx2/gui/MainFrame.cpp:462
+#: pcsx2/gui/MainFrame.cpp:460
 msgid "&Plugin/BIOS Selector"
 msgstr "&Výběr Zásuvných Modulů/BIOSu"
 
-#: pcsx2/gui/MainFrame.cpp:463 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
+#: pcsx2/gui/MainFrame.cpp:461 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "Editor Databáze Her"
 
-#: pcsx2/gui/MainFrame.cpp:469
+#: pcsx2/gui/MainFrame.cpp:467
 msgid "&Video (GS)"
 msgstr "&Obraz (GS)"
 
-#: pcsx2/gui/MainFrame.cpp:470
+#: pcsx2/gui/MainFrame.cpp:468
 msgid "&Audio (SPU2)"
 msgstr "&Zvuk (SPU2)"
 
-#: pcsx2/gui/MainFrame.cpp:471
+#: pcsx2/gui/MainFrame.cpp:469
 msgid "&Controllers (PAD)"
 msgstr "&Ovladače (PAD)"
 
-#: pcsx2/gui/MainFrame.cpp:472
+#: pcsx2/gui/MainFrame.cpp:470
 msgid "Dev9"
 msgstr "Dev9"
 
-#: pcsx2/gui/MainFrame.cpp:473
+#: pcsx2/gui/MainFrame.cpp:471
 msgid "USB"
 msgstr "USB"
 
-#: pcsx2/gui/MainFrame.cpp:474
+#: pcsx2/gui/MainFrame.cpp:472
 msgid "Firewire"
 msgstr "Firewire"
 
-#: pcsx2/gui/MainFrame.cpp:480
+#: pcsx2/gui/MainFrame.cpp:478
 msgid "Multitap 1"
 msgstr "Multitap 1"
 
-#: pcsx2/gui/MainFrame.cpp:481
+#: pcsx2/gui/MainFrame.cpp:479
 msgid "Multitap 2"
 msgstr "Multitap 2"
 
-#: pcsx2/gui/MainFrame.cpp:484
+#: pcsx2/gui/MainFrame.cpp:482
 msgid "Clear all settings..."
 msgstr "Vyčistit všechna nastavení..."
 
-#: pcsx2/gui/MainFrame.cpp:485
+#: pcsx2/gui/MainFrame.cpp:483
 #, c-format
 msgid "Clears all %s settings and re-runs the startup wizard."
 msgstr "Vyčistí všechna nastavení %s a znovu spustí průvodce při spuštění."
 
-#: pcsx2/gui/MainFrame.cpp:507
+#: pcsx2/gui/MainFrame.cpp:505
 msgid "About..."
 msgstr "O Programu..."
 
-#: pcsx2/gui/MainFrame.cpp:515
+#: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "Záznam..."
 
-#: pcsx2/gui/MainFrame.cpp:592
+#: pcsx2/gui/MainFrame.cpp:590
 msgid "Pause"
 msgstr "Pozastavit"
 
-#: pcsx2/gui/MainFrame.cpp:593
+#: pcsx2/gui/MainFrame.cpp:591
 msgid "Safely pauses emulation and preserves the PS2 state."
 msgstr "Bezpečně pozastaví emulaci a uchová stav PS2."
 
-#: pcsx2/gui/MainFrame.cpp:600
+#: pcsx2/gui/MainFrame.cpp:598
 msgid "Resume"
 msgstr "Pokračovat"
 
-#: pcsx2/gui/MainFrame.cpp:601
+#: pcsx2/gui/MainFrame.cpp:599
 msgid "Resumes the suspended emulation state."
 msgstr "Obnoví pozastavený stav emulace."
 
-#: pcsx2/gui/MainFrame.cpp:605
+#: pcsx2/gui/MainFrame.cpp:603
 msgid "Pause/Resume"
 msgstr "Pozastavit/Pokračovat"
 
-#: pcsx2/gui/MainFrame.cpp:606
+#: pcsx2/gui/MainFrame.cpp:604
 msgid "No emulation state is active; cannot suspend or resume."
 msgstr "Žádný stav emulace není aktivní; nelze pozastavit nebo pokračovat."
 
-#: pcsx2/gui/MainFrame.cpp:615
+#: pcsx2/gui/MainFrame.cpp:613
 msgid "Restart"
 msgstr "restartovat"
 
-#: pcsx2/gui/MainFrame.cpp:616
+#: pcsx2/gui/MainFrame.cpp:614
 msgid "Simulates hardware reset of the PS2 virtual machine."
 msgstr "Napodobí tvrdý reset virtuálního stroje PS2."
 
-#: pcsx2/gui/MainFrame.cpp:621
+#: pcsx2/gui/MainFrame.cpp:619
 msgid "No emulation state is active; boot something first."
 msgstr "Není aktivní žádný stav emulace; něco nejdříve zaveďte."
 
-#: pcsx2/gui/MainFrame.cpp:629
+#: pcsx2/gui/MainFrame.cpp:627
 msgid "Reboot CDVD (full)"
 msgstr "Restartovat CDVD (úplně)"
 
-#: pcsx2/gui/MainFrame.cpp:630
+#: pcsx2/gui/MainFrame.cpp:628
 msgid "Hard reset of the active VM."
 msgstr "Tvrdý reset aktivního VS."
 
-#: pcsx2/gui/MainFrame.cpp:634
+#: pcsx2/gui/MainFrame.cpp:632
 msgid "Boot CDVD (full)"
 msgstr "Zavést CDVD (úplně)"
 
-#: pcsx2/gui/MainFrame.cpp:635
+#: pcsx2/gui/MainFrame.cpp:633
 msgid "Boot the VM using the current DVD or Iso source media"
 msgstr "Zavést VS použitím současného zdrojového média DVD nebo Iso"
 
-#: pcsx2/gui/MainFrame.cpp:643
+#: pcsx2/gui/MainFrame.cpp:641
 msgid "Reboot CDVD (fast)"
 msgstr "Restartovat CDVD (rychle)"
 
-#: pcsx2/gui/MainFrame.cpp:644
+#: pcsx2/gui/MainFrame.cpp:642
 msgid "Reboot using fast BOOT (skips splash screens)"
 msgstr "Restartovat pomocí rychlého ZAVEDENÍ (přeskočí úvodní obrazovky)"
 
-#: pcsx2/gui/MainFrame.cpp:648
+#: pcsx2/gui/MainFrame.cpp:646
 msgid "Boot CDVD (fast)"
 msgstr "Zavést CDVD (rychle)"
 
-#: pcsx2/gui/MainFrame.cpp:649
+#: pcsx2/gui/MainFrame.cpp:647
 msgid "Use fast boot to skip PS2 startup and splash screens"
 msgstr ""
 "Použít rychlé zavedení pro přeskočení spouštěcích a úvodních obrazovek PS2"
 
-#: pcsx2/gui/MainFrame.cpp:711 pcsx2/gui/MainFrame.cpp:746
+#: pcsx2/gui/MainFrame.cpp:709 pcsx2/gui/MainFrame.cpp:744
 msgid "No plugin loaded"
 msgstr "Nejsou načteny žádné zásuvné moduly"
 
-#: pcsx2/gui/MainFrame.cpp:716
+#: pcsx2/gui/MainFrame.cpp:714
 msgid "Core GS Settings..."
 msgstr "Nastavení Jádra GS..."
 
-#: pcsx2/gui/MainFrame.cpp:717
+#: pcsx2/gui/MainFrame.cpp:715
 msgid ""
 "Modify hardware emulation settings regulated by the PCSX2 core virtual "
 "machine."
@@ -1544,19 +1540,19 @@ msgstr ""
 "Změnit nastavení emulace hardwaru, regulované jádrem virtuálního stroje "
 "PCSX2."
 
-#: pcsx2/gui/MainFrame.cpp:719
+#: pcsx2/gui/MainFrame.cpp:717
 msgid "Window Settings..."
 msgstr "Nastavení Okna..."
 
-#: pcsx2/gui/MainFrame.cpp:720
+#: pcsx2/gui/MainFrame.cpp:718
 msgid "Modify window and appearance options, including aspect ratio."
 msgstr "Změnit nastavení okna a vzhledu, zahrnující i poměr stran."
 
-#: pcsx2/gui/MainFrame.cpp:727
+#: pcsx2/gui/MainFrame.cpp:725
 msgid "Plugin Settings..."
 msgstr "Nastavení Zásuvného Modulu..."
 
-#: pcsx2/gui/MainFrame.cpp:728
+#: pcsx2/gui/MainFrame.cpp:726
 #, c-format
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "Otevře dialogové okno pokročilého nastavení zásuvného modulu %s."
@@ -2676,6 +2672,9 @@ msgid ""
 msgstr ""
 "Rozšíření %s nenalezeno. mikroVJ vyžaduje, aby hostitelský procesor měl "
 "rozšíření MMX, SSE, a SSE2."
+
+#~ msgid "(modded)"
+#~ msgstr "(pozměněno)"
 
 #~ msgid ""
 #~ "Cannot load this savestate.  The state is from an incompatible edition of "

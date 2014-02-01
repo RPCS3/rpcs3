@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2012-10-03 22:42+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
@@ -47,7 +47,7 @@ msgstr ""
 "重编译器无法保留内部缓存所需的连续内存空间。此错误可能是由虚拟内存资源不足引"
 "起，如交换文件过小或未使用交换文件、某个其它程序正占用过大内存。"
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."

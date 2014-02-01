@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-12-15 13:24+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2014-01-13 10:02+0200\n"
 "Last-Translator: Ceyhun Özgöç <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -52,7 +52,7 @@ msgstr ""
 "bırakılması nedeniyle düşük sanal bellek miktarı olan bilgisayarlarda veya "
 "başka bir programın hafızanın tamamı kullanması nedeniyle olur."
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."

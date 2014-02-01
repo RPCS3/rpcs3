@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.1.0 (and later)\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-01-24 18:44+0100\n"
+"POT-Creation-Date: 2014-02-01 18:19+0100\n"
 "PO-Revision-Date: 2014-01-13 21:35+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: http://forums.pcsx2.net/Thread-Swedish-GUI-translation-for-"
@@ -52,7 +52,7 @@ msgstr ""
 " spärrad växlingsfil, eller av att ett annat program tar för sig mycket "
 "minne."
 
-#: pcsx2/System.cpp:342
+#: pcsx2/System.cpp:350
 msgid ""
 "PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
 "out some memory hogging background tasks and try again."
