@@ -50,7 +50,7 @@ class RawSPUThread
 
 public:
 	RawSPUThread(u32 index, CPUThreadType type = CPU_THREAD_RAW_SPU);
-	~RawSPUThread();
+	virtual ~RawSPUThread();
 
 	virtual bool Read8(const u64 addr, u8* value) override;
 	virtual bool Read16(const u64 addr, u16* value) override;

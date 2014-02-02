@@ -1,29 +1,11 @@
 #include "stdafx.h"
 #include "Thread.h"
 
-static DWORD g_tls_this_thread = 0xFFFFFFFF;
-
-struct __init_tls
-{
-	//NamedThreadBase m_main_thr;
-
-	__init_tls()
-	{
-		g_tls_this_thread = ::TlsAlloc();
-		//m_main_thr.SetThreadName("Main Thread");
-		//::TlsSetValue(g_tls_this_thread, &m_main_thr);
-		::TlsSetValue(g_tls_this_thread, nullptr);
-	}
-
-	~__init_tls()
-	{
-		::TlsFree(g_tls_this_thread);
-	}
-} _init_tls;
+__declspec(thread) NamedThreadBase* g_tls_this_thread = nullptr;
 
 NamedThreadBase* GetCurrentNamedThread()
 {
-	return (NamedThreadBase*)::TlsGetValue(g_tls_this_thread);
+	return g_tls_this_thread;
 }
 
 std::string NamedThreadBase::GetThreadName() const
@@ -62,7 +44,7 @@ void ThreadBase::Start()
 	m_executor = new std::thread(
 		[this]()
 		{
-			::TlsSetValue(g_tls_this_thread, this);
+			g_tls_this_thread = this;
 
 			Task();
 
@@ -130,7 +112,7 @@ thread::thread()
 
 void thread::start(std::function<void()> func)
 {
-	m_thr = std::thread([this, func]() { NamedThreadBase info(m_name); ::TlsSetValue(g_tls_this_thread, &info); func(); });
+	m_thr = std::thread([this, func]() { NamedThreadBase info(m_name); g_tls_this_thread = &info; func(); });
 }
 
 void thread::detach()

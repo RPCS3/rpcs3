@@ -698,7 +698,7 @@ public:
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
-	~SPUThread();
+	virtual ~SPUThread();
 
 	virtual wxString RegsToString()
 	{
