@@ -341,7 +341,7 @@ public:
 
 	u64 Alloc(const u32 size, const u32 align)
 	{
-		return UserMemory->Alloc(AlignAddr(size, align));
+		return UserMemory->AllocAlign(size, align);
 	}
 
 	bool Free(const u64 addr)

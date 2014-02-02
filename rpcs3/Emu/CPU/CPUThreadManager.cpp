@@ -76,6 +76,8 @@ void CPUThreadManager::RemoveThread(const u32 id)
 
 s32 CPUThreadManager::GetThreadNumById(CPUThreadType type, u32 id)
 {
+	std::lock_guard<std::mutex> lock(m_mtx_thread);
+
 	s32 num = 0;
 
 	for(u32 i=0; i<m_threads.GetCount(); ++i)
@@ -89,16 +91,17 @@ s32 CPUThreadManager::GetThreadNumById(CPUThreadType type, u32 id)
 
 CPUThread* CPUThreadManager::GetThread(u32 id)
 {
-	for(u32 i=0; i<m_threads.GetCount(); ++i)
-	{
-		if(m_threads[i].GetId() == id) return &m_threads[i];
-	}
+	CPUThread* res;
 
-	return nullptr;
+	Emu.GetIdManager().GetIDData(id, res);
+
+	return res;
 }
 
 void CPUThreadManager::Exec()
 {
+	std::lock_guard<std::mutex> lock(m_mtx_thread);
+
 	for(u32 i=0; i<m_threads.GetCount(); ++i)
 	{
 		m_threads[i].Exec();

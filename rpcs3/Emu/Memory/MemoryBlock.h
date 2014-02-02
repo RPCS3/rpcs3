@@ -1,5 +1,7 @@
 #pragma once
 
+#define PAGE_4K(x) (x + 4095) & ~(4095)
+
 struct MemInfo
 {
 	u64 addr;
@@ -21,8 +23,8 @@ struct MemBlockInfo : public MemInfo
 	void* mem;
 
 	MemBlockInfo(u64 _addr, u32 _size)
-		: MemInfo(_addr, _size)
-		, mem(malloc(_size))
+		: MemInfo(_addr, PAGE_4K(_size))
+		, mem(_aligned_malloc(PAGE_4K(_size), 128))
 	{
 		if(!mem)
 		{
@@ -35,7 +37,7 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		free(mem);
+		_aligned_free(mem);
 		mem = nullptr;
 	}
 };
@@ -120,8 +122,8 @@ public:
 	u8* GetMem() const { return mem; }
 	virtual u8* GetMem(u64 addr) const { return mem + addr; }
 
-	virtual bool Alloc(u64 addr, u32 size) { return false; }
-	virtual u64 Alloc(u32 size) { return 0; }
+	virtual bool AllocFixed(u64 addr, u32 size) { return false; }
+	virtual u64 AllocAlign(u32 size, u32 align = 0) { return 0; }
 	virtual bool Alloc() { return false; }
 	virtual bool Free(u64 addr) { return false; }
 	virtual bool Lock(u64 addr, u32 size) { return false; }
@@ -190,8 +192,11 @@ class NullMemoryBlock : public MemoryBlock
 template<typename PT>
 class DynamicMemoryBlockBase : public PT
 {
-	Array<MemBlockInfo> m_used_mem;
-	Array<MemBlockInfo> m_locked_mem;
+	mutable std::mutex m_lock;
+	Array<MemBlockInfo> m_allocated; // allocation info
+	Array<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
+	Array<u8*> m_locked; // locked pages should be moved here
+	
 	u32 m_max_size;
 
 public:
@@ -209,8 +214,8 @@ public:
 
 	virtual void Delete();
 
-	virtual bool Alloc(u64 addr, u32 size);
-	virtual u64 Alloc(u32 size);
+	virtual bool AllocFixed(u64 addr, u32 size);
+	virtual u64 AllocAlign(u32 size, u32 align = 0);
 	virtual bool Alloc();
 	virtual bool Free(u64 addr);
 	virtual bool Lock(u64 addr, u32 size);
@@ -219,8 +224,7 @@ public:
 	virtual u8* GetMem(u64 addr) const;
 
 private:
-	void AppendUsedMem(u64 addr, u32 size);
-	void AppendLockedMem(u64 addr, u32 size);
+	void AppendMem(u64 addr, u32 size);
 };
 
 class VirtualMemoryBlock : public MemoryBlock

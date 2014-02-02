@@ -305,7 +305,7 @@ void Emulator::Load()
 		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
 		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
-		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
+		Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
 	break;
 
@@ -314,12 +314,12 @@ void Emulator::Load()
 		m_ppu_callback_thr = &GetCPU().AddThread(CPU_THREAD_PPU);
 
 		thread.SetEntry(l.GetEntry());
-		Memory.StackMem.Alloc(0x1000);
+		Memory.StackMem.AllocAlign(0x1000);
 		thread.InitStack();
 		thread.AddArgv(m_elf_path);
 		//thread.AddArgv("-emu");
 
-		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
+		m_rsx_callback = Memory.MainMem.AllocAlign(4 * 4) + 4;
 		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
 
 		mem32_ptr_t callback_data(m_rsx_callback);
@@ -327,7 +327,7 @@ void Emulator::Load()
 		callback_data += SC(2);
 		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 4);
+		m_ppu_thr_exit = Memory.MainMem.AllocAlign(4 * 4);
 
 		mem32_ptr_t ppu_thr_exit_data(m_ppu_thr_exit);
 		ppu_thr_exit_data += ADDI(3, 0, 0);

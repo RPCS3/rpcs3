@@ -181,9 +181,9 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			switch(machine)
 			{
-			case MACHINE_SPU: Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
-			case MACHINE_MIPS: Memory.PSPMemory.RAM.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
-			case MACHINE_ARM: Memory.PSVMemory.RAM.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_SPU: Memory.MainMem.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_MIPS: Memory.PSPMemory.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_ARM: Memory.PSVMemory.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
 
 			default:
 				continue;

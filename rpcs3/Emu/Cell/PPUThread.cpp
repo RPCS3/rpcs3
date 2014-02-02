@@ -68,14 +68,16 @@ void PPUThread::InitRegs()
 
 	SetPc(pc);
 
-	const s32 thread_num = Emu.GetCPU().GetThreadNumById(GetType(), GetId());
+	/*
+	const s32 thread_num = Emu.GetCPU().GetThread NumById(GetType(), GetId());
 
 	if(thread_num < 0)
 	{
-		ConLog.Error("GetThreadNumById failed.");
+		ConLog.Error("GetThread NumById failed.");
 		Emu.Pause();
 		return;
 	}
+	*/
 
 	/*
 	const s32 tls_size = Emu.GetTLSFilesz() * thread_num;
@@ -120,7 +122,7 @@ void PPUThread::InitRegs()
 		GPR[6] = m_args[3];
 	}
 
-	u32 prx_mem = Memory.PRXMem.Alloc(0x10000);
+	u32 prx_mem = Memory.PRXMem.AllocAlign(0x10000);
 	Memory.Write64(prx_mem, 0xDEADBEEFABADCAFE);
 
 	GPR[0] = pc;

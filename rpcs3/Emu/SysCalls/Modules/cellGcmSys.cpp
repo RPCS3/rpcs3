@@ -63,7 +63,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	{
 		local_size = 0xf900000; //TODO
 		local_addr = Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.Alloc(local_size);
+		Memory.RSXFBMem.AllocAlign(local_size);
 	}
 
 	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -78,7 +78,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	current_config.coreFrequency = re32(500000000);
 
 	InitOffsetTable();
-	Memory.RSXCMDMem.Alloc(cmdSize);
+	Memory.RSXCMDMem.AllocAlign(cmdSize);
 	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
 	cellGcmMapEaIoAddress(ioAddress, 0, ioSize);
 
@@ -89,7 +89,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	current_context.current = current_context.begin;
 	current_context.callback = re32(Emu.GetRSXCallback() - 4);
 
-	gcm_info.context_addr = Memory.MainMem.Alloc(0x1000);
+	gcm_info.context_addr = Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	Memory.WriteData(gcm_info.context_addr, current_context);
@@ -682,7 +682,7 @@ int32_t cellGcmMapLocalMemory(u64 address, u64 size)
 	{
 		local_size = 0xf900000; //TODO
 		local_addr = Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.Alloc(local_size);
+		Memory.RSXFBMem.AllocAlign(local_size);
 		Memory.Write32(address, local_addr);
 		Memory.Write32(size, local_size);
 	}

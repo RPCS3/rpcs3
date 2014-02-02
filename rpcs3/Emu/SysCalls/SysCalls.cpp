@@ -100,7 +100,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, bind_func(sys_spu_thread_group_join), null_func, //179
 	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, bind_func(sys_spu_thread_write_snr), //184
 	null_func, null_func, bind_func(sys_spu_thread_set_spu_cfg), bind_func(sys_spu_thread_get_spu_cfg), null_func, //189
-	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, null_func, null_func, //194
+	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, bind_func(sys_spu_thread_bind_queue), null_func, //194
 	null_func, null_func, null_func, null_func, null_func, //199
 	null_func, null_func, null_func, null_func, null_func, //204
 	null_func, null_func, null_func, null_func, null_func, //209

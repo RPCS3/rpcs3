@@ -40,7 +40,7 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 	ELFLoader l(stream);
 	l.LoadInfo();
 	const u32 alloc_size = 256 * 1024 /*0x1000000 - stream.GetSize()*/;
-	u32 spu_offset = Memory.MainMem.Alloc(alloc_size);
+	u32 spu_offset = Memory.MainMem.AllocAlign(alloc_size);
 	l.LoadData(spu_offset);
 	spu_ep = l.GetEntry();
 	return spu_offset;
@@ -133,7 +133,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//copy SPU image:
-	u32 spu_offset = Memory.MainMem.Alloc(256 * 1024);
+	u32 spu_offset = Memory.MainMem.AllocAlign(256 * 1024);
 	memcpy(Memory + spu_offset, Memory + (u32)img->segs_addr, 256 * 1024);
 	//initialize from new place:
 	new_thread.SetOffset(spu_offset);
@@ -535,5 +535,12 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 			}
 		}
 	}
+	return CELL_OK;
+}
+
+int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
+{
+	sc_spu.Warning("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
+
 	return CELL_OK;
 }

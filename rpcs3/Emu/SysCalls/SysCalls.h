@@ -293,6 +293,7 @@ extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
+extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4);
 
 //sys_spu
 extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
@@ -312,6 +313,7 @@ extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
 extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
 extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
+extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
 
 //sys_time
 extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);
