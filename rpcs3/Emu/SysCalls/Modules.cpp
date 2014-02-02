@@ -204,21 +204,21 @@ void UnloadModules()
 	g_modules_funcs_list.Clear();
 }
 
-Module* GetModuleByName(const wxString& name)
+Module* GetModuleByName(const std::string& name)
 {
 	for(u32 i=0; i<g_max_module_id; ++i)
 	{
-		if(g_modules[0][i] && g_modules[0][i]->GetName().Cmp(name) == 0)
+		if(g_modules[0][i] && g_modules[0][i]->GetName() == name)
 		{
 			return g_modules[0][i];
 		}
 
-		if(g_modules[1][i] && g_modules[1][i]->GetName().Cmp(name) == 0)
+		if(g_modules[1][i] && g_modules[1][i]->GetName() == name)
 		{
 			return g_modules[1][i];
 		}
 
-		if(g_modules[2][i] && g_modules[2][i]->GetName().Cmp(name) == 0)
+		if(g_modules[2][i] && g_modules[2][i]->GetName() == name)
 		{
 			return g_modules[2][i];
 		}
@@ -396,12 +396,12 @@ u16 Module::GetID() const
 	return m_id;
 }
 
-wxString Module::GetName() const
+std::string Module::GetName() const
 {
 	return m_name;
 }
 
-void Module::SetName(const wxString& name)
+void Module::SetName(const std::string& name)
 {
 	m_name = name;
 }
@@ -412,7 +412,7 @@ void Module::Log(const u32 id, wxString fmt, ...)
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 }
@@ -423,7 +423,7 @@ void Module::Log(wxString fmt, ...)
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 }
@@ -432,7 +432,7 @@ void Module::Warning(const u32 id, wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
+	ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 	va_end(list);
 }
 
@@ -440,7 +440,7 @@ void Module::Warning(wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list));
+	ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
 	va_end(list);
 }
 
@@ -448,7 +448,7 @@ void Module::Error(const u32 id, wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + wxString::Format("[%d] error: ", id) + wxString::FormatV(fmt, list));
+	ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 	va_end(list);
 }
 
@@ -456,16 +456,16 @@ void Module::Error(wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list));
+	ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
 	va_end(list);
 }
 
 bool Module::CheckID(u32 id) const
 {
-	return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetID(id).m_name.Cmp(GetName());
+	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
 }
 
 bool Module::CheckID(u32 id, ID*& _id) const
 {
-	return Emu.GetIdManager().CheckID(id) && !(_id = &Emu.GetIdManager().GetID(id))->m_name.Cmp(GetName());
+	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 }

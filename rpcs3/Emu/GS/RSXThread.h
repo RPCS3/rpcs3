@@ -564,6 +564,8 @@ protected:
 		Reset();
 	}
 
+	virtual ~RSXThread() {}
+
 	void Reset()
 	{
 		m_set_color_mask = false;

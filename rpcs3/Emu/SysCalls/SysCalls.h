@@ -17,17 +17,17 @@ extern bool enable_log;
 class SysCallBase //Module
 {
 private:
-	wxString m_module_name;
+	std::string m_module_name;
 	//u32 m_id;
 
 public:
-	SysCallBase(const wxString& name/*, u32 id*/)
+	SysCallBase(const std::string& name/*, u32 id*/)
 		: m_module_name(name)
 		//, m_id(id)
 	{
 	}
 
-	const wxString& GetName() const { return m_module_name; }
+	const std::string& GetName() const { return m_module_name; }
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
@@ -35,7 +35,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 		}
 	}
@@ -46,7 +46,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 		}
 	}
@@ -56,7 +56,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 //#endif
 	}
@@ -66,7 +66,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list));
+		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 //#endif
 	}
@@ -75,7 +75,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 
@@ -83,13 +83,13 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list));
+		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 
 	bool CheckId(u32 id) const
 	{
-		return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetID(id).m_name.Cmp(GetName());
+		return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
 	}
 
 	template<typename T> bool CheckId(u32 id, T*& data)
@@ -105,7 +105,7 @@ public:
 
 	template<> bool CheckId(u32 id, ID*& _id)
 	{
-		return Emu.GetIdManager().CheckID(id) && !(_id = &Emu.GetIdManager().GetID(id))->m_name.Cmp(GetName());
+		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 	}
 
 	template<typename T>

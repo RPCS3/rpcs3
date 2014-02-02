@@ -25,7 +25,7 @@ bool vfsLocalDir::Open(const wxString& path)
 	{
 		wxString dir_path = path + wxFILE_SEP_PATH + name;
 
-		DirEntryInfo& info = m_entryes[m_entryes.Add(new DirEntryInfo())];
+		DirEntryInfo& info = m_entryes[m_entryes.Move(new DirEntryInfo())];
 		info.name = name;
 
 		info.flags |= wxDirExists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
