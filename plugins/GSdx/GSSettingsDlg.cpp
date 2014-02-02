@@ -609,10 +609,10 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 						  "Will disable partial transparency in some games or even prevent drawing some elements altogether.";
 				break;
 			case IDC_CHECK_NVIDIA_HACK:
-				helpstr = "This is a hack to work around problems with recent NVIDIA drivers causing odd stretching problems in DirectX 11 only"
+				helpstr = "This is a hack to work around problems with recent NVIDIA drivers causing odd stretching problems in DirectX 11 only "
 						  "when using Upscaling.\n\n"
 						  "Try not to use this unless your game Videos or 2D screens are stretching outside the frame.\n\n"
-						  "If you have an AMD/ATi graphics card you should not needs this.";
+						  "If you have an AMD/ATi graphics card you should not need this.";
 				break;
 			case IDC_CHECK_DISABLE_ALL_HACKS:
 				helpstr = "FOR TESTING ONLY!!\n\n"
