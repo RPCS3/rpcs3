@@ -316,6 +316,11 @@ void vifMFIFOInterrupt()
 	if (vif1.irq && vif1.tag.size == 0) {
 		SPR_LOG("VIF MFIFO Code Interrupt detected");
 		vif1Regs.stat.INT = true;
+
+		if (((vif1Regs.code >> 24) & 0x7f) != 0x7) {
+			vif1Regs.stat.VIS = true;
+		}
+
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
 
