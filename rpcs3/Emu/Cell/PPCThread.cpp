@@ -20,7 +20,6 @@ PPCThread::PPCThread(CPUThreadType type) : CPUThread(type)
 
 PPCThread::~PPCThread()
 {
-	Close();
 }
 
 void PPCThread::DoReset()

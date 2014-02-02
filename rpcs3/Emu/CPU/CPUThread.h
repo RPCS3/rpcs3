@@ -109,7 +109,7 @@ protected:
 	CPUThread(CPUThreadType type);
 
 public:
-	~CPUThread();
+	virtual ~CPUThread();
 
 	u32 m_wait_thread_id;
 

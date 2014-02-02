@@ -221,8 +221,10 @@
     <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
+    <ClCompile Include="Emu\FS\vfsDirBase.cpp" />
     <ClCompile Include="Emu\FS\vfsFile.cpp" />
     <ClCompile Include="Emu\FS\vfsFileBase.cpp" />
+    <ClCompile Include="Emu\FS\vfsLocalDir.cpp" />
     <ClCompile Include="Emu\FS\vfsLocalFile.cpp" />
     <ClCompile Include="Emu\FS\vfsStream.cpp" />
     <ClCompile Include="Emu\FS\vfsStreamMemory.cpp" />

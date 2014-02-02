@@ -27,7 +27,7 @@ struct ModuleFunc
 
 class Module
 {
-	wxString m_name;
+	std::string m_name;
 	const u16 m_id;
 	bool m_is_loaded;
 	void (*m_load_func)();
@@ -49,8 +49,8 @@ public:
 	bool IsLoaded() const;
 
 	u16 GetID() const;
-	wxString GetName() const;
-	void SetName(const wxString& name);
+	std::string GetName() const;
+	void SetName(const std::string& name);
 
 public:
 	void Log(const u32 id, wxString fmt, ...);
@@ -95,5 +95,5 @@ bool CallFunc(u32 num);
 bool UnloadFunc(u32 id);
 void UnloadModules();
 u32 GetFuncNumById(u32 id);
-Module* GetModuleByName(const wxString& name);
+Module* GetModuleByName(const std::string& name);
 Module* GetModuleById(u16 id);

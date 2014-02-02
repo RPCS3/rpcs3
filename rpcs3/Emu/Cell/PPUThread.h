@@ -370,14 +370,14 @@ struct PPCdouble
 		case _FPCLASS_PINF:		return FPR_PINF;
 		}
 #else
-        switch (fpc)
-        {
-        case FP_NAN:        return FPR_QNAN;
-        case FP_INFINITE:   return signbit(_double) ? FPR_NINF : FPR_PINF;
-        case FP_SUBNORMAL:  return signbit(_double) ? FPR_ND : FPR_PD;
-        case FP_ZERO:       return signbit(_double) ? FPR_NZ : FPR_PZ;
-        default:            return signbit(_double) ? FPR_NN : FPR_PN;
-        }
+		switch (fpc)
+		{
+		case FP_NAN:		return FPR_QNAN;
+		case FP_INFINITE:	return signbit(_double) ? FPR_NINF : FPR_PINF;
+		case FP_SUBNORMAL:	return signbit(_double) ? FPR_ND : FPR_PD;
+		case FP_ZERO:		return signbit(_double) ? FPR_NZ : FPR_PZ;
+		default:			return signbit(_double) ? FPR_NN : FPR_PN;
+		}
 #endif
 
 		throw wxString::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
@@ -609,7 +609,7 @@ public:
 
 public:
 	PPUThread();
-	~PPUThread();
+	virtual ~PPUThread();
 
 	inline u8 GetCR(const u8 n) const
 	{

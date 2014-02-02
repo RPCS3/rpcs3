@@ -22,7 +22,6 @@ PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
 
 PPUThread::~PPUThread()
 {
-	//~PPCThread();
 }
 
 void PPUThread::DoReset()
