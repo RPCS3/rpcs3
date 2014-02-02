@@ -85,9 +85,9 @@ class GSDevice11 : public GSDeviceDX
 public: // TODO
 	CComPtr<ID3D11RasterizerState> m_rs;
 
-	bool UserHacks_NVIDIAHack;
-	bool FFXA_Compiled;
+	bool FXAA_Compiled;
 	bool ExShader_Compiled;
+	bool UserHacks_NVIDIAHack;
 
 	struct
 	{

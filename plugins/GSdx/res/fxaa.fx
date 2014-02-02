@@ -1,6 +1,6 @@
 /*===============================================================================*\
-|#########################	   [GSdx FXAA 2.00 Revised]     ######################|
-|###########################	     By Asmodean	      ########################|
+|#######################		 [GSdx FXAA 2.00]		  ########################|
+|########################		   By Asmodean			 #########################|
 ||																				 ||
 ||		  This program is free software; you can redistribute it and/or			 ||
 ||		  modify it under the terms of the GNU General Public License			 ||
@@ -16,13 +16,9 @@
 \*===============================================================================*/
 #ifdef SHADER_MODEL
 
-//-#[ANTIALIASING TECHNIQUES]   [1=ON|0=OFF]  #READ: For best results: Use post antialiasing OR FS filtering. Not both. Postfix [2D/3D] after descriptions indicates if it's typically better for 2D, or 3D.
-#define UHQ_FXAA					 1		//#High Quality Fast Approximate Anti Aliasing. Adapted for GSdx from Timothy Lottes FXAA 3.11. [3D].
-
-//-[FXAA OPTIONS]
-#define FxaaSubpixMax 0.00					//[0.00 to 1.00] Amount of subpixel aliasing removal. Higher values: more subpixel antialiasing(softer). Lower values: less subpixel antialiasing(sharper). 0.00: Edge only antialiasing (no blurring)
-#define FxaaQuality 4						//[1|2|3|4] Overall Fxaa quality preset (pixel coverage). 1: Low, 2: Medium, 3: High, 4: Ultra. I use these labels lightly, as even the 'low coverage' preset is in fact, still pretty high quality.
-#define FxaaEarlyExit 1						//[0 or 1] Use Fxaa early exit pathing. This basically tells the algorithm to offset only luma-edge detected pixels. When disabled, the entire scene is antialiased(FSAA). 0 is off, 1 is on.
+#define UHQ_FXAA 1							//High Quality Fast Approximate Anti Aliasing. Adapted for GSdx from Timothy Lottes FXAA 3.11.
+#define FxaaSubpixMax 0.0					//[0.00 to 1.00] Amount of subpixel aliasing removal. 0.00: Edge only antialiasing (no blurring)
+#define FxaaEarlyExit 1						//[0 or 1] Use Fxaa early exit pathing. When disabled, the entire scene is antialiased(FSAA). 0 is off, 1 is on.
 
 /*------------------------------------------------------------------------------
 							 [GLOBALS|FUNCTIONS]
@@ -30,13 +26,7 @@
 
 #if (SHADER_MODEL >= 0x400)
 Texture2D Texture : register(t0);
-SamplerState TextureSampler : register(s0)
-{
-	Filter = Anisotropic;
-	MaxAnisotropy = 16;
-	AddressU = Clamp;
-	AddressV = Clamp;
-};
+SamplerState TextureSampler : register(s0);
 #else
 texture2D Texture : register(t0);
 sampler2D TextureSampler : register(s0);
@@ -83,6 +73,7 @@ float RGBLuminance(float3 color)
 float3 RGBGammaToLinear(float3 color, float gamma)
 {
 	color = abs(color);
+
 	color.r = (color.r <= 0.0404482362771082) ? saturate(color.r / 12.92) : 
 	saturate(pow((color.r + 0.055) / 1.055, gamma));
 
@@ -98,6 +89,7 @@ float3 RGBGammaToLinear(float3 color, float gamma)
 float3 LinearToRGBGamma(float3 color, float gamma)
 {
 	color = abs(color);
+
 	color.r = (color.r <= 0.00313066844250063) ? saturate(color.r * 12.92) : 1.055 * 
 	saturate(pow(color.r, 1.0 / gamma)) - 0.055;
 
@@ -113,21 +105,6 @@ float3 LinearToRGBGamma(float3 color, float gamma)
 #define PixelSize float2(_rcpFrame.x, _rcpFrame.y)
 #define GammaCorrection(color, gamma) pow(color, gamma)
 #define InverseGammaCorrection(color, gamma) pow(color, 1.0/gamma)
-
-/*------------------------------------------------------------------------------
-							[VERTEX CODE SECTION]
-------------------------------------------------------------------------------*/
-
-//Not used - here for testing on custom builds.
-VS_OUTPUT vs_main(VS_INPUT input)
-{	
-	VS_OUTPUT output;  
-
-	output.p = input.p;
-	output.t = input.t;
-
-	return output;
-}
 
 /*------------------------------------------------------------------------------
 						 [GAMMA PREPASS CODE SECTION]
@@ -152,7 +129,6 @@ float4 PreGammaPass(float4 color, float2 uv0)
                              [FXAA CODE SECTION]
 ------------------------------------------------------------------------------*/
 
-#if (UHQ_FXAA == 1)
 #if (SHADER_MODEL >= 0x500)
 	#define FXAA_HLSL_5 1
 	#define FXAA_GATHER4_ALPHA 1
@@ -162,70 +138,6 @@ float4 PreGammaPass(float4 color, float2 uv0)
 #else
 	#define FXAA_HLSL_3 1
 	#define FXAA_GATHER4_ALPHA 0
-#endif
-
-#if (FxaaQuality == 4)
-	#define FxaaEdgeThreshold (0.033)
-	#define FxaaEdgeThresholdMin (0.00)
-    #define FXAA_QUALITY__PS 14
-    #define FXAA_QUALITY__P0 1.0
-    #define FXAA_QUALITY__P1 1.5
-    #define FXAA_QUALITY__P2 2.0
-    #define FXAA_QUALITY__P3 2.0
-    #define FXAA_QUALITY__P4 2.0
-    #define FXAA_QUALITY__P5 2.0
-    #define FXAA_QUALITY__P6 2.0
-    #define FXAA_QUALITY__P7 2.0
-    #define FXAA_QUALITY__P8 2.0
-    #define FXAA_QUALITY__P9 2.0
-    #define FXAA_QUALITY__P10 4.0
-    #define FXAA_QUALITY__P11 8.0
-	#define FXAA_QUALITY__P12 8.0
-
-#elif (FxaaQuality == 3)
-	#define FxaaEdgeThreshold (0.125)
-	#define FxaaEdgeThresholdMin (0.0312)
-    #define FXAA_QUALITY__PS 12
-    #define FXAA_QUALITY__P0 1.0
-    #define FXAA_QUALITY__P1 1.5
-    #define FXAA_QUALITY__P2 2.0
-    #define FXAA_QUALITY__P3 2.0
-    #define FXAA_QUALITY__P4 2.0
-    #define FXAA_QUALITY__P5 2.0
-    #define FXAA_QUALITY__P6 2.0
-    #define FXAA_QUALITY__P7 2.0
-    #define FXAA_QUALITY__P8 2.0
-    #define FXAA_QUALITY__P9 2.0
-    #define FXAA_QUALITY__P10 4.0
-    #define FXAA_QUALITY__P11 8.0
-
-#elif (FxaaQuality == 2)
-	#define FxaaEdgeThreshold (0.166)
-	#define FxaaEdgeThresholdMin (0.0625)
-	#define FXAA_QUALITY__PS 10
-    #define FXAA_QUALITY__P0 1.0
-    #define FXAA_QUALITY__P1 1.5
-    #define FXAA_QUALITY__P2 2.0
-    #define FXAA_QUALITY__P3 2.0
-    #define FXAA_QUALITY__P4 2.0
-    #define FXAA_QUALITY__P5 2.0
-    #define FXAA_QUALITY__P6 2.0
-    #define FXAA_QUALITY__P7 2.0
-    #define FXAA_QUALITY__P8 4.0
-    #define FXAA_QUALITY__P9 8.0
-
-#elif (FxaaQuality == 1)
-	#define FxaaEdgeThreshold (0.250)
-	#define FxaaEdgeThresholdMin (0.0833)
-	#define FXAA_QUALITY__PS 8
-    #define FXAA_QUALITY__P0 1.0
-    #define FXAA_QUALITY__P1 1.5
-    #define FXAA_QUALITY__P2 2.0
-    #define FXAA_QUALITY__P3 2.0
-    #define FXAA_QUALITY__P4 2.0
-    #define FXAA_QUALITY__P5 2.0
-    #define FXAA_QUALITY__P6 4.0
-    #define FXAA_QUALITY__P7 12.0
 #endif
 
 #if (FXAA_HLSL_5 == 1)
@@ -251,6 +163,22 @@ float4 PreGammaPass(float4 color, float2 uv0)
 	#define FxaaTexTop(t, p) tex2Dlod(t, float4(p, 0.0, 0.0))
 	#define FxaaTexOff(t, p, o, r) tex2Dlod(t, float4(p + (o * r), 0, 0))
 #endif
+
+#define FxaaEdgeThreshold 0.033
+#define FxaaEdgeThresholdMin 0.00
+#define FXAA_QUALITY__P0 1.0
+#define FXAA_QUALITY__P1 1.5
+#define FXAA_QUALITY__P2 2.0
+#define FXAA_QUALITY__P3 2.0
+#define FXAA_QUALITY__P4 2.0
+#define FXAA_QUALITY__P5 2.0
+#define FXAA_QUALITY__P6 2.0
+#define FXAA_QUALITY__P7 2.0
+#define FXAA_QUALITY__P8 2.0
+#define FXAA_QUALITY__P9 2.0
+#define FXAA_QUALITY__P10 4.0
+#define FXAA_QUALITY__P11 8.0
+#define FXAA_QUALITY__P12 8.0
 
 float FxaaLuma(float4 rgba)
 { 
@@ -403,7 +331,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P2;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P2;
 
-	#if (FXAA_QUALITY__PS > 3)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -417,7 +344,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P3;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P3;
 
-	#if (FXAA_QUALITY__PS > 4)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -431,7 +357,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P4;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P4;
 
-	#if (FXAA_QUALITY__PS > 5)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -445,7 +370,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P5;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P5;
 
-	#if (FXAA_QUALITY__PS > 6)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -459,7 +383,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P6;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P6;
 
-	#if (FXAA_QUALITY__PS > 7)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -473,7 +396,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P7;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P7;
 
-	#if (FXAA_QUALITY__PS > 8)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -487,7 +409,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P8;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P8;
 
-	#if (FXAA_QUALITY__PS > 9)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -501,7 +422,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P9;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P9;
 
-	#if (FXAA_QUALITY__PS > 10)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -515,7 +435,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P10;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P10;
 
-	#if (FXAA_QUALITY__PS > 11)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -529,7 +448,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P11;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P11;
 
-	#if (FXAA_QUALITY__PS > 12)
 	if(doneNP) {
 	if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
 	if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
@@ -542,27 +460,8 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	doneNP = (!doneN) || (!doneP);
 	if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P12;
 	if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P12;
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
-	#endif
-	}
+	}}}}}}}}}}}
+
     float dstN = posM.x - posN.x;
     float dstP = posP.x - posM.x;
     if(!horzSpan) dstN = posM.y - posN.y;
@@ -595,16 +494,17 @@ float4 FxaaPass(float4 FxaaColor : COLOR0, float2 uv0 : TEXCOORD0)
 	#if (SHADER_MODEL >= 0x400)
 	tex.tex = Texture;
 	tex.smpl = TextureSampler;
+
 	Texture.GetDimensions(PixelSize.x, PixelSize.y);
 	FxaaColor = FxaaPixelShader(uv0, tex, 1.0/PixelSize.xy, FxaaSubpixMax, FxaaEdgeThreshold, FxaaEdgeThresholdMin);
 	#else
+
 	tex = TextureSampler;
 	FxaaColor = FxaaPixelShader(uv0, tex, PixelSize.xy, FxaaSubpixMax, FxaaEdgeThreshold, FxaaEdgeThresholdMin);
 	#endif
 
 	return FxaaColor;
 }
-#endif
 
 /*------------------------------------------------------------------------------
                       [MAIN() & COMBINE PASS CODE SECTION]
@@ -615,26 +515,25 @@ PS_OUTPUT ps_main(VS_OUTPUT input)
 	PS_OUTPUT output;
 
 	#if (SHADER_MODEL >= 0x400)
-	float4 color = Texture.Sample(TextureSampler, input.t);
-	color = PreGammaPass(color, input.t);
-	
-	#if (UHQ_FXAA == 1)
+		float4 color = Texture.Sample(TextureSampler, input.t);
+
+		color = PreGammaPass(color, input.t);
 		color = FxaaPass(color, input.t);
-	#endif
-	
 	#else
-	float4 color = tex2D(TextureSampler, input.t);
-	color = PreGammaPass(color, input.t);
-	
-	#if (UHQ_FXAA == 1)
+		float4 color = tex2D(TextureSampler, input.t);
+
+		color = PreGammaPass(color, input.t);
 		color = FxaaPass(color, input.t);
-	#endif
 	#endif
 
 	output.c = color;
 	
 	return output;
 }
+
+/*------------------------------------------------------------------------------
+					      [RECOVERY PS CODE SECTION]
+------------------------------------------------------------------------------*/
 
 PS_OUTPUT ps_recover(VS_OUTPUT input)
 {

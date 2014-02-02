@@ -28,7 +28,9 @@ GSDevice9::GSDevice9()
 	: m_lost(false)
 {
 	m_rbswapped = true;
-	FFXA_Compiled = false;
+	FXAA_Compiled = false;
+	ExShader_Compiled = false;
+
 
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
@@ -357,25 +359,8 @@ bool GSDevice9::Create(GSWnd* wnd)
 		{NULL, NULL},
 	};
 
-	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);	
+	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);
 
-	ExShader_Compiled = false;
-	FFXA_Compiled = false;
-	/*
-	// fxaa
-	if (Use_FXAA_Shader)
-	{	
-#if EXTERNAL_SHADER_LOADING
-		try { 
-			CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps); 
-		} 
-		catch (GSDXRecoverableError) {
-			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps); 
-		}
-#else
-		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-#endif
-	}*/
 	// create shader layout
 
 	VSSelector sel;
@@ -935,16 +920,8 @@ void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linea
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
 }
 
-
-void GSDevice9::DoExternalFX(GSTexture* st, GSTexture* dt)
+void GSDevice9::InitExternalFX()
 {
-	GSVector2i s = dt->GetSize();
-
-	GSVector4 sr(0, 0, 1, 1);
-	GSVector4 dr(0, 0, s.x, s.y);
-
-	ExternalFXConstantBuffer cb;
-	
 	if (!ExShader_Compiled)
 	{
 		try {
@@ -955,6 +932,18 @@ void GSDevice9::DoExternalFX(GSTexture* st, GSTexture* dt)
 		}
 		ExShader_Compiled = true;
 	}
+}
+
+void GSDevice9::DoExternalFX(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	ExternalFXConstantBuffer cb;
+	
+	InitExternalFX();
 
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
@@ -962,6 +951,19 @@ void GSDevice9::DoExternalFX(GSTexture* st, GSTexture* dt)
 	StretchRect(st, sr, dt, dr, m_shaderfx.ps, (const float*)&cb, 2, true);
 }
 
+void GSDevice9::InitFXAA()
+{
+	if (!FXAA_Compiled)
+	{
+		try {
+			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+		}
+		catch (GSDXRecoverableError) {
+			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
+		}
+		FXAA_Compiled = true;
+	}
+}
 
 void GSDevice9::DoFXAA(GSTexture* st, GSTexture* dt)
 {
@@ -972,16 +974,7 @@ void GSDevice9::DoFXAA(GSTexture* st, GSTexture* dt)
 
 	FXAAConstantBuffer cb;
 
-	if (!FFXA_Compiled)
-	{
-		try {
-		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
-		}
-		catch (GSDXRecoverableError) {
-			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
-		}
-		FFXA_Compiled = true;
-	}
+	InitFXAA();
 
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();

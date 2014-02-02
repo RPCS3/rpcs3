@@ -75,6 +75,9 @@ class GSDevice9 : public GSDeviceDX
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 	void DoExternalFX(GSTexture* st, GSTexture* dt);
 
+	void InitExternalFX();
+	void InitFXAA();
+
 	//
 
 	D3DCAPS9 m_d3dcaps;
@@ -114,7 +117,7 @@ class GSDevice9 : public GSDeviceDX
 
 public: // TODO
 
-	bool FFXA_Compiled;
+	bool FXAA_Compiled;
 	bool ExShader_Compiled;
 
 	struct
