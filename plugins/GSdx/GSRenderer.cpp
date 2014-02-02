@@ -36,6 +36,7 @@ GSRenderer::GSRenderer()
 
 	m_interlace = theApp.GetConfig("interlace", 7);
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);
+	m_shader = theApp.GetConfig("TVShader", 0);
 	m_filter = theApp.GetConfig("filter", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
@@ -560,7 +561,8 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_F7:
 			m_shader = (m_shader + post_shader_nb + step) % post_shader_nb;
-			printf("GSdx: Set shader %d.\n", (int)m_shader);
+			printf("GSdx: Set shader to: %d.\n", (int)m_shader);
+			theApp.SetConfig("TVShader", (int)m_shader);
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
