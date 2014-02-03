@@ -143,6 +143,12 @@ GSdxApp::GSdxApp()
 	m_gs_upscale_multiplier.push_back(GSSetting(5, "5x Native", ""));
 	m_gs_upscale_multiplier.push_back(GSSetting(6, "6x Native", ""));
 
+	m_gs_max_anisotropy.push_back(GSSetting(0, "1x", ""));
+	m_gs_max_anisotropy.push_back(GSSetting(1, "2x", ""));
+	m_gs_max_anisotropy.push_back(GSSetting(2, "4x", ""));
+	m_gs_max_anisotropy.push_back(GSSetting(3, "8x", ""));
+	m_gs_max_anisotropy.push_back(GSSetting(4, "16x", ""));
+
 	m_gpu_renderers.push_back(GSSetting(0, "Direct3D9 (Software)", ""));
 	m_gpu_renderers.push_back(GSSetting(1, "Direct3D11 (Software)", ""));
 	m_gpu_renderers.push_back(GSSetting(2, "SDL 1.3 (Software)", ""));

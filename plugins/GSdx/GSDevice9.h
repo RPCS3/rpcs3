@@ -28,8 +28,13 @@ struct Direct3DSamplerState9
 {
     D3DTEXTUREFILTERTYPE FilterMin[2];
     D3DTEXTUREFILTERTYPE FilterMag[2];
+	D3DTEXTUREFILTERTYPE FilterMip[2];
+	D3DTEXTUREFILTERTYPE Anisotropic[2];
     D3DTEXTUREADDRESS AddressU;
     D3DTEXTUREADDRESS AddressV;
+	D3DTEXTUREADDRESS AddressW;
+	DWORD MaxAnisotropy;
+	DWORD MaxLOD;
 };
 
 struct Direct3DDepthStencilState9

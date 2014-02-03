@@ -149,6 +149,7 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_INTERLACE, theApp.m_gs_interlace, theApp.GetConfig("Interlace", 7)); // 7 = "auto", detects interlace based on SMODE2 register
 	ComboBoxInit(IDC_ASPECTRATIO, theApp.m_gs_aspectratio, theApp.GetConfig("AspectRatio", 1));
 	ComboBoxInit(IDC_UPSCALE_MULTIPLIER, theApp.m_gs_upscale_multiplier, theApp.GetConfig("upscale_multiplier", 1));
+	ComboBoxInit(IDC_AFCOMBO, theApp.m_gs_max_anisotropy, theApp.GetConfig("MaxAnisotropy", 0));
 
 	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));
@@ -157,6 +158,7 @@ void GSSettingsDlg::OnInit()
 	CheckDlgButton(m_hWnd, IDC_FBA, theApp.GetConfig("fba", 1));
 	CheckDlgButton(m_hWnd, IDC_AA1, theApp.GetConfig("aa1", 0));
 	CheckDlgButton(m_hWnd, IDC_NATIVERES, theApp.GetConfig("nativeres", 1));
+	CheckDlgButton(m_hWnd, IDC_ANISOTROPIC, theApp.GetConfig("AnisotropicFiltering", 0));
 
 	// Shade Boost
 	CheckDlgButton(m_hWnd, IDC_SHADEBOOST, theApp.GetConfig("ShadeBoost", 0));
@@ -202,6 +204,14 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			break;
 		case IDC_NATIVERES:
 		case IDC_SHADEBOOST:
+		case IDC_FILTER:
+			if (code == BN_CLICKED)
+				UpdateControls();
+			break;
+		case IDC_ANISOTROPIC:
+			if (code == BN_CLICKED)
+				UpdateControls();
+			break;
 		case IDC_HACKS_ENABLED:
 			if (code == BN_CLICKED)
 				UpdateControls();
@@ -256,6 +266,11 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 				theApp.SetConfig("upscale_multiplier", 1);
 			}
 
+			if (ComboBoxGetSelData(IDC_AFCOMBO, data))
+			{
+				theApp.SetConfig("MaxAnisotropy", (int)data);
+			}
+
 			if(GetId() == IDD_CONFIG) // TODO: other options may not be present in IDD_CONFIG2 as well
 			{
 				theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));			
@@ -270,6 +285,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
 			theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
 			theApp.SetConfig("extrathreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
+			theApp.SetConfig("AnisotropicFiltering", (int)IsDlgButtonChecked(m_hWnd, IDC_ANISOTROPIC));
 
 			// Shade Boost
 			theApp.SetConfig("ShadeBoost", (int)IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST));
@@ -357,6 +373,8 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_ANISOTROPIC), (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER) && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_AFCOMBO), (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER) && (int)IsDlgButtonChecked(m_hWnd, IDC_ANISOTROPIC) && hw);
 		//EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw); // Let uers set software params regardless of renderer used 
 		//EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
 		//EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS), sw);
