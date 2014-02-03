@@ -540,7 +540,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 
 int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 {
-	sc_spu.Warning("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
+	sc_spu.Error("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
 
 	return CELL_OK;
 }

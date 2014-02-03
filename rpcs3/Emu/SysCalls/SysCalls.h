@@ -139,6 +139,7 @@ extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
 extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
 extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
+extern int sys_event_queue_drain(u32 event_queue_id);
 
 //sys_semaphore
 extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);

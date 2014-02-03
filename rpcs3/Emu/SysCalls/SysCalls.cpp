@@ -87,7 +87,7 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_rwlock_wunlock),							//127 (0x07F)
 	bind_func(sys_event_queue_create),						//128 (0x080)
 	null_func,												//129 (0x081)
-	bind_func(sys_event_queue_receive), null_func, bind_func(sys_event_flag_cancel), null_func, bind_func(sys_event_port_create), //134
+	bind_func(sys_event_queue_receive), null_func, bind_func(sys_event_flag_cancel), bind_func(sys_event_queue_drain), bind_func(sys_event_port_create), //134
 	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), bind_func(sys_event_flag_get), //139
 	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, bind_func(sys_time_get_timezone), //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149

@@ -40,11 +40,7 @@ int sys_process_getppid()
 int sys_process_exit(int errorcode)
 {
 	sc_p.Warning("sys_process_exit(%d)", errorcode);
-#ifdef _DEBUG
-	Emu.Pause();
-#else
-	Emu.Stop();
-#endif
+	Emu.Pause(); // Emu.Stop() does crash
 	return CELL_OK;
 }
 

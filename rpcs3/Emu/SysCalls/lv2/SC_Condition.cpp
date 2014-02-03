@@ -76,8 +76,8 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 
 		switch (cond_data->cond.WaitTimeout(1))
 		{
-		wxCOND_NO_ERROR: return CELL_OK;
-		wxCOND_TIMEOUT:	break;
+		case wxCOND_NO_ERROR: return CELL_OK;
+		case wxCOND_TIMEOUT: break;
 		default: return CELL_EPERM;
 		}
 

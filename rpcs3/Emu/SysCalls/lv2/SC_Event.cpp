@@ -266,3 +266,10 @@ int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3)
 
 	return CELL_OK;
 }
+
+int sys_event_queue_drain(u32 event_queue_id)
+{
+	sys_event.Error("sys_event_queue_drain(event_queue_id=0x%x)", event_queue_id);
+
+	return CELL_OK;
+}
