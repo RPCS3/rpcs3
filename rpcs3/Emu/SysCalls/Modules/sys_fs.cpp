@@ -176,8 +176,8 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	}
 
 	//start callback thread
-	//if(func)
-		//func.async(aio, error, xid, res);
+	if(func)
+		func.async(aio, error, xid, res);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
@@ -195,6 +195,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
 	t.detach();
+	//fsAioRead(fd, aio, xid, func);
 
 	aio_id = xid;
 

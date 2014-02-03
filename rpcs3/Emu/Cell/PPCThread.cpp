@@ -16,6 +16,7 @@ PPCThread* GetCurrentPPCThread()
 
 PPCThread::PPCThread(CPUThreadType type) : CPUThread(type)
 {
+	memset(m_args, 0, sizeof(m_args));
 }
 
 PPCThread::~PPCThread()
@@ -24,7 +25,6 @@ PPCThread::~PPCThread()
 
 void PPCThread::DoReset()
 {
-	memset(m_args, 0, sizeof(u64) * 4);
 }
 
 void PPCThread::InitStack()

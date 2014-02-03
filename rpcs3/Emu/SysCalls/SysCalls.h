@@ -188,7 +188,7 @@ extern int sys_ppu_thread_get_priority(u32 thread_id, u32 prio_addr);
 extern int sys_ppu_thread_get_stack_information(u32 info_addr);
 extern int sys_ppu_thread_stop(u32 thread_id);
 extern int sys_ppu_thread_restart(u32 thread_id);
-extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
+extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);

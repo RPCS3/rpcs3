@@ -174,7 +174,7 @@ u64 DynamicMemoryBlockBase<PT>::AllocAlign(u32 size, u32 align)
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Alloc()
 {
-	return AllocAlign(GetSize() - GetUsedSize(), 0) != 0;
+	return AllocAlign(GetSize() - GetUsedSize()) != 0;
 }
 
 template<typename PT>

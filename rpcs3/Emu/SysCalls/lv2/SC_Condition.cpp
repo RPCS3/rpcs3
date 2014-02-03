@@ -27,7 +27,7 @@ struct condition
 
 int sys_cond_create(u32 cond_addr, u32 mutex_id, u32 attr_addr)
 {
-	sys_cond.Log("sys_cond_create(cond_addr=0x%x, mutex_id=0x%x, attr_addr=%d)",
+	sys_cond.Warning("sys_cond_create(cond_addr=0x%x, mutex_id=0x%x, attr_addr=%d)",
 		cond_addr, mutex_id, attr_addr);
 
 	if(!Memory.IsGoodAddr(cond_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;
@@ -68,9 +68,32 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 	condition* cond_data = nullptr;
 	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
 
-	cond_data->cond.WaitTimeout(timeout ? timeout : INFINITE);
+	u32 counter = 0;
+	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	do
+	{
+		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
 
-	return CELL_OK;
+		switch (cond_data->cond.WaitTimeout(1))
+		{
+		wxCOND_NO_ERROR: return CELL_OK;
+		wxCOND_TIMEOUT:	break;
+		default: return CELL_EPERM;
+		}
+
+		if (counter++ > max_counter)
+		{
+			if (!timeout) 
+			{
+				sys_cond.Warning("sys_cond_wait(cond_id=0x%x, timeout=0x%llx): TIMEOUT", cond_id, timeout);
+				counter = 0;
+			}
+			else
+			{
+				return CELL_ETIMEDOUT;
+			}
+		}		
+	} while (true);
 }
 
 int sys_cond_signal(u32 cond_id)

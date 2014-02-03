@@ -123,7 +123,7 @@ public:
 	virtual u8* GetMem(u64 addr) const { return mem + addr; }
 
 	virtual bool AllocFixed(u64 addr, u32 size) { return false; }
-	virtual u64 AllocAlign(u32 size, u32 align = 0) { return 0; }
+	virtual u64 AllocAlign(u32 size, u32 align = 1) { return 0; }
 	virtual bool Alloc() { return false; }
 	virtual bool Free(u64 addr) { return false; }
 	virtual bool Lock(u64 addr, u32 size) { return false; }
@@ -215,7 +215,7 @@ public:
 	virtual void Delete();
 
 	virtual bool AllocFixed(u64 addr, u32 size);
-	virtual u64 AllocAlign(u32 size, u32 align = 0);
+	virtual u64 AllocAlign(u32 size, u32 align = 1);
 	virtual bool Alloc();
 	virtual bool Free(u64 addr);
 	virtual bool Lock(u64 addr, u32 size);
