@@ -293,9 +293,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		if(Memory.IsGoodAddr(render.m_textures[m_cur_texture].m_offset) && render.m_textures[m_cur_texture].m_width && render.m_textures[m_cur_texture].m_height)
+    if(Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())) && render.m_textures[m_cur_texture].m_width && render.m_textures[m_cur_texture].m_height)
 			MemoryViewerPanel::ShowImage(this,
-				render.m_textures[m_cur_texture].m_offset, 0,
+				GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation()), 0,
 				render.m_textures[m_cur_texture].m_width,
 				render.m_textures[m_cur_texture].m_height, false);
 	}
@@ -417,7 +417,7 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	u32 TexBuffer_addr = render.m_textures[m_cur_texture].m_offset;
+	u32 TexBuffer_addr = GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation());
 
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
@@ -485,12 +485,12 @@ void RSXDebugger::GetTexture()
 	for(uint i=0; i<RSXThread::m_textures_count; ++i)
 	{
 		m_list_texture->InsertItem(i, wxString::Format("%d", i));
-		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", render.m_textures[i].m_offset));
-		m_list_texture->SetItem(i, 2, render.m_textures[i].m_cubemap ? "True" : "False");
-		m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].m_dimension));
+		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())));
+		m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
+		m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
 		m_list_texture->SetItem(i, 4, render.m_textures[i].m_enabled ? "True" : "False");
-		m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].m_format));
-		m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].m_mipmap));
+		m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].GetFormat()));
+		m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].Getmipmap()));
 		m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
 		m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
 			render.m_textures[i].m_width,

@@ -3,6 +3,21 @@
 
 #define ARGS(x) (Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
 
+u32 methodRegisters[0xffff];
+
+u32 GetAddress(u32 offset, u8 location)
+{
+	switch(location)
+	{
+	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
+	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
+	}
+
+	ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);
+	assert(0);
+	return 0;
+}
+
 RSXVertexData::RSXVertexData()
 	: frequency(0)
 	, stride(0)
@@ -205,8 +220,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		if(!Memory.IsGoodAddr(tex_addr))
 			ConLog.Error("Bad texture[%d] addr = 0x%x #offset = 0x%x, location=%d", index, tex_addr, offset, location);
 		//ConLog.Warning("texture addr = 0x%x #offset = 0x%x, location=%d", tex_addr, offset, location);
-		tex.SetOffset(tex_addr);
-		tex.SetFormat(cubemap, dimension, format, mipmap);
 
 		if(!tex.m_width || !tex.m_height)
 		{
@@ -1441,6 +1454,7 @@ void RSXThread::End()
 
 void RSXThread::Task()
 {
+  u8 inc;
 	ConLog.Write("RSX thread entry");
 
 	OnInitThread();
@@ -1448,6 +1462,8 @@ void RSXThread::Task()
 	while(!TestDestroy())
 	{
 		wxCriticalSectionLocker lock(m_cs_main);
+
+    inc=1;
 
 		u32 put, get;
 		se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
@@ -1499,6 +1515,7 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//ConLog.Warning("non increment cmd! 0x%x", cmd);
+      inc=0;
 		}
 
 		if(cmd == 0)
@@ -1507,6 +1524,11 @@ void RSXThread::Task()
 			Emu.Pause();
 			continue;
 		}
+
+    for(int i=0; i<count; i++)
+    {
+      methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
+    }
 
 		mem32_ptr_t args(Memory.RSXIOMem.GetStartAddr() + get + 4);
 		DoCmd(cmd, cmd & 0x3ffff, args, count);

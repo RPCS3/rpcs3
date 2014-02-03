@@ -64,9 +64,9 @@ public:
 	void Init(RSXTexture& tex)
 	{
 		Bind();
-		if(!Memory.IsGoodAddr(tex.GetOffset()))
+		if(!Memory.IsGoodAddr(GetAddress(tex.GetOffset(), tex.GetLocation())))
 		{
-			ConLog.Error("Bad texture address=0x%x", tex.GetOffset());
+			ConLog.Error("Bad texture address=0x%x", GetAddress(tex.GetOffset(), tex.GetLocation()));
 			return;
 		}
 		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
@@ -78,7 +78,7 @@ public:
 		bool is_swizzled = (tex.GetFormat() & 0x20) == 0;
 
 		glPixelStorei(GL_PACK_ALIGNMENT, tex.m_pitch);
-		char* pixels = (char*)Memory.GetMemFromAddr(tex.GetOffset());
+		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
 
 		switch(format)
 		{
@@ -151,8 +151,8 @@ public:
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x | 0x%x | 0x%x)", format, tex.GetFormat() & 0x20, tex.GetFormat() & 0x40); break;
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.m_mipmap - 1);
-		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.m_mipmap > 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.Getmipmap() - 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.Getmipmap() > 1);
 
 		if(format != 0x81 && format != 0x94)
 		{
@@ -224,13 +224,13 @@ public:
 
 	void Save(RSXTexture& tex, const wxString& name)
 	{
-		if(!m_id || !tex.m_offset || !tex.m_width || !tex.m_height) return;
+    if(!m_id || !tex.GetOffset() || !tex.m_width || !tex.m_height) return;
 
 		u32* alldata = new u32[tex.m_width * tex.m_height];
 
 		Bind();
 
-		switch(tex.m_format & ~(0x20 | 0x40))
+		switch(tex.GetFormat() & ~(0x20 | 0x40))
 		{
 		case 0x81:
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
