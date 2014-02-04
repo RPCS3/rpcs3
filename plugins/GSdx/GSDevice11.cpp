@@ -313,6 +313,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sd.MinLOD = -FLT_MAX;
 	sd.MaxLOD = FLT_MAX;
 	sd.MaxAnisotropy = theApp.GetConfig("MaxAnisotropy", 0);
 	sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
