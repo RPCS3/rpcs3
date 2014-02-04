@@ -485,7 +485,7 @@ void RSXDebugger::GetTexture()
 	for(uint i=0; i<RSXThread::m_textures_count; ++i)
 	{
 		m_list_texture->InsertItem(i, wxString::Format("%d", i));
-		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())));
+		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), render.m_textures[i].GetLocation())));
 		m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
 		m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
 		m_list_texture->SetItem(i, 4, render.m_textures[i].m_enabled ? "True" : "False");
