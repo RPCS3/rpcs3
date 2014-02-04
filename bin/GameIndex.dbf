@@ -770,7 +770,6 @@ EETimingHack = 1		//random hangs
 	patch=0,EE,003735F8,word,48438000
 	patch=0,EE,003735FC,word,4B06521B	
 [/patches]
-
 ---------------------------------------------
 Serial = SCUS-97265
 Name   = Jak II
@@ -1268,6 +1267,7 @@ Name   = Official U.S. PlayStation Magazine Demo Disc 090
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97443
+Name   = Official U.S. PlayStation Magazine Demo Issue 91
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97444
@@ -6136,6 +6136,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-20988
+Name   = Playboy - The Mansion
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
@@ -9734,8 +9735,8 @@ EETimingHack = 1
 Serial = SLUS-21788
 Name   = Ar Tonelico 2 - Melody Of Metafalica
 Region = NTSC-U
-eeRoundMode = 0 // Fixes "Fall through floor" bug when aproaching chests
 Compat = 5
+eeRoundMode = 0 // Fixes "Fall through floor" bug when aproaching chests
 ---------------------------------------------
 Serial = SLUS-21789
 Name   = Cabela's Legendary Adventures
@@ -11140,6 +11141,7 @@ Name   = Taiko no Tatsujin 3 - Appare Sandaime
 Region = NTSC-Unk
 ---------------------------------------------
 Serial = SCAJ-10007
+Name   = Taiko no Tatsujin - Waku Waku Anime Matsuri
 Region = NTSC-Unk
 ---------------------------------------------
 Serial = SCAJ-10008
@@ -13018,8 +13020,8 @@ Region = NTSC-J
 Serial = SCPS-15119
 Name   = Bleach - Blade Battlers 2nd
 Region = NTSC-J
-OPHFLagHack = 1 // Special moves "Bankai" hang otherwise
 Compat = 5
+OPHFLagHack = 1 // Special moves "Bankai" hang otherwise
 ---------------------------------------------
 Serial = SCPS-15120
 Name   = Ratchet & Clank 5 Gekitotsu! Dodeka Ginga no Mirimiri Gundan
@@ -13420,8 +13422,8 @@ Region = NTSC-J
 Serial = SCPS-55019
 Name   = Star Ocean 3 - Till the End of Time
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCPS-55020
 Name   = Kengo 2
@@ -15321,6 +15323,7 @@ Name   = Simple 2000 Series Ultimate Vol.4 - Urawaza Ikasa Majangai-Niisan Tsuka
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62234
+Name   = Simple2000 Vol.13 The Renai Adv Garasu No Mori
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62235
@@ -17791,8 +17794,8 @@ Region = NTSC-J
 Serial = SLPM-65209
 Name   = Star Ocean 3 [Limited Edition]
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65210
 Name   = Chou Battle Houshin - Bundle #1
@@ -18590,14 +18593,14 @@ Region = NTSC-J
 Serial = SLPM-65438
 Name   = Star Ocean 3 [Director's Cut] [Disc1of2]
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65439
 Name   = Star Ocean 3 [Director's Cut] [Disc2of2]
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65441
 Name   = Ashita no Joe - Masshiro ni Moetsukuru
@@ -22317,14 +22320,14 @@ Region = NTSC-J
 Serial = SLPM-66478
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc1of2]
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66479
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc2of2]
 Region = NTSC-J
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66480
 Name   = Dragon Quest V - Bride of the Sky [Ultimate Hits]
@@ -28962,8 +28965,8 @@ FpuMulHack = 1
 Serial = SLPS-25842
 Name   = Tales of Destiny [Director's Cut]
 Region = NTSC-J
-FpuMulHack = 1
 Compat = 4
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SLPS-25843
 Name   = Tir-Na-Nog
@@ -32149,10 +32152,6 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50330
 Name   = Grand Theft Auto III
-Region = PAL-M5
----------------------------------------------
-Serial = SLES-50330-T
-Name   = Grand Theft Auto III
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
@@ -32667,7 +32666,6 @@ Region = PAL-Unk
 	patch=0,EE,00170F28,word,30848000
 	patch=0,EE,00170F2C,word,4BE72B3C
 [/patches]
-
 ---------------------------------------------
 Serial = SLES-50579
 Name   = Kessen II
@@ -33652,11 +33650,6 @@ Name   = Butt Ugly Martians
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-51061
-Name   = Grand Theft Auto - Vice City
-Region = PAL-M5
-Compat = 5
----------------------------------------------
-Serial = SLES-51061-T
 Name   = Grand Theft Auto - Vice City
 Region = PAL-E
 Compat = 5
@@ -42296,14 +42289,14 @@ Region = PAL-Unk
 Serial = SLES-82028
 Name   = Star Ocean 3 - Till the End of Time [Disc1of2]
 Region = PAL-E
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLES-82029
 Name   = Star Ocean 3 - Till the End of Time [Disc2of2]
 Region = PAL-E
-VuAddSubHack = 1
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLES-82030
 Name   = Shadow Hearts - Covenant [Disc1of2]
