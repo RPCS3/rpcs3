@@ -95,7 +95,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	const u32 tid = GetCurrentPPUThread().GetId();
 	mem_ptr_t<sys_lwmutex_t> lwmutex((u32)lwcond->lwmutex_addr);
 
-	if ((u32)lwmutex->owner != tid) return CELL_EPERM; // caller must own this lwmutex
+	if ((u32)lwmutex->owner.GetOwner() != tid) return CELL_EPERM; // caller must own this lwmutex
 	lwc->begin_waiting(tid);
 
 	u32 counter = 0;

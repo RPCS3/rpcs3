@@ -78,7 +78,7 @@ void DynamicMemoryBlockBase<PT>::Delete()
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 {
-	size = PAGE_4K(size); // align size
+	size = PAGE_4K(size + (addr & 4095)); // align size
 
 	addr &= ~4095; // align start address
 

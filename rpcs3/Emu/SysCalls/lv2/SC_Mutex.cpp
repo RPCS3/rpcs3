@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "SC_Mutex.h"
+#include "Utilities/SMutex.h"
 
 SysCallBase sys_mtx("sys_mutex");
 

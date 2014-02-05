@@ -45,18 +45,18 @@ int sys_memory_container_destroy(u32 cid)
 int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 {
 	//0x30000100;
-	sc_mem.Warning("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
+	sc_mem.Log("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
 	u32 addr;
 	switch(flags)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = Memory.Alloc(size, 1);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = Memory.Alloc(size, 1);
 	break;
 
 	default: return CELL_EINVAL;

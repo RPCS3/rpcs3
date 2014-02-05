@@ -1,4 +1,5 @@
 #pragma once
+#include <Utilities/SMutex.h>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -33,16 +34,14 @@ struct sys_lwmutex_attribute_t
 	char name[8];
 };
 
-extern std::mutex g_lwmutex;
-
 struct sys_lwmutex_t
 {
 	union // sys_lwmutex_variable_t
 	{
 		struct // sys_lwmutex_lock_info_t
 		{
-			/* volatile */ be_t<u32> owner;
-			/* volatile */ be_t<u32> waiter;
+			/* volatile */ SMutexBE owner;
+			/* volatile */ be_t<u32> waiter; // not used
 		};
 		struct
 		{ 
@@ -56,75 +55,74 @@ struct sys_lwmutex_t
 
 	int trylock(u32 tid)
 	{
-		std::lock_guard<std::mutex> lock(g_lwmutex); // global lock
-
-		if ((u32)attribute & SYS_SYNC_RECURSIVE)
+		if (tid == (u32)owner.GetOwner()) // recursive or deadlock
 		{
-			if (tid == (u32)owner)
+			if (attribute & se32(SYS_SYNC_RECURSIVE))
 			{
-				recursive_count = (u32)recursive_count + 1;
-				if ((u32)recursive_count == 0xffffffff) return CELL_EKRESOURCE;
+				recursive_count += 1;
+				if (!recursive_count) return CELL_EKRESOURCE;
 				return CELL_OK;
 			}
-		}
-		else // recursive not allowed
-		{
-			if (tid == (u32)owner)
+			else
 			{
 				return CELL_EDEADLK;
 			}
 		}
-
-		if (!(u32)owner) // try lock
+		switch (owner.trylock(tid))
 		{
-			owner = tid; 
-			recursive_count = 1;
-			return CELL_OK;
-		}
-		else
-		{
-			return CELL_EBUSY;
+		case SMR_OK: recursive_count = 1; return CELL_OK;
+		default: return CELL_EBUSY;
 		}
 	}
 
 	bool unlock(u32 tid)
 	{
-		std::lock_guard<std::mutex> lock(g_lwmutex); // global lock
-
-		if (tid != (u32)owner)
+		if (tid != (u32)owner.GetOwner())
 		{
 			return false;
 		}
 		else
 		{
-			recursive_count = (u32)recursive_count - 1;
-			if (!(u32)recursive_count)
+			recursive_count -= 1;
+			if (!recursive_count)
 			{
-				waiter = 0; // not used yet
-				owner = 0; // release
+				owner.unlock(tid);
 			}
 			return true;
 		}
 	}
+
+	int lock(u32 tid, u64 timeout)
+	{
+		switch (int res = trylock(tid))
+		{
+		case CELL_OK: return CELL_OK;
+		case CELL_EBUSY: break;
+		default: return res;
+		}
+		switch (owner.lock(tid, timeout))
+		{
+		case SMR_OK: recursive_count = 1; return CELL_OK;
+		case SMR_TIMEOUT: return CELL_ETIMEDOUT;
+		default: return CELL_EINVAL;
+		}
+	}
 };
 
-struct lwmutex_locker
+class lwmutex_locker
 {
-private:
 	mem_ptr_t<sys_lwmutex_t> m_mutex;
 	u32 m_id;
-public:
-	const int res;	
 
-	lwmutex_locker(u32 lwmutex_addr, u32 tid)
+	lwmutex_locker(u32 lwmutex_addr, u32 tid, u64 timeout = 0)
 		: m_id(tid)
 		, m_mutex(lwmutex_addr)
-		, res(m_mutex->trylock(m_id))
 	{
+		if (int res = m_mutex->lock(m_id, timeout)) throw "lwmutex_locker: m_mutex->lock failed";
 	}
 
 	~lwmutex_locker()
 	{
-		if (res == CELL_OK) m_mutex->unlock(m_id);
+		m_mutex->unlock(m_id);
 	}
 };
