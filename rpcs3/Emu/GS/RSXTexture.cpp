@@ -2,18 +2,7 @@
 #include "RSXThread.h"
 
 RSXTexture::RSXTexture()
-  : m_width(0)
-  , m_height(0)
-  , m_enabled(false)
-  , m_minlod(0)
-  , m_maxlod(1000)
-  , m_maxaniso(0)
-  , m_wraps(1)
-  , m_wrapt(1)
-  , m_wrapr(3)
-  , m_zfunc(0)
-  , m_gamma(0)
-  , m_bias(0)
+  : m_bias(0)
   , m_remap(0xE4)
   , m_min_filter(1)
   , m_mag_filter(2)
@@ -22,23 +11,33 @@ RSXTexture::RSXTexture()
 }
 
 RSXTexture::RSXTexture(u8 index)
-  : m_width(0)
-  , m_height(0)
-  , m_enabled(false)
-  , m_minlod(0)
-  , m_maxlod(1000)
-  , m_maxaniso(0)
-  , m_wraps(1)
-  , m_wrapt(1)
-  , m_wrapr(3)
-  , m_zfunc(0)
-  , m_gamma(0)
-  , m_bias(0)
+  : m_bias(0)
   , m_remap(0xE4)
   , m_min_filter(1)
   , m_mag_filter(2)
 {
   m_index = index;
+}
+
+void RSXTexture::Init()
+{
+	// Offset
+	methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*4)] = 0;
+
+	// Format
+	methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*4)] = 0;
+
+	// Address
+	methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] =
+		((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) | 
+		 ((/*wrapr*/2) << 16) | ((/*gamma*/0) << 20) |((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+
+	// Control0
+	methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] =
+		(((/*alphakill*/0) << 2) | (/*maxaniso*/0) << 4) | ((/*maxlod*/0xc00) << 7) | ((/*minlod*/0) << 19) | ((/*enable*/0) << 31);
+
+	// Image Rect
+	methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*4)] = (/*height*/1) | ((/*width*/1) << 16);
 }
 
 u32 RSXTexture::GetOffset() const
@@ -76,30 +75,83 @@ u16 RSXTexture::Getmipmap() const
   return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*4)] >> 16) & 0xffff);
 }
 
-void RSXTexture::SetRect(const u32 width, const u32 height)
+u8 RSXTexture::GetWrapS() const
 {
-  m_width = width;
-  m_height = height;
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)]) & 0xf);
 }
 
-void RSXTexture::SetAddress(u8 wraps, u8 wrapt, u8 wrapr, u8 unsigned_remap, u8 zfunc, u8 gamma, u8 aniso_bias, u8 signed_remap)
+u8 RSXTexture::GetWrapT() const
 {
-  m_wraps = wraps;
-  m_wrapt = wrapt;
-  m_wrapr = wrapr;
-  m_unsigned_remap = unsigned_remap;
-  m_zfunc = zfunc;
-  m_gamma = gamma;
-  m_aniso_bias = aniso_bias;
-  m_signed_remap = signed_remap;
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 8) & 0xf);
+}
+
+u8 RSXTexture::GetWrapR() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 16) & 0xf);
+}
+
+u8 RSXTexture::GetUnsignedRemap() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 12) & 0xf);
+}
+
+u8 RSXTexture::GetZfunc() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 28) & 0xf);
+}
+
+u8 RSXTexture::GetGamma() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 20) & 0xf);
+}
+
+u8 RSXTexture::GetAnisoBias() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 4) & 0xf);
+}
+
+u8 RSXTexture::GetSignedRemap() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*4)] >> 24) & 0xf);
+}
+
+bool RSXTexture::IsEnabled() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 31) & 0x1);
+}
+
+u16  RSXTexture::GetMinLOD() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 19) & 0xfff);
+}
+
+u16  RSXTexture::GetMaxLOD() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 7) & 0xfff);
+}
+
+u8   RSXTexture::GetMaxAniso() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 4) & 0x7);
+}
+
+bool RSXTexture::IsAlphaKillEnabled() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 2) & 0x1);
+}
+
+u16 RSXTexture::GetWidth() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*4)] >> 16) & 0xffff);
+}
+
+u16 RSXTexture::GetHeight() const
+{
+	return ((methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*4)]) & 0xffff);
 }
 
 void RSXTexture::SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso)
 {
-  m_enabled = enable;
-  m_minlod = minlod;
-  m_maxlod = maxlod;
-  m_maxaniso = maxaniso;
 }
 
 void RSXTexture::SetControl1(u32 remap)
@@ -123,14 +175,4 @@ void RSXTexture::SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_
   m_r_signed = r_signed;
   m_g_signed = g_signed;
   m_b_signed = b_signed;
-}
-
-wxSize RSXTexture::GetRect() const
-{
-  return wxSize(m_width, m_height);
-}
-
-bool RSXTexture::IsEnabled() const
-{
-  return m_enabled;
 }

@@ -53,8 +53,10 @@ public:
 		case 2: return GL_MIRRORED_REPEAT;
 		case 3: return GL_CLAMP_TO_EDGE;
 		case 4: return GL_CLAMP_TO_BORDER;
-		case 5: return GL_CLAMP_TO_EDGE;//GL_CLAMP;
-		//case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case 5: return GL_CLAMP_TO_EDGE;
+		case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case 7: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+		case 8: return GL_MIRROR_CLAMP_EXT;
 		}
 
 		ConLog.Error("Texture wrap error: bad wrap (%d).", wrap);
@@ -83,7 +85,7 @@ public:
 		switch(format)
 		{
 		case 0x81:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
@@ -95,39 +97,39 @@ public:
 		break;
 
 		case 0x85:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
 		case 0x86:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 8;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 
 		case 0x87:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 16;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 
 		case 0x88:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 16;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 		
 		case 0x94:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_RED, GL_SHORT, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
@@ -136,13 +138,13 @@ public:
 		break;
 
 		case 0x9a:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_HALF_FLOAT, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_HALF_FLOAT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
 		case 0x9e:
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
 		}
@@ -189,16 +191,16 @@ public:
 			GL_ALWAYS,
 		};
 		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.m_wraps));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.m_wrapt));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.m_wrapr));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.m_zfunc]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.GetWrapS()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.GetWrapT()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.GetWrapR()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
 
     checkForGlError("GLTexture::Init() -> parameters1");
 		
 		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.m_bias);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, tex.m_minlod);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, tex.m_maxlod);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.GetMinLOD() >> 8));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.GetMaxLOD() >> 8));
 
     checkForGlError("GLTexture::Init() -> parameters2");
 		
@@ -224,9 +226,9 @@ public:
 
 	void Save(RSXTexture& tex, const wxString& name)
 	{
-    if(!m_id || !tex.GetOffset() || !tex.m_width || !tex.m_height) return;
+    if(!m_id || !tex.GetOffset() || !tex.GetWidth() || !tex.GetHeight()) return;
 
-		u32* alldata = new u32[tex.m_width * tex.m_height];
+		u32* alldata = new u32[tex.GetWidth() * tex.GetHeight()];
 
 		Bind();
 
@@ -247,15 +249,15 @@ public:
 
 		{
 			wxFile f(name + ".raw", wxFile::write);
-			f.Write(alldata, tex.m_width * tex.m_height * 4);
+			f.Write(alldata, tex.GetWidth() * tex.GetHeight() * 4);
 		}
-		u8* data = new u8[tex.m_width * tex.m_height * 3];
-		u8* alpha = new u8[tex.m_width * tex.m_height];
+		u8* data = new u8[tex.GetWidth() * tex.GetHeight() * 3];
+		u8* alpha = new u8[tex.GetWidth() * tex.GetHeight()];
 
 		u8* src = (u8*)alldata;
 		u8* dst_d = data;
 		u8* dst_a = alpha;
-		for(u32 i=0; i<tex.m_width*tex.m_height;i++)
+		for(u32 i=0; i<tex.GetWidth()*tex.GetHeight();i++)
 		{
 			*dst_d++ = *src++;
 			*dst_d++ = *src++;
@@ -264,7 +266,7 @@ public:
 		}
 
 		wxImage out;
-		out.Create(tex.m_width, tex.m_height, data, alpha);
+		out.Create(tex.GetWidth(), tex.GetHeight(), data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
 
 		free(alldata);

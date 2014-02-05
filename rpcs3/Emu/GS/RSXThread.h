@@ -19,25 +19,8 @@ class RSXTexture
 {
   u8 m_index;
 public:
-	bool m_enabled;
-
-	u32 m_width, m_height;
-
 	u32 m_pitch;
 	u16 m_depth;
-
-	u16 m_minlod;
-	u16 m_maxlod;
-	u8 m_maxaniso;
-
-	u8 m_wraps;
-	u8 m_wrapt;
-	u8 m_wrapr;
-	u8 m_unsigned_remap;
-	u8 m_zfunc;
-	u8 m_gamma;
-	u8 m_aniso_bias;
-	u8 m_signed_remap;
 
 	u16 m_bias;
 	u8 m_min_filter;
@@ -51,25 +34,46 @@ public:
 	u32 m_remap;
 
 public:
-  RSXTexture();
+	RSXTexture();
 	RSXTexture(u8 index);
+	void Init();
 
-  u32 GetOffset() const;
-  u8 GetLocation() const;
-  bool isCubemap() const;
-  u8 GetBorderType() const;
-  u8 GetDimension() const;
-  u8 GetFormat() const;
-  u16 Getmipmap() const;
+	// Offset
+	u32 GetOffset() const;
 
-	void SetRect(const u32 width, const u32 height);
-	void SetAddress(u8 wraps, u8 wrapt, u8 wrapr, u8 unsigned_remap, u8 zfunc, u8 gamma, u8 aniso_bias, u8 signed_remap);
+	// Format
+	u8   GetLocation() const;
+	bool isCubemap() const;
+	u8   GetBorderType() const;
+	u8   GetDimension() const;
+	u8   GetFormat() const;
+	u16  Getmipmap() const;
+
+	// Address
+	u8 GetWrapS() const;
+	u8 GetWrapT() const;
+	u8 GetWrapR() const;
+	u8 GetUnsignedRemap() const;
+	u8 GetZfunc() const;
+	u8 GetGamma() const;
+	u8 GetAnisoBias() const;
+	u8 GetSignedRemap() const;
+
+	// Control0
+	bool IsEnabled() const;
+	u16  GetMinLOD() const;
+	u16  GetMaxLOD() const;
+	u8   GetMaxAniso() const;
+	bool IsAlphaKillEnabled() const;
+
+	// Image Rect
+	u16 GetWidth() const;
+	u16 GetHeight() const;
+
 	void SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso);
 	void SetControl1(u32 remap);
 	void SetControl3(u16 depth, u32 pitch);
 	void SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_signed, u8 g_signed, u8 b_signed);
-	wxSize GetRect() const;
-	bool IsEnabled() const;
 };
 
 struct RSXVertexData
@@ -546,7 +550,7 @@ protected:
 
     for(uint i=0; i<m_textures_count; ++i)
 	  {
-		  m_textures[i].m_enabled = false;
+			m_textures[i].Init();
 	  }
 	}
 
