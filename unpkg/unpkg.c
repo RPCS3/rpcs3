@@ -65,13 +65,15 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 		case PKG_RELEASE_TYPE_DEBUG: 
 			{
 			ConLog.Warning ("UnPkg: Debug PKG detected.");
+			wxProgressDialog pdlg ("PKG Decrypter / Installer", "Please wait, recrypting...", 0, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
 			u8* data;
 			u8 sha_key[0x40];
 			int i;
 			f= fopen(fname, "rb");
-			fseek(f, 0, SEEK_END);
-			int nlen = ftell(f);
-			fseek(f, 0, SEEK_SET);
+			_fseeki64(f, 0, SEEK_END);
+			int nlen = _ftelli64(f);
+			_fseeki64(f, 0, SEEK_SET);
 			data = (u8*)malloc(nlen);
 			fread(data, 1, nlen, f);
 			fclose(f); 
@@ -93,6 +95,7 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 			u8 hash[0x14];
 			sha1(sha_crap, 0x40, hash);
 			for(i=0;i<0x10;i++) data[dptr+i] ^= hash[i];
+
 			set_u64(sha_crap+0x38, get_u64(sha_crap+0x38)+1);
 			}
  
@@ -114,20 +117,21 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 
 			// add hash
 			sha1(data, nlen-0x20, &data[nlen-0x20]);
+
 			fwrite(data, 1, nlen, g);
 			//fclose(g); // not close the file for continuing
 
-			fseek(g, 0, SEEK_END);
-			tmp = ftell(g);
+			_fseeki64(g, 0, SEEK_END);
+			tmp = _ftelli64(g);
 			}
 			break;
 			
-		
+
 		case PKG_RELEASE_TYPE_RELEASE:
 			{
 				ConLog.Warning ("UnPkg: Retail PKG detected.");
-				fseek(f, 0, SEEK_END);
-				tmp = ftell(f);
+				_fseeki64(f, 0, SEEK_END);
+				tmp = _ftelli64(f);
 			}
 			break;
 
@@ -188,19 +192,19 @@ static void print_pkg_header(pkg_header *header)
 	hash_tostring(qa, header->qa_digest, sizeof(header->qa_digest));
 	hash_tostring(kl, header->klicensee, sizeof(header->klicensee));	
 	
-	ConLog.Write("Magic: %x\n", ntohl(header->magic));
-	ConLog.Write("Release Type: %x\n", ntohl(header->rel_type) >> 16 & (0xffff));
-	ConLog.Write("Platform Type: %x\n", ntohl(header->rel_type) & (0xffff));
-	ConLog.Write("Header size: %x\n", ntohl(header->header_size));
-	ConLog.Write("Unk1: %x\n", ntohl(header->unk1));
-	ConLog.Write("Metadata size: %x\n", ntohl(header->meta_size));
-	ConLog.Write("File count: %u\n", ntohl(header->file_count));
-	ConLog.Write("Pkg size: %llu\n", ntohll(header->pkg_size));
-	ConLog.Write("Data offset: %llx\n", ntohll(header->data_offset));
-	ConLog.Write("Data size: %llu\n", ntohll(header->data_size));
-	ConLog.Write("TitleID: %s\n", header->title_id);
-	ConLog.Write("QA Digest: %s\n", qa);
-	ConLog.Write( "KLicensee: %s\n", kl);
+	ConLog.Write("Magic: 0x%x", ntohl(header->magic));
+	ConLog.Write("Release Type: 0x%x", ntohl(header->rel_type) >> 16 & (0xffff));
+	ConLog.Write("Platform Type: 0x%x", ntohl(header->rel_type) & (0xffff));
+	ConLog.Write("Header size: 0x%x", ntohl(header->header_size));
+	ConLog.Write("Unk1: 0x%x", ntohl(header->unk1));
+	ConLog.Write("Metadata size: 0x%x", ntohl(header->meta_size));
+	ConLog.Write("File count: %u", ntohl(header->file_count));
+	ConLog.Write("Pkg size: %llu", ntohll(header->pkg_size));
+	ConLog.Write("Data offset: 0x%llx", ntohll(header->data_offset));
+	ConLog.Write("Data size: 0x%llu", ntohll(header->data_size));
+	ConLog.Write("TitleID: %s", header->title_id);
+	ConLog.Write("QA Digest: %s", qa);
+	ConLog.Write( "KLicensee: %s", kl);
 }
 
 static void *pkg_info(const char *fname,  pkg_header **h_ptr)
@@ -244,6 +248,9 @@ static void pkg_crypt(const u8 *key, const u8 *kl, FILE *f,
 	u32 l;
 	u64 hi, lo;
 	
+	int max = len / BUF_SIZE;
+	wxProgressDialog pdlg("PKG Decrypter / Installer", "Please wait, decrypting...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+	
 	parts = len / BUF_SIZE;
 	if (len % BUF_SIZE != 0)
 		parts++;
@@ -278,18 +285,19 @@ static void pkg_crypt(const u8 *key, const u8 *kl, FILE *f,
 		}
 		
 		fwrite(out_buf, 1, l, out);
+		pdlg.Update(i);
 	}
-	
+	pdlg.Update(max);
 }
 
-static void pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
+static bool pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
 {
 	FILE *out = NULL;
 	u64 size;
 	u32 tmp;
 	u8 buf[BUF_SIZE];
 	
-	fseek(dec, fentry->name_offset, SEEK_SET);
+	_fseeki64(dec, fentry->name_offset, SEEK_SET);
 	
 	memset(buf, 0, sizeof(buf));
 	fread(buf, fentry->name_size, 1, dec);
@@ -301,7 +309,7 @@ static void pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
 		case PKG_FILE_ENTRY_SDAT:
 		case PKG_FILE_ENTRY_REGULAR:
 			out = fopen((char *)buf, "wb");
-			fseek(dec, fentry->file_offset, SEEK_SET);
+			_fseeki64(dec, fentry->file_offset, SEEK_SET);
 			for (size = 0; size < fentry->file_size; )
 			{
 				size += fread(buf, sizeof(u8), BUF_SIZE, dec);
@@ -320,14 +328,18 @@ static void pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
 			mkdir ((char *)buf);
 			break;
 	}
+	return true;
 }
 
 static void pkg_unpack_data(u32 file_count, FILE *dec)
 {
+	int max = file_count;
+	wxProgressDialog pdlg ("PKG Decrypter / Installer", "Please wait, unpacking...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
 	u32 i;
 	pkg_file_entry *file_table = NULL;
 	
-	fseek(dec, 0, SEEK_SET);
+	_fseeki64(dec, 0, SEEK_SET);
 	
 	file_table = (pkg_file_entry *)malloc(sizeof(pkg_file_entry)*file_count);
 	i = fread(file_table, sizeof(pkg_file_entry), file_count, dec);
@@ -346,27 +358,39 @@ static void pkg_unpack_data(u32 file_count, FILE *dec)
 		(file_table+i)->file_size = ntohll((file_table+i)->file_size);
 		(file_table+i)->type = ntohl((file_table+i)->type);
 		
-		pkg_unpack_file(file_table+i, dec);
-		
+		if(pkg_unpack_file(file_table+i, dec)) pdlg.Update(i);
 	}
 	
 	free(file_table);
+	pdlg.Update(max);
 }
 
-static void pkg_unpack(const char *fname)
+bool pkg_unpack(const char *fname)
 {
 	FILE *f, *dec;
 	char *dec_fname;
 	pkg_header *header;
-	int ret;
 	struct stat sb;
-	
+
 	f = (FILE*) pkg_info(fname, &header);
 	
 	if (f == NULL)
-		return;
+		return false;
+
+	// Save the main dir.
+	wxString mainDir = wxGetCwd();
+
+	// Set the working directory.
+	wxSetWorkingDirectory(wxGetCwd() + "\\dev_hdd0\\game\\");
 	
-	fseek(f, ntohll(header->data_offset), SEEK_SET);
+	std::string gamePath = "\\dev_hdd0\\game\\";
+
+	// Get the PKG title ID from the header and format it (should match TITLE ID from PARAM.SFO).
+	std::string titleID_full (header->title_id);
+	std::string titleID = titleID_full.substr(7, 9);
+	std::string pkgDir = mainDir + gamePath + titleID;
+
+	_fseeki64(f, ntohll(header->data_offset), SEEK_SET);
 	
 	dec_fname = (char*)malloc(strlen(fname)+4);
 	memset(dec_fname, 0, strlen(fname)+4);
@@ -377,29 +401,33 @@ static void pkg_unpack(const char *fname)
 	{
 		ConLog.Error("UnPkg: Could not create temp file for decrypted data.");
 		free(header);
-		return;
+		return false;
 	}
 	unlink(dec_fname);
 	
 	pkg_crypt(PKG_AES_KEY, header->klicensee, f, ntohll(header->data_size), 
 			  dec);
-	fseek(dec, 0, SEEK_SET);
+	_fseeki64(dec, 0, SEEK_SET);
 	
 	fclose(f);
 	
 	if (stat(header->title_id, &sb) != 0)
 	{
-		ret = mkdir(header->title_id);
-		if (ret < 0)
+		if (mkdir(titleID.c_str()) < 0)
 		{
 			ConLog.Error("UnPkg: Could not mkdir.");
+			ConLog.Error("UnPkg: Possibly, folder already exists in dev_hdd0\\game : %s", titleID.c_str());
+			wxSetWorkingDirectory(mainDir);
 			free(header);
-			return;
+			return false;
 		}
 	}
 	
-	chdir(header->title_id);
+	chdir(titleID.c_str());
 	
 	pkg_unpack_data(ntohl(header->file_count), dec);
 	fclose(dec);
+	
+	wxSetWorkingDirectory(mainDir);
+	return true;
 }
