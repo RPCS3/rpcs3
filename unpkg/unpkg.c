@@ -65,6 +65,8 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 		case PKG_RELEASE_TYPE_DEBUG: 
 			{
 			ConLog.Warning ("UnPkg: Debug PKG detected.");
+			wxProgressDialog pdlg ("PKG Decrypter / Installer", "Please wait, recrypting...", 0, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
 			u8* data;
 			u8 sha_key[0x40];
 			int i;
@@ -93,6 +95,7 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 			u8 hash[0x14];
 			sha1(sha_crap, 0x40, hash);
 			for(i=0;i<0x10;i++) data[dptr+i] ^= hash[i];
+
 			set_u64(sha_crap+0x38, get_u64(sha_crap+0x38)+1);
 			}
  
@@ -115,21 +118,11 @@ static int pkg_sanity_check(FILE *f, FILE *g, pkg_header **h_ptr, const char *fn
 			// add hash
 			sha1(data, nlen-0x20, &data[nlen-0x20]);
 
-			int write_count = fwrite(data, 1, nlen, g);
+			fwrite(data, 1, nlen, g);
 			//fclose(g); // not close the file for continuing
-
-			int max = nlen;
-			wxProgressDialog* pdlg = new wxProgressDialog("PKG Decrypter / Installer", "Please wait, recrypting...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
-			
-			for (i=0; i<write_count; i++)
-			{
-				pdlg->Update(i);
-			}
 
 			_fseeki64(g, 0, SEEK_END);
 			tmp = _ftelli64(g);
-			pdlg->Update(max);
-			delete pdlg;
 			}
 			break;
 			
@@ -256,8 +249,8 @@ static void pkg_crypt(const u8 *key, const u8 *kl, FILE *f,
 	u64 hi, lo;
 	
 	int max = len / BUF_SIZE;
-	wxProgressDialog* pdlg = new wxProgressDialog("PKG Decrypter / Installer", "Please wait, decrypting...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
-
+	wxProgressDialog pdlg("PKG Decrypter / Installer", "Please wait, decrypting...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+	
 	parts = len / BUF_SIZE;
 	if (len % BUF_SIZE != 0)
 		parts++;
@@ -292,10 +285,9 @@ static void pkg_crypt(const u8 *key, const u8 *kl, FILE *f,
 		}
 		
 		fwrite(out_buf, 1, l, out);
-		pdlg->Update(i);
+		pdlg.Update(i);
 	}
-	pdlg->Update(max);
-	delete pdlg;
+	pdlg.Update(max);
 }
 
 static bool pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
@@ -342,7 +334,7 @@ static bool pkg_unpack_file(pkg_file_entry *fentry, FILE *dec)
 static void pkg_unpack_data(u32 file_count, FILE *dec)
 {
 	int max = file_count;
-	wxProgressDialog* pdlg = new wxProgressDialog("PKG Decrypter / Installer", "Please wait, unpacking...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+	wxProgressDialog pdlg ("PKG Decrypter / Installer", "Please wait, unpacking...", max, 0, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
 
 	u32 i;
 	pkg_file_entry *file_table = NULL;
@@ -366,12 +358,11 @@ static void pkg_unpack_data(u32 file_count, FILE *dec)
 		(file_table+i)->file_size = ntohll((file_table+i)->file_size);
 		(file_table+i)->type = ntohl((file_table+i)->type);
 		
-		if(pkg_unpack_file(file_table+i, dec)) pdlg->Update(i);
+		if(pkg_unpack_file(file_table+i, dec)) pdlg.Update(i);
 	}
 	
 	free(file_table);
-	pdlg->Update(max);
-	delete pdlg;
+	pdlg.Update(max);
 }
 
 bool pkg_unpack(const char *fname)
@@ -437,20 +428,6 @@ bool pkg_unpack(const char *fname)
 	pkg_unpack_data(ntohl(header->file_count), dec);
 	fclose(dec);
 	
-	// Save the title ID.
-	Emu.SetTitleID(titleID);
-
-	// Travel to the main dir.
 	wxSetWorkingDirectory(mainDir);
-
-	if(Emu.BootGame(pkgDir.c_str()))
-	{
-		ConLog.Success("Game: boot done.");
-	}
-	else
-	{
-		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.c_str());
-	}
-
 	return true;
 }

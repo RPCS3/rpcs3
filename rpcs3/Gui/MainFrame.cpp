@@ -233,8 +233,31 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
 		ConLog.Warning("Could not delete the decoded DEC file");
 
+	pkg_header *header;
+	pkg_info((const char *)fileName.mb_str(), &header);
+
+	wxString titleID_full (header->title_id);
+	wxString titleID = titleID_full.SubString(7, 15);
+
+	wxString mainDir = wxGetCwd();
+	wxString gamePath = "\\dev_hdd0\\game\\";
+
+	wxString pkgDir = wxT(mainDir + gamePath + titleID);
+
+	// Save the title ID.
+	Emu.SetTitleID(titleID);
+
 	//Refresh game list
 	m_game_viewer->Refresh();
+	
+	if(Emu.BootGame(pkgDir.c_str()))
+	{
+		ConLog.Success("Game: boot done.");
+	}
+	else
+	{
+		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.c_str());
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
