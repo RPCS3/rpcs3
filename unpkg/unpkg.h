@@ -164,11 +164,11 @@ static void *pkg_info(const char *fname, pkg_header **h_ptr);
 static void pkg_crypt(const u8 *key, const u8 *kl, FILE *f, 
 					  u64 len, FILE *out);
 
-static void pkg_unpack(const char *fname);
+bool pkg_unpack(const char *fname);
 
 static void pkg_unpack_data(u32 file_count, FILE *dec);
 
-static void pkg_unpack_file(pkg_file_entry *fentry, FILE *dec);;
+static bool pkg_unpack_file(pkg_file_entry *fentry, FILE *dec);;
 
 static int pkg_pack_data(file_table_tr *ftr, pkg_file_entry *table,
 						 int file_count, sha1_context *ctx, FILE *out);
