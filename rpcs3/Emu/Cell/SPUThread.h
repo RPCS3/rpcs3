@@ -4,8 +4,6 @@
 #include "MFC.h"
 #include <mutex>
 
-extern std::mutex g_SyncMutex; //can provide compatability for CellSyncMutex through SPU<>PPU and SPU<>SPU
-
 static const char* spu_reg_name[128] =
 {
 	"$LR",  "$SP",  "$2",   "$3",   "$4",   "$5",   "$6",   "$7",
@@ -516,11 +514,11 @@ public:
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			if (enable_log)	ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+			/* if (enable_log) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
 				op & MFC_PUT_CMD ? "PUT" : "GET",
 				op & MFC_BARRIER_MASK ? "B" : "", 
 				op & MFC_FENCE_MASK ? "F" : "", 
-				lsa, ea, tag, size, cmd);
+				lsa, ea, tag, size, cmd); */
 			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 		}
 		break;
@@ -528,22 +526,56 @@ public:
 		case MFC_GETLLAR_CMD:
 		case MFC_PUTLLC_CMD:
 		case MFC_PUTLLUC_CMD:
+		case MFC_PUTQLLUC_CMD:
 		{
-			if (op == MFC_GETLLAR_CMD) 
+			/* if (enable_log) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC",
+				lsa, ea, tag, size, cmd); */
+
+			if (op == MFC_GETLLAR_CMD) // get reservation
 			{
-				g_SyncMutex.lock();
+				SMutexLocker lock(reservation.mutex);
+				reservation.owner = lock.tid;
+				reservation.addr = ea;
+				reservation.size = 128;
+				dmac.ProcessCmd(MFC_GET_CMD, tag, lsa, ea, 128);
+				memcpy(&reservation.data64[0], Memory + ea, 128);
+				Prxy.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
-			
-			ConLog.Warning("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
-				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : "PUTLLUC",
-				lsa, ea, tag, size, cmd);
-
-			dmac.ProcessCmd(op == MFC_GETLLAR_CMD ? MFC_GET_CMD : MFC_PUT_CMD, tag, lsa, ea, 128);
-			Prxy.AtomicStat.PushUncond(op == MFC_GETLLAR_CMD ? MFC_GETLLAR_SUCCESS : op == MFC_PUTLLC_CMD ? MFC_PUTLLC_SUCCESS : MFC_PUTLLUC_SUCCESS);
-
-			if (op == MFC_PUTLLC_CMD || op == MFC_PUTLLUC_CMD) 
+			else if (op == MFC_PUTLLC_CMD) // store conditional
 			{
-				g_SyncMutex.unlock();
+				SMutexLocker lock(reservation.mutex);
+				if (reservation.owner == lock.tid) // succeeded
+				{
+					if (reservation.addr == ea && reservation.size == 128 && reservation.compare128(Memory + ea))
+					{
+						dmac.ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+					}
+					else
+					{
+						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+					}
+					reservation.clear();
+				}
+				else // failed
+				{
+					Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+				}
+			}
+			else // store unconditional
+			{
+				SMutexLocker lock(reservation.mutex);
+				dmac.ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+				if (op == MFC_PUTLLUC_CMD)
+				{
+					Prxy.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
+				}
+				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
+					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
+				{
+					reservation.clear();
+				}
 			}
 		}
 		break;

@@ -2362,9 +2362,12 @@ private:
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.reserve_addr = addr;
-		CPU.reserve = true;
-		CPU.GPR[rd] = Memory.Read32(addr);
+
+		SMutexLocker lock(reservation.mutex);
+		reservation.owner = lock.tid;
+		reservation.addr = addr;
+		reservation.size = 4;
+		reservation.data32[0] = CPU.GPR[rd] = Memory.Read32(addr);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2535,9 +2538,12 @@ private:
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.reserve_addr = addr;
-		CPU.reserve = true;
-		CPU.GPR[rd] = Memory.Read64(addr);
+
+		SMutexLocker lock(reservation.mutex);
+		reservation.owner = lock.tid;
+		reservation.addr = addr;
+		reservation.size = 8;
+		reservation.data64[0] = CPU.GPR[rd] = Memory.Read64(addr);
 	}
 	void DCBF(u32 ra, u32 rb)
 	{
@@ -2650,25 +2656,19 @@ private:
 	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
-		CPU.SetCR(0, CPU.XER.SO ? CR_SO : 0);
-		
-		if(CPU.reserve)
-		{
-			const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-			if(addr == CPU.reserve_addr)
-			{
-				Memory.Write32(addr, CPU.GPR[rs]);
-				CPU.SetCR_EQ(0, true);
-				CPU.reserve = false;
-			}
-			else
-			{
-				static const bool u = 0;
-				if(u) Memory.Write32(addr, CPU.GPR[rs]);
-				CPU.SetCR_EQ(0, u);
-				CPU.reserve = false;
-			}
+		SMutexLocker lock(reservation.mutex);
+		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 4 && reservation.data32[0] == Memory.Read32(addr))
+		{
+			Memory.Write32(addr, CPU.GPR[rs]);
+			CPU.SetCR_EQ(0, true);
+			reservation.clear();
+		}
+		else
+		{
+			CPU.SetCR_EQ(0, false);
+			if (lock.tid == reservation.owner) reservation.clear();
 		}
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
@@ -2709,23 +2709,19 @@ private:
 	}
 	void STDCX_(u32 rs, u32 ra, u32 rb)
 	{
-		CPU.SetCR(0, CPU.XER.SO ? CR_SO : 0);
-		if(!CPU.reserve)
-		{
-			const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-			if(addr == CPU.reserve_addr)
-			{
-				Memory.Write64(addr, CPU.GPR[rs]);
-				CPU.SetCR_EQ(0, true);
-			}
-			else
-			{
-				static const bool u = 0;
-				if(u) Memory.Write64(addr, CPU.GPR[rs]);
-				CPU.SetCR_EQ(0, u);
-				CPU.reserve = false;
-			}
+		SMutexLocker lock(reservation.mutex);
+		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 8 && reservation.data64[0] == Memory.Read64(addr))
+		{
+			Memory.Write64(addr, CPU.GPR[rs]);
+			CPU.SetCR_EQ(0, true);
+			reservation.clear();
+		}
+		else
+		{
+			CPU.SetCR_EQ(0, false);
+			if (lock.tid == reservation.owner) reservation.clear();
 		}
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)

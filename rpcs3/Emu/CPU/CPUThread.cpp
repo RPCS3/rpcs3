@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "CPUThread.h"
 
+reservation_struct reservation;
+
 CPUThread* GetCurrentCPUThread()
 {
 	return (CPUThread*)GetCurrentNamedThread();

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/lv2/SC_Lwmutex.h"
-#include "Utilities/SMutex.h"
 #include <mutex>
 
 SysCallBase sc_lwmutex("sys_lwmutex");
@@ -13,19 +12,19 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 
 	if (!lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	switch ((u32)attr->attr_recursive)
+	switch (attr->attr_recursive.ToBE())
 	{
-	case SYS_SYNC_RECURSIVE: break;
-	case SYS_SYNC_NOT_RECURSIVE: break;
+	case se32(SYS_SYNC_RECURSIVE): break;
+	case se32(SYS_SYNC_NOT_RECURSIVE): break;
 	default: return CELL_EINVAL;
 	}
 
-	switch ((u32)attr->attr_protocol)
+	switch (attr->attr_protocol.ToBE())
 	{
-	case SYS_SYNC_PRIORITY: sc_lwmutex.Warning("TODO: SYS_SYNC_PRIORITY attr"); break;
-	case SYS_SYNC_RETRY: sc_lwmutex.Warning("TODO: SYS_SYNC_RETRY attr"); break;
-	case SYS_SYNC_PRIORITY_INHERIT: sc_lwmutex.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
-	case SYS_SYNC_FIFO: sc_lwmutex.Warning("TODO: SYS_SYNC_FIFO attr"); break;
+	case se32(SYS_SYNC_PRIORITY): sc_lwmutex.Warning("TODO: SYS_SYNC_PRIORITY attr"); break;
+	case se32(SYS_SYNC_RETRY): break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sc_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT attr"); break;
+	case se32(SYS_SYNC_FIFO): sc_lwmutex.Warning("TODO: SYS_SYNC_FIFO attr"); break;
 	default: return CELL_EINVAL;
 	}
 
@@ -46,12 +45,12 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
-	if (!lwmutex->attribute) return CELL_EINVAL;
-
 	// try to make it unable to lock
-	if (lwmutex->owner.trylock(~0) != SMR_OK) return CELL_EBUSY;
-	lwmutex->attribute = 0;
-	return CELL_OK;
+	switch (int res = lwmutex->trylock(~0)) 
+	{
+		case CELL_OK: lwmutex->attribute = 0;
+		default: return res;
+	}
 }
 
 int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
@@ -59,8 +58,6 @@ int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 	sc_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
-
-	if (!lwmutex->attribute) return CELL_EINVAL;
 
 	return lwmutex->lock(GetCurrentPPUThread().GetId(), timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0);
 }
@@ -71,8 +68,6 @@ int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
-	if (!lwmutex->attribute) return CELL_EINVAL;
-
 	return lwmutex->trylock(GetCurrentPPUThread().GetId());
 }
 
@@ -82,8 +77,6 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
-	if (!lwmutex->unlock(GetCurrentPPUThread().GetId())) return CELL_EPERM;
-
-	return CELL_OK;
+	return lwmutex->unlock(GetCurrentPPUThread().GetId());
 }
 

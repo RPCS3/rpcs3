@@ -177,15 +177,36 @@ int sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg)
 	return CELL_OK;
 }
 
-//173
-int sys_spu_thread_group_start(u32 id)
+//165
+int sys_spu_thread_get_exit_status(u32 id, mem32_t status)
 {
-	sc_spu.Warning("sys_spu_thread_group_start(id=0x%x)", id);
+	sc_spu.Warning("sys_spu_thread_get_exit_status(id=0x%x, status_addr=0x%x)", id, status.GetAddr());
 
-	if(!Emu.GetIdManager().CheckID(id))
+	if (!status.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
 	{
 		return CELL_ESRCH;
 	}
+
+	if (!thr->IsStopped()) // (!!!) if SPU thread doesn't have exit status
+	{
+		return CELL_ESTAT;
+	}
+
+	status = thr->GetExitStatus();
+	return CELL_OK;
+}
+
+//171
+int sys_spu_thread_group_destroy(u32 id)
+{
+	sc_spu.Warning("sys_spu_thread_group_destroy(id=0x%x)", id);
 
 	SpuGroupInfo* group_info;
 	if(!Emu.GetIdManager().GetIDData(id, group_info))
@@ -193,8 +214,32 @@ int sys_spu_thread_group_start(u32 id)
 		return CELL_ESRCH;
 	}
 
-	//Emu.Pause();
-	for (int i = 0; i < group_info->list.GetCount(); i++)
+	if (group_info->lock) // ???
+	{
+		return CELL_EBUSY;
+	}
+
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	{
+		Emu.GetCPU().RemoveThread(group_info->list[i]);
+	}
+
+	Emu.GetIdManager().RemoveID(id);
+	return CELL_OK;
+}
+
+//173
+int sys_spu_thread_group_start(u32 id)
+{
+	sc_spu.Warning("sys_spu_thread_group_start(id=0x%x)", id);
+
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
+
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
 		CPUThread* t;
 		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
@@ -218,10 +263,9 @@ int sys_spu_thread_group_suspend(u32 id)
 	}
 
 	//Emu.Pause();
-	for (int i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
-		CPUThread* t;
-		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
+		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
 			t->Pause();
 		}
@@ -273,14 +317,17 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 	cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 	status = 0; //unspecified because of ALL_THREADS_EXIT
 
-	for (int i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
-		while (Emu.GetCPU().GetThread(group_info->list[i]))
+		while (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
-			Sleep(1);
+			if (!t->IsRunning())
+			{
+				break;
+			}
 			if (Emu.IsStopped()) return CELL_OK;
+			Sleep(1);
 		}
-		group_info->list[i] = 0;
 	}
 
 	group_info->lock = 0; // release lock
@@ -514,7 +561,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 		return CELL_ESRCH;
 	}
 	
-	for(int i=0; i<group->list.GetCount(); ++i)
+	for(u32 i=0; i<group->list.GetCount(); ++i)
 	{
 		CPUThread* t;
 		if(t = Emu.GetCPU().GetThread(group->list[i]))

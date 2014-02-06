@@ -749,7 +749,7 @@ int32_t cellGcmUnmapEaIoAddress(u64 ea)
 		ea = ea >> 20;
 		io = Memory.Read16(offsetTable.io + (ea*sizeof(u16)));
 
-		for(int i=0; i<size; i++)
+		for(u32 i=0; i<size; i++)
 		{
 			Memory.Write16(offsetTable.io + ((ea+i)*sizeof(u16)), 0xFFFF);
 			Memory.Write16(offsetTable.ea + ((io+i)*sizeof(u16)), 0xFFFF);
@@ -772,7 +772,7 @@ int32_t cellGcmUnmapIoAddress(u64 io)
 		io = io >> 20;
 		ea = Memory.Read16(offsetTable.ea + (io*sizeof(u16)));
 
-		for(int i=0; i<size; i++)
+		for(u32 i=0; i<size; i++)
 		{
 			Memory.Write16(offsetTable.io + ((ea+i)*sizeof(u16)), 0xFFFF);
 			Memory.Write16(offsetTable.ea + ((io+i)*sizeof(u16)), 0xFFFF);

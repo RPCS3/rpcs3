@@ -192,7 +192,6 @@ extern int sys_ppu_thread_restart(u32 thread_id);
 extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
-extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 
 //memory
 extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
@@ -300,12 +299,14 @@ extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4);
 extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
 extern int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<sys_spu_image> img, mem_ptr_t<sys_spu_thread_attribute> attr, mem_ptr_t<sys_spu_thread_argument> arg);
 extern int sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg);
+extern int sys_spu_thread_group_destroy(u32 id);
 extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_suspend(u32 id);
 extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
 extern int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
+extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
@@ -315,6 +316,7 @@ extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
 extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
 extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
 extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
+extern int sys_spu_thread_get_exit_status(u32 id, mem32_t status);
 
 //sys_time
 extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);

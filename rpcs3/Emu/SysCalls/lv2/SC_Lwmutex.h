@@ -10,7 +10,7 @@ enum
 	SYS_SYNC_PRIORITY = 2,
 	// Basic Priority Inheritance Protocol
 	SYS_SYNC_PRIORITY_INHERIT = 3,
-	// ????
+	// Not selected while unlocking
 	SYS_SYNC_RETRY = 4,
 	//
 	SYS_SYNC_ATTR_PROTOCOL_MASK = 0xF, 
@@ -53,11 +53,13 @@ struct sys_lwmutex_t
 	be_t<u32> sleep_queue;
 	be_t<u32> pad;
 
-	int trylock(u32 tid)
+	int enter(u32 tid) // check and process (non-)recursive mutex
 	{
-		if (tid == (u32)owner.GetOwner()) // recursive or deadlock
+		if (!attribute) return CELL_EINVAL;
+
+		if (tid == (u32)owner.GetOwner()) 
 		{
-			if (attribute & se32(SYS_SYNC_RECURSIVE))
+			if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 			{
 				recursive_count += 1;
 				if (!recursive_count) return CELL_EKRESOURCE;
@@ -68,18 +70,28 @@ struct sys_lwmutex_t
 				return CELL_EDEADLK;
 			}
 		}
+		return CELL_EBUSY;
+	}
+
+	int trylock(u32 tid)
+	{
+		switch (int res = enter(tid))
+		{
+			case CELL_EBUSY: break;
+			default: return res;
+		}
 		switch (owner.trylock(tid))
 		{
-		case SMR_OK: recursive_count = 1; return CELL_OK;
-		default: return CELL_EBUSY;
+			case SMR_OK: recursive_count = 1; return CELL_OK;
+			default: return CELL_EBUSY;
 		}
 	}
 
-	bool unlock(u32 tid)
+	int unlock(u32 tid)
 	{
 		if (tid != (u32)owner.GetOwner())
 		{
-			return false;
+			return CELL_EPERM;
 		}
 		else
 		{
@@ -88,23 +100,22 @@ struct sys_lwmutex_t
 			{
 				owner.unlock(tid);
 			}
-			return true;
+			return CELL_OK;
 		}
 	}
 
 	int lock(u32 tid, u64 timeout)
 	{
-		switch (int res = trylock(tid))
+		switch (int res = enter(tid))
 		{
-		case CELL_OK: return CELL_OK;
-		case CELL_EBUSY: break;
-		default: return res;
+			case CELL_EBUSY: break;
+			default: return res;
 		}
 		switch (owner.lock(tid, timeout))
 		{
-		case SMR_OK: recursive_count = 1; return CELL_OK;
-		case SMR_TIMEOUT: return CELL_ETIMEDOUT;
-		default: return CELL_EINVAL;
+			case SMR_OK: recursive_count = 1; return CELL_OK;
+			case SMR_TIMEOUT: return CELL_ETIMEDOUT;
+			default: return CELL_EINVAL;
 		}
 	}
 };

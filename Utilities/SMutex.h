@@ -118,11 +118,11 @@ public:
 template<typename T, T (get_tid)()>
 class SMutexLockerBase
 {
-	typedef SMutexBase<T> T_SMutex;
-	T_SMutex& sm;
+	SMutexBase<T>& sm;
+public:
 	const T tid;
 
-	SMutexLockerBase(T_SMutex& _sm)
+	SMutexLockerBase(SMutexBase<T>& _sm)
 		: sm(_sm)
 		, tid(get_tid())
 	{

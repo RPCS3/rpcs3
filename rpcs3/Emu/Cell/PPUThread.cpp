@@ -44,9 +44,6 @@ void PPUThread::DoReset()
 	VSCR.VSCR	= 0;
 
 	cycle = 0;
-
-	reserve = false;
-	reserve_addr = 0;
 }
 
 void PPUThread::AddArgv(const wxString& arg)

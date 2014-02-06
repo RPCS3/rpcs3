@@ -4,9 +4,7 @@
 #include <mutex>
 
 void cellSync_init();
-void cellSync_unload();
-Module cellSync("cellSync", cellSync_init, nullptr, cellSync_unload);
-std::mutex g_SyncMutex;
+Module cellSync("cellSync", cellSync_init);
 
 // Return Codes
 enum
@@ -56,8 +54,13 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	{ // global mutex
-		std::lock_guard<std::mutex> lock(g_SyncMutex); //???
+	{
+		SMutexLocker lock(reservation.mutex);
+		if ((reservation.addr + reservation.size > mutex.GetAddr() && reservation.addr <= mutex.GetAddr() + 4) || 
+			(mutex.GetAddr() + 4 > reservation.addr && mutex.GetAddr() <= reservation.addr + reservation.size))
+		{
+			reservation.clear();
+		}
 		mutex->m_data = 0;
 		return CELL_OK;
 	}
@@ -77,8 +80,13 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 	}
 
 	be_t<u16> old_order;
-	{ // global mutex
-		std::lock_guard<std::mutex> lock(g_SyncMutex);
+	{
+		SMutexLocker lock(reservation.mutex);
+		if ((reservation.addr + reservation.size > mutex.GetAddr() && reservation.addr <= mutex.GetAddr() + 4) || 
+			(mutex.GetAddr() + 4 > reservation.addr && mutex.GetAddr() <= reservation.addr + reservation.size))
+		{
+			reservation.clear();
+		}
 		old_order = mutex->m_order;
 		mutex->m_order = mutex->m_order + 1;
 		if (old_order == mutex->m_freed)
@@ -98,7 +106,6 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 				mutex.GetAddr(), (u16)old_order, (u16)mutex->m_order, (u16)mutex->m_freed);
 		}
 	}
-	//while (_InterlockedExchange((volatile long*)&mutex->m_data, 1)) Sleep(1);
 	_mm_mfence();
 	return CELL_OK;
 }
@@ -115,8 +122,13 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-	{ /* global mutex */
-		std::lock_guard<std::mutex> lock(g_SyncMutex);
+	{
+		SMutexLocker lock(reservation.mutex);
+		if ((reservation.addr + reservation.size > mutex.GetAddr() && reservation.addr <= mutex.GetAddr() + 4) || 
+			(mutex.GetAddr() + 4 > reservation.addr && mutex.GetAddr() <= reservation.addr + reservation.size))
+		{
+			reservation.clear();
+		}
 		if (mutex->m_order != mutex->m_freed)
 		{
 			return CELL_SYNC_ERROR_BUSY;
@@ -140,7 +152,12 @@ int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 	}
 
 	{ /* global mutex */
-		std::lock_guard<std::mutex> lock(g_SyncMutex);
+		SMutexLocker lock(reservation.mutex);
+		if ((reservation.addr + reservation.size > mutex.GetAddr() && reservation.addr <= mutex.GetAddr() + 4) || 
+			(mutex.GetAddr() + 4 > reservation.addr && mutex.GetAddr() <= reservation.addr + reservation.size))
+		{
+			reservation.clear();
+		}
 		mutex->m_freed = mutex->m_freed + 1;
 		return CELL_OK;
 	}
@@ -152,9 +169,4 @@ void cellSync_init()
 	cellSync.AddFunc(0x1bb675c2, cellSyncMutexLock);
 	cellSync.AddFunc(0xd06918c4, cellSyncMutexTryLock);
 	cellSync.AddFunc(0x91f2b7b0, cellSyncMutexUnlock);
-}
-
-void cellSync_unload()
-{
-	g_SyncMutex.unlock();
 }

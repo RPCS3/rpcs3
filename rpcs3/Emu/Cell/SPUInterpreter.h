@@ -32,15 +32,8 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		if(code & 0x2000)
-		{
-			CPU.SetExitStatus(code & 0xfff);
-		}
-		else
-		{
-			ConLog.Warning("STOP: 0x%x", code);
-			//Emu.Pause();
-		}
+		ConLog.Warning("STOP: 0x%x (exit_status -> 0)", code);
+		CPU.SetExitStatus(0);
 		CPU.Stop();
 	}
 	void LNOP()

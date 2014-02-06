@@ -10,7 +10,7 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	if (!rw_lock_id.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	switch (attr->attr_protocol)
+	switch (attr->attr_protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): sys_rwlock.Warning("TODO: SYS_SYNC_PRIORITY attr"); break;
 	case se32(SYS_SYNC_RETRY): sys_rwlock.Error("Invalid SYS_SYNC_RETRY attr"); break;
@@ -19,7 +19,7 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 	default: return CELL_EINVAL;
 	}
 
-	if (attr->attr_pshared != se32(0x200))
+	if (attr->attr_pshared.ToBE() != se32(0x200))
 	{
 		sys_rwlock.Error("Invalid attr_pshared(0x%x)", (u32)attr->attr_pshared);
 		return CELL_EINVAL;
