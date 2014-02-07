@@ -152,7 +152,7 @@ namespace PboPool {
 
 	void EndTransfer() {
 		// Note: keep offset aligned for SSE/AVX
-		m_offset[m_current_pbo] += (m_size + 64) & ~0x3F;
+		m_offset[m_current_pbo] = (m_offset[m_current_pbo] + m_size + 31) & ~0x1F;
 	}
 }
 
@@ -319,8 +319,11 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	char* map = PboPool::Map(r.height() * line_size);
 
 	for (uint32 h = r.height(); h > 0; h--) {
-		GSVector4i::storent(map, src, line_size);
-		//memcpy(map, src, line_size);
+		// avoid a crash if map is not aligned
+		if ((uint32)map & 0x1F)
+			memcpy(map, src, line_size);
+		else
+			GSVector4i::storent(map, src, line_size);
 		src += pitch;
 		map += line_size;
 	}

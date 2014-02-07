@@ -235,7 +235,7 @@ bool RunLinuxDialog()
 	GtkWidget *interlace_label, *threads_label, *native_label,  *fsaa_label, *rexy_label, *render_label, *filter_label;
 	
 	GtkWidget *hack_table, *hack_skipdraw_label, *hack_box, *hack_frame;
-	GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check, *hack_logz_check;
+	GtkWidget *hack_alpha_check, *hack_date_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check, *hack_logz_check;
 	GtkWidget *hack_tco_label, *hack_tco_entry;
 	GtkWidget *gl_box, *gl_frame, *gl_table;
 
@@ -353,6 +353,7 @@ bool RunLinuxDialog()
 
 	// Create our hack settings.
 	hack_alpha_check    = gtk_check_button_new_with_label("Alpha Hack");
+	hack_date_check     = gtk_check_button_new_with_label("Date Hack");
 	hack_offset_check   = gtk_check_button_new_with_label("Offset Hack");
 	hack_skipdraw_label = gtk_label_new("Skipdraw:");
 	hack_skipdraw_spin  = gtk_spin_button_new_with_range(0,1000,1);
@@ -373,6 +374,7 @@ bool RunLinuxDialog()
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_sprite_check, 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_wild_check, 1, 2, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_logz_check, 0, 1, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_date_check, 1, 2, 2, 3);
 	// Note: MSAA is not implemented yet. I disable it to make the table square
 	//gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_msaa_check, 2, 3, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_skipdraw_label, 0, 1, 3, 4);
@@ -397,6 +399,7 @@ bool RunLinuxDialog()
 	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_alpha_check), theApp.GetConfig("UserHacks_AlphaHack", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_offset_check), theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_date_check), theApp.GetConfig("UserHacks_DateGL4", 0));
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_enble_check), theApp.GetConfig("UserHacks", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_msaa_check), theApp.GetConfig("UserHacks_MSAA", 0));
@@ -512,11 +515,7 @@ override_GL_ARB_shading_language_420pack = -1
 	gtk_container_add(GTK_CONTAINER(central_box), hw_frame);
 	gtk_container_add(GTK_CONTAINER(central_box), sw_frame);
 	
-	if (!!theApp.GetConfig("UserHacks", 0))
-	{
-		gtk_container_add(GTK_CONTAINER(advance_box), hack_frame);
-	}
-
+	gtk_container_add(GTK_CONTAINER(advance_box), hack_frame);
 	gtk_container_add(GTK_CONTAINER(advance_box), gl_frame);
 
 	g_signal_connect(render_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
@@ -577,6 +576,7 @@ override_GL_ARB_shading_language_420pack = -1
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_offset_check)));
 		theApp.SetConfig("UserHacks_AlphaHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_alpha_check)));
 		theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_logz_check)));
+		theApp.SetConfig("UserHacks_DateGL4", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_date_check)));
 
 		theApp.SetConfig("UserHacks_MSAA", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_msaa_check)));
 		theApp.SetConfig("UserHacks_WildHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_wild_check)));

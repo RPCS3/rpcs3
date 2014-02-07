@@ -1134,8 +1134,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 			OMSetWriteBuffer();
 			OMAttachRt(static_cast<GSTextureOGL*>(rt)->GetID());
 		} else {
-			// Note: NULL rt is only used in DATE so far. Color writing is disabled
-			// on the blend setup
+			// Note: NULL rt is only used in DATE so far.
 			OMSetFBO(m_fbo);
 			OMSetWriteBuffer(GL_NONE);
 		}

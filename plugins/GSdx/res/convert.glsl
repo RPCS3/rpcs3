@@ -223,7 +223,7 @@ void ps_main9()
 #ifdef ps_main2
 void ps_main2()
 {
-    if(sample_c().a < 127.5f / 255.0f) // >= 0x80 pass
+    if(sample_c().a < (127.5f / 255.0f)) // >= 0x80 pass
         discard;
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
@@ -237,7 +237,7 @@ void ps_main2()
 #ifdef ps_main3
 void ps_main3()
 {
-    if(127.5f / 255.0f < sample_c().a) // < 0x80 pass (== 0x80 should not pass)
+    if((127.5f / 255.0f) < sample_c().a) // < 0x80 pass (== 0x80 should not pass)
         discard;
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
