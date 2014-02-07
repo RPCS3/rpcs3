@@ -194,12 +194,14 @@ int sys_spu_thread_get_exit_status(u32 id, mem32_t status)
 		return CELL_ESRCH;
 	}
 
-	if (!thr->IsStopped()) // (!!!) if SPU thread doesn't have exit status
+	if (!(*(SPUThread*)thr).SPU.Out_MBox.GetCount() || !thr->IsStopped())
 	{
 		return CELL_ESTAT;
 	}
 
-	status = thr->GetExitStatus();
+	u32 res;
+	(*(SPUThread*)thr).SPU.Out_MBox.PopUncond(res);
+	status = res;
 	return CELL_OK;
 }
 

@@ -389,7 +389,7 @@ public:
 			else
 			{
 #ifdef _M_X64
-				_InterlockedOr64((volatile __int64*)m_indval, ((u64)value << 32) | 1);
+				InterlockedOr64((volatile __int64*)m_indval, ((u64)value << 32) | 1);
 #else
 				ConLog.Error("PushUncond_OR(): no code compiled");
 #endif
@@ -519,7 +519,20 @@ public:
 				op & MFC_BARRIER_MASK ? "B" : "", 
 				op & MFC_FENCE_MASK ? "F" : "", 
 				lsa, ea, tag, size, cmd); */
-			MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+			if (op & MFC_PUT_CMD)
+			{
+				SMutexLocker lock(reservation.mutex);
+				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
+					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
+				{
+					reservation.clear();
+				}
+			}
+			else
+			{
+				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+			}
 		}
 		break;
 
@@ -528,9 +541,9 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			/* if (enable_log) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+			if (enable_log) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC",
-				lsa, ea, tag, size, cmd); */
+				lsa, ea, tag, size, cmd);
 
 			if (op == MFC_GETLLAR_CMD) // get reservation
 			{
@@ -539,7 +552,6 @@ public:
 				reservation.addr = ea;
 				reservation.size = 128;
 				dmac.ProcessCmd(MFC_GET_CMD, tag, lsa, ea, 128);
-				memcpy(&reservation.data64[0], Memory + ea, 128);
 				Prxy.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
@@ -547,7 +559,7 @@ public:
 				SMutexLocker lock(reservation.mutex);
 				if (reservation.owner == lock.tid) // succeeded
 				{
-					if (reservation.addr == ea && reservation.size == 128 && reservation.compare128(Memory + ea))
+					if (reservation.addr == ea && reservation.size == 128)
 					{
 						dmac.ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
 						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);

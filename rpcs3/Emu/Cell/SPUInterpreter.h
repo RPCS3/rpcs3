@@ -32,7 +32,7 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		ConLog.Warning("STOP: 0x%x (exit_status -> 0)", code);
+		ConLog.Warning("STOP: 0x%x (m_exit_status -> 0)", code);
 		CPU.SetExitStatus(0);
 		CPU.Stop();
 	}

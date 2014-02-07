@@ -21,7 +21,6 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	if (attr->attr_pshared.ToBE() != se32(0x200))
 	{
-		sys_rwlock.Error("Invalid attr_pshared(0x%x)", (u32)attr->attr_pshared);
 		return CELL_EINVAL;
 	}
 

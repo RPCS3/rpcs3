@@ -12,20 +12,19 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 
 	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	u32 protocol = (u32)lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK;
-	switch (protocol)
+	switch (lwmutex->attribute.ToBE())
 	{
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: sys_lwcond.Error("Invalid SYS_SYNC_RETRY attr"); break;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_lwcond.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
-	case SYS_SYNC_FIFO: break;
-	default: sys_lwcond.Error("Invalid lwmutex protocol(%d)", protocol); break;
+	case se32(SYS_SYNC_PRIORITY): break;
+	case se32(SYS_SYNC_RETRY): sys_lwcond.Error("Invalid SYS_SYNC_RETRY attr"); break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwcond.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
+	case se32(SYS_SYNC_FIFO): break;
+	default: sys_lwcond.Error("Invalid lwmutex protocol(%d)", (u32)lwmutex->attribute); break;
 	}
 
 	lwcond->lwmutex_addr = lwmutex.GetAddr();
-	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(protocol, *(u64*)&attr->name));
+	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond((u32)lwmutex->attribute, *(u64*)&attr->name));
 
-	sys_lwcond.Warning("*** lwcond created [%s] (protocol=0x%x): id=%d", attr->name, protocol, (u32)lwcond->lwcond_queue);
+	sys_lwcond.Warning("*** lwcond created [%s] (protocol=0x%x): id=%d", attr->name, (u32)lwmutex->attribute, (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }
 

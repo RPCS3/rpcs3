@@ -7,6 +7,7 @@
 #include "lv2/SC_SPU_Thread.h"
 #include "lv2/SC_Lwmutex.h"
 #include "lv2/SC_Lwcond.h"
+#include "lv2/SC_Event_flag.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -126,20 +127,22 @@ extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_add
 								u32 data, u32 data_size, int prio, u64 flags );
 
 //sys_event
-extern int sys_event_flag_create(u32 eflag_id_addr, u32 attr_addr, u64 init);
-extern int sys_event_flag_destroy(u32 eflag_id);
-extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr, u32 timeout);
-extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr);
-extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
-extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
-extern int sys_event_flag_cancel(u32 eflag_id, u32 num_addr);
-extern int sys_event_flag_get(u32 eflag_id, u32 flag_addr);
 extern int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_queue_key, int size);
 extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
 extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
 extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
 extern int sys_event_queue_drain(u32 event_queue_id);
+
+//sys_event_flag
+extern int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init);
+extern int sys_event_flag_destroy(u32 eflag_id);
+extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u32 timeout);
+extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result);
+extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_cancel(u32 eflag_id, mem32_t num);
+extern int sys_event_flag_get(u32 eflag_id, mem64_t flags);
 
 //sys_semaphore
 extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);

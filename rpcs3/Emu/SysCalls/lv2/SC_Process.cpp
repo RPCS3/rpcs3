@@ -41,6 +41,7 @@ int sys_process_exit(int errorcode)
 {
 	sc_p.Warning("sys_process_exit(%d)", errorcode);
 	Emu.Pause(); // Emu.Stop() does crash
+	ConLog.Success("Process finished");
 	return CELL_OK;
 }
 

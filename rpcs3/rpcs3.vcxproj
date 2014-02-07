@@ -248,6 +248,7 @@
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Event_flag.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />

@@ -6,39 +6,15 @@
 struct reservation_struct
 {
 	SMutex mutex; // mutex for updating reservation_owner and data
-	u32 owner; // id of thread that got reservation
-	u32 addr;
-	u32 size;
-	union
-	{
-		u32 data32[32];
-		u64 data64[16];
-	};
+	volatile u32 owner; // id of thread that got reservation
+	volatile u32 addr;
+	volatile u32 size;
 
 	__forceinline void clear()
 	{
 		owner = 0;
-	}
-
-	__forceinline bool compare128(u8* pointer)
-	{
-		return
-			data64[0] == *(u64*)(pointer + 0) &&
-			data64[1] == *(u64*)(pointer + 8) &&
-			data64[2] == *(u64*)(pointer + 16) &&
-			data64[3] == *(u64*)(pointer + 24) &&
-			data64[4] == *(u64*)(pointer + 32) &&
-			data64[5] == *(u64*)(pointer + 40) &&
-			data64[6] == *(u64*)(pointer + 48) &&
-			data64[7] == *(u64*)(pointer + 56) &&
-			data64[8] == *(u64*)(pointer + 64) &&
-			data64[9] == *(u64*)(pointer + 72) &&
-			data64[10] == *(u64*)(pointer + 80) &&
-			data64[11] == *(u64*)(pointer + 88) &&
-			data64[12] == *(u64*)(pointer + 96) &&
-			data64[13] == *(u64*)(pointer + 104) &&
-			data64[14] == *(u64*)(pointer + 112) &&
-			data64[15] == *(u64*)(pointer + 120);
+		addr = 0;
+		size = 0;
 	}
 };
 

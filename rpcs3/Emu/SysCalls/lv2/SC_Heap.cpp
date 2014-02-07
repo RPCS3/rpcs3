@@ -33,7 +33,7 @@ int sys_heap_malloc(const u32 heap_id, const u32 size)
 	HeapInfo* heap;
 	if(!sc_heap.CheckId(heap_id, heap)) return CELL_ESRCH;
 
-	return Memory.Alloc(size, heap->align);
+	return Memory.Alloc(size, 1);
 }
 
 int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4)
