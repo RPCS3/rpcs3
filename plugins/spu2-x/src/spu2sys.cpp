@@ -503,35 +503,30 @@ void V_Core::WriteRegPS1( u32 mem, u16 value )
 		u8 vval = reg&0xf;
 		switch(vval)
 		{
-			case 0: //VOLL (Volume L)
+			case 0x0: //VOLL (Volume L)
 				Voices[voice].Volume.Left.Mode = 0;
 				Voices[voice].Volume.Left.RegSet( value << 1 );
 				Voices[voice].Volume.Left.Reg_VOL = value;
 			break;
 
-			case 1: //VOLR (Volume R)
+			case 0x2: //VOLR (Volume R)
 				Voices[voice].Volume.Right.Mode = 0;
 				Voices[voice].Volume.Right.RegSet( value << 1 );
 				Voices[voice].Volume.Right.Reg_VOL = value;
 			break;
 
-			case 2:	Voices[voice].Pitch = value; break;
-			case 3:	Voices[voice].StartA = (u32)value<<8; break;
+			case 0x4:	Voices[voice].Pitch = value; break;
+			case 0x6:	Voices[voice].StartA = (u32)value << 8; break;
 
-			case 4: // ADSR1 (Envelope)
+			case 0x8: // ADSR1 (Envelope)
 				Voices[voice].ADSR.regADSR1 = value;
 			break;
 
-			case 5: // ADSR2 (Envelope)
+			case 0xa: // ADSR2 (Envelope)
 				Voices[voice].ADSR.regADSR2 = value;
 			break;
 
-			case 6:
-				Voices[voice].ADSR.Value = ((s32)value<<16) | value;
-				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
-			break;
-
-			case 7:	Voices[voice].LoopStartA = (u32)value <<8;	break;
+			case 0xe: Voices[voice].LoopStartA = (u32)value << 8;	break;
 
 			jNO_DEFAULT;
 		}
