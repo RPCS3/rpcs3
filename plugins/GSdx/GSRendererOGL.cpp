@@ -223,7 +223,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	om_bsel.wrgba = ~GSVector4i::load((int)context->FRAME.FBMSK).eq8(GSVector4i::xffffffff()).mask();
 
 	if (DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
-		advance_DATE = GLLoader::found_GL_ARB_shader_image_load_store;
+		advance_DATE = GLLoader::found_GL_ARB_shader_image_load_store && !UserHacks_AlphaStencil;
 	}
 
 	// DATE
