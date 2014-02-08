@@ -763,10 +763,6 @@ Compat = 5
 EETimingHack = 1		//random hangs
 [patches = D5605611]
 	comment=COP2 patch by Refraction
-	patch=0,EE,001CD0A8,word,48428800
-	patch=0,EE,001CD0AC,word,4A24514B
-	patch=0,EE,001CD0B4,word,4B8503BD
-	
 	patch=0,EE,003735F8,word,48438000
 	patch=0,EE,003735FC,word,4B06521B	
 [/patches]
@@ -30351,7 +30347,13 @@ Region = PAL-M6
 Serial = SCES-52033
 Name   = Syphon Filter - The Omega Strain
 Region = PAL-M5
-Compat = 3
+Compat = 5
+EETimingHack = 1		//random hangs in US version, code is the same.
+[patches = 27E54B37]
+	comment=COP2 patch by Refraction
+	patch=0,EE,003953F8,word,48438000
+	patch=0,EE,003735FC,word,4B06521B	
+[/patches]
 ---------------------------------------------
 Serial = SCES-52042
 Name   = Formula One 2004
