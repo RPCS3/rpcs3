@@ -241,8 +241,13 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_texture_storage") == 0) found_GL_ARB_texture_storage = true;
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
-				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
 				if (ext.compare("GL_NV_depth_buffer_float") == 0) found_GL_NV_depth_buffer_float = true;
+				if (ext.compare("GL_ARB_explicit_uniform_location") == 0) found_GL_ARB_explicit_uniform_location = true;
+				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
+
+				// Only enable this extension on nvidia
+				if (nvidia_buggy_driver && ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
+
 #if 0
 				// Erratum: on nvidia implementation, gain is very nice : 42.5 fps => 46.5 fps
 				//
@@ -256,14 +261,11 @@ namespace GLLoader {
 
 				if (ext.compare("GL_ARB_shader_subroutine") == 0) found_GL_ARB_shader_subroutine = true;
 #endif
-				if (ext.compare("GL_ARB_explicit_uniform_location") == 0) found_GL_ARB_explicit_uniform_location = true;
 #ifdef GL44 // Need to debug the code first
 				// Need to check the clean (in particular of depth/stencil texture)
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
 				// FIXME unattach context case + perf
 				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
-				// OK but no apitrace support
-				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
 #endif
 #ifdef GLBINDLESS // Need to debug the code first
 				if (ext.compare("GL_ARB_bindless_texture") == 0) found_GL_ARB_bindless_texture = true;

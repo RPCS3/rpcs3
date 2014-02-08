@@ -189,55 +189,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	GSDeviceOGL* dev = (GSDeviceOGL*)m_dev;
 
-	if(DATE)
-	{
-		// Note at the moment OGL has always stencil. Rt can be disabled
-		if(dev->HasStencil())
-		{
-			GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
-			GSVector4 o = GSVector4(-1.0f, 1.0f);
 
-			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
-			GSVector4 dst = src * 2.0f + o.xxxx();
-
-			GSVertexPT1 vertices[] =
-			{
-				{GSVector4(dst.x, dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-				{GSVector4(dst.z, dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-				{GSVector4(dst.x, dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-				{GSVector4(dst.z, dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-			};
-
-			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
-		}
-
-		// Create an r32ui image that will containt primitive ID
-		if (UserHacks_DateGL4 && GLLoader::found_GL_ARB_shader_image_load_store)
-			dev->InitPrimDateTexture(rtsize.x, rtsize.y);
-	}
-
-	//
-
-	dev->BeginScene();
-
-	// om
-
-	GSDeviceOGL::OMDepthStencilSelector om_dssel;
-
-	if(context->TEST.ZTE)
-	{
-		om_dssel.ztst = context->TEST.ZTST;
-		om_dssel.zwe = !context->ZBUF.ZMSK;
-	}
-	else
-	{
-		om_dssel.ztst = ZTST_ALWAYS;
-	}
-
-	if(m_fba)
-	{
-		om_dssel.fba = context->FBA.FBA;
-	}
+	// Blend
 
 	GSDeviceOGL::OMBlendSelector om_bsel;
 
@@ -269,12 +222,61 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	om_bsel.wrgba = ~GSVector4i::load((int)context->FRAME.FBMSK).eq8(GSVector4i::xffffffff()).mask();
 
-	// TODO
-	if (UserHacks_DateGL4 && DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
-		//if (!(context->FBA.FBA && context->TEST.DATM == 1))
-
-		//advance_DATE = true;
+	if (DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
 		advance_DATE = GLLoader::found_GL_ARB_shader_image_load_store;
+	}
+
+	// DATE
+
+	if(DATE)
+	{
+		// Note at the moment OGL has always stencil. Rt can be disabled
+		if(dev->HasStencil())
+		{
+			GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
+			GSVector4 o = GSVector4(-1.0f, 1.0f);
+
+			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+			GSVector4 dst = src * 2.0f + o.xxxx();
+
+			GSVertexPT1 vertices[] =
+			{
+				{GSVector4(dst.x, dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
+				{GSVector4(dst.z, dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
+				{GSVector4(dst.x, dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
+				{GSVector4(dst.z, dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
+			};
+
+			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
+		}
+
+		// Must be done here to avoid any GL state pertubation (clear function...)
+		// Create an r32ui image that will containt primitive ID
+		if (advance_DATE)
+			dev->InitPrimDateTexture(rtsize.x, rtsize.y);
+	}
+
+	//
+
+	dev->BeginScene();
+
+	// om
+
+	GSDeviceOGL::OMDepthStencilSelector om_dssel;
+
+	if(context->TEST.ZTE)
+	{
+		om_dssel.ztst = context->TEST.ZTST;
+		om_dssel.zwe = !context->ZBUF.ZMSK;
+	}
+	else
+	{
+		om_dssel.ztst = ZTST_ALWAYS;
+	}
+
+	if(m_fba)
+	{
+		om_dssel.fba = context->FBA.FBA;
 	}
 
 	// vs
@@ -520,7 +522,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		dev->SetupPS(ps_sel);
 
 		// Be sure that first pass is finished !
-		dev->Barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		if (!UserHacks_DateGL4)
+			dev->Barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
 
 	if(context->TEST.DoFirstPass())
