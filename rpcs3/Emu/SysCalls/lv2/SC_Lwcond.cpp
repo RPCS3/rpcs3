@@ -7,24 +7,16 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr)
 {
-	sys_lwcond.Warning("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
+	sys_lwcond.Log("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
 		lwcond.GetAddr(), lwmutex.GetAddr(), attr.GetAddr());
 
 	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	switch (lwmutex->attribute.ToBE())
-	{
-	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_lwcond.Error("Invalid SYS_SYNC_RETRY attr"); break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwcond.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
-	case se32(SYS_SYNC_FIFO): break;
-	default: sys_lwcond.Error("Invalid lwmutex protocol(%d)", (u32)lwmutex->attribute); break;
-	}
+	lwcond->lwmutex = lwmutex.GetAddr();
+	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(attr->name_u64));
 
-	lwcond->lwmutex_addr = lwmutex.GetAddr();
-	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond((u32)lwmutex->attribute, *(u64*)&attr->name));
-
-	sys_lwcond.Warning("*** lwcond created [%s] (protocol=0x%x): id=%d", attr->name, (u32)lwmutex->attribute, (u32)lwcond->lwcond_queue);
+	sys_lwcond.Warning("*** lwcond created [%s] (attr=0x%x, lwmutex.sq=0x%x): id=0x%x", 
+		attr->name, (u32)lwmutex->attribute, (u32)lwmutex->sleep_queue, (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }
 
@@ -50,7 +42,7 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 	u32 id = (u32)lwcond->lwcond_queue;
 	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
 
-	lwc->signal();
+	lwc->signal(mem_ptr_t<sys_lwmutex_t>(lwcond->lwmutex)->attribute);
 
 	return CELL_OK;
 }
@@ -92,7 +84,8 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	u32 id = (u32)lwcond->lwcond_queue;
 	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
 	const u32 tid = GetCurrentPPUThread().GetId();
-	mem_ptr_t<sys_lwmutex_t> lwmutex((u32)lwcond->lwmutex_addr);
+
+	mem_ptr_t<sys_lwmutex_t> lwmutex(lwcond->lwmutex);
 
 	if ((u32)lwmutex->owner.GetOwner() != tid) return CELL_EPERM; // caller must own this lwmutex
 	lwc->begin_waiting(tid);

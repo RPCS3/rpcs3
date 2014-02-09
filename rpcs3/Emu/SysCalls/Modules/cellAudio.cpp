@@ -83,7 +83,7 @@ struct CellAudioPortConfig
 struct CellAudioConfig  //custom structure
 {
 	bool m_is_audio_initialized;
-	bool m_is_audio_port_open;
+	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
 };
 
@@ -216,7 +216,7 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 	cellAudio.Warning("cellAudioPortOpen(audioParam_addr=0x%x,portNum_addr=0x%x)",audioParam.GetAddr(),portNum.GetAddr());
 
 	if(!audioParam.IsGood() || !portNum.IsGood()) return CELL_AUDIO_ERROR_PORT_OPEN;
-	m_config->m_is_audio_port_open = true;
+	m_config->m_is_audio_port_opened = true;
 	
 	m_param->nChannel = audioParam->nChannel;
 	m_param->nBlock = audioParam->nBlock;
@@ -238,13 +238,13 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 
 	//if(portNum > 7) return CELL_AUDIO_ERROR_PORT_FULL;
 
-	if(m_config->m_is_audio_port_open == false)
+	if(!m_config->m_is_audio_port_opened)
 	{
 		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
 		return CELL_OK;
 	}
 
-	if(m_config->m_is_audio_port_started == true)
+	if(m_config->m_is_audio_port_started)
 	{
 		portConfig->status = CELL_AUDIO_STATUS_RUN;
 	}
@@ -268,7 +268,7 @@ int cellAudioPortStart(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortStart(portNum=0x%x)",portNum);
 
-	if (m_config->m_is_audio_port_open == true)
+	if (!m_config->m_is_audio_port_opened)
 		return CELL_AUDIO_ERROR_PORT_OPEN;
 	
 	m_config->m_is_audio_port_started = true;
@@ -279,10 +279,10 @@ int cellAudioPortClose(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortClose(portNum=0x%x)",portNum);
 	
-	if (m_config->m_is_audio_port_open == false)
+	if (!m_config->m_is_audio_port_opened)
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	
-	m_config->m_is_audio_port_open = false;
+	m_config->m_is_audio_port_opened = false;
 	return CELL_OK;
 }
 
@@ -1016,6 +1016,6 @@ void cellAudio_init()
 void cellAudio_unload()
 {
 	m_config->m_is_audio_initialized = false;
-	m_config->m_is_audio_port_open = false;
+	m_config->m_is_audio_port_opened = false;
 	m_config->m_is_audio_port_started = false;
 }

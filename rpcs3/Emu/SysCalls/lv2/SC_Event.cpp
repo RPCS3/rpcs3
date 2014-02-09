@@ -6,30 +6,24 @@
 SysCallBase sys_event("sys_event");
 
 //128
-int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_queue_key, int size)
+int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id_addr=0x%x, attr_addr=0x%x, event_queue_key=0x%llx, size=%d)",
-		equeue_id_addr, attr_addr, event_queue_key, size);
+		equeue_id.GetAddr(), attr.GetAddr(), event_queue_key, size);
 
 	if(size <= 0 || size > 127)
 	{
 		return CELL_EINVAL;
 	}
 
-	if(!Memory.IsGoodAddr(equeue_id_addr, 4) || !Memory.IsGoodAddr(attr_addr, sizeof(sys_event_queue_attr)))
+	if(!equeue_id.IsGood() || !attr.IsGood())
 	{
 		return CELL_EFAULT;
 	}
 
-	auto& attr = (sys_event_queue_attr&)Memory[attr_addr];
-	sys_event.Warning("name = %s", attr.name);
-	sys_event.Warning("type = %d", re(attr.type));
-	EventQueue* equeue = new EventQueue();
-	equeue->size = size;
-	equeue->pos = 0;
-	equeue->type = re(attr.type);
-	strncpy(equeue->name, attr.name, 8);
-	Memory.Write32(equeue_id_addr, sys_event.GetNewId(equeue));
+	equeue_id = sys_event.GetNewId(new EventQueue((u32)attr->protocol, (int)attr->type, attr->name_u64, event_queue_key, size));
+	sys_event.Warning("*** event_queue created[%s] (protocol=0x%x, type=0x%x): id = %d",
+		attr->name, (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
 
 	return CELL_OK;
 }
@@ -79,10 +73,10 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 			{
 				auto dst = (sys_event_data&)Memory[event_addr];
 
-				re(dst.source, equeue->ports[i]->name);
-				re(dst.data1, equeue->ports[i]->data1);
-				re(dst.data2, equeue->ports[i]->data2);
-				re(dst.data3, equeue->ports[i]->data3);
+				dst.source = equeue->ports[i]->name;
+				dst.data1 = equeue->ports[i]->data1;
+				dst.data2 = equeue->ports[i]->data2;
+				dst.data3 = equeue->ports[i]->data3;
 
 				equeue->ports[i]->has_data = false;
 

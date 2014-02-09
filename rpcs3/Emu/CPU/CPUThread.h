@@ -9,12 +9,13 @@ struct reservation_struct
 	volatile u32 owner; // id of thread that got reservation
 	volatile u32 addr;
 	volatile u32 size;
+	volatile u32 data32;
+	volatile u64 data64;
+	// atm, PPU can't break SPU MFC reservation correctly
 
 	__forceinline void clear()
 	{
 		owner = 0;
-		addr = 0;
-		size = 0;
 	}
 };
 

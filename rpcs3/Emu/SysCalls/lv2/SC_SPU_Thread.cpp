@@ -194,13 +194,12 @@ int sys_spu_thread_get_exit_status(u32 id, mem32_t status)
 		return CELL_ESRCH;
 	}
 
-	if (!(*(SPUThread*)thr).SPU.Out_MBox.GetCount() || !thr->IsStopped())
+	u32 res;
+	if (!(*(SPUThread*)thr).SPU.Out_MBox.Pop(res) || !thr->IsStopped())
 	{
 		return CELL_ESTAT;
 	}
 
-	u32 res;
-	(*(SPUThread*)thr).SPU.Out_MBox.PopUncond(res);
 	status = res;
 	return CELL_OK;
 }

@@ -21,11 +21,11 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	if (attr->attr_pshared.ToBE() != se32(0x200))
 	{
+		sys_rwlock.Error("Invalid attr_pshared(0x%x)", (u32)attr->attr_pshared);
 		return CELL_EINVAL;
 	}
 
-	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, (u32)attr->attr_pshared, 
-		(u64)attr->key, (s32)attr->flags, *(u64*)&attr->name));
+	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64));
 
 	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id=%d", 
 		attr->name, (u32)attr->attr_protocol, rw_lock_id.GetValue());

@@ -126,7 +126,11 @@ public:
 		: sm(_sm)
 		, tid(get_tid())
 	{
-		if (!tid) throw "SMutexLockerBase: invalid thread id";
+		if (!tid)
+		{
+			ConLog.Error("SMutexLockerBase: thread id == 0");
+			Emu.Pause();
+		}
 		sm.lock(tid);
 	}
 
