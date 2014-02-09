@@ -745,7 +745,7 @@ void GSDevice11::InitExternalFX()
 			CompileShader("shader.fx", "ps_main", NULL, &m_shaderfx.ps);
 		}
 		catch (GSDXRecoverableError) {
-			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
+			printf("GSdx: failed to compile external post-processing shader. \n");
 		}
 		ExShader_Compiled = true;
 	}
@@ -780,7 +780,7 @@ void GSDevice11::InitFXAA()
 			CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
 		}
 		catch (GSDXRecoverableError) {
-			CompileShader(IDR_FXAA_FX, "ps_recover", NULL, &m_fxaa.ps);
+			printf("GSdx: failed to compile fxaa shader.\n");
 		}
 		FXAA_Compiled = true;
 	}

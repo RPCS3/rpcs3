@@ -1,6 +1,6 @@
 /*===============================================================================*\
-|#########################	   [GSdx FX 2.00 Revised]     ########################|
-|###########################	    By Asmodean	        ##########################|
+|#########################    [GSdx FX 2.00 Revised]     #########################|
+|###########################	   By Asmodean	        ##########################|
 ||																				 ||
 ||		  This program is free software; you can redistribute it and/or			 ||
 ||		  modify it under the terms of the GNU General Public License			 ||
@@ -21,14 +21,9 @@
 ------------------------------------------------------------------------------*/
 
 Texture2D Texture : register(t0);
-SamplerState TextureSampler : register(s0)
-{
-	Filter = Anisotropic;
-	MaxAnisotropy = 16;
-	AddressU = Clamp;
-	AddressV = Clamp;
-	MipLODBias = 0;
-};
+
+SamplerState TextureSampler : register(s0);
+SamplerState BloomSampler : register(s1);
 
 cbuffer cb0
 {
@@ -88,6 +83,7 @@ float RGBLuminance(float3 color)
 float3 RGBGammaToLinear(float3 color, float gamma)
 {
 	color = abs(color);
+
 	color.r = (color.r <= 0.0404482362771082) ? saturate(color.r / 12.92) : 
 	saturate(pow((color.r + 0.055) / 1.055, gamma));
 
@@ -103,6 +99,7 @@ float3 RGBGammaToLinear(float3 color, float gamma)
 float3 LinearToRGBGamma(float3 color, float gamma)
 {
 	color = abs(color);
+
 	color.r = (color.r <= 0.00313066844250063) ? saturate(color.r * 12.92) : 1.055 * 
 	saturate(pow(color.r, 1.0 / gamma)) - 0.055;
 
@@ -157,9 +154,6 @@ float4 PreGammaPass(float4 color, float2 uv0)
 	#define FXAA_GATHER4_ALPHA 1
 #elif (SHADER_MODEL >= 0x400)
 	#define FXAA_HLSL_4 1
-	#define FXAA_GATHER4_ALPHA 0
-#else
-	#define FXAA_HLSL_3 1
 	#define FXAA_GATHER4_ALPHA 0
 #endif
 
@@ -242,13 +236,6 @@ float4 PreGammaPass(float4 color, float2 uv0)
     #define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)
 	#define FxaaDiscard clip(-1)
 	#define FxaaSat(x) saturate(x)
-
-#elif (FXAA_HLSL_3 == 1)
-	#define FxaaTex sampler2D
-	#define int2 float2
-	#define FxaaSat(x) saturate(x)
-	#define FxaaTexTop(t, p) tex2Dlod(t, float4(p, 0.0, 0.0))
-	#define FxaaTexOff(t, p, o, r) tex2Dlod(t, float4(p + (o * r), 0, 0))
 #endif
 
 float FxaaLuma(float4 rgba)
@@ -296,11 +283,11 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
     float minWN = min(lumaN, lumaW);
     float rangeMax = max(maxWN, maxESM);
     float rangeMin = min(minWN, minESM);
-    float rangeMaxScaled = rangeMax * fxaaEdgeThreshold;
     float range = rangeMax - rangeMin;
+    float rangeMaxScaled = rangeMax * fxaaEdgeThreshold;
     float rangeMaxClamped = max(fxaaEdgeThresholdMin, rangeMaxScaled);
-    bool earlyExit = range < rangeMaxClamped;
 
+    bool earlyExit = range < rangeMaxClamped;
     #if (FxaaEarlyExit == 1)
 	if(earlyExit)
 		{ return rgbyM; }
@@ -364,7 +351,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
     offNP.y = ( horzSpan) ? 0.0 : fxaaRcpFrame.y;
     if(!horzSpan) posB.x += lengthSign * 0.5;
     if( horzSpan) posB.y += lengthSign * 0.5;
-
     float2 posN;
     posN.x = posB.x - offNP.x * FXAA_QUALITY__P0;
     posN.y = posB.y - offNP.y * FXAA_QUALITY__P0;
@@ -381,7 +367,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
     float lumaMM = lumaM - lumaNN * 0.5;
     float subpixF = subpixD * subpixE;
     bool lumaMLTZero = lumaMM < 0.0;
-
     lumaEndN -= lumaNN * 0.5;
     lumaEndP -= lumaNN * 0.5;
     bool doneN = abs(lumaEndN) >= gradientScaled;
@@ -565,7 +550,6 @@ float4 FxaaPixelShader(float2 pos, FxaaTex tex, float2 fxaaRcpFrame, float fxaaS
 	}
 	#endif
 	}
-
     float dstN = posM.x - posN.x;
     float dstP = posP.x - posM.x;
     if(!horzSpan) dstN = posM.y - posN.y;
@@ -921,7 +905,6 @@ float4 SampleBiCubic(SamplerState texSample, float2 uv0)
 float4 TexSharpenPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0 
 {
 	float3 calcSharpen = (SLumCoeff * SharpenStrength);
-
 	float4 blurredColor = SampleBiCubic(TextureSampler, uv0);
 	float3 sharpenedColor = (color.rgb - blurredColor.rgb);
 
@@ -1029,7 +1012,9 @@ float3 BlendOverlay(float3 color, float3 bloom)
 
 float4 BloomPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0 
 {
-	float4 bloom;
+	float4 bloom = Texture.Sample(BloomSampler, uv0);
+
+	Texture.GetDimensions(PixelSize.x, PixelSize.y);
 
 	float2 dx = float2(1.0 / PixelSize.x * BlendSpread, 0.0);
 	float2 dy = float2(0.0, 1.0 / PixelSize.y * BlendSpread);
@@ -1037,36 +1022,36 @@ float4 BloomPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target0
 	float2 dx2 = 2.0 * dx;
 	float2 dy2 = 2.0 * dy;
 
-	float4 bloomBlend = color * 0.22520613262190495;
+	float4 bloomBlend = bloom * 0.22520613262190495;
 
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 -dx2 +dy2); 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 -dx +dy2); 
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 +dy2); 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 +dx +dy2); 
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 +dx2 +dy2); 
+	bloomBlend += 0.002589001911021066 * Texture.Sample(BloomSampler, uv0 -dx2 +dy2); 
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 -dx +dy2); 
+	bloomBlend += 0.024146616900339800 * Texture.Sample(BloomSampler, uv0 +dy2); 
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 +dx +dy2); 
+	bloomBlend += 0.002589001911021066 * Texture.Sample(BloomSampler, uv0 +dx2 +dy2); 
 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 -dx2 +dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 -dx +dy);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 +dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 +dx +dy);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 +dx2 +dy);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 -dx2 +dy);
+	bloomBlend += 0.044875475183061630 * Texture.Sample(BloomSampler, uv0 -dx +dy);
+	bloomBlend += 0.100529757860782610 * Texture.Sample(BloomSampler, uv0 +dy);
+	bloomBlend += 0.044875475183061630 * Texture.Sample(BloomSampler, uv0 +dx +dy);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 +dx2 +dy);
 
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 -dx2);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 -dx);	
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 +dx);
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 +dx2);
+	bloomBlend += 0.024146616900339800 * Texture.Sample(BloomSampler, uv0 -dx2);
+	bloomBlend += 0.100529757860782610 * Texture.Sample(BloomSampler, uv0 -dx);	
+	bloomBlend += 0.100529757860782610 * Texture.Sample(BloomSampler, uv0 +dx);
+	bloomBlend += 0.024146616900339800 * Texture.Sample(BloomSampler, uv0 +dx2);
 
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 -dx2 -dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 -dx -dy);
-	bloomBlend += 0.100529757860782610 * Texture.Sample(TextureSampler, uv0 -dy);
-	bloomBlend += 0.044875475183061630 * Texture.Sample(TextureSampler, uv0 +dx -dy);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 +dx2 -dy);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 -dx2 -dy);
+	bloomBlend += 0.044875475183061630 * Texture.Sample(BloomSampler, uv0 -dx -dy);
+	bloomBlend += 0.100529757860782610 * Texture.Sample(BloomSampler, uv0 -dy);
+	bloomBlend += 0.044875475183061630 * Texture.Sample(BloomSampler, uv0 +dx -dy);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 +dx2 -dy);
 
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 -dx2 -dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 -dx -dy2);
-	bloomBlend += 0.024146616900339800 * Texture.Sample(TextureSampler, uv0 -dy2);
-	bloomBlend += 0.010778807494659370 * Texture.Sample(TextureSampler, uv0 +dx -dy2);
-	bloomBlend += 0.002589001911021066 * Texture.Sample(TextureSampler, uv0 +dx2 -dy2);
+	bloomBlend += 0.002589001911021066 * Texture.Sample(BloomSampler, uv0 -dx2 -dy2);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 -dx -dy2);
+	bloomBlend += 0.024146616900339800 * Texture.Sample(BloomSampler, uv0 -dy2);
+	bloomBlend += 0.010778807494659370 * Texture.Sample(BloomSampler, uv0 +dx -dy2);
+	bloomBlend += 0.002589001911021066 * Texture.Sample(BloomSampler, uv0 +dx2 -dy2);
 
 	bloomBlend = lerp(color, bloomBlend, BlendPower);
 	bloom.rgb = BloomType(color.rgb, bloomBlend.rgb);	
@@ -1497,11 +1482,11 @@ float4 ScanlinesPass(float4 color : COLOR0, float2 uv0 : TEXCOORD0, float4 FragC
 	float4 intensity;
 	
 	#if (ScanlineType == 0)
-		if (frac(FragCoord.y * 0.25) > ScanlineScale)
+		if (frac(FragCoord.y * 0.5) > ScanlineScale)
 	#elif (ScanlineType == 1)
-		if (frac(FragCoord.x * 0.25) > ScanlineScale)
+		if (frac(FragCoord.x * 0.5) > ScanlineScale)
 	#elif (ScanlineType == 2)
-		if (frac(FragCoord.x * 0.25) > ScanlineScale && frac(FragCoord.y * 0.25) > ScanlineScale)
+		if (frac(FragCoord.x * 0.5) > ScanlineScale && frac(FragCoord.y * 0.5) > ScanlineScale)
 	#endif
 		{
 			intensity = float4(0.0, 0.0, 0.0, 0.0);
@@ -1536,7 +1521,7 @@ float4 VignettePass(float4 color : COLOR0, float2 uv0 : TEXCOORD0) : SV_Target
 
 	float v = dot(tc, tc);
 
-	color.rgb *= (1.0 + pow(v, VignetteSlope * 0.5) * -VignetteAmount);
+	color.rgb *= (1.0 + pow(v, VignetteSlope * 0.25) * -VignetteAmount);
 
 	return color;
 }

@@ -1,19 +1,3 @@
-/*===============================================================================*\
-|#######################		 [GSdx FXAA 2.00]		  ########################|
-|########################		   By Asmodean			 #########################|
-||																				 ||
-||		  This program is free software; you can redistribute it and/or			 ||
-||		  modify it under the terms of the GNU General Public License			 ||
-||		  as published by the Free Software Foundation; either version 2		 ||
-||		  of the License, or (at your option) any later version.				 ||
-||																				 ||
-||		  This program is distributed in the hope that it will be useful,		 ||
-||		  but WITHOUT ANY WARRANTY; without even the implied warranty of		 ||
-||		  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the			 ||
-||		  GNU General Public License for more details. (c)2014					 ||
-||																				 ||
-|#################################################################################|
-\*===============================================================================*/
 #ifdef SHADER_MODEL
 
 #define UHQ_FXAA 1							//High Quality Fast Approximate Anti Aliasing. Adapted for GSdx from Timothy Lottes FXAA 3.11.
@@ -528,25 +512,6 @@ PS_OUTPUT ps_main(VS_OUTPUT input)
 
 	output.c = color;
 	
-	return output;
-}
-
-/*------------------------------------------------------------------------------
-					      [RECOVERY PS CODE SECTION]
-------------------------------------------------------------------------------*/
-
-PS_OUTPUT ps_recover(VS_OUTPUT input)
-{
-	PS_OUTPUT output;
-
-	#if (SHADER_MODEL >= 0x400)
-		float4 color = Texture.Sample(TextureSampler, input.t);
-	#else
-		float4 color = tex2D(TextureSampler, input.t);
-	#endif
-
-	output.c = color;
-
 	return output;
 }
 #endif
