@@ -65,11 +65,11 @@ void PPUThread::InitRegs()
 	SetPc(pc);
 
 	/*
-	const s32 thread_num = Emu.GetCPU().GetThread NumById(GetType(), GetId());
+	const s32 thread_num = Emu.GetCPU().GetThreadNumById(GetType(), GetId());
 
 	if(thread_num < 0)
 	{
-		ConLog.Error("GetThread NumById failed.");
+		ConLog.Error("GetThreadNumById failed.");
 		Emu.Pause();
 		return;
 	}

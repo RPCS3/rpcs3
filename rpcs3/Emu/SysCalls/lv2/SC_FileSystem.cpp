@@ -132,21 +132,54 @@ int cellFsClose(u32 fd)
 int cellFsOpendir(u32 path_addr, mem32_t fd)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Error("cellFsOpendir(path_addr: 0x%x(%s), fd_addr: 0x%x)", path_addr, path.mb_str(), fd.GetAddr());
-	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood()) return CELL_EFAULT;
+	sys_fs.Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.mb_str(), fd.GetAddr());
+	
+	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood())
+		return CELL_EFAULT;
 
+	wxString localPath;
+	Emu.GetVFS().GetDevice(path, localPath);
+	vfsLocalDir* dir = new vfsLocalDir(localPath);
+	if(!dir->Open(localPath))
+		return CELL_ENOENT;
+
+	fd = sys_fs.GetNewId(dir);
 	return CELL_OK;
 }
 
-int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread)
+int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 {
-	sys_fs.Error("cellFsReaddir(fd: %d, dir_addr: 0x%x, nread_addr: 0x%x)", fd, dir_addr, nread.GetAddr());
+	sys_fs.Log("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.GetAddr(), nread.GetAddr());
+
+	vfsLocalDir* directory;
+	if(!sys_fs.CheckId(fd, directory))
+		return CELL_ESRCH;
+	if(!dir.IsGood() || !nread.IsGood())
+		return CELL_EFAULT;
+
+	const DirEntryInfo* info = directory->Read();
+	if(info)
+	{
+		nread = 1;
+		Memory.WriteString(dir.GetAddr()+2, info->name.mb_str());
+		dir->d_namlen = info->name.Length();
+		dir->d_type = (info->flags & 0x1) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+	}
+	else
+	{
+		nread = 0;
+	}
+
 	return CELL_OK;
 }
 
 int cellFsClosedir(u32 fd)
 {
-	sys_fs.Error("cellFsClosedir(fd: %d)", fd);
+	sys_fs.Log("cellFsClosedir(fd=%d)", fd);
+
+	if(!Emu.GetIdManager().RemoveID(fd))
+		return CELL_ESRCH;
+
 	return CELL_OK;
 }
 
@@ -231,11 +264,12 @@ int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 int cellFsMkdir(u32 path_addr, u32 mode)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	wxString path;
-	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Log("cellFsMkdir(path: %s, mode: 0x%x)", path.mb_str(), mode);
-	if(wxDirExists(path)) return CELL_EEXIST;
-	if(!wxMkdir(path)) return CELL_EBUSY;
+	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.mb_str(), mode);
+
+	wxString localPath;
+	Emu.GetVFS().GetDevice(ps3_path, localPath);
+	if(wxDirExists(localPath)) return CELL_EEXIST;
+	if(!wxMkdir(localPath)) return CELL_EBUSY;
 	return CELL_OK;
 }
 
@@ -248,7 +282,7 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 	Emu.GetVFS().GetDevice(ps3_from, from);
 	Emu.GetVFS().GetDevice(ps3_to, to);
 
-	sys_fs.Log("cellFsRename(from: %s, to: %s)", from.mb_str(), to.mb_str());
+	sys_fs.Log("cellFsRename(from=\"%s\", to=\"%s\")", ps3_from.mb_str(), ps3_to.mb_str());
 	if(!wxFileExists(from)) return CELL_ENOENT;
 	if(wxFileExists(to)) return CELL_EEXIST;
 	if(!wxRenameFile(from, to)) return CELL_EBUSY; // (TODO: RenameFile(a,b) = CopyFile(a,b) + RemoveFile(a), therefore file "a" will not be removed if it is opened)
@@ -258,20 +292,23 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 int cellFsRmdir(u32 path_addr)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	wxString path;
-	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Log("cellFsRmdir(path: %s)", path.mb_str());
-	if(!wxDirExists(path)) return CELL_ENOENT;
-	if(!wxRmdir(path)) return CELL_EBUSY; // (TODO: Under certain conditions it is not able to delete the folder)
+	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.mb_str());
+
+	wxString localPath;
+	Emu.GetVFS().GetDevice(ps3_path, localPath);	
+	if(!wxDirExists(localPath)) return CELL_ENOENT;
+	if(!wxRmdir(localPath)) return CELL_EBUSY; // (TODO: Under certain conditions it is not able to delete the folder)
 	return CELL_OK;
 }
 
 int cellFsUnlink(u32 path_addr)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	wxString path;
-	Emu.GetVFS().GetDevice(ps3_path, path);
-	sys_fs.Error("cellFsUnlink(path: %s)", path.mb_str());
+	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.mb_str());
+
+	wxString localPath;
+	Emu.GetVFS().GetDevice(ps3_path, localPath);
+	wxRemoveFile(localPath);
 	return CELL_OK;
 }
 

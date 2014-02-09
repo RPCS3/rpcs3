@@ -31,7 +31,7 @@ class vfsDirBase
 {
 protected:
 	wxString m_cwd;
-	Array<DirEntryInfo> m_entryes;
+	Array<DirEntryInfo> m_entries;
 
 public:
 	vfsDirBase(const wxString& path);
@@ -39,13 +39,13 @@ public:
 
 	virtual bool Open(const wxString& path);
 	virtual bool IsOpened() const;
-	virtual const Array<DirEntryInfo>& GetEntryes() const;
+	virtual bool IsExists(const wxString& path) const;
+	virtual const Array<DirEntryInfo>& GetEntries() const;
 	virtual void Close();
 	virtual wxString GetPath() const;
 
 	virtual bool Create(const wxString& path)=0;
 	//virtual bool Create(const DirEntryInfo& info)=0;
-	virtual bool IsExists(const wxString& path) const=0;
 	virtual bool Rename(const wxString& from, const wxString& to)=0;
 	virtual bool Remove(const wxString& path)=0;
 };

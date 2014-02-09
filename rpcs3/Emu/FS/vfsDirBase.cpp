@@ -27,15 +27,20 @@ bool vfsDirBase::IsOpened() const
 	return !m_cwd.IsEmpty();
 }
 
-const Array<DirEntryInfo>& vfsDirBase::GetEntryes() const
+bool vfsDirBase::IsExists(const wxString& path) const
 {
-	return m_entryes;
+	return wxDirExists(path);
+}
+
+const Array<DirEntryInfo>& vfsDirBase::GetEntries() const
+{
+	return m_entries;
 }
 
 void vfsDirBase::Close()
 {
 	m_cwd = wxEmptyString;
-	m_entryes.Clear();
+	m_entries.Clear();
 }
 
 wxString vfsDirBase::GetPath() const

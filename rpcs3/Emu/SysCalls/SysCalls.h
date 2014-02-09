@@ -228,7 +228,7 @@ extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread);
 extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite);
 extern int cellFsClose(u32 fd);
 extern int cellFsOpendir(u32 path_addr, mem32_t fd);
-extern int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread);
+extern int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread);
 extern int cellFsClosedir(u32 fd);
 extern int cellFsStat(u32 path_addr, mem_ptr_t<CellFsStat> sb);
 extern int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb);

@@ -2,7 +2,9 @@
 #include "vfsLocalDir.h"
 #include <direct.h>
 
-vfsLocalDir::vfsLocalDir(const wxString& path) : vfsDirBase(path)
+vfsLocalDir::vfsLocalDir(const wxString& path)
+	: vfsDirBase(path)
+	, m_pos(0)
 {
 }
 
@@ -25,7 +27,7 @@ bool vfsLocalDir::Open(const wxString& path)
 	{
 		wxString dir_path = path + wxFILE_SEP_PATH + name;
 
-		DirEntryInfo& info = m_entryes[m_entryes.Move(new DirEntryInfo())];
+		DirEntryInfo& info = m_entries[m_entries.Move(new DirEntryInfo())];
 		info.name = name;
 
 		info.flags |= wxDirExists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
@@ -37,14 +39,17 @@ bool vfsLocalDir::Open(const wxString& path)
 	return true;
 }
 
+const DirEntryInfo* vfsLocalDir::Read()
+{
+	if (m_pos >= m_entries.GetCount())
+		return 0;
+
+	return &m_entries[m_pos++];
+}
+
 bool vfsLocalDir::Create(const wxString& path)
 {
 	return wxFileName::Mkdir(path, 0777, wxPATH_MKDIR_FULL);
-}
-
-bool vfsLocalDir::IsExists(const wxString& path) const
-{
-	return wxDirExists(path);
 }
 
 bool vfsLocalDir::Rename(const wxString& from, const wxString& to)
