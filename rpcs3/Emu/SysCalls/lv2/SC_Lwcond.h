@@ -2,12 +2,16 @@
 
 struct sys_lwcond_attribute_t
 {
-	char name[8];
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
 struct sys_lwcond_t
 {
-	be_t<u32> lwmutex_addr;
+	be_t<u32> lwmutex;
 	be_t<u32> lwcond_queue;
 };
 
@@ -18,22 +22,20 @@ struct LWCond
 	std::mutex m_lock;
 	Array<u32> waiters; // list of waiting threads
 	Array<u32> signaled; // list of signaled threads
-	u32 m_protocol; // protocol
 	u64 m_name; // not used
 
-	LWCond(u32 prot, u64 name)
+	LWCond(u64 name)
 		: m_name(name)
-		, m_protocol(prot)
 	{
 	}
 
-	void signal()
+	void signal(u32 _protocol)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
 		if (waiters.GetCount())
 		{
-			if (m_protocol == SYS_SYNC_PRIORITY)
+			if ((_protocol & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_PRIORITY)
 			{
 				u64 max_prio = 0;
 				u32 sel = 0;

@@ -1,6 +1,25 @@
 #pragma once
 #include "Emu/Memory/MemoryBlock.h"
 #include "Emu/CPU/CPUDecoder.h"
+#include "Utilities/SMutex.h"
+
+struct reservation_struct
+{
+	SMutex mutex; // mutex for updating reservation_owner and data
+	volatile u32 owner; // id of thread that got reservation
+	volatile u32 addr;
+	volatile u32 size;
+	volatile u32 data32;
+	volatile u64 data64;
+	// atm, PPU can't break SPU MFC reservation correctly
+
+	__forceinline void clear()
+	{
+		owner = 0;
+	}
+};
+
+extern reservation_struct reservation;
 
 enum CPUThreadType
 {

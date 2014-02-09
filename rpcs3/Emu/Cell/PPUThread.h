@@ -602,9 +602,6 @@ public:
 		};
 	};
 
-	u64 reserve_addr;
-	bool reserve;
-
 	u64 cycle;
 
 public:

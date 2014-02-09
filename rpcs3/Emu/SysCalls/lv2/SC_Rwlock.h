@@ -6,8 +6,12 @@ struct sys_rwlock_attribute_t
 	be_t<u32> attr_pshared; // == 0x200 (NOT SHARED)
 	be_t<u64> key; // process-shared key (not used)
 	be_t<s32> flags; // process-shared flags (not used)
-	be_t<u32> pad;
-	char name[8];
+	be_t<u32> pad; // not used
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
 #pragma pack()
@@ -20,21 +24,15 @@ struct RWLock
 	Array<u32> rlock_list; // read lock list
 	u32 m_protocol; // TODO
 
-	u32 m_pshared; // not used
-	u64 m_key; // not used
-	s32 m_flags; // not used
 	union
 	{
-		u64 m_name_data; // not used
+		u64 m_name_u64;
 		char m_name[8];
 	};
 
-	RWLock(u32 protocol, u32 pshared, u64 key, s32 flags, u64 name)
+	RWLock(u32 protocol, u64 name)
 		: m_protocol(protocol)
-		, m_pshared(pshared)
-		, m_key(key)
-		, m_flags(flags)
-		, m_name_data(name)
+		, m_name_u64(name)
 		, wlock_thread(0)
 	{
 	}

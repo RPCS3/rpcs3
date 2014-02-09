@@ -63,7 +63,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	{
 		local_size = 0xf900000; //TODO
 		local_addr = Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.Alloc(local_size);
+		Memory.RSXFBMem.AllocAlign(local_size);
 	}
 
 	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -78,7 +78,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	current_config.coreFrequency = re32(500000000);
 
 	InitOffsetTable();
-	Memory.RSXCMDMem.Alloc(cmdSize);
+	Memory.RSXCMDMem.AllocAlign(cmdSize);
 	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
 	cellGcmMapEaIoAddress(ioAddress, 0, ioSize);
 
@@ -89,7 +89,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	current_context.current = current_context.begin;
 	current_context.callback = re32(Emu.GetRSXCallback() - 4);
 
-	gcm_info.context_addr = Memory.MainMem.Alloc(0x1000);
+	gcm_info.context_addr = Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	Memory.WriteData(gcm_info.context_addr, current_context);
@@ -167,7 +167,7 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could stall on exit
 
 	u32 current = re(ctxt->current);
 	u32 end = re(ctxt->end);
@@ -682,7 +682,7 @@ int32_t cellGcmMapLocalMemory(u64 address, u64 size)
 	{
 		local_size = 0xf900000; //TODO
 		local_addr = Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.Alloc(local_size);
+		Memory.RSXFBMem.AllocAlign(local_size);
 		Memory.Write32(address, local_addr);
 		Memory.Write32(size, local_size);
 	}
@@ -749,7 +749,7 @@ int32_t cellGcmUnmapEaIoAddress(u64 ea)
 		ea = ea >> 20;
 		io = Memory.Read16(offsetTable.io + (ea*sizeof(u16)));
 
-		for(int i=0; i<size; i++)
+		for(u32 i=0; i<size; i++)
 		{
 			Memory.Write16(offsetTable.io + ((ea+i)*sizeof(u16)), 0xFFFF);
 			Memory.Write16(offsetTable.ea + ((io+i)*sizeof(u16)), 0xFFFF);
@@ -772,7 +772,7 @@ int32_t cellGcmUnmapIoAddress(u64 io)
 		io = io >> 20;
 		ea = Memory.Read16(offsetTable.ea + (io*sizeof(u16)));
 
-		for(int i=0; i<size; i++)
+		for(u32 i=0; i<size; i++)
 		{
 			Memory.Write16(offsetTable.io + ((ea+i)*sizeof(u16)), 0xFFFF);
 			Memory.Write16(offsetTable.ea + ((io+i)*sizeof(u16)), 0xFFFF);

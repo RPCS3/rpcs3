@@ -379,6 +379,12 @@
     <ClCompile Include="Emu\FS\vfsLocalDir.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\SMutex.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Event_flag.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -557,6 +563,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\AudioManager.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\SMutex.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

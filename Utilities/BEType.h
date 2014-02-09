@@ -2,6 +2,10 @@
 
 #include "Utilities/GNU.h"
 
+#define se16(x) const_se_t<u16, x>::value
+#define se32(x) const_se_t<u32, x>::value
+#define se64(x) const_se_t<u64, x>::value
+
 template<typename T, int size = sizeof(T)> struct se_t;
 template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };
 template<typename T> struct se_t<T, 2> { static __forceinline void func(T& dst, const T src) { (u16&)dst = _byteswap_ushort((u16&)src); } };

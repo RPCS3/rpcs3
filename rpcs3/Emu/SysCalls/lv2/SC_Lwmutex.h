@@ -1,4 +1,5 @@
 #pragma once
+#include <Utilities/SMutex.h>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -9,7 +10,7 @@ enum
 	SYS_SYNC_PRIORITY = 2,
 	// Basic Priority Inheritance Protocol
 	SYS_SYNC_PRIORITY_INHERIT = 3,
-	// ????
+	// Not selected while unlocking
 	SYS_SYNC_RETRY = 4,
 	//
 	SYS_SYNC_ATTR_PROTOCOL_MASK = 0xF, 
@@ -30,10 +31,104 @@ struct sys_lwmutex_attribute_t
 {
 	be_t<u32> attr_protocol;
 	be_t<u32> attr_recursive;
-	char name[8];
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
-extern std::mutex g_lwmutex;
+class SleepQueue
+{
+	/* struct q_rec
+	{
+		u32 tid;
+		u64 prio;
+		q_rec(u32 tid, u64 prio): tid(tid), prio(prio) {}
+	}; */
+
+	SMutex m_mutex;
+	Array<u32> list;
+	u64 m_name;
+
+public:
+	SleepQueue(u64 name)
+		: m_name(name)
+	{
+	}
+
+	void push(u32 tid)
+	{
+		SMutexLocker lock(m_mutex);
+		list.AddCpy(tid);
+	}
+
+	u32 pop() // SYS_SYNC_FIFO
+	{
+		SMutexLocker lock(m_mutex);
+		
+		while (true)
+		{
+			if (list.GetCount())
+			{
+				u32 res = list[0];
+				list.RemoveAt(0);
+				if (Emu.GetIdManager().CheckID(res))
+				// check thread
+				{
+					return res;
+				}
+			}
+			return 0;
+		};
+	}
+
+	u32 pop_prio() // SYS_SYNC_PRIORITY
+	{
+		SMutexLocker lock(m_mutex);
+
+		while (true)
+		{
+			if (list.GetCount())
+			{
+				u64 max_prio = 0;
+				u32 sel = 0;
+				for (u32 i = 0; i < list.GetCount(); i++)
+				{
+					CPUThread* t = Emu.GetCPU().GetThread(list[i]);
+					if (!t)
+					{
+						list[i] = 0;
+						sel = i;
+						break;
+					}
+
+					u64 prio = t->GetPrio();
+					if (prio > max_prio)
+					{
+						max_prio = prio;
+						sel = i;
+					}
+				}
+				u32 res = list[sel];
+				list.RemoveAt(sel);
+				/* if (Emu.GetIdManager().CheckID(res)) */
+				if (res)
+				// check thread
+				{
+					return res;
+				}
+			}
+			return 0;
+		}
+	}
+
+	u32 pop_prio_inherit() // (TODO)
+	{
+		ConLog.Error("TODO: SleepQueue::pop_prio_inherit()");
+		Emu.Pause();
+	}
+};
 
 struct sys_lwmutex_t
 {
@@ -41,8 +136,8 @@ struct sys_lwmutex_t
 	{
 		struct // sys_lwmutex_lock_info_t
 		{
-			/* volatile */ be_t<u32> owner;
-			/* volatile */ be_t<u32> waiter;
+			/* volatile */ SMutexBE owner;
+			/* volatile */ be_t<u32> waiter; // not used
 		};
 		struct
 		{ 
@@ -54,77 +149,103 @@ struct sys_lwmutex_t
 	be_t<u32> sleep_queue;
 	be_t<u32> pad;
 
-	int trylock(u32 tid)
+	int trylock(be_t<u32> tid)
 	{
-		std::lock_guard<std::mutex> lock(g_lwmutex); // global lock
+		if (!attribute.ToBE()) return CELL_EINVAL;
 
-		if ((u32)attribute & SYS_SYNC_RECURSIVE)
+		if (tid == owner.GetOwner()) 
 		{
-			if (tid == (u32)owner)
+			if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 			{
-				recursive_count = (u32)recursive_count + 1;
-				if ((u32)recursive_count == 0xffffffff) return CELL_EKRESOURCE;
+				recursive_count += 1;
+				if (!recursive_count.ToBE()) return CELL_EKRESOURCE;
 				return CELL_OK;
 			}
-		}
-		else // recursive not allowed
-		{
-			if (tid == (u32)owner)
+			else
 			{
 				return CELL_EDEADLK;
 			}
 		}
 
-		if (!(u32)owner) // try lock
+		switch (owner.trylock(tid))
 		{
-			owner = tid; 
-			recursive_count = 1;
-			return CELL_OK;
-		}
-		else
-		{
-			return CELL_EBUSY;
+		case SMR_OK: recursive_count = 1; return CELL_OK;
+		case SMR_FAILED: return CELL_EBUSY;
+		default: return CELL_EINVAL;
 		}
 	}
 
-	bool unlock(u32 tid)
+	int unlock(be_t<u32> tid)
 	{
-		std::lock_guard<std::mutex> lock(g_lwmutex); // global lock
-
-		if (tid != (u32)owner)
+		if (tid != owner.GetOwner())
 		{
-			return false;
+			return CELL_EPERM;
 		}
 		else
 		{
-			recursive_count = (u32)recursive_count - 1;
-			if (!(u32)recursive_count)
+			recursive_count -= 1;
+			if (!recursive_count.ToBE())
 			{
-				waiter = 0; // not used yet
-				owner = 0; // release
+				be_t<u32> target = 0;
+				switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
+				{
+				case se32(SYS_SYNC_FIFO):
+				case se32(SYS_SYNC_PRIORITY):
+					SleepQueue* sq;
+					if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
+					target = attribute.ToBE() & se32(SYS_SYNC_FIFO) ? sq->pop() : sq->pop_prio();
+				case se32(SYS_SYNC_RETRY): default: owner.unlock(tid, target); break;
+				}
 			}
-			return true;
+			return CELL_OK;
+		}
+	}
+
+	int lock(be_t<u32> tid, u64 timeout)
+	{
+		switch (int res = trylock(tid))
+		{
+		case CELL_EBUSY: break;
+		default: return res;
+		}
+
+		switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
+		{
+		case se32(SYS_SYNC_PRIORITY):
+		case se32(SYS_SYNC_FIFO):
+			SleepQueue* sq;
+			if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
+			sq->push(tid);
+		default: break;
+		}
+
+		switch (owner.lock(tid, timeout))
+		{
+		case SMR_OK: case SMR_SIGNAL: recursive_count = 1; return CELL_OK;
+		case SMR_TIMEOUT: return CELL_ETIMEDOUT;
+		default: return CELL_EINVAL;
 		}
 	}
 };
 
-struct lwmutex_locker
+class lwmutex_locker
 {
-private:
 	mem_ptr_t<sys_lwmutex_t> m_mutex;
-	u32 m_id;
-public:
-	const int res;	
+	be_t<u32> m_id;
 
-	lwmutex_locker(u32 lwmutex_addr, u32 tid)
+	lwmutex_locker(mem_ptr_t<sys_lwmutex_t> lwmutex, be_t<u32> tid, u64 timeout = 0)
 		: m_id(tid)
-		, m_mutex(lwmutex_addr)
-		, res(m_mutex->trylock(m_id))
+		, m_mutex(lwmutex)
 	{
+		if (int res = m_mutex->lock(m_id, timeout))
+		{
+			ConLog.Error("lwmutex_locker: m_mutex->lock failed(res=0x%x)", res);
+			Emu.Pause();
+		}
 	}
 
 	~lwmutex_locker()
 	{
-		if (res == CELL_OK) m_mutex->unlock(m_id);
+		m_mutex->unlock(m_id);
 	}
 };
