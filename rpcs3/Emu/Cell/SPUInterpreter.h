@@ -32,15 +32,8 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		if(code & 0x2000)
-		{
-			CPU.SetExitStatus(code & 0xfff);
-		}
-		else
-		{
-			ConLog.Warning("STOP: 0x%x", code);
-			//Emu.Pause();
-		}
+		ConLog.Warning("STOP: 0x%x (m_exit_status -> 0)", code);
+		CPU.SetExitStatus(0);
 		CPU.Stop();
 	}
 	void LNOP()
@@ -146,7 +139,7 @@ private:
 	void ROTH(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++) 
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0xf)) | (CPU.GPR[ra]._u16[h] >> (16 - (CPU.GPR[rb]._u32[h] & 0xf)));
+			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0xf)) | (CPU.GPR[ra]._u16[h] >> (16 - (CPU.GPR[rb]._u16[h] & 0xf)));
 	}
 	void ROTHM(u32 rt, u32 ra, u32 rb)
 	{

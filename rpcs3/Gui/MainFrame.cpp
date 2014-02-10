@@ -66,47 +66,6 @@ wxString GetPaneName()
 	return wxString::Format("Pane_%d", pane_num++);
 }
 
-bool wxMoveDir(wxString sFrom, wxString sTo)
-{
-	if (sFrom[sFrom.Len() - 1] != '\\' && sFrom[sFrom.Len() - 1] != '/') sFrom += wxFILE_SEP_PATH;
-	if (sTo[sTo.Len() - 1] != '\\' && sTo[sTo.Len() - 1] != '/') sTo += wxFILE_SEP_PATH;
-
-	if (!::wxDirExists(sFrom)) {
-		::wxLogError(wxT("%s does not exist!\r\nCan not copy directory"), sFrom.c_str());
-		return false;
-	}
-	if (!wxDirExists(sTo)) {
-		if (!wxFileName::Mkdir(sTo, 0777, wxPATH_MKDIR_FULL)) {
-			::wxLogError(wxT("%s could not be created!"), sTo.c_str());
-			return false;
-		}
-	}
-
-	wxDir fDir(sFrom);
-	wxString sNext = wxEmptyString;
-	bool bIsFile = fDir.GetFirst(&sNext);
-	while (bIsFile) {
-		const wxString sFileFrom = sFrom + sNext;
-		const wxString sFileTo = sTo + sNext;
-		if (::wxDirExists(sFileFrom)) {
-			wxMoveDir(sFileFrom, sFileTo);
-			::wxRmdir(sFileFrom);
-		}
-		else {
-			if (!::wxFileExists(sFileTo)) {
-				if (!::wxCopyFile(sFileFrom, sFileTo)) {
-					::wxLogError(wxT("Could not copy %s to %s !"), sFileFrom.c_str(), sFileTo.c_str());
-					return false;
-				}
-			}
-			::wxRemoveFile(sFileFrom);
-		}
-		bIsFile = fDir.GetNext(&sNext);
-	}
-	::wxRmdir(sFrom);
-	return true;
-}
-
 MainFrame::MainFrame()
 	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(800, 600))
 	, m_aui_mgr(this)
@@ -267,47 +226,38 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 
 	wxString fileName = ctrl.GetPath();
-
-	{
-		wxProgressDialog pdlg("Please wait", "Installing PKG...", 0, this, wxPD_APP_MODAL);
-		pkg_unpack((const char *)fileName.mb_str());
-	}
+	if (!pkg_unpack((const char *)fileName.mb_str()))
+		ConLog.Error("Could not unpack PKG!");
+	else ConLog.Success("PKG: extract done.");
 
 	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
 		ConLog.Warning("Could not delete the decoded DEC file");
 
-	// Copy the PKG to dev_hdd0 and format the path to be identical to the PS3.
-	wxString gamePath = "\\dev_hdd0\\game\\";
 	pkg_header *header;
 	pkg_info((const char *)fileName.mb_str(), &header);
 
-	// Get the PKG title ID from the header and format it (should match TITLE ID from PARAM.SFO).
 	wxString titleID_full (header->title_id);
 	wxString titleID = titleID_full.SubString(7, 15);
 
-	// Travel to bin folder.
-	wxSetWorkingDirectory(wxGetCwd() + "\\..\\");
-
-	// Save the main dir.
 	wxString mainDir = wxGetCwd();
+	wxString gamePath = "\\dev_hdd0\\game\\";
 
-	// Set PKG dir.
-	wxString oldPkgDir = wxT(mainDir + "\\" + titleID_full);
-	wxString newPkgDir = wxT(mainDir + gamePath + titleID);
-
-	// Move the final folder.
-	wxMoveDir(oldPkgDir, newPkgDir);
+	wxString pkgDir = wxT(mainDir + gamePath + titleID);
 
 	// Save the title ID.
 	Emu.SetTitleID(titleID);
 
-	ConLog.Success("PKG: extract done.");
-
-	// Travel to the main dir.
-	wxSetWorkingDirectory(mainDir);
-
+	//Refresh game list
 	m_game_viewer->Refresh();
-	Emu.BootGame(newPkgDir.c_str());
+	
+	if(Emu.BootGame(pkgDir.c_str()))
+	{
+		ConLog.Success("Game: boot done.");
+	}
+	else
+	{
+		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.c_str());
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))

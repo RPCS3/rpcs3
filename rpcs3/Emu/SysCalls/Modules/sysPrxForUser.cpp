@@ -164,6 +164,7 @@ void sysPrxForUser_init()
 	//sysPrxForUser.AddFunc(0xaede4b03, sys_heap_free);
 	//sysPrxForUser.AddFunc(0x8a561d92, sys_heap_delete_heap);
 	sysPrxForUser.AddFunc(0xb2fcf2c8, sys_heap_create_heap);
+	sysPrxForUser.AddFunc(0x44265c08, _sys_heap_memalign);
 
 	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
 	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);

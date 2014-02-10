@@ -197,7 +197,7 @@ public:
 
 	u32 GetEntry() { return entry; }
 	u32 GetMinAddr() { return min_addr; }
-	u32 GetMaxAddr() { return min_addr; }
+	u32 GetMaxAddr() { return max_addr; }
 };
 
 class Loader : public LoaderBase

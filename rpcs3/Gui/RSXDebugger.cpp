@@ -293,11 +293,11 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-    if(Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())) && render.m_textures[m_cur_texture].m_width && render.m_textures[m_cur_texture].m_height)
+		if(Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())) && render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
 			MemoryViewerPanel::ShowImage(this,
-				GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation()), 0,
-				render.m_textures[m_cur_texture].m_width,
-				render.m_textures[m_cur_texture].m_height, false);
+				GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation()), 1,
+				render.m_textures[m_cur_texture].GetWidth(),
+				render.m_textures[m_cur_texture].GetHeight(), false);
 	}
 
 #undef SHOW_BUFFER
@@ -424,8 +424,8 @@ void RSXDebugger::GetBuffers()
 
 	unsigned char* TexBuffer = (unsigned char*)Memory.VirtualToRealAddr(TexBuffer_addr);
 
-	u32 width  = render.m_textures[m_cur_texture].m_width;
-	u32 height = render.m_textures[m_cur_texture].m_height;
+	u32 width  = render.m_textures[m_cur_texture].GetWidth();
+	u32 height = render.m_textures[m_cur_texture].GetHeight();
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 	memcpy(buffer, TexBuffer, width * height * 3);
 
@@ -488,13 +488,13 @@ void RSXDebugger::GetTexture()
 		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), render.m_textures[i].GetLocation())));
 		m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
 		m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
-		m_list_texture->SetItem(i, 4, render.m_textures[i].m_enabled ? "True" : "False");
+		m_list_texture->SetItem(i, 4, render.m_textures[i].IsEnabled() ? "True" : "False");
 		m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].GetFormat()));
 		m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].Getmipmap()));
 		m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
 		m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
-			render.m_textures[i].m_width,
-			render.m_textures[i].m_height));
+			render.m_textures[i].GetWidth(),
+			render.m_textures[i].GetHeight()));
 
 		m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
 	}

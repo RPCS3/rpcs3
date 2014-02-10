@@ -45,6 +45,8 @@ rpcs3/git-version.h
 # Copyrighted files
 /bin/data/
 /bin/dev_flash/data/font
+/bin/dev_flash/sys
+/bin/dev_flash/vsh
 
 # Ignore installed games except test homebrews
 !/bin/dev_hdd0/game/

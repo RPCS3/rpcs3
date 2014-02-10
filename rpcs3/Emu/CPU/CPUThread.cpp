@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "CPUThread.h"
 
+reservation_struct reservation;
+
 CPUThread* GetCurrentCPUThread()
 {
 	return (CPUThread*)GetCurrentNamedThread();
@@ -89,14 +91,12 @@ void CPUThread::Wait(const CPUThread& thr)
 
 bool CPUThread::Sync()
 {
-	wxCriticalSectionLocker lock(m_cs_sync);
-
 	return m_sync_wait;
 }
 
 int CPUThread::ThreadStatus()
 {
-	if(Emu.IsStopped())
+	if(Emu.IsStopped() || IsStopped() || IsPaused())
 	{
 		return CPUThread_Stopped;
 	}
@@ -236,7 +236,7 @@ void CPUThread::Pause()
 	DoPause();
 	Emu.CheckStatus();
 
-	ThreadBase::Stop();
+	// ThreadBase::Stop(); // "Abort() called" exception
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
 #endif

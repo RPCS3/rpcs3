@@ -7,6 +7,7 @@
 #include "lv2/SC_SPU_Thread.h"
 #include "lv2/SC_Lwmutex.h"
 #include "lv2/SC_Lwcond.h"
+#include "lv2/SC_Event_flag.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -17,17 +18,17 @@ extern bool enable_log;
 class SysCallBase //Module
 {
 private:
-	wxString m_module_name;
+	std::string m_module_name;
 	//u32 m_id;
 
 public:
-	SysCallBase(const wxString& name/*, u32 id*/)
+	SysCallBase(const std::string& name/*, u32 id*/)
 		: m_module_name(name)
 		//, m_id(id)
 	{
 	}
 
-	const wxString& GetName() const { return m_module_name; }
+	const std::string& GetName() const { return m_module_name; }
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
@@ -35,7 +36,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 		}
 	}
@@ -46,7 +47,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 		}
 	}
@@ -56,7 +57,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 //#endif
 	}
@@ -66,7 +67,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list));
+		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 //#endif
 	}
@@ -75,7 +76,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 
@@ -83,13 +84,13 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list));
+		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
 		va_end(list);
 	}
 
 	bool CheckId(u32 id) const
 	{
-		return Emu.GetIdManager().CheckID(id) && !Emu.GetIdManager().GetID(id).m_name.Cmp(GetName());
+		return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
 	}
 
 	template<typename T> bool CheckId(u32 id, T*& data)
@@ -105,7 +106,7 @@ public:
 
 	template<> bool CheckId(u32 id, ID*& _id)
 	{
-		return Emu.GetIdManager().CheckID(id) && !(_id = &Emu.GetIdManager().GetID(id))->m_name.Cmp(GetName());
+		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 	}
 
 	template<typename T>
@@ -126,19 +127,22 @@ extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_add
 								u32 data, u32 data_size, int prio, u64 flags );
 
 //sys_event
-extern int sys_event_flag_create(u32 eflag_id_addr, u32 attr_addr, u64 init);
-extern int sys_event_flag_destroy(u32 eflag_id);
-extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr, u32 timeout);
-extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, u32 result_addr);
-extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
-extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
-extern int sys_event_flag_cancel(u32 eflag_id, u32 num_addr);
-extern int sys_event_flag_get(u32 eflag_id, u32 flag_addr);
-extern int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_queue_key, int size);
+extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
 extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
 extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
 extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
+extern int sys_event_queue_drain(u32 event_queue_id);
+
+//sys_event_flag
+extern int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init);
+extern int sys_event_flag_destroy(u32 eflag_id);
+extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u32 timeout);
+extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result);
+extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
+extern int sys_event_flag_cancel(u32 eflag_id, mem32_t num);
+extern int sys_event_flag_get(u32 eflag_id, mem64_t flags);
 
 //sys_semaphore
 extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);
@@ -188,10 +192,9 @@ extern int sys_ppu_thread_get_priority(u32 thread_id, u32 prio_addr);
 extern int sys_ppu_thread_get_stack_information(u32 info_addr);
 extern int sys_ppu_thread_stop(u32 thread_id);
 extern int sys_ppu_thread_restart(u32 thread_id);
-extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
+extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
-extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 
 //memory
 extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
@@ -225,7 +228,7 @@ extern int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread);
 extern int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite);
 extern int cellFsClose(u32 fd);
 extern int cellFsOpendir(u32 path_addr, mem32_t fd);
-extern int cellFsReaddir(u32 fd, u32 dir_addr, mem64_t nread);
+extern int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread);
 extern int cellFsClosedir(u32 fd);
 extern int cellFsStat(u32 path_addr, mem_ptr_t<CellFsStat> sb);
 extern int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb);
@@ -293,17 +296,20 @@ extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
+extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4);
 
 //sys_spu
 extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
 extern int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<sys_spu_image> img, mem_ptr_t<sys_spu_thread_attribute> attr, mem_ptr_t<sys_spu_thread_argument> arg);
 extern int sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg);
+extern int sys_spu_thread_group_destroy(u32 id);
 extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_suspend(u32 id);
 extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
 extern int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
+extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
@@ -312,6 +318,8 @@ extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
 extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
 extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
+extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
+extern int sys_spu_thread_get_exit_status(u32 id, mem32_t status);
 
 //sys_time
 extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);

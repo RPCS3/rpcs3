@@ -87,20 +87,20 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_rwlock_wunlock),							//127 (0x07F)
 	bind_func(sys_event_queue_create),						//128 (0x080)
 	null_func,												//129 (0x081)
-	bind_func(sys_event_queue_receive), null_func, bind_func(sys_event_flag_cancel), null_func, bind_func(sys_event_port_create), //134
+	bind_func(sys_event_queue_receive), null_func, bind_func(sys_event_flag_cancel), bind_func(sys_event_queue_drain), bind_func(sys_event_port_create), //134
 	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), bind_func(sys_event_flag_get), //139
 	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, bind_func(sys_time_get_timezone), //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154
 	null_func, bind_func(sys_spu_image_open), null_func, null_func, null_func, //159
 	bind_func(sys_raw_spu_create), null_func, null_func, null_func, null_func, //164
-	null_func, null_func, null_func, null_func, bind_func(sys_spu_initialize), //169
-	bind_func(sys_spu_thread_group_create), bind_func(sys_spu_thread_set_argument), bind_func(sys_spu_thread_initialize), //172
+	bind_func(sys_spu_thread_get_exit_status), bind_func(sys_spu_thread_set_argument), null_func, null_func, bind_func(sys_spu_initialize), //169
+	bind_func(sys_spu_thread_group_create), bind_func(sys_spu_thread_group_destroy), bind_func(sys_spu_thread_initialize), //172
 	bind_func(sys_spu_thread_group_start), bind_func(sys_spu_thread_group_suspend), //174
 	null_func, null_func, null_func, bind_func(sys_spu_thread_group_join), null_func, //179
 	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, bind_func(sys_spu_thread_write_snr), //184
 	null_func, null_func, bind_func(sys_spu_thread_set_spu_cfg), bind_func(sys_spu_thread_get_spu_cfg), null_func, //189
-	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, null_func, null_func, //194
+	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, bind_func(sys_spu_thread_bind_queue), null_func, //194
 	null_func, null_func, null_func, null_func, null_func, //199
 	null_func, null_func, null_func, null_func, null_func, //204
 	null_func, null_func, null_func, null_func, null_func, //209

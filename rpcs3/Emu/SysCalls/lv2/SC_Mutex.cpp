@@ -1,12 +1,13 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "SC_Mutex.h"
+#include "Utilities/SMutex.h"
 
 SysCallBase sys_mtx("sys_mutex");
 
 int sys_mutex_create(u32 mutex_id_addr, u32 attr_addr)
 {
-	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)",
+	sys_mtx.Warning("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)",
 		mutex_id_addr, attr_addr);
 
 	if(!Memory.IsGoodAddr(mutex_id_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;
@@ -48,9 +49,28 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	mutex* mtx_data = nullptr;
 	if(!sys_mtx.CheckId(mutex_id, mtx_data)) return CELL_ESRCH;
 
-	mtx_data->mtx.Lock();
+	u32 counter = 0;
+	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	do
+	{
+		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
 
-	return CELL_OK;
+		if (mtx_data->mtx.TryLock() == wxMUTEX_NO_ERROR) return CELL_OK;
+		Sleep(1);
+
+		if (counter++ > max_counter)
+		{
+			if (!timeout) 
+			{
+				sys_mtx.Warning("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx): TIMEOUT", mutex_id, timeout);
+				counter = 0;
+			}
+			else
+			{
+				return CELL_ETIMEDOUT;
+			}
+		}		
+	} while (true);
 }
 
 int sys_mutex_trylock(u32 mutex_id)
@@ -60,7 +80,7 @@ int sys_mutex_trylock(u32 mutex_id)
 	mutex* mtx_data = nullptr;
 	if(!sys_mtx.CheckId(mutex_id, mtx_data)) return CELL_ESRCH;
 
-	if(mtx_data->mtx.TryLock()) return 1;
+	if (mtx_data->mtx.TryLock() != wxMUTEX_NO_ERROR) return CELL_EBUSY;
 
 	return CELL_OK;
 }

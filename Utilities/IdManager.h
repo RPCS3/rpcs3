@@ -34,12 +34,12 @@ public:
 
 struct ID
 {
-	wxString m_name;
+	std::string m_name;
 	u8 m_attr;
 	IDData* m_data;
 
 	template<typename T>
-	ID(const wxString& name, T* data, const u8 attr)
+	ID(const std::string& name, T* data, const u8 attr)
 		: m_name(name)
 		, m_attr(attr)
 	{
@@ -58,8 +58,6 @@ struct ID
 
 class IdManager
 {
-	ArrayF<ID> IDs;
-
 	static const ID_TYPE s_first_id = 1;
 	static const ID_TYPE s_max_id = -1;
 
@@ -99,7 +97,7 @@ public:
 	}
 	
 	template<typename T>
-	ID_TYPE GetNewID(const wxString& name = wxEmptyString, T* data = nullptr, const u8 attr = 0)
+	ID_TYPE GetNewID(const std::string& name = "", T* data = nullptr, const u8 attr = 0)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 

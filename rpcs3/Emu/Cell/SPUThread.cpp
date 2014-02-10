@@ -61,7 +61,7 @@ void SPUThread::InitRegs()
 
 u64 SPUThread::GetFreeStackSize() const
 {
-	return (GetStackAddr() + GetStackSize()) - GPR[1]._u64[3];
+	return (GetStackAddr() + GetStackSize()) - GPR[1]._u32[3];
 }
 
 void SPUThread::DoRun()

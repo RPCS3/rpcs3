@@ -24,7 +24,7 @@ protected:
 	PPCThread(CPUThreadType type);
 
 public:
-	~PPCThread();
+	virtual ~PPCThread();
 
 protected:
 	virtual void DoReset() override;
