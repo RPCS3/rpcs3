@@ -384,8 +384,8 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 		const wxString name = sh < name_arr.GetCount() ? name_arr[sh] : "Unknown";
 
-		fd.Write(wxString::Format("Start of section header %s[%d] (instructions count: %d)\n", name.mb_str(), sh, sh_size));
-		prog_dial.Update(0, vsize, wxString::Format("Disasm %s section", name.mb_str()));
+		fd.Write(wxString::Format("Start of section header %s[%d] (instructions count: %d)\n", (const char*)name.mb_str(), sh, sh_size));
+		prog_dial.Update(0, vsize, wxString::Format("Disasm %s section", (const char*)name.mb_str()));
 
 		if(Memory.IsGoodAddr(sh_addr))
 		{
@@ -397,7 +397,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 				fd.Write(disasm->last_opcode);
 			}
 		}
-		fd.Write(wxString::Format("End of section header %s[%d]\n\n", name.mb_str(), sh));
+		fd.Write(wxString::Format("End of section header %s[%d]\n\n", (const char*)name.mb_str(), sh));
 	}
 
 	prog_dial.Close();

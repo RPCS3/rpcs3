@@ -72,7 +72,7 @@ const wxString Phdr_FlagsToString(u32 flags)
 	flags &= ~spu << 0x14;
 	flags &= ~rsx << 0x18;
 
-	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret.mb_str(), ppu, spu, rsx);
+	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", (const char*)ret.mb_str(), ppu, spu, rsx);
 
 	ret += "PPU[" + FLAGS_TO_STRING(ppu) + "] ";
 	ret += "SPU[" + FLAGS_TO_STRING(spu) + "] ";

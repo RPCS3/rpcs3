@@ -114,7 +114,8 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		return (GetFName() + wxString::Format("[0x%08llx]", PC)).mb_str();
+		wxString temp = (GetFName() + wxString::Format("[0x%08llx]", PC));
+		return std::string(temp.mb_str());
 	}
 
 public:

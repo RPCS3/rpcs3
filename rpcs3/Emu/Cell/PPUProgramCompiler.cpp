@@ -46,13 +46,13 @@ s64 FindOp(const wxString& text, const wxString& op, s64 from)
 
 	for(s64 i=from; i<text.Len(); ++i)
 	{
-		if(i - 1 < 0 || text[i - 1] == '\n' || CompilePPUProgram::IsSkip(text[i - 1]))
+		if(i - 1 < 0 || text[(size_t)i - 1] == '\n' || CompilePPUProgram::IsSkip(text[(size_t)i - 1]))
 		{
 			if(text.Len() - i < op.Len()) return -1;
 
 			if(text(i, op.Len()).Cmp(op) != 0) continue;
-			if(i + op.Len() >= text.Len() || text[i + op.Len()] == '\n' ||
-				CompilePPUProgram::IsSkip(text[i + op.Len()])) return i;
+			if(i + op.Len() >= text.Len() || text[(size_t)i + op.Len()] == '\n' ||
+				CompilePPUProgram::IsSkip(text[(size_t)i + op.Len()])) return i;
 		}
 	}
 
@@ -149,7 +149,7 @@ void CompilePPUProgram::WriteError(const wxString& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, error.mb_str()));
+		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, (const char*)error.mb_str()));
 	}
 }
 
@@ -158,7 +158,7 @@ bool CompilePPUProgram::IsCommit(const char c) { return c == '#'; }
 bool CompilePPUProgram::IsEnd() const { return p >= m_asm.Len(); }
 bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= m_asm.Len(); }
 
-char CompilePPUProgram::NextChar() { return *m_asm(p++, 1); }
+char CompilePPUProgram::NextChar() { return *(const char*)m_asm(p++, 1); }
 void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ); if(!IsEnd()) m_line++; }
 void CompilePPUProgram::EndLn()
 {
@@ -176,9 +176,9 @@ void CompilePPUProgram::FirstChar()
 
 void CompilePPUProgram::PrevArg()
 {
-	while( --p >= 0 && (IsSkip(m_asm[p]) || m_asm[p] == ','));
-	while( --p >= 0 && !IsSkip(m_asm[p]) && !IsEndLn(m_asm[p]) );
-	if(IsEndLn(m_asm[p])) p++;
+	while( --p >= 0 && (IsSkip(m_asm[(size_t)p]) || m_asm[(size_t)p] == ','));
+	while( --p >= 0 && !IsSkip(m_asm[(size_t)p]) && !IsEndLn(m_asm[(size_t)p]) );
+	if(IsEndLn(m_asm[(size_t)p])) p++;
 }
 
 bool CompilePPUProgram::GetOp(wxString& result)
@@ -234,12 +234,12 @@ int CompilePPUProgram::GetArg(wxString& result, bool func)
 			continue;
 		}
 
-		const bool text = m_asm[from] == '"';
+		const bool text = m_asm[(size_t)from] == '"';
 		const bool end_text = cur_char == '"';
 
 		if((text ? end_text : (skip || commit || end)) || endln)
 		{
-			if(text && p > 2 && m_asm[p - 2] == '\\' && (p <= 3 || m_asm[p - 3] != '\\'))
+			if(text && p > 2 && m_asm[(size_t)p - 2] == '\\' && (p <= 3 || m_asm[(size_t)p - 3] != '\\'))
 			{
 				continue;
 			}
@@ -382,7 +382,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 	}
 
-	switch(str[0])
+	switch((char)str[0])
 	{
 	case 'r': case 'f': case 'v':
 
@@ -417,7 +417,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		switch(str[0])
+		switch((char)str[0])
 		{
 		case 'r': arg.type = ARG_REG_R; break;
 		case 'f': arg.type = ARG_REG_F; break;
@@ -701,20 +701,20 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!GetArg(test) || test[0] != '[')
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("data not found. style: %s", GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("data not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 		m_error = true;
 		NextLn();
 		return;
 	}
 
-	while(p > 0 && m_asm[p] != '[') p--;
+	while(p > 0 && m_asm[(size_t)p] != '[') p--;
 	p++;
 
 	wxString dst;
 	if(!GetArg(dst))
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("dst not found. style: %s", GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("dst not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -745,7 +745,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!dst_branch)
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("bad dst type. style: %s", GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("bad dst type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -763,7 +763,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src not found. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -779,16 +779,16 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 				: ~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src type. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
 		}
 
-		if(m_asm[p - 1] != ']')
+		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("']' not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -869,7 +869,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src1 not found. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src1 not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -881,7 +881,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src1 type. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src1 type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -891,7 +891,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src2, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src2 not found. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src2 not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			return;
 		}
@@ -902,16 +902,16 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src2.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src2 type. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src2 type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
 		}
 
-		if(m_asm[p - 1] != ']')
+		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("']' not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -1046,7 +1046,7 @@ void CompilePPUProgram::Compile()
 			continue;
 		}
 
-		while(p > 0 && m_asm[p] != '[') p--;
+		while(p > 0 && m_asm[(size_t)p] != '[') p--;
 		p++;
 
 		wxString module, name, id;
@@ -1108,7 +1108,7 @@ void CompilePPUProgram::Compile()
 			continue;
 		}
 
-		if(m_asm[p - 1] != ']')
+		if(m_asm[(size_t)p - 1] != ']')
 		{
 			WriteError("']' not found. style: [module, name, id]");
 			m_error = true;
@@ -1340,7 +1340,7 @@ void CompilePPUProgram::Compile()
 			for(u32 i=0; i<m_branches.GetCount(); ++i)
 			{
 				if(name.mb_str() != m_branches[i].m_name) continue;
-				WriteError(wxString::Format("'%s' already declared", name.mb_str()));
+				WriteError(wxString::Format("'%s' already declared", (const char*)name.mb_str()));
 				m_error = true;
 				break;
 			}
@@ -1350,7 +1350,7 @@ void CompilePPUProgram::Compile()
 
 			if(a_name.type != ARG_ERR)
 			{
-				WriteError(wxString::Format("bad name '%s'", name.mb_str()));
+				WriteError(wxString::Format("bad name '%s'", (const char*)name.mb_str()));
 				m_error = true;
 			}
 
@@ -1430,7 +1430,7 @@ void CompilePPUProgram::Compile()
 		}
 		else
 		{
-			WriteError(wxString::Format("unknown instruction '%s'", op.mb_str()));
+			WriteError(wxString::Format("unknown instruction '%s'", (const char*)op.mb_str()));
 			EndLn();
 			m_error = true;
 		}
@@ -1469,7 +1469,7 @@ void CompilePPUProgram::Compile()
 		m_branch_pos++;
 	}
 
-	if(m_file_path && !m_analyze && !m_error)
+	if(!m_file_path.IsEmpty() && !m_analyze && !m_error)
 	{
 		s_opd.sh_size = Memory.AlignAddr(s_opd.sh_size, s_opd.sh_addralign);
 		section_offset += s_opd.sh_size;

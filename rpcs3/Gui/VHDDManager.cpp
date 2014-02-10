@@ -141,7 +141,7 @@ void VHDDExplorer::Export(const wxString& path, const wxString& to)
 {
 	if(!m_hdd->Open(path))
 	{
-		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", path.mb_str()));
+		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", (const char*)path.mb_str()));
 		return;
 	}
 

@@ -149,7 +149,7 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
 	//new_thread.flags = flags;
-	new_thread.SetName(Memory.ReadString(threadname_addr).mb_str());
+	new_thread.SetName((const char*)Memory.ReadString(threadname_addr).mb_str());
 	new_thread.Run();
 	new_thread.Exec();
 

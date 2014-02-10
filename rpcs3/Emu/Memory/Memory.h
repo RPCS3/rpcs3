@@ -305,7 +305,7 @@ public:
 
 		if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
 
-		return wxString(ret, wxConvUTF8);
+		return wxString(ret.wx_str(), wxConvUTF8);
 	}
 
 	wxString ReadString(const u64 addr)

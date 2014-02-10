@@ -158,7 +158,7 @@ wxString FormatV(const wxString fmt, va_list args)
 		str.Clear();
 		wxStringBuffer buf(str, length+1);
 		memset(buf, 0, length+1);
-		if(vsnprintf(buf, length, fmt, args) != -1) break;
+		if(vsnprintf((char *)((wxStringCharType *)buf), length, fmt, args) != -1) break;
 		length *= 2;
 	}
 
@@ -170,11 +170,12 @@ void LogWriter::Write(const wxString fmt, ...)
 	va_list list;
 	va_start(list, fmt);
 
-	const wxString& frmt = FormatV(fmt, list);
+	wxString frmt;
+	frmt.PrintfV(fmt, list);
 
 	va_end(list);
 
-	WriteToLog("!", frmt.mb_str(), "White");
+	WriteToLog("!", (const char *)frmt.mb_str(), "White");
 }
 
 void LogWriter::Error(const wxString fmt, ...)
@@ -186,7 +187,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("E", frmt.mb_str(), "Red");
+	WriteToLog("E", frmt.ToStdString(), "Red");
 }
 
 void LogWriter::Warning(const wxString fmt, ...)
@@ -198,7 +199,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("W", frmt.mb_str(), "Yellow");
+	WriteToLog("W", frmt.ToStdString(), "Yellow");
 }
 
 void LogWriter::Success(const wxString fmt, ...)
@@ -210,7 +211,7 @@ void LogWriter::Success(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("S", frmt.mb_str(), "Green");
+	WriteToLog("S", frmt.ToStdString(), "Green");
 }
 
 void LogWriter::SkipLn()

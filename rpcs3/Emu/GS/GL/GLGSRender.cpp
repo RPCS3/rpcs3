@@ -39,10 +39,10 @@ GLGSFrame::GLGSFrame()
 	canvas->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick), (wxObject*)0, this);
 }
 
-void GLGSFrame::Flip()
+void GLGSFrame::Flip(wxGLContext *context)
 {
 	if(!canvas) return;
-	canvas->SetCurrent();
+	canvas->SetCurrent(*context);
 
 	static Timer fps_t;
 	canvas->SwapBuffers();
@@ -1068,7 +1068,7 @@ void GLGSRender::Flip()
 		m_post_draw_objs[i].Draw();
 	}
 
-	m_frame->Flip();
+	m_frame->Flip(m_context);
 
 	if(m_fbo.IsCreated())
 		m_fbo.Bind();

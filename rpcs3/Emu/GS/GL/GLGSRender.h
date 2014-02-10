@@ -303,7 +303,7 @@ struct GLGSFrame : public GSFrame
 	GLGSFrame();
 	~GLGSFrame() {}
 
-	void Flip();
+	void Flip(wxGLContext *context);
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 

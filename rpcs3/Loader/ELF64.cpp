@@ -336,7 +336,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						stub.s_text = re(stub.s_text);
 
 						const wxString& module_name = Memory.ReadString(stub.s_modulename);
-						Module* module = GetModuleByName(module_name.mb_str());
+						Module* module = GetModuleByName(module_name.ToStdString());
 						if(module)
 						{
 							//module->SetLoaded();

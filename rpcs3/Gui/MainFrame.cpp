@@ -192,7 +192,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 	
-	if(Emu.BootGame(ctrl.GetPath().c_str()))
+	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
 		ConLog.Success("Game: boot done.");
 	}
@@ -242,7 +242,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	wxString mainDir = wxGetCwd();
 	wxString gamePath = "\\dev_hdd0\\game\\";
 
-	wxString pkgDir = wxT(mainDir + gamePath + titleID);
+	wxString pkgDir = mainDir + gamePath + titleID;
 
 	// Save the title ID.
 	Emu.SetTitleID(titleID);
@@ -250,7 +250,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	//Refresh game list
 	m_game_viewer->Refresh();
 	
-	if(Emu.BootGame(pkgDir.c_str()))
+	if(Emu.BootGame(pkgDir.ToStdString()))
 	{
 		ConLog.Success("Game: boot done.");
 	}
@@ -770,13 +770,13 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
 	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
 	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
-	pause.SetText(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 	//send_exit.Enable(false);
 	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount();
 
-	send_open_menu.SetText(wxString::Format("Send %s system menu cmd", m_sys_menu_opened ? "close" : "open"));
+	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", m_sys_menu_opened ? "close" : "open"));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 
