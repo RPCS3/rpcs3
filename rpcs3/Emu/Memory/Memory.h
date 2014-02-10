@@ -303,8 +303,6 @@ public:
 	{
 		wxString ret(GetMemFromAddr(addr), wxConvUTF8,len);
 
-		//if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
-
 		return ret;
 	}
 
