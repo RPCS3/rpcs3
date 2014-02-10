@@ -737,7 +737,7 @@ public:
 
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, (double)FPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, (const char*)VPR[i].ToString(true).mb_str(), (const char*)VPR[i].ToString().mb_str());
+		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, (const char*)VPR[i].ToString(true).wx_str(), (const char*)VPR[i].ToString().wx_str());
 		ret += wxString::Format("CR = 0x%08x\n", CR.CR);
 		ret += wxString::Format("LR = 0x%llx\n", LR);
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);

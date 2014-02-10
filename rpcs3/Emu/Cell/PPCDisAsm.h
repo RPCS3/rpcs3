@@ -15,39 +15,39 @@ protected:
 
 	void DisAsm_V4(const wxString& op, u32 v0, u32 v1, u32 v2, u32 v3)
 	{
-		Write(wxString::Format("%s v%d,v%d,v%d,v%d", (const char*)FixOp(op).mb_str(), v0, v1, v2, v3));
+		Write(wxString::Format("%s v%d,v%d,v%d,v%d", FixOp(op).wx_str(), v0, v1, v2, v3));
 	}
 	void DisAsm_V3_UIMM(const wxString& op, u32 v0, u32 v1, u32 v2, u32 uimm)
 	{
-		Write(wxString::Format("%s v%d,v%d,v%d,%u #%x", (const char*)FixOp(op).mb_str(), v0, v1, v2, uimm, uimm));
+		Write(wxString::Format("%s v%d,v%d,v%d,%u #%x", FixOp(op).wx_str(), v0, v1, v2, uimm, uimm));
 	}
 	void DisAsm_V3(const wxString& op, u32 v0, u32 v1, u32 v2)
 	{
-		Write(wxString::Format("%s v%d,v%d,v%d", (const char*)FixOp(op).mb_str(), v0, v1, v2));
+		Write(wxString::Format("%s v%d,v%d,v%d", FixOp(op).wx_str(), v0, v1, v2));
 	}
 	void DisAsm_V2_UIMM(const wxString& op, u32 v0, u32 v1, u32 uimm)
 	{
-		Write(wxString::Format("%s v%d,v%d,%u #%x", (const char*)FixOp(op).mb_str(), v0, v1, uimm, uimm));
+		Write(wxString::Format("%s v%d,v%d,%u #%x", FixOp(op).wx_str(), v0, v1, uimm, uimm));
 	}
 	void DisAsm_V2(const wxString& op, u32 v0, u32 v1)
 	{
-		Write(wxString::Format("%s v%d,v%d", (const char*)FixOp(op).mb_str(), v0, v1));
+		Write(wxString::Format("%s v%d,v%d", FixOp(op).wx_str(), v0, v1));
 	}
 	void DisAsm_V1_SIMM(const wxString& op, u32 v0, s32 simm)
 	{
-		Write(wxString::Format("%s v%d,%d #%x", (const char*)FixOp(op).mb_str(), v0, simm, simm));
+		Write(wxString::Format("%s v%d,%d #%x", FixOp(op).wx_str(), v0, simm, simm));
 	}
 	void DisAsm_V1(const wxString& op, u32 v0)
 	{
-		Write(wxString::Format("%s v%d", (const char*)FixOp(op).mb_str(), v0));
+		Write(wxString::Format("%s v%d", FixOp(op).wx_str(), v0));
 	}
 	void DisAsm_V1_R2(const wxString& op, u32 v0, u32 r1, u32 r2)
 	{
-		Write(wxString::Format("%s v%d,r%d,r%d", (const char*)FixOp(op).mb_str(), v0, r1, r2));
+		Write(wxString::Format("%s v%d,r%d,r%d", FixOp(op).wx_str(), v0, r1, r2));
 	}
 	void DisAsm_CR1_F2_RC(const wxString& op, u32 cr0, u32 f0, u32 f1, bool rc)
 	{
-		Write(wxString::Format("%s%s cr%d,f%d,f%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", cr0, f0, f1));
+		Write(wxString::Format("%s%s cr%d,f%d,f%d", FixOp(op).wx_str(), rc ? "." : "", cr0, f0, f1));
 	}
 	void DisAsm_CR1_F2(const wxString& op, u32 cr0, u32 f0, u32 f1)
 	{
@@ -55,15 +55,15 @@ protected:
 	}
 	void DisAsm_INT1_R2(const wxString& op, u32 i0, u32 r0, u32 r1)
 	{
-		Write(wxString::Format("%s %d,r%d,r%d", (const char*)FixOp(op).mb_str(), i0, r0, r1));
+		Write(wxString::Format("%s %d,r%d,r%d", FixOp(op).wx_str(), i0, r0, r1));
 	}
 	void DisAsm_INT1_R1_IMM(const wxString& op, u32 i0, u32 r0, s32 imm0)
 	{
-		Write(wxString::Format("%s %d,r%d,%d #%x", (const char*)FixOp(op).mb_str(), i0, r0, imm0, imm0));
+		Write(wxString::Format("%s %d,r%d,%d #%x", FixOp(op).wx_str(), i0, r0, imm0, imm0));
 	}
 	void DisAsm_INT1_R1_RC(const wxString& op, u32 i0, u32 r0, bool rc)
 	{
-		Write(wxString::Format("%s%s %d,r%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", i0, r0));
+		Write(wxString::Format("%s%s %d,r%d", FixOp(op).wx_str(), rc ? "." : "", i0, r0));
 	}
 	void DisAsm_INT1_R1(const wxString& op, u32 i0, u32 r0)
 	{
@@ -71,11 +71,11 @@ protected:
 	}
 	void DisAsm_F4_RC(const wxString& op, u32 f0, u32 f1, u32 f2, u32 f3, bool rc)
 	{
-		Write(wxString::Format("%s%s f%d,f%d,f%d,f%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0, f1, f2, f3));
+		Write(wxString::Format("%s%s f%d,f%d,f%d,f%d", FixOp(op).wx_str(), rc ? "." : "", f0, f1, f2, f3));
 	}
 	void DisAsm_F3_RC(const wxString& op, u32 f0, u32 f1, u32 f2, bool rc)
 	{
-		Write(wxString::Format("%s%s f%d,f%d,f%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0, f1, f2));
+		Write(wxString::Format("%s%s f%d,f%d,f%d", FixOp(op).wx_str(), rc ? "." : "", f0, f1, f2));
 	}
 	void DisAsm_F3(const wxString& op, u32 f0, u32 f1, u32 f2)
 	{
@@ -83,7 +83,7 @@ protected:
 	}
 	void DisAsm_F2_RC(const wxString& op, u32 f0, u32 f1, bool rc)
 	{
-		Write(wxString::Format("%s%s f%d,f%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0, f1));
+		Write(wxString::Format("%s%s f%d,f%d", FixOp(op).wx_str(), rc ? "." : "", f0, f1));
 	}
 	void DisAsm_F2(const wxString& op, u32 f0, u32 f1)
 	{
@@ -93,21 +93,21 @@ protected:
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
-			Write(wxString::Format("%s f%d,r%d,r%d", (const char*)FixOp(op).mb_str(), f0, r0, r1));
+			Write(wxString::Format("%s f%d,r%d,r%d", FixOp(op).wx_str(), f0, r0, r1));
 			return;
 		}
 
-		Write(wxString::Format("%s f%d,r%d(r%d)", (const char*)FixOp(op).mb_str(), f0, r0, r1));
+		Write(wxString::Format("%s f%d,r%d(r%d)", FixOp(op).wx_str(), f0, r0, r1));
 	}
 	void DisAsm_F1_IMM_R1_RC(const wxString& op, u32 f0, s32 imm0, u32 r0, bool rc)
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
-			Write(wxString::Format("%s%s f%d,r%d,%d #%x", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0, r0, imm0, imm0));
+			Write(wxString::Format("%s%s f%d,r%d,%d #%x", FixOp(op).wx_str(), rc ? "." : "", f0, r0, imm0, imm0));
 			return;
 		}
 
-		Write(wxString::Format("%s%s f%d,%d(r%d) #%x", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0, imm0, r0, imm0));
+		Write(wxString::Format("%s%s f%d,%d(r%d) #%x", FixOp(op).wx_str(), rc ? "." : "", f0, imm0, r0, imm0));
 	}
 	void DisAsm_F1_IMM_R1(const wxString& op, u32 f0, s32 imm0, u32 r0)
 	{
@@ -115,11 +115,11 @@ protected:
 	}
 	void DisAsm_F1_RC(const wxString& op, u32 f0, bool rc)
 	{
-		Write(wxString::Format("%s%s f%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", f0));
+		Write(wxString::Format("%s%s f%d", FixOp(op).wx_str(), rc ? "." : "", f0));
 	}
 	void DisAsm_R1_RC(const wxString& op, u32 r0, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", r0));
+		Write(wxString::Format("%s%s r%d", FixOp(op).wx_str(), rc ? "." : "", r0));
 	}
 	void DisAsm_R1(const wxString& op, u32 r0)
 	{
@@ -127,7 +127,7 @@ protected:
 	}
 	void DisAsm_R2_OE_RC(const wxString& op, u32 r0, u32 r1, u32 oe, bool rc)
 	{
-		Write(wxString::Format("%s%s%s r%d,r%d", (const char*)FixOp(op).mb_str(), oe ? "o" : "", rc ? "." : "", r0, r1));
+		Write(wxString::Format("%s%s%s r%d,r%d", FixOp(op).wx_str(), oe ? "o" : "", rc ? "." : "", r0, r1));
 	}
 	void DisAsm_R2_RC(const wxString& op, u32 r0, u32 r1, bool rc)
 	{
@@ -139,11 +139,11 @@ protected:
 	}
 	void DisAsm_R3_OE_RC(const wxString& op, u32 r0, u32 r1, u32 r2, u32 oe, bool rc)
 	{
-		Write(wxString::Format("%s%s%s r%d,r%d,r%d", (const char*)FixOp(op).mb_str(), oe ? "o" : "", rc ? "." : "", r0, r1, r2));
+		Write(wxString::Format("%s%s%s r%d,r%d,r%d", FixOp(op).wx_str(), oe ? "o" : "", rc ? "." : "", r0, r1, r2));
 	}
 	void DisAsm_R3_INT2_RC(const wxString& op, u32 r0, u32 r1, u32 r2, s32 i0, s32 i1, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d,r%d,r%d,%d,%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", r0, r1, r2, i0, i1));
+		Write(wxString::Format("%s%s r%d,r%d,r%d,%d,%d", FixOp(op).wx_str(), rc ? "." : "", r0, r1, r2, i0, i1));
 	}
 	void DisAsm_R3_RC(const wxString& op, u32 r0, u32 r1, u32 r2, bool rc)
 	{
@@ -155,7 +155,7 @@ protected:
 	}
 	void DisAsm_R2_INT3_RC(const wxString& op, u32 r0, u32 r1, s32 i0, s32 i1, s32 i2, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d,r%d,%d,%d,%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", r0, r1, i0, i1, i2));
+		Write(wxString::Format("%s%s r%d,r%d,%d,%d,%d", FixOp(op).wx_str(), rc ? "." : "", r0, r1, i0, i1, i2));
 	}
 	void DisAsm_R2_INT3(const wxString& op, u32 r0, u32 r1, s32 i0, s32 i1, s32 i2)
 	{
@@ -163,7 +163,7 @@ protected:
 	}
 	void DisAsm_R2_INT2_RC(const wxString& op, u32 r0, u32 r1, s32 i0, s32 i1, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d,r%d,%d,%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", r0, r1, i0, i1));
+		Write(wxString::Format("%s%s r%d,r%d,%d,%d", FixOp(op).wx_str(), rc ? "." : "", r0, r1, i0, i1));
 	}
 	void DisAsm_R2_INT2(const wxString& op, u32 r0, u32 r1, s32 i0, s32 i1)
 	{
@@ -171,7 +171,7 @@ protected:
 	}
 	void DisAsm_R2_INT1_RC(const wxString& op, u32 r0, u32 r1, s32 i0, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d,r%d,%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", r0, r1, i0));
+		Write(wxString::Format("%s%s r%d,r%d,%d", FixOp(op).wx_str(), rc ? "." : "", r0, r1, i0));
 	}
 	void DisAsm_R2_INT1(const wxString& op, u32 r0, u32 r1, s32 i0)
 	{
@@ -181,27 +181,27 @@ protected:
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
-			Write(wxString::Format("%s r%d,r%d,%d  #%x", (const char*)FixOp(op).mb_str(), r0, r1, imm0, imm0));
+			Write(wxString::Format("%s r%d,r%d,%d  #%x", FixOp(op).wx_str(), r0, r1, imm0, imm0));
 			return;
 		}
 
-		Write(wxString::Format("%s r%d,%d(r%d)  #%x", (const char*)FixOp(op).mb_str(), r0, imm0, r1, imm0));
+		Write(wxString::Format("%s r%d,%d(r%d)  #%x", FixOp(op).wx_str(), r0, imm0, r1, imm0));
 	}
 	void DisAsm_R1_IMM(const wxString& op, u32 r0, s32 imm0)
 	{
-		Write(wxString::Format("%s r%d,%d  #%x", (const char*)FixOp(op).mb_str(), r0, imm0, imm0));
+		Write(wxString::Format("%s r%d,%d  #%x", FixOp(op).wx_str(), r0, imm0, imm0));
 	}
 	void DisAsm_IMM_R1(const wxString& op, s32 imm0, u32 r0)
 	{
-		Write(wxString::Format("%s %d,r%d  #%x", (const char*)FixOp(op).mb_str(), imm0, r0, imm0));
+		Write(wxString::Format("%s %d,r%d  #%x", FixOp(op).wx_str(), imm0, r0, imm0));
 	}
 	void DisAsm_CR1_R1_IMM(const wxString& op, u32 cr0, u32 r0, s32 imm0)
 	{
-		Write(wxString::Format("%s cr%d,r%d,%d  #%x", (const char*)FixOp(op).mb_str(), cr0, r0, imm0, imm0));
+		Write(wxString::Format("%s cr%d,r%d,%d  #%x", FixOp(op).wx_str(), cr0, r0, imm0, imm0));
 	}
 	void DisAsm_CR1_R2_RC(const wxString& op, u32 cr0, u32 r0, u32 r1, bool rc)
 	{
-		Write(wxString::Format("%s%s cr%d,r%d,r%d", (const char*)FixOp(op).mb_str(), rc ? "." : "", cr0, r0, r1));
+		Write(wxString::Format("%s%s cr%d,r%d,r%d", FixOp(op).wx_str(), rc ? "." : "", cr0, r0, r1));
 	}
 	void DisAsm_CR1_R2(const wxString& op, u32 cr0, u32 r0, u32 r1)
 	{
@@ -209,30 +209,30 @@ protected:
 	}
 	void DisAsm_CR2(const wxString& op, u32 cr0, u32 cr1)
 	{
-		Write(wxString::Format("%s cr%d,cr%d", (const char*)FixOp(op).mb_str(), cr0, cr1));
+		Write(wxString::Format("%s cr%d,cr%d", FixOp(op).wx_str(), cr0, cr1));
 	}
 	void DisAsm_INT3(const wxString& op, const int i0, const int i1, const int i2)
 	{
-		Write(wxString::Format("%s %d,%d,%d", (const char*)FixOp(op).mb_str(), i0, i1, i2));
+		Write(wxString::Format("%s %d,%d,%d", FixOp(op).wx_str(), i0, i1, i2));
 	}
 	void DisAsm_INT1(const wxString& op, const int i0)
 	{
-		Write(wxString::Format("%s %d", (const char*)FixOp(op).mb_str(), i0));
+		Write(wxString::Format("%s %d", FixOp(op).wx_str(), i0));
 	}
 	void DisAsm_BRANCH(const wxString& op, const int pc)
 	{
-		Write(wxString::Format("%s 0x%x", (const char*)FixOp(op).mb_str(), DisAsmBranchTarget(pc)));
+		Write(wxString::Format("%s 0x%x", FixOp(op).wx_str(), DisAsmBranchTarget(pc)));
 	}
 	void DisAsm_BRANCH_A(const wxString& op, const int pc)
 	{
-		Write(wxString::Format("%s 0x%x", (const char*)FixOp(op).mb_str(), pc));
+		Write(wxString::Format("%s 0x%x", FixOp(op).wx_str(), pc));
 	}
 	void DisAsm_B2_BRANCH(const wxString& op, u32 b0, u32 b1, const int pc)
 	{
-		Write(wxString::Format("%s %d,%d,0x%x ", (const char*)FixOp(op).mb_str(), b0, b1, DisAsmBranchTarget(pc)));
+		Write(wxString::Format("%s %d,%d,0x%x ", FixOp(op).wx_str(), b0, b1, DisAsmBranchTarget(pc)));
 	}
 	void DisAsm_CR_BRANCH(const wxString& op, u32 cr, const int pc)
 	{
-		Write(wxString::Format("%s cr%d,0x%x ", (const char*)FixOp(op).mb_str(), cr, DisAsmBranchTarget(pc)));
+		Write(wxString::Format("%s cr%d,0x%x ", FixOp(op).wx_str(), cr, DisAsmBranchTarget(pc)));
 	}
 };

@@ -66,7 +66,7 @@ u32 LoadSpuImage(vfsStream& stream)
 //156
 int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 {
-	const wxString path = Memory.ReadString(path_addr).mb_str();
+	const wxString path = Memory.ReadString(path_addr).wx_str();
 	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.c_str());
 
 	if(!img.IsGood() || !Memory.IsGoodAddr(path_addr))
@@ -125,7 +125,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	}
 
 	u32 spu_ep = (u32)img->entry_point;
-	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).mb_str();
+	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
 	u64 a3 = arg->arg3;

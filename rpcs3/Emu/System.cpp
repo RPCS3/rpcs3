@@ -188,7 +188,7 @@ void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
 
-	if(IsSelf((const char *)m_path.mb_str()))
+	if(IsSelf(m_path.ToStdString()))
 	{
 		std::string self_path = m_path;
 		std::string elf_path = wxFileName(m_path).GetPath().c_str();
@@ -208,7 +208,7 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	ConLog.Write("Loading '%s'...", m_path.mb_str());
+	ConLog.Write("Loading '%s'...", m_path.wx_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
@@ -216,7 +216,7 @@ void Emulator::Load()
 	ConLog.Write("Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().mb_str(), m_vfs.m_devices[i].GetLocalPath().mb_str());
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().wx_str(), m_vfs.m_devices[i].GetLocalPath().wx_str());
 	}
 	ConLog.SkipLn();
 
@@ -229,7 +229,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path.mb_str(), m_elf_path.mb_str());
+		ConLog.Error("Elf not found! (%s - %s)", m_path.wx_str(), m_elf_path.wx_str());
 		return;
 	}
 

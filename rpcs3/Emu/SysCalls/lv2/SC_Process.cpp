@@ -49,7 +49,7 @@ int sys_game_process_exitspawn(	u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags )
 {
 	sc_p.Log("sys_game_process_exitspawn: ");
-	sc_p.Log("path: %s", Memory.ReadString(path_addr).mb_str());
+	sc_p.Log("path: %s", Memory.ReadString(path_addr).wx_str());
 	sc_p.Log("argv: 0x%x", Memory.Read32(argv_addr));
 	sc_p.Log("envp: 0x%x", Memory.Read32(envp_addr));
 	sc_p.Log("data: 0x%x", data);

@@ -37,7 +37,7 @@ struct PsfEntry
 			return FormatString();
 
 		case 0x0404:
-			return wxString::Format("0x%x", FormatInteger()).mb_str();
+			return wxString::Format("0x%x", FormatInteger()).ToStdString();
 		}
 	}
 

@@ -3950,7 +3950,7 @@ private:
 
 		for(uint i=0; i<32; ++i) ConLog.Write("r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) ConLog.Write("f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).mb_str(), CPU.VPR[i].ToString().mb_str());
+		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).wx_str(), CPU.VPR[i].ToString().wx_str());
 		ConLog.Write("CR = 0x%08x", CPU.CR);
 		ConLog.Write("LR = 0x%llx", CPU.LR);
 		ConLog.Write("CTR = 0x%llx", CPU.CTR);

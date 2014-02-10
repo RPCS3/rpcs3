@@ -314,16 +314,16 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 	for(int i=m_funcs.GetCount() - 1; i>0; --i)
 	{
-		fp += wxString::Format("void %s();\n", (const char*)m_funcs[i].name.mb_str());
+		fp += wxString::Format("void %s();\n", m_funcs[i].name.wx_str());
 	}
 
 	wxString f = wxEmptyString;
 
-	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s}\n", (const char*)m_funcs[0].name.mb_str(), (const char*)BuildFuncBody(m_funcs[0]).mb_str());
+	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
 
 	for(uint i=1; i<m_funcs.GetCount(); ++i)
 	{
-		f += wxString::Format("\nvoid %s()\n{\n%s}\n", (const char*)m_funcs[i].name.mb_str(), (const char*)BuildFuncBody(m_funcs[i]).mb_str());
+		f += wxString::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.wx_str(), BuildFuncBody(m_funcs[i]).wx_str());
 	}
 
 	static const wxString& prot = 
@@ -333,7 +333,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 		"%s\n"
 		"%s";
 
-	return wxString::Format(prot, (const char*)p.mb_str(), (const char*)fp.mb_str(), (const char*)f.mb_str());
+	return wxString::Format(prot, p.wx_str(), fp.wx_str(), f.wx_str());
 }
 
 void GLVertexDecompilerThread::Task()

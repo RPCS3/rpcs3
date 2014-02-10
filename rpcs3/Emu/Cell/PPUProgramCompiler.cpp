@@ -149,7 +149,7 @@ void CompilePPUProgram::WriteError(const wxString& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, (const char*)error.mb_str()));
+		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, static_cast<const char*>(error)));
 	}
 }
 
@@ -373,7 +373,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	{
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(str.mb_str() != m_branches[i].m_name)
+			if(str.ToStdString() != m_branches[i].m_name)
 				continue;
 
 			arg.type = ARG_BRANCH;
@@ -534,7 +534,7 @@ u32 CompilePPUProgram::GetBranchValue(const wxString& branch)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(branch.mb_str() != m_branches[i].m_name)
+		if(branch.ToStdString() != m_branches[i].m_name)
 			continue;
 		if(m_branches[i].m_pos >= 0) return m_text_addr + m_branches[i].m_pos * 4;
 
@@ -667,7 +667,7 @@ CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const wxString& name)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.mb_str() != m_branches[i].m_name) continue;
+		if(name.ToStdString() != m_branches[i].m_name) continue;
 
 		return m_branches[i];
 	}
@@ -687,7 +687,7 @@ void CompilePPUProgram::SetSp(const wxString& name, u32 addr, bool create)
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.mb_str() != m_branches[i].m_name)
+		if(name.ToStdString() != m_branches[i].m_name)
 			continue;
 		m_branches[i].m_addr = addr;
 	}
@@ -701,7 +701,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!GetArg(test) || test[0] != '[')
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("data not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("data not found. style: %s", GetSpStyle(sp).wx_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -714,7 +714,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!GetArg(dst))
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("dst not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("dst not found. style: %s", GetSpStyle(sp).wx_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -745,7 +745,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!dst_branch)
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("bad dst type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+		WriteError(wxString::Format("bad dst type. style: %s", GetSpStyle(sp).wx_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -763,7 +763,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src not found. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -779,7 +779,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 				: ~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src type. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -788,7 +788,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -807,7 +807,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 
 			for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 			{
-				if(src1.mb_str() != m_sp_string[i].m_data) continue;
+				if(src1.ToStdString() != m_sp_string[i].m_data) continue;
 				*dst_branch = Branch(dst, -1, m_sp_string[i].m_addr);
 				founded = true;
 			}
@@ -869,7 +869,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src1 not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src1 not found. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -881,7 +881,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src1 type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src1 type. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -891,7 +891,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src2, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src2 not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("src2 not found. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			return;
 		}
@@ -902,7 +902,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src2.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src2 type. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("bad src2 type. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -911,7 +911,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", (const char*)GetSpStyle(sp).mb_str()));
+			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).wx_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -1339,8 +1339,8 @@ void CompilePPUProgram::Compile()
 
 			for(u32 i=0; i<m_branches.GetCount(); ++i)
 			{
-				if(name.mb_str() != m_branches[i].m_name) continue;
-				WriteError(wxString::Format("'%s' already declared", (const char*)name.mb_str()));
+				if(name.ToStdString() != m_branches[i].m_name) continue;
+				WriteError(wxString::Format("'%s' already declared", name.wx_str()));
 				m_error = true;
 				break;
 			}
@@ -1350,7 +1350,7 @@ void CompilePPUProgram::Compile()
 
 			if(a_name.type != ARG_ERR)
 			{
-				WriteError(wxString::Format("bad name '%s'", (const char*)name.mb_str()));
+				WriteError(wxString::Format("bad name '%s'", name.wx_str()));
 				m_error = true;
 			}
 
@@ -1430,7 +1430,7 @@ void CompilePPUProgram::Compile()
 		}
 		else
 		{
-			WriteError(wxString::Format("unknown instruction '%s'", (const char*)op.mb_str()));
+			WriteError(wxString::Format("unknown instruction '%s'", op.wx_str()));
 			EndLn();
 			m_error = true;
 		}
