@@ -301,11 +301,11 @@ public:
 
 	wxString ReadString(const u64 addr, const u64 len)
 	{
-		wxString ret = wxEmptyString;
+		wxString ret(GetMemFromAddr(addr), wxConvUTF8,len);
 
-		if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
+		//if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
 
-		return wxString(ret.wx_str(), wxConvUTF8);
+		return ret;
 	}
 
 	wxString ReadString(const u64 addr)
