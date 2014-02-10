@@ -304,17 +304,39 @@ void GLGSRender::DisableVertexData()
 
 void GLGSRender::InitVertexData()
 {
+	GLfloat scaleOffsetMat[16] = {1.0f, 0.0f, 0.0f, 0.0f, 
+		                          0.0f, 1.0f, 0.0f, 0.0f, 
+								  0.0f, 0.0f, 1.0f, 0.0f, 
+								  0.0f, 0.0f, 0.0f, 1.0f};
+	int l;
+
 	for(u32 i=0; i<m_transform_constants.GetCount(); ++i)
 	{
 		const RSXTransformConstant& c = m_transform_constants[i];
 		const wxString name = wxString::Format("vc%u", c.id);
-		const int l = m_program.GetLocation(name);
+		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		//ConLog.Write(name + " x: %.02f y: %.02f z: %.02f w: %.02f", c.x, c.y, c.z, c.w);
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + wxString::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
+
+	// Scale
+	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*0)] / (m_width / 2.0f);
+	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*1)] / (m_height / 2.0f);
+	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*2)];
+
+	// Offset
+	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*0)] - (m_width / 2.0f);
+	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*1)] - (m_height / 2.0f);
+	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*2)] - 1/2.0f;
+
+	scaleOffsetMat[3] /= m_width/2.0f;
+	scaleOffsetMat[7] /= m_height/2.0f;
+
+	l = m_program.GetLocation("scaleOffsetMat");
+	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
 }
 
 void GLGSRender::InitFragmentData()
@@ -432,19 +454,6 @@ void GLGSRender::WriteDepthBuffer()
 
 	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glReadPixels");
-
-  //TODO
-	//buffer rotating
-	static Array<u8> pixels;
-	pixels.SetCount(RSXThread::m_width * RSXThread::m_height);
-	u8* src = (u8*)Memory.VirtualToRealAddr(address);
-
-	for(u32 y=0; y<RSXThread::m_height; ++y)
-	{
-		memcpy(pixels + (RSXThread::m_height - y - 1) * RSXThread::m_width, src + y * RSXThread::m_width, RSXThread::m_width);
-	}
-
-  memcpy(&Memory[address], pixels.GetPtr(), pixels.GetCount());
 
 	GLuint depth_tex;
 	glGenTextures(1, &depth_tex);
@@ -749,13 +758,13 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
-		glViewport(m_viewport_x, RSXThread::m_height-m_viewport_y-m_viewport_h, m_viewport_w, m_viewport_h);
+		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		checkForGlError("glViewport");
 	}
 
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
-		glScissor(m_scissor_x, RSXThread::m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
 
@@ -1094,7 +1103,7 @@ void GLGSRender::Flip()
 
   if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
-		glScissor(m_scissor_x, RSXThread::m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
 }
