@@ -294,7 +294,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	ConLog.Write("%s enter", CPUThread::GetFName());
+	ConLog.Write("%s enter", CPUThread::GetFName().wx_str());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 

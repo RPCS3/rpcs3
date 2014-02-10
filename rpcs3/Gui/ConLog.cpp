@@ -123,7 +123,7 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, std::string co
 	}
 
 	if(m_logfile.IsOpened())
-		m_logfile.Write((prefix.empty() ? "" : std::string("[" + prefix + "]: ") + value + "\n").c_str());
+		m_logfile.Write(wxString(prefix.empty() ? "" : std::string("[" + prefix + "]: ") + value + "\n").wx_str());
 
 	if(!ConLogFrame) return;
 
@@ -148,34 +148,17 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, std::string co
 	LogBuffer.Push(LogPacket(prefix, value, colour));
 }
 
-//wxString FormatV(const wxString fmt, va_list args)
-//{
-//	int length = 256;
-//	wxString str;
-//	
-//	for(;;)
-//	{
-//		str.Clear();
-//		wxStringBuffer buf(str, length+1);
-//		memset(buf, 0, length+1);
-//		if(vsnprintf((char *)((wxStringCharType *)buf), length, fmt, args) != -1) break;
-//		length *= 2;
-//	}
-//
-//	return str;
-//}
-
 void LogWriter::Write(const wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
 
 	wxString frmt;
-	frmt.PrintfV(fmt, list);
+	frmt = wxString::FormatV(fmt, list);
 
 	va_end(list);
 
-	WriteToLog("!", static_cast<const char *>(frmt), "White");
+	WriteToLog("!", (const char *)frmt.ToAscii(), "White");
 }
 
 void LogWriter::Error(const wxString fmt, ...)
@@ -184,7 +167,7 @@ void LogWriter::Error(const wxString fmt, ...)
 	va_start(list, fmt);
 
 	wxString frmt;
-	frmt.PrintfV(fmt, list);
+	frmt = wxString::FormatV(fmt, list);
 
 	va_end(list);
 
@@ -197,7 +180,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 	va_start(list, fmt);
 
 	wxString frmt;
-	frmt.PrintfV(fmt, list);
+	frmt = wxString::FormatV(fmt, list);
 
 	va_end(list);
 
@@ -210,7 +193,7 @@ void LogWriter::Success(const wxString fmt, ...)
 	va_start(list, fmt);
 
 	wxString frmt;
-	frmt.PrintfV(fmt, list);
+	frmt = wxString::FormatV(fmt, list);
 
 	va_end(list);
 
@@ -279,9 +262,9 @@ void LogFrame::Task()
 
 		const int cur_item = m_log.GetItemCount();
 
-		m_log.InsertItem(cur_item, item.m_prefix.c_str());
-		m_log.SetItem(cur_item, 1, item.m_text.c_str());
-		m_log.SetItemTextColour(cur_item, item.m_colour.c_str());
+		m_log.InsertItem(cur_item, wxString(item.m_prefix).wx_str());
+		m_log.SetItem(cur_item, 1, wxString(item.m_text).wx_str());
+		m_log.SetItemTextColour(cur_item, wxString(item.m_colour).wx_str());
 		m_log.SetColumnWidth(0, -1);
 		m_log.SetColumnWidth(1, -1);
 

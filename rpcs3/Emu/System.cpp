@@ -110,7 +110,7 @@ bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Could not open SELF file! (%s)", self.c_str());
+		ConLog.Error("Could not open SELF file! (%s)", wxString(self).wx_str());
 		return false;
 	}
 	
@@ -135,7 +135,7 @@ bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
 
 		if(!out.IsOpened())
 		{
-			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
+			ConLog.Error("Could not create ELF file! (%s)", wxString(elf).wx_str());
 			return false;
 		}
 
@@ -504,7 +504,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", path.c_str());
+		ConLog.Error("'%s' is broken", wxString(path).wx_str());
 		return;
 	}
 

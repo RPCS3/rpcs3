@@ -180,7 +180,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		func.async(aio, error, xid, res);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.wx_str());
 }
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)

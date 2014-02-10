@@ -65,7 +65,7 @@ u32 section_offs = 0;
 
 SectionInfo::SectionInfo(const wxString& _name)
 {
-	name = _name.c_str();
+	name = _name.ToStdString();
 	memset(&shdr, 0, sizeof(Elf64_Shdr));
 
 	section_num = sections_list.Add(this);
@@ -470,7 +470,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		arg.string = str(1, str.Len() - 2).c_str();
+		arg.string = str(1, str.Len() - 2).ToStdString();
 		arg.type = ARG_TXT;
 	return;
 	}

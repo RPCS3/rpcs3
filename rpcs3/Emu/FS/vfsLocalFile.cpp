@@ -53,7 +53,7 @@ bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 
 bool vfsLocalFile::Create(const wxString& path)
 {
-	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
+	ConLog.Warning("vfsLocalFile::Create('%s')", path.wx_str());
 	for(uint p=1; p < path.Len() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.Len() && path[p] != '\0'; p++)
@@ -65,7 +65,7 @@ bool vfsLocalFile::Create(const wxString& path)
 		const wxString& dir = path(0, p);
 		if(!wxDirExists(dir))
 		{
-			ConLog.Write("create dir: %s", dir.c_str());
+			ConLog.Write("create dir: %s", dir.wx_str());
 			wxMkdir(dir);
 		}
 	}

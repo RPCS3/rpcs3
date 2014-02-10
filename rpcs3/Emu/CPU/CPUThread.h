@@ -91,9 +91,9 @@ public:
 	{
 		return 
 			wxString::Format("%s[%d] Thread%s", 
-				GetTypeString().mb_str(),
+				GetTypeString().wx_str(),
 				m_id,
-				(GetName().empty() ? "" : std::string(" (" + GetName() + ")").c_str())
+				wxString(GetName().empty() ? "" : std::string(" (" + GetName() + ")")).wx_str()
 			);
 	}
 

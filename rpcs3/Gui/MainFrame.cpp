@@ -256,7 +256,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.c_str());
+		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.wx_str());
 	}
 }
 

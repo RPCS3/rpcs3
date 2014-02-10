@@ -187,7 +187,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 
 		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
+		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], wxString(swizzle).wx_str(), wxString(swizzle).wx_str());
 	}
 
 	wxString mask = GetMask(is_sca);
@@ -482,7 +482,7 @@ void GLVertexProgram::Compile()
 
 	id = glCreateShader(GL_VERTEX_SHADER);
 
-	const char* str = shader.c_str();
+	const char* str = shader.mb_str();
 	const int strlen = shader.Len();
 
 	glShaderSource(id, 1, &str, &strlen);
@@ -500,7 +500,7 @@ void GLVertexProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			ConLog.Error("Failed to compile vertex shader: %s", buf);
+			ConLog.Error("Failed to compile vertex shader: %s", wxString(buf).wx_str());
 			delete[] buf;
 		}
 
