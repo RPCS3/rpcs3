@@ -205,13 +205,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		u32 a0 = ARGS(0);
-		bool enable = a0 >> 31 ? true : false;
-		u16 minlod = (a0 >> 19) & 0xfff;
-		u16 maxlod = (a0 >> 7) & 0xfff;
-		u8 maxaniso = (a0 >> 2) & 0x7;
-		tex.SetControl0(enable, minlod, maxlod, maxaniso);
 	}
 	break;
 	
@@ -280,8 +273,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		tex.SetControl1(ARGS(0));
 	}
 	break;
 

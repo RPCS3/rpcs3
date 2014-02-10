@@ -3,7 +3,6 @@
 
 RSXTexture::RSXTexture()
   : m_bias(0)
-  , m_remap(0xE4)
   , m_min_filter(1)
   , m_mag_filter(2)
 {
@@ -12,7 +11,6 @@ RSXTexture::RSXTexture()
 
 RSXTexture::RSXTexture(u8 index)
   : m_bias(0)
-  , m_remap(0xE4)
   , m_min_filter(1)
   , m_mag_filter(2)
 {
@@ -140,6 +138,11 @@ bool RSXTexture::IsAlphaKillEnabled() const
 	return ((methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*4)] >> 2) & 0x1);
 }
 
+u32 RSXTexture::GetRemap() const
+{
+	return (methodRegisters[NV4097_SET_TEXTURE_CONTROL1 + (m_index*4)]);
+}
+
 u16 RSXTexture::GetWidth() const
 {
 	return ((methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*4)] >> 16) & 0xffff);
@@ -148,15 +151,6 @@ u16 RSXTexture::GetWidth() const
 u16 RSXTexture::GetHeight() const
 {
 	return ((methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*4)]) & 0xffff);
-}
-
-void RSXTexture::SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso)
-{
-}
-
-void RSXTexture::SetControl1(u32 remap)
-{
-  m_remap = remap;
 }
 
 void RSXTexture::SetControl3(u16 depth, u32 pitch)

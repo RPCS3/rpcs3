@@ -158,10 +158,10 @@ public:
 
 		if(format != 0x81 && format != 0x94)
 		{
-			u8 remap_a = tex.m_remap & 0x3;
-			u8 remap_r = (tex.m_remap >> 2) & 0x3;
-			u8 remap_g = (tex.m_remap >> 4) & 0x3;
-			u8 remap_b = (tex.m_remap >> 6) & 0x3;
+			u8 remap_a = tex.GetRemap() & 0x3;
+			u8 remap_r = (tex.GetRemap() >> 2) & 0x3;
+			u8 remap_g = (tex.GetRemap() >> 4) & 0x3;
+			u8 remap_b = (tex.GetRemap() >> 6) & 0x3;
 
 			static const int gl_remap[] =
 			{

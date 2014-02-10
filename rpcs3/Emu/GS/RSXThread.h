@@ -31,8 +31,6 @@ public:
 	u8 m_g_signed;
 	u8 m_b_signed;
 
-	u32 m_remap;
-
 public:
 	RSXTexture();
 	RSXTexture(u8 index);
@@ -66,12 +64,13 @@ public:
 	u8   GetMaxAniso() const;
 	bool IsAlphaKillEnabled() const;
 
+	// Control1
+	u32 GetRemap() const;
+
 	// Image Rect
 	u16 GetWidth() const;
 	u16 GetHeight() const;
 
-	void SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso);
-	void SetControl1(u32 remap);
 	void SetControl3(u16 depth, u32 pitch);
 	void SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_signed, u8 g_signed, u8 b_signed);
 };
