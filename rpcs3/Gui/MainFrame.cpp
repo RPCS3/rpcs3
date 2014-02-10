@@ -192,7 +192,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 	
-	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
+	if(Emu.BootGame((const char *)ctrl.GetPath().mb_str()))
 	{
 		ConLog.Success("Game: boot done.");
 	}
@@ -250,7 +250,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	//Refresh game list
 	m_game_viewer->Refresh();
 	
-	if(Emu.BootGame(pkgDir.ToStdString()))
+	if(Emu.BootGame((const char*)pkgDir.mb_str()))
 	{
 		ConLog.Success("Game: boot done.");
 	}

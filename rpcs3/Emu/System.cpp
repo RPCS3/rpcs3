@@ -188,7 +188,7 @@ void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
 
-	if(IsSelf(m_path.ToStdString()))
+	if(IsSelf((const char *)m_path.mb_str()))
 	{
 		std::string self_path = m_path;
 		std::string elf_path = wxFileName(m_path).GetPath().c_str();

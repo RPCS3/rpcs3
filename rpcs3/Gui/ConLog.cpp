@@ -187,7 +187,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("E", frmt.ToStdString(), "Red");
+	WriteToLog("E", (const char *)frmt.mb_str(), "Red");
 }
 
 void LogWriter::Warning(const wxString fmt, ...)
@@ -199,7 +199,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("W", frmt.ToStdString(), "Yellow");
+	WriteToLog("W", (const char *)frmt.mb_str(), "Yellow");
 }
 
 void LogWriter::Success(const wxString fmt, ...)
@@ -211,7 +211,7 @@ void LogWriter::Success(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("S", frmt.ToStdString(), "Green");
+	WriteToLog("S", (const char *)frmt.mb_str(), "Green");
 }
 
 void LogWriter::SkipLn()

@@ -54,12 +54,12 @@ bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 bool vfsLocalFile::Create(const wxString& path)
 {
 	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
-	for(uint p=1; path[p] != '\0'; p++)
+	for(uint p=1; p < path.Len() && path[p] != '\0' ; p++)
 	{
-		for(; path[p] != '\0'; p++)
+		for(; p < path.Len() && path[p] != '\0'; p++)
 			if(path[p] == '\\') break;
 
-		if(path[p] == '\0')
+		if(p == path.Len() || path[p] == '\0')
 			break;
 
 		const wxString& dir = path(0, p);
