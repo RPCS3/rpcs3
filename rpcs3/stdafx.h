@@ -12,7 +12,6 @@
 
 #include <wx/wfstream.h>
 #include <wx/dir.h>
-//#include <wx/generic/progdlgg.h>
 #include <wx/spinctrl.h>
 #include <wx/datetime.h>
 #include <wx/filepicker.h>
@@ -207,7 +206,9 @@ enum Status
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "Emu/FS/vfsDirBase.h"
 #include "Emu/FS/vfsFileBase.h"
+#include "Emu/FS/vfsLocalDir.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStream.h"
