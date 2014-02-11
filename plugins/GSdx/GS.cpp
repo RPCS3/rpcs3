@@ -811,15 +811,20 @@ void pt(const char* str){
 
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
 {
-	if(s_gs == NULL) return 0;
+	if (s_gs == NULL) {
+		printf("GSdx: no s_gs for recording\n");
+		return 0;
+	}
 
 	if(start & 1)
 	{
+		printf("GSdx: Recording start command\n")
 		if( s_gs->BeginCapture() )
 			pt(" - Capture started\n");
 	}
 	else
 	{
+		printf("GSdx: Recording end command\n")
 		s_gs->EndCapture();
 		pt(" - Capture ended\n");
 	}
