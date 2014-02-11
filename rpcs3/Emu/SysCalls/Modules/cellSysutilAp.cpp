@@ -18,10 +18,10 @@ enum
 	CELL_SYSUTIL_AP_ERROR_NETIF_CANNOT_CONNECT	= 0x8002cd16,
 };
 
-int cellSysutilApGetRequiredMemSize()
+s32 cellSysutilApGetRequiredMemSize()
 {
-	UNIMPLEMENTED_FUNC(cellSysutilAp);
-	return CELL_OK;
+	cellSysutilAp.Log("cellSysutilApGetRequiredMemSize()");
+	return 1024*1024; // Return 1 MB as required size
 }
 
 int cellSysutilApOn()

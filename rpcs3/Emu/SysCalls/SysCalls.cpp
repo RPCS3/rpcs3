@@ -248,7 +248,7 @@ static func_caller* sc_table[1024] =
 	bind_func(cellFsMkdir),									//811 (0x32B)
 	bind_func(cellFsRename),								//812 (0x32C)
 	bind_func(cellFsRmdir),									//813 (0x32D)
-	null_func,												//814 (0x32E)
+	bind_func(cellFsUnlink),								//814 (0x32E)
 	null_func, null_func, null_func, bind_func(cellFsLseek), null_func, //819
 	null_func, null_func, null_func, null_func, null_func, //824
 	null_func, null_func, null_func, null_func, null_func, //829
