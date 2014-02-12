@@ -8,7 +8,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
-		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.wx_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	const wxString& ppath = path;
 	//ConLog.Warning("path: %s [%s]", ppath, path);
@@ -57,7 +57,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(_oflags != 0)
 	{
-		sys_fs.Error("'%s' has unknown flags! flags: 0x%08x", ppath.mb_str(), flags);
+		sys_fs.Error("'%s' has unknown flags! flags: 0x%08x", ppath.wx_str(), flags);
 		return CELL_EINVAL;
 	}
 
@@ -65,14 +65,14 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(!stream || !stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", ppath.mb_str(), flags);
+		sys_fs.Error("'%s' not found! flags: 0x%08x", ppath.wx_str(), flags);
 		delete stream;
 
 		return CELL_ENOENT;
 	}
 
 	fd = sys_fs.GetNewId(stream, flags);
-	ConLog.Warning("*** cellFsOpen(path: %s): fd=%d", path.mb_str(), fd.GetValue());
+	ConLog.Warning("*** cellFsOpen(path: %s): fd=%d", path.wx_str(), fd.GetValue());
 
 	return CELL_OK;
 }
@@ -132,7 +132,7 @@ int cellFsClose(u32 fd)
 int cellFsOpendir(u32 path_addr, mem32_t fd)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.mb_str(), fd.GetAddr());
+	sys_fs.Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.wx_str(), fd.GetAddr());
 	
 	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood())
 		return CELL_EFAULT;
@@ -161,7 +161,7 @@ int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 	if(info)
 	{
 		nread = 1;
-		Memory.WriteString(dir.GetAddr()+2, info->name.mb_str());
+		Memory.WriteString(dir.GetAddr()+2, info->name.wx_str());
 		dir->d_namlen = info->name.Length();
 		dir->d_type = (info->flags & 0x1) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
 	}
@@ -186,7 +186,7 @@ int cellFsClosedir(u32 fd)
 int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsStat(path: %s, sb_addr: 0x%x)", path.mb_str(), sb.GetAddr());
+	sys_fs.Log("cellFsStat(path: %s, sb_addr: 0x%x)", path.wx_str(), sb.GetAddr());
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -205,7 +205,7 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 	{
 		if(path.CmpNoCase(Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1)) == 0)
 		{
-			sys_fs.Log("cellFsStat: '%s' is a mount point.", path.mb_str());
+			sys_fs.Log("cellFsStat: '%s' is a mount point.", path.wx_str());
 			sb->st_mode |= CELL_FS_S_IFDIR;
 			return CELL_OK;
 		}
@@ -230,7 +230,7 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 	}
 	else
 	{
-		sys_fs.Warning("cellFsStat: '%s' not found.", path.mb_str());
+		sys_fs.Warning("cellFsStat: '%s' not found.", path.wx_str());
 		return CELL_ENOENT;
 	}
 
@@ -264,7 +264,7 @@ int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 int cellFsMkdir(u32 path_addr, u32 mode)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.mb_str(), mode);
+	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.wx_str(), mode);
 
 	wxString localPath;
 	Emu.GetVFS().GetDevice(ps3_path, localPath);
@@ -282,7 +282,7 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 	Emu.GetVFS().GetDevice(ps3_from, from);
 	Emu.GetVFS().GetDevice(ps3_to, to);
 
-	sys_fs.Log("cellFsRename(from=\"%s\", to=\"%s\")", ps3_from.mb_str(), ps3_to.mb_str());
+	sys_fs.Log("cellFsRename(from=\"%s\", to=\"%s\")", ps3_from.wx_str(), ps3_to.wx_str());
 	if(!wxFileExists(from)) return CELL_ENOENT;
 	if(wxFileExists(to)) return CELL_EEXIST;
 	if(!wxRenameFile(from, to)) return CELL_EBUSY; // (TODO: RenameFile(a,b) = CopyFile(a,b) + RemoveFile(a), therefore file "a" will not be removed if it is opened)
@@ -292,7 +292,7 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 int cellFsRmdir(u32 path_addr)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.mb_str());
+	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.wx_str());
 
 	wxString localPath;
 	Emu.GetVFS().GetDevice(ps3_path, localPath);	
@@ -304,7 +304,7 @@ int cellFsRmdir(u32 path_addr)
 int cellFsUnlink(u32 path_addr)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.mb_str());
+	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.wx_str());
 
 	wxString localPath;
 	Emu.GetVFS().GetDevice(ps3_path, localPath);
@@ -360,12 +360,12 @@ int cellFsFtruncate(u32 fd, u64 size)
 int cellFsTruncate(u32 path_addr, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsTruncate(path: %s, size: %lld)", path.mb_str(), size);
+	sys_fs.Log("cellFsTruncate(path: %s, size: %lld)", path.wx_str(), size);
 
 	vfsFile f(path, vfsReadWrite);
 	if(!f.IsOpened())
 	{
-		sys_fs.Warning("cellFsTruncate: '%s' not found.", path.mb_str());
+		sys_fs.Warning("cellFsTruncate: '%s' not found.", path.wx_str());
 		return CELL_ENOENT;
 	}
 	u64 initialSize = f.GetSize();

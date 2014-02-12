@@ -192,13 +192,13 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 	
-	if(Emu.BootGame(ctrl.GetPath().c_str()))
+	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
 		ConLog.Success("Game: boot done.");
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().mb_str());
+		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 
@@ -226,7 +226,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 
 	wxString fileName = ctrl.GetPath();
-	if (!pkg_unpack((const char *)fileName.mb_str()))
+	if (!pkg_unpack(static_cast<const char*>(fileName)))
 		ConLog.Error("Could not unpack PKG!");
 	else ConLog.Success("PKG: extract done.");
 
@@ -234,7 +234,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 		ConLog.Warning("Could not delete the decoded DEC file");
 
 	pkg_header *header;
-	pkg_info((const char *)fileName.mb_str(), &header);
+	pkg_info(static_cast<const char*>(fileName), &header);
 
 	wxString titleID_full (header->title_id);
 	wxString titleID = titleID_full.SubString(7, 15);
@@ -242,7 +242,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	wxString mainDir = wxGetCwd();
 	wxString gamePath = "\\dev_hdd0\\game\\";
 
-	wxString pkgDir = wxT(mainDir + gamePath + titleID);
+	wxString pkgDir = mainDir + gamePath + titleID;
 
 	// Save the title ID.
 	Emu.SetTitleID(titleID);
@@ -250,13 +250,13 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	//Refresh game list
 	m_game_viewer->Refresh();
 	
-	if(Emu.BootGame(pkgDir.c_str()))
+	if(Emu.BootGame(pkgDir.ToStdString()))
 	{
 		ConLog.Success("Game: boot done.");
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.c_str());
+		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.wx_str());
 	}
 }
 
@@ -770,13 +770,13 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
 	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
 	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
-	pause.SetText(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 	//send_exit.Enable(false);
 	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount();
 
-	send_open_menu.SetText(wxString::Format("Send %s system menu cmd", m_sys_menu_opened ? "close" : "open"));
+	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", m_sys_menu_opened ? "close" : "open"));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 

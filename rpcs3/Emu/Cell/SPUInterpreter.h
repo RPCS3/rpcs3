@@ -1426,6 +1426,6 @@ private:
 	{
 		ConLog.Error(err + wxString::Format(" #pc: 0x%x", CPU.PC));
 		Emu.Pause();
-		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().mb_str());
+		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().wx_str());
 	}
 };

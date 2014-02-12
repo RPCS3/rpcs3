@@ -713,7 +713,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		switch(cmd & 0x3ffff)
 		{
 		case 0x3fead:
-			DISASM("Flip and change current buffer: %d", args[0]);
+			DISASM("Flip and change current buffer: %d", (u32)args[0]);
 		break;
 
 		case NV4097_NO_OPERATION:
@@ -721,11 +721,11 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		break;
 
 		case NV406E_SET_REFERENCE:
-			DISASM("Set reference: 0x%x", args[0]);
+			DISASM("Set reference: 0x%x", (u32)args[0]);
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-			DISASM("Texture Offset[%d]: %08x", index, args[0]);
+			DISASM("Texture Offset[%d]: %08x", index, (u32)args[0]);
 			switch ((args[1] & 0x3) - 1)
 			{
 			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
@@ -760,32 +760,32 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_A:
-			DISASM("Context DMA Color A: 0x%x", args[0]);
+			DISASM("Context DMA Color A: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_B:
-			DISASM("Context DMA Color B: 0x%x", args[0]);
+			DISASM("Context DMA Color B: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_C:
-			DISASM("Context DMA Color C: 0x%x", args[0]);
+			DISASM("Context DMA Color C: 0x%x", (u32)args[0]);
 			if(count > 1)
-				DISASM("0x%x", args[1]);
+				DISASM("0x%x", (u32)args[1]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_ZETA:
-			DISASM("Context DMA Zeta: 0x%x", args[0]);
+			DISASM("Context DMA Zeta: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_SURFACE_PITCH_C:
-			DISASM("Surface Pitch C: 0x%x;", args[0]);
-			DISASM("Surface Pitch D: 0x%x;", args[1]);
-			DISASM("Surface Offset C: 0x%x;", args[2]);
-			DISASM("Surface Offset D: 0x%x", args[3]);
+			DISASM("Surface Pitch C: 0x%x;", (u32)args[0]);
+			DISASM("Surface Pitch D: 0x%x;", (u32)args[1]);
+			DISASM("Surface Offset C: 0x%x;", (u32)args[2]);
+			DISASM("Surface Offset D: 0x%x", (u32)args[3]);
 		break;
 
 		case NV4097_SET_SURFACE_PITCH_Z:
-			DISASM("Surface Pitch Z: 0x%x;", args[0]);
+			DISASM("Surface Pitch Z: 0x%x;", (u32)args[0]);
 		break;
 
 		default:
@@ -802,7 +802,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		for(uint i=0; i<count; ++i)
 		{
 			if(i != 0) disasm += ", ";
-			disasm += wxString::Format("0x%x", args[i]);
+			disasm += wxString::Format("0x%x", (u32)args[i]);
 		}
 
 		disasm += ")]";

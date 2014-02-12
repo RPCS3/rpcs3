@@ -40,14 +40,14 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.mb_str(), vfsRead);
+		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.wx_str(), vfsRead);
 		delete packed_stream;
 		return CELL_ENOENT;
 	}
 
 	if(!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.mb_str(), vfsWrite);
+		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.wx_str(), vfsWrite);
 		delete unpacked_stream;
 		return CELL_ENOENT;
 	}
@@ -116,7 +116,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsSdataOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
-		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.wx_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	if (!fd.IsGood() || (!arg.IsGood() && size))
 		return CELL_EFAULT;
@@ -180,7 +180,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		func.async(aio, error, xid, res);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.wx_str());
 }
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)

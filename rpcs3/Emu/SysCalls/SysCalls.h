@@ -36,7 +36,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 		}
 	}
@@ -47,7 +47,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 		}
 	}
@@ -57,7 +57,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 //#endif
 	}
@@ -67,7 +67,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 //#endif
 	}
@@ -76,7 +76,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 
@@ -84,7 +84,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 
