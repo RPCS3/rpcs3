@@ -220,6 +220,7 @@
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
+    <ClCompile Include="Emu\Event.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
     <ClCompile Include="Emu\FS\vfsDirBase.cpp" />

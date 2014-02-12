@@ -86,9 +86,11 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_rwlock_trywlock),							//126 (0x07E)
 	bind_func(sys_rwlock_wunlock),							//127 (0x07F)
 	bind_func(sys_event_queue_create),						//128 (0x080)
-	null_func,												//129 (0x081)
-	bind_func(sys_event_queue_receive), null_func, bind_func(sys_event_flag_cancel), bind_func(sys_event_queue_drain), bind_func(sys_event_port_create), //134
-	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), bind_func(sys_event_flag_get), //139
+	bind_func(sys_event_queue_destroy),						//129 (0x081)
+	bind_func(sys_event_queue_receive), bind_func(sys_event_queue_tryreceive), // 131
+	bind_func(sys_event_flag_cancel), bind_func(sys_event_queue_drain), bind_func(sys_event_port_create), //134
+	bind_func(sys_event_port_destroy), bind_func(sys_event_port_connect_local), //136
+	bind_func(sys_event_port_disconnect), bind_func(sys_event_port_send), bind_func(sys_event_flag_get), //139
 	null_func, bind_func(sys_timer_usleep), bind_func(sys_timer_sleep), null_func, bind_func(sys_time_get_timezone), //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154
@@ -99,8 +101,10 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_spu_thread_group_start), bind_func(sys_spu_thread_group_suspend), //174
 	null_func, null_func, null_func, bind_func(sys_spu_thread_group_join), null_func, //179
 	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, bind_func(sys_spu_thread_write_snr), //184
-	null_func, null_func, bind_func(sys_spu_thread_set_spu_cfg), bind_func(sys_spu_thread_get_spu_cfg), null_func, //189
-	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), null_func, bind_func(sys_spu_thread_bind_queue), null_func, //194
+	bind_func(sys_spu_thread_group_connect_event), bind_func(sys_spu_thread_group_disconnect_event), //186
+	bind_func(sys_spu_thread_set_spu_cfg), bind_func(sys_spu_thread_get_spu_cfg), null_func, //189
+	bind_func(sys_spu_thread_write_spu_mb), bind_func(sys_spu_thread_connect_event), bind_func(sys_spu_thread_disconnect_event), //192
+	bind_func(sys_spu_thread_bind_queue), bind_func(sys_spu_thread_unbind_queue), //194
 	null_func, null_func, null_func, null_func, null_func, //199
 	null_func, null_func, null_func, null_func, null_func, //204
 	null_func, null_func, null_func, null_func, null_func, //209
@@ -112,7 +116,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //239
 	null_func, null_func, null_func, null_func, null_func, //244
 	null_func, null_func, null_func, null_func, null_func, //249
-	null_func, bind_func(sys_spu_thread_group_connect_event_all_threads), null_func, null_func, null_func, //254
+	null_func, bind_func(sys_spu_thread_group_connect_event_all_threads), bind_func(sys_spu_thread_group_disconnect_event_all_threads), null_func, null_func, //254
 	null_func, null_func, null_func, null_func, null_func, //259
 	null_func, null_func, null_func, null_func, null_func, //264
 	null_func, null_func, null_func, null_func, null_func, //269

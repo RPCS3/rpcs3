@@ -4,11 +4,11 @@
 
 SysCallBase sc_mem("memory");
 
-int sys_memory_container_create(u32 cid_addr, u32 yield_size)
+int sys_memory_container_create(mem32_t cid, u32 yield_size)
 {
-	sc_mem.Warning("sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
+	sc_mem.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.GetAddr(), yield_size);
 
-	if(!Memory.IsGoodAddr(cid_addr, 4))
+	if (!cid.IsGood())
 	{
 		return CELL_EFAULT;
 	}
@@ -22,13 +22,14 @@ int sys_memory_container_create(u32 cid_addr, u32 yield_size)
 		return CELL_ENOMEM;
 	}
 
-	Memory.Write32(cid_addr, sc_mem.GetNewId(new MemoryContainerInfo(addr, yield_size)));
+	cid = sc_mem.GetNewId(new MemoryContainerInfo(addr, yield_size));
+	sc_mem.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, cid.GetValue());
 	return CELL_OK;
 }
 
 int sys_memory_container_destroy(u32 cid)
 {
-	sc_mem.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
+	sc_mem.Warning("sys_memory_container_destroy(cid=%d)", cid);
 
 	MemoryContainerInfo* ct;
 

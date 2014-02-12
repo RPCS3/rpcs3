@@ -72,7 +72,11 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_cond_wait(cond_id=%d, ...) aborted", cond_id);
+			return CELL_ETIMEDOUT;
+		}
 
 		switch (cond_data->cond.WaitTimeout(1))
 		{
@@ -85,7 +89,6 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 		{
 			if (!timeout) 
 			{
-				sys_cond.Warning("sys_cond_wait(cond_id=0x%x, timeout=0x%llx): TIMEOUT", cond_id, timeout);
 				counter = 0;
 			}
 			else

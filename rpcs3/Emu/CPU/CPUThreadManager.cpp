@@ -93,6 +93,8 @@ CPUThread* CPUThreadManager::GetThread(u32 id)
 {
 	CPUThread* res;
 
+	if (!id) return nullptr;
+
 	if (!Emu.GetIdManager().GetIDData(id, res)) return nullptr;
 
 	return res;

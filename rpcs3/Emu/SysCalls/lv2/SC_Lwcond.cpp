@@ -7,7 +7,7 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr)
 {
-	sys_lwcond.Log("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
+	sys_lwcond.Warning("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
 		lwcond.GetAddr(), lwmutex.GetAddr(), attr.GetAddr());
 
 	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
@@ -15,7 +15,7 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	lwcond->lwmutex = lwmutex.GetAddr();
 	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(attr->name_u64));
 
-	sys_lwcond.Warning("*** lwcond created [%s] (attr=0x%x, lwmutex.sq=0x%x): id=0x%x", 
+	sys_lwcond.Warning("*** lwcond created [%s] (attr=0x%x, lwmutex.sq=0x%x): id = %d", 
 		attr->name, (u32)lwmutex->attribute, (u32)lwmutex->sleep_queue, (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }
@@ -77,7 +77,7 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 
 int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 {
-	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%llu)", lwcond.GetAddr(), timeout);
+	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.GetAddr(), timeout);
 
 	if (!lwcond.IsGood()) return CELL_EFAULT;
 	LWCond* lwc;
@@ -95,7 +95,11 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	bool was_locked = true;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_lwcond_wait(sq id=%d, ...) aborted", id);
+			return CELL_ETIMEDOUT;
+		}
 		if (was_locked) lwmutex->unlock(tid);
 		Sleep(1);
 		if (was_locked = (lwmutex->trylock(tid) == CELL_OK))

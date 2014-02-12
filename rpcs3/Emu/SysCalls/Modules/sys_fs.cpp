@@ -115,7 +115,7 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsSdataOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
+	sys_fs.Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
 		path.mb_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	if (!fd.IsGood() || (!arg.IsGood() && size))
@@ -179,7 +179,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	if(func)
 		func.async(aio, error, xid, res);
 
-	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=%d, res=%d, xid=%d [%s])",
+	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, res=0x%x, xid=0x%x [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.c_str());
 }
 
