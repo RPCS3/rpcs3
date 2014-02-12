@@ -8,7 +8,6 @@
 #include "GLProgramBuffer.h"
 
 #pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "gl.lib")
 
 #define RSX_DEBUG 1
 
