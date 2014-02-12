@@ -132,7 +132,7 @@
       <AdditionalDependencies>wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <DataExecutionPrevention>false</DataExecutionPrevention>
-      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -195,7 +195,7 @@
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <DataExecutionPrevention>false</DataExecutionPrevention>
-      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>
