@@ -239,4 +239,5 @@ void sys_fs_init()
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 	sys_fs.AddFunc(0xdb869f20, cellFsAioInit);
 	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
+	sys_fs.AddFunc(0x1a108ab7, cellFsGetBlockSize);
 }

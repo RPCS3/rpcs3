@@ -42,7 +42,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 			_oflags &= ~CELL_O_EXCL;
 			o_mode = vfsWriteExcl;
 		}
-		else //if(flags & CELL_O_TRUNC)
+		else //if (flags & CELL_O_TRUNC)
 		{
 			_oflags &= ~CELL_O_TRUNC;
 			o_mode = vfsWrite;
@@ -51,6 +51,14 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	case CELL_O_RDWR:
 		_oflags &= ~CELL_O_RDWR;
+		if (flags & CELL_O_TRUNC)
+		{
+			_oflags &= ~CELL_O_TRUNC;
+			//truncate file before opening it as read/write
+			vfsStream* stream = Emu.GetVFS().Open(ppath, vfsWrite);
+			stream->Close();
+			delete stream;
+		}
 		o_mode = vfsReadWrite;
 	break;
 	}
@@ -392,6 +400,16 @@ int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size)
 {
 	sys_fs.Log("cellFsFGetBlockSize(fd=%d, sector_size_addr: 0x%x, block_size_addr: 0x%x)", fd, sector_size.GetAddr(), block_size.GetAddr());
 	
+	sector_size = 4096; // ?
+	block_size = 4096; // ?
+
+	return CELL_OK;
+}
+
+int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size)
+{
+	sys_fs.Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)", Memory.ReadString(path_addr).wx_str(), sector_size.GetAddr(), block_size.GetAddr());
+
 	sector_size = 4096; // ?
 	block_size = 4096; // ?
 

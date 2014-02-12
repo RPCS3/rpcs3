@@ -1592,7 +1592,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x1d99c3ee: FUNC_LOG_ERROR("TODO: cellOskDialogGetInputText");
 	case 0x1dfbfdd6: FUNC_LOG_ERROR("TODO: cellSaveDataListLoad2");
 	case 0x1dfcce99: FUNC_LOG_ERROR("TODO: cellSysutilGameDataExit");
-	case 0x1e7bff94: FUNC_LOG_ERROR("TODO: cellSysCacheMount");
 	case 0x1e930eef: FUNC_LOG_ERROR("TODO: cellVideoOutGetDeviceInfo");
 	case 0x1f6629e4: FUNC_LOG_ERROR("TODO: cellWebBrowserConfigSetErrorHook2");
 	case 0x20543730: FUNC_LOG_ERROR("TODO: cellMsgDialogClose");
@@ -1647,7 +1646,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x6dfff31d: FUNC_LOG_ERROR("TODO: cellWebBrowserSetSystemCallbackUsrdata");
 	case 0x6e7264ed: FUNC_LOG_ERROR("TODO: cellSaveDataUserFixedLoad");
 	case 0x71acb8d3: FUNC_LOG_ERROR("TODO: cellSysutilAvcSetVideoMuting");
-	case 0x744c1544: FUNC_LOG_ERROR("TODO: cellSysCacheClear");
 	case 0x749c9b5f: FUNC_LOG_ERROR("TODO: cellWebBrowserInitialize");
 	case 0x75bbb672: FUNC_LOG_ERROR("TODO: cellVideoOutGetNumberOfDevice");
 	case 0x7603d3db: FUNC_LOG_ERROR("TODO: cellMsgDialogOpen2");
@@ -2458,7 +2456,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x0e2939e5: FUNC_LOG_ERROR("TODO: cellFsFtruncate");
 	case 0x103b8632: FUNC_LOG_ERROR("TODO: cellFsAllocateFileAreaWithInitialData");
 	case 0x190912f6: FUNC_LOG_ERROR("TODO: cellFsStReadGetCurrentAddr");
-	case 0x1a108ab7: FUNC_LOG_ERROR("TODO: cellFsGetBlockSize");
 	case 0x1ea02e2f: FUNC_LOG_ERROR("TODO: cellFsArcadeHddSerialNumber");
 	case 0x2664c8ae: FUNC_LOG_ERROR("TODO: cellFsStReadInit");
 	case 0x27800c6b: FUNC_LOG_ERROR("TODO: cellFsStRead");
@@ -3762,7 +3759,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x5fdfb2fe: FUNC_LOG_ERROR("TODO: _sys_spu_printf_detach_group");
 	case 0x608212fc: FUNC_LOG_ERROR("TODO: sys_mempool_free_block");
 	case 0x620e35a7: FUNC_LOG_ERROR("TODO: sys_game_get_system_sw_version");
-	case 0x67f9fedb: FUNC_LOG_ERROR("TODO: sys_game_process_exitspawn2");
 	case 0x68b9b011: FUNC_LOG_ERROR("TODO: _sys_memset");
 	case 0x6bf66ea7: FUNC_LOG_ERROR("TODO: _sys_memcpy");
 	case 0x6e05231d: FUNC_LOG_ERROR("TODO: sys_game_watchdog_stop");
@@ -3838,7 +3834,6 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xf7f7fb20: FUNC_LOG_ERROR("TODO: _sys_free");
 	case 0xfa7f693d: FUNC_LOG_ERROR("TODO: _sys_vprintf");
 	case 0xfb5db080: FUNC_LOG_ERROR("TODO: _sys_memcmp");
-	case 0xfc52a7a9: FUNC_LOG_ERROR("TODO: sys_game_process_exitspawn");
 	}
 	
 	ConLog.Error("Unknown func id: 0x%08x", id);
