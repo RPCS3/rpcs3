@@ -32,7 +32,7 @@
 using namespace Threading;
 
 extern u8 psxhblankgate;
-
+extern bool gsIsInterlaced;
 static const uint EECNT_FUTURE_TARGET = 0x10000000;
 static int gates = 0;
 
@@ -193,10 +193,14 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 
 	u64 Frame		= ((u64)PS2CLK * 1000000ULL) / (framesPerSecond*100).ToIntRounded();
 	u64 HalfFrame	= Frame / 2;
-	u64 Blank = (Frame / scansPerFrame) * 22; // PAL VBlank Period is roughly 22 HSyncs
 
-	if(scansPerFrame == SCANLINES_TOTAL_NTSC) 
-		Blank = (Frame / scansPerFrame) * 26;		// NTSC VBlank Period is roughly 26 HSyncs, so we update
+	// One test we have shows that VBlank lasts for ~22 HBlanks, another we have show that is the time it's off.
+	// There exists a game (Legendz Gekitou! Saga Battle) Which runs REALLY slowly if VBlank is ~22 HBlanks, so the other test wins.
+
+	u64 Blank = (Frame / scansPerFrame) * ((scansPerFrame / 2) - 22); // PAL VBlank Period is off for roughly 22 HSyncs
+
+	if(scansPerFrame < SCANLINES_TOTAL_PAL) //Assume NTSC 
+		Blank = (Frame / scansPerFrame) * ((scansPerFrame /2) - 26);		// NTSC VBlank Period is off for roughly 26 HSyncs, so we update
 
 	//I would have suspected this to be Frame - Blank, but that seems to completely freak it out
 	//and the test results are completely wrong. It seems 100% the same as the PS2 test on this,
@@ -263,12 +267,14 @@ u32 UpdateVSyncRate()
 		isCustom = (EmuConfig.GS.FrameratePAL != 50.0);
 		framerate = EmuConfig.GS.FrameratePAL / 2;
 		scanlines = SCANLINES_TOTAL_PAL;
+		if (!gsIsInterlaced) scanlines += 3;
 	}
 	else if ( gsRegionMode == Region_NTSC )
 	{
 		isCustom = (EmuConfig.GS.FramerateNTSC != 59.94);
 		framerate = EmuConfig.GS.FramerateNTSC / 2;
 		scanlines = SCANLINES_TOTAL_NTSC;
+		if (!gsIsInterlaced) scanlines += 1;
 	}
 	else if ( gsRegionMode == Region_NTSC_PROGRESSIVE )
 	{
