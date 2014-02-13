@@ -388,6 +388,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Event.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

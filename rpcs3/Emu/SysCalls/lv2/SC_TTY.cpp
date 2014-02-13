@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
+int sys_tty_read(s32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
 {
 	ConLog.Warning("sys_tty_read: ch: %d, buf addr: %llx, len: %d", ch, buf_addr, len);
 	Memory.Write32NN(preadlen_addr, len);

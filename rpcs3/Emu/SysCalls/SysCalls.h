@@ -128,16 +128,20 @@ extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_add
 
 //sys_event
 extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
-extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
-extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
-extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
-extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
+extern int sys_event_queue_destroy(u32 equeue_id, int mode);
+extern int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> _event, u64 timeout);
+extern int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number);
 extern int sys_event_queue_drain(u32 event_queue_id);
+extern int sys_event_port_create(mem32_t eport_id, int port_type, u64 name);
+extern int sys_event_port_destroy(u32 eport_id);
+extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+extern int sys_event_port_disconnect(u32 eport_id);
+extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
 
 //sys_event_flag
 extern int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init);
 extern int sys_event_flag_destroy(u32 eflag_id);
-extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u32 timeout);
+extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout);
 extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result);
 extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
 extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
@@ -181,6 +185,16 @@ extern int sys_mutex_lock(u32 mutex_id, u64 timeout);
 extern int sys_mutex_trylock(u32 mutex_id);
 extern int sys_mutex_unlock(u32 mutex_id);
 
+//sys_rwlock
+extern int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
+extern int sys_rwlock_destroy(u32 rw_lock_id);
+extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_tryrlock(u32 rw_lock_id);
+extern int sys_rwlock_runlock(u32 rw_lock_id);
+extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_trywlock(u32 rw_lock_id);
+extern int sys_rwlock_wunlock(u32 rw_lock_id);
+
 //ppu_thread
 extern void sys_ppu_thread_exit(int errorcode);
 extern int sys_ppu_thread_yield();
@@ -197,7 +211,7 @@ extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 
 //memory
-extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
+extern int sys_memory_container_create(mem32_t cid, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
 extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
@@ -290,13 +304,13 @@ extern int cellMouseGetRawData(u32 port_no, mem_class_t data);
 extern int cellGcmCallback(u32 context_addr, u32 count);
 
 //sys_tty
-extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
-extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
+extern int sys_tty_read(s32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
+extern int sys_tty_write(s32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
-extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4);
+extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size);
 
 //sys_spu
 extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
@@ -307,9 +321,11 @@ extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_suspend(u32 id);
 extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
-extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
 extern int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
+extern int sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
+extern int sys_spu_thread_group_disconnect_event(u32 id, u32 et);
 extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
+extern int sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
 extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
@@ -318,7 +334,10 @@ extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
 extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
 extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
+extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
+extern int sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
 extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
+extern int sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 extern int sys_spu_thread_get_exit_status(u32 id, mem32_t status);
 
 //sys_time
@@ -349,16 +368,6 @@ extern int sys_trace_attach_process();
 extern int sys_trace_allocate_buffer();
 extern int sys_trace_free_buffer();
 extern int sys_trace_create2();
-
-//sys_rwlock
-extern int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
-extern int sys_rwlock_destroy(u32 rw_lock_id);
-extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
-extern int sys_rwlock_tryrlock(u32 rw_lock_id);
-extern int sys_rwlock_runlock(u32 rw_lock_id);
-extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
-extern int sys_rwlock_trywlock(u32 rw_lock_id);
-extern int sys_rwlock_wunlock(u32 rw_lock_id);
 
 //sys_rsx
 extern int sys_rsx_device_open();

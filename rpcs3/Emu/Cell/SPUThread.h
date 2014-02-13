@@ -601,13 +601,16 @@ public:
 
 	u32 GetChannelCount(u32 ch)
 	{
+		u32 count;
 		switch(ch)
 		{
 		case SPU_WrOutMbox:
 			return SPU.Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return SPU.In_MBox.GetCount();
+			count = SPU.In_MBox.GetCount();
+			ConLog.Warning("GetChannelCount(%s) -> %d", spu_ch_name[ch], count);
+			return count;
 
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("GetChannelCount(%s) = 0", spu_ch_name[ch]);
@@ -688,6 +691,8 @@ public:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
+
+		if (Emu.IsStopped()) ConLog.Warning("%s: %s writing aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	void ReadChannel(SPU_GPR_hdr& r, u32 ch)
@@ -725,6 +730,8 @@ public:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
+
+		if (Emu.IsStopped()) ConLog.Warning("%s: %s aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }

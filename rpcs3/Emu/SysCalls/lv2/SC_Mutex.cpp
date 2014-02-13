@@ -53,7 +53,11 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_mutex_lock(mutex_id=%d, ...) aborted", mutex_id);
+			return CELL_ETIMEDOUT;
+		}
 
 		if (mtx_data->mtx.TryLock() == wxMUTEX_NO_ERROR) return CELL_OK;
 		Sleep(1);
@@ -62,7 +66,6 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 		{
 			if (!timeout) 
 			{
-				sys_mtx.Warning("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx): TIMEOUT", mutex_id, timeout);
 				counter = 0;
 			}
 			else

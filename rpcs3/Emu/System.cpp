@@ -355,6 +355,7 @@ void Emulator::Load()
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 	GetAudioManager().Init();
+	GetEventManager().Init();
 
 	thread.Run();
 
@@ -448,6 +449,7 @@ void Emulator::Stop()
 
 	GetGSManager().Close();
 	GetAudioManager().Close();
+	GetEventManager().Clear();
 	GetCPU().Close();
 	//SysCallsManager.Close();
 	GetIdManager().Clear();

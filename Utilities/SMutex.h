@@ -1,5 +1,4 @@
 #pragma once
-#include <atomic>
 
 extern void SM_Sleep();
 extern DWORD SM_GetCurrentThreadId();
@@ -49,6 +48,10 @@ public:
 
 	SMutexResult trylock(T tid)
 	{
+		if (Emu.IsStopped())
+		{
+			return SMR_ABORT;
+		}
 		T old = (T)free_value;
 
 		if (!owner.compare_exchange_strong(old, tid))
@@ -57,15 +60,10 @@ public:
 			{
 				return SMR_DEADLOCK;
 			}
-			if (Emu.IsStopped())
-			{
-				return SMR_ABORT;
-			}
 			if (old == (T)dead_value)
 			{
 				return SMR_DESTROYED;
 			}
-
 			return SMR_FAILED;
 		}
 
@@ -74,6 +72,10 @@ public:
 
 	SMutexResult unlock(T tid, T to = (T)free_value)
 	{
+		if (Emu.IsStopped())
+		{
+			return SMR_ABORT;
+		}
 		T old = tid;
 
 		if (!owner.compare_exchange_strong(old, to))

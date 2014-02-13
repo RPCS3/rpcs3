@@ -132,10 +132,12 @@ public:
 
 	bool HasID(const s64 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		{
+			std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		if(id == wxID_ANY)
-			return m_id_map.begin() != m_id_map.end();
+			if(id == wxID_ANY)
+				return m_id_map.begin() != m_id_map.end();
+		}
 
 		return CheckID(id);
 	}
