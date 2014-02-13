@@ -1,3 +1,4 @@
 [submodule "wxWidgets"]
 	path = wxWidgets
 	url = https://github.com/DHrpcs3/wxWidgets.git
+	ignore = dirty

@@ -297,8 +297,6 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, bind_func(cellGcmCallback),    //1024
 };
 
-bool enable_log = false;
-
 void default_syscall()
 {
 	declCPU();
@@ -332,8 +330,8 @@ void default_syscall()
 		return;
 
 		case 1000:
-			enable_log = !enable_log;
-			ConLog.Warning("Log %s", wxString(enable_log ? "enabled" : "disabled").wx_str());
+			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
+			ConLog.Warning("Log %s", wxString(Ini.HLELogging.GetValue() ? "enabled" : "disabled").wx_str());
 		return;
 	}
 

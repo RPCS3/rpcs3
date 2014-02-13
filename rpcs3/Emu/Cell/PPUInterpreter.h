@@ -69,7 +69,7 @@ private:
 	{
 		SysCalls::DoSyscall(CPU.GPR[11]);
 
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 			ConLog.Warning("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)

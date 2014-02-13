@@ -408,7 +408,7 @@ void Module::SetName(const std::string& name)
 
 void Module::Log(const u32 id, wxString fmt, ...)
 {
-	if(enable_log)
+	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
@@ -419,7 +419,7 @@ void Module::Log(const u32 id, wxString fmt, ...)
 
 void Module::Log(wxString fmt, ...)
 {
-	if(enable_log)
+	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
