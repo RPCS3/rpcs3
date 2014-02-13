@@ -1107,3 +1107,32 @@ void GLGSRender::Flip()
 		checkForGlError("glScissor");
 	}
 }
+
+uint32_t LinearToSwizzleAddress(
+	uint32_t x, uint32_t y, uint32_t z,
+	uint32_t log2_width, uint32_t log2_height, uint32_t log2_depth)
+{
+	uint32_t offset = 0;
+	uint32_t shift_count = 0;
+	while(log2_width | log2_height | log2_depth){
+		if(log2_width){
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+		if(log2_height){
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+		if(log2_depth){
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
+}

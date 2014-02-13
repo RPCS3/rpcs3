@@ -14,6 +14,9 @@
 
 extern GLenum g_last_gl_error;
 void printGlError(GLenum err, const char* situation);
+uint32_t LinearToSwizzleAddress(
+	uint32_t x, uint32_t y, uint32_t z,
+	uint32_t log2_width, uint32_t log2_height, uint32_t log2_depth);
 
 #if RSX_DEBUG
 #define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
@@ -81,6 +84,7 @@ public:
 
 		glPixelStorei(GL_PACK_ALIGNMENT, tex.m_pitch);
 		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
+		char* unswizzledPixels;
 
 		switch(format)
 		{
@@ -97,7 +101,28 @@ public:
 		break;
 
 		case 0x85:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			if(is_swizzled)
+			{
+				uint32_t *src, *dst;
+				uint32_t log2width, log2height;
+
+				unswizzledPixels = (char*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
+				src = (uint32_t*)pixels;
+				dst = (uint32_t*)unswizzledPixels;
+
+				log2width = log(tex.GetWidth())/log(2);
+				log2height = log(tex.GetHeight())/log(2);
+
+				for(int i=0; i<tex.GetHeight(); i++)
+				{
+					for(int j=0; j<tex.GetWidth(); j++)
+					{
+						dst[(i*tex.GetHeight()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					}
+				}
+			}
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
@@ -150,7 +175,7 @@ public:
 		}
 		break;
 
-		default: ConLog.Error("Init tex error: Bad tex format (0x%x | 0x%x | 0x%x)", format, tex.GetFormat() & 0x20, tex.GetFormat() & 0x40); break;
+		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, is_swizzled ? "swizzled" : "linear", tex.GetFormat() & 0x40); break;
 		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.Getmipmap() - 1);
@@ -177,7 +202,7 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
 		}
 		
-    checkForGlError("GLTexture::Init() -> remap");
+		checkForGlError("GLTexture::Init() -> remap");
 
 		static const int gl_tex_zfunc[] =
 		{
@@ -196,13 +221,13 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.GetWrapR()));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
 
-    checkForGlError("GLTexture::Init() -> parameters1");
+		checkForGlError("GLTexture::Init() -> parameters1");
 		
-		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.m_bias);
+		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.GetBias());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.GetMinLOD() >> 8));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.GetMaxLOD() >> 8));
 
-    checkForGlError("GLTexture::Init() -> parameters2");
+		checkForGlError("GLTexture::Init() -> parameters2");
 		
 		static const int gl_tex_filter[] =
 		{
@@ -216,12 +241,17 @@ public:
 			GL_NEAREST,
 		};
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.m_min_filter]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.m_mag_filter]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.GetMinFilter()]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.GetMagFilter()]);
 
-    checkForGlError("GLTexture::Init() -> filters");
+		checkForGlError("GLTexture::Init() -> filters");
 
 		//Unbind();
+
+		if(is_swizzled && format == 0x85)
+		{
+			free(unswizzledPixels);
+		}
 	}
 
 	void Save(RSXTexture& tex, const wxString& name)

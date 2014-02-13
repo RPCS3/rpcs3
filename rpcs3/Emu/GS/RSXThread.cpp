@@ -288,18 +288,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		u32 a0 = ARGS(0);
-		u16 bias = a0 & 0x1fff;
-		u8 conv = (a0 >> 13) & 0xf;
-		u8 min = (a0 >> 16) & 0x7;
-		u8 mag = (a0 >> 24) & 0x7;
-		u8 a_signed = (a0 >> 28) & 0x1;
-		u8 r_signed = (a0 >> 29) & 0x1;
-		u8 g_signed = (a0 >> 30) & 0x1;
-		u8 b_signed = (a0 >> 31) & 0x1;
-
-		tex.SetFilter(bias, min, mag, conv, a_signed, r_signed, g_signed, b_signed);
 	}
 	break;
 

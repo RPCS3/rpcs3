@@ -22,15 +22,6 @@ public:
 	u32 m_pitch;
 	u16 m_depth;
 
-	u16 m_bias;
-	u8 m_min_filter;
-	u8 m_mag_filter;
-	u8 m_conv;
-	u8 m_a_signed;
-	u8 m_r_signed;
-	u8 m_g_signed;
-	u8 m_b_signed;
-
 public:
 	RSXTexture();
 	RSXTexture(u8 index);
@@ -67,12 +58,21 @@ public:
 	// Control1
 	u32 GetRemap() const;
 
+	// Filter
+	u16 GetBias() const;
+	u8  GetMinFilter() const;
+	u8  GetMagFilter() const;
+	u8  GetConvolutionFilter() const;
+	bool isASigned() const;
+	bool isRSigned() const;
+	bool isGSigned() const;
+	bool isBSigned() const;
+
 	// Image Rect
 	u16 GetWidth() const;
 	u16 GetHeight() const;
 
 	void SetControl3(u16 depth, u32 pitch);
-	void SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_signed, u8 g_signed, u8 b_signed);
 };
 
 struct RSXVertexData
