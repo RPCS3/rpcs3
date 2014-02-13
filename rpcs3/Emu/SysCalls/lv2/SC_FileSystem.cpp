@@ -11,7 +11,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		path.wx_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	const wxString& ppath = path;
-	//ConLog.Warning("path: %s [%s]", ppath, path);
+	//ConLog.Warning("path: %s [%s]", ppath.wx_str(), path.wx_str());
 
 	s32 _oflags = flags;
 	if(flags & CELL_O_CREAT)

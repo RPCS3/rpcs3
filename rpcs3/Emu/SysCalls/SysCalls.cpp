@@ -328,12 +328,12 @@ void default_syscall()
 		case 999:
 			dump_enable = !dump_enable;
 			Emu.Pause();
-			ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
+			ConLog.Warning("Dump %s", wxString(dump_enable ? "enabled" : "disabled").wx_str());
 		return;
 
 		case 1000:
 			enable_log = !enable_log;
-			ConLog.Warning("Log %s", enable_log ? "enabled" : "disabled");
+			ConLog.Warning("Log %s", wxString(enable_log ? "enabled" : "disabled").wx_str());
 		return;
 	}
 

@@ -204,13 +204,15 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 int cellFsAioInit(mem8_ptr_t mount_point)
 {
-	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), (char*)mount_point.GetPtr());
+	wxString mp = Memory.ReadString(mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
 	return CELL_OK;
 }
 
 int cellFsAioFinish(mem8_ptr_t mount_point)
 {
-	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), (char*)mount_point.GetPtr());
+	wxString mp = Memory.ReadString(mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
 	return CELL_OK;
 }
 

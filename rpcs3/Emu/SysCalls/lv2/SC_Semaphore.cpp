@@ -28,7 +28,7 @@ struct semaphore
 
 int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_count, int max_count)
 {
-	sys_sem.Log("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
+	sys_sem.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem_addr, attr_addr, initial_count, max_count);
 
 	if(!Memory.IsGoodAddr(sem_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;

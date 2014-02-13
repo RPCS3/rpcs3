@@ -16,7 +16,7 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(attr->name_u64));
 
 	sys_lwcond.Warning("*** lwcond created [%s] (attr=0x%x, lwmutex.sq=0x%x): id = %d", 
-		attr->name, (u32)lwmutex->attribute, (u32)lwmutex->sleep_queue, (u32)lwcond->lwcond_queue);
+		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, (u32)lwmutex->sleep_queue, (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }
 

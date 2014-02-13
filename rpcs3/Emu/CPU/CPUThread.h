@@ -93,7 +93,7 @@ public:
 			wxString::Format("%s[%d] Thread%s", 
 				GetTypeString().wx_str(),
 				m_id,
-				wxString(GetName().empty() ? "" : std::string(" (" + GetName() + ")")).wx_str()
+				wxString(GetName().empty() ? "" : wxString::Format(" (%s)", + wxString(GetName()).wx_str())).wx_str()
 			);
 	}
 

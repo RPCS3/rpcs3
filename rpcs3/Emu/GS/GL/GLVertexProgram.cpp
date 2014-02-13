@@ -187,7 +187,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 
 		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], wxString(swizzle).wx_str(), wxString(swizzle).wx_str());
+		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", wxString(cond_string_table[d0.cond]).wx_str(), wxString(swizzle).wx_str(), wxString(swizzle).wx_str());
 	}
 
 	wxString mask = GetMask(is_sca);

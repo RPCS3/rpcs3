@@ -40,7 +40,7 @@ void GameViewer::LoadGames()
 			m_games.Add(buf);
 	}
 
-	//ConLog.Write("path: %s", m_path.c_str());
+	//ConLog.Write("path: %s", m_path.wx_str());
 	//ConLog.Write("folders count: %d", m_games.GetCount());
 }
 

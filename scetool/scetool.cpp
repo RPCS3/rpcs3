@@ -1450,7 +1450,7 @@ bool frontend_decrypt(scetool::s8 *file_in, scetool::s8 *file_out)
 					if(ctxt->sceh->header_type == SCE_HEADER_TYPE_SELF)
 					{
 						if(self_write_to_elf(ctxt, file_out) == TRUE)
-							ConLog.Write("scetool: ELF written to %s", file_out);
+							ConLog.Write("scetool: ELF written to %s", wxString(file_out).wx_str());
 						else
 							ConLog.Error("scetool: Could not write ELF");
 					}
@@ -1458,7 +1458,7 @@ bool frontend_decrypt(scetool::s8 *file_in, scetool::s8 *file_out)
 					{
 						if(_write_buffer(file_out, ctxt->scebuffer + ctxt->metash[0].data_offset, 
 							ctxt->metash[0].data_size + ctxt->metash[1].data_size))
-							ConLog.Write("scetool: RVK written to %s", file_out);
+							ConLog.Write("scetool: RVK written to %s", wxString(file_out).wx_str());
 						else
 							ConLog.Error("scetool: Could not write RVK");
 					}
@@ -1466,7 +1466,7 @@ bool frontend_decrypt(scetool::s8 *file_in, scetool::s8 *file_out)
 					{
 						/*if(_write_buffer(file_out, ctxt->scebuffer + ctxt->metash[0].data_offset, 
 							ctxt->metash[0].data_size + ctxt->metash[1].data_size + ctxt->metash[2].data_size))
-							printf("[*] PKG written to %s.\n", file_out);
+							printf("[*] PKG written to %s.\n", wxString(file_out).wx_str());
 						else
 							printf("[*] Error: Could not write PKG.\n");*/
 						ConLog.Warning("scetool: Not yet supported");
@@ -1475,7 +1475,7 @@ bool frontend_decrypt(scetool::s8 *file_in, scetool::s8 *file_out)
 					{
 						if(_write_buffer(file_out, ctxt->scebuffer + ctxt->metash[0].data_offset, 
 							ctxt->metash[0].data_size + ctxt->metash[1].data_size))
-							ConLog.Write("scetool: SPP written to %s", file_out);
+							ConLog.Write("scetool: SPP written to %s", wxString(file_out).wx_str());
 						else
 							ConLog.Error("scetool: Could not write SPP");
 					}
@@ -1488,11 +1488,11 @@ bool frontend_decrypt(scetool::s8 *file_in, scetool::s8 *file_out)
 			free(ctxt);
 		}
 		else
-			ConLog.Error("scetool: Could not process %s", file_in);
+			ConLog.Error("scetool: Could not process %s", wxString(file_in).wx_str());
 		free(buf);
 	}
 	else
-		ConLog.Error("scetool: Could not load %s", file_in);
+		ConLog.Error("scetool: Could not load %s", wxString(file_in).wx_str());
 	return true;
 }
 

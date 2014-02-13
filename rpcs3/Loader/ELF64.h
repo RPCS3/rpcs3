@@ -50,13 +50,13 @@ struct Elf64_Ehdr
 	{
 #ifdef LOADER_DEBUG
 		ConLog.Write("Magic: %08x",								e_magic);
-		ConLog.Write("Class: %s",								"ELF64");
-		ConLog.Write("Data: %s",								Ehdr_DataToString(e_data));
+		ConLog.Write("Class: %s",								wxString("ELF64").wx_str());
+		ConLog.Write("Data: %s",								Ehdr_DataToString(e_data).wx_str());
 		ConLog.Write("Current Version: %d",						e_curver);
-		ConLog.Write("OS/ABI: %s",								Ehdr_OS_ABIToString(e_os_abi));
+		ConLog.Write("OS/ABI: %s",								Ehdr_OS_ABIToString(e_os_abi).wx_str());
 		ConLog.Write("ABI version: %lld",						e_abi_ver);
-		ConLog.Write("Type: %s",								Ehdr_TypeToString(e_type));
-		ConLog.Write("Machine: %s",								Ehdr_MachineToString(e_machine));
+		ConLog.Write("Type: %s",								Ehdr_TypeToString(e_type).wx_str());
+		ConLog.Write("Machine: %s",								Ehdr_MachineToString(e_machine).wx_str());
 		ConLog.Write("Version: %d",								e_version);
 		ConLog.Write("Entry point address: 0x%08llx",			e_entry);
 		ConLog.Write("Program headers offset: 0x%08llx",		e_phoff);
@@ -145,13 +145,13 @@ struct Elf64_Phdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Type: %s",					Phdr_TypeToString(p_type));
+		ConLog.Write("Type: %s",					Phdr_TypeToString(p_type).wx_str());
 		ConLog.Write("Offset: 0x%08llx",			p_offset);
 		ConLog.Write("Virtual address: 0x%08llx",	p_vaddr);
 		ConLog.Write("Physical address: 0x%08llx",	p_paddr);
 		ConLog.Write("File size: 0x%08llx",			p_filesz);
 		ConLog.Write("Memory size: 0x%08llx",		p_memsz);
-		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags));
+		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags).wx_str());
 		ConLog.Write("Align: 0x%llx",				p_align);
 #endif
 	}

@@ -52,7 +52,7 @@ int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 
 	equeue_id = sys_event.GetNewId(eq);
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		attr->name, (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
+		wxString(attr->name, 8).wx_str(), (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
 
 	return CELL_OK;
 }
@@ -90,7 +90,7 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_event_queue_destroy(equeue=%d, ...) aborted", equeue_id);
+			ConLog.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
 			break;
 		}
 	}
@@ -210,7 +210,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 		Sleep(1);
 		if (counter++ > timeout || Emu.IsStopped())
 		{
-			if (Emu.IsStopped()) ConLog.Warning("sys_event_queue_receive(equeue=%d, ...) aborted", equeue_id);
+			if (Emu.IsStopped()) ConLog.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
 			eq->invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}

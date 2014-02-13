@@ -36,7 +36,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	lwmutex->sleep_queue = sq_id;
 
 	sc_lwmutex.Log("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", 
-		attr->name, (u32)lwmutex->attribute, sq_id);
+		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, sq_id);
 
 	return CELL_OK;
 }
@@ -254,7 +254,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	case SMR_TIMEOUT:
 		sq->invalidate(tid); return CELL_ETIMEDOUT;
 	case SMR_ABORT:
-		if (Emu.IsStopped()) ConLog.Warning("sys_lwmutex_t::lock(sq=%d, ...) aborted", (u32)sleep_queue);
+		if (Emu.IsStopped()) ConLog.Warning("sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
 	default:
 		sq->invalidate(tid); return CELL_EINVAL;
 	}
