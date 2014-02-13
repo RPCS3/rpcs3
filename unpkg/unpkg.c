@@ -17,6 +17,8 @@
 #include "ps3_common.h"
 #include "oddkeys.h"
 
+#include <wx/progdlg.h> //in a *.c file ?
+
 static void hash_tostring(char *str, u8 *hash, u32 len)
 {
 	u8 *p;

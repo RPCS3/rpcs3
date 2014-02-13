@@ -9,3 +9,4 @@ For discussion about the emulator and PS3 emulation please visit the [official f
 
 If you want to contribute please take a took at the [Coding Style](https://github.com/DHrpcs3/rpcs3/wiki/Coding-Style) and [Roadmap](https://github.com/DHrpcs3/rpcs3/wiki/Roadmap) pages.
 
+To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.

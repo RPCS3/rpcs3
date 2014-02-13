@@ -67,7 +67,7 @@ AboutDialog::AboutDialog(wxWindow *parent)
 
 	s_panel_buttons->AddSpacer(12);
 	s_panel_buttons->Add(new wxButton(this, wxID_OK), wxLEFT, 0, 5);
-	s_panel_buttons->AddSpacer(256);
+	s_panel_buttons->AddSpacer(218);
 	s_panel_buttons->Add(b_website, wxLEFT, 0, 5);
 	s_panel_buttons->AddSpacer(5);
 	s_panel_buttons->Add(b_forum, wxLEFT, 0, 5);
@@ -77,9 +77,9 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	s_panel->Add(s_panel_logo);
 	s_panel->Add(s_panel_credits);
 	s_panel->Add(s_panel_buttons);
+	s_panel->AddSpacer(12);
 
-	this->SetSizerAndFit(s_panel);
-	this->SetSize(this->GetSize()-wxSize(0,220));
+	SetSizerAndFit(s_panel);
 }
 
 void AboutDialog::OpenWebsite(wxCommandEvent& WXUNUSED(event))

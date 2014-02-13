@@ -40,7 +40,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 		memcpy(&m_buffer[c_put], &stext, sizeof(u32));
 		c_put += sizeof(u32);
-		memcpy(&m_buffer[c_put], data.m_text.c_str(), stext);
+		memcpy(&m_buffer[c_put], static_cast<const char *>(data.m_text), stext);
 		c_put += stext;
 
 		m_put = c_put;
@@ -58,7 +58,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if(stext) memcpy(wxStringBuffer(ret.m_text, stext), &m_buffer[c_get], stext);
+		if (stext) ret.m_text = wxString(reinterpret_cast<const char*>(&m_buffer[c_get]), stext );
 		c_get += stext;
 
 		m_get = c_get;

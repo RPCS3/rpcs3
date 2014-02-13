@@ -27,7 +27,7 @@ struct Arg
 		: value(_value)
 		, type(_type)
 	{
-		string =  _string.c_str();
+		string =  _string.ToStdString();
 	}
 };
 
@@ -72,7 +72,7 @@ class CompilePPUProgram
 			, m_id(-1)
 			, m_addr(-1)
 		{
-			m_name = name.c_str();
+			m_name = name.ToStdString();
 		}
 
 		Branch(const wxString& name, u32 id, u32 addr)
@@ -80,7 +80,7 @@ class CompilePPUProgram
 			, m_id(id)
 			, m_addr(addr)
 		{
-			m_name = name.c_str();
+			m_name = name.ToStdString();
 		}
 	};
 
@@ -107,7 +107,7 @@ class CompilePPUProgram
 		SpData(const wxString& data, u32 addr)
 			: m_addr(addr)
 		{
-			m_data = data.c_str();
+			m_data = data.ToStdString();
 		}
 	};
 

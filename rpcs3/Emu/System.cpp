@@ -110,7 +110,7 @@ bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Could not open SELF file! (%s)", self.c_str());
+		ConLog.Error("Could not open SELF file! (%s)", wxString(self).wx_str());
 		return false;
 	}
 	
@@ -135,7 +135,7 @@ bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
 
 		if(!out.IsOpened())
 		{
-			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
+			ConLog.Error("Could not create ELF file! (%s)", wxString(elf).wx_str());
 			return false;
 		}
 
@@ -188,7 +188,7 @@ void Emulator::Load()
 {
 	if(!wxFileExists(m_path)) return;
 
-	if(IsSelf(m_path.c_str()))
+	if(IsSelf(m_path.ToStdString()))
 	{
 		std::string self_path = m_path;
 		std::string elf_path = wxFileName(m_path).GetPath().c_str();
@@ -208,7 +208,7 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	ConLog.Write("Loading '%s'...", m_path.mb_str());
+	ConLog.Write("Loading '%s'...", m_path.wx_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
@@ -216,7 +216,7 @@ void Emulator::Load()
 	ConLog.Write("Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().mb_str(), m_vfs.m_devices[i].GetLocalPath().mb_str());
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().wx_str(), m_vfs.m_devices[i].GetLocalPath().wx_str());
 	}
 	ConLog.SkipLn();
 
@@ -229,7 +229,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path.mb_str(), m_elf_path.mb_str());
+		ConLog.Error("Elf not found! (%s - %s)", m_path.wx_str(), m_elf_path.wx_str());
 		return;
 	}
 
@@ -506,7 +506,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", path.c_str());
+		ConLog.Error("'%s' is broken", wxString(path).wx_str());
 		return;
 	}
 

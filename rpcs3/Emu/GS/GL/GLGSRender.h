@@ -8,7 +8,6 @@
 #include "GLProgramBuffer.h"
 
 #pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "gl.lib")
 
 #define RSX_DEBUG 1
 
@@ -303,7 +302,7 @@ struct GLGSFrame : public GSFrame
 	GLGSFrame();
 	~GLGSFrame() {}
 
-	void Flip();
+	void Flip(wxGLContext *context);
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 
