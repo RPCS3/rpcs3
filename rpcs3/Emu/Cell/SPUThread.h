@@ -514,7 +514,7 @@ public:
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			if (enable_log) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
 				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(), 
 				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
 				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
@@ -541,7 +541,7 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			if (enable_log) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				wxString(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 				op == MFC_PUTLLC_CMD ? "PUTLLC" :
 				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC").wx_str(),

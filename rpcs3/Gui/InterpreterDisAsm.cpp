@@ -45,15 +45,14 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	s_b_main.Add(m_btn_pause,		wxSizerFlags().Border(wxALL, 5));
 	s_b_main.Add(m_choice_units,	wxSizerFlags().Border(wxALL, 5));
 
+	//Registers
 	m_regs = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
-	m_regs->SetMinSize(wxSize(495, 100));
 	m_regs->SetEditable(false);
 
 	//Call Stack
 	m_calls = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
-	m_calls->SetMinSize(wxSize(495, 100));
 	m_calls->SetEditable(false);
 
 	m_list ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));

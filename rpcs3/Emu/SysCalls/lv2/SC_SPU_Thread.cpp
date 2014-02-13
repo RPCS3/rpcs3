@@ -375,7 +375,7 @@ int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	//	return CELL_ENOMEM;
 	//}
 
-	//enable_log = true;
+	//Ini.HLELogging.SetValue(true);
 	//dump_enable = true;
 
 	return CELL_OK;

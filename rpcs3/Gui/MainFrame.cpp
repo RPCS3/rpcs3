@@ -356,12 +356,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default aspect ratio") ) );
 
 	wxStaticBoxSizer* s_round_io( new wxStaticBoxSizer( wxVERTICAL, &diag, _("IO") ) );
-	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad Handler") ) );
-	wxStaticBoxSizer* s_round_keyboard_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Keyboard Handler") ) );
-	wxStaticBoxSizer* s_round_mouse_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Mouse Handler") ) );
+	wxStaticBoxSizer* s_round_io_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad Handler") ) );
+	wxStaticBoxSizer* s_round_io_keyboard_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Keyboard Handler") ) );
+	wxStaticBoxSizer* s_round_io_mouse_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Mouse Handler") ) );
 	
 	wxStaticBoxSizer* s_round_audio( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Audio") ) );
 	wxStaticBoxSizer* s_round_audio_out( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Audio Out") ) );
+
+	wxStaticBoxSizer* s_round_hle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("HLE") ) );
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
@@ -376,6 +378,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
+	wxCheckBox* chbox_hle_logging = new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -411,6 +414,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
@@ -435,15 +439,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_gs->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5));
 	s_round_gs->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5));
 
-	s_round_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_mouse_handler->Add(cbox_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io->Add(s_round_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io->Add(s_round_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io->Add(s_round_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io_mouse_handler->Add(cbox_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_io_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_io_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_io->Add(s_round_io_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	s_round_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -454,11 +460,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_subpanel1->Add(s_round_cpu, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel1->Add(s_round_gs, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel1->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
 	s_subpanel2->Add(s_round_io, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel2->Add(s_round_audio, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel1->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
+	s_subpanel2->Add(s_round_hle, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	s_subpanel2->AddSpacer(180);
 	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -478,6 +484,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
+		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 
 		Ini.Save();
 	}

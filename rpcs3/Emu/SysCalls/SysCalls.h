@@ -14,8 +14,6 @@
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
-extern bool enable_log;
-
 class SysCallBase //Module
 {
 private:
@@ -33,7 +31,7 @@ public:
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);
@@ -44,7 +42,7 @@ public:
 
 	void Log(wxString fmt, ...)
 	{
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);
