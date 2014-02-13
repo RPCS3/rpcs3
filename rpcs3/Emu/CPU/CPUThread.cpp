@@ -96,19 +96,19 @@ bool CPUThread::Sync()
 
 int CPUThread::ThreadStatus()
 {
-	if(Emu.IsStopped() || IsStopped() || IsPaused())
+	if(Emu.IsStopped() || IsStopped() )
 	{
 		return CPUThread_Stopped;
 	}
 
-	if(TestDestroy())
-	{
-		return CPUThread_Break;
-	}
-
-	if(m_is_step)
+	if (m_is_step)
 	{
 		return CPUThread_Step;
+	}
+
+	if (TestDestroy())
+	{
+		return CPUThread_Break;
 	}
 
 	if(Emu.IsPaused() || Sync())

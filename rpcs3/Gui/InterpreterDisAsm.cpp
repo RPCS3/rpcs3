@@ -450,12 +450,12 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetLabel(wxString::Format("%llx", CPU->PC));
+	if(CPU) p_pc->SetValue(wxString::Format("%llx", CPU->PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
 		u64 pc = CPU ? CPU->PC : 0x0;
-		sscanf(p_pc->GetLabel(), "%llx", &pc);
+		sscanf(p_pc->GetValue(), "%llx", &pc);
 		remove_markedPC.AddCpy(Emu.GetMarkedPoints().AddCpy(pc));
 		ShowAddr(CentrePc(pc));
 	}
