@@ -9,7 +9,7 @@ int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
 	return CELL_OK;
 }
 
-int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr)
+int sys_tty_write(s32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr)
 {
 	if(ch < 0 || ch > 15 || (s32)len <= 0) return CELL_EINVAL;
 	if(!Memory.IsGoodAddr(buf_addr)) return CELL_EFAULT;
