@@ -42,7 +42,7 @@ wxString ARMv7Thread::RegsToString()
 	wxString result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
-		result += wxString::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
+		result += wxString::Format("%s\t= 0x%08x\n", wxString(g_arm_reg_name[i]).wx_str(), GPR[i]);
 	}
 
 	result += wxString::Format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", APSR.APSR, APSR.N, APSR.Z, APSR.C, APSR.V, APSR.Q);

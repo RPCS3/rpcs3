@@ -204,9 +204,9 @@ static void print_pkg_header(pkg_header *header)
 	ConLog.Write("Pkg size: %llu", ntohll(header->pkg_size));
 	ConLog.Write("Data offset: 0x%llx", ntohll(header->data_offset));
 	ConLog.Write("Data size: 0x%llu", ntohll(header->data_size));
-	ConLog.Write("TitleID: %s", header->title_id);
-	ConLog.Write("QA Digest: %s", qa);
-	ConLog.Write( "KLicensee: %s", kl);
+	ConLog.Write("TitleID: %s", wxString(header->title_id, 48).wx_str());
+	ConLog.Write("QA Digest: %s", wxString(qa, 33).wx_str());
+	ConLog.Write("KLicensee: %s", wxString(kl, 33).wx_str());
 }
 
 static void *pkg_info(const char *fname,  pkg_header **h_ptr)
@@ -418,7 +418,7 @@ bool pkg_unpack(const char *fname)
 		if (mkdir(titleID.c_str()) < 0)
 		{
 			ConLog.Error("UnPkg: Could not mkdir.");
-			ConLog.Error("UnPkg: Possibly, folder already exists in dev_hdd0\\game : %s", titleID.c_str());
+			ConLog.Error("UnPkg: Possibly, folder already exists in dev_hdd0\\game : %s", wxString(titleID).wx_str());
 			wxSetWorkingDirectory(mainDir);
 			free(header);
 			return false;

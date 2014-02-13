@@ -54,8 +54,8 @@ u32 GLProgramBuffer::GetProg(u32 fp, u32 vp) const
 		ConLog.Write("*** vp id = %d", m_buf[fp].vp_id);
 		ConLog.Write("*** fp id = %d", m_buf[fp].fp_id);
 
-		ConLog.Write("*** vp shader = \n%s", m_buf[fp].vp_shader);
-		ConLog.Write("*** fp shader = \n%s", m_buf[fp].fp_shader);
+		ConLog.Write("*** vp shader = \n%s", m_buf[fp].vp_shader.wx_str());
+		ConLog.Write("*** fp shader = \n%s", m_buf[fp].fp_shader.wx_str());
 		*/
 		return m_buf[fp].prog_id;
 	}
@@ -72,8 +72,8 @@ u32 GLProgramBuffer::GetProg(u32 fp, u32 vp) const
 			ConLog.Write("*** vp id = %d", m_buf[i].vp_id);
 			ConLog.Write("*** fp id = %d", m_buf[i].fp_id);
 
-			ConLog.Write("*** vp shader = \n%s", m_buf[i].vp_shader);
-			ConLog.Write("*** fp shader = \n%s", m_buf[i].fp_shader);
+			ConLog.Write("*** vp shader = \n%s", m_buf[i].vp_shader.wx_str());
+			ConLog.Write("*** fp shader = \n%s", m_buf[i].fp_shader.wx_str());
 			*/
 			return m_buf[i].prog_id;
 		}

@@ -77,7 +77,7 @@ int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 	vfsFile f(path);
 	if(!f.IsOpened())
 	{
-		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path);
+		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path.wx_str());
 		return CELL_ENOENT;
 	}
 

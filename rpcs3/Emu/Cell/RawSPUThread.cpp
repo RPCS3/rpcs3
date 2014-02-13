@@ -331,7 +331,7 @@ void RawSPUThread::Task()
 	}
 	catch(const char* e)
 	{
-		ConLog.Error("Exception: %s", e);
+		ConLog.Error("Exception: %s", wxString(e).wx_str());
 	}
 
 	ConLog.Write("%s leave", PPCThread::GetFName().wx_str());

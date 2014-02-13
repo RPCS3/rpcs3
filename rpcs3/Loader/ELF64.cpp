@@ -419,7 +419,7 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 			const wxString& name = shdr_name_arr[i];
 
 #ifdef LOADER_DEBUG
-			ConLog.Write("Name: %s", shdr_name_arr[i]);
+			ConLog.Write("Name: %s", shdr_name_arr[i].wx_str());
 #endif
 		}
 

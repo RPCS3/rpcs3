@@ -20,7 +20,7 @@ void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
 	{
-		ConLog.Error("%s: opengl error 0x%04x", situation, err);
+		ConLog.Error("%s: opengl error 0x%04x", wxString(situation).wx_str(), err);
 		Emu.Pause();
 	}
 }

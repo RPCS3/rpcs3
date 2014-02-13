@@ -38,7 +38,7 @@ int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	eflag_id = sys_event_flag.GetNewId(new event_flag(init, (u32)attr->protocol, (int)attr->type));
 
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		attr->name, (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());
+		wxString(attr->name, 8).wx_str(), (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());
 
 	return CELL_OK;
 }

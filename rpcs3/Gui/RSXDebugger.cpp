@@ -512,7 +512,7 @@ void RSXDebugger::GetSettings()
 
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
-		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		render.m_blend_color_r,
 		render.m_blend_color_g,
@@ -532,10 +532,10 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
 	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_depth_func,
-		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
 		render.m_draw_mode,
-		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
+		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,
@@ -543,7 +543,7 @@ void RSXDebugger::GetSettings()
 		render.m_scissor_h));
 	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_stencil_func,
-		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
 	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
 	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
@@ -733,7 +733,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			default:                      DISASM("(Bad location!);"); break;
 			}
 			DISASM("    Cubemap:%s; Dimension:0x%x; Format:0x%x; Mipmap:0x%x",
-				((args[1] >> 2) & 0x1) ? "True" : "False",
+				wxString(((args[1] >> 2) & 0x1) ? "True" : "False").wx_str(),
 				((args[1] >> 4) & 0xf),
 				((args[1] >> 8) & 0xff),
 				((args[1] >> 16) & 0xffff));

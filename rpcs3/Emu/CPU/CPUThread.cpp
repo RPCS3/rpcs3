@@ -349,12 +349,12 @@ void CPUThread::Task()
 	}
 	catch(const char* e)
 	{
-		ConLog.Error("Exception: %s", e);
+		ConLog.Error("Exception: %s", wxString(e).wx_str());
 	}
 	catch(int exitcode)
 	{
 		ConLog.Success("Exit Code: %d", exitcode);
 	}
 
-	ConLog.Write("%s leave", CPUThread::GetFName());
+	ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
 }

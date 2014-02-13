@@ -149,7 +149,7 @@ void CompilePPUProgram::WriteError(const wxString& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, static_cast<const char*>(error)));
+		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, error.wx_str()));
 	}
 }
 
@@ -569,7 +569,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 
 	if(show_err)
 	{
-		WriteError(wxString::Format("Bad arg '%s'", &arg.string[0]));
+		WriteError(wxString::Format("Bad arg '%s'", wxString(&arg.string[0]).wx_str()));
 		m_error = true;
 	}
 

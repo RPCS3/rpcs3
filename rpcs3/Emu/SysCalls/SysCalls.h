@@ -8,6 +8,7 @@
 #include "lv2/SC_Lwmutex.h"
 #include "lv2/SC_Lwcond.h"
 #include "lv2/SC_Event_flag.h"
+#include "lv2/SC_Condition.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -172,11 +173,12 @@ extern int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex);
 extern int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex);
 
 //sys_cond
-extern int sys_cond_create(u32 cond_addr, u32 mutex_id, u32 attr_addr);
+extern int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr);
 extern int sys_cond_destroy(u32 cond_id);
 extern int sys_cond_wait(u32 cond_id, u64 timeout);
 extern int sys_cond_signal(u32 cond_id);
 extern int sys_cond_signal_all(u32 cond_id);
+extern int sys_cond_signal_to(u32 cond_id, u32 thread_id);
 
 //sys_mutex
 extern int sys_mutex_create(u32 mutex_id_addr, u32 attr_addr);
@@ -383,7 +385,7 @@ extern int sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 a3);
 extern int sys_rsx_device_unmap();
 extern int sys_rsx_attribute();
 
-#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", wxString(__FUNCTION__).wx_str())
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]
