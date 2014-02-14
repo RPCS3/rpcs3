@@ -179,7 +179,7 @@ extern int sys_cond_signal_all(u32 cond_id);
 extern int sys_cond_signal_to(u32 cond_id, u32 thread_id);
 
 //sys_mutex
-extern int sys_mutex_create(u32 mutex_id_addr, u32 attr_addr);
+extern int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr);
 extern int sys_mutex_destroy(u32 mutex_id);
 extern int sys_mutex_lock(u32 mutex_id, u64 timeout);
 extern int sys_mutex_trylock(u32 mutex_id);

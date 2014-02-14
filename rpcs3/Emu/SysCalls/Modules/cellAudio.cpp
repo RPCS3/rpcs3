@@ -450,7 +450,6 @@ int cellAudioSetNotifyEventQueue(u64 key)
 	}
 
 	eq->events.push(0, 0, 0, 0);
-	eq->events.push(0, 0, 0, 0);
 
 	return CELL_OK;
 }

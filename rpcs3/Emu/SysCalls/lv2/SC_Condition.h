@@ -1,4 +1,5 @@
 #pragma once
+#include "SC_Mutex.h"
 
 struct sys_cond_attribute
 {
@@ -12,14 +13,14 @@ struct sys_cond_attribute
 	};
 };
 
-struct condition
+struct Cond
 {
-	wxCondition cond;
-	u64 name_u64;
+	Mutex* mutex; // associated with mutex
+	SleepQueue m_queue;
 
-	condition(wxMutex& mtx, u64 name)
-		: cond(mtx)
-		, name_u64(name)
+	Cond(Mutex* mutex, u64 name)
+		: mutex(mutex)
+		, m_queue(name)
 	{
 	}
 };

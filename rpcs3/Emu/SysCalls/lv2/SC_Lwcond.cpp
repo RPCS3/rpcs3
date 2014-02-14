@@ -10,13 +10,22 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	sys_lwcond.Warning("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
 		lwcond.GetAddr(), lwmutex.GetAddr(), attr.GetAddr());
 
-	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
+	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
 	lwcond->lwmutex = lwmutex.GetAddr();
-	lwcond->lwcond_queue = sys_lwcond.GetNewId(new LWCond(attr->name_u64));
+	lwcond->lwcond_queue = sys_lwcond.GetNewId(new SleepQueue(attr->name_u64));
 
-	sys_lwcond.Warning("*** lwcond created [%s] (attr=0x%x, lwmutex.sq=0x%x): id = %d", 
-		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, (u32)lwmutex->sleep_queue, (u32)lwcond->lwcond_queue);
+	if (lwmutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
+	{
+		sys_lwcond.Warning("Unsupported SYS_SYNC_RETRY lwmutex protocol");
+	}
+
+	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex.attr=0x%x): id = %d", 
+		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, (u32)lwcond->lwcond_queue);
+
 	return CELL_OK;
 }
 
@@ -24,12 +33,25 @@ int sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Warning("sys_lwcond_destroy(lwcond_addr=0x%x)", lwcond.GetAddr());
 
-	if (!lwcond.IsGood()) return CELL_EFAULT;
-	LWCond* lwc;
-	u32 id = (u32)lwcond->lwcond_queue;
-	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
+	if (!lwcond.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
-	Emu.GetIdManager().RemoveID(id);
+	u32 lwc = lwcond->lwcond_queue;
+
+	SleepQueue* sq;
+	if (!Emu.GetIdManager().GetIDData(lwc, sq))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!sq->finalize())
+	{
+		return CELL_EBUSY;
+	}
+
+	Emu.GetIdManager().RemoveID(lwc);
 	return CELL_OK;
 }
 
@@ -37,12 +59,33 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Log("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.GetAddr());
 
-	if (!lwcond.IsGood()) return CELL_EFAULT;
-	LWCond* lwc;
-	u32 id = (u32)lwcond->lwcond_queue;
-	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
+	if (!lwcond.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
-	lwc->signal(mem_ptr_t<sys_lwmutex_t>(lwcond->lwmutex)->attribute);
+	SleepQueue* sq;
+	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, sq))
+	{
+		return CELL_ESRCH;
+	}
+
+	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	be_t<u32> tid = GetCurrentPPUThread().GetId();
+
+	if (be_t<u32> target = mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())
+	{
+		if (mutex->owner.trylock(target) != SMR_OK)
+		{
+			mutex->owner.lock(tid);
+			mutex->owner.unlock(tid, target);
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_lwcond_signal(sq=%d) aborted", (u32)lwcond->lwcond_queue);
+	}
 
 	return CELL_OK;
 }
@@ -51,12 +94,33 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Log("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.GetAddr());
 
-	if (!lwcond.IsGood()) return CELL_EFAULT;
-	LWCond* lwc;
-	u32 id = (u32)lwcond->lwcond_queue;
-	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
+	if (!lwcond.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
-	lwc->signal_all();
+	SleepQueue* sq;
+	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, sq))
+	{
+		return CELL_ESRCH;
+	}
+
+	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	be_t<u32> tid = GetCurrentPPUThread().GetId();
+
+	while (be_t<u32> target = mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())
+	{
+		if (mutex->owner.trylock(target) != SMR_OK)
+		{
+			mutex->owner.lock(tid);
+			mutex->owner.unlock(tid, target);
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_lwcond_signal_all(sq=%d) aborted", (u32)lwcond->lwcond_queue);
+	}
 
 	return CELL_OK;
 }
@@ -65,12 +129,37 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
 	sys_lwcond.Log("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.GetAddr(), ppu_thread_id);
 
-	if (!lwcond.IsGood()) return CELL_EFAULT;
-	LWCond* lwc;
-	u32 id = (u32)lwcond->lwcond_queue;
-	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
+	if (!lwcond.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
-	if (!lwc->signal_to(ppu_thread_id)) return CELL_EPERM;
+	SleepQueue* sq;
+	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, sq))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!sq->invalidate(ppu_thread_id))
+	{
+		return CELL_EPERM;
+	}
+
+	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	be_t<u32> tid = GetCurrentPPUThread().GetId();
+
+	be_t<u32> target = ppu_thread_id;
+
+	if (mutex->owner.trylock(target) != SMR_OK)
+	{
+		mutex->owner.lock(tid);
+		mutex->owner.unlock(tid, target);
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_lwcond_signal_to(sq=%d, to=%d) aborted", (u32)lwcond->lwcond_queue, ppu_thread_id);
+	}
 
 	return CELL_OK;
 }
@@ -79,49 +168,56 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.GetAddr(), timeout);
 
-	if (!lwcond.IsGood()) return CELL_EFAULT;
-	LWCond* lwc;
-	u32 id = (u32)lwcond->lwcond_queue;
-	if (!sys_lwcond.CheckId(id, lwc)) return CELL_ESRCH;
-	const u32 tid = GetCurrentPPUThread().GetId();
+	if (!lwcond.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
-	mem_ptr_t<sys_lwmutex_t> lwmutex(lwcond->lwmutex);
+	SleepQueue* sq;
+	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, sq))
+	{
+		return CELL_ESRCH;
+	}
 
-	if ((u32)lwmutex->owner.GetOwner() != tid) return CELL_EPERM; // caller must own this lwmutex
-	lwc->begin_waiting(tid);
+	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	u32 tid_le = GetCurrentPPUThread().GetId();
+	be_t<u32> tid = tid_le;
+
+	if (mutex->owner.GetOwner() != tid)
+	{
+		return CELL_EPERM; // caller must own this lwmutex
+	}
+
+	sq->push(tid_le);
+
+	mutex->owner.unlock(tid);
 
 	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
-	bool was_locked = true;
-	do
+	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	while (true)
 	{
-		if (Emu.IsStopped())
+		/* switch (mutex->trylock(tid))
 		{
-			ConLog.Warning("sys_lwcond_wait(sq id=%d, ...) aborted", id);
-			return CELL_ETIMEDOUT;
+		case SMR_OK: mutex->unlock(tid); break;
+		case SMR_SIGNAL: return CELL_OK;
+		} */
+		if (mutex->owner.GetOwner() == tid)
+		{
+			_mm_mfence();
+			return CELL_OK;
 		}
-		if (was_locked) lwmutex->unlock(tid);
+
 		Sleep(1);
-		if (was_locked = (lwmutex->trylock(tid) == CELL_OK))
-		{
-			if (lwc->check(tid))
-			{
-				return CELL_OK;
-			}
-		}
 
 		if (counter++ > max_counter)
 		{
-			if (!timeout) 
-			{
-				sys_lwcond.Warning("sys_lwcond_wait(lwcond_addr=0x%x): TIMEOUT", lwcond.GetAddr());
-				counter = 0;
-			}
-			else
-			{
-				lwc->stop_waiting(tid);
-				return CELL_ETIMEDOUT;
-			}
-		}		
-	} while (true);
+			sq->invalidate(tid_le);
+			return CELL_ETIMEDOUT;
+		}
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_lwcond_wait(sq=%d) aborted", (u32)lwcond->lwcond_queue);
+			return CELL_OK;
+		}
+	}
 }

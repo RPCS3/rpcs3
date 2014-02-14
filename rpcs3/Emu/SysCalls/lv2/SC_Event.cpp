@@ -59,7 +59,7 @@ int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 
 int sys_event_queue_destroy(u32 equeue_id, int mode)
 {
-	sys_event.Warning("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
+	sys_event.Error("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))

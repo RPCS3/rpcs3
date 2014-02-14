@@ -8,7 +8,7 @@ enum
 	SYS_SYNC_FIFO = 1,
 	// Priority Order
 	SYS_SYNC_PRIORITY = 2,
-	// Basic Priority Inheritance Protocol
+	// Basic Priority Inheritance Protocol (probably not implemented)
 	SYS_SYNC_PRIORITY_INHERIT = 3,
 	// Not selected while unlocking
 	SYS_SYNC_RETRY = 4,
@@ -59,7 +59,8 @@ struct SleepQueue
 	u32 pop(); // SYS_SYNC_FIFO
 	u32 pop_prio(); // SYS_SYNC_PRIORITY
 	u32 pop_prio_inherit(); // (TODO)
-	void invalidate(u32 tid);
+	bool invalidate(u32 tid);
+	bool finalize();
 };
 
 struct sys_lwmutex_t
@@ -85,25 +86,3 @@ struct sys_lwmutex_t
 	int unlock(be_t<u32> tid);
 	int lock(be_t<u32> tid, u64 timeout);
 };
-/*
-class lwmutex_locker
-{
-	mem_ptr_t<sys_lwmutex_t> m_mutex;
-	be_t<u32> m_id;
-
-	lwmutex_locker(mem_ptr_t<sys_lwmutex_t> lwmutex, be_t<u32> tid, u64 timeout = 0)
-		: m_id(tid)
-		, m_mutex(lwmutex)
-	{
-		if (int res = m_mutex->lock(m_id, timeout))
-		{
-			ConLog.Error("lwmutex_locker: m_mutex->lock failed(res=0x%x)", res);
-			Emu.Pause();
-		}
-	}
-
-	~lwmutex_locker()
-	{
-		m_mutex->unlock(m_id);
-	}
-};*/

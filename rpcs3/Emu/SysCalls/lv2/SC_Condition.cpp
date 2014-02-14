@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "SC_Mutex.h"
 #include "Emu/SysCalls/lv2/SC_Condition.h"
 
 SysCallBase sys_cond("sys_cond");
@@ -21,13 +20,16 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 		return CELL_EINVAL;
 	}
 
-	mutex* mtx_data;
-	if (!Emu.GetIdManager().GetIDData(mutex_id, mtx_data))
+	Mutex* mutex;
+	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
 	}
 
-	cond_id = sys_cond.GetNewId(new condition(mtx_data->mtx, attr->name_u64));
+	Cond* cond = new Cond(mutex, attr->name_u64);
+	u32 id = sys_cond.GetNewId(cond);
+	cond_id = id;
+	mutex->cond_count++;
 	sys_cond.Warning("*** condition created [%s]: id = %d", wxString(attr->name, 8).wx_str(), cond_id.GetValue());
 
 	return CELL_OK;
@@ -35,88 +37,165 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 
 int sys_cond_destroy(u32 cond_id)
 {
-	sys_cond.Error("sys_cond_destroy(cond_id=%d)", cond_id);
+	sys_cond.Warning("sys_cond_destroy(cond_id=%d)", cond_id);
 
-	condition* cond;
+	Cond* cond;
 	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (true) // TODO
+	if (!cond->m_queue.finalize())
 	{
 		return CELL_EBUSY;
 	}
 
+	cond->mutex->cond_count--;
 	Emu.GetIdManager().RemoveID(cond_id);
 	return CELL_OK;
 }
 
 int sys_cond_wait(u32 cond_id, u64 timeout)
 {
-	sys_cond.Warning("sys_cond_wait(cond_id=%d, timeout=%lld)", cond_id, timeout);
+	sys_cond.Log("sys_cond_wait(cond_id=%d, timeout=%lld)", cond_id, timeout);
 
-	condition* cond_data = nullptr;
-	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	if (mutex->m_mutex.GetOwner() != tid)
+	{
+		return CELL_EPERM;
+	}
+
+	cond->m_queue.push(tid);
+
+	mutex->m_mutex.unlock(tid);
 
 	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
-	do
+	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+
+	while (true)
 	{
-		if (Emu.IsStopped())
+		/* switch (mutex->m_mutex.trylock(tid))
 		{
-			ConLog.Warning("sys_cond_wait(cond_id=%d, ...) aborted", cond_id);
-			return CELL_ETIMEDOUT;
+		case SMR_OK: mutex->m_mutex.unlock(tid); break;
+		case SMR_SIGNAL: return CELL_OK;
+		} */
+		if (mutex->m_mutex.GetOwner() == tid)
+		{
+			_mm_mfence();
+			return CELL_OK;
 		}
 
-		switch (cond_data->cond.WaitTimeout(1))
-		{
-		case wxCOND_NO_ERROR: return CELL_OK;
-		case wxCOND_TIMEOUT: break;
-		default: return CELL_EPERM;
-		}
+		Sleep(1);
 
 		if (counter++ > max_counter)
 		{
-			if (!timeout) 
-			{
-				counter = 0;
-			}
-			else
-			{
-				return CELL_ETIMEDOUT;
-			}
-		}		
-	} while (true);
+			cond->m_queue.invalidate(tid);
+			return CELL_ETIMEDOUT;
+		}
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+			return CELL_OK;
+		}
+	}
 }
 
 int sys_cond_signal(u32 cond_id)
 {
-	sys_cond.Warning("sys_cond_signal(cond_id=%d)", cond_id);
+	sys_cond.Log("sys_cond_signal(cond_id=%d)", cond_id);
 
-	condition* cond_data = nullptr;
-	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
 
-	cond_data->cond.Signal();
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	if (u32 target = mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop())
+	{
+		if (mutex->m_mutex.trylock(target) != SMR_OK)
+		{
+			mutex->m_mutex.lock(tid);
+			mutex->m_mutex.unlock(tid, target);
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
+	}
 
 	return CELL_OK;
 }
 
 int sys_cond_signal_all(u32 cond_id)
 {
-	sys_cond.Warning("sys_cond_signal_all(cond_id=%d)", cond_id);
+	sys_cond.Log("sys_cond_signal_all(cond_id=%d)", cond_id);
 
-	condition* cond_data = nullptr;
-	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
 
-	cond_data->cond.Broadcast();
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	while (u32 target = mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop())
+	{
+		if (mutex->m_mutex.trylock(target) != SMR_OK)
+		{
+			mutex->m_mutex.lock(tid);
+			mutex->m_mutex.unlock(tid, target);
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
+	}
 
 	return CELL_OK;
 }
 
 int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 {
-	sys_cond.Error("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
+	sys_cond.Log("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
+
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!cond->m_queue.invalidate(thread_id))
+	{
+		return CELL_EPERM;
+	}
+
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	if (mutex->m_mutex.trylock(thread_id) != SMR_OK)
+	{
+		mutex->m_mutex.lock(tid);
+		mutex->m_mutex.unlock(tid, thread_id);
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
+	}
 
 	return CELL_OK;
 }
