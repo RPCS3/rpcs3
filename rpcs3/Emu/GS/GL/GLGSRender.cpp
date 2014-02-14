@@ -12,6 +12,7 @@
 #endif
 
 gcmBuffer gcmBuffers[8];
+GLuint flipTex;
 
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
@@ -85,12 +86,15 @@ GLGSRender::GLGSRender()
 	, m_context(nullptr)
 {
 	m_frame = new GLGSFrame();
+
+	glGenTextures(1, &flipTex);
 }
 
 GLGSRender::~GLGSRender()
 {
 	m_frame->Close();
 	delete m_context;
+	glDeleteTextures(1, &flipTex);
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)
@@ -332,8 +336,8 @@ void GLGSRender::InitVertexData()
 	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*1)] - (m_height / 2.0f);
 	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*2)] - 1/2.0f;
 
-	scaleOffsetMat[3] /= m_width/2.0f;
-	scaleOffsetMat[7] /= m_height/2.0f;
+	scaleOffsetMat[3] /= m_width / 2.0f;
+	scaleOffsetMat[7] /= m_height / 2.0f;
 
 	l = m_program.GetLocation("scaleOffsetMat");
 	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
@@ -1051,7 +1055,7 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
-  if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
 		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
 		checkForGlError("glScissor");
@@ -1082,12 +1086,47 @@ void GLGSRender::Flip()
 	}
 	else if(m_fbo.IsCreated())
 	{
+		Array<u8> pixels;
+		pixels.SetCount(m_width * m_height * 4);
+
 		m_fbo.Bind(GL_READ_FRAMEBUFFER);
+		glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, flipTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, 1, 0, 1, 0, 1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+
+		m_program.UnUse();
+		m_program.Use();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
+		glBegin(GL_QUADS);
+		glTexCoord2i(0, 1);
+		glVertex2i(0, 0);
+
+		glTexCoord2i(1, 1);
+		glVertex2i(1, 0);
+
+		glTexCoord2i(1, 0);
+		glVertex2i(1, 1);
+
+		glTexCoord2i(0, 0);
+		glVertex2i(0, 1);
+		glEnd();
+
+		/*GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 		GLfbo::Blit(
 			m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
 			m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-			GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);*/
 		m_fbo.Bind();
 	}
 
