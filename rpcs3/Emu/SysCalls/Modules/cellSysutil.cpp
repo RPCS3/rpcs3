@@ -641,10 +641,12 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 
 int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d,type=%d,fs=%d,option=%d)", 
-						audioOut,type,fs,option);
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)",
+		audioOut, type, fs, option);
 
 	option = 0;
+
+	int available = 2;
 
 	switch(fs)
 	{
@@ -662,17 +664,16 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	switch(type)
 	{
-		case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
-		case CELL_AUDIO_OUT_CODING_TYPE_AC3:
-		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
-			break;
+		case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
+		case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
+		case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
 
 		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY: return 2;
+		case CELL_AUDIO_OUT_PRIMARY: return available;
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
@@ -681,10 +682,12 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d,type=%d,fs=%d,ch=%d,option=%d)", 
-						audioOut,type,fs,ch,option);
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)",
+		audioOut, type, fs, ch, option);
 
 	option = 0;
+
+	int available = 2;
 
 	switch(fs)
 	{
@@ -702,27 +705,25 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	switch(ch)
 	{
-		case 2:
-		case 6:
-		case 8:
-			break;
+		case 2: break;
+		case 6: available = 0; break;
+		case 8: available = 0; break;
 
 		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(type)
 	{
-		case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
-		case CELL_AUDIO_OUT_CODING_TYPE_AC3:
-		case CELL_AUDIO_OUT_CODING_TYPE_DTS:
-			break;
+		case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
+		case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
+		case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
 
 		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY: return 1;
+		case CELL_AUDIO_OUT_PRIMARY: return available;
 		case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
@@ -761,31 +762,29 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 }
 
-int cellAudioOutConfigure(u32 audioOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+int cellAudioOutConfigure(u32 audioOut, mem_ptr_t<CellAudioOutConfiguration> config, mem_ptr_t<CellAudioOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
-		audioOut, config_addr, option_addr, waitForEvent);
+	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
+		audioOut, config.GetAddr(), option.GetAddr(), waitForEvent);
 
-	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration)))
+	if (!config.IsGood())
 	{
 		return CELL_EFAULT;
 	}
 
-	CellAudioOutConfiguration& config = (CellAudioOutConfiguration&)Memory[config_addr];
-
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-		if(config.channel)
+		if (config->channel)
 		{
-			Emu.GetAudioManager().GetInfo().mode.channel = config.channel;
+			Emu.GetAudioManager().GetInfo().mode.channel = config->channel;
 		}
 
-		Emu.GetAudioManager().GetInfo().mode.encoder = config.encoder;
+		Emu.GetAudioManager().GetInfo().mode.encoder = config->encoder;
 
-		if(config.downMixer)
+		if(config->downMixer)
 		{
-			Emu.GetAudioManager().GetInfo().mode.downMixer = config.downMixer;
+			Emu.GetAudioManager().GetInfo().mode.downMixer = config->downMixer;
 		}
 
 		return CELL_AUDIO_OUT_SUCCEEDED;

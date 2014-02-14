@@ -91,7 +91,7 @@ struct AudioPortConfig
 
 	AudioPortConfig();
 
-	~AudioPortConfig();
+	void finalize();
 };
 
 struct AudioConfig  //custom structure
@@ -127,15 +127,15 @@ struct AudioConfig  //custom structure
 
 AudioPortConfig::AudioPortConfig()
 	: m_is_audio_port_started(false)
-	, m_buffer(Memory.Alloc(1024 * 128, 1024))
-	, m_index(Memory.Alloc(16, 16))
+	, m_buffer(Memory.Alloc(1024 * 128, 1024)) // max 128K size
+	, m_index(Memory.Alloc(16, 16)) // allocation for u64 value "read index"
 {
 	m_config.m_port_in_use++;
 	mem64_t index(m_index);
 	index = 0;
 }
 
-AudioPortConfig::~AudioPortConfig()
+void AudioPortConfig::finalize()
 {
 	m_config.m_port_in_use--;
 	Memory.Free(m_buffer);
@@ -330,12 +330,11 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 		portConfig->status = CELL_AUDIO_STATUS_READY;
 		portConfig->nChannel = ref.nChannel;
 		portConfig->nBlock = ref.nBlock;
-		portConfig->portSize = ref.nChannel * ref.nBlock * 256;
+		portConfig->portSize = ref.nChannel * ref.nBlock * 256 * sizeof(float);
 		portConfig->portAddr = m_config.m_ports[portNum]->m_buffer; // 0x20020000
 		portConfig->readIndexAddr = m_config.m_ports[portNum]->m_index; // 0x20010010 on ps3
 
 		// portAddr - readIndexAddr ==  0xFFF0 on ps3
-		// Memory.Write64(portConfig->readIndexAddr, 1);
 	}
 
 	return CELL_OK;
@@ -361,6 +360,25 @@ int cellAudioPortStart(u32 portNum)
 	}
 	
 	m_config.m_ports[portNum]->m_is_audio_port_started = true;
+
+	std::string t_name = "AudioPort0";
+	t_name[9] += portNum;
+
+	thread t(t_name, [portNum]()
+		{
+			AudioPortConfig& ref = *m_config.m_ports[portNum];
+			mem64_t index(ref.m_index);
+
+			ConLog.Write("Port started");
+			while (ref.m_is_audio_port_started && !Emu.IsStopped())
+			{
+				Sleep(5);
+				index = (index.GetValue() + 1) % ref.m_param.nBlock;
+			}
+			ConLog.Write("Port finished");
+		});
+	t.detach();
+
 	return CELL_OK;
 }
 
@@ -378,8 +396,8 @@ int cellAudioPortClose(u32 portNum)
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
 
-	delete m_config.m_ports[portNum];
-	m_config.m_ports[portNum] = nullptr;
+	m_config.m_ports[portNum]->finalize();
+	safe_delete(m_config.m_ports[portNum]);
 	return CELL_OK;
 }
 
@@ -402,7 +420,7 @@ int cellAudioPortStop(u32 portNum)
 		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	}
 	
-	m_config.m_ports[portNum]->m_is_audio_port_started = false;
+	m_config.m_ports[portNum]->m_is_audio_port_started = false;	
 	return CELL_OK;
 }
 
@@ -449,7 +467,7 @@ int cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	eq->events.push(0, 0, 0, 0);
+	// eq->events.push(0, 0, 0, 0);
 
 	return CELL_OK;
 }
