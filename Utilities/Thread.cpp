@@ -52,11 +52,12 @@ void ThreadBase::Start()
 		});
 }
 
-void ThreadBase::Stop(bool wait)
+void ThreadBase::Stop(bool wait, bool send_destroy)
 {
 	std::lock_guard<std::mutex> lock(m_main_mutex);
 
-	m_destroy = true;
+	if (send_destroy)
+		m_destroy = true;
 
 	if(!m_executor)
 		return;

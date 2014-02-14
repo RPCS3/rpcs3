@@ -284,8 +284,10 @@ void CPUThread::ExecOnce()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 #endif
+	m_status = Running;
 	ThreadBase::Start();
-	ThreadBase::Stop();
+	ThreadBase::Stop(true,false);
+	m_status = Paused;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);

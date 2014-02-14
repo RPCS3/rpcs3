@@ -41,7 +41,7 @@ protected:
 
 public:
 	void Start();
-	void Stop(bool wait = true);
+	void Stop(bool wait = true, bool send_destroy = true);
 
 	bool Join() const;
 	bool IsAlive() const;
