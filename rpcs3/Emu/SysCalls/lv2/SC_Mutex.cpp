@@ -7,7 +7,7 @@ SysCallBase sys_mtx("sys_mutex");
 
 int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 {
-	sys_mtx.Warning("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
+	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
 
 	if (!mutex_id.IsGood() || !attr.IsGood())
 	{
@@ -38,8 +38,9 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	}
 
 	mutex_id = sys_mtx.GetNewId(new Mutex((u32)attr->protocol, is_recursive, attr->name_u64));
-	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%d): id = %d",
-		wxString(attr->name, 8).wx_str(), (u32)attr->protocol, is_recursive, mutex_id.GetValue());
+	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
+		wxString(attr->name, 8).wx_str(), (u32)attr->protocol,
+		wxString(is_recursive ? "true" : "false").wx_str(), mutex_id.GetValue());
 
 	return CELL_OK;
 }
@@ -93,7 +94,7 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	{
 		if (mutex->is_recursive)
 		{
-			if (mutex->recursive++ == 0)
+			if (++mutex->recursive == 0)
 			{
 				return CELL_EKRESOURCE;
 			}
@@ -107,7 +108,7 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 
 	switch (mutex->m_mutex.trylock(tid))
 	{
-	case SMR_OK: return CELL_OK;
+	case SMR_OK: mutex->recursive = 1; return CELL_OK;
 	case SMR_FAILED: break;
 	default: goto abort;
 	}
@@ -161,7 +162,7 @@ int sys_mutex_trylock(u32 mutex_id)
 
 	switch (mutex->m_mutex.trylock(tid))
 	{
-	case SMR_OK: return CELL_OK;
+	case SMR_OK: mutex->recursive = 1; return CELL_OK;
 	}
 
 	return CELL_EBUSY;

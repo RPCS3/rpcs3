@@ -7,10 +7,10 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr)
 {
-	sys_lwcond.Warning("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
+	sys_lwcond.Log("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
 		lwcond.GetAddr(), lwmutex.GetAddr(), attr.GetAddr());
 
-	if (!lwcond.IsGood() || !lwmutex.IsGood() || !attr.IsGood())
+	if (!lwcond.IsGood() /*|| !lwmutex.IsGood()*/ || !attr.IsGood())
 	{
 		return CELL_EFAULT;
 	}
@@ -18,13 +18,16 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	lwcond->lwmutex = lwmutex.GetAddr();
 	lwcond->lwcond_queue = sys_lwcond.GetNewId(new SleepQueue(attr->name_u64));
 
-	if (lwmutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
+	if (lwmutex.IsGood())
 	{
-		sys_lwcond.Warning("Unsupported SYS_SYNC_RETRY lwmutex protocol");
+		if (lwmutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
+		{
+			sys_lwcond.Warning("Unsupported SYS_SYNC_RETRY lwmutex protocol");
+		}
 	}
 
-	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex.attr=0x%x): id = %d", 
-		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, (u32)lwcond->lwcond_queue);
+	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex_addr=0x%x): id = %d", 
+		wxString(attr->name, 8).wx_str(), lwmutex.GetAddr(), (u32)lwcond->lwcond_queue);
 
 	return CELL_OK;
 }
@@ -78,6 +81,7 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 		if (mutex->owner.trylock(target) != SMR_OK)
 		{
 			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
 			mutex->owner.unlock(tid, target);
 		}
 	}
@@ -113,6 +117,7 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 		if (mutex->owner.trylock(target) != SMR_OK)
 		{
 			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
 			mutex->owner.unlock(tid, target);
 		}
 	}
@@ -153,6 +158,7 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 	if (mutex->owner.trylock(target) != SMR_OK)
 	{
 		mutex->owner.lock(tid);
+		mutex->recursive_count = 1;
 		mutex->owner.unlock(tid, target);
 	}
 
@@ -190,6 +196,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 
 	sq->push(tid_le);
 
+	mutex->recursive_count = 0;
 	mutex->owner.unlock(tid);
 
 	u32 counter = 0;
@@ -204,6 +211,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 		if (mutex->owner.GetOwner() == tid)
 		{
 			_mm_mfence();
+			mutex->recursive_count = 1;
 			return CELL_OK;
 		}
 

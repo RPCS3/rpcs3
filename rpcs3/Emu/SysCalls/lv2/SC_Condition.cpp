@@ -6,7 +6,7 @@ SysCallBase sys_cond("sys_cond");
 
 int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr)
 {
-	sys_cond.Warning("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=%d)",
+	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=%d)",
 		cond_id.GetAddr(), mutex_id, attr.GetAddr());
 
 	if (!cond_id.IsGood() || !attr.IsGood())
@@ -30,7 +30,7 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 	u32 id = sys_cond.GetNewId(cond);
 	cond_id = id;
 	mutex->cond_count++;
-	sys_cond.Warning("*** condition created [%s]: id = %d", wxString(attr->name, 8).wx_str(), cond_id.GetValue());
+	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", wxString(attr->name, 8).wx_str(), mutex_id, cond_id.GetValue());
 
 	return CELL_OK;
 }
@@ -75,6 +75,7 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 
 	cond->m_queue.push(tid);
 
+	mutex->recursive = 0;
 	mutex->m_mutex.unlock(tid);
 
 	u32 counter = 0;
@@ -85,11 +86,12 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 		/* switch (mutex->m_mutex.trylock(tid))
 		{
 		case SMR_OK: mutex->m_mutex.unlock(tid); break;
-		case SMR_SIGNAL: return CELL_OK;
+		case SMR_SIGNAL: mutex->recursive = 1; return CELL_OK;
 		} */
 		if (mutex->m_mutex.GetOwner() == tid)
 		{
 			_mm_mfence();
+			mutex->recursive = 1;
 			return CELL_OK;
 		}
 
@@ -126,6 +128,7 @@ int sys_cond_signal(u32 cond_id)
 		if (mutex->m_mutex.trylock(target) != SMR_OK)
 		{
 			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
 			mutex->m_mutex.unlock(tid, target);
 		}
 	}
@@ -156,6 +159,7 @@ int sys_cond_signal_all(u32 cond_id)
 		if (mutex->m_mutex.trylock(target) != SMR_OK)
 		{
 			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
 			mutex->m_mutex.unlock(tid, target);
 		}
 	}
@@ -189,6 +193,7 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	if (mutex->m_mutex.trylock(thread_id) != SMR_OK)
 	{
 		mutex->m_mutex.lock(tid);
+		mutex->recursive = 1;
 		mutex->m_mutex.unlock(tid, thread_id);
 	}
 

@@ -95,15 +95,13 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		}
 	}
 
-	int counter = 0;
-	while (*(u16*)&old_order != *(u16*)&mutex->m_freed) 
+	while (old_order != Memory.Read16(mutex.GetAddr())) 
 	{
 		Sleep(1);
-		if (++counter >= 5000)
+		if (Emu.IsStopped())
 		{
-			counter = 0;
-			cellSync.Warning("cellSyncMutexLock(mutex=0x%x, old_order=%d, order=%d, freed=%d): TIMEOUT", 
-				mutex.GetAddr(), (u16)old_order, (u16)mutex->m_order, (u16)mutex->m_freed);
+			ConLog.Warning("cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
+			break;
 		}
 	}
 	_mm_mfence();

@@ -137,8 +137,13 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
+SMutex aio_mutex;
+bool aio_init;
+
 void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
 {
+	//SMutexLocker lock (aio_mutex);
+
 	vfsFileBase* orig_file;
 	if(!sys_fs.CheckId(fd, orig_file)) return;
 
@@ -175,29 +180,42 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		error = CELL_EFAULT;
 	}
 
+	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, res=0x%x, xid=0x%x [%s])",
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.wx_str());
+
 	//start callback thread
 	if(func)
 		func.async(aio, error, xid, res);
-
-	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, res=0x%x, xid=0x%x [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.wx_str());
 }
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
 {
 	sys_fs.Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+
+	if (!aio.IsGood() || !aio_id.IsGood() || !func.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	if (!aio_init)
+	{
+		return CELL_ENXIO;
+	}
+
 	vfsFileBase* orig_file;
 	u32 fd = aio->fd;
-	if(!sys_fs.CheckId(fd, orig_file)) return CELL_ESRCH;
+	if (!sys_fs.CheckId(fd, orig_file)) return CELL_EBADF;
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-
-	thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
-	t.detach();
-	//fsAioRead(fd, aio, xid, func);
-
 	aio_id = xid;
+
+	{
+		//SMutexLocker lock(aio_mutex);
+		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
+		t.detach();
+		//fsAioRead(fd, aio, xid, func);
+	}
 
 	return CELL_OK;
 }
@@ -206,6 +224,7 @@ int cellFsAioInit(mem8_ptr_t mount_point)
 {
 	wxString mp = Memory.ReadString(mount_point.GetAddr());
 	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
+	aio_init = true;
 	return CELL_OK;
 }
 
@@ -239,4 +258,5 @@ void sys_fs_init()
 	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
 	sys_fs.AddFunc(0xdb869f20, cellFsAioInit);
 	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
+	aio_init = false;
 }

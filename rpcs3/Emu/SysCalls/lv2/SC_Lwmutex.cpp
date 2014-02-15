@@ -6,7 +6,7 @@ SysCallBase sc_lwmutex("sys_lwmutex");
 
 int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr)
 {
-	sc_lwmutex.Warning("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)", 
+	sc_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)", 
 		lwmutex.GetAddr(), attr.GetAddr());
 
 	if (!lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;

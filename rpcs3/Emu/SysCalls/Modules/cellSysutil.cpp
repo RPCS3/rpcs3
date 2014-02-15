@@ -458,12 +458,15 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 int cellSysutilCheckCallback()
 {
 	cellSysutil.Log("cellSysutilCheckCallback()");
+
 	Emu.GetCallbackManager().m_exit_callback.Check();
 
 	CPUThread& thr = Emu.GetCallbackThread();
 
-	while(Emu.IsRunning() && thr.IsAlive())
+	while (Emu.IsRunning() && thr.IsAlive())
+	{
 		Sleep(1);
+	}
 
 	return CELL_OK;
 }
@@ -471,6 +474,7 @@ int cellSysutilCheckCallback()
 int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
 {
 	cellSysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
+
 	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
 
 	wxGetApp().SendDbgCommand(DID_REGISTRED_CALLBACK);
@@ -481,6 +485,7 @@ int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
 int cellSysutilUnregisterCallback(int slot)
 {
 	cellSysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
+
 	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
 
 	wxGetApp().SendDbgCommand(DID_UNREGISTRED_CALLBACK);
@@ -646,7 +651,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	option = 0;
 
-	int available = 2;
+	int available = 2; // should be at least 2
 
 	switch(fs)
 	{
@@ -687,7 +692,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	option = 0;
 
-	int available = 2;
+	int available = 2; // should be at least 2
 
 	switch(fs)
 	{

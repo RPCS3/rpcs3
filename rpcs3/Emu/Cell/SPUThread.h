@@ -611,7 +611,7 @@ public:
 
 		case SPU_RdInMbox:
 			count = SPU.In_MBox.GetCount();
-			ConLog.Warning("GetChannelCount(%s) -> %d", wxString(spu_ch_name[ch]).wx_str(), count);
+			//ConLog.Warning("GetChannelCount(%s) -> %d", wxString(spu_ch_name[ch]).wx_str(), count);
 			return count;
 
 		case SPU_WrOutIntrMbox:

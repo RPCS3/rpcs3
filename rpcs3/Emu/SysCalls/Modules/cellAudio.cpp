@@ -334,6 +334,8 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 		portConfig->portAddr = m_config.m_ports[portNum]->m_buffer; // 0x20020000
 		portConfig->readIndexAddr = m_config.m_ports[portNum]->m_index; // 0x20010010 on ps3
 
+		ConLog.Write("*** nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
+			(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
 		// portAddr - readIndexAddr ==  0xFFF0 on ps3
 	}
 
@@ -446,6 +448,7 @@ int cellAudioSetPortLevel(u32 portNum, float level)
 int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 {
 	cellAudio.Error("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
+	key = 0x123456789ABCDEF0;
 	return CELL_OK;
 }
 
@@ -464,7 +467,8 @@ int cellAudioSetNotifyEventQueue(u64 key)
 	EventQueue* eq;
 	if (!Emu.GetEventManager().GetEventQueue(key, eq))
 	{
-		return CELL_AUDIO_ERROR_PARAM;
+		//return CELL_AUDIO_ERROR_PARAM;
+		return CELL_OK;
 	}
 
 	// eq->events.push(0, 0, 0, 0);
