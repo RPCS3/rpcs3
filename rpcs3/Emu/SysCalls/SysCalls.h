@@ -122,8 +122,10 @@ extern int sys_process_get_number_of_object(u32 object, mem32_t nump);
 extern int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size);
 extern int sys_process_get_paramsfo(mem8_ptr_t buffer);
 extern int sys_process_exit(int errorcode);
-extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
-								u32 data, u32 data_size, int prio, u64 flags );
+extern void sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
+								u32 data_addr, u32 data_size, u32 prio, u64 flags );
+extern void sys_game_process_exitspawn2(u32 path_addr, u32 argv_addr, u32 envp_addr,
+								u32 data_addr, u32 data_size, u32 prio, u64 flags);
 
 //sys_event
 extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
@@ -254,6 +256,7 @@ extern int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos);
 extern int cellFsFtruncate(u32 fd, u64 size);
 extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
+extern int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);

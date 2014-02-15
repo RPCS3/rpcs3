@@ -183,4 +183,8 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0xe9a1bd84, sys_lwcond_signal_all);
 	sysPrxForUser.AddFunc(0x52aadadf, sys_lwcond_signal_to);
 	sysPrxForUser.AddFunc(0x2a6d9d51, sys_lwcond_wait);
+
+	sysPrxForUser.AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
+	sysPrxForUser.AddFunc(0xfc52a7a9, sys_game_process_exitspawn);
+
 }
