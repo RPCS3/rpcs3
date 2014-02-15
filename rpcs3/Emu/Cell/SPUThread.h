@@ -514,11 +514,11 @@ public:
 		case MFC_PUT_CMD:
 		case MFC_GET_CMD:
 		{
-			/* if (enable_log) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
-				op & MFC_PUT_CMD ? "PUT" : "GET",
-				op & MFC_BARRIER_MASK ? "B" : "", 
-				op & MFC_FENCE_MASK ? "F" : "", 
-				lsa, ea, tag, size, cmd); */
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(), 
+				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
+				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
+				lsa, ea, tag, size, cmd);
 			if (op & MFC_PUT_CMD)
 			{
 				SMutexLocker lock(reservation.mutex);
@@ -541,8 +541,10 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			if (enable_log) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
-				op == MFC_GETLLAR_CMD ? "GETLLAR" : op == MFC_PUTLLC_CMD ? "PUTLLC" : op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC",
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+				wxString(op == MFC_GETLLAR_CMD ? "GETLLAR" :
+				op == MFC_PUTLLC_CMD ? "PUTLLC" :
+				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC").wx_str(),
 				lsa, ea, tag, size, cmd);
 
 			if (op == MFC_GETLLAR_CMD) // get reservation
@@ -601,16 +603,19 @@ public:
 
 	u32 GetChannelCount(u32 ch)
 	{
+		u32 count;
 		switch(ch)
 		{
 		case SPU_WrOutMbox:
 			return SPU.Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return SPU.In_MBox.GetCount();
+			count = SPU.In_MBox.GetCount();
+			ConLog.Warning("GetChannelCount(%s) -> %d", wxString(spu_ch_name[ch]).wx_str(), count);
+			return count;
 
 		case SPU_WrOutIntrMbox:
-			ConLog.Warning("GetChannelCount(%s) = 0", spu_ch_name[ch]);
+			ConLog.Warning("GetChannelCount(%s) = 0", wxString(spu_ch_name[ch]).wx_str());
 			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
 
 		case MFC_RdTagStat:
@@ -626,7 +631,8 @@ public:
 			return Prxy.AtomicStat.GetCount();
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).",
+				wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
 		break;
 		}
 
@@ -640,22 +646,22 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
-			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
 			while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		case SPU_WrOutMbox:
-			ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
 			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		case MFC_WrTagMask:
-			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
 			Prxy.QueryMask.SetValue(v);
 		break;
 
 		case MFC_WrTagUpdate:
-			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
+			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
 			Prxy.TagStatus.PushUncond(Prxy.QueryMask.GetValue());
 		break;
 
@@ -685,9 +691,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
 		break;
 		}
+
+		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str());
 	}
 
 	void ReadChannel(SPU_GPR_hdr& r, u32 ch)
@@ -699,22 +707,22 @@ public:
 		{
 		case SPU_RdInMbox:
 			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
-			ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+			ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
 		break;
 
 		case MFC_RdTagStat:
 			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
 		break;
 
 		case SPU_RdSigNotify1:
 			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
 		break;
 
 		case SPU_RdSigNotify2:
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
+			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
 		break;
 
 		case MFC_RdAtomicStat:
@@ -722,9 +730,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
 		break;
 		}
+
+		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str());
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }
@@ -748,7 +758,7 @@ public:
 	{
 		wxString ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().mb_str());
+		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().wx_str());
 
 		return ret;
 	}

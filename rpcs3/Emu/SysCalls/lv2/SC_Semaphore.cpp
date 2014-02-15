@@ -28,7 +28,7 @@ struct semaphore
 
 int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_count, int max_count)
 {
-	sys_sem.Log("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
+	sys_sem.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem_addr, attr_addr, initial_count, max_count);
 
 	if(!Memory.IsGoodAddr(sem_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;
@@ -52,7 +52,7 @@ int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_count, int max
 
 int sys_semaphore_destroy(u32 sem)
 {
-	sys_sem.Log("sys_semaphore_destroy(sem=0x%x)", sem);
+	sys_sem.Log("sys_semaphore_destroy(sem=%d)", sem);
 
 	if(!sys_sem.CheckId(sem)) return CELL_ESRCH;
 
@@ -75,7 +75,7 @@ int sys_semaphore_wait(u32 sem, u64 timeout)
 
 int sys_semaphore_trywait(u32 sem)
 {
-	sys_sem.Log("sys_semaphore_trywait(sem=0x%x)", sem);
+	sys_sem.Log("sys_semaphore_trywait(sem=%d)", sem);
 
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
@@ -88,7 +88,7 @@ int sys_semaphore_trywait(u32 sem)
 
 int sys_semaphore_post(u32 sem, int count)
 {
-	sys_sem.Log("sys_semaphore_post(sem=0x%x, count=%d)", sem, count);
+	sys_sem.Log("sys_semaphore_post(sem=%d, count=%d)", sem, count);
 
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
@@ -104,7 +104,7 @@ int sys_semaphore_post(u32 sem, int count)
 
 int sys_semaphore_get_value(u32 sem, u32 count_addr)
 {
-	sys_sem.Log("sys_semaphore_get_value(sem=0x%x, count_addr=0x%x)", sem, count_addr);
+	sys_sem.Log("sys_semaphore_get_value(sem=%d, count_addr=0x%x)", sem, count_addr);
 
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;

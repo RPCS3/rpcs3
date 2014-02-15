@@ -515,7 +515,7 @@ void RSXDebugger::GetSettings()
 
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
-		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		render.m_blend_color_r,
 		render.m_blend_color_g,
@@ -535,10 +535,10 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
 	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_depth_func,
-		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
 		render.m_draw_mode,
-		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
+		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,
@@ -546,7 +546,7 @@ void RSXDebugger::GetSettings()
 		render.m_scissor_h));
 	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_stencil_func,
-		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
+		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM).wx_str()));
 	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
 	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
 	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
@@ -716,7 +716,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		switch(cmd & 0x3ffff)
 		{
 		case 0x3fead:
-			DISASM("Flip and change current buffer: %d", args[0]);
+			DISASM("Flip and change current buffer: %d", (u32)args[0]);
 		break;
 
 		case NV4097_NO_OPERATION:
@@ -724,11 +724,11 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		break;
 
 		case NV406E_SET_REFERENCE:
-			DISASM("Set reference: 0x%x", args[0]);
+			DISASM("Set reference: 0x%x", (u32)args[0]);
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-			DISASM("Texture Offset[%d]: %08x", index, args[0]);
+			DISASM("Texture Offset[%d]: %08x", index, (u32)args[0]);
 			switch ((args[1] & 0x3) - 1)
 			{
 			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
@@ -736,7 +736,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			default:                      DISASM("(Bad location!);"); break;
 			}
 			DISASM("    Cubemap:%s; Dimension:0x%x; Format:0x%x; Mipmap:0x%x",
-				((args[1] >> 2) & 0x1) ? "True" : "False",
+				wxString(((args[1] >> 2) & 0x1) ? "True" : "False").wx_str(),
 				((args[1] >> 4) & 0xf),
 				((args[1] >> 8) & 0xff),
 				((args[1] >> 16) & 0xffff));
@@ -763,32 +763,32 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_A:
-			DISASM("Context DMA Color A: 0x%x", args[0]);
+			DISASM("Context DMA Color A: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_B:
-			DISASM("Context DMA Color B: 0x%x", args[0]);
+			DISASM("Context DMA Color B: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_COLOR_C:
-			DISASM("Context DMA Color C: 0x%x", args[0]);
+			DISASM("Context DMA Color C: 0x%x", (u32)args[0]);
 			if(count > 1)
-				DISASM("0x%x", args[1]);
+				DISASM("0x%x", (u32)args[1]);
 		break;
 
 		case NV4097_SET_CONTEXT_DMA_ZETA:
-			DISASM("Context DMA Zeta: 0x%x", args[0]);
+			DISASM("Context DMA Zeta: 0x%x", (u32)args[0]);
 		break;
 
 		case NV4097_SET_SURFACE_PITCH_C:
-			DISASM("Surface Pitch C: 0x%x;", args[0]);
-			DISASM("Surface Pitch D: 0x%x;", args[1]);
-			DISASM("Surface Offset C: 0x%x;", args[2]);
-			DISASM("Surface Offset D: 0x%x", args[3]);
+			DISASM("Surface Pitch C: 0x%x;", (u32)args[0]);
+			DISASM("Surface Pitch D: 0x%x;", (u32)args[1]);
+			DISASM("Surface Offset C: 0x%x;", (u32)args[2]);
+			DISASM("Surface Offset D: 0x%x", (u32)args[3]);
 		break;
 
 		case NV4097_SET_SURFACE_PITCH_Z:
-			DISASM("Surface Pitch Z: 0x%x;", args[0]);
+			DISASM("Surface Pitch Z: 0x%x;", (u32)args[0]);
 		break;
 
 		default:
@@ -805,7 +805,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		for(uint i=0; i<count; ++i)
 		{
 			if(i != 0) disasm += ", ";
-			disasm += wxString::Format("0x%x", args[i]);
+			disasm += wxString::Format("0x%x", (u32)args[i]);
 		}
 
 		disasm += ")]";

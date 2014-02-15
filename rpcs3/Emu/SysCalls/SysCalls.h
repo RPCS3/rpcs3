@@ -8,12 +8,11 @@
 #include "lv2/SC_Lwmutex.h"
 #include "lv2/SC_Lwcond.h"
 #include "lv2/SC_Event_flag.h"
+#include "lv2/SC_Condition.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
-
-extern bool enable_log;
 
 class SysCallBase //Module
 {
@@ -32,22 +31,22 @@ public:
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 		}
 	}
 
 	void Log(wxString fmt, ...)
 	{
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 		}
 	}
@@ -57,7 +56,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 //#endif
 	}
@@ -67,7 +66,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 //#endif
 	}
@@ -76,7 +75,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 
@@ -84,7 +83,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 
@@ -123,21 +122,27 @@ extern int sys_process_get_number_of_object(u32 object, mem32_t nump);
 extern int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size);
 extern int sys_process_get_paramsfo(mem8_ptr_t buffer);
 extern int sys_process_exit(int errorcode);
-extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
-								u32 data, u32 data_size, int prio, u64 flags );
+extern void sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
+								u32 data_addr, u32 data_size, u32 prio, u64 flags );
+extern void sys_game_process_exitspawn2(u32 path_addr, u32 argv_addr, u32 envp_addr,
+								u32 data_addr, u32 data_size, u32 prio, u64 flags);
 
 //sys_event
 extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
-extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
-extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
-extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
-extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
+extern int sys_event_queue_destroy(u32 equeue_id, int mode);
+extern int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> _event, u64 timeout);
+extern int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number);
 extern int sys_event_queue_drain(u32 event_queue_id);
+extern int sys_event_port_create(mem32_t eport_id, int port_type, u64 name);
+extern int sys_event_port_destroy(u32 eport_id);
+extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+extern int sys_event_port_disconnect(u32 eport_id);
+extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
 
 //sys_event_flag
 extern int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init);
 extern int sys_event_flag_destroy(u32 eflag_id);
-extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u32 timeout);
+extern int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout);
 extern int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result);
 extern int sys_event_flag_set(u32 eflag_id, u64 bitptn);
 extern int sys_event_flag_clear(u32 eflag_id, u64 bitptn);
@@ -168,11 +173,12 @@ extern int sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex);
 extern int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex);
 
 //sys_cond
-extern int sys_cond_create(u32 cond_addr, u32 mutex_id, u32 attr_addr);
+extern int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr);
 extern int sys_cond_destroy(u32 cond_id);
 extern int sys_cond_wait(u32 cond_id, u64 timeout);
 extern int sys_cond_signal(u32 cond_id);
 extern int sys_cond_signal_all(u32 cond_id);
+extern int sys_cond_signal_to(u32 cond_id, u32 thread_id);
 
 //sys_mutex
 extern int sys_mutex_create(u32 mutex_id_addr, u32 attr_addr);
@@ -180,6 +186,16 @@ extern int sys_mutex_destroy(u32 mutex_id);
 extern int sys_mutex_lock(u32 mutex_id, u64 timeout);
 extern int sys_mutex_trylock(u32 mutex_id);
 extern int sys_mutex_unlock(u32 mutex_id);
+
+//sys_rwlock
+extern int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
+extern int sys_rwlock_destroy(u32 rw_lock_id);
+extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_tryrlock(u32 rw_lock_id);
+extern int sys_rwlock_runlock(u32 rw_lock_id);
+extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
+extern int sys_rwlock_trywlock(u32 rw_lock_id);
+extern int sys_rwlock_wunlock(u32 rw_lock_id);
 
 //ppu_thread
 extern void sys_ppu_thread_exit(int errorcode);
@@ -197,7 +213,7 @@ extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 
 //memory
-extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
+extern int sys_memory_container_create(mem32_t cid, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
 extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
@@ -240,6 +256,7 @@ extern int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos);
 extern int cellFsFtruncate(u32 fd, u64 size);
 extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
+extern int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
@@ -290,13 +307,13 @@ extern int cellMouseGetRawData(u32 port_no, mem_class_t data);
 extern int cellGcmCallback(u32 context_addr, u32 count);
 
 //sys_tty
-extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
-extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
+extern int sys_tty_read(s32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
+extern int sys_tty_write(s32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
-extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size, u64 p4);
+extern int _sys_heap_memalign(u32 heap_id, u32 align, u32 size);
 
 //sys_spu
 extern int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr);
@@ -307,9 +324,11 @@ extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_suspend(u32 id);
 extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
-extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
 extern int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
+extern int sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
+extern int sys_spu_thread_group_disconnect_event(u32 id, u32 et);
 extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
+extern int sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
 extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
@@ -318,7 +337,10 @@ extern int sys_spu_thread_write_spu_mb(u32 id, u32 value);
 extern int sys_spu_thread_set_spu_cfg(u32 id, u64 value);
 extern int sys_spu_thread_get_spu_cfg(u32 id, mem64_t value);
 extern int sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
+extern int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
+extern int sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
 extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
+extern int sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 extern int sys_spu_thread_get_exit_status(u32 id, mem32_t status);
 
 //sys_time
@@ -350,16 +372,6 @@ extern int sys_trace_allocate_buffer();
 extern int sys_trace_free_buffer();
 extern int sys_trace_create2();
 
-//sys_rwlock
-extern int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
-extern int sys_rwlock_destroy(u32 rw_lock_id);
-extern int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
-extern int sys_rwlock_tryrlock(u32 rw_lock_id);
-extern int sys_rwlock_runlock(u32 rw_lock_id);
-extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
-extern int sys_rwlock_trywlock(u32 rw_lock_id);
-extern int sys_rwlock_wunlock(u32 rw_lock_id);
-
 //sys_rsx
 extern int sys_rsx_device_open();
 extern int sys_rsx_device_close();
@@ -374,7 +386,7 @@ extern int sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 a3);
 extern int sys_rsx_device_unmap();
 extern int sys_rsx_attribute();
 
-#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", wxString(__FUNCTION__).wx_str())
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]

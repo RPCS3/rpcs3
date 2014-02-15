@@ -91,9 +91,9 @@ public:
 	{
 		return 
 			wxString::Format("%s[%d] Thread%s", 
-				GetTypeString().mb_str(),
+				GetTypeString().wx_str(),
 				m_id,
-				(GetName().empty() ? "" : std::string(" (" + GetName() + ")").c_str())
+				wxString(GetName().empty() ? "" : wxString::Format(" (%s)", + wxString(GetName()).wx_str())).wx_str()
 			);
 	}
 
@@ -114,7 +114,8 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		return (GetFName() + wxString::Format("[0x%08llx]", PC)).mb_str();
+		wxString temp = (GetFName() + wxString::Format("[0x%08llx]", PC));
+		return std::string(temp.mb_str());
 	}
 
 public:

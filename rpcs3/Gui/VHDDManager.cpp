@@ -141,7 +141,7 @@ void VHDDExplorer::Export(const wxString& path, const wxString& to)
 {
 	if(!m_hdd->Open(path))
 	{
-		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", path.mb_str()));
+		wxMessageBox(wxString::Format("EXPORT ERROR: file open error. (%s)", path.wx_str()));
 		return;
 	}
 
@@ -188,7 +188,7 @@ void VHDDExplorer::OnDropFiles(wxDropFilesEvent& event)
 
 	for(int i=0; i<count; ++i)
 	{
-		ConLog.Write("Importing '%s'", dropped[i].mb_str());
+		ConLog.Write("Importing '%s'", dropped[i].wx_str());
 		Import(dropped[i], wxFileName(dropped[i]).GetFullName());
 	}
 

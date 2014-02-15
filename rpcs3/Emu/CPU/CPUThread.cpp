@@ -142,7 +142,7 @@ void CPUThread::SetBranch(const u64 pc, bool record_branch)
 {
 	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().mb_str(), m_offset + pc, m_offset + PC);
+		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().wx_str(), m_offset + pc, m_offset + PC);
 		Emu.Pause();
 	}
 
@@ -284,8 +284,10 @@ void CPUThread::ExecOnce()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 #endif
+	m_status = Running;
 	ThreadBase::Start();
-	ThreadBase::Stop();
+	ThreadBase::Stop(true,false);
+	m_status = Paused;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
@@ -294,7 +296,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	ConLog.Write("%s enter", CPUThread::GetFName());
+	ConLog.Write("%s enter", CPUThread::GetFName().wx_str());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -345,16 +347,16 @@ void CPUThread::Task()
 	}
 	catch(const wxString& e)
 	{
-		ConLog.Error("Exception: %s", e.mb_str());
+		ConLog.Error("Exception: %s", e.wx_str());
 	}
 	catch(const char* e)
 	{
-		ConLog.Error("Exception: %s", e);
+		ConLog.Error("Exception: %s", wxString(e).wx_str());
 	}
 	catch(int exitcode)
 	{
 		ConLog.Success("Exit Code: %d", exitcode);
 	}
 
-	ConLog.Write("%s leave", CPUThread::GetFName());
+	ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
 }

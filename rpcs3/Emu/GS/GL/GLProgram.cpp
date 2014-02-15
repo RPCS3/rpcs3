@@ -20,7 +20,7 @@ int GLProgram::GetLocation(const wxString& name)
 	m_locations[pos].name = name;
 
 	m_locations[pos].loc = glGetUniformLocation(id, name);
-	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name.mb_str()));
+	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name.wx_str()));
 	return m_locations[pos].loc;
 }
 
@@ -51,7 +51,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength+1];
 			memset(buf, 0, bufLength+1);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			ConLog.Error("Could not link program: %s", buf);
+			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
 			delete[] buf;
 		}
 	}
@@ -68,7 +68,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength];
 			memset(buf, 0, bufLength);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			ConLog.Error("Could not link program: %s", buf);
+			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
 			delete[] buf;
 		}
 	}

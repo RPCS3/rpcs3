@@ -69,7 +69,7 @@ private:
 	{
 		SysCalls::DoSyscall(CPU.GPR[11]);
 
-		if(enable_log)
+		if(Ini.HLELogging.GetValue())
 		{
 			ConLog.Warning("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)
@@ -3950,7 +3950,7 @@ private:
 
 		for(uint i=0; i<32; ++i) ConLog.Write("r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) ConLog.Write("f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).mb_str(), CPU.VPR[i].ToString().mb_str());
+		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).wx_str(), CPU.VPR[i].ToString().wx_str());
 		ConLog.Write("CR = 0x%08x", CPU.CR);
 		ConLog.Write("LR = 0x%llx", CPU.LR);
 		ConLog.Write("CTR = 0x%llx", CPU.CTR);

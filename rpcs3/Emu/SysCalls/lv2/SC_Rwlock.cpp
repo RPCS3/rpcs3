@@ -27,8 +27,8 @@ int sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64));
 
-	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id=%d", 
-		attr->name, (u32)attr->attr_protocol, rw_lock_id.GetValue());
+	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d", 
+		wxString(attr->name, 8).wx_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());
 
 	return CELL_OK;
 }
@@ -51,7 +51,7 @@ int sys_rwlock_destroy(u32 rw_lock_id)
 
 int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -63,7 +63,11 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			return CELL_ETIMEDOUT;
+		}
 		Sleep(1);
 
 		if (rw->rlock_trylock(tid)) return CELL_OK;
@@ -72,7 +76,6 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 		{
 			if (!timeout) 
 			{
-				sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=%d): TIMEOUT", rw_lock_id);
 				counter = 0;
 			}
 			else
@@ -109,7 +112,7 @@ int sys_rwlock_runlock(u32 rw_lock_id)
 
 int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=%llu)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
 
 	RWLock* rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
@@ -123,7 +126,11 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			return CELL_ETIMEDOUT;
+		}
 		Sleep(1);
 
 		if (rw->wlock_trylock(tid, true)) return CELL_OK;
@@ -132,7 +139,6 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 		{
 			if (!timeout) 
 			{
-				sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=%d): TIMEOUT", rw_lock_id);
 				counter = 0;
 			}
 			else

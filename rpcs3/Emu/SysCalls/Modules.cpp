@@ -408,22 +408,22 @@ void Module::SetName(const std::string& name)
 
 void Module::Log(const u32 id, wxString fmt, ...)
 {
-	if(enable_log)
+	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 }
 
 void Module::Log(wxString fmt, ...)
 {
-	if(enable_log)
+	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).mb_str());
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).wx_str());
 		va_end(list);
 	}
 }
@@ -432,7 +432,7 @@ void Module::Warning(const u32 id, wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+	ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 	va_end(list);
 }
 
@@ -440,7 +440,7 @@ void Module::Warning(wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).mb_str());
+	ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).wx_str());
 	va_end(list);
 }
 
@@ -448,7 +448,7 @@ void Module::Error(const u32 id, wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).mb_str() + wxString::FormatV(fmt, list).mb_str());
+	ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
 	va_end(list);
 }
 
@@ -456,7 +456,7 @@ void Module::Error(wxString fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).mb_str());
+	ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).wx_str());
 	va_end(list);
 }
 

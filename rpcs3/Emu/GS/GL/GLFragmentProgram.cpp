@@ -420,7 +420,7 @@ void GLShaderProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			ConLog.Error("Failed to compile shader: %s", buf);
+			ConLog.Error("Failed to compile shader: %s", wxString(buf).wx_str());
 			delete[] buf;
 		}
 

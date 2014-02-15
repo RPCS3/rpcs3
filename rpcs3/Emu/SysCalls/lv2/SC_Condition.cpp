@@ -1,61 +1,52 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "SC_Mutex.h"
+#include "Emu/SysCalls/lv2/SC_Condition.h"
 
 SysCallBase sys_cond("sys_cond");
-extern SysCallBase sys_mtx;
 
-struct condition_attr
+int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr)
 {
-	u32 pshared;
-	int flags;
-	u64 ipc_key;
-	char name[8];
-};
+	sys_cond.Warning("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=%d)",
+		cond_id.GetAddr(), mutex_id, attr.GetAddr());
 
-struct condition
-{
-	wxCondition cond;
-	condition_attr attr;
-
-	condition(wxMutex& mtx, const condition_attr& attr)
-		: cond(mtx)
-		, attr(attr)
+	if (!cond_id.IsGood() || !attr.IsGood())
 	{
+		return CELL_EFAULT;
 	}
-};
 
-int sys_cond_create(u32 cond_addr, u32 mutex_id, u32 attr_addr)
-{
-	sys_cond.Warning("sys_cond_create(cond_addr=0x%x, mutex_id=0x%x, attr_addr=%d)",
-		cond_addr, mutex_id, attr_addr);
+	if (attr->pshared.ToBE() != se32(0x200))
+	{
+		sys_cond.Error("Invalid pshared attribute(0x%x)", (u32)attr->pshared);
+		return CELL_EINVAL;
+	}
 
-	if(!Memory.IsGoodAddr(cond_addr) || !Memory.IsGoodAddr(attr_addr)) return CELL_EFAULT;
+	mutex* mtx_data;
+	if (!Emu.GetIdManager().GetIDData(mutex_id, mtx_data))
+	{
+		return CELL_ESRCH;
+	}
 
-	condition_attr attr = (condition_attr&)Memory[attr_addr];
-
-	attr.pshared = re(attr.pshared);
-	attr.ipc_key = re(attr.ipc_key);
-	attr.flags = re(attr.flags);
-	
-	sys_cond.Log("*** pshared = %d", attr.pshared);
-	sys_cond.Log("*** ipc_key = 0x%llx", attr.ipc_key);
-	sys_cond.Log("*** flags = 0x%x", attr.flags);
-	sys_cond.Log("*** name = %s", attr.name);
-
-	mutex* mtx_data = nullptr;
-	if(!sys_mtx.CheckId(mutex_id, mtx_data)) return CELL_ESRCH;
-
-	Memory.Write32(cond_addr, sys_cond.GetNewId(new condition(mtx_data->mtx, attr)));
+	cond_id = sys_cond.GetNewId(new condition(mtx_data->mtx, attr->name_u64));
+	sys_cond.Warning("*** condition created [%s]: id = %d", wxString(attr->name, 8).wx_str(), cond_id.GetValue());
 
 	return CELL_OK;
 }
 
 int sys_cond_destroy(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_destroy(cond_id=0x%x)", cond_id);
+	sys_cond.Error("sys_cond_destroy(cond_id=%d)", cond_id);
 
-	if(!sys_cond.CheckId(cond_id)) return CELL_ESRCH;
+	condition* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (true) // TODO
+	{
+		return CELL_EBUSY;
+	}
 
 	Emu.GetIdManager().RemoveID(cond_id);
 	return CELL_OK;
@@ -63,7 +54,7 @@ int sys_cond_destroy(u32 cond_id)
 
 int sys_cond_wait(u32 cond_id, u64 timeout)
 {
-	sys_cond.Log("sys_cond_wait(cond_id=0x%x, timeout=0x%llx)", cond_id, timeout);
+	sys_cond.Warning("sys_cond_wait(cond_id=%d, timeout=%lld)", cond_id, timeout);
 
 	condition* cond_data = nullptr;
 	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
@@ -72,7 +63,11 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
-		if (Emu.IsStopped()) return CELL_ETIMEDOUT;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_cond_wait(cond_id=%d, ...) aborted", cond_id);
+			return CELL_ETIMEDOUT;
+		}
 
 		switch (cond_data->cond.WaitTimeout(1))
 		{
@@ -85,7 +80,6 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 		{
 			if (!timeout) 
 			{
-				sys_cond.Warning("sys_cond_wait(cond_id=0x%x, timeout=0x%llx): TIMEOUT", cond_id, timeout);
 				counter = 0;
 			}
 			else
@@ -98,7 +92,7 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 
 int sys_cond_signal(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal(cond_id=0x%x)", cond_id);
+	sys_cond.Warning("sys_cond_signal(cond_id=%d)", cond_id);
 
 	condition* cond_data = nullptr;
 	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
@@ -110,12 +104,19 @@ int sys_cond_signal(u32 cond_id)
 
 int sys_cond_signal_all(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal_all(cond_id=0x%x)", cond_id);
+	sys_cond.Warning("sys_cond_signal_all(cond_id=%d)", cond_id);
 
 	condition* cond_data = nullptr;
 	if(!sys_cond.CheckId(cond_id, cond_data)) return CELL_ESRCH;
 
 	cond_data->cond.Broadcast();
+
+	return CELL_OK;
+}
+
+int sys_cond_signal_to(u32 cond_id, u32 thread_id)
+{
+	sys_cond.Error("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
 
 	return CELL_OK;
 }

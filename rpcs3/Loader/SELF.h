@@ -25,7 +25,7 @@ struct SceHeader
 	void Show()
 	{
 		ConLog.Write("Magic: %08x",			se_magic);
-		ConLog.Write("Class: %s",			"SELF");
+		ConLog.Write("Class: %s",			wxString("SELF").wx_str());
 		ConLog.Write("hver: 0x%08x",		se_hver);
 		ConLog.Write("flags: 0x%04x",		se_flags);
 		ConLog.Write("type: 0x%04x",		se_type);

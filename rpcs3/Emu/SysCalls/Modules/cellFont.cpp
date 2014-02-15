@@ -308,10 +308,11 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 
 int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
 {
+	wxString fp = fontPath.GetString();
 	cellFont.Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
-		library.GetAddr(), fontPath.GetString(), subNum, uniqueId, font.GetAddr());
+		library.GetAddr(), fp.wx_str(), subNum, uniqueId, font.GetAddr());
 
-	vfsFile f(fontPath.GetString());
+	vfsFile f(fp);
 	if (!f.IsOpened())
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
@@ -508,7 +509,7 @@ int cellFontBindRenderer(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontRenderer> r
 	cellFont.Warning("cellFontBindRenderer(font_addr=0x%x, renderer_addr=0x%x)",
 		font.GetAddr(), renderer.GetAddr());
 	
-	if (!font.IsGood() || !renderer.GetAddr())
+	if (!font.IsGood() || !renderer.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_ALREADY_BIND;
@@ -591,11 +592,11 @@ int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<C
 
 	// Move the rendered character to the surface
 	unsigned char* buffer = (unsigned char*)Memory.VirtualToRealAddr(surface->buffer_addr);
-	for (u32 ypos = 0; ypos < height; ypos++){
+	for (u32 ypos = 0; ypos < (u32)height; ypos++){
 		if ((u32)y + ypos + yoff + baseLineY >= surface->height)
 			break;
 
-		for (u32 xpos = 0; xpos < width; xpos++){
+		for (u32 xpos = 0; xpos < (u32)width; xpos++){
 			if ((u32)x + xpos >= surface->width)
 				break;
 

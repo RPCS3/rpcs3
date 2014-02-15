@@ -385,6 +385,15 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Event_flag.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Event.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\TRP.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\GS\RSXTexture.cpp">
       <Filter>Emu\GS</Filter>
     </ClCompile>

@@ -40,7 +40,7 @@ void GameViewer::LoadGames()
 			m_games.Add(buf);
 	}
 
-	//ConLog.Write("path: %s", m_path.c_str());
+	//ConLog.Write("path: %s", m_path.wx_str());
 	//ConLog.Write("folders count: %d", m_games.GetCount());
 }
 
@@ -91,9 +91,9 @@ void GameViewer::DClick(wxListEvent& event)
 	const wxString& path = m_path + m_game_data[i].root;
 
 	Emu.Stop();
-	if(!Emu.BootGame(path.c_str()))
+	if(!Emu.BootGame(path.ToStdString()))
 	{
-		ConLog.Error("Boot error: elf not found! [%s]", path.mb_str());
+		ConLog.Error("Boot error: elf not found! [%s]", path.wx_str());
 		return;
 	}
 	Emu.Run();

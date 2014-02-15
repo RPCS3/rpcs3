@@ -45,15 +45,14 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	s_b_main.Add(m_btn_pause,		wxSizerFlags().Border(wxALL, 5));
 	s_b_main.Add(m_choice_units,	wxSizerFlags().Border(wxALL, 5));
 
+	//Registers
 	m_regs = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
-	m_regs->SetMinSize(wxSize(495, 100));
 	m_regs->SetEditable(false);
 
 	//Call Stack
 	m_calls = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
-	m_calls->SetMinSize(wxSize(495, 100));
 	m_calls->SetEditable(false);
 
 	m_list ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -451,12 +450,12 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetLabel(wxString::Format("%llx", CPU->PC));
+	if(CPU) p_pc->SetValue(wxString::Format("%llx", CPU->PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
 		u64 pc = CPU ? CPU->PC : 0x0;
-		sscanf(p_pc->GetLabel(), "%llx", &pc);
+		sscanf(p_pc->GetValue(), "%llx", &pc);
 		remove_markedPC.AddCpy(Emu.GetMarkedPoints().AddCpy(pc));
 		ShowAddr(CentrePc(pc));
 	}

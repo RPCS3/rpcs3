@@ -1,0 +1,1 @@
+every Folder in this directory gets cleared when  cellSysCacheClear() is called, so don't store important data here

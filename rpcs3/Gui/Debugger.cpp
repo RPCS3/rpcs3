@@ -27,7 +27,7 @@ public:
 		s_b_main.Add(new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL), 0, wxEXPAND);
 		s_b_main.Add(m_btn_restart,	wxSizerFlags().Border(wxALL, 5));
 
-		SetSizer(&s_b_main);
+		SetSizerAndFit(&s_b_main);
 		Layout();
 
 		UpdateUI();

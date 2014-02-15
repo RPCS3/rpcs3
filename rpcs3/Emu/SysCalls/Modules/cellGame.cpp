@@ -92,6 +92,17 @@ enum
 	CELL_GAME_PARAMID_APP_VER			= 106,
 };
 
+//Error dialog types
+enum
+{
+	CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA      =   0,
+	CELL_GAME_ERRDIALOG_BROKEN_HDDGAME       =   1,
+	CELL_GAME_ERRDIALOG_NOSPACE              =   2,
+	CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA = 100,
+	CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME  = 101,
+	CELL_GAME_ERRDIALOG_NOSPACE_EXIT         = 102,
+};
+
 struct CellGameContentSize
 {
 	be_t<s32> hddFreeSizeKB;
@@ -107,7 +118,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 	
-	wxString dir ("/dev_hdd0/game/" + Emu.m_title_id + "/USRDIR");
+	wxString dir = wxEmptyString;
 
 	type				= CELL_GAME_GAMETYPE_DISC;
 	attributes			= 0;
@@ -260,9 +271,29 @@ int cellGameGetLocalWebContentPath()
 	return CELL_OK;
 }
 
-int cellGameContentErrorDialog()
+int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
+
+	if (Memory.IsGoodAddr(dirName_addr))
+		return CELL_GAME_ERROR_PARAM;
+
+	char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
+	std::string errorName;
+	switch(type)
+	{
+		case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
+		case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
+		case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
+		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
+		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
+		case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
+		default: return CELL_GAME_ERROR_PARAM;
+	}
+
+	std::string errorMsg = wxString::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
+		wxString(errorName).wx_str(), errNeedSizeKB, wxString(dirName).wx_str());
+	wxMessageBox(errorMsg, wxGetApp().GetAppName(), wxICON_ERROR | wxOK);
 	return CELL_OK;
 }
 

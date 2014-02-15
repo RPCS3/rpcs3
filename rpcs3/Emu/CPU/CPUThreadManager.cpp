@@ -36,7 +36,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	default: assert(0);
 	}
 	
-	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", new_thread->GetTypeString().mb_str()).mb_str(), new_thread));
+	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", new_thread->GetTypeString().wx_str()).ToStdString(), new_thread));
 
 	m_threads.Add(new_thread);
 #ifndef QT_UI
@@ -92,6 +92,8 @@ s32 CPUThreadManager::GetThreadNumById(CPUThreadType type, u32 id)
 CPUThread* CPUThreadManager::GetThread(u32 id)
 {
 	CPUThread* res;
+
+	if (!id) return nullptr;
 
 	if (!Emu.GetIdManager().GetIDData(id, res)) return nullptr;
 

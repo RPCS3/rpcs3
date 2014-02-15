@@ -3,19 +3,19 @@
 #define NOMINMAX
 
 #ifndef QT_UI
-#include <wx/string.h>
-
+#include <wx/msw/setup.h>
 #include <wx/wx.h>
+#include <wx/string.h>
 #include <wx/propdlg.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
 
 #include <wx/wfstream.h>
 #include <wx/dir.h>
-#include <wx/generic/progdlgg.h>
 #include <wx/spinctrl.h>
 #include <wx/datetime.h>
 #include <wx/filepicker.h>
+#include <wx/menuitem.h>
 
 #include <wx/wxprec.h>
 #endif

@@ -158,7 +158,7 @@ int cellSysmoduleSetMemcontainer(u32 ct_id)
 
 int cellSysmoduleLoadModule(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
+	cellSysmodule.Warning("cellSysmoduleLoadModule(%s)", wxString(getModuleName(id)).wx_str());
 	Module* m = GetModuleById(id);
 
 	if(!m)
@@ -177,7 +177,7 @@ int cellSysmoduleLoadModule(u16 id)
 
 int cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleUnloadModule(%s)", getModuleName(id));
+	cellSysmodule.Warning("cellSysmoduleUnloadModule(%s)", wxString(getModuleName(id)).wx_str());
 	Module* m = GetModuleById(id);
 
 	if(!m)
@@ -196,7 +196,7 @@ int cellSysmoduleUnloadModule(u16 id)
 
 int cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleIsLoaded(%s)", getModuleName(id));
+	cellSysmodule.Warning("cellSysmoduleIsLoaded(%s)", wxString(getModuleName(id)).wx_str());
 	Module* m = GetModuleById(id);
 
 	if(!m)

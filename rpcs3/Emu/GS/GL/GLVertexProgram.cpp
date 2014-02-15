@@ -187,7 +187,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 
 		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
+		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", wxString(cond_string_table[d0.cond]).wx_str(), wxString(swizzle).wx_str(), wxString(swizzle).wx_str());
 	}
 
 	wxString mask = GetMask(is_sca);
@@ -314,16 +314,16 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 	for(int i=m_funcs.GetCount() - 1; i>0; --i)
 	{
-		fp += wxString::Format("void %s();\n", m_funcs[i].name.mb_str());
+		fp += wxString::Format("void %s();\n", m_funcs[i].name.wx_str());
 	}
 
 	wxString f = wxEmptyString;
 
-	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%sgl_Position = gl_Position * scaleOffsetMat;\n}\n", m_funcs[0].name.mb_str(), BuildFuncBody(m_funcs[0]).mb_str());
+	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%sgl_Position = gl_Position * scaleOffsetMat;\n}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
 
 	for(uint i=1; i<m_funcs.GetCount(); ++i)
 	{
-		f += wxString::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.mb_str(), BuildFuncBody(m_funcs[i]).mb_str());
+		f += wxString::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.wx_str(), BuildFuncBody(m_funcs[i]).wx_str());
 	}
 
 	static const wxString& prot = 
@@ -334,7 +334,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 		"%s\n"
 		"%s";
 
-	return wxString::Format(prot, p.mb_str(), fp.mb_str(), f.mb_str());
+	return wxString::Format(prot, p.wx_str(), fp.wx_str(), f.wx_str());
 }
 
 void GLVertexDecompilerThread::Task()
@@ -483,7 +483,7 @@ void GLVertexProgram::Compile()
 
 	id = glCreateShader(GL_VERTEX_SHADER);
 
-	const char* str = shader.c_str();
+	const char* str = shader.mb_str();
 	const int strlen = shader.Len();
 
 	glShaderSource(id, 1, &str, &strlen);
@@ -501,7 +501,7 @@ void GLVertexProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			ConLog.Error("Failed to compile vertex shader: %s", buf);
+			ConLog.Error("Failed to compile vertex shader: %s", wxString(buf).wx_str());
 			delete[] buf;
 		}
 
