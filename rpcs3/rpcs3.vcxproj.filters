@@ -394,6 +394,9 @@
     <ClCompile Include="Loader\TRP.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\GS\RSXTexture.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

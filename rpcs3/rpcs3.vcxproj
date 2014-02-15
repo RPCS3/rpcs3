@@ -243,6 +243,7 @@
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\GS\GSRender.cpp" />
+    <ClCompile Include="Emu\GS\RSXTexture.cpp" />
     <ClCompile Include="Emu\GS\RSXThread.cpp" />
     <ClCompile Include="Emu\HDD\HDD.cpp" />
     <ClCompile Include="Emu\Io\Keyboard.cpp" />

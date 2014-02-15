@@ -13,6 +13,9 @@
 
 extern GLenum g_last_gl_error;
 void printGlError(GLenum err, const char* situation);
+uint32_t LinearToSwizzleAddress(
+	uint32_t x, uint32_t y, uint32_t z,
+	uint32_t log2_width, uint32_t log2_height, uint32_t log2_depth);
 
 #if RSX_DEBUG
 #define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
@@ -51,9 +54,11 @@ public:
 		case 1: return GL_REPEAT;
 		case 2: return GL_MIRRORED_REPEAT;
 		case 3: return GL_CLAMP_TO_EDGE;
-		case 4: return GL_TEXTURE_BORDER;
-		case 5: return GL_CLAMP_TO_EDGE;//GL_CLAMP;
-		//case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case 4: return GL_CLAMP_TO_BORDER;
+		case 5: return GL_CLAMP_TO_EDGE;
+		case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case 7: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+		case 8: return GL_MIRROR_CLAMP_EXT;
 		}
 
 		ConLog.Error("Texture wrap error: bad wrap (%d).", wrap);
@@ -63,9 +68,9 @@ public:
 	void Init(RSXTexture& tex)
 	{
 		Bind();
-		if(!Memory.IsGoodAddr(tex.GetOffset()))
+		if(!Memory.IsGoodAddr(GetAddress(tex.GetOffset(), tex.GetLocation())))
 		{
-			ConLog.Error("Bad texture address=0x%x", tex.GetOffset());
+			ConLog.Error("Bad texture address=0x%x", GetAddress(tex.GetOffset(), tex.GetLocation()));
 			return;
 		}
 		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
@@ -77,12 +82,13 @@ public:
 		bool is_swizzled = (tex.GetFormat() & 0x20) == 0;
 
 		glPixelStorei(GL_PACK_ALIGNMENT, tex.m_pitch);
-		char* pixels = (char*)Memory.GetMemFromAddr(tex.GetOffset());
+		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
+		char* unswizzledPixels;
 
 		switch(format)
 		{
 		case 0x81:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
@@ -94,39 +100,60 @@ public:
 		break;
 
 		case 0x85:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			if(is_swizzled)
+			{
+				uint32_t *src, *dst;
+				uint32_t log2width, log2height;
+
+				unswizzledPixels = (char*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
+				src = (uint32_t*)pixels;
+				dst = (uint32_t*)unswizzledPixels;
+
+				log2width = log(tex.GetWidth())/log(2);
+				log2height = log(tex.GetHeight())/log(2);
+
+				for(int i=0; i<tex.GetHeight(); i++)
+				{
+					for(int j=0; j<tex.GetWidth(); j++)
+					{
+						dst[(i*tex.GetHeight()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					}
+				}
+			}
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
 		case 0x86:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 8;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 
 		case 0x87:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 16;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 
 		case 0x88:
 		{
-			u32 size = ((tex.m_width + 3) / 4) * ((tex.m_height + 3) / 4) * 16;
+			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.m_width, tex.m_height, 0, size, pixels);
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
 			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
 		}
 		break;
 		
 		case 0x94:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_RED, GL_SHORT, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
@@ -135,30 +162,30 @@ public:
 		break;
 
 		case 0x9a:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_HALF_FLOAT, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_HALF_FLOAT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
 		case 0x9e:
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.m_width, tex.m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
 		}
 		break;
 
-		default: ConLog.Error("Init tex error: Bad tex format (0x%x | 0x%x | 0x%x)", format, tex.GetFormat() & 0x20, tex.GetFormat() & 0x40); break;
+		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, is_swizzled ? "swizzled" : "linear", tex.GetFormat() & 0x40); break;
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.m_mipmap - 1);
-		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.m_mipmap > 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.Getmipmap() - 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.Getmipmap() > 1);
 
 		if(format != 0x81 && format != 0x94)
 		{
-			u8 remap_a = tex.m_remap & 0x3;
-			u8 remap_r = (tex.m_remap >> 2) & 0x3;
-			u8 remap_g = (tex.m_remap >> 4) & 0x3;
-			u8 remap_b = (tex.m_remap >> 6) & 0x3;
+			u8 remap_a = tex.GetRemap() & 0x3;
+			u8 remap_r = (tex.GetRemap() >> 2) & 0x3;
+			u8 remap_g = (tex.GetRemap() >> 4) & 0x3;
+			u8 remap_b = (tex.GetRemap() >> 6) & 0x3;
 
 			static const int gl_remap[] =
 			{
@@ -174,6 +201,8 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
 		}
 		
+		checkForGlError("GLTexture::Init() -> remap");
+
 		static const int gl_tex_zfunc[] =
 		{
 			GL_NEVER,
@@ -186,14 +215,18 @@ public:
 			GL_ALWAYS,
 		};
 		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.m_wraps));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.m_wrapt));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.m_wrapr));
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.m_zfunc]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.GetWrapS()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.GetWrapT()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.GetWrapR()));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
+
+		checkForGlError("GLTexture::Init() -> parameters1");
 		
-		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.m_bias);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, tex.m_minlod);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, tex.m_maxlod);
+		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.GetBias());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.GetMinLOD() >> 8));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.GetMaxLOD() >> 8));
+
+		checkForGlError("GLTexture::Init() -> parameters2");
 		
 		static const int gl_tex_filter[] =
 		{
@@ -207,20 +240,28 @@ public:
 			GL_NEAREST,
 		};
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.m_min_filter]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.m_mag_filter]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.GetMinFilter()]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.GetMagFilter()]);
+
+		checkForGlError("GLTexture::Init() -> filters");
+
 		//Unbind();
+
+		if(is_swizzled && format == 0x85)
+		{
+			free(unswizzledPixels);
+		}
 	}
 
 	void Save(RSXTexture& tex, const wxString& name)
 	{
-		if(!m_id || !tex.m_offset || !tex.m_width || !tex.m_height) return;
+    if(!m_id || !tex.GetOffset() || !tex.GetWidth() || !tex.GetHeight()) return;
 
-		u32* alldata = new u32[tex.m_width * tex.m_height];
+		u32* alldata = new u32[tex.GetWidth() * tex.GetHeight()];
 
 		Bind();
 
-		switch(tex.m_format & ~(0x20 | 0x40))
+		switch(tex.GetFormat() & ~(0x20 | 0x40))
 		{
 		case 0x81:
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
@@ -237,15 +278,15 @@ public:
 
 		{
 			wxFile f(name + ".raw", wxFile::write);
-			f.Write(alldata, tex.m_width * tex.m_height * 4);
+			f.Write(alldata, tex.GetWidth() * tex.GetHeight() * 4);
 		}
-		u8* data = new u8[tex.m_width * tex.m_height * 3];
-		u8* alpha = new u8[tex.m_width * tex.m_height];
+		u8* data = new u8[tex.GetWidth() * tex.GetHeight() * 3];
+		u8* alpha = new u8[tex.GetWidth() * tex.GetHeight()];
 
 		u8* src = (u8*)alldata;
 		u8* dst_d = data;
 		u8* dst_a = alpha;
-		for(u32 i=0; i<tex.m_width*tex.m_height;i++)
+		for(u32 i=0; i<tex.GetWidth()*tex.GetHeight();i++)
 		{
 			*dst_d++ = *src++;
 			*dst_d++ = *src++;
@@ -254,7 +295,7 @@ public:
 		}
 
 		wxImage out;
-		out.Create(tex.m_width, tex.m_height, data, alpha);
+		out.Create(tex.GetWidth(), tex.GetHeight(), data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
 
 		free(alldata);
