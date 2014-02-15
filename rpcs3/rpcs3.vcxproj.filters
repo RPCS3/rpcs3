@@ -391,6 +391,9 @@
     <ClCompile Include="Emu\Event.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\TRP.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

@@ -123,7 +123,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	type				= CELL_GAME_GAMETYPE_DISC;
 	attributes			= 0;
 	size->hddFreeSizeKB = 40000000; //40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	size->sizeKB		= 0;
+	size->sizeKB		= CELL_GAME_SIZEKB_NOTCALC;
 	size->sysSizeKB		= 0;
 	Memory.WriteString(dirName.GetAddr(), dir);
 
@@ -150,8 +150,6 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath,  mem_list_ptr_t<u8
 	if (!contentInfoPath.IsGood() || !usrdirPath.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 	
-	Memory.WriteString(contentInfoPath.GetAddr(), "/dev_bdvd/PS3_GAME");
-	Memory.WriteString(usrdirPath.GetAddr(), "/dev_bdvd/PS3_GAME/USRDIR");
 	return CELL_OK;
 }
 
