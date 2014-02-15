@@ -316,6 +316,7 @@
     <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\SELF.cpp" />
+    <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
