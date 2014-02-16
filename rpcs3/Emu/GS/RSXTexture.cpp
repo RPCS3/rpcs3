@@ -42,37 +42,37 @@ void RSXTexture::Init()
 
 u32 RSXTexture::GetOffset() const
 {
-  return methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*32)];
+	return methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*32)];
 }
 
 u8 RSXTexture::GetLocation() const
 {
-  return (methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] & 0x3) - 1;
+	return (methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] & 0x3) - 1;
 }
 
 bool RSXTexture::isCubemap() const
 {
-  return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 2) & 0x1);
+	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 2) & 0x1);
 }
 
 u8 RSXTexture::GetBorderType() const
 {
-  return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 3) & 0x1);
+	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 3) & 0x1);
 }
 
 u8 RSXTexture::GetDimension() const
 {
-  return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 4) & 0xf);
+	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 4) & 0xf);
 }
 
 u8 RSXTexture::GetFormat() const
 {
-  return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 8) & 0xff);
+	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 8) & 0xff);
 }
 
 u16 RSXTexture::Getmipmap() const
 {
-  return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 16) & 0xffff);
+	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 16) & 0xffff);
 }
 
 u8 RSXTexture::GetWrapS() const
@@ -197,6 +197,6 @@ u16 RSXTexture::GetHeight() const
 
 void RSXTexture::SetControl3(u16 depth, u32 pitch)
 {
-  m_depth = depth;
-  m_pitch = pitch;
+	m_depth = depth;
+	m_pitch = pitch;
 }

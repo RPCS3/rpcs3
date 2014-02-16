@@ -556,29 +556,29 @@ void GLGSRender::WriteBuffers()
 
 	switch(m_surface_colour_target)
 	{
-	case 0x0:
+	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
 
-	case 0x1:
+	case CELL_GCM_SURFACE_TARGET_0:
 		WriteColourBufferA();
 	break;
 
-	case 0x2:
+	case CELL_GCM_SURFACE_TARGET_1:
 		WriteColourBufferB();
 	break;
 
-	case 0x13:
+	case CELL_GCM_SURFACE_TARGET_MRT1:
 		WriteColourBufferA();
 		WriteColourBufferB();
 	break;
 
-	case 0x17:
+	case CELL_GCM_SURFACE_TARGET_MRT2:
 		WriteColourBufferA();
 		WriteColourBufferB();
 		WriteColourBufferC();
 	break;
 
-	case 0x1f:
+	case CELL_GCM_SURFACE_TARGET_MRT3:
 		WriteColourBufferA();
 		WriteColourBufferB();
 		WriteColourBufferC();
@@ -726,26 +726,26 @@ void GLGSRender::ExecCMD()
 
 	switch(m_surface_colour_target)
 	{
-	case 0x0:
+	case CELL_GCM_SURFACE_TARGET_NONE:
 		break;
 
-	case 0x1:
+	case CELL_GCM_SURFACE_TARGET_0:
 		glDrawBuffer(draw_buffers[0]);
 	break;
 
-	case 0x2:
+	case CELL_GCM_SURFACE_TARGET_1:
 		glDrawBuffer(draw_buffers[1]);
 	break;
 
-	case 0x13:
+	case CELL_GCM_SURFACE_TARGET_MRT1:
 		glDrawBuffers(2, draw_buffers);
 	break;
 
-	case 0x17:
+	case CELL_GCM_SURFACE_TARGET_MRT2:
 		glDrawBuffers(3, draw_buffers);
 	break;
 
-	case 0x1f:
+	case CELL_GCM_SURFACE_TARGET_MRT3:
 		glDrawBuffers(4, draw_buffers);
 	break;
 
@@ -1147,12 +1147,10 @@ void GLGSRender::Flip()
 	}
 }
 
-uint32_t LinearToSwizzleAddress(
-	uint32_t x, uint32_t y, uint32_t z,
-	uint32_t log2_width, uint32_t log2_height, uint32_t log2_depth)
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
 {
-	uint32_t offset = 0;
-	uint32_t shift_count = 0;
+	u32 offset = 0;
+	u32 shift_count = 0;
 	while(log2_width | log2_height | log2_depth){
 		if(log2_width){
 			offset |= (x & 0x01) << shift_count;
