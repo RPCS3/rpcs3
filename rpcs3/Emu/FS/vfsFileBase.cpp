@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "vfsFileBase.h"
 
-vfsFileBase::vfsFileBase() : vfsDevice()
+vfsFileBase::vfsFileBase(vfsDevice* device)
+	: vfsStream()
+	, m_device(device)
 {
 }
 

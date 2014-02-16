@@ -227,6 +227,8 @@
     <ClCompile Include="Emu\Event.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
+    <ClCompile Include="Emu\FS\vfsDeviceLocalFile.cpp" />
+    <ClCompile Include="Emu\FS\vfsDir.cpp" />
     <ClCompile Include="Emu\FS\vfsDirBase.cpp" />
     <ClCompile Include="Emu\FS\vfsFile.cpp" />
     <ClCompile Include="Emu\FS\vfsFileBase.cpp" />

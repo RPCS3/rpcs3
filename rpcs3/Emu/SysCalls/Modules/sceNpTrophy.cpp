@@ -106,11 +106,7 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	// TODO: There are other possible errors
 
 	// TODO: Is the TROPHY.TRP file necessarily located in this path?
-	wxString ps3_path = "/app_home/TROPDIR/";
-	wxString local_path;
-	Emu.GetVFS().GetDevice(ps3_path, local_path);
-
-	vfsLocalDir dir(local_path);
+	vfsDir dir("/app_home/TROPDIR/");
 	if(!dir.IsOpened())
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -119,13 +115,14 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	{
 		if (entry->flags & DirEntry_TypeDir)
 		{
-			vfsStream* stream = Emu.GetVFS().Open(ps3_path + entry->name + "/TROPHY.TRP", vfsRead);
-			if (stream)
+			auto f = Emu.GetVFS().OpenFile("/app_home/TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
+			if (f && f->IsOpened())
 			{
 				sceNpTrophyInternalContext ctxt;
-				ctxt.trp_stream = stream;
+				ctxt.trp_stream = f.get();
 				ctxt.trp_name = entry->name;
 				s_npTrophyInstance.contexts.push_back(ctxt);
+				f = nullptr;
 				return CELL_OK;
 			}
 		}

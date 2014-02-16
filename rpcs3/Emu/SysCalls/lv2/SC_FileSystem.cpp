@@ -17,7 +17,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	if(flags & CELL_O_CREAT)
 	{
 		_oflags &= ~CELL_O_CREAT;
-		Emu.GetVFS().Create(ppath);
+		Emu.GetVFS().CreateFile(ppath);
 	}
 
 	vfsOpenMode o_mode;
@@ -55,9 +55,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		{
 			_oflags &= ~CELL_O_TRUNC;
 			//truncate file before opening it as read/write
-			vfsStream* stream = Emu.GetVFS().Open(ppath, vfsWrite);
-			stream->Close();
-			delete stream;
+			Emu.GetVFS().OpenFile(ppath, vfsWrite);
 		}
 		o_mode = vfsReadWrite;
 	break;
@@ -69,17 +67,16 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_EINVAL;
 	}
 
-	vfsStream* stream = Emu.GetVFS().Open(ppath, o_mode);
+	auto stream = Emu.GetVFS().OpenFile(ppath, o_mode);
 
 	if(!stream || !stream->IsOpened())
 	{
 		sys_fs.Error("\"%s\" not found! flags: 0x%08x", ppath.wx_str(), flags);
-		delete stream;
-
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(stream, flags);
+	fd = sys_fs.GetNewId(stream.get(), flags);
+	stream = nullptr;
 	ConLog.Warning("*** cellFsOpen(path=\"%s\"): fd = %d", path.wx_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -145,16 +142,14 @@ int cellFsOpendir(u32 path_addr, mem32_t fd)
 	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood())
 		return CELL_EFAULT;
 
-	wxString localPath;
-	Emu.GetVFS().GetDevice(path, localPath);
-	vfsLocalDir* dir = new vfsLocalDir(localPath);
+	std::shared_ptr<vfsDirBase> dir = Emu.GetVFS().OpenDir(path);
 	if(!dir->IsOpened())
 	{
-		delete dir;
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(dir);
+	fd = sys_fs.GetNewId(dir.get());
+	dir = nullptr;
 	return CELL_OK;
 }
 
@@ -174,7 +169,7 @@ int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 		nread = 1;
 		Memory.WriteString(dir.GetAddr()+2, info->name.wx_str());
 		dir->d_namlen = info->name.Length();
-		dir->d_type = (info->flags & 0x1) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+		dir->d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
 	}
 	else
 	{

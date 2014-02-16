@@ -32,9 +32,11 @@ class vfsDirBase
 protected:
 	wxString m_cwd;
 	Array<DirEntryInfo> m_entries;
+	uint m_pos;
+	vfsDevice* m_device;
 
 public:
-	vfsDirBase(const wxString& path);
+	vfsDirBase(vfsDevice* device);
 	virtual ~vfsDirBase();
 
 	virtual bool Open(const wxString& path);
@@ -48,4 +50,5 @@ public:
 	//virtual bool Create(const DirEntryInfo& info)=0;
 	virtual bool Rename(const wxString& from, const wxString& to)=0;
 	virtual bool Remove(const wxString& path)=0;
+	virtual const DirEntryInfo* Read();
 };

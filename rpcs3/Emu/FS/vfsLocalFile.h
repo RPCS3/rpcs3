@@ -7,9 +7,7 @@ private:
 	wxFile m_file;
 
 public:
-	vfsLocalFile();
-	vfsLocalFile(const wxString path, vfsOpenMode mode = vfsRead);
-	vfsDevice* GetNew();
+	vfsLocalFile(vfsDevice* device);
 
 	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead) override;
 	virtual bool Create(const wxString& path) override;

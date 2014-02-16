@@ -92,9 +92,9 @@ void Emulator::CheckStatus()
 
 bool Emulator::IsSelf(const std::string& path)
 {
-	vfsLocalFile f(path);
+	vfsLocalFile f(nullptr);
 
-	if(!f.IsOpened())
+	if(!f.Open(path))
 		return false;
 
 	SceHeader hdr;
@@ -238,7 +238,7 @@ void Emulator::Load()
 
 	try
 	{
-		if(!(is_error = !l.Analyze() || l.GetMachine() == MACHINE_Unknown))
+		if(!(is_error = !l.Analyze()) && l.GetMachine() != MACHINE_Unknown)
 		{
 			switch(l.GetMachine())
 			{
