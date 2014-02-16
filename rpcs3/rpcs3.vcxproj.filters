@@ -394,7 +394,10 @@
     <ClCompile Include="Loader\TRP.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp">
+	<ClCompile Include="Emu\GS\RSXTexture.cpp">
+      <Filter>Emu\GS</Filter>
+	</ClCompile>
+	<ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>

@@ -12,144 +12,67 @@ enum Method
 	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
 };
 
+extern u32 methodRegisters[0xffff];
+u32 GetAddress(u32 offset, u8 location);
 
 class RSXTexture
 {
+  u8 m_index;
 public:
-	bool m_enabled;
-
-	u32 m_width, m_height;
-	u32 m_offset;
-
-	bool m_cubemap;
-	u8 m_dimension;
-	u32 m_format;
-	u16 m_mipmap;
-
 	u32 m_pitch;
 	u16 m_depth;
 
-	u16 m_minlod;
-	u16 m_maxlod;
-	u8 m_maxaniso;
-
-	u8 m_wraps;
-	u8 m_wrapt;
-	u8 m_wrapr;
-	u8 m_unsigned_remap;
-	u8 m_zfunc;
-	u8 m_gamma;
-	u8 m_aniso_bias;
-	u8 m_signed_remap;
-
-	u16 m_bias;
-	u8 m_min_filter;
-	u8 m_mag_filter;
-	u8 m_conv;
-	u8 m_a_signed;
-	u8 m_r_signed;
-	u8 m_g_signed;
-	u8 m_b_signed;
-
-	u32 m_remap;
-
 public:
-	RSXTexture()
-		: m_width(0), m_height(0)
-		, m_offset(0)
-		, m_enabled(false)
+	RSXTexture();
+	RSXTexture(u8 index);
+	void Init();
 
-		, m_cubemap(false)
-		, m_dimension(0)
-		, m_format(0)
-		, m_mipmap(0)
-		, m_minlod(0)
-		, m_maxlod(1000)
-		, m_maxaniso(0)
-	{
-	}
+	// Offset
+	u32 GetOffset() const;
 
-	void SetRect(const u32 width, const u32 height)
-	{
-		m_width = width;
-		m_height = height;
-	}
+	// Format
+	u8   GetLocation() const;
+	bool isCubemap() const;
+	u8   GetBorderType() const;
+	u8   GetDimension() const;
+	u8   GetFormat() const;
+	u16  Getmipmap() const;
 
-	void SetFormat(const bool cubemap, const u8 dimension, const u32 format, const u16 mipmap)
-	{
-		m_cubemap = cubemap;
-		m_dimension = dimension;
-		m_format = format;
-		m_mipmap = mipmap;
-	}
+	// Address
+	u8 GetWrapS() const;
+	u8 GetWrapT() const;
+	u8 GetWrapR() const;
+	u8 GetUnsignedRemap() const;
+	u8 GetZfunc() const;
+	u8 GetGamma() const;
+	u8 GetAnisoBias() const;
+	u8 GetSignedRemap() const;
 
-	void SetAddress(u8 wraps, u8 wrapt, u8 wrapr, u8 unsigned_remap, u8 zfunc, u8 gamma, u8 aniso_bias, u8 signed_remap)
-	{
-		m_wraps = wraps;
-		m_wrapt = wrapt;
-		m_wrapr = wrapr;
-		m_unsigned_remap = unsigned_remap;
-		m_zfunc = zfunc;
-		m_gamma = gamma;
-		m_aniso_bias = aniso_bias;
-		m_signed_remap = signed_remap;
-	}
+	// Control0
+	bool IsEnabled() const;
+	u16  GetMinLOD() const;
+	u16  GetMaxLOD() const;
+	u8   GetMaxAniso() const;
+	bool IsAlphaKillEnabled() const;
 
-	void SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso)
-	{
-		m_enabled = enable;
-		m_minlod = minlod;
-		m_maxlod = maxlod;
-		m_maxaniso = maxaniso;
-	}
+	// Control1
+	u32 GetRemap() const;
 
-	void SetControl1(u32 remap)
-	{
-		m_remap = remap;
-	}
+	// Filter
+	u16 GetBias() const;
+	u8  GetMinFilter() const;
+	u8  GetMagFilter() const;
+	u8  GetConvolutionFilter() const;
+	bool isASigned() const;
+	bool isRSigned() const;
+	bool isGSigned() const;
+	bool isBSigned() const;
 
-	void SetControl3(u16 depth, u32 pitch)
-	{
-		m_depth = depth;
-		m_pitch = pitch;
-	}
+	// Image Rect
+	u16 GetWidth() const;
+	u16 GetHeight() const;
 
-	void SetFilter(u16 bias, u8 min, u8 mag, u8 conv, u8 a_signed, u8 r_signed, u8 g_signed, u8 b_signed)
-	{
-		m_bias = bias;
-		m_min_filter = min;
-		m_mag_filter = mag;
-		m_conv = conv;
-		m_a_signed = a_signed;
-		m_r_signed = r_signed;
-		m_g_signed = g_signed;
-		m_b_signed = b_signed;
-	}
-
-	u32 GetFormat() const
-	{
-		return m_format;
-	}
-
-	void SetOffset(const u32 offset)
-	{
-		m_offset = offset;
-	}
-
-	wxSize GetRect() const
-	{
-		return wxSize(m_width, m_height);
-	}
-
-	bool IsEnabled() const
-	{
-		return m_enabled;
-	}
-
-	u32 GetOffset() const
-	{
-		return m_offset;
-	}
+	void SetControl3(u16 depth, u32 pitch);
 };
 
 struct RSXVertexData
@@ -561,6 +484,12 @@ protected:
 		m_point_x = 0;
 		m_point_y = 0;
 
+    // Construct Textures
+    for(int i=0; i<16; i++)
+    {
+      m_textures[i] = RSXTexture(i);
+    }
+
 		Reset();
 	}
 
@@ -619,6 +548,11 @@ protected:
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
+
+    for(uint i=0; i<m_textures_count; ++i)
+	  {
+			m_textures[i].Init();
+	  }
 	}
 
 	void Begin(u32 draw_mode);
@@ -632,19 +566,6 @@ protected:
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
 	virtual void Flip() = 0;
-
-	u32 GetAddress(u32 offset, u8 location)
-	{
-		switch(location)
-		{
-		case CELL_GCM_LOCATION_LOCAL: return m_local_mem_addr + offset;
-		case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
-		}
-
-		ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);
-		assert(0);
-		return 0;
-	}
 
 	void LoadVertexData(u32 first, u32 count)
 	{
