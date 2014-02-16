@@ -197,7 +197,7 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 	// One test we have shows that VBlank lasts for ~22 HBlanks, another we have show that is the time it's off.
 	// There exists a game (Legendz Gekitou! Saga Battle) Which runs REALLY slowly if VBlank is ~22 HBlanks, so the other test wins.
 
-	u64 Blank = HalfFrame; // PAL VBlank Period is off for roughly 22 HSyncs
+	u64 Blank = HalfFrame / 2; // PAL VBlank Period is off for roughly 22 HSyncs
 
 	//I would have suspected this to be Frame - Blank, but that seems to completely freak it out
 	//and the test results are completely wrong. It seems 100% the same as the PS2 test on this,
@@ -288,6 +288,11 @@ u32 UpdateVSyncRate()
 		
 		if( isCustom )
 			Console.Indent().WriteLn( Color_StrongGreen, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
+
+		hsyncCounter.CycleT = vSyncInfo.hRender;	// Amount of cycles before the counter will be updated
+		vsyncCounter.CycleT = vSyncInfo.Render;		// Amount of cycles before the counter will be updated
+
+		cpuRcntSet();
 	}
 
 	Fixed100 fpslimit = framerate *
@@ -484,16 +489,17 @@ __fi void rcntUpdate_vSync()
 	{
 		VSyncEnd(vsyncCounter.sCycle);
 		
-		vsyncCounter.sCycle += vSyncInfo.Render;
-		vsyncCounter.CycleT = 0;
+		vsyncCounter.sCycle += vSyncInfo.Blank;
+		vsyncCounter.CycleT = vSyncInfo.Render;
 		vsyncCounter.Mode = MODE_VRENDER;
 	}
 	else	// VSYNC end / VRENDER begin
 	{
 		VSyncStart(vsyncCounter.sCycle);
 
-		vsyncCounter.sCycle += vSyncInfo.Blank;
-		vsyncCounter.CycleT = 0;
+
+		vsyncCounter.sCycle += vSyncInfo.Render;
+		vsyncCounter.CycleT = vSyncInfo.Blank;
 		vsyncCounter.Mode = MODE_VSYNC;
 
 		// Accumulate hsync rounding errors:
