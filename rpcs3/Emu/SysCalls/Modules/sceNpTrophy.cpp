@@ -76,19 +76,19 @@ struct sceNpTrophyInternal
 	}
 };
 
-sceNpTrophyInternal* s_npTrophyInstance = new sceNpTrophyInternal();
+sceNpTrophyInternal s_npTrophyInstance;
 
 // Functions
 int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 {
 	sceNpTrophy.Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=%d, options=0x%llx)", pool_addr, poolSize, containerId, options);
 
-	if (s_npTrophyInstance->m_bInitialized)
+	if (s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
 	if (options)
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 
-	s_npTrophyInstance->m_bInitialized = true;
+	s_npTrophyInstance.m_bInitialized = true;
 	return CELL_OK;
 }
 
@@ -97,7 +97,7 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	sceNpTrophy.Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
 		context.GetAddr(), commID.GetAddr(), commSign.GetAddr(), options);
 
-	if (!(s_npTrophyInstance->m_bInitialized))
+	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (!context.IsGood())
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
@@ -111,14 +111,13 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	Emu.GetVFS().GetDevice(ps3_path, local_path);
 
 	vfsLocalDir dir(local_path);
-	if(!dir.Open(local_path))
+	if(!dir.IsOpened())
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
 	// TODO: Following method will retrieve the TROPHY.TRP of the first folder that contains such file
-	const DirEntryInfo* entry = dir.Read();
-	while (entry)
+	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
 	{
-		if (!(entry->flags & DirEntry_TypeFile))
+		if (entry->flags & DirEntry_TypeDir)
 		{
 			vfsStream* stream = Emu.GetVFS().Open(ps3_path + entry->name + "/TROPHY.TRP", vfsRead);
 			if (stream)
@@ -126,12 +125,10 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 				sceNpTrophyInternalContext ctxt;
 				ctxt.trp_stream = stream;
 				ctxt.trp_name = entry->name;
-				s_npTrophyInstance->contexts.push_back(ctxt);
+				s_npTrophyInstance.contexts.push_back(ctxt);
 				return CELL_OK;
 			}
 		}
-		entry->name;
-		entry = dir.Read();
 	}
 
 	return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
@@ -141,7 +138,7 @@ int sceNpTrophyCreateHandle(mem32_t handle)
 {
 	sceNpTrophy.Warning("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.GetAddr());
 
-	if (!(s_npTrophyInstance->m_bInitialized))
+	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (!handle.IsGood())
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
@@ -157,7 +154,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	sceNpTrophy.Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
 		context, handle, statusCb_addr, arg_addr, options);
 
-	if (!(s_npTrophyInstance->m_bInitialized))
+	if (!(s_npTrophyInstance.m_bInitialized))
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (!Memory.IsGoodAddr(statusCb_addr))
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
@@ -166,7 +163,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	// TODO: There are other possible errors
 
 	int ret;
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance->contexts[context];
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
 	TRPLoader trp(*(ctxt.trp_stream));
 
 	// TODO: Get the path of the current user
@@ -261,7 +258,7 @@ int sceNpTrophyGetGameIcon()
 
 void sceNpTrophy_unload()
 {
-	s_npTrophyInstance->m_bInitialized = false;
+	s_npTrophyInstance.m_bInitialized = false;
 }
 
 void sceNpTrophy_init()

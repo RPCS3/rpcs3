@@ -941,7 +941,7 @@ int cellSysCacheClear(void)
 	Emu.GetVFS().GetDevice(wxString("/dev_hdd1/cache/"), localPath);
 	if (wxDirExists(localPath)){
 		WxDirDeleteTraverser deleter;
-		wxString f = wxFindFirstFile(localPath+"\*",wxDIR);
+		wxString f = wxFindFirstFile(localPath+"\\*",wxDIR);
 		while (!f.empty())
 		{
 			wxDir dir(f);

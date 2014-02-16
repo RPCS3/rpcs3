@@ -148,8 +148,11 @@ int cellFsOpendir(u32 path_addr, mem32_t fd)
 	wxString localPath;
 	Emu.GetVFS().GetDevice(path, localPath);
 	vfsLocalDir* dir = new vfsLocalDir(localPath);
-	if(!dir->Open(localPath))
+	if(!dir->IsOpened())
+	{
+		delete dir;
 		return CELL_ENOENT;
+	}
 
 	fd = sys_fs.GetNewId(dir);
 	return CELL_OK;
