@@ -3,6 +3,21 @@
 
 #define ARGS(x) (Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
 
+u32 methodRegisters[0xffff];
+
+u32 GetAddress(u32 offset, u8 location)
+{
+	switch(location)
+	{
+	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
+	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
+	}
+
+	ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);
+	assert(0);
+	return 0;
+}
+
 RSXVertexData::RSXVertexData()
 	: frequency(0)
 	, stride(0)
@@ -185,47 +200,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		const u32 offset = ARGS(0);
-		u32 a1 = ARGS(1);
-		u8 location = (a1 & 0x3) - 1;
-		const bool cubemap = (a1 >> 2) & 0x1;
-		const u8 dimension = (a1 >> 4) & 0xf;
-		const u8 format = (a1 >> 8) & 0xff;
-		const u16 mipmap = (a1 >> 16) & 0xffff;
-		CMD_LOG("index = %d, offset=0x%x, location=0x%x, cubemap=0x%x, dimension=0x%x, format=0x%x, mipmap=0x%x",
-			index, offset, location, cubemap, dimension, format, mipmap);
-
-		if(location == 2)
-		{
-			ConLog.Error("Bad texture location.");
-			location = 1;
-		}
-		u32 tex_addr = GetAddress(offset, location);
-		if(!Memory.IsGoodAddr(tex_addr))
-			ConLog.Error("Bad texture[%d] addr = 0x%x #offset = 0x%x, location=%d", index, tex_addr, offset, location);
-		//ConLog.Warning("texture addr = 0x%x #offset = 0x%x, location=%d", tex_addr, offset, location);
-		tex.SetOffset(tex_addr);
-		tex.SetFormat(cubemap, dimension, format, mipmap);
-
-		if(!tex.m_width || !tex.m_height)
-		{
-			gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-			if(!tex.m_width) tex.m_width = re(buffers[m_gcm_current_buffer].width);
-			if(!tex.m_height) tex.m_height = re(buffers[m_gcm_current_buffer].height);
-		}
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		u32 a0 = ARGS(0);
-		bool enable = a0 >> 31 ? true : false;
-		u16 minlod = (a0 >> 19) & 0xfff;
-		u16 maxlod = (a0 >> 7) & 0xfff;
-		u8 maxaniso = (a0 >> 2) & 0x7;
-		tex.SetControl0(enable, minlod, maxlod, maxaniso);
 	}
 	break;
 	
@@ -294,8 +273,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		tex.SetControl1(ARGS(0));
 	}
 	break;
 
@@ -311,36 +288,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-		u32 a0 = ARGS(0);
-		u16 bias = a0 & 0x1fff;
-		u8 conv = (a0 >> 13) & 0xf;
-		u8 min = (a0 >> 16) & 0x7;
-		u8 mag = (a0 >> 24) & 0x7;
-		u8 a_signed = (a0 >> 28) & 0x1;
-		u8 r_signed = (a0 >> 29) & 0x1;
-		u8 g_signed = (a0 >> 30) & 0x1;
-		u8 b_signed = (a0 >> 31) & 0x1;
-
-		tex.SetFilter(bias, min, mag, conv, a_signed, r_signed, g_signed, b_signed);
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
 	{
-		RSXTexture& tex = m_textures[index];
-
-		u32 a0 = ARGS(0);
-		u8 wraps			= a0 & 0xf;
-		u8 aniso_bias		= (a0 >> 4) & 0xf;
-		u8 wrapt			= (a0 >> 8) & 0xf;
-		u8 unsigned_remap	= (a0 >> 12) & 0xf;
-		u8 wrapr			= (a0 >> 16) & 0xf;
-		u8 gamma			= (a0 >> 20) & 0xf;
-		u8 signed_remap		= (a0 >> 24) & 0xf;
-		u8 zfunc			= a0 >> 28;
-
-		tex.SetAddress(wraps, wrapt, wrapr, unsigned_remap, zfunc, gamma, aniso_bias, signed_remap);
 	}
 	break;
 
@@ -350,26 +302,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32):
 	{
-		RSXTexture& tex = m_textures[index];
-
-		u16 height = ARGS(0) & 0xffff;
-		u16 width = ARGS(0) >> 16;
-		CMD_LOG("width=%d, height=%d", width, height);
-
-		if(!width || !height)
-		{
-			ConLog.Warning("Bad texture rect: %dx%d (%dx%d)", width, height, tex.m_width, tex.m_height);
-			for(int i=0; i<count; ++i)
-			{
-				ConLog.Warning("*** 0x%x", ARGS(i));
-			}
-
-			if(!width) width = tex.m_width;
-			if(!height) height = tex.m_height;
-		}
-		tex.SetRect(width, height);
-
-
 	}
 	break;
 
@@ -1391,6 +1323,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_fog_param1 = (float&)a1;
 	}
 	break;
+	case NV4097_SET_VIEWPORT_SCALE:
+	{
+
+	}
+	break;
 
 	default:
 	{
@@ -1427,11 +1364,6 @@ void RSXThread::End()
 		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
 	}
 
-	for(uint i=0; i<m_textures_count; ++i)
-	{
-		m_textures[i].m_enabled = false;
-	}
-
 	m_indexed_array.Reset();
 	m_fragment_constants.Clear();
 	m_transform_constants.Clear();
@@ -1446,6 +1378,7 @@ void RSXThread::End()
 
 void RSXThread::Task()
 {
+  u8 inc;
 	ConLog.Write("RSX thread entry");
 
 	OnInitThread();
@@ -1453,6 +1386,8 @@ void RSXThread::Task()
 	while(!TestDestroy())
 	{
 		wxCriticalSectionLocker lock(m_cs_main);
+
+    inc=1;
 
 		u32 put, get;
 		se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
@@ -1504,6 +1439,7 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//ConLog.Warning("non increment cmd! 0x%x", cmd);
+      inc=0;
 		}
 
 		if(cmd == 0)
@@ -1512,6 +1448,11 @@ void RSXThread::Task()
 			Emu.Pause();
 			continue;
 		}
+
+    for(int i=0; i<count; i++)
+    {
+      methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
+    }
 
 		mem32_ptr_t args(Memory.RSXIOMem.GetStartAddr() + get + 4);
 		DoCmd(cmd, cmd & 0x3ffff, args, count);

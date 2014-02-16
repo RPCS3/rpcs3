@@ -227,6 +227,8 @@
     <ClCompile Include="Emu\Event.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
+    <ClCompile Include="Emu\FS\vfsDeviceLocalFile.cpp" />
+    <ClCompile Include="Emu\FS\vfsDir.cpp" />
     <ClCompile Include="Emu\FS\vfsDirBase.cpp" />
     <ClCompile Include="Emu\FS\vfsFile.cpp" />
     <ClCompile Include="Emu\FS\vfsFileBase.cpp" />
@@ -243,6 +245,7 @@
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\GS\GSRender.cpp" />
+    <ClCompile Include="Emu\GS\RSXTexture.cpp" />
     <ClCompile Include="Emu\GS\RSXThread.cpp" />
     <ClCompile Include="Emu\HDD\HDD.cpp" />
     <ClCompile Include="Emu\Io\Keyboard.cpp" />
@@ -292,6 +295,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
@@ -316,6 +320,7 @@
     <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\SELF.cpp" />
+    <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

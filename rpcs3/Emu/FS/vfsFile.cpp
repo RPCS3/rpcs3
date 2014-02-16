@@ -2,55 +2,51 @@
 #include "vfsFile.h"
 
 vfsFile::vfsFile()
-	: vfsFileBase()
+	: vfsFileBase(nullptr)
 	, m_stream(nullptr)
 {
 }
 
 vfsFile::vfsFile(const wxString path, vfsOpenMode mode)
-	: vfsFileBase()
+	: vfsFileBase(nullptr)
 	, m_stream(nullptr)
 {
 	Open(path, mode);
-}
-
-vfsFile::~vfsFile()
-{
-	Close();
-}
-
-vfsDevice* vfsFile::GetNew()
-{
-	return new vfsFile();
 }
 
 bool vfsFile::Open(const wxString& path, vfsOpenMode mode)
 {
 	Close();
 
-	m_stream = Emu.GetVFS().Open(path, mode);
+	m_stream.reset(Emu.GetVFS().OpenFile(path, mode));
 
 	return m_stream && m_stream->IsOpened();
 }
 
 bool vfsFile::Create(const wxString& path)
 {
-	if(wxFileExists(path)) return false;
+	return m_stream->Create(path);
+}
 
-	wxFile f;
-	return f.Create(path);
+bool vfsFile::Exists(const wxString& path)
+{
+	return m_stream->Exists(path);
+}
+
+bool vfsFile::Rename(const wxString& from, const wxString& to)
+{
+	return m_stream->Rename(from, to);
+}
+
+bool vfsFile::Remove(const wxString& path)
+{
+	return m_stream->Remove(path);
 }
 
 bool vfsFile::Close()
 {
-	if(m_stream)
-	{
-		delete m_stream;
-		m_stream = nullptr;
-		return vfsFileBase::Close();
-	}
-
-	return false;
+	m_stream.reset();
+	return vfsFileBase::Close();
 }
 
 u64 vfsFile::GetSize()

@@ -2,9 +2,7 @@
 #include "vfsLocalDir.h"
 #include <direct.h>
 
-vfsLocalDir::vfsLocalDir(const wxString& path)
-	: vfsDirBase(path)
-	, m_pos(0)
+vfsLocalDir::vfsLocalDir(vfsDevice* device) : vfsDirBase(device)
 {
 }
 
@@ -37,14 +35,6 @@ bool vfsLocalDir::Open(const wxString& path)
 	}
 
 	return true;
-}
-
-const DirEntryInfo* vfsLocalDir::Read()
-{
-	if (m_pos >= m_entries.GetCount())
-		return 0;
-
-	return &m_entries[m_pos++];
 }
 
 bool vfsLocalDir::Create(const wxString& path)

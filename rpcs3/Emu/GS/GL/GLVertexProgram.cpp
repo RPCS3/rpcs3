@@ -319,7 +319,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 	wxString f = wxEmptyString;
 
-	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
+	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%sgl_Position = gl_Position * scaleOffsetMat;\n}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
 
 	for(uint i=1; i<m_funcs.GetCount(); ++i)
 	{
@@ -329,6 +329,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 	static const wxString& prot = 
 		"#version 330\n"
 		"\n"
+		"uniform mat4 scaleOffsetMat = mat4(1.0);\n"
 		"%s\n"
 		"%s\n"
 		"%s";

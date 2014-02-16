@@ -1,19 +1,8 @@
 #pragma once
-#include "vfsStream.h"
-#include <mutex>
+#include "vfsFileBase.h"
+#include "vfsDirBase.h"
 
-enum vfsOpenMode
-{
-	vfsRead = 0x1,
-	vfsWrite = 0x2,
-	vfsExcl = 0x4,
-	vfsAppend = 0x8,
-	vfsReadWrite = vfsRead | vfsWrite,
-	vfsWriteExcl = vfsWrite | vfsExcl,
-	vfsWriteAppend = vfsWrite | vfsAppend,
-};
-
-class vfsDevice : public vfsStream
+class vfsDevice
 {
 	wxString m_ps3_path;
 	wxString m_local_path;
@@ -23,9 +12,9 @@ public:
 	vfsDevice(const wxString& ps3_path, const wxString& local_path);
 	vfsDevice() {}
 
-	virtual vfsDevice* GetNew()=0;
-	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead)=0;
-	virtual bool Create(const wxString& path)=0;
+	virtual vfsFileBase* GetNewFileStream()=0;
+	virtual vfsDirBase* GetNewDirStream()=0;
+
 	wxString GetLocalPath() const;
 	wxString GetPs3Path() const;
 

@@ -4,17 +4,17 @@
 class vfsFile : public vfsFileBase
 {
 private:
-	vfsStream* m_stream;
+	std::shared_ptr<vfsFileBase> m_stream;
 
 public:
 	vfsFile();
 	vfsFile(const wxString path, vfsOpenMode mode = vfsRead);
-	~vfsFile();
-
-	virtual vfsDevice* GetNew() override;
 
 	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead) override;
 	virtual bool Create(const wxString& path) override;
+	virtual bool Exists(const wxString& path) override;
+	virtual bool Rename(const wxString& from, const wxString& to) override;
+	virtual bool Remove(const wxString& path) override;
 	virtual bool Close() override;
 
 	virtual u64 GetSize() override;

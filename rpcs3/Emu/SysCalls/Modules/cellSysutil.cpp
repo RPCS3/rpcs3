@@ -117,6 +117,20 @@ enum
 	CELL_MSGDIALOG_BUTTON_ESCAPE	= 3,
 };
 
+enum{
+	CELL_SYSCACHE_RET_OK_CLEARED		= 0,
+	CELL_SYSCACHE_RET_OK_RELAYED		= 1, 
+
+	CELL_SYSCACHE_ID_SIZE				= 32,	
+	CELL_SYSCACHE_PATH_MAX				= 1055,
+
+	CELL_SYSCACHE_ERROR_ACCESS_ERROR	= 0x8002bc01,//I don't think we need this
+	CELL_SYSCACHE_ERROR_INTERNAL		= 0x8002bc02,//not really useful, if we run out of HD space sysfs should handle that
+
+	CELL_SYSCACHE_ERROR_PARAM			= 0x8002bc03,
+	CELL_SYSCACHE_ERROR_NOTMOUNTED		= 0x8002bc04,//we don't really need to simulate the mounting, so this is probably useless
+};
+
 enum CellMsgDialogType
 {
 	CELL_MSGDIALOG_DIALOG_TYPE_ERROR	= 0x00000000,
@@ -894,6 +908,73 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	return CELL_AUDIO_OUT_SUCCEEDED;
 }
 
+
+
+
+typedef struct{
+	char cacheId[CELL_SYSCACHE_ID_SIZE];
+	char getCachePath[CELL_SYSCACHE_PATH_MAX];
+	mem_ptr_t<void> reserved;
+} CellSysCacheParam;
+
+
+class WxDirDeleteTraverser : public wxDirTraverser
+{
+public:
+	virtual wxDirTraverseResult OnFile(const wxString& filename)
+	{
+		if (!wxRemoveFile(filename)){
+			cellSysutil.Error("Couldn't delete File: %s", filename.wx_str());
+		}
+		return wxDIR_CONTINUE;
+	}
+	virtual wxDirTraverseResult OnDir(const wxString& dirname)
+	{
+		wxDir dir(dirname);
+		dir.Traverse(*this);
+		if (!wxRmDir(dirname)){
+		//this get triggered a few times while clearing folders
+		//but if this gets reimplented we should probably warn
+		//if directories can't be removed
+		}
+		return wxDIR_CONTINUE;
+	}
+};
+
+int cellSysCacheClear(void)
+{
+	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
+	//it was mounted before, for that we would need to save the state which I don't know
+	//where to put
+	wxString localPath;
+	Emu.GetVFS().GetDevice(wxString("/dev_hdd1/cache/"), localPath);
+	if (wxDirExists(localPath)){
+		WxDirDeleteTraverser deleter;
+		wxString f = wxFindFirstFile(localPath+"\\*",wxDIR);
+		while (!f.empty())
+		{
+			wxDir dir(f);
+			dir.Traverse(deleter);
+			f = wxFindNextFile();
+		}
+		return CELL_SYSCACHE_RET_OK_CLEARED;
+	}
+	else{
+		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+	}
+}
+
+int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
+{
+	//TODO: implement
+	char id[CELL_SYSCACHE_ID_SIZE];
+	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
+	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
+	Emu.GetVFS().CreateFile(wxString(param->getCachePath));
+
+	return CELL_SYSCACHE_RET_OK_RELAYED;
+}
+
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -922,4 +1003,8 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
 	cellSysutil.AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
 	cellSysutil.AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
+
+	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
+	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
+
 }

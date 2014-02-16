@@ -294,7 +294,9 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
 
-	vfsStream& f_elf = *new vfsLocalFile(Emu.m_path);
+	vfsLocalFile& f_elf = *new vfsLocalFile(nullptr);
+	f_elf.Open(Emu.m_path);
+
 	ConLog.Write("path: %s", Emu.m_path.wx_str());
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);

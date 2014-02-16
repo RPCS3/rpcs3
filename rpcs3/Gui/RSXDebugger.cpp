@@ -293,11 +293,13 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		if(Memory.IsGoodAddr(render.m_textures[m_cur_texture].m_offset) && render.m_textures[m_cur_texture].m_width && render.m_textures[m_cur_texture].m_height)
+		u8 location = render.m_textures[m_cur_texture].GetLocation();
+		if(location <= 1 && Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), location))
+			&& render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
 			MemoryViewerPanel::ShowImage(this,
-				render.m_textures[m_cur_texture].m_offset, 0,
-				render.m_textures[m_cur_texture].m_width,
-				render.m_textures[m_cur_texture].m_height, false);
+				GetAddress(render.m_textures[m_cur_texture].GetOffset(), location), 1,
+				render.m_textures[m_cur_texture].GetWidth(),
+				render.m_textures[m_cur_texture].GetHeight(), false);
 	}
 
 #undef SHOW_BUFFER
@@ -417,15 +419,28 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	u32 TexBuffer_addr = render.m_textures[m_cur_texture].m_offset;
+	if(!render.m_textures[m_cur_texture].IsEnabled())
+		return;
+
+	u32 offset = render.m_textures[m_cur_texture].GetOffset();
+
+	if(!offset)
+		return;
+
+	u8 location = render.m_textures[m_cur_texture].GetLocation();
+
+	if(location > 1)
+		return;
+
+	u32 TexBuffer_addr = GetAddress(offset, location);
 
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
 
 	unsigned char* TexBuffer = (unsigned char*)Memory.VirtualToRealAddr(TexBuffer_addr);
 
-	u32 width  = render.m_textures[m_cur_texture].m_width;
-	u32 height = render.m_textures[m_cur_texture].m_height;
+	u32 width  = render.m_textures[m_cur_texture].GetWidth();
+	u32 height = render.m_textures[m_cur_texture].GetHeight();
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 	memcpy(buffer, TexBuffer, width * height * 3);
 
@@ -484,19 +499,32 @@ void RSXDebugger::GetTexture()
 
 	for(uint i=0; i<RSXThread::m_textures_count; ++i)
 	{
-		m_list_texture->InsertItem(i, wxString::Format("%d", i));
-		m_list_texture->SetItem(i, 1, wxString::Format("0x%x", render.m_textures[i].m_offset));
-		m_list_texture->SetItem(i, 2, render.m_textures[i].m_cubemap ? "True" : "False");
-		m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].m_dimension));
-		m_list_texture->SetItem(i, 4, render.m_textures[i].m_enabled ? "True" : "False");
-		m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].m_format));
-		m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].m_mipmap));
-		m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
-		m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
-			render.m_textures[i].m_width,
-			render.m_textures[i].m_height));
+		if(render.m_textures[i].IsEnabled())
+		{
+			m_list_texture->InsertItem(i, wxString::Format("%d", i));
+			u8 location = render.m_textures[i].GetLocation();
+			if(location > 1)
+			{
+				m_list_texture->SetItem(i, 1,
+					wxString::Format("Bad address (offset=0x%x, location=%d)", render.m_textures[i].GetOffset(), location));
+			}
+			else
+			{
+				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), location)));
+			}
 
-		m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
+			m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
+			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
+			m_list_texture->SetItem(i, 4, render.m_textures[i].IsEnabled() ? "True" : "False");
+			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].GetFormat()));
+			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].Getmipmap()));
+			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
+			m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
+				render.m_textures[i].GetWidth(),
+				render.m_textures[i].GetHeight()));
+
+			m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
+		}
 	}
 }
 

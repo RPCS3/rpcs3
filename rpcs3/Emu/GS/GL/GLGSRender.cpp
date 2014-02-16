@@ -12,6 +12,7 @@
 #endif
 
 gcmBuffer gcmBuffers[8];
+GLuint flipTex;
 
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
@@ -85,12 +86,15 @@ GLGSRender::GLGSRender()
 	, m_context(nullptr)
 {
 	m_frame = new GLGSFrame();
+
+	glGenTextures(1, &flipTex);
 }
 
 GLGSRender::~GLGSRender()
 {
 	m_frame->Close();
 	delete m_context;
+	glDeleteTextures(1, &flipTex);
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)
@@ -304,17 +308,39 @@ void GLGSRender::DisableVertexData()
 
 void GLGSRender::InitVertexData()
 {
+	GLfloat scaleOffsetMat[16] = {1.0f, 0.0f, 0.0f, 0.0f, 
+		                          0.0f, 1.0f, 0.0f, 0.0f, 
+								  0.0f, 0.0f, 1.0f, 0.0f, 
+								  0.0f, 0.0f, 0.0f, 1.0f};
+	int l;
+
 	for(u32 i=0; i<m_transform_constants.GetCount(); ++i)
 	{
 		const RSXTransformConstant& c = m_transform_constants[i];
 		const wxString name = wxString::Format("vc%u", c.id);
-		const int l = m_program.GetLocation(name);
+		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		//ConLog.Write(name + " x: %.02f y: %.02f z: %.02f w: %.02f", c.x, c.y, c.z, c.w);
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + wxString::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
+
+	// Scale
+	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*0)] / (m_width / 2.0f);
+	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*1)] / (m_height / 2.0f);
+	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*2)];
+
+	// Offset
+	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*0)] - (m_width / 2.0f);
+	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*1)] - (m_height / 2.0f);
+	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*2)] - 1/2.0f;
+
+	scaleOffsetMat[3] /= m_width / 2.0f;
+	scaleOffsetMat[7] /= m_height / 2.0f;
+
+	l = m_program.GetLocation("scaleOffsetMat");
+	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
 }
 
 void GLGSRender::InitFragmentData()
@@ -736,13 +762,13 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
-		glViewport(m_viewport_x, RSXThread::m_height-m_viewport_y-m_viewport_h, m_viewport_w, m_viewport_h);
+		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		checkForGlError("glViewport");
 	}
 
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
-		glScissor(m_scissor_x, RSXThread::m_height-m_scissor_y-m_scissor_h, m_scissor_w, m_scissor_h);
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
 
@@ -1029,6 +1055,12 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
+	if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
+		checkForGlError("glScissor");
+	}
+
 	if(m_read_buffer)
 	{
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
@@ -1054,12 +1086,47 @@ void GLGSRender::Flip()
 	}
 	else if(m_fbo.IsCreated())
 	{
+		Array<u8> pixels;
+		pixels.SetCount(m_width * m_height * 4);
+
 		m_fbo.Bind(GL_READ_FRAMEBUFFER);
+		glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, flipTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, 1, 0, 1, 0, 1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+
+		m_program.UnUse();
+		m_program.Use();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
+		glBegin(GL_QUADS);
+		glTexCoord2i(0, 1);
+		glVertex2i(0, 0);
+
+		glTexCoord2i(1, 1);
+		glVertex2i(1, 0);
+
+		glTexCoord2i(1, 0);
+		glVertex2i(1, 1);
+
+		glTexCoord2i(0, 0);
+		glVertex2i(0, 1);
+		glEnd();
+
+		/*GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 		GLfbo::Blit(
 			m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
 			m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-			GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);*/
 		m_fbo.Bind();
 	}
 
@@ -1072,4 +1139,39 @@ void GLGSRender::Flip()
 
 	if(m_fbo.IsCreated())
 		m_fbo.Bind();
+
+  if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
+}
+
+uint32_t LinearToSwizzleAddress(
+	uint32_t x, uint32_t y, uint32_t z,
+	uint32_t log2_width, uint32_t log2_height, uint32_t log2_depth)
+{
+	uint32_t offset = 0;
+	uint32_t shift_count = 0;
+	while(log2_width | log2_height | log2_depth){
+		if(log2_width){
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+		if(log2_height){
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+		if(log2_depth){
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
 }

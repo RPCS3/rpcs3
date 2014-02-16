@@ -609,9 +609,9 @@ int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fra
 		fragmentUcodeSize = 0x300;
 	}
 
-	if(colorBuffers.GetAddr())   colorBuffers = colorBuffersSize;
-	if(vertexArray.GetAddr())    vertexArray = vertexArraySize;
-	if(fragmentShader.GetAddr()) fragmentShader = fragmentUcodeSize;
+	if(colorBuffers.IsGood())   colorBuffers = colorBuffersSize;
+	if(vertexArray.IsGood())    vertexArray = vertexArraySize;
+	if(fragmentShader.IsGood()) fragmentShader = fragmentUcodeSize;
 
 	return CELL_OK;
 }

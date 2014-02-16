@@ -45,19 +45,102 @@ int sys_process_exit(int errorcode)
 	return CELL_OK;
 }
 
-int sys_game_process_exitspawn(	u32 path_addr, u32 argv_addr, u32 envp_addr,
-								u32 data, u32 data_size, int prio, u64 flags )
+void sys_game_process_exitspawn(
+			u32 path_addr,
+			u32 argv_addr,
+			u32 envp_addr,
+			u32 data_addr,
+			u32 data_size,
+			u32 prio,
+			u64 flags )
 {
-	sc_p.Log("sys_game_process_exitspawn: ");
-	sc_p.Log("path: %s", Memory.ReadString(path_addr).wx_str());
-	sc_p.Log("argv: 0x%x", Memory.Read32(argv_addr));
-	sc_p.Log("envp: 0x%x", Memory.Read32(envp_addr));
-	sc_p.Log("data: 0x%x", data);
-	sc_p.Log("data_size: 0x%x", data_size);
-	sc_p.Log("prio: %d", prio);
-	sc_p.Log("flags: %d", flags);
-	return CELL_OK;
+	sc_p.Error("sys_game_process_exitspawn UNIMPLEMENTED");
+	sc_p.Warning("path: %s", Memory.ReadString(path_addr).wx_str());
+	sc_p.Warning("argv: 0x%x", argv_addr);
+	sc_p.Warning("envp: 0x%x", envp_addr);
+	sc_p.Warning("data: 0x%x", data_addr);
+	sc_p.Warning("data_size: 0x%x", data_size);
+	sc_p.Warning("prio: %d", prio);
+	sc_p.Warning("flags: %d", flags);
+
+	wxString path = Memory.ReadString(path_addr);
+	std::vector<wxString> argv;
+	std::vector<wxString> env;
+
+	mem_ptr_t<u32> argvp(argv_addr);
+	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
+	{
+		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
+		argvp++;
+	}
+	mem_ptr_t<u32> envp(envp_addr);
+	while (envp.GetAddr() && envp.IsGood() && *envp)
+	{
+		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
+		envp++;
+	}
+
+	for (auto &arg : argv){
+		sc_p.Log("argument: %s", arg.wx_str());
+	}
+	for (auto &en : env){
+		sc_p.Log("env_argument: %s", en.wx_str());
+	}
+	//TODO: execute the file in <path> with the args in argv
+	//and the environment parameters in envp and copy the data
+	//from data_addr into the adress space of the new process
+	//then kill the current process
+	return;
 }
+
+void sys_game_process_exitspawn2(
+			u32 path_addr,
+			u32 argv_addr,
+			u32 envp_addr,
+			u32 data_addr,
+			u32 data_size,
+			u32 prio,
+			u64 flags)
+{
+	sc_p.Error("sys_game_process_exitspawn2 UNIMPLEMENTED");
+	sc_p.Warning("path: %s", Memory.ReadString(path_addr).wx_str());
+	sc_p.Warning("argv: 0x%x", argv_addr);
+	sc_p.Warning("envp: 0x%x", envp_addr);
+	sc_p.Warning("data: 0x%x", data_addr);
+	sc_p.Warning("data_size: 0x%x", data_size);
+	sc_p.Warning("prio: %d", prio);
+	sc_p.Warning("flags: %d", flags);
+
+	wxString path = Memory.ReadString(path_addr);
+	std::vector<wxString> argv;
+	std::vector<wxString> env;
+
+	mem_ptr_t<u32> argvp(argv_addr);
+	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
+	{
+		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
+		argvp++;
+	}
+	mem_ptr_t<u32> envp(envp_addr);
+	while (envp.GetAddr() && envp.IsGood() && *envp)
+	{
+		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
+		envp++;
+	}
+
+	for (auto &arg : argv){
+		sc_p.Log("argument: %s", arg.wx_str());
+	}
+	for (auto &en : env){
+		sc_p.Log("env_argument: %s", en.wx_str());
+	}
+	//TODO: execute the file in <path> with the args in argv
+	//and the environment parameters in envp and copy the data
+	//from data_addr into the adress space of the new process
+	//then kill the current process
+	return;
+}
+
 
 int sys_process_get_number_of_object(u32 object, mem32_t nump)
 {

@@ -96,19 +96,19 @@ bool CPUThread::Sync()
 
 int CPUThread::ThreadStatus()
 {
-	if (Emu.IsStopped() || IsStopped())
+	if(Emu.IsStopped() || IsStopped() || IsPaused())
 	{
 		return CPUThread_Stopped;
 	}
 
-	if (m_is_step)
-	{
-		return CPUThread_Step;
-	}
-
-	if (TestDestroy() || IsPaused())
+	if(TestDestroy())
 	{
 		return CPUThread_Break;
+	}
+
+	if(m_is_step)
+	{
+		return CPUThread_Step;
 	}
 
 	if (Emu.IsPaused() || Sync())
@@ -284,8 +284,10 @@ void CPUThread::ExecOnce()
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 #endif
+	m_status = Running;
 	ThreadBase::Start();
-	ThreadBase::Stop();
+	ThreadBase::Stop(true,false);
+	m_status = Paused;
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);

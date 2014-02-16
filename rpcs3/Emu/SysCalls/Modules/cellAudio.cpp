@@ -450,7 +450,7 @@ int cellAudioPortStart(u32 portNum)
 
 			const u32 block_size = port.m_param.nChannel * 256 * sizeof(float);
 
-			u32 buffer[32*256]; // buffer for max channel count (8)
+			float buffer[32*256]; // buffer for max channel count (8)
 
 			while (port.m_is_audio_port_started)
 			{
@@ -471,7 +471,8 @@ int cellAudioPortStart(u32 portNum)
 
 				for (u32 i = 0; i < block_size; i++)
 				{
-					buffer[i] = re(buffer[i]); // reverse byte order
+					// reverse byte order (TODO: use port.m_param.level)
+					buffer[i] = re(buffer[i]);
 				}
 
 				output.Write(&buffer, block_size); // write file data
@@ -480,7 +481,7 @@ int cellAudioPortStart(u32 portNum)
 				
 				if (Emu.IsStopped())
 				{
-					ConLog.Warning("Port aborted");
+					ConLog.Write("Port aborted");
 					goto abort;
 				}
 			}
