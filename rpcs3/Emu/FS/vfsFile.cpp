@@ -18,7 +18,7 @@ bool vfsFile::Open(const wxString& path, vfsOpenMode mode)
 {
 	Close();
 
-	m_stream = Emu.GetVFS().OpenFile(path, mode);
+	m_stream.reset(Emu.GetVFS().OpenFile(path, mode));
 
 	return m_stream && m_stream->IsOpened();
 }

@@ -4,6 +4,6 @@
 class vfsDeviceLocalFile : public vfsDevice
 {
 public:
-	virtual std::shared_ptr<vfsFileBase> GetNewFileStream() override;
-	virtual std::shared_ptr<vfsDirBase> GetNewDirStream() override;
+	virtual vfsFileBase* GetNewFileStream() override;
+	virtual vfsDirBase* GetNewDirStream() override;
 };

@@ -3,12 +3,12 @@
 #include "vfsLocalFile.h"
 #include "vfsLocalDir.h"
 
-std::shared_ptr<vfsFileBase> vfsDeviceLocalFile::GetNewFileStream()
+vfsFileBase* vfsDeviceLocalFile::GetNewFileStream()
 {
-	return std::make_shared<vfsLocalFile>(this);
+	return new vfsLocalFile(this);
 }
 
-std::shared_ptr<vfsDirBase> vfsDeviceLocalFile::GetNewDirStream()
+vfsDirBase* vfsDeviceLocalFile::GetNewDirStream()
 {
-	return std::make_shared<vfsLocalDir>(this);
+	return new vfsLocalDir(this);
 }

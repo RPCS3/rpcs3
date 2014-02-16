@@ -12,8 +12,8 @@ public:
 	vfsDevice(const wxString& ps3_path, const wxString& local_path);
 	vfsDevice() {}
 
-	virtual std::shared_ptr<vfsFileBase> GetNewFileStream()=0;
-	virtual std::shared_ptr<vfsDirBase> GetNewDirStream()=0;
+	virtual vfsFileBase* GetNewFileStream()=0;
+	virtual vfsDirBase* GetNewDirStream()=0;
 
 	wxString GetLocalPath() const;
 	wxString GetPs3Path() const;

@@ -36,8 +36,8 @@ struct VFS
 	void UnMount(const wxString& ps3_path);
 	void UnMountAll();
 
-	std::shared_ptr<vfsFileBase> OpenFile(const wxString& ps3_path, vfsOpenMode mode) const;
-	std::shared_ptr<vfsDirBase> OpenDir(const wxString& ps3_path) const;
+	vfsFileBase* OpenFile(const wxString& ps3_path, vfsOpenMode mode) const;
+	vfsDirBase* OpenDir(const wxString& ps3_path) const;
 	bool CreateFile(const wxString& ps3_path) const;
 	bool CreateDir(const wxString& ps3_path) const;
 	bool RemoveFile(const wxString& ps3_path) const;

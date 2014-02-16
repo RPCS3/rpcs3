@@ -115,7 +115,8 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	{
 		if (entry->flags & DirEntry_TypeDir)
 		{
-			auto f = Emu.GetVFS().OpenFile("/app_home/TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
+			std::shared_ptr<vfsFileBase> f(Emu.GetVFS().OpenFile("/app_home/TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead));
+
 			if (f && f->IsOpened())
 			{
 				sceNpTrophyInternalContext ctxt;

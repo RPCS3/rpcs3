@@ -67,7 +67,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_EINVAL;
 	}
 
-	auto stream = Emu.GetVFS().OpenFile(ppath, o_mode);
+	vfsFileBase* stream = Emu.GetVFS().OpenFile(ppath, o_mode);
 
 	if(!stream || !stream->IsOpened())
 	{
@@ -75,8 +75,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(stream.get(), flags);
-	stream = nullptr;
+	fd = sys_fs.GetNewId(stream, flags);
 	ConLog.Warning("*** cellFsOpen(path=\"%s\"): fd = %d", path.wx_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -142,14 +141,14 @@ int cellFsOpendir(u32 path_addr, mem32_t fd)
 	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood())
 		return CELL_EFAULT;
 
-	std::shared_ptr<vfsDirBase> dir = Emu.GetVFS().OpenDir(path);
-	if(!dir->IsOpened())
+	vfsDirBase* dir = Emu.GetVFS().OpenDir(path);
+	if(!dir || !dir->IsOpened())
 	{
+		delete dir;
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(dir.get());
-	dir = nullptr;
+	fd = sys_fs.GetNewId(dir);
 	return CELL_OK;
 }
 

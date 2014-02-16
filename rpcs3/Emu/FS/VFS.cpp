@@ -50,12 +50,12 @@ void VFS::UnMountAll()
 	}
 }
 
-std::shared_ptr<vfsFileBase> VFS::OpenFile(const wxString& ps3_path, vfsOpenMode mode) const
+vfsFileBase* VFS::OpenFile(const wxString& ps3_path, vfsOpenMode mode) const
 {
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsFileBase> res = dev->GetNewFileStream())
+		if(vfsFileBase* res = dev->GetNewFileStream())
 		{
 			res->Open(path, mode);
 			return res;
@@ -65,13 +65,13 @@ std::shared_ptr<vfsFileBase> VFS::OpenFile(const wxString& ps3_path, vfsOpenMode
 	return nullptr;
 }
 
-std::shared_ptr<vfsDirBase> VFS::OpenDir(const wxString& ps3_path) const
+vfsDirBase* VFS::OpenDir(const wxString& ps3_path) const
 {
 	wxString path;
 
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsDirBase> res = dev->GetNewDirStream())
+		if(vfsDirBase* res = dev->GetNewDirStream())
 		{
 			res->Open(path);
 			return res;
@@ -86,7 +86,9 @@ bool VFS::CreateFile(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsFileBase> res = dev->GetNewFileStream())
+		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+
+		if(res)
 		{
 			return res->Create(path);
 		}
@@ -100,7 +102,9 @@ bool VFS::CreateDir(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsDirBase> res = dev->GetNewDirStream())
+		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+
+		if(res)
 		{
 			return res->Create(path);
 		}
@@ -114,7 +118,9 @@ bool VFS::RemoveFile(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsFileBase> res = dev->GetNewFileStream())
+		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+
+		if(res)
 		{
 			return res->Remove(path);
 		}
@@ -128,7 +134,9 @@ bool VFS::RemoveDir(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsDirBase> res = dev->GetNewDirStream())
+		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+
+		if(res)
 		{
 			return res->Remove(path);
 		}
@@ -142,7 +150,9 @@ bool VFS::ExistsFile(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsFileBase> res = dev->GetNewFileStream())
+		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+
+		if(res)
 		{
 			return res->Exists(path);
 		}
@@ -156,7 +166,9 @@ bool VFS::ExistsDir(const wxString& ps3_path) const
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		if(std::shared_ptr<vfsDirBase> res = dev->GetNewDirStream())
+		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+
+		if(res)
 		{
 			return res->IsExists(path);
 		}
@@ -170,7 +182,9 @@ bool VFS::RenameFile(const wxString& ps3_path_from, const wxString& ps3_path_to)
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path_from, path))
 	{
-		if(std::shared_ptr<vfsFileBase> res = dev->GetNewFileStream())
+		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+
+		if(res)
 		{
 			return res->Rename(path, ps3_path_to);
 		}
@@ -184,7 +198,9 @@ bool VFS::RenameDir(const wxString& ps3_path_from, const wxString& ps3_path_to) 
 	wxString path;
 	if(vfsDevice* dev = GetDevice(ps3_path_from, path))
 	{
-		if(std::shared_ptr<vfsDirBase> res = dev->GetNewDirStream())
+		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+
+		if(res)
 		{
 			return res->Rename(path, ps3_path_to);
 		}

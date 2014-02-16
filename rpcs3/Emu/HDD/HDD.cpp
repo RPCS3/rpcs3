@@ -5,12 +5,12 @@ vfsDeviceHDD::vfsDeviceHDD(const std::string& hdd_path) : m_hdd_path(hdd_path)
 {
 }
 
-std::shared_ptr<vfsFileBase> vfsDeviceHDD::GetNewFileStream()
+vfsFileBase* vfsDeviceHDD::GetNewFileStream()
 {
-	return std::make_shared<vfsHDD>(this, m_hdd_path);
+	return new vfsHDD(this, m_hdd_path);
 }
 
-std::shared_ptr<vfsDirBase> vfsDeviceHDD::GetNewDirStream()
+vfsDirBase* vfsDeviceHDD::GetNewDirStream()
 {
 	return nullptr;
 }

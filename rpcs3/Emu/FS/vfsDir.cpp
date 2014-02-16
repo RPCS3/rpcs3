@@ -18,7 +18,7 @@ bool vfsDir::Open(const wxString& path)
 {
 	Close();
 
-	m_stream = Emu.GetVFS().OpenDir(path);
+	m_stream.reset(Emu.GetVFS().OpenDir(path));
 
 	return m_stream && m_stream->IsOpened();
 }

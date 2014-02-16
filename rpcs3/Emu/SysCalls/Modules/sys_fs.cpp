@@ -35,8 +35,8 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 
 int sdata_unpack(wxString packed_file, wxString unpacked_file)
 {
-	auto packed_stream = Emu.GetVFS().OpenFile(packed_file, vfsRead);
-	auto unpacked_stream = Emu.GetVFS().OpenFile(unpacked_file, vfsWrite);
+	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
+	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWrite));
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
@@ -126,9 +126,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
-	auto stream = Emu.GetVFS().OpenFile(unpacked_path, vfsRead);
-	fd = sys_fs.GetNewId(stream.get(), flags);
-	stream = nullptr;
+	fd = sys_fs.GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
 
 	return CELL_OK;
 }
