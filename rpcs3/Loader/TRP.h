@@ -3,26 +3,22 @@
 
 struct TRPHeader
 {
-	u32 trp_magic;
-	u32 trp_version;
-	u64 trp_file_size;
-	u32 trp_files_count;
-	u32 trp_element_size;
-	u32 trp_unknown;
+	be_t<u32> trp_magic;
+	be_t<u32> trp_version;
+	be_t<u64> trp_file_size;
+	be_t<u32> trp_files_count;
+	be_t<u32> trp_element_size;
+	be_t<u32> trp_unknown;
 	unsigned char sha1[20];
 	unsigned char padding[16];
-
-	bool CheckMagic() const {
-		return trp_magic == 0xDCA23D00;
-	}
 };
 
 struct TRPEntry
 {
-	char name[20];
-	u64 offset;
-	u64 size;
-	u32 unknown;
+	char name[32];
+	be_t<u64> offset;
+	be_t<u64> size;
+	be_t<u32> unknown;
 	char padding[12];
 };
 

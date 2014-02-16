@@ -9,10 +9,14 @@ bool TRPLoader::Install(std::string dest, bool show)
 {
 	if(!trp_f.IsOpened()) return false;
 	if(!LoadHeader(show)) return false;
-	
+
+	if (!dest.empty() && dest.back() != '/')
+		dest += '/';
+
 	for (const TRPEntry& entry : m_entries)
 	{
 		char* buffer = new char [entry.size];
+		Emu.GetVFS().Create(dest+entry.name);
 		vfsFile file(dest+entry.name, vfsWrite);
 		trp_f.Seek(entry.offset);
 		trp_f.Read(buffer, entry.size);
@@ -35,7 +39,7 @@ bool TRPLoader::LoadHeader(bool show)
 	if (trp_f.Read(&m_header, sizeof(TRPHeader)) != sizeof(TRPHeader))
 		return false;
 
-	if (!m_header.CheckMagic())
+	if (m_header.trp_magic != 0xDCA24D00)
 		return false;
 
 	if (show)
