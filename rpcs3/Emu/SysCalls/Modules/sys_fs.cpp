@@ -5,8 +5,6 @@
 void sys_fs_init();
 Module sys_fs(0x000e, sys_fs_init);
 
-std::atomic<u32> g_FsAioReadID = 0;
-
 bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 {
 	if (version > 4 || flags & 0x7EFFFFC0){
@@ -137,12 +135,21 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
-SMutex aio_mutex;
+std::atomic<u32> g_FsAioReadID = 0;
+std::atomic<u32> g_FsAioReadCur = 0;
 bool aio_init;
 
 void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
 {
-	//SMutexLocker lock (aio_mutex);
+	while (g_FsAioReadCur != xid)
+	{
+		Sleep(1);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("fsAioRead() aborted");
+			return;
+		}
+	}
 
 	vfsFileBase* orig_file;
 	if(!sys_fs.CheckId(fd, orig_file)) return;
@@ -186,6 +193,8 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	//start callback thread
 	if(func)
 		func.async(aio, error, xid, res);
+
+	g_FsAioReadCur++;
 }
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
@@ -199,7 +208,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	if (!aio_init)
 	{
-		return CELL_ENXIO;
+		//return CELL_ENXIO;
 	}
 
 	vfsFileBase* orig_file;
@@ -211,10 +220,8 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	aio_id = xid;
 
 	{
-		//SMutexLocker lock(aio_mutex);
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
 		t.detach();
-		//fsAioRead(fd, aio, xid, func);
 	}
 
 	return CELL_OK;

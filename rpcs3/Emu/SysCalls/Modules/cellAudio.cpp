@@ -8,6 +8,8 @@ void cellAudio_load();
 void cellAudio_unload();
 Module cellAudio(0x0011, cellAudio_init, cellAudio_load, cellAudio_unload);
 
+extern u64 get_system_time();
+
 enum
 {
 	//libaudio Error Codes
@@ -59,6 +61,56 @@ enum
 	CELL_SOUND_SYNTH2_ERROR_FATAL				= 0x80310201,
 	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER	= 0x80310202,
 	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED	= 0x80310203,
+};
+
+struct WAVHeader
+{
+	struct RIFFHeader
+	{
+		u32 ID; // "RIFF"
+		u32 Size; // FileSize - 8
+		u32 WAVE; // "WAVE"
+
+		RIFFHeader(u32 size)
+			: ID(*(u32*)"RIFF")
+			, WAVE(*(u32*)"WAVE")
+			, Size(size)
+		{
+		}
+	} RIFF;
+	struct FMTHeader
+	{
+		u32 ID; // "fmt "
+		u32 Size; // 16
+		u16 AudioFormat; // 1 for PCM, 3 for IEEE Floating Point
+		u16 NumChannels; // 1, 2, 6, 8
+		u32 SampleRate; // 48000
+		u32 ByteRate; // SampleRate * NumChannels * BitsPerSample/8
+		u16 BlockAlign; // NumChannels * BitsPerSample/8
+		u16 BitsPerSample; // sizeof(float) * 8
+
+		FMTHeader(u8 ch)
+			: ID(*(u32*)"fmt ")
+			, Size(16)
+			, AudioFormat(3)
+			, NumChannels(ch)
+			, SampleRate(48000)
+			, ByteRate(SampleRate * ch * sizeof(float))
+			, BlockAlign(ch * sizeof(float))
+			, BitsPerSample(sizeof(float) * 8)
+		{
+		}
+	} FMT;
+	u32 ID; // "data"
+	u32 Size; // size of data (256 * NumChannels * sizeof(float))
+
+	WAVHeader(u8 ch)
+		: ID(*(u32*)"data")
+		, Size(0)
+		, FMT(ch)
+		, RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
+	{
+	}
 };
 
 
@@ -368,16 +420,76 @@ int cellAudioPortStart(u32 portNum)
 
 	thread t(t_name, [portNum]()
 		{
-			AudioPortConfig& ref = *m_config.m_ports[portNum];
-			mem64_t index(ref.m_index);
+			AudioPortConfig& port = *m_config.m_ports[portNum];
+			mem64_t index(port.m_index); // index storage
+
+			if (port.m_param.nChannel > 8)
+			{
+				ConLog.Error("Port aborted: invalid channel count (%d)", port.m_param.nChannel);
+				return;
+			}
+
+			WAVHeader header(port.m_param.nChannel); // WAV file header
+
+			wxString output_name = "audioport0.wav";
+			output_name[9] = '0' + portNum;
+
+			wxFile output(output_name, wxFile::write); // create output file
+			if (!output.IsOpened())
+			{
+				ConLog.Error("Port aborted: cannot write %s", output_name.wx_str());
+				return;
+			}
 
 			ConLog.Write("Port started");
-			while (ref.m_is_audio_port_started && !Emu.IsStopped())
+
+			u64 start_time = get_system_time();
+			u32 counter = 0;
+
+			output.Write(&header, sizeof(header)); // write file header
+
+			const u32 block_size = port.m_param.nChannel * 256 * sizeof(float);
+
+			u32 buffer[32*256]; // buffer for max channel count (8)
+
+			while (port.m_is_audio_port_started)
 			{
-				Sleep(5);
-				index = (index.GetValue() + 1) % ref.m_param.nBlock;
+				// Sleep(5); // precise time of sleeping: 5,(3) ms (or 256/48000 sec)
+				if ((u64)counter * 256000000 / 48000 >= get_system_time() - start_time)
+				{
+					Sleep(1);
+					continue;
+				}
+
+				counter++;
+
+				u32 position = index.GetValue(); // get old value
+				
+				memcpy(buffer, Memory + port.m_buffer + position * block_size, block_size);
+
+				index = (position + 1) % port.m_param.nBlock; // write new value
+
+				for (u32 i = 0; i < block_size; i++)
+				{
+					buffer[i] = re(buffer[i]); // reverse byte order
+				}
+
+				output.Write(&buffer, block_size); // write file data
+				header.Size += block_size; // update file header
+				header.RIFF.Size += block_size;
+				
+				if (Emu.IsStopped())
+				{
+					ConLog.Warning("Port aborted");
+					goto abort;
+				}
 			}
 			ConLog.Write("Port finished");
+		abort:
+			output.Seek(0);
+			output.Write(&header, sizeof(header)); // write fixed file header
+
+			output.Close();
 		});
 	t.detach();
 

@@ -463,9 +463,14 @@ int cellSysutilCheckCallback()
 
 	CPUThread& thr = Emu.GetCallbackThread();
 
-	while (Emu.IsRunning() && thr.IsAlive())
+	while (thr.IsAlive())
 	{
 		Sleep(1);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellSysutilCheckCallback() aborted");
+			break;
+		}
 	}
 
 	return CELL_OK;

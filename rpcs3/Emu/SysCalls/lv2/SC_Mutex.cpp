@@ -42,12 +42,14 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 		wxString(attr->name, 8).wx_str(), (u32)attr->protocol,
 		wxString(is_recursive ? "true" : "false").wx_str(), mutex_id.GetValue());
 
+	// TODO: unlock mutex when owner thread does exit
+
 	return CELL_OK;
 }
 
 int sys_mutex_destroy(u32 mutex_id)
 {
-	sys_mtx.Warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
+	sys_mtx.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -80,7 +82,7 @@ int sys_mutex_destroy(u32 mutex_id)
 
 int sys_mutex_lock(u32 mutex_id, u64 timeout)
 {
-	sys_mtx.Log("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
+	sys_mtx.Log("sys_mutex_lock(mutex_id=%d, timeout=0x%llx)", mutex_id, timeout);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -134,7 +136,7 @@ abort:
 
 int sys_mutex_trylock(u32 mutex_id)
 {
-	sys_mtx.Log("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
+	sys_mtx.Log("sys_mutex_trylock(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -170,7 +172,7 @@ int sys_mutex_trylock(u32 mutex_id)
 
 int sys_mutex_unlock(u32 mutex_id)
 {
-	sys_mtx.Log("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
+	sys_mtx.Log("sys_mutex_unlock(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
