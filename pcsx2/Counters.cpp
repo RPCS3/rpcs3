@@ -197,10 +197,7 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 	// One test we have shows that VBlank lasts for ~22 HBlanks, another we have show that is the time it's off.
 	// There exists a game (Legendz Gekitou! Saga Battle) Which runs REALLY slowly if VBlank is ~22 HBlanks, so the other test wins.
 
-	u64 Blank = (Frame / scansPerFrame) * ((scansPerFrame / 2) - 22); // PAL VBlank Period is off for roughly 22 HSyncs
-
-	if(scansPerFrame < SCANLINES_TOTAL_PAL) //Assume NTSC 
-		Blank = (Frame / scansPerFrame) * ((scansPerFrame /2) - 26);		// NTSC VBlank Period is off for roughly 26 HSyncs, so we update
+	u64 Blank = HalfFrame; // PAL VBlank Period is off for roughly 22 HSyncs
 
 	//I would have suspected this to be Frame - Blank, but that seems to completely freak it out
 	//and the test results are completely wrong. It seems 100% the same as the PS2 test on this,
