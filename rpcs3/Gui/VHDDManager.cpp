@@ -67,7 +67,7 @@ VHDDExplorer::VHDDExplorer(wxWindow* parent, const wxString& hdd_path) : wxDialo
 	m_list->InsertColumn(2, "Size");
 	m_list->InsertColumn(3, "Creation time");
 
-	m_hdd = new vfsHDD(hdd_path);
+	m_hdd = new vfsHDD(nullptr, hdd_path);
 	UpdateList();
 	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(VHDDExplorer::OnListDrag));
 	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_ITEM_ACTIVATED,	wxListEventHandler(VHDDExplorer::DClick));

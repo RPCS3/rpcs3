@@ -941,7 +941,7 @@ int cellSysCacheClear(void)
 	Emu.GetVFS().GetDevice(wxString("/dev_hdd1/cache/"), localPath);
 	if (wxDirExists(localPath)){
 		WxDirDeleteTraverser deleter;
-		wxString f = wxFindFirstFile(localPath+"\*",wxDIR);
+		wxString f = wxFindFirstFile(localPath+"\\*",wxDIR);
 		while (!f.empty())
 		{
 			wxDir dir(f);
@@ -961,7 +961,7 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
-	Emu.GetVFS().Create(wxString(param->getCachePath));
+	Emu.GetVFS().CreateFile(wxString(param->getCachePath));
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }

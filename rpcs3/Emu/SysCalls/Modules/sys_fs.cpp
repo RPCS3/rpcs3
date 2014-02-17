@@ -35,20 +35,18 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 
 int sdata_unpack(wxString packed_file, wxString unpacked_file)
 {
-	vfsStream* packed_stream = Emu.GetVFS().Open(packed_file, vfsRead);
-	vfsStream* unpacked_stream = Emu.GetVFS().Open(unpacked_file, vfsWrite);
+	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
+	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWrite));
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
 		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.wx_str(), vfsRead);
-		delete packed_stream;
 		return CELL_ENOENT;
 	}
 
 	if(!unpacked_stream || !unpacked_stream->IsOpened())
 	{
 		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.wx_str(), vfsWrite);
-		delete unpacked_stream;
 		return CELL_ENOENT;
 	}
 
@@ -105,9 +103,6 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 		}
 	}
 
-	packed_stream->Close();
-	unpacked_stream->Close();
-
 	return CELL_OK;
 }
 	
@@ -131,8 +126,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
-	vfsStream* stream = Emu.GetVFS().Open(unpacked_path, vfsRead);
-	fd = sys_fs.GetNewId(stream, flags);
+	fd = sys_fs.GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
 
 	return CELL_OK;
 }

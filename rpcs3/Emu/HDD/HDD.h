@@ -262,7 +262,7 @@ public:
 		if(!size)
 			return 0;
 
-		vfsDeviceLocker lock(m_hdd);
+		//vfsDeviceLocker lock(m_hdd);
 
 		const u32 block_size = m_hdd_info.block_size - sizeof(vfsHDD_Block);
 		u64 rsize = min<u64>(block_size - m_position, size);
@@ -310,7 +310,7 @@ public:
 		if(!size)
 			return 0;
 
-		vfsDeviceLocker lock(m_hdd);
+		//vfsDeviceLocker lock(m_hdd);
 
 		const u32 block_size = m_hdd_info.block_size - sizeof(vfsHDD_Block);
 
@@ -409,6 +409,17 @@ public:
 	}
 };
 
+class vfsDeviceHDD : public vfsDevice
+{
+	std::string m_hdd_path;
+
+public:
+	vfsDeviceHDD(const std::string& hdd_path);
+
+	virtual vfsFileBase* GetNewFileStream() override;
+	virtual vfsDirBase* GetNewDirStream() override;
+};
+
 class vfsHDD : public vfsFileBase
 {
 	vfsHDD_Hdr m_hdd_info;
@@ -419,11 +430,13 @@ class vfsHDD : public vfsFileBase
 	const wxString& m_hdd_path;
 
 public:
-	vfsHDD(const wxString& hdd_path)
-		: m_hdd_file(hdd_path, vfsReadWrite)
+	vfsHDD(vfsDevice* device, const wxString& hdd_path)
+		: m_hdd_file(device)
 		, m_file(m_hdd_file, m_hdd_info)
 		, m_hdd_path(hdd_path)
+		, vfsFileBase(device)
 	{
+		m_hdd_file.Open(hdd_path, vfsReadWrite);
 		m_hdd_file.Read(&m_hdd_info, sizeof(vfsHDD_Hdr));
 		m_cur_dir_block = m_hdd_info.next_block;
 		if(!m_hdd_info.block_size)
@@ -433,11 +446,6 @@ public:
 		}
 		m_hdd_file.Seek(m_cur_dir_block * m_hdd_info.block_size);
 		m_hdd_file.Read(&m_cur_dir, sizeof(vfsHDD_Entry));
-	}
-
-	virtual vfsDevice* GetNew()
-	{
-		return new vfsHDD(m_hdd_path);
 	}
 
 	__forceinline u32 GetMaxNameLen() const

@@ -397,6 +397,15 @@
     <ClCompile Include="Emu\GS\RSXTexture.cpp">
       <Filter>Emu\GS</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsDeviceLocalFile.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsDir.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

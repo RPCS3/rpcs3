@@ -27,28 +27,27 @@ static const wxSeekMode vfs2wx_seek(vfsSeekMode mode)
 	return wxFromStart;
 }
 
-vfsLocalFile::vfsLocalFile() : vfsFileBase()
+vfsLocalFile::vfsLocalFile(vfsDevice* device) : vfsFileBase(device)
 {
-}
-
-vfsLocalFile::vfsLocalFile(const wxString path, vfsOpenMode mode) : vfsFileBase()
-{
-	Open(path, mode);
-}
-
-vfsDevice* vfsLocalFile::GetNew()
-{
-	return new vfsLocalFile();
 }
 
 bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 {
 	Close();
 
-	if(!m_file.Access(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode))) return false;
+	if(m_device)
+	{
+		if(!m_file.Access(vfsDevice::GetWinPath(m_device->GetLocalPath(), path), vfs2wx_mode(mode))) return false;
 
-	return m_file.Open(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode)) &&
-		vfsFileBase::Open(vfsDevice::GetPs3Path(GetPs3Path(), path), mode);
+		return m_file.Open(vfsDevice::GetWinPath(m_device->GetLocalPath(), path), vfs2wx_mode(mode)) &&
+			vfsFileBase::Open(vfsDevice::GetPs3Path(m_device->GetPs3Path(), path), mode);
+	}
+	else
+	{
+		if(!m_file.Access(path, vfs2wx_mode(mode))) return false;
+
+		return m_file.Open(path, vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
+	}
 }
 
 bool vfsLocalFile::Create(const wxString& path)

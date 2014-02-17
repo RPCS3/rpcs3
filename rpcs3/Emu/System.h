@@ -107,16 +107,6 @@ public:
 	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
 	void SetTitleID(const wxString& id);
 
-	std::shared_ptr<vfsFileBase> OpenFile(const wxString& path, vfsOpenMode mode = vfsRead)
-	{
-		return std::shared_ptr<vfsFileBase>((vfsFileBase*)m_vfs.Open(path, mode));
-	}
-
-	std::shared_ptr<vfsStream> OpenStream(const wxString& path, vfsOpenMode mode = vfsRead)
-	{
-		return std::shared_ptr<vfsStream>(m_vfs.Open(path, mode));
-	}
-
 	CPUThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }
 	KeyboardManager&	GetKeyboardManager()	{ return m_keyboard_manager; }

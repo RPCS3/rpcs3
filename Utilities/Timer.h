@@ -1,38 +1,52 @@
 #pragma once
 
 #include <chrono>
-using namespace std::chrono;
 
 class Timer
 {
 private:
-	bool stopped;
-	high_resolution_clock::time_point start;
-	high_resolution_clock::time_point end;
+	bool m_stopped;
+	std::chrono::high_resolution_clock::time_point m_start;
+	std::chrono::high_resolution_clock::time_point m_end;
 
 public:
-	Timer() : stopped(false)
+	Timer() : m_stopped(false)
 	{
 	}
 
 	void Start()
 	{
-		stopped = false;
-        start = high_resolution_clock::now();
+		m_stopped = false;
+		m_start = std::chrono::high_resolution_clock::now();
 	}
 
 	void Stop()
 	{
-		stopped = true;
-        end = high_resolution_clock::now();
+		m_stopped = true;
+		m_end = std::chrono::high_resolution_clock::now();
 	}
 
-	double GetElapsedTimeInSec(){return GetElapsedTimeInMicroSec() / 1000000.0;}
-    double GetElapsedTimeInMilliSec(){return GetElapsedTimeInMicroSec() / 1000.0;}
-    double GetElapsedTimeInMicroSec()
+	double GetElapsedTimeInSec() const
 	{
-		if (!stopped)
-            end = high_resolution_clock::now();
-		return duration_cast<microseconds>(end - start).count();
+		return GetElapsedTimeInMicroSec() / 1000000.0;
+	}
+
+	double GetElapsedTimeInMilliSec() const
+	{
+		return GetElapsedTimeInMicroSec() / 1000.0;
+	}
+
+	double GetElapsedTimeInMicroSec() const
+	{
+		std::chrono::high_resolution_clock::time_point now = m_stopped ? m_end : std::chrono::high_resolution_clock::now();
+
+		return std::chrono::duration_cast<std::chrono::microseconds>(now - m_start).count();
+	}
+
+	double GetElapsedTimeInNanoSec() const
+	{
+		std::chrono::high_resolution_clock::time_point now = m_stopped ? m_end : std::chrono::high_resolution_clock::now();
+
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_start).count();
 	}
 };

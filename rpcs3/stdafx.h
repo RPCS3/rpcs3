@@ -210,9 +210,10 @@ enum Status
 #include "Emu/FS/vfsFileBase.h"
 #include "Emu/FS/vfsLocalDir.h"
 #include "Emu/FS/vfsLocalFile.h"
-#include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/FS/vfsStreamMemory.h"
+#include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsDir.h"
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

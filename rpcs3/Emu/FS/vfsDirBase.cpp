@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "vfsDirBase.h"
 
-vfsDirBase::vfsDirBase(const wxString& path)
+vfsDirBase::vfsDirBase(vfsDevice* device)
+	: m_pos(0)
+	, m_device(device)
 {
-	Open(path);
 }
 
 vfsDirBase::~vfsDirBase()
@@ -18,6 +19,7 @@ bool vfsDirBase::Open(const wxString& path)
 	if(!IsExists(path))
 		return false;
 
+	m_pos = 0;
 	m_cwd += '/' + path;
 	return true;
 }
@@ -46,4 +48,12 @@ void vfsDirBase::Close()
 wxString vfsDirBase::GetPath() const
 {
 	return m_cwd;
+}
+
+const DirEntryInfo* vfsDirBase::Read()
+{
+	if (m_pos >= m_entries.GetCount())
+		return nullptr;
+
+	return &m_entries[m_pos++];
 }

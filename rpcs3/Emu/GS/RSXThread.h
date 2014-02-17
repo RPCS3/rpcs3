@@ -17,7 +17,8 @@ u32 GetAddress(u32 offset, u8 location);
 
 class RSXTexture
 {
-  u8 m_index;
+	u8 m_index;
+
 public:
 	u32 m_pitch;
 	u16 m_depth;
@@ -484,11 +485,11 @@ protected:
 		m_point_x = 0;
 		m_point_y = 0;
 
-    // Construct Textures
-    for(int i=0; i<16; i++)
-    {
-      m_textures[i] = RSXTexture(i);
-    }
+		// Construct Textures
+		for(int i=0; i<16; i++)
+		{
+			m_textures[i] = RSXTexture(i);
+		}
 
 		Reset();
 	}
@@ -549,10 +550,10 @@ protected:
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
 
-    for(uint i=0; i<m_textures_count; ++i)
-	  {
+		for(uint i=0; i<m_textures_count; ++i)
+		{
 			m_textures[i].Init();
-	  }
+		}
 	}
 
 	void Begin(u32 draw_mode);

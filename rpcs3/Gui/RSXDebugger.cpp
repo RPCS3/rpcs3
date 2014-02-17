@@ -293,9 +293,11 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		if(Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation())) && render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
+		u8 location = render.m_textures[m_cur_texture].GetLocation();
+		if(location <= 1 && Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), location))
+			&& render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
 			MemoryViewerPanel::ShowImage(this,
-				GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation()), 1,
+				GetAddress(render.m_textures[m_cur_texture].GetOffset(), location), 1,
 				render.m_textures[m_cur_texture].GetWidth(),
 				render.m_textures[m_cur_texture].GetHeight(), false);
 	}
@@ -417,7 +419,20 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	u32 TexBuffer_addr = GetAddress(render.m_textures[m_cur_texture].GetOffset(), render.m_textures[m_cur_texture].GetLocation());
+	if(!render.m_textures[m_cur_texture].IsEnabled())
+		return;
+
+	u32 offset = render.m_textures[m_cur_texture].GetOffset();
+
+	if(!offset)
+		return;
+
+	u8 location = render.m_textures[m_cur_texture].GetLocation();
+
+	if(location > 1)
+		return;
+
+	u32 TexBuffer_addr = GetAddress(offset, location);
 
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
@@ -487,7 +502,17 @@ void RSXDebugger::GetTexture()
 		if(render.m_textures[i].IsEnabled())
 		{
 			m_list_texture->InsertItem(i, wxString::Format("%d", i));
-			m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), render.m_textures[i].GetLocation())));
+			u8 location = render.m_textures[i].GetLocation();
+			if(location > 1)
+			{
+				m_list_texture->SetItem(i, 1,
+					wxString::Format("Bad address (offset=0x%x, location=%d)", render.m_textures[i].GetOffset(), location));
+			}
+			else
+			{
+				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), location)));
+			}
+
 			m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
 			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
 			m_list_texture->SetItem(i, 4, render.m_textures[i].IsEnabled() ? "True" : "False");

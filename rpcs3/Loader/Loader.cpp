@@ -162,11 +162,13 @@ bool Loader::Load()
 		return false;
 	}
 
+	/*
 	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
+	wxString ps3_path;
 	const wxString& psf_path = root + "\\" + "PARAM.SFO";
-	if(wxFileExists(psf_path))
+	vfsFile f(psf_path);
+	if(f.IsOpened())
 	{
-		vfsLocalFile f(psf_path);
 		PSFLoader psf_l(f);
 		if(psf_l.Load())
 		{
@@ -175,6 +177,6 @@ bool Loader::Load()
 			psf_l.Close();
 		}
 	}
-
+	*/
 	return true;
 }

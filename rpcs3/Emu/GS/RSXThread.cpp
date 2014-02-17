@@ -1378,7 +1378,7 @@ void RSXThread::End()
 
 void RSXThread::Task()
 {
-  u8 inc;
+	u8 inc;
 	ConLog.Write("RSX thread entry");
 
 	OnInitThread();
@@ -1387,7 +1387,7 @@ void RSXThread::Task()
 	{
 		wxCriticalSectionLocker lock(m_cs_main);
 
-    inc=1;
+		inc=1;
 
 		u32 put, get;
 		se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
@@ -1439,7 +1439,7 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//ConLog.Warning("non increment cmd! 0x%x", cmd);
-      inc=0;
+			inc=0;
 		}
 
 		if(cmd == 0)
@@ -1449,10 +1449,10 @@ void RSXThread::Task()
 			continue;
 		}
 
-    for(int i=0; i<count; i++)
-    {
-      methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
-    }
+		for(int i=0; i<count; i++)
+		{
+			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
+		}
 
 		mem32_ptr_t args(Memory.RSXIOMem.GetStartAddr() + get + 4);
 		DoCmd(cmd, cmd & 0x3ffff, args, count);

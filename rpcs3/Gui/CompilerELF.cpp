@@ -12,7 +12,7 @@ enum CompilerIDs
 
 wxFont GetFont(int size)
 {
-	return wxFont(size, wxMODERN, wxNORMAL, wxNORMAL);
+	return wxFont(size, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 }
 
 CompilerELF::CompilerELF(wxWindow* parent)

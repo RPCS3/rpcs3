@@ -307,8 +307,8 @@ extern int cellMouseGetRawData(u32 port_no, mem_class_t data);
 extern int cellGcmCallback(u32 context_addr, u32 count);
 
 //sys_tty
-extern int sys_tty_read(s32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
-extern int sys_tty_write(s32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
+extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
+extern int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
 
 //sys_heap
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
