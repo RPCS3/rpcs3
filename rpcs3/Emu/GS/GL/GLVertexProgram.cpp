@@ -319,7 +319,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 
 	wxString f = wxEmptyString;
 
-	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%sgl_Position = gl_Position * scaleOffsetMat;\n}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
+	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s\tgl_Position = gl_Position * scaleOffsetMat;\n}\n", m_funcs[0].name.wx_str(), BuildFuncBody(m_funcs[0]).wx_str());
 
 	for(uint i=1; i<m_funcs.GetCount(); ++i)
 	{
@@ -341,7 +341,7 @@ void GLVertexDecompilerThread::Task()
 {
 	m_parr.params.Clear();
 
-	for(u32 i=0;;)
+	for(u32 i=0, intsCount=0;;intsCount++)
 	{
 		d0.HEX = m_data[i++];
 		d1.HEX = m_data[i++];
@@ -364,11 +364,11 @@ void GLVertexDecompilerThread::Task()
 		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
 		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
 		//case 0x07: break; // LIT
-		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; return; }", false, true); break; // BRA
-		case 0x09: AddScaCode("{ " + GetFunc() + "; return; }", false, true); break; // BRI : works differently (BRI o[1].x(TR) L0;)
+		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; " + wxString(m_funcs.GetCount() == 1 || m_funcs[1].offset > intsCount ? "gl_Position = gl_Position * scaleOffsetMat;" : "")  + " return; }", false, true); break; // BRA
+		case 0x09: AddScaCode("{ " + GetFunc() + "; " + wxString(m_funcs.GetCount() == 1 || m_funcs[1].offset > intsCount ? "gl_Position = gl_Position * scaleOffsetMat;" : "")  + " return; }", false, true); break; // BRI : works differently (BRI o[1].x(TR) L0;)
 		case 0x0a: AddScaCode("/*CAL*/ " + GetFunc(), false, true); break; // CAL : works same as BRI
 		case 0x0b: AddScaCode("/*CLI*/ " + GetFunc(), false, true); break; // CLI : works same as BRI
-		case 0x0c: AddScaCode("return", false, true); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
+		case 0x0c: AddScaCode("{ " + wxString(m_funcs.GetCount() == 1 || m_funcs[1].offset > intsCount ? "gl_Position = gl_Position * scaleOffsetMat;" : "")  + "return; }", false, true); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
 		case 0x0d: AddScaCode("log2(" + GetSRC(2, true) + ")"); break; // LG2
 		case 0x0e: AddScaCode("exp2(" + GetSRC(2, true) + ")"); break; // EX2
 		case 0x0f: AddScaCode("sin(" + GetSRC(2, true) + ")"); break; // SIN
