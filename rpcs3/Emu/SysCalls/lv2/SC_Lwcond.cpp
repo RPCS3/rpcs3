@@ -20,10 +20,18 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 
 	if (lwmutex.IsGood())
 	{
-		if (lwmutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
+		if (lwmutex->attribute.ToBE() & se32(SYS_SYNC_RETRY))
 		{
 			sys_lwcond.Warning("Unsupported SYS_SYNC_RETRY lwmutex protocol");
 		}
+		if (lwmutex->attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
+		{
+			sys_lwcond.Warning("Recursive lwmutex(sq=%d)", (u32)lwmutex->sleep_queue);
+		}
+	}
+	else
+	{
+		sys_lwcond.Warning("Invalid lwmutex address(0x%x)", lwmutex.GetAddr());
 	}
 
 	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex_addr=0x%x): id = %d", 

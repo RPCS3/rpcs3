@@ -26,6 +26,11 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 		return CELL_ESRCH;
 	}
 
+	if (mutex->is_recursive)
+	{
+		sys_cond.Warning("Recursive mutex(%d)", mutex_id);
+	}
+
 	Cond* cond = new Cond(mutex, attr->name_u64);
 	u32 id = sys_cond.GetNewId(cond);
 	cond_id = id;

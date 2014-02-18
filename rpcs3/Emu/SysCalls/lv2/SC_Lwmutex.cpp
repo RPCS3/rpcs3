@@ -67,6 +67,9 @@ int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
+	//ConLog.Write("*** lock mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
+		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->owner.GetOwner(), (u32)lwmutex->waiter);
+
 	return lwmutex->lock(GetCurrentPPUThread().GetId(), timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0);
 }
 
@@ -84,6 +87,9 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	sc_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
+
+	//ConLog.Write("*** unlocking mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
+		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->owner.GetOwner(), (u32)lwmutex->waiter);
 
 	return lwmutex->unlock(GetCurrentPPUThread().GetId());
 }
