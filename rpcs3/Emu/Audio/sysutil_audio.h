@@ -158,7 +158,7 @@ struct CellAudioOutConfiguration
 	u8 channel; 
 	u8 encoder; 
 	u8 reserved[10];
-	u32 downMixer;
+	be_t<u32> downMixer;
 };
 
 struct CellAudioOutSoundMode
@@ -167,7 +167,7 @@ struct CellAudioOutSoundMode
 	u8 channel; 
 	u8 fs; 
 	u8 reserved; 
-	u32 layout; 
+	be_t<u32> layout; 
 };
 
 struct CellAudioOutDeviceInfo
@@ -175,9 +175,9 @@ struct CellAudioOutDeviceInfo
 	u8 portType; 
 	u8 availableModeCount; 
 	u8 state;
-	u8 reserved[3]; 
-	u16 latency; 
-	CellAudioOutSoundMode availableModes[16]; 
+	u8 reserved[3];
+	be_t<u16> latency;
+	CellAudioOutSoundMode availableModes[16];
 };
 
 struct CellAudioOutState
@@ -185,7 +185,7 @@ struct CellAudioOutState
 	u8 state; 
 	u8 encoder; 
 	u8 reserved[6]; 
-	u32 downMixer; 
+	be_t<u32> downMixer; 
 	CellAudioOutSoundMode soundMode; 
 };
 
@@ -193,7 +193,7 @@ struct CellAudioOutSoundMode2
 { 
 	u8 type; 
 	u8 channel; 
-	u16 fs; 
+	be_t<u16> fs; 
 	u8 reserved[4]; 
 };
 
@@ -204,8 +204,8 @@ struct CellAudioOutDeviceInfo2
 	u8 state; 
 	u8 deviceNumber; 
 	u8 reserved[12]; 
-	u64 deviceId; 
-	u64 type; 
+	be_t<u64> deviceId; 
+	be_t<u64> type; 
 	char name[64]; 
 	CellAudioOutSoundMode2 availableModes2[16];
 };
@@ -229,7 +229,7 @@ struct CellAudioInSoundMode
 { 
 	u8 type; 
 	u8 channel; 
-	u16 fs; 
+	be_t<u16> fs; 
 	u8 reserved[4]; 
 };
 
@@ -240,8 +240,8 @@ struct CellAudioInDeviceInfo
 	u8 state; 
 	u8 deviceNumber; 
 	u8 reserved[12]; 
-	u64 deviceId; 
-	u64 type; 
+	be_t<u64> deviceId; 
+	be_t<u64> type; 
 	char name[64]; 
 	CellAudioInSoundMode availableModes[16];
 };

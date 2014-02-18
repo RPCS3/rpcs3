@@ -32,7 +32,8 @@ void sys_ppu_thread_exit(int errorcode)
 
 int sys_ppu_thread_yield()
 {
-	sysPrxForUser.Log("sys_ppu_thread_yield()");	
+	sysPrxForUser.Log("sys_ppu_thread_yield()");
+	Sleep(1);
 	return CELL_OK;
 }
 

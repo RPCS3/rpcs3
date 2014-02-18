@@ -118,8 +118,8 @@ int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSi
 	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pSize.GetAddr());
 
-	//if ((u32)pAddr->magic != 0x464d4150)
-		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
+	if ((u32)pAddr->magic != 0x464d4150)
+		return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
 	pSize = offset /*? offset : 2048*/; //hack

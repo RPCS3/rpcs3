@@ -216,6 +216,13 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 		}
 	}
 
+	if (path == "/dev_bdvd/PS3_GAME/USRDIR")
+	{
+		sys_fs.Warning("cellFsStat: /dev_bdvd/PS3_GAME/USRDIR mount point hack");
+		sb->st_mode |= CELL_FS_S_IFDIR;
+		return CELL_OK;
+	}
+
 	// TODO: Temporary solution until vfsDir is implemented
 	wxString real_path;
 	Emu.GetVFS().GetDevice(path, real_path);

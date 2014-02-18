@@ -1,25 +1,36 @@
 #pragma once
 
-struct mutex_attr
+struct sys_mutex_attribute
 {
-	u32 protocol;
-	u32 recursive;
-	u32 pshared;
-	u32 adaptive;
-	u64 ipc_key;
-	int flags;
-	u32 pad;
-	char name[8];
+	be_t<u32> protocol; // SYS_SYNC_FIFO, SYS_SYNC_PRIORITY or SYS_SYNC_PRIORITY_INHERIT
+	be_t<u32> recursive; // SYS_SYNC_RECURSIVE or SYS_SYNC_NOT_RECURSIVE
+	be_t<u32> pshared; // always 0x200 (not shared)
+	be_t<u32> adaptive;
+	be_t<u64> ipc_key;
+	be_t<int> flags;
+	be_t<u32> pad;
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
-struct mutex
+struct Mutex
 {
-	wxMutex mtx;
-	mutex_attr attr;
+	SMutex m_mutex;
+	SleepQueue m_queue;
+	u32 recursive; // recursive locks count
+	std::atomic<u32> cond_count; // count of condition variables associated
 
-	mutex(const mutex_attr& attr)
-		: mtx()
-		, attr(attr)
+	const u32 protocol;
+	const bool is_recursive;
+
+	Mutex(u32 protocol, bool is_recursive, u64 name)
+		: protocol(protocol)
+		, is_recursive(is_recursive)
+		, m_queue(name)
+		, cond_count(0)
 	{
 	}
 };

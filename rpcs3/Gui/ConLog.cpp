@@ -265,7 +265,7 @@ void LogFrame::Task()
 		m_log.InsertItem(cur_item, wxString(item.m_prefix).wx_str());
 		m_log.SetItem(cur_item, 1, wxString(item.m_text).wx_str());
 		m_log.SetItemTextColour(cur_item, wxString(item.m_colour).wx_str());
-		m_log.SetColumnWidth(0, -1);
+		m_log.SetColumnWidth(0, -1); // crashes on exit
 		m_log.SetColumnWidth(1, -1);
 
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);

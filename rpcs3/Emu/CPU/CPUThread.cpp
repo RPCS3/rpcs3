@@ -111,7 +111,7 @@ int CPUThread::ThreadStatus()
 		return CPUThread_Step;
 	}
 
-	if(Emu.IsPaused() || Sync())
+	if (Emu.IsPaused() || Sync())
 	{
 		return CPUThread_Sleeping;
 	}

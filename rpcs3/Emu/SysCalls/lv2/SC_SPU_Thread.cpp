@@ -625,7 +625,6 @@ int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 	{
 		return CELL_ESRCH;
 	}
-
 	/*
 	for(int j=0; j<equeue->pos; ++j)
 	{
@@ -656,9 +655,22 @@ int sys_spu_thread_throw_event(u8 spup, u24 data0, u32 data1);
 int sys_spu_thread_tryreceive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
 */
 
-int sys_spu_thread_bind_queue(u32 id, u32 equeue_id, u32 spuq_num)
+int sys_spu_thread_bind_queue(u32 id, u32 eq, u32 spuq_num)
 {
-	sc_spu.Error("sys_spu_thread_bind_queue(id=%d, equeue_id=%d, spuq_num=%d)", id, equeue_id, spuq_num);
+	sc_spu.Error("sys_spu_thread_bind_queue(id=%d, equeue_id=%d, spuq_num=%d)", id, eq, spuq_num);
+
+	EventQueue* equeue;
+	if(!sys_event.CheckId(eq, equeue))
+	{
+		return CELL_ESRCH;
+	}
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		return CELL_ESRCH;
+	}
 
 	return CELL_OK;
 }

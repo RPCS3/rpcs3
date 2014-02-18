@@ -32,8 +32,11 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		ConLog.Warning("STOP: 0x%x (m_exit_status -> 0)", code);
-		CPU.SetExitStatus(0);
+		if (CPU.SPU.Out_MBox.GetCount()) // the real exit status is probably stored there
+			ConLog.Warning("STOP: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
+		else
+			ConLog.Warning("STOP: 0x%x (no message)", code);
+		CPU.SetExitStatus(code);
 		CPU.Stop();
 	}
 	void LNOP()

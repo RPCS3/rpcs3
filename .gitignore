@@ -28,6 +28,7 @@
 *.unsuccessfulbuild
 *.res
 *.dump
+*.wav
 
 /libs
 /ipch

@@ -713,7 +713,7 @@ int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 int cellRescSetWaitFlip()
 {
 	cellResc.Log("cellRescSetWaitFlip()");
-	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
+	GSLockCurrent lock(GS_LOCK_WAIT_FLIP); // could stall on exit
 
 	return CELL_OK;
 }
