@@ -2349,7 +2349,7 @@ private:
 			if(count == 1)
 			{
 				//RD[32+4*n : 32+4*n+3] = CR[4*n : 4*n+3];
-				CPU.GPR[rd] = (u64)CPU.GetCR(n) << (n * 4);
+				CPU.GPR[rd] = (u64)CPU.GetCR(7 - n) << (n * 4);
 			}
 			else
 				CPU.GPR[rd] = 0;
