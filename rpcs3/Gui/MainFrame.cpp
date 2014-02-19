@@ -5,7 +5,6 @@
 #include "RSXDebugger.h"
 
 #include "git-version.h"
-#include "Emu/System.h"
 #include "Ini.h"
 #include "Emu/GS/sysutil_video.h"
 #include "Gui/VHDDManager.h"
@@ -81,45 +80,50 @@ MainFrame::MainFrame()
 	wxMenuBar& menubar(*new wxMenuBar());
 
 	wxMenu& menu_boot(*new wxMenu());
-	wxMenu& menu_sys(*new wxMenu());
-	wxMenu& menu_conf(*new wxMenu());
-	wxMenu& menu_tools(*new wxMenu());
-	wxMenu& menu_help(*new wxMenu());
-
 	menubar.Append(&menu_boot, "Boot");
-	menubar.Append(&menu_sys, "System");
-	menubar.Append(&menu_conf, "Config");
-	menubar.Append(&menu_tools, "Tools");
-	menubar.Append(&menu_help, "Help");
-
 	menu_boot.Append(id_boot_game, "Boot game");
 	menu_boot.Append(id_install_pkg, "Install PKG");
 	menu_boot.AppendSeparator();
 	menu_boot.Append(id_boot_elf, "Boot (S)ELF");
 
+	wxMenu& menu_sys(*new wxMenu());
+	menubar.Append(&menu_sys, "System");
 	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
 	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
 	menu_sys.AppendSeparator();
 	menu_sys.Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
 	menu_sys.Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
 
+	wxMenu& menu_conf(*new wxMenu());
+	menubar.Append(&menu_conf, "Config");
 	menu_conf.Append(id_config_emu, "Settings");
 	menu_conf.Append(id_config_pad, "PAD Settings");
 	menu_conf.AppendSeparator();
 	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
 
+	wxMenu& menu_tools(*new wxMenu());
+	menubar.Append(&menu_tools, "Tools");
 	menu_tools.Append(id_tools_compiler, "ELF Compiler");
 	menu_tools.Append(id_tools_memory_viewer, "Memory Viewer");
 	menu_tools.Append(id_tools_rsx_debugger, "RSX Debugger");
 
+	wxMenu& menu_help(*new wxMenu());
+	menubar.Append(&menu_help, "Help");
 	menu_help.Append(id_help_about, "About...");
 
 	SetMenuBar(&menubar);
 
+	// Panels
 	m_game_viewer = new GameViewer(this);
+	m_debugger_frame = new DebuggerPanel(this);
+	ConLogFrame = new LogFrame(this);
+
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
+	AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
+	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
+	// Events
 	Connect( id_boot_game,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
 	Connect( id_install_pkg,		 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
 	Connect( id_boot_elf,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
