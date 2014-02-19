@@ -53,6 +53,8 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
 			delete[] buf;
+
+			return;
 		}
 	}
 	//else ConLog.Write("program linked!");
@@ -70,8 +72,13 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
 			delete[] buf;
+
+			return;
 		}
 	}
+
+	glDetachShader(id, vp);
+	glDetachShader(id, fp);
 }
 
 void GLProgram::UnUse()

@@ -60,6 +60,8 @@ public:
 	thread(const std::string& name);
 	thread();
 
+
+public:
 	void start(std::function<void()> func);
 	void detach();
 	void join();

@@ -495,15 +495,13 @@ void RSXDebugger::GetPrograms()
 	if (!RSXReady()) return;
 	m_list_programs->DeleteAllItems();
 
-	int i=0;
 	for (auto& program : m_debug_programs)
 	{
-		m_list_programs->InsertItem(i, wxString::Format("%d", program.id));
-		m_list_programs->SetItem(i, 1, wxString::Format("%d", program.vp_id));
-		m_list_programs->SetItem(i, 2, wxString::Format("%d", program.fp_id));
-		m_list_programs->SetItem(i, 3, wxString::Format("%d", program.vp_shader.length()));
-		m_list_programs->SetItem(i, 4, wxString::Format("%d", program.fp_shader.length()));
-		i++;
+		const int i = m_list_programs->InsertItem(m_list_programs->GetItemCount(), wxString::Format("%u", program.id));
+		m_list_programs->SetItem(i, 1, wxString::Format("%u", program.vp_id));
+		m_list_programs->SetItem(i, 2, wxString::Format("%u", program.fp_id));
+		m_list_programs->SetItem(i, 3, wxString::Format("%llu", (u64)program.vp_shader.length()));
+		m_list_programs->SetItem(i, 4, wxString::Format("%llu", (u64)program.fp_shader.length()));
 	}
 }
 
@@ -654,27 +652,27 @@ void RSXDebugger::SetPrograms(wxListEvent& event)
 
 	// Program Editor
 	wxString title = wxString::Format("Program ID: %d (VP:%d, FP:%d)", program.id, program.vp_id, program.fp_id);
-	wxDialog* d_editor = new wxDialog(this, wxID_ANY, title, wxDefaultPosition, wxSize(800,500),
+	wxDialog d_editor(this, wxID_ANY, title, wxDefaultPosition, wxSize(800,500),
 		wxDEFAULT_DIALOG_STYLE | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxRESIZE_BORDER);
 
 	wxBoxSizer& s_panel = *new wxBoxSizer(wxHORIZONTAL);
-	wxStaticBoxSizer& s_vp_box = *new wxStaticBoxSizer(wxHORIZONTAL, d_editor, "Vertex Program");
-	wxStaticBoxSizer& s_fp_box = *new wxStaticBoxSizer(wxHORIZONTAL, d_editor, "Fragment Program");
-	wxTextCtrl* t_vp_edit  = new wxTextCtrl(d_editor, -1, program.vp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
-	wxTextCtrl* t_fp_edit  = new wxTextCtrl(d_editor, -1, program.fp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	wxStaticBoxSizer& s_vp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Vertex Program");
+	wxStaticBoxSizer& s_fp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Fragment Program");
+	wxTextCtrl* t_vp_edit  = new wxTextCtrl(&d_editor, wxID_ANY, program.vp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	wxTextCtrl* t_fp_edit  = new wxTextCtrl(&d_editor, wxID_ANY, program.fp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	t_vp_edit->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	t_fp_edit->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	s_vp_box.Add(t_vp_edit, 1, wxEXPAND);
 	s_fp_box.Add(t_fp_edit, 1, wxEXPAND);
 	s_panel.Add(&s_vp_box, 1, wxEXPAND);
 	s_panel.Add(&s_fp_box, 1, wxEXPAND);
-	d_editor->SetSizer(&s_panel);
+	d_editor.SetSizer(&s_panel);
 
 	// Show editor and open Save Dialog when closing
-	if (d_editor->ShowModal())
+	if (d_editor.ShowModal())
 	{
-		wxMessageDialog* d_save = new wxMessageDialog(d_editor, "Save changes and compile shaders?", title, wxYES_NO|wxCENTRE);
-		if(d_save->ShowModal() == wxID_YES)
+		wxMessageDialog d_save(&d_editor, "Save changes and compile shaders?", title, wxYES_NO|wxCENTRE);
+		if(d_save.ShowModal() == wxID_YES)
 		{
 			program.modified = true;
 			program.vp_shader = t_vp_edit->GetValue();
