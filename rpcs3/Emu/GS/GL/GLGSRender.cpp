@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
+#include "Gui/RSXDebugger.h"
 
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
@@ -428,6 +429,34 @@ bool GLGSRender::LoadProgram()
 
 	if(m_program.id)
 	{
+		// RSX Debugger: Check if this program was modified and update it
+		if (Ini.GSLogPrograms.GetValue())
+		{
+			for(auto& program : m_debug_programs)
+			{
+				if (program.id == m_program.id && program.modified)
+				{
+					// TODO: This isn't working perfectly. Is there any better/shorter way to update the program.
+					glDetachShader(m_program.id, m_vertex_prog.id);
+					glDetachShader(m_program.id, m_shader_prog.id);
+					m_vertex_prog.shader = program.vp_shader;
+					m_shader_prog.shader = program.fp_shader;
+					m_vertex_prog.Wait();
+					m_vertex_prog.Compile();
+					checkForGlError("m_vertex_prog.Compile");
+					m_shader_prog.Wait();
+					m_shader_prog.Compile();
+					checkForGlError("m_shader_prog.Compile");
+					glAttachShader(m_program.id, m_vertex_prog.id);
+					glAttachShader(m_program.id, m_shader_prog.id);
+					glLinkProgram(m_program.id);
+					checkForGlError("glLinkProgram");
+					program.vp_id = m_vertex_prog.id;
+					program.fp_id = m_shader_prog.id;
+					program.modified = false;
+				}
+			}
+		}
 		m_program.Use();
 	}
 	else
@@ -437,6 +466,18 @@ bool GLGSRender::LoadProgram()
 		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_shader_prog, m_vertex_prog, *m_cur_vertex_prog);
 		checkForGlError("m_prog_buffer.Add");
 		m_program.Use();
+
+		// RSX Debugger
+		if (Ini.GSLogPrograms.GetValue())
+		{
+			RSXDebuggerProgram program = RSXDebuggerProgram();
+			program.id = m_program.id;
+			program.vp_id = m_vertex_prog.id;
+			program.fp_id = m_shader_prog.id;
+			program.vp_shader = m_vertex_prog.shader;
+			program.fp_shader = m_shader_prog.shader;
+			m_debug_programs.push_back(program);
+		}
 	}
 
 	return true;

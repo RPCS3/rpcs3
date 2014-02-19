@@ -375,6 +375,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_audio_out = new wxComboBox(&diag, wxID_ANY);
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(&diag, wxID_ANY, "Ignore Read/Write errors");
+	wxCheckBox* chbox_gs_log_prog   = new wxCheckBox(&diag, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
@@ -411,6 +412,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_audio_out->Append("Null");
 
 	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
+	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
@@ -435,6 +437,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_gs->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5));
 	s_round_gs->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5));
 	s_round_gs->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5));
 	s_round_gs->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5));
@@ -478,6 +481,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
+		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
@@ -805,7 +809,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
+		case 'E': case 'e': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
 		case 'P': case 'p': if(Emu.IsRunning()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
 		case 'R': case 'r': if(!Emu.m_path.IsEmpty()) {Emu.Stop(); Emu.Run();} return;

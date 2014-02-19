@@ -2,6 +2,23 @@
 
 #include <wx/listctrl.h>
 
+struct RSXDebuggerProgram
+{
+	u32 id;
+	u32 vp_id;
+	u32 fp_id;
+	std::string vp_shader;
+	std::string fp_shader;
+	bool modified;
+
+	RSXDebuggerProgram()
+		: modified(false)
+	{
+	}
+};
+
+extern std::vector<RSXDebuggerProgram> m_debug_programs;
+
 class RSXDebugger : public wxFrame
 {
 	AppConnector m_app_connector;
@@ -18,6 +35,7 @@ class RSXDebugger : public wxFrame
 	u32 m_item_count;
 	wxListView* m_list_commands;
 	wxListView* m_list_flags;
+	wxListView* m_list_programs;
 	wxListView* m_list_lightning;
 	wxListView* m_list_texture;
 	wxListView* m_list_settings;
@@ -52,11 +70,13 @@ public:
 	virtual void GetMemory();
 	virtual void GetBuffers();
 	virtual void GetFlags();
+	virtual void GetPrograms();
 	virtual void GetLightning();
 	virtual void GetTexture();
 	virtual void GetSettings();
 
 	virtual void SetFlags(wxListEvent& event);
+	virtual void SetPrograms(wxListEvent& event);
 	virtual void OnSelectTexture(wxListEvent& event);
 
 	wxString ParseGCMEnum(u32 value, u32 type);

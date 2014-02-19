@@ -98,6 +98,7 @@ public:
 	IniEntry<int> GSResolution;
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<bool> GSVSyncEnable;
+	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
 	IniEntry<u8> PadHandlerMode;
@@ -137,6 +138,7 @@ public:
 		GSResolution.Init("Resolution", path);
 		GSAspectRatio.Init("AspectRatio", path);
 		GSVSyncEnable.Init("VSyncEnable", path);
+		GSLogPrograms.Init("LogPrograms", path);
 		GSDumpColorBuffers.Init("DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("DumpDepthBuffer", path);
 
@@ -178,6 +180,7 @@ public:
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
 		GSVSyncEnable.Load(false);
+		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(true);
 		GSDumpDepthBuffer.Load(true);
 		PadHandlerMode.Load(1);
@@ -212,6 +215,7 @@ public:
 		GSResolution.Save();
 		GSAspectRatio.Save();
 		GSVSyncEnable.Save();
+		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
 		PadHandlerMode.Save();

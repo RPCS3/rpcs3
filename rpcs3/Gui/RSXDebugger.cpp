@@ -5,6 +5,9 @@
 
 #include "MemoryViewer.h"
 
+// TODO: Clear the object when restarting the emulator
+std::vector<RSXDebuggerProgram> m_debug_programs;
+
 enum GCMEnumTypes
 {
 	CELL_GCM_ENUM,
@@ -68,12 +71,14 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(482,475));
 	wxPanel* p_commands  = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_flags     = new wxPanel(nb_rsx, wxID_ANY);
+	wxPanel* p_programs  = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_lightning = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_texture   = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_settings  = new wxPanel(nb_rsx, wxID_ANY);
 
 	nb_rsx->AddPage(p_commands,  wxT("RSX Commands"));
 	nb_rsx->AddPage(p_flags,     wxT("Flags"));
+	nb_rsx->AddPage(p_programs,  wxT("Programs"));
 	nb_rsx->AddPage(p_lightning, wxT("Lightning"));
 	nb_rsx->AddPage(p_texture,   wxT("Texture"));
 	nb_rsx->AddPage(p_settings,  wxT("Settings"));
@@ -81,6 +86,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Tabs: Lists
 	m_list_commands  = new wxListView(p_commands,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
 	m_list_flags     = new wxListView(p_flags,     wxID_ANY, wxPoint(1,3), wxSize(470,444));
+	m_list_programs  = new wxListView(p_programs,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
 	m_list_lightning = new wxListView(p_lightning, wxID_ANY, wxPoint(1,3), wxSize(470,444));
 	m_list_texture   = new wxListView(p_texture,   wxID_ANY, wxPoint(1,3), wxSize(470,444));
 	m_list_settings  = new wxListView(p_settings,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
@@ -88,6 +94,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Tabs: List Style
 	m_list_commands ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_flags    ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_list_programs ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_lightning->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_texture  ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_settings ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -99,6 +106,11 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	m_list_commands->InsertColumn(3, "Count", 0, 40);
 	m_list_flags->InsertColumn(0, "Name", 0, 170);
 	m_list_flags->InsertColumn(1, "Value", 0, 270);
+	m_list_programs->InsertColumn(0, "ID", 0, 70);
+	m_list_programs->InsertColumn(1, "VP ID", 0, 70);
+	m_list_programs->InsertColumn(2, "FP ID", 0, 70);
+	m_list_programs->InsertColumn(3, "VP Length", 0, 110);
+	m_list_programs->InsertColumn(4, "FP Length", 0, 110);
 	m_list_lightning->InsertColumn(0, "Name", 0, 170);
 	m_list_lightning->InsertColumn(1, "Value", 0, 270);
 
@@ -131,10 +143,10 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Buffers
 	wxBoxSizer& s_buffers1 = *new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer& s_buffers2 = *new wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer& s_buffers_colorA   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
-	wxStaticBoxSizer& s_buffers_colorB   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
-	wxStaticBoxSizer& s_buffers_colorC   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
-	wxStaticBoxSizer& s_buffers_colorD   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
+	wxStaticBoxSizer& s_buffers_colorA  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
+	wxStaticBoxSizer& s_buffers_colorB  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
+	wxStaticBoxSizer& s_buffers_colorC  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
+	wxStaticBoxSizer& s_buffers_colorD  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
 	wxStaticBoxSizer& s_buffers_depth   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Depth Buffer");
 	wxStaticBoxSizer& s_buffers_stencil = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Stencil Buffer");
 	wxStaticBoxSizer& s_buffers_text    = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
@@ -207,6 +219,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 
 	m_list_commands->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(RSXDebugger::OnScrollMemory), nullptr, this);
 	m_list_flags->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetFlags), nullptr, this);
+	m_list_programs->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetPrograms), nullptr, this);
 
 	m_list_texture->Connect(wxID_ANY, wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::OnSelectTexture), nullptr, this);
 	
@@ -331,6 +344,7 @@ void RSXDebugger::UpdateInformation()
 	GetMemory();
 	GetBuffers();
 	GetFlags();
+	GetPrograms();
 	GetLightning();
 	GetTexture();
 	GetSettings();
@@ -476,6 +490,23 @@ void RSXDebugger::GetFlags()
 #undef LIST_FLAGS_ADD
 }
 
+void RSXDebugger::GetPrograms()
+{
+	if (!RSXReady()) return;
+	m_list_programs->DeleteAllItems();
+
+	int i=0;
+	for (auto& program : m_debug_programs)
+	{
+		m_list_programs->InsertItem(i, wxString::Format("%d", program.id));
+		m_list_programs->SetItem(i, 1, wxString::Format("%d", program.vp_id));
+		m_list_programs->SetItem(i, 2, wxString::Format("%d", program.fp_id));
+		m_list_programs->SetItem(i, 3, wxString::Format("%d", program.vp_shader.length()));
+		m_list_programs->SetItem(i, 4, wxString::Format("%d", program.fp_shader.length()));
+		i++;
+	}
+}
+
 void RSXDebugger::GetLightning()
 {
 	if (!RSXReady()) return;
@@ -612,6 +643,44 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	case 12: render.m_set_stencil_test      ^= true; break;
 	}
 
+	UpdateInformation();
+}
+
+void RSXDebugger::SetPrograms(wxListEvent& event)
+{
+	if (!RSXReady()) return;
+	GSRender& render = Emu.GetGSManager().GetRender();
+	RSXDebuggerProgram& program = m_debug_programs[event.m_itemIndex];
+
+	// Program Editor
+	wxString title = wxString::Format("Program ID: %d (VP:%d, FP:%d)", program.id, program.vp_id, program.fp_id);
+	wxDialog* d_editor = new wxDialog(this, wxID_ANY, title, wxDefaultPosition, wxSize(800,500),
+		wxDEFAULT_DIALOG_STYLE | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxRESIZE_BORDER);
+
+	wxBoxSizer& s_panel = *new wxBoxSizer(wxHORIZONTAL);
+	wxStaticBoxSizer& s_vp_box = *new wxStaticBoxSizer(wxHORIZONTAL, d_editor, "Vertex Program");
+	wxStaticBoxSizer& s_fp_box = *new wxStaticBoxSizer(wxHORIZONTAL, d_editor, "Fragment Program");
+	wxTextCtrl* t_vp_edit  = new wxTextCtrl(d_editor, -1, program.vp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	wxTextCtrl* t_fp_edit  = new wxTextCtrl(d_editor, -1, program.fp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	t_vp_edit->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	t_fp_edit->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	s_vp_box.Add(t_vp_edit, 1, wxEXPAND);
+	s_fp_box.Add(t_fp_edit, 1, wxEXPAND);
+	s_panel.Add(&s_vp_box, 1, wxEXPAND);
+	s_panel.Add(&s_fp_box, 1, wxEXPAND);
+	d_editor->SetSizer(&s_panel);
+
+	// Show editor and open Save Dialog when closing
+	if (d_editor->ShowModal())
+	{
+		wxMessageDialog* d_save = new wxMessageDialog(d_editor, "Save changes and compile shaders?", title, wxYES_NO|wxCENTRE);
+		if(d_save->ShowModal() == wxID_YES)
+		{
+			program.modified = true;
+			program.vp_shader = t_vp_edit->GetValue();
+			program.fp_shader = t_fp_edit->GetValue();
+		}
+	}
 	UpdateInformation();
 }
 
