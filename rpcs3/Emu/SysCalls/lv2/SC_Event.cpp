@@ -153,7 +153,7 @@ int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 
 int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 timeout)
 {
-	sys_event.Warning("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
+	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
 		equeue_id, event.GetAddr(), timeout);
 
 	if (!event.IsGood())

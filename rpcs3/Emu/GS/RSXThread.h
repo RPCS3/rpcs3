@@ -559,6 +559,7 @@ protected:
 	void Begin(u32 draw_mode);
 	void End();
 
+	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count);
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);
 
 	virtual void OnInit() = 0;

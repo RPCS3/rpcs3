@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "RSXThread.h"
 
-#define ARGS(x) (Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
 
 u32 methodRegisters[0xffff];
 
@@ -101,6 +101,18 @@ u32 RSXVertexData::GetTypeSize()
 #else
 	#define CMD_LOG(...)
 #endif
+
+u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count)
+{
+	wxString debug = GetMethodName(cmd);
+	debug += "(";
+	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", ARGS(i));
+	debug += ")";
+	ConLog.Write("OutOfArgsCount(x=%u, count=%u): " + debug, x, count);
+
+	return 0;
+}
+
 
 #define case_16(a, m) \
 	case a + m: \
@@ -315,11 +327,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_surface_antialias = (a0 >> 12) & 0xf;
 		m_surface_width = (a0 >> 16) & 0xff;
 		m_surface_height = (a0 >> 24) & 0xff;
-		m_surface_pitch_a = ARGS(1);
-		m_surface_offset_a = ARGS(2);
-		m_surface_offset_z = ARGS(3);
-		m_surface_offset_b = ARGS(4);
-		m_surface_pitch_b = ARGS(5);
+
+		if(count >= 2)
+		{
+			m_surface_pitch_a = ARGS(1);
+
+			if(count >= 3)
+			{
+				m_surface_offset_a = ARGS(2);
+
+				if(count >= 4)
+				{
+					m_surface_offset_z = ARGS(3);
+
+					if(count >= 5)
+					{
+						m_surface_offset_b = ARGS(4);
+
+						if(count >= 6)
+						{
+							m_surface_pitch_b = ARGS(5);
+						}
+					}
+				}
+			}
+		}
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
 		m_width = re(buffers[m_gcm_current_buffer].width);
@@ -1326,6 +1358,56 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_VIEWPORT_SCALE:
 	{
 
+	}
+	break;
+
+	case NV4097_SET_ZMIN_MAX_CONTROL:
+	break;
+
+	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
+	break;
+
+	case 0x000002c8:
+	case 0x000002d0:
+	case 0x000002d8:
+	case 0x000002e0:
+	case 0x000002e8:
+	case 0x000002f0:
+	case 0x000002f8:
+	break;
+
+	case NV4097_SET_SURFACE_COLOR_AOFFSET:
+		m_surface_offset_a = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_COLOR_BOFFSET:
+		m_surface_offset_b = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_COLOR_COFFSET:
+		m_surface_offset_c = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_COLOR_DOFFSET:
+		m_surface_offset_d = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_ZETA_OFFSET:
+		m_surface_offset_z = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_PITCH_A:
+		m_surface_pitch_a = ARGS(0);
+	break;
+
+	case NV4097_SET_SURFACE_PITCH_B:
+		m_surface_pitch_b = ARGS(0);
+	break;
+
+	case NV4097_SET_TRANSFORM_PROGRAM_START:
+	{
+		int a0 = ARGS(0);
+		if(a0) ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", a0);
 	}
 	break;
 
