@@ -113,7 +113,20 @@ thread::thread()
 
 void thread::start(std::function<void()> func)
 { // got a crash related with strings
-	m_thr = std::thread([this, func]() { NamedThreadBase info(m_name); g_tls_this_thread = &info; func(); });
+	m_thr = std::thread([this, func]()
+	{
+		try
+		{
+			NamedThreadBase info(m_name);
+			g_tls_this_thread = &info;
+			func();
+		}
+		catch(...)
+		{
+			ConLog.Error("Crash :(");
+			terminate();
+		}
+	});
 }
 
 void thread::detach()
