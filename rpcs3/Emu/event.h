@@ -220,4 +220,5 @@ public:
 	bool RegisterKey(EventQueue* data, u64 key);
 	bool GetEventQueue(u64 key, EventQueue*& data);
 	bool UnregisterKey(u64 key);
+	bool SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3);
 };

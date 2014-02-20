@@ -59,3 +59,19 @@ bool EventManager::UnregisterKey(u64 key)
 	}
 	return false;
 }
+
+bool EventManager::SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3)
+{
+	if (!key) return false;
+	SMutexLocker lock(m_lock);
+
+	auto f = key_map.find(key);
+	if (f == key_map.end())
+	{
+		return false;
+	}
+	EventQueue* eq = f->second;
+
+	eq->events.push(source, d1, d2, d3);
+	return true;
+}

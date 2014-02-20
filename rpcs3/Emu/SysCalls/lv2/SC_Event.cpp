@@ -199,7 +199,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 			}
 		case SMR_SIGNAL:
 			{
-				eq->events.pop(*(sys_event_data*)(Memory + event));
+				eq->events.pop(*event);
 				eq->owner.unlock(tid);
 				return CELL_OK;
 			}

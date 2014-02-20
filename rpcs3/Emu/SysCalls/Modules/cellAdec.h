@@ -83,7 +83,6 @@ enum
 	CELL_ADEC_ERROR_M4AAC_STEREO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED
 															= 0x8061243c,
 
-	/* SBR */
 	CELL_ADEC_ERROR_M4AAC_SBR_CH_OVERFLOW					= 0x80612480,
 	CELL_ADEC_ERROR_M4AAC_SBR_NOSYNCH						= 0x80612481,
 	CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PROGRAM				= 0x80612482,
@@ -108,82 +107,71 @@ enum
 
 	CELL_ADEC_ERROR_AT3_OFFSET = 0x80612100,
 	CELL_ADEC_ERROR_AT3_OK     = 0x80612100,
-	/* Adapter level error */
 	CELL_ADEC_ERROR_AT3_BUSY   = 0x80612164,
 	CELL_ADEC_ERROR_AT3_EMPTY  = 0x80612165,
-	/* Core level error */
 	CELL_ADEC_ERROR_AT3_ERROR  = 0x80612180,
 
 
 	CELL_ADEC_ERROR_ATX_OFFSET = 0x80612200,
-	CELL_ADEC_ERROR_ATX_NONE	                   = 0x80612200,	        /* no errors */
+	CELL_ADEC_ERROR_ATX_NONE	                   = 0x80612200,
 	CELL_ADEC_ERROR_ATX_OK	                       = 0x80612200,
-	/*----- Adapter level error -----*/
 	CELL_ADEC_ERROR_ATX_BUSY                       = 0x80612264,
 	CELL_ADEC_ERROR_ATX_EMPTY                      = 0x80612265,
 	CELL_ADEC_ERROR_ATX_ATSHDR                     = 0x80612266,
-	/*----- Core level error -----*/
-	/* non fatal errors */
-	CELL_ADEC_ERROR_ATX_NON_FATAL                  = 0x80612281,	/* undefined error */
-	CELL_ADEC_ERROR_ATX_NOT_IMPLE                  = 0x80612282,	/* not implemented */
-	CELL_ADEC_ERROR_ATX_PACK_CE_OVERFLOW           = 0x80612283,	/* pack_channel_block_at5() in pack_at5.c */
-	CELL_ADEC_ERROR_ATX_ILLEGAL_NPROCQUS           = 0x80612284,	/* unpack_sheader() in pack_at5_sheader.c */
-	/* fatal errors(block level) */
-	CELL_ADEC_ERROR_ATX_FATAL                      = 0x8061228c,	/* undefined error */
-	CELL_ADEC_ERROR_ATX_ENC_OVERFLOW               = 0x8061228d,	/* at5enc_proc() in at5enc.c */
-	CELL_ADEC_ERROR_ATX_PACK_CE_UNDERFLOW          = 0x8061228e,	/* pack_channel_block_at5() in pack_at5.c */
-	/* to check syntax */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT                = 0x8061228f,	/* unpack_idct() in pack_at5_codetbl.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GAINADJ             = 0x80612290,	/* unpack_gainadj() in pack_at5_gainadj.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF                = 0x80612291,	/* unpack_idsf() in pack_at5_sfactor.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_SPECTRA             = 0x80612292,	/* unpack_spectra() in pack_at5_spectra.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL	               = 0x80612293,	/* unpack_idwl() in pack_at5_idwl.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GHWAVE              = 0x80612294,	/* unpack_ghwave() in pack_at5_ghwave.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_SHEADER             = 0x80612295,	/* unpack_sheader() in pack_at5_sheader.c */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_A              = 0x80612296,	/* idwl[][]{0-7} range error	*/
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_B              = 0x80612297,	/* idwl restriction error (wlc_encqu<=divqu<nprocqus,ich=0) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_C              = 0x80612298,	/* idwl restriction error (0<=wlc_divqu<=wlc_encqu,ich=0) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_D              = 0x80612299,	/* idwl restriction error (wlc_encqu<divqu<=nprocqus,ich=1) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_E              = 0x8061229a,	/* idwl restriction error (wlc_encqu<=nprocqus)	*/
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_A              = 0x8061229b,	/* idsf[][]{0-63} range error */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_B              = 0x8061229c,	/* sfc_nbitlen{0-6} range error	*/
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_C              = 0x8061229d,	/* idsf restriction error (0<=sfc_divqu<=nrealqus) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_D              = 0x8061229e,	/* idsf restriction error (0<=sfc_sg_divqu<=nrealqus) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT_A              = 0x8061229f,	/* idct restriction error (0<=ctc_divqu<=nrealqus) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_NGC              = 0x806122a0,	/* ngc[][]{0-7} range error */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_A          = 0x806122a1,	/* idlev[][][]{0-15} range error */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_A          = 0x806122a2,	/* idloc[][][]{0-31} range error */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_B          = 0x806122a3,	/* gain_control_data restriction error (idlev[][][]) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_B          = 0x806122a4,	/* gain_control_data restriction error (idloc[][][]) */
-	CELL_ADEC_ERROR_ATX_SYNTAX_SN_NWVS             = 0x806122a5,	/* sinusoid_data restriction error	*/
-	/* fatal errors(handle level) */
-	CELL_ADEC_ERROR_ATX_FATAL_HANDLE               = 0x806122aa,	/* undefined error at handle level */
-	/* parameter assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_SAMPLING_FREQ       = 0x806122ab,	/* sampling freqeuency assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_CH_CONFIG_INDEX     = 0x806122ac,	/* channel_config_index assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_NBYTES              = 0x806122ad,	/* a number of bytes(nbytes) assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_NUM           = 0x806122ae,	/* a number of blocks(block_num) assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_ID            = 0x806122af,	/* block_id assertion error */
-	CELL_ADEC_ERROR_ATX_ASSERT_CHANNELS            = 0x806122b0,	/* a number of channels per block assertion error */
-	CELL_ADEC_ERROR_ATX_UNINIT_BLOCK_SPECIFIED     = 0x806122b1,	/* uninitialized block specified */
-	CELL_ADEC_ERROR_ATX_POSCFG_PRESENT             = 0x806122b2, 	/* "position_config_data" presents(currently fatal error) */
-	CELL_ADEC_ERROR_ATX_BUFFER_OVERFLOW            = 0x806122b3,	/* buffer overflow */
-	CELL_ADEC_ERROR_ATX_ILL_BLK_TYPE_ID            = 0x806122b4,	/* illegal "block_type_id" detected */
-	CELL_ADEC_ERROR_ATX_UNPACK_CHANNEL_BLK_FAILED  = 0x806122b5,	/* unpack_channel_block() failed */
-	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_1          = 0x806122b6,	/* illegal "block_id" used (more audio_channel_block) */
-	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_2          = 0x806122b7,	/* illegal "block_id" used (less audio_channel_block) */
-	/* error in parameter assertion */
-	CELL_ADEC_ERROR_ATX_ILLEGAL_ENC_SETTING        = 0x806122b8,	/* illegal encoder setting(init_atrac5_encode()) */
-	CELL_ADEC_ERROR_ATX_ILLEGAL_DEC_SETTING        = 0x806122b9,	/* illegal decoder setting(init_atrac5_decode()) */
-	CELL_ADEC_ERROR_ATX_ASSERT_NSAMPLES            = 0x806122ba,	/* a number of input PCM samples assertion error */
-																							/* (for atx_encode() and atx_encode_alt()) */
-	/* ATS */
-	CELL_ADEC_ERROR_ATX_ILL_SYNCWORD               = 0x806122bb,	/* illegal syncword used	*/
-	CELL_ADEC_ERROR_ATX_ILL_SAMPLING_FREQ          = 0x806122bc,	/* illegal sampling_frequeny_index @ config_data()	*/
-	CELL_ADEC_ERROR_ATX_ILL_CH_CONFIG_INDEX        = 0x806122bd,	/* illegal channel_config_index	@ config_data()	*/
-	CELL_ADEC_ERROR_ATX_RAW_DATA_FRAME_SIZE_OVER   = 0x806122be,	/* size of raw_data_frame > frame_length	*/
-	CELL_ADEC_ERROR_ATX_SYNTAX_ENHANCE_LENGTH_OVER = 0x806122bf,	/* enhance_length {0,2046} range error	*/
-	CELL_ADEC_ERROR_ATX_SPU_INTERNAL_FAIL          = 0x806122c8,	/* spu-processing failed */
+	CELL_ADEC_ERROR_ATX_NON_FATAL                  = 0x80612281,
+	CELL_ADEC_ERROR_ATX_NOT_IMPLE                  = 0x80612282,
+	CELL_ADEC_ERROR_ATX_PACK_CE_OVERFLOW           = 0x80612283,
+	CELL_ADEC_ERROR_ATX_ILLEGAL_NPROCQUS           = 0x80612284,
+	CELL_ADEC_ERROR_ATX_FATAL                      = 0x8061228c,
+	CELL_ADEC_ERROR_ATX_ENC_OVERFLOW               = 0x8061228d,
+	CELL_ADEC_ERROR_ATX_PACK_CE_UNDERFLOW          = 0x8061228e,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT                = 0x8061228f,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GAINADJ             = 0x80612290,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF                = 0x80612291,
+	CELL_ADEC_ERROR_ATX_SYNTAX_SPECTRA             = 0x80612292,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL	               = 0x80612293,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GHWAVE              = 0x80612294,
+	CELL_ADEC_ERROR_ATX_SYNTAX_SHEADER             = 0x80612295,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_A              = 0x80612296,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_B              = 0x80612297,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_C              = 0x80612298,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_D              = 0x80612299,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_E              = 0x8061229a,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_A              = 0x8061229b,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_B              = 0x8061229c,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_C              = 0x8061229d,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_D              = 0x8061229e,
+	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT_A              = 0x8061229f,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GC_NGC              = 0x806122a0,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_A          = 0x806122a1,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_A          = 0x806122a2,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_B          = 0x806122a3,
+	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_B          = 0x806122a4,
+	CELL_ADEC_ERROR_ATX_SYNTAX_SN_NWVS             = 0x806122a5,
+	CELL_ADEC_ERROR_ATX_FATAL_HANDLE               = 0x806122aa,
+	CELL_ADEC_ERROR_ATX_ASSERT_SAMPLING_FREQ       = 0x806122ab,
+	CELL_ADEC_ERROR_ATX_ASSERT_CH_CONFIG_INDEX     = 0x806122ac,
+	CELL_ADEC_ERROR_ATX_ASSERT_NBYTES              = 0x806122ad,
+	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_NUM           = 0x806122ae,
+	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_ID            = 0x806122af,
+	CELL_ADEC_ERROR_ATX_ASSERT_CHANNELS            = 0x806122b0,
+	CELL_ADEC_ERROR_ATX_UNINIT_BLOCK_SPECIFIED     = 0x806122b1,
+	CELL_ADEC_ERROR_ATX_POSCFG_PRESENT             = 0x806122b2,
+	CELL_ADEC_ERROR_ATX_BUFFER_OVERFLOW            = 0x806122b3,
+	CELL_ADEC_ERROR_ATX_ILL_BLK_TYPE_ID            = 0x806122b4,
+	CELL_ADEC_ERROR_ATX_UNPACK_CHANNEL_BLK_FAILED  = 0x806122b5,
+	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_1          = 0x806122b6,
+	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_2          = 0x806122b7,
+	CELL_ADEC_ERROR_ATX_ILLEGAL_ENC_SETTING        = 0x806122b8,
+	CELL_ADEC_ERROR_ATX_ILLEGAL_DEC_SETTING        = 0x806122b9,
+	CELL_ADEC_ERROR_ATX_ASSERT_NSAMPLES            = 0x806122ba,
+
+	CELL_ADEC_ERROR_ATX_ILL_SYNCWORD               = 0x806122bb,
+	CELL_ADEC_ERROR_ATX_ILL_SAMPLING_FREQ          = 0x806122bc,
+	CELL_ADEC_ERROR_ATX_ILL_CH_CONFIG_INDEX        = 0x806122bd,
+	CELL_ADEC_ERROR_ATX_RAW_DATA_FRAME_SIZE_OVER   = 0x806122be,
+	CELL_ADEC_ERROR_ATX_SYNTAX_ENHANCE_LENGTH_OVER = 0x806122bf,
+	CELL_ADEC_ERROR_ATX_SPU_INTERNAL_FAIL          = 0x806122c8,
 
 
 	CELL_ADEC_ERROR_LPCM_FATAL = 0x80612001,
@@ -194,14 +182,9 @@ enum
 
 
 	CELL_ADEC_ERROR_MP3_OFFSET = 0x80612700U,
-
 	CELL_ADEC_ERROR_MP3_OK                  = 0x80612700,
-
-	/* Adapter level error */
 	CELL_ADEC_ERROR_MP3_BUSY                = 0x80612764,
 	CELL_ADEC_ERROR_MP3_EMPTY               = 0x80612765,
-
-	/* Core level error */
 	CELL_ADEC_ERROR_MP3_ERROR               = 0x80612781,
 	CELL_ADEC_ERROR_MP3_LOST_SYNC           = 0x80612782,
 	CELL_ADEC_ERROR_MP3_NOT_L3              = 0x80612783,
@@ -224,27 +207,24 @@ enum
 
 
 	CELL_ADEC_ERROR_M2BC_FATAL			= 0x80612b01,
-	CELL_ADEC_ERROR_M2BC_SEQ			= 0x80612b02,	/* Not Used */
+	CELL_ADEC_ERROR_M2BC_SEQ			= 0x80612b02,
 	CELL_ADEC_ERROR_M2BC_ARG			= 0x80612b03,
 	CELL_ADEC_ERROR_M2BC_BUSY			= 0x80612b04,
 	CELL_ADEC_ERROR_M2BC_EMPTY			= 0x80612b05,
 
-	/* Common header contents error */
 	CELL_ADEC_ERROR_M2BC_SYNCF			= 0x80612b11,
 	CELL_ADEC_ERROR_M2BC_LAYER			= 0x80612b12,
 	CELL_ADEC_ERROR_M2BC_BITRATE		= 0x80612b13,
 	CELL_ADEC_ERROR_M2BC_SAMPLEFREQ		= 0x80612b14,
 	CELL_ADEC_ERROR_M2BC_VERSION		= 0x80612b15,
-	CELL_ADEC_ERROR_M2BC_MODE_EXT		= 0x80612b16,	/* Not Used */
-	CELL_ADEC_ERROR_M2BC_UNSUPPORT		= 0x80612b17,	/* <MS-2323>*/
+	CELL_ADEC_ERROR_M2BC_MODE_EXT		= 0x80612b16,
+	CELL_ADEC_ERROR_M2BC_UNSUPPORT		= 0x80612b17,
 
-	/* Extension file header contents error */
 	CELL_ADEC_ERROR_M2BC_OPENBS_EX		= 0x80612b21,
 	CELL_ADEC_ERROR_M2BC_SYNCF_EX		= 0x80612b22,
 	CELL_ADEC_ERROR_M2BC_CRCGET_EX		= 0x80612b23,
 	CELL_ADEC_ERROR_M2BC_CRC_EX			= 0x80612b24,
 
-	/* Data sampling & CRC error (proper to MPEG I part) */
 	CELL_ADEC_ERROR_M2BC_CRCGET			= 0x80612b31,
 	CELL_ADEC_ERROR_M2BC_CRC			= 0x80612b32,
 	CELL_ADEC_ERROR_M2BC_BITALLOC		= 0x80612b33,
@@ -252,7 +232,6 @@ enum
 	CELL_ADEC_ERROR_M2BC_SAMPLE			= 0x80612b35,
 	CELL_ADEC_ERROR_M2BC_OPENBS			= 0x80612b36,
 
-	/* Data sampling & CRC error (MPEG II muliti codec part) */
 	CELL_ADEC_ERROR_M2BC_MC_CRCGET		= 0x80612b41,
 	CELL_ADEC_ERROR_M2BC_MC_CRC			= 0x80612b42,
 	CELL_ADEC_ERROR_M2BC_MC_BITALLOC	= 0x80612b43,
@@ -261,14 +240,12 @@ enum
 	CELL_ADEC_ERROR_M2BC_MC_HEADER		= 0x80612b46,
 	CELL_ADEC_ERROR_M2BC_MC_STATUS		= 0x80612b47,
 
-	/* Data sampling & CRC error (MPEG II extention muliti codec part) */
 	CELL_ADEC_ERROR_M2BC_AG_CCRCGET		= 0x80612b51,
 	CELL_ADEC_ERROR_M2BC_AG_CRC			= 0x80612b52,
 	CELL_ADEC_ERROR_M2BC_AG_BITALLOC	= 0x80612b53,
 	CELL_ADEC_ERROR_M2BC_AG_SCALE		= 0x80612b54,
 	CELL_ADEC_ERROR_M2BC_AG_SAMPLE		= 0x80612b55,
 	CELL_ADEC_ERROR_M2BC_AG_STATUS		= 0x80612b57,
-
 };
 
 // Audio Codec Type

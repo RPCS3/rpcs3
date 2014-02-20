@@ -135,65 +135,40 @@ struct CellAudioPortConfig
 
 struct AudioPortConfig
 {
+	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
-	bool m_is_audio_port_stopped;
 	CellAudioPortParam m_param;
-
-	const u32 m_buffer; // 64 KB or 128 KB with 8x16 config
-	const u32 m_index;
-
-	AudioPortConfig();
-
-	void finalize();
 };
 
 struct AudioConfig  //custom structure
 {
-	Array<AudioPortConfig*> m_ports;
+	enum
+	{
+		AUDIO_PORT_COUNT = 8,
+	};
+	AudioPortConfig m_ports[AUDIO_PORT_COUNT];
+	u32 m_buffer; // 1 MB memory for audio ports
+	u32 m_indexes; // current block indexes and other info
 	bool m_is_audio_initialized;
+	bool m_is_audio_finalized;
 	u32 m_port_in_use;
 	u64 event_key;
 
 	AudioConfig()
 		: m_is_audio_initialized(false)
+		, m_is_audio_finalized(false)
 		, m_port_in_use(0)
 		, event_key(0)
 	{
-		m_ports.SetCount(8);
-		for (u32 i = 0; i < m_ports.GetCount(); i++)
-			m_ports[i] = nullptr;
+		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
 	}
 
 	void Clear()
 	{
-		for (u32 i = 0; i < m_ports.GetCount(); i++)
-		{
-			if (m_ports[i])
-			{
-				delete m_ports[i];
-				m_ports[i] = nullptr;
-			}
-		}
+		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
 		m_port_in_use = 0;
 	}
 } m_config;
-
-AudioPortConfig::AudioPortConfig()
-	: m_is_audio_port_started(false)
-	, m_buffer(Memory.Alloc(1024 * 128, 1024)) // max 128K size
-	, m_index(Memory.Alloc(16, 16)) // allocation for u64 value "read index"
-{
-	m_config.m_port_in_use++;
-	mem64_t index(m_index);
-	index = 0;
-}
-
-void AudioPortConfig::finalize()
-{
-	m_config.m_port_in_use--;
-	Memory.Free(m_buffer);
-	Memory.Free(m_index);
-}
 
 //libmixer datatypes
 typedef void * CellAANHandle;
@@ -307,160 +282,41 @@ int cellAudioInit()
 	}
 
 	m_config.m_is_audio_initialized = true;
-	return CELL_OK;
-}
 
-int cellAudioQuit()
-{
-	cellAudio.Warning("cellAudioQuit()");
+	// alloc memory
+	m_config.m_buffer = Memory.Alloc(128 * 1024 * m_config.AUDIO_PORT_COUNT, 1024); 
+	memset(Memory + m_config.m_buffer, 0, 128 * 1024 * m_config.AUDIO_PORT_COUNT);
+	m_config.m_indexes = Memory.Alloc(sizeof(u64) * m_config.AUDIO_PORT_COUNT, 16);
+	memset(Memory + m_config.m_indexes, 0, sizeof(u64) * m_config.AUDIO_PORT_COUNT);
 
-	if (!m_config.m_is_audio_initialized)
-	{
-		return CELL_AUDIO_ERROR_NOT_INIT;
-	}
-
-	m_config.m_is_audio_initialized = false;
-	return CELL_OK;
-}
-
-int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
-{
-	cellAudio.Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.GetAddr(), portNum.GetAddr());
-
-	if(!audioParam.IsGood() || !portNum.IsGood())
-	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
-	if (m_config.m_port_in_use >= m_config.m_ports.GetCount())
-	{
-		return CELL_AUDIO_ERROR_PORT_FULL;
-	}
-
-	for (u32 i = 0; i < m_config.m_ports.GetCount(); i++)
-	{
-		if (m_config.m_ports[i] == nullptr)
+	thread t("Audio", []()
 		{
-			CellAudioPortParam& ref = (m_config.m_ports[i] = new AudioPortConfig)->m_param;
-	
-			ref.nChannel = audioParam->nChannel;
-			ref.nBlock = audioParam->nBlock;
-			ref.attr = audioParam->attr;
-			ref.level = audioParam->level;
+			WAVHeader header(2); // WAV file header (stereo)
 
-			portNum = i;
-			cellAudio.Warning("*** audio port opened(nChannel=%lld, nBlock=0x%llx, attr=0x%llx, level=%f): port = %d",
-				(u64)ref.nChannel, (u64)ref.nBlock, (u64)ref.attr, (float)ref.level, portNum.GetValue());
-			//TODO: implementation of ring buffer
-			return CELL_OK;
-		}
-	}
-
-	return CELL_AUDIO_ERROR_PORT_FULL;
-}
-
-int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfig)
-{
-	cellAudio.Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig_addr=0x%x)", portNum, portConfig.GetAddr());
-
-	if (!portConfig.IsGood() || portNum >= m_config.m_ports.GetCount()) 
-	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
-	if (!m_config.m_ports[portNum])
-	{
-		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
-	}
-	else if (m_config.m_ports[portNum]->m_is_audio_port_started)
-	{
-		portConfig->status = CELL_AUDIO_STATUS_RUN;
-	}
-	else
-	{
-		CellAudioPortParam& ref = m_config.m_ports[portNum]->m_param;
-
-		portConfig->status = CELL_AUDIO_STATUS_READY;
-		portConfig->nChannel = ref.nChannel;
-		portConfig->nBlock = ref.nBlock;
-		portConfig->portSize = ref.nChannel * ref.nBlock * 256 * sizeof(float);
-		portConfig->portAddr = m_config.m_ports[portNum]->m_buffer; // 0x20020000
-		portConfig->readIndexAddr = m_config.m_ports[portNum]->m_index; // 0x20010010 on ps3
-
-		ConLog.Write("*** nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
-			(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
-		// portAddr - readIndexAddr ==  0xFFF0 on ps3
-	}
-
-	return CELL_OK;
-}
-
-int cellAudioPortStart(u32 portNum)
-{
-	cellAudio.Warning("cellAudioPortStart(portNum=0x%x)", portNum);
-
-	if (portNum >= m_config.m_ports.GetCount()) 
-	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
-	if (!m_config.m_ports[portNum])
-	{
-		return CELL_AUDIO_ERROR_PORT_OPEN;
-	}
-
-	if (m_config.m_ports[portNum]->m_is_audio_port_started)
-	{
-		return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
-	}
-	
-	m_config.m_ports[portNum]->m_is_audio_port_started = true;
-	m_config.m_ports[portNum]->m_is_audio_port_stopped = false;
-
-	std::string t_name = "AudioPort0";
-	t_name[9] += portNum;
-
-	thread t(t_name, [portNum]()
-		{
-			AudioPortConfig& port = *m_config.m_ports[portNum];
-			mem64_t index(port.m_index); // index storage
-
-			if (port.m_param.nChannel > 8)
-			{
-				ConLog.Error("Port aborted: invalid channel count (%d)", port.m_param.nChannel);
-				port.m_is_audio_port_stopped = true;
-				return;
-			}
-
-			WAVHeader header(port.m_param.nChannel); // WAV file header
-
-			wxString output_name = "audioport0.wav";
-			output_name[9] = '0' + portNum;
+			wxString output_name = "audio.wav";
 
 			wxFile output(output_name, wxFile::write); // create output file
 			if (!output.IsOpened())
 			{
-				ConLog.Error("Port aborted: cannot create %s", output_name.wx_str());
-				port.m_is_audio_port_stopped = true;
+				ConLog.Error("Audio aborted: cannot create %s", output_name.wx_str());
 				return;
 			}
 
-			ConLog.Write("Port started");
+			ConLog.Write("Audio started");
 
 			u64 start_time = get_system_time();
 			u64 counter = 0;
 
 			output.Write(&header, sizeof(header)); // write file header
 
-			const u32 block_size = port.m_param.nChannel * 256 * sizeof(float);
+			float buffer[2*256]; // buffer for 2 channels
+			float buffer2[8*256]; // buffer for 8 channels (max count)
 
-			float buffer[32*256]; // buffer for max channel count (8)
-
-			while (port.m_is_audio_port_started)
+			while (m_config.m_is_audio_initialized)
 			{
 				if (Emu.IsStopped())
 				{
-					ConLog.Warning("Port aborted");
+					ConLog.Warning("Audio aborted");
 					goto abort;
 				}
 
@@ -480,39 +336,199 @@ int cellAudioPortStart(u32 portNum)
 					continue;
 				}
 
-				u32 position = index.GetValue(); // get old value
-				
-				memcpy(buffer, Memory + port.m_buffer + position * block_size, block_size);
-				memset(Memory + port.m_buffer + position * block_size, 0, block_size);
+				bool first_mix = true;
 
-				index = (position + 1) % port.m_param.nBlock; // write new value
-
-				// TODO: send aftermix event (normal audio event)
-
-				for (u32 i = 0; i < block_size; i++)
+				// MIX:
+				for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
 				{
-					// reverse byte order (TODO: use port.m_param.level)
-					buffer[i] = re(buffer[i]);
-				}
+					if (!m_config.m_ports[i].m_is_audio_port_started) continue;
 
-				if (output.Write(&buffer, block_size) != (size_t)block_size) // write file data
+					AudioPortConfig& port = m_config.m_ports[i];
+					mem64_t index(m_config.m_indexes + i * sizeof(u64));
+
+					const u32 block_size = port.m_param.nChannel * 256;
+
+					u32 position = index.GetValue(); // get old value
+
+					u32 buf_addr = m_config.m_buffer + (i * 128 * 1024) + (position * block_size * sizeof(float));
+
+					memcpy(buffer2, Memory + buf_addr, block_size * sizeof(float));
+					memset(Memory + buf_addr, 0, block_size * sizeof(float));
+
+					index = (position + 1) % port.m_param.nBlock; // write new value
+
+					if (first_mix)
+					{
+						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+						{
+							// reverse byte order (TODO: use port.m_param.level)
+							buffer[i] = re(buffer2[i]);
+						}
+						first_mix = false;
+					}
+					else
+					{
+						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+						{
+							float value = re(buffer2[i]);
+							buffer[i] = (buffer[i] + value) * 0.5; // TODO: valid mixing
+						}
+					}
+				}				
+
+				// send aftermix event (normal audio event)
+				// TODO: check event source
+				Emu.GetEventManager().SendEvent(m_config.event_key, 0x10103000e010e07, 0, 0, 0);
+
+				if (output.Write(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
 				{
 					ConLog.Error("Port aborted: cannot write %s", output_name.wx_str());
 					goto abort;
 				}
 
-				header.Size += block_size; // update file header
-				header.RIFF.Size += block_size;
+				header.Size += sizeof(buffer); // update file header
+				header.RIFF.Size += sizeof(buffer);
 			}
-			ConLog.Write("Port finished");
+			ConLog.Write("Audio finished");
 		abort:
 			output.Seek(0);
 			output.Write(&header, sizeof(header)); // write fixed file header
 
 			output.Close();
-			port.m_is_audio_port_stopped = true;
+			m_config.m_is_audio_finalized = true;
 		});
 	t.detach();
+
+	return CELL_OK;
+}
+
+int cellAudioQuit()
+{
+	cellAudio.Warning("cellAudioQuit()");
+
+	if (!m_config.m_is_audio_initialized)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	m_config.m_is_audio_initialized = false;
+
+	while (!m_config.m_is_audio_finalized)
+	{
+		Sleep(1);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellAudioQuit() aborted");
+			break;
+		}
+	}
+
+	Memory.Free(m_config.m_buffer);
+	Memory.Free(m_config.m_indexes);
+	return CELL_OK;
+}
+
+int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
+{
+	cellAudio.Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.GetAddr(), portNum.GetAddr());
+
+	if(!audioParam.IsGood() || !portNum.IsGood())
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (audioParam->nChannel > 8 || audioParam->nBlock > 16)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (m_config.m_port_in_use >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PORT_FULL;
+	}
+
+	for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
+	{
+		if (!m_config.m_ports[i].m_is_audio_port_opened)
+		{
+			CellAudioPortParam& param = m_config.m_ports[i].m_param;
+	
+			param.nChannel = audioParam->nChannel;
+			param.nBlock = audioParam->nBlock;
+			param.attr = audioParam->attr;
+			param.level = audioParam->level;
+
+			portNum = i;
+			cellAudio.Warning("*** audio port opened(nChannel=%lld, nBlock=0x%llx, attr=0x%llx, level=%f): port = %d",
+				(u64)param.nChannel, (u64)param.nBlock, (u64)param.attr, (float)param.level, i);
+			
+			m_config.m_port_in_use++;
+			m_config.m_ports[i].m_is_audio_port_opened = true;
+			m_config.m_ports[i].m_is_audio_port_started = false;
+			return CELL_OK;
+		}
+	}
+
+	return CELL_AUDIO_ERROR_PORT_FULL;
+}
+
+int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfig)
+{
+	cellAudio.Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig_addr=0x%x)", portNum, portConfig.GetAddr());
+
+	if (!portConfig.IsGood() || portNum >= m_config.AUDIO_PORT_COUNT) 
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
+	{
+		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
+	}
+	else if (m_config.m_ports[portNum].m_is_audio_port_started)
+	{
+		portConfig->status = CELL_AUDIO_STATUS_RUN;
+	}
+	else
+	{
+		portConfig->status = CELL_AUDIO_STATUS_READY;
+	}
+
+	CellAudioPortParam& ref = m_config.m_ports[portNum].m_param;
+
+	portConfig->nChannel = ref.nChannel;
+	portConfig->nBlock = ref.nBlock;
+	portConfig->portSize = ref.nChannel * ref.nBlock * 256 * sizeof(float);
+	portConfig->portAddr = m_config.m_buffer + (128 * 1024 * portNum); // 0x20020000
+	portConfig->readIndexAddr = m_config.m_indexes + (sizeof(u64) * portNum); // 0x20010010 on ps3
+
+	ConLog.Write("*** nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
+		(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
+	// portAddr - readIndexAddr ==  0xFFF0 on ps3
+
+	return CELL_OK;
+}
+
+int cellAudioPortStart(u32 portNum)
+{
+	cellAudio.Warning("cellAudioPortStart(portNum=0x%x)", portNum);
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_OPEN;
+	}
+
+	if (m_config.m_ports[portNum].m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
+	}
+	
+	m_config.m_ports[portNum].m_is_audio_port_started = true;
 
 	return CELL_OK;
 }
@@ -521,18 +537,18 @@ int cellAudioPortClose(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortClose(portNum=0x%x)", portNum);
 
-	if (portNum >= m_config.m_ports.GetCount()) 
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!m_config.m_ports[portNum])
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
 
-	m_config.m_ports[portNum]->finalize();
-	safe_delete(m_config.m_ports[portNum]);
+	m_config.m_ports[portNum].m_is_audio_port_started = false;
+	m_config.m_port_in_use--;
 	return CELL_OK;
 }
 
@@ -540,31 +556,22 @@ int cellAudioPortStop(u32 portNum)
 {
 	cellAudio.Warning("cellAudioPortStop(portNum=0x%x)",portNum);
 	
-	if (portNum >= m_config.m_ports.GetCount()) 
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!m_config.m_ports[portNum])
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
 
-	if (!m_config.m_ports[portNum]->m_is_audio_port_started)
+	if (!m_config.m_ports[portNum].m_is_audio_port_started)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	}
 	
-	m_config.m_ports[portNum]->m_is_audio_port_started = false;
-	while (!m_config.m_ports[portNum]->m_is_audio_port_stopped)
-	{
-		Sleep(1);
-		if (Emu.IsStopped())
-		{
-			ConLog.Warning("cellAudioPortStop(%d) aborted", portNum);
-			break;
-		}
-	}
+	m_config.m_ports[portNum].m_is_audio_port_started = false;
 	return CELL_OK;
 }
 
@@ -589,8 +596,24 @@ int cellAudioSetPortLevel(u32 portNum, float level)
 // Utility Functions  
 int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 {
-	cellAudio.Error("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
-	key = 0x123456789ABCDEF0;
+	cellAudio.Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
+
+	if (Emu.GetEventManager().CheckKey(0x80004d494f323221))
+	{
+		return CELL_AUDIO_ERROR_EVENT_QUEUE;
+	}
+
+	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0x80004d494f323221, 0x80004d494f323221, 32);
+
+	if (!Emu.GetEventManager().RegisterKey(eq, 0x80004d494f323221))
+	{
+		delete eq;
+		return CELL_AUDIO_ERROR_EVENT_QUEUE;
+	}
+
+	id = cellAudio.GetNewId(eq);
+	key = 0x80004d494f323221;
+
 	return CELL_OK;
 }
 
@@ -609,11 +632,10 @@ int cellAudioSetNotifyEventQueue(u64 key)
 	EventQueue* eq;
 	if (!Emu.GetEventManager().GetEventQueue(key, eq))
 	{
-		//return CELL_AUDIO_ERROR_PARAM;
-		return CELL_OK;
+		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	// eq->events.push(0, 0, 0, 0);
+	// TODO: connect port
 
 	return CELL_OK;
 }
@@ -626,7 +648,18 @@ int cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 
 int cellAudioRemoveNotifyEventQueue(u64 key)
 {
-	cellAudio.Error("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
+	cellAudio.Warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
+
+	EventQueue* eq;
+	if (!Emu.GetEventManager().GetEventQueue(key, eq))
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	m_config.event_key = 0;
+
+	// TODO: disconnect port
+
 	return CELL_OK;
 }
 
