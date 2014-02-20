@@ -136,3 +136,182 @@ enum
 	CELL_VPOST_CSC_ERROR_E_FATAL_RCVRES_FAIL		= 0x806184c1,
 	CELL_VPOST_CSC_ERROR_E_FATAL_SPUCORE_FAIL		= 0x806184c2,
 };
+
+enum CellVpostPictureDepth
+{
+	CELL_VPOST_PIC_DEPTH_8,
+};
+
+enum CellVpostPictureFormatIn
+{
+	CELL_VPOST_PIC_FMT_IN_YUV420_PLANAR,
+};
+
+enum CellVpostPictureFormatOut
+{
+	CELL_VPOST_PIC_FMT_OUT_RGBA_ILV,
+	CELL_VPOST_PIC_FMT_OUT_YUV420_PLANAR,
+};
+
+enum CellVpostPictureStructure
+{
+	CELL_VPOST_PIC_STRUCT_PFRM,
+	CELL_VPOST_PIC_STRUCT_IFRM,
+	CELL_VPOST_PIC_STRUCT_ITOP,
+	CELL_VPOST_PIC_STRUCT_IBTM,
+};
+
+enum CellVpostExecType
+{
+	CELL_VPOST_EXEC_TYPE_PFRM_PFRM,
+	CELL_VPOST_EXEC_TYPE_PTOP_ITOP,
+	CELL_VPOST_EXEC_TYPE_PBTM_IBTM,
+	CELL_VPOST_EXEC_TYPE_ITOP_PFRM,
+	CELL_VPOST_EXEC_TYPE_IBTM_PFRM,
+	CELL_VPOST_EXEC_TYPE_IFRM_IFRM,
+	CELL_VPOST_EXEC_TYPE_ITOP_ITOP,
+	CELL_VPOST_EXEC_TYPE_IBTM_IBTM,
+};
+
+enum CellVpostChromaPositionType
+{
+	CELL_VPOST_CHROMA_POS_TYPE_A,
+	CELL_VPOST_CHROMA_POS_TYPE_B,
+};
+
+enum CellVpostScanType
+{
+	CELL_VPOST_SCAN_TYPE_P,
+	CELL_VPOST_SCAN_TYPE_I,
+};
+
+enum CellVpostQuantRange
+{
+	CELL_VPOST_QUANT_RANGE_FULL,
+	CELL_VPOST_QUANT_RANGE_BROADCAST,
+};
+
+enum CellVpostColorMatrix
+{
+	CELL_VPOST_COLOR_MATRIX_BT601,
+	CELL_VPOST_COLOR_MATRIX_BT709,
+};
+
+enum CellVpostScalerType
+{
+	CELL_VPOST_SCALER_TYPE_BILINEAR,
+	CELL_VPOST_SCALER_TYPE_LINEAR_SHARP,
+	CELL_VPOST_SCALER_TYPE_2X4TAP,
+	CELL_VPOST_SCALER_TYPE_8X4TAP,
+};
+
+enum CellVpostIpcType
+{
+	CELL_VPOST_IPC_TYPE_DOUBLING,
+	CELL_VPOST_IPC_TYPE_LINEAR,
+	CELL_VPOST_IPC_TYPE_MAVG,
+};
+
+struct CellVpostCfgParam
+{
+	be_t<u32> inMaxWidth;
+	be_t<u32> inMaxHeight;
+	be_t<CellVpostPictureDepth> inDepth;
+	be_t<CellVpostPictureFormatIn> inPicFmt;
+
+	be_t<u32> outMaxWidth;
+	be_t<u32> outMaxHeight;
+	be_t<CellVpostPictureDepth> outDepth;
+	be_t<CellVpostPictureFormatOut> outPicFmt;
+
+	be_t<u32> reserved1;
+	be_t<u32> reserved2;
+};
+
+struct CellVpostAttr
+{
+	be_t<u32> memSize;
+	u8 delay;
+	be_t<u32> vpostVerUpper;
+	be_t<u32> vpostVerLower;
+};
+
+struct CellVpostResource
+{
+	be_t<u32> memAddr;
+	be_t<u32> memSize;
+	be_t<s32> ppuThreadPriority;
+	be_t<u32> ppuThreadStackSize;
+	be_t<s32> spuThreadPriority;
+	be_t<u32> numOfSpus;
+};
+
+struct CellVpostResourceEx
+{
+	be_t<u32> memAddr;
+	be_t<u32> memSize;
+	be_t<u32> spurs_addr;
+	u8 priority[8];
+	be_t<u32> maxContention;
+};
+
+struct CellVpostWindow
+{
+	be_t<u32> x;
+	be_t<u32> y;
+	be_t<u32> width;
+	be_t<u32> height;
+};
+
+struct CellVpostCtrlParam
+{
+	be_t<CellVpostExecType> execType;
+
+	be_t<CellVpostScalerType> scalerType;
+	be_t<CellVpostIpcType> ipcType;
+
+	be_t<u32> inWidth;
+	be_t<u32> inHeight;
+	be_t<CellVpostChromaPositionType> inChromaPosType;
+	be_t<CellVpostQuantRange> inQuantRange;
+	be_t<CellVpostColorMatrix> inColorMatrix;
+	CellVpostWindow inWindow;
+
+	be_t<u32> outWidth;
+	be_t<u32> outHeight;
+	CellVpostWindow outWindow;
+	u8 outAlpha;
+
+	be_t<u64> userData;
+
+	be_t<u32> reserved1;
+	be_t<u32> reserved2;
+};
+
+struct CellVpostPictureInfo
+{
+	be_t<u32> inWidth;
+	be_t<u32> inHeight;
+	be_t<CellVpostPictureDepth> inDepth;
+	be_t<CellVpostScanType> inScanType;
+	be_t<CellVpostPictureFormatIn> inPicFmt;
+	be_t<CellVpostChromaPositionType> inChromaPosType;
+	be_t<CellVpostPictureStructure> inPicStruct;
+	be_t<CellVpostQuantRange> inQuantRange;
+	be_t<CellVpostColorMatrix> inColorMatrix;
+
+	be_t<u32> outWidth;
+	be_t<u32> outHeight;
+	be_t<CellVpostPictureDepth> outDepth;
+	be_t<CellVpostScanType> outScanType;
+	be_t<CellVpostPictureFormatOut> outPicFmt;
+	be_t<CellVpostChromaPositionType> outChromaPosType;
+	be_t<CellVpostPictureStructure> outPicStruct;
+	be_t<CellVpostQuantRange> outQuantRange;
+	be_t<CellVpostColorMatrix> outColorMatrix;
+
+	be_t<u64> userData;
+
+	be_t<u32> reserved1;
+	be_t<u32> reserved2;
+};

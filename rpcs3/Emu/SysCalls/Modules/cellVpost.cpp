@@ -6,33 +6,37 @@
 void cellVpost_init();
 Module cellVpost(0x0008, cellVpost_init);
 
-int cellVpostQueryAttr()
+int cellVpostQueryAttr(const mem_ptr_t<CellVpostCfgParam> cfgParam, mem_ptr_t<CellVpostAttr> attr)
 {
-	UNIMPLEMENTED_FUNC(cellVpost);
+	cellVpost.Error("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.GetAddr(), attr.GetAddr());
 	return CELL_OK;
 }
 
-int cellVpostOpen()
+int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResource> resource, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellVpost);
+	cellVpost.Error("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellVpostOpenEx()
+int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResourceEx> resource, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellVpost);
+	cellVpost.Error("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellVpostClose()
+int cellVpostClose(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellVpost);
+	cellVpost.Error("cellVpostClose(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellVpostExec()
+int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpostCtrlParam> ctrlParam,
+				  u32 outPicBuff_addr, mem_ptr_t<CellVpostPictureInfo> picInfo)
 {
-	UNIMPLEMENTED_FUNC(cellVpost);
+	cellVpost.Error("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
+		handle, inPicBuff_addr, ctrlParam.GetAddr(), outPicBuff_addr, picInfo.GetAddr());
 	return CELL_OK;
 }
 
