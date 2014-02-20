@@ -24,14 +24,14 @@ int sys_time_get_timezone(mem32_t timezone, mem32_t summertime)
 	return CELL_OK;
 }
 
-u64 get_system_time()
+u64 get_time()
 {
 #ifdef _WIN32
 	LARGE_INTEGER cycle;
 	LARGE_INTEGER freq;
 	QueryPerformanceCounter(&cycle);
 	QueryPerformanceFrequency(&freq);
-	return cycle.QuadPart * 1000000 / freq.QuadPart;
+	return cycle.QuadPart * 10000000 / freq.QuadPart;
 #else
 	struct timespec ts;
 	if (!clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -39,14 +39,20 @@ u64 get_system_time()
 #endif
 }
 
+u64 get_system_time()
+{
+	// returns some relative time in microseconds, don't change this fact
+	return get_time() / 10;
+}
+
 int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr)
 {
 	sys_time.Log("sys_time_get_current_time(sec_addr=0x%x, nsec_addr=0x%x)", sec_addr, nsec_addr);
 
-	u64 time = get_system_time();
+	u64 time = get_time();
 
-	Memory.Write64(sec_addr, time / 1000000);
-	Memory.Write64(nsec_addr, time % 1000000);
+	Memory.Write64(sec_addr, time / 10000000);
+	Memory.Write64(nsec_addr, (time % 10000000) * 100);
 
 	return CELL_OK;
 }
@@ -60,17 +66,5 @@ s64 sys_time_get_system_time()
 u64 sys_time_get_timebase_frequency()
 {
 	sys_time.Log("sys_time_get_timebase_frequency()");
-	return 1000000;
-
-	/*
-#ifdef _WIN32
-	static LARGE_INTEGER frequency = {0ULL};
-
-	if(!frequency.QuadPart) QueryPerformanceFrequency(&frequency);
-
-	return frequency.QuadPart;
-#else
 	return 10000000;
-#endif
-	*/
 }

@@ -1,19 +1,10 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "cellAdec.h"
 
 void cellAdec_init();
 Module cellAdec(0x0006, cellAdec_init);
-
-// Error Codes
-enum
-{
-	CELL_ADEC_ERROR_FATAL	= 0x80610001,
-	CELL_ADEC_ERROR_SEQ		= 0x80610002,
-	CELL_ADEC_ERROR_ARG		= 0x80610003,
-	CELL_ADEC_ERROR_BUSY	= 0x80610004,
-	CELL_ADEC_ERROR_EMPTY	= 0x80610005,
-};
 
 int cellAdecQueryAttr()
 {

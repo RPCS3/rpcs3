@@ -69,7 +69,7 @@ struct sys_lwmutex_t
 	{
 		struct // sys_lwmutex_lock_info_t
 		{
-			/* volatile */ SMutexBE owner;
+			/* volatile */ SMutexBase<be_t<u32>, 0xffffffff, 0> owner;
 			/* volatile */ be_t<u32> waiter; // not used
 		};
 		struct

@@ -28,7 +28,8 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->all_info = 0;
+	lwmutex->owner.initialize();
+	lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
 
@@ -51,9 +52,10 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
 
 	// try to make it unable to lock
-	switch (int res = lwmutex->trylock(~0)) 
+	switch (int res = lwmutex->trylock(lwmutex->owner.GetDeadValue())) 
 	{
 	case CELL_OK:
+		lwmutex->all_info = 0;
 		lwmutex->attribute = 0;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
@@ -245,8 +247,10 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 				SleepQueue* sq;
 				if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
 				target = attribute.ToBE() & se32(SYS_SYNC_FIFO) ? sq->pop() : sq->pop_prio();
-			case se32(SYS_SYNC_RETRY): default: owner.unlock(tid, target); break;
+			case se32(SYS_SYNC_RETRY): break;
 			}
+			if (target) owner.unlock(tid, target);
+			else owner.unlock(tid);
 		}
 		return CELL_OK;
 	}
