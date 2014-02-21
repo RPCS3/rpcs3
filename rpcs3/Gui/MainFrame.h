@@ -1,9 +1,13 @@
 #pragma once
-#include "GameViewer.h"
+
+#include "Gui/Debugger.h"
+#include "Gui/GameViewer.h"
+
 #include <wx/aui/aui.h>
 
 class MainFrame : public FrameBase
 {
+	DebuggerPanel* m_debugger_frame;
 	GameViewer* m_game_viewer;
 	wxAuiManager m_aui_mgr;
 	AppConnector m_app_connector;

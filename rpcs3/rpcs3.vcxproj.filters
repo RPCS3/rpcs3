@@ -406,6 +406,9 @@
     <ClCompile Include="Emu\FS\vfsDir.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\PKG.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

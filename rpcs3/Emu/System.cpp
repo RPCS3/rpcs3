@@ -190,7 +190,7 @@ void Emulator::Load()
 
 	if(IsSelf(m_path.ToStdString()))
 	{
-		std::string self_path = m_path;
+		std::string self_path = m_path.mb_str();
 		std::string elf_path = wxFileName(m_path).GetPath().c_str();
 
 		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)

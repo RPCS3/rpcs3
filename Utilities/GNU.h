@@ -10,4 +10,5 @@
 #define Sleep(x) usleep(x * 1000)
 #define mkdir(x) mkdir(x, 0777)
 #define INFINITE 0xFFFFFFFF
+#define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #endif

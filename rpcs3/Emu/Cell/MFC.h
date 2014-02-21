@@ -158,7 +158,7 @@ struct DMAC
 	u32 queue_pos;
 	u32 proxy_pos;
 	long queue_lock;
-	long proxy_lock;
+	volatile std::atomic<int> proxy_lock;
 
 	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
@@ -193,7 +193,7 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		/* while (_InterlockedExchange(&proxy_lock, 1));
+		/* while (std::atomic_exchange(&proxy_lock, 1));
 		_mm_lfence();
 		DMAC_Proxy& p = proxy[proxy_pos];
 		p.cmd = cmd;
@@ -212,7 +212,7 @@ struct DMAC
 
 	void ClearCmd()
 	{
-		while (_InterlockedExchange(&proxy_lock, 1));
+		while (std::atomic_exchange(&proxy_lock, 1));
 		_mm_lfence();
 		memcpy(proxy, proxy + 1, --proxy_pos * sizeof(DMAC_Proxy));
 		_mm_sfence();
