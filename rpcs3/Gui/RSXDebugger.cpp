@@ -548,7 +548,7 @@ void RSXDebugger::GetTexture()
 			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
 			m_list_texture->SetItem(i, 4, render.m_textures[i].IsEnabled() ? "True" : "False");
 			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].GetFormat()));
-			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].Getmipmap()));
+			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].GetMipmap()));
 			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
 			m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
 				render.m_textures[i].GetWidth(),

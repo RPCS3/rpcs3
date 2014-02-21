@@ -12,7 +12,7 @@ PKGLoader::PKGLoader(wxFile& f) : pkg_f(f)
 bool PKGLoader::Install(std::string dest, bool show)
 {
 	// Initial checks
-	if(!pkg_f.IsOpened())
+	if (!pkg_f.IsOpened())
 		return false;
 
 	dest = wxGetCwd() + dest;
@@ -26,6 +26,12 @@ bool PKGLoader::Install(std::string dest, bool show)
 	std::string decryptedFile = wxGetCwd() + "/dev_hdd1/" + titleID + ".dec";
 
 	if (wxDirExists(dest+titleID)) {
+		wxMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", wxYES_NO|wxCENTRE);
+		if (d_overwrite.ShowModal() != wxID_YES) {
+			ConLog.Error("PKG Loader: Another installation found in: %s", wxString(titleID).wx_str());
+			return false;
+		}
+		// TODO: Remove the following two lines and remove the folder dest+titleID
 		ConLog.Error("PKG Loader: Another installation found in: %s", wxString(titleID).wx_str());
 		return false;
 	}

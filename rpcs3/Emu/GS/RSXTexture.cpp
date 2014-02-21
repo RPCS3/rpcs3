@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "RSXThread.h"
+#include "RSXTexture.h"
 
 RSXTexture::RSXTexture()
 {
@@ -70,7 +70,7 @@ u8 RSXTexture::GetFormat() const
 	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 8) & 0xff);
 }
 
-u16 RSXTexture::Getmipmap() const
+u16 RSXTexture::GetMipmap() const
 {
 	return ((methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)] >> 16) & 0xffff);
 }
