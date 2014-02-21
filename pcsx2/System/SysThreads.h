@@ -113,7 +113,8 @@ public:
 	virtual void Suspend( bool isBlocking = true );
 	virtual void Resume();
 	virtual void Pause();
-	
+	virtual void PauseSelf();
+
 protected:
 	virtual void OnStart();
 
@@ -121,6 +122,7 @@ protected:
 	// the core emulation thread.  You should overload this rather than Resume(), since
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
+	virtual void OnPause() {}
 
 	virtual bool StateCheckInThread();
 	virtual void OnCleanupInThread();

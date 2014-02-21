@@ -23,6 +23,7 @@ using namespace std;
 
 u32 ElfCRC;
 u32 ElfEntry;
+std::pair<u32,u32> ElfTextRange;
 wxString LastELF;
 
 #if 0
@@ -237,6 +238,20 @@ void ElfObject::initElfHeaders()
 bool ElfObject::hasProgramHeaders() { return (proghead != NULL); }
 bool ElfObject::hasSectionHeaders() { return (secthead != NULL); }
 bool ElfObject::hasHeaders() { return (hasProgramHeaders() && hasSectionHeaders()); }
+
+std::pair<u32,u32> ElfObject::getTextRange()
+{
+	for (int i = 0; i < header.e_phnum; i++)
+	{
+		u32 start = proghead[i].p_vaddr;
+		u32 size = proghead[i].p_memsz;
+
+		if (start <= header.e_entry && (start+size) > header.e_entry)
+			return std::make_pair(start,size);
+	}
+	
+	return std::make_pair(0,0);
+}
 
 void ElfObject::readIso(IsoFile file)
 {

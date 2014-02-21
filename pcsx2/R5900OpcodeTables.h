@@ -79,7 +79,7 @@ namespace R5900
 		// Number of cycles this instruction normally uses.
 		u8 cycles;
 
-		const OPCODE& (*getsubclass)();
+		const OPCODE& (*getsubclass)(u32 op);
 
 		// Process the instruction using the interpreter.
 		// The action is performed immediately on the EE's cpu state.
@@ -96,7 +96,7 @@ namespace R5900
 
 	// Returns the current real instruction, as per the current cpuRegs settings.
 	const OPCODE& GetCurrentInstruction();
-
+	const OPCODE& GetInstruction(u32 op);
 	namespace OpcodeTables
 	{
 		using ::R5900::OPCODE;
@@ -126,22 +126,22 @@ namespace R5900
 	{
 		using ::R5900::OPCODE;
 
-		const OPCODE& Class_SPECIAL();
-		const OPCODE& Class_REGIMM();
-		const OPCODE& Class_MMI();
-		const OPCODE& Class_MMI0();
-		const OPCODE& Class_MMI1();
-		const OPCODE& Class_MMI2();
-		const OPCODE& Class_MMI3();
+		const OPCODE& Class_SPECIAL(u32 op);
+		const OPCODE& Class_REGIMM(u32 op);
+		const OPCODE& Class_MMI(u32 op);
+		const OPCODE& Class_MMI0(u32 op);
+		const OPCODE& Class_MMI1(u32 op);
+		const OPCODE& Class_MMI2(u32 op);
+		const OPCODE& Class_MMI3(u32 op);
 
-		const OPCODE& Class_COP0();
-		const OPCODE& Class_COP0_BC0();
-		const OPCODE& Class_COP0_C0();
+		const OPCODE& Class_COP0(u32 op);
+		const OPCODE& Class_COP0_BC0(u32 op);
+		const OPCODE& Class_COP0_C0(u32 op);
 
-		const OPCODE& Class_COP1();
-		const OPCODE& Class_COP1_BC1();
-		const OPCODE& Class_COP1_S();
-		const OPCODE& Class_COP1_W();
+		const OPCODE& Class_COP1(u32 op);
+		const OPCODE& Class_COP1_BC1(u32 op);
+		const OPCODE& Class_COP1_S(u32 op);
+		const OPCODE& Class_COP1_W(u32 op);
 	}
 
 	namespace OpcodeDisasm

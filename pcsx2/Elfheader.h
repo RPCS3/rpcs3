@@ -155,6 +155,7 @@ class ElfObject
 		bool hasSectionHeaders();
 		bool hasHeaders();
 
+		std::pair<u32,u32> getTextRange();
 		u32 getCRC();
 };
 
@@ -165,6 +166,7 @@ extern int  GetPS2ElfName( wxString& dest );
 
 extern u32 ElfCRC;
 extern u32 ElfEntry;
+extern std::pair<u32,u32> ElfTextRange;
 extern wxString LastELF;
 
 #endif

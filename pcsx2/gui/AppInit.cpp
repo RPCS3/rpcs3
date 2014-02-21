@@ -23,6 +23,8 @@
 #include "DebugTools/Debug.h"
 #include "Dialogs/ModalPopups.h"
 
+#include "Debugger/DisassemblyDialog.h"
+
 #include <wx/cmdline.h>
 #include <wx/intl.h>
 #include <wx/stdpaths.h>
@@ -85,6 +87,9 @@ void Pcsx2App::OpenMainFrame()
 
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, pxGetAppName() );
 	m_id_MainFrame = mainFrame->GetId();
+
+	DisassemblyDialog* disassembly = new DisassemblyDialog( mainFrame );
+	m_id_Disassembler = disassembly->GetId();
 
 	PostIdleAppMethod( &Pcsx2App::OpenProgramLog );
 

@@ -361,6 +361,7 @@ static __fi void _reloadElfInfo(wxString elfpath)
 
 	ElfCRC = elfptr->getCRC();
 	ElfEntry = elfptr->header.e_entry;
+	ElfTextRange = elfptr->getTextRange();
 	Console.WriteLn( Color_StrongBlue, L"ELF (%s) Game CRC = 0x%08X, EntryPoint = 0x%08X", elfpath.c_str(), ElfCRC, ElfEntry);
 
 	// Note: Do not load game database info here.  This code is generic and called from

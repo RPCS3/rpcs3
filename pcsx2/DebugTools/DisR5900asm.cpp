@@ -26,6 +26,7 @@
 #include "R5900OpcodeTables.h"
 
 unsigned long opcode_addr;
+u32 disasmOpcode;
 
 using namespace std;
 
@@ -41,19 +42,19 @@ namespace R5900
 #define DECODE_FD           (DECODE_SA)
 /// ********
 
-#define DECODE_FUNCTION     ((cpuRegs.code) & 0x3F)
-#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register
-#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register
-#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register
-#define DECODE_SA     ((cpuRegs.code >>  6) & 0x1F) // The sa part of the instruction register
-#define DECODE_IMMED     ( cpuRegs.code & 0xFFFF)      // The immediate part of the instruction register
+#define DECODE_FUNCTION     ((disasmOpcode) & 0x3F)
+#define DECODE_RD     ((disasmOpcode >> 11) & 0x1F) // The rd part of the instruction register
+#define DECODE_RT     ((disasmOpcode >> 16) & 0x1F) // The rt part of the instruction register
+#define DECODE_RS     ((disasmOpcode >> 21) & 0x1F) // The rs part of the instruction register
+#define DECODE_SA     ((disasmOpcode >>  6) & 0x1F) // The sa part of the instruction register
+#define DECODE_IMMED     ( disasmOpcode & 0xFFFF)      // The immediate part of the instruction register
 #define DECODE_OFFSET  ((((short)DECODE_IMMED * 4) + opcode_addr + 4))
-#define DECODE_JUMP     (opcode_addr & 0xf0000000)|((cpuRegs.code&0x3ffffff)<<2)
+#define DECODE_JUMP     (opcode_addr & 0xf0000000)|((disasmOpcode&0x3ffffff)<<2)
 #define DECODE_SYSCALL      ((opcode_addr & 0x03FFFFFF) >> 6)
 #define DECODE_BREAK        (DECODE_SYSCALL)
-#define DECODE_C0BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C1BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)
+#define DECODE_C0BC         ((disasmOpcode >> 16) & 0x03)
+#define DECODE_C1BC         ((disasmOpcode >> 16) & 0x03)
+#define DECODE_C2BC         ((disasmOpcode >> 16) & 0x03)
 */
 /*************************CPUS REGISTERS**************************/
 static const char * const GPR_REG[32] = {
@@ -609,15 +610,10 @@ void disR5900Fasm( string& output, u32 code, u32 pc )
 	string dbuf;
 	char obuf[48];
 
-	const u32 scode = cpuRegs.code;
 	opcode_addr = pc;
-	cpuRegs.code = code;
+	disasmOpcode = code;
 
-	sprintf(obuf, "%08X:\t", pc );
-	output.assign( obuf );
-	GetCurrentInstruction().disasm( output );
-
-	cpuRegs.code = scode;
+	GetInstruction(code).disasm( output );
 }
 
 //*************************************************************
@@ -632,7 +628,7 @@ void P_COP2_SPECIAL( string& output )
 }
 void P_COP2_SPECIAL2( string& output )
 {
-	COP2SPECIAL2PrintTable[(cpuRegs.code & 0x3) | ((cpuRegs.code >> 4) & 0x7c)]( output );
+	COP2SPECIAL2PrintTable[(disasmOpcode & 0x3) | ((disasmOpcode >> 4) & 0x7c)]( output );
 }
 
 //**************************UNKNOWN****************************
@@ -649,15 +645,7 @@ void P_COP2_Unknown( string& output )
 void label_decode( string& output, u32 addr )
 {
 	string buf;
-	ssprintf(buf, "0x%08X", addr);
-	const char* label = disR5900GetSym( addr );
-
-	if( label != NULL )
-	{
-		output += label;
-		output += ' ';
-	}
-
+	ssprintf(buf, "->$0x%08X", addr);
 	output += buf;
 }
 
@@ -757,7 +745,7 @@ void LQC2( string& output )   { _sap("lqc2\t%s, 0x%04X(%s)")   COP2_REG_FP[DECOD
 
 void SLL( string& output )
 {
-   if (cpuRegs.code == 0x00000000)
+   if (disasmOpcode == 0x00000000)
         output += "nop";
     else
         _sap("sll\t%s, %s, 0x%02X") GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], DECODE_SA);
@@ -768,16 +756,16 @@ void SRA( string& output )    { _sap("sra\t%s, %s, 0x%02X") GPR_REG[DECODE_RD], 
 void SLLV( string& output )   { _sap("sllv\t%s, %s, %s")    GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
 void SRLV( string& output )   { _sap("srlv\t%s, %s, %s")    GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]);}
 void SRAV( string& output )   { _sap("srav\t%s, %s, %s")    GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
-void JR( string& output )     { _sap("jr\t%s")              GPR_REG[DECODE_RS]); }
+void JR( string& output )     { _sap("jr\t->%s")            GPR_REG[DECODE_RS]); }
 
 void JALR( string& output )
 {
     int rd = DECODE_RD;
 
     if (rd == 31)
-        _sap("jalr\t%s") GPR_REG[DECODE_RS]);
+        _sap("jalr\t->%s") GPR_REG[DECODE_RS]);
     else
-        _sap("jalr\t%s, %s") GPR_REG[rd], GPR_REG[DECODE_RS]);
+        _sap("jalr\t%s, ->%s") GPR_REG[rd], GPR_REG[DECODE_RS]);
 }
 
 
@@ -1032,10 +1020,10 @@ void P_BC2T( string& output ){    output += "bc2t\t";      offset_decode(output)
 void P_BC2FL( string& output ){   output += "bc2fl\t";     offset_decode(output); }
 void P_BC2TL( string& output ){   output += "bc2tl\t";     offset_decode(output); }
 //******************************SPECIAL 1 VUO TABLE****************************************
-#define _X ((cpuRegs.code>>24) & 1)
-#define _Y ((cpuRegs.code>>23) & 1)
-#define _Z ((cpuRegs.code>>22) & 1)
-#define _W ((cpuRegs.code>>21) & 1)
+#define _X ((disasmOpcode>>24) & 1)
+#define _Y ((disasmOpcode>>23) & 1)
+#define _Z ((disasmOpcode>>22) & 1)
+#define _W ((disasmOpcode>>21) & 1)
 
 const char *dest_string(void)
 {
@@ -1054,13 +1042,13 @@ const char *dest_string(void)
 char dest_fsf()
 {
 	const char arr[4] = { 'x', 'y', 'z', 'w' };
-	return arr[(cpuRegs.code>>21)&3];
+	return arr[(disasmOpcode>>21)&3];
 }
 
 char dest_ftf()
 {
 	const char arr[4] = { 'x', 'y', 'z', 'w' };
-	return arr[(cpuRegs.code>>23)&3];
+	return arr[(disasmOpcode>>23)&3];
 }
 
 void P_VADDx( string& output ){_sap("vaddx.%s %s, %s, %sx") dest_string(),COP2_REG_FP[DECODE_FD], COP2_REG_FP[DECODE_FS],COP2_REG_FP[DECODE_FT]); }

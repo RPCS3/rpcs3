@@ -26,6 +26,8 @@
 #include "AppCoreThread.h"
 #include "RecentIsoList.h"
 
+class DisassemblyDialog;
+
 #include "System.h"
 #include "System/SysThreads.h"
 
@@ -503,6 +505,7 @@ protected:
 	wxWindowID			m_id_MainFrame;
 	wxWindowID			m_id_GsFrame;
 	wxWindowID			m_id_ProgramLogBox;
+	wxWindowID			m_id_Disassembler;
 
 	wxKeyEvent			m_kevt;
 
@@ -521,11 +524,16 @@ public:
 	
 	SysMainMemory& GetVmReserve();
 	
-	GSFrame&		GetGsFrame() const;
-	MainEmuFrame&	GetMainFrame() const;
+	GSFrame&			GetGsFrame() const;
+	MainEmuFrame&		GetMainFrame() const;
 
-	GSFrame*		GetGsFramePtr() const	{ return (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame ); }
-	MainEmuFrame*	GetMainFramePtr() const	{ return (MainEmuFrame*)wxWindow::FindWindowById( m_id_MainFrame ); }
+	GSFrame*			GetGsFramePtr() const		{ return (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame ); }
+	MainEmuFrame*		GetMainFramePtr() const		{ return (MainEmuFrame*)wxWindow::FindWindowById( m_id_MainFrame ); }
+	DisassemblyDialog*	GetDisassemblyPtr() const	{ return (DisassemblyDialog*)wxWindow::FindWindowById( m_id_Disassembler ); }
+	
+	void enterDebugMode();
+	void leaveDebugMode();
+	void resetDebugger();
 
 	bool HasMainFrame() const	{ return GetMainFramePtr() != NULL; }
 

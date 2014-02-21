@@ -28,6 +28,8 @@
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
 
+#include "Debugger/DisassemblyDialog.h"
+
 #include "Utilities/IniInterface.h"
 
 #include <wx/stdpaths.h>
@@ -749,6 +751,27 @@ GSFrame& Pcsx2App::GetGsFrame() const
 	GSFrame* gsFrame  = (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame );
 	pxAssert(gsFrame != NULL);
 	return  *gsFrame;
+}
+
+void Pcsx2App::enterDebugMode()
+{
+	DisassemblyDialog* dlg = GetDisassemblyPtr();
+	if (dlg)
+		dlg->setDebugMode(true);
+}
+	
+void Pcsx2App::leaveDebugMode()
+{
+	DisassemblyDialog* dlg = GetDisassemblyPtr();
+	if (dlg)
+		dlg->setDebugMode(false);
+}
+
+void Pcsx2App::resetDebugger()
+{
+	DisassemblyDialog* dlg = GetDisassemblyPtr();
+	if (dlg)
+		dlg->reset();
 }
 
 // NOTE: Plugins are *not* applied by this function.  Changes to plugins need to handled

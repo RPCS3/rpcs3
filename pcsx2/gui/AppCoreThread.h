@@ -146,6 +146,7 @@ protected:
 	virtual void DoCpuExecute();
 
 	virtual void OnResumeReady();
+	virtual void OnPause();
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();

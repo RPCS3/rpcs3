@@ -71,7 +71,17 @@ const R5900::OPCODE& R5900::GetCurrentInstruction()
 	const OPCODE* opcode = &R5900::OpcodeTables::tbl_Standard[_Opcode_];
 
 	while( opcode->getsubclass != NULL )
-		opcode = &opcode->getsubclass();
+		opcode = &opcode->getsubclass(cpuRegs.code);
+
+	return *opcode;
+}
+
+const R5900::OPCODE& R5900::GetInstruction(u32 op)
+{
+	const OPCODE* opcode = &R5900::OpcodeTables::tbl_Standard[op >> 26];
+
+	while( opcode->getsubclass != NULL )
+		opcode = &opcode->getsubclass(op);
 
 	return *opcode;
 }

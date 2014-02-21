@@ -261,6 +261,12 @@ set(pcsx2CDVDHeaders
 
 # DebugTools sources
 set(pcsx2DebugToolsSources
+	DebugTools/DebugInterface.cpp
+	DebugTools/DisassemblyManager.cpp
+	DebugTools/ExpressionParser.cpp
+	DebugTools/MIPSAnalyst.cpp
+	DebugTools/Breakpoints.cpp
+	DebugTools/SymbolMap.cpp
 	DebugTools/DisR3000A.cpp
 	DebugTools/DisR5900asm.cpp
 	DebugTools/DisR5900.cpp
@@ -269,6 +275,12 @@ set(pcsx2DebugToolsSources
 
 # DebugTools headers
 set(pcsx2DebugToolsHeaders
+	DebugTools/DebugInterface.h
+	DebugTools/DisassemblyManager.h
+	DebugTools/ExpressionParser.h
+	DebugTools/MIPSAnalyst.h
+	DebugTools/Breakpoints.h
+	DebugTools/SymbolMap.h
 	DebugTools/Debug.h
 	DebugTools/DisASm.h
 	DebugTools/DisVUmicro.h
@@ -307,6 +319,12 @@ set(pcsx2GuiSources
 	gui/Dialogs/PickUserModeDialog.cpp
 	gui/Dialogs/StuckThreadDialog.cpp
 	gui/Dialogs/SysConfigDialog.cpp
+	gui/Debugger/BreakpointWindow.cpp
+	gui/Debugger/CtrlDisassemblyView.cpp
+	gui/Debugger/CtrlRegisterList.cpp
+	gui/Debugger/CtrlMemView.cpp
+	gui/Debugger/DisassemblyDialog.cpp
+	gui/Debugger/DebugEvents.cpp
 	gui/ExecutorThread.cpp
 	gui/FrameForGS.cpp
 	gui/GlobalCommands.cpp
@@ -356,6 +374,12 @@ set(pcsx2GuiHeaders
 	gui/Dialogs/ConfigurationDialog.h
 	gui/Dialogs/LogOptionsDialog.h
 	gui/Dialogs/ModalPopups.h
+	gui/Debugger/BreakpointWindow.h
+	gui/Debugger/CtrlDisassemblyView.h
+	gui/Debugger/CtrlRegisterList.h
+	gui/Debugger/CtrlMemView.h
+	gui/Debugger/DisassemblyDialog.h
+	gui/Debugger/DebugEvents.h
 	gui/i18n.h
 	gui/IsoDropTarget.h
 	gui/MainFrame.h
@@ -387,6 +411,8 @@ set(pcsx2GuiResources
     ${res_bin}/ConfigIcon_Speedhacks.h
     ${res_bin}/ConfigIcon_Video.h
     ${res_bin}/Dualshock.h
+    ${res_bin}/Breakpoint_Active.h
+    ${res_bin}/Breakpoint_Inactive.h
     )
 
 # IPU sources
@@ -586,13 +612,15 @@ set(pcsx2SSources
 # change language of .S-files to c++
 set_source_files_properties(${pcsx2SSources} PROPERTIES LANGUAGE CXX)
 
+# C++11 is used for debug tools, so we enable it
+set_source_files_properties(${pcsx2DebugToolsSources} PROPERTIES COMPILE_FLAGS "-std=c++0x")
+
 # common Sources
 set(Common
 	${pcsx2Sources}
 	${pcsx2Headers}
 	${pcsx2CDVDSources}
 	${pcsx2CDVDHeaders}
-	${pcsx2DebugToolsSources}
 	${pcsx2DebugToolsSources}
 	${pcsx2GuiSources}
     ${pcsx2GuiResources}
@@ -652,12 +680,12 @@ add_custom_command(OUTPUT  "${res_bin}/Dualshock.h"  COMMAND perl ${PROJECT_SOUR
 foreach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
-        ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video)
+        ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video Breakpoint_Active Breakpoint_Inactive)
     add_custom_command(OUTPUT  "${res_bin}/${res_file}.h" COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/${res_file}.png" "${res_bin}/${res_file}" )
 endforeach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
-        ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video)
+        ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video Breakpoint_Active Breakpoint_Inactive)
 
 # Suppress all the system-specific predefined macros outside the reserved namespace.
 # Needed when stringifying macros.

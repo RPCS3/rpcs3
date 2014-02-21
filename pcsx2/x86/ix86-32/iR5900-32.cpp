@@ -32,6 +32,8 @@
 #include "CDVD/CDVD.h"
 #include "Elfheader.h"
 
+#include "../DebugTools/Breakpoints.h"
+
 #if !PCSX2_SEH
 #	include <csetjmp>
 #endif
@@ -1254,10 +1256,35 @@ int cop2flags(u32 code)
 }
 #endif
 
+
+void dynarecCheckBreakpoint()
+{
+	u32 pc = cpuRegs.pc;
+ 	if (CBreakPoints::CheckSkipFirst(pc))
+	{
+		CBreakPoints::SetSkipFirst(0xFFFFFFFF);
+		return;
+	}
+
+	auto cond = CBreakPoints::GetBreakPointCondition(pc);
+	if (cond && !cond->Evaluate())
+		return;
+
+	GetCoreThread().PauseSelf();
+	recExitExecution();
+}
+
 void recompileNextInstruction(int delayslot)
 {
 	static u8 s_bFlushReg = 1;
 	int i, count;
+
+	// add breakpoint
+	if (CBreakPoints::IsAddressBreakPoint(pc))
+	{
+		iFlushCall(FLUSH_EVERYTHING);
+		xCALL(&dynarecCheckBreakpoint);
+	}
 
 	s_pCode = (int *)PSM( pc );
 	pxAssert(s_pCode);
@@ -1595,8 +1622,22 @@ static void __fastcall recRecompile( const u32 startpc )
 	s_nEndBlock = 0xffffffff;
 	s_branchTo = -1;
 
+	// compile breakpoints as individual blocks
+	if (CBreakPoints::IsAddressBreakPoint(i))
+	{
+		s_nEndBlock = i + 4;
+		goto StartRecomp;
+	}
+
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
+		
+		// stop before breakpoints
+		if (CBreakPoints::IsAddressBreakPoint(i))
+		{
+			s_nEndBlock = i;
+			break;
+		}
 
 		if(i != startpc)	// Block size truncation checks.
 		{

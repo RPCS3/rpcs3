@@ -142,10 +142,26 @@ void SysThreadBase::Pause()
 
 		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
 
+		OnPause();
 		m_sem_event.Post();
 	}
 
 	m_RunningLock.Wait();
+}
+
+void SysThreadBase::PauseSelf()
+{
+	if( !IsSelf() || !IsRunning() ) return;
+
+	{
+		ScopedLock locker( m_ExecModeMutex );
+		
+		if( m_ExecMode == ExecMode_Opened )
+			m_ExecMode = ExecMode_Pausing;
+		
+		OnPause();
+		m_sem_event.Post();
+	}
 }
 
 // Resumes the core execution state, or does nothing is the core is already running.  If

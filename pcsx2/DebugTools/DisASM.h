@@ -24,19 +24,19 @@
 #define DECODE_FD           (DECODE_SA)
 ///********
 
-#define DECODE_FUNCTION     ((cpuRegs.code) & 0x3F)
-#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register
-#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register
-#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register
-#define DECODE_SA     ((cpuRegs.code >>  6) & 0x1F) // The sa part of the instruction register
-#define DECODE_IMMED     ( cpuRegs.code & 0xFFFF)      // The immediate part of the instruction register
+#define DECODE_FUNCTION     ((disasmOpcode) & 0x3F)
+#define DECODE_RD     ((disasmOpcode >> 11) & 0x1F) // The rd part of the instruction register
+#define DECODE_RT     ((disasmOpcode >> 16) & 0x1F) // The rt part of the instruction register
+#define DECODE_RS     ((disasmOpcode >> 21) & 0x1F) // The rs part of the instruction register
+#define DECODE_SA     ((disasmOpcode >>  6) & 0x1F) // The sa part of the instruction register
+#define DECODE_IMMED     ( disasmOpcode & 0xFFFF)      // The immediate part of the instruction register
 #define DECODE_OFFSET  ((((short)DECODE_IMMED * 4) + opcode_addr + 4))
-#define DECODE_JUMP     (opcode_addr & 0xf0000000)|((cpuRegs.code&0x3ffffff)<<2)
+#define DECODE_JUMP     (opcode_addr & 0xf0000000)|((disasmOpcode&0x3ffffff)<<2)
 #define DECODE_SYSCALL      ((opcode_addr & 0x03FFFFFF) >> 6)
 #define DECODE_BREAK        (DECODE_SYSCALL)
-#define DECODE_C0BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C1BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)
+#define DECODE_C0BC         ((disasmOpcode >> 16) & 0x03)
+#define DECODE_C1BC         ((disasmOpcode >> 16) & 0x03)
+#define DECODE_C2BC         ((disasmOpcode >> 16) & 0x03)
 
 //IOP
 

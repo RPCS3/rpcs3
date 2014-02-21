@@ -619,23 +619,23 @@ namespace R5900
 	{
 		using namespace OpcodeTables;
 
-		const OPCODE& Class_SPECIAL() { return tbl_Special[_Funct_]; }
-		const OPCODE& Class_REGIMM()  { return tbl_RegImm[_Rt_]; }
+		const OPCODE& Class_SPECIAL(u32 op) { return tbl_Special[op & 0x3F]; }
+		const OPCODE& Class_REGIMM(u32 op)  { return tbl_RegImm[(op >> 16) & 0x1F]; }
+		
+		const OPCODE& Class_MMI(u32 op)  { return tbl_MMI[op & 0x3F]; }
+		const OPCODE& Class_MMI0(u32 op) { return tbl_MMI0[(op >> 6) & 0x1F]; }
+		const OPCODE& Class_MMI1(u32 op) { return tbl_MMI1[(op >> 6) & 0x1F]; }
+		const OPCODE& Class_MMI2(u32 op) { return tbl_MMI2[(op >> 6) & 0x1F]; }
+		const OPCODE& Class_MMI3(u32 op) { return tbl_MMI3[(op >> 6) & 0x1F]; }
 
-		const OPCODE& Class_MMI()  { return tbl_MMI[_Funct_]; }
-		const OPCODE& Class_MMI0() { return tbl_MMI0[_Sa_]; }
-		const OPCODE& Class_MMI1() { return tbl_MMI1[_Sa_]; }
-		const OPCODE& Class_MMI2() { return tbl_MMI2[_Sa_]; }
-		const OPCODE& Class_MMI3() { return tbl_MMI3[_Sa_]; }
+		const OPCODE& Class_COP0(u32 op) { return tbl_COP0[(op >> 21) & 0x1F]; }
+		const OPCODE& Class_COP0_BC0(u32 op) { return tbl_COP0_BC0[(cpuRegs.code >> 16) & 0x03]; }
+		const OPCODE& Class_COP0_C0(u32 op) { return tbl_COP0_C0[op & 0x3F]; }
 
-		const OPCODE& Class_COP0() { return tbl_COP0[_Rs_]; }
-		const OPCODE& Class_COP0_BC0() { return tbl_COP0_BC0[(cpuRegs.code >> 16) & 0x03]; }
-		const OPCODE& Class_COP0_C0() { return tbl_COP0_C0[_Funct_]; }
-
-		const OPCODE& Class_COP1() { return tbl_COP1[_Rs_]; }
-		const OPCODE& Class_COP1_BC1() { return tbl_COP1_BC1[_Rt_]; }
-		const OPCODE& Class_COP1_S() { return tbl_COP1_S[_Funct_]; }
-		const OPCODE& Class_COP1_W() { return tbl_COP1_W[_Funct_]; }
+		const OPCODE& Class_COP1(u32 op) { return tbl_COP1[(op >> 21) & 0x1F]; }
+		const OPCODE& Class_COP1_BC1(u32 op) { return tbl_COP1_BC1[(op >> 16) & 0x1F]; }
+		const OPCODE& Class_COP1_S(u32 op) { return tbl_COP1_S[op & 0x3F]; }
+		const OPCODE& Class_COP1_W(u32 op) { return tbl_COP1_W[op & 0x3F]; }
 
 		// These are for future use when the COP2 tables are completed.
 		//const OPCODE& Class_COP2() { return tbl_COP2[_Rs_]; }

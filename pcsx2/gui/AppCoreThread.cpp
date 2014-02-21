@@ -20,6 +20,8 @@
 
 #include <wx/stdpaths.h>
 
+#include "Debugger/DisassemblyDialog.h"
+
 #include "Utilities/TlsVariable.inl"
 
 #include "ps2/BiosTools.h"
@@ -107,7 +109,7 @@ void AppCoreThread::Reset()
 		GetSysExecutorThread().PostEvent( SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::Reset) );
 		return;
 	}
-
+		
 	_parent::Reset();
 }
 
@@ -197,7 +199,15 @@ void AppCoreThread::OnResumeReady()
 {
 	wxGetApp().SysApplySettings();
 	wxGetApp().PostMethod( AppSaveSettings );
+	
+	sApp.PostAppMethod( &Pcsx2App::leaveDebugMode );
 	_parent::OnResumeReady();
+}
+
+void AppCoreThread::OnPause()
+{
+	sApp.PostAppMethod( &Pcsx2App::enterDebugMode );
+	_parent::OnPause();
 }
 
 // Load Game Settings found in database

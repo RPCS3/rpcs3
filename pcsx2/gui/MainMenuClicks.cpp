@@ -24,6 +24,7 @@
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
+#include "Debugger/DisassemblyDialog.h"
 
 #include "Utilities/IniInterface.h"
 
@@ -554,6 +555,9 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)
 {
+	DisassemblyDialog* dlg = wxGetApp().GetDisassemblyPtr();
+	if (dlg)
+		dlg->Show();
 }
 
 void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Utilities/TraceLog.h"
+#include "../Memory.h"
 
 extern FILE *emuLog;
 extern wxString emuLogName;
@@ -26,6 +27,9 @@ extern char* disVU1MicroUF(u32 code, u32 pc);
 extern char* disVU1MicroLF(u32 code, u32 pc);
 
 extern const char * const CP2VFnames[];
+extern const char * const disRNameCP2f[];
+extern const char * const disRNameCP2i[];
+
 extern const char * const disRNameCP2f[];
 extern const char * const disRNameCP2i[];
 
@@ -42,6 +46,8 @@ namespace R5900
 	void dFindSym( std::string& output, u32 addr );
 
 	extern const char * const disRNameGPR[];
+	extern const char * const disRNameCP0[];
+	extern const char * const disRNameCP1[];
 
 	// A helper class for getting a quick and efficient string representation of the
 	// R5900's current instruction.  This class is *not* thread safe!
