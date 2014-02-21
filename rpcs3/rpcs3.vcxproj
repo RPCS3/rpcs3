@@ -318,6 +318,7 @@
     <ClCompile Include="Loader\ELF32.cpp" />
     <ClCompile Include="Loader\ELF64.cpp" />
     <ClCompile Include="Loader\Loader.cpp" />
+    <ClCompile Include="Loader\PKG.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\SELF.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />

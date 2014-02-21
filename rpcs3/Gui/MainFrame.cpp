@@ -12,7 +12,7 @@
 #include "Gui/AboutDialog.h"
 #include <wx/dynlib.h>
 
-#include "unpkg/unpkg.c"
+#include "Loader/PKG.h"
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -225,43 +225,21 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("PKG: extracting...");
-
 	Emu.Stop();
-
-	wxString fileName = ctrl.GetPath();
-	if (!pkg_unpack(static_cast<const char*>(fileName)))
-		ConLog.Error("Could not unpack PKG!");
-	else ConLog.Success("PKG: extract done.");
-
-	if (!wxRemoveFile(ctrl.GetPath()+".dec"))
-		ConLog.Warning("Could not delete the decoded DEC file");
-
-	pkg_header *header;
-	pkg_info(static_cast<const char*>(fileName), &header);
-
-	wxString titleID_full (header->title_id);
-	wxString titleID = titleID_full.SubString(7, 15);
-
-	wxString mainDir = wxGetCwd();
-	wxString gamePath = "\\dev_hdd0\\game\\";
-
-	wxString pkgDir = mainDir + gamePath + titleID;
-
-	// Save the title ID.
-	Emu.SetTitleID(titleID);
-
-	//Refresh game list
-	m_game_viewer->Refresh();
 	
-	if(Emu.BootGame(pkgDir.ToStdString()))
+	// Open and install PKG file
+	std::string filePath = ctrl.GetPath();
+	wxFile pkg_f(filePath, wxFile::read); // TODO: Use VFS to install PKG files
+
+	if (pkg_f.IsOpened())
 	{
-		ConLog.Success("Game: boot done.");
+		PKGLoader pkg(pkg_f);
+		pkg.Install("/dev_hdd0/game/");
+		pkg.Close();
 	}
-	else
-	{
-		ConLog.Error("Ps3 executable not found in folder (%s)", pkgDir.wx_str());
-	}
+
+	// Refresh game list
+	m_game_viewer->Refresh();
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
