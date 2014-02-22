@@ -1126,7 +1126,18 @@ static u32 scaleBlockCycles_helper()
 			scalarHigh = 7;
 		break;
 
-		jNO_DEFAULT
+		// Added insane rates on popular request (rama)
+		//jNO_DEFAULT
+		default:
+			scalarLow = 2;
+			scalarMid = 3;
+			scalarHigh = 2;
+			
+			if (EmuConfig.Speedhacks.EECycleRate > 2 && EmuConfig.Speedhacks.EECycleRate < 100) {
+				scalarLow *= EmuConfig.Speedhacks.EECycleRate;
+				scalarMid *= EmuConfig.Speedhacks.EECycleRate;
+				scalarHigh *= EmuConfig.Speedhacks.EECycleRate;
+			}
 	}
 
 	const u32 temp = s_nBlockCycles * (
