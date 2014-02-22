@@ -95,9 +95,9 @@ void GameViewer::DClick(wxListEvent& event)
 
 	const wxString& path = m_path + m_game_data[i].root;
 
+	Emu.Stop();
 	Emu.GetVFS().Init(path);
 	wxString local_path;
-	Emu.Stop();
 	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path.ToStdString()))
 	{
 		ConLog.Error("Boot error: elf not found! [%s]", path.wx_str());

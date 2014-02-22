@@ -301,11 +301,11 @@ int cellAudioInit()
 	thread t("AudioThread", []()
 		{
 			WAVHeader header(2); // WAV file header (stereo)
+			
+			static const wxString& output_name = "audio.wav";
 
-			wxString output_name = "audio.wav";
-
-			wxFile output(output_name, wxFile::write); // create output file
-			if (!output.IsOpened())
+			wxFile output; // create output file
+			if (Ini.AudioDumpToFile.GetValue() && !output.Open(output_name, wxFile::write))
 			{
 				ConLog.Error("Audio aborted: cannot create %s", output_name.wx_str());
 				return;
@@ -315,10 +315,11 @@ int cellAudioInit()
 
 			m_config.start_time = get_system_time();
 
-			output.Write(&header, sizeof(header)); // write file header
+			if (Ini.AudioDumpToFile.GetValue())
+				output.Write(&header, sizeof(header)); // write file header
 
 			float buffer[2*256]; // buffer for 2 channels
-			float buffer2[8*256]; // buffer for 8 channels (max count)
+			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
 			memset(&buffer, 0, sizeof(buffer));
 			memset(&buffer2, 0, sizeof(buffer2));
 
@@ -370,14 +371,12 @@ int cellAudioInit()
 					port.tag++; // absolute index of block that will be read
 					index = (position + 1) % port.block; // write new value
 
-					
-
 					if (first_mix)
 					{
 						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
 						{
 							// reverse byte order (TODO: use port.m_param.level)
-							buffer[i] = re(buffer2[i]);
+							buffer[i] = buffer2[i];
 						}
 						first_mix = false;
 					}
@@ -385,31 +384,37 @@ int cellAudioInit()
 					{
 						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
 						{
-							float value = re(buffer2[i]);
-							buffer[i] = (buffer[i] + value) * 0.5; // TODO: valid mixing
+							buffer[i] = (buffer[i] + buffer2[i]) * 0.5; // TODO: valid mixing
 						}
 					}
-				}				
+				}
 
 				// send aftermix event (normal audio event)
 				// TODO: check event source
 				Emu.GetEventManager().SendEvent(m_config.event_key, 0x10103000e010e07, 0, 0, 0);
 
-				if (output.Write(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
+				if(Ini.AudioDumpToFile.GetValue())
 				{
-					ConLog.Error("Port aborted: cannot write %s", output_name.wx_str());
-					goto abort;
-				}
+					if (output.Write(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
+					{
+						ConLog.Error("Port aborted: cannot write %s", output_name.wx_str());
+						goto abort;
+					}
 
-				header.Size += sizeof(buffer); // update file header
-				header.RIFF.Size += sizeof(buffer);
+					header.Size += sizeof(buffer); // update file header
+					header.RIFF.Size += sizeof(buffer);
+				}
 			}
 			ConLog.Write("Audio finished");
-		abort:
-			output.Seek(0);
-			output.Write(&header, sizeof(header)); // write fixed file header
+abort:
+			if(Ini.AudioDumpToFile.GetValue())
+			{
+				output.Seek(0);
+				output.Write(&header, sizeof(header)); // write fixed file header
 
-			output.Close();
+				output.Close();
+			}
+
 			m_config.m_is_audio_finalized = true;
 		});
 	t.detach();

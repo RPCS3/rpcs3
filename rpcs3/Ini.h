@@ -105,6 +105,7 @@ public:
 	IniEntry<u8> KeyboardHandlerMode;
 	IniEntry<u8> MouseHandlerMode;
 	IniEntry<u8> AudioOutMode;
+	IniEntry<bool> AudioDumpToFile;
 	IniEntry<bool> HLELogging;
 
 	IniEntry<int> PadHandlerLeft;
@@ -167,6 +168,7 @@ public:
 
 		path = DefPath + "\\" + "Audio";
 		AudioOutMode.Init("AudioOutMode", path);
+		AudioDumpToFile.Init("AudioDumpToFile", path);
 
 		path = DefPath + "\\" + "HLE";
 		HLELogging.Init("HLELogging", path);
@@ -187,6 +189,7 @@ public:
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
 		AudioOutMode.Load(0);
+		AudioDumpToFile.Load(0);
 		HLELogging.Load(false);
 
 		PadHandlerLeft.Load(static_cast<int>('A'));
@@ -222,6 +225,7 @@ public:
 		KeyboardHandlerMode.Save();
 		MouseHandlerMode.Save();
 		AudioOutMode.Save();
+		AudioDumpToFile.Save();
 		HLELogging.Save();
 
 		PadHandlerLeft.Save();

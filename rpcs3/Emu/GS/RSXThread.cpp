@@ -219,6 +219,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 	}
 	break;
+
+	case NV4097_SET_FRONT_FACE:
+		m_front_face = ARGS(0);
+	break;
 	
 	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4):
 	{
@@ -658,7 +662,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SHADER_PROGRAM:
 	{
-		m_cur_shader_prog = &m_shader_progs[m_cur_shader_prog_num++];
+		m_cur_shader_prog = &m_shader_progs[/*m_cur_shader_prog_num++*/0];
 		u32 a0 = ARGS(0);
 		m_cur_shader_prog->offset = a0 & ~0x3;
 		m_cur_shader_prog->addr = GetAddress(m_cur_shader_prog->offset, (a0 & 0x3) - 1);
@@ -1376,6 +1380,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case 0x000002f8:
 	break;
 
+	case NV0039_SET_CONTEXT_DMA_BUFFER_IN:
+	case NV0039_OFFSET_IN:
+	case NV0039_OFFSET_OUT:
+		//TODO
+	break;
+
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
 		m_surface_offset_a = ARGS(0);
 	break;
@@ -1450,6 +1460,7 @@ void RSXThread::End()
 	m_fragment_constants.Clear();
 	m_transform_constants.Clear();
 	m_cur_shader_prog_num = 0;
+	//m_cur_shader_prog = nullptr;
 
 	m_clear_surface_mask = 0;
 	m_begin_end = 0;

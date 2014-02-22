@@ -257,7 +257,7 @@ int sys_spu_thread_group_start(u32 id)
 //174
 int sys_spu_thread_group_suspend(u32 id)
 {
-	sc_spu.Warning("sys_spu_thread_group_suspend(id=%d)", id);
+	sc_spu.Log("sys_spu_thread_group_suspend(id=%d)", id);
 
 	SpuGroupInfo* group_info;
 	if(!Emu.GetIdManager().GetIDData(id, group_info))

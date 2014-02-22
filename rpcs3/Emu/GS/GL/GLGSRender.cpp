@@ -802,6 +802,8 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glColorMask");
 	}
 
+	//glFrontFace(m_front_face);
+
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
 		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
