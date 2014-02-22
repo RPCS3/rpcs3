@@ -185,15 +185,20 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 	Console.Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
 		cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
 
+#if 0
 	if (bd) Console.Warning("branch delay!!");
 
 	pxFail( "TLB Miss handler is uninished code." ); // temporary
+#endif
 
 	cpuRegs.CP0.n.BadVAddr = addr;
 	cpuRegs.CP0.n.Context &= 0xFF80000F;
 	cpuRegs.CP0.n.Context |= (addr >> 9) & 0x007FFFF0;
 	cpuRegs.CP0.n.EntryHi = (addr & 0xFFFFE000) | (cpuRegs.CP0.n.EntryHi & 0x1FFF);
 
+	// Don't reinvent the wheel ;)
+	cpuException(excode, bd);
+#if 0
 	cpuRegs.CP0.n.Cause = excode;
 	if (!(cpuRegs.CP0.n.Status.val & 0x2)) { // EXL bit
 		cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
@@ -208,6 +213,7 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 	cpuRegs.CP0.n.Status.b.EXL = 1;
 	cpuUpdateOperationMode();
 //	Log=1; varLog|= 0x40000000;
+#endif
 }
 
 void cpuTlbMissR(u32 addr, u32 bd) {

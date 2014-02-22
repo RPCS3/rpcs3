@@ -334,7 +334,21 @@ template void vtlb_memWrite<mem32_t>(u32 mem, mem32_t data);
 // Generates a tlbMiss Exception
 static __ri void vtlb_Miss(u32 addr,u32 mode)
 {
+	// Hack to handle expected tlb miss by some games.
+#if 0
+	if (mode)
+		cpuTlbMissW(addr, cpuRegs.branch);
+	else
+		cpuTlbMissR(addr, cpuRegs.branch);
+#endif
+
+	// The exception terminate the program on linux which is very annoying
+	// Just disable it for the moment
+#ifdef __LINUX__
+	if (0)
+#else
 	if( IsDevBuild )
+#endif
 		Cpu->ThrowCpuException( R5900Exception::TLBMiss( addr, !!mode ) );
 	else
 	{
@@ -349,7 +363,13 @@ static __ri void vtlb_Miss(u32 addr,u32 mode)
 // time of the exception.
 static __ri void vtlb_BusError(u32 addr,u32 mode)
 {
+	// The exception terminate the program on linux which is very annoying
+	// Just disable it for the moment
+#ifdef __LINUX__
+	if (0)
+#else
 	if( IsDevBuild )
+#endif
 		Cpu->ThrowCpuException( R5900Exception::BusError( addr, !!mode ) );
 	else
 		Console.Error( R5900Exception::TLBMiss( addr, !!mode ).FormatMessage() );
