@@ -5,6 +5,11 @@
 #include "DebugTools/DisassemblyManager.h"
 #include "DebugTools/Breakpoints.h"
 #include "BreakpointWindow.h"
+#include "PathDefs.h"
+
+#ifdef WIN32
+#include <Windows.h>
+#endif
 
 BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_SETSTATUSBARTEXT, DisassemblyDialog::onDebuggerEvent )
@@ -15,6 +20,34 @@ BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_STEPOVER, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_UPDATE, DisassemblyDialog::onDebuggerEvent )
 END_EVENT_TABLE()
+
+
+DebuggerHelpDialog::DebuggerHelpDialog(wxWindow* parent)
+	: wxDialog(parent,wxID_ANY,L"Help")
+{
+	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+
+	wxTextCtrl* textControl = new wxTextCtrl(this,wxID_ANY,L"",wxDefaultPosition,wxDefaultSize,
+		wxTE_MULTILINE|wxTE_READONLY);
+	textControl->SetMinSize(wxSize(400,300));
+	auto fileName = PathDefs::GetDocs().ToString()+L"/debugger.txt";
+	wxTextFile file(fileName);
+	if (file.Open())
+	{
+		wxString text = file.GetFirstLine();
+		while (!file.Eof())
+		{
+			text += file.GetNextLine()+L"\r\n";
+		}
+
+		textControl->SetLabel(text);
+		textControl->SetSelection(0,0);
+	}
+
+	sizer->Add(textControl,1,wxEXPAND);
+	SetSizerAndFit(sizer);
+}
+
 
 CpuTabPage::CpuTabPage(wxWindow* parent, DebugInterface* _cpu)
 	: wxPanel(parent), cpu(_cpu)
@@ -98,6 +131,38 @@ DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 
 	setDebugMode(true);
 }
+
+#ifdef WIN32
+WXLRESULT DisassemblyDialog::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam)
+{
+	switch (nMsg)
+	{
+	case WM_SHOWWINDOW:
+		{
+			WXHWND hwnd = GetHWND();
+
+			u32 style = GetWindowLong((HWND)hwnd,GWL_STYLE);
+			style &= ~(WS_MINIMIZEBOX|WS_MAXIMIZEBOX);
+			SetWindowLong((HWND)hwnd,GWL_STYLE,style);
+
+			u32 exStyle = GetWindowLong((HWND)hwnd,GWL_EXSTYLE);
+			exStyle |= (WS_EX_CONTEXTHELP);
+			SetWindowLong((HWND)hwnd,GWL_EXSTYLE,exStyle);
+		}
+		break;
+	case WM_SYSCOMMAND:
+		if (wParam == SC_CONTEXTHELP)
+		{
+			DebuggerHelpDialog help(this);
+			help.ShowModal();
+			return 0;
+		}
+		break;
+	}
+
+	return wxFrame::MSWWindowProc(nMsg,wParam,lParam);
+}
+#endif
 
 void DisassemblyDialog::onBreakRunClicked(wxCommandEvent& evt)
 {	

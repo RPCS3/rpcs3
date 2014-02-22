@@ -8,6 +8,12 @@
 #include "CtrlMemView.h"
 #include "DebugEvents.h"
 
+class DebuggerHelpDialog: public wxDialog
+{
+public:
+	DebuggerHelpDialog(wxWindow* parent);
+};
+
 class CpuTabPage: public wxPanel
 {
 public:
@@ -37,6 +43,10 @@ public:
 	void update();
 	void reset();
 	void setDebugMode(bool debugMode);
+	
+#ifdef WIN32
+	WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam);
+#endif
 
 	DECLARE_EVENT_TABLE()
 protected:
