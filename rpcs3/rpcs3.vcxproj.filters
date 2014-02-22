@@ -406,6 +406,15 @@
     <ClCompile Include="Emu\FS\vfsDir.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

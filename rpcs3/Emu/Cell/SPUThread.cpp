@@ -95,3 +95,22 @@ void SPUThread::DoStop()
 	delete m_dec;
 	m_dec = nullptr;
 }
+
+void SPUThread::DoClose()
+{
+	// disconnect all event ports
+	if (Emu.IsStopped())
+	{
+		return;
+	}
+	for (u32 i = 0; i < 64; i++)
+	{
+		EventPort& port = SPUPs[i];
+		SMutexLocker lock(port.mutex);
+		if (port.eq)
+		{
+			port.eq->ports.remove(&port);
+			port.eq = nullptr;
+		}
+	}
+}

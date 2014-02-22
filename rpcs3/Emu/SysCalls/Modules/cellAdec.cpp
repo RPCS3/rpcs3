@@ -1,71 +1,64 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "cellAdec.h"
 
 void cellAdec_init();
 Module cellAdec(0x0006, cellAdec_init);
 
-// Error Codes
-enum
+int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr)
 {
-	CELL_ADEC_ERROR_FATAL	= 0x80610001,
-	CELL_ADEC_ERROR_SEQ		= 0x80610002,
-	CELL_ADEC_ERROR_ARG		= 0x80610003,
-	CELL_ADEC_ERROR_BUSY	= 0x80610004,
-	CELL_ADEC_ERROR_EMPTY	= 0x80610005,
-};
-
-int cellAdecQueryAttr()
-{
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 	return CELL_OK;
 }
 
-int cellAdecOpen()
+int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellAdecOpenEx()
+int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellAdecClose()
+int cellAdecClose(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecClose(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellAdecStartSeq()
+int cellAdecStartSeq(u32 handle, u32 param_addr)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecStartSeq(handle=0x%x, param_addr=0x%x)", handle, param_addr);
 	return CELL_OK;
 }
 
-int cellAdecEndSeq()
+int cellAdecEndSeq(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecEndSeq(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellAdecDecodeAu()
+int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecDecodeAu(handle=0x%x, auInfo_addr=0x%x)", handle, auInfo.GetAddr());
 	return CELL_OK;
 }
 
-int cellAdecGetPcm()
+int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecGetPcm(handle=0x%x, outBuffer_addr=0x%x)", handle, outBuffer_addr);
 	return CELL_OK;
 }
 
-int cellAdecGetPcmItem()
+int cellAdecGetPcmItem(u32 handle, u32 pcmItem_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellAdec);
+	cellAdec.Error("cellAdecGetPcmItem(handle=0x%x, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr_addr);
 	return CELL_OK;
 }
 

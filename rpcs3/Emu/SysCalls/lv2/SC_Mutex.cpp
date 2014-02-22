@@ -91,8 +91,9 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	}
 
 	u32 tid = GetCurrentPPUThread().GetId();
+	u32 owner = mutex->m_mutex.GetOwner();
 
-	if (mutex->m_mutex.GetOwner() == tid)
+	if (owner == tid)
 	{
 		if (mutex->is_recursive)
 		{
@@ -107,6 +108,13 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 			return CELL_EDEADLK;
 		}
 	}
+	else if (owner && !Emu.GetIdManager().CheckID(owner))
+	{
+		sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+		mutex->m_mutex.unlock(owner, tid);
+		mutex->recursive = 1;
+		return CELL_OK;
+	}
 
 	switch (mutex->m_mutex.trylock(tid))
 	{
@@ -119,16 +127,20 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 
 	switch (mutex->m_mutex.lock(tid, timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0))
 	{
-	case SMR_OK: mutex->m_queue.invalidate(tid);
-	case SMR_SIGNAL: mutex->recursive = 1; return CELL_OK;
-	case SMR_TIMEOUT: return CELL_ETIMEDOUT;
-	default: goto abort;
+	case SMR_OK:
+		mutex->m_queue.invalidate(tid);
+	case SMR_SIGNAL:
+		mutex->recursive = 1; return CELL_OK;
+	case SMR_TIMEOUT:
+		mutex->m_queue.invalidate(tid); return CELL_ETIMEDOUT;
+	default:
+		mutex->m_queue.invalidate(tid); goto abort;
 	}
 
 abort:
 	if (Emu.IsStopped())
 	{
-		ConLog.Warning("sys_mutex_lock(id=%d) aborted", mutex_id);
+		sys_mtx.Warning("sys_mutex_lock(id=%d) aborted", mutex_id);
 		return CELL_OK;
 	}
 	return CELL_ESRCH;
@@ -145,8 +157,9 @@ int sys_mutex_trylock(u32 mutex_id)
 	}
 
 	u32 tid = GetCurrentPPUThread().GetId();
+	u32 owner = mutex->m_mutex.GetOwner();
 
-	if (mutex->m_mutex.GetOwner() == tid)
+	if (owner == tid)
 	{
 		if (mutex->is_recursive)
 		{
@@ -160,6 +173,13 @@ int sys_mutex_trylock(u32 mutex_id)
 		{
 			return CELL_EDEADLK;
 		}
+	}
+	else if (owner && !Emu.GetIdManager().CheckID(owner))
+	{
+		sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+		mutex->m_mutex.unlock(owner, tid);
+		mutex->recursive = 1;
+		return CELL_OK;
 	}
 
 	switch (mutex->m_mutex.trylock(tid))
@@ -184,6 +204,10 @@ int sys_mutex_unlock(u32 mutex_id)
 
 	if (mutex->m_mutex.GetOwner() == tid)
 	{
+		if (!mutex->recursive || (mutex->recursive > 1 && !mutex->is_recursive))
+		{
+			sys_mtx.Warning("sys_mutex_unlock(%d): wrong recursive value (%d)", mutex_id, mutex->recursive);
+		}
 		mutex->recursive--;
 		if (!mutex->recursive)
 		{
