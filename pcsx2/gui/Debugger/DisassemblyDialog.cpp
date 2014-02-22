@@ -19,6 +19,7 @@ BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_GOTOINDISASM, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_STEPOVER, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_UPDATE, DisassemblyDialog::onDebuggerEvent )
+   EVT_CLOSE( DisassemblyDialog::onClose )
 END_EVENT_TABLE()
 
 
@@ -298,6 +299,11 @@ void DisassemblyDialog::onDebuggerEvent(wxCommandEvent& evt)
 	{
 		update();
 	}
+}
+
+void DisassemblyDialog::onClose(wxCloseEvent& evt)
+{
+	Hide();
 }
 
 void DisassemblyDialog::update()
