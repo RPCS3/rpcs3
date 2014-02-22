@@ -1952,13 +1952,14 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 				break;
 
-			case GIF_FLG_IMAGE2: // hmmm
-
-				ASSERT(0);
+			case GIF_FLG_IMAGE2: // hmmm // Fall through here fixes a crash in Wallace and Gromit Project Zoo
+				// and according to Pseudonym we shouldn't even land in this code. So hmm indeed. (rama)
+				
+				/*ASSERT(0);
 
 				path.nloop = 0;
 
-				break;
+				break;*/
 
 			case GIF_FLG_IMAGE:
 
