@@ -130,7 +130,7 @@ extern void sys_game_process_exitspawn2(u32 path_addr, u32 argv_addr, u32 envp_a
 //sys_event
 extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
 extern int sys_event_queue_destroy(u32 equeue_id, int mode);
-extern int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> _event, u64 timeout);
+extern int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 timeout);
 extern int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number);
 extern int sys_event_queue_drain(u32 event_queue_id);
 extern int sys_event_port_create(mem32_t eport_id, int port_type, u64 name);

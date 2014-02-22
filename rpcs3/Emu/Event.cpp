@@ -26,6 +26,11 @@ bool EventManager::RegisterKey(EventQueue* data, u64 key)
 
 	if (key_map.find(key) != key_map.end()) return false;
 
+	for (auto& v = key_map.begin(); v != key_map.end(); ++v)
+	{
+		if (v->second == data) return false;
+	}
+
 	key_map[key] = data;
 
 	return true;

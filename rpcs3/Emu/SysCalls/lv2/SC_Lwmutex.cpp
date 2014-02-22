@@ -28,8 +28,9 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
+	lwmutex->all_info = 0;
 	lwmutex->owner.initialize();
-	lwmutex->waiter = lwmutex->owner.GetOwner();
+	//lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
 
@@ -130,7 +131,7 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 	{
 		if (list.GetCount())
 		{
-			u64 max_prio = 0;
+			u32 highest_prio = ~0;
 			u32 sel = 0;
 			for (u32 i = 0; i < list.GetCount(); i++)
 			{
@@ -142,9 +143,9 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 					break;
 				}
 				u64 prio = t->GetPrio();
-				if (prio > max_prio)
+				if (prio < highest_prio)
 				{
-					max_prio = prio;
+					highest_prio = prio;
 					sel = i;
 				}
 			}

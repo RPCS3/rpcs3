@@ -275,6 +275,9 @@ public:
 	FPSCR FPSCR;
 	SPU_SNRConfig_hdr cfg; //Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
+	EventPort SPUPs[64]; // SPU Thread Event Ports
+	EventManager SPUQs; // SPU Queue Mapping
+
 	template<size_t _max_count>
 	class Channel
 	{
@@ -317,8 +320,13 @@ public:
 				{
 					return false;
 				}
-				res = m_value[--m_index];
-				m_value[m_index] = 0;
+				res = m_value[0];
+				for (u32 i = 1; i < max_count; i++) // FIFO
+				{
+					m_value[i-1] = m_value[i];
+				}
+				m_value[max_count-1] = 0;
+				m_index--;
 				return true;
 			}
 			else
@@ -479,7 +487,6 @@ public:
 	struct
 	{
 		Channel<1> Out_MBox;
-		Channel<1> OutIntr_Mbox;
 		Channel<4> In_MBox;
 		Channel<1> MBox_Status;
 		Channel<1> RunCntl;
@@ -616,10 +623,13 @@ public:
 
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("GetChannelCount(%s) = 0", wxString(spu_ch_name[ch]).wx_str());
-			return 0;//return SPU.OutIntr_Mbox.GetFreeCount();
+			return 0;
 
 		case MFC_RdTagStat:
 			return Prxy.TagStatus.GetCount();
+
+		case MFC_WrTagUpdate:
+			return Prxy.TagStatus.GetCount(); // hack
 
 		case SPU_RdSigNotify1:
 			return SPU.SNR[0].GetCount();
@@ -646,12 +656,63 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
-			ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
-			while (!SPU.OutIntr_Mbox.Push(v) && !Emu.IsStopped()) Sleep(1);
+			{
+				u8 code = v >> 24;
+				if (code < 64) 
+				{
+					/* ===== sys_spu_thread_send_event ===== */
+
+					u8 spup = code & 63;
+
+					u32 data;
+					if (!SPU.Out_MBox.Pop(data))
+					{
+						ConLog.Error("sys_spu_thread_send_event(v=0x%x, spup=%d): Out_MBox is empty", v, spup);
+						return;
+					}
+
+					if (SPU.In_MBox.GetCount())
+					{
+						ConLog.Error("sys_spu_thread_send_event(v=0x%x, spup=%d): In_MBox is not empty", v, spup);
+						SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
+						return;
+					}
+
+					if (Ini.HLELogging.GetValue())
+					{
+						ConLog.Write("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
+					}
+
+					EventPort& port = SPUPs[spup];
+
+					SMutexLocker lock(port.mutex);
+
+					if (!port.eq)
+					{
+						SPU.In_MBox.PushUncond(CELL_ENOTCONN); // check error passing
+						return;
+					}
+
+					if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, lock.tid, ((u64)code << 32) | (v & 0x00ffffff), data))
+					{
+						SPU.In_MBox.PushUncond(CELL_EBUSY);
+						return;
+					}
+
+					SPU.In_MBox.PushUncond(CELL_OK);
+					return;
+				}
+				else
+				{
+					ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x)", v);
+					SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
+					return;
+				}
+			}
 		break;
 
 		case SPU_WrOutMbox:
-			ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
+			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
 			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
@@ -707,7 +768,7 @@ public:
 		{
 		case SPU_RdInMbox:
 			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
-			ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
+			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
 		break;
 
 		case MFC_RdTagStat:
@@ -738,7 +799,7 @@ public:
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }
-	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
+	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + m_offset); } // m_offset & 0x3fffc ?????
 	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
 	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
 	virtual u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
@@ -805,6 +866,7 @@ protected:
 	virtual void DoPause();
 	virtual void DoResume();
 	virtual void DoStop();
+	virtual void DoClose();
 };
 
 SPUThread& GetCurrentSPUThread();

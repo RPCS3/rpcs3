@@ -74,18 +74,18 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->m_mutex.lock(tid);
+	eq->sq.m_mutex.lock(tid);
 	eq->owner.lock(tid);
 	// check if some threads are waiting for an event
-	if (!mode && eq->list.GetCount())
+	if (!mode && eq->sq.list.GetCount())
 	{
 		eq->owner.unlock(tid);
-		eq->m_mutex.unlock(tid);
+		eq->sq.m_mutex.unlock(tid);
 		return CELL_EBUSY;
 	}
 	eq->owner.unlock(tid, ~0);
-	eq->m_mutex.unlock(tid);
-	while (eq->list.GetCount())
+	eq->sq.m_mutex.unlock(tid);
+	while (eq->sq.list.GetCount())
 	{
 		Sleep(1);
 		if (Emu.IsStopped())
@@ -136,18 +136,18 @@ int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->m_mutex.lock(tid);
+	eq->sq.m_mutex.lock(tid);
 	eq->owner.lock(tid);
-	if (eq->list.GetCount())
+	if (eq->sq.list.GetCount())
 	{
 		number = 0;
 		eq->owner.unlock(tid);
-		eq->m_mutex.unlock(tid);
+		eq->sq.m_mutex.unlock(tid);
 		return CELL_OK;
 	}
 	number = eq->events.pop_all((sys_event_data*)(Memory + event_array.GetAddr()), size);
 	eq->owner.unlock(tid);
-	eq->m_mutex.unlock(tid);
+	eq->sq.m_mutex.unlock(tid);
 	return CELL_OK;
 }
 
@@ -174,7 +174,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->push(tid); // add thread to sleep queue
+	eq->sq.push(tid); // add thread to sleep queue
 
 	timeout = timeout ? (timeout / 1000) : ~0;
 	u64 counter = 0;
@@ -190,7 +190,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 			}
 			else
 			{
-				u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->pop() : eq->pop_prio();
+				u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
 				if (next != tid)
 				{
 					eq->owner.unlock(tid, next);
@@ -201,78 +201,33 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 			{
 				eq->events.pop(*event);
 				eq->owner.unlock(tid);
+				sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
+					(u64)event->source, (u64)event->data1, (u64)event->data2, (u64)event->data3);
+				/* HACK: passing event data in registers */
+				PPUThread& t = GetCurrentPPUThread();
+				t.GPR[4] = event->source;
+				t.GPR[5] = event->data1;
+				t.GPR[6] = event->data2;
+				t.GPR[7] = event->data3;
 				return CELL_OK;
 			}
 		case SMR_FAILED: break;
-		default: eq->invalidate(tid); return CELL_ECANCELED;
+		default: eq->sq.invalidate(tid); return CELL_ECANCELED;
 		}
 
 		Sleep(1);
 		if (counter++ > timeout || Emu.IsStopped())
 		{
 			if (Emu.IsStopped()) ConLog.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
-			eq->invalidate(tid);
+			eq->sq.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}
 	}
-	/* auto queue_receive = [&](int status) -> bool
-	{
-		if(status == CPUThread_Stopped)
-		{
-			result = CELL_ECANCELED;
-			return false;
-		}
-
-		EventQueue* equeue;
-		if (!Emu.GetIdManager().GetIDData(equeue_id, equeue))
-		{
-			result = CELL_ESRCH;
-			return false;
-		}
-
-		for(int i=0; i<equeue->pos; ++i)
-		{
-			if(!equeue->ports[i]->has_data && equeue->ports[i]->thread)
-			{
-				SPUThread* thr = (SPUThread*)equeue->ports[i]->thread;
-				if(thr->SPU.OutIntr_Mbox.GetCount())
-				{
-					u32 val;
-					thr->SPU.OutIntr_Mbox.Pop(val);
-					if(!thr->SPU.Out_MBox.Pop(val)) val = 0;
-					equeue->ports[i]->data1 = val;
-					equeue->ports[i]->data2 = 0;
-					equeue->ports[i]->data3 = 0;
-					equeue->ports[i]->has_data = true;
-				}
-			}
-		}
-
-		for(int i=0; i<equeue->pos; i++)
-		{
-			if(equeue->ports[i]->has_data)
-			{
-				event->source = equeue->ports[i]->name;
-				event->data1 = equeue->ports[i]->data1;
-				event->data2 = equeue->ports[i]->data2;
-				event->data3 = equeue->ports[i]->data3;
-
-				equeue->ports[i]->has_data = false;
-
-				result = CELL_OK;
-				return false;
-			}
-		}
-
-		return true;
-	};
-
-	GetCurrentPPUThread().WaitFor(queue_receive);*/
 }
 
 int sys_event_queue_drain(u32 equeue_id)
 {
-	sys_event.Warning("sys_event_queue_drain(equeue_id=%d)", equeue_id);
+	sys_event.Log("sys_event_queue_drain(equeue_id=%d)", equeue_id);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -401,14 +356,14 @@ int sys_event_port_disconnect(u32 eport_id)
 	}
 
 	eport->eq->ports.remove(eport);
-	eport->eq = 0;
+	eport->eq = nullptr;
 	eport->mutex.unlock(tid);
 	return CELL_OK;
 }
 
 int sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
-	sys_event.Warning("sys_event_port_send(eport_id=%d, data1=0x%llx, data2=0x%llx, data3=0x%llx)",
+	sys_event.Log("sys_event_port_send(eport_id=%d, data1=0x%llx, data2=0x%llx, data3=0x%llx)",
 		eport_id, data1, data2, data3);
 
 	EventPort* eport;
@@ -419,12 +374,13 @@ int sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	SMutexLocker lock(eport->mutex);
 
-	if (!eport->eq)
+	EventQueue* eq = eport->eq;
+	if (!eq)
 	{
 		return CELL_ENOTCONN;
 	}
 
-	if (!eport->eq->events.push(eport->name, data1, data2, data3))
+	if (!eq->events.push(eport->name, data1, data2, data3))
 	{
 		return CELL_EBUSY;
 	}

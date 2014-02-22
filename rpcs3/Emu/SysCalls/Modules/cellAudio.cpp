@@ -137,7 +137,12 @@ struct AudioPortConfig
 {
 	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
-	CellAudioPortParam m_param;
+	u8 channel;
+	u8 block;
+	float level;
+	u64 attr;
+	u64 tag;
+	u64 counter; // copy of global counter
 };
 
 struct AudioConfig  //custom structure
@@ -153,12 +158,15 @@ struct AudioConfig  //custom structure
 	bool m_is_audio_finalized;
 	u32 m_port_in_use;
 	u64 event_key;
+	u64 counter;
+	u64 start_time;
 
 	AudioConfig()
 		: m_is_audio_initialized(false)
 		, m_is_audio_finalized(false)
 		, m_port_in_use(0)
 		, event_key(0)
+		, counter(0)
 	{
 		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
 	}
@@ -282,6 +290,7 @@ int cellAudioInit()
 	}
 
 	m_config.m_is_audio_initialized = true;
+	m_config.counter = 0;
 
 	// alloc memory
 	m_config.m_buffer = Memory.Alloc(128 * 1024 * m_config.AUDIO_PORT_COUNT, 1024); 
@@ -289,7 +298,7 @@ int cellAudioInit()
 	m_config.m_indexes = Memory.Alloc(sizeof(u64) * m_config.AUDIO_PORT_COUNT, 16);
 	memset(Memory + m_config.m_indexes, 0, sizeof(u64) * m_config.AUDIO_PORT_COUNT);
 
-	thread t("Audio", []()
+	thread t("AudioThread", []()
 		{
 			WAVHeader header(2); // WAV file header (stereo)
 
@@ -304,13 +313,14 @@ int cellAudioInit()
 
 			ConLog.Write("Audio started");
 
-			u64 start_time = get_system_time();
-			u64 counter = 0;
+			m_config.start_time = get_system_time();
 
 			output.Write(&header, sizeof(header)); // write file header
 
 			float buffer[2*256]; // buffer for 2 channels
 			float buffer2[8*256]; // buffer for 8 channels (max count)
+			memset(&buffer, 0, sizeof(buffer));
+			memset(&buffer2, 0, sizeof(buffer2));
 
 			while (m_config.m_is_audio_initialized)
 			{
@@ -323,13 +333,13 @@ int cellAudioInit()
 				// TODO: send beforemix event (in ~2,6 ms before mixing)
 
 				// Sleep(5); // precise time of sleeping: 5,(3) ms (or 256/48000 sec)
-				if (counter * 256000000 / 48000 >= get_system_time() - start_time)
+				if (m_config.counter * 256000000 / 48000 >= get_system_time() - m_config.start_time)
 				{
 					Sleep(1);
 					continue;
 				}
 
-				counter++;
+				m_config.counter++;
 
 				if (Emu.IsPaused())
 				{
@@ -346,16 +356,21 @@ int cellAudioInit()
 					AudioPortConfig& port = m_config.m_ports[i];
 					mem64_t index(m_config.m_indexes + i * sizeof(u64));
 
-					const u32 block_size = port.m_param.nChannel * 256;
+					const u32 block_size = port.channel * 256;
 
-					u32 position = index.GetValue(); // get old value
+					u32 position = port.tag % port.block; // old value
 
 					u32 buf_addr = m_config.m_buffer + (i * 128 * 1024) + (position * block_size * sizeof(float));
 
 					memcpy(buffer2, Memory + buf_addr, block_size * sizeof(float));
 					memset(Memory + buf_addr, 0, block_size * sizeof(float));
 
-					index = (position + 1) % port.m_param.nBlock; // write new value
+					// TODO: atomic
+					port.counter = m_config.counter;
+					port.tag++; // absolute index of block that will be read
+					index = (position + 1) % port.block; // write new value
+
+					
 
 					if (first_mix)
 					{
@@ -419,7 +434,7 @@ int cellAudioQuit()
 		if (Emu.IsStopped())
 		{
 			ConLog.Warning("cellAudioQuit() aborted");
-			break;
+			return CELL_OK;
 		}
 	}
 
@@ -451,20 +466,22 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 	{
 		if (!m_config.m_ports[i].m_is_audio_port_opened)
 		{
-			CellAudioPortParam& param = m_config.m_ports[i].m_param;
+			AudioPortConfig& port = m_config.m_ports[i];
 	
-			param.nChannel = audioParam->nChannel;
-			param.nBlock = audioParam->nBlock;
-			param.attr = audioParam->attr;
-			param.level = audioParam->level;
+			port.channel = audioParam->nChannel;
+			port.block = audioParam->nBlock;
+			port.attr = audioParam->attr;
+			port.level = audioParam->level;
 
 			portNum = i;
-			cellAudio.Warning("*** audio port opened(nChannel=%lld, nBlock=0x%llx, attr=0x%llx, level=%f): port = %d",
-				(u64)param.nChannel, (u64)param.nBlock, (u64)param.attr, (float)param.level, i);
+			cellAudio.Warning("*** audio port opened(nChannel=%d, nBlock=%d, attr=0x%llx, level=%f): port = %d",
+				port.channel, port.block, port.attr, port.level, i);
 			
+			port.m_is_audio_port_opened = true;
+			port.m_is_audio_port_started = false;
+			port.tag = 0;
+
 			m_config.m_port_in_use++;
-			m_config.m_ports[i].m_is_audio_port_opened = true;
-			m_config.m_ports[i].m_is_audio_port_started = false;
 			return CELL_OK;
 		}
 	}
@@ -494,15 +511,15 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 		portConfig->status = CELL_AUDIO_STATUS_READY;
 	}
 
-	CellAudioPortParam& ref = m_config.m_ports[portNum].m_param;
+	AudioPortConfig& port = m_config.m_ports[portNum];
 
-	portConfig->nChannel = ref.nChannel;
-	portConfig->nBlock = ref.nBlock;
-	portConfig->portSize = ref.nChannel * ref.nBlock * 256 * sizeof(float);
+	portConfig->nChannel = port.channel;
+	portConfig->nBlock = port.block;
+	portConfig->portSize = port.channel * port.block * 256 * sizeof(float);
 	portConfig->portAddr = m_config.m_buffer + (128 * 1024 * portNum); // 0x20020000
 	portConfig->readIndexAddr = m_config.m_indexes + (sizeof(u64) * portNum); // 0x20010010 on ps3
 
-	ConLog.Write("*** nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
+	cellAudio.Log("*** port config: nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
 		(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
 	// portAddr - readIndexAddr ==  0xFFF0 on ps3
 
@@ -577,13 +594,71 @@ int cellAudioPortStop(u32 portNum)
 
 int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 {
-	cellAudio.Error("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp_addr=0x%x)", portNum, tag, stamp.GetAddr());
+	cellAudio.Warning("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp_addr=0x%x)", portNum, tag, stamp.GetAddr());
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	// TODO: atomic
+	stamp = m_config.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
+
 	return CELL_OK;
 }
 
 int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 {
-	cellAudio.Error("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag_addr=0x%x)", portNum, blockNo, tag.GetAddr());
+	cellAudio.Warning("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag_addr=0x%x)", portNum, blockNo, tag.GetAddr());
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!m_config.m_ports[portNum].m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (blockNo >= port.block)
+	{
+		cellAudio.Error("cellAudioGetPortBlockTag: wrong blockNo(%lld)", blockNo);
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	// TODO: atomic
+	u64 tag_base = port.tag;
+	if (tag_base % port.block > blockNo)
+	{
+		tag_base &= ~(port.block-1);
+		tag_base += port.block;
+	}
+	else
+	{
+		tag_base &= ~(port.block-1);
+	}
+	tag = tag_base + blockNo;
+
 	return CELL_OK;
 }
 
