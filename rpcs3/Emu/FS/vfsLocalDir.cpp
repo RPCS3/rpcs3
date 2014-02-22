@@ -23,12 +23,12 @@ bool vfsLocalDir::Open(const wxString& path)
 	wxString name;
 	for(bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
 	{
-		wxString dir_path = path + wxFILE_SEP_PATH + name;
+		wxString dir_path = path + name;
 
 		DirEntryInfo& info = m_entries[m_entries.Move(new DirEntryInfo())];
 		info.name = name;
 
-		info.flags |= wxDirExists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
+		info.flags |= dir.Exists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
 		if(wxIsWritable(dir_path)) info.flags |= DirEntry_PermWritable;
 		if(wxIsReadable(dir_path)) info.flags |= DirEntry_PermReadable;
 		if(wxIsExecutable(dir_path)) info.flags |= DirEntry_PermExecutable;

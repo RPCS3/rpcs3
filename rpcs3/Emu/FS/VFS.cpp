@@ -259,6 +259,8 @@ vfsDevice* VFS::GetDeviceLocal(const wxString& local_path, wxString& path) const
 
 void VFS::Init(const wxString& path)
 {
+	UnMountAll();
+
 	Array<VFSManagerEntry> entries;
 	SaveLoadDevices(entries, true);
 

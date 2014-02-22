@@ -13,7 +13,7 @@ vfsDirBase::~vfsDirBase()
 
 bool vfsDirBase::Open(const wxString& path)
 {
-	if(!IsOpened())
+	if(IsOpened())
 		Close();
 
 	if(!IsExists(path))
