@@ -23,7 +23,7 @@ bool PKGLoader::Install(std::string dest, bool show)
 		return false;
 
 	std::string titleID = std::string(m_header.title_id).substr(7, 9);
-	std::string decryptedFile = wxGetCwd() + "/dev_hdd1/" + titleID + ".dec";
+	std::string decryptedFile = wxGetCwd().ToStdString() + "/dev_hdd1/" + titleID + ".dec";
 
 	if (wxDirExists(dest+titleID)) {
 		wxMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", wxYES_NO|wxCENTRE);

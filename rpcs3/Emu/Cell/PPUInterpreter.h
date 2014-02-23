@@ -97,7 +97,7 @@ private:
 		const int fpc = _fpclass(v);
 #ifdef __GNUG__
 		if(fpc == FP_SUBNORMAL)
-			return signbit(v) ? -0.0f : 0.0f;
+			return std::signbit(v) ? -0.0f : 0.0f;
 #else
 		if(fpc & _FPCLASS_ND) return -0.0f;
 		if(fpc & _FPCLASS_PD) return  0.0f;
@@ -3361,7 +3361,7 @@ private:
 #ifdef _MSC_VER
 		if(_fpclass(CPU.FPR[frb]) >= _FPCLASS_NZ)
 #else
-		if(_fpclass(CPU.FPR[frb]) == FP_ZERO || signbit(CPU.FPR[frb]) == 0)
+		if(_fpclass(CPU.FPR[frb]) == FP_ZERO || std::signbit(CPU.FPR[frb]) == 0)
 #endif
 		{
 			res = static_cast<float>(1.0 / CPU.FPR[frb]);

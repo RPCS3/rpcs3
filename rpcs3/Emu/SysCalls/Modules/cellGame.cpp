@@ -292,7 +292,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	}
 
 	std::string errorMsg = wxString::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
-		wxString(errorName).wx_str(), errNeedSizeKB, wxString(dirName).wx_str());
+		wxString(errorName).wx_str(), errNeedSizeKB, wxString(dirName).wx_str()).ToStdString();
 	wxMessageBox(errorMsg, wxGetApp().GetAppName(), wxICON_ERROR | wxOK);
 	return CELL_OK;
 }

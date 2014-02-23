@@ -3,19 +3,33 @@
 #define NOMINMAX
 
 #ifndef QT_UI
+#ifdef _WIN32
 #include <wx/msw/setup.h>
-#include <wx/wx.h>
+#endif
+#include <wx/config.h>
 #include <wx/string.h>
 #include <wx/propdlg.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
+#include <wx/filefn.h>
+#include <wx/dcclient.h>
 
 #include <wx/wfstream.h>
 #include <wx/dir.h>
 #include <wx/spinctrl.h>
 #include <wx/datetime.h>
 #include <wx/filepicker.h>
+#include <wx/menu.h>
 #include <wx/menuitem.h>
+#include <wx/stattext.h>
+#include <wx/msgdlg.h>
+#include "wx/gauge.h"
+#include <wx/stattext.h>
+#include "wx/scrolbar.h"
+#include "wx/frame.h"
+#include <wx/combobox.h>
+#include <wx/checkbox.h>
+#include "wx/app.h"
 
 #include <wx/wxprec.h>
 #endif
@@ -199,12 +213,15 @@ enum Status
 
 #include "AppConnector.h"
 
+#include "Emu/SysCalls/Callback.h"
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/Modules.h"
+
 
 #include "Emu/FS/vfsDirBase.h"
 #include "Emu/FS/vfsFileBase.h"

@@ -228,7 +228,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	std::string filePath = ctrl.GetPath();
+	std::string filePath = ctrl.GetPath().ToStdString();
 	wxFile pkg_f(filePath, wxFile::read); // TODO: Use VFS to install PKG files
 
 	if (pkg_f.IsOpened())

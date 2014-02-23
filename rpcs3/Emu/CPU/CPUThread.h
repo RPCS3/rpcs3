@@ -21,7 +21,7 @@ struct reservation_struct
 
 extern reservation_struct reservation;
 
-enum CPUThreadType
+enum CPUThreadType :unsigned char
 {
 	CPU_THREAD_PPU,
 	CPU_THREAD_SPU,

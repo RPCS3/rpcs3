@@ -190,8 +190,8 @@ void Emulator::Load()
 
 	if(IsSelf(m_path.ToStdString()))
 	{
-		std::string self_path = m_path.mb_str();
-		std::string elf_path = wxFileName(m_path).GetPath().c_str();
+		std::string self_path = m_path.ToStdString();
+		std::string elf_path = wxFileName(m_path).GetPath().ToStdString();
 
 		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
 		{
@@ -216,7 +216,7 @@ void Emulator::Load()
 	ConLog.Write("Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().wx_str(), m_vfs.m_devices[i].GetLocalPath().wx_str());
+		ConLog.Write("%s -> %s", static_cast<const char *>(m_vfs.m_devices[i].GetPs3Path()), static_cast<const char *>(m_vfs.m_devices[i].GetLocalPath().ToAscii()));
 	}
 	ConLog.SkipLn();
 

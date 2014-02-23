@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Thread.h"
 
-__declspec(thread) NamedThreadBase* g_tls_this_thread = nullptr;
+/*__declspec(thread)*/ thread_local NamedThreadBase* g_tls_this_thread = nullptr;
 
 NamedThreadBase* GetCurrentNamedThread()
 {
@@ -124,7 +124,7 @@ void thread::start(std::function<void()> func)
 		catch(...)
 		{
 			ConLog.Error("Crash :(");
-			terminate();
+			std::terminate();
 		}
 	});
 }

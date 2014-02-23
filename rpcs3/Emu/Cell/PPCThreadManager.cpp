@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "PPCThreadManager.h"
 #include "PPUThread.h"
@@ -33,7 +34,7 @@ PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
 	default: assert(0);
 	}
 	
-	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", name), new_thread));
+	new_thread->SetId(Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", name).ToStdString(), new_thread));
 
 	m_threads.Add(new_thread);
 	wxGetApp().SendDbgCommand(DID_CREATE_THREAD, new_thread);
@@ -106,3 +107,4 @@ void PPCThreadManager::Exec()
 		m_threads[i].Exec();
 	}
 }
+#endif

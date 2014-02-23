@@ -3,13 +3,14 @@ cmake_minimum_required(VERSION 2.8)
 project(rpcs3)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    add_definitions(-std=gnu++11)
-    add_definitions(-D__WXGTK__)
-    #add_definitions(-Wfatal-errors)
-    add_definitions(-w) # TODO: remove me
-    add_definitions(-DwxUSE_UNICODE=0)
-    add_definitions(-fpermissive) # TODO: remove me
+	add_definitions(-std=gnu++11)
+	#add_definitions(-D__WXGTK__)
+	#add_definitions(-Wfatal-errors)
+	add_definitions(-w) # TODO: remove me
+	add_definitions(-fpermissive) # TODO: remove me
 endif()
+
+SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
 add_definitions(-DGLX_GLXEXT_PROTOTYPES)

@@ -2,6 +2,7 @@
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
 #include "Gui/RSXDebugger.h"
+#include "OpenGL.h"
 
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
@@ -649,12 +650,10 @@ void GLGSRender::OnInitThread()
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-
-	glGenTextures(1, &g_depth_tex);
-	glGenTextures(1, &g_flip_tex);
 #else
-    if (GLXDrawable drawable = glXGetCurrentDrawable())
-        glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+	if (GLXDrawable drawable = glXGetCurrentDrawable()){
+		//glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+	}
 #endif
 }
 

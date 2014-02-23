@@ -96,20 +96,20 @@ struct CellDmuxResource2
 	be_t<u32> memSize;
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> ppuThreadStackSize;
-	union
+	union cell_info
 	{
-		struct
+		struct spu_info
 		{
 			be_t<u32> noex_spuThreadPriority;
 			be_t<u32> noex_numOfSpus;
-		};
-		struct
+		}spu_inf;
+		struct spurs_info
 		{
 			be_t<u32> ex_spurs_addr;
 			u8 ex_priority[8];
 			be_t<u32> ex_maxContention;
-		};
-	};
+		}spurs_inf;
+	}cell_inf;
 };
 
 struct CellDmuxCb
@@ -140,8 +140,8 @@ struct CellDmuxEsAttr
 
 struct CellDmuxEsResource
 {
-    be_t<u32> memAddr;
-    be_t<u32> memSize;
+	be_t<u32> memAddr;
+	be_t<u32> memSize;
 };
 
 struct CellDmuxAuInfo
@@ -149,7 +149,7 @@ struct CellDmuxAuInfo
 	be_t<u32> auAddr;
 	be_t<u32> auSize;
 	be_t<u32> auMaxSize;
-    be_t<u64> userData;
+	be_t<u64> userData;
 	be_t<u32> ptsUpper;
 	be_t<u32> ptsLower;
 	be_t<u32> dtsUpper;

@@ -28,7 +28,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->all_info = 0;
+	lwmutex->vars.all_info = 0;
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
 
@@ -68,7 +68,7 @@ int sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
 	//ConLog.Write("*** lock mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
-		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->owner.GetOwner(), (u32)lwmutex->waiter);
+		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
 
 	return lwmutex->lock(GetCurrentPPUThread().GetId(), timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0);
 }
@@ -89,7 +89,7 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
 	//ConLog.Write("*** unlocking mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
-		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->owner.GetOwner(), (u32)lwmutex->waiter);
+		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
 
 	return lwmutex->unlock(GetCurrentPPUThread().GetId());
 }
@@ -204,7 +204,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (!attribute.ToBE()) return CELL_EINVAL;
 
-	if (tid == owner.GetOwner()) 
+	if (tid == vars.parts.owner.GetOwner())
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
@@ -218,7 +218,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 		}
 	}
 
-	switch (owner.trylock(tid))
+	switch (vars.parts.owner.trylock(tid))
 	{
 	case SMR_OK: recursive_count = 1; return CELL_OK;
 	case SMR_FAILED: return CELL_EBUSY;
@@ -228,7 +228,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 
 int sys_lwmutex_t::unlock(be_t<u32> tid)
 {
-	if (tid != owner.GetOwner())
+	if (tid != vars.parts.owner.GetOwner())
 	{
 		return CELL_EPERM;
 	}
@@ -245,7 +245,7 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 				SleepQueue* sq;
 				if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
 				target = attribute.ToBE() & se32(SYS_SYNC_FIFO) ? sq->pop() : sq->pop_prio();
-			case se32(SYS_SYNC_RETRY): default: owner.unlock(tid, target); break;
+			case se32(SYS_SYNC_RETRY): default: vars.parts.owner.unlock(tid, target); break;
 			}
 		}
 		return CELL_OK;
@@ -271,7 +271,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	default: break;
 	}
 
-	switch (owner.lock(tid, timeout))
+	switch (vars.parts.owner.lock(tid, timeout))
 	{
 	case SMR_OK:
 		sq->invalidate(tid);

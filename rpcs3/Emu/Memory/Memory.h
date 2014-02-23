@@ -1,5 +1,6 @@
 #pragma once
 #include "MemoryBlock.h"
+#include <vector>
 
 enum MemoryType
 {
@@ -912,10 +913,10 @@ public:
 		return m_ptr;
 	}
 
-    T operator [](int index)
-    {
-        return *(m_ptr + index);
-    }
+	T operator [](int index)
+	{
+		return *(m_ptr + index);
+	}
 
 	template<typename T1>
 	operator const mem_t<T1>() const

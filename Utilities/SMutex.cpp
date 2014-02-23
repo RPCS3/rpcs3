@@ -6,9 +6,9 @@ __forceinline void SM_Sleep()
 	Sleep(1);
 }
 
-__forceinline DWORD SM_GetCurrentThreadId()
+__forceinline std::thread::id SM_GetCurrentThreadId()
 {
-	return GetCurrentThreadId();
+	return std::this_thread::get_id();
 }
 
 __forceinline u32 SM_GetCurrentCPUThreadId()

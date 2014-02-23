@@ -52,9 +52,7 @@ class be_t
 	T m_data;
 
 public:
-	be_t()
-	{
-	}
+	be_t() noexcept = default;
 
 	be_t(const T& value)
 	{

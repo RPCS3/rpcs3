@@ -12,8 +12,9 @@
 #include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
 #include "SysCalls/Callback.h"
-#include "SysCalls/Modules.h"
-#include "event.h"
+
+class EventManager;
+extern void UnloadModules();
 
 struct EmuInfo
 {
@@ -90,7 +91,7 @@ class Emulator
 	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
 	CPUThread* m_ppu_callback_thr;
-	EventManager m_event_manager;
+	EventManager &m_event_manager;
 
 	VFS m_vfs;
 

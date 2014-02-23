@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Gui/MainFrame.h"
 
 template<typename T> T min(const T a, const T b) { return a < b ? a : b; }

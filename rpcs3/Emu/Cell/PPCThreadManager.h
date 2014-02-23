@@ -3,9 +3,9 @@
 
 enum PPCThreadType
 {
-    PPC_THREAD_PPU,
-    PPC_THREAD_SPU,
-    PPC_THREAD_RAW_SPU
+	PPC_THREAD_PPU,
+	PPC_THREAD_SPU,
+	PPC_THREAD_RAW_SPU
 };
 
 class PPCThreadManager
@@ -17,7 +17,7 @@ class PPCThreadManager
 	std::mutex m_mtx_thread;
 	wxSemaphore m_sem_task;
 	Stack<u32> m_delete_threads;
-    u32 m_raw_spu_num;
+	u32 m_raw_spu_num;
 
 public:
 	PPCThreadManager();
