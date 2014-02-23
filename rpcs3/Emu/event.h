@@ -1,6 +1,9 @@
 #pragma once
 #include "Emu/SysCalls/lv2/SC_Lwmutex.h"
 
+#define FIX_SPUQ(x) ((u64)x | 0x5350555100000000ULL)
+// arbitrary code to prevent "special" zero value in key argument
+
 enum EventQueueType
 {
 	SYS_PPU_QUEUE = 1,
@@ -158,6 +161,7 @@ public:
 		SMutexLocker lock(m_lock);
 		for (u32 i = 0; i < data.GetCount(); i++)
 		{
+			SMutexLocker lock2(data[i]->mutex);
 			data[i]->eq = nullptr; // force all ports to disconnect
 		}
 		data.Clear();
@@ -183,8 +187,9 @@ public:
 	}
 };
 
-struct EventQueue : SleepQueue
+struct EventQueue
 {
+	SleepQueue sq;
 	EventPortList ports;
 	EventRingBuffer events;
 	SMutex owner;
@@ -220,4 +225,5 @@ public:
 	bool RegisterKey(EventQueue* data, u64 key);
 	bool GetEventQueue(u64 key, EventQueue*& data);
 	bool UnregisterKey(u64 key);
+	bool SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3);
 };

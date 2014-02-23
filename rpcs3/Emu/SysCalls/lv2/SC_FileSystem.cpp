@@ -4,6 +4,12 @@
 
 extern Module sys_fs;
 
+enum
+{
+	IDFlag_File = 1,
+	IDFlag_Dir = 2,
+};
+
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
@@ -75,7 +81,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(stream, flags);
+	fd = sys_fs.GetNewId(stream, IDFlag_File);
 	ConLog.Warning("*** cellFsOpen(path=\"%s\"): fd = %d", path.wx_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -148,7 +154,7 @@ int cellFsOpendir(u32 path_addr, mem32_t fd)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs.GetNewId(dir);
+	fd = sys_fs.GetNewId(dir, IDFlag_Dir);
 	return CELL_OK;
 }
 
@@ -156,7 +162,7 @@ int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 {
 	sys_fs.Log("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.GetAddr(), nread.GetAddr());
 
-	vfsLocalDir* directory;
+	vfsDirBase* directory;
 	if(!sys_fs.CheckId(fd, directory))
 		return CELL_ESRCH;
 	if(!dir.IsGood() || !nread.IsGood())
@@ -205,56 +211,36 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 	sb->st_ctime_ = 0; //TODO
 	sb->st_blksize = 4096;
 
-	// Check if path is a mount point. (TODO: Add information in sb_addr)
-	for(u32 i=0; i<Emu.GetVFS().m_devices.GetCount(); ++i)
 	{
-		if(path.CmpNoCase(Emu.GetVFS().m_devices[i].GetPs3Path().RemoveLast(1)) == 0)
+		vfsDir dir(path);
+		if(dir.IsOpened())
 		{
-			sys_fs.Log("cellFsStat: \"%s\" is a mount point.", path.wx_str());
 			sb->st_mode |= CELL_FS_S_IFDIR;
 			return CELL_OK;
 		}
 	}
 
-	if (path == "/dev_bdvd/PS3_GAME/USRDIR")
 	{
-		sys_fs.Warning("cellFsStat: /dev_bdvd/PS3_GAME/USRDIR mount point hack");
-		sb->st_mode |= CELL_FS_S_IFDIR;
-		return CELL_OK;
-	}
-
-	// TODO: Temporary solution until vfsDir is implemented
-	wxString real_path;
-	Emu.GetVFS().GetDevice(path, real_path);
-	struct stat s;
-	if(stat(real_path.c_str(), &s) == 0)
-	{
-		if(s.st_mode & S_IFDIR)
+		vfsFile f(path);
+		if(f.IsOpened())
 		{
-			sb->st_mode |= CELL_FS_S_IFDIR;
-		}
-		else if(s.st_mode & S_IFREG)
-		{
-			vfsFile f(path);
 			sb->st_mode |= CELL_FS_S_IFREG;
 			sb->st_size = f.GetSize();
+			return CELL_OK;
 		}
 	}
-	else
-	{
-		sys_fs.Warning("cellFsStat: \"%s\" not found.", path.wx_str());
-		return CELL_ENOENT;
-	}
 
-	return CELL_OK;
+	sys_fs.Warning("cellFsStat: \"%s\" not found.", path.wx_str());
+	return CELL_ENOENT;
 }
 
 int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 {
 	sys_fs.Log("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.GetAddr());
 
+	u32 attr;
 	vfsStream* file;
-	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	if(!sys_fs.CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -278,10 +264,12 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.wx_str(), mode);
 
-	wxString localPath;
-	Emu.GetVFS().GetDevice(ps3_path, localPath);
-	if(wxDirExists(localPath)) return CELL_EEXIST;
-	if(!wxMkdir(localPath)) return CELL_EBUSY;
+	vfsDir dir;
+	if(dir.IsExists(ps3_path))
+		return CELL_EEXIST;
+	if(!dir.Create(ps3_path))
+		return CELL_EBUSY;
+
 	return CELL_OK;
 }
 
@@ -289,16 +277,30 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 {
 	const wxString& ps3_from = Memory.ReadString(from_addr);
 	const wxString& ps3_to = Memory.ReadString(to_addr);
-	wxString from;
-	wxString to;
-	Emu.GetVFS().GetDevice(ps3_from, from);
-	Emu.GetVFS().GetDevice(ps3_to, to);
 
-	sys_fs.Log("cellFsRename(from=\"%s\", to=\"%s\")", ps3_from.wx_str(), ps3_to.wx_str());
-	if(!wxFileExists(from)) return CELL_ENOENT;
-	if(wxFileExists(to)) return CELL_EEXIST;
-	if(!wxRenameFile(from, to)) return CELL_EBUSY; // (TODO: RenameFile(a,b) = CopyFile(a,b) + RemoveFile(a), therefore file "a" will not be removed if it is opened)
-	return CELL_OK;
+	{
+		vfsDir dir;
+		if(dir.IsExists(ps3_from))
+		{
+			if(!dir.Rename(ps3_from, ps3_to))
+				return CELL_EBUSY;
+
+			return CELL_OK;
+		}
+	}
+
+	{
+		vfsFile f;
+		if(f.Exists(ps3_from))
+		{
+			if(!f.Rename(ps3_from, ps3_to))
+				return CELL_EBUSY;
+
+			return CELL_OK;
+		}
+	}
+
+	return CELL_ENOENT;
 }
 
 int cellFsRmdir(u32 path_addr)
@@ -306,10 +308,13 @@ int cellFsRmdir(u32 path_addr)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.wx_str());
 
-	wxString localPath;
-	Emu.GetVFS().GetDevice(ps3_path, localPath);	
-	if(!wxDirExists(localPath)) return CELL_ENOENT;
-	if(!wxRmdir(localPath)) return CELL_EBUSY; // (TODO: Under certain conditions it is not able to delete the folder)
+	vfsDir d;
+	if(!d.IsExists(ps3_path))
+		return CELL_ENOENT;
+
+	if(!d.Remove(ps3_path))
+		return CELL_EBUSY;
+
 	return CELL_OK;
 }
 
@@ -318,9 +323,9 @@ int cellFsUnlink(u32 path_addr)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.wx_str());
 
-	wxString localPath;
-	Emu.GetVFS().GetDevice(ps3_path, localPath);
-	wxRemoveFile(localPath);
+	//wxString localPath;
+	//Emu.GetVFS().GetDevice(ps3_path, localPath);
+	//wxRemoveFile(localPath);
 	return CELL_OK;
 }
 
@@ -338,8 +343,9 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 	return CELL_EINVAL;
 	}
 
+	u32 attr;
 	vfsStream* file;
-	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	if(!sys_fs.CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
 	pos = file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
@@ -347,8 +353,9 @@ int cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 int cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs.Log("cellFsFtruncate(fd=%d, size=%lld)", fd, size);
+	u32 attr;
 	vfsStream* file;
-	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	if(!sys_fs.CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
 	u64 initialSize = file->GetSize();
 
 	if (initialSize < size)
@@ -403,7 +410,10 @@ int cellFsTruncate(u32 path_addr, u64 size)
 int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size)
 {
 	sys_fs.Log("cellFsFGetBlockSize(fd=%d, sector_size_addr: 0x%x, block_size_addr: 0x%x)", fd, sector_size.GetAddr(), block_size.GetAddr());
-	
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
 	sector_size = 4096; // ?
 	block_size = 4096; // ?
 

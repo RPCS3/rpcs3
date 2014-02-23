@@ -56,7 +56,6 @@ const DirEntryInfo* vfsDir::Read()
 void vfsDir::Close()
 {
 	m_stream.reset();
-	return vfsDirBase::Close();
 }
 
 wxString vfsDir::GetPath() const
@@ -66,5 +65,5 @@ wxString vfsDir::GetPath() const
 
 bool vfsDir::IsOpened() const
 {
-	return m_stream && m_stream->IsOpened() && vfsDirBase::IsOpened();
+	return m_stream && m_stream->IsOpened();
 }

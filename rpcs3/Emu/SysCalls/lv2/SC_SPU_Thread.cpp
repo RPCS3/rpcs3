@@ -222,6 +222,8 @@ int sys_spu_thread_group_destroy(u32 id)
 
 	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
+		// TODO: disconnect all event ports
+
 		Emu.GetCPU().RemoveThread(group_info->list[i]);
 	}
 
@@ -255,7 +257,7 @@ int sys_spu_thread_group_start(u32 id)
 //174
 int sys_spu_thread_group_suspend(u32 id)
 {
-	sc_spu.Warning("sys_spu_thread_group_suspend(id=%d)", id);
+	sc_spu.Log("sys_spu_thread_group_suspend(id=%d)", id);
 
 	SpuGroupInfo* group_info;
 	if(!Emu.GetIdManager().GetIDData(id, group_info))
@@ -550,6 +552,152 @@ int sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 	return CELL_OK;
 }
 
+/*
+SPU-Side functions:
+int sys_spu_thread_receive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
+int sys_spu_thread_send_event(u8 spup, u24 data0, u32 data1);
+int sys_spu_thread_throw_event(u8 spup, u24 data0, u32 data1);
+int sys_spu_thread_tryreceive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
+*/
+
+int sys_spu_thread_connect_event(u32 id, u32 eq_id, u32 et, u8 spup)
+{
+	sc_spu.Warning("sys_spu_thread_connect_event(id=%d, eq_id=%d, event_type=0x%x, spup=%d)", id, eq_id, et, spup);
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		return CELL_ESRCH;
+	}
+
+	EventQueue* eq;
+	if (!Emu.GetIdManager().GetIDData(eq_id, eq))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (spup > 63)
+	{
+		sc_spu.Error("sys_spu_thread_connect_event: invalid spup (%d)", spup);
+		return CELL_EINVAL;
+	}
+
+	if (et != SYS_SPU_THREAD_EVENT_USER)
+	{
+		sc_spu.Error("sys_spu_thread_connect_event: unsupported event type (0x%x)", et);
+		return CELL_EINVAL;
+	}
+
+	// TODO: check if can receive this events
+
+	SPUThread& spu = *(SPUThread*)thr;
+
+	EventPort& port = spu.SPUPs[spup];
+
+	SMutexLocker lock(port.mutex);
+
+	if (port.eq)
+	{
+		return CELL_EISCONN;
+	}
+
+	eq->ports.add(&port);
+	port.eq = eq;
+
+	return CELL_OK;
+}
+
+//
+int sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
+{
+	sc_spu.Warning("sys_spu_thread_disconnect_event(id=%d, event_type=0x%x, spup=%d)", id, et, spup);
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (spup > 63)
+	{
+		sc_spu.Error("sys_spu_thread_connect_event: invalid spup (%d)", spup);
+		return CELL_EINVAL;
+	}
+
+	if (et != SYS_SPU_THREAD_EVENT_USER)
+	{
+		sc_spu.Error("sys_spu_thread_connect_event: unsupported event type (0x%x)", et);
+		return CELL_EINVAL;
+	}
+
+	SPUThread& spu = *(SPUThread*)thr;
+
+	EventPort& port = spu.SPUPs[spup];
+
+	SMutexLocker lock(port.mutex);
+
+	if (!port.eq)
+	{
+		return CELL_ENOTCONN;
+	}
+
+	port.eq->ports.remove(&port);
+	port.eq = nullptr;
+
+	return CELL_OK;
+}
+
+int sys_spu_thread_bind_queue(u32 id, u32 eq_id, u32 spuq_num)
+{
+	sc_spu.Warning("sys_spu_thread_bind_queue(id=%d, equeue_id=%d, spuq_num=0x%x)", id, eq_id, spuq_num);
+
+	EventQueue* eq;
+	if (!Emu.GetIdManager().GetIDData(eq_id, eq))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (eq->type != SYS_SPU_QUEUE)
+	{
+		return CELL_EINVAL;
+	}
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!(*(SPUThread*)thr).SPUQs.RegisterKey(eq, FIX_SPUQ(spuq_num)))
+	{
+		return CELL_EBUSY;
+	}
+
+	return CELL_OK;
+}
+
+int sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
+{
+	sc_spu.Warning("sys_spu_thread_unbind_queue(id=0x%x, spuq_num=0x%x)", id, spuq_num);
+
+	CPUThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!(*(SPUThread*)thr).SPUQs.UnregisterKey(FIX_SPUQ(spuq_num)))
+	{
+		return CELL_ESRCH; // may be CELL_EINVAL
+	}
+
+	return CELL_OK;
+}
+
 int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr)
 {
 	sc_spu.Error("sys_spu_thread_group_connect_event_all_threads(id=%d, eq=%d, req=0x%llx, spup_addr=0x%x)",
@@ -600,84 +748,6 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 int sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
 	sc_spu.Error("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
-
-	return CELL_OK;
-}
-
-int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
-{
-	sc_spu.Error("sys_spu_thread_connect_event(id=%d, eq=%d, et=0x%x, spup=%d)", id, eq, et, spup);
-
-	EventQueue* equeue;
-	if(!sys_event.CheckId(eq, equeue))
-	{
-		return CELL_ESRCH;
-	}
-
-	if(spup > 63)
-	{
-		return CELL_EINVAL;
-	}
-
-	CPUThread* thr = Emu.GetCPU().GetThread(id);
-
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
-	{
-		return CELL_ESRCH;
-	}
-	/*
-	for(int j=0; j<equeue->pos; ++j)
-	{
-		if(!equeue->ports[j]->thread)
-		{
-			equeue->ports[j]->thread = thr;
-			return CELL_OK;
-		}
-	}
-	*/
-
-	return CELL_EISCONN;
-}
-
-//
-int sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup)
-{
-	sc_spu.Error("sys_spu_thread_disconnect_event(id=%d, event_type=0x%x, spup=%d", id, event_type, spup);
-
-	return CELL_OK;
-}
-
-/*
-SPU-Side functions:
-int sys_spu_thread_receive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
-int sys_spu_thread_send_event(u8 spup, u24 data0, u32 data1);
-int sys_spu_thread_throw_event(u8 spup, u24 data0, u32 data1);
-int sys_spu_thread_tryreceive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
-*/
-
-int sys_spu_thread_bind_queue(u32 id, u32 eq, u32 spuq_num)
-{
-	sc_spu.Error("sys_spu_thread_bind_queue(id=%d, equeue_id=%d, spuq_num=%d)", id, eq, spuq_num);
-
-	EventQueue* equeue;
-	if(!sys_event.CheckId(eq, equeue))
-	{
-		return CELL_ESRCH;
-	}
-
-	CPUThread* thr = Emu.GetCPU().GetThread(id);
-
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
-	{
-		return CELL_ESRCH;
-	}
-
-	return CELL_OK;
-}
-
-int sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
-{
-	sc_spu.Error("sys_spu_thread_unbind_queue(id=0x%x, spuq_num=%d)", id, spuq_num);
 
 	return CELL_OK;
 }

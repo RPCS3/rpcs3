@@ -73,6 +73,18 @@ public:
 
 		return true;
 	}
+
+	template<typename T> bool CheckId(u32 id, T*& data, u32& attr)
+	{
+		ID* id_data;
+
+		if(!CheckID(id, id_data)) return false;
+
+		data = id_data->m_data->get<T>();
+		attr = id_data->m_attr;
+
+		return true;
+	}
 	bool CheckID(u32 id, ID*& _id) const;
 
 	template<typename T>

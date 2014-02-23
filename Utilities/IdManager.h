@@ -35,11 +35,11 @@ public:
 struct ID
 {
 	std::string m_name;
-	u8 m_attr;
+	u32 m_attr;
 	IDData* m_data;
 
 	template<typename T>
-	ID(const std::string& name, T* data, const u8 attr)
+	ID(const std::string& name, T* data, const u32 attr)
 		: m_name(name)
 		, m_attr(attr)
 	{
@@ -97,7 +97,7 @@ public:
 	}
 	
 	template<typename T = char>
-	ID_TYPE GetNewID(const std::string& name = "", T* data = nullptr, const u8 attr = 0)
+	ID_TYPE GetNewID(const std::string& name = "", T* data = nullptr, const u32 attr = 0)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 

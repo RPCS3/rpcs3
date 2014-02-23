@@ -128,7 +128,7 @@ int sys_cond_signal(u32 cond_id)
 	Mutex* mutex = cond->mutex;
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	if (u32 target = mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop())
+	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop()))
 	{
 		if (mutex->m_mutex.trylock(target) != SMR_OK)
 		{
@@ -159,7 +159,7 @@ int sys_cond_signal_all(u32 cond_id)
 	Mutex* mutex = cond->mutex;
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	while (u32 target = mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop())
+	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop()))
 	{
 		if (mutex->m_mutex.trylock(target) != SMR_OK)
 		{

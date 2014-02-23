@@ -131,9 +131,9 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 std::atomic<u32> g_FsAioReadID( 0 );
 std::atomic<u32> g_FsAioReadCur( 0 );
-bool aio_init;
+bool aio_init = false;
 
-void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
+void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	while (g_FsAioReadCur != xid)
 	{
@@ -184,14 +184,26 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, res=0x%x, xid=0x%x [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, res, xid, path.wx_str());
 
-	//start callback thread
-	if(func)
+	if (func) // start callback thread
+	{
 		func.async(aio, error, xid, res);
+	}
+
+	CPUThread& thr = Emu.GetCallbackThread();
+	while (thr.IsAlive())
+	{
+		Sleep(1);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("fsAioRead() aborted");
+			break;
+		}
+	}
 
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, u32 error, int xid, u64 size)> func)
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	sys_fs.Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
 
@@ -202,7 +214,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	if (!aio_init)
 	{
-		//return CELL_ENXIO;
+		return CELL_ENXIO;
 	}
 
 	vfsFileBase* orig_file;
@@ -233,6 +245,7 @@ int cellFsAioFinish(mem8_ptr_t mount_point)
 {
 	wxString mp = Memory.ReadString(mount_point.GetAddr());
 	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
+	aio_init = false;
 	return CELL_OK;
 }
 

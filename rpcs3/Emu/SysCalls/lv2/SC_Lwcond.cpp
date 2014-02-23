@@ -84,7 +84,7 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
-	if (be_t<u32> target = mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())
+	if (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
 		if (mutex->vars.parts.owner.trylock(target) != SMR_OK)
 		{
@@ -120,7 +120,7 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
-	while (be_t<u32> target = mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())
+	while (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
 		if (mutex->vars.parts.owner.trylock(target) != SMR_OK)
 		{

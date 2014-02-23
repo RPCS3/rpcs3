@@ -2,9 +2,9 @@
 
 enum DirEntryFlags
 {
-	DirEntry_TypeDir = 0x0,
-	DirEntry_TypeFile = 0x1,
-	DirEntry_TypeMask = 0x1,
+	DirEntry_TypeDir = 0x1,
+	DirEntry_TypeFile = 0x2,
+	DirEntry_TypeMask = 0x3,
 	DirEntry_PermWritable = 0x20,
 	DirEntry_PermReadable = 0x40,
 	DirEntry_PermExecutable = 0x80,
