@@ -104,14 +104,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scetool", "scetool", "{AB33
 		scetool\zlib.h = scetool\zlib.h
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unpkg", "unpkg", "{9F2D2094-BA46-4456-8C45-FD9EC108F1EE}"
-	ProjectSection(SolutionItems) = preProject
-		unpkg\oddkeys.h = unpkg\oddkeys.h
-		unpkg\ps3_common.h = unpkg\ps3_common.h
-		unpkg\unpkg.c = unpkg\unpkg.c
-		unpkg\unpkg.h = unpkg\unpkg.h
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ribbon", "wxWidgets\build\msw\wx_vc10_ribbon.vcxproj", "{87B42A9C-3F5C-53D7-9017-2B1CAE39457D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "stc", "wxWidgets\build\msw\wx_vc10_stc.vcxproj", "{23E1C437-A951-5943-8639-A17F3CF2E606}"

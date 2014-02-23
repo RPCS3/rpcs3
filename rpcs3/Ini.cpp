@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Ini.h"
 
+#ifdef _WIN32
 #include <wx/msw/iniconf.h>
+#endif
 
 Inis Ini;
 
@@ -148,9 +150,13 @@ static wxString WindowInfoToString(const WindowInfo wind)
 //Ini
 Ini::Ini()
 {
+#ifdef _WIN32
 	m_Config = new wxIniConfig( wxEmptyString, wxEmptyString,
 			wxGetCwd() + "\\rpcs3.ini",
 			wxEmptyString, wxCONFIG_USE_LOCAL_FILE );
+#else
+        m_Config = new wxConfig("rpcs3");
+#endif
 }
 
 void Ini::Save(wxString key, int value)

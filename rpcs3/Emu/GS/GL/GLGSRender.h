@@ -175,10 +175,10 @@ public:
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, is_swizzled ? "swizzled" : "linear", tex.GetFormat() & 0x40); break;
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.Getmipmap() - 1);
-		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.Getmipmap() > 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.GetMipmap() - 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.GetMipmap() > 1);
 
-		if(format != 0x81 && format != 0x94)
+		if(format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16)
 		{
 			u8 remap_a = tex.GetRemap() & 0x3;
 			u8 remap_r = (tex.GetRemap() >> 2) & 0x3;
@@ -245,7 +245,7 @@ public:
 
 		//Unbind();
 
-		if(is_swizzled && format == 0x85)
+		if(is_swizzled && format == CELL_GCM_TEXTURE_A8R8G8B8)
 		{
 			free(unswizzledPixels);
 		}
