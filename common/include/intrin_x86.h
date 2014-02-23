@@ -843,7 +843,9 @@ static __inline__ __attribute__((always_inline)) unsigned long long __xgetbv(uns
 	return ((unsigned long long)edx << 32) | eax;
 }
 
-static __inline__ __attribute__((always_inline)) unsigned long long __rdtsc(void)
+// gcc 4.8 define __rdtsc but unfortunately the compiler crash...
+// The redefine allow to skip the gcc __rdtsc version -- Gregory
+static __inline__ __attribute__((always_inline)) unsigned long long __pcsx2__rdtsc(void)
 {
 	unsigned long long retval;
 	__asm__ __volatile__("rdtsc" : "=A"(retval));

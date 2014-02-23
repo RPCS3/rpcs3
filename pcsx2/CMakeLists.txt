@@ -19,6 +19,7 @@ set(CommonFlags
 	-fno-tree-dse
 	-fno-strict-aliasing
     -Wstrict-aliasing # Allow to track strict aliasing issue.
+    -std=c++0x
 	-pipe)
 
 if (SPARSEHASH_NEW_FOUND)
