@@ -845,7 +845,11 @@ static __inline__ __attribute__((always_inline)) unsigned long long __xgetbv(uns
 
 // gcc 4.8 define __rdtsc but unfortunately the compiler crash...
 // The redefine allow to skip the gcc __rdtsc version -- Gregory
+#ifdef __LINUX__
 static __inline__ __attribute__((always_inline)) unsigned long long __pcsx2__rdtsc(void)
+#else
+static __inline__ __attribute__((always_inline)) unsigned long long __rdtsc(void)
+#endif
 {
 	unsigned long long retval;
 	__asm__ __volatile__("rdtsc" : "=A"(retval));

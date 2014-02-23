@@ -335,12 +335,12 @@ template void vtlb_memWrite<mem32_t>(u32 mem, mem32_t data);
 static __ri void vtlb_Miss(u32 addr,u32 mode)
 {
 	// Hack to handle expected tlb miss by some games.
-#if 0
-	if (mode)
-		cpuTlbMissW(addr, cpuRegs.branch);
-	else
-		cpuTlbMissR(addr, cpuRegs.branch);
-#endif
+	if (Cpu == &intCpu) {
+		if (mode)
+			cpuTlbMissW(addr, cpuRegs.branch);
+		else
+			cpuTlbMissR(addr, cpuRegs.branch);
+	}
 
 	// The exception terminate the program on linux which is very annoying
 	// Just disable it for the moment

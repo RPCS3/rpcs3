@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License along with PCSX2.
 # If not, see <http://www.gnu.org/licenses/>.
 
-flags=""
+flags="-DCMAKE_BUILD_PO=FALSE"
 clean_build=false
 
 for f in $*

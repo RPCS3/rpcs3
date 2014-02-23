@@ -93,12 +93,20 @@ s64 x86capabilities::_CPUSpeedHz( u64 time ) const
 
 	do {
 		timeStart = GetCPUTicks();
+#ifdef __LINUX__
 		startCycle = __pcsx2__rdtsc();
+#else
+		startCycle = __rdtsc();
+#endif
 	} while( GetCPUTicks() == timeStart );
 
 	do {
 		timeStop = GetCPUTicks();
+#ifdef __LINUX__
 		endCycle = __pcsx2__rdtsc();
+#else
+		endCycle = __rdtsc();
+#endif
 	} while( ( timeStop - timeStart ) < time );
 
 	s64 cycleCount = endCycle - startCycle;

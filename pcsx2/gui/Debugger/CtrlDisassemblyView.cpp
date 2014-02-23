@@ -64,7 +64,7 @@ CtrlDisassemblyView::CtrlDisassemblyView(wxWindow* parent, DebugInterface* _cpu)
 	: wxWindow(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxWANTS_CHARS|wxBORDER), cpu(_cpu)
 {
 	manager.setCpu(cpu);
-	windowStart = 0x20100000;
+	windowStart = 0x100000;
 	rowHeight = 14;
 	charWidth = 8;
 	displaySymbols = true;
@@ -387,7 +387,7 @@ void CtrlDisassemblyView::render(wxDC& dc)
 		dc.DrawText(wxString(line.params.c_str(),wxConvUTF8),pixelPositions.argumentsStart,rowY1+2);
 		
 		if (isInInterval(address,line.totalSize,cpu->getPC()))
-			dc.DrawText(L"■",pixelPositions.opcodeStart-8,rowY1);
+			dc.DrawText(L"■",pixelPositions.opcodeStart-(charWidth+1),rowY1);
 
 		dc.SetFont(boldFont);
 		dc.DrawText(wxString(line.name.c_str(),wxConvUTF8),pixelPositions.opcodeStart,rowY1+2);

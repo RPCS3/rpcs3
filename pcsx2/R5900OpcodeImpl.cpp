@@ -879,6 +879,9 @@ void SYSCALL()
 		call = cpuRegs.GPR.n.v1.UC[0];
 
 	BIOS_LOG("Bios call: %s (%x)", R5900::bios[call], call);
+	if (call == 13) {
+		DevCon.Warning("A tlb refill handler is set. New handler %x", (u32*)PSM(cpuRegs.GPR.n.a1.UL[0]));
+	}
 
 	if (call == 0x7c)
 	{
