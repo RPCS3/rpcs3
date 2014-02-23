@@ -524,16 +524,16 @@ struct CellAdecParamM4Aac
 	be_t<MPEG4AAC_ConfigType> configNumber;
 
 	union {
-		struct { struct
+		struct
 		{
 			be_t<u32> adifProgramNumber; // 0
-		} adifConfig; };
+		} adifConfig;
 
-		struct { struct
+		struct
 		{
 			be_t<MPEG4AAC_SamplingFreq> samplingFreqIndex;
 			be_t<u32> profile; // LC profile (1)
-		} rawDataBlockConfig; };
+		} rawDataBlockConfig;
 	} configInfo;
 
 	be_t<u32> enableDownmix; // enable downmix to 2.0 (if (enableDownmix))
@@ -557,7 +557,7 @@ struct CellAdecM4AacInfo
 	be_t<u32> pad1; // TODO: check alignment
 
 	union {
-		struct { struct
+		struct
 		{
 			be_t<u32> copyrightIdPresent;
 			char copyrightId[9];
@@ -567,9 +567,9 @@ struct CellAdecM4AacInfo
 			be_t<u32> bitrate;
 			be_t<u32> numberOfProgramConfigElements;
 			be_t<u32> bufferFullness;
-		} adif; };
+		} adif;
 
-		struct { struct
+		struct
 		{
 			be_t<u32> id;
 			be_t<u32> layer;
@@ -586,7 +586,7 @@ struct CellAdecM4AacInfo
 			be_t<u32> bufferFullness;
 			be_t<u32> numberOfRawDataBlocks;
 			be_t<u32> crcCheck;
-		} adts; };
+		} adts;
 	} bsi;
 
 	be_t<u32> pad2; // TODO: check alignment

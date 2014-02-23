@@ -54,10 +54,10 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
 
 	// try to make it unable to lock
-	switch (int res = lwmutex->trylock(lwmutex->owner.GetDeadValue())) 
+	switch (int res = lwmutex->trylock(lwmutex->vars.parts.owner.GetDeadValue()))
 	{
 	case CELL_OK:
-		lwmutex->all_info = 0;
+		lwmutex->vars.all_info = 0;
 		lwmutex->attribute = 0;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
@@ -252,7 +252,7 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 			case se32(SYS_SYNC_RETRY): break;
 			}
 			if (target) vars.parts.owner.unlock(tid, target);
-			else owner.unlock(tid);
+			else vars.parts.owner.unlock(tid);
 		}
 		return CELL_OK;
 	}

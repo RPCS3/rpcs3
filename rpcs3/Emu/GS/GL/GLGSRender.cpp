@@ -652,7 +652,7 @@ void GLGSRender::OnInitThread()
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 #else
 	if (GLXDrawable drawable = glXGetCurrentDrawable()){
-		//glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+		glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 	}
 #endif
 	glGenTextures(1, &g_depth_tex);
