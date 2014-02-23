@@ -86,11 +86,11 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 
 	if (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->vars.parts.owner.trylock(target) != SMR_OK)
+		if (mutex->mutex.owner.trylock(target) != SMR_OK)
 		{
-			mutex->vars.parts.owner.lock(tid);
+			mutex->mutex.owner.lock(tid);
 			mutex->recursive_count = 1;
-			mutex->vars.parts.owner.unlock(tid, target);
+			mutex->mutex.owner.unlock(tid, target);
 		}
 	}
 
@@ -122,11 +122,11 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 
 	while (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->vars.parts.owner.trylock(target) != SMR_OK)
+		if (mutex->mutex.owner.trylock(target) != SMR_OK)
 		{
-			mutex->vars.parts.owner.lock(tid);
+			mutex->mutex.owner.lock(tid);
 			mutex->recursive_count = 1;
-			mutex->vars.parts.owner.unlock(tid, target);
+			mutex->mutex.owner.unlock(tid, target);
 		}
 	}
 
@@ -163,11 +163,11 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 
 	be_t<u32> target = ppu_thread_id;
 
-	if (mutex->vars.parts.owner.trylock(target) != SMR_OK)
+	if (mutex->mutex.owner.trylock(target) != SMR_OK)
 	{
-		mutex->vars.parts.owner.lock(tid);
+		mutex->mutex.owner.lock(tid);
 		mutex->recursive_count = 1;
-		mutex->vars.parts.owner.unlock(tid, target);
+		mutex->mutex.owner.unlock(tid, target);
 	}
 
 	if (Emu.IsStopped())
@@ -197,7 +197,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	u32 tid_le = GetCurrentPPUThread().GetId();
 	be_t<u32> tid = tid_le;
 
-	if (mutex->vars.parts.owner.GetOwner() != tid)
+	if (mutex->mutex.owner.GetOwner() != tid)
 	{
 		return CELL_EPERM; // caller must own this lwmutex
 	}
@@ -205,7 +205,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	sq->push(tid_le);
 
 	mutex->recursive_count = 0;
-	mutex->vars.parts.owner.unlock(tid);
+	mutex->mutex.owner.unlock(tid);
 
 	u32 counter = 0;
 	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
@@ -216,7 +216,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 		case SMR_OK: mutex->unlock(tid); break;
 		case SMR_SIGNAL: return CELL_OK;
 		} */
-		if (mutex->vars.parts.owner.GetOwner() == tid)
+		if (mutex->mutex.owner.GetOwner() == tid)
 		{
 			_mm_mfence();
 			mutex->recursive_count = 1;

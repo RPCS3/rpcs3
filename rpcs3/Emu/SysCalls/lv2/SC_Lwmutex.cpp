@@ -28,9 +28,9 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->vars.all_info = 0;
-	lwmutex->vars.all_info = 0;
-	lwmutex->vars.parts.owner.initialize();
+	lwmutex->mutex.all_info() = 0;
+	lwmutex->mutex.all_info() = 0;
+	lwmutex->mutex.owner.initialize();
 	//lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
@@ -54,10 +54,10 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
 
 	// try to make it unable to lock
-	switch (int res = lwmutex->trylock(lwmutex->vars.parts.owner.GetDeadValue()))
+	switch (int res = lwmutex->trylock(lwmutex->mutex.owner.GetDeadValue()))
 	{
 	case CELL_OK:
-		lwmutex->vars.all_info = 0;
+		lwmutex->mutex.all_info() = 0;
 		lwmutex->attribute = 0;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
@@ -208,7 +208,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (!attribute.ToBE()) return CELL_EINVAL;
 
-	if (tid == vars.parts.owner.GetOwner())
+	if (tid == mutex.owner.GetOwner())
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
@@ -222,7 +222,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 		}
 	}
 
-	switch (vars.parts.owner.trylock(tid))
+	switch (mutex.owner.trylock(tid))
 	{
 	case SMR_OK: recursive_count = 1; return CELL_OK;
 	case SMR_FAILED: return CELL_EBUSY;
@@ -232,7 +232,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 
 int sys_lwmutex_t::unlock(be_t<u32> tid)
 {
-	if (tid != vars.parts.owner.GetOwner())
+	if (tid != mutex.owner.GetOwner())
 	{
 		return CELL_EPERM;
 	}
@@ -251,8 +251,8 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 				target = attribute.ToBE() & se32(SYS_SYNC_FIFO) ? sq->pop() : sq->pop_prio();
 			case se32(SYS_SYNC_RETRY): break;
 			}
-			if (target) vars.parts.owner.unlock(tid, target);
-			else vars.parts.owner.unlock(tid);
+			if (target) mutex.owner.unlock(tid, target);
+			else mutex.owner.unlock(tid);
 		}
 		return CELL_OK;
 	}
@@ -277,7 +277,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	default: break;
 	}
 
-	switch (vars.parts.owner.lock(tid, timeout))
+	switch (mutex.owner.lock(tid, timeout))
 	{
 	case SMR_OK:
 		sq->invalidate(tid);

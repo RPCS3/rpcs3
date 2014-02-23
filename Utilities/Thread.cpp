@@ -1,7 +1,12 @@
 #include "stdafx.h"
 #include "Thread.h"
 
-/*__declspec(thread)*/ thread_local NamedThreadBase* g_tls_this_thread = nullptr;
+#ifdef _WIN32
+__declspec(thread)
+#else
+thread_local
+#endif
+NamedThreadBase* g_tls_this_thread = nullptr;
 
 NamedThreadBase* GetCurrentNamedThread()
 {

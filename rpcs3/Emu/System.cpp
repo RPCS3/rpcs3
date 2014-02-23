@@ -28,6 +28,7 @@ Emulator::Emulator()
 	, m_dbg_console(nullptr)
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
+	, m_event_manager(new EventManager())
 {
 }
 

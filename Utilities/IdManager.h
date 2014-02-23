@@ -96,7 +96,11 @@ public:
 		m_cur_id = s_first_id;
 	}
 	
-	template<typename T = char>
+	template<typename T 
+#ifdef __GNUG__ 
+		= char
+#endif
+	>
 	ID_TYPE GetNewID(const std::string& name = "", T* data = nullptr, const u32 attr = 0)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);

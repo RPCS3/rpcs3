@@ -24,12 +24,12 @@ enum
 };
 
 #pragma pack(push, 1)
-union CellSyncMutex {
-	struct cell_sync_mutex_info{
-		be_t<u16> m_freed;
+struct CellSyncMutex {
+	 	be_t<u16> m_freed;
 		be_t<u16> m_order;
-	}parts;
-	volatile u32 m_data;
+		volatile u32& m_data(){
+			return *reinterpret_cast<u32*>(this);
+		};
 	/*
 	(???) Initialize: set zeros
 	(???) Lock: increase m_order and wait until m_freed == old m_order
@@ -59,7 +59,7 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 		{
 			reservation.clear();
 		}
-		mutex->m_data = 0;
+		mutex->m_data() = 0;
 		return CELL_OK;
 	}
 }
@@ -85,9 +85,9 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		{
 			reservation.clear();
 		}
-		old_order = mutex->parts.m_order;
-		mutex->parts.m_order = mutex->parts.m_order + 1;
-		if (old_order == mutex->parts.m_freed)
+		old_order = mutex->m_order;
+		mutex->m_order = mutex->m_order + 1;
+		if (old_order == mutex->m_freed)
 		{
 			return CELL_OK;
 		}
@@ -125,11 +125,11 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 		{
 			reservation.clear();
 		}
-		if (mutex->parts.m_order != mutex->parts.m_freed)
+		if (mutex->m_order != mutex->m_freed)
 		{
 			return CELL_SYNC_ERROR_BUSY;
 		}
-		mutex->parts.m_order = mutex->parts.m_order + 1;
+		mutex->m_order = mutex->m_order + 1;
 		return CELL_OK;
 	}
 }
@@ -154,7 +154,7 @@ int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 		{
 			reservation.clear();
 		}
-		mutex->parts.m_freed = mutex->parts.m_freed + 1;
+		mutex->m_freed = mutex->m_freed + 1;
 		return CELL_OK;
 	}
 }

@@ -96,20 +96,7 @@ struct CellDmuxResource2
 	be_t<u32> memSize;
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> ppuThreadStackSize;
-	union cell_info
-	{
-		struct spu_info
-		{
-			be_t<u32> noex_spuThreadPriority;
-			be_t<u32> noex_numOfSpus;
-		}spu_inf;
-		struct spurs_info
-		{
-			be_t<u32> ex_spurs_addr;
-			u8 ex_priority[8];
-			be_t<u32> ex_maxContention;
-		}spurs_inf;
-	}cell_inf;
+	be_t<u32> shit[4];
 };
 
 struct CellDmuxCb

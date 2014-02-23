@@ -91,7 +91,7 @@ class Emulator
 	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
 	CPUThread* m_ppu_callback_thr;
-	EventManager &m_event_manager;
+	std::unique_ptr<EventManager> m_event_manager;
 
 	VFS m_vfs;
 
@@ -121,7 +121,7 @@ public:
 	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
 	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
 	CPUThread&			GetCallbackThread()		{ return *m_ppu_callback_thr; }
-	EventManager&		GetEventManager()		{ return m_event_manager; }
+	EventManager&		GetEventManager()		{ return *m_event_manager; }
 	
 	void AddModuleInit(ModuleInitializer* m)
 	{
