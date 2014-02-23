@@ -655,6 +655,8 @@ void GLGSRender::OnInitThread()
 		//glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 	}
 #endif
+	glGenTextures(1, &g_depth_tex);
+	glGenTextures(1, &g_flip_tex);
 }
 
 void GLGSRender::OnExitThread()
@@ -805,6 +807,8 @@ void GLGSRender::ExecCMD()
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
 	}
+
+	//glFrontFace(m_front_face);
 
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{

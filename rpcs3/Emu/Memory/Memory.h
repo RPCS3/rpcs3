@@ -400,18 +400,18 @@ public:
 
 extern MemoryBase Memory;
 
-template<typename T>
+template<typename T, typename AT = u32>
 class mem_base_t
 {
 protected:
-	u32 m_addr;
+	AT m_addr;
 
 public:
-	mem_base_t(u32 addr) : m_addr(addr)
+	mem_base_t(AT addr) : m_addr(addr)
 	{
 	}
 
-	__forceinline u32 GetAddr() const { return m_addr; }
+	__forceinline AT GetAddr() const { return m_addr; }
 
 	__forceinline bool IsGood() const
 	{
@@ -434,16 +434,16 @@ public:
 	}
 };
 
-template<typename T>
-class mem_ptr_t : public mem_base_t<T>
+template<typename T, typename AT = u32>
+class mem_ptr_t : public mem_base_t<T, AT>
 {
 public:
-	mem_ptr_t(u32 addr) : mem_base_t<T>(addr)
+	mem_ptr_t(AT addr) : mem_base_t<T, AT>(addr)
 	{
 	}
 
-	template<typename NT> operator mem_ptr_t<NT>&() { return (mem_ptr_t<NT>&)*this; }
-	template<typename NT> operator const mem_ptr_t<NT>&() const { return (const mem_ptr_t<NT>&)*this; }
+	template<typename NT> operator mem_ptr_t<NT, AT>&() { return (mem_ptr_t<NT, AT>&)*this; }
+	template<typename NT> operator const mem_ptr_t<NT, AT>&() const { return (const mem_ptr_t<NT, AT>&)*this; }
 
 	T* operator -> ()
 	{
@@ -538,11 +538,11 @@ public:
 	bool operator <= (T* right) const { return (T*)&Memory[this->m_addr] <= right; }
 };
 
-template<>
-class mem_ptr_t<void> : public mem_base_t<u8>
+template<typename AT>
+class mem_ptr_t<void, AT> : public mem_base_t<u8, AT>
 {
 public:
-	mem_ptr_t(u32 addr) : mem_base_t<u8>(addr)
+	mem_ptr_t(AT addr) : mem_base_t<u8, AT>(addr)
 	{
 	}
 
@@ -571,10 +571,13 @@ template<typename T> static bool operator < (T* left, mem_ptr_t<T> right) { retu
 template<typename T> static bool operator >= (T* left, mem_ptr_t<T> right) { return left >= (T*)&Memory[right.GetAddr()]; }
 template<typename T> static bool operator <= (T* left, mem_ptr_t<T> right) { return left <= (T*)&Memory[right.GetAddr()]; }
 
-template<typename T> class mem_t : public mem_base_t<T>
+template<typename T, typename AT = u32>
+class mem_beptr_t : public mem_ptr_t<T, be_t<AT>> {};
+
+template<typename T, typename AT = u32> class mem_t : public mem_base_t<T, AT>
 {
 public:
-	mem_t(u32 addr) : mem_base_t<T>(addr)
+	mem_t(AT addr) : mem_base_t<T, AT>(addr)
 	{
 	}
 
@@ -607,7 +610,7 @@ public:
 	mem_t& operator >>= (T right) { return *this = (*this) >> right; }
 };
 
-template<typename T> class mem_list_ptr_t : public mem_base_t<T>
+template<typename T, typename AT=u32> class mem_list_ptr_t : public mem_base_t<T, AT>
 {
 public:
 	mem_list_ptr_t(u32 addr) : mem_base_t<T>(addr)
@@ -688,18 +691,18 @@ struct _func_arg
 };
 
 template<typename T>
-struct _func_arg<mem_base_t<T>>
+struct _func_arg<mem_base_t<T, u32>>
 {
-	__forceinline static u64 get_value(const mem_base_t<T> arg)
+	__forceinline static u64 get_value(const mem_base_t<T, u32> arg)
 	{
 		return arg.GetAddr();
 	}
 };
 
-template<typename T> struct _func_arg<mem_ptr_t<T>> : public _func_arg<mem_base_t<T>> {};
-template<> struct _func_arg<mem_ptr_t<void>> : public _func_arg<mem_base_t<u8>> {};
-template<typename T> struct _func_arg<mem_list_ptr_t<T>> : public _func_arg<mem_base_t<T>> {};
-template<typename T> struct _func_arg<mem_t<T>> : public _func_arg<mem_base_t<T>> {};
+template<typename T> struct _func_arg<mem_ptr_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
+template<> struct _func_arg<mem_ptr_t<void, u32>> : public _func_arg<mem_base_t<u8, u32>> {};
+template<typename T> struct _func_arg<mem_list_ptr_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
+template<typename T> struct _func_arg<mem_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
 
 template<typename T>
 struct _func_arg<be_t<T>>
@@ -936,10 +939,10 @@ public:
 	}
 };
 
-typedef mem_t<u8> mem8_t;
-typedef mem_t<u16> mem16_t;
-typedef mem_t<u32> mem32_t;
-typedef mem_t<u64> mem64_t;
+typedef mem_t<u8, u32> mem8_t;
+typedef mem_t<u16, u32> mem16_t;
+typedef mem_t<u32, u32> mem32_t;
+typedef mem_t<u64, u32> mem64_t;
 
 /*
 typedef mem_ptr_t<be_t<u8>> mem8_ptr_t;
@@ -953,7 +956,7 @@ typedef mem_list_ptr_t<u32> mem32_lptr_t;
 typedef mem_list_ptr_t<u64> mem64_lptr_t;
 */
 
-typedef mem_list_ptr_t<u8> mem8_ptr_t;
-typedef mem_list_ptr_t<u16> mem16_ptr_t;
-typedef mem_list_ptr_t<u32> mem32_ptr_t;
-typedef mem_list_ptr_t<u64> mem64_ptr_t;
+typedef mem_list_ptr_t<u8, u32> mem8_ptr_t;
+typedef mem_list_ptr_t<u16, u32> mem16_ptr_t;
+typedef mem_list_ptr_t<u32, u32> mem32_ptr_t;
+typedef mem_list_ptr_t<u64, u32> mem64_ptr_t;

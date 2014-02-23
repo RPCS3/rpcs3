@@ -279,6 +279,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellDmux.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />
@@ -295,6 +296,8 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />

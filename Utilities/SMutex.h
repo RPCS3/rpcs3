@@ -35,6 +35,11 @@ public:
 	{
 	}
 
+	void initialize()
+	{
+		(T&)owner = free_value;
+	}
+
 	~SMutexBase()
 	{
 		lock((T)dead_value);
@@ -44,6 +49,16 @@ public:
 	__forceinline T GetOwner() const
 	{
 		return (T&)owner;
+	}
+
+	__forceinline T GetFreeValue() const
+	{
+		return (T)free_value;
+	}
+
+	__forceinline T GetDeadValue() const
+	{
+		return (T)dead_value;
 	}
 
 	SMutexResult trylock(T tid)

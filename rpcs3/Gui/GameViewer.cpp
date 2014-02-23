@@ -8,7 +8,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	LoadSettings();
 	m_columns.Show(this);
 
-	m_path = wxGetCwd() + "\\dev_hdd0\\game\\"; //TODO
+	m_path = "/dev_hdd0/game/";
 
 	Connect(GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(GameViewer::DClick));
 
@@ -27,17 +27,18 @@ void GameViewer::DoResize(wxSize size)
 
 void GameViewer::LoadGames()
 {
-	if(!wxDirExists(m_path)) return;
+	vfsDir dir(m_path);
+	ConLog.Write("path: %s", m_path.wx_str());
+	if(!dir.IsOpened()) return;
 
 	m_games.Clear();
-	wxDir dir(m_path);
-	if(!dir.HasSubDirs()) return;
 
-	wxString buf;
-	for(bool ok = dir.GetFirst(&buf); ok; ok = dir.GetNext(&buf))
+	for(const DirEntryInfo* info = dir.Read(); info; info = dir.Read())
 	{
-		if(wxDirExists(m_path + buf))
-			m_games.Add(buf);
+		if(info->flags & DirEntry_TypeDir)
+		{
+			m_games.Add(info->name);
+		}
 	}
 
 	//ConLog.Write("path: %s", m_path.wx_str());
@@ -49,8 +50,8 @@ void GameViewer::LoadPSF()
 	m_game_data.Clear();
 	for(uint i=0; i<m_games.GetCount(); ++i)
 	{
-		const wxString& path = m_path + m_games[i] + "\\PARAM.SFO";
-		vfsLocalFile f(nullptr);
+		const wxString& path = m_path + m_games[i] + "/PARAM.SFO";
+		vfsFile f;
 		if(!f.Open(path))
 			continue;
 
@@ -70,9 +71,11 @@ void GameViewer::ShowData()
 
 void GameViewer::Refresh()
 {
+	Emu.GetVFS().Init(m_path);
 	LoadGames();
 	LoadPSF();
 	ShowData();
+	Emu.GetVFS().UnMountAll();
 }
 
 void GameViewer::SaveSettings()
@@ -93,7 +96,9 @@ void GameViewer::DClick(wxListEvent& event)
 	const wxString& path = m_path + m_game_data[i].root;
 
 	Emu.Stop();
-	if(!Emu.BootGame(path.ToStdString()))
+	Emu.GetVFS().Init(path);
+	wxString local_path;
+	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path.ToStdString()))
 	{
 		ConLog.Error("Boot error: elf not found! [%s]", path.wx_str());
 		return;

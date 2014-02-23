@@ -35,11 +35,11 @@ public:
 struct ID
 {
 	std::string m_name;
-	u8 m_attr;
+	u32 m_attr;
 	IDData* m_data;
 
 	template<typename T>
-	ID(const std::string& name, T* data, const u8 attr)
+	ID(const std::string& name, T* data, const u32 attr)
 		: m_name(name)
 		, m_attr(attr)
 	{

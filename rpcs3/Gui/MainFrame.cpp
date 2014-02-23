@@ -361,6 +361,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
+	wxCheckBox* chbox_audio_dump = new wxCheckBox(&diag, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_hle_logging = new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
 
 	//cbox_cpu_decoder->Append("DisAsm");
@@ -398,7 +399,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_audio_dump->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
+
+	chbox_audio_dump->Enable(Emu.IsStopped());
+	chbox_hle_logging->Enable(Emu.IsStopped());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
@@ -432,6 +437,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_io->Add(s_round_io_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_audio_out->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -470,6 +476,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
+		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 
 		Ini.Save();
@@ -631,7 +638,6 @@ void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
 	s_subpanel3->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
 	s_subpanel4->Add(s_round_pad_shifts_r, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel5->Add(s_round_pad_buttons, wxSizerFlags().Border(wxALL, 5).Expand());
-
 
 	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());

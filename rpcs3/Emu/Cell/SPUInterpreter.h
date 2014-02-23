@@ -32,12 +32,99 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		if (CPU.SPU.Out_MBox.GetCount()) // the real exit status is probably stored there
-			ConLog.Warning("STOP: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
-		else
-			ConLog.Warning("STOP: 0x%x (no message)", code);
-		CPU.SetExitStatus(code);
-		CPU.Stop();
+		CPU.SetExitStatus(code); // exit code (not status)
+
+		switch (code)
+		{
+		case 0x110: /* ===== sys_spu_thread_receive_event ===== */
+			{
+				u32 spuq = 0;
+				if (!CPU.SPU.Out_MBox.Pop(spuq))
+				{
+					ConLog.Error("sys_spu_thread_receive_event: cannot read Out_MBox");
+					CPU.SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
+					return;
+				}
+
+				if (CPU.SPU.In_MBox.GetCount())
+				{
+					ConLog.Error("sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
+					CPU.SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
+					return;
+				}
+
+				if (Ini.HLELogging.GetValue())
+				{
+					ConLog.Write("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
+				}
+
+				EventQueue* eq;
+				if (!CPU.SPUQs.GetEventQueue(FIX_SPUQ(spuq), eq))
+				{
+					CPU.SPU.In_MBox.PushUncond(CELL_EINVAL); // TODO: check error value
+					return;
+				}
+
+				u32 tid = GetCurrentSPUThread().GetId();
+
+				eq->sq.push(tid); // add thread to sleep queue
+
+				while (true)
+				{
+					switch (eq->owner.trylock(tid))
+					{
+					case SMR_OK:
+						if (!eq->events.count())
+						{
+							eq->owner.unlock(tid);
+							break;
+						}
+						else
+						{
+							u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
+							if (next != tid)
+							{
+								eq->owner.unlock(tid, next);
+								break;
+							}
+						}
+					case SMR_SIGNAL:
+						{
+							sys_event_data event;
+							eq->events.pop(event);
+							eq->owner.unlock(tid);
+							CPU.SPU.In_MBox.PushUncond(CELL_OK);
+							CPU.SPU.In_MBox.PushUncond(event.data1);
+							CPU.SPU.In_MBox.PushUncond(event.data2);
+							CPU.SPU.In_MBox.PushUncond(event.data3);
+							return;
+						}
+					case SMR_FAILED: break;
+					default: eq->sq.invalidate(tid); CPU.SPU.In_MBox.PushUncond(CELL_ECANCELED); return;
+					}
+
+					Sleep(1);
+					if (Emu.IsStopped())
+					{
+						ConLog.Warning("sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
+						eq->sq.invalidate(tid);
+						return;
+					}
+				}
+			}
+			break;
+		case 0x102: default:
+			if (!CPU.SPU.Out_MBox.GetCount()) // the real exit status
+			{
+				ConLog.Warning("STOP: 0x%x (no message)", code);
+			}
+			else if (Ini.HLELogging.GetValue() || code != 0x102)
+			{
+				ConLog.Warning("STOP: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
+			}
+			CPU.Stop();
+			break;
+		}
 	}
 	void LNOP()
 	{

@@ -91,7 +91,7 @@ class RSXThread  : public ThreadBase
 public:
 	static const uint m_textures_count = 16;
 	static const uint m_vertex_count = 32;
-	static const uint m_fragment_count = 16;
+	static const uint m_fragment_count = 32;
 	static const uint m_tiles_count = 15;
 
 protected:
@@ -118,7 +118,6 @@ public:
 	int m_flip_mode;
 	int m_debug_level;
 	int m_frequency_mode;
-
 
 	u32 m_tiles_addr;
 	u32 m_zculls_addr;
@@ -378,6 +377,8 @@ public:
 
 	u32 m_surface_colour_target;
 
+	u32 m_front_face;
+
 	u8 m_begin_end;
 	bool m_read_buffer;
 
@@ -424,6 +425,8 @@ protected:
 
 		m_point_x = 0;
 		m_point_y = 0;
+
+		m_front_face = 0x0901;
 
 		// Construct Textures
 		for(int i=0; i<16; i++)

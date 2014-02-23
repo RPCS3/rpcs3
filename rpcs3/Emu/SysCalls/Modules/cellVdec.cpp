@@ -1,83 +1,76 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "cellVdec.h"
 
 void cellVdec_init();
 Module cellVdec(0x0005, cellVdec_init);
 
-// Error Codes
-enum
+int cellVdecQueryAttr(const mem_ptr_t<CellVdecType> type, mem_ptr_t<CellVdecAttr> attr)
 {
-	CELL_VDEC_ERROR_ARG		= 0x80610101,
-	CELL_VDEC_ERROR_SEQ		= 0x80610102,
-	CELL_VDEC_ERROR_BUSY	= 0x80610103,
-	CELL_VDEC_ERROR_EMPTY	= 0x80610104,
-	CELL_VDEC_ERROR_FATAL	= 0x80610180,
-};
-
-int cellVdecQueryAttr()
-{
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 	return CELL_OK;
 }
 
-int cellVdecQueryAttrEx()
+int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdecAttr> attr)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 	return CELL_OK;
 }
 
-int cellVdecOpen()
+int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecResource> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellVdecOpenEx()
+int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVdecResourceEx> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 	return CELL_OK;
 }
 
-int cellVdecClose()
+int cellVdecClose(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecClose(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellVdecStartSeq()
+int cellVdecStartSeq(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecStartSeq(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellVdecEndSeq()
+int cellVdecEndSeq(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecEndSeq(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-int cellVdecDecodeAu()
+int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const mem_ptr_t<CellVdecAuInfo> auInfo)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecDecodeAu(handle=0x%x, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.GetAddr());
 	return CELL_OK;
 }
 
-int cellVdecGetPicture()
+int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u32 out_addr)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecGetPicture(handle=0x%x, format_addr=0x%x, out_addr=0x%x)", handle, format.GetAddr(), out_addr);
 	return CELL_OK;
 }
 
-int cellVdecGetPicItem()
+int cellVdecGetPicItem(u32 handle, const u32 picItem_ptr_addr)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecGetPicItem(handle=0x%x, picItem_ptr_addr=0x%x)", handle, picItem_ptr_addr);
 	return CELL_OK;
 }
 
-int cellVdecSetFrameRate()
+int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.Error("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, frc);
 	return CELL_OK;
 }
 

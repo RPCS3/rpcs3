@@ -2334,6 +2334,7 @@ private:
 	}
 	void MFOCRF(u32 a, u32 rd, u32 crm)
 	{
+		/*
 		if(a)
 		{
 			u32 n = 0, count = 0;
@@ -2349,15 +2350,17 @@ private:
 			if(count == 1)
 			{
 				//RD[32+4*n : 32+4*n+3] = CR[4*n : 4*n+3];
-				CPU.GPR[rd] = (u64)CPU.GetCR(7 - n) << (n * 4);
+				u8 offset = n * 4;
+				CPU.GPR[rd] = (CPU.GPR[rd] & ~(0xf << offset)) | ((u32)CPU.GetCR(7 - n) << offset);
 			}
 			else
 				CPU.GPR[rd] = 0;
 		}
 		else
 		{
-			CPU.GPR[rd] = CPU.CR.CR;
-		}
+		*/
+		CPU.GPR[rd] = CPU.CR.CR;
+		//}
 	}
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2634,7 +2637,7 @@ private:
 			if(count == 1)
 			{
 				//CR[4*n : 4*n+3] = RS[32+4*n : 32+4*n+3];
-				CPU.SetCR(n, (CPU.GPR[rs] >> (4*n)) & 0xf);
+				CPU.SetCR(7 - n, (CPU.GPR[rs] >> (4*n)) & 0xf);
 			}
 			else
 				CPU.CR.CR = 0;
@@ -2645,7 +2648,7 @@ private:
 			{
 				if(crm & (1 << i))
 				{
-					CPU.SetCR(i, CPU.GPR[rs] & (0xf << i));
+					CPU.SetCR(7 - i, CPU.GPR[rs] & (0xf << (i * 4)));
 				}
 			}
 		}
