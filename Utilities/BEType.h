@@ -51,9 +51,10 @@ class be_t
 public:
 	typedef T type;
 #ifdef __GNUG__
-	be_t()	noexcept = default
-#endif
+	be_t()	noexcept = default;
+#else
 	be_t(){}
+#endif
 
 	be_t(const T& value)
 	{

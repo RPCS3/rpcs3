@@ -306,7 +306,7 @@ public:
 		static const wxString& dir_path = "textures";
 		static const wxString& file_fmt = dir_path + "\\" + "tex[%d].png";
 
-		if(!wxDirExists(dir_path)) wxMkDir(dir_path);
+		if(!wxDirExists(dir_path)) wxMkDir(dir_path, wxS_DIR_DEFAULT );
 
 		u32 count = 0;
 		while(wxFileExists(wxString::Format(file_fmt, count))) count++;
