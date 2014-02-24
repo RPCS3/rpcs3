@@ -4,6 +4,7 @@
 #include "DebugInterface.h"
 #include "SymbolMap.h"
 #include "DebugInterface.h"
+#include "../R5900.h"
 
 static std::vector<MIPSAnalyst::AnalyzedFunction> functions;
 
@@ -371,6 +372,27 @@ namespace MIPSAnalyst
 		case 0x09:	// adiu
 			info.hasRelevantAddress = true;
 			info.releventAddress = cpu->getRegister(0,MIPS_GET_RS(op))._u32[0]+((s16)(op & 0xFFFF));
+			break;
+		case 0x10:	// cop0
+			switch (MIPS_GET_RS(op))
+			{
+			case 0x10:	// tlb
+				switch (MIPS_GET_FUNC(op))
+				{
+				case 0x18:	// eret
+					info.isBranch = true;
+					info.isConditional = false;
+
+					// probably shouldn't be hard coded like this...
+					if (cpuRegs.CP0.n.Status.b.ERL) {
+						info.branchTarget = cpuRegs.CP0.n.ErrorEPC;
+					} else {
+						info.branchTarget = cpuRegs.CP0.n.EPC;
+					}
+					break;
+				}
+				break;
+			}
 			break;
 		}
 
