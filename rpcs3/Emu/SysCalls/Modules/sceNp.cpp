@@ -5,12 +5,10 @@
 
 #include "sceNp.h"
 
-void sceNpTrophy_init();
-Module sceNp(0x0016, sceNpTrophy_init);
+void sceNp_init();
+Module sceNp(0x0016, sceNp_init);
 
-void sceNpTrophy_init()
+void sceNp_init()
 {
 }
 #endif
-
-

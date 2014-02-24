@@ -70,12 +70,12 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 	map_offset_addr = 0;
 	map_offset_pos = 0;
-	current_config.ioSize = re32(ioSize);
-	current_config.ioAddress = re32(ioAddress);
-	current_config.localSize = re32(local_size);
-	current_config.localAddress = re32(local_addr);
-	current_config.memoryFrequency = re32(650000000);
-	current_config.coreFrequency = re32(500000000);
+	current_config.ioSize = ioSize;
+	current_config.ioAddress = ioAddress;
+	current_config.localSize = local_size;
+	current_config.localAddress = local_addr;
+	current_config.memoryFrequency = 650000000;
+	current_config.coreFrequency = 500000000;
 
 	InitOffsetTable();
 	Memory.RSXCMDMem.AllocAlign(cmdSize);
@@ -84,10 +84,10 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
-	current_context.begin = re(ctx_begin);
-	current_context.end = re(ctx_begin + ctx_size);
+	current_context.begin = ctx_begin;
+	current_context.end = ctx_begin + ctx_size;
 	current_context.current = current_context.begin;
-	current_context.callback = re32(Emu.GetRSXCallback() - 4);
+	current_context.callback = Emu.GetRSXCallback() - 4;
 
 	gcm_info.context_addr = Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
@@ -169,8 +169,8 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could stall on exit
 
-	u32 current = re(ctxt->current);
-	u32 end = re(ctxt->end);
+	u32 current = ctxt->current;
+	u32 end = ctxt->end;
 
 	if(current + 8 >= end)
 	{
@@ -178,15 +178,15 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 		cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
 	}
 
-	current = re(ctxt->current);
+	current = ctxt->current;
 	Memory.Write32(current, 0x3fead | (1 << 18));
 	Memory.Write32(current + 4, id);
-	re(ctxt->current, current + 8);
+	ctxt->current += 8;
 
 	if(ctxt.GetAddr() == gcm_info.context_addr)
 	{
 		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
-		re(ctrl.put, re(ctrl.put) + 8);
+		ctrl.put += 8;
 	}
 
 	return id;
@@ -416,7 +416,8 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 {
 	cellGcmSys.Warning("cellGcmSetTile(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
-	//copied form cellGcmSetTileInfo
+
+	// Copied form cellGcmSetTileInfo
 	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -434,7 +435,7 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 	if(comp)
 	{
-		cellGcmSys.Error("cellGcmSetTileInfo: bad comp! (%d)", comp);
+		cellGcmSys.Error("cellGcmSetTile: bad comp! (%d)", comp);
 	}
 
 	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
