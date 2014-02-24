@@ -7,23 +7,14 @@
 * */
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include <sys/timeb.h>
+#include "SC_Time.h"
 
 SysCallBase sys_time("sys_time");
 
 //static const u64 timebase_frequency = 79800000;
 extern int cellSysutilGetSystemParamInt(int id, mem32_t value);
 
-int sys_time_get_timezone(mem32_t timezone, mem32_t summertime)
-{
-	int ret;
-	ret = cellSysutilGetSystemParamInt(0x0116, timezone);   //0x0116 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE
-	if (ret != CELL_OK) return ret;
-	ret = cellSysutilGetSystemParamInt(0x0117, summertime); //0x0117 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE
-	if (ret != CELL_OK) return ret;
-	return CELL_OK;
-}
-
+// Auxiliary functions
 u64 get_time()
 {
 #ifdef _WIN32
@@ -39,10 +30,22 @@ u64 get_time()
 #endif
 }
 
+// Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
-	// returns some relative time in microseconds, don't change this fact
 	return get_time() / 10;
+}
+
+
+// Functions
+int sys_time_get_timezone(mem32_t timezone, mem32_t summertime)
+{
+	int ret;
+	ret = cellSysutilGetSystemParamInt(0x0116, timezone);   //0x0116 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE
+	if (ret != CELL_OK) return ret;
+	ret = cellSysutilGetSystemParamInt(0x0117, summertime); //0x0117 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE
+	if (ret != CELL_OK) return ret;
+	return CELL_OK;
 }
 
 int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr)

@@ -150,7 +150,7 @@ bool PKGLoader::UnpackEntry(wxFile& dec, const PKGEntry& entry, std::string dir)
 	dec.Read(buf, entry.name_size);
 	buf[entry.name_size] = 0;
 	
-	switch (entry.type & (0xffff))
+	switch (entry.type & (0xff))
 	{
 		case PKG_FILE_ENTRY_NPDRM:
 		case PKG_FILE_ENTRY_NPDRMEDAT:

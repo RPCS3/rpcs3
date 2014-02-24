@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "RSXThread.h"
+#include "Emu/SysCalls/lv2/SC_Time.h"
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
 
@@ -1195,8 +1196,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		switch(type)
 		{
 		case 1:
-			data = std::chrono::steady_clock::now().time_since_epoch().count();
-			data *= 1000000;
+			data = get_system_time();
+			data *= 1000; // Microseconds to nanoseconds
 		break;
 
 		default:
