@@ -106,8 +106,12 @@ WXLRESULT CtrlDisassemblyView::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPA
 	switch (nMsg)
 	{
 	case 0x0104:		// WM_SYSKEYDOWN, make f10 usable
-		postEvent(debEVT_STEPOVER,0);
-		return 0;
+		if (wParam == 0x79)	// f10
+		{
+			postEvent(debEVT_STEPOVER,0);
+			return 0;
+		}
+		break;
 	}
 
 	return wxWindow::MSWWindowProc(nMsg,wParam,lParam);
