@@ -429,7 +429,7 @@ std::string R5900DebugInterface::disasm(u32 address)
 
 bool R5900DebugInterface::isValidAddress(u32 addr)
 {
-	if (addr < 0x100000)
+	if (addr < 0x80000)
 		return false;
 	if (addr >= 0x10000000 && addr < 0x10010000)
 		return true;
