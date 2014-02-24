@@ -298,7 +298,7 @@ int cellAudioInit()
 	m_config.m_indexes = Memory.Alloc(sizeof(u64) * m_config.AUDIO_PORT_COUNT, 16);
 	memset(Memory + m_config.m_indexes, 0, sizeof(u64) * m_config.AUDIO_PORT_COUNT);
 
-	thread t("AudioThread", []()
+	thread t("Audio Thread", []()
 		{
 			WAVHeader header(2); // WAV file header (stereo)
 			

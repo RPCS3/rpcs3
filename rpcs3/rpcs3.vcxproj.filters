@@ -597,5 +597,8 @@
     <ClInclude Include="..\Utilities\SMutex.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\SQueue.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
