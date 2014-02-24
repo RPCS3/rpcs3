@@ -23,9 +23,9 @@ void displayExpressionError(wxWindow* parent)
 	wxMessageBox(wxString(getExpressionError(),wxConvUTF8),L"Invalid expression",wxICON_ERROR);
 }
 
-bool executeExpressionWindow(wxWindow* parent, DebugInterface* cpu, u64& dest)
+bool executeExpressionWindow(wxWindow* parent, DebugInterface* cpu, u64& dest, const wxString& defaultValue)
 {
-	wxString result = wxGetTextFromUser(L"Enter expression",L"Expression",wxEmptyString,parent);
+	wxString result = wxGetTextFromUser(L"Enter expression",L"Expression",defaultValue,parent);
 	if (result.empty())
 		return false;
 

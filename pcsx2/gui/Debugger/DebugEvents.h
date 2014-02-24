@@ -12,4 +12,4 @@ DECLARE_LOCAL_EVENT_TYPE( debEVT_STEPOVER, wxNewEventType() )
 DECLARE_LOCAL_EVENT_TYPE( debEVT_STEPINTO, wxNewEventType() )
 DECLARE_LOCAL_EVENT_TYPE( debEVT_UPDATE, wxNewEventType() )
 
-bool executeExpressionWindow(wxWindow* parent, DebugInterface* cpu, u64& dest);
+bool executeExpressionWindow(wxWindow* parent, DebugInterface* cpu, u64& dest, const wxString& defaultValue = wxEmptyString);
