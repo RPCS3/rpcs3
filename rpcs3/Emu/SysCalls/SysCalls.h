@@ -14,6 +14,20 @@
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
+class SysCallBase;
+
+namespace detail{
+	template<typename T> bool CheckId(u32 id, T*& data,const std::string &name)
+	{
+		ID* id_data;
+		if(!CheckId(id, id_data,name)) return false;
+		data = id_data->m_data->get<T>();
+		return true;
+	}
+
+	template<> bool CheckId<ID>(u32 id, ID*& _id,const std::string &name);
+}
+
 class SysCallBase //Module
 {
 private:
@@ -94,18 +108,7 @@ public:
 
 	template<typename T> bool CheckId(u32 id, T*& data)
 	{
-		ID* id_data;
-
-		if(!CheckId(id, id_data)) return false;
-
-		data = id_data->m_data->get<T>();
-
-		return true;
-	}
-
-	template<> bool CheckId(u32 id, ID*& _id)
-	{
-		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
+		return detail::CheckId(id,data,GetName());
 	}
 
 	template<typename T>

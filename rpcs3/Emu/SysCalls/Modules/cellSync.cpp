@@ -25,13 +25,11 @@ enum
 
 #pragma pack(push, 1)
 struct CellSyncMutex {
-	union { 
-		struct {
-			be_t<u16> m_freed;
-			be_t<u16> m_order;
+	 	be_t<u16> m_freed;
+		be_t<u16> m_order;
+		volatile u32& m_data(){
+			return *reinterpret_cast<u32*>(this);
 		};
-		volatile u32 m_data;
-	};
 	/*
 	(???) Initialize: set zeros
 	(???) Lock: increase m_order and wait until m_freed == old m_order
@@ -61,7 +59,7 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 		{
 			reservation.clear();
 		}
-		mutex->m_data = 0;
+		mutex->m_data() = 0;
 		return CELL_OK;
 	}
 }

@@ -155,7 +155,7 @@ Ini::Ini()
 			wxGetCwd() + "\\rpcs3.ini",
 			wxEmptyString, wxCONFIG_USE_LOCAL_FILE );
 #else
-        m_Config = new wxConfig("rpcs3");
+		m_Config = new wxConfig("rpcs3");
 #endif
 }
 

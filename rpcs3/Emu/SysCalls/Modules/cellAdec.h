@@ -557,36 +557,40 @@ struct CellAdecM4AacInfo
 	be_t<u32> pad1; // TODO: check alignment
 
 	union {
-		struct { struct
-		{
-			be_t<u32> copyrightIdPresent;
-			char copyrightId[9];
-			be_t<u32> originalCopy;
-			be_t<u32> home;
-			be_t<u32> bitstreamType;
-			be_t<u32> bitrate;
-			be_t<u32> numberOfProgramConfigElements;
-			be_t<u32> bufferFullness;
-		} adif; };
+		struct {
+			struct
+			{
+				be_t<u32> copyrightIdPresent;
+				char copyrightId[9];
+				be_t<u32> originalCopy;
+				be_t<u32> home;
+				be_t<u32> bitstreamType;
+				be_t<u32> bitrate;
+				be_t<u32> numberOfProgramConfigElements;
+				be_t<u32> bufferFullness;
+			} adif;
+		};
 
-		struct { struct
-		{
-			be_t<u32> id;
-			be_t<u32> layer;
-			be_t<u32> protectionAbsent;
-			be_t<u32> profile;
-			be_t<u32> samplingFreqIndex;
-			be_t<u32> privateBit;
-			be_t<u32> channelConfiguration;
-			be_t<u32> originalCopy;
-			be_t<u32> home;
-			be_t<u32> copyrightIdBit;
-			be_t<u32> copyrightIdStart;
-			be_t<u32> frameLength;
-			be_t<u32> bufferFullness;
-			be_t<u32> numberOfRawDataBlocks;
-			be_t<u32> crcCheck;
-		} adts; };
+		struct {
+			struct
+			{
+				be_t<u32> id;
+				be_t<u32> layer;
+				be_t<u32> protectionAbsent;
+				be_t<u32> profile;
+				be_t<u32> samplingFreqIndex;
+				be_t<u32> privateBit;
+				be_t<u32> channelConfiguration;
+				be_t<u32> originalCopy;
+				be_t<u32> home;
+				be_t<u32> copyrightIdBit;
+				be_t<u32> copyrightIdStart;
+				be_t<u32> frameLength;
+				be_t<u32> bufferFullness;
+				be_t<u32> numberOfRawDataBlocks;
+				be_t<u32> crcCheck;
+			} adts;
+		};
 	} bsi;
 
 	be_t<u32> pad2; // TODO: check alignment

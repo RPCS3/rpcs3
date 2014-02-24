@@ -1,5 +1,6 @@
 #pragma once
-#include "CPUThread.h"
+class CPUThread;
+enum CPUThreadType : unsigned char;
 
 class CPUThreadManager
 {

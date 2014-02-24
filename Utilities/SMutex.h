@@ -1,7 +1,7 @@
 #pragma once
 
 extern void SM_Sleep();
-extern DWORD SM_GetCurrentThreadId();
+extern std::thread::id SM_GetCurrentThreadId();
 extern u32 SM_GetCurrentCPUThreadId();
 extern be_t<u32> SM_GetCurrentCPUThreadIdBE();
 
@@ -22,7 +22,7 @@ template
 	typename T,
 	u32 free_value = 0,
 	u32 dead_value = ~0,
-	void (wait)() = SM_Sleep
+	void (*wait)() = SM_Sleep
 >
 class SMutexBase
 {
@@ -164,7 +164,7 @@ typedef SMutexBase<u32>
 typedef SMutexBase<be_t<u32>>
 	SMutexBE;
 
-typedef SMutexLockerBase<DWORD, SM_GetCurrentThreadId>
+typedef SMutexLockerBase<std::thread::id, SM_GetCurrentThreadId>
 	SMutexGeneralLocker;
 typedef SMutexLockerBase<u32, SM_GetCurrentCPUThreadId>
 	SMutexLocker;
