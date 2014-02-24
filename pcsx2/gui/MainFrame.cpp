@@ -339,7 +339,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menubar.Append( &m_menuCDVD,		_("CD&VD") );
 	m_menubar.Append( &m_menuConfig,	_("&Config") );
 	m_menubar.Append( &m_menuMisc,		_("&Misc") );
-	m_menubar.Append( &m_menuDebug,		_("&Debug") );
+	
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger)
+		m_menubar.Append( &m_menuDebug,		_("&Debug") );
 
 	SetMenuBar( &m_menubar );
 
@@ -506,9 +508,12 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuMisc.AppendSeparator();
 	m_menuMisc.Append( MenuId_ChangeLang,		L"Change Language" ); // Always in English
 
-	m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
-	//m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
-	m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger)
+	{
+		m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
+		//m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
+		m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
+	}
 
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 

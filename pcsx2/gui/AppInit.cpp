@@ -88,8 +88,16 @@ void Pcsx2App::OpenMainFrame()
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, pxGetAppName() );
 	m_id_MainFrame = mainFrame->GetId();
 
-	DisassemblyDialog* disassembly = new DisassemblyDialog( mainFrame );
-	m_id_Disassembler = disassembly->GetId();
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger)
+	{
+		DisassemblyDialog* disassembly = new DisassemblyDialog( mainFrame );
+		m_id_Disassembler = disassembly->GetId();
+
+		if (g_Conf->EmuOptions.Debugger.ShowDebuggerOnStart)
+			disassembly->Show();
+	} else {
+		m_id_Disassembler = 0;
+	}
 
 	PostIdleAppMethod( &Pcsx2App::OpenProgramLog );
 
