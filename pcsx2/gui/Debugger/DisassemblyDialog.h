@@ -52,11 +52,13 @@ public:
 protected:
 	void onBreakRunClicked(wxCommandEvent& evt);
 	void onStepOverClicked(wxCommandEvent& evt);
+	void onStepIntoClicked(wxCommandEvent& evt);
 	void onDebuggerEvent(wxCommandEvent& evt);
 	void onPageChanging(wxCommandEvent& evt);
 	void onBreakpointClick(wxCommandEvent& evt);
 	void onClose(wxCloseEvent& evt);
 	void stepOver();
+	void stepInto();
 private:
 	CpuTabPage* eeTab;
 	CpuTabPage* iopTab;

@@ -689,7 +689,10 @@ void CtrlDisassemblyView::keydownEvent(wxKeyEvent& evt)
 			break;
 		case WXK_F10:
 			postEvent(debEVT_STEPOVER,0);
-			break;
+			return;
+		case WXK_F11:
+			postEvent(debEVT_STEPINTO,0);
+			return;
 		default:
 			evt.Skip();
 			break;

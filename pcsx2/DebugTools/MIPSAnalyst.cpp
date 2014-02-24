@@ -356,6 +356,10 @@ namespace MIPSAnalyst
 		switch (MIPS_GET_OP(op)) {
 		case 0:		// special
 			switch (MIPS_GET_FUNC(op)) {
+			case 0x0C:	// syscall
+				info.isSyscall = true;
+				info.branchTarget = 0x80000000+0x180;
+				break;
 			case 0x20:	// add
 			case 0x21:	// addu
 				info.hasRelevantAddress = true;

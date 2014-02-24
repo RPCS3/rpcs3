@@ -18,6 +18,7 @@ BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_RUNTOPOS, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_GOTOINDISASM, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_STEPOVER, DisassemblyDialog::onDebuggerEvent )
+   EVT_COMMAND( wxID_ANY, debEVT_STEPINTO, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_UPDATE, DisassemblyDialog::onDebuggerEvent )
    EVT_CLOSE( DisassemblyDialog::onClose )
 END_EVENT_TABLE()
@@ -97,6 +98,7 @@ DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 
 	stepIntoButton = new wxButton( panel, wxID_ANY, L"Step Into" );
 	stepIntoButton->Enable(false);
+	Connect( stepIntoButton->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DisassemblyDialog::onStepIntoClicked ) );
 	topRowSizer->Add(stepIntoButton,0,wxBOTTOM,2);
 
 	stepOverButton = new wxButton( panel, wxID_ANY, L"Step Over" );
@@ -181,6 +183,11 @@ void DisassemblyDialog::onStepOverClicked(wxCommandEvent& evt)
 	stepOver();
 }
 
+void DisassemblyDialog::onStepIntoClicked(wxCommandEvent& evt)
+{	
+	stepInto();
+}
+
 void DisassemblyDialog::onPageChanging(wxCommandEvent& evt)
 {
 	wxNotebook* notebook = (wxNotebook*)wxWindow::FindWindowById(evt.GetId());
@@ -247,6 +254,48 @@ void DisassemblyDialog::stepOver()
 	r5900Debug.resumeCpu();
 }
 
+
+void DisassemblyDialog::stepInto()
+{
+	if (!r5900Debug.isAlive() || !r5900Debug.isCpuPaused() || currentCpu == NULL)
+		return;
+	
+	// todo: breakpoints for iop
+	if (currentCpu != eeTab)
+		return;
+
+	CtrlDisassemblyView* disassembly = currentCpu->getDisassembly();
+
+	// If the current PC is on a breakpoint, the user doesn't want to do nothing.
+	CBreakPoints::SetSkipFirst(r5900Debug.getPC());
+	u32 currentPc = r5900Debug.getPC();
+
+	MIPSAnalyst::MipsOpcodeInfo info = MIPSAnalyst::GetOpcodeInfo(&r5900Debug,r5900Debug.getPC());
+	u32 breakpointAddress = currentPc+disassembly->getInstructionSizeAt(currentPc);
+	if (info.isBranch)
+	{
+		if (info.isConditional == false)
+		{
+			breakpointAddress = info.branchTarget;
+		} else {
+			if (info.conditionMet)
+			{
+				breakpointAddress = info.branchTarget;
+			} else {
+				breakpointAddress = currentPc+2*4;
+				disassembly->scrollStepping(breakpointAddress);
+			}
+		}
+	}
+
+	if (info.isSyscall)
+		breakpointAddress = info.branchTarget;
+
+	CBreakPoints::AddBreakPoint(breakpointAddress,true);
+	r5900Debug.resumeCpu();
+}
+
+
 void DisassemblyDialog::onBreakpointClick(wxCommandEvent& evt)
 {
 	if (currentCpu == NULL)
@@ -295,6 +344,10 @@ void DisassemblyDialog::onDebuggerEvent(wxCommandEvent& evt)
 	{
 		if (currentCpu != NULL)
 			stepOver();
+	} else if (type == debEVT_STEPINTO)
+	{
+		if (currentCpu != NULL)
+			stepInto();
 	} else if (type == debEVT_UPDATE)
 	{
 		update();
@@ -340,6 +393,7 @@ void DisassemblyDialog::setDebugMode(bool debugMode)
 			breakRunButton->SetLabel(L"Run");
 
 			stepOverButton->Enable(true);
+			stepIntoButton->Enable(true);
 
 			eeTab->getDisassembly()->gotoPc();
 			iopTab->getDisassembly()->gotoPc();
