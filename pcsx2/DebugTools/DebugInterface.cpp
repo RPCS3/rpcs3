@@ -480,6 +480,11 @@ bool R5900DebugInterface::isValidAddress(u32 addr)
 }
 
 
+u32 R5900DebugInterface::getCycles()
+{
+	return cpuRegs.cycle;
+}
+
 //
 // R3000DebugInterface
 //
@@ -700,4 +705,9 @@ bool R3000DebugInterface::isValidAddress(u32 addr)
 		return true;
 
 	return !(addr & 0x40000000) && vtlb_GetPhyPtr(addr & 0x1FFFFFFF) != NULL;
+}
+
+u32 R3000DebugInterface::getCycles()
+{
+	return psxRegs.cycle;
 }

@@ -31,6 +31,7 @@ public:
 	
 	virtual std::string disasm(u32 address) = 0;
 	virtual bool isValidAddress(u32 address) = 0;
+	virtual u32 getCycles() = 0;
 	
 	bool initExpression(const char* exp, PostfixExpression& dest);
 	bool parseExpression(PostfixExpression& exp, u64& dest);
@@ -67,6 +68,7 @@ public:
 
 	virtual std::string disasm(u32 address);
 	virtual bool isValidAddress(u32 address);
+	virtual u32 getCycles();
 };
 
 
@@ -97,6 +99,7 @@ public:
 
 	virtual std::string disasm(u32 address);
 	virtual bool isValidAddress(u32 address);
+	virtual u32 getCycles();
 };
 
 extern R5900DebugInterface r5900Debug;

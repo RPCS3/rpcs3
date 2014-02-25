@@ -347,14 +347,15 @@ void CBreakPoints::ExecMemCheckJitCleanup()
 void CBreakPoints::SetSkipFirst(u32 pc)
 {
 	breakSkipFirstAt_ = pc & addressMask;
-//	breakSkipFirstTicks_ = CoreTiming::GetTicks();
+	breakSkipFirstTicks_ = r5900Debug.getCycles();
 }
+
 u32 CBreakPoints::CheckSkipFirst(u32 cmpPc)
 {
 	cmpPc &= addressMask;
 	u32 pc = breakSkipFirstAt_;
-	if (pc == cmpPc)
-		return 1;
+	if (breakSkipFirstTicks_ == r5900Debug.getCycles())
+		return pc;
 	return 0;
 }
 
