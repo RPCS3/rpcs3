@@ -20,29 +20,29 @@ enum CELL_PAD_ERROR_CODE
 
 struct CellPadData
 {
-	s32 len;
-	u16 button[CELL_PAD_MAX_CODES];
+	be_t<s32> len;
+	be_t<u16> button[CELL_PAD_MAX_CODES];
 };
 
 struct CellPadInfo
 {
-	u32 max_connect;
-	u32 now_connect;
-	u32 system_info;
-	u16 vendor_id[CELL_MAX_PADS];
-	u16 product_id[CELL_MAX_PADS];
-	u8  status[CELL_MAX_PADS];
+	be_t<u32> max_connect;
+	be_t<u32> now_connect;
+	be_t<u32> system_info;
+	be_t<u16> vendor_id[CELL_MAX_PADS];
+	be_t<u16> product_id[CELL_MAX_PADS];
+	u8 status[CELL_MAX_PADS];
 };
 
 struct CellPadInfo2
 {
-	u32 max_connect;
-	u32 now_connect;
-	u32 system_info;
-	u32 port_status[CELL_PAD_MAX_PORT_NUM];
-	u32 port_setting[CELL_PAD_MAX_PORT_NUM];
-	u32 device_capability[CELL_PAD_MAX_PORT_NUM];
-	u32 device_type[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> max_connect;
+	be_t<u32> now_connect;
+	be_t<u32> system_info;
+	be_t<u32> port_status[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> port_setting[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> device_capability[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> device_type[CELL_PAD_MAX_PORT_NUM];
 };
 
 int cellPadInit(u32 max_connect)
@@ -130,29 +130,29 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 			*res = 0;
 	}
 
-	data.len = re(len);
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]		= re(d1);
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]		= re(d2);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = re(rx);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = re(ry);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]	= re(lx);
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]	= re(ly);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]	= re(pad.m_press_right);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]		= re(pad.m_press_left);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_UP]		= re(pad.m_press_up);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_DOWN]		= re(pad.m_press_down);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = re(pad.m_press_triangle);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE]	= re(pad.m_press_circle);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_CROSS]	= re(pad.m_press_cross);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE]	= re(pad.m_press_square);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_L1]		= re(pad.m_press_L1);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_L2]		= re(pad.m_press_L2);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_R1]		= re(pad.m_press_R1);
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_R2]		= re(pad.m_press_R2);
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_X]		= re(pad.m_sensor_x);
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Y]		= re(pad.m_sensor_y);
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Z]		= re(pad.m_sensor_z);
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_G]		= re(pad.m_sensor_g);
+	data.len = len;
+	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = d1;
+	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = d2;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = rx;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = ry;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]  = lx;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]  = ly;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]    = pad.m_press_right;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]     = pad.m_press_left;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_UP]       = pad.m_press_up;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_DOWN]     = pad.m_press_down;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = pad.m_press_triangle;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE]   = pad.m_press_circle;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_CROSS]    = pad.m_press_cross;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE]   = pad.m_press_square;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_L1]       = pad.m_press_L1;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_L2]       = pad.m_press_L2;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_R1]       = pad.m_press_R1;
+	data.button[CELL_PAD_BTN_OFFSET_PRESS_R2]       = pad.m_press_R2;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_X]       = pad.m_sensor_x;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Y]       = pad.m_sensor_y;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Z]       = pad.m_sensor_z;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_G]       = pad.m_sensor_g;
 
 	Memory.WriteData(data_addr, data);
 
@@ -184,9 +184,9 @@ int cellPadGetInfo(u32 info_addr)
 	memset(&info, 0, sizeof(CellPadInfo));
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	info.max_connect = re(rinfo.max_connect);
-	info.now_connect = re(rinfo.now_connect);
-	info.system_info = re(rinfo.system_info);
+	info.max_connect = rinfo.max_connect;
+	info.now_connect = rinfo.now_connect;
+	info.system_info = rinfo.system_info;
 
 	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
 
@@ -194,9 +194,9 @@ int cellPadGetInfo(u32 info_addr)
 	{
 		if(i >= pads.GetCount()) break;
 
-		re(info.status[i], pads[i].m_port_status);
-		info.product_id[i] = const_se_t<u16, 0x0268>::value;
-		info.vendor_id[i] = const_se_t<u16, 0x054C>::value;
+		info.status[i] = pads[i].m_port_status;
+		info.product_id[i] = 0x0268;
+		info.vendor_id[i] = 0x054C;
 	}
 
 	Memory.WriteData(info_addr, info);
@@ -213,19 +213,19 @@ int cellPadGetInfo2(u32 info_addr)
 	memset(&info, 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	info.max_connect = re(rinfo.max_connect);
-	info.now_connect = re(rinfo.now_connect);
-	info.system_info = re(rinfo.system_info);
+	info.max_connect = rinfo.max_connect;
+	info.now_connect = rinfo.now_connect;
+	info.system_info = rinfo.system_info;
 
 	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	for(u32 i=0; i<CELL_PAD_MAX_PORT_NUM; ++i)
 	{
 		if(i >= pads.GetCount()) break;
-		info.port_status[i] = re(pads[i].m_port_status);
-		info.port_setting[i] = re(pads[i].m_port_setting);
-		info.device_capability[i] = re(pads[i].m_device_capability);
-		info.device_type[i] = re(pads[i].m_device_type);
+		info.port_status[i] = pads[i].m_port_status;
+		info.port_setting[i] = pads[i].m_port_setting;
+		info.device_capability[i] = pads[i].m_device_capability;
+		info.device_type[i] = pads[i].m_device_type;
 	}
 
 	Memory.WriteData(info_addr, info);
