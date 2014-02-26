@@ -3,6 +3,11 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "cellVdec.h"
 
+extern "C"
+{
+#include "libavformat\avformat.h"
+}
+
 void cellVdec_init();
 Module cellVdec(0x0005, cellVdec_init);
 

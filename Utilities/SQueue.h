@@ -81,15 +81,13 @@ public:
 		}
 	}
 
-	u32 GetCount()
+	volatile u32 GetCount()
 	{
-		SMutexLocker lock(m_mutex);
 		return m_count;
 	}
 
-	bool IsEmpty()
+	volatile bool IsEmpty()
 	{
-		SMutexLocker lock(m_mutex);
 		return !m_count;
 	}
 

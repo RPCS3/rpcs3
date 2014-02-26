@@ -251,7 +251,7 @@ u32 RawSPUThread::GetIndex() const
 
 void RawSPUThread::Task()
 {
-	ConLog.Write("%s enter", PPCThread::GetFName().wx_str());
+	if (Ini.HLELogging.GetValue()) ConLog.Write("%s enter", PPCThread::GetFName().wx_str());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -334,5 +334,5 @@ void RawSPUThread::Task()
 		ConLog.Error("Exception: %s", wxString(e).wx_str());
 	}
 
-	ConLog.Write("%s leave", PPCThread::GetFName().wx_str());
+	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", PPCThread::GetFName().wx_str());
 }

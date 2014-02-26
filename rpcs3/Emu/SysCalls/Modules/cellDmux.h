@@ -2,6 +2,9 @@
 
 #include "Utilities/SQueue.h"
 
+// align size or address to 128
+#define a128(x) ((x + 127) & (~127))
+
 // Error Codes
 enum
 {
@@ -232,7 +235,7 @@ struct CellDmuxResource2
 	};
 };
 
-typedef mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, mem_ptr_t<CellDmuxMsg> demuxerMsg, u32 cbArg_addr)> CellDmuxCbMsg;
+typedef mem_func_ptr_t<void (*)(u32 demuxerHandle, mem_ptr_t<CellDmuxMsg> demuxerMsg, u32 cbArg_addr)> CellDmuxCbMsg;
 
 struct CellDmuxCb
 {
@@ -241,7 +244,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg_addr;
 };
 
-typedef mem_func_ptr_t<void (*)(u32 demuxerHandle_addr, u32 esHandle_addr, mem_ptr_t<CellDmuxEsMsg> esMsg, u32 cbArg_addr)> CellDmuxCbEsMsg;
+typedef mem_func_ptr_t<void (*)(u32 demuxerHandle, u32 esHandle, mem_ptr_t<CellDmuxEsMsg> esMsg, u32 cbArg_addr)> CellDmuxCbEsMsg;
 
 struct CellDmuxEsCb
 {
@@ -293,16 +296,120 @@ struct CellDmuxAuInfoEx
 
 /* Demuxer Thread Classes */
 
-struct AccessUnit
+enum
+{
+	/* http://dvd.sourceforge.net/dvdinfo/mpeghdrs.html */
+
+	PACKET_START_CODE_MASK   = 0xffffff00,
+	PACKET_START_CODE_PREFIX = 0x00000100,
+
+	USER_DATA_START_CODE     = 0x000001b2,
+	SEQUENCE_START_CODE      = 0x000001b3,
+	EXT_START_CODE           = 0x000001b5,
+	SEQUENCE_END_CODE        = 0x000001b7,
+	GOP_START_CODE           = 0x000001b8,
+	ISO_11172_END_CODE       = 0x000001b9,
+	PACK_START_CODE          = 0x000001ba,
+	SYSTEM_HEADER_START_CODE = 0x000001bb,
+	PROGRAM_STREAM_MAP       = 0x000001bc,
+	PRIVATE_STREAM_1         = 0x000001bd,
+	PADDING_STREAM           = 0x000001be,
+	PRIVATE_STREAM_2         = 0x000001bf,
+};
+
+enum
+{
+	MAX_AU = 640 * 1024 + 128, // 640 KB
+};
+
+struct DemuxerStream
 {
 	u32 addr;
 	u32 size;
-	u32 ptsUpper;
-	u32 ptsLower;
-	u32 dtsUpper;
-	u32 dtsLower;
-	u64 userData;
-	bool isRap;
+	u64 userdata;
+	bool discontinuity;
+
+	template<typename T>
+	bool get(T& out)
+	{
+		if (sizeof(T) > size) return false;
+
+		out = *mem_ptr_t<T>(addr);
+		addr += sizeof(T);
+		size -= sizeof(T);
+
+		return true;
+	}
+
+	template<typename T>
+	bool peek(T& out)
+	{
+		if (sizeof(T) > size) return false;
+
+		out = *mem_ptr_t<T>(addr);
+		return true;
+	}
+
+	void skip(u32 count)
+	{
+		addr += count;
+		size = size > count ? size - count : 0;
+	}
+
+	u32 get_ts(u8 c)
+	{
+		u16 v1, v2; get(v1); get(v2);
+		return (((u32) (c & 0x0E)) << 29) | ((v1 >> 1) << 15) | (v2 >> 1);
+	}
+
+	u32 get_ts()
+	{
+		u8 v; get(v);
+		return get_ts(v);
+	}
+};
+
+struct PesHeader
+{
+	u32 pts;
+	u32 dts;
+	u8 ch;
+	u8 size;
+
+	PesHeader(DemuxerStream& stream)
+		: pts(0)
+		, dts(0)
+		, ch(0)
+		, size(0)
+	{
+		u16 header;
+		stream.get(header);
+		stream.get(size);
+		if (size)
+		{
+			if (size < 10)
+			{
+				ConLog.Error("Unknown PesHeader size");
+				Emu.Pause();
+			}
+			u8 v;
+			stream.get(v);
+			if ((v & 0xF0) != 0x30)
+			{
+				ConLog.Error("Pts not found");
+				Emu.Pause();
+			}
+			pts = stream.get_ts(v);
+			stream.get(v);
+			if ((v & 0xF0) != 0x10)
+			{
+				ConLog.Error("Dts not found");
+				Emu.Pause();				
+			}
+			dts = stream.get_ts(v);
+			stream.skip(size - 10);
+		}
+	}
 };
 
 class ElementaryStream;
@@ -311,32 +418,22 @@ enum DemuxerJobType
 {
 	dmuxSetStream,
 	dmuxResetStream,
+	dmuxResetStreamAndWaitDone,
 	dmuxEnableEs,
 	dmuxDisableEs,
 	dmuxResetEs,
-	dmuxGetAu,
-	dmuxPeekAu,
 	dmuxReleaseAu,
 	dmuxFlushEs,
 	dmuxClose,
 };
 
-#pragma pack(push, 1)
 struct DemuxerTask
 {
 	DemuxerJobType type;
 
 	union
 	{
-		struct
-		{
-			u32 addr;
-			u64 userdata;
-			u32 size;
-			/*bool*/u32 discontinuity;
-		} stream;
-
-		u32 esHandle;
+		DemuxerStream stream;
 
 		struct
 		{
@@ -344,7 +441,7 @@ struct DemuxerTask
 			u32 auInfo_ptr_addr;
 			u32 auSpec_ptr_addr;
 			ElementaryStream* es_ptr;
-		} au;
+		} es;
 	};
 
 	DemuxerTask()
@@ -356,8 +453,6 @@ struct DemuxerTask
 	{
 	}
 };
-static_assert(sizeof(DemuxerTask) == 24, "");
-#pragma pack(pop)
 
 class Demuxer
 {
@@ -365,13 +460,16 @@ public:
 	SQueue<DemuxerTask> job;
 	const u32 memAddr;
 	const u32 memSize;
-	const CellDmuxCbMsg cbFunc;
+	const u32 cbFunc;
 	const u32 cbArg;
+	u32 id;
 	bool is_finished;
+	bool is_running;
 
 
-	Demuxer(u32 addr, u32 size, CellDmuxCbMsg func, u32 arg)
+	Demuxer(u32 addr, u32 size, u32 func, u32 arg)
 		: is_finished(false)
+		, is_running(false)
 		, memAddr(addr)
 		, memSize(size)
 		, cbFunc(func)
@@ -382,19 +480,27 @@ public:
 
 class ElementaryStream
 {
+	SMutex mutex;
+
+	u32 first_addr; // AU that will be released
+	u32 last_addr; // AU that is being written now
+	u32 last_size; // number of bytes written (after 128b header)
+	u32 peek_addr; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
+	
 public:
 	Demuxer* dmux;
+	u32 id;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 fidMajor;
 	const u32 fidMinor;
 	const u32 sup1;
 	const u32 sup2;
-	const CellDmuxCbEsMsg cbFunc;
+	const u32 cbFunc;
 	const u32 cbArg;
 	const u32 spec; //addr
 
-	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, CellDmuxCbEsMsg cbFunc, u32 cbArg, u32 spec)
+	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, u32 cbFunc, u32 cbArg, u32 spec)
 		: dmux(dmux)
 		, memAddr(addr)
 		, memSize(size)
@@ -405,6 +511,175 @@ public:
 		, cbFunc(cbFunc)
 		, cbArg(cbArg)
 		, spec(spec)
+		, first_addr(0)
+		, peek_addr(0)
+		, last_addr(a128(addr))
+		, last_size(0)
 	{
+	}
+
+	volatile bool hasdata()
+	{
+		return last_size;
+	}
+
+	bool isfull() // not multithread-safe
+	{
+		if (first_addr)
+		{
+			if (first_addr > last_addr)
+			{
+				return (first_addr - last_addr) < MAX_AU;
+			}
+			else
+			{
+				return (first_addr + MAX_AU) > (memAddr + memSize);
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	void finish(DemuxerStream& stream) // not multithread-safe
+	{
+		SMutexLocker lock(mutex);
+
+		if (!first_addr)
+		{
+			first_addr = last_addr;
+		}
+		if (!peek_addr)
+		{
+			peek_addr = last_addr;
+		}
+		u32 new_addr = a128(last_addr + 128 + last_size);
+		if ((new_addr + MAX_AU) > (memAddr + memSize))
+		{
+			last_addr = memAddr;
+		}
+		else
+		{
+			last_addr = new_addr;
+		}
+		last_size = 0;
+	}
+
+	void push(DemuxerStream& stream, u32 size, PesHeader& pes)
+	{
+		SMutexLocker lock(mutex);
+		if (isfull()) 
+		{
+			ConLog.Error("ElementaryStream::push(): buffer is full");
+			Emu.Pause();
+			return;
+		}
+
+		u32 data_addr = last_addr + 128 + last_size;
+		last_size += size;
+		memcpy(Memory + data_addr, Memory + stream.addr, size);
+		stream.skip(size);
+
+		mem_ptr_t<CellDmuxAuInfoEx> info(last_addr);
+		info->auAddr = last_addr + 128;
+		info->auSize = last_size;
+		if (pes.size)
+		{
+			info->dts.lower = pes.dts;
+			info->dts.upper = 0;
+			info->pts.lower = pes.pts;
+			info->pts.upper = 0;
+			info->isRap = false; // TODO: set valid value
+			info->reserved = 0;
+			info->userData = stream.userdata;
+		}
+
+		mem_ptr_t<CellDmuxPamfAuSpecificInfoAvc> tail(last_addr + sizeof(CellDmuxAuInfoEx));
+		tail->reserved1 = 0;
+
+		mem_ptr_t<CellDmuxAuInfo> inf(last_addr + 64);
+		inf->auAddr = last_addr + 128;
+		inf->auSize = last_size;
+		if (pes.size)
+		{
+			inf->dtsLower = pes.dts;
+			inf->dtsUpper = 0;
+			inf->ptsLower = pes.pts;
+			inf->ptsUpper = 0;
+			inf->auMaxSize = 0; // ?????
+			inf->userData = stream.userdata;
+		}
+	}
+
+	volatile bool canrelease()
+	{
+		return first_addr;
+	}
+
+	void release()
+	{
+		SMutexLocker lock(mutex);
+		if (!canrelease())
+		{
+			ConLog.Error("ElementaryStream::release(): buffer is empty");
+			Emu.Pause();
+			return;
+		}
+
+		u32 size = a128(Memory.Read32(first_addr + 4) + 128);
+		u32 new_addr = first_addr + size;
+		if (peek_addr <= first_addr) peek_addr = new_addr;
+		if (new_addr == last_addr)
+		{
+			first_addr = 0;
+		}
+		else if ((new_addr + MAX_AU) > (memAddr + memSize))
+		{
+			first_addr = memAddr;
+		}
+		else
+		{
+			first_addr = new_addr;
+		}
+	}
+
+	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
+	{
+		SMutexLocker lock(mutex);
+		ConLog.Write("es::peek(): peek_addr=0x%x", peek_addr);
+		if (!peek_addr) return false;
+
+		out_data = peek_addr;
+		out_spec = out_data + sizeof(CellDmuxAuInfoEx);
+		if (no_ex) out_data += 64;
+
+		if (update_index)
+		{
+			u32 size = a128(Memory.Read32(peek_addr + 4) + 128);
+			u32 new_addr = peek_addr + size;
+			if (new_addr = last_addr)
+			{
+				peek_addr = 0;
+			}
+			else if ((new_addr + MAX_AU) > (memAddr + memSize))
+			{
+				peek_addr = memAddr;
+			}
+			else
+			{
+				peek_addr = new_addr;
+			}
+		}
+		return true;
+	}
+
+	void reset()
+	{
+		SMutexLocker lock(mutex);
+		first_addr = 0;
+		peek_addr = 0;
+		last_addr = a128(memAddr);
+		last_size = 0;
 	}
 };

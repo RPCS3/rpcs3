@@ -17,26 +17,16 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pE
 	switch (type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
-		switch (ch)
 		{
-		case 0:
+			if (ch < 16)
 			{
-				pEsFilterId->filterIdMajor = 0xe0; //fake info
+				pEsFilterId->filterIdMajor = 0xe0 + ch;
 				pEsFilterId->filterIdMinor = 0;
 				pEsFilterId->supplementalInfo1 = 0x01;
 				pEsFilterId->supplementalInfo2 = 0;
 			}
-			break;
-		case 1:
-			{
-				pEsFilterId->filterIdMajor = 0xe1;
-				pEsFilterId->filterIdMinor = 0;
-				pEsFilterId->supplementalInfo1 = 0x01;
-				pEsFilterId->supplementalInfo2 = 0;
-			}
-			break;
-		default:
-			cellPamf.Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_AVC (ch=%d)", ch);
+			else
+				cellPamf.Error("pamfStreamTypeToEsFilterId: invalid CELL_PAMF_STREAM_TYPE_AVC channel (ch=%d)", ch);
 		}
 		break;
 	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
@@ -96,7 +86,7 @@ u8 pamfGetStreamType(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
 	default:
-		cellPamf.Error("pamfGetStreamType: unsupported stream type found(0x%x)",
+		cellPamf.Error("pamfGetStreamType: (TODO) unsupported stream type found(0x%x)",
 			pAddr->stream_headers[stream].type);
 		return 0;
 	}
@@ -104,12 +94,16 @@ u8 pamfGetStreamType(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 
 u8 pamfGetStreamChannel(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 {
-	cellPamf.Warning("TODO: pamfGetStreamChannel");
 	//TODO: get stream channel correctly
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
 	if ((pAddr->stream_headers[stream].type == 0x1b) &&
-		(pAddr->stream_headers[stream].stream_id == 0xe1)) return 1;
+		(pAddr->stream_headers[stream].stream_id >= 0xe0) &&
+		(pAddr->stream_headers[stream].stream_id <= 0xef))
+	{
+		return pAddr->stream_headers[stream].stream_id - 0xe0;
+	}
+	cellPamf.Error("TODO: pamfGetStreamChannel (-> 0)");
 	return 0;
 }
 
