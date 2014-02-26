@@ -84,13 +84,22 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
+	bool was_locked = (mutex->owner.GetOwner() == tid);
+
 	if (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->owner.trylock(target) != SMR_OK)
+		if (!was_locked)
 		{
 			mutex->owner.lock(tid);
 			mutex->recursive_count = 1;
 			mutex->owner.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->owner.unlock(tid, target);
+			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
 		}
 	}
 
@@ -120,13 +129,22 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
+	bool was_locked = (mutex->owner.GetOwner() == tid);
+
 	while (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->owner.trylock(target) != SMR_OK)
+		if (!was_locked)
 		{
 			mutex->owner.lock(tid);
 			mutex->recursive_count = 1;
 			mutex->owner.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->owner.unlock(tid, target);
+			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
 		}
 	}
 
@@ -153,6 +171,11 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 		return CELL_ESRCH;
 	}
 
+	if (!Emu.GetIdManager().CheckID(ppu_thread_id))
+	{
+		return CELL_ESRCH;
+	}
+
 	if (!sq->invalidate(ppu_thread_id))
 	{
 		return CELL_EPERM;
@@ -161,13 +184,23 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
-	be_t<u32> target = ppu_thread_id;
+	bool was_locked = (mutex->owner.GetOwner() == tid);
 
-	if (mutex->owner.trylock(target) != SMR_OK)
+	be_t<u32> target = ppu_thread_id;
 	{
-		mutex->owner.lock(tid);
-		mutex->recursive_count = 1;
-		mutex->owner.unlock(tid, target);
+		if (!was_locked)
+		{
+			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
+			mutex->owner.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->owner.unlock(tid, target);
+			mutex->owner.lock(tid);
+			mutex->recursive_count = 1;
+		}
 	}
 
 	if (Emu.IsStopped())

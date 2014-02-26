@@ -149,7 +149,7 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.size)
 							{
-								//ConLog.Write("*** AVC AU detected (pts=0x%x, dts=0x%x)", pes.pts, pes.dts);
+								ConLog.Write("*** AVC AU detected (pts=0x%x, dts=0x%x)", pes.pts, pes.dts);
 							}
 
 							es.push(stream, len - pes.size - 3, pes);
@@ -658,6 +658,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, const mem_ptr_t<CellCodecEsFilterId> esF
 
 	u32 id = cellDmux.GetNewId(es);
 	es->id = id;
+	esHandle = id;
 
 	cellDmux.Warning("*** New ES(dmux=%d, addr=0x%x, size=0x%x, filter(0x%x, 0x%x, 0x%x, 0x%x), cb=0x%x(arg=0x%x), spec=0x%x): id = %d",
 		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, (u32)esCb->cbEsMsgFunc, es->cbArg, es->spec, id);

@@ -28,7 +28,7 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 
 	if (mutex->is_recursive)
 	{
-		sys_cond.Warning("Recursive mutex(%d)", mutex_id);
+		sys_cond.Warning("*** condition on recursive mutex(%d)", mutex_id);
 	}
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
@@ -57,6 +57,136 @@ int sys_cond_destroy(u32 cond_id)
 
 	cond->mutex->cond_count--;
 	Emu.GetIdManager().RemoveID(cond_id);
+	return CELL_OK;
+}
+
+int sys_cond_signal(u32 cond_id)
+{
+	sys_cond.Log("sys_cond_signal(cond_id=%d)", cond_id);
+
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
+
+	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
+	{
+		if (!was_locked) // mutex hasn't been locked (don't care about mutex state)
+		{
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+		}
+		else // mutex has been locked (should preserve original mutex state)
+		{
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
+	}
+
+	return CELL_OK;
+}
+
+int sys_cond_signal_all(u32 cond_id)
+{
+	sys_cond.Log("sys_cond_signal_all(cond_id=%d)", cond_id);
+
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
+
+	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
+	{
+		if (!was_locked)
+		{
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
+	}
+
+	return CELL_OK;
+}
+
+int sys_cond_signal_to(u32 cond_id, u32 thread_id)
+{
+	sys_cond.Log("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
+
+	Cond* cond;
+	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!Emu.GetIdManager().CheckID(thread_id))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!cond->m_queue.invalidate(thread_id))
+	{
+		return CELL_EPERM;
+	}
+
+	Mutex* mutex = cond->mutex;
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
+
+	u32 target = thread_id;
+	{
+		if (!was_locked)
+		{
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive = 1;
+			mutex->m_mutex.unlock(tid, target);
+			mutex->m_mutex.lock(tid);
+			mutex->recursive = 1;
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
+	}
+
 	return CELL_OK;
 }
 
@@ -113,99 +243,4 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 			return CELL_OK;
 		}
 	}
-}
-
-int sys_cond_signal(u32 cond_id)
-{
-	sys_cond.Log("sys_cond_signal(cond_id=%d)", cond_id);
-
-	Cond* cond;
-	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
-	{
-		return CELL_ESRCH;
-	}
-
-	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop()))
-	{
-		if (mutex->m_mutex.trylock(target) != SMR_OK)
-		{
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-		}
-	}
-
-	if (Emu.IsStopped())
-	{
-		ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
-	}
-
-	return CELL_OK;
-}
-
-int sys_cond_signal_all(u32 cond_id)
-{
-	sys_cond.Log("sys_cond_signal_all(cond_id=%d)", cond_id);
-
-	Cond* cond;
-	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
-	{
-		return CELL_ESRCH;
-	}
-
-	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop()))
-	{
-		if (mutex->m_mutex.trylock(target) != SMR_OK)
-		{
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-		}
-	}
-
-	if (Emu.IsStopped())
-	{
-		ConLog.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
-	}
-
-	return CELL_OK;
-}
-
-int sys_cond_signal_to(u32 cond_id, u32 thread_id)
-{
-	sys_cond.Log("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
-
-	Cond* cond;
-	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
-	{
-		return CELL_ESRCH;
-	}
-
-	if (!cond->m_queue.invalidate(thread_id))
-	{
-		return CELL_EPERM;
-	}
-
-	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	if (mutex->m_mutex.trylock(thread_id) != SMR_OK)
-	{
-		mutex->m_mutex.lock(tid);
-		mutex->recursive = 1;
-		mutex->m_mutex.unlock(tid, thread_id);
-	}
-
-	if (Emu.IsStopped())
-	{
-		ConLog.Warning("sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
-	}
-
-	return CELL_OK;
 }

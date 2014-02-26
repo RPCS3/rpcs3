@@ -135,6 +135,7 @@ struct CellAudioPortConfig
 
 struct AudioPortConfig
 {
+	SMutex m_mutex;
 	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
 	u8 channel;
@@ -366,10 +367,12 @@ int cellAudioInit()
 					memcpy(buffer2, Memory + buf_addr, block_size * sizeof(float));
 					memset(Memory + buf_addr, 0, block_size * sizeof(float));
 
-					// TODO: atomic
-					port.counter = m_config.counter;
-					port.tag++; // absolute index of block that will be read
-					index = (position + 1) % port.block; // write new value
+					{
+						SMutexLocker lock(port.m_mutex);
+						port.counter = m_config.counter;
+						port.tag++; // absolute index of block that will be read
+						index = (position + 1) % port.block; // write new value
+					}
 
 					if (first_mix)
 					{
@@ -599,7 +602,7 @@ int cellAudioPortStop(u32 portNum)
 
 int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 {
-	cellAudio.Warning("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp_addr=0x%x)", portNum, tag, stamp.GetAddr());
+	cellAudio.Log("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp_addr=0x%x)", portNum, tag, stamp.GetAddr());
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{
@@ -618,7 +621,8 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
-	// TODO: atomic
+	SMutexLocker lock(port.m_mutex);
+
 	stamp = m_config.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
 	return CELL_OK;
@@ -626,7 +630,7 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 
 int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 {
-	cellAudio.Warning("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag_addr=0x%x)", portNum, blockNo, tag.GetAddr());
+	cellAudio.Log("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag_addr=0x%x)", portNum, blockNo, tag.GetAddr());
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{
@@ -651,7 +655,8 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	// TODO: atomic
+	SMutexLocker lock(port.m_mutex);
+
 	u64 tag_base = port.tag;
 	if (tag_base % port.block > blockNo)
 	{
