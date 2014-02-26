@@ -35,14 +35,14 @@ static __fi void Sif0Init()
 // Write from Fifo to EE.
 static __fi bool WriteFifoToEE()
 {
-	const int readSize = min((s32)sif0dma.qwc, sif0.fifo.size >> 2);
+	const int readSize = min((s32)sif0ch.qwc, sif0.fifo.size >> 2);
 
 	tDMA_TAG *ptag;
 
-	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma.madr);
-	SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0dma.qwc << 2);
+	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0ch.madr);
+	SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0ch.qwc << 2);
 
-	ptag = sif0dma.getAddr(sif0dma.madr, DMAC_SIF0, true);
+	ptag = sif0ch.getAddr(sif0ch.madr, DMAC_SIF0, true);
 	if (ptag == NULL)
 	{
 		DevCon.Warning("Write Fifo to EE: ptag == NULL");
@@ -52,11 +52,11 @@ static __fi bool WriteFifoToEE()
 	sif0.fifo.read((u32*)ptag, readSize << 2);
 
 	// Clearing handled by vtlb memory protection and manual blocks.
-	//Cpu->Clear(sif0dma.madr, readSize*4);
+	//Cpu->Clear(sif0ch.madr, readSize*4);
 
-	sif0dma.madr += readSize << 4;
+	sif0ch.madr += readSize << 4;
 	sif0.ee.cycles += readSize;	// fixme : BIAS is factored in above
-	sif0dma.qwc -= readSize;
+	sif0ch.qwc -= readSize;
 
 	return true;
 }
@@ -79,7 +79,7 @@ static __fi bool WriteIOPtoFifo()
 	return true;
 }
 
-// Read Fifo into an ee tag, transfer it to sif0dma, and process it.
+// Read Fifo into an ee tag, transfer it to sif0ch, and process it.
 static __fi bool ProcessEETag()
 {
 	static __aligned16 u32 tag[4];
@@ -88,13 +88,13 @@ static __fi bool ProcessEETag()
 	sif0.fifo.read((u32*)&tag[0], 4); // Tag
 	SIF_LOG("SIF0 EE read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
-	sif0dma.unsafeTransfer(&ptag);
-	sif0dma.madr = tag[1];
+	sif0ch.unsafeTransfer(&ptag);
+	sif0ch.madr = tag[1];
 
 	SIF_LOG("SIF0 EE dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)",
-		sif0dma.madr, sif0dma.qwc, ptag.ID, ptag.IRQ, tag[1], tag[0]);
+		sif0ch.madr, sif0ch.qwc, ptag.ID, ptag.IRQ, tag[1], tag[0]);
 
-	if (sif0dma.chcr.TIE && ptag.IRQ)
+	if (sif0ch.chcr.TIE && ptag.IRQ)
 	{
 		//Console.WriteLn("SIF0 TIE");
 		sif0.ee.end = true;
@@ -106,7 +106,7 @@ static __fi bool ProcessEETag()
 
 		case TAG_CNTS:
 			if (dmacRegs.ctrl.STS == STS_SIF0)
-				dmacRegs.stadr.ADDR = sif0dma.madr + (sif0dma.qwc * 16);
+				dmacRegs.stadr.ADDR = sif0ch.madr + (sif0ch.qwc * 16);
 			break;
 
 		case TAG_END:
@@ -180,7 +180,7 @@ static __fi void EndIOP()
 // Handle the EE transfer.
 static __fi void HandleEETransfer()
 {
-	if(sif0dma.chcr.STR == false)
+	if(sif0ch.chcr.STR == false)
 	{
 		//DevCon.Warning("Replacement for irq prevention hack EE SIF0");
 		sif0.ee.end = false;
@@ -190,20 +190,20 @@ static __fi void HandleEETransfer()
 
 	if (dmacRegs.ctrl.STS == STS_SIF0)
 	{
-		DevCon.Warning("SIF0 stall control");
+		DevCon.Warning("SIF0 stall control not properly implemented");
 	}
 
-	/*if (sif0dma.qwc == 0)
-		if (sif0dma.chcr.MOD == NORMAL_MODE)
+	/*if (sif0ch.qwc == 0)
+		if (sif0ch.chcr.MOD == NORMAL_MODE)
 			if (!sif0.ee.end){
 				DevCon.Warning("sif0 irq prevented");
 				done = true;
 				return;
 			}*/
 
-	if (sif0dma.qwc <= 0)
+	if (sif0ch.qwc <= 0)
 	{
-		if ((sif0dma.chcr.MOD == NORMAL_MODE) || sif0.ee.end)
+		if ((sif0ch.chcr.MOD == NORMAL_MODE) || sif0.ee.end)
 		{
 			// Stop transferring ee, and signal an interrupt.
 			done = true;
@@ -211,13 +211,13 @@ static __fi void HandleEETransfer()
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
-			// Read Fifo into an ee tag, transfer it to sif0dma
+			// Read Fifo into an ee tag, transfer it to sif0ch
 			// and process it.
 			ProcessEETag();
 		}
 	}
 
-	if (sif0dma.qwc > 0) // If we're writing something, continue to do so.
+	if (sif0ch.qwc > 0) // If we're writing something, continue to do so.
 	{
 		// Write from Fifo to EE.
 		if (sif0.fifo.size > 0)
@@ -312,7 +312,7 @@ __fi void SIF0Dma()
 		}
 		if (sif0.ee.busy)
 		{
-			if(sif0.fifo.size >= 4 || (sif0.ee.end == true && sif0dma.qwc == 0)) 
+			if(sif0.fifo.size >= 4 || (sif0.ee.end == true && sif0ch.qwc == 0)) 
 			{
 				BusyCheck++;
 				HandleEETransfer();
@@ -332,19 +332,19 @@ __fi void  sif0Interrupt()
 __fi void  EEsif0Interrupt()
 {
 	hwDmacIrq(DMAC_SIF0);
-	sif0dma.chcr.STR = false;
+	sif0ch.chcr.STR = false;
 }
 
 __fi void dmaSIF0()
 {
-	SIF_LOG(wxString(L"dmaSIF0" + sif0dma.cmqt_to_str()).To8BitData());
+	SIF_LOG(wxString(L"dmaSIF0" + sif0ch.cmqt_to_str()).To8BitData());
 
 	if (sif0.fifo.readPos != sif0.fifo.writePos)
 	{
 		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
 	}
 
-	//if(sif0dma.chcr.MOD == CHAIN_MODE && sif0dma.qwc > 0) DevCon.Warning(L"SIF0 QWC on Chain CHCR " + sif0dma.chcr.desc());
+	//if(sif0ch.chcr.MOD == CHAIN_MODE && sif0ch.qwc > 0) DevCon.Warning(L"SIF0 QWC on Chain CHCR " + sif0ch.chcr.desc());
 	psHu32(SBUS_F240) |= 0x2000;
 	sif0.ee.busy = true;
 

@@ -229,7 +229,7 @@ void GIFdma()
 		if (dmacRegs.ctrl.STD == STD_GIF)
 		{
 			// there are still bugs, need to also check if gifch.madr +16*qwc >= stadr, if not, stall
-			if (!gspath3done && ((gifch.madr + (gifch.qwc * 16)) > dmacRegs.stadr.ADDR) && (ptag->ID == TAG_REFS))
+			if ((ptag->ID == TAG_REFS) && ((gifch.madr + (gifch.qwc * 16)) > dmacRegs.stadr.ADDR))
 			{
 				// stalled.
 				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
@@ -245,6 +245,10 @@ void GIFdma()
 		}
 
 		checkTieBit(ptag);
+	}
+	else if (dmacRegs.ctrl.STD == STD_GIF && gifch.chcr.MOD == NORMAL_MODE)
+	{
+		Console.WriteLn("GIF DMA Stall in Normal mode not implemented - Report which game to PCSX2 Team");
 	}
 
 	clearFIFOstuff(true);
@@ -296,7 +300,7 @@ void dmaGIF()
 
 	if(gifch.chcr.MOD == CHAIN_MODE && gifch.qwc > 0) {
 		//DevCon.Warning(L"GIF QWC on Chain " + gifch.chcr.desc());
-		if ((gifch.chcr.tag().ID == TAG_REFE) || (gifch.chcr.tag().ID == TAG_END)) {
+		if ((gifch.chcr.tag().ID == TAG_REFE) || (gifch.chcr.tag().ID == TAG_END) || (gifch.chcr.tag().IRQ && gifch.chcr.TIE)) {
 			gspath3done = true;
 		}
 	}
@@ -456,7 +460,10 @@ void mfifoGIFtransfer(int qwc)
 				ptag[1]._u32, ptag[0]._u32, gifch.qwc, ptag->ID, gifch.madr, gifch.tadr, gifqwc, spr0ch.madr);
 
 		gspath3done = hwDmacSrcChainWithStack(gifch, ptag->ID);
-
+		if (dmacRegs.ctrl.STD == STD_GIF && (ptag->ID == TAG_REFS))
+		{
+			Console.WriteLn("GIF MFIFO DMA Stall not implemented - Report which game to PCSX2 Team");
+		}
 		mfifoGifMaskMem(ptag->ID);
 
 		if(gspath3done == true) gifstate = GIF_STATE_DONE;

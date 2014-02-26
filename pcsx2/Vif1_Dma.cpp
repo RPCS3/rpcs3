@@ -136,84 +136,81 @@ __fi void vif1SetupTransfer()
 {
     tDMA_TAG *ptag;
 	
-	switch (vif1.dmamode)
+	ptag = dmaGetAddr(vif1ch.tadr, false); //Set memory pointer to TADR
+
+	if (!(vif1ch.transfer("Vif1 Tag", ptag))) return;
+
+	vif1ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
+	g_vif1Cycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+	vif1.inprogress &= ~1;
+
+	VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
+			ptag[1]._u32, ptag[0]._u32, vif1ch.qwc, ptag->ID, vif1ch.madr, vif1ch.tadr);
+
+	if (!vif1.done && ((dmacRegs.ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1
 	{
-		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif1ch.tadr, false); //Set memory pointer to TADR
-
-			if (!(vif1ch.transfer("Vif1 Tag", ptag))) return;
-
-			vif1ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
-			g_vif1Cycles += 1; // Add 1 g_vifCycles from the QW read for the tag
-
-			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
-			        ptag[1]._u32, ptag[0]._u32, vif1ch.qwc, ptag->ID, vif1ch.madr, vif1ch.tadr);
-
-			if (!vif1.done && ((dmacRegs.ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1
-			{
-				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
-				if ((vif1ch.madr + vif1ch.qwc * 16) >= dmacRegs.stadr.ADDR)
-				{
-					// stalled
-					hwDmacIrq(DMAC_STALL_SIS);
-					return;
-				}
-			}
+		// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
+		if ((vif1ch.madr + vif1ch.qwc * 16) >= dmacRegs.stadr.ADDR)
+		{
+			//DevCon.Warning("VIF1 DMA Stall");
+			// stalled
+			hwDmacIrq(DMAC_STALL_SIS);
+			return;
+		}
+	}
 
 			
-			vif1.inprogress &= ~1;
+			
 
-			if (vif1ch.chcr.TTE)
-			{
-				// Transfer dma tag if tte is set
+	if (vif1ch.chcr.TTE)
+	{
+		// Transfer dma tag if tte is set
 
-			    bool ret;
+		bool ret;
 
-				static __aligned16 u128 masked_tag;
+		static __aligned16 u128 masked_tag;
 				
-				masked_tag._u64[0] = 0;
-				masked_tag._u64[1] = *((u64*)ptag + 1);
+		masked_tag._u64[0] = 0;
+		masked_tag._u64[1] = *((u64*)ptag + 1);
 
-				VIF_LOG("\tVIF1 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
+		VIF_LOG("\tVIF1 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
 
-				if (vif1.irqoffset.enabled)
-				{
-					ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset.value, 4 - vif1.irqoffset.value, true);  //Transfer Tag on stall
-					//ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
-				}
-				else
-				{
-					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
-					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
-					vif1.irqoffset.value = 2;
-					vif1.irqoffset.enabled = true;
-					ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
-					//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
-				}
+		if (vif1.irqoffset.enabled)
+		{
+			ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset.value, 4 - vif1.irqoffset.value, true);  //Transfer Tag on stall
+			//ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
+		}
+		else
+		{
+			//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
+			//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
+			vif1.irqoffset.value = 2;
+			vif1.irqoffset.enabled = true;
+			ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
+			//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
+		}
 				
-				if (!ret && vif1.irqoffset.enabled)
-				{
-					vif1.inprogress &= ~1; //Better clear this so it has to do it again (Jak 1)
-					return;        //IRQ set by VIFTransfer
-				}
-			}
-			vif1.irqoffset.value = 0;
-			vif1.irqoffset.enabled = false;
+		if (!ret && vif1.irqoffset.enabled)
+		{
+			vif1.inprogress &= ~1; //Better clear this so it has to do it again (Jak 1)
+			return;        //IRQ set by VIFTransfer
+		}
+	}
+	vif1.irqoffset.value = 0;
+	vif1.irqoffset.enabled = false;
 
-			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
+	vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
-			if(vif1ch.qwc > 0) vif1.inprogress |= 1;
+	if(vif1ch.qwc > 0) vif1.inprogress |= 1;
 
-			//Check TIE bit of CHCR and IRQ bit of tag
-			if (vif1ch.chcr.TIE && ptag->IRQ)
-			{
-				VIF_LOG("dmaIrq Set");
+	//Check TIE bit of CHCR and IRQ bit of tag
+	if (vif1ch.chcr.TIE && ptag->IRQ)
+	{
+		VIF_LOG("dmaIrq Set");
 
-                //End Transfer
-				vif1.done = true;
-				return;
-			}
-		break;
+        //End Transfer
+		vif1.done = true;
+		return;
 	}
 }
 
@@ -433,7 +430,7 @@ void dmaVIF1()
 			vif1.dmamode = VIF_CHAIN_MODE;
 			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
 			
-			if ((vif1ch.chcr.tag().ID == TAG_REFE) || (vif1ch.chcr.tag().ID == TAG_END))
+			if ((vif1ch.chcr.tag().ID == TAG_REFE) || (vif1ch.chcr.tag().ID == TAG_END) || (vif1ch.chcr.tag().IRQ && vif1ch.chcr.TIE))
 			{
 				vif1.done = true;
 			}
@@ -445,9 +442,9 @@ void dmaVIF1()
 		else //Assume normal mode for reverse FIFO and Normal.
 		{
 			if (dmacRegs.ctrl.STD == STD_VIF1)
-				Console.WriteLn("DMA Stall Control on VIF1 normal");
+				Console.WriteLn("DMA Stall Control on VIF1 normal not implemented - Report which game to PCSX2 Team");
 
-			if (vif1ch.chcr.DIR)  // to Memory
+			if (vif1ch.chcr.DIR)  // from Memory
 				vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
 			else
 				vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;

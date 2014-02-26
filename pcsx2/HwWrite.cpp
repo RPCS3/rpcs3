@@ -102,8 +102,16 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 
 				icase(GIF_MODE)
 				{
-					// need to set GIF_MODE (hamster ball)
 					gifRegs.mode.write(value);
+
+					//Need to kickstart the GIF if the M3R mask comes off
+					if (gifRegs.stat.M3R == 1 && gifRegs.mode.M3R == 0 && gifch.chcr.STR)
+					{
+						DevCon.Warning("GIF Mode cancelling P3 Disable");
+						CPU_INT(DMAC_GIF, 8);
+					}
+						
+
 					gifRegs.stat.M3R = gifRegs.mode.M3R;
 					gifRegs.stat.IMT = gifRegs.mode.IMT;
 					return;

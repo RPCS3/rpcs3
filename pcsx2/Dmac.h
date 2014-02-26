@@ -547,6 +547,11 @@ static DMACh& vif1ch	= (DMACh&)eeHw[0x9000];
 static DMACh& gifch		= (DMACh&)eeHw[0xA000];
 static DMACh& spr0ch	= (DMACh&)eeHw[0xD000];
 static DMACh& spr1ch	= (DMACh&)eeHw[0xD400];
+static DMACh& ipu0ch	= (DMACh&)eeHw[0xb000];
+static DMACh& ipu1ch	= (DMACh&)eeHw[0xb400];
+static DMACh& sif0ch	= (DMACh&)eeHw[0xc000];
+static DMACh& sif1ch	= (DMACh&)eeHw[0xc400];
+static DMACh& sif2dma	= (DMACh&)eeHw[0xc800];
 
 extern void throwBusError(const char *s);
 extern void setDmacStat(u32 num);

@@ -202,6 +202,11 @@ void mfifoVIF1transfer(int qwc)
 		vif1ch.tadr = qwctag(vif1ch.tadr);
 		ptag = dmaGetAddr(vif1ch.tadr, false);
 
+		if (dmacRegs.ctrl.STD == STD_VIF1 && (ptag->ID == TAG_REFS))
+		{
+			Console.WriteLn("VIF MFIFO DMA Stall not implemented - Report which game to PCSX2 Team");
+		}
+
 		if (vif1ch.chcr.TTE)
 		{
             bool ret;

@@ -61,7 +61,7 @@ void tIPU_cmd::clear()
 
 __fi void IPUProcessInterrupt()
 {
-	if (ipuRegs.ctrl.BUSY) // && (g_BP.FP || g_BP.IFC || (ipu1dma.chcr.STR && ipu1dma.qwc > 0)))
+	if (ipuRegs.ctrl.BUSY) // && (g_BP.FP || g_BP.IFC || (ipu1ch.chcr.STR && ipu1ch.qwc > 0)))
 		IPUWorker();
 }
 
@@ -873,7 +873,7 @@ __fi void IPUCMD_WRITE(u32 val)
 
 		case SCE_IPU_FDEC:
 			IPU_LOG("FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, CHCR 0x%x",
-			        val & 0x3f, g_BP.IFC, g_BP.BP, ipu1dma.chcr._u32);
+			        val & 0x3f, g_BP.IFC, g_BP.BP, ipu1ch.chcr._u32);
 
 			g_BP.Advance(val & 0x3F);
 			ipuRegs.SetDataBusy();
@@ -898,7 +898,7 @@ __fi void IPUCMD_WRITE(u32 val)
 
 	ipuRegs.ctrl.BUSY = 1;
 
-	//if(!ipu1dma.chcr.STR) hwIntcIrq(INTC_IPU);
+	//if(!ipu1ch.chcr.STR) hwIntcIrq(INTC_IPU);
 }
 
 __noinline void IPUWorker()
@@ -922,7 +922,7 @@ __noinline void IPUWorker()
 			// CHECK!: IPU0dma remains when IDEC is done, so we need to clear it
 			// Check Mana Khemia 1 "off campus" to trigger a GUST IDEC messup.
 			// This hackfixes it :/
-			//if (ipu0dma.qwc > 0 && ipu0dma.chcr.STR) ipu0Interrupt();
+			//if (ipu0ch.qwc > 0 && ipu0ch.chcr.STR) ipu0Interrupt();
 			break;
 
 		case SCE_IPU_BDEC:

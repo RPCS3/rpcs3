@@ -66,80 +66,69 @@ __fi void vif0SetupTransfer()
 {
     tDMA_TAG *ptag;
 
-	switch (vif0.dmamode)
+	ptag = dmaGetAddr(vif0ch.tadr, false); //Set memory pointer to TADR
+
+	if (!(vif0ch.transfer("vif0 Tag", ptag))) return;
+
+	vif0ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
+	g_vif0Cycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+
+	// Transfer dma tag if tte is set
+
+	VIF_LOG("vif0 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
+			ptag[1]._u32, ptag[0]._u32, vif0ch.qwc, ptag->ID, vif0ch.madr, vif0ch.tadr);
+
+	vif0.inprogress = 0;
+
+	if (vif0ch.chcr.TTE)
 	{
-		case VIF_NORMAL_TO_MEM_MODE:
-			vif0.inprogress = 1;
-			vif0.done = true;
-			g_vif0Cycles = 2;
-			break;
+		// Transfer dma tag if tte is set
 
-		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif0ch.tadr, false); //Set memory pointer to TADR
+		bool ret;
 
-			if (!(vif0ch.transfer("vif0 Tag", ptag))) return;
+		static __aligned16 u128 masked_tag;
 
-			vif0ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
-			g_vif0Cycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+		masked_tag._u64[0] = 0;
+		masked_tag._u64[1] = *((u64*)ptag + 1);
 
-			// Transfer dma tag if tte is set
+		VIF_LOG("\tVIF0 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
 
-			VIF_LOG("vif0 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
-			        ptag[1]._u32, ptag[0]._u32, vif0ch.qwc, ptag->ID, vif0ch.madr, vif0ch.tadr);
-
-			vif0.inprogress = 0;
-
-			if (vif0ch.chcr.TTE)
-			{
-				// Transfer dma tag if tte is set
-
-			    bool ret;
-
-				static __aligned16 u128 masked_tag;
-
-				masked_tag._u64[0] = 0;
-				masked_tag._u64[1] = *((u64*)ptag + 1);
-
-				VIF_LOG("\tVIF0 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
-
-				if (vif0.irqoffset.enabled)
-				{
-					ret = VIF0transfer((u32*)&masked_tag + vif0.irqoffset.value, 4 - vif0.irqoffset.value, true);  //Transfer Tag on stall
-					//ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset);  //Transfer Tag on stall
-				}
-				else
-				{
-					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
-					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
-					vif0.irqoffset.value = 2;
-					vif0.irqoffset.enabled = true;
-					ret = VIF0transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
-					//ret = VIF0transfer((u32*)ptag + 2, 2);  //Transfer Tag
-				}
+		if (vif0.irqoffset.enabled)
+		{
+			ret = VIF0transfer((u32*)&masked_tag + vif0.irqoffset.value, 4 - vif0.irqoffset.value, true);  //Transfer Tag on stall
+			//ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset);  //Transfer Tag on stall
+		}
+		else
+		{
+			//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
+			//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
+			vif0.irqoffset.value = 2;
+			vif0.irqoffset.enabled = true;
+			ret = VIF0transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
+			//ret = VIF0transfer((u32*)ptag + 2, 2);  //Transfer Tag
+		}
 				
-				if (!ret && vif0.irqoffset.enabled)
-				{
-					vif0.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
-					return;        //IRQ set by VIFTransfer
+		if (!ret && vif0.irqoffset.enabled)
+		{
+			vif0.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
+			return;        //IRQ set by VIFTransfer
 					
-				}
-			}
+		}
+	}
 
-			vif0.irqoffset.value = 0;
-			vif0.irqoffset.enabled = false;
-			vif0.done |= hwDmacSrcChainWithStack(vif0ch, ptag->ID);
+	vif0.irqoffset.value = 0;
+	vif0.irqoffset.enabled = false;
+	vif0.done |= hwDmacSrcChainWithStack(vif0ch, ptag->ID);
 
-			if(vif0ch.qwc > 0) vif0.inprogress = 1;
-			//Check TIE bit of CHCR and IRQ bit of tag
-			if (vif0ch.chcr.TIE && ptag->IRQ)
-			{
-				VIF_LOG("dmaIrq Set");
+	if(vif0ch.qwc > 0) vif0.inprogress = 1;
+	//Check TIE bit of CHCR and IRQ bit of tag
+	if (vif0ch.chcr.TIE && ptag->IRQ)
+	{
+		VIF_LOG("dmaIrq Set");
 
-                //End Transfer
-				vif0.done = true;
-				return;
-			}
-			break;
+        //End Transfer
+		vif0.done = true;
+		return;
 	}
 }
 
@@ -254,7 +243,7 @@ __fi void vif0Interrupt()
 		return; //Dont want to end if vif is stalled.
 	}
 #ifdef PCSX2_DEVBUILD
-	if (vif0ch.qwc > 0) Console.WriteLn("vif0 Ending with %x QWC left");
+	if (vif0ch.qwc > 0) Console.WriteLn("vif0 Ending with %x QWC left", vif0ch.qwc);
 	if (vif0.cmd != 0) Console.WriteLn("vif0.cmd still set %x tag size %x", vif0.cmd, vif0.tag.size);
 #endif
 
@@ -278,34 +267,37 @@ void dmaVIF0()
 
 	g_vif0Cycles = 0;
 		
-
-	if ((vif0ch.chcr.MOD == NORMAL_MODE) || vif0ch.qwc > 0)   // Normal Mode
+	if (vif0ch.qwc > 0)   // Normal Mode
 	{
-			vif0.dmamode = VIF_NORMAL_TO_MEM_MODE;
+		if (vif0ch.chcr.MOD == CHAIN_MODE)
+		{
+			vif0.dmamode = VIF_CHAIN_MODE;
 
-			if(vif0.irqoffset.enabled == true && vif0.done == false)
+			if ((vif0ch.chcr.tag().ID == TAG_REFE) || (vif0ch.chcr.tag().ID == TAG_END) || (vif0ch.chcr.tag().IRQ && vif0ch.chcr.TIE))
 			{
-				if(vif0ch.chcr.MOD == NORMAL_MODE)DevCon.Warning("Warning! VIF0 starting a new Normal transfer with vif offset set (Possible force stop?)");
-				else if(vif0ch.qwc == 0) DevCon.Warning("Warning! VIF0 starting a new Chain transfer with vif offset set (Possible force stop?)");
+				vif0.done = true;
 			}
-
-			vif0.done = false;
-
-			if(vif0ch.chcr.MOD == CHAIN_MODE && vif0ch.qwc > 0) 
+			else
 			{
-				vif0.dmamode = VIF_CHAIN_MODE;
-				DevCon.Warning(L"VIF0 QWC on Chain CHCR " + vif0ch.chcr.desc());
-				
-				if ((vif0ch.chcr.tag().ID == TAG_REFE) || (vif0ch.chcr.tag().ID == TAG_END))
-				{
-					vif0.done = true;
-				}
+				vif0.done = false;
 			}
+		}
+		else //Assume Normal mode.
+		{
+			vif0.dmamode = VIF_NORMAL_FROM_MEM_MODE;
+
+			if (vif0.irqoffset.enabled == true && vif0.done == false) DevCon.Warning("Warning! VIF0 starting a Normal transfer with vif offset set (Possible force stop?)");
+			vif0.done = true;
+		}
+
+		vif0.inprogress |= 1;
 	}
 	else
 	{
+		if (vif0.irqoffset.enabled == true && vif0.done == false) DevCon.Warning("Warning! VIF0 starting a new Chain transfer with vif offset set (Possible force stop?)");
 		vif0.dmamode = VIF_CHAIN_MODE;
 		vif0.done = false;
+		vif0.inprogress &= ~0x1;
 	}
 
 	vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);

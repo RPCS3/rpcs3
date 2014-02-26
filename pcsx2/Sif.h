@@ -18,10 +18,6 @@
 
 static const int FIFO_SIF_W = 128;
 
-static DMACh& sif0dma = (DMACh&)eeHw[0xc000];
-static DMACh& sif1dma = (DMACh&)eeHw[0xc400];
-static DMACh& sif2dma = (DMACh&)eeHw[0xc800];
-
 // Despite its name, this is actually the IOP's DMAtag, which itself also contains
 // the EE's DMAtag in its upper 64 bits.  Note that only the lower 24 bits of 'data' is
 // the IOP's chain transfer address (loaded into MADR).  Bits 30 and 31 are transfer stop

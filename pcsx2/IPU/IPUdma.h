@@ -17,8 +17,7 @@
 
 #include "IPU.h"
 
-static DMACh& ipu0dma = (DMACh&)eeHw[0xb000];
-static DMACh& ipu1dma = (DMACh&)eeHw[0xb400];
+
 
 struct IPUStatus {
 	bool InProgress;

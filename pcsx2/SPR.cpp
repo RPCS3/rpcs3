@@ -120,7 +120,7 @@ int  _SPR0chain()
 __fi void SPR0chain()
 {
 	int cycles = 0;
-	cycles =  _SPR0chain() * BIAS;
+	cycles =  _SPR0chain() / BIAS;
 	CPU_INT(DMAC_FROM_SPR, cycles);
 }
 
@@ -136,7 +136,7 @@ void _SPR0interleave()
 	SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr0ch.qwc, tqwc, sqwc, spr0ch.madr, spr0ch.sadr);
 
-	CPU_INT(DMAC_FROM_SPR, qwc * BIAS);
+	CPU_INT(DMAC_FROM_SPR, qwc / BIAS);
 
 	while (qwc > 0)
 	{
@@ -178,6 +178,10 @@ static __fi void _dmaSPR0()
 	{
 		case NORMAL_MODE:
 		{
+			if (dmacRegs.ctrl.STS == STS_fromSPR)   // STS == fromSPR
+			{
+				Console.WriteLn("SPR stall control Normal not implemented");
+			}
 			SPR0chain();
 			spr0finished = true;
 			return;
@@ -239,6 +243,10 @@ static __fi void _dmaSPR0()
 		//case INTERLEAVE_MODE:
 		default:
 		{
+			if (dmacRegs.ctrl.STS == STS_fromSPR)   // STS == fromSPR
+			{
+				Console.WriteLn("SPR stall control interleave not implemented");
+			}
 			_SPR0interleave();
 			spr0finished = true;
 			break;
@@ -352,7 +360,7 @@ __fi void SPR1chain()
 	int cycles = 0;
 	if(!CHECK_IPUWAITHACK) 
 	{
-		cycles =  _SPR1chain() * BIAS;
+		cycles =  _SPR1chain() / BIAS;
 		CPU_INT(DMAC_TO_SPR, cycles);
 	}
 	else 
@@ -372,7 +380,7 @@ void _SPR1interleave()
 	if (tqwc == 0) tqwc = qwc;
 	SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr1ch.qwc, tqwc, sqwc, spr1ch.madr, spr1ch.sadr);
-	CPU_INT(DMAC_TO_SPR, qwc * BIAS);
+	CPU_INT(DMAC_TO_SPR, qwc / BIAS);
 	while (qwc > 0)
 	{
 		spr1ch.qwc = std::min(tqwc, qwc);
@@ -432,7 +440,7 @@ void _dmaSPR1()   // toSPR work function
 			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx taddr=%lx saddr=%lx",
 				ptag[1]._u32, ptag[0]._u32, spr1ch.qwc, ptag->ID, spr1ch.madr, spr1ch.tadr, spr1ch.sadr);
 
-			done = (hwDmacSrcChain(spr1ch, ptag->ID));
+			done = hwDmacSrcChain(spr1ch, ptag->ID);
 			SPR1chain();										//Transfers the data set by the switch
 
 			if (spr1ch.chcr.TIE && ptag->IRQ)  			//Check TIE bit of CHCR and IRQ bit of tag
@@ -468,7 +476,7 @@ void dmaSPR1()   // toSPR
 	if(spr1ch.chcr.MOD == CHAIN_MODE && spr1ch.qwc > 0) 
 	{
 		//DevCon.Warning(L"SPR1 QWC on Chain " + spr1ch.chcr.desc());
-		if ((spr1ch.chcr.tag().ID == TAG_END) || (spr1ch.chcr.tag().ID == TAG_REFE))
+		if ((spr1ch.chcr.tag().ID == TAG_END) || (spr1ch.chcr.tag().ID == TAG_REFE) || (spr1ch.chcr.tag().IRQ && spr1ch.chcr.TIE))
 		{
 			spr1finished = true;
 		}

@@ -308,11 +308,15 @@ if this doesnt happen, which was the reasoning for the hacked up SPR timing we h
 -Refraction
 ******************************/
 
-void hwDmacSrcTadrInc(DMACh& dma)
+inline void hwDmacSrcTadrInc(DMACh& dma)
 {
+	//Don't touch it if in normal/interleave mode.
+	if (dma.chcr.STR == 0) return;
+	if (dma.chcr.MOD != 1) return;
+		
 	u16 tagid = (dma.chcr.TAG >> 12) & 0x7;
 
-	if(tagid == TAG_CNT)
+	if (tagid == TAG_CNT)
 	{
 		dma.tadr = dma.madr;
 	}

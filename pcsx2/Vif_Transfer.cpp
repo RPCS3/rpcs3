@@ -93,7 +93,7 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 		vifXch.madr +=(transferred << 4);
 		vifXch.qwc  -= transferred;
 
-		if (vifXch.chcr.STR) hwDmacSrcTadrInc(vifXch);
+		hwDmacSrcTadrInc(vifXch);
 
 		vifX.irqoffset.enabled = false;
 
