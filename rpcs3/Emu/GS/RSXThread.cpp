@@ -56,7 +56,7 @@ void RSXVertexData::Load(u32 start, u32 count)
 		{
 		case 1:
 		{
-			memcpy(dst, src, size);
+			memcpy(dst, src, size); // may be dangerous
 		}
 		break;
 

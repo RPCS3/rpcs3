@@ -26,7 +26,14 @@ DbgConsole::~DbgConsole()
 
 void DbgConsole::Write(int ch, const wxString& text)
 {
-	while(m_dbg_buffer.IsBusy()) Sleep(1);
+	while (m_dbg_buffer.IsBusy())
+	{
+		if (Emu.IsStopped())
+		{
+			return;
+		}
+		Sleep(1);
+	}
 	m_dbg_buffer.Push(DbgPacket(ch, text));
 
 	if(!IsAlive()) Start();
@@ -43,11 +50,11 @@ void DbgConsole::Task()
 	{
 		if(!m_dbg_buffer.HasNewPacket())
 		{
-			Sleep(1);
 			if (Emu.IsStopped())
 			{
 				break;
 			}
+			Sleep(1);
 			continue;
 		}
 

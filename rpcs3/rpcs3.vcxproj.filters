@@ -603,5 +603,8 @@
     <ClInclude Include="..\Utilities\SQueue.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\MFC.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

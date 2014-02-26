@@ -565,7 +565,7 @@ public:
 
 		u32 data_addr = last_addr + 128 + last_size;
 		last_size += size;
-		memcpy(Memory + data_addr, Memory + stream.addr, size);
+		Memory.Copy(data_addr, stream.addr, size);
 		stream.skip(size);
 
 		mem_ptr_t<CellDmuxAuInfoEx> info(last_addr);
