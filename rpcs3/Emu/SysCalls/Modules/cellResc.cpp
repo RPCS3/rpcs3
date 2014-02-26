@@ -728,9 +728,9 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	if(!colorBuffers.IsGood() || !vertexArray.IsGood() || !fragmentShader.IsGood()) 
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	if(colorBuffers.GetAddr() % COLOR_BUFFER_ALIGNMENT ||
-	   vertexArray.GetAddr() % VERTEX_BUFFER_ALIGNMENT ||
-	   fragmentShader.GetAddr() % FRAGMENT_SHADER_ALIGNMENT)
-	    return CELL_RESC_ERROR_BAD_ALIGNMENT;
+		vertexArray.GetAddr() % VERTEX_BUFFER_ALIGNMENT ||
+		fragmentShader.GetAddr() % FRAGMENT_SHADER_ALIGNMENT)
+		return CELL_RESC_ERROR_BAD_ALIGNMENT;
 
 	s_rescInternalInstance->m_colorBuffersEA_addr  = colorBuffers.GetAddr();
 	s_rescInternalInstance->m_vertexArrayEA_addr   = vertexArray.GetAddr();

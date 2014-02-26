@@ -75,27 +75,27 @@ enum
 
 struct CellGcmControl
 {
-	u32 put;
-	u32 get;
-	u32 ref;
+	be_t<u32> put;
+	be_t<u32> get;
+	be_t<u32> ref;
 };
 
 struct CellGcmConfig
 {
-	u32 localAddress;
-	u32 ioAddress;
-	u32 localSize;
-	u32 ioSize;
-	u32 memoryFrequency;
-	u32 coreFrequency;
+	be_t<u32> localAddress;
+	be_t<u32> ioAddress;
+	be_t<u32> localSize;
+	be_t<u32> ioSize;
+	be_t<u32> memoryFrequency;
+	be_t<u32> coreFrequency;
 };
 
 struct CellGcmContextData
 {
-	u32 begin;
-	u32 end;
-	u32 current;
-	u32 callback;
+	be_t<u32> begin;
+	be_t<u32> end;
+	be_t<u32> current;
+	be_t<u32> callback;
 };
 
 struct gcmInfo
@@ -147,10 +147,10 @@ struct CellGcmZcullInfo
 
 struct CellGcmTileInfo
 {
-	u32 tile;
-	u32 limit;
-	u32 pitch;
-	u32 format;
+	be_t<u32> tile;
+	be_t<u32> limit;
+	be_t<u32> pitch;
+	be_t<u32> format;
 };
 
 struct GcmZcullInfo
@@ -194,10 +194,10 @@ struct GcmTileInfo
 	{
 		CellGcmTileInfo ret;
 
-		re(ret.tile, (m_location + 1) | (m_bank << 4) | ((m_offset / 0x10000) << 16) | (m_location << 31));
-		re(ret.limit, ((m_offset + m_size - 1) / 0x10000) << 16 | (m_location << 31));
-		re(ret.pitch, (m_pitch / 0x100) << 8);
-		re(ret.format, m_base | ((m_base + ((m_size - 1) / 0x10000)) << 13) | (m_comp << 26) | (1 << 30));
+		ret.tile = (m_location + 1) | (m_bank << 4) | ((m_offset / 0x10000) << 16) | (m_location << 31);
+		ret.limit = ((m_offset + m_size - 1) / 0x10000) << 16 | (m_location << 31);
+		ret.pitch = (m_pitch / 0x100) << 8;
+		ret.format = m_base | ((m_base + ((m_size - 1) / 0x10000)) << 13) | (m_comp << 26) | (1 << 30);
 
 		return ret;
 	}
@@ -1198,6 +1198,7 @@ static const wxString GetMethodName(const u32 id)
 		{ NV4097_SET_TRANSFORM_CONSTANT_LOAD , "SetTransformConstantLoad" } ,
 		{ NV4097_SET_FREQUENCY_DIVIDER_OPERATION , "SetFrequencyDividerOperation" } ,
 		{ NV4097_INVALIDATE_L2 , "InvalidateL2" } ,
+		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "SetTransformBranchBits" } ,
 	};
 
 	for(u32 i = 0; i < WXSIZEOF(METHOD_NAME_LIST); ++i)

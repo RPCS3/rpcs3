@@ -347,10 +347,10 @@ VHDDSetInfoDialog::VHDDSetInfoDialog(wxWindow* parent) : wxDialog(parent, wxID_A
 	m_ch_type->Append("MB");
 	m_ch_type->Append("GB");
 
-    m_spin_size->SetRange(1, 0x7fffffff);
+	m_spin_size->SetRange(1, 0x7fffffff);
 	m_spin_size->SetValue(64);
 	m_ch_type->SetSelection(3);
-    m_spin_block_size->SetRange(64, 0x7fffffff);
+	m_spin_block_size->SetRange(64, 0x7fffffff);
 	m_spin_block_size->SetValue(2048);
 	Connect(wxID_OK, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VHDDSetInfoDialog::OnOk));
 }

@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "RSXThread.h"
+#include "Emu/SysCalls/lv2/SC_Time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + re(m_ctrl->get) + (4*(x+1))))
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + m_ctrl->get + (4*(x+1))))
 
 u32 methodRegisters[0xffff];
 
@@ -207,7 +208,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV406E_SET_REFERENCE:
-		m_ctrl->ref = re32(ARGS(0));
+		m_ctrl->ref = ARGS(0);
 	break;
 
 	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
@@ -1195,8 +1196,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		switch(type)
 		{
 		case 1:
-			data = std::chrono::steady_clock::now().time_since_epoch().count();
-			data *= 1000000;
+			data = get_system_time();
+			data *= 1000; // Microseconds to nanoseconds
 		break;
 
 		default:
@@ -1509,7 +1510,7 @@ void RSXThread::Task()
 		{
 			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
 			//ConLog.Warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, m_ioAddress + get, cmd, get, put);
-			re(m_ctrl->get, addr);
+			m_ctrl->get = addr;
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -1518,7 +1519,7 @@ void RSXThread::Task()
 			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
 			u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
 			//ConLog.Warning("rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
-			m_ctrl->get = re32(offs);
+			m_ctrl->get = offs;
 			continue;
 		}
 		if(cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -1526,7 +1527,7 @@ void RSXThread::Task()
 			//ConLog.Warning("rsx return!");
 			u32 get = m_call_stack.Pop();
 			//ConLog.Warning("rsx return(0x%x)", get);
-			m_ctrl->get = re32(get);
+			m_ctrl->get = get;
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -1537,7 +1538,7 @@ void RSXThread::Task()
 
 		if(cmd == 0)
 		{
-			ConLog.Warning("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, re(m_ctrl->put), get);
+			ConLog.Warning("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, m_ctrl->put, get);
 			Emu.Pause();
 			continue;
 		}
@@ -1550,7 +1551,7 @@ void RSXThread::Task()
 		mem32_ptr_t args(Memory.RSXIOMem.GetStartAddr() + get + 4);
 		DoCmd(cmd, cmd & 0x3ffff, args, count);
 
-		re(m_ctrl->get, get + (count + 1) * 4);
+		m_ctrl->get = get + (count + 1) * 4;
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Modules.h"
 
 #define RESULT(x) SC_ARGS_1 = (x)
 

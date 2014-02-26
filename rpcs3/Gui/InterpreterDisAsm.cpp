@@ -167,7 +167,7 @@ void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		if(event.GetKeyCode() == WXK_SPACE)
 		{
-            wxCommandEvent ce;
+			wxCommandEvent ce;
 			DoStep(ce);
 			return;
 		}
@@ -222,7 +222,7 @@ void InterpreterDisAsmFrame::OnResize(wxSizeEvent& event)
 
 void InterpreterDisAsmFrame::DoUpdate()
 {
-    wxCommandEvent ce;
+	wxCommandEvent ce;
 	Show_PC(ce);
 	WriteRegs();
 	WriteCallStack();

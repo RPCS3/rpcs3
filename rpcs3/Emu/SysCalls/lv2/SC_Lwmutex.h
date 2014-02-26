@@ -65,18 +65,9 @@ struct SleepQueue
 
 struct sys_lwmutex_t
 {
-	union // sys_lwmutex_variable_t
-	{
-		struct // sys_lwmutex_lock_info_t
-		{
-			/* volatile */ SMutexBase<be_t<u32>, 0xffffffff, 0> owner;
-			/* volatile */ be_t<u32> waiter; // not used
-		};
-		struct
-		{ 
-			/* volatile */ be_t<u64> all_info;
-		};
-	};
+	/* volatile */ SMutexBase<be_t<u32>, 0xffffffff, 0> mutex;
+	/* volatile */ be_t<u32> waiter; // not used
+	u64 &all_info(){return *(reinterpret_cast<u64*>(this));}
 	be_t<u32> attribute;
 	be_t<u32> recursive_count;
 	be_t<u32> sleep_queue;

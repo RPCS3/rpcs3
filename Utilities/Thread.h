@@ -141,7 +141,7 @@ class StepThread : public ThreadBase
 	volatile bool m_exit;
 
 protected:
-	StepThread(const wxString& name = "Unknown StepThread")
+	StepThread(const std::string& name = "Unknown StepThread")
 		: ThreadBase(true, name)
 		, m_exit(false)
 	{

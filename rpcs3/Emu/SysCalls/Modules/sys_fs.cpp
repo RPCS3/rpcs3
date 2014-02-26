@@ -129,8 +129,8 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
-std::atomic<u32> g_FsAioReadID = 0;
-std::atomic<u32> g_FsAioReadCur = 0;
+std::atomic<u32> g_FsAioReadID( 0 );
+std::atomic<u32> g_FsAioReadCur( 0 );
 bool aio_init = false;
 
 void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)

@@ -4,13 +4,17 @@
 
 #ifdef _WIN32
 typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
-#endif
 
 #define OPENGL_PROC(p, n) extern p gl##n
 #define OPENGL_PROC2(p, n, tn) OPENGL_PROC(p, n)
 	#include "GLProcTable.tbl"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
+
+#else
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#endif
 
 void InitProcTable();
 

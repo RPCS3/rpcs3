@@ -44,6 +44,10 @@ void DbgConsole::Task()
 		if(!m_dbg_buffer.HasNewPacket())
 		{
 			Sleep(1);
+			if (Emu.IsStopped())
+			{
+				break;
+			}
 			continue;
 		}
 

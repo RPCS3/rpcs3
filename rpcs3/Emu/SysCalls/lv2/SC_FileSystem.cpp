@@ -350,9 +350,18 @@ int cellFsUnlink(u32 path_addr)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.wx_str());
 
-	//wxString localPath;
-	//Emu.GetVFS().GetDevice(ps3_path, localPath);
-	//wxRemoveFile(localPath);
+	if (ps3_path.empty())
+		return CELL_EFAULT;
+
+	if (Emu.GetVFS().ExistsDir(ps3_path))
+		return CELL_EISDIR;
+
+	if (!Emu.GetVFS().ExistsFile(ps3_path))
+		return CELL_ENOENT;
+
+	if (!Emu.GetVFS().RemoveFile(ps3_path))
+		return CELL_EACCES;
+	
 	return CELL_OK;
 }
 

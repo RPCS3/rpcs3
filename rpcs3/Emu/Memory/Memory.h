@@ -1,5 +1,6 @@
 #pragma once
 #include "MemoryBlock.h"
+#include <vector>
 
 enum MemoryType
 {

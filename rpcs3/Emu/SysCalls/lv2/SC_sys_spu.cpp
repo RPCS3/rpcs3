@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 
@@ -19,3 +20,4 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 	Memory.Write32(id_addr, Emu.GetIdManager().GetNewID("raw_spu"));
 	return CELL_OK;
 }
+#endif

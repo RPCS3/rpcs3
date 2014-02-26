@@ -200,9 +200,9 @@ public:
 		PadHandlerR3.Load(static_cast<int>('C'));
 		PadHandlerL3.Load(static_cast<int>('Z'));
 		PadHandlerSelect.Load(0);
-		PadHandlerSquare.Load(static_cast<int>('L'));
+		PadHandlerSquare.Load(static_cast<int>('J'));
 		PadHandlerCross.Load(static_cast<int>('K'));
-		PadHandlerCircle.Load(static_cast<int>('J'));
+		PadHandlerCircle.Load(static_cast<int>('L'));
 		PadHandlerTriangle.Load(static_cast<int>('I'));
 		PadHandlerR1.Load(static_cast<int>('3'));
 		PadHandlerL1.Load(static_cast<int>('1'));

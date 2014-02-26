@@ -75,7 +75,7 @@ enum CellVideoOutPortType
 
 enum CellVideoOutDisplayAspect
 {
-    CELL_VIDEO_OUT_ASPECT_AUTO,
+	CELL_VIDEO_OUT_ASPECT_AUTO,
 	CELL_VIDEO_OUT_ASPECT_4_3,
 	CELL_VIDEO_OUT_ASPECT_16_9,
 };

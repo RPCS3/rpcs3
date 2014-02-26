@@ -28,6 +28,7 @@ Emulator::Emulator()
 	, m_dbg_console(nullptr)
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
+	, m_event_manager(new EventManager())
 {
 }
 
@@ -190,8 +191,8 @@ void Emulator::Load()
 
 	if(IsSelf(m_path.ToStdString()))
 	{
-		std::string self_path = m_path;
-		std::string elf_path = wxFileName(m_path).GetPath().c_str();
+		std::string self_path = m_path.ToStdString();
+		std::string elf_path = wxFileName(m_path).GetPath().ToStdString();
 
 		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
 		{
