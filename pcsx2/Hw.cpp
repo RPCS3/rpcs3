@@ -308,7 +308,7 @@ if this doesnt happen, which was the reasoning for the hacked up SPR timing we h
 -Refraction
 ******************************/
 
-inline void hwDmacSrcTadrInc(DMACh& dma)
+void hwDmacSrcTadrInc(DMACh& dma)
 {
 	//Don't touch it if in normal/interleave mode.
 	if (dma.chcr.STR == 0) return;
