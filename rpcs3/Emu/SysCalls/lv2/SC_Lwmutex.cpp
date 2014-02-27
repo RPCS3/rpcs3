@@ -28,7 +28,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->all_info() = 0;
+	lwmutex->all_info() = ~0;
 	lwmutex->mutex.initialize();
 	//lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;

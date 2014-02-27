@@ -65,7 +65,7 @@ struct SleepQueue
 
 struct sys_lwmutex_t
 {
-	/* volatile */ SMutexBase<be_t<u32>, 0xffffffff, 0> mutex;
+	/* volatile */ SMutexBase<be_t<u32>, ~0, 0> mutex;
 	/* volatile */ be_t<u32> waiter; // not used
 	u64 &all_info(){return *(reinterpret_cast<u64*>(this));}
 	be_t<u32> attribute;

@@ -18,7 +18,7 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 					 const u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x500000; // 0x45fa49 from ps3
+		attr->memSize = 0x600000; // 0x45fa49 from ps3
 	else
 		attr->memSize = 0x10000; // 0x73d9 from ps3
 
@@ -40,16 +40,13 @@ u32 dmuxOpen(Demuxer* data)
 
 		DemuxerTask task;
 		DemuxerStream stream;
-		/*
-		ElementaryStream* esAVC[16]; memset(esAVC, 0, sizeof(esAVC));
-		ElementaryStream* esM2V[16]; memset(esM2V, 0, sizeof(esM2V));
-		ElementaryStream* esDATA[16]; memset(esDATA, 0, sizeof(esDATA));
-		ElementaryStream* esATRAX[48]; memset(esATRAX, 0, sizeof(esATRAX));
-		ElementaryStream* esAC3[48]; memset(esAC3, 0, sizeof(esAC3));
-		ElementaryStream* esLPCM[48]; memset(esLPCM, 0, sizeof(esLPCM));
-		*/
 		ElementaryStream* esALL[192]; memset(esALL, 0, sizeof(esALL));
-		ElementaryStream** esAVC = &esALL[0];
+		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16)
+		ElementaryStream** esM2V = &esALL[16]; // MPEG-2 (max 16)
+		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
+		ElementaryStream** esATX = &esALL[48]; // ATRAC3+ (max 48)
+		ElementaryStream** esAC3 = &esALL[96]; // AC3 (max 48)
+		ElementaryStream** esPCM = &esALL[144]; // LPCM (max 48)
 
 		u32 cb_add = 0;
 
@@ -124,6 +121,8 @@ u32 dmuxOpen(Demuxer* data)
 								continue;
 							}
 
+							DemuxerStream backup = stream;
+
 							stream.skip(4);
 							stream.get(len);
 							PesHeader pes(stream);
@@ -136,6 +135,11 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.size && es.hasdata()) // new AU detected
 							{
+								/*if (es.hasunseen())
+								{
+									stream = backup;
+									continue;
+								}*/
 								es.finish(stream);
 								// callback
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
@@ -149,7 +153,13 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.size)
 							{
-								ConLog.Write("*** AVC AU detected (pts=0x%x, dts=0x%x)", pes.pts, pes.dts);
+								ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
+							}
+
+							if (es.isfull())
+							{
+								stream = backup;
+								continue;
 							}
 
 							es.push(stream, len - pes.size - 3, pes);
@@ -173,6 +183,7 @@ u32 dmuxOpen(Demuxer* data)
 				case 0x1dc: case 0x1dd: case 0x1de: case 0x1df:
 					{
 						// unknown
+						ConLog.Warning("Unknown MPEG stream found");
 						stream.skip(4);
 						stream.get(len);
 						stream.skip(len);

@@ -1,5 +1,6 @@
 #pragma once
-#include "cellPamf.h"
+
+#include "Utilities/SQueue.h"
 
 // Error Codes
 enum
@@ -30,7 +31,7 @@ enum CellVdecMsgType
 };
 
 // Decoder Operation Mode
-enum CellVdecDecodeMode
+enum CellVdecDecodeMode : u32
 {
 	CELL_VDEC_DEC_MODE_NORMAL,
 	CELL_VDEC_DEC_MODE_B_SKIP,
@@ -164,11 +165,13 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
+typedef mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)> CellVdecCbMsg;
+
 // Callback Function Information
 struct CellVdecCb
 {
-	be_t<mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)>> cbFunc;
-	be_t<u32> cbArg_addr;
+	be_t<u32> cbFunc;
+	be_t<u32> cbArg;
 };
 
 // Max CC Data Length
@@ -634,4 +637,109 @@ struct CellVdecMpeg2Info
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
 	be_t<u64> reserved[2];
+};
+
+/* Video Decoder Thread Classes */
+
+enum VdecJobType : u32
+{
+	vdecStartSeq,
+	vdecEndSeq,
+	vdecDecodeAu,
+	vdecSetFrameRate,
+	vdecClose,
+};
+
+struct VdecTask
+{
+	VdecJobType type;
+	union
+	{
+		u32 frc;
+		CellVdecDecodeMode mode;
+	};
+	u32 addr;
+	u32 size;
+	u64 pts;
+	u64 dts;
+	u64 userData;
+	u64 specData;
+
+	VdecTask(VdecJobType type)
+		: type(type)
+	{
+	}
+
+	VdecTask()
+	{
+	}
+};
+
+class VideoDecoder
+{
+public:
+	SQueue<VdecTask> job;
+	u32 id;
+	volatile bool is_running;
+	volatile bool is_finished;
+
+	AVCodec* codec;
+	AVCodecContext* ctx;
+	AVFrame* frame;
+
+	const u32 type;
+	const u32 profile;
+	const u32 memAddr;
+	const u32 memSize;
+	const u32 cbFunc;
+	const u32 cbArg;
+
+	VideoDecoder(u32 type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
+		: type(type)
+		, profile(profile)
+		, memAddr(addr)
+		, memSize(size)
+		, cbFunc(func)
+		, cbArg(arg)
+		, is_finished(false)
+		, is_running(false)
+	{
+		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+		if (!codec)
+		{
+			ConLog.Error("VideoDecoder(): avcodec_find_decoder failed");
+			Emu.Pause();
+			return;
+		}
+		ctx = avcodec_alloc_context3(codec);
+		if (!ctx)
+		{
+			ConLog.Error("VideoDecoder(): avcodec_alloc_context3 failed");
+			Emu.Pause();
+			return;
+		}
+		if (int err = avcodec_open2(ctx, codec, NULL)) // TODO: not multithread safe
+		{
+			ConLog.Error("VideoDecoder(): avcodec_open2 failed(%d)", err);
+			Emu.Pause();
+			return;
+		}
+		frame = av_frame_alloc();
+		if (!frame)
+		{
+			ConLog.Error("VideoDecoder(): av_frame_alloc failed");
+			Emu.Pause();
+			return;
+		}
+	}
+
+	~VideoDecoder()
+	{
+		if (frame) av_frame_free(&frame);
+		if (ctx)
+		{
+			avcodec_close(ctx);
+			av_free(ctx);
+		}
+	}
 };

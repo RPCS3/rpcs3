@@ -321,7 +321,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = *mem_ptr_t<T>(addr);
+		out = *(T*)Memory.VirtualToRealAddr(addr);
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -333,7 +333,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = *mem_ptr_t<T>(addr);
+		out = *(T*)Memory.VirtualToRealAddr(addr);
 		return true;
 	}
 
@@ -343,13 +343,17 @@ struct DemuxerStream
 		size = size > count ? size - count : 0;
 	}
 
-	u32 get_ts(u8 c)
+	u64 get_ts(u8 c)
 	{
-		u16 v1, v2; get(v1); get(v2);
-		return (((u32) (c & 0x0E)) << 29) | ((v1 >> 1) << 15) | (v2 >> 1);
+		u8 v[4]; get((u32&)v); 
+		return
+			(((u64)c & 0x0e) << 29) | 
+			(((u64)v[0]) << 21) |
+			(((u64)v[1] & 0x7e) << 15) |
+			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
 	}
 
-	u32 get_ts()
+	u64 get_ts()
 	{
 		u8 v; get(v);
 		return get_ts(v);
@@ -358,8 +362,8 @@ struct DemuxerStream
 
 struct PesHeader
 {
-	u32 pts;
-	u32 dts;
+	u64 pts;
+	u64 dts;
 	u8 ch;
 	u8 size;
 
@@ -505,6 +509,11 @@ public:
 	{
 	}
 
+	volatile bool hasunseen()
+	{
+		return peek_addr;
+	}
+
 	volatile bool hasdata()
 	{
 		return last_size;
@@ -532,7 +541,7 @@ public:
 	void finish(DemuxerStream& stream) // not multithread-safe
 	{
 		SMutexLocker lock(mutex);
-
+		//ConLog.Write("es::finish(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
 		if (!first_addr)
 		{
 			first_addr = last_addr;
@@ -556,6 +565,7 @@ public:
 	void push(DemuxerStream& stream, u32 size, PesHeader& pes)
 	{
 		SMutexLocker lock(mutex);
+		//ConLog.Write("es::push(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
 		if (isfull()) 
 		{
 			ConLog.Error("ElementaryStream::push(): buffer is full");
@@ -565,7 +575,12 @@ public:
 
 		u32 data_addr = last_addr + 128 + last_size;
 		last_size += size;
-		Memory.Copy(data_addr, stream.addr, size);
+		if (!Memory.Copy(data_addr, stream.addr, size))
+		{
+			ConLog.Error("ElementaryStream::push(): data copying failed");
+			Emu.Pause();
+			return;
+		}
 		stream.skip(size);
 
 		mem_ptr_t<CellDmuxAuInfoEx> info(last_addr);
@@ -573,10 +588,10 @@ public:
 		info->auSize = last_size;
 		if (pes.size)
 		{
-			info->dts.lower = pes.dts;
-			info->dts.upper = 0;
-			info->pts.lower = pes.pts;
-			info->pts.upper = 0;
+			info->dts.lower = (u32)pes.dts;
+			info->dts.upper = (u32)(pes.dts >> 32);
+			info->pts.lower = (u32)pes.pts;
+			info->pts.upper = (u32)(pes.pts >> 32);
 			info->isRap = false; // TODO: set valid value
 			info->reserved = 0;
 			info->userData = stream.userdata;
@@ -590,10 +605,10 @@ public:
 		inf->auSize = last_size;
 		if (pes.size)
 		{
-			inf->dtsLower = pes.dts;
-			inf->dtsUpper = 0;
-			inf->ptsLower = pes.pts;
-			inf->ptsUpper = 0;
+			inf->dtsLower = (u32)pes.dts;
+			inf->dtsUpper = (u32)(pes.dts >> 32);
+			inf->ptsLower = (u32)pes.pts;
+			inf->ptsUpper = (u32)(pes.pts >> 32);
 			inf->auMaxSize = 0; // ?????
 			inf->userData = stream.userdata;
 		}
@@ -607,6 +622,7 @@ public:
 	void release()
 	{
 		SMutexLocker lock(mutex);
+		ConLog.Write("es::release(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
 		if (!canrelease())
 		{
 			ConLog.Error("ElementaryStream::release(): buffer is empty");
@@ -634,7 +650,8 @@ public:
 	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 	{
 		SMutexLocker lock(mutex);
-		ConLog.Write("es::peek(): peek_addr=0x%x", peek_addr);
+		/*ConLog.Write("es::peek(%sAu%s): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
+			wxString(no_ex ? "" : "Ex").wx_str(), peek_addr, first_addr, last_addr, last_size);*/
 		if (!peek_addr) return false;
 
 		out_data = peek_addr;

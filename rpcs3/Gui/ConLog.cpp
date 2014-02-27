@@ -136,11 +136,22 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, std::string co
 	if(wxThread::IsMain())
 #endif
 	{
-		while(LogBuffer.IsBusy()) wxYieldIfNeeded();
+		while(LogBuffer.IsBusy())
+		{
+			// need extra break condition?
+			wxYieldIfNeeded();
+		}
 	}
 	else
 	{
-		while(LogBuffer.IsBusy()) Sleep(1);
+		while (LogBuffer.IsBusy())
+		{
+			if (Emu.IsStopped())
+			{
+				break;
+			}
+			Sleep(1);
+		}
 	}
 
 	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();

@@ -117,10 +117,12 @@ thread::thread()
 }
 
 void thread::start(std::function<void()> func)
-{ // got a crash related with strings
-	m_thr = std::thread([this, func]()
+{
+	std::string name = m_name;
+
+	m_thr = std::thread([func, name]()
 	{
-		NamedThreadBase info(m_name);
+		NamedThreadBase info(name);
 		g_tls_this_thread = &info;
 
 		try
@@ -130,7 +132,7 @@ void thread::start(std::function<void()> func)
 		catch(...)
 		{
 			ConLog.Error("Crash :(");
-			std::terminate();
+			//std::terminate();
 		}
 	});
 }
