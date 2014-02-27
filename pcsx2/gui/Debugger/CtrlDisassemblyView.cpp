@@ -1059,3 +1059,11 @@ void CtrlDisassemblyView::editBreakpoint()
 		postEvent(debEVT_UPDATE,0);
 	}
 }
+
+void CtrlDisassemblyView::getOpcodeText(u32 address, char* dest)
+{
+	DisassemblyLineInfo line;
+	address = manager.getStartAddress(address);
+	manager.getLine(address,displaySymbols,line);
+	sprintf(dest,"%s  %s",line.name.c_str(),line.params.c_str());
+}

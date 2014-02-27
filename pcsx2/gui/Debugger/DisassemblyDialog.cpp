@@ -74,10 +74,21 @@ CpuTabPage::CpuTabPage(wxWindow* parent, DebugInterface* _cpu)
 
 	// create bottom section
 	bottomTabs->AddPage(memory,L"Memory");
+
+	breakpointList = new BreakpointList(bottomTabs,cpu,disassembly);
+	bottomTabs->AddPage(breakpointList,L"Breakpoints");
+
 	mainSizer->Add(bottomTabs,1,wxEXPAND);
 
 	mainSizer->Layout();
 }
+
+void CpuTabPage::update()
+{
+	breakpointList->reloadBreakpoints();
+	Refresh();
+}
+
 
 DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 	wxFrame( parent, wxID_ANY, L"Debugger", wxDefaultPosition,wxDefaultSize,wxRESIZE_BORDER|wxCLOSE_BOX|wxCAPTION|wxSYSTEM_MENU ),
@@ -203,7 +214,7 @@ void DisassemblyDialog::onPageChanging(wxCommandEvent& evt)
 	if (currentCpu != NULL)
 	{
 		currentCpu->getDisassembly()->SetFocus();
-		currentCpu->Refresh();
+		currentCpu->update();
 	}
 }
 
@@ -365,7 +376,7 @@ void DisassemblyDialog::update()
 	{
 		stepOverButton->Enable(true);
 		breakpointButton->Enable(true);
-		currentCpu->Refresh();
+		currentCpu->update();
 	} else {
 		stepOverButton->Enable(false);
 		breakpointButton->Enable(false);

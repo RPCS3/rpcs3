@@ -326,6 +326,7 @@ set(pcsx2GuiSources
 	gui/Debugger/CtrlDisassemblyView.cpp
 	gui/Debugger/CtrlRegisterList.cpp
 	gui/Debugger/CtrlMemView.cpp
+	gui/Debugger/DebuggerLists.cpp
 	gui/Debugger/DisassemblyDialog.cpp
 	gui/Debugger/DebugEvents.cpp
 	gui/ExecutorThread.cpp
@@ -381,6 +382,7 @@ set(pcsx2GuiHeaders
 	gui/Debugger/CtrlDisassemblyView.h
 	gui/Debugger/CtrlRegisterList.h
 	gui/Debugger/CtrlMemView.h
+	gui/Debugger/DebuggerLists.h
 	gui/Debugger/DisassemblyDialog.h
 	gui/Debugger/DebugEvents.h
 	gui/i18n.h

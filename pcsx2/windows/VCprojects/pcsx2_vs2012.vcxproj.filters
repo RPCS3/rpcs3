@@ -844,13 +844,15 @@
     <ClCompile Include="..\..\DebugTools\SymbolMap.cpp">
       <Filter>System\Ps2\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gui\Debugger\DebuggerLists.cpp">
+      <Filter>AppHost\Debugger</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\sif2.cpp">
       <Filter>System\Ps2\EmotionEngine\DMAC\Sif</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Gte.cpp">
       <Filter>System\Ps2\Iop\PS1 Components</Filter>
-    </ClCompile>
-  </ItemGroup>
+    </ClCompile>  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
       <Filter>Misc</Filter>
@@ -1255,10 +1257,12 @@
     <ClInclude Include="..\..\DebugTools\SymbolMap.h">
       <Filter>System\Ps2\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\gui\Debugger\DebuggerLists.h">
+      <Filter>AppHost\Debugger</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Gte.h">
       <Filter>System\Ps2\Iop\PS1 Components</Filter>
-    </ClInclude>
-  </ItemGroup>
+    </ClInclude>  </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\3rdparty\wxWidgets\include\wx\msw\wx.rc">
       <Filter>AppHost\Resources</Filter>

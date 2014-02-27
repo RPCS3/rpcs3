@@ -11,6 +11,7 @@ disassembly view:
     page up         move visible area up one page
     page down       move visible area down one page
     f10             step over
+    f11             step into
     tab             toggle display symbols
     left click      select line/toggle breakpoint if line is already highlighted
     right click     open context menu
@@ -29,3 +30,11 @@ memory view:
     any             overwrite ansi byte
     left click      select byte/nibble
     right click     open context menu
+
+breakpoint list:
+
+    up              select previous item
+    down            select next item
+    delete          remove selected breakpoint
+    return          edit selected breakpoint
+    space           toggle enable state of selected breakpoint

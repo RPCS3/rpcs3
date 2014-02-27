@@ -7,6 +7,7 @@
 #include "CtrlRegisterList.h"
 #include "CtrlMemView.h"
 #include "DebugEvents.h"
+#include "DebuggerLists.h"
 
 class DebuggerHelpDialog: public wxDialog
 {
@@ -23,12 +24,14 @@ public:
 	CtrlRegisterList* getRegisterList() { return registerList; };
 	CtrlMemView* getMemoryView() { return memory; };
 	wxNotebook* getBottomTabs() { return bottomTabs; };
+	void update();
 private:
 	DebugInterface* cpu;
 	CtrlDisassemblyView* disassembly;
 	CtrlRegisterList* registerList;
 	CtrlMemView* memory;
 	wxNotebook* bottomTabs;
+	BreakpointList* breakpointList;
 };
 
 class DisassemblyDialog : public wxFrame

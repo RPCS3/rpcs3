@@ -385,6 +385,10 @@ const std::vector<BreakPoint> CBreakPoints::GetBreakpoints()
 	return breakPoints_;
 }
 
+// including them earlier causes some ambiguities
+#include "App.h"
+#include "Debugger/DisassemblyDialog.h"
+
 void CBreakPoints::Update(u32 addr)
 {
 	bool resume = false;
@@ -402,6 +406,5 @@ void CBreakPoints::Update(u32 addr)
 	if (resume)
 		r5900Debug.resumeCpu();
 
-	// Redraw in order to show the breakpoint.
-	// host->UpdateDisassembly();
+	wxGetApp().GetDisassemblyPtr()->update();
 }

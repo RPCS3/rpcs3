@@ -207,6 +207,12 @@
     <None Include="..\..\gui\Dialogs\BaseConfigurationDialog.inl">
       <Filter>AppHost\Dialogs</Filter>
     </None>
+    <None Include="..\..\gui\Debugger\DebuggerLists.cpp">
+      <Filter>AppHost\Debugger</Filter>
+    </None>
+    <None Include="..\..\gui\Debugger\DebuggerLists.h">
+      <Filter>AppHost\Debugger</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Patch.cpp">

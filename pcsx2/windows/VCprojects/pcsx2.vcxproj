@@ -178,6 +178,8 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
     </CustomBuild>
+    <None Include="..\..\gui\Debugger\DebuggerLists.cpp" />
+    <None Include="..\..\gui\Debugger\DebuggerLists.h" />
     <None Include="..\..\Utilities\folderdesc.txt" />
     <None Include="..\..\Docs\License.txt" />
     <None Include="..\..\x86\aVUzerorec.S" />
