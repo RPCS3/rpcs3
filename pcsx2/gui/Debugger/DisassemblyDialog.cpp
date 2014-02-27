@@ -171,8 +171,8 @@ void DisassemblyDialog::onBreakRunClicked(wxCommandEvent& evt)
 {	
 	if (r5900Debug.isCpuPaused())
 	{
-		if (CBreakPoints::IsAddressBreakPoint(r5900Debug.getPC()))
-			CBreakPoints::SetSkipFirst(r5900Debug.getPC());
+		// If the current PC is on a breakpoint, the user doesn't want to do nothing.
+		CBreakPoints::SetSkipFirst(r5900Debug.getPC());
 		r5900Debug.resumeCpu();
 	} else
 		r5900Debug.pauseCpu();
