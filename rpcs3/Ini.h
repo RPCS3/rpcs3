@@ -107,6 +107,7 @@ public:
 	IniEntry<u8> AudioOutMode;
 	IniEntry<bool> AudioDumpToFile;
 	IniEntry<bool> HLELogging;
+	IniEntry<bool> HLESaveTTY;
 
 	IniEntry<int> PadHandlerLeft;
 	IniEntry<int> PadHandlerDown;
@@ -172,6 +173,7 @@ public:
 
 		path = DefPath + "\\" + "HLE";
 		HLELogging.Init("HLELogging", path);
+		HLESaveTTY.Init("HLESaveTTY", path);
 	}
 
 	void Load()
@@ -191,6 +193,7 @@ public:
 		AudioOutMode.Load(0);
 		AudioDumpToFile.Load(0);
 		HLELogging.Load(false);
+		HLESaveTTY.Load(false);
 
 		PadHandlerLeft.Load(static_cast<int>('A'));
 		PadHandlerDown.Load(static_cast<int>('S'));
@@ -227,6 +230,7 @@ public:
 		AudioOutMode.Save();
 		AudioDumpToFile.Save();
 		HLELogging.Save();
+		HLESaveTTY.Save();
 
 		PadHandlerLeft.Save();
 		PadHandlerDown.Save();

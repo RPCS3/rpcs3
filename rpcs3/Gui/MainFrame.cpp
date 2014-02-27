@@ -363,6 +363,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(&diag, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_hle_logging = new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
+	wxCheckBox* chbox_hle_savetty = new wxCheckBox(&diag, wxID_ANY, "Save TTY output to file");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -401,6 +402,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
+	chbox_hle_savetty->SetValue(Ini.HLESaveTTY.GetValue());
 
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
@@ -441,6 +443,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -478,6 +481,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
+		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 
 		Ini.Save();
 	}
