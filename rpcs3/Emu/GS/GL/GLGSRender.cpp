@@ -1013,7 +1013,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_alpha_func && m_set_alpha_ref)
 	{
-		glAlphaFunc(m_alpha_func, m_alpha_ref);
+		glAlphaFunc(m_alpha_func, m_alpha_ref/255.0f);
 		checkForGlError("glAlphaFunc");
 	}
 
