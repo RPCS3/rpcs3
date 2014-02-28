@@ -2665,7 +2665,7 @@ private:
 		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 4)
 		{
 			// Memory.Write32(addr, CPU.GPR[rs]);
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile long*)(Memory + addr), (u32)CPU.GPR[rs], reservation.data32) == reservation.data32);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile long*) (Memory + addr), re((u32) CPU.GPR[rs]), re(reservation.data32)) == re(reservation.data32));
 			reservation.clear();
 		}
 		else
@@ -2718,7 +2718,7 @@ private:
 		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 8)
 		{
 			// Memory.Write64(addr, CPU.GPR[rs]);
-			CPU.SetCR_EQ(0, InterlockedCompareExchange64((volatile long long*)(Memory + addr), CPU.GPR[rs], reservation.data64) == reservation.data64);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange64((volatile long long*)(Memory + addr), re(CPU.GPR[rs]), re(reservation.data64)) == re(reservation.data64));
 			reservation.clear();
 		}
 		else
