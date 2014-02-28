@@ -229,10 +229,10 @@ bool BreakpointWindow::fetchDialogData()
 	onChange = checkOnChange->GetValue();
 
 	// parse address
-	wxCharBuffer addressText = editAddress->GetLabel().ToUTF8();
+	wxCharBuffer addressText = editAddress->GetValue().ToUTF8();
 	if (cpu->initExpression(addressText,exp) == false)
 	{
-		swprintf(errorMessage,512,L"Invalid expression \"%s\".",editAddress->GetLabel().wchar_str().data());
+		swprintf(errorMessage,512,L"Invalid expression \"%s\".",editAddress->GetValue().wchar_str().data());
 		wxMessageBox(errorMessage,L"Error",wxICON_ERROR);
 		return false;
 	}
@@ -240,7 +240,7 @@ bool BreakpointWindow::fetchDialogData()
 	u64 value;
 	if (cpu->parseExpression(exp,value) == false)
 	{
-		swprintf(errorMessage,512,L"Invalid expression \"%s\".",editAddress->GetLabel().wchar_str().data());
+		swprintf(errorMessage,512,L"Invalid expression \"%s\".",editAddress->GetValue().wchar_str().data());
 		wxMessageBox(errorMessage,L"Error",wxICON_ERROR);
 		return false;
 	}
@@ -249,17 +249,17 @@ bool BreakpointWindow::fetchDialogData()
 	if (memory)
 	{
 		// parse size
-		wxCharBuffer sizeText = editSize->GetLabel().ToUTF8();
+		wxCharBuffer sizeText = editSize->GetValue().ToUTF8();
 		if (cpu->initExpression(sizeText,exp) == false)
 		{
-			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editSize->GetLabel().wchar_str().data());
+			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editSize->GetValue().wchar_str().data());
 			wxMessageBox(errorMessage,L"Error",wxICON_ERROR);
 			return false;
 		}
 
 		if (cpu->parseExpression(exp,value) == false)
 		{
-			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editSize->GetLabel().wchar_str().data());
+			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editSize->GetValue().wchar_str().data());
 			wxMessageBox(errorMessage,L"Error",wxICON_ERROR);
 			return false;
 		}
@@ -267,7 +267,7 @@ bool BreakpointWindow::fetchDialogData()
 	}
 
 	// condition
-	wxCharBuffer conditionText = editCondition->GetLabel().ToUTF8();
+	wxCharBuffer conditionText = editCondition->GetValue().ToUTF8();
 	strncpy(condition,conditionText,sizeof(condition));
 	condition[sizeof(condition)-1] = 0;
 
@@ -276,7 +276,7 @@ bool BreakpointWindow::fetchDialogData()
 	{
 		if (cpu->initExpression(condition,compiledCondition) == false)
 		{
-			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editCondition->GetLabel().wchar_str().data());
+			swprintf(errorMessage,512,L"Invalid expression \"%s\".",editCondition->GetValue().wchar_str().data());
 			wxMessageBox(errorMessage,L"Error",wxICON_ERROR);
 			return false;
 		}
