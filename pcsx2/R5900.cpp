@@ -503,10 +503,6 @@ __fi void cpuTestHwInts() {
 
 __fi void CPU_INT( EE_EventType n, s32 ecycle)
 {
-	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ // 2 is Gif, and every path 3 masking game triggers this :/
-		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
-	}
-
 	// EE events happen 8 cycles in the future instead of whatever was requested.
 	// This can be used on games with PATH3 masking issues for example, or when
 	// some FMV look bad.

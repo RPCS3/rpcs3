@@ -132,14 +132,6 @@ __fi int psxTestCycle( u32 startCycle, s32 delta )
 
 __fi void PSX_INT( IopEventId n, s32 ecycle )
 {
-	// Generally speaking games shouldn't throw ints that haven't been cleared yet.
-	// It's usually indicative of something amiss in our emulation, so uncomment this
-	// code to help trap those sort of things.
-
-	// Exception: IRQ16 - SIO - it drops ints like crazy when handling PAD stuff.
-	if( /*n!=16 &&*/ psxRegs.interrupt & (1<<n) )
-		DevCon.Warning( "***** IOP > Twice-thrown int on IRQ %d", n );
-
 	// 19 is CDVD read int, it's supposed to be high.
 	//if (ecycle > 8192 && n != 19)
 	//	DevCon.Warning( "IOP cycles high: %d, n %d", ecycle, n );
