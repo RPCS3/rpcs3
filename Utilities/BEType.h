@@ -54,7 +54,7 @@ public:
 #ifdef _WIN32
 	be_t(){}
 #else
-	be_t()	noexcept = default
+	be_t()	noexcept = default;
 #endif
 
 	be_t(const T& value)
