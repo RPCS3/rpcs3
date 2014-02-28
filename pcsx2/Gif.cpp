@@ -117,7 +117,16 @@ __fi void gifInterrupt()
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc) {
-	if(gifRegs.stat.IMT) qwc = std::min(qwc, 1024u);
+	if (gifRegs.stat.IMT)
+	{
+		//Splitting by 8qw can be really slow, so on bigger packets be less picky.
+		//Some games like Wallace & Gromit like smaller packets to be split correctly, hopefully with little impact on speed.
+		//68 works for W&G but 128 is more of a safe point.
+		if (qwc > 128)
+			qwc = std::min(qwc, 1024u);
+		else
+			qwc = std::min(qwc, 8u);
+	}
 	uint size = gifUnit.TransferGSPacketData(GIF_TRANS_DMA, (u8*)pMem, qwc*16) / 16;
 	incGifChAddr(size);
 	return size;
