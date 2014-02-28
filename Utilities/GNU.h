@@ -15,5 +15,5 @@
 #define InterlockedCompareExchange64(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 #define _aligned_malloc(size,alignment) aligned_alloc(alignment,size)
 #define _aligned_free(pointer)  free(pointer)
-#define DWORD int64_t
+#define DWORD int32_t
 #endif
