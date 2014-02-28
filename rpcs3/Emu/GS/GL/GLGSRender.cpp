@@ -1013,7 +1013,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_alpha_func && m_set_alpha_ref)
 	{
-		glAlphaFunc(m_alpha_func, m_alpha_ref);
+		glAlphaFunc(m_alpha_func, m_alpha_ref/255.0f);
 		checkForGlError("glAlphaFunc");
 	}
 
@@ -1115,9 +1115,11 @@ void GLGSRender::Flip()
 	static u8* src_buffer = nullptr;
 	static u32 width = 0;
 	static u32 height = 0;
+	GLenum format = GL_RGBA;
 
 	if(m_read_buffer)
 	{
+		format = GL_BGRA;
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
 		u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
 
@@ -1134,6 +1136,7 @@ void GLGSRender::Flip()
 	}
 	else if(m_fbo.IsCreated())
 	{
+		format = GL_RGBA;
 		static Array<u8> pixels;
 		pixels.SetCount(RSXThread::m_width * RSXThread::m_height * 4);
 		m_fbo.Bind(GL_READ_FRAMEBUFFER);
@@ -1150,7 +1153,8 @@ void GLGSRender::Flip()
 	{
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_flip_tex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
