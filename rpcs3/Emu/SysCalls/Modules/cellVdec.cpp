@@ -6,6 +6,7 @@
 extern "C"
 {
 #include "libavcodec\avcodec.h"
+#include "libavformat\avformat.h"
 #include "libavutil\imgutils.h"
 }
 
@@ -13,6 +14,29 @@ extern "C"
 
 void cellVdec_init();
 Module cellVdec(0x0005, cellVdec_init);
+
+int vdecRead(void* opaque, u8* buf, int buf_size)
+{
+	VideoDecoder& vdec = *(VideoDecoder*)opaque;
+
+	if (vdec.reader.size < (u32)buf_size) buf_size = vdec.reader.size;
+	if (!buf_size)
+	{
+		return AVERROR_EOF;
+	}
+	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
+	{
+		ConLog.Error("vdecRead: data reading failed (buf_size=0x%x)", buf_size);
+		Emu.Pause();
+		return 0;
+	}
+	else
+	{
+		vdec.reader.addr += buf_size;
+		vdec.reader.size -= buf_size;
+		return buf_size;
+	}
+}
 
 u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0 */, mem_ptr_t<CellVdecAttr> attr)
 {
@@ -98,31 +122,42 @@ u32 vdecOpen(VideoDecoder* data)
 					{
 						vdecPacket(u32 size)
 						{
-							av_new_packet(this, size + FF_INPUT_BUFFER_PADDING_SIZE);
+							av_init_packet(this);
+							data = (u8*)av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
 							memset(data + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
-							this->size -= FF_INPUT_BUFFER_PADDING_SIZE; // ????????????????????
+							this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
 						}
 
 						~vdecPacket()
 						{
-							av_free_packet(this);
+							av_free(data);
+							//av_free_packet(this);
 						}
 
 					} au(task.size);
 
-					if (task.pts || task.dts)
+					if ((task.pts || task.dts) && task.pts != ~0 && task.dts != ~0)
 					{
 						vdec.pts = task.pts;
 						vdec.dts = task.dts;
+						au.pts = vdec.pts;
+						au.dts = vdec.dts;
+						au.flags = AV_PKT_FLAG_KEY;
 					}
-					au.pts = vdec.pts;
-					au.dts = vdec.dts;
-					
+					else
+					{
+						au.pts = vdec.pts;
+						au.dts = vdec.dts;
+					}
+
 					if (task.mode != CELL_VDEC_DEC_MODE_NORMAL)
 					{
 						ConLog.Error("vdecDecodeAu: unsupported decoding mode(%d)", task.mode);
 						break;
 					}
+
+					vdec.reader.addr = task.addr;
+					vdec.reader.size = task.size;
 
 					if (!Memory.CopyToReal(au.data, task.addr, task.size))
 					{
@@ -130,10 +165,23 @@ u32 vdecOpen(VideoDecoder* data)
 						break;
 					}
 
+					/*{
+						wxFile dump;
+						dump.Open(wxString::Format("0x%llx-0x%llx.dump", au.pts, au.dts), wxFile::write);
+						dump.Write(au.data, task.size + FF_INPUT_BUFFER_PADDING_SIZE);
+						dump.Close();
+					}*/
+
 					int got_picture = 0;
 
 					//vdec.ctx->flags |= CODEC_FLAG_TRUNCATED;
 					//vdec.ctx->flags2 |= CODEC_FLAG2_CHUNKS;
+					vdec.ctx->flags2 |= CODEC_FLAG2_LOCAL_HEADER;
+					vdec.ctx->codec_tag = *(u32*)"DAVC";
+					//vdec.ctx->stream_codec_tag = *(u32*)"DAVC";
+
+					//avcodec_get_frame_defaults(vdec.frame);
+					
 
 					int decode = avcodec_decode_video2(vdec.ctx, vdec.frame, &got_picture, &au);
 					if (decode < 0)
@@ -141,23 +189,11 @@ u32 vdecOpen(VideoDecoder* data)
 						ConLog.Error("vdecDecodeAu: AU decoding error(%d)", decode);
 						break;
 					}
-				
-					ConLog.Write("Frame decoded (pts=0x%llx, dts=0x%llx, addr=0x%x, result=0x%x)",
-						au.pts, au.dts, task.addr, decode);
-
-
-					Callback cb;
-					cb.SetAddr(vdec.cbFunc);
-					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, 0, vdec.cbArg);
-					cb.Branch(false);
 
 					if (got_picture)
 					{
 						ConLog.Write("got_picture (%d, vdec: pts=0x%llx, dts=0x%llx)", got_picture, vdec.pts, vdec.dts);
-
-						vdec.pts += 3003;
-						vdec.dts += 3003;
-						
+					
 						/*if (vdec.out_data[0]) av_freep(vdec.out_data[0]);
 
 						int err = av_image_alloc(vdec.out_data, vdec.linesize, vdec.ctx->width, vdec.ctx->height, vdec.ctx->pix_fmt, 1);
@@ -167,15 +203,13 @@ u32 vdecOpen(VideoDecoder* data)
 							Emu.Pause();
 							return;
 						}
-
+						
 						vdec.buf_size = err;
 
 						av_image_copy(vdec.out_data, vdec.linesize, (const u8**)(vdec.frame->data), vdec.frame->linesize,
 							vdec.ctx->pix_fmt, vdec.ctx->width, vdec.ctx->height);*/
 						vdec.buf_size = a128(av_image_get_buffer_size(vdec.ctx->pix_fmt, vdec.ctx->width, vdec.ctx->height, 1));
 
-						vdec.dts = task.dts;
-						vdec.pts = task.pts;
 						vdec.userdata = task.userData;
 						vdec.has_picture = true;
 
@@ -184,6 +218,13 @@ u32 vdecOpen(VideoDecoder* data)
 						cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, 0, vdec.cbArg);
 						cb.Branch(false);
 					}
+				
+					ConLog.Write("Frame decoded (pts=0x%llx, dts=0x%llx, addr=0x%x, result=0x%x)", au.pts, au.dts, task.addr, decode);
+
+					Callback cb;
+					cb.SetAddr(vdec.cbFunc);
+					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, 0, vdec.cbArg);
+					cb.Branch(false);
 				}
 				break;
 

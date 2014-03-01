@@ -26,6 +26,7 @@ template
 >
 class SMutexBase
 {
+	static_assert(sizeof(T) == sizeof(std::atomic<T>), "Invalid SMutexBase type");
 	std::atomic<T> owner;
 
 public:

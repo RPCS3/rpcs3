@@ -714,13 +714,13 @@ int cellAudioSetNotifyEventQueue(u64 key)
 
 	m_config.event_key = key;
 
-	EventQueue* eq;
+	/*EventQueue* eq;
 	if (!Emu.GetEventManager().GetEventQueue(key, eq))
 	{
 		return CELL_AUDIO_ERROR_PARAM;
-	}
+	}*/
 
-	// TODO: connect port
+	// TODO: connect port (?????)
 
 	return CELL_OK;
 }

@@ -373,12 +373,11 @@ struct PesHeader
 		, dts(0xffffffffffffffff)
 		, ch(0)
 		, size(0)
-		, new_au(false)
+		, new_au(true)
 	{
 		u16 header;
 		stream.get(header);
 		stream.get(size);
-		new_au = true;
 		if (size)
 		{
 			//ConLog.Write(">>>>> Pes Header (size=%d)", size);
@@ -571,7 +570,7 @@ public:
 	{
 		SMutexLocker lock(mutex);
 		//ConLog.Write("es::push(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
-		if (isfull()) 
+		if (isfull())
 		{
 			ConLog.Error("ElementaryStream::push(): buffer is full");
 			Emu.Pause();

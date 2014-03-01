@@ -167,6 +167,7 @@ u32 dmuxOpen(Demuxer* data)
 								stream = backup;
 								continue;
 							}
+							//stream = backup;
 							es.push(stream, len - pes.size - 3, pes);
 						}
 						else

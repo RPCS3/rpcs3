@@ -679,6 +679,8 @@ struct VdecTask
 	}
 };
 
+int vdecRead(void* opaque, u8* buf, int buf_size);
+
 class VideoDecoder
 {
 public:
@@ -689,13 +691,22 @@ public:
 
 	AVCodec* codec;
 	AVCodecContext* ctx;
+	AVFormatContext* fmt;
 	AVFrame* frame;
 	AVDictionary* opts;
+	u8* io_buf;
 	u32 buf_size;
 	u64 pts;
 	u64 dts;
+	u64 pos;
 	u64 userdata;
 	volatile bool has_picture;
+
+	struct VideoReader
+	{
+		u32 addr;
+		u32 size;
+	} reader;
 
 	const CellVdecCodecType type;
 	const u32 profile;
@@ -714,6 +725,7 @@ public:
 		, is_finished(false)
 		, is_running(false)
 		, has_picture(false)
+		, pos(0)
 	{
 		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)
@@ -744,12 +756,32 @@ public:
 			Emu.Pause();
 			return;
 		}
+		fmt = avformat_alloc_context();
+		if (!fmt)
+		{
+			ConLog.Error("VideoDecoder(): avformat_alloc_context failed");
+			Emu.Pause();
+			return;
+		}
+		io_buf = (u8*)av_malloc(4096);
+		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
+		if (!fmt->pb)
+		{
+			ConLog.Error("VideoDecoder(): avio_alloc_context failed");
+			Emu.Pause();
+			return;
+		}
 		//memset(&out_data, 0, sizeof(out_data));
 		//memset(&linesize, 0, sizeof(linesize));
 	}
 
 	~VideoDecoder()
 	{
+		if (io_buf) av_free(io_buf);
+		if (fmt)
+		{
+			avformat_free_context(fmt);
+		}
 		if (frame) av_frame_free(&frame);
 		if (ctx)
 		{
