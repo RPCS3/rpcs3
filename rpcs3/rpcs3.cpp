@@ -40,6 +40,9 @@ void Rpcs3App::OnArguments()
 
 	if (Rpcs3App::argc > 1)
 	{
+		// Force this value to be true
+		Ini.HLEExitOnStop.SetValue(true);
+
 		Emu.SetPath(argv[1]);
 		Emu.Load();
 		Emu.Run();

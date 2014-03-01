@@ -345,7 +345,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_audio( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Audio") ) );
 	wxStaticBoxSizer* s_round_audio_out( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Audio Out") ) );
 
-	wxStaticBoxSizer* s_round_hle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("HLE") ) );
+	wxStaticBoxSizer* s_round_hle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("HLE / Misc.") ) );
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
@@ -364,6 +364,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(&diag, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_hle_logging = new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_savetty = new wxCheckBox(&diag, wxID_ANY, "Save TTY output to file");
+	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(&diag, wxID_ANY, "Exit RPCS3 when process finishes");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -403,6 +404,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_audio_dump->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
 	chbox_hle_savetty->SetValue(Ini.HLESaveTTY.GetValue());
+	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
@@ -444,6 +446,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -482,6 +485,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
+		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 
 		Ini.Save();
 	}
