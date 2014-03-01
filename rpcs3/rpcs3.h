@@ -54,7 +54,8 @@ class Rpcs3App : public wxApp
 public:
 	MainFrame* m_MainFrame;
 
-	virtual bool OnInit();
+	virtual bool OnInit();       // RPCS3's entry point
+	virtual void OnArguments();  // Handle arguments: Rpcs3App::argc, Rpcs3App::argv
 	virtual void Exit();
 
 	void SendDbgCommand(DbgCommand id, CPUThread* thr=nullptr);

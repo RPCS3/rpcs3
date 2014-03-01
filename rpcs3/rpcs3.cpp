@@ -27,7 +27,26 @@ bool Rpcs3App::OnInit()
 	m_MainFrame->Show();
 	m_MainFrame->DoSettings(true);
 
+	OnArguments();
+
 	return true;
+}
+
+void Rpcs3App::OnArguments()
+{
+	// Usage:
+	//   rpcs3-*.exe               Initializes RPCS3
+	//   rpcs3-*.exe [(S)ELF]      Initializes RPCS3, then loads and runs the specified (S)ELF file.
+
+	if (Rpcs3App::argc > 1)
+	{
+		// Force this value to be true
+		Ini.HLEExitOnStop.SetValue(true);
+
+		Emu.SetPath(argv[1]);
+		Emu.Load();
+		Emu.Run();
+	}
 }
 
 void Rpcs3App::Exit()

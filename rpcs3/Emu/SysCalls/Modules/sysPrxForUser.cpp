@@ -168,6 +168,7 @@ void sysPrxForUser_init()
 
 	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
 	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);
+	sysPrxForUser.AddFunc(0x409ad939, sys_mmapper_free_memory);
 
 	sysPrxForUser.AddFunc(0x1ed454ce, sys_spu_elf_get_information);
 	sysPrxForUser.AddFunc(0xdb6b3250, sys_spu_elf_get_segments);

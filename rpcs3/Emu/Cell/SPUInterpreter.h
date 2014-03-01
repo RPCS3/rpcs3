@@ -244,7 +244,7 @@ private:
 	void SHLH(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[rb]._u16[h] & 0x1f) > 15 ? 0 : CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0x3f);
+			CPU.GPR[rt]._u16[h] = (CPU.GPR[rb]._u16[h] & 0x1f) > 15 ? 0 : CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0x1f);
 	}
 	void ROTI(u32 rt, u32 ra, s32 i7)
 	{
@@ -413,6 +413,7 @@ private:
 	}
 	void HBR(u32 p, u32 ro, u32 ra)
 	{
+		UNIMPLEMENTED();
 	}
 	void GB(u32 rt, u32 ra)
 	{
@@ -558,7 +559,7 @@ private:
 		CPU.GPR[rt]._u32[0] = (temp._u32[0] >> t) | (temp._u32[1] << (32 - t));
 		CPU.GPR[rt]._u32[1] = (temp._u32[1] >> t) | (temp._u32[2] << (32 - t));
 		CPU.GPR[rt]._u32[2] = (temp._u32[2] >> t) | (temp._u32[3] << (32 - t));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] >> t);
+		CPU.GPR[rt]._u32[3] = (temp._u32[3] >> t);
 	}
 	void SHLQBI(u32 rt, u32 ra, u32 rb)
 	{
@@ -934,7 +935,7 @@ private:
 		CPU.GPR[rt]._f[1] = (float)CPU.GPR[ra]._d[0];
 		CPU.GPR[rt]._u32[0] = 0x00000000;
 		CPU.GPR[rt]._f[3] = (float)CPU.GPR[ra]._d[1];
-		CPU.GPR[rt]._u32[1] = 0x00000000;
+		CPU.GPR[rt]._u32[2] = 0x00000000;
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
@@ -1430,9 +1431,11 @@ private:
 	//0 - 6
 	void HBRA(s32 ro, s32 i16)
 	{ //i16 is shifted left by 2 while decoding
+		UNIMPLEMENTED();
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
+		UNIMPLEMENTED();
 	}
 	void ILA(u32 rt, u32 i18)
 	{
