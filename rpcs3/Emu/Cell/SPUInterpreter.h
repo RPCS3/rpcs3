@@ -413,7 +413,6 @@ private:
 	}
 	void HBR(u32 p, u32 ro, u32 ra)
 	{
-		UNIMPLEMENTED();
 	}
 	void GB(u32 rt, u32 ra)
 	{
@@ -1431,11 +1430,9 @@ private:
 	//0 - 6
 	void HBRA(s32 ro, s32 i16)
 	{ //i16 is shifted left by 2 while decoding
-		UNIMPLEMENTED();
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
-		UNIMPLEMENTED();
 	}
 	void ILA(u32 rt, u32 i18)
 	{
