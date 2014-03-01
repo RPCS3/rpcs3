@@ -315,3 +315,14 @@ struct CellVpostPictureInfo
 	be_t<u32> reserved1;
 	be_t<u32> reserved2;
 };
+
+class VpostInstance
+{
+public:
+	const bool to_rgba;
+
+	VpostInstance(bool rgba)
+		: to_rgba(rgba)
+	{
+	}
+};

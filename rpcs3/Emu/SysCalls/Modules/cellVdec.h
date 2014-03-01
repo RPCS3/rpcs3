@@ -2,6 +2,8 @@
 
 #include "Utilities/SQueue.h"
 
+#define a128(x) ((x + 127) & (~127))
+
 // Error Codes
 enum
 {
@@ -341,15 +343,17 @@ struct CellVdecAvcInfo
 	AVC_transfer_characteristics transfer_characteristics;
 	AVC_matrix_coefficients matrix_coefficients;
 	bool timing_info_present_flag;
-	CellVdecFrameRate frameRateCode;
+	AVC_FrameRateCode frameRateCode; // ???
 	bool fixed_frame_rate_flag;
 	bool low_delay_hrd_flag;
 	bool entropy_coding_mode_flag;
-	be_t<AVC_NulUnitPresentFlags> nalUnitPresentFlags;
+	be_t<u16> nalUnitPresentFlags;
 	u8 ccDataLength[2];
 	u8 ccData[2][CELL_VDEC_AVC_CCD_MAX];
 	be_t<u64> reserved[2];
 };
+
+const int sz = sizeof(CellVdecAvcInfo);
 
 // DIVX Profile
 enum DIVX_level : u8
@@ -686,15 +690,21 @@ public:
 	AVCodec* codec;
 	AVCodecContext* ctx;
 	AVFrame* frame;
+	AVDictionary* opts;
+	u32 buf_size;
+	u64 pts;
+	u64 dts;
+	u64 userdata;
+	volatile bool has_picture;
 
-	const u32 type;
+	const CellVdecCodecType type;
 	const u32 profile;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 cbFunc;
 	const u32 cbArg;
 
-	VideoDecoder(u32 type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
+	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
 		: type(type)
 		, profile(profile)
 		, memAddr(addr)
@@ -703,6 +713,7 @@ public:
 		, cbArg(arg)
 		, is_finished(false)
 		, is_running(false)
+		, has_picture(false)
 	{
 		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)
@@ -718,7 +729,9 @@ public:
 			Emu.Pause();
 			return;
 		}
-		if (int err = avcodec_open2(ctx, codec, NULL)) // TODO: not multithread safe
+		opts = nullptr;
+		int err = avcodec_open2(ctx, codec, &opts);
+		if (err) // TODO: not multithread safe
 		{
 			ConLog.Error("VideoDecoder(): avcodec_open2 failed(%d)", err);
 			Emu.Pause();
@@ -731,6 +744,8 @@ public:
 			Emu.Pause();
 			return;
 		}
+		//memset(&out_data, 0, sizeof(out_data));
+		//memset(&linesize, 0, sizeof(linesize));
 	}
 
 	~VideoDecoder()
@@ -741,5 +756,6 @@ public:
 			avcodec_close(ctx);
 			av_free(ctx);
 		}
+		//if (out_data[0]) av_freep(out_data[0]);
 	}
 };

@@ -366,23 +366,28 @@ struct PesHeader
 	u64 dts;
 	u8 ch;
 	u8 size;
+	bool new_au;
 
 	PesHeader(DemuxerStream& stream)
-		: pts(0)
-		, dts(0)
+		: pts(0xffffffffffffffff)
+		, dts(0xffffffffffffffff)
 		, ch(0)
 		, size(0)
+		, new_au(false)
 	{
 		u16 header;
 		stream.get(header);
 		stream.get(size);
+		new_au = true;
 		if (size)
 		{
+			//ConLog.Write(">>>>> Pes Header (size=%d)", size);
 			if (size < 10)
 			{
-				ConLog.Error("Unknown PesHeader size");
-				Emu.Pause();
+				stream.skip(size);
+				return;
 			}
+			new_au = true;
 			u8 v;
 			stream.get(v);
 			if ((v & 0xF0) != 0x30)
@@ -454,8 +459,8 @@ public:
 	const u32 cbFunc;
 	const u32 cbArg;
 	u32 id;
-	bool is_finished;
-	bool is_running;
+	volatile bool is_finished;
+	volatile bool is_running;
 
 
 	Demuxer(u32 addr, u32 size, u32 func, u32 arg)

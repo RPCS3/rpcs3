@@ -85,9 +85,15 @@ u32 dmuxOpen(Demuxer* data)
 					break;
 
 				case PADDING_STREAM:
+					{
+						stream.skip(4);
+						stream.get(len);
+						stream.skip(len);
+					}
+					break;
+
 				case PRIVATE_STREAM_2:
 					{
-						// unknown
 						stream.skip(4);
 						stream.get(len);
 						stream.skip(len);
@@ -127,19 +133,19 @@ u32 dmuxOpen(Demuxer* data)
 							stream.get(len);
 							PesHeader pes(stream);
 
-							if (!pes.size && !es.hasdata()) // fatal error
+							if (!pes.new_au && !es.hasdata()) // fatal error
 							{
 								ConLog.Error("PES not found");
 								return;
 							}
 
-							if (pes.size && es.hasdata()) // new AU detected
+							if (pes.new_au && es.hasdata()) // new AU detected
 							{
-								/*if (es.hasunseen())
+								if (es.hasunseen()) // hack, probably useless
 								{
 									stream = backup;
 									continue;
-								}*/
+								}
 								es.finish(stream);
 								// callback
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
@@ -151,7 +157,7 @@ u32 dmuxOpen(Demuxer* data)
 								cb.Branch(false);
 							}
 
-							if (pes.size)
+							if (pes.new_au)
 							{
 								ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 							}
@@ -161,7 +167,6 @@ u32 dmuxOpen(Demuxer* data)
 								stream = backup;
 								continue;
 							}
-
 							es.push(stream, len - pes.size - 3, pes);
 						}
 						else
@@ -217,6 +222,19 @@ task:
 			{
 			case dmuxSetStream:
 				{
+					bool do_wait = false;
+					for (u32 i = 0; i < 192; i++)
+					{
+						if (esALL[i])
+						{
+							if (esALL[i]->hasunseen()) // hack, probably useless
+							{
+								do_wait = true;
+								break;
+							}
+						}
+					}
+					if (do_wait) continue;
 					stream = task.stream;
 					ConLog.Write("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 						stream.addr, stream.size, stream.discontinuity, stream.userdata);
@@ -832,7 +850,9 @@ int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_
 
 int cellDmuxReleaseAu(u32 esHandle)
 {
-	cellDmux.Log("cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
+	cellDmux.Warning("(disabled) cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
+
+	return CELL_OK;
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
@@ -842,7 +862,9 @@ int cellDmuxReleaseAu(u32 esHandle)
 
 	if (!es->canrelease())
 	{
+		cellDmux.Error("cellDmuxReleaseAu: no AU");
 		return CELL_DMUX_ERROR_SEQ;
+		//return CELL_OK;
 	}
 
 	DemuxerTask task(dmuxReleaseAu);
