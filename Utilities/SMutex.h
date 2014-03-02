@@ -1,7 +1,7 @@
 #pragma once
 
 extern void SM_Sleep();
-extern std::thread::id SM_GetCurrentThreadId();
+extern size_t SM_GetCurrentThreadId();
 extern u32 SM_GetCurrentCPUThreadId();
 extern be_t<u32> SM_GetCurrentCPUThreadIdBE();
 
@@ -20,13 +20,13 @@ enum SMutexResult
 template
 <
 	typename T,
-	u32 free_value = 0,
-	u32 dead_value = ~0,
+	u64 free_value = 0,
+	u64 dead_value = ~0,
 	void (*wait)() = SM_Sleep
 >
 class SMutexBase
 {
-	static_assert(sizeof(T) == 4, "Invalid SMutexBase typename");
+	static_assert(sizeof(T) == sizeof(std::atomic<T>), "Invalid SMutexBase type");
 	std::atomic<T> owner;
 
 public:
@@ -157,14 +157,14 @@ public:
 	}
 };
 
-typedef SMutexBase<DWORD>
+typedef SMutexBase<size_t>
 	SMutexGeneral;
 typedef SMutexBase<u32>
 	SMutex;
 typedef SMutexBase<be_t<u32>>
 	SMutexBE;
 
-typedef SMutexLockerBase<std::thread::id, SM_GetCurrentThreadId>
+typedef SMutexLockerBase<size_t, SM_GetCurrentThreadId>
 	SMutexGeneralLocker;
 typedef SMutexLockerBase<u32, SM_GetCurrentCPUThreadId>
 	SMutexLocker;

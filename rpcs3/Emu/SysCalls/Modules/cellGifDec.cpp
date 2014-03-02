@@ -164,7 +164,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
-		memcpy(data, image.get(), image_size);
+		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
 	break;
 
 	case CELL_GIFDEC_ARGB:

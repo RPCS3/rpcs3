@@ -296,7 +296,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	ConLog.Write("%s enter", CPUThread::GetFName().wx_str());
+	if (Ini.HLELogging.GetValue()) ConLog.Write("%s enter", CPUThread::GetFName().wx_str());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -358,5 +358,5 @@ void CPUThread::Task()
 		ConLog.Success("Exit Code: %d", exitcode);
 	}
 
-	ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
+	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
 }

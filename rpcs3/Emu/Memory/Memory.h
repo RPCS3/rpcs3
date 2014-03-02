@@ -238,6 +238,106 @@ public:
 	u64 Read64(const u64 addr);
 	u128 Read128(const u64 addr);
 
+	bool CopyToReal(void* real, u32 from, u32 count) // (4K pages) copy from virtual to real memory
+	{
+		if (!count) return true;
+
+		u8* to = (u8*)real;
+
+		if (u32 frag = from & 4095)
+		{
+			if (!IsGoodAddr(from)) return false;
+			u32 num = 4096 - frag;
+			if (count < num) num = count;
+			memcpy(to, GetMemFromAddr(from), num);
+			to += num;
+			from += num;
+			count -= num;
+		}
+
+		for (u32 page = count / 4096; page > 0; page--)
+		{
+			if (!IsGoodAddr(from)) return false;
+			memcpy(to, GetMemFromAddr(from), 4096);
+			to += 4096;
+			from += 4096;
+			count -= 4096;
+		}
+
+		if (count)
+		{
+			if (!IsGoodAddr(from)) return false;
+			memcpy(to, GetMemFromAddr(from), count);
+		}
+
+		return true;
+	}
+
+	bool CopyFromReal(u32 to, void* real, u32 count) // (4K pages) copy from real to virtual memory
+	{
+		if (!count) return true;
+
+		u8* from = (u8*)real;
+
+		if (u32 frag = to & 4095)
+		{
+			if (!IsGoodAddr(to)) return false;
+			u32 num = 4096 - frag;
+			if (count < num) num = count;
+			memcpy(GetMemFromAddr(to), from, num);
+			to += num;
+			from += num;
+			count -= num;
+		}
+
+		for (u32 page = count / 4096; page > 0; page--)
+		{
+			if (!IsGoodAddr(to)) return false;
+			memcpy(GetMemFromAddr(to), from, 4096);
+			to += 4096;
+			from += 4096;
+			count -= 4096;
+		}
+
+		if (count)
+		{
+			if (!IsGoodAddr(to)) return false;
+			memcpy(GetMemFromAddr(to), from, count);
+		}
+
+		return true;
+
+	}
+
+	bool Copy(u32 to, u32 from, u32 count) // (4K pages) copy from virtual to virtual memory through real
+	{
+		if (u8* buf = (u8*)malloc(count))
+		{
+			if (CopyToReal(buf, from, count))
+			{
+				if (CopyFromReal(to, buf, count))
+				{
+					free(buf);
+					return true;
+				}
+				else
+				{
+					free(buf);
+					return false;
+				}
+			}
+			else
+			{
+				free(buf);
+				return false;
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+
 	void ReadLeft(u8* dst, const u64 addr, const u32 size)
 	{
 		MemoryBlock& mem = GetMemByAddr(addr);

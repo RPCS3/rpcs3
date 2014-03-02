@@ -135,13 +135,15 @@ enum
 };
 
 // Timestamp information (time in increments of 90 kHz)
-struct CellCodecTimeStamp {
+struct CellCodecTimeStamp
+{
 	be_t<u32> upper;
 	be_t<u32> lower;
 };
 
 // Entry point information
-struct CellPamfEp {
+struct CellPamfEp
+{
 	be_t<u32> indexN;
 	be_t<u32> nThRefPictureOffset;
 	CellCodecTimeStamp pts;

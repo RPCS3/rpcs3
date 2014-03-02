@@ -53,10 +53,33 @@ void Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
+	static SMutexGeneral cb_mutex;
+
 	CPUThread& thr = Emu.GetCallbackThread();
 
-	while(Emu.IsRunning() && thr.IsAlive())
+again:
+
+	while (thr.IsAlive())
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("Callback::Branch() aborted");
+			return;
+		}
 		Sleep(1);
+	}
+
+	SMutexGeneralLocker lock(cb_mutex);
+
+	if (thr.IsAlive())
+	{
+		goto again;
+	}
+	if (Emu.IsStopped())
+	{
+		ConLog.Warning("Callback::Branch() aborted");
+		return;
+	}
 
 	thr.Stop();
 	thr.Reset();
@@ -74,8 +97,20 @@ void Callback::Branch(bool wait)
 
 	thr.Exec();
 
-	if(wait)
-		GetCurrentPPCThread()->Wait(thr);
+	if (!wait)
+	{
+		return;
+	}
+
+	while (thr.IsAlive())
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("Callback::Branch(true) aborted (end)");
+			return;
+		}
+		Sleep(1);
+	}
 }
 
 void Callback::SetName(const std::string& name)

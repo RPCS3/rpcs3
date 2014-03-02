@@ -30,7 +30,7 @@ bool vfsDir::Create(const wxString& path)
 
 bool vfsDir::IsExists(const wxString& path) const
 {
-	return m_stream->IsExists(path);
+	return m_stream->IsExists(path); // Crash (Access violation reading location 0x0000000000000000)
 }
 
 const Array<DirEntryInfo>& vfsDir::GetEntries() const
