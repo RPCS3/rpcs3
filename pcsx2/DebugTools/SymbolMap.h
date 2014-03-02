@@ -80,7 +80,7 @@ public:
 	static const u32 INVALID_ADDRESS = (u32)-1;
 
 	void UpdateActiveSymbols();
-
+	bool IsEmpty() const { return activeFunctions.empty() && activeLabels.empty() && activeData.empty(); };
 private:
 	void AssignFunctionIndices();
 	const char *GetLabelName(u32 address) const;

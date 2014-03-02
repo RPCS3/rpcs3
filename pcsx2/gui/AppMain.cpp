@@ -1043,6 +1043,7 @@ protected:
 		DbgCon.WriteLn( Color_Gray, "(SysExecute) received." );
 
 		CoreThread.ResetQuick();
+		symbolMap.Clear();
 
 		CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 		if( m_UseCDVDsrc )
