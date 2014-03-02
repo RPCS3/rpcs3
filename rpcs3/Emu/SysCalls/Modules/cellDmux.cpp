@@ -18,7 +18,7 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 					 const u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x600000; // 0x45fa49 from ps3
+		attr->memSize = 0x6000000; // 0x45fa49 from ps3
 	else
 		attr->memSize = 0x10000; // 0x73d9 from ps3
 
@@ -159,7 +159,7 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.new_au)
 							{
-								ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
+								//ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 							}
 
 							if (es.isfull())
@@ -167,8 +167,10 @@ u32 dmuxOpen(Demuxer* data)
 								stream = backup;
 								continue;
 							}
-							//stream = backup;
-							es.push(stream, len - pes.size - 3, pes);
+
+							//hack: reconstruction of MPEG2-PS stream for vdec module (seems it works without it too)
+							stream = backup;
+							es.push(stream, len + 6 /*- pes.size - 3*/, pes);
 						}
 						else
 						{

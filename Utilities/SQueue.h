@@ -19,11 +19,6 @@ public:
 	{
 		while (true)
 		{
-			if (Emu.IsStopped())
-			{
-				return false;
-			}
-
 			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
 			{
 				return false;
@@ -31,6 +26,10 @@ public:
 
 			if (m_count >= SQSize)
 			{
+				if (Emu.IsStopped())
+				{
+					return false;
+				}
 				Sleep(1);
 				continue;
 			}
@@ -51,11 +50,6 @@ public:
 	{
 		while (true)
 		{
-			if (Emu.IsStopped())
-			{
-				return false;
-			}
-
 			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
 			{
 				return false;
@@ -63,6 +57,10 @@ public:
 
 			if (!m_count)
 			{
+				if (Emu.IsStopped())
+				{
+					return false;
+				}
 				Sleep(1);
 				continue;
 			}
@@ -95,5 +93,11 @@ public:
 	{
 		SMutexLocker lock(m_mutex);
 		m_count = 0;
+	}
+
+	T& Peek(u32 pos = 0)
+	{
+		SMutexLocker lock(m_mutex);
+		return m_data[(m_pos + pos) % SQSize];
 	}
 };

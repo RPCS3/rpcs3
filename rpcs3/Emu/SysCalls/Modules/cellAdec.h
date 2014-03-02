@@ -1,5 +1,6 @@
 #pragma once
-#include "cellPamf.h"
+
+#include "Utilities/SQueue.h"
 
 // Error Codes
 enum
@@ -341,6 +342,17 @@ struct CellAdecResource
 	be_t<u32> ppuThreadStackSize;
 };
 
+struct CellAdecResourceEx
+{
+	be_t<u32> totalMemSize;
+	be_t<u32> startAddr;
+	be_t<u32> ppuThreadPriority;
+	be_t<u32> ppuThreadStackSize;
+	be_t<u32> spurs_addr;
+	u8 priority[8];
+	be_t<u32> maxContention;
+};
+
 // Callback Messages
 enum CellAdecMsgType
 {
@@ -348,12 +360,14 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_PCMOUT,
 	CELL_ADEC_MSG_TYPE_ERROR,
 	CELL_ADEC_MSG_TYPE_SEQDONE,
-};	
+};
+
+typedef mem_func_ptr_t<int (*)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg)> CellAdecCbMsg;
 
 struct CellAdecCb
 {
-	be_t<mem_func_ptr_t<int (*)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg_addr)>> cbFunc;
-	be_t<u32> cbArg_addr;
+	be_t<u32> cbFunc;
+	be_t<u32> cbArg;
 };
 
 typedef CellCodecTimeStamp CellAdecTimeStamp;
@@ -397,17 +411,6 @@ struct CellAdecLpcmInfo
 	be_t<u32> channelNumber;
 	be_t<u32> sampleRate;
 	be_t<u32> outputDataSize;
-};
-
-struct CellAdecResourceEx
-{
-	be_t<u32> totalMemSize;
-	be_t<u32> startAddr;
-	be_t<u32> ppuThreadPriority;
-	be_t<u32> ppuThreadStackSize;
-	be_t<u32> spurs_addr;
-	u8 priority[8];
-	be_t<u32> maxContention;
 };
 
 // CELP Excitation Mode
@@ -984,4 +987,68 @@ struct CellAdecMpmcInfo
 	be_t<u32> multiCodecMode;
 	be_t<u32> lfePresent;
 	be_t<u32> channelCoufiguration;
+};
+
+/* Audio Decoder Thread Classes */
+
+enum AdecJobType : u32
+{
+	adecStartSeq,
+	adecEndSeq,
+	adecDecodeAu,
+	adecClose,
+};
+
+struct AdecTask
+{
+	AdecJobType type;
+	// ...
+
+	AdecTask(AdecJobType type)
+		: type(type)
+	{
+	}
+
+	AdecTask()
+	{
+	}
+};
+
+struct AdecFrame
+{
+	// under construction
+	u64 pts;
+	u64 userdata;
+};
+
+class AudioDecoder
+{
+public:
+	SQueue<AdecTask> job;
+	u32 id;
+	volatile bool is_running;
+	volatile bool is_finished;
+
+	SQueue<AdecFrame> frames;
+
+	const AudioCodecType type;
+	const u32 memAddr;
+	const u32 memSize;
+	const u32 cbFunc;
+	const u32 cbArg;
+
+	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
+		: type(type)
+		, memAddr(addr)
+		, memSize(size)
+		, cbFunc(func)
+		, cbArg(arg)
+		, is_running(false)
+		, is_finished(false)
+	{
+	}
+
+	~AudioDecoder()
+	{
+	}
 };

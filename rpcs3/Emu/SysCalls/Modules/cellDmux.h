@@ -373,7 +373,7 @@ struct PesHeader
 		, dts(0xffffffffffffffff)
 		, ch(0)
 		, size(0)
-		, new_au(true)
+		, new_au(false)
 	{
 		u16 header;
 		stream.get(header);
