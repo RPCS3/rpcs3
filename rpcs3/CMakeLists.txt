@@ -47,4 +47,4 @@ ${CMAKE_SOURCE_DIR}/../scetool/scetool.cpp
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${ZLIB_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${ZLIB_LIBRARIES} ${FFMPEG_LIBRARIES})
