@@ -5,9 +5,9 @@
 
 extern "C"
 {
-#include "libavcodec\avcodec.h"
-#include "libavformat\avformat.h"
-#include "libavutil\imgutils.h"
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavutil/imgutils.h"
 }
 
 #include "cellVdec.h"

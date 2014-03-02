@@ -10,6 +10,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions(-fpermissive) # TODO: remove me
 endif()
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
@@ -17,12 +18,14 @@ add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 
 find_package(wxWidgets COMPONENTS core base net aui gl REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(FFMPEG REQUIRED)
 find_package(ZLIB REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
 
 include_directories(
 ${wxWidgets_INCLUDE_DIRS}
+${FFMPEG_INCLUDE_DIR}
 ${CMAKE_SOURCE_DIR}
 ${CMAKE_SOURCE_DIR}/Emu
 ${CMAKE_SOURCE_DIR}/Gui
