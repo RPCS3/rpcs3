@@ -133,9 +133,20 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //289
 	null_func, null_func, null_func, null_func, null_func, //294
 	null_func, null_func, null_func, null_func, null_func, //299
-	bind_func(sys_vm_memory_map), bind_func(sys_vm_unmap), bind_func(sys_vm_append_memory), bind_func(sys_vm_return_memory), bind_func(sys_vm_lock), //304
-	bind_func(sys_vm_unlock), bind_func(sys_vm_touch), bind_func(sys_vm_flush), bind_func(sys_vm_invalidate), bind_func(sys_vm_store), //309
-	bind_func(sys_vm_sync), bind_func(sys_vm_test), bind_func(sys_vm_get_statistics), null_func, null_func, //314
+	bind_func(sys_vm_memory_map),                           //300 (0x12C)
+	bind_func(sys_vm_unmap),                                //301 (0x12D)
+	bind_func(sys_vm_append_memory),                        //302 (0x12E)
+	bind_func(sys_vm_return_memory),                        //303 (0x12F)
+	bind_func(sys_vm_lock),                                 //304 (0x130)
+	bind_func(sys_vm_unlock),                               //305 (0x131)
+	bind_func(sys_vm_touch),                                //306 (0x132)
+	bind_func(sys_vm_flush),                                //307 (0x133)
+	bind_func(sys_vm_invalidate),                           //308 (0x134)
+	bind_func(sys_vm_store),                                //309 (0x135)
+	bind_func(sys_vm_sync),                                 //310 (0x136)
+	bind_func(sys_vm_test),                                 //311 (0x137)
+	bind_func(sys_vm_get_statistics),                       //312 (0x138)
+	null_func, null_func, //314
 	null_func, null_func, null_func, null_func, null_func, //319
 	null_func, null_func, null_func, null_func, bind_func(sys_memory_container_create), //324
 	bind_func(sys_memory_container_destroy), null_func, null_func, null_func, null_func, //329

@@ -72,6 +72,7 @@ class DbgConsole
 	: public FrameBase
 	, public ThreadBase
 {
+	wxFile* m_output;
 	wxTextCtrl* m_console;
 	wxTextAttr* m_color_white;
 	wxTextAttr* m_color_red;

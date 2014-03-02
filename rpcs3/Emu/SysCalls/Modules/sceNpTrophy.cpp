@@ -188,9 +188,20 @@ int sceNpTrophySetSoundLevel()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetRequiredDiskSpace()
+int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u64 options)
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy.Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
+		context, handle, reqspace.GetAddr(), options);
+
+	if (!s_npTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	if (!reqspace.IsGood())
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	// TODO: There are other possible errors
+
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	reqspace = ctxt.trp_stream->GetSize(); // TODO: This is not accurate. It's just an approximation of the real value
+
 	return CELL_OK;
 }
 

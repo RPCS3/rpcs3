@@ -301,6 +301,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
