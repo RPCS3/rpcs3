@@ -41,6 +41,8 @@
 /bin/VertexProgram.txt
 /bin/BreakPoints.dat
 /bin/textures
+/bin/*.lib
+/bin/*.exp
 rpcs3/git-version.h
 
 # Copyrighted files

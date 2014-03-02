@@ -84,13 +84,22 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
+	bool was_locked = (mutex->mutex.GetOwner() == tid);
+
 	if (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->mutex.owner.trylock(target) != SMR_OK)
+		if (!was_locked)
 		{
-			mutex->mutex.owner.lock(tid);
+			mutex->mutex.lock(tid);
 			mutex->recursive_count = 1;
-			mutex->mutex.owner.unlock(tid, target);
+			mutex->mutex.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->mutex.unlock(tid, target);
+			mutex->mutex.lock(tid);
+			mutex->recursive_count = 1;
 		}
 	}
 
@@ -120,13 +129,22 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
+	bool was_locked = (mutex->mutex.GetOwner() == tid);
+
 	while (be_t<u32> target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()))
 	{
-		if (mutex->mutex.owner.trylock(target) != SMR_OK)
+		if (!was_locked)
 		{
-			mutex->mutex.owner.lock(tid);
+			mutex->mutex.lock(tid);
 			mutex->recursive_count = 1;
-			mutex->mutex.owner.unlock(tid, target);
+			mutex->mutex.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->mutex.unlock(tid, target);
+			mutex->mutex.lock(tid);
+			mutex->recursive_count = 1;
 		}
 	}
 
@@ -153,6 +171,11 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 		return CELL_ESRCH;
 	}
 
+	if (!Emu.GetIdManager().CheckID(ppu_thread_id))
+	{
+		return CELL_ESRCH;
+	}
+
 	if (!sq->invalidate(ppu_thread_id))
 	{
 		return CELL_EPERM;
@@ -161,13 +184,23 @@ int sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 
-	be_t<u32> target = ppu_thread_id;
+	bool was_locked = (mutex->mutex.GetOwner() == tid);
 
-	if (mutex->mutex.owner.trylock(target) != SMR_OK)
+	be_t<u32> target = ppu_thread_id;
 	{
-		mutex->mutex.owner.lock(tid);
-		mutex->recursive_count = 1;
-		mutex->mutex.owner.unlock(tid, target);
+		if (!was_locked)
+		{
+			mutex->mutex.lock(tid);
+			mutex->recursive_count = 1;
+			mutex->mutex.unlock(tid, target);
+		}
+		else
+		{
+			mutex->recursive_count = 1;
+			mutex->mutex.unlock(tid, target);
+			mutex->mutex.lock(tid);
+			mutex->recursive_count = 1;
+		}
 	}
 
 	if (Emu.IsStopped())
@@ -197,7 +230,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	u32 tid_le = GetCurrentPPUThread().GetId();
 	be_t<u32> tid = tid_le;
 
-	if (mutex->mutex.owner.GetOwner() != tid)
+	if (mutex->mutex.GetOwner() != tid)
 	{
 		return CELL_EPERM; // caller must own this lwmutex
 	}
@@ -205,7 +238,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	sq->push(tid_le);
 
 	mutex->recursive_count = 0;
-	mutex->mutex.owner.unlock(tid);
+	mutex->mutex.unlock(tid);
 
 	u32 counter = 0;
 	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
@@ -216,7 +249,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 		case SMR_OK: mutex->unlock(tid); break;
 		case SMR_SIGNAL: return CELL_OK;
 		} */
-		if (mutex->mutex.owner.GetOwner() == tid)
+		if (mutex->mutex.GetOwner() == tid)
 		{
 			_mm_mfence();
 			mutex->recursive_count = 1;

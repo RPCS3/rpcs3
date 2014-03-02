@@ -91,7 +91,7 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	switch(subHandle_data->src.srcSelect.ToLE())
 	{
 	case CELL_PNGDEC_BUFFER:
-		memcpy(Memory.VirtualToRealAddr(buffer.GetAddr()), Memory.VirtualToRealAddr(subHandle_data->src.streamPtr.ToLE()), buffer.GetSize());
+		Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 	case CELL_PNGDEC_FILE:
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
@@ -145,7 +145,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToLE())
 	{
 	case CELL_PNGDEC_BUFFER:
-		memcpy(Memory.VirtualToRealAddr(png.GetAddr()), Memory.VirtualToRealAddr(subHandle_data->src.streamPtr.ToLE()), png.GetSize());
+		Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize());
 		break;
 	case CELL_PNGDEC_FILE:
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
@@ -164,7 +164,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	case CELL_PNGDEC_RGB:
 	case CELL_PNGDEC_RGBA:
 		image_size *= current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
-		memcpy(data, image.get(), image_size);
+		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
 	break;
 
 	case CELL_PNGDEC_ARGB:

@@ -168,11 +168,11 @@ struct DMAC
 		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
 		{
 		case MFC_PUT_CMD:
-			memcpy(Memory + ea, Memory + ls_offset + lsa, size);
+			Memory.Copy(ea, ls_offset + lsa, size);
 		return true;
 
 		case MFC_GET_CMD:
-			memcpy(Memory + ls_offset + lsa, Memory + ea, size);
+			Memory.Copy(ls_offset + lsa, ea, size);
 		return true;
 
 		default:

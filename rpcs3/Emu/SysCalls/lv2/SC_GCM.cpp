@@ -14,7 +14,7 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	if(res > 0) memcpy(&Memory[ctx.begin], &Memory[ctx.current - res], res);
+	if(res > 0) Memory.Copy(ctx.begin, ctx.current - res, res);
 
 	ctx.current = ctx.begin + res;
 

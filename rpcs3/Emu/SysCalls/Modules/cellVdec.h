@@ -1,5 +1,8 @@
 #pragma once
-#include "cellPamf.h"
+
+#include "Utilities/SQueue.h"
+
+#define a128(x) ((x + 127) & (~127))
 
 // Error Codes
 enum
@@ -30,7 +33,7 @@ enum CellVdecMsgType
 };
 
 // Decoder Operation Mode
-enum CellVdecDecodeMode
+enum CellVdecDecodeMode : u32
 {
 	CELL_VDEC_DEC_MODE_NORMAL,
 	CELL_VDEC_DEC_MODE_B_SKIP,
@@ -164,11 +167,13 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
+typedef mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)> CellVdecCbMsg;
+
 // Callback Function Information
 struct CellVdecCb
 {
-	be_t<mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)>> cbFunc;
-	be_t<u32> cbArg_addr;
+	be_t<u32> cbFunc;
+	be_t<u32> cbArg;
 };
 
 // Max CC Data Length
@@ -338,15 +343,17 @@ struct CellVdecAvcInfo
 	AVC_transfer_characteristics transfer_characteristics;
 	AVC_matrix_coefficients matrix_coefficients;
 	bool timing_info_present_flag;
-	CellVdecFrameRate frameRateCode;
+	AVC_FrameRateCode frameRateCode; // ???
 	bool fixed_frame_rate_flag;
 	bool low_delay_hrd_flag;
 	bool entropy_coding_mode_flag;
-	be_t<AVC_NulUnitPresentFlags> nalUnitPresentFlags;
+	be_t<u16> nalUnitPresentFlags;
 	u8 ccDataLength[2];
 	u8 ccData[2][CELL_VDEC_AVC_CCD_MAX];
 	be_t<u64> reserved[2];
 };
+
+const int sz = sizeof(CellVdecAvcInfo);
 
 // DIVX Profile
 enum DIVX_level : u8
@@ -634,4 +641,153 @@ struct CellVdecMpeg2Info
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
 	be_t<u64> reserved[2];
+};
+
+/* Video Decoder Thread Classes */
+
+enum VdecJobType : u32
+{
+	vdecStartSeq,
+	vdecEndSeq,
+	vdecDecodeAu,
+	vdecSetFrameRate,
+	vdecClose,
+};
+
+struct VdecTask
+{
+	VdecJobType type;
+	union
+	{
+		u32 frc;
+		CellVdecDecodeMode mode;
+	};
+	u32 addr;
+	u32 size;
+	u64 pts;
+	u64 dts;
+	u64 userData;
+	u64 specData;
+
+	VdecTask(VdecJobType type)
+		: type(type)
+	{
+	}
+
+	VdecTask()
+	{
+	}
+};
+
+int vdecRead(void* opaque, u8* buf, int buf_size);
+
+class VideoDecoder
+{
+public:
+	SQueue<VdecTask> job;
+	u32 id;
+	volatile bool is_running;
+	volatile bool is_finished;
+
+	AVCodec* codec;
+	AVCodecContext* ctx;
+	AVFormatContext* fmt;
+	AVFrame* frame;
+	AVDictionary* opts;
+	u8* io_buf;
+	u32 buf_size;
+	u64 pts;
+	u64 dts;
+	u64 pos;
+	u64 userdata;
+	volatile bool has_picture;
+
+	struct VideoReader
+	{
+		u32 addr;
+		u32 size;
+	} reader;
+
+	const CellVdecCodecType type;
+	const u32 profile;
+	const u32 memAddr;
+	const u32 memSize;
+	const u32 cbFunc;
+	const u32 cbArg;
+
+	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
+		: type(type)
+		, profile(profile)
+		, memAddr(addr)
+		, memSize(size)
+		, cbFunc(func)
+		, cbArg(arg)
+		, is_finished(false)
+		, is_running(false)
+		, has_picture(false)
+		, pos(0)
+	{
+		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+		if (!codec)
+		{
+			ConLog.Error("VideoDecoder(): avcodec_find_decoder failed");
+			Emu.Pause();
+			return;
+		}
+		ctx = avcodec_alloc_context3(codec);
+		if (!ctx)
+		{
+			ConLog.Error("VideoDecoder(): avcodec_alloc_context3 failed");
+			Emu.Pause();
+			return;
+		}
+		opts = nullptr;
+		int err = avcodec_open2(ctx, codec, &opts);
+		if (err) // TODO: not multithread safe
+		{
+			ConLog.Error("VideoDecoder(): avcodec_open2 failed(%d)", err);
+			Emu.Pause();
+			return;
+		}
+		frame = av_frame_alloc();
+		if (!frame)
+		{
+			ConLog.Error("VideoDecoder(): av_frame_alloc failed");
+			Emu.Pause();
+			return;
+		}
+		fmt = avformat_alloc_context();
+		if (!fmt)
+		{
+			ConLog.Error("VideoDecoder(): avformat_alloc_context failed");
+			Emu.Pause();
+			return;
+		}
+		io_buf = (u8*)av_malloc(4096);
+		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
+		if (!fmt->pb)
+		{
+			ConLog.Error("VideoDecoder(): avio_alloc_context failed");
+			Emu.Pause();
+			return;
+		}
+		//memset(&out_data, 0, sizeof(out_data));
+		//memset(&linesize, 0, sizeof(linesize));
+	}
+
+	~VideoDecoder()
+	{
+		if (io_buf) av_free(io_buf);
+		if (fmt)
+		{
+			avformat_free_context(fmt);
+		}
+		if (frame) av_frame_free(&frame);
+		if (ctx)
+		{
+			avcodec_close(ctx);
+			av_free(ctx);
+		}
+		//if (out_data[0]) av_freep(out_data[0]);
+	}
 };

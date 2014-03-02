@@ -134,7 +134,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//copy SPU image:
 	u32 spu_offset = Memory.MainMem.AllocAlign(256 * 1024);
-	memcpy(Memory + spu_offset, Memory + (u32)img->segs_addr, 256 * 1024);
+	Memory.CopyToReal(Memory + spu_offset, (u32)img->segs_addr, 256 * 1024);
 	//initialize from new place:
 	new_thread.SetOffset(spu_offset);
 	new_thread.SetEntry(spu_ep);

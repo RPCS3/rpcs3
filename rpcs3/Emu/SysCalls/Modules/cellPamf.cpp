@@ -17,26 +17,16 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pE
 	switch (type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
-		switch (ch)
 		{
-		case 0:
+			if (ch < 16)
 			{
-				pEsFilterId->filterIdMajor = 0xe0; //fake info
+				pEsFilterId->filterIdMajor = 0xe0 + ch;
 				pEsFilterId->filterIdMinor = 0;
 				pEsFilterId->supplementalInfo1 = 0x01;
 				pEsFilterId->supplementalInfo2 = 0;
 			}
-			break;
-		case 1:
-			{
-				pEsFilterId->filterIdMajor = 0xe1;
-				pEsFilterId->filterIdMinor = 0;
-				pEsFilterId->supplementalInfo1 = 0x01;
-				pEsFilterId->supplementalInfo2 = 0;
-			}
-			break;
-		default:
-			cellPamf.Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_AVC (ch=%d)", ch);
+			else
+				cellPamf.Error("pamfStreamTypeToEsFilterId: invalid CELL_PAMF_STREAM_TYPE_AVC channel (ch=%d)", ch);
 		}
 		break;
 	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
@@ -96,7 +86,7 @@ u8 pamfGetStreamType(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
 	default:
-		cellPamf.Error("pamfGetStreamType: unsupported stream type found(0x%x)",
+		cellPamf.Error("pamfGetStreamType: (TODO) unsupported stream type found(0x%x)",
 			pAddr->stream_headers[stream].type);
 		return 0;
 	}
@@ -104,12 +94,16 @@ u8 pamfGetStreamType(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 
 u8 pamfGetStreamChannel(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 {
-	cellPamf.Warning("TODO: pamfGetStreamChannel");
 	//TODO: get stream channel correctly
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
 	if ((pAddr->stream_headers[stream].type == 0x1b) &&
-		(pAddr->stream_headers[stream].stream_id == 0xe1)) return 1;
+		(pAddr->stream_headers[stream].stream_id >= 0xe0) &&
+		(pAddr->stream_headers[stream].stream_id <= 0xef))
+	{
+		return pAddr->stream_headers[stream].stream_id - 0xe0;
+	}
+	cellPamf.Error("TODO: pamfGetStreamChannel (-> 0)");
 	return 0;
 }
 
@@ -122,7 +116,7 @@ int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSi
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pSize = offset /*? offset : 2048*/; //hack
+	pSize = offset;
 	return CELL_OK;
 }
 
@@ -135,11 +129,9 @@ int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attrib
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pSize = offset /*? offset : 2048*/; //hack
+	pSize = offset;
 	return CELL_OK;
 }
-
-//u32 hack_LastHeader = 0;
 
 int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pOffset, mem64_t pSize)
 {
@@ -150,10 +142,9 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pOffset = offset /*? offset : 2048*/; //hack
+	pOffset = offset;
 	const u64 size = (u64)pAddr->data_size << 11;
-	pSize = size /*? size : (fileSize - 2048)*/; //hack
-	//if (!(u32)pAddr->magic) hack_LastHeader = pAddr.GetAddr();
+	pSize = size;
 	return CELL_OK;
 }
 
@@ -177,7 +168,7 @@ int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHead
 		pSelf->fileSize = ((u64)pAddr->data_offset << 11) + ((u64)pAddr->data_size << 11);
 	}
 	pSelf->pAddr = pAddr.GetAddr();
-	//if (hack_LastHeader) memcpy(Memory + pAddr.GetAddr(), Memory + hack_LastHeader, 2048);
+
 	if (attribute & CELL_PAMF_ATTRIBUTE_VERIFY_ON)
 	{
 		//TODO

@@ -29,10 +29,10 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	s_tools_mem_bytes.Add(sc_bytes);
 
 	wxStaticBoxSizer& s_tools_mem_buttons = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Control");
-	wxButton* b_fprev = new wxButton(this, wxID_ANY, "\u00AB", wxDefaultPosition, wxSize(21, 21));
+	wxButton* b_fprev = new wxButton(this, wxID_ANY, "<<", wxDefaultPosition, wxSize(21, 21));
 	wxButton* b_prev  = new wxButton(this, wxID_ANY, "<", wxDefaultPosition, wxSize(21, 21));
 	wxButton* b_next  = new wxButton(this, wxID_ANY, ">", wxDefaultPosition, wxSize(21, 21));
-	wxButton* b_fnext = new wxButton(this, wxID_ANY, "\u00BB", wxDefaultPosition, wxSize(21, 21));
+	wxButton* b_fnext = new wxButton(this, wxID_ANY, ">>", wxDefaultPosition, wxSize(21, 21));
 	s_tools_mem_buttons.Add(b_fprev);
 	s_tools_mem_buttons.Add(b_prev);
 	s_tools_mem_buttons.Add(b_next);

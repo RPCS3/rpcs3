@@ -94,16 +94,43 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 	vfsStream* file;
 	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
 
-	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
+	if (nread.GetAddr() && !nread.IsGood()) return CELL_EFAULT;
+
+	u32 res = 0;
+	u32 count = nbytes;
+	if (nbytes != (u64)count) return CELL_ENOMEM;
+
+	if (!Memory.IsGoodAddr(buf_addr)) return CELL_EFAULT;
+
+	if (count) if (u32 frag = buf_addr & 4095) // memory page fragment
 	{
-		MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
-		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
+		u32 req = min(count, 4096 - frag);
+		u32 read = file->Read(Memory + buf_addr, req);
+		buf_addr += req;
+		res += read;
+		count -= req;
+		if (read < req) goto fin;
 	}
 
-	const u64 res = nbytes ? file->Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	for (u32 pages = count / 4096; pages > 0; pages--) // full pages
+	{
+		if (!Memory.IsGoodAddr(buf_addr)) goto fin; // ??? (probably EFAULT)
+		u32 read = file->Read(Memory + buf_addr, 4096);
+		buf_addr += 4096;
+		res += read;
+		count -= 4096;
+		if (read < 4096) goto fin;
+	}
 
-	if(nread.IsGood())
-		nread = res;
+	if (count) // last fragment
+	{
+		if (!Memory.IsGoodAddr(buf_addr)) goto fin;
+		res += file->Read(Memory + buf_addr, count);
+	}
+
+fin:
+
+	if (nread.GetAddr()) nread = res; // write value if not NULL
 
 	return CELL_OK;
 }
