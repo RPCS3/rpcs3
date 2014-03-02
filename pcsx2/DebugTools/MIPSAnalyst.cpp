@@ -115,6 +115,11 @@ namespace MIPSAnalyst
 			}
 			*/
 			if (end) {
+				// most functions are aligned to 8 or 16 bytes
+				// add the padding to this one
+				while (r5900Debug.read32(addr+8) == 0)
+					addr += 4;
+
 				currentFunction.end = addr + 4;
 				currentFunction.isStraightLeaf = isStraightLeaf;
 				functions.push_back(currentFunction);
@@ -123,6 +128,7 @@ namespace MIPSAnalyst
 				looking = false;
 				end = false;
 				isStraightLeaf = true;
+
 				currentFunction.start = addr+4;
 			}
 		}
