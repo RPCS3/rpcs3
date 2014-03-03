@@ -53,7 +53,6 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	s_panel_credits->AddSpacer(8);
 	s_panel_credits->Add(t_section2);
 	s_panel_credits->AddSpacer(8);
-	s_panel_credits->Add(t_section3);
 	s_panel_credits->AddSpacer(12);
 	
 	//Buttons
