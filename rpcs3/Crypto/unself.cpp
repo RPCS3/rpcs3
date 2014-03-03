@@ -299,7 +299,7 @@ bool SELFDecrypter::LoadMetadata()
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	u32 ctr_nc_off = 0;
+	size_t ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers, metadata_headers);
@@ -347,7 +347,7 @@ bool SELFDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (int i = 0; i < meta_hdr.section_count; i++)
 	{
-		u32 ctr_nc_off = 0;
+		size_t ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
