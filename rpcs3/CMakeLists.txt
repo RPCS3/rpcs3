@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 2.8)
-
 project(rpcs3)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -30,6 +29,7 @@ ${CMAKE_SOURCE_DIR}
 ${CMAKE_SOURCE_DIR}/Emu
 ${CMAKE_SOURCE_DIR}/Gui
 ${CMAKE_SOURCE_DIR}/Loader
+${CMAKE_SOURCE_DIR}/Crypto
 ${CMAKE_SOURCE_DIR}/..
 )
 
@@ -42,9 +42,11 @@ ${CMAKE_SOURCE_DIR}/Ini.cpp
 ${CMAKE_SOURCE_DIR}/Emu/*
 ${CMAKE_SOURCE_DIR}/Gui/*
 ${CMAKE_SOURCE_DIR}/Loader/*
+${CMAKE_SOURCE_DIR}/Crypto/*
 ${CMAKE_SOURCE_DIR}/../Utilities/*
-${CMAKE_SOURCE_DIR}/../scetool/scetool.cpp
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
+
 target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${ZLIB_LIBRARIES} ${FFMPEG_LIBRARIES})
+

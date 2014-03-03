@@ -53,11 +53,11 @@
     <Filter Include="Emu\ARMv7">
       <UniqueIdentifier>{bee6a4b4-6371-4c1b-8558-fc7888b1574e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utilities\scetool">
-      <UniqueIdentifier>{52b11fe8-a967-4d52-bf88-a3210d4ffb27}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\Audio">
       <UniqueIdentifier>{46cb6261-7ba2-4511-b576-4b491c04bed8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Crypto">
+      <UniqueIdentifier>{28cf8d4a-ff56-45ef-a824-3bd71c626257}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -349,9 +349,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="..\scetool\scetool.cpp">
-      <Filter>Utilities\scetool</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -420,6 +417,24 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\aes.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\key_vault.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\sha1.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\unpkg.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\unself.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\utils.cpp">
+      <Filter>Crypto</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -608,6 +623,24 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\MFC.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\aes.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\key_vault.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\sha1.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\unpkg.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\unself.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\utils.h">
+      <Filter>Crypto</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

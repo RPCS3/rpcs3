@@ -261,6 +261,7 @@ extern int cellFsFtruncate(u32 fd, u64 size);
 extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
 extern int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size);
+extern int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
