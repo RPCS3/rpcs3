@@ -465,3 +465,22 @@ int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size)
 
 	return CELL_OK;
 }
+
+int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count)
+{
+	const wxString& ps3_path = Memory.ReadString(path_addr);
+	sys_fs.Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
+		ps3_path.wx_str(), block_size.GetAddr(), block_count.GetAddr());
+
+	if (Memory.IsGoodAddr(path_addr) || !block_size.IsGood() || !block_count.IsGood())
+		return CELL_EFAULT;
+
+	if (ps3_path.empty())
+		return CELL_EINVAL;
+
+	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
+	block_size = 4096; // ?
+	block_count = 10485760; // ?
+
+	return CELL_OK;
+}

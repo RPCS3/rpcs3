@@ -40,7 +40,6 @@ ${CMAKE_SOURCE_DIR}/Emu/*
 ${CMAKE_SOURCE_DIR}/Gui/*
 ${CMAKE_SOURCE_DIR}/Loader/*
 ${CMAKE_SOURCE_DIR}/../Utilities/*
-${CMAKE_SOURCE_DIR}/../scetool/scetool.cpp
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
