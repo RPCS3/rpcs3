@@ -28,6 +28,7 @@
  *  http://www.itl.nist.gov/fipspubs/fip180-1.htm
  */
 
+#include "stdafx.h"
 #include "sha1.h"
 
 /*

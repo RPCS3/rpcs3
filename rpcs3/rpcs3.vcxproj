@@ -206,15 +206,15 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\scetool\scetool.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="AppConnector.cpp" />
+    <ClCompile Include="Crypto\aes.cpp" />
+    <ClCompile Include="Crypto\key_vault.cpp" />
+    <ClCompile Include="Crypto\sha1.cpp" />
+    <ClCompile Include="Crypto\unpkg.cpp" />
+    <ClCompile Include="Crypto\unself.cpp" />
+    <ClCompile Include="Crypto\utils.cpp" />
     <ClCompile Include="Emu\Audio\AudioManager.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
@@ -349,6 +349,12 @@
     <ClInclude Include="..\Utilities\SQueue.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="Crypto\aes.h" />
+    <ClInclude Include="Crypto\key_vault.h" />
+    <ClInclude Include="Crypto\sha1.h" />
+    <ClInclude Include="Crypto\unpkg.h" />
+    <ClInclude Include="Crypto\unself.h" />
+    <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="Emu\Audio\AudioManager.h" />
     <ClInclude Include="Emu\Audio\cellAudio.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />

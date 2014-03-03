@@ -306,3 +306,7 @@ private:
 	bool LoadPhdrData(u64 offset);
 	bool LoadShdrData(u64 offset);
 };
+
+void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr);
+void WritePhdr(wxFile& f, Elf32_Phdr& phdr);
+void WriteShdr(wxFile& f, Elf32_Shdr& shdr);

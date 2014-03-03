@@ -29,6 +29,7 @@
  *  http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
  */
 
+#include "stdafx.h"
 #include "aes.h"
 
 /*

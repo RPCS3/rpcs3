@@ -7,9 +7,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
-#include "scetool/scetool.h"
-
-#include "Loader/SELF.h"
+#include "../Crypto/unself.h"
 #include <cstdlib>
 #include <fstream>
 using namespace PPU_instr;
@@ -89,72 +87,6 @@ void Emulator::CheckStatus()
 		//ConLog.Warning("all stoped!");
 		Pause(); //Stop();
 	}
-}
-
-bool Emulator::IsSelf(const std::string& path)
-{
-	vfsLocalFile f(nullptr);
-
-	if(!f.Open(path))
-		return false;
-
-	SceHeader hdr;
-	hdr.Load(f);
-
-	return hdr.CheckMagic();
-}
-
-bool Emulator::DecryptSelf(const std::string& elf, const std::string& self)
-{
-	// Check if the data really needs to be decrypted.
-	wxFile f(self.c_str());
-
-	if(!f.IsOpened())
-	{
-		ConLog.Error("Could not open SELF file! (%s)", wxString(self).wx_str());
-		return false;
-	}
-	
-	// Get the key version.
-	f.Seek(0x08);
-	be_t<u16> key_version;
-	f.Read(&key_version, sizeof(key_version));
-
-	if(key_version.ToBE() == const_se_t<u16, 0x8000>::value)
-	{
-		ConLog.Warning("Debug SELF detected! Removing fake header...");
-
-		// Get the real elf offset.
-		f.Seek(0x10);
-		be_t<u64> elf_offset;
-		f.Read(&elf_offset, sizeof(elf_offset));
-
-		// Start at the real elf offset.
-		f.Seek(elf_offset);
-
-		wxFile out(elf.c_str(), wxFile::write);
-
-		if(!out.IsOpened())
-		{
-			ConLog.Error("Could not create ELF file! (%s)", wxString(elf).wx_str());
-			return false;
-		}
-
-		// Copy the data.
-		char buf[2048];
-		while (ssize_t size = f.Read(buf, 2048))
-			out.Write(buf, size);
-	}
-	else
-	{
-		if (!scetool_decrypt((scetool::s8 *)self.c_str(), (scetool::s8 *)elf.c_str()))
-		{
-			ConLog.Write("SELF: Could not decrypt file");
-			return false;
-		}
-	}
-
-	return true;
 }
 
 bool Emulator::BootGame(const std::string& path)
