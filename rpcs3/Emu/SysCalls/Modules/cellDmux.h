@@ -329,11 +329,11 @@ struct DemuxerStream
 	}
 
 	template<typename T>
-	bool peek(T& out)
+	bool peek(T& out, u32 shift = 0)
 	{
-		if (sizeof(T) > size) return false;
+		if (sizeof(T) + shift > size) return false;
 
-		out = *(T*)Memory.VirtualToRealAddr(addr);
+		out = *(T*)Memory.VirtualToRealAddr(addr + shift);
 		return true;
 	}
 
@@ -364,14 +364,12 @@ struct PesHeader
 {
 	u64 pts;
 	u64 dts;
-	u8 ch;
 	u8 size;
 	bool new_au;
 
 	PesHeader(DemuxerStream& stream)
 		: pts(0xffffffffffffffff)
 		, dts(0xffffffffffffffff)
-		, ch(0)
 		, size(0)
 		, new_au(false)
 	{
@@ -380,29 +378,40 @@ struct PesHeader
 		stream.get(size);
 		if (size)
 		{
-			//ConLog.Write(">>>>> Pes Header (size=%d)", size);
-			if (size < 10)
-			{
-				stream.skip(size);
-				return;
-			}
-			new_au = true;
+			u8 empty = 0;
 			u8 v;
-			stream.get(v);
-			if ((v & 0xF0) != 0x30)
+			while (true)
 			{
-				ConLog.Error("Pts not found");
-				Emu.Pause();
-			}
-			pts = stream.get_ts(v);
-			stream.get(v);
-			if ((v & 0xF0) != 0x10)
+				stream.get(v);
+				if (v != 0xFF) break; // skip padding bytes
+				empty++;
+				if (empty = size) return;
+			};
+
+			if ((v & 0xF0) == 0x20 && (size - empty) >= 5) // pts only
 			{
-				ConLog.Error("Dts not found");
-				Emu.Pause();				
+				new_au = true;
+				pts = stream.get_ts(v);
+				stream.skip(size - empty - 5);
 			}
-			dts = stream.get_ts(v);
-			stream.skip(size - 10);
+			else
+			{
+				new_au = true;
+				if ((v & 0xF0) != 0x30 || (size - empty) < 10)
+				{
+					ConLog.Error("PesHeader(): pts not found");
+					Emu.Pause();
+				}
+				pts = stream.get_ts(v);
+				stream.get(v);
+				if ((v & 0xF0) != 0x10)
+				{
+					ConLog.Error("PesHeader(): dts not found");
+					Emu.Pause();				
+				}
+				dts = stream.get_ts(v);
+				stream.skip(size - empty - 10);
+			}
 		}
 	}
 };
@@ -497,8 +506,8 @@ public:
 
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, u32 cbFunc, u32 cbArg, u32 spec)
 		: dmux(dmux)
-		, memAddr(addr)
-		, memSize(size)
+		, memAddr(a128(addr))
+		, memSize(size - (addr - memAddr))
 		, fidMajor(fidMajor)
 		, fidMinor(fidMinor)
 		, sup1(sup1)
@@ -508,7 +517,7 @@ public:
 		, spec(spec)
 		, first_addr(0)
 		, peek_addr(0)
-		, last_addr(a128(addr))
+		, last_addr(memAddr)
 		, last_size(0)
 	{
 	}
@@ -590,7 +599,7 @@ public:
 		mem_ptr_t<CellDmuxAuInfoEx> info(last_addr);
 		info->auAddr = last_addr + 128;
 		info->auSize = last_size;
-		if (pes.size)
+		if (pes.new_au)
 		{
 			info->dts.lower = (u32)pes.dts;
 			info->dts.upper = (u32)(pes.dts >> 32);
@@ -607,7 +616,7 @@ public:
 		mem_ptr_t<CellDmuxAuInfo> inf(last_addr + 64);
 		inf->auAddr = last_addr + 128;
 		inf->auSize = last_size;
-		if (pes.size)
+		if (pes.new_au)
 		{
 			inf->dtsLower = (u32)pes.dts;
 			inf->dtsUpper = (u32)(pes.dts >> 32);
@@ -687,7 +696,7 @@ public:
 		SMutexLocker lock(mutex);
 		first_addr = 0;
 		peek_addr = 0;
-		last_addr = a128(memAddr);
+		last_addr = memAddr;
 		last_size = 0;
 	}
 };

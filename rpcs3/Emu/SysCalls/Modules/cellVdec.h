@@ -699,7 +699,6 @@ public:
 	bool just_started;
 
 	AVCodecContext* ctx;
-	AVDictionary* opts;
 	AVFormatContext* fmt;
 	u8* io_buf;
 
@@ -717,34 +716,31 @@ public:
 	const u32 memSize;
 	const u32 cbFunc;
 	const u32 cbArg;
+	u32 memBias;
+
+	VdecTask task; // reference to current task variable
+	u64 last_pts, last_dts;
 
 	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
 		: type(type)
 		, profile(profile)
 		, memAddr(addr)
 		, memSize(size)
+		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
 		, is_finished(false)
 		, is_running(false)
 		, just_started(false)
+		, ctx(nullptr)
 	{
-		opts = nullptr;
-		av_dict_set(&opts, "refcounted_frames", "1", 0);
 		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)
 		{
-			ConLog.Error("vdecDecodeAu: avcodec_find_decoder(H264) failed");
+			ConLog.Error("VideoDecoder(): avcodec_find_decoder(H264) failed");
 			Emu.Pause();
 			return;
 		}
-		ctx = nullptr; /*avcodec_alloc_context3(codec);
-		if (!ctx)
-		{
-			ConLog.Error("VideoDecoder(): avcodec_alloc_context3 failed");
-			Emu.Pause();
-			return;
-		}*/
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
@@ -764,7 +760,7 @@ public:
 
 	~VideoDecoder()
 	{
-		if (!is_finished && ctx)
+		if (ctx)
 		{
 			for (u32 i = frames.GetCount() - 1; ~i; i--)
 			{
@@ -772,20 +768,17 @@ public:
 				av_frame_unref(vf.data);
 				av_frame_free(&vf.data);
 			}
-		}
-		if (io_buf)
-		{
-			av_free(io_buf);
+			avcodec_close(ctx);
+			avformat_close_input(&fmt);
 		}
 		if (fmt)
 		{
+			if (io_buf)
+			{
+				av_free(io_buf);
+			}
 			if (fmt->pb) av_free(fmt->pb);
 			avformat_free_context(fmt);
-		}
-		if (!is_finished && ctx)
-		{
-			//avcodec_close(ctx); // crashes
-			//avformat_close_input(&fmt);
 		}
 	}
 };

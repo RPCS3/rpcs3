@@ -77,7 +77,7 @@ int cellVpostClose(u32 handle)
 int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpostCtrlParam> ctrlParam,
 				  u32 outPicBuff_addr, mem_ptr_t<CellVpostPictureInfo> picInfo)
 {
-	cellVpost.Warning("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
+	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
 		handle, inPicBuff_addr, ctrlParam.GetAddr(), outPicBuff_addr, picInfo.GetAddr());
 
 	VpostInstance* vpost;
