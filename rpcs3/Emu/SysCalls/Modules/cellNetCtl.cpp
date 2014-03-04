@@ -45,6 +45,15 @@ enum
 	CELL_NET_CTL_ERROR_DHCP_LEASE_TIME					= 0x80130504,
 };
 
+// Network connection states
+enum
+{
+	CELL_NET_CTL_STATE_Disconnected = 0,
+	CELL_NET_CTL_STATE_Connecting   = 1,
+	CELL_NET_CTL_STATE_IPObtaining  = 2,
+	CELL_NET_CTL_STATE_IPObtained   = 3,
+};
+
 int cellNetCtlInit()
 {
 	UNIMPLEMENTED_FUNC(cellNetCtl);
@@ -57,9 +66,14 @@ int cellNetCtlTerm()
 	return CELL_OK;
 }
 
-int cellNetCtlGetState()
+int cellNetCtlGetState(mem32_t state)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl.Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
+
+	if (!state.IsGood())
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+
+	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 	return CELL_OK;
 }
 

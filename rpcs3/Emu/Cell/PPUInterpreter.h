@@ -1889,8 +1889,6 @@ private:
 	}
 	void VSUM2SWS(u32 vd, u32 va, u32 vb)
 	{
-		CPU.VPR[vd].Clear();
-
 		for (uint n = 0; n < 2; n++)
 		{
 			s64 sum = (s64)CPU.VPR[va]._s32[n*2] + CPU.VPR[va]._s32[n*2 + 1] + CPU.VPR[vb]._s32[n*2];
@@ -1908,6 +1906,8 @@ private:
 			else
 				CPU.VPR[vd]._s32[n*2] = (s32)sum;
 		}
+		CPU.VPR[vd]._s32[1] = 0;
+		CPU.VPR[vd]._s32[3] = 0;
 	}
 	void VSUM4SBS(u32 vd, u32 va, u32 vb)
 	{

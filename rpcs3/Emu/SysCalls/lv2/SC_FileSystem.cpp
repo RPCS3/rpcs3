@@ -472,7 +472,7 @@ int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count)
 	sys_fs.Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
 		ps3_path.wx_str(), block_size.GetAddr(), block_count.GetAddr());
 
-	if (Memory.IsGoodAddr(path_addr) || !block_size.IsGood() || !block_count.IsGood())
+	if (!Memory.IsGoodAddr(path_addr) || !block_size.IsGood() || !block_count.IsGood())
 		return CELL_EFAULT;
 
 	if (ps3_path.empty())
