@@ -360,3 +360,44 @@ void CPUThread::Task()
 
 	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
 }
+
+int CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe
+{
+	while (m_alive)
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("ExecAsCallback() aborted");
+			return CELL_ECANCELED; // doesn't mean anything
+		}
+		Sleep(1);
+	}
+
+	Stop();
+	Reset();
+
+	SetEntry(pc);
+	SetPrio(1001);
+	SetStackSize(0x10000);
+	SetExitStatus(CELL_OK);
+
+	SetArg(0, a1);
+	SetArg(1, a2);
+	SetArg(2, a3);
+	SetArg(3, a4);
+	Run();
+
+	Exec();
+
+	while (wait && m_alive)
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("ExecAsCallback() aborted");
+			return CELL_EABORT; // doesn't mean anything
+		}
+		Sleep(1);
+	}
+
+	return wait * m_exit_status;
+}

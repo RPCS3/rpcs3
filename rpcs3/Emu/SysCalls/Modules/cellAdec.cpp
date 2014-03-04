@@ -47,6 +47,8 @@ u32 adecOpen(AudioDecoder* data)
 {
 	AudioDecoder& adec = *data;
 
+	adec.adecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
 	u32 adec_id = cellAdec.GetNewId(data);
 
 	adec.id = adec_id;
@@ -70,11 +72,11 @@ u32 adecOpen(AudioDecoder* data)
 				continue;
 			}
 
-			if (adec.frames.GetCount() >= 50)
+			/*if (adec.frames.GetCount() >= 50)
 			{
 				Sleep(1);
 				continue;
-			}
+			}*/
 
 			if (!adec.job.Pop(task))
 			{
@@ -100,10 +102,11 @@ u32 adecOpen(AudioDecoder* data)
 					// TODO: finalize
 					ConLog.Warning("adecEndSeq:");
 
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(adec.cbFunc);
 					cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
-					cb.Branch(true); // ???
+					cb.Branch(true); // ???*/
+					adec.adecCb->ExecAsCallback(adec.cbFunc, true, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
 					avcodec_close(adec.ctx);
 					avformat_close_input(&adec.fmt);
@@ -214,14 +217,15 @@ u32 adecOpen(AudioDecoder* data)
 							frame.auAddr = task.au.addr;
 							frame.auSize = task.au.size;
 							frame.userdata = task.au.userdata;
-							frame.size = 2048;
+							frame.size = 4096;
 							frame.data = nullptr;
 							adec.frames.Push(frame);
 
-							Callback cb;
+							/*Callback cb;
 							cb.SetAddr(adec.cbFunc);
 							cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
-							cb.Branch(false);
+							cb.Branch(false);*/
+							adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 
 							break;
 						}
@@ -273,17 +277,19 @@ u32 adecOpen(AudioDecoder* data)
 							adec.frames.Push(frame);
 							frame.data = nullptr; // to prevent destruction
 
-							Callback cb;
+							/*Callback cb;
 							cb.SetAddr(adec.cbFunc);
 							cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
-							cb.Branch(false);
+							cb.Branch(false);*/
+							adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 						}
 					}
 						
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(adec.cbFunc);
 					cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
-					cb.Branch(false);
+					cb.Branch(false);*/
+					adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
 				}
 				break;
 
@@ -408,6 +414,7 @@ int cellAdecClose(u32 handle)
 		Sleep(1);
 	}
 
+	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
 	Emu.GetIdManager().RemoveID(handle);
 	return CELL_OK;
 }
@@ -506,6 +513,10 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		// copy data
 		if (!af.data) // fake: empty data
 		{
+			u8* buf = (u8*)malloc(4096);
+			memset(buf, 0, 4096);
+			Memory.CopyFromReal(outBuffer_addr, buf, 4096);
+			free(buf);
 			return CELL_OK;
 		}
 	}
@@ -546,7 +557,9 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 
 	adec->memBias += 512;
 	if (adec->memBias + 512 > adec->memSize)
+	{
 		adec->memBias = 0;
+	}
 
 	pcm->pcmHandle = 0; // ???
 	pcm->pcmAttr.bsiInfo_addr = pcm.GetAddr() + sizeof(CellAdecPcmItem);

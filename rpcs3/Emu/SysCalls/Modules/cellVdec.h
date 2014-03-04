@@ -718,8 +718,10 @@ public:
 	const u32 cbArg;
 	u32 memBias;
 
-	VdecTask task; // reference to current task variable
+	VdecTask task; // current task variable
 	u64 last_pts, last_dts;
+
+	CPUThread* vdecCb;
 
 	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
 		: type(type)
@@ -733,6 +735,7 @@ public:
 		, is_running(false)
 		, just_started(false)
 		, ctx(nullptr)
+		, vdecCb(nullptr)
 	{
 		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)

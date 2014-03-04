@@ -234,6 +234,8 @@ public:
 		return pc + 4;
 	}
 
+	int ExecAsCallback(u64 pc, bool wait, u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0);
+
 protected:
 	virtual void DoReset()=0;
 	virtual void DoRun()=0;

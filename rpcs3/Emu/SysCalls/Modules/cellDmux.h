@@ -470,6 +470,7 @@ public:
 	volatile bool is_finished;
 	volatile bool is_running;
 
+	CPUThread* dmuxCb;
 
 	Demuxer(u32 addr, u32 size, u32 func, u32 arg)
 		: is_finished(false)
@@ -478,6 +479,7 @@ public:
 		, memSize(size)
 		, cbFunc(func)
 		, cbArg(arg)
+		, dmuxCb(nullptr)
 	{
 	}
 };

@@ -118,14 +118,11 @@ void PPUThread::InitRegs()
 		GPR[6] = m_args[3];
 	}
 
-	u32 prx_mem = Memory.PRXMem.AllocAlign(0x10000);
-	Memory.Write64(prx_mem, 0xDEADBEEFABADCAFE);
-
 	GPR[0] = pc;
 	GPR[8] = entry;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = prx_mem + 0x7060;
+	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];

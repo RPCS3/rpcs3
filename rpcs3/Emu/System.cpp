@@ -267,6 +267,8 @@ void Emulator::Load()
 		ppu_thr_exit_data += ADDI(11, 0, 41);
 		ppu_thr_exit_data += SC(2);
 		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+
+		Memory.Write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 	}
 	break;
 

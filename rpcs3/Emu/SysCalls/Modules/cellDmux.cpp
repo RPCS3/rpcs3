@@ -20,7 +20,7 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 	if (esFilterId->filterIdMajor >= 0xe0)
 		attr->memSize = 0x2000000; // 0x45fa49 from ps3
 	else
-		attr->memSize = 0x400000; // 0x73d9 from ps3
+		attr->memSize = 0x100000; // 0x73d9 from ps3
 
 	cellDmux.Warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", (u32)esFilterId->filterIdMajor, (u32)esFilterId->filterIdMinor,
 		(u32)esFilterId->supplementalInfo1, (u32)esFilterId->supplementalInfo2);
@@ -29,6 +29,8 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 u32 dmuxOpen(Demuxer* data)
 {
 	Demuxer& dmux = *data;
+
+	dmux.dmuxCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	u32 dmux_id = cellDmux.GetNewId(data);
 
@@ -138,10 +140,11 @@ u32 dmuxOpen(Demuxer* data)
 							mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							Callback cb;
+							/*Callback cb;
 							cb.SetAddr(es.cbFunc);
 							cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-							cb.Branch(false);
+							cb.Branch(false);*/
+							dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 						}
 						else
 						{
@@ -184,10 +187,11 @@ u32 dmuxOpen(Demuxer* data)
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 								esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 								esMsg->supplementalInfo = stream.userdata;
-								Callback cb;
+								/*Callback cb;
 								cb.SetAddr(es.cbFunc);
 								cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-								cb.Branch(false);
+								cb.Branch(false);*/
+								dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 							}
 
 							if (pes.new_au)
@@ -292,10 +296,12 @@ task:
 					mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(dmux.cbFunc);
 					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
-					cb.Branch(task.type == dmuxResetStreamAndWaitDone);
+					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
+					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, task.type == dmuxResetStreamAndWaitDone,
+						dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
 					dmux.is_running = false;
 				}
 				break;
@@ -370,20 +376,22 @@ task:
 						mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 						esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 						esMsg->supplementalInfo = stream.userdata;
-						Callback cb;
+						/*Callback cb;
 						cb.SetAddr(es.cbFunc);
 						cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-						cb.Branch(false);
+						cb.Branch(false);*/
+						dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 					}
 
 					// callback
 					mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 					esMsg->supplementalInfo = stream.userdata;
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(es.cbFunc);
 					cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-					cb.Branch(false);
+					cb.Branch(false);*/
+					dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 				}
 				break;
 
@@ -549,6 +557,7 @@ int cellDmuxClose(u32 demuxerHandle)
 		Sleep(1);
 	}
 
+	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
 	Emu.GetIdManager().RemoveID(demuxerHandle);
 	return CELL_OK;
 }

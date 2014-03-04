@@ -1064,6 +1064,8 @@ public:
 	const u32 cbArg;
 	u32 memBias;
 
+	CPUThread* adecCb;
+
 	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
 		: type(type)
 		, memAddr(addr)
@@ -1071,6 +1073,7 @@ public:
 		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
+		, adecCb(nullptr)
 		, is_running(false)
 		, is_finished(false)
 		, just_started(false)
