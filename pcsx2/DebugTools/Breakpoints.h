@@ -150,6 +150,9 @@ public:
 
 	static void Update(u32 addr = 0);
 
+	static void SetBreakpointTriggered(bool b) { breakpointTriggered_ = b; };
+	static bool GetBreakpointTriggered() { return breakpointTriggered_; };
+
 private:
 	static size_t FindBreakpoint(u32 addr, bool matchTemp = false, bool temp = false);
 	// Finds exactly, not using a range check.
@@ -158,6 +161,7 @@ private:
 	static std::vector<BreakPoint> breakPoints_;
 	static u32 breakSkipFirstAt_;
 	static u64 breakSkipFirstTicks_;
+	static bool breakpointTriggered_;
 
 	static std::vector<MemCheck> memChecks_;
 	static std::vector<MemCheck *> cleanupMemChecks_;

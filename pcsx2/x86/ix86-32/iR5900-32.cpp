@@ -1278,6 +1278,7 @@ void dynarecCheckBreakpoint()
 	if (cond && !cond->Evaluate())
 		return;
 
+	CBreakPoints::SetBreakpointTriggered(true);
 	GetCoreThread().PauseSelf();
 	recExitExecution();
 }
@@ -1289,6 +1290,7 @@ void dynarecMemcheck()
 		return;
 
 	iFlushCall(FLUSH_INTERPRETER);
+	CBreakPoints::SetBreakpointTriggered(true);
 	GetCoreThread().PauseSelf();
 	recExitExecution();
 }

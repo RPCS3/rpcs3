@@ -409,9 +409,12 @@ void DisassemblyDialog::setDebugMode(bool debugMode)
 			eeTab->getDisassembly()->gotoPc();
 			iopTab->getDisassembly()->gotoPc();
 			
-			// Defocuses main window even when not debugging, causing savestate hotkeys to fail
-			/*if (currentCpu != NULL)
-				currentCpu->getDisassembly()->SetFocus();*/
+			if (CBreakPoints::GetBreakpointTriggered())
+			{
+				if (currentCpu != NULL)
+					currentCpu->getDisassembly()->SetFocus();
+				CBreakPoints::SetBreakpointTriggered(false);
+			}
 		} else {
 			breakRunButton->SetLabel(L"Break");
 

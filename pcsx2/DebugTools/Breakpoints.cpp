@@ -11,6 +11,7 @@ u32 CBreakPoints::breakSkipFirstAt_ = 0;
 u64 CBreakPoints::breakSkipFirstTicks_ = 0;
 std::vector<MemCheck> CBreakPoints::memChecks_;
 std::vector<MemCheck *> CBreakPoints::cleanupMemChecks_;
+bool CBreakPoints::breakpointTriggered_ = false;
 
 int addressMask = 0x1FFFFFFF;
 
