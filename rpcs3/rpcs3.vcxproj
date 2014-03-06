@@ -291,6 +291,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellJpgDec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellNetCtl.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPamf.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
