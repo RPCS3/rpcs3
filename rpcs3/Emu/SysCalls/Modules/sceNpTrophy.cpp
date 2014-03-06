@@ -111,10 +111,16 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (options & (~(u64)1))
 		SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
+	if (context >= s_npTrophyInstance.contexts.size())
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
 
-	int ret;
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+
+	if (!ctxt.trp_stream)
+		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+
+	int ret;
 	TRPLoader trp(*(ctxt.trp_stream));
 
 	// TODO: Get the path of the current user
@@ -150,11 +156,16 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (!reqspace.IsGood())
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	if (context >= s_npTrophyInstance.contexts.size())
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
-	reqspace = ctxt.trp_stream->GetSize(); // TODO: This is not accurate. It's just an approximation of the real value
 
+	if (!ctxt.trp_stream)
+		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+
+	reqspace = ctxt.trp_stream->GetSize(); // TODO: This is not accurate. It's just an approximation of the real value
 	return CELL_OK;
 }
 

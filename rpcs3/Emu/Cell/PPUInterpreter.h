@@ -3717,7 +3717,7 @@ private:
 	}
 	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = CPU.FPR[fra] < 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
+		CPU.FPR[frd] = CPU.FPR[fra] >= 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
 		if(rc) UNK("fsel.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)
