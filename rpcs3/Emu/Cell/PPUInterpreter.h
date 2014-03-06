@@ -1889,8 +1889,6 @@ private:
 	}
 	void VSUM2SWS(u32 vd, u32 va, u32 vb)
 	{
-		CPU.VPR[vd].Clear();
-
 		for (uint n = 0; n < 2; n++)
 		{
 			s64 sum = (s64)CPU.VPR[va]._s32[n*2] + CPU.VPR[va]._s32[n*2 + 1] + CPU.VPR[vb]._s32[n*2];
@@ -1908,6 +1906,8 @@ private:
 			else
 				CPU.VPR[vd]._s32[n*2] = (s32)sum;
 		}
+		CPU.VPR[vd]._s32[1] = 0;
+		CPU.VPR[vd]._s32[3] = 0;
 	}
 	void VSUM4SBS(u32 vd, u32 va, u32 vb)
 	{
@@ -3717,7 +3717,7 @@ private:
 	}
 	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = CPU.FPR[fra] < 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
+		CPU.FPR[frd] = CPU.FPR[fra] >= 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
 		if(rc) UNK("fsel.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)

@@ -525,7 +525,7 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 		return false;
 	}
 
-	ConLog.Write("Loading RAP file %s", ci_str + ".rap");
+	ConLog.Write("Loading RAP file %s", ci_str.wc_str() + wchar_t(".rap"));
 	rap_file.Read(rap_key, 0x10);
 	rap_file.Close();
 
