@@ -257,6 +257,8 @@ static dma_mbc&		hw_dma12	= (dma_mbc&) iopHw[0x1550];
 
 #define HW_DMA2_MADR (psxHu32(0x10a0)) // GPU DMA
 #define HW_DMA2_BCR  (psxHu32(0x10a4))
+#define HW_DMA2_BCR_L16 (psxHu16(0x10a4))
+#define HW_DMA2_BCR_H16 (psxHu16(0x10a6))
 #define HW_DMA2_CHCR (psxHu32(0x10a8))
 #define HW_DMA2_TADR (psxHu32(0x10ac))
 
@@ -309,6 +311,7 @@ static dma_mbc&		hw_dma12	= (dma_mbc&) iopHw[0x1550];
 enum IopEventId
 {
 	IopEvt_SIFhack = 1	// The SIF likes to fall asleep and never wake up.  This sends intermittent SBUS flags to rewake it.
+,   IopEvt_SIF2 = 2
 ,	IopEvt_Cdvd = 5		// General Cdvd commands (Seek, Standby, Break, etc)
 ,	IopEvt_SIF0 = 9
 ,	IopEvt_SIF1 = 10

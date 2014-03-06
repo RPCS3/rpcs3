@@ -170,6 +170,7 @@ static __fi void _psxTestInterrupts()
 {
 	IopTestEvent(IopEvt_SIF0,		sif0Interrupt);	// SIF0
 	IopTestEvent(IopEvt_SIF1,		sif1Interrupt);	// SIF1
+	IopTestEvent(IopEvt_SIF2,		sif2Interrupt);	// SIF2
 #ifndef SIO_INLINE_IRQS
 	IopTestEvent(IopEvt_SIO,		sioInterrupt);
 #endif

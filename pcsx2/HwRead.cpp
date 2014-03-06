@@ -17,7 +17,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Hardware.h"
-
+#include "IopCommon.h"
 #include "ps2/HwInternal.h"
 #include "ps2/eeHwTraceLog.inl"
 
@@ -31,6 +31,7 @@ static __fi void IntCHackCheck()
 	if( diff > 0 ) cpuRegs.cycle = g_nextEventCycle;
 }
 
+int shift = 0;
 static const uint HwF_VerboseConLog	= 1<<0;
 static const uint HwF_IntcStatHack	= 1<<1;	// used for Reads only.
 
@@ -91,9 +92,50 @@ mem32_t __fastcall _hwRead32(u32 mem)
 				return psHu32(INTC_STAT);
 			}
 
-			//if ((mem & 0x1000f200) == 0x1000f200)
-			//	Console.Error("SBUS");
+			
+				
+			if ((mem & 0x1000ff00) == 0x1000f300)
+			{
+				int ret = 0;
+				u32 sif2fifosize = min(sif2.fifo.size, 7);
 
+				switch (mem & 0xf0)
+				{
+				case 0x00:
+					ret = psxHu32(0x1f801814);
+					break;
+				case 0x80:					
+#if PSX_EXTRALOGS
+					DevCon.Warning("FIFO Size %x", sif2fifosize);
+#endif
+					ret = psHu32(mem) | (sif2fifosize << 16);
+					if (sif2.fifo.size > 0) ret |= 0x80000000;
+					break;
+				case 0xc0:
+					ReadFifoSingleWord();
+					ret = psHu32(mem);
+					break;
+				case 0xe0:
+					//ret = 0xa000e1ec;
+					if (sif2.fifo.size > 0)
+					{
+						ReadFifoSingleWord();
+						ret = psHu32(mem);
+					}
+					else ret = 0;
+					break;
+				}
+#if PSX_EXTRALOGS
+				DevCon.Warning("SBUS read %x value sending %x", mem, ret);
+#endif
+				return ret;
+
+				
+			}
+			/*if ((mem & 0x1000ff00) == 0x1000f200)
+			{
+				if((mem & 0xffff) != 0xf230)DevCon.Warning("SBUS read %x value sending %x", mem, psHu32(mem));
+			}*/
 			switch( mem )
 			{
 				case SIO_ISR:
@@ -245,6 +287,20 @@ static void _hwRead64(u32 mem, mem64_t* result )
 			_hwRead128<page>(mem & ~0x0f, &out128);
 			*result = out128._u64[wordpart];
 		}
+			return;
+		case 0x0F:
+			if ((mem & 0xffffff00) == 0x1000f300)
+			{
+				DevCon.Warning("64bit read from %x wibble", mem);
+				if (mem == 0x1000f3E0)
+				{
+
+					ReadFifoSingleWord();
+					*result = psHu32(0x1000f3E0);
+					ReadFifoSingleWord();
+					*result |= (u64)psHu32(0x1000f3E0) << 32;
+				}
+			}
 		return;
 	}
 
@@ -288,7 +344,25 @@ void __fastcall _hwRead128(u32 mem, mem128_t* result )
 			// indeterminate state.  The actual behavior probably isn't important.
 			ZeroQWC( result );
 		break;
-		
+		case 0x0F:
+			if ((mem & 0xffffff00) == 0x1000f300)
+			{
+				DevCon.Warning("128bit read from %x wibble", mem);
+				if (mem == 0x1000f3E0)
+				{
+					
+					ReadFifoSingleWord();
+					result->lo = psHu32(0x1000f3E0);
+					ReadFifoSingleWord();
+					result->lo |= (u64)psHu32(0x1000f3E0) << 32;
+					ReadFifoSingleWord();
+					result->hi = psHu32(0x1000f3E0);
+					ReadFifoSingleWord();
+					result->hi |= (u64)psHu32(0x1000f3E0) << 32;
+				}
+			}
+			break;
+				
 		default:
 			_hwRead64<page>( mem, &result->lo );
 			result->hi = 0;

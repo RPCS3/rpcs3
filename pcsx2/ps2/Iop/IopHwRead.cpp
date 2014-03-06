@@ -16,7 +16,7 @@
 
 #include "PrecompiledHeader.h"
 #include "IopHw_Internal.h"
-
+#include "Sif.h"
 #include "Sio.h"
 #include "CDVD/CdRom.h"
 
@@ -222,6 +222,8 @@ static __fi T _HwRead_16or32_Page1( u32 addr )
 	}
 	else
 	{
+		u32 sif2fifosize = sif2.fifo.size;
+
 		switch( masked_addr )
 		{
 			// ------------------------------------------------------------------------
@@ -295,22 +297,60 @@ static __fi T _HwRead_16or32_Page1( u32 addr )
 			// ------------------------------------------------------------------------
 			// Legacy GPU  emulation
 			//
-
-			mcase (HW_PS1_GPU_DATA):
+			mcase(0x1f8010ac) :
 				ret = psxHu32(addr);
+				DevCon.Warning("SIF2 IOP TADR?? read");
+			break;
+
+			mcase(HW_PS1_GPU_DATA) :
+				ret = psxHu32(addr);
+				DevCon.Warning("GPU Data Read %x", ret);
 			break;
 			
-			mcase (HW_PS1_GPU_STATUS):
-				ret = psxHu32(addr);
+			mcase(HW_PS1_GPU_STATUS) :
+				//ret = psxHu32(addr);
+				/*if (sif2fifosize == 0x8) psxHu32(0x1f801814) &= ~(3 << 25);
+				else psxHu32(0x1f801814) |= (3 << 25);*/
+				/*switch ((psxHu32(HW_PS1_GPU_STATUS) >> 29) & 0x3)
+				{
+					case 0x0:
+						//DevCon.Warning("Set DMA Mode OFF");
+						psxHu32(HW_PS1_GPU_STATUS) &= ~0x2000000;
+						break;
+					case 0x1:
+						//DevCon.Warning("Set DMA Mode FIFO");
+						psxHu32(HW_PS1_GPU_STATUS) |= 0x2000000;
+						break;
+					case 0x2:
+						//DevCon.Warning("Set DMA Mode CPU->GPU");
+						psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x10000000) >> 3);
+						break;
+					case 0x3:
+						//DevCon.Warning("Set DMA Mode GPUREAD->CPU");
+						psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x8000000) >> 2);
+						break;
+				}*/
+				ret = psxHu32(addr); //Idle & Ready to recieve command.
+				//psxHu32(addr) = psHu32(0x1000f300);
+#if PSX_EXTRALOGS
+			DevCon.Warning("GPU Status Read %x Sif fifo size %x", ret, sif2fifosize);
+#endif
 				//ret = -1; // fake alive GPU :p
 			break;
 			
 			mcase (0x1f801820): // MDEC
 				ret = psxHu32(addr);
+#if PSX_EXTRALOGS
+				DevCon.Warning("MDEC 1820 Read %x", ret);
+#endif
 			break;
 			
 			mcase (0x1f801824): // MDEC
+				
 				ret = psxHu32(addr);
+#if PSX_EXTRALOGS
+			DevCon.Warning("MDEC 1824 Read %x", ret);
+#endif
 			break;
 
 			// ------------------------------------------------------------------------

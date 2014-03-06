@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "IopHw_Internal.h"
-
+#include "Sif.h"
 #include "Sio.h"
 #include "CDVD/CdRom.h"
 
@@ -348,11 +348,16 @@ static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 
 			mcase(0x1f801098):	// DMA1 CHCR -- MDEC OUT [ignored]
 				DmaExec(1);
+			break;*/
+			mcase(0x1f8010ac):
+				DevCon.Warning("SIF2 IOP TADR?? write");
+				psxHu(addr) = val;
 			break;
 
-			mcase(0x1f8010a8):	// DMA2 CHCR -- GPU [ignored]
+			mcase(0x1f8010a8) :	// DMA2 CHCR -- GPU [ignored]
+				psxHu(addr) = val;
 				DmaExec(2);
-			break;*/
+			break;
 
 			mcase(0x1f8010b8):	// DMA3 CHCR -- CDROM
 				psxHu(addr) = val;
@@ -456,19 +461,101 @@ static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 			// Legacy GPU  emulation
 			//
 
-			mcase (HW_PS1_GPU_DATA):
-				psxHu(addr) = val; // guess
+			mcase(HW_PS1_GPU_DATA) :
+				DevCon.Warning("GPUDATA Write %x", val);
+				/*if (val == 0x00000000)
+				{
+					psxHu32(HW_PS1_GPU_STATUS) = 0x14802000;
+				}
+				else if (val == 0x01000000)
+				{
+					DevCon.Warning("GP0 FIFO Clear");
+					sif2.fifo.clear();
+				}
+			     else 
+				{*/
+					psxHu(HW_PS1_GPU_DATA) = val; // guess
+					WriteFifoSingleWord();
+						
+				//}
 				//GPU_writeData(value); // really old code from PCSX? (rama)
 				break;
 			mcase (HW_PS1_GPU_STATUS):
-				psxHu(addr) = val; // guess
+				DevCon.Warning("GPUSTATUS Write Command %x Param %x", (u32)val >> 24, val & 0xffffff);
+			//psxHu(addr) = val; // guess
+				//psxHu(HW_PS1_GPU_STATUS) = val;
+				//WriteFifoSingleWord();
+			//	psxHu(HW_PS1_GPU_DATA) = val; // guess
+			//	WriteFifoSingleWord();
+				/*if (val == 0) //Reset
+				{
+					psxHu32(HW_PS1_GPU_STATUS) = 0x14802000;
+				}
+				else if (val == 0x10000007) //Get GPU version
+				{
+					//DevCon.Warning("Get Version");
+					psxHu(HW_PS1_GPU_DATA) = 2;
+				}
+				else if ((val & 0xff000000) == 0x04000000)
+				{
+					//psxHu32(HW_PS1_GPU_STATUS) = psxHu32(HW_PS1_GPU_STATUS) &= ~0x60000000;
+					psxHu32(HW_PS1_GPU_STATUS) |= (val & 0x3) << 29;
+					switch (val & 0x3)
+					{
+						case 0x0:
+							//DevCon.Warning("Set DMA Mode OFF");
+							psxHu32(HW_PS1_GPU_STATUS) &= ~0x2000000;
+							break;
+						case 0x1:
+							//DevCon.Warning("Set DMA Mode FIFO");
+							psxHu32(HW_PS1_GPU_STATUS) |= 0x2000000;
+							break;
+						case 0x2:
+							//DevCon.Warning("Set DMA Mode CPU->GPU");
+							psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x10000000) >> 3);
+							break;
+						case 0x3:
+							//DevCon.Warning("Set DMA Mode GPUREAD->CPU");
+							psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x8000000) >> 2);
+							break;
+					}
+				
+				}
+				else if (val == 0x03000000)
+				{
+				//	DevCon.Warning("Turn Display on");
+					psxHu32(HW_PS1_GPU_STATUS) &= ~(1 << 23);
+				}
+				else if ((val & 0xff000000) == 0x05000000)
+				{
+					DevCon.Warning("Start display area");
+
+					//psxHu32(HW_PS1_GPU_STATUS) |= 0x80000000;
+					//psxHu32(HW_PS1_GPU_STATUS) &= ~(1 << 26);
+				}
+				else if ((val & 0xff000000) == 0x08000000)
+				{
+					//DevCon.Warning("Display Mode");
+					psxHu32(HW_PS1_GPU_STATUS) &= ~0x7F4000;
+					psxHu32(HW_PS1_GPU_STATUS) |= (u32)(val & 0x3f) << 17;
+					psxHu32(HW_PS1_GPU_STATUS) |= (u32)(val & 0x40) << 10;
+					psxHu32(HW_PS1_GPU_STATUS) |= (u32)(val & 0x80) << 7;
+					//psxHu32(HW_PS1_GPU_STATUS) |= 0x80000000;
+					//psxHu32(HW_PS1_GPU_STATUS) &= ~(1 << 26);
+				}
+				else
+				{
+					//DevCon.Warning("Unknown GP1 Command");
+				}*/
 				//GPU_writeStatus(value); // really old code from PCSX? (rama)
 				break;
 			mcase (0x1f801820): // MDEC
+				DevCon.Warning("MDEX 1820 Write %x", val);
 				psxHu(addr) = val; // guess
 				//mdecWrite0(value); // really old code from PCSX? (rama)
 				break;
 			mcase (0x1f801824): // MDEC
+				DevCon.Warning("MDEX 1824 Write %x", val);
 				psxHu(addr) = val; // guess
 				//mdecWrite1(value); // really old code from PCSX? (rama)
 				break;

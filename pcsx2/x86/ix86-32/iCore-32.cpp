@@ -172,6 +172,7 @@ void _flushConstReg(int reg)
 		MOV32ItoM((int)&cpuRegs.GPR.r[reg].UL[0], g_cpuConstRegs[reg].UL[0]);
 		MOV32ItoM((int)&cpuRegs.GPR.r[reg].UL[1], g_cpuConstRegs[reg].UL[1]);
 		g_cpuFlushedConstReg |= (1<<reg);
+		if (reg == 0) DevCon.Warning("Flushing r0!");
 	}
 }
 

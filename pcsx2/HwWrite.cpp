@@ -18,7 +18,7 @@
 #include "Common.h"
 #include "Hardware.h"
 #include "Gif_Unit.h"
-
+#include "IopCommon.h"
 #include "ps2/HwInternal.h"
 #include "ps2/eeHwTraceLog.inl"
 
@@ -44,7 +44,10 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 	// All unknown registers on the EE are "reserved" as discarded writes and indeterminate
 	// reads.  Bus error is only generated for registers outside the first 16k of mapped
 	// register space (which is handled by the VTLB mapping, so no need for checks here).
-
+#if PSX_EXTRALOGS
+	if ((mem & 0x1000ff00) == 0x1000f300) DevCon.Warning("32bit Write to SIF Register %x value %x", mem, value);
+	//if ((mem & 0x1000ff00) == 0x1000f200) DevCon.Warning("Write to SIF Register %x value %x", mem, value);
+#endif	
 	switch (page)
 	{
 		case 0x00:	if (!rcntWrite32<0x00>(mem, value)) return;	break;
@@ -180,6 +183,34 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 					psHu32(mem) = 0;
 				return;
 
+				mcase(SBUS_F300) :
+					psxHu32(0x1f801814) = value;
+				/*
+				if (sif2.fifo.size == 0) psxHu32(0x1f801814) |= 0x4000000;
+				switch ((psxHu32(HW_PS1_GPU_STATUS) >> 29) & 0x3)
+					{
+					case 0x0:
+						//DevCon.Warning("Set DMA Mode OFF");
+						psxHu32(HW_PS1_GPU_STATUS) &= ~0x2000000;
+						break;
+					case 0x1:
+						//DevCon.Warning("Set DMA Mode FIFO");
+						psxHu32(HW_PS1_GPU_STATUS) |= 0x2000000;
+						break;
+					case 0x2:
+						//DevCon.Warning("Set DMA Mode CPU->GPU");
+						psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x10000000) >> 3);
+						break;
+					case 0x3:
+						//DevCon.Warning("Set DMA Mode GPUREAD->CPU");
+						psxHu32(HW_PS1_GPU_STATUS) = (psxHu32(HW_PS1_GPU_STATUS) & ~0x2000000) | ((psxHu32(HW_PS1_GPU_STATUS) & 0x8000000) >> 2);
+						break;
+					}*/
+					//psHu32(mem) = 0;
+				return;
+				mcase(SBUS_F380) :
+					psHu32(mem) = value;
+				return;
 				mcase(MCH_RICM)://MCH_RICM: x:4|SA:12|x:5|SDEV:1|SOP:4|SBC:1|SDEV:5
 					if ((((value >> 16) & 0xFFF) == 0x21) && (((value >> 6) & 0xF) == 1) && (((psHu32(0xf440) >> 7) & 1) == 0))//INIT & SRP=0
 						rdram_sdevid = 0;	// if SIO repeater is cleared, reset sdevid
@@ -221,6 +252,9 @@ void __fastcall hwWrite32( u32 mem, u32 value )
 template< uint page >
 void __fastcall _hwWrite8(u32 mem, u8 value)
 {
+#if PSX_EXTRALOGS
+	if ((mem & 0x1000ff00) == 0x1000f300) DevCon.Warning("8bit Write to SIF Register %x value %x wibble", mem, value);
+#endif
 	iswitch (mem)
 	icase(SIO_TXFIFO)
 	{
@@ -276,7 +310,9 @@ template< uint page >
 void __fastcall _hwWrite16(u32 mem, u16 value)
 {
 	pxAssume( (mem & 0x01) == 0 );
-
+#if PSX_EXTRALOGS
+	if ((mem & 0x1000ff00) == 0x1000f300) DevCon.Warning("16bit Write to SIF Register %x wibble", mem);
+#endif
 	switch(mem & ~3)
 	{
 		case DMAC_STAT:
@@ -310,7 +346,9 @@ void __fastcall _hwWrite64( u32 mem, const mem64_t* srcval )
 	// * FIFOs have 128 bit registers that are probably zero-fill.
 	// * All other registers likely disregard the upper 32-bits and simply act as normal
 	//   32-bit writes.
-
+#if PSX_EXTRALOGS
+	if ((mem & 0x1000ff00) == 0x1000f300) DevCon.Warning("64bit Write to SIF Register %x wibble", mem);
+#endif
 	switch (page)
 	{
 		case 0x02:
@@ -355,7 +393,9 @@ void __fastcall _hwWrite128(u32 mem, const mem128_t* srcval)
 	// FIFOs are the only "legal" 128 bit registers.  Handle them first.
 	// all other registers fall back on the 64-bit handler (and from there
 	// most of them fall back to the 32-bit handler).
-
+#if PSX_EXTRALOGS
+	if ((mem & 0x1000ff00) == 0x1000f300) DevCon.Warning("128bit Write to SIF Register %x wibble", mem);
+#endif
 	switch (page)
 	{
 		case 0x04:

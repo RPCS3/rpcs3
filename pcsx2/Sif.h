@@ -18,6 +18,9 @@
 
 static const int FIFO_SIF_W = 128;
 
+// psxdev: was here on the initial psx merge
+//static u32 sif2fifostat = (u32&)eeHw[0xf380];
+
 // Despite its name, this is actually the IOP's DMAtag, which itself also contains
 // the EE's DMAtag in its upper 64 bits.  Note that only the lower 24 bits of 'data' is
 // the IOP's chain transfer address (loaded into MADR).  Bits 30 and 31 are transfer stop
@@ -119,12 +122,13 @@ struct _sif
 	sif_iop iop;
 };
 
-extern _sif sif0, sif1;
+extern _sif sif0, sif1, sif2;
 
 extern void sifInit();
 
 extern void SIF0Dma();
 extern void SIF1Dma();
+extern void SIF2Dma();
 
 extern void dmaSIF0();
 extern void dmaSIF1();
@@ -132,17 +136,25 @@ extern void dmaSIF2();
 
 extern void EEsif0Interrupt();
 extern void EEsif1Interrupt();
+extern void EEsif2Interrupt();
 
 extern void sif0Interrupt();
 extern void sif1Interrupt();
+extern void sif2Interrupt();
+
+extern bool ReadFifoSingleWord();
+extern bool WriteFifoSingleWord();
 
 #define sif0data sif0.iop.data.data
 #define sif1data sif1.iop.data.data
+#define sif2data sif2.iop.data.data
 
 #define sif0words sif0.iop.data.words
 #define sif1words sif1.iop.data.words
+#define sif2words sif2.iop.data.words
 
 #define sif0tag DMA_TAG(sif0data)
 #define sif1tag DMA_TAG(sif1data)
+#define sif2tag DMA_TAG(sif2data)
 
 #endif /* __SIF_H__ */

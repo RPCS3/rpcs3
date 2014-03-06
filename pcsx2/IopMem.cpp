@@ -386,6 +386,9 @@ void __fastcall iopMemWrite16(u32 mem, u16 value)
 						psHu32(SBUS_F260) = 0;
 						return;
 				}
+#if PSX_EXTRALOGS
+				DevCon.Warning("IOP 16 Write to %x value %x", mem, value);
+#endif
 				psxSu16(mem) = value; return;
 			}
 			if (t == 0x1F90) {
@@ -469,6 +472,9 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 					return;
 
 				}
+#if PSX_EXTRALOGS
+				DevCon.Warning("IOP 32 Write to %x value %x", mem, value);
+#endif
 				psxSu32(mem) = value;
 
 				// wtf?  why were we writing to the EE's sif space?  Commenting this out doesn't

@@ -77,6 +77,7 @@ struct cdrStruct
 
 	int Init;
 
+	u8 IrqMask; // psxdev: Added on initial psx work, not referenced since. Is it needed?
 	u8 Irq;
 	u32 eCycle;
 

@@ -27,7 +27,7 @@
 #include "IopBios.h"
 #include "IopCounters.h"
 #include "IopSio2.h"
-
+#include "Gte.h"
 static const s64 PSXCLK = 36864000;	/* 36.864 Mhz */
 //#define PSXCLK	 9216000	/* 36.864 Mhz */
 //#define PSXCLK	186864000	/* 36.864 Mhz */
