@@ -367,7 +367,7 @@ __fi void  EEsif2Interrupt()
 	sif2dma.chcr.STR = false;
 }
 
-__fi void dmaSIF2()
+__fi void _dmaSIF2()
 {
 	DevCon.Warning("SIF2 EE CHCR %x", sif2dma.chcr._u32);
 	SIF_LOG(wxString(L"dmaSIF2" + sif2dma.cmqt_to_str()).To8BitData());
