@@ -52,6 +52,9 @@ u32 dmuxOpen(Demuxer* data)
 
 		u32 cb_add = 0;
 
+		u32 updates_count = 0;
+		u32 updates_signaled = 0;
+
 		while (true)
 		{
 			if (Emu.IsStopped())
@@ -68,9 +71,17 @@ u32 dmuxOpen(Demuxer* data)
 
 				if (!stream.peek(code)) 
 				{
+					dmux.is_running = false;
 					// demuxing finished
-					task.type = dmuxResetStream;
-					goto task;
+					mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux.memAddr) + (cb_add ^= 16));
+					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
+					dmuxMsg->supplementalInfo = stream.userdata;
+					/*Callback cb;
+					cb.SetAddr(dmux.cbFunc);
+					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
+					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					updates_signaled++;
 				}
 				else switch (code.ToLE())
 				{
@@ -125,11 +136,14 @@ u32 dmuxOpen(Demuxer* data)
 						if (esATX[ch])
 						{
 							ElementaryStream& es = *esATX[ch];
-							if (es.isfull())
+							while (es.isfull())
 							{
-								stream = backup;
+								if (Emu.IsStopped())
+								{
+									ConLog.Warning("esATX[%d] was full, waiting aborted", ch);
+									return;
+								}
 								Sleep(1);
-								continue;
 							}
 
 							//ConLog.Write("*** AT3+ AU sent (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
@@ -163,10 +177,14 @@ u32 dmuxOpen(Demuxer* data)
 						if (esAVC[ch])
 						{
 							ElementaryStream& es = *esAVC[ch];
-							if (es.isfull())
+							while (es.isfull())
 							{
+								if (Emu.IsStopped())
+								{
+									ConLog.Warning("esAVC[%d] was full, waiting aborted", ch);
+									return;
+								}
 								Sleep(1);
-								continue;
 							}
 
 							DemuxerStream backup = stream;
@@ -177,11 +195,11 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.new_au && es.hasdata()) // new AU detected
 							{
-								if (es.hasunseen()) // hack, probably useless
+								/*if (es.hasunseen()) // hack, probably useless
 								{
 									stream = backup;
 									continue;
-								}
+								}*/
 								es.finish(stream);
 								// callback
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
@@ -257,24 +275,11 @@ u32 dmuxOpen(Demuxer* data)
 			{
 				break; // Emu is stopped
 			}
-task:
+
 			switch (task.type)
 			{
 			case dmuxSetStream:
 				{
-					bool do_wait = false;
-					for (u32 i = 0; i < 192; i++)
-					{
-						if (esALL[i])
-						{
-							if (esALL[i]->hasunseen()) // hack, probably useless
-							{
-								do_wait = true;
-								break;
-							}
-						}
-					}
-					if (do_wait) continue;
 					stream = task.stream;
 					ConLog.Write("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 						stream.addr, stream.size, stream.discontinuity, stream.userdata);
@@ -285,6 +290,7 @@ task:
 							esALL[i]->reset();
 						}
 					}
+					updates_count++;
 					dmux.is_running = true;
 				}
 				break;
@@ -292,7 +298,6 @@ task:
 			case dmuxResetStream:
 			case dmuxResetStreamAndWaitDone:
 				{
-					// TODO: send CELL_DMUX_MSG_TYPE_DEMUX_DONE callback and provide waiting condition
 					mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
@@ -302,6 +307,7 @@ task:
 					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
 					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, task.type == dmuxResetStreamAndWaitDone,
 						dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					updates_signaled++;
 					dmux.is_running = false;
 				}
 				break;
@@ -578,10 +584,15 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 		return CELL_DMUX_ERROR_FATAL;
 	}
 
-	if (dmux->is_running)
+	while (dmux->is_running) // hack
 	{
-		Sleep(1); // performance hack
-		return CELL_DMUX_ERROR_BUSY;
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
+			break;
+		}
+		Sleep(1);
+		//return CELL_DMUX_ERROR_BUSY;
 	}
 
 	DemuxerTask task(dmuxSetStream);

@@ -433,3 +433,7 @@ public:
 };
 
 //extern SysCalls SysCallsManager;
+
+void StaticAnalyse(void* ptr, u32 size);
+void StaticExecute(u32 code);
+void StaticFinalize();

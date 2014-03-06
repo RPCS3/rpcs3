@@ -37,7 +37,12 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 		return CELL_EINVAL;
 	}
 
-	mutex_id = sys_mtx.GetNewId(new Mutex((u32)attr->protocol, is_recursive, attr->name_u64));
+	u32 tid = GetCurrentPPUThread().GetId();
+	Mutex* mutex = new Mutex((u32)attr->protocol, is_recursive, attr->name_u64);
+	u32 id = sys_mtx.GetNewId(mutex);
+	mutex->m_mutex.lock(tid);
+	mutex_id = id;
+	mutex->m_mutex.unlock(tid);
 	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		wxString(attr->name, 8).wx_str(), (u32)attr->protocol,
 		wxString(is_recursive ? "true" : "false").wx_str(), mutex_id.GetValue());

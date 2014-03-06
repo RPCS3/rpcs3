@@ -57,7 +57,7 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	{
 	case CELL_OK:
 		lwmutex->all_info() = 0;
-		lwmutex->attribute = 0;
+		lwmutex->attribute = 0xDEADBEEF;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
 	default: return res;
@@ -205,7 +205,17 @@ bool SleepQueue::finalize()
 
 int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
-	if (!attribute.ToBE()) return CELL_EINVAL;
+	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
+
+	while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("(hack) sys_lwmutex_t::trylock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
+			return CELL_ESRCH;
+		}
+		Sleep(1);
+	}
 
 	if (tid == mutex.GetOwner())
 	{

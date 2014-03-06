@@ -4,9 +4,8 @@
 #include "Emu/Audio/cellAudio.h"
 
 void cellAudio_init();
-void cellAudio_load();
 void cellAudio_unload();
-Module cellAudio(0x0011, cellAudio_init, cellAudio_load, cellAudio_unload);
+Module cellAudio(0x0011, cellAudio_init, nullptr, cellAudio_unload);
 
 extern u64 get_system_time();
 
@@ -135,7 +134,7 @@ struct CellAudioPortConfig
 
 struct AudioPortConfig
 {
-	SMutex m_mutex;
+	SMutexGeneral m_mutex;
 	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
 	u8 channel;
@@ -178,64 +177,6 @@ struct AudioConfig  //custom structure
 		m_port_in_use = 0;
 	}
 } m_config;
-
-//libmixer datatypes
-typedef void * CellAANHandle;
-
-struct CellSSPlayerConfig
-{
-	be_t<u32> channels;
-	be_t<u32> outputMode;
-}; 
-
-struct CellSSPlayerWaveParam 
-{ 
-	void *addr;
-	be_t<s32> format;
-	be_t<u32> samples;
-	be_t<u32> loopStartOffset;
-	be_t<u32> startOffset;
-};
-
-struct CellSSPlayerCommonParam 
-{ 
-	be_t<u32> loopMode;
-	be_t<u32> attackMode;
-};
-
-struct CellSurMixerPosition 
-{ 
-	be_t<float> x;
-	be_t<float> y;
-	be_t<float> z;
-};
-
-struct CellSSPlayerRuntimeInfo 
-{ 
-	be_t<float> level;
-	be_t<float> speed;
-	CellSurMixerPosition position;
-};
-
-struct CellSurMixerConfig 
-{ 
-	be_t<s32> priority;
-	be_t<u32> chStrips1;
-	be_t<u32> chStrips2;
-	be_t<u32> chStrips6;
-	be_t<u32> chStrips8;
-};
-
-struct CellSurMixerChStripParam 
-{ 
-	be_t<u32> param;
-	void *attribute;
-	be_t<s32> dBSwitch;
-	be_t<float> floatVal;
-	be_t<s32> intVal;
-};
-
-CellSSPlayerWaveParam current_SSPlayerWaveParam;
 
 //libsnd3 datatypes
 struct CellSnd3DataCtx
@@ -368,7 +309,7 @@ int cellAudioInit()
 					memset(Memory + buf_addr, 0, block_size * sizeof(float));
 
 					{
-						SMutexLocker lock(port.m_mutex);
+						SMutexGeneralLocker lock(port.m_mutex);
 						port.counter = m_config.counter;
 						port.tag++; // absolute index of block that will be read
 						index = (position + 1) % port.block; // write new value
@@ -621,7 +562,7 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
-	SMutexLocker lock(port.m_mutex);
+	SMutexGeneralLocker lock(port.m_mutex);
 
 	stamp = m_config.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
@@ -655,7 +596,7 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	SMutexLocker lock(port.m_mutex);
+	SMutexGeneralLocker lock(port.m_mutex);
 
 	u64 tag_base = port.tag;
 	if (tag_base % port.block > blockNo)
@@ -795,168 +736,6 @@ int cellAudioUnsetPersonalDevice(int iPersonalStream)
 	cellAudio.Error("cellAudioUnsetPersonalDevice(iPersonalStream=0x%x)", iPersonalStream);
 	return CELL_OK;
 }
-
-
-//Callback Functions 
-typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples); //Currently unused.
-
-// libmixer Functions, NOT active in this moment
-int cellAANConnect(CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellAANDisconnect(CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellAANAddData(CellAANHandle handle, u32 port, u32 offset, float *addr, u32 samples)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0; 
-}
- 
-int cellSSPlayerCreate(CellAANHandle *handle, CellSSPlayerConfig *config)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSSPlayerRemove(CellAANHandle handle)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSSPlayerSetWave() //CellAANHandle handle, CellSSPlayerWaveParam *waveInfo, CellSSPlayerCommonParam *commonInfo  //mem_class_t waveInfo
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSSPlayerPlay() //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSSPlayerStop() //CellAANHandle handle, u32 mode
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSSPlayerSetParam() //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
- 
-s32 cellSSPlayerGetState() //CellAANHandle handle
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerCreate() //const CellSurMixerConfig *config
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerGetAANHandle() //CellAANHandle *handle
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerChStripGetAANPortNo() //u32 *port, u32 type, u32 index
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerSetNotifyCallback() //CellSurMixerNotifyCallbackFunction callback, void *arg
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerRemoveNotifyCallback() //CellSurMixerNotifyCallbackFunction callback
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerStart()
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerSurBusAddData() //u32 busNo, u32 offset, float *addr, u32 samples
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerSetParameter() //u32 param, float value
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerChStripSetParameter() //u32 type, u32 index, CellSurMixerChStripParam *param
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerPause() //u32 switch
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerGetCurrentBlockTag() //u64 *tag
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-int cellSurMixerGetTimestamp() //u64 tag, u64 *stamp
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-void cellSurMixerBeep(); //void *arg
-
-float cellSurMixerUtilGetLevelFromDB() //float dB
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO;
-}
-
-float cellSurMixerUtilGetLevelFromDBIndex() //int index
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO;
-}
-
-float cellSurMixerUtilNoteToRatio() //unsigned char refNote, unsigned char note
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-int cellSurMixerFinalize(); //Currently unused. Returns 0 (in the current release).
 
 //*libsnd3 Functions, NOT active in this moment
 s32 cellSnd3Init() //u32 maxVoice, u32 samples, CellSnd3RequestQueueCtx *queue
@@ -1399,14 +1178,7 @@ void cellAudio_init()
 	//TODO: Find addresses for libmixer, libsnd3 and libsynth2 functions
 }
 
-void cellAudio_load()
-{
-	m_config.m_is_audio_initialized = false;
-	m_config.Clear();
-}
-
 void cellAudio_unload()
 {
-	m_config.m_is_audio_initialized = false;
-	m_config.Clear();
+	//StaticFinalize();
 }

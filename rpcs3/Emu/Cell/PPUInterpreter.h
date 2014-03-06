@@ -71,10 +71,16 @@ private:
 
 		if(Ini.HLELogging.GetValue())
 		{
-			ConLog.Warning("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+			ConLog.Warning("SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)
 				SysCalls::DoFunc(CPU.GPR[11]);
 		}
+		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
+		{
+			ConLog.Error("SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+			if(CPU.GPR[11] > 1024)
+				SysCalls::DoFunc(CPU.GPR[11]);
+		}*/
 #ifdef HLE_CALL_DEBUG
 		ConLog.Write("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 #endif
@@ -2088,6 +2094,11 @@ private:
 		{
 		case 0x1: UNK(wxString::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
+		case 0x3:
+			StaticExecute(CPU.GPR[11]);
+			ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
+				wxString(g_static_funcs_list[CPU.GPR[11]].name).wx_str(), CPU.GPR[3], CPU.PC);
+			break;
 		case 0x22: UNK("HyperCall LV1"); break;
 		default: UNK(wxString::Format("Unknown sc: %x", sc_code));
 		}
