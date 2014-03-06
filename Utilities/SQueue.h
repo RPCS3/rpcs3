@@ -15,7 +15,7 @@ public:
 	{
 	}
 
-	bool Push(T& data)
+	bool Push(const T& data)
 	{
 		while (true)
 		{

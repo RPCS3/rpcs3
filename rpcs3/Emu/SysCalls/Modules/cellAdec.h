@@ -527,12 +527,12 @@ struct CellAdecParamM4Aac
 	be_t<MPEG4AAC_ConfigType> configNumber;
 
 	union {
-		struct { struct
+		struct mp { struct mp2
 		{
 			be_t<u32> adifProgramNumber; // 0
 		} adifConfig; };
 
-		struct { struct
+		struct mp3 { struct mp4
 		{
 			be_t<MPEG4AAC_SamplingFreq> samplingFreqIndex;
 			be_t<u32> profile; // LC profile (1)
@@ -560,8 +560,8 @@ struct CellAdecM4AacInfo
 	be_t<u32> pad1; // TODO: check alignment
 
 	union {
-		struct {
-			struct
+		struct mp5 {
+			struct m6
 			{
 				be_t<u32> copyrightIdPresent;
 				char copyrightId[9];
@@ -574,8 +574,8 @@ struct CellAdecM4AacInfo
 			} adif;
 		};
 
-		struct {
-			struct
+		struct mp7 {
+			struct mp8
 			{
 				be_t<u32> id;
 				be_t<u32> layer;
@@ -598,7 +598,7 @@ struct CellAdecM4AacInfo
 
 	be_t<u32> pad2; // TODO: check alignment
 
-	struct
+	struct mp9
 	{
 		be_t<u32> matrixMixdownPresent;
 		be_t<u32> mixdownIndex;

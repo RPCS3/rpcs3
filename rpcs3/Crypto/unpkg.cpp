@@ -188,7 +188,7 @@ int Unpack(wxFile& pkg_f, std::string src, std::string dst)
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
 	wxFile dec_pkg_f;
-	std::string decryptedFile = wxGetCwd() + "/dev_hdd1/" + src + ".dec";
+	std::string decryptedFile = wxGetCwd().ToStdString() + "/dev_hdd1/" + src + ".dec";
 
 	dec_pkg_f.Create(decryptedFile, true);
 	

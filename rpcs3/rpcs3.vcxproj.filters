@@ -436,8 +436,16 @@
     <ClCompile Include="Crypto\utils.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+
     <ClCompile Include="Emu\SysCalls\Static.cpp">
       <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellNetCtl.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp">
+
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>

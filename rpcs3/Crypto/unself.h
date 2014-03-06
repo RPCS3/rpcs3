@@ -205,7 +205,7 @@ struct ControlInfo
 			  for (int i = 0; i < 20; i++)
 				  digest_str += wxString::Format("%02x", file_digest_30.digest[i]);
 
-			  ConLog.Write("Digest: %s",						digest_str);
+			  ConLog.Write("Digest: %s",						digest_str.wc_str());
 			  ConLog.Write("Unknown: 0x%llx",					file_digest_30.unknown);
 		  }
 		  else if (size == 0x40)
@@ -218,8 +218,8 @@ struct ControlInfo
 				  digest_str2 += wxString::Format("%02x", file_digest_40.digest2[i]);
 			  }
 			  
-			  ConLog.Write("Digest1: %s",						digest_str1);
-			  ConLog.Write("Digest2: %s",						digest_str2);
+			  ConLog.Write("Digest1: %s",						digest_str1.wc_str());
+			  ConLog.Write("Digest2: %s",						digest_str2.wc_str());
 			  ConLog.Write("Unknown: 0x%llx",					file_digest_40.unknown);
 		  }
 	  }
@@ -242,10 +242,10 @@ struct ControlInfo
 		  ConLog.Write("Unknown1: 0x%08x",						npdrm.unknown1);
 		  ConLog.Write("License: 0x%08x",						npdrm.license);
 		  ConLog.Write("Type: 0x%08x",							npdrm.type);
-		  ConLog.Write("ContentID: %s",							contentid_str);
-		  ConLog.Write("Digest: %s",							digest_str);
-		  ConLog.Write("Inverse digest: %s",					invdigest_str);
-		  ConLog.Write("XOR digest: %s",						xordigest_str);
+		  ConLog.Write("ContentID: %s",							contentid_str.wc_str());
+		  ConLog.Write("Digest: %s",							digest_str.wc_str());
+		  ConLog.Write("Inverse digest: %s",					invdigest_str.wc_str());
+		  ConLog.Write("XOR digest: %s",						xordigest_str.wc_str());
 		  ConLog.Write("Unknown2: 0x%llx",						npdrm.unknown2);
 		  ConLog.Write("Unknown3: 0x%llx",						npdrm.unknown3);
 	  }
@@ -282,10 +282,10 @@ struct MetadataInfo
 		  iv_pad_str += wxString::Format("%02x", iv_pad[i]);
 	  }
 	  
-	  ConLog.Write("Key: %s", key_str);
-	  ConLog.Write("Key pad: %s", key_pad_str);
-	  ConLog.Write("IV: %s", iv_str);
-	  ConLog.Write("IV pad: %s", iv_pad_str);
+	  ConLog.Write("Key: %s", key_str.wc_str());
+	  ConLog.Write("Key pad: %s", key_pad_str.wc_str());
+	  ConLog.Write("IV: %s", iv_str.wc_str());
+	  ConLog.Write("IV pad: %s", iv_pad_str.wc_str());
   }
 };
 

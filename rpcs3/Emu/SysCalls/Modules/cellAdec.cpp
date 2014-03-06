@@ -7,8 +7,8 @@ extern SMutexGeneral g_mutex_avcodec_open2;
 
 extern "C"
 {
-#include "libavcodec\avcodec.h"
-#include "libavformat\avformat.h"
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
 }
 
 #include "cellAdec.h"
