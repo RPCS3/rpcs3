@@ -192,7 +192,7 @@ public:
 		PadHandlerMode.Load(1);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
-		AudioOutMode.Load(0);
+		AudioOutMode.Load(1);
 		AudioDumpToFile.Load(0);
 		HLELogging.Load(false);
 		HLESaveTTY.Load(false);

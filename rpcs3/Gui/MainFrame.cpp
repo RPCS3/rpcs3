@@ -358,8 +358,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(&diag, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_log_prog   = new wxCheckBox(&diag, wxID_ANY, "Log vertex/fragment programs");
-	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Dump Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Dump Color Buffers");
+	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(&diag, wxID_ANY, "Write Depth Buffer");
+	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(&diag, wxID_ANY, "Write Color Buffers");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(&diag, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_hle_logging = new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
@@ -395,6 +395,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	//cbox_mouse_handler->Append("DirectInput");
 
 	cbox_audio_out->Append("Null");
+	cbox_audio_out->Append("OpenAL");
 
 	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
