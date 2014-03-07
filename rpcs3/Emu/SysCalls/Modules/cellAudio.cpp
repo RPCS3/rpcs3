@@ -2,6 +2,8 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/Audio/cellAudio.h"
+#include "Emu/Audio/AudioManager.h"
+#include "Emu/Audio/AudioDumper.h"
 
 void cellAudio_init();
 void cellAudio_unload();
@@ -9,223 +11,15 @@ Module cellAudio(0x0011, cellAudio_init, nullptr, cellAudio_unload);
 
 extern u64 get_system_time();
 
-enum
-{
-	//libaudio Error Codes
-	CELL_AUDIO_ERROR_ALREADY_INIT				= 0x80310701,
-	CELL_AUDIO_ERROR_AUDIOSYSTEM				= 0x80310702,
-	CELL_AUDIO_ERROR_NOT_INIT					= 0x80310703,
-	CELL_AUDIO_ERROR_PARAM						= 0x80310704,
-	CELL_AUDIO_ERROR_PORT_FULL					= 0x80310705,
-	CELL_AUDIO_ERROR_PORT_ALREADY_RUN			= 0x80310706,
-	CELL_AUDIO_ERROR_PORT_NOT_OPEN				= 0x80310707,
-	CELL_AUDIO_ERROR_PORT_NOT_RUN				= 0x80310708,
-	CELL_AUDIO_ERROR_TRANS_EVENT				= 0x80310709,
-	CELL_AUDIO_ERROR_PORT_OPEN					= 0x8031070a,
-	CELL_AUDIO_ERROR_SHAREDMEMORY				= 0x8031070b,
-	CELL_AUDIO_ERROR_MUTEX						= 0x8031070c,
-	CELL_AUDIO_ERROR_EVENT_QUEUE				= 0x8031070d,
-	CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND		= 0x8031070e,
-	CELL_AUDIO_ERROR_TAG_NOT_FOUND				= 0x8031070f,
-
-	//libmixer Error Codes
-	CELL_LIBMIXER_ERROR_NOT_INITIALIZED			= 0x80310002,
-	CELL_LIBMIXER_ERROR_INVALID_PARAMATER		= 0x80310003,
-	CELL_LIBMIXER_ERROR_NO_MEMORY				= 0x80310005,
-	CELL_LIBMIXER_ERROR_ALREADY_EXIST			= 0x80310006,
-	CELL_LIBMIXER_ERROR_FULL					= 0x80310007,
-	CELL_LIBMIXER_ERROR_NOT_EXIST				= 0x80310008,
-	CELL_LIBMIXER_ERROR_TYPE_MISMATCH			= 0x80310009,
-	CELL_LIBMIXER_ERROR_NOT_FOUND				= 0x8031000a,
-
-	//libsnd3 Error Codes
-	CELL_SND3_ERROR_PARAM						= 0x80310301,
-	CELL_SND3_ERROR_CREATE_MUTEX				= 0x80310302,
-	CELL_SND3_ERROR_SYNTH						= 0x80310303,
-	CELL_SND3_ERROR_ALREADY						= 0x80310304,
-	CELL_SND3_ERROR_NOTINIT						= 0x80310305,
-	CELL_SND3_ERROR_SMFFULL						= 0x80310306,
-	CELL_SND3_ERROR_HD3ID						= 0x80310307,
-	CELL_SND3_ERROR_SMF							= 0x80310308,
-	CELL_SND3_ERROR_SMFCTX						= 0x80310309,
-	CELL_SND3_ERROR_FORMAT						= 0x8031030a,
-	CELL_SND3_ERROR_SMFID						= 0x8031030b,
-	CELL_SND3_ERROR_SOUNDDATAFULL				= 0x8031030c,
-	CELL_SND3_ERROR_VOICENUM					= 0x8031030d,
-	CELL_SND3_ERROR_RESERVEDVOICE				= 0x8031030e,
-	CELL_SND3_ERROR_REQUESTQUEFULL				= 0x8031030f,
-	CELL_SND3_ERROR_OUTPUTMODE					= 0x80310310,
-
-	//libsynt2 Error Codes
-	CELL_SOUND_SYNTH2_ERROR_FATAL				= 0x80310201,
-	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER	= 0x80310202,
-	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED	= 0x80310203,
-};
-
-struct WAVHeader
-{
-	struct RIFFHeader
-	{
-		u32 ID; // "RIFF"
-		u32 Size; // FileSize - 8
-		u32 WAVE; // "WAVE"
-
-		RIFFHeader(u32 size)
-			: ID(*(u32*)"RIFF")
-			, WAVE(*(u32*)"WAVE")
-			, Size(size)
-		{
-		}
-	} RIFF;
-	struct FMTHeader
-	{
-		u32 ID; // "fmt "
-		u32 Size; // 16
-		u16 AudioFormat; // 1 for PCM, 3 for IEEE Floating Point
-		u16 NumChannels; // 1, 2, 6, 8
-		u32 SampleRate; // 48000
-		u32 ByteRate; // SampleRate * NumChannels * BitsPerSample/8
-		u16 BlockAlign; // NumChannels * BitsPerSample/8
-		u16 BitsPerSample; // sizeof(float) * 8
-
-		FMTHeader(u8 ch)
-			: ID(*(u32*)"fmt ")
-			, Size(16)
-			, AudioFormat(3)
-			, NumChannels(ch)
-			, SampleRate(48000)
-			, ByteRate(SampleRate * ch * sizeof(float))
-			, BlockAlign(ch * sizeof(float))
-			, BitsPerSample(sizeof(float) * 8)
-		{
-		}
-	} FMT;
-	u32 ID; // "data"
-	u32 Size; // size of data (256 * NumChannels * sizeof(float))
-
-	WAVHeader(u8 ch)
-		: ID(*(u32*)"data")
-		, Size(0)
-		, FMT(ch)
-		, RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
-	{
-	}
-};
-
-
-//libaudio datatypes
-struct CellAudioPortParam
-{ 
-	be_t<u64> nChannel;
-	be_t<u64> nBlock;
-	be_t<u64> attr;
-	be_t<float> level;
-}; 
-
-struct CellAudioPortConfig
-{ 
-	be_t<u32> readIndexAddr;
-	be_t<u32> status;
-	be_t<u64> nChannel;
-	be_t<u64> nBlock;
-	be_t<u32> portSize;
-	be_t<u32> portAddr;
-};
-
-struct AudioPortConfig
-{
-	SMutexGeneral m_mutex;
-	bool m_is_audio_port_opened;
-	bool m_is_audio_port_started;
-	u8 channel;
-	u8 block;
-	float level;
-	u64 attr;
-	u64 tag;
-	u64 counter; // copy of global counter
-};
-
-struct AudioConfig  //custom structure
-{
-	enum
-	{
-		AUDIO_PORT_COUNT = 8,
-	};
-	AudioPortConfig m_ports[AUDIO_PORT_COUNT];
-	u32 m_buffer; // 1 MB memory for audio ports
-	u32 m_indexes; // current block indexes and other info
-	bool m_is_audio_initialized;
-	bool m_is_audio_finalized;
-	u32 m_port_in_use;
-	u64 event_key;
-	u64 counter;
-	u64 start_time;
-
-	AudioConfig()
-		: m_is_audio_initialized(false)
-		, m_is_audio_finalized(false)
-		, m_port_in_use(0)
-		, event_key(0)
-		, counter(0)
-	{
-		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
-	}
-
-	void Clear()
-	{
-		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
-		m_port_in_use = 0;
-	}
-} m_config;
-
-//libsnd3 datatypes
-struct CellSnd3DataCtx
-{ 
-	s8 system;  //[CELL_SND3_DATA_CTX_SIZE], unknown identifier
-}; 
-
-struct CellSnd3SmfCtx
-{ 
-	s8 system;  //[CELL_SND3_SMF_CTX_SIZE],  unknown identifier
-};
-
-struct CellSnd3KeyOnParam
-{ 
-	u8 vel;
-	u8 pan;
-	u8 panEx;
-	be_t<s32> addPitch;
-};
-
-struct CellSnd3VoiceBitCtx
-{ 
-	be_t<u32> core;  //[CELL_SND3_MAX_CORE],  unknown identifier
-};
-
-struct CellSnd3RequestQueueCtx
-{ 
-	void *frontQueue;
-	be_t<u32> frontQueueSize;
-	void *rearQueue;
-	be_t<u32> rearQueueSize;
-};
-
-//libsynt2 datatypes
-struct CellSoundSynth2EffectAttr
-{ 
-	be_t<u16> core;
-	be_t<u16> mode;
-	be_t<s16> depth_L;
-	be_t<s16> depth_R;
-	be_t<u16> delay;
-	be_t<u16> feedback;
-};
-
 // libaudio Functions
 
 int cellAudioInit()
 {
 	cellAudio.Warning("cellAudioInit()");
+
+	if(Ini.AudioOutMode.GetValue() == 1)
+		m_audio_out->Init();
+
 	if (m_config.m_is_audio_initialized)
 	{
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
@@ -242,14 +36,11 @@ int cellAudioInit()
 
 	thread t("Audio Thread", []()
 		{
-			WAVHeader header(2); // WAV file header (stereo)
-			
-			static const wxString& output_name = "audio.wav";
-
-			wxFile output; // create output file
-			if (Ini.AudioDumpToFile.GetValue() && !output.Open(output_name, wxFile::write))
+			AudioDumper m_dump(2); // WAV file header (stereo)
+		
+			if (Ini.AudioDumpToFile.GetValue() && !m_dump.Init())
 			{
-				ConLog.Error("Audio aborted: cannot create %s", output_name.wx_str());
+				ConLog.Error("Audio aborted: cannot create file!");
 				return;
 			}
 
@@ -258,12 +49,18 @@ int cellAudioInit()
 			m_config.start_time = get_system_time();
 
 			if (Ini.AudioDumpToFile.GetValue())
-				output.Write(&header, sizeof(header)); // write file header
+				m_dump.WriteHeader();
 
 			float buffer[2*256]; // buffer for 2 channels
 			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
+			u16 oal_buffer[2*256]; // buffer for OpenAL
+
 			memset(&buffer, 0, sizeof(buffer));
 			memset(&buffer2, 0, sizeof(buffer2));
+			memset(&oal_buffer, 0, sizeof(oal_buffer));
+
+			if(Ini.AudioOutMode.GetValue() == 1)
+				m_audio_out->Open(oal_buffer, sizeof(oal_buffer));
 
 			while (m_config.m_is_audio_initialized)
 			{
@@ -321,6 +118,9 @@ int cellAudioInit()
 						{
 							// reverse byte order (TODO: use port.m_param.level)
 							buffer[i] = buffer2[i];
+
+							// convert the data from float to u16
+							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
 						}
 						first_mix = false;
 					}
@@ -329,6 +129,9 @@ int cellAudioInit()
 						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
 						{
 							buffer[i] = (buffer[i] + buffer2[i]) * 0.5; // TODO: valid mixing
+
+							// convert the data from float to u16
+							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
 						}
 					}
 				}
@@ -337,29 +140,28 @@ int cellAudioInit()
 				// TODO: check event source
 				Emu.GetEventManager().SendEvent(m_config.event_key, 0x10103000e010e07, 0, 0, 0);
 
+				if(Ini.AudioOutMode.GetValue() == 1)
+					m_audio_out->AddData(oal_buffer, sizeof(oal_buffer));
+
 				if(Ini.AudioDumpToFile.GetValue())
 				{
-					if (output.Write(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
+					if (m_dump.WriteData(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
 					{
-						ConLog.Error("Port aborted: cannot write %s", output_name.wx_str());
+						ConLog.Error("Port aborted: cannot write file!");
 						goto abort;
 					}
 
-					header.Size += sizeof(buffer); // update file header
-					header.RIFF.Size += sizeof(buffer);
+					m_dump.UpdateHeader(sizeof(buffer));
 				}
 			}
 			ConLog.Write("Audio finished");
 abort:
 			if(Ini.AudioDumpToFile.GetValue())
-			{
-				output.Seek(0);
-				output.Write(&header, sizeof(header)); // write fixed file header
-
-				output.Close();
-			}
+				m_dump.Finalize();
 
 			m_config.m_is_audio_finalized = true;
+			if(Ini.AudioOutMode.GetValue() == 1)
+				m_audio_out->Quit();
 		});
 	t.detach();
 
@@ -389,6 +191,9 @@ int cellAudioQuit()
 
 	Memory.Free(m_config.m_buffer);
 	Memory.Free(m_config.m_indexes);
+	if(Ini.AudioOutMode.GetValue() == 1)
+		m_audio_out->Quit();
+
 	return CELL_OK;
 }
 
@@ -495,6 +300,9 @@ int cellAudioPortStart(u32 portNum)
 	}
 	
 	m_config.m_ports[portNum].m_is_audio_port_started = true;
+
+	if(Ini.AudioOutMode.GetValue() == 1) 
+		m_audio_out->Play();
 
 	return CELL_OK;
 }
