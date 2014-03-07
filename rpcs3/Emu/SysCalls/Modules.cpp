@@ -8,6 +8,7 @@ uint g_max_module_id = 0;
 uint g_module_2_count = 0;
 ArrayF<ModuleFunc> g_modules_funcs_list;
 std::mutex g_funcs_lock;
+ArrayF<SFunc> g_static_funcs_list;
 
 struct ModuleInfo
 {

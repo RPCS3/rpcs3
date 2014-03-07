@@ -18,6 +18,7 @@ struct sys_mutex_attribute
 
 struct Mutex
 {
+	u32 id;
 	SMutex m_mutex;
 	SleepQueue m_queue;
 	u32 recursive; // recursive locks count
@@ -32,5 +33,22 @@ struct Mutex
 		, m_queue(name)
 		, cond_count(0)
 	{
+	}
+
+	~Mutex()
+	{
+		if (u32 owner = m_mutex.GetOwner())
+		{
+			ConLog.Write("Mutex(%d) was owned by thread %d (recursive=%d)", id, owner, recursive);
+		}
+
+		if (!m_queue.m_mutex.try_lock()) return;
+
+		for (u32 i = 0; i < m_queue.list.GetCount(); i++)
+		{
+			if (u32 owner = m_queue.list[i]) ConLog.Write("Mutex(%d) was waited by thread %d", id, owner);
+		}
+
+		m_queue.m_mutex.unlock();
 	}
 };

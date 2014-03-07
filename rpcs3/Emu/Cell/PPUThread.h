@@ -526,6 +526,9 @@ static const s32 MAX_INT_VALUE = 0x7fffffff;
 class PPUThread : public PPCThread
 {
 public:
+	std::atomic<u32> owned_mutexes;
+
+public:
 	PPCdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register

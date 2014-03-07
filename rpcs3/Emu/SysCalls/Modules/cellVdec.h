@@ -679,6 +679,14 @@ struct VdecTask
 	}
 };
 
+struct VdecFrame
+{
+	AVFrame* data;
+	u64 dts;
+	u64 pts;
+	u64 userdata;
+};
+
 int vdecRead(void* opaque, u8* buf, int buf_size);
 
 class VideoDecoder
@@ -688,19 +696,11 @@ public:
 	u32 id;
 	volatile bool is_running;
 	volatile bool is_finished;
+	bool just_started;
 
-	AVCodec* codec;
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
-	AVFrame* frame;
-	AVDictionary* opts;
 	u8* io_buf;
-	u32 buf_size;
-	u64 pts;
-	u64 dts;
-	u64 pos;
-	u64 userdata;
-	volatile bool has_picture;
 
 	struct VideoReader
 	{
@@ -708,51 +708,39 @@ public:
 		u32 size;
 	} reader;
 
+	SQueue<VdecFrame> frames;
+
 	const CellVdecCodecType type;
 	const u32 profile;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 cbFunc;
 	const u32 cbArg;
+	u32 memBias;
+
+	VdecTask task; // current task variable
+	u64 last_pts, last_dts;
+
+	CPUThread* vdecCb;
 
 	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
 		: type(type)
 		, profile(profile)
 		, memAddr(addr)
 		, memSize(size)
+		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
 		, is_finished(false)
 		, is_running(false)
-		, has_picture(false)
-		, pos(0)
+		, just_started(false)
+		, ctx(nullptr)
+		, vdecCb(nullptr)
 	{
-		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)
 		{
-			ConLog.Error("VideoDecoder(): avcodec_find_decoder failed");
-			Emu.Pause();
-			return;
-		}
-		ctx = avcodec_alloc_context3(codec);
-		if (!ctx)
-		{
-			ConLog.Error("VideoDecoder(): avcodec_alloc_context3 failed");
-			Emu.Pause();
-			return;
-		}
-		opts = nullptr;
-		int err = avcodec_open2(ctx, codec, &opts);
-		if (err) // TODO: not multithread safe
-		{
-			ConLog.Error("VideoDecoder(): avcodec_open2 failed(%d)", err);
-			Emu.Pause();
-			return;
-		}
-		frame = av_frame_alloc();
-		if (!frame)
-		{
-			ConLog.Error("VideoDecoder(): av_frame_alloc failed");
+			ConLog.Error("VideoDecoder(): avcodec_find_decoder(H264) failed");
 			Emu.Pause();
 			return;
 		}
@@ -771,23 +759,29 @@ public:
 			Emu.Pause();
 			return;
 		}
-		//memset(&out_data, 0, sizeof(out_data));
-		//memset(&linesize, 0, sizeof(linesize));
 	}
 
 	~VideoDecoder()
 	{
-		if (io_buf) av_free(io_buf);
-		if (fmt)
-		{
-			avformat_free_context(fmt);
-		}
-		if (frame) av_frame_free(&frame);
 		if (ctx)
 		{
+			for (u32 i = frames.GetCount() - 1; ~i; i--)
+			{
+				VdecFrame& vf = frames.Peek(i);
+				av_frame_unref(vf.data);
+				av_frame_free(&vf.data);
+			}
 			avcodec_close(ctx);
-			av_free(ctx);
+			avformat_close_input(&fmt);
 		}
-		//if (out_data[0]) av_freep(out_data[0]);
+		if (fmt)
+		{
+			if (io_buf)
+			{
+				av_free(io_buf);
+			}
+			if (fmt->pb) av_free(fmt->pb);
+			avformat_free_context(fmt);
+		}
 	}
 };

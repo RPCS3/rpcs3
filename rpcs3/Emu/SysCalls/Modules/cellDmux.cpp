@@ -18,9 +18,9 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 					 const u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x600000; // 0x45fa49 from ps3
+		attr->memSize = 0x1000000; // 0x45fa49 from ps3
 	else
-		attr->memSize = 0x10000; // 0x73d9 from ps3
+		attr->memSize = 0x200000; // 0x73d9 from ps3
 
 	cellDmux.Warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", (u32)esFilterId->filterIdMajor, (u32)esFilterId->filterIdMinor,
 		(u32)esFilterId->supplementalInfo1, (u32)esFilterId->supplementalInfo2);
@@ -30,9 +30,13 @@ u32 dmuxOpen(Demuxer* data)
 {
 	Demuxer& dmux = *data;
 
+	dmux.dmuxCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
 	u32 dmux_id = cellDmux.GetNewId(data);
 
 	dmux.id = dmux_id;
+
+	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
@@ -50,6 +54,9 @@ u32 dmuxOpen(Demuxer* data)
 
 		u32 cb_add = 0;
 
+		u32 updates_count = 0;
+		u32 updates_signaled = 0;
+
 		while (true)
 		{
 			if (Emu.IsStopped())
@@ -66,9 +73,17 @@ u32 dmuxOpen(Demuxer* data)
 
 				if (!stream.peek(code)) 
 				{
+					dmux.is_running = false;
 					// demuxing finished
-					task.type = dmuxResetStream;
-					goto task;
+					mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux.memAddr) + (cb_add ^= 16));
+					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
+					dmuxMsg->supplementalInfo = stream.userdata;
+					/*Callback cb;
+					cb.SetAddr(dmux.cbFunc);
+					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
+					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					updates_signaled++;
 				}
 				else switch (code.ToLE())
 				{
@@ -102,12 +117,61 @@ u32 dmuxOpen(Demuxer* data)
 
 				case PRIVATE_STREAM_1:
 					{
+						DemuxerStream backup = stream;
+
 						// audio AT3+ (and probably LPCM or user data)
 						stream.skip(4);
 						stream.get(len);
 
-						// skipping...
-						stream.skip(len);
+						PesHeader pes(stream);
+
+						if (!pes.new_au) // temporarily
+						{
+							ConLog.Error("No pts info found");
+						}
+
+						// read additional header:
+						stream.peek(ch);
+						//stream.skip(4);
+						//pes.size += 4;
+
+						if (esATX[ch])
+						{
+							ElementaryStream& es = *esATX[ch];
+							while (es.isfull())
+							{
+								if (Emu.IsStopped())
+								{
+									ConLog.Warning("esATX[%d] was full, waiting aborted", ch);
+									return;
+								}
+								Sleep(1);
+							}
+
+							/*if (es.hasunseen()) // hack, probably useless
+							{
+								stream = backup;
+								continue;
+							}*/
+
+							//ConLog.Write("*** AT3+ AU sent (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
+
+							es.push(stream, len - pes.size - 3, pes);
+							es.finish(stream);
+							
+							mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
+							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
+							esMsg->supplementalInfo = stream.userdata;
+							/*Callback cb;
+							cb.SetAddr(es.cbFunc);
+							cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
+							cb.Branch(false);*/
+							dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
+						}
+						else
+						{
+							stream.skip(len - pes.size - 3);
+						}
 					}
 					break;
 
@@ -121,10 +185,14 @@ u32 dmuxOpen(Demuxer* data)
 						if (esAVC[ch])
 						{
 							ElementaryStream& es = *esAVC[ch];
-							if (es.isfull())
+							while (es.isfull())
 							{
+								if (Emu.IsStopped())
+								{
+									ConLog.Warning("esAVC[%d] was full, waiting aborted", ch);
+									return;
+								}
 								Sleep(1);
-								continue;
 							}
 
 							DemuxerStream backup = stream;
@@ -133,33 +201,28 @@ u32 dmuxOpen(Demuxer* data)
 							stream.get(len);
 							PesHeader pes(stream);
 
-							if (!pes.new_au && !es.hasdata()) // fatal error
-							{
-								ConLog.Error("PES not found");
-								return;
-							}
-
 							if (pes.new_au && es.hasdata()) // new AU detected
 							{
-								if (es.hasunseen()) // hack, probably useless
+								/*if (es.hasunseen()) // hack, probably useless
 								{
 									stream = backup;
 									continue;
-								}
+								}*/
 								es.finish(stream);
 								// callback
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 								esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 								esMsg->supplementalInfo = stream.userdata;
-								Callback cb;
+								/*Callback cb;
 								cb.SetAddr(es.cbFunc);
 								cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-								cb.Branch(false);
+								cb.Branch(false);*/
+								dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 							}
 
 							if (pes.new_au)
 							{
-								ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
+								//ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 							}
 
 							if (es.isfull())
@@ -167,8 +230,10 @@ u32 dmuxOpen(Demuxer* data)
 								stream = backup;
 								continue;
 							}
-							//stream = backup;
-							es.push(stream, len - pes.size - 3, pes);
+
+							//hack: reconstruction of MPEG2-PS stream for vdec module (seems it works without it too)
+							stream = backup;
+							es.push(stream, len + 6 /*- pes.size - 3*/, pes);
 						}
 						else
 						{
@@ -218,24 +283,11 @@ u32 dmuxOpen(Demuxer* data)
 			{
 				break; // Emu is stopped
 			}
-task:
+
 			switch (task.type)
 			{
 			case dmuxSetStream:
 				{
-					bool do_wait = false;
-					for (u32 i = 0; i < 192; i++)
-					{
-						if (esALL[i])
-						{
-							if (esALL[i]->hasunseen()) // hack, probably useless
-							{
-								do_wait = true;
-								break;
-							}
-						}
-					}
-					if (do_wait) continue;
 					stream = task.stream;
 					ConLog.Write("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 						stream.addr, stream.size, stream.discontinuity, stream.userdata);
@@ -246,6 +298,7 @@ task:
 							esALL[i]->reset();
 						}
 					}
+					updates_count++;
 					dmux.is_running = true;
 				}
 				break;
@@ -253,14 +306,16 @@ task:
 			case dmuxResetStream:
 			case dmuxResetStreamAndWaitDone:
 				{
-					// TODO: send CELL_DMUX_MSG_TYPE_DEMUX_DONE callback and provide waiting condition
 					mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(dmux.cbFunc);
 					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
-					cb.Branch(task.type == dmuxResetStreamAndWaitDone);
+					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
+					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, task.type == dmuxResetStreamAndWaitDone,
+						dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					updates_signaled++;
 					dmux.is_running = false;
 				}
 				break;
@@ -282,6 +337,13 @@ task:
 						es.sup2 == 0)
 					{
 						esAVC[es.fidMajor - 0xe0] = task.es.es_ptr;
+					}
+					else if (es.fidMajor == 0xbd &&
+						es.fidMinor == 0 &&
+						es.sup1 == 0 &&
+						es.sup2 == 0)
+					{
+						esATX[0] = task.es.es_ptr;
 					}
 					else
 					{
@@ -311,11 +373,11 @@ task:
 				}
 				break;
 
-			case dmuxReleaseAu:
+			/*case dmuxReleaseAu:
 				{
 					task.es.es_ptr->release();
 				}
-				break;
+				break;*/
 
 			case dmuxFlushEs:
 				{
@@ -328,20 +390,22 @@ task:
 						mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 						esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 						esMsg->supplementalInfo = stream.userdata;
-						Callback cb;
+						/*Callback cb;
 						cb.SetAddr(es.cbFunc);
 						cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-						cb.Branch(false);
+						cb.Branch(false);*/
+						dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 					}
 
 					// callback
 					mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 					esMsg->supplementalInfo = stream.userdata;
-					Callback cb;
+					/*Callback cb;
 					cb.SetAddr(es.cbFunc);
 					cb.Handle(dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
-					cb.Branch(false);
+					cb.Branch(false);*/
+					dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.GetAddr(), es.cbArg);
 				}
 				break;
 
@@ -507,6 +571,7 @@ int cellDmuxClose(u32 demuxerHandle)
 		Sleep(1);
 	}
 
+	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
 	Emu.GetIdManager().RemoveID(demuxerHandle);
 	return CELL_OK;
 }
@@ -527,9 +592,14 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 		return CELL_DMUX_ERROR_FATAL;
 	}
 
-	if (dmux->is_running)
+	while (dmux->is_running) // !!!
 	{
-		Sleep(1); // performance hack
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
+			break;
+		}
+		Sleep(1);
 		return CELL_DMUX_ERROR_BUSY;
 	}
 
@@ -851,7 +921,7 @@ int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_
 
 int cellDmuxReleaseAu(u32 esHandle)
 {
-	cellDmux.Warning("(disabled) cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
+	cellDmux.Log("cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
 
 	return CELL_OK;
 
@@ -865,14 +935,19 @@ int cellDmuxReleaseAu(u32 esHandle)
 	{
 		cellDmux.Error("cellDmuxReleaseAu: no AU");
 		return CELL_DMUX_ERROR_SEQ;
-		//return CELL_OK;
 	}
 
-	DemuxerTask task(dmuxReleaseAu);
+	/*DemuxerTask task(dmuxReleaseAu);
 	task.es.es = esHandle;
 	task.es.es_ptr = es;
 
-	es->dmux->job.Push(task);
+	es->dmux->job.Push(task);*/
+
+	if (!es->release())
+	{
+		cellDmux.Error("cellDmuxReleaseAu failed");
+		return CELL_DMUX_ERROR_SEQ;
+	}
 	return CELL_OK;
 }
 
