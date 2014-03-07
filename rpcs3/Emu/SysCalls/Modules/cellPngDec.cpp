@@ -163,20 +163,58 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	{
 	case CELL_PNGDEC_RGB:
 	case CELL_PNGDEC_RGBA:
-		image_size *= current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
-		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+	{
+		const char nComponents = (CELL_PNGDEC_RGBA ? 4 : 3);
+		image_size *= nComponents;
+		if (dataCtrlParam->outputBytesPerLine > width * nComponents) //check if we need padding
+		{
+			//TODO: find out if we can't do padding without an extra copy
+			char *output = (char *) malloc(dataCtrlParam->outputBytesPerLine*height);
+			for (int i = 0; i < height; i++)
+			{
+				memcpy(&output[i*dataCtrlParam->outputBytesPerLine], &image.get()[width*nComponents*i], width*nComponents);
+			}
+			Memory.CopyFromReal(data.GetAddr(), output, dataCtrlParam->outputBytesPerLine*height);
+			free(output);
+		}
+		else
+		{
+			Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+		}
+	}
 	break;
 
 	case CELL_PNGDEC_ARGB:
-		image_size *= 4;
-
-		for(uint i = 0; i < image_size; i+=4)
+	{
+		const char nComponents = 4;
+		image_size *= nComponents;
+		if (dataCtrlParam->outputBytesPerLine > width * nComponents) //check if we need padding
 		{
-			data += image.get()[i+3];
-			data += image.get()[i+0];
-			data += image.get()[i+1];
-			data += image.get()[i+2];
+			//TODO: find out if we can't do padding without an extra copy
+			char *output = (char *) malloc(dataCtrlParam->outputBytesPerLine*height);
+			for (int i = 0; i < height; i++)
+			{
+				for (int j = 0; j < width * nComponents; j += nComponents){
+					output[i*dataCtrlParam->outputBytesPerLine + j	  ] = image.get()[i*width * nComponents + j + 3];
+					output[i*dataCtrlParam->outputBytesPerLine + j + 1] = image.get()[i*width * nComponents + j + 0];
+					output[i*dataCtrlParam->outputBytesPerLine + j + 2] = image.get()[i*width * nComponents + j + 1];
+					output[i*dataCtrlParam->outputBytesPerLine + j + 3] = image.get()[i*width * nComponents + j + 2];
+				}
+			}
+			Memory.CopyFromReal(data.GetAddr(), output, dataCtrlParam->outputBytesPerLine*height);
+			free(output);
 		}
+		else
+		{
+			for (uint i = 0; i < image_size; i += nComponents)
+			{
+				data += image.get()[i + 3];
+				data += image.get()[i + 0];
+				data += image.get()[i + 1];
+				data += image.get()[i + 2];
+			}
+		}
+	}
 	break;
 
 	case CELL_PNGDEC_GRAYSCALE:
