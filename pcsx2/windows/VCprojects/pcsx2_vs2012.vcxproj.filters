@@ -151,6 +151,9 @@
     <Filter Include="AppHost\Debugger">
       <UniqueIdentifier>{b49e5139-daa9-411b-995e-a53d98c583ba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="System\Ps2\Iop\PS1 Components">
+      <UniqueIdentifier>{715244e1-76fc-41fa-8247-fdce25ba65d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Utilities\folderdesc.txt">
@@ -841,6 +844,12 @@
     <ClCompile Include="..\..\DebugTools\SymbolMap.cpp">
       <Filter>System\Ps2\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sif2.cpp">
+      <Filter>System\Ps2\EmotionEngine\DMAC\Sif</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Gte.cpp">
+      <Filter>System\Ps2\Iop\PS1 Components</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
@@ -1245,6 +1254,9 @@
     </ClInclude>
     <ClInclude Include="..\..\DebugTools\SymbolMap.h">
       <Filter>System\Ps2\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Gte.h">
+      <Filter>System\Ps2\Iop\PS1 Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
