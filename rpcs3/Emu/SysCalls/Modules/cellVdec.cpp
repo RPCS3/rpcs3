@@ -3,6 +3,8 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "cellPamf.h"
 
+SMutexGeneral g_mutex_avcodec_open2;
+
 extern "C"
 {
 #include "libavcodec/avcodec.h"
@@ -19,10 +21,68 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 {
 	VideoDecoder& vdec = *(VideoDecoder*)opaque;
 
-	if (vdec.reader.size < (u32)buf_size) buf_size = vdec.reader.size;
+	int res = 0;
+
+	if (vdec.reader.size < (u32)buf_size && !vdec.just_started)
+	{
+		while (vdec.job.IsEmpty())
+		{
+			if (Emu.IsStopped())
+			{
+				ConLog.Warning("vdecRead() aborted");
+				return 0;
+			}
+			Sleep(1);
+		}
+
+		switch (vdec.job.Peek().type)
+		{
+		case vdecEndSeq:
+			{
+				buf_size = vdec.reader.size;
+			}
+			break;
+		case vdecDecodeAu:
+			{
+				if (!Memory.CopyToReal(buf, vdec.reader.addr, vdec.reader.size))
+				{
+					ConLog.Error("vdecRead: data reading failed (reader.size=0x%x)", vdec.reader.size);
+					Emu.Pause();
+					return 0;
+				}
+
+				buf += vdec.reader.size;
+				buf_size -= vdec.reader.size;
+				res += vdec.reader.size;
+
+				/*Callback cb;
+				cb.SetAddr(vdec.cbFunc);
+				cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+				cb.Branch(false);*/
+				vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+
+				vdec.job.Pop(vdec.task);
+
+				vdec.reader.addr = vdec.task.addr;
+				vdec.reader.size = vdec.task.size;
+
+				vdec.last_pts = vdec.task.pts;
+				vdec.last_dts = vdec.task.dts;
+			}
+			break;
+		default:
+			ConLog.Error("vdecRead(): sequence error (task %d)", vdec.job.Peek().type);
+			return 0;
+		}
+	}
+	else if (vdec.reader.size < (u32)buf_size)
+	{
+		buf_size = vdec.reader.size;
+	}
+
 	if (!buf_size)
 	{
-		return AVERROR_EOF;
+		return res;
 	}
 	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
 	{
@@ -34,7 +94,7 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 	{
 		vdec.reader.addr += buf_size;
 		vdec.reader.size -= buf_size;
-		return buf_size;
+		return res + buf_size;
 	}
 }
 
@@ -60,15 +120,19 @@ u32 vdecOpen(VideoDecoder* data)
 {
 	VideoDecoder& vdec = *data;
 
+	vdec.vdecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
 	u32 vdec_id = cellVdec.GetNewId(data);
 
 	vdec.id = vdec_id;
+
+	vdec.vdecCb->SetName("Video Decoder[" + std::to_string(vdec_id) + "] Callback");
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{
 		ConLog.Write("Video Decoder enter()");
 
-		VdecTask task;
+		VdecTask& task = vdec.task;
 
 		while (true)
 		{
@@ -79,12 +143,11 @@ u32 vdecOpen(VideoDecoder* data)
 
 			if (vdec.job.IsEmpty() && vdec.is_running)
 			{
-				// TODO: default task (not needed?)
 				Sleep(1);
 				continue;
 			}
 
-			if (vdec.has_picture) // hack
+			if (vdec.frames.GetCount() >= 50)
 			{
 				Sleep(1);
 				continue;
@@ -100,55 +163,36 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecStartSeq:
 				{
 					// TODO: reset data
-					ConLog.Warning("vdecStartSeq()");
+					ConLog.Warning("vdecStartSeq:");
+
+					vdec.reader.addr = 0;
+					vdec.reader.size = 0;
 					vdec.is_running = true;
+					vdec.just_started = true;
 				}
 				break;
 
 			case vdecEndSeq:
 				{
-					Callback cb;
+					// TODO: finalize
+					ConLog.Warning("vdecEndSeq:");
+
+					vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
+					/*Callback cb;
 					cb.SetAddr(vdec.cbFunc);
-					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, 0, vdec.cbArg);
-					cb.Branch(false);
-					ConLog.Warning("vdecEndSeq()");
+					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
+					cb.Branch(true); // ???*/
+
+					avcodec_close(vdec.ctx);
+					avformat_close_input(&vdec.fmt);
+
 					vdec.is_running = false;
 				}
 				break;
 
 			case vdecDecodeAu:
 				{
-					struct vdecPacket : AVPacket
-					{
-						vdecPacket(u32 size)
-						{
-							av_init_packet(this);
-							data = (u8*)av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
-							memset(data + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
-							this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
-						}
-
-						~vdecPacket()
-						{
-							av_free(data);
-							//av_free_packet(this);
-						}
-
-					} au(task.size);
-
-					if ((task.pts || task.dts) && task.pts != ~0 && task.dts != ~0)
-					{
-						vdec.pts = task.pts;
-						vdec.dts = task.dts;
-						au.pts = vdec.pts;
-						au.dts = vdec.dts;
-						au.flags = AV_PKT_FLAG_KEY;
-					}
-					else
-					{
-						au.pts = vdec.pts;
-						au.dts = vdec.dts;
-					}
+					int err;
 
 					if (task.mode != CELL_VDEC_DEC_MODE_NORMAL)
 					{
@@ -159,72 +203,166 @@ u32 vdecOpen(VideoDecoder* data)
 					vdec.reader.addr = task.addr;
 					vdec.reader.size = task.size;
 
-					if (!Memory.CopyToReal(au.data, task.addr, task.size))
+					vdec.last_pts = task.pts;
+					vdec.last_dts = task.dts;
+
+					struct AVPacketHolder : AVPacket
 					{
-						ConLog.Error("vdecDecodeAu: AU data accessing failed(addr=0x%x, size=0x%x)", task.addr, task.size);
-						break;
-					}
-
-					/*{
-						wxFile dump;
-						dump.Open(wxString::Format("0x%llx-0x%llx.dump", au.pts, au.dts), wxFile::write);
-						dump.Write(au.data, task.size + FF_INPUT_BUFFER_PADDING_SIZE);
-						dump.Close();
-					}*/
-
-					int got_picture = 0;
-
-					//vdec.ctx->flags |= CODEC_FLAG_TRUNCATED;
-					//vdec.ctx->flags2 |= CODEC_FLAG2_CHUNKS;
-					vdec.ctx->flags2 |= CODEC_FLAG2_LOCAL_HEADER;
-					vdec.ctx->codec_tag = *(u32*)"DAVC";
-					//vdec.ctx->stream_codec_tag = *(u32*)"DAVC";
-
-					//avcodec_get_frame_defaults(vdec.frame);
-					
-
-					int decode = avcodec_decode_video2(vdec.ctx, vdec.frame, &got_picture, &au);
-					if (decode < 0)
-					{
-						ConLog.Error("vdecDecodeAu: AU decoding error(%d)", decode);
-						break;
-					}
-
-					if (got_picture)
-					{
-						ConLog.Write("got_picture (%d, vdec: pts=0x%llx, dts=0x%llx)", got_picture, vdec.pts, vdec.dts);
-					
-						/*if (vdec.out_data[0]) av_freep(vdec.out_data[0]);
-
-						int err = av_image_alloc(vdec.out_data, vdec.linesize, vdec.ctx->width, vdec.ctx->height, vdec.ctx->pix_fmt, 1);
-						if (err < 0)
+						AVPacketHolder(u32 size)
 						{
-							ConLog.Error("vdecDecodeAu: av_image_alloc failed(%d)", err);
+							av_init_packet(this);
+
+							if (size)
+							{
+								data = (u8*)av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
+								memset(data + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+								this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
+							}
+							else
+							{
+								data = NULL;
+								size = 0;
+							}
+						}
+
+						~AVPacketHolder()
+						{
+							av_free(data);
+							//av_free_packet(this);
+						}
+
+					} au(0);
+
+					if (vdec.just_started) // deferred initialization
+					{
+						err = avformat_open_input(&vdec.fmt, NULL, NULL, NULL);
+						if (err)
+						{
+							ConLog.Error("vdecDecodeAu: avformat_open_input() failed");
 							Emu.Pause();
+							break;
+						}
+						err = avformat_find_stream_info(vdec.fmt, NULL);
+						if (err)
+						{
+							ConLog.Error("vdecDecodeAu: avformat_find_stream_info() failed");
+							Emu.Pause();
+							break;
+						}
+						if (!vdec.fmt->nb_streams)
+						{
+							ConLog.Error("vdecDecodeAu: no stream found");
+							Emu.Pause();
+							break;
+						}
+						vdec.ctx = vdec.fmt->streams[0]->codec; // TODO: check data
+						
+						AVCodec* codec = avcodec_find_decoder(vdec.ctx->codec_id); // ???
+						if (!codec)
+						{
+							ConLog.Error("vdecDecodeAu: avcodec_find_decoder() failed");
+							Emu.Pause();
+							break;
+						}
+
+						AVDictionary* opts = nullptr;
+						av_dict_set(&opts, "refcounted_frames", "1", 0);
+						{
+							SMutexGeneralLocker lock(g_mutex_avcodec_open2);
+							// not multithread-safe
+							err = avcodec_open2(vdec.ctx, codec, &opts);
+						}
+						if (err)
+						{
+							ConLog.Error("vdecDecodeAu: avcodec_open2() failed");
+							Emu.Pause();
+							break;
+						}
+						//vdec.ctx->flags |= CODEC_FLAG_TRUNCATED;
+						//vdec.ctx->flags2 |= CODEC_FLAG2_CHUNKS;
+						vdec.just_started = false;
+					}
+
+					bool last_frame = false;
+
+					while (true)
+					{
+						if (Emu.IsStopped())
+						{
+							ConLog.Warning("vdecDecodeAu aborted");
 							return;
 						}
-						
-						vdec.buf_size = err;
+						last_frame = av_read_frame(vdec.fmt, &au) < 0;
+						if (last_frame)
+						{
+							//break;
+							av_free(au.data);
+							au.data = NULL;
+							au.size = 0;
+						}
 
-						av_image_copy(vdec.out_data, vdec.linesize, (const u8**)(vdec.frame->data), vdec.frame->linesize,
-							vdec.ctx->pix_fmt, vdec.ctx->width, vdec.ctx->height);*/
-						vdec.buf_size = a128(av_image_get_buffer_size(vdec.ctx->pix_fmt, vdec.ctx->width, vdec.ctx->height, 1));
+						struct VdecFrameHolder : VdecFrame
+						{
+							VdecFrameHolder()
+							{
+								data = av_frame_alloc();
+							}
 
-						vdec.userdata = task.userData;
-						vdec.has_picture = true;
+							~VdecFrameHolder()
+							{
+								if (data)
+								{
+									av_frame_unref(data);
+									av_frame_free(&data);
+								}
+							}
 
-						Callback cb;
-						cb.SetAddr(vdec.cbFunc);
-						cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, 0, vdec.cbArg);
-						cb.Branch(false);
+						} frame;
+
+						if (!frame.data)
+						{
+							ConLog.Error("vdecDecodeAu: av_frame_alloc() failed");
+							Emu.Pause();
+							break;
+						}
+
+						int got_picture = 0;
+
+						int decode = avcodec_decode_video2(vdec.ctx, frame.data, &got_picture, &au);
+
+						if (decode <= 0)
+						{
+							if (!last_frame && decode < 0)
+							{
+								ConLog.Error("vdecDecodeAu: AU decoding error(0x%x)", decode);
+								break;
+							}
+							if (!got_picture && vdec.reader.size == 0) break; // video end?
+						}
+
+						if (got_picture)
+						{
+							//ConLog.Write("got_picture (%d, vdec: pts=0x%llx, dts=0x%llx)", got_picture, au.pts, au.dts);					
+
+							frame.dts = vdec.last_dts; vdec.last_dts += 3003; // + duration???
+							frame.pts = vdec.last_pts; vdec.last_pts += 3003;
+							frame.userdata = task.userData;
+							vdec.frames.Push(frame); // !!!!!!!!
+							frame.data = nullptr; // to prevent destruction
+
+							vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
+							/*Callback cb;
+							cb.SetAddr(vdec.cbFunc);
+							cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
+							cb.Branch(false);*/
+						}
 					}
-				
-					ConLog.Write("Frame decoded (pts=0x%llx, dts=0x%llx, addr=0x%x, result=0x%x)", au.pts, au.dts, task.addr, decode);
 
-					Callback cb;
+					vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+					/*Callback cb;
 					cb.SetAddr(vdec.cbFunc);
-					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, 0, vdec.cbArg);
-					cb.Branch(false);
+					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+					cb.Branch(false);*/
 				}
 				break;
 
@@ -238,15 +376,15 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecSetFrameRate:
 				{
 					ConLog.Error("TODO: vdecSetFrameRate(%d)", task.frc);
-					return;
 				}
+				break;
 
 			default:
 				ConLog.Error("Video Decoder error: unknown task(%d)", task.type);
-				return;
 			}
 		}
 
+		vdec.is_finished = true;
 		ConLog.Warning("Video Decoder aborted");
 	});
 
@@ -331,7 +469,7 @@ int cellVdecClose(u32 handle)
 
 	vdec->job.Push(VdecTask(vdecClose));
 
-	while (!vdec->is_finished)
+	while (!vdec->is_finished || !vdec->frames.IsEmpty())
 	{
 		if (Emu.IsStopped())
 		{
@@ -341,6 +479,7 @@ int cellVdecClose(u32 handle)
 		Sleep(1);
 	}
 
+	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());
 	Emu.GetIdManager().RemoveID(handle);
 	return CELL_OK;
 }
@@ -361,12 +500,34 @@ int cellVdecStartSeq(u32 handle)
 
 int cellVdecEndSeq(u32 handle)
 {
-	cellVdec.Log("cellVdecEndSeq(handle=%d)", handle);
+	cellVdec.Warning("cellVdecEndSeq(handle=%d)", handle);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
+	}
+
+	/*if (!vdec->job.IsEmpty())
+	{
+		Sleep(1);
+		return CELL_VDEC_ERROR_BUSY; // ???
+	}
+
+	if (!vdec->frames.IsEmpty())
+	{
+		Sleep(1);
+		return CELL_VDEC_ERROR_BUSY; // ???
+	}*/
+
+	while (!vdec->job.IsEmpty() || !vdec->frames.IsEmpty())
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellVdecEndSeq(%d) aborted", handle);
+			return CELL_OK;
+		}
+		Sleep(1);
 	}
 
 	vdec->job.Push(VdecTask(vdecEndSeq));
@@ -399,7 +560,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const mem_ptr_t<CellVd
 
 int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u32 out_addr)
 {
-	cellVdec.Warning("cellVdecGetPicture(handle=%d, format_addr=0x%x, out_addr=0x%x)", handle, format.GetAddr(), out_addr);
+	cellVdec.Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, out_addr=0x%x)", handle, format.GetAddr(), out_addr);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -412,14 +573,16 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 		return CELL_VDEC_ERROR_FATAL;
 	}
 
-	if (!vdec->has_picture)
+	if (vdec->frames.IsEmpty())
 	{
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
 	if (out_addr)
 	{
-		if (!Memory.IsGoodAddr(out_addr, vdec->buf_size))
+		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
+
+		if (!Memory.IsGoodAddr(out_addr, buf_size))
 		{
 			return CELL_VDEC_ERROR_FATAL;
 		}
@@ -429,54 +592,47 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 			cellVdec.Error("cellVdecGetPicture: TODO: unknown formatType(%d)", (u32)format->formatType);
 			return CELL_OK;
 		}
+
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
 			cellVdec.Error("cellVdecGetPicture: TODO: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
 			return CELL_OK;
 		}
 
-		AVFrame& frame = *vdec->frame;
+		VdecFrame vf;
 
-		u8* buf = (u8*)malloc(vdec->buf_size);
-		if (!buf)
-		{
-			cellVdec.Error("cellVdecGetPicture: malloc failed (out of memory)");
-			Emu.Pause();
-			return CELL_OK;
-		}
+		vdec->frames.Pop(vf);
+
+		AVFrame& frame = *vf.data;
+
+		u8* buf = (u8*)malloc(buf_size);
 
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(buf, vdec->buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(buf, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
 			cellVdec.Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
 			Emu.Pause();
 		}
 
-		if (!Memory.CopyFromReal(out_addr, buf, vdec->buf_size))
+		if (!Memory.CopyFromReal(out_addr, buf, buf_size))
 		{
 			cellVdec.Error("cellVdecGetPicture: data copying failed");
 			Emu.Pause();
 		}
 
-		/*
-		u32 size0 = frame.linesize[0] * frame.height;
-		u32 size1 = frame.linesize[1] * frame.height / 2;
-		u32 size2 = frame.linesize[2] * frame.height / 2;
-		ConLog.Write("*** size0=0x%x, size1=0x%x, size2=0x%x, buf_size=0x%x (res=0x%x)", size0, size1, size2, vdec->buf_size, err);
-		*/
-
+		av_frame_unref(vf.data);
+		av_frame_free(&vf.data);
 		free(buf);
 	}
 
-	vdec->has_picture = false;
 	return CELL_OK;
 }
 
 int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 {
-	cellVdec.Warning("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.GetAddr());
+	cellVdec.Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.GetAddr());
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -489,36 +645,47 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 		return CELL_VDEC_ERROR_FATAL;
 	}
 
-	if (!vdec->has_picture)
+	VdecFrame& vf = vdec->frames.Peek();
+
+	if (vdec->frames.IsEmpty())
 	{
+		Sleep(1);
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
-	mem_ptr_t<CellVdecPicItem> info(vdec->memAddr);
+	AVFrame& frame = *vf.data;
+
+	mem_ptr_t<CellVdecPicItem> info(vdec->memAddr + vdec->memBias);
+
+	vdec->memBias += 512;
+	if (vdec->memBias + 512 > vdec->memSize)
+	{
+		vdec->memBias = 0;
+	}
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	info->size = vdec->buf_size;
+	info->size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
 	info->auNum = 1;
-	info->auPts[0].lower = vdec->pts;
-	info->auPts[0].upper = vdec->pts >> 32;
+	info->auPts[0].lower = vf.pts;
+	info->auPts[0].upper = vf.pts >> 32;
 	info->auPts[1].lower = 0xffffffff;
 	info->auPts[1].upper = 0xffffffff;
-	info->auDts[0].lower = vdec->dts;
-	info->auDts[0].upper = vdec->dts >> 32;
+	info->auDts[0].lower = vf.dts;
+	info->auDts[0].upper = vf.dts >> 32;
 	info->auDts[1].lower = 0xffffffff;
 	info->auDts[1].upper = 0xffffffff;
-	info->auUserData[0] = vdec->userdata;
+	info->auUserData[0] = vf.userdata;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
 	info->attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
-	info->picInfo_addr = vdec->memAddr + sizeof(CellVdecPicItem);
+	info->picInfo_addr = info.GetAddr() + sizeof(CellVdecPicItem);
 
-	mem_ptr_t<CellVdecAvcInfo> avc(vdec->memAddr + sizeof(CellVdecPicItem));
+	mem_ptr_t<CellVdecAvcInfo> avc(info.GetAddr() + sizeof(CellVdecPicItem));
 
-	avc->horizontalSize = vdec->frame->width; // ???
-	avc->verticalSize = vdec->frame->height;
-	switch (vdec->frame->pict_type)
+	avc->horizontalSize = frame.width;
+	avc->verticalSize = frame.height;
+	switch (frame.pict_type)
 	{
 	case AV_PICTURE_TYPE_I: avc->pictureType[0] = CELL_VDEC_AVC_PCT_I; break;
 	case AV_PICTURE_TYPE_P: avc->pictureType[0] = CELL_VDEC_AVC_PCT_P; break;
@@ -590,5 +757,6 @@ void cellVdec_init()
 	cellVdec.AddFunc(0x17c702b9, cellVdecGetPicItem);
 	cellVdec.AddFunc(0xe13ef6fc, cellVdecSetFrameRate);
 
+	av_register_all();
 	avcodec_register_all();
 }

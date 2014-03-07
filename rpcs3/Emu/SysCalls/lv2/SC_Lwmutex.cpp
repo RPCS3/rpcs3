@@ -57,7 +57,7 @@ int sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 	{
 	case CELL_OK:
 		lwmutex->all_info() = 0;
-		lwmutex->attribute = 0;
+		lwmutex->attribute = 0xDEADBEEF;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
 	default: return res;
@@ -99,13 +99,13 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 void SleepQueue::push(u32 tid)
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	list.AddCpy(tid);
 }
 
 u32 SleepQueue::pop() // SYS_SYNC_FIFO
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 		
 	while (true)
 	{
@@ -125,7 +125,7 @@ u32 SleepQueue::pop() // SYS_SYNC_FIFO
 
 u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	while (true)
 	{
@@ -171,7 +171,7 @@ u32 SleepQueue::pop_prio_inherit() // (TODO)
 
 bool SleepQueue::invalidate(u32 tid)
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (tid) for (u32 i = 0; i < list.GetCount(); i++)
 	{
@@ -187,15 +187,13 @@ bool SleepQueue::invalidate(u32 tid)
 
 bool SleepQueue::finalize()
 {
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	m_mutex.lock(tid);
+	if (!m_mutex.try_lock()) return false;
 
 	for (u32 i = 0; i < list.GetCount(); i++)
 	{
 		if (list[i])
 		{
-			m_mutex.unlock(tid);
+			m_mutex.unlock();
 			return false;
 		}
 	}
@@ -205,9 +203,42 @@ bool SleepQueue::finalize()
 
 int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
-	if (!attribute.ToBE()) return CELL_EINVAL;
+	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
 
-	if (tid == mutex.GetOwner())
+	be_t<u32> owner_tid = mutex.GetOwner();
+
+	if (owner_tid != mutex.GetFreeValue())
+	{
+		if (CPUThread* tt = Emu.GetCPU().GetThread(owner_tid))
+		{
+			if (!tt->IsAlive())
+			{
+				sc_lwmutex.Error("sys_lwmutex_t::(try)lock(%d): deadlock on invalid thread(%d)", (u32)sleep_queue, (u32)owner_tid);
+				mutex.unlock(owner_tid, tid);
+				recursive_count = 1;
+				return CELL_OK;
+			}
+		}
+		else
+		{
+			sc_lwmutex.Error("sys_lwmutex_t::(try)lock(%d): deadlock on invalid thread(%d)", (u32)sleep_queue, (u32)owner_tid);
+			mutex.unlock(owner_tid, tid);
+			recursive_count = 1;
+			return CELL_OK;
+		}
+	}
+
+	/*while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
+			return CELL_ESRCH;
+		}
+		Sleep(1);
+	}*/
+
+	if (tid == owner_tid)
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
@@ -237,6 +268,11 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 	}
 	else
 	{
+		if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
+		{
+			sc_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value (%d)", (u32)sleep_queue, (u32)recursive_count);
+			recursive_count = 1;
+		}
 		recursive_count -= 1;
 		if (!recursive_count.ToBE())
 		{

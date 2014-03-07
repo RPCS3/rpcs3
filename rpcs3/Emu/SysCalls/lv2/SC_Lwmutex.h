@@ -47,7 +47,7 @@ struct SleepQueue
 		q_rec(u32 tid, u64 prio): tid(tid), prio(prio) {}
 	}; */
 	Array<u32> list;
-	SMutex m_mutex;
+	std::mutex m_mutex;
 	u64 m_name;
 
 	SleepQueue(u64 name = 0)
@@ -65,7 +65,7 @@ struct SleepQueue
 
 struct sys_lwmutex_t
 {
-	/* volatile */ SMutexBase<be_t<u32>, ~0, 0> mutex;
+	/* volatile */ SMutexBase<be_t<u32>> mutex;
 	/* volatile */ be_t<u32> waiter; // not used
 	u64 &all_info(){return *(reinterpret_cast<u64*>(this));}
 	be_t<u32> attribute;

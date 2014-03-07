@@ -25,6 +25,21 @@ struct ModuleFunc
 	}
 };
 
+struct SFuncOp
+{
+	u32 crc;
+	u32 mask;
+};
+
+struct SFunc
+{
+	func_caller* func;
+	char* name;
+	Array<SFuncOp> ops;
+};
+
+extern ArrayF<SFunc> g_static_funcs_list;
+
 class Module
 {
 	std::string m_name;
@@ -94,12 +109,37 @@ public:
 	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
+
+	template<typename T> __forceinline void AddFuncSub(const u64 ops[], char* name, T func);
 };
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
 	m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
+}
+
+template<typename T>
+__forceinline void Module::AddFuncSub(const u64 ops[], char* name, T func)
+{
+	if (!ops[0]) return;
+
+	SFunc* sf = new SFunc;
+	sf->func = bind_func(func);
+	sf->name = name;
+
+	// TODO: check for self-inclusions, use CRC
+
+	for (u32 i = 0; ops[i]; i++)
+	{
+		SFuncOp op;
+		op.mask = ops[i] >> 32;
+		op.crc = ops[i] & op.mask;
+		op.mask = re(op.mask);
+		op.crc = re(op.crc);
+		sf->ops.AddCpy(op);
+	}
+	g_static_funcs_list.Add(sf);
 }
 
 bool IsLoadedFunc(u32 id);
