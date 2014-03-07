@@ -57,7 +57,7 @@ protected:
 	u64 m_stack_size;
 	u64 m_stack_point;
 
-	u32 m_exit_status;
+	u64 m_exit_status;
 
 	CPUDecoder* m_dec;
 
@@ -80,10 +80,10 @@ public:
 	void SetName(const std::string& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
 	void SetOffset(const u64 offset) { m_offset = offset; }
-	void SetExitStatus(const u32 status) { m_exit_status = status; }
+	void SetExitStatus(const u64 status) { m_exit_status = status; }
 
 	u64 GetOffset() const { return m_offset; }
-	u32 GetExitStatus() const { return m_exit_status; }
+	u64 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 
 	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
@@ -234,7 +234,7 @@ public:
 		return pc + 4;
 	}
 
-	int ExecAsCallback(u64 pc, bool wait, u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0);
+	s64 ExecAsCallback(u64 pc, bool wait, u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0);
 
 protected:
 	virtual void DoReset()=0;

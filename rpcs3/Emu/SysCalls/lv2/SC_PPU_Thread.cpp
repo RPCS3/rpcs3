@@ -10,24 +10,21 @@ enum
 	SYS_PPU_THREAD_DONE_INIT,
 };
 
-void sys_ppu_thread_exit(int errorcode)
+void sys_ppu_thread_exit(u64 errorcode)
 {
-	if(errorcode == 0)
-	{
-		sysPrxForUser.Log("sys_ppu_thread_exit(errorcode=%d)", errorcode);
-	}
-	else
-	{
-		sysPrxForUser.Warning("sys_ppu_thread_exit(errorcode=%d)", errorcode);
-	}
+	sysPrxForUser.Log("sys_ppu_thread_exit(0x%llx)", errorcode);
 	
 	PPUThread& thr = GetCurrentPPUThread();
+	u32 tid = thr.GetId();
+
+	if (thr.owned_mutexes)
+	{
+		ConLog.Error("Owned mutexes found (%d)", thr.owned_mutexes);
+		thr.owned_mutexes = 0;
+	}
+
 	thr.SetExitStatus(errorcode);
 	thr.Stop();
-
-	//Emu.GetCPU().RemoveThread(thr.GetId());
-
-	//throw errorcode;
 }
 
 int sys_ppu_thread_yield()
@@ -37,14 +34,24 @@ int sys_ppu_thread_yield()
 	return CELL_OK;
 }
 
-int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr)
+int sys_ppu_thread_join(u32 thread_id, mem64_t vptr)
 {
-	sysPrxForUser.Warning("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr_addr);
+	sysPrxForUser.Warning("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr.GetAddr());
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
-	GetCurrentPPUThread().Wait(*thr);
+	while (thr->IsAlive())
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_ppu_thread_join(%d) aborted", thread_id);
+			return CELL_OK;
+		}
+		Sleep(1);
+	}
+
+	vptr = thr->GetExitStatus();
 	return CELL_OK;
 }
 

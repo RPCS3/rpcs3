@@ -9,6 +9,8 @@ void StaticAnalyse(void* ptr, u32 size)
 {
 	u32* data = (u32*)ptr; size /= 4;
 
+	return; // disabled
+
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
@@ -38,7 +40,7 @@ void StaticAnalyse(void* ptr, u32 size)
 					data[i] = re(0x39600000 | j); // li r11, j
 					data[i+1] = se32(0x44000003); // sc 3
 					data[i+2] = se32(0x4e800020); // blr
-					i += g_static_funcs_list[j].ops.GetCount(); // ???
+					i += 2; // ???
 				}
 			}
 		}

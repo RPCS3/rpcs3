@@ -13,20 +13,21 @@ int cellAANAddData(u32 handle, u32 port, u32 offset, u32 addr, u32 samples)
 	return CELL_OK; 
 }
 
-// libmixer Functions, NOT active in this moment
-/*int cellAANConnect(CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
+int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
+	libmixer.Error("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcrPortNo=0x%x)",
+		receive, receivePortNo, source, sourcePortNo);
 	return 0;
 }
 
-int cellAANDisconnect(CellAANHandle receive, u32 receivePortNo, CellAANHandle source, u32 sourcePortNo)
+int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
+	libmixer.Error("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcrPortNo=0x%x)",
+		receive, receivePortNo, source, sourcePortNo);
 	return 0;
 }
  
-int cellSSPlayerCreate(CellAANHandle *handle, CellSSPlayerConfig *config)
+/*int cellSSPlayerCreate(CellAANHandle *handle, CellSSPlayerConfig *config)
 {
 	UNIMPLEMENTED_FUNC(libmixer);
 	return 0;
@@ -182,7 +183,6 @@ void libmixer_init()
 		0xffffffff81690000,
 		0xffffffff7c050378,
 		0xffffffff7cc43378,
-		// 78 63 00 20 	clrldi  r3,r3,32	# 20      // may be included
 		0xffffffff7d465378,
 		0xffffffff812b0030,
 		0xffffffff80090000,
@@ -199,6 +199,80 @@ void libmixer_init()
 		0
 	};
 	libmixer.AddFuncSub(cellAANAddData_table, "cellAANAddData", cellAANAddData);
+
+	u64 cellAANConnect_table[39] = {
+		0xfffffffff821ff71,
+		0xffffffff7c0802a6,
+		0xffffffff2f830000,
+		0xfffffffff80100a0,
+		0xffffffff3c008031,
+		0xffffffff7c691b78,
+		0xffffffff7c8a2378,
+		0xffffffff60000003,
+		0xffffff00409e0018, // bne
+		0xffffffff7c0307b4,
+		0xffffffffe80100a0,
+		0xffffffff38210090,
+		0xffffffff7c0803a6,
+		0xffffffff4e800020,
+		0xffffffff2f850000,
+		0xffffffff78630020,
+		0xffffffff38810070,
+		0xffffff00419effe0, // beq
+		0xffffffff81690000,
+		0xffffffff38000001,
+		0xffffffff91210074,
+		0xffffffff90a10070,
+		0xffffffff90c10078,
+		0xffffffff9141007c,
+		0xffffffff812b0018, // [24]
+		0xffffffff90010080,
+		0xffffffff80090000,
+		0xfffffffff8410028,
+		0xffffffff7c0903a6,
+		0xffffffff80490004,
+		0xffffffff4e800421,
+		0xffffffffe8410028,
+		0xffffffff7c601b78,
+		0xffffffff7c0307b4,
+		0xffffffffe80100a0,
+		0xffffffff38210090,
+		0xffffffff7c0803a6,
+		0xffffffff4e800020,
+		0, // [38]
+	};
+	libmixer.AddFuncSub(cellAANConnect_table, "cellAANConnect", cellAANConnect);
+	cellAANConnect_table[24] = 0xffffffff812b001c;
+	libmixer.AddFuncSub(cellAANConnect_table, "cellAANDisconnect", cellAANDisconnect);
+
+	static const u64 cellAANAddData_table1[] = {
+		// TODO
+		0xffffffff7c691b78,
+		0xffffffff7c0802a6,
+		0xfffffffff821ff91,
+		0xfffffffff8010080,
+		0xffffffff7c802378,
+		0xffffffff7caa2b78,
+		0xffffffff81690000,
+		0xffffffff7c050378,
+		0xffffffff7cc43378,
+		0xffffffff78630020, // clrldi r3,r3,32
+		0xffffffff7d465378,
+		0xffffffff812b0030,
+		0xffffffff80090000,
+		0xfffffffff8410028,
+		0xffffffff7c0903a6,
+		0xffffffff80490004,
+		0xffffffff4e800421,
+		0xffffffffe8410028,
+		0xffffffffe8010080,
+		0xffffffff7c6307b4,
+		0xffffffff7c0803a6,
+		0xffffffff38210070,
+		0xffffffff4e800020,
+		0
+	};
+	libmixer.AddFuncSub(cellAANAddData_table1, "cellAANAddData(1)", cellAANAddData);
 
 	static const u64 cellSurMixerCreate_table[] = {
 		0xffffffff2f830000,

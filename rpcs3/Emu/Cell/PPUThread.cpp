@@ -17,6 +17,7 @@ PPUThread& GetCurrentPPUThread()
 
 PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
 {
+	owned_mutexes = 0;
 	Reset();
 }
 

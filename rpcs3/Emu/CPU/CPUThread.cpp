@@ -361,7 +361,7 @@ void CPUThread::Task()
 	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().wx_str());
 }
 
-int CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe
+s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe
 {
 	while (m_alive)
 	{

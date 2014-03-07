@@ -95,7 +95,8 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	PPUThread& t = GetCurrentPPUThread();
+	u32 tid = t.GetId();
 	u32 owner = mutex->m_mutex.GetOwner();
 
 	if (owner == tid)
@@ -113,17 +114,32 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 			return CELL_EDEADLK;
 		}
 	}
-	else if (owner && !Emu.GetIdManager().CheckID(owner))
+	else if (owner)
 	{
-		sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-		mutex->m_mutex.unlock(owner, tid);
-		mutex->recursive = 1;
-		return CELL_OK;
+		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
+		{
+			if (!tt->IsAlive())
+			{
+				sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+				mutex->m_mutex.unlock(owner, tid);
+				mutex->recursive = 1;
+				t.owned_mutexes++; 
+				return CELL_OK;
+			}
+		}
+		else
+		{
+			sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+			mutex->m_mutex.unlock(owner, tid);
+			mutex->recursive = 1;
+			t.owned_mutexes++; 
+			return CELL_OK;
+		}
 	}
 
 	switch (mutex->m_mutex.trylock(tid))
 	{
-	case SMR_OK: mutex->recursive = 1; return CELL_OK;
+	case SMR_OK: mutex->recursive = 1; t.owned_mutexes++; return CELL_OK;
 	case SMR_FAILED: break;
 	default: goto abort;
 	}
@@ -135,7 +151,7 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	case SMR_OK:
 		mutex->m_queue.invalidate(tid);
 	case SMR_SIGNAL:
-		mutex->recursive = 1; return CELL_OK;
+		mutex->recursive = 1; t.owned_mutexes++; return CELL_OK;
 	case SMR_TIMEOUT:
 		mutex->m_queue.invalidate(tid); return CELL_ETIMEDOUT;
 	default:
@@ -161,7 +177,8 @@ int sys_mutex_trylock(u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	PPUThread& t = GetCurrentPPUThread();
+	u32 tid = t.GetId();
 	u32 owner = mutex->m_mutex.GetOwner();
 
 	if (owner == tid)
@@ -179,17 +196,32 @@ int sys_mutex_trylock(u32 mutex_id)
 			return CELL_EDEADLK;
 		}
 	}
-	else if (owner && !Emu.GetIdManager().CheckID(owner))
+	else if (owner)
 	{
-		sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-		mutex->m_mutex.unlock(owner, tid);
-		mutex->recursive = 1;
-		return CELL_OK;
+		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
+		{
+			if (!tt->IsAlive())
+			{
+				sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+				mutex->m_mutex.unlock(owner, tid);
+				mutex->recursive = 1;
+				t.owned_mutexes++; 
+				return CELL_OK;
+			}
+		}
+		else
+		{
+			sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+			mutex->m_mutex.unlock(owner, tid);
+			mutex->recursive = 1;
+			t.owned_mutexes++; 
+			return CELL_OK;
+		}
 	}
 
 	switch (mutex->m_mutex.trylock(tid))
 	{
-	case SMR_OK: mutex->recursive = 1; return CELL_OK;
+	case SMR_OK: mutex->recursive = 1; t.owned_mutexes++; return CELL_OK;
 	}
 
 	return CELL_EBUSY;
@@ -205,18 +237,21 @@ int sys_mutex_unlock(u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	PPUThread& t = GetCurrentPPUThread();
+	u32 tid = t.GetId();
 
 	if (mutex->m_mutex.GetOwner() == tid)
 	{
-		if (!mutex->recursive || (mutex->recursive > 1 && !mutex->is_recursive))
+		if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
 		{
-			sys_mtx.Warning("sys_mutex_unlock(%d): wrong recursive value (%d)", mutex_id, mutex->recursive);
+			sys_mtx.Error("sys_mutex_unlock(%d): wrong recursive value (%d)", mutex_id, mutex->recursive);
+			mutex->recursive = 1;
 		}
 		mutex->recursive--;
 		if (!mutex->recursive)
 		{
 			mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
+			t.owned_mutexes--;
 		}
 		return CELL_OK;
 	}

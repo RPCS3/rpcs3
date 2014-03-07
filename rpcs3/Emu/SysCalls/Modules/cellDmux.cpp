@@ -80,8 +80,8 @@ u32 dmuxOpen(Demuxer* data)
 					cb.SetAddr(dmux.cbFunc);
 					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
 					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
-					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
-					updates_signaled++;
+					//dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					//updates_signaled++;
 				}
 				else switch (code.ToLE())
 				{
@@ -582,6 +582,17 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	if (!Memory.IsGoodAddr(streamAddress, streamSize))
 	{
 		return CELL_DMUX_ERROR_FATAL;
+	}
+
+	if (dmux->is_running) // maximum hack
+	{
+		mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux->memAddr) + 128);
+		dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
+		dmuxMsg->supplementalInfo = 0; // !!!
+		Callback cb;
+		cb.SetAddr(dmux->cbFunc);
+		cb.Handle(dmux->id, dmuxMsg.GetAddr(), dmux->cbArg);
+		cb.Branch(true);
 	}
 
 	while (dmux->is_running) // hack

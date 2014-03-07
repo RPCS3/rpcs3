@@ -2096,8 +2096,11 @@ private:
 		case 0x2: SysCall(); break;
 		case 0x3:
 			StaticExecute(CPU.GPR[11]);
-			ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
-				wxString(g_static_funcs_list[CPU.GPR[11]].name).wx_str(), CPU.GPR[3], CPU.PC);
+			if (Ini.HLELogging.GetValue())
+			{
+				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
+					wxString(g_static_funcs_list[CPU.GPR[11]].name).wx_str(), CPU.GPR[3], CPU.PC);
+			}
 			break;
 		case 0x22: UNK("HyperCall LV1"); break;
 		default: UNK(wxString::Format("Unknown sc: %x", sc_code));

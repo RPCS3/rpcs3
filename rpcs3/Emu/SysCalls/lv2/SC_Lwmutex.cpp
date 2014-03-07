@@ -207,17 +207,40 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
 
+	be_t<u32> owner_tid = mutex.GetOwner();
+
+	if (owner_tid != mutex.GetFreeValue())
+	{
+		if (CPUThread* tt = Emu.GetCPU().GetThread(owner_tid))
+		{
+			if (!tt->IsAlive())
+			{
+				sc_lwmutex.Error("sys_lwmutex_t::(try)lock(%d): deadlock on invalid thread(%d)", (u32)sleep_queue, (u32)owner_tid);
+				mutex.unlock(owner_tid, tid);
+				recursive_count = 1;
+				return CELL_OK;
+			}
+		}
+		else
+		{
+			sc_lwmutex.Error("sys_lwmutex_t::(try)lock(%d): deadlock on invalid thread(%d)", (u32)sleep_queue, (u32)owner_tid);
+			mutex.unlock(owner_tid, tid);
+			recursive_count = 1;
+			return CELL_OK;
+		}
+	}
+
 	while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("(hack) sys_lwmutex_t::trylock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
+			ConLog.Warning("(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
 			return CELL_ESRCH;
 		}
 		Sleep(1);
 	}
 
-	if (tid == mutex.GetOwner())
+	if (tid == owner_tid)
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
@@ -247,6 +270,11 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 	}
 	else
 	{
+		if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
+		{
+			sc_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value (%d)", (u32)sleep_queue, (u32)recursive_count);
+			recursive_count = 1;
+		}
 		recursive_count -= 1;
 		if (!recursive_count.ToBE())
 		{

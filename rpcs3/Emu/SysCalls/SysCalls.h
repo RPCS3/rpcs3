@@ -201,9 +201,9 @@ extern int sys_rwlock_trywlock(u32 rw_lock_id);
 extern int sys_rwlock_wunlock(u32 rw_lock_id);
 
 //ppu_thread
-extern void sys_ppu_thread_exit(int errorcode);
+extern void sys_ppu_thread_exit(u64 errorcode);
 extern int sys_ppu_thread_yield();
-extern int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr);
+extern int sys_ppu_thread_join(u32 thread_id, mem64_t vptr);
 extern int sys_ppu_thread_detach(u32 thread_id);
 extern void sys_ppu_thread_get_join_state(u32 isjoinable_addr);
 extern int sys_ppu_thread_set_priority(u32 thread_id, int prio);
