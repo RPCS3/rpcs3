@@ -41,6 +41,7 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	Mutex* mutex = new Mutex((u32)attr->protocol, is_recursive, attr->name_u64);
 	u32 id = sys_mtx.GetNewId(mutex);
 	mutex->m_mutex.lock(tid);
+	mutex->id = id;
 	mutex_id = id;
 	mutex->m_mutex.unlock(tid);
 	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
@@ -120,20 +121,20 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 		{
 			if (!tt->IsAlive())
 			{
-				sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-				mutex->m_mutex.unlock(owner, tid);
+				if (owner == mutex->m_mutex.GetOwner()) sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+				/*mutex->m_mutex.unlock(owner, tid);
 				mutex->recursive = 1;
 				t.owned_mutexes++; 
-				return CELL_OK;
+				return CELL_OK;*/
 			}
 		}
 		else
 		{
 			sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-			mutex->m_mutex.unlock(owner, tid);
+			/*mutex->m_mutex.unlock(owner, tid);
 			mutex->recursive = 1;
 			t.owned_mutexes++; 
-			return CELL_OK;
+			return CELL_OK;*/
 		}
 	}
 
@@ -202,20 +203,20 @@ int sys_mutex_trylock(u32 mutex_id)
 		{
 			if (!tt->IsAlive())
 			{
-				sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-				mutex->m_mutex.unlock(owner, tid);
+				if (owner == mutex->m_mutex.GetOwner()) sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+				/*mutex->m_mutex.unlock(owner, tid);
 				mutex->recursive = 1;
 				t.owned_mutexes++; 
-				return CELL_OK;
+				return CELL_OK;*/
 			}
 		}
 		else
 		{
 			sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-			mutex->m_mutex.unlock(owner, tid);
+			/*mutex->m_mutex.unlock(owner, tid);
 			mutex->recursive = 1;
 			t.owned_mutexes++; 
-			return CELL_OK;
+			return CELL_OK;*/
 		}
 	}
 
@@ -244,7 +245,7 @@ int sys_mutex_unlock(u32 mutex_id)
 	{
 		if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
 		{
-			sys_mtx.Error("sys_mutex_unlock(%d): wrong recursive value (%d)", mutex_id, mutex->recursive);
+			sys_mtx.Error("sys_mutex_unlock(%d): wrong recursive value fixed (%d)", mutex_id, mutex->recursive);
 			mutex->recursive = 1;
 		}
 		mutex->recursive--;

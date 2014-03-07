@@ -18,9 +18,9 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 					 const u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x2000000; // 0x45fa49 from ps3
+		attr->memSize = 0x1000000; // 0x45fa49 from ps3
 	else
-		attr->memSize = 0x100000; // 0x73d9 from ps3
+		attr->memSize = 0x200000; // 0x73d9 from ps3
 
 	cellDmux.Warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", (u32)esFilterId->filterIdMajor, (u32)esFilterId->filterIdMinor,
 		(u32)esFilterId->supplementalInfo1, (u32)esFilterId->supplementalInfo2);
@@ -35,6 +35,8 @@ u32 dmuxOpen(Demuxer* data)
 	u32 dmux_id = cellDmux.GetNewId(data);
 
 	dmux.id = dmux_id;
+
+	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
@@ -80,8 +82,8 @@ u32 dmuxOpen(Demuxer* data)
 					cb.SetAddr(dmux.cbFunc);
 					cb.Handle(dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
 					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
-					//dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
-					//updates_signaled++;
+					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+					updates_signaled++;
 				}
 				else switch (code.ToLE())
 				{
@@ -145,6 +147,12 @@ u32 dmuxOpen(Demuxer* data)
 								}
 								Sleep(1);
 							}
+
+							/*if (es.hasunseen()) // hack, probably useless
+							{
+								stream = backup;
+								continue;
+							}*/
 
 							//ConLog.Write("*** AT3+ AU sent (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 
@@ -365,11 +373,11 @@ u32 dmuxOpen(Demuxer* data)
 				}
 				break;
 
-			case dmuxReleaseAu:
+			/*case dmuxReleaseAu:
 				{
 					task.es.es_ptr->release();
 				}
-				break;
+				break;*/
 
 			case dmuxFlushEs:
 				{
@@ -584,18 +592,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 		return CELL_DMUX_ERROR_FATAL;
 	}
 
-	if (dmux->is_running) // maximum hack
-	{
-		mem_ptr_t<CellDmuxMsg> dmuxMsg(a128(dmux->memAddr) + 128);
-		dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
-		dmuxMsg->supplementalInfo = 0; // !!!
-		Callback cb;
-		cb.SetAddr(dmux->cbFunc);
-		cb.Handle(dmux->id, dmuxMsg.GetAddr(), dmux->cbArg);
-		cb.Branch(true);
-	}
-
-	while (dmux->is_running) // hack
+	while (dmux->is_running) // !!!
 	{
 		if (Emu.IsStopped())
 		{
@@ -603,7 +600,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 			break;
 		}
 		Sleep(1);
-		//return CELL_DMUX_ERROR_BUSY;
+		return CELL_DMUX_ERROR_BUSY;
 	}
 
 	DemuxerTask task(dmuxSetStream);
@@ -938,14 +935,19 @@ int cellDmuxReleaseAu(u32 esHandle)
 	{
 		cellDmux.Error("cellDmuxReleaseAu: no AU");
 		return CELL_DMUX_ERROR_SEQ;
-		//return CELL_OK;
 	}
 
-	DemuxerTask task(dmuxReleaseAu);
+	/*DemuxerTask task(dmuxReleaseAu);
 	task.es.es = esHandle;
 	task.es.es_ptr = es;
 
-	es->dmux->job.Push(task);
+	es->dmux->job.Push(task);*/
+
+	if (!es->release())
+	{
+		cellDmux.Error("cellDmuxReleaseAu failed");
+		return CELL_DMUX_ERROR_SEQ;
+	}
 	return CELL_OK;
 }
 

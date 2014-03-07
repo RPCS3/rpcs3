@@ -53,6 +53,8 @@ u32 adecOpen(AudioDecoder* data)
 
 	adec.id = adec_id;
 
+	adec.adecCb->SetName("Audio Decoder[" + std::to_string(adec_id) + "] Callback");
+
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{
 		ConLog.Write("Audio Decoder enter()");

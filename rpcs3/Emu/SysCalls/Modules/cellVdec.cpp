@@ -23,7 +23,7 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 
 	int res = 0;
 
-	if (vdec.reader.size < (u32)buf_size)
+	if (vdec.reader.size < (u32)buf_size && !vdec.just_started)
 	{
 		while (vdec.job.IsEmpty())
 		{
@@ -74,7 +74,10 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 			ConLog.Error("vdecRead(): sequence error (task %d)", vdec.job.Peek().type);
 			return 0;
 		}
-		//buf_size = vdec.reader.size;
+	}
+	else if (vdec.reader.size < (u32)buf_size)
+	{
+		buf_size = vdec.reader.size;
 	}
 
 	if (!buf_size)
@@ -122,6 +125,8 @@ u32 vdecOpen(VideoDecoder* data)
 	u32 vdec_id = cellVdec.GetNewId(data);
 
 	vdec.id = vdec_id;
+
+	vdec.vdecCb->SetName("Video Decoder[" + std::to_string(vdec_id) + "] Callback");
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{

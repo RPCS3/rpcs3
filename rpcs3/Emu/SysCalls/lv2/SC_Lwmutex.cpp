@@ -99,13 +99,13 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 void SleepQueue::push(u32 tid)
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	list.AddCpy(tid);
 }
 
 u32 SleepQueue::pop() // SYS_SYNC_FIFO
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 		
 	while (true)
 	{
@@ -125,7 +125,7 @@ u32 SleepQueue::pop() // SYS_SYNC_FIFO
 
 u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	while (true)
 	{
@@ -171,7 +171,7 @@ u32 SleepQueue::pop_prio_inherit() // (TODO)
 
 bool SleepQueue::invalidate(u32 tid)
 {
-	SMutexLocker lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (tid) for (u32 i = 0; i < list.GetCount(); i++)
 	{
@@ -187,15 +187,13 @@ bool SleepQueue::invalidate(u32 tid)
 
 bool SleepQueue::finalize()
 {
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	m_mutex.lock(tid);
+	if (!m_mutex.try_lock()) return false;
 
 	for (u32 i = 0; i < list.GetCount(); i++)
 	{
 		if (list[i])
 		{
-			m_mutex.unlock(tid);
+			m_mutex.unlock();
 			return false;
 		}
 	}
@@ -230,7 +228,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 		}
 	}
 
-	while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
+	/*while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
 	{
 		if (Emu.IsStopped())
 		{
@@ -238,7 +236,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 			return CELL_ESRCH;
 		}
 		Sleep(1);
-	}
+	}*/
 
 	if (tid == owner_tid)
 	{

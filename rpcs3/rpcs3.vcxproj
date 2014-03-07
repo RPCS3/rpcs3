@@ -297,6 +297,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />

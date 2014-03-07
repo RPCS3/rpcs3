@@ -74,17 +74,17 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->sq.m_mutex.lock(tid);
+	eq->sq.m_mutex.lock();
 	eq->owner.lock(tid);
 	// check if some threads are waiting for an event
 	if (!mode && eq->sq.list.GetCount())
 	{
 		eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock(tid);
+		eq->sq.m_mutex.unlock();
 		return CELL_EBUSY;
 	}
 	eq->owner.unlock(tid, ~0);
-	eq->sq.m_mutex.unlock(tid);
+	eq->sq.m_mutex.unlock();
 	while (eq->sq.list.GetCount())
 	{
 		Sleep(1);
@@ -136,18 +136,18 @@ int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->sq.m_mutex.lock(tid);
+	eq->sq.m_mutex.lock();
 	eq->owner.lock(tid);
 	if (eq->sq.list.GetCount())
 	{
 		number = 0;
 		eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock(tid);
+		eq->sq.m_mutex.unlock();
 		return CELL_OK;
 	}
 	number = eq->events.pop_all((sys_event_data*)(Memory + event_array.GetAddr()), size);
 	eq->owner.unlock(tid);
-	eq->sq.m_mutex.unlock(tid);
+	eq->sq.m_mutex.unlock();
 	return CELL_OK;
 }
 
