@@ -59,6 +59,9 @@
     <Filter Include="Crypto">
       <UniqueIdentifier>{28cf8d4a-ff56-45ef-a824-3bd71c626257}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Audio\AL">
+      <UniqueIdentifier>{e9937271-a8ff-49f6-a326-c4659f96703f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -442,6 +445,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\AudioDumper.cpp">
+      <Filter>Emu\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp">
+      <Filter>Emu\Audio\AL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -613,9 +622,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\RawSPUThread.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\cellAudio.h">
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\AudioManager.h">
