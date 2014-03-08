@@ -25,7 +25,9 @@ public:
 	CtrlMemView* getMemoryView() { return memory; };
 	wxNotebook* getBottomTabs() { return bottomTabs; };
 	void update();
+	void showMemoryView() { setBottomTabPage(memory); };
 private:
+	void setBottomTabPage(wxWindow* win);
 	DebugInterface* cpu;
 	CtrlDisassemblyView* disassembly;
 	CtrlRegisterList* registerList;

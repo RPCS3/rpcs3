@@ -47,7 +47,7 @@ GenericListViewColumn breakpointColumns[BPL_COLUMNCOUNT] = {
 };
 
 BreakpointList::BreakpointList(wxWindow* parent, DebugInterface* _cpu, CtrlDisassemblyView* _disassembly)
-	: wxListView(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxLC_VIRTUAL|wxLC_REPORT|wxLC_SINGLE_SEL), cpu(_cpu), disasm(_disassembly)
+	: wxListView(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxLC_VIRTUAL|wxLC_REPORT|wxLC_SINGLE_SEL|wxNO_BORDER), cpu(_cpu), disasm(_disassembly)
 {
 	insertListViewColumns(this,breakpointColumns,BPL_COLUMNCOUNT);
 }

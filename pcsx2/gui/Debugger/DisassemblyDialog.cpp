@@ -83,6 +83,18 @@ CpuTabPage::CpuTabPage(wxWindow* parent, DebugInterface* _cpu)
 	mainSizer->Layout();
 }
 
+void CpuTabPage::setBottomTabPage(wxWindow* win)
+{
+	for (size_t i = 0; i < bottomTabs->GetPageCount(); i++)
+	{
+		if (bottomTabs->GetPage(i) == win)
+		{
+			bottomTabs->SetSelection(i);
+			break;
+		}
+	}
+}
+
 void CpuTabPage::update()
 {
 	breakpointList->reloadBreakpoints();
@@ -335,7 +347,11 @@ void DisassemblyDialog::onDebuggerEvent(wxCommandEvent& evt)
 	} else if (type == debEVT_GOTOINMEMORYVIEW)
 	{
 		if (currentCpu != NULL)
+		{
+			currentCpu->showMemoryView();
 			currentCpu->getMemoryView()->gotoAddress(evt.GetInt());
+			currentCpu->getDisassembly()->SetFocus();
+		}
 	} else if (type == debEVT_RUNTOPOS)
 	{
 		// todo: breakpoints for iop
