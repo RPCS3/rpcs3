@@ -32,11 +32,13 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	int size = (int)WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), len, 0, 0, NULL, NULL);
 #else
 
-	/* Okay that is the first time i have to deal to with something like this...
+	/*
+	 *  Linux Version..
 	 *
-	 * I don´t know if this works...         *
+	 * Okay that is the first time i have to deal to with something like this...
 	 *
-	 *  Aishou <kaito.linux@gmail.com>
+	 * I don´t know if this works...
+	 *
 	 */
 
     const wchar_t* p = wstr.c_str();
