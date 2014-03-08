@@ -1,6 +1,6 @@
 #pragma once
 #include "sysutil_audio.h"
-#include "AL\OpenALThread.h"
+#include "AL/OpenALThread.h"
 
 struct AudioInfo
 {

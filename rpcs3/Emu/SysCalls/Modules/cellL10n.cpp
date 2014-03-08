@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <stdlib.h>
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -26,7 +27,25 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	std::string str;
 
 	int len = min((int)utf16_len.GetValue(), (int)wstr.size());
+
+#ifdef WIN32
 	int size = (int)WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), len, 0, 0, NULL, NULL);
+#else
+
+	/*
+	 *  Linux Version..
+	 *
+	 * Okay that is the first time i have to deal to with something like this...
+	 *
+	 * I don´t know if this works...
+	 *
+	 */
+
+    const wchar_t* p = wstr.c_str();
+    char* tp = new char[len];
+    int  size  = wcstombs(tp, p, len);
+
+#endif
 
 	if (!utf8.IsGood())
 		utf8_len = size;

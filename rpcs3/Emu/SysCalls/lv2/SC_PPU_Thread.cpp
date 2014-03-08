@@ -19,7 +19,7 @@ void sys_ppu_thread_exit(u64 errorcode)
 
 	if (thr.owned_mutexes)
 	{
-		ConLog.Error("Owned mutexes found (%d)", thr.owned_mutexes);
+		ConLog.Error("Owned mutexes found (%d)",  wchar_t(thr.owned_mutexes));
 		thr.owned_mutexes = 0;
 	}
 
