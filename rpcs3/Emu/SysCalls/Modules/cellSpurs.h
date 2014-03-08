@@ -87,14 +87,30 @@ struct CellSpursTraceInfo
 	//u8 padding[]; 
 };
 
-__declspec(align(8)) struct CellTraceHeader 
-{ 
-	u8 tag; 
-	u8 length; 
-	u8 cpu; 
-	u8 thread; 
-	be_t<u32> time; 
+#ifdef WIN32
+__declspec(align(8)) struct CellTraceHeader
+		{
+			u8 tag;
+			u8 length;
+			u8 cpu;
+			u8 thread;
+			be_t<u32> time;
+		};
+#else
+struct CellTraceHeader
+{
+	u8 tag;
+	u8 length;
+	u8 cpu;
+	u8 thread;
+	be_t<u32> time;
+
+	__attribute__ ((aligned (8)));
 };
+
+
+#endif
+
 
 struct CellSpursTracePacket
 { 
@@ -135,20 +151,61 @@ struct CellSpursTracePacket
 	} data;
 };
 
+#ifdef WIN32
 __declspec(align(128)) struct CellSpurs
 { 
 	u8 skip[CELL_SPURS_SIZE];  
 };
+#else
 
+struct CellSpurs
+{
+	u8 skip[CELL_SPURS_SIZE];
+
+	__attribute__ ((aligned (128)));
+
+};
+
+#endif
+
+
+
+
+#ifdef WIN32
 __declspec(align(128)) struct CellSpurs2
 { 
 	u8 skip[CELL_SPURS_SIZE2 - CELL_SPURS_SIZE];
 };
+#else
 
+struct CellSpurs2
+{
+	u8 skip[CELL_SPURS_SIZE2 - CELL_SPURS_SIZE];
+
+	__attribute__ ((aligned (128)));
+
+};
+
+#endif
+
+
+
+
+#ifdef WIN32
 __declspec(align(8)) struct CellSpursAttribute
+{
+	u8 skip[CELL_SPURS_ATTRIBUTE_SIZE];
+};
+#else
+
+struct CellSpursAttribute
 { 
 	u8 skip[CELL_SPURS_ATTRIBUTE_SIZE];  
+	__attribute__ ((aligned (8)));
 };
+#endif
+
+
 
 
 //typedef unsigned CellSpursWorkloadId;
@@ -183,11 +240,22 @@ enum
 	CELL_SPURS_TASK_ERROR_SHUTDOWN		= 0x80410920, 
 };
 
-
+#ifdef WIN32
 __declspec(align(128)) struct CellSpursTaskset 
 {
 	u8 skip[6400];
 };
+#else
+struct CellSpursTaskset
+{
+	u8 skip[6400];
+
+	__attribute__ ((aligned (128)));
+};
+
+
+#endif
+
 
 typedef void(*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
 													 uint idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
@@ -216,11 +284,22 @@ struct CellSpursTasksetInfo
 #define CELL_SPURS_TASKSET_ALIGN                  128
 #define CELL_SPURS_TASKSET_SIZE                   CELL_SPURS_TASKSET_CLASS0_SIZE
 */
-
-__declspec(align(128)) struct CellSpursTaskset2 
+#ifdef WIN32
+__declspec(align(128)) struct CellSpursTaskset2
 {
 	be_t<u8> skip[10496];
 };
+#else
+
+struct CellSpursTaskset2
+{
+	be_t<u8> skip[10496];
+
+	__attribute__ ((aligned (128)));
+};
+
+#endif
+
 
 struct CellSpursTasksetAttribute2 
 { 
@@ -267,10 +346,23 @@ struct CellSpursTaskAttribute2
 	//be_t<u32> __reserved__[]; 
 };
 
+
+#ifdef WIN32
 __declspec(align(128)) struct CellSpursTaskExitCode 
 {
 	unsigned char skip[128];
 };
+#else
+
+struct CellSpursTaskExitCode
+{
+	unsigned char skip[128];
+
+	__attribute__ ((aligned (128)));
+};
+
+#endif
+
 
 struct CellSpursTaskInfo 
 { 
