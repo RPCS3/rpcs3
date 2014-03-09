@@ -57,13 +57,34 @@ enum
 	SCE_NP_TROPHY_DESCR_MAX_SIZE       = 1024,
 };
 
-enum
+enum SceNpTrophyGrade
 {
 	SCE_NP_TROPHY_GRADE_UNKNOWN        = 0,
 	SCE_NP_TROPHY_GRADE_PLATINUM       = 1,
 	SCE_NP_TROPHY_GRADE_GOLD           = 2,
 	SCE_NP_TROPHY_GRADE_SILVER         = 3,
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
+};
+
+struct SceNpTrophyGameDetails
+{
+	u32 numTrophies;
+	u32 numPlatinum;
+	u32 numGold;
+	u32 numSilver;
+	u32 numBronze;
+	u8 title[SCE_NP_TROPHY_TITLE_MAX_SIZE];
+	u8 description[SCE_NP_TROPHY_GAME_DESCR_MAX_SIZE];
+	u8 reserved[4];
+};
+
+struct SceNpTrophyGameData
+{
+	u32 unlockedTrophies;
+	u32 unlockedPlatinum;
+	u32 unlockedGold;
+	u32 unlockedSilver;
+	u32 unlockedBronze;
 };
 
 struct SceNpTrophyDetails
