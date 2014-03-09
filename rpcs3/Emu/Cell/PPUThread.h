@@ -526,7 +526,7 @@ static const s32 MAX_INT_VALUE = 0x7fffffff;
 class PPUThread : public PPCThread
 {
 public:
-	std::atomic<u32> owned_mutexes;
+	u32 owned_mutexes;
 
 public:
 	PPCdouble FPR[32]; //Floating Point Register
