@@ -1,7 +1,7 @@
 #pragma once
 
-#include "OpenAL\include\al.h"
-#include "OpenAL\include\alc.h"
+#include "OpenAL/include/al.h"
+#include "OpenAL/include/alc.h"
 #include <map>
 
 extern ALenum g_last_al_error;
@@ -47,3 +47,4 @@ public:
 	bool AddBlock(ALuint bufferID, ALsizei size, const void* src);
 	void AddData(const void* src, ALsizei size);
 };
+
