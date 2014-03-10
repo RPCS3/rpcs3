@@ -57,7 +57,7 @@ int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, c
 	cellSpurs.Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority[%u], maxSpu=%u, isPreemptible[%u])",
 						attr.GetAddr(), priority, maxSpu, isPreemptible);
 	if(!attr.IsGood()) return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	for (int i=0; i<9; i++)
+	for (int i=0; i<8; i++)
 		if(priority[i] != 1 || maxSpu == 0) return CELL_SPURS_CORE_ERROR_INVAL;
  
 	return CELL_OK;
