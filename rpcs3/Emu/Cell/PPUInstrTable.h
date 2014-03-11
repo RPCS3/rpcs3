@@ -193,7 +193,7 @@ namespace PPU_instr
 	static CodeField<26, 31> GD_04; //0x3f
 	static CodeField<21, 31> GD_04_0;//0x7ff
 	static CodeField<21, 30> GD_13; //0x3ff
-	static CodeField<28, 29> GD_1e; //0x3
+	static CodeField<27, 29> GD_1e; //0x7
 	static CodeField<21, 30> GD_1f; //0x3ff
 	static CodeField<30, 31> GD_3a; //0x3
 	static CodeField<26, 30> GD_3b; //0x1f
@@ -441,6 +441,7 @@ namespace PPU_instr
 	bind_instr(g1e_list, RLDICR, RA, RS, sh, me, RC);
 	bind_instr(g1e_list, RLDIC, RA, RS, sh, mb, RC);
 	bind_instr(g1e_list, RLDIMI, RA, RS, sh, mb, RC);
+	bind_instr(g1e_list, RLDC_LR, RA, RS, RB, mb, AA, RC);
 
 	/*0x000*/bind_instr(g1f_list, CMP, CRFD, L_10, RA, RB);
 	/*0x004*/bind_instr(g1f_list, TW, TO, RA, RB);
