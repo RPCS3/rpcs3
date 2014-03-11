@@ -93,12 +93,12 @@ bool Emulator::BootGame(const std::string& path)
 {
 	static const char* elf_path[6] =
 	{
-		"\\PS3_GAME\\USRDIR\\BOOT.BIN",
-		"\\USRDIR\\BOOT.BIN",
-		"\\BOOT.BIN",
-		"\\PS3_GAME\\USRDIR\\EBOOT.BIN",
-		"\\USRDIR\\EBOOT.BIN",
-		"\\EBOOT.BIN",
+		"/PS3_GAME/USRDIR/BOOT.BIN",
+		"/USRDIR/BOOT.BIN",
+		"/BOOT.BIN",
+		"/PS3_GAME/USRDIR/EBOOT.BIN",
+		"/USRDIR/EBOOT.BIN",
+		"/EBOOT.BIN",
 	};
 
 	for(int i=0; i<sizeof(elf_path) / sizeof(*elf_path);i++)
@@ -128,11 +128,11 @@ void Emulator::Load()
 
 		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
 		{
-			elf_path += "\\BOOT.BIN";
+			elf_path += "/BOOT.BIN";
 		}
 		else
 		{
-			elf_path += "\\" + wxFileName(m_path).GetName() + ".elf";
+			elf_path += "/" + wxFileName(m_path).GetName() + ".elf";
 		}
 
 		if(!DecryptSelf(elf_path, self_path))
