@@ -87,7 +87,8 @@ struct CellSpursTraceInfo
 	//u8 padding[]; 
 };
 
-__declspec(align(8)) struct CellTraceHeader 
+//__declspec(align(8))
+struct CellTraceHeader 
 { 
 	u8 tag; 
 	u8 length; 
@@ -135,17 +136,20 @@ struct CellSpursTracePacket
 	} data;
 };
 
-__declspec(align(128)) struct CellSpurs
+//__declspec(align(128))
+struct CellSpurs
 { 
 	u8 skip[CELL_SPURS_SIZE];  
 };
 
-__declspec(align(128)) struct CellSpurs2
+//__declspec(align(128))
+struct CellSpurs2
 { 
 	u8 skip[CELL_SPURS_SIZE2 - CELL_SPURS_SIZE];
 };
 
-__declspec(align(8)) struct CellSpursAttribute
+//__declspec(align(8))
+struct CellSpursAttribute
 { 
 	u8 skip[CELL_SPURS_ATTRIBUTE_SIZE];  
 };
@@ -184,7 +188,8 @@ enum
 };
 
 
-__declspec(align(128)) struct CellSpursTaskset 
+//__declspec(align(128))
+struct CellSpursTaskset 
 {
 	u8 skip[6400];
 };
@@ -217,7 +222,8 @@ struct CellSpursTasksetInfo
 #define CELL_SPURS_TASKSET_SIZE                   CELL_SPURS_TASKSET_CLASS0_SIZE
 */
 
-__declspec(align(128)) struct CellSpursTaskset2 
+//__declspec(align(128))
+struct CellSpursTaskset2 
 {
 	be_t<u8> skip[10496];
 };
@@ -267,7 +273,8 @@ struct CellSpursTaskAttribute2
 	//be_t<u32> __reserved__[]; 
 };
 
-__declspec(align(128)) struct CellSpursTaskExitCode 
+//__declspec(align(128))
+struct CellSpursTaskExitCode 
 {
 	unsigned char skip[128];
 };

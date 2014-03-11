@@ -152,7 +152,7 @@ Ini::Ini()
 {
 #ifdef _WIN32
 	m_Config = new wxIniConfig( wxEmptyString, wxEmptyString,
-			wxGetCwd() + "\\rpcs3.ini",
+			wxGetCwd() + "/rpcs3.ini",
 			wxEmptyString, wxCONFIG_USE_LOCAL_FILE );
 #else
 		m_Config = new wxConfig("rpcs3");
