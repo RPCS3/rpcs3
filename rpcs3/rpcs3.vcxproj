@@ -304,6 +304,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp" />
