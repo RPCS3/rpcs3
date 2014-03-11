@@ -2,7 +2,10 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
+// Requires GCC 4.10 apparently..
+#ifdef _MSC_VER
 #include <codecvt>
+#endif
 
 void cellL10n_init();
 Module cellL10n(0x001e, cellL10n_init);
@@ -26,7 +29,7 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 
 	std::u16string wstr =(char16_t*)Memory.VirtualToRealAddr(utf16);
 	wstr.resize(utf16_len.GetValue()); // TODO: Is this really the role of utf16_len in this function?
-
+#ifdef _MSC_VER
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
 	std::string str = convert.to_bytes(wstr);
 
@@ -36,6 +39,7 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	
 	utf8_len = str.size();
 	Memory.WriteString(utf8, str.c_str());
+#endif
 	return ConversionOK;
 }
 

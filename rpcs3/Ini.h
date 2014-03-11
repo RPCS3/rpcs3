@@ -132,11 +132,11 @@ public:
 	{
 		wxString path;
 
-		path = DefPath + "\\" + "CPU";
+		path = DefPath + "/" + "CPU";
 		CPUDecoderMode.Init("DecoderMode", path);
 		CPUIgnoreRWErrors.Init("IgnoreRWErrors", path);
 
-		path = DefPath + "\\" + "GS";
+		path = DefPath + "/" + "GS";
 		GSRenderMode.Init("RenderMode", path);
 		GSResolution.Init("Resolution", path);
 		GSAspectRatio.Init("AspectRatio", path);
@@ -145,12 +145,12 @@ public:
 		GSDumpColorBuffers.Init("DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("DumpDepthBuffer", path);
 
-		path = DefPath + "\\" + "IO";
+		path = DefPath + "/" + "IO";
 		PadHandlerMode.Init("PadHandlerMode", path);
 		KeyboardHandlerMode.Init("KeyboardHandlerMode", path);
 		MouseHandlerMode.Init("MouseHandlerMode", path);
 
-		path = DefPath + "\\" + "ControlSetings";
+		path = DefPath + "/" + "ControlSetings";
 		PadHandlerLeft.Init("PadHandlerLeft", path);
 		PadHandlerDown.Init("PadHandlerDown", path);
 		PadHandlerRight.Init("PadHandlerRight", path);
@@ -168,11 +168,11 @@ public:
 		PadHandlerR2.Init("PadHandlerR2", path);
 		PadHandlerL2.Init("PadHandlerL2", path);
 
-		path = DefPath + "\\" + "Audio";
+		path = DefPath + "/" + "Audio";
 		AudioOutMode.Init("AudioOutMode", path);
 		AudioDumpToFile.Init("AudioDumpToFile", path);
 
-		path = DefPath + "\\" + "HLE";
+		path = DefPath + "/" + "HLE";
 		HLELogging.Init("HLELogging", path);
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
