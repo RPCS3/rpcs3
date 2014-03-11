@@ -262,6 +262,19 @@ extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
 extern int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size);
 extern int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count);
+extern int cellFsGetDirectoryEntries(u32 fd, mem_ptr_t<CellFsDirectoryEntry> entries, u32 entries_size, mem32_t data_count);
+extern int cellFsStReadInit(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf);
+extern int cellFsStReadFinish(u32 fd);
+extern int cellFsStReadGetRingBuf(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf);
+extern int cellFsStReadGetStatus(u32 fd, mem64_t status);
+extern int cellFsStReadGetRegid(u32 fd, mem64_t regid);
+extern int cellFsStReadStart(u32 fd, u64 offset, u64 size);
+extern int cellFsStReadStop(u32 fd);
+extern int cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize);
+extern int cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size);
+extern int cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size);
+extern int cellFsStReadWait(u32 fd, u64 size);
+extern int cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(int xfd, u64 xsize)> func);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
