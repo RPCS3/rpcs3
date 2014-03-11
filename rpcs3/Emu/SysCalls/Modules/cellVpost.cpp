@@ -77,7 +77,7 @@ int cellVpostClose(u32 handle)
 int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpostCtrlParam> ctrlParam,
 				  u32 outPicBuff_addr, mem_ptr_t<CellVpostPictureInfo> picInfo)
 {
-	cellVpost.Warning("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
+	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
 		handle, inPicBuff_addr, ctrlParam.GetAddr(), outPicBuff_addr, picInfo.GetAddr());
 
 	VpostInstance* vpost;
@@ -139,31 +139,34 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
 
-	u8* pY = (u8*)malloc(w*h);
+	u8* pY = (u8*)malloc(w*h); // color planes
 	u8* pU = (u8*)malloc(w*h/4);
 	u8* pV = (u8*)malloc(w*h/4);
-	u32* res = (u32*)malloc(w*h*4);
+	u32* res = (u32*)malloc(w*h*4); // RGBA interleaved output
 	const u8 alpha = ctrlParam->outAlpha;
 
 	if (!Memory.CopyToReal(pY, inPicBuff_addr, w*h))
 	{
 		cellVpost.Error("cellVpostExec: data copying failed(pY)");
+		Emu.Pause();
 	}
 
 	if (!Memory.CopyToReal(pU, inPicBuff_addr + w*h, w*h/4))
 	{
 		cellVpost.Error("cellVpostExec: data copying failed(pU)");
+		Emu.Pause();
 	}
 
 	if (!Memory.CopyToReal(pV, inPicBuff_addr + w*h + w*h/4, w*h/4))
 	{
 		cellVpost.Error("cellVpostExec: data copying failed(pV)");
+		Emu.Pause();
 	}
 
 	for (u32 i = 0; i < h; i++) for (u32 j = 0; j < w; j++)
 	{
-		float Cr = pV[(i/2)*(w/2)+j/2];
-		float Cb = pU[(i/2)*(w/2)+j/2];
+		float Cr = pV[(i/2)*(w/2)+j/2] - 128;
+		float Cb = pU[(i/2)*(w/2)+j/2] - 128;
 		float Y = pY[i*w+j];
 
 		int R = Y + 1.5701f * Cr;

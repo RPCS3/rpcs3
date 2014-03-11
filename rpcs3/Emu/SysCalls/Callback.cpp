@@ -53,7 +53,7 @@ void Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
-	static SMutexGeneral cb_mutex;
+	static std::mutex cb_mutex;
 
 	CPUThread& thr = Emu.GetCallbackThread();
 
@@ -69,7 +69,7 @@ again:
 		Sleep(1);
 	}
 
-	SMutexGeneralLocker lock(cb_mutex);
+	std::lock_guard<std::mutex> lock(cb_mutex);
 
 	if (thr.IsAlive())
 	{

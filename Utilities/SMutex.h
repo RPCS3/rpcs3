@@ -145,15 +145,19 @@ public:
 	{
 		if (!tid)
 		{
-			ConLog.Error("SMutexLockerBase: thread id == 0");
-			Emu.Pause();
+			if (!Emu.IsStopped())
+			{
+				ConLog.Error("SMutexLockerBase: thread id == 0");
+				Emu.Pause();
+			}
+			return;
 		}
 		sm.lock(tid);
 	}
 
 	~SMutexLockerBase()
 	{
-		sm.unlock(tid);
+		if (tid) sm.unlock(tid);
 	}
 };
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "sysutil_audio.h"
+#include "AL/OpenALThread.h"
 
 struct AudioInfo
 {
@@ -31,7 +32,6 @@ struct AudioInfo
 class AudioManager
 {
 	AudioInfo m_audio_info;
-
 public:
 	AudioManager();
 
@@ -42,3 +42,6 @@ public:
 
 	u8 GetState();
 };
+
+extern OpenALThread* m_audio_out;
+
