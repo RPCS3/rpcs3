@@ -1151,6 +1151,14 @@ void GLGSRender::Flip()
 
 	if(src_buffer)
 	{
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CLIP_PLANE0);
+		glDisable(GL_CLIP_PLANE1);
+		glDisable(GL_CLIP_PLANE2);
+		glDisable(GL_CLIP_PLANE3);
+		glDisable(GL_CLIP_PLANE4);
+		glDisable(GL_CLIP_PLANE5);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_flip_tex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
@@ -1170,6 +1178,7 @@ void GLGSRender::Flip()
 		m_program.Use();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
 
+		glColor3f(1, 1, 1);
 		glBegin(GL_QUADS);
 			glTexCoord2i(0, 1);
 			glVertex2i(0, 0);
