@@ -69,7 +69,7 @@ void OpenALThread::Stop()
 
 void OpenALThread::Open(const void* src, ALsizei size)
 {
-	alGenSources(1, &mSource);	// WARNING: Memory leaks!
+	alGenSources(1, &mSource);
 	checkForAlError("alGenSources");
 
 	alSourcei(mSource, AL_LOOPING, AL_FALSE);

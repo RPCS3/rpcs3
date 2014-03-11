@@ -120,7 +120,7 @@ int cellAudioInit()
 							buffer[i] = buffer2[i];
 
 							// convert the data from float to u16
-							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
+							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 15));
 						}
 						first_mix = false;
 					}
@@ -131,7 +131,7 @@ int cellAudioInit()
 							buffer[i] = (buffer[i] + buffer2[i]) * 0.5; // TODO: valid mixing
 
 							// convert the data from float to u16
-							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
+							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 15));
 						}
 					}
 				}

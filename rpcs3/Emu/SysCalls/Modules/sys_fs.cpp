@@ -295,5 +295,19 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
 	sys_fs.AddFunc(0x1a108ab7, cellFsGetBlockSize);
 	sys_fs.AddFunc(0xaa3b4bcd, cellFsGetFreeSize);
+	sys_fs.AddFunc(0x9b882495, cellFsGetDirectoryEntries);
+	sys_fs.AddFunc(0x2664c8ae, cellFsStReadInit);
+	sys_fs.AddFunc(0xd73938df, cellFsStReadFinish);
+	sys_fs.AddFunc(0xb3afee8b, cellFsStReadGetRingBuf);
+	sys_fs.AddFunc(0xcf34969c, cellFsStReadGetStatus);
+	sys_fs.AddFunc(0xbd273a88, cellFsStReadGetRegid);
+	sys_fs.AddFunc(0x8df28ff9, cellFsStReadStart);
+	sys_fs.AddFunc(0xf8e5d9a0, cellFsStReadStop);
+	sys_fs.AddFunc(0x27800c6b, cellFsStRead);
+	sys_fs.AddFunc(0x190912f6, cellFsStReadGetCurrentAddr);
+	sys_fs.AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
+	sys_fs.AddFunc(0x8f71c5b2, cellFsStReadWait);
+	sys_fs.AddFunc(0x866f6aec, cellFsStReadWaitCallback);
+
 	aio_init = false;
 }
