@@ -513,6 +513,8 @@ public:
 
 	__forceinline AT GetAddr() const { return m_addr; }
 
+	__forceinline void SetAddr(AT addr) { m_addr = addr; }
+
 	__forceinline bool IsGood() const
 	{
 		return Memory.IsGoodAddr(m_addr, sizeof(T));
