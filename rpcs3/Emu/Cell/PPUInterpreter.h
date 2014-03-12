@@ -2313,8 +2313,7 @@ private:
 #ifdef _M_X64
 		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
 #else
-		ConLog.Warning("MULHDU");
-
+		//ConLog.Warning("MULHDU");
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 
@@ -2520,7 +2519,7 @@ private:
 #ifdef _M_X64
 		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
 #else
-		ConLog.Warning("MULHD");
+		//ConLog.Warning("MULHD");
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
 
