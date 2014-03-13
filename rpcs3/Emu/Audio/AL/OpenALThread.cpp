@@ -4,8 +4,8 @@
 ALenum g_last_al_error = AL_NO_ERROR;
 ALCenum g_last_alc_error = ALC_NO_ERROR;
 
-ALCdevice*		pDevice;
-ALCcontext*		pContext;
+#define checkForAlError(sit) if((g_last_al_error = alGetError()) != AL_NO_ERROR) printAlError(g_last_al_error, sit)
+#define checkForAlcError(sit) if((g_last_alc_error = alcGetError(m_device)) != ALC_NO_ERROR) printAlcError(g_last_alc_error, sit)
 
 void printAlError(ALenum err, const char* situation)
 {
@@ -25,120 +25,124 @@ void printAlcError(ALCenum err, const char* situation)
 	}
 }
 
+OpenALThread::~OpenALThread()
+{
+	Quit();
+}
+
 void OpenALThread::Init()
 {
-	pDevice = alcOpenDevice(NULL);
+	m_device = alcOpenDevice(nullptr);
 	checkForAlcError("alcOpenDevice");
 
-	pContext = alcCreateContext(pDevice, NULL);
+	m_context = alcCreateContext(m_device, nullptr);
 	checkForAlcError("alcCreateContext");
 
-	alcMakeContextCurrent(pContext);
+	alcMakeContextCurrent(m_context);
 	checkForAlcError("alcMakeContextCurrent");
 }
 
 void OpenALThread::Quit()
 {
-	for (SampleBuffer::iterator i = mBuffers.begin(); i != mBuffers.end(); i++)
-		alDeleteBuffers(1, &i->second.mBufferID);
-
-	alcMakeContextCurrent(NULL);
-	alcDestroyContext(pContext);
-	alcCloseDevice(pDevice);
+	alcMakeContextCurrent(nullptr);
+	alcDestroyContext(m_context);
+	alcCloseDevice(m_device);
 }
 
 void OpenALThread::Play()
 {
-	alSourcePlay(mSource);
-	checkForAlError("alSourcePlay");
+	ALint state;
+	alGetSourcei(m_source, AL_SOURCE_STATE, &state);
+	checkForAlError("alGetSourcei");
+
+	if(state != AL_PLAYING)
+	{
+		alSourcePlay(m_source);
+		checkForAlError("alSourcePlay");
+	}
 }
 
 void OpenALThread::Close()
 {
-	alSourceStop(mSource);
+	alSourceStop(m_source);
 	checkForAlError("alSourceStop");
-	if (alIsSource(mSource)) 
-		alDeleteSources(1, &mSource);
+	if (alIsSource(m_source)) 
+		alDeleteSources(1, &m_source);
+
+	alDeleteBuffers(g_al_buffers_count, m_buffers);
+	checkForAlError("alDeleteBuffers");
 }
 
 void OpenALThread::Stop()
 {
-	alSourceStop(mSource);
+	alSourceStop(m_source);
 	checkForAlError("alSourceStop");
 }
 
 void OpenALThread::Open(const void* src, ALsizei size)
 {
-	alGenSources(1, &mSource);
+	alGenSources(1, &m_source);
 	checkForAlError("alGenSources");
 
-	alSourcei(mSource, AL_LOOPING, AL_FALSE);
+	alGenBuffers(g_al_buffers_count, m_buffers);
+	checkForAlError("alGenBuffers");
+
+	alSourcei(m_source, AL_LOOPING, AL_FALSE);
 	checkForAlError("alSourcei");
 
-	mProcessed = 0;
-	mBuffer.mFreq = 48000;
-	mBuffer.mFormat	= AL_FORMAT_STEREO16;
+	m_buffer_size = size;
 
-	for (int i = 0; i < NUM_OF_BUFFERS; i++)
+	for(uint i=0; i<g_al_buffers_count; ++i)
 	{
-		AddData(src, size);
+		AddBlock(m_buffers[i], m_buffer_size, src);
 	}
+
+	alSourceQueueBuffers(m_source, g_al_buffers_count, m_buffers);
+	checkForAlError("alSourceQueueBuffers");
+	Play();
 }
 
 void OpenALThread::AddData(const void* src, ALsizei size)
 {
-	alGenBuffers(1, &mBuffer.mBufferID);
-	checkForAlError("alGenBuffers");
-	
-	mBuffers[mBuffer.mBufferID] = mBuffer;
-	
-	AddBlock(mBuffer.mBufferID, size, src);
+	const char* bsrc = (const char*)src;
+	ALuint buffer;
+	ALint buffers_count;
+	alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &buffers_count);
+	checkForAlError("alGetSourcei");
 
-	alSourceQueueBuffers(mSource, 1, &mBuffer.mBufferID);
-	checkForAlError("alSourceQueueBuffers");
-
-	alGetSourcei(mSource, AL_BUFFERS_PROCESSED, &mProcessed);
-	
-	while (mProcessed--)
+	while(size)
 	{
-		alSourceUnqueueBuffers(mSource, 1, &mBuffer.mBufferID);
+		if(buffers_count-- <= 0)
+		{
+			Play();
+
+			alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &buffers_count);
+			checkForAlError("alGetSourcei");
+			continue;
+		}
+
+		alSourceUnqueueBuffers(m_source, 1, &buffer);
 		checkForAlError("alSourceUnqueueBuffers");
 
-		alDeleteBuffers(1,  &mBuffer.mBufferID);
-		checkForAlError("alDeleteBuffers");
+		int bsize = size < m_buffer_size ? size : m_buffer_size;
+		AddBlock(buffer, bsize, bsrc);
+
+		alSourceQueueBuffers(m_source, 1, &buffer);
+		checkForAlError("alSourceQueueBuffers");
+
+		size -= bsize;
+		bsrc += bsize;
 	}
+
+	Play();
 }
 
-bool OpenALThread::AddBlock(ALuint bufferID, ALsizei size, const void* src)
+bool OpenALThread::AddBlock(const ALuint buffer_id, ALsizei size, const void* src)
 {
-	memset(&mTempBuffer, 0, sizeof(mTempBuffer));
-	memcpy(mTempBuffer, src, size);
-
-	long TotalRet = 0, ret;
- 
 	if (size < 1) return false;
 
-	while (TotalRet < size) 
-	{
-		ret = size;
-
-		// if buffer is empty
-		if (ret == 0) break;
-		else if (ret < 0)
-		{
-			ConLog.Error("Error in bitstream!");
-		}
-		else
-		{
-			TotalRet += ret;
-		}
-	}
-	if (TotalRet > 0)
-	{
-	alBufferData(bufferID, mBuffers[bufferID].mFormat, mTempBuffer, 
-				TotalRet, mBuffers[bufferID].mFreq);
+	alBufferData(buffer_id, AL_FORMAT_STEREO16, src, size, 48000);
 	checkForAlError("alBufferData");
-	}
 
-	return (ret > 0);
+	return true;
 }

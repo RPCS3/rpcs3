@@ -109,6 +109,7 @@ public:
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
+	IniEntry<u8> HLELogLvl;
 
 	IniEntry<int> PadHandlerLeft;
 	IniEntry<int> PadHandlerDown;
@@ -176,6 +177,7 @@ public:
 		HLELogging.Init("HLELogging", path);
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
+		HLELogLvl.Init("HLELogLvl", path);
 	}
 
 	void Load()
@@ -197,6 +199,7 @@ public:
 		HLELogging.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
+		HLELogLvl.Load(0);
 
 		PadHandlerLeft.Load(static_cast<int>('A'));
 		PadHandlerDown.Load(static_cast<int>('S'));
@@ -235,6 +238,7 @@ public:
 		HLELogging.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
+		HLELogLvl.Save();
 
 		PadHandlerLeft.Save();
 		PadHandlerDown.Save();

@@ -151,6 +151,9 @@ struct GLVertexDecompilerThread : public ThreadBase
 		m_funcs.Add(new FuncInfo());
 		m_funcs[0].offset = 0;
 		m_funcs[0].name = "main";
+		m_funcs.Add(new FuncInfo());
+		m_funcs[1].offset = 0;
+		m_funcs[1].name = "func0";
 		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 	}
 

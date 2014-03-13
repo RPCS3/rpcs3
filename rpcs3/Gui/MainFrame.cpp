@@ -346,6 +346,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_audio_out( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Audio Out") ) );
 
 	wxStaticBoxSizer* s_round_hle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("HLE / Misc.") ) );
+	wxStaticBoxSizer* s_round_hle_log_lvl( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Log lvl") ) );
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
@@ -355,6 +356,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_mouse_handler = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_audio_out = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_hle_loglvl = new wxComboBox(&diag, wxID_ANY);
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(&diag, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_log_prog   = new wxCheckBox(&diag, wxID_ANY, "Log vertex/fragment programs");
@@ -397,6 +399,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
 
+	cbox_hle_loglvl->Append("All");
+	cbox_hle_loglvl->Append("Success");
+	cbox_hle_loglvl->Append("Warnings");
+	cbox_hle_loglvl->Append("Errors");
+	cbox_hle_loglvl->Append("Nothing");
+
 	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
@@ -408,6 +416,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 
 	chbox_audio_dump->Enable(Emu.IsStopped());
+	cbox_audio_out->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
@@ -418,6 +427,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -445,6 +455,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_audio_out->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -487,6 +499,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
+		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 
 		Ini.Save();
 	}

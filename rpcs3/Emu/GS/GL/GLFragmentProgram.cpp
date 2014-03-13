@@ -5,7 +5,7 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	const std::string mask = GetMask().c_str();
+	const std::string mask = GetMask();
 	std::string cond;
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
@@ -227,7 +227,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 	main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "ocol", 0) + " = " + (m_ctrl & 0x40 ? "r0" : "h0") + ";\n";
 	if(m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
 
-	std::string p = "";
+	std::string p;
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{

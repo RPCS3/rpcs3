@@ -11,7 +11,7 @@ class LogWriter
 	std::string m_prefix;
 	std::string m_value;
 
-	virtual void WriteToLog(std::string prefix, std::string value, std::string colour);
+	virtual void WriteToLog(std::string prefix, std::string value, u8 lvl);
 
 public:
 	LogWriter();
