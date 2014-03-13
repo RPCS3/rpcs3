@@ -270,6 +270,25 @@ int cellFsAioFinish(mem8_ptr_t mount_point)
 	return CELL_OK;
 }
 
+int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem64_t nread)
+{
+	sys_fs.Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
+		fd, offset, buf_addr, buffer_size, nread.GetAddr());
+
+	int ret;
+	MemoryAllocator<be_t<u64>> oldPos, newPos;
+	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos.GetAddr());       // Save the current position
+	if (ret) return ret;
+	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos.GetAddr());  // Move to the specified offset
+	if (ret) return ret;
+	ret = cellFsRead(fd, buf_addr, buffer_size, nread.GetAddr());    // Read the file
+	if (ret) return ret;
+	ret = cellFsLseek(fd, Memory.Read64(oldPos.GetAddr()), CELL_SEEK_SET, newPos.GetAddr());  // Return to the old position
+	if (ret) return ret;
+
+	return CELL_OK;
+}
+
 void sys_fs_init()
 {
 	sys_fs.AddFunc(0x718bf5f8, cellFsOpen);
@@ -295,5 +314,20 @@ void sys_fs_init()
 	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
 	sys_fs.AddFunc(0x1a108ab7, cellFsGetBlockSize);
 	sys_fs.AddFunc(0xaa3b4bcd, cellFsGetFreeSize);
+	sys_fs.AddFunc(0x0d5b4a14, cellFsReadWithOffset);
+	sys_fs.AddFunc(0x9b882495, cellFsGetDirectoryEntries);
+	sys_fs.AddFunc(0x2664c8ae, cellFsStReadInit);
+	sys_fs.AddFunc(0xd73938df, cellFsStReadFinish);
+	sys_fs.AddFunc(0xb3afee8b, cellFsStReadGetRingBuf);
+	sys_fs.AddFunc(0xcf34969c, cellFsStReadGetStatus);
+	sys_fs.AddFunc(0xbd273a88, cellFsStReadGetRegid);
+	sys_fs.AddFunc(0x8df28ff9, cellFsStReadStart);
+	sys_fs.AddFunc(0xf8e5d9a0, cellFsStReadStop);
+	sys_fs.AddFunc(0x27800c6b, cellFsStRead);
+	sys_fs.AddFunc(0x190912f6, cellFsStReadGetCurrentAddr);
+	sys_fs.AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
+	sys_fs.AddFunc(0x8f71c5b2, cellFsStReadWait);
+	sys_fs.AddFunc(0x866f6aec, cellFsStReadWaitCallback);
+
 	aio_init = false;
 }

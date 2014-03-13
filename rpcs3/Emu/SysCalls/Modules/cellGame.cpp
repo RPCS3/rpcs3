@@ -118,9 +118,15 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 	
-	wxString dir = wxEmptyString;
+	// TODO: Locate the PARAM.SFO. The following path may be wrong.
+	vfsFile f("/app_home/PARAM.SFO");
+	PSFLoader psf(f);
+	if(!psf.Load(false))
+		return CELL_GAME_ERROR_FAILURE;
+	wxString dir = psf.m_info.serial(0,4) + psf.m_info.serial(5,5);
 
-	type				= CELL_GAME_GAMETYPE_DISC;
+	// TODO: Only works for HDD games
+	type				= CELL_GAME_GAMETYPE_HDD;
 	attributes			= 0;
 	size->hddFreeSizeKB = 40000000; //40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	size->sizeKB		= CELL_GAME_SIZEKB_NOTCALC;
@@ -150,6 +156,16 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath,  mem_list_ptr_t<u8
 	if (!contentInfoPath.IsGood() || !usrdirPath.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 	
+	// TODO: Locate the PARAM.SFO. The following path may be wrong.
+	vfsFile f("/app_home/PARAM.SFO");
+	PSFLoader psf(f);
+	if(!psf.Load(false))
+		return CELL_GAME_ERROR_FAILURE;
+	wxString title_id = psf.m_info.serial(0,4) + psf.m_info.serial(5,5);
+
+	// TODO: Only works for HDD games
+	Memory.WriteString(contentInfoPath.GetAddr(), "/dev_hdd0/game/"+title_id);
+	Memory.WriteString(usrdirPath.GetAddr(), "/dev_hdd0/game/"+title_id+"/USRDIR");
 	return CELL_OK;
 }
 
@@ -172,7 +188,7 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 	if(!value.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 
-	// TODO: Locate the PARAM.SFO. The following path is in most cases wrong.
+	// TODO: Locate the PARAM.SFO. The following path may be wrong.
 	vfsFile f("/app_home/PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))
@@ -198,7 +214,7 @@ int cellGameGetParamString(u32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 	if(!buf.IsGood())
 		return CELL_GAME_ERROR_PARAM;
 
-	// TODO: Locate the PARAM.SFO. The following path is in most cases wrong.
+	// TODO: Locate the PARAM.SFO. The following path may be wrong.
 	vfsFile f("/app_home/PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))

@@ -460,6 +460,12 @@
     <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp">
       <Filter>Emu\Audio\AL</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

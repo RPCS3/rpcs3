@@ -2324,8 +2324,7 @@ private:
 #ifdef _M_X64
 		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
 #else
-		ConLog.Warning("MULHDU");
-
+		//ConLog.Warning("MULHDU");
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 
@@ -2531,7 +2530,7 @@ private:
 #ifdef _M_X64
 		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
 #else
-		ConLog.Warning("MULHD");
+		//ConLog.Warning("MULHD");
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
 
@@ -2992,6 +2991,10 @@ private:
 		const u8 eb = addr & 0xf;
 
 		Memory.ReadLeft(CPU.VPR[vd]._u8 + eb, addr, 16 - eb);
+	}
+	void LDBRX(u32 rd, u32 ra, u32 rb)
+	{
+		CPU.GPR[rd] = (u64&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3787,8 +3790,7 @@ private:
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
-		UNIMPLEMENTED();
-		//CPU.FPR[frd] = 1.0f / (float)sqrt(CPU.FPR[frb]);
+		CPU.FPR[frd] = 1.0f / (float)sqrt(CPU.FPR[frb]);
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{

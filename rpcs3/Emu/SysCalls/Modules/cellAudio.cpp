@@ -17,9 +17,6 @@ int cellAudioInit()
 {
 	cellAudio.Warning("cellAudioInit()");
 
-	if(Ini.AudioOutMode.GetValue() == 1)
-		m_audio_out->Init();
-
 	if (m_config.m_is_audio_initialized)
 	{
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
@@ -53,14 +50,21 @@ int cellAudioInit()
 
 			float buffer[2*256]; // buffer for 2 channels
 			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
-			u16 oal_buffer[2*256]; // buffer for OpenAL
+			//u16 oal_buffer[2*256]; // buffer for OpenAL
 
-			memset(&buffer, 0, sizeof(buffer));
-			memset(&buffer2, 0, sizeof(buffer2));
-			memset(&oal_buffer, 0, sizeof(oal_buffer));
+			uint oal_buffer_offset = 0;
+			uint oal_buffer_size = 2 * 256;
+			std::unique_ptr<u16[]> oal_buffer(new u16[oal_buffer_size]);
+
+			memset(buffer, 0, sizeof(buffer));
+			memset(buffer2, 0, sizeof(buffer2));
+			memset(oal_buffer.get(), 0, oal_buffer_size * sizeof(u16));
 
 			if(Ini.AudioOutMode.GetValue() == 1)
-				m_audio_out->Open(oal_buffer, sizeof(oal_buffer));
+			{
+				m_audio_out->Init();
+				m_audio_out->Open(oal_buffer.get(), oal_buffer_size*sizeof(u16));
+			}
 
 			while (m_config.m_is_audio_initialized)
 			{
@@ -120,8 +124,10 @@ int cellAudioInit()
 							buffer[i] = buffer2[i];
 
 							// convert the data from float to u16
-							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
+							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
+							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
 						}
+
 						first_mix = false;
 					}
 					else
@@ -131,7 +137,8 @@ int cellAudioInit()
 							buffer[i] = (buffer[i] + buffer2[i]) * 0.5; // TODO: valid mixing
 
 							// convert the data from float to u16
-							oal_buffer[i] = (u16)((float)buffer[i] * (1 << 16));
+							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
+							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
 						}
 					}
 				}
@@ -140,8 +147,14 @@ int cellAudioInit()
 				// TODO: check event source
 				Emu.GetEventManager().SendEvent(m_config.event_key, 0x10103000e010e07, 0, 0, 0);
 
-				if(Ini.AudioOutMode.GetValue() == 1)
-					m_audio_out->AddData(oal_buffer, sizeof(oal_buffer));
+				oal_buffer_offset += sizeof(buffer) / sizeof(float);
+
+				if(oal_buffer_offset >= oal_buffer_size)
+				{
+					m_audio_out->AddData(oal_buffer.get(), oal_buffer_offset * sizeof(u16));
+
+					oal_buffer_offset = 0;
+				}
 
 				if(Ini.AudioDumpToFile.GetValue())
 				{
@@ -160,8 +173,6 @@ abort:
 				m_dump.Finalize();
 
 			m_config.m_is_audio_finalized = true;
-			if(Ini.AudioOutMode.GetValue() == 1)
-				m_audio_out->Quit();
 		});
 	t.detach();
 
@@ -191,8 +202,6 @@ int cellAudioQuit()
 
 	Memory.Free(m_config.m_buffer);
 	Memory.Free(m_config.m_indexes);
-	if(Ini.AudioOutMode.GetValue() == 1)
-		m_audio_out->Quit();
 
 	return CELL_OK;
 }
@@ -300,9 +309,6 @@ int cellAudioPortStart(u32 portNum)
 	}
 	
 	m_config.m_ports[portNum].m_is_audio_port_started = true;
-
-	if(Ini.AudioOutMode.GetValue() == 1) 
-		m_audio_out->Play();
 
 	return CELL_OK;
 }

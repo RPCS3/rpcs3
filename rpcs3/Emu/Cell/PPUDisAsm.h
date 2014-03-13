@@ -1613,6 +1613,10 @@ private:
 	{
 		DisAsm_V1_R2("lvlx", vd, ra, rb);
 	}
+	void LDBRX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("ldbrx", rd, ra, rb);
+	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		DisAsm_R3("lwbrx", rd, ra, rb);

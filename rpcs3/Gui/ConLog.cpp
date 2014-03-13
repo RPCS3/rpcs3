@@ -14,6 +14,11 @@ std::mutex g_cs_conlog;
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
 
+static const std::string g_log_colors[] =
+{
+	"Black", "Green", "White", "Yellow", "Red",
+};
+
 struct LogPacket
 {
 	std::string m_prefix;
@@ -112,7 +117,7 @@ LogWriter::LogWriter()
 	}
 }
 
-void LogWriter::WriteToLog(std::string prefix, std::string value, std::string colour/*, wxColour bgcolour*/)
+void LogWriter::WriteToLog(std::string prefix, std::string value, u8 lvl/*, wxColour bgcolour*/)
 {
 	if(!prefix.empty())
 	{
@@ -125,7 +130,8 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, std::string co
 	if(m_logfile.IsOpened())
 		m_logfile.Write(wxString(prefix.empty() ? "" : std::string("[" + prefix + "]: ") + value + "\n").wx_str());
 
-	if(!ConLogFrame) return;
+	if(!ConLogFrame || Ini.HLELogLvl.GetValue() == 4 || (lvl != 0 && lvl <= Ini.HLELogLvl.GetValue()))
+		return;
 
 	std::lock_guard<std::mutex> lock(g_cs_conlog);
 
@@ -156,7 +162,7 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, std::string co
 
 	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();
 
-	LogBuffer.Push(LogPacket(prefix, value, colour));
+	LogBuffer.Push(LogPacket(prefix, value, g_log_colors[lvl]));
 }
 
 void LogWriter::Write(const wxString fmt, ...)
@@ -169,7 +175,7 @@ void LogWriter::Write(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("!", (const char *)frmt.ToAscii(), "White");
+	WriteToLog("!", (const char *)frmt.ToAscii(), 2);
 }
 
 void LogWriter::Error(const wxString fmt, ...)
@@ -182,7 +188,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("E", static_cast<const char *>(frmt), "Red");
+	WriteToLog("E", static_cast<const char *>(frmt), 4);
 }
 
 void LogWriter::Warning(const wxString fmt, ...)
@@ -195,7 +201,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("W", static_cast<const char *>(frmt), "Yellow");
+	WriteToLog("W", static_cast<const char *>(frmt), 3);
 }
 
 void LogWriter::Success(const wxString fmt, ...)
@@ -208,12 +214,12 @@ void LogWriter::Success(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("S", static_cast<const char *>(frmt), "Green");
+	WriteToLog("S", static_cast<const char *>(frmt), 1);
 }
 
 void LogWriter::SkipLn()
 {
-	WriteToLog("", "", "Black");
+	WriteToLog("", "", 0);
 }
 
 BEGIN_EVENT_TABLE(LogFrame, wxPanel)

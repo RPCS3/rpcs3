@@ -24,8 +24,6 @@ void AudioDumper::WriteHeader()
 size_t AudioDumper::WriteData(const void* buffer, size_t size)
 {
 	size_t ret = m_output.Write(buffer, size);
-	
-
 	return ret;
 }
 
