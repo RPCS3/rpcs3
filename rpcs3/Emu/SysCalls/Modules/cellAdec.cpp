@@ -20,14 +20,66 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 {
 	AudioDecoder& adec = *(AudioDecoder*)opaque;
 
-	if (adec.reader.size < (u32)buf_size)
+	int res = 0;
+
+next:
+	if (adec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
+	{
+		while (adec.job.IsEmpty())
+		{
+			if (Emu.IsStopped())
+			{
+				ConLog.Warning("vdecRead() aborted");
+				return 0;
+			}
+			Sleep(1);
+		}
+
+		switch (adec.job.Peek().type)
+		{
+		case adecEndSeq:
+			{
+				buf_size = adec.reader.size;
+			}
+			break;
+		case adecDecodeAu:
+			{
+				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
+				{
+					ConLog.Error("adecRead: data reading failed (reader.size=0x%x)", adec.reader.size);
+					Emu.Pause();
+					return 0;
+				}
+
+				buf += adec.reader.size;
+				buf_size -= adec.reader.size;
+				res += adec.reader.size;
+
+				adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
+
+				adec.job.Pop(adec.task);
+
+				adec.reader.addr = adec.task.au.addr;
+				adec.reader.size = adec.task.au.size;
+
+				adec.last_pts = adec.task.au.pts;
+			}
+			break;
+		default:
+			ConLog.Error("adecRead(): sequence error (task %d)", adec.job.Peek().type);
+			return 0;
+		}
+
+		goto next;
+	}
+	else if (adec.reader.size < (u32)buf_size)
 	{
 		buf_size = adec.reader.size;
 	}
 
 	if (!buf_size)
 	{
-		return 0;
+		return res;
 	}
 	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
 	{
@@ -39,7 +91,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 	{
 		adec.reader.addr += buf_size;
 		adec.reader.size -= buf_size;
-		return 0 + buf_size;
+		return res + buf_size;
 	}
 }
 
@@ -59,7 +111,7 @@ u32 adecOpen(AudioDecoder* data)
 	{
 		ConLog.Write("Audio Decoder enter()");
 
-		AdecTask task;
+		AdecTask& task = adec.task;
 
 		while (true)
 		{
@@ -119,12 +171,12 @@ u32 adecOpen(AudioDecoder* data)
 
 			case adecDecodeAu:
 				{
-					int err;
+					int err = 0;
 
 					adec.reader.addr = task.au.addr;
 					adec.reader.size = task.au.size;
 
-					u64 last_pts = task.au.pts;
+					adec.last_pts = task.au.pts;
 
 					struct AVPacketHolder : AVPacket
 					{
@@ -160,7 +212,7 @@ u32 adecOpen(AudioDecoder* data)
 						if (Memory.CopyToReal(buf, task.au.addr, task.au.size)) dump.Write(buf, task.au.size);
 						free(buf);
 						dump.Close();
-					}
+					}*/
 
 					if (adec.just_started) // deferred initialization
 					{
@@ -168,6 +220,13 @@ u32 adecOpen(AudioDecoder* data)
 						if (err)
 						{
 							ConLog.Error("adecDecodeAu: avformat_open_input() failed");
+							Emu.Pause();
+							break;
+						}
+						AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P); // ???
+						if (!codec)
+						{
+							ConLog.Error("adecDecodeAu: avcodec_find_decoder() failed");
 							Emu.Pause();
 							break;
 						}
@@ -185,16 +244,8 @@ u32 adecOpen(AudioDecoder* data)
 							break;
 						}
 						adec.ctx = adec.fmt->streams[0]->codec; // TODO: check data
-						
-						AVCodec* codec = avcodec_find_decoder(adec.ctx->codec_id); // ???
-						if (!codec)
-						{
-							ConLog.Error("adecDecodeAu: avcodec_find_decoder() failed");
-							Emu.Pause();
-							break;
-						}
 
-						AVDictionary* opts;
+						AVDictionary* opts = nullptr;
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
 							SMutexGeneralLocker lock(g_mutex_avcodec_open2);
@@ -210,9 +261,17 @@ u32 adecOpen(AudioDecoder* data)
 						adec.just_started = false;
 					}
 
-					while (av_read_frame(adec.fmt, &au) >= 0)*/ while (true)
+					bool last_frame = false;
+
+					while (true)
 					{
-						if (!adec.ctx) // fake
+						if (Emu.IsStopped())
+						{
+							ConLog.Warning("adecDecodeAu aborted");
+							return;
+						}
+
+						/*if (!adec.ctx) // fake
 						{
 							AdecFrame frame;
 							frame.pts = task.au.pts;
@@ -223,13 +282,18 @@ u32 adecOpen(AudioDecoder* data)
 							frame.data = nullptr;
 							adec.frames.Push(frame);
 
-							/*Callback cb;
-							cb.SetAddr(adec.cbFunc);
-							cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
-							cb.Branch(false);*/
 							adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 
 							break;
+						}*/
+
+						last_frame = av_read_frame(adec.fmt, &au) < 0;
+						if (last_frame)
+						{
+							//break;
+							av_free(au.data);
+							au.data = NULL;
+							au.size = 0;
 						}
 
 						struct VdecFrameHolder : AdecFrame
@@ -261,10 +325,13 @@ u32 adecOpen(AudioDecoder* data)
 
 						int decode = avcodec_decode_audio4(adec.ctx, frame.data, &got_frame, &au);
 
-						if (decode < 0)
+						if (decode <= 0)
 						{
-							ConLog.Error("adecDecodeAu: AU decoding error(0x%x)", decode);
-							break;
+							if (!last_frame && decode < 0)
+							{
+								ConLog.Error("adecDecodeAu: AU decoding error(0x%x)", decode);
+							}
+							if (!got_frame && adec.reader.size == 0) break;
 						}
 
 						if (got_frame)

@@ -198,6 +198,7 @@ bool SleepQueue::finalize()
 		}
 	}
 
+	m_mutex.unlock();
 	return true;
 }
 
