@@ -23,13 +23,13 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 	int res = 0;
 
 next:
-	if (adec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
+	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
 	{
 		while (adec.job.IsEmpty())
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("vdecRead() aborted");
+				ConLog.Warning("adecRead() aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -212,7 +212,7 @@ u32 adecOpen(AudioDecoder* data)
 						if (Memory.CopyToReal(buf, task.au.addr, task.au.size)) dump.Write(buf, task.au.size);
 						free(buf);
 						dump.Close();
-					}*/
+					}
 
 					if (adec.just_started) // deferred initialization
 					{
@@ -259,7 +259,7 @@ u32 adecOpen(AudioDecoder* data)
 							break;
 						}
 						adec.just_started = false;
-					}
+					}*/
 
 					bool last_frame = false;
 
@@ -271,7 +271,7 @@ u32 adecOpen(AudioDecoder* data)
 							return;
 						}
 
-						/*if (!adec.ctx) // fake
+						if (!adec.ctx) // fake
 						{
 							AdecFrame frame;
 							frame.pts = task.au.pts;
@@ -285,7 +285,7 @@ u32 adecOpen(AudioDecoder* data)
 							adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 
 							break;
-						}*/
+						}
 
 						last_frame = av_read_frame(adec.fmt, &au) < 0;
 						if (last_frame)
@@ -296,14 +296,14 @@ u32 adecOpen(AudioDecoder* data)
 							au.size = 0;
 						}
 
-						struct VdecFrameHolder : AdecFrame
+						struct AdecFrameHolder : AdecFrame
 						{
-							VdecFrameHolder()
+							AdecFrameHolder()
 							{
 								data = av_frame_alloc();
 							}
 
-							~VdecFrameHolder()
+							~AdecFrameHolder()
 							{
 								if (data)
 								{
@@ -336,7 +336,7 @@ u32 adecOpen(AudioDecoder* data)
 
 						if (got_frame)
 						{
-							ConLog.Write("got_frame (%d, vdec: pts=0x%llx, dts=0x%llx)", got_frame, au.pts, au.dts);					
+							ConLog.Write("got_frame (%d, pts=0x%llx, dts=0x%llx)", got_frame, au.pts, au.dts);					
 
 							frame.pts = task.au.pts; // ???
 							frame.auAddr = task.au.addr;

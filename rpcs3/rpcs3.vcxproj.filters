@@ -466,6 +466,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Spinlock.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

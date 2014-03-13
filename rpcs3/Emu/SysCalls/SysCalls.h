@@ -9,6 +9,7 @@
 #include "lv2/SC_Lwcond.h"
 #include "lv2/SC_Event_flag.h"
 #include "lv2/SC_Condition.h"
+#include "lv2/SC_Spinlock.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -199,6 +200,12 @@ extern int sys_rwlock_runlock(u32 rw_lock_id);
 extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
 extern int sys_rwlock_trywlock(u32 rw_lock_id);
 extern int sys_rwlock_wunlock(u32 rw_lock_id);
+
+//sys_spinlock
+extern void sys_spinlock_initialize(mem_ptr_t<spinlock> lock);
+extern void sys_spinlock_lock(mem_ptr_t<spinlock> lock);
+extern int sys_spinlock_trylock(mem_ptr_t<spinlock> lock);
+extern void sys_spinlock_unlock(mem_ptr_t<spinlock> lock);
 
 //ppu_thread
 extern void sys_ppu_thread_exit(u64 errorcode);

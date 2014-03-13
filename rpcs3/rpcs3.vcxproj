@@ -277,6 +277,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Spinlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
