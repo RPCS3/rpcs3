@@ -22,6 +22,16 @@
 #pragma once
 
 #ifndef ENABLE_GLES
+// FIX compilation issue with Mesa 10
+// Note it might be possible to do better with the right include 
+// in the rigth order but I don't have time
+#ifndef APIENTRY
+#define APIENTRY
+#endif
+#ifndef APIENTRYP
+#define APIENTRYP APIENTRY *
+#endif
+
 // Allow compilation with older mesa
 
 #ifndef GL_ARB_copy_image
