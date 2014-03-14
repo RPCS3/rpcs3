@@ -63,7 +63,7 @@ static const g_module_list[] =
 	{0x002e, "cellLv2dbg"},
 	{0x0030, "cellUsbpspcm"},
 	{0x0031, "cellAvconfExt"},
-	{0x0032, "cellSysutilUserinfo"},
+	{0x0032, "cellUserInfo"},
 	{0x0033, "cellSysutilSavedata"},
 	{0x0034, "cellSubdisplay"},
 	{0x0035, "cellSysutilRec"},

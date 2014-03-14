@@ -10,21 +10,29 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
-SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
 add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 
 find_package(wxWidgets COMPONENTS core base net aui gl REQUIRED)
+find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(FFMPEG REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(OpenAL REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(PLATFORM_ARCH "linux/x86_64")
+else()
+	set(PLATFORM_ARCH "linux/x86")
+endif()
+
 include_directories(
 ${wxWidgets_INCLUDE_DIRS}
-${FFMPEG_INCLUDE_DIR}
+${OPENAL_INCLUDE_DIR}
+${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/include
 ${CMAKE_SOURCE_DIR}
 ${CMAKE_SOURCE_DIR}/Emu
 ${CMAKE_SOURCE_DIR}/Gui
@@ -32,6 +40,8 @@ ${CMAKE_SOURCE_DIR}/Loader
 ${CMAKE_SOURCE_DIR}/Crypto
 ${CMAKE_SOURCE_DIR}/..
 )
+
+link_directories(${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib)
 
 file(
 GLOB_RECURSE
@@ -48,5 +58,5 @@ ${CMAKE_SOURCE_DIR}/../Utilities/*
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${ZLIB_LIBRARIES} ${FFMPEG_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 

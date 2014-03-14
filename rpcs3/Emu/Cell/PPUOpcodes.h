@@ -340,6 +340,7 @@ namespace PPU_opcodes
 		DIVD 	= 0x1e9,
 		DIVW 	= 0x1eb,
 		LVLX	= 0x207, //Load Vector Left Indexed
+		LDBRX	= 0x214,
 		LWBRX 	= 0x216,
 		LFSX 	= 0x217,
 		SRW 	= 0x218,
@@ -729,6 +730,7 @@ public:
 	virtual void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void LVLX(u32 vd, u32 ra, u32 rb) = 0;
+	virtual void LDBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LWBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LFSX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void SRW(u32 ra, u32 rs, u32 rb, bool rc) = 0;

@@ -119,8 +119,6 @@ u32 adecOpen(AudioDecoder* data)
 
 			case adecDecodeAu:
 				{
-					int err;
-
 					adec.reader.addr = task.au.addr;
 					adec.reader.size = task.au.size;
 

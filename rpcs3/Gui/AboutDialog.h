@@ -45,8 +45,8 @@ AboutDialog::AboutDialog(wxWindow *parent)
 
 	//Credits
 	wxBoxSizer* s_panel_credits(new wxBoxSizer(wxHORIZONTAL));
-	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil", wxDefaultPosition, wxSize(156,160));
-	wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon", wxDefaultPosition, wxSize(156,160));
+	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil\nNekotekina\nelisha464\nBigpet", wxDefaultPosition, wxSize(156,160));
+	wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon\nAishou\nkrofna\nxsacha", wxDefaultPosition, wxSize(156,160));
 
 	s_panel_credits->AddSpacer(12);
 	s_panel_credits->Add(t_section1);
