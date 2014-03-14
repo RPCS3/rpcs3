@@ -287,7 +287,7 @@ int sys_net_shutdown(s32 s, s32 how)
 
 int sys_net_socket(s32 family, s32 type, s32 protocol)
 {
-	sys_net.Warning("socket(family=%d, type=%d, protocol=%d", family, type, protocol);
+	sys_net.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 	int ret = socket(family, type, protocol);
 	g_lastError = getLastError();
 	return ret;

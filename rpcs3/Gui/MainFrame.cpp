@@ -416,7 +416,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 
 	chbox_audio_dump->Enable(Emu.IsStopped());
-	cbox_audio_out->Enable(Emu.IsStopped());
+	//cbox_audio_out->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);

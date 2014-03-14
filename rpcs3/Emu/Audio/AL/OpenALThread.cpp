@@ -44,6 +44,8 @@ void OpenALThread::Init()
 
 void OpenALThread::Quit()
 {
+	m_context = alcGetCurrentContext();
+	m_device = alcGetContextsDevice(m_context);
 	alcMakeContextCurrent(nullptr);
 	alcDestroyContext(m_context);
 	alcCloseDevice(m_device);
