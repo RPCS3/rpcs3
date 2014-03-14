@@ -3,12 +3,12 @@
 
 RSXTexture::RSXTexture()
 {
-  m_index = 0;
+	m_index = 0;
 }
 
 RSXTexture::RSXTexture(u8 index)
 {
-  m_index = index;
+	m_index = index;
 }
 
 void RSXTexture::Init()
