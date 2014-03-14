@@ -60,7 +60,7 @@ int cellAudioInit()
 			memset(buffer2, 0, sizeof(buffer2));
 			memset(oal_buffer.get(), 0, oal_buffer_size * sizeof(u16));
 
-			if(Ini.AudioOutMode.GetValue() == 1)
+			if(m_audio_out)
 			{
 				m_audio_out->Init();
 				m_audio_out->Open(oal_buffer.get(), oal_buffer_size*sizeof(u16));
@@ -151,7 +151,10 @@ int cellAudioInit()
 
 				if(oal_buffer_offset >= oal_buffer_size)
 				{
-					m_audio_out->AddData(oal_buffer.get(), oal_buffer_offset * sizeof(u16));
+					if(m_audio_out)
+					{
+						m_audio_out->AddData(oal_buffer.get(), oal_buffer_offset * sizeof(u16));
+					}
 
 					oal_buffer_offset = 0;
 				}
@@ -438,21 +441,22 @@ int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 {
 	cellAudio.Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
 
-	if (Emu.GetEventManager().CheckKey(0x80004d494f323221))
+	while (Emu.GetEventManager().CheckKey(m_config.event_key))
 	{
-		return CELL_AUDIO_ERROR_EVENT_QUEUE;
+		m_config.event_key++; // experimental
+		//return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
-	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0x80004d494f323221, 0x80004d494f323221, 32);
+	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, m_config.event_key, m_config.event_key, 32);
 
-	if (!Emu.GetEventManager().RegisterKey(eq, 0x80004d494f323221))
+	if (!Emu.GetEventManager().RegisterKey(eq, m_config.event_key))
 	{
 		delete eq;
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
 	id = cellAudio.GetNewId(eq);
-	key = 0x80004d494f323221;
+	key = m_config.event_key;
 
 	return CELL_OK;
 }
@@ -467,7 +471,7 @@ int cellAudioSetNotifyEventQueue(u64 key)
 {
 	cellAudio.Warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
-	m_config.event_key = key;
+	//m_config.event_key = key;
 
 	/*EventQueue* eq;
 	if (!Emu.GetEventManager().GetEventQueue(key, eq))
@@ -496,7 +500,7 @@ int cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	m_config.event_key = 0;
+	m_config.event_key = 0x80004d494f323221;
 
 	// TODO: disconnect port
 

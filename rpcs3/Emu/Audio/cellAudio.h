@@ -139,7 +139,7 @@ struct AudioConfig  //custom structure
 		: m_is_audio_initialized(false)
 		, m_is_audio_finalized(false)
 		, m_port_in_use(0)
-		, event_key(0)
+		, event_key(0x80004d494f323221)
 		, counter(0)
 	{
 		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
