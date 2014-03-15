@@ -1,6 +1,7 @@
 #pragma once
 #include "PPCThread.h"
 #include "Emu/event.h"
+#include "Emu/SysCalls/lv2/SC_SPU_Thread.h"
 #include "MFC.h"
 #include <mutex>
 
@@ -484,6 +485,22 @@ public:
 		Channel<1> AtomicStat;
 	} Prxy;
 
+	struct StalledList
+	{
+		u32 lsa;
+		u64 ea;
+		u16 tag;
+		u16 size;
+		u32 cmd;
+		MFCReg* MFCArgs;
+
+		StalledList()
+			: MFCArgs(nullptr)
+		{
+		}
+	} StallList[32];
+	Channel<1> StallStat;
+
 	struct
 	{
 		Channel<1> Out_MBox;
@@ -504,6 +521,66 @@ public:
 	};
 
 	DMAC dmac;
+
+	void ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs)
+	{
+		u32 list_addr = ea & 0x3ffff;
+		u32 list_size = size / 8;
+		lsa &= 0x3fff0;
+
+		struct list_element
+		{
+			be_t<u16> s; // Stall-and-Notify bit (0x8000)
+			be_t<u16> ts; // List Transfer Size
+			be_t<u32> ea; // External Address Low
+		};
+
+		u32 result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+
+		for (u32 i = 0; i < list_size; i++)
+		{
+			mem_ptr_t<list_element> rec(dmac.ls_offset + list_addr + i * 8);
+
+			u32 size = rec->ts;
+			if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
+			{
+				ConLog.Error("DMA List: invalid transfer size(%d)", size);
+				return;
+			}
+
+			u32 addr = rec->ea;
+			result = dmac.Cmd(cmd, tag, lsa | (addr & 0xf), addr, size);
+			if (result == MFC_PPU_DMA_CMD_SEQUENCE_ERROR)
+			{
+				break;
+			}
+
+			if (Ini.HLELogging.GetValue() || rec->s)
+				ConLog.Write("*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
+					i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
+
+			lsa += max(size, (u32)16);
+
+			if (rec->s & se16(0x8000))
+			{
+				StallStat.PushUncond_OR(1 << tag);
+
+				if (StallList[tag].MFCArgs)
+				{
+					ConLog.Error("DMA List: existing stalled list found (tag=%d)", tag);
+				}
+				StallList[tag].MFCArgs = &MFCArgs;
+				StallList[tag].cmd = cmd;
+				StallList[tag].ea = (ea & ~0xffffffff) | (list_addr + (i + 1) * 8);
+				StallList[tag].lsa = lsa;
+				StallList[tag].size = (list_size - i - 1) * 8;
+
+				return;
+			}
+		}
+
+		MFCArgs.CMDStatus.SetValue(result);
+	}
 
 	void EnqMfcCmd(MFCReg& MFCArgs)
 	{
@@ -528,7 +605,7 @@ public:
 				lsa, ea, tag, size, cmd);
 			if (op & MFC_PUT_CMD)
 			{
-				SMutexLocker lock(reservation.mutex);
+				SMutexLocker lock(reservation.mutex); // should be removed
 				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
 					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
@@ -540,6 +617,19 @@ public:
 			{
 				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 			}
+		}
+		break;
+
+		case MFC_PUTL_CMD:
+		case MFC_GETL_CMD:
+		{
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+				wxString(op & MFC_PUT_CMD ? "PUTL" : "GETL").wx_str(),
+				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
+				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
+				lsa, ea, tag, size, cmd);
+
+			ListCmd(lsa, ea, tag, size, cmd, MFCArgs);
 		}
 		break;
 
@@ -627,6 +717,9 @@ public:
 
 		case MFC_RdTagStat:
 			return Prxy.TagStatus.GetCount();
+
+		case MFC_RdListStallStat:
+			return StallStat.GetCount();
 
 		case MFC_WrTagUpdate:
 			return Prxy.TagStatus.GetCount(); // hack
@@ -751,6 +844,24 @@ public:
 			EnqMfcCmd(MFC1);
 		break;
 
+		case MFC_WrListStallAck:
+		{
+			if (v >= 32)
+			{
+				ConLog.Error("MFC_WrListStallAck error: invalid tag(%d)", v);
+				return;
+			}
+			StalledList temp = StallList[v];
+			if (!temp.MFCArgs)
+			{
+				ConLog.Error("MFC_WrListStallAck error: empty tag(%d)", v);
+				return;
+			}
+			StallList[v].MFCArgs = nullptr;
+			ListCmd(temp.lsa, temp.ea, temp.tag, temp.size, temp.cmd, *temp.MFCArgs);
+		}
+		break;
+
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
 		break;
@@ -788,6 +899,10 @@ public:
 
 		case MFC_RdAtomicStat:
 			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
+		break;
+
+		case MFC_RdListStallStat:
+			while (!StallStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		default:

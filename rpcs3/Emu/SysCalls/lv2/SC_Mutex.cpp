@@ -98,8 +98,9 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
-	u32 owner = mutex->m_mutex.GetOwner();
 
+	_mm_mfence();
+	u32 owner = mutex->m_mutex.GetOwner();
 	if (owner == tid)
 	{
 		if (mutex->is_recursive)
@@ -119,22 +120,10 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	{
 		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
 		{
-			if (!tt->IsAlive())
-			{
-				if (owner == mutex->m_mutex.GetOwner()) sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-				/*mutex->m_mutex.unlock(owner, tid);
-				mutex->recursive = 1;
-				t.owned_mutexes++; 
-				return CELL_OK;*/
-			}
 		}
 		else
 		{
 			sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-			/*mutex->m_mutex.unlock(owner, tid);
-			mutex->recursive = 1;
-			t.owned_mutexes++; 
-			return CELL_OK;*/
 		}
 	}
 
@@ -180,8 +169,9 @@ int sys_mutex_trylock(u32 mutex_id)
 
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
-	u32 owner = mutex->m_mutex.GetOwner();
 
+	_mm_mfence();
+	u32 owner = mutex->m_mutex.GetOwner();
 	if (owner == tid)
 	{
 		if (mutex->is_recursive)
@@ -201,22 +191,10 @@ int sys_mutex_trylock(u32 mutex_id)
 	{
 		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
 		{
-			if (!tt->IsAlive())
-			{
-				if (owner == mutex->m_mutex.GetOwner()) sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-				/*mutex->m_mutex.unlock(owner, tid);
-				mutex->recursive = 1;
-				t.owned_mutexes++; 
-				return CELL_OK;*/
-			}
 		}
 		else
 		{
 			sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
-			/*mutex->m_mutex.unlock(owner, tid);
-			mutex->recursive = 1;
-			t.owned_mutexes++; 
-			return CELL_OK;*/
 		}
 	}
 
@@ -241,6 +219,7 @@ int sys_mutex_unlock(u32 mutex_id)
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
 
+	_mm_mfence();
 	if (mutex->m_mutex.GetOwner() == tid)
 	{
 		if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
