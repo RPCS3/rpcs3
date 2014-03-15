@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "SC_Memory.h"
+#include <map>
 
 SysCallBase sc_mem("memory");
 std::map<u32, u32> mmapper_info_map;
