@@ -568,8 +568,7 @@ public:
 					// LS access
 					ea = spu->dmac.ls_offset + addr;
 				}
-				else if ((cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK)) == MFC_PUT_CMD &&
-					size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
+				else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 				{
 					spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, Memory.Read32(dmac.ls_offset + lsa));
 					return true;
@@ -587,7 +586,7 @@ public:
 			}
 		}
 
-		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK))
+		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
 		case MFC_PUT_CMD:
 			{
@@ -694,10 +693,12 @@ public:
 		switch(op & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
 		{
 		case MFC_PUT_CMD:
+		case MFC_PUTR_CMD: // ???
 		case MFC_GET_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
-				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(), 
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(),
+				wxString(op & MFC_RESULT_MASK ? "R" : "").wx_str(),
 				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
 				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
 				lsa, ea, tag, size, cmd);
@@ -719,10 +720,12 @@ public:
 		break;
 
 		case MFC_PUTL_CMD:
+		case MFC_PUTRL_CMD: // ???
 		case MFC_GETL_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
-				wxString(op & MFC_PUT_CMD ? "PUTL" : "GETL").wx_str(),
+			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(),
+				wxString(op & MFC_RESULT_MASK ? "RL" : "L").wx_str(),
 				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
 				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
 				lsa, ea, tag, size, cmd);
