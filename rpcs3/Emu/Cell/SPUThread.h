@@ -119,6 +119,15 @@ enum
 	SPU_STATUS_SINGLE_STEP			= 0x10,
 };
 
+enum : u32
+{
+	SYS_SPU_THREAD_BASE_LOW = 0xf0000000,
+	SYS_SPU_THREAD_BASE_MASK = 0xfffffff,
+	SYS_SPU_THREAD_OFFSET = 0x00100000,
+	SYS_SPU_THREAD_SNR1 = 0x05400c,
+	SYS_SPU_THREAD_SNR2 = 0x05C00c,
+};
+
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class FPSCR
@@ -278,6 +287,7 @@ public:
 
 	EventPort SPUPs[64]; // SPU Thread Event Ports
 	EventManager SPUQs; // SPU Queue Mapping
+	SpuGroupInfo* group; // associated SPU Thread Group (null for raw spu)
 
 	template<size_t _max_count>
 	class Channel
@@ -512,6 +522,18 @@ public:
 		Channel<1> SNR[2];
 	} SPU;
 
+	void WriteSNR(bool number, u32 value)
+	{
+		if (cfg.value & ((u64)1 << (u64)number))
+		{
+			SPU.SNR[number].PushUncond_OR(value); // logical OR
+		}
+		else
+		{
+			SPU.SNR[number].PushUncond(value); // overwrite
+		}
+	}
+
 	u32 LSA;
 
 	union
@@ -521,6 +543,82 @@ public:
 	};
 
 	DMAC dmac;
+
+	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
+	{
+		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
+
+		if ((ea & 0xf0000000) == SYS_SPU_THREAD_BASE_LOW)
+		{
+			if (group)
+			{
+				// SPU Thread Group MMIO (LS and SNR)
+				u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
+				if (num >= group->list.GetCount() || !group->list[num])
+				{
+					ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
+					return false;
+				}
+
+				SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
+
+				u32 addr = (ea & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET;
+				if ((addr <= 0x3ffff) && (addr + size <= 0x40000))
+				{
+					// LS access
+					ea = spu->dmac.ls_offset + addr;
+				}
+				else if ((cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK)) == MFC_PUT_CMD &&
+					size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
+				{
+					spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, Memory.Read32(dmac.ls_offset + lsa));
+					return true;
+				}
+				else
+				{
+					ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx, size=%d, cmd=0x%x): invalid command", ea, size, cmd);
+					return false;
+				}
+			}
+			else
+			{
+				ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): group not set", ea);
+				return false;
+			}
+		}
+
+		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK))
+		{
+		case MFC_PUT_CMD:
+			{
+				return Memory.Copy(ea, dmac.ls_offset + lsa, size);
+			}
+
+		case MFC_GET_CMD:
+			{
+				return Memory.Copy(dmac.ls_offset + lsa, ea, size);
+			}
+
+		default:
+			{
+				ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
+				return false;
+			}
+		}
+	}
+
+	u32 dmacCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
+	{
+		/*if(proxy_pos >= MFC_PPU_MAX_QUEUE_SPACE)
+		{
+			return MFC_PPU_DMA_QUEUE_FULL;
+		}*/
+
+		if (ProcessCmd(cmd, tag, lsa, ea, size))
+			return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+		else
+			return MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+	}
 
 	void ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs)
 	{
@@ -549,7 +647,7 @@ public:
 			}
 
 			u32 addr = rec->ea;
-			result = dmac.Cmd(cmd, tag, lsa | (addr & 0xf), addr, size);
+			result = dmacCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
 			if (result == MFC_PPU_DMA_CMD_SEQUENCE_ERROR)
 			{
 				break;
@@ -606,7 +704,7 @@ public:
 			if (op & MFC_PUT_CMD)
 			{
 				SMutexLocker lock(reservation.mutex); // should be removed
-				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+				MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
 				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
 					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
 				{
@@ -615,7 +713,7 @@ public:
 			}
 			else
 			{
-				MFCArgs.CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
+				MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
 			}
 		}
 		break;
@@ -650,7 +748,7 @@ public:
 				reservation.owner = lock.tid;
 				reservation.addr = ea;
 				reservation.size = 128;
-				dmac.ProcessCmd(MFC_GET_CMD, tag, lsa, ea, 128);
+				ProcessCmd(MFC_GET_CMD, tag, lsa, ea, 128);
 				Prxy.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
@@ -660,7 +758,7 @@ public:
 				{
 					if (reservation.addr == ea && reservation.size == 128)
 					{
-						dmac.ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+						ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
 						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 					}
 					else
@@ -677,7 +775,7 @@ public:
 			else // store unconditional
 			{
 				SMutexLocker lock(reservation.mutex);
-				dmac.ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+				ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
 				if (op == MFC_PUTLLUC_CMD)
 				{
 					Prxy.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);

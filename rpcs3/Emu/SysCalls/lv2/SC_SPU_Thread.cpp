@@ -120,6 +120,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	new_thread.Run();
 
 	thread = group_info->list[spu_num] = new_thread.GetId();
+	(*(SPUThread*)&new_thread).group = group_info;
 
 	sc_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
 		wxString(name).wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
@@ -500,14 +501,7 @@ int sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	if ((*(SPUThread*)thr).cfg.value & ((u64)1<<number))
-	{ //logical OR
-		(*(SPUThread*)thr).SPU.SNR[number].PushUncond_OR(value);
-	}
-	else
-	{ //overwrite
-		(*(SPUThread*)thr).SPU.SNR[number].PushUncond(value);
-	}
+	(*(SPUThread*)thr).WriteSNR(number, value);
 
 	return CELL_OK;
 }

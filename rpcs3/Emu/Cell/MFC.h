@@ -55,7 +55,7 @@ enum
 	MFC_SPU_MAX_QUEUE_SPACE					= 0x10,
 };
 
-struct DMAC_Queue
+/*struct DMAC_Queue
 {
 	bool is_valid;
 	u64 ea;
@@ -149,13 +149,14 @@ public:
 	{
 		return Memory.Read32(m_addr);
 	}
-};
+};*/
 
 struct DMAC
 {
-	//DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE]; //not used yet
-	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE+MFC_SPU_MAX_QUEUE_SPACE]; //temporarily 24
 	u64 ls_offset;
+
+	/*//DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE]; //not used yet
+	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE+MFC_SPU_MAX_QUEUE_SPACE]; //temporarily 24
 	u32 queue_pos;
 	u32 proxy_pos;
 	long queue_lock;
@@ -194,18 +195,6 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		/* while (std::atomic_exchange(&proxy_lock, 1));
-		_mm_lfence();
-		DMAC_Proxy& p = proxy[proxy_pos];
-		p.cmd = cmd;
-		p.tag = tag;
-		p.lsa = lsa;
-		p.ea = ea;
-		p.size = size;
-		_mm_sfence(); //for DoCmd()
-		proxy_pos++;
-		_mm_sfence();
-		proxy_lock = 0; */
 		ProcessCmd(cmd, tag, lsa, ea, size);
 
 		return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
@@ -230,10 +219,10 @@ struct DMAC
 				ClearCmd();
 			}
 		}
-	}
+	}*/
 };
 
-struct MFC
+/*struct MFC
 {
 	SPUReg<1> MFC_LSA;
 	SPUReg<1> MFC_EAH;
@@ -299,4 +288,4 @@ struct MFC
 			MFC_QStatus.SetValue(mask);
 		}
 	}
-};
+};*/
