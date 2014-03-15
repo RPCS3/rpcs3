@@ -23,7 +23,8 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 
 	int res = 0;
 
-	if (vdec.reader.size < (u32)buf_size && !vdec.just_started)
+next:
+	if (vdec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
 	{
 		while (vdec.job.IsEmpty())
 		{
@@ -74,6 +75,8 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 			ConLog.Error("vdecRead(): sequence error (task %d)", vdec.job.Peek().type);
 			return 0;
 		}
+		
+		goto next;
 	}
 	else if (vdec.reader.size < (u32)buf_size)
 	{
@@ -235,14 +238,21 @@ u32 vdecOpen(VideoDecoder* data)
 
 					if (vdec.just_started) // deferred initialization
 					{
-						err = avformat_open_input(&vdec.fmt, NULL, NULL, NULL);
+						err = avformat_open_input(&vdec.fmt, NULL, av_find_input_format("mpeg"), NULL);
 						if (err)
 						{
 							ConLog.Error("vdecDecodeAu: avformat_open_input() failed");
 							Emu.Pause();
 							break;
 						}
-						err = avformat_find_stream_info(vdec.fmt, NULL);
+						AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264); // ???
+						if (!codec)
+						{
+							ConLog.Error("vdecDecodeAu: avcodec_find_decoder() failed");
+							Emu.Pause();
+							break;
+						}
+						/*err = avformat_find_stream_info(vdec.fmt, NULL);
 						if (err)
 						{
 							ConLog.Error("vdecDecodeAu: avformat_find_stream_info() failed");
@@ -254,17 +264,15 @@ u32 vdecOpen(VideoDecoder* data)
 							ConLog.Error("vdecDecodeAu: no stream found");
 							Emu.Pause();
 							break;
-						}
-						vdec.ctx = vdec.fmt->streams[0]->codec; // TODO: check data
-						
-						AVCodec* codec = avcodec_find_decoder(vdec.ctx->codec_id); // ???
-						if (!codec)
+						}*/
+						if (!avformat_new_stream(vdec.fmt, codec))
 						{
-							ConLog.Error("vdecDecodeAu: avcodec_find_decoder() failed");
+							ConLog.Error("vdecDecodeAu: avformat_new_stream() failed");
 							Emu.Pause();
 							break;
 						}
-
+						vdec.ctx = vdec.fmt->streams[0]->codec; // TODO: check data
+						
 						AVDictionary* opts = nullptr;
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
@@ -292,6 +300,7 @@ u32 vdecOpen(VideoDecoder* data)
 							ConLog.Warning("vdecDecodeAu aborted");
 							return;
 						}
+
 						last_frame = av_read_frame(vdec.fmt, &au) < 0;
 						if (last_frame)
 						{
@@ -335,7 +344,6 @@ u32 vdecOpen(VideoDecoder* data)
 							if (!last_frame && decode < 0)
 							{
 								ConLog.Error("vdecDecodeAu: AU decoding error(0x%x)", decode);
-								break;
 							}
 							if (!got_picture && vdec.reader.size == 0) break; // video end?
 						}

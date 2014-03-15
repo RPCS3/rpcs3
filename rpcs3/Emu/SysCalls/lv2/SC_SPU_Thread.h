@@ -55,3 +55,28 @@ struct sys_spu_segment
 	be_t<int> size;
 	be_t<u64> src;
 };
+
+struct SpuGroupInfo
+{
+	Array<u32> list;
+	std::atomic<u32> lock;
+	wxString m_name;
+	int m_prio;
+	int m_type;
+	int m_ct;
+
+	SpuGroupInfo(wxString name, u32 num, int prio, int type, u32 ct) 
+		: m_name(name)
+		, m_prio(prio)
+		, m_type(type)
+		, m_ct(ct)
+		, lock(0)
+	{
+		num = 256;
+		list.SetCount(num);
+		for (u32 i = 0; i < num; i++)
+		{
+			list[i] = 0;
+		}
+	}
+};

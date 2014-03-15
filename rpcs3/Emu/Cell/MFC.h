@@ -18,6 +18,7 @@ enum
 
 	MFC_BARRIER_MASK = 0x01,
 	MFC_FENCE_MASK   = 0x02,
+	MFC_LIST_MASK    = 0x04,
 	MFC_MASK_CMD     = 0xffff,
 };
 
@@ -165,7 +166,7 @@ struct DMAC
 		//returns true if the command should be deleted from the queue
 		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
-		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK))
+		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK))
 		{
 		case MFC_PUT_CMD:
 			Memory.Copy(ea, ls_offset + lsa, size);
@@ -176,7 +177,7 @@ struct DMAC
 		return true;
 
 		default:
-			ConLog.Error("Unknown DMA cmd.");
+			ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
 		return true;
 		}
 	}

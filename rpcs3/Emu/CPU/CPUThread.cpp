@@ -393,7 +393,7 @@ s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("ExecAsCallback() aborted");
+			ConLog.Warning("ExecAsCallback(wait=%s) aborted", wxString(wait ? "true" : "false").wx_str());
 			return CELL_EABORT; // doesn't mean anything
 		}
 		Sleep(1);

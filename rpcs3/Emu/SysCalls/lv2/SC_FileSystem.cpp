@@ -324,10 +324,15 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.wx_str(), mode);
 	
-	vfsDir dir;
+	/*vfsDir dir;
 	if(dir.IsExists(ps3_path))
 		return CELL_EEXIST;
 	if(!dir.Create(ps3_path))
+		return CELL_EBUSY;*/
+
+	if(Emu.GetVFS().ExistsDir(ps3_path))
+		return CELL_EEXIST;
+	if(!Emu.GetVFS().CreateDir(ps3_path))
 		return CELL_EBUSY;
 
 	return CELL_OK;

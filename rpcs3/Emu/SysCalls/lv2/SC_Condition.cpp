@@ -71,48 +71,15 @@ int sys_cond_signal(u32 cond_id)
 	}
 
 	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
 
 	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		CPUThread* tt = Emu.GetCPU().GetThread(target);
-		bool valid = tt && tt->IsAlive();
-		if (!valid)
-		{
-			sys_cond.Error("sys_cond_signal(%d): signal to invalid thread(%d)", cond_id, target);
-			return CELL_OK;
-		}
+		cond->cond.lock(target);
 
-		if (!was_locked) // mutex hasn't been locked (don't care about mutex state)
+		if (Emu.IsStopped())
 		{
-			if (u32 owner = mutex->m_mutex.GetOwner())
-			{
-				tt = Emu.GetCPU().GetThread(owner);
-				valid = tt && tt->IsAlive();
-				if (!valid)
-				{
-					sys_cond.Error("sys_cond_signal(%d): deadlock on invalid thread(%d)", cond_id, owner);
-					return CELL_OK;
-				}
-			}
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
+			ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
 		}
-		else // mutex has been locked (should preserve original mutex state)
-		{
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-		}
-	}
-
-	if (Emu.IsStopped())
-	{
-		ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
 	}
 
 	return CELL_OK;
@@ -129,43 +96,10 @@ int sys_cond_signal_all(u32 cond_id)
 	}
 
 	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
 
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		CPUThread* tt = Emu.GetCPU().GetThread(target);
-		bool valid = tt && tt->IsAlive();
-		if (!valid)
-		{
-			sys_cond.Error("sys_cond_signal_all(%d): signal to invalid thread(%d)", cond_id, target);
-			return CELL_OK;
-		}
-
-		if (!was_locked)
-		{
-			if (u32 owner = mutex->m_mutex.GetOwner())
-			{
-				tt = Emu.GetCPU().GetThread(owner);
-				valid = tt && tt->IsAlive();
-				if (!valid)
-				{
-					sys_cond.Error("sys_cond_signal_all(%d): deadlock on invalid thread(%d)", cond_id, owner);
-					return CELL_OK;
-				}
-			}
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-		}
-		else
-		{
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-		}
+		cond->cond.lock(target);
 
 		if (Emu.IsStopped())
 		{
@@ -197,35 +131,10 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	}
 
 	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	bool was_locked = (mutex->m_mutex.GetOwner() == tid);
 
 	u32 target = thread_id;
 	{
-		if (!was_locked)
-		{
-			if (u32 owner = mutex->m_mutex.GetOwner())
-			{
-				CPUThread* tt = Emu.GetCPU().GetThread(owner);
-				bool valid = tt && tt->IsAlive();
-				if (!valid)
-				{
-					sys_cond.Error("sys_cond_signal_to(%d): deadlock on invalid thread(%d)", cond_id, owner);
-					return CELL_OK;
-				}
-			}
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-		}
-		else
-		{
-			mutex->recursive = 1;
-			mutex->m_mutex.unlock(tid, target);
-			mutex->m_mutex.lock(tid);
-			mutex->recursive = 1;
-		}
+		cond->cond.lock(target);
 	}
 
 	if (Emu.IsStopped())
@@ -264,15 +173,11 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 
 	while (true)
 	{
-		/* switch (mutex->m_mutex.trylock(tid))
+		if (cond->cond.GetOwner() == tid)
 		{
-		case SMR_OK: mutex->m_mutex.unlock(tid); break;
-		case SMR_SIGNAL: mutex->recursive = 1; return CELL_OK;
-		} */
-		if (mutex->m_mutex.GetOwner() == tid)
-		{
-			_mm_mfence();
+			mutex->m_mutex.lock(tid);
 			mutex->recursive = 1;
+			cond->cond.unlock(tid);
 			return CELL_OK;
 		}
 
@@ -281,6 +186,7 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 		if (counter++ > max_counter)
 		{
 			cond->m_queue.invalidate(tid);
+			GetCurrentPPUThread().owned_mutexes--;
 			return CELL_ETIMEDOUT;
 		}
 		if (Emu.IsStopped())

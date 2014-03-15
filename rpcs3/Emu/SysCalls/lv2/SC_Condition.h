@@ -16,6 +16,7 @@ struct sys_cond_attribute
 struct Cond
 {
 	Mutex* mutex; // associated with mutex
+	SMutex cond;
 	SleepQueue m_queue;
 
 	Cond(Mutex* mutex, u64 name)

@@ -9,32 +9,6 @@
 static SysCallBase sc_spu("sys_spu");
 extern SysCallBase sys_event;
 
-static const u32 g_spu_group_thr_max = 255;
-
-struct SpuGroupInfo
-{
-	Array<u32> list;
-	std::atomic<u32> lock;
-	wxString m_name;
-	int m_prio;
-	int m_type;
-	int m_ct;
-
-	SpuGroupInfo(wxString name, u32 num, int prio, int type, u32 ct) 
-		: m_name(name)
-		, m_prio(prio)
-		, m_type(type)
-		, m_ct(ct)
-		, lock(0)
-	{
-		list.SetCount(num);
-		for (u32 i = 0; i < num; i++)
-		{
-			list[i] = 0;
-		}
-	}
-};
-
 u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 {
 	ELFLoader l(stream);
@@ -114,7 +88,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EFAULT;
 	}
 
-	if(spu_num >= g_spu_group_thr_max)
+	if(spu_num >= group_info->list.GetCount())
 	{
 		return CELL_EINVAL;
 	}
@@ -287,7 +261,7 @@ int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu
 
 	if (!Memory.IsGoodAddr(attr->name_addr, attr->name_len)) return CELL_EFAULT;
 
-	if (num > g_spu_group_thr_max) return CELL_EINVAL;
+	if (num > 256) return CELL_EINVAL;
 
 	if (prio < 16 || prio > 255) return CELL_EINVAL;
 

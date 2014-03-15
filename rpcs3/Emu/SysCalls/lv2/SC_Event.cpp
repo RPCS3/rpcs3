@@ -203,7 +203,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 				eq->owner.unlock(tid);
 				sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
 					(u64)event->source, (u64)event->data1, (u64)event->data2, (u64)event->data3);
-				/* HACK: passing event data in registers */
+				/* passing event data in registers */
 				PPUThread& t = GetCurrentPPUThread();
 				t.GPR[4] = event->source;
 				t.GPR[5] = event->data1;

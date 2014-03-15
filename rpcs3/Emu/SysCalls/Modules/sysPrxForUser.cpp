@@ -185,6 +185,11 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0x52aadadf, sys_lwcond_signal_to);
 	sysPrxForUser.AddFunc(0x2a6d9d51, sys_lwcond_wait);
 
+	sysPrxForUser.AddFunc(0x8c2bb498, sys_spinlock_initialize);
+	sysPrxForUser.AddFunc(0xa285139d, sys_spinlock_lock);
+	sysPrxForUser.AddFunc(0x722a0254, sys_spinlock_trylock);
+	sysPrxForUser.AddFunc(0x5267cb35, sys_spinlock_unlock);
+
 	sysPrxForUser.AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
 	sysPrxForUser.AddFunc(0xfc52a7a9, sys_game_process_exitspawn);
 
