@@ -3404,62 +3404,11 @@ private:
 	}
 	void FRES(u32 frd, u32 frb, bool rc)
 	{
-		double res;
-
-#ifdef _MSC_VER
-		if(_fpclass(CPU.FPR[frb]) >= _FPCLASS_NZ)
-#else
-		if(_fpclass(CPU.FPR[frb]) == FP_ZERO || std::signbit(CPU.FPR[frb]) == 0)
-#endif
-		{
-			res = static_cast<float>(1.0 / CPU.FPR[frb]);
-			if(FPRdouble::IsINF(res) && CPU.FPR[frb] != 0.0)
-			{
-				if(res > 0.0)
-				{
-					(u64&)res = 0x47EFFFFFE0000000ULL;
-				}
-				else
-				{
-					(u64&)res = 0xC7EFFFFFE0000000ULL;
-				}
-			}
-		}
-		else
-		{
-			u64 v = CPU.FPR[frb];
-
-			if(v == 0ULL)
-			{
-				v = 0x7FF0000000000000ULL;
-			}
-			else if(v == 0x8000000000000000ULL)
-			{
-				v = 0xFFF0000000000000ULL;
-			}
-			else if(FPRdouble::IsNaN(CPU.FPR[frb]))
-			{
-				v = 0x7FF8000000000000ULL;
-			}
-			else if(CPU.FPR[frb] < 0.0)
-			{
-				v = 0x8000000000000000ULL;
-			}
-			else
-			{
-				v = 0ULL;
-			}
-
-			res = (double&)v;
-		}
-
 		if(CPU.FPR[frb] == 0.0)
 		{
 			CPU.SetFPSCRException(FPSCR_ZX);
 		}
-
-		CPU.FPR[frd] = res;
-
+		CPU.FPR[frd] = static_cast<float>(1.0 / CPU.FPR[frb]);
 		if(rc) UNK("fres.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMULS(u32 frd, u32 fra, u32 frc, bool rc)
@@ -3790,7 +3739,12 @@ private:
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = 1.0f / (float)sqrt(CPU.FPR[frb]);
+		if(CPU.FPR[frb] == 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_ZX);
+		}
+		CPU.FPR[frd] = static_cast<float>(1.0 / sqrt(CPU.FPR[frb]));
+		if(rc) UNK("frsqrte.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{

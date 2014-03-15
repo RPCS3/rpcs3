@@ -223,16 +223,25 @@ extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 
 //memory
+extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_free(u32 start_addr);
+extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr);
+extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
 extern int sys_memory_container_create(mem32_t cid, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
-extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
-extern int sys_memory_free(u32 start_addr);
-extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
-extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a);
+extern int sys_memory_container_get_size(u32 mem_info_addr, u32 cid);
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
+extern int sys_mmapper_allocate_fixed_address();
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id);
-extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
+extern int sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem32_t mem_id);
+extern int sys_mmapper_change_address_access_right(u32 start_addr, u64 flags);
+extern int sys_mmapper_free_address(u32 start_addr);
 extern int sys_mmapper_free_memory(u32 mem_id);
+extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
+extern int sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_addr);
+extern int sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr);
+extern int sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 q_id);
 
 //vm
 extern int sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr);
