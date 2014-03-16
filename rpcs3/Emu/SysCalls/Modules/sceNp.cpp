@@ -32,8 +32,8 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 		k_licensee_str += wxString::Format("%02x", k_licensee[i]);
 	}
 
-	sceNp.Warning("sceNpDrmIsAvailable: Found DRM license file at %s", drm_path.c_str());
-	sceNp.Warning("sceNpDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str);
+	sceNp.Warning("sceNpDrmIsAvailable: Found DRM license file at %s", drm_path.wx_str());
+	sceNp.Warning("sceNpDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str.wx_str());
 
 	return CELL_OK;
 }
