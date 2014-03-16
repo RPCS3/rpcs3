@@ -177,7 +177,7 @@ bool SleepQueue::invalidate(u32 tid)
 	{
 		if (list[i] = tid)
 		{
-			list[i] = 0;
+			list.RemoveAt(i);
 			return true;
 		}
 	}

@@ -6,7 +6,7 @@ SysCallBase sys_event_flag("sys_event_flag");
 
 int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
 {
-	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
+	sys_event_flag.Log("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
 		eflag_id.GetAddr(), attr.GetAddr(), init);
 
 	if(!eflag_id.IsGood() || !attr.IsGood())
@@ -30,8 +30,8 @@ int sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 
 	switch (attr->type.ToBE())
 	{
-	case se32(SYS_SYNC_WAITER_SINGLE): sys_event_flag.Warning("TODO: SYS_SYNC_WAITER_SINGLE type"); break;
-	case se32(SYS_SYNC_WAITER_MULTIPLE): sys_event_flag.Warning("TODO: SYS_SYNC_WAITER_MULTIPLE type"); break;
+	case se32(SYS_SYNC_WAITER_SINGLE): break;
+	case se32(SYS_SYNC_WAITER_MULTIPLE): sys_event_flag.Error("TODO: SYS_SYNC_WAITER_MULTIPLE type"); break;
 	default: return CELL_EINVAL;
 	}
 
@@ -57,16 +57,136 @@ int sys_event_flag_destroy(u32 eflag_id)
 
 int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout)
 {
-	sys_event_flag.Error("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
+	sys_event_flag.Warning("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
 		eflag_id, bitptn, mode, result.GetAddr(), timeout);
-	return CELL_OK;
+
+	if (result.IsGood()) result = 0;
+
+	switch (mode & 0xf)
+	{
+	case SYS_EVENT_FLAG_WAIT_AND: break;
+	case SYS_EVENT_FLAG_WAIT_OR: break;
+	default: return CELL_EINVAL;
+	}
+
+	switch (mode & ~0xf)
+	{
+	case 0: break; // ???
+	case SYS_EVENT_FLAG_WAIT_CLEAR: break;
+	case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
+	default: return CELL_EINVAL;
+	}
+
+	event_flag* ef;
+	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+
+	u32 tid = GetCurrentPPUThread().GetId();
+
+	ef->waiters.push(tid);
+	if (ef->m_type == SYS_SYNC_WAITER_SINGLE && ef->waiters.list.GetCount() > 1)
+	{
+		ef->waiters.invalidate(tid);
+		return CELL_EPERM;
+	}
+
+	u32 counter = 0;
+	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+
+	while (true)
+	{
+		{
+			SMutexLocker lock(ef->m_mutex);
+
+			u64 flags = ef->flags;
+
+			if (((mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & bitptn) == bitptn) ||
+				((mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & bitptn)))
+			{
+				ef->waiters.invalidate(tid);
+
+				if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
+				{
+					ef->flags &= ~bitptn;
+				}
+				else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+				{
+					ef->flags = 0;
+				}
+
+				if (result.IsGood())
+				{
+					result = flags;
+					return CELL_OK;
+				}
+				return CELL_EFAULT;
+			}
+		}
+
+		Sleep(1);
+
+		if (counter++ > max_counter)
+		{
+			ef->waiters.invalidate(tid);
+			return CELL_ETIMEDOUT;
+		}
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("sys_event_flag_wait(id=%d) aborted", eflag_id);
+			return CELL_OK;
+		}
+	}
 }
 
 int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 {
-	sys_event_flag.Error("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
+	sys_event_flag.Warning("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
 		eflag_id, bitptn, mode, result.GetAddr());
-	return CELL_OK;
+
+	if (result.IsGood()) result = 0;
+
+	switch (mode & 0xf)
+	{
+	case SYS_EVENT_FLAG_WAIT_AND: break;
+	case SYS_EVENT_FLAG_WAIT_OR: break;
+	default: return CELL_EINVAL;
+	}
+
+	switch (mode & ~0xf)
+	{
+	case 0: break; // ???
+	case SYS_EVENT_FLAG_WAIT_CLEAR: break;
+	case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
+	default: return CELL_EINVAL;
+	}
+
+	event_flag* ef;
+	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+
+	SMutexLocker lock(ef->m_mutex);
+
+	u64 flags = ef->flags;
+
+	if (((mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & bitptn) == bitptn) ||
+		((mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & bitptn)))
+	{
+		if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
+		{
+			ef->flags &= ~bitptn;
+		}
+		else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+		{
+			ef->flags = 0;
+		}
+
+		if (result.IsGood())
+		{
+			result = flags;
+			return CELL_OK;
+		}
+		return CELL_EFAULT;
+	}
+
+	return CELL_EBUSY;
 }
 
 int sys_event_flag_set(u32 eflag_id, u64 bitptn)
@@ -76,6 +196,7 @@ int sys_event_flag_set(u32 eflag_id, u64 bitptn)
 	event_flag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
+	SMutexLocker lock(ef->m_mutex);
 	ef->flags |= bitptn;
 
 	return CELL_OK;
@@ -88,6 +209,7 @@ int sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 	event_flag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
+	SMutexLocker lock(ef->m_mutex);
 	ef->flags &= bitptn;
 
 	return CELL_OK;
@@ -96,6 +218,10 @@ int sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 {
 	sys_event_flag.Error("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.GetAddr());
+
+	event_flag* ef;
+	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+
 	return CELL_OK;
 }
 

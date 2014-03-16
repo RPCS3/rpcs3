@@ -4,6 +4,12 @@ enum
 {
 	SYS_SYNC_WAITER_SINGLE = 0x10000,
 	SYS_SYNC_WAITER_MULTIPLE = 0x20000,
+	
+	SYS_EVENT_FLAG_WAIT_AND = 0x01,
+	SYS_EVENT_FLAG_WAIT_OR = 0x02,
+
+	SYS_EVENT_FLAG_WAIT_CLEAR = 0x10,
+	SYS_EVENT_FLAG_WAIT_CLEAR_ALL = 0x20,
 };
 
 struct sys_event_flag_attr
@@ -18,7 +24,9 @@ struct sys_event_flag_attr
 
 struct event_flag
 {
-	std::atomic<u64> flags;
+	SMutex m_mutex;
+	u64 flags;
+	SleepQueue waiters;
 	const u32 m_protocol;
 	const int m_type;
 
