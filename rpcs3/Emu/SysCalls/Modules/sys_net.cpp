@@ -6,7 +6,7 @@
 
 #ifdef _WIN32
 #include <winsock.h>
-#elif
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #endif
@@ -296,7 +296,11 @@ int sys_net_socket(s32 family, s32 type, s32 protocol)
 int sys_net_socketclose(s32 s)
 {
 	sys_net.Warning("socket(s=%d)", s);
+#ifdef _WIN32
 	int ret = closesocket(s);
+#else
+	int ret = close(s);
+#endif
 	g_lastError = getLastError();
 	return ret;
 }
@@ -321,8 +325,6 @@ int sys_net_initialize_network_ex(mem_ptr_t<sys_net_initialize_parameter> param)
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1,1);
 	WSAStartup(wVersionRequested, &wsaData);
-#elif
-	// TODO ?
 #endif
 	return CELL_OK;
 }
@@ -454,8 +456,6 @@ int sys_net_finalize_network()
 	g_lastError.SetAddr(NULL);
 #ifdef _WIN32
 	WSACleanup();
-#else
-	// TODO ?
 #endif
 	return CELL_OK;
 }
