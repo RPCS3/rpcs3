@@ -4,6 +4,7 @@
 
 #include "sceNp.h"
 #include "sceNpTrophy.h"
+
 #include "Loader/TRP.h"
 
 void sceNpTrophy_unload();
@@ -116,23 +117,44 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
-
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
-	int ret;
 	TRPLoader trp(*(ctxt.trp_stream));
+	if (!trp.LoadHeader())
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+
+	// Rename or discard certain entries based on the files found
+	char target [32];
+	sprintf(target, "TROP_%02d.SFM", Ini.SysLanguage.GetValue());
+
+	if (trp.ContainsEntry(target)) {
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RemoveEntry("TROP.SFM");
+		trp.RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (trp.ContainsEntry("TROP.SFM")) {
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!trp.ContainsEntry("TROPCONF.SFM")) {
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (int i=0; i<=18; i++) {
+		sprintf(target, "TROP_%02d.SFM", i);
+		if (i != Ini.SysLanguage.GetValue())
+			trp.RemoveEntry(target);
+	}
 
 	// TODO: Get the path of the current user
-	if (trp.Install("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name))
-		ret = CELL_OK;
-	else
-		ret = SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	if (!trp.Install("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name))
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	
 	// TODO: Callbacks
 	
-	trp.Close();
-	return ret;
+	return CELL_OK;
 }
 
 int sceNpTrophyGetGameProgress()
