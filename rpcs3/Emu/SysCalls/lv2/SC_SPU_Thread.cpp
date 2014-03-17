@@ -83,9 +83,12 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EFAULT;
 	}
 
-	if(!Memory.IsGoodAddr(attr->name_addr, attr->name_len))
+	if (attr->name_addr)
 	{
-		return CELL_EFAULT;
+		if(!Memory.IsGoodAddr(attr->name_addr, attr->name_len))
+		{
+			return CELL_EFAULT;
+		}
 	}
 
 	if(spu_num >= group_info->list.GetCount())
@@ -99,7 +102,13 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	}
 
 	u32 spu_ep = (u32)img->entry_point;
-	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
+
+	std::string name = "SPUThread";
+	if (attr->name_addr)
+	{
+		name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
+	}
+
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
 	u64 a3 = arg->arg3;
@@ -123,7 +132,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	(*(SPUThread*)&new_thread).group = group_info;
 
 	sc_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		wxString(name).wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
+		wxString(attr->name_addr ? name : "").wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
 
 	return CELL_OK;
 }

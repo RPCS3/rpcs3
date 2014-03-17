@@ -896,9 +896,66 @@ public:
 					SPU.In_MBox.PushUncond(CELL_OK);
 					return;
 				}
+				else if (code = 128)
+				{
+					/* ===== sys_event_flag_set_bit ===== */
+					u32 flag = v & 0xffffff;
+
+					u32 data;
+					if (!SPU.Out_MBox.Pop(data))
+					{
+						ConLog.Error("sys_event_flag_set_bit(v=0x%x (flag=%d)): Out_MBox is empty", v, flag);
+						return;
+					}
+
+					if (flag > 63)
+					{
+						ConLog.Error("sys_event_flag_set_bit(id=%d, v=0x%x): flag > 63", data, v, flag);
+						return;
+					}
+
+					//if (Ini.HLELogging.GetValue())
+					{
+						ConLog.Warning("sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d))", data, v, flag);
+					}
+
+					EventFlag* ef;
+					if (!Emu.GetIdManager().GetIDData(data, ef))
+					{
+						ConLog.Error("sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
+						SPU.In_MBox.PushUncond(CELL_ESRCH);
+						return;
+					}
+
+					u32 tid = GetCurrentCPUThread()->GetId();
+
+					ef->m_mutex.lock(tid);
+					ef->flags |= (u64)1 << flag;
+					if (u32 target = ef->check())
+					{
+						// if signal, leave both mutexes locked...
+						ef->signal.lock(target);
+						ef->m_mutex.unlock(tid, target);
+					}
+					else
+					{
+						ef->m_mutex.unlock(tid);
+					}
+
+					SPU.In_MBox.PushUncond(CELL_OK);
+					return;
+				}
 				else
 				{
-					ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x)", v);
+					u32 data;
+					if (SPU.Out_MBox.Pop(data))
+					{
+						ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x); Out_MBox = 0x%x", v, data);
+					}
+					else
+					{
+						ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x)", v);
+					}
 					SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
 					return;
 				}
