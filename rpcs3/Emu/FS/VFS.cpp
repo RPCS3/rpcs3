@@ -226,7 +226,6 @@ vfsDevice* VFS::GetDevice(const wxString& ps3_path, wxString& path) const
 	}
 
 	if(max_i < 0) return nullptr;
-
 	path = vfsDevice::GetWinPath(m_devices[max_i].GetLocalPath(), ps3_path(max_eq, ps3_path.Len() - max_eq));
 	return &m_devices[max_i];
 }
@@ -303,27 +302,27 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 		{
 			int idx;
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)\\dev_hdd0\\";
+			res[idx].path = "$(EmulatorDir)/dev_hdd0/";
 			res[idx].mount = "/dev_hdd0/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)\\dev_hdd1\\";
+			res[idx].path = "$(EmulatorDir)/dev_hdd1/";
 			res[idx].mount = "/dev_hdd1/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)\\dev_flash\\";
+			res[idx].path = "$(EmulatorDir)/dev_flash/";
 			res[idx].mount = "/dev_flash/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)\\dev_usb000\\";
+			res[idx].path = "$(EmulatorDir)/dev_usb000/";
 			res[idx].mount = "/dev_usb000/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)\\dev_usb000\\";
+			res[idx].path = "$(EmulatorDir)/dev_usb000/";
 			res[idx].mount = "/dev_usb/";
 			res[idx].device = vfsDevice_LocalFile;
 
@@ -333,7 +332,7 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)\\..\\";
+			res[idx].path = "$(GameDir)/../";
 			res[idx].mount = "/dev_bdvd/";
 			res[idx].device = vfsDevice_LocalFile;
 
