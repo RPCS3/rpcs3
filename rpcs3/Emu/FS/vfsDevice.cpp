@@ -48,8 +48,8 @@ u32 vfsDevice::CmpLocalPath(const wxString& local_path)
 	wxFileName path0(m_local_path);
 	path0.Normalize();
 
-	wxArrayString arr0 = wxSplit(path0.GetFullPath(), '\\');
-	wxArrayString arr1 = wxSplit(local_path, '\\');
+	wxArrayString arr0 = wxSplit(path0.GetFullPath(), '/');
+	wxArrayString arr1 = wxSplit(local_path, '/');
 
 	const u32 lim = min(arr0.GetCount(), arr1.GetCount());
 	u32 ret = 0;
@@ -168,7 +168,7 @@ wxString vfsDevice::GetWinPath(const wxString& p, bool is_dir)
 		{
 			if(!is_ls)
 			{
-				ret += '\\';
+				ret += '/';
 				is_ls = true;
 			}
 
@@ -179,7 +179,7 @@ wxString vfsDevice::GetWinPath(const wxString& p, bool is_dir)
 		ret += p[i];
 	}
 
-	if(is_dir && ret[ret.Len() - 1] != '\\') ret += '\\';
+	if(is_dir && ret[ret.Len() - 1] != '/') ret += '/';
 
 	wxFileName res(ret);
 	res.Normalize();
@@ -191,7 +191,7 @@ wxString vfsDevice::GetWinPath(const wxString& l, const wxString& r)
 	if(l.IsEmpty()) return GetWinPath(r, false);
 	if(r.IsEmpty()) return GetWinPath(l);
 
-	return GetWinPath(l + '\\' + r, false);
+	return GetWinPath(l + '/' + r, false);
 }
 
 wxString vfsDevice::GetPs3Path(const wxString& p, bool is_dir)
