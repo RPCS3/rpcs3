@@ -241,6 +241,10 @@ public:
 
 		checkForGlError("GLTexture::Init() -> filters");
 
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, (tex.GetBorderColor() << 8) | (tex.GetBorderColor() >> 24));
+
+		checkForGlError("GLTexture::Init() -> border color");
+
 		//Unbind();
 
 		if(is_swizzled && format == CELL_GCM_TEXTURE_A8R8G8B8)

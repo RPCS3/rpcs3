@@ -272,9 +272,6 @@ public:
 	u8 m_blend_color_b;
 	u8 m_blend_color_a;
 
-	bool m_set_texture_border_color;
-	u32 m_border_color;
-
 	u8 m_clear_color_r;
 	u8 m_clear_color_g;
 	u8 m_clear_color_b;
@@ -403,7 +400,6 @@ protected:
 	{
 		m_set_alpha_test = false;
 		m_set_blend = false;
-		m_set_texture_border_color = false;
 		m_set_depth_bounds_test = false;
 		m_depth_test_enable = false;
 		m_set_logic_op = false;
@@ -422,8 +418,6 @@ protected:
 		m_clear_color_a = 0;
 		m_clear_z = 0xffffff;
 		m_clear_s = 0;
-
-		m_border_color = 0;
 
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
@@ -448,7 +442,6 @@ protected:
 	void Reset()
 	{
 		m_set_color_mask = false;
-		m_set_texture_border_color = false;
 		m_set_clip = false;
 		m_set_depth_func = false;
 		m_set_depth_bounds = false;

@@ -322,12 +322,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_SET_TEXTURE_BORDER_COLOR:
+	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
 	{
-		m_set_texture_border_color = true;
-		u32 tmp = ARGS(0);
-		m_border_color=((tmp & 0x00FFFFFF)<<8)|((tmp & 0xFF000000)>>24);
-		break;
 	}
 
 	case NV4097_SET_SURFACE_FORMAT:
