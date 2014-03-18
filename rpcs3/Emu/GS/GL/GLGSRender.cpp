@@ -1150,6 +1150,10 @@ void GLGSRender::Flip()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		if(m_set_texture_border_color)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,(GLint)m_border_color);
+		}
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
