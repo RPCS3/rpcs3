@@ -1411,6 +1411,10 @@ private:
 	{
 		DisAsm_V1_R2("stvewx", vs, ra, rb);
 	}
+	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		DisAsm_R2_OE_RC("subfze", rd, ra, oe, rc);
+	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("addze", rd, ra, oe, rc);
@@ -1426,6 +1430,10 @@ private:
 	void STVX(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("stvx", vd, ra, rb);
+	}
+	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		DisAsm_R2_OE_RC("subfme", rd, ra, oe, rc);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
