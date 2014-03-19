@@ -2738,7 +2738,7 @@ private:
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
-		CPU.XER.CA = (0x8000000000000000 & RA) && (0x8000000000000000 & CPU.GPR[rd]);//RA <= 0ull;
+		CPU.XER.CA = (~RA + CPU.XER.CA > ~0x0) | ((RA == 0) & CPU.XER.CA);
 		if (oe) ConLog.Warning("subfzeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2771,7 +2771,7 @@ private:
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA + 0xFFFFFFFFFFFFFFFF;
-		CPU.XER.CA = !(0x8000000000000000 & RA) && !(0x8000000000000000 & CPU.GPR[rd]);
+		CPU.XER.CA = (~RA + CPU.XER.CA > ~0xFFFFFFFFFFFFFFFF) | ((RA == 0) & CPU.XER.CA);
 		if (oe) ConLog.Warning("subfmeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
