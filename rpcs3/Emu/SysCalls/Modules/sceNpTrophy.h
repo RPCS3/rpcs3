@@ -68,11 +68,11 @@ enum SceNpTrophyGrade
 
 struct SceNpTrophyGameDetails
 {
-	u32 numTrophies;
-	u32 numPlatinum;
-	u32 numGold;
-	u32 numSilver;
-	u32 numBronze;
+	be_t<u32> numTrophies;
+	be_t<u32> numPlatinum;
+	be_t<u32> numGold;
+	be_t<u32> numSilver;
+	be_t<u32> numBronze;
 	u8 title[SCE_NP_TROPHY_TITLE_MAX_SIZE];
 	u8 description[SCE_NP_TROPHY_GAME_DESCR_MAX_SIZE];
 	u8 reserved[4];
@@ -80,17 +80,17 @@ struct SceNpTrophyGameDetails
 
 struct SceNpTrophyGameData
 {
-	u32 unlockedTrophies;
-	u32 unlockedPlatinum;
-	u32 unlockedGold;
-	u32 unlockedSilver;
-	u32 unlockedBronze;
+	be_t<u32> unlockedTrophies;
+	be_t<u32> unlockedPlatinum;
+	be_t<u32> unlockedGold;
+	be_t<u32> unlockedSilver;
+	be_t<u32> unlockedBronze;
 };
 
 struct SceNpTrophyDetails
 {
-	s32 trophyId;     // SceNpTrophyId
-	u32 trophyGrade;  // SceNpTrophyGrade
+	be_t<s32> trophyId;     // SceNpTrophyId
+	be_t<u32> trophyGrade;  // SceNpTrophyGrade
 	u8 name[SCE_NP_TROPHY_NAME_MAX_SIZE];
 	u8 description[SCE_NP_TROPHY_DESCR_MAX_SIZE];
 	bool hidden;
@@ -99,7 +99,7 @@ struct SceNpTrophyDetails
 
 struct SceNpTrophyData {
 	CellRtcTick timestamp;
-	s32 trophyId;     // SceNpTrophyId
+	be_t<s32> trophyId;     // SceNpTrophyId
 	bool unlocked;
 	u8 reserved[3];
 };

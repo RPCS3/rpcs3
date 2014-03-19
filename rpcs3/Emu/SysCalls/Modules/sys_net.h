@@ -2,9 +2,9 @@
 
 struct sys_net_initialize_parameter
 {
-	u32 memory_addr;
-	int memory_size;
-	int flags;
+	be_t<u32> memory_addr;
+	be_t<s32> memory_size;
+	be_t<s32> flags;
 };
 
 // The names of the following structs are modified to avoid overloading problems

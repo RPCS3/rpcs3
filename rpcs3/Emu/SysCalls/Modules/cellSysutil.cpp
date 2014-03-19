@@ -5,7 +5,11 @@
 
 #include "cellSysutil.h"
 
+#include "Loader/PSF.h"
+
 typedef void (*CellMsgDialogCallback)(int buttonType, mem_ptr_t<void> userData);
+typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
+
 
 void cellSysutil_init();
 Module cellSysutil(0x0015, cellSysutil_init);
@@ -840,6 +844,72 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }
 
+int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_t<CellHddGameStatCallback> funcStat, u32 container)
+{
+	cellSysutil.Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
+		version, dirName_addr, errDialog, funcStat, container);
+
+	if (!Memory.IsGoodAddr(dirName_addr) || !funcStat.IsGood())
+		return CELL_HDDGAME_ERROR_PARAM;
+
+	std::string dirName = Memory.ReadString(dirName_addr).ToStdString();
+	if (dirName.size() != 9)
+		return CELL_HDDGAME_ERROR_PARAM;
+
+	MemoryAllocator<CellHddGameSystemFileParam> param;
+	MemoryAllocator<CellHddGameCBResult> result;
+	MemoryAllocator<CellHddGameStatGet> get;
+	MemoryAllocator<CellHddGameStatSet> set;
+
+	get->hddFreeSizeKB = 40000000; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
+	get->sysSizeKB = 0; // TODO
+	get->st_atime  = 0; // TODO
+	get->st_ctime  = 0; // TODO
+	get->st_mtime  = 0; // TODO
+	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
+	memcpy(get->contentInfoPath, ("/dev_hdd0/game/"+dirName).c_str(), CELL_HDDGAME_PATH_MAX);
+	memcpy(get->hddGamePath, ("/dev_hdd0/game/"+dirName+"/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
+
+	if (!Emu.GetVFS().ExistsDir(("/dev_hdd0/game/"+dirName).c_str()))
+	{
+		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
+	}
+	else
+	{
+		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
+
+		vfsFile f(("/dev_hdd0/game/"+dirName+"/PARAM.SFO").c_str());
+		PSFLoader psf(f);
+		if (!psf.Load(false)) {
+			return CELL_HDDGAME_ERROR_BROKEN;
+		}
+
+		get->getParam.parentalLevel = psf.m_info.parental_lvl;
+		get->getParam.attribute = psf.m_info.attr;
+		get->getParam.resolution = psf.m_info.resolution;
+		get->getParam.soundFormat = psf.m_info.sound_format;
+		memcpy(get->getParam.title, psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE);
+		memcpy(get->getParam.dataVersion, psf.m_info.app_ver.mb_str(), CELL_HDDGAME_SYSP_VERSION_SIZE);
+		memcpy(get->getParam.titleId, dirName.c_str(), CELL_HDDGAME_SYSP_TITLEID_SIZE);
+
+		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
+			memcpy(get->getParam.titleLang[i], psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE); // TODO: Get real titleLang name
+		}
+	}
+
+	// TODO ?
+
+	funcStat(result.GetAddr(), get.GetAddr(), set.GetAddr());
+	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
+		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+		return CELL_HDDGAME_ERROR_CBRESULT;
+
+	// TODO ?
+
+	return CELL_OK;
+}
+
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -871,5 +941,7 @@ void cellSysutil_init()
 
 	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
 	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
+
+	cellSysutil.AddFunc(0x9117df20, cellHddGameCheck);
 
 }

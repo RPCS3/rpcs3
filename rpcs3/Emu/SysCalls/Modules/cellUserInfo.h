@@ -28,28 +28,28 @@ enum  CellUserInfoListType
 // Structs
 struct CellUserInfoUserStat
 {
-	u32 id;
+	be_t<u32> id;
 	u8 name[CELL_USERINFO_USERNAME_SIZE];
 };
 
 struct CellUserInfoUserList
 {
-	u32 userId[CELL_USERINFO_USER_MAX];
+	be_t<u32> userId[CELL_USERINFO_USER_MAX];
 };
 
 struct CellUserInfoListSet
 {
-	u32 title_addr; // (char*)
-	u32 focus;
-	u32 fixedListNum;
+	be_t<u32> title_addr; // (char*)
+	be_t<u32> focus;
+	be_t<u32> fixedListNum;
 	mem_ptr_t<CellUserInfoUserList> fixedList;
-	u32 reserved_addr; // (void*)
+	be_t<u32> reserved_addr; // (void*)
 };
 
 struct CellUserInfoTypeSet
 {
-	u32 title_addr; // (char*)
-	u32 focus;
+	be_t<u32> title_addr; // (char*)
+	be_t<u32> focus;
 	CellUserInfoListType type;
-	u32 reserved_addr; // (void*)
+	be_t<u32> reserved_addr; // (void*)
 };
