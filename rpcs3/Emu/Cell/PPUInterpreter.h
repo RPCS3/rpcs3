@@ -2612,10 +2612,10 @@ private:
 	}
 	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const s64 RA = CPU.GPR[ra];
-		const s64 RB = CPU.GPR[rb];
+		const u64 RA = CPU.GPR[ra];
+		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + CPU.XER.CA;
-		CPU.XER.CA = ((u64)~RA + CPU.XER.CA > ~(u64)RB) | ((RA == 0) & CPU.XER.CA);
+		CPU.XER.CA = (~RA + CPU.XER.CA > ~RB) | ((RA == 0) & CPU.XER.CA);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 		if(oe) UNK("subfeo");
 	}
@@ -2736,9 +2736,9 @@ private:
 	}
 	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
-		const u64 nRA = ~CPU.GPR[ra];
-		CPU.GPR[rd] = nRA + CPU.XER.CA;
-		CPU.XER.CA = CPU.IsCarry(nRA, CPU.XER.CA);
+		const u64 RA = CPU.GPR[ra];
+		CPU.GPR[rd] = ~RA + CPU.XER.CA;
+		CPU.XER.CA = (0x8000000000000000 & RA) && (0x8000000000000000 & CPU.GPR[rd]);//RA <= 0ull;
 		if (oe) ConLog.Warning("subfzeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2769,9 +2769,9 @@ private:
 	}
 	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
-		const u64 nRA = ~CPU.GPR[ra];
-		CPU.GPR[rd] = nRA + CPU.XER.CA + 0xFFFFFFFF;
-		CPU.XER.CA = CPU.IsCarry(nRA, CPU.XER.CA) || CPU.IsCarry(nRA, CPU.XER.CA + 0xFFFFFFFF);
+		const u64 RA = CPU.GPR[ra];
+		CPU.GPR[rd] = ~RA + CPU.XER.CA + 0xFFFFFFFFFFFFFFFF;
+		CPU.XER.CA = !(0x8000000000000000 & RA) && !(0x8000000000000000 & CPU.GPR[rd]);
 		if (oe) ConLog.Warning("subfmeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
