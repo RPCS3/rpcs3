@@ -61,7 +61,6 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	wxButton* b_forum = new wxButton(this, b_id_forum, "Forum");
 	Connect(b_id_website, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenWebsite));
 	Connect(b_id_forum, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenForum));
-	b_website->Disable();
 
 	s_panel_buttons->AddSpacer(12);
 	s_panel_buttons->Add(new wxButton(this, wxID_OK), wxLEFT, 0, 5);
@@ -82,10 +81,10 @@ AboutDialog::AboutDialog(wxWindow *parent)
 
 void AboutDialog::OpenWebsite(wxCommandEvent& WXUNUSED(event))
 {
-	wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=162");
+	wxLaunchDefaultBrowser("http://rpcs3.net/");
 }
 
 void AboutDialog::OpenForum(wxCommandEvent& WXUNUSED(event))
 {
-	wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=162");
+	wxLaunchDefaultBrowser("http://forum.rpcs3.net/");
 }

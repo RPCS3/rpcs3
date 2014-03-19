@@ -140,3 +140,88 @@ enum CellMsgDialogType
 	CELL_MSGDIALOG_DEFAULT_CURSOR_YES = 0x00000000,
 	CELL_MSGDIALOG_DEFAULT_CURSOR_NO  = 0x00000100,
 };
+
+
+// cellSysutil: cellHddGame
+enum
+{
+	// Return Codes
+	CELL_HDDGAME_RET_CANCEL            = 0,
+	CELL_HDDGAME_ERROR_CBRESULT        = 0,
+	CELL_HDDGAME_ERROR_ACCESS_ERROR    = 0,
+	CELL_HDDGAME_ERROR_INTERNAL        = 0,
+	CELL_HDDGAME_ERROR_PARAM           = 0,
+	CELL_HDDGAME_ERROR_BROKEN          = 0,
+	CELL_HDDGAME_ERROR_FAILURE         = 0,
+
+	// Callback Result
+	CELL_HDDGAME_CBRESULT_OK_CANCEL    = 1,
+	CELL_HDDGAME_CBRESULT_OK           = 0,
+	CELL_HDDGAME_CBRESULT_ERR_NOSPACE  = -1,
+	CELL_HDDGAME_CBRESULT_ERR_BROKEN   = -3,
+	CELL_HDDGAME_CBRESULT_ERR_NODATA   = -4,
+	CELL_HDDGAME_CBRESULT_ERR_INVALID  = -5,
+
+	// Character Strings
+	CELL_HDDGAME_INVALIDMSG_MAX        = 256,
+	CELL_HDDGAME_PATH_MAX              = 1055,
+	CELL_HDDGAME_SYSP_TITLE_SIZE       = 128,
+	CELL_HDDGAME_SYSP_TITLEID_SIZE     = 10,
+	CELL_HDDGAME_SYSP_VERSION_SIZE     = 6,
+	CELL_HDDGAME_SYSP_SYSTEMVER_SIZE   = 8,
+
+	// HDD Directory exists
+	CELL_HDDGAME_ISNEWDATA_EXIST       = 0,
+	CELL_HDDGAME_ISNEWDATA_NODIR       = 1,
+
+	// Languages
+	CELL_HDDGAME_SYSP_LANGUAGE_NUM     = 20,
+
+	// Stat Get
+	CELL_HDDGAME_SIZEKB_NOTCALC        = -1,
+};
+
+struct CellHddGameSystemFileParam
+{
+	u8 title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	u8 titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
+	u8 titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
+	u8 reserved0[2];
+	u8 dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	u8 reserved1[2];
+	be_t<u32> attribute;
+	be_t<u32> parentalLevel;
+	be_t<u32> resolution;
+	be_t<u32> soundFormat;
+	u8 reserved2[256];
+};
+
+struct CellHddGameStatGet
+{
+	be_t<s32> hddFreeSizeKB;
+	be_t<u32> isNewData;
+	u8 contentInfoPath[CELL_HDDGAME_PATH_MAX];
+	u8 hddGamePath[CELL_HDDGAME_PATH_MAX];
+	u8 reserved0[2];
+	be_t<u64> st_atime;
+	be_t<u64> st_mtime;
+	be_t<u64> st_ctime;
+	CellHddGameSystemFileParam getParam;
+	be_t<s32> sizeKB;
+	be_t<s32> sysSizeKB;
+	u8 reserved1[68];
+};
+
+struct CellHddGameStatSet
+{
+	CellHddGameSystemFileParam *setParam;
+	u32 reserved_addr;  // void*
+};
+
+struct CellHddGameCBResult
+{
+	be_t<u32> result;
+	be_t<s32> errNeedSizeKB;
+	u8 *invalidMsg;
+	u32 reserved_addr;  // void*
+};
