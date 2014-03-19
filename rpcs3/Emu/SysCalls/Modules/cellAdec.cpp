@@ -9,6 +9,7 @@ extern "C"
 {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
+#include "libswresample/swresample.h"
 }
 
 #include "cellAdec.h"
@@ -16,7 +17,7 @@ extern "C"
 void cellAdec_init();
 Module cellAdec(0x0006, cellAdec_init);
 
-int adecRead(void* opaque, u8* buf, int buf_size)
+int adecRawRead(void* opaque, u8* buf, int buf_size)
 {
 	AudioDecoder& adec = *(AudioDecoder*)opaque;
 
@@ -61,8 +62,9 @@ next:
 
 				adec.reader.addr = adec.task.au.addr;
 				adec.reader.size = adec.task.au.size;
+				//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 
-				adec.last_pts = adec.task.au.pts;
+				if (adec.last_pts > adec.task.au.pts) adec.last_pts = adec.task.au.pts;
 			}
 			break;
 		default:
@@ -93,6 +95,89 @@ next:
 		adec.reader.size -= buf_size;
 		return res + buf_size;
 	}
+}
+
+int adecRead(void* opaque, u8* buf, int buf_size)
+{
+	AudioDecoder& adec = *(AudioDecoder*)opaque;
+
+	int res = 0;
+
+	if (adec.reader.rem_size && adec.reader.rem)
+	{
+		if (buf_size < (int)adec.reader.rem_size)
+		{
+			ConLog.Error("adecRead: too small buf_size (rem_size = %d, buf_size = %d)", adec.reader.rem_size, buf_size);
+			Emu.Pause();
+			return 0;
+		}
+
+		memcpy(buf, adec.reader.rem, adec.reader.rem_size);
+		free(adec.reader.rem);
+		adec.reader.rem = nullptr;
+		buf += adec.reader.rem_size;
+		buf_size -= adec.reader.rem_size;
+		res += adec.reader.rem_size;
+		adec.reader.rem_size = 0;
+	}
+
+	while (buf_size)
+	{
+		u8 header[8];
+		if (adecRawRead(opaque, header, 8) < 8) break;
+		if (header[0] != 0x0f || header[1] != 0xd0)
+		{
+			ConLog.Error("adecRead: 0x0FD0 header not found");
+			Emu.Pause();
+			return 0;
+		}
+
+		if (!adec.reader.init)
+		{
+			OMAHeader oma(1 /* atrac3p id */, header[2], header[3]);
+			if (buf_size < sizeof(oma) + 8)
+			{
+				ConLog.Error("adecRead: OMAHeader writing failed");
+				Emu.Pause();
+				return 0;
+			}
+
+			memcpy(buf, &oma, sizeof(oma));
+			buf += sizeof(oma);
+			buf_size -= sizeof(oma);
+			res += sizeof(oma);
+
+			adec.reader.init = true;
+		}
+		else
+		{
+		}
+
+		u32 size = (((header[2] & 0x3) << 8) | header[3]) * 8 + 8; // data to be read before next header
+
+		//ConLog.Write("*** audio block read: size = 0x%x", size);
+
+		if (buf_size < (int)size)
+		{
+			if (adecRawRead(opaque, buf, buf_size) < buf_size) break; // ???
+			res += buf_size;
+			size -= buf_size;
+			buf_size = 0;
+			
+			adec.reader.rem = (u8*)malloc(size);
+			adec.reader.rem_size = size;
+			if (adecRawRead(opaque, adec.reader.rem, size) < (int)size) break; // ???
+		}
+		else
+		{
+			if (adecRawRead(opaque, buf, size) < (int)size) break; // ???
+			buf += size;
+			buf_size -= size;
+			res += size;
+		}
+	}
+
+	return res;
 }
 
 u32 adecOpen(AudioDecoder* data)
@@ -146,6 +231,10 @@ u32 adecOpen(AudioDecoder* data)
 
 					adec.reader.addr = 0;
 					adec.reader.size = 0;
+					adec.reader.init = false;
+					if (adec.reader.rem) free(adec.reader.rem);
+					adec.reader.rem = nullptr;
+					adec.reader.rem_size = 0;
 					adec.is_running = true;
 					adec.just_started = true;
 				}
@@ -175,8 +264,9 @@ u32 adecOpen(AudioDecoder* data)
 
 					adec.reader.addr = task.au.addr;
 					adec.reader.size = task.au.size;
+					//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
-					adec.last_pts = task.au.pts;
+					if (adec.last_pts > task.au.pts || adec.just_started) adec.last_pts = task.au.pts;
 
 					struct AVPacketHolder : AVPacket
 					{
@@ -212,11 +302,11 @@ u32 adecOpen(AudioDecoder* data)
 						if (Memory.CopyToReal(buf, task.au.addr, task.au.size)) dump.Write(buf, task.au.size);
 						free(buf);
 						dump.Close();
-					}
+					}*/
 
 					if (adec.just_started) // deferred initialization
 					{
-						err = avformat_open_input(&adec.fmt, NULL, NULL, NULL);
+						err = avformat_open_input(&adec.fmt, NULL, av_find_input_format("oma"), NULL);
 						if (err)
 						{
 							ConLog.Error("adecDecodeAu: avformat_open_input() failed");
@@ -230,7 +320,7 @@ u32 adecOpen(AudioDecoder* data)
 							Emu.Pause();
 							break;
 						}
-						err = avformat_find_stream_info(adec.fmt, NULL);
+						/*err = avformat_find_stream_info(adec.fmt, NULL);
 						if (err)
 						{
 							ConLog.Error("adecDecodeAu: avformat_find_stream_info() failed");
@@ -240,6 +330,12 @@ u32 adecOpen(AudioDecoder* data)
 						if (!adec.fmt->nb_streams)
 						{
 							ConLog.Error("adecDecodeAu: no stream found");
+							Emu.Pause();
+							break;
+						}*/
+						if (!avformat_new_stream(adec.fmt, codec))
+						{
+							ConLog.Error("adecDecodeAu: avformat_new_stream() failed");
 							Emu.Pause();
 							break;
 						}
@@ -259,7 +355,7 @@ u32 adecOpen(AudioDecoder* data)
 							break;
 						}
 						adec.just_started = false;
-					}*/
+					}
 
 					bool last_frame = false;
 
@@ -271,7 +367,7 @@ u32 adecOpen(AudioDecoder* data)
 							return;
 						}
 
-						if (!adec.ctx) // fake
+						/*if (!adec.ctx) // fake
 						{
 							AdecFrame frame;
 							frame.pts = task.au.pts;
@@ -285,7 +381,7 @@ u32 adecOpen(AudioDecoder* data)
 							adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 
 							break;
-						}
+						}*/
 
 						last_frame = av_read_frame(adec.fmt, &au) < 0;
 						if (last_frame)
@@ -336,13 +432,16 @@ u32 adecOpen(AudioDecoder* data)
 
 						if (got_frame)
 						{
-							ConLog.Write("got_frame (%d, pts=0x%llx, dts=0x%llx)", got_frame, au.pts, au.dts);					
-
-							frame.pts = task.au.pts; // ???
+							frame.pts = adec.last_pts;
+							adec.last_pts += (u64)frame.data->nb_samples * 90000 / 48000; // ???
 							frame.auAddr = task.au.addr;
 							frame.auSize = task.au.size;
 							frame.userdata = task.au.userdata;
-							frame.size = 32768; // ????
+							frame.size = frame.data->nb_samples * frame.data->channels * sizeof(float);
+
+							//ConLog.Write("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d)",
+								//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate);
+
 							adec.frames.Push(frame);
 							frame.data = nullptr; // to prevent destruction
 
@@ -569,26 +668,69 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	AdecFrame af;
 	adec->frames.Pop(af);
-	//AVFrame& frame = *af.data;
+	AVFrame* frame = af.data;
 
 	int result = CELL_OK;
 
 	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
 	{
 		result = CELL_ADEC_ERROR_FATAL;
+		goto end;
 	}
-	else
+
+	if (!af.data) // fake: empty data
 	{
-		// copy data
-		if (!af.data) // fake: empty data
-		{
-			u8* buf = (u8*)malloc(4096);
-			memset(buf, 0, 4096);
-			Memory.CopyFromReal(outBuffer_addr, buf, 4096);
-			free(buf);
-			return CELL_OK;
-		}
+		/*u8* buf = (u8*)malloc(4096);
+		memset(buf, 0, 4096);
+		Memory.CopyFromReal(outBuffer_addr, buf, 4096);
+		free(buf);*/
+		goto end;
 	}
+	// copy data
+	SwrContext* swr = nullptr;
+	u8* out = nullptr;
+
+	if (frame->format != AV_SAMPLE_FMT_FLTP)
+	{
+		ConLog.Error("cellAdecGetPcm(%d): unsupported frame format(%d)", handle, frame->format);
+		Emu.Pause();
+		goto end;
+	}
+
+	out = (u8*)malloc(af.size);
+
+	/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
+		frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
+
+	if (!swr)
+	{
+		ConLog.Error("cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
+		Emu.Pause();
+		goto end;
+	}
+	// something is wrong
+	swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples); */
+
+	// reverse byte order, extract data:
+	float* in_f[2];
+	in_f[0] = (float*)frame->extended_data[0];
+	in_f[1] = (float*)frame->extended_data[1];
+	be_t<float>* out_f = (be_t<float>*)out;
+	for (u32 i = 0; i < af.size / 8; i++)
+	{
+		out_f[i*2] = in_f[0][i];
+		out_f[i*2+1] = in_f[1][i];
+	}
+
+	if (!Memory.CopyFromReal(outBuffer_addr, out, af.size))
+	{
+		ConLog.Error("cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
+		Emu.Pause();
+	}
+
+end:
+	if (out) free(out);
+	if (swr) swr_free(&swr);
 
 	if (af.data)
 	{
@@ -620,7 +762,7 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	//AVFrame& frame = *af.data;
+	AVFrame* frame = af.data;
 
 	mem_ptr_t<CellAdecPcmItem> pcm(adec->memAddr + adec->memBias);
 
@@ -635,16 +777,17 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = af.pts; // ???
+	pcm->auInfo.pts.lower = af.pts;
 	pcm->auInfo.pts.upper = af.pts >> 32;
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;
 
 	mem_ptr_t<CellAdecAtracXInfo> atx(pcm.GetAddr() + sizeof(CellAdecPcmItem));
-	atx->samplingFreq = 48000; // ???
-	atx->nbytes = 2048; // ???
+	atx->samplingFreq = frame->sample_rate; // ???
+	atx->nbytes = frame->nb_samples * frame->channels * sizeof(float); // ???
 	atx->channelConfigIndex = CELL_ADEC_CH_STEREO; // ???
+	if (frame->channels != 2) ConLog.Error("cellAdecGetPcmItem: unsupported channel count (%d)", frame->channels);
 
 	pcmItem_ptr = pcm.GetAddr();
 

@@ -66,9 +66,10 @@ next:
 
 				vdec.reader.addr = vdec.task.addr;
 				vdec.reader.size = vdec.task.size;
+				//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", vdec.task.size, vdec.task.pts, vdec.task.dts);
 
-				vdec.last_pts = vdec.task.pts;
-				vdec.last_dts = vdec.task.dts;
+				if (vdec.last_pts > vdec.task.pts) vdec.last_pts = vdec.task.pts;
+				if (vdec.last_dts > vdec.task.dts) vdec.last_dts = vdec.task.dts;
 			}
 			break;
 		default:
@@ -205,9 +206,10 @@ u32 vdecOpen(VideoDecoder* data)
 
 					vdec.reader.addr = task.addr;
 					vdec.reader.size = task.size;
+					//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", task.size, task.pts, task.dts);
 
-					vdec.last_pts = task.pts;
-					vdec.last_dts = task.dts;
+					if (vdec.last_pts > task.pts || vdec.just_started) vdec.last_pts = task.pts;
+					if (vdec.last_dts > task.dts || vdec.just_started) vdec.last_dts = task.dts;
 
 					struct AVPacketHolder : AVPacket
 					{
@@ -350,11 +352,12 @@ u32 vdecOpen(VideoDecoder* data)
 
 						if (got_picture)
 						{
-							//ConLog.Write("got_picture (%d, vdec: pts=0x%llx, dts=0x%llx)", got_picture, au.pts, au.dts);					
-
 							frame.dts = vdec.last_dts; vdec.last_dts += 3003; // + duration???
 							frame.pts = vdec.last_pts; vdec.last_pts += 3003;
 							frame.userdata = task.userData;
+
+							//ConLog.Write("got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);	
+
 							vdec.frames.Push(frame); // !!!!!!!!
 							frame.data = nullptr; // to prevent destruction
 

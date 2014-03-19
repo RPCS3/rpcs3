@@ -541,7 +541,7 @@ public:
 
 	const u32 GetMaxAU() const
 	{
-		return 640 * 1024 + 128;
+		return (fidMajor == 0xbd) ? 2048 : 640 * 1024 + 128;
 	}
 
 	volatile bool hasunseen()
@@ -572,6 +572,11 @@ public:
 		{
 			peek_addr = last_addr;
 		}
+
+		mem_ptr_t<CellDmuxAuInfo> info(last_addr);
+		/*if (fidMajor == 0xbd) ConLog.Warning("es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
+			wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
+			(u32)info->auSize, last_addr, (u32)info->ptsLower);*/
 
 		u32 new_addr = a128(last_addr + 128 + last_size);
 		if ((new_addr + GetMaxAU()) > (memAddr + memSize))
@@ -680,6 +685,11 @@ public:
 		/*ConLog.Write("es::peek(%sAu%s): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
 			wxString(no_ex ? "" : "Ex").wx_str(), peek_addr, first_addr, last_addr, last_size);*/
 		if (!peek_addr) return false;
+
+		mem_ptr_t<CellDmuxAuInfo> info(peek_addr);
+		/*if (fidMajor == 0xbd) ConLog.Warning("es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+			wxString(update_index ? "Get" : "Peek").wx_str(),
+			wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek_addr, (u32)info->ptsLower);*/
 
 		out_data = peek_addr;
 		out_spec = out_data + sizeof(CellDmuxAuInfoEx);

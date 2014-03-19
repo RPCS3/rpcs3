@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+
+extern "C"
+{
+#include "libswscale/swscale.h"
+}
+
 #include "cellVpost.h"
 
 void cellVpost_init();
@@ -93,13 +99,15 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	u32 w = ctrlParam->inWidth;
 	u32 h = ctrlParam->inHeight;
+	u32 ow = ctrlParam->outWidth;
+	u32 oh = ctrlParam->outHeight;
 
 	if (!Memory.IsGoodAddr(inPicBuff_addr, w*h*3/2))
 	{
 		return CELL_VPOST_ERROR_E_ARG_INPICBUF_INVALID;
 	}
 
-	if (!Memory.IsGoodAddr(outPicBuff_addr, w*h*4))
+	if (!Memory.IsGoodAddr(outPicBuff_addr, ow*oh*4))
 	{
 		return CELL_VPOST_ERROR_E_ARG_OUTPICBUF_INVALID;
 	}
@@ -110,13 +118,21 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	}
 
 	ctrlParam->inWindow; // ignored
+	if (ctrlParam->inWindow.x) ConLog.Warning("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
+	if (ctrlParam->inWindow.y) ConLog.Warning("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
+	if (ctrlParam->inWindow.width != w) ConLog.Warning("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
+	if (ctrlParam->inWindow.height != h) ConLog.Warning("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
 	ctrlParam->outWindow; // ignored
+	if (ctrlParam->outWindow.x) ConLog.Warning("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
+	if (ctrlParam->outWindow.y) ConLog.Warning("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
+	if (ctrlParam->outWindow.width != ow) ConLog.Warning("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
+	if (ctrlParam->outWindow.height != oh) ConLog.Warning("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
 	ctrlParam->execType; // ignored
 	ctrlParam->scalerType; // ignored
 	ctrlParam->ipcType; // ignored
 
-	picInfo->inWidth = ctrlParam->inWidth; // copy
-	picInfo->inHeight = ctrlParam->inHeight; // copy
+	picInfo->inWidth = w; // copy
+	picInfo->inHeight = h; // copy
 	picInfo->inDepth = CELL_VPOST_PIC_DEPTH_8; // fixed
 	picInfo->inScanType = CELL_VPOST_SCAN_TYPE_P; // TODO
 	picInfo->inPicFmt = CELL_VPOST_PIC_FMT_IN_YUV420_PLANAR; // fixed
@@ -125,24 +141,25 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->inQuantRange = ctrlParam->inQuantRange; // copy
 	picInfo->inColorMatrix = ctrlParam->inColorMatrix; // copy
 
-	picInfo->outWidth = picInfo->inWidth; // TODO (resampling)
-	picInfo->outHeight = picInfo->inHeight; // TODO
+	picInfo->outWidth = ow; // copy
+	picInfo->outHeight = oh; // copy
 	picInfo->outDepth = CELL_VPOST_PIC_DEPTH_8; // fixed
 	picInfo->outScanType = CELL_VPOST_SCAN_TYPE_P; // TODO
 	picInfo->outPicFmt = CELL_VPOST_PIC_FMT_OUT_RGBA_ILV; // TODO
-	picInfo->outChromaPosType = ctrlParam->inChromaPosType; // ???
-	picInfo->outPicStruct = picInfo->inPicStruct; // ???
-	picInfo->outQuantRange = ctrlParam->inQuantRange; // ???
-	picInfo->outColorMatrix = ctrlParam->inColorMatrix; // ???
+	picInfo->outChromaPosType = ctrlParam->inChromaPosType; // ignored
+	picInfo->outPicStruct = picInfo->inPicStruct; // ignored
+	picInfo->outQuantRange = ctrlParam->inQuantRange; // ignored
+	picInfo->outColorMatrix = ctrlParam->inColorMatrix; // ignored
 
 	picInfo->userData = ctrlParam->userData; // copy
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
-
+	
 	u8* pY = (u8*)malloc(w*h); // color planes
 	u8* pU = (u8*)malloc(w*h/4);
 	u8* pV = (u8*)malloc(w*h/4);
-	u32* res = (u32*)malloc(w*h*4); // RGBA interleaved output
+	u8* pA = (u8*)malloc(w*h);
+	u32* res = (u32*)malloc(ow*oh*4); // RGBA interleaved output
 	const u8 alpha = ctrlParam->outAlpha;
 
 	if (!Memory.CopyToReal(pY, inPicBuff_addr, w*h))
@@ -163,6 +180,20 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		Emu.Pause();
 	}
 
+	memset(pA, alpha, w*h);
+
+	SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+
+	u8* in_data[4] = { pY, pU, pV, pA };
+	int in_line[4] = { w, w/2, w/2, w };
+	u8* out_data[4] = { (u8*)res, NULL, NULL, NULL };
+	int out_line[4] = { ow*4, 0, 0, 0 };
+
+	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
+
+	sws_freeContext(sws);
+
+	/*
 	for (u32 i = 0; i < h; i++) for (u32 j = 0; j < w; j++)
 	{
 		float Cr = pV[(i/2)*(w/2)+j/2] - 128;
@@ -179,9 +210,9 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		if (B < 0) B = 0;
 		if (B > 255) B = 255;
 		res[i*w+j] = ((u32)alpha << 24) | (B << 16) | (G << 8) | (R);
-	}
+	}*/
 
-	if (!Memory.CopyFromReal(outPicBuff_addr, res, w*h*4))
+	if (!Memory.CopyFromReal(outPicBuff_addr, res, ow*oh*4))
 	{
 		cellVpost.Error("cellVpostExec: data copying failed(result)");
 		Emu.Pause();
@@ -190,6 +221,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	free(pY);
 	free(pU);
 	free(pV);
+	free(pA);
 	free(res);
 	return CELL_OK;
 }
