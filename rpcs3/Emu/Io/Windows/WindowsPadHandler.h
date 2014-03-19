@@ -59,7 +59,7 @@ public:
 
 		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, WXK_LEFT, WXK_RIGHT));
 		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, WXK_UP, WXK_DOWN));
-		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, WXK_HOME, WXK_END));
-		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, WXK_PAGEUP, WXK_PAGEDOWN));
+		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, WXK_NUMPAD4, WXK_NUMPAD6));
+		m_pads[0].m_sticks.Move(new AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, WXK_NUMPAD8, WXK_NUMPAD2));
 	}
 };
