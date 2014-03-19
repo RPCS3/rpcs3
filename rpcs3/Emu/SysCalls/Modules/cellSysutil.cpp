@@ -839,7 +839,7 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
-	Emu.GetVFS().CreateFile(wxString(param->getCachePath));
+	Emu.GetVFS().CreateDir(wxString(param->getCachePath));
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }

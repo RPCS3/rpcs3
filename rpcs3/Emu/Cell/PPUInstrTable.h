@@ -489,10 +489,12 @@ namespace PPU_instr
 	/*0x0b5*/bind_instr(g1f_list, STDUX, RS, RA, RB);
 	/*0x0b7*/bind_instr(g1f_list, STWUX, RS, RA, RB);
 	/*0x0c7*/bind_instr(g1f_list, STVEWX, VS, RA, RB);
+	/*0x0c8*/bind_instr(g1f_list, SUBFZE, RD, RA, OE, RC);
 	/*0x0ca*/bind_instr(g1f_list, ADDZE, RD, RA, OE, RC);
 	/*0x0d6*/bind_instr(g1f_list, STDCX_, RS, RA, RB);
 	/*0x0d7*/bind_instr(g1f_list, STBX, RS, RA, RB);
 	/*0x0e7*/bind_instr(g1f_list, STVX, VS, RA, RB);
+	/*0x0e8*/bind_instr(g1f_list, SUBFME, RD, RA, OE, RC);
 	/*0x0e9*/bind_instr(g1f_list, MULLD, RD, RA, RB, OE, RC);
 	/*0x0ea*/bind_instr(g1f_list, ADDME, RD, RA, OE, RC);
 	/*0x0eb*/bind_instr(g1f_list, MULLW, RD, RA, RB, OE, RC);
