@@ -56,6 +56,21 @@ enum FsDirentType
 	CELL_FS_TYPE_SYMLINK	= 3,
 };
 
+enum CellFsRingBufferCopy
+{
+	CELL_FS_ST_COPY			= 0,
+	CELL_FS_ST_COPYLESS		= 1,
+};
+
+enum cellFsStStatus
+{
+	CELL_FS_ST_INITIALIZED		= 0x0001,
+	CELL_FS_ST_NOT_INITIALIZED	= 0x0002,
+	CELL_FS_ST_STOP				= 0x0100,
+	CELL_FS_ST_PROGRESS			= 0x0200,
+};
+
+
 #pragma pack(4)
 
 struct CellFsStat
@@ -92,4 +107,18 @@ struct CellFsAio
 	be_t<u32> buf_addr;
 	be_t<u64> size;
 	be_t<u64> user_data;
+};
+
+struct CellFsDirectoryEntry
+{
+	CellFsStat attribute;
+	CellFsDirent entry_name;
+};
+
+struct CellFsRingBuffer 
+{
+	be_t<u64> ringbuf_size;
+	be_t<u64> block_size;
+	be_t<u64> transfer_rate;
+	be_t<u32> copy;
 };

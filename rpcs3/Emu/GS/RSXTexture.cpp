@@ -3,12 +3,12 @@
 
 RSXTexture::RSXTexture()
 {
-  m_index = 0;
+	m_index = 0;
 }
 
 RSXTexture::RSXTexture(u8 index)
 {
-  m_index = index;
+	m_index = index;
 }
 
 void RSXTexture::Init()
@@ -38,6 +38,9 @@ void RSXTexture::Init()
 
 	// Image Rect
 	methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*32)] = (/*height*/1) | ((/*width*/1) << 16);
+
+	// Border Color
+	methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)] = 0;
 }
 
 u32 RSXTexture::GetOffset() const
@@ -193,6 +196,11 @@ u16 RSXTexture::GetWidth() const
 u16 RSXTexture::GetHeight() const
 {
 	return ((methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*32)]) & 0xffff);
+}
+
+u32 RSXTexture::GetBorderColor() const
+{
+	return methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)];
 }
 
 void RSXTexture::SetControl3(u16 depth, u32 pitch)

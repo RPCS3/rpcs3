@@ -9,6 +9,7 @@
 #include "lv2/SC_Lwcond.h"
 #include "lv2/SC_Event_flag.h"
 #include "lv2/SC_Condition.h"
+#include "lv2/SC_Spinlock.h"
 #include "Emu/event.h"
 //#define SYSCALLS_DEBUG
 
@@ -200,6 +201,12 @@ extern int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
 extern int sys_rwlock_trywlock(u32 rw_lock_id);
 extern int sys_rwlock_wunlock(u32 rw_lock_id);
 
+//sys_spinlock
+extern void sys_spinlock_initialize(mem_ptr_t<spinlock> lock);
+extern void sys_spinlock_lock(mem_ptr_t<spinlock> lock);
+extern int sys_spinlock_trylock(mem_ptr_t<spinlock> lock);
+extern void sys_spinlock_unlock(mem_ptr_t<spinlock> lock);
+
 //ppu_thread
 extern void sys_ppu_thread_exit(u64 errorcode);
 extern int sys_ppu_thread_yield();
@@ -216,16 +223,25 @@ extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 
 //memory
+extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_free(u32 start_addr);
+extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr);
+extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
 extern int sys_memory_container_create(mem32_t cid, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
-extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
-extern int sys_memory_free(u32 start_addr);
-extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
-extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> a);
+extern int sys_memory_container_get_size(u32 mem_info_addr, u32 cid);
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
+extern int sys_mmapper_allocate_fixed_address();
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id);
-extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
+extern int sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem32_t mem_id);
+extern int sys_mmapper_change_address_access_right(u32 start_addr, u64 flags);
+extern int sys_mmapper_free_address(u32 start_addr);
 extern int sys_mmapper_free_memory(u32 mem_id);
+extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
+extern int sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_addr);
+extern int sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr);
+extern int sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 q_id);
 
 //vm
 extern int sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr);
@@ -262,6 +278,19 @@ extern int cellFsTruncate(u32 path_addr, u64 size);
 extern int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size);
 extern int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size);
 extern int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count);
+extern int cellFsGetDirectoryEntries(u32 fd, mem_ptr_t<CellFsDirectoryEntry> entries, u32 entries_size, mem32_t data_count);
+extern int cellFsStReadInit(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf);
+extern int cellFsStReadFinish(u32 fd);
+extern int cellFsStReadGetRingBuf(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf);
+extern int cellFsStReadGetStatus(u32 fd, mem64_t status);
+extern int cellFsStReadGetRegid(u32 fd, mem64_t regid);
+extern int cellFsStReadStart(u32 fd, u64 offset, u64 size);
+extern int cellFsStReadStop(u32 fd);
+extern int cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize);
+extern int cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size);
+extern int cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size);
+extern int cellFsStReadWait(u32 fd, u64 size);
+extern int cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(int xfd, u64 xsize)> func);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);

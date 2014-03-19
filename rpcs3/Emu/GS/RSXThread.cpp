@@ -322,6 +322,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
+	{
+	}
+
 	case NV4097_SET_SURFACE_FORMAT:
 	{
 		u32 a0 = ARGS(0);
@@ -333,29 +337,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_surface_width = (a0 >> 16) & 0xff;
 		m_surface_height = (a0 >> 24) & 0xff;
 
-		if(count >= 2)
+		switch (min((u32)6, count))
 		{
-			m_surface_pitch_a = ARGS(1);
-
-			if(count >= 3)
-			{
-				m_surface_offset_a = ARGS(2);
-
-				if(count >= 4)
-				{
-					m_surface_offset_z = ARGS(3);
-
-					if(count >= 5)
-					{
-						m_surface_offset_b = ARGS(4);
-
-						if(count >= 6)
-						{
-							m_surface_pitch_b = ARGS(5);
-						}
-					}
-				}
-			}
+		case 6: m_surface_pitch_b  = ARGS(5);
+		case 5: m_surface_offset_b = ARGS(4);
+		case 4: m_surface_offset_z = ARGS(3);
+		case 3: m_surface_offset_a = ARGS(2);
+		case 2: m_surface_pitch_a  = ARGS(1);
 		}
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);

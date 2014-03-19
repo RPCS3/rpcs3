@@ -121,6 +121,7 @@ struct AudioPortConfig
 
 struct AudioConfig  //custom structure
 {
+	std::mutex m_mutex;
 	enum
 	{
 		AUDIO_PORT_COUNT = 8,
@@ -131,15 +132,14 @@ struct AudioConfig  //custom structure
 	bool m_is_audio_initialized;
 	bool m_is_audio_finalized;
 	u32 m_port_in_use;
-	u64 event_key;
 	u64 counter;
 	u64 start_time;
+	Array<u64> m_keys;
 
 	AudioConfig()
 		: m_is_audio_initialized(false)
 		, m_is_audio_finalized(false)
 		, m_port_in_use(0)
-		, event_key(0)
 		, counter(0)
 	{
 		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);

@@ -304,11 +304,6 @@ enum
 	PRIVATE_STREAM_2         = 0x000001bf,
 };
 
-enum
-{
-	MAX_AU = 640 * 1024 + 128, // 640 KB
-};
-
 struct DemuxerStream
 {
 	u32 addr;
@@ -385,7 +380,7 @@ struct PesHeader
 				stream.get(v);
 				if (v != 0xFF) break; // skip padding bytes
 				empty++;
-				if (empty = size) return;
+				if (empty == size) return;
 			};
 
 			if ((v & 0xF0) == 0x20 && (size - empty) >= 5) // pts only
@@ -460,7 +455,8 @@ struct DemuxerTask
 class Demuxer
 {
 public:
-	SQueue<DemuxerTask> job;
+	SQueue<DemuxerTask, 32> job;
+	SQueue<u32, 16> fbSetStream;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 cbFunc;
@@ -491,6 +487,26 @@ class ElementaryStream
 	u32 last_addr; // AU that is being written now
 	u32 last_size; // number of bytes written (after 128b header)
 	u32 peek_addr; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
+
+	bool is_full()
+	{
+		if (first_addr)
+		{
+			if (first_addr >= last_addr)
+			{
+				return (first_addr - last_addr) <= GetMaxAU();
+			}
+			else
+			{
+				// probably, always false
+				return (last_addr + GetMaxAU()) > (memAddr + memSize);
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
 	
 public:
 	Demuxer* dmux;
@@ -523,6 +539,11 @@ public:
 	{
 	}
 
+	const u32 GetMaxAU() const
+	{
+		return 640 * 1024 + 128;
+	}
+
 	volatile bool hasunseen()
 	{
 		return peek_addr;
@@ -536,21 +557,7 @@ public:
 	bool isfull()
 	{
 		SMutexLocker lock(mutex);
-		if (first_addr)
-		{
-			if (first_addr > last_addr)
-			{
-				return (first_addr - last_addr) < MAX_AU;
-			}
-			else
-			{
-				return (first_addr + MAX_AU) > (memAddr + memSize);
-			}
-		}
-		else
-		{
-			return false;
-		}
+		return is_full();
 	}
 
 	void finish(DemuxerStream& stream) // not multithread-safe
@@ -565,8 +572,9 @@ public:
 		{
 			peek_addr = last_addr;
 		}
+
 		u32 new_addr = a128(last_addr + 128 + last_size);
-		if ((new_addr + MAX_AU) > (memAddr + memSize))
+		if ((new_addr + GetMaxAU()) > (memAddr + memSize))
 		{
 			last_addr = memAddr;
 		}
@@ -581,24 +589,8 @@ public:
 	{
 		SMutexLocker lock(mutex);
 		//ConLog.Write("es::push(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
-		bool is_full;
-		if (first_addr)
-		{
-			if (first_addr > last_addr)
-			{
-				is_full = (first_addr - last_addr) < MAX_AU;
-			}
-			else
-			{
-				is_full = (first_addr + MAX_AU) > (memAddr + memSize);
-			}
-		}
-		else
-		{
-			is_full = false;
-		}
 
-		if (is_full)
+		if (is_full())
 		{
 			ConLog.Error("ElementaryStream::push(): buffer is full");
 			Emu.Pause();
@@ -646,16 +638,11 @@ public:
 		}
 	}
 
-	volatile bool canrelease()
-	{
-		return first_addr;
-	}
-
 	bool release()
 	{
 		SMutexLocker lock(mutex);
 		//ConLog.Write("es::release(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
-		if (!canrelease())
+		if (!first_addr)
 		{
 			ConLog.Error("ElementaryStream::release(): buffer is empty");
 			return false;
@@ -675,7 +662,7 @@ public:
 		{
 			first_addr = 0;
 		}
-		else if ((new_addr + MAX_AU) > (memAddr + memSize))
+		else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
 		{
 			first_addr = memAddr;
 		}
@@ -706,7 +693,7 @@ public:
 			{
 				peek_addr = 0;
 			}
-			else if ((new_addr + MAX_AU) > (memAddr + memSize))
+			else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
 			{
 				peek_addr = memAddr;
 			}

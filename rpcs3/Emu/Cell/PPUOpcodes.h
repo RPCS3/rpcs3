@@ -250,6 +250,7 @@ namespace PPU_opcodes
 		RLDICR 	= 0x1,
 		RLDIC 	= 0x2,
 		RLDIMI 	= 0x3,
+		RLDC_LR	= 0x4,
 	};
 
 	enum G_1fOpcodes //Field 21 - 30
@@ -342,6 +343,7 @@ namespace PPU_opcodes
 		DIVD 	= 0x1e9,
 		DIVW 	= 0x1eb,
 		LVLX	= 0x207, //Load Vector Left Indexed
+		LDBRX	= 0x214,
 		LWBRX 	= 0x216,
 		LFSX 	= 0x217,
 		SRW 	= 0x218,
@@ -646,6 +648,7 @@ public:
 	virtual void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc) = 0;
 	virtual void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) = 0;
 	virtual void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) = 0;
+	virtual void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc) = 0;
 	virtual void CMP(u32 crfd, u32 l, u32 ra, u32 rb) = 0;
 	virtual void TW(u32 to, u32 ra, u32 rb) = 0;
 	virtual void LVSL(u32 vd, u32 ra, u32 rb) = 0;
@@ -733,6 +736,7 @@ public:
 	virtual void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void LVLX(u32 vd, u32 ra, u32 rb) = 0;
+	virtual void LDBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LWBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LFSX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void SRW(u32 ra, u32 rs, u32 rb, bool rc) = 0;

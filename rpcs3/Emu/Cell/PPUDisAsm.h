@@ -1206,6 +1206,13 @@ private:
 	{
 		DisAsm_R2_INT2_RC("rldimi", ra, rs, sh, mb, rc);
 	}
+	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc)
+	{
+		if (is_r)
+			DisAsm_R3_INT2_RC("rldcr", ra, rs, rb, m_eb, 0, rc);
+		else
+			DisAsm_R3_INT2_RC("rldcl", ra, rs, rb, m_eb, 0, rc);
+	}
 	void CMP(u32 crfd, u32 l, u32 ra, u32 rb)
 	{
 		DisAsm_CR1_R2(wxString::Format("cmp%s", wxString(l ? "d" : "w").wx_str()), crfd, ra, rb);
@@ -1613,6 +1620,10 @@ private:
 	void LVLX(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("lvlx", vd, ra, rb);
+	}
+	void LDBRX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("ldbrx", rd, ra, rb);
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{

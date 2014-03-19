@@ -10,6 +10,39 @@ enum
 	IDFlag_Dir = 2,
 };
 
+struct FsRingBuffer
+{
+	u64 m_ringbuf_size;
+	u64 m_block_size;
+	u64 m_transfer_rate;
+	u32 m_copy;
+};
+
+struct FsRingBufferConfig
+{
+	FsRingBuffer m_ring_buffer;
+	u32 m_buffer;
+	u64 m_fs_status;
+	u64 m_regid;
+	u32 m_alloc_mem_size;
+	u32 m_current_addr;
+
+	FsRingBufferConfig()
+		: m_fs_status(CELL_FS_ST_NOT_INITIALIZED)
+		, m_regid(0)
+		, m_alloc_mem_size(0)
+		, m_current_addr(0)
+	{
+		memset(&m_ring_buffer, 0, sizeof(FsRingBufferConfig));
+	}
+
+	~FsRingBufferConfig()
+	{
+		memset(&m_ring_buffer, 0, sizeof(FsRingBufferConfig));
+	}
+} m_fs_config;
+
+
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
@@ -290,11 +323,16 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 {
 	const wxString& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.wx_str(), mode);
-
-	vfsDir dir;
+	
+	/*vfsDir dir;
 	if(dir.IsExists(ps3_path))
 		return CELL_EEXIST;
 	if(!dir.Create(ps3_path))
+		return CELL_EBUSY;*/
+
+	if(Emu.GetVFS().ExistsDir(ps3_path))
+		return CELL_EEXIST;
+	if(!Emu.GetVFS().CreateDir(ps3_path))
 		return CELL_EBUSY;
 
 	return CELL_OK;
@@ -482,5 +520,219 @@ int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count)
 	block_size = 4096; // ?
 	block_count = 10485760; // ?
 
+	return CELL_OK;
+}
+
+int cellFsGetDirectoryEntries(u32 fd, mem_ptr_t<CellFsDirectoryEntry> entries, u32 entries_size, mem32_t data_count)
+{
+	sys_fs.Log("cellFsGetDirectoryEntries(fd=%d, entries_addr=0x%x, entries_size = 0x%x, data_count_addr=0x%x)", fd, entries.GetAddr(), entries_size, data_count.GetAddr());
+
+	vfsDirBase* directory;
+	if(!sys_fs.CheckId(fd, directory))
+		return CELL_ESRCH;
+	if(!entries.IsGood() || !data_count.IsGood())
+		return CELL_EFAULT;
+
+	const DirEntryInfo* info = directory->Read();
+	if(info)
+	{
+		data_count = 1;
+		Memory.WriteString(entries.GetAddr()+2, info->name.wx_str());
+		entries->entry_name.d_namlen = info->name.Length();
+		entries->entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+
+		entries->attribute.st_mode = 
+		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
+		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
+		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
+
+		entries->attribute.st_uid = 0;
+		entries->attribute.st_gid = 0;
+		entries->attribute.st_atime_ = 0; //TODO
+		entries->attribute.st_mtime_ = 0; //TODO
+		entries->attribute.st_ctime_ = 0; //TODO
+		entries->attribute.st_blksize = 4096;
+	}
+	else
+	{
+		data_count = 0;
+	}
+
+	return CELL_OK;
+}
+
+int cellFsStReadInit(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
+{
+	sys_fs.Warning("cellFsStReadInit(fd=%d, ringbuf_addr=0x%x)", fd, ringbuf.GetAddr());
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	if(!ringbuf.IsGood())
+		return CELL_EFAULT;
+
+	FsRingBuffer& buffer = m_fs_config.m_ring_buffer;
+
+	buffer.m_block_size = ringbuf->block_size;
+	buffer.m_copy = ringbuf->copy;
+	buffer.m_ringbuf_size = ringbuf->ringbuf_size;
+	buffer.m_transfer_rate = ringbuf->transfer_rate;
+
+	if(buffer.m_ringbuf_size < 0x40000000) // If the size is less than 1MB
+		m_fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
+	m_fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+
+	// alloc memory
+	m_fs_config.m_buffer = Memory.Alloc(m_fs_config.m_alloc_mem_size, 1024);
+	memset(Memory + m_fs_config.m_buffer, 0, m_fs_config.m_alloc_mem_size);
+
+	m_fs_config.m_fs_status = CELL_FS_ST_INITIALIZED;
+
+	return CELL_OK;
+}
+
+int cellFsStReadFinish(u32 fd)
+{
+	sys_fs.Warning("cellFsStReadFinish(fd=%d)", fd);
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	Memory.Free(m_fs_config.m_buffer);
+	m_fs_config.m_fs_status = CELL_FS_ST_NOT_INITIALIZED;
+
+	return CELL_OK;
+}
+
+int cellFsStReadGetRingBuf(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
+{
+	sys_fs.Warning("cellFsStReadGetRingBuf(fd=%d, ringbuf_addr=0x%x)", fd, ringbuf.GetAddr());
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	if(!ringbuf.IsGood())
+		return CELL_EFAULT;
+
+	FsRingBuffer& buffer = m_fs_config.m_ring_buffer;
+
+	ringbuf->block_size = buffer.m_block_size;
+	ringbuf->copy = buffer.m_copy;
+	ringbuf->ringbuf_size = buffer.m_ringbuf_size;
+	ringbuf->transfer_rate = buffer.m_transfer_rate;
+
+	sys_fs.Warning("*** fs stream config: block_size=0x%llx, copy=%d, ringbuf_size = 0x%llx, transfer_rate = 0x%llx", ringbuf->block_size, ringbuf->copy,
+																								ringbuf->ringbuf_size, ringbuf->transfer_rate);
+	return CELL_OK;
+}
+
+int cellFsStReadGetStatus(u32 fd, mem64_t status)
+{
+	sys_fs.Warning("cellFsStReadGetRingBuf(fd=%d, status_addr=0x%x)", fd, status.GetAddr());
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	status = m_fs_config.m_fs_status;
+
+	return CELL_OK;
+}
+
+int cellFsStReadGetRegid(u32 fd, mem64_t regid)
+{
+	sys_fs.Warning("cellFsStReadGetRingBuf(fd=%d, regid_addr=0x%x)", fd, regid.GetAddr());
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	regid = m_fs_config.m_regid;
+
+	return CELL_OK;
+}
+
+int cellFsStReadStart(u32 fd, u64 offset, u64 size)
+{
+	sys_fs.Warning("TODO: cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	m_fs_config.m_current_addr = m_fs_config.m_buffer + (u32)offset;
+	m_fs_config.m_fs_status = CELL_FS_ST_PROGRESS;
+
+	return CELL_OK;
+}
+
+int cellFsStReadStop(u32 fd)
+{
+	sys_fs.Warning("cellFsStReadStop(fd=%d)", fd);
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	m_fs_config.m_fs_status = CELL_FS_ST_STOP;
+
+	return CELL_OK;
+}
+
+int cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize)
+{
+	sys_fs.Warning("TODO: cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.GetAddr());
+	
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	if (rsize.GetAddr() && !rsize.IsGood()) return CELL_EFAULT;
+
+	m_fs_config.m_regid += size;
+	rsize = m_fs_config.m_regid;
+
+	return CELL_OK;
+}
+
+int cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size)
+{
+	sys_fs.Warning("TODO: cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr_addr.GetAddr(), size.GetAddr());
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	if (!addr_addr.IsGood() && !size.IsGood()) return CELL_EFAULT;
+	
+	return CELL_OK;
+}
+
+int cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
+{
+	sys_fs.Warning("TODO: cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size = 0x%llx)", fd, addr_addr, size);
+	
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+
+	if (!Memory.IsGoodAddr(addr_addr)) return CELL_EFAULT;
+
+	return CELL_OK;
+}
+
+int cellFsStReadWait(u32 fd, u64 size)
+{
+	sys_fs.Warning("TODO: cellFsStReadWait(fd=%d, size = 0x%llx)", fd, size);
+	
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	
+	return CELL_OK;
+}
+
+int cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(int xfd, u64 xsize)> func)
+{
+	sys_fs.Warning("TODO: cellFsStReadWaitCallback(fd=%d, size = 0x%llx, func_addr = 0x%x)", fd, size, func.GetAddr());
+
+	if (!func.IsGood())
+		return CELL_EFAULT;
+
+	vfsStream* file;
+	if(!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	
 	return CELL_OK;
 }

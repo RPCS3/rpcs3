@@ -148,13 +148,28 @@ static func_caller* sc_table[1024] =
 	bind_func(sys_vm_get_statistics),                       //312 (0x138)
 	null_func, null_func, //314
 	null_func, null_func, null_func, null_func, null_func, //319
-	null_func, null_func, null_func, null_func, bind_func(sys_memory_container_create), //324
-	bind_func(sys_memory_container_destroy), null_func, null_func, null_func, null_func, //329
-	bind_func(sys_mmapper_allocate_address), null_func, null_func, null_func, null_func, //334
-	null_func, null_func, null_func, null_func, null_func, //339
-	null_func, bind_func(sys_memory_container_create), bind_func(sys_memory_container_destroy), null_func, null_func, //344
-	null_func, null_func, null_func, bind_func(sys_memory_allocate), bind_func(sys_memory_free), //349
-	null_func, bind_func(sys_memory_get_page_attribute), bind_func(sys_memory_get_user_memory_size), null_func, null_func, //354
+	null_func, null_func, null_func, null_func, //323
+	bind_func(sys_memory_container_create),                 //324
+	bind_func(sys_memory_container_destroy),                //325
+	bind_func(sys_mmapper_allocate_fixed_address),          //326
+	bind_func(sys_mmapper_enable_page_fault_notification),  //327
+	null_func, null_func, //329
+	bind_func(sys_mmapper_allocate_address),                //330
+	bind_func(sys_mmapper_free_address),                    //331
+	null_func, null_func, null_func, null_func, //335
+	bind_func(sys_mmapper_change_address_access_right),     //336
+	bind_func(sys_mmapper_search_and_map),                  //337
+	null_func, null_func, null_func, //340
+	bind_func(sys_memory_container_create),                 //341
+	bind_func(sys_memory_container_destroy),                //342
+	bind_func(sys_memory_container_get_size),				//343
+	null_func, null_func, null_func, null_func, //347
+	bind_func(sys_memory_allocate),							//348
+	bind_func(sys_memory_free),								//349
+	bind_func(sys_memory_allocate_from_container),			//350
+	bind_func(sys_memory_get_page_attribute),				//351
+	bind_func(sys_memory_get_user_memory_size),				//352
+	null_func, null_func, //354
 	null_func, null_func, null_func, null_func, null_func, //359
 	null_func, null_func, null_func, null_func, null_func, //364
 	null_func, null_func, null_func, null_func, null_func, //369

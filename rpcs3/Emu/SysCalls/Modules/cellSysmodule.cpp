@@ -166,7 +166,7 @@ int cellSysmoduleLoadModule(u16 id)
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	if(m->IsLoaded())
+	if(m->IsLoaded() && id != 0x10) // CELL_SYSMODULE_GCM_SYS and CELL_SYSMODULE_GCM share the same ID
 	{
 		return CELL_SYSMODULE_ERROR_DUPLICATED;
 	}

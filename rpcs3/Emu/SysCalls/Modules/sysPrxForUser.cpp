@@ -167,7 +167,9 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0x44265c08, _sys_heap_memalign);
 
 	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
+	sysPrxForUser.AddFunc(0x70258515, sys_mmapper_allocate_memory_from_container);
 	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);
+	sysPrxForUser.AddFunc(0x4643ba6e, sys_mmapper_unmap_memory);
 	sysPrxForUser.AddFunc(0x409ad939, sys_mmapper_free_memory);
 
 	sysPrxForUser.AddFunc(0x1ed454ce, sys_spu_elf_get_information);
@@ -184,6 +186,11 @@ void sysPrxForUser_init()
 	sysPrxForUser.AddFunc(0xe9a1bd84, sys_lwcond_signal_all);
 	sysPrxForUser.AddFunc(0x52aadadf, sys_lwcond_signal_to);
 	sysPrxForUser.AddFunc(0x2a6d9d51, sys_lwcond_wait);
+
+	sysPrxForUser.AddFunc(0x8c2bb498, sys_spinlock_initialize);
+	sysPrxForUser.AddFunc(0xa285139d, sys_spinlock_lock);
+	sysPrxForUser.AddFunc(0x722a0254, sys_spinlock_trylock);
+	sysPrxForUser.AddFunc(0x5267cb35, sys_spinlock_unlock);
 
 	sysPrxForUser.AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
 	sysPrxForUser.AddFunc(0xfc52a7a9, sys_game_process_exitspawn);

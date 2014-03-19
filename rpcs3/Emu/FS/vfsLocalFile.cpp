@@ -56,7 +56,7 @@ bool vfsLocalFile::Create(const wxString& path)
 	for(uint p=1; p < path.Len() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.Len() && path[p] != '\0'; p++)
-			if(path[p] == '\\') break;
+			if(path[p] == '/') break;
 
 		if(p == path.Len() || path[p] == '\0')
 			break;
@@ -70,7 +70,7 @@ bool vfsLocalFile::Create(const wxString& path)
 	}
 
 	//create file
-	if(path(path.Len() - 1, 1) != '\\' && !wxFileExists(path))
+	if(path(path.Len() - 1, 1) != '/' && !wxFileExists(path))
 	{
 		wxFile f;
 		return f.Create(path);

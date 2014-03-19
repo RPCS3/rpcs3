@@ -2,7 +2,6 @@
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
 #include "Gui/RSXDebugger.h"
-#include "OpenGL.h"
 
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
@@ -376,33 +375,24 @@ bool GLGSRender::LoadProgram()
 	if(!m_cur_shader_prog)
 	{
 		ConLog.Warning("LoadProgram: m_cur_shader_prog == NULL");
-
 		return false;
 	}
-
-	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog, m_shader_prog);
-
-	if(m_fp_buf_num == -1) m_shader_prog.Decompile(*m_cur_shader_prog);
 
 	if(!m_cur_vertex_prog)
 	{
 		ConLog.Warning("LoadProgram: m_cur_vertex_prog == NULL");
-
 		return false;
 	}
 
-	//ConLog.Write("Create program");
+	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog, m_shader_prog);
 	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
 
-	if(m_vp_buf_num == -1) 
-	{
-		ConLog.Warning("VP not found in buffer!");
-		m_vertex_prog.Decompile(*m_cur_vertex_prog);
-	}
+	//ConLog.Write("Create program");
 
 	if(m_fp_buf_num == -1)
 	{
 		ConLog.Warning("FP not found in buffer!");
+		m_shader_prog.Decompile(*m_cur_shader_prog);
 		m_shader_prog.Wait();
 		m_shader_prog.Compile();
 		checkForGlError("m_shader_prog.Compile");
@@ -413,6 +403,8 @@ bool GLGSRender::LoadProgram()
 
 	if(m_vp_buf_num == -1)
 	{
+		ConLog.Warning("VP not found in buffer!");
+		m_vertex_prog.Decompile(*m_cur_vertex_prog);
 		m_vertex_prog.Wait();
 		m_vertex_prog.Compile();
 		checkForGlError("m_vertex_prog.Compile");
@@ -650,10 +642,11 @@ void GLGSRender::OnInitThread()
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-#else
+// Undefined reference: glXSwapIntervalEXT
+/*#else
 	if (GLXDrawable drawable = glXGetCurrentDrawable()){
 		glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-	}
+	}*/
 #endif
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);

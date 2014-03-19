@@ -277,6 +277,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Spinlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp" />
@@ -304,6 +305,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp" />
@@ -312,6 +314,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
     <ClCompile Include="Emu\SysCalls\Static.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />

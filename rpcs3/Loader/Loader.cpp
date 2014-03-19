@@ -165,7 +165,7 @@ bool Loader::Load()
 	/*
 	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
 	wxString ps3_path;
-	const wxString& psf_path = root + "\\" + "PARAM.SFO";
+	const wxString& psf_path = root + "/" + "PARAM.SFO";
 	vfsFile f(psf_path);
 	if(f.IsOpened())
 	{

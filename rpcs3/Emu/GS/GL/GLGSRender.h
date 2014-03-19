@@ -1,11 +1,9 @@
 #pragma once
 #include "Emu/GS/GSRender.h"
 #include "Emu/GS/RSXThread.h"
-#include <wx/glcanvas.h>
 #include "GLBuffers.h"
-#include "GLProgram.h"
-#include "OpenGL.h"
 #include "GLProgramBuffer.h"
+#include <wx/glcanvas.h>
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -304,7 +302,7 @@ public:
 	void Save(RSXTexture& tex)
 	{
 		static const wxString& dir_path = "textures";
-		static const wxString& file_fmt = dir_path + "\\" + "tex[%d].png";
+		static const wxString& file_fmt = dir_path + "/" + "tex[%d].png";
 
 		if(!wxDirExists(dir_path)) wxMkdir(dir_path);
 

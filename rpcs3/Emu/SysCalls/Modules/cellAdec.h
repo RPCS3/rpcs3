@@ -1064,6 +1064,9 @@ public:
 	const u32 cbArg;
 	u32 memBias;
 
+	AdecTask task;
+	u64 last_pts;
+
 	CPUThread* adecCb;
 
 	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)

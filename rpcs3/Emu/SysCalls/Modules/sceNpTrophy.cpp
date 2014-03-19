@@ -4,6 +4,7 @@
 
 #include "sceNp.h"
 #include "sceNpTrophy.h"
+
 #include "Loader/TRP.h"
 
 void sceNpTrophy_unload();
@@ -110,29 +111,50 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	if (!Memory.IsGoodAddr(statusCb_addr))
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (options & (~(u64)1))
-		SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
+		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	if (context >= s_npTrophyInstance.contexts.size())
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
-
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
-	int ret;
 	TRPLoader trp(*(ctxt.trp_stream));
+	if (!trp.LoadHeader())
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+
+	// Rename or discard certain entries based on the files found
+	char target [32];
+	sprintf(target, "TROP_%02d.SFM", Ini.SysLanguage.GetValue());
+
+	if (trp.ContainsEntry(target)) {
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RemoveEntry("TROP.SFM");
+		trp.RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (trp.ContainsEntry("TROP.SFM")) {
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!trp.ContainsEntry("TROPCONF.SFM")) {
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (int i=0; i<=18; i++) {
+		sprintf(target, "TROP_%02d.SFM", i);
+		if (i != Ini.SysLanguage.GetValue())
+			trp.RemoveEntry(target);
+	}
 
 	// TODO: Get the path of the current user
-	if (trp.Install("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name))
-		ret = CELL_OK;
-	else
-		ret = SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	if (!trp.Install("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name))
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	
 	// TODO: Callbacks
 	
-	trp.Close();
-	return ret;
+	return CELL_OK;
 }
 
 int sceNpTrophyGetGameProgress()
@@ -181,9 +203,32 @@ int sceNpTrophyAbortHandle()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetGameInfo()
+int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDetails> details, mem_ptr_t<SceNpTrophyGameData> data)
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy.Warning("sceNpTrophyGetGameInfo(context=%d, handle=%d, details_addr=0x%x, data_addr=0x%x)",
+		context, handle, details.GetAddr(), data.GetAddr());
+
+	if (!s_npTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	if (!details.IsGood() || !data.IsGood())
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	// TODO: There are other possible errors
+
+	// sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+
+	// TODO: This data is faked, implement a XML reader and get it from TROP.SFM
+	memcpy(details->title, "Trophy Set", SCE_NP_TROPHY_NAME_MAX_SIZE);
+	memcpy(details->description, "Hey! Implement a XML reader, and load the description from TROP.SFM", SCE_NP_TROPHY_DESCR_MAX_SIZE);
+	details->numTrophies = 0;
+	details->numPlatinum = 0;
+	details->numGold = 0;
+	details->numSilver = 0;
+	details->numBronze = 0;
+	data->unlockedTrophies = 0;
+	data->unlockedPlatinum = 0;
+	data->unlockedGold = 0;
+	data->unlockedSilver = 0;
+	data->unlockedBronze = 0;
 	return CELL_OK;
 }
 
@@ -229,6 +274,8 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 	// TODO: There are other possible errors
 
 	// sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+
+	// TODO: This data is faked, implement a XML reader and get it from TROP.SFM
 	memcpy(details->name, "Some Trophy", SCE_NP_TROPHY_NAME_MAX_SIZE);
 	memcpy(details->description, "Hey! Implement a XML reader, and load the description from TROP.SFM", SCE_NP_TROPHY_DESCR_MAX_SIZE);
 	details->hidden = false;

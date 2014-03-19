@@ -18,7 +18,7 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const mem_ptr_t<CellCodecEsFi
 					 const u32 esSpecificInfo_addr, mem_ptr_t<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x1000000; // 0x45fa49 from ps3
+		attr->memSize = 0x3000000; // 0x45fa49 from ps3
 	else
 		attr->memSize = 0x200000; // 0x73d9 from ps3
 
@@ -156,6 +156,16 @@ u32 dmuxOpen(Demuxer* data)
 
 							//ConLog.Write("*** AT3+ AU sent (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 
+							stream.skip(4);
+							len -= 4;
+							u32 abc;
+							stream.peek(abc);
+							if (abc == 0x5548D00F)
+							{
+								stream.skip(8);
+								len -= 8;
+							}
+
 							es.push(stream, len - pes.size - 3, pes);
 							es.finish(stream);
 							
@@ -231,7 +241,7 @@ u32 dmuxOpen(Demuxer* data)
 								continue;
 							}
 
-							//hack: reconstruction of MPEG2-PS stream for vdec module (seems it works without it too)
+							//reconstruction of MPEG2-PS stream for vdec module
 							stream = backup;
 							es.push(stream, len + 6 /*- pes.size - 3*/, pes);
 						}
@@ -288,18 +298,32 @@ u32 dmuxOpen(Demuxer* data)
 			{
 			case dmuxSetStream:
 				{
+					if (stream.discontinuity)
+					{
+						for (u32 i = 0; i < 192; i++)
+						{
+							if (esALL[i])
+							{
+								esALL[i]->reset();
+							}
+						}
+						updates_count = 0;
+						updates_signaled = 0;
+					}
+
+					if (updates_count != updates_signaled)
+					{
+						ConLog.Error("dmuxSetStream: stream update inconsistency (input=%d, signaled=%d)", updates_count, updates_signaled);
+						return;
+					}
+
+					updates_count++;
 					stream = task.stream;
 					ConLog.Write("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 						stream.addr, stream.size, stream.discontinuity, stream.userdata);
-					if (stream.discontinuity) for (u32 i = 0; i < 192; i++)
-					{
-						if (esALL[i])
-						{
-							esALL[i]->reset();
-						}
-					}
-					updates_count++;
+
 					dmux.is_running = true;
+					dmux.fbSetStream.Push(task.stream.addr); // feedback
 				}
 				break;
 
@@ -592,12 +616,12 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 		return CELL_DMUX_ERROR_FATAL;
 	}
 
-	while (dmux->is_running) // !!!
+	if (dmux->is_running)
 	{
 		if (Emu.IsStopped())
 		{
 			ConLog.Warning("cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
-			break;
+			return CELL_OK;
 		}
 		Sleep(1);
 		return CELL_DMUX_ERROR_BUSY;
@@ -612,14 +636,16 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 
 	dmux->job.Push(task);
 
-	while (!dmux->is_running)
+	u32 addr;
+	if (!dmux->fbSetStream.Pop(addr))
 	{
-		if (Emu.IsStopped())
-		{
-			ConLog.Warning("cellDmuxSetStream(%d) aborted", demuxerHandle);
-			break;
-		}
-		Sleep(1);
+		ConLog.Warning("cellDmuxSetStream(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		return CELL_OK;
+	}
+	if (addr != info.addr)
+	{
+		ConLog.Error("cellDmuxSetStream(%d): wrong stream queued (right=0x%x, queued=0x%x)", demuxerHandle, info.addr, addr);
+		Emu.Pause();
 	}
 	return CELL_OK;
 }
@@ -921,7 +947,7 @@ int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_
 
 int cellDmuxReleaseAu(u32 esHandle)
 {
-	cellDmux.Log("cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
+	cellDmux.Log("(disabled) cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
 
 	return CELL_OK;
 
@@ -931,21 +957,8 @@ int cellDmuxReleaseAu(u32 esHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (!es->canrelease())
-	{
-		cellDmux.Error("cellDmuxReleaseAu: no AU");
-		return CELL_DMUX_ERROR_SEQ;
-	}
-
-	/*DemuxerTask task(dmuxReleaseAu);
-	task.es.es = esHandle;
-	task.es.es_ptr = es;
-
-	es->dmux->job.Push(task);*/
-
 	if (!es->release())
 	{
-		cellDmux.Error("cellDmuxReleaseAu failed");
 		return CELL_DMUX_ERROR_SEQ;
 	}
 	return CELL_OK;
@@ -953,7 +966,7 @@ int cellDmuxReleaseAu(u32 esHandle)
 
 int cellDmuxFlushEs(u32 esHandle)
 {
-	cellDmux.Log("cellDmuxFlushEs(esHandle=0x%x)", esHandle);
+	cellDmux.Warning("cellDmuxFlushEs(esHandle=0x%x)", esHandle);
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
