@@ -46,8 +46,8 @@ u64 rotl64(const u64 x, const u8 n) { return (x << n) | (x >> (64 - n)); }
 u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 */
 
-#define rotl32 _rotl
-#define rotr32 _rotr
+#define rotl32(x, n) _rotl64((u64)(u32)x | ((u64)(u32)x << 32), n)
+#define rotr32(x, n) _rotr64((u64)(u32)x | ((u64)(u32)x << 32), n)
 #define rotl64 _rotl64
 #define rotr64 _rotr64
 
@@ -2177,7 +2177,7 @@ private:
 	}	
 	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
-		const u32 mask = rotate_mask[32 + mb][32 + me];
+		const u64 mask = rotate_mask[32 + mb][32 + me];
 		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl32(CPU.GPR[rs], sh) & mask);
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
