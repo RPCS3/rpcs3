@@ -469,6 +469,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Spinlock.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\TROPUSR.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

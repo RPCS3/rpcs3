@@ -1,11 +1,14 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "wx/xml/xml.h"
 
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
 #include "Loader/TRP.h"
+#include "Loader/TROPUSR.h"
+#include "Emu/SysCalls/lv2/SC_Time.h"
 
 void sceNpTrophy_unload();
 void sceNpTrophy_init();
@@ -17,6 +20,8 @@ struct sceNpTrophyInternalContext
 	// TODO
 	std::string trp_name;
 	vfsStream* trp_stream;
+
+	TROPUSRLoader* tropusr;
 };
 
 struct sceNpTrophyInternal
@@ -149,9 +154,14 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	}
 
 	// TODO: Get the path of the current user
-	if (!trp.Install("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name))
+	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name;
+	if (!trp.Install(trophyPath))
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	
+	TROPUSRLoader* tropusr = new TROPUSRLoader();
+	tropusr->Load(trophyPath + "/TROPUSR.DAT", trophyPath + "/TROPCONF.SFM");
+	ctxt.tropusr = tropusr;
+
 	// TODO: Callbacks
 	
 	return CELL_OK;
@@ -183,7 +193,6 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
-
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -214,21 +223,46 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
-	// sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	wxString path;
+	wxXmlDocument doc;
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
+	doc.Load(path);
 
-	// TODO: This data is faked, implement a XML reader and get it from TROP.SFM
-	memcpy(details->title, "Trophy Set", SCE_NP_TROPHY_NAME_MAX_SIZE);
-	memcpy(details->description, "Hey! Implement a XML reader, and load the description from TROP.SFM", SCE_NP_TROPHY_DESCR_MAX_SIZE);
-	details->numTrophies = 0;
-	details->numPlatinum = 0;
-	details->numGold = 0;
-	details->numSilver = 0;
-	details->numBronze = 0;
-	data->unlockedTrophies = 0;
-	data->unlockedPlatinum = 0;
-	data->unlockedGold = 0;
-	data->unlockedSilver = 0;
-	data->unlockedBronze = 0;
+	std::string titleName;
+	std::string titleDetail;
+	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
+		if (n->GetName() == "title-name")
+			titleName = n->GetNodeContent().mb_str();
+		if (n->GetName() == "title-detail")
+			titleDetail = n->GetNodeContent().mb_str();
+		if (n->GetName() == "trophy")
+		{
+			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
+			
+			details->numTrophies++;
+			switch (n->GetAttribute("ttype").mb_str()[0]) {
+			case 'B': details->numBronze++;   break;
+			case 'S': details->numSilver++;   break;
+			case 'G': details->numGold++;     break;
+			case 'P': details->numPlatinum++; break;
+			}
+			
+			if (ctxt.tropusr->GetTrophyUnlockState(trophy_id))
+			{
+				data->unlockedTrophies++;
+				switch (n->GetAttribute("ttype").mb_str()[0]) {
+				case 'B': data->unlockedBronze++;   break;
+				case 'S': data->unlockedSilver++;   break;
+				case 'G': data->unlockedGold++;     break;
+				case 'P': data->unlockedPlatinum++; break;
+				}
+			}
+		}
+	}
+
+	memcpy(details->title, titleName.c_str(), SCE_NP_TROPHY_NAME_MAX_SIZE);
+	memcpy(details->description, titleDetail.c_str(), SCE_NP_TROPHY_DESCR_MAX_SIZE);
 	return CELL_OK;
 }
 
@@ -238,9 +272,29 @@ int sceNpTrophyDestroyHandle()
 	return CELL_OK;
 }
 
-int sceNpTrophyUnlockTrophy()
+int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, mem32_t platinumId)
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy.Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
+		context, handle, trophyId, platinumId.GetAddr());
+	
+	if (!s_npTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	if (!platinumId.IsGood())
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	// TODO: There are other possible errors
+
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	if (trophyId >= ctxt.tropusr->GetTrophiesCount())
+		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
+	if (ctxt.tropusr->GetTrophyUnlockState(trophyId))
+		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
+
+	u64 timestamp1 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
+	u64 timestamp2 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
+	ctxt.tropusr->UnlockTrophy(trophyId, timestamp1, timestamp2);
+	ctxt.tropusr->Save("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPUSR.DAT");
+
+	platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
 	return CELL_OK;
 }
 
@@ -250,9 +304,31 @@ int sceNpTrophyTerm()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetTrophyUnlockState()
+int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, mem_ptr_t<SceNpTrophyFlagArray> flags, mem32_t count)
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
+		context, handle, flags.GetAddr(), count.GetAddr());
+
+	if (!s_npTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	if (!flags.IsGood() || !count.IsGood())
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	// TODO: There are other possible errors
+
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	count = ctxt.tropusr->GetTrophiesCount();
+	if (count.GetValue() > 128)
+		ConLog.Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+
+	// Pack up to 128 bools in u32 flag_bits[4]
+	for (u32 id=0; id<count.GetValue(); id++)
+	{
+		if (ctxt.tropusr->GetTrophyUnlockState(id))
+			flags->flag_bits[id/32] |= 1<<(id%32);
+		else
+			flags->flag_bits[id/32] &= ~(1<<(id%32));
+	}
+
 	return CELL_OK;
 }
 
@@ -273,14 +349,43 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
-	// sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	wxString path;
+	wxXmlDocument doc;
+	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
+	doc.Load(path);
 
-	// TODO: This data is faked, implement a XML reader and get it from TROP.SFM
-	memcpy(details->name, "Some Trophy", SCE_NP_TROPHY_NAME_MAX_SIZE);
-	memcpy(details->description, "Hey! Implement a XML reader, and load the description from TROP.SFM", SCE_NP_TROPHY_DESCR_MAX_SIZE);
-	details->hidden = false;
-	details->trophyId = trophyId;
-	details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;
+	std::string name;
+	std::string detail;
+	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
+		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").mb_str())))
+		{
+			details->trophyId = trophyId;
+			switch (n->GetAttribute("ttype").mb_str()[0]) {
+			case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
+			case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
+			case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
+			case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
+			}
+
+			switch (n->GetAttribute("hidden").mb_str()[0]) {
+			case 'y': details->hidden = true;  break;
+			case 'n': details->hidden = false; break;
+			}
+
+			for (wxXmlNode *n2 = n->GetChildren(); n2; n2 = n2->GetNext()) {
+				if (n2->GetName() == "name")   name = n2->GetNodeContent().mb_str();
+				if (n2->GetName() == "detail") detail = n2->GetNodeContent().mb_str();
+			}
+
+			data->trophyId = trophyId;
+			data->unlocked = ctxt.tropusr->GetTrophyUnlockState(trophyId);
+			data->timestamp.tick = ctxt.tropusr->GetTrophyTimestamp(trophyId);
+		}		
+	}
+
+	memcpy(details->name, name.c_str(), SCE_NP_TROPHY_NAME_MAX_SIZE);
+	memcpy(details->description, detail.c_str(), SCE_NP_TROPHY_DESCR_MAX_SIZE);
 	return CELL_OK;
 }
 

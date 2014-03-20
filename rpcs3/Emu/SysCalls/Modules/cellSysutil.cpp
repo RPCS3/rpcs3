@@ -943,5 +943,8 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
 
 	cellSysutil.AddFunc(0x9117df20, cellHddGameCheck);
-
+	//cellSysutil.AddFunc(0x4bdec82a, cellHddGameCheck2);
+	//cellSysutil.AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
+	//cellSysutil.AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
+	//cellSysutil.AddFunc(0xafd605b3, cellHddGameExitBroken);
 }

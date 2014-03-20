@@ -338,6 +338,7 @@
     <ClCompile Include="Loader\PKG.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\SELF.cpp" />
+    <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="stdafx.cpp">

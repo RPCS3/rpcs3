@@ -55,6 +55,13 @@ enum
 	SCE_NP_TROPHY_GAME_DESCR_MAX_SIZE  = 1024,
 	SCE_NP_TROPHY_NAME_MAX_SIZE        = 128,
 	SCE_NP_TROPHY_DESCR_MAX_SIZE       = 1024,
+
+	SCE_NP_TROPHY_FLAG_SETSIZE         = 128,
+	SCE_NP_TROPHY_FLAG_BITS_SHIFT      = 5,
+
+	SCE_NP_TROPHY_INVALID_CONTEXT      = 0,
+	SCE_NP_TROPHY_INVALID_HANDLE       = 0,
+	SCE_NP_TROPHY_INVALID_TROPHY_ID    = -1,
 };
 
 enum SceNpTrophyGrade
@@ -97,9 +104,15 @@ struct SceNpTrophyDetails
 	u8 reserved[3];
 };
 
-struct SceNpTrophyData {
+struct SceNpTrophyData
+{
 	CellRtcTick timestamp;
 	be_t<s32> trophyId;     // SceNpTrophyId
 	bool unlocked;
 	u8 reserved[3];
+};
+
+struct SceNpTrophyFlagArray
+{
+	u32 flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
 };
