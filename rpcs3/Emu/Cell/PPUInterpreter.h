@@ -3046,6 +3046,34 @@ private:
 
 		Memory.ReadRight(CPU.VPR[vd]._u8, addr & ~0xf, eb);
 	}
+	void LSWI(u32 rd, u32 ra, u32 nb)
+	{
+		u64 EA = ra ? CPU.GPR[ra] : 0;
+		u64 N = nb ? nb : 32;
+		u8 reg = CPU.GPR[rd];
+
+		while (N > 0)
+		{
+			if (N > 3)
+			{
+				CPU.GPR[reg] = Memory.Read32(EA);
+				EA += 4;
+				N -= 4;
+			}
+			else
+			{
+				u32 buf = 0;
+				while (N > 0)
+				{
+					N = N - 1;
+					buf |= Memory.Read8(EA) <<(N*8) ;
+					EA = EA + 1;
+				}
+				CPU.GPR[reg] = buf;
+			}
+			reg = (reg + 1) % 32;
+		}
+	}
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
@@ -3088,6 +3116,34 @@ private:
 		const u8 eb = addr & 0xf;
 
 		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+	}
+	void STSWI(u32 rd, u32 ra, u32 nb)
+	{
+			u64 EA = ra ? CPU.GPR[ra] : 0;
+			u64 N = nb ? nb : 32;
+			u8 reg = CPU.GPR[rd];
+
+			while (N > 0)
+			{
+				if (N > 3)
+				{
+					Memory.Write32(EA, CPU.GPR[reg]);
+					EA += 4;
+					N -= 4;
+				}
+				else
+				{
+					u32 buf = CPU.GPR[reg];
+					while (N > 0)
+					{
+						N = N - 1;
+						Memory.Write8(EA, (0xFF000000 & buf) >> 24);
+						buf <<= 8;
+						EA = EA + 1;
+					}
+				}
+				reg = (reg + 1) % 32;
+			}
 	}
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
