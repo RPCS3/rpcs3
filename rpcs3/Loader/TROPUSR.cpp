@@ -132,7 +132,7 @@ bool TROPUSRLoader::Generate(std::string& filepath, std::string& configpath)
 		{
 			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
 			u32 trophy_grade;
-			switch (n->GetAttribute("ttype").mb_str()[0])
+			switch (((const char *)n->GetAttribute("ttype").mb_str())[0])
 			{
 			case 'B': trophy_grade = 4; break;
 			case 'S': trophy_grade = 3; break;

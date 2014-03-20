@@ -2,6 +2,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 											
+// TODO: Is this really a module? Or is everything part of cellSysutil?
 void cellSaveData_init();
 Module cellSaveData("cellSaveData", cellSaveData_init);
 
@@ -21,206 +22,227 @@ enum
 	CELL_SAVEDATA_ERROR_NOUSER,
 };
 
+// Constants
+enum
+{
+	// CellSaveDataParamSize
+	CELL_SAVEDATA_DIRNAME_SIZE          = 32,
+	CELL_SAVEDATA_FILENAME_SIZE         = 13,
+	CELL_SAVEDATA_SECUREFILEID_SIZE     = 16,
+	CELL_SAVEDATA_PREFIX_SIZE           = 256,
+	CELL_SAVEDATA_LISTITEM_MAX          = 2048,
+	CELL_SAVEDATA_SECUREFILE_MAX        = 113,
+	CELL_SAVEDATA_DIRLIST_MAX           = 2048,
+	CELL_SAVEDATA_INVALIDMSG_MAX        = 256,
+	CELL_SAVEDATA_INDICATORMSG_MAX      = 64,
+
+	// CellSaveDataSystemParamSize
+	CELL_SAVEDATA_SYSP_TITLE_SIZE       = 128,
+	CELL_SAVEDATA_SYSP_SUBTITLE_SIZE    = 128,
+	CELL_SAVEDATA_SYSP_DETAIL_SIZE      = 1024,
+	CELL_SAVEDATA_SYSP_LPARAM_SIZE      = 8,
+};
+
 // Datatypes
 struct CellSaveDataSetList
 { 
-	unsigned int sortType;
-	unsigned int sortOrder;
-	char *dirNamePrefix;
+	be_t<u32> sortType;
+	be_t<u32> sortOrder;
+	be_t<u32> dirNamePrefix_addr; // char*
 };
 
 struct CellSaveDataSetBuf
 { 
-	unsigned int dirListMax;
-	unsigned int fileListMax;
-	unsigned int reserved[6];
-	unsigned int bufSize;
-	void *buf;
+	be_t<u32> dirListMax;
+	be_t<u32> fileListMax;
+	be_t<u32> reserved[6];
+	be_t<u32> bufSize;
+	be_t<u32> buf_addr; // void*
 };
 
 struct CellSaveDataNewDataIcon 
 { 
-	char *title;
-	unsigned int iconBufSize;
-	void *iconBuf;
+	be_t<u32> title_addr; // char*
+	be_t<u32> iconBufSize;
+	be_t<u32> iconBuf_addr; // void*
 };
 
 struct CellSaveDataListNewData 
 { 
-	unsigned int iconPosition;
-	char *dirName;
-	CellSaveDataNewDataIcon *icon;
+	be_t<u32> iconPosition;
+	be_t<u32> dirName_addr; // char*
+	be_t<u32> icon_addr;    // CellSaveDataNewDataIcon*
 };
 
 struct CellSaveDataDirList
 { 
-	char dirName; //[CELL_SAVEDATA_DIRNAME_SIZE]; 
-	char listParam; //[CELL_SAVEDATA_SYSP_LPARAM_SIZE]; 
+	s8 dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
+	s8 listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE]; 
 };
 
 struct CellSaveDataListGet
 { 
-	unsigned int dirNum;
-	unsigned int dirListNum;
-	CellSaveDataDirList *dirList;
+	be_t<u32> dirNum;
+	be_t<u32> dirListNum;
+	be_t<u32> dirList_addr; // CellSaveDataDirList*
 };
 
 struct CellSaveDataListSet
 { 
-	unsigned int focusPosition;
-	char *focusDirName;
-	unsigned int fixedListNum;
-	CellSaveDataDirList *fixedList;
-	CellSaveDataListNewData *newData;
+	be_t<u32> focusPosition;
+	be_t<u32> focusDirName_addr; // char*
+	be_t<u32> fixedListNum;
+	be_t<u32> fixedList_addr; // CellSaveDataDirList*
+	be_t<u32> newData_addr;   // CellSaveDataListNewData*
 };
 
 struct CellSaveDataFixedSet
 { 
-	char *dirName;
-	CellSaveDataNewDataIcon *newIcon;
-	unsigned int option;
+	be_t<u32> dirName_addr; // char*
+	be_t<u32> newIcon_addr; // CellSaveDataNewDataIcon*
+	be_t<u32> option;
 };
 
 struct CellSaveDataSystemFileParam 
 { 
-	char title;			//[CELL_SAVEDATA_SYSP_TITLE_SIZE]; 
-	char subTitle;		//[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE]; 
-	char detail;		//[CELL_SAVEDATA_SYSP_DETAIL_SIZE]; 
-	unsigned int attribute; 
-	char reserved2[4]; 
-	char listParam;		//[CELL_SAVEDATA_SYSP_LPARAM_SIZE]; 
-	char reserved[256]; 
+	s8 title[CELL_SAVEDATA_SYSP_TITLE_SIZE]; 
+	s8 subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE]; 
+	s8 detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE]; 
+	be_t<u32> attribute; 
+	s8 reserved2[4]; 
+	s8 listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE]; 
+	s8 reserved[256]; 
 };
 
 struct CellSaveDataDirStat
 { 
-	s64 st_atime_;
-	s64 st_mtime_;
-	s64 st_ctime_;
-	char dirName; //[CELL_SAVEDATA_DIRNAME_SIZE]; 
+	be_t<s64> st_atime_;
+	be_t<s64> st_mtime_;
+	be_t<s64> st_ctime_;
+	s8 dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
 };
 
 struct CellSaveDataFileStat
 { 
-	unsigned int fileType;
-	char reserved1[4];
-	u64 st_size;
-	s64 st_atime_;
-	s64 st_mtime_;
-	s64 st_ctime_;
-	char fileName; //[CELL_SAVEDATA_FILENAME_SIZE]; 
-	char reserved2[3];
+	be_t<u32> fileType;
+	u8 reserved1[4];
+	be_t<u64> st_size;
+	be_t<s64> st_atime_;
+	be_t<s64> st_mtime_;
+	be_t<s64> st_ctime_;
+	u8 fileName[CELL_SAVEDATA_FILENAME_SIZE]; 
+	u8 reserved2[3];
 };
 
 struct CellSaveDataStatGet
 { 
-	int hddFreeSizeKB;
-	unsigned int isNewData;
+	be_t<s32> hddFreeSizeKB;
+	be_t<u32> isNewData;
 	CellSaveDataDirStat dir;
 	CellSaveDataSystemFileParam getParam;
-	unsigned int bind;
-	int sizeKB;
-	int sysSizeKB;
-	unsigned int fileNum;
-	unsigned int fileListNum;
-	CellSaveDataFileStat *fileList;
+	be_t<u32> bind;
+	be_t<s32> sizeKB;
+	be_t<s32> sysSizeKB;
+	be_t<u32> fileNum;
+	be_t<u32> fileListNum;
+	be_t<u32> fileList_addr; // CellSaveDataFileStat*
 };
 
 struct CellSaveDataAutoIndicator
 { 
-	unsigned int dispPosition;
-	unsigned int dispMode;
-	char *dispMsg;
-	unsigned int picBufSize;
-	void *picBuf;
+	be_t<u32> dispPosition;
+	be_t<u32> dispMode;
+	be_t<u32> dispMsg_addr; // char*
+	be_t<u32> picBufSize;
+	be_t<u32> picBuf_addr; // void*
 };
 
 struct CellSaveDataStatSet 
 { 
-	CellSaveDataSystemFileParam *setParam;
-	unsigned int reCreateMode;
-	CellSaveDataAutoIndicator *indicator;
+	be_t<u32> setParam_addr;  // CellSaveDataSystemFileParam*
+	be_t<u32> reCreateMode;
+	be_t<u32> indicator_addr; // CellSaveDataAutoIndicator*
 };
 
 struct CellSaveDataFileGet
 { 
-	unsigned int excSize;
+	be_t<u32> excSize;
 }; 
 
 struct CellSaveDataFileSet 
 { 
-	unsigned int fileOperation;
-	void *reserved;
-	unsigned int fileType;
-	unsigned char secureFileId; //[CELL_SAVEDATA_SECUREFILEID_SIZE]; 
-	char *fileName;
-	unsigned int fileOffset;
-	unsigned int fileSize;
-	unsigned int fileBufSize;
-	void *fileBuf;
+	be_t<u32> fileOperation;
+	be_t<u32> reserved_addr; // void*
+	be_t<u32> fileType;
+	u8 secureFileId[CELL_SAVEDATA_SECUREFILEID_SIZE]; 
+	be_t<u32> fileName_addr; // char*
+	be_t<u32> fileOffset;
+	be_t<u32> fileSize;
+	be_t<u32> fileBufSize;
+	be_t<u32> fileBuf_addr; // void*
 };
 
 struct CellSaveDataCBResult 
 { 
-	int result;
-	unsigned int progressBarInc;
-	int errNeedSizeKB;
-	char *invalidMsg;
-	void *userdata;
+	be_t<s32> result;
+	be_t<u32> progressBarInc;
+	be_t<s32> errNeedSizeKB;
+	be_t<u32> invalidMsg_addr; // char*
+	be_t<u32> userdata_addr;   // void*
 };
 
 struct CellSaveDataDoneGet
 { 
-	int excResult;
-	char dirName; //[CELL_SAVEDATA_DIRNAME_SIZE]; 
-	int sizeKB;
-	int hddFreeSizeKB;
+	be_t<s32> excResult;
+	s8 dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
+	be_t<s32> sizeKB;
+	be_t<s32> hddFreeSizeKB;
 };
 
 // Functions
-int cellSaveDataListSave2() //unsigned int version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataListSave2() //u32 version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListLoad2() //unsigned int version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataListLoad2() //u32 version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataFixedSave2() //unsigned int version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile,sys_memory_container_t container, void *userdata
+int cellSaveDataFixedSave2() //u32 version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile,sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataFixedLoad2() //unsigned int version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataFixedLoad2() //u32 version, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataAutoSave2() //unsigned int version, const char *dirName, unsigned int errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataAutoSave2() //u32 version, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataAutoLoad2() //unsigned int version, const char *dirName, unsigned int errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataAutoLoad2() //u32 version, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListAutoSave() //unsigned int version, unsigned int errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile,sys_memory_container_t container, void *userdata
+int cellSaveDataListAutoSave() //u32 version, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile,sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListAutoLoad() //unsigned int version, unsigned int errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataListAutoLoad() //u32 version, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
@@ -238,49 +260,49 @@ int cellSaveDataFixedDelete() //CellSaveDataSetList *setList, CellSaveDataSetBuf
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListSave() //unsigned int version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListSave() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListLoad() //unsigned int version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListLoad() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedSave() //unsigned int version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedSave() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedLoad() //unsigned int version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedLoad() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserAutoSave() //unsigned int version, CellSysutilUserId userId, const char *dirName, unsigned int errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserAutoSave() //u32 version, CellSysutilUserId userId, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserAutoLoad() //unsigned int version, CellSysutilUserId userId, const char *dirName, unsigned int errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserAutoLoad() //u32 version, CellSysutilUserId userId, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListAutoSave() //unsigned int version, CellSysutilUserId userId, unsigned int errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListAutoSave() //u32 version, CellSysutilUserId userId, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListAutoLoad() //unsigned int version, CellSysutilUserId userId, unsigned int errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListAutoLoad() //u32 version, CellSysutilUserId userId, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
@@ -302,31 +324,31 @@ int cellSaveDataListDelete() //CellSaveDataSetList *setList, CellSaveDataSetBuf 
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListImport() //CellSaveDataSetList *setList, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataListImport() //CellSaveDataSetList *setList, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListExport() //CellSaveDataSetList *setList, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataListExport() //CellSaveDataSetList *setList, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataFixedImport() //const char *dirName, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataFixedImport() //const char *dirName, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataFixedExport() //const char *dirName, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataFixedExport() //const char *dirName, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, unsigned int *bind, int *sizeKB
+int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, mem32_t bind, mem32_t sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
@@ -338,31 +360,31 @@ int cellSaveDataUserListDelete() //CellSysutilUserId userId, CellSaveDataSetList
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListImport() //CellSysutilUserId userId, CellSaveDataSetList *setList, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListImport() //CellSysutilUserId userId, CellSaveDataSetList *setList, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListExport() //CellSysutilUserId userId, CellSaveDataSetList *setList, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListExport() //CellSysutilUserId userId, CellSaveDataSetList *setList, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedImport() //CellSysutilUserId userId, const char *dirName, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedImport() //CellSysutilUserId userId, const char *dirName, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedExport() //CellSysutilUserId userId, const char *dirName, unsigned int maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedExport() //CellSysutilUserId userId, const char *dirName, u32 maxSizeKB, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, unsigned int *bind, int *sizeKB
+int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, mem32_t bind, mem32_t sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSaveData);
 	return CELL_SAVEDATA_RET_OK;

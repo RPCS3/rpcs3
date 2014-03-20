@@ -241,7 +241,7 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
 			
 			details->numTrophies++;
-			switch (n->GetAttribute("ttype").mb_str()[0]) {
+			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
 			case 'B': details->numBronze++;   break;
 			case 'S': details->numSilver++;   break;
 			case 'G': details->numGold++;     break;
@@ -251,7 +251,7 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 			if (ctxt.tropusr->GetTrophyUnlockState(trophy_id))
 			{
 				data->unlockedTrophies++;
-				switch (n->GetAttribute("ttype").mb_str()[0]) {
+				switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
 				case 'B': data->unlockedBronze++;   break;
 				case 'S': data->unlockedSilver++;   break;
 				case 'G': data->unlockedGold++;     break;
@@ -361,14 +361,14 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").mb_str())))
 		{
 			details->trophyId = trophyId;
-			switch (n->GetAttribute("ttype").mb_str()[0]) {
+			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
 			case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
 			case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
 			case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
 			case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 			}
 
-			switch (n->GetAttribute("hidden").mb_str()[0]) {
+			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
 			case 'y': details->hidden = true;  break;
 			case 'n': details->hidden = false; break;
 			}
