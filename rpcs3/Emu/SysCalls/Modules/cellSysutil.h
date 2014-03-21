@@ -204,9 +204,9 @@ struct CellHddGameStatGet
 	u8 contentInfoPath[CELL_HDDGAME_PATH_MAX];
 	u8 hddGamePath[CELL_HDDGAME_PATH_MAX];
 	u8 reserved0[2];
-	be_t<u64> st_atime;
-	be_t<u64> st_mtime;
-	be_t<u64> st_ctime;
+	be_t<u64> st_atime__;
+	be_t<u64> st_mtime__;
+	be_t<u64> st_ctime__;
 	CellHddGameSystemFileParam getParam;
 	be_t<s32> sizeKB;
 	be_t<s32> sysSizeKB;

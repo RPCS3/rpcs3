@@ -15,7 +15,7 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 add_definitions(-DGL_GLEXT_PROTOTYPES)
 add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 
-find_package(wxWidgets COMPONENTS core base net aui gl REQUIRED)
+find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)

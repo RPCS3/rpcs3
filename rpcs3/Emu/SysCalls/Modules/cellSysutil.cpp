@@ -864,9 +864,9 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	get->hddFreeSizeKB = 40000000; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
-	get->st_atime  = 0; // TODO
-	get->st_ctime  = 0; // TODO
-	get->st_mtime  = 0; // TODO
+	get->st_atime__  = 0; // TODO
+	get->st_ctime__  = 0; // TODO
+	get->st_mtime__  = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
 	memcpy(get->contentInfoPath, ("/dev_hdd0/game/"+dirName).c_str(), CELL_HDDGAME_PATH_MAX);
 	memcpy(get->hddGamePath, ("/dev_hdd0/game/"+dirName+"/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
