@@ -202,7 +202,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().ToStdString().c_str());
+		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 

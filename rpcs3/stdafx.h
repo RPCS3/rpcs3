@@ -34,6 +34,10 @@
 #include <wx/wxprec.h>
 #endif
 
+#ifndef _WIN32
+#define wx_str() ToStdString().c_str()
+#endif
+
 #include <cstdint>
 
 typedef unsigned int uint;
