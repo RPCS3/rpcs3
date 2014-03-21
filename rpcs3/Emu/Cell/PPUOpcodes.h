@@ -301,11 +301,13 @@ namespace PPU_opcodes
 		STDUX 	= 0x0b5,
 		STWUX 	= 0x0b7,
 		STVEWX	= 0x0c7, //Store Vector Element Word Indexed
-		ADDZE 	= 0x0ca,
+		SUBFZE	= 0x0c8,
+		ADDZE	= 0x0ca,
 		STDCX_ 	= 0x0d6,
 		STBX 	= 0x0d7,
 		STVX 	= 0x0e7,
-		MULLD 	= 0x0e9,
+		SUBFME	= 0x0e8,
+		MULLD	= 0x0e9,
 		ADDME 	= 0x0ea,
 		MULLW 	= 0x0eb,
 		DCBTST 	= 0x0f6,
@@ -347,7 +349,8 @@ namespace PPU_opcodes
 		SRW 	= 0x218,
 		SRD 	= 0x21b,
 		LVRX	= 0x227, //Load Vector Right Indexed
-		LFSUX 	= 0x237,
+		LFSUX	= 0x237,
+		LSWI	= 0x255,
 		SYNC 	= 0x256,
 		LFDX 	= 0x257,
 		LFDUX	= 0x277,
@@ -355,6 +358,7 @@ namespace PPU_opcodes
 		STWBRX 	= 0x296,
 		STFSX 	= 0x297,
 		STVRX	= 0x2a7, //Store Vector Right Indexed
+		STSWI	= 0x2d5,
 		STFDX	= 0x2d7, //Store Floating-Point Double Indexed
 		LVLXL	= 0x307, //Load Vector Left Indexed Last
 		LHBRX 	= 0x316,
@@ -693,11 +697,13 @@ public:
 	virtual void STDUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVEWX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void ADDZE(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void STDCX_(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STBX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STVX(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
+	virtual void SUBFME(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void ADDME(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DCBTST(u32 th, u32 ra, u32 rb) = 0;
@@ -738,6 +744,7 @@ public:
 	virtual void SRW(u32 ra, u32 rs, u32 rb, bool rc) = 0;
 	virtual void SRD(u32 ra, u32 rs, u32 rb, bool rc) = 0;
 	virtual void LVRX(u32 vd, u32 ra, u32 rb) = 0;
+	virtual void LSWI(u32 rd, u32 ra, u32 nb) = 0;
 	virtual void LFSUX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void SYNC(u32 l) = 0;
 	virtual void LFDX(u32 frd, u32 ra, u32 rb) = 0;
@@ -746,6 +753,7 @@ public:
 	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STVRX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STSWI(u32 rd, u32 ra, u32 nb) = 0;
 	virtual void STFDX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void LVLXL(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void LHBRX(u32 rd, u32 ra, u32 rb) = 0;

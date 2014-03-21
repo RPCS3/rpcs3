@@ -110,6 +110,7 @@ public:
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<u8> HLELogLvl;
+	IniEntry<u8> SysLanguage;
 
 	IniEntry<int> PadHandlerLeft;
 	IniEntry<int> PadHandlerDown;
@@ -178,6 +179,9 @@ public:
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
 		HLELogLvl.Init("HLELogLvl", path);
+
+		path = DefPath + "/" + "System";
+		SysLanguage.Init("SysLanguage", path);
 	}
 
 	void Load()
@@ -200,6 +204,7 @@ public:
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(0);
+		SysLanguage.Load(1);
 
 		PadHandlerLeft.Load(static_cast<int>('A'));
 		PadHandlerDown.Load(static_cast<int>('S'));
@@ -239,6 +244,7 @@ public:
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
+		SysLanguage.Save();
 
 		PadHandlerLeft.Save();
 		PadHandlerDown.Save();

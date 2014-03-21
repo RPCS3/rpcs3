@@ -202,7 +202,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().ToStdString().c_str());
 	}
 }
 
@@ -328,6 +328,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
 	wxBoxSizer* s_subpanel1(new wxBoxSizer(wxVERTICAL));
 	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_subpanel3(new wxBoxSizer(wxVERTICAL));
 
 	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, &diag, _("CPU") ) );
 	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Decoder") ) );
@@ -348,6 +349,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_hle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("HLE / Misc.") ) );
 	wxStaticBoxSizer* s_round_hle_log_lvl( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Log lvl") ) );
 
+	wxStaticBoxSizer* s_round_sys( new wxStaticBoxSizer( wxVERTICAL, &diag, _("System") ) );
+	wxStaticBoxSizer* s_round_sys_lang( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Language") ) );
+
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(&diag, wxID_ANY);
@@ -357,6 +361,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_mouse_handler = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_audio_out = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_hle_loglvl = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_sys_lang = new wxComboBox(&diag, wxID_ANY);
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(&diag, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_log_prog   = new wxCheckBox(&diag, wxID_ANY, "Log vertex/fragment programs");
@@ -405,6 +410,25 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
+	cbox_sys_lang->Append("Japanese");
+	cbox_sys_lang->Append("English (US)");
+	cbox_sys_lang->Append("French");
+	cbox_sys_lang->Append("Spanish");
+	cbox_sys_lang->Append("German");
+	cbox_sys_lang->Append("Italian");
+	cbox_sys_lang->Append("Dutch");
+	cbox_sys_lang->Append("Portuguese (PT)");
+	cbox_sys_lang->Append("Russian");
+	cbox_sys_lang->Append("Korean");
+	cbox_sys_lang->Append("Chinese (Trad.)");
+	cbox_sys_lang->Append("Chinese (Simp.)");
+	cbox_sys_lang->Append("Finnish");
+	cbox_sys_lang->Append("Swedish");
+	cbox_sys_lang->Append("Danish");
+	cbox_sys_lang->Append("Norwegian");
+	cbox_sys_lang->Append("Polish");
+	cbox_sys_lang->Append("English (UK)");
+
 	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
@@ -428,6 +452,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_mouse_handler->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out->SetSelection(Ini.AudioOutMode.GetValue());
 	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
+	cbox_sys_lang->SetSelection(Ini.SysLanguage.GetValue());
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -461,6 +486,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_sys->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
+
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
 	s_b_panel->Add(new wxButton(&diag, wxID_OK), wxSizerFlags().Border(wxALL, 5).Center());
@@ -474,9 +502,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel2->Add(s_round_io, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel2->Add(s_round_audio, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel2->Add(s_round_hle, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel3->Add(s_round_sys, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_panel->Add(s_subpanel3, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	diag.SetSizerAndFit( s_panel );
 	
@@ -500,6 +530,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
+		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 
 		Ini.Save();
 	}

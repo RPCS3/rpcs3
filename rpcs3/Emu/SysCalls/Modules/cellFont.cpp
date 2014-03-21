@@ -459,6 +459,9 @@ void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buf
 	surface->pixelSizeByte	= pixelSizeByte;
 	surface->width			= w;
 	surface->height			= h;
+
+	if (!buffer_addr)
+		surface->buffer_addr = Memory.Alloc(bufferWidthByte * h, 1); // TODO: Huge memory leak
 }
 
 void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)

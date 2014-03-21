@@ -30,7 +30,13 @@ class TRPLoader
 
 public:
 	TRPLoader(vfsStream& f);
+	~TRPLoader();
 	virtual bool Install(std::string dest, bool show = false);
 	virtual bool LoadHeader(bool show = false);
+
+	virtual bool ContainsEntry(char *filename);
+	virtual void RemoveEntry(char *filename);
+	virtual void RenameEntry(char *oldname, char *newname);
+
 	virtual bool Close();
 };

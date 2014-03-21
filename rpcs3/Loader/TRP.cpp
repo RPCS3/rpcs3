@@ -5,14 +5,20 @@ TRPLoader::TRPLoader(vfsStream& f) : trp_f(f)
 {
 }
 
+TRPLoader::~TRPLoader()
+{
+	Close();
+}
+
 bool TRPLoader::Install(std::string dest, bool show)
 {
-	if(!trp_f.IsOpened()) return false;
-	if(!LoadHeader(show)) return false;
+	if(!trp_f.IsOpened())
+		return false;
 
 	if (!dest.empty() && dest.back() != '/')
 		dest += '/';
 
+	Emu.GetVFS().CreateDir(dest);
 	for (const TRPEntry& entry : m_entries)
 	{
 		char* buffer = new char [entry.size];
@@ -28,13 +34,11 @@ bool TRPLoader::Install(std::string dest, bool show)
 	return true;
 }
 
-bool TRPLoader::Close()
-{
-	return trp_f.Close();
-}
-
 bool TRPLoader::LoadHeader(bool show)
 {
+	if(!trp_f.IsOpened())
+		return false;
+
 	trp_f.Seek(0);
 	if (trp_f.Read(&m_header, sizeof(TRPHeader)) != sizeof(TRPHeader))
 		return false;
@@ -58,4 +62,37 @@ bool TRPLoader::LoadHeader(bool show)
 	}
 
 	return true;
+}
+
+bool TRPLoader::ContainsEntry(char *filename)
+{
+	for (const TRPEntry& entry : m_entries) {
+		if (!strcmp(entry.name, filename))
+			return true;
+	}
+	return false;
+}
+
+void TRPLoader::RemoveEntry(char *filename)
+{
+	std::vector<TRPEntry>::iterator i = m_entries.begin();
+	while (i != m_entries.end()) {
+		if (!strcmp(i->name, filename))
+			i = m_entries.erase(i);
+		else
+			i++;
+	}
+}
+
+void TRPLoader::RenameEntry(char *oldname, char *newname)
+{
+	for (const TRPEntry& entry : m_entries) {
+		if (!strcmp(entry.name, oldname))
+			memcpy((void*)entry.name, newname, 32);
+	}
+}
+
+bool TRPLoader::Close()
+{
+	return trp_f.Close();
 }

@@ -302,7 +302,7 @@ public:
 	void Save(RSXTexture& tex)
 	{
 		static const wxString& dir_path = "textures";
-		static const wxString& file_fmt = dir_path + "\\" + "tex[%d].png";
+		static const wxString& file_fmt = dir_path + "/" + "tex[%d].png";
 
 		if(!wxDirExists(dir_path)) wxMkdir(dir_path);
 

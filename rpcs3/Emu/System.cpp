@@ -141,7 +141,7 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	ConLog.Write("Loading '%s'...", m_path.wx_str());
+	ConLog.Write("Loading '%s'...", m_path.ToStdString().c_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
@@ -149,7 +149,7 @@ void Emulator::Load()
 	ConLog.Write("Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().wx_str(), m_vfs.m_devices[i].GetLocalPath().wx_str());
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().ToStdString().c_str(), m_vfs.m_devices[i].GetLocalPath().ToStdString().c_str());
 	}
 	ConLog.SkipLn();
 
@@ -162,7 +162,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path.wx_str(), m_elf_path.wx_str());
+		ConLog.Error("Elf not found! (%s - %s)", m_path.ToStdString().c_str(), m_elf_path.ToStdString().c_str());
 		return;
 	}
 
@@ -441,7 +441,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", wxString(path).wx_str());
+		ConLog.Error("'%s' is broken", path.c_str());
 		return;
 	}
 

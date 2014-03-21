@@ -58,5 +58,8 @@ public:
 	u16 GetWidth() const;
 	u16 GetHeight() const;
 
+	// Border Color
+	u32 GetBorderColor() const;
+
 	void SetControl3(u16 depth, u32 pitch);
 };

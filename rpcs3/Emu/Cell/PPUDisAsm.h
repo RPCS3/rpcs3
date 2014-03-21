@@ -1418,6 +1418,10 @@ private:
 	{
 		DisAsm_V1_R2("stvewx", vs, ra, rb);
 	}
+	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		DisAsm_R2_OE_RC("subfze", rd, ra, oe, rc);
+	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("addze", rd, ra, oe, rc);
@@ -1433,6 +1437,10 @@ private:
 	void STVX(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("stvx", vd, ra, rb);
+	}
+	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		DisAsm_R2_OE_RC("subfme", rd, ra, oe, rc);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -1637,6 +1645,10 @@ private:
 	{
 		DisAsm_V1_R2("lvrx", vd, ra, rb);
 	}
+	void LSWI(u32 rd, u32 ra, u32 nb)
+	{
+		DisAsm_R2_INT1("lswi", rd, ra, nb);
+	}
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		DisAsm_F1_R2("lfsux", frd, ra, rb);
@@ -1668,6 +1680,10 @@ private:
 	void STVRX(u32 sd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("stvrx", sd, ra, rb);
+	}
+	void STSWI(u32 rd, u32 ra, u32 nb)
+	{
+		DisAsm_R2_INT1("stswi", rd, ra, nb);
 	}
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{

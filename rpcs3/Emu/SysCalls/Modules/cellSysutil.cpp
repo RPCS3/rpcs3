@@ -3,147 +3,13 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/Audio/sysutil_audio.h"
 
-// Parameter IDs
-enum
-{
-	//Integers
-	CELL_SYSUTIL_SYSTEMPARAM_ID_LANG							= 0x0111,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN				= 0x0112,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT						= 0x0114,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT						= 0x0115,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE						= 0x0116,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME						= 0x0117,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL				= 0x0121,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT	= 0x0123,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT		= 0x0141,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ					= 0x0151,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE						= 0x0152,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE					= 0x0153,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD	= 0x0154,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD	= 0x0155,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF						= 0x0156,
+#include "cellSysutil.h"
 
-	//Strings
-	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME						= 0x113,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME				= 0x131,
-};
-
-enum
-{
-	CELL_SYSUTIL_LANG_JAPANESE		= 0,
-	CELL_SYSUTIL_LANG_ENGLISH_US	= 1,
-	CELL_SYSUTIL_LANG_FRENCH		= 2,
-	CELL_SYSUTIL_LANG_SPANISH		= 3,
-	CELL_SYSUTIL_LANG_GERMAN		= 4,
-	CELL_SYSUTIL_LANG_ITALIAN		= 5,
-	CELL_SYSUTIL_LANG_DUTCH			= 6,
-	CELL_SYSUTIL_LANG_PORTUGUESE_PT	= 7,
-	CELL_SYSUTIL_LANG_RUSSIAN		= 8,
-	CELL_SYSUTIL_LANG_KOREAN		= 9,
-	CELL_SYSUTIL_LANG_CHINESE_T		= 10,
-	CELL_SYSUTIL_LANG_CHINESE_S		= 11,
-	CELL_SYSUTIL_LANG_FINNISH		= 12,
-	CELL_SYSUTIL_LANG_SWEDISH		= 13,
-	CELL_SYSUTIL_LANG_DANISH		= 14,
-	CELL_SYSUTIL_LANG_NORWEGIAN		= 15,
-	CELL_SYSUTIL_LANG_POLISH		= 16,
-	CELL_SYSUTIL_LANG_PORTUGUESE_BR	= 17,
-	CELL_SYSUTIL_LANG_ENGLISH_GB	= 18,
-};
-
-enum
-{
-	CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CIRCLE = 0,
-	CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS	= 1,
-};
-
-enum
-{
-	CELL_SYSUTIL_DATE_FMT_YYYYMMDD = 0,
-	CELL_SYSUTIL_DATE_FMT_DDMMYYYY = 1,
-	CELL_SYSUTIL_DATE_FMT_MMDDYYYY = 2,
-};
-
-enum
-{
-	CELL_SYSUTIL_TIME_FMT_CLOCK12 = 0,
-	CELL_SYSUTIL_TIME_FMT_CLOCK24 = 1,
-};
-
-enum
-{
-	CELL_SYSUTIL_GAME_PARENTAL_OFF		= 0,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL01	= 1,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL02	= 2,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL03	= 3,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL04	= 4,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL05	= 5,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL06	= 6,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL07	= 7,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL08	= 8,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL09	= 9,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL10	= 10,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL11	= 11,
-};
-
-enum
-{
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF	= 0,
-	CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_ON	= 1,
-};
-
-enum
-{
-	CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED			= 0,
-	CELL_SYSUTIL_CAMERA_PLFREQ_50HZ				= 1,
-	CELL_SYSUTIL_CAMERA_PLFREQ_60HZ				= 2,
-	CELL_SYSUTIL_CAMERA_PLFREQ_DEVCIE_DEPEND	= 4,
-};
-
-enum
-{
-	CELL_SYSUTIL_PAD_RUMBLE_OFF	= 0,
-	CELL_SYSUTIL_PAD_RUMBLE_ON	= 1,
-};
-
-
-enum
-{
-	CELL_MSGDIALOG_BUTTON_NONE		= -1,
-	CELL_MSGDIALOG_BUTTON_INVALID	= 0,
-	CELL_MSGDIALOG_BUTTON_OK		= 1,
-	CELL_MSGDIALOG_BUTTON_YES		= 1,
-	CELL_MSGDIALOG_BUTTON_NO		= 2,
-	CELL_MSGDIALOG_BUTTON_ESCAPE	= 3,
-};
-
-enum{
-	CELL_SYSCACHE_RET_OK_CLEARED		= 0,
-	CELL_SYSCACHE_RET_OK_RELAYED		= 1, 
-
-	CELL_SYSCACHE_ID_SIZE				= 32,	
-	CELL_SYSCACHE_PATH_MAX				= 1055,
-
-	CELL_SYSCACHE_ERROR_ACCESS_ERROR	= 0x8002bc01,//I don't think we need this
-	CELL_SYSCACHE_ERROR_INTERNAL		= 0x8002bc02,//not really useful, if we run out of HD space sysfs should handle that
-
-	CELL_SYSCACHE_ERROR_PARAM			= 0x8002bc03,
-	CELL_SYSCACHE_ERROR_NOTMOUNTED		= 0x8002bc04,//we don't really need to simulate the mounting, so this is probably useless
-};
-
-enum CellMsgDialogType
-{
-	CELL_MSGDIALOG_DIALOG_TYPE_ERROR	= 0x00000000,
-	CELL_MSGDIALOG_DIALOG_TYPE_NORMAL	= 0x00000001,
-
-	CELL_MSGDIALOG_BUTTON_TYPE_NONE		= 0x00000000,
-	CELL_MSGDIALOG_BUTTON_TYPE_YESNO	= 0x00000010,
-
-	CELL_MSGDIALOG_DEFAULT_CURSOR_YES	= 0x00000000,
-	CELL_MSGDIALOG_DEFAULT_CURSOR_NO	= 0x00000100,
-};
+#include "Loader/PSF.h"
 
 typedef void (*CellMsgDialogCallback)(int buttonType, mem_ptr_t<void> userData);
+typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
+
 
 void cellSysutil_init();
 Module cellSysutil(0x0015, cellSysutil_init);
@@ -161,7 +27,7 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
-		value = CELL_SYSUTIL_LANG_ENGLISH_US;
+		value = Ini.SysLanguage.GetValue();
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
@@ -973,9 +839,75 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
-	Emu.GetVFS().CreateFile(wxString(param->getCachePath));
+	Emu.GetVFS().CreateDir(wxString(param->getCachePath));
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
+}
+
+int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_t<CellHddGameStatCallback> funcStat, u32 container)
+{
+	cellSysutil.Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
+		version, dirName_addr, errDialog, funcStat, container);
+
+	if (!Memory.IsGoodAddr(dirName_addr) || !funcStat.IsGood())
+		return CELL_HDDGAME_ERROR_PARAM;
+
+	std::string dirName = Memory.ReadString(dirName_addr).ToStdString();
+	if (dirName.size() != 9)
+		return CELL_HDDGAME_ERROR_PARAM;
+
+	MemoryAllocator<CellHddGameSystemFileParam> param;
+	MemoryAllocator<CellHddGameCBResult> result;
+	MemoryAllocator<CellHddGameStatGet> get;
+	MemoryAllocator<CellHddGameStatSet> set;
+
+	get->hddFreeSizeKB = 40000000; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
+	get->sysSizeKB = 0; // TODO
+	get->st_atime  = 0; // TODO
+	get->st_ctime  = 0; // TODO
+	get->st_mtime  = 0; // TODO
+	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
+	memcpy(get->contentInfoPath, ("/dev_hdd0/game/"+dirName).c_str(), CELL_HDDGAME_PATH_MAX);
+	memcpy(get->hddGamePath, ("/dev_hdd0/game/"+dirName+"/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
+
+	if (!Emu.GetVFS().ExistsDir(("/dev_hdd0/game/"+dirName).c_str()))
+	{
+		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
+	}
+	else
+	{
+		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
+
+		vfsFile f(("/dev_hdd0/game/"+dirName+"/PARAM.SFO").c_str());
+		PSFLoader psf(f);
+		if (!psf.Load(false)) {
+			return CELL_HDDGAME_ERROR_BROKEN;
+		}
+
+		get->getParam.parentalLevel = psf.m_info.parental_lvl;
+		get->getParam.attribute = psf.m_info.attr;
+		get->getParam.resolution = psf.m_info.resolution;
+		get->getParam.soundFormat = psf.m_info.sound_format;
+		memcpy(get->getParam.title, psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE);
+		memcpy(get->getParam.dataVersion, psf.m_info.app_ver.mb_str(), CELL_HDDGAME_SYSP_VERSION_SIZE);
+		memcpy(get->getParam.titleId, dirName.c_str(), CELL_HDDGAME_SYSP_TITLEID_SIZE);
+
+		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
+			memcpy(get->getParam.titleLang[i], psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE); // TODO: Get real titleLang name
+		}
+	}
+
+	// TODO ?
+
+	funcStat(result.GetAddr(), get.GetAddr(), set.GetAddr());
+	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
+		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+		return CELL_HDDGAME_ERROR_CBRESULT;
+
+	// TODO ?
+
+	return CELL_OK;
 }
 
 void cellSysutil_init()
@@ -1010,4 +942,9 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
 	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
 
+	cellSysutil.AddFunc(0x9117df20, cellHddGameCheck);
+	//cellSysutil.AddFunc(0x4bdec82a, cellHddGameCheck2);
+	//cellSysutil.AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
+	//cellSysutil.AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
+	//cellSysutil.AddFunc(0xafd605b3, cellHddGameExitBroken);
 }
