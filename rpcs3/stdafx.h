@@ -35,7 +35,8 @@
 #endif
 
 #ifndef _WIN32
-#define wx_str() ToStdString().c_str()
+//hack, disabled
+//#define wx_str() ToStdString().c_str()
 #endif
 
 #include <cstdint>
@@ -72,6 +73,12 @@ union u128
 
 	operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
 
+	static u128 From128( u64 hi, u64 lo )
+	{
+		u128 ret = {hi, lo};
+		return ret;
+	}
+
 	static u128 From64( u64 src )
 	{
 		u128 ret = {0, src};
@@ -88,6 +95,27 @@ union u128
 		return ret;
 	}
 
+	static u128 FromBit ( u32 bit )
+	{
+		u128 ret;
+		if (bit < 64)
+		{
+			ret.hi = 0;
+			ret.lo = (u64)1 << bit;
+		}
+		else if (bit < 128)
+		{
+			ret.hi = (u64)1 << (bit - 64);
+			ret.lo = 0;
+		}
+		else
+		{
+			ret.hi = 0;
+			ret.lo = 0;
+		}
+		return ret;
+	}
+
 	bool operator == ( const u128& right ) const
 	{
 		return (lo == right.lo) && (hi == right.hi);
@@ -96,6 +124,26 @@ union u128
 	bool operator != ( const u128& right ) const
 	{
 		return (lo != right.lo) || (hi != right.hi);
+	}
+
+	u128 operator | ( const u128& right ) const
+	{
+		return From128(hi | right.hi, lo | right.lo);
+	}
+
+	u128 operator & ( const u128& right ) const
+	{
+		return From128(hi & right.hi, lo & right.lo);
+	}
+
+	u128 operator ^ ( const u128& right ) const
+	{
+		return From128(hi ^ right.hi, lo ^ right.lo);
+	}
+
+	u128 operator ~ () const
+	{
+		return From128(~hi, ~lo);
 	}
 };
 
