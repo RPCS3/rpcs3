@@ -1,10 +1,11 @@
 #ifndef EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 #define EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
-#if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
+#if defined(_MSC_VER) ||                                            \
+    (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || \
+     (__GNUC__ >= 4))  // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
-
 
 #include "yaml-cpp/mark.h"
 #include "yaml-cpp/traits.h"
@@ -12,86 +13,99 @@
 #include <string>
 #include <sstream>
 
-namespace YAML
-{
-	// error messages
-	namespace ErrorMsg
-	{
-		const char * const YAML_DIRECTIVE_ARGS    = "YAML directives must have exactly one argument";
-		const char * const YAML_VERSION           = "bad YAML version: ";
-		const char * const YAML_MAJOR_VERSION     = "YAML major version too large";
-		const char * const REPEATED_YAML_DIRECTIVE= "repeated YAML directive";
-		const char * const TAG_DIRECTIVE_ARGS     = "TAG directives must have exactly two arguments";
-		const char * const REPEATED_TAG_DIRECTIVE = "repeated TAG directive";
-		const char * const CHAR_IN_TAG_HANDLE     = "illegal character found while scanning tag handle";
-		const char * const TAG_WITH_NO_SUFFIX     = "tag handle with no suffix";
-		const char * const END_OF_VERBATIM_TAG    = "end of verbatim tag not found";
-		const char * const END_OF_MAP             = "end of map not found";
-		const char * const END_OF_MAP_FLOW        = "end of map flow not found";
-		const char * const END_OF_SEQ             = "end of sequence not found";
-		const char * const END_OF_SEQ_FLOW        = "end of sequence flow not found";
-		const char * const MULTIPLE_TAGS          = "cannot assign multiple tags to the same node";
-		const char * const MULTIPLE_ANCHORS       = "cannot assign multiple anchors to the same node";
-		const char * const MULTIPLE_ALIASES       = "cannot assign multiple aliases to the same node";
-		const char * const ALIAS_CONTENT          = "aliases can't have any content, *including* tags";
-		const char * const INVALID_HEX            = "bad character found while scanning hex number";
-		const char * const INVALID_UNICODE        = "invalid unicode: ";
-		const char * const INVALID_ESCAPE         = "unknown escape character: ";
-		const char * const UNKNOWN_TOKEN          = "unknown token";
-		const char * const DOC_IN_SCALAR          = "illegal document indicator in scalar";
-		const char * const EOF_IN_SCALAR          = "illegal EOF in scalar";
-		const char * const CHAR_IN_SCALAR         = "illegal character in scalar";
-		const char * const TAB_IN_INDENTATION     = "illegal tab when looking for indentation";
-		const char * const FLOW_END               = "illegal flow end";
-		const char * const BLOCK_ENTRY            = "illegal block entry";
-		const char * const MAP_KEY                = "illegal map key";
-		const char * const MAP_VALUE              = "illegal map value";
-		const char * const ALIAS_NOT_FOUND        = "alias not found after *";
-		const char * const ANCHOR_NOT_FOUND       = "anchor not found after &";
-		const char * const CHAR_IN_ALIAS          = "illegal character found while scanning alias";
-		const char * const CHAR_IN_ANCHOR         = "illegal character found while scanning anchor";
-		const char * const ZERO_INDENT_IN_BLOCK   = "cannot set zero indentation for a block scalar";
-		const char * const CHAR_IN_BLOCK          = "unexpected character in block scalar";
-		const char * const AMBIGUOUS_ANCHOR       = "cannot assign the same alias to multiple nodes";
-		const char * const UNKNOWN_ANCHOR         = "the referenced anchor is not defined";
+namespace YAML {
+// error messages
+namespace ErrorMsg {
+const char* const YAML_DIRECTIVE_ARGS =
+    "YAML directives must have exactly one argument";
+const char* const YAML_VERSION = "bad YAML version: ";
+const char* const YAML_MAJOR_VERSION = "YAML major version too large";
+const char* const REPEATED_YAML_DIRECTIVE = "repeated YAML directive";
+const char* const TAG_DIRECTIVE_ARGS =
+    "TAG directives must have exactly two arguments";
+const char* const REPEATED_TAG_DIRECTIVE = "repeated TAG directive";
+const char* const CHAR_IN_TAG_HANDLE =
+    "illegal character found while scanning tag handle";
+const char* const TAG_WITH_NO_SUFFIX = "tag handle with no suffix";
+const char* const END_OF_VERBATIM_TAG = "end of verbatim tag not found";
+const char* const END_OF_MAP = "end of map not found";
+const char* const END_OF_MAP_FLOW = "end of map flow not found";
+const char* const END_OF_SEQ = "end of sequence not found";
+const char* const END_OF_SEQ_FLOW = "end of sequence flow not found";
+const char* const MULTIPLE_TAGS =
+    "cannot assign multiple tags to the same node";
+const char* const MULTIPLE_ANCHORS =
+    "cannot assign multiple anchors to the same node";
+const char* const MULTIPLE_ALIASES =
+    "cannot assign multiple aliases to the same node";
+const char* const ALIAS_CONTENT =
+    "aliases can't have any content, *including* tags";
+const char* const INVALID_HEX = "bad character found while scanning hex number";
+const char* const INVALID_UNICODE = "invalid unicode: ";
+const char* const INVALID_ESCAPE = "unknown escape character: ";
+const char* const UNKNOWN_TOKEN = "unknown token";
+const char* const DOC_IN_SCALAR = "illegal document indicator in scalar";
+const char* const EOF_IN_SCALAR = "illegal EOF in scalar";
+const char* const CHAR_IN_SCALAR = "illegal character in scalar";
+const char* const TAB_IN_INDENTATION =
+    "illegal tab when looking for indentation";
+const char* const FLOW_END = "illegal flow end";
+const char* const BLOCK_ENTRY = "illegal block entry";
+const char* const MAP_KEY = "illegal map key";
+const char* const MAP_VALUE = "illegal map value";
+const char* const ALIAS_NOT_FOUND = "alias not found after *";
+const char* const ANCHOR_NOT_FOUND = "anchor not found after &";
+const char* const CHAR_IN_ALIAS =
+    "illegal character found while scanning alias";
+const char* const CHAR_IN_ANCHOR =
+    "illegal character found while scanning anchor";
+const char* const ZERO_INDENT_IN_BLOCK =
+    "cannot set zero indentation for a block scalar";
+const char* const CHAR_IN_BLOCK = "unexpected character in block scalar";
+const char* const AMBIGUOUS_ANCHOR =
+    "cannot assign the same alias to multiple nodes";
+const char* const UNKNOWN_ANCHOR = "the referenced anchor is not defined";
 
-		const char * const UNMATCHED_GROUP_TAG    = "unmatched group tag";
-		const char * const UNEXPECTED_END_SEQ     = "unexpected end sequence token";
-		const char * const UNEXPECTED_END_MAP     = "unexpected end map token";
-		const char * const SINGLE_QUOTED_CHAR     = "invalid character in single-quoted string";
-		const char * const INVALID_ANCHOR         = "invalid anchor";
-		const char * const INVALID_ALIAS          = "invalid alias";
-		const char * const INVALID_TAG            = "invalid tag";
-	}
-
-	class Exception: public std::runtime_error {
-	public:
-		Exception(const Mark& mark_, const std::string& msg_)
-		: std::runtime_error(build_what(mark_, msg_)), mark(mark_), msg(msg_) {}
-		virtual ~Exception() throw() {}
-
-		Mark mark;
-		std::string msg;
-
-	private:
-		static const std::string build_what(const Mark& mark, const std::string& msg) {
-			std::stringstream output;
-			output << "yaml-cpp: error at line " << mark.line+1 << ", column " << mark.column+1 << ": " << msg;
-			return output.str();
-		}
-	};
-
-	class ParserException: public Exception {
-	public:
-		ParserException(const Mark& mark_, const std::string& msg_)
-			: Exception(mark_, msg_) {}
-	};
-
-	class EmitterException: public Exception {
-	public:
-		EmitterException(const std::string& msg_)
-		: Exception(Mark::null_mark(), msg_) {}
-	};
+const char* const UNMATCHED_GROUP_TAG = "unmatched group tag";
+const char* const UNEXPECTED_END_SEQ = "unexpected end sequence token";
+const char* const UNEXPECTED_END_MAP = "unexpected end map token";
+const char* const SINGLE_QUOTED_CHAR =
+    "invalid character in single-quoted string";
+const char* const INVALID_ANCHOR = "invalid anchor";
+const char* const INVALID_ALIAS = "invalid alias";
+const char* const INVALID_TAG = "invalid tag";
 }
 
-#endif // EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+class Exception : public std::runtime_error {
+ public:
+  Exception(const Mark& mark_, const std::string& msg_)
+      : std::runtime_error(build_what(mark_, msg_)), mark(mark_), msg(msg_) {}
+  virtual ~Exception() throw() {}
+
+  Mark mark;
+  std::string msg;
+
+ private:
+  static const std::string build_what(const Mark& mark,
+                                      const std::string& msg) {
+    std::stringstream output;
+    output << "yaml-cpp: error at line " << mark.line + 1 << ", column "
+           << mark.column + 1 << ": " << msg;
+    return output.str();
+  }
+};
+
+class ParserException : public Exception {
+ public:
+  ParserException(const Mark& mark_, const std::string& msg_)
+      : Exception(mark_, msg_) {}
+};
+
+class EmitterException : public Exception {
+ public:
+  EmitterException(const std::string& msg_)
+      : Exception(Mark::null_mark(), msg_) {}
+};
+}
+
+#endif  // EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66

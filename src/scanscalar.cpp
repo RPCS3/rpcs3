@@ -4,211 +4,215 @@
 #include "yaml-cpp/exceptions.h"
 #include "token.h"
 
-namespace YAML
-{
-	// ScanScalar
-	// . This is where the scalar magic happens.
-	//
-	// . We do the scanning in three phases:
-	//   1. Scan until newline
-	//   2. Eat newline
-	//   3. Scan leading blanks.
-	//
-	// . Depending on the parameters given, we store or stop
-	//   and different places in the above flow.
-	std::string ScanScalar(Stream& INPUT, ScanScalarParams& params)
-	{
-		bool foundNonEmptyLine = false;
-		bool pastOpeningBreak = (params.fold == FOLD_FLOW);
-		bool emptyLine = false, moreIndented = false;
-		int foldedNewlineCount = 0;
-		bool foldedNewlineStartedMoreIndented = false;
-        std::size_t lastEscapedChar = std::string::npos;
-		std::string scalar;
-		params.leadingSpaces = false;
+namespace YAML {
+// ScanScalar
+// . This is where the scalar magic happens.
+//
+// . We do the scanning in three phases:
+//   1. Scan until newline
+//   2. Eat newline
+//   3. Scan leading blanks.
+//
+// . Depending on the parameters given, we store or stop
+//   and different places in the above flow.
+std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
+  bool foundNonEmptyLine = false;
+  bool pastOpeningBreak = (params.fold == FOLD_FLOW);
+  bool emptyLine = false, moreIndented = false;
+  int foldedNewlineCount = 0;
+  bool foldedNewlineStartedMoreIndented = false;
+  std::size_t lastEscapedChar = std::string::npos;
+  std::string scalar;
+  params.leadingSpaces = false;
 
-		while(INPUT) {
-			// ********************************
-			// Phase #1: scan until line ending
-			
-			std::size_t lastNonWhitespaceChar = scalar.size();
-			bool escapedNewline = false;
-			while(!params.end.Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
-				if(!INPUT)
-					break;
+  while (INPUT) {
+    // ********************************
+    // Phase #1: scan until line ending
 
-				// document indicator?
-				if(INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT)) {
-					if(params.onDocIndicator == BREAK)
-						break;
-					else if(params.onDocIndicator == THROW)
-						throw ParserException(INPUT.mark(), ErrorMsg::DOC_IN_SCALAR);
-				}
+    std::size_t lastNonWhitespaceChar = scalar.size();
+    bool escapedNewline = false;
+    while (!params.end.Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
+      if (!INPUT)
+        break;
 
-				foundNonEmptyLine = true;
-				pastOpeningBreak = true;
+      // document indicator?
+      if (INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT)) {
+        if (params.onDocIndicator == BREAK)
+          break;
+        else if (params.onDocIndicator == THROW)
+          throw ParserException(INPUT.mark(), ErrorMsg::DOC_IN_SCALAR);
+      }
 
-				// escaped newline? (only if we're escaping on slash)
-				if(params.escape == '\\' && Exp::EscBreak().Matches(INPUT)) {
-					// eat escape character and get out (but preserve trailing whitespace!)
-					INPUT.get();
-					lastNonWhitespaceChar = scalar.size();
-                    lastEscapedChar = scalar.size();
-					escapedNewline = true;
-					break;
-				}
+      foundNonEmptyLine = true;
+      pastOpeningBreak = true;
 
-				// escape this?
-				if(INPUT.peek() == params.escape) {
-					scalar += Exp::Escape(INPUT);
-					lastNonWhitespaceChar = scalar.size();
-                    lastEscapedChar = scalar.size();
-					continue;
-				}
+      // escaped newline? (only if we're escaping on slash)
+      if (params.escape == '\\' && Exp::EscBreak().Matches(INPUT)) {
+        // eat escape character and get out (but preserve trailing whitespace!)
+        INPUT.get();
+        lastNonWhitespaceChar = scalar.size();
+        lastEscapedChar = scalar.size();
+        escapedNewline = true;
+        break;
+      }
 
-				// otherwise, just add the damn character
-				char ch = INPUT.get();
-				scalar += ch;
-				if(ch != ' ' && ch != '\t')
-					lastNonWhitespaceChar = scalar.size();
-			}
+      // escape this?
+      if (INPUT.peek() == params.escape) {
+        scalar += Exp::Escape(INPUT);
+        lastNonWhitespaceChar = scalar.size();
+        lastEscapedChar = scalar.size();
+        continue;
+      }
 
-			// eof? if we're looking to eat something, then we throw
-			if(!INPUT) {
-				if(params.eatEnd)
-					throw ParserException(INPUT.mark(), ErrorMsg::EOF_IN_SCALAR);
-				break;
-			}
+      // otherwise, just add the damn character
+      char ch = INPUT.get();
+      scalar += ch;
+      if (ch != ' ' && ch != '\t')
+        lastNonWhitespaceChar = scalar.size();
+    }
 
-			// doc indicator?
-			if(params.onDocIndicator == BREAK && INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT))
-				break;
+    // eof? if we're looking to eat something, then we throw
+    if (!INPUT) {
+      if (params.eatEnd)
+        throw ParserException(INPUT.mark(), ErrorMsg::EOF_IN_SCALAR);
+      break;
+    }
 
-			// are we done via character match?
-			int n = params.end.Match(INPUT);
-			if(n >= 0) {
-				if(params.eatEnd)
-					INPUT.eat(n);
-				break;
-			}
-			
-			// do we remove trailing whitespace?
-			if(params.fold == FOLD_FLOW)
-				scalar.erase(lastNonWhitespaceChar);
-			
-			// ********************************
-			// Phase #2: eat line ending
-			n = Exp::Break().Match(INPUT);
-			INPUT.eat(n);
+    // doc indicator?
+    if (params.onDocIndicator == BREAK && INPUT.column() == 0 &&
+        Exp::DocIndicator().Matches(INPUT))
+      break;
 
-			// ********************************
-			// Phase #3: scan initial spaces
+    // are we done via character match?
+    int n = params.end.Match(INPUT);
+    if (n >= 0) {
+      if (params.eatEnd)
+        INPUT.eat(n);
+      break;
+    }
 
-			// first the required indentation
-			while(INPUT.peek() == ' ' && (INPUT.column() < params.indent || (params.detectIndent && !foundNonEmptyLine)))
-				INPUT.eat(1);
+    // do we remove trailing whitespace?
+    if (params.fold == FOLD_FLOW)
+      scalar.erase(lastNonWhitespaceChar);
 
-			// update indent if we're auto-detecting
-			if(params.detectIndent && !foundNonEmptyLine)
-				params.indent = std::max(params.indent, INPUT.column());
+    // ********************************
+    // Phase #2: eat line ending
+    n = Exp::Break().Match(INPUT);
+    INPUT.eat(n);
 
-			// and then the rest of the whitespace
-			while(Exp::Blank().Matches(INPUT)) {
-				// we check for tabs that masquerade as indentation
-				if(INPUT.peek() == '\t'&& INPUT.column() < params.indent && params.onTabInIndentation == THROW)
-					throw ParserException(INPUT.mark(), ErrorMsg::TAB_IN_INDENTATION);
+    // ********************************
+    // Phase #3: scan initial spaces
 
-				if(!params.eatLeadingWhitespace)
-					break;
+    // first the required indentation
+    while (INPUT.peek() == ' ' && (INPUT.column() < params.indent ||
+                                   (params.detectIndent && !foundNonEmptyLine)))
+      INPUT.eat(1);
 
-				INPUT.eat(1);
-			}
+    // update indent if we're auto-detecting
+    if (params.detectIndent && !foundNonEmptyLine)
+      params.indent = std::max(params.indent, INPUT.column());
 
-			// was this an empty line?
-			bool nextEmptyLine = Exp::Break().Matches(INPUT);
-			bool nextMoreIndented = Exp::Blank().Matches(INPUT);
-			if(params.fold == FOLD_BLOCK && foldedNewlineCount == 0 && nextEmptyLine)
-				foldedNewlineStartedMoreIndented = moreIndented;
+    // and then the rest of the whitespace
+    while (Exp::Blank().Matches(INPUT)) {
+      // we check for tabs that masquerade as indentation
+      if (INPUT.peek() == '\t' && INPUT.column() < params.indent &&
+          params.onTabInIndentation == THROW)
+        throw ParserException(INPUT.mark(), ErrorMsg::TAB_IN_INDENTATION);
 
-			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
-			if(pastOpeningBreak) {
-				switch(params.fold) {
-					case DONT_FOLD:
-						scalar += "\n";
-						break;
-					case FOLD_BLOCK:
-						if(!emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
-							scalar += " ";
-						else if(nextEmptyLine)
-							foldedNewlineCount++;
-						else
-							scalar += "\n";
-						
-						if(!nextEmptyLine && foldedNewlineCount > 0) {
-							scalar += std::string(foldedNewlineCount - 1, '\n');
-							if(foldedNewlineStartedMoreIndented || nextMoreIndented | !foundNonEmptyLine)
-								scalar += "\n";
-							foldedNewlineCount = 0;
-						}
-						break;
-					case FOLD_FLOW:
-						if(nextEmptyLine)
-							scalar += "\n";
-						else if(!emptyLine && !nextEmptyLine && !escapedNewline)
-							scalar += " ";
-						break;
-				}
-			}
+      if (!params.eatLeadingWhitespace)
+        break;
 
-			emptyLine = nextEmptyLine;
-			moreIndented = nextMoreIndented;
-			pastOpeningBreak = true;
+      INPUT.eat(1);
+    }
 
-			// are we done via indentation?
-			if(!emptyLine && INPUT.column() < params.indent) {
-				params.leadingSpaces = true;
-				break;
-			}
-		}
+    // was this an empty line?
+    bool nextEmptyLine = Exp::Break().Matches(INPUT);
+    bool nextMoreIndented = Exp::Blank().Matches(INPUT);
+    if (params.fold == FOLD_BLOCK && foldedNewlineCount == 0 && nextEmptyLine)
+      foldedNewlineStartedMoreIndented = moreIndented;
 
-		// post-processing
-		if(params.trimTrailingSpaces) {
-			std::size_t pos = scalar.find_last_not_of(' ');
-            if(lastEscapedChar != std::string::npos) {
-                if(pos < lastEscapedChar || pos == std::string::npos)
-                    pos = lastEscapedChar;
-            }
-			if(pos < scalar.size())
-				scalar.erase(pos + 1);
-		}
+    // for block scalars, we always start with a newline, so we should ignore it
+    // (not fold or keep)
+    if (pastOpeningBreak) {
+      switch (params.fold) {
+        case DONT_FOLD:
+          scalar += "\n";
+          break;
+        case FOLD_BLOCK:
+          if (!emptyLine && !nextEmptyLine && !moreIndented &&
+              !nextMoreIndented && INPUT.column() >= params.indent)
+            scalar += " ";
+          else if (nextEmptyLine)
+            foldedNewlineCount++;
+          else
+            scalar += "\n";
 
-		switch(params.chomp) {
-			case CLIP: {
-				std::size_t pos = scalar.find_last_not_of('\n');
-                if(lastEscapedChar != std::string::npos) {
-                    if(pos < lastEscapedChar || pos == std::string::npos)
-                        pos = lastEscapedChar;
-                }
-				if(pos == std::string::npos)
-					scalar.erase();
-				else if(pos + 1 < scalar.size())
-					scalar.erase(pos + 2);
-			} break;
-			case STRIP: {
-				std::size_t pos = scalar.find_last_not_of('\n');
-                if(lastEscapedChar != std::string::npos) {
-                    if(pos < lastEscapedChar || pos == std::string::npos)
-                        pos = lastEscapedChar;
-                }
-				if(pos == std::string::npos)
-					scalar.erase();
-				else if(pos < scalar.size())
-					scalar.erase(pos + 1);
-			} break;
-			default:
-				break;
-		}
+          if (!nextEmptyLine && foldedNewlineCount > 0) {
+            scalar += std::string(foldedNewlineCount - 1, '\n');
+            if (foldedNewlineStartedMoreIndented ||
+                nextMoreIndented | !foundNonEmptyLine)
+              scalar += "\n";
+            foldedNewlineCount = 0;
+          }
+          break;
+        case FOLD_FLOW:
+          if (nextEmptyLine)
+            scalar += "\n";
+          else if (!emptyLine && !nextEmptyLine && !escapedNewline)
+            scalar += " ";
+          break;
+      }
+    }
 
-		return scalar;
-	}
+    emptyLine = nextEmptyLine;
+    moreIndented = nextMoreIndented;
+    pastOpeningBreak = true;
+
+    // are we done via indentation?
+    if (!emptyLine && INPUT.column() < params.indent) {
+      params.leadingSpaces = true;
+      break;
+    }
+  }
+
+  // post-processing
+  if (params.trimTrailingSpaces) {
+    std::size_t pos = scalar.find_last_not_of(' ');
+    if (lastEscapedChar != std::string::npos) {
+      if (pos < lastEscapedChar || pos == std::string::npos)
+        pos = lastEscapedChar;
+    }
+    if (pos < scalar.size())
+      scalar.erase(pos + 1);
+  }
+
+  switch (params.chomp) {
+    case CLIP: {
+      std::size_t pos = scalar.find_last_not_of('\n');
+      if (lastEscapedChar != std::string::npos) {
+        if (pos < lastEscapedChar || pos == std::string::npos)
+          pos = lastEscapedChar;
+      }
+      if (pos == std::string::npos)
+        scalar.erase();
+      else if (pos + 1 < scalar.size())
+        scalar.erase(pos + 2);
+    } break;
+    case STRIP: {
+      std::size_t pos = scalar.find_last_not_of('\n');
+      if (lastEscapedChar != std::string::npos) {
+        if (pos < lastEscapedChar || pos == std::string::npos)
+          pos = lastEscapedChar;
+      }
+      if (pos == std::string::npos)
+        scalar.erase();
+      else if (pos < scalar.size())
+        scalar.erase(pos + 1);
+    } break;
+    default:
+      break;
+  }
+
+  return scalar;
+}
 }
