@@ -298,37 +298,31 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 	{
 		count = entries_count.LoadValue(count);
 
-#ifdef _WIN32
-#define DL "\\"
-#else
-#define DL "/"
-#endif
-
 		if(!count)
 		{
 			int idx;
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)" DL "dev_hdd0" DL;
+			res[idx].path = "$(EmulatorDir)/dev_hdd0/";
 			res[idx].mount = "/dev_hdd0/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)" DL "dev_hdd1" DL;
+			res[idx].path = "$(EmulatorDir)/dev_hdd1/";
 			res[idx].mount = "/dev_hdd1/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)" DL "dev_flash" DL;
+			res[idx].path = "$(EmulatorDir)/dev_flash/";
 			res[idx].mount = "/dev_flash/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)" DL "dev_usb000" DL;
+			res[idx].path = "$(EmulatorDir)/dev_usb000/";
 			res[idx].mount = "/dev_usb000/";
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)" DL "dev_usb000" DL;
+			res[idx].path = "$(EmulatorDir)/dev_usb000/";
 			res[idx].mount = "/dev_usb/";
 			res[idx].device = vfsDevice_LocalFile;
 
@@ -338,7 +332,7 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 			res[idx].device = vfsDevice_LocalFile;
 
 			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)" DL ".." DL;
+			res[idx].path = "$(GameDir)/../";
 			res[idx].mount = "/dev_bdvd/";
 			res[idx].device = vfsDevice_LocalFile;
 

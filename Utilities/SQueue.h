@@ -79,12 +79,12 @@ public:
 		}
 	}
 
-	volatile u32 GetCount()
+	volatile u32 GetCount() // may be not safe
 	{
 		return m_count;
 	}
 
-	volatile bool IsEmpty()
+	volatile bool IsEmpty() // may be not safe
 	{
 		return !m_count;
 	}
@@ -97,7 +97,28 @@ public:
 
 	T& Peek(u32 pos = 0)
 	{
-		SMutexLocker lock(m_mutex);
+		while (true)
+		{
+			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
+			{
+				break;
+			}
+
+			if (!m_count)
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+				Sleep(1);
+				continue;
+			}
+
+			{
+				SMutexLocker lock(m_mutex);
+				if (m_count) break;
+			}
+		}
 		return m_data[(m_pos + pos) % SQSize];
 	}
 };

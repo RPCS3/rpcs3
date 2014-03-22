@@ -483,23 +483,29 @@ class ElementaryStream
 {
 	SMutex mutex;
 
-	u32 first_addr; // AU that will be released
-	u32 last_addr; // AU that is being written now
-	u32 last_size; // number of bytes written (after 128b header)
-	u32 peek_addr; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
+	SQueue<u32> entries; // AU starting addresses
+	u32 put_count; // number of AU written
+	u32 released; // number of AU released
+	u32 peek_count; // number of AU obtained by GetAu(Ex)
+
+	u32 put; // AU that is being written now
+	u32 size; // number of bytes written (after 128b header)
+	//u32 first; // AU that will be released
+	//u32 peek; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
 
 	bool is_full()
 	{
-		if (first_addr)
+		if (released < put_count)
 		{
-			if (first_addr >= last_addr)
+			u32 first = entries.Peek();
+			if (first >= put)
 			{
-				return (first_addr - last_addr) <= GetMaxAU();
+				return (first - put) < GetMaxAU();
 			}
 			else
 			{
 				// probably, always false
-				return (last_addr + GetMaxAU()) > (memAddr + memSize);
+				return (put + GetMaxAU()) > (memAddr + memSize);
 			}
 		}
 		else
@@ -532,26 +538,42 @@ public:
 		, cbFunc(cbFunc)
 		, cbArg(cbArg)
 		, spec(spec)
-		, first_addr(0)
-		, peek_addr(0)
-		, last_addr(memAddr)
-		, last_size(0)
+		//, first(0)
+		//, peek(0)
+		, put(memAddr)
+		, size(0)
+		, put_count(0)
+		, released(0)
+		, peek_count(0)
 	{
 	}
 
 	const u32 GetMaxAU() const
 	{
-		return (fidMajor == 0xbd) ? 2048 : 640 * 1024 + 128;
+		return (fidMajor == 0xbd) ? 4096 : 640 * 1024 + 128; // TODO
 	}
 
-	volatile bool hasunseen()
+	u32 freespace()
 	{
-		return peek_addr;
+		if (size > GetMaxAU())
+		{
+			ConLog.Error("es::freespace(): last_size too big (size=0x%x, max_au=0x%x)", size, GetMaxAU());
+			Emu.Pause();
+			return 0;
+		}
+		return GetMaxAU() - size;
 	}
 
-	volatile bool hasdata()
+	bool hasunseen()
 	{
-		return last_size;
+		SMutexLocker lock(mutex);
+		return peek_count < put_count;
+	}
+
+	bool hasdata()
+	{
+		SMutexLocker lock(mutex);
+		return size;
 	}
 
 	bool isfull()
@@ -562,59 +584,70 @@ public:
 
 	void finish(DemuxerStream& stream) // not multithread-safe
 	{
-		SMutexLocker lock(mutex);
-		//ConLog.Write("es::finish(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
-		if (!first_addr)
+		u32 addr;
 		{
-			first_addr = last_addr;
-		}
-		if (!peek_addr)
-		{
-			peek_addr = last_addr;
-		}
+			SMutexLocker lock(mutex);
+			//if (fidMajor != 0xbd) ConLog.Write(">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 
-		mem_ptr_t<CellDmuxAuInfo> info(last_addr);
-		/*if (fidMajor == 0xbd) ConLog.Warning("es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
-			wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
-			(u32)info->auSize, last_addr, (u32)info->ptsLower);*/
+			addr = put;
+			/*if (!first)
+			{
+				first = put;
+			}
+			if (!peek)
+			{
+				peek = put;
+			}*/
 
-		u32 new_addr = a128(last_addr + 128 + last_size);
-		if ((new_addr + GetMaxAU()) > (memAddr + memSize))
-		{
-			last_addr = memAddr;
+			mem_ptr_t<CellDmuxAuInfo> info(put);
+			//if (fidMajor != 0xbd) ConLog.Warning("es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
+				//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
+				//(u32)info->auSize, put, (u32)info->ptsLower);
+
+			u32 new_addr = a128(put + 128 + size);
+			if ((new_addr + GetMaxAU()) > (memAddr + memSize))
+			{
+				put = memAddr;
+			}
+			else
+			{
+				put = new_addr;
+			}
+			size = 0;
+
+			put_count++;
+			//if (fidMajor != 0xbd) ConLog.Write("<<< es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		}
-		else
+		if (!entries.Push(addr))
 		{
-			last_addr = new_addr;
+			ConLog.Error("es::finish() aborted (no space)");
 		}
-		last_size = 0;
 	}
 
-	void push(DemuxerStream& stream, u32 size, PesHeader& pes)
+	void push(DemuxerStream& stream, u32 sz, PesHeader& pes)
 	{
 		SMutexLocker lock(mutex);
-		//ConLog.Write("es::push(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
 
 		if (is_full())
 		{
-			ConLog.Error("ElementaryStream::push(): buffer is full");
+			ConLog.Error("es::push(): buffer is full");
 			Emu.Pause();
 			return;
 		}
 
-		u32 data_addr = last_addr + 128 + last_size;
-		last_size += size;
-		if (!Memory.Copy(data_addr, stream.addr, size))
+		u32 data_addr = put + 128 + size;
+		size += sz;
+		if (!Memory.Copy(data_addr, stream.addr, sz))
 		{
-			ConLog.Error("ElementaryStream::push(): data copying failed");
+			ConLog.Error("es::push(): data copying failed");
 			Emu.Pause();
 			return;
 		}
-		stream.skip(size);
+		stream.skip(sz);
 
-		mem_ptr_t<CellDmuxAuInfoEx> info(last_addr);
-		info->auAddr = last_addr + 128;
-		info->auSize = last_size;
+		mem_ptr_t<CellDmuxAuInfoEx> info(put);
+		info->auAddr = put + 128;
+		info->auSize = size;
 		if (pes.new_au)
 		{
 			info->dts.lower = (u32)pes.dts;
@@ -626,12 +659,12 @@ public:
 			info->userData = stream.userdata;
 		}
 
-		mem_ptr_t<CellDmuxPamfAuSpecificInfoAvc> tail(last_addr + sizeof(CellDmuxAuInfoEx));
+		mem_ptr_t<CellDmuxPamfAuSpecificInfoAvc> tail(put + sizeof(CellDmuxAuInfoEx));
 		tail->reserved1 = 0;
 
-		mem_ptr_t<CellDmuxAuInfo> inf(last_addr + 64);
-		inf->auAddr = last_addr + 128;
-		inf->auSize = last_size;
+		mem_ptr_t<CellDmuxAuInfo> inf(put + 64);
+		inf->auAddr = put + 128;
+		inf->auSize = size;
 		if (pes.new_au)
 		{
 			inf->dtsLower = (u32)pes.dts;
@@ -646,81 +679,107 @@ public:
 	bool release()
 	{
 		SMutexLocker lock(mutex);
-		//ConLog.Write("es::release(): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", peek_addr, first_addr, last_addr, last_size);
-		if (!first_addr)
+		//if (fidMajor != 0xbd) ConLog.Write(">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+		if (released >= put_count)
 		{
-			ConLog.Error("ElementaryStream::release(): buffer is empty");
+			ConLog.Error("es::release(): buffer is empty");
 			return false;
 		}
 
-		u32 size = a128(Memory.Read32(first_addr + 4) + 128);
-		u32 new_addr = first_addr + size;
+		u32 addr = entries.Peek();
 
-		if (peek_addr == first_addr)
+		mem_ptr_t<CellDmuxAuInfo> info(addr);
+		//if (fidMajor != 0xbd) ConLog.Warning("es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, first, (u32)info->ptsLower);
+
+		if (released >= peek_count)
 		{
-			ConLog.Error("ElementaryStream::release(): buffer has not been seen yet");
+			ConLog.Error("es::release(): buffer has not been seen yet");
 			return false;
 		}
 
-		//if (peek_addr <= first_addr) peek_addr = new_addr;
-		if (new_addr == last_addr)
+		/*u32 new_addr = a128(info.GetAddr() + 128 + info->auSize);
+
+		if (new_addr == put)
 		{
-			first_addr = 0;
+			first = 0;
 		}
 		else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
 		{
-			first_addr = memAddr;
+			first = memAddr;
 		}
 		else
 		{
-			first_addr = new_addr;
-		}
+			first = new_addr;
+		}*/
 
+		released++;
+		if (!entries.Pop(addr))
+		{
+			ConLog.Error("es::release(): entries.Pop() aborted (no entries found)");
+			return false;
+		}
+		//if (fidMajor != 0xbd) ConLog.Write("<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		return true;
 	}
 
 	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 	{
 		SMutexLocker lock(mutex);
-		/*ConLog.Write("es::peek(%sAu%s): peek=0x%x, first=0x%x, last=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
-			wxString(no_ex ? "" : "Ex").wx_str(), peek_addr, first_addr, last_addr, last_size);*/
-		if (!peek_addr) return false;
+		//if (fidMajor != 0xbd) ConLog.Write(">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
+			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
+		if (peek_count >= put_count) return false;
 
-		mem_ptr_t<CellDmuxAuInfo> info(peek_addr);
-		/*if (fidMajor == 0xbd) ConLog.Warning("es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
-			wxString(update_index ? "Get" : "Peek").wx_str(),
-			wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek_addr, (u32)info->ptsLower);*/
+		if (peek_count < released)
+		{
+			ConLog.Error("es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
+			Emu.Pause();
+			return false;
+		}
 
-		out_data = peek_addr;
+		u32 addr = entries.Peek(peek_count - released);
+		mem_ptr_t<CellDmuxAuInfo> info(addr);
+		//if (fidMajor != 0xbd) ConLog.Warning("es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+			//wxString(update_index ? "Get" : "Peek").wx_str(),
+			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek, (u32)info->ptsLower);
+
+		out_data = addr;
 		out_spec = out_data + sizeof(CellDmuxAuInfoEx);
 		if (no_ex) out_data += 64;
 
 		if (update_index)
 		{
-			u32 size = a128(Memory.Read32(peek_addr + 4) + 128);
-			u32 new_addr = peek_addr + size;
-			if (new_addr = last_addr)
+			/*u32 new_addr = a128(peek + 128 + info->auSize);
+			if (new_addr = put)
 			{
-				peek_addr = 0;
+				peek = 0;
 			}
 			else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
 			{
-				peek_addr = memAddr;
+				peek = memAddr;
 			}
 			else
 			{
-				peek_addr = new_addr;
-			}
+				peek = new_addr;
+			}*/
+			peek_count++;
 		}
+
+		//if (fidMajor != 0xbd) ConLog.Write("<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
+			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
 		return true;
 	}
 
 	void reset()
 	{
 		SMutexLocker lock(mutex);
-		first_addr = 0;
-		peek_addr = 0;
-		last_addr = memAddr;
-		last_size = 0;
+		//first = 0;
+		//peek = 0;
+		put = memAddr;
+		size = 0;
+		entries.Clear();
+		put_count = 0;
+		released = 0;
+		peek_count = 0;
 	}
 };

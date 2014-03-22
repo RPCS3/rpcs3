@@ -69,7 +69,7 @@ next:
 			break;
 		default:
 			ConLog.Error("adecRead(): sequence error (task %d)", adec.job.Peek().type);
-			return 0;
+			return -1;
 		}
 
 		goto next;
@@ -129,7 +129,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 		{
 			ConLog.Error("adecRead: 0x0FD0 header not found");
 			Emu.Pause();
-			return 0;
+			return -1;
 		}
 
 		if (!adec.reader.init)
@@ -433,14 +433,28 @@ u32 adecOpen(AudioDecoder* data)
 						if (got_frame)
 						{
 							frame.pts = adec.last_pts;
-							adec.last_pts += (u64)frame.data->nb_samples * 90000 / 48000; // ???
+							adec.last_pts += ((u64)frame.data->nb_samples) * 90000 / 48000; // ???
 							frame.auAddr = task.au.addr;
 							frame.auSize = task.au.size;
 							frame.userdata = task.au.userdata;
 							frame.size = frame.data->nb_samples * frame.data->channels * sizeof(float);
 
-							//ConLog.Write("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d)",
-								//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate);
+							if (frame.data->format != AV_SAMPLE_FMT_FLTP)
+							{
+								ConLog.Error("adecDecodeaAu: unsupported frame format(%d)", frame.data->format);
+								Emu.Pause();
+								break;
+							}
+							if (frame.data->channels != 2)
+							{
+								ConLog.Error("adecDecodeAu: unsupported channel count (%d)", frame.data->channels);
+								Emu.Pause();
+								break;
+							}
+
+							//ConLog.Write("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+								//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate,
+								//av_get_bytes_per_sample((AVSampleFormat)frame.data->format));
 
 							adec.frames.Push(frame);
 							frame.data = nullptr; // to prevent destruction
@@ -690,13 +704,6 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	SwrContext* swr = nullptr;
 	u8* out = nullptr;
 
-	if (frame->format != AV_SAMPLE_FMT_FLTP)
-	{
-		ConLog.Error("cellAdecGetPcm(%d): unsupported frame format(%d)", handle, frame->format);
-		Emu.Pause();
-		goto end;
-	}
-
 	out = (u8*)malloc(af.size);
 
 	/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
@@ -787,7 +794,6 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	atx->samplingFreq = frame->sample_rate; // ???
 	atx->nbytes = frame->nb_samples * frame->channels * sizeof(float); // ???
 	atx->channelConfigIndex = CELL_ADEC_CH_STEREO; // ???
-	if (frame->channels != 2) ConLog.Error("cellAdecGetPcmItem: unsupported channel count (%d)", frame->channels);
 
 	pcmItem_ptr = pcm.GetAddr();
 
