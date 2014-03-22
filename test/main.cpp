@@ -1,7 +1,6 @@
 #include "tests.h"
 
-int main()
-{
-	Test::RunAll();
-	return 0;
+int main() {
+  Test::RunAll();
+  return 0;
 }

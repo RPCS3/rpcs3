@@ -1,6 +1,5 @@
 #include "yaml-cpp/null.h"
 
-namespace YAML
-{
-	_Null Null;
+namespace YAML {
+_Null Null;
 }
