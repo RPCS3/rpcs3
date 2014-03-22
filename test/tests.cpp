@@ -9,25 +9,22 @@
 #include <vector>
 #include <iostream>
 
-namespace Test
-{
-	void RunAll()
-	{
-		bool passed = true;
-		if(!RunParserTests())
-			passed = false;
-			
-		if(!RunEmitterTests())
-			passed = false;
+namespace Test {
+void RunAll() {
+  bool passed = true;
+  if (!RunParserTests())
+    passed = false;
 
-		if(!RunSpecTests())
-			passed = false;
+  if (!RunEmitterTests())
+    passed = false;
 
-		if(!RunNodeTests())
-			passed = false;
+  if (!RunSpecTests())
+    passed = false;
 
-		if(passed)
-			std::cout << "All tests passed!\n";
-	}
+  if (!RunNodeTests())
+    passed = false;
+
+  if (passed)
+    std::cout << "All tests passed!\n";
 }
-
+}

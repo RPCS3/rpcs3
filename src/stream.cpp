@@ -50,21 +50,21 @@ static bool s_introFinalState[] = {false,  // uis_start
                                    false,  // uis_utfbe_b1
                                    false,  // uis_utf32be_b2
                                    false,  // uis_utf32be_bom3
-                                   true,  // uis_utf32be
-                                   true,  // uis_utf16be
+                                   true,   // uis_utf32be
+                                   true,   // uis_utf16be
                                    false,  // uis_utf16be_bom1
                                    false,  // uis_utfle_bom1
                                    false,  // uis_utf16le_bom2
                                    false,  // uis_utf32le_bom3
-                                   true,  // uis_utf16le
-                                   true,  // uis_utf32le
+                                   true,   // uis_utf16le
+                                   true,   // uis_utf32le
                                    false,  // uis_utf8_imp
                                    false,  // uis_utf16le_imp
                                    false,  // uis_utf32le_imp3
                                    false,  // uis_utf8_bom1
                                    false,  // uis_utf8_bom2
-                                   true,  // uis_utf8
-                                   true,  // uis_error
+                                   true,   // uis_utf8
+                                   true,   // uis_error
 };
 
 static UtfIntroState s_introTransitions[][uictMax] = {

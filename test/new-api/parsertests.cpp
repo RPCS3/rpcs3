@@ -1,8 +1,5 @@
 #include "parsertests.h"
 
 namespace Test {
-	bool RunParserTests()
-	{
-		return true;
-	}
+bool RunParserTests() { return true; }
 }
