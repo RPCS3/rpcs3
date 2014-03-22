@@ -206,10 +206,11 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
 
-	be_t<u32> owner_tid = mutex.GetOwner();
+	be_t<u32> owner_tid = mutex.GetFreeValue();
 
-	if (owner_tid != mutex.GetFreeValue())
+	if (mutex.unlock(owner_tid, owner_tid) != SMR_OK) // check free value
 	{
+		owner_tid = mutex.GetOwner();
 		if (CPUThread* tt = Emu.GetCPU().GetThread(owner_tid))
 		{
 			if (!tt->IsAlive())
@@ -263,7 +264,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 
 int sys_lwmutex_t::unlock(be_t<u32> tid)
 {
-	if (tid != mutex.GetOwner())
+	if (mutex.unlock(tid, tid) != SMR_OK)
 	{
 		return CELL_EPERM;
 	}
