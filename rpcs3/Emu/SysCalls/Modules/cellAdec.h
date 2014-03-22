@@ -1036,6 +1036,40 @@ struct AdecFrame
 
 int adecRead(void* opaque, u8* buf, int buf_size);
 
+struct OMAHeader // OMA Header
+{
+	u32 magic; // 0x01334145
+	u16 size; // 96 << 8
+	u16 unk0; // 0xffff
+	u64 unk1; // 0x00500f0100000000ULL
+	u64 unk2; // 0xcef5000000000400ULL
+	u64 unk3; // 0x1c458024329192d2ULL
+	u8 codecId; // 1 for ATRAC3P
+	u8 reserved0; // 0
+	u8 code1;
+	u8 code2;
+	u32 reserved1; // 0
+	u64 reserved[7]; // 0
+
+	OMAHeader(u8 id, u8 code1, u8 code2)
+		: magic(0x01334145)
+		, size(96 << 8)
+		, unk0(0xffff)
+		, unk1(0x00500f0100000000ULL)
+		, unk2(0xcef5000000000400ULL)
+		, unk3(0x1c458024329192d2ULL)
+		, codecId(id)
+		, reserved0(0)
+		, code1(code1)
+		, code2(code2)
+		, reserved1(0)
+	{
+		memset(reserved, 0, sizeof(reserved));
+	}
+};
+
+static_assert(sizeof(OMAHeader) == 96, "Wrong OMAHeader size");
+
 class AudioDecoder
 {
 public:
@@ -1053,6 +1087,21 @@ public:
 	{
 		u32 addr;
 		u32 size;
+		bool init;
+		u8* rem;
+		u32 rem_size;
+
+		AudioReader()
+			: rem(nullptr)
+			, rem_size(0)
+		{
+		}
+
+		~AudioReader()
+		{
+			if (rem) free(rem);
+			rem = nullptr;
+		}
 	} reader;
 
 	SQueue<AdecFrame> frames;

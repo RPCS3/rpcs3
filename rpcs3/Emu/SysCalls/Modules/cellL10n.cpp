@@ -19,6 +19,19 @@ enum
 	ConverterUnknown,
 };
 
+// detection result
+enum
+{
+	L10N_STR_UNKNOWN = (1 << 0),
+	L10N_STR_ASCII = (1 << 1),
+	L10N_STR_JIS = (1 << 2),
+	L10N_STR_EUCJP = (1 << 3),
+	L10N_STR_SJIS = (1 << 4),
+	L10N_STR_UTF8 = (1 << 5),
+	L10N_STR_ILLEGAL = (1 << 16),
+	L10N_STR_ERROR = (1 << 17),
+};
+
 int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t utf8_len)
 {
 	cellL10n.Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
@@ -41,6 +54,13 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	Memory.WriteString(utf8, str.c_str());
 #endif
 	return ConversionOK;
+}
+
+int jstrchk(mem8_ptr_t jstr)
+{
+	cellL10n.Log("jstrchk(jstr_addr=0x%x [%s])", jstr.GetAddr(), "omitted" /*Memory.ReadString(jstr.GetAddr()).wx_str()*/);
+
+	return L10N_STR_UTF8;
 }
 
 void cellL10n_init()
@@ -132,7 +152,7 @@ void cellL10n_init()
 	// cellL10n.AddFunc(0x73f2cd21, SJISstoJISs);
 	// cellL10n.AddFunc(0x74496718, SBCStoUTF8);
 	// cellL10n.AddFunc(0x74871fe0, UTF8toUTF32);
-	// cellL10n.AddFunc(0x750c363d, jstrchk);
+	cellL10n.AddFunc(0x750c363d, jstrchk);
 	// cellL10n.AddFunc(0x7c5bde1c, UHCtoEUCKR);
 	// cellL10n.AddFunc(0x7c912bda, kuten2jis);
 	// cellL10n.AddFunc(0x7d07a1c2, UTF8toEUCCN);

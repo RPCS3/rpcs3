@@ -113,14 +113,26 @@ private:
 				}
 			}
 			break;
-		case 0x102: default:
-			if (!CPU.SPU.Out_MBox.GetCount()) // the real exit status
+		case 0x102:
+			if (!CPU.SPU.Out_MBox.GetCount())
 			{
-				ConLog.Warning("STOP: 0x%x (no message)", code);
+				ConLog.Error("sys_spu_thread_exit (no status, code 0x102)");
 			}
-			else if (Ini.HLELogging.GetValue() || code != 0x102)
+			else if (Ini.HLELogging.GetValue())
 			{
-				ConLog.Warning("STOP: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
+				// the real exit status
+				ConLog.Write("sys_spu_thread_exit (status=0x%x)", CPU.SPU.Out_MBox.GetValue());
+			}
+			CPU.Stop();
+			break;
+		default:
+			if (!CPU.SPU.Out_MBox.GetCount())
+			{
+				ConLog.Error("Unknown STOP code: 0x%x (no message)", code);
+			}
+			else
+			{
+				ConLog.Error("Unknown STOP code: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
 			}
 			CPU.Stop();
 			break;

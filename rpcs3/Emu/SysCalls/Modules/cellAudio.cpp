@@ -118,29 +118,37 @@ int cellAudioInit()
 						index = (position + 1) % port.block; // write new value
 					}
 
+					u32 k = port.channel / 2;
+
 					if (first_mix)
 					{
-						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 						{
 							// reverse byte order (TODO: use port.m_param.level)
-							buffer[i] = buffer2[i];
+							buffer[i] = buffer2[i*k];
+							buffer[i+1] = buffer2[i*k+1];
 
 							// convert the data from float to u16
 							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
+							assert(buffer[i+1] >= -4.0f && buffer[i+1] <= 4.0f);
 							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
+							oal_buffer[oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 13) - 1));
 						}
 
 						first_mix = false;
 					}
 					else
 					{
-						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 						{
-							buffer[i] = (buffer[i] + buffer2[i]) * 0.5; // TODO: valid mixing
+							buffer[i] = (buffer[i] + buffer2[i*k]) * 0.5; // TODO: valid mixing
+							buffer[i+1] = (buffer[i+1] + buffer2[i*k+1]) * 0.5;
 
 							// convert the data from float to u16
 							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
+							assert(buffer[i+1] >= -4.0f && buffer[i+1] <= 4.0f);
 							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
+							oal_buffer[oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 13) - 1));
 						}
 					}
 				}
@@ -176,8 +184,6 @@ int cellAudioInit()
 						ConLog.Error("Port aborted: cannot write file!");
 						goto abort;
 					}
-
-					m_dump.UpdateHeader(sizeof(buffer));
 				}
 			}
 			ConLog.Write("Audio finished");

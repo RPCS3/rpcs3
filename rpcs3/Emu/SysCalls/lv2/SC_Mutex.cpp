@@ -63,7 +63,7 @@ int sys_mutex_destroy(u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	if ((u32&)mutex->cond_count) // check if associated condition variable exists
+	if (mutex->cond_count) // check if associated condition variable exists
 	{
 		return CELL_EPERM;
 	}
@@ -99,9 +99,7 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
 
-	_mm_mfence();
-	u32 owner = mutex->m_mutex.GetOwner();
-	if (owner == tid)
+	if (mutex->m_mutex.unlock(tid, tid) == SMR_OK)
 	{
 		if (mutex->is_recursive)
 		{
@@ -116,7 +114,7 @@ int sys_mutex_lock(u32 mutex_id, u64 timeout)
 			return CELL_EDEADLK;
 		}
 	}
-	else if (owner)
+	else if (u32 owner = mutex->m_mutex.GetOwner())
 	{
 		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
 		{
@@ -170,9 +168,7 @@ int sys_mutex_trylock(u32 mutex_id)
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
 
-	_mm_mfence();
-	u32 owner = mutex->m_mutex.GetOwner();
-	if (owner == tid)
+	if (mutex->m_mutex.unlock(tid, tid) == SMR_OK)
 	{
 		if (mutex->is_recursive)
 		{
@@ -187,7 +183,7 @@ int sys_mutex_trylock(u32 mutex_id)
 			return CELL_EDEADLK;
 		}
 	}
-	else if (owner)
+	else if (u32 owner = mutex->m_mutex.GetOwner())
 	{
 		if (CPUThread* tt = Emu.GetCPU().GetThread(owner))
 		{
@@ -219,8 +215,7 @@ int sys_mutex_unlock(u32 mutex_id)
 	PPUThread& t = GetCurrentPPUThread();
 	u32 tid = t.GetId();
 
-	_mm_mfence();
-	if (mutex->m_mutex.GetOwner() == tid)
+	if (mutex->m_mutex.unlock(tid, tid) == SMR_OK)
 	{
 		if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
 		{

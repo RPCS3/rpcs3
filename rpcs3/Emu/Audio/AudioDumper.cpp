@@ -23,14 +23,20 @@ void AudioDumper::WriteHeader()
 
 size_t AudioDumper::WriteData(const void* buffer, size_t size)
 {
+	for (u32 i = 0; i < size / 8; i++)
+	{
+		if (((u64*)buffer)[i]) goto process;
+	}
+	for (u32 i = 0; i < size % 8; i++)
+	{
+		if (((u8*)buffer)[i + (size & ~7)]) goto process;
+	}
+	return size; // ignore empty data
+process:
 	size_t ret = m_output.Write(buffer, size);
+	m_header.Size += ret;
+	m_header.RIFF.Size += ret;
 	return ret;
-}
-
-void AudioDumper::UpdateHeader(size_t size)
-{
-	m_header.Size += size;
-	m_header.RIFF.Size += size;
 }
 
 void AudioDumper::Finalize()

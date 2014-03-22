@@ -286,6 +286,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellAtrac.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellDmux.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />

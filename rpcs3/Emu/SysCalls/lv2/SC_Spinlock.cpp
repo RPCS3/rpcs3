@@ -44,8 +44,10 @@ void sys_spinlock_unlock(mem_ptr_t<spinlock> lock)
 {
 	sys_spinlock.Log("sys_spinlock_unlock(lock_addr=0x%x)", lock.GetAddr());
 
+again:
 	switch (lock->mutex.unlock(lock->mutex.GetOwner()))
 	{
+	case SMR_PERMITTED: goto again;
 	default: break;
 	}
 }

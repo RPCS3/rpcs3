@@ -210,6 +210,11 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 		}
 	}
 
+	ConLog.Error("DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
+	for (u32 i = 0; i < m_allocated.GetCount(); i++)
+	{
+		ConLog.Write("*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
+	}
 	return false;
 }
 

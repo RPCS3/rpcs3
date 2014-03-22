@@ -356,6 +356,7 @@ extern int sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument
 extern int sys_spu_thread_group_destroy(u32 id);
 extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_suspend(u32 id);
+extern int sys_spu_thread_group_resume(u32 id);
 extern int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 extern int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);

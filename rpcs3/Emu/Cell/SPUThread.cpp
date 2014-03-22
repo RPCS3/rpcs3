@@ -20,6 +20,8 @@ SPUThread::SPUThread(CPUThreadType type) : PPCThread(type)
 {
 	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
 
+	group = nullptr;
+
 	Reset();
 }
 
@@ -46,10 +48,10 @@ void SPUThread::InitRegs()
 	cfg.Reset();
 
 	dmac.ls_offset = m_offset;
-	dmac.proxy_pos = 0;
+	/*dmac.proxy_pos = 0;
 	dmac.queue_pos = 0;
 	dmac.proxy_lock = 0;
-	dmac.queue_lock = 0;
+	dmac.queue_lock = 0;*/
 
 	SPU.RunCntl.SetValue(SPU_RUNCNTL_STOP);
 	SPU.Status.SetValue(SPU_STATUS_RUNNING);

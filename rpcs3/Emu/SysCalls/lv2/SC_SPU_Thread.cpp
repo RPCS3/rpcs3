@@ -83,9 +83,12 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		return CELL_EFAULT;
 	}
 
-	if(!Memory.IsGoodAddr(attr->name_addr, attr->name_len))
+	if (attr->name_addr)
 	{
-		return CELL_EFAULT;
+		if(!Memory.IsGoodAddr(attr->name_addr, attr->name_len))
+		{
+			return CELL_EFAULT;
+		}
 	}
 
 	if(spu_num >= group_info->list.GetCount())
@@ -99,7 +102,13 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	}
 
 	u32 spu_ep = (u32)img->entry_point;
-	std::string name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
+
+	std::string name = "SPUThread";
+	if (attr->name_addr)
+	{
+		name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
+	}
+
 	u64 a1 = arg->arg1;
 	u64 a2 = arg->arg2;
 	u64 a3 = arg->arg3;
@@ -120,9 +129,10 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	new_thread.Run();
 
 	thread = group_info->list[spu_num] = new_thread.GetId();
+	(*(SPUThread*)&new_thread).group = group_info;
 
 	sc_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		wxString(name).wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
+		wxString(attr->name_addr ? name : "").wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
 
 	return CELL_OK;
 }
@@ -216,6 +226,8 @@ int sys_spu_thread_group_start(u32 id)
 		return CELL_ESRCH;
 	}
 
+	// TODO: check group state
+
 	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
 		CPUThread* t;
@@ -239,12 +251,37 @@ int sys_spu_thread_group_suspend(u32 id)
 		return CELL_ESRCH;
 	}
 
-	//Emu.Pause();
+	// TODO: check group state
+
 	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
 		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
 			t->Pause();
+		}
+	}
+
+	return CELL_OK;
+}
+
+//175
+int sys_spu_thread_group_resume(u32 id)
+{
+	sc_spu.Log("sys_spu_thread_group_resume(id=%d)", id);
+
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
+
+	// TODO: check group state
+
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	{
+		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
+		{
+			t->Resume();
 		}
 	}
 
@@ -500,14 +537,7 @@ int sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	if ((*(SPUThread*)thr).cfg.value & ((u64)1<<number))
-	{ //logical OR
-		(*(SPUThread*)thr).SPU.SNR[number].PushUncond_OR(value);
-	}
-	else
-	{ //overwrite
-		(*(SPUThread*)thr).SPU.SNR[number].PushUncond(value);
-	}
+	(*(SPUThread*)thr).WriteSNR(number, value);
 
 	return CELL_OK;
 }

@@ -37,6 +37,7 @@ uint32_t cellGcmGetMaxIoMapSize();
 void cellGcmGetOffsetTable(mem_ptr_t<gcm_offset> table);
 int32_t cellGcmIoOffsetToAddress(u32 ioOffset, u64 address);
 int32_t cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size);
+int32_t cellGcmMapEaIoAddressWithFlags(const u32 ea, const u32 io, const u32 size, const u32 flags);
 int32_t cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset);
 int32_t cellGcmReserveIoMapSize(const u32 size);
 int32_t cellGcmUnmapEaIoAddress(u64 ea);
@@ -68,6 +69,14 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
 
+	InitOffsetTable();
+	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
+	{
+		Memory.MemoryBlocks.pop_back();
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
 	map_offset_addr = 0;
 	map_offset_pos = 0;
 	current_config.ioSize = ioSize;
@@ -77,10 +86,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	current_config.memoryFrequency = 650000000;
 	current_config.coreFrequency = 500000000;
 
-	InitOffsetTable();
 	Memory.RSXCMDMem.AllocAlign(cmdSize);
-	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
-	cellGcmMapEaIoAddress(ioAddress, 0, ioSize);
 
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
@@ -677,6 +683,12 @@ int32_t cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size)
 	return CELL_OK;
 }
 
+int32_t cellGcmMapEaIoAddressWithFlags(const u32 ea, const u32 io, const u32 size, const u32 flags)
+{
+	cellGcmSys.Warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
+	return cellGcmMapEaIoAddress(ea, io, size); // TODO: strict ordering
+}
+
 int32_t cellGcmMapLocalMemory(u64 address, u64 size)
 {
 	if(!local_size && !local_addr)
@@ -855,6 +867,7 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x2922aed0, cellGcmGetOffsetTable);
 	cellGcmSys.AddFunc(0x2a6fba9c, cellGcmIoOffsetToAddress);
 	cellGcmSys.AddFunc(0x63441cb4, cellGcmMapEaIoAddress);
+	cellGcmSys.AddFunc(0x626e8518, cellGcmMapEaIoAddressWithFlags);
 	cellGcmSys.AddFunc(0xdb769b32, cellGcmMapLocalMemory);
 	cellGcmSys.AddFunc(0xa114ec67, cellGcmMapMainMemory);
 	cellGcmSys.AddFunc(0xa7ede268, cellGcmReserveIoMapSize);

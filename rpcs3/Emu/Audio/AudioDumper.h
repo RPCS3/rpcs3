@@ -64,6 +64,5 @@ public:
 	bool Init();
 	void WriteHeader();
 	size_t WriteData(const void* buffer, size_t size);
-	void UpdateHeader(size_t size);
 	void Finalize();
 };

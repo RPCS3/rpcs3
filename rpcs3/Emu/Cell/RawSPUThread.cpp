@@ -283,7 +283,7 @@ void RawSPUThread::Task()
 				continue;
 			}
 
-			dmac.DoCmd();
+			//dmac.DoCmd();
 
 			if(SPU.RunCntl.GetValue() != SPU_RUNCNTL_RUNNABLE)
 			{

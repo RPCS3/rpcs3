@@ -4,13 +4,16 @@
 enum
 {
 	MFC_PUT_CMD      = 0x20,	MFC_PUTB_CMD     = 0x21,	MFC_PUTF_CMD     = 0x22,
+	MFC_PUTR_CMD     = 0x30,	MFC_PUTRB_CMD    = 0x31,	MFC_PUTRF_CMD    = 0x32,
 	MFC_GET_CMD      = 0x40,	MFC_GETB_CMD     = 0x41,	MFC_GETF_CMD     = 0x42,
 	MFC_PUTL_CMD     = 0x24,	MFC_PUTLB_CMD    = 0x25,	MFC_PUTLF_CMD    = 0x26,
+	MFC_PUTRL_CMD    = 0x34,	MFC_PUTRLB_CMD   = 0x35,	MFC_PUTRLF_CMD   = 0x36,
 	MFC_GETL_CMD     = 0x44,	MFC_GETLB_CMD    = 0x45,	MFC_GETLF_CMD    = 0x46,
 	MFC_GETLLAR_CMD  = 0xD0,
 	MFC_PUTLLC_CMD   = 0xB4,
 	MFC_PUTLLUC_CMD  = 0xB0,
 	MFC_PUTQLLUC_CMD = 0xB8,
+
 	MFC_SNDSIG_CMD   = 0xA0,	MFC_SNDSIGB_CMD  = 0xA1,	MFC_SNDSIGF_CMD  = 0xA2,
 	MFC_BARRIER_CMD  = 0xC0,
 	MFC_EIEIO_CMD    = 0xC8,
@@ -19,6 +22,8 @@ enum
 	MFC_BARRIER_MASK = 0x01,
 	MFC_FENCE_MASK   = 0x02,
 	MFC_LIST_MASK    = 0x04,
+	MFC_START_MASK   = 0x08, // ???
+	MFC_RESULT_MASK  = 0x10, // ???
 	MFC_MASK_CMD     = 0xffff,
 };
 
@@ -55,7 +60,7 @@ enum
 	MFC_SPU_MAX_QUEUE_SPACE					= 0x10,
 };
 
-struct DMAC_Queue
+/*struct DMAC_Queue
 {
 	bool is_valid;
 	u64 ea;
@@ -149,13 +154,14 @@ public:
 	{
 		return Memory.Read32(m_addr);
 	}
-};
+};*/
 
 struct DMAC
 {
-	//DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE]; //not used yet
-	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE+MFC_SPU_MAX_QUEUE_SPACE]; //temporarily 24
 	u64 ls_offset;
+
+	/*//DMAC_Queue queue[MFC_SPU_MAX_QUEUE_SPACE]; //not used yet
+	DMAC_Proxy proxy[MFC_PPU_MAX_QUEUE_SPACE+MFC_SPU_MAX_QUEUE_SPACE]; //temporarily 24
 	u32 queue_pos;
 	u32 proxy_pos;
 	long queue_lock;
@@ -194,18 +200,6 @@ struct DMAC
 			return MFC_PPU_DMA_QUEUE_FULL;
 		}
 
-		/* while (std::atomic_exchange(&proxy_lock, 1));
-		_mm_lfence();
-		DMAC_Proxy& p = proxy[proxy_pos];
-		p.cmd = cmd;
-		p.tag = tag;
-		p.lsa = lsa;
-		p.ea = ea;
-		p.size = size;
-		_mm_sfence(); //for DoCmd()
-		proxy_pos++;
-		_mm_sfence();
-		proxy_lock = 0; */
 		ProcessCmd(cmd, tag, lsa, ea, size);
 
 		return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
@@ -230,10 +224,10 @@ struct DMAC
 				ClearCmd();
 			}
 		}
-	}
+	}*/
 };
 
-struct MFC
+/*struct MFC
 {
 	SPUReg<1> MFC_LSA;
 	SPUReg<1> MFC_EAH;
@@ -299,4 +293,4 @@ struct MFC
 			MFC_QStatus.SetValue(mask);
 		}
 	}
-};
+};*/

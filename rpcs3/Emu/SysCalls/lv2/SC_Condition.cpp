@@ -74,7 +74,7 @@ int sys_cond_signal(u32 cond_id)
 
 	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		cond->cond.lock(target);
+		cond->signal.lock(target);
 
 		if (Emu.IsStopped())
 		{
@@ -99,7 +99,7 @@ int sys_cond_signal_all(u32 cond_id)
 
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		cond->cond.lock(target);
+		cond->signal.lock(target);
 
 		if (Emu.IsStopped())
 		{
@@ -134,7 +134,7 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
-		cond->cond.lock(target);
+		cond->signal.lock(target);
 	}
 
 	if (Emu.IsStopped())
@@ -160,24 +160,46 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 
 	if (mutex->m_mutex.GetOwner() != tid)
 	{
+		sys_cond.Warning("sys_cond_wait(cond_id=%d) failed (EPERM)", cond_id);
 		return CELL_EPERM;
 	}
 
 	cond->m_queue.push(tid);
 
+	if (mutex->recursive != 1)
+	{
+		sys_cond.Warning("sys_cond_wait(cond_id=%d): associated mutex had wrong recursive value (%d)", cond_id, mutex->recursive);
+	}
 	mutex->recursive = 0;
-	mutex->m_mutex.unlock(tid);
+	mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
 
 	u32 counter = 0;
 	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
 
 	while (true)
 	{
-		if (cond->cond.GetOwner() == tid)
+		if (cond->signal.unlock(tid, tid) == SMR_OK)
 		{
-			mutex->m_mutex.lock(tid);
+			if (SMutexResult res = mutex->m_mutex.trylock(tid))
+			{
+				if (res != SMR_FAILED)
+				{
+					goto abort;
+				}
+				mutex->m_queue.push(tid);
+
+				switch (mutex->m_mutex.lock(tid))
+				{
+				case SMR_OK:
+					mutex->m_queue.invalidate(tid);
+				case SMR_SIGNAL:
+					break;
+				default:
+					goto abort;
+				}
+			}
 			mutex->recursive = 1;
-			cond->cond.unlock(tid);
+			cond->signal.unlock(tid);
 			return CELL_OK;
 		}
 
@@ -186,13 +208,16 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 		if (counter++ > max_counter)
 		{
 			cond->m_queue.invalidate(tid);
-			GetCurrentPPUThread().owned_mutexes--;
+			GetCurrentPPUThread().owned_mutexes--; // ???
 			return CELL_ETIMEDOUT;
 		}
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_cond_wait(id=%d) aborted", cond_id);
-			return CELL_OK;
+			goto abort;
 		}
 	}
+
+abort:
+	ConLog.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+	return CELL_OK;
 }
