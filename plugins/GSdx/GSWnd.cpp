@@ -79,7 +79,7 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_ClientWaitSync) = GetProcAddress("glClientWaitSync");
 	*(void**)&(gl_FlushMappedBufferRange) = GetProcAddress("glFlushMappedBufferRange");
 	// GL4.0
-	*(void**)&(gl_UniformSubroutinesuiv) = GetProcAddress("glUniformSubroutinesuiv");
+	*(void**)&(gl_UniformSubroutinesuiv) = GetProcAddress("glUniformSubroutinesuiv", true);
 	// GL4.1
 	*(void**)&(gl_CreateShaderProgramv) = GetProcAddress("glCreateShaderProgramv", true);
 	*(void**)&(gl_BindProgramPipeline) = GetProcAddress("glBindProgramPipeline", true);
