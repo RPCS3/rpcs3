@@ -158,6 +158,9 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 
 	new_thread.SetStackSize(stacksize);
 	//new_thread.flags = flags;
 	new_thread.SetName(Memory.ReadString(threadname_addr).ToStdString());
+
+	ConLog.Write("*** New PPU Thread [%s] (): id = %d", wxString(new_thread.GetName()).wx_str(), new_thread.GetId());
+
 	new_thread.Run();
 	new_thread.Exec();
 
@@ -177,7 +180,7 @@ void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
 		new_thread.Run();
 		new_thread.Exec();
 
-		GetCurrentPPUThread().Wait(new_thread);
+		//GetCurrentPPUThread().Wait(new_thread);
 	}
 }
 

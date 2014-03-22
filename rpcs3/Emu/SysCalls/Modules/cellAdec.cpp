@@ -64,7 +64,7 @@ next:
 				adec.reader.size = adec.task.au.size;
 				//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 
-				if (adec.last_pts > adec.task.au.pts) adec.last_pts = adec.task.au.pts;
+				//if (adec.last_pts > adec.task.au.pts) adec.last_pts = adec.task.au.pts;
 			}
 			break;
 		default:
@@ -266,7 +266,8 @@ u32 adecOpen(AudioDecoder* data)
 					adec.reader.size = task.au.size;
 					//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
-					if (adec.last_pts > task.au.pts || adec.just_started) adec.last_pts = task.au.pts;
+					//if (adec.last_pts > task.au.pts || adec.just_started) adec.last_pts = task.au.pts;
+					if (adec.just_started) adec.last_pts = task.au.pts;
 
 					struct AVPacketHolder : AVPacket
 					{

@@ -58,7 +58,7 @@ void CPUThread::CloseStack()
 {
 	if(m_stack_addr)
 	{
-		Memory.Free(m_stack_addr);
+		Memory.StackMem.Free(m_stack_addr);
 		m_stack_addr = 0;
 	}
 

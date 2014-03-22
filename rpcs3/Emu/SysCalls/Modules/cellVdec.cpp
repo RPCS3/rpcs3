@@ -68,8 +68,8 @@ next:
 				vdec.reader.size = vdec.task.size;
 				//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", vdec.task.size, vdec.task.pts, vdec.task.dts);
 
-				if (vdec.last_pts > vdec.task.pts) vdec.last_pts = vdec.task.pts;
-				if (vdec.last_dts > vdec.task.dts) vdec.last_dts = vdec.task.dts;
+				//if (vdec.last_pts > vdec.task.pts) vdec.last_pts = vdec.task.pts;
+				//if (vdec.last_dts > vdec.task.dts) vdec.last_dts = vdec.task.dts;
 			}
 			break;
 		default:
@@ -208,8 +208,13 @@ u32 vdecOpen(VideoDecoder* data)
 					vdec.reader.size = task.size;
 					//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", task.size, task.pts, task.dts);
 
-					if (vdec.last_pts > task.pts || vdec.just_started) vdec.last_pts = task.pts;
-					if (vdec.last_dts > task.dts || vdec.just_started) vdec.last_dts = task.dts;
+					//if (vdec.last_pts > task.pts || vdec.just_started) vdec.last_pts = task.pts;
+					//if (vdec.last_dts > task.dts || vdec.just_started) vdec.last_dts = task.dts;
+					if (vdec.just_started)
+					{
+						vdec.last_pts = task.pts;
+						vdec.last_dts = task.dts;
+					}
 
 					struct AVPacketHolder : AVPacket
 					{

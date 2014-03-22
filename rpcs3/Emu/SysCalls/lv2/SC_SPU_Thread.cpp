@@ -226,6 +226,8 @@ int sys_spu_thread_group_start(u32 id)
 		return CELL_ESRCH;
 	}
 
+	// TODO: check group state
+
 	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
 		CPUThread* t;
@@ -249,12 +251,37 @@ int sys_spu_thread_group_suspend(u32 id)
 		return CELL_ESRCH;
 	}
 
-	//Emu.Pause();
+	// TODO: check group state
+
 	for (u32 i = 0; i < group_info->list.GetCount(); i++)
 	{
 		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
 			t->Pause();
+		}
+	}
+
+	return CELL_OK;
+}
+
+//175
+int sys_spu_thread_group_resume(u32 id)
+{
+	sc_spu.Log("sys_spu_thread_group_resume(id=%d)", id);
+
+	SpuGroupInfo* group_info;
+	if(!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
+
+	// TODO: check group state
+
+	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	{
+		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
+		{
+			t->Resume();
 		}
 	}
 
