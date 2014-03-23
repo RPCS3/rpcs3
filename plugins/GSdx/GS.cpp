@@ -58,11 +58,7 @@ extern bool RunLinuxDialog();
 #define PS2E_X86 0x01   // 32 bit
 #define PS2E_X86_64 0x02   // 64 bit
 
-#ifdef ENABLE_OGL_MT_HACK
-GSRenderer* s_gs = NULL;
-#else
 static GSRenderer* s_gs = NULL;
-#endif
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
 static int s_renderer = -1;
@@ -550,20 +546,7 @@ EXPORT_C GSreadFIFO(uint8* mem)
 {
 	try
 	{
-#ifdef ENABLE_OGL_MT_HACK
-		// FIXME: double check which thread call this function
-		// See fifo2 issue below
-#ifdef ENABLE_OGL_DEBUG
-		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO1 on opengl\n");
-#endif
-		s_gs->m_dev->AttachContext();
-#endif
-
 		s_gs->ReadFIFO(mem, 1);
-
-#ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_dev->DetachContext();
-#endif
 	}
 	catch (GSDXRecoverableError)
 	{
@@ -574,17 +557,7 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
 	try
 	{
-#ifdef ENABLE_OGL_MT_HACK
-		// FIXME called from EE core thread not MTGS which cause
-		// invalidate data for opengl
-		s_gs->m_dev->AttachContext();
-#endif
-
 		s_gs->ReadFIFO(mem, size);
-
-#ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_dev->DetachContext();
-#endif
 	}
 	catch (GSDXRecoverableError)
 	{
@@ -656,9 +629,6 @@ EXPORT_C GSvsync(int field)
 
 #endif
 
-#ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_dev->AttachContext();
-#endif
 		s_gs->VSync(field);
 	}
 	catch (GSDXRecoverableError)

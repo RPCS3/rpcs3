@@ -23,13 +23,6 @@
 #include "GSState.h"
 #include "GSdx.h"
 
-#ifdef ENABLE_OGL_MT_HACK
-
-#include "GSRendererOGL.h"
-extern GSRenderer* s_gs;
-
-#endif
-
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 
 GSState::GSState()
@@ -1286,9 +1279,6 @@ void GSState::GIFRegHandlerTRXDIR(const GIFReg* RESTRICT r)
 		break;
 	case 1: // local -> host
 		m_tr.Init(m_env.TRXPOS.SSAX, m_env.TRXPOS.SSAY);
-#ifdef ENABLE_OGL_MT_HACK
-		s_gs->m_dev->DetachContext();
-#endif
 		break;
 	case 2: // local -> local
 		Move();
@@ -1793,9 +1783,6 @@ static hash_map<uint64, uint64> s_tags;
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(&m_perfmon);
-#ifdef ENABLE_OGL_MT_HACK
-	s_gs->m_dev->AttachContext();
-#endif
 
 	const uint8* start = mem;
 

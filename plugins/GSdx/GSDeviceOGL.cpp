@@ -369,13 +369,8 @@ void GSDeviceOGL::AttachContext()
 
 void GSDeviceOGL::DetachContext()
 {
-	// Must be done before we detach the context!
-	if (GLLoader::found_GL_ARB_buffer_storage)
-		PboPool::UnmapAll();
-
 	if (m_window)
 		m_window->DetachContext();
-
 }
 
 void GSDeviceOGL::BeforeDraw()
