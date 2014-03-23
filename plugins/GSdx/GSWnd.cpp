@@ -89,6 +89,7 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_GetProgramPipelineInfoLog) = GetProcAddress("glGetProgramPipelineInfoLog", true);
 	*(void**)&(gl_ValidateProgramPipeline) = GetProcAddress("glValidateProgramPipeline", true);
 	*(void**)&(gl_UseProgramStages) = GetProcAddress("glUseProgramStages", true);
+	*(void**)&(gl_ProgramUniform1i) = GetProcAddress("glProgramUniform1i", true); // but no GL4.2
 	// NO GL4.1
 	*(void**)&(gl_DeleteProgram) = GetProcAddress("glDeleteProgram");
 	*(void**)&(gl_DeleteShader) = GetProcAddress("glDeleteShader");
@@ -97,7 +98,6 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_CreateShader) = GetProcAddress("glCreateShader");
 	*(void**)&(gl_UseProgram) = GetProcAddress("glUseProgram");
 	*(void**)&(gl_GetShaderInfoLog) = GetProcAddress("glGetShaderInfoLog");
-	*(void**)&(gl_ProgramUniform1i) = GetProcAddress("glProgramUniform1i");
 	*(void**)&(gl_LinkProgram) = GetProcAddress("glLinkProgram");
 	// NO GL4.2
 	*(void**)&(gl_GetUniformBlockIndex) = GetProcAddress("glGetUniformBlockIndex");
