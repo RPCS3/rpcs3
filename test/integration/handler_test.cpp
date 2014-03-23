@@ -1,14 +1,11 @@
-#include "specexamples.h"  // IWYU pragma: keep
-#include "yaml-cpp/eventhandler.h"
+#include "handler_test.h"
+#include "specexamples.h"   // IWYU pragma: keep
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using ::testing::_;
-using ::testing::InSequence;
-using ::testing::NiceMock;
-using ::testing::StrictMock;
 
 #define EXPECT_THROW_PARSER_EXCEPTION(statement, message) \
   ASSERT_THROW(statement, ParserException);               \
@@ -21,45 +18,6 @@ using ::testing::StrictMock;
 
 namespace YAML {
 namespace {
-
-class MockEventHandler : public EventHandler {
- public:
-  MOCK_METHOD1(OnDocumentStart, void(const Mark&));
-  MOCK_METHOD0(OnDocumentEnd, void());
-
-  MOCK_METHOD2(OnNull, void(const Mark&, anchor_t));
-  MOCK_METHOD2(OnAlias, void(const Mark&, anchor_t));
-  MOCK_METHOD4(OnScalar, void(const Mark&, const std::string&, anchor_t,
-                              const std::string&));
-
-  MOCK_METHOD3(OnSequenceStart,
-               void(const Mark&, const std::string&, anchor_t));
-  MOCK_METHOD0(OnSequenceEnd, void());
-
-  MOCK_METHOD3(OnMapStart, void(const Mark&, const std::string&, anchor_t));
-  MOCK_METHOD0(OnMapEnd, void());
-};
-
-class HandlerTest : public ::testing::Test {
- protected:
-  void Parse(const std::string& example) {
-    std::stringstream stream(example);
-    Parser parser(stream);
-    while (parser.HandleNextDocument(handler)) {
-    }
-  }
-
-  void IgnoreParse(const std::string& example) {
-    std::stringstream stream(example);
-    Parser parser(stream);
-    while (parser.HandleNextDocument(nice_handler)) {
-    }
-  }
-
-  InSequence sequence;
-  StrictMock<MockEventHandler> handler;
-  NiceMock<MockEventHandler> nice_handler;
-};
 
 TEST_F(HandlerTest, NoEndOfMapFlow) {
   EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse("---{header: {id: 1"),
