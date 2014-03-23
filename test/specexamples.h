@@ -1,5 +1,4 @@
-namespace Test {
-namespace Spec {
+namespace {
 const char *ex2_1 =
     "- Mark McGwire\n"
     "- Sammy Sosa\n"
@@ -844,5 +843,4 @@ const char *ex8_22 =
     " - nested\n"
     "mapping: !!map\n"
     " foo: bar\n";
-}
 }

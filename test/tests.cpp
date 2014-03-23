@@ -6,7 +6,6 @@
 #include "emittertests.h"
 #include "nodetests.h"
 #include "parsertests.h"
-#include "spectests.h"
 #include "tests.h"
 
 namespace Test {
@@ -16,9 +15,6 @@ void RunAll() {
     passed = false;
 
   if (!RunEmitterTests())
-    passed = false;
-
-  if (!RunSpecTests())
     passed = false;
 
   if (!RunNodeTests())
