@@ -29,52 +29,63 @@ namespace PboPool {
 	
 	GLuint m_pool[PBO_POOL_SIZE];
 	uint32 m_offset[PBO_POOL_SIZE];
+	uint32 m_initial_offset[PBO_POOL_SIZE]; // work around silly driver
 	char*  m_map[PBO_POOL_SIZE];
 	uint32 m_current_pbo = 0;
 	uint32 m_size;
 	const uint32 m_pbo_size = (640*480*16) << 2;
+	bool m_buffer_storage = false;
+
+	// Option for buffer storage
+	// Note there is a barrier (but maybe coherent is faster)
+	const GLbitfield map_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+	// FIXME do I need GL_DYNAMIC_STORAGE_BIT to allow write?
+	const GLbitfield create_flags = map_flags | GL_DYNAMIC_STORAGE_BIT;
+
+	// Normally driver must aligned the map....
+	void* align_map(void* ptr) {
+		void* aligned_map = (char*)(((uptr)ptr + 63) & ~0x3F);
+
+		m_initial_offset[m_current_pbo] = (uptr)aligned_map-(uptr)ptr;
+		if (m_initial_offset[m_current_pbo])
+			fprintf(stderr, "Buggy driver detected!!! Buffer alignment is not 64B as the spec request it\n");
+
+		return aligned_map;
+	}
 
 	void Init() {
 		gl_GenBuffers(countof(m_pool), m_pool);
+		m_buffer_storage = (theApp.GetConfig("ogl_texture_storage", 0) == 1) && GLLoader::found_GL_ARB_buffer_storage;
 
 		for (size_t i = 0; i < countof(m_pool); i++) {
 			BindPbo();
 
-			if (GLLoader::found_GL_ARB_buffer_storage) {
-				gl_BufferStorage(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_DYNAMIC_STORAGE_BIT | GL_CLIENT_STORAGE_BIT);
+			// Note the +64 gives additional room to realign the buffer (buggy driver....)
+			if (m_buffer_storage) {
+				gl_BufferStorage(GL_PIXEL_UNPACK_BUFFER, m_pbo_size+64, NULL, create_flags);
+				m_map[m_current_pbo] = (char*)align_map(gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size+64, map_flags));
+				// Workaround silly driver. (would be 0 otherwise)
+				m_offset[m_current_pbo] = m_initial_offset[m_current_pbo];
 			} else {
-				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_COPY);
+				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size+64, NULL, GL_STREAM_COPY);
+				m_map[m_current_pbo] = NULL;
+				m_offset[m_current_pbo] = 0;
 			}
 
-			m_offset[m_current_pbo] = 0;
-			m_map[m_current_pbo] = NULL;
-
-			NextPbo();
-		}
-		UnbindPbo();
-	}
-
-	void MapAll() {
-		if (m_map[m_current_pbo] != NULL) return;
-
-		// FIXME I'm not sure it is allowed to map another buffer after we get a pointer
-		GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT;
-		for (size_t i = 0; i < countof(m_pool); i++) {
-			BindPbo();
-			m_map[m_current_pbo] = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size, flags);
 			NextPbo();
 		}
 		UnbindPbo();
 	}
 
 	char* Map(uint32 size) {
+		char* map;
 		m_size = size;
 
 		if (m_size >= m_pbo_size) {
 			fprintf(stderr, "BUG: PBO too small %d but need %d\n", m_pbo_size, m_size);
 		}
 
-		if (!GLLoader::found_GL_ARB_buffer_storage) {
+		if (!m_buffer_storage) {
 			GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_RANGE_BIT;
 
 			if (m_offset[m_current_pbo] + m_size >= m_pbo_size) {
@@ -90,26 +101,28 @@ namespace PboPool {
 			// Pbo ready let's get a pointer
 			BindPbo();
 
-			return (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, m_offset[m_current_pbo], m_size, flags);
-		} else {
-			MapAll();
+			// Be sure the map is aligned
+			map = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, m_offset[m_current_pbo], m_size, flags);
 
+		} else {
 			if (m_offset[m_current_pbo] + m_size >= m_pbo_size) {
 				NextPbo();
 
-				// Mark current pbo free
-				m_offset[m_current_pbo] = 0;
+				// Mark current pbo free. Will be 0 if driver aligned properly the buffer
+				m_offset[m_current_pbo] = m_initial_offset[m_current_pbo];
 			}
 
-			// Note: it still need it because texsubimage will access currently bound buffer
+			// Note: texsubimage will access currently bound buffer
 			// Pbo ready let's get a pointer
 			BindPbo();
 
-			return m_map[m_current_pbo] + m_offset[m_current_pbo];
+			map = m_map[m_current_pbo] + m_offset[m_current_pbo];
 		}
+
+		return map;
 	}
 
-	// FIXME: unmap buffer when the context is dettached (not sure it is required actually)
+	// Used to unmap the buffer when context was detached.
 	void UnmapAll() {
 		if (m_map[m_current_pbo] == NULL) return;
 
@@ -123,8 +136,8 @@ namespace PboPool {
 	}
 
 	void Unmap() {
-		if (GLLoader::found_GL_ARB_buffer_storage) {
-			gl_MemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+		if (m_buffer_storage) {
+			//gl_MemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 		} else {
 			gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 		}
@@ -135,6 +148,8 @@ namespace PboPool {
 	}
 
 	void Destroy() {
+		if (m_buffer_storage)
+			UnmapAll();
 		gl_DeleteBuffers(countof(m_pool), m_pool);
 	}
 
@@ -152,7 +167,7 @@ namespace PboPool {
 
 	void EndTransfer() {
 		// Note: keep offset aligned for SSE/AVX
-		m_offset[m_current_pbo] = (m_offset[m_current_pbo] + m_size + 31) & ~0x1F;
+		m_offset[m_current_pbo] = (m_offset[m_current_pbo] + m_size + 63) & ~0x3F;
 	}
 }
 
@@ -319,11 +334,11 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	char* map = PboPool::Map(r.height() * line_size);
 
 	for (uint32 h = r.height(); h > 0; h--) {
-		// avoid a crash if map is not aligned
-		if ((uint32)map & 0x1F)
+		if ((uptr)map & 0x3F) {
 			memcpy(map, src, line_size);
-		else
+		} else {
 			GSVector4i::storent(map, src, line_size);
+		}
 		src += pitch;
 		map += line_size;
 	}
@@ -333,7 +348,6 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, (const void*)PboPool::Offset());
 
 	// FIXME OGL4: investigate, only 1 unpack buffer always bound
-	//if (!GLLoader::found_GL_ARB_buffer_storage)
 	PboPool::UnbindPbo();
 
 	PboPool::EndTransfer();
