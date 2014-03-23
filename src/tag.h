@@ -10,8 +10,8 @@
 #include <string>
 
 namespace YAML {
-struct Token;
 struct Directives;
+struct Token;
 
 struct Tag {
   enum TYPE {

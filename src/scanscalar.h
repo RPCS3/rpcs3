@@ -8,6 +8,7 @@
 #endif
 
 #include <string>
+
 #include "regex_yaml.h"
 #include "stream.h"
 

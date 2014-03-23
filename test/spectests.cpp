@@ -1,6 +1,11 @@
-#include "spectests.h"
-#include "yaml-cpp/yaml.h"
 #include <iostream>
+
+#include "spectests.h"
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
+
+namespace YAML {
+class Exception;
+}  // namespace YAML
 
 namespace Test {
 namespace {

@@ -1,9 +1,9 @@
 #include "scanner.h"
 #include "token.h"
-#include "yaml-cpp/exceptions.h"
-#include "exp.h"
 
 namespace YAML {
+struct Mark;
+
 Scanner::SimpleKey::SimpleKey(const Mark& mark_, int flowLevel_)
     : mark(mark_), flowLevel(flowLevel_), pIndent(0), pMapStart(0), pKey(0) {}
 

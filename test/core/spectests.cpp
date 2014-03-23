@@ -1,8 +1,9 @@
-#include "spectests.h"
-#include "handlermacros.h"
-#include "specexamples.h"
-#include "yaml-cpp/yaml.h"
 #include <cassert>
+
+#include "handlermacros.h"
+#include "specexamples.h"  // IWYU pragma: keep
+#include "spectests.h"  // IWYU pragma: keep
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
 namespace Test {
 namespace Spec {

@@ -7,18 +7,19 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/dll.h"
-#include "yaml-cpp/noncopyable.h"
 #include <ios>
 #include <memory>
 
+#include "yaml-cpp/dll.h"
+#include "yaml-cpp/noncopyable.h"
+
 namespace YAML {
-struct Directives;
-struct Mark;
-struct Token;
 class EventHandler;
 class Node;
 class Scanner;
+struct Directives;
+struct Mark;
+struct Token;
 
 class YAML_CPP_API Parser : private noncopyable {
  public:

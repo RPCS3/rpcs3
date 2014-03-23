@@ -1,11 +1,16 @@
-#include "yaml-cpp/emitter.h"
-#include "emitterstate.h"
-#include "emitterutils.h"
-#include "indentation.h"
-#include "yaml-cpp/exceptions.h"
 #include <sstream>
 
+#include "emitterutils.h"
+#include "indentation.h"  // IWYU pragma: keep
+#include "yaml-cpp/emitter.h"
+#include "yaml-cpp/emitterdef.h"
+#include "yaml-cpp/emittermanip.h"
+#include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
+
 namespace YAML {
+class Binary;
+struct _Null;
+
 Emitter::Emitter() : m_pState(new EmitterState) {}
 
 Emitter::Emitter(std::ostream& stream)

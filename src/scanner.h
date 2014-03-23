@@ -8,14 +8,16 @@
 #endif
 
 #include <ios>
-#include <string>
-#include <queue>
-#include <stack>
-#include <set>
 #include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+
 #include "ptr_vector.h"
 #include "stream.h"
 #include "token.h"
+#include "yaml-cpp/mark.h"
 
 namespace YAML {
 class Node;

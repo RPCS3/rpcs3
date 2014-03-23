@@ -10,9 +10,16 @@
 #include <cstdlib>
 #include <map>
 #include <stack>
-#include "yaml-cpp/eventhandler.h"
+
+#include "yaml-cpp/anchor.h"
 #include "yaml-cpp/contrib/anchordict.h"
 #include "yaml-cpp/contrib/graphbuilder.h"
+#include "yaml-cpp/eventhandler.h"
+
+namespace YAML {
+class GraphBuilderInterface;
+struct Mark;
+}  // namespace YAML
 
 namespace YAML {
 class GraphBuilderAdapter : public EventHandler {

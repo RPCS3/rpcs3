@@ -1,7 +1,14 @@
-#include "parsertests.h"
-#include "handlermacros.h"
-#include "yaml-cpp/yaml.h"
 #include <iostream>
+
+#include "handlermacros.h"
+#include "parsertests.h"  // IWYU pragma: keep
+#include "teststruct.h"
+#include "yaml-cpp/parser.h"
+
+namespace YAML {
+class Exception;
+class ParserException;
+}  // namespace YAML
 
 namespace Test {
 namespace Parser {

@@ -1,8 +1,13 @@
-#include "tests.h"
-#include "handlermacros.h"
-#include "yaml-cpp/yaml.h"
-#include "yaml-cpp/eventhandler.h"
 #include <iostream>
+
+#include "teststruct.h"
+#include "yaml-cpp/eventhandler.h"
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
+
+namespace YAML {
+class Exception;
+struct Mark;
+}  // namespace YAML
 
 namespace Test {
 namespace Emitter {

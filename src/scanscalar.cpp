@@ -1,8 +1,8 @@
-#include "scanscalar.h"
-#include "scanner.h"
 #include "exp.h"
-#include "yaml-cpp/exceptions.h"
-#include "token.h"
+#include "regeximpl.h"
+#include "scanscalar.h"
+#include "stream.h"
+#include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
 
 namespace YAML {
 // ScanScalar
