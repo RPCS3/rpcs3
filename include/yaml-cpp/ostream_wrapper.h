@@ -41,7 +41,7 @@ class ostream_wrapper {
 
  private:
   mutable std::vector<char> m_buffer;
-  std::ostream* m_pStream;
+  std::ostream* const m_pStream;
 
   std::size_t m_pos;
   std::size_t m_row, m_col;

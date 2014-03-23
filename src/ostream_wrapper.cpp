@@ -4,7 +4,7 @@
 
 namespace YAML {
 ostream_wrapper::ostream_wrapper()
-    : m_buffer(1),
+    : m_buffer(1, '\0'),
       m_pStream(0),
       m_pos(0),
       m_row(0),
@@ -24,8 +24,9 @@ void ostream_wrapper::write(const std::string& str) {
     std::copy(str.begin(), str.end(), &m_buffer[m_pos]);
   }
 
-  for (std::size_t i = 0; i < str.size(); i++)
+  for (std::size_t i = 0; i < str.size(); i++) {
     update_pos(str[i]);
+  }
 }
 
 void ostream_wrapper::write(const char* str, std::size_t size) {
@@ -36,8 +37,9 @@ void ostream_wrapper::write(const char* str, std::size_t size) {
     std::copy(str, str + size, &m_buffer[m_pos]);
   }
 
-  for (std::size_t i = 0; i < size; i++)
+  for (std::size_t i = 0; i < size; i++) {
     update_pos(str[i]);
+  }
 }
 
 void ostream_wrapper::update_pos(char ch) {
