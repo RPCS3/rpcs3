@@ -2,7 +2,7 @@ add_subdirectory(gtest-1.7.0)
 include_directories(gtest-1.7.0/include)
 
 file(GLOB test_headers [a-z_]*.h)
-file(GLOB test_sources [a-z_]*.cpp)
+file(GLOB test_sources [a-z_]*.cpp integration/[a-z_]*.cpp)
 file(GLOB test_core_sources core/[a-z]*.cpp)
 
 list(APPEND test_sources ${test_core_sources})
