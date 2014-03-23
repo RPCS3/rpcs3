@@ -92,7 +92,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s( libraryName, "USBqemu r%d%s"
+	sprintf_s( libraryName, "USBqemu %lld%s"
 	#ifdef DEBUG_FAST
 		"-Debug"
 	#elif defined( PCSX2_DEBUG )
@@ -102,8 +102,7 @@ static void InitLibraryName()
 	#else
 		""
 	#endif
-		,SVN_REV,
-		SVN_MODS ? "m" : ""
+		,SVN_REV,SVN_MODS ? "m" : ""
 	);
 	#endif
 #endif

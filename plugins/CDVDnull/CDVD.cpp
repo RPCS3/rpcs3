@@ -29,7 +29,7 @@ const unsigned char build = 6;
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-	snprintf( libraryName, 255, "CDVDnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "CDVDnull Driver %lld%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
 }
 

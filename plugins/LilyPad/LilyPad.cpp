@@ -655,11 +655,11 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 // Used in about and config screens.
 void GetNameAndVersionString(wchar_t *out) {
 #ifdef NO_CRT
-	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF);
 #elif defined(PCSX2_DEBUG)
-	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+	wsprintfW(out, L"LilyPad Debug %i.%i.%i (%lld)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #else
-	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+	wsprintfW(out, L"LilyPad %i.%i.%i (%lld)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #endif
 }
 
@@ -668,11 +668,11 @@ char* CALLBACK PSEgetLibName() {
 	return "LilyPad";
 #elif defined(PCSX2_DEBUG)
 	static char version[50];
-	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
+	sprintf(version, "LilyPad Debug (%lld)", SVN_REV);
 	return version;
 #else
 	static char version[50];
-	sprintf(version, "LilyPad svn (r%i)", SVN_REV);
+	sprintf(version, "LilyPad (%lld)", SVN_REV);
 	return version;
 #endif
 }

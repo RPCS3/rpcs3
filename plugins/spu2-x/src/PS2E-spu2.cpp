@@ -87,7 +87,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	snprintf( libraryName, 255, "SPU2-X r%d%s"
+	snprintf( libraryName, 255, "SPU2-X %lld%s"
 	#ifdef DEBUG_FAST
 		"-Debug"
 	#elif defined( PCSX2_DEBUG )
@@ -97,8 +97,7 @@ static void InitLibraryName()
 	#else
 		""
 	#endif
-		,SVN_REV,
-		SVN_MODS ? "m" : ""
+		,SVN_REV, SVN_MODS ? "m" : ""
 	);
 	#endif
 #endif

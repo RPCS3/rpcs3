@@ -77,7 +77,7 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-	snprintf( libraryName, 255, "DEV9null Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "DEV9null Driver %lld%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
 }
 

@@ -296,7 +296,7 @@ BEGIN
         BEGIN
             VALUE "Comments", "SPU2 Plugin for PS2 Emulators"
             VALUE "CompanyName", "PCSX2 Dev Team"
-            VALUE "FileDescription", "SPU2-X Plugin (svn build)"
+            VALUE "FileDescription", "SPU2-X Plugin (git build)"
             VALUE "FileVersion", "2.0.SVN"
             VALUE "InternalName", "SPU2-X"
             VALUE "LegalCopyright", "Copyright (C) 2011"

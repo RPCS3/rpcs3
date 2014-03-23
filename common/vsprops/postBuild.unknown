@@ -14,6 +14,7 @@ if defined PCSX2_TARGET_COPY CALL :TestAndCopy "%PCSX2_TARGET_COPY%" %1 %2 %3 %4
 ENDLOCAL
 exit 0
 
+if exists postBuild.inc.cmd call postBuild.inc.cmd
 
 :TestAndCopy
 :: Subroutine.  First parameter is our Target Dir.  Since it's a parameter into

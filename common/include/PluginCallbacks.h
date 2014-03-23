@@ -442,7 +442,7 @@ typedef struct _PS2E_VersionInfo
 
 	// Revision typically refers a revision control system (such as SVN).  When displayed
 	// by the emulator it will have an 'r' prefixed before it.
-	s32 Revision;
+	s64 Revision;
 
 } PS2E_VersionInfo;
 

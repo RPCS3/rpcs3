@@ -36,7 +36,7 @@ char *LibName       = "cdvdGigaherz "
 #ifdef PCSX2_DEBUG
 	" Debug "
 #endif
-	"(r" SFY(SVN_REV)
+	"(" SFY(SVN_REV)
 #if SVN_MODS
 	"/modded"
 #endif

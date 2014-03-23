@@ -194,13 +194,13 @@ void SysLogMachineCaps()
 {
 	if ( !PCSX2_isReleaseVersion )
 	{
-		Console.WriteLn(Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__,
+		Console.WriteLn(Color_StrongGreen, "PCSX2 %u.%u.%u-%lld %s - compiled on " __DATE__,
 			PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_REV, SVN_MODS ? "(modded)" : ""
 			);
 	}
 	else { // shorter release version string
-		Console.WriteLn(Color_StrongGreen, "PCSX2 %u.%u.%u.r%d - compiled on " __DATE__,
+		Console.WriteLn(Color_StrongGreen, "PCSX2 %u.%u.%u-%lld - compiled on " __DATE__,
 			PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_REV );
 	}

@@ -42,7 +42,7 @@ const char* GSUtil::GetLibName()
 		str = "GSdx";
 
 		#ifdef _WINDOWS
-		str += format(" %d", SVN_REV);
+		str += format(" %lld", SVN_REV);
 		if(SVN_MODS) str += "m";
 		#endif
 

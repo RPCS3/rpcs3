@@ -134,14 +134,13 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
+	sprintf_s( libraryName, "ZeroSPU2 %lld%s"
 #	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elif defined( ZEROSPU2_DEVBUILD )
 		"-Dev"
 #	endif
-		,SVN_REV,
-		SVN_MODS ? "m" : ""
+		,SVN_REV,SVN_MODS ? "m" : ""
 	);
 #endif
 #else

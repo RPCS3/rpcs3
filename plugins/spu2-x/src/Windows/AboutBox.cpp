@@ -32,7 +32,7 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 			wchar_t outstr[256];
 			if( IsDevBuild )
-				swprintf_s( outstr, L"Build r%d -- Compiled on " _T(__DATE__), SVN_REV );
+				swprintf_s( outstr, L"Build %lld -- Compiled on " _T(__DATE__), SVN_REV );
 			else
 				swprintf_s( outstr, L"Release v%d.%d -- Compiled on "  _T(__DATE__),
 					VersionInfo::Release, VersionInfo::Revision );
