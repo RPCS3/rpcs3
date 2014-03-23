@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:20+0100\n"
 "PO-Revision-Date: 2012-05-04 22:04+0700\n"
 "Last-Translator: \n"
 "Language-Team: ikazu <ikazu.kevin@gmail.com>\n"
@@ -101,11 +101,11 @@ msgstr ""
 msgid "Unrecognized ISO image file format"
 msgstr "Format ISO tak dikenali"
 
-#: pcsx2/Elfheader.cpp:265
+#: pcsx2/Elfheader.cpp:280
 msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr "Gagal memula image biner ELF. File mungkin korup atau taklengkap."
 
-#: pcsx2/Elfheader.cpp:267
+#: pcsx2/Elfheader.cpp:282
 msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
 "image type or a bug in PCSX2 ISO image support."
@@ -393,11 +393,11 @@ msgstr "Gagal menimpa file pengaturan yang ada; izin ditolak."
 msgid "Loading PS2 system plugins..."
 msgstr "Meload plugin sistem PS2..."
 
-#: pcsx2/gui/AppInit.cpp:41
+#: pcsx2/gui/AppInit.cpp:43
 msgid "PCSX2 - SSE2 Recommended"
 msgstr "PCSX2- SSE2 Direkomendasikan"
 
-#: pcsx2/gui/AppInit.cpp:69
+#: pcsx2/gui/AppInit.cpp:71
 msgid ""
 "SSE extensions are not available.  PCSX2 requires a cpu that supports the "
 "SSE instruction set."
@@ -405,91 +405,91 @@ msgstr ""
 "Ekstensi SSE tidak tersedia. PCSX2 membutuhkan sebuah cpu yang mendukung "
 "instruksi SSE."
 
-#: pcsx2/gui/AppInit.cpp:152
+#: pcsx2/gui/AppInit.cpp:157
 msgid "PCSX2 Recompiler Error(s)"
 msgstr "Kegagalan Recompiler PCSX2"
 
-#: pcsx2/gui/AppInit.cpp:222
+#: pcsx2/gui/AppInit.cpp:227
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr ""
 "Semua opsi hanya untuk sesi yang sedang berjalan dan tidak akan disimpan.\n"
 
-#: pcsx2/gui/AppInit.cpp:232 pcsx2/gui/AppMain.cpp:299
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:301
 msgid "IsoFile"
 msgstr "IsoFile"
 
-#: pcsx2/gui/AppInit.cpp:233
+#: pcsx2/gui/AppInit.cpp:238
 msgid "displays this list of command line options"
 msgstr "Menampilkan opsi daftar perintah"
 
-#: pcsx2/gui/AppInit.cpp:234
+#: pcsx2/gui/AppInit.cpp:239
 msgid "forces the program log/console to be visible"
 msgstr "memaksa catatan program/konsol menjadi tampak"
 
-#: pcsx2/gui/AppInit.cpp:235
+#: pcsx2/gui/AppInit.cpp:240
 msgid "use fullscreen GS mode"
 msgstr "gunakan mode fullscreen GS"
 
-#: pcsx2/gui/AppInit.cpp:236
+#: pcsx2/gui/AppInit.cpp:241
 msgid "use windowed GS mode"
 msgstr "gunakan mode GS windowed"
 
-#: pcsx2/gui/AppInit.cpp:238
+#: pcsx2/gui/AppInit.cpp:243
 msgid "disables display of the gui while running games"
 msgstr "menonaktifkan tampilan gui ketika menjalankan game"
 
-#: pcsx2/gui/AppInit.cpp:239
+#: pcsx2/gui/AppInit.cpp:244
 msgid "executes an ELF image"
 msgstr "jalankan sebuah image ELF"
 
-#: pcsx2/gui/AppInit.cpp:240
+#: pcsx2/gui/AppInit.cpp:245
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
 msgstr "jalankan dvd kosong; berguna untuk masuk menu sistem PS2"
 
-#: pcsx2/gui/AppInit.cpp:241
+#: pcsx2/gui/AppInit.cpp:246
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
 msgstr "jalankan plugin CDVD (menggantikan parameter IsoFile)"
 
-#: pcsx2/gui/AppInit.cpp:243
+#: pcsx2/gui/AppInit.cpp:248
 msgid "disables all speedhacks"
 msgstr "nonaktifkan semua speedhack"
 
-#: pcsx2/gui/AppInit.cpp:244
+#: pcsx2/gui/AppInit.cpp:249
 msgid "use the specified comma or pipe-delimited list of gamefixes."
 msgstr "gunakan koma yang dipilih atau daftar gamefixes pipe-delimited."
 
-#: pcsx2/gui/AppInit.cpp:245
+#: pcsx2/gui/AppInit.cpp:250
 msgid "disables fast booting"
 msgstr "nonaktifkan fast booting"
 
-#: pcsx2/gui/AppInit.cpp:247
+#: pcsx2/gui/AppInit.cpp:252
 msgid "changes the configuration file path"
 msgstr "mengganti lokasi konfigurasi file"
 
-#: pcsx2/gui/AppInit.cpp:248
+#: pcsx2/gui/AppInit.cpp:253
 msgid "specifies the PCSX2 configuration file to use"
 msgstr "masukkan file konfigurasi yang digunakan PCSX2"
 
-#: pcsx2/gui/AppInit.cpp:249
+#: pcsx2/gui/AppInit.cpp:254
 #, c-format
 msgid "forces %s to start the First-time Wizard"
 msgstr "paksa %s untuk memulai Tampilan First-time"
 
-#: pcsx2/gui/AppInit.cpp:250
+#: pcsx2/gui/AppInit.cpp:255
 msgid "enables portable mode operation (requires admin/root access)"
 msgstr "aktifkan mode operasi portable (memerlukan admin/akses root)"
 
-#: pcsx2/gui/AppInit.cpp:254
+#: pcsx2/gui/AppInit.cpp:259
 #, c-format
 msgid "specify the file to use as the %s plugin"
 msgstr "masukkan file yang digunakan sebagai %s plugin"
 
-#: pcsx2/gui/AppInit.cpp:302
+#: pcsx2/gui/AppInit.cpp:307
 #, c-format
 msgid "Plugin Override Error - %s"
 msgstr "Kegagalan Timpa Plugin - %s"
 
-#: pcsx2/gui/AppInit.cpp:305
+#: pcsx2/gui/AppInit.cpp:310
 #, c-format
 msgid ""
 "%s Plugin Override Error!  The following file does not exist or is not a "
@@ -499,95 +499,95 @@ msgstr ""
 "%s Gagal Menimpa Plugin!  File tersebut tidak ada atau tidaklah valid %s "
 "plugin:\n"
 
-#: pcsx2/gui/AppInit.cpp:312
+#: pcsx2/gui/AppInit.cpp:317
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr ""
 "Tekan OK untuk menerapkan plugin default, atau Cancel untuk menutup %s."
 
-#: pcsx2/gui/AppInit.cpp:491
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "Eror PCSX2: Defisiensi Perangkatkeras"
 
-#: pcsx2/gui/AppInit.cpp:491 pcsx2/gui/AppInit.cpp:503
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Tekan OK untuk menutup %s."
 
-#: pcsx2/gui/AppInit.cpp:504
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Eror Kritikal"
 
-#: pcsx2/gui/AppInit.cpp:674
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:675
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:676
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Batal"
 
-#: pcsx2/gui/AppInit.cpp:677
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Batal"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Terapkan"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Lanjut >"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< &Back"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Kembali"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Akhiri"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "&Ya"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "&Tidak"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Cari"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Simpan"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "Simpan &Sebagai..."
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Bantuan"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Rumah"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Tampilkan tentang dialog"
 
-#: pcsx2/gui/AppMain.cpp:87
+#: pcsx2/gui/AppMain.cpp:89
 msgid ""
 "\n"
 "\n"
@@ -597,35 +597,35 @@ msgstr ""
 "\n"
 "Tekan Ok untuk menuju ke Panel Konfigurasi Plugin."
 
-#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
+#: pcsx2/gui/AppMain.cpp:142 pcsx2/gui/AppMain.cpp:156
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 "Peringatan! Plugin Sistem belum dijalankan. PCSX2 mungkin tidak bisa "
 "beroperasi."
 
-#: pcsx2/gui/AppMain.cpp:309
+#: pcsx2/gui/AppMain.cpp:311
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s Opsi Commandline"
 
-#: pcsx2/gui/AppMain.cpp:607
+#: pcsx2/gui/AppMain.cpp:609
 msgid "PS2 BIOS Error"
 msgstr "BIOS PS2 Eror"
 
-#: pcsx2/gui/AppMain.cpp:608
+#: pcsx2/gui/AppMain.cpp:610
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Tekan Ok untuk menuju Panel Konfigurasi BIOS."
 
-#: pcsx2/gui/AppMain.cpp:660
+#: pcsx2/gui/AppMain.cpp:662
 msgid "PCSX2 Unresponsive Thread"
 msgstr "Trit PCSX2 Tidakrespon"
 
-#: pcsx2/gui/AppMain.cpp:667
+#: pcsx2/gui/AppMain.cpp:669
 msgid "Terminate"
 msgstr "Gagalkan"
 
-#: pcsx2/gui/AppMain.cpp:994
+#: pcsx2/gui/AppMain.cpp:1017
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Sedang eksekusi Mesin Virtual PS2..."
 
@@ -809,6 +809,10 @@ msgstr "&Catatan"
 #: pcsx2/gui/ConsoleLogger.cpp:465
 msgid "&Sources"
 msgstr "&Sumber"
+
+#: pcsx2/gui/Debugger/DisassemblyDialog.cpp:54
+msgid "panel"
+msgstr ""
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
@@ -1235,7 +1239,7 @@ msgstr ""
 "Merupakan kesalahan jika menjatuhkan banyak file kedalam sebuah %s window. "
 "Satu satu donk, terima kasih."
 
-#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:338
+#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:339
 msgid "Confirm PS2 Reset"
 msgstr "Konfirmasi Reset PS2"
 
@@ -1330,6 +1334,7 @@ msgid "Enable Cheats"
 msgstr "Aktifkan Cheats"
 
 #: pcsx2/gui/MainFrame.cpp:425
+#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Aktifkan speedhacks"
 
@@ -1447,6 +1452,10 @@ msgstr "Hapus semua %s pengaturan dan ulang jalankan tampilan mulamula."
 msgid "About..."
 msgstr "Tentang..."
 
+#: pcsx2/gui/MainFrame.cpp:511
+msgid "Open Debug Window..."
+msgstr ""
+
 #: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "Pencatatan..."
@@ -1553,71 +1562,71 @@ msgstr "Pengaturan Plugin..."
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "Buka %s plugin dialog pengaturan kompleks."
 
-#: pcsx2/gui/MainMenuClicks.cpp:108
+#: pcsx2/gui/MainMenuClicks.cpp:109
 msgid "Reset all settings?"
 msgstr "Reset semua pengaturan?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:136
+#: pcsx2/gui/MainMenuClicks.cpp:137
 msgid "Confirm ISO image change"
 msgstr "Konfirmasi pengubahan image ISO"
 
-#: pcsx2/gui/MainMenuClicks.cpp:142
+#: pcsx2/gui/MainMenuClicks.cpp:143
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr "Apa kamu mau ganti disc atau jalankan image baru (lewat reset sistem)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
+#: pcsx2/gui/MainMenuClicks.cpp:145 pcsx2/gui/MainMenuClicks.cpp:191
 msgid "Swap Disc"
 msgstr "Ganti Disc"
 
-#: pcsx2/gui/MainMenuClicks.cpp:180
+#: pcsx2/gui/MainMenuClicks.cpp:181
 msgid "Confirm CDVD source change"
 msgstr "Konfirmasi perubahan sumber CDVD"
 
-#: pcsx2/gui/MainMenuClicks.cpp:183
+#: pcsx2/gui/MainMenuClicks.cpp:184
 #, c-format
 msgid "You've selected to switch the CDVD source from %s to %s."
 msgstr "Kamu telah memilih untuk beralih sumber CDVD dari %s ke %s."
 
-#: pcsx2/gui/MainMenuClicks.cpp:187
+#: pcsx2/gui/MainMenuClicks.cpp:188
 msgid "Do you want to swap discs or boot the new image (system reset)?"
 msgstr "Apa km mau ganti disc atau jalankan image baru (sistem reset)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:257
+#: pcsx2/gui/MainMenuClicks.cpp:258
 #, c-format
 msgid "All Supported (%s)"
 msgstr "Semua Didukung (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:260
+#: pcsx2/gui/MainMenuClicks.cpp:261
 #, c-format
 msgid "Disc Images (%s)"
 msgstr "Image Disc (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:263
+#: pcsx2/gui/MainMenuClicks.cpp:264
 #, c-format
 msgid "Blockdumps (%s)"
 msgstr "Blockdumps (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:266 pcsx2/gui/MainMenuClicks.cpp:287
+#: pcsx2/gui/MainMenuClicks.cpp:267 pcsx2/gui/MainMenuClicks.cpp:288
 msgid "All Files (*.*)"
 msgstr "Semua File (*.*)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:269
+#: pcsx2/gui/MainMenuClicks.cpp:270
 msgid "Select CDVD source iso..."
 msgstr "Pilih sumber iso CDVD..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:286
+#: pcsx2/gui/MainMenuClicks.cpp:287
 msgid "Select ELF file..."
 msgstr "Pilih file ELF..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:312
+#: pcsx2/gui/MainMenuClicks.cpp:313
 msgid "ISO file not found!"
 msgstr "ISO tidak ditemukan!"
 
-#: pcsx2/gui/MainMenuClicks.cpp:314
+#: pcsx2/gui/MainMenuClicks.cpp:315
 msgid "An error occurred while trying to open the file:"
 msgstr "Kesalahan terjadi ketika sedang membuka file:"
 
-#: pcsx2/gui/MainMenuClicks.cpp:315
+#: pcsx2/gui/MainMenuClicks.cpp:316
 msgid ""
 "Error: The configured ISO file does not exist.  Click OK to select a new ISO "
 "source for CDVD."
@@ -1625,7 +1634,7 @@ msgstr ""
 "Kesalahan: Konfigurasi file ISO tidak ada. Klik OK untuk memilih sumber ISO "
 "baru untuk CDVD."
 
-#: pcsx2/gui/MainMenuClicks.cpp:386
+#: pcsx2/gui/MainMenuClicks.cpp:387
 msgid ""
 "You have selected the following ISO image into PCSX2:\n"
 "\n"
@@ -2637,7 +2646,7 @@ msgstr ""
 msgid "The configured BIOS file does not exist.  Please re-configure."
 msgstr "File konfigurasi BIOS tidak ada. Silakan ulang konfigurasi."
 
-#: pcsx2/x86/ix86-32/iR5900-32.cpp:578
+#: pcsx2/x86/ix86-32/iR5900-32.cpp:580
 #, c-format
 msgid ""
 "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "

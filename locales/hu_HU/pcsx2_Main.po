@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:20+0100\n"
 "PO-Revision-Date: 2011-04-17 16:35+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -98,13 +98,13 @@ msgstr ""
 msgid "Unrecognized ISO image file format"
 msgstr "Felismerhetetlen ISO képfájl formátum"
 
-#: pcsx2/Elfheader.cpp:265
+#: pcsx2/Elfheader.cpp:280
 msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr ""
 "A bináris ELF képfájl nem tölthető be.  A fájl valószínűleg sérült vagy "
 "hiányos."
 
-#: pcsx2/Elfheader.cpp:267
+#: pcsx2/Elfheader.cpp:282
 msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
 "image type or a bug in PCSX2 ISO image support."
@@ -382,11 +382,11 @@ msgstr "A meglévő beállítás fájl felülírása sikertelen; hozzáférés m
 msgid "Loading PS2 system plugins..."
 msgstr "PS2 rendszer pluginok betöltése..."
 
-#: pcsx2/gui/AppInit.cpp:41
+#: pcsx2/gui/AppInit.cpp:43
 msgid "PCSX2 - SSE2 Recommended"
 msgstr "PCSX2 - SSE2 ajánlott"
 
-#: pcsx2/gui/AppInit.cpp:69
+#: pcsx2/gui/AppInit.cpp:71
 msgid ""
 "SSE extensions are not available.  PCSX2 requires a cpu that supports the "
 "SSE instruction set."
@@ -394,95 +394,95 @@ msgstr ""
 "SSE kiterjesztések nem állnak rendelkezésre.  PCSX2 futtatásához szükséges "
 "egy SSE utasításkészletet támogató processzor."
 
-#: pcsx2/gui/AppInit.cpp:152
+#: pcsx2/gui/AppInit.cpp:157
 msgid "PCSX2 Recompiler Error(s)"
 msgstr "PCSX2 Recompiler hiba/hibák"
 
-#: pcsx2/gui/AppInit.cpp:222
+#: pcsx2/gui/AppInit.cpp:227
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr ""
 "A beállítások csak a jelenlegi munkamenetre érvényesek és nem lesznek "
 "elmentve.\n"
 
-#: pcsx2/gui/AppInit.cpp:232 pcsx2/gui/AppMain.cpp:299
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:301
 msgid "IsoFile"
 msgstr "Iso fájl"
 
-#: pcsx2/gui/AppInit.cpp:233
+#: pcsx2/gui/AppInit.cpp:238
 msgid "displays this list of command line options"
 msgstr "megjeleníti a parancssori lehetőségek listáját"
 
-#: pcsx2/gui/AppInit.cpp:234
+#: pcsx2/gui/AppInit.cpp:239
 msgid "forces the program log/console to be visible"
 msgstr "láthatóvá teszi a program naplót/konzolt"
 
-#: pcsx2/gui/AppInit.cpp:235
+#: pcsx2/gui/AppInit.cpp:240
 msgid "use fullscreen GS mode"
 msgstr "teljes képernyős GS mód használata"
 
-#: pcsx2/gui/AppInit.cpp:236
+#: pcsx2/gui/AppInit.cpp:241
 msgid "use windowed GS mode"
 msgstr "ablakos GS mód használata"
 
-#: pcsx2/gui/AppInit.cpp:238
+#: pcsx2/gui/AppInit.cpp:243
 msgid "disables display of the gui while running games"
 msgstr "játék közben elrejti a felhasználói felületet"
 
-#: pcsx2/gui/AppInit.cpp:239
+#: pcsx2/gui/AppInit.cpp:244
 msgid "executes an ELF image"
 msgstr "ELF képfájlt indít"
 
-#: pcsx2/gui/AppInit.cpp:240
+#: pcsx2/gui/AppInit.cpp:245
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
 msgstr "dvd lemez nélkül indítás; PS2 rendszer menü elérésére használatos"
 
-#: pcsx2/gui/AppInit.cpp:241
+#: pcsx2/gui/AppInit.cpp:246
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
 msgstr ""
 "CDVD pluginról indítás (figyelmen kívül hagyja az ISO fájl paraméterét)"
 
-#: pcsx2/gui/AppInit.cpp:243
+#: pcsx2/gui/AppInit.cpp:248
 msgid "disables all speedhacks"
 msgstr "kikapcsolja az összes gyorsító hacket"
 
-#: pcsx2/gui/AppInit.cpp:244
+#: pcsx2/gui/AppInit.cpp:249
 msgid "use the specified comma or pipe-delimited list of gamefixes."
 msgstr ""
 "használd a vesszővel vagy függőleges vonallal határolt játék javítás listát"
 
-#: pcsx2/gui/AppInit.cpp:245
+#: pcsx2/gui/AppInit.cpp:250
 msgid "disables fast booting"
 msgstr "letiltja a gyors indítást "
 
-#: pcsx2/gui/AppInit.cpp:247
+#: pcsx2/gui/AppInit.cpp:252
 msgid "changes the configuration file path"
 msgstr "megváltoztatja a konfigurációs fájl elérési helyét"
 
-#: pcsx2/gui/AppInit.cpp:248
+#: pcsx2/gui/AppInit.cpp:253
 msgid "specifies the PCSX2 configuration file to use"
 msgstr "kjelöli a használandó PCSX2 konfigurációs fájlt"
 
-#: pcsx2/gui/AppInit.cpp:249
+#: pcsx2/gui/AppInit.cpp:254
 #, c-format
 msgid "forces %s to start the First-time Wizard"
 msgstr "kényszeríti a %s emulátort az első indításkori varázsló elindítására"
 
-#: pcsx2/gui/AppInit.cpp:250
+#: pcsx2/gui/AppInit.cpp:255
 msgid "enables portable mode operation (requires admin/root access)"
 msgstr ""
 "hordozható módi műveletek használata (rendszergazdai hozzáférés szükséges)"
 
-#: pcsx2/gui/AppInit.cpp:254
+#: pcsx2/gui/AppInit.cpp:259
 #, c-format
 msgid "specify the file to use as the %s plugin"
 msgstr "válassz %s pluginként használatos fájlt"
 
-#: pcsx2/gui/AppInit.cpp:302
+#: pcsx2/gui/AppInit.cpp:307
 #, c-format
 msgid "Plugin Override Error - %s"
 msgstr "Plugin felülírási hiba - %s"
 
-#: pcsx2/gui/AppInit.cpp:305
+#: pcsx2/gui/AppInit.cpp:310
 #, c-format
 msgid ""
 "%s Plugin Override Error!  The following file does not exist or is not a "
@@ -493,96 +493,96 @@ msgstr ""
 "%s plugin:\n"
 "\n"
 
-#: pcsx2/gui/AppInit.cpp:312
+#: pcsx2/gui/AppInit.cpp:317
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr ""
 "Nyomj Rendben gombot az alapértelmezett konfigurált plugin használatához, "
 "vagy Mégsem gombot a %s bezárásához."
 
-#: pcsx2/gui/AppInit.cpp:491
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "PCSX2 hiba: Hardver elégtelenség"
 
-#: pcsx2/gui/AppInit.cpp:491 pcsx2/gui/AppInit.cpp:503
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Nyomj Rendben gombot a %s bezárásához."
 
-#: pcsx2/gui/AppInit.cpp:504
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s kritikus hiba"
 
-#: pcsx2/gui/AppInit.cpp:674
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "Rendben"
 
-#: pcsx2/gui/AppInit.cpp:675
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&Rendben"
 
-#: pcsx2/gui/AppInit.cpp:676
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Mégsem"
 
-#: pcsx2/gui/AppInit.cpp:677
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Mégsem"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Alkalmaz"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Következő >"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< &Vissza"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Vissza"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Befejezés"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "&Igen"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "&Nem"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Tallózás"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Mentés"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "Mentés &másként..."
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Súgó"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Home"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Megnyitja a Névjegy párbeszédablakot"
 
-#: pcsx2/gui/AppMain.cpp:87
+#: pcsx2/gui/AppMain.cpp:89
 msgid ""
 "\n"
 "\n"
@@ -592,35 +592,35 @@ msgstr ""
 "\n"
 "Nyomj Rendben gombot a plugin konfigurációs panel eléréséhez."
 
-#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
+#: pcsx2/gui/AppMain.cpp:142 pcsx2/gui/AppMain.cpp:156
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 "Figyelem!  A rendszer pluginok nem töltődtek be.  A PCSX2 lehet, hogy nem "
 "fog működni."
 
-#: pcsx2/gui/AppMain.cpp:309
+#: pcsx2/gui/AppMain.cpp:311
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s parancssori beállítások"
 
-#: pcsx2/gui/AppMain.cpp:607
+#: pcsx2/gui/AppMain.cpp:609
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS hiba"
 
-#: pcsx2/gui/AppMain.cpp:608
+#: pcsx2/gui/AppMain.cpp:610
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Nyomj Rendben gombot a BIOS konfigurációs panel eléréséhez."
 
-#: pcsx2/gui/AppMain.cpp:660
+#: pcsx2/gui/AppMain.cpp:662
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 nem reagáló folyamatág"
 
-#: pcsx2/gui/AppMain.cpp:667
+#: pcsx2/gui/AppMain.cpp:669
 msgid "Terminate"
 msgstr "Megszakítás"
 
-#: pcsx2/gui/AppMain.cpp:994
+#: pcsx2/gui/AppMain.cpp:1017
 msgid "Executing PS2 Virtual Machine..."
 msgstr "PS2 virtuális gép indítása..."
 
@@ -807,6 +807,10 @@ msgstr "&Napló"
 #: pcsx2/gui/ConsoleLogger.cpp:465
 msgid "&Sources"
 msgstr "&Források"
+
+#: pcsx2/gui/Debugger/DisassemblyDialog.cpp:54
+msgid "panel"
+msgstr ""
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
@@ -1242,7 +1246,7 @@ msgstr ""
 "Ez hiba a hiba akkor jelentkezik, ha egyszerre több fájl kerül a %s ablakba. "
 "Egyszerre egyet csak, köszi."
 
-#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:338
+#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:339
 msgid "Confirm PS2 Reset"
 msgstr "PS2 alapra állításának jóváhagyása"
 
@@ -1339,6 +1343,7 @@ msgid "Enable Cheats"
 msgstr "Csalások használata"
 
 #: pcsx2/gui/MainFrame.cpp:425
+#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Javítások használata"
 
@@ -1456,6 +1461,10 @@ msgstr "Töröl minden %s beállítást és újrafuttatja az indításkori vará
 msgid "About..."
 msgstr "Névjegy..."
 
+#: pcsx2/gui/MainFrame.cpp:511
+msgid "Open Debug Window..."
+msgstr ""
+
 #: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "Naplózás..."
@@ -1564,75 +1573,75 @@ msgstr "Plugin beállítások..."
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "%s plugin fejlett beállítási párbeszédablakját nyitja meg."
 
-#: pcsx2/gui/MainMenuClicks.cpp:108
+#: pcsx2/gui/MainMenuClicks.cpp:109
 msgid "Reset all settings?"
 msgstr "Minden beállítás alapra állítása?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:136
+#: pcsx2/gui/MainMenuClicks.cpp:137
 msgid "Confirm ISO image change"
 msgstr "ISO képfájl csere megerősítése"
 
-#: pcsx2/gui/MainMenuClicks.cpp:142
+#: pcsx2/gui/MainMenuClicks.cpp:143
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr ""
 "Lemezt akarsz cserélni vagy elindítani az új képfájlt (a rendszer "
 "alapértékekre állításával)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
+#: pcsx2/gui/MainMenuClicks.cpp:145 pcsx2/gui/MainMenuClicks.cpp:191
 msgid "Swap Disc"
 msgstr "Lemezcsere"
 
-#: pcsx2/gui/MainMenuClicks.cpp:180
+#: pcsx2/gui/MainMenuClicks.cpp:181
 msgid "Confirm CDVD source change"
 msgstr "CDVD forrás váltás megerősítése"
 
-#: pcsx2/gui/MainMenuClicks.cpp:183
+#: pcsx2/gui/MainMenuClicks.cpp:184
 #, c-format
 msgid "You've selected to switch the CDVD source from %s to %s."
 msgstr "Azt választottad, hogy a CDVD forrást átváltod erről: %s, erre: %s."
 
-#: pcsx2/gui/MainMenuClicks.cpp:187
+#: pcsx2/gui/MainMenuClicks.cpp:188
 msgid "Do you want to swap discs or boot the new image (system reset)?"
 msgstr ""
 "Lemezt akarsz cserélni vagy elindítani az új képfájlt (a rendszer "
 "alapértékekre állítása)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:257
+#: pcsx2/gui/MainMenuClicks.cpp:258
 #, c-format
 msgid "All Supported (%s)"
 msgstr "Minden formátum (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:260
+#: pcsx2/gui/MainMenuClicks.cpp:261
 #, c-format
 msgid "Disc Images (%s)"
 msgstr "Lemez képfájlok (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:263
+#: pcsx2/gui/MainMenuClicks.cpp:264
 #, c-format
 msgid "Blockdumps (%s)"
 msgstr "Mentés tömbök (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:266 pcsx2/gui/MainMenuClicks.cpp:287
+#: pcsx2/gui/MainMenuClicks.cpp:267 pcsx2/gui/MainMenuClicks.cpp:288
 msgid "All Files (*.*)"
 msgstr "Minden fájl (*.*)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:269
+#: pcsx2/gui/MainMenuClicks.cpp:270
 msgid "Select CDVD source iso..."
 msgstr "CDVD forrás ISO választása..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:286
+#: pcsx2/gui/MainMenuClicks.cpp:287
 msgid "Select ELF file..."
 msgstr "ELF fájl választása..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:312
+#: pcsx2/gui/MainMenuClicks.cpp:313
 msgid "ISO file not found!"
 msgstr "Nem található ISO fájl!"
 
-#: pcsx2/gui/MainMenuClicks.cpp:314
+#: pcsx2/gui/MainMenuClicks.cpp:315
 msgid "An error occurred while trying to open the file:"
 msgstr "Hiba keletkezett a fájl megnyitására irányuló próbálkozás közben:"
 
-#: pcsx2/gui/MainMenuClicks.cpp:315
+#: pcsx2/gui/MainMenuClicks.cpp:316
 msgid ""
 "Error: The configured ISO file does not exist.  Click OK to select a new ISO "
 "source for CDVD."
@@ -1640,7 +1649,7 @@ msgstr ""
 "Hiba: A megadott ISO fájl nincs meg.  Kattints a Rendben gombra egy új ISO "
 "forráshoz a CDVD számára."
 
-#: pcsx2/gui/MainMenuClicks.cpp:386
+#: pcsx2/gui/MainMenuClicks.cpp:387
 msgid ""
 "You have selected the following ISO image into PCSX2:\n"
 "\n"
@@ -2675,7 +2684,7 @@ msgstr ""
 msgid "The configured BIOS file does not exist.  Please re-configure."
 msgstr "A BIOS konfigurációs fájl nincs meg.  Konfiguráld újra."
 
-#: pcsx2/x86/ix86-32/iR5900-32.cpp:578
+#: pcsx2/x86/ix86-32/iR5900-32.cpp:580
 #, c-format
 msgid ""
 "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "

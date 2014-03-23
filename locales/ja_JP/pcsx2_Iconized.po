@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2012-03-05 08:12+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -31,7 +31,7 @@ msgstr ""
 "仮想メモリが不足しているか、必要な仮想メモリは既に他のプロセス、サービス、DLL"
 "に割り当てられています。"
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -65,7 +65,7 @@ msgstr ""
 "た。 \n"
 "バックグラウンドタスクを終了させ、メモリーを解放してから再試行して下さい。"
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -75,7 +75,7 @@ msgstr ""
 "サポートしていません。 \n"
 "選択できるオプションが限られ、エミュレーション速度は*非常に*遅くなります。"
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -83,7 +83,7 @@ msgstr ""
 "警告： 設定されたいくつかのPS2リコンパイラが初期化に失敗し、無効にされまし"
 "た。"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -94,7 +94,7 @@ msgstr ""
 "エラーを解決した後に、上記リストのリコンパイラを手動で有効化しなおす必要があ"
 "るかもしれません。"
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -104,7 +104,7 @@ msgstr ""
 "す)PS2の実機から \n"
 "「合法的に」手に入れて下さい。詳しい吸出し方法はFAQやガイドを参照して下さい。"
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -283,7 +283,7 @@ msgstr ""
 "この操作は既存するPS2の仮想マシンステートをリセットします。\n"
 "進行中の全ての作業が失われます。本当にリセットしてもよろしいですか？"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -750,7 +750,7 @@ msgstr ""
 "警告：　このオプションはゲーム実行中に有効化できますが、無効化する事はできま"
 "せん（映像出力内容の判別ができなくなります）。"
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "

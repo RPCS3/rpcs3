@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:20+0100\n"
 "PO-Revision-Date: 2012-08-12 09:43+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -99,12 +99,12 @@ msgstr "Inkluderer hvilende prosesser og noen unormale bruksområder."
 msgid "Unrecognized ISO image file format"
 msgstr "Ukjent ISO bilde fil format"
 
-#: pcsx2/Elfheader.cpp:265
+#: pcsx2/Elfheader.cpp:280
 msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr ""
 "Kan ikke lafte ELF binær bildet. Filen kan være korrupt eller ufullstendig."
 
-#: pcsx2/Elfheader.cpp:267
+#: pcsx2/Elfheader.cpp:282
 msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
 "image type or a bug in PCSX2 ISO image support."
@@ -393,11 +393,11 @@ msgstr ""
 msgid "Loading PS2 system plugins..."
 msgstr "Laster PS2 system tillegg..."
 
-#: pcsx2/gui/AppInit.cpp:41
+#: pcsx2/gui/AppInit.cpp:43
 msgid "PCSX2 - SSE2 Recommended"
 msgstr "PCSX2 - SSE2 Anbefalt"
 
-#: pcsx2/gui/AppInit.cpp:69
+#: pcsx2/gui/AppInit.cpp:71
 msgid ""
 "SSE extensions are not available.  PCSX2 requires a cpu that supports the "
 "SSE instruction set."
@@ -405,91 +405,91 @@ msgstr ""
 "SSE utvidelse ikke tilgjengelig.  PCSX2 krever en CPU som støtter SSE "
 "instruksjons settet."
 
-#: pcsx2/gui/AppInit.cpp:152
+#: pcsx2/gui/AppInit.cpp:157
 msgid "PCSX2 Recompiler Error(s)"
 msgstr "PCSX2 Rekompilator Feil"
 
-#: pcsx2/gui/AppInit.cpp:222
+#: pcsx2/gui/AppInit.cpp:227
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr "Alle valg er fortiden kun sesjons messig og lagres ikke.\n"
 
-#: pcsx2/gui/AppInit.cpp:232 pcsx2/gui/AppMain.cpp:299
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:301
 msgid "IsoFile"
 msgstr "ISOFil"
 
-#: pcsx2/gui/AppInit.cpp:233
+#: pcsx2/gui/AppInit.cpp:238
 msgid "displays this list of command line options"
 msgstr "vis denne listen med kommando linje valg"
 
-#: pcsx2/gui/AppInit.cpp:234
+#: pcsx2/gui/AppInit.cpp:239
 msgid "forces the program log/console to be visible"
 msgstr "tvinger programmets logg/konsoll til å være synlige"
 
-#: pcsx2/gui/AppInit.cpp:235
+#: pcsx2/gui/AppInit.cpp:240
 msgid "use fullscreen GS mode"
 msgstr "Bruk fullskjerm GS modus"
 
-#: pcsx2/gui/AppInit.cpp:236
+#: pcsx2/gui/AppInit.cpp:241
 msgid "use windowed GS mode"
 msgstr "Bruk vindu  GS modus"
 
-#: pcsx2/gui/AppInit.cpp:238
+#: pcsx2/gui/AppInit.cpp:243
 msgid "disables display of the gui while running games"
 msgstr "deaktiver visningen av GUI mens spill kjører"
 
-#: pcsx2/gui/AppInit.cpp:239
+#: pcsx2/gui/AppInit.cpp:244
 msgid "executes an ELF image"
 msgstr "kjør et ELF bilde"
 
-#: pcsx2/gui/AppInit.cpp:240
+#: pcsx2/gui/AppInit.cpp:245
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
 msgstr "start opp til en tom dvd; bruk denne for å gå til PS2 sin system meny"
 
-#: pcsx2/gui/AppInit.cpp:241
+#: pcsx2/gui/AppInit.cpp:246
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
 msgstr "start opp fra CDVD tillegget (Overkjører IsoFile parametere)"
 
-#: pcsx2/gui/AppInit.cpp:243
+#: pcsx2/gui/AppInit.cpp:248
 msgid "disables all speedhacks"
 msgstr "deaktiver alle hastighets fikser"
 
-#: pcsx2/gui/AppInit.cpp:244
+#: pcsx2/gui/AppInit.cpp:249
 msgid "use the specified comma or pipe-delimited list of gamefixes."
 msgstr ""
 "bruk den spessifiserte komma eller pipe-delgrense listen for spill fikser."
 
-#: pcsx2/gui/AppInit.cpp:245
+#: pcsx2/gui/AppInit.cpp:250
 msgid "disables fast booting"
 msgstr "deaktiver hurtig oppstart"
 
-#: pcsx2/gui/AppInit.cpp:247
+#: pcsx2/gui/AppInit.cpp:252
 msgid "changes the configuration file path"
 msgstr "skifter konfigurasjons fil stien"
 
-#: pcsx2/gui/AppInit.cpp:248
+#: pcsx2/gui/AppInit.cpp:253
 msgid "specifies the PCSX2 configuration file to use"
 msgstr "spessifiser PCSX2 configurasjonen som skal brukes"
 
-#: pcsx2/gui/AppInit.cpp:249
+#: pcsx2/gui/AppInit.cpp:254
 #, c-format
 msgid "forces %s to start the First-time Wizard"
 msgstr "tvinger %s til å starte Førstegangs Veiviseren"
 
-#: pcsx2/gui/AppInit.cpp:250
+#: pcsx2/gui/AppInit.cpp:255
 msgid "enables portable mode operation (requires admin/root access)"
 msgstr "aktiver portabel modus opperasjon (krever admin/root rettigheter)"
 
-#: pcsx2/gui/AppInit.cpp:254
+#: pcsx2/gui/AppInit.cpp:259
 #, c-format
 msgid "specify the file to use as the %s plugin"
 msgstr "spesifiser filen som brukes som %s tillegget"
 
-#: pcsx2/gui/AppInit.cpp:302
+#: pcsx2/gui/AppInit.cpp:307
 #, c-format
 msgid "Plugin Override Error - %s"
 msgstr "Tillegs Overkjørings Feil - %s"
 
-#: pcsx2/gui/AppInit.cpp:305
+#: pcsx2/gui/AppInit.cpp:310
 #, c-format
 msgid ""
 "%s Plugin Override Error!  The following file does not exist or is not a "
@@ -500,96 +500,96 @@ msgstr ""
 "ikke brukbar %s tillegg:\n"
 "\n"
 
-#: pcsx2/gui/AppInit.cpp:312
+#: pcsx2/gui/AppInit.cpp:317
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr ""
 "Trykk OK for å bruke det standard  konfigurerte tillegget, eller Avbryt for "
 "å stenge ned %s."
 
-#: pcsx2/gui/AppInit.cpp:491
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "PCSX2 Feil: Hardvare Mangler"
 
-#: pcsx2/gui/AppInit.cpp:491 pcsx2/gui/AppInit.cpp:503
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Press OK for å avslutte %s."
 
-#: pcsx2/gui/AppInit.cpp:504
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Kritisk Feil"
 
-#: pcsx2/gui/AppInit.cpp:674
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:675
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:676
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: pcsx2/gui/AppInit.cpp:677
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Avbryt"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Legg til"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Neste >"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< &Forgje"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Forgje"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Fullfør"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "&Ja"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "&Nei"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Søk"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Lagre"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "Lagre &Som"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Hjelp"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Hjem"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Vis om dialogen"
 
-#: pcsx2/gui/AppMain.cpp:87
+#: pcsx2/gui/AppMain.cpp:89
 msgid ""
 "\n"
 "\n"
@@ -599,35 +599,35 @@ msgstr ""
 "\n"
 "Trykk OK for å gå til Tillegs Configurasjons Panelet"
 
-#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
+#: pcsx2/gui/AppMain.cpp:142 pcsx2/gui/AppMain.cpp:156
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 "Advarsel! Systemets tillegg har ikke blitt lastet. PCSX2 kan være ikke-"
 "fungerbar"
 
-#: pcsx2/gui/AppMain.cpp:309
+#: pcsx2/gui/AppMain.cpp:311
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s Komandolinje Opsjoner"
 
-#: pcsx2/gui/AppMain.cpp:607
+#: pcsx2/gui/AppMain.cpp:609
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS Feil"
 
-#: pcsx2/gui/AppMain.cpp:608
+#: pcsx2/gui/AppMain.cpp:610
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Trykk OK for å gå til BIOS konfigurasjons Panelet."
 
-#: pcsx2/gui/AppMain.cpp:660
+#: pcsx2/gui/AppMain.cpp:662
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 Tråden har sluttet å reagere"
 
-#: pcsx2/gui/AppMain.cpp:667
+#: pcsx2/gui/AppMain.cpp:669
 msgid "Terminate"
 msgstr "Terminer"
 
-#: pcsx2/gui/AppMain.cpp:994
+#: pcsx2/gui/AppMain.cpp:1017
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Eksekverer PS2 Virtuell Maskin..."
 
@@ -816,6 +816,10 @@ msgstr "&Logg"
 #: pcsx2/gui/ConsoleLogger.cpp:465
 msgid "&Sources"
 msgstr "&Kilde"
+
+#: pcsx2/gui/Debugger/DisassemblyDialog.cpp:54
+msgid "panel"
+msgstr ""
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
@@ -1241,7 +1245,7 @@ msgid ""
 "please, thank you."
 msgstr "Det er feil å slippe flere filer i et %s vindu.  En av gangen, Takk."
 
-#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:338
+#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:339
 msgid "Confirm PS2 Reset"
 msgstr "Godkjenn PS2 omstart"
 
@@ -1336,6 +1340,7 @@ msgid "Enable Cheats"
 msgstr "Aktiver Juks"
 
 #: pcsx2/gui/MainFrame.cpp:425
+#, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Aktiver hastighets fikser"
 
@@ -1455,6 +1460,10 @@ msgstr ""
 msgid "About..."
 msgstr "Om..."
 
+#: pcsx2/gui/MainFrame.cpp:511
+msgid "Open Debug Window..."
+msgstr ""
+
 #: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "Logging..."
@@ -1561,75 +1570,75 @@ msgstr "Tilleggs Innstillinger..."
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "Åpne %s tillegget sin avanserte innstillings dialog."
 
-#: pcsx2/gui/MainMenuClicks.cpp:108
+#: pcsx2/gui/MainMenuClicks.cpp:109
 msgid "Reset all settings?"
 msgstr "Tilbakestill alle innstillinger?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:136
+#: pcsx2/gui/MainMenuClicks.cpp:137
 msgid "Confirm ISO image change"
 msgstr "Godkjenn ISO bilde skifte"
 
-#: pcsx2/gui/MainMenuClicks.cpp:142
+#: pcsx2/gui/MainMenuClicks.cpp:143
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr ""
 "Ønsker du å skifte disker elle å starte opp fra nytt bilde (via system "
 "omstart)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
+#: pcsx2/gui/MainMenuClicks.cpp:145 pcsx2/gui/MainMenuClicks.cpp:191
 msgid "Swap Disc"
 msgstr "Bytt Disk"
 
-#: pcsx2/gui/MainMenuClicks.cpp:180
+#: pcsx2/gui/MainMenuClicks.cpp:181
 msgid "Confirm CDVD source change"
 msgstr "Godkjenn CDVD kilde bytte"
 
-#: pcsx2/gui/MainMenuClicks.cpp:183
+#: pcsx2/gui/MainMenuClicks.cpp:184
 #, c-format
 msgid "You've selected to switch the CDVD source from %s to %s."
 msgstr "Du har valgt å bytte CDVD kilen fra %s til %s."
 
-#: pcsx2/gui/MainMenuClicks.cpp:187
+#: pcsx2/gui/MainMenuClicks.cpp:188
 msgid "Do you want to swap discs or boot the new image (system reset)?"
 msgstr ""
 "Ønsker du å skifte disker eller å starte opp på en ny ISO fil (system "
 "omstart)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:257
+#: pcsx2/gui/MainMenuClicks.cpp:258
 #, c-format
 msgid "All Supported (%s)"
 msgstr "Alle støttet (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:260
+#: pcsx2/gui/MainMenuClicks.cpp:261
 #, c-format
 msgid "Disc Images (%s)"
 msgstr "Disk bilde (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:263
+#: pcsx2/gui/MainMenuClicks.cpp:264
 #, c-format
 msgid "Blockdumps (%s)"
 msgstr "Blokk dumper (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:266 pcsx2/gui/MainMenuClicks.cpp:287
+#: pcsx2/gui/MainMenuClicks.cpp:267 pcsx2/gui/MainMenuClicks.cpp:288
 msgid "All Files (*.*)"
 msgstr "Alle filer (*.*)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:269
+#: pcsx2/gui/MainMenuClicks.cpp:270
 msgid "Select CDVD source iso..."
 msgstr "Velg CDVD kilde ISO..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:286
+#: pcsx2/gui/MainMenuClicks.cpp:287
 msgid "Select ELF file..."
 msgstr "Velg ELF fil..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:312
+#: pcsx2/gui/MainMenuClicks.cpp:313
 msgid "ISO file not found!"
 msgstr "ISO filen ikke funnet!"
 
-#: pcsx2/gui/MainMenuClicks.cpp:314
+#: pcsx2/gui/MainMenuClicks.cpp:315
 msgid "An error occurred while trying to open the file:"
 msgstr "En feil oppstod imens man forsøkte å åpne filen:"
 
-#: pcsx2/gui/MainMenuClicks.cpp:315
+#: pcsx2/gui/MainMenuClicks.cpp:316
 msgid ""
 "Error: The configured ISO file does not exist.  Click OK to select a new ISO "
 "source for CDVD."
@@ -1637,7 +1646,7 @@ msgstr ""
 "Feil: Den konfigurert ISO filen eksisterer ikke.  Klikk OK for å velge en ny "
 "ISO kilde for CDVD."
 
-#: pcsx2/gui/MainMenuClicks.cpp:386
+#: pcsx2/gui/MainMenuClicks.cpp:387
 msgid ""
 "You have selected the following ISO image into PCSX2:\n"
 "\n"
@@ -2652,7 +2661,7 @@ msgstr ""
 msgid "The configured BIOS file does not exist.  Please re-configure."
 msgstr "Den konfigurerte BIOS filen eksisterer ikke, Vennligst re-konfigurer"
 
-#: pcsx2/x86/ix86-32/iR5900-32.cpp:578
+#: pcsx2/x86/ix86-32/iR5900-32.cpp:580
 #, c-format
 msgid ""
 "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "

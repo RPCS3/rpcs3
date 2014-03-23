@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2012-09-09 20:43+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -29,7 +29,7 @@ msgstr ""
 "Není dostatek virtuální paměti, nebo potřebná mapování virtuální paměti již "
 "byly vyhrazeny jinými procesy, službami, nebo DLL."
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -58,7 +58,7 @@ msgstr ""
 "PCSX2 nemůže přidělit paměť potřebnou pro virtuální stroj PS2. Zavřete "
 "některé úlohy na pozadí náročné na paměť a zkuste to znovu."
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -68,7 +68,7 @@ msgstr ""
 "rekompilátorů PCSX2 a zásuvných modulů. Vaše volby budou omezené a emulace "
 "bude *velmi* pomalá."
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -76,7 +76,7 @@ msgstr ""
 "Varování: Některé z nastavených rekompilátorů PS2 nelze spustit a byly "
 "zakázány:"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -86,7 +86,7 @@ msgstr ""
 "výrazně zlepšují rychlost emulace. Možná budete muset ruřne rekompilátory "
 "znovu zapnout, pokud vyřešíte chyby."
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -96,7 +96,7 @@ msgstr ""
 "ze skutečného PS2, které vlastníte (půjčení se nepočítá). Podívejte se "
 "prosím na Nejčastější Otázky a Průvodce pro další instrukce."
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -277,7 +277,7 @@ msgstr ""
 "Tato činnost resetuje existující stav virtuálního stroje PS2; veškerý "
 "současný postup bude ztracen. Jste si jisti?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -744,7 +744,7 @@ msgstr ""
 "Varování: Tato volba může být zapnuta za běhu ale typicky nemůže být takto "
 "vypnuta (obraz bude většinou poškozený)"
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "

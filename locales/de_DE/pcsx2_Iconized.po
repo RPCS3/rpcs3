@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2014-01-06 09:06+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -27,7 +27,7 @@ msgstr ""
 "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
 "wird von anderen Programmen / DLLs belegt."
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -53,7 +53,7 @@ msgstr ""
 "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
 "wird von anderen Programmen / DLLs belegt."
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -62,14 +62,14 @@ msgstr ""
 "Dein Prozessor unterstützt kein SSE2. Viele Plugins werden nicht "
 "funktionieren und die Emulation wird sehr langsam sein."
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
 msgstr ""
 "Einige der PCSX2 Recompiler konnten nicht starten und wurden deaktiviert:"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -79,7 +79,7 @@ msgstr ""
 "wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die "
 "Recompiler über die Konfigurationseinstellungen zu reaktivieren."
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -89,7 +89,7 @@ msgstr ""
 "dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
 "deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -251,7 +251,7 @@ msgid ""
 "progress will be lost.  Are you sure?"
 msgstr "Diese Option wird die virtuelle PS2 resetten. Bist du dir sicher?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -638,7 +638,7 @@ msgstr ""
 "Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur "
 "für PCSX2 Benchmarks interressant."
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "

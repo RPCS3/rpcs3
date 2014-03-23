@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.1.0 (and later)\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2014-01-13 21:35+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: http://forums.pcsx2.net/Thread-Swedish-GUI-translation-for-"
@@ -30,7 +30,7 @@ msgstr ""
 " eller så har den nödvändiga tilldelningen av Virtuellt Minne \n"
 " redan blivit reserverat av andra processer, tjänster eller DLL'er."
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -61,7 +61,7 @@ msgstr ""
 " för PS2's Virtuella Maskin. Stäng minneskrävande \n"
 " bakgrundsprogram och försök igen."
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -71,7 +71,7 @@ msgstr ""
 " omkompilerare och InsticksProgram. Era möjligheter kommer vara \n"
 " begränsade och emuleringen blir *mycket* långsam."
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -79,7 +79,7 @@ msgstr ""
 "Varning: Några av de konfigurerade PS2-omkompilerarna \n"
 " misslyckades att köras igång och har blivit spärrade:"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -89,7 +89,7 @@ msgstr ""
 "de förbättrar oftast emuleringshastigheten avsevärt. Ni kanske måste "
 "återmöjliggöra omkompilerarna ovanför egenhändigt, om Ni löser fel."
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -99,7 +99,7 @@ msgstr ""
 "ett BIOS från en faktisk PS2-enhet som Ni äger (tillåns gäller inte). "
 "Undersök FAQ'er och Guider för ytterligare information."
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -287,7 +287,7 @@ msgstr ""
 " framsteg kommer att gå förlorade. \n"
 "Är Ni säker?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -803,7 +803,7 @@ msgstr ""
 "Varning: Denna funktion kan möjliggöras dynamiskt \n"
 " men kan vanligtvis inte spärras på samma vis (video blir ofta skräp)."
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "

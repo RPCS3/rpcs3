@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2014-01-04 17:41+0100\n"
 "Last-Translator: \n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -32,7 +32,7 @@ msgstr ""
 "Nema dovoljno virtualne memorije, ili je potrebna memorija već rezervirana "
 "od strane drugih procesa, usluga, ili DLLova."
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -61,7 +61,7 @@ msgstr ""
 "PCSX2 nemože dodijeliti dovoljno memorije potrebne za PS2 virtualni stroj. "
 "Zatvorite pozadinske programe koji troše memoriju i pokušajte ponovno."
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -70,7 +70,7 @@ msgstr ""
 "Upozorenje: Računalo ne podržava SSE2, koji korite mnogi PCSX2 rekompajleri "
 "i dodaci. Mogućnosti će biti ograničene i emulacija će biti *veoma* spora."
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -78,7 +78,7 @@ msgstr ""
 "Upozorenje: Neki konfigurirani PS2 rekompajleri se nisu uspjeli pokrenuti te "
 "su isključeni:"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -88,7 +88,7 @@ msgstr ""
 "značajno poboljšavaju brzinu emulacije. Možda ćete morati ponovno uključiti "
 "navedene rekompajlere, ako riješite probleme."
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -98,7 +98,7 @@ msgstr ""
 "dobiti iz PS2 konzole u vašem vlasništvu (posuđena se ne računa).  Molimo "
 "pogledajte Najčešća pitanja ili Vodiče za daljnje upute."
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -279,7 +279,7 @@ msgstr ""
 "Ova radnja će restartirat stanje PS2 virtualnog stroja; sav trenutni "
 "napredak će biti izgubljen.  Jeste li sigurni?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -749,7 +749,7 @@ msgstr ""
 "Upozorenje: Ova mogućnost može biti omogućena za vrijeme izvođenja ali "
 "nemože biti onemogućena za vrijeme izvođenja (slika će najčešće biti loša)."
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-02-01 18:19+0100\n"
+"POT-Creation-Date: 2014-03-23 14:15+0100\n"
 "PO-Revision-Date: 2012-05-20 13:26+0200\n"
 "Last-Translator: kmartimo <kimmo.martimo@gmail.com>\n"
 "Language-Team: kmartimo <kimmo.martimo@gmail.com>\n"
@@ -32,7 +32,7 @@ msgstr ""
 "virtuaalimuistin kartoitukset on jo varattu muille prosseille, palveluille "
 "tai DLLeille."
 
-#: pcsx2/CDVD/CDVD.cpp:396
+#: pcsx2/CDVD/CDVD.cpp:397
 msgid ""
 "Playstation game discs are not supported by PCSX2.  If you want to emulate "
 "PSX games then you'll have to download a PSX-specific emulator, such as "
@@ -64,7 +64,7 @@ msgstr ""
 "PCSX2 ei pysty varaamaan PS2-virtuaalikoneelle tarvittavaa muistia. Sulje "
 "joitakin paljon muistia vieviä taustatehtäviä ja kokeile uudelleen."
 
-#: pcsx2/gui/AppInit.cpp:43
+#: pcsx2/gui/AppInit.cpp:45
 msgid ""
 "Warning: Your computer does not support SSE2, which is required by many "
 "PCSX2 recompilers and plugins. Your options will be limited and emulation "
@@ -74,7 +74,7 @@ msgstr ""
 "den uudelleenkääntäjät ja liitännäiset vaativat. Vaihtoehtosi ovat "
 "rajoitetut ja emulointi tulee olemaan *todella* hidasta."
 
-#: pcsx2/gui/AppInit.cpp:160
+#: pcsx2/gui/AppInit.cpp:165
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -82,7 +82,7 @@ msgstr ""
 "Varoitus: Joidenkin määriteltyjen PCSX2-uudelleenkääntäjien alustus "
 "epäonnistui ja ne on poistettu käytöstä:"
 
-#: pcsx2/gui/AppInit.cpp:208
+#: pcsx2/gui/AppInit.cpp:213
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
@@ -93,7 +93,7 @@ msgstr ""
 "manuaalisesti ottamaan käyttöön yllä listatut uudelleenkääntäjät, jos saat "
 "virheet ratkaistua."
 
-#: pcsx2/gui/AppMain.cpp:583
+#: pcsx2/gui/AppMain.cpp:585
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -103,7 +103,7 @@ msgstr ""
 "*täytyy* hankkia BIOS-tiedosto omistamastasi PS2-järjestelmästä (lainaamista "
 "ei lasketa). Lisätietoja löydät UKK:sta (FAQ) ja oppaista."
 
-#: pcsx2/gui/AppMain.cpp:663
+#: pcsx2/gui/AppMain.cpp:665
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -291,7 +291,7 @@ msgstr ""
 "Tämä toiminto resetoi olemassaolevan PS2-virtuaalikoneen tilan; kaikki "
 "nykyiset tiedot menetetään.  Oletko varma?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:106
+#: pcsx2/gui/MainMenuClicks.cpp:107
 #, c-format
 msgid ""
 "This command clears %s settings and allows you to re-run the First-Time "
@@ -779,7 +779,7 @@ msgstr ""
 "Varoitus: Tämän valinnan voi ottaa käyttöön lennosta, mutta yleensä ei voi "
 "poistaa käytöstä lennosta (pelikuvan tilalla on yleensä roskaa)."
 
-#: pcsx2/vtlb.cpp:711
+#: pcsx2/vtlb.cpp:731
 msgid ""
 "Your system is too low on virtual resources for PCSX2 to run. This can be "
 "caused by having a small or disabled swapfile, or by other programs that are "
