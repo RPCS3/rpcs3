@@ -5,15 +5,11 @@
 
 #include "emittertests.h"
 #include "nodetests.h"
-#include "parsertests.h"
 #include "tests.h"
 
 namespace Test {
 void RunAll() {
   bool passed = true;
-  if (!RunParserTests())
-    passed = false;
-
   if (!RunEmitterTests())
     passed = false;
 
