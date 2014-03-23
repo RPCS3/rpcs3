@@ -586,6 +586,8 @@ public:
 			}
 		}
 
+		Sleep(1);
+
 		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
 		case MFC_PUT_CMD:
