@@ -40,7 +40,7 @@ class MockEventHandler : public EventHandler {
   MOCK_METHOD0(OnMapEnd, void());
 };
 
-class SpecTest : public ::testing::Test {
+class HandlerSpecTest : public ::testing::Test {
  protected:
   void Parse(const std::string& example) {
     std::stringstream stream(example);
@@ -61,7 +61,7 @@ class SpecTest : public ::testing::Test {
   NiceMock<MockEventHandler> nice_handler;
 };
 
-TEST_F(SpecTest, Ex2_1_SeqScalars) {
+TEST_F(HandlerSpecTest, Ex2_1_SeqScalars) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Mark McGwire"));
@@ -72,8 +72,7 @@ TEST_F(SpecTest, Ex2_1_SeqScalars) {
   Parse(ex2_1);
 }
 
-// 2.2
-TEST_F(SpecTest, Ex2_2_MappingScalarsToScalars) {
+TEST_F(HandlerSpecTest, Ex2_2_MappingScalarsToScalars) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "hr"));
@@ -87,8 +86,7 @@ TEST_F(SpecTest, Ex2_2_MappingScalarsToScalars) {
   Parse(ex2_2);
 }
 
-// 2.3
-TEST_F(SpecTest, Ex2_3_MappingScalarsToSequences) {
+TEST_F(HandlerSpecTest, Ex2_3_MappingScalarsToSequences) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "american"));
@@ -108,8 +106,7 @@ TEST_F(SpecTest, Ex2_3_MappingScalarsToSequences) {
   Parse(ex2_3);
 }
 
-// 2.4
-TEST_F(SpecTest, Ex2_4_SequenceOfMappings) {
+TEST_F(HandlerSpecTest, Ex2_4_SequenceOfMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -133,8 +130,7 @@ TEST_F(SpecTest, Ex2_4_SequenceOfMappings) {
   Parse(ex2_4);
 }
 
-// 2.5
-TEST_F(SpecTest, Ex2_5_SequenceOfSequences) {
+TEST_F(HandlerSpecTest, Ex2_5_SequenceOfSequences) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
@@ -157,8 +153,7 @@ TEST_F(SpecTest, Ex2_5_SequenceOfSequences) {
   Parse(ex2_5);
 }
 
-// 2.6
-TEST_F(SpecTest, Ex2_6_MappingOfMappings) {
+TEST_F(HandlerSpecTest, Ex2_6_MappingOfMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Mark McGwire"));
@@ -180,8 +175,7 @@ TEST_F(SpecTest, Ex2_6_MappingOfMappings) {
   Parse(ex2_6);
 }
 
-// 2.7
-TEST_F(SpecTest, Ex2_7_TwoDocumentsInAStream) {
+TEST_F(HandlerSpecTest, Ex2_7_TwoDocumentsInAStream) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Mark McGwire"));
@@ -198,8 +192,7 @@ TEST_F(SpecTest, Ex2_7_TwoDocumentsInAStream) {
   Parse(ex2_7);
 }
 
-// 2.8
-TEST_F(SpecTest, Ex2_8_PlayByPlayFeed) {
+TEST_F(HandlerSpecTest, Ex2_8_PlayByPlayFeed) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "time"));
@@ -223,8 +216,7 @@ TEST_F(SpecTest, Ex2_8_PlayByPlayFeed) {
   Parse(ex2_8);
 }
 
-// 2.9
-TEST_F(SpecTest, Ex2_9_SingleDocumentWithTwoComments) {
+TEST_F(HandlerSpecTest, Ex2_9_SingleDocumentWithTwoComments) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "hr"));
@@ -242,8 +234,7 @@ TEST_F(SpecTest, Ex2_9_SingleDocumentWithTwoComments) {
   Parse(ex2_9);
 }
 
-// 2.10
-TEST_F(SpecTest, Ex2_10_SimpleAnchor) {
+TEST_F(HandlerSpecTest, Ex2_10_SimpleAnchor) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "hr"));
@@ -261,8 +252,7 @@ TEST_F(SpecTest, Ex2_10_SimpleAnchor) {
   Parse(ex2_10);
 }
 
-// 2.11
-TEST_F(SpecTest, Ex2_11_MappingBetweenSequences) {
+TEST_F(HandlerSpecTest, Ex2_11_MappingBetweenSequences) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
@@ -286,8 +276,7 @@ TEST_F(SpecTest, Ex2_11_MappingBetweenSequences) {
   Parse(ex2_11);
 }
 
-// 2.12
-TEST_F(SpecTest, Ex2_12_CompactNestedMapping) {
+TEST_F(HandlerSpecTest, Ex2_12_CompactNestedMapping) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -313,8 +302,7 @@ TEST_F(SpecTest, Ex2_12_CompactNestedMapping) {
   Parse(ex2_12);
 }
 
-// 2.13
-TEST_F(SpecTest, Ex2_13_InLiteralsNewlinesArePreserved) {
+TEST_F(HandlerSpecTest, Ex2_13_InLiteralsNewlinesArePreserved) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0,
                                 "\\//||\\/||\n"
@@ -323,8 +311,7 @@ TEST_F(SpecTest, Ex2_13_InLiteralsNewlinesArePreserved) {
   Parse(ex2_13);
 }
 
-// 2.14
-TEST_F(SpecTest, Ex2_14_InFoldedScalarsNewlinesBecomeSpaces) {
+TEST_F(HandlerSpecTest, Ex2_14_InFoldedScalarsNewlinesBecomeSpaces) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler,
               OnScalar(_, "!", 0,
@@ -333,8 +320,7 @@ TEST_F(SpecTest, Ex2_14_InFoldedScalarsNewlinesBecomeSpaces) {
   Parse(ex2_14);
 }
 
-// 2.15
-TEST_F(SpecTest,
+TEST_F(HandlerSpecTest,
        Ex2_15_FoldedNewlinesArePreservedForMoreIndentedAndBlankLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(
@@ -350,8 +336,7 @@ TEST_F(SpecTest,
   Parse(ex2_15);
 }
 
-// 2.16
-TEST_F(SpecTest, Ex2_16_IndentationDeterminesScope) {
+TEST_F(HandlerSpecTest, Ex2_16_IndentationDeterminesScope) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "name"));
@@ -369,8 +354,7 @@ TEST_F(SpecTest, Ex2_16_IndentationDeterminesScope) {
   Parse(ex2_16);
 }
 
-// 2.17
-TEST_F(SpecTest, Ex2_17_QuotedScalars) {
+TEST_F(HandlerSpecTest, Ex2_17_QuotedScalars) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "unicode"));
@@ -390,8 +374,7 @@ TEST_F(SpecTest, Ex2_17_QuotedScalars) {
   Parse(ex2_17);
 }
 
-// 2.18
-TEST_F(SpecTest, Ex2_18_MultiLineFlowScalars) {
+TEST_F(HandlerSpecTest, Ex2_18_MultiLineFlowScalars) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "plain"));
@@ -406,8 +389,7 @@ TEST_F(SpecTest, Ex2_18_MultiLineFlowScalars) {
 
 // TODO: 2.19 - 2.22 schema tags
 
-// 2.23
-TEST_F(SpecTest, Ex2_23_VariousExplicitTags) {
+TEST_F(HandlerSpecTest, Ex2_23_VariousExplicitTags) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "not-date"));
@@ -428,8 +410,7 @@ TEST_F(SpecTest, Ex2_23_VariousExplicitTags) {
   Parse(ex2_23);
 }
 
-// 2.24
-TEST_F(SpecTest, Ex2_24_GlobalTags) {
+TEST_F(HandlerSpecTest, Ex2_24_GlobalTags) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "tag:clarkevans.com,2002:shape", 0));
   EXPECT_CALL(handler, OnMapStart(_, "tag:clarkevans.com,2002:circle", 0));
@@ -467,8 +448,7 @@ TEST_F(SpecTest, Ex2_24_GlobalTags) {
   Parse(ex2_24);
 }
 
-// 2.25
-TEST_F(SpecTest, Ex2_25_UnorderedSets) {
+TEST_F(HandlerSpecTest, Ex2_25_UnorderedSets) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "tag:yaml.org,2002:set", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Mark McGwire"));
@@ -482,8 +462,7 @@ TEST_F(SpecTest, Ex2_25_UnorderedSets) {
   Parse(ex2_25);
 }
 
-// 2.26
-TEST_F(SpecTest, Ex2_26_OrderedMappings) {
+TEST_F(HandlerSpecTest, Ex2_26_OrderedMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "tag:yaml.org,2002:omap", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -503,8 +482,7 @@ TEST_F(SpecTest, Ex2_26_OrderedMappings) {
   Parse(ex2_26);
 }
 
-// 2.27
-TEST_F(SpecTest, Ex2_27_Invoice) {
+TEST_F(HandlerSpecTest, Ex2_27_Invoice) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "tag:clarkevans.com,2002:invoice", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "invoice"));
@@ -569,8 +547,7 @@ TEST_F(SpecTest, Ex2_27_Invoice) {
   Parse(ex2_27);
 }
 
-// 2.28
-TEST_F(SpecTest, Ex2_28_LogFile) {
+TEST_F(HandlerSpecTest, Ex2_28_LogFile) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Time"));
@@ -627,8 +604,7 @@ TEST_F(SpecTest, Ex2_28_LogFile) {
 
 // TODO: 5.1 - 5.2 BOM
 
-// 5.3
-TEST_F(SpecTest, Ex5_3_BlockStructureIndicators) {
+TEST_F(HandlerSpecTest, Ex5_3_BlockStructureIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "sequence"));
@@ -648,8 +624,7 @@ TEST_F(SpecTest, Ex5_3_BlockStructureIndicators) {
   Parse(ex5_3);
 }
 
-// 5.4
-TEST_F(SpecTest, Ex5_4_FlowStructureIndicators) {
+TEST_F(HandlerSpecTest, Ex5_4_FlowStructureIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "sequence"));
@@ -669,11 +644,9 @@ TEST_F(SpecTest, Ex5_4_FlowStructureIndicators) {
   Parse(ex5_4);
 }
 
-// 5.5
-TEST_F(SpecTest, Ex5_5_CommentIndicator) { Parse(ex5_5); }
+TEST_F(HandlerSpecTest, Ex5_5_CommentIndicator) { Parse(ex5_5); }
 
-// 5.6
-TEST_F(SpecTest, Ex5_6_NodePropertyIndicators) {
+TEST_F(HandlerSpecTest, Ex5_6_NodePropertyIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "anchored"));
@@ -685,8 +658,7 @@ TEST_F(SpecTest, Ex5_6_NodePropertyIndicators) {
   Parse(ex5_6);
 }
 
-// 5.7
-TEST_F(SpecTest, Ex5_7_BlockScalarIndicators) {
+TEST_F(HandlerSpecTest, Ex5_7_BlockScalarIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "literal"));
@@ -698,8 +670,7 @@ TEST_F(SpecTest, Ex5_7_BlockScalarIndicators) {
   Parse(ex5_7);
 }
 
-// 5.8
-TEST_F(SpecTest, Ex5_8_QuotedScalarIndicators) {
+TEST_F(HandlerSpecTest, Ex5_8_QuotedScalarIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "single"));
@@ -714,8 +685,7 @@ TEST_F(SpecTest, Ex5_8_QuotedScalarIndicators) {
 // TODO: 5.9 directive
 // TODO: 5.10 reserved indicator
 
-// 5.11
-TEST_F(SpecTest, Ex5_11_LineBreakCharacters) {
+TEST_F(HandlerSpecTest, Ex5_11_LineBreakCharacters) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0,
                                 "Line break (no glyph)\n"
@@ -724,8 +694,7 @@ TEST_F(SpecTest, Ex5_11_LineBreakCharacters) {
   Parse(ex5_11);
 }
 
-// 5.12
-TEST_F(SpecTest, Ex5_12_TabsAndSpaces) {
+TEST_F(HandlerSpecTest, Ex5_12_TabsAndSpaces) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "quoted"));
@@ -740,8 +709,7 @@ TEST_F(SpecTest, Ex5_12_TabsAndSpaces) {
   Parse(ex5_12);
 }
 
-// 5.13
-TEST_F(SpecTest, Ex5_13_EscapedCharacters) {
+TEST_F(HandlerSpecTest, Ex5_13_EscapedCharacters) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(
       handler,
@@ -753,14 +721,12 @@ TEST_F(SpecTest, Ex5_13_EscapedCharacters) {
   Parse(ex5_13);
 }
 
-// 5.14
-TEST_F(SpecTest, Ex5_14_InvalidEscapedCharacters) {
-  EXPECT_THROW_PARSER_EXCEPTION(
-      IgnoreParse(ex5_14), std::string(YAML::ErrorMsg::INVALID_ESCAPE) + "c");
+TEST_F(HandlerSpecTest, Ex5_14_InvalidEscapedCharacters) {
+  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex5_14),
+                                std::string(ErrorMsg::INVALID_ESCAPE) + "c");
 }
 
-// 6.1
-TEST_F(SpecTest, Ex6_1_IndentationSpaces) {
+TEST_F(HandlerSpecTest, Ex6_1_IndentationSpaces) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Not indented"));
@@ -779,8 +745,7 @@ TEST_F(SpecTest, Ex6_1_IndentationSpaces) {
   Parse(ex6_1);
 }
 
-// 6.2
-TEST_F(SpecTest, Ex6_2_IndentationIndicators) {
+TEST_F(HandlerSpecTest, Ex6_2_IndentationIndicators) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "a"));
@@ -796,8 +761,7 @@ TEST_F(SpecTest, Ex6_2_IndentationIndicators) {
   Parse(ex6_2);
 }
 
-// 6.3
-TEST_F(SpecTest, Ex6_3_SeparationSpaces) {
+TEST_F(HandlerSpecTest, Ex6_3_SeparationSpaces) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -813,8 +777,7 @@ TEST_F(SpecTest, Ex6_3_SeparationSpaces) {
   Parse(ex6_3);
 }
 
-// 6.4
-TEST_F(SpecTest, Ex6_4_LinePrefixes) {
+TEST_F(HandlerSpecTest, Ex6_4_LinePrefixes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "plain"));
@@ -828,8 +791,7 @@ TEST_F(SpecTest, Ex6_4_LinePrefixes) {
   Parse(ex6_4);
 }
 
-// 6.5
-TEST_F(SpecTest, Ex6_5_EmptyLines) {
+TEST_F(HandlerSpecTest, Ex6_5_EmptyLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "Folding"));
@@ -841,32 +803,28 @@ TEST_F(SpecTest, Ex6_5_EmptyLines) {
   Parse(ex6_5);
 }
 
-// 6.6
-TEST_F(SpecTest, Ex6_6_LineFolding) {
+TEST_F(HandlerSpecTest, Ex6_6_LineFolding) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "trimmed\n\n\nas space"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_6);
 }
 
-// 6.7
-TEST_F(SpecTest, Ex6_7_BlockFolding) {
+TEST_F(HandlerSpecTest, Ex6_7_BlockFolding) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "foo \n\n\t bar\n\nbaz\n"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_7);
 }
 
-// 6.8
-TEST_F(SpecTest, Ex6_8_FlowFolding) {
+TEST_F(HandlerSpecTest, Ex6_8_FlowFolding) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, " foo\nbar\nbaz "));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_8);
 }
 
-// 6.9
-TEST_F(SpecTest, Ex6_9_SeparatedComment) {
+TEST_F(HandlerSpecTest, Ex6_9_SeparatedComment) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "key"));
@@ -876,11 +834,9 @@ TEST_F(SpecTest, Ex6_9_SeparatedComment) {
   Parse(ex6_9);
 }
 
-// 6.10
-TEST_F(SpecTest, Ex6_10_CommentLines) { Parse(ex6_10); }
+TEST_F(HandlerSpecTest, Ex6_10_CommentLines) { Parse(ex6_10); }
 
-// 6.11
-TEST_F(SpecTest, _MultiLineComments) {
+TEST_F(HandlerSpecTest, _MultiLineComments) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "key"));
@@ -890,8 +846,7 @@ TEST_F(SpecTest, _MultiLineComments) {
   Parse(ex6_11);
 }
 
-// 6.12
-TEST_F(SpecTest, Ex6_12_SeparationSpacesII) {
+TEST_F(HandlerSpecTest, Ex6_12_SeparationSpacesII) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -911,44 +866,38 @@ TEST_F(SpecTest, Ex6_12_SeparationSpacesII) {
   Parse(ex6_12);
 }
 
-// 6.13
-TEST_F(SpecTest, Ex6_13_ReservedDirectives) {
+TEST_F(HandlerSpecTest, Ex6_13_ReservedDirectives) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "foo"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_13);
 }
 
-// 6.14
-TEST_F(SpecTest, Ex6_14_YAMLDirective) {
+TEST_F(HandlerSpecTest, Ex6_14_YAMLDirective) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "foo"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_14);
 }
 
-// 6.15
-TEST_F(SpecTest, Ex6_15_InvalidRepeatedYAMLDirective) {
+TEST_F(HandlerSpecTest, Ex6_15_InvalidRepeatedYAMLDirective) {
   EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex6_15),
                                 ErrorMsg::REPEATED_YAML_DIRECTIVE);
 }
 
-// 6.16
-TEST_F(SpecTest, Ex6_16_TagDirective) {
+TEST_F(HandlerSpecTest, Ex6_16_TagDirective) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "tag:yaml.org,2002:str", 0, "foo"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_16);
 }
 
-// 6.17
-TEST_F(SpecTest, Ex6_17_InvalidRepeatedTagDirective) {
+TEST_F(HandlerSpecTest, Ex6_17_InvalidRepeatedTagDirective) {
   EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex6_17),
-                                YAML::ErrorMsg::REPEATED_TAG_DIRECTIVE);
+                                ErrorMsg::REPEATED_TAG_DIRECTIVE);
 }
 
-// 6.18
-TEST_F(SpecTest, Ex6_18_PrimaryTagHandle) {
+TEST_F(HandlerSpecTest, Ex6_18_PrimaryTagHandle) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!foo", 0, "bar"));
   EXPECT_CALL(handler, OnDocumentEnd());
@@ -958,24 +907,21 @@ TEST_F(SpecTest, Ex6_18_PrimaryTagHandle) {
   Parse(ex6_18);
 }
 
-// 6.19
-TEST_F(SpecTest, Ex6_19_SecondaryTagHandle) {
+TEST_F(HandlerSpecTest, Ex6_19_SecondaryTagHandle) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "tag:example.com,2000:app/int", 0, "1 - 3"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_19);
 }
 
-// 6.20
-TEST_F(SpecTest, Ex6_20_TagHandles) {
+TEST_F(HandlerSpecTest, Ex6_20_TagHandles) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "tag:example.com,2000:app/foo", 0, "bar"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex6_20);
 }
 
-// 6.21
-TEST_F(SpecTest, Ex6_21_LocalTagPrefix) {
+TEST_F(HandlerSpecTest, Ex6_21_LocalTagPrefix) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!my-light", 0, "fluorescent"));
   EXPECT_CALL(handler, OnDocumentEnd());
@@ -985,8 +931,7 @@ TEST_F(SpecTest, Ex6_21_LocalTagPrefix) {
   Parse(ex6_21);
 }
 
-// 6.22
-TEST_F(SpecTest, Ex6_22_GlobalTagPrefix) {
+TEST_F(HandlerSpecTest, Ex6_22_GlobalTagPrefix) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "tag:example.com,2000:app/foo", 0, "bar"));
@@ -995,8 +940,7 @@ TEST_F(SpecTest, Ex6_22_GlobalTagPrefix) {
   Parse(ex6_22);
 }
 
-// 6.23
-TEST_F(SpecTest, Ex6_23_NodeProperties) {
+TEST_F(HandlerSpecTest, Ex6_23_NodeProperties) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "tag:yaml.org,2002:str", 1, "foo"));
@@ -1008,8 +952,7 @@ TEST_F(SpecTest, Ex6_23_NodeProperties) {
   Parse(ex6_23);
 }
 
-// 6.24
-TEST_F(SpecTest, Ex6_24_VerbatimTags) {
+TEST_F(HandlerSpecTest, Ex6_24_VerbatimTags) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "tag:yaml.org,2002:str", 0, "foo"));
@@ -1020,13 +963,12 @@ TEST_F(SpecTest, Ex6_24_VerbatimTags) {
 }
 
 // TODO: Implement
-TEST_F(SpecTest, DISABLED_Ex6_25_InvalidVerbatimTags) {
+TEST_F(HandlerSpecTest, DISABLED_Ex6_25_InvalidVerbatimTags) {
   Parse(ex6_25);
   FAIL() << "not implemented yet";
 }
 
-// 6.26
-TEST_F(SpecTest, Ex6_26_TagShorthands) {
+TEST_F(HandlerSpecTest, Ex6_26_TagShorthands) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!local", 0, "foo"));
@@ -1038,20 +980,18 @@ TEST_F(SpecTest, Ex6_26_TagShorthands) {
   Parse(ex6_26);
 }
 
-// 6.27
-TEST_F(SpecTest, Ex6_27a_InvalidTagShorthands) {
+TEST_F(HandlerSpecTest, Ex6_27a_InvalidTagShorthands) {
   EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex6_27a),
                                 ErrorMsg::TAG_WITH_NO_SUFFIX);
 }
 
 // TODO: should we reject this one (since !h! is not declared)?
-TEST_F(SpecTest, DISABLED_Ex6_27b_InvalidTagShorthands) {
+TEST_F(HandlerSpecTest, DISABLED_Ex6_27b_InvalidTagShorthands) {
   Parse(ex6_27b);
   FAIL() << "not implemented yet";
 }
 
-// 6.28
-TEST_F(SpecTest, Ex6_28_NonSpecificTags) {
+TEST_F(HandlerSpecTest, Ex6_28_NonSpecificTags) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "12"));
@@ -1062,8 +1002,7 @@ TEST_F(SpecTest, Ex6_28_NonSpecificTags) {
   Parse(ex6_28);
 }
 
-// 6.29
-TEST_F(SpecTest, Ex6_29_NodeAnchors) {
+TEST_F(HandlerSpecTest, Ex6_29_NodeAnchors) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "First occurrence"));
@@ -1075,8 +1014,7 @@ TEST_F(SpecTest, Ex6_29_NodeAnchors) {
   Parse(ex6_29);
 }
 
-// 7.1
-TEST_F(SpecTest, Ex7_1_AliasNodes) {
+TEST_F(HandlerSpecTest, Ex7_1_AliasNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "First occurrence"));
@@ -1092,8 +1030,7 @@ TEST_F(SpecTest, Ex7_1_AliasNodes) {
   Parse(ex7_1);
 }
 
-// 7.2
-TEST_F(SpecTest, Ex7_2_EmptyNodes) {
+TEST_F(HandlerSpecTest, Ex7_2_EmptyNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "foo"));
@@ -1105,8 +1042,7 @@ TEST_F(SpecTest, Ex7_2_EmptyNodes) {
   Parse(ex7_2);
 }
 
-// 7.3
-TEST_F(SpecTest, Ex7_3_CompletelyEmptyNodes) {
+TEST_F(HandlerSpecTest, Ex7_3_CompletelyEmptyNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "foo"));
@@ -1118,8 +1054,7 @@ TEST_F(SpecTest, Ex7_3_CompletelyEmptyNodes) {
   Parse(ex7_3);
 }
 
-// 7.4
-TEST_F(SpecTest, Ex7_4_DoubleQuotedImplicitKeys) {
+TEST_F(HandlerSpecTest, Ex7_4_DoubleQuotedImplicitKeys) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "implicit block key"));
@@ -1134,8 +1069,7 @@ TEST_F(SpecTest, Ex7_4_DoubleQuotedImplicitKeys) {
   Parse(ex7_4);
 }
 
-// 7.5
-TEST_F(SpecTest, Ex7_5_DoubleQuotedLineBreaks) {
+TEST_F(HandlerSpecTest, Ex7_5_DoubleQuotedLineBreaks) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(
       handler,
@@ -1145,8 +1079,7 @@ TEST_F(SpecTest, Ex7_5_DoubleQuotedLineBreaks) {
   Parse(ex7_5);
 }
 
-// 7.6
-TEST_F(SpecTest, Ex7_6_DoubleQuotedLines) {
+TEST_F(HandlerSpecTest, Ex7_6_DoubleQuotedLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(
       handler,
@@ -1155,16 +1088,14 @@ TEST_F(SpecTest, Ex7_6_DoubleQuotedLines) {
   Parse(ex7_6);
 }
 
-// 7.7
-TEST_F(SpecTest, Ex7_7_SingleQuotedCharacters) {
+TEST_F(HandlerSpecTest, Ex7_7_SingleQuotedCharacters) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "here's to \"quotes\""));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex7_7);
 }
 
-// 7.8
-TEST_F(SpecTest, Ex7_8_SingleQuotedImplicitKeys) {
+TEST_F(HandlerSpecTest, Ex7_8_SingleQuotedImplicitKeys) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "implicit block key"));
@@ -1179,8 +1110,7 @@ TEST_F(SpecTest, Ex7_8_SingleQuotedImplicitKeys) {
   Parse(ex7_8);
 }
 
-// 7.9
-TEST_F(SpecTest, Ex7_9_SingleQuotedLines) {
+TEST_F(HandlerSpecTest, Ex7_9_SingleQuotedLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(
       handler,
@@ -1189,8 +1119,7 @@ TEST_F(SpecTest, Ex7_9_SingleQuotedLines) {
   Parse(ex7_9);
 }
 
-// 7.10
-TEST_F(SpecTest, Ex7_10_PlainCharacters) {
+TEST_F(HandlerSpecTest, Ex7_10_PlainCharacters) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "::vector"));
@@ -1210,8 +1139,7 @@ TEST_F(SpecTest, Ex7_10_PlainCharacters) {
   Parse(ex7_10);
 }
 
-// 7.11
-TEST_F(SpecTest, Ex7_11_PlainImplicitKeys) {
+TEST_F(HandlerSpecTest, Ex7_11_PlainImplicitKeys) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "implicit block key"));
@@ -1226,8 +1154,7 @@ TEST_F(SpecTest, Ex7_11_PlainImplicitKeys) {
   Parse(ex7_11);
 }
 
-// 7.12
-TEST_F(SpecTest, Ex7_12_PlainLines) {
+TEST_F(HandlerSpecTest, Ex7_12_PlainLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "?", 0,
                                 "1st non-empty\n2nd non-empty 3rd non-empty"));
@@ -1235,8 +1162,7 @@ TEST_F(SpecTest, Ex7_12_PlainLines) {
   Parse(ex7_12);
 }
 
-// 7.13
-TEST_F(SpecTest, Ex7_13_FlowSequence) {
+TEST_F(HandlerSpecTest, Ex7_13_FlowSequence) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
@@ -1252,8 +1178,7 @@ TEST_F(SpecTest, Ex7_13_FlowSequence) {
   Parse(ex7_13);
 }
 
-// 7.14
-TEST_F(SpecTest, Ex7_14_FlowSequenceEntries) {
+TEST_F(HandlerSpecTest, Ex7_14_FlowSequenceEntries) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "double quoted"));
@@ -1271,8 +1196,7 @@ TEST_F(SpecTest, Ex7_14_FlowSequenceEntries) {
   Parse(ex7_14);
 }
 
-// 7.15
-TEST_F(SpecTest, Ex7_15_FlowMappings) {
+TEST_F(HandlerSpecTest, Ex7_15_FlowMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -1292,8 +1216,7 @@ TEST_F(SpecTest, Ex7_15_FlowMappings) {
   Parse(ex7_15);
 }
 
-// 7.16
-TEST_F(SpecTest, Ex7_16_FlowMappingEntries) {
+TEST_F(HandlerSpecTest, Ex7_16_FlowMappingEntries) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "explicit"));
@@ -1307,8 +1230,7 @@ TEST_F(SpecTest, Ex7_16_FlowMappingEntries) {
   Parse(ex7_16);
 }
 
-// 7.17
-TEST_F(SpecTest, Ex7_17_FlowMappingSeparateValues) {
+TEST_F(HandlerSpecTest, Ex7_17_FlowMappingSeparateValues) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "unquoted"));
@@ -1324,8 +1246,7 @@ TEST_F(SpecTest, Ex7_17_FlowMappingSeparateValues) {
   Parse(ex7_17);
 }
 
-// 7.18
-TEST_F(SpecTest, Ex7_18_FlowMappingAdjacentValues) {
+TEST_F(HandlerSpecTest, Ex7_18_FlowMappingAdjacentValues) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "adjacent"));
@@ -1339,8 +1260,7 @@ TEST_F(SpecTest, Ex7_18_FlowMappingAdjacentValues) {
   Parse(ex7_18);
 }
 
-// 7.19
-TEST_F(SpecTest, Ex7_19_SinglePairFlowMappings) {
+TEST_F(HandlerSpecTest, Ex7_19_SinglePairFlowMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -1352,8 +1272,7 @@ TEST_F(SpecTest, Ex7_19_SinglePairFlowMappings) {
   Parse(ex7_19);
 }
 
-// 7.20
-TEST_F(SpecTest, Ex7_20_SinglePairExplicitEntry) {
+TEST_F(HandlerSpecTest, Ex7_20_SinglePairExplicitEntry) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -1365,8 +1284,7 @@ TEST_F(SpecTest, Ex7_20_SinglePairExplicitEntry) {
   Parse(ex7_20);
 }
 
-// 7.21
-TEST_F(SpecTest, Ex7_21_SinglePairImplicitEntries) {
+TEST_F(HandlerSpecTest, Ex7_21_SinglePairImplicitEntries) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
@@ -1395,14 +1313,11 @@ TEST_F(SpecTest, Ex7_21_SinglePairImplicitEntries) {
   Parse(ex7_21);
 }
 
-// 7.22
-TEST_F(SpecTest, Ex7_22_InvalidImplicitKeys) {
-  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex7_22),
-                                YAML::ErrorMsg::END_OF_SEQ_FLOW);
+TEST_F(HandlerSpecTest, Ex7_22_InvalidImplicitKeys) {
+  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex7_22), ErrorMsg::END_OF_SEQ_FLOW);
 }
 
-// 7.23
-TEST_F(SpecTest, Ex7_23_FlowContent) {
+TEST_F(HandlerSpecTest, Ex7_23_FlowContent) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
@@ -1421,8 +1336,7 @@ TEST_F(SpecTest, Ex7_23_FlowContent) {
   Parse(ex7_23);
 }
 
-// 7.24
-TEST_F(SpecTest, Ex7_24_FlowNodes) {
+TEST_F(HandlerSpecTest, Ex7_24_FlowNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "tag:yaml.org,2002:str", 0, "a"));
@@ -1435,8 +1349,7 @@ TEST_F(SpecTest, Ex7_24_FlowNodes) {
   Parse(ex7_24);
 }
 
-// 8.1
-TEST_F(SpecTest, Ex8_1_BlockScalarHeader) {
+TEST_F(HandlerSpecTest, Ex8_1_BlockScalarHeader) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "literal\n"));
@@ -1448,8 +1361,7 @@ TEST_F(SpecTest, Ex8_1_BlockScalarHeader) {
   Parse(ex8_1);
 }
 
-// 8.2
-TEST_F(SpecTest, Ex8_2_BlockIndentationHeader) {
+TEST_F(HandlerSpecTest, Ex8_2_BlockIndentationHeader) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "detected\n"));
@@ -1461,23 +1373,19 @@ TEST_F(SpecTest, Ex8_2_BlockIndentationHeader) {
   Parse(ex8_2);
 }
 
-// 8.3
-TEST_F(SpecTest, Ex8_3a_InvalidBlockScalarIndentationIndicators) {
-  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex8_3a),
-                                YAML::ErrorMsg::END_OF_SEQ);
+TEST_F(HandlerSpecTest, Ex8_3a_InvalidBlockScalarIndentationIndicators) {
+  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex8_3a), ErrorMsg::END_OF_SEQ);
 }
 
-TEST_F(SpecTest, Ex8_3b_InvalidBlockScalarIndentationIndicators) {
-  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex8_3b),
-                                YAML::ErrorMsg::END_OF_SEQ);
+TEST_F(HandlerSpecTest, Ex8_3b_InvalidBlockScalarIndentationIndicators) {
+  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex8_3b), ErrorMsg::END_OF_SEQ);
 }
 
-TEST_F(SpecTest, Ex8_3c_InvalidBlockScalarIndentationIndicators) {
+TEST_F(HandlerSpecTest, Ex8_3c_InvalidBlockScalarIndentationIndicators) {
   EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse(ex8_3c), ErrorMsg::END_OF_SEQ);
 }
 
-// 8.4
-TEST_F(SpecTest, Ex8_4_ChompingFinalLineBreak) {
+TEST_F(HandlerSpecTest, Ex8_4_ChompingFinalLineBreak) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "strip"));
@@ -1491,8 +1399,7 @@ TEST_F(SpecTest, Ex8_4_ChompingFinalLineBreak) {
   Parse(ex8_4);
 }
 
-// 8.5
-TEST_F(SpecTest, DISABLED_Ex8_5_ChompingTrailingLines) {
+TEST_F(HandlerSpecTest, DISABLED_Ex8_5_ChompingTrailingLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "strip"));
@@ -1508,8 +1415,7 @@ TEST_F(SpecTest, DISABLED_Ex8_5_ChompingTrailingLines) {
   Parse(ex8_5);
 }
 
-// 8.6
-TEST_F(SpecTest, Ex8_6_EmptyScalarChomping) {
+TEST_F(HandlerSpecTest, Ex8_6_EmptyScalarChomping) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "strip"));
@@ -1523,32 +1429,28 @@ TEST_F(SpecTest, Ex8_6_EmptyScalarChomping) {
   Parse(ex8_6);
 }
 
-// 8.7
-TEST_F(SpecTest, Ex8_7_LiteralScalar) {
+TEST_F(HandlerSpecTest, Ex8_7_LiteralScalar) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "literal\n\ttext\n"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex8_7);
 }
 
-// 8.8
-TEST_F(SpecTest, Ex8_8_LiteralContent) {
+TEST_F(HandlerSpecTest, Ex8_8_LiteralContent) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "\n\nliteral\n \n\ntext\n"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex8_8);
 }
 
-// 8.9
-TEST_F(SpecTest, Ex8_9_FoldedScalar) {
+TEST_F(HandlerSpecTest, Ex8_9_FoldedScalar) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "folded text\n"));
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse(ex8_9);
 }
 
-// 8.10
-TEST_F(SpecTest, Ex8_10_FoldedLines) {
+TEST_F(HandlerSpecTest, Ex8_10_FoldedLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler,
               OnScalar(_, "!", 0,
@@ -1558,8 +1460,7 @@ TEST_F(SpecTest, Ex8_10_FoldedLines) {
   Parse(ex8_10);
 }
 
-// 8.11
-TEST_F(SpecTest, Ex8_11_MoreIndentedLines) {
+TEST_F(HandlerSpecTest, Ex8_11_MoreIndentedLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler,
               OnScalar(_, "!", 0,
@@ -1569,8 +1470,7 @@ TEST_F(SpecTest, Ex8_11_MoreIndentedLines) {
   Parse(ex8_11);
 }
 
-// 8.12
-TEST_F(SpecTest, Ex8_12_EmptySeparationLines) {
+TEST_F(HandlerSpecTest, Ex8_12_EmptySeparationLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler,
               OnScalar(_, "!", 0,
@@ -1580,8 +1480,7 @@ TEST_F(SpecTest, Ex8_12_EmptySeparationLines) {
   Parse(ex8_12);
 }
 
-// 8.13
-TEST_F(SpecTest, Ex8_13_FinalEmptyLines) {
+TEST_F(HandlerSpecTest, Ex8_13_FinalEmptyLines) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler,
               OnScalar(_, "!", 0,
@@ -1591,8 +1490,7 @@ TEST_F(SpecTest, Ex8_13_FinalEmptyLines) {
   Parse(ex8_13);
 }
 
-// 8.14
-TEST_F(SpecTest, Ex8_14_BlockSequence) {
+TEST_F(HandlerSpecTest, Ex8_14_BlockSequence) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "block sequence"));
@@ -1608,8 +1506,7 @@ TEST_F(SpecTest, Ex8_14_BlockSequence) {
   Parse(ex8_14);
 }
 
-// 8.15
-TEST_F(SpecTest, Ex8_15_BlockSequenceEntryTypes) {
+TEST_F(HandlerSpecTest, Ex8_15_BlockSequenceEntryTypes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnNull(_, 0));
@@ -1627,8 +1524,7 @@ TEST_F(SpecTest, Ex8_15_BlockSequenceEntryTypes) {
   Parse(ex8_15);
 }
 
-// 8.16
-TEST_F(SpecTest, Ex8_16_BlockMappings) {
+TEST_F(HandlerSpecTest, Ex8_16_BlockMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "block mapping"));
@@ -1641,8 +1537,7 @@ TEST_F(SpecTest, Ex8_16_BlockMappings) {
   Parse(ex8_16);
 }
 
-// 8.17
-TEST_F(SpecTest, Ex8_17_ExplicitBlockMappingEntries) {
+TEST_F(HandlerSpecTest, Ex8_17_ExplicitBlockMappingEntries) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "explicit key"));
@@ -1657,8 +1552,7 @@ TEST_F(SpecTest, Ex8_17_ExplicitBlockMappingEntries) {
   Parse(ex8_17);
 }
 
-// 8.18
-TEST_F(SpecTest, Ex8_18_ImplicitBlockMappingEntries) {
+TEST_F(HandlerSpecTest, Ex8_18_ImplicitBlockMappingEntries) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "plain key"));
@@ -1674,8 +1568,7 @@ TEST_F(SpecTest, Ex8_18_ImplicitBlockMappingEntries) {
   Parse(ex8_18);
 }
 
-// 8.19
-TEST_F(SpecTest, Ex8_19_CompactBlockMappings) {
+TEST_F(HandlerSpecTest, Ex8_19_CompactBlockMappings) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
@@ -1697,8 +1590,7 @@ TEST_F(SpecTest, Ex8_19_CompactBlockMappings) {
   Parse(ex8_19);
 }
 
-// 8.20
-TEST_F(SpecTest, Ex8_20_BlockNodeTypes) {
+TEST_F(HandlerSpecTest, Ex8_20_BlockNodeTypes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "flow in block"));
@@ -1712,8 +1604,7 @@ TEST_F(SpecTest, Ex8_20_BlockNodeTypes) {
   Parse(ex8_20);
 }
 
-// 8.21
-TEST_F(SpecTest, DISABLED_Ex8_21_BlockScalarNodes) {
+TEST_F(HandlerSpecTest, DISABLED_Ex8_21_BlockScalarNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "literal"));
@@ -1727,8 +1618,7 @@ TEST_F(SpecTest, DISABLED_Ex8_21_BlockScalarNodes) {
   Parse(ex8_21);
 }
 
-// 8.22
-TEST_F(SpecTest, Ex8_22_BlockCollectionNodes) {
+TEST_F(HandlerSpecTest, Ex8_22_BlockCollectionNodes) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "sequence"));
