@@ -1,3 +1,6 @@
+add_subdirectory(gtest-1.7.0)
+include_directories(gtest-1.7.0/include)
+
 file(GLOB test_headers [a-z]*.h)
 file(GLOB test_sources [a-z]*.cpp)
 file(GLOB test_new_api_sources new-api/[a-z]*.cpp)
@@ -10,6 +13,6 @@ add_executable(run-tests
 	${test_sources}
 	${test_headers}
 )
-target_link_libraries(run-tests yaml-cpp)
+target_link_libraries(run-tests yaml-cpp gtest)
 
-add_test(yaml-reader-test run-tests)
+#add_test(yaml-reader-test run-tests)
