@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "teststruct.h"
-#include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
 namespace Test {

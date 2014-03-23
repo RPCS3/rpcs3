@@ -3,10 +3,6 @@
 #include "spectests.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
-namespace YAML {
-class Exception;
-}  // namespace YAML
-
 namespace Test {
 namespace {
 void RunSpecTest(TEST (*test)(), const std::string& index,

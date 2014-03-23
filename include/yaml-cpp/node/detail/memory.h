@@ -7,9 +7,17 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/node/ptr.h"
-#include <set>
 #include <boost/shared_ptr.hpp>
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <set>
+
+#include "yaml-cpp/node/ptr.h"
+
+namespace YAML {
+namespace detail {
+class node;
+}  // namespace detail
+}  // namespace YAML
 
 namespace YAML {
 namespace detail {

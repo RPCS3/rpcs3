@@ -7,9 +7,18 @@
 #pragma once
 #endif
 
+#include <vector>
+
+#include "yaml-cpp/anchor.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/node/ptr.h"
-#include <vector>
+
+namespace YAML {
+namespace detail {
+class node;
+}  // namespace detail
+struct Mark;
+}  // namespace YAML
 
 namespace YAML {
 class Node;

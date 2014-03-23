@@ -7,16 +7,25 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/dll.h"
-#include "yaml-cpp/node/iterator.h"
-#include "yaml-cpp/node/ptr.h"
-#include "yaml-cpp/node/type.h"
+#include <boost/noncopyable.hpp>
 #include <boost/utility.hpp>
 #include <list>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "yaml-cpp/dll.h"
+#include "yaml-cpp/node/detail/node_iterator.h"
+#include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/node/ptr.h"
+#include "yaml-cpp/node/type.h"
+
+namespace YAML {
+namespace detail {
+class node;
+}  // namespace detail
+}  // namespace YAML
 
 namespace YAML {
 namespace detail {

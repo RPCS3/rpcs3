@@ -7,15 +7,24 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/binary.h"
-#include "yaml-cpp/node/node.h"
-#include "yaml-cpp/node/iterator.h"
-#include "yaml-cpp/null.h"
 #include <limits>
 #include <list>
 #include <map>
 #include <sstream>
 #include <vector>
+
+#include "yaml-cpp/binary.h"
+#include "yaml-cpp/node/impl.h"
+#include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/type.h"
+#include "yaml-cpp/null.h"
+
+namespace YAML {
+class Binary;
+struct _Null;
+template <typename T> struct convert;
+}  // namespace YAML
 
 namespace YAML {
 namespace conversion {

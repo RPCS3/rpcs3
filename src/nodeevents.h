@@ -7,10 +7,17 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/anchor.h"
-#include "yaml-cpp/node/ptr.h"
 #include <map>
 #include <vector>
+
+#include "yaml-cpp/anchor.h"
+#include "yaml-cpp/node/ptr.h"
+
+namespace YAML {
+namespace detail {
+class node;
+}  // namespace detail
+}  // namespace YAML
 
 namespace YAML {
 class EventHandler;

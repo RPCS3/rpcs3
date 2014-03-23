@@ -7,12 +7,21 @@
 #pragma once
 #endif
 
+#include <stdexcept>
+
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/node/detail/bool_type.h"
+#include "yaml-cpp/node/detail/iterator_fwd.h"
 #include "yaml-cpp/node/ptr.h"
 #include "yaml-cpp/node/type.h"
-#include "yaml-cpp/node/detail/iterator_fwd.h"
-#include "yaml-cpp/node/detail/bool_type.h"
-#include <stdexcept>
+
+namespace YAML {
+namespace detail {
+class node;
+class node_data;
+struct iterator_value;
+}  // namespace detail
+}  // namespace YAML
 
 namespace YAML {
 class Node {

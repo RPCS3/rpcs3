@@ -1,11 +1,18 @@
-#include "yaml-cpp/node/detail/node_data.h"
-#include "yaml-cpp/node/detail/memory.h"
-#include "yaml-cpp/node/detail/node.h"
-#include "yaml-cpp/exceptions.h"
+#include <assert.h>
+#include <boost/smart_ptr/shared_ptr.hpp>
 #include <sstream>
+
+#include "yaml-cpp/exceptions.h"
+#include "yaml-cpp/node/detail/memory.h"
+#include "yaml-cpp/node/detail/node.h"  // IWYU pragma: keep
+#include "yaml-cpp/node/detail/node_data.h"
+#include "yaml-cpp/node/detail/node_iterator.h"
+#include "yaml-cpp/node/ptr.h"
+#include "yaml-cpp/node/type.h"
 
 namespace YAML {
 namespace detail {
+
 std::string node_data::empty_scalar;
 
 node_data::node_data()

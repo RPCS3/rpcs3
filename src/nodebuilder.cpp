@@ -1,10 +1,15 @@
-#include "nodebuilder.h"
-#include "yaml-cpp/mark.h"
-#include "yaml-cpp/node/node.h"
-#include "yaml-cpp/node/impl.h"
+#include <assert.h>
 #include <cassert>
 
+#include "nodebuilder.h"
+#include "yaml-cpp/node/detail/node.h"
+#include "yaml-cpp/node/impl.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/type.h"
+
 namespace YAML {
+struct Mark;
+
 NodeBuilder::NodeBuilder()
     : m_pMemory(new detail::memory_holder), m_pRoot(0), m_mapDepth(0) {
   m_anchors.push_back(0);  // since the anchors start at 1

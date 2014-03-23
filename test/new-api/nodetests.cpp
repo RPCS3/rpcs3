@@ -1,8 +1,13 @@
-#include "nodetests.h"
-#include "yaml-cpp/yaml.h"
+#include <boost/version.hpp>
 #include <iostream>
 
-#include <boost/version.hpp>
+#include "nodetests.h"
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
+
+namespace YAML {
+class InvalidNode;
+template <typename T> class TypedBadConversion;
+}  // namespace YAML
 
 #if BOOST_VERSION >= 103400
 #include <boost/foreach.hpp>
