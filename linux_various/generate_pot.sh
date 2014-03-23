@@ -113,3 +113,8 @@ do
     mkdir -p `dirname $mo_file`
     msgfmt -o $mo_file $po_file
 done
+
+######################################################################
+# Clean garbage
+######################################################################
+find ./locales -iname "pcsx2_*.po~" -exec rm {} \;
