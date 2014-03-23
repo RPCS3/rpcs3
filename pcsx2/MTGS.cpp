@@ -495,6 +495,14 @@ void SysMtgsThread::ExecuteTaskInThread()
 							GSsetGameCRC( tag.data[0], 0 );
 						break;
 
+						case GS_RINGTYPE_READ_FIFO1:
+							GSreadFIFO( (u64*)tag.data[1]);
+						break;
+
+						case GS_RINGTYPE_READ_FIFO2:
+							GSreadFIFO2( (u64*)tag.data[1], tag.data[0]);
+						break;
+
 #ifdef PCSX2_DEVBUILD
 						default:
 							Console.Error("GSThreadProc, bad packet (%x) at m_ReadPos: %x, m_WritePos: %x", tag.command, m_ReadPos, m_WritePos);

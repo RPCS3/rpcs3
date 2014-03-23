@@ -67,8 +67,8 @@ void vif1TransferToMemory()
 		pxAssert(p3.isDone() || !p3.gifTag.isValid);
 	}
 
+	GetMTGS().SendPointerPacket(GS_RINGTYPE_READ_FIFO2, size, pMem);
 	GetMTGS().WaitGS();
-	GSreadFIFO2((u64*)pMem, size);
 	pMem += size;
 
 	if(pMem < pMemEnd) {

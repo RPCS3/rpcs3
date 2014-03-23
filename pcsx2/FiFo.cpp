@@ -50,8 +50,8 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 			DevCon.Warning("Warning! GS Download size < FIFO count!");
 		}
 		if (vif1Regs.stat.FQC > 0) {
+			GetMTGS().SendPointerPacket(GS_RINGTYPE_READ_FIFO1, 0, out);
 			GetMTGS().WaitGS();
-			GSreadFIFO((u64*)out);
 			vif1.GSLastDownloadSize--;
 			GUNIT_LOG("ReadFIFO_VIF1");
 			if (vif1.GSLastDownloadSize <= 16)
