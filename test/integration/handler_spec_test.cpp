@@ -1,3 +1,4 @@
+#include "mock_event_handler.h"
 #include "specexamples.h"  // IWYU pragma: keep
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
@@ -21,24 +22,6 @@ using ::testing::StrictMock;
 
 namespace YAML {
 namespace {
-
-class MockEventHandler : public EventHandler {
- public:
-  MOCK_METHOD1(OnDocumentStart, void(const Mark&));
-  MOCK_METHOD0(OnDocumentEnd, void());
-
-  MOCK_METHOD2(OnNull, void(const Mark&, anchor_t));
-  MOCK_METHOD2(OnAlias, void(const Mark&, anchor_t));
-  MOCK_METHOD4(OnScalar, void(const Mark&, const std::string&, anchor_t,
-                              const std::string&));
-
-  MOCK_METHOD3(OnSequenceStart,
-               void(const Mark&, const std::string&, anchor_t));
-  MOCK_METHOD0(OnSequenceEnd, void());
-
-  MOCK_METHOD3(OnMapStart, void(const Mark&, const std::string&, anchor_t));
-  MOCK_METHOD0(OnMapEnd, void());
-};
 
 class HandlerSpecTest : public ::testing::Test {
  protected:
