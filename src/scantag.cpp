@@ -1,5 +1,5 @@
 #include "scanner.h"
-#include "regex.h"
+#include "regex_yaml.h"
 #include "exp.h"
 #include "yaml-cpp/exceptions.h"
 
