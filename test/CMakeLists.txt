@@ -1,5 +1,6 @@
-add_subdirectory(gtest-1.7.0)
-include_directories(gtest-1.7.0/include)
+add_subdirectory(gmock-1.7.0)
+include_directories(gmock-1.7.0/gtest/include)
+include_directories(gmock-1.7.0/include)
 
 file(GLOB test_headers [a-z_]*.h)
 file(GLOB test_sources [a-z_]*.cpp integration/[a-z_]*.cpp)
@@ -13,6 +14,6 @@ add_executable(run-tests
 	${test_sources}
 	${test_headers}
 )
-target_link_libraries(run-tests yaml-cpp gtest)
+target_link_libraries(run-tests yaml-cpp gtest gmock)
 
 #add_test(yaml-reader-test run-tests)
