@@ -62,7 +62,7 @@ class HandlerTest : public ::testing::Test {
 };
 
 TEST_F(HandlerTest, NoEndOfMapFlow) {
-  EXPECT_THROW_PARSER_EXCEPTION(Parse("---{header: {id: 1"),
+  EXPECT_THROW_PARSER_EXCEPTION(IgnoreParse("---{header: {id: 1"),
                                 ErrorMsg::END_OF_MAP_FLOW);
 }
 
