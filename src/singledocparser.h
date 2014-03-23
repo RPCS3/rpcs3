@@ -7,20 +7,21 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/anchor.h"
-#include "yaml-cpp/noncopyable.h"
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
+
+#include "yaml-cpp/anchor.h"
+#include "yaml-cpp/noncopyable.h"
 
 namespace YAML {
-struct Directives;
-struct Mark;
-struct Token;
 class CollectionStack;
 class EventHandler;
 class Node;
 class Scanner;
+struct Directives;
+struct Mark;
+struct Token;
 
 class SingleDocParser : private noncopyable {
  public:

@@ -1,8 +1,8 @@
-#include "yaml-cpp/ostream_wrapper.h"
-
+#include <stddef.h>
 #include <sstream>
 
 #include "gtest/gtest.h"
+#include "yaml-cpp/ostream_wrapper.h"
 
 namespace {
 TEST(OstreamWrapperTest, BufferNoWrite) {

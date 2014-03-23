@@ -1,13 +1,13 @@
-#include "tests.h"
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <vector>
+
 #include "emittertests.h"
 #include "nodetests.h"
 #include "parsertests.h"
 #include "spectests.h"
-#include "yaml-cpp/yaml.h"
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <iostream>
+#include "tests.h"
 
 namespace Test {
 void RunAll() {

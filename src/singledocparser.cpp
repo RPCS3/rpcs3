@@ -1,14 +1,15 @@
-#include "singledocparser.h"
-#include "collectionstack.h"
-#include "directives.h"
-#include "yaml-cpp/eventhandler.h"
-#include "yaml-cpp/exceptions.h"
+#include <algorithm>
+#include <cstdio>
+#include <sstream>
+
+#include "collectionstack.h"  // IWYU pragma: keep
 #include "scanner.h"
+#include "singledocparser.h"
 #include "tag.h"
 #include "token.h"
-#include <sstream>
-#include <cstdio>
-#include <algorithm>
+#include "yaml-cpp/eventhandler.h"
+#include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
+#include "yaml-cpp/mark.h"
 
 namespace YAML {
 SingleDocParser::SingleDocParser(Scanner& scanner, const Directives& directives)

@@ -1,6 +1,9 @@
 #include "graphbuilderadapter.h"
+#include "yaml-cpp/contrib/graphbuilder.h"
 
 namespace YAML {
+struct Mark;
+
 int GraphBuilderAdapter::ContainerFrame::sequenceMarker;
 
 void GraphBuilderAdapter::OnNull(const Mark &mark, anchor_t anchor) {

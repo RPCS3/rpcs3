@@ -1,15 +1,16 @@
-#include "yaml-cpp/parser.h"
-#include "yaml-cpp/eventhandler.h"
-#include "yaml-cpp/exceptions.h"
-#include "directives.h"
-#include "scanner.h"
-#include "singledocparser.h"
-#include "tag.h"
-#include "token.h"
-#include <sstream>
 #include <cstdio>
+#include <sstream>
+
+#include "directives.h"  // IWYU pragma: keep
+#include "scanner.h"  // IWYU pragma: keep
+#include "singledocparser.h"
+#include "token.h"
+#include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
+#include "yaml-cpp/parser.h"
 
 namespace YAML {
+class EventHandler;
+
 Parser::Parser() {}
 
 Parser::Parser(std::istream& in) { Load(in); }

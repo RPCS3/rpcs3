@@ -1,6 +1,7 @@
-#include "emitterstate.h"
-#include "yaml-cpp/exceptions.h"
 #include <limits>
+
+#include "emitterstate.h"
+#include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
 
 namespace YAML {
 EmitterState::EmitterState()

@@ -7,8 +7,14 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/eventhandler.h"
 #include <stack>
+
+#include "yaml-cpp/anchor.h"
+#include "yaml-cpp/eventhandler.h"
+
+namespace YAML {
+struct Mark;
+}  // namespace YAML
 
 namespace YAML {
 class Emitter;

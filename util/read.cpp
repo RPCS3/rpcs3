@@ -1,6 +1,6 @@
-#include "yaml-cpp/yaml.h"
-#include "yaml-cpp/eventhandler.h"
 #include <iostream>
+
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
 class NullEventHandler : public YAML::EventHandler {
  public:

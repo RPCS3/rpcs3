@@ -1,7 +1,8 @@
-#include "tests.h"
-#include "handlermacros.h"
-#include "yaml-cpp/yaml.h"
 #include <iostream>
+
+#include "teststruct.h"
+#include "yaml-cpp/eventhandler.h"
+#include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
 namespace Test {
 namespace Emitter {

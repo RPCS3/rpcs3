@@ -1,11 +1,14 @@
+#include <iomanip>
+#include <sstream>
+
 #include "emitterutils.h"
 #include "exp.h"
 #include "indentation.h"
-#include "yaml-cpp/binary.h"
-#include "yaml-cpp/exceptions.h"
+#include "regex_yaml.h"
+#include "regeximpl.h"
 #include "stringsource.h"
-#include <sstream>
-#include <iomanip>
+#include "yaml-cpp/binary.h"  // IWYU pragma: keep
+#include "yaml-cpp/ostream_wrapper.h"
 
 namespace YAML {
 namespace Utils {

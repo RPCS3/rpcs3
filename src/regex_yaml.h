@@ -7,8 +7,8 @@
 #pragma once
 #endif
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace YAML {
 class Stream;
