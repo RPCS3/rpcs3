@@ -318,7 +318,7 @@ TEST_F(HandlerSpecTest, Ex2_17_QuotedScalars) {
   EXPECT_CALL(handler, OnDocumentStart(_));
   EXPECT_CALL(handler, OnMapStart(_, "?", 0));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "unicode"));
-  EXPECT_CALL(handler, OnScalar(_, "!", 0, "Sosa did fine.\u263A"));
+  EXPECT_CALL(handler, OnScalar(_, "!", 0, "Sosa did fine.\xE2\x98\xBA"));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "control"));
   EXPECT_CALL(handler, OnScalar(_, "!", 0, "\b1998\t1999\t2000\n"));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "hex esc"));
