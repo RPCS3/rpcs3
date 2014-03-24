@@ -13,21 +13,9 @@
 #include "stream.h"
 
 namespace YAML {
-enum CHOMP {
-  STRIP = -1,
-  CLIP,
-  KEEP
-};
-enum ACTION {
-  NONE,
-  BREAK,
-  THROW
-};
-enum FOLD {
-  DONT_FOLD,
-  FOLD_BLOCK,
-  FOLD_FLOW
-};
+enum CHOMP { STRIP = -1, CLIP, KEEP };
+enum ACTION { NONE, BREAK, THROW };
+enum FOLD { DONT_FOLD, FOLD_BLOCK, FOLD_FLOW };
 
 struct ScanScalarParams {
   ScanScalarParams()

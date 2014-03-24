@@ -8,8 +8,8 @@ Directives::Directives() {
   version.minor = 2;
 }
 
-const std::string Directives::TranslateTagHandle(const std::string& handle)
-    const {
+const std::string Directives::TranslateTagHandle(
+    const std::string& handle) const {
   std::map<std::string, std::string>::const_iterator it = tags.find(handle);
   if (it == tags.end()) {
     if (handle == "!!")

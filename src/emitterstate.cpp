@@ -82,8 +82,8 @@ void EmitterState::StartedNode() {
   m_hasNonContent = false;
 }
 
-EmitterNodeType::value EmitterState::NextGroupType(GroupType::value type)
-    const {
+EmitterNodeType::value EmitterState::NextGroupType(
+    GroupType::value type) const {
   if (type == GroupType::Seq) {
     if (GetFlowType(type) == Block)
       return EmitterNodeType::BlockSeq;

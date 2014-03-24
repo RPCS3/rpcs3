@@ -22,11 +22,7 @@ const std::string TokenNames[] = {
 
 struct Token {
   // enums
-  enum STATUS {
-    VALID,
-    INVALID,
-    UNVERIFIED
-  };
+  enum STATUS { VALID, INVALID, UNVERIFIED };
   enum TYPE {
     DIRECTIVE,
     DOC_START,

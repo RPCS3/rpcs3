@@ -2,7 +2,7 @@
 #include <sstream>
 
 #include "directives.h"  // IWYU pragma: keep
-#include "scanner.h"  // IWYU pragma: keep
+#include "scanner.h"     // IWYU pragma: keep
 #include "singledocparser.h"
 #include "token.h"
 #include "yaml-cpp/exceptions.h"  // IWYU pragma: keep

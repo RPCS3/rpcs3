@@ -9,15 +9,7 @@
 
 namespace YAML {
 struct EmitterNodeType {
-  enum value {
-    None,
-    Property,
-    Scalar,
-    FlowSeq,
-    BlockSeq,
-    FlowMap,
-    BlockMap
-  };
+  enum value { None, Property, Scalar, FlowSeq, BlockSeq, FlowMap, BlockMap };
 };
 }
 

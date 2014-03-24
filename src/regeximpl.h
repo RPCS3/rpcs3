@@ -104,8 +104,8 @@ inline int RegEx::MatchOpEmpty(const Source& source) const {
 }
 
 template <>
-inline int RegEx::MatchOpEmpty<StringCharSource>(const StringCharSource& source)
-    const {
+inline int RegEx::MatchOpEmpty<StringCharSource>(
+    const StringCharSource& source) const {
   return !source
              ? 0
              : -1;  // the empty regex only is successful on the empty string

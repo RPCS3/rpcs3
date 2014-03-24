@@ -41,13 +41,7 @@ class Stream : private noncopyable {
   void ResetColumn() { m_mark.column = 0; }
 
  private:
-  enum CharacterSet {
-    utf8,
-    utf16le,
-    utf16be,
-    utf32le,
-    utf32be
-  };
+  enum CharacterSet { utf8, utf16le, utf16be, utf32le, utf32be };
 
   std::istream& m_input;
   Mark m_mark;
