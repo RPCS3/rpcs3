@@ -365,13 +365,13 @@ void Stream::StreamInUtf16() const {
       }
       unsigned long chLow = (static_cast<unsigned long>(bytes[nBigEnd]) << 8) |
                             static_cast<unsigned long>(bytes[1 ^ nBigEnd]);
-      if (chLow < 0xDC00 || ch >= 0xE000) {
+      if (chLow < 0xDC00 || chLow >= 0xE000) {
         // Trouble...not a low surrogate.  Dump a REPLACEMENT CHARACTER into the
         // stream.
         QueueUnicodeCodepoint(m_readahead, CP_REPLACEMENT_CHARACTER);
 
         // Deal with the next UTF-16 unit
-        if (chLow < 0xD800 || ch >= 0xE000) {
+        if (chLow < 0xD800 || chLow >= 0xE000) {
           // Easiest case: queue the codepoint and return
           QueueUnicodeCodepoint(m_readahead, ch);
           return;
@@ -391,6 +391,7 @@ void Stream::StreamInUtf16() const {
 
       // Add the surrogacy offset
       ch += 0x10000;
+      break;
     }
   }
 
