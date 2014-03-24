@@ -85,11 +85,7 @@ inline _Anchor Anchor(const std::string content) { return _Anchor(content); }
 
 struct _Tag {
   struct Type {
-    enum value {
-      Verbatim,
-      PrimaryHandle,
-      NamedHandle
-    };
+    enum value { Verbatim, PrimaryHandle, NamedHandle };
   };
 
   explicit _Tag(const std::string& prefix_, const std::string& content_,

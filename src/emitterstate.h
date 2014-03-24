@@ -19,24 +19,13 @@
 
 namespace YAML {
 struct FmtScope {
-  enum value {
-    Local,
-    Global
-  };
+  enum value { Local, Global };
 };
 struct GroupType {
-  enum value {
-    None,
-    Seq,
-    Map
-  };
+  enum value { None, Seq, Map };
 };
 struct FlowType {
-  enum value {
-    None,
-    Flow,
-    Block
-  };
+  enum value { None, Flow, Block };
 };
 
 class EmitterState {

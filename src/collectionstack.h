@@ -12,14 +12,7 @@
 
 namespace YAML {
 struct CollectionType {
-  enum value {
-    None,
-    BlockMap,
-    BlockSeq,
-    FlowMap,
-    FlowSeq,
-    CompactMap
-  };
+  enum value { None, BlockMap, BlockSeq, FlowMap, FlowSeq, CompactMap };
 };
 
 class CollectionStack {

@@ -50,62 +50,62 @@ static bool s_introFinalState[] = {false,  // uis_start
                                    false,  // uis_utfbe_b1
                                    false,  // uis_utf32be_b2
                                    false,  // uis_utf32be_bom3
-                                   true,  // uis_utf32be
-                                   true,  // uis_utf16be
+                                   true,   // uis_utf32be
+                                   true,   // uis_utf16be
                                    false,  // uis_utf16be_bom1
                                    false,  // uis_utfle_bom1
                                    false,  // uis_utf16le_bom2
                                    false,  // uis_utf32le_bom3
-                                   true,  // uis_utf16le
-                                   true,  // uis_utf32le
+                                   true,   // uis_utf16le
+                                   true,   // uis_utf32le
                                    false,  // uis_utf8_imp
                                    false,  // uis_utf16le_imp
                                    false,  // uis_utf32le_imp3
                                    false,  // uis_utf8_bom1
                                    false,  // uis_utf8_bom2
-                                   true,  // uis_utf8
-                                   true,  // uis_error
+                                   true,   // uis_utf8
+                                   true,   // uis_error
 };
 
 static UtfIntroState s_introTransitions[][uictMax] = {
     // uict00,           uictBB,           uictBF,           uictEF,
     // uictFE,           uictFF,           uictAscii,        uictOther
-    {uis_utfbe_b1,     uis_utf8,       uis_utf8,     uis_utf8_bom1,
-     uis_utf16be_bom1, uis_utfle_bom1, uis_utf8_imp, uis_utf8},
-    {uis_utf32be_b2, uis_utf8, uis_utf8,    uis_utf8,
-     uis_utf8,       uis_utf8, uis_utf16be, uis_utf8},
-    {uis_utf32be,      uis_utf8, uis_utf8, uis_utf8,
-     uis_utf32be_bom3, uis_utf8, uis_utf8, uis_utf8},
-    {uis_utf8, uis_utf8,    uis_utf8, uis_utf8,
-     uis_utf8, uis_utf32be, uis_utf8, uis_utf8},
-    {uis_utf32be, uis_utf32be, uis_utf32be, uis_utf32be,
-     uis_utf32be, uis_utf32be, uis_utf32be, uis_utf32be},
-    {uis_utf16be, uis_utf16be, uis_utf16be, uis_utf16be,
-     uis_utf16be, uis_utf16be, uis_utf16be, uis_utf16be},
-    {uis_utf8, uis_utf8,    uis_utf8, uis_utf8,
-     uis_utf8, uis_utf16be, uis_utf8, uis_utf8},
-    {uis_utf8,         uis_utf8, uis_utf8, uis_utf8,
-     uis_utf16le_bom2, uis_utf8, uis_utf8, uis_utf8},
-    {uis_utf32le_bom3, uis_utf16le, uis_utf16le, uis_utf16le,
-     uis_utf16le,      uis_utf16le, uis_utf16le, uis_utf16le},
-    {uis_utf32le, uis_utf16le, uis_utf16le, uis_utf16le,
-     uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le},
-    {uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
-     uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le},
-    {uis_utf32le, uis_utf32le, uis_utf32le, uis_utf32le,
-     uis_utf32le, uis_utf32le, uis_utf32le, uis_utf32le},
-    {uis_utf16le_imp, uis_utf8, uis_utf8, uis_utf8,
-     uis_utf8,        uis_utf8, uis_utf8, uis_utf8},
-    {uis_utf32le_imp3, uis_utf16le, uis_utf16le, uis_utf16le,
-     uis_utf16le,      uis_utf16le, uis_utf16le, uis_utf16le},
-    {uis_utf32le, uis_utf16le, uis_utf16le, uis_utf16le,
-     uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le},
-    {uis_utf8, uis_utf8_bom2, uis_utf8, uis_utf8,
-     uis_utf8, uis_utf8,      uis_utf8, uis_utf8},
-    {uis_utf8, uis_utf8, uis_utf8, uis_utf8,
-     uis_utf8, uis_utf8, uis_utf8, uis_utf8},
-    {uis_utf8, uis_utf8, uis_utf8, uis_utf8,
-     uis_utf8, uis_utf8, uis_utf8, uis_utf8}, };
+    {uis_utfbe_b1, uis_utf8, uis_utf8, uis_utf8_bom1, uis_utf16be_bom1,
+     uis_utfle_bom1, uis_utf8_imp, uis_utf8},
+    {uis_utf32be_b2, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
+     uis_utf16be, uis_utf8},
+    {uis_utf32be, uis_utf8, uis_utf8, uis_utf8, uis_utf32be_bom3, uis_utf8,
+     uis_utf8, uis_utf8},
+    {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf32be, uis_utf8,
+     uis_utf8},
+    {uis_utf32be, uis_utf32be, uis_utf32be, uis_utf32be, uis_utf32be,
+     uis_utf32be, uis_utf32be, uis_utf32be},
+    {uis_utf16be, uis_utf16be, uis_utf16be, uis_utf16be, uis_utf16be,
+     uis_utf16be, uis_utf16be, uis_utf16be},
+    {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf16be, uis_utf8,
+     uis_utf8},
+    {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf16le_bom2, uis_utf8,
+     uis_utf8, uis_utf8},
+    {uis_utf32le_bom3, uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
+     uis_utf16le, uis_utf16le, uis_utf16le},
+    {uis_utf32le, uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
+     uis_utf16le, uis_utf16le, uis_utf16le},
+    {uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
+     uis_utf16le, uis_utf16le, uis_utf16le},
+    {uis_utf32le, uis_utf32le, uis_utf32le, uis_utf32le, uis_utf32le,
+     uis_utf32le, uis_utf32le, uis_utf32le},
+    {uis_utf16le_imp, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
+     uis_utf8, uis_utf8},
+    {uis_utf32le_imp3, uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
+     uis_utf16le, uis_utf16le, uis_utf16le},
+    {uis_utf32le, uis_utf16le, uis_utf16le, uis_utf16le, uis_utf16le,
+     uis_utf16le, uis_utf16le, uis_utf16le},
+    {uis_utf8, uis_utf8_bom2, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
+     uis_utf8},
+    {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
+     uis_utf8},
+    {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
+     uis_utf8}, };
 
 static char s_introUngetCount[][uictMax] = {
     // uict00, uictBB, uictBF, uictEF, uictFE, uictFF, uictAscii, uictOther

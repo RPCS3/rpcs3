@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 using ::testing::_;
+using ::testing::InSequence;
 
 namespace YAML {
 namespace {
@@ -92,6 +93,7 @@ class EncodingTest : public HandlerTest {
   }
 
   void Run() {
+    InSequence sequence;
     EXPECT_CALL(handler, OnDocumentStart(_));
     EXPECT_CALL(handler, OnSequenceStart(_, "?", 0));
     for (std::size_t i = 0; i < m_entries.size(); i++) {

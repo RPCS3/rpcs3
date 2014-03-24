@@ -21,5 +21,4 @@ class MockEventHandler : public EventHandler {
   MOCK_METHOD3(OnMapStart, void(const Mark&, const std::string&, anchor_t));
   MOCK_METHOD0(OnMapEnd, void());
 };
-
 }

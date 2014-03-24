@@ -47,11 +47,7 @@ class EmitFromEvents : public EventHandler {
   Emitter& m_emitter;
 
   struct State {
-    enum value {
-      WaitingForSequenceEntry,
-      WaitingForKey,
-      WaitingForValue
-    };
+    enum value { WaitingForSequenceEntry, WaitingForKey, WaitingForValue };
   };
   std::stack<State::value> m_stateStack;
 };

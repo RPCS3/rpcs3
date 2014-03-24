@@ -6,7 +6,7 @@
 #include "scanner.h"
 #include "scanscalar.h"
 #include "scantag.h"  // IWYU pragma: keep
-#include "tag.h"  // IWYU pragma: keep
+#include "tag.h"      // IWYU pragma: keep
 #include "token.h"
 #include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
 #include "yaml-cpp/mark.h"

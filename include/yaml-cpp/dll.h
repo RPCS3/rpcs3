@@ -30,7 +30,7 @@
 //	#pragma message( "Defining YAML_CPP_API for DLL import" )
 #define YAML_CPP_API __declspec(dllimport)
 #endif  // yaml_cpp_EXPORTS
-#else  // YAML_CPP_DLL
+#else   // YAML_CPP_DLL
 #define YAML_CPP_API
 #endif  // YAML_CPP_DLL
 
