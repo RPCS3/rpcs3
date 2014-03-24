@@ -61,7 +61,7 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 	if (!context.IsGood())
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (options & (~(u64)1))
-		SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
+		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	// TODO: There are other possible errors
 
 	// TODO: Is the TROPHY.TRP file necessarily located in this path?

@@ -24,10 +24,10 @@ struct Arg
 	ArgType type;
 
 	Arg(const wxString& _string, const u32 _value = 0, const ArgType _type = ARG_ERR)
-		: value(_value)
+		: string(_string.ToStdString())
+		, value(_value)
 		, type(_type)
 	{
-		string =  _string.ToStdString();
 	}
 };
 
@@ -68,19 +68,19 @@ class CompilePPUProgram
 		s32 m_addr;
 
 		Branch(const wxString& name, s32 pos)
-			: m_pos(pos)
+			: m_name(name.ToStdString())
+			, m_pos(pos)
 			, m_id(-1)
 			, m_addr(-1)
 		{
-			m_name = name.ToStdString();
 		}
 
 		Branch(const wxString& name, u32 id, u32 addr)
-			: m_pos(-1)
+			: m_name(name.ToStdString())
+			, m_pos(-1)
 			, m_id(id)
 			, m_addr(addr)
 		{
-			m_name = name.ToStdString();
 		}
 	};
 
@@ -105,9 +105,9 @@ class CompilePPUProgram
 		u32 m_addr;
 
 		SpData(const wxString& data, u32 addr)
-			: m_addr(addr)
+			: m_data(data.ToStdString())
+			, m_addr(addr)
 		{
-			m_data = data.ToStdString();
 		}
 	};
 

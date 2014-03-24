@@ -143,7 +143,7 @@ public:
 		return res;
 	}
 
-	u32 count()
+	u32 count() const
 	{
 		return buf_count;
 	}
