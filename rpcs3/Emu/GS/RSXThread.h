@@ -30,7 +30,7 @@ struct RSXVertexData
 	RSXVertexData();
 
 	void Reset();
-	bool IsEnabled() { return size > 0; }
+	bool IsEnabled() const { return size > 0; }
 	void Load(u32 start, u32 count);
 
 	u32 GetTypeSize();

@@ -20,7 +20,7 @@ public:
 	CellKbData& GetData(const u32 keyboard) { return m_keyboard_handler->GetData(keyboard); }
 	CellKbConfig& GetConfig(const u32 keyboard) { return m_keyboard_handler->GetConfig(keyboard); }
 
-	bool IsInited() { return m_inited; }
+	bool IsInited() const { return m_inited; }
 
 //private:
 	//DECLARE_EVENT_TABLE();

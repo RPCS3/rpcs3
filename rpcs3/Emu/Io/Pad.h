@@ -18,7 +18,7 @@ public:
 	PadInfo& GetInfo() { return m_pad_handler->GetInfo(); }
 	Array<Button>& GetButtons(const u32 pad) { return m_pad_handler->GetButtons(pad); }
 
-	bool IsInited() { return m_inited; }
+	bool IsInited() const { return m_inited; }
 
 //private:
 	//DECLARE_EVENT_TABLE();
