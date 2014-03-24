@@ -23,13 +23,13 @@ enum
 enum
 {
 	L10N_STR_UNKNOWN = (1 << 0),
-	L10N_STR_ASCII = (1 << 1),
-	L10N_STR_JIS = (1 << 2),
-	L10N_STR_EUCJP = (1 << 3),
-	L10N_STR_SJIS = (1 << 4),
-	L10N_STR_UTF8 = (1 << 5),
+	L10N_STR_ASCII   = (1 << 1),
+	L10N_STR_JIS     = (1 << 2),
+	L10N_STR_EUCJP   = (1 << 3),
+	L10N_STR_SJIS    = (1 << 4),
+	L10N_STR_UTF8    = (1 << 5),
 	L10N_STR_ILLEGAL = (1 << 16),
-	L10N_STR_ERROR = (1 << 17),
+	L10N_STR_ERROR   = (1 << 17),
 };
 
 int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t utf8_len)
@@ -47,9 +47,11 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	std::string str = convert.to_bytes(wstr);
 
 	if (!utf8.IsGood() || utf8_len.GetValue() < str.size())
+	{
 		utf8_len = str.size();
 		return DSTExhausted;
-	
+	}
+
 	utf8_len = str.size();
 	Memory.WriteString(utf8, str.c_str());
 #endif

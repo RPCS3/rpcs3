@@ -401,7 +401,7 @@ struct PPCdouble
 		return (u64&)_double;
 	}
 
-	u32 GetZerosCount()
+	u32 GetZerosCount() const
 	{
 		u32 ret;
 		u32 dd = frac >> 32;

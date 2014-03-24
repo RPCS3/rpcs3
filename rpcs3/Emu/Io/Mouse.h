@@ -19,7 +19,7 @@ public:
 	CellMouseData& GetData(const u32 mouse) { return m_mouse_handler->GetData(mouse); }
 	CellMouseRawData& GetRawData(const u32 mouse) { return m_mouse_handler->GetRawData(mouse); }
 
-	bool IsInited() { return m_inited; }
+	bool IsInited() const { return m_inited; }
 
 //private:
 	//DECLARE_EVENT_TABLE();

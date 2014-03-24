@@ -193,11 +193,11 @@ protected:
 public:
 	virtual bool LoadInfo() { return false; }
 	virtual bool LoadData(u64 offset = 0) { return false; }
-	Elf_Machine GetMachine() { return machine; }
+	Elf_Machine GetMachine() const { return machine; }
 
-	u32 GetEntry() { return entry; }
-	u32 GetMinAddr() { return min_addr; }
-	u32 GetMaxAddr() { return max_addr; }
+	u32 GetEntry()   const { return entry; }
+	u32 GetMinAddr() const { return min_addr; }
+	u32 GetMaxAddr() const { return max_addr; }
 };
 
 class Loader : public LoaderBase

@@ -198,7 +198,7 @@ int cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 int cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadId)
 {
 	cellSpurs.Error("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.GetAddr(), workloadId.GetAddr());
-	if(!taskset.IsGood() || !taskset.IsGood()) return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	if(!taskset.IsGood() || !workloadId.IsGood()) return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 
 	return CELL_OK;
 }

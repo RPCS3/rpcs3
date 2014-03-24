@@ -27,7 +27,7 @@ struct Elf_Ehdr
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 
-	ElfClass GetClass()
+	ElfClass GetClass() const
 	{
 		switch(e_class)
 		{

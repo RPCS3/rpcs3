@@ -235,7 +235,7 @@ public:
 		return 0;
 	}
 
-	u64 GetSize()
+	u64 GetSize() const
 	{
 		return m_info.size;
 	}
