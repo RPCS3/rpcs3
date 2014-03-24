@@ -10,8 +10,10 @@
 #include <string>
 #include <vector>
 
+#include "yaml-cpp/dll.h"
+
 namespace YAML {
-class ostream_wrapper {
+class YAML_CPP_API ostream_wrapper {
  public:
   ostream_wrapper();
   explicit ostream_wrapper(std::ostream& stream);
