@@ -35,40 +35,62 @@ class GSBufferOGL {
 	size_t m_start;
 	size_t m_count;
 	size_t m_limit;
-	const GLenum m_target;
-	GLuint m_buffer;
+	const  GLenum m_target;
+	GLuint m_buffer_name;
 	const bool m_sub_data_config;
+	uint8*  m_buffer_ptr;
+	const bool m_buffer_storage;
 
-	public: 
-	GSBufferOGL(GLenum target, size_t stride) : 
+	public:
+	GSBufferOGL(GLenum target, size_t stride) :
 		m_stride(stride)
 		, m_start(0)
 		, m_count(0)
 		, m_limit(0)
 		, m_target(target)
 		, m_sub_data_config(theApp.GetConfig("ogl_vertex_subdata", 1) != 0)
+		, m_buffer_storage((theApp.GetConfig("ogl_vertex_storage", 0) == 1) && GLLoader::found_GL_ARB_buffer_storage)
 	{
-		gl_GenBuffers(1, &m_buffer);
+		gl_GenBuffers(1, &m_buffer_name);
 		// Opengl works best with 1-4MB buffer.
 		// Warning m_limit is the number of object (not the size in Bytes)
-		m_limit = 2 * 1024 * 1024 / m_stride;
-		//m_limit = 512 * 1024 * m_stride;
+		m_limit = 2 * 2 * 1024 * 1024 / m_stride;
+
+		if (m_buffer_storage) {
+			bind();
+			// FIXME do I need the dynamic
+			const GLbitfield map_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+			const GLbitfield create_flags = map_flags | GL_DYNAMIC_STORAGE_BIT;
+
+			gl_BufferStorage(m_target, m_stride*m_limit, NULL, create_flags );
+			m_buffer_ptr = (uint8*) gl_MapBufferRange(m_target, 0, m_stride*m_limit, map_flags);
+		} else {
+			m_buffer_ptr = NULL;
+		}
 	}
 
-	~GSBufferOGL() { gl_DeleteBuffers(1, &m_buffer); }
+	~GSBufferOGL() {
+		if (m_buffer_storage) {
+			bind();
+			gl_UnmapBuffer(m_target);
+		}
+		gl_DeleteBuffers(1, &m_buffer_name);
+	}
 
 	void allocate() { allocate(m_limit); }
 
 	void allocate(size_t new_limit)
 	{
-		m_start = 0;
-		m_limit = new_limit;
-		gl_BufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+		if (!m_buffer_storage) {
+			m_start = 0;
+			m_limit = new_limit;
+			gl_BufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+		}
 	}
 
 	void bind()
 	{
-		gl_BindBuffer(m_target, m_buffer);
+		gl_BindBuffer(m_target, m_buffer_name);
 	}
 
 	void subdata_upload(const void* src, uint32 count)
@@ -96,9 +118,15 @@ class GSBufferOGL {
 	{
 		void* dst;
 		if (Map(&dst, count)) {
+#if 0
 			// FIXME which one to use. Note dst doesn't have any aligment guarantee
 			// because it depends of the offset
-			//GSVector4i::storent(dst, src, m_count * m_stride);
+			if (m_target == GL_ARRAY_BUFFER) {
+				GSVector4i::storent(dst, src, m_count * m_stride);
+			} else {
+				memcpy(dst, src, m_stride*m_count);
+			}
+#endif
 			memcpy(dst, src, m_stride*m_count);
 			Unmap();
 		}
@@ -119,7 +147,7 @@ class GSBufferOGL {
 			}
 		}
 #endif
-		if (m_sub_data_config) {
+		if (m_sub_data_config && !m_buffer_storage) {
 			subdata_upload(src, count);
 		} else {
 			map_upload(src, count);
@@ -129,34 +157,52 @@ class GSBufferOGL {
 	bool Map(void** pointer, uint32 count ) {
 		m_count = count;
 
-		// Note: For an explanation of the map flag
-		// see http://www.opengl.org/wiki/Buffer_Object_Streaming
-		uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+		if (m_buffer_storage) {
+			// It would need some protection of the data. For the moment finger cross!
 
-		// Current GPU buffer is really too small need to allocate a new one
-		if (m_count > m_limit) {
-			allocate(std::max<int>(m_count * 3 / 2, m_limit));
+			if (m_count > m_limit) {
+				fprintf(stderr, "Buffer (%x) too small! Please report it upstream\n", m_target);
+				ASSERT(0);
+			} else if (m_count > (m_limit - m_start) ) {
+				//fprintf(stderr, "Wrap buffer (%x)\n", m_target);
+				// Wrap at startup
+				m_start = 0;
+			}
 
-		} else if (m_count > (m_limit - m_start) ) {
-			// Not enough left free room. Just go back at the beginning
-			m_start = 0;
+			*pointer = m_buffer_ptr + m_start*m_stride;
 
-			// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
-			// Technically the buffer will not be accessible by the application anymore but the
-			// GL will effectively remove it when draws call are finised.
-			map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
 		} else {
-			// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
-			map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
-		}
+			// Note: For an explanation of the map flag
+			// see http://www.opengl.org/wiki/Buffer_Object_Streaming
+			uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
 
-		// Upload the data to the buffer
-		*pointer = (uint8*) gl_MapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+			// Current GPU buffer is really too small need to allocate a new one
+			if (m_count > m_limit) {
+				allocate(std::max<int>(m_count * 3 / 2, m_limit));
+
+			} else if (m_count > (m_limit - m_start) ) {
+				// Not enough left free room. Just go back at the beginning
+				m_start = 0;
+
+				// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
+				// Technically the buffer will not be accessible by the application anymore but the
+				// GL will effectively remove it when draws call are finised.
+				map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
+			} else {
+				// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
+				map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
+			}
+
+			// Upload the data to the buffer
+			*pointer = (uint8*) gl_MapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+		}
 
 		return true;
 	}
 
-	void Unmap() { gl_UnmapBuffer(m_target); }
+	void Unmap() {
+		if (!m_buffer_storage) gl_UnmapBuffer(m_target);
+	}
 
 	void EndScene()
 	{
@@ -189,7 +235,7 @@ class GSBufferOGL {
 
 	size_t GetStart() { return m_start; }
 
-	void debug() 
+	void debug()
 	{
 		fprintf(stderr, "data buffer: start %d, count %d\n", m_start, m_count);
 	}
@@ -212,7 +258,7 @@ public:
 		m_ib = new GSBufferOGL(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32));
 
 		bind();
-		// Note: index array are part of the VA state so it need to be bind only once.
+		// Note: index array are part of the VA state so it need to be bound only once.
 		m_ib->bind();
 
 		m_vb->allocate();
@@ -293,7 +339,7 @@ public:
 			case GL_LINES:
 				topo = "line";
 				break;
-			case GL_TRIANGLES: 
+			case GL_TRIANGLES:
 				topo = "triangle";
 				break;
 			case GL_TRIANGLE_STRIP:
