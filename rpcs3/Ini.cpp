@@ -7,7 +7,7 @@
 
 Inis Ini;
 
-static bool StringToBool(const wxString str)
+static bool StringToBool(const wxString& str)
 {
 	if(
 		!str.CmpNoCase("enable") ||
@@ -29,7 +29,7 @@ static wxString BoolToString(const bool b)
 	return "false";
 }
 
-static wxSize StringToSize(const wxString str)
+static wxSize StringToSize(const wxString& str)
 {
 	wxSize ret;
 
@@ -62,12 +62,12 @@ static wxSize StringToSize(const wxString str)
 	return ret;
 }
 
-static wxString SizeToString(const wxSize size)
+static wxString SizeToString(const wxSize& size)
 {
 	return wxString::Format("%dx%d", size.x, size.y);
 }
 
-static wxPoint StringToPosition(const wxString str)
+static wxPoint StringToPosition(const wxString& str)
 {
 	wxPoint ret;
 
@@ -100,12 +100,12 @@ static wxPoint StringToPosition(const wxString str)
 	return ret;
 }
 
-static wxString PositionToString(const wxPoint position)
+static wxString PositionToString(const wxPoint& position)
 {
 	return wxString::Format("%dx%d", position.x, position.y);
 }
 
-static WindowInfo StringToWindowInfo(const wxString str)
+static WindowInfo StringToWindowInfo(const wxString& str)
 {
 	WindowInfo ret = WindowInfo(wxDefaultSize, wxDefaultPosition);
 
@@ -140,7 +140,7 @@ static WindowInfo StringToWindowInfo(const wxString str)
 	return ret;
 }
 
-static wxString WindowInfoToString(const WindowInfo wind)
+static wxString WindowInfoToString(const WindowInfo& wind)
 {
 	const int px = wind.position.x < -wind.size.x ? -1 : wind.position.x;
 	const int py = wind.position.y < -wind.size.y ? -1 : wind.position.y;
@@ -159,62 +159,62 @@ Ini::Ini()
 #endif
 }
 
-void Ini::Save(wxString key, int value)
+void Ini::Save(const wxString& key, int value)
 {
 	m_Config->Write(key, value);
 }
 
-void Ini::Save(wxString key, bool value)
+void Ini::Save(const wxString& key, bool value)
 {
 	m_Config->Write(key, BoolToString(value));
 }
 
-void Ini::Save(wxString key, wxSize value)
+void Ini::Save(const wxString& key, wxSize value)
 {
 	m_Config->Write(key, SizeToString(value));
 }
 
-void Ini::Save(wxString key, wxPoint value)
+void Ini::Save(const wxString& key, wxPoint value)
 {
 	m_Config->Write(key, PositionToString(value));
 }
 
-void Ini::Save(wxString key, wxString value)
+void Ini::Save(const wxString& key, wxString value)
 {
 	m_Config->Write(key, value);
 }
 
-void Ini::Save(wxString key, WindowInfo value)
+void Ini::Save(const wxString& key, WindowInfo value)
 {
 	m_Config->Write(key, WindowInfoToString(value));
 }
 
-int Ini::Load(wxString key, const int def_value)
+int Ini::Load(const wxString& key, const int def_value)
 {
 	return m_Config->Read(key, def_value);
 }
 
-bool Ini::Load(wxString key, const bool def_value)
+bool Ini::Load(const wxString& key, const bool def_value)
 {
 	return StringToBool(m_Config->Read(key, BoolToString(def_value)));
 }
 
-wxSize Ini::Load(wxString key, const wxSize def_value)
+wxSize Ini::Load(const wxString& key, const wxSize def_value)
 {
 	return StringToSize(m_Config->Read(key, SizeToString(def_value)));
 }
 
-wxPoint Ini::Load(wxString key, const wxPoint def_value)
+wxPoint Ini::Load(const wxString& key, const wxPoint def_value)
 {
 	return StringToPosition(m_Config->Read(key, PositionToString(def_value)));
 }
 
-wxString Ini::Load(wxString key, const wxString& def_value)
+wxString Ini::Load(const wxString& key, const wxString& def_value)
 {
 	return m_Config->Read(key, def_value);
 }
 
-WindowInfo Ini::Load(wxString key, const WindowInfo& def_value)
+WindowInfo Ini::Load(const wxString& key, const WindowInfo& def_value)
 {
 	return StringToWindowInfo(m_Config->Read(key, WindowInfoToString(def_value)));
 }
