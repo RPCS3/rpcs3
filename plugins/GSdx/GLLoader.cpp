@@ -147,7 +147,7 @@ namespace GLLoader {
 
 	// Mandatory for FULL GL (but optional for GLES)
 	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers. Note might be deprecated by bindless_texture
-	bool found_GL_ARB_shading_language_420pack = false; // Not yet. Wait Mesa & AMD drivers
+	bool found_GL_ARB_shading_language_420pack = false; // GLES 3.1 ???
 
 	// Mandatory
 	bool found_GL_ARB_texture_storage = false;
@@ -244,6 +244,7 @@ namespace GLLoader {
 				if (ext.compare("GL_NV_depth_buffer_float") == 0) found_GL_NV_depth_buffer_float = true;
 				if (ext.compare("GL_ARB_explicit_uniform_location") == 0) found_GL_ARB_explicit_uniform_location = true;
 				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
+				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
 
 				// Only enable this extension on nvidia
 				if (nvidia_buggy_driver && ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
@@ -264,8 +265,6 @@ namespace GLLoader {
 #ifdef GL44 // Need to debug the code first
 				// Need to check the clean (in particular of depth/stencil texture)
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
-				// FIXME unattach context case + perf
-				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
 #endif
 #ifdef GLBINDLESS // Need to debug the code first
 				if (ext.compare("GL_ARB_bindless_texture") == 0) found_GL_ARB_bindless_texture = true;
@@ -291,6 +290,7 @@ namespace GLLoader {
 
 		status &= status_and_override(found_GL_ARB_texture_storage, "GL_ARB_texture_storage", true);
 		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");
+
 		status &= status_and_override(found_GL_ARB_multi_bind,"GL_ARB_multi_bind");
 		status &= status_and_override(found_GL_ARB_bindless_texture,"GL_ARB_bindless_texture");
 
