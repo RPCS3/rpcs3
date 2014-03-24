@@ -21,6 +21,12 @@
 
 #pragma once
 
+#include "config.h"
+
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+extern uint32 g_vertex_upload_byte;
+#endif
+
 struct GSInputLayoutOGL {
 	GLuint  index;
 	GLint   size;
@@ -146,6 +152,9 @@ class GSBufferOGL {
 				data[i] += basevertex;
 			}
 		}
+#endif
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+		g_vertex_upload_byte += count*m_stride;
 #endif
 		if (m_sub_data_config && !m_buffer_storage) {
 			subdata_upload(src, count);

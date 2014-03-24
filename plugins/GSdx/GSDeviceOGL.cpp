@@ -31,6 +31,10 @@
 
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+uint32 g_texture_upload_byte = 0;
+uint32 g_vertex_upload_byte = 0;
+#endif
 
 static const uint32 g_merge_cb_index      = 10;
 static const uint32 g_interlace_cb_index  = 11;

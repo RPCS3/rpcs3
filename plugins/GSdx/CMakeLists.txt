@@ -32,7 +32,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-    add_definitions(${CommonFlags} ${OptimizationFlags} -g -W)
+    add_definitions(${CommonFlags} ${OptimizationFlags} -D_DEVEL -g -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build

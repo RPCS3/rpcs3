@@ -29,6 +29,11 @@
 #include "GSShaderOGL.h"
 #include "GLState.h"
 
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+extern uint32 g_texture_upload_byte;
+extern uint32 g_vertex_upload_byte;
+#endif
+
 class GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
 	// We will keep basic the first try

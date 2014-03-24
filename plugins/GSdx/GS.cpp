@@ -1628,6 +1628,9 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			fprintf(stderr, "Mean by frame: %fms (%ffps)\n", mean/(float)frame_number, 1000.0f*frame_number/mean);
 			fprintf(stderr, "Standard deviatin by frame: %fms\n", sd/(float)frame_number);
 		}
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+		fprintf(stderr, "memory bandwith. T: %f. V: %f\n", (float)g_texture_upload_byte/(float)frame_number/1024, (float)g_vertex_upload_byte/(float)frame_number/1024);
+#endif
 
 		for(auto i = packets.begin(); i != packets.end(); i++)
 		{

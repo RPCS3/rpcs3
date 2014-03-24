@@ -23,7 +23,7 @@ do
 		--dev|--devel)
 			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
 			;;
-		--debug)
+		--dbg|--debug)
 			flags="$flags -DCMAKE_BUILD_TYPE=Debug"
 			;;
 		--release)

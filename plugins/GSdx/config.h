@@ -38,9 +38,10 @@
 
 //#define DISABLE_DATE
 
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(_DEVEL)
 #define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 #endif
+//#define ENABLE_OGL_DEBUG_MEM_BW // compute the quantity of data transfered (debug purpose)
 
 // Output stencil to a color buffer
 //#define ENABLE_OGL_STENCIL_DEBUG

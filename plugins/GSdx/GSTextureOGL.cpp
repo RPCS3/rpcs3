@@ -24,6 +24,10 @@
 #include "GSTextureOGL.h"
 #include "GLState.h"
 
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+extern uint32 g_texture_upload_byte;
+#endif
+
 // FIXME OGL4: investigate, only 1 unpack buffer always bound
 namespace PboPool {
 	
@@ -341,6 +345,10 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 		}
 		src += pitch;
 		map += line_size;
+
+#ifdef ENABLE_OGL_DEBUG_MEM_BW
+		g_texture_upload_byte += line_size;
+#endif
 	}
 
 	PboPool::Unmap();
