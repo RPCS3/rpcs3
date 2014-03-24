@@ -450,7 +450,6 @@ protected:
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;
-		m_clear_surface_mask = 0;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
 		m_set_stencil_mask = false;
