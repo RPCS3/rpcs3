@@ -139,22 +139,22 @@ TEST_F(EncodingTest, UTF8_BOM) {
   Run();
 }
 
-TEST_F(EncodingTest, DISABLED_UTF16LE_noBOM) {
+TEST_F(EncodingTest, UTF16LE_noBOM) {
   SetUpEncoding(&EncodeToUtf16LE, false);
   Run();
 }
 
-TEST_F(EncodingTest, DISABLED_UTF16LE_BOM) {
+TEST_F(EncodingTest, UTF16LE_BOM) {
   SetUpEncoding(&EncodeToUtf16LE, true);
   Run();
 }
 
-TEST_F(EncodingTest, DISABLED_UTF16BE_noBOM) {
+TEST_F(EncodingTest, UTF16BE_noBOM) {
   SetUpEncoding(&EncodeToUtf16BE, false);
   Run();
 }
 
-TEST_F(EncodingTest, DISABLED_UTF16BE_BOM) {
+TEST_F(EncodingTest, UTF16BE_BOM) {
   SetUpEncoding(&EncodeToUtf16BE, true);
   Run();
 }
