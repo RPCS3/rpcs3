@@ -1,3 +1,5 @@
+set(gtest_force_shared_crt ${MSVC_SHARED_RT} CACHE BOOL
+  "Use shared (DLL) run-time lib even when Google Test built as a static lib.")
 add_subdirectory(gmock-1.7.0)
 include_directories(gmock-1.7.0/gtest/include)
 include_directories(gmock-1.7.0/include)
