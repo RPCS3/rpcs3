@@ -10,11 +10,13 @@
 #include <string>
 #include <vector>
 
-namespace YAML {
-std::string EncodeBase64(const unsigned char *data, std::size_t size);
-std::vector<unsigned char> DecodeBase64(const std::string &input);
+#include "yaml-cpp/dll.h"
 
-class Binary {
+namespace YAML {
+YAML_CPP_API std::string EncodeBase64(const unsigned char *data, std::size_t size);
+YAML_CPP_API std::vector<unsigned char> DecodeBase64(const std::string &input);
+
+class YAML_CPP_API Binary {
  public:
   Binary() : m_unownedData(0), m_unownedSize(0) {}
   Binary(const unsigned char *data_, std::size_t size_)

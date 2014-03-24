@@ -29,7 +29,7 @@ class node;
 
 namespace YAML {
 namespace detail {
-class node_data : private boost::noncopyable {
+class YAML_CPP_API node_data : private boost::noncopyable {
  public:
   node_data();
 
