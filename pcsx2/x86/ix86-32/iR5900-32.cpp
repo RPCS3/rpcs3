@@ -1295,7 +1295,7 @@ void dynarecMemcheck()
 	recExitExecution();
 }
 
-__fastcall void dynarecMemLogcheck(u32 start, bool store)
+void __fastcall dynarecMemLogcheck(u32 start, bool store)
 {
 	if (store)
 		DevCon.WriteLn("Hit store breakpoint @0x%x", start);
