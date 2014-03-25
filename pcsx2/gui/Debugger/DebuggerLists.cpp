@@ -49,6 +49,11 @@ GenericListViewColumn breakpointColumns[BPL_COLUMNCOUNT] = {
 BreakpointList::BreakpointList(wxWindow* parent, DebugInterface* _cpu, CtrlDisassemblyView* _disassembly)
 	: wxListView(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxLC_VIRTUAL|wxLC_REPORT|wxLC_SINGLE_SEL|wxNO_BORDER), cpu(_cpu), disasm(_disassembly)
 {
+#ifdef __LINUX__
+	// On linux wx failed to resize properly the page. I don't know why so for the moment I just create a static size page
+	// Far from ideal but at least I can use the memory window!
+	this->SetSize(wxSize(1000, 200));
+#endif
 	insertListViewColumns(this,breakpointColumns,BPL_COLUMNCOUNT);
 }
 
@@ -130,7 +135,11 @@ wxString BreakpointList::OnGetItemText(long item, long col) const
 				const std::string sym = symbolMap.GetLabelString(displayedBreakPoints_[index].addr);
 				if (!sym.empty())
 				{
+#ifdef __LINUX__
+					swprintf(dest,256,L"%s",sym.c_str());
+#else
 					swprintf(dest,256,L"%S",sym.c_str());
+#endif
 				} else {
 					wcscpy(dest,L"-");
 				}
@@ -144,7 +153,11 @@ wxString BreakpointList::OnGetItemText(long item, long col) const
 			} else {
 				char temp[256];
 				disasm->getOpcodeText(displayedBreakPoints_[index].addr, temp);
+#ifdef __LINUX__
+				swprintf(dest,256,L"%s",temp);
+#else
 				swprintf(dest,256,L"%S",temp);
+#endif
 			}
 		}
 		break;
@@ -153,7 +166,11 @@ wxString BreakpointList::OnGetItemText(long item, long col) const
 			if (isMemory || displayedBreakPoints_[index].hasCond == false) {
 				wcscpy(dest,L"-");
 			} else {
+#ifdef __LINUX__
+				swprintf(dest,256,L"%s",displayedBreakPoints_[index].cond.expressionString);
+#else
 				swprintf(dest,256,L"%S",displayedBreakPoints_[index].cond.expressionString);
+#endif
 			}
 		}
 		break;
@@ -169,9 +186,17 @@ wxString BreakpointList::OnGetItemText(long item, long col) const
 	case BPL_ENABLED:
 		{
 			if (isMemory) {
+#ifdef __LINUX__
+				swprintf(dest,256,L"%s",displayedMemChecks_[index].cond & MEMCHECK_BREAK ? "true" : "false");
+#else
 				swprintf(dest,256,L"%S",displayedMemChecks_[index].cond & MEMCHECK_BREAK ? "true" : "false");
+#endif
 			} else {
+#ifdef __LINUX__
+				swprintf(dest,256,L"%s",displayedBreakPoints_[index].enabled ? "true" : "false");
+#else
 				swprintf(dest,256,L"%S",displayedBreakPoints_[index].enabled ? "true" : "false");
+#endif
 			}
 		}
 		break;

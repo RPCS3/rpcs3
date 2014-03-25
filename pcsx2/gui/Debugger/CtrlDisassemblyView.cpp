@@ -291,7 +291,7 @@ void CtrlDisassemblyView::drawBranchLine(wxDC& dc, std::map<u32,int>& addressPos
 
 int getBackgroundColor(unsigned int address)
 {
-	int colors[6] = {0xFFe0FFFF,0xFFFFe0e0,0xFFe8e8FF,0xFFFFe0FF,0xFFe0FFe0,0xFFFFFFe0};
+	u32 colors[6] = {0xFFe0FFFF,0xFFFFe0e0,0xFFe8e8FF,0xFFFFe0FF,0xFFe0FFe0,0xFFFFFFe0};
 	int n=symbolMap.GetFunctionNum(address);
 	if (n==-1) return 0xFFFFFFFF;
 	return colors[n%6];

@@ -6,6 +6,7 @@
 #include "AppCoreThread.h"
 #include "Debug.h"
 #include "../VU.h"
+#include "Counters.h"
 
 #include "../R3000A.h"
 #include "../IopMem.h"
@@ -149,7 +150,7 @@ private:
 
 bool DebugInterface::isAlive()
 {
-	return GetCoreThread().IsOpen();
+	return GetCoreThread().IsOpen() && g_FrameCount > 0;
 }
 
 bool DebugInterface::isCpuPaused()

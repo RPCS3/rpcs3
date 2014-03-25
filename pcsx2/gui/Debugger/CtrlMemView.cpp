@@ -108,6 +108,14 @@ void CtrlMemView::render(wxDC& dc)
 	bool hasFocus = wxWindow::FindFocus() == this;
 	int visibleRows = GetClientSize().y/rowHeight;
 
+	wxColor white = wxColor(0xFFFFFFFF);
+	dc.SetBrush(wxBrush(white));
+	dc.SetPen(wxPen(white));
+
+	int width,height;
+	dc.GetSize(&width,&height);
+	dc.DrawRectangle(0,0,width,height);
+
 	for (int i = 0; i < visibleRows+1; i++)
 	{
 		wchar_t temp[32];

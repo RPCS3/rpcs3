@@ -1295,6 +1295,14 @@ void dynarecMemcheck()
 	recExitExecution();
 }
 
+__fastcall void dynarecMemLogcheck(u32 start, bool store)
+{
+	if (store)
+		DevCon.WriteLn("Hit store breakpoint @0x%x", start);
+	else
+		DevCon.WriteLn("Hit load breakpoint @0x%x", start);
+}
+
 void recMemcheck(u32 bits, bool store)
 {
 	iFlushCall(FLUSH_INTERPRETER);
@@ -1315,7 +1323,7 @@ void recMemcheck(u32 bits, bool store)
 	auto checks = CBreakPoints::GetMemChecks();
 	for (size_t i = 0; i < checks.size(); i++)
 	{
-		if ((checks[i].cond & MEMCHECK_BREAK) == 0)
+		if (checks[i].result == 0)
 			continue;
 		if ((checks[i].cond & MEMCHECK_WRITE) == 0 && store == true)
 			continue;
@@ -1333,7 +1341,13 @@ void recMemcheck(u32 bits, bool store)
 		xForwardJGE8 next2;			// if start >= address+size then goto next2
 
 		// hit the breakpoint
-		xCALL(&dynarecMemcheck);
+		if (checks[i].result & MEMCHECK_LOG) {
+			xMOV(edx, store);
+			xCALL(&dynarecMemLogcheck);
+		}
+		if (checks[i].result & MEMCHECK_BREAK) {
+			xCALL(&dynarecMemcheck);
+		}
 
 		next1.SetTarget();
 		next2.SetTarget();

@@ -53,7 +53,7 @@ CtrlRegisterList::CtrlRegisterList(wxWindow* parent, DebugInterface* _cpu)
 	}
 
 	SetDoubleBuffered(true);
-	SetInitialBestSize(ClientToWindowSize(GetMinClientSize()));
+	SetInitialSize(ClientToWindowSize(GetMinClientSize()));
 }
 
 void CtrlRegisterList::postEvent(wxEventType type, wxString text)
@@ -341,19 +341,19 @@ void CtrlRegisterList::onPopupClick(wxCommandEvent& evt)
 	{
 	case ID_REGISTERLIST_DISPLAY32:
 		maxBits = 32;
-		SetBestSize(ClientToWindowSize(GetMinClientSize()));
+		SetInitialSize(ClientToWindowSize(GetMinClientSize()));
 		postEvent(debEVT_UPDATELAYOUT,0);
 		Refresh();
 		break;
 	case ID_REGISTERLIST_DISPLAY64:
 		maxBits = 64;
-		SetBestSize(ClientToWindowSize(GetMinClientSize()));
+		SetInitialSize(ClientToWindowSize(GetMinClientSize()));
 		postEvent(debEVT_UPDATELAYOUT,0);
 		Refresh();
 		break;
 	case ID_REGISTERLIST_DISPLAY128:
 		maxBits = 128;
-		SetBestSize(ClientToWindowSize(GetMinClientSize()));
+		SetInitialSize(ClientToWindowSize(GetMinClientSize()));
 		postEvent(debEVT_UPDATELAYOUT,0);
 		Refresh();
 		break;
