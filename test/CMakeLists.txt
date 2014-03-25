@@ -10,7 +10,7 @@ endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
    "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  set(yaml_test_flags "-Wno-c99-extensions")
+  set(yaml_test_flags "-Wno-c99-extensions -Wno-variadic-macros -Wno-sign-compare")
 endif()
 
 file(GLOB test_headers [a-z_]*.h)
