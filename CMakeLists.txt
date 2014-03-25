@@ -68,6 +68,15 @@ else()
 	add_definitions(-DYAML_CPP_NO_CONTRIB)
 endif()
 
+set(all_sources
+  ${sources}
+  ${public_headers}
+  ${private_headers}
+  ${contrib_sources}
+  ${contrib_public_headers}
+  ${contrib_private_headers}
+)
+
 if(VERBOSE)
 	message(STATUS "sources: ${sources}")
 	message(STATUS "public_headers: ${public_headers}")
@@ -84,6 +93,9 @@ include_directories(${YAML_CPP_SOURCE_DIR}/src)
 ###
 ### General compilation settings
 ###
+set(yaml_c_flags ${CMAKE_C_FLAGS})
+set(yaml_cxx_flags ${CMAKE_CXX_FLAGS})
+
 if(BUILD_SHARED_LIBS)
 	set(LABEL_SUFFIX "shared")
 else()
@@ -110,8 +122,9 @@ if(WIN32)
 	endif()
 endif()
 
-# GCC specialities
-if(CMAKE_COMPILER_IS_GNUCXX)
+# GCC or Clang specialities
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
+   "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	### General stuff
 	if(WIN32)
 		set(CMAKE_SHARED_LIBRARY_PREFIX "")	# DLLs do not have a "lib" prefix
@@ -137,7 +150,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} ${FLAG_TESTED}")
 	endif()
 	#
-	set(CMAKE_CXX_FLAGS "-Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
+	set(yaml_cxx_flags "-Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${yaml_cxx_flags}")
 
 	### Make specific
 	if(${CMAKE_BUILD_TOOL} STREQUAL make OR ${CMAKE_BUILD_TOOL} STREQUAL gmake)
@@ -175,7 +188,7 @@ if(MSVC)
 		endif()
 
 		# correct linker options
-		foreach(flag_var  CMAKE_C_FLAGS  CMAKE_CXX_FLAGS)
+		foreach(flag_var  yaml_c_flags  yaml_cxx_flags)
 			foreach(config_name  ""  DEBUG  RELEASE  MINSIZEREL  RELWITHDEBINFO)
 				set(var_name "${flag_var}")
 				if(NOT "${config_name}" STREQUAL "")
@@ -201,7 +214,7 @@ if(MSVC)
 	# /W3 = set warning level; see http://msdn.microsoft.com/en-us/library/thxezb7y.aspx
 	# /wd4127 = disable warning C4127 "conditional expression is constant"; see http://msdn.microsoft.com/en-us/library/6t66728h.aspx
 	# /wd4355 = disable warning C4355 "'this' : used in base member initializer list"; http://msdn.microsoft.com/en-us/library/3c594ae3.aspx
-	set(CMAKE_CXX_FLAGS "/W3 /wd4127 /wd4355 /D_SCL_SECURE_NO_WARNINGS ${CMAKE_CXX_FLAGS}")
+	set(yaml_cxx_flags "/W3 /wd4127 /wd4355 /D_SCL_SECURE_NO_WARNINGS ${yaml_cxx_flags}")
 endif()
 
 
@@ -229,13 +242,9 @@ set(_INSTALL_DESTINATIONS
 ###
 ### Library
 ###
-add_library(yaml-cpp
-	${sources}
-	${public_headers}
-	${private_headers}
-	${contrib_sources}
-	${contrib_public_headers}
-	${contrib_private_headers}
+add_library(yaml-cpp ${all_sources})
+set_target_properties(yaml-cpp PROPERTIES
+  COMPILE_FLAGS "${yaml_c_flags} ${yaml_cxx_flags}"
 )
 
 set_target_properties(yaml-cpp PROPERTIES
