@@ -46,9 +46,12 @@ public:
 		return GetMinClientSize();
 	}
 private:
+	enum RegisterChangeMode { LOWER64, UPPER64, CHANGE32 };
+
 	void render(wxDC& dc);
 	void refreshChangedRegs();
 	void setCurrentRow(int row);
+	void changeValue(RegisterChangeMode mode);
 
 	void postEvent(wxEventType type, wxString text);
 	void postEvent(wxEventType type, int value);
@@ -68,5 +71,4 @@ private:
 	u32 lastPc;
 	int category;
 	int maxBits;
-	wxMenu menu;
 };

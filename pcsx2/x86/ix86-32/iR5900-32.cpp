@@ -1271,19 +1271,75 @@ int cop2flags(u32 code)
 void dynarecCheckBreakpoint()
 {
 	u32 pc = cpuRegs.pc;
- 	if (CBreakPoints::CheckSkipFirst(pc))
-	{
-		CBreakPoints::SetSkipFirst(0xFFFFFFFF);
+ 	if (CBreakPoints::CheckSkipFirst(pc) != 0)
 		return;
-	}
 
 	auto cond = CBreakPoints::GetBreakPointCondition(pc);
 	if (cond && !cond->Evaluate())
 		return;
 
+	CBreakPoints::SetBreakpointTriggered(true);
 	GetCoreThread().PauseSelf();
 	recExitExecution();
 }
+
+void dynarecMemcheck()
+{
+	u32 pc = cpuRegs.pc;
+ 	if (CBreakPoints::CheckSkipFirst(pc) != 0)
+		return;
+
+	iFlushCall(FLUSH_INTERPRETER);
+	CBreakPoints::SetBreakpointTriggered(true);
+	GetCoreThread().PauseSelf();
+	recExitExecution();
+}
+
+void recMemcheck(u32 bits, bool store)
+{
+	iFlushCall(FLUSH_INTERPRETER);
+
+	// compute accessed address
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
+	if (bits == 128)
+		xAND(ecx, ~0x0F);
+
+	xMOV(edx,ecx);
+	xADD(edx,bits/8);
+	
+	// ecx = access address
+	// edx = access address+size
+
+	auto checks = CBreakPoints::GetMemChecks();
+	for (size_t i = 0; i < checks.size(); i++)
+	{
+		if ((checks[i].cond & MEMCHECK_BREAK) == 0)
+			continue;
+		if ((checks[i].cond & MEMCHECK_WRITE) == 0 && store == true)
+			continue;
+		if ((checks[i].cond & MEMCHECK_READ) == 0 && store == false)
+			continue;
+
+		// logic: memAddress < bpEnd && bpStart < memAddress+memSize
+		
+		xMOV(eax,checks[i].end);
+		xCMP(ecx,eax);				// address < end
+		xForwardJGE8 next1;			// if address >= end then goto next1
+		
+		xMOV(eax,checks[i].start);
+		xCMP(eax,edx);				// start < address+size
+		xForwardJGE8 next2;			// if start >= address+size then goto next2
+
+		// hit the breakpoint
+		xCALL(&dynarecMemcheck);
+
+		next1.SetTarget();
+		next2.SetTarget();
+	}
+}
+
 
 void recompileNextInstruction(int delayslot)
 {
@@ -1296,14 +1352,62 @@ void recompileNextInstruction(int delayslot)
 		iFlushCall(FLUSH_EVERYTHING);
 		xCALL(&dynarecCheckBreakpoint);
 	}
-
+	
 	s_pCode = (int *)PSM( pc );
 	pxAssert(s_pCode);
-
+	
 	if( IsDebugBuild )
 		MOV32ItoR(EAX, pc);		// acts as a tag for delimiting recompiled instructions when viewing x86 disasm.
 
 	cpuRegs.code = *(int *)s_pCode;
+
+	if (CBreakPoints::GetMemChecks().size() != 0)
+	{
+		switch (cpuRegs.code >> 26)
+		{
+		case 0x20:		// lb
+		case 0x24:		// lbu
+			recMemcheck(8,false);
+			break;
+		case 0x28:		// sb
+			recMemcheck(8,true);
+			break;
+		case 0x21:		// lh
+		case 0x25:		// lhu
+			recMemcheck(16,false);
+			break;
+		case 0x22:		// lwl
+		case 0x23:		// lw
+		case 0x26:		// lwr
+			recMemcheck(32,false);
+			break;
+		case 0x29:		// sh
+			recMemcheck(16,true);
+			break;
+		case 0x2A:		// swl
+		case 0x2B:		// sw
+		case 0x2E:		// swr
+			recMemcheck(32,true);
+			break;
+		case 0x37:		// ld
+		case 0x1B:		// ldr
+		case 0x1A:		// ldl
+			recMemcheck(64,false);
+			break;
+		case 0x3F:		// sd
+		case 0x3D:		// sdr
+		case 0x2C:		// sdl
+			recMemcheck(64,true);
+			break;
+		case 0x1E:		// lq
+			recMemcheck(128,false);
+			break;
+		case 0x1F:		// sq
+			recMemcheck(128,true);
+			break;
+		}
+	}
+
 	if (!delayslot) {
 		pc += 4;
 		g_cpuFlushedPC = false;
@@ -1554,6 +1658,44 @@ bool skipMPEG_By_Pattern(u32 sPC) {
 	return 0;
 }
 
+inline bool needsBreakpoint(u32 pc)
+{
+	if (CBreakPoints::IsAddressBreakPoint(pc))
+		return true;
+
+	if (CBreakPoints::GetMemChecks().size() == 0)
+		return false;
+
+	u32 op = memRead32(pc);
+
+	switch (op >> 26)
+	{
+	case 0x20:		// lb
+	case 0x21:		// lh
+	case 0x22:		// lwl
+	case 0x23:		// lw
+	case 0x24:		// lbu
+	case 0x25:		// lhu
+	case 0x26:		// lwr
+	case 0x28:		// sb
+	case 0x29:		// sh
+	case 0x2A:		// swl
+	case 0x2B:		// sw
+	case 0x2E:		// swr
+	case 0x37:		// ld
+	case 0x1B:		// ldr
+	case 0x3F:		// sd
+	case 0x3D:		// sdr
+	case 0x1A:		// ldl
+	case 0x2C:		// sdl
+	case 0x1E:		// lq
+	case 0x1F:		// sq
+		return true;
+	default:
+		return false;
+	}
+}
+
 static void __fastcall recRecompile( const u32 startpc )
 {
 	u32 i = 0;
@@ -1634,7 +1776,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	s_branchTo = -1;
 
 	// compile breakpoints as individual blocks
-	if (CBreakPoints::IsAddressBreakPoint(i))
+	if (needsBreakpoint(i))
 	{
 		s_nEndBlock = i + 4;
 		goto StartRecomp;
@@ -1644,7 +1786,7 @@ static void __fastcall recRecompile( const u32 startpc )
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
 		
 		// stop before breakpoints
-		if (CBreakPoints::IsAddressBreakPoint(i))
+		if (needsBreakpoint(i))
 		{
 			s_nEndBlock = i;
 			break;

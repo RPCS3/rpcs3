@@ -404,6 +404,31 @@ struct Pcsx2Config
 		}
 	};
 
+	struct DebugOptions
+	{
+		BITFIELD32()
+			bool
+				EnableDebugger		:1,
+				ShowDebuggerOnStart	:1;
+		BITFIELD_END
+
+		u8 FontWidth;
+		u8 FontHeight;
+
+		DebugOptions();
+		void LoadSave( IniInterface& conf );
+		
+		bool operator ==( const DebugOptions& right ) const
+		{
+			return OpEqu( bitset ) && OpEqu( FontWidth ) && OpEqu( FontHeight );
+		}
+
+		bool operator !=( const DebugOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
+	};
+
 	BITFIELD32()
 		bool
 			CdvdVerboseReads	:1,		// enables cdvd read activity verbosely dumped to the console
@@ -429,6 +454,7 @@ struct Pcsx2Config
 	SpeedhackOptions	Speedhacks;
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
+	DebugOptions		Debugger;
 
 	TraceLogFilters		Trace;
 

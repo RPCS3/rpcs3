@@ -424,6 +424,7 @@
     <ClCompile Include="..\..\gui\Debugger\CtrlMemView.cpp" />
     <ClCompile Include="..\..\gui\Debugger\CtrlRegisterList.cpp" />
     <ClCompile Include="..\..\gui\Debugger\DebugEvents.cpp" />
+    <ClCompile Include="..\..\gui\Debugger\DebuggerLists.cpp" />
     <ClCompile Include="..\..\gui\Debugger\DisassemblyDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\GameDatabaseDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\McdConfigDialog.cpp" />
@@ -708,6 +709,7 @@
     <ClInclude Include="..\..\gui\Debugger\CtrlMemView.h" />
     <ClInclude Include="..\..\gui\Debugger\CtrlRegisterList.h" />
     <ClInclude Include="..\..\gui\Debugger\DebugEvents.h" />
+    <ClInclude Include="..\..\gui\Debugger\DebuggerLists.h" />
     <ClInclude Include="..\..\gui\Debugger\DisassemblyDialog.h" />
     <ClInclude Include="..\..\gui\Panels\MemoryCardPanels.h" />
     <ClInclude Include="..\..\IPU\IPUdma.h" />

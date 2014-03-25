@@ -37,6 +37,7 @@ namespace MIPSAnalyst
 
 		// branches
 		u32 branchTarget;
+		bool isSyscall;
 		bool isBranch;
 		bool isLinkedBranch;
 		bool isLikelyBranch;

@@ -5,6 +5,11 @@
 #include "DebugTools/DisassemblyManager.h"
 #include "DebugTools/Breakpoints.h"
 #include "BreakpointWindow.h"
+#include "PathDefs.h"
+
+#ifdef WIN32
+#include <Windows.h>
+#endif
 
 BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_SETSTATUSBARTEXT, DisassemblyDialog::onDebuggerEvent )
@@ -13,8 +18,38 @@ BEGIN_EVENT_TABLE(DisassemblyDialog, wxFrame)
    EVT_COMMAND( wxID_ANY, debEVT_RUNTOPOS, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_GOTOINDISASM, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_STEPOVER, DisassemblyDialog::onDebuggerEvent )
+   EVT_COMMAND( wxID_ANY, debEVT_STEPINTO, DisassemblyDialog::onDebuggerEvent )
    EVT_COMMAND( wxID_ANY, debEVT_UPDATE, DisassemblyDialog::onDebuggerEvent )
+   EVT_CLOSE( DisassemblyDialog::onClose )
 END_EVENT_TABLE()
+
+
+DebuggerHelpDialog::DebuggerHelpDialog(wxWindow* parent)
+	: wxDialog(parent,wxID_ANY,L"Help")
+{
+	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+
+	wxTextCtrl* textControl = new wxTextCtrl(this,wxID_ANY,L"",wxDefaultPosition,wxDefaultSize,
+		wxTE_MULTILINE|wxTE_READONLY);
+	textControl->SetMinSize(wxSize(400,300));
+	auto fileName = PathDefs::GetDocs().ToString()+L"/debugger.txt";
+	wxTextFile file(fileName);
+	if (file.Open())
+	{
+		wxString text = file.GetFirstLine();
+		while (!file.Eof())
+		{
+			text += file.GetNextLine()+L"\r\n";
+		}
+
+		textControl->SetLabel(text);
+		textControl->SetSelection(0,0);
+	}
+
+	sizer->Add(textControl,1,wxEXPAND);
+	SetSizerAndFit(sizer);
+}
+
 
 CpuTabPage::CpuTabPage(wxWindow* parent, DebugInterface* _cpu)
 	: wxPanel(parent), cpu(_cpu)
@@ -39,10 +74,33 @@ CpuTabPage::CpuTabPage(wxWindow* parent, DebugInterface* _cpu)
 
 	// create bottom section
 	bottomTabs->AddPage(memory,L"Memory");
+
+	breakpointList = new BreakpointList(bottomTabs,cpu,disassembly);
+	bottomTabs->AddPage(breakpointList,L"Breakpoints");
+
 	mainSizer->Add(bottomTabs,1,wxEXPAND);
 
 	mainSizer->Layout();
 }
+
+void CpuTabPage::setBottomTabPage(wxWindow* win)
+{
+	for (size_t i = 0; i < bottomTabs->GetPageCount(); i++)
+	{
+		if (bottomTabs->GetPage(i) == win)
+		{
+			bottomTabs->SetSelection(i);
+			break;
+		}
+	}
+}
+
+void CpuTabPage::update()
+{
+	breakpointList->reloadBreakpoints();
+	Refresh();
+}
+
 
 DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 	wxFrame( parent, wxID_ANY, L"Debugger", wxDefaultPosition,wxDefaultSize,wxRESIZE_BORDER|wxCLOSE_BOX|wxCAPTION|wxSYSTEM_MENU ),
@@ -63,6 +121,7 @@ DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 
 	stepIntoButton = new wxButton( panel, wxID_ANY, L"Step Into" );
 	stepIntoButton->Enable(false);
+	Connect( stepIntoButton->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DisassemblyDialog::onStepIntoClicked ) );
 	topRowSizer->Add(stepIntoButton,0,wxBOTTOM,2);
 
 	stepOverButton = new wxButton( panel, wxID_ANY, L"Step Over" );
@@ -99,12 +158,44 @@ DisassemblyDialog::DisassemblyDialog(wxWindow* parent):
 	setDebugMode(true);
 }
 
+#ifdef WIN32
+WXLRESULT DisassemblyDialog::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam)
+{
+	switch (nMsg)
+	{
+	case WM_SHOWWINDOW:
+		{
+			WXHWND hwnd = GetHWND();
+
+			u32 style = GetWindowLong((HWND)hwnd,GWL_STYLE);
+			style &= ~(WS_MINIMIZEBOX|WS_MAXIMIZEBOX);
+			SetWindowLong((HWND)hwnd,GWL_STYLE,style);
+
+			u32 exStyle = GetWindowLong((HWND)hwnd,GWL_EXSTYLE);
+			exStyle |= (WS_EX_CONTEXTHELP);
+			SetWindowLong((HWND)hwnd,GWL_EXSTYLE,exStyle);
+		}
+		break;
+	case WM_SYSCOMMAND:
+		if (wParam == SC_CONTEXTHELP)
+		{
+			DebuggerHelpDialog help(this);
+			help.ShowModal();
+			return 0;
+		}
+		break;
+	}
+
+	return wxFrame::MSWWindowProc(nMsg,wParam,lParam);
+}
+#endif
+
 void DisassemblyDialog::onBreakRunClicked(wxCommandEvent& evt)
 {	
 	if (r5900Debug.isCpuPaused())
 	{
-		if (CBreakPoints::IsAddressBreakPoint(r5900Debug.getPC()))
-			CBreakPoints::SetSkipFirst(r5900Debug.getPC());
+		// If the current PC is on a breakpoint, the user doesn't want to do nothing.
+		CBreakPoints::SetSkipFirst(r5900Debug.getPC());
 		r5900Debug.resumeCpu();
 	} else
 		r5900Debug.pauseCpu();
@@ -113,6 +204,11 @@ void DisassemblyDialog::onBreakRunClicked(wxCommandEvent& evt)
 void DisassemblyDialog::onStepOverClicked(wxCommandEvent& evt)
 {	
 	stepOver();
+}
+
+void DisassemblyDialog::onStepIntoClicked(wxCommandEvent& evt)
+{	
+	stepInto();
 }
 
 void DisassemblyDialog::onPageChanging(wxCommandEvent& evt)
@@ -130,7 +226,7 @@ void DisassemblyDialog::onPageChanging(wxCommandEvent& evt)
 	if (currentCpu != NULL)
 	{
 		currentCpu->getDisassembly()->SetFocus();
-		currentCpu->Refresh();
+		currentCpu->update();
 	}
 }
 
@@ -181,6 +277,48 @@ void DisassemblyDialog::stepOver()
 	r5900Debug.resumeCpu();
 }
 
+
+void DisassemblyDialog::stepInto()
+{
+	if (!r5900Debug.isAlive() || !r5900Debug.isCpuPaused() || currentCpu == NULL)
+		return;
+	
+	// todo: breakpoints for iop
+	if (currentCpu != eeTab)
+		return;
+
+	CtrlDisassemblyView* disassembly = currentCpu->getDisassembly();
+
+	// If the current PC is on a breakpoint, the user doesn't want to do nothing.
+	CBreakPoints::SetSkipFirst(r5900Debug.getPC());
+	u32 currentPc = r5900Debug.getPC();
+
+	MIPSAnalyst::MipsOpcodeInfo info = MIPSAnalyst::GetOpcodeInfo(&r5900Debug,r5900Debug.getPC());
+	u32 breakpointAddress = currentPc+disassembly->getInstructionSizeAt(currentPc);
+	if (info.isBranch)
+	{
+		if (info.isConditional == false)
+		{
+			breakpointAddress = info.branchTarget;
+		} else {
+			if (info.conditionMet)
+			{
+				breakpointAddress = info.branchTarget;
+			} else {
+				breakpointAddress = currentPc+2*4;
+				disassembly->scrollStepping(breakpointAddress);
+			}
+		}
+	}
+
+	if (info.isSyscall)
+		breakpointAddress = info.branchTarget;
+
+	CBreakPoints::AddBreakPoint(breakpointAddress,true);
+	r5900Debug.resumeCpu();
+}
+
+
 void DisassemblyDialog::onBreakpointClick(wxCommandEvent& evt)
 {
 	if (currentCpu == NULL)
@@ -209,7 +347,11 @@ void DisassemblyDialog::onDebuggerEvent(wxCommandEvent& evt)
 	} else if (type == debEVT_GOTOINMEMORYVIEW)
 	{
 		if (currentCpu != NULL)
+		{
+			currentCpu->showMemoryView();
 			currentCpu->getMemoryView()->gotoAddress(evt.GetInt());
+			currentCpu->getDisassembly()->SetFocus();
+		}
 	} else if (type == debEVT_RUNTOPOS)
 	{
 		// todo: breakpoints for iop
@@ -229,10 +371,19 @@ void DisassemblyDialog::onDebuggerEvent(wxCommandEvent& evt)
 	{
 		if (currentCpu != NULL)
 			stepOver();
+	} else if (type == debEVT_STEPINTO)
+	{
+		if (currentCpu != NULL)
+			stepInto();
 	} else if (type == debEVT_UPDATE)
 	{
 		update();
 	}
+}
+
+void DisassemblyDialog::onClose(wxCloseEvent& evt)
+{
+	Hide();
 }
 
 void DisassemblyDialog::update()
@@ -241,7 +392,7 @@ void DisassemblyDialog::update()
 	{
 		stepOverButton->Enable(true);
 		breakpointButton->Enable(true);
-		currentCpu->Refresh();
+		currentCpu->update();
 	} else {
 		stepOverButton->Enable(false);
 		breakpointButton->Enable(false);
@@ -269,13 +420,17 @@ void DisassemblyDialog::setDebugMode(bool debugMode)
 			breakRunButton->SetLabel(L"Run");
 
 			stepOverButton->Enable(true);
+			stepIntoButton->Enable(true);
 
 			eeTab->getDisassembly()->gotoPc();
 			iopTab->getDisassembly()->gotoPc();
 			
-			// Defocuses main window even when not debugging, causing savestate hotkeys to fail
-			/*if (currentCpu != NULL)
-				currentCpu->getDisassembly()->SetFocus();*/
+			if (CBreakPoints::GetBreakpointTriggered())
+			{
+				if (currentCpu != NULL)
+					currentCpu->getDisassembly()->SetFocus();
+				CBreakPoints::SetBreakpointTriggered(false);
+			}
 		} else {
 			breakRunButton->SetLabel(L"Break");
 

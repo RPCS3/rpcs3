@@ -418,6 +418,44 @@ void R5900DebugInterface::setPc(u32 newPc)
 	cpuRegs.pc = newPc;
 }
 
+void R5900DebugInterface::setRegister(int cat, int num, u128 newValue)
+{
+	switch (cat)
+	{
+	case EECAT_GPR:
+		switch (num)
+		{
+		case 32:	// pc
+			cpuRegs.pc = newValue._u32[0];
+			break;
+		case 33:	// hi
+			cpuRegs.HI.UQ = newValue;
+			break;
+		case 34:	// lo
+			cpuRegs.LO.UQ = newValue;
+			break;
+		default:
+			cpuRegs.GPR.r[num].UQ = newValue;
+			break;
+		}
+		break;
+	case EECAT_CP0:
+		cpuRegs.CP0.r[num] = newValue._u32[0];
+		break;
+	case EECAT_CP1:
+		fpuRegs.fpr[num].UL = newValue._u32[0];
+		break;
+	case EECAT_CP2F:
+		VU1.VF[num].UQ = newValue;
+		break;
+	case EECAT_CP2I:
+		VU1.VI[num].UL = newValue._u32[0];
+		break;
+	default:
+		break;
+	}
+}
+
 std::string R5900DebugInterface::disasm(u32 address)
 {
 	std::string out;
@@ -429,7 +467,7 @@ std::string R5900DebugInterface::disasm(u32 address)
 
 bool R5900DebugInterface::isValidAddress(u32 addr)
 {
-	if (addr < 0x100000)
+	if (addr < 0x80000)
 		return false;
 	if (addr >= 0x10000000 && addr < 0x10010000)
 		return true;
@@ -441,6 +479,11 @@ bool R5900DebugInterface::isValidAddress(u32 addr)
 	return !(addr & 0x40000000) && vtlb_GetPhyPtr(addr & 0x1FFFFFFF) != NULL;
 }
 
+
+u32 R5900DebugInterface::getCycles()
+{
+	return cpuRegs.cycle;
+}
 
 //
 // R3000DebugInterface
@@ -617,6 +660,32 @@ void R3000DebugInterface::setPc(u32 newPc)
 	psxRegs.pc = newPc;
 }
 
+void R3000DebugInterface::setRegister(int cat, int num, u128 newValue)
+{
+	switch (cat)
+	{
+	case IOPCAT_GPR:
+		switch (num)
+		{
+		case 32:	// pc
+			psxRegs.pc = newValue._u32[0];
+			break;
+		case 33:	// hi
+			psxRegs.GPR.n.hi = newValue._u32[0];
+			break;
+		case 34:	// lo
+			psxRegs.GPR.n.lo = newValue._u32[0];
+			break;
+		default:
+			psxRegs.GPR.r[num] = newValue._u32[0];
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
 std::string R3000DebugInterface::disasm(u32 address)
 {
 	std::string out;
@@ -636,4 +705,9 @@ bool R3000DebugInterface::isValidAddress(u32 addr)
 		return true;
 
 	return !(addr & 0x40000000) && vtlb_GetPhyPtr(addr & 0x1FFFFFFF) != NULL;
+}
+
+u32 R3000DebugInterface::getCycles()
+{
+	return psxRegs.cycle;
 }

@@ -63,6 +63,7 @@ namespace PathDefs
 	extern wxDirName GetLangs();
 	extern wxDirName GetCheats();
 	extern wxDirName GetCheatsWS();
+	extern wxDirName GetDocs();
 
 	extern wxDirName Get( FoldersEnum_t folderidx );
 
@@ -81,6 +82,7 @@ namespace PathDefs
 		extern const wxDirName& Langs();
 		extern const wxDirName& Cheats();
 		extern const wxDirName& CheatsWS();
+		extern const wxDirName& Docs();
 	}
 }
 

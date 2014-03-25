@@ -3,6 +3,7 @@
 #include "DebugTools/Debug.h"
 
 #include "DebugEvents.h"
+#include "AppConfig.h"
 
 BEGIN_EVENT_TABLE(CtrlRegisterList, wxWindow)
 	EVT_PAINT(CtrlRegisterList::paintEvent)
@@ -18,14 +19,17 @@ enum DisassemblyMenuIdentifiers
 	ID_REGISTERLIST_DISPLAY32 = 1,
 	ID_REGISTERLIST_DISPLAY64,
 	ID_REGISTERLIST_DISPLAY128,
+	ID_REGISTERLIST_CHANGELOWER,
+	ID_REGISTERLIST_CHANGEUPPER,
+	ID_REGISTERLIST_CHANGEVALUE
 };
 
 
 CtrlRegisterList::CtrlRegisterList(wxWindow* parent, DebugInterface* _cpu)
 	: wxWindow(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxWANTS_CHARS|wxBORDER), cpu(_cpu)
 {
-	rowHeight = 14;
-	charWidth = 8;
+	rowHeight = g_Conf->EmuOptions.Debugger.FontHeight+2;
+	charWidth = g_Conf->EmuOptions.Debugger.FontWidth;
 	category = 0;
 	maxBits = 128;
 
@@ -47,12 +51,6 @@ CtrlRegisterList::CtrlRegisterList(wxWindow* parent, DebugInterface* _cpu)
 		startPositions.push_back(x);
 		currentRows.push_back(0);
 	}
-
-	menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY32,		L"Display 32 bit");
-	menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY64,		L"Display 64 bit");
-	menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY128,	L"Display 128 bit");
-	menu.Check(ID_REGISTERLIST_DISPLAY128,true);
-	menu.Connect(wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&CtrlRegisterList::onPopupClick, NULL, this);
 
 	SetDoubleBuffered(true);
 	SetInitialBestSize(ClientToWindowSize(GetMinClientSize()));
@@ -297,6 +295,46 @@ void CtrlRegisterList::render(wxDC& dc)
 	}
 }
 
+void CtrlRegisterList::changeValue(RegisterChangeMode mode)
+{
+	wchar_t str[64];
+
+	u128 oldValue = cpu->getRegister(category,currentRows[category]);
+
+	switch (mode)
+	{
+	case LOWER64:
+		swprintf(str,64,L"0x%016llX",oldValue._u64[0]);
+		break;
+	case UPPER64:
+		swprintf(str,64,L"0x%016llX",oldValue._u64[1]);
+		break;
+	case CHANGE32:
+		swprintf(str,64,L"0x%08X",oldValue._u32[0]);
+		break;
+	}
+	
+	u64 newValue;
+	if (executeExpressionWindow(this,cpu,newValue,str))
+	{
+		switch (mode)
+		{
+		case LOWER64:
+			oldValue._u64[0] = newValue;
+			break;
+		case UPPER64:
+			oldValue._u64[1] = newValue; 
+			break;
+		case CHANGE32:
+			oldValue._u32[0] = newValue; 
+			break;
+		}
+
+		cpu->setRegister(category,currentRows[category],oldValue);
+	}
+}
+
+
 void CtrlRegisterList::onPopupClick(wxCommandEvent& evt)
 {
 	switch (evt.GetId())
@@ -317,6 +355,21 @@ void CtrlRegisterList::onPopupClick(wxCommandEvent& evt)
 		maxBits = 128;
 		SetBestSize(ClientToWindowSize(GetMinClientSize()));
 		postEvent(debEVT_UPDATELAYOUT,0);
+		Refresh();
+		break;
+	case ID_REGISTERLIST_CHANGELOWER:
+		changeValue(LOWER64);
+		Refresh();
+		break;
+	case ID_REGISTERLIST_CHANGEUPPER:
+		changeValue(UPPER64);
+		Refresh();
+		break;
+	case ID_REGISTERLIST_CHANGEVALUE:
+		if (cpu->getRegisterSize(category) == 32)
+			changeValue(CHANGE32);
+		else
+			changeValue(LOWER64);
 		Refresh();
 		break;
 	default:
@@ -373,7 +426,37 @@ void CtrlRegisterList::mouseEvent(wxMouseEvent& evt)
 			if (row != currentRows[category] && row < cpu->getRegisterCount(category))
 				setCurrentRow(row);
 		}
-		
+
+		wxMenu menu;
+		int bits = cpu->getRegisterSize(category);
+
+		menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY32,		L"Display 32 bit");
+		menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY64,		L"Display 64 bit");
+		menu.AppendRadioItem(ID_REGISTERLIST_DISPLAY128,	L"Display 128 bit");
+		menu.AppendSeparator();
+
+		if (bits >= 64)
+		{
+			menu.Append(ID_REGISTERLIST_CHANGELOWER,	L"Change lower 64 bit");
+			menu.Append(ID_REGISTERLIST_CHANGEUPPER,	L"Change upper 64 bit");
+		} else {
+			menu.Append(ID_REGISTERLIST_CHANGEVALUE,	L"Change value");
+		}
+
+		switch (maxBits)
+		{
+		case 128:
+			menu.Check(ID_REGISTERLIST_DISPLAY128,true);
+			break;
+		case 64:
+			menu.Check(ID_REGISTERLIST_DISPLAY64,true);
+			break;
+		case 32:
+			menu.Check(ID_REGISTERLIST_DISPLAY32,true);
+			break;
+		}
+
+		menu.Connect(wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&CtrlRegisterList::onPopupClick, NULL, this);
 		PopupMenu(&menu,evt.GetPosition());
 		return;
 	}

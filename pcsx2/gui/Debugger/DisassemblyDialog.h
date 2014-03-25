@@ -7,6 +7,13 @@
 #include "CtrlRegisterList.h"
 #include "CtrlMemView.h"
 #include "DebugEvents.h"
+#include "DebuggerLists.h"
+
+class DebuggerHelpDialog: public wxDialog
+{
+public:
+	DebuggerHelpDialog(wxWindow* parent);
+};
 
 class CpuTabPage: public wxPanel
 {
@@ -17,12 +24,16 @@ public:
 	CtrlRegisterList* getRegisterList() { return registerList; };
 	CtrlMemView* getMemoryView() { return memory; };
 	wxNotebook* getBottomTabs() { return bottomTabs; };
+	void update();
+	void showMemoryView() { setBottomTabPage(memory); };
 private:
+	void setBottomTabPage(wxWindow* win);
 	DebugInterface* cpu;
 	CtrlDisassemblyView* disassembly;
 	CtrlRegisterList* registerList;
 	CtrlMemView* memory;
 	wxNotebook* bottomTabs;
+	BreakpointList* breakpointList;
 };
 
 class DisassemblyDialog : public wxFrame
@@ -37,15 +48,22 @@ public:
 	void update();
 	void reset();
 	void setDebugMode(bool debugMode);
+	
+#ifdef WIN32
+	WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam);
+#endif
 
 	DECLARE_EVENT_TABLE()
 protected:
 	void onBreakRunClicked(wxCommandEvent& evt);
 	void onStepOverClicked(wxCommandEvent& evt);
+	void onStepIntoClicked(wxCommandEvent& evt);
 	void onDebuggerEvent(wxCommandEvent& evt);
 	void onPageChanging(wxCommandEvent& evt);
 	void onBreakpointClick(wxCommandEvent& evt);
+	void onClose(wxCloseEvent& evt);
 	void stepOver();
+	void stepInto();
 private:
 	CpuTabPage* eeTab;
 	CpuTabPage* iopTab;

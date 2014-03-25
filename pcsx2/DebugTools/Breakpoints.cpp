@@ -11,6 +11,9 @@ u32 CBreakPoints::breakSkipFirstAt_ = 0;
 u64 CBreakPoints::breakSkipFirstTicks_ = 0;
 std::vector<MemCheck> CBreakPoints::memChecks_;
 std::vector<MemCheck *> CBreakPoints::cleanupMemChecks_;
+bool CBreakPoints::breakpointTriggered_ = false;
+
+int addressMask = 0x1FFFFFFF;
 
 MemCheck::MemCheck()
 {
@@ -82,9 +85,11 @@ void MemCheck::JitCleanup()
 
 size_t CBreakPoints::FindBreakpoint(u32 addr, bool matchTemp, bool temp)
 {
+	addr &= addressMask;
+
 	for (size_t i = 0; i < breakPoints_.size(); ++i)
 	{
-		if (breakPoints_[i].addr == addr && (!matchTemp || breakPoints_[i].temporary == temp))
+		if ((breakPoints_[i].addr & addressMask) == addr && (!matchTemp || breakPoints_[i].temporary == temp))
 			return i;
 	}
 
@@ -93,9 +98,11 @@ size_t CBreakPoints::FindBreakpoint(u32 addr, bool matchTemp, bool temp)
 
 size_t CBreakPoints::FindMemCheck(u32 start, u32 end)
 {
+	start &= addressMask;
+	end &= addressMask;
 	for (size_t i = 0; i < memChecks_.size(); ++i)
 	{
-		if (memChecks_[i].start == start && memChecks_[i].end == end)
+		if ((memChecks_[i].start & addressMask) == start && (memChecks_[i].end & addressMask) == end)
 			return i;
 	}
 
@@ -291,6 +298,8 @@ static inline u32 NotCached(u32 val)
 
 MemCheck *CBreakPoints::GetMemCheck(u32 address, int size)
 {
+	address &= addressMask;
+
 	std::vector<MemCheck>::iterator iter;
 	for (iter = memChecks_.begin(); iter != memChecks_.end(); ++iter)
 	{
@@ -338,14 +347,16 @@ void CBreakPoints::ExecMemCheckJitCleanup()
 
 void CBreakPoints::SetSkipFirst(u32 pc)
 {
-	breakSkipFirstAt_ = pc;
-//	breakSkipFirstTicks_ = CoreTiming::GetTicks();
+	breakSkipFirstAt_ = pc & addressMask;
+	breakSkipFirstTicks_ = r5900Debug.getCycles();
 }
+
 u32 CBreakPoints::CheckSkipFirst(u32 cmpPc)
 {
+	cmpPc &= addressMask;
 	u32 pc = breakSkipFirstAt_;
-	if (pc == cmpPc)
-		return 1;
+	if (breakSkipFirstTicks_ == r5900Debug.getCycles())
+		return pc;
 	return 0;
 }
 
@@ -375,6 +386,10 @@ const std::vector<BreakPoint> CBreakPoints::GetBreakpoints()
 	return breakPoints_;
 }
 
+// including them earlier causes some ambiguities
+#include "App.h"
+#include "Debugger/DisassemblyDialog.h"
+
 void CBreakPoints::Update(u32 addr)
 {
 	bool resume = false;
@@ -384,14 +399,13 @@ void CBreakPoints::Update(u32 addr)
 		resume = true;
 	}
 	
-	if (addr != 0)
-		Cpu->Clear(addr-4,8);
-	else
+//	if (addr != 0)
+//		Cpu->Clear(addr-4,8);
+//	else
 		SysClearExecutionCache();
 	
 	if (resume)
 		r5900Debug.resumeCpu();
 
-	// Redraw in order to show the breakpoint.
-	// host->UpdateDisassembly();
+	wxGetApp().GetDisassemblyPtr()->update();
 }

@@ -33,6 +33,9 @@
 #include "CDVDisoReader.h"
 #include "Utilities/ScopedPtr.h"
 
+#include "DebugTools/SymbolMap.h"
+#include "AppConfig.h"
+
 const wxChar* CDVD_SourceLabels[] =
 {
 	L"Iso",
@@ -287,6 +290,21 @@ static CDVD_SourceType	m_CurrentSourceType = CDVDsrc_NoDisc;
 void CDVDsys_SetFile( CDVD_SourceType srctype, const wxString& newfile )
 {
 	m_SourceFilename[srctype] = newfile;
+
+	// look for symbol file
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger && symbolMap.IsEmpty())
+	{
+		wxString symName;
+		int n = newfile.Last('.');
+		if (n == wxNOT_FOUND)
+			symName = newfile + L".sym";
+		else
+			symName = newfile.substr(0,n) + L".sym";
+
+		wxCharBuffer buf = symName.ToUTF8();
+		symbolMap.LoadNocashSym(buf);
+		symbolMap.UpdateActiveSymbols();
+	}
 }
 
 const wxString& CDVDsys_GetFile( CDVD_SourceType srctype )

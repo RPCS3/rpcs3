@@ -1,6 +1,7 @@
 #include "PrecompiledHeader.h"
 #include "CtrlMemView.h"
 #include "DebugTools/Debug.h"
+#include "AppConfig.h"
 
 #include "BreakpointWindow.h"
 #include "DebugEvents.h"
@@ -35,8 +36,8 @@ enum MemoryViewMenuIdentifiers
 CtrlMemView::CtrlMemView(wxWindow* parent, DebugInterface* _cpu)
 	: wxWindow(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxWANTS_CHARS), cpu(_cpu)
 {
-	rowHeight = 12;
-	charWidth = 8;
+	rowHeight = g_Conf->EmuOptions.Debugger.FontHeight;
+	charWidth = g_Conf->EmuOptions.Debugger.FontWidth;
 	windowStart = 0x480000;
 	curAddress = windowStart;
 	rowSize = 16;

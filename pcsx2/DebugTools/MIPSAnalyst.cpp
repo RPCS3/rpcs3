@@ -4,6 +4,7 @@
 #include "DebugInterface.h"
 #include "SymbolMap.h"
 #include "DebugInterface.h"
+#include "../R5900.h"
 
 static std::vector<MIPSAnalyst::AnalyzedFunction> functions;
 
@@ -114,6 +115,11 @@ namespace MIPSAnalyst
 			}
 			*/
 			if (end) {
+				// most functions are aligned to 8 or 16 bytes
+				// add the padding to this one
+				while (r5900Debug.read32(addr+8) == 0)
+					addr += 4;
+
 				currentFunction.end = addr + 4;
 				currentFunction.isStraightLeaf = isStraightLeaf;
 				functions.push_back(currentFunction);
@@ -122,6 +128,7 @@ namespace MIPSAnalyst
 				looking = false;
 				end = false;
 				isStraightLeaf = true;
+
 				currentFunction.start = addr+4;
 			}
 		}
@@ -355,6 +362,10 @@ namespace MIPSAnalyst
 		switch (MIPS_GET_OP(op)) {
 		case 0:		// special
 			switch (MIPS_GET_FUNC(op)) {
+			case 0x0C:	// syscall
+				info.isSyscall = true;
+				info.branchTarget = 0x80000000+0x180;
+				break;
 			case 0x20:	// add
 			case 0x21:	// addu
 				info.hasRelevantAddress = true;
@@ -371,6 +382,27 @@ namespace MIPSAnalyst
 		case 0x09:	// adiu
 			info.hasRelevantAddress = true;
 			info.releventAddress = cpu->getRegister(0,MIPS_GET_RS(op))._u32[0]+((s16)(op & 0xFFFF));
+			break;
+		case 0x10:	// cop0
+			switch (MIPS_GET_RS(op))
+			{
+			case 0x10:	// tlb
+				switch (MIPS_GET_FUNC(op))
+				{
+				case 0x18:	// eret
+					info.isBranch = true;
+					info.isConditional = false;
+
+					// probably shouldn't be hard coded like this...
+					if (cpuRegs.CP0.n.Status.b.ERL) {
+						info.branchTarget = cpuRegs.CP0.n.ErrorEPC;
+					} else {
+						info.branchTarget = cpuRegs.CP0.n.EPC;
+					}
+					break;
+				}
+				break;
+			}
 			break;
 		}
 

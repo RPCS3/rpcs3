@@ -371,6 +371,28 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( FMVinSoftwareHack );
 }
 
+
+Pcsx2Config::DebugOptions::DebugOptions()
+{
+	EnableDebugger = false;
+	ShowDebuggerOnStart = false;
+	FontWidth = 8;
+	FontHeight = 12;
+}
+
+void Pcsx2Config::DebugOptions::LoadSave( IniInterface& ini )
+{
+	ScopedIniGroup path( ini, L"Debugger" );
+
+	IniBitBool( EnableDebugger );
+	IniBitBool( ShowDebuggerOnStart );
+	IniBitfield(FontWidth);
+	IniBitfield(FontHeight);
+}
+
+
+
+
 Pcsx2Config::Pcsx2Config()
 {
 	bitset = 0;
@@ -405,6 +427,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	Gamefixes		.LoadSave( ini );
 	Profiler		.LoadSave( ini );
 
+	Debugger		.LoadSave( ini );
 	Trace			.LoadSave( ini );
 
 	ini.Flush();

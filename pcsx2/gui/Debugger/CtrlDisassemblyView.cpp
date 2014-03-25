@@ -5,6 +5,7 @@
 
 #include "DebugEvents.h"
 #include "BreakpointWindow.h"
+#include "AppConfig.h"
 
 #include <wx/mstream.h>
 #include <wx/clipbrd.h>
@@ -65,8 +66,8 @@ CtrlDisassemblyView::CtrlDisassemblyView(wxWindow* parent, DebugInterface* _cpu)
 {
 	manager.setCpu(cpu);
 	windowStart = 0x100000;
-	rowHeight = 14;
-	charWidth = 8;
+	rowHeight = g_Conf->EmuOptions.Debugger.FontHeight+2;
+	charWidth = g_Conf->EmuOptions.Debugger.FontWidth;
 	displaySymbols = true;
 	visibleRows = 1;
 
@@ -105,8 +106,12 @@ WXLRESULT CtrlDisassemblyView::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPA
 	switch (nMsg)
 	{
 	case 0x0104:		// WM_SYSKEYDOWN, make f10 usable
-		postEvent(debEVT_STEPOVER,0);
-		return 0;
+		if (wParam == 0x79)	// f10
+		{
+			postEvent(debEVT_STEPOVER,0);
+			return 0;
+		}
+		break;
 	}
 
 	return wxWindow::MSWWindowProc(nMsg,wParam,lParam);
@@ -684,7 +689,10 @@ void CtrlDisassemblyView::keydownEvent(wxKeyEvent& evt)
 			break;
 		case WXK_F10:
 			postEvent(debEVT_STEPOVER,0);
-			break;
+			return;
+		case WXK_F11:
+			postEvent(debEVT_STEPINTO,0);
+			return;
 		default:
 			evt.Skip();
 			break;
@@ -1050,4 +1058,12 @@ void CtrlDisassemblyView::editBreakpoint()
 		win.addBreakpoint();	
 		postEvent(debEVT_UPDATE,0);
 	}
+}
+
+void CtrlDisassemblyView::getOpcodeText(u32 address, char* dest)
+{
+	DisassemblyLineInfo line;
+	address = manager.getStartAddress(address);
+	manager.getLine(address,displaySymbols,line);
+	sprintf(dest,"%s  %s",line.name.c_str(),line.params.c_str());
 }

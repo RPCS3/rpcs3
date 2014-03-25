@@ -339,9 +339,14 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menubar.Append( &m_menuCDVD,		_("CD&VD") );
 	m_menubar.Append( &m_menuConfig,	_("&Config") );
 	m_menubar.Append( &m_menuMisc,		_("&Misc") );
-#ifdef PCSX2_DEVBUILD
-	m_menubar.Append( &m_menuDebug,		_("&Debug") );
+	
+#ifndef PCSX2_DEVBUILD
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger)
 #endif
+	{
+		m_menubar.Append( &m_menuDebug,		_("&Debug") );
+	}
+
 	SetMenuBar( &m_menubar );
 
 	// ------------------------------------------------------------------------
@@ -507,11 +512,15 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuMisc.AppendSeparator();
 	m_menuMisc.Append( MenuId_ChangeLang,		L"Change Language" ); // Always in English
 
-#ifdef PCSX2_DEVBUILD
-	m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
-	//m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
-	m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
+#ifndef PCSX2_DEVBUILD
+	if (g_Conf->EmuOptions.Debugger.EnableDebugger)
 #endif
+	{
+		m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
+		//m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
+		m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
+	}
+
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
