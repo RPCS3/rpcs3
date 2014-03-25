@@ -11,8 +11,8 @@ void NodeEvents::AliasManager::RegisterReference(const detail::node& node) {
   m_anchorByIdentity.insert(std::make_pair(node.ref(), _CreateNewAnchor()));
 }
 
-anchor_t NodeEvents::AliasManager::LookupAnchor(const detail::node& node)
-    const {
+anchor_t NodeEvents::AliasManager::LookupAnchor(
+    const detail::node& node) const {
   AnchorByIdentity::const_iterator it = m_anchorByIdentity.find(node.ref());
   if (it == m_anchorByIdentity.end())
     return 0;

@@ -232,7 +232,7 @@ TEST(NodeTest, Bool) {
 }
 
 TEST(NodeTest, AutoBoolConversion) {
-#pragma warning(disable:4800)
+#pragma warning(disable : 4800)
   YAML::Node node;
   node["foo"] = "bar";
   EXPECT_TRUE(static_cast<bool>(node["foo"]));

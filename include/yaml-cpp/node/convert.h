@@ -23,7 +23,8 @@
 namespace YAML {
 class Binary;
 struct _Null;
-template <typename T> struct convert;
+template <typename T>
+struct convert;
 }  // namespace YAML
 
 namespace YAML {

@@ -18,11 +18,7 @@
 namespace YAML {
 namespace detail {
 struct iterator_type {
-  enum value {
-    None,
-    Sequence,
-    Map
-  };
+  enum value { None, Sequence, Map };
 };
 
 template <typename V>
@@ -76,10 +72,9 @@ class node_iterator_base
   }
 
   template <typename W>
-  node_iterator_base(
-      const node_iterator_base<W>& rhs,
-      typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type =
-          enabler())
+  node_iterator_base(const node_iterator_base<W>& rhs,
+                     typename boost::enable_if<boost::is_convertible<W*, V*>,
+                                               enabler>::type = enabler())
       : m_type(rhs.m_type),
         m_seqIt(rhs.m_seqIt),
         m_mapIt(rhs.m_mapIt),
