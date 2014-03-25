@@ -2,7 +2,7 @@ PCSX2 is an open source Playstation 2 emulator. It's purpose is to mimic the the
 
 # Project Details
 
-The PCSX2 project has been running for more than ten years. Once able to run only a few public domain demos, recent versions enable many games to work at full speed, including popular titles such as *Final Fantasy X* or *Devil May Cry 3*. Visit the *[http://pcsx2.net PCSX2 homepage]* to check the latest compatibility status of games (with more than 2000 titles tested), or ask your doubts in the *[http://forums.pcsx2.net/ Official forums]*.
+The PCSX2 project has been running for more than ten years. Once able to run only a few public domain demos, recent versions enable many games to work at full speed, including popular titles such as *Final Fantasy X* or *Devil May Cry 3*. Visit the *[PCSX2 homepage](http://pcsx2.net)* to check the latest compatibility status of games (with more than 2000 titles tested), or ask your doubts in the *[Official forums](http://forums.pcsx2.net/)*.
 
 The latest officially released version is *1.2.1* (SVN r5875).
 Installers and binaries for both Windows and Linux are available from **[PCSX2.net](http://pcsx2.net/)**.
