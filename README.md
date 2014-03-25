@@ -34,4 +34,6 @@ Installers and binaries for both Windows and Linux are available from **[our hom
 ![TOTA](https://dl.dropboxusercontent.com/u/743491/PCSX2/TOTA.jpg "TOTA")
 
 # Source code stats
-Coming soon...
+<script type="text/javascript" src="http://www.ohloh.net/p/318184/widgets/project_basic_stats.js"></script>
+<script type="text/javascript" src="http://www.ohloh.net/p/318184/widgets/project_languages.js"></script>
+<script type="text/javascript" src="http://www.ohloh.net/p/318184/widgets/project_factoids_stats.js"></script>
