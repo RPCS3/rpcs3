@@ -153,7 +153,7 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
 	set(yaml_cxx_flags "-Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${yaml_cxx_flags}")
 
 	### Make specific
-	if(${CMAKE_BUILD_TOOL} STREQUAL make OR ${CMAKE_BUILD_TOOL} STREQUAL gmake)
+	if(${CMAKE_BUILD_TOOL} MATCHES make OR ${CMAKE_BUILD_TOOL} MATCHES gmake)
 		add_custom_target(debuggable $(MAKE) clean
 			COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
 			COMMENT "Adjusting settings for debug compilation"
@@ -161,6 +161,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
 		add_custom_target(releasable $(MAKE) clean
 			COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${CMAKE_SOURCE_DIR}
 			COMMENT "Adjusting settings for release compilation"
+			VERBATIM)
+		add_custom_target(format
+			COMMAND clang-format --style=file -i ${all_sources}
+			COMMENT "Running clang-format"
 			VERBATIM)
 	endif()
 endif()
