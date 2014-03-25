@@ -7,9 +7,8 @@ The PCSX2 project has been running for more than ten years. Once able to run onl
 The latest officially released version is *1.2.1* (SVN r5875).
 Installers and binaries for both Windows and Linux are available from **[our homepage](http://pcsx2.net/)**.
 
-![KOF 2002](https://dl.dropboxusercontent.com/u/743491/PCSX2/KoF2002.jpg "KOF 2002")
-![Final Fantasy XII](https://dl.dropboxusercontent.com/u/743491/PCSX2/FinalFantasyXII.jpg "Final Fantasy XII")
-![Odin Sphere](https://dl.dropboxusercontent.com/u/743491/PCSX2/OdinSphere.jpg "Odin Sphere")
+| ![KOF 2002](https://dl.dropboxusercontent.com/u/743491/PCSX2/KoF2002.jpg "KOF 2002") | ![Final Fantasy XII](https://dl.dropboxusercontent.com/u/743491/PCSX2/FinalFantasyXII.jpg "Final Fantasy XII") | ![Odin Sphere](https://dl.dropboxusercontent.com/u/743491/PCSX2/OdinSphere.jpg "Odin Sphere")
+|:----:|:----:|:----:|
 
 # System Requirements
 
@@ -29,6 +28,5 @@ Installers and binaries for both Windows and Linux are available from **[our hom
 
 **Note:** PCSX2 mainly takes advantage of 2 CPU cores. As of r4865 PCSX2 can now take advantage of a 3rd core using the MTVU speedhack. This can be a significant speedup on CPUs with 3+ cores, however on GS limited games (or on dual core CPUs) it may be a slowdown.
 
-![Pro Evo 2009](https://dl.dropboxusercontent.com/u/743491/PCSX2/ProEvo2009.jpg "Pro Evo 2009")
-![Megaman X8](https://dl.dropboxusercontent.com/u/743491/PCSX2/MegamanX8.jpg "Megaman X8")
-![TOTA](https://dl.dropboxusercontent.com/u/743491/PCSX2/TOTA.jpg "TOTA")
+| ![Pro Evo 2009](https://dl.dropboxusercontent.com/u/743491/PCSX2/ProEvo2009.jpg "Pro Evo 2009") | ![Megaman X8](https://dl.dropboxusercontent.com/u/743491/PCSX2/MegamanX8.jpg "Megaman X8") | ![TOTA](https://dl.dropboxusercontent.com/u/743491/PCSX2/TOTA.jpg "TOTA")
+|:----:|:----:|:----:|
