@@ -652,7 +652,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_SHADER_PROGRAM:
 	{
 		m_cur_shader_prog = &m_shader_progs[m_cur_shader_prog_num];
-		//m_cur_shader_prog_num = (m_cur_shader_prog_num + 1) % 16;
+		m_cur_shader_prog_num = (m_cur_shader_prog_num + 1) % 16;
 		u32 a0 = ARGS(0);
 		m_cur_shader_prog->offset = a0 & ~0x3;
 		m_cur_shader_prog->addr = GetAddress(m_cur_shader_prog->offset, (a0 & 0x3) - 1);

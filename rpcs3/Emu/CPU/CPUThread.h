@@ -6,12 +6,12 @@
 struct reservation_struct
 {
 	SMutex mutex; // mutex for updating reservation_owner and data
-	volatile u32 owner; // id of thread that got reservation
-	volatile u32 addr;
-	volatile u32 size;
-	volatile u32 data32;
-	volatile u64 data64;
-	// atm, PPU can't break SPU MFC reservation correctly
+	u32 owner; // id of thread that got reservation
+	u32 addr;
+	u32 size;
+	u32 data32;
+	u64 data64;
+	u128 data[8];
 
 	__forceinline void clear()
 	{

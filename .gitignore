@@ -58,3 +58,4 @@ rpcs3/git-version.h
 
 # Ignore other system generated files
 bin/dev_hdd0/home/00000001/trophy
+bin/dev_hdd0/log.txt
