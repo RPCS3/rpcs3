@@ -896,7 +896,7 @@ public:
 					SPU.In_MBox.PushUncond(CELL_OK);
 					return;
 				}
-				else if (code = 128)
+				else if (code == 128)
 				{
 					/* ===== sys_event_flag_set_bit ===== */
 					u32 flag = v & 0xffffff;
