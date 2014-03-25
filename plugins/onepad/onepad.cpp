@@ -146,7 +146,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	snprintf(libraryName, 255, "OnePAD r%d%s"
+	snprintf(libraryName, 255, "OnePAD %lld%s"
 #	ifdef PCSX2_DEBUG
 	          "-Debug"
 #	else

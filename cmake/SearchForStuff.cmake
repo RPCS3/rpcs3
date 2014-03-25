@@ -28,12 +28,12 @@ endif(Linux)
 find_package(ALSA)
 find_package(BZip2)
 find_package(Gettext) # translation tool
+find_package(Git)
 find_package(JPEG)
 find_package(OpenGL)
 # Tell cmake that we use SDL as a library and not as an application
 set(SDL_BUILDING_LIBRARY TRUE)
 find_package(SDL)
-find_package(Subversion)
 # The requirement of wxWidgets is checked in SelectPcsx2Plugins module
 # Does not require the module (allow to compile non-wx plugins)
 # Force the unicode build (the variable is only supported on cmake 2.8.3 and above)
