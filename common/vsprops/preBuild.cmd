@@ -37,11 +37,11 @@ if %ERRORLEVEL% NEQ 0 (
   echo You can safely ignore this message - a dummy string will be printed.
 
   echo #define SVN_REV_UNKNOWN > "%CD%\svnrev.h"
-  echo #define SVN_REV 0 >> "%CD%\svnrev.h"
+  echo #define SVN_REV 0ll >> "%CD%\svnrev.h"
   echo #define SVN_MODS 0 >> "%CD%\svnrev.h"
   echo set SVN_REV=0 > "%CD%\postBuild.inc.cmd"
 ) else (
-  echo #define SVN_REV %REV% > "%CD%\svnrev.h"
+  echo #define SVN_REV %REV%ll > "%CD%\svnrev.h"
   echo #define SVN_MODS 0 /* Not implemented at the moment. */ >> "%CD%\svnrev.h"
   echo set SVN_REV=%REV% > "%CD%\postBuild.inc.cmd"
 )
