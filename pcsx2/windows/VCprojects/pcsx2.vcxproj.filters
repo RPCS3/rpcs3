@@ -207,9 +207,6 @@
     <None Include="..\..\gui\Dialogs\BaseConfigurationDialog.inl">
       <Filter>AppHost\Dialogs</Filter>
     </None>
-    <None Include="..\..\gui\Debugger\DebuggerLists.cpp">
-      <Filter>AppHost\Debugger</Filter>
-    </None>
     <None Include="..\..\gui\Debugger\DebuggerLists.h">
       <Filter>AppHost\Debugger</Filter>
     </None>
@@ -855,6 +852,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Gte.cpp">
       <Filter>System\Ps2\Iop\PS1 Components</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\Debugger\DebuggerLists.cpp">
+      <Filter>AppHost\Debugger</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
