@@ -54,6 +54,29 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 ### Sources, headers, directories and libs
 ###
+
+# From http://www.cmake.org/pipermail/cmake/2010-March/035992.html:
+# function to collect all the sources from sub-directories
+# into a single list
+function(add_sources)
+  get_property(is_defined GLOBAL PROPERTY SRCS_LIST DEFINED)
+  if(NOT is_defined)
+    define_property(GLOBAL PROPERTY SRCS_LIST
+      BRIEF_DOCS "List of source files"
+      FULL_DOCS "List of all source files in the entire project")
+  endif()
+  # make absolute paths
+  set(SRCS)
+  foreach(s IN LISTS ARGN)
+    if(NOT IS_ABSOLUTE "${s}")
+      get_filename_component(s "${s}" ABSOLUTE)
+    endif()
+    list(APPEND SRCS "${s}")
+  endforeach()
+  # append to global list
+  set_property(GLOBAL APPEND PROPERTY SRCS_LIST "${SRCS}")
+endfunction(add_sources)
+
 set(header_directory "include/yaml-cpp/")
 
 file(GLOB sources "src/[a-zA-Z]*.cpp")
@@ -68,7 +91,7 @@ else()
 	add_definitions(-DYAML_CPP_NO_CONTRIB)
 endif()
 
-set(all_sources
+set(library_sources
   ${sources}
   ${public_headers}
   ${private_headers}
@@ -76,6 +99,7 @@ set(all_sources
   ${contrib_public_headers}
   ${contrib_private_headers}
 )
+add_sources(${library_sources})
 
 if(VERBOSE)
 	message(STATUS "sources: ${sources}")
@@ -162,10 +186,6 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
 			COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${CMAKE_SOURCE_DIR}
 			COMMENT "Adjusting settings for release compilation"
 			VERBATIM)
-		add_custom_target(format
-			COMMAND clang-format --style=file -i ${all_sources}
-			COMMENT "Running clang-format"
-			VERBATIM)
 	endif()
 endif()
 
@@ -246,7 +266,7 @@ set(_INSTALL_DESTINATIONS
 ###
 ### Library
 ###
-add_library(yaml-cpp ${all_sources})
+add_library(yaml-cpp ${library_sources})
 set_target_properties(yaml-cpp PROPERTIES
   COMPILE_FLAGS "${yaml_c_flags} ${yaml_cxx_flags}"
 )
@@ -295,4 +315,14 @@ endif()
 if(YAML_CPP_BUILD_TOOLS)
 	add_subdirectory(test)
 	add_subdirectory(util)
+endif()
+
+### Formatting
+if(${CMAKE_BUILD_TOOL} MATCHES make OR ${CMAKE_BUILD_TOOL} MATCHES gmake)
+  get_property(all_sources GLOBAL PROPERTY SRCS_LIST)
+  message(STATUS ${all_sources})
+	add_custom_target(format
+		COMMAND clang-format --style=file -i ${all_sources}
+		COMMENT "Running clang-format"
+		VERBATIM)
 endif()

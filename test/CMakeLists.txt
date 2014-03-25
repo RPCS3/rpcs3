@@ -18,6 +18,7 @@ file(GLOB test_sources [a-z_]*.cpp integration/[a-z_]*.cpp)
 file(GLOB test_core_sources core/[a-z]*.cpp)
 
 list(APPEND test_sources ${test_core_sources})
+add_sources(${test_sources} ${test_headers})
 
 include_directories(${YAML_CPP_SOURCE_DIR}/test)
 
