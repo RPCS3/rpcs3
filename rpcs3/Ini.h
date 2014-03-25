@@ -22,22 +22,22 @@ struct WindowInfo
 class Ini
 {
 protected:
-	wxConfigBase*	m_Config;
+	wxConfigBase* m_Config;
 
 	Ini();
-	virtual void Save(wxString key, int value);
-	virtual void Save(wxString key, bool value);
-	virtual void Save(wxString key, wxSize value);
-	virtual void Save(wxString key, wxPoint value);
-	virtual void Save(wxString key, wxString value);
-	virtual void Save(wxString key, WindowInfo value);
+	virtual void Save(const wxString& key, int value);
+	virtual void Save(const wxString& key, bool value);
+	virtual void Save(const wxString& key, wxSize value);
+	virtual void Save(const wxString& key, wxPoint value);
+	virtual void Save(const wxString& key, wxString value);
+	virtual void Save(const wxString& key, WindowInfo value);
 
-	virtual int Load(wxString key, const int def_value);
-	virtual bool Load(wxString key, const bool def_value);
-	virtual wxSize Load(wxString key, const wxSize def_value);
-	virtual wxPoint Load(wxString key, const wxPoint def_value);
-	virtual wxString Load(wxString key, const wxString& def_value);
-	virtual WindowInfo Load(wxString key, const WindowInfo& def_value);
+	virtual int Load(const wxString& key, const int def_value);
+	virtual bool Load(const wxString& key, const bool def_value);
+	virtual wxSize Load(const wxString& key, const wxSize def_value);
+	virtual wxPoint Load(const wxString& key, const wxPoint def_value);
+	virtual wxString Load(const wxString& key, const wxString& def_value);
+	virtual WindowInfo Load(const wxString& key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
