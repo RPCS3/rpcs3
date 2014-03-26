@@ -159,7 +159,9 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	
 	TROPUSRLoader* tropusr = new TROPUSRLoader();
-	tropusr->Load(trophyPath + "/TROPUSR.DAT", trophyPath + "/TROPCONF.SFM");
+	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt.tropusr = tropusr;
 
 	// TODO: Callbacks
@@ -292,7 +294,8 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, mem32_t plati
 	u64 timestamp1 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
 	u64 timestamp2 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
 	ctxt.tropusr->UnlockTrophy(trophyId, timestamp1, timestamp2);
-	ctxt.tropusr->Save("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPUSR.DAT");
+	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPUSR.DAT";
+	ctxt.tropusr->Save(trophyPath);
 
 	platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
 	return CELL_OK;

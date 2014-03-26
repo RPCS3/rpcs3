@@ -61,7 +61,7 @@ class TROPUSRLoader
 	std::vector<TROPUSREntry4> m_table4;
 	std::vector<TROPUSREntry6> m_table6;
 
-	virtual bool Generate(std::string& filepath, std::string& configpath);
+	virtual bool Generate(const std::string& filepath, const std::string& configpath);
 	virtual bool LoadHeader();
 	virtual bool LoadTableHeaders();
 	virtual bool LoadTables();
@@ -70,8 +70,8 @@ public:
 	TROPUSRLoader();
 	~TROPUSRLoader();
 
-	virtual bool Load(std::string& filepath, std::string& configpath);
-	virtual bool Save(std::string& filepath);
+	virtual bool Load(const std::string& filepath, const std::string& configpath);
+	virtual bool Save(const std::string& filepath);
 	virtual bool Close();
 
 	virtual u32 GetTrophiesCount();
