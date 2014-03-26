@@ -232,7 +232,9 @@ TEST(NodeTest, Bool) {
 }
 
 TEST(NodeTest, AutoBoolConversion) {
+#ifdef _MSC_VER
 #pragma warning(disable : 4800)
+#endif
   YAML::Node node;
   node["foo"] = "bar";
   EXPECT_TRUE(static_cast<bool>(node["foo"]));
