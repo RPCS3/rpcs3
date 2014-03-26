@@ -39,9 +39,9 @@ find_package(SDL)
 # Force the unicode build (the variable is only supported on cmake 2.8.3 and above)
 # Warning do not put any double-quote for the argument...
 # set(wxWidgets_CONFIG_OPTIONS --unicode=yes --debug=yes) # In case someone want to debug inside wx
-# 
+#
 # Fedora uses an extra non-standard option ... Arch must be the first option.
-if(Fedora) 
+if(Fedora)
     set(wxWidgets_CONFIG_OPTIONS --arch i686 --unicode=yes)
 else()
     set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
@@ -67,7 +67,7 @@ include(FindSparseHash_NEW)
 # Note for include_directory: The order is important to avoid a mess between include file from your system and the one of pcsx2
 # If you include first 3rdparty, all 3rdpary include will have a higer priority...
 # If you include first /usr/include, all system include will have a higer priority over the pcsx2 one...
-# Current implementation: 
+# Current implementation:
 # 1/ include 3rdparty sub-directory that we will used (either request or fallback)
 # 2/ include system one
 #----------------------------------------
@@ -165,6 +165,20 @@ if(wxWidgets_FOUND)
             # Multiarch ubuntu/debian
             STRING(REGEX REPLACE "/usr/lib/x86_64-linux-gnu" "/usr/lib/i386-linux-gnu" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
         endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
+
+		# Some people are trying to compile with wx 3.0 ...
+		### 3.0
+		# -I/usr/lib/i386-linux-gnu/wx/include/gtk2-unicode-3.0 -I/usr/include/wx-3.0 -D_FILE_OFFSET_BITS=64 -DWXUSINGDLL -D__WXGTK__ -pthread
+		# -L/usr/lib/i386-linux-gnu -pthread   -lwx_gtk2u_xrc-3.0 -lwx_gtk2u_html-3.0 -lwx_gtk2u_qa-3.0 -lwx_gtk2u_adv-3.0 -lwx_gtk2u_core-3.0 -lwx_baseu_xml-3.0 -lwx_baseu_net-3.0 -lwx_baseu-3.0
+		### 2.8
+		# -I/usr/lib/i386-linux-gnu/wx/include/gtk2-unicode-release-2.8 -I/usr/include/wx-2.8 -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -D__WXGTK__ -pthread
+		# -L/usr/lib/i386-linux-gnu -pthread -Wl,-z,relro  -L/usr/lib/i386-linux-gnu   -lwx_gtk2u_richtext-2.8 -lwx_gtk2u_aui-2.8 -lwx_gtk2u_xrc-2.8 -lwx_gtk2u_qa-2.8 -lwx_gtk2u_html-2.8 -lwx_gtk2u_adv-2.8 -lwx_gtk2u_core-2.8 -lwx_baseu_xml-2.8 -lwx_baseu_net-2.8 -lwx_baseu-2.8
+		if ("${wxWidgets_INCLUDE_DIRS}" MATCHES "3.0")
+			message(WARNING "\nWxwidget 3.0 is installed on your system whereas PCSX2 required 2.8 !!!\nPCSX2 will try to use 2.8 but if it would be better to fix your setup.\n")
+			STRING(REGEX REPLACE "unicode" "unicode-release" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+			STRING(REGEX REPLACE "3\\.0" "2.8" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+			STRING(REGEX REPLACE "3\\.0" "2.8" wxWidgets_LIBRARIES "${wxWidgets_LIBRARIES}")
+		endif()
     endif(Linux)
 
 	include(${wxWidgets_USE_FILE})
