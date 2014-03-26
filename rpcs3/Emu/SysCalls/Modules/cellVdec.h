@@ -719,7 +719,8 @@ public:
 	u32 memBias;
 
 	VdecTask task; // current task variable
-	u64 last_pts, last_dts;
+	u64 last_pts, first_pts, first_dts;
+	AVRational rfr, afr;
 
 	CPUThread* vdecCb;
 

@@ -1114,7 +1114,7 @@ public:
 	u32 memBias;
 
 	AdecTask task;
-	u64 last_pts;
+	u64 last_pts, first_pts;
 
 	CPUThread* adecCb;
 

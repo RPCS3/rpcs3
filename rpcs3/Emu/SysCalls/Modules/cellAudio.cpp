@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Utilities/SQueue.h"
 #include "Emu/Audio/cellAudio.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
@@ -9,7 +10,9 @@ void cellAudio_init();
 void cellAudio_unload();
 Module cellAudio(0x0011, cellAudio_init, nullptr, cellAudio_unload);
 
-extern u64 get_system_time();
+static SMutexGeneral audioMutex;
+
+AudioConfig m_config;
 
 // libaudio Functions
 
@@ -23,6 +26,7 @@ int cellAudioInit()
 	}
 
 	m_config.m_is_audio_initialized = true;
+	m_config.start_time = 0;
 	m_config.counter = 0;
 
 	// alloc memory
@@ -43,30 +47,56 @@ int cellAudioInit()
 
 			ConLog.Write("Audio started");
 
-			m_config.start_time = get_system_time();
-
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
 
 			float buffer[2*256]; // buffer for 2 channels
 			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
 			//u16 oal_buffer[2*256]; // buffer for OpenAL
+			memset(buffer, 0, sizeof(buffer));
+			memset(buffer2, 0, sizeof(buffer2));
 
 			uint oal_buffer_offset = 0;
 			uint oal_buffer_size = 2 * 256;
-			std::unique_ptr<u16[]> oal_buffer(new u16[oal_buffer_size]);
-
-			memset(buffer, 0, sizeof(buffer));
-			memset(buffer2, 0, sizeof(buffer2));
-			memset(oal_buffer.get(), 0, oal_buffer_size * sizeof(u16));
+			std::unique_ptr<u16[]> oal_buffer[32];
+			SQueue<u16*, sizeof(oal_buffer) / sizeof(oal_buffer[0])> queue;
+			for (u32 i = 0; i < queue.GetSize(); i++)
+			{
+				oal_buffer[i] = std::unique_ptr<u16[]>(new u16[oal_buffer_size]);
+				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(u16));
+			}
+			queue.Clear();
+			//std::unique_ptr<u16[]> oal_buf(new u16[oal_buffer_size]);
+			//memset(oal_buffer.get(), 0, oal_buffer_size * sizeof(u16));
 
 			Array<u64> keys;
 
 			if(m_audio_out)
 			{
 				m_audio_out->Init();
-				m_audio_out->Open(oal_buffer.get(), oal_buffer_size*sizeof(u16));
+				m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(u16));
 			}
+
+			m_config.start_time = get_system_time();
+
+			thread iat("Internal Audio Thread", [oal_buffer_size, &queue]()
+			{
+				while (true)
+				{
+					u16* oal_buffer = nullptr;
+					queue.Pop(oal_buffer);
+					
+					if (oal_buffer)
+					{
+						m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(u16));
+					}
+					else
+					{
+						break;
+					}
+				}
+			});
+			iat.detach();
 
 			while (m_config.m_is_audio_initialized)
 			{
@@ -76,16 +106,20 @@ int cellAudioInit()
 					goto abort;
 				}
 
+				const u64 stamp0 = get_system_time();
+
 				// TODO: send beforemix event (in ~2,6 ms before mixing)
 
-				// Sleep(5); // precise time of sleeping: 5,(3) ms (or 256/48000 sec)
-				if (m_config.counter * 256000000 / 48000 >= get_system_time() - m_config.start_time)
+				// precise time of sleeping: 5,(3) ms (or 256/48000 sec)
+				if (m_config.counter * 256000000 / 48000 >= stamp0 - m_config.start_time)
 				{
 					Sleep(1);
 					continue;
 				}
 
 				m_config.counter++;
+
+				const u32 oal_pos = m_config.counter % queue.GetSize();
 
 				if (Emu.IsPaused())
 				{
@@ -112,13 +146,13 @@ int cellAudioInit()
 					memset(Memory + buf_addr, 0, block_size * sizeof(float));
 
 					{
-						SMutexGeneralLocker lock(port.m_mutex);
+						SMutexGeneralLocker lock(audioMutex);
 						port.counter = m_config.counter;
 						port.tag++; // absolute index of block that will be read
 						index = (position + 1) % port.block; // write new value
 					}
 
-					u32 k = port.channel / 2;
+					const u32 k = port.channel / 2;
 
 					if (first_mix)
 					{
@@ -129,10 +163,10 @@ int cellAudioInit()
 							buffer[i+1] = buffer2[i*k+1];
 
 							// convert the data from float to u16
-							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
-							assert(buffer[i+1] >= -4.0f && buffer[i+1] <= 4.0f);
-							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
-							oal_buffer[oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 13) - 1));
+							//assert(buffer[i] >= -1.0f && buffer[i] <= 1.0f);
+							//assert(buffer[i+1] >= -1.0f && buffer[i+1] <= 1.0f);
+							oal_buffer[oal_pos][oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 14) - 1));
+							oal_buffer[oal_pos][oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 14) - 1));
 						}
 
 						first_mix = false;
@@ -145,17 +179,19 @@ int cellAudioInit()
 							buffer[i+1] = (buffer[i+1] + buffer2[i*k+1]) * 0.5;
 
 							// convert the data from float to u16
-							assert(buffer[i] >= -4.0f && buffer[i] <= 4.0f);
-							assert(buffer[i+1] >= -4.0f && buffer[i+1] <= 4.0f);
-							oal_buffer[oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 13) - 1));
-							oal_buffer[oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 13) - 1));
+							//assert(buffer[i] >= -1.0f && buffer[i] <= 1.0f);
+							//assert(buffer[i+1] >= -1.0f && buffer[i+1] <= 1.0f);
+							oal_buffer[oal_pos][oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 14) - 1));
+							oal_buffer[oal_pos][oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 14) - 1));
 						}
 					}
 				}
 
+				const u64 stamp1 = get_system_time();
+
 				// send aftermix event (normal audio event)
 				{
-					std::lock_guard<std::mutex> lock(m_config.m_mutex);
+					SMutexGeneralLocker lock(audioMutex);
 					keys.SetCount(m_config.m_keys.GetCount());
 					memcpy(keys.GetPtr(), m_config.m_keys.GetPtr(), sizeof(u64) * keys.GetCount());
 				}
@@ -165,17 +201,21 @@ int cellAudioInit()
 					Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
 				}
 
+				const u64 stamp2 = get_system_time();
+
 				oal_buffer_offset += sizeof(buffer) / sizeof(float);
 
 				if(oal_buffer_offset >= oal_buffer_size)
 				{
 					if(m_audio_out)
 					{
-						m_audio_out->AddData(oal_buffer.get(), oal_buffer_offset * sizeof(u16));
+						queue.Push(&oal_buffer[oal_pos][0]);
 					}
 
 					oal_buffer_offset = 0;
 				}
+
+				const u64 stamp3 = get_system_time();
 
 				if(Ini.AudioDumpToFile.GetValue())
 				{
@@ -185,15 +225,36 @@ int cellAudioInit()
 						goto abort;
 					}
 				}
+
+				const u64 stamp4 = get_system_time();
+
+				//ConLog.Write("Audio perf: start=%d (access=%d, event=%d, AddData=%d, dump=%d)",
+					//stamp0 - m_config.start_time, stamp1-stamp0, stamp2-stamp1, stamp3-stamp2, stamp4-stamp3);
 			}
 			ConLog.Write("Audio finished");
 abort:
+			queue.Push(nullptr);
+			while (queue.GetCount())
+			{
+				Sleep(1);
+			}
 			if(Ini.AudioDumpToFile.GetValue())
 				m_dump.Finalize();
 
 			m_config.m_is_audio_finalized = true;
+			m_config.m_is_audio_initialized = false;
 		});
 	t.detach();
+
+	while (!m_config.start_time) // waiting for initialization
+	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("cellAudioInit() aborted");
+			return CELL_OK;
+		}
+		Sleep(1);
+	}
 
 	return CELL_OK;
 }
@@ -395,7 +456,7 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
-	SMutexGeneralLocker lock(port.m_mutex);
+	SMutexGeneralLocker lock(audioMutex);
 
 	stamp = m_config.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
@@ -429,7 +490,7 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	SMutexGeneralLocker lock(port.m_mutex);
+	SMutexGeneralLocker lock(audioMutex);
 
 	u64 tag_base = port.tag;
 	if (tag_base % port.block > blockNo)
@@ -457,7 +518,7 @@ int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 {
 	cellAudio.Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
 
-	std::lock_guard<std::mutex> lock(m_config.m_mutex);
+	SMutexGeneralLocker lock(audioMutex);
 
 	u64 event_key = 0;
 	while (Emu.GetEventManager().CheckKey((event_key << 48) | 0x80004d494f323221))
@@ -475,7 +536,6 @@ int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
-	m_config.m_keys.AddCpy(event_key);
 	id = cellAudio.GetNewId(eq);
 	key = event_key;
 
@@ -492,8 +552,15 @@ int cellAudioSetNotifyEventQueue(u64 key)
 {
 	cellAudio.Warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
-	std::lock_guard<std::mutex> lock(m_config.m_mutex);
+	SMutexGeneralLocker lock(audioMutex);
 
+	for (u32 i = 0; i < m_config.m_keys.GetCount(); i++) // check for duplicates
+	{
+		if (m_config.m_keys[i] == key)
+		{
+			return CELL_AUDIO_ERROR_PARAM;
+		}
+	}
 	m_config.m_keys.AddCpy(key);
 
 	/*EventQueue* eq;
@@ -517,7 +584,7 @@ int cellAudioRemoveNotifyEventQueue(u64 key)
 {
 	cellAudio.Warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
-	std::lock_guard<std::mutex> lock(m_config.m_mutex);
+	SMutexGeneralLocker lock(audioMutex);
 
 	bool found = false;
 	for (u32 i = 0; i < m_config.m_keys.GetCount(); i++)

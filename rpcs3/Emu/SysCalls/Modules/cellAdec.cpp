@@ -63,8 +63,6 @@ next:
 				adec.reader.addr = adec.task.au.addr;
 				adec.reader.size = adec.task.au.size;
 				//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
-
-				//if (adec.last_pts > adec.task.au.pts) adec.last_pts = adec.task.au.pts;
 			}
 			break;
 		default:
@@ -266,8 +264,11 @@ u32 adecOpen(AudioDecoder* data)
 					adec.reader.size = task.au.size;
 					//ConLog.Write("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
-					//if (adec.last_pts > task.au.pts || adec.just_started) adec.last_pts = task.au.pts;
-					if (adec.just_started) adec.last_pts = task.au.pts;
+					if (adec.just_started)
+					{
+						adec.first_pts = task.au.pts;
+						adec.last_pts = task.au.pts /*- 3816*8*/; // hack
+					}
 
 					struct AVPacketHolder : AVPacket
 					{
@@ -433,8 +434,19 @@ u32 adecOpen(AudioDecoder* data)
 
 						if (got_frame)
 						{
-							frame.pts = adec.last_pts;
-							adec.last_pts += ((u64)frame.data->nb_samples) * 90000 / 48000; // ???
+							u64 ts = av_frame_get_best_effort_timestamp(frame.data);
+							if (ts != AV_NOPTS_VALUE)
+							{
+								frame.pts = ts/* - adec.first_pts*/;
+								adec.last_pts = frame.pts;
+							}
+							else
+							{
+								adec.last_pts += ((u64)frame.data->nb_samples) * 90000 / 48000;
+								frame.pts = adec.last_pts;
+							}
+							//frame.pts = adec.last_pts;
+							//adec.last_pts += ((u64)frame.data->nb_samples) * 90000 / 48000; // ???
 							frame.auAddr = task.au.addr;
 							frame.auSize = task.au.size;
 							frame.userdata = task.au.userdata;

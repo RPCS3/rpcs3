@@ -15,6 +15,11 @@ public:
 	{
 	}
 
+	const u32 GetSize() const
+	{
+		return SQSize;
+	}
+
 	bool Push(const T& data)
 	{
 		while (true)

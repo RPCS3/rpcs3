@@ -34,8 +34,11 @@ struct SFuncOp
 struct SFunc
 {
 	func_caller* func;
+	void* ptr;
 	char* name;
 	Array<SFuncOp> ops;
+	u64 group;
+	u32 found;
 };
 
 extern ArrayF<SFunc> g_static_funcs_list;
@@ -110,7 +113,7 @@ public:
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 
-	template<typename T> __forceinline void AddFuncSub(const u64 ops[], char* name, T func);
+	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], char* name, T func);
 };
 
 template<typename T>
@@ -120,13 +123,16 @@ __forceinline void Module::AddFunc(u32 id, T func)
 }
 
 template<typename T>
-__forceinline void Module::AddFuncSub(const u64 ops[], char* name, T func)
+__forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], char* name, T func)
 {
 	if (!ops[0]) return;
 
 	SFunc* sf = new SFunc;
+	sf->ptr = func;
 	sf->func = bind_func(func);
 	sf->name = name;
+	sf->group = *(u64*)group;
+	sf->found = 0;
 
 	// TODO: check for self-inclusions, use CRC
 
