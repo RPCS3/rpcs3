@@ -321,10 +321,8 @@ if(YAML_CPP_BUILD_TOOLS)
 endif()
 
 ### Formatting
-if(${CMAKE_BUILD_TOOL} MATCHES make OR ${CMAKE_BUILD_TOOL} MATCHES gmake)
-  get_property(all_sources GLOBAL PROPERTY SRCS_LIST)
-	add_custom_target(format
-		COMMAND clang-format --style=file -i ${all_sources}
-		COMMENT "Running clang-format"
-		VERBATIM)
-endif()
+get_property(all_sources GLOBAL PROPERTY SRCS_LIST)
+add_custom_target(format
+	COMMAND clang-format --style=file -i ${all_sources}
+	COMMENT "Running clang-format"
+	VERBATIM)
