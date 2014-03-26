@@ -8,11 +8,11 @@
 // Error Codes
 enum
 {
-	CELL_DMUX_ERROR_ARG		= 0x80610201,
-	CELL_DMUX_ERROR_SEQ		= 0x80610202,
-	CELL_DMUX_ERROR_BUSY	= 0x80610203,
-	CELL_DMUX_ERROR_EMPTY	= 0x80610204,
-	CELL_DMUX_ERROR_FATAL	= 0x80610205,
+	CELL_DMUX_ERROR_ARG     = 0x80610201,
+	CELL_DMUX_ERROR_SEQ     = 0x80610202,
+	CELL_DMUX_ERROR_BUSY    = 0x80610203,
+	CELL_DMUX_ERROR_EMPTY   = 0x80610204,
+	CELL_DMUX_ERROR_FATAL   = 0x80610205,
 };
 
 enum CellDmuxStreamType 
@@ -605,14 +605,9 @@ public:
 				//(u32)info->auSize, put, (u32)info->ptsLower);
 
 			u32 new_addr = a128(put + 128 + size);
-			if ((new_addr + GetMaxAU()) > (memAddr + memSize))
-			{
-				put = memAddr;
-			}
-			else
-			{
-				put = new_addr;
-			}
+			put = ((new_addr + GetMaxAU()) > (memAddr + memSize))
+			    ? memAddr : new_addr;
+
 			size = 0;
 
 			put_count++;
@@ -750,7 +745,7 @@ public:
 		if (update_index)
 		{
 			/*u32 new_addr = a128(peek + 128 + info->auSize);
-			if (new_addr = put)
+			if (new_addr == put)
 			{
 				peek = 0;
 			}
