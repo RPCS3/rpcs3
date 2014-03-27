@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 class VFSEntrySettingsDialog : public wxDialog
 {
 	wxTextCtrl* m_tctrl_dev_path;

@@ -1,4 +1,3 @@
-#include <vector>
 #include "stdafx.h"
 #include "VFS.h"
 #include "Emu/HDD/HDD.h"
