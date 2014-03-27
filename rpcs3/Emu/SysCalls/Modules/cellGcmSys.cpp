@@ -701,7 +701,7 @@ int32_t cellGcmMapLocalMemory(u64 address, u64 size)
 	}
 	else
 	{
-		printf("RSX local memory already mapped");
+		cellGcmSys.Error("RSX local memory already mapped");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
