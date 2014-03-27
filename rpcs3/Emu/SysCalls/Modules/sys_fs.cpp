@@ -50,9 +50,10 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 
 	char buffer [10200];
 	packed_stream->Read(buffer, 256);
-	if (re32(*(u32*)&buffer[0]) != 0x4E504400) // "NPD\x00"
+	u32 format = re32(*(u32*)&buffer[0]);
+	if (format != 0x4E504400) // "NPD\x00"
 	{
-		printf("ERROR: illegal format.");
+		sys_fs.Error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
 		return CELL_EFSSPECIFIC;
 	}
 

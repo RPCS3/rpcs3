@@ -583,13 +583,12 @@ public:
 		}
 
 		u64 new_block = FindFreeBlock();
-
-		ConLog.Write("CREATION ENTRY AT 0x%llx", new_block);
 		if(!new_block)
 		{
 			return false;
 		}
 
+		ConLog.Write("CREATING ENTRY AT 0x%llx", new_block);
 		WriteBlock(new_block, g_used_block);
 
 		{
@@ -739,7 +738,7 @@ public:
 			return false;
 		}
 
-		ConLog.Write("ENTRY FINDED AT 0x%llx", file_block);
+		ConLog.Write("ENTRY FOUND AT 0x%llx", file_block);
 		m_file.Open(file_block);
 
 		return vfsFileBase::Open(path, mode);
@@ -769,7 +768,7 @@ public:
 
 			if(entry.type == vfsHDD_Entry_Dir && name != "." && name != "..")
 			{
-				ConLog.Warning("removing sub folder '%s'", name.wx_str());
+				ConLog.Warning("Removing sub folder '%s'", name.wx_str());
 				RemoveBlocksDir(entry.data_block);
 			}
 			else if(entry.type == vfsHDD_Entry_File)

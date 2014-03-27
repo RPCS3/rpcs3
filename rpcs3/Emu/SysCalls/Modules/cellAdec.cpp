@@ -30,7 +30,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("adecRead() aborted");
+				ConLog.Warning("adecRawRead() aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -47,7 +47,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
 				{
-					ConLog.Error("adecRead: data reading failed (reader.size=0x%x)", adec.reader.size);
+					ConLog.Error("adecRawRead: data reading failed (reader.size=0x%x)", adec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -68,7 +68,7 @@ next:
 			}
 			break;
 		default:
-			ConLog.Error("adecRead(): sequence error (task %d)", adec.job.Peek().type);
+			ConLog.Error("adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
 			return -1;
 		}
 
@@ -85,7 +85,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
 	{
-		ConLog.Error("adecRead: data reading failed (buf_size=0x%x)", buf_size);
+		ConLog.Error("adecRawRead: data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
