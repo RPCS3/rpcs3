@@ -687,56 +687,48 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	int result = CELL_OK;
 
-	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
-	{
-		result = CELL_ADEC_ERROR_FATAL;
-		goto end;
-	}
-
-	if (!af.data) // fake: empty data
-	{
-		/*u8* buf = (u8*)malloc(4096);
-		memset(buf, 0, 4096);
-		Memory.CopyFromReal(outBuffer_addr, buf, 4096);
-		free(buf);*/
-		goto end;
-	}
-	// copy data
 	SwrContext* swr = nullptr;
 	u8* out = nullptr;
 
 	out = (u8*)malloc(af.size);
 
-	/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
-		frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
-
-	if (!swr)
+	if (Memory.IsGoodAddr(outBuffer_addr, af.size) && af.data)
 	{
-		ConLog.Error("cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
-		Emu.Pause();
-		goto end;
-	}
-	// something is wrong
-	swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples); */
+		// copy data
+		
 
-	// reverse byte order, extract data:
-	float* in_f[2];
-	in_f[0] = (float*)frame->extended_data[0];
-	in_f[1] = (float*)frame->extended_data[1];
-	be_t<float>* out_f = (be_t<float>*)out;
-	for (u32 i = 0; i < af.size / 8; i++)
-	{
-		out_f[i*2] = in_f[0][i];
-		out_f[i*2+1] = in_f[1][i];
-	}
+		/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
+			frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
 
-	if (!Memory.CopyFromReal(outBuffer_addr, out, af.size))
-	{
-		ConLog.Error("cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
-		Emu.Pause();
-	}
+		if (!swr)
+		{
+			ConLog.Error("cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
+			Emu.Pause();
+			goto end;
+		}
+		// something is wrong
+		swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples); */
 
-end:
+		// reverse byte order, extract data:
+		float* in_f[2];
+		in_f[0] = (float*)frame->extended_data[0];
+		in_f[1] = (float*)frame->extended_data[1];
+		be_t<float>* out_f = (be_t<float>*)out;
+		for (u32 i = 0; i < af.size / 8; i++)
+		{
+			out_f[i*2] = in_f[0][i];
+			out_f[i*2+1] = in_f[1][i];
+		}
+
+		if (!Memory.CopyFromReal(outBuffer_addr, out, af.size))
+		{
+			ConLog.Error("cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
+			Emu.Pause();
+		}
+	} 
+	else if(!Memory.IsGoodAddr(outBuffer_addr, af.size))
+		result = CELL_ADEC_ERROR_FATAL;
+
 	if (out) free(out);
 	if (swr) swr_free(&swr);
 
