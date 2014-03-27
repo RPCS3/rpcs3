@@ -2,15 +2,15 @@
 #include "VFSManager.h"
 
 VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry& entry)
-	: wxDialog(parent, wxID_ANY, "Mount configuration", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "Mount configuration")
 	, m_entry(entry)
 {
-	m_tctrl_dev_path		= new wxTextCtrl(this, wxID_ANY);
-	m_btn_select_dev_path	= new wxButton(this, wxID_ANY, "...");
-	m_tctrl_path			= new wxTextCtrl(this, wxID_ANY);
-	m_btn_select_path		= new wxButton(this, wxID_ANY, "...");
-	m_tctrl_mount			= new wxTextCtrl(this, wxID_ANY);
-	m_ch_type				= new wxChoice(this, wxID_ANY);
+	m_tctrl_dev_path      = new wxTextCtrl(this, wxID_ANY);
+	m_btn_select_dev_path = new wxButton(this, wxID_ANY, "...");
+	m_tctrl_path          = new wxTextCtrl(this, wxID_ANY);
+	m_btn_select_path     = new wxButton(this, wxID_ANY, "...");
+	m_tctrl_mount         = new wxTextCtrl(this, wxID_ANY);
+	m_ch_type             = new wxChoice(this, wxID_ANY);
 
 	wxBoxSizer& s_type(*new wxBoxSizer(wxHORIZONTAL));
 	s_type.Add(m_ch_type, 1, wxEXPAND);
@@ -48,10 +48,10 @@ VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry
 		m_ch_type->Append(i);
 	}
 
-	Connect(m_ch_type->GetId(),				wxEVT_COMMAND_CHOICE_SELECTED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectType));
-	Connect(m_btn_select_path->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectPath));
-	Connect(m_btn_select_dev_path->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectDevPath));
-	Connect(wxID_OK,						wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(VFSEntrySettingsDialog::OnOk));
+	Connect(m_ch_type->GetId(),             wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectType));
+	Connect(m_btn_select_path->GetId(),     wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectPath));
+	Connect(m_btn_select_dev_path->GetId(), wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectDevPath));
+	Connect(wxID_OK,                        wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnOk));
 
 	m_tctrl_dev_path->SetValue(m_entry.device_path);
 	m_tctrl_path->SetValue(m_entry.path);
@@ -111,7 +111,7 @@ enum
 };
 
 VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Virtual File System Manager", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "Virtual File System Manager")
 {
 	m_list = new wxListView(this);
 
@@ -126,11 +126,11 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 	m_list->InsertColumn(2, "Path to Device");
 	m_list->InsertColumn(3, "Device");
 
-	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_ITEM_ACTIVATED,	wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
-	Connect(m_list->GetId(),	wxEVT_COMMAND_RIGHT_CLICK,			wxCommandEventHandler(VFSManagerDialog::OnRightClick));
-	Connect(id_add,				wxEVT_COMMAND_MENU_SELECTED,		wxCommandEventHandler(VFSManagerDialog::OnAdd));
-	Connect(id_remove,			wxEVT_COMMAND_MENU_SELECTED,		wxCommandEventHandler(VFSManagerDialog::OnRemove));
-	Connect(id_config,			wxEVT_COMMAND_MENU_SELECTED,		wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
+	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
+	Connect(m_list->GetId(), wxEVT_COMMAND_RIGHT_CLICK,         wxCommandEventHandler(VFSManagerDialog::OnRightClick));
+	Connect(id_add,          wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnAdd));
+	Connect(id_remove,       wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnRemove));
+	Connect(id_config,       wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
 	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(VFSManagerDialog::OnClose));
 
 	LoadEntries();
@@ -141,7 +141,7 @@ void VFSManagerDialog::UpdateList()
 {
 	m_list->Freeze();
 	m_list->DeleteAllItems();
-	for(uint i=0; i<m_entries.GetCount(); ++i)
+	for(size_t i=0; i<m_entries.size(); ++i)
 	{
 		m_list->InsertItem(i, m_entries[i].mount);
 		m_list->SetItem(i, 1, m_entries[i].path);
@@ -171,18 +171,19 @@ void VFSManagerDialog::OnRightClick(wxCommandEvent& event)
 	int idx = m_list->GetFirstSelected();
 
 	menu->Append(id_add,	"Add");
-	menu->Append(id_remove,	"Remove")->Enable(idx != wxNOT_FOUND);
+	menu->Append(id_remove, "Remove")->Enable(idx != wxNOT_FOUND);
 	menu->AppendSeparator();
-	menu->Append(id_config,	"Config")->Enable(idx != wxNOT_FOUND);
+	menu->Append(id_config, "Config")->Enable(idx != wxNOT_FOUND);
 
 	PopupMenu( menu );
 }
 
 void VFSManagerDialog::OnAdd(wxCommandEvent& event)
 {
-	u32 idx = m_entries.Move(new VFSManagerEntry());
+	m_entries.emplace_back(VFSManagerEntry());
 	UpdateList();
 
+	u32 idx = m_entries.size() - 1;
 	for(int i=0; i<m_list->GetItemCount(); ++i)
 	{
 		m_list->SetItemState(i, i == idx ? wxLIST_STATE_SELECTED : ~wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
@@ -196,7 +197,7 @@ void VFSManagerDialog::OnRemove(wxCommandEvent& event)
 {
 	for(int sel = m_list->GetNextSelected(-1), offs = 0; sel != wxNOT_FOUND; sel = m_list->GetNextSelected(sel), --offs)
 	{
-		m_entries.RemoveAt(sel + offs);
+		m_entries.erase(m_entries.begin() + (sel + offs));
 	}
 
 	UpdateList();
@@ -210,7 +211,7 @@ void VFSManagerDialog::OnClose(wxCloseEvent& event)
 
 void VFSManagerDialog::LoadEntries()
 {
-	m_entries.Clear();
+	m_entries.clear();
 
 	Emu.GetVFS().SaveLoadDevices(m_entries, true);
 }
