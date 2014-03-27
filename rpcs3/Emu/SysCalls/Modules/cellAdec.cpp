@@ -687,6 +687,10 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	int result = CELL_OK;
 
+	SwrContext* swr = nullptr;
+	u8* out = nullptr;
+	be_t<float>* out_f = nullptr;
+
 	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
 	{
 		result = CELL_ADEC_ERROR_FATAL;
@@ -702,8 +706,6 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		goto end;
 	}
 	// copy data
-	SwrContext* swr = nullptr;
-	u8* out = nullptr;
 
 	out = (u8*)malloc(af.size);
 
@@ -723,7 +725,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	float* in_f[2];
 	in_f[0] = (float*)frame->extended_data[0];
 	in_f[1] = (float*)frame->extended_data[1];
-	be_t<float>* out_f = (be_t<float>*)out;
+	out_f = (be_t<float>*)out;
 	for (u32 i = 0; i < af.size / 8; i++)
 	{
 		out_f[i*2] = in_f[0][i];
