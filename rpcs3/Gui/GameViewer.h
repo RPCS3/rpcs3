@@ -89,7 +89,7 @@ public:
 		#undef ADD_COLUMN
 	}
 
-	void Update(ArrayF<GameInfo>& game_data)
+	void Update(std::vector<GameInfo>& game_data)
 	{
 		m_col_name->data.Clear();
 		m_col_serial->data.Clear();
@@ -100,9 +100,8 @@ public:
 
 		if(m_columns.GetCount() == 0) return;
 
-		for(uint i=0; i<game_data.GetCount(); ++i)
+		for(const auto& game : game_data)
 		{
-			GameInfo& game = game_data[i];
 			m_col_name->data.Add(game.name);
 			m_col_serial->data.Add(game.serial);
 			m_col_fw->data.Add(game.fw);
@@ -218,7 +217,7 @@ class GameViewer : public wxListView
 {
 	wxString m_path;
 	wxArrayString m_games;
-	ArrayF<GameInfo> m_game_data;
+	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
 
 public:

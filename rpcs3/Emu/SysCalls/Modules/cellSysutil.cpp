@@ -885,16 +885,18 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 			return CELL_HDDGAME_ERROR_BROKEN;
 		}
 
-		get->getParam.parentalLevel = psf.m_info.parental_lvl;
-		get->getParam.attribute = psf.m_info.attr;
-		get->getParam.resolution = psf.m_info.resolution;
-		get->getParam.soundFormat = psf.m_info.sound_format;
-		memcpy(get->getParam.title, psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE);
-		memcpy(get->getParam.dataVersion, psf.m_info.app_ver.mb_str(), CELL_HDDGAME_SYSP_VERSION_SIZE);
+		get->getParam.parentalLevel = psf.GetInteger("PARENTAL_LEVEL");
+		get->getParam.attribute = psf.GetInteger("ATTRIBUTE");
+		get->getParam.resolution = psf.GetInteger("RESOLUTION");
+		get->getParam.soundFormat = psf.GetInteger("SOUND_FORMAT");
+		memcpy(get->getParam.title, psf.GetString("TITLE"), CELL_HDDGAME_SYSP_TITLE_SIZE);
+		memcpy(get->getParam.dataVersion, psf.GetString("APP_VER"), CELL_HDDGAME_SYSP_VERSION_SIZE);
 		memcpy(get->getParam.titleId, dirName.c_str(), CELL_HDDGAME_SYSP_TITLEID_SIZE);
 
 		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
-			memcpy(get->getParam.titleLang[i], psf.m_info.name.mb_str(), CELL_HDDGAME_SYSP_TITLE_SIZE); // TODO: Get real titleLang name
+			char key [16];
+			sprintf(key, "TITLE_%02d", i);
+			memcpy(get->getParam.titleLang[i], psf.GetString(key), CELL_HDDGAME_SYSP_TITLE_SIZE);
 		}
 	}
 

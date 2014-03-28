@@ -165,11 +165,8 @@ void PPUThread::DoPause()
 
 void PPUThread::DoStop()
 {
-	if(m_dec)
-	{
-		delete m_dec;
-		m_dec = nullptr;
-	}
+	delete m_dec;
+	m_dec = nullptr;
 }
 
 bool dump_enable = false;

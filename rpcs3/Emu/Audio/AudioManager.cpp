@@ -23,11 +23,8 @@ void AudioManager::Init()
 
 void AudioManager::Close()
 {
-	if(m_audio_out)
-	{
-		delete m_audio_out;
-		m_audio_out = nullptr;
-	}
+	delete m_audio_out;
+	m_audio_out = nullptr;
 }
 
 u8 AudioManager::GetState()

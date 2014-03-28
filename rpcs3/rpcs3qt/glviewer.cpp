@@ -83,8 +83,6 @@ QSGNode* GLViewer::updatePaintNode(QSGNode* node, UpdatePaintNodeData* data)
 void GLViewer::cleanup() {
 	this->killTimer(m_timerID);
 	m_timerID = 0;
-	if (m_fbo) {
-		delete m_fbo;
-		m_fbo = 0;
-	}
+	delete m_fbo;
+	m_fbo = nullptr;
 }
