@@ -8,10 +8,10 @@ class LogWriter
 	wxFile m_logfile;
 	wxColour m_txtcolour;
 
-	//wxString m_prefix;
-	//wxString m_value;
+	std::string m_prefix;
+	std::string m_value;
 
-	virtual void WriteToLog(wxString prefix, wxString value, u8 lvl);
+	virtual void WriteToLog(std::string prefix, std::string value, u8 lvl);
 
 public:
 	LogWriter();
