@@ -5,7 +5,7 @@
 
 extern ArrayF<SFunc> g_static_funcs_list;
 
-void StaticAnalyse(void* ptr, u32 size)
+void StaticAnalyse(void* ptr, u32 size, u32 base)
 {
 	u32* data = (u32*)ptr; size /= 4;
 
@@ -14,32 +14,78 @@ void StaticAnalyse(void* ptr, u32 size)
 	{
 		for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++)
 		{
-			if ((data[i] & g_static_funcs_list[j].ops[0].mask) == g_static_funcs_list[j].ops[0].crc && (i + g_static_funcs_list[j].ops.GetCount()) < size)
+			if ((data[i] & g_static_funcs_list[j].ops[0].mask) == g_static_funcs_list[j].ops[0].crc)
 			{
 				bool found = true;
-				for (u32 k = i + 1, x = 1; x < g_static_funcs_list[j].ops.GetCount(); k++, x++)
+				u32 can_skip = 0;
+				for (u32 k = i, x = 0; x + 1 <= g_static_funcs_list[j].ops.GetCount(); k++, x++)
 				{
-					// skip NOP
-					if (data[k] == se32(0x60000000)) 
-					{
-						k++;
-						continue;
-					}
-
-					if ((data[k] & g_static_funcs_list[j].ops[x].mask) != g_static_funcs_list[j].ops[x].crc)
+					if (k >= size)
 					{
 						found = false;
 						break;
 					}
+
+					// skip NOP
+					if (data[k] == se32(0x60000000)) 
+					{
+						x--;
+						continue;
+					}
+
+					const u32 mask = g_static_funcs_list[j].ops[x].mask;
+					const u32 crc = g_static_funcs_list[j].ops[x].crc;
+
+					if (!mask)
+					{
+						// TODO: define syntax
+						if (crc < 4) // skip various number of instructions that don't match next pattern entry
+						{
+							can_skip += crc;
+							k--; // process this position again
+						}
+						else if (data[k] != crc) // skippable pattern ("optional" instruction), no mask allowed
+						{
+							k--;
+							if (can_skip) // cannot define this behaviour properly
+							{
+								ConLog.Warning("StaticAnalyse(): can_skip = %d (unchanged)", can_skip);
+							}
+						}
+						else
+						{
+							if (can_skip) // cannot define this behaviour properly
+							{
+								ConLog.Warning("StaticAnalyse(): can_skip = %d (set to 0)", can_skip);
+								can_skip = 0;
+							}
+						}
+					}
+					else if ((data[k] & mask) != crc) // masked pattern
+					{
+						if (can_skip)
+						{
+							can_skip--;
+						}
+						else
+						{
+							found = false;
+							break;
+						}
+					}
+					else
+					{
+						can_skip = 0;
+					}
 				}
 				if (found)
 				{
-					//ConLog.Success("Function '%s' hooked", wxString(g_static_funcs_list[j].name).wx_str());
+					ConLog.Write("Function '%s' hooked (addr=0x%x)", wxString(g_static_funcs_list[j].name).wx_str(), i * 4 + base);
 					g_static_funcs_list[j].found++;
-					data[i] = re(0x39600000 | j); // li r11, j
+					data[i+0] = re32(0x39600000 | j); // li r11, j
 					data[i+1] = se32(0x44000003); // sc 3
 					data[i+2] = se32(0x4e800020); // blr
-					i += 2; // ???
+					i += 2; // skip modified code
 				}
 			}
 		}
@@ -54,8 +100,8 @@ void StaticAnalyse(void* ptr, u32 size)
 
 			enum GroupSearchResult : u32
 			{
-				GSR_SUCCESS = 0, // every function from this group has been found
-				GSR_MISSING = 1, // (error) not every function found
+				GSR_SUCCESS = 0, // every function from this group has been found once
+				GSR_MISSING = 1, // (error) some function not found
 				GSR_EXCESS = 2, // (error) some function found twice or more
 			};
 			u32 res = GSR_SUCCESS;
@@ -123,9 +169,9 @@ void StaticAnalyse(void* ptr, u32 size)
 			}
 			else
 			{
-				ConLog.Error("Function group [%s] failed: %s%s", wxString(name, 9).wx_str(),
-					wxString(res & GSR_MISSING ? "missing;" : "").wx_str(),
-					wxString(res & GSR_EXCESS ? "excess;" : "").wx_str());
+				ConLog.Error("Function group [%s] failed:%s%s", wxString(name, 9).wx_str(),
+					wxString(res & GSR_MISSING ? " missing;" : "").wx_str(),
+					wxString(res & GSR_EXCESS ? " excess;" : "").wx_str());
 			}
 		}
 	}

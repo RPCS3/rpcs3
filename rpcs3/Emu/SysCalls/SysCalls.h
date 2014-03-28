@@ -464,6 +464,6 @@ public:
 
 //extern SysCalls SysCallsManager;
 
-void StaticAnalyse(void* ptr, u32 size);
+void StaticAnalyse(void* ptr, u32 size, u32 base);
 void StaticExecute(u32 code);
 void StaticFinalize();

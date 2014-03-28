@@ -12,7 +12,7 @@ LogFrame* ConLogFrame;
 std::mutex g_cs_conlog;
 
 static const uint max_item_count = 500;
-static const uint buffer_size = 1024 * 64;
+static const uint buffer_size = 1024 * 64 * sizeof(wxChar);
 
 static const wxString g_log_colors[] =
 {

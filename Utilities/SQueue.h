@@ -3,7 +3,7 @@
 template<typename T, u32 SQSize = 666>
 class SQueue
 {
-	SMutex m_mutex;
+	SMutexGeneral m_mutex;
 	u32 m_pos;
 	u32 m_count;
 	T m_data[SQSize];
@@ -40,7 +40,7 @@ public:
 			}
 
 			{
-				SMutexLocker lock(m_mutex);
+				SMutexGeneralLocker lock(m_mutex);
 
 				if (m_count >= SQSize) continue;
 
@@ -71,7 +71,7 @@ public:
 			}
 
 			{
-				SMutexLocker lock(m_mutex);
+				SMutexGeneralLocker lock(m_mutex);
 
 				if (!m_count) continue;
 
@@ -96,7 +96,7 @@ public:
 
 	void Clear()
 	{
-		SMutexLocker lock(m_mutex);
+		SMutexGeneralLocker lock(m_mutex);
 		m_count = 0;
 	}
 
@@ -120,7 +120,7 @@ public:
 			}
 
 			{
-				SMutexLocker lock(m_mutex);
+				SMutexGeneralLocker lock(m_mutex);
 				if (m_count) break;
 			}
 		}

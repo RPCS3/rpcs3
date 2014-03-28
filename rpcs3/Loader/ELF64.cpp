@@ -246,7 +246,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					{
 						elf64_f.Seek(phdr_arr[i].p_offset);
 						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
-						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
+						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
 					}
 				}
 			break;
