@@ -30,7 +30,7 @@ CPUThread::~CPUThread()
 
 void CPUThread::Close()
 {
-	ThreadBase::Stop();
+	ThreadBase::Stop(m_sync_wait);
 	DoStop();
 
 	delete m_dec;
