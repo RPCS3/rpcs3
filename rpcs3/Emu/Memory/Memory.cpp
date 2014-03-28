@@ -535,7 +535,7 @@ template<> __forceinline u64 MemoryBase::ReverseData<2>(u64 val) { return Revers
 template<> __forceinline u64 MemoryBase::ReverseData<4>(u64 val) { return Reverse32(val); }
 template<> __forceinline u64 MemoryBase::ReverseData<8>(u64 val) { return Reverse64(val); }
 
-VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock()
+VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock(), m_reserve_size(0)
 {
 }
 
