@@ -4,6 +4,7 @@
 #include "Emu/Audio/sysutil_audio.h"
 
 #include "cellSysutil.h"
+#include "cellSysutil_SaveData.h"
 
 #include "Loader/PSF.h"
 
@@ -949,4 +950,35 @@ void cellSysutil_init()
 	//cellSysutil.AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
 	//cellSysutil.AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
 	//cellSysutil.AddFunc(0xafd605b3, cellHddGameExitBroken);
+
+	//cellSysutil_SaveData
+	//cellSysutil.AddFunc(0x04c06fc2, cellSaveDataGetListItem);
+	//cellSysutil.AddFunc(0x273d116a, cellSaveDataUserListExport);
+	//cellSysutil.AddFunc(0x27cb8bc2, cellSaveDataListDelete);
+	//cellSysutil.AddFunc(0x39d6ee43, cellSaveDataUserListImport);
+	//cellSysutil.AddFunc(0x46a2d878, cellSaveDataFixedExport);
+	//cellSysutil.AddFunc(0x491cc554, cellSaveDataListExport);
+	//cellSysutil.AddFunc(0x52541151, cellSaveDataFixedImport);
+	//cellSysutil.AddFunc(0x529231b0, cellSaveDataUserFixedImport);
+	//cellSysutil.AddFunc(0x6b4e0de6, cellSaveDataListImport);
+	//cellSysutil.AddFunc(0x7048a9ba, cellSaveDataUserListDelete);
+	//cellSysutil.AddFunc(0x95ae2cde, cellSaveDataUserFixedExport);
+	//cellSysutil.AddFunc(0xf6482036, cellSaveDataUserGetListItem);
+	cellSysutil.AddFunc(0x2de0d663, cellSaveDataListSave2);
+	cellSysutil.AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
+	//cellSysutil.AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
+	//cellSysutil.AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
+	//cellSysutil.AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
+	//cellSysutil.AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
+	//cellSysutil.AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
+	//cellSysutil.AddFunc(0x21425307, cellSaveDataListAutoLoad);
+	//cellSysutil.AddFunc(0xedadd797, cellSaveDataDelete2);
+	//cellSysutil.AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
+	//cellSysutil.AddFunc(0x39dd8425, cellSaveDataUserListLoad);
+	//cellSysutil.AddFunc(0x40b34847, cellSaveDataUserFixedSave);
+	//cellSysutil.AddFunc(0x6e7264ed, cellSaveDataUserFixedLoad);
+	//cellSysutil.AddFunc(0x52aac4fa, cellSaveDataUserAutoSave);
+	//cellSysutil.AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
+	//cellSysutil.AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
+	//cellSysutil.AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
 }

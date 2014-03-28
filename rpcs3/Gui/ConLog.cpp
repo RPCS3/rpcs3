@@ -14,22 +14,23 @@ std::mutex g_cs_conlog;
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
 
-static const std::string g_log_colors[] =
+static const wxString g_log_colors[] =
 {
 	"Black", "Green", "White", "Yellow", "Red",
 };
 
 struct LogPacket
 {
-	std::string m_prefix;
-	std::string m_text;
-	std::string m_colour;
+	wxString m_prefix;
+	wxString m_text;
+	wxString m_colour;
 
-	LogPacket(const std::string& prefix, const std::string& text, const std::string& colour)
+	LogPacket(const wxString& prefix, const wxString& text, const wxString& colour)
 		: m_prefix(prefix)
 		, m_text(text)
 		, m_colour(colour)
-	{	
+	{
+		
 	}
 
 	LogPacket()
@@ -45,9 +46,9 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 	void _push(const LogPacket& data)
 	{
-		const u32 sprefix	= data.m_prefix.length();
-		const u32 stext		= data.m_text.length();
-		const u32 scolour	= data.m_colour.length();
+		const u32 sprefix	= data.m_prefix.length() * sizeof(wxChar);
+		const u32 stext		= data.m_text.length() * sizeof(wxChar);
+		const u32 scolour	= data.m_colour.length() * sizeof(wxChar);
 
 		m_buffer.Reserve(
 			sizeof(u32) + sprefix +
@@ -58,17 +59,17 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 		memcpy(&m_buffer[c_put], &sprefix, sizeof(u32));
 		c_put += sizeof(u32);
-		memcpy(&m_buffer[c_put], data.m_prefix.c_str(), sprefix);
+		memcpy(&m_buffer[c_put], data.m_prefix.wx_str(), sprefix);
 		c_put += sprefix;
 
 		memcpy(&m_buffer[c_put], &stext, sizeof(u32));
 		c_put += sizeof(u32);
-		memcpy(&m_buffer[c_put], data.m_text.c_str(), stext);
+		memcpy(&m_buffer[c_put], data.m_text.wx_str(), stext);
 		c_put += stext;
 
 		memcpy(&m_buffer[c_put], &scolour, sizeof(u32));
 		c_put += sizeof(u32);
-		memcpy(&m_buffer[c_put], data.m_colour.c_str(), scolour);
+		memcpy(&m_buffer[c_put], data.m_colour.wx_str(), scolour);
 		c_put += scolour;
 
 		m_put = c_put;
@@ -83,20 +84,17 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 		const u32& sprefix = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_prefix.resize(sprefix);
-		if(sprefix) memcpy((void*)ret.m_prefix.c_str(), &m_buffer[c_get], sprefix);
+		ret.m_prefix = wxString((wxChar*)&m_buffer[c_get], sprefix / sizeof(wxChar));
 		c_get += sprefix;
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_text.resize(stext);
-		if(stext) memcpy((void*)ret.m_text.c_str(), &m_buffer[c_get], stext);
+		ret.m_text = wxString((wxChar*)&m_buffer[c_get], stext / sizeof(wxChar));
 		c_get += stext;
 
 		const u32& scolour = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_colour.resize(scolour);
-		if(scolour) memcpy((void*)ret.m_colour.c_str(), &m_buffer[c_get], scolour);
+		ret.m_colour = wxString((wxChar*)&m_buffer[c_get], scolour / sizeof(wxChar));
 		c_get += scolour;
 
 		m_get = c_get;
@@ -116,7 +114,7 @@ LogWriter::LogWriter()
 	}
 }
 
-void LogWriter::WriteToLog(std::string prefix, std::string value, u8 lvl/*, wxColour bgcolour*/)
+void LogWriter::WriteToLog(wxString prefix, wxString value, u8 lvl/*, wxColour bgcolour*/)
 {
 	if(!prefix.empty())
 	{
@@ -126,8 +124,8 @@ void LogWriter::WriteToLog(std::string prefix, std::string value, u8 lvl/*, wxCo
 		}
 	}
 
-	if(m_logfile.IsOpened())
-		m_logfile.Write(wxString(prefix.empty() ? "" : std::string("[" + prefix + "]: ") + value + "\n").wx_str());
+	if(m_logfile.IsOpened() && !prefix.empty())
+		m_logfile.Write(wxString("[") + prefix + "]: " + value + "\n");
 
 	if(!ConLogFrame || Ini.HLELogLvl.GetValue() == 4 || (lvl != 0 && lvl <= Ini.HLELogLvl.GetValue()))
 		return;
@@ -174,7 +172,7 @@ void LogWriter::Write(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("!", (const char *)frmt.ToAscii(), 2);
+	WriteToLog("!", frmt, 2);
 }
 
 void LogWriter::Error(const wxString fmt, ...)
@@ -187,7 +185,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("E", static_cast<const char *>(frmt), 4);
+	WriteToLog("E", frmt, 4);
 }
 
 void LogWriter::Warning(const wxString fmt, ...)
@@ -200,7 +198,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("W", static_cast<const char *>(frmt), 3);
+	WriteToLog("W", frmt, 3);
 }
 
 void LogWriter::Success(const wxString fmt, ...)
@@ -213,7 +211,7 @@ void LogWriter::Success(const wxString fmt, ...)
 
 	va_end(list);
 
-	WriteToLog("S", static_cast<const char *>(frmt), 1);
+	WriteToLog("S", frmt, 1);
 }
 
 void LogWriter::SkipLn()
@@ -278,9 +276,9 @@ void LogFrame::Task()
 
 		const int cur_item = m_log.GetItemCount();
 
-		m_log.InsertItem(cur_item, wxString(item.m_prefix).wx_str());
-		m_log.SetItem(cur_item, 1, wxString(item.m_text).wx_str());
-		m_log.SetItemTextColour(cur_item, wxString(item.m_colour).wx_str());
+		m_log.InsertItem(cur_item, item.m_prefix);
+		m_log.SetItem(cur_item, 1, item.m_text);
+		m_log.SetItemTextColour(cur_item, item.m_colour);
 		m_log.SetColumnWidth(0, -1); // crashes on exit
 		m_log.SetColumnWidth(1, -1);
 

@@ -322,11 +322,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
-	static const u32 m_height = 400;
-	static const u32 m_width = 385;
+	static const u32 height = 400;
+	static const u32 width = 385;
 
 	// Settings panels
-	wxNotebook* nb_config	= new wxNotebook(&diag, wxID_ANY, wxDefaultPosition, wxSize(m_width, m_height));
+	wxNotebook* nb_config	= new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
 	wxPanel* p_system		= new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_cpu			= new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_graphics		= new wxPanel(nb_config, wxID_ANY);
@@ -541,7 +541,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	diag.SetSizerAndFit(s_subpanel_system, false);
 	diag.SetSizerAndFit(s_b_panel, false);
 	
-	diag.SetSize(m_width, m_height + 80);
+	diag.SetSize(width+26, height+80);
 
 	if(diag.ShowModal() == wxID_OK)
 	{

@@ -472,10 +472,10 @@
     <ClCompile Include="Loader\TROPUSR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp">
+    <ClCompile Include="Emu\SysCalls\Modules\cellAtrac.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellAtrac.cpp">
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil_SaveData.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>
