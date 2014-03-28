@@ -7,6 +7,10 @@
 #include <wx/msw/wrapwin.h>
 #endif
 
+#ifdef __UNIX__
+#include <X11/Xlib.h>
+#endif
+
 const wxEventType wxEVT_DBG_COMMAND = wxNewEventType();
 
 IMPLEMENT_APP(Rpcs3App)
@@ -66,6 +70,12 @@ void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 	AddPendingEvent(event);
 }
 
+Rpcs3App::Rpcs3App()
+{
+	#ifdef __UNIX__
+	XInitThreads();
+	#endif
+}
 /*
 CPUThread& GetCPU(const u8 core)
 {

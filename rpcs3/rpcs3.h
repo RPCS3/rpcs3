@@ -58,6 +58,8 @@ public:
 	virtual void OnArguments();  // Handle arguments: Rpcs3App::argc, Rpcs3App::argv
 	virtual void Exit();
 
+	Rpcs3App();
+
 	void SendDbgCommand(DbgCommand id, CPUThread* thr=nullptr);
 };
 
