@@ -39,6 +39,9 @@ void OpenGL::Init()
 	#include "GLProcTable.tbl"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
+#elif __UNIX__
+	glewExperimental = true;
+	glewInit();
 #endif
 }
 
