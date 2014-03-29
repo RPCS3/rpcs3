@@ -20,34 +20,26 @@ clean_build=false
 for f in $*
 do
 	case $f in
-		--dev|--devel)
-			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
-			;;
-		--dbg|--debug)
-			flags="$flags -DCMAKE_BUILD_TYPE=Debug"
-			;;
-		--release)
-			flags="$flags -DCMAKE_BUILD_TYPE=Release"
-			;;
-        --glsl)
-			flags="$flags -DGLSL_API=TRUE"
-            ;;
-        --egl)
-            echo "Warning EGL needs at lesat MESA 9.0"
-			flags="$flags -DEGL_API=TRUE"
-            ;;
-		--clean)
-			clean_build=true
-			;;
+		--dev|--devel ) flags="$flags -DCMAKE_BUILD_TYPE=Devel" ;;
+		--dbg|--debug ) flags="$flags -DCMAKE_BUILD_TYPE=Debug" ;;
+		--release     ) flags="$flags -DCMAKE_BUILD_TYPE=Release" ;;
+		--glsl        ) flags="$flags -DGLSL_API=TRUE" ;;
+		--egl         ) flags="$flags -DEGL_API=TRUE" ;;
+		--gles        ) flags="$flags -DGLES_API=TRUE" ;;
+		--sdl2        ) flags="$flags -DSDL2_API=TRUE" ;;
+		--clean       ) clean_build=true ;;
 		*)
 			# unknown option
-			echo "Valid options are:"
-			echo "--dev / --devel - Build PCSX2 as a Development build."
-			echo "--debug         - Build PCSX2 as a Debug build."
-			echo "--release       - Build PCSX2 as a Release build."
-			echo "--clean         - Do a clean build."
-            echo "--glsl          - Replace CG backend of ZZogl by GLSL"
-            echo "--egl           - Replace GLX by EGL (ZZogl plugins only)"
+			echo "** User options **"
+			echo "--dev / --devel : Build PCSX2 as a Development build."
+			echo "--debug         : Build PCSX2 as a Debug build."
+			echo "--release       : Build PCSX2 as a Release build."
+			echo "--clean         : Do a clean build."
+            echo "** Developper option **"
+            echo "--glsl          : Replace CG backend of ZZogl by GLSL"
+            echo "--egl           : Replace GLX by EGL (ZZogl plugins only)"
+            echo "--sdl2          : Build with SDL2 (crash if wx is linked to SDL1)"
+            echo "--gles          : Replace openGL backend of GSdx by openGLES3"
 			exit 1;;
   	esac
 done

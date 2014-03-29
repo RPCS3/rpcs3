@@ -63,6 +63,7 @@ class GSBufferOGL {
 		m_limit = 2 * 2 * 1024 * 1024 / m_stride;
 
 		if (m_buffer_storage) {
+#ifndef ENABLE_GLES
 			bind();
 			// FIXME do I need the dynamic
 			const GLbitfield map_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
@@ -70,6 +71,7 @@ class GSBufferOGL {
 
 			gl_BufferStorage(m_target, m_stride*m_limit, NULL, create_flags );
 			m_buffer_ptr = (uint8*) gl_MapBufferRange(m_target, 0, m_stride*m_limit, map_flags);
+#endif
 		} else {
 			m_buffer_ptr = NULL;
 		}

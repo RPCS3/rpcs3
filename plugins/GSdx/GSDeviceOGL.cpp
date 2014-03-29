@@ -487,6 +487,7 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 	// TODO is it possible with GL44 ClearTexture? no the API is garbage!
 	// Anyway, stencil can be cleared to 0 (it will be only used for date)
 	if (0 && GLLoader::found_GL_ARB_clear_texture) {
+#ifndef ENABLE_GLES
 		static_cast<GSTextureOGL*>(t)->EnableUnit();
 		// Yes a very nice API to mix float and integer
 		struct clear {
@@ -498,6 +499,7 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 		clear.stencil = 0;
 
 		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, &clear);
+#endif
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
@@ -519,8 +521,10 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
 	// TODO is it possible with GL44 ClearTexture? no the API is garbage!
 	if (GLLoader::found_GL_ARB_clear_texture) {
+#ifndef ENABLE_GLES
 		static_cast<GSTextureOGL*>(t)->EnableUnit();
 		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_BYTE, &c);
+#endif
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
@@ -600,7 +604,9 @@ void GSDeviceOGL::BindDateTexture()
 	// gl_BindImageTextures(2, 1, textures);
 	//gl_BindImageTexture(2, 0, 0, true, 0, GL_READ_WRITE, GL_R32I);
 
+#ifndef ENABLE_GLES
 	gl_BindImageTexture(2, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32I);
+#endif
 }
 
 void GSDeviceOGL::RecycleDateTexture()
@@ -618,11 +624,13 @@ void GSDeviceOGL::RecycleDateTexture()
 
 void GSDeviceOGL::Barrier(GLbitfield b)
 {
+#ifndef ENABLE_GLES
 	gl_MemoryBarrier(b);
 //#ifdef ENABLE_OGL_STENCIL_DEBUG
 //	if (m_date.t)
 //		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/barrier_%04ld.csv", g_draw_count));
 //#endif
+#endif
 }
 
 /* Note: must be here because tfx_glsl is static */
@@ -1027,7 +1035,9 @@ void GSDeviceOGL::PSSetShaderResource(GLuint sr)
 		GLState::tex_unit[0] = sr;
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
+#ifndef ENABLE_GLES
 			gl_BindTextures(0, 1, &sr);
+#endif
 		} else {
 			gl_ActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, sr);
@@ -1045,7 +1055,9 @@ void GSDeviceOGL::PSSetShaderResources(GLuint tex[2])
 		GLState::tex_unit[1] = tex[1];
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
+#ifndef ENABLE_GLES
 			gl_BindTextures(0, 2, tex);
+#endif
 		} else {
 			gl_ActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, tex[0]);

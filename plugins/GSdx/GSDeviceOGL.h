@@ -106,7 +106,11 @@ public:
 			GLState::b_msk = m_b_msk;
 			GLState::a_msk = m_a_msk;
 
+#ifdef ENABLE_GLES
+			gl_ColorMask(m_r_msk, m_g_msk, m_b_msk, m_a_msk);
+#else
 			gl_ColorMaski(0, m_r_msk, m_g_msk, m_b_msk, m_a_msk);
+#endif
 		}
 	}
 
@@ -133,7 +137,11 @@ public:
 			if (GLState::eq_RGB != m_equation_RGB || GLState::eq_A != m_equation_A) {
 				GLState::eq_RGB = m_equation_RGB;
 				GLState::eq_A   = m_equation_A;
+#ifdef ENABLE_GLES
+				gl_BlendEquationSeparate(m_equation_RGB, m_equation_A);
+#else
 				gl_BlendEquationSeparateiARB(0, m_equation_RGB, m_equation_A);
+#endif
 			}
 			// FIXME align then SSE
 			if (GLState::f_sRGB != m_func_sRGB || GLState::f_dRGB != m_func_dRGB || GLState::f_sA != m_func_sA || GLState::f_dA != m_func_dA) {
@@ -141,7 +149,11 @@ public:
 				GLState::f_dRGB = m_func_dRGB;
 				GLState::f_sA = m_func_sA;
 				GLState::f_dA = m_func_dA;
+#ifdef ENABLE_GLES
+				gl_BlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sA, m_func_dA);
+#else
 				gl_BlendFuncSeparateiARB(0, m_func_sRGB, m_func_dRGB, m_func_sA, m_func_dA);
+#endif
 			}
 		}
 	}

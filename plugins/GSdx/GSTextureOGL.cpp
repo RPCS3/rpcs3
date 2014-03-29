@@ -40,11 +40,13 @@ namespace PboPool {
 	const uint32 m_pbo_size = (640*480*16) << 2;
 	bool m_buffer_storage = false;
 
+#ifndef ENABLE_GLES
 	// Option for buffer storage
 	// Note there is a barrier (but maybe coherent is faster)
 	const GLbitfield map_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 	// FIXME do I need GL_DYNAMIC_STORAGE_BIT to allow write?
 	const GLbitfield create_flags = map_flags | GL_DYNAMIC_STORAGE_BIT;
+#endif
 
 	// Normally driver must aligned the map....
 	void* align_map(void* ptr) {
@@ -66,10 +68,12 @@ namespace PboPool {
 
 			// Note the +64 gives additional room to realign the buffer (buggy driver....)
 			if (m_buffer_storage) {
+#ifndef ENABLE_GLES
 				gl_BufferStorage(GL_PIXEL_UNPACK_BUFFER, m_pbo_size+64, NULL, create_flags);
 				m_map[m_current_pbo] = (char*)align_map(gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size+64, map_flags));
 				// Workaround silly driver. (would be 0 otherwise)
 				m_offset[m_current_pbo] = m_initial_offset[m_current_pbo];
+#endif
 			} else {
 				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size+64, NULL, GL_STREAM_COPY);
 				m_map[m_current_pbo] = NULL;
@@ -317,8 +321,10 @@ GSTextureOGL::~GSTextureOGL()
 
 void GSTextureOGL::Clear(const void *data)
 {
+#ifndef ENABLE_GLES
 	EnableUnit();
 	gl_ClearTexImage(m_texture_id, 0,  m_int_format, m_int_type, data);
+#endif
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
@@ -380,10 +386,12 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 GLuint64 GSTextureOGL::GetHandle(GLuint sampler_id)
 {
 	ASSERT(sampler_id < 12);
+#ifndef ENABLE_GLES
 	if (!m_handles[sampler_id]) {
 		m_handles[sampler_id] = gl_GetTextureSamplerHandleARB(m_texture_id, sampler_id);
 		gl_MakeTextureHandleResidentARB(m_handles[sampler_id]);
 	}
+#endif
 
 	return m_handles[sampler_id];
 }
@@ -613,8 +621,10 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		gl_ActiveTexture(GL_TEXTURE0 + 6);
 		glBindTexture(GL_TEXTURE_2D, m_texture_id);
 
+#ifndef ENABLE_GLES
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_INT, image);
 		SaveRaw(fn, image, pitch);
+#endif
 
 		// Not supported in Save function
 		status = false;

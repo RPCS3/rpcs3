@@ -211,7 +211,9 @@ extern PFNGLDEPTHRANGEDNVPROC                   gl_DepthRangedNV;
 #define gl_CheckFramebufferStatus glCheckFramebufferStatus
 #define gl_ClearBufferfv glClearBufferfv
 #define gl_ClearBufferiv glClearBufferiv
+#define gl_ClearBufferuiv glClearBufferuiv
 #define gl_CompileShader glCompileShader
+#define gl_ColorMask glColorMask
 #define gl_CreateProgram glCreateProgram
 #define gl_CreateShader glCreateShader
 #define gl_CreateShaderProgramv glCreateShaderProgramv

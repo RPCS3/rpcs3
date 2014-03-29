@@ -153,6 +153,7 @@ void GSShaderOGL::SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding)
 
 void GSShaderOGL::SetupRessources()
 {
+#ifndef ENABLE_GLES
 	if (!GLLoader::found_GL_ARB_bindless_texture) return;
 
 	if (GLState::dirty_ressources) {
@@ -166,6 +167,7 @@ void GSShaderOGL::SetupRessources()
 			gl_UniformHandleui64vARB(0, count, GLState::tex_handle);
 		}
 	}
+#endif
 }
 
 void GSShaderOGL::SetupUniform()
@@ -201,6 +203,7 @@ void GSShaderOGL::SetupUniform()
 
 void GSShaderOGL::SetupSubroutineUniform()
 {
+#ifndef ENABLE_GLES
 	if (!GLLoader::found_GL_ARB_shader_subroutine) return;
 
 	if (GLState::dirty_subroutine_vs && m_vs_sub_count) {
@@ -212,6 +215,7 @@ void GSShaderOGL::SetupSubroutineUniform()
 		gl_UniformSubroutinesuiv(GL_FRAGMENT_SHADER, m_ps_sub_count,  m_ps_sub);
 		GLState::dirty_subroutine_ps = false;
 	}
+#endif
 }
 
 bool GSShaderOGL::ValidateShader(GLuint s)
