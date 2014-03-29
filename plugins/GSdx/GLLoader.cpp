@@ -124,10 +124,11 @@ PFNGLDEPTHRANGEDNVPROC                 gl_DepthRangedNV                = NULL;
 
 namespace GLLoader {
 
-	bool fglrx_buggy_driver = false;
-	bool nvidia_buggy_driver = false;
-	bool intel_buggy_driver = false;
-	bool in_replayer = false;
+	bool fglrx_buggy_driver    = false;
+	bool mesa_amd_buggy_driver = false;
+	bool nvidia_buggy_driver   = false;
+	bool intel_buggy_driver    = false;
+	bool in_replayer           = false;
 
 	// Optional
 	bool found_GL_ARB_separate_shader_objects = false;
@@ -139,14 +140,14 @@ namespace GLLoader {
 	// GL4 hardware
 	bool found_GL_ARB_copy_image = false; // Not sure actually maybe GL3 GPU can do it
 	bool found_GL_ARB_gpu_shader5 = false;
-	bool found_GL_ARB_shader_image_load_store = false;
+	bool found_GL_ARB_shader_image_load_store = false; // GLES3.1
 	bool found_GL_ARB_shader_subroutine = false;
 	bool found_GL_ARB_bindless_texture = false; // GL5 GPU?
 	// Surely recent hardware
 	bool found_GL_NV_depth_buffer_float = false;
 
 	// Mandatory for FULL GL (but optional for GLES)
-	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers. Note might be deprecated by bindless_texture
+	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers.
 	bool found_GL_ARB_shading_language_420pack = false; // GLES 3.1 ???
 
 	// Mandatory
@@ -182,6 +183,7 @@ namespace GLLoader {
 
 		const char* vendor = (const char*)glGetString(GL_VENDOR);
 		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), vendor);
+		fprintf(stderr, "Note: the maximal version supported by GSdx is 3.3 (even if you driver support more)!\n");
 
 		// Name change but driver is still bad!
 		if (strstr(vendor, "ATI") || strstr(vendor, "Advanced Micro Devices"))
@@ -190,6 +192,8 @@ namespace GLLoader {
 			nvidia_buggy_driver = true;
 		if (strstr(vendor, "Intel"))
 			intel_buggy_driver = true;
+		if (strstr(vendor, "X.Org")) // Note: it might actually catch nouveau too, but bug are likely to be the same anyway
+			mesa_amd_buggy_driver = true;
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -203,7 +207,7 @@ namespace GLLoader {
 			fprintf(stderr, "Geometry shaders are not supported. Required openGL 3.2\n");
 			found_geometry_shader = false;
 		}
-		if (nvidia_buggy_driver || intel_buggy_driver) {
+		if (mesa_amd_buggy_driver || intel_buggy_driver) {
 			fprintf(stderr, "Buggy driver detected. Geometry shaders will be disabled\n");
 			found_geometry_shader = false;
 		}
