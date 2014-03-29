@@ -10,6 +10,10 @@ void InitProcTable()
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 #endif
+#ifdef __UNIX__
+	glewExperimental = true;
+	glewInit();
+#endif
 }
 
 #ifdef _WIN32
@@ -39,9 +43,6 @@ void OpenGL::Init()
 	#include "GLProcTable.tbl"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
-#elif __UNIX__
-	glewExperimental = true;
-	glewInit();
 #endif
 }
 
