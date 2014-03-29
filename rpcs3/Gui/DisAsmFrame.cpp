@@ -391,7 +391,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 		if(Memory.IsGoodAddr(sh_addr))
 		{
-			for(u64 addr=sh_addr; addr<sh_addr+sh_size; addr, vsize++)
+			for(u64 addr=sh_addr; addr<sh_addr+sh_size; addr++, vsize++)
 			{
 				disasm->dump_pc = addr;
 				decoder->Decode(Memory.Read32(disasm->dump_pc));
