@@ -33,12 +33,12 @@ struct FsRingBufferConfig
 		, m_alloc_mem_size(0)
 		, m_current_addr(0)
 	{
-		memset(&m_ring_buffer, 0, sizeof(FsRingBufferConfig));
+		memset(&m_ring_buffer, 0, sizeof(FsRingBuffer));
 	}
 
 	~FsRingBufferConfig()
 	{
-		memset(&m_ring_buffer, 0, sizeof(FsRingBufferConfig));
+		memset(&m_ring_buffer, 0, sizeof(FsRingBuffer));
 	}
 } m_fs_config;
 
