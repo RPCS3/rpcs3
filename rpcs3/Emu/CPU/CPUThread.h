@@ -226,7 +226,7 @@ public:
 		new_item.branch_pc = pc;
 		new_item.pc = PC;
 
-		m_call_stack.AddCpy(new_item);
+		m_call_stack.Push(new_item);
 	}
 
 	virtual u64 CallStackGetNextPC(u64 pc)

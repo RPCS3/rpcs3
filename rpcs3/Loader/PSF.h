@@ -1,7 +1,7 @@
 #pragma once
 #include "Loader.h"
 
-struct PsfHeader
+struct PSFHeader
 {
 	u32 psf_magic;
 	u32 psf_version;
@@ -12,7 +12,7 @@ struct PsfHeader
 	bool CheckMagic() const { return psf_magic == *(u32*)"\0PSF"; }
 };
 
-struct PsfDefTbl
+struct PSFDefTbl
 {
 	u16 psf_key_table_offset;
 	u16 psf_param_fmt;
@@ -21,23 +21,22 @@ struct PsfDefTbl
 	u32 psf_data_tbl_offset;
 };
 
-struct PsfEntry
+struct PSFEntry
 {
 	char name[128];
 	u16 fmt;
 	char param[4096];
 
-	std::string Format() const
+	const char* FormatString() const
 	{
 		switch(fmt)
 		{
 		default:
 		case 0x0400:
 		case 0x0402:
-			return FormatString();
-
+			return (const char*)param;
 		case 0x0404:
-			return wxString::Format("0x%x", FormatInteger()).ToStdString();
+			return (const char*)wxString::Format("0x%x", FormatInteger()).mb_str();
 		}
 	}
 
@@ -45,34 +44,27 @@ struct PsfEntry
 	{
 		return *(u32*)param;
 	}
-
-	char* FormatString() const
-	{
-		return (char*)param;
-	}
 };
 
 class PSFLoader
 {
 	vfsStream& psf_f;
+
+	PSFHeader m_header;
+	std::vector<PSFDefTbl> m_psfindxs;
+	std::vector<PSFEntry> m_entries;
 	bool m_show_log;
+
+	bool LoadHeader();
+	bool LoadKeyTable();
+	bool LoadDataTable();
 
 public:
 	PSFLoader(vfsStream& f);
-
-	Array<PsfEntry> m_entries;
-
-	PsfEntry* SearchEntry(const std::string& key);
-
-	//wxArrayString m_table;
-	GameInfo m_info;
-	PsfHeader psfhdr;
-	Array<PsfDefTbl> m_psfindxs;
 	virtual bool Load(bool show = true);
 	virtual bool Close();
 
-private:
-	bool LoadHdr();
-	bool LoadKeyTable();
-	bool LoadDataTable();
+	PSFEntry* SearchEntry(const std::string& key);
+	const char* GetString(const std::string& key);
+	u32 GetInteger(const std::string& key);
 };

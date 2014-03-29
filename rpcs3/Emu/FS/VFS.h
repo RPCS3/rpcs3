@@ -1,4 +1,5 @@
 #pragma once
+
 #include "vfsDevice.h"
 
 enum vfsDeviceType
@@ -15,16 +16,25 @@ static const char* vfsDeviceTypeNames[] =
 
 struct VFSManagerEntry
 {
-	char* device_path;
-	char* path;
-	char* mount;
 	vfsDeviceType device;
+	const char* device_path;
+	const char* path;
+	const char* mount;
 
 	VFSManagerEntry()
 		: device(vfsDevice_LocalFile)
 		, device_path("")
 		, path("")
 		, mount("")
+	{
+	}
+
+	VFSManagerEntry(const vfsDeviceType& device, const char* path, const char* mount)
+		: device(device)
+		, device_path("")
+		, path(path)
+		, mount(mount)
+
 	{
 	}
 };
@@ -51,5 +61,5 @@ struct VFS
 	vfsDevice* GetDeviceLocal(const wxString& local_path, wxString& path) const;
 
 	void Init(const wxString& path);
-	void SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load);
+	void SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load);
 };

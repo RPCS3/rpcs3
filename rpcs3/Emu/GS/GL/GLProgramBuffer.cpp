@@ -8,7 +8,7 @@ int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& g
 		if(memcmp(&m_buf[i].fp_data[0], &Memory[rsx_fp.addr], m_buf[i].fp_data.GetCount()) != 0) continue;
 
 		gl_fp.id = m_buf[i].fp_id;
-		gl_fp.shader = m_buf[i].fp_shader.c_str();
+		gl_fp.shader = m_buf[i].fp_shader;
 
 		return i;
 	}

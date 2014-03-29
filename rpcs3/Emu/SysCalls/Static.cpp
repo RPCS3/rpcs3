@@ -9,6 +9,9 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 {
 	u32* data = (u32*)ptr; size /= 4;
 
+	if(!Ini.HLEHookStFunc.GetValue())
+		return;
+
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{

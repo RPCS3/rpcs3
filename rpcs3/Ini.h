@@ -107,6 +107,7 @@ public:
 	IniEntry<u8> AudioOutMode;
 	IniEntry<bool> AudioDumpToFile;
 	IniEntry<bool> HLELogging;
+	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<u8> HLELogLvl;
@@ -176,6 +177,7 @@ public:
 
 		path = DefPath + "/" + "HLE";
 		HLELogging.Init("HLELogging", path);
+		HLEHookStFunc.Init("HLEHookStFunc", path);
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
 		HLELogLvl.Init("HLELogLvl", path);
@@ -201,6 +203,7 @@ public:
 		AudioOutMode.Load(1);
 		AudioDumpToFile.Load(0);
 		HLELogging.Load(false);
+		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(0);
@@ -241,6 +244,7 @@ public:
 		AudioOutMode.Save();
 		AudioDumpToFile.Save();
 		HLELogging.Save();
+		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();

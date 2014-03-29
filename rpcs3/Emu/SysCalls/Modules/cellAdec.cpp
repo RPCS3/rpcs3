@@ -30,7 +30,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("adecRead() aborted");
+				ConLog.Warning("adecRawRead() aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -47,7 +47,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
 				{
-					ConLog.Error("adecRead: data reading failed (reader.size=0x%x)", adec.reader.size);
+					ConLog.Error("adecRawRead: data reading failed (reader.size=0x%x)", adec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -66,7 +66,7 @@ next:
 			}
 			break;
 		default:
-			ConLog.Error("adecRead(): sequence error (task %d)", adec.job.Peek().type);
+			ConLog.Error("adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
 			return -1;
 		}
 
@@ -83,7 +83,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
 	{
-		ConLog.Error("adecRead: data reading failed (buf_size=0x%x)", buf_size);
+		ConLog.Error("adecRawRead: data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
@@ -702,7 +702,12 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
 	{
 		result = CELL_ADEC_ERROR_FATAL;
-		goto end;
+		if (af.data)
+		{
+			av_frame_unref(af.data);
+			av_frame_free(&af.data);
+		}
+		return result;
 	}
 
 	if (!af.data) // fake: empty data
@@ -711,13 +716,10 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		memset(buf, 0, 4096);
 		Memory.CopyFromReal(outBuffer_addr, buf, 4096);
 		free(buf);*/
-		goto end;
+		return result;
 	}
 	// copy data
 	SwrContext* swr = nullptr;
-	u8* out = nullptr;
-
-	out = (u8*)malloc(af.size);
 
 	/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
 		frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
@@ -726,10 +728,17 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	{
 		ConLog.Error("cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
 		Emu.Pause();
-		goto end;
-	}
+		free(out);
+		if (af.data)
+		{
+			av_frame_unref(af.data);
+			av_frame_free(&af.data);
+		}
+		return result;
+	}*/
+	u8* out = (u8*)malloc(af.size);
 	// something is wrong
-	swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples); */
+	//swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples);
 
 	// reverse byte order, extract data:
 	float* in_f[2];
@@ -748,8 +757,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		Emu.Pause();
 	}
 
-end:
-	if (out) free(out);
+	free(out);
 	if (swr) swr_free(&swr);
 
 	if (af.data)

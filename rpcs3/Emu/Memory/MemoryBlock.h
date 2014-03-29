@@ -13,7 +13,7 @@ struct MemInfo
 	{
 	}
 
-	MemInfo()
+	MemInfo() : addr(0), size(0)
 	{
 	}
 };

@@ -5,12 +5,12 @@ PSFLoader::PSFLoader(vfsStream& f) : psf_f(f)
 {
 }
 
-PsfEntry* PSFLoader::SearchEntry(const std::string& key)
+PSFEntry* PSFLoader::SearchEntry(const std::string& key)
 {
-	for(uint i=0; i<m_entries.GetCount(); ++i)
+	for(auto& entry : m_entries)
 	{
-		if(m_entries[i].name == key)
-			return &m_entries[i];
+		if(entry.name == key)
+			return &entry;
 	}
 
 	return nullptr;
@@ -22,7 +22,7 @@ bool PSFLoader::Load(bool show)
 
 	m_show_log = show;
 
-	if(!LoadHdr()) return false;
+	if(!LoadHeader()) return false;
 	if(!LoadKeyTable()) return false;
 	if(!LoadDataTable()) return false;
 
@@ -34,23 +34,24 @@ bool PSFLoader::Close()
 	return psf_f.Close();
 }
 
-bool PSFLoader::LoadHdr()
+bool PSFLoader::LoadHeader()
 {
-	if(psf_f.Read(&psfhdr, sizeof(PsfHeader)) != sizeof(PsfHeader))
+	if(psf_f.Read(&m_header, sizeof(PSFHeader)) != sizeof(PSFHeader))
 		return false;
 
-	if(!psfhdr.CheckMagic()) return false;
+	if(!m_header.CheckMagic())
+		return false;
 
-	if(m_show_log) ConLog.Write("PSF version: %x", psfhdr.psf_version);
+	if(m_show_log) ConLog.Write("PSF version: %x", m_header.psf_version);
 
-	m_psfindxs.Clear();
-	m_entries.Clear();
-	m_psfindxs.SetCount(psfhdr.psf_entries_num);
-	m_entries.SetCount(psfhdr.psf_entries_num);
+	m_psfindxs.clear();
+	m_entries.clear();
+	m_psfindxs.resize(m_header.psf_entries_num);
+	m_entries.resize(m_header.psf_entries_num);
 
-	for(u32 i=0; i<psfhdr.psf_entries_num; ++i)
+	for(u32 i=0; i<m_header.psf_entries_num; ++i)
 	{
-		if(psf_f.Read(&m_psfindxs[i], sizeof(PsfDefTbl)) != sizeof(PsfDefTbl))
+		if(psf_f.Read(&m_psfindxs[i], sizeof(PSFDefTbl)) != sizeof(PSFDefTbl))
 			return false;
 
 		m_entries[i].fmt = m_psfindxs[i].psf_param_fmt;
@@ -61,9 +62,9 @@ bool PSFLoader::LoadHdr()
 
 bool PSFLoader::LoadKeyTable()
 {
-	for(u32 i=0; i<psfhdr.psf_entries_num; ++i)
+	for(u32 i=0; i<m_header.psf_entries_num; ++i)
 	{
-		psf_f.Seek(psfhdr.psf_offset_key_table + m_psfindxs[i].psf_key_table_offset);
+		psf_f.Seek(m_header.psf_offset_key_table + m_psfindxs[i].psf_key_table_offset);
 
 		int c_pos = 0;
 
@@ -83,29 +84,28 @@ bool PSFLoader::LoadKeyTable()
 
 bool PSFLoader::LoadDataTable()
 {
-	for(u32 i=0; i<psfhdr.psf_entries_num; ++i)
+	for(u32 i=0; i<m_header.psf_entries_num; ++i)
 	{
-		psf_f.Seek(psfhdr.psf_offset_data_table + m_psfindxs[i].psf_data_tbl_offset);
+		psf_f.Seek(m_header.psf_offset_data_table + m_psfindxs[i].psf_data_tbl_offset);
 		psf_f.Read(m_entries[i].param, m_psfindxs[i].psf_param_len);
 		memset(m_entries[i].param + m_psfindxs[i].psf_param_len, 0, m_psfindxs[i].psf_param_max_len - m_psfindxs[i].psf_param_len);
 	}
 
-	m_info.Reset();
-
-	if(PsfEntry* entry = SearchEntry("TITLE_ID"))		m_info.serial = entry->Format();
-	if(PsfEntry* entry = SearchEntry("TITLE"))			m_info.name = entry->Format();
-	if(PsfEntry* entry = SearchEntry("APP_VER"))		m_info.app_ver = entry->Format();
-	if(PsfEntry* entry = SearchEntry("CATEGORY"))		m_info.category = entry->Format();
-	if(PsfEntry* entry = SearchEntry("PS3_SYSTEM_VER"))	m_info.fw = entry->Format();
-	if(PsfEntry* entry = SearchEntry("SOUND_FORMAT"))	m_info.sound_format = entry->FormatInteger();
-	if(PsfEntry* entry = SearchEntry("RESOLUTION"))		m_info.resolution = entry->FormatInteger();
-	if(PsfEntry* entry = SearchEntry("PARENTAL_LEVEL"))	m_info.parental_lvl = entry->FormatInteger();
-
-
-	if(m_info.serial.Length() == 9)
-	{
-		m_info.serial = m_info.serial(0, 4) + "-" + m_info.serial(4, 5);
-	}
-
 	return true;
+}
+
+const char* PSFLoader::GetString(const std::string& key)
+{
+	if(PSFEntry* entry = SearchEntry(key))
+		return entry->FormatString();
+	else
+		return "";
+}
+
+u32 PSFLoader::GetInteger(const std::string& key)
+{
+	if(PSFEntry* entry = SearchEntry(key))
+		return entry->FormatInteger();
+	else
+		return 0;
 }

@@ -260,35 +260,35 @@ void VFS::Init(const wxString& path)
 {
 	UnMountAll();
 
-	Array<VFSManagerEntry> entries;
+	std::vector<VFSManagerEntry> entries;
 	SaveLoadDevices(entries, true);
 
-	for(uint i=0; i<entries.GetCount(); ++i)
+	for(const VFSManagerEntry& entry : entries)
 	{
 		vfsDevice* dev;
 
-		switch(entries[i].device)
+		switch(entry.device)
 		{
 		case vfsDevice_LocalFile:
 			dev = new vfsDeviceLocalFile();
 		break;
 
 		case vfsDevice_HDD:
-			dev = new vfsDeviceHDD(entries[i].device_path);
+			dev = new vfsDeviceHDD(entry.device_path);
 		break;
 
 		default:
 			continue;
 		}
 		
-		wxString mpath = entries[i].path;
+		wxString mpath = entry.path;
 		mpath.Replace("$(EmulatorDir)", wxGetCwd());
 		mpath.Replace("$(GameDir)", vfsDevice::GetRoot(path));
-		Mount(entries[i].mount, mpath, dev);
+		Mount(entry.mount, mpath, dev);
 	}
 }
 
-void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
+void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 {
 	IniEntry<int> entries_count;
 	entries_count.Init("count", "VFSManager");
@@ -300,61 +300,25 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 
 		if(!count)
 		{
-			int idx;
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)/dev_hdd0/";
-			res[idx].mount = "/dev_hdd0/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)/dev_hdd1/";
-			res[idx].mount = "/dev_hdd1/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)/dev_flash/";
-			res[idx].mount = "/dev_flash/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)/dev_usb000/";
-			res[idx].mount = "/dev_usb000/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(EmulatorDir)/dev_usb000/";
-			res[idx].mount = "/dev_usb/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)";
-			res[idx].mount = "/app_home/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)/../";
-			res[idx].mount = "/dev_bdvd/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "";
-			res[idx].mount = "/host_root/";
-			res[idx].device = vfsDevice_LocalFile;
-
-			idx = res.Move(new VFSManagerEntry());
-			res[idx].path = "$(GameDir)";
-			res[idx].mount = "/";
-			res[idx].device = vfsDevice_LocalFile;
+			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_hdd0/",   "/dev_hdd0/");
+			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_hdd1/",   "/dev_hdd1/");
+			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_flash/",  "/dev_flash/");
+			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb000/");
+			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb/");
+			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)",                 "/app_home/");
+			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../",             "/dev_bdvd/");
+			res.emplace_back(vfsDevice_LocalFile, "",                           "/host_root/");
+			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)",                 "/");
 
 			return;
 		}
 
-		res.SetCount(count);
+		res.resize(count);
 	}
 	else
 	{
-		count = res.GetCount();
-		entries_count.SaveValue(res.GetCount());
+		count = res.size();
+		entries_count.SaveValue(res.size());
 	}
 
 	for(int i=0; i<count; ++i)
@@ -371,7 +335,7 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 		
 		if(is_load)
 		{
-			new (res + i) VFSManagerEntry();
+			res[i] = VFSManagerEntry();
 			res[i].path = strdup(entry_path.LoadValue(wxEmptyString).c_str());
 			res[i].device_path = strdup(entry_device_path.LoadValue(wxEmptyString).c_str());
 			res[i].mount = strdup(entry_mount.LoadValue(wxEmptyString).c_str());

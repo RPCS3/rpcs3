@@ -2,7 +2,7 @@
 #include "unself.h"
 
 SELFDecrypter::SELFDecrypter(vfsStream& s)
-	: self_f(s), key_v()
+	: self_f(s), key_v(), data_buf_length(0)
 {
 }
 
@@ -92,9 +92,10 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	{
 		ControlInfo* cinfo = new ControlInfo();
 		cinfo->Load(self_f);
-		ctrlinfo_arr.Move(cinfo);
 
 		i += cinfo->size;
+
+		ctrlinfo_arr.Move(cinfo);
 	}
 
 	// Read ELF section headers.
@@ -368,6 +369,9 @@ bool SELFDecrypter::DecryptData()
 				// Seek to the section data offset and read the encrypted data.
 				self_f.Seek(meta_shdr[i].data_offset);
 				self_f.Read(buf, meta_shdr[i].data_size);
+
+				// Zero out our ctr nonce
+				memset(ctr_stream_block, 0, sizeof(ctr_stream_block));
 
 				// Perform AES-CTR encryption on the data blocks.
 				aes_setkey_enc(&aes, data_key, 128);

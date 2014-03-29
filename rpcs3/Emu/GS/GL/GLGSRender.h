@@ -294,7 +294,7 @@ public:
 		out.Create(tex.GetWidth(), tex.GetHeight(), data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
 
-		free(alldata);
+		delete[] alldata;
 		//free(data);
 		//free(alpha);
 	}

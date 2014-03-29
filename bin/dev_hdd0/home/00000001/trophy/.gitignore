@@ -1,0 +1,6 @@
+# Note: This folder has to exist. Once the User Account manager is implemented, make sure it creates this folder in case it's missing and delete this .gitignore file.
+
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

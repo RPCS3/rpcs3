@@ -133,9 +133,9 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
-	wxString dir = psf.m_info.serial(0,4) + psf.m_info.serial(5,5);
-	Memory.WriteString(dirName.GetAddr(), dir);
+	std::string titleId = psf.GetString("TITLE_ID");
 
+	Memory.WriteString(dirName.GetAddr(), titleId);
 	return CELL_OK;
 }
 
@@ -164,11 +164,11 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath,  mem_list_ptr_t<u8
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
-	wxString title_id = psf.m_info.serial(0,4) + psf.m_info.serial(5,5);
+	std::string titleId = psf.GetString("TITLE_ID");
 
 	// TODO: Only works for HDD games
-	Memory.WriteString(contentInfoPath.GetAddr(), "/dev_hdd0/game/"+title_id);
-	Memory.WriteString(usrdirPath.GetAddr(), "/dev_hdd0/game/"+title_id+"/USRDIR");
+	Memory.WriteString(contentInfoPath.GetAddr(), "/dev_hdd0/game/"+titleId);
+	Memory.WriteString(usrdirPath.GetAddr(), "/dev_hdd0/game/"+titleId+"/USRDIR");
 	return CELL_OK;
 }
 
@@ -199,9 +199,9 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 
 	switch(id)
 	{
-	case CELL_GAME_PARAMID_PARENTAL_LEVEL:	value = psf.m_info.parental_lvl;	break;
-	case CELL_GAME_PARAMID_RESOLUTION:		value = psf.m_info.resolution;		break;
-	case CELL_GAME_PARAMID_SOUND_FORMAT:	value = psf.m_info.sound_format;	break;
+	case CELL_GAME_PARAMID_PARENTAL_LEVEL:  value = psf.GetInteger("PARENTAL_LEVEL"); break;
+	case CELL_GAME_PARAMID_RESOLUTION:      value = psf.GetInteger("RESOLUTION");     break;
+	case CELL_GAME_PARAMID_SOUND_FORMAT:    value = psf.GetInteger("SOUND_FORMAT");   break;
 
 	default:
 		return CELL_GAME_ERROR_INVALID_ID;
@@ -210,11 +210,11 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 	return CELL_OK;
 }
 
-int cellGameGetParamString(u32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
+int cellGameGetParamString(u32 id, u32 buf_addr, u32 bufsize)
 {
-	cellGame.Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
+	cellGame.Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf_addr, bufsize);
 
-	if(!buf.IsGood())
+	if(!Memory.IsGoodAddr(buf_addr))
 		return CELL_GAME_ERROR_PARAM;
 
 	// TODO: Locate the PARAM.SFO. The following path may be wrong.
@@ -223,46 +223,41 @@ int cellGameGetParamString(u32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
 
+	std::string data;
 	switch(id)
 	{
-	// WARNING: Is there any difference between all these "CELL_GAME_PARAMID_TITLE*" IDs?
-	case CELL_GAME_PARAMID_TITLE:
-	case CELL_GAME_PARAMID_TITLE_DEFAULT:
-	case CELL_GAME_PARAMID_TITLE_JAPANESE:
-	case CELL_GAME_PARAMID_TITLE_ENGLISH:
-	case CELL_GAME_PARAMID_TITLE_FRENCH:
-	case CELL_GAME_PARAMID_TITLE_SPANISH:
-	case CELL_GAME_PARAMID_TITLE_GERMAN:
-	case CELL_GAME_PARAMID_TITLE_ITALIAN:
-	case CELL_GAME_PARAMID_TITLE_DUTCH:
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:
-	case CELL_GAME_PARAMID_TITLE_RUSSIAN:
-	case CELL_GAME_PARAMID_TITLE_KOREAN:
-	case CELL_GAME_PARAMID_TITLE_CHINESE_T:
-	case CELL_GAME_PARAMID_TITLE_CHINESE_S:
-	case CELL_GAME_PARAMID_TITLE_FINNISH:
-	case CELL_GAME_PARAMID_TITLE_SWEDISH:
-	case CELL_GAME_PARAMID_TITLE_DANISH:
-	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:
-	case CELL_GAME_PARAMID_TITLE_POLISH:
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:
-	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:
-		Memory.WriteString(buf.GetAddr(), psf.m_info.name.Left(bufsize));
-		break;
-	case CELL_GAME_PARAMID_TITLE_ID:
-		Memory.WriteString(buf.GetAddr(), psf.m_info.serial.Left(bufsize));
-		break;
-	case CELL_GAME_PARAMID_VERSION:
-		Memory.WriteString(buf.GetAddr(), psf.m_info.fw.Left(bufsize));
-		break;
-	case CELL_GAME_PARAMID_APP_VER:
-		Memory.WriteString(buf.GetAddr(), psf.m_info.app_ver.Left(bufsize));
-		break;
+	case CELL_GAME_PARAMID_TITLE:                    data = psf.GetString("TITLE");    break; // TODO: Is this value correct?
+	case CELL_GAME_PARAMID_TITLE_DEFAULT:            data = psf.GetString("TITLE");    break;
+	case CELL_GAME_PARAMID_TITLE_JAPANESE:           data = psf.GetString("TITLE_00"); break;
+	case CELL_GAME_PARAMID_TITLE_ENGLISH:            data = psf.GetString("TITLE_01"); break;
+	case CELL_GAME_PARAMID_TITLE_FRENCH:             data = psf.GetString("TITLE_02"); break;
+	case CELL_GAME_PARAMID_TITLE_SPANISH:            data = psf.GetString("TITLE_03"); break;
+	case CELL_GAME_PARAMID_TITLE_GERMAN:             data = psf.GetString("TITLE_04"); break;
+	case CELL_GAME_PARAMID_TITLE_ITALIAN:            data = psf.GetString("TITLE_05"); break;
+	case CELL_GAME_PARAMID_TITLE_DUTCH:              data = psf.GetString("TITLE_06"); break;
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         data = psf.GetString("TITLE_07"); break;
+	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            data = psf.GetString("TITLE_08"); break;
+	case CELL_GAME_PARAMID_TITLE_KOREAN:             data = psf.GetString("TITLE_09"); break;
+	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          data = psf.GetString("TITLE_10"); break;
+	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          data = psf.GetString("TITLE_11"); break;
+	case CELL_GAME_PARAMID_TITLE_FINNISH:            data = psf.GetString("TITLE_12"); break;
+	case CELL_GAME_PARAMID_TITLE_SWEDISH:            data = psf.GetString("TITLE_13"); break;
+	case CELL_GAME_PARAMID_TITLE_DANISH:             data = psf.GetString("TITLE_14"); break;
+	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          data = psf.GetString("TITLE_15"); break;
+	case CELL_GAME_PARAMID_TITLE_POLISH:             data = psf.GetString("TITLE_16"); break;
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  data = psf.GetString("TITLE_17"); break;
+	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         data = psf.GetString("TITLE_18"); break;
+
+	case CELL_GAME_PARAMID_TITLE_ID:                 data = psf.GetString("TITLE_ID");       break;
+	case CELL_GAME_PARAMID_VERSION:                  data = psf.GetString("PS3_SYSTEM_VER"); break;
+	case CELL_GAME_PARAMID_APP_VER:                  data = psf.GetString("APP_VER");        break;
 
 	default:
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
+	data.resize(bufsize-1);
+	Memory.WriteString(buf_addr, data.c_str());
 	return CELL_OK;
 }
 

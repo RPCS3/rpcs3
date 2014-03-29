@@ -47,7 +47,7 @@ void GameViewer::LoadGames()
 
 void GameViewer::LoadPSF()
 {
-	m_game_data.Clear();
+	m_game_data.clear();
 	for(uint i=0; i<m_games.GetCount(); ++i)
 	{
 		const wxString& path = m_path + m_games[i] + "/PARAM.SFO";
@@ -56,9 +56,23 @@ void GameViewer::LoadPSF()
 			continue;
 
 		PSFLoader psf(f);
-		if(!psf.Load(false)) continue;
-		psf.m_info.root = m_games[i];
-		m_game_data.Add(new GameInfo(psf.m_info));
+		if(!psf.Load(false))
+			continue;
+
+		GameInfo game;
+		game.root = m_games[i];
+		game.serial = psf.GetString("TITLE_ID");
+		game.name = psf.GetString("TITLE");
+		game.app_ver = psf.GetString("APP_VER");
+		game.category = psf.GetString("CATEGORY");
+		game.fw = psf.GetString("PS3_SYSTEM_VER");
+		game.parental_lvl = psf.GetInteger("PARENTAL_LEVEL");
+		game.resolution = psf.GetInteger("RESOLUTION");
+		game.sound_format = psf.GetInteger("SOUND_FORMAT");
+		if(game.serial.Length() == 9)
+			game.serial = game.serial(0, 4) + "-" + game.serial(4, 5);
+
+		m_game_data.push_back(game);
 	}
 
 	m_columns.Update(m_game_data);

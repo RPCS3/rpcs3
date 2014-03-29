@@ -21,7 +21,7 @@ public:
 class VFSManagerDialog : public wxDialog
 {
 	wxListView* m_list;
-	Array<VFSManagerEntry> m_entries;
+	std::vector<VFSManagerEntry> m_entries;
 
 public:
 	VFSManagerDialog(wxWindow* parent);
