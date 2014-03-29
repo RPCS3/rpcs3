@@ -10,6 +10,10 @@ void InitProcTable()
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 #endif
+#ifdef __UNIX__
+	glewExperimental = true;
+	glewInit();
+#endif
 }
 
 #ifdef _WIN32

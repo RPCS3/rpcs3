@@ -7,6 +7,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	#add_definitions(-Wfatal-errors)
 	add_definitions(-w) # TODO: remove me
 	add_definitions(-fpermissive) # TODO: remove me
+	add_definitions(-g)	# Debugging!!
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
