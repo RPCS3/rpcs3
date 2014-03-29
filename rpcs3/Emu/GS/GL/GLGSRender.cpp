@@ -106,6 +106,7 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 	{
 		glDisable(cap);
 	}
+	checkForGlError("glEnable");
 }
 
 extern CellGcmContextData current_context;
@@ -855,7 +856,6 @@ void GLGSRender::ExecCMD()
 
 	Enable(m_depth_test_enable, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
-	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
 	Enable(m_set_blend, GL_BLEND);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face_enable, GL_CULL_FACE);
