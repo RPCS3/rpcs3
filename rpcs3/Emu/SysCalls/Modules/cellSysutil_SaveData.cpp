@@ -102,7 +102,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	if(!dir.IsOpened())
 		return CELL_SAVEDATA_ERROR_INTERNAL;
 
-	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr).mb_str();
+	std::string dirNamePrefix = std::string(Memory.ReadString(setList->dirNamePrefix_addr).mb_str());
 	std::vector<SaveDataListEntry> saveEntries;
 	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
 	{
@@ -165,7 +165,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	if(!dir.IsOpened())
 		return CELL_SAVEDATA_ERROR_INTERNAL;
 
-	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr).mb_str();
+	std::string dirNamePrefix = std::string(Memory.ReadString(setList->dirNamePrefix_addr).mb_str());
 	std::vector<SaveDataListEntry> saveEntries;
 	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
 	{
