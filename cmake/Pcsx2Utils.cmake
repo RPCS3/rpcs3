@@ -39,7 +39,7 @@ endfunction(detectOperatingSystem)
 
 function(write_svnrev_h)
     if (GIT_FOUND)
-        execute_process(COMMAND git show -s --format=%ci HEAD
+        execute_process(COMMAND git -C ${CMAKE_SOURCE_DIR} show  -s --format=%ci HEAD
             OUTPUT_VARIABLE tmpvar_WC_INFO
             OUTPUT_STRIP_TRAILING_WHITESPACE)
         # %2014-03-25 16:36:29 +0100
