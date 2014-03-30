@@ -14,14 +14,14 @@ endif(GLEW_INCLUDE_DIR AND GLEW_LIBRARY)
 IF (WIN32)
     FIND_PATH( GLEW_INCLUDE_DIR GL/glew.h
 		$ENV{PROGRAMFILES}/GLEW/include
-		${PROJECT_SOURCE_DIR}/src/nvgl/glew/include
+		${CMAKE_SOURCE_DIR}/src/nvgl/glew/include
 		DOC "The directory where GL/glew.h resides")
 	FIND_LIBRARY( GLEW_LIBRARY
 		NAMES glew GLEW glew32 glew32s
 		PATHS
 		$ENV{PROGRAMFILES}/GLEW/lib
-		${PROJECT_SOURCE_DIR}/src/nvgl/glew/bin
-		${PROJECT_SOURCE_DIR}/src/nvgl/glew/lib
+		${CMAKE_SOURCE_DIR}/src/nvgl/glew/bin
+		${CMAKE_SOURCE_DIR}/src/nvgl/glew/lib
 		DOC "The GLEW library")
 ELSE (WIN32)
     FIND_PATH( GLEW_INCLUDE_DIR GL/glew.h

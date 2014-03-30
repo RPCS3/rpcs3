@@ -63,7 +63,7 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 # Now build the shader
 add_custom_command(TARGET ${Output} POST_BUILD
     COMMAND ${Output} ps2hw.fx ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/zzogl-pg/opengl
     )
 
 if(PACKAGE_MODE)

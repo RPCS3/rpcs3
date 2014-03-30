@@ -400,7 +400,7 @@ set(pcsx2GuiHeaders
 # from the bin2cpp tools at the good moment (ie .h must be created before the pcsx2 compilation)
 # Gui resources headers
 set(res_bin "${CMAKE_BINARY_DIR}/pcsx2/gui/Resources")
-set(res_src "${PROJECT_SOURCE_DIR}/pcsx2/gui/Resources")
+set(res_src "${CMAKE_SOURCE_DIR}/pcsx2/gui/Resources")
 set(pcsx2GuiResources
     ${res_bin}/AppIcon16.h
     ${res_bin}/AppIcon32.h
@@ -677,13 +677,13 @@ add_executable(${Output}
 ### Generate the resources files
 file(MAKE_DIRECTORY ${res_bin})
 
-add_custom_command(OUTPUT  "${res_bin}/Dualshock.h"  COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/Dualshock.jpg" "${res_bin}/Dualshock" )
+add_custom_command(OUTPUT  "${res_bin}/Dualshock.h"  COMMAND perl ${CMAKE_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/Dualshock.jpg" "${res_bin}/Dualshock" )
 
 foreach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
         ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video Breakpoint_Active Breakpoint_Inactive)
-    add_custom_command(OUTPUT  "${res_bin}/${res_file}.h" COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/${res_file}.png" "${res_bin}/${res_file}" )
+    add_custom_command(OUTPUT  "${res_bin}/${res_file}.h" COMMAND perl ${CMAKE_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/${res_file}.png" "${res_bin}/${res_file}" )
 endforeach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard

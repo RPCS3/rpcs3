@@ -188,7 +188,7 @@ include_directories(.)
 
 # Generate Glsl header file. Protect with REBUILD_SHADER to avoid build-dependency on PERL
 if (REBUILD_SHADER)
-    add_custom_command(OUTPUT res/glsl_source.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+    add_custom_command(OUTPUT res/glsl_source.h COMMAND perl ${CMAKE_SOURCE_DIR}/linux_various/glsl2h.pl)
 endif()
 
 add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})

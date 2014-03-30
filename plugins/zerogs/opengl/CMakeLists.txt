@@ -117,11 +117,11 @@ add_library(${Output} SHARED
 
 # set output directory
 set_target_properties(${Output} PROPERTIES
-					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
+					  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/plugins)
 
 # copy ps2hw.dat to plugins folder
 add_custom_command(TARGET ${Output} POST_BUILD
-				   COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/plugins/zerogs/opengl/Win32/ps2hw.dat ${PROJECT_SOURCE_DIR}/bin/plugins)
+				   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/plugins/zerogs/opengl/Win32/ps2hw.dat ${CMAKE_SOURCE_DIR}/bin/plugins)
 
 # link target with Cg
 target_link_libraries(${Output} ${CG_LIBRARIES})

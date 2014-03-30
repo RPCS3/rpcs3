@@ -6,9 +6,9 @@ if(NOT TOP_CMAKE_WAS_SOURCED)
 endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 # Allow to build the shader files
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders" AND REBUILD_SHADER AND NOT GLSL_API)
+if(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders" AND REBUILD_SHADER AND NOT GLSL_API)
     add_subdirectory(ZeroGSShaders)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders" AND REBUILD_SHADER AND NOT GLSL_API)
+endif(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders" AND REBUILD_SHADER AND NOT GLSL_API)
 
 # plugin name
 set(Output zzogl-0.4.0)
@@ -156,7 +156,7 @@ include_directories(.
 
 # Generate Glsl header file. Protect with REBUILD_SHADER to avoid build-dependency on PERL
 if (REBUILD_SHADER)
-    add_custom_command(OUTPUT ps2hw_gl4.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+    add_custom_command(OUTPUT ps2hw_gl4.h COMMAND perl ${CMAKE_SOURCE_DIR}/linux_various/glsl2h.pl)
 endif()
 
 # add library
@@ -206,9 +206,9 @@ endif()
 
 if(NOT GLSL_API AND NOT REBUILD_SHADER)
     if(PACKAGE_MODE)
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
+        install(FILES ${CMAKE_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
     else()
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+        install(FILES ${CMAKE_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     endif()
 endif()
 

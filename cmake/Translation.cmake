@@ -67,7 +67,7 @@ MACRO(GETTEXT_CREATE_TRANSLATIONS_PCSX2 _potFile _firstPoFileArg)
         IF (PACKAGE_MODE)
             INSTALL(FILES ${_gmoFile} DESTINATION share/locale/${_lang}/LC_MESSAGES RENAME ${_potBasename}.mo)
         ELSE (PACKAGE_MODE)
-            INSTALL(FILES ${_gmoFile} DESTINATION ${PROJECT_SOURCE_DIR}/bin/Langs/${_lang}/LC_MESSAGES RENAME ${_potBasename}.mo)
+            INSTALL(FILES ${_gmoFile} DESTINATION ${CMAKE_SOURCE_DIR}/bin/Langs/${_lang}/LC_MESSAGES RENAME ${_potBasename}.mo)
         ENDIF (PACKAGE_MODE)
 
         SET(_gmoFiles ${_gmoFiles} ${_gmoFile})

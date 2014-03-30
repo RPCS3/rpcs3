@@ -43,7 +43,7 @@ add_library(${zerogsName} SHARED
 
 # set output directory
 set_target_properties(${zerogsName} PROPERTIES
-					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
+					  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/plugins)
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
