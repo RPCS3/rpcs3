@@ -274,13 +274,13 @@ void LogFrame::Task()
 			wxThread::Yield();
 		}
 
-		const int cur_item = m_log.GetItemCount();
+		// const int cur_item = m_log.GetItemCount();
 
-		m_log.InsertItem(cur_item, item.m_prefix);
-		m_log.SetItem(cur_item, 1, item.m_text);
-		m_log.SetItemTextColour(cur_item, item.m_colour);
-		m_log.SetColumnWidth(0, -1); // crashes on exit
-		m_log.SetColumnWidth(1, -1);
+		// m_log.InsertItem(cur_item, item.m_prefix);
+		// m_log.SetItem(cur_item, 1, item.m_text);
+		// m_log.SetItemTextColour(cur_item, item.m_colour);
+		// m_log.SetColumnWidth(0, -1); // crashes on exit
+		// m_log.SetColumnWidth(1, -1);
 
 #ifdef _WIN32
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
