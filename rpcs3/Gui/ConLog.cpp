@@ -269,6 +269,11 @@ void LogFrame::Task()
 			wxThread::Yield();
 		}
 
+		// This causes _random_ gtk crashes for me, under Ubuntu 13.10
+		// It appears to be because wxGTK is more fickle about threads
+		// touching other threads things than mswGTK is. 
+		// Fix incoming, I guess, with the newer variadic template ConLog
+		#ifdef _WIN32
 		const int cur_item = m_log.GetItemCount();
 
 		m_log.InsertItem(cur_item, item.m_prefix);
@@ -276,6 +281,7 @@ void LogFrame::Task()
 		m_log.SetItemTextColour(cur_item, item.m_colour);
 		m_log.SetColumnWidth(0, -1); // crashes on exit
 		m_log.SetColumnWidth(1, -1);
+		#endif
 
 #ifdef _WIN32
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
