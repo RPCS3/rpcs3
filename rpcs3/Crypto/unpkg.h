@@ -1,6 +1,5 @@
 #pragma once
-#include "aes.h"
-#include "sha1.h"
+#include "utils.h"
 #include "key_vault.h"
 
 // Constants

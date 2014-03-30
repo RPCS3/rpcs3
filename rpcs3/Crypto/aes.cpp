@@ -1,7 +1,7 @@
 /*
  *  FIPS-197 compliant AES implementation
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -35,18 +35,18 @@
 /*
  * 32-bit integer manipulation macros (little endian)
  */
-#ifndef GET_ULONG_LE
-#define GET_ULONG_LE(n,b,i)                             \
+#ifndef GET_UINT32_LE
+#define GET_UINT32_LE(n,b,i)                            \
 {                                                       \
-    (n) = ( (unsigned long) (b)[(i)    ]       )        \
-        | ( (unsigned long) (b)[(i) + 1] <<  8 )        \
-        | ( (unsigned long) (b)[(i) + 2] << 16 )        \
-        | ( (unsigned long) (b)[(i) + 3] << 24 );       \
+    (n) = ( (uint32_t) (b)[(i)    ]       )             \
+        | ( (uint32_t) (b)[(i) + 1] <<  8 )             \
+        | ( (uint32_t) (b)[(i) + 2] << 16 )             \
+        | ( (uint32_t) (b)[(i) + 3] << 24 );            \
 }
 #endif
 
-#ifndef PUT_ULONG_LE
-#define PUT_ULONG_LE(n,b,i)                             \
+#ifndef PUT_UINT32_LE
+#define PUT_UINT32_LE(n,b,i)                            \
 {                                                       \
     (b)[(i)    ] = (unsigned char) ( (n)       );       \
     (b)[(i) + 1] = (unsigned char) ( (n) >>  8 );       \
@@ -55,6 +55,7 @@
 }
 #endif
 
+#if defined(POLARSSL_AES_ROM_TABLES)
 /*
  * Forward S-box
  */
@@ -165,19 +166,19 @@ static const unsigned char FSb[256] =
     V(CB,B0,B0,7B), V(FC,54,54,A8), V(D6,BB,BB,6D), V(3A,16,16,2C)
 
 #define V(a,b,c,d) 0x##a##b##c##d
-static const unsigned long FT0[256] = { FT };
+static const uint32_t FT0[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##b##c##d##a
-static const unsigned long FT1[256] = { FT };
+static const uint32_t FT1[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##c##d##a##b
-static const unsigned long FT2[256] = { FT };
+static const uint32_t FT2[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##d##a##b##c
-static const unsigned long FT3[256] = { FT };
+static const uint32_t FT3[256] = { FT };
 #undef V
 
 #undef FT
@@ -292,19 +293,19 @@ static const unsigned char RSb[256] =
     V(61,84,CB,7B), V(70,B6,32,D5), V(74,5C,6C,48), V(42,57,B8,D0)
 
 #define V(a,b,c,d) 0x##a##b##c##d
-static const unsigned long RT0[256] = { RT };
+static const uint32_t RT0[256] = { RT };
 #undef V
 
 #define V(a,b,c,d) 0x##b##c##d##a
-static const unsigned long RT1[256] = { RT };
+static const uint32_t RT1[256] = { RT };
 #undef V
 
 #define V(a,b,c,d) 0x##c##d##a##b
-static const unsigned long RT2[256] = { RT };
+static const uint32_t RT2[256] = { RT };
 #undef V
 
 #define V(a,b,c,d) 0x##d##a##b##c
-static const unsigned long RT3[256] = { RT };
+static const uint32_t RT3[256] = { RT };
 #undef V
 
 #undef RT
@@ -312,12 +313,124 @@ static const unsigned long RT3[256] = { RT };
 /*
  * Round constants
  */
-static const unsigned long RCON[10] =
+static const uint32_t RCON[10] =
 {
     0x00000001, 0x00000002, 0x00000004, 0x00000008,
     0x00000010, 0x00000020, 0x00000040, 0x00000080,
     0x0000001B, 0x00000036
 };
+
+#else
+
+/*
+ * Forward S-box & tables
+ */
+static unsigned char FSb[256];
+static uint32_t FT0[256]; 
+static uint32_t FT1[256]; 
+static uint32_t FT2[256]; 
+static uint32_t FT3[256]; 
+
+/*
+ * Reverse S-box & tables
+ */
+static unsigned char RSb[256];
+static uint32_t RT0[256];
+static uint32_t RT1[256];
+static uint32_t RT2[256];
+static uint32_t RT3[256];
+
+/*
+ * Round constants
+ */
+static uint32_t RCON[10];
+
+/*
+ * Tables generation code
+ */
+#define ROTL8(x) ( ( x << 8 ) & 0xFFFFFFFF ) | ( x >> 24 )
+#define XTIME(x) ( ( x << 1 ) ^ ( ( x & 0x80 ) ? 0x1B : 0x00 ) )
+#define MUL(x,y) ( ( x && y ) ? pow[(log[x]+log[y]) % 255] : 0 )
+
+static int aes_init_done = 0;
+
+static void aes_gen_tables( void )
+{
+    int i, x, y, z;
+    int pow[256];
+    int log[256];
+
+    /*
+     * compute pow and log tables over GF(2^8)
+     */
+    for( i = 0, x = 1; i < 256; i++ )
+    {
+        pow[i] = x;
+        log[x] = i;
+        x = ( x ^ XTIME( x ) ) & 0xFF;
+    }
+
+    /*
+     * calculate the round constants
+     */
+    for( i = 0, x = 1; i < 10; i++ )
+    {
+        RCON[i] = (uint32_t) x;
+        x = XTIME( x ) & 0xFF;
+    }
+
+    /*
+     * generate the forward and reverse S-boxes
+     */
+    FSb[0x00] = 0x63;
+    RSb[0x63] = 0x00;
+
+    for( i = 1; i < 256; i++ )
+    {
+        x = pow[255 - log[i]];
+
+        y  = x; y = ( (y << 1) | (y >> 7) ) & 0xFF;
+        x ^= y; y = ( (y << 1) | (y >> 7) ) & 0xFF;
+        x ^= y; y = ( (y << 1) | (y >> 7) ) & 0xFF;
+        x ^= y; y = ( (y << 1) | (y >> 7) ) & 0xFF;
+        x ^= y ^ 0x63;
+
+        FSb[i] = (unsigned char) x;
+        RSb[x] = (unsigned char) i;
+    }
+
+    /*
+     * generate the forward and reverse tables
+     */
+    for( i = 0; i < 256; i++ )
+    {
+        x = FSb[i];
+        y = XTIME( x ) & 0xFF;
+        z =  ( y ^ x ) & 0xFF;
+
+        FT0[i] = ( (uint32_t) y       ) ^
+                 ( (uint32_t) x <<  8 ) ^
+                 ( (uint32_t) x << 16 ) ^
+                 ( (uint32_t) z << 24 );
+
+        FT1[i] = ROTL8( FT0[i] );
+        FT2[i] = ROTL8( FT1[i] );
+        FT3[i] = ROTL8( FT2[i] );
+
+        x = RSb[i];
+
+        RT0[i] = ( (uint32_t) MUL( 0x0E, x )       ) ^
+                 ( (uint32_t) MUL( 0x09, x ) <<  8 ) ^
+                 ( (uint32_t) MUL( 0x0D, x ) << 16 ) ^
+                 ( (uint32_t) MUL( 0x0B, x ) << 24 );
+
+        RT1[i] = ROTL8( RT0[i] );
+        RT2[i] = ROTL8( RT1[i] );
+        RT3[i] = ROTL8( RT2[i] );
+    }
+}
+
+#endif
 
 /*
  * AES key schedule (encryption)
@@ -325,7 +438,16 @@ static const unsigned long RCON[10] =
 int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int keysize )
 {
     unsigned int i;
-    unsigned long *RK;
+    uint32_t *RK;
+
+#if !defined(POLARSSL_AES_ROM_TABLES)
+    if( aes_init_done == 0 )
+    {
+        aes_gen_tables();
+        aes_init_done = 1;
+
+    }
+#endif
 
     switch( keysize )
     {
@@ -339,7 +461,7 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
 
     for( i = 0; i < (keysize >> 5); i++ )
     {
-        GET_ULONG_LE( RK[i], key, i << 2 );
+        GET_UINT32_LE( RK[i], key, i << 2 );
     }
 
     switch( ctx->nr )
@@ -349,10 +471,10 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
             for( i = 0; i < 10; i++, RK += 4 )
             {
                 RK[4]  = RK[0] ^ RCON[i] ^
-                ( (unsigned long) FSb[ ( RK[3] >>  8 ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( RK[3] >> 16 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( RK[3] >> 24 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( RK[3]       ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( RK[3] >>  8 ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( RK[3] >> 16 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( RK[3] >> 24 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( RK[3]       ) & 0xFF ] << 24 );
 
                 RK[5]  = RK[1] ^ RK[4];
                 RK[6]  = RK[2] ^ RK[5];
@@ -365,10 +487,10 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
             for( i = 0; i < 8; i++, RK += 6 )
             {
                 RK[6]  = RK[0] ^ RCON[i] ^
-                ( (unsigned long) FSb[ ( RK[5] >>  8 ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( RK[5] >> 16 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( RK[5] >> 24 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( RK[5]       ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( RK[5] >>  8 ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( RK[5] >> 16 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( RK[5] >> 24 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( RK[5]       ) & 0xFF ] << 24 );
 
                 RK[7]  = RK[1] ^ RK[6];
                 RK[8]  = RK[2] ^ RK[7];
@@ -383,20 +505,20 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
             for( i = 0; i < 7; i++, RK += 8 )
             {
                 RK[8]  = RK[0] ^ RCON[i] ^
-                ( (unsigned long) FSb[ ( RK[7] >>  8 ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( RK[7] >> 16 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( RK[7] >> 24 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( RK[7]       ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( RK[7] >>  8 ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( RK[7] >> 16 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( RK[7] >> 24 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( RK[7]       ) & 0xFF ] << 24 );
 
                 RK[9]  = RK[1] ^ RK[8];
                 RK[10] = RK[2] ^ RK[9];
                 RK[11] = RK[3] ^ RK[10];
 
                 RK[12] = RK[4] ^
-                ( (unsigned long) FSb[ ( RK[11]       ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( RK[11] >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( RK[11] >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( RK[11] >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( RK[11]       ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( RK[11] >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( RK[11] >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( RK[11] >> 24 ) & 0xFF ] << 24 );
 
                 RK[13] = RK[5] ^ RK[12];
                 RK[14] = RK[6] ^ RK[13];
@@ -419,8 +541,8 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
 {
     int i, j;
     aes_context cty;
-    unsigned long *RK;
-    unsigned long *SK;
+    uint32_t *RK;
+    uint32_t *SK;
     int ret;
 
     switch( keysize )
@@ -520,14 +642,14 @@ int aes_crypt_ecb( aes_context *ctx,
                     unsigned char output[16] )
 {
     int i;
-    unsigned long *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
+    uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
 
     RK = ctx->rk;
 
-    GET_ULONG_LE( X0, input,  0 ); X0 ^= *RK++;
-    GET_ULONG_LE( X1, input,  4 ); X1 ^= *RK++;
-    GET_ULONG_LE( X2, input,  8 ); X2 ^= *RK++;
-    GET_ULONG_LE( X3, input, 12 ); X3 ^= *RK++;
+    GET_UINT32_LE( X0, input,  0 ); X0 ^= *RK++;
+    GET_UINT32_LE( X1, input,  4 ); X1 ^= *RK++;
+    GET_UINT32_LE( X2, input,  8 ); X2 ^= *RK++;
+    GET_UINT32_LE( X3, input, 12 ); X3 ^= *RK++;
 
     if( mode == AES_DECRYPT )
     {
@@ -540,28 +662,28 @@ int aes_crypt_ecb( aes_context *ctx,
         AES_RROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );
 
         X0 = *RK++ ^ \
-                ( (unsigned long) RSb[ ( Y0       ) & 0xFF ]       ) ^
-                ( (unsigned long) RSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) RSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) RSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) RSb[ ( Y0       ) & 0xFF ]       ) ^
+                ( (uint32_t) RSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) RSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) RSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
 
         X1 = *RK++ ^ \
-                ( (unsigned long) RSb[ ( Y1       ) & 0xFF ]       ) ^
-                ( (unsigned long) RSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) RSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) RSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) RSb[ ( Y1       ) & 0xFF ]       ) ^
+                ( (uint32_t) RSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) RSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) RSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
 
         X2 = *RK++ ^ \
-                ( (unsigned long) RSb[ ( Y2       ) & 0xFF ]       ) ^
-                ( (unsigned long) RSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) RSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) RSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) RSb[ ( Y2       ) & 0xFF ]       ) ^
+                ( (uint32_t) RSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) RSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) RSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
 
         X3 = *RK++ ^ \
-                ( (unsigned long) RSb[ ( Y3       ) & 0xFF ]       ) ^
-                ( (unsigned long) RSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) RSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) RSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) RSb[ ( Y3       ) & 0xFF ]       ) ^
+                ( (uint32_t) RSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) RSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) RSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
     }
     else /* AES_ENCRYPT */
     {
@@ -574,34 +696,34 @@ int aes_crypt_ecb( aes_context *ctx,
         AES_FROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );
 
         X0 = *RK++ ^ \
-                ( (unsigned long) FSb[ ( Y0       ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( Y0       ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
 
         X1 = *RK++ ^ \
-                ( (unsigned long) FSb[ ( Y1       ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( Y1       ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
 
         X2 = *RK++ ^ \
-                ( (unsigned long) FSb[ ( Y2       ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( Y2       ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
 
         X3 = *RK++ ^ \
-                ( (unsigned long) FSb[ ( Y3       ) & 0xFF ]       ) ^
-                ( (unsigned long) FSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
-                ( (unsigned long) FSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
-                ( (unsigned long) FSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
+                ( (uint32_t) FSb[ ( Y3       ) & 0xFF ]       ) ^
+                ( (uint32_t) FSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
+                ( (uint32_t) FSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
+                ( (uint32_t) FSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
     }
 
-    PUT_ULONG_LE( X0, output,  0 );
-    PUT_ULONG_LE( X1, output,  4 );
-    PUT_ULONG_LE( X2, output,  8 );
-    PUT_ULONG_LE( X3, output, 12 );
+    PUT_UINT32_LE( X0, output,  0 );
+    PUT_UINT32_LE( X1, output,  4 );
+    PUT_UINT32_LE( X2, output,  8 );
+    PUT_UINT32_LE( X3, output, 12 );
 
     return( 0 );
 }
@@ -659,6 +781,52 @@ int aes_crypt_cbc( aes_context *ctx,
 }
 
 /*
+ * AES-CFB128 buffer encryption/decryption
+ */
+int aes_crypt_cfb128( aes_context *ctx,
+                       int mode,
+                       size_t length,
+                       size_t *iv_off,
+                       unsigned char iv[16],
+                       const unsigned char *input,
+                       unsigned char *output )
+{
+    int c;
+    size_t n = *iv_off;
+
+    if( mode == AES_DECRYPT )
+    {
+        while( length-- )
+        {
+            if( n == 0 )
+                aes_crypt_ecb( ctx, AES_ENCRYPT, iv, iv );
+
+            c = *input++;
+            *output++ = (unsigned char)( c ^ iv[n] );
+            iv[n] = (unsigned char) c;
+
+            n = (n + 1) & 0x0F;
+        }
+    }
+    else
+    {
+        while( length-- )
+        {
+            if( n == 0 )
+                aes_crypt_ecb( ctx, AES_ENCRYPT, iv, iv );
+
+            iv[n] = *output++ = (unsigned char)( iv[n] ^ *input++ );
+
+            n = (n + 1) & 0x0F;
+        }
+    }
+
+    *iv_off = n;
+
+    return( 0 );
+}
+
+/*
  * AES-CTR buffer encryption/decryption
  */
 int aes_crypt_ctr( aes_context *ctx,
@@ -669,7 +837,7 @@ int aes_crypt_ctr( aes_context *ctx,
                        const unsigned char *input,
                        unsigned char *output )
 {
-    int c, i, cb;
+    int c, i;
     size_t n = *nc_off;
 
     while( length-- )
@@ -677,12 +845,9 @@ int aes_crypt_ctr( aes_context *ctx,
         if( n == 0 ) {
             aes_crypt_ecb( ctx, AES_ENCRYPT, nonce_counter, stream_block );
 
-            i = 15;
-            do {
-               nonce_counter[i]++;
-               cb = nonce_counter[i] == 0;
-            } while( i-- && cb );
-
+            for( i = 16; i > 0; i-- )
+                if( ++nonce_counter[i - 1] != 0 )
+                    break;
         }
         c = *input++;
         *output++ = (unsigned char)( c ^ stream_block[n] );
@@ -693,4 +858,118 @@ int aes_crypt_ctr( aes_context *ctx,
     *nc_off = n;
 
     return( 0 );
+}
+
+/* AES-CMAC */
+
+unsigned char const_Rb[16] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87
+};
+unsigned char const_Zero[16] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+void leftshift_onebit(unsigned char *input, unsigned char *output)
+{
+	int i;
+    unsigned char overflow = 0;
+
+	for (i = 15; i >= 0; i--) 
+	{
+		output[i] = input[i] << 1;
+		output[i] |= overflow;
+		overflow = (input[i] & 0x80) ? 1 : 0;
+	}
+}
+
+void xor_128(unsigned char *a, unsigned char *b, unsigned char *out)
+{
+	int i;
+	for (i = 0; i < 16; i++) 
+		out[i] = a[i] ^ b[i];
+}
+
+void generate_subkey(aes_context *ctx, unsigned char *K1, unsigned char *K2)
+{
+	unsigned char L[16];
+	unsigned char Z[16];
+	unsigned char tmp[16];
+	
+	int i;
+	for (i = 0; i < 16; i++) Z[i] = 0;
+
+	aes_crypt_ecb(ctx, AES_ENCRYPT, Z, L);
+
+	if ((L[0] & 0x80) == 0)
+	{
+		leftshift_onebit(L,K1);
+	} else {
+        leftshift_onebit(L,tmp);
+        xor_128(tmp,const_Rb,K1);
+    }
+
+	if ((K1[0] & 0x80) == 0) 
+	{
+        leftshift_onebit(K1,K2);
+    } else {
+        leftshift_onebit(K1,tmp);
+        xor_128(tmp,const_Rb,K2);
+    }
+}
+
+void padding (unsigned char *lastb, unsigned char *pad, int length)
+{
+	int i;
+	for (i = 0; i < 16; i++) 
+	{
+		if (i < length) 
+			pad[i] = lastb[i];
+        else if (i == length)
+            pad[i] = 0x80;
+        else
+            pad[i] = 0x00;
+	}
+}
+
+void aes_cmac(aes_context *ctx, int length, unsigned char *input, unsigned char *output)
+{
+    unsigned char X[16], Y[16], M_last[16], padded[16];
+    unsigned char K1[16], K2[16];
+    int n, i, flag;
+    generate_subkey(ctx, K1, K2);
+
+    n = (length + 15) / 16;
+    if (n == 0) 
+	{
+        n = 1;
+        flag = 0;
+    } else {
+		if ((length % 16) == 0)
+            flag = 1;
+		else
+			flag = 0;
+    }
+
+    if (flag) 
+	{
+        xor_128(&input[16 * (n - 1)], K1, M_last);
+    } else {
+        padding(&input[16 * (n - 1)], padded, length % 16);
+        xor_128(padded, K2, M_last);
+    }
+
+    for (i = 0; i < 16; i++) X[i] = 0;
+    for (i = 0; i < n - 1; i++) 
+    {
+        xor_128(X, &input[16*i], Y);
+		aes_crypt_ecb(ctx, AES_ENCRYPT, Y, X); 
+    }
+
+    xor_128(X,M_last,Y);
+    aes_crypt_ecb(ctx, AES_ENCRYPT, Y, X);
+
+    for (i = 0; i < 16; i++)
+		output[i] = X[i];
 }

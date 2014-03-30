@@ -423,11 +423,11 @@ public:
 class vfsHDD : public vfsFileBase
 {
 	vfsHDD_Hdr m_hdd_info;
+	vfsLocalFile m_hdd_file;
+	const wxString& m_hdd_path;
 	vfsHDD_Entry m_cur_dir;
 	u64 m_cur_dir_block;
 	vfsHDDFile m_file;
-	vfsLocalFile m_hdd_file;
-	const wxString& m_hdd_path;
 
 public:
 	vfsHDD(vfsDevice* device, const wxString& hdd_path)

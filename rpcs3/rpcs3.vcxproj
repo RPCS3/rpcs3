@@ -212,6 +212,7 @@
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\key_vault.cpp" />
     <ClCompile Include="Crypto\sha1.cpp" />
+    <ClCompile Include="Crypto\unedat.cpp" />
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
     <ClCompile Include="Crypto\utils.cpp" />
@@ -225,6 +226,7 @@
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
+    <ClCompile Include="Emu\Cell\SPURSManager.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
@@ -365,6 +367,7 @@
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\key_vault.h" />
     <ClInclude Include="Crypto\sha1.h" />
+    <ClInclude Include="Crypto\unedat.h" />
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
@@ -387,6 +390,7 @@
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
+    <ClInclude Include="Emu\Cell\SPURSManager.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\DbgConsole.h" />
     <ClInclude Include="Emu\GameInfo.h" />

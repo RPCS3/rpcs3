@@ -682,7 +682,7 @@ SELF_KEY KeyVault::GetSelfLV1Key(u64 version)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_LV1_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_LV1_arr.GetCount(); i++)
 	{
 		if (sk_LV1_arr[i].version == version)
 		{
@@ -698,7 +698,7 @@ SELF_KEY KeyVault::GetSelfLV2Key(u64 version)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_LV2_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_LV2_arr.GetCount(); i++)
 	{
 		if (sk_LV2_arr[i].version == version)
 		{
@@ -714,7 +714,7 @@ SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_ISO_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_ISO_arr.GetCount(); i++)
 	{
 		if ((sk_ISO_arr[i].version == version) &&
 			(sk_ISO_arr[i].revision == revision))
@@ -731,7 +731,7 @@ SELF_KEY KeyVault::GetSelfAPPKey(u16 revision)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_APP_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_APP_arr.GetCount(); i++)
 	{
 		if (sk_APP_arr[i].revision == revision)
 		{
@@ -747,7 +747,7 @@ SELF_KEY KeyVault::GetSelfUNK7Key(u64 version)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_UNK7_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_UNK7_arr.GetCount(); i++)
 	{
 		if (sk_UNK7_arr[i].version == version)
 		{
@@ -763,7 +763,7 @@ SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision)
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
-	for(int i = 0; i < sk_NPDRM_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < sk_NPDRM_arr.GetCount(); i++)
 	{
 		if (sk_NPDRM_arr[i].revision == revision)
 		{
@@ -832,7 +832,7 @@ u8 *KeyVault::GetKlicenseeKey()
 	return klicensee_key;
 }
 
-void KeyVault::RapToRif(unsigned char* rap, unsigned char* rif)
+void rap_to_rif(unsigned char* rap, unsigned char* rif)
 {
 	int i;
 	int round;

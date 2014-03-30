@@ -478,6 +478,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil_SaveData.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\unedat.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPURSManager.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -680,6 +686,12 @@
     </ClInclude>
     <ClInclude Include="Crypto\utils.h">
       <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\unedat.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPURSManager.h">
+      <Filter>Include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
