@@ -87,12 +87,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# include some generic functions
+# include some generic functions to ensure correctness of the env
 include(Pcsx2Utils)
 
-# Detect current OS
+check_no_parenthesis_in_path()
 detectOperatingSystem()
-
 check_compiler_version("4.7" "4.5")
 
 #-------------------------------------------------------------------------------
