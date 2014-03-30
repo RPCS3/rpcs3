@@ -1,6 +1,7 @@
 #pragma once
+#include "Emu/Cell/SPURSManager.h"
 
-// return codes
+// Core return codes.
 enum
 {
 	CELL_SPURS_CORE_ERROR_AGAIN			= 0x80410701,
@@ -14,39 +15,38 @@ enum
 	CELL_SPURS_CORE_ERROR_NULL_POINTER	= 0x80410711,
 };
 
-//defines
-enum SPURSKernelInterfaces
+// Task return codes.
+enum
 {
-	CELL_SPURS_MAX_SPU				= 8,
-	CELL_SPURS_MAX_WORKLOAD			= 16,
-	CELL_SPURS_MAX_WORKLOAD2		= 32,
-	CELL_SPURS_MAX_PRIORITY			= 16,
-	CELL_SPURS_NAME_MAX_LENGTH		= 15,
-	CELL_SPURS_SIZE					= 4096,
-	CELL_SPURS_SIZE2				= 8192,
-	CELL_SPURS_ALIGN				= 128,
-	CELL_SPURS_ATTRIBUTE_SIZE		= 512,
-	CELL_SPURS_ATTRIBUTE_ALIGN		= 8,
-	CELL_SPURS_INTERRUPT_VECTOR		= 0x0,
-	CELL_SPURS_LOCK_LINE			= 0x80,
-	CELL_SPURS_KERNEL_DMA_TAG_ID	= 31,
+	CELL_SPURS_TASK_ERROR_AGAIN			= 0x80410901,
+	CELL_SPURS_TASK_ERROR_INVAL			= 0x80410902,
+	CELL_SPURS_TASK_ERROR_NOMEM			= 0x80410904,
+	CELL_SPURS_TASK_ERROR_SRCH			= 0x80410905,
+	CELL_SPURS_TASK_ERROR_NOEXEC		= 0x80410907,
+	CELL_SPURS_TASK_ERROR_PERM			= 0x80410909,
+	CELL_SPURS_TASK_ERROR_BUSY			= 0x8041090A,
+	CELL_SPURS_TASK_ERROR_FAULT			= 0x8041090D,
+	CELL_SPURS_TASK_ERROR_STAT			= 0x8041090F,
+	CELL_SPURS_TASK_ERROR_ALIGN			= 0x80410910,
+	CELL_SPURS_TASK_ERROR_NULL_POINTER	= 0x80410911,
+	CELL_SPURS_TASK_ERROR_FATAL			= 0x80410914,
+	CELL_SPURS_TASK_ERROR_SHUTDOWN		= 0x80410920, 
 };
 
-enum RangeofEventQueuePortNumbers
-{
-	CELL_SPURS_STATIC_PORT_RANGE_BOTTOM		= 15,
-	CELL_SPURS_DYNAMIC_PORT_RANGE_TOP		= 16,
-	CELL_SPURS_DYNAMIC_PORT_RANGE_BOTTOM	= 63,
+// Core CellSpurs structures.
+struct CellSpurs
+{ 
+	SPURSManager *spurs;  
 };
 
-enum SPURSTraceTypes
-{
-	CELL_SPURS_TRACE_TAG_LOAD	= 0x2a, 
-	CELL_SPURS_TRACE_TAG_MAP	= 0x2b,
-	CELL_SPURS_TRACE_TAG_START	= 0x2c,
-	CELL_SPURS_TRACE_TAG_STOP	= 0x2d,
-	CELL_SPURS_TRACE_TAG_USER	= 0x2e,
-	CELL_SPURS_TRACE_TAG_GUID	= 0x2f,
+struct CellSpurs2
+{ 
+	SPURSManager *spurs;
+};
+
+struct CellSpursAttribute
+{ 
+	SPURSManagerAttribute *attr;  
 };
 
 struct CellSpursInfo
@@ -87,7 +87,6 @@ struct CellSpursTraceInfo
 	//u8 padding[]; 
 };
 
-//__declspec(align(8))
 struct CellTraceHeader 
 { 
 	u8 tag; 
@@ -136,67 +135,18 @@ struct CellSpursTracePacket
 	} data;
 };
 
-//__declspec(align(128))
-struct CellSpurs
-{ 
-	u8 skip[CELL_SPURS_SIZE];  
-};
-
-//__declspec(align(128))
-struct CellSpurs2
-{ 
-	u8 skip[CELL_SPURS_SIZE2 - CELL_SPURS_SIZE];
-};
-
-//__declspec(align(8))
-struct CellSpursAttribute
-{ 
-	u8 skip[CELL_SPURS_ATTRIBUTE_SIZE];  
-};
-
-
-//typedef unsigned CellSpursWorkloadId;
-
-typedef void (*CellSpursGlobalExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursExceptionInfo> info, 
-													 uint id, mem_ptr_t<void> arg);
-
-
-// task datatypes and constans
-enum TaskConstants
-{
-	CELL_SPURS_MAX_TASK				= 128,
-	CELL_SPURS_TASK_TOP				= 0x3000,
-	CELL_SPURS_TASK_BOTTOM			= 0x40000,
-	CELL_SPURS_MAX_TASK_NAME_LENGTH	= 32,
-};
-
-enum
-{
-	CELL_SPURS_TASK_ERROR_AGAIN			= 0x80410901,
-	CELL_SPURS_TASK_ERROR_INVAL			= 0x80410902,
-	CELL_SPURS_TASK_ERROR_NOMEM			= 0x80410904,
-	CELL_SPURS_TASK_ERROR_SRCH			= 0x80410905,
-	CELL_SPURS_TASK_ERROR_NOEXEC		= 0x80410907,
-	CELL_SPURS_TASK_ERROR_PERM			= 0x80410909,
-	CELL_SPURS_TASK_ERROR_BUSY			= 0x8041090A,
-	CELL_SPURS_TASK_ERROR_FAULT			= 0x8041090D,
-	CELL_SPURS_TASK_ERROR_STAT			= 0x8041090F,
-	CELL_SPURS_TASK_ERROR_ALIGN			= 0x80410910,
-	CELL_SPURS_TASK_ERROR_NULL_POINTER	= 0x80410911,
-	CELL_SPURS_TASK_ERROR_FATAL			= 0x80410914,
-	CELL_SPURS_TASK_ERROR_SHUTDOWN		= 0x80410920, 
-};
-
-
-//__declspec(align(128))
+// cellSpurs taskset structures.
 struct CellSpursTaskset 
 {
 	u8 skip[6400];
 };
 
-typedef void(*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
-													 uint idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
+// Exception handlers.
+typedef void (*CellSpursGlobalExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursExceptionInfo> info, 
+													 uint id, mem_ptr_t<void> arg);
 
+typedef void (*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
+													 uint idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
 
 struct CellSpursTasksetInfo 
 { 
@@ -211,18 +161,6 @@ struct CellSpursTasksetInfo
 	//be_t<u8> reserved[]; 
 };
 
-
-/*
-#define CELL_SPURS_TASKSET_CLASS0_SIZE            (128 * 50)
-#define	_CELL_SPURS_TASKSET_CLASS1_EXTENDED_SIZE  (128 + 128 * 16 + 128 * 15)
-#define	CELL_SPURS_TASKSET_CLASS1_SIZE			  (CELL_SPURS_TASKSET_CLASS0_SIZE + _CELL_SPURS_TASKSET_CLASS1_EXTENDED_SIZE)
-#define CELL_SPURS_TASKSET2_SIZE                  (CELL_SPURS_TASKSET_CLASS1_SIZE)
-#define CELL_SPURS_TASKSET2_ALIGN	              128
-#define CELL_SPURS_TASKSET_ALIGN                  128
-#define CELL_SPURS_TASKSET_SIZE                   CELL_SPURS_TASKSET_CLASS0_SIZE
-*/
-
-//__declspec(align(128))
 struct CellSpursTaskset2 
 {
 	be_t<u8> skip[10496];
@@ -240,6 +178,7 @@ struct CellSpursTasksetAttribute2
 	//be_t<u32> __reserved__[]; 
 };
 
+// cellSpurs task structures.
 struct CellSpursTaskNameBuffer 
 { 
 	char taskName[CELL_SPURS_MAX_TASK][CELL_SPURS_MAX_TASK_NAME_LENGTH]; 
@@ -273,7 +212,6 @@ struct CellSpursTaskAttribute2
 	//be_t<u32> __reserved__[]; 
 };
 
-//__declspec(align(128))
 struct CellSpursTaskExitCode 
 {
 	unsigned char skip[128];
@@ -301,3 +239,7 @@ struct CellSpursTaskBinInfo
 	CellSpursTaskLsPattern lsPattern;
 };
 
+// cellSpurs event flag.
+struct CellSpursEventFlag {
+	u8 skip[128];
+};
