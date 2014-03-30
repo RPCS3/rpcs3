@@ -13,11 +13,7 @@ enum
 	CELL_LIBMIXER_ERROR_NOT_FOUND				= 0x8031000a,
 };
 
-//Callback Functions 
-typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples); //Currently unused.
-
-//libmixer datatypes
-typedef void * CellAANHandle;
+typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples);
 
 struct CellSSPlayerConfig
 {

@@ -38,8 +38,10 @@ int cellAudioInit()
 	thread t("Audio Thread", []()
 		{
 			AudioDumper m_dump(2); // WAV file header (stereo)
+
+			bool do_dump = Ini.AudioDumpToFile.GetValue();
 		
-			if (Ini.AudioDumpToFile.GetValue() && !m_dump.Init())
+			if (do_dump && !m_dump.Init())
 			{
 				ConLog.Error("Audio aborted: cannot create file!");
 				return;
@@ -50,7 +52,7 @@ int cellAudioInit()
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
 
-			float buffer[2*256]; // buffer for 2 channels
+			float buffer[2*256]; // intermediate buffer for 2 channels
 			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
 			//u16 oal_buffer[2*256]; // buffer for OpenAL
 			memset(buffer, 0, sizeof(buffer));
@@ -79,7 +81,9 @@ int cellAudioInit()
 
 			m_config.start_time = get_system_time();
 
-			thread iat("Internal Audio Thread", [oal_buffer_size, &queue]()
+			volatile bool internal_finished = false;
+
+			thread iat("Internal Audio Thread", [oal_buffer_size, &queue, &internal_finished]()
 			{
 				while (true)
 				{
@@ -92,7 +96,8 @@ int cellAudioInit()
 					}
 					else
 					{
-						break;
+						internal_finished = true;
+						return;
 					}
 				}
 			});
@@ -128,13 +133,12 @@ int cellAudioInit()
 
 				bool first_mix = true;
 
-				// MIX:
+				// mixing:
 				for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
 				{
 					if (!m_config.m_ports[i].m_is_audio_port_started) continue;
 
 					AudioPortConfig& port = m_config.m_ports[i];
-					mem64_t index(m_config.m_indexes + i * sizeof(u64));
 
 					const u32 block_size = port.channel * 256;
 
@@ -145,28 +149,17 @@ int cellAudioInit()
 					memcpy(buffer2, Memory + buf_addr, block_size * sizeof(float));
 					memset(Memory + buf_addr, 0, block_size * sizeof(float));
 
-					{
-						SMutexGeneralLocker lock(audioMutex);
-						port.counter = m_config.counter;
-						port.tag++; // absolute index of block that will be read
-						index = (position + 1) % port.block; // write new value
-					}
-
 					const u32 k = port.channel / 2;
 
 					if (first_mix)
 					{
 						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 						{
-							// reverse byte order (TODO: use port.m_param.level)
+							// reverse byte order
 							buffer[i] = buffer2[i*k];
 							buffer[i+1] = buffer2[i*k+1];
-
-							// convert the data from float to u16
-							//assert(buffer[i] >= -1.0f && buffer[i] <= 1.0f);
-							//assert(buffer[i+1] >= -1.0f && buffer[i+1] <= 1.0f);
-							oal_buffer[oal_pos][oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 14) - 1));
-							oal_buffer[oal_pos][oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 14) - 1));
+							// TODO: use port.m_param.level
+							// TODO: downmix channels that are ignored (?) or implement surround sound
 						}
 
 						first_mix = false;
@@ -175,33 +168,19 @@ int cellAudioInit()
 					{
 						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 						{
-							buffer[i] = (buffer[i] + buffer2[i*k]) * 0.5; // TODO: valid mixing
-							buffer[i+1] = (buffer[i+1] + buffer2[i*k+1]) * 0.5;
-
-							// convert the data from float to u16
-							//assert(buffer[i] >= -1.0f && buffer[i] <= 1.0f);
-							//assert(buffer[i+1] >= -1.0f && buffer[i+1] <= 1.0f);
-							oal_buffer[oal_pos][oal_buffer_offset + i] = (u16)(buffer[i] * ((1 << 14) - 1));
-							oal_buffer[oal_pos][oal_buffer_offset + i + 1] = (u16)(buffer[i+1] * ((1 << 14) - 1));
+							buffer[i] += buffer2[i*k];
+							buffer[i+1] += buffer2[i*k+1];
 						}
 					}
 				}
 
+				// convert the data from float to u16 and clip:
+				for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+				{
+					oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buffer[i] * 0x8000, -0x8000), 0x7fff));
+				}
+
 				const u64 stamp1 = get_system_time();
-
-				// send aftermix event (normal audio event)
-				{
-					SMutexGeneralLocker lock(audioMutex);
-					keys.SetCount(m_config.m_keys.GetCount());
-					memcpy(keys.GetPtr(), m_config.m_keys.GetPtr(), sizeof(u64) * keys.GetCount());
-				}
-				for (u32 i = 0; i < keys.GetCount(); i++)
-				{
-					// TODO: check event source
-					Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
-				}
-
-				const u64 stamp2 = get_system_time();
 
 				oal_buffer_offset += sizeof(buffer) / sizeof(float);
 
@@ -215,9 +194,37 @@ int cellAudioInit()
 					oal_buffer_offset = 0;
 				}
 
+				const u64 stamp2 = get_system_time();
+
+				// send aftermix event (normal audio event)
+				{
+					SMutexGeneralLocker lock(audioMutex);
+					// update indexes:
+					for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
+					{
+						if (!m_config.m_ports[i].m_is_audio_port_started) continue;
+
+						AudioPortConfig& port = m_config.m_ports[i];
+						mem64_t index(m_config.m_indexes + i * sizeof(u64));
+
+						u32 position = port.tag % port.block; // old value
+						port.counter = m_config.counter;
+						port.tag++; // absolute index of block that will be read
+						index = (position + 1) % port.block; // write new value
+					}
+					// load keys:
+					keys.SetCount(m_config.m_keys.GetCount());
+					memcpy(keys.GetPtr(), m_config.m_keys.GetPtr(), sizeof(u64) * keys.GetCount());
+				}
+				for (u32 i = 0; i < keys.GetCount(); i++)
+				{
+					// TODO: check event source
+					Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
+				}
+
 				const u64 stamp3 = get_system_time();
 
-				if(Ini.AudioDumpToFile.GetValue())
+				if(do_dump)
 				{
 					if (m_dump.WriteData(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
 					{
@@ -228,21 +235,24 @@ int cellAudioInit()
 
 				const u64 stamp4 = get_system_time();
 
-				//ConLog.Write("Audio perf: start=%d (access=%d, event=%d, AddData=%d, dump=%d)",
+				//ConLog.Write("Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
 					//stamp0 - m_config.start_time, stamp1-stamp0, stamp2-stamp1, stamp3-stamp2, stamp4-stamp3);
 			}
 			ConLog.Write("Audio finished");
 abort:
 			queue.Push(nullptr);
-			while (queue.GetCount())
+
+			if(do_dump)
+				m_dump.Finalize();
+
+			m_config.m_is_audio_initialized = false;
+
+			while (!internal_finished)
 			{
 				Sleep(1);
 			}
-			if(Ini.AudioDumpToFile.GetValue())
-				m_dump.Finalize();
 
 			m_config.m_is_audio_finalized = true;
-			m_config.m_is_audio_initialized = false;
 		});
 	t.detach();
 

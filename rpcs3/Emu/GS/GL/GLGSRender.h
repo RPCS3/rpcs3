@@ -170,7 +170,8 @@ public:
 		}
 		break;
 
-		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, is_swizzled ? "swizzled" : "linear", tex.GetFormat() & 0x40); break;
+		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format,
+					 wxString(is_swizzled ? "swizzled" : "linear").wx_str(), tex.GetFormat() & 0x40); break;
 		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.GetMipmap() - 1);

@@ -175,15 +175,16 @@ bool ELF32Loader::LoadShdrInfo()
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		elf32_f.Seek(shdr_arr[ehdr.e_shstrndx].sh_offset + shdr_arr[i].sh_name);
-		wxString name = wxEmptyString;
+		Array<char> name;
 		while(!elf32_f.Eof())
 		{
 			char c;
 			elf32_f.Read(&c, 1);
 			if(c == 0) break;
-			name += c;
+			name.AddCpy(c);
 		}
-		shdr_name_arr.Add(name);	
+		name.AddCpy('\0');
+		shdr_name_arr.Add(wxString(name.GetPtr(), wxConvUTF8));	
 	}
 
 	return true;

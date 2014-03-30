@@ -12,13 +12,30 @@ CellSurMixerConfig surMixer;
 #define SUR_PORT (7)
 u32 surMixerCb = 0;
 u32 surMixerCbArg = 0;
-u64 mixcount = 0, stamp1 = 0, stamp2 = 0;
+SMutex mixer_mutex;
+bool mixfirst;
+float mixdata[2*256];
+u64 mixcount = 0;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 samples)
 {
-	stamp1 = get_system_time();
+	u32 ch = aan_port >> 16;
+	u32 port = aan_port & 0xffff;
+	switch (ch)
+	{
+	case 1:
+		if (port >= surMixer.chStrips1) ch = 0; break;
+	case 2:
+		if (port >= surMixer.chStrips2) ch = 0; break;
+	case 6:
+		if (port >= surMixer.chStrips6) ch = 0; break;
+	case 8:
+		if (port >= surMixer.chStrips8) ch = 0; break;
+	default:
+		ch = 0;
+	}
 
-	if (aan_handle == 0x11111111 && aan_port == (2 << 16))
+	if (aan_handle == 0x11111111 && samples == 256 && ch && offset == 0)
 	{
 		libmixer.Log("cellAANAddData(handle=0x%x, port=0x%x, offset=0x%x, addr=0x%x, samples=0x%x)",
 			aan_handle, aan_port, offset, addr, samples);
@@ -31,16 +48,28 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		return CELL_OK;
 	}
 
-	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
+	SMutexLocker lock(mixer_mutex);
 
-	u32 to = m_config.m_buffer + (128 * 1024 * SUR_PORT) + ((mixcount + 12) % 16) * 2 * 256 * sizeof(float) + offset;
+	const u32 k = ch / 2;
 
-	if (!Memory.Copy(to, addr, 2 * samples * sizeof(float)))
+	if (mixfirst)
 	{
-		return CELL_LIBMIXER_ERROR_NO_MEMORY;
+		for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i += 2)
+		{
+			// reverse byte order and mix
+			mixdata[i] = *(be_t<float>*)&Memory[addr + i * k * sizeof(float)];
+			mixdata[i + 1] = *(be_t<float>*)&Memory[addr + (i * k + 1) * sizeof(float)];
+		}
+		mixfirst = false;
 	}
-
-	stamp2 = get_system_time();
+	else
+	{
+		for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i += 2)
+		{
+			mixdata[i] += *(be_t<float>*)&Memory[addr + i * k * sizeof(float)];
+			mixdata[i + 1] += *(be_t<float>*)&Memory[addr + (i * k + 1) * sizeof(float)];
+		}
+	}
 
 	return CELL_OK; 
 }
@@ -119,14 +148,14 @@ int cellSurMixerGetAANHandle(mem32_t handle)
 
 int cellSurMixerChStripGetAANPortNo(mem32_t port, u32 type, u32 index)
 {
-	libmixer.Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0", port.GetAddr(), type, index);
+	libmixer.Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.GetAddr(), type, index, (type << 16) | index);
 	port = (type << 16) | index;
 	return CELL_OK;
 }
 
 int cellSurMixerSetNotifyCallback(u32 func, u32 arg)
 {
-	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x)", func, arg);
+	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x) (surMixerCb=0x%x)", func, arg, surMixerCb);
 	surMixerCb = func;
 	surMixerCbArg = arg;
 	return CELL_OK;
@@ -134,7 +163,7 @@ int cellSurMixerSetNotifyCallback(u32 func, u32 arg)
 
 int cellSurMixerRemoveNotifyCallback(u32 func)
 {
-	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x)", func);
+	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x) (surMixerCb=0x%x)", func, surMixerCb);
 	surMixerCb = 0;
 	surMixerCbArg = 0;
 	return CELL_OK;
@@ -181,22 +210,38 @@ int cellSurMixerStart()
 				return;
 			}
 
-			if (mixcount > port.tag)
+			if (mixcount > (port.tag + 15)) // preemptive buffer filling (probably hack)
 			{
 				Sleep(1);
 				continue;
 			}
 
 			u64 stamp0 = get_system_time();
-			stamp1 = 0;
-			stamp2 = 0;
 
+			mixfirst = true;
 			mixerCb->ExecAsCallback(surMixerCb, true, surMixerCbArg, mixcount, 256);
 
-			u64 stamp3 = get_system_time();
+			u64 stamp1 = get_system_time();
 
-			//ConLog.Write("Libmixer perf: start=%d (cb_before=%d, cb=%d, cb_after=%d)",
-				//stamp0 - m_config.start_time, stamp1-stamp0, stamp2-stamp1, stamp3-stamp2);
+			auto buf = (be_t<float>*)&Memory[m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % 16) * 2 * 256 * sizeof(float)];
+			
+			if (!mixfirst)
+			{
+				for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
+				{
+					// reverse byte order
+					buf[i] = mixdata[i];
+				}
+			}
+			else
+			{
+				// no data?
+			}
+
+			u64 stamp2 = get_system_time();
+
+			//ConLog.Write("Libmixer perf: start=%d (cb=%d, finalize=%d)",
+				//stamp0 - m_config.start_time, stamp1-stamp0, stamp2-stamp1);
 
 			mixcount++;
 		}
@@ -229,7 +274,41 @@ int cellSurMixerFinalize()
 
 int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 {
-	libmixer.Error("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
+	if (busNo < 8 && samples == 256 && offset == 0)
+	{
+		libmixer.Log("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
+	}
+	else
+	{
+		libmixer.Error("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
+		Emu.Pause();
+		return CELL_OK;
+	}
+	
+	if (busNo > 1) // channels from 3 to 8 ignored (TODO)
+	{
+		return CELL_OK;
+	}
+
+	SMutexLocker lock(mixer_mutex);
+
+	if (mixfirst)
+	{
+		for (u32 i = 0; i < samples; i++)
+		{
+			// reverse byte order and mix
+			mixdata[i * 2 + busNo] = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
+		}
+		mixfirst = false;
+	}
+	else
+	{
+		for (u32 i = 0; i < samples; i++)
+		{
+			mixdata[i * 2 + busNo] += *(be_t<float>*)&Memory[addr + i * sizeof(float)];
+		}
+	}
+
 	return CELL_OK;
 }
 
