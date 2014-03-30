@@ -87,7 +87,7 @@ void VHDDExplorer::UpdateList()
 {
 	m_list->Freeze();
 	m_list->DeleteAllItems();
-	m_entries.Clear();
+	m_entries.clear();
 	m_names.Clear();
 
 	u64 block;
@@ -101,7 +101,7 @@ void VHDDExplorer::UpdateList()
 		m_list->SetItem(item, 1, entry.type == vfsHDD_Entry_Dir ? "Dir" : "File");
 		m_list->SetItem(item, 2, wxString::Format("%lld", entry.size));
 		m_list->SetItem(item, 3, wxDateTime().Set(time_t(entry.ctime)).Format());
-		m_entries.AddCpy(entry);
+		m_entries.push_back(entry);
 		m_names.Add(name);
 	}
 
@@ -397,7 +397,7 @@ VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 	Connect(id_remove,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnRemove));
 	Connect(id_create_hdd,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnCreateHDD));
 	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(VHDDManagerDialog::OnClose));
-	LoadPathes();
+	LoadPaths();
 	UpdateList();
 }
 
@@ -406,9 +406,9 @@ void VHDDManagerDialog::UpdateList()
 	m_list->Freeze();
 	m_list->DeleteAllItems();
 
-	for(size_t i=0; i<m_pathes.GetCount(); ++i)
+	for(size_t i=0; i<m_paths.size(); ++i)
 	{
-		m_list->InsertItem(i, m_pathes[i]);
+		m_list->InsertItem(i, m_paths[i]);
 	}
 
 	m_list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
@@ -420,7 +420,7 @@ void VHDDManagerDialog::UpdateList()
 
 void VHDDManagerDialog::Open(int sel)
 {
-	VHDDExplorer dial(this, m_pathes[sel]);
+	VHDDExplorer dial(this, m_paths[sel]);
 	dial.ShowModal();
 }
 
@@ -439,14 +439,14 @@ void VHDDManagerDialog::AddHDD(wxCommandEvent& event)
 		return;
 	}
 
-	wxArrayString pathes;
-	ctrl.GetPaths(pathes);
-	for(size_t i=0; i<pathes.GetCount(); ++i)
+	wxArrayString paths;
+	ctrl.GetPaths(paths);
+	for(size_t i=0; i<paths.GetCount(); ++i)
 	{
 		bool skip = false;
-		for(size_t j=0; j<m_pathes.GetCount(); ++j)
+		for(size_t j=0; j<m_paths.size(); ++j)
 		{
-			if(m_pathes[j].CmpNoCase(pathes[i]) == 0)
+			if(m_paths[j].CmpNoCase(paths[i]) == 0)
 			{
 				skip = true;
 				break;
@@ -455,7 +455,7 @@ void VHDDManagerDialog::AddHDD(wxCommandEvent& event)
 		
 		if(!skip)
 		{
-			m_pathes.Move(new wxString(pathes[i].c_str()));
+			m_paths.emplace_back(paths[i]);
 		}
 	}
 	UpdateList();
@@ -483,7 +483,7 @@ void VHDDManagerDialog::OnRemove(wxCommandEvent& event)
 {
 	for(int sel = m_list->GetNextSelected(-1), offs = 0; sel != wxNOT_FOUND; sel = m_list->GetNextSelected(sel), --offs)
 	{
-		m_pathes.RemoveAt(sel + offs);
+		m_paths.erase(m_paths.begin() + (sel + offs));
 	}
 
 	UpdateList();
@@ -506,44 +506,42 @@ void VHDDManagerDialog::OnCreateHDD(wxCommandEvent& event)
 		u64 size, bsize;
 		dial.GetResult(size, bsize);
 		vfsHDDManager::CreateHDD(ctrl.GetPath(), size, bsize);
-		m_pathes.AddCpy(ctrl.GetPath());
+		m_paths.push_back(ctrl.GetPath());
 		UpdateList();
 	}
 }
 
 void VHDDManagerDialog::OnClose(wxCloseEvent& event)
 {
-	SavePathes();
+	SavePaths();
 	event.Skip();
 }
 
-void VHDDManagerDialog::LoadPathes()
+void VHDDManagerDialog::LoadPaths()
 {
 	IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
 	int count = 0;
 	count = path_count.LoadValue(count);
 
-	m_pathes.SetCount(count);
-
-	for(size_t i=0; i<m_pathes.GetCount(); ++i)
+	for(size_t i=0; i<count; ++i)
 	{
 		IniEntry<wxString> path_entry;
 		path_entry.Init(wxString::Format("path[%d]", i), "HDDManager");
-		new (m_pathes + i) wxString(path_entry.LoadValue(wxEmptyString));
+		m_paths.emplace_back(path_entry.LoadValue(wxEmptyString));
 	}
 }
 
-void VHDDManagerDialog::SavePathes()
+void VHDDManagerDialog::SavePaths()
 {
 	IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
-	path_count.SaveValue(m_pathes.GetCount());
+	path_count.SaveValue(m_paths.size());
 
-	for(size_t i=0; i<m_pathes.GetCount(); ++i)
+	for(size_t i=0; i<m_paths.size(); ++i)
 	{
 		IniEntry<wxString> path_entry;
 		path_entry.Init(wxString::Format("path[%d]", i), "HDDManager");
-		path_entry.SaveValue(m_pathes[i]);
+		path_entry.SaveValue(m_paths[i]);
 	}
 }
