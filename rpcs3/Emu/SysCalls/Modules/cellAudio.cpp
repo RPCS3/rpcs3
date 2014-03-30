@@ -53,13 +53,9 @@ int cellAudioInit()
 				m_dump.WriteHeader();
 
 			float buffer[2*256]; // intermediate buffer for 2 channels
-			be_t<float> buffer2[8*256]; // buffer for 8 channels (max count)
-			//u16 oal_buffer[2*256]; // buffer for OpenAL
-			memset(buffer, 0, sizeof(buffer));
-			memset(buffer2, 0, sizeof(buffer2));
 
 			uint oal_buffer_offset = 0;
-			uint oal_buffer_size = 2 * 256;
+			uint oal_buffer_size = sizeof(buffer) / sizeof(float);
 			std::unique_ptr<u16[]> oal_buffer[32];
 			SQueue<u16*, sizeof(oal_buffer) / sizeof(oal_buffer[0])> queue;
 			for (u32 i = 0; i < queue.GetSize(); i++)
@@ -68,8 +64,6 @@ int cellAudioInit()
 				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(u16));
 			}
 			queue.Clear();
-			//std::unique_ptr<u16[]> oal_buf(new u16[oal_buffer_size]);
-			//memset(oal_buffer.get(), 0, oal_buffer_size * sizeof(u16));
 
 			Array<u64> keys;
 
@@ -141,57 +135,103 @@ int cellAudioInit()
 					AudioPortConfig& port = m_config.m_ports[i];
 
 					const u32 block_size = port.channel * 256;
+					const u32 position = port.tag % port.block; // old value
+					const u32 buf_addr = m_config.m_buffer + (i * 128 * 1024) + (position * block_size * sizeof(float));
 
-					u32 position = port.tag % port.block; // old value
+					auto buf = (be_t<float>*)&Memory[buf_addr];
 
-					u32 buf_addr = m_config.m_buffer + (i * 128 * 1024) + (position * block_size * sizeof(float));
-
-					memcpy(buffer2, Memory + buf_addr, block_size * sizeof(float));
-					memset(Memory + buf_addr, 0, block_size * sizeof(float));
-
-					const u32 k = port.channel / 2;
-
-					if (first_mix)
+					if (port.channel == 2)
 					{
-						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+						if (first_mix)
 						{
-							// reverse byte order
-							buffer[i] = buffer2[i*k];
-							buffer[i+1] = buffer2[i*k+1];
-							// TODO: use port.m_param.level
-							// TODO: downmix channels that are ignored (?) or implement surround sound
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+							{
+								// reverse byte order
+								buffer[i] = buf[i];
+								// TODO: use port.m_param.level
+							}
+							first_mix = false;
 						}
-
-						first_mix = false;
-					}
-					else
-					{
-						for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+						else
 						{
-							buffer[i] += buffer2[i*k];
-							buffer[i+1] += buffer2[i*k+1];
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+							{
+								buffer[i] += buf[i];
+							}
 						}
 					}
+					else if (port.channel == 6)
+					{
+						if (first_mix)
+						{
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							{
+								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
+								buffer[i] = (buf[i*3] + buf[i*3+4] + center) * 0.5f;
+								buffer[i+1] = (buf[i*3+1] + buf[i*3+5] + center) * 0.5f;
+							}
+							first_mix = false;
+						}
+						else
+						{
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							{
+								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
+								buffer[i] += (buf[i*3] + buf[i*3+4] + center) * 0.5f;
+								buffer[i+1] += (buf[i*3+1] + buf[i*3+5] + center) * 0.5f;
+							}
+						}
+					}
+					else if (port.channel == 8)
+					{
+						if (first_mix)
+						{
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							{
+								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
+								buffer[i] = (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * 0.5f;
+								buffer[i+1] = (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * 0.5f;
+							}
+							first_mix = false;
+						}
+						else
+						{
+							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							{
+								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
+								buffer[i] += (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * 0.5f;
+								buffer[i+1] += (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * 0.5f;
+							}
+						}
+					}
+
+					memset(buf, 0, block_size * sizeof(float));
 				}
 
 				// convert the data from float to u16 and clip:
-				for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+				if (!first_mix)
 				{
-					oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buffer[i] * 0x8000, -0x8000), 0x7fff));
+					for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+					{
+						oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buffer[i] * 0x8000, -0x8000), 0x7fff));
+					}
 				}
 
 				const u64 stamp1 = get_system_time();
 
-				oal_buffer_offset += sizeof(buffer) / sizeof(float);
-
-				if(oal_buffer_offset >= oal_buffer_size)
+				if (!first_mix)
 				{
-					if(m_audio_out)
-					{
-						queue.Push(&oal_buffer[oal_pos][0]);
-					}
+					oal_buffer_offset += sizeof(buffer) / sizeof(float);
 
-					oal_buffer_offset = 0;
+					if(oal_buffer_offset >= oal_buffer_size)
+					{
+						if(m_audio_out)
+						{
+							queue.Push(&oal_buffer[oal_pos][0]);
+						}
+
+						oal_buffer_offset = 0;
+					}
 				}
 
 				const u64 stamp2 = get_system_time();
@@ -224,7 +264,7 @@ int cellAudioInit()
 
 				const u64 stamp3 = get_system_time();
 
-				if(do_dump)
+				if (do_dump && !first_mix)
 				{
 					if (m_dump.WriteData(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
 					{
@@ -246,6 +286,15 @@ abort:
 				m_dump.Finalize();
 
 			m_config.m_is_audio_initialized = false;
+
+			m_config.m_keys.Clear();
+			for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
+			{
+				AudioPortConfig& port = m_config.m_ports[i];
+				port.m_is_audio_port_opened = false;
+				port.m_is_audio_port_started = false;
+			}
+			m_config.m_port_in_use = 0;
 
 			while (!internal_finished)
 			{
@@ -418,6 +467,7 @@ int cellAudioPortClose(u32 portNum)
 	}
 
 	m_config.m_ports[portNum].m_is_audio_port_started = false;
+	m_config.m_ports[portNum].m_is_audio_port_opened = false;
 	m_config.m_port_in_use--;
 	return CELL_OK;
 }

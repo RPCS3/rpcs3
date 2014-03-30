@@ -13,8 +13,7 @@ CellSurMixerConfig surMixer;
 u32 surMixerCb = 0;
 u32 surMixerCbArg = 0;
 SMutex mixer_mutex;
-bool mixfirst;
-float mixdata[2*256];
+float mixdata[8*256];
 u64 mixcount = 0;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 samples)
@@ -28,11 +27,11 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 	case 2:
 		if (port >= surMixer.chStrips2) ch = 0; break;
 	case 6:
-		if (port >= surMixer.chStrips6) ch = 0; break;
+		/*if (port >= surMixer.chStrips6)*/ ch = 0; break;
 	case 8:
 		if (port >= surMixer.chStrips8) ch = 0; break;
 	default:
-		ch = 0;
+		ch = 0; break;
 	}
 
 	if (aan_handle == 0x11111111 && samples == 256 && ch && offset == 0)
@@ -50,24 +49,52 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 
 	SMutexLocker lock(mixer_mutex);
 
-	const u32 k = ch / 2;
-
-	if (mixfirst)
+	if (ch == 1)
 	{
-		for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i += 2)
+		// mono upmixing
+		for (u32 i = 0; i < samples; i++)
 		{
-			// reverse byte order and mix
-			mixdata[i] = *(be_t<float>*)&Memory[addr + i * k * sizeof(float)];
-			mixdata[i + 1] = *(be_t<float>*)&Memory[addr + (i * k + 1) * sizeof(float)];
-		}
-		mixfirst = false;
+			const float center = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
+			mixdata[i*8+0] += center * 2;
+			mixdata[i*8+1] += center * 2;
+		}		
 	}
-	else
+	else if (ch == 2)
 	{
-		for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i += 2)
+		// stereo upmixing
+		for (u32 i = 0; i < samples; i++)
 		{
-			mixdata[i] += *(be_t<float>*)&Memory[addr + i * k * sizeof(float)];
-			mixdata[i + 1] += *(be_t<float>*)&Memory[addr + (i * k + 1) * sizeof(float)];
+			const float left = *(be_t<float>*)&Memory[addr + i * 2 * sizeof(float)];
+			const float right = *(be_t<float>*)&Memory[addr + (i * 2 + 1) * sizeof(float)];
+			mixdata[i*8+0] += left * 2;
+			mixdata[i*8+1] += right * 2;
+		}
+	}
+	else if (ch == 6)
+	{
+		// 5.1 upmixing
+		for (u32 i = 0; i < samples; i++)
+		{
+			const float left = *(be_t<float>*)&Memory[addr + i * 6 * sizeof(float)];
+			const float right = *(be_t<float>*)&Memory[addr + (i * 6 + 1) * sizeof(float)];
+			const float center = *(be_t<float>*)&Memory[addr + (i * 6 + 2) * sizeof(float)];
+			const float low_freq = *(be_t<float>*)&Memory[addr + (i * 6 + 3) * sizeof(float)];
+			const float rear_left = *(be_t<float>*)&Memory[addr + (i * 6 + 4) * sizeof(float)];
+			const float rear_right = *(be_t<float>*)&Memory[addr + (i * 6 + 5) * sizeof(float)];
+			mixdata[i*8+0] += left;
+			mixdata[i*8+1] += right;
+			mixdata[i*8+2] += center;
+			mixdata[i*8+3] += low_freq;
+			mixdata[i*8+4] += rear_left;
+			mixdata[i*8+5] += rear_right;
+		}
+	}
+	else if (ch == 8)
+	{
+		// 7.1
+		for (u32 i = 0; i < samples * 8; i++)
+		{
+			mixdata[i] += *(be_t<float>*)&Memory[addr + i * sizeof(float)];
 		}
 	}
 
@@ -180,7 +207,7 @@ int cellSurMixerStart()
 		return CELL_LIBMIXER_ERROR_FULL;
 	}
 	
-	port.channel = 2;
+	port.channel = 8;
 	port.block = 16;
 	port.attr = 0;
 	port.level = 1.0f;
@@ -218,24 +245,17 @@ int cellSurMixerStart()
 
 			u64 stamp0 = get_system_time();
 
-			mixfirst = true;
+			memset(mixdata, 0, sizeof(mixdata));
 			mixerCb->ExecAsCallback(surMixerCb, true, surMixerCbArg, mixcount, 256);
 
 			u64 stamp1 = get_system_time();
 
-			auto buf = (be_t<float>*)&Memory[m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % 16) * 2 * 256 * sizeof(float)];
+			auto buf = (be_t<float>*)&Memory[m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float)];
 			
-			if (!mixfirst)
+			for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
 			{
-				for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
-				{
-					// reverse byte order
-					buf[i] = mixdata[i];
-				}
-			}
-			else
-			{
-				// no data?
+				// reverse byte order
+				buf[i] = mixdata[i];
 			}
 
 			u64 stamp2 = get_system_time();
@@ -255,7 +275,7 @@ int cellSurMixerStart()
 
 int cellSurMixerSetParameter(u32 param, float value)
 {
-	libmixer.Warning("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
+	libmixer.Error("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
 	return CELL_OK;
 }
 
@@ -265,9 +285,12 @@ int cellSurMixerFinalize()
 
 	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
 
-	port.m_is_audio_port_started = false;
-	port.m_is_audio_port_opened = false;
-	m_config.m_port_in_use--;
+	if (port.m_is_audio_port_opened)
+	{
+		port.m_is_audio_port_started = false;
+		port.m_is_audio_port_opened = false;
+		m_config.m_port_in_use--;
+	}
 
 	return CELL_OK;
 }
@@ -284,29 +307,14 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 		Emu.Pause();
 		return CELL_OK;
 	}
-	
-	if (busNo > 1) // channels from 3 to 8 ignored (TODO)
-	{
-		return CELL_OK;
-	}
 
 	SMutexLocker lock(mixer_mutex);
 
-	if (mixfirst)
+	for (u32 i = 0; i < samples; i++)
 	{
-		for (u32 i = 0; i < samples; i++)
-		{
-			// reverse byte order and mix
-			mixdata[i * 2 + busNo] = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
-		}
-		mixfirst = false;
-	}
-	else
-	{
-		for (u32 i = 0; i < samples; i++)
-		{
-			mixdata[i * 2 + busNo] += *(be_t<float>*)&Memory[addr + i * sizeof(float)];
-		}
+		// reverse byte order and mix
+		u32 v = Memory.Read32(addr + i * sizeof(float));
+		mixdata[i*8+busNo] += (float&)v;
 	}
 
 	return CELL_OK;
@@ -685,7 +693,7 @@ void libmixer_init()
 	libmixer.AddFuncSub("surmx___", cellSurMixerFinalize_table, "cellSurMixerFinalize", cellSurMixerFinalize);
 
 	static const u64 cellSurMixerSurBusAddData_table[] = {
-		// first instruction ignored
+		0xff00000081428250,
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
 		0xfffffffff8010080,
@@ -716,7 +724,7 @@ void libmixer_init()
 	libmixer.AddFuncSub("surmx___", cellSurMixerSurBusAddData_table, "cellSurMixerSurBusAddData", cellSurMixerSurBusAddData);
 
 	static const u64 cellSurMixerChStripSetParameter_table[] = {
-		// first instruction ignored
+		0xff00000081028250,
 		0xffffffff7c6b1b78,
 		0xffffffff3c608031,
 		0xffffffff7c8a2378,
