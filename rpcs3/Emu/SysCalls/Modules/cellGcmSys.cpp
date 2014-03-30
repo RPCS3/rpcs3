@@ -815,53 +815,98 @@ int32_t cellGcmUnreserveIoMapSize(u32 size)
 
 void cellGcmSys_init()
 {
-	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
-	cellGcmSys.AddFunc(0x06edea9e, cellGcmSetUserHandler);
-	cellGcmSys.AddFunc(0x15bae46b, cellGcmInit);
-	cellGcmSys.AddFunc(0x21397818, cellGcmSetFlipCommand);
-	cellGcmSys.AddFunc(0x3a33c1fd, cellGcmFunc15);
-	cellGcmSys.AddFunc(0x4ae8d215, cellGcmSetFlipMode);
-	cellGcmSys.AddFunc(0x5e2ee0f0, cellGcmGetDefaultCommandWordSize);
-	cellGcmSys.AddFunc(0x72a577ce, cellGcmGetFlipStatus);
-	cellGcmSys.AddFunc(0x8cdf8c70, cellGcmGetDefaultSegmentWordSize);
-	cellGcmSys.AddFunc(0x9ba451e4, cellGcmSetDefaultFifoSize);
-	cellGcmSys.AddFunc(0xa53d12ae, cellGcmSetDisplayBuffer);
-	cellGcmSys.AddFunc(0xa547adde, cellGcmGetControlRegister);
-	cellGcmSys.AddFunc(0xb2e761d4, cellGcmResetFlipStatus);
-	cellGcmSys.AddFunc(0xd8f88e1a, cellGcmSetFlipCommandWithWaitLabel);
-	cellGcmSys.AddFunc(0xe315a0b2, cellGcmGetConfiguration);
-	cellGcmSys.AddFunc(0x9dc04436, cellGcmBindZcull);
-	cellGcmSys.AddFunc(0xd34a420d, cellGcmSetZcull);
-	cellGcmSys.AddFunc(0xd9a0a879, cellGcmGetZcullInfo);
+	//------------------------------------------------------------------------
+	// Generating Render Commands
+	//------------------------------------------------------------------------
+	
+	// TODO
+
+	//------------------------------------------------------------------------
+	// Data Retrieval
+	//------------------------------------------------------------------------
+	// cellGcmGetCurrentField
+	cellGcmSys.AddFunc(0xf80196c1, cellGcmGetLabelAddress);
+	// cellGcmGetNotifyDataAddress
+	// cellGcmGetReport
+	// cellGcmGetReportDataAddress
+	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
+	// cellGcmGetReportDataLocation
 	cellGcmSys.AddFunc(0x5a41c10f, cellGcmGetTimeStamp);
+	// cellGcmGetTimeStampLocation
+
+	//------------------------------------------------------------------------
+	// Data Transfer and Format Conversion
+	//------------------------------------------------------------------------
+	
+	// TODO
+
+	//------------------------------------------------------------------------
+	// Command Buffer Control
+	//------------------------------------------------------------------------
+	// cellGcmCallbackForSnc
+	// cellGcmFinish
+	// cellGcmFlush
+	cellGcmSys.AddFunc(0xa547adde, cellGcmGetControlRegister);
+	cellGcmSys.AddFunc(0x5e2ee0f0, cellGcmGetDefaultCommandWordSize);
+	cellGcmSys.AddFunc(0x8cdf8c70, cellGcmGetDefaultSegmentWordSize);
+	cellGcmSys.AddFunc(0xcaabd992, cellGcmInitDefaultFifoMode);
+	// cellGcmReserveMethodSize
+	// cellGcmResetDefaultCommandBuffer
+	// cellGcmSetCallCommand
+	cellGcmSys.AddFunc(0x9ba451e4, cellGcmSetDefaultFifoSize);
+	// cellGcmSetJumpCommand
+	// cellGcmSetNopCommand
+	// cellGcmSetReturnCommand
+	// cellGcmSetSkipNop
+	// cellGcmSetupContextData
+	// cellGcmSetUserCommand
+
+	//------------------------------------------------------------------------
+	// Hardware Resource Management
+	//------------------------------------------------------------------------
+	cellGcmSys.AddFunc(0x4524cccd, cellGcmBindTile);
+	cellGcmSys.AddFunc(0x9dc04436, cellGcmBindZcull);
+	// cellGcmDumpGraphicsError
+	cellGcmSys.AddFunc(0xe315a0b2, cellGcmGetConfiguration);
+	// cellGcmGetDisplayBufferByFlipIndex
+	cellGcmSys.AddFunc(0x72a577ce, cellGcmGetFlipStatus);
+	// cellGcmgetLastFlipTime
+	// cellGcmGetLastSecondVTime
+	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
+	// cellGcmGetVBlankCount
+	cellGcmSys.AddFunc(0x15bae46b, cellGcmInit);
+	// cellGcmInitSystemMode
+	cellGcmSys.AddFunc(0xb2e761d4, cellGcmResetFlipStatus);
+	cellGcmSys.AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
+	cellGcmSys.AddFunc(0xa53d12ae, cellGcmSetDisplayBuffer);
+	cellGcmSys.AddFunc(0xdc09357e, cellGcmSetFlip);
+	cellGcmSys.AddFunc(0xa41ef7e8, cellGcmSetFlipHandler);
+	// cellGcmSetFlipImmediate
+	cellGcmSys.AddFunc(0x4ae8d215, cellGcmSetFlipMode);
+	cellGcmSys.AddFunc(0xa47c09ff, cellGcmSetFlipStatus);
+	// cellGcmSetFlipWithWaitLabel
+	// cellGcmSetGraphicsHandler 
+	cellGcmSys.AddFunc(0x0b4b62d5, cellGcmSetPrepareFlip);
+	//cellGcmSetQueueHandler
+	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
+	// cellGcmSetSecondVHandler
+	cellGcmSys.AddFunc(0xbd100dbc, cellGcmSetTileInfo);
+	// cellGcmSetUserHandler TODO: Function exists
+	// cellGcmSetVBlankFrequency
+	cellGcmSys.AddFunc(0xa91b0402, cellGcmSetVBlankHandler);
+	cellGcmSys.AddFunc(0x983fb9aa, cellGcmSetWaitFlip);
+	cellGcmSys.AddFunc(0xd34a420d, cellGcmSetZcull);
+	// cellGcmSortRemapEaIoAddress
 	cellGcmSys.AddFunc(0xd9b7653e, cellGcmUnbindTile);
 	cellGcmSys.AddFunc(0xa75640e8, cellGcmUnbindZcull);
-	cellGcmSys.AddFunc(0xa41ef7e8, cellGcmSetFlipHandler);
-	cellGcmSys.AddFunc(0xf80196c1, cellGcmGetLabelAddress);
-	cellGcmSys.AddFunc(0x107bf3a1, cellGcmInitCursor);
-	cellGcmSys.AddFunc(0x1a0de550, cellGcmSetCursorPosition);
-	cellGcmSys.AddFunc(0x69c6cc82, cellGcmSetCursorDisable);
-	cellGcmSys.AddFunc(0xa91b0402, cellGcmSetVBlankHandler);
-	cellGcmSys.AddFunc(0xbd2fa0a7, cellGcmUpdateCursor);
-	cellGcmSys.AddFunc(0xc47d0812, cellGcmSetCursorEnable);
-	cellGcmSys.AddFunc(0xf9bfdc72, cellGcmSetCursorImageOffset);
+	cellGcmSys.AddFunc(0x657571f7, cellGcmGetTileInfo);
+	cellGcmSys.AddFunc(0xd9a0a879, cellGcmGetZcullInfo);
 	cellGcmSys.AddFunc(0x0e6b0dae, cellGcmGetDisplayInfo);
 	cellGcmSys.AddFunc(0x93806525, cellGcmGetCurrentDisplayBufferId);
-	cellGcmSys.AddFunc(0xbc982946, cellGcmSetDefaultCommandBuffer);
-	cellGcmSys.AddFunc(0xa47c09ff, cellGcmSetFlipStatus);
-	cellGcmSys.AddFunc(0xd0b1d189, cellGcmSetTile);
-	cellGcmSys.AddFunc(0xbd100dbc, cellGcmSetTileInfo);
-	cellGcmSys.AddFunc(0x4524cccd, cellGcmBindTile);
-	cellGcmSys.AddFunc(0x0b4b62d5, cellGcmSetPrepareFlip);
-	cellGcmSys.AddFunc(0x657571f7, cellGcmGetTileInfo);
-	cellGcmSys.AddFunc(0xcaabd992, cellGcmInitDefaultFifoMode);
-	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
-	cellGcmSys.AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
-	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
-	cellGcmSys.AddFunc(0xdc09357e, cellGcmSetFlip);
-	cellGcmSys.AddFunc(0x983fb9aa, cellGcmSetWaitFlip);
 
+	//------------------------------------------------------------------------
 	//Memory Mapping
+	//------------------------------------------------------------------------
 	cellGcmSys.AddFunc(0x21ac3697, cellGcmAddressToOffset);
 	cellGcmSys.AddFunc(0xfb81c03e, cellGcmGetMaxIoMapSize);
 	cellGcmSys.AddFunc(0x2922aed0, cellGcmGetOffsetTable);
@@ -874,6 +919,33 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0xefd00f54, cellGcmUnmapEaIoAddress);
 	cellGcmSys.AddFunc(0xdb23e867, cellGcmUnmapIoAddress);
 	cellGcmSys.AddFunc(0x3b9bd5bd, cellGcmUnreserveIoMapSize);
+
+	//------------------------------------------------------------------------
+	// Cursor
+	//------------------------------------------------------------------------
+	cellGcmSys.AddFunc(0x107bf3a1, cellGcmInitCursor);
+	cellGcmSys.AddFunc(0xc47d0812, cellGcmSetCursorEnable);
+	cellGcmSys.AddFunc(0x69c6cc82, cellGcmSetCursorDisable);
+	cellGcmSys.AddFunc(0xf9bfdc72, cellGcmSetCursorImageOffset);
+	cellGcmSys.AddFunc(0x1a0de550, cellGcmSetCursorPosition);
+	cellGcmSys.AddFunc(0xbd2fa0a7, cellGcmUpdateCursor);
+
+	//------------------------------------------------------------------------
+	// Functions for Maintaining Compatibility
+	//------------------------------------------------------------------------
+	// cellGcmGetCurrentBuffer
+	// cellGcmSetCurrentBuffer
+	cellGcmSys.AddFunc(0xbc982946, cellGcmSetDefaultCommandBuffer);
+	// cellGcmSetDefaultCommandBufferAndSegmentWordSize
+	// cellGcmSetUserCallback
+
+	//------------------------------------------------------------------------
+	// Other
+	//------------------------------------------------------------------------
+	cellGcmSys.AddFunc(0x21397818, cellGcmSetFlipCommand);
+	cellGcmSys.AddFunc(0x3a33c1fd, cellGcmFunc15);
+	cellGcmSys.AddFunc(0xd8f88e1a, cellGcmSetFlipCommandWithWaitLabel);
+	cellGcmSys.AddFunc(0xd0b1d189, cellGcmSetTile);
 }
 
 void cellGcmSys_Load()
