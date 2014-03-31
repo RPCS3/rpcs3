@@ -301,6 +301,44 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 	return 0;
 }
 
+static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
+{
+	if (edat == nullptr || npd == nullptr)
+		return false;
+
+	if (npd->version == 0 || npd->version == 1)
+	{
+		if (edat->flags & 0x7EFFFFFE) 
+		{
+			ConLog.Error("EDAT: Bad header flags!\n");
+			return false;
+		}
+	}
+	else if (npd->version == 2) 
+	{
+		if (edat->flags & 0x7EFFFFE0) 
+		{
+			ConLog.Error("EDAT: Bad header flags!\n");
+			return false;
+		}
+	}
+	else if (npd->version == 3 || npd->version == 4)
+	{
+		if (edat->flags & 0x7EFFFFC0)
+		{
+			ConLog.Error("EDAT: Bad header flags!\n");
+			return false;
+		}
+	}
+	else if (npd->version > 4)
+	{
+		ConLog.Error("EDAT: Unknown version - %d\n", npd->version);
+		return false;
+	}
+
+	return true;
+}
+
 int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFile *f, bool verbose)
 {
 	f->Seek(0);
@@ -309,33 +347,12 @@ int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFi
 	unsigned char *hash_result = new unsigned char[0x10];
 
 	// Check NPD version and EDAT flags.
-	if ((npd->version == 0) || (npd->version == 1))
+	if (!check_flags(edat, npd))
 	{
-		if (edat->flags & 0x7EFFFFFE) 
-		{
-			ConLog.Error("EDAT: Bad header flags!\n");
-			return 1;
-		}
-	}
-	else if (npd->version == 2) 
-	{
-		if (edat->flags & 0x7EFFFFE0) 
-		{
-			ConLog.Error("EDAT: Bad header flags!\n");
-			return 1;
-		}
-	}
-	else if ((npd->version == 3) || (npd->version == 4))
-	{
-		if (edat->flags & 0x7EFFFFC0)
-		{
-			ConLog.Error("EDAT: Bad header flags!\n");
-			return 1;
-		}
-	}
-	else
-	{
-		ConLog.Error("EDAT: Unknown version!\n");
+		delete[] header;
+		delete[] tmp;
+		delete[] hash_result;
+
 		return 1;
 	}
 
@@ -501,6 +518,8 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 	if(memcmp(NPD->magic, npd_magic, 4))
 	{
 		ConLog.Error("EDAT: File has invalid NPD header.");
+		delete NPD;
+		delete EDAT;
 		return 1;
 	}
 
@@ -556,6 +575,8 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 			if (!test)
 			{
 				ConLog.Error("EDAT: A valid RAP file is needed!");
+				delete NPD;
+				delete EDAT;
 				return 1;
 			}
 		}
