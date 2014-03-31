@@ -2,7 +2,7 @@
 
 #include "Emu/Io/KeyboardHandler.h"
 
-class WindowsKeyboardHandler
+class WindowsKeyboardHandler final
 	: public wxWindow
 	, public KeyboardHandlerBase
 {

@@ -2,7 +2,7 @@
 
 #include "Emu/Io/MouseHandler.h"
 
-class WindowsMouseHandler
+class WindowsMouseHandler final
 	: public wxWindow
 	, public MouseHandlerBase
 {

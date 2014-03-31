@@ -2,7 +2,7 @@
 
 #include "Emu/Io/PadHandler.h"
 
-class WindowsPadHandler
+class WindowsPadHandler final
 	: public wxWindow
 	, public PadHandlerBase
 {

@@ -2,7 +2,7 @@
 
 #include "Emu/Io/PadHandler.h"
 
-class NullPadHandler : public PadHandlerBase
+class NullPadHandler final : public PadHandlerBase
 {
 public:
 	NullPadHandler()

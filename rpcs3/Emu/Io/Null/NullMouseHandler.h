@@ -2,7 +2,7 @@
 
 #include "Emu/Io/MouseHandler.h"
 
-class NullMouseHandler : public MouseHandlerBase
+class NullMouseHandler final : public MouseHandlerBase
 {
 public:
 	NullMouseHandler()

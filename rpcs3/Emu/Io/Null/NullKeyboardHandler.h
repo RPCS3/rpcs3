@@ -2,7 +2,7 @@
 
 #include "Emu/Io/KeyboardHandler.h"
 
-class NullKeyboardHandler : public KeyboardHandlerBase
+class NullKeyboardHandler final : public KeyboardHandlerBase
 {
 public:
 	NullKeyboardHandler()
