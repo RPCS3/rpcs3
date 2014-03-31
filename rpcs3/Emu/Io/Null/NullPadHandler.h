@@ -13,12 +13,12 @@ public:
 	{
 		memset(&m_info, 0, sizeof(PadInfo));
 		m_info.max_connect = max_connect;
-		m_pads.Clear();
+		m_pads.clear();
 	}
 
 	virtual void Close()
 	{
 		memset(&m_info, 0, sizeof(PadInfo));
-		m_pads.Clear();
+		m_pads.clear();
 	}
 };

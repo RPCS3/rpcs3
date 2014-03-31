@@ -65,7 +65,7 @@ int cellPadClearBuf(u32 port_no)
 {
 	sys_io.Log("cellPadClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if(port_no >= Emu.GetPadManager().GetPads().size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	//?
 
@@ -75,9 +75,9 @@ int cellPadClearBuf(u32 port_no)
 int cellPadGetData(u32 port_no, u32 data_addr)
 {
 	sys_io.Log("cellPadGetData[port_no: %d, data_addr: 0x%x]", port_no, data_addr);
-	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= pads.GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if(port_no >= pads.size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const Pad& pad = pads[port_no];
 	CellPadData data;
@@ -86,13 +86,14 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	const Array<Button>& buttons = pads[port_no].m_buttons;
+	std::vector<Button>& buttons = pads[port_no].m_buttons;
 	pads[port_no].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 	s32 len = 0;
-	for(uint i=0; i<buttons.GetCount(); ++i)
+	for(uint i=0; i<buttons.size(); ++i)
 	{
-		if(!buttons[i].m_pressed) continue;
+		if(!buttons[i].m_pressed)
+			continue;
 
 		switch(buttons[i].m_offset)
 		{
@@ -111,8 +112,8 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 ly = 128;
 	u16 rx = 128;
 	u16 ry = 128;
-	const Array<AnalogStick>& sticks = pads[port_no].m_sticks;
-	for (u32 s = 0; s < sticks.GetCount(); s++)
+	const std::vector<AnalogStick>& sticks = pads[port_no].m_sticks;
+	for (u32 s = 0; s < sticks.size(); s++)
 	{
 		u16* res;
 		switch (sticks[s].m_offset)
@@ -163,7 +164,7 @@ int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr)
 {
 	sys_io.Log("cellPadGetDataExtra(port_no=%d, device_type_addr=0x%x, device_type_addr=0x%x)", port_no, device_type_addr, data_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if(port_no >= Emu.GetPadManager().GetPads().size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	return CELL_OK;
 }
 
@@ -171,7 +172,7 @@ int cellPadSetActDirect(u32 port_no, u32 param_addr)
 {
 	sys_io.Log("cellPadSetActDirect(port_no=%d, param_addr=0x%x)", port_no, param_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if(port_no >= Emu.GetPadManager().GetPads().size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	return CELL_OK;
 }
 
@@ -188,11 +189,12 @@ int cellPadGetInfo(u32 info_addr)
 	info.now_connect = rinfo.now_connect;
 	info.system_info = rinfo.system_info;
 
-	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
+	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	for(u32 i=0; i<CELL_MAX_PADS; ++i)
 	{
-		if(i >= pads.GetCount()) break;
+		if(i >= pads.size())
+			break;
 
 		info.status[i] = pads[i].m_port_status;
 		info.product_id[i] = 0x0268;
@@ -217,11 +219,13 @@ int cellPadGetInfo2(u32 info_addr)
 	info.now_connect = rinfo.now_connect;
 	info.system_info = rinfo.system_info;
 
-	const Array<Pad>& pads = Emu.GetPadManager().GetPads();
+	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	for(u32 i=0; i<CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if(i >= pads.GetCount()) break;
+		if(i >= pads.size())
+			break;
+
 		info.port_status[i] = pads[i].m_port_status;
 		info.port_setting[i] = pads[i].m_port_setting;
 		info.device_capability[i] = pads[i].m_device_capability;
@@ -237,8 +241,8 @@ int cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
 	sys_io.Log("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	Array<Pad>& pads = Emu.GetPadManager().GetPads();
-	if(port_no >= pads.GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
+	if(port_no >= pads.size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	pads[port_no].m_port_setting = port_setting;
 

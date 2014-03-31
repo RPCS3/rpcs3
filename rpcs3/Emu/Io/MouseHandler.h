@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 enum MousePortStatus
 {
 	CELL_MOUSE_STATUS_DISCONNECTED = 0x00000000,
@@ -99,7 +101,7 @@ class MouseHandlerBase
 {
 protected:
 	MouseInfo m_info;
-	Array<Mouse> m_mice;
+	std::vector<Mouse> m_mice;
 
 public:
 	virtual void Init(const u32 max_connect)=0;
@@ -107,7 +109,7 @@ public:
 
 	void Button(u8 button, bool pressed)
 	{
-		for(u64 p=0; p<GetMice().GetCount(); ++p)
+		for(u64 p=0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -121,7 +123,7 @@ public:
 
 	void Scroll(const s8 rotation)
 	{
-		for(u64 p=0; p<GetMice().GetCount(); ++p)
+		for(u64 p=0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -134,17 +136,17 @@ public:
 
 	void Move(const s16 x_pos_new, const s16 y_pos_new)
 	{
-		for(u64 p=0; p<GetMice().GetCount(); ++p)
+		for(u64 p=0; p< m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
 				CellMouseData& data = GetData(p);
 				data.update = CELL_MOUSE_DATA_UPDATE;
-				data.x_axis += x_pos_new - GetMice()[p].x_pos;
-				data.y_axis += y_pos_new - GetMice()[p].y_pos;
+				data.x_axis += x_pos_new - m_mice[p].x_pos;
+				data.y_axis += y_pos_new - m_mice[p].y_pos;
 
-				GetMice()[p].x_pos = x_pos_new;
-				GetMice()[p].y_pos = y_pos_new;
+				m_mice[p].x_pos = x_pos_new;
+				m_mice[p].y_pos = y_pos_new;
 
 				/*CellMouseRawData& rawdata = GetRawData(p);
 				rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
@@ -154,7 +156,7 @@ public:
 	}
 
 	MouseInfo& GetInfo() { return m_info; }
-	Array<Mouse>& GetMice() { return m_mice; }
-	CellMouseData& GetData(const u32 mouse) { return GetMice()[mouse].m_data; }
-	CellMouseRawData& GetRawData(const u32 mouse) { return GetMice()[mouse].m_rawdata; }
+	std::vector<Mouse>& GetMice() { return m_mice; }
+	CellMouseData& GetData(const u32 mouse) { return m_mice[mouse].m_data; }
+	CellMouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
 };

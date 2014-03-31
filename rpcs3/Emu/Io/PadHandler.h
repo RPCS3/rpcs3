@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 enum PortStatus
 {
 	CELL_PAD_STATUS_DISCONNECTED   = 0x00000000,
@@ -128,8 +130,8 @@ struct Pad
 	u32 m_device_capability;
 	u32 m_device_type;
 
-	Array<Button> m_buttons;
-	Array<AnalogStick> m_sticks;
+	std::vector<Button> m_buttons;
+	std::vector<AnalogStick> m_sticks;
 
 	s16 m_analog_left_x;
 	s16 m_analog_left_y;
@@ -185,7 +187,9 @@ struct Pad
 	{
 	}
 
-	~Pad() { m_buttons.Clear(); m_sticks.Clear(); }
+	~Pad()
+	{
+	}
 };
 
 struct PadInfo
@@ -199,7 +203,7 @@ class PadHandlerBase
 {
 protected:
 	PadInfo m_info;
-	Array<Pad> m_pads;
+	std::vector<Pad> m_pads;
 
 public:
 	virtual void Init(const u32 max_connect)=0;
@@ -207,14 +211,14 @@ public:
 
 	void Key(const u32 code, bool pressed)
 	{
-		for(u64 p=0; p<GetPads().GetCount(); ++p)
+		for(Pad& pad : m_pads)
 		{
-			for(u64 b=0; b<GetButtons(p).GetCount(); b++)
+			for(Button& button : pad.m_buttons)
 			{
-				Button& button = GetButtons(p).Get(b);
-				if(button.m_keyCode != code) continue;
+				if(button.m_keyCode != code)
+					continue;
 
-				GetPads()[p].m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 				if(button.m_pressed && !pressed)
 				{
@@ -225,12 +229,13 @@ public:
 					button.m_pressed = pressed;
 				}
 			}
-			for(u32 s = 0; s < GetSticks(p).GetCount(); s++)
-			{
-				AnalogStick& stick = GetSticks(p).Get(s);
-				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code) continue;
 
-				GetPads()[p].m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			for(AnalogStick& stick : pad.m_sticks)
+			{
+				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code)
+					continue;
+
+				pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 				if (stick.m_keyCodeMax == code)
 				{
@@ -247,7 +252,7 @@ public:
 	}
 
 	PadInfo& GetInfo() { return m_info; }
-	Array<Pad>& GetPads() { return m_pads; }
-	Array<Button>& GetButtons(const u32 pad) { return GetPads()[pad].m_buttons; }
-	Array<AnalogStick>& GetSticks(const u32 pad) { return GetPads()[pad].m_sticks; }
+	std::vector<Pad>& GetPads() { return m_pads; }
+	std::vector<Button>& GetButtons(const u32 pad) { return m_pads[pad].m_buttons; }
+	std::vector<AnalogStick>& GetSticks(const u32 pad) { return m_pads[pad].m_sticks; }
 };
