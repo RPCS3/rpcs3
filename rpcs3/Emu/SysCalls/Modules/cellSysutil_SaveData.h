@@ -71,6 +71,20 @@ enum
 	CELL_SAVEDATA_FOCUSPOS_LATEST       = 3,
 	CELL_SAVEDATA_FOCUSPOS_OLDEST       = 4,
 	CELL_SAVEDATA_FOCUSPOS_NEWDATA      = 5,
+
+	// CellSaveDataFileOperation
+	CELL_SAVEDATA_FILEOP_READ           = 0,
+	CELL_SAVEDATA_FILEOP_WRITE          = 1,
+	CELL_SAVEDATA_FILEOP_DELETE         = 2,
+	CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC  = 3,
+
+	// CellSaveDataFileType
+	CELL_SAVEDATA_FILETYPE_SECUREFILE     = 0,
+	CELL_SAVEDATA_FILETYPE_NORMALFILE     = 1,
+	CELL_SAVEDATA_FILETYPE_CONTENT_ICON0  = 2,
+	CELL_SAVEDATA_FILETYPE_CONTENT_ICON1  = 3,
+	CELL_SAVEDATA_FILETYPE_CONTENT_PIC1   = 4,
+	CELL_SAVEDATA_FILETYPE_CONTENT_SND0   = 5,
 };
 
 
@@ -248,7 +262,7 @@ struct SaveDataListEntry
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u32 sizeKb;
+	u32 sizeKB;
 	s64 st_atime_;
 	s64 st_mtime_;
 	s64 st_ctime_;
