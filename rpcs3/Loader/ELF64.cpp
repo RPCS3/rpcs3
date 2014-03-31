@@ -176,16 +176,16 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		elf64_f.Seek((offset < 0 ? shdr_arr[ehdr.e_shstrndx].sh_offset : shdr_arr[ehdr.e_shstrndx].sh_offset - ehdr.e_shoff + offset) + shdr_arr[i].sh_name);
-		wxString name = wxEmptyString;
+		Array<char> name;
 		while(!elf64_f.Eof())
 		{
 			char c;
 			elf64_f.Read(&c, 1);
 			if(c == 0) break;
-			name += c;
+			name.AddCpy(c);
 		}
-
-		shdr_name_arr.Add(name);
+		name.AddCpy('\0');
+		shdr_name_arr.Add(wxString(name.GetPtr(), wxConvUTF8));
 	}
 
 	return true;
@@ -246,7 +246,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					{
 						elf64_f.Seek(phdr_arr[i].p_offset);
 						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
-						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
+						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
 					}
 				}
 			break;

@@ -651,7 +651,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SHADER_PROGRAM:
 	{
-		m_cur_shader_prog = &m_shader_progs[/*m_cur_shader_prog_num++*/0];
+		m_cur_shader_prog = &m_shader_progs[m_cur_shader_prog_num];
+		//m_cur_shader_prog_num = (m_cur_shader_prog_num + 1) % 16;
 		u32 a0 = ARGS(0);
 		m_cur_shader_prog->offset = a0 & ~0x3;
 		m_cur_shader_prog->addr = GetAddress(m_cur_shader_prog->offset, (a0 & 0x3) - 1);
@@ -948,7 +949,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_VIEWPORT_OFFSET:
 	{
+		/*const u32 offset0 = ARGS(0);
+		const u32 offset1 = ARGS(1);
+		const u32 offset2 = ARGS(2);
+		const u32 offset3 = ARGS(3);
+		const u32 scale0 = ARGS(4);
+		const u32 scale1 = ARGS(5);
+		const u32 scale2 = ARGS(6);
+		const u32 scale3 = ARGS(7);*/
 		//TODO
+		//ConLog.Warning("NV4097_SET_VIEWPORT_OFFSET: offset (%d, %d, %d, %d), scale (%d, %d, %d, %d)",
+			//offset0, offset1, offset2, offset3, scale0, scale1, scale2, scale3);
 	}
 	break;
 
@@ -1369,10 +1380,58 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case 0x000002f8:
 	break;
 
-	case NV0039_SET_CONTEXT_DMA_BUFFER_IN:
-	case NV0039_OFFSET_IN:
-	case NV0039_OFFSET_OUT:
-		//TODO
+	case NV0039_SET_CONTEXT_DMA_BUFFER_IN: // [E : RSXThread]: TODO: unknown/illegal method [0x00002184](0xfeed0000, 0xfeed0000)
+	{
+		const u32 srcContext = ARGS(0);
+		const u32 dstContext = ARGS(1);
+
+		if (srcContext == 0xfeed0000 && dstContext == 0xfeed0000)
+		{
+		}
+		else
+		{
+			ConLog.Warning("NV0039_SET_CONTEXT_DMA_BUFFER_IN: TODO: srcContext=0x%x, dstContext=0x%x", srcContext, dstContext);
+		}
+	}
+	break;
+
+	case NV0039_OFFSET_IN: // [E : RSXThread]: TODO: unknown/illegal method [0x0000230c](0x0, 0xb00400, 0x0, 0x0, 0x384000, 0x1, 0x101, 0x0)
+	{
+		const u32 inOffset = ARGS(0);
+		const u32 outOffset = ARGS(1);
+		const u32 inPitch = ARGS(2);
+		const u32 outPitch = ARGS(3);
+		const u32 lineLength = ARGS(4);
+		const u32 lineCount = ARGS(5);
+		const u32 format = ARGS(6);
+		const u8 outFormat = (format >> 8);
+		const u8 inFormat = (format >> 0);
+		const u32 notify = ARGS(7);
+
+		if (lineCount == 1 && !inPitch && !outPitch && !notify && format == 0x101)
+		{
+			memcpy(&Memory[GetAddress(outOffset, 0)], &Memory[GetAddress(inOffset, 0)], lineLength);
+		}
+		else
+		{
+			ConLog.Warning("NV0039_OFFSET_IN: TODO: offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+				inOffset, outOffset, inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
+		}
+	}
+	break;
+
+	case NV0039_OFFSET_OUT: // [E : RSXThread]: TODO: unknown/illegal method [0x00002310](0x0)
+	{
+		const u32 offset = ARGS(0);
+
+		if (!offset)
+		{
+		}
+		else
+		{
+			ConLog.Warning("NV0039_OFFSET_OUT: TODO: offset=0x%x", offset);
+		}
+	}
 	break;
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
@@ -1531,7 +1590,7 @@ void RSXThread::Task()
 			continue;
 		}
 
-		for(int i=0; i<count; i++)
+		for(u32 i=0; i<count; i++)
 		{
 			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
 		}

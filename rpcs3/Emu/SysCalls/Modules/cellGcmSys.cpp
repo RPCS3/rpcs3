@@ -181,7 +181,17 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 	if(current + 8 >= end)
 	{
 		ConLog.Warning("bad flip!");
-		cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
+		//cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
+		//copied:
+
+		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+
+		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
+
+		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
+		ctxt->current = ctxt->begin + res;
+		ctrl.put = res;
+		ctrl.get = 0;
 	}
 
 	current = ctxt->current;
