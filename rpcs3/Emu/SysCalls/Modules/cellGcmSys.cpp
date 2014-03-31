@@ -919,7 +919,7 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
 	// cellGcmSetSecondVHandler
 	cellGcmSys.AddFunc(0xbd100dbc, cellGcmSetTileInfo);
-	// cellGcmSetUserHandler TODO: Function exists
+	cellGcmSys.AddFunc(0x06edea9e, cellGcmSetUserHandler);
 	// cellGcmSetVBlankFrequency
 	cellGcmSys.AddFunc(0xa91b0402, cellGcmSetVBlankHandler);
 	cellGcmSys.AddFunc(0x983fb9aa, cellGcmSetWaitFlip);
