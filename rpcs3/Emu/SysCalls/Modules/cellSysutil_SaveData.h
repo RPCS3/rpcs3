@@ -19,6 +19,19 @@ enum
 	CELL_SAVEDATA_ERROR_NOTSUPPORTED    = 0x8002b40c,	
 };
 
+// Callback return codes
+enum
+{
+	CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM  =  2,
+	CELL_SAVEDATA_CBRESULT_OK_LAST            =  1,
+	CELL_SAVEDATA_CBRESULT_OK_NEXT            =  0,
+	CELL_SAVEDATA_CBRESULT_ERR_NOSPACE        = -1,
+	CELL_SAVEDATA_CBRESULT_ERR_FAILURE        = -2,
+	CELL_SAVEDATA_CBRESULT_ERR_BROKEN         = -3,
+	CELL_SAVEDATA_CBRESULT_ERR_NODATA         = -4,
+	CELL_SAVEDATA_CBRESULT_ERR_INVALID        = -5,
+};
+
 // Constants
 enum
 {
@@ -46,6 +59,18 @@ enum
 	// CellSaveDataSortOrder
 	CELL_SAVEDATA_SORTORDER_DESCENT     = 0,
 	CELL_SAVEDATA_SORTORDER_ASCENT      = 1,
+
+	// CellSaveDataIsNewData
+	CELL_SAVEDATA_ISNEWDATA_NO          = 0,
+	CELL_SAVEDATA_ISNEWDATA_YES         = 1,
+
+	// CellSaveDataFocusPosition
+	CELL_SAVEDATA_FOCUSPOS_DIRNAME      = 0,
+	CELL_SAVEDATA_FOCUSPOS_LISTHEAD     = 1,
+	CELL_SAVEDATA_FOCUSPOS_LISTTAIL     = 2,
+	CELL_SAVEDATA_FOCUSPOS_LATEST       = 3,
+	CELL_SAVEDATA_FOCUSPOS_OLDEST       = 4,
+	CELL_SAVEDATA_FOCUSPOS_NEWDATA      = 5,
 };
 
 
@@ -77,7 +102,7 @@ struct CellSaveDataListNewData
 { 
 	be_t<u32> iconPosition;
 	be_t<u32> dirName_addr; // char*
-	be_t<u32> icon_addr;    // CellSaveDataNewDataIcon*
+	mem_beptr_t<CellSaveDataNewDataIcon> icon;
 };
 
 struct CellSaveDataDirList
@@ -90,7 +115,7 @@ struct CellSaveDataListGet
 { 
 	be_t<u32> dirNum;
 	be_t<u32> dirListNum;
-	be_t<u32> dirList_addr; // CellSaveDataDirList*
+	mem_beptr_t<CellSaveDataDirList> dirList;
 };
 
 struct CellSaveDataListSet
@@ -98,14 +123,15 @@ struct CellSaveDataListSet
 	be_t<u32> focusPosition;
 	be_t<u32> focusDirName_addr; // char*
 	be_t<u32> fixedListNum;
-	be_t<u32> fixedList_addr; // CellSaveDataDirList*
-	be_t<u32> newData_addr;   // CellSaveDataListNewData*
+	mem_beptr_t<CellSaveDataDirList> fixedList;
+	mem_beptr_t<CellSaveDataListNewData> newData;
+	be_t<u32> reserved_addr;  // void*
 };
 
 struct CellSaveDataFixedSet
 { 
 	be_t<u32> dirName_addr; // char*
-	be_t<u32> newIcon_addr; // CellSaveDataNewDataIcon*
+	mem_beptr_t<CellSaveDataNewDataIcon> newIcon;
 	be_t<u32> option;
 };
 
@@ -151,7 +177,7 @@ struct CellSaveDataStatGet
 	be_t<s32> sysSizeKB;
 	be_t<u32> fileNum;
 	be_t<u32> fileListNum;
-	be_t<u32> fileList_addr; // CellSaveDataFileStat*
+	mem_beptr_t<CellSaveDataFileStat> fileList;
 };
 
 struct CellSaveDataAutoIndicator
@@ -165,9 +191,9 @@ struct CellSaveDataAutoIndicator
 
 struct CellSaveDataStatSet 
 { 
-	be_t<u32> setParam_addr;  // CellSaveDataSystemFileParam*
+	mem_beptr_t<CellSaveDataSystemFileParam> setParam;
 	be_t<u32> reCreateMode;
-	be_t<u32> indicator_addr; // CellSaveDataAutoIndicator*
+	mem_beptr_t<CellSaveDataAutoIndicator> indicator;
 };
 
 struct CellSaveDataFileGet
@@ -223,8 +249,12 @@ struct SaveDataListEntry
 	std::string subtitle;
 	std::string details;
 	u32 sizeKb;
-	u64 timestamp;
-	void* iconBuffer;
+	s64 st_atime_;
+	s64 st_mtime_;
+	s64 st_ctime_;
+	void* iconBuf;
+	u32 iconBufSize;
+	bool isNew;
 };
 
 

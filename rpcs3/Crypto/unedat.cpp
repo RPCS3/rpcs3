@@ -457,7 +457,7 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	else
 	{
 		// Generate klicensee xor key.
-		xor(key, klicensee, NP_OMAC_KEY_2, 0x10);
+		xor_(key, klicensee, NP_OMAC_KEY_2, 0x10);
 
 		// Hash with generated key and compare with dev_hash.
 		dev_hash_result = cmac_hash_compare(key, 0x10, (unsigned char *)npd, 0x60, npd->dev_hash);
@@ -529,7 +529,7 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 	if((EDAT->flags & SDAT_FLAG) == SDAT_FLAG)
 	{
 		ConLog.Warning("EDAT: SDAT detected!\n");
-		xor(key, NPD->dev_hash, SDAT_KEY, 0x10);
+		xor_(key, NPD->dev_hash, SDAT_KEY, 0x10);
 	}
 	else
 	{

@@ -23,17 +23,18 @@ public:
 		if (sortOrder == CELL_SAVEDATA_SORTORDER_DESCENT)
 		{
 			if (sortType == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-				return entry1.timestamp >= entry2.timestamp;
-			else //if (sortType == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				return entry1.st_mtime_ >= entry2.st_mtime_;
+			if (sortType == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
 				return entry1.subtitle >= entry2.subtitle;
 		}
-		else //if (sortOrder == CELL_SAVEDATA_SORTORDER_ASCENT)
+		if (sortOrder == CELL_SAVEDATA_SORTORDER_ASCENT)
 		{
 			if (sortType == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-				return entry1.timestamp < entry2.timestamp;
-			else //if (sortType == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				return entry1.st_mtime_ < entry2.st_mtime_;
+			if (sortType == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
 				return entry1.subtitle < entry2.subtitle;
 		}
+		return true;
 	}
 };
 
@@ -55,7 +56,7 @@ u64 getSaveDataSize(const std::string& dirName)
 	return totalSize;
 }
 
-void getSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::string& saveDir)
+void addSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::string& saveDir)
 {
 	// PSF parameters
 	vfsFile f(saveDir + "/PARAM.SFO");
@@ -75,10 +76,54 @@ void getSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::st
 	saveEntry.subtitle = psf.GetString("SUB_TITLE");
 	saveEntry.details = psf.GetString("DETAIL");
 	saveEntry.sizeKb = getSaveDataSize(saveDir)/1024;
-	saveEntry.timestamp = 0; // TODO
-	saveEntry.iconBuffer = stbi_load(localPath.mb_str(), &width, &height, &actual_components, 3);
+	saveEntry.st_atime_ = 0; // TODO
+	saveEntry.st_mtime_ = 0; // TODO
+	saveEntry.st_ctime_ = 0; // TODO
+	saveEntry.iconBuf = stbi_load(localPath.mb_str(), &width, &height, &actual_components, 3);
+	saveEntry.iconBufSize = width * height * 3;
+	saveEntry.isNew = false;
 
 	saveEntries.push_back(saveEntry);
+}
+
+void addNewSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, mem_ptr_t<CellSaveDataListNewData> newData)
+{
+	SaveDataListEntry saveEntry;
+	saveEntry.dirName = (char*)Memory.VirtualToRealAddr(newData->dirName_addr);
+	saveEntry.title = (char*)Memory.VirtualToRealAddr(newData->icon->title_addr);
+	saveEntry.subtitle = (char*)Memory.VirtualToRealAddr(newData->icon->title_addr);
+	saveEntry.iconBuf = Memory.VirtualToRealAddr(newData->icon->iconBuf_addr);
+	saveEntry.iconBufSize = newData->icon->iconBufSize;
+	saveEntry.isNew = true;
+	// TODO: Add information stored in newData->iconPosition. (It's not very relevant)
+
+	saveEntries.push_back(saveEntry);
+}
+
+u32 focusSaveDataEntry(const std::vector<SaveDataListEntry>& saveEntries, u32 focusPosition)
+{
+	return 0;
+}
+
+void setSaveDataEntries(std::vector<SaveDataListEntry>& saveEntries, mem_ptr_t<CellSaveDataDirList> fixedList, u32 fixedListNum)
+{
+	std::vector<SaveDataListEntry>::iterator entry = saveEntries.begin();
+	while (entry != saveEntries.end())
+	{
+		bool found = false;
+		for (u32 j=0; j<fixedListNum; j++)
+		{
+			if (entry->dirName == (char*)fixedList[j].dirName)
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			entry = saveEntries.erase(entry);
+		else
+			entry++;
+	}
 }
 
 
@@ -95,7 +140,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
-	MemoryAllocator<CellSaveDataListGet> listSet;
+	MemoryAllocator<CellSaveDataListSet> listSet;
 
 	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
 	vfsDir dir(saveBaseDir);
@@ -115,14 +160,14 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 			listGet->dirNum++;
 
 			std::string saveDir = saveBaseDir + (const char*)(entry->name.mb_str());
-			getSaveDataEntry(saveEntries, saveDir);
+			addSaveDataEntry(saveEntries, saveDir);
 		}
 	}
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList_addr = setBuf->buf_addr;
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList_addr);
+	listGet->dirList.SetAddr(setBuf->buf_addr);
+	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.GetAddr());
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
@@ -139,8 +184,8 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	funcFile(result.GetAddr(), fileGet.GetAddr(), fileSet.GetAddr());
 
 	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuffer;
-		entry.iconBuffer = nullptr;
+		delete[] entry.iconBuf;
+		entry.iconBuf = nullptr;
 	}
 
 	return CELL_SAVEDATA_RET_OK;
@@ -158,7 +203,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
-	MemoryAllocator<CellSaveDataListGet> listSet;
+	MemoryAllocator<CellSaveDataListSet> listSet;
 
 	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
 	vfsDir dir(saveBaseDir);
@@ -178,23 +223,42 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 			listGet->dirNum++;
 
 			std::string saveDir = saveBaseDir + (const char*)(entry->name.mb_str());
-			getSaveDataEntry(saveEntries, saveDir);
+			addSaveDataEntry(saveEntries, saveDir);
 		}
 	}
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList_addr = setBuf->buf_addr;
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList_addr);
+	listGet->dirList.SetAddr(setBuf->buf_addr);
+	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.GetAddr());
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
 
 	funcList(result.GetAddr(), listGet.GetAddr(), listSet.GetAddr());
+	
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataListLoad2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
+	if (!listSet->fixedList.IsGood()) {
+		return CELL_SAVEDATA_ERROR_PARAM;
+	}
+	setSaveDataEntries(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
+	u32 focusIndex = focusSaveDataEntry(saveEntries, listSet->focusPosition);
 
 	MemoryAllocator<CellSaveDataStatGet> statGet;
 	MemoryAllocator<CellSaveDataStatSet> statSet;
+
+	// TODO: Display the dialog here
+	ConLog.Warning("cellSaveDataListLoad2:");
+
+	statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_NO; // You can *never* load new data
+	//statGet->dir = 
+
+
+	
 	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
 
 	MemoryAllocator<CellSaveDataFileGet> fileGet;
@@ -202,8 +266,8 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	funcFile(result.GetAddr(), fileGet.GetAddr(), fileSet.GetAddr());
 
 	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuffer;
-		entry.iconBuffer = nullptr;
+		delete[] entry.iconBuf;
+		entry.iconBuf = nullptr;
 	}
 
 	return CELL_SAVEDATA_RET_OK;

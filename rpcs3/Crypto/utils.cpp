@@ -20,7 +20,7 @@ u64 swap64(u64 i)
 		((i & 0x00ff000000000000) >> 40) | ((i & 0xff00000000000000) >> 56);
 }
 
-void xor(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size)
+void xor_(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size)
 {
 	int i;
 	for(i = 0; i < size; i++)
