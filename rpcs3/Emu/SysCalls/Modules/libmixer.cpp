@@ -55,8 +55,8 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		for (u32 i = 0; i < samples; i++)
 		{
 			const float center = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
-			mixdata[i*8+0] += center * 2;
-			mixdata[i*8+1] += center * 2;
+			mixdata[i*8+0] += center;
+			mixdata[i*8+1] += center;
 		}		
 	}
 	else if (ch == 2)
@@ -66,8 +66,8 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		{
 			const float left = *(be_t<float>*)&Memory[addr + i * 2 * sizeof(float)];
 			const float right = *(be_t<float>*)&Memory[addr + (i * 2 + 1) * sizeof(float)];
-			mixdata[i*8+0] += left * 2;
-			mixdata[i*8+1] += right * 2;
+			mixdata[i*8+0] += left;
+			mixdata[i*8+1] += right;
 		}
 	}
 	else if (ch == 6)

@@ -140,6 +140,9 @@ int cellAudioInit()
 
 					auto buf = (be_t<float>*)&Memory[buf_addr];
 
+					static const float k = 1.0f;
+					const float m = (port.level == 0.0f) ? 1.0f : port.level;
+
 					if (port.channel == 2)
 					{
 						if (first_mix)
@@ -147,8 +150,7 @@ int cellAudioInit()
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
 							{
 								// reverse byte order
-								buffer[i] = buf[i];
-								// TODO: use port.m_param.level
+								buffer[i] = buf[i] * m;
 							}
 							first_mix = false;
 						}
@@ -156,7 +158,7 @@ int cellAudioInit()
 						{
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
 							{
-								buffer[i] += buf[i];
+								buffer[i] += buf[i] * m;
 							}
 						}
 					}
@@ -167,8 +169,8 @@ int cellAudioInit()
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 							{
 								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
-								buffer[i] = (buf[i*3] + buf[i*3+4] + center) * 0.5f;
-								buffer[i+1] = (buf[i*3+1] + buf[i*3+5] + center) * 0.5f;
+								buffer[i] = (buf[i*3] + buf[i*3+4] + center) * k * m;
+								buffer[i+1] = (buf[i*3+1] + buf[i*3+5] + center) * k * m;
 							}
 							first_mix = false;
 						}
@@ -177,8 +179,8 @@ int cellAudioInit()
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 							{
 								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
-								buffer[i] += (buf[i*3] + buf[i*3+4] + center) * 0.5f;
-								buffer[i+1] += (buf[i*3+1] + buf[i*3+5] + center) * 0.5f;
+								buffer[i] += (buf[i*3] + buf[i*3+4] + center) * k * m;
+								buffer[i+1] += (buf[i*3+1] + buf[i*3+5] + center) * k * m;
 							}
 						}
 					}
@@ -189,8 +191,8 @@ int cellAudioInit()
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 							{
 								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
-								buffer[i] = (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * 0.5f;
-								buffer[i+1] = (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * 0.5f;
+								buffer[i] = (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * k * m;
+								buffer[i+1] = (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * k * m;
 							}
 							first_mix = false;
 						}
@@ -199,8 +201,8 @@ int cellAudioInit()
 							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
 							{
 								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
-								buffer[i] += (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * 0.5f;
-								buffer[i+1] += (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * 0.5f;
+								buffer[i] += (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * k * m;
+								buffer[i+1] += (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * k * m;
 							}
 						}
 					}
