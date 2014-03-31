@@ -55,3 +55,6 @@ rpcs3/git-version.h
 !/bin/dev_hdd0/game/
 /bin/dev_hdd0/game/*
 !/bin/dev_hdd0/game/TEST12345/
+
+# Ignore other system generated files
+bin/dev_hdd0/log.txt

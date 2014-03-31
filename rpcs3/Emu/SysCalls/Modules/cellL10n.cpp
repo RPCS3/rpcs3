@@ -60,7 +60,12 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 
 int jstrchk(mem8_ptr_t jstr)
 {
-	cellL10n.Log("jstrchk(jstr_addr=0x%x [%s])", jstr.GetAddr(), "omitted" /*Memory.ReadString(jstr.GetAddr()).wx_str()*/);
+	if (!jstr.IsGood())
+		cellL10n.Error("jstrchk(jstr_addr=0x%x): invalid address", jstr.GetAddr());
+	else if (jstr[0])
+		cellL10n.Log("jstrchk(jstr_addr=0x%x): utf-8: [%s]", jstr.GetAddr(), Memory.ReadString(jstr.GetAddr()).wx_str());
+	else
+		cellL10n.Log("jstrchk(jstr_addr=0x%x): empty string", jstr.GetAddr());
 
 	return L10N_STR_UTF8;
 }

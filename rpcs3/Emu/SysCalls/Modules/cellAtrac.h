@@ -26,3 +26,34 @@ enum
 	CELL_ATRAC_ERROR_ILLEGAL_PPU_THREAD_PRIORITY	= 0x80610381,
 	CELL_ATRAC_ERROR_ILLEGAL_SPU_THREAD_PRIORITY	= 0x80610382,
 };
+
+// Remain Frame
+enum
+{
+	CELL_ATRAC_ALLDATA_IS_ON_MEMORY = -1,
+	CELL_ATRAC_NONLOOP_STREAM_DATA_IS_ON_MEMORY = -2,
+	CELL_ATRAC_LOOP_STREAM_DATA_IS_ON_MEMORY = -3,
+};
+
+union CellAtracHandle
+{
+	u8 uiWorkMem[512];
+	struct AtracHandle
+	{
+		u32 pucWorkMem_addr;
+	} data;
+};
+
+struct CellAtracBufferInfo
+{
+	be_t<u32> pucWriteAddr;
+	be_t<u32> uiWritableByte;
+	be_t<u32> uiMinWriteByte;
+	be_t<u32> uiReadPosition;
+};
+
+struct CellAtracExtRes
+{
+	be_t<u32> pSpurs_addr;
+	u8 priority[8];
+};

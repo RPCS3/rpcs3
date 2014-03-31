@@ -586,6 +586,8 @@ public:
 			}
 		}
 
+		Sleep(1); // hack
+
 		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
 		case MFC_PUT_CMD:
@@ -702,20 +704,8 @@ public:
 				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
 				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
 				lsa, ea, tag, size, cmd);
-			if (op & MFC_PUT_CMD)
-			{
-				SMutexLocker lock(reservation.mutex); // should be removed
-				MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
-				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
-					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
-				{
-					reservation.clear();
-				}
-			}
-			else
-			{
-				MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
-			}
+
+			MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
 		}
 		break;
 
@@ -739,7 +729,7 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+			if (Ini.HLELogging.GetValue() || size != 128) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				wxString(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 				op == MFC_PUTLLC_CMD ? "PUTLLC" :
 				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC").wx_str(),
@@ -751,7 +741,11 @@ public:
 				reservation.owner = lock.tid;
 				reservation.addr = ea;
 				reservation.size = 128;
-				ProcessCmd(MFC_GET_CMD, tag, lsa, ea, 128);
+				for (u32 i = 0; i < 8; i++)
+				{
+					reservation.data[i] = *(u128*)&Memory[(u32)ea + i * 16];
+					*(u128*)&Memory[dmac.ls_offset + lsa + i * 16] = reservation.data[i];
+				}
 				Prxy.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
@@ -761,8 +755,68 @@ public:
 				{
 					if (reservation.addr == ea && reservation.size == 128)
 					{
-						ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
-						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+						u128 buf[8]; // data being written newly
+						u32 changed = 0, mask = 0, last = 0;
+						for (u32 i = 0; i < 8; i++)
+						{
+							buf[i] = *(u128*)&Memory[dmac.ls_offset + lsa + i * 16];
+							if (buf[i] != reservation.data[i])
+							{
+								changed++;
+								last = i;
+								mask |= (0xf << (i * 4));
+							}
+						}
+						if (changed == 0) // nothing changed?
+						{
+							Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+						}
+						else if (changed == 1)
+						{
+							if (buf[last].hi != reservation.data[last].hi && buf[last].lo != reservation.data[last].lo)
+							{
+								ConLog.Error("MFC_PUTLLC_CMD: TODO: 128bit compare and swap");
+								Emu.Pause();
+								Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+							}
+							else
+							{
+								const u32 last_q = (buf[last].hi == reservation.data[last].hi);
+
+								if (InterlockedCompareExchange64((volatile long long*)(Memory + (u32)ea + last * 16 + last_q * 8),
+									buf[last]._u64[last_q], reservation.data[last]._u64[last_q]) == reservation.data[last]._u64[last_q])
+								{
+									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+								}
+								else
+								{
+									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+								}
+								/*u32 last_d = last_q * 2;
+								if (buf[last]._u32[last_d] == reservation.data[last]._u32[last_d] && buf[last]._u32[last_d+1] != reservation.data[last]._u32[last_d+1])
+								{
+									last_d++;
+								}
+								else if (buf[last]._u32[last_d+1] == reservation.data[last]._u32[last_d+1])
+								{
+									last_d;
+								}
+								else // full 64 bit
+								{
+									ConLog.Error("MFC_PUTLLC_CMD: TODO: 64bit compare and swap");
+									Emu.Pause();
+									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+								}*/
+							}
+						}
+						else
+						{
+							ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+							ConLog.Error("MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 16x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
+								changed, mask, op, cmd, lsa, ea, tag, size);
+							Emu.Pause();
+							Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+						}
 					}
 					else
 					{

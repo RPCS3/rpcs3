@@ -358,7 +358,7 @@ void Emulator::Resume()
 	m_status = Running;
 
 	CheckStatus();
-	if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+	//if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
 #ifndef QT_UI
 	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
 #endif

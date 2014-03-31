@@ -21,7 +21,7 @@ template
 <
 	typename T,
 	u64 free_value = 0,
-	u64 dead_value = ~0,
+	u64 dead_value = 0xffffffff,
 	void (*wait)() = SM_Sleep
 >
 class SMutexBase
@@ -139,7 +139,7 @@ class SMutexLockerBase
 public:
 	const T tid;
 
-	SMutexLockerBase(SMutexBase<T>& _sm)
+	__forceinline SMutexLockerBase(SMutexBase<T>& _sm)
 		: sm(_sm)
 		, tid(get_tid())
 	{
@@ -155,7 +155,7 @@ public:
 		sm.lock(tid);
 	}
 
-	~SMutexLockerBase()
+	__forceinline ~SMutexLockerBase()
 	{
 		if (tid) sm.unlock(tid);
 	}

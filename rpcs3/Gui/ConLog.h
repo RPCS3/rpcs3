@@ -11,15 +11,15 @@ class LogWriter
 	//wxString m_prefix;
 	//wxString m_value;
 
-	virtual void WriteToLog(wxString prefix, wxString value, u8 lvl);
+	virtual void WriteToLog(const wxString& prefix, const wxString& value, u8 lvl);
 
 public:
 	LogWriter();
 
-	virtual void Write(const wxString fmt, ...);
-	virtual void Error(const wxString fmt, ...);
-	virtual void Warning(const wxString fmt, ...);
-	virtual void Success(const wxString fmt, ...);
+	virtual void Write(const wxString& fmt, ...);
+	virtual void Error(const wxString& fmt, ...);
+	virtual void Warning(const wxString& fmt, ...);
+	virtual void Success(const wxString& fmt, ...);
 	virtual void SkipLn();	
 };
 

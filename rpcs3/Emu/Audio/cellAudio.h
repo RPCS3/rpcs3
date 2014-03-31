@@ -1,5 +1,7 @@
 #pragma once
 
+extern u64 get_system_time();
+
 // Error codes
 enum
 {
@@ -19,16 +21,6 @@ enum
 	CELL_AUDIO_ERROR_EVENT_QUEUE				= 0x8031070d,
 	CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND		= 0x8031070e,
 	CELL_AUDIO_ERROR_TAG_NOT_FOUND				= 0x8031070f,
-
-	//libmixer Error Codes
-	CELL_LIBMIXER_ERROR_NOT_INITIALIZED			= 0x80310002,
-	CELL_LIBMIXER_ERROR_INVALID_PARAMATER		= 0x80310003,
-	CELL_LIBMIXER_ERROR_NO_MEMORY				= 0x80310005,
-	CELL_LIBMIXER_ERROR_ALREADY_EXIST			= 0x80310006,
-	CELL_LIBMIXER_ERROR_FULL					= 0x80310007,
-	CELL_LIBMIXER_ERROR_NOT_EXIST				= 0x80310008,
-	CELL_LIBMIXER_ERROR_TYPE_MISMATCH			= 0x80310009,
-	CELL_LIBMIXER_ERROR_NOT_FOUND				= 0x8031000a,
 
 	//libsnd3 Error Codes
 	CELL_SND3_ERROR_PARAM						= 0x80310301,
@@ -108,7 +100,6 @@ struct CellAudioPortConfig
 
 struct AudioPortConfig
 {
-	SMutexGeneral m_mutex;
 	bool m_is_audio_port_opened;
 	bool m_is_audio_port_started;
 	u8 channel;
@@ -121,7 +112,6 @@ struct AudioPortConfig
 
 struct AudioConfig  //custom structure
 {
-	std::mutex m_mutex;
 	enum
 	{
 		AUDIO_PORT_COUNT = 8,
@@ -150,7 +140,9 @@ struct AudioConfig  //custom structure
 		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
 		m_port_in_use = 0;
 	}
-} m_config;
+};
+
+extern AudioConfig m_config;
 
 //libsnd3 datatypes
 struct CellSnd3DataCtx

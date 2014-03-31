@@ -67,9 +67,6 @@ next:
 				vdec.reader.addr = vdec.task.addr;
 				vdec.reader.size = vdec.task.size;
 				//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", vdec.task.size, vdec.task.pts, vdec.task.dts);
-
-				//if (vdec.last_pts > vdec.task.pts) vdec.last_pts = vdec.task.pts;
-				//if (vdec.last_dts > vdec.task.dts) vdec.last_dts = vdec.task.dts;
 			}
 			break;
 		default:
@@ -208,12 +205,11 @@ u32 vdecOpen(VideoDecoder* data)
 					vdec.reader.size = task.size;
 					//ConLog.Write("Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", task.size, task.pts, task.dts);
 
-					//if (vdec.last_pts > task.pts || vdec.just_started) vdec.last_pts = task.pts;
-					//if (vdec.last_dts > task.dts || vdec.just_started) vdec.last_dts = task.dts;
 					if (vdec.just_started)
 					{
+						vdec.first_pts = task.pts;
 						vdec.last_pts = task.pts;
-						vdec.last_dts = task.dts;
+						vdec.first_dts = task.dts;
 					}
 
 					struct AVPacketHolder : AVPacket
@@ -357,8 +353,20 @@ u32 vdecOpen(VideoDecoder* data)
 
 						if (got_picture)
 						{
-							frame.dts = vdec.last_dts; vdec.last_dts += 3003; // + duration???
-							frame.pts = vdec.last_pts; vdec.last_pts += 3003;
+							u64 ts = av_frame_get_best_effort_timestamp(frame.data);
+							if (ts != AV_NOPTS_VALUE)
+							{
+								frame.pts = ts/* - vdec.first_pts*/; // ???
+								vdec.last_pts = frame.pts;
+							}
+							else
+							{
+								vdec.last_pts += vdec.ctx->time_base.num * 90000 / (vdec.ctx->time_base.den / vdec.ctx->ticks_per_frame);
+								frame.pts = vdec.last_pts;
+							}
+							//frame.pts = vdec.last_pts;
+							//vdec.last_pts += 3754;
+							frame.dts = (frame.pts - vdec.first_pts) + vdec.first_dts;
 							frame.userdata = task.userData;
 
 							//ConLog.Write("got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);	
@@ -726,7 +734,27 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 	avc->transfer_characteristics = CELL_VDEC_AVC_TC_ITU_R_BT_709_5;
 	avc->matrix_coefficients = CELL_VDEC_AVC_MXC_ITU_R_BT_709_5; // important
 	avc->timing_info_present_flag = true;
-	avc->frameRateCode = CELL_VDEC_AVC_FRC_30000DIV1001; // important (!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)
+	if (vdec->ctx->time_base.num == 1001)
+	{
+		if (vdec->ctx->time_base.den == 48000 && vdec->ctx->ticks_per_frame == 2)
+		{
+			avc->frameRateCode = CELL_VDEC_AVC_FRC_24000DIV1001;
+		}
+		else if (vdec->ctx->time_base.den == 60000 && vdec->ctx->ticks_per_frame == 2)
+		{
+			avc->frameRateCode = CELL_VDEC_AVC_FRC_30000DIV1001;
+		}
+		else
+		{
+			ConLog.Error("cellVdecGetPicItem: unsupported time_base.den (%d)", vdec->ctx->time_base.den);
+			Emu.Pause();
+		}
+	}
+	else
+	{
+		ConLog.Error("cellVdecGetPicItem: unsupported time_base.num (%d)", vdec->ctx->time_base.num);
+		Emu.Pause();
+	}
 	avc->fixed_frame_rate_flag = true;
 	avc->low_delay_hrd_flag = true; // ???
 	avc->entropy_coding_mode_flag = true; // ???

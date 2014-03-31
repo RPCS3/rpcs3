@@ -158,6 +158,10 @@ int cellSysmoduleSetMemcontainer(u32 ct_id)
 
 int cellSysmoduleLoadModule(u16 id)
 {
+	if (id == 0xf054)
+	{
+		cellSysmodule.Error("cellSysmoduleLoadModule: TODO: CELL_SYSMODULE_LIBATRAC3MULTI");
+	}
 	cellSysmodule.Warning("cellSysmoduleLoadModule(%s)", wxString(getModuleName(id)).wx_str());
 	Module* m = GetModuleById(id);
 

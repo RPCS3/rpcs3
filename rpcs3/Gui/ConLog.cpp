@@ -12,7 +12,7 @@ LogFrame* ConLogFrame;
 std::mutex g_cs_conlog;
 
 static const uint max_item_count = 500;
-static const uint buffer_size = 1024 * 64;
+static const uint buffer_size = 1024 * 64 * sizeof(wxChar);
 
 static const wxString g_log_colors[] =
 {
@@ -31,10 +31,6 @@ struct LogPacket
 		, m_colour(colour)
 	{
 		
-	}
-
-	LogPacket()
-	{
 	}
 };
 
@@ -78,29 +74,27 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 	LogPacket _pop()
 	{
-		LogPacket ret;
-
 		u32 c_get = m_get;
 
 		const u32& sprefix = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_prefix = wxString((wxChar*)&m_buffer[c_get], sprefix / sizeof(wxChar));
+		const wxString& prefix = wxString((wxChar*)&m_buffer[c_get], sprefix / sizeof(wxChar));
 		c_get += sprefix;
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_text = wxString((wxChar*)&m_buffer[c_get], stext / sizeof(wxChar));
+		const wxString& text = wxString((wxChar*)&m_buffer[c_get], stext / sizeof(wxChar));
 		c_get += stext;
 
 		const u32& scolour = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		ret.m_colour = wxString((wxChar*)&m_buffer[c_get], scolour / sizeof(wxChar));
+		const wxString& colour = wxString((wxChar*)&m_buffer[c_get], scolour / sizeof(wxChar));
 		c_get += scolour;
 
 		m_get = c_get;
 		if(!HasNewPacket()) Flush();
 
-		return ret;
+		return LogPacket(prefix, text, colour);
 	}
 } LogBuffer;
 
@@ -114,18 +108,19 @@ LogWriter::LogWriter()
 	}
 }
 
-void LogWriter::WriteToLog(wxString prefix, wxString value, u8 lvl/*, wxColour bgcolour*/)
+void LogWriter::WriteToLog(const wxString& prefix, const wxString& value, u8 lvl/*, wxColour bgcolour*/)
 {
+	wxString new_prefix = prefix;
 	if(!prefix.empty())
 	{
 		if(NamedThreadBase* thr = GetCurrentNamedThread())
 		{
-			prefix += " : " + thr->GetThreadName();
+			new_prefix += " : " + thr->GetThreadName();
 		}
 	}
 
-	if(m_logfile.IsOpened() && !prefix.empty())
-		m_logfile.Write(wxString("[") + prefix + "]: " + value + "\n");
+	if(m_logfile.IsOpened() && !new_prefix.empty())
+		m_logfile.Write(wxString("[") + new_prefix + "]: " + value + "\n");
 
 	if(!ConLogFrame || Ini.HLELogLvl.GetValue() == 4 || (lvl != 0 && lvl <= Ini.HLELogLvl.GetValue()))
 		return;
@@ -159,10 +154,10 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, u8 lvl/*, wxColour b
 
 	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();
 
-	LogBuffer.Push(LogPacket(prefix, value, g_log_colors[lvl]));
+	LogBuffer.Push(LogPacket(new_prefix, value, g_log_colors[lvl]));
 }
 
-void LogWriter::Write(const wxString fmt, ...)
+void LogWriter::Write(const wxString& fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
@@ -175,7 +170,7 @@ void LogWriter::Write(const wxString fmt, ...)
 	WriteToLog("!", frmt, 2);
 }
 
-void LogWriter::Error(const wxString fmt, ...)
+void LogWriter::Error(const wxString& fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
@@ -188,7 +183,7 @@ void LogWriter::Error(const wxString fmt, ...)
 	WriteToLog("E", frmt, 4);
 }
 
-void LogWriter::Warning(const wxString fmt, ...)
+void LogWriter::Warning(const wxString& fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
@@ -201,7 +196,7 @@ void LogWriter::Warning(const wxString fmt, ...)
 	WriteToLog("W", frmt, 3);
 }
 
-void LogWriter::Success(const wxString fmt, ...)
+void LogWriter::Success(const wxString& fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);

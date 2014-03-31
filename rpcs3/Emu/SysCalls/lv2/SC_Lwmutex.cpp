@@ -28,7 +28,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->all_info() = ~0;
+	lwmutex->waiter = 0;
 	lwmutex->mutex.initialize();
 	//lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;
@@ -211,7 +211,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 	if (mutex.unlock(owner_tid, owner_tid) != SMR_OK) // check free value
 	{
 		owner_tid = mutex.GetOwner();
-		if (CPUThread* tt = Emu.GetCPU().GetThread(owner_tid))
+		/*if (CPUThread* tt = Emu.GetCPU().GetThread(owner_tid))
 		{
 			if (!tt->IsAlive())
 			{
@@ -227,7 +227,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 			mutex.unlock(owner_tid, tid);
 			recursive_count = 1;
 			return CELL_OK;
-		}
+		}*/
 	}
 
 	/*while ((attribute.ToBE() & se32(SYS_SYNC_ATTR_RECURSIVE_MASK)) == 0)
@@ -272,7 +272,7 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 	{
 		if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
 		{
-			sc_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value (%d)", (u32)sleep_queue, (u32)recursive_count);
+			sc_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
 			recursive_count = 1;
 		}
 		recursive_count -= 1;
