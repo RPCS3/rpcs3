@@ -8,6 +8,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions(-w) # TODO: remove me
 	add_definitions(-fpermissive) # TODO: remove me
 	add_definitions(-g)	# Debugging!!
+	add_definitions(-msse2)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
@@ -59,5 +60,5 @@ ${CMAKE_SOURCE_DIR}/../Utilities/*
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 
