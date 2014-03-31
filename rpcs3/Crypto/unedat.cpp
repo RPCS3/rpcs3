@@ -48,7 +48,7 @@ void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsign
 	};
 }
 
-bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsigned char *out, int lenght, unsigned char *key, unsigned char *iv, unsigned char *hash, unsigned char *test_hash) 
+bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsigned char *out, int length, unsigned char *key, unsigned char *iv, unsigned char *hash, unsigned char *test_hash) 
 {
 	// Setup buffers for key, iv and hash.
 	unsigned char key_final[0x10] = {};
@@ -65,11 +65,11 @@ bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsi
 
 	if ((crypto_mode & 0xFF) == 0x01)  // No algorithm.
 	{
-		memcpy(out, in, lenght);
+		memcpy(out, in, length);
 	}
 	else if ((crypto_mode & 0xFF) == 0x02)  // AES128-CBC
 	{
-		aescbc128_decrypt(key_final, iv_final, in, out, lenght);
+		aescbc128_decrypt(key_final, iv_final, in, out, length);
 	}
 	else
 	{
@@ -79,15 +79,15 @@ bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsi
 
 	if ((hash_mode & 0xFF) == 0x01) // 0x14 SHA1-HMAC
 	{
-		return hmac_hash_compare(hash_final_14, 0x14, in, lenght, test_hash);
+		return hmac_hash_compare(hash_final_14, 0x14, in, length, test_hash);
 	}
 	else if ((hash_mode & 0xFF) == 0x02)  // 0x10 AES-CMAC
 	{
-		return cmac_hash_compare(hash_final_10, 0x10, in, lenght, test_hash);
+		return cmac_hash_compare(hash_final_10, 0x10, in, length, test_hash);
 	}
 	else if ((hash_mode & 0xFF) == 0x04) //0x10 SHA1-HMAC
 	{
-		return hmac_hash_compare(hash_final_10, 0x10, in, lenght, test_hash);
+		return hmac_hash_compare(hash_final_10, 0x10, in, length, test_hash);
 	}
 	else
 	{
@@ -147,13 +147,12 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 	unsigned char empty_iv[0x10] = {};
 
 	// Decrypt the metadata.
-	int i;
-	for (i = 0; i < block_num; i++)
+	for (int i = 0; i < block_num; i++)
 	{
 		in->Seek(metadata_offset + i * metadata_section_size);
 		unsigned char hash_result[0x10];
 		long offset;
-		int lenght;
+		int length = 0;
 		int compression_end = 0;
 
 		if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
@@ -164,7 +163,7 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 			// If the data is compressed, decrypt the metadata.
 			unsigned char *result = dec_section(metadata);
 			offset = ((swap32(*(int*)&result[0]) << 4) | (swap32(*(int*)&result[4])));
-			lenght = swap32(*(int*)&result[8]);
+			length = swap32(*(int*)&result[8]);
 			compression_end = swap32(*(int*)&result[12]);
 			delete[] result;
 
@@ -173,44 +172,43 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 		else if ((edat->flags & EDAT_FLAG_0x20) != 0)
 		{
 			// If FLAG 0x20, the metadata precedes each data block.
-			in->Seek(metadata_offset + i * metadata_section_size + lenght);
+			in->Seek(metadata_offset + i * metadata_section_size + length);
 
 			unsigned char metadata[0x20];
 			in->Read(metadata, 0x20);
 
 			// If FLAG 0x20 is set, apply custom xor.
-			int j;
-			for (j = 0; j < 0x10; j++) {
+			for (int j = 0; j < 0x10; j++) {
 				hash_result[j] = (unsigned char)(metadata[j] ^ metadata[j+0x10]);
 			}
 
 			offset = metadata_offset + i * edat->block_size + (i + 1) * metadata_section_size;
-			lenght = edat->block_size;
+			length = edat->block_size;
 
 			if ((i == (block_num - 1)) && (edat->file_size % edat->block_size))
-				lenght = (int) (edat->file_size % edat->block_size);
+				length = (int) (edat->file_size % edat->block_size);
 		}
 		else
 		{
 			in->Read(hash_result, 0x10);
 			offset = metadata_offset + i * edat->block_size + block_num * metadata_section_size;
-			lenght = edat->block_size;
+			length = edat->block_size;
 			
 			if ((i == (block_num - 1)) && (edat->file_size % edat->block_size))
-				lenght = (int) (edat->file_size % edat->block_size);
+				length = (int) (edat->file_size % edat->block_size);
 		}
 
 		// Locate the real data.
-		int pad_lenght = lenght;
-		lenght = (int) ((pad_lenght + 0xF) & 0xFFFFFFF0);
+		int pad_length = length;
+		length = (int) ((pad_length + 0xF) & 0xFFFFFFF0);
 		in->Seek(offset);
 
 		// Setup buffers for decryption and read the data.
-		enc_data = new unsigned char[lenght];
-		dec_data = new unsigned char[lenght];
+		enc_data = new unsigned char[length];
+		dec_data = new unsigned char[length];
 		unsigned char key_result[0x10];
 		unsigned char hash[0x10];
-		in->Read(enc_data, lenght);
+		in->Read(enc_data, length);
 		
 		// Generate a key for the current block.
 		b_key = get_block_key(i, npd);
@@ -245,14 +243,14 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 			crypto_mode |= 0x01000000;
 			hash_mode |= 0x01000000;
 			// Simply copy the data without the header or the footer.
-			memcpy(dec_data, enc_data, lenght);
+			memcpy(dec_data, enc_data, length);
 		}
 		else
 		{
 			// IV is null if NPD version is 1 or 0.
 			iv = (npd->version <= 1) ? empty_iv : npd->digest;
 			// Call main crypto routine on this data block.
-			crypto(hash_mode, crypto_mode, (npd->version == 4), enc_data, dec_data, lenght, key_result, iv, hash, hash_result);
+			crypto(hash_mode, crypto_mode, (npd->version == 4), enc_data, dec_data, length, key_result, iv, hash, hash_result);
 		}
 
 		// Apply additional compression if needed and write the decrypted data.
@@ -270,7 +268,7 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 			
 			if (verbose)
 			{
-				ConLog.Write("EDAT: Compressed block size: %d\n", pad_lenght);
+				ConLog.Write("EDAT: Compressed block size: %d\n", pad_length);
 				ConLog.Write("EDAT: Decompressed block size: %d\n", res);
 			}
 
@@ -291,7 +289,7 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 		}
 		else
 		{
-			out->Write(dec_data, pad_lenght);
+			out->Write(dec_data, pad_length);
 		}
 
 		delete[] enc_data;
