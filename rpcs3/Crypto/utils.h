@@ -6,7 +6,7 @@
 u16 swap16(u16 i);
 u32 swap32(u32 i);
 u64 swap64(u64 i);
-void xor(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size);
+void xor_(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size);
 
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str);
