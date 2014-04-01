@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "CPUInstrTable.h"
 #pragma warning( disable : 4800 )
 
@@ -321,7 +322,14 @@ public:
 		, m_args_count(args_count)
 		, m_args(args_count ? new CodeFieldBase*[args_count] : nullptr)
 	{
-		m_name.MakeLower().Replace("_", ".");
+			std::transform(
+				name.begin(),
+				name.end(),
+				m_name.begin(),
+				[](const char &a){
+					char b = tolower(a);
+					if (b == '_') b = '.';
+					return b; });
 	}
 
 	__forceinline const std::string& GetName() const

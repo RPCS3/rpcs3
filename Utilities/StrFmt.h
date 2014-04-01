@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include <ostream>
 #include <sstream>
 #include <cstdio>
@@ -92,14 +93,6 @@ namespace fmt{
 			length *= 2;
 		}
 		return str;
-	}
-
-	//TODO:remove
-	//fmt alias for FormatV unused at the moment
-	template <typename... Args>
-	auto fmt(Args&&... args) -> decltype(FormatV(std::forward<Args>(parameters)...))
-	{
-		return FormatV(std::forward<Args>(args)...);
 	}
 
 	//convert a wxString to a std::string encoded in utf8

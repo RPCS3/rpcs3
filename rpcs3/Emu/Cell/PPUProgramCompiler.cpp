@@ -149,7 +149,7 @@ void CompilePPUProgram::WriteError(const std::string& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(fmt::FromUTF8(fmt::Format("line %lld: %s\n", m_line, error)));
+		m_err_list->WriteText(fmt::FromUTF8(fmt::Format("line %lld: %s\n", m_line, error.c_str())));
 	}
 }
 
