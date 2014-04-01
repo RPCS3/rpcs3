@@ -117,7 +117,7 @@ void sys_game_process_exitspawn2(
 	sc_p.Warning("prio: %d", prio);
 	sc_p.Warning("flags: %d", flags);
 
-	wxString path = Memory.ReadString(path_addr);
+	std::string path = Memory.ReadString(path_addr);
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 

@@ -60,12 +60,12 @@ struct SpuGroupInfo
 {
 	Array<u32> list;
 	std::atomic<u32> lock;
-	wxString m_name;
+	std::string m_name;
 	int m_prio;
 	int m_type;
 	int m_ct;
 
-	SpuGroupInfo(wxString name, u32 num, int prio, int type, u32 ct) 
+	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct) 
 		: m_name(name)
 		, m_prio(prio)
 		, m_type(type)
