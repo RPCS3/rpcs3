@@ -174,7 +174,7 @@ void getSaveDataStat(SaveDataListEntry entry, mem_ptr_t<CellSaveDataStatGet> sta
 			fileEntry.st_atime_ = 0; // TODO ?
 			fileEntry.st_mtime_ = 0; // TODO ?
 			fileEntry.st_ctime_ = 0; // TODO ?
-			memcpy(fileEntry.fileName, (const char*)dirEntry->name.mb_str(), CELL_SAVEDATA_FILENAME_SIZE);
+			memcpy(fileEntry.fileName, dirEntry->name.c_str(), CELL_SAVEDATA_FILENAME_SIZE);
 
 			fileEntries.push_back(fileEntry);
 		}
