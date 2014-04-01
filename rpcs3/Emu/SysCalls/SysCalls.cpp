@@ -359,12 +359,12 @@ void default_syscall()
 		case 999:
 			dump_enable = !dump_enable;
 			Emu.Pause();
-			ConLog.Warning("Dump %s", std::string(dump_enable ? "enabled" : "disabled").c_str());
+			ConLog.Warning("Dump %s", (dump_enable ? "enabled" : "disabled"));
 		return;
 
 		case 1000:
 			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			ConLog.Warning("Log %s", std::string(Ini.HLELogging.GetValue() ? "enabled" : "disabled").c_str());
+			ConLog.Warning("Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
 		return;
 	}
 

@@ -173,8 +173,8 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 			else
 			{
 				ConLog.Error("Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
-					std::string(res & GSR_MISSING ? " missing;" : "").c_str(),
-					std::string(res & GSR_EXCESS ? " excess;" : "").c_str());
+					(res & GSR_MISSING ? " missing;" : ""),
+					(res & GSR_EXCESS ? " excess;" : ""));
 			}
 		}
 	}

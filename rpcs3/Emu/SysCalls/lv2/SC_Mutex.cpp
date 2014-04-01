@@ -46,7 +46,7 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	mutex->m_mutex.unlock(tid);
 	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		std::string(attr->name, 8).c_str(), (u32) attr->protocol,
-		std::string(is_recursive ? "true" : "false").c_str(), mutex_id.GetValue());
+		(is_recursive ? "true" : "false"), mutex_id.GetValue());
 
 	// TODO: unlock mutex when owner thread does exit
 
