@@ -61,4 +61,4 @@ ${CMAKE_SOURCE_DIR}/../Utilities/*
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
