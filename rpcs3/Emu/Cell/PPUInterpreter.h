@@ -2328,23 +2328,31 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 
-		u128 RD;
+        unsigned __int128 a(RA);
+        unsigned __int128 b(RB);
+        unsigned __int128 r(0);
+        r = a * b;
 
-		u64& lo =  (u64&)((u32*)&RD)[0];
-		u64& mid = (u64&)((u32*)&RD)[1];
-		u64& hi =  (u64&)((u32*)&RD)[2];
+        u64 hi = ((u64*)&r)[1];
+//        const u64 al = ((u32*)&RA)[0];
+//        const u64 ah = ((u32*)&RA)[1];
+//        const u64 bl = ((u32*)&RB)[0];
+//        const u64 bh = ((u32*)&RB)[1];
 
-		const u64 a0 = ((u32*)&RA)[0];
-		const u64 a1 = ((u32*)&RA)[1];
-		const u64 b0 = ((u32*)&RB)[0];
-		const u64 b1 = ((u32*)&RB)[1];
+//        u64 x0 = al * bl;
+//        u64 x1 = al * bh;
+//        u64 x2 = ah * bl;
+//        u64 x3 = ah * bh;
 
-		lo = a0 * b0;
-		hi = a1 * b1;
+//        x1 += (x0 >> 32);
+//        x1 += x2;
+//        if(x1 < x2)
+//            x3 += (1 << 32);
 
-		mid += (a0 + a1) * (b0 + b1) - (lo + hi);
+//        u64 hi = x3 + (x1 >> 32);
+//        u64 lo = (lo & (( 1 << 32) - 1) << 32) + ((x0) & ((1 << 32) - 1));
 
-		CPU.GPR[rd] = RD._u64[1];
+        CPU.GPR[rd] = hi;//RD._u64[1];
 #endif
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
