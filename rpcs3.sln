@@ -1,5 +1,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3", "rpcs3\rpcs3.vcxproj", "{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}"
 	ProjectSection(ProjectDependencies) = postProject
 		{CD478F02-7550-58A5-E085-CE4BC0C0AD23} = {CD478F02-7550-58A5-E085-CE4BC0C0AD23}
