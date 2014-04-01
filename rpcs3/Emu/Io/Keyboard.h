@@ -1,12 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include "KeyboardHandler.h"
 
 class KeyboardManager //: public wxWindow
 {
 	bool m_inited;
-	KeyboardHandlerBase* m_keyboard_handler;
+	std::unique_ptr<KeyboardHandlerBase> m_keyboard_handler;
 
 public:
 	KeyboardManager();

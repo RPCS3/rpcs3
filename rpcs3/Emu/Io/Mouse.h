@@ -1,12 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include "MouseHandler.h"
 
 class MouseManager //: public wxWindow
 {
 	bool m_inited;
-	MouseHandlerBase* m_mouse_handler;
+	std::unique_ptr<MouseHandlerBase> m_mouse_handler;
 
 public:
 	MouseManager();

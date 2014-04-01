@@ -186,10 +186,6 @@ struct Pad
 		, m_sensor_g(0)
 	{
 	}
-
-	~Pad()
-	{
-	}
 };
 
 struct PadInfo

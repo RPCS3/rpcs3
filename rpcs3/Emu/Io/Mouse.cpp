@@ -15,14 +15,20 @@ MouseManager::~MouseManager()
 
 void MouseManager::Init(const u32 max_connect)
 {
-	if(m_inited) return;
+	if(m_inited)
+		return;
 
+	// NOTE: Change these to std::make_unique assignments when C++14 is available.
 	switch(Ini.MouseHandlerMode.GetValue())
 	{
-	case 1: m_mouse_handler = new WindowsMouseHandler(); break;
+	case 1:
+		m_mouse_handler.reset(new WindowsMouseHandler());
+		break;
 
 	default:
-	case 0: m_mouse_handler = new NullMouseHandler(); break;
+	case 0:
+		m_mouse_handler.reset(new NullMouseHandler());
+		break;
 	}
 
 	m_mouse_handler->Init(max_connect);

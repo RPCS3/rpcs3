@@ -15,14 +15,20 @@ PadManager::~PadManager()
 
 void PadManager::Init(const u32 max_connect)
 {
-	if(m_inited) return;
+	if(m_inited)
+		return;
 
+	// NOTE: Change these to std::make_unique assignments when C++14 is available.
 	switch(Ini.PadHandlerMode.GetValue())
 	{
-	case 1: m_pad_handler = new WindowsPadHandler(); break;
+	case 1:
+		m_pad_handler.reset(new WindowsPadHandler());
+		break;
 
 	default:
-	case 0: m_pad_handler = new NullPadHandler(); break;
+	case 0:
+		m_pad_handler.reset(new NullPadHandler());
+		break;
 	}
 
 	m_pad_handler->Init(max_connect);

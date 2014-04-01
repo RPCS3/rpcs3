@@ -257,10 +257,6 @@ struct Keyboard
 		, m_config()
 	{
 	}
-
-	~Keyboard()
-	{
-	}
 };
 
 class KeyboardHandlerBase
@@ -287,10 +283,10 @@ public:
 
 				if (pressed)
 				{
-
+					// Meta Keys
 					if (code == 308 || code == 307 || code == 306 || 
 					    code == 393 || code == 396 || code == 394)
-					{	// Meta Keys
+					{
 						data.mkey |= button.m_outKeyCode;
 					}
 					else
@@ -316,9 +312,10 @@ public:
 
 				if (!pressed)
 				{
+					// Meta Keys
 					if (code == 308 || code == 307 || code == 306 || 
 					    code == 393 || code == 396 || code == 394)
-					{	// Meta Keys
+					{
 						data.mkey &= ~button.m_outKeyCode;
 					}
 				}

@@ -86,25 +86,24 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	std::vector<Button>& buttons = pads[port_no].m_buttons;
-	pads[port_no].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+	pad.m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 	s32 len = 0;
-	for(uint i=0; i<buttons.size(); ++i)
+	for(Button& button : pads[port_no].m_buttons)
 	{
-		if(!buttons[i].m_pressed)
+		if(!button.m_pressed)
 			continue;
 
-		switch(buttons[i].m_offset)
+		switch(button.m_offset)
 		{
-		case CELL_PAD_BTN_OFFSET_DIGITAL1: if(!(d1 & buttons[i].m_outKeyCode)){d1 |= buttons[i].m_outKeyCode; len++;} break;
-		case CELL_PAD_BTN_OFFSET_DIGITAL2: if(!(d2 & buttons[i].m_outKeyCode)){d2 |= buttons[i].m_outKeyCode; len++;} break;
+		case CELL_PAD_BTN_OFFSET_DIGITAL1: if(!(d1 & button.m_outKeyCode)){d1 |= button.m_outKeyCode; len++;} break;
+		case CELL_PAD_BTN_OFFSET_DIGITAL2: if(!(d2 & button.m_outKeyCode)){d2 |= button.m_outKeyCode; len++;} break;
 		}
 
-		if(buttons[i].m_flush)
+		if(button.m_flush)
 		{
-			buttons[i].m_pressed = false;
-			buttons[i].m_flush = false;
+			button.m_pressed = false;
+			button.m_flush = false;
 		}
 	}
 
@@ -112,11 +111,10 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 ly = 128;
 	u16 rx = 128;
 	u16 ry = 128;
-	const std::vector<AnalogStick>& sticks = pads[port_no].m_sticks;
-	for (u32 s = 0; s < sticks.size(); s++)
+	for (const AnalogStick& stick : pads[port_no].m_sticks)
 	{
 		u16* res;
-		switch (sticks[s].m_offset)
+		switch (stick.m_offset)
 		{
 		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: res = &lx; break;
 		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: res = &ly; break;
@@ -125,9 +123,9 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		default: continue;
 		}
 
-		if (sticks[s].m_max_pressed && !sticks[s].m_min_pressed)
+		if (stick.m_max_pressed && !stick.m_min_pressed)
 			*res = 255;
-		if (sticks[s].m_min_pressed && !sticks[s].m_max_pressed)
+		if (stick.m_min_pressed && !stick.m_max_pressed)
 			*res = 0;
 	}
 

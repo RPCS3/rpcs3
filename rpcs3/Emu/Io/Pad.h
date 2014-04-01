@@ -1,12 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include "PadHandler.h"
 
 class PadManager //: public wxWindow
 {
 	bool m_inited;
-	PadHandlerBase* m_pad_handler;
+	std::unique_ptr<PadHandlerBase> m_pad_handler;
 
 public:
 	PadManager();
