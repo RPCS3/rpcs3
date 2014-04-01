@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2014-03-23 14:20+0100\n"
-"PO-Revision-Date: 2014-03-31 07:25+0900\n"
+"PO-Revision-Date: 2014-04-01 21:11+0900\n"
 "Last-Translator: nrusef <nrusef@gmail.com>\n"
 "Language-Team: DeltaHF\n"
 "Language: ja_JP\n"
@@ -58,7 +58,7 @@ msgstr "[不明又は未知]"
 
 #: common/src/Utilities/Exceptions.cpp:331
 msgid "A file could not be created."
-msgstr "ファイルを作成できませんでした。"
+msgstr "ファイルを作成できません。"
 
 #: common/src/Utilities/Exceptions.cpp:351
 msgid "File not found."
@@ -121,7 +121,7 @@ msgstr "GSプラグインのロード待機中にMTGSスレッドの応答が停
 #: pcsx2/PluginManager.cpp:712
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
-msgstr "セーブステートをロードできませんでした。破損しているか不完全です。"
+msgstr "セーブステートをロードできません。破損しているか不完全です。"
 
 #: pcsx2/PluginManager.cpp:722
 #, c-format
@@ -144,7 +144,7 @@ msgstr ""
 #: pcsx2/PluginManager.cpp:835
 #, c-format
 msgid "The configured %s plugin file was not found"
-msgstr "設定された[%s]プラグインファイルが見つかりませんでした。"
+msgstr "設定された[%s]プラグインファイルが見つかりません。"
 
 #: pcsx2/PluginManager.cpp:839
 #, c-format
@@ -254,8 +254,8 @@ msgid ""
 "All known hardware register accesses (very slow!); not including sub filter "
 "options below."
 msgstr ""
-"既知の全てのハードウェアレジスタアクセス(鈍速！)下のサブフィルタオプションは"
-"含まない。"
+"既知の全てのハードウェアレジスタアクセス（鈍速！）下のサブフィルタオプション"
+"は含まない。"
 
 #: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
@@ -321,8 +321,8 @@ msgstr "IOPのGPUコプロセッサ命令のディスアセンブラ。"
 msgid ""
 "All known hardware register accesses, not including the sub-filters below."
 msgstr ""
-"既知の全てのハードウェアレジスタアクセス(下のサブフィルタオプションは含まな"
-"い)。"
+"既知の全てのハードウェアレジスタアクセス（下のサブフィルタオプションは含まな"
+"い）。"
 
 #: pcsx2/SourceLog.cpp:306
 msgid "Memorycard reads, writes, erases, terminators, and other processing."
@@ -403,7 +403,7 @@ msgstr ""
 
 #: pcsx2/gui/AppInit.cpp:157
 msgid "PCSX2 Recompiler Error(s)"
-msgstr "PCSX2 リコンパイラエラー"
+msgstr "PCSX2 リコンパイラーエラー"
 
 #: pcsx2/gui/AppInit.cpp:227
 msgid "All options are for the current session only and will not be saved.\n"
@@ -451,7 +451,7 @@ msgstr "スピードハックを全て無効にする"
 
 #: pcsx2/gui/AppInit.cpp:249
 msgid "use the specified comma or pipe-delimited list of gamefixes."
-msgstr "カンマ又はハイフンで仕分けられたゲーム修正リストを使用する。"
+msgstr "カンマ又はハイフン区切りのゲームフィックスリストを使用する。"
 
 #: pcsx2/gui/AppInit.cpp:250
 msgid "disables fast booting"
@@ -499,17 +499,17 @@ msgstr ""
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr ""
-"OKを押してデフォルトプラグインを使用するか、キャンセルを押して%sを閉じて下さ"
-"い。"
+"OKを押してデフォルトプラグインを使用するか、キャンセルを押して%sを閉じてくだ"
+"さい。"
 
 #: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
-msgstr "PCSX2エラー： ハードウェア構成は最低基準を満たしていません。"
+msgstr "PCSX2エラー： ハードウェア構成が最低基準を満たしていません。"
 
 #: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
-msgstr "OKを押して%sを閉じて下さい。"
+msgstr "OKを押して%sを閉じてください。"
 
 #: pcsx2/gui/AppInit.cpp:509
 #, c-format
@@ -636,11 +636,11 @@ msgstr "参照..."
 
 #: pcsx2/gui/AppUserMode.cpp:95
 msgid "The following folders exist, but are not writable:"
-msgstr "次のフォルダはありましたが、書き込み権限が不足しています："
+msgstr "次のフォルダーはありましたが、書き込み権限が不足しています："
 
 #: pcsx2/gui/AppUserMode.cpp:100
 msgid "The following folders are missing and cannot be created:"
-msgstr "次のフォルダがありません、作成する事もできません："
+msgstr "次のフォルダーが存在せず、作成する事もできません。"
 
 #: pcsx2/gui/AppUserMode.cpp:140
 #, c-format
@@ -653,11 +653,11 @@ msgid ""
 "following errors:"
 msgstr ""
 "PCSX2はポータブルアプリケーションとしてインストールされましたが、次の理由によ"
-"り実行する事ができません："
+"り実行する事ができません。"
 
 #: pcsx2/gui/AppUserMode.cpp:161
 msgid "Switch to User Documents Mode"
-msgstr "ユーザドキュメントモードに切り替える"
+msgstr "ユーザードキュメントモードに切り替える"
 
 #: pcsx2/gui/AppUserMode.cpp:174
 #, c-format
@@ -669,7 +669,8 @@ msgid ""
 "Try to remove the file called \"portable.ini\" from your installation "
 "directory manually."
 msgstr ""
-"インストールした場所から\"portable.ini\"ファイルを手動で除去してみて下さい。"
+"インストールした場所から\"portable.ini\"ファイルを手動で除去してみてくださ"
+"い。"
 
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
@@ -810,7 +811,7 @@ msgstr "ソース"
 
 #: pcsx2/gui/Debugger/DisassemblyDialog.cpp:54
 msgid "panel"
-msgstr ""
+msgstr "パネル"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:35
 #, c-format
@@ -847,7 +848,7 @@ msgstr "貢献者"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:98
 msgid "A Playstation 2 Emulator"
-msgstr "プレイステーション2　エミュレータ"
+msgstr "プレイステーション2 エミュレーター"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:102
 msgid "PCSX2 Official Website and Forums"
@@ -939,7 +940,7 @@ msgstr "メモリーカードの作成"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:163
 msgid "Error: The memory card could not be created."
-msgstr "エラー： メモリーカードの作成ができませんでした。"
+msgstr "エラー：メモリーカードの作成ができませんでした。"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:177
 msgid "Use NTFS compression when creating this card."
@@ -962,7 +963,7 @@ msgid ""
 "behavior."
 msgstr ""
 "最も確実で安全なメモリーカードの挙動を求めるならば、このオプションを必ず選択"
-"して下さい。"
+"してください。"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:198
 msgid "16 MB"
@@ -993,23 +994,24 @@ msgstr "64MB"
 msgid ""
 "Low compatibility warning: Yes it's very big, but may not work with many "
 "games."
-msgstr "互換性警告：大容量ですが、一部のゲームにしか使用できません。"
+msgstr "警告：大容量ですが、一部のゲームにしか使用できません。"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
 msgid ""
 "Use at your own risk.  Erratic memory card behavior is possible (though "
 "unlikely)."
 msgstr ""
-"自己責任で使用して下さい。誤作動する可能性があります（ほとんど無いですが）。"
+"自己責任で使用してください。誤作動する可能性があります（ほとんど無いです"
+"が）。"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
 msgid "Select a folder for %s settings"
-msgstr "%s設定の保存先フォルダを指定して下さい"
+msgstr "%s設定の保存先フォルダーを指定してください"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 msgid "Settings"
-msgstr "フォルダ設定"
+msgstr "フォルダー設定"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:76
 msgid "Language selector"
@@ -1020,7 +1022,7 @@ msgid ""
 "Change the language only if you need to.\n"
 "The system default should be fine for most operating systems."
 msgstr ""
-"言語の変更が必要な場合は選択して下さい。\n"
+"言語の変更が必要な場合は選択してください。\n"
 "通常は「System Default」のままでかまいません。"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:85
@@ -1067,7 +1069,7 @@ msgstr "セーブステートをロードする時にメモリーカードを自
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:92
 msgid "MemoryCard Manager"
-msgstr "メモリーカードマネージャ"
+msgstr "メモリーカードマネージャー"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:108
 msgid "Drag cards to or from PS2-ports"
@@ -1089,7 +1091,8 @@ msgstr "PCSX2初回起動設定"
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:29
 #, c-format
 msgid "%s is starting from a new or unknown folder and needs to be configured."
-msgstr "%sは別の又は未知のフォルダから起動しています、設定する必要があります。"
+msgstr ""
+"%sは別の又は未知のフォルダーから起動しています。設定する必要があります。"
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:28
 msgid "PCSX2 Thread is not responding"
@@ -1134,7 +1137,7 @@ msgstr "スピードハック"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:226
 msgid "Game Fixes"
-msgstr "ゲーム修正"
+msgstr "ゲームフィックス"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
 #, c-format
@@ -1151,7 +1154,7 @@ msgstr "BIOS"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:246
 msgid "Folders"
-msgstr "フォルダ管理"
+msgstr "フォルダー管理"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:257
 #, c-format
@@ -1288,9 +1291,9 @@ msgid "&Debug"
 msgstr "デバッグ(&D)"
 
 #: pcsx2/gui/MainFrame.cpp:355
-#, fuzzy, c-format
+#, c-format
 msgid "%s  %d.%d.%d"
-msgstr "%s  %d.%d.%d %s"
+msgstr "%s  %d.%d.%d"
 
 #: pcsx2/gui/MainFrame.cpp:360
 #, c-format
@@ -1316,20 +1319,19 @@ msgstr "バックアップしてセーブ"
 
 #: pcsx2/gui/MainFrame.cpp:419
 msgid "Automatic Gamefixes"
-msgstr "自動ゲーム修正"
+msgstr "自動ゲームフィックス"
 
 #: pcsx2/gui/MainFrame.cpp:420
 msgid "Automatically applies needed Gamefixes to known problematic games"
-msgstr "既知のゲーム修正を自動的に適用します"
+msgstr "既知のゲームフィックスを自動的に適用します"
 
 #: pcsx2/gui/MainFrame.cpp:422
 msgid "Enable Cheats"
 msgstr "チート有効化"
 
 #: pcsx2/gui/MainFrame.cpp:425
-#, fuzzy
 msgid "Enable Widescreen Patches"
-msgstr "スピードハック有効化"
+msgstr "ワイドスクリーンパッチ有効化"
 
 #: pcsx2/gui/MainFrame.cpp:428
 msgid "Enable Host Filesystem"
@@ -1382,19 +1384,19 @@ msgstr "ディスク無し"
 
 #: pcsx2/gui/MainFrame.cpp:450
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
-msgstr "PS2のBIOS設定に入る時に使います。"
+msgstr "PS2の本体設定に入る時に使います。"
 
 #: pcsx2/gui/MainFrame.cpp:458
 msgid "Emulation &Settings"
-msgstr "エミュレーション設定(&S)"
+msgstr "エミュレーション設定 (&S)"
 
 #: pcsx2/gui/MainFrame.cpp:459
 msgid "&Memory cards"
-msgstr "メモリーカード(&M)"
+msgstr "メモリーカード (&M)"
 
 #: pcsx2/gui/MainFrame.cpp:460
 msgid "&Plugin/BIOS Selector"
-msgstr "プラグイン/BIOS選択(&P)"
+msgstr "プラグイン/BIOS選択 (&P)"
 
 #: pcsx2/gui/MainFrame.cpp:461 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
@@ -1410,7 +1412,7 @@ msgstr "オーディオ (SPU2) (&A)"
 
 #: pcsx2/gui/MainFrame.cpp:469
 msgid "&Controllers (PAD)"
-msgstr "コントローラ (PAD) (&C)"
+msgstr "コントローラー (PAD) (&C)"
 
 #: pcsx2/gui/MainFrame.cpp:470
 msgid "Dev9"
@@ -1447,7 +1449,7 @@ msgstr "PCSX2について"
 
 #: pcsx2/gui/MainFrame.cpp:511
 msgid "Open Debug Window..."
-msgstr ""
+msgstr "デバッグウィンドウを開く"
 
 #: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
@@ -1476,7 +1478,7 @@ msgstr "中断/再開"
 #: pcsx2/gui/MainFrame.cpp:604
 msgid "No emulation state is active; cannot suspend or resume."
 msgstr ""
-"アクティブなエミュレーションステートがありません。中断、再開ができません。"
+"アクティブなエミュレーションステートがありません。中断、再開はできません。"
 
 #: pcsx2/gui/MainFrame.cpp:613
 msgid "Restart"
@@ -1489,7 +1491,7 @@ msgstr "PS2仮想マシンでハードウェアリセットをシミュレート
 #: pcsx2/gui/MainFrame.cpp:619
 msgid "No emulation state is active; boot something first."
 msgstr ""
-"アクティブなエミュレーションステートがありません。先に何か起動して下さい。"
+"アクティブなエミュレーションステートがありません。先に何か起動してください。"
 
 #: pcsx2/gui/MainFrame.cpp:627
 msgid "Reboot CDVD (full)"
@@ -1565,8 +1567,7 @@ msgstr "ISOイメージ変更の確認"
 #: pcsx2/gui/MainMenuClicks.cpp:143
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr ""
-"ディスクを入れ替えるか、別のイメージを起動(システムはリセットされます)します"
-"か？"
+"ディスクを入れ替えるか、別のイメージを起動してシステムをリセットしますか？"
 
 #: pcsx2/gui/MainMenuClicks.cpp:145 pcsx2/gui/MainMenuClicks.cpp:191
 msgid "Swap Disc"
@@ -1584,8 +1585,7 @@ msgstr "CDVDソースを[%s]から[%s]に変更されました。"
 #: pcsx2/gui/MainMenuClicks.cpp:188
 msgid "Do you want to swap discs or boot the new image (system reset)?"
 msgstr ""
-"ディスクをスワップするか、別のイメージを起動(システムはリセットされます)させ"
-"ますか？"
+"ディスクを入れ替えるか、別のイメージを起動してシステムをリセットしますか？"
 
 #: pcsx2/gui/MainMenuClicks.cpp:258
 #, c-format
@@ -1612,7 +1612,7 @@ msgstr "CDVDのISOソースを選択してください..."
 
 #: pcsx2/gui/MainMenuClicks.cpp:287
 msgid "Select ELF file..."
-msgstr "ELFファイルを選択して下さい..."
+msgstr "ELFファイルを選択してください..."
 
 #: pcsx2/gui/MainMenuClicks.cpp:313
 msgid "ISO file not found!"
@@ -1627,8 +1627,8 @@ msgid ""
 "Error: The configured ISO file does not exist.  Click OK to select a new ISO "
 "source for CDVD."
 msgstr ""
-"エラー： 指定されたISOファイルが見つかりません。OKをクリックし、CDVDのISOソー"
-"スを選択して下さい。"
+"エラー：指定されたISOファイルが見つかりません。OKをクリックし、CDVDのISOソー"
+"スを選択してください。"
 
 #: pcsx2/gui/MainMenuClicks.cpp:387
 msgid ""
@@ -1659,8 +1659,8 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
-"メモリーカードのアクセスが拒否されました：(このセッションではメモリーカードは"
-"無効となります)\n"
+"メモリーカードへのアクセスが拒否されました。このセッションではメモリーカード"
+"は無効となります。\n"
 "%s\n"
 "\n"
 
@@ -1690,13 +1690,13 @@ msgstr "BIOS参照パス："
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:104
 msgid "Select folder with PS2 BIOS roms"
-msgstr "PS2のBIOSがあるフォルダを選択して下さい"
+msgstr "PS2のBIOSがあるフォルダーを選択してください"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:111
 msgid ""
 "Click the Browse button to select a different folder where PCSX2 will look "
 "for PS2 BIOS roms."
-msgstr "参照を押してPCSX2がBIOS ROMをロードするフォルダを指定して下さい。"
+msgstr "参照を押してPCSX2がBIOS ROMをロードするフォルダーを指定してください。"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:171
@@ -1706,7 +1706,7 @@ msgstr "リスト更新"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:115
 msgid "Select a BIOS rom:"
-msgstr "BIOS ROMを選択して下さい："
+msgstr "BIOS ROMを選択してください："
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:24
 msgid "Round Mode"
@@ -1738,7 +1738,7 @@ msgstr "無し"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:85
 msgid "EE/FPU Advanced Recompiler Options"
-msgstr "EE/FPU リコンパイラ詳細設定"
+msgstr "EE/FPU リコンパイラー詳細設定"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:87 pcsx2/gui/Panels/CpuPanel.cpp:102
 msgid "Extra + Preserve Sign"
@@ -1750,7 +1750,7 @@ msgstr "フル"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:99
 msgid "VU0 / VU1 Advanced Recompiler Options"
-msgstr "VU0/VU1 リコンパイラ詳細設定"
+msgstr "VU0/VU1 リコンパイラー詳細設定"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:101
 msgid "Extra"
@@ -1759,7 +1759,7 @@ msgstr "Extra"
 #: pcsx2/gui/Panels/CpuPanel.cpp:116 pcsx2/gui/Panels/CpuPanel.cpp:125
 #: pcsx2/gui/Panels/CpuPanel.cpp:182
 msgid "Interpreter"
-msgstr "インタプリタ"
+msgstr "インタプリター"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:117
 msgid "Quite possibly the slowest thing in the universe."
@@ -1767,15 +1767,15 @@ msgstr "おそらくこの宇宙の中で一番遅いものです。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:119 pcsx2/gui/Panels/CpuPanel.cpp:128
 msgid "Recompiler"
-msgstr "リコンパイラ"
+msgstr "リコンパイラー"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:120
 msgid ""
 "Performs just-in-time binary translation of 64-bit MIPS-IV machine code to "
 "x86."
 msgstr ""
-"64-bit MIPS-IV マシンコードを x86 にバイナリトランスレーションする操作を丁度"
-"間に合わせる具合に行う。"
+"64-bit MIPS-IV マシンコードを x86 にバイナリトランスレーションする操作をJust-"
+"In-Time方式で行う。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:126
 msgid "Pretty slow; provided for diagnostic purposes only."
@@ -1786,16 +1786,16 @@ msgid ""
 "Performs just-in-time binary translation of 32-bit MIPS-I machine code to "
 "x86."
 msgstr ""
-"32-bit MIPS-I マシンコードを x86 にバイナリトランスレーションする操作を丁度間"
-"に合わせる具合に行う。"
+"32-bit MIPS-I マシンコードを x86 にバイナリトランスレーションする操作をJust-"
+"In-Time方式で行う。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Enable EE Cache (Slower)"
-msgstr "EEキャッシュを有効にする(遅くなる)"
+msgstr "EEキャッシュを有効にする（遅くなる）"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Interpreter only; provided for diagnostic"
-msgstr "インタプリタモード専用、デバッグ用"
+msgstr "インタプリターモード専用、デバッグ用"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:169 pcsx2/gui/Panels/CpuPanel.cpp:221
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:99
@@ -1807,20 +1807,20 @@ msgid ""
 "Vector Unit Interpreter. Slow and not very compatible. Only use for "
 "diagnostics."
 msgstr ""
-"ベクターユニットインタプリタ。低速であまり互換性が無い。デバッグ診断用。"
+"ベクターユニットインタプリター。低速であまり互換性が無い。デバッグ診断用。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:185
 msgid "microVU Recompiler"
-msgstr "microVU リコンパイラ"
+msgstr "microVU リコンパイラー"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:186
 msgid ""
 "New Vector Unit recompiler with much improved compatibility. Recommended."
-msgstr "最新のVUリコンパイラです。互換性が改善されています。お勧め。"
+msgstr "最新のVUリコンパイラーです。互換性が改善されています。お勧め。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:188
 msgid "superVU Recompiler [legacy]"
-msgstr "superVU リコンパイラ [legacy]"
+msgstr "superVU リコンパイラー [legacy]"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:189
 msgid ""
@@ -1837,20 +1837,20 @@ msgstr "デフォルト設定を使う"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:174
 msgid "Open in Explorer"
-msgstr "エクスプローラで開く"
+msgstr "エクスプローラーで開く"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:175
 msgid "Open an explorer window to this folder."
-msgstr "このフォルダをエクスプローラウィンドウで開きます。"
+msgstr "このフォルダーをエクスプローラーで開きます。"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:266
 msgid "Create folder?"
-msgstr "フォルダを作成しますか？"
+msgstr "フォルダーを作成しますか？"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:267
 #, c-format
 msgid "A configured folder does not exist.  Should %s try to create it?"
-msgstr "設定フォルダが見つかりません。%sに作成させますか？"
+msgstr "設定フォルダーが見つかりません。%sに作成させますか？"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:30
 msgid "Fit to Window/Screen"
@@ -1870,7 +1870,7 @@ msgstr "ウィンドウのリサイズを無効にする"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:47
 msgid "Always hide mouse cursor"
-msgstr "マウスポインタを非表示にする"
+msgstr "マウスポインターを非表示にする"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:48
 msgid "Hide window when paused"
@@ -1886,7 +1886,7 @@ msgstr "垂直同期（垂直同期信号まで画面の書き換えを待機し
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:51
 msgid "Dynamically toggle Vsync depending on frame rate (read tooltip!)"
-msgstr "動的垂直同期（ツールチップを読んでください）"
+msgstr "動的垂直同期（ツールチップをお読みください）"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:52
 msgid "Double-click toggles fullscreen mode"
@@ -1910,7 +1910,7 @@ msgid ""
 ">_<"
 msgstr ""
 "無効なサイズ指定です：\n"
-"整数以外は入力しないで下さい！　>_<"
+"整数以外は入力しないでください！　>_<"
 
 #: pcsx2/gui/Panels/GameDatabasePanel.cpp:334
 msgid "Search"
@@ -1919,7 +1919,7 @@ msgstr "検索"
 #: pcsx2/gui/Panels/GameDatabasePanel.cpp:368
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:25
 msgid "Gamefixes"
-msgstr "ゲーム修正"
+msgstr "ゲームフィックス"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:38
 msgid "VU Add Hack - Fixes Tri-Ace games boot crash."
@@ -1940,7 +1940,7 @@ msgstr ""
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:42
 msgid "VU Clip Flag Hack - For Persona games (SuperVU recompiler only!)"
 msgstr ""
-"VU Clip Flag Hack - ペルソナ系のゲーム用（SuperVU リコンパイラ使用の場合の"
+"VU Clip Flag Hack - ペルソナ系のゲーム用（SuperVU リコンパイラー使用の場合の"
 "み）"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:46
@@ -1973,12 +1973,13 @@ msgid ""
 "Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."
 msgstr ""
 "Skip MPEG hack - ムービーをスキップします。イントロムービーがフリーズ、ハング"
-"する場合に使って下さい。"
+"する場合に使ってください。"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:75
 msgid "OPH Flag hack - Try if your game freezes showing the same frame."
 msgstr ""
-"OPH Flag hack - 毎回同じフレーム/シーンでフリーズする時に使ってみて下さい。"
+"OPH Flag hack - 毎回同じフレームやシーンでフリーズする時に使ってみてくださ"
+"い。"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
 msgid "Ignore DMAC writes when it is busy."
@@ -1999,16 +2000,16 @@ msgstr "Path3転送のBus Directionを無視する - Hotwheels用"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
-msgstr ""
+msgstr "FMV再生時にGSdxをソフトウェアレンダリングに切り替える"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
-msgstr "ゲーム修正の手動設定有効化[推奨されません]"
+msgstr "ゲームフィックスを手動で設定する[非推奨]"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:114
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
-msgstr "ゲーム修正が全て無効化されている事を確認する為の最善な方法です。"
+msgstr "ゲームフィックスが全て無効化されている事を確認する為の最善な方法です。"
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:249
 msgid "Enable Trace Logging"
@@ -2027,12 +2028,12 @@ msgid ""
 "Warning: Enabling trace logs is typically very slow, and is a leading cause "
 "of 'What happened to my FPS?' problems. :)"
 msgstr ""
-"警告： トレースログを有効にすると遅くなります。「俺のFPSどうなっちまった」現"
+"警告：トレースログを有効にすると遅くなります。「俺のFPSはどうなっちまった」現"
 "象に繋がります。 (^-^)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:166
 msgid "Select folder with PS2 memory cards"
-msgstr "PS2メモリーカードが保存されるフォルダを選択して下さい"
+msgstr "PS2メモリーカードが保存されるフォルダーを選択してください"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
@@ -2088,7 +2089,7 @@ msgstr "削除"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:560
 msgid "Permanently delete this memory card from disk (all contents are lost)"
-msgstr "このメモリーカードを完全に消去する(全てのデータは失われます)"
+msgstr "このメモリーカードを完全に消去する（全てのデータは失われます）"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:562
 msgid "Create a new memory card and assign it to this Port."
@@ -2107,14 +2108,14 @@ msgstr "メモリーカードの複製"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 msgid "Failed: Can only duplicate an existing card."
-msgstr "失敗： 複製元のメモリーカードがありません。"
+msgstr "失敗：複製元のメモリーカードがありません。"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
 msgstr ""
-"複製先のメモリーカードに名前を付けて下さい。\n"
+"複製先のメモリーカードに名前を付けてください。\n"
 "（拡張子「.ps2」 は自動的に追加されます）"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
@@ -2141,7 +2142,7 @@ msgid ""
 "Select a new name for the memory card '%s'\n"
 "( '.ps2' will be added automatically)"
 msgstr ""
-"'%s' メモリーカードに名前を付けて下さい\n"
+"'%s' メモリーカードに名前を付けてください\n"
 "（拡張子「.ps2」 は自動的に追加されます）"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
@@ -2173,7 +2174,7 @@ msgstr "空"
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
-msgstr "'%s' を差し込むポートを指定して下さい"
+msgstr "'%s' を差し込むポートを指定してください"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
@@ -2214,7 +2215,7 @@ msgstr "PS2ポート"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:108
 msgid "Card (file) name"
-msgstr "カード (ファイル) 名"
+msgstr "カード（ファイル）名"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Card size"
@@ -2226,7 +2227,7 @@ msgstr "フォーマットされた"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:111
 msgid "Type"
-msgstr ""
+msgstr "種類"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
@@ -2245,14 +2246,12 @@ msgid "Yes"
 msgstr "はい"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PS2"
-msgstr "FPS"
+msgstr "PS2"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:159
-#, fuzzy
 msgid "PSX"
-msgstr "FPS"
+msgstr "PS1"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
@@ -2268,15 +2267,15 @@ msgstr "ユーザーモード選択"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:44
 msgid "User Documents (recommended)"
-msgstr "ユーザードキュメント (推奨)"
+msgstr "ユーザードキュメント（推奨）"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:45
 msgid "Location: "
-msgstr "フォルダの場所："
+msgstr "フォルダーの場所："
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:49
 msgid "Custom folder:"
-msgstr "カスタムフォルダ："
+msgstr "カスタムフォルダー："
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:51
 msgid ""
@@ -2287,7 +2286,7 @@ msgstr "この設定はOSの管理者権限が必要な可能性があります�
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:60
 #, c-format
 msgid "Select a document root for %s"
-msgstr "%sを設置するドキュメントのルートを選択して下さい"
+msgstr "%sを設置するドキュメントのルートを選択してください"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:118
 msgid "Apply"
@@ -2343,7 +2342,7 @@ msgstr "プラグイン参照パス："
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:352
 msgid "Select a folder with PCSX2 plugins"
-msgstr "PCSX2プラグインフォルダを選択"
+msgstr "プラグインフォルダーを選択"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:365
 msgid "Configure..."
@@ -2351,12 +2350,12 @@ msgstr "設定する..."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:374
 msgid "Click the Browse button to select a different folder for PCSX2 plugins."
-msgstr "参照ボタンをクリックしてPCSX2プラグインフォルダを指定して下さい。"
+msgstr "参照ボタンをクリックしてプラグインフォルダーを指定してください。"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:473
 #, c-format
 msgid "Please select a valid plugin for the %s."
-msgstr "%sの有効なプラグインを選択して下さい。"
+msgstr "%sの有効なプラグインを選択してください。"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:511
 #, c-format
@@ -2366,7 +2365,7 @@ msgid ""
 "Reason: %s\n"
 "\n"
 msgstr ""
-"選択された[%s]プラグインはロードに失敗しました。\n"
+"選択された[%s]プラグインのロードに失敗しました。\n"
 "\n"
 "理由： %s\n"
 "\n"
@@ -2382,7 +2381,7 @@ msgstr "スピードハック有効化"
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:91
 msgid ""
 "A safe and easy way to make sure that all speedhacks are completely disabled."
-msgstr "ゲーム修正が全て無効化されている事を確認する為の最善な方法です。"
+msgstr "ゲームフィックスが全て無効化されている事を確認する為の最善な方法です。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:100
 msgid ""
@@ -2400,7 +2399,7 @@ msgstr "VU サイクルステアリング [非推奨]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:145
 msgid "microVU Hacks"
-msgstr "microVU Hacks"
+msgstr "microVU ハック"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:147
 msgid "mVU Flag Hack"
@@ -2413,7 +2412,7 @@ msgstr "速度の向上と高い互換性、グラフィック不具合の可能
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "MTVU (Multi-Threaded microVU1)"
-msgstr "MTVU (Multi-Threaded microVU1)"
+msgstr "MTVU（マルチスレッド microVU1）"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:151
 msgid ""
@@ -2462,14 +2461,14 @@ msgstr "テーマ参照パス："
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:38
 msgid "Select folder containing PCSX2 visual themes"
-msgstr "PCSX2の視覚テーマがあるフォルダの選択"
+msgstr "PCSX2の視覚テーマがあるフォルダーの選択"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:45
 msgid ""
 "Click the Browse button to select a different folder containing PCSX2 visual "
 "themes."
 msgstr ""
-"参照ボタンをクリックしてPCSX2視覚テーマがあるフォルダを指定して下さい。"
+"参照ボタンをクリックし、PCSX2視覚テーマがあるフォルダーを指定してください。"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:49
 msgid "Select a visual theme:"
@@ -2477,7 +2476,7 @@ msgstr "視覚テーマの選択："
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:34
 msgid "Disable Framelimiting"
-msgstr "フレームリミッタ無効化"
+msgstr "フレームリミッター無効化"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:35
 msgid ""
@@ -2555,7 +2554,7 @@ msgid ""
 "very slow."
 msgstr ""
 "クラッシュやグラフィックエラーの発生原因として、\n"
-"MTGSスレッドの同期が疑わしい場合は有効にして下さい。"
+"MTGSスレッドの同期が疑わしい場合は有効にしてください。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
@@ -2566,8 +2565,8 @@ msgid ""
 "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 "components."
 msgstr ""
-"GSプラグインの動作を完全に無効にします。エモーションエンジンのコンポーネント"
-"自体の処理速度計測とデバッグに最適です。"
+"GSプラグインの動作を完全に無効にします。EEコンポーネント自体の処理速度計測と"
+"デバッグに最適です。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
@@ -2575,25 +2574,21 @@ msgstr "フレームスキップ"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
-msgstr "フレームリミッタ"
+msgstr "フレームリミッター"
 
 #: pcsx2/gui/SysState.cpp:283
-#, fuzzy
 msgid "Cannot load this savestate.  The state is an unsupported version."
-msgstr ""
-"セーブステートをロードできません。未知又はサポートされないバージョンです。"
+msgstr "セーブステートをロードできません。サポートされていないバージョンです。"
 
 #: pcsx2/gui/SysState.cpp:290
-#, fuzzy
 msgid "Cannot load this savestate. The state is an unsupported version."
-msgstr ""
-"セーブステートをロードできません。未知又はサポートされないバージョンです。"
+msgstr "セーブステートをロードできません。サポートされていないバージョンです。"
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
 msgstr ""
-"エラー： メモリバッファへダウンロード又保存できるアクティブな仮想マシンステー"
-"トがありません。"
+"エラー：メモリバッファーへダウンロード又保存できるアクティブな仮想マシンス"
+"テートがありません。"
 
 #: pcsx2/gui/SysState.cpp:520
 msgid ""
@@ -2601,30 +2596,30 @@ msgid ""
 "may have been created by an older unsupported version of PCSX2, or it may be "
 "corrupted."
 msgstr ""
-"セーブステートが無効なgzipアーカイブなのでロードできませんでした。旧バージョ"
-"ンのPCSX2で作成されたか、破損したファイルです。"
+"セーブステートが無効なgzipアーカイブのためロードできません。旧バージョンの"
+"PCSX2で作成されたか、破損したファイルです。"
 
 #: pcsx2/gui/SysState.cpp:579
 msgid "This file is not a valid PCSX2 savestate.  See the logfile for details."
 msgstr ""
-"このファイルは無効なPCSX2のセーブステートです。詳細はログファイルを参照して下"
-"さい。"
+"このファイルは無効なPCSX2のセーブステートです。詳細はログファイルを参照してく"
+"ださい。"
 
 #: pcsx2/gui/SysState.cpp:598
 msgid ""
 "This savestate cannot be loaded due to missing critical components.  See the "
 "log file for details."
 msgstr ""
-"セーブステートは重要な構成に欠けている為、ロードできませんでした。詳細はログ"
-"ファイルを参照して下さい。"
+"セーブステートは重要な構成に欠けている為、ロードできません。詳細はログファイ"
+"ルを参照してください。"
 
 #: pcsx2/gui/i18n.cpp:63
 msgid " (default)"
-msgstr "(デフォルト)"
+msgstr "（デフォルト）"
 
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
-msgstr "選択されたBIOSファイルは無効です。再度設定して下さい。"
+msgstr "選択されたBIOSファイルは無効です。再度設定してください。"
 
 #: pcsx2/ps2/BiosTools.cpp:244
 msgid ""
@@ -2632,11 +2627,11 @@ msgid ""
 "configuration has been corrupted.  Please re-configure."
 msgstr ""
 "PS2のBIOSをロードできませんでした。BIOSが設定されていないか、設定が破損してい"
-"ます。再度設定して下さい。"
+"ます。再度設定してください。"
 
 #: pcsx2/ps2/BiosTools.cpp:251
 msgid "The configured BIOS file does not exist.  Please re-configure."
-msgstr "指定されたBIOSファイルが見つかりません。再度設定して下さい。"
+msgstr "指定されたBIOSファイルが見つかりません。再度設定してください。"
 
 #: pcsx2/x86/ix86-32/iR5900-32.cpp:580
 #, c-format
@@ -2644,7 +2639,7 @@ msgid ""
 "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "
 "MMX, SSE, and SSE2 extensions."
 msgstr ""
-"お使いのCPUは %s 拡張命令に対応していません。 R5900-32 リコンパイラは MMX、"
+"お使いのCPUは %s 拡張命令に対応していません。 R5900-32 リコンパイラーは MMX、"
 "SSE、およびSSE2 拡張命令に対応したCPUが必要です。"
 
 #: pcsx2/x86/microVU.cpp:28
