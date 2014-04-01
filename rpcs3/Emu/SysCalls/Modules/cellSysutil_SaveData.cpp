@@ -65,7 +65,7 @@ void addSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::st
 		return;
 
 	// PNG icon
-	wxString localPath;
+	std::string localPath;
 	int width, height, actual_components;
 	Emu.GetVFS().GetDevice(saveDir + "/ICON0.PNG", localPath);
 
@@ -79,7 +79,7 @@ void addSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::st
 	saveEntry.st_atime_ = 0; // TODO
 	saveEntry.st_mtime_ = 0; // TODO
 	saveEntry.st_ctime_ = 0; // TODO
-	saveEntry.iconBuf = stbi_load(localPath.mb_str(), &width, &height, &actual_components, 3);
+	saveEntry.iconBuf = stbi_load(localPath.c_str(), &width, &height, &actual_components, 3);
 	saveEntry.iconBufSize = width * height * 3;
 	saveEntry.isNew = false;
 
@@ -147,11 +147,11 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	if(!dir.IsOpened())
 		return CELL_SAVEDATA_ERROR_INTERNAL;
 
-	std::string dirNamePrefix = std::string(Memory.ReadString(setList->dirNamePrefix_addr).mb_str());
+	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr);
 	std::vector<SaveDataListEntry> saveEntries;
 	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
 	{
-		if (entry->flags & DirEntry_TypeDir || entry->name.Left(dirNamePrefix.size()) == dirNamePrefix)
+		if (entry->flags & DirEntry_TypeDir || entry->name.substr(0,dirNamePrefix.size()) == dirNamePrefix)
 		{
 			// Count the amount of matches and the amount of listed directories
 			listGet->dirListNum++;
@@ -159,7 +159,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 				continue;
 			listGet->dirNum++;
 
-			std::string saveDir = saveBaseDir + (const char*)(entry->name.mb_str());
+			std::string saveDir = saveBaseDir + entry->name;
 			addSaveDataEntry(saveEntries, saveDir);
 		}
 	}
@@ -210,11 +210,11 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	if(!dir.IsOpened())
 		return CELL_SAVEDATA_ERROR_INTERNAL;
 
-	std::string dirNamePrefix = std::string(Memory.ReadString(setList->dirNamePrefix_addr).mb_str());
+	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr);
 	std::vector<SaveDataListEntry> saveEntries;
 	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
 	{
-		if (entry->flags & DirEntry_TypeDir || entry->name.Left(dirNamePrefix.size()) == dirNamePrefix)
+		if (entry->flags & DirEntry_TypeDir || entry->name.substr(0,dirNamePrefix.size()) == dirNamePrefix)
 		{
 			// Count the amount of matches and the amount of listed directories
 			listGet->dirListNum++;
@@ -222,7 +222,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 				continue;
 			listGet->dirNum++;
 
-			std::string saveDir = saveBaseDir + (const char*)(entry->name.mb_str());
+			std::string saveDir = saveBaseDir + entry->name;
 			addSaveDataEntry(saveEntries, saveDir);
 		}
 	}

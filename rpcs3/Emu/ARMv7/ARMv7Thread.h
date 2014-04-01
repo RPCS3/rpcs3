@@ -84,9 +84,9 @@ public:
 	virtual void SetArg(const uint pos, const u64 arg);
 
 public:
-	virtual wxString RegsToString();
-	virtual wxString ReadRegString(wxString reg);
-	virtual bool WriteRegString(wxString reg, wxString value);
+	virtual std::string RegsToString();
+	virtual std::string ReadRegString(const std::string& reg);
+	virtual bool WriteRegString(const std::string& reg, std::string value);
 
 protected:
 	virtual void DoReset();

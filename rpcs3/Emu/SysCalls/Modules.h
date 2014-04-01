@@ -71,14 +71,15 @@ public:
 	void SetName(const std::string& name);
 
 public:
-	void Log(const u32 id, wxString fmt, ...);
-	void Log(wxString fmt, ...);
+	//TODO: use variadic function templates here to be able to use string references and forward all arguments without copying
+	void Log(const u32 id, std::string fmt, ...);
+	void Log(std::string fmt, ...);
 
-	void Warning(const u32 id, wxString fmt, ...);
-	void Warning(wxString fmt, ...);
+	void Warning(const u32 id, std::string fmt, ...);
+	void Warning(std::string fmt, ...);
 
-	void Error(const u32 id, wxString fmt, ...);
-	void Error(wxString fmt, ...);
+	void Error(const u32 id, std::string fmt, ...);
+	void Error(std::string fmt, ...);
 
 	bool CheckID(u32 id) const;
 	template<typename T> bool CheckId(u32 id, T*& data)

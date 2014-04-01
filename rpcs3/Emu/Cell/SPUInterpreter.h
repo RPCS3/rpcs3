@@ -1521,13 +1521,13 @@ private:
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
 	{
-		UNK(wxString::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+		UNK(fmt::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 
-	void UNK(const wxString& err)
+	void UNK(const std::string& err)
 	{
-		ConLog.Error(err + wxString::Format(" #pc: 0x%x", CPU.PC));
+		ConLog.Error(err + fmt::Format(" #pc: 0x%x", CPU.PC));
 		Emu.Pause();
-		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().wx_str());
+		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 	}
 };

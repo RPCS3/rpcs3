@@ -142,7 +142,7 @@ int sys_ppu_thread_restart(u32 thread_id)
 int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
 	sysPrxForUser.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%x, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-		thread_id_addr, entry, arg, prio, stacksize, flags, threadname_addr, Memory.ReadString(threadname_addr).wx_str());
+		thread_id_addr, entry, arg, prio, stacksize, flags, threadname_addr, Memory.ReadString(threadname_addr).c_str());
 
 	if(!Memory.IsGoodAddr(entry) || !Memory.IsGoodAddr(thread_id_addr) || !Memory.IsGoodAddr(threadname_addr))
 	{
@@ -157,9 +157,9 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
 	//new_thread.flags = flags;
-	new_thread.SetName(Memory.ReadString(threadname_addr).ToStdString());
+	new_thread.SetName(Memory.ReadString(threadname_addr));
 
-	ConLog.Write("*** New PPU Thread [%s] (): id = %d", wxString(new_thread.GetName()).wx_str(), new_thread.GetId());
+	ConLog.Write("*** New PPU Thread [%s] (): id = %d", new_thread.GetName().c_str(), new_thread.GetId());
 
 	new_thread.Run();
 	new_thread.Exec();

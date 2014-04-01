@@ -23,9 +23,13 @@ void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
 	{
-		ConLog.Error("%s: opengl error 0x%04x", wxString(situation).wx_str(), err);
+		ConLog.Error("%s: opengl error 0x%04x", situation, err);
 		Emu.Pause();
 	}
+}
+void printGlError(GLenum err, const std::string& situation)
+{
+	printGlError(err, situation.c_str());
 }
 
 #if 0
@@ -316,13 +320,13 @@ void GLGSRender::InitVertexData()
 	for(u32 i=0; i<m_transform_constants.GetCount(); ++i)
 	{
 		const RSXTransformConstant& c = m_transform_constants[i];
-		const wxString name = wxString::Format("vc%u", c.id);
+		const std::string name = fmt::Format("vc%u", c.id);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		//ConLog.Write(name + " x: %.02f y: %.02f z: %.02f w: %.02f", c.x, c.y, c.z, c.w);
 		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + wxString::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		checkForGlError("glUniform4f " + name + fmt::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
 
 	// Scale
@@ -358,12 +362,12 @@ void GLGSRender::InitFragmentData()
 
 		//ConLog.Warning("fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
 
-		const wxString name = wxString::Format("fc%u", id);
+		const std::string name = fmt::Format("fc%u", id);
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + wxString::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		checkForGlError("glUniform4f " + name + fmt::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
 
 	//if(m_fragment_constants.GetCount())
@@ -735,7 +739,7 @@ void GLGSRender::ExecCMD()
 		for(int i=0; i<4; ++i)
 		{
 			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
-			checkForGlError(wxString::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
+			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 
 		m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
@@ -1044,10 +1048,10 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glActiveTexture");
 		m_gl_textures[i].Create();
 		m_gl_textures[i].Bind();
-		checkForGlError(wxString::Format("m_gl_textures[%d].Bind", i));
+		checkForGlError(fmt::Format("m_gl_textures[%d].Bind", i));
 		m_program.SetTex(i);
 		m_gl_textures[i].Init(m_textures[i]);
-		checkForGlError(wxString::Format("m_gl_textures[%d].Init", i));
+		checkForGlError(fmt::Format("m_gl_textures[%d].Init", i));
 	}
 
 	m_vao.Bind();

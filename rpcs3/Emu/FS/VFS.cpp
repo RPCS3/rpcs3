@@ -8,13 +8,13 @@ int sort_devices(const void* _a, const void* _b)
 	const vfsDevice& a =  **(const vfsDevice**)_a;
 	const vfsDevice& b =  **(const vfsDevice**)_b;
 
-	if(a.GetPs3Path().Len() > b.GetPs3Path().Len()) return  1;
-	if(a.GetPs3Path().Len() < b.GetPs3Path().Len()) return -1;
+	if(a.GetPs3Path().length() > b.GetPs3Path().length()) return  1;
+	if(a.GetPs3Path().length() < b.GetPs3Path().length()) return -1;
 
 	return 0;
 }
 
-void VFS::Mount(const wxString& ps3_path, const wxString& local_path, vfsDevice* device)
+void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device)
 {
 	UnMount(ps3_path);
 
@@ -27,11 +27,11 @@ void VFS::Mount(const wxString& ps3_path, const wxString& local_path, vfsDevice*
 	}
 }
 
-void VFS::UnMount(const wxString& ps3_path)
+void VFS::UnMount(const std::string& ps3_path)
 {
 	for(u32 i=0; i<m_devices.GetCount(); ++i)
 	{
-		if(!m_devices[i].GetPs3Path().Cmp(ps3_path))
+		if(!m_devices[i].GetPs3Path().compare(ps3_path))
 		{
 			delete &m_devices[i];
 			m_devices.RemoveFAt(i);
@@ -50,9 +50,9 @@ void VFS::UnMountAll()
 	}
 }
 
-vfsFileBase* VFS::OpenFile(const wxString& ps3_path, vfsOpenMode mode) const
+vfsFileBase* VFS::OpenFile(const std::string& ps3_path, vfsOpenMode mode) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		if(vfsFileBase* res = dev->GetNewFileStream())
@@ -65,9 +65,9 @@ vfsFileBase* VFS::OpenFile(const wxString& ps3_path, vfsOpenMode mode) const
 	return nullptr;
 }
 
-vfsDirBase* VFS::OpenDir(const wxString& ps3_path) const
+vfsDirBase* VFS::OpenDir(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
@@ -81,9 +81,9 @@ vfsDirBase* VFS::OpenDir(const wxString& ps3_path) const
 	return nullptr;
 }
 
-bool VFS::CreateFile(const wxString& ps3_path) const
+bool VFS::CreateFile(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
@@ -97,9 +97,9 @@ bool VFS::CreateFile(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::CreateDir(const wxString& ps3_path) const
+bool VFS::CreateDir(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
@@ -113,9 +113,9 @@ bool VFS::CreateDir(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::RemoveFile(const wxString& ps3_path) const
+bool VFS::RemoveFile(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
@@ -129,9 +129,9 @@ bool VFS::RemoveFile(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::RemoveDir(const wxString& ps3_path) const
+bool VFS::RemoveDir(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
@@ -145,9 +145,9 @@ bool VFS::RemoveDir(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::ExistsFile(const wxString& ps3_path) const
+bool VFS::ExistsFile(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
@@ -161,9 +161,9 @@ bool VFS::ExistsFile(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::ExistsDir(const wxString& ps3_path) const
+bool VFS::ExistsDir(const std::string& ps3_path) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
@@ -177,9 +177,9 @@ bool VFS::ExistsDir(const wxString& ps3_path) const
 	return false;
 }
 
-bool VFS::RenameFile(const wxString& ps3_path_from, const wxString& ps3_path_to) const
+bool VFS::RenameFile(const std::string& ps3_path_from, const std::string& ps3_path_to) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path_from, path))
 	{
 		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
@@ -193,9 +193,9 @@ bool VFS::RenameFile(const wxString& ps3_path_from, const wxString& ps3_path_to)
 	return false;
 }
 
-bool VFS::RenameDir(const wxString& ps3_path_from, const wxString& ps3_path_to) const
+bool VFS::RenameDir(const std::string& ps3_path_from, const std::string& ps3_path_to) const
 {
-	wxString path;
+	std::string path;
 	if(vfsDevice* dev = GetDevice(ps3_path_from, path))
 	{
 		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
@@ -209,7 +209,7 @@ bool VFS::RenameDir(const wxString& ps3_path_from, const wxString& ps3_path_to) 
 	return false;
 }
 
-vfsDevice* VFS::GetDevice(const wxString& ps3_path, wxString& path) const
+vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 {
 	u32 max_eq;
 	s32 max_i=-1;
@@ -226,18 +226,18 @@ vfsDevice* VFS::GetDevice(const wxString& ps3_path, wxString& path) const
 	}
 
 	if(max_i < 0) return nullptr;
-	path = vfsDevice::GetWinPath(m_devices[max_i].GetLocalPath(), ps3_path(max_eq, ps3_path.Len() - max_eq));
+	path = vfsDevice::GetWinPath(m_devices[max_i].GetLocalPath(), ps3_path.substr(max_eq, ps3_path.length() - max_eq));
 	return &m_devices[max_i];
 }
 
-vfsDevice* VFS::GetDeviceLocal(const wxString& local_path, wxString& path) const
+vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path) const
 {
 	u32 max_eq;
 	s32 max_i=-1;
 
-	wxFileName file_path(local_path);
+	wxFileName file_path(fmt::FromUTF8(local_path));
 	file_path.Normalize();
-	wxString mormalized_path = file_path.GetFullPath();
+	std::string mormalized_path = fmt::ToUTF8(file_path.GetFullPath());
 
 	for(u32 i=0; i<m_devices.GetCount(); ++i)
 	{
@@ -252,11 +252,11 @@ vfsDevice* VFS::GetDeviceLocal(const wxString& local_path, wxString& path) const
 
 	if(max_i < 0) return nullptr;
 
-	path = vfsDevice::GetPs3Path(m_devices[max_i].GetPs3Path(), local_path(max_eq, local_path.Len() - max_eq));
+	path = vfsDevice::GetPs3Path(m_devices[max_i].GetPs3Path(), local_path.substr(max_eq, local_path.length() - max_eq));
 	return &m_devices[max_i];
 }
 
-void VFS::Init(const wxString& path)
+void VFS::Init(const std::string& path)
 {
 	UnMountAll();
 
@@ -283,8 +283,8 @@ void VFS::Init(const wxString& path)
 		
 		wxString mpath = entry.path;
 		mpath.Replace("$(EmulatorDir)", wxGetCwd());
-		mpath.Replace("$(GameDir)", vfsDevice::GetRoot(path));
-		Mount(entry.mount, mpath, dev);
+		mpath.Replace("$(GameDir)", fmt::FromUTF8(vfsDevice::GetRoot(path)));
+		Mount(entry.mount, fmt::ToUTF8(mpath), dev);
 	}
 }
 
@@ -323,22 +323,22 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 
 	for(int i=0; i<count; ++i)
 	{
-		IniEntry<wxString> entry_path;
-		IniEntry<wxString> entry_device_path;
-		IniEntry<wxString> entry_mount;
+		IniEntry<std::string> entry_path;
+		IniEntry<std::string> entry_device_path;
+		IniEntry<std::string> entry_mount;
 		IniEntry<int> entry_device;
 
-		entry_path.Init(wxString::Format("path[%d]", i), "VFSManager");
-		entry_device_path.Init(wxString::Format("device_path[%d]", i), "VFSManager");
-		entry_mount.Init(wxString::Format("mount[%d]", i), "VFSManager");
-		entry_device.Init(wxString::Format("device[%d]", i), "VFSManager");
+		entry_path.Init(fmt::Format("path[%d]", i), "VFSManager");
+		entry_device_path.Init(fmt::Format("device_path[%d]", i), "VFSManager");
+		entry_mount.Init(fmt::Format("mount[%d]", i), "VFSManager");
+		entry_device.Init(fmt::Format("device[%d]", i), "VFSManager");
 		
 		if(is_load)
 		{
 			res[i] = VFSManagerEntry();
-			res[i].path = strdup(entry_path.LoadValue(wxEmptyString).c_str());
-			res[i].device_path = strdup(entry_device_path.LoadValue(wxEmptyString).c_str());
-			res[i].mount = strdup(entry_mount.LoadValue(wxEmptyString).c_str());
+			res[i].path = entry_path.LoadValue("");
+			res[i].device_path = entry_device_path.LoadValue("");
+			res[i].mount = entry_mount.LoadValue("");
 			res[i].device = (vfsDeviceType)entry_device.LoadValue(vfsDevice_LocalFile);
 		}
 		else

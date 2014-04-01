@@ -138,9 +138,9 @@ public:
 
 	FPSCR() {}
 
-	wxString ToString() const
+	std::string ToString() const
 	{
-		return "FPSCR writer not yet implemented"; //wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return "FPSCR writer not yet implemented"; //fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
@@ -230,9 +230,9 @@ union SPU_GPR_hdr
 
 	SPU_GPR_hdr() {}
 
-	wxString ToString() const
+	std::string ToString() const
 	{
-		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
@@ -249,9 +249,9 @@ union SPU_SPR_hdr
 
 	SPU_SPR_hdr() {}
 
-	wxString ToString() const
+	std::string ToString() const
 	{
-		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
@@ -266,9 +266,9 @@ union SPU_SNRConfig_hdr
 
 	SPU_SNRConfig_hdr() {}
 
-	wxString ToString() const
+	std::string ToString() const
 	{
-		return wxString::Format("%01x", value);
+		return fmt::Format("%01x", value);
 	}
 
 	void Reset()
@@ -699,10 +699,10 @@ public:
 		case MFC_GET_CMD:
 		{
 			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
-				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(),
-				wxString(op & MFC_RESULT_MASK ? "R" : "").wx_str(),
-				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
-				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
+				(op & MFC_PUT_CMD ? "PUT" : "GET"),
+				(op & MFC_RESULT_MASK ? "R" : ""),
+				(op & MFC_BARRIER_MASK ? "B" : ""),
+				(op & MFC_FENCE_MASK ? "F" : ""),
 				lsa, ea, tag, size, cmd);
 
 			MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
@@ -714,10 +714,10 @@ public:
 		case MFC_GETL_CMD:
 		{
 			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
-				wxString(op & MFC_PUT_CMD ? "PUT" : "GET").wx_str(),
-				wxString(op & MFC_RESULT_MASK ? "RL" : "L").wx_str(),
-				wxString(op & MFC_BARRIER_MASK ? "B" : "").wx_str(),
-				wxString(op & MFC_FENCE_MASK ? "F" : "").wx_str(),
+				(op & MFC_PUT_CMD ? "PUT" : "GET"),
+				(op & MFC_RESULT_MASK ? "RL" : "L"),
+				(op & MFC_BARRIER_MASK ? "B" : ""),
+				(op & MFC_FENCE_MASK ? "F" : ""),
 				lsa, ea, tag, size, cmd);
 
 			ListCmd(lsa, ea, tag, size, cmd, MFCArgs);
@@ -730,9 +730,9 @@ public:
 		case MFC_PUTQLLUC_CMD:
 		{
 			if (Ini.HLELogging.GetValue() || size != 128) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
-				wxString(op == MFC_GETLLAR_CMD ? "GETLLAR" :
+				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 				op == MFC_PUTLLC_CMD ? "PUTLLC" :
-				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC").wx_str(),
+				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
 				lsa, ea, tag, size, cmd);
 
 			if (op == MFC_GETLLAR_CMD) // get reservation
@@ -863,11 +863,11 @@ public:
 
 		case SPU_RdInMbox:
 			count = SPU.In_MBox.GetCount();
-			//ConLog.Warning("GetChannelCount(%s) -> %d", wxString(spu_ch_name[ch]).wx_str(), count);
+			//ConLog.Warning("GetChannelCount(%s) -> %d", spu_ch_name[ch], count);
 			return count;
 
 		case SPU_WrOutIntrMbox:
-			ConLog.Warning("GetChannelCount(%s) = 0", wxString(spu_ch_name[ch]).wx_str());
+			ConLog.Warning("GetChannelCount(%s) = 0", spu_ch_name[ch]);
 			return 0;
 
 		case MFC_RdTagStat:
@@ -890,7 +890,7 @@ public:
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).",
-				wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
+				__FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
 
@@ -1017,17 +1017,17 @@ public:
 		break;
 
 		case SPU_WrOutMbox:
-			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
+			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
 		break;
 
 		case MFC_WrTagMask:
-			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
+			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			Prxy.QueryMask.SetValue(v);
 		break;
 
 		case MFC_WrTagUpdate:
-			//ConLog.Warning("%s: %s = 0x%x", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str(), v);
+			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			Prxy.TagStatus.PushUncond(Prxy.QueryMask.GetValue());
 		break;
 
@@ -1075,11 +1075,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
+			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
 
-		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str());
+		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	void ReadChannel(SPU_GPR_hdr& r, u32 ch)
@@ -1091,22 +1091,22 @@ public:
 		{
 		case SPU_RdInMbox:
 			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case MFC_RdTagStat:
 			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify1:
 			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case SPU_RdSigNotify2:
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
-			//ConLog.Warning("%s: 0x%x = %s", wxString(__FUNCTION__).wx_str(), v, wxString(spu_ch_name[ch]).wx_str());
+			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 		break;
 
 		case MFC_RdAtomicStat:
@@ -1118,11 +1118,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", wxString(__FUNCTION__).wx_str(), ch, wxString(spu_ch_name[ch]).wx_str());
+			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
 
-		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", wxString(__FUNCTION__).wx_str(), wxString(spu_ch_name[ch]).wx_str());
+		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }
@@ -1142,39 +1142,48 @@ public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
 	virtual ~SPUThread();
 
-	virtual wxString RegsToString()
+	virtual std::string RegsToString()
 	{
-		wxString ret = "Registers:\n=========\n";
+		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().wx_str());
+		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().c_str());
 
 		return ret;
 	}
 
-	virtual wxString ReadRegString(wxString reg)
+	virtual std::string ReadRegString(const std::string& reg)
 	{
-		if (reg.Contains("["))
+		std::string::size_type first_brk = reg.find('[');
+		if (first_brk != std::string::npos)
 		{
 			long reg_index;
-			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR")) return wxString::Format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
+			reg_index = atol(reg.substr(first_brk + 1, reg.length()-2).c_str());
+			if (reg.find("GPR")==0) return fmt::Format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
 		}
-		return wxEmptyString;
+		return "";
 	}
 
-	bool WriteRegString(wxString reg, wxString value)
+	bool WriteRegString(const std::string& reg, std::string value)
 	{
-		while (value.Len() < 32) value = "0"+value;
-		if (reg.Contains("["))
+		while (value.length() < 32) value = "0"+value;
+		std::string::size_type first_brk = reg.find('[');
+		if (first_brk != std::string::npos)
 		{
 			long reg_index;
-			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR"))
+			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
+			if (reg.find("GPR")==0)
 			{
 				unsigned long long reg_value0;
 				unsigned long long reg_value1;
-				if (!value.SubString(16,31).ToULongLong(&reg_value0, 16)) return false;
-				if (!value.SubString(0,15).ToULongLong(&reg_value1, 16)) return false;
+				try
+				{
+					reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
+					reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
+				}
+				catch (std::invalid_argument& e)
+				{
+					return false;
+				}
 				GPR[reg_index]._u64[0] = (u64)reg_value0;
 				GPR[reg_index]._u64[1] = (u64)reg_value1;
 				return true;

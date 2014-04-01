@@ -59,9 +59,9 @@ public:
 		CreateBlock(entry);
 	}
 
-	static void CreateHDD(const wxString& path, u64 size, u64 block_size)
+	static void CreateHDD(const std::string& path, u64 size, u64 block_size)
 	{
-		wxFile f(path, wxFile::write);
+		wxFile f(fmt::FromUTF8(path), wxFile::write);
 
 		static const u64 cur_dir_block = 1;
 
@@ -174,24 +174,26 @@ class vfsHDDFile
 		m_hdd.Read(&data, sizeof(vfsHDD_Entry));
 	}
 
-	void ReadEntry(u64 block, vfsHDD_Entry& data, wxString& name)
+	void ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
 	{
 		m_hdd.Seek(block * m_hdd_info.block_size);
 		m_hdd.Read(&data, sizeof(vfsHDD_Entry));
-		m_hdd.Read(wxStringBuffer(name, GetMaxNameLen()), GetMaxNameLen());
+		name.resize(GetMaxNameLen());
+		m_hdd.Read(&name.front(), GetMaxNameLen());
 	}
 
-	void ReadEntry(u64 block, wxString& name)
+	void ReadEntry(u64 block, std::string& name)
 	{
 		m_hdd.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
-		m_hdd.Read(wxStringBuffer(name, GetMaxNameLen()), GetMaxNameLen());
+		name.resize(GetMaxNameLen());
+		m_hdd.Read(&name.front(), GetMaxNameLen());
 	}
 
-	void WriteEntry(u64 block, const vfsHDD_Entry& data, const wxString& name)
+	void WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
 	{
 		m_hdd.Seek(block * m_hdd_info.block_size);
 		m_hdd.Write(&data, sizeof(vfsHDD_Entry));
-		m_hdd.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.Len() + 1));
+		m_hdd.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
 	}
 
 	__forceinline u32 GetMaxNameLen() const
@@ -424,13 +426,13 @@ class vfsHDD : public vfsFileBase
 {
 	vfsHDD_Hdr m_hdd_info;
 	vfsLocalFile m_hdd_file;
-	const wxString& m_hdd_path;
+	const std::string& m_hdd_path;
 	vfsHDD_Entry m_cur_dir;
 	u64 m_cur_dir_block;
 	vfsHDDFile m_file;
 
 public:
-	vfsHDD(vfsDevice* device, const wxString& hdd_path)
+	vfsHDD(vfsDevice* device, const std::string& hdd_path)
 		: m_hdd_file(device)
 		, m_file(m_hdd_file, m_hdd_info)
 		, m_hdd_path(hdd_path)
@@ -453,18 +455,18 @@ public:
 		return m_hdd_info.block_size - sizeof(vfsHDD_Entry);
 	}
 
-	bool SearchEntry(const wxString& name, u64& entry_block, u64* parent_block = nullptr)
+	bool SearchEntry(const std::string& name, u64& entry_block, u64* parent_block = nullptr)
 	{
 		u64 last_block = 0;
 		u64 block = m_cur_dir_block;
 		vfsHDD_Entry entry;
-		wxString buf;
+		std::string buf;
 
 		while(block)
 		{
 			ReadEntry(block, entry, buf);
 
-			if(name.CmpNoCase(buf) == 0)
+			if (fmt::CmpNoCase(name,buf) == 0)
 			{
 				entry_block = block;
 				if(parent_block)
@@ -480,9 +482,9 @@ public:
 		return false;
 	}
 
-	int OpenDir(const wxString& name)
+	int OpenDir(const std::string& name)
 	{
-		ConLog.Warning("OpenDir(%s)", name.wx_str());
+		ConLog.Warning("OpenDir(%s)", name.c_str());
 		u64 entry_block;
 		if(!SearchEntry(name, entry_block))
 			return -1;
@@ -499,7 +501,7 @@ public:
 		return 0;
 	}
 
-	bool Rename(const wxString& from, const wxString& to)
+	bool Rename(const std::string& from, const std::string& to)
 	{
 		u64 entry_block;
 		if(!SearchEntry(from, entry_block))
@@ -555,27 +557,29 @@ public:
 		m_hdd_file.Read(&data, sizeof(vfsHDD_Entry));
 	}
 
-	void ReadEntry(u64 block, vfsHDD_Entry& data, wxString& name)
+	void ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
 	{
 		m_hdd_file.Seek(block * m_hdd_info.block_size);
 		m_hdd_file.Read(&data, sizeof(vfsHDD_Entry));
-		m_hdd_file.Read(wxStringBuffer(name, GetMaxNameLen()), GetMaxNameLen());
+		name.resize(GetMaxNameLen());
+		m_hdd_file.Read(&name.front(), GetMaxNameLen());
 	}
 
-	void ReadEntry(u64 block, wxString& name)
+	void ReadEntry(u64 block, std::string& name)
 	{
 		m_hdd_file.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
-		m_hdd_file.Read(wxStringBuffer(name, GetMaxNameLen()), GetMaxNameLen());
+		name.resize(GetMaxNameLen());
+		m_hdd_file.Read(&name.front(), GetMaxNameLen());
 	}
 
-	void WriteEntry(u64 block, const vfsHDD_Entry& data, const wxString& name)
+	void WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
 	{
 		m_hdd_file.Seek(block * m_hdd_info.block_size);
 		m_hdd_file.Write(&data, sizeof(vfsHDD_Entry));
-		m_hdd_file.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.Len() + 1));
+		m_hdd_file.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
 	}
 
-	bool Create(vfsHDD_EntryType type, const wxString& name)
+	bool Create(vfsHDD_EntryType type, const std::string& name)
 	{
 		if(HasEntry(name))
 		{
@@ -659,7 +663,7 @@ public:
 		return true;
 	}
 
-	bool GetFirstEntry(u64& block, vfsHDD_Entry& entry, wxString& name)
+	bool GetFirstEntry(u64& block, vfsHDD_Entry& entry, std::string& name)
 	{
 		if(!m_cur_dir_block)
 		{
@@ -672,7 +676,7 @@ public:
 		return true;
 	}
 
-	bool GetNextEntry(u64& block, vfsHDD_Entry& entry, wxString& name)
+	bool GetNextEntry(u64& block, vfsHDD_Entry& entry, std::string& name)
 	{
 		if(!block)
 		{
@@ -685,7 +689,7 @@ public:
 		return true;
 	}
 
-	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead)
+	virtual bool Open(const std::string& path, vfsOpenMode mode = vfsRead)
 	{
 		const char* s = path.c_str();
 		u64 from = 0;
@@ -705,7 +709,7 @@ public:
 				{
 					if(pos - from > 1)
 					{
-						int res = OpenDir(wxString(s + from, pos));
+						int res = OpenDir(std::string(s + from, pos));
 						if(res == -1)
 						{
 							return false;
@@ -733,7 +737,7 @@ public:
 		}
 
 		u64 file_block;
-		if(!SearchEntry(wxString(s + file_pos), file_block))
+		if(!SearchEntry(std::string(s + file_pos), file_block))
 		{
 			return false;
 		}
@@ -744,7 +748,7 @@ public:
 		return vfsFileBase::Open(path, mode);
 	}
 
-	bool HasEntry(const wxString& name)
+	bool HasEntry(const std::string& name)
 	{
 		u64 file_block;
 		if(!SearchEntry(name, file_block))
@@ -757,7 +761,7 @@ public:
 
 	void RemoveBlocksDir(u64 start_block)
 	{
-		wxString name;
+		std::string name;
 		u64 block = start_block;
 		vfsHDD_Entry entry;
 
@@ -768,7 +772,7 @@ public:
 
 			if(entry.type == vfsHDD_Entry_Dir && name != "." && name != "..")
 			{
-				ConLog.Warning("Removing sub folder '%s'", name.wx_str());
+				ConLog.Warning("Removing sub folder '%s'", name.c_str());
 				RemoveBlocksDir(entry.data_block);
 			}
 			else if(entry.type == vfsHDD_Entry_File)
@@ -794,7 +798,7 @@ public:
 		}
 	}
 
-	bool RemoveEntry(const wxString& name)
+	bool RemoveEntry(const std::string& name)
 	{
 		u64 entry_block, parent_entry;
 		if(!SearchEntry(name, entry_block, &parent_entry))
@@ -824,7 +828,7 @@ public:
 		return true;
 	}
 
-	virtual bool Create(const wxString& path)
+	virtual bool Create(const std::string& path)
 	{
 		return false;
 	}

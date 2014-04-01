@@ -381,7 +381,7 @@ struct PPCdouble
 		}
 #endif
 
-		throw wxString::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
+		throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 	}
 
 	FPRType GetType() const
@@ -488,11 +488,11 @@ union VPR_reg
 
 	VPR_reg() { Clear(); }
 
-	wxString ToString(bool hex=false) const
+	std::string ToString(bool hex = false) const
 	{
-		if(hex) return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		if(hex) return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 
-		return wxString::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
+		return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 	}
 
 	u8 GetBit(u8 bit)
@@ -735,99 +735,106 @@ public:
 		FPSCR.FI = val;
 	}
 
-	virtual wxString RegsToString()
+	virtual std::string RegsToString()
 	{
-		wxString ret = "Registers:\n=========\n";
+		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, (double)FPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, (const char*)VPR[i].ToString(true).wx_str(), (const char*)VPR[i].ToString().wx_str());
-		ret += wxString::Format("CR = 0x%08x\n", CR.CR);
-		ret += wxString::Format("LR = 0x%llx\n", LR);
-		ret += wxString::Format("CTR = 0x%llx\n", CTR);
-		ret += wxString::Format("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]\n", XER.XER, XER.CA, XER.OV, XER.SO);
-		ret += wxString::Format("FPSCR = 0x%x "
+		for(uint i=0; i<32; ++i) ret += fmt::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
+		for(uint i=0; i<32; ++i) ret += fmt::Format("FPR[%d] = %.6G\n", i, (double)FPR[i]);
+		for(uint i=0; i<32; ++i) ret += fmt::Format("VPR[%d] = 0x%s [%s]\n", i, (const char*)VPR[i].ToString(true).c_str(), (const char*)VPR[i].ToString().c_str());
+		ret += fmt::Format("CR = 0x%08x\n", CR.CR);
+		ret += fmt::Format("LR = 0x%llx\n", LR);
+		ret += fmt::Format("CTR = 0x%llx\n", CTR);
+		ret += fmt::Format("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]\n", XER.XER, fmt::by_value(XER.CA), fmt::by_value(XER.OV), fmt::by_value(XER.SO));
+		ret += fmt::Format("FPSCR = 0x%x "
 			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
 			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
 			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
 			"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
 			"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
 			FPSCR.FPSCR,
-			FPSCR.RN,
-			FPSCR.NI, FPSCR.XE, FPSCR.ZE, FPSCR.UE, FPSCR.OE, FPSCR.VE,
-			FPSCR.VXCVI, FPSCR.VXSQRT, FPSCR.VXSOFT, FPSCR.FPRF,
-			FPSCR.FI, FPSCR.FR, FPSCR.VXVC, FPSCR.VXIMZ,
-			FPSCR.VXZDZ, FPSCR.VXIDI, FPSCR.VXISI, FPSCR.VXSNAN,
-			FPSCR.XX, FPSCR.ZX, FPSCR.UX, FPSCR.OX, FPSCR.VX, FPSCR.FEX, FPSCR.FX);
+			fmt::by_value(FPSCR.RN),
+			fmt::by_value(FPSCR.NI), fmt::by_value(FPSCR.XE), fmt::by_value(FPSCR.ZE), fmt::by_value(FPSCR.UE), fmt::by_value(FPSCR.OE), fmt::by_value(FPSCR.VE),
+			fmt::by_value(FPSCR.VXCVI), fmt::by_value(FPSCR.VXSQRT), fmt::by_value(FPSCR.VXSOFT), fmt::by_value(FPSCR.FPRF),
+			fmt::by_value(FPSCR.FI), fmt::by_value(FPSCR.FR), fmt::by_value(FPSCR.VXVC), fmt::by_value(FPSCR.VXIMZ),
+			fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
+			fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
 
 		return ret;
 	}
 
-	virtual wxString ReadRegString(wxString reg)
+	virtual std::string ReadRegString(const std::string& reg)
 	{
-		if (reg.Contains("["))
+		std::string::size_type first_brk = reg.find('[');
+		if (first_brk != std::string::npos)
 		{
-			long reg_index;
-			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR")) return wxString::Format("%016llx", GPR[reg_index]);
-			if (reg.StartsWith("FPR")) return wxString::Format("%016llx", (double)FPR[reg_index]);
-			if (reg.StartsWith("VPR")) return wxString::Format("%016llx%016llx", VPR[reg_index]._u64[1], VPR[reg_index]._u64[0]);
+			long reg_index = atol(reg.substr(first_brk+1,reg.length()-first_brk-2).c_str());
+			if (reg.find("GPR")==0) return fmt::Format("%016llx", GPR[reg_index]);
+			if (reg.find("FPR")==0) return fmt::Format("%016llx", (double)FPR[reg_index]);
+			if (reg.find("VPR")==0) return fmt::Format("%016llx%016llx", VPR[reg_index]._u64[1], VPR[reg_index]._u64[0]);
 		}
-		if (reg == "CR")	return wxString::Format("%08x", CR.CR);
-		if (reg == "LR")	return wxString::Format("%016llx", LR);
-		if (reg == "CTR")	return wxString::Format("%016llx", CTR);
-		if (reg == "XER")	return wxString::Format("%016llx", XER.XER);
-		if (reg == "FPSCR")	return wxString::Format("%08x", FPSCR.FPSCR);
+		if (reg == "CR")	return fmt::Format("%08x", CR.CR);
+		if (reg == "LR")	return fmt::Format("%016llx", LR);
+		if (reg == "CTR")	return fmt::Format("%016llx", CTR);
+		if (reg == "XER")	return fmt::Format("%016llx", XER.XER);
+		if (reg == "FPSCR")	return fmt::Format("%08x", FPSCR.FPSCR);
 
-		return wxEmptyString;
+		return "";
 	}
 
-	bool WriteRegString(wxString reg, wxString value) {
-		while (value.Len() < 32) value = "0"+value;
-		if (reg.Contains("["))
+	bool WriteRegString(const std::string& reg, std::string value) {
+		while (value.length() < 32) value = "0"+value;
+		std::string::size_type first_brk = reg.find('[');
+		try
 		{
-			long reg_index;
-			reg.AfterFirst('[').RemoveLast().ToLong(&reg_index);
-			if (reg.StartsWith("GPR") || (reg.StartsWith("FPR")))
+			if (first_brk != std::string::npos)
+			{
+				long reg_index = atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
+				if (reg.find("GPR")==0 || reg.find("FPR")==0 )
+				{
+					unsigned long long reg_value;
+					reg_value = std::stoull(value.substr(16, 31),0,16);
+					if (reg.find("GPR")==0) GPR[reg_index] = (u64)reg_value;
+					if (reg.find("FPR")==0) FPR[reg_index] = (u64)reg_value;
+					return true;
+				}
+				if (reg.find("VPR")==0)
+				{
+					unsigned long long reg_value0;
+					unsigned long long reg_value1;
+					reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
+					reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
+					VPR[reg_index]._u64[0] = (u64)reg_value0;
+					VPR[reg_index]._u64[1] = (u64)reg_value1;
+					return true;
+				}
+			}
+			if (reg == "LR" || reg == "CTR" || reg == "XER")
 			{
 				unsigned long long reg_value;
-				if (!value.SubString(16,31).ToULongLong(&reg_value, 16)) return false;
-				if (reg.StartsWith("GPR")) GPR[reg_index] = (u64)reg_value;
-				if (reg.StartsWith("FPR")) FPR[reg_index] = (u64)reg_value;
+				reg_value = std::stoull(value.substr(16, 31), 0, 16);
+				if (reg == "LR") LR = (u64)reg_value;
+				if (reg == "CTR") CTR = (u64)reg_value;
+				if (reg == "XER") XER.XER = (u64)reg_value;
 				return true;
 			}
-			if (reg.StartsWith("VPR"))
+			if (reg == "CR" || reg == "FPSCR")
 			{
-				unsigned long long reg_value0;
-				unsigned long long reg_value1;
-				if (!value.SubString(16,31).ToULongLong(&reg_value0, 16)) return false;
-				if (!value.SubString(0,15).ToULongLong(&reg_value1, 16)) return false;
-				VPR[reg_index]._u64[0] = (u64)reg_value0;
-				VPR[reg_index]._u64[1] = (u64)reg_value1;
+				unsigned long reg_value;
+				reg_value = std::stoull(value.substr(24, 31), 0, 16);
+				if (reg == "CR") CR.CR = (u32)reg_value;
+				if (reg == "FPSCR") FPSCR.FPSCR = (u32)reg_value;
 				return true;
 			}
 		}
-		if (reg == "LR" || reg == "CTR" || reg == "XER")
+		catch (std::invalid_argument& e)//if any of the stoull conversion fail
 		{
-			unsigned long long reg_value;
-			if (!value.SubString(16,31).ToULongLong(&reg_value, 16)) return false;
-			if (reg == "LR") LR = (u64)reg_value;
-			if (reg == "CTR") CTR = (u64)reg_value;
-			if (reg == "XER") XER.XER = (u64)reg_value;
-			return true;
-		}
-		if (reg == "CR" || reg == "FPSCR")
-		{
-			unsigned long reg_value;
-			if (!value.SubString(24,31).ToULong(&reg_value, 16)) return false;
-			if (reg == "CR") CR.CR = (u32)reg_value;
-			if (reg == "FPSCR") FPSCR.FPSCR = (u32)reg_value;
-			return true;
+			return false;
 		}
 		return false;
 	}
 
-	virtual void AddArgv(const wxString& arg) override;
+	virtual void AddArgv(const std::string& arg) override;
 
 public:
 	virtual void InitRegs(); 

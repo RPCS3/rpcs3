@@ -4,7 +4,7 @@
 using namespace PPU_instr;
 
 template<typename TO, typename T>
-InstrBase<TO>* GetInstruction(T* list, const wxString& str)
+InstrBase<TO>* GetInstruction(T* list, const std::string& str)
 {
 	for(int i=0; i<list->count; ++i)
 	{
@@ -12,7 +12,7 @@ InstrBase<TO>* GetInstruction(T* list, const wxString& str)
 
 		if(instr)
 		{
-			if(instr->GetName().Cmp(str) == 0)
+			if(instr->GetName().compare(str) == 0)
 			{
 				return instr;
 			}
@@ -23,7 +23,7 @@ InstrBase<TO>* GetInstruction(T* list, const wxString& str)
 }
 
 template<typename TO>
-InstrBase<TO>* GetInstruction(const wxString& str)
+InstrBase<TO>* GetInstruction(const std::string& str)
 {
 	if(auto res = GetInstruction<TO>(main_list, str)) return res;
 	if(auto res = GetInstruction<TO>(g04_list, str)) return res;
@@ -40,19 +40,19 @@ InstrBase<TO>* GetInstruction(const wxString& str)
 	return nullptr;
 }
 
-s64 FindOp(const wxString& text, const wxString& op, s64 from)
+s64 FindOp(const std::string& text, const std::string& op, s64 from)
 {
-	if(text.Len() < op.Len()) return -1;
+	if (text.length() < op.length()) return -1;
 
-	for(s64 i=from; i<text.Len(); ++i)
+	for (s64 i = from; i<text.length(); ++i)
 	{
 		if(i - 1 < 0 || text[(size_t)i - 1] == '\n' || CompilePPUProgram::IsSkip(text[(size_t)i - 1]))
 		{
-			if(text.Len() - i < op.Len()) return -1;
+			if (text.length() - i < op.length()) return -1;
 
-			if(text(i, op.Len()).Cmp(op) != 0) continue;
-			if(i + op.Len() >= text.Len() || text[(size_t)i + op.Len()] == '\n' ||
-				CompilePPUProgram::IsSkip(text[(size_t)i + op.Len()])) return i;
+			if (text.substr(i, op.length()).compare(op) != 0) continue;
+			if (i + op.length() >= text.length() || text[(size_t) i + op.length()] == '\n' ||
+				CompilePPUProgram::IsSkip(text[(size_t) i + op.length()])) return i;
 		}
 	}
 
@@ -63,9 +63,9 @@ ArrayF<SectionInfo> sections_list;
 u32 section_name_offs = 0;
 u32 section_offs = 0;
 
-SectionInfo::SectionInfo(const wxString& _name)
+SectionInfo::SectionInfo(const std::string& _name)
 {
-	name = _name.ToStdString();
+	name = _name;
 	memset(&shdr, 0, sizeof(Elf64_Shdr));
 
 	section_num = sections_list.Add(this);
@@ -116,8 +116,8 @@ SectionInfo::~SectionInfo()
 }
 
 CompilePPUProgram::CompilePPUProgram(
-		const wxString& asm_,
-		const wxString& file_path,
+		const std::string& asm_,
+		const std::string& file_path,
 		wxTextCtrl* asm_list,
 		wxTextCtrl* hex_list,
 		wxTextCtrl* err_list,
@@ -137,28 +137,28 @@ CompilePPUProgram::CompilePPUProgram(
 {
 }
 
-void CompilePPUProgram::WriteHex(const wxString& text)
+void CompilePPUProgram::WriteHex(const std::string& text)
 {
 	if(m_hex_list)
 	{
-		m_hex_list->WriteText(text);
+		m_hex_list->WriteText(fmt::FromUTF8(text));
 	}
 }
 
-void CompilePPUProgram::WriteError(const wxString& error)
+void CompilePPUProgram::WriteError(const std::string& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(wxString::Format("line %lld: %s\n", m_line, error.wx_str()));
+		m_err_list->WriteText(fmt::FromUTF8(fmt::Format("line %lld: %s\n", m_line, error)));
 	}
 }
 
 bool CompilePPUProgram::IsSkip(const char c) { return c == ' ' || c == '\t'; }
 bool CompilePPUProgram::IsCommit(const char c) { return c == '#'; }
-bool CompilePPUProgram::IsEnd() const { return p >= m_asm.Len(); }
-bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= m_asm.Len(); }
+bool CompilePPUProgram::IsEnd() const { return p >= m_asm.length(); }
+bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= m_asm.length(); }
 
-char CompilePPUProgram::NextChar() { return *(const char*)m_asm(p++, 1); }
+char CompilePPUProgram::NextChar() { return *m_asm.substr(p++, 1).c_str(); }
 void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ); if(!IsEnd()) m_line++; }
 void CompilePPUProgram::EndLn()
 {
@@ -181,7 +181,7 @@ void CompilePPUProgram::PrevArg()
 	if(IsEndLn(m_asm[(size_t)p])) p++;
 }
 
-bool CompilePPUProgram::GetOp(wxString& result)
+bool CompilePPUProgram::GetOp(std::string& result)
 {
 	s64 from = -1;
 
@@ -205,7 +205,7 @@ bool CompilePPUProgram::GetOp(wxString& result)
 		if(skip || endln || commit)
 		{
 			const s64 to = (endln ? p : p - 1) - from;
-			result = m_asm(from, to);
+			result = m_asm.substr(from, to);
 
 			return true;
 		}
@@ -214,7 +214,7 @@ bool CompilePPUProgram::GetOp(wxString& result)
 	return false;
 }
 
-int CompilePPUProgram::GetArg(wxString& result, bool func)
+int CompilePPUProgram::GetArg(std::string& result, bool func)
 {
 	s64 from = -1;
 
@@ -246,7 +246,7 @@ int CompilePPUProgram::GetArg(wxString& result, bool func)
 
 			if(text && !end_text)
 			{
-				WriteError(wxString::Format("'\"' not found."));
+				WriteError("'\"' not found.");
 				m_error = true;
 			}
 
@@ -278,19 +278,19 @@ int CompilePPUProgram::GetArg(wxString& result, bool func)
 						break;
 					}
 
-					WriteError(wxString::Format("Bad symbol '%c'", cur_char));
+					WriteError(fmt::Format("Bad symbol '%c'", cur_char));
 					m_error = true;
 					break;
 				}
 			}
 
-			result = m_asm(from, to);
+			result = m_asm.substr(from, to);
 
 			if(text)
 			{
-				for(u32 pos = 0; (s32)(pos = result.find('\\', pos)) >= 0;)
+				for(u32 pos = 0; (s32)(pos = result.find('\\', pos)) != std::string::npos;)
 				{
-					if(pos + 1 < result.Len() && result[pos + 1] == '\\')
+					if(pos + 1 < result.length() && result[pos + 1] == '\\')
 					{
 						pos += 2;
 						continue;
@@ -299,9 +299,9 @@ int CompilePPUProgram::GetArg(wxString& result, bool func)
 					const char v = result[pos + 1];
 					switch(v)
 					{
-					case 'n': result = result(0, pos) + '\n' + result(pos+2, result.Len()-(pos+2)); break;
-					case 'r': result = result(0, pos) + '\r' + result(pos+2, result.Len()-(pos+2)); break;
-					case 't': result = result(0, pos) + '\t' + result(pos+2, result.Len()-(pos+2)); break;
+					case 'n': result = result.substr(0, pos) + '\n' + result.substr(pos + 2, result.length() - (pos + 2)); break;
+					case 'r': result = result.substr(0, pos) + '\r' + result.substr(pos + 2, result.length() - (pos + 2)); break;
+					case 't': result = result.substr(0, pos) + '\t' + result.substr(pos + 2, result.length() - (pos + 2)); break;
 					}
 
 					pos++;
@@ -345,7 +345,7 @@ bool CompilePPUProgram::CheckEnd(bool show_err)
 			return true;
 		}
 
-		WriteError(wxString::Format("Bad symbol '%c'", cur_char));
+		WriteError(fmt::Format("Bad symbol '%c'", cur_char));
 		NextLn();
 		return false;
 	}
@@ -355,9 +355,9 @@ bool CompilePPUProgram::CheckEnd(bool show_err)
 
 void CompilePPUProgram::DetectArgInfo(Arg& arg)
 {
-	const wxString str = arg.string;
+	const std::string str = arg.string;
 
-	if(str.Len() <= 0)
+	if(str.empty())
 	{
 		arg.type = ARG_ERR;
 		return;
@@ -369,11 +369,11 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		return;
 	}
 
-	if(str.Len() > 1)
+	if(str.length() > 1)
 	{
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(str.ToStdString() != m_branches[i].m_name)
+			if(str != m_branches[i].m_name)
 				continue;
 
 			arg.type = ARG_BRANCH;
@@ -386,20 +386,20 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	{
 	case 'r': case 'f': case 'v':
 
-		if(str.Len() < 2)
+		if(str.length() < 2)
 		{
 			arg.type = ARG_ERR;
 			return;
 		}
 
-		if(str.Cmp("rtoc") == 0)
+		if(str.compare("rtoc") == 0)
 		{
 			arg.type = ARG_REG_R;
 			arg.value = 2;
 			return;
 		}
 
-		for(u32 i=1; i<str.Len(); ++i)
+		for(u32 i=1; i<str.length(); ++i)
 		{
 			if(str[i] < '0' || str[i] > '9')
 			{
@@ -409,7 +409,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 
 		u32 reg;
-		sscanf(str(1, str.Len() - 1), "%d", &reg);
+		sscanf(str.substr(1, str.length() - 1).c_str(), "%d", &reg);
 
 		if(reg >= 32)
 		{
@@ -429,9 +429,9 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	return;
 		
 	case 'c':
-		if(str.Len() > 2 && str[1] == 'r')
+		if(str.length() > 2 && str[1] == 'r')
 		{
-			for(u32 i=2; i<str.Len(); ++i)
+			for(u32 i=2; i<str.length(); ++i)
 			{
 				if(str[i] < '0' || str[i] > '9')
 				{
@@ -441,7 +441,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			}
 
 			u32 reg;
-			sscanf(str, "cr%d", &reg);
+			sscanf(str.c_str(), "cr%d", &reg);
 
 			if(reg < 8)
 			{
@@ -458,26 +458,26 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	break;
 
 	case '"':
-		if(str.Len() < 2)
+		if(str.length() < 2)
 		{
 			arg.type = ARG_ERR;
 			return;
 		}
 
-		if(str[str.Len() - 1] != '"')
+		if(str[str.length() - 1] != '"')
 		{
 			arg.type = ARG_ERR;
 			return;
 		}
 
-		arg.string = str(1, str.Len() - 2).ToStdString();
+		arg.string = str.substr(1, str.length() - 2);
 		arg.type = ARG_TXT;
 	return;
 	}
 
-	if(str.Len() > 2 && str(0, 2).Cmp("0x") == 0)
+	if(str.length() > 2 && str.substr(0, 2).compare("0x") == 0)
 	{
-		for(u32 i=2; i<str.Len(); ++i)
+		for(u32 i=2; i<str.length(); ++i)
 		{
 			if(
 				(str[i] >= '0' && str[i] <= '9') ||
@@ -490,14 +490,14 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 
 		u32 val;
-		sscanf(str, "0x%x", &val);
+		sscanf(str.c_str(), "0x%x", &val);
 
 		arg.type = ARG_NUM16;
 		arg.value = val;
 		return;
 	}
 
-	for(u32 i= str[0] == '-' ? 1 : 0; i<str.Len(); ++i)
+	for(u32 i= str[0] == '-' ? 1 : 0; i<str.length(); ++i)
 	{
 		if(str[i] < '0' || str[i] > '9')
 		{
@@ -507,7 +507,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	}
 
 	u32 val;
-	sscanf(str, "%d", &val);
+	sscanf(str.c_str(), "%d", &val);
 
 	arg.type = ARG_NUM;
 	arg.value = val;
@@ -518,7 +518,7 @@ void CompilePPUProgram::LoadArgs()
 	m_args.Clear();
 	m_cur_arg = 0;
 
-	wxString str;
+	std::string str;
 	while(int r = GetArg(str))
 	{
 		Arg* arg = new Arg(str);
@@ -530,11 +530,11 @@ void CompilePPUProgram::LoadArgs()
 	m_end_args = m_args.GetCount() > 0;
 }
 
-u32 CompilePPUProgram::GetBranchValue(const wxString& branch)
+u32 CompilePPUProgram::GetBranchValue(const std::string& branch)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(branch.ToStdString() != m_branches[i].m_name)
+		if(branch != m_branches[i].m_name)
 			continue;
 		if(m_branches[i].m_pos >= 0) return m_text_addr + m_branches[i].m_pos * 4;
 
@@ -552,7 +552,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 	{
 		if(show_err)
 		{
-			WriteError(wxString::Format("%d arg not found", m_cur_arg + 1));
+			WriteError(fmt::Format("%d arg not found", m_cur_arg + 1));
 			m_error = true;
 		}
 
@@ -569,7 +569,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 
 	if(show_err)
 	{
-		WriteError(wxString::Format("Bad arg '%s'", wxString(&arg.string[0]).wx_str()));
+		WriteError(fmt::Format("Bad arg '%s'", arg.string.c_str()));
 		m_error = true;
 	}
 
@@ -598,38 +598,38 @@ bool CompilePPUProgram::SetNextArgBranch(u8 aa, bool show_err)
 	return ret;
 }
 
-bool CompilePPUProgram::IsBranchOp(const wxString& op)
+bool CompilePPUProgram::IsBranchOp(const std::string& op)
 {
-	return op.Len() > 1 && op[op.Len() - 1] == ':';
+	return op.length() > 1 && op[op.length() - 1] == ':';
 }
 
-bool CompilePPUProgram::IsFuncOp(const wxString& op)
+bool CompilePPUProgram::IsFuncOp(const std::string& op)
 {
-	return op.Len() >= 1 && op[0] == '[';
+	return op.length() >= 1 && op[0] == '[';
 }
 
-CompilePPUProgram::SP_TYPE CompilePPUProgram::GetSpType(const wxString& op)
+CompilePPUProgram::SP_TYPE CompilePPUProgram::GetSpType(const std::string& op)
 {
-	if(op.Cmp(".int") == 0) return SP_INT;
-	if(op.Cmp(".string") == 0) return SP_STRING;
-	if(op.Cmp(".strlen") == 0) return SP_STRLEN;
-	if(op.Cmp(".buf") == 0) return SP_BUF;
-	if(op.Cmp(".srl") == 0) return SP_SRL;
-	if(op.Cmp(".srr") == 0) return SP_SRR;
-	if(op.Cmp(".mul") == 0) return SP_MUL;
-	if(op.Cmp(".div") == 0) return SP_DIV;
-	if(op.Cmp(".add") == 0) return SP_ADD;
-	if(op.Cmp(".sub") == 0) return SP_SUB;
-	if(op.Cmp(".and") == 0) return SP_AND;
-	if(op.Cmp(".or") == 0) return SP_OR;
-	if(op.Cmp(".xor") == 0) return SP_XOR;
-	if(op.Cmp(".not") == 0) return SP_NOT;
-	if(op.Cmp(".nor") == 0) return SP_NOR;
+	if (op.compare(".int") == 0) return SP_INT;
+	if (op.compare(".string") == 0) return SP_STRING;
+	if (op.compare(".strlen") == 0) return SP_STRLEN;
+	if (op.compare(".buf") == 0) return SP_BUF;
+	if (op.compare(".srl") == 0) return SP_SRL;
+	if (op.compare(".srr") == 0) return SP_SRR;
+	if (op.compare(".mul") == 0) return SP_MUL;
+	if (op.compare(".div") == 0) return SP_DIV;
+	if (op.compare(".add") == 0) return SP_ADD;
+	if (op.compare(".sub") == 0) return SP_SUB;
+	if (op.compare(".and") == 0) return SP_AND;
+	if (op.compare(".or") == 0) return SP_OR;
+	if (op.compare(".xor") == 0) return SP_XOR;
+	if (op.compare(".not") == 0) return SP_NOT;
+	if (op.compare(".nor") == 0) return SP_NOR;
 
 	return SP_ERR;
 }
 
-wxString CompilePPUProgram::GetSpStyle(const SP_TYPE sp)
+std::string CompilePPUProgram::GetSpStyle(const SP_TYPE sp)
 {
 	switch(sp)
 	{
@@ -658,16 +658,16 @@ wxString CompilePPUProgram::GetSpStyle(const SP_TYPE sp)
 	return "error";
 }
 
-bool CompilePPUProgram::IsSpOp(const wxString& op)
+bool CompilePPUProgram::IsSpOp(const std::string& op)
 {
 	return GetSpType(op) != SP_ERR;
 }
 
-CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const wxString& name)
+CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const std::string& name)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.ToStdString() != m_branches[i].m_name) continue;
+		if(name != m_branches[i].m_name) continue;
 
 		return m_branches[i];
 	}
@@ -675,7 +675,7 @@ CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const wxString& name)
 	return m_branches[0];
 }
 
-void CompilePPUProgram::SetSp(const wxString& name, u32 addr, bool create)
+void CompilePPUProgram::SetSp(const std::string& name, u32 addr, bool create)
 {
 	if(create)
 	{
@@ -687,21 +687,21 @@ void CompilePPUProgram::SetSp(const wxString& name, u32 addr, bool create)
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(name.ToStdString() != m_branches[i].m_name)
+		if(name != m_branches[i].m_name)
 			continue;
 		m_branches[i].m_addr = addr;
 	}
 }
 
-void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
+void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 {
 	SP_TYPE sp = GetSpType(op);
 
-	wxString test;
+	std::string test;
 	if(!GetArg(test) || test[0] != '[')
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("data not found. style: %s", GetSpStyle(sp).wx_str()));
+		WriteError(fmt::Format("data not found. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -710,11 +710,11 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	while(p > 0 && m_asm[(size_t)p] != '[') p--;
 	p++;
 
-	wxString dst;
+	std::string dst;
 	if(!GetArg(dst))
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("dst not found. style: %s", GetSpStyle(sp).wx_str()));
+		WriteError(fmt::Format("dst not found. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -736,7 +736,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 
 		case ARG_ERR:
 		{
-			m_branches.Move(new Branch(wxEmptyString, -1, 0));
+			m_branches.Move(new Branch("", -1, 0)); //TODO: allocated with new, deleted with free()
 			dst_branch = &m_branches[m_branches.GetCount() - 1];
 		}
 		break;
@@ -745,7 +745,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	if(!dst_branch)
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(wxString::Format("bad dst type. style: %s", GetSpStyle(sp).wx_str()));
+		WriteError(fmt::Format("bad dst type. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -759,11 +759,11 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	case SP_BUF:
 	case SP_NOT:
 	{
-		wxString src1;
+		std::string src1;
 		if(!GetArg(src1, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src not found. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("src not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -779,7 +779,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 				: ~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src type. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("bad src type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -788,7 +788,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("']' not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -802,12 +802,12 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 
 		if(sp == SP_STRING)
 		{
-			src1 = src1(1, src1.Len()-2);
+			src1 = src1.substr(1, src1.length()-2);
 			bool founded = false;
 
 			for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 			{
-				if(src1.ToStdString() != m_sp_string[i].m_data) continue;
+				if(src1 != m_sp_string[i].m_data) continue;
 				*dst_branch = Branch(dst, -1, m_sp_string[i].m_addr);
 				founded = true;
 			}
@@ -815,8 +815,8 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 			if(!founded)
 			{
 				const u32 addr = s_opd.sh_addr + s_opd.sh_size;
-				m_sp_string.Move(new SpData(src1, addr));
-				s_opd.sh_size += src1.Len() + 1;
+				m_sp_string.Move(new SpData(src1, addr)); //TODO: new and free mixed
+				s_opd.sh_size += src1.length() + 1;
 				*dst_branch = Branch(dst, -1, addr);
 			}
 		}
@@ -824,7 +824,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		{
 			switch(a_src1.type)
 			{
-				case ARG_TXT: *dst_branch = Branch(dst, -1, src1.Len() - 2); break;
+				case ARG_TXT: *dst_branch = Branch(dst, -1, src1.length() - 2); break;
 				case ARG_BRANCH:
 				{
 					for(u32 i=0; i<m_sp_string.GetCount(); ++i)
@@ -865,11 +865,11 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 	case SP_XOR:
 	case SP_NOR:
 	{
-		wxString src1;
+		std::string src1;
 		if(!GetArg(src1))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src1 not found. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("src1 not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -881,17 +881,17 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src1 type. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("bad src1 type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
 		}
 
-		wxString src2;
+		std::string src2;
 		if(!GetArg(src2, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("src2 not found. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("src2 not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			return;
 		}
@@ -902,7 +902,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src2.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("bad src2 type. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("bad src2 type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -911,7 +911,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(wxString::Format("']' not found. style: %s", GetSpStyle(sp).wx_str()));
+			WriteError(fmt::Format("']' not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -969,7 +969,7 @@ void CompilePPUProgram::Compile()
 	u32 text_size = 0;
 	while(!IsEnd())
 	{
-		wxString op;
+		std::string op;
 		if(GetOp(op) && !IsFuncOp(op) && !IsBranchOp(op) && !IsSpOp(op))
 		{
 			text_size += 4;
@@ -994,7 +994,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_null;
 	memset(&s_null, 0, sizeof(Elf64_Shdr));
 
-	wxArrayString sections_names;
+	std::vector<std::string> sections_names;
 	u32 section_name_offset = 1;
 
 	Elf64_Shdr s_text;
@@ -1006,18 +1006,18 @@ void CompilePPUProgram::Compile()
 	s_text.sh_addralign = 4;
 	s_text.sh_flags = 6;
 	s_text.sh_name = section_name_offset;
-	sections_names.Add(".text");
-	section_name_offset += wxString(".text").Len() + 1;
+	sections_names.push_back(".text");
+	section_name_offset += std::string(".text").length() + 1;
 	section_offset += s_text.sh_size;
 
 	m_text_addr = s_text.sh_addr;
 
 	struct Module
 	{
-		wxString m_name;
+		std::string m_name;
 		Array<u32> m_imports;
 
-		Module(const wxString& name, u32 import) : m_name(name)
+		Module(const std::string& name, u32 import) : m_name(name)
 		{
 			Add(import);
 		}
@@ -1029,7 +1029,7 @@ void CompilePPUProgram::Compile()
 
 		void Clear()
 		{
-			m_name.Clear();
+			m_name.clear();
 			m_imports.Clear();
 		}
 	};
@@ -1039,7 +1039,7 @@ void CompilePPUProgram::Compile()
 	FirstChar();
 	while(!IsEnd())
 	{
-		wxString op;
+		std::string op;
 		if(!GetOp(op) || !IsFuncOp(op))
 		{
 			NextLn();
@@ -1049,7 +1049,7 @@ void CompilePPUProgram::Compile()
 		while(p > 0 && m_asm[(size_t)p] != '[') p--;
 		p++;
 
-		wxString module, name, id;
+		std::string module, name, id;
 
 		if(!GetArg(module))
 		{
@@ -1118,13 +1118,13 @@ void CompilePPUProgram::Compile()
 
 		if(!CheckEnd()) continue;
 
-		m_branches.Move(new Branch(name, a_id.value, 0));
+		m_branches.Move(new Branch(name, a_id.value, 0)); //TODO: HACK: new and free() mixed
 		const u32 import = m_branches.GetCount() - 1;
 
 		bool founded = false;
 		for(u32 i=0; i<modules.GetCount(); ++i)
 		{
-			if(modules[i].m_name.Cmp(module) != 0) continue;
+			if(modules[i].m_name.compare(module) != 0) continue;
 			founded = true;
 			modules[i].Add(import);
 			break;
@@ -1150,8 +1150,8 @@ void CompilePPUProgram::Compile()
 	s_sceStub_text.sh_name = section_name_offset;
 	s_sceStub_text.sh_flags = 6;
 	s_sceStub_text.sh_size = imports_count * sceStub_text_block;
-	sections_names.Add(".sceStub.text");
-	section_name_offset += wxString(".sceStub.text").Len() + 1;
+	sections_names.push_back(".sceStub.text");
+	section_name_offset += std::string(".sceStub.text").length() + 1;
 	section_offset += s_sceStub_text.sh_size;
 
 	for(u32 m=0, pos=0; m<modules.GetCount(); ++m)
@@ -1172,8 +1172,8 @@ void CompilePPUProgram::Compile()
 	s_lib_stub_top.sh_addr = section_offset + 0x10000;
 	s_lib_stub_top.sh_flags = 2;
 	s_lib_stub_top.sh_size = 4;
-	sections_names.Add(".lib.stub.top");
-	section_name_offset += wxString(".lib.stub.top").Len() + 1;
+	sections_names.push_back(".lib.stub.top");
+	section_name_offset += std::string(".lib.stub.top").length() + 1;
 	section_offset += s_lib_stub_top.sh_size;
 
 	Elf64_Shdr s_lib_stub;
@@ -1185,8 +1185,8 @@ void CompilePPUProgram::Compile()
 	s_lib_stub.sh_addr = section_offset + 0x10000;
 	s_lib_stub.sh_flags = 2;
 	s_lib_stub.sh_size = sizeof(Elf64_StubHeader) * modules.GetCount();
-	sections_names.Add(".lib.stub");
-	section_name_offset += wxString(".lib.stub").Len() + 1;
+	sections_names.push_back(".lib.stub");
+	section_name_offset += std::string(".lib.stub").length() + 1;
 	section_offset += s_lib_stub.sh_size;
 
 	Elf64_Shdr s_lib_stub_btm;
@@ -1198,8 +1198,8 @@ void CompilePPUProgram::Compile()
 	s_lib_stub_btm.sh_addr = section_offset + 0x10000;
 	s_lib_stub_btm.sh_flags = 2;
 	s_lib_stub_btm.sh_size = 4;
-	sections_names.Add(".lib.stub.btm");
-	section_name_offset += wxString(".lib.stub.btm").Len() + 1;
+	sections_names.push_back(".lib.stub.btm");
+	section_name_offset += std::string(".lib.stub.btm").length() + 1;
 	section_offset += s_lib_stub_btm.sh_size;
 
 	Elf64_Shdr s_rodata_sceFNID;
@@ -1212,8 +1212,8 @@ void CompilePPUProgram::Compile()
 	s_rodata_sceFNID.sh_addr = section_offset + 0x10000;
 	s_rodata_sceFNID.sh_flags = 2;
 	s_rodata_sceFNID.sh_size = imports_count * 4;
-	sections_names.Add(".rodata.sceFNID");
-	section_name_offset += wxString(".rodata.sceFNID").Len() + 1;
+	sections_names.push_back(".rodata.sceFNID");
+	section_name_offset += std::string(".rodata.sceFNID").length() + 1;
 	section_offset += s_rodata_sceFNID.sh_size;
 
 	Elf64_Shdr s_rodata_sceResident;
@@ -1228,11 +1228,11 @@ void CompilePPUProgram::Compile()
 	s_rodata_sceResident.sh_size = 4;
 	for(u32 i=0; i<modules.GetCount(); ++i)
 	{
-		s_rodata_sceResident.sh_size += modules[i].m_name.Len() + 1;
+		s_rodata_sceResident.sh_size += modules[i].m_name.length() + 1;
 	}
 	s_rodata_sceResident.sh_size = Memory.AlignAddr(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
-	sections_names.Add(".rodata.sceResident");
-	section_name_offset += wxString(".rodata.sceResident").Len() + 1;
+	sections_names.push_back(".rodata.sceResident");
+	section_name_offset += std::string(".rodata.sceResident").length() + 1;
 	section_offset += s_rodata_sceResident.sh_size;
 
 	Elf64_Shdr s_lib_ent_top;
@@ -1245,8 +1245,8 @@ void CompilePPUProgram::Compile()
 	s_lib_ent_top.sh_name = section_name_offset;
 	s_lib_ent_top.sh_offset = section_offset;
 	s_lib_ent_top.sh_addr = section_offset + 0x10000;
-	sections_names.Add(".lib.ent.top");
-	section_name_offset += wxString(".lib.ent.top").Len() + 1;
+	sections_names.push_back(".lib.ent.top");
+	section_name_offset += std::string(".lib.ent.top").length() + 1;
 	section_offset += s_lib_ent_top.sh_size;
 
 	Elf64_Shdr s_lib_ent_btm;
@@ -1258,8 +1258,8 @@ void CompilePPUProgram::Compile()
 	s_lib_ent_btm.sh_name = section_name_offset;
 	s_lib_ent_btm.sh_offset = section_offset;
 	s_lib_ent_btm.sh_addr = section_offset + 0x10000;
-	sections_names.Add(".lib.ent.btm");
-	section_name_offset += wxString(".lib.ent.btm").Len() + 1;
+	sections_names.push_back(".lib.ent.btm");
+	section_name_offset += std::string(".lib.ent.btm").length() + 1;
 	section_offset += s_lib_ent_btm.sh_size;
 
 	Elf64_Shdr s_sys_proc_prx_param;
@@ -1272,8 +1272,8 @@ void CompilePPUProgram::Compile()
 	s_sys_proc_prx_param.sh_offset = section_offset;
 	s_sys_proc_prx_param.sh_addr = section_offset + 0x10000;
 	s_sys_proc_prx_param.sh_flags = 2;
-	sections_names.Add(".sys_proc_prx_param");
-	section_name_offset += wxString(".sys_proc_prx_param").Len() + 1;
+	sections_names.push_back(".sys_proc_prx_param");
+	section_name_offset += std::string(".sys_proc_prx_param").length() + 1;
 	section_offset += s_sys_proc_prx_param.sh_size;
 
 	const u32 prog_load_0_end = section_offset;
@@ -1291,8 +1291,8 @@ void CompilePPUProgram::Compile()
 	s_data_sceFStub.sh_offset = section_offset;
 	s_data_sceFStub.sh_addr = section_offset + 0x10000;
 	s_data_sceFStub.sh_size = imports_count * 4;
-	sections_names.Add(".data.sceFStub");
-	section_name_offset += wxString(".data.sceFStub").Len() + 1;
+	sections_names.push_back(".data.sceFStub");
+	section_name_offset += std::string(".data.sceFStub").length() + 1;
 	section_offset += s_data_sceFStub.sh_size;
 
 	Elf64_Shdr s_tbss;
@@ -1305,8 +1305,8 @@ void CompilePPUProgram::Compile()
 	s_tbss.sh_name = section_name_offset;
 	s_tbss.sh_offset = section_offset;
 	s_tbss.sh_addr = section_offset + 0x10000;
-	sections_names.Add(".tbss");
-	section_name_offset += wxString(".tbss").Len() + 1;
+	sections_names.push_back(".tbss");
+	section_name_offset += std::string(".tbss").length() + 1;
 	section_offset += s_tbss.sh_size;
 
 	Elf64_Shdr s_opd;
@@ -1319,14 +1319,14 @@ void CompilePPUProgram::Compile()
 	s_opd.sh_addr = section_offset + 0x10000;
 	s_opd.sh_name = section_name_offset;
 	s_opd.sh_flags = 3;
-	sections_names.Add(".opd");
-	section_name_offset += wxString(".opd").Len() + 1;
+	sections_names.push_back(".opd");
+	section_name_offset += std::string(".opd").length() + 1;
 
 	FirstChar();
 
 	while(!IsEnd())
 	{
-		wxString op;
+		std::string op;
 		if(!GetOp(op) || IsFuncOp(op) || IsSpOp(op))
 		{
 			NextLn();
@@ -1335,12 +1335,12 @@ void CompilePPUProgram::Compile()
 
 		if(IsBranchOp(op))
 		{
-			const wxString& name = op(0, op.Len() - 1);
+			const std::string& name = op.substr(0, op.length() - 1);
 
 			for(u32 i=0; i<m_branches.GetCount(); ++i)
 			{
-				if(name.ToStdString() != m_branches[i].m_name) continue;
-				WriteError(wxString::Format("'%s' already declared", name.wx_str()));
+				if(name != m_branches[i].m_name) continue;
+				WriteError(fmt::Format("'%s' already declared", name.c_str()));
 				m_error = true;
 				break;
 			}
@@ -1350,13 +1350,13 @@ void CompilePPUProgram::Compile()
 
 			if(a_name.type != ARG_ERR)
 			{
-				WriteError(wxString::Format("bad name '%s'", name.wx_str()));
+				WriteError(fmt::Format("bad name '%s'", name.c_str()));
 				m_error = true;
 			}
 
 			if(m_error) break;
 
-			m_branches.Move(new Branch(name, m_branch_pos));
+			m_branches.Move(new Branch(name, m_branch_pos)); //TODO: HACK: free() and new mixed
 
 			CheckEnd();
 			continue;
@@ -1376,7 +1376,7 @@ void CompilePPUProgram::Compile()
 		break;
 	}
 
-	if(!has_entry) m_branches.Move(new Branch("entry", 0));
+	if(!has_entry) m_branches.Move(new Branch("entry", 0)); //TODO: HACK: new and free() mixed
 
 	if(m_analyze) m_error = false;
 	FirstChar();
@@ -1386,7 +1386,7 @@ void CompilePPUProgram::Compile()
 		m_args.Clear();
 		m_end_args = false;
 
-		wxString op;
+		std::string op;
 		if(!GetOp(op) || IsBranchOp(op) || IsFuncOp(op))
 		{
 			if(m_analyze) WriteHex("\n");
@@ -1430,7 +1430,7 @@ void CompilePPUProgram::Compile()
 		}
 		else
 		{
-			WriteError(wxString::Format("unknown instruction '%s'", op.wx_str()));
+			WriteError(fmt::Format("unknown instruction '%s'", op.c_str()));
 			EndLn();
 			m_error = true;
 		}
@@ -1462,14 +1462,14 @@ void CompilePPUProgram::Compile()
 			code = (*instr)(args);
 		}
 
-		if(m_analyze) WriteHex(wxString::Format("0x%08x\n", code));
+		if(m_analyze) WriteHex(fmt::Format("0x%08x\n", code));
 
 		if(!m_analyze) m_code.AddCpy(code);
 
 		m_branch_pos++;
 	}
 
-	if(!m_file_path.IsEmpty() && !m_analyze && !m_error)
+	if(!m_file_path.empty() && !m_analyze && !m_error)
 	{
 		s_opd.sh_size = Memory.AlignAddr(s_opd.sh_size, s_opd.sh_addralign);
 		section_offset += s_opd.sh_size;
@@ -1484,12 +1484,12 @@ void CompilePPUProgram::Compile()
 		s_shstrtab.sh_type = 3;
 		s_shstrtab.sh_offset = section_offset;
 		s_shstrtab.sh_addr = 0;
-		sections_names.Add(".shstrtab");
-		section_name_offset += wxString(".shstrtab").Len() + 1;
+		sections_names.push_back(".shstrtab");
+		section_name_offset += std::string(".shstrtab").length() + 1;
 		s_shstrtab.sh_size = section_name_offset;
 		section_offset += s_shstrtab.sh_size;
 
-		wxFile f(m_file_path, wxFile::write);
+		wxFile f(fmt::FromUTF8(m_file_path), wxFile::write);
 
 		elf_info.e_magic = 0x7F454C46;
 		elf_info.e_class = 2; //ELF64
@@ -1595,7 +1595,7 @@ void CompilePPUProgram::Compile()
 			dataoffs += modules[i].m_imports.GetCount() * 4;
 
 			f.Write(&stub, sizeof(Elf64_StubHeader));
-			nameoffs += modules[i].m_name.Len() + 1;
+			nameoffs += modules[i].m_name.length() + 1;
 		}
 
 		f.Seek(s_lib_stub_btm.sh_offset);
@@ -1622,7 +1622,7 @@ void CompilePPUProgram::Compile()
 		f.Seek(s_rodata_sceResident.sh_offset + 4);
 		for(u32 i=0; i<modules.GetCount(); ++i)
 		{
-			f.Write(&modules[i].m_name[0], modules[i].m_name.Len() + 1);
+			f.Write(&modules[i].m_name[0], modules[i].m_name.length() + 1);
 		}
 
 		f.Seek(s_sys_proc_prx_param.sh_offset);
@@ -1638,9 +1638,9 @@ void CompilePPUProgram::Compile()
 		f.Seek(s_tbss.sh_size, wxFromCurrent);
 
 		f.Seek(s_shstrtab.sh_offset + 1);
-		for(u32 i=0; i<sections_names.GetCount(); ++i)
+		for(u32 i=0; i<sections_names.size(); ++i)
 		{
-			f.Write(&sections_names[i][0], sections_names[i].Len() + 1);
+			f.Write(&sections_names[i][0], sections_names[i].length() + 1);
 		}
 
 		Elf64_Phdr p_load_0;
@@ -1700,7 +1700,7 @@ void CompilePPUProgram::Compile()
 		WritePhdr(f, p_loos_1);
 		WritePhdr(f, p_loos_2);
 
-		sections_names.Clear();
+		sections_names.clear();
 		delete[] opd_data;
 		for(u32 i=0; i<modules.GetCount(); ++i) modules[i].Clear();
 		modules.Clear();
@@ -1729,6 +1729,7 @@ void CompilePPUProgram::Compile()
 	}
 	else
 	{
+		//TODO: doesn't look portable
 		system("make_fself.cmd");
 	}
 }

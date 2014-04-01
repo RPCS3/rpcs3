@@ -31,50 +31,50 @@ vfsLocalFile::vfsLocalFile(vfsDevice* device) : vfsFileBase(device)
 {
 }
 
-bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
+bool vfsLocalFile::Open(const std::string& path, vfsOpenMode mode)
 {
 	Close();
 
 	// if(m_device)
 	// {
-	// 	if(!m_file.Access(vfsDevice::GetWinPath(m_device->GetLocalPath(), path), vfs2wx_mode(mode))) return false;
+	// 	if(!m_file.Access(fmt::FromUTF8(vfsDevice::GetWinPath(m_device->GetLocalPath(), path)), vfs2wx_mode(mode))) return false;
 
-	// 	return m_file.Open(vfsDevice::GetWinPath(m_device->GetLocalPath(), path), vfs2wx_mode(mode)) &&
-	// 		vfsFileBase::Open(vfsDevice::GetPs3Path(m_device->GetPs3Path(), path), mode);
+	// 	return m_file.Open(fmt::FromUTF8(vfsDevice::GetWinPath(m_device->GetLocalPath(), path)), vfs2wx_mode(mode)) &&
+	// 		vfsFileBase::Open(fmt::FromUTF8(vfsDevice::GetPs3Path(m_device->GetPs3Path(), path)), mode);
 	// }
 	// else
 	// {
-		if(!m_file.Access(path, vfs2wx_mode(mode))) return false;
+		if(!m_file.Access(fmt::FromUTF8(path), vfs2wx_mode(mode))) return false;
 
-		return m_file.Open(path, vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
+		return m_file.Open(fmt::FromUTF8(path), vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
 	// }
 }
 
-bool vfsLocalFile::Create(const wxString& path)
+bool vfsLocalFile::Create(const std::string& path)
 {
-	ConLog.Warning("vfsLocalFile::Create('%s')", path.wx_str());
-	for(uint p=1; p < path.Len() && path[p] != '\0' ; p++)
+	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
+	for(uint p=1; p < path.length() && path[p] != '\0' ; p++)
 	{
-		for(; p < path.Len() && path[p] != '\0'; p++)
+		for(; p < path.length() && path[p] != '\0'; p++)
 			if(path[p] == '/' || path[p] == '\\') break; // ???
 
-		if(p == path.Len() || path[p] == '\0')
+		if(p == path.length() || path[p] == '\0')
 			break;
 
-		const wxString& dir = path(0, p);
-		if(!wxDirExists(dir))
+		const std::string& dir = path.substr(0, p);
+		if(!wxDirExists(fmt::FromUTF8(dir)))
 		{
-			ConLog.Write("create dir: %s", dir.wx_str());
-			wxMkdir(dir);
+			ConLog.Write("create dir: %s", dir.c_str());
+			wxMkdir(fmt::FromUTF8(dir));
 		}
 	}
 
 	//create file
-	wxString m = path(path.Len() - 1, 1);
-	if(m != '/' && m != '\\' && !wxFileExists(path)) // ???
+	const char m = path[path.length() - 1];
+	if(m != '/' && m != '\\' && !wxFileExists(fmt::FromUTF8(path))) // ???
 	{
 		wxFile f;
-		return f.Create(path);
+		return f.Create(fmt::FromUTF8(path));
 	}
 
 	return true;

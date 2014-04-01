@@ -503,12 +503,12 @@ enum
 	NV3089_IMAGE_IN						= 0x0000C40C,
 };
 
-static const wxString GetMethodName(const u32 id)
+static const std::string GetMethodName(const u32 id)
 {
 	struct MethodName
 	{
 		const u32 id;
-		const wxString& name;
+		const std::string& name;
 	} static const METHOD_NAME_LIST[] = {
 		{ NV4097_NO_OPERATION , "NoOperation" } ,
 		{ NV4097_NOTIFY , "Notify" } ,
@@ -1206,5 +1206,5 @@ static const wxString GetMethodName(const u32 id)
 		if(METHOD_NAME_LIST[i].id == id) return "cellGcm" + METHOD_NAME_LIST[i].name;
 	}
 
-	return wxString::Format("unknown/illegal method [0x%08x]", id);
+	return fmt::Format("unknown/illegal method [0x%08x]", id);
 }

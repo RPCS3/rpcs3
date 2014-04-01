@@ -27,16 +27,16 @@ struct PSFEntry
 	u16 fmt;
 	char param[4096];
 
-	const char* FormatString() const
+	std::string FormatString() const
 	{
 		switch(fmt)
 		{
 		default:
 		case 0x0400:
 		case 0x0402:
-			return (const char*)param;
+			return std::string(param);
 		case 0x0404:
-			return (const char*)wxString::Format("0x%x", FormatInteger()).mb_str();
+			return fmt::Format("0x%x", FormatInteger());
 		}
 	}
 
@@ -65,6 +65,6 @@ public:
 	virtual bool Close();
 
 	PSFEntry* SearchEntry(const std::string& key);
-	const char* GetString(const std::string& key);
+	std::string GetString(const std::string& key);
 	u32 GetInteger(const std::string& key);
 };

@@ -257,11 +257,11 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			if(IsBreakPoint(PC))
 			{
-				m_list->SetItem(i, 0, ">>> " + disasm->last_opcode);
+				m_list->SetItem(i, 0, fmt::FromUTF8(">>> " + disasm->last_opcode));
 			}
 			else
 			{
-				m_list->SetItem(i, 0, "    " + disasm->last_opcode);
+				m_list->SetItem(i, 0, fmt::FromUTF8("    " + disasm->last_opcode));
 			}
 
 			wxColour colour;
@@ -318,11 +318,11 @@ void InterpreterDisAsmFrame::WriteRegs()
 		return;
 	}
 
-	const wxString data = CPU->RegsToString();
+	const std::string data = CPU->RegsToString();
 
 	m_regs->Freeze();
 	m_regs->Clear();
-	m_regs->WriteText(data);
+	m_regs->WriteText(fmt::FromUTF8(data));
 	m_regs->Thaw();
 }
 
@@ -334,11 +334,11 @@ void InterpreterDisAsmFrame::WriteCallStack()
 		return;
 	}
 
-	const wxString data = CPU->CallStackToString();
+	const std::string data = CPU->CallStackToString();
 
 	m_calls->Freeze();
 	m_calls->Clear();
-	m_calls->WriteText(data);
+	m_calls->WriteText(fmt::FromUTF8(data));
 	m_calls->Thaw();
 }
 

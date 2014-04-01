@@ -41,13 +41,13 @@ void Emulator::Init()
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
 
-void Emulator::SetPath(const wxString& path, const wxString& elf_path)
+void Emulator::SetPath(const std::string& path, const std::string& elf_path)
 {
 	m_path = path;
 	m_elf_path = elf_path;
 }
 
-void Emulator::SetTitleID(const wxString& id)
+void Emulator::SetTitleID(const std::string& id)
 {
 	m_title_id = id;
 }
@@ -103,9 +103,9 @@ bool Emulator::BootGame(const std::string& path)
 
 	for(int i=0; i<sizeof(elf_path) / sizeof(*elf_path);i++)
 	{
-		const wxString& curpath = path + elf_path[i];
+		const std::string& curpath = path + elf_path[i];
 
-		if(wxFile::Access(curpath, wxFile::read))
+		if(wxFile::Access(fmt::FromUTF8(curpath), wxFile::read))
 		{
 			SetPath(curpath);
 			Load();
@@ -119,20 +119,20 @@ bool Emulator::BootGame(const std::string& path)
 
 void Emulator::Load()
 {
-	if(!wxFileExists(m_path)) return;
+	if(!wxFileExists(fmt::FromUTF8(m_path))) return;
 
-	if(IsSelf(m_path.ToStdString()))
+	if(IsSelf(m_path))
 	{
-		std::string self_path = m_path.ToStdString();
-		std::string elf_path = wxFileName(m_path).GetPath().ToStdString();
+		std::string self_path = m_path;
+		std::string elf_path = fmt::ToUTF8(wxFileName(fmt::FromUTF8(m_path)).GetPath());
 
-		if(wxFileName(m_path).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
+		if (wxFileName(fmt::FromUTF8(m_path)).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
 		{
 			elf_path += "/BOOT.BIN";
 		}
 		else
 		{
-			elf_path += "/" + wxFileName(m_path).GetName() + ".elf";
+			elf_path += "/" + fmt::ToUTF8(wxFileName(fmt::FromUTF8(m_path)).GetName()) + ".elf";
 		}
 
 		if(!DecryptSelf(elf_path, self_path))
@@ -141,7 +141,7 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	ConLog.Write("Loading '%s'...", m_path.wx_str());
+	ConLog.Write("Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
@@ -149,11 +149,11 @@ void Emulator::Load()
 	ConLog.Write("Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().wx_str(), m_vfs.m_devices[i].GetLocalPath().wx_str());
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().c_str(), m_vfs.m_devices[i].GetLocalPath().c_str());
 	}
 	ConLog.SkipLn();
 
-	if(m_elf_path.IsEmpty())
+	if(m_elf_path.empty())
 	{
 		GetVFS().GetDeviceLocal(m_path, m_elf_path);
 	}
@@ -162,7 +162,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path.wx_str(), m_elf_path.wx_str());
+		ConLog.Error("Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
 		return;
 	}
 
@@ -193,7 +193,7 @@ void Emulator::Load()
 		}
 		
 	}
-	catch(const wxString& e)
+	catch(const std::string& e)
 	{
 		ConLog.Error(e);
 		is_error = true;
@@ -441,7 +441,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", wxString(path).wx_str());
+		ConLog.Error("'%s' is broken", path.c_str());
 		return;
 	}
 

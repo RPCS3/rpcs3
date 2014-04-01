@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "GLVertexProgram.h"
 
-wxString GLVertexDecompilerThread::GetMask(bool is_sca)
+std::string GLVertexDecompilerThread::GetMask(bool is_sca)
 {
-	wxString ret = wxEmptyString;
+	std::string ret;
 
 	if(is_sca)
 	{
@@ -20,20 +20,20 @@ wxString GLVertexDecompilerThread::GetMask(bool is_sca)
 		if(d3.vec_writemask_w) ret += "w";
 	}
 
-	return ret.IsEmpty() || ret == "xyzw" ? wxString(wxEmptyString) : ("." + ret);
+	return ret.empty() || ret == "xyzw" ? "" : ("." + ret);
 }
 
-wxString GLVertexDecompilerThread::GetVecMask()
+std::string GLVertexDecompilerThread::GetVecMask()
 {
 	return GetMask(false);
 }
 
-wxString GLVertexDecompilerThread::GetScaMask()
+std::string GLVertexDecompilerThread::GetScaMask()
 {
 	return GetMask(true);
 }
 
-wxString GLVertexDecompilerThread::GetDST(bool isSca)
+std::string GLVertexDecompilerThread::GetDST(bool isSca)
 {
 	static const std::string reg_table[] = 
 	{
@@ -45,7 +45,7 @@ wxString GLVertexDecompilerThread::GetDST(bool isSca)
 		"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7"
 	};
 
-	wxString ret = wxEmptyString;
+	std::string ret;
 
 	switch(isSca ? 0x1f : d3.dst)
 	{
@@ -64,7 +64,7 @@ wxString GLVertexDecompilerThread::GetDST(bool isSca)
 		}
 		else
 		{
-			ConLog.Error("Bad dst reg num: %d", d3.dst);
+			ConLog.Error("Bad dst reg num: %d", fmt::by_value(d3.dst));
 			ret += m_parr.AddParam(PARAM_OUT, "vec4", "unk");
 		}
 	break;
@@ -73,7 +73,7 @@ wxString GLVertexDecompilerThread::GetDST(bool isSca)
 	return ret;
 }
 
-wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
+std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 {
 	static const std::string reg_table[] = 
 	{
@@ -85,7 +85,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 	};
 
-	wxString ret = wxEmptyString;
+	std::string ret;
 
 	switch(src[n].reg_type)
 	{
@@ -99,7 +99,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		}
 		else
 		{
-			ConLog.Error("Bad input src num: %d", d1.input_src);
+			ConLog.Error("Bad input src num: %d", fmt::by_value(d1.input_src));
 			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
 		}
 	break;
@@ -108,12 +108,12 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	break;
 
 	default:
-		ConLog.Error("Bad src%u reg type: %d", n, src[n].reg_type);
+		ConLog.Error("Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type));
 		Emu.Pause();
 	break;
 	}
 
-	static const wxString f = "xyzw";
+	static const std::string f = "xyzw";
 
 	if (isSca)
 	{
@@ -126,7 +126,7 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	}
 	else
 	{
-		wxString swizzle = wxEmptyString;
+		std::string swizzle;
 
 		swizzle += f[src[n].swz_x];
 		swizzle += f[src[n].swz_y];
@@ -151,8 +151,9 @@ wxString GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	return ret;
 }
 
-void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask, bool set_dst, bool set_cond)
+void GLVertexDecompilerThread::AddCode(bool is_sca, const std::string& pCode, bool src_mask, bool set_dst, bool set_cond)
 {
+	std::string code = pCode;
 	if(d0.cond == 0) return;
 	enum
 	{
@@ -173,7 +174,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		"error"
 	};
 
-	wxString cond;
+	std::string cond;
 
 	if((set_cond || d0.cond_test_enable) && d0.cond != (lt | gt | eq))
 	{
@@ -187,11 +188,11 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 
 		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		cond = wxString::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", wxString(cond_string_table[d0.cond]).wx_str(), wxString(swizzle).wx_str(), wxString(swizzle).wx_str());
+		cond = fmt::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
 	}
 
-	wxString mask = GetMask(is_sca);
-	wxString value = src_mask ? code + mask : code;
+	std::string mask = GetMask(is_sca);
+	std::string value = src_mask ? code + mask : code;
 
 	if(is_sca && d0.vec_result)
 	{
@@ -205,7 +206,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 
 	if(set_dst)
 	{
-		wxString dest;
+		std::string dest;
 		if(d0.cond_update_enable_0)
 		{
 			dest = m_parr.AddParam(PARAM_NONE, "vec4", "rc", "vec4(0.0)") + mask;
@@ -224,7 +225,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 				if(d3.vec_writemask_z) num += 1;
 				else if(d3.vec_writemask_w) num += 2;
 
-				dest = wxString::Format(GetDST(is_sca) + "/*" + mask + "*/", num);
+				dest = fmt::Format(GetDST(is_sca) + "/*" + mask + "*/", num);
 			}
 		}
 		else
@@ -239,17 +240,17 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask
 		code = cond + value;
 	}
 
-	m_body.Add(code + ";");
+	m_body.push_back(code + ";");
 }
 
-wxString GLVertexDecompilerThread::GetFunc()
+std::string GLVertexDecompilerThread::GetFunc()
 {
 	u32 offset = (d2.iaddrh << 3) | d3.iaddrl;
-	wxString name = wxString::Format("func%u", offset);
+	std::string name = fmt::Format("func%u", offset);
 
 	for(uint i=0; i<m_funcs.GetCount(); ++i)
 	{
-		if(m_funcs[i].name.Cmp(name) == 0)
+		if(m_funcs[i].name.compare(name) == 0)
 			return name + "()";
 	}
 
@@ -260,21 +261,21 @@ wxString GLVertexDecompilerThread::GetFunc()
 	return name + "()";
 }
 
-void GLVertexDecompilerThread::AddVecCode(const wxString& code, bool src_mask, bool set_dst)
+void GLVertexDecompilerThread::AddVecCode(const std::string& code, bool src_mask, bool set_dst)
 {
 	AddCode(false, code, src_mask, set_dst);
 }
 
-void GLVertexDecompilerThread::AddScaCode(const wxString& code, bool set_dst, bool set_cond)
+void GLVertexDecompilerThread::AddScaCode(const std::string& code, bool set_dst, bool set_cond)
 {
 	AddCode(true, code, false, set_dst, set_cond);
 }
 
-wxString GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
+std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 {
-	wxString result;
+	std::string result;
 
-	for(uint i=func.offset; i<m_body.GetCount(); ++i)
+	for(uint i=func.offset; i<m_body.size(); ++i)
 	{
 		if(i != func.offset)
 		{
@@ -301,33 +302,33 @@ wxString GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 	return result;
 }
 
-wxString GLVertexDecompilerThread::BuildCode()
+std::string GLVertexDecompilerThread::BuildCode()
 {
-	wxString p = wxEmptyString;
+	std::string p;
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
 
-	wxString fp = wxEmptyString;
+	std::string fp;
 
 	for(int i=m_funcs.GetCount() - 1; i>0; --i)
 	{
-		fp += wxString::Format("void %s();\n", m_funcs[i].name.wx_str());
+		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
 	}
 
-	wxString f = wxEmptyString;
+	std::string f;
 
-	f += wxString::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n\t%s();\n\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
-		m_funcs[0].name.wx_str(), m_funcs[1].name.wx_str());
+	f += fmt::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n\t%s();\n\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
+		m_funcs[0].name.c_str(), m_funcs[1].name.c_str());
 
 	for(uint i=1; i<m_funcs.GetCount(); ++i)
 	{
-		f += wxString::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.wx_str(), BuildFuncBody(m_funcs[i]).wx_str());
+		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
 
-	static const wxString& prot = 
+	static const std::string& prot =
 		"#version 330\n"
 		"\n"
 		"uniform mat4 scaleOffsetMat = mat4(1.0);\n"
@@ -335,7 +336,7 @@ wxString GLVertexDecompilerThread::BuildCode()
 		"%s\n"
 		"%s";
 
-	return wxString::Format(prot, p.wx_str(), fp.wx_str(), f.wx_str());
+	return fmt::Format(prot, p.c_str(), fp.c_str(), f.c_str());
 }
 
 void GLVertexDecompilerThread::Task()
@@ -357,7 +358,7 @@ void GLVertexDecompilerThread::Task()
 
 		if(!d1.sca_opcode && !d1.vec_opcode)
 		{
-			m_body.Add("//nop");
+			m_body.push_back("//nop");
 		}
 
 		switch(d1.sca_opcode)
@@ -385,8 +386,8 @@ void GLVertexDecompilerThread::Task()
 		//case 0x14: break; // POP : works differently (POP o[1].x;)
 
 		default:
-			m_body.Add(wxString::Format("//Unknown vp sca_opcode 0x%x", d1.sca_opcode));
-			ConLog.Error("Unknown vp sca_opcode 0x%x", d1.sca_opcode);
+			m_body.push_back(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
+			ConLog.Error("Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
 			Emu.Pause();
 		break;
 		}
@@ -417,8 +418,8 @@ void GLVertexDecompilerThread::Task()
 		case 0x16: AddVecCode("sign(" + GetSRC(0) + ")"); break; //SSG
 
 		default:
-			m_body.Add(wxString::Format("//Unknown vp opcode 0x%x", d1.vec_opcode));
-			ConLog.Error("Unknown vp opcode 0x%x", d1.vec_opcode);
+			m_body.push_back(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
+			ConLog.Error("Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
 			Emu.Pause();
 		break;
 		}
@@ -434,7 +435,7 @@ void GLVertexDecompilerThread::Task()
 
 	m_shader = BuildCode();
 
-	m_body.Clear();
+	m_body.clear();
 	m_funcs.RemoveAt(2, m_funcs.GetCount() - 2);
 }
 
@@ -489,8 +490,8 @@ void GLVertexProgram::Compile()
 
 	id = glCreateShader(GL_VERTEX_SHADER);
 
-	const char* str = shader.mb_str();
-	const int strlen = shader.Len();
+	const char* str = shader.c_str();
+	const int strlen = shader.length();
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
@@ -507,7 +508,7 @@ void GLVertexProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			ConLog.Error("Failed to compile vertex shader: %s", wxString(buf).wx_str());
+			ConLog.Error("Failed to compile vertex shader: %s", buf);
 			delete[] buf;
 		}
 
@@ -521,7 +522,7 @@ void GLVertexProgram::Compile()
 void GLVertexProgram::Delete()
 {
 	parr.params.Clear();
-	shader.Clear();
+	shader.clear();
 
 	if(id)
 	{

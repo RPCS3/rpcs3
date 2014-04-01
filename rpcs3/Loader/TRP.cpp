@@ -58,7 +58,7 @@ bool TRPLoader::LoadHeader(bool show)
 			return false;
 
 		if (show)
-			ConLog.Write("TRP entry #%d: %s", wxString(m_entries[i].name).wx_str());
+			ConLog.Write("TRP entry #%d: %s", m_entries[i].name);
 	}
 
 	return true;

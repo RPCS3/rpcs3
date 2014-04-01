@@ -6,11 +6,11 @@ GLProgram::GLProgram() : id(0)
 {
 }
 
-int GLProgram::GetLocation(const wxString& name)
+int GLProgram::GetLocation(const std::string& name)
 {
 	for(u32 i=0; i<m_locations.GetCount(); ++i)
 	{
-		if(!m_locations[i].name.Cmp(name))
+		if(!m_locations[i].name.compare(name))
 		{
 			return m_locations[i].loc;
 		}
@@ -19,8 +19,8 @@ int GLProgram::GetLocation(const wxString& name)
 	u32 pos = m_locations.Move(new Location());
 	m_locations[pos].name = name;
 
-	m_locations[pos].loc = glGetUniformLocation(id, name);
-	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name.wx_str()));
+	m_locations[pos].loc = glGetUniformLocation(id, name.c_str());
+	checkForGlError(fmt::Format("glGetUniformLocation(0x%x, %s)", id, name.c_str()));
 	return m_locations[pos].loc;
 }
 
@@ -51,7 +51,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength+1];
 			memset(buf, 0, bufLength+1);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
+			ConLog.Error("Could not link program: %s", buf);
 			delete[] buf;
 
 			return;
@@ -70,7 +70,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength];
 			memset(buf, 0, bufLength);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			ConLog.Error("Could not link program: %s", wxString(buf).wx_str());
+			ConLog.Error("Could not link program: %s", buf);
 			delete[] buf;
 
 			return;
@@ -95,9 +95,9 @@ void GLProgram::Use()
 
 void GLProgram::SetTex(u32 index)
 {
-	int loc = GetLocation(wxString::Format("tex%u", index));
+	int loc = GetLocation(fmt::Format("tex%u", index));
 	glProgramUniform1i(id, loc, index);
-	checkForGlError(wxString::Format("SetTex(%u - %d - %d)", id, index, loc));
+	checkForGlError(fmt::Format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
 void GLProgram::Delete()

@@ -11,7 +11,7 @@ void printAlError(ALenum err, const char* situation)
 {
 	if(err != AL_NO_ERROR)
 	{
-		ConLog.Error("%s: OpenAL error 0x%04x", wxString(situation).wx_str(), err);
+		ConLog.Error("%s: OpenAL error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }
@@ -20,7 +20,7 @@ void printAlcError(ALCenum err, const char* situation)
 {
 	if(err != ALC_NO_ERROR)
 	{
-		ConLog.Error("%s: OpenALC error 0x%04x", wxString(situation).wx_str(), err);
+		ConLog.Error("%s: OpenALC error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }

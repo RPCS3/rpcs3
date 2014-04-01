@@ -3,9 +3,9 @@
 struct DbgPacket
 {
 	int m_ch;
-	wxString m_text;
+	std::string m_text;
 
-	DbgPacket(int ch, const wxString& text)
+	DbgPacket(int ch, const std::string& text)
 		: m_ch(ch)
 		, m_text(text)
 	{
@@ -17,7 +17,7 @@ struct DbgPacket
 
 	void Clear()
 	{
-		m_text.Clear();
+		m_text.clear();
 	}
 };
 
@@ -29,7 +29,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 	void _push(const DbgPacket& data)
 	{
-		const u32 stext = data.m_text.Len();
+		const u32 stext = data.m_text.length();
 
 		m_buffer.Reserve(sizeof(int) + sizeof(u32) + stext);
 
@@ -40,7 +40,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 		memcpy(&m_buffer[c_put], &stext, sizeof(u32));
 		c_put += sizeof(u32);
-		memcpy(&m_buffer[c_put], static_cast<const char *>(data.m_text), stext);
+		memcpy(&m_buffer[c_put], data.m_text.data(), stext);
 		c_put += stext;
 
 		m_put = c_put;
@@ -58,7 +58,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if (stext) ret.m_text = wxString(reinterpret_cast<const char*>(&m_buffer[c_get]), stext );
+		if (stext) ret.m_text = std::string(reinterpret_cast<const char*>(&m_buffer[c_get]), stext );
 		c_get += stext;
 
 		m_get = c_get;
@@ -81,7 +81,7 @@ class DbgConsole
 public:
 	DbgConsole();
 	~DbgConsole();
-	void Write(int ch, const wxString& text);
+	void Write(int ch, const std::string& text);
 	void Clear();
 	virtual void Task();
 

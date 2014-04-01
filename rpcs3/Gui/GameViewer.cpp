@@ -2,7 +2,7 @@
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 
-static const wxString m_class_name = "GameViewer";
+static const std::string m_class_name = "GameViewer";
 GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 {
 	LoadSettings();
@@ -28,16 +28,16 @@ void GameViewer::DoResize(wxSize size)
 void GameViewer::LoadGames()
 {
 	vfsDir dir(m_path);
-	ConLog.Write("path: %s", m_path.wx_str());
+	ConLog.Write("path: %s", m_path.c_str());
 	if(!dir.IsOpened()) return;
 
-	m_games.Clear();
+	m_games.clear();
 
 	for(const DirEntryInfo* info = dir.Read(); info; info = dir.Read())
 	{
 		if(info->flags & DirEntry_TypeDir)
 		{
-			m_games.Add(info->name);
+			m_games.push_back(info->name);
 		}
 	}
 
@@ -48,9 +48,9 @@ void GameViewer::LoadGames()
 void GameViewer::LoadPSF()
 {
 	m_game_data.clear();
-	for(uint i=0; i<m_games.GetCount(); ++i)
+	for(uint i=0; i<m_games.size(); ++i)
 	{
-		const wxString& path = m_path + m_games[i] + "/PARAM.SFO";
+		const std::string path = m_path + m_games[i] + "/PARAM.SFO";
 		vfsFile f;
 		if(!f.Open(path))
 			continue;
@@ -69,8 +69,8 @@ void GameViewer::LoadPSF()
 		game.parental_lvl = psf.GetInteger("PARENTAL_LEVEL");
 		game.resolution = psf.GetInteger("RESOLUTION");
 		game.sound_format = psf.GetInteger("SOUND_FORMAT");
-		if(game.serial.Length() == 9)
-			game.serial = game.serial(0, 4) + "-" + game.serial(4, 5);
+		if(game.serial.length() == 9)
+			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
 
 		m_game_data.push_back(game);
 	}
@@ -107,14 +107,14 @@ void GameViewer::DClick(wxListEvent& event)
 	long i = GetFirstSelected();
 	if(i < 0) return;
 
-	const wxString& path = m_path + m_game_data[i].root;
+	const std::string& path = m_path + m_game_data[i].root;
 
 	Emu.Stop();
 	Emu.GetVFS().Init(path);
-	wxString local_path;
-	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path.ToStdString()))
+	std::string local_path;
+	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
 	{
-		ConLog.Error("Boot error: elf not found! [%s]", path.wx_str());
+		ConLog.Error("Boot error: elf not found! [%s]", path.c_str());
 		return;
 	}
 	Emu.Run();

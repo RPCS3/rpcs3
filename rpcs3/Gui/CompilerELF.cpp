@@ -16,7 +16,7 @@ wxFont GetFont(int size)
 }
 
 CompilerELF::CompilerELF(wxWindow* parent)
-	: FrameBase(parent, wxID_ANY, "CompilerELF", wxEmptyString, wxSize(640, 680))
+	: FrameBase(parent, wxID_ANY, "CompilerELF", "", wxSize(640, 680))
 	, m_status_bar(*CreateStatusBar())
 {
 	m_disable_scroll = false;
@@ -392,26 +392,26 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
-	LoadElf(ctrl.GetPath());
+	LoadElf(fmt::ToUTF8(ctrl.GetPath()));
 }
 
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUDecoder.h"
 
-void CompilerELF::LoadElf(const wxString& path)
+void CompilerELF::LoadElf(const std::string& path)
 {
 }
 
-void CompilerELF::SetTextStyle(const wxString& text, const wxColour& color, bool bold)
+void CompilerELF::SetTextStyle(const std::string& text, const wxColour& color, bool bold)
 {
-	for(int p=0; (p = asm_list->GetValue().find(text, p)) >= 0; p += text.Len())
+	for(int p=0; (p = fmt::ToUTF8(asm_list->GetValue()).find(text, p)) !=std::string::npos; p += text.length())
 	{
-		asm_list->SetStyle(p, p + text.Len(), wxTextAttr(color, wxNullColour, 
+		asm_list->SetStyle(p, p + text.length(), wxTextAttr(color, wxNullColour, 
 			wxFont(-1, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL)));
 	}
 }
 
-void CompilerELF::SetOpStyle(const wxString& text, const wxColour& color, bool bold)
+void CompilerELF::SetOpStyle(const std::string& text, const wxColour& color, bool bold)
 {
 	/*
 	for(int p=0; (p = FindOp(asm_list->GetValue(), text, p)) >= 0; p += text.Len())
@@ -424,5 +424,5 @@ void CompilerELF::SetOpStyle(const wxString& text, const wxColour& color, bool b
 
 void CompilerELF::DoAnalyzeCode(bool compile)
 {
-	CompilePPUProgram(asm_list->GetValue(), "compiled.elf", asm_list, hex_list, err_list, !compile).Compile();
+	CompilePPUProgram(fmt::ToUTF8(asm_list->GetValue()), "compiled.elf", asm_list, hex_list, err_list, !compile).Compile();
 }

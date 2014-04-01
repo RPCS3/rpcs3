@@ -12,12 +12,12 @@ vfsFileBase::~vfsFileBase()
 	Close();
 }
 
-bool Access(const wxString& path, vfsOpenMode mode)
+bool Access(const std::string& path, vfsOpenMode mode)
 {
 	return false;
 }
 
-bool vfsFileBase::Open(const wxString& path, vfsOpenMode mode)
+bool vfsFileBase::Open(const std::string& path, vfsOpenMode mode)
 {
 	m_path = path;
 	m_mode = mode;
@@ -29,12 +29,12 @@ bool vfsFileBase::Open(const wxString& path, vfsOpenMode mode)
 
 bool vfsFileBase::Close()
 {
-	m_path = wxEmptyString;
+	m_path = "";
 
 	return vfsStream::Close();
 }
 
-wxString vfsFileBase::GetPath() const
+std::string vfsFileBase::GetPath() const
 {
 	return m_path;
 }

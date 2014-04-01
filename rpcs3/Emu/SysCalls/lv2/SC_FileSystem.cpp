@@ -45,12 +45,12 @@ struct FsRingBufferConfig
 
 int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
-		path.wx_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
-	const wxString& ppath = path;
-	//ConLog.Warning("path: %s [%s]", ppath.wx_str(), path.wx_str());
+	const std::string& ppath = path;
+	//ConLog.Warning("path: %s [%s]", ppath.c_str(), path.c_str());
 
 	s32 _oflags = flags;
 	if(flags & CELL_O_CREAT)
@@ -102,7 +102,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(_oflags != 0)
 	{
-		sys_fs.Error("\"%s\" has unknown flags! flags: 0x%08x", ppath.wx_str(), flags);
+		sys_fs.Error("\"%s\" has unknown flags! flags: 0x%08x", ppath.c_str(), flags);
 		return CELL_EINVAL;
 	}
 
@@ -110,12 +110,12 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(!stream || !stream->IsOpened())
 	{
-		sys_fs.Error("\"%s\" not found! flags: 0x%08x", ppath.wx_str(), flags);
+		sys_fs.Error("\"%s\" not found! flags: 0x%08x", ppath.c_str(), flags);
 		return CELL_ENOENT;
 	}
 
 	fd = sys_fs.GetNewId(stream, IDFlag_File);
-	ConLog.Warning("*** cellFsOpen(path=\"%s\"): fd = %d", path.wx_str(), fd.GetValue());
+	ConLog.Warning("*** cellFsOpen(path=\"%s\"): fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
 }
@@ -201,8 +201,8 @@ int cellFsClose(u32 fd)
 
 int cellFsOpendir(u32 path_addr, mem32_t fd)
 {
-	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.wx_str(), fd.GetAddr());
+	const std::string& path = Memory.ReadString(path_addr);
+	sys_fs.Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.c_str(), fd.GetAddr());
 	
 	if(!Memory.IsGoodAddr(path_addr) || !fd.IsGood())
 		return CELL_EFAULT;
@@ -232,8 +232,8 @@ int cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 	if(info)
 	{
 		nread = 1;
-		Memory.WriteString(dir.GetAddr()+2, info->name.wx_str());
-		dir->d_namlen = info->name.Length();
+		Memory.WriteString(dir.GetAddr()+2, info->name);
+		dir->d_namlen = info->name.length();
 		dir->d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
 	}
 	else
@@ -256,8 +256,8 @@ int cellFsClosedir(u32 fd)
 
 int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
-	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.wx_str(), sb.GetAddr());
+	const std::string& path = Memory.ReadString(path_addr);
+	sys_fs.Log("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.c_str(), sb.GetAddr());
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -290,7 +290,7 @@ int cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 		}
 	}
 
-	sys_fs.Warning("cellFsStat: \"%s\" not found.", path.wx_str());
+	sys_fs.Warning("cellFsStat: \"%s\" not found.", path.c_str());
 	return CELL_ENOENT;
 }
 
@@ -321,8 +321,8 @@ int cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 
 int cellFsMkdir(u32 path_addr, u32 mode)
 {
-	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.wx_str(), mode);
+	const std::string& ps3_path = Memory.ReadString(path_addr);
+	sys_fs.Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.c_str(), mode);
 	
 	/*vfsDir dir;
 	if(dir.IsExists(ps3_path))
@@ -340,8 +340,8 @@ int cellFsMkdir(u32 path_addr, u32 mode)
 
 int cellFsRename(u32 from_addr, u32 to_addr)
 {
-	const wxString& ps3_from = Memory.ReadString(from_addr);
-	const wxString& ps3_to = Memory.ReadString(to_addr);
+	const std::string& ps3_from = Memory.ReadString(from_addr);
+	const std::string& ps3_to = Memory.ReadString(to_addr);
 
 	{
 		vfsDir dir;
@@ -370,8 +370,8 @@ int cellFsRename(u32 from_addr, u32 to_addr)
 
 int cellFsRmdir(u32 path_addr)
 {
-	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.wx_str());
+	const std::string& ps3_path = Memory.ReadString(path_addr);
+	sys_fs.Log("cellFsRmdir(path=\"%s\")", ps3_path.c_str());
 
 	vfsDir d;
 	if(!d.IsExists(ps3_path))
@@ -385,8 +385,8 @@ int cellFsRmdir(u32 path_addr)
 
 int cellFsUnlink(u32 path_addr)
 {
-	const wxString& ps3_path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.wx_str());
+	const std::string& ps3_path = Memory.ReadString(path_addr);
+	sys_fs.Warning("cellFsUnlink(path=\"%s\")", ps3_path.c_str());
 
 	if (ps3_path.empty())
 		return CELL_EFAULT;
@@ -452,13 +452,13 @@ int cellFsFtruncate(u32 fd, u64 size)
 
 int cellFsTruncate(u32 path_addr, u64 size)
 {
-	const wxString& path = Memory.ReadString(path_addr);
-	sys_fs.Log("cellFsTruncate(path=\"%s\", size=%lld)", path.wx_str(), size);
+	const std::string& path = Memory.ReadString(path_addr);
+	sys_fs.Log("cellFsTruncate(path=\"%s\", size=%lld)", path.c_str(), size);
 
 	vfsFile f(path, vfsReadWrite);
 	if(!f.IsOpened())
 	{
-		sys_fs.Warning("cellFsTruncate: \"%s\" not found.", path.wx_str());
+		sys_fs.Warning("cellFsTruncate: \"%s\" not found.", path.c_str());
 		return CELL_ENOENT;
 	}
 	u64 initialSize = f.GetSize();
@@ -496,7 +496,7 @@ int cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size)
 
 int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size)
 {
-	sys_fs.Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)", Memory.ReadString(path_addr).wx_str(), sector_size.GetAddr(), block_size.GetAddr());
+	sys_fs.Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)", Memory.ReadString(path_addr).c_str(), sector_size.GetAddr(), block_size.GetAddr());
 
 	sector_size = 4096; // ?
 	block_size = 4096; // ?
@@ -506,9 +506,9 @@ int cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size)
 
 int cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count)
 {
-	const wxString& ps3_path = Memory.ReadString(path_addr);
+	const std::string& ps3_path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
-		ps3_path.wx_str(), block_size.GetAddr(), block_count.GetAddr());
+		ps3_path.c_str(), block_size.GetAddr(), block_count.GetAddr());
 
 	if (!Memory.IsGoodAddr(path_addr) || !block_size.IsGood() || !block_count.IsGood())
 		return CELL_EFAULT;
@@ -537,8 +537,8 @@ int cellFsGetDirectoryEntries(u32 fd, mem_ptr_t<CellFsDirectoryEntry> entries, u
 	if(info)
 	{
 		data_count = 1;
-		Memory.WriteString(entries.GetAddr()+2, info->name.wx_str());
-		entries->entry_name.d_namlen = info->name.Length();
+		Memory.WriteString(entries.GetAddr()+2, info->name);
+		entries->entry_name.d_namlen = info->name.length();
 		entries->entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
 
 		entries->attribute.st_mode = 

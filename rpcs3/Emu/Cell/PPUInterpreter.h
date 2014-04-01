@@ -139,7 +139,7 @@ private:
 		case 0x100: return CPU.USPRG0;
 		}
 
-		UNK(wxString::Format("GetRegBySPR error: Unknown SPR 0x%x!", n));
+		UNK(fmt::Format("GetRegBySPR error: Unknown SPR 0x%x!", n));
 		return CPU.XER.XER;
 	}
 	
@@ -153,7 +153,7 @@ private:
 			((u64)a < (u64)simm16 && (to & 0x2)) ||
 			((u64)a > (u64)simm16 && (to & 0x1)) )
 		{
-			UNK(wxString::Format("Trap! (tdi %x, r%d, %x)", to, ra, simm16));
+			UNK(fmt::Format("Trap! (tdi %x, r%d, %x)", to, ra, simm16));
 		}
 	}
 
@@ -167,7 +167,7 @@ private:
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
-			UNK(wxString::Format("Trap! (twi %x, r%d, %x)", to, ra, simm16));
+			UNK(fmt::Format("Trap! (twi %x, r%d, %x)", to, ra, simm16));
 		}
 	}
 
@@ -2092,18 +2092,18 @@ private:
 	{
 		switch(sc_code)
 		{
-		case 0x1: UNK(wxString::Format("HyperCall %d", CPU.GPR[0])); break;
+		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
 		case 0x3:
 			StaticExecute(CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
 				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
-					wxString(g_static_funcs_list[CPU.GPR[11]].name).wx_str(), CPU.GPR[3], CPU.PC);
+					g_static_funcs_list[CPU.GPR[11]].name, CPU.GPR[3], CPU.PC);
 			}
 			break;
 		case 0x22: UNK("HyperCall LV1"); break;
-		default: UNK(wxString::Format("Unknown sc: %x", sc_code));
+		default: UNK(fmt::Format("Unknown sc: %x", sc_code));
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
@@ -2264,7 +2264,7 @@ private:
 			((u32)a < (u32)b && (to & 0x2)) ||
 			((u32)a > (u32)b && (to & 0x1)) )
 		{
-			UNK(wxString::Format("Trap! (tw %x, r%d, r%d)", to, ra, rb));
+			UNK(fmt::Format("Trap! (tw %x, r%d, r%d)", to, ra, rb));
 		}
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb)
@@ -2874,7 +2874,7 @@ private:
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
 		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
-		default: UNK(wxString::Format("mftb r%d, %d", rd, spr)); break;
+		default: UNK(fmt::Format("mftb r%d, %d", rd, spr)); break;
 		}
 	}
 	void LWAUX(u32 rd, u32 ra, u32 rb)
@@ -4010,12 +4010,12 @@ private:
 
 	void UNK(const u32 code, const u32 opcode, const u32 gcode)
 	{
-		UNK(wxString::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
+		UNK(fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
 	}
 
-	void UNK(const wxString& err, bool pause = true)
+	void UNK(const std::string& err, bool pause = true)
 	{
-		ConLog.Error(err + wxString::Format(" #pc: 0x%llx", CPU.PC));
+		ConLog.Error(err + fmt::Format(" #pc: 0x%llx", CPU.PC));
 
 		if(!pause) return;
 
@@ -4023,11 +4023,11 @@ private:
 
 		for(uint i=0; i<32; ++i) ConLog.Write("r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) ConLog.Write("f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).wx_str(), CPU.VPR[i].ToString().wx_str());
+		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
 		ConLog.Write("CR = 0x%08x", CPU.CR);
 		ConLog.Write("LR = 0x%llx", CPU.LR);
 		ConLog.Write("CTR = 0x%llx", CPU.CTR);
-		ConLog.Write("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, CPU.XER.CA, CPU.XER.OV, CPU.XER.SO);
+		ConLog.Write("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
 		ConLog.Write("FPSCR = 0x%x "
 			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
 			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
@@ -4035,11 +4035,11 @@ private:
 			"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
 			"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]",
 			CPU.FPSCR,
-			CPU.FPSCR.RN,
-			CPU.FPSCR.NI, CPU.FPSCR.XE, CPU.FPSCR.ZE, CPU.FPSCR.UE, CPU.FPSCR.OE, CPU.FPSCR.VE,
-			CPU.FPSCR.VXCVI, CPU.FPSCR.VXSQRT, CPU.FPSCR.VXSOFT, CPU.FPSCR.FPRF,
-			CPU.FPSCR.FI, CPU.FPSCR.FR, CPU.FPSCR.VXVC, CPU.FPSCR.VXIMZ,
-			CPU.FPSCR.VXZDZ, CPU.FPSCR.VXIDI, CPU.FPSCR.VXISI, CPU.FPSCR.VXSNAN,
-			CPU.FPSCR.XX, CPU.FPSCR.ZX, CPU.FPSCR.UX, CPU.FPSCR.OX, CPU.FPSCR.VX, CPU.FPSCR.FEX, CPU.FPSCR.FX);
+			fmt::by_value(CPU.FPSCR.RN),
+			fmt::by_value(CPU.FPSCR.NI), fmt::by_value(CPU.FPSCR.XE), fmt::by_value(CPU.FPSCR.ZE), fmt::by_value(CPU.FPSCR.UE), fmt::by_value(CPU.FPSCR.OE), fmt::by_value(CPU.FPSCR.VE),
+			fmt::by_value(CPU.FPSCR.VXCVI), fmt::by_value(CPU.FPSCR.VXSQRT), fmt::by_value(CPU.FPSCR.VXSOFT), fmt::by_value(CPU.FPSCR.FPRF),
+			fmt::by_value(CPU.FPSCR.FI), fmt::by_value(CPU.FPSCR.FR), fmt::by_value(CPU.FPSCR.VXVC), fmt::by_value(CPU.FPSCR.VXIMZ),
+			fmt::by_value(CPU.FPSCR.VXZDZ), fmt::by_value(CPU.FPSCR.VXIDI), fmt::by_value(CPU.FPSCR.VXISI), fmt::by_value(CPU.FPSCR.VXSNAN),
+			fmt::by_value(CPU.FPSCR.XX), fmt::by_value(CPU.FPSCR.ZX), fmt::by_value(CPU.FPSCR.UX), fmt::by_value(CPU.FPSCR.OX), fmt::by_value(CPU.FPSCR.VX), fmt::by_value(CPU.FPSCR.FEX), fmt::by_value(CPU.FPSCR.FX));
 	}
 };

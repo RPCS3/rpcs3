@@ -98,7 +98,7 @@ void InstructionEditorDialog::updatePreview(wxCommandEvent& event)
 		{
 			disasm->dump_pc = pc;
 			((PPCDecoder*)decoder)->Decode((u32)opcode);
-			wxString preview = disasm->last_opcode;
+			wxString preview = fmt::FromUTF8(disasm->last_opcode);
 			preview.Remove(0, preview.Find(':') + 1);
 			t3_preview->SetLabel(preview);
 		}

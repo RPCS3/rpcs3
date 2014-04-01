@@ -207,6 +207,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\SMutex.cpp" />
+    <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
@@ -362,6 +363,7 @@
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
     <ClInclude Include="..\Utilities\SMutex.h" />
     <ClInclude Include="..\Utilities\SQueue.h" />
+    <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="Crypto\aes.h" />

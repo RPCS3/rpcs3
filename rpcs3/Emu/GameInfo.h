@@ -2,13 +2,13 @@
 
 struct GameInfo
 {
-	wxString root;
+	std::string root;
 
-	wxString name;
-	wxString serial;
-	wxString app_ver;
-	wxString category;
-	wxString fw;
+	std::string name;
+	std::string serial;
+	std::string app_ver;
+	std::string category;
+	std::string fw;
 
 	u32 attr;
 	u32 bootable;
@@ -23,7 +23,7 @@ struct GameInfo
 
 	void Reset()
 	{
-		root = wxEmptyString;
+		root = "";
 
 		name = "Unknown";
 		serial = "Unknown";

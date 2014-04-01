@@ -26,54 +26,54 @@ private:
 	}
 
 private:
-	wxString& FixOp(wxString& op)
+	std::string& FixOp(std::string& op)
 	{
-		op.Append(' ', max<int>(10 - (int)op.Len(), 0));
+		op.append(max<int>(10 - (int)op.length(), 0),' ');
 		return op;
 	}
 	void DisAsm(const char* op)
 	{
 		Write(op);
 	}
-	void DisAsm(wxString op, u32 a1)
+	void DisAsm(std::string op, u32 a1)
 	{
-		Write(wxString::Format("%s 0x%x", FixOp(op).wx_str(), a1));
+		Write(fmt::Format("%s 0x%x", FixOp(op).c_str(), a1));
 	}
-	void DisAsm(wxString op, const char* a1)
+	void DisAsm(std::string op, const char* a1)
 	{
-		Write(wxString::Format("%s %s", FixOp(op).wx_str(), wxString(a1).wx_str()));
+		Write(fmt::Format("%s %s", FixOp(op).c_str(), a1));
 	}
-	void DisAsm(wxString op, const char* a1, const char* a2)
+	void DisAsm(std::string op, const char* a1, const char* a2)
 	{
-		Write(wxString::Format("%s %s,%s", FixOp(op).wx_str(), wxString(a1).wx_str(), wxString(a2).wx_str()));
+		Write(fmt::Format("%s %s,%s", FixOp(op).c_str(), a1, a2));
 	}
-	void DisAsm(wxString op, int a1, const char* a2)
+	void DisAsm(std::string op, int a1, const char* a2)
 	{
-		Write(wxString::Format("%s 0x%x,%s", FixOp(op).wx_str(), a1, wxString(a2).wx_str()));
+		Write(fmt::Format("%s 0x%x,%s", FixOp(op).c_str(), a1, a2));
 	}
-	void DisAsm(wxString op, const char* a1, int a2)
+	void DisAsm(std::string op, const char* a1, int a2)
 	{
-		Write(wxString::Format("%s %s,0x%x", FixOp(op).wx_str(), wxString(a1).wx_str(), a2));
+		Write(fmt::Format("%s %s,0x%x", FixOp(op).c_str(), a1, a2));
 	}
-	void DisAsm(wxString op, int a1, int a2)
+	void DisAsm(std::string op, int a1, int a2)
 	{
-		Write(wxString::Format("%s 0x%x,0x%x", FixOp(op).wx_str(), a1, a2));
+		Write(fmt::Format("%s 0x%x,0x%x", FixOp(op).c_str(), a1, a2));
 	}
-	void DisAsm(wxString op, const char* a1, const char* a2, const char* a3)
+	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3)
 	{
-		Write(wxString::Format("%s %s,%s,%s", FixOp(op).wx_str(), wxString(a1).wx_str(), wxString(a2).wx_str(), wxString(a3).wx_str()));
+		Write(fmt::Format("%s %s,%s,%s", FixOp(op).c_str(), a1, a2, a3));
 	}
-	void DisAsm(wxString op, const char* a1, int a2, const char* a3)
+	void DisAsm(std::string op, const char* a1, int a2, const char* a3)
 	{
-		Write(wxString::Format("%s %s,0x%x(%s)", FixOp(op).wx_str(), wxString(a1).wx_str(), a2, wxString(a3).wx_str()));
+		Write(fmt::Format("%s %s,0x%x(%s)", FixOp(op).c_str(), a1, a2, a3));
 	}
-	void DisAsm(wxString op, const char* a1, const char* a2, int a3)
+	void DisAsm(std::string op, const char* a1, const char* a2, int a3)
 	{
-		Write(wxString::Format("%s %s,%s,0x%x", FixOp(op).wx_str(), wxString(a1).wx_str(), wxString(a2).wx_str(), a3));
+		Write(fmt::Format("%s %s,%s,0x%x", FixOp(op).c_str(), a1, a2, a3));
 	}
-	void DisAsm(wxString op, const char* a1, const char* a2, const char* a3, const char* a4)
+	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3, const char* a4)
 	{
-		Write(wxString::Format("%s %s,%s,%s,%s", FixOp(op).wx_str(), wxString(a1).wx_str(), wxString(a2).wx_str(), wxString(a3).wx_str(), wxString(a4).wx_str()));
+		Write(fmt::Format("%s %s,%s,%s,%s", FixOp(op).c_str(), a1, a2, a3, a4));
 	}
 	//0 - 10
 	void STOP(u32 code)
@@ -885,6 +885,6 @@ private:
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
 	{
-		Write(wxString::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+		Write(fmt::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 };

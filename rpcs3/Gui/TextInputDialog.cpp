@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "TextInputDialog.h"
 
-TextInputDialog::TextInputDialog(wxWindow* parent, const wxString& defvalue)
+TextInputDialog::TextInputDialog(wxWindow* parent, const std::string& defvalue)
 	: wxDialog(parent, wxID_ANY, "Input text", wxDefaultPosition)
 {
-	m_tctrl_text = new wxTextCtrl(this, wxID_ANY, defvalue);
+	m_tctrl_text = new wxTextCtrl(this, wxID_ANY, fmt::ToUTF8(defvalue));
 
 	wxBoxSizer& s_text(*new wxBoxSizer(wxVERTICAL));
 	s_text.Add(m_tctrl_text, 1, wxEXPAND);
@@ -27,11 +27,11 @@ TextInputDialog::TextInputDialog(wxWindow* parent, const wxString& defvalue)
 
 void TextInputDialog::OnOk(wxCommandEvent& event)
 {
-	m_result = m_tctrl_text->GetValue();
+	m_result = fmt::ToUTF8(m_tctrl_text->GetValue());
 	EndModal(wxID_OK);
 }
 
-wxString& TextInputDialog::GetResult()
+std::string TextInputDialog::GetResult()
 {
 	return m_result;
 }

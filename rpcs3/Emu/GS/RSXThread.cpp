@@ -105,9 +105,9 @@ u32 RSXVertexData::GetTypeSize()
 
 u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count)
 {
-	wxString debug = GetMethodName(cmd);
+	std::string debug = GetMethodName(cmd);
 	debug += "(";
-	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", ARGS(i));
+	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 	debug += ")";
 	ConLog.Write("OutOfArgsCount(x=%u, count=%u): " + debug, x, count);
 
@@ -172,9 +172,9 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count)
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count)
 {
 #if	CMD_DEBUG
-		wxString debug = GetMethodName(cmd);
+		std::string debug = GetMethodName(cmd);
 		debug += "(";
-		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", ARGS(i));
+		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 		debug += ")";
 		ConLog.Write(debug);
 #endif
@@ -1471,9 +1471,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	default:
 	{
-		wxString log = GetMethodName(cmd);
+		std::string log = GetMethodName(cmd);
 		log += "(";
-		for(u32 i=0; i<count; ++i) log += (i ? ", " : "") + wxString::Format("0x%x", ARGS(i));
+		for(u32 i=0; i<count; ++i) log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 		log += ")";
 		ConLog.Error("TODO: " + log);
 		//Emu.Pause();
