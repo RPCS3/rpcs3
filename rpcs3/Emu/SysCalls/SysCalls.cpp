@@ -359,12 +359,12 @@ void default_syscall()
 		case 999:
 			dump_enable = !dump_enable;
 			Emu.Pause();
-			ConLog.Warning("Dump %s", wxString(dump_enable ? "enabled" : "disabled").wx_str());
+			ConLog.Warning("Dump %s", (dump_enable ? "enabled" : "disabled"));
 		return;
 
 		case 1000:
 			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			ConLog.Warning("Log %s", wxString(Ini.HLELogging.GetValue() ? "enabled" : "disabled").wx_str());
+			ConLog.Warning("Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
 		return;
 	}
 

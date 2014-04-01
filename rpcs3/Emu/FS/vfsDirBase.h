@@ -12,7 +12,7 @@ enum DirEntryFlags
 
 struct DirEntryInfo
 {
-	wxString name;
+	std::string name;
 	u32 flags;
 	time_t create_time;
 	time_t access_time;
@@ -30,7 +30,7 @@ struct DirEntryInfo
 class vfsDirBase
 {
 protected:
-	wxString m_cwd;
+	std::string m_cwd;
 	Array<DirEntryInfo> m_entries;
 	uint m_pos;
 	vfsDevice* m_device;
@@ -39,16 +39,16 @@ public:
 	vfsDirBase(vfsDevice* device);
 	virtual ~vfsDirBase();
 
-	virtual bool Open(const wxString& path);
+	virtual bool Open(const std::string& path);
 	virtual bool IsOpened() const;
-	virtual bool IsExists(const wxString& path) const;
+	virtual bool IsExists(const std::string& path) const;
 	virtual const Array<DirEntryInfo>& GetEntries() const;
 	virtual void Close();
-	virtual wxString GetPath() const;
+	virtual std::string GetPath() const;
 
-	virtual bool Create(const wxString& path)=0;
+	virtual bool Create(const std::string& path) = 0;
 	//virtual bool Create(const DirEntryInfo& info)=0;
-	virtual bool Rename(const wxString& from, const wxString& to)=0;
-	virtual bool Remove(const wxString& path)=0;
+	virtual bool Rename(const std::string& from, const std::string& to) = 0;
+	virtual bool Remove(const std::string& path) = 0;
 	virtual const DirEntryInfo* Read();
 };

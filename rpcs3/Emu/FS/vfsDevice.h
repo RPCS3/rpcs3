@@ -4,32 +4,32 @@
 
 class vfsDevice
 {
-	wxString m_ps3_path;
-	wxString m_local_path;
+	std::string m_ps3_path;
+	std::string m_local_path;
 	mutable std::mutex m_mtx_lock;
 
 public:
-	vfsDevice(const wxString& ps3_path, const wxString& local_path);
+	vfsDevice(const std::string& ps3_path, const std::string& local_path);
 	vfsDevice() {}
 
 	virtual vfsFileBase* GetNewFileStream()=0;
 	virtual vfsDirBase* GetNewDirStream()=0;
 
-	wxString GetLocalPath() const;
-	wxString GetPs3Path() const;
+	std::string GetLocalPath() const;
+	std::string GetPs3Path() const;
 
-	void SetPath(const wxString& ps3_path, const wxString& local_path);
+	void SetPath(const std::string& ps3_path, const std::string& local_path);
 
-	u32 CmpPs3Path(const wxString& ps3_path);
-	u32 CmpLocalPath(const wxString& local_path);
+	u32 CmpPs3Path(const std::string& ps3_path);
+	u32 CmpLocalPath(const std::string& local_path);
 
-	static wxString ErasePath(const wxString& local_path, u32 start_dir_count, u32 end_dir_count);
-	static wxString GetRoot(const wxString& local_path);
-	static wxString GetRootPs3(const wxString& local_path);
-	static wxString GetWinPath(const wxString& p, bool is_dir = true);
-	static wxString GetWinPath(const wxString& l, const wxString& r);
-	static wxString GetPs3Path(const wxString& p, bool is_dir = true);
-	static wxString GetPs3Path(const wxString& l, const wxString& r);
+	static std::string ErasePath(const std::string& local_path, u32 start_dir_count, u32 end_dir_count);
+	static std::string GetRoot(const std::string& local_path);
+	static std::string GetRootPs3(const std::string& local_path);
+	static std::string GetWinPath(const std::string& p, bool is_dir = true);
+	static std::string GetWinPath(const std::string& l, const std::string& r);
+	static std::string GetPs3Path(const std::string& p, bool is_dir = true);
+	static std::string GetPs3Path(const std::string& l, const std::string& r);
 
 	void Lock() const;
 	void Unlock() const;

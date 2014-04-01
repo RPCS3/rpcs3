@@ -396,7 +396,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 	wxFile e(elf.c_str(), wxFile::write);
 	if(!e.IsOpened())
 	{
-		ConLog.Error("Could not create ELF file! (%s)", wxString(elf).wx_str());
+		ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
 		return false;
 	}
 
@@ -508,18 +508,18 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	memset(rap_key, 0, 0x10);
 
 	// Try to find a matching RAP file under dev_usb000.
-	wxString ci_str(content_id);
-	wxString rap_path(wxGetCwd() + "/dev_usb000/" + ci_str + ".rap");
+	std::string ci_str((const char *)content_id);
+	std::string rap_path(fmt::ToUTF8(wxGetCwd()) + "/dev_usb000/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!wxFile::Exists(rap_path))
+	if (!wxFile::Exists(fmt::FromUTF8(rap_path)))
 	{
 		ConLog.Error("This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
 	// Open the RAP file and read the key.
-	wxFile rap_file(rap_path, wxFile::read);
+	wxFile rap_file(fmt::FromUTF8(rap_path), wxFile::read);
 
 	if (!rap_file.IsOpened())
 	{
@@ -527,7 +527,7 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 		return false;
 	}
 
-	ConLog.Write("Loading RAP file %s", ci_str.wc_str() + wchar_t(".rap"));
+	ConLog.Write("Loading RAP file %s", (ci_str + ".rap").c_str());
 	rap_file.Read(rap_key, 0x10);
 	rap_file.Close();
 
@@ -573,11 +573,11 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	wxFile s(self.c_str());
+	wxFile s(fmt::FromUTF8(self));
 
 	if(!s.IsOpened())
 	{
-		ConLog.Error("Could not open SELF file! (%s)", wxString(self).wx_str());
+		ConLog.Error("Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
@@ -601,10 +601,10 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.Seek(elf_offset);
 
 		// Write the real ELF file back.
-		wxFile e(elf.c_str(), wxFile::write);
+		wxFile e(fmt::FromUTF8(elf), wxFile::write);
 		if(!e.IsOpened())
 		{
-			ConLog.Error("Could not create ELF file! (%s)", wxString(elf).wx_str());
+			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
 			return false;
 		}
 

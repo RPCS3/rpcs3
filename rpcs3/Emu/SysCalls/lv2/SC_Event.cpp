@@ -52,7 +52,7 @@ int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 
 	equeue_id = sys_event.GetNewId(eq);
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		wxString(attr->name, 8).wx_str(), (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
 
 	return CELL_OK;
 }

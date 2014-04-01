@@ -17,7 +17,7 @@ class vfsDevice;
 struct vfsFileBase : public vfsStream
 {
 protected:
-	wxString m_path;
+	std::string m_path;
 	vfsOpenMode m_mode;
 	vfsDevice* m_device;
 
@@ -25,13 +25,13 @@ public:
 	vfsFileBase(vfsDevice* device);
 	virtual ~vfsFileBase();
 
-	virtual bool Open(const wxString& path, vfsOpenMode mode);
+	virtual bool Open(const std::string& path, vfsOpenMode mode);
 	virtual bool Close() override;
-	virtual bool Create(const wxString& path) { return false; }
-	virtual bool Exists(const wxString& path) { return false; }
-	virtual bool Rename(const wxString& from, const wxString& to) { return false; }
-	virtual bool Remove(const wxString& path) { return false; }
+	virtual bool Create(const std::string& path) { return false; }
+	virtual bool Exists(const std::string& path) { return false; }
+	virtual bool Rename(const std::string& from, const std::string& to) { return false; }
+	virtual bool Remove(const std::string& path) { return false; }
 
-	wxString GetPath() const;
+	std::string GetPath() const;
 	vfsOpenMode GetOpenMode() const;
 };

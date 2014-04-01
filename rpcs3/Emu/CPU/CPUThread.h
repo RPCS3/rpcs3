@@ -87,17 +87,17 @@ public:
 	u64 GetPrio() const { return m_prio; }
 
 	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
-	wxString GetFName() const
+	std::string GetFName() const
 	{
 		return 
-			wxString::Format("%s[%d] Thread%s", 
-				GetTypeString().wx_str(),
+			fmt::Format("%s[%d] Thread%s", 
+				GetTypeString().c_str(),
 				m_id,
-				wxString(GetName().empty() ? "" : wxString::Format(" (%s)", + wxString(GetName()).wx_str())).wx_str()
+				(GetName().empty() ? std::string("") : fmt::Format(" (%s)", GetName().c_str())).c_str()
 			);
 	}
 
-	static wxString CPUThreadTypeToString(CPUThreadType type)
+	static std::string CPUThreadTypeToString(CPUThreadType type)
 	{
 		switch(type)
 		{
@@ -110,12 +110,12 @@ public:
 		return "Unknown";
 	}
 
-	wxString GetTypeString() const { return CPUThreadTypeToString(m_type); }
+	std::string GetTypeString() const { return CPUThreadTypeToString(m_type); }
 
 	virtual std::string GetThreadName() const
 	{
-		wxString temp = (GetFName() + wxString::Format("[0x%08llx]", PC));
-		return std::string(temp.mb_str());
+		std::string temp = (GetFName() + fmt::Format("[0x%08llx]", PC));
+		return temp;
 	}
 
 public:
@@ -181,11 +181,11 @@ public:
 	void Resume();
 	void Stop();
 
-	virtual void AddArgv(const wxString& arg) {}
+	virtual void AddArgv(const std::string& arg) {}
 
-	virtual wxString RegsToString() = 0;
-	virtual wxString ReadRegString(wxString reg) = 0;
-	virtual bool WriteRegString(wxString reg, wxString value) = 0;
+	virtual std::string RegsToString() = 0;
+	virtual std::string ReadRegString(const std::string& reg) = 0;
+	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
 
 	virtual void Exec();
 	void ExecOnce();
@@ -198,13 +198,13 @@ public:
 
 	Stack<CallStackItem> m_call_stack;
 
-	wxString CallStackToString()
+	std::string CallStackToString()
 	{
-		wxString ret = "Call Stack:\n==========\n";
+		std::string ret = "Call Stack:\n==========\n";
 
 		for(uint i=0; i<m_call_stack.GetCount(); ++i)
 		{
-			ret += wxString::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
+			ret += fmt::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
 		}
 
 		return ret;

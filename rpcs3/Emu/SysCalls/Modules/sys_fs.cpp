@@ -31,20 +31,20 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 	return true;
 }
 
-int sdata_unpack(wxString packed_file, wxString unpacked_file)
+int sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
 {
 	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
 	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWrite));
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.wx_str(), vfsRead);
+		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.c_str(), vfsRead);
 		return CELL_ENOENT;
 	}
 
 	if(!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.wx_str(), vfsWrite);
+		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.c_str(), vfsWrite);
 		return CELL_ENOENT;
 	}
 
@@ -108,9 +108,9 @@ int sdata_unpack(wxString packed_file, wxString unpacked_file)
 
 int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
-	const wxString& path = Memory.ReadString(path_addr);
+	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs.Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
-		path.wx_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	if (!fd.IsGood() || (!arg.IsGood() && size))
 		return CELL_EFAULT;
@@ -118,10 +118,13 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
 
-	if (!path.Lower().EndsWith(".sdat"))
+	std::string suffix = path.substr(path.length() - 5, 4);
+	if (suffix != ".sdat" && suffix != ".SDAT")
 		return CELL_ENOTSDATA;
 
-	wxString unpacked_path = "/dev_hdd1/"+path.AfterLast('/')+".unpacked";
+	std::string::size_type last_slash = path.rfind('/'); //TODO: use a filesystem library to solve this more robustly
+	last_slash = last_slash == std::string::npos ? 0 : last_slash+1;
+	std::string unpacked_path = "/dev_hdd1/"+path.substr(last_slash,path.length()-last_slash)+".unpacked";
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
@@ -149,7 +152,16 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	vfsFileBase* orig_file;
 	if(!sys_fs.CheckId(fd, orig_file)) return;
 
-	const wxString path = orig_file->GetPath().AfterFirst('/');
+	std::string path = orig_file->GetPath();
+	std::string::size_type first_slash = path.find('/');
+	if (first_slash == std::string::npos)
+	{
+		path = "";
+	}
+	else
+	{
+		path = path.substr(first_slash+1,std::string::npos);
+	}
 
 	u64 nbytes = aio->size;
 	u32 buf_addr = aio->buf_addr;
@@ -204,7 +216,7 @@ fin:
 	file.Seek(old_pos);
 
 	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, path.wx_str());
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, path.c_str());
 
 	if (func) // start callback thread
 	{
@@ -257,16 +269,16 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 int cellFsAioInit(mem8_ptr_t mount_point)
 {
-	wxString mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
+	std::string mp = Memory.ReadString(mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
 	aio_init = true;
 	return CELL_OK;
 }
 
 int cellFsAioFinish(mem8_ptr_t mount_point)
 {
-	wxString mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.wx_str());
+	std::string mp = Memory.ReadString(mount_point.GetAddr());
+	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
 	aio_init = false;
 	return CELL_OK;
 }

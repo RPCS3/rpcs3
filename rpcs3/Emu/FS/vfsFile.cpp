@@ -7,14 +7,14 @@ vfsFile::vfsFile()
 {
 }
 
-vfsFile::vfsFile(const wxString path, vfsOpenMode mode)
+vfsFile::vfsFile(const std::string& path, vfsOpenMode mode)
 	: vfsFileBase(nullptr)
 	, m_stream(nullptr)
 {
 	Open(path, mode);
 }
 
-bool vfsFile::Open(const wxString& path, vfsOpenMode mode)
+bool vfsFile::Open(const std::string& path, vfsOpenMode mode)
 {
 	Close();
 
@@ -23,22 +23,22 @@ bool vfsFile::Open(const wxString& path, vfsOpenMode mode)
 	return m_stream && m_stream->IsOpened();
 }
 
-bool vfsFile::Create(const wxString& path)
+bool vfsFile::Create(const std::string& path)
 {
 	return m_stream->Create(path);
 }
 
-bool vfsFile::Exists(const wxString& path)
+bool vfsFile::Exists(const std::string& path)
 {
 	return m_stream->Exists(path);
 }
 
-bool vfsFile::Rename(const wxString& from, const wxString& to)
+bool vfsFile::Rename(const std::string& from, const std::string& to)
 {
 	return m_stream->Rename(from, to);
 }
 
-bool vfsFile::Remove(const wxString& path)
+bool vfsFile::Remove(const std::string& path)
 {
 	return m_stream->Remove(path);
 }

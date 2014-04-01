@@ -10,7 +10,7 @@ PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
 
-	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw wxString("GetCurrentPPUThread: bad thread");
+	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw std::string("GetCurrentPPUThread: bad thread");
 
 	return *(PPUThread*)thread;
 }
@@ -47,9 +47,9 @@ void PPUThread::DoReset()
 	cycle = 0;
 }
 
-void PPUThread::AddArgv(const wxString& arg)
+void PPUThread::AddArgv(const std::string& arg)
 {
-	m_stack_point -= arg.Len() + 1;
+	m_stack_point -= arg.length() + 1;
 	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
 	m_argv_addr.AddCpy(m_stack_point);
 	Memory.WriteString(m_stack_point, arg);

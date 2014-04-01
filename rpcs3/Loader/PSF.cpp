@@ -94,7 +94,7 @@ bool PSFLoader::LoadDataTable()
 	return true;
 }
 
-const char* PSFLoader::GetString(const std::string& key)
+std::string PSFLoader::GetString(const std::string& key)
 {
 	if(PSFEntry* entry = SearchEntry(key))
 		return entry->FormatString();

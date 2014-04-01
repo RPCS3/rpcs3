@@ -12,7 +12,7 @@ bool PKGLoader::Install(std::string dest)
 	if (!pkg_f.IsOpened())
 		return false;
 
-	dest = wxGetCwd() + dest;
+	dest = fmt::ToUTF8(wxGetCwd()) + dest;
 	if (!dest.empty() && dest.back() != '/')
 		dest += '/';
 
@@ -23,18 +23,18 @@ bool PKGLoader::Install(std::string dest)
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (wxDirExists(dest+titleID)) {
+	if (wxDirExists(fmt::FromUTF8(dest+titleID))) {
 		wxMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", wxYES_NO|wxCENTRE);
 		if (d_overwrite.ShowModal() != wxID_YES) {
-			ConLog.Error("PKG Loader: Another installation found in: %s", wxString(titleID).wx_str());
+			ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
 			return false;
 		}
 		// TODO: Remove the following two lines and remove the folder dest+titleID
-		ConLog.Error("PKG Loader: Another installation found in: %s", wxString(titleID).wx_str());
+		ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
 		return false;
 	}
-	if (!wxMkdir(dest+titleID)) {
-		ConLog.Error("PKG Loader: Could not make the installation directory: %s", wxString(titleID).wx_str());
+	if (!wxMkdir(fmt::FromUTF8(dest+titleID))) {
+		ConLog.Error("PKG Loader: Could not make the installation directory: %s", titleID.c_str());
 		return false;
 	}
 
@@ -46,7 +46,7 @@ bool PKGLoader::Install(std::string dest)
 	}
 	else
 	{
-		ConLog.Write("PKG Loader: Package successfully installed in: /dev_hdd0/game/%s", wxString(titleID.c_str()).wx_str());
+		ConLog.Write("PKG Loader: Package successfully installed in: /dev_hdd0/game/%s", titleID.c_str());
 		return true;
 	}
 }

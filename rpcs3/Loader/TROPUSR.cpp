@@ -120,10 +120,10 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
 {
-	wxString path;
+	std::string path;
 	wxXmlDocument doc;
 	Emu.GetVFS().GetDevice(configpath.c_str(), path);
-	doc.Load(path);
+	doc.Load(fmt::FromUTF8(path));
 
 	m_table4.clear();
 	m_table6.clear();

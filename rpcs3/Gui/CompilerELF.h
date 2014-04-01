@@ -38,10 +38,10 @@ public:
 	}
 
 	void LoadElf(wxCommandEvent& event);
-	void LoadElf(const wxString& path);
+	void LoadElf(const std::string& path);
 
-	void SetTextStyle(const wxString& text, const wxColour& color, bool bold=false);
-	void SetOpStyle(const wxString& text, const wxColour& color, bool bold=true);
+	void SetTextStyle(const std::string& text, const wxColour& color, bool bold=false);
+	void SetOpStyle(const std::string& text, const wxColour& color, bool bold = true);
 	void DoAnalyzeCode(bool compile);
 
 	void UpdateStatus(int offset=0);

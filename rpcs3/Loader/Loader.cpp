@@ -7,15 +7,15 @@
 
 static const u64 g_spu_offset = 0x10000;
 
-const wxString Ehdr_DataToString(const u8 data)
+const std::string Ehdr_DataToString(const u8 data)
 {
-	if(data > 1) return wxString::Format("%d's complement, big endian", data);
+	if(data > 1) return fmt::Format("%d's complement, big endian", data);
 	if(data < 1) return "Data is not found";
 
-	return wxString::Format("%d's complement, small endian", data);
+	return fmt::Format("%d's complement, small endian", data);
 }
 
-const wxString Ehdr_TypeToString(const u16 type)
+const std::string Ehdr_TypeToString(const u16 type)
 {
 	switch(type)
 	{
@@ -23,10 +23,10 @@ const wxString Ehdr_TypeToString(const u16 type)
 	case 2: return "EXEC (Executable file)";
 	};
 
-	return wxString::Format("Unknown (%d)", type);
+	return fmt::Format("Unknown (%d)", type);
 }
 
-const wxString Ehdr_OS_ABIToString(const u8 os_abi)
+const std::string Ehdr_OS_ABIToString(const u8 os_abi)
 {
 	switch(os_abi)
 	{
@@ -34,10 +34,10 @@ const wxString Ehdr_OS_ABIToString(const u8 os_abi)
 	case 0x66: return "Cell OS LV-2";
 	};
 
-	return wxString::Format("Unknown (%x)", os_abi);
+	return fmt::Format("Unknown (%x)", os_abi);
 }
 
-const wxString Ehdr_MachineToString(const u16 machine)
+const std::string Ehdr_MachineToString(const u16 machine)
 {
 	switch(machine)
 	{
@@ -47,32 +47,32 @@ const wxString Ehdr_MachineToString(const u16 machine)
 	case MACHINE_ARM:	return "ARM";
 	};
 
-	return wxString::Format("Unknown (%x)", machine);
+	return fmt::Format("Unknown (%x)", machine);
 }
 
-const wxString Phdr_FlagsToString(u32 flags)
+const std::string Phdr_FlagsToString(u32 flags)
 {
 	enum {ppu_R = 0x1, ppu_W = 0x2, ppu_E = 0x4};
 	enum {spu_E = 0x1, spu_W = 0x2, spu_R = 0x4};
 	enum {rsx_R = 0x1, rsx_W = 0x2, rsx_E = 0x4};
 
 #define FLAGS_TO_STRING(f) \
-	wxString(f & f##_R ? "R" : "-") + \
-	wxString(f & f##_W ? "W" : "-") + \
-	wxString(f & f##_E ? "E" : "-")
+	std::string(f & f##_R ? "R" : "-") + \
+	std::string(f & f##_W ? "W" : "-") + \
+	std::string(f & f##_E ? "E" : "-")
 
 	const u8 ppu = flags & 0xf;
 	const u8 spu = (flags >> 0x14) & 0xf;
 	const u8 rsx = (flags >> 0x18) & 0xf;
 
-	wxString ret = wxEmptyString;
-	ret += wxString::Format("[0x%x] ", flags);
+	std::string ret;
+	ret += fmt::Format("[0x%x] ", flags);
 
 	flags &= ~ppu;
 	flags &= ~spu << 0x14;
 	flags &= ~rsx << 0x18;
 
-	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret.wx_str(), ppu, spu, rsx);
+	if(flags != 0) return fmt::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret.c_str(), ppu, spu, rsx);
 
 	ret += "PPU[" + FLAGS_TO_STRING(ppu) + "] ";
 	ret += "SPU[" + FLAGS_TO_STRING(spu) + "] ";
@@ -81,7 +81,7 @@ const wxString Phdr_FlagsToString(u32 flags)
 	return ret;
 }
 
-const wxString Phdr_TypeToString(const u32 type)
+const std::string Phdr_TypeToString(const u32 type)
 {
 	switch(type)
 	{
@@ -92,7 +92,7 @@ const wxString Phdr_TypeToString(const u32 type)
 	case 0x60000002: return "LOOS+2";
 	};
 
-	return wxString::Format("Unknown (%x)", type);
+	return fmt::Format("Unknown (%x)", type);
 }
 
 Loader::Loader()
@@ -163,9 +163,9 @@ bool Loader::Load()
 	}
 
 	/*
-	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
-	wxString ps3_path;
-	const wxString& psf_path = root + "/" + "PARAM.SFO";
+	const std::string& root = fmt::ToUTF8(wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath());
+	std::string ps3_path;
+	const std::string& psf_path = root + "/" + "PARAM.SFO";
 	vfsFile f(psf_path);
 	if(f.IsOpened())
 	{

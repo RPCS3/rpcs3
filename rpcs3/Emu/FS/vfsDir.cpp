@@ -7,14 +7,14 @@ vfsDir::vfsDir()
 {
 }
 
-vfsDir::vfsDir(const wxString path)
+vfsDir::vfsDir(const std::string& path)
 	: vfsDirBase(nullptr)
 	, m_stream(nullptr)
 {
 	Open(path);
 }
 
-bool vfsDir::Open(const wxString& path)
+bool vfsDir::Open(const std::string& path)
 {
 	Close();
 
@@ -23,12 +23,12 @@ bool vfsDir::Open(const wxString& path)
 	return m_stream && m_stream->IsOpened();
 }
 
-bool vfsDir::Create(const wxString& path)
+bool vfsDir::Create(const std::string& path)
 {
 	return m_stream->Create(path);
 }
 
-bool vfsDir::IsExists(const wxString& path) const
+bool vfsDir::IsExists(const std::string& path) const
 {
 	return m_stream->IsExists(path); // Crash (Access violation reading location 0x0000000000000000)
 }
@@ -38,12 +38,12 @@ const Array<DirEntryInfo>& vfsDir::GetEntries() const
 	return m_stream->GetEntries();
 }
 
-bool vfsDir::Rename(const wxString& from, const wxString& to)
+bool vfsDir::Rename(const std::string& from, const std::string& to)
 {
 	return m_stream->Rename(from, to);
 }
 
-bool vfsDir::Remove(const wxString& path)
+bool vfsDir::Remove(const std::string& path)
 {
 	return m_stream->Remove(path);
 }
@@ -58,7 +58,7 @@ void vfsDir::Close()
 	m_stream.reset();
 }
 
-wxString vfsDir::GetPath() const
+std::string vfsDir::GetPath() const
 {
 	return m_stream->GetPath();
 }
