@@ -7,8 +7,6 @@
 #include "Loader/PSF.h"
 #include "stblib/stb_image.h"
 
-//#include "Emu/SysCalls/Dialogs/SaveDataList.h"
-
 extern Module cellSysutil;
 
 // Auxiliary Classes
@@ -75,7 +73,7 @@ void addSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, const std::st
 	saveEntry.title = psf.GetString("TITLE");
 	saveEntry.subtitle = psf.GetString("SUB_TITLE");
 	saveEntry.details = psf.GetString("DETAIL");
-	saveEntry.sizeKb = getSaveDataSize(saveDir)/1024;
+	saveEntry.sizeKB = getSaveDataSize(saveDir)/1024;
 	saveEntry.st_atime_ = 0; // TODO
 	saveEntry.st_mtime_ = 0; // TODO
 	saveEntry.st_ctime_ = 0; // TODO
@@ -102,6 +100,7 @@ void addNewSaveDataEntry(std::vector<SaveDataListEntry>& saveEntries, mem_ptr_t<
 
 u32 focusSaveDataEntry(const std::vector<SaveDataListEntry>& saveEntries, u32 focusPosition)
 {
+	// TODO: Get the correct index. Right now, this returns the first element of the list.
 	return 0;
 }
 
@@ -126,14 +125,97 @@ void setSaveDataEntries(std::vector<SaveDataListEntry>& saveEntries, mem_ptr_t<C
 	}
 }
 
+void getSaveDataStat(SaveDataListEntry entry, mem_ptr_t<CellSaveDataStatGet> statGet)
+{
+	if (entry.isNew)
+		statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_YES;
+	else
+		statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_NO;
+
+	statGet->bind = 0; // TODO ?
+	statGet->sizeKB = entry.sizeKB;
+	statGet->hddFreeSizeKB = 40000000; // 40 GB. TODO ?
+	statGet->sysSizeKB = 0; // TODO: This is the size of PARAM.SFO + PARAM.PDF
+	statGet->dir.st_atime_ = 0; // TODO ?
+	statGet->dir.st_mtime_ = 0; // TODO ?
+	statGet->dir.st_ctime_ = 0; // TODO ?
+	memcpy(statGet->dir.dirName, entry.dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
+
+	statGet->getParam.attribute = 0; // TODO ?
+	memcpy(statGet->getParam.title, entry.title.c_str(), CELL_SAVEDATA_SYSP_TITLE_SIZE);
+	memcpy(statGet->getParam.subTitle, entry.subtitle.c_str(), CELL_SAVEDATA_SYSP_SUBTITLE_SIZE);
+	memcpy(statGet->getParam.detail, entry.details.c_str(), CELL_SAVEDATA_SYSP_DETAIL_SIZE);
+	memcpy(statGet->getParam.listParam, entry.listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
+
+	statGet->fileNum = 0;
+	statGet->fileList.SetAddr(0);
+	statGet->fileListNum = 0;
+	std::string saveDir = "/dev_hdd0/home/00000001/savedata/" + entry.dirName; // TODO: Get the path of the current user
+	vfsDir dir(saveDir);
+	if (!dir.IsOpened())
+		return;
+
+	std::vector<CellSaveDataFileStat> fileEntries;
+	for(const DirEntryInfo* dirEntry = dir.Read(); dirEntry; dirEntry = dir.Read()) {
+		if (dirEntry->flags & DirEntry_TypeFile) {
+			if (dirEntry->name == "PARAM.SFO" || dirEntry->name == "PARAM.PFD")
+				continue;
+
+			statGet->fileNum++;
+			statGet->fileListNum++;
+			CellSaveDataFileStat fileEntry;
+			vfsFile file(saveDir + "/" + dirEntry->name);
+
+			if (dirEntry->name == "ICON0.PNG") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+			if (dirEntry->name == "ICON1.PAM") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+			if (dirEntry->name == "PIC1.PNG")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+			if (dirEntry->name == "SND0.AT3")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+			fileEntry.st_size = file.GetSize();
+			fileEntry.st_atime_ = 0; // TODO ?
+			fileEntry.st_mtime_ = 0; // TODO ?
+			fileEntry.st_ctime_ = 0; // TODO ?
+			memcpy(fileEntry.fileName, (const char*)dirEntry->name.mb_str(), CELL_SAVEDATA_FILENAME_SIZE);
+
+			fileEntries.push_back(fileEntry);
+		}
+	}
+
+	statGet->fileList.SetAddr(Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), sizeof(CellSaveDataFileStat)));
+	for (u32 i=0; i<fileEntries.size(); i++)
+		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
+}
+
+s32 readSaveDataFile(mem_ptr_t<CellSaveDataFileSet> fileSet, const std::string& saveDir)
+{
+	void* dest = NULL;
+	std::string filepath = saveDir + '/' + (char*)Memory.VirtualToRealAddr(fileSet->fileName_addr);
+	vfsFile file(filepath);
+
+	switch (fileSet->fileType)
+	{
+	case CELL_SAVEDATA_FILETYPE_SECUREFILE:
+	case CELL_SAVEDATA_FILETYPE_NORMALFILE:
+	case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:
+	case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:
+	case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:
+	case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:
+		dest = Memory.VirtualToRealAddr(fileSet->fileBuf_addr);
+		return file.Read(dest, min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
+
+	default:
+		ConLog.Error("readSaveDataFile: Unknown type! Aborting...");
+		return -1;
+	}
+}
+
 
 // Functions
 int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
 						  mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
-						  u32 container, u32 userdata)
+						  u32 container, u32 userdata_addr)
 {
 	cellSysutil.Warning("cellSaveDataListSave2(version=%d, setList_addr=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
 
 	if (!setList.IsGood() || !setBuf.IsGood() || !funcList.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
 		return CELL_SAVEDATA_ERROR_PARAM;
@@ -174,15 +256,41 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	}
 
 	funcList(result.GetAddr(), listGet.GetAddr(), listSet.GetAddr());
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataListSave2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
+	if (!listSet->fixedList.IsGood())
+		return CELL_SAVEDATA_ERROR_PARAM;
+
+	setSaveDataEntries(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
+	if (listSet->newData.IsGood())
+		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
+	if (saveEntries.size() == 0) {
+		ConLog.Warning("cellSaveDataListSave2: No save entries found!"); // TODO: Find a better way to handle this error
+		return CELL_SAVEDATA_RET_OK;
+	}
 
 	MemoryAllocator<CellSaveDataStatGet> statGet;
 	MemoryAllocator<CellSaveDataStatSet> statSet;
+	u32 focusIndex = focusSaveDataEntry(saveEntries, listSet->focusPosition);
+	// TODO: Display the dialog here
+	u32 selectedIndex = focusIndex; // TODO: Until the dialog is implemented, select always the focused entry
+	getSaveDataStat(saveEntries[selectedIndex], statGet.GetAddr());
+	result->userdata_addr = userdata_addr;
+
 	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
+	Memory.Free(statGet->fileList.GetAddr());
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
 
 	MemoryAllocator<CellSaveDataFileGet> fileGet;
 	MemoryAllocator<CellSaveDataFileSet> fileSet;
 	funcFile(result.GetAddr(), fileGet.GetAddr(), fileSet.GetAddr());
 
+	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
 	for (auto& entry : saveEntries) {
 		delete[] entry.iconBuf;
 		entry.iconBuf = nullptr;
@@ -193,10 +301,10 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 
 int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
 						  mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
-						  u32 container, u32 userdata)
+						  u32 container, u32 userdata_addr)
 {
 	cellSysutil.Warning("cellSaveDataListLoad2(version=%d, setList_addr=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
 	
 	if (!setList.IsGood() || !setBuf.IsGood() || !funcList.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
 		return CELL_SAVEDATA_ERROR_PARAM;
@@ -204,6 +312,10 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
 	MemoryAllocator<CellSaveDataListSet> listSet;
+	MemoryAllocator<CellSaveDataStatGet> statGet;
+	MemoryAllocator<CellSaveDataStatSet> statSet;
+	MemoryAllocator<CellSaveDataFileGet> fileGet;
+	MemoryAllocator<CellSaveDataFileSet> fileSet;
 
 	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
 	vfsDir dir(saveBaseDir);
@@ -237,34 +349,60 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	}
 
 	funcList(result.GetAddr(), listGet.GetAddr(), listSet.GetAddr());
-	
 	if (result->result < 0)	{
 		ConLog.Error("cellSaveDataListLoad2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	if (!listSet->fixedList.IsGood()) {
+	if (!listSet->fixedList.IsGood())
 		return CELL_SAVEDATA_ERROR_PARAM;
-	}
+
 	setSaveDataEntries(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
+	if (listSet->newData.IsGood())
+		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
+	if (saveEntries.size() == 0) {
+		ConLog.Warning("cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
+		return CELL_SAVEDATA_RET_OK;
+	}
+
 	u32 focusIndex = focusSaveDataEntry(saveEntries, listSet->focusPosition);
-
-	MemoryAllocator<CellSaveDataStatGet> statGet;
-	MemoryAllocator<CellSaveDataStatSet> statSet;
-
 	// TODO: Display the dialog here
-	ConLog.Warning("cellSaveDataListLoad2:");
+	u32 selectedIndex = focusIndex; // TODO: Until the dialog is implemented, select always the focused entry
+	getSaveDataStat(saveEntries[selectedIndex], statGet.GetAddr());
+	result->userdata_addr = userdata_addr;
 
-	statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_NO; // You can *never* load new data
-	//statGet->dir = 
-
-
-	
 	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
+	Memory.Free(statGet->fileList.GetAddr());
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
+	if (statSet->setParam.IsGood())
+		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 
-	MemoryAllocator<CellSaveDataFileGet> fileGet;
-	MemoryAllocator<CellSaveDataFileSet> fileSet;
-	funcFile(result.GetAddr(), fileGet.GetAddr(), fileSet.GetAddr());
+	fileGet->excSize = 0;
+	while(true)
+	{
+		funcFile(result.GetAddr(), fileGet.GetAddr(), fileSet.GetAddr());
+		if (result->result < 0)	{
+			ConLog.Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+			return CELL_SAVEDATA_ERROR_CBRESULT;
+		}
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			break;
+		switch (fileSet->fileOperation)
+		{
+		case CELL_SAVEDATA_FILEOP_READ:
+			fileGet->excSize = readSaveDataFile(fileSet.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
+			break;
+		case CELL_SAVEDATA_FILEOP_WRITE:
+		case CELL_SAVEDATA_FILEOP_DELETE:
+		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
+			ConLog.Warning("cellSaveDataListLoad2: TODO: fileSet->fileOperation not yet implemented");
+			break;
+		}
+	}
 
+	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
 	for (auto& entry : saveEntries) {
 		delete[] entry.iconBuf;
 		entry.iconBuf = nullptr;
