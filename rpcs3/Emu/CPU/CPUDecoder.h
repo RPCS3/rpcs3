@@ -326,10 +326,12 @@ public:
 				name.begin(),
 				name.end(),
 				m_name.begin(),
-				[](const char &a){
+				[](const char &a)
+				{
 					char b = tolower(a);
 					if (b == '_') b = '.';
-					return b; });
+					return b;
+				});
 	}
 
 	__forceinline const std::string& GetName() const
