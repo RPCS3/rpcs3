@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "StrFmt.h"
 
+static const std::string fmt::placeholder = "???";
+
+
 //wrapper to deal with advance sprintf formating options with automatic length finding
 //can't take strings by reference because of "va_start", so overload it with char *
 std::string fmt::FormatV(const char *fmt, va_list args)

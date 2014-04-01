@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include <ostream>
 #include <sstream>
 #include <cstdio>
@@ -15,7 +16,7 @@ namespace fmt{
 
 	struct empty_t{};
 
-	//static const string placeholder = "???";
+	extern const string placeholder;
 
 	// write `fmt` from `pos` to the first occurence of `fmt::placeholder` to
 	// the stream `os`. Then write `arg` to to the stream. If there's no
@@ -24,7 +25,7 @@ namespace fmt{
 	template<typename T>
 	empty_t write(const string &fmt, ostream &os, string::size_type &pos, T &&arg)
 	{
-		string::size_type ins = fmt.find(/*placeholder*/"???", pos);
+		string::size_type ins = fmt.find(placeholder, pos);
 
 		if (ins == string::npos)
 		{
@@ -92,14 +93,6 @@ namespace fmt{
 			length *= 2;
 		}
 		return str;
-	}
-
-	//TODO:remove
-	//fmt alias for FormatV unused at the moment
-	template <typename... Args>
-	auto fmt(Args&&... args) -> decltype(FormatV(std::forward<Args>(parameters)...))
-	{
-		return FormatV(std::forward<Args>(args)...);
 	}
 
 	//convert a wxString to a std::string encoded in utf8
