@@ -110,14 +110,14 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 			u32 res = GSR_SUCCESS;
 
 			// analyse
-			for (u32 j = i; j < g_static_funcs_list.GetCount(); j++) if (g_static_funcs_list[j].group == group)
+			for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++) if (g_static_funcs_list[j].group == group)
 			{
 				u32 count = g_static_funcs_list[j].found;
 
 				if (count == 0) // not found
 				{
 					// check if this function has been found with different pattern
-					for (u32 k = i; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
+					for (u32 k = 0; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
 					{
 						if (k != j && g_static_funcs_list[k].ptr == g_static_funcs_list[j].ptr)
 						{
@@ -137,7 +137,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				else if (count == 1) // found
 				{
 					// ensure that this function has NOT been found with different pattern
-					for (u32 k = i; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
+					for (u32 k = 0; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
 					{
 						if (k != j && g_static_funcs_list[k].ptr == g_static_funcs_list[j].ptr)
 						{
@@ -157,7 +157,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 			}
 
 			// clear data
-			for (u32 j = i; j < g_static_funcs_list.GetCount(); j++)
+			for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++)
 			{
 				if (g_static_funcs_list[j].group == group) g_static_funcs_list[j].found = 0;
 			}
