@@ -12,7 +12,7 @@ InstrBase<TO>* GetInstruction(T* list, const std::string& str)
 
 		if(instr)
 		{
-			if(instr->GetName().compare(str) == 0)
+			if(instr->GetName() == str)
 			{
 				return instr;
 			}
@@ -393,7 +393,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		if(str.compare("rtoc") == 0)
+		if(str == "rtoc")
 		{
 			arg.type = ARG_REG_R;
 			arg.value = 2;
@@ -409,8 +409,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			}
 		}
 
-		u32 reg;
-		sscanf(str.substr(1, str.length() - 1).c_str(), "%d", &reg);
+		u32 reg = std::stoul(str.substr(1, str.length() - 1));
 
 		if(reg >= 32)
 		{
@@ -418,7 +417,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		switch((char)str[0])
+		switch(str[0])
 		{
 		case 'r': arg.type = ARG_REG_R; break;
 		case 'f': arg.type = ARG_REG_F; break;
@@ -476,7 +475,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	return;
 	}
 
-	if(str.length() > 2 && str.substr(0, 2).compare("0x") == 0)
+	// Hex numbers
+	if(str.length() > 2 && str.substr(0, 2) == "0x")
 	{
 		for(u32 i=2; i<str.length(); ++i)
 		{
@@ -490,11 +490,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		u32 val;
-		sscanf(str.c_str(), "0x%x", &val);
-
 		arg.type = ARG_NUM16;
-		arg.value = val;
+		arg.value = std::stoul(str, nullptr, 16);
 		return;
 	}
 
@@ -507,11 +504,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 	}
 
-	u32 val;
-	sscanf(str.c_str(), "%d", &val);
-
 	arg.type = ARG_NUM;
-	arg.value = val;
+	arg.value = std::stoul(str);
 }
 
 void CompilePPUProgram::LoadArgs()
