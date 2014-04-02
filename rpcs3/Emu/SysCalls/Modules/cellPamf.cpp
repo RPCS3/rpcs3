@@ -524,7 +524,7 @@ int cellPamfEpIteratorGetEp(mem_ptr_t<CellPamfEpIterator> pIt, mem_ptr_t<CellPam
 	return CELL_OK;
 }
 
-int cellPamfEpIteratorMove(mem_ptr_t<CellPamfEpIterator> pIt, int steps, mem_ptr_t<CellPamfEp> pEp)
+int cellPamfEpIteratorMove(mem_ptr_t<CellPamfEpIterator> pIt, s32 steps, mem_ptr_t<CellPamfEp> pEp)
 {
 	cellPamf.Error("cellPamfEpIteratorMove(pIt_addr=0x%x, steps=%d, pEp_addr=0x%x)", pIt.GetAddr(), steps, pEp.GetAddr());
 	//TODO:

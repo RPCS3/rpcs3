@@ -398,7 +398,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
 	{
-		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width, ResolutionTable[i].height));
+		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.ToLE(), ResolutionTable[i].height.ToLE()));
 	}
 
 	cbox_gs_aspect->Append("4:3");
