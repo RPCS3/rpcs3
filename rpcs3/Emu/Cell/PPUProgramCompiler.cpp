@@ -386,7 +386,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	switch((char)str[0])
 	{
 	case 'r': case 'f': case 'v':
-
+	{
 		if(str.length() < 2)
 		{
 			arg.type = ARG_ERR;
@@ -426,8 +426,9 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 
 		arg.value = reg;
+	}
 	return;
-		
+
 	case 'c':
 		if(str.length() > 2 && str[1] == 'r')
 		{
