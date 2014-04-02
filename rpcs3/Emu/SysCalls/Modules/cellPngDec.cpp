@@ -38,7 +38,7 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	case const_se_t<u32, CELL_PNGDEC_FILE>::value:
 		// Get file descriptor
 		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, NULL, 0);
+		int ret = cellFsOpen(src->fileName_addr, 0, fd.GetAddr(), NULL, 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
@@ -94,8 +94,8 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 		Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 	case CELL_PNGDEC_FILE:
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
 		break;
 	}
 
@@ -148,8 +148,8 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 		Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize());
 		break;
 	case CELL_PNGDEC_FILE:
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, png.GetAddr(), png.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, png.GetAddr(), png.GetSize(), nread.GetAddr());
 		break;
 	}
 

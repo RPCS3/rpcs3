@@ -1,20 +1,21 @@
 #pragma once
+#include <vector>
 #include "PPUInstrTable.h"
 #include "Loader/ELF64.h"
 
 enum ArgType
 {
-	ARG_ERR		= 0,
-	ARG_NUM		= 1 << 0,
-	ARG_NUM16	= 1 << 1,
-	ARG_TXT		= 1 << 2,
-	ARG_REG_R	= 1 << 3,
-	ARG_REG_F	= 1 << 4,
-	ARG_REG_V	= 1 << 5,
-	ARG_REG_CR	= 1 << 6,
-	ARG_BRANCH	= 1 << 7,
-	ARG_INSTR	= 1 << 8,
-	ARG_IMM		= ARG_NUM | ARG_NUM16 | ARG_BRANCH,
+	ARG_ERR     = 0,
+	ARG_NUM     = 1 << 0,
+	ARG_NUM16   = 1 << 1,
+	ARG_TXT     = 1 << 2,
+	ARG_REG_R   = 1 << 3,
+	ARG_REG_F   = 1 << 4,
+	ARG_REG_V   = 1 << 5,
+	ARG_REG_CR  = 1 << 6,
+	ARG_BRANCH  = 1 << 7,
+	ARG_INSTR   = 1 << 8,
+	ARG_IMM     = ARG_NUM | ARG_NUM16 | ARG_BRANCH,
 };
 
 struct Arg
@@ -35,7 +36,7 @@ struct SectionInfo
 {
 	Elf64_Shdr shdr;
 	std::string name;
-	Array<u8> code;
+	std::vector<u8> code;
 	u32 section_num;
 
 	SectionInfo(const std::string& name);
@@ -46,14 +47,13 @@ struct SectionInfo
 
 struct ProgramInfo
 {
-	Array<u8> code;
+	std::vector<u8> code;
 	Elf64_Phdr phdr;
 	bool is_preload;
 
 	ProgramInfo()
 	{
 		is_preload = false;
-		code.Clear();
 		memset(&phdr, 0, sizeof(Elf64_Phdr));
 	}
 };
@@ -92,9 +92,9 @@ class CompilePPUProgram
 	wxTextCtrl* m_hex_list;
 	wxTextCtrl* m_err_list;
 	bool m_error;
-	Array<u32> m_code;
+	std::vector<u32> m_code;
 	bool m_end_args;
-	Array<Branch> m_branches;
+	std::vector<Branch> m_branches;
 	s32 m_branch_pos;
 	u32 m_text_addr;
 	std::string m_file_path;
@@ -111,8 +111,8 @@ class CompilePPUProgram
 		}
 	};
 
-	Array<SpData> m_sp_string;
-	Array<Arg> m_args;
+	std::vector<SpData> m_sp_string;
+	std::vector<Arg> m_args;
 	u32 m_cur_arg;
 
 public:
