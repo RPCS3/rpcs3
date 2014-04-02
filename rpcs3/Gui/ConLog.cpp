@@ -212,19 +212,24 @@ void LogFrame::Task()
 
 		const LogPacket item = LogBuffer.Pop();
 
-		while(m_log.GetItemCount() > max_item_count)
+		wxListView& m_log = this->m_log; //makes m_log capturable by the lambda
+		//queue adding the log message to the gui element in the main thread
+		wxTheApp->GetTopWindow()->GetEventHandler()->CallAfter([item, &m_log]()
 		{
-			m_log.DeleteItem(0);
-			wxThread::Yield();
-		}
+			while (m_log.GetItemCount() > max_item_count)
+			{
+				m_log.DeleteItem(0);
+				wxThread::Yield();
+			}
 
-		const int cur_item = m_log.GetItemCount();
+			const int cur_item = m_log.GetItemCount();
 
-		m_log.InsertItem(cur_item, fmt::FromUTF8(item.m_prefix));
-		m_log.SetItem(cur_item, 1, fmt::FromUTF8(item.m_text));
-		m_log.SetItemTextColour(cur_item, fmt::FromUTF8(item.m_colour));
-		m_log.SetColumnWidth(0, -1); // crashes on exit
-		m_log.SetColumnWidth(1, -1);
+			m_log.InsertItem(cur_item, fmt::FromUTF8(item.m_prefix));
+			m_log.SetItem(cur_item, 1, fmt::FromUTF8(item.m_text));
+			m_log.SetItemTextColour(cur_item, fmt::FromUTF8(item.m_colour));
+			m_log.SetColumnWidth(0, -1);
+			m_log.SetColumnWidth(1, -1);
+		});
 
 #ifdef _WIN32
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
