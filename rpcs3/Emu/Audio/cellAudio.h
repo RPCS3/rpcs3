@@ -39,11 +39,6 @@ enum
 	CELL_SND3_ERROR_RESERVEDVOICE				= 0x8031030e,
 	CELL_SND3_ERROR_REQUESTQUEFULL				= 0x8031030f,
 	CELL_SND3_ERROR_OUTPUTMODE					= 0x80310310,
-
-	//libsynt2 Error Codes
-	CELL_SOUND_SYNTH2_ERROR_FATAL				= 0x80310201,
-	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER	= 0x80310202,
-	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED	= 0x80310203,
 };
 
 // constants
@@ -174,15 +169,4 @@ struct CellSnd3RequestQueueCtx
 	be_t<u32> frontQueueSize;
 	void *rearQueue;
 	be_t<u32> rearQueueSize;
-};
-
-//libsynt2 datatypes
-struct CellSoundSynth2EffectAttr
-{ 
-	be_t<u16> core;
-	be_t<u16> mode;
-	be_t<s16> depth_L;
-	be_t<s16> depth_R;
-	be_t<u16> delay;
-	be_t<u16> feedback;
 };

@@ -153,15 +153,6 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	if(!sys_fs.CheckId(fd, orig_file)) return;
 
 	std::string path = orig_file->GetPath();
-	std::string::size_type first_slash = path.find('/');
-	if (first_slash == std::string::npos)
-	{
-		path = "";
-	}
-	else
-	{
-		path = path.substr(first_slash+1,std::string::npos);
-	}
 
 	u64 nbytes = aio->size;
 	u32 buf_addr = aio->buf_addr;

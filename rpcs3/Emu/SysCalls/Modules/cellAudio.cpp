@@ -7,8 +7,7 @@
 #include "Emu/Audio/AudioDumper.h"
 
 void cellAudio_init();
-void cellAudio_unload();
-Module cellAudio(0x0011, cellAudio_init, nullptr, cellAudio_unload);
+Module cellAudio(0x0011, cellAudio_init);
 
 static SMutexGeneral audioMutex;
 
@@ -57,8 +56,8 @@ int cellAudioInit()
 			uint oal_buffer_offset = 0;
 			uint oal_buffer_size = sizeof(buffer) / sizeof(float);
 			std::unique_ptr<u16[]> oal_buffer[32];
-			SQueue<u16*, sizeof(oal_buffer) / sizeof(oal_buffer[0])> queue;
-			for (u32 i = 0; i < queue.GetSize(); i++)
+			SQueue<u16*, 31> queue;
+			for (u32 i = 0; i < sizeof(oal_buffer) / sizeof(oal_buffer[0]); i++)
 			{
 				oal_buffer[i] = std::unique_ptr<u16[]>(new u16[oal_buffer_size]);
 				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(u16));
@@ -118,7 +117,7 @@ int cellAudioInit()
 
 				m_config.counter++;
 
-				const u32 oal_pos = m_config.counter % queue.GetSize();
+				const u32 oal_pos = m_config.counter % (sizeof(oal_buffer) / sizeof(oal_buffer[0]));
 
 				if (Emu.IsPaused())
 				{
@@ -1039,110 +1038,6 @@ s32 cellSnd3SMFGetKeyOnID() //u32 smfID, u32 midiChannel, u32 *keyOnID
 	return CELL_OK;
 }
 
-                                           //*libsynth2 Functions, NON active in this moment*//
-
-s32 cellSoundSynth2Config(s16 param, s32 value)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-s32 cellSoundSynth2Init( s16 flag)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-s32 cellSoundSynth2Exit()
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-void cellSoundSynth2SetParam(u16 register, u16 value)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	//TODO
-}
-
-u16 cellSoundSynth2GetParam() //u16 register
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-void cellSoundSynth2SetSwitch(u16 register, u32 value)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	//TODO
-}
-
-u32 cellSoundSynth2GetSwitch() //u16 register
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-u32 cellSoundSynth2SetAddr(u16 register, u32 value)
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-u32 cellSoundSynth2GetAddr() //u16 register
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-s32 cellSoundSynth2SetEffectAttr() //s16 bus, CellSoundSynth2EffectAttr *attr
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-s32 cellSoundSynth2SetEffectMode() //s16 bus, CellSoundSynth2EffectAttr *attr
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-void cellSoundSynth2SetCoreAttr(u16 entry, u16 value) 
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	//TODO
-}
-
-s32 cellSoundSynth2Generate() //u16 samples, float *left_buffer, float *right_buffer, float *left_rear, float *right_rear
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-s32 cellSoundSynth2VoiceTrans() //s16 channel, u16 mode, u8 *m_addr, u32 s_addr, u32 size
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return 0;
-}
-
-u16 cellSoundSynth2Note2Pitch() //u16 center_note, u16 center_fine, u16 note, s16 fine
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-u16 cellSoundSynth2Pitch2Note() //u16 center_note, u16 center_fine, u16 pitch
-{
-	UNIMPLEMENTED_FUNC(cellAudio);
-	return CELL_OK; //it's NOT real value
-	//TODO
-}
-
-
 void cellAudio_init()
 {
 	cellAudio.AddFunc(0x0b168f92, cellAudioInit);
@@ -1161,11 +1056,4 @@ void cellAudio_init()
 	cellAudio.AddFunc(0xdab029aa, cellAudioAddData);
 	cellAudio.AddFunc(0xe4046afe, cellAudioGetPortBlockTag);
 	cellAudio.AddFunc(0xff3626fd, cellAudioRemoveNotifyEventQueue);
-
-	//TODO: Find addresses for libmixer, libsnd3 and libsynth2 functions
-}
-
-void cellAudio_unload()
-{
-	//StaticFinalize();
 }
