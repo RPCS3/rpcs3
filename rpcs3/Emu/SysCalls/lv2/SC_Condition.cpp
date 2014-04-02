@@ -35,7 +35,7 @@ int sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 	u32 id = sys_cond.GetNewId(cond);
 	cond_id = id;
 	mutex->cond_count++;
-	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", wxString(attr->name, 8).wx_str(), mutex_id, cond_id.GetValue());
+	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, cond_id.GetValue());
 
 	return CELL_OK;
 }

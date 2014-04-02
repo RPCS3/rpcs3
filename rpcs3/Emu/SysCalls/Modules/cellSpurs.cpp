@@ -95,7 +95,7 @@ int cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 	if(size > 15)
 		return CELL_SPURS_CORE_ERROR_INVAL;
 
-	attr->attr->_setNamePrefix(Memory.ReadString(prefix.GetAddr(), size), size);
+	attr->attr->_setNamePrefix(Memory.ReadString(prefix.GetAddr(), size).c_str(), size);
 
 	return CELL_OK;
 }

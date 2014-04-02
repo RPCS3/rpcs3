@@ -163,16 +163,16 @@ void MainFrame::AddPane(wxWindow* wind, const wxString& caption, int flags)
 
 void MainFrame::DoSettings(bool load)
 {
-	IniEntry<wxString> ini;
+	IniEntry<std::string> ini;
 	ini.Init("Settings", "MainFrameAui");
 
 	if(load)
 	{
-		m_aui_mgr.LoadPerspective(ini.LoadValue(m_aui_mgr.SavePerspective()));
+		m_aui_mgr.LoadPerspective(fmt::FromUTF8(ini.LoadValue(fmt::ToUTF8(m_aui_mgr.SavePerspective()))));
 	}
 	else
 	{
-		ini.SaveValue(m_aui_mgr.SavePerspective());
+		ini.SaveValue(fmt::ToUTF8(m_aui_mgr.SavePerspective()));
 	}
 }
 
@@ -228,7 +228,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	std::string filePath = ctrl.GetPath().ToStdString();
+	wxString filePath = ctrl.GetPath();
 	wxFile pkg_f(filePath, wxFile::read); // TODO: Use VFS to install PKG files
 
 	if (pkg_f.IsOpened())
@@ -271,7 +271,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	Emu.SetPath(ctrl.GetPath());
+	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
 	ConLog.Success("(S)ELF: boot done.");
@@ -862,7 +862,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	//send_exit.Enable(false);
 	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount();
 
-	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", wxString(m_sys_menu_opened ? "close" : "open").wx_str()));
+	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 
@@ -887,7 +887,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 		case 'E': case 'e': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
 		case 'P': case 'p': if(Emu.IsRunning()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
-		case 'R': case 'r': if(!Emu.m_path.IsEmpty()) {Emu.Stop(); Emu.Run();} return;
+		case 'R': case 'r': if(!Emu.m_path.empty()) {Emu.Stop(); Emu.Run();} return;
 		}
 	}
 

@@ -6,7 +6,7 @@ BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
 END_EVENT_TABLE()
 
 DbgConsole::DbgConsole()
-	: FrameBase(nullptr, wxID_ANY, "DbgConsole", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
+	: FrameBase(nullptr, wxID_ANY, "DbgConsole", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
 	, ThreadBase("DbgConsole thread")
 	, m_output(nullptr)
 {
@@ -28,7 +28,7 @@ DbgConsole::~DbgConsole()
 	m_dbg_buffer.Flush();
 }
 
-void DbgConsole::Write(int ch, const wxString& text)
+void DbgConsole::Write(int ch, const std::string& text)
 {
 	while (m_dbg_buffer.IsBusy())
 	{
@@ -65,10 +65,10 @@ void DbgConsole::Task()
 		DbgPacket packet = m_dbg_buffer.Pop();
 		m_console->SetDefaultStyle(packet.m_ch == 1 ? *m_color_red : *m_color_white);
 		m_console->SetInsertionPointEnd();
-		m_console->WriteText(packet.m_text);
+		m_console->WriteText(fmt::FromUTF8(packet.m_text));
 
 		if (m_output && Ini.HLESaveTTY.GetValue())
-			m_output->Write(packet.m_text);
+			m_output->Write(fmt::FromUTF8(packet.m_text));
 
 		if(!DbgConsole::IsShown()) Show();
 	}

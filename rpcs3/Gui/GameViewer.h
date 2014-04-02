@@ -7,13 +7,13 @@ struct Column
 	u32 pos;
 	u32 width;
 	bool shown;
-	wxArrayString data;
+	std::vector<std::string> data;
 
-	const wxString name;
+	const std::string name;
 	const u32 def_pos;
 	const u32 def_width;
 
-	Column(const u32 _def_pos, const u32 _def_width, const wxString& _name)
+	Column(const u32 _def_pos, const u32 _def_width, const std::string& _name)
 		: def_pos(_def_pos)
 		, def_width(_def_width)
 		, pos(_def_pos)
@@ -21,7 +21,7 @@ struct Column
 		, shown(true)
 		, name(_name)
 	{
-		data.Clear();
+		data.clear();
 	}
 
 };
@@ -91,23 +91,23 @@ public:
 
 	void Update(std::vector<GameInfo>& game_data)
 	{
-		m_col_name->data.Clear();
-		m_col_serial->data.Clear();
-		m_col_fw->data.Clear();
-		m_col_app_ver->data.Clear();
-		m_col_category->data.Clear();
-		m_col_path->data.Clear();
+		m_col_name->data.clear();
+		m_col_serial->data.clear();
+		m_col_fw->data.clear();
+		m_col_app_ver->data.clear();
+		m_col_category->data.clear();
+		m_col_path->data.clear();
 
 		if(m_columns.GetCount() == 0) return;
 
 		for(const auto& game : game_data)
 		{
-			m_col_name->data.Add(game.name);
-			m_col_serial->data.Add(game.serial);
-			m_col_fw->data.Add(game.fw);
-			m_col_app_ver->data.Add(game.app_ver);
-			m_col_category->data.Add(game.category);
-			m_col_path->data.Add(game.root);
+			m_col_name->data.push_back(game.name);
+			m_col_serial->data.push_back(game.serial);
+			m_col_fw->data.push_back(game.fw);
+			m_col_app_ver->data.push_back(game.app_ver);
+			m_col_category->data.push_back(game.category);
+			m_col_path->data.push_back(game.root);
 		}
 	}
 
@@ -118,7 +118,7 @@ public:
 		for(u32 i=0, c=0; i<c_col.GetCount(); ++i)
 		{
 			if(!c_col[i].shown) continue;
-			list->InsertColumn(c++, c_col[i].name, 0, c_col[i].width);
+			list->InsertColumn(c++, fmt::FromUTF8(c_col[i].name), 0, c_col[i].width);
 		}
 	}
 
@@ -135,15 +135,15 @@ public:
 				return;
 			}
 
-			for(u32 i=0; i<col->data.GetCount(); ++i)
+			for(u32 i=0; i<col->data.size(); ++i)
 			{
 				if(list->GetItemCount() <= (int)i) list->InsertItem(i, wxEmptyString);
-				list->SetItem(i, c, col->data[i]);
+				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
 			}			
 		}
 	}
 
-	void LoadSave(bool isLoad, const wxString& path, wxListView* list = NULL)
+	void LoadSave(bool isLoad, const std::string& path, wxListView* list = NULL)
 	{
 		if(isLoad) Init();
 		else if(list)
@@ -215,8 +215,8 @@ public:
 
 class GameViewer : public wxListView
 {
-	wxString m_path;
-	wxArrayString m_games;
+	std::string m_path;
+	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
 

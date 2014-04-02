@@ -172,7 +172,7 @@ public:
 				disasm->dump_pc = sh_addr + off;
 				decoder->Decode(Memory.Read32(disasm->dump_pc));
 
-				arr[id][sh].Add(disasm->last_opcode);
+				arr[id][sh].Add(fmt::FromUTF8(disasm->last_opcode));
 
 				off += (cores - id) * 4;
 				off += id * 4;
@@ -297,7 +297,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	vfsLocalFile& f_elf = *new vfsLocalFile(nullptr);
 	f_elf.Open(Emu.m_path);
 
-	ConLog.Write("path: %s", Emu.m_path.wx_str());
+	ConLog.Write("path: %s", Emu.m_path.c_str());
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
 
@@ -306,7 +306,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		ConLog.Error("Corrupted ELF!");
 		return;
 	}
-	wxArrayString name_arr;
+	std::vector<std::string> name_arr;
 
 	switch(ehdr.GetClass())
 	{
@@ -384,10 +384,10 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		const u64 sh_size = (ElfType64 ? (*shdr_arr_64)[sh].sh_size : (*shdr_arr_32)[sh].sh_size) / 4;
 		const u64 sh_addr = (ElfType64 ? (*shdr_arr_64)[sh].sh_addr : (*shdr_arr_32)[sh].sh_addr);
 
-		const wxString name = sh < name_arr.GetCount() ? name_arr[sh] : "Unknown";
+		const std::string name = sh < name_arr.size() ? name_arr[sh] : "Unknown";
 
-		fd.Write(wxString::Format("Start of section header %s[%d] (instructions count: %d)\n", name.wx_str(), sh, sh_size));
-		prog_dial.Update(0, vsize, wxString::Format("Disasm %s section", name.wx_str()));
+		fd.Write(wxString::Format("Start of section header %s[%d] (instructions count: %d)\n", name.c_str(), sh, sh_size));
+		prog_dial.Update(0, vsize, wxString::Format("Disasm %s section", name.c_str()));
 
 		if(Memory.IsGoodAddr(sh_addr))
 		{
@@ -396,10 +396,10 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 				disasm->dump_pc = addr;
 				decoder->Decode(Memory.Read32(disasm->dump_pc));
 				fd.Write("\t");
-				fd.Write(disasm->last_opcode);
+				fd.Write(fmt::FromUTF8(disasm->last_opcode));
 			}
 		}
-		fd.Write(wxString::Format("End of section header %s[%d]\n\n", name.wx_str(), sh));
+		fd.Write(wxString::Format("End of section header %s[%d]\n\n", name.c_str(), sh));
 	}
 
 	prog_dial.Close();
@@ -481,7 +481,7 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 
 	if(diag.ShowModal() == wxID_OK)
 	{
-		sscanf(p_pc->GetLabel(), "%llx", &CPU.PC);
+		sscanf(fmt::ToUTF8(p_pc->GetLabel()).c_str(), "%llx", &CPU.PC);
 		Resume();
 	}
 }

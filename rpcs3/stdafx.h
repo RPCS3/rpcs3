@@ -262,6 +262,7 @@ enum Status
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
+#include "Utilities/StrFmt.h"
 
 #include "AppConnector.h"
 

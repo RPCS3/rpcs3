@@ -11,7 +11,7 @@ protected:
 		wxWindow* parent,
 		wxWindowID id = wxID_ANY,
 		const wxString& framename = "UnknownFrame",
-		const wxString& ininame = wxEmptyString,
+		const std::string& ininame = "",
 		wxSize defsize = wxDefaultSize,
 		wxPoint defposition = wxDefaultPosition,
 		long style = wxDEFAULT_FRAME_STYLE,
@@ -20,7 +20,7 @@ protected:
 		, m_default_info(defsize, defposition)
 		, m_is_skip_resize(is_skip_resize)
 	{
-		m_ini.Init(ininame.IsEmpty() ? framename : ininame, "GuiSettings");
+		m_ini.Init(ininame.empty() ? fmt::ToUTF8(framename) : ininame, "GuiSettings");
 		LoadInfo();
 
 		Connect(GetId(), wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FrameBase::OnClose));

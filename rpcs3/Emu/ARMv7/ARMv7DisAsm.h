@@ -27,15 +27,15 @@ protected:
 		return dump_pc + imm;
 	}
 
-	wxString GetRegsListString(u16 regs_list)
+	std::string GetRegsListString(u16 regs_list)
 	{
-		wxString regs_str;
+		std::string regs_str;
 
 		for(u16 mask=0x1, i=0; mask; mask <<= 1, i++)
 		{
 			if(regs_list & mask)
 			{
-				if(!regs_str.IsEmpty())
+				if(!regs_str.empty())
 				{
 					regs_str += ", ";
 				}
@@ -54,12 +54,12 @@ protected:
 
 	void PUSH(u16 regs_list)
 	{
-		Write(wxString::Format("push {%s}", GetRegsListString(regs_list).mb_str()));
+		Write(fmt::Format("push {%s}", GetRegsListString(regs_list).c_str()));
 	}
 
 	void POP(u16 regs_list)
 	{
-		Write(wxString::Format("pop {%s}", GetRegsListString(regs_list).mb_str()));
+		Write(fmt::Format("pop {%s}", GetRegsListString(regs_list).c_str()));
 	}
 
 	void NOP()
@@ -71,26 +71,26 @@ protected:
 	{
 		if((cond & 0xe) == 0xe)
 		{
-			Write(wxString::Format("b 0x%x", DisAsmBranchTarget(imm) + intstr_size));
+			Write(fmt::Format("b 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 		}
 		else
 		{
-			Write(wxString::Format("b[%s] 0x%x", g_arm_cond_name[cond], DisAsmBranchTarget(imm) + intstr_size));
+			Write(fmt::Format("b[%s] 0x%x", g_arm_cond_name[cond], DisAsmBranchTarget(imm) + intstr_size));
 		}
 	}
 
 	virtual void CBZ(u8 op, u32 imm, u8 rn, u8 intstr_size)
 	{
-		Write(wxString::Format("cb%sz 0x%x,%s", (op ? "n" : ""), DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
+		Write(fmt::Format("cb%sz 0x%x,%s", (op ? "n" : ""), DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
 	}
 
 	void BL(u32 imm, u8 intstr_size)
 	{
-		Write(wxString::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
+		Write(fmt::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 	}
 
 	void UNK(const u16 code0, const u16 code1)
 	{
-		Write(wxString::Format("Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1));
+		Write(fmt::Format("Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1));
 	}
 };

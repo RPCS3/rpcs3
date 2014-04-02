@@ -737,7 +737,7 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	s_rescInternalInstance->m_fragmentUcodeEA_addr = fragmentShader.GetAddr();
 
 	MemoryAllocator<be_t<u32>> dstOffset;
-	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset);
+	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset.GetAddr());
 
 	for(int i=0; i<GetNumColorBuffers(); i++)
 	{

@@ -407,57 +407,57 @@ void Module::SetName(const std::string& name)
 	m_name = name;
 }
 
-void Module::Log(const u32 id, wxString fmt, ...)
+void Module::Log(const u32 id, std::string fmt, ...)
 {
 	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + wxString::Format("[%d]: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
+		ConLog.Write(GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
 		va_end(list);
 	}
 }
 
-void Module::Log(wxString fmt, ...)
+void Module::Log(std::string fmt, ...)
 {
 	if(Ini.HLELogging.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list).wx_str());
+		ConLog.Write(GetName() + ": " + fmt::FormatV(fmt, list));
 		va_end(list);
 	}
 }
 
-void Module::Warning(const u32 id, wxString fmt, ...)
+void Module::Warning(const u32 id, std::string fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
+	ConLog.Warning(GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
 	va_end(list);
 }
 
-void Module::Warning(wxString fmt, ...)
+void Module::Warning(std::string fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Warning(GetName() + " warning: " + wxString::FormatV(fmt, list).wx_str());
+	ConLog.Warning(GetName() + " warning: " + fmt::FormatV(fmt, list));
 	va_end(list);
 }
 
-void Module::Error(const u32 id, wxString fmt, ...)
+void Module::Error(const u32 id, std::string fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + wxString::Format("[%d] error: ", id).wx_str() + wxString::FormatV(fmt, list).wx_str());
+	ConLog.Error(GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
 	va_end(list);
 }
 
-void Module::Error(wxString fmt, ...)
+void Module::Error(std::string fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
-	ConLog.Error(GetName() + " error: " + wxString::FormatV(fmt, list).wx_str());
+	ConLog.Error(GetName() + " error: " + fmt::FormatV(fmt, list));
 	va_end(list);
 }
 

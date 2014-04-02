@@ -152,7 +152,7 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 bool ELF64Loader::LoadShdrInfo(s64 offset)
 {
 	shdr_arr.Clear();
-	shdr_name_arr.Clear();
+	shdr_name_arr.clear();
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
 	{
 		ConLog.Warning("LoadShdr64 error: Section header offset is null!");
@@ -185,7 +185,7 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 			name.AddCpy(c);
 		}
 		name.AddCpy('\0');
-		shdr_name_arr.Add(wxString(name.GetPtr(), wxConvUTF8));
+		shdr_name_arr.push_back(std::string(name.GetPtr()));
 	}
 
 	return true;
@@ -336,15 +336,15 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						stub.s_nid = re(stub.s_nid);
 						stub.s_text = re(stub.s_text);
 
-						const wxString& module_name = Memory.ReadString(stub.s_modulename);
-						Module* module = GetModuleByName(module_name.ToStdString());
+						const std::string& module_name = Memory.ReadString(stub.s_modulename);
+						Module* module = GetModuleByName(module_name);
 						if(module)
 						{
 							//module->SetLoaded();
 						}
 						else
 						{
-							ConLog.Warning("Unknown module '%s'", module_name.wx_str());
+							ConLog.Warning("Unknown module '%s'", module_name.c_str());
 						}
 
 #ifdef LOADER_DEBUG
@@ -354,7 +354,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						ConLog.Write("*** unk0: 0x%x", stub.s_unk0);
 						ConLog.Write("*** unk1: 0x%x", stub.s_unk1);
 						ConLog.Write("*** imports: %d", stub.s_imports);
-						ConLog.Write("*** module name: %s [0x%x]", module_name.wx_str(), stub.s_modulename);
+						ConLog.Write("*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename);
 						ConLog.Write("*** nid: 0x%x", stub.s_nid);
 						ConLog.Write("*** text: 0x%x", stub.s_text);
 #endif
@@ -371,7 +371,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 							{
 								if(!module->Load(nid))
 								{
-									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name.wx_str());
+									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name.c_str());
 									SysCalls::DoFunc(nid);
 								}
 							}
@@ -415,12 +415,10 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
 
-		if(i < shdr_name_arr.GetCount())
+		if(i < shdr_name_arr.size())
 		{
-			const wxString& name = shdr_name_arr[i];
-
 #ifdef LOADER_DEBUG
-			ConLog.Write("Name: %s", shdr_name_arr[i].wx_str());
+			ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
 #endif
 		}
 

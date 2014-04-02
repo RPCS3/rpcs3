@@ -98,15 +98,15 @@ class Emulator
 	EmuInfo m_info;
 
 public:
-	wxString m_path;
-	wxString m_elf_path;
-	wxString m_title_id;
+	std::string m_path;
+	std::string m_elf_path;
+	std::string m_title_id;
 
 	Emulator();
 
 	void Init();
-	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
-	void SetTitleID(const wxString& id);
+	void SetPath(const std::string& path, const std::string& elf_path = "");
+	void SetTitleID(const std::string& id);
 
 	CPUThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }

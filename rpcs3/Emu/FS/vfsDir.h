@@ -8,18 +8,18 @@ private:
 
 public:
 	vfsDir();
-	vfsDir(const wxString path);
+	vfsDir(const std::string& path);
 
-	virtual bool Open(const wxString& path) override;
+	virtual bool Open(const std::string& path) override;
 	virtual bool IsOpened() const override;
-	virtual bool IsExists(const wxString& path) const override;
+	virtual bool IsExists(const std::string& path) const override;
 	virtual const Array<DirEntryInfo>& GetEntries() const override;
 	virtual void Close() override;
-	virtual wxString GetPath() const override;
+	virtual std::string GetPath() const override;
 
-	virtual bool Create(const wxString& path) override;
+	virtual bool Create(const std::string& path) override;
 	//virtual bool Create(const DirEntryInfo& info) override;
-	virtual bool Rename(const wxString& from, const wxString& to) override;
-	virtual bool Remove(const wxString& path) override;
+	virtual bool Rename(const std::string& from, const std::string& to) override;
+	virtual bool Remove(const std::string& path) override;
 	virtual const DirEntryInfo* Read() override;
 };

@@ -47,7 +47,7 @@ void Rpcs3App::OnArguments()
 		// Force this value to be true
 		Ini.HLEExitOnStop.SetValue(true);
 
-		Emu.SetPath(argv[1]);
+		Emu.SetPath(fmt::ToUTF8(argv[1]));
 		Emu.Load();
 		Emu.Run();
 	}

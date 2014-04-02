@@ -22,7 +22,7 @@ struct SELF_KEY {
 	u8 priv[0x15];
 	u32 curve_type;
 
-	SELF_KEY(u64 ver, u16 rev, u32 type, wxString e, wxString r, wxString pb, wxString pr, u32 ct)
+	SELF_KEY(u64 ver, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
 	{
 		version = ver;
 		revision = rev;

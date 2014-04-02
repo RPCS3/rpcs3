@@ -17,7 +17,7 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		return (GetFName() + wxString::Format("[0x%08llx]", PC)).ToStdString();
+		return (GetFName() + fmt::Format("[0x%08llx]", PC));
 	}
 
 protected:

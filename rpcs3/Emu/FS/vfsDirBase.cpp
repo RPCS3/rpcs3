@@ -11,7 +11,7 @@ vfsDirBase::~vfsDirBase()
 {
 }
 
-bool vfsDirBase::Open(const wxString& path)
+bool vfsDirBase::Open(const std::string& path)
 {
 	if(IsOpened())
 		Close();
@@ -26,12 +26,12 @@ bool vfsDirBase::Open(const wxString& path)
 
 bool vfsDirBase::IsOpened() const
 {
-	return !m_cwd.IsEmpty();
+	return !m_cwd.empty();
 }
 
-bool vfsDirBase::IsExists(const wxString& path) const
+bool vfsDirBase::IsExists(const std::string& path) const
 {
-	return wxDirExists(path);
+	return wxDirExists(fmt::FromUTF8(path));
 }
 
 const Array<DirEntryInfo>& vfsDirBase::GetEntries() const
@@ -41,11 +41,11 @@ const Array<DirEntryInfo>& vfsDirBase::GetEntries() const
 
 void vfsDirBase::Close()
 {
-	m_cwd = wxEmptyString;
+	m_cwd = "";
 	m_entries.Clear();
 }
 
-wxString vfsDirBase::GetPath() const
+std::string vfsDirBase::GetPath() const
 {
 	return m_cwd;
 }

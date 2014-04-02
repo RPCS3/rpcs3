@@ -92,8 +92,8 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* 
 
 	if(ShowModal() == wxID_OK)
 	{
-		wxString reg = t1_register->GetStringSelection();
-		wxString value = t2_value->GetValue();
+		std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
+		std::string value = fmt::ToUTF8(t2_value->GetValue());
 		if (!CPU->WriteRegString(reg,value))
 			wxMessageBox("This value could not be converted.\nNo changes were made.","Error");
 	}
@@ -101,6 +101,6 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* 
 
 void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 {
-	wxString reg = t1_register->GetStringSelection();
-	t2_value->SetValue(CPU->ReadRegString(reg));
+	std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
+	t2_value->SetValue(fmt::FromUTF8(CPU->ReadRegString(reg)));
 }

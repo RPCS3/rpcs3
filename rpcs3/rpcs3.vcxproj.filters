@@ -484,6 +484,9 @@
     <ClCompile Include="Emu\Cell\SPURSManager.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\StrFmt.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -692,6 +695,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPURSManager.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\StrFmt.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

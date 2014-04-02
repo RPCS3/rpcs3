@@ -83,7 +83,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				}
 				if (found)
 				{
-					ConLog.Write("Function '%s' hooked (addr=0x%x)", wxString(g_static_funcs_list[j].name).wx_str(), i * 4 + base);
+					ConLog.Write("Function '%s' hooked (addr=0x%x)", g_static_funcs_list[j].name, i * 4 + base);
 					g_static_funcs_list[j].found++;
 					data[i+0] = re32(0x39600000 | j); // li r11, j
 					data[i+1] = se32(0x44000003); // sc 3
@@ -127,7 +127,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 					if (count == 0)
 					{
 						res |= GSR_MISSING;
-						ConLog.Error("Function '%s' not found", wxString(g_static_funcs_list[j].name).wx_str());
+						ConLog.Error("Function '%s' not found", g_static_funcs_list[j].name);
 					}
 					else if (count > 1)
 					{
@@ -144,7 +144,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 							if (g_static_funcs_list[k].found)
 							{
 								res |= GSR_EXCESS;
-								ConLog.Error("Function '%s' hooked twice", wxString(g_static_funcs_list[j].name).wx_str());
+								ConLog.Error("Function '%s' hooked twice", g_static_funcs_list[j].name);
 							}
 						}
 					}
@@ -152,7 +152,7 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				else
 				{
 					res |= GSR_EXCESS;
-					ConLog.Error("Function '%s' hooked twice", wxString(g_static_funcs_list[j].name).wx_str());
+					ConLog.Error("Function '%s' hooked twice", g_static_funcs_list[j].name);
 				}
 			}
 
@@ -168,13 +168,13 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 
 			if (res == GSR_SUCCESS)
 			{
-				ConLog.Success("Function group [%s] successfully hooked", wxString(name, 9).wx_str());
+				ConLog.Success("Function group [%s] successfully hooked", std::string(name, 9).c_str());
 			}
 			else
 			{
-				ConLog.Error("Function group [%s] failed:%s%s", wxString(name, 9).wx_str(),
-					wxString(res & GSR_MISSING ? " missing;" : "").wx_str(),
-					wxString(res & GSR_EXCESS ? " excess;" : "").wx_str());
+				ConLog.Error("Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
+					(res & GSR_MISSING ? " missing;" : ""),
+					(res & GSR_EXCESS ? " excess;" : ""));
 			}
 		}
 	}

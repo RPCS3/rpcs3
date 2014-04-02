@@ -93,8 +93,8 @@ void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProg
 	ConLog.Write("*** vp data size = %d", rsx_vp.data.GetCount() * 4);
 	ConLog.Write("*** fp data size = %d", rsx_fp.size);
 
-	ConLog.Write("*** vp shader = \n%s", gl_vp.shader.wx_str());
-	ConLog.Write("*** fp shader = \n%s", wxString(gl_fp.shader).wx_str());
+	ConLog.Write("*** vp shader = \n%s", gl_vp.shader.c_str());
+	ConLog.Write("*** fp shader = \n%s", gl_fp.shader.c_str());
 	
 
 	new_buf.prog_id = prog.id;

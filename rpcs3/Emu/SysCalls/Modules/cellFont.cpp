@@ -308,9 +308,9 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 
 int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
 {
-	wxString fp = fontPath.GetString();
+	std::string fp(fontPath.GetString());
 	cellFont.Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
-		library.GetAddr(), fp.wx_str(), subNum, uniqueId, font.GetAddr());
+		library.GetAddr(), fp.c_str(), subNum, uniqueId, font.GetAddr());
 
 	vfsFile f(fp);
 	if (!f.IsOpened())

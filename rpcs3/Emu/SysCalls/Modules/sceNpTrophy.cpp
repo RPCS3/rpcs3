@@ -10,6 +10,8 @@
 #include "Loader/TROPUSR.h"
 #include "Emu/SysCalls/lv2/SC_Time.h"
 
+#include <algorithm>
+
 void sceNpTrophy_unload();
 void sceNpTrophy_init();
 Module sceNpTrophy(0xf035, sceNpTrophy_init, nullptr, sceNpTrophy_unload);
@@ -225,25 +227,25 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
-	wxString path;
+	std::string path;
 	wxXmlDocument doc;
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
-	doc.Load(path);
+	doc.Load(fmt::FromUTF8(path));
 
 	std::string titleName;
 	std::string titleDetail;
 	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
 		if (n->GetName() == "title-name")
-			titleName = n->GetNodeContent().mb_str();
+			titleName = fmt::ToUTF8(n->GetNodeContent());
 		if (n->GetName() == "title-detail")
-			titleDetail = n->GetNodeContent().mb_str();
+			titleDetail = fmt::ToUTF8(n->GetNodeContent());
 		if (n->GetName() == "trophy")
 		{
-			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
+			u32 trophy_id = atoi(fmt::ToUTF8(n->GetAttribute("id")).c_str());
 			
 			details->numTrophies++;
-			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
+			switch (fmt::ToUTF8(n->GetAttribute("ttype"))[0]) {
 			case 'B': details->numBronze++;   break;
 			case 'S': details->numSilver++;   break;
 			case 'G': details->numGold++;     break;
@@ -253,7 +255,7 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 			if (ctxt.tropusr->GetTrophyUnlockState(trophy_id))
 			{
 				data->unlockedTrophies++;
-				switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
+				switch (fmt::ToUTF8(n->GetAttribute("ttype"))[0]) {
 				case 'B': data->unlockedBronze++;   break;
 				case 'S': data->unlockedSilver++;   break;
 				case 'G': data->unlockedGold++;     break;
@@ -263,8 +265,8 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 		}
 	}
 
-	memcpy(details->title, titleName.c_str(), SCE_NP_TROPHY_NAME_MAX_SIZE);
-	memcpy(details->description, titleDetail.c_str(), SCE_NP_TROPHY_DESCR_MAX_SIZE);
+	memcpy(details->title, titleName.c_str(), std::min((size_t) SCE_NP_TROPHY_NAME_MAX_SIZE, titleName.length() + 1));
+	memcpy(details->description, titleDetail.c_str(), std::min((size_t) SCE_NP_TROPHY_DESCR_MAX_SIZE, titleDetail.length() + 1));
 	return CELL_OK;
 }
 
@@ -352,33 +354,33 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
-	wxString path;
+	std::string path;
 	wxXmlDocument doc;
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
-	doc.Load(path);
+	doc.Load(fmt::FromUTF8(path));
 
 	std::string name;
 	std::string detail;
 	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
-		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").mb_str())))
+		if (n->GetName() == "trophy" && (trophyId == atoi(fmt::ToUTF8(n->GetAttribute("id")).c_str())))
 		{
 			details->trophyId = trophyId;
-			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
+			switch (fmt::ToUTF8(n->GetAttribute("ttype"))[0]) {
 			case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
 			case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
 			case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
 			case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 			}
 
-			switch (((const char *)n->GetAttribute("ttype").mb_str())[0]) {
+			switch (fmt::ToUTF8(n->GetAttribute("ttype"))[0]) {
 			case 'y': details->hidden = true;  break;
 			case 'n': details->hidden = false; break;
 			}
 
 			for (wxXmlNode *n2 = n->GetChildren(); n2; n2 = n2->GetNext()) {
-				if (n2->GetName() == "name")   name = n2->GetNodeContent().mb_str();
-				if (n2->GetName() == "detail") detail = n2->GetNodeContent().mb_str();
+				if (n2->GetName() == "name")   name = fmt::ToUTF8(n2->GetNodeContent());
+				if (n2->GetName() == "detail") detail = fmt::ToUTF8(n2->GetNodeContent());
 			}
 
 			data->trophyId = trophyId;
@@ -387,8 +389,8 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 		}		
 	}
 
-	memcpy(details->name, name.c_str(), SCE_NP_TROPHY_NAME_MAX_SIZE);
-	memcpy(details->description, detail.c_str(), SCE_NP_TROPHY_DESCR_MAX_SIZE);
+	memcpy(details->name, name.c_str(), std::min((size_t) SCE_NP_TROPHY_NAME_MAX_SIZE, name.length() + 1));
+	memcpy(details->description, detail.c_str(), std::min((size_t) SCE_NP_TROPHY_DESCR_MAX_SIZE, detail.length() + 1));
 	return CELL_OK;
 }
 

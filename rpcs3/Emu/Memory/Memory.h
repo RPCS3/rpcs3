@@ -400,27 +400,27 @@ public:
 		*(T*)GetMemFromAddr(addr) = data;
 	}
 
-	wxString ReadString(const u64 addr, const u64 len)
+	std::string ReadString(const u64 addr, const u64 len)
 	{
-		wxString ret(GetMemFromAddr(addr), wxConvUTF8,len);
+		std::string ret((const char *)GetMemFromAddr(addr), len);
 
 		return ret;
 	}
 
-	wxString ReadString(const u64 addr)
+	std::string ReadString(const u64 addr)
 	{
-		return wxString((const char*)GetMemFromAddr(addr), wxConvUTF8);
+		return std::string((const char*)GetMemFromAddr(addr));
 	}
 
-	void WriteString(const u64 addr, const wxString& str)
+	void WriteString(const u64 addr, const std::string& str)
 	{
-		if(!IsGoodAddr(addr, str.Len()))
+		if(!IsGoodAddr(addr, str.length()))
 		{
 			ConLog.Error("Memory::WriteString error: bad address (0x%llx)", addr);
 			return;
 		}
 
-		strcpy((char*)GetMemFromAddr(addr), str);
+		strcpy((char*)GetMemFromAddr(addr), str.c_str());
 	}
 
 	static u64 AlignAddr(const u64 addr, const u64 align)
@@ -488,7 +488,7 @@ public:
 	u8* operator + (const u64 vaddr)
 	{
 		u8* ret = GetMemFromAddr(vaddr);
-		if(!ret) throw wxString::Format("GetMemFromAddr(0x%llx)", vaddr);
+		if(!ret) throw fmt::Format("GetMemFromAddr(0x%llx)", vaddr);
 		return ret;
 	}
 

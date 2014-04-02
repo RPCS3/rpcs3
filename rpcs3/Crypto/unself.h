@@ -200,51 +200,51 @@ struct ControlInfo
 	  {
 		  if (size == 0x30)
 		  {
-			  wxString digest_str;
+			  std::string digest_str;
 			  for (int i = 0; i < 20; i++)
-				  digest_str += wxString::Format("%02x", file_digest_30.digest[i]);
+				  digest_str += fmt::Format("%02x", file_digest_30.digest[i]);
 
-			  ConLog.Write("Digest: %s",						digest_str.wc_str());
+			  ConLog.Write("Digest: %s",						digest_str.c_str());
 			  ConLog.Write("Unknown: 0x%llx",					file_digest_30.unknown);
 		  }
 		  else if (size == 0x40)
 		  {
-			  wxString digest_str1;
-			  wxString digest_str2;
+			  std::string digest_str1;
+			  std::string digest_str2;
 			  for (int i = 0; i < 20; i++)
 			  {
-				  digest_str1 += wxString::Format("%02x", file_digest_40.digest1[i]);
-				  digest_str2 += wxString::Format("%02x", file_digest_40.digest2[i]);
+				  digest_str1 += fmt::Format("%02x", file_digest_40.digest1[i]);
+				  digest_str2 += fmt::Format("%02x", file_digest_40.digest2[i]);
 			  }
 			  
-			  ConLog.Write("Digest1: %s",						digest_str1.wc_str());
-			  ConLog.Write("Digest2: %s",						digest_str2.wc_str());
+			  ConLog.Write("Digest1: %s",						digest_str1.c_str());
+			  ConLog.Write("Digest2: %s",						digest_str2.c_str());
 			  ConLog.Write("Unknown: 0x%llx",					file_digest_40.unknown);
 		  }
 	  }
 	  else if (type == 3)
 	  {
-		  wxString contentid_str;
-		  wxString digest_str;
-		  wxString invdigest_str;
-		  wxString xordigest_str;
+		  std::string contentid_str;
+		  std::string digest_str;
+		  std::string invdigest_str;
+		  std::string xordigest_str;
 		  for (int i = 0; i < 48; i++)
-			  contentid_str += wxString::Format("%02x", npdrm.content_id[i]);
+			  contentid_str += fmt::Format("%02x", npdrm.content_id[i]);
 		  for (int i = 0; i < 16; i++)
 		  {
-			  digest_str += wxString::Format("%02x", npdrm.digest[i]);
-			  invdigest_str += wxString::Format("%02x", npdrm.invdigest[i]);
-			  xordigest_str += wxString::Format("%02x", npdrm.xordigest[i]);
+			  digest_str += fmt::Format("%02x", npdrm.digest[i]);
+			  invdigest_str += fmt::Format("%02x", npdrm.invdigest[i]);
+			  xordigest_str += fmt::Format("%02x", npdrm.xordigest[i]);
 		  }
 
 		  ConLog.Write("Magic: 0x%08x",							npdrm.magic);
 		  ConLog.Write("Unknown1: 0x%08x",						npdrm.unknown1);
 		  ConLog.Write("License: 0x%08x",						npdrm.license);
 		  ConLog.Write("Type: 0x%08x",							npdrm.type);
-		  ConLog.Write("ContentID: %s",							contentid_str.wc_str());
-		  ConLog.Write("Digest: %s",							digest_str.wc_str());
-		  ConLog.Write("Inverse digest: %s",					invdigest_str.wc_str());
-		  ConLog.Write("XOR digest: %s",						xordigest_str.wc_str());
+		  ConLog.Write("ContentID: %s",							contentid_str.c_str());
+		  ConLog.Write("Digest: %s",							digest_str.c_str());
+		  ConLog.Write("Inverse digest: %s",					invdigest_str.c_str());
+		  ConLog.Write("XOR digest: %s",						xordigest_str.c_str());
 		  ConLog.Write("Unknown2: 0x%llx",						npdrm.unknown2);
 		  ConLog.Write("Unknown3: 0x%llx",						npdrm.unknown3);
 	  }
@@ -269,22 +269,22 @@ struct MetadataInfo
 
   void Show()
   {
-	  wxString key_str;
-	  wxString key_pad_str;
-	  wxString iv_str;
-	  wxString iv_pad_str;
+	  std::string key_str;
+	  std::string key_pad_str;
+	  std::string iv_str;
+	  std::string iv_pad_str;
 	  for (int i = 0; i < 0x10; i++)
 	  {
-		  key_str += wxString::Format("%02x", key[i]);
-		  key_pad_str += wxString::Format("%02x", key_pad[i]);
-		  iv_str += wxString::Format("%02x", iv[i]);
-		  iv_pad_str += wxString::Format("%02x", iv_pad[i]);
+		  key_str += fmt::Format("%02x", key[i]);
+		  key_pad_str += fmt::Format("%02x", key_pad[i]);
+		  iv_str += fmt::Format("%02x", iv[i]);
+		  iv_pad_str += fmt::Format("%02x", iv_pad[i]);
 	  }
 	  
-	  ConLog.Write("Key: %s", key_str.wc_str());
-	  ConLog.Write("Key pad: %s", key_pad_str.wc_str());
-	  ConLog.Write("IV: %s", iv_str.wc_str());
-	  ConLog.Write("IV pad: %s", iv_pad_str.wc_str());
+	  ConLog.Write("Key: %s", key_str.c_str());
+	  ConLog.Write("Key pad: %s", key_pad_str.c_str());
+	  ConLog.Write("IV: %s", iv_str.c_str());
+	  ConLog.Write("IV pad: %s", iv_pad_str.c_str());
   }
 };
 

@@ -828,7 +828,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			default:                      DISASM("(Bad location!);"); break;
 			}
 			DISASM("    Cubemap:%s; Dimension:0x%x; Format:0x%x; Mipmap:0x%x",
-				wxString(((args[1] >> 2) & 0x1) ? "True" : "False").wx_str(),
+				(((args[1] >> 2) & 0x1) ? "True" : "False"),
 				((args[1] >> 4) & 0xf),
 				((args[1] >> 8) & 0xff),
 				((args[1] >> 16) & 0xffff));

@@ -9,8 +9,8 @@ private:
 public:
 	vfsLocalFile(vfsDevice* device);
 
-	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead) override;
-	virtual bool Create(const wxString& path) override;
+	virtual bool Open(const std::string& path, vfsOpenMode mode = vfsRead) override;
+	virtual bool Create(const std::string& path) override;
 	virtual bool Close() override;
 
 	virtual u64 GetSize() override;

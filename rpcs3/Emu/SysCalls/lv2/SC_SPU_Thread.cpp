@@ -40,8 +40,8 @@ u32 LoadSpuImage(vfsStream& stream)
 //156
 int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 {
-	const wxString path = Memory.ReadString(path_addr).wx_str();
-	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.wx_str());
+	const std::string path = Memory.ReadString(path_addr).c_str();
+	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.c_str());
 
 	if(!img.IsGood() || !Memory.IsGoodAddr(path_addr))
 	{
@@ -51,7 +51,7 @@ int sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 	vfsFile f(path);
 	if(!f.IsOpened())
 	{
-		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path.wx_str());
+		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path.c_str());
 		return CELL_ENOENT;
 	}
 
@@ -106,7 +106,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	std::string name = "SPUThread";
 	if (attr->name_addr)
 	{
-		name = Memory.ReadString(attr->name_addr, attr->name_len).ToStdString();
+		name = Memory.ReadString(attr->name_addr, attr->name_len);
 	}
 
 	u64 a1 = arg->arg1;
@@ -132,7 +132,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	(*(SPUThread*)&new_thread).group = group_info;
 
 	sc_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		wxString(attr->name_addr ? name : "").wx_str(), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
+		(attr->name_addr ? name.c_str() : ""), (u32) img->segs_addr, ((SPUThread&) new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, thread.GetValue());
 
 	return CELL_OK;
 }
@@ -302,12 +302,12 @@ int sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu
 
 	if (prio < 16 || prio > 255) return CELL_EINVAL;
 
-	const wxString name = Memory.ReadString(attr->name_addr, attr->name_len);
+	const std::string name = Memory.ReadString(attr->name_addr, attr->name_len);
 
 	id = sc_spu.GetNewId(new SpuGroupInfo(name, num, prio, attr->type, attr->ct));
 
 	sc_spu.Warning("*** SPU Thread Group created [%s] (type=0x%x, option.ct=0x%x): id=%d", 
-		name.wx_str(), (int)attr->type, (u32)attr->ct, id.GetValue());
+		name.c_str(), (int)attr->type, (u32)attr->ct, id.GetValue());
 
 	return CELL_OK;
 }

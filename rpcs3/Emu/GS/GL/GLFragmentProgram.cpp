@@ -59,7 +59,7 @@ void GLFragmentDecompilerThread::AddCode(std::string code, bool append_mask)
 		case 7: code = "(" + code + " / 8)"; break;
 
 		default:
-			ConLog.Error("Bad scale: %d", src1.scale);
+			ConLog.Error("Bad scale: %d", fmt::by_value(src1.scale));
 			Emu.Pause();
 		break;
 		}
@@ -186,7 +186,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 			}
 			else
 			{
-				ConLog.Error("Bad src reg num: %d", dst.src_attr_reg_num);
+				ConLog.Error("Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
 				ret += m_parr.AddParam(PARAM_IN, "vec4", "unk");
 				Emu.Pause();
 			}
@@ -200,7 +200,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 	break;
 
 	default:
-		ConLog.Error("Bad src type %d", src.reg_type);
+		ConLog.Error("Bad src type %d", fmt::by_value(src.reg_type));
 		Emu.Pause();
 	break;
 	}
@@ -223,7 +223,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 
 std::string GLFragmentDecompilerThread::BuildCode()
 {
-	//main += wxString::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
+	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 	main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "ocol", 0) + " = " + (m_ctrl & 0x40 ? "r0" : "h0") + ";\n";
 	if(m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
 
@@ -420,7 +420,7 @@ void GLShaderProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			ConLog.Error("Failed to compile shader: %s", wxString(buf).wx_str());
+			ConLog.Error("Failed to compile shader: %s", buf);
 			delete[] buf;
 		}
 

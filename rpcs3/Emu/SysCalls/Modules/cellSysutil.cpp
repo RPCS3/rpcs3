@@ -794,7 +794,7 @@ public:
 	virtual wxDirTraverseResult OnFile(const wxString& filename)
 	{
 		if (!wxRemoveFile(filename)){
-			cellSysutil.Error("Couldn't delete File: %s", filename.wx_str());
+			cellSysutil.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 		}
 		return wxDIR_CONTINUE;
 	}
@@ -816,11 +816,13 @@ int cellSysCacheClear(void)
 	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
 	//it was mounted before, for that we would need to save the state which I don't know
 	//where to put
-	wxString localPath;
-	Emu.GetVFS().GetDevice(wxString("/dev_hdd1/cache/"), localPath);
-	if (wxDirExists(localPath)){
+	std::string localPath;
+	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
+	
+	//TODO: replace wxWidgetsSpecific filesystem stuff
+	if (wxDirExists(fmt::FromUTF8(localPath))){
 		WxDirDeleteTraverser deleter;
-		wxString f = wxFindFirstFile(localPath+"\\*",wxDIR);
+		wxString f = wxFindFirstFile(fmt::FromUTF8(localPath+"\\*"),wxDIR);
 		while (!f.empty())
 		{
 			wxDir dir(f);
@@ -840,7 +842,8 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
-	Emu.GetVFS().CreateDir(wxString(param->getCachePath));
+	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
+	Emu.GetVFS().CreateDir(std::string(param->getCachePath));
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }
@@ -853,7 +856,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	if (!Memory.IsGoodAddr(dirName_addr) || !funcStat.IsGood())
 		return CELL_HDDGAME_ERROR_PARAM;
 
-	std::string dirName = Memory.ReadString(dirName_addr).ToStdString();
+	std::string dirName = Memory.ReadString(dirName_addr);
 	if (dirName.size() != 9)
 		return CELL_HDDGAME_ERROR_PARAM;
 
@@ -890,14 +893,17 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 		get->getParam.attribute = psf.GetInteger("ATTRIBUTE");
 		get->getParam.resolution = psf.GetInteger("RESOLUTION");
 		get->getParam.soundFormat = psf.GetInteger("SOUND_FORMAT");
-		memcpy(get->getParam.title, psf.GetString("TITLE"), CELL_HDDGAME_SYSP_TITLE_SIZE);
-		memcpy(get->getParam.dataVersion, psf.GetString("APP_VER"), CELL_HDDGAME_SYSP_VERSION_SIZE);
-		memcpy(get->getParam.titleId, dirName.c_str(), CELL_HDDGAME_SYSP_TITLEID_SIZE);
+		std::string title = psf.GetString("TITLE");
+		memcpy(get->getParam.title, title.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE,title.length()+1));
+		std::string app_ver = psf.GetString("APP_VER");
+		memcpy(get->getParam.dataVersion, app_ver.c_str(), min<size_t>(CELL_HDDGAME_SYSP_VERSION_SIZE,app_ver.length()+1));
+		memcpy(get->getParam.titleId, dirName.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLEID_SIZE,dirName.length()+1));
 
 		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
 			char key [16];
 			sprintf(key, "TITLE_%02d", i);
-			memcpy(get->getParam.titleLang[i], psf.GetString(key), CELL_HDDGAME_SYSP_TITLE_SIZE);
+			title = psf.GetString(key);
+			memcpy(get->getParam.titleLang[i], title.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE, title.length() + 1));
 		}
 	}
 

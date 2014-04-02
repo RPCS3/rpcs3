@@ -11,6 +11,7 @@
 
 extern GLenum g_last_gl_error;
 void printGlError(GLenum err, const char* situation);
+void printGlError(GLenum err, const std::string& situation);
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
 #if RSX_DEBUG
@@ -171,7 +172,7 @@ public:
 		break;
 
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format,
-					 wxString(is_swizzled ? "swizzled" : "linear").wx_str(), tex.GetFormat() & 0x40); break;
+					 (is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40); break;
 		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.GetMipmap() - 1);

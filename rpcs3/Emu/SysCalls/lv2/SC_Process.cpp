@@ -61,7 +61,7 @@ void sys_game_process_exitspawn(
 			u64 flags )
 {
 	sc_p.Error("sys_game_process_exitspawn UNIMPLEMENTED");
-	sc_p.Warning("path: %s", Memory.ReadString(path_addr).wx_str());
+	sc_p.Warning("path: %s", Memory.ReadString(path_addr).c_str());
 	sc_p.Warning("argv: 0x%x", argv_addr);
 	sc_p.Warning("envp: 0x%x", envp_addr);
 	sc_p.Warning("data: 0x%x", data_addr);
@@ -69,9 +69,9 @@ void sys_game_process_exitspawn(
 	sc_p.Warning("prio: %d", prio);
 	sc_p.Warning("flags: %d", flags);
 
-	wxString path = Memory.ReadString(path_addr);
-	std::vector<wxString> argv;
-	std::vector<wxString> env;
+	std::string path = Memory.ReadString(path_addr);
+	std::vector<std::string> argv;
+	std::vector<std::string> env;
 
 	mem_ptr_t<u32> argvp(argv_addr);
 	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
@@ -87,10 +87,10 @@ void sys_game_process_exitspawn(
 	}
 
 	for (auto &arg : argv){
-		sc_p.Log("argument: %s", arg.wx_str());
+		sc_p.Log("argument: %s", arg.c_str());
 	}
 	for (auto &en : env){
-		sc_p.Log("env_argument: %s", en.wx_str());
+		sc_p.Log("env_argument: %s", en.c_str());
 	}
 	//TODO: execute the file in <path> with the args in argv
 	//and the environment parameters in envp and copy the data
@@ -109,7 +109,7 @@ void sys_game_process_exitspawn2(
 			u64 flags)
 {
 	sc_p.Error("sys_game_process_exitspawn2 UNIMPLEMENTED");
-	sc_p.Warning("path: %s", Memory.ReadString(path_addr).wx_str());
+	sc_p.Warning("path: %s", Memory.ReadString(path_addr).c_str());
 	sc_p.Warning("argv: 0x%x", argv_addr);
 	sc_p.Warning("envp: 0x%x", envp_addr);
 	sc_p.Warning("data: 0x%x", data_addr);
@@ -117,9 +117,9 @@ void sys_game_process_exitspawn2(
 	sc_p.Warning("prio: %d", prio);
 	sc_p.Warning("flags: %d", flags);
 
-	wxString path = Memory.ReadString(path_addr);
-	std::vector<wxString> argv;
-	std::vector<wxString> env;
+	std::string path = Memory.ReadString(path_addr);
+	std::vector<std::string> argv;
+	std::vector<std::string> env;
 
 	mem_ptr_t<u32> argvp(argv_addr);
 	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
@@ -135,10 +135,10 @@ void sys_game_process_exitspawn2(
 	}
 
 	for (auto &arg : argv){
-		sc_p.Log("argument: %s", arg.wx_str());
+		sc_p.Log("argument: %s", arg.c_str());
 	}
 	for (auto &en : env){
-		sc_p.Log("env_argument: %s", en.wx_str());
+		sc_p.Log("env_argument: %s", en.c_str());
 	}
 	//TODO: execute the file in <path> with the args in argv
 	//and the environment parameters in envp and copy the data

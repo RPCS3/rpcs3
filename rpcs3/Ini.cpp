@@ -33,7 +33,7 @@ static wxSize StringToSize(const wxString& str)
 {
 	wxSize ret;
 
-	wxString s[2] = {wxEmptyString};
+	wxString s[2] = {wxEmptyString, wxEmptyString};
 
 	for(uint i=0, a=0; i<str.Length(); ++i)
 	{
@@ -71,7 +71,7 @@ static wxPoint StringToPosition(const wxString& str)
 {
 	wxPoint ret;
 
-	wxString s[2] = {wxEmptyString};
+	wxString s[2] = {wxEmptyString, wxEmptyString};
 
 	for(uint i=0, a=0; i<str.Length(); ++i)
 	{
@@ -109,7 +109,7 @@ static WindowInfo StringToWindowInfo(const wxString& str)
 {
 	WindowInfo ret = WindowInfo(wxDefaultSize, wxDefaultPosition);
 
-	wxString s[4] = {wxEmptyString};
+	wxString s[4] = {wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString};
 
 	for(uint i=0, a=0; i<str.Length(); ++i)
 	{
@@ -179,9 +179,9 @@ void Ini::Save(const wxString& key, wxPoint value)
 	m_Config->Write(key, PositionToString(value));
 }
 
-void Ini::Save(const wxString& key, wxString value)
+void Ini::Save(const wxString& key, const std::string& value)
 {
-	m_Config->Write(key, value);
+	m_Config->Write(key, fmt::FromUTF8(value));
 }
 
 void Ini::Save(const wxString& key, WindowInfo value)
@@ -209,9 +209,9 @@ wxPoint Ini::Load(const wxString& key, const wxPoint def_value)
 	return StringToPosition(m_Config->Read(key, PositionToString(def_value)));
 }
 
-wxString Ini::Load(const wxString& key, const wxString& def_value)
+std::string Ini::Load(const wxString& key, const std::string& def_value)
 {
-	return m_Config->Read(key, def_value);
+	return fmt::ToUTF8(m_Config->Read(key, def_value));
 }
 
 WindowInfo Ini::Load(const wxString& key, const WindowInfo& def_value)

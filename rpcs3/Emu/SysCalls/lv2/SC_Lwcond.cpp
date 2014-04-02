@@ -35,7 +35,7 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	}
 
 	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex_addr=0x%x): id = %d", 
-		wxString(attr->name, 8).wx_str(), lwmutex.GetAddr(), (u32)lwcond->lwcond_queue);
+		std::string(attr->name, 8).c_str(), lwmutex.GetAddr(), (u32) lwcond->lwcond_queue);
 
 	return CELL_OK;
 }

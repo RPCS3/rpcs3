@@ -63,7 +63,7 @@ int jstrchk(mem8_ptr_t jstr)
 	if (!jstr.IsGood())
 		cellL10n.Error("jstrchk(jstr_addr=0x%x): invalid address", jstr.GetAddr());
 	else if (jstr[0])
-		cellL10n.Log("jstrchk(jstr_addr=0x%x): utf-8: [%s]", jstr.GetAddr(), Memory.ReadString(jstr.GetAddr()).wx_str());
+		cellL10n.Log("jstrchk(jstr_addr=0x%x): utf-8: [%s]", jstr.GetAddr(), Memory.ReadString(jstr.GetAddr()).c_str());
 	else
 		cellL10n.Log("jstrchk(jstr_addr=0x%x): empty string", jstr.GetAddr());
 

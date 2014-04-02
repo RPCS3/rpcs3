@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "CPUInstrTable.h"
 #pragma warning( disable : 4800 )
 
@@ -308,23 +309,32 @@ template<typename TO>
 class InstrBase : public InstrCaller<TO>
 {
 protected:
-	wxString m_name;
+	std::string m_name;
 	const u32 m_opcode;
 	CodeFieldBase** m_args;
 	const uint m_args_count;
 
 public:
-	InstrBase(const wxString& name, int opcode, uint args_count)
+	InstrBase(const std::string& name, int opcode, uint args_count)
 		: InstrCaller<TO>()
 		, m_name(name)
 		, m_opcode(opcode)
 		, m_args_count(args_count)
 		, m_args(args_count ? new CodeFieldBase*[args_count] : nullptr)
 	{
-		m_name.MakeLower().Replace("_", ".");
+			std::transform(
+				name.begin(),
+				name.end(),
+				m_name.begin(),
+				[](const char &a)
+				{
+					char b = tolower(a);
+					if (b == '_') b = '.';
+					return b;
+				});
 	}
 
-	__forceinline const wxString& GetName() const
+	__forceinline const std::string& GetName() const
 	{
 		return m_name;
 	}
@@ -485,7 +495,7 @@ class Instr0 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr0(InstrList<count, TO>* list, const wxString& name,
+	Instr0(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)())
 		: InstrBase<TO>(name, opcode, 0)
 		, m_list(*list)
@@ -521,7 +531,7 @@ class Instr1 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr1(InstrList<count, TO>* list, const wxString& name,
+	Instr1(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1),
 			CodeFieldBase& arg_1)
 		: InstrBase<TO>(name, opcode, 1)
@@ -560,7 +570,7 @@ class Instr2 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr2(InstrList<count, TO>* list, const wxString& name,
+	Instr2(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1, T2),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2)
@@ -601,7 +611,7 @@ class Instr3 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr3(InstrList<count, TO>* list, const wxString& name,
+	Instr3(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1, T2, T3),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2,
@@ -644,7 +654,7 @@ class Instr4 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr4(InstrList<count, TO>* list, const wxString& name,
+	Instr4(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1, T2, T3, T4),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2,
@@ -697,7 +707,7 @@ class Instr5 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr5(InstrList<count, TO>* list, const wxString& name,
+	Instr5(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1, T2, T3, T4, T5),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2,
@@ -754,7 +764,7 @@ class Instr6 : public InstrBase<TO>
 	InstrList<count, TO>& m_list;
 
 public:
-	Instr6(InstrList<count, TO>* list, const wxString& name,
+	Instr6(InstrList<count, TO>* list, const std::string& name,
 			void (TO::*func)(T1, T2, T3, T4, T5, T6),
 			CodeFieldBase& arg_1,
 			CodeFieldBase& arg_2,
@@ -810,13 +820,13 @@ public:
 };
 
 template<int opcode, typename TO, int count>
-static Instr0<TO, opcode, count>& make_instr(InstrList<count, TO>* list, const wxString& name, void (TO::*func)())
+static Instr0<TO, opcode, count>& make_instr(InstrList<count, TO>* list, const std::string& name, void (TO::*func)())
 {
 	return *new Instr0<TO, opcode, count>(list, name, func);
 }
 
 template<int opcode, typename TO, int count, typename T1>
-static Instr1<TO, opcode, count, T1>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr1<TO, opcode, count, T1>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1),
 	CodeFieldBase& arg_1)
 {
@@ -824,7 +834,7 @@ static Instr1<TO, opcode, count, T1>& make_instr(InstrList<count, TO>* list, con
 }
 
 template<int opcode, typename TO, int count, typename T1, typename T2>
-static Instr2<TO, opcode, count, T1, T2>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr2<TO, opcode, count, T1, T2>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1, T2),
 	CodeFieldBase& arg_1,
 	CodeFieldBase& arg_2)
@@ -833,7 +843,7 @@ static Instr2<TO, opcode, count, T1, T2>& make_instr(InstrList<count, TO>* list,
 }
 
 template<int opcode, typename TO, int count, typename T1, typename T2, typename T3>
-static Instr3<TO, opcode, count, T1, T2, T3>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr3<TO, opcode, count, T1, T2, T3>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1, T2, T3),
 	CodeFieldBase& arg_1,
 	CodeFieldBase& arg_2,
@@ -843,7 +853,7 @@ static Instr3<TO, opcode, count, T1, T2, T3>& make_instr(InstrList<count, TO>* l
 }
 
 template<int opcode, typename TO, int count, typename T1, typename T2, typename T3, typename T4>
-static Instr4<TO, opcode, count, T1, T2, T3, T4>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr4<TO, opcode, count, T1, T2, T3, T4>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1, T2, T3, T4),
 	CodeFieldBase& arg_1,
 	CodeFieldBase& arg_2,
@@ -854,7 +864,7 @@ static Instr4<TO, opcode, count, T1, T2, T3, T4>& make_instr(InstrList<count, TO
 }
 
 template<int opcode, typename TO, int count, typename T1, typename T2, typename T3, typename T4, typename T5>
-static Instr5<TO, opcode, count, T1, T2, T3, T4, T5>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr5<TO, opcode, count, T1, T2, T3, T4, T5>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1, T2, T3, T4, T5),
 	CodeFieldBase& arg_1,
 	CodeFieldBase& arg_2,
@@ -866,7 +876,7 @@ static Instr5<TO, opcode, count, T1, T2, T3, T4, T5>& make_instr(InstrList<count
 }
 
 template<int opcode, typename TO, int count, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-static Instr6<TO, opcode, count, T1, T2, T3, T4, T5, T6>& make_instr(InstrList<count, TO>* list, const wxString& name,
+static Instr6<TO, opcode, count, T1, T2, T3, T4, T5, T6>& make_instr(InstrList<count, TO>* list, const std::string& name,
 	void (TO::*func)(T1, T2, T3, T4, T5, T6),
 	CodeFieldBase& arg_1,
 	CodeFieldBase& arg_2,

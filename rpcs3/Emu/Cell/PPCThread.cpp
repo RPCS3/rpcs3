@@ -8,7 +8,7 @@ PPCThread* GetCurrentPPCThread()
 
 	if(!thread || (thread->GetType() != CPU_THREAD_PPU && thread->GetType() != CPU_THREAD_SPU && thread->GetType() != CPU_THREAD_RAW_SPU))
 	{
-		throw wxString("GetCurrentPPCThread: bad thread");
+		throw std::string("GetCurrentPPCThread: bad thread");
 	}
 
 	return (PPCThread*)thread;

@@ -29,30 +29,30 @@ protected:
 	virtual void Save(const wxString& key, bool value);
 	virtual void Save(const wxString& key, wxSize value);
 	virtual void Save(const wxString& key, wxPoint value);
-	virtual void Save(const wxString& key, wxString value);
+	virtual void Save(const wxString& key, const std::string& value);
 	virtual void Save(const wxString& key, WindowInfo value);
 
 	virtual int Load(const wxString& key, const int def_value);
 	virtual bool Load(const wxString& key, const bool def_value);
 	virtual wxSize Load(const wxString& key, const wxSize def_value);
 	virtual wxPoint Load(const wxString& key, const wxPoint def_value);
-	virtual wxString Load(const wxString& key, const wxString& def_value);
+	virtual std::string Load(const wxString& key, const std::string& def_value);
 	virtual WindowInfo Load(const wxString& key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
 {
 	T m_value;
-	wxString m_key;
+	std::string m_key;
 
 	IniEntry() : Ini()
 	{
 	}
 
-	void Init(const wxString& key, const wxString& path)
+	void Init(const std::string& key, const std::string& path)
 	{
 		m_key = key;
-		m_Config->SetPath(path);
+		m_Config->SetPath(fmt::FromUTF8(path));
 	}
 
 	void SetValue(const T& value)
@@ -89,7 +89,7 @@ template<typename T> struct IniEntry : public Ini
 class Inis
 {
 private:
-	const wxString DefPath;
+	const std::string DefPath;
 
 public:
 	IniEntry<u8> CPUDecoderMode;
@@ -133,7 +133,7 @@ public:
 public:
 	Inis() : DefPath("EmuSettings")
 	{
-		wxString path;
+		std::string path;
 
 		path = DefPath + "/" + "CPU";
 		CPUDecoderMode.Init("DecoderMode", path);

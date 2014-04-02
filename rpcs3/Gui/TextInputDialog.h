@@ -3,11 +3,11 @@
 class TextInputDialog : public wxDialog
 {
 	wxTextCtrl* m_tctrl_text;
-	wxString m_result;
+	std::string m_result;
 
 public:
-	TextInputDialog(wxWindow* parent, const wxString& defvalue = wxEmptyString);
+	TextInputDialog(wxWindow* parent, const std::string& defvalue = "");
 	void OnOk(wxCommandEvent& event);
 
-	wxString& GetResult();
+	std::string GetResult();
 };

@@ -130,19 +130,19 @@ struct GLVertexDecompilerThread : public ThreadBase
 	struct FuncInfo
 	{
 		u32 offset;
-		wxString name;
+		std::string name;
 	};
 
-	wxArrayString m_body;
+	std::vector<std::string> m_body;
 
 	ArrayF<FuncInfo> m_funcs;
 
 	//wxString main;
-	wxString& m_shader;
+	std::string& m_shader;
 	Array<u32>& m_data;
 	GLParamArray& m_parr;
 
-	GLVertexDecompilerThread(Array<u32>& data, wxString& shader, GLParamArray& parr)
+	GLVertexDecompilerThread(Array<u32>& data, std::string& shader, GLParamArray& parr)
 		: ThreadBase("Vertex Shader Decompiler Thread")
 		, m_data(data)
 		, m_shader(shader)
@@ -157,17 +157,17 @@ struct GLVertexDecompilerThread : public ThreadBase
 		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 	}
 
-	wxString GetMask(bool is_sca);
-	wxString GetVecMask();
-	wxString GetScaMask();
-	wxString GetDST(bool is_sca = false);
-	wxString GetSRC(const u32 n, bool is_sca = false);
-	wxString GetFunc();
-	void AddCode(bool is_sca, wxString code, bool src_mask = true, bool set_dst = true, bool set_cond = true);
-	void AddVecCode(const wxString& code, bool src_mask = true, bool set_dst = true);
-	void AddScaCode(const wxString& code, bool set_dst = true, bool set_cond = true);
-	wxString BuildFuncBody(const FuncInfo& func);
-	wxString BuildCode();
+	std::string GetMask(bool is_sca);
+	std::string GetVecMask();
+	std::string GetScaMask();
+	std::string GetDST(bool is_sca = false);
+	std::string GetSRC(const u32 n, bool is_sca = false);
+	std::string GetFunc();
+	void AddCode(bool is_sca, const std::string& code, bool src_mask = true, bool set_dst = true, bool set_cond = true);
+	void AddVecCode(const std::string& code, bool src_mask = true, bool set_dst = true);
+	void AddScaCode(const std::string& code, bool set_dst = true, bool set_cond = true);
+	std::string BuildFuncBody(const FuncInfo& func);
+	std::string BuildCode();
 
 	virtual void Task();
 };
@@ -181,7 +181,7 @@ struct GLVertexProgram
 
 	GLParamArray parr;
 	u32 id;
-	wxString shader;
+	std::string shader;
 
 	void Wait()
 	{

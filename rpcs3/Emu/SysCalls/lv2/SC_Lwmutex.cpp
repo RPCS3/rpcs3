@@ -38,7 +38,7 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	lwmutex->sleep_queue = sq_id;
 
 	sc_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", 
-		wxString(attr->name, 8).wx_str(), (u32)lwmutex->attribute, sq_id);
+		std::string(attr->name, 8).c_str(), (u32) lwmutex->attribute, sq_id);
 
 	return CELL_OK;
 }
