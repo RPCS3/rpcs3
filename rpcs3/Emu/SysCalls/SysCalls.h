@@ -294,7 +294,7 @@ extern int cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(in
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
-extern int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr);
+extern int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution> resolution);
 extern int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent);
 extern int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr);
 extern int cellVideoOutGetNumberOfDevice(u32 videoOut);

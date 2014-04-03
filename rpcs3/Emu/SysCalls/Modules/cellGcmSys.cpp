@@ -101,7 +101,7 @@ u32 cellGcmGetDefaultSegmentWordSize()
 	return 0x100;
 }
 
-int cellGcmInitDefaultFifoMode(int mode)
+int cellGcmInitDefaultFifoMode(s32 mode)
 {
 	cellGcmSys.Warning("cellGcmInitDefaultFifoMode(mode=%d)", mode);
 	return CELL_OK;

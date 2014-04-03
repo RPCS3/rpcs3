@@ -12,7 +12,7 @@ InstrBase<TO>* GetInstruction(T* list, const std::string& str)
 
 		if(instr)
 		{
-			if(instr->GetName().compare(str) == 0)
+			if(instr->GetName() == str)
 			{
 				return instr;
 			}
@@ -59,7 +59,7 @@ s64 FindOp(const std::string& text, const std::string& op, s64 from)
 	return -1;
 }
 
-ArrayF<SectionInfo> sections_list;
+std::vector<SectionInfo*> sections_list;
 u32 section_name_offs = 0;
 u32 section_offs = 0;
 
@@ -68,7 +68,8 @@ SectionInfo::SectionInfo(const std::string& _name)
 	name = _name;
 	memset(&shdr, 0, sizeof(Elf64_Shdr));
 
-	section_num = sections_list.Add(this);
+	sections_list.push_back(this);
+	section_num = sections_list.size() - 1;
 
 	shdr.sh_offset = section_offs;
 	shdr.sh_name = section_name_offs;
@@ -81,37 +82,37 @@ void SectionInfo::SetDataSize(u32 size, u32 align)
 	if(align) shdr.sh_addralign = align;
 	if(shdr.sh_addralign) size = Memory.AlignAddr(size, shdr.sh_addralign);
 
-	if(code.GetCount())
+	if(!code.empty())
 	{
-		for(u32 i=section_num + 1; i<sections_list.GetCount(); ++i)
+		for(u32 i=section_num + 1; i<sections_list.size(); ++i)
 		{
-			sections_list[i].shdr.sh_offset -= code.GetCount();
+			sections_list[i]->shdr.sh_offset -= code.size();
 		}
 
-		section_offs -= code.GetCount();
+		section_offs -= code.size();
 	}
 
-	code.SetCount(size);
+	code.resize(size);
 
 	section_offs += size;
 
-	for(u32 i=section_num + 1; i<sections_list.GetCount(); ++i)
+	for(u32 i=section_num + 1; i<sections_list.size(); ++i)
 	{
-		sections_list[i].shdr.sh_offset += size;
+		sections_list[i]->shdr.sh_offset += size;
 	}
 }
 
 SectionInfo::~SectionInfo()
 {
-	sections_list.RemoveFAt(section_num);
+	sections_list.erase(sections_list.begin() + section_num);
 
-	for(u32 i=section_num + 1; i<sections_list.GetCount(); ++i)
+	for(u32 i=section_num + 1; i<sections_list.size(); ++i)
 	{
-		sections_list[i].shdr.sh_offset -= code.GetCount();
-		sections_list[i].shdr.sh_name -= name.length();
+		sections_list[i]->shdr.sh_offset -= code.size();
+		sections_list[i]->shdr.sh_name -= name.length();
 	}
 
-	section_offs -= code.GetCount();
+	section_offs -= code.size();
 	section_name_offs -= name.length();
 }
 
@@ -371,9 +372,9 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 
 	if(str.length() > 1)
 	{
-		for(u32 i=0; i<m_branches.GetCount(); ++i)
+		for(const Branch& branch : m_branches)
 		{
-			if(str != m_branches[i].m_name)
+			if(str != branch.m_name)
 				continue;
 
 			arg.type = ARG_BRANCH;
@@ -385,14 +386,14 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	switch((char)str[0])
 	{
 	case 'r': case 'f': case 'v':
-
+	{
 		if(str.length() < 2)
 		{
 			arg.type = ARG_ERR;
 			return;
 		}
 
-		if(str.compare("rtoc") == 0)
+		if(str == "rtoc")
 		{
 			arg.type = ARG_REG_R;
 			arg.value = 2;
@@ -408,8 +409,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			}
 		}
 
-		u32 reg;
-		sscanf(str.substr(1, str.length() - 1).c_str(), "%d", &reg);
+		u32 reg = std::stoul(str.substr(1, str.length() - 1));
 
 		if(reg >= 32)
 		{
@@ -417,7 +417,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		switch((char)str[0])
+		switch(str[0])
 		{
 		case 'r': arg.type = ARG_REG_R; break;
 		case 'f': arg.type = ARG_REG_F; break;
@@ -426,8 +426,9 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 
 		arg.value = reg;
+	}
 	return;
-		
+
 	case 'c':
 		if(str.length() > 2 && str[1] == 'r')
 		{
@@ -475,7 +476,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	return;
 	}
 
-	if(str.length() > 2 && str.substr(0, 2).compare("0x") == 0)
+	// Hex numbers
+	if(str.length() > 2 && str.substr(0, 2) == "0x")
 	{
 		for(u32 i=2; i<str.length(); ++i)
 		{
@@ -489,11 +491,8 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 			return;
 		}
 
-		u32 val;
-		sscanf(str.c_str(), "0x%x", &val);
-
 		arg.type = ARG_NUM16;
-		arg.value = val;
+		arg.value = std::stoul(str, nullptr, 16);
 		return;
 	}
 
@@ -506,39 +505,39 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 		}
 	}
 
-	u32 val;
-	sscanf(str.c_str(), "%d", &val);
-
 	arg.type = ARG_NUM;
-	arg.value = val;
+	arg.value = std::stoul(str);
 }
 
 void CompilePPUProgram::LoadArgs()
 {
-	m_args.Clear();
+	m_args.clear();
 	m_cur_arg = 0;
 
 	std::string str;
 	while(int r = GetArg(str))
 	{
-		Arg* arg = new Arg(str);
-		DetectArgInfo(*arg);
-		m_args.Add(arg);
-		if(r == -1) break;
+		m_args.emplace_back(str);
+		DetectArgInfo(m_args[m_args.size() -1]);
+
+		if(r == -1)
+			break;
 	}
 
-	m_end_args = m_args.GetCount() > 0;
+	m_end_args = m_args.size() > 0;
 }
 
-u32 CompilePPUProgram::GetBranchValue(const std::string& branch)
+u32 CompilePPUProgram::GetBranchValue(const std::string& branch_name)
 {
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
+	for(const Branch& branch : m_branches)
 	{
-		if(branch != m_branches[i].m_name)
+		if(branch_name != branch.m_name)
 			continue;
-		if(m_branches[i].m_pos >= 0) return m_text_addr + m_branches[i].m_pos * 4;
 
-		return m_branches[i].m_addr;
+		if(branch.m_pos >= 0)
+			return m_text_addr + branch.m_pos * 4;
+
+		return branch.m_addr;
 	}
 
 	return 0;
@@ -548,7 +547,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 {
 	if(m_error) return false;
 
-	if(m_cur_arg >= m_args.GetCount())
+	if(m_cur_arg >= m_args.size())
 	{
 		if(show_err)
 		{
@@ -581,7 +580,7 @@ bool CompilePPUProgram::SetNextArgBranch(u8 aa, bool show_err)
 	const u32 pos = m_cur_arg;
 	const bool ret = SetNextArgType(ARG_BRANCH | ARG_IMM, show_err);
 
-	if(!aa && pos < m_args.GetCount())
+	if(!aa && pos < m_args.size())
 	{
 		switch(m_args[pos].type)
 		{
@@ -665,11 +664,12 @@ bool CompilePPUProgram::IsSpOp(const std::string& op)
 
 CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const std::string& name)
 {
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
+	for(Branch& branch : m_branches)
 	{
-		if(name != m_branches[i].m_name) continue;
+		if(name != branch.m_name)
+			continue;
 
-		return m_branches[i];
+		return branch;
 	}
 
 	return m_branches[0];
@@ -679,17 +679,18 @@ void CompilePPUProgram::SetSp(const std::string& name, u32 addr, bool create)
 {
 	if(create)
 	{
-		m_branches.Move(new Branch(name, -1, addr));
+		m_branches.emplace_back(name, -1, addr);
 		return;
 	}
 
 	GetBranch(name);
 
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
+	for(Branch& branch : m_branches)
 	{
-		if(name != m_branches[i].m_name)
+		if(name != branch.m_name)
 			continue;
-		m_branches[i].m_addr = addr;
+
+		branch.m_addr = addr;
 	}
 }
 
@@ -736,8 +737,8 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 
 		case ARG_ERR:
 		{
-			m_branches.Move(new Branch("", -1, 0)); //TODO: allocated with new, deleted with free()
-			dst_branch = &m_branches[m_branches.GetCount() - 1];
+			m_branches.emplace_back("", -1, 0);
+			dst_branch = &m_branches[m_branches.size() - 1];
 		}
 		break;
 	}
@@ -805,17 +806,19 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 			src1 = src1.substr(1, src1.length()-2);
 			bool founded = false;
 
-			for(u32 i=0; i<m_sp_string.GetCount(); ++i)
+			for(const SpData& sp_str : m_sp_string)
 			{
-				if(src1 != m_sp_string[i].m_data) continue;
-				*dst_branch = Branch(dst, -1, m_sp_string[i].m_addr);
+				if(src1 != sp_str.m_data)
+					continue;
+
+				*dst_branch = Branch(dst, -1, sp_str.m_addr);
 				founded = true;
 			}
 
 			if(!founded)
 			{
 				const u32 addr = s_opd.sh_addr + s_opd.sh_size;
-				m_sp_string.Move(new SpData(src1, addr)); //TODO: new and free mixed
+				m_sp_string.emplace_back(src1, addr);
 				s_opd.sh_size += src1.length() + 1;
 				*dst_branch = Branch(dst, -1, addr);
 			}
@@ -827,11 +830,11 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 				case ARG_TXT: *dst_branch = Branch(dst, -1, src1.length() - 2); break;
 				case ARG_BRANCH:
 				{
-					for(u32 i=0; i<m_sp_string.GetCount(); ++i)
+					for(const SpData& sp_str : m_sp_string)
 					{
-						if(m_sp_string[i].m_addr == a_src1.value)
+						if(sp_str.m_addr == a_src1.value)
 						{
-							*dst_branch = Branch(dst, -1, m_sp_string[i].m_data.length());
+							*dst_branch = Branch(dst, -1, sp_str.m_data.length());
 							break;
 						}
 					}
@@ -957,14 +960,8 @@ void CompilePPUProgram::Compile()
 		m_hex_list->Clear();
 	}
 
-	m_code.Clear();
-
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
-	{
-		m_branches[i].m_name.clear();
-	}
-
-	m_branches.Clear();
+	m_code.clear();
+	m_branches.clear();
 
 	u32 text_size = 0;
 	while(!IsEnd())
@@ -1015,7 +1012,7 @@ void CompilePPUProgram::Compile()
 	struct Module
 	{
 		std::string m_name;
-		Array<u32> m_imports;
+		std::vector<u32> m_imports;
 
 		Module(const std::string& name, u32 import) : m_name(name)
 		{
@@ -1024,17 +1021,17 @@ void CompilePPUProgram::Compile()
 
 		void Add(u32 import)
 		{
-			m_imports.AddCpy(import);
+			m_imports.push_back(import);
 		}
 
 		void Clear()
 		{
 			m_name.clear();
-			m_imports.Clear();
+			m_imports.clear();
 		}
 	};
 
-	Array<Module> modules;
+	std::vector<Module> modules;
 
 	FirstChar();
 	while(!IsEnd())
@@ -1049,9 +1046,9 @@ void CompilePPUProgram::Compile()
 		while(p > 0 && m_asm[(size_t)p] != '[') p--;
 		p++;
 
-		std::string module, name, id;
+		std::string module_name, name, id;
 
-		if(!GetArg(module))
+		if(!GetArg(module_name))
 		{
 			WriteError("module not found. style: [module, name, id]");
 			m_error = true;
@@ -1059,7 +1056,7 @@ void CompilePPUProgram::Compile()
 			continue;
 		}
 
-		Arg a_module(module);
+		Arg a_module(module_name);
 		DetectArgInfo(a_module);
 
 		if(~ARG_ERR & a_module.type)
@@ -1118,26 +1115,28 @@ void CompilePPUProgram::Compile()
 
 		if(!CheckEnd()) continue;
 
-		m_branches.Move(new Branch(name, a_id.value, 0)); //TODO: HACK: new and free() mixed
-		const u32 import = m_branches.GetCount() - 1;
+		m_branches.emplace_back(name, a_id.value, 0);
+		const u32 import = m_branches.size() - 1;
 
 		bool founded = false;
-		for(u32 i=0; i<modules.GetCount(); ++i)
+		for(Module& module : modules)
 		{
-			if(modules[i].m_name.compare(module) != 0) continue;
+			if(module.m_name != module_name)
+				continue;
+
 			founded = true;
-			modules[i].Add(import);
+			module.Add(import);
 			break;
 		}
 
-		if(!founded) modules.Move(new Module(module, import));
+		if(!founded) modules.emplace_back(module_name, import);
 	}
 
 	u32 imports_count = 0;
 
-	for(u32 m=0; m < modules.GetCount(); ++m)
+	for(const Module& module : modules)
 	{
-		imports_count += modules[m].m_imports.GetCount();
+		imports_count += module.m_imports.size();
 	}
 
 	Elf64_Shdr s_sceStub_text;
@@ -1154,11 +1153,13 @@ void CompilePPUProgram::Compile()
 	section_name_offset += std::string(".sceStub.text").length() + 1;
 	section_offset += s_sceStub_text.sh_size;
 
-	for(u32 m=0, pos=0; m<modules.GetCount(); ++m)
+	for(const Module& module : modules)
 	{
-		for(u32 i=0; i<modules[m].m_imports.GetCount(); ++i, ++pos)
+		u32 pos = 0;
+		for(const u32& import : module.m_imports)
 		{
-			m_branches[modules[m].m_imports[i]].m_addr = s_sceStub_text.sh_addr + sceStub_text_block * pos;
+			m_branches[import].m_addr = s_sceStub_text.sh_addr + sceStub_text_block * pos;
+			++pos;
 		}
 	}
 
@@ -1184,7 +1185,7 @@ void CompilePPUProgram::Compile()
 	s_lib_stub.sh_offset = section_offset;
 	s_lib_stub.sh_addr = section_offset + 0x10000;
 	s_lib_stub.sh_flags = 2;
-	s_lib_stub.sh_size = sizeof(Elf64_StubHeader) * modules.GetCount();
+	s_lib_stub.sh_size = sizeof(Elf64_StubHeader) * modules.size();
 	sections_names.push_back(".lib.stub");
 	section_name_offset += std::string(".lib.stub").length() + 1;
 	section_offset += s_lib_stub.sh_size;
@@ -1226,9 +1227,9 @@ void CompilePPUProgram::Compile()
 	s_rodata_sceResident.sh_addr = section_offset + 0x10000;
 	s_rodata_sceResident.sh_flags = 2;
 	s_rodata_sceResident.sh_size = 4;
-	for(u32 i=0; i<modules.GetCount(); ++i)
+	for(const Module& module : modules)
 	{
-		s_rodata_sceResident.sh_size += modules[i].m_name.length() + 1;
+		s_rodata_sceResident.sh_size += module.m_name.length() + 1;
 	}
 	s_rodata_sceResident.sh_size = Memory.AlignAddr(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
 	sections_names.push_back(".rodata.sceResident");
@@ -1337,9 +1338,11 @@ void CompilePPUProgram::Compile()
 		{
 			const std::string& name = op.substr(0, op.length() - 1);
 
-			for(u32 i=0; i<m_branches.GetCount(); ++i)
+			for(const Branch& branch : m_branches)
 			{
-				if(name != m_branches[i].m_name) continue;
+				if(name != branch.m_name)
+					continue;
+
 				WriteError(fmt::Format("'%s' already declared", name.c_str()));
 				m_error = true;
 				break;
@@ -1356,7 +1359,7 @@ void CompilePPUProgram::Compile()
 
 			if(m_error) break;
 
-			m_branches.Move(new Branch(name, m_branch_pos)); //TODO: HACK: free() and new mixed
+			m_branches.emplace_back(name, m_branch_pos);
 
 			CheckEnd();
 			continue;
@@ -1367,23 +1370,23 @@ void CompilePPUProgram::Compile()
 	}
 
 	bool has_entry = false;
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
+	for(const Branch& branch : m_branches)
 	{
-		if(m_branches[i].m_name != "entry")
+		if(branch.m_name != "entry")
 			continue;
 
 		has_entry = true;
 		break;
 	}
 
-	if(!has_entry) m_branches.Move(new Branch("entry", 0)); //TODO: HACK: new and free() mixed
+	if(!has_entry) m_branches.emplace_back("entry", 0);
 
 	if(m_analyze) m_error = false;
 	FirstChar();
 
 	while(!IsEnd())
 	{
-		m_args.Clear();
+		m_args.clear();
 		m_end_args = false;
 
 		std::string op;
@@ -1453,7 +1456,7 @@ void CompilePPUProgram::Compile()
 
 		{
 			Array<u32> args;
-			args.SetCount(m_args.GetCount());
+			args.SetCount(m_args.size());
 			for(uint i=0; i<args.GetCount(); ++i)
 			{
 				args[i] = m_args[i].value;
@@ -1464,7 +1467,7 @@ void CompilePPUProgram::Compile()
 
 		if(m_analyze) WriteHex(fmt::Format("0x%08x\n", code));
 
-		if(!m_analyze) m_code.AddCpy(code);
+		if(!m_analyze) m_code.push_back(code);
 
 		m_branch_pos++;
 	}
@@ -1505,11 +1508,11 @@ void CompilePPUProgram::Compile()
 
 		u8* opd_data = new u8[s_opd.sh_size];
 		u32 entry_point = s_text.sh_addr;
-		for(u32 i=0; i<m_branches.GetCount(); ++i)
+		for(const Branch& branch : m_branches)
 		{
-			if(m_branches[i].m_name == "entry")
+			if(branch.m_name == "entry")
 			{
-				entry_point += m_branches[i].m_pos * 4;
+				entry_point += branch.m_pos * 4;
 				break;
 			}
 		}
@@ -1551,11 +1554,14 @@ void CompilePPUProgram::Compile()
 		WriteShdr(f, s_shstrtab);
 
 		f.Seek(s_text.sh_offset);
-		for(u32 i=0; i<m_code.GetCount(); ++i) Write32(f, m_code[i]);
+		for(const u32& code : m_code)
+		{
+			Write32(f, code);
+		}
 
 		f.Seek(s_opd.sh_offset);
 		f.Write(opd_data, 8);
-		for(u32 i=0; i<m_sp_string.GetCount(); ++i)
+		for(u32 i=0; i<m_sp_string.size(); ++i)
 		{
 			f.Seek(s_opd.sh_offset + (m_sp_string[i].m_addr - s_opd.sh_addr));
 			f.Write(&m_sp_string[i].m_data[0], m_sp_string[i].m_data.length() + 1);
@@ -1579,7 +1585,7 @@ void CompilePPUProgram::Compile()
 		f.Seek(s_lib_stub_top.sh_size, wxFromCurrent);
 
 		f.Seek(s_lib_stub.sh_offset);
-		for(u32 i=0, nameoffs=4, dataoffs=0; i<modules.GetCount(); ++i)
+		for(u32 i=0, nameoffs=4, dataoffs=0; i<modules.size(); ++i)
 		{
 			Elf64_StubHeader stub;
 			memset(&stub, 0, sizeof(Elf64_StubHeader));
@@ -1590,9 +1596,9 @@ void CompilePPUProgram::Compile()
 			stub.s_modulename = re32(s_rodata_sceResident.sh_addr + nameoffs);
 			stub.s_nid = re32(s_rodata_sceFNID.sh_addr + dataoffs);
 			stub.s_text = re32(s_data_sceFStub.sh_addr + dataoffs);
-			stub.s_imports = re16(modules[i].m_imports.GetCount());
+			stub.s_imports = re16(modules[i].m_imports.size());
 
-			dataoffs += modules[i].m_imports.GetCount() * 4;
+			dataoffs += modules[i].m_imports.size() * 4;
 
 			f.Write(&stub, sizeof(Elf64_StubHeader));
 			nameoffs += modules[i].m_name.length() + 1;
@@ -1602,25 +1608,25 @@ void CompilePPUProgram::Compile()
 		f.Seek(s_lib_stub_btm.sh_size, wxFromCurrent);
 
 		f.Seek(s_data_sceFStub.sh_offset);
-		for(u32 m=0; m<modules.GetCount(); ++m)
+		for(const Module& module : modules)
 		{
-			for(u32 i=0; i<modules[m].m_imports.GetCount(); ++i)
+			for(const u32& import : module.m_imports)
 			{
-				Write32(f, m_branches[modules[m].m_imports[i]].m_addr);
+				Write32(f, m_branches[import].m_addr);
 			}
 		}
 
 		f.Seek(s_rodata_sceFNID.sh_offset);
-		for(u32 m=0; m<modules.GetCount(); ++m)
+		for(const Module& module : modules)
 		{
-			for(u32 i=0; i<modules[m].m_imports.GetCount(); ++i)
+			for(const u32& import : module.m_imports)
 			{
-				Write32(f, m_branches[modules[m].m_imports[i]].m_id);
+				Write32(f, m_branches[import].m_id);
 			}
 		}
 
 		f.Seek(s_rodata_sceResident.sh_offset + 4);
-		for(u32 i=0; i<modules.GetCount(); ++i)
+		for(u32 i=0; i<modules.size(); ++i)
 		{
 			f.Write(&modules[i].m_name[0], modules[i].m_name.length() + 1);
 		}
@@ -1702,21 +1708,13 @@ void CompilePPUProgram::Compile()
 
 		sections_names.clear();
 		delete[] opd_data;
-		for(u32 i=0; i<modules.GetCount(); ++i) modules[i].Clear();
-		modules.Clear();
+		modules.clear();
 	}
 
-	for(u32 i=0; i<m_branches.GetCount(); ++i)
-	{
-		m_branches[i].m_name.clear();
-	}
-
-	m_branches.Clear();
-
-	m_code.Clear();
-	m_args.Clear();
-
-	m_sp_string.Clear();
+	m_branches.clear();
+	m_code.clear();
+	m_args.clear();
+	m_sp_string.clear();
 
 	if(m_err_list) m_err_list->Thaw();
 

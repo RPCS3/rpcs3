@@ -37,6 +37,19 @@ enum CellPngDecStreamSrcSel
 	CELL_PNGDEC_BUFFER		= 1,
 };
 
+enum CellPngDecInterlaceMode
+{
+	CELL_PNGDEC_NO_INTERLACE = 0,
+	CELL_PNGDEC_ADAM7_INTERLACE = 1,
+};
+
+enum CellPngDecOutputMode
+{
+	CELL_PNGDEC_TOP_TO_BOTTOM = 0,
+	CELL_PNGDEC_BOTTOM_TO_TOP = 1,
+};
+
+// Structs
 struct CellPngDecDataOutInfo
 {
 	be_t<u32> chunkInformation;
@@ -55,31 +68,31 @@ struct CellPngDecInfo
 	be_t<u32> imageWidth;
 	be_t<u32> imageHeight;
 	be_t<u32> numComponents;
-	be_t<u32> colorSpace;			// CellPngDecColorSpace
+	be_t<u32> colorSpace;         // CellPngDecColorSpace
 	be_t<u32> bitDepth;
-	be_t<u32> interlaceMethod;		// CellPngDecInterlaceMode
+	be_t<u32> interlaceMethod;    // CellPngDecInterlaceMode
 	be_t<u32> chunkInformation;
 };
 
 struct CellPngDecSrc
 {
-	be_t<u32> srcSelect;			// CellPngDecStreamSrcSel
-	be_t<u32> fileName;				// const char*
-	be_t<u64> fileOffset;			// int64_t
+	be_t<u32> srcSelect;          // CellPngDecStreamSrcSel
+	be_t<u32> fileName_addr;      // const char*
+	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	be_t<u32> streamPtr;
 	be_t<u32> streamSize;
-	be_t<u32> spuThreadEnable;		// CellPngDecSpuThreadEna
+	be_t<u32> spuThreadEnable;    // CellPngDecSpuThreadEna
 };
 
 struct CellPngDecInParam
 {
 	be_t<u32> commandPtr;
-	be_t<u32> outputMode;			// CellPngDecOutputMode
-	be_t<u32> outputColorSpace;	// CellPngDecColorSpace
+	be_t<u32> outputMode;         // CellPngDecOutputMode
+	be_t<u32> outputColorSpace;   // CellPngDecColorSpace
 	be_t<u32> outputBitDepth;
-	be_t<u32> outputPackFlag;		// CellPngDecPackFlag
-	be_t<u32> outputAlphaSelect;	// CellPngDecAlphaSelect
+	be_t<u32> outputPackFlag;     // CellPngDecPackFlag
+	be_t<u32> outputAlphaSelect;  // CellPngDecAlphaSelect
 	be_t<u32> outputColorAlpha;
 };
 
@@ -90,12 +103,13 @@ struct CellPngDecOutParam
 	be_t<u32> outputHeight;
 	be_t<u32> outputComponents;
 	be_t<u32> outputBitDepth;
-	be_t<u32> outputMode;			// CellPngDecOutputMode
-	be_t<u32> outputColorSpace;	// CellPngDecColorSpace
+	be_t<u32> outputMode;         // CellPngDecOutputMode
+	be_t<u32> outputColorSpace;   // CellPngDecColorSpace
 	be_t<u32> useMemorySpace;
 };
 
-struct CellPngDecSubHandle //Custom struct
+//Custom structs
+struct CellPngDecSubHandle
 {
 	u32 fd;
 	u64 fileSize;

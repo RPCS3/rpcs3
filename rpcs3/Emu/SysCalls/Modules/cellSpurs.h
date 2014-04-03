@@ -51,9 +51,9 @@ struct CellSpursAttribute
 
 struct CellSpursInfo
 { 
-	be_t<int> nSpus; 
-	be_t<int> spuThreadGroupPriority; 
-	be_t<int> ppuThreadPriority; 
+	be_t<s32> nSpus;
+	be_t<s32> spuThreadGroupPriority;
+	be_t<s32> ppuThreadPriority; 
 	bool exitIfNoWork; 
 	bool spurs2; 
 	be_t<u32> traceBuffer_addr;		//void *traceBuffer;
@@ -63,7 +63,7 @@ struct CellSpursInfo
 	be_t<u32> spuThreads[8];		//typedef u32 sys_spu_thread_t;
 	be_t<u32> spursHandlerThread0; 
 	be_t<u32> spursHandlerThread1; 
-	char namePrefix[CELL_SPURS_NAME_MAX_LENGTH+1]; 
+	s8 namePrefix[CELL_SPURS_NAME_MAX_LENGTH+1]; 
 	be_t<u64> namePrefixLength; 
 	be_t<u32> deadlineMissCounter; 
 	be_t<u32> deadlineMeetCounter; 
@@ -125,7 +125,7 @@ struct CellSpursTracePacket
 
 		struct start_struct
 		{ 
-			char module[4]; 
+			s8 module[4];
 			be_t<u16> level; 
 			be_t<u16> ls; 
 		} start; 
@@ -143,17 +143,17 @@ struct CellSpursTaskset
 
 // Exception handlers.
 typedef void (*CellSpursGlobalExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursExceptionInfo> info, 
-													 uint id, mem_ptr_t<void> arg);
+													 u32 id, mem_ptr_t<void> arg);
 
 typedef void (*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
-													 uint idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
+													 u32 idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
 
 struct CellSpursTasksetInfo 
 { 
 	//CellSpursTaskInfo taskInfo[CELL_SPURS_MAX_TASK]; 
 	be_t<u64> argument; 
-	be_t<uint> idWorkload; 
-	be_t<uint> idLastScheduledTask; //typedef unsigned CellSpursTaskId
+	be_t<u32> idWorkload; 
+	be_t<u32> idLastScheduledTask; //typedef unsigned CellSpursTaskId
 	be_t<u32> name_addr; 
 	CellSpursTasksetExceptionEventHandler exceptionEventHandler; 
 	be_t<u32> exceptionEventHandlerArgument_addr; //void *exceptionEventHandlerArgument

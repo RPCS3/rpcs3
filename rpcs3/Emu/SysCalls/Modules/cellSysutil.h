@@ -215,14 +215,14 @@ struct CellHddGameStatGet
 
 struct CellHddGameStatSet
 {
-	CellHddGameSystemFileParam *setParam;
-	u32 reserved_addr;  // void*
+	mem_beptr_t<CellHddGameSystemFileParam> setParam;
+	be_t<u32> reserved_addr;  // void*
 };
 
 struct CellHddGameCBResult
 {
 	be_t<u32> result;
 	be_t<s32> errNeedSizeKB;
-	u8 *invalidMsg;
-	u32 reserved_addr;  // void*
+	be_t<u32> invalidMsg_addr;  // char*
+	be_t<u32> reserved_addr;  // void*
 };

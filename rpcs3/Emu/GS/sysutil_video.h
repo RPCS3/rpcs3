@@ -137,9 +137,9 @@ struct CellVideoOutColorInfo
 
 struct CellVideoOutKSVList
 {
-	u8	ksv[32*5];
-	u8	reserved[4];
-	u32	count;
+	u8 ksv[32*5];
+	u8 reserved[4];
+	u32 count;
 };
 
 enum CellVideoOutDisplayConversion
@@ -165,8 +165,8 @@ struct CellVideoOutDisplayMode
 
 struct CellVideoOutResolution
 {
-	u16 width;
-	u16 height;
+	be_t<u16> width;
+	be_t<u16> height;
 };
 
 struct CellVideoOutDeviceInfo

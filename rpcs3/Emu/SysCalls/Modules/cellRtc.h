@@ -21,16 +21,16 @@ enum
 
 struct CellRtcTick
 {
-	u64 tick;
+	be_t<u64> tick;
 };
 
 struct CellRtcDateTime
 {
-	u16 year;
-	u16 month;
-	u16 day;
-	u16 hour;
-	u16 minute;
-	u16 second;
-	u32 microsecond;
+	be_t<u16> year;
+	be_t<u16> month;
+	be_t<u16> day;
+	be_t<u16> hour;
+	be_t<u16> minute;
+	be_t<u16> second;
+	be_t<u32> microsecond;
 };

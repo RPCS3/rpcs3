@@ -174,28 +174,20 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr)
+int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution> resolution)
 {
 	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
-		resolutionId, resolution_addr);
+		resolutionId, resolution.GetAddr());
 
-	if(!Memory.IsGoodAddr(resolution_addr, sizeof(CellVideoOutResolution)))
-	{
-		return CELL_EFAULT;
-	}
+	if (!resolution.IsGood())
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	
 	u32 num = ResolutionIdToNum(resolutionId);
-
 	if(!num)
-	{
 		return CELL_EINVAL;
-	}
 
-	CellVideoOutResolution res;
-	re(res.width, ResolutionTable[num].width);
-	re(res.height, ResolutionTable[num].height);
-
-	Memory.WriteData(resolution_addr, res);
+	resolution->width = ResolutionTable[num].width;
+	resolution->height = ResolutionTable[num].height;
 
 	return CELL_VIDEO_OUT_SUCCEEDED;
 }
