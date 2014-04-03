@@ -23,6 +23,8 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 
 int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
+	if (!subHandle.IsGood() || !src.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
 	/*
 	vfsStream* stream;
 
@@ -73,6 +75,9 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
 {
+	if (!info.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec.CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -111,6 +116,9 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 
 int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
 {
+	if (!inParam.IsGood() || !outParam.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec.CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -138,6 +146,9 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 
 int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
+	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	CellGifDecSubHandle* subHandle_data;
