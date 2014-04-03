@@ -36,13 +36,13 @@ int cellAudioInit()
 
 	thread t("Audio Thread", []()
 		{
-			AudioDumper m_dump(2); // WAV file header (stereo)
+			AudioDumper m_dump(8); // WAV file header (8 ch)
 
 			bool do_dump = Ini.AudioDumpToFile.GetValue();
 		
 			if (do_dump && !m_dump.Init())
 			{
-				ConLog.Error("Audio aborted: cannot create file!");
+				ConLog.Error("Audio aborted: AudioDumper::Init() failed");
 				return;
 			}
 
@@ -51,10 +51,11 @@ int cellAudioInit()
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
 
-			float buffer[2*256]; // intermediate buffer for 2 channels
+			float buf2ch[2 * 256]; // intermediate buffer for 2 channels
+			float buf8ch[8 * 256]; // intermediate buffer for 8 channels
 
 			uint oal_buffer_offset = 0;
-			uint oal_buffer_size = sizeof(buffer) / sizeof(float);
+			uint oal_buffer_size = sizeof(buf2ch) / sizeof(float);
 			std::unique_ptr<u16[]> oal_buffer[32];
 			SQueue<u16*, 31> queue;
 			for (u32 i = 0; i < sizeof(oal_buffer) / sizeof(oal_buffer[0]); i++)
@@ -139,25 +140,45 @@ int cellAudioInit()
 
 					auto buf = (be_t<float>*)&Memory[buf_addr];
 
-					static const float k = 1.0f;
+					static const float k = 1.0f; // may be 0.5f
 					const float m = port.level;
 
 					if (port.channel == 2)
 					{
 						if (first_mix)
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
 								// reverse byte order
-								buffer[i] = buf[i] * m;
+								const float left = buf[i + 0] * m;
+								const float right = buf[i + 1] * m;
+
+								buf2ch[i + 0] = left;
+								buf2ch[i + 1] = right;
+
+								buf8ch[i * 4 + 0] = left;
+								buf8ch[i * 4 + 1] = right;
+								buf8ch[i * 4 + 2] = 0.0f;
+								buf8ch[i * 4 + 3] = 0.0f;
+								buf8ch[i * 4 + 4] = 0.0f;
+								buf8ch[i * 4 + 5] = 0.0f;
+								buf8ch[i * 4 + 6] = 0.0f;
+								buf8ch[i * 4 + 7] = 0.0f;
 							}
 							first_mix = false;
 						}
 						else
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i++)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
-								buffer[i] += buf[i] * m;
+								const float left = buf[i + 0] * m;
+								const float right = buf[i + 1] * m;
+
+								buf2ch[i + 0] += left;
+								buf2ch[i + 1] += right;
+
+								buf8ch[i * 4 + 0] += left;
+								buf8ch[i * 4 + 1] += right;
 							}
 						}
 					}
@@ -165,21 +186,51 @@ int cellAudioInit()
 					{
 						if (first_mix)
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
-								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
-								buffer[i] = (buf[i*3] + buf[i*3+4] + center) * k * m;
-								buffer[i+1] = (buf[i*3+1] + buf[i*3+5] + center) * k * m;
+								const float left = buf[i * 3 + 0] * m;
+								const float right = buf[i * 3 + 1] * m;
+								const float center = buf[i * 3 + 2] * m;
+								const float low_freq = buf[i * 3 + 3] * m;
+								const float rear_left = buf[i * 3 + 4] * m;
+								const float rear_right = buf[i * 3 + 5] * m;
+
+								const float mid = (center + low_freq) * 0.708f;
+								buf2ch[i + 0] = (left + rear_left + mid) * k;
+								buf2ch[i + 1] = (right + rear_right + mid) * k;
+
+								buf8ch[i * 4 + 0] = left;
+								buf8ch[i * 4 + 1] = right;
+								buf8ch[i * 4 + 2] = center;
+								buf8ch[i * 4 + 3] = low_freq;
+								buf8ch[i * 4 + 4] = rear_left;
+								buf8ch[i * 4 + 5] = rear_right;
+								buf8ch[i * 4 + 6] = 0.0f;
+								buf8ch[i * 4 + 7] = 0.0f;
 							}
 							first_mix = false;
 						}
 						else
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
-								const float center = (buf[i*3+2] + buf[i*3+3]) * 0.708f;
-								buffer[i] += (buf[i*3] + buf[i*3+4] + center) * k * m;
-								buffer[i+1] += (buf[i*3+1] + buf[i*3+5] + center) * k * m;
+								const float left = buf[i * 3 + 0] * m;
+								const float right = buf[i * 3 + 1] * m;
+								const float center = buf[i * 3 + 2] * m;
+								const float low_freq = buf[i * 3 + 3] * m;
+								const float rear_left = buf[i * 3 + 4] * m;
+								const float rear_right = buf[i * 3 + 5] * m;
+
+								const float mid = (center + low_freq) * 0.708f;
+								buf2ch[i + 0] += (left + rear_left + mid) * k;
+								buf2ch[i + 1] += (right + rear_right + mid) * k;
+
+								buf8ch[i * 4 + 0] += left;
+								buf8ch[i * 4 + 1] += right;
+								buf8ch[i * 4 + 2] += center;
+								buf8ch[i * 4 + 3] += low_freq;
+								buf8ch[i * 4 + 4] += rear_left;
+								buf8ch[i * 4 + 5] += rear_right;
 							}
 						}
 					}
@@ -187,21 +238,57 @@ int cellAudioInit()
 					{
 						if (first_mix)
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
-								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
-								buffer[i] = (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * k * m;
-								buffer[i+1] = (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * k * m;
+								const float left = buf[i * 4 + 0] * m;
+								const float right = buf[i * 4 + 1] * m;
+								const float center = buf[i * 4 + 2] * m;
+								const float low_freq = buf[i * 4 + 3] * m;
+								const float rear_left = buf[i * 4 + 4] * m;
+								const float rear_right = buf[i * 4 + 5] * m;
+								const float side_left = buf[i * 4 + 6] * m;
+								const float side_right = buf[i * 4 + 7] * m;
+
+								const float mid = (center + low_freq) * 0.708f;
+								buf2ch[i + 0] = (left + rear_left + side_left + mid) * k;
+								buf2ch[i + 1] = (right + rear_right + side_right + mid) * k;
+
+								buf8ch[i * 4 + 0] = left;
+								buf8ch[i * 4 + 1] = right;
+								buf8ch[i * 4 + 2] = center;
+								buf8ch[i * 4 + 3] = low_freq;
+								buf8ch[i * 4 + 4] = rear_left;
+								buf8ch[i * 4 + 5] = rear_right;
+								buf8ch[i * 4 + 6] = side_left;
+								buf8ch[i * 4 + 7] = side_right;
 							}
 							first_mix = false;
 						}
 						else
 						{
-							for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 2)
+							for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
 							{
-								const float center = (buf[i*4+2] + buf[i*4+3]) * 0.708f;
-								buffer[i] += (buf[i*4] + buf[i*4+4] + buf[i*4+6] + center) * k * m;
-								buffer[i+1] += (buf[i*4+1] + buf[i*4+5] + buf[i*4+7] + center) * k * m;
+								const float left = buf[i * 4 + 0] * m;
+								const float right = buf[i * 4 + 1] * m;
+								const float center = buf[i * 4 + 2] * m;
+								const float low_freq = buf[i * 4 + 3] * m;
+								const float rear_left = buf[i * 4 + 4] * m;
+								const float rear_right = buf[i * 4 + 5] * m;
+								const float side_left = buf[i * 4 + 6] * m;
+								const float side_right = buf[i * 4 + 7] * m;
+
+								const float mid = (center + low_freq) * 0.708f;
+								buf2ch[i + 0] += (left + rear_left + side_left + mid) * k;
+								buf2ch[i + 1] += (right + rear_right + side_right + mid) * k;
+
+								buf8ch[i * 4 + 0] += left;
+								buf8ch[i * 4 + 1] += right;
+								buf8ch[i * 4 + 2] += center;
+								buf8ch[i * 4 + 3] += low_freq;
+								buf8ch[i * 4 + 4] += rear_left;
+								buf8ch[i * 4 + 5] += rear_right;
+								buf8ch[i * 4 + 6] += side_left;
+								buf8ch[i * 4 + 7] += side_right;
 							}
 						}
 					}
@@ -221,12 +308,12 @@ int cellAudioInit()
 					// 2x MINPS (optional)
 					// 2x CVTPS2DQ (converts float to s32)
 					// PACKSSDW (converts s32 to s16 with clipping)
-					for (u32 i = 0; i < (sizeof(buffer) / sizeof(float)); i += 8)
+					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 8)
 					{
 						static const __m128 float2u16 = { 0x8000, 0x8000, 0x8000, 0x8000 };
 						(__m128i&)(oal_buffer[oal_pos][oal_buffer_offset + i]) = _mm_packs_epi32(
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buffer[i]), float2u16)),
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buffer[i + 4]), float2u16)));
+							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i]), float2u16)),
+							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i + 4]), float2u16)));
 					}
 				}
 
@@ -234,7 +321,7 @@ int cellAudioInit()
 
 				if (!first_mix)
 				{
-					oal_buffer_offset += sizeof(buffer) / sizeof(float);
+					oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
 
 					if(oal_buffer_offset >= oal_buffer_size)
 					{
@@ -279,9 +366,25 @@ int cellAudioInit()
 
 				if (do_dump && !first_mix)
 				{
-					if (m_dump.WriteData(&buffer, sizeof(buffer)) != sizeof(buffer)) // write file data
+					if (m_dump.GetCh() == 8)
 					{
-						ConLog.Error("Port aborted: cannot write file!");
+						if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data
+						{
+							ConLog.Error("Audio aborted: AudioDumper::WriteData() failed");
+							goto abort;
+						}
+					}
+					else if (m_dump.GetCh() == 2)
+					{
+						if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data
+						{
+							ConLog.Error("Audio aborted: AudioDumper::WriteData() failed");
+							goto abort;
+						}
+					}
+					else
+					{
+						ConLog.Error("Audio aborted: unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
 						goto abort;
 					}
 				}

@@ -56,8 +56,8 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		for (u32 i = 0; i < samples; i++)
 		{
 			const float center = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
-			mixdata[i*8+0] += center;
-			mixdata[i*8+1] += center;
+			mixdata[i * 8 + 0] += center;
+			mixdata[i * 8 + 1] += center;
 		}		
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE2A)
@@ -67,8 +67,8 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		{
 			const float left = *(be_t<float>*)&Memory[addr + i * 2 * sizeof(float)];
 			const float right = *(be_t<float>*)&Memory[addr + (i * 2 + 1) * sizeof(float)];
-			mixdata[i*8+0] += left;
-			mixdata[i*8+1] += right;
+			mixdata[i * 8 + 0] += left;
+			mixdata[i * 8 + 1] += right;
 		}
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE6A)
@@ -82,12 +82,12 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 			const float low_freq = *(be_t<float>*)&Memory[addr + (i * 6 + 3) * sizeof(float)];
 			const float rear_left = *(be_t<float>*)&Memory[addr + (i * 6 + 4) * sizeof(float)];
 			const float rear_right = *(be_t<float>*)&Memory[addr + (i * 6 + 5) * sizeof(float)];
-			mixdata[i*8+0] += left;
-			mixdata[i*8+1] += right;
-			mixdata[i*8+2] += center;
-			mixdata[i*8+3] += low_freq;
-			mixdata[i*8+4] += rear_left;
-			mixdata[i*8+5] += rear_right;
+			mixdata[i * 8 + 0] += left;
+			mixdata[i * 8 + 1] += right;
+			mixdata[i * 8 + 2] += center;
+			mixdata[i * 8 + 3] += low_freq;
+			mixdata[i * 8 + 4] += rear_left;
+			mixdata[i * 8 + 5] += rear_right;
 		}
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE8A)

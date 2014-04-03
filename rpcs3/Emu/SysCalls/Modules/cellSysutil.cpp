@@ -532,7 +532,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -573,7 +573,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
