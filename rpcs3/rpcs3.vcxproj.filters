@@ -487,9 +487,6 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
