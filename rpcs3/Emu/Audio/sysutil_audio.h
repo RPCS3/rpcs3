@@ -257,3 +257,23 @@ struct CellAudioInDeviceConfiguration
 	u8 reserved[31];
 };
 
+enum CellBgmPlaybackStatusState
+{
+	CELL_BGMPLAYBACK_STATUS_PLAY = 0,
+	CELL_BGMPLAYBACK_STATUS_STOP = 1
+};
+
+enum CellBgmPlaybackStatusEnabled
+{
+	CELL_BGMPLAYBACK_STATUS_ENABLE = 0,
+	CELL_BGMPLAYBACK_STATUS_DISABLE = 1
+};
+
+struct CellBgmPlaybackStatus
+{
+	u8 playbackState;
+	u8 enabled;
+	char contentId[16];
+	u8 fadeRatio;
+	char reserved[13];
+};
