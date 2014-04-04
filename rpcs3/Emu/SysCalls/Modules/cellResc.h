@@ -2,10 +2,10 @@
 
 enum CellRescBufferMode
 {
-	CELL_RESC_720x480					= 0x1, 
-	CELL_RESC_720x576					= 0x2, 
-	CELL_RESC_1280x720					= 0x4, 
-	CELL_RESC_1920x1080					= 0x8, 
+	CELL_RESC_720x480   = 0x1, 
+	CELL_RESC_720x576   = 0x2, 
+	CELL_RESC_1280x720  = 0x4, 
+	CELL_RESC_1920x1080 = 0x8, 
 };
 
 enum CellRescPalTemporalMode

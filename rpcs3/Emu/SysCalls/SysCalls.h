@@ -471,3 +471,5 @@ void StaticFinalize();
 #define REG_SUB(module, group, name,...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ ## 0}; \
 	module.AddFuncSub(group, name ## _table, #name, name)
+
+extern u64 get_system_time();

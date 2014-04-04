@@ -114,19 +114,19 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 
 	switch (buffer.To<u8>()[25])
 	{
-	case 0: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE;		current_info.numComponents = 1; break;
-	case 2: current_info.colorSpace = CELL_PNGDEC_RGB;				current_info.numComponents = 3; break;
-	case 3: current_info.colorSpace = CELL_PNGDEC_PALETTE;			current_info.numComponents = 1; break;
-	case 4: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA;	current_info.numComponents = 2; break;
-	case 6: current_info.colorSpace = CELL_PNGDEC_RGBA;				current_info.numComponents = 4; break;
+	case 0: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE;       current_info.numComponents = 1; break;
+	case 2: current_info.colorSpace = CELL_PNGDEC_RGB;             current_info.numComponents = 3; break;
+	case 3: current_info.colorSpace = CELL_PNGDEC_PALETTE;         current_info.numComponents = 1; break;
+	case 4: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA; current_info.numComponents = 2; break;
+	case 6: current_info.colorSpace = CELL_PNGDEC_RGBA;            current_info.numComponents = 4; break;
 	default: return CELL_PNGDEC_ERROR_HEADER; // Not supported color type
 	}
 
-	current_info.imageWidth			= buffer[4];
-	current_info.imageHeight		= buffer[5];
-	current_info.bitDepth			= buffer.To<u8>()[24];
-	current_info.interlaceMethod	= buffer.To<u8>()[28];
-	current_info.chunkInformation	= 0; // Unimplemented
+	current_info.imageWidth       = buffer[4];
+	current_info.imageHeight      = buffer[5];
+	current_info.bitDepth         = buffer.To<u8>()[24];
+	current_info.interlaceMethod  = buffer.To<u8>()[28];
+	current_info.chunkInformation = 0; // Unimplemented
 
 	*info = current_info;
 
@@ -253,28 +253,29 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPn
 	CellPngDecInfo& current_info = subHandle_data->info;
 	CellPngDecOutParam& current_outParam = subHandle_data->outParam;
 
-	current_outParam.outputWidthByte	= (current_info.imageWidth * current_info.numComponents * current_info.bitDepth) / 8;
-	current_outParam.outputWidth		= current_info.imageWidth;
-	current_outParam.outputHeight		= current_info.imageHeight;
-	current_outParam.outputColorSpace	= inParam->outputColorSpace;
+	current_outParam.outputWidthByte  = (current_info.imageWidth * current_info.numComponents * current_info.bitDepth) / 8;
+	current_outParam.outputWidth      = current_info.imageWidth;
+	current_outParam.outputHeight     = current_info.imageHeight;
+	current_outParam.outputColorSpace = inParam->outputColorSpace;
+
 	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_PALETTE:
-	case CELL_PNGDEC_GRAYSCALE:			current_outParam.outputComponents = 1; break;
+	case CELL_PNGDEC_GRAYSCALE:       current_outParam.outputComponents = 1; break;
 
-	case CELL_PNGDEC_GRAYSCALE_ALPHA:	current_outParam.outputComponents = 2; break;
+	case CELL_PNGDEC_GRAYSCALE_ALPHA: current_outParam.outputComponents = 2; break;
 
-	case CELL_PNGDEC_RGB:				current_outParam.outputComponents = 3; break;
+	case CELL_PNGDEC_RGB:             current_outParam.outputComponents = 3; break;
 
 	case CELL_PNGDEC_RGBA:
-	case CELL_PNGDEC_ARGB:				current_outParam.outputComponents = 4; break;
+	case CELL_PNGDEC_ARGB:            current_outParam.outputComponents = 4; break;
 
-	default: return CELL_PNGDEC_ERROR_ARG;	// Not supported color space
+	default: return CELL_PNGDEC_ERROR_ARG; // Not supported color space
 	}
 
-	current_outParam.outputBitDepth		= inParam->outputBitDepth;
-	current_outParam.outputMode			= inParam->outputMode;
-	current_outParam.useMemorySpace		= 0;	// Unimplemented
+	current_outParam.outputBitDepth = inParam->outputBitDepth;
+	current_outParam.outputMode     = inParam->outputMode;
+	current_outParam.useMemorySpace = 0; // Unimplemented
 
 	*outParam = current_outParam;
 

@@ -20,14 +20,14 @@ DisAsmFrame::DisAsmFrame(PPCThread& cpu)
 
 	m_disasm_list = new wxListView(this);
 
-	wxButton& b_fprev	= *new wxButton(this, wxID_ANY, L"<<");
-	wxButton& b_prev	= *new wxButton(this, wxID_ANY, L"<");
-	wxButton& b_next	= *new wxButton(this, wxID_ANY, L">");
-	wxButton& b_fnext	= *new wxButton(this, wxID_ANY, L">>");
+	wxButton& b_fprev   = *new wxButton(this, wxID_ANY, L"<<");
+	wxButton& b_prev    = *new wxButton(this, wxID_ANY, L"<");
+	wxButton& b_next    = *new wxButton(this, wxID_ANY, L">");
+	wxButton& b_fnext   = *new wxButton(this, wxID_ANY, L">>");
 
-	wxButton& b_dump	= *new wxButton(this, wxID_ANY, L"Dump code");
+	wxButton& b_dump    = *new wxButton(this, wxID_ANY, L"Dump code");
 
-	wxButton& b_setpc	= *new wxButton(this, wxID_ANY, L"Set PC");
+	wxButton& b_setpc   = *new wxButton(this, wxID_ANY, L"Set PC");
 
 	s_b_panel.Add(&b_fprev);
 	s_b_panel.Add(&b_prev);

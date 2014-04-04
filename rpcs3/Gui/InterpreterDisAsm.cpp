@@ -34,16 +34,16 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	wxButton& b_go_to_addr = *new wxButton(this, wxID_ANY, "Go To Address");
 	wxButton& b_go_to_pc = *new wxButton(this, wxID_ANY, "Go To PC");
 
-	m_btn_step	= new wxButton(this, wxID_ANY, "Step");
-	m_btn_run	= new wxButton(this, wxID_ANY, "Run");
-	m_btn_pause	= new wxButton(this, wxID_ANY, "Pause");
+	m_btn_step  = new wxButton(this, wxID_ANY, "Step");
+	m_btn_run   = new wxButton(this, wxID_ANY, "Run");
+	m_btn_pause = new wxButton(this, wxID_ANY, "Pause");
 
-	s_b_main.Add(&b_go_to_addr,		wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(&b_go_to_pc,		wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_step,		wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_run,			wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_pause,		wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_choice_units,	wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(&b_go_to_addr,  wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(&b_go_to_pc,    wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_step,     wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_run,      wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_pause,    wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_choice_units, wxSizerFlags().Border(wxALL, 5));
 
 	//Registers
 	m_regs = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
@@ -76,15 +76,15 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 		m_list->InsertItem(m_list->GetItemCount(), wxEmptyString);
 	}
 
-	Connect(m_regs->GetId(),		wxEVT_COMMAND_TEXT_UPDATED,		wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
-	Connect(b_go_to_addr.GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
-	Connect(b_go_to_pc.GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
-	Connect(m_btn_step->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoStep));
-	Connect(m_btn_run->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
-	Connect(m_btn_pause->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
-	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_KEY_DOWN,	wxListEventHandler(InterpreterDisAsmFrame::InstrKey));
-	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
-	Connect(m_choice_units->GetId(),wxEVT_COMMAND_CHOICE_SELECTED,	wxCommandEventHandler(InterpreterDisAsmFrame::OnSelectUnit));
+	Connect(m_regs->GetId(),         wxEVT_COMMAND_TEXT_UPDATED,    wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
+	Connect(b_go_to_addr.GetId(),    wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
+	Connect(b_go_to_pc.GetId(),      wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
+	Connect(m_btn_step->GetId(),     wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoStep));
+	Connect(m_btn_run->GetId(),      wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
+	Connect(m_btn_pause->GetId(),    wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
+	Connect(m_list->GetId(),         wxEVT_COMMAND_LIST_KEY_DOWN,   wxListEventHandler(InterpreterDisAsmFrame::InstrKey));
+	Connect(m_list->GetId(),         wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
+	Connect(m_choice_units->GetId(), wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(InterpreterDisAsmFrame::OnSelectUnit));
 	Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
 	m_app_connector.Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
 	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
@@ -176,10 +176,10 @@ void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case WXK_PAGEUP:	ShowAddr( PC - (m_item_count * 2) * 4 ); return;
-		case WXK_PAGEDOWN:	ShowAddr( PC ); return;
-		case WXK_UP:		ShowAddr( PC - (m_item_count + 1) * 4 ); return;
-		case WXK_DOWN:		ShowAddr( PC - (m_item_count - 1) * 4 ); return;
+		case WXK_PAGEUP:   ShowAddr( PC - (m_item_count * 2) * 4 ); return;
+		case WXK_PAGEDOWN: ShowAddr( PC ); return;
+		case WXK_UP:       ShowAddr( PC - (m_item_count + 1) * 4 ); return;
+		case WXK_DOWN:     ShowAddr( PC - (m_item_count - 1) * 4 ); return;
 		}
 	}
 

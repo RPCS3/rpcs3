@@ -86,10 +86,10 @@ struct GLParamArray
 	{
 		switch(flag)
 		{
-		case PARAM_OUT:		return "out ";
-		case PARAM_IN:		return "in ";
-		case PARAM_UNIFORM:	return "uniform ";
-		case PARAM_CONST:	return "const ";
+		case PARAM_OUT:     return "out ";
+		case PARAM_IN:      return "in ";
+		case PARAM_UNIFORM: return "uniform ";
+		case PARAM_CONST:   return "const ";
 		}
 
 		return "";

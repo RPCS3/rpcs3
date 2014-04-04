@@ -119,7 +119,7 @@ void BuildupVertexBufferNR()
 		switch(s_rescInternalInstance->m_initConfig.ratioMode){
 		case CELL_RESC_LETTERBOX:  goto NR_LETTERBOX;
 		case CELL_RESC_PANSCAN:    goto NR_PANSCAN;
-		default:				   goto NR_FULLSCREEN;
+		default:                   goto NR_FULLSCREEN;
 		}
 	} else {
 		goto NR_FULLSCREEN;
@@ -262,7 +262,7 @@ u8 RescDstFormat2SysutilFormat(u32 dstFormat)
 {
 	switch (dstFormat) {
 	case CELL_RESC_SURFACE_F_W16Z16Y16X16: return CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT;
-	default:							   return CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
+	default:                               return CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
 	}
 }
 
@@ -346,8 +346,8 @@ bool CheckInitConfig(mem_ptr_t<CellRescInitConfig> initConfig)
 	}
 
 	if( InternalVersion() >= 3 ){
-		if(initConfig->interlaceMode > 4)	return false;
-		if(initConfig->flipMode > 1)		return false;
+		if(initConfig->interlaceMode > 4) return false;
+		if(initConfig->flipMode > 1)      return false;
 	}
 
 	return true;

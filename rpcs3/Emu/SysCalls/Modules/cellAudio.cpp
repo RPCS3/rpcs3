@@ -319,19 +319,20 @@ int cellAudioInit()
 
 				const u64 stamp1 = get_system_time();
 
-				if (!first_mix)
+				if (first_mix)
 				{
-					oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
+					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(u16));
+				}
+				oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
 
-					if(oal_buffer_offset >= oal_buffer_size)
+				if(oal_buffer_offset >= oal_buffer_size)
+				{
+					if(m_audio_out)
 					{
-						if(m_audio_out)
-						{
-							queue.Push(&oal_buffer[oal_pos][0]);
-						}
-
-						oal_buffer_offset = 0;
+						queue.Push(&oal_buffer[oal_pos][0]);
 					}
+
+					oal_buffer_offset = 0;
 				}
 
 				const u64 stamp2 = get_system_time();
