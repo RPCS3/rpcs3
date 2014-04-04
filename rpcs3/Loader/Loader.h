@@ -32,10 +32,10 @@ enum ShdrType
 
 enum ShdrFlag
 {
-	SHF_WRITE		= 0x1,
-	SHF_ALLOC		= 0x2,
-	SHF_EXECINSTR	= 0x4,
-	SHF_MASKPROC	= 0xf0000000,
+	SHF_WRITE     = 0x1,
+	SHF_ALLOC     = 0x2,
+	SHF_EXECINSTR = 0x4,
+	SHF_MASKPROC  = 0xf0000000,
 };
 
 __forceinline static u8 Read8(vfsStream& f)

@@ -69,63 +69,63 @@ static const char* spu_ch_name[128] =
 
 enum SPUchannels 
 {
-	SPU_RdEventStat		= 0,	//Read event status with mask applied
-	SPU_WrEventMask		= 1,	//Write event mask
-	SPU_WrEventAck		= 2,	//Write end of event processing
-	SPU_RdSigNotify1	= 3,	//Signal notification 1
-	SPU_RdSigNotify2	= 4,	//Signal notification 2
-	SPU_WrDec			= 7,	//Write decrementer count
-	SPU_RdDec			= 8,	//Read decrementer count
-	SPU_RdEventMask		= 11,	//Read event mask
-	SPU_RdMachStat		= 13,	//Read SPU run status
-	SPU_WrSRR0			= 14,	//Write SPU machine state save/restore register 0 (SRR0)
-	SPU_RdSRR0			= 15,	//Read SPU machine state save/restore register 0 (SRR0)
-	SPU_WrOutMbox		= 28,	//Write outbound mailbox contents
-	SPU_RdInMbox		= 29,	//Read inbound mailbox contents
-	SPU_WrOutIntrMbox	= 30,	//Write outbound interrupt mailbox contents (interrupting PPU)
+	SPU_RdEventStat     = 0,  //Read event status with mask applied
+	SPU_WrEventMask     = 1,  //Write event mask
+	SPU_WrEventAck      = 2,  //Write end of event processing
+	SPU_RdSigNotify1    = 3,  //Signal notification 1
+	SPU_RdSigNotify2    = 4,  //Signal notification 2
+	SPU_WrDec           = 7,  //Write decrementer count
+	SPU_RdDec           = 8,  //Read decrementer count
+	SPU_RdEventMask     = 11, //Read event mask
+	SPU_RdMachStat      = 13, //Read SPU run status
+	SPU_WrSRR0          = 14, //Write SPU machine state save/restore register 0 (SRR0)
+	SPU_RdSRR0          = 15, //Read SPU machine state save/restore register 0 (SRR0)
+	SPU_WrOutMbox       = 28, //Write outbound mailbox contents
+	SPU_RdInMbox        = 29, //Read inbound mailbox contents
+	SPU_WrOutIntrMbox   = 30, //Write outbound interrupt mailbox contents (interrupting PPU)
 };
 
 enum MFCchannels 
 {
-	MFC_WrMSSyncReq		= 9,	//Write multisource synchronization request
-	MFC_RdTagMask		= 12,	//Read tag mask
-	MFC_LSA				= 16,	//Write local memory address command parameter
-	MFC_EAH				= 17,	//Write high order DMA effective address command parameter
-	MFC_EAL				= 18,	//Write low order DMA effective address command parameter
-	MFC_Size			= 19,	//Write DMA transfer size command parameter
-	MFC_TagID			= 20,	//Write tag identifier command parameter
-	MFC_Cmd				= 21,	//Write and enqueue DMA command with associated class ID
-	MFC_WrTagMask		= 22,	//Write tag mask
-	MFC_WrTagUpdate		= 23,	//Write request for conditional or unconditional tag status update
-	MFC_RdTagStat		= 24,	//Read tag status with mask applied
-	MFC_RdListStallStat = 25,	//Read DMA list stall-and-notify status
-	MFC_WrListStallAck	= 26,	//Write DMA list stall-and-notify acknowledge
-	MFC_RdAtomicStat	= 27,	//Read completion status of last completed immediate MFC atomic update command
+	MFC_WrMSSyncReq     = 9,  //Write multisource synchronization request
+	MFC_RdTagMask       = 12, //Read tag mask
+	MFC_LSA             = 16, //Write local memory address command parameter
+	MFC_EAH             = 17, //Write high order DMA effective address command parameter
+	MFC_EAL             = 18, //Write low order DMA effective address command parameter
+	MFC_Size            = 19, //Write DMA transfer size command parameter
+	MFC_TagID           = 20, //Write tag identifier command parameter
+	MFC_Cmd             = 21, //Write and enqueue DMA command with associated class ID
+	MFC_WrTagMask       = 22, //Write tag mask
+	MFC_WrTagUpdate     = 23, //Write request for conditional or unconditional tag status update
+	MFC_RdTagStat       = 24, //Read tag status with mask applied
+	MFC_RdListStallStat = 25, //Read DMA list stall-and-notify status
+	MFC_WrListStallAck  = 26, //Write DMA list stall-and-notify acknowledge
+	MFC_RdAtomicStat    = 27, //Read completion status of last completed immediate MFC atomic update command
 };
 
 enum
 {
-	SPU_RUNCNTL_STOP		= 0,
-	SPU_RUNCNTL_RUNNABLE	= 1,
+	SPU_RUNCNTL_STOP     = 0,
+	SPU_RUNCNTL_RUNNABLE = 1,
 };
 
 enum
 {
-	SPU_STATUS_STOPPED				= 0x0,
-	SPU_STATUS_RUNNING				= 0x1,
-	SPU_STATUS_STOPPED_BY_STOP		= 0x2,
-	SPU_STATUS_STOPPED_BY_HALT		= 0x4,
-	SPU_STATUS_WAITING_FOR_CHANNEL	= 0x8,
-	SPU_STATUS_SINGLE_STEP			= 0x10,
+	SPU_STATUS_STOPPED             = 0x0,
+	SPU_STATUS_RUNNING             = 0x1,
+	SPU_STATUS_STOPPED_BY_STOP     = 0x2,
+	SPU_STATUS_STOPPED_BY_HALT     = 0x4,
+	SPU_STATUS_WAITING_FOR_CHANNEL = 0x8,
+	SPU_STATUS_SINGLE_STEP         = 0x10,
 };
 
 enum : u32
 {
-	SYS_SPU_THREAD_BASE_LOW = 0xf0000000,
+	SYS_SPU_THREAD_BASE_LOW  = 0xf0000000,
 	SYS_SPU_THREAD_BASE_MASK = 0xfffffff,
-	SYS_SPU_THREAD_OFFSET = 0x00100000,
-	SYS_SPU_THREAD_SNR1 = 0x05400c,
-	SYS_SPU_THREAD_SNR2 = 0x05C00c,
+	SYS_SPU_THREAD_OFFSET    = 0x00100000,
+	SYS_SPU_THREAD_SNR1      = 0x05400c,
+	SYS_SPU_THREAD_SNR2      = 0x05C00c,
 };
 
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs

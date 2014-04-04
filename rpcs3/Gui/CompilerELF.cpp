@@ -55,19 +55,19 @@ CompilerELF::CompilerELF(wxWindow* parent)
 	FrameBase::LoadInfo();
 
 	Connect(asm_list->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(CompilerELF::OnUpdate));
-	Connect(id_analyze_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::AnalyzeCode));
-	Connect(id_compile_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::CompileCode));
-	Connect(id_load_elf,	 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::LoadElf));
+	Connect(id_analyze_code,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::AnalyzeCode));
+	Connect(id_compile_code,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::CompileCode));
+	Connect(id_load_elf,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::LoadElf));
 
 	asm_list->SetFont(wxFont(-1, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	hex_list->SetFont(wxFont(-1, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-	m_app_connector.Connect(wxEVT_SCROLLWIN_TOP,			wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_SCROLLWIN_BOTTOM,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEUP,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEDOWN,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBRELEASE,wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_TOP,          wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_BOTTOM,       wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEUP,       wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEDOWN,     wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBTRACK,   wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBRELEASE, wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
 
 	m_app_connector.Connect(asm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
 	m_app_connector.Connect(hex_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
@@ -180,12 +180,12 @@ void CompilerELF::OnKeyDown(wxKeyEvent& event)
 
 	switch(event.GetKeyCode())
 	{
-	case WXK_RETURN:	UpdateStatus( 1); break;
-	case WXK_UP:		UpdateStatus(-1); break;
-	case WXK_DOWN:		UpdateStatus( 1); break;
+	case WXK_RETURN: UpdateStatus( 1); break;
+	case WXK_UP:     UpdateStatus(-1); break;
+	case WXK_DOWN:   UpdateStatus( 1); break;
 
 	case WXK_LEFT:
-	case WXK_RIGHT:		UpdateStatus(); break;
+	case WXK_RIGHT:  UpdateStatus(); break;
 
 	case WXK_PAGEUP:
 		scrool_event.SetEventType(wxEVT_SCROLLWIN_PAGEUP);

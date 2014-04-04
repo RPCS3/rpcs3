@@ -4,32 +4,32 @@
 
 enum
 {
-	MFC_LSA_offs			= 0x3004,
-	MFC_EAH_offs			= 0x3008,
-	MFC_EAL_offs			= 0x300C,
-	MFC_Size_Tag_offs		= 0x3010,
-	MFC_Class_CMD_offs		= 0x3014,
-	MFC_CMDStatus_offs		= 0x3014,
-	MFC_QStatus_offs		= 0x3104,
-	Prxy_QueryType_offs		= 0x3204,
-	Prxy_QueryMask_offs		= 0x321C,
-	Prxy_TagStatus_offs		= 0x322C,
-	SPU_Out_MBox_offs		= 0x4004,
-	SPU_In_MBox_offs		= 0x400C,
-	SPU_MBox_Status_offs	= 0x4014,
-	SPU_RunCntl_offs		= 0x401C,
-	SPU_Status_offs			= 0x4024,
-	SPU_NPC_offs			= 0x4034,
-	SPU_RdSigNotify1_offs	= 0x1400C,
-	SPU_RdSigNotify2_offs	= 0x1C00C,
+	MFC_LSA_offs          = 0x3004,
+	MFC_EAH_offs          = 0x3008,
+	MFC_EAL_offs          = 0x300C,
+	MFC_Size_Tag_offs     = 0x3010,
+	MFC_Class_CMD_offs    = 0x3014,
+	MFC_CMDStatus_offs    = 0x3014,
+	MFC_QStatus_offs      = 0x3104,
+	Prxy_QueryType_offs   = 0x3204,
+	Prxy_QueryMask_offs   = 0x321C,
+	Prxy_TagStatus_offs   = 0x322C,
+	SPU_Out_MBox_offs     = 0x4004,
+	SPU_In_MBox_offs      = 0x400C,
+	SPU_MBox_Status_offs  = 0x4014,
+	SPU_RunCntl_offs      = 0x401C,
+	SPU_Status_offs       = 0x4024,
+	SPU_NPC_offs          = 0x4034,
+	SPU_RdSigNotify1_offs = 0x1400C,
+	SPU_RdSigNotify2_offs = 0x1C00C,
 };
 
 enum : u64
 {
-	RAW_SPU_OFFSET		= 0x0000000000100000,
+	RAW_SPU_OFFSET      = 0x0000000000100000,
 	RAW_SPU_BASE_ADDR   = 0x00000000E0000000,
-	RAW_SPU_LS_OFFSET	= 0x0000000000000000,
-	RAW_SPU_PROB_OFFSET	= 0x0000000000040000,
+	RAW_SPU_LS_OFFSET   = 0x0000000000000000,
+	RAW_SPU_PROB_OFFSET = 0x0000000000040000,
 };
 
 __forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)

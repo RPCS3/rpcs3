@@ -277,9 +277,9 @@ int sys_vm_get_statistics(u32 addr, u32 stat_addr)
 	stats.physical_mem_used = 0;                 // Physical memory in use by the virtual memory area.
 	stats.timestamp = 0;                         // Current time.
 	stats.vm_crash_ppu = 0;                      // Number of bad virtual memory accesses from a PPU thread.
-	stats.vm_crash_spu = 0;						 // Number of bad virtual memory accesses from a SPU thread.
+	stats.vm_crash_spu = 0;                      // Number of bad virtual memory accesses from a SPU thread.
 	stats.vm_read = 0;                           // Number of virtual memory backup reading operations.
-	stats.vm_write = 0;							 // Number of virtual memory backup writing operations.
+	stats.vm_write = 0;                          // Number of virtual memory backup writing operations.
 	Memory.WriteData(stat_addr, stats);          // Faking.
 
 	return CELL_OK;

@@ -15,8 +15,8 @@ public:
 		m_app_connector.Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsPadHandler::KeyUp), (wxObject*)0, this);
 	}
 
-	virtual void KeyDown(wxKeyEvent& event)	{ Key(event.GetKeyCode(), 1); event.Skip(); }
-	virtual void KeyUp(wxKeyEvent& event)	{ Key(event.GetKeyCode(), 0); event.Skip(); }
+	virtual void KeyDown(wxKeyEvent& event) { Key(event.GetKeyCode(), 1); event.Skip(); }
+	virtual void KeyUp(wxKeyEvent& event)   { Key(event.GetKeyCode(), 0); event.Skip(); }
 
 	virtual void Init(const u32 max_connect)
 	{

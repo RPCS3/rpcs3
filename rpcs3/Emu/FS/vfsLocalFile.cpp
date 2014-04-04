@@ -5,11 +5,11 @@ static const wxFile::OpenMode vfs2wx_mode(vfsOpenMode mode)
 {
 	switch(mode)
 	{
-	case vfsRead:			return wxFile::read;
-	case vfsWrite:			return wxFile::write;
-	case vfsReadWrite:		return wxFile::read_write;
-	case vfsWriteExcl:		return wxFile::write_excl;
-	case vfsWriteAppend:	return wxFile::write_append;
+	case vfsRead:        return wxFile::read;
+	case vfsWrite:       return wxFile::write;
+	case vfsReadWrite:   return wxFile::read_write;
+	case vfsWriteExcl:   return wxFile::write_excl;
+	case vfsWriteAppend: return wxFile::write_append;
 	}
 
 	return wxFile::read;
