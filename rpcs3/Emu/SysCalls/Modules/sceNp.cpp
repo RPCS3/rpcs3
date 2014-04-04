@@ -73,6 +73,36 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	return CELL_OK;
 }
 
+int sceNpDrmIsAvailable2(u32 k_licensee_addr, u32 drm_path_addr)
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+int sceNpDrmVerifyUpgradeLicense(u32 content_id_addr)
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+int sceNpDrmVerifyUpgradeLicense2(u32 content_id_addr)
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+int sceNpDrmExecuteGamePurchase()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+int sceNpDrmGetTimelimit(u32 drm_path_addr, mem64_t time_remain_usec)
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 int sceNpManagerGetStatus(mem32_t status)
 {
 	sceNp.Log("sceNpManagerGetStatus(status_addr=0x%x)", status.GetAddr());
@@ -91,5 +121,10 @@ void sceNp_init()
 	sceNp.AddFunc(0xbd28fdbf, sceNpInit);
 	sceNp.AddFunc(0x4885aa18, sceNpTerm);
 	sceNp.AddFunc(0xad218faf, sceNpDrmIsAvailable);
+	sceNp.AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
+	sceNp.AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
+	sceNp.AddFunc(0xbe0e3ee2, sceNpDrmVerifyUpgradeLicense2);
+	sceNp.AddFunc(0xf283c143, sceNpDrmExecuteGamePurchase);
+	sceNp.AddFunc(0xcf51864b, sceNpDrmGetTimelimit);
 	sceNp.AddFunc(0xa7bff757, sceNpManagerGetStatus);
 }
