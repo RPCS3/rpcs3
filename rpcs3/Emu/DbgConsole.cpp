@@ -61,25 +61,25 @@ void DbgConsole::Task()
 			Sleep(1);
 			continue;
 		}
-                else
-                {
-                        wxThread::Yield();
-                }
+		else
+		{
+			wxThread::Yield();
+		}
                 
 		const DbgPacket packet = m_dbg_buffer.Pop();
-                wxTextCtrl* m_log = this->m_console;
-                wxTextAttr* m_red = this->m_color_red;
-                wxTextAttr* m_white = this->m_color_white;
-                wxFile* m_file_output = this->m_output;
-                wxTheApp->GetTopWindow()->GetEventHandler()->CallAfter([packet, m_log, m_red, m_white, m_file_output]()
-                {
-                        m_log->SetDefaultStyle(packet.m_ch == 1 ? *m_red : *m_white);
-                        m_log->SetInsertionPointEnd();
-                        m_log->WriteText(fmt::FromUTF8(packet.m_text));
+		wxTextCtrl* m_log = this->m_console;
+		wxTextAttr* m_red = this->m_color_red;
+		wxTextAttr* m_white = this->m_color_white;
+		wxFile* m_file_output = this->m_output;
+		wxTheApp->GetTopWindow()->GetEventHandler()->CallAfter([packet, m_log, m_red, m_white, m_file_output]()
+		{
+			m_log->SetDefaultStyle(packet.m_ch == 1 ? *m_red : *m_white);
+			m_log->SetInsertionPointEnd();
+			m_log->WriteText(fmt::FromUTF8(packet.m_text));
 
-                        if (m_file_output && Ini.HLESaveTTY.GetValue())
-                                m_file_output->Write(fmt::FromUTF8(packet.m_text));
-                });
+			if (m_file_output && Ini.HLESaveTTY.GetValue())
+				m_file_output->Write(fmt::FromUTF8(packet.m_text));
+		});
 
 		if(!DbgConsole::IsShown()) Show();
 	}
