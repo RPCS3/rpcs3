@@ -23,20 +23,20 @@ public:
 
 	virtual void MouseButtonDown(wxMouseEvent& event)
 	{
-		if (event.LeftDown())		MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 1);
-		else if (event.RightDown())	MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 1);
-		else if (event.MiddleDown())MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 1);
+		if (event.LeftDown())        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 1);
+		else if (event.RightDown())  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 1);
+		else if (event.MiddleDown()) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 1);
 		event.Skip();
 	}
 	virtual void MouseButtonUp(wxMouseEvent& event)	
 	{
-		if (event.LeftUp())			MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 0);
-		else if (event.RightUp())	MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 0);
-		else if (event.MiddleUp())	MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 0);
+		if (event.LeftUp())          MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 0);
+		else if (event.RightUp())    MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 0);
+		else if (event.MiddleUp())   MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 0);
 		event.Skip();
 	}
-	virtual void MouseScroll(wxMouseEvent& event)	 { MouseHandlerBase::Scroll(event.GetWheelRotation()); event.Skip(); }
-	virtual void MouseMove(wxMouseEvent& event)		 { MouseHandlerBase::Move(event.m_x, event.m_y); event.Skip(); }
+	virtual void MouseScroll(wxMouseEvent& event) { MouseHandlerBase::Scroll(event.GetWheelRotation()); event.Skip(); }
+	virtual void MouseMove(wxMouseEvent& event)   { MouseHandlerBase::Move(event.m_x, event.m_y); event.Skip(); }
 
 	virtual void Init(const u32 max_connect)
 	{

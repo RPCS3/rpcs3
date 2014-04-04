@@ -4,20 +4,20 @@
 //Return Codes
 enum
 {
-	CELL_GIFDEC_ERROR_OPEN_FILE		= 0x80611300,
+	CELL_GIFDEC_ERROR_OPEN_FILE     = 0x80611300,
 	CELL_GIFDEC_ERROR_STREAM_FORMAT = 0x80611301,
-	CELL_GIFDEC_ERROR_SEQ			= 0x80611302,
-	CELL_GIFDEC_ERROR_ARG			= 0x80611303,
-	CELL_GIFDEC_ERROR_FATAL			= 0x80611304,
+	CELL_GIFDEC_ERROR_SEQ           = 0x80611302,
+	CELL_GIFDEC_ERROR_ARG           = 0x80611303,
+	CELL_GIFDEC_ERROR_FATAL         = 0x80611304,
 	CELL_GIFDEC_ERROR_SPU_UNSUPPORT = 0x80611305,
-	CELL_GIFDEC_ERROR_SPU_ERROR		= 0x80611306,
-	CELL_GIFDEC_ERROR_CB_PARAM		= 0x80611307,
+	CELL_GIFDEC_ERROR_SPU_ERROR     = 0x80611306,
+	CELL_GIFDEC_ERROR_CB_PARAM      = 0x80611307,
 };
 
 enum CellGifDecStreamSrcSel
 {
-	CELL_GIFDEC_FILE	= 0,	//Input from a file
-	CELL_GIFDEC_BUFFER	= 1,	//Input from a buffer
+	CELL_GIFDEC_FILE   = 0, //Input from a file
+	CELL_GIFDEC_BUFFER = 1, //Input from a buffer
 };
 
 enum CellGifDecColorSpace
@@ -28,15 +28,15 @@ enum CellGifDecColorSpace
 
 enum CellGifDecRecordType
 {
-	CELL_GIFDEC_RECORD_TYPE_IMAGE_DESC	= 1,	// Image data block
-	CELL_GIFDEC_RECORD_TYPE_EXTENSION	= 2,	// Extension block
-	CELL_GIFDEC_RECORD_TYPE_TERMINATE	= 3,	// Trailer block
+	CELL_GIFDEC_RECORD_TYPE_IMAGE_DESC = 1, // Image data block
+	CELL_GIFDEC_RECORD_TYPE_EXTENSION  = 2, // Extension block
+	CELL_GIFDEC_RECORD_TYPE_TERMINATE  = 3, // Trailer block
 };
 
 enum CellGifDecDecodeStatus
 {
-	CELL_GIFDEC_DEC_STATUS_FINISH	= 0,	//Decoding finished
-	CELL_GIFDEC_DEC_STATUS_STOP		= 1,	//Decoding halted
+	CELL_GIFDEC_DEC_STATUS_FINISH = 0, //Decoding finished
+	CELL_GIFDEC_DEC_STATUS_STOP   = 1, //Decoding halted
 };
 
 struct CellGifDecInfo
