@@ -8,8 +8,8 @@ struct vfsHDD_Block
 {
 	struct
 	{
-		u64 is_used		: 1;
-		u64 next_block	: 63;
+		u64 is_used    : 1;
+		u64 next_block : 63;
 	};
 } static const g_null_block = {0}, g_used_block = {1};
 

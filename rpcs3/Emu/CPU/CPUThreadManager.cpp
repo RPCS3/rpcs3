@@ -29,10 +29,10 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 
 	switch(type)
 	{
-	case CPU_THREAD_PPU:		new_thread = new PPUThread(); break;
-	case CPU_THREAD_SPU:		new_thread = new SPUThread(); break;
-	case CPU_THREAD_RAW_SPU:	new_thread = new RawSPUThread(m_raw_spu_num++); break;
-	case CPU_THREAD_ARMv7:		new_thread = new ARMv7Thread(); break;
+	case CPU_THREAD_PPU:     new_thread = new PPUThread(); break;
+	case CPU_THREAD_SPU:     new_thread = new SPUThread(); break;
+	case CPU_THREAD_RAW_SPU: new_thread = new RawSPUThread(m_raw_spu_num++); break;
+	case CPU_THREAD_ARMv7:   new_thread = new ARMv7Thread(); break;
 	default: assert(0);
 	}
 	

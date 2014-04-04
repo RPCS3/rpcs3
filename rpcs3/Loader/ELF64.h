@@ -25,49 +25,49 @@ struct Elf64_Ehdr
 
 	void Load(vfsStream& f)
 	{
-		e_magic		= Read32(f);
-		e_class		= Read8(f);
-		e_data		= Read8(f);
-		e_curver	= Read8(f);
-		e_os_abi	= Read8(f);
-		e_abi_ver	= Read64(f);
-		e_type		= Read16(f);
-		e_machine	= Read16(f);
-		e_version	= Read32(f);
-		e_entry		= Read64(f);
-		e_phoff		= Read64(f);
-		e_shoff		= Read64(f);
-		e_flags		= Read32(f);
-		e_ehsize	= Read16(f);
+		e_magic     = Read32(f);
+		e_class     = Read8(f);
+		e_data      = Read8(f);
+		e_curver    = Read8(f);
+		e_os_abi    = Read8(f);
+		e_abi_ver   = Read64(f);
+		e_type      = Read16(f);
+		e_machine   = Read16(f);
+		e_version   = Read32(f);
+		e_entry     = Read64(f);
+		e_phoff     = Read64(f);
+		e_shoff     = Read64(f);
+		e_flags     = Read32(f);
+		e_ehsize    = Read16(f);
 		e_phentsize = Read16(f);
-		e_phnum		= Read16(f);
+		e_phnum     = Read16(f);
 		e_shentsize = Read16(f);
-		e_shnum		= Read16(f);
+		e_shnum     = Read16(f);
 		e_shstrndx  = Read16(f);
 	}
 
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Magic: %08x",								e_magic);
-		ConLog.Write("Class: %s",								"ELF64");
-		ConLog.Write("Data: %s",								Ehdr_DataToString(e_data).c_str());
-		ConLog.Write("Current Version: %d",						e_curver);
-		ConLog.Write("OS/ABI: %s",								Ehdr_OS_ABIToString(e_os_abi).c_str());
-		ConLog.Write("ABI version: %lld",						e_abi_ver);
-		ConLog.Write("Type: %s",								Ehdr_TypeToString(e_type).c_str());
-		ConLog.Write("Machine: %s",								Ehdr_MachineToString(e_machine).c_str());
-		ConLog.Write("Version: %d",								e_version);
-		ConLog.Write("Entry point address: 0x%08llx",			e_entry);
-		ConLog.Write("Program headers offset: 0x%08llx",		e_phoff);
-		ConLog.Write("Section headers offset: 0x%08llx",		e_shoff);
-		ConLog.Write("Flags: 0x%x",								e_flags);
-		ConLog.Write("Size of this header: %d",					e_ehsize);
-		ConLog.Write("Size of program headers: %d",				e_phentsize);
-		ConLog.Write("Number of program headers: %d",			e_phnum);
-		ConLog.Write("Size of section headers: %d",				e_shentsize);
-		ConLog.Write("Number of section headers: %d",			e_shnum);
-		ConLog.Write("Section header string table index: %d",	e_shstrndx);
+		ConLog.Write("Magic: %08x",                           e_magic);
+		ConLog.Write("Class: %s",                             "ELF64");
+		ConLog.Write("Data: %s",                              Ehdr_DataToString(e_data).c_str());
+		ConLog.Write("Current Version: %d",                   e_curver);
+		ConLog.Write("OS/ABI: %s",                            Ehdr_OS_ABIToString(e_os_abi).c_str());
+		ConLog.Write("ABI version: %lld",                     e_abi_ver);
+		ConLog.Write("Type: %s",                              Ehdr_TypeToString(e_type).c_str());
+		ConLog.Write("Machine: %s",                           Ehdr_MachineToString(e_machine).c_str());
+		ConLog.Write("Version: %d",                           e_version);
+		ConLog.Write("Entry point address: 0x%08llx",         e_entry);
+		ConLog.Write("Program headers offset: 0x%08llx",      e_phoff);
+		ConLog.Write("Section headers offset: 0x%08llx",      e_shoff);
+		ConLog.Write("Flags: 0x%x",                           e_flags);
+		ConLog.Write("Size of this header: %d",               e_ehsize);
+		ConLog.Write("Size of program headers: %d",           e_phentsize);
+		ConLog.Write("Number of program headers: %d",         e_phnum);
+		ConLog.Write("Size of section headers: %d",           e_shentsize);
+		ConLog.Write("Number of section headers: %d",         e_shnum);
+		ConLog.Write("Section header string table index: %d", e_shstrndx);
 #endif
 	}
 
@@ -90,31 +90,31 @@ struct Elf64_Shdr
 
 	void Load(vfsStream& f)
 	{
-		sh_name			= Read32(f);
-		sh_type			= Read32(f);
-		sh_flags		= Read64(f);
-		sh_addr			= Read64(f);
-		sh_offset		= Read64(f);
-		sh_size			= Read64(f);
-		sh_link			= Read32(f);
-		sh_info			= Read32(f);
-		sh_addralign	= Read64(f);
-		sh_entsize		= Read64(f);
+		sh_name      = Read32(f);
+		sh_type      = Read32(f);
+		sh_flags     = Read64(f);
+		sh_addr      = Read64(f);
+		sh_offset    = Read64(f);
+		sh_size      = Read64(f);
+		sh_link      = Read32(f);
+		sh_info      = Read32(f);
+		sh_addralign = Read64(f);
+		sh_entsize   = Read64(f);
 	}
 
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Name offset: %x",		sh_name);
-		ConLog.Write("Type: %d",			sh_type);
-		ConLog.Write("Addr: %llx",			sh_addr);
-		ConLog.Write("Offset: %llx",		sh_offset);
-		ConLog.Write("Size: %llx",			sh_size);
-		ConLog.Write("EntSize: %lld",		sh_entsize);
-		ConLog.Write("Flags: %llx",			sh_flags);
-		ConLog.Write("Link: %x",			sh_link);
-		ConLog.Write("Info: %x",			sh_info);
-		ConLog.Write("Address align: %llx",	sh_addralign);
+		ConLog.Write("Name offset: %x",     sh_name);
+		ConLog.Write("Type: %d",            sh_type);
+		ConLog.Write("Addr: %llx",          sh_addr);
+		ConLog.Write("Offset: %llx",        sh_offset);
+		ConLog.Write("Size: %llx",          sh_size);
+		ConLog.Write("EntSize: %lld",       sh_entsize);
+		ConLog.Write("Flags: %llx",         sh_flags);
+		ConLog.Write("Link: %x",            sh_link);
+		ConLog.Write("Info: %x",            sh_info);
+		ConLog.Write("Address align: %llx", sh_addralign);
 #endif
 	}
 };
@@ -132,27 +132,27 @@ struct Elf64_Phdr
 
 	void Load(vfsStream& f)
 	{
-		p_type		= Read32(f);
-		p_flags		= Read32(f);
-		p_offset	= Read64(f);
-		p_vaddr		= Read64(f);
-		p_paddr		= Read64(f);
-		p_filesz	= Read64(f);
-		p_memsz		= Read64(f);
-		p_align		= Read64(f);
+		p_type   = Read32(f);
+		p_flags  = Read32(f);
+		p_offset = Read64(f);
+		p_vaddr  = Read64(f);
+		p_paddr  = Read64(f);
+		p_filesz = Read64(f);
+		p_memsz  = Read64(f);
+		p_align  = Read64(f);
 	}
 
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Type: %s",					Phdr_TypeToString(p_type).c_str());
-		ConLog.Write("Offset: 0x%08llx",			p_offset);
-		ConLog.Write("Virtual address: 0x%08llx",	p_vaddr);
-		ConLog.Write("Physical address: 0x%08llx",	p_paddr);
-		ConLog.Write("File size: 0x%08llx",			p_filesz);
-		ConLog.Write("Memory size: 0x%08llx",		p_memsz);
-		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags).c_str());
-		ConLog.Write("Align: 0x%llx",				p_align);
+		ConLog.Write("Type: %s",                   Phdr_TypeToString(p_type).c_str());
+		ConLog.Write("Offset: 0x%08llx",           p_offset);
+		ConLog.Write("Virtual address: 0x%08llx",  p_vaddr);
+		ConLog.Write("Physical address: 0x%08llx", p_paddr);
+		ConLog.Write("File size: 0x%08llx",        p_filesz);
+		ConLog.Write("Memory size: 0x%08llx",      p_memsz);
+		ConLog.Write("Flags: %s",                  Phdr_FlagsToString(p_flags).c_str());
+		ConLog.Write("Align: 0x%llx",              p_align);
 #endif
 	}
 };

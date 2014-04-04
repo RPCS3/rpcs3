@@ -532,7 +532,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -573,7 +573,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -911,6 +911,19 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	return CELL_OK;
 }
 
+int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
+{
+	cellSysutil.Warning("cellSysutilGetBgmPlaybackStatus(status=0x%x)", status.GetAddr());
+
+	// non-essential, so always assume background music is stopped/disabled
+	status->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
+	status->enabled = CELL_BGMPLAYBACK_STATUS_DISABLE;
+	status->fadeRatio = 0; // volume ratio
+	memset(status->contentId, 0, sizeof(status->contentId));
+
+	return CELL_OK;
+}
+
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -939,6 +952,8 @@ void cellSysutil_init()
 	cellSysutil.AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
 	cellSysutil.AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
 	cellSysutil.AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
+
+	cellSysutil.AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
 
 	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
 	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);

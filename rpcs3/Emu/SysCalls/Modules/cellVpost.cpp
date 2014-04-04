@@ -154,6 +154,8 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->userData = ctrlParam->userData; // copy
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
+
+	u64 stamp0 = get_system_time();
 	
 	u8* pY = (u8*)malloc(w*h); // color planes
 	u8* pU = (u8*)malloc(w*h/4);
@@ -182,7 +184,11 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	memset(pA, alpha, w*h);
 
+	u64 stamp1 = get_system_time();
+
 	SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+
+	u64 stamp2 = get_system_time();
 
 	u8* in_data[4] = { pY, pU, pV, pA };
 	int in_line[4] = { w, w/2, w/2, w };
@@ -193,24 +199,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	sws_freeContext(sws);
 
-	/*
-	for (u32 i = 0; i < h; i++) for (u32 j = 0; j < w; j++)
-	{
-		float Cr = pV[(i/2)*(w/2)+j/2] - 128;
-		float Cb = pU[(i/2)*(w/2)+j/2] - 128;
-		float Y = pY[i*w+j];
-
-		int R = Y + 1.5701f * Cr;
-		if (R < 0) R = 0;
-		if (R > 255) R = 255;
-		int G = Y - 0.1870f * Cb - 0.4664f * Cr;
-		if (G < 0) G = 0;
-		if (G > 255) G = 255;
-		int B = Y - 1.8556f * Cb;
-		if (B < 0) B = 0;
-		if (B > 255) B = 255;
-		res[i*w+j] = ((u32)alpha << 24) | (B << 16) | (G << 8) | (R);
-	}*/
+	u64 stamp3 = get_system_time();
 
 	if (!Memory.CopyFromReal(outPicBuff_addr, res, ow*oh*4))
 	{
@@ -223,6 +212,9 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	free(pV);
 	free(pA);
 	free(res);
+
+	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
+		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	return CELL_OK;
 }
 

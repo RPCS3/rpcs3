@@ -337,8 +337,13 @@ u32 dmuxOpen(Demuxer* data)
 					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
 					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, task.type == dmuxResetStreamAndWaitDone,
 						dmux.id, dmuxMsg.GetAddr(), dmux.cbArg);
+
 					updates_signaled++;
 					dmux.is_running = false;
+					if (task.type == dmuxResetStreamAndWaitDone)
+					{
+						dmux.fbSetStream.Push(0);
+					}
 				}
 				break;
 
@@ -675,16 +680,17 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 
 	dmux->job.Push(DemuxerTask(dmuxResetStreamAndWaitDone));
 
-	while (dmux->is_running)
+	u32 addr;
+	if (!dmux->fbSetStream.Pop(addr))
 	{
-		if (Emu.IsStopped())
-		{
-			ConLog.Warning("cellDmuxResetStreamAndWaitDone(%d) aborted", demuxerHandle);
-			break;
-		}
-		Sleep(1);
+		ConLog.Warning("cellDmuxResetStreamAndWaitDone(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		return CELL_OK;
 	}
-
+	if (addr != 0)
+	{
+		ConLog.Error("cellDmuxResetStreamAndWaitDone(%d): wrong stream queued (0x%x)", demuxerHandle, addr);
+		Emu.Pause();
+	}
 	return CELL_OK;
 }
 

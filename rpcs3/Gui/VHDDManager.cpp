@@ -69,18 +69,18 @@ VHDDExplorer::VHDDExplorer(wxWindow* parent, const std::string& hdd_path) : wxDi
 
 	m_hdd = new vfsHDD(nullptr, hdd_path);
 	UpdateList();
-	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(VHDDExplorer::OnListDrag));
-	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_ITEM_ACTIVATED,	wxListEventHandler(VHDDExplorer::DClick));
-	Connect(m_list->GetId(),	wxEVT_COMMAND_RIGHT_CLICK,			wxCommandEventHandler(VHDDExplorer::OnContextMenu));
+	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_BEGIN_DRAG,     wxListEventHandler(VHDDExplorer::OnListDrag));
+	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(VHDDExplorer::DClick));
+	Connect(m_list->GetId(), wxEVT_COMMAND_RIGHT_CLICK,         wxCommandEventHandler(VHDDExplorer::OnContextMenu));
 	m_list->Connect(wxEVT_DROP_FILES, wxDropFilesEventHandler(VHDDExplorer::OnDropFiles), (wxObject*)0, this);
 
-	Connect(id_open,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnOpen));
-	Connect(id_rename,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRename));
-	Connect(id_remove,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRemove));
-	Connect(id_create_dir,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateDir));
-	Connect(id_create_file,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateFile));
-	Connect(id_import,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnImport));
-	Connect(id_export,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnExport));
+	Connect(id_open,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnOpen));
+	Connect(id_rename,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRename));
+	Connect(id_remove,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRemove));
+	Connect(id_create_dir,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateDir));
+	Connect(id_create_file,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateFile));
+	Connect(id_import,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnImport));
+	Connect(id_export,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnExport));
 }
 
 void VHDDExplorer::UpdateList()
@@ -389,13 +389,13 @@ VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 	m_list->InsertColumn(0, "Path");
 	//m_list->InsertColumn(1, "Size");
 	//m_list->InsertColumn(2, "Block size");
-	Connect(m_list->GetId(),	wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(VHDDManagerDialog::DClick));
-	Connect(m_list->GetId(),	wxEVT_COMMAND_RIGHT_CLICK,	wxCommandEventHandler(VHDDManagerDialog::OnContextMenu));
+	Connect(m_list->GetId(),    wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(VHDDManagerDialog::DClick));
+	Connect(m_list->GetId(),    wxEVT_COMMAND_RIGHT_CLICK,   wxCommandEventHandler(VHDDManagerDialog::OnContextMenu));
 
-	Connect(id_add_hdd,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::AddHDD));
-	Connect(id_open,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnOpen));
-	Connect(id_remove,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnRemove));
-	Connect(id_create_hdd,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnCreateHDD));
+	Connect(id_add_hdd,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::AddHDD));
+	Connect(id_open,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnOpen));
+	Connect(id_remove,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnRemove));
+	Connect(id_create_hdd,      wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnCreateHDD));
 	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(VHDDManagerDialog::OnClose));
 	LoadPaths();
 	UpdateList();

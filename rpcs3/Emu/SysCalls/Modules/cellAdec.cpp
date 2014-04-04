@@ -267,7 +267,7 @@ u32 adecOpen(AudioDecoder* data)
 					if (adec.just_started)
 					{
 						adec.first_pts = task.au.pts;
-						adec.last_pts = task.au.pts /*- 3816*8*/; // hack
+						adec.last_pts = task.au.pts - 0x10000; // hack
 					}
 
 					struct AVPacketHolder : AVPacket
