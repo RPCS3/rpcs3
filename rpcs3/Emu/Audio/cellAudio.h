@@ -1,11 +1,8 @@
 #pragma once
 
-extern u64 get_system_time();
-
 // Error codes
 enum
 {
-	//libaudio Error Codes
 	CELL_AUDIO_ERROR_ALREADY_INIT               = 0x80310701,
 	CELL_AUDIO_ERROR_AUDIOSYSTEM                = 0x80310702,
 	CELL_AUDIO_ERROR_NOT_INIT                   = 0x80310703,
@@ -21,29 +18,6 @@ enum
 	CELL_AUDIO_ERROR_EVENT_QUEUE                = 0x8031070d,
 	CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND      = 0x8031070e,
 	CELL_AUDIO_ERROR_TAG_NOT_FOUND              = 0x8031070f,
-
-	//libsnd3 Error Codes
-	CELL_SND3_ERROR_PARAM                       = 0x80310301,
-	CELL_SND3_ERROR_CREATE_MUTEX                = 0x80310302,
-	CELL_SND3_ERROR_SYNTH                       = 0x80310303,
-	CELL_SND3_ERROR_ALREADY                     = 0x80310304,
-	CELL_SND3_ERROR_NOTINIT                     = 0x80310305,
-	CELL_SND3_ERROR_SMFFULL                     = 0x80310306,
-	CELL_SND3_ERROR_HD3ID                       = 0x80310307,
-	CELL_SND3_ERROR_SMF                         = 0x80310308,
-	CELL_SND3_ERROR_SMFCTX                      = 0x80310309,
-	CELL_SND3_ERROR_FORMAT                      = 0x8031030a,
-	CELL_SND3_ERROR_SMFID                       = 0x8031030b,
-	CELL_SND3_ERROR_SOUNDDATAFULL               = 0x8031030c,
-	CELL_SND3_ERROR_VOICENUM                    = 0x8031030d,
-	CELL_SND3_ERROR_RESERVEDVOICE               = 0x8031030e,
-	CELL_SND3_ERROR_REQUESTQUEFULL              = 0x8031030f,
-	CELL_SND3_ERROR_OUTPUTMODE                  = 0x80310310,
-
-	//libsynt2 Error Codes
-	CELL_SOUND_SYNTH2_ERROR_FATAL               = 0x80310201,
-	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER   = 0x80310202,
-	CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED = 0x80310203,
 };
 
 // constants
@@ -143,46 +117,3 @@ struct AudioConfig  //custom structure
 };
 
 extern AudioConfig m_config;
-
-//libsnd3 datatypes
-struct CellSnd3DataCtx
-{ 
-	s8 system;  //[CELL_SND3_DATA_CTX_SIZE], unknown identifier
-}; 
-
-struct CellSnd3SmfCtx
-{ 
-	s8 system;  //[CELL_SND3_SMF_CTX_SIZE],  unknown identifier
-};
-
-struct CellSnd3KeyOnParam
-{ 
-	u8 vel;
-	u8 pan;
-	u8 panEx;
-	be_t<s32> addPitch;
-};
-
-struct CellSnd3VoiceBitCtx
-{ 
-	be_t<u32> core;  //[CELL_SND3_MAX_CORE],  unknown identifier
-};
-
-struct CellSnd3RequestQueueCtx
-{ 
-	void *frontQueue;
-	be_t<u32> frontQueueSize;
-	void *rearQueue;
-	be_t<u32> rearQueueSize;
-};
-
-//libsynt2 datatypes
-struct CellSoundSynth2EffectAttr
-{ 
-	be_t<u16> core;
-	be_t<u16> mode;
-	be_t<s16> depth_L;
-	be_t<s16> depth_R;
-	be_t<u16> delay;
-	be_t<u16> feedback;
-};
