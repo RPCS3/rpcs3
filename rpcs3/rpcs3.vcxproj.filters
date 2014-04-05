@@ -487,6 +487,9 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
