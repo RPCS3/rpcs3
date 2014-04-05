@@ -3041,6 +3041,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xd9a4f812: FUNC_LOG_ERROR("TODO: atoff");
 	case 0xda5a7eb8: FUNC_LOG_ERROR("TODO: strtoul");
 	case 0xdaeada07: FUNC_LOG_ERROR("TODO: mallopt");
+	case 0xdbf4c59c: FUNC_LOG_ERROR("TODO: cellPadGetCapabilityInfo");
 	case 0xddbac025: FUNC_LOG_ERROR("TODO: strcasecmp_ascii");
 	case 0xddc71a75: FUNC_LOG_ERROR("TODO: _SCE_Assert");
 	case 0xde1bb092: FUNC_LOG_ERROR("TODO: init_by_array_TT800");
