@@ -55,7 +55,7 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 				return TRUE;
 
 				case IDC_LINK_GOOGLECODE:
-					ShellExecute(hDlg, L"open", L"http://code.google.com/p/pcsx2",
+					ShellExecute(hDlg, L"open", L"https://github.com/PCSX2/pcsx2",
 						NULL, NULL, SW_SHOWNORMAL);
 				return TRUE;
 			}

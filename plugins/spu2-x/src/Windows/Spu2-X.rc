@@ -37,7 +37,7 @@ BEGIN
     CTEXT           "The SPU2-X project is derived from SPU2ghz v1.9beta released in 2008 and later modified and upgraded by the Pcsx2 Playground Team.",IDC_STATIC,25,161,242,17
     CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME,20,157,252,41
     CTEXT           "Compile Date, Revision, Etc.",IDC_LABEL_VERSION_INFO,9,80,273,17
-    CTEXT           "Pcsx2 Official Svn Repository @ Googlecode",IDC_LINK_GOOGLECODE,9,121,273,10,SS_NOPREFIX | SS_NOTIFY
+    CTEXT           "Pcsx2 Official Git Repository @ GitHub",IDC_LINK_GOOGLECODE,9,121,273,10,SS_NOPREFIX | SS_NOTIFY
     CTEXT           "Pcsx2 Official Website and Forums",IDC_LINK_WEBSITE,9,110,273,10,SS_NOPREFIX | SS_NOTIFY
     CTEXT           "Brought to you by the collaborative efforts of the Pcsx2 Development Team.",IDC_STATIC,9,141,273,10
 END
@@ -297,12 +297,12 @@ BEGIN
             VALUE "Comments", "SPU2 Plugin for PS2 Emulators"
             VALUE "CompanyName", "PCSX2 Dev Team"
             VALUE "FileDescription", "SPU2-X Plugin (git build)"
-            VALUE "FileVersion", "2.0.SVN"
+            VALUE "FileVersion", "2.0.GIT"
             VALUE "InternalName", "SPU2-X"
             VALUE "LegalCopyright", "Copyright (C) 2011"
             VALUE "OriginalFilename", "SPU2-X-2.0.dll"
             VALUE "ProductName", "SPU2-X"
-            VALUE "ProductVersion", "2.0.SVN"
+            VALUE "ProductVersion", "2.0.GIT"
         END
     END
     BLOCK "VarFileInfo"

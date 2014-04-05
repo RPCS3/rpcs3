@@ -103,7 +103,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	) | pxProportion(1).Center().Border( wxALL, 3 );
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
-		_("PCSX2 Official Svn Repository at Googlecode"), L"http://code.google.com/p/pcsx2"
+		_("PCSX2 Official Git Repository at GitHub"), L"https://github.com/PCSX2/pcsx2"
 	) | pxProportion(1).Center().Border( wxALL, 3 );
 
 	*this	+= ContribSizer											| StdExpand();
