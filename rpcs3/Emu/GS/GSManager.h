@@ -10,9 +10,9 @@ struct GSInfo
 		u8  scanMode;
 		u8  conversion;
 		u8  aspect;
-		u8	format;
+		u8  format;
 		u16 refreshRates;
-		u32	pitch;
+		u32 pitch;
 	} mode;
 	//CellVideoOutDisplayMode mode;
 

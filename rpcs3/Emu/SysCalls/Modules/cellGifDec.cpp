@@ -23,6 +23,8 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 
 int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
+	if (!subHandle.IsGood() || !src.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
 	/*
 	vfsStream* stream;
 
@@ -63,7 +65,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
 	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
 	if(ret != CELL_OK) return ret;
-	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+	current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
 	subHandle = cellGifDec.GetNewId(current_subHandle);
@@ -73,6 +75,9 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
 {
+	if (!info.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec.CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -82,27 +87,27 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	CellGifDecInfo& current_info = subHandle_data->info;
 	
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer(13);					// Alloc buffer for GIF header
+	MemoryAllocator<u8> buffer(13); // Alloc buffer for GIF header
 	MemoryAllocator<be_t<u64>> pos, nread;
 
 	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
 	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
 
 	if (*buffer.To<be_t<u32>>(0) != 0x47494638 ||
-		(*buffer.To<u16>(4) != 0x6139 && *buffer.To<u16>(4) != 0x6137))				// Error: The first 6 bytes are not a valid GIF signature
+		(*buffer.To<u16>(4) != 0x6139 && *buffer.To<u16>(4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
 	{
-		return CELL_GIFDEC_ERROR_STREAM_FORMAT;			// Surprisingly there is no error code related with headerss
+		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
 
 	u8 packedField = buffer[10];
-	current_info.SWidth						= buffer[6] + buffer[7] * 0x100;
-	current_info.SHeight					= buffer[8] + buffer[9] * 0x100;
-	current_info.SGlobalColorTableFlag		= packedField >> 7;
-	current_info.SColorResolution			= ((packedField >> 4) & 7)+1;
-	current_info.SSortFlag					= (packedField >> 3) & 1;
-	current_info.SSizeOfGlobalColorTable	= (packedField & 7)+1;
-	current_info.SBackGroundColor			= buffer[11];
-	current_info.SPixelAspectRatio			= buffer[12];
+	current_info.SWidth                  = buffer[6] + buffer[7] * 0x100;
+	current_info.SHeight                 = buffer[8] + buffer[9] * 0x100;
+	current_info.SGlobalColorTableFlag   = packedField >> 7;
+	current_info.SColorResolution        = ((packedField >> 4) & 7)+1;
+	current_info.SSortFlag               = (packedField >> 3) & 1;
+	current_info.SSizeOfGlobalColorTable = (packedField & 7)+1;
+	current_info.SBackGroundColor        = buffer[11];
+	current_info.SPixelAspectRatio       = buffer[12];
 
 	*info = current_info;
 	
@@ -111,6 +116,9 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 
 int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
 {
+	if (!inParam.IsGood() || !outParam.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec.CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -118,18 +126,18 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 	CellGifDecInfo& current_info = subHandle_data->info;
 	CellGifDecOutParam& current_outParam = subHandle_data->outParam;
 
-	current_outParam.outputWidthByte	= (current_info.SWidth * current_info.SColorResolution * 3)/8;
-	current_outParam.outputWidth	= current_info.SWidth;
-	current_outParam.outputHeight	= current_info.SHeight;
-	current_outParam.outputColorSpace	= inParam->colorSpace;
+	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3)/8;
+	current_outParam.outputWidth      = current_info.SWidth;
+	current_outParam.outputHeight     = current_info.SHeight;
+	current_outParam.outputColorSpace = inParam->colorSpace;
 	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
-	default: return CELL_GIFDEC_ERROR_ARG;	// Not supported color space
+	default: return CELL_GIFDEC_ERROR_ARG; // Not supported color space
 	}
-	current_outParam.outputBitDepth	= 0;	// Unimplemented
-	current_outParam.useMemorySpace	= 0;	// Unimplemented
+	current_outParam.outputBitDepth	= 0;   // Unimplemented
+	current_outParam.useMemorySpace	= 0;   // Unimplemented
 
 	*outParam = current_outParam;
 
@@ -138,6 +146,9 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 
 int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
+	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
+		return CELL_GIFDEC_ERROR_ARG;
+
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	CellGifDecSubHandle* subHandle_data;

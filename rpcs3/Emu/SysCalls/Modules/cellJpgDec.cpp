@@ -30,6 +30,9 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
+	if (!subHandle.IsGood() || !src.IsGood() || !openInfo.IsGood())
+		return CELL_JPGDEC_ERROR_ARG;
+
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
 	// Get file descriptor
@@ -65,6 +68,10 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo> info)
 {
 	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+
+	if (!info.IsGood())
+		return CELL_JPGDEC_ERROR_ARG;
+
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
@@ -80,8 +87,8 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
 	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
 
-	if (*buffer.To<u32>(0) != 0xE0FFD8FF ||		// Error: Not a valid SOI header
-		*buffer.To<u32>(6) != 0x4649464A)		// Error: Not a valid JFIF string
+	if (*buffer.To<u32>(0) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		*buffer.To<u32>(6) != 0x4649464A)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER; 
 	}
@@ -95,24 +102,24 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 
 	while(true)
 	{
-		i += block_length;									// Increase the file index to get to the next block
-		if (i >= fileSize ||								// Check to protect against segmentation faults
-			buffer[i] != 0xFF)								// Check that we are truly at the start of another block
+		i += block_length;                                  // Increase the file index to get to the next block
+		if (i >= fileSize ||                                // Check to protect against segmentation faults
+			buffer[i] != 0xFF)                              // Check that we are truly at the start of another block
 		{
 			return CELL_JPGDEC_ERROR_HEADER;
 		}
 
 		if(buffer[i+1] == 0xC0)
-			break;											// 0xFFC0 is the "Start of frame" marker which contains the file size
+			break;                                          // 0xFFC0 is the "Start of frame" marker which contains the file size
 
-		i += 2;												// Skip the block marker
-		block_length = buffer[i] * 0xFF + buffer[i+1];		// Go to the next block
+		i += 2;                                             // Skip the block marker
+		block_length = buffer[i] * 0xFF + buffer[i+1];      // Go to the next block
 	}
 
-	current_info.imageWidth			= buffer[i+7]*0x100 + buffer[i+8];
-	current_info.imageHeight		= buffer[i+5]*0x100 + buffer[i+6];
-	current_info.numComponents		= 3;	// Unimplemented
-	current_info.colorSpace			= CELL_JPG_RGB;
+	current_info.imageWidth    = buffer[i+7]*0x100 + buffer[i+8];
+	current_info.imageHeight   = buffer[i+5]*0x100 + buffer[i+6];
+	current_info.numComponents = 3; // Unimplemented
+	current_info.colorSpace    = CELL_JPG_RGB;
 
 	*info = current_info;
 
@@ -121,6 +128,9 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 
 int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellJpgDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellJpgDecDataOutInfo> dataOutInfo)
 {
+	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
+		return CELL_JPGDEC_ERROR_ARG;
+
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
@@ -185,6 +195,9 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJpgDecInParam> inParam, mem_ptr_t<CellJpgDecOutParam> outParam)
 {
+	if (!inParam.IsGood() || !outParam.IsGood())
+		return CELL_JPGDEC_ERROR_ARG;
+
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
@@ -192,31 +205,31 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJp
 	CellJpgDecInfo& current_info = subHandle_data->info;
 	CellJpgDecOutParam& current_outParam = subHandle_data->outParam;
 
-	current_outParam.outputWidthByte	= (current_info.imageWidth * current_info.numComponents);
-	current_outParam.outputWidth		= current_info.imageWidth;
-	current_outParam.outputHeight		= current_info.imageHeight;
-	current_outParam.outputColorSpace	= inParam->outputColorSpace;
+	current_outParam.outputWidthByte  = (current_info.imageWidth * current_info.numComponents);
+	current_outParam.outputWidth      = current_info.imageWidth;
+	current_outParam.outputHeight     = current_info.imageHeight;
+	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
 	switch (current_outParam.outputColorSpace)
 	{
-	case CELL_JPG_GRAYSCALE:				current_outParam.outputComponents = 1; break;
+	case CELL_JPG_GRAYSCALE:               current_outParam.outputComponents = 1; break;
 
 	case CELL_JPG_RGB:
-	case CELL_JPG_YCbCr:					current_outParam.outputComponents = 3; break;
+	case CELL_JPG_YCbCr:                   current_outParam.outputComponents = 3; break;
 
-	case CELL_JPG_UPSAMPLE_ONLY:			current_outParam.outputComponents = current_info.numComponents; break;
+	case CELL_JPG_UPSAMPLE_ONLY:           current_outParam.outputComponents = current_info.numComponents; break;
 
 	case CELL_JPG_RGBA:
 	case CELL_JPG_ARGB:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_RGBA:
-	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB:	current_outParam.outputComponents = 4; break;
+	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB: current_outParam.outputComponents = 4; break;
 
-	default: return CELL_JPGDEC_ERROR_ARG;	// Not supported color space
+	default: return CELL_JPGDEC_ERROR_ARG; // Not supported color space
 	}
 
-	current_outParam.outputMode		= inParam->outputMode;
-	current_outParam.downScale		= inParam->downScale;
-	current_outParam.useMemorySpace	= 0;	// Unimplemented
+	current_outParam.outputMode     = inParam->outputMode;
+	current_outParam.downScale      = inParam->downScale;
+	current_outParam.useMemorySpace = 0; // Unimplemented
 
 	*outParam = current_outParam;
 

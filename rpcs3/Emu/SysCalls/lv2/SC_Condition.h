@@ -18,6 +18,7 @@ struct Cond
 	Mutex* mutex; // associated with mutex
 	SMutex signal;
 	SleepQueue m_queue;
+	u64 signal_stamp;
 
 	Cond(Mutex* mutex, u64 name)
 		: mutex(mutex)

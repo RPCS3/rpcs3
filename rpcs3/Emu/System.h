@@ -108,20 +108,20 @@ public:
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
 
-	CPUThreadManager&	GetCPU()				{ return m_thread_manager; }
-	PadManager&			GetPadManager()			{ return m_pad_manager; }
-	KeyboardManager&	GetKeyboardManager()	{ return m_keyboard_manager; }
-	MouseManager&		GetMouseManager()		{ return m_mouse_manager; }
-	IdManager&			GetIdManager()			{ return m_id_manager; }
-	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
-	GSManager&			GetGSManager()			{ return m_gs_manager; }
-	AudioManager&		GetAudioManager()		{ return m_audio_manager; }
-	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
-	VFS&				GetVFS()				{ return m_vfs; }
-	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
-	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
-	CPUThread&			GetCallbackThread()		{ return *m_ppu_callback_thr; }
-	EventManager&		GetEventManager()		{ return *m_event_manager; }
+	CPUThreadManager& GetCPU()             { return m_thread_manager; }
+	PadManager&       GetPadManager()      { return m_pad_manager; }
+	KeyboardManager&  GetKeyboardManager() { return m_keyboard_manager; }
+	MouseManager&     GetMouseManager()    { return m_mouse_manager; }
+	IdManager&        GetIdManager()       { return m_id_manager; }
+	DbgConsole&       GetDbgCon()          { return *m_dbg_console; }
+	GSManager&        GetGSManager()       { return m_gs_manager; }
+	AudioManager&     GetAudioManager()    { return m_audio_manager; }
+	CallbackManager&  GetCallbackManager() { return m_callback_manager; }
+	VFS&              GetVFS()             { return m_vfs; }
+	Array<u64>&       GetBreakPoints()     { return m_break_points; }
+	Array<u64>&       GetMarkedPoints()    { return m_marked_points; }
+	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }
+	EventManager&     GetEventManager()    { return *m_event_manager; }
 	
 	void AddModuleInit(ModuleInitializer* m)
 	{
@@ -156,10 +156,10 @@ public:
 	void SavePoints(const std::string& path);
 	void LoadPoints(const std::string& path);
 
-	__forceinline bool IsRunning()	const { return m_status == Running; }
-	__forceinline bool IsPaused()	const { return m_status == Paused; }
-	__forceinline bool IsStopped()	const { return m_status == Stopped; }
-	__forceinline bool IsReady()	const { return m_status == Ready; }
+	__forceinline bool IsRunning() const { return m_status == Running; }
+	__forceinline bool IsPaused()  const { return m_status == Paused; }
+	__forceinline bool IsStopped() const { return m_status == Stopped; }
+	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
 extern Emulator Emu;

@@ -65,4 +65,5 @@ public:
 	void WriteHeader();
 	size_t WriteData(const void* buffer, size_t size);
 	void Finalize();
+	const u8 GetCh() const { return m_header.FMT.NumChannels; }
 };

@@ -42,9 +42,9 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 
 	void _push(const LogPacket& data)
 	{
-		const u32 sprefix	= data.m_prefix.length();
-		const u32 stext		= data.m_text.length();
-		const u32 scolour	= data.m_colour.length();
+		const u32 sprefix = data.m_prefix.length();
+		const u32 stext   = data.m_text.length();
+		const u32 scolour = data.m_colour.length();
 
 		m_buffer.Reserve(
 			sizeof(u32) + sprefix +

@@ -18,23 +18,24 @@ u64 mixcount = 0;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 samples)
 {
-	u32 ch = aan_port >> 16;
+	u32 type = aan_port >> 16;
 	u32 port = aan_port & 0xffff;
-	switch (ch)
+
+	switch (type)
 	{
-	case 1:
-		if (port >= surMixer.chStrips1) ch = 0; break;
-	case 2:
-		if (port >= surMixer.chStrips2) ch = 0; break;
-	case 6:
-		/*if (port >= surMixer.chStrips6)*/ ch = 0; break;
-	case 8:
-		if (port >= surMixer.chStrips8) ch = 0; break;
+	case CELL_SURMIXER_CHSTRIP_TYPE1A:
+		if (port >= surMixer.chStrips1) type = 0; break;
+	case CELL_SURMIXER_CHSTRIP_TYPE2A:
+		if (port >= surMixer.chStrips2) type = 0; break;
+	case CELL_SURMIXER_CHSTRIP_TYPE6A:
+		if (port >= surMixer.chStrips6) type = 0; break;
+	case CELL_SURMIXER_CHSTRIP_TYPE8A:
+		if (port >= surMixer.chStrips8) type = 0; break;
 	default:
-		ch = 0; break;
+		type = 0; break;
 	}
 
-	if (aan_handle == 0x11111111 && samples == 256 && ch && offset == 0)
+	if (aan_handle == 0x11111111 && samples == 256 && type && offset == 0)
 	{
 		libmixer.Log("cellAANAddData(handle=0x%x, port=0x%x, offset=0x%x, addr=0x%x, samples=0x%x)",
 			aan_handle, aan_port, offset, addr, samples);
@@ -49,28 +50,28 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 
 	SMutexLocker lock(mixer_mutex);
 
-	if (ch == 1)
+	if (type == CELL_SURMIXER_CHSTRIP_TYPE1A)
 	{
 		// mono upmixing
 		for (u32 i = 0; i < samples; i++)
 		{
 			const float center = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
-			mixdata[i*8+0] += center;
-			mixdata[i*8+1] += center;
+			mixdata[i * 8 + 0] += center;
+			mixdata[i * 8 + 1] += center;
 		}		
 	}
-	else if (ch == 2)
+	else if (type == CELL_SURMIXER_CHSTRIP_TYPE2A)
 	{
 		// stereo upmixing
 		for (u32 i = 0; i < samples; i++)
 		{
 			const float left = *(be_t<float>*)&Memory[addr + i * 2 * sizeof(float)];
 			const float right = *(be_t<float>*)&Memory[addr + (i * 2 + 1) * sizeof(float)];
-			mixdata[i*8+0] += left;
-			mixdata[i*8+1] += right;
+			mixdata[i * 8 + 0] += left;
+			mixdata[i * 8 + 1] += right;
 		}
 	}
-	else if (ch == 6)
+	else if (type == CELL_SURMIXER_CHSTRIP_TYPE6A)
 	{
 		// 5.1 upmixing
 		for (u32 i = 0; i < samples; i++)
@@ -81,15 +82,15 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 			const float low_freq = *(be_t<float>*)&Memory[addr + (i * 6 + 3) * sizeof(float)];
 			const float rear_left = *(be_t<float>*)&Memory[addr + (i * 6 + 4) * sizeof(float)];
 			const float rear_right = *(be_t<float>*)&Memory[addr + (i * 6 + 5) * sizeof(float)];
-			mixdata[i*8+0] += left;
-			mixdata[i*8+1] += right;
-			mixdata[i*8+2] += center;
-			mixdata[i*8+3] += low_freq;
-			mixdata[i*8+4] += rear_left;
-			mixdata[i*8+5] += rear_right;
+			mixdata[i * 8 + 0] += left;
+			mixdata[i * 8 + 1] += right;
+			mixdata[i * 8 + 2] += center;
+			mixdata[i * 8 + 3] += low_freq;
+			mixdata[i * 8 + 4] += rear_left;
+			mixdata[i * 8 + 5] += rear_right;
 		}
 	}
-	else if (ch == 8)
+	else if (type == CELL_SURMIXER_CHSTRIP_TYPE8A)
 	{
 		// 7.1
 		for (u32 i = 0; i < samples * 8; i++)
@@ -103,59 +104,61 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 
 int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer.Error("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcrPortNo=0x%x)",
+	libmixer.Error("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
-	return 0;
+	return CELL_OK;
 }
 
 int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer.Error("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcrPortNo=0x%x)",
+	libmixer.Error("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
-	return 0;
+	return CELL_OK;
 }
  
-/*int cellSSPlayerCreate(CellAANHandle *handle, CellSSPlayerConfig *config)
+int cellSSPlayerCreate(mem32_t handle, mem_ptr_t<CellSSPlayerConfig> config)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
+		handle.GetAddr(), config.GetAddr());
+	return CELL_OK;
 }
 
-int cellSSPlayerRemove(CellAANHandle handle)
+int cellSSPlayerRemove(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerRemove(handle=%d)", handle);
+	return CELL_OK;
 }
 
-int cellSSPlayerSetWave() //CellAANHandle handle, CellSSPlayerWaveParam *waveInfo, CellSSPlayerCommonParam *commonInfo  //mem_class_t waveInfo
+int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, mem_ptr_t<CellSSPlayerCommonParam> commonInfo)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
+		handle, waveInfo.GetAddr(), commonInfo.GetAddr());
+	return CELL_OK;
 }
 
-int cellSSPlayerPlay() //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
+int cellSSPlayerPlay(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
+	return CELL_OK;
 }
 
-int cellSSPlayerStop() //CellAANHandle handle, u32 mode
+int cellSSPlayerStop(u32 handle, u32 mode)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerStop(handle=%d, mode=0x%x)", handle, mode);
+	return CELL_OK;
 }
 
-int cellSSPlayerSetParam() //CellAANHandle handle, CellSSPlayerRuntimeInfo *info
+int cellSSPlayerSetParam(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
+	libmixer.Error("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
+	return CELL_OK;
 }
  
-s32 cellSSPlayerGetState() //CellAANHandle handle
+s32 cellSSPlayerGetState(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(libmixer);
-	return 0;
-}*/
+	libmixer.Error("cellSSPlayerGetState(handle=%d) -> OFF", handle);
+	return CELL_SSPLAYER_STATE_OFF;
+}
 
 int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 {
@@ -376,7 +379,7 @@ void cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 
 void libmixer_init()
 {
-	static const u64 cellAANAddData_table[] = {
+	REG_SUB(libmixer, "surmxAAN", cellAANAddData,
 		0xffffffff7c691b78,
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
@@ -399,12 +402,10 @@ void libmixer_init()
 		0xffffffff7c6307b4,
 		0xffffffff7c0803a6,
 		0xffffffff38210070,
-		0xffffffff4e800020,
-		0
-	};
-	libmixer.AddFuncSub("surmxAAN", cellAANAddData_table, "cellAANAddData", cellAANAddData);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellAANConnect_table[] = {
+	REG_SUB(libmixer, "surmxAAN", cellAANConnect,
 		0xfffffffff821ff71,
 		0xffffffff7c0802a6,
 		0xffffffff2f830000,
@@ -442,12 +443,10 @@ void libmixer_init()
 		0xffffffffe80100a0,
 		0xffffffff38210090,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
-		0,
-	};
-	libmixer.AddFuncSub("surmxAAN", cellAANConnect_table, "cellAANConnect", cellAANConnect);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellAANDisconnect_table[] = {
+	REG_SUB(libmixer, "surmxAAN", cellAANDisconnect,
 		0xfffffffff821ff71,
 		0xffffffff7c0802a6,
 		0xffffffff2f830000,
@@ -485,12 +484,10 @@ void libmixer_init()
 		0xffffffffe80100a0,
 		0xffffffff38210090,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
-		0,
-	};
-	libmixer.AddFuncSub("surmxAAN", cellAANDisconnect_table, "cellAANDisconnect", cellAANDisconnect);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellSurMixerCreate_table[] = {
+	REG_SUB(libmixer, "surmixer", cellSurMixerCreate,
 		0xffffffff2f830000,
 		0xffffffff7c0802a6,
 		0xfffffffff821ff51,
@@ -516,13 +513,11 @@ void libmixer_init()
 		0xffffffffeba10098,
 		0xffffffffebc100a0,
 		0xffffffffebe100a8,
-		0xffffffff382100b0,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerCreate_table, "cellSurMixerCreate", cellSurMixerCreate);
+		0xffffffff382100b0
+	);
 
-	static const u64 cellSurMixerGetAANHandle_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerGetAANHandle,
+		0xff00000081428250, // lwz
 		0xffffffff3d607fce,
 		0xffffffff616bfffe,
 		0xffffffff812a0018,
@@ -535,13 +530,11 @@ void libmixer_init()
 		0xffffffff3c638031,
 		0xffffffff38630002,
 		0xffffffff7c6307b4,
-		0xffffffff4e800020,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerGetAANHandle_table, "cellSurMixerGetAANHandle", cellSurMixerGetAANHandle);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellSurMixerChStripGetAANPortNo_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerChStripGetAANPortNo,
+		0xff00000081228250, // lwz
 		0xffffffff7c661b78,
 		0xffffffff3c608031,
 		0xffffffff78c60020,
@@ -552,13 +545,11 @@ void libmixer_init()
 		0xffffffff2f800000,
 		0xffffffff4d9e0020,
 		0xffffffff78030020,
-		0xf000000040000000, // b
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerChStripGetAANPortNo_table, "cellSurMixerChStripGetAANPortNo", cellSurMixerChStripGetAANPortNo);
+		0xf000000040000000 // b
+	);
 
-	static const u64 cellSurMixerSetNotifyCallback_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerSetNotifyCallback,
+		0xff00000081428250, // lwz
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -582,13 +573,11 @@ void libmixer_init()
 		0xffffffff79290020,
 		0xffffffff38810070,
 		0xffffffff2f800000,
-		0xffffffff7d234b78,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerSetNotifyCallback_table, "cellSurMixerSetNotifyCallback", cellSurMixerSetNotifyCallback);
+		0xffffffff7d234b78
+	);
 
-	static const u64 cellSurMixerRemoveNotifyCallback_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerRemoveNotifyCallback,
+		0xff00000081628250, // lwz
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -602,12 +591,10 @@ void libmixer_init()
 		0xffffffff7d2307b4,
 		0xffffffff38210080,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerRemoveNotifyCallback_table, "cellSurMixerRemoveNotifyCallback", cellSurMixerRemoveNotifyCallback);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellSurMixerStart_table[] = {
+	REG_SUB(libmixer, "surmixer", cellSurMixerStart,
 		0xfffffffff821ff71,
 		0xffffffff7c0802a6,
 		0xfffffffffbc10080,
@@ -627,12 +614,10 @@ void libmixer_init()
 		0xffffffff7c0803a6,
 		0xffffffffebe10088,
 		0xffffffff38210090,
-		0xffffffff4e800020,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerStart_table, "cellSurMixerStart", cellSurMixerStart);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellSurMixerSetParameter_table[] = {
+	REG_SUB(libmixer, "surmixer", cellSurMixerSetParameter,
 		0xfffffffff821ff81,
 		0xffffffff7c0802a6,
 		0xfffffffffbc10070,
@@ -659,12 +644,10 @@ void libmixer_init()
 		0xffff0000419cffd8, // blt
 		0xffffffff2b83002b,
 		0xffff000040990008, // ble
-		0xffff0000409d0054, // ble
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerSetParameter_table, "cellSurMixerSetParameter", cellSurMixerSetParameter);
+		0xffff0000409d0054 // ble
+	);
 
-	static const u64 cellSurMixerFinalize_table[] = {
+	REG_SUB(libmixer, "surmixer", cellSurMixerFinalize,
 		0xfffffffff821ff91,
 		0xffffffff7c0802a6,
 		0xfffffffff8010080,
@@ -687,13 +670,11 @@ void libmixer_init()
 		0xfffffffff8410028,
 		0xffffffff7c0903a6,
 		0xffffffff804a0004,
-		0xffffffff4e800421,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerFinalize_table, "cellSurMixerFinalize", cellSurMixerFinalize);
+		0xffffffff4e800421
+	);
 
-	static const u64 cellSurMixerSurBusAddData_table[] = {
-		0xff00000081428250,
+	REG_SUB(libmixer, "surmixer", cellSurMixerSurBusAddData,
+		0xff00000081428250, // lwz
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
 		0xfffffffff8010080,
@@ -718,13 +699,11 @@ void libmixer_init()
 		0xffffffff7d034378,
 		0xffffffff79660020,
 		0xffffffff78e70020,
-		0xffff0000419cffcc, // blt
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerSurBusAddData_table, "cellSurMixerSurBusAddData", cellSurMixerSurBusAddData);
+		0xffff0000419cffcc // blt
+	);
 
-	static const u64 cellSurMixerChStripSetParameter_table[] = {
-		0xff00000081028250,
+	REG_SUB(libmixer, "surmixer", cellSurMixerChStripSetParameter,
+		0xff00000081028250, // lwz
 		0xffffffff7c6b1b78,
 		0xffffffff3c608031,
 		0xffffffff7c8a2378,
@@ -740,13 +719,11 @@ void libmixer_init()
 		0xffffffff78c60020,
 		0xffffffff4d9c0020,
 		0xffffffff79230020,
-		0xf000000048000000, // b
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerChStripSetParameter_table, "cellSurMixerChStripSetParameter", cellSurMixerChStripSetParameter);
+		0xf000000048000000 // b
+	);
 
-	static const u64 cellSurMixerPause_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerPause,
+		0xff00000081428250, // lwz
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -767,13 +744,11 @@ void libmixer_init()
 		0xffffffff4e800020,
 		0xffffffff800a001c,
 		0xffffffff2b030002,
-		0xffffffff2f800000,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerPause_table, "cellSurMixerPause", cellSurMixerPause);
+		0xffffffff2f800000
+	);
 
-	static const u64 cellSurMixerGetCurrentBlockTag_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerGetCurrentBlockTag,
+		0xff00000081628250, // lwz
 		0xffffffff3d208031,
 		0xffffffff61290002,
 		0xffffffff880b0020,
@@ -783,13 +758,11 @@ void libmixer_init()
 		0xffffffff39200000,
 		0xfffffffff8030000,
 		0xffffffff7d2307b4,
-		0xffffffff4e800020,
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerGetCurrentBlockTag_table, "cellSurMixerGetCurrentBlockTag", cellSurMixerGetCurrentBlockTag);
+		0xffffffff4e800020
+	);
 
-	static const u64 cellSurMixerGetTimestamp_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerGetTimestamp,
+		0xff00000081628250, // lwz
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
 		0xfffffffff8010080,
@@ -807,13 +780,11 @@ void libmixer_init()
 		0xffffffff7c0803a6,
 		0xffffffff4e800020,
 		0xffffffff806b04d8,
-		0xf000000048000001, // bl
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerGetTimestamp_table, "cellSurMixerGetTimestamp", cellSurMixerGetTimestamp);
+		0xf000000048000001 // bl
+	);
 
-	static const u64 cellSurMixerBeep_table[] = {
-		// first instruction ignored
+	REG_SUB(libmixer, "surmixer", cellSurMixerBeep,
+		0xff00000081228250, // lwz
 		0xffffffff7c641b78,
 		0xffffffff80690018,
 		0xffffffff2f830000,
@@ -823,14 +794,154 @@ void libmixer_init()
 		0xffffffff78840020,
 		0xffffffff2f800000,
 		0xffffffff4d9c0020,
-		0xf000000048000000, // b
-		0
-	};
-	libmixer.AddFuncSub("surmx___", cellSurMixerBeep_table, "cellSurMixerBeep", cellSurMixerBeep);
+		0xf000000048000000 // b
+	);
 
-	// TODO: SSPlayer functions
-	/*static const u64 cell_table[] = {
-		0
-	};
-	libmixer.AddFuncSub("surmxSSP", cell_table, "cell", nullptr);*/
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerCreate,
+		0xfffffffff821ff51,
+		0xffffffff7c0802a6,
+		0xffffffff2f840000,
+		0xfffffffff80100c0,
+		0xffffffff3c008031,
+		0xfffffffffb210078,
+		0xfffffffffb410080,
+		0xfffffffffb610088,
+		0xfffffffffb810090,
+		0xfffffffffba10098,
+		0xfffffffffbc100a0,
+		0xfffffffffbe100a8,
+		0xffffffff7c9a2378,
+		0xffffffff7c791b78,
+		0xffffffff60000003,
+		0xffff0000419e0068, // beq
+		0xff00000083620000, // lwz
+		0xffffffff3b800000,
+		0xffffffff381b0064,
+		0xffffffff901b0018,
+		0xffffffff5780103a,
+		0xffffffff38800010,
+		0xffffffff7c0007b4,
+		0xffffffff38a01c70,
+		0xffffffff7fc0da14,
+		0xffffffff38c00000,
+		0xffffffff83be0024,
+		0xffffffff2f9d0000,
+		0xffffffff7ba30020,
+		0xffff000041de00c0, // beq-
+		0xf000000048000001 // bl
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerRemove,
+		0xffffffff7c641b78,
+		0xffffffff7c0802a6,
+		0xffffffff3c608031,
+		0xffffffff2f840000,
+		0xfffffffff821ff51,
+		0xfffffffffb010070,
+		0xfffffffffb210078,
+		0xfffffffffb410080,
+		0xfffffffffb610088,
+		0xfffffffffb810090,
+		0xfffffffffba10098,
+		0xfffffffffbc100a0,
+		0xfffffffffbe100a8,
+		0xfffffffff80100c0,
+		0xffffffff60630003,
+		0xffff0000419e0074, // beq
+		0xffffffff81240000,
+		0xffffffff78830020,
+		0xffffffff83440004,
+		0xffffffff83240008,
+		0xffffffff7b5b0020,
+		0xffffffff81690000,
+		0xffffffff800b0000,
+		0xfffffffff8410028,
+		0xffffffff7c0903a6,
+		0xffffffff804b0004,
+		0xffffffff4e800421
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerSetWave,
+		0xffffffff7c601b78,
+		0xffffffff78840020,
+		0xffffffff2f800000,
+		0xffffffff3c608031,
+		0xffffffff78a50020,
+		0xffff0000419e000c, // beq
+		0xffffffff78030020,
+		0xf000000048000000, // b
+		0xffffffff60630003,
+		0xffffffff4e800020
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerPlay,
+		0xffffffff7c601b78,
+		0xffffffff3c608031,
+		0xffffffff2f800000,
+		0xffffffff60630003,
+		0xffffffff78840020,
+		0xffffffff4d9e0020,
+		0xffffffff78030020,
+		0xf000000048000000, // b
+		0xfffffffff821ff81, // next func
+		0xffffffff7c0802a6,
+		0xfffffffffbe10078,
+		0xffffffff7c7f1b78,
+		0xff00000081620028, // lwz
+		0xfffffffff8010090,
+		0xffffffff39400000,
+		0xffffffff38630010
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerStop,
+		0xfffffffff821ff91,
+		0xffffffff7c0802a6,
+		0xffffffff2f830000,
+		0xfffffffff8010080,
+		0xffffffff3c008031,
+		0xffffffff78630020,
+		0xffffffff60000003,
+		0xffff0000419e0010, // beq
+		0xffffffff78840020,
+		0xf000000048000001, // bl
+		0xffffffff38000000,
+		0xffffffff7c0307b4,
+		0xffffffffe8010080,
+		0xffffffff38210070,
+		0xffffffff7c0803a6,
+		0xffffffff4e800020
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerSetParam,
+		0xffffffff7c601b78,
+		0xffffffff3c608031,
+		0xffffffff2f800000,
+		0xffffffff60630003,
+		0xffffffff78840020,
+		0xffffffff4d9e0020,
+		0xffffffff78030020,
+		0xf000000048000000, // b
+		0xfffffffff821ff71, // next func
+		0xffffffff7c0802a6,
+		0xffffffff3d608031,
+		0xfffffffff80100a0,
+		0xffffffff80030068,
+		0xffffffff616b0002,
+		0xfffffffffbc10080,
+		0xffffffff2f800000
+	);
+
+	REG_SUB(libmixer, "surmxSSP", cellSSPlayerGetState,
+		0xffffffff7c601b78,
+		0xffffffff3c608031,
+		0xffffffff2f800000,
+		0xffffffff60630003,
+		0xffffffff4d9e0020,
+		0xffffffff78030020,
+		0xf000000048000000 // b
+	);
+
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB);
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex);
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio);
 }

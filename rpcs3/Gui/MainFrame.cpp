@@ -124,13 +124,13 @@ MainFrame::MainFrame()
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
-	Connect( id_boot_game,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_install_pkg,		 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
-	Connect( id_boot_elf,			 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
+	Connect( id_boot_game,           wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
+	Connect( id_install_pkg,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
+	Connect( id_boot_elf,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
 
 	Connect( id_sys_pause,           wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
 	Connect( id_sys_stop,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
-	Connect( id_sys_send_open_menu,	 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
+	Connect( id_sys_send_open_menu,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
 	Connect( id_sys_send_exit,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
 
 	Connect( id_config_emu,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
@@ -138,7 +138,7 @@ MainFrame::MainFrame()
 	Connect( id_config_vfs_manager,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
 	Connect( id_config_vhdd_manager, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
 
-	Connect( id_tools_compiler,		 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
+	Connect( id_tools_compiler,      wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
 	Connect( id_tools_memory_viewer, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
 	Connect( id_tools_rsx_debugger,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenRSXDebugger));
 
@@ -326,20 +326,20 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	static const u32 width = 385;
 
 	// Settings panels
-	wxNotebook* nb_config	= new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
-	wxPanel* p_system		= new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_cpu			= new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_graphics		= new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_audio		= new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_io			= new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_hle			= new wxPanel(nb_config, wxID_ANY);
+	wxNotebook* nb_config = new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
+	wxPanel* p_system     = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_cpu        = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_graphics   = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_audio      = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_io         = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_hle        = new wxPanel(nb_config, wxID_ANY);
 
-	nb_config->AddPage(p_cpu,		wxT("Core"));
-	nb_config->AddPage(p_graphics,  wxT("Graphics"));
-	nb_config->AddPage(p_audio,		wxT("Audio"));
-	nb_config->AddPage(p_io,		wxT("Input / Output"));
-	nb_config->AddPage(p_hle,		wxT("HLE / Misc."));
-	nb_config->AddPage(p_system,	wxT("System"));
+	nb_config->AddPage(p_cpu,      wxT("Core"));
+	nb_config->AddPage(p_graphics, wxT("Graphics"));
+	nb_config->AddPage(p_audio,    wxT("Audio"));
+	nb_config->AddPage(p_io,       wxT("Input / Output"));
+	nb_config->AddPage(p_hle,      wxT("HLE / Misc."));
+	nb_config->AddPage(p_system,   wxT("System"));
 
 	wxBoxSizer* s_subpanel_system(new wxBoxSizer(wxVERTICAL));
 	wxBoxSizer* s_subpanel_cpu(new wxBoxSizer(wxVERTICAL));
@@ -592,86 +592,86 @@ void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
 	wxBoxSizer* s_subpanel5(new wxBoxSizer(wxVERTICAL));
 
 	wxStaticBoxSizer* s_round_pad_controls( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Controls") ) );
-	wxStaticBoxSizer* s_round_pad_left(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("LEFT") ) );
-	wxStaticBoxSizer* s_round_pad_down(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("DOWN") ) );
-	wxStaticBoxSizer* s_round_pad_right(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("RIGHT") ) );
-	wxStaticBoxSizer* s_round_pad_up(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("UP") ) );
+	wxStaticBoxSizer* s_round_pad_left(     new wxStaticBoxSizer( wxVERTICAL, &diag, _("LEFT") ) );
+	wxStaticBoxSizer* s_round_pad_down(     new wxStaticBoxSizer( wxVERTICAL, &diag, _("DOWN") ) );
+	wxStaticBoxSizer* s_round_pad_right(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("RIGHT") ) );
+	wxStaticBoxSizer* s_round_pad_up(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("UP") ) );
 
 	wxStaticBoxSizer* s_round_pad_shifts_l( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_l1(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("L1") ) );
-	wxStaticBoxSizer* s_round_pad_l2(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("L2") ) );
-	wxStaticBoxSizer* s_round_pad_l3(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("L3") ) );
+	wxStaticBoxSizer* s_round_pad_l1(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L1") ) );
+	wxStaticBoxSizer* s_round_pad_l2(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L2") ) );
+	wxStaticBoxSizer* s_round_pad_l3(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L3") ) );
 
-	wxStaticBoxSizer* s_round_pad_system(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("System") ) );
-	wxStaticBoxSizer* s_round_pad_select(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("SELECT") ) );
-	wxStaticBoxSizer* s_round_pad_start(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("START") ) );
+	wxStaticBoxSizer* s_round_pad_system(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("System") ) );
+	wxStaticBoxSizer* s_round_pad_select(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("SELECT") ) );
+	wxStaticBoxSizer* s_round_pad_start(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("START") ) );
 
 	wxStaticBoxSizer* s_round_pad_shifts_r( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_r1(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("R1") ) );
-	wxStaticBoxSizer* s_round_pad_r2(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("R2") ) );
-	wxStaticBoxSizer* s_round_pad_r3(		new wxStaticBoxSizer( wxVERTICAL, &diag, _("R3") ) );
+	wxStaticBoxSizer* s_round_pad_r1(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R1") ) );
+	wxStaticBoxSizer* s_round_pad_r2(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R2") ) );
+	wxStaticBoxSizer* s_round_pad_r3(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R3") ) );
 
-	wxStaticBoxSizer* s_round_pad_buttons(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("Buttons") ) );
-	wxStaticBoxSizer* s_round_pad_square(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("SQUARE") ) );
-	wxStaticBoxSizer* s_round_pad_cross(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("CROSS") ) );
-	wxStaticBoxSizer* s_round_pad_circle(	new wxStaticBoxSizer( wxVERTICAL, &diag, _("CIRCLE") ) );
+	wxStaticBoxSizer* s_round_pad_buttons(  new wxStaticBoxSizer( wxVERTICAL, &diag, _("Buttons") ) );
+	wxStaticBoxSizer* s_round_pad_square(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("SQUARE") ) );
+	wxStaticBoxSizer* s_round_pad_cross(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("CROSS") ) );
+	wxStaticBoxSizer* s_round_pad_circle(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("CIRCLE") ) );
 	wxStaticBoxSizer* s_round_pad_triangle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("TRIANGLE") ) );
 
 
-	wxComboBox* cbox_pad_left =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_down =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_right =	new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_up =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_start =	new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r3 =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l3 =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_select =	new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_square =	new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_cross =	new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_circle =	new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_left     = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_down     = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_right    = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_up       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_start    = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_r3       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_l3       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_select   = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_square   = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_cross    = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_circle   = new wxComboBox(&diag, wxID_ANY);
 	wxComboBox* cbox_pad_triangle = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r1 =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l1 =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r2 =		new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l2 =		new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_r1       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_l1       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_r2       = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_l2       = new wxComboBox(&diag, wxID_ANY);
 
 	for(int i=0; i<128; i++)
 	{
-		cbox_pad_left->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_down->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_right->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_up->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r3->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l3->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_square->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_cross->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_circle->Append		(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_triangle->Append	(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r1->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l1->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r2->Append			(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l2->Append			(wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_left->Append    (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_down->Append    (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_right->Append   (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_up->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_r3->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_l3->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_square->Append  (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_cross->Append   (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_circle->Append  (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_triangle->Append(wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_r1->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_l1->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_r2->Append      (wxString::Format("%c", static_cast<char>(i) ) );
+		cbox_pad_l2->Append      (wxString::Format("%c", static_cast<char>(i) ) );
 	}
 
 	cbox_pad_start->Append("Enter");
 	cbox_pad_select->Append("Space");
 
-	cbox_pad_left->SetSelection		(Ini.PadHandlerLeft.GetValue());
-	cbox_pad_down->SetSelection		(Ini.PadHandlerDown.GetValue());
-	cbox_pad_right->SetSelection	(Ini.PadHandlerRight.GetValue());
-	cbox_pad_up->SetSelection		(Ini.PadHandlerUp.GetValue());
-	cbox_pad_start->SetSelection	(Ini.PadHandlerStart.GetValue());
-	cbox_pad_r3->SetSelection		(Ini.PadHandlerR3.GetValue());
-	cbox_pad_l3->SetSelection		(Ini.PadHandlerL3.GetValue());
-	cbox_pad_select->SetSelection	(Ini.PadHandlerSelect.GetValue());
-	cbox_pad_square->SetSelection	(Ini.PadHandlerSquare.GetValue());
-	cbox_pad_cross->SetSelection	(Ini.PadHandlerCross.GetValue());
-	cbox_pad_circle->SetSelection	(Ini.PadHandlerCircle.GetValue());
-	cbox_pad_triangle->SetSelection	(Ini.PadHandlerTriangle.GetValue());
-	cbox_pad_r1->SetSelection		(Ini.PadHandlerR1.GetValue());
-	cbox_pad_l1->SetSelection		(Ini.PadHandlerL1.GetValue());
-	cbox_pad_r2->SetSelection		(Ini.PadHandlerR2.GetValue());
-	cbox_pad_l2->SetSelection		(Ini.PadHandlerL2.GetValue());
+	cbox_pad_left->SetSelection     (Ini.PadHandlerLeft.GetValue());
+	cbox_pad_down->SetSelection     (Ini.PadHandlerDown.GetValue());
+	cbox_pad_right->SetSelection    (Ini.PadHandlerRight.GetValue());
+	cbox_pad_up->SetSelection       (Ini.PadHandlerUp.GetValue());
+	cbox_pad_start->SetSelection    (Ini.PadHandlerStart.GetValue());
+	cbox_pad_r3->SetSelection       (Ini.PadHandlerR3.GetValue());
+	cbox_pad_l3->SetSelection       (Ini.PadHandlerL3.GetValue());
+	cbox_pad_select->SetSelection   (Ini.PadHandlerSelect.GetValue());
+	cbox_pad_square->SetSelection   (Ini.PadHandlerSquare.GetValue());
+	cbox_pad_cross->SetSelection    (Ini.PadHandlerCross.GetValue());
+	cbox_pad_circle->SetSelection   (Ini.PadHandlerCircle.GetValue());
+	cbox_pad_triangle->SetSelection (Ini.PadHandlerTriangle.GetValue());
+	cbox_pad_r1->SetSelection       (Ini.PadHandlerR1.GetValue());
+	cbox_pad_l1->SetSelection       (Ini.PadHandlerL1.GetValue());
+	cbox_pad_r2->SetSelection       (Ini.PadHandlerR2.GetValue());
+	cbox_pad_l2->SetSelection       (Ini.PadHandlerL2.GetValue());
 
 	s_round_pad_left->Add(cbox_pad_left, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_pad_down->Add(cbox_pad_down, wxSizerFlags().Border(wxALL, 5).Expand());

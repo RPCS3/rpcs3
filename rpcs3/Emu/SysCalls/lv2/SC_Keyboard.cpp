@@ -6,14 +6,14 @@ extern Module sys_io;
 
 enum CELL_KB_ERROR_CODE
 {
-	CELL_KB_ERROR_FATAL							= 0x80121001,
-	CELL_KB_ERROR_INVALID_PARAMETER				= 0x80121002,
-	CELL_KB_ERROR_ALREADY_INITIALIZED			= 0x80121003,
-	CELL_KB_ERROR_UNINITIALIZED					= 0x80121004,
-	CELL_KB_ERROR_RESOURCE_ALLOCATION_FAILED	= 0x80121005,
-	CELL_KB_ERROR_READ_FAILED					= 0x80121006,
-	CELL_KB_ERROR_NO_DEVICE						= 0x80121007,
-	CELL_KB_ERROR_SYS_SETTING_FAILED			= 0x80121008,
+	CELL_KB_ERROR_FATAL                      = 0x80121001,
+	CELL_KB_ERROR_INVALID_PARAMETER          = 0x80121002,
+	CELL_KB_ERROR_ALREADY_INITIALIZED        = 0x80121003,
+	CELL_KB_ERROR_UNINITIALIZED              = 0x80121004,
+	CELL_KB_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121005,
+	CELL_KB_ERROR_READ_FAILED                = 0x80121006,
+	CELL_KB_ERROR_NO_DEVICE                  = 0x80121007,
+	CELL_KB_ERROR_SYS_SETTING_FAILED         = 0x80121008,
 };
 
 int cellKbInit(u32 max_connect)
@@ -58,17 +58,17 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 		}
 
 	// CELL_KB_NUMPAD
-	if (rawcode >= 0x59 && rawcode <= 0x61) return (rawcode - 0x28) | 0x4000;	// '1' - '9'
-	if (rawcode == 0x62) return 0x30 | 0x4000;									// '0'
-	if (rawcode == 0x53) return 0x00 | 0x4000;									// 'Num Lock'
-	if (rawcode == 0x54) return 0x2F | 0x4000;									// '/'
-	if (rawcode == 0x55) return 0x2A | 0x4000;									// '*'
-	if (rawcode == 0x56) return 0x2D | 0x4000;									// '-'
-	if (rawcode == 0x57) return 0x2B | 0x4000;									// '+'
-	if (rawcode == 0x58) return 0x0A | 0x4000;									// '\n'
+	if (rawcode >= 0x59 && rawcode <= 0x61) return (rawcode - 0x28) | 0x4000; // '1' - '9'
+	if (rawcode == 0x62) return 0x30 | 0x4000;                                // '0'
+	if (rawcode == 0x53) return 0x00 | 0x4000;                                // 'Num Lock'
+	if (rawcode == 0x54) return 0x2F | 0x4000;                                // '/'
+	if (rawcode == 0x55) return 0x2A | 0x4000;                                // '*'
+	if (rawcode == 0x56) return 0x2D | 0x4000;                                // '-'
+	if (rawcode == 0x57) return 0x2B | 0x4000;                                // '+'
+	if (rawcode == 0x58) return 0x0A | 0x4000;                                // '\n'
 
 	// ASCII
-	if (rawcode >= 0x04 && rawcode <= 0x1D)										// 'A' - 'Z'
+	if (rawcode >= 0x04 && rawcode <= 0x1D)                                   // 'A' - 'Z'
 	{
 		rawcode -= 
 			(mkey&(CELL_KB_MKEY_L_SHIFT|CELL_KB_MKEY_R_SHIFT)) ? 
@@ -76,17 +76,17 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
 		return rawcode + 0x5D;
 	}				
-	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;				// '1' - '9'
-	if (rawcode == 0x27) return 0x30;											// '0'
-	if (rawcode == 0x28) return 0x0A;											// '\n'
-	if (rawcode == 0x2B) return 0x09;											// '\t'
-	if (rawcode == 0x2C) return 0x20;											// ' '
-	if (rawcode == 0x2D) return 0x2D;											// '-'
-	if (rawcode == 0x2E) return 0x3D;											// '='
-	if (rawcode == 0x36) return 0x2C;											// ','
-	if (rawcode == 0x37) return 0x2E;											// '.'
-	if (rawcode == 0x38) return 0x2F;											// '/'
-	if (rawcode == 0x87) return 0x5C;											// '\'
+	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;            // '1' - '9'
+	if (rawcode == 0x27) return 0x30;                                         // '0'
+	if (rawcode == 0x28) return 0x0A;                                         // '\n'
+	if (rawcode == 0x2B) return 0x09;                                         // '\t'
+	if (rawcode == 0x2C) return 0x20;                                         // ' '
+	if (rawcode == 0x2D) return 0x2D;                                         // '-'
+	if (rawcode == 0x2E) return 0x3D;                                         // '='
+	if (rawcode == 0x36) return 0x2C;                                         // ','
+	if (rawcode == 0x37) return 0x2E;                                         // '.'
+	if (rawcode == 0x38) return 0x2F;                                         // '/'
+	if (rawcode == 0x87) return 0x5C;                                         // '\'
 
 	// (TODO: Add more cases)
 

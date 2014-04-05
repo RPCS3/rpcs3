@@ -290,8 +290,8 @@ void GLFragmentDecompilerThread::Task()
 		//case 0x12: break; // KIL
 		//case 0x13: break; // PK4
 		//case 0x14: break; // UP4
-		case 0x15: AddCode("ddx(" + GetSRC(src0) + ")"); break; // DDX
-		case 0x16: AddCode("ddy(" + GetSRC(src0) + ")"); break; // DDY
+		case 0x15: AddCode("dFdx(" + GetSRC(src0) + ")"); break; // DDX
+		case 0x16: AddCode("dFdy(" + GetSRC(src0) + ")"); break; // DDY
 		case 0x17: AddCode("texture(" + AddTex() + ", " + GetSRC(src0) + ".xy)"); break; //TEX
 		//case 0x18: break; // TXP
 		//case 0x19: break; // TXD

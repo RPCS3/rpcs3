@@ -74,6 +74,7 @@ int sys_cond_signal(u32 cond_id)
 
 	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
+		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 
 		if (Emu.IsStopped())
@@ -99,6 +100,7 @@ int sys_cond_signal_all(u32 cond_id)
 
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
+		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 
 		if (Emu.IsStopped())
@@ -134,6 +136,7 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
+		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 	}
 
@@ -199,7 +202,9 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 				}
 			}
 			mutex->recursive = 1;
+			const volatile u64 stamp = cond->signal_stamp;
 			cond->signal.unlock(tid);
+			//ConLog.Write("sys_cond_wait(): signal latency %d", get_system_time() - stamp);
 			return CELL_OK;
 		}
 
