@@ -17,7 +17,7 @@ out gl_PerVertex {
 };
 #endif
 
-layout(location = 0) in vec4 POSITION;
+layout(location = 0) in vec2 POSITION;
 layout(location = 1) in vec2 TEXCOORD0;
 
 // FIXME set the interpolation (don't know what dx do)
@@ -55,9 +55,9 @@ layout(location = 1) out vec2 SHADERt;
 
 void vs_main()
 {
-    VSout_p = POSITION;
+    VSout_p = vec4(POSITION, 0.5f, 1.0f);
     VSout_t = TEXCOORD0;
-    gl_Position = POSITION; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
+    gl_Position = vec4(POSITION, 0.5f, 1.0f); // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 }
 
 #endif

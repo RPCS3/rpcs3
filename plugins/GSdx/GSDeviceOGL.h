@@ -599,7 +599,7 @@ class GSDeviceOGL : public GSDevice
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSBlendStateOGL* bs, bool linear = true);
 
-	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm);
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPxyT1* vertices, bool datm);
 
 	void EndScene();
 

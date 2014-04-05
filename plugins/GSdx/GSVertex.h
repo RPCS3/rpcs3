@@ -52,6 +52,15 @@ struct GSVertexP
 	GSVector4 p;
 };
 
+// Align 16 because the structure only contains 16B. Otherwise
+// sizeof(GSVertexPxyT1) == 32 which defeat the purpose to save bandwidth vs
+// GSVertexPT1
+__aligned(struct, 16) GSVertexPxyT1
+{
+	GSVector2 p;
+	GSVector2 t;
+};
+
 __aligned(struct, 32) GSVertexPT1
 {
 	GSVector4 p;

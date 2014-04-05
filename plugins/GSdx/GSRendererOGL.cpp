@@ -239,12 +239,12 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
 			GSVector4 dst = src * 2.0f + o.xxxx();
 
-			GSVertexPT1 vertices[] =
+			GSVertexPxyT1 vertices[] =
 			{
-				{GSVector4(dst.x, dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-				{GSVector4(dst.z, dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-				{GSVector4(dst.x, dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-				{GSVector4(dst.z, dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
+				{GSVector2(dst.x, dst.y), GSVector2(src.x, src.y)},
+				{GSVector2(dst.z, dst.y), GSVector2(src.z, src.y)},
+				{GSVector2(dst.x, dst.w), GSVector2(src.x, src.w)},
+				{GSVector2(dst.z, dst.w), GSVector2(src.z, src.w)},
 			};
 
 			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
