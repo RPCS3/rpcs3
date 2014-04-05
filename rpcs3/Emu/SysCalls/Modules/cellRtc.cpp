@@ -190,7 +190,7 @@ int cellRtcGetTick(mem_ptr_t<CellRtcDateTime> pTime, mem_ptr_t<CellRtcTick> pTic
 {
 	cellRtc.Log("cellRtcGetTick(pTime=0x%x, pTick=0x%x)", pTime.GetAddr(), pTick.GetAddr());
 
-	if (!pTime.IsGood() || !pTime.IsGood())
+	if (!pTime.IsGood() || !pTick.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	wxDateTime datetime = wxDateTime::wxDateTime(pTime->day, (wxDateTime::Month)pTime->month.ToLE(), pTime->year, pTime->hour, pTime->minute, pTime->second, (pTime->microsecond / 1000));
@@ -203,7 +203,7 @@ int cellRtcSetTick(mem_ptr_t<CellRtcDateTime> pTime, mem_ptr_t<CellRtcTick> pTic
 {
 	cellRtc.Log("cellRtcSetTick(pTime=0x%x, pTick=0x%x)", pTime.GetAddr(), pTick.GetAddr());
 	
-	if (!pTime.IsGood() || !pTime.IsGood())
+	if (!pTime.IsGood() || !pTick.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick->tick);
