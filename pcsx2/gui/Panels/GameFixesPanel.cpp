@@ -26,6 +26,8 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 
 	// NOTE: Order of checkboxes must match the order of the bits in the GamefixOptions structure!
 	// NOTE2: Don't make this static, because translations can change at run-time :)
+	// NOTE3: This panel is way to big, header text was reduced as a temporary solution.
+	//		  However if you want add more gamefix, a final solution must be found (noteboox/scrolling...)
 
 	struct CheckTextMess
 	{
@@ -107,11 +109,11 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	}
 
 	m_check_Enable = new pxCheckBox( this, _("Enable manual game fixes [Not recommended]"),
-		pxE( L"Gamefixes can work around wrong emulation in some titles. \nThey may also cause compatibility or performance issues. \n\nIt's better to enable 'Automatic game fixes' at the main menu instead, and leave this page empty. \n('Automatic' means: selectively use specific tested fixes for specific games)"
+		pxE( L"It's better to enable 'Automatic game fixes' at the main menu instead, and leave this page empty. ('Automatic' means: selectively use specific tested fixes for specific games)"
 		)
 	);
 
-	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled.")).SetSubPadding( 1 );
+	m_check_Enable->SetToolTip(_("Gamefixes can work around wrong emulation in some titles. \nThey may also cause compatibility or performance issues.\n\nThe safest way to make sure that all game fixes are completely disabled.")).SetSubPadding( 1 );
 	m_check_Enable->SetValue( g_Conf->EnableGameFixes );
 
 	*this	+= m_check_Enable	| StdExpand();
