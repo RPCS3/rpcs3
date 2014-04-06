@@ -93,6 +93,9 @@ set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 set(DEFAULT_WARNINGS "-Wno-write-strings -Wno-format -Wno-unused-parameter -Wno-unused-value -Wstrict-aliasing -Wno-unused-function -Wno-attributes -Wno-unused-result -Wno-missing-field-initializers -Wno-unused-local-typedefs -Wno-parentheses")
 set (HARDEING_OPT "-D_FORTIFY_SOURCE=2  -Wformat -Wformat-security")
 set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread ${DEFAULT_WARNINGS} ${HARDEING_OPT}")
+if(CMAKE_BUILD_TYPE MATCHES "Debug|Devel")
+    set(DEFAULT_GCC_FLAG "-g ${DEFAULT_GCC_FLAG}")
+endif()
 set(DEFAULT_CPP_FLAG "${DEFAULT_GCC_FLAG} -Wno-invalid-offsetof")
 
 #-------------------------------------------------------------------------------
