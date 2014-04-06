@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
-"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-03-23 14:15+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
 "PO-Revision-Date: 2014-01-13 10:02+0200\n"
 "Last-Translator: Ceyhun Özgöç <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -70,7 +70,7 @@ msgstr ""
 "kullanılan SSE2 özelliğini desteklemiyor. Kullanabileceğiniz seçenekler çok "
 "kısıtlı olacaktır ve emülatör aşırı derecede yavaş çalışacaktır."
 
-#: pcsx2/gui/AppInit.cpp:165
+#: pcsx2/gui/AppInit.cpp:178
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -78,7 +78,7 @@ msgstr ""
 "Uyarı: Yapılandırılmış bazı PS2 derleyicileri başlatılamadı ve devre dışı "
 "bırakıldı."
 
-#: pcsx2/gui/AppInit.cpp:213
+#: pcsx2/gui/AppInit.cpp:226
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "

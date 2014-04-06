@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-03-23 14:23+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
 "PO-Revision-Date: 2014-02-05 18:05+0100\n"
 "Last-Translator: Víctor González Fraile <victor.gonfraile@hotmail.es>\n"
 "Language-Team: \n"
@@ -69,7 +69,7 @@ msgstr ""
 "recompiladores y plugins de PCSX2. Tus opciones estarán limitadas y la "
 "emulación será *muy* lenta."
 
-#: pcsx2/gui/AppInit.cpp:165
+#: pcsx2/gui/AppInit.cpp:178
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -77,7 +77,7 @@ msgstr ""
 "Aviso: Algunos de los recompiladores configurados de PS2 no se han iniciado "
 "y por lo tanto están desactivados:"
 
-#: pcsx2/gui/AppInit.cpp:213
+#: pcsx2/gui/AppInit.cpp:226
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "
