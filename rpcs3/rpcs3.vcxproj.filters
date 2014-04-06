@@ -702,5 +702,8 @@
     <ClInclude Include="..\Utilities\StrFmt.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\SPURecompiler.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

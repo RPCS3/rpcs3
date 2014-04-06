@@ -7,7 +7,7 @@ static const SPUImmTable g_spu_imm;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 : m_enc(new SPURecompiler(cpu, *this))
-, m_inter(new SPUInterpreter(cpu))
+, inter(new SPUInterpreter(cpu))
 , CPU(cpu)
 , compiler(&runtime)
 {
@@ -17,17 +17,17 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 SPURecompilerCore::~SPURecompilerCore()
 {
 	delete m_enc;
-	delete m_inter;
+	delete inter;
 }
 
 void SPURecompilerCore::Decode(const u32 code) // decode instruction and run with interpreter
 {
-	(*SPU_instr::rrr_list)(m_inter, code);
+	(*SPU_instr::rrr_list)(inter, code);
 }
 
 void SPURecompilerCore::Compile(u16 pos)
 {
-	compiler.addFunc(kFuncConvHost, FuncBuilder4<u16, void*, void*, void*, u16>());
+	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	entry[pos].host = pos;
 
 	GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
@@ -45,15 +45,26 @@ void SPURecompilerCore::Compile(u16 pos)
 	compiler.alloc(imm_var);
 	m_enc->imm_var = &imm_var;
 
-	GpVar pos_var(compiler, kVarTypeUInt16, "pos");
+	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
 	compiler.setArg(3, pos_var);
 	compiler.alloc(pos_var);
+
+	m_enc->pos_var = &pos_var;
+
+	compiler.xor_(pos_var, pos_var);
 
 	while (true)
 	{
 		const u32 opcode = Memory.Read32(CPU.dmac.ls_offset + pos * 4);
 		m_enc->do_finalize = false;
-		(*SPU_instr::rrr_list)(m_enc, opcode); // compile single opcode
+		if (opcode)
+		{
+			(*SPU_instr::rrr_list)(m_enc, opcode); // compile single opcode
+		}
+		else
+		{
+			m_enc->do_finalize = true;
+		}
 		bool fin = m_enc->do_finalize;
 		entry[pos].valid = opcode;
 
@@ -63,7 +74,6 @@ void SPURecompilerCore::Compile(u16 pos)
 		entry[pos].host = entry[pos - 1].host;
 	}
 
-	compiler.xor_(pos_var, pos_var);
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[entry[pos].host].pointer = compiler.make();
@@ -74,6 +84,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	const u64 m_offset = address - CPU.PC;
 	const u16 pos = (CPU.PC >> 2);
 
+	//ConLog.Write("DecodeMemory: pos=%d", pos);
 	u32* ls = (u32*)Memory.VirtualToRealAddr(m_offset);
 
 	if (!pos)
@@ -115,16 +126,16 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		return 0;
 	}
 	// jump
-	typedef u16(*Func)(void* _cpu, void* _ls, const SPUImmTable* _imm, u16 _pos);
+	typedef u32(*Func)(void* _cpu, void* _ls, const SPUImmTable* _imm, u32 _pos);
 
 	Func func = asmjit_cast<Func>(entry[entry[pos].host].pointer);
 
 	void* cpu = (u8*)&CPU.GPR[0] - offsetof(SPUThread, GPR[0]); // ugly cpu base offset detection
 
-	u16 res = pos == entry[pos].host ? 0 : pos;
-	res = func(cpu, ls, &g_spu_imm, res);
+	u16 res = (pos == entry[pos].host) ? 0 : pos;
+	res = (u16)func(cpu, ls, &g_spu_imm, res);
 
-	ConLog.Write("func -> %d", res);
+	CPU.SetBranch((u64)res << 2);
 
 	return 0;
 	/*Decode(Memory.Read32(address));

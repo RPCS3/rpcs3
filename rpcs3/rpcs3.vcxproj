@@ -393,6 +393,7 @@
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
+    <ClInclude Include="Emu\Cell\SPURecompiler.h" />
     <ClInclude Include="Emu\Cell\SPURSManager.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\DbgConsole.h" />
