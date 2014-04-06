@@ -18,6 +18,8 @@ void sys_io_init()
 	sys_io.AddFunc(0x578e3c98, cellPadSetPortSetting);
 	sys_io.AddFunc(0x0e2dfaad, cellPadInfoPressMode);
 	sys_io.AddFunc(0x78200559, cellPadInfoSensorMode);
+	sys_io.AddFunc(0xf83f8182, cellPadSetPressMode);
+	sys_io.AddFunc(0xbe5be3ba, cellPadSetSensorMode);
 
 	sys_io.AddFunc(0x433f6ec0, cellKbInit);
 	sys_io.AddFunc(0xbfce3285, cellKbEnd);
