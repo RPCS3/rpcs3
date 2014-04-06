@@ -554,10 +554,10 @@ void PADManager::RunTimer(const u32 seconds, const u32 id)
 {
 	m_seconds = seconds;
 	clock_t t1, t2;
-	t1 = t2 = clock() / CLK_TCK;
+	t1 = t2 = clock() / CLOCKS_PER_SEC;
 	while (m_seconds) 
 	{
-		if (t1 / CLK_TCK + 1 <= (t2 = clock()) / CLK_TCK) 
+		if (t1 / CLOCKS_PER_SEC + 1 <= (t2 = clock()) / CLOCKS_PER_SEC) 
 		{
 			UpdateTimerLabel(id);
 			m_seconds--;
