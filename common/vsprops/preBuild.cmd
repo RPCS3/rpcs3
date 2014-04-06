@@ -21,14 +21,8 @@ IF "%PROGRAMFILES(x86)%" == "" do (
 
 set PATH=%PATH%;"%PROGRAMFILES(x86)%\Git\bin"
 
-FOR /F "delims=+" %%i IN ('"git show -s --format=%%%ci HEAD"') do (
-  set REV3=%%i
-)
-
-set REV2=%REV3: =%
-set REV1=%REV2:-=%
-set REV=%REV1::=%
-
+rem Test if git is available for this repo
+git show -s
 if %ERRORLEVEL% NEQ 0 (
   echo Automatic version detection unavailable.
   echo If you want to have the version string print correctly,
@@ -41,6 +35,14 @@ if %ERRORLEVEL% NEQ 0 (
   echo #define SVN_MODS 0 >> "%CD%\svnrev.h"
   echo set SVN_REV=0 > "%CD%\postBuild.inc.cmd"
 ) else (
+
+  FOR /F "delims=+" %%i IN ('"git show -s --format=%%%ci HEAD"') do (
+    set REV3=%%i
+  )
+  set REV2=%REV3: =%
+  set REV1=%REV2:-=%
+  set REV=%REV1::=%
+
   echo #define SVN_REV %REV%ll > "%CD%\svnrev.h"
   echo #define SVN_MODS 0 /* Not implemented at the moment. */ >> "%CD%\svnrev.h"
   echo set SVN_REV=%REV% > "%CD%\postBuild.inc.cmd"
