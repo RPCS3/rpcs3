@@ -21,7 +21,7 @@
 ######################################################################
 VERSION=0.9.9
 COPYRIGHT="PCSX2 Dev Team"
-BUG_MAIL="http://code.google.com/p/pcsx2/"
+BUG_MAIL="https://github.com/PCSX2/pcsx2/issues"
 
 GENERAL_OPTION="--sort-by-file --no-wrap --package-name=PCSX2 \
 	--package-version=$VERSION --msgid-bugs-address=$BUG_MAIL"

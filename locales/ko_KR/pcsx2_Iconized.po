@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
-"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-03-23 14:15+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
 "PO-Revision-Date: 2014-01-14 19:47+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull,p695091 <99skull@gmail.com>\n"
@@ -68,14 +68,14 @@ msgstr ""
 "경고: 컴퓨터가 많은 PCSX2의 리컴파일러 및 플러그인에 필요한 SSE2를 지원하지 "
 "않습니다. 옵션은 제한 될 것입니다 그리고 에뮬레이션은 *매우* 느려지게 됩니다."
 
-#: pcsx2/gui/AppInit.cpp:165
+#: pcsx2/gui/AppInit.cpp:178
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
 msgstr ""
 "경고: 구성된 PS2의 리컴파일러 중 일부 초기화에 실패하여 비활성화되었습니다:"
 
-#: pcsx2/gui/AppInit.cpp:213
+#: pcsx2/gui/AppInit.cpp:226
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "

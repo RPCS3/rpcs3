@@ -3,8 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.1.0 (and later)\n"
-"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-03-23 14:15+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
 "PO-Revision-Date: 2014-01-13 21:35+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: http://forums.pcsx2.net/Thread-Swedish-GUI-translation-for-"
@@ -71,7 +71,7 @@ msgstr ""
 " omkompilerare och InsticksProgram. Era möjligheter kommer vara \n"
 " begränsade och emuleringen blir *mycket* långsam."
 
-#: pcsx2/gui/AppInit.cpp:165
+#: pcsx2/gui/AppInit.cpp:178
 msgid ""
 "Warning: Some of the configured PS2 recompilers failed to initialize and "
 "have been disabled:"
@@ -79,7 +79,7 @@ msgstr ""
 "Varning: Några av de konfigurerade PS2-omkompilerarna \n"
 " misslyckades att köras igång och har blivit spärrade:"
 
-#: pcsx2/gui/AppInit.cpp:213
+#: pcsx2/gui/AppInit.cpp:226
 msgid ""
 "Note: Recompilers are not necessary for PCSX2 to run, however they typically "
 "improve emulation speed substantially. You may have to manually re-enable "

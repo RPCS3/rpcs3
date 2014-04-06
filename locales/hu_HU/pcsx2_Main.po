@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
-"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2014-03-23 14:20+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
 "PO-Revision-Date: 2011-04-17 16:35+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -112,7 +112,7 @@ msgstr ""
 "ISO képfájl betöltése esetén ezt a hibát okozhatja egy nem támogatott ISO "
 "képfájl típus, vagy egy hiba a PCSX2 ISO képfájl támogatásban."
 
-#: pcsx2/MTGS.cpp:859
+#: pcsx2/MTGS.cpp:867
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
@@ -350,31 +350,31 @@ msgstr ""
 "A mentett állás nem megfelelően van elmentve. Az ideiglenes fájl sikeresen "
 "létre lett hozva, de nem került át a végső helyére."
 
-#: pcsx2/gui/AppConfig.cpp:898
+#: pcsx2/gui/AppConfig.cpp:909
 msgid "Safest"
 msgstr "Legbiztonságosabb"
 
-#: pcsx2/gui/AppConfig.cpp:899
+#: pcsx2/gui/AppConfig.cpp:910
 msgid "Safe (faster)"
 msgstr "Biztonságos (gyorsabb)"
 
-#: pcsx2/gui/AppConfig.cpp:900
+#: pcsx2/gui/AppConfig.cpp:911
 msgid "Balanced"
 msgstr "Kiegyensúlyozott"
 
-#: pcsx2/gui/AppConfig.cpp:901
+#: pcsx2/gui/AppConfig.cpp:912
 msgid "Aggressive"
 msgstr "Agresszív"
 
-#: pcsx2/gui/AppConfig.cpp:902
+#: pcsx2/gui/AppConfig.cpp:913
 msgid "Aggressive plus"
 msgstr "Agresszív plusz"
 
-#: pcsx2/gui/AppConfig.cpp:903
+#: pcsx2/gui/AppConfig.cpp:914
 msgid "Mostly Harmful"
 msgstr "Legártalmasabb"
 
-#: pcsx2/gui/AppConfig.cpp:1064 pcsx2/gui/AppConfig.cpp:1070
+#: pcsx2/gui/AppConfig.cpp:1075 pcsx2/gui/AppConfig.cpp:1081
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "A meglévő beállítás fájl felülírása sikertelen; hozzáférés megtagadva."
 
@@ -394,95 +394,95 @@ msgstr ""
 "SSE kiterjesztések nem állnak rendelkezésre.  PCSX2 futtatásához szükséges "
 "egy SSE utasításkészletet támogató processzor."
 
-#: pcsx2/gui/AppInit.cpp:157
+#: pcsx2/gui/AppInit.cpp:170
 msgid "PCSX2 Recompiler Error(s)"
 msgstr "PCSX2 Recompiler hiba/hibák"
 
-#: pcsx2/gui/AppInit.cpp:227
+#: pcsx2/gui/AppInit.cpp:240
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr ""
 "A beállítások csak a jelenlegi munkamenetre érvényesek és nem lesznek "
 "elmentve.\n"
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppInit.cpp:250 pcsx2/gui/AppMain.cpp:301
 msgid "IsoFile"
 msgstr "Iso fájl"
 
-#: pcsx2/gui/AppInit.cpp:238
+#: pcsx2/gui/AppInit.cpp:251
 msgid "displays this list of command line options"
 msgstr "megjeleníti a parancssori lehetőségek listáját"
 
-#: pcsx2/gui/AppInit.cpp:239
+#: pcsx2/gui/AppInit.cpp:252
 msgid "forces the program log/console to be visible"
 msgstr "láthatóvá teszi a program naplót/konzolt"
 
-#: pcsx2/gui/AppInit.cpp:240
+#: pcsx2/gui/AppInit.cpp:253
 msgid "use fullscreen GS mode"
 msgstr "teljes képernyős GS mód használata"
 
-#: pcsx2/gui/AppInit.cpp:241
+#: pcsx2/gui/AppInit.cpp:254
 msgid "use windowed GS mode"
 msgstr "ablakos GS mód használata"
 
-#: pcsx2/gui/AppInit.cpp:243
+#: pcsx2/gui/AppInit.cpp:256
 msgid "disables display of the gui while running games"
 msgstr "játék közben elrejti a felhasználói felületet"
 
-#: pcsx2/gui/AppInit.cpp:244
+#: pcsx2/gui/AppInit.cpp:257
 msgid "executes an ELF image"
 msgstr "ELF képfájlt indít"
 
-#: pcsx2/gui/AppInit.cpp:245
+#: pcsx2/gui/AppInit.cpp:258
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
 msgstr "dvd lemez nélkül indítás; PS2 rendszer menü elérésére használatos"
 
-#: pcsx2/gui/AppInit.cpp:246
+#: pcsx2/gui/AppInit.cpp:259
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
 msgstr ""
 "CDVD pluginról indítás (figyelmen kívül hagyja az ISO fájl paraméterét)"
 
-#: pcsx2/gui/AppInit.cpp:248
+#: pcsx2/gui/AppInit.cpp:261
 msgid "disables all speedhacks"
 msgstr "kikapcsolja az összes gyorsító hacket"
 
-#: pcsx2/gui/AppInit.cpp:249
+#: pcsx2/gui/AppInit.cpp:262
 msgid "use the specified comma or pipe-delimited list of gamefixes."
 msgstr ""
 "használd a vesszővel vagy függőleges vonallal határolt játék javítás listát"
 
-#: pcsx2/gui/AppInit.cpp:250
+#: pcsx2/gui/AppInit.cpp:263
 msgid "disables fast booting"
 msgstr "letiltja a gyors indítást "
 
-#: pcsx2/gui/AppInit.cpp:252
+#: pcsx2/gui/AppInit.cpp:265
 msgid "changes the configuration file path"
 msgstr "megváltoztatja a konfigurációs fájl elérési helyét"
 
-#: pcsx2/gui/AppInit.cpp:253
+#: pcsx2/gui/AppInit.cpp:266
 msgid "specifies the PCSX2 configuration file to use"
 msgstr "kjelöli a használandó PCSX2 konfigurációs fájlt"
 
-#: pcsx2/gui/AppInit.cpp:254
+#: pcsx2/gui/AppInit.cpp:267
 #, c-format
 msgid "forces %s to start the First-time Wizard"
 msgstr "kényszeríti a %s emulátort az első indításkori varázsló elindítására"
 
-#: pcsx2/gui/AppInit.cpp:255
+#: pcsx2/gui/AppInit.cpp:268
 msgid "enables portable mode operation (requires admin/root access)"
 msgstr ""
 "hordozható módi műveletek használata (rendszergazdai hozzáférés szükséges)"
 
-#: pcsx2/gui/AppInit.cpp:259
+#: pcsx2/gui/AppInit.cpp:272
 #, c-format
 msgid "specify the file to use as the %s plugin"
 msgstr "válassz %s pluginként használatos fájlt"
 
-#: pcsx2/gui/AppInit.cpp:307
+#: pcsx2/gui/AppInit.cpp:320
 #, c-format
 msgid "Plugin Override Error - %s"
 msgstr "Plugin felülírási hiba - %s"
 
-#: pcsx2/gui/AppInit.cpp:310
+#: pcsx2/gui/AppInit.cpp:323
 #, c-format
 msgid ""
 "%s Plugin Override Error!  The following file does not exist or is not a "
@@ -493,92 +493,92 @@ msgstr ""
 "%s plugin:\n"
 "\n"
 
-#: pcsx2/gui/AppInit.cpp:317
+#: pcsx2/gui/AppInit.cpp:330
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr ""
 "Nyomj Rendben gombot az alapértelmezett konfigurált plugin használatához, "
 "vagy Mégsem gombot a %s bezárásához."
 
-#: pcsx2/gui/AppInit.cpp:496
+#: pcsx2/gui/AppInit.cpp:509
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "PCSX2 hiba: Hardver elégtelenség"
 
-#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:509 pcsx2/gui/AppInit.cpp:521
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Nyomj Rendben gombot a %s bezárásához."
 
-#: pcsx2/gui/AppInit.cpp:509
+#: pcsx2/gui/AppInit.cpp:522
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s kritikus hiba"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:692
 msgid "OK"
 msgstr "Rendben"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&OK"
 msgstr "&Rendben"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:694
 msgid "Cancel"
 msgstr "Mégsem"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:695
 msgid "&Cancel"
 msgstr "&Mégsem"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:696
 msgid "&Apply"
 msgstr "&Alkalmaz"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:697
 msgid "&Next >"
 msgstr "&Következő >"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:698
 msgid "< &Back"
 msgstr "< &Vissza"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:699
 msgid "&Back"
 msgstr "&Vissza"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:700
 msgid "&Finish"
 msgstr "&Befejezés"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:701
 msgid "&Yes"
 msgstr "&Igen"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:702
 msgid "&No"
 msgstr "&Nem"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:703
 msgid "Browse"
 msgstr "Tallózás"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:704
 msgid "&Save"
 msgstr "&Mentés"
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:705
 msgid "Save &As..."
 msgstr "Mentés &másként..."
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:706
 msgid "&Help"
 msgstr "&Súgó"
 
-#: pcsx2/gui/AppInit.cpp:694
+#: pcsx2/gui/AppInit.cpp:707
 msgid "&Home"
 msgstr "&Home"
 
-#: pcsx2/gui/AppInit.cpp:696
+#: pcsx2/gui/AppInit.cpp:709
 msgid "Show about dialog"
 msgstr "Megnyitja a Névjegy párbeszédablakot"
 
@@ -808,7 +808,7 @@ msgstr "&Napló"
 msgid "&Sources"
 msgstr "&Források"
 
-#: pcsx2/gui/Debugger/DisassemblyDialog.cpp:54
+#: pcsx2/gui/Debugger/DisassemblyDialog.cpp:112
 msgid "panel"
 msgstr ""
 
@@ -857,8 +857,9 @@ msgid "PCSX2 Official Website and Forums"
 msgstr "PCSX2 hivatalos weblap és fórum"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:106
-msgid "PCSX2 Official Svn Repository at Googlecode"
-msgstr "PCSX2 hivatalos SVN Googlecode tárhely"
+#, fuzzy
+msgid "PCSX2 Official Git Repository at GitHub"
+msgstr "PCSX2 hivatalos SVN GitHub tárhely"
 
 #: pcsx2/gui/Dialogs/AboutBoxDialog.cpp:110
 msgid "I've seen enough"
@@ -1192,7 +1193,7 @@ msgstr "Alk. megszakítása"
 msgid "GS Output is Disabled!"
 msgstr "GS kimenet kikapcsolva!"
 
-#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:412
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:417
 msgid "Save state"
 msgstr "Állás mentés"
 
@@ -1200,7 +1201,7 @@ msgstr "Állás mentés"
 msgid "Saves the virtual machine state to the current slot."
 msgstr "A virtuális gép állapotát menti a jelenlegi helyre."
 
-#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:411
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:416
 msgid "Load state"
 msgstr "Állás betöltés"
 
@@ -1297,258 +1298,258 @@ msgstr "&Beállítások"
 msgid "&Misc"
 msgstr "&Egyebek"
 
-#: pcsx2/gui/MainFrame.cpp:343
+#: pcsx2/gui/MainFrame.cpp:347
 msgid "&Debug"
 msgstr "&Hibakereső"
 
-#: pcsx2/gui/MainFrame.cpp:355
+#: pcsx2/gui/MainFrame.cpp:360
 #, fuzzy, c-format
 msgid "%s  %d.%d.%d"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:360
-#, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+#: pcsx2/gui/MainFrame.cpp:365
+#, fuzzy, c-format
+msgid "%s  %d.%d.%d-%lld%s (git)  %s"
 msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
-#: pcsx2/gui/MainFrame.cpp:397 pcsx2/gui/MainFrame.cpp:399
-#: pcsx2/gui/MainFrame.cpp:405
+#: pcsx2/gui/MainFrame.cpp:402 pcsx2/gui/MainFrame.cpp:404
+#: pcsx2/gui/MainFrame.cpp:410
 msgid "Initializing..."
 msgstr "Iniciálás..."
 
-#: pcsx2/gui/MainFrame.cpp:401
+#: pcsx2/gui/MainFrame.cpp:406
 msgid "Run ELF..."
 msgstr "ELF futtatása..."
 
-#: pcsx2/gui/MainFrame.cpp:402
+#: pcsx2/gui/MainFrame.cpp:407
 msgid "For running raw PS2 binaries directly"
 msgstr "Feldolgozatlan PS2 binérek közvetlen futtatásához"
 
-#: pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/MainFrame.cpp:419
 msgid "Backup before save"
 msgstr "Mentés előtt másolat készítése"
 
-#: pcsx2/gui/MainFrame.cpp:419
+#: pcsx2/gui/MainFrame.cpp:424
 msgid "Automatic Gamefixes"
 msgstr "Automatikus játék javítások"
 
-#: pcsx2/gui/MainFrame.cpp:420
+#: pcsx2/gui/MainFrame.cpp:425
 msgid "Automatically applies needed Gamefixes to known problematic games"
 msgstr ""
 "Automatikusan érvényesíti a szükséges játék javításokat az ismert problémás "
 "játékokhoz"
 
-#: pcsx2/gui/MainFrame.cpp:422
+#: pcsx2/gui/MainFrame.cpp:427
 msgid "Enable Cheats"
 msgstr "Csalások használata"
 
-#: pcsx2/gui/MainFrame.cpp:425
+#: pcsx2/gui/MainFrame.cpp:430
 #, fuzzy
 msgid "Enable Widescreen Patches"
 msgstr "Javítások használata"
 
-#: pcsx2/gui/MainFrame.cpp:428
+#: pcsx2/gui/MainFrame.cpp:433
 msgid "Enable Host Filesystem"
 msgstr "Gazda fájlrendszer használata"
 
-#: pcsx2/gui/MainFrame.cpp:433
+#: pcsx2/gui/MainFrame.cpp:438
 msgid "Shutdown"
 msgstr "Leállítás"
 
-#: pcsx2/gui/MainFrame.cpp:434
+#: pcsx2/gui/MainFrame.cpp:439
 msgid "Wipes all internal VM states and shuts down plugins."
 msgstr "Töröl minden VM állapotot és leállítja a pluginokat."
 
-#: pcsx2/gui/MainFrame.cpp:436
+#: pcsx2/gui/MainFrame.cpp:441
 msgid "Exit"
 msgstr "Kilépés"
 
-#: pcsx2/gui/MainFrame.cpp:437
+#: pcsx2/gui/MainFrame.cpp:442
 #, c-format
 msgid "Closing %s may be hazardous to your health"
 msgstr "%s bezárása az egészségedre káros lehet"
 
-#: pcsx2/gui/MainFrame.cpp:444
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Iso Selector"
 msgstr "ISO választó"
 
-#: pcsx2/gui/MainFrame.cpp:445
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "Plugin Menu"
 msgstr "Plugin menü"
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:453
 msgid "Iso"
 msgstr "ISO"
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:453
 msgid "Makes the specified ISO image the CDVD source."
 msgstr "Beállítja a kiválasztott ISO képfájlt CDVD forrásnak."
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:454
 msgid "Plugin"
 msgstr "Plugin"
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:454
 msgid "Uses an external plugin as the CDVD source."
 msgstr "Egy külső plugint használ CDVD forrásként."
 
-#: pcsx2/gui/MainFrame.cpp:450
+#: pcsx2/gui/MainFrame.cpp:455
 msgid "No disc"
 msgstr "Nincs lemez"
 
-#: pcsx2/gui/MainFrame.cpp:450
+#: pcsx2/gui/MainFrame.cpp:455
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
 msgstr "Ennek használatával lehet elérni a virtuális PS2 BIOS beállításokat."
 
-#: pcsx2/gui/MainFrame.cpp:458
+#: pcsx2/gui/MainFrame.cpp:463
 msgid "Emulation &Settings"
 msgstr "Emuláció &beállítások"
 
-#: pcsx2/gui/MainFrame.cpp:459
+#: pcsx2/gui/MainFrame.cpp:464
 msgid "&Memory cards"
 msgstr "&Memória kártyák"
 
-#: pcsx2/gui/MainFrame.cpp:460
+#: pcsx2/gui/MainFrame.cpp:465
 msgid "&Plugin/BIOS Selector"
 msgstr "&Plugin/BIOS választó"
 
-#: pcsx2/gui/MainFrame.cpp:461 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
+#: pcsx2/gui/MainFrame.cpp:466 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "Játék adatbázis szerkesztő"
 
-#: pcsx2/gui/MainFrame.cpp:467
+#: pcsx2/gui/MainFrame.cpp:472
 msgid "&Video (GS)"
 msgstr "&Grafika (GS)"
 
-#: pcsx2/gui/MainFrame.cpp:468
+#: pcsx2/gui/MainFrame.cpp:473
 msgid "&Audio (SPU2)"
 msgstr "&Hang (SPU2)"
 
-#: pcsx2/gui/MainFrame.cpp:469
+#: pcsx2/gui/MainFrame.cpp:474
 msgid "&Controllers (PAD)"
 msgstr "&Irányítók (PAD)"
 
-#: pcsx2/gui/MainFrame.cpp:470
+#: pcsx2/gui/MainFrame.cpp:475
 msgid "Dev9"
 msgstr "Dev9"
 
-#: pcsx2/gui/MainFrame.cpp:471
+#: pcsx2/gui/MainFrame.cpp:476
 msgid "USB"
 msgstr "USB"
 
-#: pcsx2/gui/MainFrame.cpp:472
+#: pcsx2/gui/MainFrame.cpp:477
 msgid "Firewire"
 msgstr "Firewire"
 
-#: pcsx2/gui/MainFrame.cpp:478
+#: pcsx2/gui/MainFrame.cpp:483
 msgid "Multitap 1"
 msgstr "1. Multitap"
 
-#: pcsx2/gui/MainFrame.cpp:479
+#: pcsx2/gui/MainFrame.cpp:484
 msgid "Multitap 2"
 msgstr "2. Multitap"
 
-#: pcsx2/gui/MainFrame.cpp:482
+#: pcsx2/gui/MainFrame.cpp:487
 msgid "Clear all settings..."
 msgstr "Minden beállítás törlése..."
 
-#: pcsx2/gui/MainFrame.cpp:483
+#: pcsx2/gui/MainFrame.cpp:488
 #, c-format
 msgid "Clears all %s settings and re-runs the startup wizard."
 msgstr "Töröl minden %s beállítást és újrafuttatja az indításkori varázslót."
 
-#: pcsx2/gui/MainFrame.cpp:505
+#: pcsx2/gui/MainFrame.cpp:510
 msgid "About..."
 msgstr "Névjegy..."
 
-#: pcsx2/gui/MainFrame.cpp:511
+#: pcsx2/gui/MainFrame.cpp:519
 msgid "Open Debug Window..."
 msgstr ""
 
-#: pcsx2/gui/MainFrame.cpp:513
+#: pcsx2/gui/MainFrame.cpp:521
 msgid "Logging..."
 msgstr "Naplózás..."
 
-#: pcsx2/gui/MainFrame.cpp:590
+#: pcsx2/gui/MainFrame.cpp:599
 msgid "Pause"
 msgstr "Szünet"
 
-#: pcsx2/gui/MainFrame.cpp:591
+#: pcsx2/gui/MainFrame.cpp:600
 msgid "Safely pauses emulation and preserves the PS2 state."
 msgstr "Biztonságosan szüntelteti az emulációt és megőrzi a PS2 állapotát."
 
-#: pcsx2/gui/MainFrame.cpp:598
+#: pcsx2/gui/MainFrame.cpp:607
 msgid "Resume"
 msgstr "Folytatás"
 
-#: pcsx2/gui/MainFrame.cpp:599
+#: pcsx2/gui/MainFrame.cpp:608
 msgid "Resumes the suspended emulation state."
 msgstr "Folytatja a felfüggesztett emulációs állapotot."
 
-#: pcsx2/gui/MainFrame.cpp:603
+#: pcsx2/gui/MainFrame.cpp:612
 msgid "Pause/Resume"
 msgstr "Szünet / folytatás"
 
-#: pcsx2/gui/MainFrame.cpp:604
+#: pcsx2/gui/MainFrame.cpp:613
 msgid "No emulation state is active; cannot suspend or resume."
 msgstr ""
 "Nincs aktív emulációs állapot; nem függeszthető fel és nem folytatható."
 
-#: pcsx2/gui/MainFrame.cpp:613
+#: pcsx2/gui/MainFrame.cpp:622
 msgid "Restart"
 msgstr "Újraindítás"
 
-#: pcsx2/gui/MainFrame.cpp:614
+#: pcsx2/gui/MainFrame.cpp:623
 msgid "Simulates hardware reset of the PS2 virtual machine."
 msgstr "Szimulálja a PS2 virtuális gép hardverének alaphelyzetbe állítását."
 
-#: pcsx2/gui/MainFrame.cpp:619
+#: pcsx2/gui/MainFrame.cpp:628
 msgid "No emulation state is active; boot something first."
 msgstr "Nincs aktív emulációs állapot; először indíts el valamit."
 
-#: pcsx2/gui/MainFrame.cpp:627
+#: pcsx2/gui/MainFrame.cpp:636
 msgid "Reboot CDVD (full)"
 msgstr "CDVD újraindítása (teljes)"
 
-#: pcsx2/gui/MainFrame.cpp:628
+#: pcsx2/gui/MainFrame.cpp:637
 msgid "Hard reset of the active VM."
 msgstr "A virtuális gép (VM) teljes alaphelyzetbe állítása."
 
-#: pcsx2/gui/MainFrame.cpp:632
+#: pcsx2/gui/MainFrame.cpp:641
 msgid "Boot CDVD (full)"
 msgstr "CDVD indítása (teljes)"
 
-#: pcsx2/gui/MainFrame.cpp:633
+#: pcsx2/gui/MainFrame.cpp:642
 msgid "Boot the VM using the current DVD or Iso source media"
 msgstr ""
 "Indítsd el a virtuális gépet a mostani DVD vagy ISO forrás média "
 "használatával."
 
-#: pcsx2/gui/MainFrame.cpp:641
+#: pcsx2/gui/MainFrame.cpp:650
 msgid "Reboot CDVD (fast)"
 msgstr "CDVD újraindítása (gyors)"
 
-#: pcsx2/gui/MainFrame.cpp:642
+#: pcsx2/gui/MainFrame.cpp:651
 msgid "Reboot using fast BOOT (skips splash screens)"
 msgstr "Újraindítás a gyors indítás használatával (üdvözlőképernyő kihagyása)"
 
-#: pcsx2/gui/MainFrame.cpp:646
+#: pcsx2/gui/MainFrame.cpp:655
 msgid "Boot CDVD (fast)"
 msgstr "CDVD indítása (gyors)"
 
-#: pcsx2/gui/MainFrame.cpp:647
+#: pcsx2/gui/MainFrame.cpp:656
 msgid "Use fast boot to skip PS2 startup and splash screens"
 msgstr "Gyors indítás használata a PS2 indító és üdvözlőképernyő kihagyásához"
 
-#: pcsx2/gui/MainFrame.cpp:709 pcsx2/gui/MainFrame.cpp:744
+#: pcsx2/gui/MainFrame.cpp:718 pcsx2/gui/MainFrame.cpp:753
 msgid "No plugin loaded"
 msgstr "Nincs plugin betöltve"
 
-#: pcsx2/gui/MainFrame.cpp:714
+#: pcsx2/gui/MainFrame.cpp:723
 msgid "Core GS Settings..."
 msgstr "GS központi beállítások..."
 
-#: pcsx2/gui/MainFrame.cpp:715
+#: pcsx2/gui/MainFrame.cpp:724
 msgid ""
 "Modify hardware emulation settings regulated by the PCSX2 core virtual "
 "machine."
@@ -1556,19 +1557,19 @@ msgstr ""
 "A PCSX2 központi virtuális gép által szabályozott hardver emulációs "
 "beállítások módosítása."
 
-#: pcsx2/gui/MainFrame.cpp:717
+#: pcsx2/gui/MainFrame.cpp:726
 msgid "Window Settings..."
 msgstr "Ablak beállítások..."
 
-#: pcsx2/gui/MainFrame.cpp:718
+#: pcsx2/gui/MainFrame.cpp:727
 msgid "Modify window and appearance options, including aspect ratio."
 msgstr "Ablak és megjeleníési beállítások módosítása, beleérte a képarányt is."
 
-#: pcsx2/gui/MainFrame.cpp:725
+#: pcsx2/gui/MainFrame.cpp:734
 msgid "Plugin Settings..."
 msgstr "Plugin beállítások..."
 
-#: pcsx2/gui/MainFrame.cpp:726
+#: pcsx2/gui/MainFrame.cpp:735
 #, c-format
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "%s plugin fejlett beállítási párbeszédablakját nyitja meg."
