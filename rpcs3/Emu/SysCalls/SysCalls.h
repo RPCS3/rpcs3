@@ -312,6 +312,8 @@ extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 extern int cellPadInfoPressMode(u32 port_no);
 extern int cellPadInfoSensorMode(u32 port_no);
+extern int cellPadSetPressMode(u32 port_no, u32 mode);
+extern int cellPadSetSensorMode(u32 port_no, u32 mode);
 
 //cellKb
 extern int cellKbInit(u32 max_connect);

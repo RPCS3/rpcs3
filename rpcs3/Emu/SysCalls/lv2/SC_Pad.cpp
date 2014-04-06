@@ -256,3 +256,15 @@ int cellPadInfoSensorMode(u32 port_no)
 	sys_io.Error("cellPadInfoSensorMode(port_no=%d)", port_no);
 	return CELL_OK;
 }
+
+int cellPadSetPressMode(u32 port_no, u32 mode)
+{
+	sys_io.Error("cellPadSetPressMode(port_no=%d)", port_no);
+	return CELL_OK;
+}
+
+int cellPadSetSensorMode(u32 port_no, u32 mode)
+{
+	sys_io.Error("cellPadSetPressMode(port_no=%d)", port_no);
+	return CELL_OK;
+}
