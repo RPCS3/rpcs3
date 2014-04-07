@@ -29,6 +29,7 @@ void SPURecompilerCore::Compile(u16 pos)
 {
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
+	u32 excess = 0;
 	entry[start].count = 0;
 
 	GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
@@ -68,6 +69,10 @@ void SPURecompilerCore::Compile(u16 pos)
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
+		if (entry[pos].valid == re(opcode))
+		{
+			excess++;
+		}
 		entry[pos].valid = re(opcode);
 
 		if (fin) break;
@@ -78,6 +83,8 @@ void SPURecompilerCore::Compile(u16 pos)
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[start].pointer = compiler.make();
+
+	//ConLog.Write("Compiled: %d (excess %d), ls_addr = 0x%x", entry[start].count, excess, pos * 4);
 }
 
 u8 SPURecompilerCore::DecodeMemory(const u64 address)
