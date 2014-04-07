@@ -300,19 +300,17 @@ public:
 #else
 		static const bool x86 = true;
 #endif
+	private:
 		union _CRT_ALIGN(8) {
 			struct {
 				volatile u32 m_index;
 				u32 m_value[max_count];
 			};
-			struct {
-				volatile u32 m_index2;
-				u16 m_val16[max_count * 2];
-			};
 			volatile u64 m_indval;
 		};
 		std::mutex m_lock;
 
+	public:
 		Channel()
 		{
 			Init();

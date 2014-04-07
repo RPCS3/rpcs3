@@ -87,7 +87,7 @@ public:
 
 	struct SPURecEntry
 	{
-		u16 host; // absolute position of first instruction of current block
+		//u16 host; // absolute position of first instruction of current block (not used now)
 		u16 count; // count of instructions compiled from current point (and to be checked)
 		u32 valid; // copy of valid opcode for validation
 		void* pointer; // pointer to executable memory object
@@ -114,6 +114,8 @@ public:
 
 #define imm_xmm(x) oword_ptr(*imm_var, offsetof(SPUImmTable, x))
 
+#define LOG_OPCODE(...) //ConLog.Write(__FUNCTION__ "()" __VA_ARGS__)
+
 #define WRAPPER_BEGIN(a0, a1, a2, a3) struct opcode_wrapper \
 { \
 	static void opcode(u32 a0, u32 a1, u32 a2, u32 a3) \
@@ -122,11 +124,13 @@ public:
 
 #define WRAPPER_END(a0, a1, a2, a3) } \
 }; \
+	c.mov(cpu_qword(PC), (u32)CPU.PC); \
 	X86X64CallNode* call = c.call(imm_ptr(&opcode_wrapper::opcode), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
 	call->setArg(0, imm_u(a0)); \
 	call->setArg(1, imm_u(a1)); \
 	call->setArg(2, imm_u(a2)); \
-	call->setArg(3, imm_u(a3));
+	call->setArg(3, imm_u(a3)); \
+	LOG_OPCODE();
 
 
 class SPURecompiler : public SPUOpcodes
@@ -156,26 +160,31 @@ private:
 		WRAPPER_END(code, 0, 0, 0);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		do_finalize = true;
-		ConLog.Write("STOP(code=%d)", code);
 	}
 	void LNOP()
 	{
-		/*c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		/*
 		do_finalize = true;
-		ConLog.Write("LNOP()");*/
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		*/
+		LOG_OPCODE();
 	}
 	void SYNC(u32 Cbit)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		// This instruction must be used following a store instruction that modifies the instruction stream.
 		c.mfence();
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		do_finalize = true;
-		ConLog.Write("SYNC()");
+		LOG_OPCODE();
 	}
 	void DSYNC()
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 		c.mfence();
+		LOG_OPCODE();
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
@@ -563,27 +572,55 @@ private:
 	}
 	void BIZ(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
-		if(CPU.GPR[rt]._u32[3] == 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		GpVar pos_next(c, kVarTypeUInt32);
+		c.mov(pos_next, (u32)CPU.PC + 4);
+		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
+		c.cmovne(*pos_var, pos_next);
+		c.shr(*pos_var, 2);
+		LOG_OPCODE();
 	}
 	void BINZ(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
-		if(CPU.GPR[rt]._u32[3] != 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		GpVar pos_next(c, kVarTypeUInt32);
+		c.mov(pos_next, (u32)CPU.PC + 4);
+		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
+		c.cmove(*pos_var, pos_next);
+		c.shr(*pos_var, 2);
+		LOG_OPCODE();
 	}
 	void BIHZ(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
-		if(CPU.GPR[rt]._u16[6] == 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		GpVar pos_next(c, kVarTypeUInt32);
+		c.mov(pos_next, (u32)CPU.PC + 4);
+		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
+		c.cmovne(*pos_var, pos_next);
+		c.shr(*pos_var, 2);
+		LOG_OPCODE();
 	}
 	void BIHNZ(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
-		if(CPU.GPR[rt]._u16[6] != 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		GpVar pos_next(c, kVarTypeUInt32);
+		c.mov(pos_next, (u32)CPU.PC + 4);
+		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
+		c.cmove(*pos_var, pos_next);
+		c.shr(*pos_var, 2);
+		LOG_OPCODE();
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
@@ -606,23 +643,26 @@ private:
 	}
 	void BI(u32 ra)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.shr(*pos_var, 2);
-		//ConLog.Write("BI(ra=%d)", ra);
+		LOG_OPCODE();
 	}
 	void BISL(u32 rt, u32 ra)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
-		c.int3();
+
 		c.xor_(*pos_var, *pos_var);
 		c.mov(cpu_dword(GPR[rt]._u32[0]), *pos_var);
 		c.mov(cpu_dword(GPR[rt]._u32[1]), *pos_var);
 		c.mov(cpu_dword(GPR[rt]._u32[2]), *pos_var);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
-		c.mov(cpu_dword(GPR[rt]._u32[3]), (CPU.PC >> 2) + 1);
+		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
 		c.shr(*pos_var, 2);
-		ConLog.Write("BISL(rt=%d,ra=%d)", rt, ra);
+		LOG_OPCODE();
 	}
 	void IRET(u32 ra)
 	{
@@ -635,6 +675,7 @@ private:
 	}
 	void HBR(u32 p, u32 ro, u32 ra)
 	{
+		LOG_OPCODE();
 	}
 	void GB(u32 rt, u32 ra)
 	{
@@ -885,7 +926,7 @@ private:
 	void CHD(u32 rt, u32 ra, s32 i7)
 	{
 		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xE;
+		const int t = (CPU.GPR[ra]._u32[3] + (s32)i7) & 0xE;
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -895,7 +936,7 @@ private:
 	void CWD(u32 rt, u32 ra, s32 i7)
 	{
 		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xC;
+		const int t = (CPU.GPR[ra]._u32[3] + (s32)i7) & 0xC;
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -1045,6 +1086,7 @@ private:
 	}
 	void NOP(u32 rt)
 	{
+		LOG_OPCODE();
 	}
 	void CGT(u32 rt, u32 ra, u32 rb)
 	{
@@ -1096,8 +1138,11 @@ private:
 	//HGT uses signed values.  HLGT uses unsigned values
 	void HGT(u32 rt, s32 ra, s32 rb)
 	{
-		UNIMPLEMENTED();
+		WRAPPER_BEGIN(rt, ra, rb, zz);
 		if(CPU.GPR[ra]._i32[3] > CPU.GPR[rb]._i32[3])	CPU.Stop();
+		WRAPPER_END(rt, ra, rb, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
@@ -1287,8 +1332,11 @@ private:
 	}
 	void HLGT(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		WRAPPER_BEGIN(rt, ra, rb, zz);
 		if(CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3])	CPU.Stop();
+		WRAPPER_END(rt, ra, rb, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb)
 	{
@@ -1567,8 +1615,11 @@ private:
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
-		UNIMPLEMENTED();
+		WRAPPER_BEGIN(rt, ra, rb, zz);
 		if(CPU.GPR[ra]._i32[3] == CPU.GPR[rb]._i32[3])	CPU.Stop();
+		WRAPPER_END(rt, ra, rb, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 
 	//0 - 9
@@ -1687,13 +1738,15 @@ private:
 	//0 - 8
 	void BRZ(u32 rt, s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		GpVar pos_next(c, kVarTypeUInt32);
 		c.mov(pos_next, (CPU.PC >> 2) + 1);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
-		c.cmovnz(*pos_var, pos_next);
-		//ConLog.Write("BRZ(rt=%d,i16=%d)", rt, i16);
+		c.cmovne(*pos_var, pos_next);
+		LOG_OPCODE();
 	}
 	void STQA(u32 rt, s32 i16)
 	{
@@ -1711,45 +1764,50 @@ private:
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		GpVar pos_next(c, kVarTypeUInt32);
 		c.mov(pos_next, (CPU.PC >> 2) + 1);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
-		c.cmovz(*pos_var, pos_next);
-		//ConLog.Write("BRNZ(rt=%d,i16=%d)", rt, i16);
+		c.cmove(*pos_var, pos_next);
+		LOG_OPCODE();
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		GpVar pos_next(c, kVarTypeUInt32);
 		c.mov(pos_next, (CPU.PC >> 2) + 1);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmovnz(*pos_var, pos_next);
-		ConLog.Write("BRHZ(rt=%d,i16=%d)", rt, i16);
+		LOG_OPCODE();
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		GpVar pos_next(c, kVarTypeUInt32);
 		c.mov(pos_next, (CPU.PC >> 2) + 1);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmovz(*pos_var, pos_next);
-		ConLog.Write("BRHNZ(rt=%d,i16=%d)", rt, i16);
+		LOG_OPCODE();
 	}
 	void STQR(u32 rt, s32 i16)
 	{
 		WRAPPER_BEGIN(rt, i16, PC, zz);
-		u32 lsa = branchTarget(PC, i16) & 0x3fff0;
+		u32 lsa = branchTarget(PC, (s32)i16) & 0x3fff0;
 		if (!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQR: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
-
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 		WRAPPER_END(rt, i16, CPU.PC, 0);
 		/*u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
@@ -1765,8 +1823,11 @@ private:
 	}
 	void BRA(s32 i16)
 	{
-		UNIMPLEMENTED();
-		CPU.SetBranch(branchTarget(0, i16));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		c.mov(*pos_var, branchTarget(0, i16) >> 2);
+		LOG_OPCODE();
 	}
 	void LQA(u32 rt, s32 i16)
 	{
@@ -1784,16 +1845,24 @@ private:
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
-		UNIMPLEMENTED();
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(0, i16));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
+		GpVar v0(c, kVarTypeUInt64);
+		c.xor_(v0, v0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), v0);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), v0);
+		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
+		c.mov(*pos_var, branchTarget(0, i16) >> 2);
+		LOG_OPCODE();
 	}
 	void BR(s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
+
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
-		//ConLog.Write("BR(i16=%d)", i16);
+		LOG_OPCODE();
 	}
 	void FSMBI(u32 rt, s32 i16)
 	{
@@ -1818,27 +1887,27 @@ private:
 	}
 	void BRSL(u32 rt, s32 i16)
 	{
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		do_finalize = true;
+
 		GpVar v0(c, kVarTypeUInt64);
 		c.xor_(v0, v0);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), v0);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), v0);
-		c.mov(cpu_dword(GPR[rt]._u32[3]), CPU.PC + 4);
-
-		do_finalize = true;
+		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
-		//ConLog.Write("BRSL(rt=%d,i16=%d)", rt, i16);
+		LOG_OPCODE();
 	}
 	void LQR(u32 rt, s32 i16)
 	{
 		WRAPPER_BEGIN(rt, i16, PC, zz);
-		u32 lsa = branchTarget(PC, i16) & 0x3fff0;
+		u32 lsa = branchTarget(PC, (s32)i16) & 0x3fff0;
 		if (!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQR: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
-
 		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 		WRAPPER_END(rt, i16, CPU.PC, 0);
 		/*u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
@@ -1858,7 +1927,7 @@ private:
 		CPU.GPR[rt]._i32[0] =
 			CPU.GPR[rt]._i32[1] =
 			CPU.GPR[rt]._i32[2] =
-			CPU.GPR[rt]._i32[3] = i16;
+			CPU.GPR[rt]._i32[3] = (s32)i16;
 		WRAPPER_END(rt, i16, 0, 0);
 		/*XmmVar v0(c);
 		if (i16 == 0)
@@ -1879,7 +1948,7 @@ private:
 	{
 		WRAPPER_BEGIN(rt, i16, yy, zz);
 		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = i16 << 16;
+			CPU.GPR[rt]._i32[w] = (s32)i16 << 16;
 		WRAPPER_END(rt, i16, 0, 0);
 		/*XmmVar v0(c);
 		if (i16 == 0)
@@ -2013,10 +2082,10 @@ private:
 	void AI(u32 rt, u32 ra, s32 i10)
 	{
 		WRAPPER_BEGIN(rt, ra, i10, zz);
-		CPU.GPR[rt]._i32[0] = CPU.GPR[ra]._i32[0] + i10;
-		CPU.GPR[rt]._i32[1] = CPU.GPR[ra]._i32[1] + i10;
-		CPU.GPR[rt]._i32[2] = CPU.GPR[ra]._i32[2] + i10;
-		CPU.GPR[rt]._i32[3] = CPU.GPR[ra]._i32[3] + i10;
+		CPU.GPR[rt]._i32[0] = CPU.GPR[ra]._i32[0] + (s32)i10;
+		CPU.GPR[rt]._i32[1] = CPU.GPR[ra]._i32[1] + (s32)i10;
+		CPU.GPR[rt]._i32[2] = CPU.GPR[ra]._i32[2] + (s32)i10;
+		CPU.GPR[rt]._i32[3] = CPU.GPR[ra]._i32[3] + (s32)i10;
 		WRAPPER_END(rt, ra, i10, 0);
 		/*XmmVar v0(c);
 		if (i10 == 0)
@@ -2050,13 +2119,14 @@ private:
 	void STQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
 		WRAPPER_BEGIN(rt, i10, ra, zz);
-		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
+		const u32 lsa = (CPU.GPR[ra]._i32[3] + (s32)i10) & 0x3fff0;
 		if (!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("STQD: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
+		//ConLog.Write("wrapper::STQD (lsa=0x%x): GPR[%d] (0x%llx%llx)", lsa, rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 		WRAPPER_END(rt, i10, ra, 0);
 		/*GpVar lsa(c, kVarTypeUInt32);
@@ -2076,7 +2146,7 @@ private:
 	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
 		WRAPPER_BEGIN(rt, i10, ra, zz);
-		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
+		const u32 lsa = (CPU.GPR[ra]._i32[3] + (s32)i10) & 0x3fff0;
 		if (!CPU.IsGoodLSA(lsa))
 		{
 			ConLog.Error("LQD: bad lsa (0x%x)", lsa);
@@ -2145,14 +2215,19 @@ private:
 	}
 	void HGTI(u32 rt, u32 ra, s32 i10)
 	{
-		UNIMPLEMENTED();
-		if(CPU.GPR[ra]._i32[3] > i10)	CPU.Stop();
+		WRAPPER_BEGIN(rt, ra, i10, zz);
+		if(CPU.GPR[ra]._i32[3] > (s32)i10)	CPU.Stop();
+		WRAPPER_END(rt, ra, i10, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
 	{
 		WRAPPER_BEGIN(rt, ra, i10, zz);
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] > (s32)i10 ? 0xffffffff : 0;
+		for (u32 i = 0; i < 4; ++i)
+		{
+			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] > (u32)i10) ? 0xffffffff : 0x00000000;
+		}
 		WRAPPER_END(rt, ra, i10, 0);
 		/*XmmVar v0(c);
 		if (i10 == -1)
@@ -2182,7 +2257,7 @@ private:
 		WRAPPER_BEGIN(rt, ra, i10, zz);
 		for(u32 i = 0; i < 8; ++i)
 		{
-			CPU.GPR[rt]._u16[i] = (CPU.GPR[ra]._u16[i] > (u16)(s32)i10) ? 0xffff : 0x0000;
+			CPU.GPR[rt]._u16[i] = (CPU.GPR[ra]._u16[i] > (u16)i10) ? 0xffff : 0x0000;
 		}
 		WRAPPER_END(rt, ra, i10, 0);
 	}
@@ -2195,8 +2270,11 @@ private:
 	}
 	void HLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		UNIMPLEMENTED();
+		WRAPPER_BEGIN(rt, ra, i10, zz);
 		if(CPU.GPR[ra]._u32[3] > (u32)i10)	CPU.Stop();
+		WRAPPER_END(rt, ra, i10, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 	void MPYI(u32 rt, u32 ra, s32 i10)
 	{
@@ -2236,20 +2314,22 @@ private:
 	}
 	void HEQI(u32 rt, u32 ra, s32 i10)
 	{
-		// TODO
-		UNIMPLEMENTED();
-		if(CPU.GPR[ra]._i32[3] == i10)	CPU.Stop();
+		WRAPPER_BEGIN(rt, ra, i10, zz);
+		if(CPU.GPR[ra]._i32[3] == (s32)i10)	CPU.Stop();
+		WRAPPER_END(rt, ra, i10, 0);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		do_finalize = true;
 	}
 
 
 	//0 - 6
 	void HBRA(s32 ro, s32 i16)
 	{ //i16 is shifted left by 2 while decoding
-		//UNIMPLEMENTED();
+		LOG_OPCODE();
 	}
 	void HBRR(s32 ro, s32 i16)
 	{
-		//UNIMPLEMENTED();
+		LOG_OPCODE();
 	}
 	void ILA(u32 rt, u32 i18)
 	{
@@ -2376,6 +2456,7 @@ private:
 	void UNK(const std::string& err)
 	{
 		ConLog.Error(err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 		Emu.Pause();
 	}
