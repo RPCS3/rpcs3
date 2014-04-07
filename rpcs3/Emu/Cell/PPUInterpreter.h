@@ -2738,7 +2738,7 @@ private:
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
-		CPU.XER.CA = (~RA + CPU.XER.CA > ~0x0) | ((RA == 0) & CPU.XER.CA);
+		CPU.XER.CA = ((RA == 0) & CPU.XER.CA);
 		if (oe) ConLog.Warning("subfzeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
