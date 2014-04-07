@@ -86,7 +86,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	pad.m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+	pads[port_no].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 	s32 len = 0;
 	for(Button& button : pads[port_no].m_buttons)
