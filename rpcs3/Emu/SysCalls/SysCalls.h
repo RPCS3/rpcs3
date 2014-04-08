@@ -470,8 +470,8 @@ void StaticAnalyse(void* ptr, u32 size, u32 base);
 void StaticExecute(u32 code);
 void StaticFinalize();
 
-#define REG_SUB(module, group, name, args...) \
-	static const u64 name ## _table[] = {args, 0}; \
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	module.AddFuncSub(group, name ## _table, #name, name)
 
 #define REG_SUB_EMPTY(module, group, name,...) \
