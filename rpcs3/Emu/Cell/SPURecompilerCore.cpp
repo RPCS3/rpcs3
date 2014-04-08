@@ -9,7 +9,7 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 : m_enc(new SPURecompiler(cpu, *this))
 , inter(new SPUInterpreter(cpu))
 , CPU(cpu)
-, compiler(&runtime)
+//, compiler(&runtime)
 {
 	memset(entry, 0, sizeof(entry));
 }
@@ -27,6 +27,12 @@ void SPURecompilerCore::Decode(const u32 code) // decode instruction and run wit
 
 void SPURecompilerCore::Compile(u16 pos)
 {
+	const u64 stamp0 = get_system_time();
+	u64 time0 = 0;
+
+	Compiler compiler(&runtime);
+	m_enc->compiler = &compiler;
+
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
 	u32 excess = 0;
@@ -61,8 +67,16 @@ void SPURecompilerCore::Compile(u16 pos)
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
+			const u64 stamp1 = get_system_time();
 			(*SPU_instr::rrr_list)(m_enc, opcode); // compile single opcode
+			/*if ((pos % 128 == 127) && !m_enc->do_finalize)
+			{
+				// force finalization between every slice using absolute alignment
+				compiler.mov(pos_var, pos + 1);
+				m_enc->do_finalize = true;
+			}*/
 			entry[start].count++;
+			time0 += get_system_time() - stamp1;
 		}
 		else
 		{
@@ -80,11 +94,14 @@ void SPURecompilerCore::Compile(u16 pos)
 		pos++;
 	}
 
+	const u64 stamp1 = get_system_time();
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[start].pointer = compiler.make();
 
-	//ConLog.Write("Compiled: %d (excess %d), ls_addr = 0x%x", entry[start].count, excess, pos * 4);
+	//ConLog.Write("Compiled: %d (excess %d), addr=0x%x, time: [start=%d (decoding=%d), finalize=%d]",
+		//entry[start].count, excess, start * 4, stamp1 - stamp0, time0, get_system_time() - stamp1);
+	m_enc->compiler = nullptr;
 }
 
 u8 SPURecompilerCore::DecodeMemory(const u64 address)
