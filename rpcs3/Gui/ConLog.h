@@ -11,7 +11,7 @@ class LogWriter
 	//wxString m_prefix;
 	//wxString m_value;
 
-	virtual void WriteToLog(const std::string& prefix, const std::string& value, u8 lvl);
+	void WriteToLog(const std::string& prefix, const std::string& value, u8 lvl);
 
 public:
 	LogWriter();

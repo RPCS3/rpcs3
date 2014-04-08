@@ -1,20 +1,20 @@
 #include "stdafx.h"
 #include "StrFmt.h"
 
-static const std::string fmt::placeholder = "???";
+extern const std::string fmt::placeholder = "???";
 
 
 //wrapper to deal with advance sprintf formating options with automatic length finding
 //can't take strings by reference because of "va_start", so overload it with char *
 std::string fmt::FormatV(const char *fmt, va_list args)
 {
-	int length = 256;
+	size_t length = 256;
 	std::string str;
 
 	for (;;)
 	{
 		std::vector<char> buffptr(length);
-		size_t printlen = vsnprintf(buffptr.data(), length, fmt, args);
+		int printlen = vsnprintf(buffptr.data(), length, fmt, args);
 		if (printlen >= 0 && printlen < length)
 		{
 			str = std::string(buffptr.data(), printlen);

@@ -25,19 +25,19 @@ protected:
 	wxConfigBase* m_Config;
 
 	Ini();
-	virtual void Save(const wxString& key, int value);
-	virtual void Save(const wxString& key, bool value);
-	virtual void Save(const wxString& key, wxSize value);
-	virtual void Save(const wxString& key, wxPoint value);
-	virtual void Save(const wxString& key, const std::string& value);
-	virtual void Save(const wxString& key, WindowInfo value);
+	void Save(const wxString& key, int value);
+	void Save(const wxString& key, bool value);
+	void Save(const wxString& key, wxSize value);
+	void Save(const wxString& key, wxPoint value);
+	void Save(const wxString& key, const std::string& value);
+	void Save(const wxString& key, WindowInfo value);
 
-	virtual int Load(const wxString& key, const int def_value);
-	virtual bool Load(const wxString& key, const bool def_value);
-	virtual wxSize Load(const wxString& key, const wxSize def_value);
-	virtual wxPoint Load(const wxString& key, const wxPoint def_value);
-	virtual std::string Load(const wxString& key, const std::string& def_value);
-	virtual WindowInfo Load(const wxString& key, const WindowInfo& def_value);
+	int Load(const wxString& key, const int def_value);
+	bool Load(const wxString& key, const bool def_value);
+	wxSize Load(const wxString& key, const wxSize def_value);
+	wxPoint Load(const wxString& key, const wxPoint def_value);
+	std::string Load(const wxString& key, const std::string& def_value);
+	WindowInfo Load(const wxString& key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
@@ -95,7 +95,7 @@ public:
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<bool> CPUIgnoreRWErrors;
 	IniEntry<u8> GSRenderMode;
-	IniEntry<int> GSResolution;
+	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GSLogPrograms;

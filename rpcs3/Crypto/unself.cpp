@@ -622,8 +622,6 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.Seek(0);
 		return false;
 	}
-
-	s.Close();
 }
 
 bool DecryptSelf(const std::string& elf, const std::string& self)

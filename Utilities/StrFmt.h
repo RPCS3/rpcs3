@@ -78,13 +78,13 @@ namespace fmt{
 	template<typename  ... Args>
 	string Format(const string &fmt, Args&& ... parameters)
 	{
-		int length = 256;
+		size_t length = 256;
 		string str;
 
 		for (;;)
 		{
 			std::vector<char> buffptr(length);
-			size_t printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
+			int printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
 			if (printlen >= 0 && printlen < length)
 			{
 				str = string(buffptr.data(), printlen);

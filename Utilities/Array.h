@@ -142,9 +142,9 @@ public:
 		return m_array[num];
 	}
 
-	virtual u32 GetCount() const { return m_count; }
+	u32 GetCount() const { return m_count; }
 
-	virtual void SetCount(const u32 count, bool memzero = true)
+	void SetCount(const u32 count, bool memzero = true)
 	{
 		if(m_count >= count) return;
 
@@ -196,96 +196,6 @@ protected:
 
 		m_array = m_count ? (T*)realloc(m_array, sizeof(T) * (m_count + size)) : (T*)malloc(sizeof(T) * size);
 		m_count += size;
-	}
-};
-
-class ArrayString : public Array<char>
-{
-public:
-	ArrayString() : Array()
-	{
-	}
-
-	ArrayString(const wxString& value) : Array()
-	{
-		*this = value;
-	}
-
-	ArrayString(const char* value) : Array()
-	{
-		*this = value;
-	}
-
-	virtual u32 GetCount() const
-	{
-		return m_array ? strlen(m_array) : 0;
-	}
-
-	virtual void SetCount(const u32 count, bool memzero = true)
-	{
-		if(m_count && count < m_count - 1)
-		{
-			m_array[count] = '\0';
-		}
-		else
-		{
-			Array::SetCount(count + 1, memzero);
-		}
-	}
-
-	ArrayString& operator = (const char* right)
-	{
-		Clear();
-
-		if(right)
-		{
-			size_t len = strlen(right);
-
-			if(len)
-			{
-				SetCount(len);
-				memcpy(m_array, right, len * sizeof(char));
-				m_array[len] = '\0';
-			}
-		}
-
-		return *this;
-	}
-
-	ArrayString& operator = (const ArrayString& right)
-	{
-		Clear();
-
-		if(size_t len = right.GetCount())
-		{
-			SetCount(len);
-			memcpy(m_array, right.GetPtr(), len * sizeof(char));
-			m_array[len] = '\0';
-		}
-
-		return *this;
-	}
-
-	ArrayString& operator = (const wxString& right)
-	{
-		Clear();
-
-		if(size_t len = right.Len())
-		{
-			SetCount(len);
-			memcpy(m_array, right.c_str(), len * sizeof(char));
-			m_array[len] = '\0';
-		}
-
-		return *this;
-	}
-
-	ArrayString* Clone() const
-	{
-		ArrayString* new_array = new ArrayString();
-		(*new_array) = m_array;
-
-		return new_array;
 	}
 };
 
