@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "TextInputDialog.h"
 #include "../Crypto/aes.h"
 #include "../Crypto/sha1.h"

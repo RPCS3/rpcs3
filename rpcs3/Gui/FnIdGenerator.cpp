@@ -91,6 +91,8 @@ void FnIdGenerator::PrintId()
 
 void FnIdGenerator::UpdateInformation()
 {
+	m_list->DeleteAllItems();
+
 	for(u32 i = 0; i < m_func_name.GetCount(); i++)
 	{
 		m_list->InsertItem(m_func_name.GetCount(), wxEmptyString);
