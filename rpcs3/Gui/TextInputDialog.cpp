@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "TextInputDialog.h"
 
-TextInputDialog::TextInputDialog(wxWindow* parent, const std::string& defvalue)
-	: wxDialog(parent, wxID_ANY, "Input text", wxDefaultPosition)
+TextInputDialog::TextInputDialog(wxWindow* parent, const std::string& defvalue, const std::string& label)
+	: wxDialog(parent, wxID_ANY, label, wxDefaultPosition)
 {
 	m_tctrl_text = new wxTextCtrl(this, wxID_ANY, fmt::ToUTF8(defvalue));
 

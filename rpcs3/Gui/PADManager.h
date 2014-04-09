@@ -82,13 +82,11 @@ private:
 	AppConnector m_app_connector;
 	u32 m_seconds;
 	u32 m_button_id;
-	bool m_key_pressed;
+	bool m_key_pressed, m_emu_paused;
 
 public:
 	PADManager(wxWindow* parent);
-	~PADManager()
-	{
-	}
+	~PADManager() { if(m_emu_paused) Emu.Resume(); }
 
 	void OnKeyDown(wxKeyEvent &keyEvent);
 	void OnKeyUp(wxKeyEvent &keyEvent);
