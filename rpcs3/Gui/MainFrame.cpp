@@ -3,6 +3,7 @@
 #include "CompilerELF.h"
 #include "MemoryViewer.h"
 #include "RSXDebugger.h"
+#include "PADManager.h"
 
 #include "git-version.h"
 #include "Ini.h"
@@ -36,26 +37,6 @@ enum IDs
 	id_tools_rsx_debugger,
 	id_help_about,
 	id_update_dbg,
-};
-
-enum PadIDs
-{
-	id_pad_left,
-	id_pad_down,
-	id_pad_right,
-	id_pad_up,
-	id_pad_start,
-	id_pad_r3,
-	id_pad_l3,
-	id_pad_select,
-	id_pad_square,
-	id_pad_cross,
-	id_pad_circle,
-	id_pad_triangle,
-	id_pad_r1,
-	id_pad_l1,
-	id_pad_r2,
-	id_pad_l2,
 };
 
 wxString GetPaneName()
@@ -574,189 +555,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
 {
-	bool paused = false;
-
-	if(Emu.IsRunning())
-	{
-		Emu.Pause();
-		paused = true;
-	}
-
-	wxDialog diag(this, wxID_ANY, "PAD Settings", wxDefaultPosition);
-
-	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_subpanel1(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel3(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel4(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel5(new wxBoxSizer(wxVERTICAL));
-
-	wxStaticBoxSizer* s_round_pad_controls( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Controls") ) );
-	wxStaticBoxSizer* s_round_pad_left(     new wxStaticBoxSizer( wxVERTICAL, &diag, _("LEFT") ) );
-	wxStaticBoxSizer* s_round_pad_down(     new wxStaticBoxSizer( wxVERTICAL, &diag, _("DOWN") ) );
-	wxStaticBoxSizer* s_round_pad_right(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("RIGHT") ) );
-	wxStaticBoxSizer* s_round_pad_up(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("UP") ) );
-
-	wxStaticBoxSizer* s_round_pad_shifts_l( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_l1(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L1") ) );
-	wxStaticBoxSizer* s_round_pad_l2(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L2") ) );
-	wxStaticBoxSizer* s_round_pad_l3(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("L3") ) );
-
-	wxStaticBoxSizer* s_round_pad_system(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("System") ) );
-	wxStaticBoxSizer* s_round_pad_select(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("SELECT") ) );
-	wxStaticBoxSizer* s_round_pad_start(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("START") ) );
-
-	wxStaticBoxSizer* s_round_pad_shifts_r( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_r1(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R1") ) );
-	wxStaticBoxSizer* s_round_pad_r2(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R2") ) );
-	wxStaticBoxSizer* s_round_pad_r3(       new wxStaticBoxSizer( wxVERTICAL, &diag, _("R3") ) );
-
-	wxStaticBoxSizer* s_round_pad_buttons(  new wxStaticBoxSizer( wxVERTICAL, &diag, _("Buttons") ) );
-	wxStaticBoxSizer* s_round_pad_square(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("SQUARE") ) );
-	wxStaticBoxSizer* s_round_pad_cross(    new wxStaticBoxSizer( wxVERTICAL, &diag, _("CROSS") ) );
-	wxStaticBoxSizer* s_round_pad_circle(   new wxStaticBoxSizer( wxVERTICAL, &diag, _("CIRCLE") ) );
-	wxStaticBoxSizer* s_round_pad_triangle( new wxStaticBoxSizer( wxVERTICAL, &diag, _("TRIANGLE") ) );
-
-
-	wxComboBox* cbox_pad_left     = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_down     = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_right    = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_up       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_start    = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r3       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l3       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_select   = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_square   = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_cross    = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_circle   = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_triangle = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r1       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l1       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_r2       = new wxComboBox(&diag, wxID_ANY);
-	wxComboBox* cbox_pad_l2       = new wxComboBox(&diag, wxID_ANY);
-
-	for(int i=0; i<128; i++)
-	{
-		cbox_pad_left->Append    (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_down->Append    (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_right->Append   (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_up->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r3->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l3->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_square->Append  (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_cross->Append   (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_circle->Append  (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_triangle->Append(wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r1->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l1->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_r2->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-		cbox_pad_l2->Append      (wxString::Format("%c", static_cast<char>(i) ) );
-	}
-
-	cbox_pad_start->Append("Enter");
-	cbox_pad_select->Append("Space");
-
-	cbox_pad_left->SetSelection     (Ini.PadHandlerLeft.GetValue());
-	cbox_pad_down->SetSelection     (Ini.PadHandlerDown.GetValue());
-	cbox_pad_right->SetSelection    (Ini.PadHandlerRight.GetValue());
-	cbox_pad_up->SetSelection       (Ini.PadHandlerUp.GetValue());
-	cbox_pad_start->SetSelection    (Ini.PadHandlerStart.GetValue());
-	cbox_pad_r3->SetSelection       (Ini.PadHandlerR3.GetValue());
-	cbox_pad_l3->SetSelection       (Ini.PadHandlerL3.GetValue());
-	cbox_pad_select->SetSelection   (Ini.PadHandlerSelect.GetValue());
-	cbox_pad_square->SetSelection   (Ini.PadHandlerSquare.GetValue());
-	cbox_pad_cross->SetSelection    (Ini.PadHandlerCross.GetValue());
-	cbox_pad_circle->SetSelection   (Ini.PadHandlerCircle.GetValue());
-	cbox_pad_triangle->SetSelection (Ini.PadHandlerTriangle.GetValue());
-	cbox_pad_r1->SetSelection       (Ini.PadHandlerR1.GetValue());
-	cbox_pad_l1->SetSelection       (Ini.PadHandlerL1.GetValue());
-	cbox_pad_r2->SetSelection       (Ini.PadHandlerR2.GetValue());
-	cbox_pad_l2->SetSelection       (Ini.PadHandlerL2.GetValue());
-
-	s_round_pad_left->Add(cbox_pad_left, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_down->Add(cbox_pad_down, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_right->Add(cbox_pad_right, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_up->Add(cbox_pad_up, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_start->Add(cbox_pad_start, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_r3->Add(cbox_pad_r3, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_l3->Add(cbox_pad_l3, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_select->Add(cbox_pad_select, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_square->Add(cbox_pad_square, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_cross->Add(cbox_pad_cross, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_circle->Add(cbox_pad_circle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_triangle->Add(cbox_pad_triangle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_r1->Add(cbox_pad_r1, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_l1->Add(cbox_pad_l1, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_r2->Add(cbox_pad_r2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_l2->Add(cbox_pad_l2, wxSizerFlags().Border(wxALL, 5).Expand());
-
-
-	s_round_pad_controls->Add(s_round_pad_left, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_controls->Add(s_round_pad_down, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_controls->Add(s_round_pad_right, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_controls->Add(s_round_pad_up, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	
-	s_round_pad_shifts_l->Add(s_round_pad_l1, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_shifts_l->Add(s_round_pad_l2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_shifts_l->Add(s_round_pad_l3, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	s_round_pad_system->Add(s_round_pad_start, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_system->Add(s_round_pad_select, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	s_round_pad_shifts_r->Add(s_round_pad_r1, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_shifts_r->Add(s_round_pad_r2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_shifts_r->Add(s_round_pad_r3, wxSizerFlags().Border(wxALL, 5).Expand());
-
-
-	s_round_pad_buttons->Add(s_round_pad_square, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_buttons->Add(s_round_pad_cross, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_buttons->Add(s_round_pad_circle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_pad_buttons->Add(s_round_pad_triangle, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
-
-	s_b_panel->Add(new wxButton(&diag, wxID_OK), wxSizerFlags().Border(wxALL, 5).Center());
-	s_b_panel->Add(new wxButton(&diag, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Center());
-
-	s_subpanel1->Add(s_round_pad_controls, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel2->Add(s_round_pad_shifts_l, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel3->Add(s_round_pad_system, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel3->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
-	s_subpanel4->Add(s_round_pad_shifts_r, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel5->Add(s_round_pad_buttons, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	s_panel->Add(s_subpanel1, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_subpanel2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_subpanel3, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_subpanel4, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_panel->Add(s_subpanel5, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	diag.SetSizerAndFit( s_panel );
-	
-	if(diag.ShowModal() == wxID_OK)
-	{
-		Ini.PadHandlerLeft.SetValue(cbox_pad_left->GetSelection());
-		Ini.PadHandlerDown.SetValue(cbox_pad_down->GetSelection());
-		Ini.PadHandlerRight.SetValue(cbox_pad_right->GetSelection());
-		Ini.PadHandlerUp.SetValue(cbox_pad_up->GetSelection());
-		Ini.PadHandlerStart.SetValue(cbox_pad_start->GetSelection());
-		Ini.PadHandlerR3.SetValue(cbox_pad_r3->GetSelection());
-		Ini.PadHandlerL3.SetValue(cbox_pad_l3->GetSelection());
-		Ini.PadHandlerSelect.SetValue(cbox_pad_select->GetSelection());
-		Ini.PadHandlerSquare.SetValue(cbox_pad_square->GetSelection());
-		Ini.PadHandlerCross.SetValue(cbox_pad_cross->GetSelection());
-		Ini.PadHandlerCircle.SetValue(cbox_pad_circle->GetSelection());
-		Ini.PadHandlerTriangle.SetValue(cbox_pad_triangle->GetSelection());
-		Ini.PadHandlerR1.SetValue(cbox_pad_r1->GetSelection());
-		Ini.PadHandlerL1.SetValue(cbox_pad_l1->GetSelection());
-		Ini.PadHandlerR2.SetValue(cbox_pad_r2->GetSelection());
-		Ini.PadHandlerL2.SetValue(cbox_pad_l2->GetSelection());
-
-		Ini.Save();
-	}
-
-	if(paused) Emu.Resume();
+	PADManager(this).ShowModal();
 }
 
 void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))

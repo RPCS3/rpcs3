@@ -25,19 +25,19 @@ protected:
 	wxConfigBase* m_Config;
 
 	Ini();
-	virtual void Save(const wxString& key, int value);
-	virtual void Save(const wxString& key, bool value);
-	virtual void Save(const wxString& key, wxSize value);
-	virtual void Save(const wxString& key, wxPoint value);
-	virtual void Save(const wxString& key, const std::string& value);
-	virtual void Save(const wxString& key, WindowInfo value);
+	void Save(const wxString& key, int value);
+	void Save(const wxString& key, bool value);
+	void Save(const wxString& key, wxSize value);
+	void Save(const wxString& key, wxPoint value);
+	void Save(const wxString& key, const std::string& value);
+	void Save(const wxString& key, WindowInfo value);
 
-	virtual int Load(const wxString& key, const int def_value);
-	virtual bool Load(const wxString& key, const bool def_value);
-	virtual wxSize Load(const wxString& key, const wxSize def_value);
-	virtual wxPoint Load(const wxString& key, const wxPoint def_value);
-	virtual std::string Load(const wxString& key, const std::string& def_value);
-	virtual WindowInfo Load(const wxString& key, const WindowInfo& def_value);
+	int Load(const wxString& key, const int def_value);
+	bool Load(const wxString& key, const bool def_value);
+	wxSize Load(const wxString& key, const wxSize def_value);
+	wxPoint Load(const wxString& key, const wxPoint def_value);
+	std::string Load(const wxString& key, const std::string& def_value);
+	WindowInfo Load(const wxString& key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
@@ -95,7 +95,7 @@ public:
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<bool> CPUIgnoreRWErrors;
 	IniEntry<u8> GSRenderMode;
-	IniEntry<int> GSResolution;
+	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GSLogPrograms;
@@ -113,6 +113,10 @@ public:
 	IniEntry<u8> HLELogLvl;
 	IniEntry<u8> SysLanguage;
 
+	IniEntry<int> PadHandlerLStickLeft;
+	IniEntry<int> PadHandlerLStickDown;
+	IniEntry<int> PadHandlerLStickRight;
+	IniEntry<int> PadHandlerLStickUp;
 	IniEntry<int> PadHandlerLeft;
 	IniEntry<int> PadHandlerDown;
 	IniEntry<int> PadHandlerRight;
@@ -129,6 +133,10 @@ public:
 	IniEntry<int> PadHandlerL1;
 	IniEntry<int> PadHandlerR2;
 	IniEntry<int> PadHandlerL2;
+	IniEntry<int> PadHandlerRStickLeft;
+	IniEntry<int> PadHandlerRStickDown;
+	IniEntry<int> PadHandlerRStickRight;
+	IniEntry<int> PadHandlerRStickUp;
 
 public:
 	Inis() : DefPath("EmuSettings")
@@ -154,6 +162,10 @@ public:
 		MouseHandlerMode.Init("MouseHandlerMode", path);
 
 		path = DefPath + "/" + "ControlSetings";
+		PadHandlerLStickLeft.Init("PadHandlerLStickLeft", path);
+		PadHandlerLStickDown.Init("PadHandlerLStickDown", path);
+		PadHandlerLStickRight.Init("PadHandlerLStickRight", path);
+		PadHandlerLStickUp.Init("PadHandlerLStickUp", path);
 		PadHandlerLeft.Init("PadHandlerLeft", path);
 		PadHandlerDown.Init("PadHandlerDown", path);
 		PadHandlerRight.Init("PadHandlerRight", path);
@@ -170,6 +182,11 @@ public:
 		PadHandlerL1.Init("PadHandlerL1", path);
 		PadHandlerR2.Init("PadHandlerR2", path);
 		PadHandlerL2.Init("PadHandlerL2", path);
+		PadHandlerRStickLeft.Init("PadHandlerRStickLeft", path);
+		PadHandlerRStickDown.Init("PadHandlerRStickDown", path);
+		PadHandlerRStickRight.Init("PadHandlerRStickRight", path);
+		PadHandlerRStickUp.Init("PadHandlerRStickUp", path);
+
 
 		path = DefPath + "/" + "Audio";
 		AudioOutMode.Init("AudioOutMode", path);
@@ -209,14 +226,18 @@ public:
 		HLELogLvl.Load(0);
 		SysLanguage.Load(1);
 
+		PadHandlerLStickLeft.Load(314); //WXK_LEFT
+		PadHandlerLStickDown.Load(317); //WXK_DOWN
+		PadHandlerLStickRight.Load(316); //WXK_RIGHT
+		PadHandlerLStickUp.Load(315); //WXK_UP
 		PadHandlerLeft.Load(static_cast<int>('A'));
 		PadHandlerDown.Load(static_cast<int>('S'));
 		PadHandlerRight.Load(static_cast<int>('D'));
 		PadHandlerUp.Load(static_cast<int>('W'));
-		PadHandlerStart.Load(0);
+		PadHandlerStart.Load(13); //WXK_RETURN
 		PadHandlerR3.Load(static_cast<int>('C'));
 		PadHandlerL3.Load(static_cast<int>('Z'));
-		PadHandlerSelect.Load(0);
+		PadHandlerSelect.Load(32); //WXK_SPACE
 		PadHandlerSquare.Load(static_cast<int>('J'));
 		PadHandlerCross.Load(static_cast<int>('K'));
 		PadHandlerCircle.Load(static_cast<int>('L'));
@@ -225,6 +246,10 @@ public:
 		PadHandlerL1.Load(static_cast<int>('1'));
 		PadHandlerR2.Load(static_cast<int>('E'));
 		PadHandlerL2.Load(static_cast<int>('Q'));
+		PadHandlerRStickLeft.Load(313); //WXK_HOME
+		PadHandlerRStickDown.Load(367); //WXK_PAGEDOWN
+		PadHandlerRStickRight.Load(312); //WXK_END
+		PadHandlerRStickUp.Load(366); //WXK_PAGEUP
 	}
 
 	void Save()
@@ -250,6 +275,10 @@ public:
 		HLELogLvl.Save();
 		SysLanguage.Save();
 
+		PadHandlerLStickLeft.Save();
+		PadHandlerLStickDown.Save();
+		PadHandlerLStickRight.Save();
+		PadHandlerLStickUp.Save();
 		PadHandlerLeft.Save();
 		PadHandlerDown.Save();
 		PadHandlerRight.Save();
@@ -266,6 +295,10 @@ public:
 		PadHandlerL1.Save();
 		PadHandlerR2.Save();
 		PadHandlerL2.Save();
+		PadHandlerRStickLeft.Save();
+		PadHandlerRStickDown.Save();
+		PadHandlerRStickRight.Save();
+		PadHandlerRStickUp.Save();
 	}
 };
 

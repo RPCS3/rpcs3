@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
 
 enum KbPortStatus
@@ -248,22 +250,20 @@ struct Keyboard
 {
 	CellKbData m_data;
 	CellKbConfig m_config;
-	Array<KbButton> m_buttons;
+	std::vector<KbButton> m_buttons;
 
 	Keyboard()
 		: m_data()
 		, m_config()
 	{
 	}
-
-	~Keyboard() { m_buttons.Clear(); }
 };
 
 class KeyboardHandlerBase
 {
 protected:
 	KbInfo m_info;
-	Array<Keyboard> m_keyboards;
+	std::vector<Keyboard> m_keyboards;
 
 public:
 	virtual void Init(const u32 max_connect)=0;
@@ -271,22 +271,22 @@ public:
 
 	void Key(const u32 code, bool pressed)
 	{
-		for(u64 p=0; p<GetKeyboards().GetCount(); ++p)
+		for(Keyboard& keyboard : m_keyboards)
 		{
-			for(u64 b=0; b<GetButtons(p).GetCount(); b++)
+			for(KbButton& button : keyboard.m_buttons)
 			{
-				KbButton& button = GetButtons(p).Get(b);
-				if(button.m_keyCode != code) continue;
+				if(button.m_keyCode != code)
+					continue;
 
-				CellKbData& data = GetKeyboards()[p].m_data;
-				CellKbConfig& config = GetKeyboards()[p].m_config;
+				CellKbData& data = keyboard.m_data;
+				CellKbConfig& config = keyboard.m_config;
 
 				if (pressed)
 				{
-
+					// Meta Keys
 					if (code == 308 || code == 307 || code == 306 || 
-						code == 393 || code == 396 || code == 394)
-					{	// Meta Keys
+					    code == 393 || code == 396 || code == 394)
+					{
 						data.mkey |= button.m_outKeyCode;
 					}
 					else
@@ -312,9 +312,10 @@ public:
 
 				if (!pressed)
 				{
+					// Meta Keys
 					if (code == 308 || code == 307 || code == 306 || 
-						code == 393 || code == 396 || code == 394)
-					{	// Meta Keys
+					    code == 393 || code == 396 || code == 394)
+					{
 						data.mkey &= ~button.m_outKeyCode;
 					}
 				}
@@ -324,8 +325,8 @@ public:
 	}
 
 	KbInfo& GetInfo() { return m_info; }
-	Array<Keyboard>& GetKeyboards() { return m_keyboards; }
-	Array<KbButton>& GetButtons(const u32 keyboard) { return GetKeyboards()[keyboard].m_buttons; }
-	CellKbData& GetData(const u32 keyboard) { return GetKeyboards()[keyboard].m_data; }
-	CellKbConfig& GetConfig(const u32 keyboard) { return GetKeyboards()[keyboard].m_config; }
+	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
+	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
+	CellKbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
+	CellKbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 };

@@ -402,7 +402,7 @@ void libmixer_init()
 		0xffffffff7c6307b4,
 		0xffffffff7c0803a6,
 		0xffffffff38210070,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmxAAN", cellAANConnect,
@@ -443,7 +443,7 @@ void libmixer_init()
 		0xffffffffe80100a0,
 		0xffffffff38210090,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmxAAN", cellAANDisconnect,
@@ -484,7 +484,7 @@ void libmixer_init()
 		0xffffffffe80100a0,
 		0xffffffff38210090,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerCreate,
@@ -513,7 +513,7 @@ void libmixer_init()
 		0xffffffffeba10098,
 		0xffffffffebc100a0,
 		0xffffffffebe100a8,
-		0xffffffff382100b0,
+		0xffffffff382100b0
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetAANHandle,
@@ -530,7 +530,7 @@ void libmixer_init()
 		0xffffffff3c638031,
 		0xffffffff38630002,
 		0xffffffff7c6307b4,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerChStripGetAANPortNo,
@@ -545,7 +545,7 @@ void libmixer_init()
 		0xffffffff2f800000,
 		0xffffffff4d9e0020,
 		0xffffffff78030020,
-		0xf000000040000000, // b
+		0xf000000040000000 // b
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerSetNotifyCallback,
@@ -573,7 +573,7 @@ void libmixer_init()
 		0xffffffff79290020,
 		0xffffffff38810070,
 		0xffffffff2f800000,
-		0xffffffff7d234b78,
+		0xffffffff7d234b78
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerRemoveNotifyCallback,
@@ -591,7 +591,7 @@ void libmixer_init()
 		0xffffffff7d2307b4,
 		0xffffffff38210080,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerStart,
@@ -614,7 +614,7 @@ void libmixer_init()
 		0xffffffff7c0803a6,
 		0xffffffffebe10088,
 		0xffffffff38210090,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerSetParameter,
@@ -644,7 +644,7 @@ void libmixer_init()
 		0xffff0000419cffd8, // blt
 		0xffffffff2b83002b,
 		0xffff000040990008, // ble
-		0xffff0000409d0054, // ble
+		0xffff0000409d0054 // ble
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerFinalize,
@@ -670,7 +670,7 @@ void libmixer_init()
 		0xfffffffff8410028,
 		0xffffffff7c0903a6,
 		0xffffffff804a0004,
-		0xffffffff4e800421,
+		0xffffffff4e800421
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerSurBusAddData,
@@ -699,7 +699,7 @@ void libmixer_init()
 		0xffffffff7d034378,
 		0xffffffff79660020,
 		0xffffffff78e70020,
-		0xffff0000419cffcc, // blt
+		0xffff0000419cffcc // blt
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerChStripSetParameter,
@@ -719,7 +719,7 @@ void libmixer_init()
 		0xffffffff78c60020,
 		0xffffffff4d9c0020,
 		0xffffffff79230020,
-		0xf000000048000000, // b
+		0xf000000048000000 // b
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerPause,
@@ -744,7 +744,7 @@ void libmixer_init()
 		0xffffffff4e800020,
 		0xffffffff800a001c,
 		0xffffffff2b030002,
-		0xffffffff2f800000,
+		0xffffffff2f800000
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetCurrentBlockTag,
@@ -758,7 +758,7 @@ void libmixer_init()
 		0xffffffff39200000,
 		0xfffffffff8030000,
 		0xffffffff7d2307b4,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetTimestamp,
@@ -780,7 +780,7 @@ void libmixer_init()
 		0xffffffff7c0803a6,
 		0xffffffff4e800020,
 		0xffffffff806b04d8,
-		0xf000000048000001, // bl
+		0xf000000048000001 // bl
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerBeep,
@@ -794,7 +794,7 @@ void libmixer_init()
 		0xffffffff78840020,
 		0xffffffff2f800000,
 		0xffffffff4d9c0020,
-		0xf000000048000000, // b
+		0xf000000048000000 // b
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerCreate,
@@ -828,7 +828,7 @@ void libmixer_init()
 		0xffffffff2f9d0000,
 		0xffffffff7ba30020,
 		0xffff000041de00c0, // beq-
-		0xf000000048000001, // bl
+		0xf000000048000001 // bl
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerRemove,
@@ -858,7 +858,7 @@ void libmixer_init()
 		0xfffffffff8410028,
 		0xffffffff7c0903a6,
 		0xffffffff804b0004,
-		0xffffffff4e800421,
+		0xffffffff4e800421
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerSetWave,
@@ -871,7 +871,7 @@ void libmixer_init()
 		0xffffffff78030020,
 		0xf000000048000000, // b
 		0xffffffff60630003,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerPlay,
@@ -890,7 +890,7 @@ void libmixer_init()
 		0xff00000081620028, // lwz
 		0xfffffffff8010090,
 		0xffffffff39400000,
-		0xffffffff38630010,
+		0xffffffff38630010
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerStop,
@@ -909,7 +909,7 @@ void libmixer_init()
 		0xffffffffe8010080,
 		0xffffffff38210070,
 		0xffffffff7c0803a6,
-		0xffffffff4e800020,
+		0xffffffff4e800020
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerSetParam,
@@ -928,7 +928,7 @@ void libmixer_init()
 		0xffffffff80030068,
 		0xffffffff616b0002,
 		0xfffffffffbc10080,
-		0xffffffff2f800000,
+		0xffffffff2f800000
 	);
 
 	REG_SUB(libmixer, "surmxSSP", cellSSPlayerGetState,
@@ -938,10 +938,10 @@ void libmixer_init()
 		0xffffffff60630003,
 		0xffffffff4d9e0020,
 		0xffffffff78030020,
-		0xf000000048000000, // b
+		0xf000000048000000 // b
 	);
 
-	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB);
-	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex);
-	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio);
+	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB);
+	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex);
+	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio);
 }

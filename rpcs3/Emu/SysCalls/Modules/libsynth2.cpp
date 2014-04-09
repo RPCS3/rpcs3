@@ -112,7 +112,7 @@ u16 cellSoundSynth2Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 
 void libsynth2_init()
 {
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Init,
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Init,
 		/*
 		0xffffffff7d800026,
 		0xfffffffff821ff41,
@@ -140,20 +140,20 @@ void libsynth2_init()
 		0xffffffff3ba00000,
 		*/
 	);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Exit);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Config);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2GetAddr);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2GetParam);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2GetSwitch);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetAddr);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetParam);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetSwitch);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetEffectMode);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetEffectAttr);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Note2Pitch);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Pitch2Note);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2VoiceTrans);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2VoiceTransStatus);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2SetCoreAttr);
-	REG_SUB(libsynth2, "synth2", cellSoundSynth2Generate);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Exit);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Config);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2GetAddr);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2GetParam);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2GetSwitch);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetAddr);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetParam);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetSwitch);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetEffectMode);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetEffectAttr);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Note2Pitch);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Pitch2Note);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2VoiceTrans);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2VoiceTransStatus);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetCoreAttr);
+	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Generate);
 }

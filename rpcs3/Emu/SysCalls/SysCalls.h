@@ -312,6 +312,8 @@ extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 extern int cellPadInfoPressMode(u32 port_no);
 extern int cellPadInfoSensorMode(u32 port_no);
+extern int cellPadSetPressMode(u32 port_no, u32 mode);
+extern int cellPadSetSensorMode(u32 port_no, u32 mode);
 
 //cellKb
 extern int cellKbInit(u32 max_connect);
@@ -468,8 +470,12 @@ void StaticAnalyse(void* ptr, u32 size, u32 base);
 void StaticExecute(u32 code);
 void StaticFinalize();
 
-#define REG_SUB(module, group, name,...) \
-	static const u64 name ## _table[] = {__VA_ARGS__ ## 0}; \
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
+	module.AddFuncSub(group, name ## _table, #name, name)
+
+#define REG_SUB_EMPTY(module, group, name,...) \
+	static const u64 name ## _table[] = {0}; \
 	module.AddFuncSub(group, name ## _table, #name, name)
 
 extern u64 get_system_time();

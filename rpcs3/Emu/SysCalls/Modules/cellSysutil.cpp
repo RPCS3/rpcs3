@@ -979,8 +979,8 @@ void cellSysutil_init()
 	//cellSysutil.AddFunc(0xf6482036, cellSaveDataUserGetListItem);
 	cellSysutil.AddFunc(0x2de0d663, cellSaveDataListSave2);
 	cellSysutil.AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
-	//cellSysutil.AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
-	//cellSysutil.AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
+	cellSysutil.AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
+	cellSysutil.AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
 	//cellSysutil.AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
 	//cellSysutil.AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
 	//cellSysutil.AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);

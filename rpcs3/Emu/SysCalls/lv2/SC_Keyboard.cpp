@@ -38,7 +38,7 @@ int cellKbClearBuf(u32 port_no)
 {
 	sys_io.Log("cellKbClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
-	if(port_no >= Emu.GetKeyboardManager().GetKeyboards().GetCount()) return CELL_KB_ERROR_INVALID_PARAMETER;
+	if(port_no >= Emu.GetKeyboardManager().GetKeyboards().size()) return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	//?
 
@@ -114,9 +114,9 @@ int cellKbRead(u32 port_no, mem_class_t data)
 {
 	sys_io.Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.GetAddr());
 
-	const Array<Keyboard>& keyboards = Emu.GetKeyboardManager().GetKeyboards();
+	const std::vector<Keyboard>& keyboards = Emu.GetKeyboardManager().GetKeyboards();
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
-	if(port_no >= keyboards.GetCount()) return CELL_KB_ERROR_INVALID_PARAMETER;
+	if(port_no >= keyboards.size()) return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	CellKbData& current_data = Emu.GetKeyboardManager().GetData(port_no);
 	data += current_data.led;
