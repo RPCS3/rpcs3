@@ -31,7 +31,7 @@ class vfsDirBase
 {
 protected:
 	std::string m_cwd;
-	Array<DirEntryInfo> m_entries;
+	std::vector<DirEntryInfo> m_entries;
 	uint m_pos;
 	vfsDevice* m_device;
 
@@ -42,7 +42,7 @@ public:
 	virtual bool Open(const std::string& path);
 	virtual bool IsOpened() const;
 	virtual bool IsExists(const std::string& path) const;
-	virtual const Array<DirEntryInfo>& GetEntries() const;
+	virtual const std::vector<DirEntryInfo>& GetEntries() const;
 	virtual void Close();
 	virtual std::string GetPath() const;
 

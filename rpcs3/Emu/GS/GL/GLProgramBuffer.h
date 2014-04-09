@@ -6,15 +6,15 @@ struct GLBufferInfo
 	u32 prog_id;
 	u32 fp_id;
 	u32 vp_id;
-	Array<u8> fp_data;
-	Array<u32> vp_data;
+	std::vector<u8> fp_data;
+	std::vector<u32> vp_data;
 	std::string fp_shader;
 	std::string vp_shader;
 };
 
 struct GLProgramBuffer
 {
-	Array<GLBufferInfo> m_buf;
+	std::vector<GLBufferInfo> m_buf;
 
 	int SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& gl_fp);
 	int SearchVp(const RSXVertexProgram& rsx_vp, GLVertexProgram& gl_vp);

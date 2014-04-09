@@ -91,7 +91,7 @@ int sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 		}
 	}
 
-	if(spu_num >= group_info->list.GetCount())
+	if(spu_num >= group_info->list.size())
 	{
 		return CELL_EINVAL;
 	}
@@ -204,7 +204,7 @@ int sys_spu_thread_group_destroy(u32 id)
 		return CELL_EBUSY;
 	}
 
-	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		// TODO: disconnect all event ports
 
@@ -228,7 +228,7 @@ int sys_spu_thread_group_start(u32 id)
 
 	// TODO: check group state
 
-	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		CPUThread* t;
 		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
@@ -253,7 +253,7 @@ int sys_spu_thread_group_suspend(u32 id)
 
 	// TODO: check group state
 
-	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
@@ -277,7 +277,7 @@ int sys_spu_thread_group_resume(u32 id)
 
 	// TODO: check group state
 
-	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
@@ -331,7 +331,7 @@ int sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 	cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 	status = 0; //unspecified because of ALL_THREADS_EXIT
 
-	for (u32 i = 0; i < group_info->list.GetCount(); i++)
+	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		while (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
@@ -725,7 +725,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 	}
 	
 	/*
-	for(u32 i=0; i<group->list.GetCount(); ++i)
+	for(u32 i=0; i<group->list.size(); ++i)
 	{
 		CPUThread* t;
 		if(t = Emu.GetCPU().GetThread(group->list[i]))

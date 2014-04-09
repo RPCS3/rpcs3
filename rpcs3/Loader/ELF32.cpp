@@ -129,10 +129,11 @@ bool ELF32Loader::LoadPhdrInfo()
 	elf32_f.Seek(ehdr.e_phoff);
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf32_Phdr* phdr = new Elf32_Phdr();
-		if(ehdr.IsLittleEndian()) phdr->LoadLE(elf32_f);
-		else phdr->Load(elf32_f);
-		phdr_arr.Move(phdr);
+		phdr_arr.emplace_back();
+		if(ehdr.IsLittleEndian())
+			phdr_arr.back().LoadLE(elf32_f);
+		else
+			phdr_arr.back().Load(elf32_f);
 	}
 
 	if(/*!Memory.IsGoodAddr(entry)*/ entry & 0x1)
@@ -141,7 +142,7 @@ bool ELF32Loader::LoadPhdrInfo()
 
 		entry &= ~0x1;
 
-		for(size_t i=0; i<phdr_arr.GetCount(); ++i)
+		for(size_t i=0; i<phdr_arr.size(); ++i)
 		{
 			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
 			{
@@ -160,31 +161,32 @@ bool ELF32Loader::LoadShdrInfo()
 	elf32_f.Seek(ehdr.e_shoff);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf32_Shdr* shdr = new Elf32_Shdr();
-		if(ehdr.IsLittleEndian()) shdr->LoadLE(elf32_f);
-		else shdr->Load(elf32_f);
-		shdr_arr.Move(shdr);
+		shdr_arr.emplace_back();
+		if(ehdr.IsLittleEndian())
+			shdr_arr.back().LoadLE(elf32_f);
+		else
+			shdr_arr.back().Load(elf32_f);
+
 	}
 
-	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
+	if(ehdr.e_shstrndx >= shdr_arr.size())
 	{
 		ConLog.Warning("LoadShdr32 error: shstrndx too big!");
 		return true;
 	}
 
-	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		elf32_f.Seek(shdr_arr[ehdr.e_shstrndx].sh_offset + shdr_arr[i].sh_name);
-		Array<char> name;
+		std::string name;
 		while(!elf32_f.Eof())
 		{
 			char c;
 			elf32_f.Read(&c, 1);
 			if(c == 0) break;
-			name.AddCpy(c);
+			name.push_back(c);
 		}
-		name.AddCpy('\0');
-		shdr_name_arr.push_back(std::string(name.GetPtr()));	
+		shdr_name_arr.push_back(name);
 	}
 
 	return true;
@@ -204,7 +206,7 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 {
 	const u64 offset = machine == MACHINE_SPU ? _offset : 0;
 
-	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<phdr_arr.size(); ++i)
 	{
 		phdr_arr[i].Show();
 
@@ -294,12 +296,12 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 bool ELF32Loader::LoadShdrData(u64 offset)
 {
-	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
 
 #ifdef LOADER_DEBUG
-		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
+		if(i < shdr_name_arr.size()) ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
 		shdr.Show();
 		ConLog.SkipLn();
 #endif

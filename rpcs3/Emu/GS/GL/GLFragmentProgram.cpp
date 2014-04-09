@@ -229,7 +229,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 
 	std::string p;
 
-	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
+	for(u32 i=0; i<m_parr.params.size(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
@@ -348,7 +348,7 @@ void GLFragmentDecompilerThread::Task()
 
 	m_shader = BuildCode();
 	main.clear();
-	m_parr.params.Clear();
+	m_parr.params.clear();
 }
 
 GLShaderProgram::GLShaderProgram() 
@@ -432,13 +432,13 @@ void GLShaderProgram::Compile()
 
 void GLShaderProgram::Delete()
 {
-	for(u32 i=0; i<parr.params.GetCount(); ++i)
+	for(u32 i=0; i<parr.params.size(); ++i)
 	{
-		parr.params[i].items.Clear();
+		parr.params[i].items.clear();
 		parr.params[i].type.clear();
 	}
 
-	parr.params.Clear();
+	parr.params.clear();
 	shader.clear();
 
 	if(id)

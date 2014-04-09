@@ -4,7 +4,7 @@
 struct GLBufferObject
 {
 protected:
-	Array<GLuint> m_id;
+	std::vector<GLuint> m_id;
 	GLuint m_type;
 	
 public:
@@ -51,7 +51,7 @@ public:
 class GLrbo
 {
 protected:
-	Array<GLuint> m_id;
+	std::vector<GLuint> m_id;
 
 public:
 	GLrbo();

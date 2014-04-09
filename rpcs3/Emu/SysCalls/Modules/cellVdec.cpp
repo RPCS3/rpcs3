@@ -148,7 +148,7 @@ u32 vdecOpen(VideoDecoder* data)
 				continue;
 			}
 
-			if (vdec.frames.GetCount() >= 50)
+			if (vdec.frames.GetSize() >= 50)
 			{
 				Sleep(1);
 				continue;

@@ -196,13 +196,13 @@ public:
 		u64 branch_pc;
 	};
 
-	Stack<CallStackItem> m_call_stack;
+	std::vector<CallStackItem> m_call_stack;
 
 	std::string CallStackToString()
 	{
 		std::string ret = "Call Stack:\n==========\n";
 
-		for(uint i=0; i<m_call_stack.GetCount(); ++i)
+		for(uint i=0; i<m_call_stack.size(); ++i)
 		{
 			ret += fmt::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
 		}
@@ -212,21 +212,25 @@ public:
 
 	void CallStackBranch(u64 pc)
 	{
-		for(int i=m_call_stack.GetCount() - 1; i >= 0; --i)
-		{
-			if(CallStackGetNextPC(m_call_stack[i].pc) == pc)
+		//look if we're jumping back and if so pop the stack back to that position
+		auto res = std::find_if(m_call_stack.rbegin(), m_call_stack.rend(),
+			[&pc, this](CallStackItem &it)
 			{
-				m_call_stack.RemoveAt(i, m_call_stack.GetCount() - i);
-				return;
-			}
+				return CallStackGetNextPC(it.pc) == pc;
+			});
+		if (res != m_call_stack.rend())
+		{
+			m_call_stack.erase((res + 1).base(), m_call_stack.end());
+			return;
 		}
-
+		
+		//add a new entry otherwise
 		CallStackItem new_item;
-
+		
 		new_item.branch_pc = pc;
 		new_item.pc = PC;
-
-		m_call_stack.Push(new_item);
+			
+		m_call_stack.push_back(new_item);
 	}
 
 	virtual u64 CallStackGetNextPC(u64 pc)

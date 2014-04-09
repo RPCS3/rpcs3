@@ -5,6 +5,8 @@
 #include "RSXFragmentProgram.h"
 #include "Emu/SysCalls/Callback.h"
 
+#include <stack>
+
 enum Method
 {
 	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
@@ -25,7 +27,7 @@ struct RSXVertexData
 	u32 addr;
 	u32 constant_count;
 
-	Array<u8> data;
+	std::vector<u8> data;
 
 	RSXVertexData();
 
@@ -38,7 +40,7 @@ struct RSXVertexData
 
 struct RSXIndexArrayData
 {
-	Array<u8> m_data;
+	std::vector<u8> m_data;
 	int m_type;
 	u32 m_first;
 	u32 m_count;
@@ -59,7 +61,7 @@ struct RSXIndexArrayData
 		m_addr = 0;
 		index_min = ~0;
 		index_max = 0;
-		m_data.Clear();
+		m_data.clear();
 	}
 };
 
@@ -95,7 +97,7 @@ public:
 	static const uint m_tiles_count = 15;
 
 protected:
-	Stack<u32> m_call_stack;
+	std::stack<u32> m_call_stack;
 	CellGcmControl* m_ctrl;
 
 public:
@@ -103,8 +105,8 @@ public:
 	RSXTexture m_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
 	RSXIndexArrayData m_indexed_array;
-	Array<RSXTransformConstant> m_fragment_constants;
-	Array<RSXTransformConstant> m_transform_constants;
+	std::vector<RSXTransformConstant> m_fragment_constants;
+	std::vector<RSXTransformConstant> m_transform_constants;
 
 	u32 m_cur_shader_prog_num;
 	RSXShaderProgram m_shader_progs[m_fragment_count];

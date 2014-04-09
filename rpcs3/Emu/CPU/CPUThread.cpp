@@ -298,11 +298,11 @@ void CPUThread::Task()
 {
 	if (Ini.HLELogging.GetValue()) ConLog.Write("%s enter", CPUThread::GetFName().c_str());
 
-	const Array<u64>& bp = Emu.GetBreakPoints();
+	const std::vector<u64>& bp = Emu.GetBreakPoints();
 
 	try
 	{
-		for(uint i=0; i<bp.GetCount(); ++i)
+		for(uint i=0; i<bp.size(); ++i)
 		{
 			if(bp[i] == m_offset + PC)
 			{
@@ -335,7 +335,7 @@ void CPUThread::Task()
 				break;
 			}
 
-			for(uint i=0; i<bp.GetCount(); ++i)
+			for(uint i=0; i<bp.size(); ++i)
 			{
 				if(bp[i] == PC)
 				{

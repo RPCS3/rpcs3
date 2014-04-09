@@ -287,8 +287,8 @@ class ELF32Loader : public LoaderBase
 public:
 	Elf32_Ehdr ehdr;
 	std::vector<std::string> shdr_name_arr;
-	Array<Elf32_Shdr> shdr_arr;
-	Array<Elf32_Phdr> phdr_arr;
+	std::vector<Elf32_Shdr> shdr_arr;
+	std::vector<Elf32_Phdr> phdr_arr;
 
 	ELF32Loader(vfsStream& f);
 	~ELF32Loader() {Close();}

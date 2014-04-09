@@ -37,9 +37,8 @@ FnIdGenerator::FnIdGenerator(wxWindow* parent)
 
 FnIdGenerator::~FnIdGenerator()
 {
-	m_func_name.Clear();
-	m_func_id.Clear();
 	delete m_list;
+	m_list = nullptr;
 }
 
 void FnIdGenerator::OnInput(wxCommandEvent &event)
@@ -51,8 +50,8 @@ void FnIdGenerator::OnInput(wxCommandEvent &event)
 void FnIdGenerator::OnClear(wxCommandEvent &event)
 {
 	m_list->DeleteAllItems();
-	m_func_name.Clear();
-	m_func_id.Clear();
+	m_func_name.clear();
+	m_func_id.clear();
 	event.Skip();
 }
 
@@ -82,8 +81,8 @@ void FnIdGenerator::PrintId()
 		return;
 
 	const be_t<u32> result = GenerateFnId(func_name);
-	m_func_name.AddCpy(func_name);
-	m_func_id.AddCpy(result);
+	m_func_name.push_back(func_name);
+	m_func_id.push_back(result);
 
 	ConLog.Write("Function: %s, Id: 0x%08x ", func_name.c_str(), result);
 	UpdateInformation();
@@ -93,9 +92,9 @@ void FnIdGenerator::UpdateInformation()
 {
 	m_list->DeleteAllItems();
 
-	for(u32 i = 0; i < m_func_name.GetCount(); i++)
+	for(u32 i = 0; i < m_func_name.size(); i++)
 	{
-		m_list->InsertItem(m_func_name.GetCount(), wxEmptyString);
+		m_list->InsertItem(m_func_name.size(), wxEmptyString);
 		m_list->SetItem(i, 0, m_func_name[i]);
 		m_list->SetItem(i, 1, wxString::Format("0x%08x", re(m_func_id[i])));
 	}

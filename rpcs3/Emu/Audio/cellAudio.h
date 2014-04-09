@@ -98,7 +98,7 @@ struct AudioConfig  //custom structure
 	u32 m_port_in_use;
 	u64 counter;
 	u64 start_time;
-	Array<u64> m_keys;
+	std::vector<u64> m_keys;
 
 	AudioConfig()
 		: m_is_audio_initialized(false)

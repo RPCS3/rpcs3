@@ -2,5 +2,5 @@
 
 struct RSXVertexProgram
 {
-	Array<u32> data;
+	std::vector<u32> data;
 };

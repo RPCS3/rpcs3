@@ -20,7 +20,7 @@ void GLBufferObject::Create(GLuint type, u32 count)
 {
 	if(IsCreated()) return;
 
-	m_id.InsertRoomEnd(count);
+	m_id.resize(count);
 	glGenBuffers(count, &m_id[0]);
 	m_type = type;
 }
@@ -29,14 +29,14 @@ void GLBufferObject::Delete()
 {
 	if(!IsCreated()) return;
 
-	glDeleteBuffers(m_id.GetCount(), &m_id[0]);
-	m_id.Clear();
+	glDeleteBuffers(m_id.size(), &m_id[0]);
+	m_id.clear();
 	m_type = 0;
 }
 
 void GLBufferObject::Bind(u32 type, u32 num)
 {
-	assert(num < m_id.GetCount());
+	assert(num < m_id.size());
 	glBindBuffer(type, m_id[num]);
 }
 
@@ -75,7 +75,7 @@ void GLBufferObject::SetAttribPointer(int location, int size, int type, int poin
 
 bool GLBufferObject::IsCreated() const
 {
-	return m_id.GetCount() != 0;
+	return m_id.size() != 0;
 }
 
 GLvbo::GLvbo()
@@ -135,20 +135,20 @@ GLrbo::~GLrbo()
 
 void GLrbo::Create(u32 count)
 {
-	if(m_id.GetCount() == count)
+	if(m_id.size() == count)
 	{
 		return;
 	}
 
 	Delete();
 
-	m_id.SetCount(count);
-	glGenRenderbuffers(count, m_id.GetPtr());
+	m_id.resize(count);
+	glGenRenderbuffers(count, m_id.data());
 }
 
 void GLrbo::Bind(u32 num) const
 {
-	assert(num < m_id.GetCount());
+	assert(num < m_id.size());
 
 	glBindRenderbuffer(GL_RENDERBUFFER, m_id[num]);
 }
@@ -170,18 +170,18 @@ void GLrbo::Delete()
 		return;
 	}
 
-	glDeleteRenderbuffers(m_id.GetCount(), m_id.GetPtr());
-	m_id.Clear();
+	glDeleteRenderbuffers(m_id.size(), m_id.data());
+	m_id.clear();
 }
 
 bool GLrbo::IsCreated() const
 {
-	return m_id.GetCount();
+	return m_id.size();
 }
 
 u32 GLrbo::GetId(u32 num) const
 {
-	assert(num < m_id.GetCount());
+	assert(num < m_id.size());
 	return m_id[num];
 }
 

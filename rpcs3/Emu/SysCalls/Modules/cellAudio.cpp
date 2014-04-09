@@ -65,7 +65,7 @@ int cellAudioInit()
 			}
 			queue.Clear();
 
-			Array<u64> keys;
+			std::vector<u64> keys;
 
 			if(m_audio_out)
 			{
@@ -354,10 +354,10 @@ int cellAudioInit()
 						index = (position + 1) % port.block; // write new value
 					}
 					// load keys:
-					keys.SetCount(m_config.m_keys.GetCount());
-					memcpy(keys.GetPtr(), m_config.m_keys.GetPtr(), sizeof(u64) * keys.GetCount());
+					keys.resize(m_config.m_keys.size());
+					memcpy(keys.data(), m_config.m_keys.data(), sizeof(u64) * keys.size());
 				}
-				for (u32 i = 0; i < keys.GetCount(); i++)
+				for (u32 i = 0; i < keys.size(); i++)
 				{
 					// TODO: check event source
 					Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
@@ -402,7 +402,7 @@ abort:
 
 			m_config.m_is_audio_initialized = false;
 
-			m_config.m_keys.Clear();
+			m_config.m_keys.clear();
 			for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
 			{
 				AudioPortConfig& port = m_config.m_ports[i];
@@ -736,14 +736,14 @@ int cellAudioSetNotifyEventQueue(u64 key)
 
 	SMutexGeneralLocker lock(audioMutex);
 
-	for (u32 i = 0; i < m_config.m_keys.GetCount(); i++) // check for duplicates
+	for (u32 i = 0; i < m_config.m_keys.size(); i++) // check for duplicates
 	{
 		if (m_config.m_keys[i] == key)
 		{
 			return CELL_AUDIO_ERROR_PARAM;
 		}
 	}
-	m_config.m_keys.AddCpy(key);
+	m_config.m_keys.push_back(key);
 
 	/*EventQueue* eq;
 	if (!Emu.GetEventManager().GetEventQueue(key, eq))
@@ -769,11 +769,11 @@ int cellAudioRemoveNotifyEventQueue(u64 key)
 	SMutexGeneralLocker lock(audioMutex);
 
 	bool found = false;
-	for (u32 i = 0; i < m_config.m_keys.GetCount(); i++)
+	for (u32 i = 0; i < m_config.m_keys.size(); i++)
 	{
 		if (m_config.m_keys[i] == key)
 		{
-			m_config.m_keys.RemoveAt(i);
+			m_config.m_keys.erase(m_config.m_keys.begin() + i);
 			found = true;
 			break;
 		}

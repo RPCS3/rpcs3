@@ -28,22 +28,22 @@ struct Column
 
 struct ColumnsArr
 {
-	ArrayF<Column> m_columns;
+	std::vector<Column *> m_columns;
 
 	ColumnsArr()
 	{
 		Init();
 	}
 
-	ArrayF<Column>* GetSortedColumnsByPos()
+	std::vector<Column*>* GetSortedColumnsByPos()
 	{
-		static ArrayF<Column>& arr = *new ArrayF<Column>(); arr.ClearF();
-		for(u32 pos=0; pos<m_columns.GetCount(); pos++)
+		static std::vector<Column*> arr; arr.clear();
+		for(u32 pos=0; pos<m_columns.size(); pos++)
 		{
-			for(u32 c=0; c<m_columns.GetCount(); ++c)
+			for(u32 c=0; c<m_columns.size(); ++c)
 			{
-				if(m_columns[c].pos != pos) continue;
-				arr.Add(m_columns[c]);
+				if(m_columns[c]->pos != pos) continue;
+				arr.push_back(m_columns[c]);
 			}
 		}
 
@@ -52,16 +52,16 @@ struct ColumnsArr
 
 	Column* GetColumnByPos(u32 pos)
 	{
-		ArrayF<Column>& columns = *GetSortedColumnsByPos();
-		for(u32 c=0; c<columns.GetCount(); ++c)
+		std::vector<Column *>& columns = *GetSortedColumnsByPos();
+		for(u32 c=0; c<columns.size(); ++c)
 		{
-			if(!columns[c].shown)
+			if(!columns[c]->shown)
 			{
 				pos++;
 				continue;
 			}
-			if(columns[c].pos != pos) continue;
-			return &columns[c];
+			if(columns[c]->pos != pos) continue;
+			return columns[c];
 		}
 
 		return NULL;
@@ -77,9 +77,9 @@ public:
 
 	void Init()
 	{
-		m_columns.Clear();
+		m_columns.clear();
 
-		#define ADD_COLUMN(x, w, n) x = new Column(m_columns.GetCount(), w, n);	m_columns.Add(x);
+		#define ADD_COLUMN(x, w, n) x = new Column(m_columns.size(), w, n);	m_columns.push_back(x);
 			ADD_COLUMN(m_col_name, 160, "Name");
 			ADD_COLUMN(m_col_serial, 85, "Serial");
 			ADD_COLUMN(m_col_fw, 55, "FW");
@@ -98,7 +98,7 @@ public:
 		m_col_category->data.clear();
 		m_col_path->data.clear();
 
-		if(m_columns.GetCount() == 0) return;
+		if(m_columns.size() == 0) return;
 
 		for(const auto& game : game_data)
 		{
@@ -114,11 +114,11 @@ public:
 	void Show(wxListView* list)
 	{
 		list->DeleteAllColumns();
-		ArrayF<Column>& c_col = *GetSortedColumnsByPos();
-		for(u32 i=0, c=0; i<c_col.GetCount(); ++i)
+		std::vector<Column *>& c_col = *GetSortedColumnsByPos();
+		for(u32 i=0, c=0; i<c_col.size(); ++i)
 		{
-			if(!c_col[i].shown) continue;
-			list->InsertColumn(c++, fmt::FromUTF8(c_col[i].name), 0, c_col[i].width);
+			if(!c_col[i]->shown) continue;
+			list->InsertColumn(c++, fmt::FromUTF8(c_col[i]->name), 0, c_col[i]->width);
 		}
 	}
 
@@ -158,30 +158,30 @@ public:
 	#define ADD_COLUMN(v, dv, t, n, isshown) \
 		{ \
 			IniEntry<t> ini; \
-			ini.Init(m_columns[i].name + "_" + n, path); \
-			if(isLoad) m_columns[i].v = ini.LoadValue(dv); \
-			else if(isshown ? m_columns[i].shown : 1) \
+			ini.Init(m_columns[i]->name + "_" + n, path); \
+			if(isLoad) m_columns[i]->v = ini.LoadValue(dv); \
+			else if(isshown ? m_columns[i]->shown : 1) \
 			{ \
-				ini.SetValue(m_columns[i].v); \
+				ini.SetValue(m_columns[i]->v); \
 				ini.Save(); \
 			} \
 		}
 
-		for(u32 i=0; i<m_columns.GetCount(); ++i)
+		for(u32 i=0; i<m_columns.size(); ++i)
 		{
-			ADD_COLUMN(pos, m_columns[i].def_pos, int, "position", 1);
-			ADD_COLUMN(width, m_columns[i].def_width, int, "width", 1);
+			ADD_COLUMN(pos, m_columns[i]->def_pos, int, "position", 1);
+			ADD_COLUMN(width, m_columns[i]->def_width, int, "width", 1);
 			ADD_COLUMN(shown, true, bool, "shown", 0);
 		}
 
 		if(isLoad)
 		{
 			//check for errors
-			for(u32 c1=0; c1<m_columns.GetCount(); ++c1)
+			for(u32 c1=0; c1<m_columns.size(); ++c1)
 			{
-				for(u32 c2=c1+1; c2<m_columns.GetCount(); ++c2)
+				for(u32 c2=c1+1; c2<m_columns.size(); ++c2)
 				{
-					if(m_columns[c1].pos == m_columns[c2].pos)
+					if(m_columns[c1]->pos == m_columns[c2]->pos)
 					{
 						ConLog.Error("Columns loaded with error!");
 						Init();
@@ -190,12 +190,12 @@ public:
 				}
 			}
 
-			for(u32 p=0; p<m_columns.GetCount(); ++p)
+			for(u32 p=0; p<m_columns.size(); ++p)
 			{
 				bool ishas = false;
-				for(u32 c=0; c<m_columns.GetCount(); ++c)
+				for(u32 c=0; c<m_columns.size(); ++c)
 				{
-					if(m_columns[c].pos != p) continue;
+					if(m_columns[c]->pos != p) continue;
 					ishas = true;
 					break;
 				}

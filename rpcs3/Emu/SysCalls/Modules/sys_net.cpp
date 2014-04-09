@@ -80,7 +80,11 @@ s32 getLastError()
 	return errno;
 #endif
 }
-
+#ifdef _WIN32
+using pck_len_t = s32;
+#else
+using pck_len_t = u32;
+#endif
 
 // Functions
 int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
@@ -89,7 +93,7 @@ int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
 	sockaddr _addr;
 	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
-	s32 *_paddrlen = (s32 *)Memory.VirtualToRealAddr(paddrlen.GetAddr());
+	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.GetAddr());
 	int ret = accept(s, &_addr, _paddrlen);
 	g_lastError = getLastError();
 	return ret;
@@ -227,7 +231,7 @@ int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_
 	sockaddr _addr;
 	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
-	s32 *_paddrlen = (s32 *)Memory.VirtualToRealAddr(paddrlen.GetAddr());
+	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.GetAddr());
 	int ret = recvfrom(s, _buf_addr, len, flags, &_addr, _paddrlen);
 	g_lastError = getLastError();
 	return ret;
