@@ -85,20 +85,22 @@ endif(GTK2_FOUND)
 # requires: -BZip2
 #           -gtk2 (linux)
 #---------------------------------------
-if(BZIP2_FOUND AND GTK2_FOUND)
+if(BZIP2_FOUND AND GTK2_FOUND AND EXTRA_PLUGINS)
     set(CDVDiso TRUE)
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/CDVDiso")
     set(CDVDiso FALSE)
-else(BZIP2_FOUND AND GTK2_FOUND)
+else()
     set(CDVDiso FALSE)
     message(STATUS "Skip build of CDVDiso: miss some dependencies")
     message(STATUS "${msg_dep_cdvdiso}")
-endif(BZIP2_FOUND AND GTK2_FOUND)
+endif()
 
 #---------------------------------------
 #			CDVDlinuz
 #---------------------------------------
+if(EXTRA_PLUGINS)
 set(CDVDlinuz TRUE)
+endif()
 
 #---------------------------------------
 #			dev9null
@@ -119,9 +121,9 @@ endif(GTK2_FOUND)
 #---------------------------------------
 #			GSnull
 #---------------------------------------
-if(GTK2_FOUND)
+if(GTK2_FOUND AND EXTRA_PLUGINS)
     set(GSnull TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -149,15 +151,15 @@ endif(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
 #			-X11
 #			-CG
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND EXTRA_PLUGINS)
 	set(zerogs TRUE)
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerogs")
 	set(zerogs FALSE)
-else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+else()
 	set(zerogs FALSE)
     message(STATUS "Skip build of zerogs: miss some dependencies")
     message(STATUS "${msg_dep_zerogs}")
-endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -172,30 +174,30 @@ endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 #---------------------------------------
 if((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
 	set(zzogl TRUE)
-	if(CG_FOUND AND NOT GLSL_API)
+    if(CG_FOUND AND NOT GLSL_API AND EXTRA_PLUGINS)
 		set(zzoglcg TRUE)
-	else(CG_FOUND AND NOT GLSL_API)
+	else()
 		set(zzoglcg FALSE)
-	endif(CG_FOUND AND NOT GLSL_API)
+	endif()
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zzogl-pg")
 	set(zzogl FALSE)
 	set(zzoglcg FALSE)
 	set(REBUILD_SHADER FALSE)
-else((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
+else()
 	set(zzogl FALSE)
 	set(zzoglcg FALSE)
 	set(REBUILD_SHADER FALSE)
     message(STATUS "Skip build of zzogl: miss some dependencies")
     message(STATUS "${msg_dep_zzogl}")
-endif((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
+endif()
 #---------------------------------------
 
 #---------------------------------------
 #			PadNull
 #---------------------------------------
-if(GTK2_FOUND)
+if(GTK2_FOUND AND EXTRA_PLUGINS)
     set(PadNull TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -217,9 +219,9 @@ endif(SDL_FOUND)
 #---------------------------------------
 #			SPU2null
 #---------------------------------------
-if(GTK2_FOUND)
+if(GTK2_FOUND AND EXTRA_PLUGINS)
     set(SPU2null TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -249,18 +251,18 @@ endif()
 #			-ALSA
 #			-PortAudio
 #---------------------------------------
-if(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND)
+if(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND AND EXTRA_PLUGINS)
     set(zerospu2 TRUE)
     # Comment the next line, if you want to compile zerospu2
 	set(zerospu2 FALSE)
     message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2")
 	set(zerospu2 FALSE)
-else(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND)
+else()
 	set(zerospu2 FALSE)
     message(STATUS "Skip build of zerospu2: miss some dependencies")
     message(STATUS "${msg_dep_zerospu2}")
-endif(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------

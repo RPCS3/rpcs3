@@ -19,52 +19,55 @@ clean_build=false
 
 for f in $*
 do
-	case $f in
-		--dev|--devel ) flags="$flags -DCMAKE_BUILD_TYPE=Devel" ;;
-		--dbg|--debug ) flags="$flags -DCMAKE_BUILD_TYPE=Debug" ;;
-		--release     ) flags="$flags -DCMAKE_BUILD_TYPE=Release" ;;
-		--glsl        ) flags="$flags -DGLSL_API=TRUE" ;;
-		--egl         ) flags="$flags -DEGL_API=TRUE" ;;
-		--gles        ) flags="$flags -DGLES_API=TRUE" ;;
-		--sdl2        ) flags="$flags -DSDL2_API=TRUE" ;;
-		--clean       ) clean_build=true ;;
-		*)
-			# unknown option
-			echo "** User options **"
-			echo "--dev / --devel : Build PCSX2 as a Development build."
-			echo "--debug         : Build PCSX2 as a Debug build."
-			echo "--release       : Build PCSX2 as a Release build."
-			echo "--clean         : Do a clean build."
+    case $f in
+        --dev|--devel ) flags="$flags -DCMAKE_BUILD_TYPE=Devel" ;;
+        --dbg|--debug ) flags="$flags -DCMAKE_BUILD_TYPE=Debug" ;;
+        --release     ) flags="$flags -DCMAKE_BUILD_TYPE=Release" ;;
+        --glsl        ) flags="$flags -DGLSL_API=TRUE" ;;
+        --egl         ) flags="$flags -DEGL_API=TRUE" ;;
+        --gles        ) flags="$flags -DGLES_API=TRUE" ;;
+        --sdl2        ) flags="$flags -DSDL2_API=TRUE" ;;
+        --extra       ) flags="$flags -DEXTRA_PLUGINS=TRUE" ;;
+        --clean       ) clean_build=true ;;
+
+        *)
+            # unknown option
+            echo "** User options **"
+            echo "--dev / --devel : Build PCSX2 as a Development build."
+            echo "--debug         : Build PCSX2 as a Debug build."
+            echo "--release       : Build PCSX2 as a Release build."
+            echo "--clean         : Do a clean build."
+            echo "--extra         : Build all plugins"
             echo "** Developper option **"
             echo "--glsl          : Replace CG backend of ZZogl by GLSL"
             echo "--egl           : Replace GLX by EGL (ZZogl plugins only)"
             echo "--sdl2          : Build with SDL2 (crash if wx is linked to SDL1)"
             echo "--gles          : Replace openGL backend of GSdx by openGLES3"
-			exit 1;;
-  	esac
+            exit 1;;
+    esac
 done
 
 rm -f install_log.txt
 
 if [ "$flags" != "" ]; then
-	echo "Building pcsx2 with $flags"
-	echo "Building pcsx2 with $flags" > install_log.txt
+    echo "Building pcsx2 with $flags"
+    echo "Building pcsx2 with $flags" > install_log.txt
 fi
 
 if [ "$clean_build" = true ]; then
-	echo "Doing a clean build."
+    echo "Doing a clean build."
     rm -fr build
-	# make clean 2>&1 | tee -a ../install_log.txt 
+    # make clean 2>&1 | tee -a ../install_log.txt
 fi
 
 
 mkdir -p build
 cd build
 
-cmake $flags .. 2>&1 | tee -a ../install_log.txt 
+cmake $flags .. 2>&1 | tee -a ../install_log.txt
 
 CORE=`grep -w -c processor /proc/cpuinfo`
-make -j $CORE 2>&1 | tee -a ../install_log.txt 
-make install 2>&1 | tee -a ../install_log.txt 
+make -j $CORE 2>&1 | tee -a ../install_log.txt
+make install 2>&1 | tee -a ../install_log.txt
 
 cd ..

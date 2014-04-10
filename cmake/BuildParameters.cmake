@@ -9,7 +9,8 @@
 # Build the Replay Loaders     : -DBUILD_REPLAY_LOADERS=TRUE|FALSE
 # Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE|FALSE
 # Use EGL (vs GLX)            : -DEGL_API=TRUE|FALSE
-# Use SDL2                    ; -DSDL2_API=TRUE|FALSE
+# Use SDL2                    : -DSDL2_API=TRUE|FALSE
+# Build all plugins           : -DEXTRA_PLUGINS=TRUE|FALSE
 
 ### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
@@ -211,3 +212,9 @@ if (NOT DEFINED XDG_STD)
     set(XDG_STD FALSE)
 endif (NOT DEFINED XDG_STD)
 
+#-------------------------------------------------------------------------------
+# Use only main plugin (faster compilation time)
+#-------------------------------------------------------------------------------
+if (NOT DEFINED EXTRA_PLUGINS)
+    set(EXTRA_PLUGINS FALSE)
+endif()
