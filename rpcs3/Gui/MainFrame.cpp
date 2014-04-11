@@ -4,6 +4,7 @@
 #include "MemoryViewer.h"
 #include "RSXDebugger.h"
 #include "PADManager.h"
+#include "FnIdGenerator.h"
 
 #include "git-version.h"
 #include "Ini.h"
@@ -35,6 +36,7 @@ enum IDs
 	id_tools_compiler,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
+	id_tools_fnid_generator,
 	id_help_about,
 	id_update_dbg,
 };
@@ -88,6 +90,7 @@ MainFrame::MainFrame()
 	menu_tools.Append(id_tools_compiler, "ELF Compiler");
 	menu_tools.Append(id_tools_memory_viewer, "Memory Viewer");
 	menu_tools.Append(id_tools_rsx_debugger, "RSX Debugger");
+	menu_tools.Append(id_tools_fnid_generator, "FunctionID Generator");
 
 	wxMenu& menu_help(*new wxMenu());
 	menubar.Append(&menu_help, "Help");
@@ -122,6 +125,7 @@ MainFrame::MainFrame()
 	Connect( id_tools_compiler,      wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
 	Connect( id_tools_memory_viewer, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
 	Connect( id_tools_rsx_debugger,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenRSXDebugger));
+	Connect(id_tools_fnid_generator, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenFnIdGenerator));
 
 	Connect( id_help_about,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
 
@@ -582,6 +586,12 @@ void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 {
 	(new RSXDebugger(this)) -> Show();
 }
+
+void MainFrame::OpenFnIdGenerator(wxCommandEvent& WXUNUSED(event))
+{
+	FnIdGenerator(this).ShowModal();
+}
+
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 {

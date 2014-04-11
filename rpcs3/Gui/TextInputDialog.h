@@ -6,7 +6,7 @@ class TextInputDialog : public wxDialog
 	std::string m_result;
 
 public:
-	TextInputDialog(wxWindow* parent, const std::string& defvalue = "");
+	TextInputDialog(wxWindow* parent, const std::string& defvalue = "", const std::string& label = "Input text");
 	void OnOk(wxCommandEvent& event);
 
 	std::string GetResult();

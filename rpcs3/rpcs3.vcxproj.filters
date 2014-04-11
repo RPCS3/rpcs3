@@ -370,6 +370,9 @@
     <ClCompile Include="Gui\RSXDebugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\FnIdGenerator.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
     <ClCompile Include="Gui\PADManager.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -577,6 +580,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\RSXDebugger.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\FnIdGenerator.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\TextInputDialog.h">
