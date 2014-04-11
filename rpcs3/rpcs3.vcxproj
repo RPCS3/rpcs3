@@ -334,6 +334,7 @@
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
+    <ClCompile Include="Gui\FnIdGenerator.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
@@ -504,6 +505,7 @@
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />
+    <ClInclude Include="Gui\FnIdGenerator.h" />
     <ClInclude Include="Ini.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\ELF32.h" />

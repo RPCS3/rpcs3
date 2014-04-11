@@ -5,13 +5,12 @@ PADManager::PADManager(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "PAD Settings", wxDefaultPosition)
 	, m_button_id(0)
 	, m_key_pressed(false)
+	, m_emu_paused(false)
 {
-	bool paused = false;
-
 	if(Emu.IsRunning())
 	{
 		Emu.Pause();
-		paused = true;
+		m_emu_paused = true;
 	}
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
@@ -246,8 +245,6 @@ PADManager::PADManager(wxWindow* parent)
 	Connect(b_ok->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
 	Connect(b_reset->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
 	Connect(b_cancel->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-
-	if(paused) Emu.Resume();
 }
 
 void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
