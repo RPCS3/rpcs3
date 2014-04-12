@@ -18,6 +18,7 @@ struct SPUImmTable
 {
 	__m128i s19_to_s32[1 << 19];
 	__m128i fsmbi_mask[1 << 16];
+	__m128i u8_to_u8[256];
 	__m128 scale_to_float[256];
 	__m128 scale_to_int[256];
 	__m128i min_int;
@@ -70,8 +71,18 @@ struct SPUImmTable
 		max_int.m128i_u32[1] = 0x7fffffff;
 		max_int.m128i_u32[2] = 0x7fffffff;
 		max_int.m128i_u32[3] = 0x7fffffff;
+		// table for byte consts
+		for (u32 i = 0; i < sizeof(u8_to_u8) / sizeof(__m128i); i++)
+		{
+			for (u32 j = 0; j < 16; j++)
+			{
+				u8_to_u8[i].m128i_u8[j] = i;
+			}
+		}
 	}
 };
+
+extern const SPUImmTable g_spu_imm;
 
 class SPURecompiler;
 
@@ -118,22 +129,22 @@ public:
 
 #define LOG_OPCODE(...) //ConLog.Write("Compiled "__FUNCTION__"()"__VA_ARGS__)
 
-#define LOG3_OPCODE(...) // ConLog.Write("Linked "__FUNCTION__"()"__VA_ARGS__)
+#define LOG3_OPCODE(...) //ConLog.Write("Linked "__FUNCTION__"()"__VA_ARGS__)
 
-#define WRAPPER_BEGIN(a0, a1, a2, a3) struct opcode_wrapper \
+#define WRAPPER_BEGIN(a0, a1, a2, a3) struct opwr_##a0 \
 { \
 	static void opcode(u32 a0, u32 a1, u32 a2, u32 a3) \
 { \
 	SPUThread& CPU = *(SPUThread*)GetCurrentCPUThread();
 
-#define WRAPPER_END(a0, a1, a2, a3) LOG2_OPCODE(); } \
+#define WRAPPER_END(a0, a1, a2, a3) /*LOG2_OPCODE();*/ } \
 }; \
 	c.mov(cpu_qword(PC), (u32)CPU.PC); \
-	X86X64CallNode* call = c.call(imm_ptr(&opcode_wrapper::opcode), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
-	call->setArg(0, imm_u(a0)); \
-	call->setArg(1, imm_u(a1)); \
-	call->setArg(2, imm_u(a2)); \
-	call->setArg(3, imm_u(a3)); \
+	X86X64CallNode* call##a0 = c.call(imm_ptr(&opwr_##a0::opcode), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
+	call##a0->setArg(0, imm_u(a0)); \
+	call##a0->setArg(1, imm_u(a1)); \
+	call##a0->setArg(2, imm_u(a2)); \
+	call##a0->setArg(3, imm_u(a3)); \
 	LOG3_OPCODE();
 
 
@@ -151,7 +162,10 @@ public:
 	GpVar* imm_var;
 	GpVar* pos_var;
 
-	SPURecompiler(SPUThread& cpu, SPURecompilerCore& rec) : CPU(cpu), rec(rec), compiler(nullptr)
+	SPURecompiler(SPUThread& cpu, SPURecompilerCore& rec)
+		: CPU(cpu)
+		, rec(rec)
+		, compiler(nullptr)
 	{
 	}
 
@@ -291,25 +305,51 @@ private:
 		/*XmmVar v0(c);
 		if (ra == rb)
 		{
-			// load { 1, 1, 1, 1 }
 			c.movaps(v0, imm_xmm(s19_to_s32[1]));
 			c.movaps(cpu_xmm(GPR[rt]), v0);
 		}
 		else
 		{
-			// compare if-greater-then
-			c.movdqa(v0, cpu_xmm(GPR[rb]));
-			// (not implemented)
+			XmmVar v1(c), v2(c);
+			c.movdqa(v0, cpu_xmm(GPR[ra]));
+			c.movdqa(v1, cpu_xmm(GPR[rb]));
+			// compare if-greater-than
+			
 			c.movdqa(cpu_xmm(GPR[rt]), v0);
+			
+			// sign bits:
+			// a b (b-a) -> (result of BG)
+			// 0 0 0 -> 1
+			// 0 0 1 -> 0
+			// 0 1 0 -> 1
+			// 0 1 1 -> 1
+			// 1 0 0 -> 0
+			// 1 0 1 -> 0
+			// 1 1 0 -> 0
+			// 1 1 1 -> 1
 		}
 		LOG_OPCODE();*/
 	}
 	void SFH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
+		/*WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = CPU.GPR[rb]._u16[h] - CPU.GPR[ra]._u16[h];
-		WRAPPER_END(rt, ra, rb, 0);
+		WRAPPER_END(rt, ra, rb, 0);*/
+
+		XmmVar v0(c);
+		if (ra == rb)
+		{
+			// zero
+			c.xorps(v0, v0);
+			c.movaps(cpu_xmm(GPR[rt]), v0);
+		}
+		else
+		{
+			c.movaps(v0, cpu_xmm(GPR[rb]));
+			c.psubw(v0, cpu_xmm(GPR[ra]));
+			c.movaps(cpu_xmm(GPR[rt]), v0);
+		}
 	}
 	void NOR(u32 rt, u32 ra, u32 rb)
 	{
@@ -346,19 +386,19 @@ private:
 	void ROTM(u32 rt, u32 ra, u32 rb)
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) % 64) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) % 64) : 0;
-		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) % 64) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) % 64) : 0;
-		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) % 64) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) % 64) : 0;
-		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) % 64) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) % 64) : 0;
+		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : 0;
 		WRAPPER_END(rt, ra, rb, 0);
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._i32[0]) % 64) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._i32[0]) % 64) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._i32[1]) % 64) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._i32[1]) % 64) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._i32[2]) % 64) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._i32[2]) % 64) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._i32[3]) % 64) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._i32[3]) % 64) : CPU.GPR[ra]._i32[3] >> 31;
+		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
+		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
+		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
+		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
 		WRAPPER_END(rt, ra, rb, 0);
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
@@ -397,14 +437,14 @@ private:
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) % 32) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) % 32) : 0;
+			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : 0;
 		WRAPPER_END(rt, ra, rb, 0);
 	}
 	void ROTMAH(u32 rt, u32 ra, u32 rb)
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._i16[h]) % 32) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._i16[h]) % 32) : CPU.GPR[ra]._i16[h] >> 15;
+			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : CPU.GPR[ra]._i16[h] >> 15;
 		WRAPPER_END(rt, ra, rb, 0);
 	}
 	void SHLH(u32 rt, u32 ra, u32 rb)
@@ -427,14 +467,14 @@ private:
 	void ROTMI(u32 rt, u32 ra, s32 i7)
 	{
 		/*WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) % 64; // ???
+		const int nRot = (0 - (s32)i7) & 0x3f;
 		CPU.GPR[rt]._u32[0] = nRot < 32 ? CPU.GPR[ra]._u32[0] >> nRot : 0;
 		CPU.GPR[rt]._u32[1] = nRot < 32 ? CPU.GPR[ra]._u32[1] >> nRot : 0;
 		CPU.GPR[rt]._u32[2] = nRot < 32 ? CPU.GPR[ra]._u32[2] >> nRot : 0;
 		CPU.GPR[rt]._u32[3] = nRot < 32 ? CPU.GPR[ra]._u32[3] >> nRot : 0;
 		WRAPPER_END(rt, ra, i7, 0);*/
 
-		const int nRot = (0 - i7) & 0x3f; // !!!
+		const int nRot = (0 - i7) & 0x3f;
 		XmmVar v0(c);
 		if (nRot > 31)
 		{
@@ -463,20 +503,41 @@ private:
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) % 64;
+		/*WRAPPER_BEGIN(rt, ra, i7, zz);
+		const int nRot = (0 - (s32)i7) & 0x3f;
 		CPU.GPR[rt]._i32[0] = nRot < 32 ? CPU.GPR[ra]._i32[0] >> nRot : CPU.GPR[ra]._i32[0] >> 31;
 		CPU.GPR[rt]._i32[1] = nRot < 32 ? CPU.GPR[ra]._i32[1] >> nRot : CPU.GPR[ra]._i32[1] >> 31;
 		CPU.GPR[rt]._i32[2] = nRot < 32 ? CPU.GPR[ra]._i32[2] >> nRot : CPU.GPR[ra]._i32[2] >> 31;
 		CPU.GPR[rt]._i32[3] = nRot < 32 ? CPU.GPR[ra]._i32[3] >> nRot : CPU.GPR[ra]._i32[3] >> 31;
-		WRAPPER_END(rt, ra, i7, 0);
+		WRAPPER_END(rt, ra, i7, 0);*/
+
+		const int nRot = (0 - i7) & 0x3f;
+		XmmVar v0(c);
+		if (nRot == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				c.movaps(v0, cpu_xmm(GPR[ra]));
+				c.movaps(cpu_xmm(GPR[rt]), v0);
+			}
+			// else nop
+		}
+		else
+		{
+			// shift right arithmetical
+			c.movdqa(v0, cpu_xmm(GPR[ra]));
+			c.psrad(v0, nRot);
+			c.movdqa(cpu_xmm(GPR[rt]), v0);
+		}
+		LOG_OPCODE();
 	}
 	void SHLI(u32 rt, u32 ra, s32 i7)
 	{
 		/*WRAPPER_BEGIN(rt, ra, i7, zz);
 		const u32 s = i7 & 0x3f;
 		for (u32 j = 0; j < 4; ++j)
-			CPU.GPR[rt]._u32[j] = CPU.GPR[ra]._u32[j] << s;
+			CPU.GPR[rt]._u32[j] = (s >= 32) ? 0 : CPU.GPR[ra]._u32[j] << s;
 		WRAPPER_END(rt, ra, i7, 0);*/
 
 		const int s = i7 & 0x3f;
@@ -517,7 +578,7 @@ private:
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
 		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) % 32;
+		const int nRot = (0 - (s32)i7) & 0x1f;
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = nRot < 16 ? CPU.GPR[ra]._u16[h] >> nRot : 0;
 		WRAPPER_END(rt, ra, i7, 0);
@@ -525,7 +586,7 @@ private:
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
 		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) % 32;
+		const int nRot = (0 - (s32)i7) & 0x1f;
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._i16[h] = nRot < 16 ? CPU.GPR[ra]._i16[h] >> nRot : CPU.GPR[ra]._i16[h] >> 15;
 		WRAPPER_END(rt, ra, i7, 0);
@@ -535,7 +596,7 @@ private:
 		WRAPPER_BEGIN(rt, ra, i7, zz);
 		const int nRot = i7 & 0x1f;
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[0] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[0] << nRot;
+			CPU.GPR[rt]._u16[h] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[h] << nRot;
 		WRAPPER_END(rt, ra, i7, 0);
 	}
 	void A(u32 rt, u32 ra, u32 rb)
@@ -617,10 +678,15 @@ private:
 	}
 	void AVGB(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
+		/*WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int b = 0; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = (CPU.GPR[ra]._u8[b] + CPU.GPR[rb]._u8[b] + 1) >> 1;
-		WRAPPER_END(rt, ra, rb, 0);
+		WRAPPER_END(rt, ra, rb, 0);*/
+
+		XmmVar v0(c);
+		c.movdqa(v0, cpu_xmm(GPR[ra]));
+		c.pavgb(v0, cpu_xmm(GPR[rb]));
+		c.movdqa(cpu_xmm(GPR[rt]), v0);
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
@@ -1245,10 +1311,23 @@ private:
 	}
 	void CGT(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
+		/*WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] > CPU.GPR[rb]._i32[w] ? 0xffffffff : 0;
-		WRAPPER_END(rt, ra, rb, 0);
+		WRAPPER_END(rt, ra, rb, 0);*/
+
+		XmmVar v0(c);
+		if (ra == rb)
+		{
+			c.xorps(v0, v0);
+			c.movaps(cpu_xmm(GPR[rt]), v0);
+		}
+		else
+		{
+			c.movdqa(v0, cpu_xmm(GPR[ra]));
+			c.pcmpgtd(v0, cpu_xmm(GPR[rb]));
+			c.movdqa(cpu_xmm(GPR[rt]), v0);
+		}
 	}
 	void XOR(u32 rt, u32 ra, u32 rb)
 	{
@@ -1919,7 +1998,7 @@ private:
 		{
 			c.mulps(v0, imm_xmm(scale_to_int[i8 & 0xff])); // scale
 		}
-		c.cvtps2dq(v0, v0); // convert to ints
+		c.cvttps2dq(v0, v0); // convert to ints with truncation
 		c.movdqa(cpu_xmm(GPR[rt]), v0);
 		LOG_OPCODE();
 	}
@@ -2396,7 +2475,7 @@ private:
 		{
 			// zero
 			c.xorps(v0, v0);
-			c.movaps(v0, cpu_xmm(GPR[ra]));
+			c.movaps(cpu_xmm(GPR[rt]), v0);
 		}
 		else if (i10 == -1)
 		{
@@ -2738,7 +2817,13 @@ private:
 	}
 	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, rc);
+		/*WRAPPER_BEGIN(ra, rb, rc, zz);
+		ConLog.Write("SHUFB: input ra=%d, value=0x%016llx%016llx", ra, CPU.GPR[ra]._u64[1], CPU.GPR[ra]._u64[0]);
+		ConLog.Write("SHUFB: input rb=%d, value=0x%016llx%016llx", rb, CPU.GPR[rb]._u64[1], CPU.GPR[rb]._u64[0]);
+		ConLog.Write("SHUFB: input rc=%d, value=0x%016llx%016llx", rc, CPU.GPR[rc]._u64[1], CPU.GPR[rc]._u64[0]);
+		WRAPPER_END(ra, rb, rc, 0);*/
+
+		WRAPPER_BEGIN(rc, rt, ra, rb);
 		const SPU_GPR_hdr _a = CPU.GPR[ra];
 		const SPU_GPR_hdr _b = CPU.GPR[rb];
 		for (int i = 0; i < 16; i++)
@@ -2764,8 +2849,44 @@ private:
 					CPU.GPR[rt]._u8[i] = _a._u8[15 - (b & 0x0F)];
 			}
 		}
-		WRAPPER_END(rt, ra, rb, rc);
-		// TODO
+		WRAPPER_END(rc, rt, ra, rb);
+
+		/*XmmVar v0(c), v1(c), v2(c), v3(c), v4(c), vFF(c);
+		c.movdqa(v0, cpu_xmm(GPR[rc])); //        v0 = mask
+		// generate specific values:
+		c.movdqa(v1, imm_xmm(u8_to_u8[0xe0])); // v1 = 11100000
+		c.movdqa(v2, v0); // copy mask            v2 = mask
+		c.movdqa(v3, imm_xmm(u8_to_u8[0x80])); // v3 = 10000000
+		c.pand(v2, v1); // filter mask            v2 = mask & 11100000
+		c.movdqa(vFF, v2); // load filtered mask  vFF = mask & 11100000
+		c.movdqa(v4, imm_xmm(u8_to_u8[0xc0])); // v4 = 11000000
+		c.pcmpeqb(vFF, v4); // gen 0xff values    vFF = (mask & 11100000 == 11000000) ? 0xff : 0
+		c.movdqa(v4, v2); // load filtered mask   v4 = mask & 11100000
+		c.pand(v4, v3); // filter mask again      v4 = mask & 10000000
+		c.pcmpeqb(v2, v1); //                     v2 = (mask & 11100000 == 11100000) ? 0xff : 0
+		c.pcmpeqb(v4, v3); //                     v4 = (mask & 10000000 == 10000000) ? 0xff : 0
+		c.pand(v2, v3); // generate 0x80 values   v2 = (mask & 11100000 == 11100000) ? 0x80 : 0
+		c.por(vFF, v2); // merge 0xff and 0x80    vFF = (mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0
+		c.pandn(v1, v0); // filter mask           v1 = mask & 00011111
+		// select bytes from [rb]:
+		c.movdqa(v2, imm_xmm(u8_to_u8[15])); //   v2 = 00001111
+		c.pxor(v1, imm_xmm(u8_to_u8[0x10])); //   v1 = (mask & 00011111) ^ 00010000
+		c.psubb(v2, v1); //                       v2 = 00001111 - ((mask & 00011111) ^ 00010000)
+		c.movdqa(v1, cpu_xmm(GPR[rb])); //        v1 = rb
+		c.pshufb(v1, v2); //                      v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000))
+		// select bytes from [ra]:
+		c.pxor(v2, imm_xmm(u8_to_u8[0xf0])); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
+		c.movdqa(v3, cpu_xmm(GPR[ra])); //        v3 = ra
+		c.pshufb(v3, v2); //                      v3 = select(ra, (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000)
+		c.por(v1, v3); //                         v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000)) | (v3)
+		c.pandn(v4, v1); // filter result         v4 = v1 & ((mask & 10000000 == 10000000) ? 0 : 0xff)
+		c.por(vFF, v4); // final merge            vFF = (mask & 10000000 == 10000000) ? ((mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0) : (v1)
+		c.movdqa(cpu_xmm(GPR[rt]), vFF);
+		LOG_OPCODE();*/
+
+		/*WRAPPER_BEGIN(rt, xx, yy, zz);
+		//ConLog.Write("SHUFB: output=%d, value=0x%016llx%016llx", rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
+		WRAPPER_END(rt, 0, 0, 0);*/
 	}
 	void MPYA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{

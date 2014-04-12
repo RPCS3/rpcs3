@@ -15,7 +15,12 @@
 	__m128d m128d;
  } __u32x4; */
 
-#define LOG2_OPCODE(...) //unsigned char cs[20]; sha1(&Memory[CPU.dmac.ls_offset], 256*1024, cs); ConLog.Write("Mem Dump: 0x%llx", *(u64*)cs); ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
+#define MEM_AND_REG_HASH() \
+	unsigned char mem_h[20]; sha1(&Memory[CPU.dmac.ls_offset], 256*1024, mem_h); \
+	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
+	ConLog.Write("Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
+
+#define LOG2_OPCODE(...) // ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -120,17 +125,17 @@ private:
 	}
 	void ROTM(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) % 64) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) % 64) : 0;
-		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) % 64) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) % 64) : 0;
-		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) % 64) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) % 64) : 0;
-		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) % 64) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) % 64) : 0;
+		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : 0;
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._i32[0]) % 64) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._i32[0]) % 64) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._i32[1]) % 64) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._i32[1]) % 64) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._i32[2]) % 64) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._i32[2]) % 64) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._i32[3]) % 64) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._i32[3]) % 64) : CPU.GPR[ra]._i32[3] >> 31;
+		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
+		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
+		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
+		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
@@ -147,12 +152,12 @@ private:
 	void ROTHM(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) % 32) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) % 32) : 0;
+			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : 0;
 	}
 	void ROTMAH(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._i16[h]) % 32) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._i16[h]) % 32) : CPU.GPR[ra]._i16[h] >> 15;
+			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : CPU.GPR[ra]._i16[h] >> 15;
 	}
 	void SHLH(u32 rt, u32 ra, u32 rb)
 	{
@@ -169,7 +174,7 @@ private:
 	}
 	void ROTMI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 64;
+		const int nRot = (0 - i7) & 0x3f;
 		CPU.GPR[rt]._u32[0] = nRot < 32 ? CPU.GPR[ra]._u32[0] >> nRot : 0;
 		CPU.GPR[rt]._u32[1] = nRot < 32 ? CPU.GPR[ra]._u32[1] >> nRot : 0;
 		CPU.GPR[rt]._u32[2] = nRot < 32 ? CPU.GPR[ra]._u32[2] >> nRot : 0;
@@ -177,7 +182,7 @@ private:
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 64;
+		const int nRot = (0 - i7) & 0x3f;
 		CPU.GPR[rt]._i32[0] = nRot < 32 ? CPU.GPR[ra]._i32[0] >> nRot : CPU.GPR[ra]._i32[0] >> 31;
 		CPU.GPR[rt]._i32[1] = nRot < 32 ? CPU.GPR[ra]._i32[1] >> nRot : CPU.GPR[ra]._i32[1] >> 31;
 		CPU.GPR[rt]._i32[2] = nRot < 32 ? CPU.GPR[ra]._i32[2] >> nRot : CPU.GPR[ra]._i32[2] >> 31;
@@ -188,7 +193,7 @@ private:
 		const u32 s = i7 & 0x3f;
 
 		for (u32 j = 0; j < 4; ++j)
-			CPU.GPR[rt]._u32[j] = CPU.GPR[ra]._u32[j] << s;
+			CPU.GPR[rt]._u32[j] = (s >= 32) ? 0 : CPU.GPR[ra]._u32[j] << s;
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
@@ -199,14 +204,14 @@ private:
 	}
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 32;
+		const int nRot = (0 - i7) & 0x1f;
 
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = nRot < 16 ? CPU.GPR[ra]._u16[h] >> nRot : 0;
 	}
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 32;
+		const int nRot = (0 - i7) & 0x1f;
 
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._i16[h] = nRot < 16 ? CPU.GPR[ra]._i16[h] >> nRot : CPU.GPR[ra]._i16[h] >> 15;
@@ -216,7 +221,7 @@ private:
 		const int nRot = i7 & 0x1f;
 
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[0] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[0] << nRot;
+			CPU.GPR[rt]._u16[h] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[h] << nRot;
 	}
 	void A(u32 rt, u32 ra, u32 rb)
 	{
