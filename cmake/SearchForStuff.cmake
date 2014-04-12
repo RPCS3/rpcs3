@@ -62,7 +62,6 @@ include(FindLibc)
 include(FindPortAudio)
 include(FindSoundTouch)
 include(FindSparseHash)
-include(FindSparseHash_NEW)
 
 # Note for include_directory: The order is important to avoid a mess between include file from your system and the one of pcsx2
 # If you include first 3rdparty, all 3rdpary include will have a higer priority...
