@@ -51,12 +51,12 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 		sceNp.Warning("sceNpDrmIsAvailable: Can't find RAP file for DRM!");
 	else
 	{
-		Array<DirEntryInfo> entries = raps_dir->GetEntries();
-		for (unsigned int i = 0; i < entries.GetCount(); i++)
+		const std::vector<DirEntryInfo> &entries = raps_dir->GetEntries();
+		for (auto &entry:  entries)
 		{
-			if (entries[i].name.find(fmt::ToUTF8(titleID)) != std::string::npos )
+			if (entry.name.find(fmt::ToUTF8(titleID)) != std::string::npos )
 			{
-				rap_file_path += fmt::FromUTF8(entries[i].name);
+				rap_file_path += fmt::FromUTF8(entry.name);
 				break;
 			}
 		}

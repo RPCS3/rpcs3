@@ -11,7 +11,7 @@ private:
 		std::string name;
 	};
 
-	Array<Location> m_locations;
+	std::vector<Location> m_locations;
 
 public:
 	u32 id;

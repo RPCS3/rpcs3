@@ -7,7 +7,7 @@ class PPCThread : public CPUThread
 {
 protected:
 	u64 m_args[4];
-	Array<u64> m_argv_addr;
+	std::vector<u64> m_argv_addr;
 
 public:
 	virtual void InitRegs()=0;

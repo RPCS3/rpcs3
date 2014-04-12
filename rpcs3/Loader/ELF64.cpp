@@ -129,7 +129,7 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 bool ELF64Loader::LoadPhdrInfo(s64 offset)
 {
-	phdr_arr.Clear();
+	phdr_arr.clear();
 
 	if(ehdr.e_phoff == 0 && ehdr.e_phnum)
 	{
@@ -141,9 +141,8 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 
 	for(u32 i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf64_Phdr* phdr = new Elf64_Phdr();
-		phdr->Load(elf64_f);
-		phdr_arr.Move(phdr);
+		phdr_arr.emplace_back();
+		phdr_arr.back().Load(elf64_f);
 	}
 
 	return true;
@@ -151,7 +150,7 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 
 bool ELF64Loader::LoadShdrInfo(s64 offset)
 {
-	shdr_arr.Clear();
+	shdr_arr.clear();
 	shdr_name_arr.clear();
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
 	{
@@ -162,30 +161,28 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf64_Shdr* shdr = new Elf64_Shdr();
-		shdr->Load(elf64_f);
-		shdr_arr.Move(shdr);
+		shdr_arr.emplace_back();
+		shdr_arr.back().Load(elf64_f);
 	}
 
-	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
+	if(ehdr.e_shstrndx >= shdr_arr.size())
 	{
 		ConLog.Warning("LoadShdr64 error: shstrndx too big!");
 		return true;
 	}
 
-	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		elf64_f.Seek((offset < 0 ? shdr_arr[ehdr.e_shstrndx].sh_offset : shdr_arr[ehdr.e_shstrndx].sh_offset - ehdr.e_shoff + offset) + shdr_arr[i].sh_name);
-		Array<char> name;
+		std::string name;
 		while(!elf64_f.Eof())
 		{
 			char c;
 			elf64_f.Read(&c, 1);
 			if(c == 0) break;
-			name.AddCpy(c);
+			name.push_back(c);
 		}
-		name.AddCpy('\0');
-		shdr_name_arr.push_back(std::string(name.GetPtr()));
+		shdr_name_arr.push_back(name);
 	}
 
 	return true;
@@ -203,7 +200,7 @@ bool ELF64Loader::LoadEhdrData(u64 offset)
 
 bool ELF64Loader::LoadPhdrData(u64 offset)
 {
-	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<phdr_arr.size(); ++i)
 	{
 		phdr_arr[i].Show();
 
@@ -411,7 +408,7 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 {
 	u64 max_addr = 0;
 
-	for(uint i=0; i<shdr_arr.GetCount(); ++i)
+	for(uint i=0; i<shdr_arr.size(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
 

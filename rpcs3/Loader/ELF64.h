@@ -164,8 +164,8 @@ class ELF64Loader : public LoaderBase
 public:
 	Elf64_Ehdr ehdr;
 	std::vector<std::string> shdr_name_arr;
-	Array<Elf64_Shdr> shdr_arr;
-	Array<Elf64_Phdr> phdr_arr;
+	std::vector<Elf64_Shdr> shdr_arr;
+	std::vector<Elf64_Phdr> phdr_arr;
 
 	ELF64Loader(vfsStream& f);
 	~ELF64Loader() {Close();}

@@ -1,7 +1,13 @@
 #pragma once
-#include "Modules.h"
 
 #define RESULT(x) SC_ARGS_1 = (x)
+
+class func_caller
+{
+public:
+	virtual void operator()() = 0;
+};
+
 
 template<bool is_in_sp, bool is_fp, bool is_ptr, typename T, int i>
 struct get_arg;

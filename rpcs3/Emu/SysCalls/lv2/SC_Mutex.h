@@ -44,7 +44,7 @@ struct Mutex
 
 		if (!m_queue.m_mutex.try_lock()) return;
 
-		for (u32 i = 0; i < m_queue.list.GetCount(); i++)
+		for (u32 i = 0; i < m_queue.list.size(); i++)
 		{
 			if (u32 owner = m_queue.list[i]) ConLog.Write("Mutex(%d) was waited by thread %d", id, owner);
 		}

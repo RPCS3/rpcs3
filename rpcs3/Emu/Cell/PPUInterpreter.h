@@ -2099,7 +2099,7 @@ private:
 			if (Ini.HLELogging.GetValue())
 			{
 				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
-					g_static_funcs_list[CPU.GPR[11]].name, CPU.GPR[3], CPU.PC);
+					g_static_funcs_list[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
 		case 0x22: UNK("HyperCall LV1"); break;

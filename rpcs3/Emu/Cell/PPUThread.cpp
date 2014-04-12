@@ -51,7 +51,7 @@ void PPUThread::AddArgv(const std::string& arg)
 {
 	m_stack_point -= arg.length() + 1;
 	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
-	m_argv_addr.AddCpy(m_stack_point);
+	m_argv_addr.push_back(m_stack_point);
 	Memory.WriteString(m_stack_point, arg);
 }
 
@@ -98,9 +98,9 @@ void PPUThread::InitRegs()
 			GPR[i] = (i+1) * 0x10000;
 	}
 	*/
-	if(m_argv_addr.GetCount())
+	if(m_argv_addr.size())
 	{
-		u64 argc = m_argv_addr.GetCount();
+		u64 argc = m_argv_addr.size();
 		m_stack_point -= 0xc + 4 * argc;
 		u64 argv = m_stack_point;
 

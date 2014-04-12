@@ -17,7 +17,7 @@ PPCThreadManager::~PPCThreadManager()
 
 void PPCThreadManager::Close()
 {
-	while(m_threads.GetCount()) RemoveThread(m_threads[0].GetId());
+	while(m_threads.size()) RemoveThread(m_threads[0]->GetId());
 }
 
 PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
@@ -36,7 +36,7 @@ PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
 	
 	new_thread->SetId(Emu.GetIdManager().GetNewID(fmt::Format("%s Thread", name), new_thread));
 
-	m_threads.Add(new_thread);
+	m_threads.push_back(new_thread);
 	wxGetApp().SendDbgCommand(DID_CREATE_THREAD, new_thread);
 
 	return *new_thread;
@@ -46,17 +46,17 @@ void PPCThreadManager::RemoveThread(const u32 id)
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	for(u32 i=0; i<m_threads.size(); ++i)
 	{
-		if(m_threads[i].m_wait_thread_id == id)
+		if(m_threads[i]->m_wait_thread_id == id)
 		{
-			m_threads[i].Wait(false);
-			m_threads[i].m_wait_thread_id = -1;
+			m_threads[i]->Wait(false);
+			m_threads[i]->m_wait_thread_id = -1;
 		}
 
-		if(m_threads[i].GetId() != id) continue;
+		if(m_threads[i]->GetId() != id) continue;
 
-		PPCThread* thr = &m_threads[i];
+		PPCThread* thr = m_threads[i];
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, thr);
 		if(thr->IsAlive())
 		{
@@ -69,7 +69,7 @@ void PPCThreadManager::RemoveThread(const u32 id)
 		}
 
 
-		m_threads.RemoveFAt(i);
+		m_threads.erase(m_threads.begin() + i);
 		i--;
 	}
 
@@ -81,10 +81,10 @@ s32 PPCThreadManager::GetThreadNumById(PPCThreadType type, u32 id)
 {
 	s32 num = 0;
 
-	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	for(u32 i=0; i<m_threads.size(); ++i)
 	{
-		if(m_threads[i].GetId() == id) return num;
-		if(m_threads[i].GetType() == type) num++;
+		if(m_threads[i]->GetId() == id) return num;
+		if(m_threads[i]->GetType() == type) num++;
 	}
 
 	return -1;
@@ -92,9 +92,9 @@ s32 PPCThreadManager::GetThreadNumById(PPCThreadType type, u32 id)
 
 PPCThread* PPCThreadManager::GetThread(u32 id)
 {
-	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	for(u32 i=0; i<m_threads.size(); ++i)
 	{
-		if(m_threads[i].GetId() == id) return &m_threads[i];
+		if(m_threads[i]->GetId() == id) return m_threads[i];
 	}
 
 	return nullptr;
@@ -102,9 +102,9 @@ PPCThread* PPCThreadManager::GetThread(u32 id)
 
 void PPCThreadManager::Exec()
 {
-	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	for(u32 i=0; i<m_threads.size(); ++i)
 	{
-		m_threads[i].Exec();
+		m_threads[i]->Exec();
 	}
 }
 #endif

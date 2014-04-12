@@ -33,7 +33,7 @@ struct EventFlag
 {
 	SMutex m_mutex;
 	u64 flags;
-	Array<EventFlagWaiter> waiters;
+	std::vector<EventFlagWaiter> waiters;
 	SMutex signal;
 	const u32 m_protocol;
 	const int m_type;
@@ -51,7 +51,7 @@ struct EventFlag
 
 		u32 target = 0;
 
-		for (u32 i = 0; i < waiters.GetCount(); i++)
+		for (u32 i = 0; i < waiters.size(); i++)
 		{
 			if (((waiters[i].mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & waiters[i].bitptn) == waiters[i].bitptn) ||
 				((waiters[i].mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & waiters[i].bitptn)))
@@ -61,7 +61,7 @@ struct EventFlag
 					target = waiters[i].tid;
 					break;
 				}
-				sq.list.AddCpy(waiters[i].tid);
+				sq.list.push_back(waiters[i].tid);
 			}
 		}
 

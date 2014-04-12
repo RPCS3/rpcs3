@@ -100,7 +100,7 @@ int sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 void SleepQueue::push(u32 tid)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	list.AddCpy(tid);
+	list.push_back(tid);
 }
 
 u32 SleepQueue::pop() // SYS_SYNC_FIFO
@@ -109,10 +109,10 @@ u32 SleepQueue::pop() // SYS_SYNC_FIFO
 		
 	while (true)
 	{
-		if (list.GetCount())
+		if (list.size())
 		{
 			u32 res = list[0];
-			list.RemoveAt(0);
+			list.erase(list.begin());
 			if (res && Emu.GetIdManager().CheckID(res))
 			// check thread
 			{
@@ -129,11 +129,11 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 
 	while (true)
 	{
-		if (list.GetCount())
+		if (list.size())
 		{
 			u32 highest_prio = ~0;
 			u32 sel = 0;
-			for (u32 i = 0; i < list.GetCount(); i++)
+			for (u32 i = 0; i < list.size(); i++)
 			{
 				CPUThread* t = Emu.GetCPU().GetThread(list[i]);
 				if (!t)
@@ -150,7 +150,7 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 				}
 			}
 			u32 res = list[sel];
-			list.RemoveAt(sel);
+			list.erase(list.begin() + sel);
 			/* if (Emu.GetIdManager().CheckID(res)) */
 			if (res)
 			// check thread
@@ -173,11 +173,11 @@ bool SleepQueue::invalidate(u32 tid)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	if (tid) for (u32 i = 0; i < list.GetCount(); i++)
+	if (tid) for (u32 i = 0; i < list.size(); i++)
 	{
 		if (list[i] == tid)
 		{
-			list.RemoveAt(i);
+			list.erase(list.begin() + i);
 			return true;
 		}
 	}
@@ -189,7 +189,7 @@ bool SleepQueue::finalize()
 {
 	if (!m_mutex.try_lock()) return false;
 
-	for (u32 i = 0; i < list.GetCount(); i++)
+	for (u32 i = 0; i < list.size(); i++)
 	{
 		if (list[i])
 		{
@@ -299,7 +299,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 {
 	switch (int res = trylock(tid))
 	{
-	case CELL_EBUSY: break;
+	case static_cast<int>(CELL_EBUSY): break;
 	default: return res;
 	}
 
