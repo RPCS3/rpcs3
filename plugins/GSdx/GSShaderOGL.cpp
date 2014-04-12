@@ -420,6 +420,7 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	// intel linux refuse to define it
 #ifdef ENABLE_GLES
 	header += "#define pGL_ES 1\n";
+	header += "precision highp float;\n";
 #else
 	header += "#define pGL_ES 0\n";
 #endif

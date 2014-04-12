@@ -183,7 +183,9 @@ namespace GLLoader {
 
 		const char* vendor = (const char*)glGetString(GL_VENDOR);
 		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), vendor);
+#ifndef ENABLE_GLES
 		fprintf(stderr, "Note: the maximal version supported by GSdx is 3.3 (even if you driver support more)!\n");
+#endif
 
 		// Name change but driver is still bad!
 		if (strstr(vendor, "ATI") || strstr(vendor, "Advanced Micro Devices"))
@@ -222,10 +224,12 @@ namespace GLLoader {
 #else
 		found_geometry_shader = false;
 #endif
+#ifndef ENABLE_GLES
 		if ( (major_gl < major) || ( major_gl == major && minor_gl < minor ) ) {
 			fprintf(stderr, "OPENGL %d.%d is not supported\n", major, minor);
 			return false;
 		}
+#endif
 
         return true;
     }
@@ -234,6 +238,7 @@ namespace GLLoader {
 		int max_ext = 0;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 
+#ifndef ENABLE_GLES
 		if (gl_GetStringi && max_ext) {
 			for (GLint i = 0; i < max_ext; i++) {
 				string ext((const char*)gl_GetStringi(GL_EXTENSIONS, i));
@@ -279,6 +284,7 @@ namespace GLLoader {
 #endif
 			}
 		}
+#endif
 
 		bool status = true;
 #ifndef ENABLE_GLES
