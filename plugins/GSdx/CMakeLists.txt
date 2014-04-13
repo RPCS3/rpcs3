@@ -11,7 +11,7 @@ set(Output GSdx-0.1.16)
 
 set(CommonFlags
     -D_LINUX
-    -fno-operator-names
+    -fno-operator-names # because Xbyak uses and()/xor()/or()/not() function
     -mpreferred-stack-boundary=2
     -mfpmath=sse
     #-Wstrict-aliasing # Allow to track strict aliasing issue.
