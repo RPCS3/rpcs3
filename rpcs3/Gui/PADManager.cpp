@@ -209,8 +209,8 @@ PADManager::PADManager(wxWindow* parent)
 	SetSizerAndFit(s_panel);
 
 	// Bind buttons
-	Bind(wxEVT_KEY_UP, &PADManager::OnKeyUp, this);
-	Bind(wxEVT_KEY_DOWN, &PADManager::OnKeyDown, this);
+	wxGetApp().Bind(wxEVT_KEY_UP, &PADManager::OnKeyUp, this);
+	wxGetApp().Bind(wxEVT_KEY_DOWN, &PADManager::OnKeyDown, this);
 	b_up_lstick   ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 	b_down_lstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 	b_left_lstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);

@@ -12,7 +12,7 @@ template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
 template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
 template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
 
-extern const wxEventTypeTag<wxCommandEvent> wxEVT_DBG_COMMAND;
+wxDECLARE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 
 enum DbgCommand
 {

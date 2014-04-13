@@ -60,43 +60,43 @@ MainFrame::MainFrame()
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
 #endif
 
-	wxMenuBar& menubar(*new wxMenuBar());
+	wxMenuBar* menubar = new wxMenuBar();
 
-	wxMenu& menu_boot(*new wxMenu());
-	menubar.Append(&menu_boot, "Boot");
-	menu_boot.Append(id_boot_game, "Boot game");
-	menu_boot.Append(id_install_pkg, "Install PKG");
-	menu_boot.AppendSeparator();
-	menu_boot.Append(id_boot_elf, "Boot (S)ELF");
+	wxMenu* menu_boot = new wxMenu();
+	menubar->Append(menu_boot, "Boot");
+	menu_boot->Append(id_boot_game, "Boot game");
+	menu_boot->Append(id_install_pkg, "Install PKG");
+	menu_boot->AppendSeparator();
+	menu_boot->Append(id_boot_elf, "Boot (S)ELF");
 
-	wxMenu& menu_sys(*new wxMenu());
-	menubar.Append(&menu_sys, "System");
-	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
-	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
-	menu_sys.AppendSeparator();
-	menu_sys.Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
-	menu_sys.Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
+	wxMenu* menu_sys = new wxMenu();
+	menubar->Append(menu_sys, "System");
+	menu_sys->Append(id_sys_pause, "Pause")->Enable(false);
+	menu_sys->Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
+	menu_sys->AppendSeparator();
+	menu_sys->Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
 
-	wxMenu& menu_conf(*new wxMenu());
-	menubar.Append(&menu_conf, "Config");
-	menu_conf.Append(id_config_emu, "Settings");
-	menu_conf.Append(id_config_pad, "PAD Settings");
-	menu_conf.AppendSeparator();
-	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
-	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
+	wxMenu* menu_conf = new wxMenu();
+	menubar->Append(menu_conf, "Config");
+	menu_conf->Append(id_config_emu, "Settings");
+	menu_conf->Append(id_config_pad, "PAD Settings");
+	menu_conf->AppendSeparator();
+	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
+	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
 
-	wxMenu& menu_tools(*new wxMenu());
-	menubar.Append(&menu_tools, "Tools");
-	menu_tools.Append(id_tools_compiler, "ELF Compiler");
-	menu_tools.Append(id_tools_memory_viewer, "Memory Viewer");
-	menu_tools.Append(id_tools_rsx_debugger, "RSX Debugger");
-	menu_tools.Append(id_tools_fnid_generator, "FunctionID Generator");
+	wxMenu* menu_tools = new wxMenu();
+	menubar->Append(menu_tools, "Tools");
+	menu_tools->Append(id_tools_compiler, "ELF Compiler");
+	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer");
+	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger");
+	menu_tools->Append(id_tools_fnid_generator, "FunctionID Generator");
 
-	wxMenu& menu_help(*new wxMenu());
-	menubar.Append(&menu_help, "Help");
-	menu_help.Append(id_help_about, "About...");
+	wxMenu* menu_help = new wxMenu();
+	menubar->Append(menu_help, "Help");
+	menu_help->Append(id_help_about, "About...");
 
-	SetMenuBar(&menubar);
+	SetMenuBar(menubar);
 
 	// Panels
 	m_game_viewer = new GameViewer(this);
@@ -108,31 +108,31 @@ MainFrame::MainFrame()
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
-	Connect( id_boot_game,           wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_install_pkg,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::InstallPkg) );
-	Connect( id_boot_elf,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
+	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
+	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
+	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
 
-	Connect( id_sys_pause,           wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
-	Connect( id_sys_stop,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
-	Connect( id_sys_send_open_menu,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
-	Connect( id_sys_send_exit,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
+	Bind(wxEVT_MENU, &MainFrame::Pause, this, id_sys_pause);
+	Bind(wxEVT_MENU, &MainFrame::Stop, this, id_sys_stop);
+	Bind(wxEVT_MENU, &MainFrame::SendOpenCloseSysMenu, this, id_sys_send_open_menu);
+	Bind(wxEVT_MENU, &MainFrame::SendExit, this, id_sys_send_exit);
 
-	Connect( id_config_emu,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
-	Connect( id_config_pad,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigPad) );
-	Connect( id_config_vfs_manager,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
-	Connect( id_config_vhdd_manager, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
+	Bind(wxEVT_MENU, &MainFrame::Config, this, id_config_emu);
+	Bind(wxEVT_MENU, &MainFrame::ConfigPad, this, id_config_pad);
+	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 
-	Connect( id_tools_compiler,      wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenELFCompiler));
-	Connect( id_tools_memory_viewer, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenMemoryViewer));
-	Connect( id_tools_rsx_debugger,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenRSXDebugger));
-	Connect(id_tools_fnid_generator, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OpenFnIdGenerator));
+	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
+	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
+	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
+	Bind(wxEVT_MENU, &MainFrame::OpenFnIdGenerator, this, id_tools_fnid_generator);
 
-	Connect( id_help_about,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::AboutDialogHandler) );
+	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
-	Connect( id_update_dbg,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
+	Bind(wxEVT_MENU, &MainFrame::UpdateUI, this, id_update_dbg);
 
-	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(MainFrame::UpdateUI), (wxObject*)0, this);
+	Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
+	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
 }
 
 MainFrame::~MainFrame()
@@ -187,7 +187,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("Ps3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 
@@ -326,35 +326,35 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	nb_config->AddPage(p_hle,      wxT("HLE / Misc."));
 	nb_config->AddPage(p_system,   wxT("System"));
 
-	wxBoxSizer* s_subpanel_system(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel_cpu(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel_graphics(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel_audio(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel_io(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel_hle(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_subpanel_system = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_cpu = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_graphics = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_audio = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_io = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_hle = new wxBoxSizer(wxVERTICAL);
 
 	// CPU/SPU settings
-	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, p_cpu, _("CPU") ) );
-	wxStaticBoxSizer* s_round_spu_decoder( new wxStaticBoxSizer( wxVERTICAL, p_cpu, _("SPU") ) );
+	wxStaticBoxSizer* s_round_cpu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_cpu, _("CPU"));
+	wxStaticBoxSizer* s_round_spu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_cpu, _("SPU"));
 
 	// Graphics
-	wxStaticBoxSizer* s_round_gs_render( new wxStaticBoxSizer( wxVERTICAL, p_graphics, _("Render") ) );
-	wxStaticBoxSizer* s_round_gs_res( new wxStaticBoxSizer( wxVERTICAL, p_graphics, _("Default resolution") ) );
-	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, p_graphics, _("Default aspect ratio") ) );
+	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
+	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default resolution"));
+	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default aspect ratio"));
 
 	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler( new wxStaticBoxSizer( wxVERTICAL, p_io, _("Pad Handler") ) );
-	wxStaticBoxSizer* s_round_io_keyboard_handler( new wxStaticBoxSizer( wxVERTICAL, p_io, _("Keyboard Handler") ) );
-	wxStaticBoxSizer* s_round_io_mouse_handler( new wxStaticBoxSizer( wxVERTICAL, p_io, _("Mouse Handler") ) );
+	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
+	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Keyboard Handler"));
+	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse Handler"));
 	
 	// Audio
-	wxStaticBoxSizer* s_round_audio_out( new wxStaticBoxSizer( wxVERTICAL, p_audio, _("Audio Out") ) );
+	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
 	// HLE / Misc.
-	wxStaticBoxSizer* s_round_hle_log_lvl( new wxStaticBoxSizer( wxVERTICAL, p_hle, _("Log lvl") ) );
+	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log lvl"));
 
 	// System
-	wxStaticBoxSizer* s_round_sys_lang( new wxStaticBoxSizer( wxVERTICAL, p_system, _("Language") ) );
+	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(p_cpu, wxID_ANY);
 	wxComboBox* cbox_spu_decoder = new wxComboBox(p_cpu, wxID_ANY);

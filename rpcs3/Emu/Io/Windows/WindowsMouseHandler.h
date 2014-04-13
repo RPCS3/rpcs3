@@ -10,14 +10,14 @@ class WindowsMouseHandler final
 public:
 	WindowsMouseHandler() : wxWindow()
 	{
-		Bind(wxEVT_LEFT_DOWN,   &WindowsMouseHandler::MouseButtonDown, this);
-		Bind(wxEVT_RIGHT_DOWN,  &WindowsMouseHandler::MouseButtonDown, this);
-		Bind(wxEVT_MIDDLE_DOWN, &WindowsMouseHandler::MouseButtonDown, this);
-		Bind(wxEVT_LEFT_UP,     &WindowsMouseHandler::MouseButtonUp, this);
-		Bind(wxEVT_RIGHT_UP,    &WindowsMouseHandler::MouseButtonUp, this);
-		Bind(wxEVT_MIDDLE_UP,   &WindowsMouseHandler::MouseButtonUp, this);
-		Bind(wxEVT_MOUSEWHEEL,  &WindowsMouseHandler::MouseScroll, this);
-		Bind(wxEVT_MOTION,      &WindowsMouseHandler::MouseMove, this);
+		wxGetApp().Bind(wxEVT_LEFT_DOWN, &WindowsMouseHandler::MouseButtonDown, this);
+		wxGetApp().Bind(wxEVT_RIGHT_DOWN,  &WindowsMouseHandler::MouseButtonDown, this);
+		wxGetApp().Bind(wxEVT_MIDDLE_DOWN, &WindowsMouseHandler::MouseButtonDown, this);
+		wxGetApp().Bind(wxEVT_LEFT_UP,     &WindowsMouseHandler::MouseButtonUp, this);
+		wxGetApp().Bind(wxEVT_RIGHT_UP,    &WindowsMouseHandler::MouseButtonUp, this);
+		wxGetApp().Bind(wxEVT_MIDDLE_UP,   &WindowsMouseHandler::MouseButtonUp, this);
+		wxGetApp().Bind(wxEVT_MOUSEWHEEL,  &WindowsMouseHandler::MouseScroll, this);
+		wxGetApp().Bind(wxEVT_MOTION,      &WindowsMouseHandler::MouseMove, this);
 	}
 
 	virtual void MouseButtonDown(wxMouseEvent& event)

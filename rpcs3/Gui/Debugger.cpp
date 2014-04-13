@@ -33,7 +33,7 @@ public:
 		Layout();
 
 		UpdateUI();
-		Bind(wxEVT_DBG_COMMAND, &DbgEmuPanel::HandleCommand, this);
+		wxGetApp().Bind(wxEVT_DBG_COMMAND, &DbgEmuPanel::HandleCommand, this);
 	}
 
 	void UpdateUI()

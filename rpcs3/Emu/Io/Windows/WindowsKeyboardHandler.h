@@ -11,8 +11,8 @@ class WindowsKeyboardHandler final
 public:
 	WindowsKeyboardHandler() : wxWindow()
 	{
-		Bind(wxEVT_KEY_DOWN, &WindowsKeyboardHandler::KeyDown, this);
-		Bind(wxEVT_KEY_UP, &WindowsKeyboardHandler::KeyUp, this);
+		wxGetApp().Bind(wxEVT_KEY_DOWN, &WindowsKeyboardHandler::KeyDown, this);
+		wxGetApp().Bind(wxEVT_KEY_UP, &WindowsKeyboardHandler::KeyUp, this);
 	}
 
 	virtual void KeyDown(wxKeyEvent& event) { Key(event.GetKeyCode(), 1); event.Skip(); }

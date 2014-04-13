@@ -10,8 +10,8 @@ class WindowsPadHandler final
 public:
 	WindowsPadHandler() : wxWindow()
 	{
-		Bind(wxEVT_KEY_DOWN, &WindowsPadHandler::KeyDown, this);
-		Bind(wxEVT_KEY_UP, &WindowsPadHandler::KeyUp, this);
+		wxGetApp().Bind(wxEVT_KEY_DOWN, &WindowsPadHandler::KeyDown, this);
+		wxGetApp().Bind(wxEVT_KEY_UP, &WindowsPadHandler::KeyUp, this);
 	}
 
 	virtual void KeyDown(wxKeyEvent& event) { Key(event.GetKeyCode(), 1); event.Skip(); }

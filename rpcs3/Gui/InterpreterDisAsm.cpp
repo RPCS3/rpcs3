@@ -89,7 +89,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 
 	Bind(wxEVT_SIZE, &InterpreterDisAsmFrame::OnResize, this);
 	Bind(wxEVT_KEY_DOWN, &InterpreterDisAsmFrame::OnKeyDown, this);
-	Bind(wxEVT_DBG_COMMAND, &InterpreterDisAsmFrame::HandleCommand, this);
+	wxGetApp().Bind(wxEVT_DBG_COMMAND, &InterpreterDisAsmFrame::HandleCommand, this);
 
 	ShowAddr(CentrePc(PC));
 	UpdateUnitList();
