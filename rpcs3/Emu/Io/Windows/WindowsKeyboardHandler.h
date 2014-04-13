@@ -8,13 +8,11 @@ class WindowsKeyboardHandler final
 	: public wxWindow
 	, public KeyboardHandlerBase
 {
-	AppConnector m_app_connector;
-
 public:
 	WindowsKeyboardHandler() : wxWindow()
 	{
-		m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(WindowsKeyboardHandler::KeyDown), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsKeyboardHandler::KeyUp), (wxObject*)0, this);
+		Bind(wxEVT_KEY_DOWN, &WindowsKeyboardHandler::KeyDown, this);
+		Bind(wxEVT_KEY_UP, &WindowsKeyboardHandler::KeyUp, this);
 	}
 
 	virtual void KeyDown(wxKeyEvent& event) { Key(event.GetKeyCode(), 1); event.Skip(); }

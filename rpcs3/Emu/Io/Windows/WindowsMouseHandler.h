@@ -7,19 +7,17 @@ class WindowsMouseHandler final
 	: public wxWindow
 	, public MouseHandlerBase
 {
-	AppConnector m_app_connector;
-
 public:
 	WindowsMouseHandler() : wxWindow()
 	{
-		m_app_connector.Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(WindowsMouseHandler::MouseButtonDown), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(WindowsMouseHandler::MouseButtonDown), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(WindowsMouseHandler::MouseButtonDown), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_LEFT_UP, wxMouseEventHandler(WindowsMouseHandler::MouseButtonUp), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(WindowsMouseHandler::MouseButtonUp), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_MIDDLE_UP, wxMouseEventHandler(WindowsMouseHandler::MouseButtonUp), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(WindowsMouseHandler::MouseScroll), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_MOTION, wxMouseEventHandler(WindowsMouseHandler::MouseMove), (wxObject*)0, this);
+		Bind(wxEVT_LEFT_DOWN,   &WindowsMouseHandler::MouseButtonDown, this);
+		Bind(wxEVT_RIGHT_DOWN,  &WindowsMouseHandler::MouseButtonDown, this);
+		Bind(wxEVT_MIDDLE_DOWN, &WindowsMouseHandler::MouseButtonDown, this);
+		Bind(wxEVT_LEFT_UP,     &WindowsMouseHandler::MouseButtonUp, this);
+		Bind(wxEVT_RIGHT_UP,    &WindowsMouseHandler::MouseButtonUp, this);
+		Bind(wxEVT_MIDDLE_UP,   &WindowsMouseHandler::MouseButtonUp, this);
+		Bind(wxEVT_MOUSEWHEEL,  &WindowsMouseHandler::MouseScroll, this);
+		Bind(wxEVT_MOTION,      &WindowsMouseHandler::MouseMove, this);
 	}
 
 	virtual void MouseButtonDown(wxMouseEvent& event)

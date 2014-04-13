@@ -38,7 +38,7 @@ public:
 	void OnDropFiles(wxDropFilesEvent& event);
 	void OpenDir(int sel);
 	void DClick(wxListEvent& event);
-	void OnContextMenu(wxCommandEvent& event);
+	void OnContextMenu(wxMouseEvent& event);
 	void OnOpen(wxCommandEvent& event);
 	void OnRename(wxCommandEvent& event);
 	void OnRemove(wxCommandEvent& event);
@@ -77,7 +77,7 @@ public:
 	void Open(int sel);
 	void DClick(wxListEvent& event);
 	void AddHDD(wxCommandEvent& event);
-	void OnContextMenu(wxCommandEvent& event);
+	void OnContextMenu(wxMouseEvent& event);
 	void OnOpen(wxCommandEvent& event);
 	void OnRemove(wxCommandEvent& event);
 	void OnCreateHDD(wxCommandEvent& event);

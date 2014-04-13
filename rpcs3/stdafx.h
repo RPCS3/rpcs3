@@ -279,7 +279,6 @@ enum Status
 #include "Utilities/IdManager.h"
 #include "Utilities/StrFmt.h"
 
-#include "AppConnector.h"
 
 #include "Emu/SysCalls/Callback.h"
 #include "Ini.h"

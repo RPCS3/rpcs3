@@ -70,8 +70,8 @@ endforeach()
 file(
 GLOB_RECURSE
 RPCS3_SRC
+<<<<<<< HEAD
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
-"${RPCS3_SRC_DIR}/AppConnector.cpp"
 "${RPCS3_SRC_DIR}/Ini.cpp"
 "${RPCS3_SRC_DIR}/Emu/*"
 "${RPCS3_SRC_DIR}/Gui/*"

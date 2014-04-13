@@ -6,7 +6,7 @@
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
 
-#if	CMD_DEBUG
+#if CMD_DEBUG
 	#define CMD_LOG ConLog.Write
 #else
 	#define CMD_LOG(...)
@@ -43,7 +43,7 @@ GLGSFrame::GLGSFrame()
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
 	canvas->SetSize(GetClientSize());
 
-	canvas->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick), (wxObject*)0, this);
+	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
 void GLGSFrame::Flip(wxGLContext *context)

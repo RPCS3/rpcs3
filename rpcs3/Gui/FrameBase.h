@@ -23,9 +23,9 @@ protected:
 		m_ini.Init(ininame.empty() ? fmt::ToUTF8(framename) : ininame, "GuiSettings");
 		LoadInfo();
 
-		Connect(GetId(), wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FrameBase::OnClose));
-		Connect(GetId(), wxEVT_MOVE, wxMoveEventHandler(FrameBase::OnMove));
-		Connect(wxEVT_SIZE, wxSizeEventHandler(FrameBase::OnResize));
+		Bind(wxEVT_CLOSE_WINDOW, &FrameBase::OnClose, this);
+		Bind(wxEVT_MOVE, &FrameBase::OnMove, this);
+		Bind(wxEVT_SIZE, &FrameBase::OnSize, this);
 	}
 
 	~FrameBase()

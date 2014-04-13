@@ -3,9 +3,9 @@
 
 struct NullGSFrame : public GSFrame
 {
-	NullGSFrame() : GSFrame(NULL, "GSFrame[Null]")
+	NullGSFrame() : GSFrame(nullptr, "GSFrame[Null]")
 	{
-		Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick));
+		Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 	}
 
 	void Draw()

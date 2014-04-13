@@ -10,59 +10,56 @@
 #include "Emu/Cell/SPUDisAsm.h"
 
 DisAsmFrame::DisAsmFrame(PPCThread& cpu)
-	: wxFrame(NULL, wxID_ANY, "DisAsm")
+	: wxFrame(nullptr, wxID_ANY, "DisAsm")
 	, CPU(cpu)
 {
 	exit = false;
 	count = 0;
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
-	wxBoxSizer& s_b_panel( *new wxBoxSizer(wxHORIZONTAL) );
+	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_b_panel =  new wxBoxSizer(wxHORIZONTAL);
 
 	m_disasm_list = new wxListView(this);
+	m_disasm_list->Bind(wxEVT_MOUSEWHEEL, &DisAsmFrame::MouseWheel, this);
 
-	wxButton& b_fprev   = *new wxButton(this, wxID_ANY, L"<<");
-	wxButton& b_prev    = *new wxButton(this, wxID_ANY, L"<");
-	wxButton& b_next    = *new wxButton(this, wxID_ANY, L">");
-	wxButton& b_fnext   = *new wxButton(this, wxID_ANY, L">>");
+	wxButton* b_fprev = new wxButton(this, wxID_ANY, L"<<");
+	wxButton* b_prev  = new wxButton(this, wxID_ANY, L"<");
+	wxButton* b_next  = new wxButton(this, wxID_ANY, L">");
+	wxButton* b_fnext = new wxButton(this, wxID_ANY, L">>");
+	b_fprev->Bind(wxEVT_BUTTON, &DisAsmFrame::fPrev, this);
+	b_prev->Bind(wxEVT_BUTTON, &DisAsmFrame::Prev, this);
+	b_next->Bind(wxEVT_BUTTON, &DisAsmFrame::Next, this);
+	b_fnext->Bind(wxEVT_BUTTON, &DisAsmFrame::fNext, this);
 
-	wxButton& b_dump    = *new wxButton(this, wxID_ANY, L"Dump code");
+	wxButton* b_dump  = new wxButton(this, wxID_ANY, L"Dump code");
+	b_dump->Bind(wxEVT_BUTTON, &DisAsmFrame::Dump, this);
 
-	wxButton& b_setpc   = *new wxButton(this, wxID_ANY, L"Set PC");
+	wxButton* b_setpc = new wxButton(this, wxID_ANY, L"Set PC");
+	b_setpc->Bind(wxEVT_BUTTON, &DisAsmFrame::SetPc, this);
 
-	s_b_panel.Add(&b_fprev);
-	s_b_panel.Add(&b_prev);
-	s_b_panel.AddSpacer(5);
-	s_b_panel.Add(&b_next);
-	s_b_panel.Add(&b_fnext);
-	s_b_panel.AddSpacer(8);
-	s_b_panel.Add(&b_dump);
+	s_b_panel->Add(b_fprev);
+	s_b_panel->Add(b_prev);
+	s_b_panel->AddSpacer(5);
+	s_b_panel->Add(b_next);
+	s_b_panel->Add(b_fnext);
+	s_b_panel->AddSpacer(8);
+	s_b_panel->Add(b_dump);
 
-	s_panel.Add(&s_b_panel);
-	s_panel.Add(&b_setpc);
-	s_panel.Add(m_disasm_list);
+	s_panel->Add(s_b_panel);
+	s_panel->Add(b_setpc);
+	s_panel->Add(m_disasm_list);
 
 	m_disasm_list->InsertColumn(0, "PC");
 	m_disasm_list->InsertColumn(1, "ASM");
 
-	m_disasm_list->SetColumnWidth( 0, 50 );
+	m_disasm_list->SetColumnWidth(0, 50);
 
-	for(uint i=0; i<LINES_OPCODES; ++i) m_disasm_list->InsertItem(i, -1);
+	for(uint i=0; i<LINES_OPCODES; ++i)
+		m_disasm_list->InsertItem(i, -1);
 
-	SetSizerAndFit( &s_panel );
-
+	SetSizerAndFit(s_panel);
 	SetSize(50, 660);
 
-	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
-
-	m_app_connector.Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
-
-	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
-	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
-	Connect(b_fprev.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fPrev));
-	Connect(b_fnext.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fNext));
-	Connect(b_setpc.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::SetPc));
-
-	Connect(b_dump.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Dump));
+	Bind(wxEVT_SIZE, &DisAsmFrame::OnResize, this);
 }
 
 void DisAsmFrame::OnResize(wxSizeEvent& event)

@@ -176,9 +176,9 @@ LogFrame::LogFrame(wxWindow* parent)
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
-	wxBoxSizer& s_main = *new wxBoxSizer(wxVERTICAL);
-	s_main.Add(&m_log, 1, wxEXPAND);
-	SetSizer(&s_main);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(&m_log, 1, wxEXPAND);
+	SetSizer(s_main);
 	Layout();
 	
 	Show();

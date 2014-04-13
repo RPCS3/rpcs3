@@ -79,7 +79,6 @@ struct PadButtons
 class PADManager : public wxDialog, PadButtons
 {
 private:
-	AppConnector m_app_connector;
 	u32 m_seconds;
 	u32 m_button_id;
 	bool m_key_pressed, m_emu_paused;

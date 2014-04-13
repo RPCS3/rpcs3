@@ -22,39 +22,39 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	, exit(false)
 {
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
-	wxBoxSizer& s_panel = *new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
 
 	//Tools
-	wxBoxSizer& s_tools = *new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_tools = new wxBoxSizer(wxVERTICAL);
 
 	// Controls
-	wxStaticBoxSizer& s_controls = *new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
+	wxStaticBoxSizer* s_controls = new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
 
 	// Controls: Address
-	wxStaticBoxSizer& s_controls_addr = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");
+	wxStaticBoxSizer* s_controls_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");
 	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60,-1));
 	t_addr->SetMaxLength(8);
-	s_controls_addr.Add(t_addr);
+	s_controls_addr->Add(t_addr);
 
 	// Controls: Go to
-	wxStaticBoxSizer& s_controls_goto = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Go to:");
+	wxStaticBoxSizer* s_controls_goto = new wxStaticBoxSizer(wxHORIZONTAL, this, "Go to:");
 	wxButton* b_goto_get = new wxButton(this, wxID_ANY, "Get", wxDefaultPosition, wxSize(40,-1));
 	wxButton* b_goto_put = new wxButton(this, wxID_ANY, "Put", wxDefaultPosition, wxSize(40,-1));
-	s_controls_goto.Add(b_goto_get);
-	s_controls_goto.Add(b_goto_put);
+	s_controls_goto->Add(b_goto_get);
+	s_controls_goto->Add(b_goto_put);
 
 	// Controls: Breaks
-	wxStaticBoxSizer& s_controls_breaks = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Break on:");
+	wxStaticBoxSizer* s_controls_breaks = new wxStaticBoxSizer(wxHORIZONTAL, this, "Break on:");
 	wxButton* b_break_frame = new wxButton(this, wxID_ANY, "Frame",     wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_text  = new wxButton(this, wxID_ANY, "Texture",   wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_draw  = new wxButton(this, wxID_ANY, "Draw",      wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_prim  = new wxButton(this, wxID_ANY, "Primitive", wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_inst  = new wxButton(this, wxID_ANY, "Command",   wxDefaultPosition, wxSize(60,-1));
-	s_controls_breaks.Add(b_break_frame);
-	s_controls_breaks.Add(b_break_text);
-	s_controls_breaks.Add(b_break_draw);
-	s_controls_breaks.Add(b_break_prim);
-	s_controls_breaks.Add(b_break_inst);
+	s_controls_breaks->Add(b_break_frame);
+	s_controls_breaks->Add(b_break_text);
+	s_controls_breaks->Add(b_break_draw);
+	s_controls_breaks->Add(b_break_prim);
+	s_controls_breaks->Add(b_break_inst);
 
 	// TODO: This feature is not yet implemented
 	b_break_frame->Disable();
@@ -63,9 +63,9 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	b_break_prim->Disable();
 	b_break_inst->Disable();
 	
-	s_controls.Add(&s_controls_addr);
-	s_controls.Add(&s_controls_goto);
-	s_controls.Add(&s_controls_breaks);
+	s_controls->Add(s_controls_addr);
+	s_controls->Add(s_controls_goto);
+	s_controls->Add(s_controls_breaks);
 
 	//Tabs
 	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(482,475));
@@ -134,22 +134,22 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	}
 
 	//Tools: Tools = Controls + Notebook Tabs
-	s_tools.AddSpacer(10);
-	s_tools.Add(&s_controls);
-	s_tools.AddSpacer(10);
-	s_tools.Add(nb_rsx);
-	s_tools.AddSpacer(10);
+	s_tools->AddSpacer(10);
+	s_tools->Add(s_controls);
+	s_tools->AddSpacer(10);
+	s_tools->Add(nb_rsx);
+	s_tools->AddSpacer(10);
 
 	//Buffers
-	wxBoxSizer& s_buffers1 = *new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer& s_buffers2 = *new wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer& s_buffers_colorA  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
-	wxStaticBoxSizer& s_buffers_colorB  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
-	wxStaticBoxSizer& s_buffers_colorC  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
-	wxStaticBoxSizer& s_buffers_colorD  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
-	wxStaticBoxSizer& s_buffers_depth   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Depth Buffer");
-	wxStaticBoxSizer& s_buffers_stencil = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Stencil Buffer");
-	wxStaticBoxSizer& s_buffers_text    = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
+	wxBoxSizer* s_buffers1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_buffers2 = new wxBoxSizer(wxVERTICAL);
+	wxStaticBoxSizer* s_buffers_colorA  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
+	wxStaticBoxSizer* s_buffers_colorB  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
+	wxStaticBoxSizer* s_buffers_colorC  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
+	wxStaticBoxSizer* s_buffers_colorD  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
+	wxStaticBoxSizer* s_buffers_depth   = new wxStaticBoxSizer(wxHORIZONTAL, this, "Depth Buffer");
+	wxStaticBoxSizer* s_buffers_stencil = new wxStaticBoxSizer(wxHORIZONTAL, this, "Stencil Buffer");
+	wxStaticBoxSizer* s_buffers_text    = new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
 
 	//Buffers and textures
 	CellVideoOutResolution res  = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
@@ -166,62 +166,62 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	p_buffer_depth   = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_panel_width, m_panel_height));
 	p_buffer_stencil = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_panel_width, m_panel_height));
 	p_buffer_tex     = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_text_width, m_text_height));
-	s_buffers_colorA.Add(p_buffer_colorA); 
-	s_buffers_colorB.Add(p_buffer_colorB); 
-	s_buffers_colorC.Add(p_buffer_colorC); 
-	s_buffers_colorD.Add(p_buffer_colorD); 
-	s_buffers_depth.Add(p_buffer_depth);
-	s_buffers_stencil.Add(p_buffer_stencil);
-	s_buffers_text.Add(p_buffer_tex);
+	s_buffers_colorA->Add(p_buffer_colorA); 
+	s_buffers_colorB->Add(p_buffer_colorB); 
+	s_buffers_colorC->Add(p_buffer_colorC); 
+	s_buffers_colorD->Add(p_buffer_colorD); 
+	s_buffers_depth->Add(p_buffer_depth);
+	s_buffers_stencil->Add(p_buffer_stencil);
+	s_buffers_text->Add(p_buffer_tex);
 	
 	//Merge and display everything
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_colorA);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_colorC);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_depth);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_text);
-	s_buffers1.AddSpacer(10);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_colorA);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_colorC);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_depth);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_text);
+	s_buffers1->AddSpacer(10);
 
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_colorB);
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_colorD);
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_stencil);
-	s_buffers2.AddSpacer(10);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_colorB);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_colorD);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_stencil);
+	s_buffers2->AddSpacer(10);
 
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_tools);
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_buffers1);
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_buffers2);
-	s_panel.AddSpacer(10);
-	SetSizerAndFit(&s_panel);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_tools);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_buffers1);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_buffers2);
+	s_panel->AddSpacer(10);
+	SetSizerAndFit(s_panel);
 
 	//Events
-	m_app_connector.Connect(wxID_ANY, wxEVT_KEY_DOWN, wxKeyEventHandler(RSXDebugger::OnKeyDown), nullptr, this);
-	Connect(t_addr->GetId(),   wxEVT_COMMAND_TEXT_ENTER,       wxCommandEventHandler(RSXDebugger::OnChangeToolsAddr));
+	Bind(wxEVT_KEY_DOWN, &RSXDebugger::OnKeyDown, this);
+	t_addr->Bind(wxEVT_TEXT_ENTER, &RSXDebugger::OnChangeToolsAddr, this);
 
-	Connect(b_goto_get->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToGet));
-	Connect(b_goto_put->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToPut));
+	b_goto_get->Bind(wxEVT_BUTTON, &RSXDebugger::GoToGet, this);
+	b_goto_put->Bind(wxEVT_BUTTON, &RSXDebugger::GoToPut, this);
 
-	p_buffer_colorA->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorB->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorC->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorD->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	//Connect(p_buffer_depth->GetId(),   wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
-	//Connect(p_buffer_stencil->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
-	p_buffer_tex->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
+	p_buffer_colorA->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorB->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorC->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorD->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	//p_buffer_depth->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
+	//p_buffer_stencil->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_tex->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 
-	m_list_commands->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(RSXDebugger::OnScrollMemory), nullptr, this);
-	m_list_flags->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetFlags), nullptr, this);
-	m_list_programs->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetPrograms), nullptr, this);
+	m_list_commands->Bind(wxEVT_MOUSEWHEEL, &RSXDebugger::OnScrollMemory, this);
+	m_list_flags->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::SetFlags, this);
+	m_list_programs->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::SetPrograms, this);
 
-	m_list_texture->Connect(wxID_ANY, wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::OnSelectTexture), nullptr, this);
+	m_list_texture->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::OnSelectTexture, this);
 	
 	//Fill the frame
 	UpdateInformation();
