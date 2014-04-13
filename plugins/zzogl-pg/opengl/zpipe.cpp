@@ -3,6 +3,8 @@
  * zpipe.c: example of proper use of zlib's inflate() and deflate()
  * Not copyrighted -- provided to the public domain
  * Version 1.4  11 December 2005  Mark Adler 
+ *
+ * This file is in the public domain
  */
 
 #include <iostream>

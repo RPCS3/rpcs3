@@ -18,6 +18,7 @@
  * DISCLAIMED. This includes but is not limited to warranties of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
+ * This file is in the public domain
  */
 
 #ifndef __NTDDSCSI_H
