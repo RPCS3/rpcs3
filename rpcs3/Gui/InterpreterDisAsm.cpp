@@ -455,7 +455,7 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 	if(diag->ShowModal() == wxID_OK)
 	{
 		u64 pc = CPU ? CPU->PC : 0x0;
-		sscanf(p_pc->GetValue(), "%llx", &pc);
+		sscanf(p_pc->GetValue().c_str(), "%llx", &pc);
 		Emu.GetMarkedPoints().push_back(pc);
 		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
 		ShowAddr(CentrePc(pc));
