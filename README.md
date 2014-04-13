@@ -26,4 +26,4 @@ __Linux__
 To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
 * __Windows__: Install *Visual Studio 2013*. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux__:
-`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run `./bin/rpcs3`
+`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
