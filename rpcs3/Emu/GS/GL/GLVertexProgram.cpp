@@ -437,7 +437,10 @@ void GLVertexDecompilerThread::Task()
 	m_shader = BuildCode();
 
 	m_body.clear();
-	m_funcs = std::vector<FuncInfo *>(m_funcs.begin(),m_funcs.begin()+3);
+	if (m_funcs.size() >= 3)
+	{
+		m_funcs = std::vector<FuncInfo *>(m_funcs.begin(), m_funcs.begin() + 3);
+	}
 }
 
 GLVertexProgram::GLVertexProgram()
