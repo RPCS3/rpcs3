@@ -1201,7 +1201,7 @@ void GLGSRender::Flip()
 
 	for(uint i=0; i<m_post_draw_objs.size(); ++i)
 	{
-		m_post_draw_objs[i]->Draw();
+		m_post_draw_objs[i].Draw();
 	}
 
 	m_frame->Flip(m_context);

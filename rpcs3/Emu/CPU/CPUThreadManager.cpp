@@ -46,6 +46,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	return *new_thread;
 }
 
+//TODO: find out where the thread is actually deleted because it's sure as shit not here
 void CPUThreadManager::RemoveThread(const u32 id)
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);

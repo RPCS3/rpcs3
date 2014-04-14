@@ -76,7 +76,7 @@ class Emulator
 	u32 m_ppu_thr_exit;
 	MemoryViewerPanel* m_memory_viewer;
 	//ArrayF<CPUThread> m_cpu_threads;
-	std::vector<ModuleInitializer *> m_modules_init;
+	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
@@ -123,9 +123,9 @@ public:
 	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	
-	void AddModuleInit(ModuleInitializer* m)
+	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
 	{
-		m_modules_init.push_back(m);
+		m_modules_init.push_back(std::move(m));
 	}
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
