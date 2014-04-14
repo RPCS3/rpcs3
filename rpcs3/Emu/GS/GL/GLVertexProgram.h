@@ -135,7 +135,7 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 	std::vector<std::string> m_body;
 
-	std::vector<FuncInfo *> m_funcs;
+	std::vector<FuncInfo> m_funcs;
 
 	//wxString main;
 	std::string& m_shader;
@@ -148,12 +148,12 @@ struct GLVertexDecompilerThread : public ThreadBase
 		, m_shader(shader)
 		, m_parr(parr)
 	{
-		m_funcs.push_back(new FuncInfo());
-		m_funcs[0]->offset = 0;
-		m_funcs[0]->name = "main";
-		m_funcs.push_back(new FuncInfo());
-		m_funcs[1]->offset = 0;
-		m_funcs[1]->name = "func0";
+		m_funcs.emplace_back();
+		m_funcs[0].offset = 0;
+		m_funcs[0].name = "main";
+		m_funcs.emplace_back();
+		m_funcs[1].offset = 0;
+		m_funcs[1].name = "func0";
 		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 	}
 

@@ -28,31 +28,31 @@ struct Column
 
 struct ColumnsArr
 {
-	std::vector<Column *> m_columns;
+	std::vector<Column> m_columns;
 
 	ColumnsArr()
 	{
 		Init();
 	}
 
-	std::vector<Column*>* GetSortedColumnsByPos()
+	std::vector<Column*> GetSortedColumnsByPos()
 	{
-		static std::vector<Column*> arr; arr.clear();
+		std::vector<Column*> arr;
 		for(u32 pos=0; pos<m_columns.size(); pos++)
 		{
 			for(u32 c=0; c<m_columns.size(); ++c)
 			{
-				if(m_columns[c]->pos != pos) continue;
-				arr.push_back(m_columns[c]);
+				if(m_columns[c].pos != pos) continue;
+				arr.push_back(&m_columns[c]);
 			}
 		}
 
-		return &arr;
+		return arr;
 	}
 
 	Column* GetColumnByPos(u32 pos)
 	{
-		std::vector<Column *>& columns = *GetSortedColumnsByPos();
+		std::vector<Column *> columns = GetSortedColumnsByPos();
 		for(u32 c=0; c<columns.size(); ++c)
 		{
 			if(!columns[c]->shown)
@@ -78,15 +78,18 @@ public:
 	void Init()
 	{
 		m_columns.clear();
-
-		#define ADD_COLUMN(x, w, n) x = new Column(m_columns.size(), w, n);	m_columns.push_back(x);
-			ADD_COLUMN(m_col_name, 160, "Name");
-			ADD_COLUMN(m_col_serial, 85, "Serial");
-			ADD_COLUMN(m_col_fw, 55, "FW");
-			ADD_COLUMN(m_col_app_ver, 55, "App version");
-			ADD_COLUMN(m_col_category, 55, "Category");
-			ADD_COLUMN(m_col_path, 160, "Path");
-		#undef ADD_COLUMN
+		m_columns.emplace_back(m_columns.size(), 160, "Name");
+		m_columns.emplace_back(m_columns.size(),  85, "Serial");
+		m_columns.emplace_back(m_columns.size(),  55, "FW");
+		m_columns.emplace_back(m_columns.size(),  55, "App version");
+		m_columns.emplace_back(m_columns.size(),  55, "Category");
+		m_columns.emplace_back(m_columns.size(), 160, "Path");
+		m_col_name     = &m_columns[0];
+		m_col_serial   = &m_columns[1];
+		m_col_fw       = &m_columns[2];
+		m_col_app_ver  = &m_columns[3];
+		m_col_category = &m_columns[4];
+		m_col_path     = &m_columns[5];
 	}
 
 	void Update(std::vector<GameInfo>& game_data)
@@ -114,7 +117,7 @@ public:
 	void Show(wxListView* list)
 	{
 		list->DeleteAllColumns();
-		std::vector<Column *>& c_col = *GetSortedColumnsByPos();
+		std::vector<Column *> c_col = GetSortedColumnsByPos();
 		for(u32 i=0, c=0; i<c_col.size(); ++i)
 		{
 			if(!c_col[i]->shown) continue;
@@ -158,19 +161,19 @@ public:
 	#define ADD_COLUMN(v, dv, t, n, isshown) \
 		{ \
 			IniEntry<t> ini; \
-			ini.Init(m_columns[i]->name + "_" + n, path); \
-			if(isLoad) m_columns[i]->v = ini.LoadValue(dv); \
-			else if(isshown ? m_columns[i]->shown : 1) \
+			ini.Init(m_columns[i].name + "_" + n, path); \
+			if(isLoad) m_columns[i].v = ini.LoadValue(dv); \
+			else if(isshown ? m_columns[i].shown : 1) \
 			{ \
-				ini.SetValue(m_columns[i]->v); \
+				ini.SetValue(m_columns[i].v); \
 				ini.Save(); \
 			} \
 		}
 
 		for(u32 i=0; i<m_columns.size(); ++i)
 		{
-			ADD_COLUMN(pos, m_columns[i]->def_pos, int, "position", 1);
-			ADD_COLUMN(width, m_columns[i]->def_width, int, "width", 1);
+			ADD_COLUMN(pos, m_columns[i].def_pos, int, "position", 1);
+			ADD_COLUMN(width, m_columns[i].def_width, int, "width", 1);
 			ADD_COLUMN(shown, true, bool, "shown", 0);
 		}
 
@@ -181,7 +184,7 @@ public:
 			{
 				for(u32 c2=c1+1; c2<m_columns.size(); ++c2)
 				{
-					if(m_columns[c1]->pos == m_columns[c2]->pos)
+					if(m_columns[c1].pos == m_columns[c2].pos)
 					{
 						ConLog.Error("Columns loaded with error!");
 						Init();
@@ -195,7 +198,7 @@ public:
 				bool ishas = false;
 				for(u32 c=0; c<m_columns.size(); ++c)
 				{
-					if(m_columns[c]->pos != p) continue;
+					if(m_columns[c].pos != p) continue;
 					ishas = true;
 					break;
 				}

@@ -250,14 +250,14 @@ std::string GLVertexDecompilerThread::GetFunc()
 
 	for(uint i=0; i<m_funcs.size(); ++i)
 	{
-		if(m_funcs[i]->name.compare(name) == 0)
+		if(m_funcs[i].name.compare(name) == 0)
 			return name + "()";
 	}
 
-	m_funcs.push_back(new FuncInfo());
-	uint idx = m_funcs.size()-1;
-	m_funcs[idx]->offset = offset;
-	m_funcs[idx]->name = name;
+	m_funcs.emplace_back();
+	FuncInfo &idx = m_funcs.back();
+	idx.offset = offset;
+	idx.name = name;
 
 	return name + "()";
 }
@@ -283,7 +283,7 @@ std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 			uint call_func = -1;
 			for(uint j=0; j<m_funcs.size(); ++j)
 			{
-				if(m_funcs[j]->offset == i)
+				if(m_funcs[j].offset == i)
 				{
 					call_func = j;
 					break;
@@ -292,7 +292,7 @@ std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 
 			if(call_func != -1)
 			{
-				result += '\t' + m_funcs[call_func]->name + "();\n";
+				result += '\t' + m_funcs[call_func].name + "();\n";
 				break;
 			}
 		}
@@ -316,17 +316,17 @@ std::string GLVertexDecompilerThread::BuildCode()
 
 	for(int i=m_funcs.size() - 1; i>0; --i)
 	{
-		fp += fmt::Format("void %s();\n", m_funcs[i]->name.c_str());
+		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
 	}
 
 	std::string f;
 
 	f += fmt::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n\t%s();\n\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
-		m_funcs[0]->name.c_str(), m_funcs[1]->name.c_str());
+		m_funcs[0].name.c_str(), m_funcs[1].name.c_str());
 
 	for(uint i=1; i<m_funcs.size(); ++i)
 	{
-		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i]->name.c_str(), BuildFuncBody(*m_funcs[i]).c_str());
+		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
 
 	static const std::string& prot =
@@ -437,9 +437,9 @@ void GLVertexDecompilerThread::Task()
 	m_shader = BuildCode();
 
 	m_body.clear();
-	if (m_funcs.size() >= 3)
+	if (m_funcs.size() > 2)
 	{
-		m_funcs = std::vector<FuncInfo *>(m_funcs.begin(), m_funcs.begin() + 3);
+		m_funcs.erase(m_funcs.begin()+2, m_funcs.end());
 	}
 }
 

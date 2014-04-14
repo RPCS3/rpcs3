@@ -17,7 +17,7 @@ static const u16 bpdb_version = 0x1000;
 
 ModuleInitializer::ModuleInitializer()
 {
-	Emu.AddModuleInit(this);
+	Emu.AddModuleInit(std::move(std::unique_ptr<ModuleInitializer>(this)));
 }
 
 Emulator::Emulator()
