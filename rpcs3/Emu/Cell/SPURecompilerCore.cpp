@@ -56,8 +56,12 @@ void SPURecompilerCore::Compile(u16 pos)
 	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
 	compiler.setArg(3, pos_var);
 	compiler.alloc(pos_var);
-
 	m_enc->pos_var = &pos_var;
+
+	for (u32 i = 0; i < 16; i++)
+	{
+		m_enc->xmm_var[i].data = new XmmVar(compiler);
+	}
 
 	compiler.xor_(pos_var, pos_var);
 
@@ -92,6 +96,15 @@ void SPURecompilerCore::Compile(u16 pos)
 		if (fin) break;
 		CPU.PC += 4;
 		pos++;
+	}
+
+	m_enc->XmmRelease();
+
+	for (u32 i = 0; i < 16; i++)
+	{
+		assert(!m_enc->xmm_var[i].taken);
+		delete m_enc->xmm_var[i].data;
+		m_enc->xmm_var[i].data = nullptr;
 	}
 
 	const u64 stamp1 = get_system_time();
