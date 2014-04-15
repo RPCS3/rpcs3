@@ -228,11 +228,11 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 			switch (mutex->lock(tid, 0))
 			{
 			case CELL_OK: break;
-			case CELL_EDEADLK: sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex was locked",
+			case static_cast<int>(CELL_EDEADLK): sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex was locked",
 								   (u32)lwcond->lwcond_queue); return CELL_OK;
-			case CELL_ESRCH: sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex not found (%d)",
+			case static_cast<int>(CELL_ESRCH): sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex not found (%d)",
 								 (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue); return CELL_ESRCH;
-			case CELL_EINVAL: goto abort;
+			case static_cast<int>(CELL_EINVAL): goto abort;
 			}
 
 			mutex->recursive_count = 1;

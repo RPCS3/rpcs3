@@ -41,7 +41,9 @@ struct VFSManagerEntry
 
 struct VFS
 {
-	ArrayF<vfsDevice> m_devices;
+	//TODO: find out where these are supposed to be deleted or just make it shared_ptr
+	//and also make GetDevice and GetDeviceLocal return shared_ptr then.
+	std::vector<vfsDevice *> m_devices;
 	void Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device);
 	void UnMount(const std::string& ps3_path);
 	void UnMountAll();

@@ -136,11 +136,11 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
 
 		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
-		const size_t data_size = m_vertex_data[i].data.GetCount() - data_offset * item_size;
-		const u32 pos = m_vdata.GetCount();
+		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
+		const u32 pos = m_vdata.size();
 
 		cur_offset += data_size;
-		m_vdata.InsertRoomEnd(data_size);
+		m_vdata.resize(m_vdata.size() + data_size);
 		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
 	}
 
@@ -150,12 +150,12 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 	m_vbo.Create(indexed_draw ? 2 : 1);
 	m_vbo.Bind(0);
-	m_vbo.SetData(&m_vdata[0], m_vdata.GetCount());
+	m_vbo.SetData(&m_vdata[0], m_vdata.size());
 
 	if(indexed_draw)
 	{
 		m_vbo.Bind(GL_ELEMENT_ARRAY_BUFFER, 1);
-		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, &m_indexed_array.m_data[0], m_indexed_array.m_data.GetCount());
+		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, &m_indexed_array.m_data[0], m_indexed_array.m_data.size());
 	}
 
 	checkForGlError("initializing vbo");
@@ -173,7 +173,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		switch(m_vertex_data[i].type)
 		{
 		case 1:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
@@ -181,7 +181,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		case 2:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=4)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=4)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
@@ -189,7 +189,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		case 3:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
@@ -197,7 +197,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		case 4:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
@@ -205,7 +205,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		case 5:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
@@ -213,7 +213,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		case 7:
-			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
+			for(u32 j = 0; j<m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
@@ -299,7 +299,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 void GLGSRender::DisableVertexData()
 {
-	m_vdata.Clear();
+	m_vdata.clear();
 	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
@@ -317,7 +317,7 @@ void GLGSRender::InitVertexData()
 								  0.0f, 0.0f, 0.0f, 1.0f};
 	int l;
 
-	for(u32 i=0; i<m_transform_constants.GetCount(); ++i)
+	for(u32 i=0; i<m_transform_constants.size(); ++i)
 	{
 		const RSXTransformConstant& c = m_transform_constants[i];
 		const std::string name = fmt::Format("vc%u", c.id);
@@ -354,7 +354,7 @@ void GLGSRender::InitFragmentData()
 		return;
 	}
 
-	for(u32 i=0; i<m_fragment_constants.GetCount(); ++i)
+	for(u32 i=0; i<m_fragment_constants.size(); ++i)
 	{
 		const RSXTransformConstant& c = m_fragment_constants[i];
 
@@ -1134,12 +1134,12 @@ void GLGSRender::Flip()
 	else if(m_fbo.IsCreated())
 	{
 		format = GL_RGBA;
-		static Array<u8> pixels;
-		pixels.SetCount(RSXThread::m_width * RSXThread::m_height * 4);
+		static std::vector<u8> pixels;
+		pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
 		m_fbo.Bind(GL_READ_FRAMEBUFFER);
-		glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.GetPtr());
+		glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.data());
 
-		src_buffer = pixels.GetPtr();
+		src_buffer = pixels.data();
 		width = RSXThread::m_width;
 		height = RSXThread::m_height;
 	}
@@ -1199,7 +1199,7 @@ void GLGSRender::Flip()
 	if(m_fbo.IsCreated())
 		m_fbo.Bind();
 
-	for(uint i=0; i<m_post_draw_objs.GetCount(); ++i)
+	for(uint i=0; i<m_post_draw_objs.size(); ++i)
 	{
 		m_post_draw_objs[i].Draw();
 	}

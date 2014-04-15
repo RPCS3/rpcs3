@@ -33,7 +33,7 @@ bool vfsDir::IsExists(const std::string& path) const
 	return m_stream->IsExists(path); // Crash (Access violation reading location 0x0000000000000000)
 }
 
-const Array<DirEntryInfo>& vfsDir::GetEntries() const
+const std::vector<DirEntryInfo>& vfsDir::GetEntries() const
 {
 	return m_stream->GetEntries();
 }

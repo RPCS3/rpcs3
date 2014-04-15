@@ -648,14 +648,14 @@ public:
 	{
 		switch(n)
 		{
-		case 0: value ? CR.cr0 |= bit : CR.cr0 &= ~bit; break;
-		case 1: value ? CR.cr1 |= bit : CR.cr1 &= ~bit; break;
-		case 2: value ? CR.cr2 |= bit : CR.cr2 &= ~bit; break;
-		case 3: value ? CR.cr3 |= bit : CR.cr3 &= ~bit; break;
-		case 4: value ? CR.cr4 |= bit : CR.cr4 &= ~bit; break;
-		case 5: value ? CR.cr5 |= bit : CR.cr5 &= ~bit; break;
-		case 6: value ? CR.cr6 |= bit : CR.cr6 &= ~bit; break;
-		case 7: value ? CR.cr7 |= bit : CR.cr7 &= ~bit; break;
+		case 0: CR.cr0 = (value ? CR.cr0 | bit : CR.cr0 & ~bit); break;
+		case 1: CR.cr1 = (value ? CR.cr1 | bit : CR.cr1 & ~bit); break;
+		case 2: CR.cr2 = (value ? CR.cr2 | bit : CR.cr2 & ~bit); break;
+		case 3: CR.cr3 = (value ? CR.cr3 | bit : CR.cr3 & ~bit); break;
+		case 4: CR.cr4 = (value ? CR.cr4 | bit : CR.cr4 & ~bit); break;
+		case 5: CR.cr5 = (value ? CR.cr5 | bit : CR.cr5 & ~bit); break;
+		case 6: CR.cr6 = (value ? CR.cr6 | bit : CR.cr6 & ~bit); break;
+		case 7: CR.cr7 = (value ? CR.cr7 | bit : CR.cr7 & ~bit); break;
 		}
 	}
 

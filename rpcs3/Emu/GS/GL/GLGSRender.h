@@ -540,8 +540,8 @@ class GLGSRender
 	, public GSRender
 {
 private:
-	Array<u8> m_vdata;
-	ArrayF<PostDrawObj> m_post_draw_objs;
+	std::vector<u8> m_vdata;
+	std::vector<PostDrawObj> m_post_draw_objs;
 
 	GLProgram m_program;
 	int m_fp_buf_num;

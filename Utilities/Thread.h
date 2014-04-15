@@ -2,6 +2,7 @@
 #include "Array.h"
 #include <functional>
 #include <thread>
+#include <vector>
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
@@ -73,7 +74,7 @@ template<typename T> class MTPacketBuffer
 protected:
 	volatile bool m_busy;
 	volatile u32 m_put, m_get;
-	Array<u8> m_buffer;
+	std::vector<u8> m_buffer;
 	u32 m_max_buffer_size;
 	mutable std::recursive_mutex m_cs_main;
 
@@ -98,7 +99,7 @@ public:
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_cs_main);
 		m_put = m_get = 0;
-		m_buffer.Clear();
+		m_buffer.clear();
 		m_busy = false;
 	}
 

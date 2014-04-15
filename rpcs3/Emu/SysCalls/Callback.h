@@ -44,7 +44,7 @@ struct Callback3 : public Callback
 
 struct Callbacks
 {
-	Array<Callback> m_callbacks;
+	std::vector<Callback> m_callbacks;
 	bool m_in_manager;
 
 	Callbacks() : m_in_manager(false)
@@ -58,11 +58,11 @@ struct Callbacks
 
 	void Unregister(u32 slot)
 	{
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		for(u32 i=0; i<m_callbacks.size(); ++i)
 		{
 			if(m_callbacks[i].GetSlot() == slot)
 			{
-				m_callbacks.RemoveAt(i);
+				m_callbacks.erase(m_callbacks.begin() + i);
 				break;
 			}
 		}
@@ -74,7 +74,7 @@ struct Callbacks
 	{
 		bool handled = false;
 
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		for(u32 i=0; i<m_callbacks.size(); ++i)
 		{
 			if(m_callbacks[i].HasData())
 			{
@@ -96,12 +96,13 @@ struct Callbacks2 : public Callbacks
 	void Register(u32 slot, u64 addr, u64 userdata)
 	{
 		Callbacks::Register(slot, addr, userdata);
-		m_callbacks.Move(new Callback2(slot, addr, userdata));
+		Callback2 callback(slot, addr, userdata);
+		m_callbacks.push_back(callback);
 	}
 
 	void Handle(u64 a1, u64 a2)
 	{
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		for(u32 i=0; i<m_callbacks.size(); ++i)
 		{
 			((Callback2&)m_callbacks[i]).Handle(a1);
 		}
@@ -117,12 +118,13 @@ struct Callbacks3 : public Callbacks
 	void Register(u32 slot, u64 addr, u64 userdata)
 	{
 		Callbacks::Register(slot, addr, userdata);
-		m_callbacks.Move(new Callback3(slot, addr, userdata));
+		Callback3 callback(slot, addr, userdata);
+		m_callbacks.push_back(callback);
 	}
 
 	void Handle(u64 a1, u64 a2)
 	{
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		for(u32 i=0; i<m_callbacks.size(); ++i)
 		{
 			((Callback3&)m_callbacks[i]).Handle(a1, a2);
 		}
@@ -131,7 +133,7 @@ struct Callbacks3 : public Callbacks
 
 struct CallbackManager
 {
-	ArrayF<Callbacks> m_callbacks;
+	std::vector<Callbacks *> m_callbacks;
 	Callbacks3 m_exit_callback;
 
 	void Add(Callbacks& c)
@@ -139,7 +141,7 @@ struct CallbackManager
 		if(c.m_in_manager) return;
 
 		c.m_in_manager = true;
-		m_callbacks.Add(c);
+		m_callbacks.push_back(&c);
 	}
 
 	void Init()
@@ -149,12 +151,12 @@ struct CallbackManager
 
 	void Clear()
 	{
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		for(u32 i=0; i<m_callbacks.size(); ++i)
 		{
-			m_callbacks[i].m_callbacks.Clear();
-			m_callbacks[i].m_in_manager = false;
+			m_callbacks[i]->m_callbacks.clear();
+			m_callbacks[i]->m_in_manager = false;
 		}
 
-		m_callbacks.ClearF();
+		m_callbacks.clear();
 	}
 };

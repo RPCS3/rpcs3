@@ -20,7 +20,7 @@ struct MemInfo
 
 struct MemBlockInfo : public MemInfo
 {
-	void* mem;
+	void *mem;
 
 	MemBlockInfo(u64 _addr, u32 _size)
 		: MemInfo(_addr, PAGE_4K(_size))
@@ -31,13 +31,26 @@ struct MemBlockInfo : public MemInfo
 			ConLog.Error("Not enought free memory.");
 			assert(0);
 		}
-		
 		memset(mem, 0, size);
+	}
+
+	MemBlockInfo(MemBlockInfo &other) = delete;
+	MemBlockInfo(MemBlockInfo &&other) : MemInfo(other.addr,other.size) ,mem(other.mem)
+	{
+		other.mem = nullptr;
+	}
+	MemBlockInfo& operator =(MemBlockInfo &other) = delete;
+	MemBlockInfo& operator =(MemBlockInfo &&other){
+		this->addr = other.addr;
+		this->size = other.size;
+		this->mem = other.mem;
+		other.mem = nullptr;
+		return *this;
 	}
 
 	~MemBlockInfo()
 	{
-		_aligned_free(mem);
+		if(mem) _aligned_free(mem);
 		mem = nullptr;
 	}
 };
@@ -193,9 +206,9 @@ template<typename PT>
 class DynamicMemoryBlockBase : public PT
 {
 	mutable std::mutex m_lock;
-	Array<MemBlockInfo> m_allocated; // allocation info
-	Array<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
-	Array<u8*> m_locked; // locked pages should be moved here
+	std::vector<MemBlockInfo> m_allocated; // allocation info
+	std::vector<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
+	std::vector<u8*> m_locked; // locked pages should be moved here
 	
 	u32 m_max_size;
 
@@ -229,7 +242,7 @@ private:
 
 class VirtualMemoryBlock : public MemoryBlock
 {
-	Array<VirtualMemInfo> m_mapped_memory;
+	std::vector<VirtualMemInfo> m_mapped_memory;
 	u32 m_reserve_size;
 
 public:
@@ -283,3 +296,4 @@ public:
 
 typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
 typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;
+

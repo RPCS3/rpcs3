@@ -355,13 +355,13 @@ public:
 		decode(op, code);
 	}
 
-	u32 operator()(const Array<u32>& args) const
+	u32 operator()(const std::vector<u32>& args) const
 	{
 		return encode(args);
 	}
 
 	virtual void decode(TO* op, u32 code) const=0;
-	virtual u32 encode(const Array<u32>& args) const=0;
+	virtual u32 encode(const std::vector<u32>& args) const=0;
 };
 
 template<int _count, typename TO>
@@ -508,9 +508,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode);
 	}
 
@@ -547,9 +547,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]];
 	}
 
@@ -588,9 +588,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]] | (*InstrBase<TO>::m_args[1])[args[1]];
 	}
 
@@ -631,9 +631,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | (*InstrBase<TO>::m_args[0])[args[0]] | (*InstrBase<TO>::m_args[1])[args[1]] | (*InstrBase<TO>::m_args[2])[args[2]];
 	}
 
@@ -676,9 +676,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
 			(*InstrBase<TO>::m_args[0])[args[0]] |
 			(*InstrBase<TO>::m_args[1])[args[1]] |
@@ -731,9 +731,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
 			(*InstrBase<TO>::m_args[0])[args[0]] |
 			(*InstrBase<TO>::m_args[1])[args[1]] |
@@ -790,9 +790,9 @@ public:
 		m_list.decode(op, opcode, code);
 	}
 
-	virtual u32 encode(const Array<u32>& args) const
+	virtual u32 encode(const std::vector<u32>& args) const
 	{
-		assert(args.GetCount() == InstrBase<TO>::m_args_count);
+		assert(args.size() == InstrBase<TO>::m_args_count);
 		return m_list.encode(opcode) | 
 			(*InstrBase<TO>::m_args[0])[args[0]] |
 			(*InstrBase<TO>::m_args[1])[args[1]] |

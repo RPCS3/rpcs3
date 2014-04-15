@@ -463,23 +463,23 @@ class SELFDecrypter
 	
 	// ELF64 header and program header/section header arrays.
 	Elf64_Ehdr elf64_hdr;
-	Array<Elf64_Shdr> shdr64_arr;
-	Array<Elf64_Phdr> phdr64_arr;
+	std::vector<Elf64_Shdr> shdr64_arr;
+	std::vector<Elf64_Phdr> phdr64_arr;
 
 	// ELF32 header and program header/section header arrays.
 	Elf32_Ehdr elf32_hdr;
-	Array<Elf32_Shdr> shdr32_arr;
-	Array<Elf32_Phdr> phdr32_arr;
+	std::vector<Elf32_Shdr> shdr32_arr;
+	std::vector<Elf32_Phdr> phdr32_arr;
 
 	// Decryption info structs.
-	Array<SectionInfo> secinfo_arr;
+	std::vector<SectionInfo> secinfo_arr;
 	SCEVersionInfo scev_info;
-	Array<ControlInfo> ctrlinfo_arr;
+	std::vector<ControlInfo> ctrlinfo_arr;
 
 	// Metadata structs.
 	MetadataInfo meta_info;
 	MetadataHeader meta_hdr;
-	Array<MetadataSectionHeader> meta_shdr;
+	std::vector<MetadataSectionHeader> meta_shdr;
 
 	// Internal data buffers.
 	u8 *data_keys;

@@ -5,8 +5,8 @@
 class FnIdGenerator : public wxDialog
 {
 private:
-	Array<std::string> m_func_name;
-	Array<u32> m_func_id;
+	std::vector<std::string> m_func_name;
+	std::vector<u32> m_func_id;
 	wxListView* m_list;
 
 public:

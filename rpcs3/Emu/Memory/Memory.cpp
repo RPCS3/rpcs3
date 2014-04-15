@@ -559,7 +559,7 @@ bool VirtualMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
 
 bool VirtualMemoryBlock::IsMyAddress(const u64 addr)
 {
-	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
 		{
@@ -577,7 +577,7 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 		if(!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
 			return 0;
 
-		m_mapped_memory.Move(new VirtualMemInfo(addr, realaddr, size));
+		m_mapped_memory.emplace_back(addr, realaddr, size);
 		return addr;
 	}
 	else
@@ -587,7 +587,7 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 			bool is_good_addr = true;
 
 			// check if address is already mapped
-			for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+			for(u32 i=0; i<m_mapped_memory.size(); ++i)
 			{
 				if((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
 					(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
@@ -600,7 +600,7 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 
 			if(!is_good_addr) continue;
 
-			m_mapped_memory.Move(new VirtualMemInfo(addr, realaddr, size));
+			m_mapped_memory.emplace_back(addr, realaddr, size);
 
 			return addr;
 		}
@@ -611,12 +611,12 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 
 u32 VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
 {
-	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			u32 size = m_mapped_memory[i].size;
-			m_mapped_memory.RemoveAt(i);
+			m_mapped_memory.erase(m_mapped_memory.begin() + i);
 			return size;
 		}
 	}
@@ -626,12 +626,12 @@ u32 VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
 
 u32 VirtualMemoryBlock::UnmapAddress(u64 addr)
 {
-	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			u32 size = m_mapped_memory[i].size;
-			m_mapped_memory.RemoveAt(i);
+			m_mapped_memory.erase(m_mapped_memory.begin() + i);
 			return size;
 		}
 	}
@@ -711,7 +711,7 @@ bool VirtualMemoryBlock::Write128(const u64 addr, const u128 value)
 
 u64 VirtualMemoryBlock::getRealAddr(u64 addr)
 {
-	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
 		{
@@ -724,7 +724,7 @@ u64 VirtualMemoryBlock::getRealAddr(u64 addr)
 
 u64 VirtualMemoryBlock::getMappedAddress(u64 realAddress)
 {
-	for(u32 i=0; i<m_mapped_memory.GetCount(); ++i)
+	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
 		{
@@ -737,7 +737,7 @@ u64 VirtualMemoryBlock::getMappedAddress(u64 realAddress)
 
 void VirtualMemoryBlock::Delete()
 {
-	m_mapped_memory.Clear();
+	m_mapped_memory.clear();
 
 	MemoryBlock::Delete();
 }

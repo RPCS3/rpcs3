@@ -57,17 +57,18 @@ public:
 	be_t()	noexcept = default;
 #endif
 
+	be_t(const be_t<T,size>& value) = default;
 	be_t(const T& value)
 	{
 		FromLE(value);
 	}
 
 	template<typename T1>
-	be_t(const be_t<T1>& value)
+	explicit be_t(const be_t<T1>& value)
 	{
 		FromBE(value.ToBE());
 	}
-
+	
 	const T& ToBE() const
 	{
 		return m_data;
@@ -126,11 +127,7 @@ public:
 		return *this;
 	}
 
-	be_t& operator = (const be_t& right)
-	{
-		m_data = right.m_data;
-		return *this;
-	}
+	be_t<T,size>& operator = (const be_t<T,size>& right) = default;
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
 	template<typename T1> be_t& operator -= (T1 right) { return *this = T(*this) - right; }

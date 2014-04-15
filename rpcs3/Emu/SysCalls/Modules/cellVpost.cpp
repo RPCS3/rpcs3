@@ -97,7 +97,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		return CELL_VPOST_ERROR_E_ARG_CTRL_INVALID;
 	}
 
-	u32 w = ctrlParam->inWidth;
+	s32 w = ctrlParam->inWidth;
 	u32 h = ctrlParam->inHeight;
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
@@ -193,7 +193,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	u8* in_data[4] = { pY, pU, pV, pA };
 	int in_line[4] = { w, w/2, w/2, w };
 	u8* out_data[4] = { (u8*)res, NULL, NULL, NULL };
-	int out_line[4] = { ow*4, 0, 0, 0 };
+	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
 
 	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
 

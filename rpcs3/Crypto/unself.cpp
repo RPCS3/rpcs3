@@ -36,7 +36,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	// Read ELF program headers.
 	if (isElf32)
 	{
-		phdr32_arr.Clear();
+		phdr32_arr.clear();
 		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
 			ConLog.Error("SELF: ELF program header offset is null!");
@@ -45,14 +45,13 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		self_f.Seek(self_hdr.se_phdroff);
 		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
-			Elf32_Phdr* phdr = new Elf32_Phdr();
-			phdr->Load(self_f);
-			phdr32_arr.Move(phdr);
+			phdr32_arr.emplace_back();
+			phdr32_arr.back().Load(self_f);
 		}
 	}
 	else
 	{
-		phdr64_arr.Clear();
+		phdr64_arr.clear();
 		if(elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
 			ConLog.Error("SELF: ELF program header offset is null!");
@@ -61,22 +60,20 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		self_f.Seek(self_hdr.se_phdroff);
 		for(u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
-			Elf64_Phdr* phdr = new Elf64_Phdr();
-			phdr->Load(self_f);
-			phdr64_arr.Move(phdr);
+			phdr64_arr.emplace_back();
+			phdr64_arr.back().Load(self_f);
 		}
 	}
 
 
 	// Read section info.
-	secinfo_arr.Clear();
+	secinfo_arr.clear();
 	self_f.Seek(self_hdr.se_secinfoff);
 
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
-		SectionInfo* sinfo = new SectionInfo();
-		sinfo->Load(self_f);
-		secinfo_arr.Move(sinfo);
+		secinfo_arr.emplace_back();
+		secinfo_arr.back().Load(self_f);
 	}
 
 	// Read SCE version info.
@@ -84,22 +81,22 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	scev_info.Load(self_f);
 
 	// Read control info.
-	ctrlinfo_arr.Clear();
+	ctrlinfo_arr.clear();
 	self_f.Seek(self_hdr.se_controloff);
 
 	u32 i = 0;
 	while(i < self_hdr.se_controlsize)
 	{
-		ControlInfo* cinfo = new ControlInfo();
-		cinfo->Load(self_f);
-		i += cinfo->size;
-		ctrlinfo_arr.Move(cinfo);
+		ctrlinfo_arr.emplace_back();
+		ControlInfo &cinfo = ctrlinfo_arr.back();
+		cinfo.Load(self_f);
+		i += cinfo.size;
 	}
 
 	// Read ELF section headers.
 	if (isElf32)
 	{
-		shdr32_arr.Clear();
+		shdr32_arr.clear();
 		if(elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
 			ConLog.Warning("SELF: ELF section header offset is null!");
@@ -108,14 +105,13 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		self_f.Seek(self_hdr.se_shdroff);
 		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
-			Elf32_Shdr* shdr = new Elf32_Shdr();
-			shdr->Load(self_f);
-			shdr32_arr.Move(shdr);
+			shdr32_arr.emplace_back();
+			shdr32_arr.back().Load(self_f);
 		}
 	}
 	else
 	{
-		shdr64_arr.Clear();
+		shdr64_arr.clear();
 		if(elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
 			ConLog.Warning("SELF: ELF section header offset is null!");
@@ -124,9 +120,8 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		self_f.Seek(self_hdr.se_shdroff);
 		for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 		{
-			Elf64_Shdr* shdr = new Elf64_Shdr();
-			shdr->Load(self_f);
-			shdr64_arr.Move(shdr);
+			shdr64_arr.emplace_back();
+			shdr64_arr.back().Load(self_f);
 		}
 	}
 
@@ -153,12 +148,12 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	ConLog.Write("----------------------------------------------------");
 	ConLog.Write("ELF program headers");
 	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.GetCount() : phdr64_arr.GetCount()); i++)
+	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
 		isElf32 ? phdr32_arr[i].Show() : phdr64_arr[i].Show();
 	ConLog.Write("----------------------------------------------------");
 	ConLog.Write("Section info");
 	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < secinfo_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < secinfo_arr.size(); i++)
 		secinfo_arr[i].Show();
 	ConLog.Write("----------------------------------------------------");
 	ConLog.Write("SCE version info");
@@ -167,12 +162,12 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	ConLog.Write("----------------------------------------------------");
 	ConLog.Write("Control info");
 	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ctrlinfo_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 		ctrlinfo_arr[i].Show();
 	ConLog.Write("----------------------------------------------------");
 	ConLog.Write("ELF section headers");
 	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.GetCount() : shdr64_arr.GetCount()); i++)
+	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
 		isElf32 ? shdr32_arr[i].Show() : shdr64_arr[i].Show();
 	ConLog.Write("----------------------------------------------------");
 }
@@ -185,7 +180,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	u8 npdrm_iv[0x10];
 
 	// Parse the control info structures to find the NPDRM control info.
-	for(unsigned int i = 0; i < ctrlinfo_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 	{
 		if (ctrlinfo_arr[i].type == 3)
 		{
@@ -307,12 +302,11 @@ bool SELFDecrypter::LoadMetadata()
 	meta_hdr.Load(metadata_headers);
 
 	// Load the metadata section headers.
-	meta_shdr.Clear();
+	meta_shdr.clear();
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		MetadataSectionHeader* m_shdr = new MetadataSectionHeader();
-		m_shdr->Load(metadata_headers + sizeof(meta_hdr) + sizeof(MetadataSectionHeader) * i);
-		meta_shdr.Move(m_shdr);
+		meta_shdr.emplace_back();
+		meta_shdr.back().Load(metadata_headers + sizeof(meta_hdr) + sizeof(MetadataSectionHeader) * i);
 	}
 
 	// Copy the decrypted data keys.

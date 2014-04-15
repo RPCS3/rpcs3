@@ -3,12 +3,13 @@
 #include "SC_FUNC.h"
 #include <mutex>
 
+
 Module* g_modules[3][0xff] = {0};
 uint g_max_module_id = 0;
 uint g_module_2_count = 0;
-ArrayF<ModuleFunc> g_modules_funcs_list;
+std::vector<ModuleFunc *> g_modules_funcs_list;
 std::mutex g_funcs_lock;
-ArrayF<SFunc> g_static_funcs_list;
+std::vector<SFunc *> g_static_funcs_list;
 
 struct ModuleInfo
 {
@@ -132,9 +133,9 @@ struct _InitNullModules
 
 bool IsLoadedFunc(u32 id)
 {
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	for(u32 i=0; i<g_modules_funcs_list.size(); ++i)
 	{
-		if(g_modules_funcs_list[i].id == id)
+		if(g_modules_funcs_list[i]->id == id)
 		{
 			return true;
 		}
@@ -149,11 +150,11 @@ bool CallFunc(u32 num)
 	{
 		std::lock_guard<std::mutex> lock(g_funcs_lock);
 
-		for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+		for(u32 i=0; i<g_modules_funcs_list.size(); ++i)
 		{
-			if(g_modules_funcs_list[i].id == num)
+			if(g_modules_funcs_list[i]->id == num)
 			{
-				func = g_modules_funcs_list[i].func;
+				func = g_modules_funcs_list[i]->func;
 				break;
 			}
 		}
@@ -170,11 +171,11 @@ bool UnloadFunc(u32 id)
 {
 	std::lock_guard<std::mutex> lock(g_funcs_lock);
 
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	for(u32 i=0; i<g_modules_funcs_list.size(); ++i)
 	{
-		if(g_modules_funcs_list[i].id == id)
+		if(g_modules_funcs_list[i]->id == id)
 		{
-			g_modules_funcs_list.RemoveFAt(i);
+			g_modules_funcs_list.erase(g_modules_funcs_list.begin() +i);
 
 			return true;
 		}
@@ -202,7 +203,7 @@ void UnloadModules()
 	}
 
 	std::lock_guard<std::mutex> lock(g_funcs_lock);
-	g_modules_funcs_list.Clear();
+	g_modules_funcs_list.clear();
 }
 
 Module* GetModuleByName(const std::string& name)
@@ -331,13 +332,13 @@ void Module::Load()
 
 	if(m_load_func) m_load_func();
 
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
 		std::lock_guard<std::mutex> lock(g_funcs_lock);
 
 		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
 		
-		g_modules_funcs_list.Add(m_funcs_list[i]);
+		g_modules_funcs_list.push_back(&m_funcs_list[i]);
 	}
 
 	SetLoaded(true);
@@ -350,7 +351,7 @@ void Module::UnLoad()
 
 	if(m_unload_func) m_unload_func();
 
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
 		UnloadFunc(m_funcs_list[i].id);
 	}
@@ -364,11 +365,11 @@ bool Module::Load(u32 id)
 
 	if(IsLoadedFunc(id)) return false;
 
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
 		if(m_funcs_list[i].id == id)
 		{
-			g_modules_funcs_list.Add(m_funcs_list[i]);
+			g_modules_funcs_list.push_back(&m_funcs_list[i]);
 
 			return true;
 		}
@@ -470,3 +471,4 @@ bool Module::CheckID(u32 id, ID*& _id) const
 {
 	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 }
+

@@ -58,7 +58,7 @@ struct sys_spu_segment
 
 struct SpuGroupInfo
 {
-	Array<u32> list;
+	std::vector<u32> list;
 	std::atomic<u32> lock;
 	std::string m_name;
 	int m_prio;
@@ -73,7 +73,7 @@ struct SpuGroupInfo
 		, lock(0)
 	{
 		num = 256;
-		list.SetCount(num);
+		list.resize(num);
 		for (u32 i = 0; i < num; i++)
 		{
 			list[i] = 0;

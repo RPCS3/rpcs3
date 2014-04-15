@@ -248,15 +248,16 @@ std::string GLVertexDecompilerThread::GetFunc()
 	u32 offset = (d2.iaddrh << 3) | d3.iaddrl;
 	std::string name = fmt::Format("func%u", offset);
 
-	for(uint i=0; i<m_funcs.GetCount(); ++i)
+	for(uint i=0; i<m_funcs.size(); ++i)
 	{
 		if(m_funcs[i].name.compare(name) == 0)
 			return name + "()";
 	}
 
-	uint idx = m_funcs.Add(new FuncInfo());
-	m_funcs[idx].offset = offset;
-	m_funcs[idx].name = name;
+	m_funcs.emplace_back();
+	FuncInfo &idx = m_funcs.back();
+	idx.offset = offset;
+	idx.name = name;
 
 	return name + "()";
 }
@@ -280,7 +281,7 @@ std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 		if(i != func.offset)
 		{
 			uint call_func = -1;
-			for(uint j=0; j<m_funcs.GetCount(); ++j)
+			for(uint j=0; j<m_funcs.size(); ++j)
 			{
 				if(m_funcs[j].offset == i)
 				{
@@ -306,14 +307,14 @@ std::string GLVertexDecompilerThread::BuildCode()
 {
 	std::string p;
 
-	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
+	for(u32 i=0; i<m_parr.params.size(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
 
 	std::string fp;
 
-	for(int i=m_funcs.GetCount() - 1; i>0; --i)
+	for(int i=m_funcs.size() - 1; i>0; --i)
 	{
 		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
 	}
@@ -323,7 +324,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 	f += fmt::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n\t%s();\n\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
 		m_funcs[0].name.c_str(), m_funcs[1].name.c_str());
 
-	for(uint i=1; i<m_funcs.GetCount(); ++i)
+	for(uint i=1; i<m_funcs.size(); ++i)
 	{
 		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
@@ -341,7 +342,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 
 void GLVertexDecompilerThread::Task()
 {
-	m_parr.params.Clear();
+	m_parr.params.clear();
 
 	for(u32 i=0, intsCount=0;;intsCount++)
 	{
@@ -426,7 +427,7 @@ void GLVertexDecompilerThread::Task()
 
 		if(d3.end)
 		{
-			if(i < m_data.GetCount())
+			if(i < m_data.size())
 				ConLog.Error("Program end before buffer end.");
 
 			break;
@@ -436,7 +437,10 @@ void GLVertexDecompilerThread::Task()
 	m_shader = BuildCode();
 
 	m_body.clear();
-	m_funcs.RemoveAt(2, m_funcs.GetCount() - 2);
+	if (m_funcs.size() > 2)
+	{
+		m_funcs.erase(m_funcs.begin()+2, m_funcs.end());
+	}
 }
 
 GLVertexProgram::GLVertexProgram()
@@ -521,7 +525,7 @@ void GLVertexProgram::Compile()
 
 void GLVertexProgram::Delete()
 {
-	parr.params.Clear();
+	parr.params.clear();
 	shader.clear();
 
 	if(id)

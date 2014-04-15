@@ -117,14 +117,14 @@ static u8 EDAT_IV[0x10] = {
 
 class KeyVault
 {
-	Array<SELF_KEY> sk_LV0_arr;
-	Array<SELF_KEY> sk_LV1_arr;
-	Array<SELF_KEY> sk_LV2_arr;
-	Array<SELF_KEY> sk_APP_arr;
-	Array<SELF_KEY> sk_ISO_arr;
-	Array<SELF_KEY> sk_LDR_arr;
-	Array<SELF_KEY> sk_UNK7_arr;
-	Array<SELF_KEY> sk_NPDRM_arr;
+	std::vector<SELF_KEY> sk_LV0_arr;
+	std::vector<SELF_KEY> sk_LV1_arr;
+	std::vector<SELF_KEY> sk_LV2_arr;
+	std::vector<SELF_KEY> sk_APP_arr;
+	std::vector<SELF_KEY> sk_ISO_arr;
+	std::vector<SELF_KEY> sk_LDR_arr;
+	std::vector<SELF_KEY> sk_UNK7_arr;
+	std::vector<SELF_KEY> sk_NPDRM_arr;
 	u8 klicensee_key[0x10];
 
 public:

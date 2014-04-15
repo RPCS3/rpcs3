@@ -77,7 +77,7 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 	eq->sq.m_mutex.lock();
 	eq->owner.lock(tid);
 	// check if some threads are waiting for an event
-	if (!mode && eq->sq.list.GetCount())
+	if (!mode && eq->sq.list.size())
 	{
 		eq->owner.unlock(tid);
 		eq->sq.m_mutex.unlock();
@@ -85,7 +85,7 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 	}
 	eq->owner.unlock(tid, ~0);
 	eq->sq.m_mutex.unlock();
-	while (eq->sq.list.GetCount())
+	while (eq->sq.list.size())
 	{
 		Sleep(1);
 		if (Emu.IsStopped())
@@ -138,7 +138,7 @@ int sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 
 	eq->sq.m_mutex.lock();
 	eq->owner.lock(tid);
-	if (eq->sq.list.GetCount())
+	if (eq->sq.list.size())
 	{
 		number = 0;
 		eq->owner.unlock(tid);

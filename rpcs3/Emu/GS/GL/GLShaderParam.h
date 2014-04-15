@@ -31,7 +31,7 @@ struct GLParamType
 {
 	const GLParamFlag flag;
 	std::string type;
-	Array<GLParamItem> items;
+	std::vector<GLParamItem> items;
 
 	GLParamType(const GLParamFlag _flag, const std::string& _type)
 		: flag(_flag)
@@ -41,7 +41,7 @@ struct GLParamType
 
 	bool SearchName(const std::string& name)
 	{
-		for(u32 i=0; i<items.GetCount(); ++i)
+		for(u32 i=0; i<items.size(); ++i)
 		{
 			if(items[i].name.compare(name) == 0) return true;
 		}
@@ -53,7 +53,7 @@ struct GLParamType
 	{
 		std::string ret = "";
 
-		for(u32 n=0; n<items.GetCount(); ++n)
+		for(u32 n=0; n<items.size(); ++n)
 		{
 			ret += items[n].location + type + " " + items[n].name;
 			if(!items[n].value.empty())
@@ -69,11 +69,11 @@ struct GLParamType
 
 struct GLParamArray
 {
-	Array<GLParamType> params;
+	std::vector<GLParamType> params;
 
 	GLParamType* SearchParam(const std::string& type)
 	{
-		for(u32 i=0; i<params.GetCount(); ++i)
+		for(u32 i=0; i<params.size(); ++i)
 		{
 			if (params[i].type.compare(type) == 0)
 				return &params[i];
@@ -109,13 +109,13 @@ struct GLParamArray
 
 		if(t)
 		{
-			if(!t->SearchName(name)) t->items.Move(new GLParamItem(name, -1, value));
+			if(!t->SearchName(name)) t->items.emplace_back(name, -1, value);
 		}
 		else
 		{
-			const u32 num = params.GetCount();
-			params.Move(new GLParamType(flag, type));
-			params[num].items.Move(new GLParamItem(name, -1, value));
+			const u32 num = params.size();
+			params.emplace_back(flag, type);
+			params[num].items.emplace_back(name, -1, value);
 		}
 
 		return name;
@@ -128,13 +128,13 @@ struct GLParamArray
 
 		if(t)
 		{
-			if(!t->SearchName(name)) t->items.Move(new GLParamItem(name, location));
+			if(!t->SearchName(name)) t->items.emplace_back(name, location);
 		}
 		else
 		{
-			const u32 num = params.GetCount();
-			params.Move(new GLParamType(flag, type));
-			params[num].items.Move(new GLParamItem(name, location));
+			const u32 num = params.size();
+			params.emplace_back(flag, type);
+			params[num].items.emplace_back(name, location);
 		}
 
 		return name;

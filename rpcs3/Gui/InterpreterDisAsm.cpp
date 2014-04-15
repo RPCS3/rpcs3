@@ -104,9 +104,9 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 	m_choice_units->Clear();
 	auto& thrs = Emu.GetCPU().GetThreads();
 
-	for(uint i=0; i<thrs.GetCount(); ++i)
+	for(uint i=0; i<thrs.size(); ++i)
 	{
-		m_choice_units->Append(thrs[i].GetFName(), &thrs[i]);
+		m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
 	}
 
 	m_choice_units->Thaw();
@@ -274,7 +274,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 			{
 				colour = wxColour("White");
 
-				for(u32 i=0; i<Emu.GetMarkedPoints().GetCount(); ++i)
+				for(u32 i=0; i<Emu.GetMarkedPoints().size(); ++i)
 				{
 					if(Emu.GetMarkedPoints()[i] == PC)
 					{
@@ -288,22 +288,22 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 		}
 	}
 
-	while(remove_markedPC.GetCount())
+	while(remove_markedPC.size())
 	{
 		u32 mpc = remove_markedPC[0];
 
-		for(u32 i=0; i<remove_markedPC.GetCount(); ++i)
+		for(u32 i=0; i<remove_markedPC.size(); ++i)
 		{
 			if(remove_markedPC[i] == mpc)
 			{
-				remove_markedPC.RemoveAt(i--);
+				remove_markedPC.erase( remove_markedPC.begin() + i--);
 				continue;
 			}
 
 			if(remove_markedPC[i] > mpc) remove_markedPC[i]--;
 		}
 
-		Emu.GetMarkedPoints().RemoveAt(mpc);
+		Emu.GetMarkedPoints().erase(Emu.GetMarkedPoints().begin() + mpc);
 	}
 
 	m_list->SetColumnWidth(0, -1);
@@ -456,7 +456,8 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 	{
 		u64 pc = CPU ? CPU->PC : 0x0;
 		sscanf(p_pc->GetValue(), "%llx", &pc);
-		remove_markedPC.AddCpy(Emu.GetMarkedPoints().AddCpy(pc));
+		Emu.GetMarkedPoints().push_back(pc);
+		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
 		ShowAddr(CentrePc(pc));
 	}
 }
@@ -551,7 +552,7 @@ void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 
 bool InterpreterDisAsmFrame::IsBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] == pc) return true;
 	}
@@ -561,20 +562,20 @@ bool InterpreterDisAsmFrame::IsBreakPoint(u64 pc)
 
 void InterpreterDisAsmFrame::AddBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] == pc) return;
 	}
 
-	Emu.GetBreakPoints().AddCpy(pc);
+	Emu.GetBreakPoints().push_back(pc);
 }
 
 bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] != pc) continue;
-		Emu.GetBreakPoints().RemoveAt(i);
+		Emu.GetBreakPoints().erase(Emu.GetBreakPoints().begin() + i);
 		return true;
 	}
 

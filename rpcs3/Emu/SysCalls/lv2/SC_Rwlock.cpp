@@ -42,7 +42,7 @@ int sys_rwlock_destroy(u32 rw_lock_id)
 
 	std::lock_guard<std::mutex> lock(rw->m_lock);
 
-	if (rw->wlock_queue.GetCount() || rw->rlock_list.GetCount() || rw->wlock_thread) return CELL_EBUSY;
+	if (rw->wlock_queue.size() || rw->rlock_list.size() || rw->wlock_thread) return CELL_EBUSY;
 
 	Emu.GetIdManager().RemoveID(rw_lock_id);
 

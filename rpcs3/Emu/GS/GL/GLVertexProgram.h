@@ -135,23 +135,23 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 	std::vector<std::string> m_body;
 
-	ArrayF<FuncInfo> m_funcs;
+	std::vector<FuncInfo> m_funcs;
 
 	//wxString main;
 	std::string& m_shader;
-	Array<u32>& m_data;
+	std::vector<u32>& m_data;
 	GLParamArray& m_parr;
 
-	GLVertexDecompilerThread(Array<u32>& data, std::string& shader, GLParamArray& parr)
+	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, GLParamArray& parr)
 		: ThreadBase("Vertex Shader Decompiler Thread")
 		, m_data(data)
 		, m_shader(shader)
 		, m_parr(parr)
 	{
-		m_funcs.Add(new FuncInfo());
+		m_funcs.emplace_back();
 		m_funcs[0].offset = 0;
 		m_funcs[0].name = "main";
-		m_funcs.Add(new FuncInfo());
+		m_funcs.emplace_back();
 		m_funcs[1].offset = 0;
 		m_funcs[1].name = "func0";
 		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";

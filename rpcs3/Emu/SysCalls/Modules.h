@@ -6,11 +6,6 @@
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
-class func_caller
-{
-public:
-	virtual void operator()() = 0;
-};
 
 //TODO
 struct ModuleFunc
@@ -36,12 +31,12 @@ struct SFunc
 	func_caller* func;
 	void* ptr;
 	char* name;
-	Array<SFuncOp> ops;
+	std::vector<SFuncOp> ops;
 	u64 group;
 	u32 found;
 };
 
-extern ArrayF<SFunc> g_static_funcs_list;
+extern std::vector<SFunc *> g_static_funcs_list;
 
 class Module
 {
@@ -52,7 +47,7 @@ class Module
 	void (*m_unload_func)();
 
 public:
-	Array<ModuleFunc> m_funcs_list;
+	std::vector<ModuleFunc> m_funcs_list;
 
 	Module(u16 id, const char* name);
 	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
@@ -120,7 +115,7 @@ public:
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
-	m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
+	m_funcs_list.emplace_back(id, bind_func(func));
 }
 
 template<typename T>
@@ -128,8 +123,9 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], char
 {
 	if (!ops[0]) return;
 
+	//TODO: track down where this is supposed to be deleted
 	SFunc* sf = new SFunc;
-	sf->ptr = func;
+	sf->ptr = (void *)func;
 	sf->func = bind_func(func);
 	sf->name = name;
 	sf->group = *(u64*)group;
@@ -145,9 +141,9 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], char
 		if (op.mask) op.crc &= op.mask;
 		op.mask = re(op.mask);
 		op.crc = re(op.crc);
-		sf->ops.AddCpy(op);
+		sf->ops.push_back(op);
 	}
-	g_static_funcs_list.Add(sf);
+	g_static_funcs_list.push_back(sf);
 }
 
 bool IsLoadedFunc(u32 id);
@@ -157,3 +153,4 @@ void UnloadModules();
 u32 GetFuncNumById(u32 id);
 Module* GetModuleByName(const std::string& name);
 Module* GetModuleById(u16 id);
+

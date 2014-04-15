@@ -13,7 +13,7 @@ public:
 	virtual bool Open(const std::string& path) override;
 	virtual bool IsOpened() const override;
 	virtual bool IsExists(const std::string& path) const override;
-	virtual const Array<DirEntryInfo>& GetEntries() const override;
+	virtual const std::vector<DirEntryInfo>& GetEntries() const override;
 	virtual void Close() override;
 	virtual std::string GetPath() const override;
 

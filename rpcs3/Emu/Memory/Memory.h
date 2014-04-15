@@ -2,6 +2,8 @@
 #include "MemoryBlock.h"
 #include <vector>
 
+using std::nullptr_t;
+
 enum MemoryType
 {
 	Memory_PS3,
@@ -488,7 +490,8 @@ public:
 	u8* operator + (const u64 vaddr)
 	{
 		u8* ret = GetMemFromAddr(vaddr);
-		if(!ret) throw fmt::Format("GetMemFromAddr(0x%llx)", vaddr);
+		if(ret == nullptr)
+			throw fmt::Format("GetMemFromAddr(0x%x)", vaddr);
 		return ret;
 	}
 

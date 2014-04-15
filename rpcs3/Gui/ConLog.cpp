@@ -46,7 +46,7 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 		const u32 stext   = data.m_text.length();
 		const u32 scolour = data.m_colour.length();
 
-		m_buffer.Reserve(
+		m_buffer.resize( m_buffer.size() +
 			sizeof(u32) + sprefix +
 			sizeof(u32) + stext +
 			sizeof(u32) + scolour);

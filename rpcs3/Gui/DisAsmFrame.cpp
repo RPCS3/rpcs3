@@ -104,8 +104,8 @@ void DisAsmFrame::Resume()
 
 #include <Utilities/MTProgressDialog.h>
 #include "Loader/ELF.h"
-Array<Elf64_Shdr>* shdr_arr_64 = NULL;
-Array<Elf32_Shdr>* shdr_arr_32 = NULL;
+std::vector<Elf64_Shdr>* shdr_arr_64 = NULL;
+std::vector<Elf32_Shdr>* shdr_arr_32 = NULL;
 ELF64Loader* l_elf64 = NULL;
 ELF32Loader* l_elf32 = NULL;
 bool ElfType64 = false;
@@ -135,7 +135,7 @@ public:
 
 		*done = false;
 
-		if(Emu.GetCPU().GetThreads()[0].GetType() != CPU_THREAD_PPU)
+		if(Emu.GetCPU().GetThreads()[0]->GetType() != CPU_THREAD_PPU)
 		{
 			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_DumpMode);
 			decoder = new SPUDecoder(dis_asm);
@@ -153,7 +153,7 @@ public:
 	{
 		ConLog.Write("Start dump in thread %d!", (int)id);
 		const u32 max_value = prog_dial->GetMaxValue(id);
-		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 		for(u32 sh=0, vsize=0; sh<shdr_count; ++sh)
 		{
@@ -235,7 +235,7 @@ struct WaitDumperThread : public ThreadBase
 		wxFile fd;
 		fd.Open(patch, wxFile::write);
 
-		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 		for(uint sh=0, counter=0; sh<shdr_count; ++sh)
 		{
@@ -320,7 +320,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		}
 		name_arr = l_elf64->shdr_name_arr;
 		shdr_arr_64 = &l_elf64->shdr_arr;
-		if(l_elf64->shdr_arr.GetCount() <= 0) return;
+		if(l_elf64->shdr_arr.size() <= 0) return;
 	break;
 
 	case CLASS_ELF32:
@@ -334,7 +334,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 		name_arr = l_elf32->shdr_name_arr;
 		shdr_arr_32 = &l_elf32->shdr_arr;
-		if(l_elf32->shdr_arr.GetCount() <= 0) return;
+		if(l_elf32->shdr_arr.size() <= 0) return;
 	break;
 
 	default: ConLog.Error("Corrupted ELF!"); return;
@@ -343,7 +343,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	PPCDisAsm* disasm;
 	PPCDecoder* decoder;
 
-	switch(Emu.GetCPU().GetThreads()[0].GetType())
+	switch(Emu.GetCPU().GetThreads()[0]->GetType())
 	{
 	case CPU_THREAD_PPU:
 	{
@@ -363,7 +363,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	break;
 	}
 
-	const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+	const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 	u64 max_count = 0;
 	for(u32 sh=0; sh<shdr_count; ++sh)
