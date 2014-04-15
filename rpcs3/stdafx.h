@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef MSVC_CRT_MEMLEAK_DETECTION
+	#define _CRTDBG_MAP_ALLOC
+	#include <stdlib.h>
+	#include <crtdbg.h>
+#endif
+
 #define NOMINMAX
 
 #ifndef QT_UI
@@ -33,6 +39,15 @@
 
 #include <wx/wxprec.h>
 #endif
+
+#ifdef MSVC_CRT_MEMLEAK_DETECTION
+	#ifdef _DEBUG
+		#ifndef DBG_NEW
+			#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+			#define new DBG_NEW
+		#endif
+	#endif  // _DEBUG
+#endif // MSVC_CRT_MEMLEAK_DETECTION
 
 #ifndef _WIN32
 //hack, disabled

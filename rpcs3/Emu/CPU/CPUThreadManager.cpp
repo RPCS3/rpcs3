@@ -46,31 +46,38 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	return *new_thread;
 }
 
-//TODO: find out where the thread is actually deleted because it's sure as shit not here
 void CPUThreadManager::RemoveThread(const u32 id)
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	for(u32 i=0; i<m_threads.size(); ++i)
+	CPUThread* thr = nullptr;
+	u32 thread_index = 0;
+
+	for (u32 i = 0; i < m_threads.size(); ++i)
 	{
-		if(m_threads[i]->m_wait_thread_id == id)
+		if (m_threads[i]->m_wait_thread_id == id)
 		{
 			m_threads[i]->Wait(false);
 			m_threads[i]->m_wait_thread_id = -1;
 		}
 
-		if(m_threads[i]->GetId() != id) continue;
+		if (m_threads[i]->GetId() != id) continue;
 
-		CPUThread* thr = m_threads[i];
+		thr = m_threads[i];
+		thread_index = i;
+	}
+
+	if (thr)
+	{
 #ifndef QT_UI
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, thr);
 #endif
 		thr->Close();
 
-		m_threads.erase(m_threads.begin()+ i);
-		break;
+		m_threads.erase(m_threads.begin() + thread_index);
 	}
 
+	// Removing the ID should trigger the actual deletion of the thread
 	Emu.GetIdManager().RemoveID(id);
 	Emu.CheckStatus();
 }

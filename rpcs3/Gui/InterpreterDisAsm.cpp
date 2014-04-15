@@ -127,9 +127,9 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_InterpreterMode);
+			PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_InterpreterMode);
 			decoder = new PPUDecoder(dis_asm);
-			disasm = &dis_asm;
+			disasm = dis_asm;
 		}
 		break;
 

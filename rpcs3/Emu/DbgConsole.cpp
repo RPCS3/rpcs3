@@ -26,6 +26,11 @@ DbgConsole::~DbgConsole()
 {
 	ThreadBase::Stop();
 	m_dbg_buffer.Flush();
+
+	safe_delete(m_console);
+	safe_delete(m_color_white);
+	safe_delete(m_color_red);
+	safe_delete(m_output);
 }
 
 void DbgConsole::Write(int ch, const std::string& text)
