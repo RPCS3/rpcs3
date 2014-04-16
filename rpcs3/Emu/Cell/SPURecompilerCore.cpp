@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SPUInstrTable.h"
+#include "SPUDisAsm.h"
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
@@ -9,7 +10,7 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 : m_enc(new SPURecompiler(cpu, *this))
 , inter(new SPUInterpreter(cpu))
 , CPU(cpu)
-//, compiler(&runtime)
+, first(true)
 {
 	memset(entry, 0, sizeof(entry));
 }
@@ -30,8 +31,14 @@ void SPURecompilerCore::Compile(u16 pos)
 	const u64 stamp0 = get_system_time();
 	u64 time0 = 0;
 
+	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+
+	StringLogger stringLogger;
+	stringLogger.setOption(kLoggerOptionBinaryForm, true);
+
 	Compiler compiler(&runtime);
 	m_enc->compiler = &compiler;
+	compiler.setLogger(&stringLogger);
 
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
@@ -55,12 +62,18 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
 	compiler.setArg(3, pos_var);
-	compiler.alloc(pos_var);
 	m_enc->pos_var = &pos_var;
+
+	GpVar addr_var(compiler, kVarTypeUInt32, "addr");
+	m_enc->addr = &addr_var;
+	GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
+	m_enc->qw0 = &qw0_var;
+	GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
+	m_enc->qw1 = &qw1_var;
 
 	for (u32 i = 0; i < 16; i++)
 	{
-		m_enc->xmm_var[i].data = new XmmVar(compiler);
+		m_enc->xmm_var[i].data = new XmmVar(compiler, kVarTypeXmm, fmt::Format("reg_%d", i).c_str());
 	}
 
 	compiler.xor_(pos_var, pos_var);
@@ -72,10 +85,15 @@ void SPURecompilerCore::Compile(u16 pos)
 		if (opcode)
 		{
 			const u64 stamp1 = get_system_time();
-			(*SPU_instr::rrr_list)(m_enc, opcode); // compile single opcode
+			// disasm for logging:
+			dis_asm.dump_pc = CPU.dmac.ls_offset + pos * 4;
+			(*SPU_instr::rrr_list)(&dis_asm, opcode);
+			compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
+			// compile single opcode:
+			(*SPU_instr::rrr_list)(m_enc, opcode);
+			// force finalization between every slice using absolute alignment
 			/*if ((pos % 128 == 127) && !m_enc->do_finalize)
 			{
-				// force finalization between every slice using absolute alignment
 				compiler.mov(pos_var, pos + 1);
 				m_enc->do_finalize = true;
 			}*/
@@ -111,10 +129,17 @@ void SPURecompilerCore::Compile(u16 pos)
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[start].pointer = compiler.make();
+	compiler.setLogger(nullptr); // crashes without it
 
+	wxFile log;
+	log.Open(wxString::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? wxFile::write : wxFile::write_append);
+	log.Write(wxString::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
+	log.Write(wxString(stringLogger.getString()));
+	log.Close();
 	//ConLog.Write("Compiled: %d (excess %d), addr=0x%x, time: [start=%d (decoding=%d), finalize=%d]",
 		//entry[start].count, excess, start * 4, stamp1 - stamp0, time0, get_system_time() - stamp1);
 	m_enc->compiler = nullptr;
+	first = false;
 }
 
 u8 SPURecompilerCore::DecodeMemory(const u64 address)

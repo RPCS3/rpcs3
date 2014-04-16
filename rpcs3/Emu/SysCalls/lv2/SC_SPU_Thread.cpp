@@ -468,7 +468,7 @@ int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 //190
 int sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
-	sc_spu.Warning("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
+	sc_spu.Log("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 

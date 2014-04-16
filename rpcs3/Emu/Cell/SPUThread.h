@@ -331,7 +331,7 @@ public:
 					return false;
 				}
 				res = m_value[0];
-				for (u32 i = 1; i < max_count; i++) // FIFO
+				if (max_count > 1) for (u32 i = 1; i < max_count; i++) // FIFO
 				{
 					m_value[i-1] = m_value[i];
 				}
