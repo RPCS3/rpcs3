@@ -144,6 +144,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 u8 SPURecompilerCore::DecodeMemory(const u64 address)
 {
+	assert(CPU.dmac.ls_offset == address - CPU.PC);
 	const u64 m_offset = CPU.dmac.ls_offset;
 	const u16 pos = (CPU.PC >> 2);
 
@@ -179,10 +180,11 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		}
 	}
 
+	bool did_compile = false;
 	if (!entry[pos].pointer)
 	{
-		// compile from current position to nearest dynamic or statically unresolved branch, zero data or something other
 		Compile(pos);
+		did_compile = true;
 		if (entry[pos].valid == 0)
 		{
 			ConLog.Error("SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
@@ -197,17 +199,36 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		Emu.Pause();
 		return 0;
 	}
-	// jump
+
 	typedef u32(*Func)(void* _cpu, void* _ls, const SPUImmTable* _imm, u32 _pos);
 
 	Func func = asmjit_cast<Func>(entry[pos].pointer);
 
 	void* cpu = (u8*)&CPU.GPR[0] - offsetof(SPUThread, GPR[0]); // ugly cpu base offset detection
 
+	//if (did_compile)
+	{
+		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
+		//if (pos == 0x19c >> 2)
+		{
+			//Emu.Pause();
+			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+		}
+	}
+
 	u16 res = pos;
 	res = (u16)func(cpu, &Memory[m_offset], &g_spu_imm, res);
 
-	LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
+	if (did_compile)
+	{
+		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
+		//if (pos == 0x340 >> 2)
+		{
+			//Emu.Pause();
+			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+		}
+	}
+
 	if ((res - 1) == (CPU.PC >> 2))
 	{
 		return 4;

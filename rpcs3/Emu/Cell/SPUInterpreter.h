@@ -20,7 +20,9 @@
 	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
 	ConLog.Write("Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
 
-#define LOG2_OPCODE(...) // ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
+#define LOG2_OPCODE(...) //MEM_AND_REG_HASH(); ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
+
+#define LOG5_OPCODE(...) ///
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -41,6 +43,7 @@ private:
 	void STOP(u32 code)
 	{
 		CPU.DoStop(code);
+		LOG2_OPCODE();
 	}
 	void LNOP()
 	{
@@ -278,12 +281,12 @@ private:
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u32[3] == 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void BINZ(u32 rt, u32 ra)
@@ -291,12 +294,12 @@ private:
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u32[3] != 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void BIHZ(u32 rt, u32 ra)
@@ -304,12 +307,12 @@ private:
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u16[6] == 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void BIHNZ(u32 rt, u32 ra)
@@ -317,12 +320,12 @@ private:
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u16[6] != 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
@@ -345,7 +348,7 @@ private:
 	void BI(u32 ra)
 	{
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void BISL(u32 rt, u32 ra)
@@ -353,7 +356,7 @@ private:
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;		
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void IRET(u32 ra)
@@ -1094,12 +1097,12 @@ private:
 		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u32[3] == 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void STQA(u32 rt, s32 i16)
@@ -1119,12 +1122,12 @@ private:
 		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u32[3] != 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void BRHZ(u32 rt, s32 i16)
@@ -1132,12 +1135,12 @@ private:
 		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u16[6] == 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void BRHNZ(u32 rt, s32 i16)
@@ -1145,12 +1148,12 @@ private:
 		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u16[6] != 0)
 		{
-			LOG2_OPCODE("taken (0x%llx)", target);
+			LOG5_OPCODE("taken (0x%llx)", target);
 			CPU.SetBranch(target);
 		}
 		else
 		{
-			LOG2_OPCODE("not taken (0x%llx)", target);
+			LOG5_OPCODE("not taken (0x%llx)", target);
 		}
 	}
 	void STQR(u32 rt, s32 i16)
@@ -1168,7 +1171,7 @@ private:
 	void BRA(s32 i16)
 	{
 		u64 target = branchTarget(0, i16);
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void LQA(u32 rt, s32 i16)
@@ -1188,13 +1191,13 @@ private:
 		u64 target = branchTarget(0, i16);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void BR(s32 i16)
 	{
 		u64 target = branchTarget(CPU.PC, i16);
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void FSMBI(u32 rt, s32 i16)
@@ -1218,7 +1221,7 @@ private:
 		u64 target = branchTarget(CPU.PC, i16);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		LOG2_OPCODE("branch (0x%llx)", target);
+		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
 	void LQR(u32 rt, s32 i16)

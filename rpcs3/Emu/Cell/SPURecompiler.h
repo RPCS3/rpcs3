@@ -212,7 +212,6 @@ public:
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
 				LOG4_OPCODE("free reg taken (i=%d)", i);
-				xmm_var[i].reg = -1;
 				return xmm_var[i];
 			}
 		}
@@ -220,12 +219,12 @@ public:
 		{
 			if (!xmm_var[i].taken)
 			{
-				//(saving cached data?)
+				// (saving cached data?)
 				//c.movaps(cpu_xmm(GPR[xmm_var[i].reg]), *xmm_var[i].data);
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
 				LOG4_OPCODE("cached reg taken (i=%d): GPR[%d] lost", i, xmm_var[i].reg);
-				xmm_var[i].reg = -1;
+				xmm_var[i].reg = -1; // ???
 				return xmm_var[i];
 			}
 		}
@@ -245,7 +244,7 @@ public:
 				if (xmm_var[i].taken) throw "XmmGet(): xmm_var is taken";
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
-				xmm_var[i].reg = -1;
+				//xmm_var[i].reg = -1;
 				for (u32 j = i + 1; j < 16; j++)
 				{
 					if (xmm_var[j].reg == reg) throw "XmmGet(): xmm_var duplicate";
@@ -258,7 +257,7 @@ public:
 		{
 			res = &(XmmLink&)XmmAlloc();
 			c.movaps(*res->data, cpu_xmm(GPR[reg]));
-			res->reg = -1;
+			res->reg = -1; // ???
 			LOG4_OPCODE("* cached GPR[%d] not found", reg);
 		}
 		return *res;
@@ -268,7 +267,7 @@ public:
 	{
 		XmmLink* res = &(XmmLink&)XmmAlloc();
 		c.movaps(*res->data, *from.data);
-		res->reg = -1;
+		res->reg = -1; // ???
 		LOG4_OPCODE("*");
 		return *res;
 	}
@@ -329,7 +328,7 @@ public:
 				}
 				LOG4_OPCODE("GPR[%d] finalized (i=%d), GPR[%d] replaced", reg, i, xmm_var[i].reg);
 				// (to disable caching:)
-				reg = -1;
+				//reg = -1;
 				xmm_var[i].reg = reg;
 				xmm_var[i].taken = false;
 				return;
@@ -589,7 +588,9 @@ private:
 		WRAPPER_END(rt, ra, rb, 0);
 
 		// AVX2: masking with 0x3f + VPSLLVD may be better
-		/*for (u32 i = 0; i < 4; i++)
+		/*XmmInvalidate(rt);
+		
+		for (u32 i = 0; i < 4; i++)
 		{
 			GpVar v0(c, kVarTypeUInt32);
 			c.mov(v0, cpu_dword(GPR[ra]._u32[i]));
@@ -861,7 +862,9 @@ private:
 		WRAPPER_END(ra, rt, 0, 0);
 		// TODO
 
-		/*GpVar v(c, kVarTypeUInt32);
+		/*XmmInvalidate(rt);
+		
+		GpVar v(c, kVarTypeUInt32);
 		c.mov(v, cpu_dword(GPR[rt]._u32[3]));
 		switch (ra)
 		{
@@ -977,6 +980,8 @@ private:
 	}
 	void BISL(u32 rt, u32 ra)
 	{
+		XmmInvalidate(rt);
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1084,6 +1089,8 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
+		XmmInvalidate(rt);
+
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (ra == rb)
 		{
@@ -2223,6 +2230,8 @@ private:
 	}
 	void LQA(u32 rt, s32 i16)
 	{
+		XmmInvalidate(rt);
+
 		const u32 lsa = (i16 << 2) & 0x3fff0;
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
@@ -2234,6 +2243,8 @@ private:
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
+		XmmInvalidate(rt);
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -2272,6 +2283,8 @@ private:
 	}
 	void BRSL(u32 rt, s32 i16)
 	{
+		XmmInvalidate(rt);
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -2285,6 +2298,8 @@ private:
 	}
 	void LQR(u32 rt, s32 i16)
 	{
+		XmmInvalidate(rt);
+
 		const u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
@@ -2303,7 +2318,7 @@ private:
 		}
 		else if (i16 == -1)
 		{
-			c.cmpps(vr.get(), vr.get(), 0);
+			c.pcmpeqd(vr.get(), vr.get());
 		}
 		else
 		{
@@ -2321,7 +2336,7 @@ private:
 		}
 		else if (i16 == -1)
 		{
-			c.cmpps(vr.get(), vr.get(), 0);
+			c.pcmpeqd(vr.get(), vr.get());
 			c.pslld(vr.get(), 16);
 		}
 		else
@@ -2362,7 +2377,7 @@ private:
 		{
 			// fill with 1
 			const XmmLink& v1 = XmmAlloc();
-			c.cmpps(v1.get(), v1.get(), 0);
+			c.pcmpeqd(v1.get(), v1.get());
 			XmmFinalize(v1, rt);
 		}
 		else if (i10 == 0)
@@ -2515,6 +2530,8 @@ private:
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) // i10 is shifted left by 4 while decoding
 	{
+		XmmInvalidate(rt);
+
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (i10) c.add(*addr, i10);
 		c.and_(*addr, 0x3fff0);
