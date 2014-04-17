@@ -52,9 +52,7 @@ if(NOT PACKAGE_MODE)
         PCSX2 does not support a 64-bits environment and has no plan to support a 64-bits architecture in the future.
         It would need a complete rewrite of the core emulator and a lot of time.
 
-        You can still run a 32-bits binary if you install all 32-bits libraries (runtime and dev).
-
-        Ubuntu users, please upgrade to 12.04.")
+        You can still run a 32-bits binary if you install all 32-bits libraries (runtime and dev).")
     endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 endif(NOT PACKAGE_MODE)
 
