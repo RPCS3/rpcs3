@@ -13,7 +13,7 @@ if(GLSL_API)
 	set(msg_dep_zzogl       "check these libraries -> glew (>=1.6), jpeg (>=6.2), opengl, X11, pcsx2 common libs")
 else(GLSL_API)
 	set(msg_dep_zzogl       "check these libraries -> glew (>=1.6), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
-endif(GLSL_API)
+endif()
 
 #-------------------------------------------------------------------------------
 #								Pcsx2 core & common libs
@@ -31,11 +31,11 @@ if(wxWidgets_FOUND AND SPARSEHASH_FOUND)
     set(common_libs TRUE)
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/common/src")
     set(common_libs FALSE)
-else(wxWidgets_FOUND AND SPARSEHASH_FOUND)
+else()
     set(common_libs FALSE)
     message(STATUS "Skip build of common libraries: miss some dependencies")
     message(STATUS "${msg_dep_common_libs}")
-endif(wxWidgets_FOUND AND SPARSEHASH_FOUND)
+endif()
 
 #---------------------------------------
 #			Pcsx2 core
@@ -76,7 +76,7 @@ endif()
 #---------------------------------------
 if(GTK2_FOUND)
     set(CDVDnull TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -85,21 +85,23 @@ endif(GTK2_FOUND)
 # requires: -BZip2
 #           -gtk2 (linux)
 #---------------------------------------
-if(BZIP2_FOUND AND GTK2_FOUND AND EXTRA_PLUGINS)
-    set(CDVDiso TRUE)
-elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/CDVDiso")
-    set(CDVDiso FALSE)
-else()
-    set(CDVDiso FALSE)
-    message(STATUS "Skip build of CDVDiso: miss some dependencies")
-    message(STATUS "${msg_dep_cdvdiso}")
+if(EXTRA_PLUGINS)
+    if(BZIP2_FOUND AND GTK2_FOUND)
+        set(CDVDiso TRUE)
+    elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/CDVDiso")
+        set(CDVDiso FALSE)
+    else()
+        set(CDVDiso FALSE)
+        message(STATUS "Skip build of CDVDiso: miss some dependencies")
+        message(STATUS "${msg_dep_cdvdiso}")
+    endif()
 endif()
 
 #---------------------------------------
 #			CDVDlinuz
 #---------------------------------------
 if(EXTRA_PLUGINS)
-set(CDVDlinuz TRUE)
+    set(CDVDlinuz TRUE)
 endif()
 
 #---------------------------------------
@@ -107,7 +109,7 @@ endif()
 #---------------------------------------
 if(GTK2_FOUND)
     set(dev9null TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -115,7 +117,7 @@ endif(GTK2_FOUND)
 #---------------------------------------
 if(GTK2_FOUND)
     set(FWnull TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -136,11 +138,11 @@ if(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
     set(GSdx TRUE)
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/GSdx")
 	set(GSdx FALSE)
-else(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
+else()
 	set(GSdx FALSE)
     message(STATUS "Skip build of GSdx: miss some dependencies")
     message(STATUS "${msg_dep_gsdx}")
-endif(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -151,14 +153,16 @@ endif(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
 #			-X11
 #			-CG
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND EXTRA_PLUGINS)
-	set(zerogs TRUE)
-elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerogs")
-	set(zerogs FALSE)
-else()
-	set(zerogs FALSE)
-    message(STATUS "Skip build of zerogs: miss some dependencies")
-    message(STATUS "${msg_dep_zerogs}")
+if(EXTRA_PLUGINS)
+    if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+        set(zerogs TRUE)
+    elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerogs")
+        set(zerogs FALSE)
+    else()
+        set(zerogs FALSE)
+        message(STATUS "Skip build of zerogs: miss some dependencies")
+        message(STATUS "${msg_dep_zerogs}")
+    endif()
 endif()
 #---------------------------------------
 
@@ -209,11 +213,11 @@ if(SDL_FOUND)
 	set(onepad TRUE)
 elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/onepad")
 	set(onepad FALSE)
-else(SDL_FOUND)
+else()
 	set(onepad FALSE)
     message(STATUS "Skip build of onepad: miss some dependencies")
     message(STATUS "${msg_dep_onepad}")
-endif(SDL_FOUND)
+endif()
 #---------------------------------------
 
 #---------------------------------------
@@ -251,17 +255,19 @@ endif()
 #			-ALSA
 #			-PortAudio
 #---------------------------------------
-if(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND AND EXTRA_PLUGINS)
-    set(zerospu2 TRUE)
-    # Comment the next line, if you want to compile zerospu2
-	set(zerospu2 FALSE)
-    message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
-elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2")
-	set(zerospu2 FALSE)
-else()
-	set(zerospu2 FALSE)
-    message(STATUS "Skip build of zerospu2: miss some dependencies")
-    message(STATUS "${msg_dep_zerospu2}")
+if(EXTRA_PLUGINS)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2" AND SOUNDTOUCH_FOUND AND ALSA_FOUND)
+        set(zerospu2 TRUE)
+        # Comment the next line, if you want to compile zerospu2
+        set(zerospu2 FALSE)
+        message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
+    elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/plugins/zerospu2")
+        set(zerospu2 FALSE)
+    else()
+        set(zerospu2 FALSE)
+        message(STATUS "Skip build of zerospu2: miss some dependencies")
+        message(STATUS "${msg_dep_zerospu2}")
+    endif()
 endif()
 #---------------------------------------
 
@@ -270,7 +276,7 @@ endif()
 #---------------------------------------
 if(GTK2_FOUND)
     set(USBnull TRUE)
-endif(GTK2_FOUND)
+endif()
 #---------------------------------------
 
 #-------------------------------------------------------------------------------
