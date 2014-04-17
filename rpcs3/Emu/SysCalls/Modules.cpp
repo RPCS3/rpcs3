@@ -117,19 +117,44 @@ static const g_module_list[] =
 	{0xf034, "cellSailRec"},
 	{0xf035, "sceNpTrophy"},
 	{0xf053, "cellAdecAt3multi"},
-	{0xf054, "cellLibatrac3multi"},
+	{0xf054, "cellLibatrac3multi"}
 };
 
 struct _InitNullModules
 {
+	std::vector<Module*> m_modules;
+
 	_InitNullModules()
 	{
 		for(auto& m : g_module_list)
 		{
-			new Module(m.id, m.name);
+			m_modules.push_back(new Module(m.id, m.name));
+		}
+	}
+
+	~_InitNullModules()
+	{
+		for (int i = 0; i < m_modules.size(); ++i)
+		{
+			delete m_modules[i];
 		}
 	}
 } InitNullModules;
+
+/** HACK: Used to delete SFunc objects that get added to the global static function array (g_static_funcs_list).
+ * The destructor of this static object gets called when the program shuts down.
+ */
+struct StaticFunctionListCleaner_t
+{
+	StaticFunctionListCleaner_t() {}
+	~StaticFunctionListCleaner_t()
+	{
+		for (int i = 0; i < g_static_funcs_list.size(); ++i)
+		{
+			delete g_static_funcs_list[i];
+		}
+	}
+} StaticFunctionListCleaner;
 
 bool IsLoadedFunc(u32 id)
 {
@@ -269,13 +294,13 @@ void SetModule(int id, Module* module, bool with_data)
 			if(with_data)
 			{
 				module->SetName(g_modules[index][(u8)id]->GetName());
-				delete g_modules[index][(u8)id];
+				// delete g_modules[index][(u8)id];
 				g_modules[index][(u8)id] = module;
 			}
 			else
 			{
 				g_modules[index][(u8)id]->SetName(module->GetName());
-				delete module;
+				// delete module;
 			}
 		}
 		else
@@ -325,6 +350,16 @@ Module::Module(u16 id, void (*init)(), void (*load)(), void (*unload)())
 	if(init) init();
 }
 
+Module::~Module()
+{
+	UnLoad();
+
+	for (int i = 0; i < m_funcs_list.size(); i++)
+	{
+		delete m_funcs_list[i];
+	}
+}
+
 void Module::Load()
 {
 	if(IsLoaded())
@@ -336,9 +371,9 @@ void Module::Load()
 	{
 		std::lock_guard<std::mutex> lock(g_funcs_lock);
 
-		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
+		if(IsLoadedFunc(m_funcs_list[i]->id)) continue;
 		
-		g_modules_funcs_list.push_back(&m_funcs_list[i]);
+		g_modules_funcs_list.push_back(m_funcs_list[i]);
 	}
 
 	SetLoaded(true);
@@ -353,7 +388,7 @@ void Module::UnLoad()
 
 	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
-		UnloadFunc(m_funcs_list[i].id);
+		UnloadFunc(m_funcs_list[i]->id);
 	}
 
 	SetLoaded(false);
@@ -367,9 +402,9 @@ bool Module::Load(u32 id)
 
 	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
-		if(m_funcs_list[i].id == id)
+		if(m_funcs_list[i]->id == id)
 		{
-			g_modules_funcs_list.push_back(&m_funcs_list[i]);
+			g_modules_funcs_list.push_back(m_funcs_list[i]);
 
 			return true;
 		}

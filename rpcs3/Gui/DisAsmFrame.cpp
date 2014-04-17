@@ -143,9 +143,9 @@ public:
 		}
 		else
 		{
-			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+			PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_DumpMode);
 			decoder = new PPUDecoder(dis_asm);
-			disasm = &dis_asm;
+			disasm = dis_asm;
 		}
 	}
 
@@ -347,9 +347,9 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	{
 	case CPU_THREAD_PPU:
 	{
-		PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+		PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_DumpMode);
 		decoder = new PPUDecoder(dis_asm);
-		disasm = &dis_asm;
+		disasm = dis_asm;
 	}
 	break;
 

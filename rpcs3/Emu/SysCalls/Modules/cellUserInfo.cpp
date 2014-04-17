@@ -30,6 +30,7 @@ int cellUserInfoGetStat(u32 id, mem_ptr_t<CellUserInfoUserStat> stat)
 	memset(name, 0, CELL_USERINFO_USERNAME_SIZE);
 	stream->Read(name, CELL_USERINFO_USERNAME_SIZE);
 	stream->Close();
+	delete stream;
 
 	stat->id = id;
 	memcpy(stat->name, name, CELL_USERINFO_USERNAME_SIZE);

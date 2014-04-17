@@ -150,7 +150,8 @@ void PPUThread::DoRun()
 
 	case 1:
 	case 2:
-		m_dec = new PPUDecoder(*new PPUInterpreter(*this));
+		auto ppui = new PPUInterpreter(*this);
+		m_dec = new PPUDecoder(ppui);
 	break;
 	}
 }

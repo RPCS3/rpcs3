@@ -7,15 +7,15 @@ class CPUDecoder
 {
 public:
 	virtual u8 DecodeMemory(const u64 address)=0;
+
+	virtual ~CPUDecoder() = default;
 };
 
 template<typename TO>
 class InstrCaller
 {
 public:
-	virtual ~InstrCaller<TO>()
-	{
-	}
+	virtual ~InstrCaller<TO>() = default;
 
 	virtual void operator ()(TO* op, u32 code) const = 0;
 
@@ -334,6 +334,17 @@ public:
 				});
 	}
 
+	virtual ~InstrBase()
+	{
+		if (m_args) {
+			// m_args contains pointers to statically allocated CodeFieldBase objects
+			// We shouldn't call delete on these, they aren't allocated with new
+
+			// The m_args array itself, however, should be deleted
+			delete[] m_args;
+		}
+	}
+
 	__forceinline const std::string& GetName() const
 	{
 		return m_name;
@@ -396,12 +407,54 @@ public:
 
 	virtual ~InstrList()
 	{
-		for(int i=0; i<count; ++i)
+		bool deletedErrorFunc = false;
+
+		// Clean up m_instrs
+		for(int i = 0; i < count; ++i)
 		{
-			delete m_instrs[i];
+			InstrCaller<TO>* deleteMe = m_instrs[i];
+
+			if (deleteMe) { // deleteMe will be a nullptr if we've already deleted it through another reference
+				// Remove any instances of pointers to this instruction caller from our m_instrs list
+				m_instrs[i] = nullptr;
+				for (int j = i + 1; j < count; j++) {
+					if (m_instrs[j] == deleteMe) {
+						m_instrs[j] = nullptr;
+					}
+				}
+
+				// If we're deleting the error handler here, remember it so we don't try to delete it again later
+				if (deleteMe == m_error_func) {
+					deletedErrorFunc = true;
+				}
+
+				// Delete the instruction caller
+				delete deleteMe;
+			}
 		}
 
-		delete m_error_func;
+		// Clean up m_instrs_info
+		for (int i = 0; i < count; ++i)
+		{
+			InstrBase<TO>* deleteMe = m_instrs_info[i];
+
+			if (deleteMe) {
+				m_instrs_info[i] = nullptr;
+				for (int j = i + 1; j < count; j++) {
+					if (m_instrs_info[j] == deleteMe) {
+						m_instrs[j] = nullptr;
+					}
+				}
+
+				delete deleteMe;
+			}
+		}
+
+		// If we haven't already deleted our error handler, and we have one, then delete it now
+		if (!deletedErrorFunc && m_error_func)
+		{
+			delete m_error_func;
+		}
 	}
 
 	void set_parent(InstrCaller<TO>* parent, int opcode)

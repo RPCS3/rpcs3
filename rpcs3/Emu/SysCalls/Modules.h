@@ -1,8 +1,4 @@
 #pragma once
-#include "Modules/cellResc.h"
-#include "Modules/cellPngDec.h"
-#include "Modules/cellJpgDec.h"
-#include "Modules/cellGifDec.h"
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
@@ -17,6 +13,11 @@ struct ModuleFunc
 		: id(id)
 		, func(func)
 	{
+	}
+
+	~ModuleFunc()
+	{
+		safe_delete(func);
 	}
 };
 
@@ -34,6 +35,11 @@ struct SFunc
 	std::vector<SFuncOp> ops;
 	u64 group;
 	u32 found;
+
+	~SFunc()
+	{
+		safe_delete(func);
+	}
 };
 
 extern std::vector<SFunc *> g_static_funcs_list;
@@ -47,11 +53,13 @@ class Module
 	void (*m_unload_func)();
 
 public:
-	std::vector<ModuleFunc> m_funcs_list;
+	std::vector<ModuleFunc*> m_funcs_list;
 
 	Module(u16 id, const char* name);
 	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
 	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+
+	~Module();
 
 	void Load();
 	void UnLoad();
@@ -115,7 +123,7 @@ public:
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
-	m_funcs_list.emplace_back(id, bind_func(func));
+	m_funcs_list.emplace_back(new ModuleFunc(id, bind_func(func)));
 }
 
 template<typename T>

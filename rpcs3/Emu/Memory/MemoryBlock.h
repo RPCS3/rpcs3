@@ -43,6 +43,7 @@ struct MemBlockInfo : public MemInfo
 	MemBlockInfo& operator =(MemBlockInfo &&other){
 		this->addr = other.addr;
 		this->size = other.size;
+		if (this->mem) _aligned_free(mem);
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;

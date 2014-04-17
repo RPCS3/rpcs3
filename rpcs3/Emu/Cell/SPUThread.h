@@ -1180,7 +1180,7 @@ public:
 					reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
 				}
-				catch (std::invalid_argument& e)
+				catch (std::invalid_argument& /*e*/)
 				{
 					return false;
 				}

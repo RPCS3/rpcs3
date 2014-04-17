@@ -397,12 +397,11 @@ bool GLGSRender::LoadProgram()
 	{
 		ConLog.Warning("FP not found in buffer!");
 		m_shader_prog.Decompile(*m_cur_shader_prog);
-		m_shader_prog.Wait();
 		m_shader_prog.Compile();
 		checkForGlError("m_shader_prog.Compile");
 
 		wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
-		f.Write(m_shader_prog.shader);
+		f.Write(m_shader_prog.GetShaderText());
 	}
 
 	if(m_vp_buf_num == -1)
@@ -433,7 +432,7 @@ bool GLGSRender::LoadProgram()
 				{
 					// TODO: This isn't working perfectly. Is there any better/shorter way to update the program
 					m_vertex_prog.shader = program.vp_shader;
-					m_shader_prog.shader = program.fp_shader;
+					m_shader_prog.SetShaderText(program.fp_shader);
 					m_vertex_prog.Wait();
 					m_vertex_prog.Compile();
 					checkForGlError("m_vertex_prog.Compile");
@@ -441,13 +440,13 @@ bool GLGSRender::LoadProgram()
 					m_shader_prog.Compile();
 					checkForGlError("m_shader_prog.Compile");
 					glAttachShader(m_program.id, m_vertex_prog.id);
-					glAttachShader(m_program.id, m_shader_prog.id);
+					glAttachShader(m_program.id, m_shader_prog.GetId());
 					glLinkProgram(m_program.id);
 					checkForGlError("glLinkProgram");
 					glDetachShader(m_program.id, m_vertex_prog.id);
-					glDetachShader(m_program.id, m_shader_prog.id);
+					glDetachShader(m_program.id, m_shader_prog.GetId());
 					program.vp_id = m_vertex_prog.id;
-					program.fp_id = m_shader_prog.id;
+					program.fp_id = m_shader_prog.GetId();
 					program.modified = false;
 				}
 			}
@@ -456,7 +455,7 @@ bool GLGSRender::LoadProgram()
 	}
 	else
 	{
-		m_program.Create(m_vertex_prog.id, m_shader_prog.id);
+		m_program.Create(m_vertex_prog.id, m_shader_prog.GetId());
 		checkForGlError("m_program.Create");
 		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_shader_prog, m_vertex_prog, *m_cur_vertex_prog);
 		checkForGlError("m_prog_buffer.Add");
@@ -468,9 +467,9 @@ bool GLGSRender::LoadProgram()
 			RSXDebuggerProgram program;
 			program.id = m_program.id;
 			program.vp_id = m_vertex_prog.id;
-			program.fp_id = m_shader_prog.id;
+			program.fp_id = m_shader_prog.GetId();
 			program.vp_shader = m_vertex_prog.shader;
-			program.fp_shader = m_shader_prog.shader;
+			program.fp_shader = m_shader_prog.GetShaderText();
 			m_debug_programs.push_back(program);
 		}
 	}

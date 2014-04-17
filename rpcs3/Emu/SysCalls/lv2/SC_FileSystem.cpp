@@ -94,7 +94,8 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		{
 			_oflags &= ~CELL_O_TRUNC;
 			//truncate file before opening it as read/write
-			Emu.GetVFS().OpenFile(ppath, vfsWrite);
+			auto filePtr = Emu.GetVFS().OpenFile(ppath, vfsWrite);
+			delete filePtr;
 		}
 		o_mode = vfsReadWrite;
 	break;
@@ -110,6 +111,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	if(!stream || !stream->IsOpened())
 	{
+		delete stream;
 		sys_fs.Error("\"%s\" not found! flags: 0x%08x", ppath.c_str(), flags);
 		return CELL_ENOENT;
 	}

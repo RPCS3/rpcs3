@@ -6,6 +6,7 @@
 #include "Emu/SysCalls/Callback.h"
 
 #include <stack>
+#include <set> // For tracking a list of used gcm commands
 
 enum Method
 {
@@ -384,6 +385,8 @@ public:
 	u8 m_begin_end;
 	bool m_read_buffer;
 
+	std::set<u32> m_used_gcm_commands;
+
 protected:
 	RSXThread()
 		: ThreadBase("RSXThread")
@@ -537,6 +540,8 @@ public:
 		m_cur_vertex_prog = nullptr;
 		m_cur_shader_prog = nullptr;
 		m_cur_shader_prog_num = 0;
+
+		m_used_gcm_commands.clear();
 
 		OnInit();
 		ThreadBase::Start();

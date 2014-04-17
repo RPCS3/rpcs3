@@ -50,6 +50,14 @@ struct ID
 	{
 	}
 
+	ID(ID&& other)
+	{
+		m_name = other.m_name;
+		m_attr = other.m_attr;
+		m_data = other.m_data;
+		other.m_data = nullptr;
+	}
+
 	void Kill()
 	{
 		delete m_data;
