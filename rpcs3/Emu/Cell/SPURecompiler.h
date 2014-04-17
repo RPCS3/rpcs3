@@ -14,76 +14,6 @@ using namespace asmjit::host;
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
-struct SPUImmTable
-{
-	__m128i s19_to_s32[1 << 19];
-	__m128i fsmbi_mask[1 << 16];
-	__m128i u8_to_u8[256];
-	__m128 scale_to_float[256];
-	__m128 scale_to_int[256];
-	__m128i min_int;
-	__m128i max_int;
-
-	SPUImmTable()
-	{
-		// signed numbers table
-		for (u32 i = 0; i < sizeof(s19_to_s32) / sizeof(__m128i); i++)
-		{
-			const u32 v = (i & 0x40000) ? (i | 0xfff80000) : i;
-			s19_to_s32[i].m128i_i32[0] = v;
-			s19_to_s32[i].m128i_i32[1] = v;
-			s19_to_s32[i].m128i_i32[2] = v;
-			s19_to_s32[i].m128i_i32[3] = v;
-		}
-		// FSMBI mask table
-		for (u32 i = 0; i < sizeof(fsmbi_mask) / sizeof(__m128i); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				fsmbi_mask[i].m128i_i8[j] = ((i >> j) & 0x1) ? 0xff : 0;
-			}
-		}
-		// scale table for (u)int -> float conversion
-		for (s32 i = 0; i < sizeof(scale_to_float) / sizeof(__m128); i++)
-		{
-			const float v = pow(2, i - 155);
-			scale_to_float[i].m128_f32[0] = v;
-			scale_to_float[i].m128_f32[1] = v;
-			scale_to_float[i].m128_f32[2] = v;
-			scale_to_float[i].m128_f32[3] = v;
-		}
-		// scale table for float -> (u)int conversion
-		for (s32 i = 0; i < sizeof(scale_to_int) / sizeof(__m128); i++)
-		{
-			const float v = pow(2, 173 - i);
-			scale_to_int[i].m128_f32[0] = v;
-			scale_to_int[i].m128_f32[1] = v;
-			scale_to_int[i].m128_f32[2] = v;
-			scale_to_int[i].m128_f32[3] = v;
-		}
-		// sign bit
-		min_int.m128i_u32[0] = 0x80000000;
-		min_int.m128i_u32[1] = 0x80000000;
-		min_int.m128i_u32[2] = 0x80000000;
-		min_int.m128i_u32[3] = 0x80000000;
-		//
-		max_int.m128i_u32[0] = 0x7fffffff;
-		max_int.m128i_u32[1] = 0x7fffffff;
-		max_int.m128i_u32[2] = 0x7fffffff;
-		max_int.m128i_u32[3] = 0x7fffffff;
-		// table for byte consts
-		for (u32 i = 0; i < sizeof(u8_to_u8) / sizeof(__m128i); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				u8_to_u8[i].m128i_u8[j] = i;
-			}
-		}
-	}
-};
-
-extern const SPUImmTable g_spu_imm;
-
 class SPURecompiler;
 
 class SPURecompilerCore : public CPUDecoder
@@ -106,6 +36,8 @@ public:
 
 	SPURecEntry entry[0x10000];
 
+	std::vector<__m128i> imm_table;
+
 	SPURecompilerCore(SPUThread& cpu);
 
 	~SPURecompilerCore();
@@ -124,8 +56,6 @@ public:
 #define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
 #define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
 #define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
-
-#define imm_xmm(x) oword_ptr(*imm_var, offsetof(SPUImmTable, x))
 
 #define LOG_OPCODE(...) //ConLog.Write("Compiled "__FUNCTION__"(): "__VA_ARGS__)
 
@@ -180,18 +110,29 @@ public:
 		s8 reg;
 		bool taken;
 		mutable bool got;
+		mutable u32 access;
 
 		XmmLink()
 			: data(nullptr)
 			, reg(-1)
 			, taken(false)
+			, got(false)
+			, access(0)
 		{
 		}
 
 		const XmmVar& get() const
 		{
 			assert(data);
+			assert(taken);
+			if (!taken) throw "XmmLink::get(): wrong use";
 			got = true;
+			return *data;
+		}
+
+		const XmmVar& read() const
+		{
+			assert(data);
 			return *data;
 		}
 	} xmm_var[16];
@@ -203,73 +144,54 @@ public:
 	{
 	}
 
-	const XmmLink& XmmAlloc() // get empty xmm register
+	const XmmLink& XmmAlloc(s8 pref = -1) // get empty xmm register
 	{
+		if (pref >= 0) for (u32 i = 0; i < 16; i++)
+		{
+			if ((xmm_var[i].reg == pref) && !xmm_var[i].taken)
+			{
+				xmm_var[i].taken = true;
+				xmm_var[i].got = false;
+				xmm_var[i].access = 0;
+				LOG4_OPCODE("pref(%d) reg taken (i=%d)", pref, i);
+				return xmm_var[i];
+			}
+		}
 		for (u32 i = 0; i < 16; i++)
 		{
 			if ((xmm_var[i].reg == -1) && !xmm_var[i].taken)
 			{
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
+				xmm_var[i].access = 0;
 				LOG4_OPCODE("free reg taken (i=%d)", i);
 				return xmm_var[i];
 			}
 		}
+		int last = -1, max = -1;
 		for (u32 i = 0; i < 16; i++)
 		{
 			if (!xmm_var[i].taken)
 			{
-				// (saving cached data?)
-				//c.movaps(cpu_xmm(GPR[xmm_var[i].reg]), *xmm_var[i].data);
-				xmm_var[i].taken = true;
-				xmm_var[i].got = false;
-				LOG4_OPCODE("cached reg taken (i=%d): GPR[%d] lost", i, xmm_var[i].reg);
-				xmm_var[i].reg = -1; // ???
-				return xmm_var[i];
-			}
-		}
-		assert(false);
-		return *(XmmLink*)nullptr;
-	}
-
-	const XmmLink& XmmGet(s8 reg) // get xmm register with specific SPU reg
-	{
-		assert(reg >= 0);
-		XmmLink* res = nullptr;
-		for (u32 i = 0; i < 16; i++)
-		{
-			if (xmm_var[i].reg == reg)
-			{
-				res = &xmm_var[i];
-				if (xmm_var[i].taken) throw "XmmGet(): xmm_var is taken";
-				xmm_var[i].taken = true;
-				xmm_var[i].got = false;
-				//xmm_var[i].reg = -1;
-				for (u32 j = i + 1; j < 16; j++)
+				if ((int)xmm_var[i].access > max)
 				{
-					if (xmm_var[j].reg == reg) throw "XmmGet(): xmm_var duplicate";
+					last = i;
+					max = xmm_var[i].access;
 				}
-				LOG4_OPCODE("cached GPR[%d] used (i=%d)", reg, i);
-				break;
 			}
 		}
-		if (!res)
+		if (last >= 0)
 		{
-			res = &(XmmLink&)XmmAlloc();
-			c.movaps(*res->data, cpu_xmm(GPR[reg]));
-			res->reg = -1; // ???
-			LOG4_OPCODE("* cached GPR[%d] not found", reg);
+			// (saving cached data?)
+			//c.movaps(cpu_xmm(GPR[xmm_var[last].reg]), *xmm_var[last].data);
+			xmm_var[last].taken = true;
+			xmm_var[last].got = false;
+			LOG4_OPCODE("cached reg taken (i=%d): GPR[%d] lost", last, xmm_var[last].reg);
+			xmm_var[last].reg = -1; // ???
+			xmm_var[last].access = 0;
+			return xmm_var[last];
 		}
-		return *res;
-	}
-
-	const XmmLink& XmmCopy(const XmmLink& from) // XmmAlloc + mov
-	{
-		XmmLink* res = &(XmmLink&)XmmAlloc();
-		c.movaps(*res->data, *from.data);
-		res->reg = -1; // ???
-		LOG4_OPCODE("*");
-		return *res;
+		throw "XmmAlloc() failed";
 	}
 
 	const XmmLink* XmmRead(const s8 reg) const // get xmm register with specific SPU reg or nullptr
@@ -279,13 +201,72 @@ public:
 		{
 			if (xmm_var[i].reg == reg)
 			{
-				if (xmm_var[i].got && xmm_var[i].taken) throw "XmmRead(): wrong reuse";
+				assert(!xmm_var[i].got);
+				if (xmm_var[i].got) throw "XmmRead(): wrong reuse";
 				LOG4_OPCODE("GPR[%d] has been read (i=%d)", reg, i);
+				xmm_var[i].access++;
 				return &xmm_var[i];
 			}
 		}
 		LOG4_OPCODE("GPR[%d] not found", reg);
 		return nullptr;
+	}
+
+	const XmmLink& XmmGet(s8 reg, s8 target = -1) // get xmm register with specific SPU reg
+	{
+		assert(reg >= 0);
+		XmmLink* res = nullptr;
+		if (reg == target)
+		{
+			for (u32 i = 0; i < 16; i++)
+			{
+				if (xmm_var[i].reg == reg)
+				{
+					res = &xmm_var[i];
+					if (xmm_var[i].taken) throw "XmmGet(): xmm_var is taken";
+					xmm_var[i].taken = true;
+					xmm_var[i].got = false;
+					//xmm_var[i].reg = -1;
+					for (u32 j = i + 1; j < 16; j++)
+					{
+						if (xmm_var[j].reg == reg) throw "XmmGet(): xmm_var duplicate";
+					}
+					LOG4_OPCODE("cached GPR[%d] used (i=%d)", reg, i);
+					break;
+				}
+			}
+		}
+		if (!res)
+		{
+			res = &(XmmLink&)XmmAlloc(target);
+			/*if (target != res->reg)
+			{
+				c.movaps(*res->data, cpu_xmm(GPR[reg]));
+			}
+			else*/
+			{
+				if (const XmmLink* source = XmmRead(reg))
+				{
+					c.movaps(*res->data, source->read());
+				}
+				else
+				{
+					c.movaps(*res->data, cpu_xmm(GPR[reg]));
+				}
+			}
+			res->reg = -1; // ???
+			LOG4_OPCODE("* cached GPR[%d] not found", reg);
+		}
+		return *res;
+	}
+
+	const XmmLink& XmmCopy(const XmmLink& from, s8 pref = -1) // XmmAlloc + mov
+	{
+		XmmLink* res = &(XmmLink&)XmmAlloc(pref);
+		c.movaps(*res->data, *from.data);
+		res->reg = -1; // ???
+		LOG4_OPCODE("*");
+		return *res;
 	}
 
 	void XmmInvalidate(const s8 reg) // invalidate cached register
@@ -298,6 +279,7 @@ public:
 				if (xmm_var[i].taken) throw "XmmInvalidate(): xmm_var is taken";
 				LOG4_OPCODE("GPR[%d] invalidated (i=%d)", reg, i);
 				xmm_var[i].reg = -1;
+				xmm_var[i].access = 0;
 			}
 		}
 	}
@@ -311,6 +293,7 @@ public:
 			{
 				LOG4_OPCODE("GPR[%d] invalidated (i=%d)", reg, i);
 				xmm_var[i].reg = -1;
+				xmm_var[i].access = 0;
 			}
 		}
 		for (u32 i = 0; i < 16; i++)
@@ -331,6 +314,8 @@ public:
 				//reg = -1;
 				xmm_var[i].reg = reg;
 				xmm_var[i].taken = false;
+				xmm_var[i].got = false;
+				xmm_var[i].access = 0;
 				return;
 			}
 		}
@@ -346,8 +331,28 @@ public:
 				//c.movaps(cpu_xmm(GPR[xmm_var[i].reg]), *xmm_var[i].data);
 				LOG4_OPCODE("GPR[%d] released (i=%d)", xmm_var[i].reg, i);
 				xmm_var[i].reg = -1;
+				xmm_var[i].access = 0;
 			}
 		}
+	}
+
+	Mem XmmConst(const __m128i data)
+	{
+		for (u32 i = 0; i < rec.imm_table.size(); i++)
+		{
+			if (rec.imm_table[i].m128i_u64[0] == data.m128i_u64[0] && rec.imm_table[i].m128i_u64[1] == data.m128i_u64[1])
+			{
+				return oword_ptr(*imm_var, i * sizeof(__m128i));
+			}
+		}
+		const int shift = rec.imm_table.size() * sizeof(__m128i);
+		rec.imm_table.push_back(data);
+		return oword_ptr(*imm_var, shift);
+	}
+
+	Mem XmmConst(const __m128 data)
+	{
+		return XmmConst((__m128i&)data);
 	}
 
 private:
@@ -427,17 +432,17 @@ private:
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// sub from
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.psubd(vb.get(), va->get());
+				c.psubd(vb.get(), va->read());
 			}
 			else
 			{
@@ -454,7 +459,7 @@ private:
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -462,10 +467,10 @@ private:
 		else
 		{
 			// or
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.orps(vb.get(), va->get());
+				c.orps(vb.get(), va->read());
 			}
 			else
 			{
@@ -477,28 +482,23 @@ private:
 	}
 	void BG(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] > CPU.GPR[rb]._u32[0] ? 0 : 1;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] > CPU.GPR[rb]._u32[1] ? 0 : 1;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] > CPU.GPR[rb]._u32[2] ? 0 : 1;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3] ? 0 : 1;
-		WRAPPER_END(rt, ra, rb, 0);
-
-		/*XmmVar v0(c);
 		if (ra == rb)
 		{
-			c.movaps(v0, imm_xmm(s19_to_s32[1]));
-			c.movaps(cpu_xmm(GPR[rt]), v0);
+			const XmmLink& v1 = XmmAlloc(rt);
+			c.movaps(v1.get(), XmmConst(_mm_set1_epi32(1)));
+			XmmFinalize(v1, rt);
 		}
 		else
 		{
-			XmmVar v1(c), v2(c);
-			c.movdqa(v0, cpu_xmm(GPR[ra]));
-			c.movdqa(v1, cpu_xmm(GPR[rb]));
 			// compare if-greater-than
-			
-			c.movdqa(cpu_xmm(GPR[rt]), v0);
-			
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& vb = XmmGet(rb);
+			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.pcmpgtd(va.get(), vb.get());
+			c.paddd(va.get(), XmmConst(_mm_set1_epi32(1)));
+			XmmFinalize(va, rt);
+			XmmFinalize(vb);
 			// sign bits:
 			// a b (b-a) -> (result of BG)
 			// 0 0 0 -> 1
@@ -510,23 +510,23 @@ private:
 			// 1 1 0 -> 0
 			// 1 1 1 -> 1
 		}
-		LOG_OPCODE();*/
+		LOG_OPCODE();
 	}
 	void SFH(u32 rt, u32 ra, u32 rb)
 	{
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.psubw(vb.get(), va->get());
+				c.psubw(vb.get(), va->read());
 			}
 			else
 			{
@@ -538,18 +538,44 @@ private:
 	}
 	void NOR(u32 rt, u32 ra, u32 rb)
 	{
-		const XmmLink& va = XmmGet(ra);
-		if (ra != rb) c.orps(va.get(), cpu_xmm(GPR[rb]));
-		c.xorps(va.get(), imm_xmm(s19_to_s32[0x7ffff]));
+		const XmmLink& va = XmmGet(ra, rt);
+		if (ra != rb)
+		{
+			if (const XmmLink* vb = XmmRead(rb))
+			{
+				c.orps(va.get(), vb->read());
+			}
+			else
+			{
+				c.orps(va.get(), cpu_xmm(GPR[rb]));
+			}
+		}
+		c.xorps(va.get(), XmmConst(_mm_set1_epi32(-1)));
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ABSDB(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[rb]._u8[b] > CPU.GPR[ra]._u8[b] ? CPU.GPR[rb]._u8[b] - CPU.GPR[ra]._u8[b] : CPU.GPR[ra]._u8[b] - CPU.GPR[rb]._u8[b];
-		WRAPPER_END(rt, ra, rb, 0);
+		if (ra == rb)
+		{
+			// zero
+			const XmmLink& v0 = XmmAlloc(rt);
+			c.xorps(v0.get(), v0.get());
+			XmmFinalize(v0, rt);
+		}
+		else
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vm = XmmCopy(va);
+			c.pmaxub(va.get(), vb.get());
+			c.pminub(vb.get(), vm.get());
+			c.psubb(va.get(), vb.get());
+			XmmFinalize(va, rt);
+			XmmFinalize(vb);
+			XmmFinalize(vm);
+		}
+		LOG_OPCODE();
 	}
 	void ROT(u32 rt, u32 ra, u32 rb)
 	{
@@ -589,7 +615,6 @@ private:
 
 		// AVX2: masking with 0x3f + VPSLLVD may be better
 		/*XmmInvalidate(rt);
-		
 		for (u32 i = 0; i < 4; i++)
 		{
 			GpVar v0(c, kVarTypeUInt32);
@@ -635,30 +660,45 @@ private:
 	}
 	void ROTI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = i7 & 0x1f;
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nRot) | (CPU.GPR[ra]._u32[0] >> (32 - nRot));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nRot) | (CPU.GPR[ra]._u32[1] >> (32 - nRot));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nRot) | (CPU.GPR[ra]._u32[2] >> (32 - nRot));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << nRot) | (CPU.GPR[ra]._u32[3] >> (32 - nRot));
-		WRAPPER_END(rt, ra, i7, 0);
-	}
-	void ROTMI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = (0 - i7) & 0x3f;
-		if (nRot > 31)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc();
-			c.xorps(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (nRot == 0)
+		const int s = i7 & 0x1f;
+		if (s == 0)
 		{
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
+				XmmFinalize(va, rt);
+			}
+			// else nop
+		}
+		else
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& v1 = XmmCopy(va);
+			c.pslld(va.get(), s);
+			c.psrld(v1.get(), 32 - s);
+			c.por(va.get(), v1.get());
+			XmmFinalize(va, rt);
+			XmmFinalize(v1);
+		}
+		LOG_OPCODE();
+	}
+	void ROTMI(u32 rt, u32 ra, s32 i7)
+	{
+		const int s = (0 - i7) & 0x3f;
+		if (s > 31)
+		{
+			// zero
+			const XmmLink& v0 = XmmAlloc(rt);
+			c.xorps(v0.get(), v0.get());
+			XmmFinalize(v0, rt);
+		}
+		else if (s == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -666,21 +706,21 @@ private:
 		else
 		{
 			// shift right logical
-			const XmmLink& va = XmmGet(ra);
-			c.psrld(va.get(), nRot);
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psrld(va.get(), s);
 			XmmFinalize(va, rt);
 		}
 		LOG_OPCODE();
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) & 0x3f;
-		if (nRot == 0)
+		const int s = (0 - i7) & 0x3f;
+		if (s == 0)
 		{
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -688,8 +728,8 @@ private:
 		else
 		{
 			// shift right arithmetical
-			const XmmLink& va = XmmGet(ra);
-			c.psrad(va.get(), nRot);
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psrad(va.get(), s);
 			XmmFinalize(va, rt);
 		}
 		LOG_OPCODE();
@@ -700,7 +740,7 @@ private:
 		if (s > 31)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
@@ -709,7 +749,7 @@ private:
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -717,7 +757,7 @@ private:
 		else
 		{
 			// shift left
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.pslld(va.get(), s);
 			XmmFinalize(va, rt);
 		}
@@ -725,50 +765,123 @@ private:
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = i7 & 0xf;
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << nRot) | (CPU.GPR[ra]._u16[h] >> (16 - nRot));
-		WRAPPER_END(rt, ra, i7, 0);
+		const int s = i7 & 0xf;
+		if (s == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				const XmmLink& va = XmmGet(ra, rt);
+				XmmFinalize(va, rt);
+			}
+			// else nop
+		}
+		else
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& v1 = XmmCopy(va);
+			c.psllw(va.get(), s);
+			c.psrlw(v1.get(), 16 - s);
+			c.por(va.get(), v1.get());
+			XmmFinalize(va, rt);
+			XmmFinalize(v1);
+		}
+		LOG_OPCODE();
 	}
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) & 0x1f;
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = nRot < 16 ? CPU.GPR[ra]._u16[h] >> nRot : 0;
-		WRAPPER_END(rt, ra, i7, 0);
+		const int s = (0 - i7) & 0x1f;
+		if (s > 15)
+		{
+			// zero
+			const XmmLink& v0 = XmmAlloc(rt);
+			c.xorps(v0.get(), v0.get());
+			XmmFinalize(v0, rt);
+		}
+		else if (s == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				const XmmLink& va = XmmGet(ra, rt);
+				XmmFinalize(va, rt);
+			}
+			// else nop
+		}
+		else
+		{
+			// shift right logical
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psrlw(va.get(), s);
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = (0 - (s32)i7) & 0x1f;
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = nRot < 16 ? CPU.GPR[ra]._i16[h] >> nRot : CPU.GPR[ra]._i16[h] >> 15;
-		WRAPPER_END(rt, ra, i7, 0);
+		const int s = (0 - i7) & 0x1f;
+		if (s == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				const XmmLink& va = XmmGet(ra, rt);
+				XmmFinalize(va, rt);
+			}
+			// else nop
+		}
+		else
+		{
+			// shift right arithmetical
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psraw(va.get(), s);
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void SHLHI(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int nRot = i7 & 0x1f;
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[h] << nRot;
-		WRAPPER_END(rt, ra, i7, 0);
+		const int s = i7 & 0x1f;
+		if (s > 15)
+		{
+			// zero
+			const XmmLink& v0 = XmmAlloc(rt);
+			c.xorps(v0.get(), v0.get());
+			XmmFinalize(v0, rt);
+		}
+		else if (s == 0)
+		{
+			// mov
+			if (ra != rt)
+			{
+				const XmmLink& va = XmmGet(ra, rt);
+				XmmFinalize(va, rt);
+			}
+			// else nop
+		}
+		else
+		{
+			// shift left
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psllw(va.get(), s);
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void A(u32 rt, u32 ra, u32 rb)
 	{
 		if (ra == rb)
 		{
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			c.paddd(vb.get(), vb.get());
 			XmmFinalize(vb, rt);
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.paddd(vb.get(), va->get());
+				c.paddd(vb.get(), va->read());
 			}
 			else
 			{
@@ -785,7 +898,7 @@ private:
 			if (rt != ra)
 			{
 				// mov
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -793,10 +906,10 @@ private:
 		else
 		{
 			// and
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.andps(vb.get(), va->get());
+				c.andps(vb.get(), va->read());
 			}
 			else
 			{
@@ -808,36 +921,81 @@ private:
 	}
 	void CG(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = ((CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]) < CPU.GPR[ra]._u32[0]) ? 1 : 0;
-		CPU.GPR[rt]._u32[1] = ((CPU.GPR[ra]._u32[1] + CPU.GPR[rb]._u32[1]) < CPU.GPR[ra]._u32[1]) ? 1 : 0;
-		CPU.GPR[rt]._u32[2] = ((CPU.GPR[ra]._u32[2] + CPU.GPR[rb]._u32[2]) < CPU.GPR[ra]._u32[2]) ? 1 : 0;
-		CPU.GPR[rt]._u32[3] = ((CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) < CPU.GPR[ra]._u32[3]) ? 1 : 0;
-		WRAPPER_END(rt, ra, rb, 0);
-		// TODO
+		if (ra == rb)
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			c.psrld(va.get(), 31);
+			XmmFinalize(va, rt);
+		}
+		else
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& vb = XmmGet(rb);
+			c.paddd(vb.get(), va.get());
+			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.pcmpgtd(va.get(), vb.get());
+			c.psrld(va.get(), 31);
+			XmmFinalize(va, rt);
+			XmmFinalize(vb);
+		}
+		LOG_OPCODE();
 	}
 	void AH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] + CPU.GPR[rb]._u16[h];
-		WRAPPER_END(rt, ra, rb, 0);
+		if (ra == rb)
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			c.paddw(va.get(), va.get());
+			XmmFinalize(va, rt);
+		}
+		else
+		{
+			const XmmLink& va = XmmGet(ra, rt);
+			if (const XmmLink* vb = XmmRead(rb))
+			{
+				c.paddw(va.get(), vb->read());
+			}
+			else
+			{
+				c.paddw(va.get(), cpu_xmm(GPR[rb]));
+			}
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void NAND(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = ~(CPU.GPR[ra]._u32[0] & CPU.GPR[rb]._u32[0]);
-		CPU.GPR[rt]._u32[1] = ~(CPU.GPR[ra]._u32[1] & CPU.GPR[rb]._u32[1]);
-		CPU.GPR[rt]._u32[2] = ~(CPU.GPR[ra]._u32[2] & CPU.GPR[rb]._u32[2]);
-		CPU.GPR[rt]._u32[3] = ~(CPU.GPR[ra]._u32[3] & CPU.GPR[rb]._u32[3]);
-		WRAPPER_END(rt, ra, rb, 0);
+		if (ra == rb)
+		{
+			// not
+			const XmmLink& va = XmmGet(ra, rt);
+			c.xorps(va.get(), XmmConst(_mm_set1_epi32(-1)));
+			XmmFinalize(va, rt);
+		}
+		else
+		{
+			// nand
+			const XmmLink& va = XmmGet(ra, rt);
+			if (const XmmLink* vb = XmmRead(rb))
+			{
+				c.andps(va.get(), vb->read());
+			}
+			else
+			{
+				c.andps(va.get(), cpu_xmm(GPR[rb]));
+			}
+			c.xorps(va.get(), XmmConst(_mm_set1_epi32(-1)));
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void AVGB(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& vb = XmmGet(rb);
 		if (const XmmLink* va = XmmRead(ra))
 		{
-			c.pavgb(vb.get(), va->get());
+			c.pavgb(vb.get(), va->read());
 		}
 		else
 		{
@@ -1009,37 +1167,37 @@ private:
 	}
 	void GB(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt]._u32[3] =	(CPU.GPR[ra]._u32[0] & 1) |
-										((CPU.GPR[ra]._u32[1] & 1) << 1) |
-										((CPU.GPR[ra]._u32[2] & 1) << 2) |
-										((CPU.GPR[ra]._u32[3] & 1) << 3);
-		CPU.GPR[rt]._u32[2] = 0;
-		CPU.GPR[rt]._u64[0] = 0;
-		WRAPPER_END(rt, ra, 0, 0);
-		// TODO
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pand(va.get(), XmmConst(_mm_set1_epi32(1)));
+		c.pmullw(va.get(), XmmConst(_mm_set_epi32(8, 4, 2, 1)));
+		c.phaddd(va.get(), va.get());
+		c.phaddd(va.get(), va.get());
+		c.pand(va.get(), XmmConst(_mm_set_epi32(0xffffffff, 0, 0, 0)));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void GBH(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		u32 temp = 0;
-		for (int h = 0; h < 8; h++)
-			temp |= (CPU.GPR[ra]._u16[h] & 1) << h;
-		CPU.GPR[rt]._u32[3] = temp;
-		CPU.GPR[rt]._u32[2] = 0;
-		CPU.GPR[rt]._u64[0] = 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pand(va.get(), XmmConst(_mm_set1_epi16(1)));
+		c.pmullw(va.get(), XmmConst(_mm_set_epi16(128, 64, 32, 16, 8, 4, 2, 1)));
+		c.phaddw(va.get(), va.get());
+		c.phaddw(va.get(), va.get());
+		c.phaddw(va.get(), va.get());
+		c.pand(va.get(), XmmConst(_mm_set_epi32(0xffff, 0, 0, 0)));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void GBB(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		u32 temp = 0;
-		for (int b = 0; b < 16; b++)
-			temp |= (CPU.GPR[ra]._u8[b] & 1) << b;
-		CPU.GPR[rt]._u32[3] = temp;
-		CPU.GPR[rt]._u32[2] = 0;
-		CPU.GPR[rt]._u64[0] = 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		//c.pand(va.get(), XmmConst(_mm_set1_epi8(1))); // ???
+		c.pslld(va.get(), 7);
+		c.pmovmskb(*addr, va.get());
+		c.pxor(va.get(), va.get());
+		c.pinsrw(va.get(), *addr, 6);
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void FSM(u32 rt, u32 ra)
 	{
@@ -1067,24 +1225,17 @@ private:
 	}
 	void FREST(u32 rt, u32 ra)
 	{
-		const XmmLink& vr = XmmAlloc();
-		if (const XmmLink* va = XmmRead(ra))
-		{
-			c.rcpps(vr.get(), va->get());
-		}
-		else
-		{
-			c.rcpps(vr.get(), cpu_xmm(GPR[ra]));
-		}
-		XmmFinalize(vr, rt);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.rcpps(va.get(), va.get());
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void FRSQEST(u32 rt, u32 ra)
 	{
-		const XmmLink& vr = XmmGet(ra);
-		c.andps(vr.get(), imm_xmm(max_int)); // abs
-		c.rsqrtps(vr.get(), vr.get());
-		XmmFinalize(vr, rt);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.andps(va.get(), XmmConst(_mm_set1_epi32(0x7fffffff))); // abs
+		c.rsqrtps(va.get(), va.get());
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
@@ -1270,14 +1421,25 @@ private:
 	}
 	void CWD(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
+		/*WRAPPER_BEGIN(rt, ra, i7, zz);
 		const int t = (CPU.GPR[ra]._u32[3] + (s32)i7) & 0xC;
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u32[3 - (t >> 2)] = 0x00010203;
-		WRAPPER_END(rt, ra, i7, 0);
-		// TODO
+		WRAPPER_END(rt, ra, i7, 0);*/
+		
+		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+		c.add(*addr, i7);
+		c.and_(*addr, 3 << 2);
+		c.neg(*addr);
+		c.add(*addr, 3 << 2);
+		const XmmLink& vr = XmmAlloc(rt);
+		c.movaps(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
+		XmmFinalize(vr, rt);
+		XmmInvalidate(rt);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
+		LOG_OPCODE();
 	}
 	void CDD(u32 rt, u32 ra, s32 i7)
 	{
@@ -1330,14 +1492,14 @@ private:
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			const XmmLink& v1 = XmmCopy(va);
 			c.pslldq(va.get(), s);
 			c.psrldq(v1.get(), 16 - s);
@@ -1355,7 +1517,7 @@ private:
 			if (ra != rt)
 			{
 				// mov
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -1363,14 +1525,14 @@ private:
 		else if (s > 15)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// shift right
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.psrldq(va.get(), s);
 			XmmFinalize(va, rt);
 		}
@@ -1384,7 +1546,7 @@ private:
 			if (ra != rt)
 			{
 				// mov
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -1392,14 +1554,14 @@ private:
 		else if (s > 15)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// shift left
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.pslldq(va.get(), s);
 			XmmFinalize(va, rt);
 		}
@@ -1414,16 +1576,16 @@ private:
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.pcmpgtd(va.get(), vb->get());
+				c.pcmpgtd(va.get(), vb->read());
 			}
 			else
 			{
@@ -1438,17 +1600,17 @@ private:
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// xor
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.xorps(va.get(), vb->get());
+				c.xorps(va.get(), vb->read());
 			}
 			else
 			{
@@ -1548,46 +1710,42 @@ private:
 	}
 	void CLGT(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] > CPU.GPR[rb]._u32[i]) ? 0xffffffff : 0x00000000;
-		}
-		WRAPPER_END(rt, ra, rb, 0);
-
-		/*XmmVar v0(c);
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			// compare if-greater-then
-			// c.movdqa(v0, cpu_xmm(GPR[rb]));
-			// TODO
-			// c.movdqa(cpu_xmm(GPR[rt]), v0);
+			// compare if-greater-than
+			const XmmLink& va = XmmGet(ra, rt);
+			const XmmLink& vb = XmmGet(rb);
+			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.pcmpgtd(va.get(), vb.get());
+			XmmFinalize(va, rt);
+			XmmFinalize(vb);
 		}
-		LOG_OPCODE();*/
+		LOG_OPCODE();
 	}
 	void ANDC(u32 rt, u32 ra, u32 rb)
 	{
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// and not
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
 			if (const XmmLink* va = XmmRead(ra))
 			{
-				c.andnps(vb.get(), va->get());
+				c.andnps(vb.get(), va->read());
 			}
 			else
 			{
@@ -1602,17 +1760,17 @@ private:
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
 			// not-less-or-equal
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.cmpps(va.get(), vb->get(), 6);
+				c.cmpps(va.get(), vb->read(), 6);
 			}
 			else
 			{
@@ -1631,7 +1789,7 @@ private:
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
-		const XmmLink& va = XmmGet(ra);
+		const XmmLink& va = XmmGet(ra, rt);
 		if (ra == rb)
 		{
 			c.addps(va.get(), va.get());
@@ -1640,7 +1798,7 @@ private:
 		{
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.addps(va.get(), vb->get());
+				c.addps(va.get(), vb->read());
 			}
 			else
 			{
@@ -1655,16 +1813,16 @@ private:
 		if (ra == rb)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.subps(va.get(), vb->get());
+				c.subps(va.get(), vb->read());
 			}
 			else
 			{
@@ -1678,16 +1836,16 @@ private:
 	{
 		if (ra == rb)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.mulps(va.get(), va.get());
 			XmmFinalize(va, rt);
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{
@@ -1808,7 +1966,7 @@ private:
 	void ADDX(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& vt = XmmGet(rt);
-		c.pand(vt.get(), imm_xmm(s19_to_s32[1]));
+		c.pand(vt.get(), XmmConst(_mm_set1_epi32(1)));
 		c.paddd(vt.get(), cpu_xmm(GPR[ra]));
 		c.paddd(vt.get(), cpu_xmm(GPR[rb]));
 		XmmFinalize(vt, rt);
@@ -1817,11 +1975,11 @@ private:
 	void SFX(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& vt = XmmGet(rt);
-		c.pandn(vt.get(), imm_xmm(s19_to_s32[1]));
 		if (ra == rb)
 		{
 			// load zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
+			c.pandn(vt.get(), XmmConst(_mm_set1_epi32(1)));
 			c.pxor(v0.get(), v0.get());
 			c.psubd(v0.get(), vt.get());
 			XmmFinalize(v0, rt);
@@ -1829,7 +1987,8 @@ private:
 		else
 		{
 			// sub
-			const XmmLink& vb = XmmGet(rb);
+			const XmmLink& vb = XmmGet(rb, rt);
+			c.pandn(vt.get(), XmmConst(_mm_set1_epi32(1)));
 			c.psubd(vb.get(), cpu_xmm(GPR[ra]));
 			c.psubd(vb.get(), vt.get());
 			XmmFinalize(vb, rt);
@@ -1979,11 +2138,15 @@ private:
 	}
 	void MPYH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = (CPU.GPR[ra]._i16[w*2+1] * CPU.GPR[rb]._i16[w*2]) << 16;
-		WRAPPER_END(rt, ra, rb, 0);
-		// TODO
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = (ra == rb) ? XmmCopy(va) : XmmGet(rb);
+		c.psrld(va.get(), 16);
+		c.pand(vb.get(), XmmConst(_mm_set1_epi32(0xffff)));
+		c.pmulld(va.get(), vb.get());
+		c.pslld(va.get(), 16);
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
+		LOG_OPCODE();
 	}
 	void MPYHH(u32 rt, u32 ra, u32 rb)
 	{
@@ -2024,16 +2187,16 @@ private:
 	}
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
-		const XmmLink& va = XmmGet(ra);
+		const XmmLink& va = XmmGet(ra, rt);
 		if (ra == rb)
 		{
-			c.pand(va.get(), imm_xmm(s19_to_s32[0xffff]));
+			c.pand(va.get(), XmmConst(_mm_set1_epi32(0xffff)));
 			c.pmulld(va.get(), va.get());
 		}
 		else
 		{
 			const XmmLink& v1 = XmmAlloc();
-			c.movdqa(v1.get(), imm_xmm(s19_to_s32[0xffff])); // load mask
+			c.movdqa(v1.get(), XmmConst(_mm_set1_epi32(0xffff))); // load mask
 			c.pand(va.get(), v1.get()); // clear high words of each dword
 			c.pand(v1.get(), cpu_xmm(GPR[rb]));
 			c.pmulld(va.get(), v1.get());
@@ -2067,10 +2230,10 @@ private:
 	//0 - 9
 	void CFLTS(u32 rt, u32 ra, s32 i8)
 	{
-		const XmmLink& va = XmmGet(ra);
+		const XmmLink& va = XmmGet(ra, rt);
 		if (i8 != 173)
 		{
-			c.mulps(va.get(), imm_xmm(scale_to_int[i8 & 0xff])); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
 		}
 		c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
 		XmmFinalize(va, rt);
@@ -2105,7 +2268,7 @@ private:
 		c.movaps(v0, cpu_xmm(GPR[ra]));
 		if (i8 != 173)
 		{
-			c.mulps(v0, imm_xmm(scale_to_int[i8 & 0xff])); // scale
+			c.mulps(v0, XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
 		}
 		// TODO: handle negative values and convert to unsigned value
 		// c.int3();
@@ -2115,11 +2278,11 @@ private:
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		const XmmLink& va = XmmGet(ra);
+		const XmmLink& va = XmmGet(ra, rt);
 		c.cvtdq2ps(va.get(), va.get()); // convert to floats
 		if (i8 != 155)
 		{
-			c.mulps(va.get(), imm_xmm(scale_to_float[i8 & 0xff])); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
 		}
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
@@ -2147,7 +2310,7 @@ private:
 		c.cvtdq2ps(v0, v0); // convert to floats as signed
 		if (i8 != 155)
 		{
-			c.mulps(v0, imm_xmm(scale_to_float[i8 & 0xff])); // scale
+			c.mulps(v0, XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
 		}
 		c.movaps(cpu_xmm(GPR[rt]), v0);
 		LOG_OPCODE();*/
@@ -2269,14 +2432,19 @@ private:
 		if (i16 == 0)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			const XmmLink& vr = XmmAlloc();
-			c.movaps(vr.get(), imm_xmm(fsmbi_mask[i16 & 0xffff]));
+			const XmmLink& vr = XmmAlloc(rt);
+			__m128i fsmbi_mask;
+			for (u32 j = 0; j < 16; j++)
+			{
+				fsmbi_mask.m128i_i8[j] = ((i16 >> j) & 0x1) ? 0xff : 0;
+			}
+			c.movaps(vr.get(), XmmConst(fsmbi_mask));
 			XmmFinalize(vr, rt);
 		}
 		LOG_OPCODE();
@@ -2311,7 +2479,7 @@ private:
 	}
 	void IL(u32 rt, s32 i16)
 	{
-		const XmmLink& vr = XmmAlloc();
+		const XmmLink& vr = XmmAlloc(rt);
 		if (i16 == 0)
 		{
 			c.xorps(vr.get(), vr.get());
@@ -2322,27 +2490,21 @@ private:
 		}
 		else
 		{
-			c.movaps(vr.get(), imm_xmm(s19_to_s32[i16 & 0x7ffff]));
+			c.movaps(vr.get(), XmmConst(_mm_set1_epi32(i16)));
 		}
 		XmmFinalize(vr, rt);
 		LOG_OPCODE();
 	}
 	void ILHU(u32 rt, s32 i16)
 	{
-		const XmmLink& vr = XmmAlloc();
+		const XmmLink& vr = XmmAlloc(rt);
 		if (i16 == 0)
 		{
 			c.xorps(vr.get(), vr.get());
 		}
-		else if (i16 == -1)
-		{
-			c.pcmpeqd(vr.get(), vr.get());
-			c.pslld(vr.get(), 16);
-		}
 		else
 		{
-			c.movaps(vr.get(), imm_xmm(s19_to_s32[i16 & 0x7ffff]));
-			c.pslld(vr.get(), 16);
+			c.movaps(vr.get(), XmmConst(_mm_set1_epi32(i16 << 16)));
 		}
 		XmmFinalize(vr, rt);
 		LOG_OPCODE();
@@ -2362,8 +2524,8 @@ private:
 		}
 		else
 		{
-			const XmmLink& vt = XmmGet(rt);
-			c.orps(vt.get(), imm_xmm(s19_to_s32[i16 & 0xffff]));
+			const XmmLink& vt = XmmGet(rt, rt);
+			c.orps(vt.get(), XmmConst(_mm_set1_epi32(i16 & 0xffff)));
 			XmmFinalize(vt, rt);
 		}
 		LOG_OPCODE();
@@ -2376,7 +2538,7 @@ private:
 		if (i10 == -1)
 		{
 			// fill with 1
-			const XmmLink& v1 = XmmAlloc();
+			const XmmLink& v1 = XmmAlloc(rt);
 			c.pcmpeqd(v1.get(), v1.get());
 			XmmFinalize(v1, rt);
 		}
@@ -2385,15 +2547,15 @@ private:
 			if (rt != ra)
 			{
 				// mov
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
-			c.orps(va.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+			const XmmLink& va = XmmGet(ra, rt);
+			c.orps(va.get(), XmmConst(_mm_set1_epi32(i10)));
 			XmmFinalize(va, rt);
 		}
 		LOG_OPCODE();
@@ -2417,7 +2579,7 @@ private:
 		if (i10 == 0)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			c.psubd(v0.get(), cpu_xmm(GPR[ra]));
 			XmmFinalize(v0, rt);
@@ -2425,15 +2587,15 @@ private:
 		else if (i10 == -1)
 		{
 			// fill with 1
-			const XmmLink& v1 = XmmAlloc();
+			const XmmLink& v1 = XmmAlloc(rt);
 			c.pcmpeqd(v1.get(), v1.get());
 			c.psubd(v1.get(), cpu_xmm(GPR[ra]));
 			XmmFinalize(v1, rt);
 		}
 		else
 		{
-			const XmmLink& vr = XmmAlloc();
-			c.movdqa(vr.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+			const XmmLink& vr = XmmAlloc(rt);
+			c.movdqa(vr.get(), XmmConst(_mm_set1_epi32(i10)));
 			c.psubd(vr.get(), cpu_xmm(GPR[ra]));
 			XmmFinalize(vr, rt);
 		}
@@ -2451,7 +2613,7 @@ private:
 		if (i10 == 0)
 		{
 			// zero
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
@@ -2460,15 +2622,15 @@ private:
 			// mov
 			if (ra != rt)
 			{
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra);
-			c.andps(va.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+			const XmmLink& va = XmmGet(ra, rt);
+			c.andps(va.get(), XmmConst(_mm_set1_epi32(i10)));
 			XmmFinalize(va, rt);
 		}
 		LOG_OPCODE();
@@ -2494,7 +2656,7 @@ private:
 			if (rt != ra)
 			{
 				// mov
-				const XmmLink& va = XmmGet(ra);
+				const XmmLink& va = XmmGet(ra, rt);
 				XmmFinalize(va, rt);
 			}
 			// else nop
@@ -2502,8 +2664,8 @@ private:
 		else
 		{
 			// add
-			const XmmLink& va = XmmGet(ra);
-			c.paddd(va.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+			const XmmLink& va = XmmGet(ra, rt);
+			c.paddd(va.get(), XmmConst(_mm_set1_epi32(i10)));
 			XmmFinalize(va, rt);
 		}
 		LOG_OPCODE();
@@ -2567,7 +2729,7 @@ private:
 	void CGTI(u32 rt, u32 ra, s32 i10)
 	{
 		const XmmLink& va = XmmGet(ra);
-		c.pcmpgtd(va.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+		c.pcmpgtd(va.get(), XmmConst(_mm_set1_epi32(i10)));
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
@@ -2595,27 +2757,21 @@ private:
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		WRAPPER_BEGIN(rt, ra, i10, zz);
-		for (u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] > (u32)i10) ? 0xffffffff : 0x00000000;
-		}
-		WRAPPER_END(rt, ra, i10, 0);
-
-		/*XmmVar v0(c);
 		if (i10 == -1)
 		{
 			// zero result
-			const XmmLink& v0 = XmmAlloc();
+			const XmmLink& v0 = XmmAlloc(rt);
 			c.xorps(v0.get(), v0.get());
 			XmmFinalize(v0, rt);
 		}
 		else
 		{
-			//c.movdqa(v0, imm_xmm(s19_to_s32[i10 & 0x7ffff]));
-			// TODO
-			//c.movdqa(cpu_xmm(GPR[rt]), v0);
-		}*/
+			const XmmLink& va = XmmGet(ra);
+			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+			c.pcmpgtd(va.get(), XmmConst(_mm_set1_epi32((u32)i10 - 0x80000000)));
+			XmmFinalize(va, rt);
+		}
+		LOG_OPCODE();
 	}
 	void CLGTHI(u32 rt, u32 ra, s32 i10)
 	{
@@ -2658,7 +2814,7 @@ private:
 	void CEQI(u32 rt, u32 ra, s32 i10)
 	{
 		const XmmLink& va = XmmGet(ra);
-		c.pcmpeqd(va.get(), imm_xmm(s19_to_s32[i10 & 0x7ffff]));
+		c.pcmpeqd(va.get(), XmmConst(_mm_set1_epi32(i10)));
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
@@ -2697,14 +2853,14 @@ private:
 	}
 	void ILA(u32 rt, u32 i18)
 	{
-		const XmmLink& vr = XmmAlloc();
+		const XmmLink& vr = XmmAlloc(rt);
 		if (i18 == 0)
 		{
 			c.xorps(vr.get(), vr.get());
 		}
 		else
 		{
-			c.movaps(vr.get(), imm_xmm(s19_to_s32[i18 & 0x3ffff]));
+			c.movaps(vr.get(), XmmConst(_mm_set1_epi32(i18 & 0x3ffff)));
 		}
 		XmmFinalize(vr, rt);
 		LOG_OPCODE();
@@ -2757,13 +2913,13 @@ private:
 		const XmmLink& v2 = XmmCopy(v0); // v2 = mask
 		const XmmLink& v3 = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
-		const XmmLink& vFF = XmmAlloc();
+		const XmmLink& vFF = XmmAlloc(rt);
 		// generate specific values:
-		c.movdqa(v1.get(), imm_xmm(u8_to_u8[0xe0])); // v1 = 11100000
-		c.movdqa(v3.get(), imm_xmm(u8_to_u8[0x80])); // v3 = 10000000
+		c.movdqa(v1.get(), XmmConst(_mm_set1_epi32(0xe0e0e0e0))); // v1 = 11100000
+		c.movdqa(v3.get(), XmmConst(_mm_set1_epi32(0x80808080))); // v3 = 10000000
 		c.pand(v2.get(), v1.get()); // filter mask      v2 = mask & 11100000
 		c.movdqa(vFF.get(), v2.get()); // and copy      vFF = mask & 11100000
-		c.movdqa(v4.get(), imm_xmm(u8_to_u8[0xc0])); // v4 = 11000000
+		c.movdqa(v4.get(), XmmConst(_mm_set1_epi32(0xc0c0c0c0))); // v4 = 11000000
 		c.pcmpeqb(vFF.get(), v4.get()); // gen 0xff     vFF = (mask & 11100000 == 11000000) ? 0xff : 0
 		c.movdqa(v4.get(), v2.get()); // copy again     v4 = mask & 11100000
 		c.pand(v4.get(), v3.get()); // filter mask      v4 = mask & 10000000
@@ -2773,13 +2929,13 @@ private:
 		c.por(vFF.get(), v2.get()); // merge 0xff, 0x80 vFF = (mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0
 		c.pandn(v1.get(), v0.get()); // filter mask     v1 = mask & 00011111
 		// select bytes from [rb]:
-		c.movdqa(v2.get(), imm_xmm(u8_to_u8[15])); //   v2 = 00001111
-		c.pxor(v1.get(), imm_xmm(u8_to_u8[0x10])); //   v1 = (mask & 00011111) ^ 00010000
+		c.movdqa(v2.get(), XmmConst(_mm_set1_epi8(15))); //   v2 = 00001111
+		c.pxor(v1.get(), XmmConst(_mm_set1_epi8(0x10))); //   v1 = (mask & 00011111) ^ 00010000
 		c.psubb(v2.get(), v1.get()); //                 v2 = 00001111 - ((mask & 00011111) ^ 00010000)
 		c.movdqa(v1.get(), cpu_xmm(GPR[rb])); //        v1 = rb
 		c.pshufb(v1.get(), v2.get()); //                v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000))
 		// select bytes from [ra]:
-		c.pxor(v2.get(), imm_xmm(u8_to_u8[0xf0])); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
+		c.pxor(v2.get(), XmmConst(_mm_set1_epi32(0xf0f0f0f0))); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
 		c.movdqa(v3.get(), cpu_xmm(GPR[ra])); //        v3 = ra
 		c.pshufb(v3.get(), v2.get()); //                v3 = select(ra, (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000)
 		c.por(v1.get(), v3.get()); //                   v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000)) | (v3)
@@ -2803,7 +2959,7 @@ private:
 	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		const XmmLink& va = XmmGet(ra);
-		const XmmLink& vc = (ra == rc) ? XmmCopy(va) : XmmGet(rc);
+		const XmmLink& vc = (ra == rc) ? XmmCopy(va, rt) : XmmGet(rc, rt);
 
 		if (ra == rb)
 		{
@@ -2817,7 +2973,7 @@ private:
 		{
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{
@@ -2833,10 +2989,10 @@ private:
 	{
 		if (ra != rb && rb != rc && rc != ra)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{
@@ -2844,7 +3000,7 @@ private:
 			}
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.addps(va.get(), vc->get());
+				c.addps(va.get(), vc->read());
 			}
 			else
 			{
@@ -2854,7 +3010,7 @@ private:
 		}
 		else if (ra == rb && rb == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			const XmmLink& vc = XmmCopy(va);
 			c.mulps(va.get(), va.get());
 			c.addps(va.get(), vc.get());
@@ -2863,11 +3019,11 @@ private:
 		}
 		else if (ra == rb)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.mulps(va.get(), va.get());
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.addps(va.get(), vc->get());
+				c.addps(va.get(), vc->read());
 			}
 			else
 			{
@@ -2877,28 +3033,28 @@ private:
 		}
 		else if (rb == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.mulps(va.get(), vc->get());
-				c.addps(va.get(), vc->get());
+				c.mulps(va.get(), vc->read());
+				c.addps(va.get(), vc->read());
 			}
 			else
 			{
-				const XmmLink& vb = XmmGet(rb);
+				const XmmLink& vb = XmmGet(rb, rb);
 				c.mulps(va.get(), vb.get());
 				c.addps(va.get(), vb.get());
-				XmmFinalize(vb);
+				XmmFinalize(vb, rb);
 			}
 			XmmFinalize(va, rt);
 		}
 		else if (ra == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			const XmmLink& vc = XmmCopy(va);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{
@@ -2918,10 +3074,10 @@ private:
 	{
 		if (ra != rb && rb != rc && rc != ra)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{
@@ -2929,7 +3085,7 @@ private:
 			}
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.subps(va.get(), vc->get());
+				c.subps(va.get(), vc->read());
 			}
 			else
 			{
@@ -2939,7 +3095,7 @@ private:
 		}
 		else if (ra == rb && rb == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			const XmmLink& vc = XmmCopy(va);
 			c.mulps(va.get(), va.get());
 			c.subps(va.get(), vc.get());
@@ -2948,11 +3104,11 @@ private:
 		}
 		else if (ra == rb)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			c.mulps(va.get(), va.get());
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.subps(va.get(), vc->get());
+				c.subps(va.get(), vc->read());
 			}
 			else
 			{
@@ -2962,28 +3118,28 @@ private:
 		}
 		else if (rb == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			if (const XmmLink* vc = XmmRead(rc))
 			{
-				c.mulps(va.get(), vc->get());
-				c.subps(va.get(), vc->get());
+				c.mulps(va.get(), vc->read());
+				c.subps(va.get(), vc->read());
 			}
 			else
 			{
-				const XmmLink& vb = XmmGet(rb);
+				const XmmLink& vb = XmmGet(rb, rb);
 				c.mulps(va.get(), vb.get());
 				c.subps(va.get(), vb.get());
-				XmmFinalize(vb);
+				XmmFinalize(vb, rb);
 			}
 			XmmFinalize(va, rt);
 		}
 		else if (ra == rc)
 		{
-			const XmmLink& va = XmmGet(ra);
+			const XmmLink& va = XmmGet(ra, rt);
 			const XmmLink& vc = XmmCopy(va);
 			if (const XmmLink* vb = XmmRead(rb))
 			{
-				c.mulps(va.get(), vb->get());
+				c.mulps(va.get(), vb->read());
 			}
 			else
 			{

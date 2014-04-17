@@ -4,8 +4,6 @@
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
-static const SPUImmTable g_spu_imm;
-
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 : m_enc(new SPURecompiler(cpu, *this))
 , inter(new SPUInterpreter(cpu))
@@ -135,9 +133,9 @@ void SPURecompilerCore::Compile(u16 pos)
 	log.Open(wxString::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? wxFile::write : wxFile::write_append);
 	log.Write(wxString::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
 	log.Write(wxString(stringLogger.getString()));
+	log.Write(wxString::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
 	log.Close();
-	//ConLog.Write("Compiled: %d (excess %d), addr=0x%x, time: [start=%d (decoding=%d), finalize=%d]",
-		//entry[start].count, excess, start * 4, stamp1 - stamp0, time0, get_system_time() - stamp1);
 	m_enc->compiler = nullptr;
 	first = false;
 }
@@ -200,7 +198,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		return 0;
 	}
 
-	typedef u32(*Func)(void* _cpu, void* _ls, const SPUImmTable* _imm, u32 _pos);
+	typedef u32(*Func)(void* _cpu, void* _ls, const void* _imm, u32 _pos);
 
 	Func func = asmjit_cast<Func>(entry[pos].pointer);
 
@@ -217,7 +215,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	}
 
 	u16 res = pos;
-	res = (u16)func(cpu, &Memory[m_offset], &g_spu_imm, res);
+	res = (u16)func(cpu, &Memory[m_offset], imm_table.data(), res);
 
 	if (did_compile)
 	{
@@ -238,6 +236,4 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		CPU.SetBranch((u64)res << 2);
 		return 0;
 	}
-	/*Decode(Memory.Read32(address));
-	return 4;*/
 }
