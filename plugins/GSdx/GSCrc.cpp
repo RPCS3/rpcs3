@@ -86,9 +86,10 @@ CRC::Game CRC::m_games[] =
 	{0xAA31B5BF, MetalGearSolid3, US, 0},
 	{0x86BC3040, MetalGearSolid3, US, 0}, //Subsistance disc 1
 	{0x0481AD8A, MetalGearSolid3, JP, 0},
-	{0xC69ACB6F, MetalGearSolid3, KO, 0}, //MetalGearSolid 3 SnakeEater
-	{0xB0D195EF, MetalGearSolid3, KO, 0}, //MetalGearSolid 3 Substance disc1
-	{0x3EBABC9C, MetalGearSolid3, KO, 0}, //MetalGearSolid3Substance disc2
+	{0xC69ACB6F, MetalGearSolid3, KO, 0}, //Metal Gear Solid 3 SnakeEater
+	{0xB0D195EF, MetalGearSolid3, KO, 0}, //Metal Gear Solid 3 Substance disc1
+	{0x3EBABC9C, MetalGearSolid3, KO, 0}, //Metal Gear Solid 3 Substance disc2
+	{0x8A5C25A7, MetalGearSolid3, ES, 0}, //Metal Gear Solid 3 Subsistence Spanish version
 	{0x278722BF, DBZBT2, US, 0},
 	{0xFE961D28, DBZBT2, US, 0},
 	{0x0393B6BE, DBZBT2, EU, 0},
