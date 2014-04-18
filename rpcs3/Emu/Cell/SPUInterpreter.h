@@ -60,6 +60,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
+		UNIMPLEMENTED();
 		//If register is a dummy register (register labeled 0x0)
 		if(sa == 0x0)
 		{

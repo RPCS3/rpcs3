@@ -214,8 +214,14 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		}
 	}
 
-	u16 res = pos;
-	res = (u16)func(cpu, &Memory[m_offset], imm_table.data(), res);
+	u32 res = pos;
+	res = func(cpu, &Memory[m_offset], imm_table.data(), res);
+
+	if (res > 0xffff)
+	{
+		CPU.Stop();
+		res = ~res;
+	}
 
 	if (did_compile)
 	{
