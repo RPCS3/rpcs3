@@ -50,7 +50,7 @@ int sys_event_flag_destroy(u32 eflag_id)
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	if (ef->waiters.GetCount()) // ???
+	if (ef->waiters.size()) // ???
 	{
 		return CELL_EBUSY;
 	}
@@ -89,7 +89,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 
 	{
 		SMutexLocker lock(ef->m_mutex);
-		if (ef->m_type == SYS_SYNC_WAITER_SINGLE && ef->waiters.GetCount() > 0)
+		if (ef->m_type == SYS_SYNC_WAITER_SINGLE && ef->waiters.size() > 0)
 		{
 			return CELL_EPERM;
 		}
@@ -97,13 +97,13 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		rec.bitptn = bitptn;
 		rec.mode = mode;
 		rec.tid = tid;
-		ef->waiters.AddCpy(rec);
+		ef->waiters.push_back(rec);
 
 		if (ef->check() == tid)
 		{
 			u64 flags = ef->flags;
 
-			ef->waiters.RemoveAt(ef->waiters.GetCount() - 1);
+			ef->waiters.erase(ef->waiters.end() - 1);
 
 			if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
 			{
@@ -141,11 +141,11 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 
 			u64 flags = ef->flags;
 
-			for (u32 i = 0; i < ef->waiters.GetCount(); i++)
+			for (u32 i = 0; i < ef->waiters.size(); i++)
 			{
 				if (ef->waiters[i].tid == tid)
 				{
-					ef->waiters.RemoveAt(i);
+					ef->waiters.erase(ef->waiters.begin() +i);
 
 					if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
 					{
@@ -179,11 +179,11 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		{
 			SMutexLocker lock(ef->m_mutex);
 
-			for (u32 i = 0; i < ef->waiters.GetCount(); i++)
+			for (u32 i = 0; i < ef->waiters.size(); i++)
 			{
 				if (ef->waiters[i].tid == tid)
 				{
-					ef->waiters.RemoveAt(i);
+					ef->waiters.erase(ef->waiters.begin() + i);
 					break;
 				}
 			}
@@ -300,19 +300,19 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	Array<u32> tids;
+	std::vector<u32> tids;
 
 	{
 		SMutexLocker lock(ef->m_mutex);
-		tids.SetCount(ef->waiters.GetCount());
-		for (u32 i = 0; i < ef->waiters.GetCount(); i++)
+		tids.resize(ef->waiters.size());
+		for (u32 i = 0; i < ef->waiters.size(); i++)
 		{
 			tids[i] = ef->waiters[i].tid;
 		}
-		ef->waiters.Clear();
+		ef->waiters.clear();
 	}
 
-	for (u32 i = 0; i < tids.GetCount(); i++)
+	for (u32 i = 0; i < tids.size(); i++)
 	{
 		if (Emu.IsStopped()) break;
 		ef->signal.lock(tids[i]);
@@ -326,7 +326,7 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 	if (num.IsGood())
 	{
-		num = tids.GetCount();
+		num = tids.size();
 		return CELL_OK;
 	}
 

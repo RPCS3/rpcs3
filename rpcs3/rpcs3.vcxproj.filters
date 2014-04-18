@@ -984,5 +984,8 @@
     <ClInclude Include="Emu\Cell\SPURecompiler.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUInstrTable.h">
+      <Filter>Emu\Cell</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

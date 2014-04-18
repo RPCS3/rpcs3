@@ -8,7 +8,7 @@ GLProgram::GLProgram() : id(0)
 
 int GLProgram::GetLocation(const std::string& name)
 {
-	for(u32 i=0; i<m_locations.GetCount(); ++i)
+	for(u32 i=0; i<m_locations.size(); ++i)
 	{
 		if(!m_locations[i].name.compare(name))
 		{
@@ -16,7 +16,8 @@ int GLProgram::GetLocation(const std::string& name)
 		}
 	}
 	
-	u32 pos = m_locations.Move(new Location());
+	m_locations.emplace_back();
+	u32 pos = m_locations.size()-1;
 	m_locations[pos].name = name;
 
 	m_locations[pos].loc = glGetUniformLocation(id, name.c_str());
@@ -84,7 +85,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 void GLProgram::UnUse()
 {
 	id = 0;
-	m_locations.Clear();
+	m_locations.clear();
 }
 
 void GLProgram::Use()
@@ -105,5 +106,5 @@ void GLProgram::Delete()
 	if(!IsCreated()) return;
 	glDeleteProgram(id);
 	id = 0;
-	m_locations.Clear();
+	m_locations.clear();
 }

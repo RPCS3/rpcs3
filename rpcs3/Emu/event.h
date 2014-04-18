@@ -69,7 +69,7 @@ struct EventPort
 
 class EventRingBuffer
 {
-	Array<sys_event_data> data;
+	std::vector<sys_event_data> data;
 	SMutex m_lock;
 	u32 buf_pos;
 	u32 buf_count;
@@ -82,7 +82,7 @@ public:
 		, buf_pos(0)
 		, buf_count(0)
 	{
-		data.SetCount(size);
+		data.resize(size);
 	}
 
 	void clear()
@@ -151,7 +151,7 @@ public:
 
 class EventPortList
 {
-	Array<EventPort*> data;
+	std::vector<EventPort*> data;
 	SMutex m_lock;
 
 public:
@@ -159,28 +159,28 @@ public:
 	void clear()
 	{
 		SMutexLocker lock(m_lock);
-		for (u32 i = 0; i < data.GetCount(); i++)
+		for (u32 i = 0; i < data.size(); i++)
 		{
 			SMutexLocker lock2(data[i]->mutex);
 			data[i]->eq = nullptr; // force all ports to disconnect
 		}
-		data.Clear();
+		data.clear();
 	}
 
 	void add(EventPort* port)
 	{
 		SMutexLocker lock(m_lock);
-		data.AddCpy(port);
+		data.push_back(port);
 	}
 
 	void remove(EventPort* port)
 	{
 		SMutexLocker lock(m_lock);
-		for (u32 i = 0; i < data.GetCount(); i++)
+		for (u32 i = 0; i < data.size(); i++)
 		{
 			if (data[i] == port)
 			{
-				data.RemoveAt(i);
+				data.erase(data.begin() + i);
 				return;
 			}
 		}

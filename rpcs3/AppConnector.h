@@ -22,7 +22,7 @@ class AppConnector
 		}
 	};
 
-	Array<ConnectInfo> m_connect_arr;
+	std::vector<ConnectInfo> m_connect_arr;
 
 public:
 	~AppConnector();

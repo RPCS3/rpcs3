@@ -4,7 +4,9 @@
 #include "cellFont.h"
 
 void cellFontFT_init();
-Module cellFontFT(0x001a, cellFontFT_init);
+void cellFontFT_load();
+void cellFontFT_unload();
+Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
 
 struct CellFontLibraryConfigFT
 {
@@ -33,7 +35,7 @@ struct CCellFontFTInternal
 	}
 };
 
-CCellFontFTInternal* s_fontFtInternalInstance = new CCellFontFTInternal();
+CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 
 int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
 {
@@ -67,4 +69,14 @@ void cellFontFT_init()
 	cellFontFT.AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
 	cellFontFT.AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
 	cellFontFT.AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);
+}
+
+void cellFontFT_load()
+{
+	s_fontFtInternalInstance = new CCellFontFTInternal();
+}
+
+void cellFontFT_unload()
+{
+	delete s_fontFtInternalInstance;
 }

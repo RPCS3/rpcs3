@@ -17,7 +17,7 @@ static const u16 bpdb_version = 0x1000;
 
 ModuleInitializer::ModuleInitializer()
 {
-	Emu.AddModuleInit(this);
+	Emu.AddModuleInit(std::move(std::unique_ptr<ModuleInitializer>(this)));
 }
 
 Emulator::Emulator()
@@ -32,10 +32,10 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
-	while(m_modules_init.GetCount())
+	while(m_modules_init.size())
 	{
-		m_modules_init[0].Init();
-		m_modules_init.RemoveAt(0);
+		m_modules_init[0]->Init();
+		m_modules_init.erase(m_modules_init.begin());
 	}
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
@@ -54,17 +54,17 @@ void Emulator::SetTitleID(const std::string& id)
 
 void Emulator::CheckStatus()
 {
-	ArrayF<CPUThread>& threads = GetCPU().GetThreads();
-	if(!threads.GetCount())
+	std::vector<CPUThread *>& threads = GetCPU().GetThreads();
+	if(!threads.size())
 	{
 		Stop();
 		return;	
 	}
 
 	bool IsAllPaused = true;
-	for(u32 i=0; i<threads.GetCount(); ++i)
+	for(u32 i=0; i<threads.size(); ++i)
 	{
-		if(threads[i].IsPaused()) continue;
+		if(threads[i]->IsPaused()) continue;
 		IsAllPaused = false;
 		break;
 	}
@@ -76,9 +76,9 @@ void Emulator::CheckStatus()
 	}
 
 	bool IsAllStoped = true;
-	for(u32 i=0; i<threads.GetCount(); ++i)
+	for(u32 i=0; i<threads.size(); ++i)
 	{
-		if(threads[i].IsStopped()) continue;
+		if(threads[i]->IsStopped()) continue;
 		IsAllStoped = false;
 		break;
 	}
@@ -147,9 +147,9 @@ void Emulator::Load()
 
 	ConLog.SkipLn();
 	ConLog.Write("Mount info:");
-	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
+	for(uint i=0; i<m_vfs.m_devices.size(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path().c_str(), m_vfs.m_devices[i].GetLocalPath().c_str());
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
 	}
 	ConLog.SkipLn();
 
@@ -377,8 +377,8 @@ void Emulator::Stop()
 	m_rsx_callback = 0;
 
 	SavePoints(BreakPointsDBName);
-	m_break_points.Clear();
-	m_marked_points.Clear();
+	m_break_points.clear();
+	m_marked_points.clear();
 
 	m_vfs.UnMountAll();
 
@@ -407,8 +407,8 @@ void Emulator::SavePoints(const std::string& path)
 {
 	std::ofstream f(path, std::ios::binary | std::ios::trunc);
 
-	u32 break_count = m_break_points.GetCount();
-	u32 marked_count = m_marked_points.GetCount();
+	u32 break_count = m_break_points.size();
+	u32 marked_count = m_marked_points.size();
 
 	f << bpdb_version << break_count << marked_count;
 	
@@ -447,13 +447,13 @@ void Emulator::LoadPoints(const std::string& path)
 
 	if(break_count > 0)
 	{
-		m_break_points.SetCount(break_count);
+		m_break_points.resize(break_count);
 		f.read(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
 	}
 
 	if(marked_count > 0)
 	{
-		m_marked_points.SetCount(marked_count);
+		m_marked_points.resize(marked_count);
 		f.read(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
 	}
 }

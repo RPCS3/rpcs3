@@ -39,7 +39,9 @@ namespace SPU_instr
 	static CodeField<18, 31> L_18_31;
 	static CodeField<11> L_11;
 
-	static auto rrr_list = new_list<SPUOpcodes>(RRR);
+	// static auto rrr_list = new_list<SPUOpcodes>(RRR);
+	static InstrList<1 << CodeField<0, 3>::size, SPUOpcodes> rrr_list_obj(RRR, nullptr);
+	static auto rrr_list = &rrr_list_obj;
 	static auto ri18_list = new_list(rrr_list, RI18);
 	static auto ri10_list = new_list(ri18_list, RI10);
 	static auto ri16_list = new_list(ri10_list, RI16);

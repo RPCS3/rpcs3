@@ -20,8 +20,8 @@ struct RWLock
 {
 	std::mutex m_lock; // internal lock
 	u32 wlock_thread; // write lock owner
-	Array<u32> wlock_queue; // write lock queue
-	Array<u32> rlock_list; // read lock list
+	std::vector<u32> wlock_queue; // write lock queue
+	std::vector<u32> rlock_list; // read lock list
 	u32 m_protocol; // TODO
 
 	union
@@ -41,9 +41,9 @@ struct RWLock
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		if (!wlock_thread && !wlock_queue.GetCount())
+		if (!wlock_thread && !wlock_queue.size())
 		{
-			rlock_list.AddCpy(tid);
+			rlock_list.push_back(tid);
 			return true;
 		}
 		return false;
@@ -53,11 +53,11 @@ struct RWLock
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		for (u32 i = rlock_list.GetCount() - 1; ~i; i--)
+		for (u32 i = rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
-				rlock_list.RemoveAt(i);
+				rlock_list.erase(rlock_list.begin() + i);
 				return true;
 			}
 		}
@@ -72,7 +72,7 @@ struct RWLock
 		{
 			return false; // deadlock
 		}
-		for (u32 i = rlock_list.GetCount() - 1; ~i; i--)
+		for (u32 i = rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
@@ -86,31 +86,31 @@ struct RWLock
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		if (wlock_thread || rlock_list.GetCount()) // already locked
+		if (wlock_thread || rlock_list.size()) // already locked
 		{
 			if (!enqueue)
 			{
 				return false; // do not enqueue
 			}
-			for (u32 i = wlock_queue.GetCount() - 1; ~i; i--)
+			for (u32 i = wlock_queue.size() - 1; ~i; i--)
 			{
 				if (wlock_queue[i] == tid)
 				{
 					return false; // already enqueued
 				}
 			}
-			wlock_queue.AddCpy(tid); // enqueue new thread
+			wlock_queue.push_back(tid); // enqueue new thread
 			return false;
 		}
 		else
 		{
-			if (wlock_queue.GetCount())
+			if (wlock_queue.size())
 			{
 				// SYNC_FIFO only yet
 				if (wlock_queue[0] == tid)
 				{
 					wlock_thread = tid;
-					wlock_queue.RemoveAt(0);
+					wlock_queue.erase(wlock_queue.begin());
 					return true;
 				}
 				else
@@ -119,14 +119,14 @@ struct RWLock
 					{
 						return false; // do not enqueue
 					}
-					for (u32 i = wlock_queue.GetCount() - 1; ~i; i--)
+					for (u32 i = wlock_queue.size() - 1; ~i; i--)
 					{
 						if (wlock_queue[i] == tid)
 						{
 							return false; // already enqueued
 						}
 					}
-					wlock_queue.AddCpy(tid); // enqueue new thread
+					wlock_queue.push_back(tid); // enqueue new thread
 					return false;
 				}
 			}

@@ -11,7 +11,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions(-msse2)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
@@ -34,28 +34,28 @@ endif()
 include_directories(
 ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
-${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/include
-${CMAKE_SOURCE_DIR}
-${CMAKE_SOURCE_DIR}/Emu
-${CMAKE_SOURCE_DIR}/Gui
-${CMAKE_SOURCE_DIR}/Loader
-${CMAKE_SOURCE_DIR}/Crypto
-${CMAKE_SOURCE_DIR}/..
+"${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
+"${CMAKE_SOURCE_DIR}"
+"${CMAKE_SOURCE_DIR}/Emu"
+"${CMAKE_SOURCE_DIR}/Gui"
+"${CMAKE_SOURCE_DIR}/Loader"
+"${CMAKE_SOURCE_DIR}/Crypto"
+"${CMAKE_SOURCE_DIR}/.."
 )
 
-link_directories(${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib)
+link_directories("${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
 
 file(
 GLOB_RECURSE
 RPCS3_SRC
-${CMAKE_SOURCE_DIR}/rpcs3.cpp
-${CMAKE_SOURCE_DIR}/AppConnector.cpp
-${CMAKE_SOURCE_DIR}/Ini.cpp
-${CMAKE_SOURCE_DIR}/Emu/*
-${CMAKE_SOURCE_DIR}/Gui/*
-${CMAKE_SOURCE_DIR}/Loader/*
-${CMAKE_SOURCE_DIR}/Crypto/*
-${CMAKE_SOURCE_DIR}/../Utilities/*
+"${CMAKE_SOURCE_DIR}/rpcs3.cpp"
+"${CMAKE_SOURCE_DIR}/AppConnector.cpp"
+"${CMAKE_SOURCE_DIR}/Ini.cpp"
+"${CMAKE_SOURCE_DIR}/Emu/*"
+"${CMAKE_SOURCE_DIR}/Gui/*"
+"${CMAKE_SOURCE_DIR}/Loader/*"
+"${CMAKE_SOURCE_DIR}/Crypto/*"
+"${CMAKE_SOURCE_DIR}/../Utilities/*"
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})

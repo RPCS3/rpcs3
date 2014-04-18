@@ -1455,9 +1455,9 @@ void CompilePPUProgram::Compile()
 		u32 code;
 
 		{
-			Array<u32> args;
-			args.SetCount(m_args.size());
-			for(uint i=0; i<args.GetCount(); ++i)
+			std::vector<u32> args;
+			args.resize(m_args.size());
+			for(uint i=0; i<args.size(); ++i)
 			{
 				args[i] = m_args[i].value;
 			}

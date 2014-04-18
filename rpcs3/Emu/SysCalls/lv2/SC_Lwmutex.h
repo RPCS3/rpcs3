@@ -46,7 +46,7 @@ struct SleepQueue
 		u64 prio;
 		q_rec(u32 tid, u64 prio): tid(tid), prio(prio) {}
 	}; */
-	Array<u32> list;
+	std::vector<u32> list;
 	std::mutex m_mutex;
 	u64 m_name;
 

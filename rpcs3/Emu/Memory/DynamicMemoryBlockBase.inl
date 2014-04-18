@@ -2,8 +2,8 @@
 //DynamicMemoryBlockBase
 template<typename PT>
 DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase()
-	: PT()
-	, m_max_size(0)
+: PT()
+, m_max_size(0)
 {
 }
 
@@ -14,7 +14,7 @@ const u32 DynamicMemoryBlockBase<PT>::GetUsedSize() const
 
 	u32 size = 0;
 
-	for(u32 i=0; i<m_allocated.GetCount(); ++i)
+	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
 		size += m_allocated[i].size;
 	}
@@ -53,10 +53,10 @@ MemoryBlock* DynamicMemoryBlockBase<PT>::SetRange(const u64 start, const u32 siz
 	MemoryBlock::SetRange(start, 0);
 
 	const u32 page_count = m_max_size >> 12;
-	m_pages.SetCount(page_count);
-	m_locked.SetCount(page_count);
-	memset(m_pages.GetPtr(), 0, sizeof(u8*) * page_count);
-	memset(m_locked.GetPtr(), 0, sizeof(u8*) * page_count);
+	m_pages.resize(page_count);
+	m_locked.resize(page_count);
+	memset(m_pages.data(), 0, sizeof(u8*) * page_count);
+	memset(m_locked.data(), 0, sizeof(u8*) * page_count);
 
 	return this;
 }
@@ -66,11 +66,11 @@ void DynamicMemoryBlockBase<PT>::Delete()
 {
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	m_allocated.Clear();
+	m_allocated.clear();
 	m_max_size = 0;
 
-	m_pages.Clear();
-	m_locked.Clear();
+	m_pages.clear();
+	m_locked.clear();
 
 	MemoryBlock::Delete();
 }
@@ -82,22 +82,22 @@ bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 
 	addr &= ~4095; // align start address
 
-	if(!IsInMyRange(addr, size))
+	if (!IsInMyRange(addr, size))
 	{
 		assert(0);
 		return false;
 	}
 
-	if(IsMyAddress(addr) || IsMyAddress(addr + size - 1))
+	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
 	{
 		return false;
 	}
 
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	for(u32 i=0; i<m_allocated.GetCount(); ++i)
+	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
-		if(addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) return false;
+		if (addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) return false;
 	}
 
 	AppendMem(addr, size);
@@ -108,7 +108,9 @@ bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 template<typename PT>
 void DynamicMemoryBlockBase<PT>::AppendMem(u64 addr, u32 size) /* private */
 {
-	u8* pointer = (u8*)m_allocated[m_allocated.Move(new MemBlockInfo(addr, size))].mem;
+	//u8* pointer = (u8*)m_allocated[m_allocated.Move(new MemBlockInfo(addr, size))].mem;
+	m_allocated.emplace_back(addr, size);
+	u8* pointer = (u8*) m_allocated.back().mem;
 
 	const u32 first = MemoryBlock::FixAddr(addr) >> 12;
 
@@ -141,13 +143,13 @@ u64 DynamicMemoryBlockBase<PT>::AllocAlign(u32 size, u32 align)
 
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	for(u64 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
+	for (u64 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
 	{
 		bool is_good_addr = true;
 
-		for(u32 i=0; i<m_allocated.GetCount(); ++i)
+		for (u32 i = 0; i<m_allocated.size(); ++i)
 		{
-			if((addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) ||
+			if ((addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) ||
 				(m_allocated[i].addr >= addr && m_allocated[i].addr < addr + exsize))
 			{
 				is_good_addr = false;
@@ -156,7 +158,7 @@ u64 DynamicMemoryBlockBase<PT>::AllocAlign(u32 size, u32 align)
 			}
 		}
 
-		if(!is_good_addr) continue;
+		if (!is_good_addr) continue;
 
 		if (align)
 		{
@@ -182,7 +184,7 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 {
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	for (u32 num = 0; num < m_allocated.GetCount(); num++)
+	for (u32 num = 0; num < m_allocated.size(); num++)
 	{
 		if (addr == m_allocated[num].addr)
 		{
@@ -205,13 +207,13 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 				m_locked[i] = nullptr;
 			}
 
-			m_allocated.RemoveAt(num);
+			m_allocated.erase(m_allocated.begin() + num);
 			return true;
 		}
 	}
 
 	ConLog.Error("DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
-	for (u32 i = 0; i < m_allocated.GetCount(); i++)
+	for (u32 i = 0; i < m_allocated.size(); i++)
 	{
 		ConLog.Write("*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
 	}
@@ -223,7 +225,7 @@ u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const // lock-free, addr is fix
 {
 	const u32 index = addr >> 12;
 
-	if (index < m_pages.GetCount())
+	if (index < m_pages.size())
 	{
 		if (u8* res = m_pages[index])
 		{
@@ -243,7 +245,7 @@ bool DynamicMemoryBlockBase<PT>::IsLocked(u64 addr) // lock-free
 	{
 		const u32 index = MemoryBlock::FixAddr(addr) >> 12;
 
-		if (index < m_locked.GetCount())
+		if (index < m_locked.size())
 		{
 			if (m_locked[index]) return true;
 		}
@@ -259,13 +261,13 @@ bool DynamicMemoryBlockBase<PT>::Lock(u64 addr, u32 size)
 
 	addr &= ~4095; // align start address
 
-	if(!IsInMyRange(addr, size))
+	if (!IsInMyRange(addr, size))
 	{
 		assert(0);
 		return false;
 	}
 
-	if(IsMyAddress(addr) || IsMyAddress(addr + size - 1))
+	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
 	{
 		return false;
 	}
@@ -291,18 +293,18 @@ bool DynamicMemoryBlockBase<PT>::Lock(u64 addr, u32 size)
 
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Unlock(u64 addr, u32 size)
-{	
+{
 	size = PAGE_4K(size); // align size
 
 	addr &= ~4095; // align start address
 
-	if(!IsInMyRange(addr, size))
+	if (!IsInMyRange(addr, size))
 	{
 		assert(0);
 		return false;
 	}
 
-	if(IsMyAddress(addr) || IsMyAddress(addr + size - 1))
+	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
 	{
 		return false;
 	}

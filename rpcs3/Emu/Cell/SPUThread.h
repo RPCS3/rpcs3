@@ -553,7 +553,7 @@ public:
 			{
 				// SPU Thread Group MMIO (LS and SNR)
 				u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
-				if (num >= group->list.GetCount() || !group->list[num])
+				if (num >= group->list.size() || !group->list[num])
 				{
 					ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
 					return false;
@@ -1288,7 +1288,7 @@ public:
 					reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
 				}
-				catch (std::invalid_argument& e)
+				catch (std::invalid_argument& /*e*/)
 				{
 					return false;
 				}

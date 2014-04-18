@@ -24,7 +24,8 @@ bool vfsLocalDir::Open(const std::string& path)
 	{
 		wxString dir_path = fmt::FromUTF8(path) + name;
 
-		DirEntryInfo& info = m_entries[m_entries.Move(new DirEntryInfo())];
+		m_entries.emplace_back();
+		DirEntryInfo& info = m_entries.back();
 		info.name = fmt::ToUTF8(name);
 
 		info.flags |= dir.Exists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;

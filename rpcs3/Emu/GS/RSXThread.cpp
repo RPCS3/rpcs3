@@ -36,7 +36,7 @@ void RSXVertexData::Reset()
 	size = 0;
 	type = 0;
 	addr = 0;
-	data.ClearF();
+	data.clear();
 }
 
 void RSXVertexData::Load(u32 start, u32 count)
@@ -45,7 +45,7 @@ void RSXVertexData::Load(u32 start, u32 count)
 
 	const u32 tsize = GetTypeSize();
 
-	data.SetCount((start + count) * tsize * size);
+	data.resize((start + count) * tsize * size);
 
 	for(u32 i=start; i<start + count; ++i)
 	{
@@ -181,6 +181,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	u32 index = 0;
 
+	m_used_gcm_commands.insert(cmd);
+
 	//static u32 draw_array_count = 0;
 
 	switch(cmd)
@@ -236,10 +238,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_vertex_data[index].Reset();
 		m_vertex_data[index].size = 4;
 		m_vertex_data[index].type = 4;
-		m_vertex_data[index].data.AddCpy(v0);
-		m_vertex_data[index].data.AddCpy(v1);
-		m_vertex_data[index].data.AddCpy(v2);
-		m_vertex_data[index].data.AddCpy(v3);
+		m_vertex_data[index].data.push_back(v0);
+		m_vertex_data[index].data.push_back(v1);
+		m_vertex_data[index].data.push_back(v2);
+		m_vertex_data[index].data.push_back(v3);
 		//ConLog.Warning("index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
 	}
 	break;
@@ -255,7 +257,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = 2;
 		m_vertex_data[index].size = 2;
-		m_vertex_data[index].data.SetCount(sizeof(float) * 2);
+		m_vertex_data[index].data.resize(sizeof(float) * 2);
 		(float&)m_vertex_data[index].data[sizeof(float)*0] = v0;
 		(float&)m_vertex_data[index].data[sizeof(float)*1] = v1;
 
@@ -278,7 +280,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = 2;
 		m_vertex_data[index].size = 4;
-		m_vertex_data[index].data.SetCount(sizeof(float) * 4);
+		m_vertex_data[index].data.resize(sizeof(float) * 4);
 		(float&)m_vertex_data[index].data[sizeof(float)*0] = v0;
 		(float&)m_vertex_data[index].data[sizeof(float)*1] = v1;
 		(float&)m_vertex_data[index].data[sizeof(float)*2] = v2;
@@ -299,7 +301,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
-		tex.SetControl3(pitch, depth);
+		tex.SetControl3(depth, pitch);
 	}
 	break;
 
@@ -325,6 +327,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
 	{
 	}
+	break;
 
 	case NV4097_SET_SURFACE_FORMAT:
 	{
@@ -528,7 +531,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		const u32 addr = GetAddress(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
 		CMD_LOG("num=%d, addr=0x%x", index, addr);
 		m_vertex_data[index].addr = addr;
-		m_vertex_data[index].data.ClearF();
+		m_vertex_data[index].data.clear();
 	}
 	break;
 
@@ -592,8 +595,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 				{
 					case 0:
 					{
-						int pos = m_indexed_array.m_data.GetCount();
-						m_indexed_array.m_data.InsertRoomEnd(4);
+						int pos = m_indexed_array.m_data.size();
+						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
 						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
 						*(u32*)&m_indexed_array.m_data[pos] = index;
 						//ConLog.Warning("index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
@@ -602,8 +605,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 					case 1:
 					{
-						int pos = m_indexed_array.m_data.GetCount();
-						m_indexed_array.m_data.InsertRoomEnd(2);
+						int pos = m_indexed_array.m_data.size();
+						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
 						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
 						//ConLog.Warning("index 2: %d", index);
 						*(u16*)&m_indexed_array.m_data[pos] = index;
@@ -684,7 +687,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		//ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_LOAD: prog = %d", ARGS(0));
 
 		m_cur_vertex_prog = &m_vertex_progs[ARGS(0)];
-		m_cur_vertex_prog->data.Clear();
+		m_cur_vertex_prog->data.clear();
 
 		if(count == 2)
 		{
@@ -705,7 +708,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			break;
 		}
 
-		for(u32 i=0; i<count; ++i) m_cur_vertex_prog->data.AddCpy(ARGS(i));
+		for(u32 i=0; i<count; ++i) m_cur_vertex_prog->data.push_back(ARGS(i));
 	}
 	break;
 
@@ -745,7 +748,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			RSXTransformConstant c(id, (float&)x, (float&)y, (float&)z, (float&)w);
 
 			CMD_LOG("SET_TRANSFORM_CONSTANT_LOAD[%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
-			m_transform_constants.AddCpy(c);
+			m_transform_constants.push_back(c);
 		}
 	}
 	break;
@@ -1252,7 +1255,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		}
 
 		//ConLog.Warning("NV308A_COLOR: [%d]: %f, %f, %f, %f", c.id, c.x, c.y, c.z, c.w);
-		m_fragment_constants.AddCpy(c);
+		m_fragment_constants.push_back(c);
 	}
 	break;
 
@@ -1489,7 +1492,7 @@ void RSXThread::Begin(u32 draw_mode)
 	m_draw_array_count = 0;
 	m_draw_array_first = ~0;
 
-	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount())
+	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.size())
 	{
 		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0121, 0);
 	}
@@ -1499,14 +1502,14 @@ void RSXThread::End()
 {
 	ExecCMD();
 
-	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount())
+	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.size())
 	{
 		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
 	}
 
 	m_indexed_array.Reset();
-	m_fragment_constants.Clear();
-	m_transform_constants.Clear();
+	m_fragment_constants.clear();
+	m_transform_constants.clear();
 	m_cur_shader_prog_num = 0;
 	//m_cur_shader_prog = nullptr;
 
@@ -1562,7 +1565,7 @@ void RSXThread::Task()
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
-			m_call_stack.Push(get + 4);
+			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
 			u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
 			//ConLog.Warning("rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
@@ -1572,7 +1575,8 @@ void RSXThread::Task()
 		if(cmd == CELL_GCM_METHOD_FLAG_RETURN)
 		{
 			//ConLog.Warning("rsx return!");
-			u32 get = m_call_stack.Pop();
+			u32 get = m_call_stack.top();
+			m_call_stack.pop();
 			//ConLog.Warning("rsx return(0x%x)", get);
 			m_ctrl->get = get;
 			continue;

@@ -8,6 +8,8 @@ public:
 	virtual void Decode(const u32 code)=0;
 
 	virtual u8 DecodeMemory(const u64 address);
+
+	virtual ~PPCDecoder() = default;
 };
 
 

@@ -669,7 +669,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 	//send_exit.Enable(false);
-	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount();
+	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
 
 	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);

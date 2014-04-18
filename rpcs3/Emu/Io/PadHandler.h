@@ -202,9 +202,9 @@ protected:
 	std::vector<Pad> m_pads;
 
 public:
-	virtual ~PadHandlerBase() = default;
 	virtual void Init(const u32 max_connect)=0;
 	virtual void Close()=0;
+	virtual ~PadHandlerBase() = default;
 
 	void Key(const u32 code, bool pressed)
 	{

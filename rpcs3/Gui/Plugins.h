@@ -299,14 +299,14 @@ struct PluginsManager
 		u32 type;
 	};
 
-	Array<PluginInfo> m_plugins;
-	ArrayF<PluginInfo> m_pad_plugins;
+	std::vector<PluginInfo> m_plugins;
+	std::vector<PluginInfo*> m_pad_plugins;
 
 	void Load(const wxString& path)
 	{
 		if(!wxDirExists(path)) return;
 
-		m_plugins.ClearD();
+		m_plugins.clear();
 		wxDir dir(path);
 
 		wxArrayString res;
@@ -318,11 +318,11 @@ struct PluginsManager
 			Ps3EmuPlugin l(res[i]);
 			if(!l.Test()) continue;
 
-			PluginInfo& info = *new PluginInfo();
+			m_plugins.emplace_back();
+			PluginInfo& info = m_plugins.back();
 			info.path = res[i];
 			info.name.Printf("%s v%s", l.Ps3EmuLibGetFullName(), l.FormatVersion());
 			info.type = l.Ps3EmuLibGetType();
-			m_plugins.Add(info);
 		}
 	}
 
@@ -345,11 +345,11 @@ struct PluginsManager
 		wxComboBox* cbox_pad_plugins;
 		s_panel.Add(GetNewComboBox(&dial, "Pad", cbox_pad_plugins), wxSizerFlags().Border(wxALL, 5).Expand());
 
-		for(u32 i=0; i<m_plugins.GetCount(); ++i)
+		for(u32 i=0; i<m_plugins.size(); ++i)
 		{
 			if(m_plugins[i].type & Ps3EmuPlugin::LIB_PAD)
 			{
-				m_pad_plugins.Add(m_plugins[i]);
+				m_pad_plugins.push_back(&m_plugins[i]);
 				cbox_pad_plugins->Append(m_plugins[i].name + " (" + wxFileName(m_plugins[i].path).GetName() + ")");
 			}
 		}

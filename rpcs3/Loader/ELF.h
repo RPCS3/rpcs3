@@ -48,7 +48,7 @@ public:
 	Elf_Ehdr ehdr;
 
 	ELFLoader(vfsStream& f);
-	~ELFLoader() {Close();}
+	virtual ~ELFLoader() {Close();}
 
 	virtual bool LoadInfo();
 	virtual bool LoadData(u64 offset = 0);

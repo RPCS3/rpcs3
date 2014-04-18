@@ -164,7 +164,11 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	std::shared_ptr<unsigned char> image(stbi_load_from_memory(png.GetPtr(), fileSize, &width, &height, &actual_components, 4));
+	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
+			(
+				stbi_load_from_memory(png.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+				&::free
+			);
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
 	uint image_size = width * height;

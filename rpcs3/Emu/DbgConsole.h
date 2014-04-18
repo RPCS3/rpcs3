@@ -31,7 +31,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 	{
 		const u32 stext = data.m_text.length();
 
-		m_buffer.Reserve(sizeof(int) + sizeof(u32) + stext);
+		m_buffer.resize(m_buffer.size() + sizeof(int) + sizeof(u32) + stext);
 
 		u32 c_put = m_put;
 
