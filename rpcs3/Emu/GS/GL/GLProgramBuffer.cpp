@@ -7,8 +7,8 @@ int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& g
 	{
 		if(memcmp(&m_buf[i].fp_data[0], &Memory[rsx_fp.addr], m_buf[i].fp_data.size()) != 0) continue;
 
-		gl_fp.id = m_buf[i].fp_id;
-		gl_fp.shader = m_buf[i].fp_shader;
+		gl_fp.SetId(m_buf[i].fp_id);
+		gl_fp.SetShaderText(m_buf[i].fp_shader);
 
 		return i;
 	}
@@ -89,23 +89,23 @@ void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProg
 	ConLog.Write("Add program (%d):", m_buf.size());
 	ConLog.Write("*** prog id = %d", prog.id);
 	ConLog.Write("*** vp id = %d", gl_vp.id);
-	ConLog.Write("*** fp id = %d", gl_fp.id);
+	ConLog.Write("*** fp id = %d", gl_fp.GetId());
 	ConLog.Write("*** vp data size = %d", rsx_vp.data.size() * 4);
 	ConLog.Write("*** fp data size = %d", rsx_fp.size);
 
 	ConLog.Write("*** vp shader = \n%s", gl_vp.shader.c_str());
-	ConLog.Write("*** fp shader = \n%s", gl_fp.shader.c_str());
+	ConLog.Write("*** fp shader = \n%s", gl_fp.GetShaderText().c_str());
 	
 
 	new_buf.prog_id = prog.id;
 	new_buf.vp_id = gl_vp.id;
-	new_buf.fp_id = gl_fp.id;
+	new_buf.fp_id = gl_fp.GetId();
 
 	new_buf.fp_data.insert(new_buf.fp_data.end(),&Memory[rsx_fp.addr], &Memory[rsx_fp.addr] + rsx_fp.size);
 	new_buf.vp_data = rsx_vp.data;
 
 	new_buf.vp_shader = gl_vp.shader;
-	new_buf.fp_shader = gl_fp.shader;
+	new_buf.fp_shader = gl_fp.GetShaderText();
 
 	m_buf.push_back(new_buf);
 }

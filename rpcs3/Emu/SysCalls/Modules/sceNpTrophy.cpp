@@ -21,9 +21,38 @@ struct sceNpTrophyInternalContext
 {
 	// TODO
 	std::string trp_name;
-	vfsStream* trp_stream;
+	std::unique_ptr<vfsStream> trp_stream;
 
-	TROPUSRLoader* tropusr;
+	std::unique_ptr<TROPUSRLoader> tropusr;
+
+//TODO: remove the following code when Visual C++ no longer generates
+//compiler errors for it. All of this should be auto-generated
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+	sceNpTrophyInternalContext()
+		: trp_stream(),
+		tropusr()
+	{
+	}
+
+	sceNpTrophyInternalContext(sceNpTrophyInternalContext&& other)
+	{
+		std::swap(trp_stream,other.trp_stream);
+		std::swap(tropusr, other.tropusr);
+		std::swap(trp_name, other.trp_name);
+	}
+
+	sceNpTrophyInternalContext& operator =(sceNpTrophyInternalContext&& other)
+	{
+		std::swap(trp_stream, other.trp_stream);
+		std::swap(tropusr, other.tropusr);
+		std::swap(trp_name, other.trp_name);
+		return *this;
+	}
+
+	sceNpTrophyInternalContext(sceNpTrophyInternalContext& other) = delete;
+	sceNpTrophyInternalContext& operator =(sceNpTrophyInternalContext& other) = delete;
+#endif
+
 };
 
 struct sceNpTrophyInternal
@@ -80,10 +109,10 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 
 			if (stream && stream->IsOpened())
 			{
-				sceNpTrophyInternalContext ctxt;
-				ctxt.trp_stream = stream;
+				s_npTrophyInstance.contexts.emplace_back();
+				sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts.back();
+				ctxt.trp_stream.reset(stream);
 				ctxt.trp_name = entry->name;
-				s_npTrophyInstance.contexts.push_back(ctxt);
 				stream = nullptr;
 				return CELL_OK;
 			}
@@ -132,8 +161,10 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 
 	// Rename or discard certain entries based on the files found
-	char target [32];
-	sprintf(target, "TROP_%02d.SFM", Ini.SysLanguage.GetValue());
+	const size_t kTargetBufferLength = 31;
+	char target[kTargetBufferLength+1];
+	target[kTargetBufferLength] = 0;
+	snprintf(target, kTargetBufferLength, "TROP_%02d.SFM", Ini.SysLanguage.GetValue());
 
 	if (trp.ContainsEntry(target)) {
 		trp.RemoveEntry("TROPCONF.SFM");
@@ -150,7 +181,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 
 	// Discard unnecessary TROP_XX.SFM files
 	for (int i=0; i<=18; i++) {
-		sprintf(target, "TROP_%02d.SFM", i);
+		snprintf(target, kTargetBufferLength, "TROP_%02d.SFM", i);
 		if (i != Ini.SysLanguage.GetValue())
 			trp.RemoveEntry(target);
 	}
@@ -164,7 +195,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
 	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
 	tropusr->Load(trophyUsrPath, trophyConfPath);
-	ctxt.tropusr = tropusr;
+	ctxt.tropusr.reset(tropusr);
 
 	// TODO: Callbacks
 	
@@ -288,7 +319,7 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, mem32_t plati
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
-	if (trophyId >= ctxt.tropusr->GetTrophiesCount())
+	if (trophyId >= (s32)ctxt.tropusr->GetTrophiesCount())
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	if (ctxt.tropusr->GetTrophyUnlockState(trophyId))
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;

@@ -191,6 +191,8 @@ protected:
 	}
 
 public:
+	virtual ~LoaderBase() = default;
+
 	virtual bool LoadInfo() { return false; }
 	virtual bool LoadData(u64 offset = 0) { return false; }
 	Elf_Machine GetMachine() const { return machine; }
@@ -208,7 +210,7 @@ class Loader : public LoaderBase
 public:
 	Loader();
 	Loader(vfsFileBase& stream);
-	~Loader();
+	virtual ~Loader();
 
 	void Open(const std::string& path);
 	void Open(vfsFileBase& stream);

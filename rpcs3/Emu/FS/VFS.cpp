@@ -14,6 +14,11 @@ int sort_devices(const void* _a, const void* _b)
 	return 0;
 }
 
+VFS::~VFS()
+{
+	UnMountAll();
+}
+
 void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device)
 {
 	UnMount(ps3_path);
@@ -46,8 +51,9 @@ void VFS::UnMountAll()
 	for(u32 i=0; i<m_devices.size(); ++i)
 	{
 		delete m_devices[i];
-		m_devices.erase(m_devices.begin() +i);
 	}
+
+	m_devices.clear();
 }
 
 vfsFileBase* VFS::OpenFile(const std::string& ps3_path, vfsOpenMode mode) const

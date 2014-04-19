@@ -5,8 +5,9 @@
 #include "stblib/stb_truetype.h"
 
 void cellFont_init();
+void cellFont_load();
 void cellFont_unload();
-Module cellFont(0x0019, cellFont_init, nullptr, cellFont_unload);
+Module cellFont(0x0019, cellFont_init, cellFont_load, cellFont_unload);
 
 // Font Set Types
 enum
@@ -226,7 +227,7 @@ struct CCellFontInternal      //Module cellFont
 	}
 };
 
-CCellFontInternal* s_fontInternalInstance = new CCellFontInternal();
+CCellFontInternal* s_fontInternalInstance = nullptr;
 
 // Functions
 int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> config)
@@ -899,8 +900,14 @@ void cellFont_init()
 	cellFont.AddFunc(0xb015a84e, cellFontGetRevisionFlags);
 }
 
+void cellFont_load()
+{
+	s_fontInternalInstance = new CCellFontInternal();
+}
+
 void cellFont_unload()
 {
-	s_fontInternalInstance->m_bInitialized = false;
-	s_fontInternalInstance->m_bFontGcmInitialized = false;
+	// s_fontInternalInstance->m_bInitialized = false;
+	// s_fontInternalInstance->m_bFontGcmInitialized = false;
+	delete s_fontInternalInstance;
 }

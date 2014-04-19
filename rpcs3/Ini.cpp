@@ -159,6 +159,11 @@ Ini::Ini()
 #endif
 }
 
+Ini::~Ini()
+{
+	safe_delete(m_Config);
+}
+
 void Ini::Save(const wxString& key, int value)
 {
 	m_Config->Write(key, value);

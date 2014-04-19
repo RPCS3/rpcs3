@@ -28,8 +28,7 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 	LoadTableHeaders();
 	LoadTables();
 
-	m_file->Close();
-	m_file = NULL;
+	Close();
 	return true;
 }
 
@@ -206,7 +205,7 @@ bool TROPUSRLoader::Close()
 {
 	if (m_file && m_file->Close())
 	{
-		m_file = NULL;
+		safe_delete(m_file);
 		return true;
 	}
 	return false;

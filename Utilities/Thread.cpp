@@ -35,6 +35,8 @@ ThreadBase::~ThreadBase()
 {
 	if(IsAlive())
 		Stop(false);
+
+	safe_delete(m_executor);
 }
 
 void ThreadBase::Start()

@@ -41,8 +41,13 @@ struct VFSManagerEntry
 
 struct VFS
 {
+	~VFS();
+
 	//TODO: find out where these are supposed to be deleted or just make it shared_ptr
 	//and also make GetDevice and GetDeviceLocal return shared_ptr then.
+	// A vfsDevice will be deleted when they're unmounted or the VFS struct is destroyed.
+	// This will cause problems if other code stores the pointer returned by GetDevice/GetDeviceLocal
+	// and tries to use it after the device is unmounted.
 	std::vector<vfsDevice *> m_devices;
 	void Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device);
 	void UnMount(const std::string& ps3_path);

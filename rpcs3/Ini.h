@@ -21,10 +21,14 @@ struct WindowInfo
 
 class Ini
 {
+public:
+	virtual ~Ini();
+
 protected:
 	wxConfigBase* m_Config;
 
 	Ini();
+
 	void Save(const wxString& key, int value);
 	void Save(const wxString& key, bool value);
 	void Save(const wxString& key, wxSize value);

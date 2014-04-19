@@ -13,7 +13,9 @@ namespace detail{
 void default_syscall();
 static func_caller *null_func = bind_func(default_syscall);
 
-static func_caller* sc_table[1024] = 
+static const int kSyscallTableLength = 1024;
+
+static func_caller* sc_table[kSyscallTableLength] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
@@ -501,6 +503,24 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //1019
 	null_func, null_func, null_func, bind_func(cellGcmCallback), //1024
 };
+
+/** HACK: Used to delete func_caller objects that get allocated and stored in sc_table (above).
+* The destructor of this static object gets called when the program shuts down.
+*/
+struct SyscallTableCleaner_t
+{
+	SyscallTableCleaner_t() {}
+	~SyscallTableCleaner_t()
+	{
+		for (int i = 0; i < kSyscallTableLength; ++i)
+		{
+			if (sc_table[i] != null_func)
+				delete sc_table[i];
+		}
+
+		delete null_func;
+	}
+} SyscallTableCleaner_t;
 
 void default_syscall()
 {

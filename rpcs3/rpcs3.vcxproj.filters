@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Emu">
@@ -977,6 +977,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUInstrTable.h">
+      <Filter>Emu\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

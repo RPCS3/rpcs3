@@ -5,8 +5,9 @@
 #include "cellResc.h"
 
 void cellResc_init();
+void cellResc_load();
 void cellResc_unload();
-Module cellResc(0x001f, cellResc_init, nullptr, cellResc_unload);
+Module cellResc(0x001f, cellResc_init, cellResc_load, cellResc_unload);
 
 // Error Codes
 enum
@@ -71,7 +72,7 @@ struct CCellRescInternal
 };
 
 
-CCellRescInternal* s_rescInternalInstance = new CCellRescInternal();
+CCellRescInternal* s_rescInternalInstance = nullptr;
 
 // Extern Functions
 extern int cellGcmSetFlipMode(u32 mode);
@@ -810,7 +811,13 @@ void cellResc_init()
 	//cellResc.AddFunc(0xe0cef79e, cellRescCreateInterlaceTable);
 }
 
+void cellResc_load()
+{
+	s_rescInternalInstance = new CCellRescInternal();
+}
+
 void cellResc_unload()
 {
-	s_rescInternalInstance->m_bInitialized = false;
+	// s_rescInternalInstance->m_bInitialized = false;
+	delete s_rescInternalInstance;
 }

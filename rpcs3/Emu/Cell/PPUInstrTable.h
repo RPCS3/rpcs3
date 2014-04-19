@@ -203,7 +203,9 @@ namespace PPU_instr
 
 	static CodeField<9, 10> STRM;
 
-	static auto main_list = new_list(OPCD, instr_bind(&PPUOpcodes::UNK, GetCode, OPCD, OPCD));
+	//static auto main_list = new_list(OPCD, instr_bind(&PPUOpcodes::UNK, GetCode, OPCD, OPCD));
+	static InstrList<1 << CodeField<0, 5>::size, ::PPUOpcodes> main_list_obj(OPCD, instr_bind(&PPUOpcodes::UNK, GetCode, OPCD, OPCD));
+	static auto main_list = &main_list_obj;
 	static auto g04_list = new_list(main_list, PPU_opcodes::G_04, GD_04);
 	static auto g04_0_list = new_list(g04_list, GD_04_0, instr_bind(&PPUOpcodes::UNK, GetCode, OPCD, GD_04_0));
 	static auto g13_list = new_list(main_list, PPU_opcodes::G_13, GD_13, instr_bind(&PPUOpcodes::UNK, GetCode, OPCD, GD_13));

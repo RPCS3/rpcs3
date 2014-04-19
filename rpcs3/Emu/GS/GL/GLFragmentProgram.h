@@ -138,28 +138,65 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
 };
 
-struct GLShaderProgram
+/** Storage for an Fragment Program in the process of of recompilation.
+ *  This class calls OpenGL functions and should only be used from the RSX/Graphics thread.
+ */
+class GLShaderProgram
 {
+public:
 	GLShaderProgram();
 	~GLShaderProgram();
 
-	GLFragmentDecompilerThread* m_decompiler_thread;
-
-	GLParamArray parr;
-
-	std::string shader;
-
-	u32 id;
-	
-	void Wait()
-	{
-		if(m_decompiler_thread && m_decompiler_thread->IsAlive())
-		{
-			m_decompiler_thread->Join();
-		}
-	}
+	/**
+	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
+	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory
+	 */
 	void Decompile(RSXShaderProgram& prog);
+
+	/**
+	* Asynchronously decompile a fragment shader located in the PS3's Memory.
+	* When this function is called you must call Wait before GetShaderText() will return valid data.
+	* @param prog RSXShaderProgram specifying the location and size of the shader in memory
+	*/
+	void DecompileAsync(RSXShaderProgram& prog);
+
+	/** Wait for the decompiler task to complete decompilation. */
+	void Wait();
+
+	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
 	void Compile();
 
+	/** Get the source text for this shader */
+	inline const std::string& GetShaderText() const { return m_shader; }
+
+	/**
+	 * Set the source text for this shader
+	 * @param shaderText supplied shader text
+	 */
+	inline void SetShaderText(const std::string& shaderText) { m_shader = shaderText; }
+
+	/** Get the OpenGL id this shader is bound to */
+	inline u32 GetId() const { return m_id; }
+
+	/** 
+	 * Set the OpenGL id this shader is bound to
+	 * @param id supplied id
+	 */
+	inline void SetId(const u32 id) { m_id = id; }
+
+private:
+	/** Threaded fragment shader decompiler responsible for decompiling this program */
+	GLFragmentDecompilerThread* m_decompiler_thread;
+
+	/** Shader parameter storage */
+	GLParamArray m_parr;
+
+	/** Text of our decompiler shader */
+	std::string m_shader;
+
+	/** OpenGL id this shader is bound to */
+	u32 m_id;
+
+	/** Deletes the shader and any stored information */
 	void Delete();
 };

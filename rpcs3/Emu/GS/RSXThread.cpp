@@ -181,6 +181,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	u32 index = 0;
 
+	m_used_gcm_commands.insert(cmd);
+
 	//static u32 draw_array_count = 0;
 
 	switch(cmd)
@@ -299,7 +301,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
-		tex.SetControl3(pitch, depth);
+		tex.SetControl3(depth, pitch);
 	}
 	break;
 
@@ -325,6 +327,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
 	{
 	}
+	break;
 
 	case NV4097_SET_SURFACE_FORMAT:
 	{

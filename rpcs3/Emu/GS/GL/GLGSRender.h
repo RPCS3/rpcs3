@@ -78,7 +78,6 @@ public:
 		int format = tex.GetFormat() & ~(0x20 | 0x40);
 		bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
-		glPixelStorei(GL_PACK_ALIGNMENT, tex.m_pitch);
 		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
 		char* unswizzledPixels;
 
@@ -255,7 +254,9 @@ public:
 	{
 		if(!m_id || !tex.GetOffset() || !tex.GetWidth() || !tex.GetHeight()) return;
 
-		u32* alldata = new u32[tex.GetWidth() * tex.GetHeight()];
+		const u32 texPixelCount = tex.GetWidth() * tex.GetHeight();
+
+		u32* alldata = new u32[texPixelCount];
 
 		Bind();
 
@@ -276,15 +277,15 @@ public:
 
 		{
 			wxFile f(name + ".raw", wxFile::write);
-			f.Write(alldata, tex.GetWidth() * tex.GetHeight() * 4);
+			f.Write(alldata, texPixelCount * 4);
 		}
-		u8* data = new u8[tex.GetWidth() * tex.GetHeight() * 3];
-		u8* alpha = new u8[tex.GetWidth() * tex.GetHeight()];
+		u8* data = new u8[texPixelCount * 3];
+		u8* alpha = new u8[texPixelCount];
 
 		u8* src = (u8*)alldata;
 		u8* dst_d = data;
 		u8* dst_a = alpha;
-		for(u32 i=0; i<tex.GetWidth()*tex.GetHeight();i++)
+		for (u32 i = 0; i < texPixelCount; i++)
 		{
 			*dst_d++ = *src++;
 			*dst_d++ = *src++;
@@ -384,7 +385,7 @@ public:
 		InitializeShaders();
 		m_fp.Compile();
 		m_vp.Compile();
-		m_program.Create(m_vp.id, m_fp.id);
+		m_program.Create(m_vp.id, m_fp.GetId());
 		m_program.Use();
 		InitializeLocations();
 	}
@@ -499,7 +500,7 @@ public:
 			"	gl_Position = in_pos;\n"
 			"}\n";
 
-		m_fp.shader =
+		m_fp.SetShaderText(
 			"#version 330\n"
 			"\n"
 			"in vec2 tc;\n"
@@ -509,7 +510,7 @@ public:
 			"void main()\n"
 			"{\n"
 			"	res = texture(tex0, tc);\n"
-			"}\n";
+			"}\n");
 	}
 
 	void SetTexture(void* pixels, int width, int height)

@@ -26,6 +26,7 @@ CPUThread::CPUThread(CPUThreadType type)
 
 CPUThread::~CPUThread()
 {
+	safe_delete(m_dec);
 }
 
 void CPUThread::Close()
