@@ -160,14 +160,14 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	{
 		// check data (hard way)
 		bool is_valid = true;
-		for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
+		/*for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
 		{
 			if (entry[i].valid != ls[i])
 			{
 				is_valid = false;
 				break;
 			}
-		}
+		}*/
 		// invalidate if necessary
 		if (!is_valid)
 		{

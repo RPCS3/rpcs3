@@ -605,29 +605,15 @@ private:
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[rb]._u32[0] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[0] << (CPU.GPR[rb]._u32[0] & 0x3f);
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[rb]._u32[1] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[1] << (CPU.GPR[rb]._u32[1] & 0x3f);
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[rb]._u32[2] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[2] << (CPU.GPR[rb]._u32[2] & 0x3f);
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[rb]._u32[3] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[3] << (CPU.GPR[rb]._u32[3] & 0x3f);
-		WRAPPER_END(rt, ra, rb, 0);
-
-		// AVX2: masking with 0x3f + VPSLLVD may be better
-		/*XmmInvalidate(rt);
+		XmmInvalidate(rt);
 		for (u32 i = 0; i < 4; i++)
 		{
-			GpVar v0(c, kVarTypeUInt32);
-			c.mov(v0, cpu_dword(GPR[ra]._u32[i]));
-			GpVar shift(c, kVarTypeUInt32);
-			c.mov(shift, cpu_dword(GPR[rb]._u32[i]));
-			GpVar z(c);
-			c.xor_(z, z);
-			c.test(shift, 0x20);
-			c.cmovnz(v0, z);
-			c.shl(v0, shift);
-			c.mov(cpu_dword(GPR[rt]._u32[i]), v0);
+			c.mov(qw0->r32(), cpu_dword(GPR[ra]._u32[i]));
+			c.mov(*addr, cpu_dword(GPR[rb]._u32[i]));
+			c.shl(*qw0, *addr);
+			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
 		}
-		LOG_OPCODE();*/
+		LOG_OPCODE();
 	}
 	void ROTH(u32 rt, u32 ra, u32 rb)
 	{
@@ -2289,30 +2275,25 @@ private:
 		XmmFinalize(vb);
 		LOG_OPCODE();
 	}
-	//Forced bits to 0, hence the shift:
-	
 	void FSCRRD(u32 rt)
 	{
-		/*CPU.GPR[rt]._u128.lo = 
-			CPU.FPSCR.Exception0 << 20 &
-			CPU.FPSCR.*/
 		UNIMPLEMENTED();
 	}
 	void FESD(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt]._d[0] = (double)CPU.GPR[ra]._f[1];
-		CPU.GPR[rt]._d[1] = (double)CPU.GPR[ra]._f[3];
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.shufps(va.get(), va.get(), 0x8d); // _f[0] = _f[1]; _f[1] = _f[3];
+		c.cvtps2pd(va.get(), va.get());
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void FRDS(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt]._f[1] = (float)CPU.GPR[ra]._d[0];
-		CPU.GPR[rt]._u32[0] = 0x00000000;
-		CPU.GPR[rt]._f[3] = (float)CPU.GPR[ra]._d[1];
-		CPU.GPR[rt]._u32[2] = 0x00000000;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.cvtpd2ps(va.get(), va.get());
+		c.shufps(va.get(), va.get(), 0x72); // _f[1] = _f[0]; _f[3] = _f[1]; _f[0] = _f[2] = 0;
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
@@ -2565,46 +2546,29 @@ private:
 		{
 			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
 		}
+		c.maxps(va.get(), XmmConst(_mm_set1_ps(-pow(2, 31)))); // saturate
+		c.minps(va.get(), XmmConst(_mm_set1_ps((float)0x7fffffff)));
 		c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
-		WRAPPER_BEGIN(rt, ra, i8, zz);
-		const u32 scale = 173 - (i8 & 0xff); //unsigned immediate
-		for (int i = 0; i < 4; i++)
-		{
-			u32 exp = ((CPU.GPR[ra]._u32[i] >> 23) & 0xff) + scale;
-
-			if (exp > 255)
-				exp = 255;
-
-			if (CPU.GPR[ra]._u32[i] & 0x80000000) //if negative, result = 0
-				CPU.GPR[rt]._u32[i] = 0;
-			else
-			{
-				CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
-
-				if (CPU.GPR[rt]._f[i] > 0xffffffff) //if big, result = max
-					CPU.GPR[rt]._u32[i] = 0xffffffff;
-				else
-					CPU.GPR[rt]._u32[i] = floor(CPU.GPR[rt]._f[i]);
-			}
-		}
-		WRAPPER_END(rt, ra, i8, 0);
-
-		/*XmmVar v0(c);
-		c.movaps(v0, cpu_xmm(GPR[ra]));
+		const XmmLink& va = XmmGet(ra, rt);
 		if (i8 != 173)
 		{
-			c.mulps(v0, XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
 		}
-		// TODO: handle negative values and convert to unsigned value
-		// c.int3();
-		c.cvtps2dq(v0, v0); // convert to signed ints
-		c.movdqa(cpu_xmm(GPR[rt]), v0);
-		LOG_OPCODE();*/
+		c.maxps(va.get(), XmmConst(_mm_set1_ps(0.0f))); // saturate
+		c.minps(va.get(), XmmConst(_mm_set1_ps((float)0xffffffff)));
+		const XmmLink& v1 = XmmCopy(va);
+		c.cmpps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 31))), 5); // generate mask of big values
+		c.andps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 32)))); // generate correction component
+		c.subps(va.get(), v1.get()); // subtract correction component
+		c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
+		XmmFinalize(va, rt);
+		XmmFinalize(v1);
+		LOG_OPCODE();
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
@@ -2619,31 +2583,19 @@ private:
 	}
 	void CUFLT(u32 rt, u32 ra, s32 i8)
 	{
-		WRAPPER_BEGIN(rt, ra, i8, zz);
-		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
-		for (int i = 0; i < 4; i++)
-		{
-			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
-			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
-
-			if (exp > 255) //< 0
-				exp = 0;
-
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] & 0x807fffff) | (exp << 23);
-		}
-		WRAPPER_END(rt, ra, i8, 0);
-
-		/*XmmVar v0(c);
-		c.movdqa(v0, cpu_xmm(GPR[ra]));
-		// TODO: convert from unsigned value
-		// c.int3();
-		c.cvtdq2ps(v0, v0); // convert to floats as signed
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& v1 = XmmCopy(va);
+		c.cvtdq2ps(va.get(), va.get()); // convert to floats
+		c.psrad(v1.get(), 32); // generate mask from sign bit
+		c.andps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 32)))); // generate correction component
+		c.addps(va.get(), v1.get()); // add correction component
 		if (i8 != 155)
 		{
-			c.mulps(v0, XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
 		}
-		c.movaps(cpu_xmm(GPR[rt]), v0);
-		LOG_OPCODE();*/
+		XmmFinalize(va, rt);
+		XmmFinalize(v1);
+		LOG_OPCODE();
 	}
 
 	//0 - 8
@@ -3438,10 +3390,17 @@ private:
 	}
 	void MPYA(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, rc);
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2] * CPU.GPR[rb]._i16[w*2] + CPU.GPR[rc]._i32[w];
-		WRAPPER_END(rt, ra, rb, rc);
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.pslld(va.get(), 16);
+		c.pslld(vb.get(), 16);
+		c.psrad(va.get(), 16);
+		c.psrad(vb.get(), 16);
+		c.pmulld(va.get(), vb.get());
+		c.paddd(va.get(), cpu_xmm(GPR[rc]));
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
+		LOG_OPCODE();
 	}
 	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
@@ -3655,6 +3614,8 @@ private:
 		do_finalize = true;
 		Emu.Pause();
 	}
+
+	
 };
 
 #undef c

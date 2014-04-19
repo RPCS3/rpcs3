@@ -1034,9 +1034,13 @@ private:
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
 
-			CPU.GPR[rt]._u32[i] = (u32)CPU.GPR[rt]._f[i]; //trunc
+			if (CPU.GPR[rt]._f[i] > 0x7fffffff)
+				CPU.GPR[rt]._u32[i] = 0x7fffffff;
+			else if (CPU.GPR[rt]._f[i] < -pow(2, 31))
+				CPU.GPR[rt]._u32[i] = 0x80000000;
+			else
+				CPU.GPR[rt]._i32[i] = (s32)CPU.GPR[rt]._f[i]; //trunc
 		}
-		//CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
@@ -1063,7 +1067,6 @@ private:
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		//CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
 		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
