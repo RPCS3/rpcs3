@@ -4,6 +4,8 @@
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
+static const g_imm_table_struct g_imm_table;
+
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 : m_enc(new SPURecompiler(cpu, *this))
 , inter(new SPUInterpreter(cpu))
@@ -58,16 +60,21 @@ void SPURecompilerCore::Compile(u16 pos)
 	compiler.alloc(imm_var);
 	m_enc->imm_var = &imm_var;
 
-	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
-	compiler.setArg(3, pos_var);
-	m_enc->pos_var = &pos_var;
+	GpVar g_imm_var(compiler, kVarTypeIntPtr, "g_imm");
+	compiler.setArg(3, g_imm_var);
+	compiler.alloc(g_imm_var);
+	m_enc->g_imm_var = &g_imm_var;
 
+	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
+	m_enc->pos_var = &pos_var;
 	GpVar addr_var(compiler, kVarTypeUInt32, "addr");
 	m_enc->addr = &addr_var;
 	GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
 	m_enc->qw0 = &qw0_var;
 	GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
 	m_enc->qw1 = &qw1_var;
+	GpVar qw2_var(compiler, kVarTypeUInt64, "qw2");
+	m_enc->qw2 = &qw2_var;
 
 	for (u32 i = 0; i < 16; i++)
 	{
@@ -198,7 +205,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		return 0;
 	}
 
-	typedef u32(*Func)(void* _cpu, void* _ls, const void* _imm, u32 _pos);
+	typedef u32(*Func)(const void* _cpu, const void* _ls, const void* _imm, const void* _g_imm);
 
 	Func func = asmjit_cast<Func>(entry[pos].pointer);
 
@@ -215,7 +222,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	}
 
 	u32 res = pos;
-	res = func(cpu, &Memory[m_offset], imm_table.data(), res);
+	res = func(cpu, &Memory[m_offset], imm_table.data(), &g_imm_table);
 
 	if (res > 0xffff)
 	{

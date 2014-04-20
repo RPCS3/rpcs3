@@ -14,6 +14,58 @@ using namespace asmjit::host;
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
+struct g_imm_table_struct
+{
+	u16 cntb_table[65536];
+
+	__m128i fsmb_table[65536];
+	__m128i fsmh_table[256];
+	__m128i fsm_table[16];
+
+	__m128i sldq_pshufb[32];
+	__m128i srdq_pshufb[32];
+	__m128i rldq_pshufb[16];
+
+	g_imm_table_struct()
+	{
+		static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
+		for (u32 i = 0; i < sizeof(cntb_table) / sizeof(cntb_table[0]); i++)
+		{
+			u32 cnt_low = 0, cnt_high = 0;
+			for (u32 j = 0; j < 8; j++)
+			{
+				cnt_low += (i >> j) & 1;
+				cnt_high += (i >> (j + 8)) & 1;
+			}
+			cntb_table[i] = (cnt_high << 8) | cnt_low;
+		}
+		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
+		{
+			for (u32 j = 0; j < 4; j++) fsm_table[i].m128i_u32[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
+		{
+			for (u32 j = 0; j < 8; j++) fsmh_table[i].m128i_u16[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(fsmb_table) / sizeof(fsmb_table[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) fsmb_table[i].m128i_u8[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) sldq_pshufb[i].m128i_u8[j] = (u8)(j - i);
+		}
+		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) srdq_pshufb[i].m128i_u8[j] = (j + i > 15) ? 0xff : (u8)(j + i);
+		}
+		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) rldq_pshufb[i].m128i_u8[j] = (u8)(j - i) & 0xf;
+		}
+	}
+};
+
 class SPURecompiler;
 
 class SPURecompilerCore : public CPUDecoder
@@ -57,6 +109,9 @@ public:
 #define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
 #define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
 
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
+
 #define LOG_OPCODE(...) //ConLog.Write("Compiled "__FUNCTION__"(): "__VA_ARGS__)
 
 #define LOG3_OPCODE(...) //ConLog.Write("Linked "__FUNCTION__"(): "__VA_ARGS__)
@@ -97,12 +152,14 @@ public:
 	GpVar* cpu_var;
 	GpVar* ls_var;
 	GpVar* imm_var;
-	// (input) output:
+	GpVar* g_imm_var;
+	// output:
 	GpVar* pos_var;
 	// temporary:
 	GpVar* addr;
 	GpVar* qw0;
 	GpVar* qw1;
+	GpVar* qw2;
 
 	struct XmmLink
 	{
@@ -578,30 +635,41 @@ private:
 	}
 	void ROT(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << (CPU.GPR[rb]._u32[0] & 0x1f)) | (CPU.GPR[ra]._u32[0] >> (32 - (CPU.GPR[rb]._u32[0] & 0x1f)));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << (CPU.GPR[rb]._u32[1] & 0x1f)) | (CPU.GPR[ra]._u32[1] >> (32 - (CPU.GPR[rb]._u32[1] & 0x1f)));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << (CPU.GPR[rb]._u32[2] & 0x1f)) | (CPU.GPR[ra]._u32[2] >> (32 - (CPU.GPR[rb]._u32[2] & 0x1f)));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << (CPU.GPR[rb]._u32[3] & 0x1f)) | (CPU.GPR[ra]._u32[3] >> (32 - (CPU.GPR[rb]._u32[3] & 0x1f)));
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 4; i++)
+		{
+			c.mov(qw0->r32(), cpu_dword(GPR[ra]._u32[i]));
+			c.mov(*addr, cpu_dword(GPR[rb]._u32[i]));
+			c.rol(qw0->r32(), *addr);
+			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
+		}
+		LOG_OPCODE();
 	}
 	void ROTM(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : 0;
-		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : 0;
-		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : 0;
-		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : 0;
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 4; i++)
+		{
+			c.mov(qw0->r32(), cpu_dword(GPR[ra]._u32[i]));
+			c.mov(*addr, cpu_dword(GPR[rb]._u32[i]));
+			c.neg(*addr);
+			c.shr(*qw0, *addr);
+			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
+		}
+		LOG_OPCODE();
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 4; i++)
+		{
+			c.movsxd(*qw0, cpu_dword(GPR[ra]._u32[i]));
+			c.mov(*addr, cpu_dword(GPR[rb]._u32[i]));
+			c.neg(*addr);
+			c.sar(*qw0, *addr);
+			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
+		}
+		LOG_OPCODE();
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
@@ -617,31 +685,53 @@ private:
 	}
 	void ROTH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int h = 0; h < 8; h++) 
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0xf)) | (CPU.GPR[ra]._u16[h] >> (16 - (CPU.GPR[rb]._u16[h] & 0xf)));
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 8; i++)
+		{
+			c.movzx(qw0->r32(), cpu_word(GPR[ra]._u16[i]));
+			c.movzx(*addr, cpu_word(GPR[rb]._u16[i]));
+			c.rol(qw0->r16(), *addr);
+			c.mov(cpu_word(GPR[rt]._u16[i]), qw0->r16());
+		}
+		LOG_OPCODE();
 	}
 	void ROTHM(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : 0;
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 8; i++)
+		{
+			c.movzx(qw0->r32(), cpu_word(GPR[ra]._u16[i]));
+			c.movzx(*addr, cpu_word(GPR[rb]._u16[i]));
+			c.neg(*addr);
+			c.shr(qw0->r32(), *addr);
+			c.mov(cpu_word(GPR[rt]._u16[i]), qw0->r16());
+		}
+		LOG_OPCODE();
 	}
 	void ROTMAH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : CPU.GPR[ra]._i16[h] >> 15;
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 8; i++)
+		{
+			c.movsx(qw0->r32(), cpu_word(GPR[ra]._u16[i]));
+			c.movzx(*addr, cpu_word(GPR[rb]._u16[i]));
+			c.neg(*addr);
+			c.sar(qw0->r32(), *addr);
+			c.mov(cpu_word(GPR[rt]._u16[i]), qw0->r16());
+		}
+		LOG_OPCODE();
 	}
 	void SHLH(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[rb]._u16[h] & 0x1f) > 15 ? 0 : CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0x1f);
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 8; i++)
+		{
+			c.movzx(qw0->r32(), cpu_word(GPR[ra]._u16[i]));
+			c.movzx(*addr, cpu_word(GPR[rb]._u16[i]));
+			c.shl(qw0->r32(), *addr);
+			c.mov(cpu_word(GPR[rt]._u16[i]), qw0->r16());
+		}
+		LOG_OPCODE();
 	}
 	void ROTI(u32 rt, u32 ra, s32 i7)
 	{
@@ -1186,27 +1276,33 @@ private:
 	}
 	void FSM(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		const u32 pref = CPU.GPR[ra]._u32[3];
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (pref & (1 << w)) ? ~0 : 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& vr = XmmAlloc(rt);
+		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+		c.and_(*addr, 0xf);
+		c.shl(*addr, 4);
+		c.movdqa(vr.get(), g_imm2_xmm(fsm_table[0], *addr));
+		XmmFinalize(vr, rt);
+		LOG_OPCODE();
 	}
 	void FSMH(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		const u32 pref = CPU.GPR[ra]._u32[3];
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (pref & (1 << h)) ? ~0 : 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& vr = XmmAlloc(rt);
+		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+		c.and_(*addr, 0xff);
+		c.shl(*addr, 4);
+		c.movdqa(vr.get(), g_imm2_xmm(fsmh_table[0], *addr));
+		XmmFinalize(vr, rt);
+		LOG_OPCODE();
 	}
 	void FSMB(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		const u32 pref = CPU.GPR[ra]._u32[3];
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = (pref & (1 << b)) ? ~0 : 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		const XmmLink& vr = XmmAlloc(rt);
+		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+		c.and_(*addr, 0xffff);
+		c.shl(*addr, 4);
+		c.movdqa(vr.get(), g_imm2_xmm(fsmb_table[0], *addr));
+		XmmFinalize(vr, rt);
+		LOG_OPCODE();
 	}
 	void FREST(u32 rt, u32 ra)
 	{
@@ -1247,32 +1343,35 @@ private:
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0xf;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 0xf << 3);
+		c.shl(*addr, 1);
+		c.pshufb(va.get(), g_imm2_xmm(rldq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = (0 - (CPU.GPR[rb]._u32[3] >> 3)) & 0x1f;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		for (int b = 0; b < 16 - s; b++)
-			CPU.GPR[rt]._u8[b] = temp._u8[(b + s) & 0xf];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.shr(*addr, 3);
+		c.neg(*addr);
+		c.and_(*addr, 0x1f);
+		c.shl(*addr, 4);
+		c.pshufb(va.get(), g_imm2_xmm(srdq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void SHLQBYBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0x1f;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		for (int b = s; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 0x1f << 3);
+		c.shl(*addr, 1);
+		c.pshufb(va.get(), g_imm2_xmm(sldq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void CBX(u32 rt, u32 ra, u32 rb)
 	{
@@ -1361,73 +1460,89 @@ private:
 	}
 	void ROTQBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int t = CPU.GPR[rb]._u32[3] & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] << t) | (temp._u32[3] >> (32 - t));
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] << t) | (temp._u32[2] >> (32 - t));
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.mov(*qw2, *qw0);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 7);
+		c.shld(*qw0, *qw1, *addr);
+		c.shld(*qw1, *qw2, *addr);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void ROTQMBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int t = (0 - CPU.GPR[rb]._u32[3]) & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] >> t) | (temp._u32[1] << (32 - t));
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] >> t) | (temp._u32[2] << (32 - t));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] >> t) | (temp._u32[3] << (32 - t));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] >> t);
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.neg(*addr);
+		c.and_(*addr, 7);
+		c.shrd(*qw0, *qw1, *addr);
+		c.shr(*qw1, *addr);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void SHLQBI(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int t = CPU.GPR[rb]._u32[3] & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] << t);
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] << t) | (temp._u32[2] >> (32 - t));
-		WRAPPER_END(rt, ra, rb, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 7);
+		c.shld(*qw1, *qw0, *addr);
+		c.shl(*qw0, *addr);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void ROTQBY(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = CPU.GPR[rb]._u32[3] & 0xf;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		for (int b = 0; b < 16; ++b)
-			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 0xf);
+		c.shl(*addr, 4);
+		c.pshufb(va.get(), g_imm2_xmm(rldq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void ROTQMBY(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = (0 - CPU.GPR[rb]._u32[3]) & 0x1f;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		for (int b = 0; b < 16 - s; b++)
-			CPU.GPR[rt]._u8[b] = temp._u8[(b + s) & 0xf];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.neg(*addr);
+		c.and_(*addr, 0x1f);
+		c.shl(*addr, 4);
+		c.pshufb(va.get(), g_imm2_xmm(srdq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void SHLQBY(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		const int s = CPU.GPR[rb]._u32[3] & 0x1f;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		for (int b = s; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
-		WRAPPER_END(rt, ra, rb, 0);
+		const XmmLink& va = XmmGet(ra, rt);
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		c.and_(*addr, 0x1f);
+		c.shl(*addr, 4);
+		c.pshufb(va.get(), g_imm2_xmm(sldq_pshufb[0], *addr));
+		XmmFinalize(va, rt);
+		LOG_OPCODE();
 	}
 	void ORX(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[0] | CPU.GPR[ra]._u32[1] | CPU.GPR[ra]._u32[2] | CPU.GPR[ra]._u32[3];
-		CPU.GPR[rt]._u32[2] = 0;
-		CPU.GPR[rt]._u64[0] = 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		XmmInvalidate(rt);
+		c.mov(*addr, cpu_dword(GPR[ra]._u32[0]));
+		c.or_(*addr, cpu_dword(GPR[ra]._u32[1]));
+		c.or_(*addr, cpu_dword(GPR[ra]._u32[2]));
+		c.or_(*addr, cpu_dword(GPR[ra]._u32[3]));
+		c.mov(cpu_dword(GPR[rt]._u32[3]), *addr);
+		c.xor_(*addr, *addr);
+		c.mov(cpu_dword(GPR[rt]._u32[0]), *addr);
+		c.mov(cpu_dword(GPR[rt]._u32[1]), *addr);
+		c.mov(cpu_dword(GPR[rt]._u32[2]), *addr);
+		LOG_OPCODE();
 	}
 	void CBD(u32 rt, u32 ra, s32 i7)
 	{
@@ -1488,36 +1603,37 @@ private:
 	}
 	void ROTQBII(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int s = i7 & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] << s) | (temp._u32[3] >> (32 - s));
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] << s) | (temp._u32[2] >> (32 - s));
-		WRAPPER_END(rt, ra, i7, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.mov(*qw2, *qw0);
+		c.shld(*qw0, *qw1, i7 & 0x7);
+		c.shld(*qw1, *qw2, i7 & 0x7);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void ROTQMBII(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int s = (0 - (s32)i7) & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] >> s) | (temp._u32[1] << (32 - s));
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] >> s) | (temp._u32[2] << (32 - s));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] >> s) | (temp._u32[3] << (32 - s));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] >> s);
-		WRAPPER_END(rt, ra, i7, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.shrd(*qw0, *qw1, (0 - i7) & 0x7);
+		c.shr(*qw1, (0 - i7) & 0x7);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void SHLQBII(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const int s = i7 & 0x7;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt]._u32[0] = (temp._u32[0] << s);
-		CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
-		CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
-		CPU.GPR[rt]._u32[3] = (temp._u32[3] << s) | (temp._u32[2] >> (32 - s));
-		WRAPPER_END(rt, ra, i7, 0);
+		XmmInvalidate(rt);
+		c.mov(*qw0, cpu_qword(GPR[ra]._u64[0]));
+		c.mov(*qw1, cpu_qword(GPR[ra]._u64[1]));
+		c.shld(*qw1, *qw0, i7 & 0x7);
+		c.shl(*qw0, i7 & 0x7);
+		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw1);
+		LOG_OPCODE();
 	}
 	void ROTQBYI(u32 rt, u32 ra, s32 i7)
 	{
@@ -1729,7 +1845,7 @@ private:
 	}
 	void SUMB(u32 rt, u32 ra, u32 rb)
 	{
-		WRAPPER_BEGIN(rt, ra, rb, zz);
+		/*WRAPPER_BEGIN(rt, ra, rb, zz);
 		const SPU_GPR_hdr _a = CPU.GPR[ra];
 		const SPU_GPR_hdr _b = CPU.GPR[rb];
 		for (int w = 0; w < 4; w++)
@@ -1737,7 +1853,46 @@ private:
 			CPU.GPR[rt]._u16[w*2] = _a._u8[w*4] + _a._u8[w*4 + 1] + _a._u8[w*4 + 2] + _a._u8[w*4 + 3];
 			CPU.GPR[rt]._u16[w*2 + 1] = _b._u8[w*4] + _b._u8[w*4 + 1] + _b._u8[w*4 + 2] + _b._u8[w*4 + 3];
 		}
-		WRAPPER_END(rt, ra, rb, 0);
+		WRAPPER_END(rt, ra, rb, 0);*/
+
+		const XmmLink& va = XmmGet(ra);
+		const XmmLink& vb = (ra == rb) ? XmmCopy(va) : XmmGet(rb);
+		const XmmLink& v1 = XmmCopy(vb, rt);
+		const XmmLink& v2 = XmmCopy(vb);
+		const XmmLink& vFF = XmmAlloc();
+		c.movdqa(vFF.get(), XmmConst(_mm_set1_epi32(0xff)));
+		c.pand(v1.get(), vFF.get());
+		c.psrld(v2.get(), 8);
+		c.pand(v2.get(), vFF.get());
+		c.paddd(v1.get(), v2.get());
+		c.movdqa(v2.get(), vb.get());
+		c.psrld(v2.get(), 16);
+		c.pand(v2.get(), vFF.get());
+		c.paddd(v1.get(), v2.get());
+		c.movdqa(v2.get(), vb.get());
+		c.psrld(v2.get(), 24);
+		c.paddd(v1.get(), v2.get());
+		c.pslld(v1.get(), 16);
+		c.movdqa(v2.get(), va.get());
+		c.pand(v2.get(), vFF.get());
+		c.por(v1.get(), v2.get());
+		c.movdqa(v2.get(), va.get());
+		c.psrld(v2.get(), 8);
+		c.pand(v2.get(), vFF.get());
+		c.paddd(v1.get(), v2.get());
+		c.movdqa(v2.get(), va.get());
+		c.psrld(v2.get(), 16);
+		c.pand(v2.get(), vFF.get());
+		c.paddd(v1.get(), v2.get());
+		c.movdqa(v2.get(), va.get());
+		c.psrld(v2.get(), 24);
+		c.paddd(v1.get(), v2.get());
+		XmmFinalize(vb);
+		XmmFinalize(va);
+		XmmFinalize(v1, rt);
+		XmmFinalize(v2);
+		XmmFinalize(vFF);
+		LOG_OPCODE();
 	}
 	//HGT uses signed values.  HLGT uses unsigned values
 	void HGT(u32 rt, s32 ra, s32 rb)
@@ -1754,18 +1909,16 @@ private:
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		for (int w = 0; w < 4; w++)
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 4; i++)
 		{
-			int nPos;
-
-			for (nPos = 0; nPos < 32; nPos++)
-				if (CPU.GPR[ra]._u32[w] & (1 << (31 - nPos)))
-					break;
-
-			CPU.GPR[rt]._u32[w] = nPos;
+			c.bsr(*addr, cpu_dword(GPR[ra]._u32[i]));
+			c.cmovz(*addr, dword_ptr(*g_imm_var, offsetof(g_imm_table_struct, fsmb_table[0xffff]))); // load 0xffffffff
+			c.neg(*addr);
+			c.add(*addr, 31);
+			c.mov(cpu_dword(GPR[rt]._u32[i]), *addr);
 		}
-		WRAPPER_END(rt, ra, 0, 0);
+		LOG_OPCODE();
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
@@ -1786,13 +1939,14 @@ private:
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		for (int b = 0; b < 16; b++)
-			for (int i = 0; i < 8; i++)
-				CPU.GPR[rt]._u8[b] += (temp._u8[b] & (1 << i)) ? 1 : 0;
-		WRAPPER_END(rt, ra, 0, 0);
+		XmmInvalidate(rt);
+		for (u32 i = 0; i < 8; i++)
+		{
+			c.movzx(*addr, cpu_word(GPR[ra]._u16[i]));
+			c.movzx(*addr, word_ptr(*g_imm_var, *addr, 1, offsetof(g_imm_table_struct, cntb_table[0])));
+			c.mov(cpu_word(GPR[rt]._u16[i]), addr->r16());
+		}
+		LOG_OPCODE();
 	}
 	void XSBH(u32 rt, u32 ra)
 	{
@@ -2228,14 +2382,14 @@ private:
 		XmmFinalize(vt);
 		LOG_OPCODE();
 	}
-	void CGX(u32 rt, u32 ra, u32 rb)
+	void CGX(u32 rt, u32 ra, u32 rb) //nf
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = ((u64)CPU.GPR[ra]._u32[w] + (u64)CPU.GPR[rb]._u32[w] + (u64)(CPU.GPR[rt]._u32[w] & 1)) >> 32;
 		WRAPPER_END(rt, ra, rb, 0);
 	}
-	void BGX(u32 rt, u32 ra, u32 rb)
+	void BGX(u32 rt, u32 ra, u32 rb) //nf
 	{
 		WRAPPER_BEGIN(rt, ra, rb, zz);
 		s64 nResult;
@@ -2299,7 +2453,7 @@ private:
 	{
 		UNIMPLEMENTED();
 	}
-	void DFTSV(u32 rt, u32 ra, s32 i7)
+	void DFTSV(u32 rt, u32 ra, s32 i7) //nf
 	{
 		WRAPPER_BEGIN(rt, ra, i7, zz);
 		const u64 DoubleExpMask = 0x7ff0000000000000;
@@ -2721,12 +2875,7 @@ private:
 		else
 		{
 			const XmmLink& vr = XmmAlloc(rt);
-			__m128i fsmbi_mask;
-			for (u32 j = 0; j < 16; j++)
-			{
-				fsmbi_mask.m128i_i8[j] = ((i16 >> j) & 0x1) ? 0xff : 0;
-			}
-			c.movdqa(vr.get(), XmmConst(fsmbi_mask));
+			c.movdqa(vr.get(), g_imm_xmm(fsmb_table[i16 & 0xffff]));
 			XmmFinalize(vr, rt);
 		}
 		LOG_OPCODE();
