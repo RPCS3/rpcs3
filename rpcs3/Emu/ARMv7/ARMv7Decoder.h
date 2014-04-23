@@ -59,7 +59,7 @@ public:
 			u8 I1 = 1 - (J1 ^ S);
 			u8 I2 = 1 - (J2 ^ S);
 			u16 imm11 = code1 & 0x7ff;
-			u32 imm32;
+			u32 imm32 = 0;
 
 			switch(code1 >> 14)
 			{

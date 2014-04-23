@@ -3,6 +3,7 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPURecompiler.h"
 
 SPUThread& GetCurrentSPUThread()
 {
@@ -75,6 +76,8 @@ void SPUThread::DoRun()
 	break;
 
 	case 1:
+		m_dec = new SPURecompilerCore(*this);
+	break;
 	case 2:
 		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
 	break;

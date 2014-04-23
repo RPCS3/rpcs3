@@ -4,6 +4,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Crypto/sha1.h"
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
@@ -13,6 +14,15 @@
 	__m128 m128;
 	__m128d m128d;
  } __u32x4; */
+
+#define MEM_AND_REG_HASH() \
+	unsigned char mem_h[20]; sha1(&Memory[CPU.dmac.ls_offset], 256*1024, mem_h); \
+	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
+	ConLog.Write("Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
+
+#define LOG2_OPCODE(...) //MEM_AND_REG_HASH(); ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
+
+#define LOG5_OPCODE(...) ///
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -32,125 +42,25 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		CPU.SetExitStatus(code); // exit code (not status)
-
-		switch (code)
-		{
-		case 0x110: /* ===== sys_spu_thread_receive_event ===== */
-			{
-				u32 spuq = 0;
-				if (!CPU.SPU.Out_MBox.Pop(spuq))
-				{
-					ConLog.Error("sys_spu_thread_receive_event: cannot read Out_MBox");
-					CPU.SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
-					return;
-				}
-
-				if (CPU.SPU.In_MBox.GetCount())
-				{
-					ConLog.Error("sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
-					CPU.SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
-					return;
-				}
-
-				if (Ini.HLELogging.GetValue())
-				{
-					ConLog.Write("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
-				}
-
-				EventQueue* eq;
-				if (!CPU.SPUQs.GetEventQueue(FIX_SPUQ(spuq), eq))
-				{
-					CPU.SPU.In_MBox.PushUncond(CELL_EINVAL); // TODO: check error value
-					return;
-				}
-
-				u32 tid = GetCurrentSPUThread().GetId();
-
-				eq->sq.push(tid); // add thread to sleep queue
-
-				while (true)
-				{
-					switch (eq->owner.trylock(tid))
-					{
-					case SMR_OK:
-						if (!eq->events.count())
-						{
-							eq->owner.unlock(tid);
-							break;
-						}
-						else
-						{
-							u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
-							if (next != tid)
-							{
-								eq->owner.unlock(tid, next);
-								break;
-							}
-						}
-					case SMR_SIGNAL:
-						{
-							sys_event_data event;
-							eq->events.pop(event);
-							eq->owner.unlock(tid);
-							CPU.SPU.In_MBox.PushUncond(CELL_OK);
-							CPU.SPU.In_MBox.PushUncond(event.data1);
-							CPU.SPU.In_MBox.PushUncond(event.data2);
-							CPU.SPU.In_MBox.PushUncond(event.data3);
-							return;
-						}
-					case SMR_FAILED: break;
-					default: eq->sq.invalidate(tid); CPU.SPU.In_MBox.PushUncond(CELL_ECANCELED); return;
-					}
-
-					Sleep(1);
-					if (Emu.IsStopped())
-					{
-						ConLog.Warning("sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
-						eq->sq.invalidate(tid);
-						return;
-					}
-				}
-			}
-			break;
-		case 0x102:
-			if (!CPU.SPU.Out_MBox.GetCount())
-			{
-				ConLog.Error("sys_spu_thread_exit (no status, code 0x102)");
-			}
-			else if (Ini.HLELogging.GetValue())
-			{
-				// the real exit status
-				ConLog.Write("sys_spu_thread_exit (status=0x%x)", CPU.SPU.Out_MBox.GetValue());
-			}
-			CPU.Stop();
-			break;
-		default:
-			if (!CPU.SPU.Out_MBox.GetCount())
-			{
-				ConLog.Error("Unknown STOP code: 0x%x (no message)", code);
-			}
-			else
-			{
-				ConLog.Error("Unknown STOP code: 0x%x (message=0x%x)", code, CPU.SPU.Out_MBox.GetValue());
-			}
-			CPU.Stop();
-			break;
-		}
+		CPU.DoStop(code);
+		LOG2_OPCODE();
 	}
 	void LNOP()
 	{
 	}
 	void SYNC(u32 Cbit)
 	{
+		// This instruction must be used following a store instruction that modifies the instruction stream.
 		_mm_mfence();
 	}
 	void DSYNC()
 	{
+		// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 		_mm_mfence();
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
+		UNIMPLEMENTED();
 		//If register is a dummy register (register labeled 0x0)
 		if(sa == 0x0)
 		{
@@ -219,17 +129,17 @@ private:
 	}
 	void ROTM(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) % 64) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) % 64) : 0;
-		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) % 64) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) % 64) : 0;
-		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) % 64) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) % 64) : 0;
-		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) % 64) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) % 64) : 0;
+		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : 0;
+		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : 0;
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._i32[0]) % 64) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._i32[0]) % 64) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._i32[1]) % 64) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._i32[1]) % 64) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._i32[2]) % 64) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._i32[2]) % 64) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._i32[3]) % 64) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._i32[3]) % 64) : CPU.GPR[ra]._i32[3] >> 31;
+		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
+		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
+		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
+		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
@@ -246,12 +156,12 @@ private:
 	void ROTHM(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) % 32) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) % 32) : 0;
+			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : 0;
 	}
 	void ROTMAH(u32 rt, u32 ra, u32 rb)
 	{
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._i16[h]) % 32) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._i16[h]) % 32) : CPU.GPR[ra]._i16[h] >> 15;
+			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._u16[h]) & 0x1f) : CPU.GPR[ra]._i16[h] >> 15;
 	}
 	void SHLH(u32 rt, u32 ra, u32 rb)
 	{
@@ -268,7 +178,7 @@ private:
 	}
 	void ROTMI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 64;
+		const int nRot = (0 - i7) & 0x3f;
 		CPU.GPR[rt]._u32[0] = nRot < 32 ? CPU.GPR[ra]._u32[0] >> nRot : 0;
 		CPU.GPR[rt]._u32[1] = nRot < 32 ? CPU.GPR[ra]._u32[1] >> nRot : 0;
 		CPU.GPR[rt]._u32[2] = nRot < 32 ? CPU.GPR[ra]._u32[2] >> nRot : 0;
@@ -276,7 +186,7 @@ private:
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 64;
+		const int nRot = (0 - i7) & 0x3f;
 		CPU.GPR[rt]._i32[0] = nRot < 32 ? CPU.GPR[ra]._i32[0] >> nRot : CPU.GPR[ra]._i32[0] >> 31;
 		CPU.GPR[rt]._i32[1] = nRot < 32 ? CPU.GPR[ra]._i32[1] >> nRot : CPU.GPR[ra]._i32[1] >> 31;
 		CPU.GPR[rt]._i32[2] = nRot < 32 ? CPU.GPR[ra]._i32[2] >> nRot : CPU.GPR[ra]._i32[2] >> 31;
@@ -287,7 +197,7 @@ private:
 		const u32 s = i7 & 0x3f;
 
 		for (u32 j = 0; j < 4; ++j)
-			CPU.GPR[rt]._u32[j] = CPU.GPR[ra]._u32[j] << s;
+			CPU.GPR[rt]._u32[j] = (s >= 32) ? 0 : CPU.GPR[ra]._u32[j] << s;
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
@@ -298,14 +208,14 @@ private:
 	}
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 32;
+		const int nRot = (0 - i7) & 0x1f;
 
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = nRot < 16 ? CPU.GPR[ra]._u16[h] >> nRot : 0;
 	}
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
-		const int nRot = (0 - i7) % 32;
+		const int nRot = (0 - i7) & 0x1f;
 
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._i16[h] = nRot < 16 ? CPU.GPR[ra]._i16[h] >> nRot : CPU.GPR[ra]._i16[h] >> 15;
@@ -315,7 +225,7 @@ private:
 		const int nRot = i7 & 0x1f;
 
 		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[0] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[0] << nRot;
+			CPU.GPR[rt]._u16[h] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[h] << nRot;
 	}
 	void A(u32 rt, u32 ra, u32 rb)
 	{
@@ -369,26 +279,59 @@ private:
 	}
 	void BIZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u32[3] == 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
+		if (CPU.GPR[rt]._u32[3] == 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void BINZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u32[3] != 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
+		if (CPU.GPR[rt]._u32[3] != 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void BIHZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[6] == 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
+		if (CPU.GPR[rt]._u16[6] == 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void BIHNZ(u32 rt, u32 ra)
 	{
-		if(CPU.GPR[rt]._u16[6] != 0)
-			CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
+		if (CPU.GPR[rt]._u16[6] != 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
+		UNIMPLEMENTED();
 		Emu.Pause();
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
@@ -405,14 +348,17 @@ private:
 	}
 	void BI(u32 ra)
 	{
-		CPU.SetBranch(branchTarget(CPU.GPR[ra]._u32[3], 0));
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void BISL(u32 rt, u32 ra)
 	{
-		const u32 NewPC = CPU.GPR[ra]._u32[3];
+		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;		
-		CPU.SetBranch(branchTarget(NewPC, 0));
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void IRET(u32 ra)
 	{
@@ -1088,9 +1034,13 @@ private:
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
 
-			CPU.GPR[rt]._u32[i] = (u32)CPU.GPR[rt]._f[i]; //trunc
+			if (CPU.GPR[rt]._f[i] > 0x7fffffff)
+				CPU.GPR[rt]._u32[i] = 0x7fffffff;
+			else if (CPU.GPR[rt]._f[i] < -pow(2, 31))
+				CPU.GPR[rt]._u32[i] = 0x80000000;
+			else
+				CPU.GPR[rt]._i32[i] = (s32)CPU.GPR[rt]._f[i]; //trunc
 		}
-		//CPU.GPR[rt]._m128i = _mm_cvttps_epi32(CPU.GPR[rt]._m128);
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
@@ -1117,7 +1067,6 @@ private:
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		//CPU.GPR[rt]._m128 = _mm_cvtepi32_ps(CPU.GPR[ra]._m128i);
 		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
@@ -1149,8 +1098,16 @@ private:
 	//0 - 8
 	void BRZ(u32 rt, s32 i16)
 	{
+		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u32[3] == 0)
-			CPU.SetBranch(branchTarget(CPU.PC, i16));
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void STQA(u32 rt, s32 i16)
 	{
@@ -1166,18 +1123,42 @@ private:
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
+		u64 target = branchTarget(CPU.PC, i16);
 		if (CPU.GPR[rt]._u32[3] != 0)
-			CPU.SetBranch(branchTarget(CPU.PC, i16));
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
-		if (CPU.GPR[rt]._u16[6] == 0) 
-			CPU.SetBranch(branchTarget(CPU.PC, i16));
+		u64 target = branchTarget(CPU.PC, i16);
+		if (CPU.GPR[rt]._u16[6] == 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
-		if (CPU.GPR[rt]._u16[6] != 0) 
-			CPU.SetBranch(branchTarget(CPU.PC, i16));
+		u64 target = branchTarget(CPU.PC, i16);
+		if (CPU.GPR[rt]._u16[6] != 0)
+		{
+			LOG5_OPCODE("taken (0x%llx)", target);
+			CPU.SetBranch(target);
+		}
+		else
+		{
+			LOG5_OPCODE("not taken (0x%llx)", target);
+		}
 	}
 	void STQR(u32 rt, s32 i16)
 	{
@@ -1193,7 +1174,9 @@ private:
 	}
 	void BRA(s32 i16)
 	{
-		CPU.SetBranch(branchTarget(0, i16));
+		u64 target = branchTarget(0, i16);
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void LQA(u32 rt, s32 i16)
 	{
@@ -1209,13 +1192,17 @@ private:
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
+		u64 target = branchTarget(0, i16);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(0, i16));
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void BR(s32 i16)
 	{
-		CPU.SetBranch(branchTarget(CPU.PC, i16));
+		u64 target = branchTarget(CPU.PC, i16);
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void FSMBI(u32 rt, s32 i16)
 	{
@@ -1235,9 +1222,11 @@ private:
 	}
 	void BRSL(u32 rt, s32 i16)
 	{
+		u64 target = branchTarget(CPU.PC, i16);
 		CPU.GPR[rt].Reset();
 		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(CPU.PC, i16));
+		LOG5_OPCODE("branch (0x%llx)", target);
+		CPU.SetBranch(target);
 	}
 	void LQR(u32 rt, s32 i16)
 	{
@@ -1337,6 +1326,7 @@ private:
 			Emu.Pause();
 			return;
 		}
+		//ConLog.Write("STQD(lsa=0x%x): GPR[%d] (0x%llx%llx)", lsa, rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding

@@ -499,6 +499,9 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Memory\Memory.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
@@ -977,6 +980,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPURecompiler.h">
+      <Filter>Emu\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInstrTable.h">
       <Filter>Emu\Cell</Filter>
