@@ -333,8 +333,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxBoxSizer* s_subpanel_io(new wxBoxSizer(wxVERTICAL));
 	wxBoxSizer* s_subpanel_hle(new wxBoxSizer(wxVERTICAL));
 
-	// CPU settings
-	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, p_cpu, _("Decoder") ) );
+	// CPU/SPU settings
+	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, p_cpu, _("CPU") ) );
+	wxStaticBoxSizer* s_round_spu_decoder( new wxStaticBoxSizer( wxVERTICAL, p_cpu, _("SPU") ) );
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render( new wxStaticBoxSizer( wxVERTICAL, p_graphics, _("Render") ) );
@@ -356,6 +357,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_sys_lang( new wxStaticBoxSizer( wxVERTICAL, p_system, _("Language") ) );
 
 	wxComboBox* cbox_cpu_decoder = new wxComboBox(p_cpu, wxID_ANY);
+	wxComboBox* cbox_spu_decoder = new wxComboBox(p_cpu, wxID_ANY);
 	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY);
@@ -380,6 +382,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("Interpreter");
+
+	cbox_spu_decoder->Append("Interpreter");
+	cbox_spu_decoder->Append("Recompiler");
 
 	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
 	{
@@ -447,6 +452,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 
 	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
+	cbox_spu_decoder->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
 	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_gs_resolution->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
@@ -465,6 +471,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -482,7 +489,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Core
 	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_cpu->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_cpu_decoder->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
 	s_subpanel_graphics->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -532,6 +540,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
 		Ini.CPUIgnoreRWErrors.SetValue(chbox_cpu_ignore_rwerrors->GetValue());
+		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection() + 1);
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);

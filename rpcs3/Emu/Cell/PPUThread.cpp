@@ -150,9 +150,15 @@ void PPUThread::DoRun()
 
 	case 1:
 	case 2:
+	{
 		auto ppui = new PPUInterpreter(*this);
 		m_dec = new PPUDecoder(ppui);
+	}
 	break;
+
+	default:
+		ConLog.Error("Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		Emu.Pause();
 	}
 }
 
