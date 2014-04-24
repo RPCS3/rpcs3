@@ -213,20 +213,21 @@ public:
 
 union SPU_GPR_hdr
 {
+	u32 _u32[4];
+	float _f[4];
 	u128 _u128;
 	s128 _i128;
 	__m128 _m128;
 	__m128i _m128i;
 	u64 _u64[2];
 	s64 _i64[2];
-	u32 _u32[4];
 	s32 _i32[4];
 	u16 _u16[8];
 	s16 _i16[8];
 	u8  _u8[16];
 	s8  _i8[16];
 	double _d[2];
-	float _f[4];
+
 
 	SPU_GPR_hdr() {}
 
@@ -243,9 +244,9 @@ union SPU_GPR_hdr
 
 union SPU_SPR_hdr
 {
+	u32 _u32[4];
 	u128 _u128;
 	s128 _i128;
-	u32 _u32[4];
 
 	SPU_SPR_hdr() {}
 
@@ -299,7 +300,6 @@ public:
 #else
 		static const bool x86 = true;
 #endif
-
 	private:
 		union _CRT_ALIGN(8) {
 			struct {
@@ -311,7 +311,6 @@ public:
 		std::mutex m_lock;
 
 	public:
-
 		Channel()
 		{
 			Init();
@@ -332,7 +331,7 @@ public:
 					return false;
 				}
 				res = m_value[0];
-				for (u32 i = 1; i < max_count; i++) // FIFO
+				if (max_count > 1) for (u32 i = 1; i < max_count; i++) // FIFO
 				{
 					m_value[i-1] = m_value[i];
 				}
@@ -586,7 +585,7 @@ public:
 			}
 		}
 
-		Sleep(1); // hack
+		//Sleep(1); // hack
 
 		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
@@ -1123,6 +1122,115 @@ public:
 		}
 
 		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+	}
+
+	void DoStop(u32 code)
+	{
+		SetExitStatus(code); // exit code (not status)
+
+		switch (code)
+		{
+		case 0x110: /* ===== sys_spu_thread_receive_event ===== */
+		{
+			u32 spuq = 0;
+			if (!SPU.Out_MBox.Pop(spuq))
+			{
+				ConLog.Error("sys_spu_thread_receive_event: cannot read Out_MBox");
+				SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
+				return;
+			}
+
+			if (SPU.In_MBox.GetCount())
+			{
+				ConLog.Error("sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
+				SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
+				return;
+			}
+
+			if (Ini.HLELogging.GetValue())
+			{
+				ConLog.Write("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
+			}
+
+			EventQueue* eq;
+			if (!SPUQs.GetEventQueue(FIX_SPUQ(spuq), eq))
+			{
+				SPU.In_MBox.PushUncond(CELL_EINVAL); // TODO: check error value
+				return;
+			}
+
+			u32 tid = GetId();
+
+			eq->sq.push(tid); // add thread to sleep queue
+
+			while (true)
+			{
+				switch (eq->owner.trylock(tid))
+				{
+				case SMR_OK:
+					if (!eq->events.count())
+					{
+						eq->owner.unlock(tid);
+						break;
+					}
+					else
+					{
+						u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
+						if (next != tid)
+						{
+							eq->owner.unlock(tid, next);
+							break;
+						}
+					}
+				case SMR_SIGNAL:
+				{
+					sys_event_data event;
+					eq->events.pop(event);
+					eq->owner.unlock(tid);
+					SPU.In_MBox.PushUncond(CELL_OK);
+					SPU.In_MBox.PushUncond(event.data1);
+					SPU.In_MBox.PushUncond(event.data2);
+					SPU.In_MBox.PushUncond(event.data3);
+					return;
+				}
+				case SMR_FAILED: break;
+				default: eq->sq.invalidate(tid); SPU.In_MBox.PushUncond(CELL_ECANCELED); return;
+				}
+
+				Sleep(1);
+				if (Emu.IsStopped())
+				{
+					ConLog.Warning("sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
+					eq->sq.invalidate(tid);
+					return;
+				}
+			}
+		}
+			break;
+		case 0x102:
+			if (!SPU.Out_MBox.GetCount())
+			{
+				ConLog.Error("sys_spu_thread_exit (no status, code 0x102)");
+			}
+			else if (Ini.HLELogging.GetValue())
+			{
+				// the real exit status
+				ConLog.Write("sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());
+			}
+			Stop();
+			break;
+		default:
+			if (!SPU.Out_MBox.GetCount())
+			{
+				ConLog.Error("Unknown STOP code: 0x%x (no message)", code);
+			}
+			else
+			{
+				ConLog.Error("Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
+			}
+			Stop();
+			break;
+		}
 	}
 
 	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }

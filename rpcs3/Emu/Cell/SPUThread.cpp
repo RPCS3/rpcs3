@@ -3,6 +3,7 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPURecompiler.h"
 
 SPUThread& GetCurrentSPUThread()
 {
@@ -68,20 +69,19 @@ u64 SPUThread::GetFreeStackSize() const
 
 void SPUThread::DoRun()
 {
-	switch(Ini.CPUDecoderMode.GetValue())
+	switch(Ini.SPUDecoderMode.GetValue())
 	{
-	case 0:
-		//m_dec = new SPUDecoder(*new SPUDisAsm());
-	break;
-
 	case 1:
-	case 2:
 		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
 	break;
-	}
+	case 2:
+		m_dec = new SPURecompilerCore(*this);
+	break;
 
-	//Pause();
-	//Emu.Pause();
+	default:
+		ConLog.Error("Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
+		Emu.Pause();
+	}
 }
 
 void SPUThread::DoResume()

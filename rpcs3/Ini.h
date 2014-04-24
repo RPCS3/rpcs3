@@ -97,6 +97,7 @@ private:
 
 public:
 	IniEntry<u8> CPUDecoderMode;
+	IniEntry<u8> SPUDecoderMode;
 	IniEntry<bool> CPUIgnoreRWErrors;
 	IniEntry<u8> GSRenderMode;
 	IniEntry<u8> GSResolution;
@@ -150,6 +151,7 @@ public:
 		path = DefPath + "/" + "CPU";
 		CPUDecoderMode.Init("DecoderMode", path);
 		CPUIgnoreRWErrors.Init("IgnoreRWErrors", path);
+		SPUDecoderMode.Init("SPUDecoderMode", path);
 
 		path = DefPath + "/" + "GS";
 		GSRenderMode.Init("RenderMode", path);
@@ -211,6 +213,7 @@ public:
 	{
 		CPUDecoderMode.Load(2);
 		CPUIgnoreRWErrors.Load(false);
+		SPUDecoderMode.Load(1);
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
@@ -260,6 +263,7 @@ public:
 	{
 		CPUDecoderMode.Save();
 		CPUIgnoreRWErrors.Save();
+		SPUDecoderMode.Save();
 		GSRenderMode.Save();
 		GSResolution.Save();
 		GSAspectRatio.Save();

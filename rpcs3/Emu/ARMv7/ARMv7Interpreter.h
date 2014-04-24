@@ -95,7 +95,7 @@ public:
 
 	SRType DecodeImmShift(u8 type, u8 imm5, uint* shift_n)
 	{
-		SRType shift_t;
+		SRType shift_t = SRType_None;
 
 		switch(type)
 		{
@@ -119,7 +119,7 @@ public:
 
 	SRType DecodeRegShift(u8 type)
 	{
-		SRType shift_t;
+		SRType shift_t = SRType_None;
 
 		switch(type)
 		{
@@ -235,7 +235,7 @@ public:
 
 	bool ConditionPassed(u8 cond)
 	{
-		bool result;
+		bool result = false;
 
 		switch(cond >> 1)
 		{

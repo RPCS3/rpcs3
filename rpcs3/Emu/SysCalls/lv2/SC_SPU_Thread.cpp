@@ -397,7 +397,7 @@ int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 //181
 int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 {
-	sc_spu.Warning("sys_spu_thread_write_ls(id=%d, address=0x%x, value=0x%llx, type=0x%x)",
+	sc_spu.Log("sys_spu_thread_write_ls(id=%d, address=0x%x, value=0x%llx, type=0x%x)",
 		id, address, value, type);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
@@ -430,7 +430,7 @@ int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 //182
 int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 {
-	sc_spu.Warning("sys_spu_thread_read_ls(id=%d, address=0x%x, value_addr=0x%x, type=0x%x)",
+	sc_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value_addr=0x%x, type=0x%x)",
 		id, address, value.GetAddr(), type);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
@@ -468,7 +468,7 @@ int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 //190
 int sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
-	sc_spu.Warning("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
+	sc_spu.Log("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
