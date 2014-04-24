@@ -90,13 +90,20 @@ using pck_len_t = u32;
 int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
 {
 	sys_net.Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.GetAddr(), paddrlen.GetAddr());
-	sockaddr _addr;
-	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
-	_addr.sa_family = addr->sa_family;
-	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.GetAddr());
-	int ret = accept(s, &_addr, _paddrlen);
-	g_lastError = getLastError();
-	return ret;
+	if (addr.GetAddr() == 0) {
+		int ret = accept(s, NULL, NULL);
+		g_lastError = getLastError();
+		return ret;
+	}
+	else {
+		sockaddr _addr;
+		memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
+		_addr.sa_family = addr->sa_family;
+		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.GetAddr());
+		int ret = accept(s, &_addr, _paddrlen);
+		g_lastError = getLastError();
+		return ret;
+	}
 }
 
 int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr> family, u32 addrlen)
