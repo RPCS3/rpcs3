@@ -924,6 +924,14 @@ int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
 	return CELL_OK;
 }
 
+int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
+{
+	// TODO: When cellWebBrowser stuff is implemented, change this to some real
+	// needed memory buffer size.
+	*memSize = 1024 * 1024 * 1; // 1 MB
+	return CELL_OK;
+}
+
 void cellSysutil_init()
 {
 	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -994,4 +1002,6 @@ void cellSysutil_init()
 	//cellSysutil.AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
 	//cellSysutil.AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
 	//cellSysutil.AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
+
+	cellSysutil.AddFunc(0x6d087930, cellWebBrowserEstimate2);
 }

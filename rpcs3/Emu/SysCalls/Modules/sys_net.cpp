@@ -90,33 +90,44 @@ using pck_len_t = u32;
 int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
 {
 	sys_net.Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.GetAddr(), paddrlen.GetAddr());
-	sockaddr _addr;
-	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
-	_addr.sa_family = addr->sa_family;
-	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.GetAddr());
-	int ret = accept(s, &_addr, _paddrlen);
+	if (addr.GetAddr() == 0) {
+		int ret = accept(s, NULL, NULL);
+		g_lastError = getLastError();
+		return ret;
+	}
+	else {
+		sockaddr _addr;
+		memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
+		_addr.sa_family = addr->sa_family;
+		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.GetAddr());
+		int ret = accept(s, &_addr, _paddrlen);
+		g_lastError = getLastError();
+		return ret;
+	}
+}
+
+int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
+{
+	sys_net.Warning("bind(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.GetAddr(), addrlen);
+	sockaddr_in saddr;
+	memcpy(&saddr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr_in));
+	saddr.sin_family = addr->sin_family;
+	const char *ipaddr = inet_ntoa(saddr.sin_addr);
+	sys_net.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+	int ret = bind(s, (const sockaddr *)&saddr, addrlen);
 	g_lastError = getLastError();
 	return ret;
 }
 
-int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr> family, u32 addrlen)
+int sys_net_connect(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
 {
-	sys_net.Warning("bind(s=%d, family_addr=0x%x, addrlen=%u)", s, family.GetAddr(), addrlen);
-	sockaddr _family;
-	memcpy(&_family, Memory.VirtualToRealAddr(family.GetAddr()), sizeof(sockaddr));
-	_family.sa_family = family->sa_family;
-	int ret = bind(s, &_family, addrlen);
-	g_lastError = getLastError();
-	return ret;
-}
-
-int sys_net_connect(s32 s, mem_ptr_t<sys_net_sockaddr> family, u32 addrlen)
-{
-	sys_net.Warning("connect(s=%d, family_addr=0x%x, addrlen=%u)", s, family.GetAddr(), addrlen);
-	sockaddr _family;
-	memcpy(&_family, Memory.VirtualToRealAddr(family.GetAddr()), sizeof(sockaddr));
-	_family.sa_family = family->sa_family;
-	int ret = connect(s, &_family, addrlen);
+	sys_net.Warning("connect(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.GetAddr(), addrlen);
+	sockaddr_in saddr;
+	memcpy(&saddr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr_in));
+	saddr.sin_family = addr->sin_family;
+	const char *ipaddr = inet_ntoa(saddr.sin_addr);
+	sys_net.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+	int ret = connect(s, (const sockaddr *) &saddr, addrlen);
 	g_lastError = getLastError();
 	return ret;
 }
@@ -151,10 +162,11 @@ int getsockopt()
 	return CELL_OK;
 }
 
-int inet_addr()
+int sys_net_inet_addr(mem8_ptr_t cp)
 {
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
+	std::string cp_ = Memory.ReadString(cp.GetAddr());
+	sys_net.Warning("inet_addr(cp=\"%s\")", cp_.c_str());
+	return htonl(inet_addr(cp_.c_str())); // return a big-endian IP address
 }
 
 int inet_aton()
@@ -207,10 +219,12 @@ int sys_net_inet_pton(s32 af, u32 src_addr, u32 dst_addr)
 	return inet_pton(af, src, dst);
 }
 
-int listen()
+int sys_net_listen(s32 s, s32 backlog)
 {
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
+	sys_net.Warning("listen(s=%d, backlog=%d)", s, backlog);
+	int ret = listen(s, backlog);
+	g_lastError = getLastError();
+	return ret;
 }
 
 int sys_net_recv(s32 s, u32 buf_addr, u32 len, s32 flags)
@@ -493,7 +507,7 @@ void sys_net_init()
 	//sys_net.AddFunc(0xf9ec2db6, sys_net_getpeername);
 	//sys_net.AddFunc(0x13efe7f5, sys_net_getsockname);
 	//sys_net.AddFunc(0x5a045bd1, sys_net_getsockopt);
-	//sys_net.AddFunc(0xdabbc2c0, sys_net_inet_addr);
+	sys_net.AddFunc(0xdabbc2c0, sys_net_inet_addr);
 	//sys_net.AddFunc(0xa9a079e0, sys_net_inet_aton);
 	//sys_net.AddFunc(0x566893ce, sys_net_inet_lnaof);
 	//sys_net.AddFunc(0xb4152c74, sys_net_inet_makeaddr);
@@ -502,7 +516,7 @@ void sys_net_init()
 	//sys_net.AddFunc(0x858a930b, sys_net_inet_ntoa);
 	//sys_net.AddFunc(0xc98a3146, sys_net_inet_ntop);
 	sys_net.AddFunc(0x8af3825e, sys_net_inet_pton);
-	//sys_net.AddFunc(0x28e208bb, sys_net_listen);
+	sys_net.AddFunc(0x28e208bb, sys_net_listen);
 	//sys_net.AddFunc(, sys_net_ntohl);
 	//sys_net.AddFunc(, sys_net_ntohs);
 	sys_net.AddFunc(0xfba04f37, sys_net_recv);
