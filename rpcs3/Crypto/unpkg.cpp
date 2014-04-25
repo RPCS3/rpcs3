@@ -10,7 +10,7 @@ bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
 		return false;
 	}
 
-	switch (m_header->pkg_type)
+	switch ((u32)m_header->pkg_type)
 	{
 	case PKG_RELEASE_TYPE_DEBUG:   break;
 	case PKG_RELEASE_TYPE_RELEASE: break;
@@ -19,7 +19,7 @@ bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
 		return false;
 	}
 
-	switch (m_header->pkg_platform)
+	switch ((u32)m_header->pkg_platform)
 	{
 	case PKG_PLATFORM_TYPE_PS3: break;
 	case PKG_PLATFORM_TYPE_PSP: break;

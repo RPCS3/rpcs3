@@ -2,17 +2,30 @@ cmake_minimum_required(VERSION 2.8)
 project(rpcs3)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-	add_definitions(-std=gnu++11)
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.0)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	endif()
 	#add_definitions(-D__WXGTK__)
 	#add_definitions(-Wfatal-errors)
 	add_definitions(-w) # TODO: remove me
 	add_definitions(-fpermissive) # TODO: remove me
 	add_definitions(-g)	# Debugging!!
 	add_definitions(-msse2)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
+If( NOT RPCS3_SRC_DIR)
+  SET(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
+  Message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
+Else()
+  Message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
+EndIf()
+
+set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
+set(EXECUTABLE_OUTPUT_PATH "${RPCS3_SRC_DIR}/../bin") # TODO: do real installation, including copying directory structure
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
 add_definitions(-DGLX_GLXEXT_PROTOTYPES)
@@ -34,28 +47,34 @@ endif()
 include_directories(
 ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
-"${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
-"${CMAKE_SOURCE_DIR}"
-"${CMAKE_SOURCE_DIR}/Emu"
-"${CMAKE_SOURCE_DIR}/Gui"
-"${CMAKE_SOURCE_DIR}/Loader"
-"${CMAKE_SOURCE_DIR}/Crypto"
-"${CMAKE_SOURCE_DIR}/.."
+"${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
+"${RPCS3_SRC_DIR}"
+"${RPCS3_SRC_DIR}/Emu"
+"${RPCS3_SRC_DIR}/Gui"
+"${RPCS3_SRC_DIR}/Loader"
+"${RPCS3_SRC_DIR}/Crypto"
+"${RPCS3_SRC_DIR}/.."
+"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 )
 
-link_directories("${CMAKE_SOURCE_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
+link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
+
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+endforeach()
 
 file(
 GLOB_RECURSE
 RPCS3_SRC
-"${CMAKE_SOURCE_DIR}/rpcs3.cpp"
-"${CMAKE_SOURCE_DIR}/AppConnector.cpp"
-"${CMAKE_SOURCE_DIR}/Ini.cpp"
-"${CMAKE_SOURCE_DIR}/Emu/*"
-"${CMAKE_SOURCE_DIR}/Gui/*"
-"${CMAKE_SOURCE_DIR}/Loader/*"
-"${CMAKE_SOURCE_DIR}/Crypto/*"
-"${CMAKE_SOURCE_DIR}/../Utilities/*"
+"${RPCS3_SRC_DIR}/rpcs3.cpp"
+"${RPCS3_SRC_DIR}/AppConnector.cpp"
+"${RPCS3_SRC_DIR}/Ini.cpp"
+"${RPCS3_SRC_DIR}/Emu/*"
+"${RPCS3_SRC_DIR}/Gui/*"
+"${RPCS3_SRC_DIR}/Loader/*"
+"${RPCS3_SRC_DIR}/Crypto/*"
+"${RPCS3_SRC_DIR}/../Utilities/*"
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})

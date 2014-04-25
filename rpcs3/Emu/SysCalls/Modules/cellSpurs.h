@@ -190,16 +190,19 @@ struct CellSpursTraceTaskData
 	be_t<u32> task; 
 };
 
+typedef be_t<u32> be_u32;
+typedef be_t<u64> be_u64;
+
 struct CellSpursTaskArgument 
 { 
-	be_t<u32> u32[4]; 
-	be_t<u64> u64[2]; 
+	be_u32 u32[4];
+	be_u64 u64[2];
 };
 
 struct CellSpursTaskLsPattern 
 {
-	be_t<u32> u32[4];
-	be_t<u64> u64[2];
+	be_u32 u32[4];
+	be_u64 u64[2];
 };
 
 struct CellSpursTaskAttribute2 

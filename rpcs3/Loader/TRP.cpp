@@ -21,7 +21,7 @@ bool TRPLoader::Install(std::string dest, bool show)
 	Emu.GetVFS().CreateDir(dest);
 	for (const TRPEntry& entry : m_entries)
 	{
-		char* buffer = new char [entry.size];
+		char* buffer = new char [(u32)entry.size];
 		Emu.GetVFS().CreateFile(dest+entry.name);
 		vfsFile file(dest+entry.name, vfsWrite);
 		trp_f.Seek(entry.offset);

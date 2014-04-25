@@ -338,7 +338,7 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 		cellFont.Warning("cellFontOpenFontset: Only Unicode is supported");
 	
 	std::string file;
-	switch(fontType->type)
+	switch((u32)fontType->type)
 	{
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN:         file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";  break;
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN:   file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN.TTF";  break;

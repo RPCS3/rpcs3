@@ -295,6 +295,14 @@
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\key_vault.cpp" />
+    <ClCompile Include="Crypto\lz.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\sha1.cpp" />
     <ClCompile Include="Crypto\unedat.cpp" />
     <ClCompile Include="Crypto\unpkg.cpp" />
@@ -457,6 +465,7 @@
     <ClInclude Include="AppConnector.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\key_vault.h" />
+    <ClInclude Include="Crypto\lz.h" />
     <ClInclude Include="Crypto\sha1.h" />
     <ClInclude Include="Crypto\unedat.h" />
     <ClInclude Include="Crypto\unpkg.h" />

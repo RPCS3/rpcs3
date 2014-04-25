@@ -117,7 +117,7 @@ void BuildupVertexBufferNR()
 	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
-		switch(s_rescInternalInstance->m_initConfig.ratioMode){
+		switch((u32)s_rescInternalInstance->m_initConfig.ratioMode){
 		case CELL_RESC_LETTERBOX:  goto NR_LETTERBOX;
 		case CELL_RESC_PANSCAN:    goto NR_PANSCAN;
 		default:                   goto NR_FULLSCREEN;
@@ -193,7 +193,7 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
-		switch(s_rescInternalInstance->m_initConfig.ratioMode){
+		switch((u32)s_rescInternalInstance->m_initConfig.ratioMode){
 		case CELL_RESC_LETTERBOX:  goto UN_LETTERBOX;
 		case CELL_RESC_PANSCAN:    goto UN_PANSCAN;
 		default:                   goto UN_FULLSCREEN;
@@ -229,7 +229,7 @@ UN_PANSCAN:
 
 inline int InternalVersion(mem_ptr_t<CellRescInitConfig> conf)
 {
-	switch (conf->size)
+	switch ((u32)conf->size)
 	{
 		case 20: return 1;
 		case 24: return 2;
@@ -239,7 +239,7 @@ inline int InternalVersion(mem_ptr_t<CellRescInitConfig> conf)
 }
 
 inline int InternalVersion() {
-	switch (s_rescInternalInstance->m_initConfig.size)
+	switch ((u32)s_rescInternalInstance->m_initConfig.size)
 	{
 		case 20: return 1;
 		case 24: return 2;
