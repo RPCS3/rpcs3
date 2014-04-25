@@ -16,7 +16,7 @@ using namespace asmjit::host;
 
 struct g_imm_table_struct
 {
-	u16 cntb_table[65536];
+	//u16 cntb_table[65536];
 
 	__m128i fsmb_table[65536];
 	__m128i fsmh_table[256];
@@ -28,7 +28,7 @@ struct g_imm_table_struct
 
 	g_imm_table_struct()
 	{
-		static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
+		/*static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
 		for (u32 i = 0; i < sizeof(cntb_table) / sizeof(cntb_table[0]); i++)
 		{
 			u32 cnt_low = 0, cnt_high = 0;
@@ -38,7 +38,7 @@ struct g_imm_table_struct
 				cnt_high += (i >> (j + 8)) & 1;
 			}
 			cntb_table[i] = (cnt_high << 8) | cnt_low;
-		}
+		}*/
 		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
 		{
 			for (u32 j = 0; j < 4; j++) fsm_table[i].m128i_u32[j] = (i & (1 << j)) ? ~0 : 0;
@@ -660,6 +660,7 @@ private:
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
+#ifdef _M_X64
 		XmmInvalidate(rt);
 		for (u32 i = 0; i < 4; i++)
 		{
@@ -670,6 +671,14 @@ private:
 			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
 		}
 		LOG_OPCODE();
+#else
+		WRAPPER_BEGIN(rt, ra, rb, zz);
+		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
+		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
+		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
+		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
+		WRAPPER_END(rt, ra, rb, 0);
+#endif
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
@@ -1922,12 +1931,19 @@ private:
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
+#ifdef _M_X64
 		c.movsxd(*qw0, cpu_dword(GPR[ra]._i32[0]));
 		c.movsxd(*qw1, cpu_dword(GPR[ra]._i32[2]));
 		c.mov(cpu_qword(GPR[rt]._i64[0]), *qw0);
 		c.mov(cpu_qword(GPR[rt]._i64[1]), *qw1);
 		XmmInvalidate(rt);
 		LOG_OPCODE();
+#else
+		WRAPPER_BEGIN(rt, ra, yy, zz);
+		CPU.GPR[rt]._i64[0] = (s64)CPU.GPR[ra]._i32[0];
+		CPU.GPR[rt]._i64[1] = (s64)CPU.GPR[ra]._i32[2];
+		WRAPPER_END(rt, ra, 0, 0);
+#endif
 	}
 	void XSHW(u32 rt, u32 ra)
 	{
@@ -1939,13 +1955,27 @@ private:
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
-		XmmInvalidate(rt);
+		/*XmmInvalidate(rt);
 		for (u32 i = 0; i < 8; i++)
 		{
 			c.movzx(*addr, cpu_word(GPR[ra]._u16[i]));
 			c.movzx(*addr, word_ptr(*g_imm_var, *addr, 1, offsetof(g_imm_table_struct, cntb_table[0])));
 			c.mov(cpu_word(GPR[rt]._u16[i]), addr->r16());
-		}
+		}*/
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& v1 = XmmCopy(va);
+		const XmmLink& vm = XmmAlloc();
+		c.psrlw(v1.get(), 4);
+		c.pand(va.get(), XmmConst(_mm_set1_epi8(0xf)));
+		c.pand(v1.get(), XmmConst(_mm_set1_epi8(0xf)));
+		c.movdqa(vm.get(), XmmConst(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0)));
+		c.pshufb(vm.get(), va.get());
+		c.movdqa(va.get(), XmmConst(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0)));
+		c.pshufb(va.get(), v1.get());
+		c.paddb(va.get(), vm.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(v1);
+		XmmFinalize(vm);
 		LOG_OPCODE();
 	}
 	void XSBH(u32 rt, u32 ra)
