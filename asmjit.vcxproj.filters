@@ -25,5 +25,9 @@
     <ClCompile Include="asmjit\src\asmjit\base\string.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\vmem.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\zone.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\constpool.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="asmjit\src\asmjit\base\constpool.h" />
   </ItemGroup>
 </Project>

@@ -22,6 +22,7 @@
     <ClCompile Include="asmjit\src\asmjit\base\assembler.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\codegen.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\compiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\constpool.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\context.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\cpuinfo.cpp" />
     <ClCompile Include="asmjit\src\asmjit\base\cputicks.cpp" />
@@ -43,6 +44,9 @@
     <ClCompile Include="asmjit\src\asmjit\x86\x86cpuinfo.cpp" />
     <ClCompile Include="asmjit\src\asmjit\x86\x86defs.cpp" />
     <ClCompile Include="asmjit\src\asmjit\x86\x86func.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="asmjit\src\asmjit\base\constpool.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AC40FF01-426E-4838-A317-66354CEFAE88}</ProjectGuid>
