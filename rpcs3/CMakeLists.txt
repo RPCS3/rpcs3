@@ -21,6 +21,7 @@ find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(BZip2 REQUIRED)
 find_package(OpenAL REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
@@ -60,5 +61,4 @@ RPCS3_SRC
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
-
+target_link_libraries(rpcs3 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
