@@ -393,7 +393,7 @@ public:
 		}
 	}
 
-	Mem XmmConst(const __m128i data)
+	Mem XmmConst(const __m128i& data)
 	{
 		for (u32 i = 0; i < rec.imm_table.size(); i++)
 		{
@@ -407,7 +407,7 @@ public:
 		return oword_ptr(*imm_var, shift);
 	}
 
-	Mem XmmConst(const __m128 data)
+	Mem XmmConst(const __m128& data)
 	{
 		return XmmConst((__m128i&)data);
 	}
