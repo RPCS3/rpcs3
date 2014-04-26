@@ -7,8 +7,13 @@
 #ifdef _WIN32
 #include <winsock.h>
 #else
+extern "C"
+{
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+}
 #endif
 
 void sys_net_init();

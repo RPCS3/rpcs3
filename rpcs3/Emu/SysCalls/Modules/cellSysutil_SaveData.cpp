@@ -235,7 +235,7 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 		vfsStream* file = NULL;
 		void* buf = Memory.VirtualToRealAddr(fileSet->fileBuf_addr);
 
-		switch (fileSet->fileType)
+		switch ((u32)fileSet->fileType)
 		{
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:     filepath += (char*)Memory.VirtualToRealAddr(fileSet->fileName_addr); break;
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:     filepath += (char*)Memory.VirtualToRealAddr(fileSet->fileName_addr); break;
@@ -249,7 +249,7 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 
-		switch (fileSet->fileOperation)
+		switch ((u32)fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 			file = Emu.GetVFS().OpenFile(filepath, vfsRead);

@@ -172,7 +172,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
 	uint image_size = width * height;
-	switch(current_outParam.outputColorSpace)
+	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
 	case CELL_PNGDEC_RGBA:
@@ -262,7 +262,7 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPn
 	current_outParam.outputHeight     = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch (current_outParam.outputColorSpace)
+	switch ((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_PALETTE:
 	case CELL_PNGDEC_GRAYSCALE:       current_outParam.outputComponents = 1; break;

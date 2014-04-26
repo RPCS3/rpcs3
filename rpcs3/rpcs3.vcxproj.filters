@@ -505,6 +505,9 @@
     <ClCompile Include="Emu\Memory\Memory.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\lz.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -986,6 +989,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInstrTable.h">
       <Filter>Emu\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\lz.h">
+      <Filter>Crypto</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

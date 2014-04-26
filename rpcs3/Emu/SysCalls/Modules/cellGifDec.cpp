@@ -130,7 +130,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 	current_outParam.outputWidth      = current_info.SWidth;
 	current_outParam.outputHeight     = current_info.SHeight;
 	current_outParam.outputColorSpace = inParam->colorSpace;
-	switch (current_outParam.outputColorSpace)
+	switch ((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
@@ -172,7 +172,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	uint image_size = width * height * 4;
 
-	switch(current_outParam.outputColorSpace)
+	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);

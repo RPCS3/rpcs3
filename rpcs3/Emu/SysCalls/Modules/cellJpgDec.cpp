@@ -153,7 +153,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	if (!image) return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	uint image_size = width * height;
-	switch(current_outParam.outputColorSpace)
+	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_JPG_RGBA:
 	case CELL_JPG_RGB:
@@ -210,7 +210,7 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJp
 	current_outParam.outputHeight     = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch (current_outParam.outputColorSpace)
+	switch ((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_JPG_GRAYSCALE:               current_outParam.outputComponents = 1; break;
 

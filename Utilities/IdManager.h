@@ -57,6 +57,13 @@ struct ID
 		m_data = other.m_data;
 		other.m_data = nullptr;
 	}
+	ID& operator=(ID&& other)
+	{
+		std::swap(m_name,other.m_name);
+		std::swap(m_attr,other.m_attr);
+		std::swap(m_data,other.m_data);
+		return *this;
+	}
 
 	void Kill()
 	{
@@ -113,7 +120,7 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		m_id_map[m_cur_id] = std::move(ID(name, data, attr));
+		m_id_map[m_cur_id] = ID(name, data, attr);
 
 		return m_cur_id++;
 	}

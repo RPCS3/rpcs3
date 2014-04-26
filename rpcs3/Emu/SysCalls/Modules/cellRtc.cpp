@@ -42,7 +42,7 @@ int cellRtcGetCurrentClock(mem_ptr_t<CellRtcDateTime> pClock, s32 iTimeZone)
 	wxDateTime unow = wxDateTime::UNow();
 
 	// Add time_zone as offset in minutes.
-	wxTimeSpan tz = wxTimeSpan::wxTimeSpan(0, (long) iTimeZone, 0, 0);
+	wxTimeSpan tz = wxTimeSpan(0, (long) iTimeZone, 0, 0);
 	unow.Add(tz);
 
 	pClock->year = unow.GetYear(wxDateTime::TZ::UTC);
@@ -84,10 +84,10 @@ int cellRtcFormatRfc2822(u32 pszDateTime_addr, mem_ptr_t<CellRtcTick> pUtc, s32 
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Add time_zone as offset in minutes.
-	wxTimeSpan tz = wxTimeSpan::wxTimeSpan(0, (long) iTimeZone, 0, 0);
+	wxTimeSpan tz = wxTimeSpan(0, (long) iTimeZone, 0, 0);
 
 	// Get date from ticks + tz.
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pUtc->tick);
+	wxDateTime date = wxDateTime((time_t)pUtc->tick);
 	date.Add(tz);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
@@ -105,7 +105,7 @@ int cellRtcFormatRfc2822LocalTime(u32 pszDateTime_addr, mem_ptr_t<CellRtcTick> p
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Get date from ticks.
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pUtc->tick);
+	wxDateTime date = wxDateTime((time_t)pUtc->tick);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
 	const std::string& str = fmt::ToUTF8(date.Format("%a, %d %b %Y %T %z", wxDateTime::TZ::Local));
@@ -122,10 +122,10 @@ int cellRtcFormatRfc3339(u32 pszDateTime_addr, mem_ptr_t<CellRtcTick> pUtc, s32 
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Add time_zone as offset in minutes.
-	wxTimeSpan tz = wxTimeSpan::wxTimeSpan(0, (long) iTimeZone, 0, 0);
+	wxTimeSpan tz = wxTimeSpan(0, (long) iTimeZone, 0, 0);
 
 	// Get date from ticks + tz.
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pUtc->tick);
+	wxDateTime date = wxDateTime((time_t)pUtc->tick);
 	date.Add(tz);
 
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
@@ -143,7 +143,7 @@ int cellRtcFormatRfc3339LocalTime(u32 pszDateTime_addr, mem_ptr_t<CellRtcTick> p
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Get date from ticks.
-	wxDateTime date = wxDateTime::wxDateTime((time_t) pUtc->tick);
+	wxDateTime date = wxDateTime((time_t) pUtc->tick);
 	
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
 	const std::string& str = fmt::ToUTF8(date.Format("%FT%T.%zZ", wxDateTime::TZ::Local));
@@ -193,7 +193,7 @@ int cellRtcGetTick(mem_ptr_t<CellRtcDateTime> pTime, mem_ptr_t<CellRtcTick> pTic
 	if (!pTime.IsGood() || !pTick.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime datetime = wxDateTime::wxDateTime(pTime->day, (wxDateTime::Month)pTime->month.ToLE(), pTime->year, pTime->hour, pTime->minute, pTime->second, (pTime->microsecond / 1000));
+	wxDateTime datetime = wxDateTime(pTime->day, (wxDateTime::Month)pTime->month.ToLE(), pTime->year, pTime->hour, pTime->minute, pTime->second, (pTime->microsecond / 1000));
 	pTick->tick = datetime.GetTicks();
 	
 	return CELL_OK;
@@ -206,7 +206,7 @@ int cellRtcSetTick(mem_ptr_t<CellRtcDateTime> pTime, mem_ptr_t<CellRtcTick> pTic
 	if (!pTime.IsGood() || !pTick.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick->tick);
+	wxDateTime date = wxDateTime((time_t)pTick->tick);
 
 	pTime->year = date.GetYear(wxDateTime::TZ::UTC);
 	pTime->month = date.GetMonth(wxDateTime::TZ::UTC);
@@ -237,8 +237,8 @@ int cellRtcTickAddMicroseconds(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcT
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxTimeSpan microseconds = wxTimeSpan::wxTimeSpan(0, 0, 0, lAdd / 1000);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxTimeSpan microseconds = wxTimeSpan(0, 0, 0, lAdd / 1000);
 	date.Add(microseconds);
 	pTick0->tick = date.GetTicks();
 
@@ -252,8 +252,8 @@ int cellRtcTickAddSeconds(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> 
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxTimeSpan seconds = wxTimeSpan::wxTimeSpan(0, 0, lAdd, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxTimeSpan seconds = wxTimeSpan(0, 0, lAdd, 0);
 	date.Add(seconds);
 	pTick0->tick = date.GetTicks();
 
@@ -267,8 +267,8 @@ int cellRtcTickAddMinutes(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> 
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxTimeSpan minutes = wxTimeSpan::wxTimeSpan(0, lAdd, 0, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxTimeSpan minutes = wxTimeSpan(0, lAdd, 0, 0);
 	date.Add(minutes);
 	pTick0->tick = date.GetTicks();
 
@@ -282,8 +282,8 @@ int cellRtcTickAddHours(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pT
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxTimeSpan hours = wxTimeSpan::wxTimeSpan(iAdd, 0, 0, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxTimeSpan hours = wxTimeSpan(iAdd, 0, 0, 0);
 	date.Add(hours);
 	pTick0->tick = date.GetTicks();
 
@@ -297,8 +297,8 @@ int cellRtcTickAddDays(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pTi
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxDateSpan days = wxDateSpan::wxDateSpan(0, 0, 0, iAdd);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxDateSpan days = wxDateSpan(0, 0, 0, iAdd);
 	date.Add(days);
 	pTick0->tick = date.GetTicks();
 
@@ -312,8 +312,8 @@ int cellRtcTickAddWeeks(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pT
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxDateSpan weeks = wxDateSpan::wxDateSpan(0, 0, iAdd, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxDateSpan weeks = wxDateSpan(0, 0, iAdd, 0);
 	date.Add(weeks);
 	pTick0->tick = date.GetTicks();
 
@@ -327,8 +327,8 @@ int cellRtcTickAddMonths(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> p
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxDateSpan months = wxDateSpan::wxDateSpan(0, iAdd, 0, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxDateSpan months = wxDateSpan(0, iAdd, 0, 0);
 	date.Add(months);
 	pTick0->tick = date.GetTicks();
 
@@ -342,8 +342,8 @@ int cellRtcTickAddYears(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pT
 	if (!pTick0.IsGood() || !pTick1.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date = wxDateTime::wxDateTime((time_t)pTick1->tick);
-	wxDateSpan years = wxDateSpan::wxDateSpan(iAdd, 0, 0, 0);
+	wxDateTime date = wxDateTime((time_t)pTick1->tick);
+	wxDateSpan years = wxDateSpan(iAdd, 0, 0, 0);
 	date.Add(years);
 	pTick0->tick = date.GetTicks();
 
@@ -357,7 +357,7 @@ int cellRtcConvertUtcToLocalTime(mem_ptr_t<CellRtcTick> pUtc, mem_ptr_t<CellRtcT
 	if (!pUtc.IsGood() || !pLocalTime.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime time = wxDateTime::wxDateTime((time_t)pUtc->tick);
+	wxDateTime time = wxDateTime((time_t)pUtc->tick);
 	wxDateTime local_time = time.FromUTC(false);
 	pLocalTime->tick = local_time.GetTicks();
 	return CELL_OK;
@@ -370,7 +370,7 @@ int cellRtcConvertLocalTimeToUtc(mem_ptr_t<CellRtcTick> pLocalTime, mem_ptr_t<Ce
 	if (!pLocalTime.IsGood() || !pUtc.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime time = wxDateTime::wxDateTime((time_t)pLocalTime->tick);
+	wxDateTime time = wxDateTime((time_t)pLocalTime->tick);
 	wxDateTime utc_time = time.ToUTC(false);
 	pUtc->tick = utc_time.GetTicks();
 	return CELL_OK;
@@ -384,7 +384,7 @@ int cellRtcGetDosTime(mem_ptr_t<CellRtcDateTime> pDateTime, mem32_t puiDosTime)
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Convert to DOS time.
-	wxDateTime date_time = wxDateTime::wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	wxDateTime date_time = wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	puiDosTime = date_time.GetAsDOS();
 
 	return CELL_OK;
@@ -398,7 +398,7 @@ int cellRtcGetTime_t(mem_ptr_t<CellRtcDateTime> pDateTime, mem64_t piTime)
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Convert to POSIX time_t.
-	wxDateTime date_time = wxDateTime::wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	wxDateTime date_time = wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	piTime = convertToUNIXTime(date_time.GetSecond(wxDateTime::TZ::UTC), date_time.GetMinute(wxDateTime::TZ::UTC),
 		date_time.GetHour(wxDateTime::TZ::UTC), date_time.GetDay(wxDateTime::TZ::UTC), date_time.GetYear(wxDateTime::TZ::UTC));
 
@@ -413,7 +413,7 @@ int cellRtcGetWin32FileTime(mem_ptr_t<CellRtcDateTime> pDateTime, mem64_t pulWin
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
 	// Convert to WIN32 FILETIME.
-	wxDateTime date_time = wxDateTime::wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	wxDateTime date_time = wxDateTime(pDateTime->day, (wxDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	pulWin32FileTime = convertToWin32FILETIME(date_time.GetSecond(wxDateTime::TZ::UTC), date_time.GetMinute(wxDateTime::TZ::UTC),
 		date_time.GetHour(wxDateTime::TZ::UTC), date_time.GetDay(wxDateTime::TZ::UTC), date_time.GetYear(wxDateTime::TZ::UTC));
 
@@ -448,7 +448,7 @@ int cellRtcSetTime_t(mem_ptr_t<CellRtcDateTime> pDateTime, u64 iTime)
 	if (!pDateTime.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date_time = wxDateTime::wxDateTime((time_t)iTime);
+	wxDateTime date_time = wxDateTime((time_t)iTime);
 	
 	pDateTime->year = date_time.GetYear(wxDateTime::TZ::UTC);
 	pDateTime->month = date_time.GetMonth(wxDateTime::TZ::UTC);
@@ -468,7 +468,7 @@ int cellRtcSetWin32FileTime(mem_ptr_t<CellRtcDateTime> pDateTime, u64 ulWin32Fil
 	if (!pDateTime.IsGood())
 		return CELL_RTC_ERROR_INVALID_POINTER;
 
-	wxDateTime date_time = wxDateTime::wxDateTime((time_t)ulWin32FileTime);
+	wxDateTime date_time = wxDateTime((time_t)ulWin32FileTime);
 	
 	pDateTime->year = date_time.GetYear(wxDateTime::TZ::UTC);
 	pDateTime->month = date_time.GetMonth(wxDateTime::TZ::UTC);

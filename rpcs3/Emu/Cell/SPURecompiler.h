@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef _WIN32
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"
@@ -41,6 +41,7 @@ struct g_imm_table_struct
 		}*/
 		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
 		{
+
 			for (u32 j = 0; j < 4; j++) fsm_table[i].m128i_u32[j] = (i & (1 << j)) ? ~0 : 0;
 		}
 		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
@@ -3796,5 +3797,6 @@ private:
 
 	
 };
+#endif WIN32
 
 #undef c
