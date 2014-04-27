@@ -4,7 +4,6 @@
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
-#ifdef _WIN32
 static const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
@@ -251,4 +250,3 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		return 0;
 	}
 }
-#endif

@@ -10,7 +10,7 @@ typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
 
 #define OPENGL_PROC(p, n) extern p gl##n
 #define OPENGL_PROC2(p, n, tn) OPENGL_PROC(p, n)
-	#include "GLProcTable.tbl"
+	#include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 
@@ -25,7 +25,7 @@ struct OpenGL
 {
 #define OPENGL_PROC2(p, n, tn) OPENGL_PROC(p, n)
 #define OPENGL_PROC(p, n) p n
-	#include "GLProcTable.tbl"
+	#include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 

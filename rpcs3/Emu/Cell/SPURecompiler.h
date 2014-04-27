@@ -1,5 +1,4 @@
 #pragma once
-#ifdef _WIN32
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"
@@ -13,6 +12,11 @@ using namespace asmjit;
 using namespace asmjit::host;
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
+
+#define mmToU64Ptr(x) ((u64*)(&x))
+#define mmToU32Ptr(x) ((u32*)(&x))
+#define mmToU16Ptr(x) ((u16*)(&x))
+#define mmToU8Ptr(x) ((u8*)(&x))
 
 struct g_imm_table_struct
 {
@@ -42,27 +46,27 @@ struct g_imm_table_struct
 		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
 		{
 
-			for (u32 j = 0; j < 4; j++) fsm_table[i].m128i_u32[j] = (i & (1 << j)) ? ~0 : 0;
+			for (u32 j = 0; j < 4; j++) mmToU32Ptr(fsm_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
 		}
 		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
 		{
-			for (u32 j = 0; j < 8; j++) fsmh_table[i].m128i_u16[j] = (i & (1 << j)) ? ~0 : 0;
+			for (u32 j = 0; j < 8; j++) mmToU16Ptr(fsmh_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
 		}
 		for (u32 i = 0; i < sizeof(fsmb_table) / sizeof(fsmb_table[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) fsmb_table[i].m128i_u8[j] = (i & (1 << j)) ? ~0 : 0;
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(fsmb_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
 		}
 		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) sldq_pshufb[i].m128i_u8[j] = (u8)(j - i);
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(sldq_pshufb[i])[j] = (u8)(j - i);
 		}
 		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) srdq_pshufb[i].m128i_u8[j] = (j + i > 15) ? 0xff : (u8)(j + i);
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(srdq_pshufb[i])[j] = (j + i > 15) ? 0xff : (u8)(j + i);
 		}
 		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) rldq_pshufb[i].m128i_u8[j] = (u8)(j - i) & 0xf;
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(rldq_pshufb[i])[j] = (u8)(j - i) & 0xf;
 		}
 	}
 };
@@ -104,6 +108,7 @@ public:
 
 #define c (*compiler)
 
+#ifdef _WIN32
 #define cpu_xmm(x) oword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 16) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 16")
 #define cpu_qword(x) qword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 8) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 8")
 #define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
@@ -112,6 +117,17 @@ public:
 
 #define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
 #define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
+#else
+#define cpu_xmm(x) oword_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
+#define cpu_qword(x) qword_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
+#define cpu_dword(x) dword_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
+#define cpu_word(x) word_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
+#define cpu_byte(x) byte_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
+
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, reinterpret_cast<uintptr_t>(&(((g_imm_table_struct*)0)->x)))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, reinterpret_cast<uintptr_t>(&(((g_imm_table_struct*)0)->x)))
+#endif
+
 
 #define LOG_OPCODE(...) //ConLog.Write("Compiled "__FUNCTION__"(): "__VA_ARGS__)
 
@@ -132,7 +148,7 @@ public:
 	if (#a1[0] == 'r') XmmInvalidate(a1); \
 	if (#a2[0] == 'r') XmmInvalidate(a2); \
 	if (#a3[0] == 'r') XmmInvalidate(a3); \
-	X86X64CallNode* call##a0 = c.call(imm_ptr(&opwr_##a0::opcode), kFuncConvHost, FuncBuilder4<FnVoid, u32, u32, u32, u32>()); \
+	X86X64CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<FnVoid, u32, u32, u32, u32>()); \
 	call##a0->setArg(0, imm_u(a0)); \
 	call##a0->setArg(1, imm_u(a1)); \
 	call##a0->setArg(2, imm_u(a2)); \
@@ -398,7 +414,7 @@ public:
 	{
 		for (u32 i = 0; i < rec.imm_table.size(); i++)
 		{
-			if (rec.imm_table[i].m128i_u64[0] == data.m128i_u64[0] && rec.imm_table[i].m128i_u64[1] == data.m128i_u64[1])
+			if (mmToU64Ptr(rec.imm_table[i])[0] == mmToU64Ptr(data)[0] && mmToU64Ptr(rec.imm_table[i])[1] == mmToU64Ptr(data)[1])
 			{
 				return oword_ptr(*imm_var, i * sizeof(__m128i));
 			}
@@ -427,7 +443,7 @@ private:
 			}
 		};
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
-		X86X64CallNode* call = c.call(imm_ptr(&STOP_wrapper::STOP), kFuncConvHost, FuncBuilder1<FnVoid, u32>());
+		X86X64CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<FnVoid, u32>());
 		call->setArg(0, imm_u(code));
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		do_finalize = true;
@@ -1133,7 +1149,7 @@ private:
 
 		default:
 		{
-			X86X64CallNode* call = c.call(imm_ptr(&WRCH_wrapper::WRCH), kFuncConvHost, FuncBuilder2<FnVoid, u32, u32>());
+			X86X64CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&WRCH_wrapper::WRCH)), kFuncConvHost, FuncBuilder2<FnVoid, u32, u32>());
 			call->setArg(0, imm_u(ra));
 			call->setArg(1, v);
 		}
@@ -3692,7 +3708,7 @@ private:
 		}
 		else
 		{
-			throw __FUNCTION__"(): invalid case";
+			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
 		}
 		LOG_OPCODE();
 	}
@@ -3777,7 +3793,7 @@ private:
 		}
 		else
 		{
-			throw __FUNCTION__"(): invalid case";
+			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
 		}
 		LOG_OPCODE();
 	}
@@ -3797,6 +3813,5 @@ private:
 
 	
 };
-#endif WIN32
 
 #undef c
