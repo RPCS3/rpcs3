@@ -118,14 +118,14 @@ public:
 #define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
 #define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
 #else
-#define cpu_xmm(x) oword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
-#define cpu_qword(x) qword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
-#define cpu_dword(x) dword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
-#define cpu_word(x) word_ptr(*cpu_var, &(((SPUThread*)0)->x) )
-#define cpu_byte(x) byte_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#define cpu_xmm(x) oword_ptr(*cpu_var, (int)&(((SPUThread*)0)->x) )
+#define cpu_qword(x) qword_ptr(*cpu_var, (int)&(((SPUThread*)0)->x) )
+#define cpu_dword(x) dword_ptr(*cpu_var, (int)&(((SPUThread*)0)->x) )
+#define cpu_word(x) word_ptr(*cpu_var, (int)&(((SPUThread*)0)->x) )
+#define cpu_byte(x) byte_ptr(*cpu_var, (int)&(((SPUThread*)0)->x) )
 
-#define g_imm_xmm(x) oword_ptr(*g_imm_var, &(((g_imm_table_struct*)0)->x))
-#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, &(((g_imm_table_struct*)0)->x))
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, (int)&(((g_imm_table_struct*)0)->x))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, (int)&(((g_imm_table_struct*)0)->x))
 #endif
 
 
