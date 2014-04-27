@@ -1,0 +1,228 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resrc1.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "resource.h"
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_ZEROGSLOGO          BITMAP                  "zerogs.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RCDATA
+//
+
+IDR_SHADERS             RCDATA                  "ps2hw.dat"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG DIALOGEX 0, 0, 427, 401
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "Interlace Enable (toggle with F5)\n    there are 2 modes + interlace off",IDC_CONFIG_INTERLACE,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,7,134,18
+    CONTROL         "Bilinear Filtering (Shift+F5)\n    Best quality is on, turn off for speed.",IDC_CONFIG_BILINEAR,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,31,135,18
+    CONTROL         "None",IDC_CONFIG_AANONE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,19,81,34,11
+    CONTROL         "2X",IDC_CONFIG_AA2,"Button",BS_AUTORADIOBUTTON,69,81,26,11
+    CONTROL         "4X",IDC_CONFIG_AA4,"Button",BS_AUTORADIOBUTTON,111,81,28,11
+    CONTROL         "Wireframe rendering (F7)",IDC_CONFIG_WIREFRAME,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,122,93,10
+    CONTROL         "Capture Avi (zerogs.avi) (F12)",IDC_CONFIG_CAPTUREAVI,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,140,109,10
+    CONTROL         "Save Snapshots as BMPs (default is JPG)",IDC_CONFIG_BMPSS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,161,147,10
+    CONTROL         "Fullscreen (Alt+Enter)\n    to get out press Alt+Enter again",IDC_CONFIG_FULLSCREEN,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,177,146,17
+    CONTROL         "640 x 480",IDC_CONF_WIN640,"Button",BS_AUTORADIOBUTTON | WS_GROUP,15,210,59,8
+    CONTROL         "800 x 600",IDC_CONF_WIN800,"Button",BS_AUTORADIOBUTTON,78,210,59,8
+    CONTROL         "1024 x 768",IDC_CONF_WIN1024,"Button",BS_AUTORADIOBUTTON,15,223,59,8
+    CONTROL         "1280 x 960",IDC_CONF_WIN1280,"Button",BS_AUTORADIOBUTTON,78,223,59,8
+    DEFPUSHBUTTON   "OK",IDOK,7,380,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,94,380,50,14
+    GROUPBOX        "Anti-aliasing for sharper graphics (F6)",IDC_STATIC,7,55,132,61
+    GROUPBOX        "Default Window Size (no speed impact)",IDC_STATIC,7,201,141,35
+    LTEXT           "Show Frames Per Second (Shift+F7)",IDC_STATIC,7,244,140,10
+    GROUPBOX        "Advanced Options",IDC_STATIC,152,7,268,387
+    LTEXT           "Each option is presented with a unique ID in hex. In order to preserve options across games, go into the game's patch (.pnach) file and type\n  zerogs=IDS\nwhere IDS is the OR all of the values in hex for every option you want enabled. ",IDC_STATIC,161,16,252,33
+    PUSHBUTTON      "Use Defaults (recommended)",IDC_CONF_DEFAULT,159,76,151,14
+    CONTROL         "Disable alpha testing - 00080000",IDC_CONFOPT_00080000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,159,104,119,10
+    CONTROL         "Disable stencil buffer - 00002000\nusually safe to do for simple scenes",IDC_CONFOPT_00002000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,159,114,118,22
+    CONTROL         "No target CLUT - 00001000\n(use on RE4, or foggy scenes)",IDC_CONFOPT_00001000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,169,120,24
+    CONTROL         "Disable depth updates - 00000200",IDC_CONFOPT_00000200,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,161,125,10
+    CONTROL         "FFX hack - 00000080\nshows missing geometry",IDC_CONFOPT_00000080,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,190,121,17
+    CONTROL         "Exact color testing - 00000020\nfixes overbright or shadow/black artifacts (crash n burn)",IDC_CONFOPT_00000020,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,209,119,25
+    CONTROL         "Tex Target checking - 00000001\nlego racers",IDC_CONFOPT_00000001,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,233,123,22
+    CONTROL         "Interlace 2X - 00000004\nfixes 2x bigger screen (gradius3)",IDC_CONFOPT_00000004,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,254,119,20
+    CONTROL         "32 bit render targets - 00200000",IDC_CONFOPT_00200000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,285,93,117,10
+    CONTROL         "No depth resolve - 00008000\nmight give z buffer artifacts",IDC_CONFOPT_00008000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,164,121,19
+    CONTROL         "full 16 bit resolution - 00010000\nuse when half the screen is missing, etc",IDC_CONFOPT_00010000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,185,125,23
+    CONTROL         "Auto Reset Targs - 00000002\nshadow hearts, samurai warriors (use when game is slow and toggling AA fixes it)",IDC_CONFOPT_00000002,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,212,124,32
+    CONTROL         "Tex Alpha Hack - 00000008\nnightmare before christmas",IDC_CONFOPT_00000008,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,247,125,17
+    EDITTEXT        IDC_CONFOPT_IDS,361,380,48,14,ES_AUTOHSCROLL | ES_READONLY
+    CONTROL         "Resolve Hack #1 - 00000400\nspeeds some games (kingdom hearts)",IDC_CONFOPT_00000400,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,266,135,19
+    CONTROL         "Resolve Hack #2 - 00000800\nshadow hearts, urbz",IDC_CONFOPT_00000800,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,276,117,17
+    CONTROL         "Resolve Hack #3 - 00020000\nneopets",IDC_CONFOPT_00020000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,287,125,17
+    CONTROL         "Fast Update - 00040000\nspeeds some games (okami)",IDC_CONFOPT_00040000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,297,125,17
+    PUSHBUTTON      "Compute OR of IDS",IDC_CONFOPT_COMPUTEOR,283,380,73,14
+    LTEXT           "Important options are listed first. Note, setting option here means that they will be ADDED to whatever options are set in each pnach file.",IDC_STATIC,159,50,252,23
+    CONTROL         "No target resolves - 00000010\nStops all resolving of targets (try this first for really slow games)",IDC_CONFOPT_00000010,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,104,111,33
+    CONTROL         "Disable Multiple RTs - 00100000",IDC_CONFOPT_00100000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,159,91,119,10
+    CONTROL         "No color clamping - 00000040\nSpeeds games up but might be too bright or too dim",IDC_CONFOPT_00000040,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,157,137,123,22
+    CONTROL         "8X",IDC_CONFIG_AA8,"Button",BS_AUTORADIOBUTTON,65,97,26,11
+    CONTROL         "16X",IDC_CONFIG_AA16,"Button",BS_AUTORADIOBUTTON,107,97,28,11
+    LTEXT           "shortcuts: F6 - next, Shift+F6 - prev",IDC_STATIC,19,65,116,11
+    CONTROL         "No Vertical Stripes - 00004000\n try when there's a lot of garbage on screen",IDC_CONFOPT_00004000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,138,111,28
+    CONTROL         "Partial Targets - 02000000\nReduces artifacts and speeds up some games (mgs3)",IDC_CONFOPT_02000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,158,319,125,24
+    CONTROL         "Partial Depth - 04000000\nTries to save the depth target as much as possible (mgs3)",IDC_CONFOPT_04000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,159,347,125,24
+    CONTROL         "Specular Highlights - 01000000\nMakes xenosaga graphics faster by removing highlights",IDC_CONFOPT_01000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,313,125,25
+    CONTROL         "Parallelize Contexts - 00800000 (Might speed things up, xenosaga is faster)",IDC_CONFOPT_00800000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,284,345,125,25
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 182, 220
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "GSabout"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,65,199,50,14
+    LTEXT           "ZeroGS\n\nauthor: zerofrog(@gmail.com)\n\n\nthanks to Gabest for SSE optimizations",IDC_STATIC,7,7,160,47
+    LTEXT           "Static",IDC_ABOUTTEXT,7,65,152,124
+END
+
+IDD_LOGGING DIALOG  0, 0, 152, 55
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,40,35,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,95,35,50,14
+    CONTROL         "Log",IDC_LOG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,60,15,28,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 420
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 394
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 175
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 213
+    END
+
+    IDD_LOGGING, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 145
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 48
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resrc1.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""resource.h""\r\n"
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

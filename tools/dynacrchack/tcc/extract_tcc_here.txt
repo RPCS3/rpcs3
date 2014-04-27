@@ -1,0 +1,2 @@
+Download tcc (Tiny C Compiler) from http://bellard.org/tcc/ (Tested with v0.9.25 for Win32)
+Extract it fully such that tcc.exe is at this folder.

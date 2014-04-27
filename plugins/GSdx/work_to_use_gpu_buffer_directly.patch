@@ -1,0 +1,99 @@
+diff --git a/plugins/GSdx/GS.cpp b/plugins/GSdx/GS.cpp
+index a4c90a4..7a6b9a2 100644
+--- a/plugins/GSdx/GS.cpp
++++ b/plugins/GSdx/GS.cpp
+@@ -58,7 +58,7 @@ extern bool RunLinuxDialog();
+ #define PS2E_X86 0x01   // 32 bit
+ #define PS2E_X86_64 0x02   // 64 bit
+ 
+-static GSRenderer* s_gs = NULL;
++GSRenderer* s_gs = NULL;
+ static void (*s_irq)() = NULL;
+ static uint8* s_basemem = NULL;
+ static int s_renderer = -1;
+diff --git a/plugins/GSdx/GS.h b/plugins/GSdx/GS.h
+index ec414a3..b5ce390 100644
+--- a/plugins/GSdx/GS.h
++++ b/plugins/GSdx/GS.h
+@@ -1245,3 +1245,5 @@ enum {FREEZE_LOAD=0, FREEZE_SAVE=1, FREEZE_SIZE=2};
+ struct GSFreezeData {int size; uint8* data;};
+ 
+ enum stateType {ST_WRITE, ST_TRANSFER, ST_VSYNC};
++
++enum GpuVertexType {GPU_VERTEX_BUFFER, GPU_INDEX_BUFFER};
+diff --git a/plugins/GSdx/GSDevice.h b/plugins/GSdx/GSDevice.h
+index 97eb407..3042802 100644
+--- a/plugins/GSdx/GSDevice.h
++++ b/plugins/GSdx/GSDevice.h
+@@ -157,6 +157,8 @@ public:
+ 
+ 	GSTexture* GetCurrent();
+ 
++	virtual void* AllocateGpuBuffer(GpuVertexType type, uint32 max_count) { return NULL; }
++
+ 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
+ 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+ 	void FXAA();
+diff --git a/plugins/GSdx/GSDeviceOGL.cpp b/plugins/GSdx/GSDeviceOGL.cpp
+index 5d34ff4..0a85fd2 100644
+--- a/plugins/GSdx/GSDeviceOGL.cpp
++++ b/plugins/GSdx/GSDeviceOGL.cpp
+@@ -986,6 +986,10 @@ void GSDeviceOGL::EndScene()
+ 	m_state.vb->EndScene();
+ }
+ 
++void GSDeviceOGL::AllocateGpuBuffer(GpuVertexType type, uint32 max_count)
++{
++}
++
+ void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
+ {
+ 	if (vb == NULL) vb = m_vb;
+diff --git a/plugins/GSdx/GSDeviceOGL.h b/plugins/GSdx/GSDeviceOGL.h
+index a1680a8..a2aff3c 100644
+--- a/plugins/GSdx/GSDeviceOGL.h
++++ b/plugins/GSdx/GSDeviceOGL.h
+@@ -628,4 +628,6 @@ class GSDeviceOGL : public GSDevice
+ 	GLuint GetPaletteSamplerID();
+ 
+ 	void Barrier(GLbitfield b);
++
++	void* AllocateGpuBuffer(GpuVertexType type, uint32 max_count);
+ };
+diff --git a/plugins/GSdx/GSState.cpp b/plugins/GSdx/GSState.cpp
+index 2c7995c..735a269 100644
+--- a/plugins/GSdx/GSState.cpp
++++ b/plugins/GSdx/GSState.cpp
+@@ -23,6 +23,9 @@
+ #include "GSState.h"
+ #include "GSdx.h"
+ 
++#include "GSRendererOGL.h";
++extern GSRenderer* s_gs;
++
+ //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
+ 
+ GSState::GSState()
+@@ -2285,8 +2288,20 @@ void GSState::GrowVertexBuffer()
+ {
+ 	int maxcount = std::max<int>(m_vertex.maxcount * 3 / 2, 10000);
+ 
+-	GSVertex* vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 32);
+-	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 32); // worst case is slightly less than vertex number * 3
++	GSVertex* vertex = NULL;
++	uint32* index = NULL;
++
++	if (s_gs && s_gs->m_dev) {
++		vertex = (GSVertex*)s_gs->m_dev->AllocateGpuBuffer(GPU_VERTEX_BUFFER, maxcount);
++		index  = (uint32*)s_gs->m_dev->AllocateGpuBuffer(GPU_INDEX_BUFFER, maxcount*3);
++	} else {
++		maxcount = 10;
++	}
++
++	if (!vertex || !index) {
++		vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 32);
++		index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 32); // worst case is slightly less than vertex number * 3
++	}
+ 
+ 	if (!vertex || !index)
+ 	{

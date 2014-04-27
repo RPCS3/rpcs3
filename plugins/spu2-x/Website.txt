@@ -1,0 +1,18 @@
+
+-- SPU2-X -- Website Links
+
+The official Svn for SPU2-X is hosted at GoogleCode, under the Pcsx2 project.
+You can check it out directly or you can check out Pcsx2 as a whole (which
+includes this plugin along with many others).  The links are as follows:
+
+Homepage (website):
+	http://code.google.com/p/pcsx2/
+
+	You'll find information on how to check out from svn and how to compile
+	Pcsx2 and the plugins at the above link.
+
+SPU2-X (svn):
+	http://pcsx2.googlecode.com/svn/trunk/plugins/spu2-x
+
+Pcsx2 + All Plugins (svn):
+	http://pcsx2.googlecode.com/svn/trunk/

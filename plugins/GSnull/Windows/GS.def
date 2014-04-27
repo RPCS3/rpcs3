@@ -1,0 +1,42 @@
+; GS.def : Declares the module parameters for the DLL.
+
+;LIBRARY      "GSnull"
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType			@2
+	PS2EgetLibName			@3
+	PS2EgetLibVersion2		@4
+	GSinit					@5
+	GSopen					@6
+	GSclose					@7
+	GSshutdown				@8
+	GSvsync					@9
+	GSgifTransfer			@10
+	GSgifTransfer1			@11
+	GSgifTransfer2			@12
+	GSgifTransfer3			@13
+	GSgetLastTag			@14
+	GSgifSoftReset			@15
+	GSreadFIFO				@16
+	GSreadFIFO2				@17
+	GSkeyEvent				@18
+	GSchangeSaveState		@19
+	GSmakeSnapshot			@20
+	GSmakeSnapshot2			@21
+	GSirqCallback			@22
+	GSprintf				@23
+	GSsetBaseMem			@24
+	GSsetGameCRC			@25
+	GSsetFrameSkip			@26
+	GSsetupRecording		@27
+	GSreset					@28
+	GSwriteCSR				@29
+	GSgetDriverInfo			@30
+	GSsetWindowInfo			@31
+	GSfreeze				@32
+	GSconfigure				@33
+	GSabout					@34
+	GStest					@35
+
+

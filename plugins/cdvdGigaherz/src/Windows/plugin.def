@@ -1,0 +1,26 @@
+EXPORTS
+    PS2EgetLibType		@2
+    PS2EgetLibName		@3
+    PS2EgetLibVersion2	@4
+    CDVDinit			@5
+    CDVDshutdown		@6
+    CDVDopen			@7
+    CDVDclose			@8
+    CDVDreadTrack		@9
+    CDVDgetBuffer		@10
+    CDVDreadSubQ		@11
+    CDVDgetTN			@12
+    CDVDgetTD			@13
+    CDVDgetTOC			@14
+    CDVDgetDiskType		@15
+    CDVDgetTrayStatus	@16
+    CDVDctrlTrayOpen	@17
+    CDVDctrlTrayClose	@18
+    CDVDconfigure		@19
+    CDVDtest			@20
+    CDVDabout			@21
+	CDVDnewDiskCB		@22
+    CDVDgetBuffer2		@23
+    CDVDreadSector		@24
+    CDVDgetDualInfo		@25
+    CDVDsetSettingsDir	@26

@@ -1,0 +1,26 @@
+; xpad.def : Declares the module parameters for the DLL.
+
+LIBRARY      "xpad"
+
+EXPORTS
+    ; Explicit exports can go here
+    PSEgetLibType
+    PSEgetLibName
+    PSEgetLibVersion
+    PS2EgetLibType
+    PS2EgetLibName
+    PS2EgetLibVersion2
+    PADinit
+    PADshutdown
+    PADopen
+    PADclose
+    PADkeyEvent
+    PADstartPoll
+    PADpoll
+    PADquery
+    PADconfigure
+    PADtest
+    PADabout
+    PADreadPort
+    PADreadPort1
+    PADreadPort2

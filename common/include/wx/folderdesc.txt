@@ -1,0 +1,15 @@
+-------------------------------------------------
+   include/wx folder -- PCSX2 Common Includes
+-------------------------------------------------
+
+This folder contains various classes borrowed from wxWidgets 2.9.x / 3.0. 
+
+/Common/include is a PCSX2 project default include search path, and with the /wx
+folder prefix, these files can be included the same way as other wxWidgets includes:
+
+#include <wx/something.h>
+
+If/when PCSX2 upgrades to wx2.9/3.0 these files will be removed and the wxWidgets
+distribution files will automatically be used instead.
+
+NOTE: Folder is currently empty, by design.  Nothing from 2.9/3.0 is useful anymore (for now).

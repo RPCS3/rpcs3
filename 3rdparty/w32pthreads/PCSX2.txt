@@ -1,0 +1,20 @@
+-----------------------------------
+-- Air's Notes on Using PThreads --
+-----------------------------------
+
+The official name of the DLL is "w32pthreads.dll" -- I use the prefix to indicate with
+some vaugeness that the pthreads dll is a modified non-standard implementation (see below
+for details); just in case pthreads-win32 dlls in another universe were to be conflicting
+interests.
+
+I created a subfolder for pthreads' publically exposed header files, since "config.h" was
+rather brutal include file namespace pollution. >_<
+
+Important: pthread_cond is an inherently flawed concept, and is quite incredibly slow
+on top of it.  It's primarily meant for inter-process thread regulation, of which we 
+do none.  Therefore it has been excluded from the library builds.  Don't use it!
+
+I've also disabled rwlocks, since they use pthread_cond internally.  Again, there should
+be little or no reason to have to use those within the context of a high performance app
+like Pcsx2.
+

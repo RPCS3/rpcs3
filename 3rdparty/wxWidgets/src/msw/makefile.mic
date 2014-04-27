@@ -1,0 +1,356 @@
+##############################################################################
+# Microwindows template Makefile
+# Copyright (c) 2000 Martin Jolicoeur, Greg Haerr
+# Licence:   wxWindows Licence
+##############################################################################
+
+TOP=$(MICROWINDOWS)
+ifeq "$(MICROWINDOWS)" ""
+TOP=/home/julians/local/microwindows/microwindows-0.89pre8/src
+endif
+
+CONFIG = $(TOP)/config
+WXDIR = ../..
+OBJSUFF = o
+SRCSUFF = cpp
+WXLIB=$(WXDIR)/lib/libwx.a
+AROPTIONS = ruv
+RANLIB =  ranlib
+RM = rm -f
+
+GENDIR  = $(WXDIR)/src/generic
+COMMDIR = $(WXDIR)/src/common
+HTMLDIR = $(WXDIR)/src/html
+ZLIBDIR = $(WXDIR)/src/zlib
+PNGDIR  = $(WXDIR)/src/png
+JPEGDIR = $(WXDIR)/src/jpeg
+TIFFDIR = $(WXDIR)/src/tiff
+OLEDIR  = $(WXDIR)/src/msw/ole
+MICROWINDIR  = $(WXDIR)/src/msw
+UNIXDIR  = $(WXDIR)/src/unix
+UNIVDIR  = $(WXDIR)/src/univ
+
+ZLIBLIB = $(WXDIR)/lib/libzlib.a
+PNGLIB  = $(WXDIR)/lib/libpng.a
+JPEGLIB = $(WXDIR)/lib/libjpeg.a
+TIFFLIB = $(WXDIR)/lib/libtiff.a
+
+GENERICOBJS = \
+                $(GENDIR)/accel.$(OBJSUFF) \
+                $(GENDIR)/busyinfo.$(OBJSUFF) \
+		$(GENDIR)/calctrl.$(OBJSUFF) \
+		$(GENDIR)/choicdgg.$(OBJSUFF) \
+		$(GENDIR)/colrdlgg.$(OBJSUFF) \
+		$(GENDIR)/dirctrlg.$(OBJSUFF) \
+		$(GENDIR)/dragimgg.$(OBJSUFF) \
+		$(GENDIR)/fontdlgg.$(OBJSUFF) \
+		$(GENDIR)/grid.$(OBJSUFF) \
+		$(GENDIR)/gridctrl.$(OBJSUFF) \
+		$(GENDIR)/gridsel.$(OBJSUFF) \
+		$(GENDIR)/imaglist.$(OBJSUFF) \
+		$(GENDIR)/laywin.$(OBJSUFF) \
+		$(GENDIR)/listctrl.$(OBJSUFF) \
+		$(GENDIR)/logg.$(OBJSUFF) \
+		$(GENDIR)/msgdlgg.$(OBJSUFF) \
+		$(GENDIR)/numdlgg.$(OBJSUFF) \
+		$(GENDIR)/panelg.$(OBJSUFF) \
+		$(GENDIR)/progdlgg.$(OBJSUFF) \
+		$(GENDIR)/sashwin.$(OBJSUFF) \
+		$(GENDIR)/scrlwing.$(OBJSUFF) \
+		$(GENDIR)/spinctlg.$(OBJSUFF) \
+		$(GENDIR)/splash.$(OBJSUFF) \
+		$(GENDIR)/splitter.$(OBJSUFF) \
+		$(GENDIR)/tabg.$(OBJSUFF) \
+		$(GENDIR)/tbarsmpl.$(OBJSUFF) \
+		$(GENDIR)/textdlgg.$(OBJSUFF) \
+		$(GENDIR)/tipdlg.$(OBJSUFF) \
+		$(GENDIR)/tipwin.$(OBJSUFF) \
+		$(GENDIR)/treectlg.$(OBJSUFF) \
+		$(GENDIR)/treelay.$(OBJSUFF) \
+		$(GENDIR)/wizard.$(OBJSUFF)
+
+COMMONOBJS  = \
+		$(COMMDIR)/appcmn.$(OBJSUFF) \
+		$(COMMDIR)/choiccmn.$(OBJSUFF) \
+		$(COMMDIR)/clntdata.$(OBJSUFF) \
+		$(COMMDIR)/clipcmn.$(OBJSUFF) \
+		$(COMMDIR)/cmdline.$(OBJSUFF) \
+		$(COMMDIR)/cmdproc.$(OBJSUFF) \
+		$(COMMDIR)/cmndata.$(OBJSUFF) \
+		$(COMMDIR)/config.$(OBJSUFF) \
+		$(COMMDIR)/containr.$(OBJSUFF) \
+		$(COMMDIR)/cshelp.$(OBJSUFF) \
+		$(COMMDIR)/ctrlcmn.$(OBJSUFF) \
+		$(COMMDIR)/ctrlsub.$(OBJSUFF) \
+		$(COMMDIR)/datetime.$(OBJSUFF) \
+		$(COMMDIR)/datstrm.$(OBJSUFF) \
+		$(COMMDIR)/dcbase.$(OBJSUFF) \
+		$(COMMDIR)/dircmn.$(OBJSUFF) \
+		$(COMMDIR)/dlgcmn.$(OBJSUFF) \
+		$(COMMDIR)/dobjcmn.$(OBJSUFF) \
+		$(COMMDIR)/docview.$(OBJSUFF) \
+		$(COMMDIR)/dynarray.$(OBJSUFF) \
+		$(COMMDIR)/dynlib.$(OBJSUFF) \
+		$(COMMDIR)/effects.$(OBJSUFF) \
+		$(COMMDIR)/encconv.$(OBJSUFF) \
+		$(COMMDIR)/event.$(OBJSUFF) \
+		$(COMMDIR)/extended.$(OBJSUFF) \
+		$(COMMDIR)/ffile.$(OBJSUFF) \
+		$(COMMDIR)/file.$(OBJSUFF) \
+		$(COMMDIR)/fileconf.$(OBJSUFF) \
+		$(COMMDIR)/filefn.$(OBJSUFF) \
+		$(COMMDIR)/filename.$(OBJSUFF) \
+		$(COMMDIR)/filesys.$(OBJSUFF) \
+		$(COMMDIR)/fontcmn.$(OBJSUFF) \
+		$(COMMDIR)/fontmap.$(OBJSUFF) \
+		$(COMMDIR)/framecmn.$(OBJSUFF) \
+		$(COMMDIR)/gaugecmn.$(OBJSUFF) \
+		$(COMMDIR)/gdicmn.$(OBJSUFF) \
+		$(COMMDIR)/geometry.$(OBJSUFF) \
+		$(COMMDIR)/gifdecod.$(OBJSUFF) \
+		$(COMMDIR)/hash.$(OBJSUFF) \
+		$(COMMDIR)/helpbase.$(OBJSUFF) \
+		$(COMMDIR)/imagall.$(OBJSUFF) \
+		$(COMMDIR)/imagbmp.$(OBJSUFF) \
+		$(COMMDIR)/image.$(OBJSUFF) \
+		$(COMMDIR)/imaggif.$(OBJSUFF) \
+		$(COMMDIR)/imagjpeg.$(OBJSUFF) \
+		$(COMMDIR)/imagpcx.$(OBJSUFF) \
+		$(COMMDIR)/imagpng.$(OBJSUFF) \
+		$(COMMDIR)/imagpnm.$(OBJSUFF) \
+		$(COMMDIR)/imagtiff.$(OBJSUFF) \
+		$(COMMDIR)/imagxpm.$(OBJSUFF) \
+		$(COMMDIR)/intl.$(OBJSUFF) \
+		$(COMMDIR)/ipcbase.$(OBJSUFF) \
+		$(COMMDIR)/layout.$(OBJSUFF) \
+		$(COMMDIR)/lboxcmn.$(OBJSUFF) \
+		$(COMMDIR)/list.$(OBJSUFF) \
+		$(COMMDIR)/log.$(OBJSUFF) \
+		$(COMMDIR)/longlong.$(OBJSUFF) \
+		$(COMMDIR)/matrix.$(OBJSUFF) \
+		$(COMMDIR)/memory.$(OBJSUFF) \
+		$(COMMDIR)/menucmn.$(OBJSUFF) \
+		$(COMMDIR)/mimecmn.$(OBJSUFF) \
+		$(COMMDIR)/module.$(OBJSUFF) \
+		$(COMMDIR)/mstream.$(OBJSUFF) \
+		$(COMMDIR)/nbkbase.$(OBJSUFF) \
+		$(COMMDIR)/object.$(OBJSUFF) \
+		$(COMMDIR)/paper.$(OBJSUFF) \
+		$(COMMDIR)/popupcmn.$(OBJSUFF) \
+		$(COMMDIR)/prntbase.$(OBJSUFF) \
+		$(COMMDIR)/process.$(OBJSUFF) \
+		$(COMMDIR)/quantize.$(OBJSUFF) \
+		$(COMMDIR)/radiocmn.$(OBJSUFF) \
+		$(COMMDIR)/sizer.$(OBJSUFF) \
+		$(COMMDIR)/statbar.$(OBJSUFF) \
+		$(COMMDIR)/strconv.$(OBJSUFF) \
+		$(COMMDIR)/stream.$(OBJSUFF) \
+		$(COMMDIR)/string.$(OBJSUFF) \
+		$(COMMDIR)/sysopt.$(OBJSUFF) \
+		$(COMMDIR)/tbarbase.$(OBJSUFF) \
+		$(COMMDIR)/textbuf.$(OBJSUFF) \
+		$(COMMDIR)/textcmn.$(OBJSUFF) \
+		$(COMMDIR)/textfile.$(OBJSUFF) \
+		$(COMMDIR)/timercmn.$(OBJSUFF) \
+		$(COMMDIR)/tokenzr.$(OBJSUFF) \
+		$(COMMDIR)/toplvcmn.$(OBJSUFF) \
+		$(COMMDIR)/treebase.$(OBJSUFF) \
+		$(COMMDIR)/txtstrm.$(OBJSUFF) \
+		$(COMMDIR)/utilscmn.$(OBJSUFF) \
+		$(UNIXDIR)/utilsunx.$(OBJSUFF) \
+		$(COMMDIR)/valgen.$(OBJSUFF) \
+		$(COMMDIR)/validate.$(OBJSUFF) \
+		$(COMMDIR)/valtext.$(OBJSUFF) \
+		$(COMMDIR)/variant.$(OBJSUFF) \
+		$(COMMDIR)/wfstream.$(OBJSUFF) \
+		$(COMMDIR)/wincmn.$(OBJSUFF) \
+		$(COMMDIR)/wxchar.$(OBJSUFF) \
+		$(COMMDIR)/xpmdecod.$(OBJSUFF)
+
+HTMLOBJS = \
+                $(HTMLDIR)/helpctrl.$(OBJSUFF) \
+		$(HTMLDIR)/helpdata.$(OBJSUFF) \
+		$(HTMLDIR)/helpfrm.$(OBJSUFF) \
+		$(HTMLDIR)/htmlcell.$(OBJSUFF) \
+		$(HTMLDIR)/htmlfilt.$(OBJSUFF) \
+		$(HTMLDIR)/htmlpars.$(OBJSUFF) \
+		$(HTMLDIR)/htmltag.$(OBJSUFF) \
+		$(HTMLDIR)/htmlwin.$(OBJSUFF) \
+		$(HTMLDIR)/htmprint.$(OBJSUFF) \
+		$(HTMLDIR)/m_dflist.$(OBJSUFF) \
+		$(HTMLDIR)/m_fonts.$(OBJSUFF) \
+		$(HTMLDIR)/m_hline.$(OBJSUFF) \
+		$(HTMLDIR)/m_image.$(OBJSUFF) \
+		$(HTMLDIR)/m_layout.$(OBJSUFF) \
+		$(HTMLDIR)/m_links.$(OBJSUFF) \
+		$(HTMLDIR)/m_list.$(OBJSUFF) \
+		$(HTMLDIR)/m_meta.$(OBJSUFF) \
+		$(HTMLDIR)/m_pre.$(OBJSUFF) \
+		$(HTMLDIR)/m_tables.$(OBJSUFF) \
+		$(HTMLDIR)/winpars.$(OBJSUFF)
+
+MSWOBJS     = \
+		$(MICROWINDIR)/app.$(OBJSUFF) \
+		$(MICROWINDIR)/bitmap.$(OBJSUFF) \
+		$(MICROWINDIR)/brush.$(OBJSUFF) \
+		$(MICROWINDIR)/caret.$(OBJSUFF) \
+		$(MICROWINDIR)/clipbrd.$(OBJSUFF) \
+		$(MICROWINDIR)/colour.$(OBJSUFF) \
+		$(MICROWINDIR)/cursor.$(OBJSUFF) \
+		$(MICROWINDIR)/data.$(OBJSUFF) \
+		$(MICROWINDIR)/dc.$(OBJSUFF) \
+		$(MICROWINDIR)/dcclient.$(OBJSUFF) \
+		$(MICROWINDIR)/dcmemory.$(OBJSUFF) \
+		$(MICROWINDIR)/dcprint.$(OBJSUFF) \
+		$(MICROWINDIR)/dcscreen.$(OBJSUFF) \
+		$(MICROWINDIR)/dde.$(OBJSUFF) \
+		$(MICROWINDIR)/dialog.$(OBJSUFF) \
+		$(MICROWINDIR)/dialup.$(OBJSUFF) \
+		$(UNIXDIR)/dir.$(OBJSUFF) \
+		$(MICROWINDIR)/evtloop.$(OBJSUFF) \
+		$(MICROWINDIR)/font.$(OBJSUFF) \
+		$(MICROWINDIR)/fontenum.$(OBJSUFF) \
+		$(MICROWINDIR)/fontutil.$(OBJSUFF) \
+		$(MICROWINDIR)/gdiimage.$(OBJSUFF) \
+		$(MICROWINDIR)/gdiobj.$(OBJSUFF) \
+		$(MICROWINDIR)/icon.$(OBJSUFF) \
+		$(MICROWINDIR)/main.$(OBJSUFF) \
+		$(MICROWINDIR)/microwin.$(OBJSUFF) \
+		$(MICROWINDIR)/palette.$(OBJSUFF) \
+		$(MICROWINDIR)/pen.$(OBJSUFF) \
+		$(MICROWINDIR)/region.$(OBJSUFF) \
+		$(MICROWINDIR)/settings.$(OBJSUFF) \
+		$(MICROWINDIR)/snglinst.$(OBJSUFF) \
+		$(MICROWINDIR)/thread.$(OBJSUFF) \
+		$(MICROWINDIR)/timer.$(OBJSUFF) \
+		$(MICROWINDIR)/toplevel.$(OBJSUFF) \
+		$(MICROWINDIR)/utils.$(OBJSUFF) \
+		$(MICROWINDIR)/window.$(OBJSUFF) \
+		$(OLEDIR)/dataobj.$(OBJSUFF)
+
+UNIVOBJS_TODO = $(UNIVDIR)/choice.$(OBJSUFF) \
+		$(UNIVDIR)/colordlg.$(OBJSUFF) \
+
+
+UNIVOBJS     = \
+		$(UNIVDIR)/bmpbuttn.$(OBJSUFF) \
+		$(UNIVDIR)/button.$(OBJSUFF) \
+		$(UNIVDIR)/checkbox.$(OBJSUFF) \
+		$(UNIVDIR)/checklst.$(OBJSUFF) \
+		$(UNIVDIR)/colschem.$(OBJSUFF) \
+		$(UNIVDIR)/combobox.$(OBJSUFF) \
+		$(UNIVDIR)/control.$(OBJSUFF) \
+		$(UNIVDIR)/framuniv.$(OBJSUFF) \
+		$(UNIVDIR)/gauge.$(OBJSUFF) \
+		$(UNIVDIR)/inphand.$(OBJSUFF) \
+		$(UNIVDIR)/inpcons.$(OBJSUFF) \
+		$(UNIVDIR)/listbox.$(OBJSUFF) \
+		$(UNIVDIR)/menu.$(OBJSUFF) \
+		$(UNIVDIR)/notebook.$(OBJSUFF) \
+		$(UNIVDIR)/radiobox.$(OBJSUFF) \
+		$(UNIVDIR)/radiobut.$(OBJSUFF) \
+		$(UNIVDIR)/renderer.$(OBJSUFF) \
+		$(UNIVDIR)/scrarrow.$(OBJSUFF) \
+		$(UNIVDIR)/scrolbar.$(OBJSUFF) \
+		$(UNIVDIR)/scrthumb.$(OBJSUFF) \
+		$(UNIVDIR)/slider.$(OBJSUFF) \
+		$(UNIVDIR)/spinbutt.$(OBJSUFF) \
+		$(UNIVDIR)/statbmp.$(OBJSUFF) \
+		$(UNIVDIR)/statbox.$(OBJSUFF) \
+		$(UNIVDIR)/statline.$(OBJSUFF) \
+		$(UNIVDIR)/stattext.$(OBJSUFF) \
+		$(UNIVDIR)/statusbr.$(OBJSUFF) \
+		$(UNIVDIR)/textctrl.$(OBJSUFF) \
+		$(UNIVDIR)/theme.$(OBJSUFF) \
+		$(UNIVDIR)/topluniv.$(OBJSUFF) \
+		$(UNIVDIR)/winuniv.$(OBJSUFF) \
+		$(UNIVDIR)/themes/gtk.$(OBJSUFF) \
+		$(UNIVDIR)/themes/win32.$(OBJSUFF)
+
+include $(CONFIG)
+
+######################## Additional Flags section ############################
+
+# Directories list for header files
+INCLUDEDIRS += -I$(WXDIR)/include
+# Defines for preprocessor
+DEFINES += -DMWIN -D__WXMSW__ -D__WXMICROWIN__ -D__WXUNIVERSAL__ -D__WIN32__ -D__WIN95__ -DHAVE_BOOL -DMICROWIN_TODO=1 -D__UNIX__ -DHAVE_NANOSLEEP -DMICROWIN_NOCONTROLS -D__WXDEBUG__ -DwxSIZE_T_IS_UINT -DWXWIN_OS_DESCRIPTION="\"MicroWindows\""
+
+# Compilation flags for C files OTHER than include directories
+CFLAGS +=
+# Preprocessor flags OTHER than defines
+CPPFLAGS += 
+# Linking flags
+LDFLAGS +=
+
+############################# targets section ################################
+
+# If you want to create a library with the objects files, define the name here
+LIBNAME =
+
+# If we put it below OBJS=, Makefile.rules includes .depend
+# and it continually looks for .c files to satisfy .o.cpp
+# dependency. What's going on there?
+include $(TOP)/Makefile.rules
+
+# List of objects to compile
+OBJS = $(COMMONOBJS) $(MSWOBJS) $(GENERICOBJS) $(UNIVOBJS)
+
+all: $(WXLIB)
+
+######################### Makefile.rules section #############################
+
+
+
+######################## Tools targets section ###############################
+
+#ntest: $(OBJS) $(NANOXCLIENTLIBS) $(TOP)/config
+#	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $@ $(NANOXCLIENTLIBS)
+
+$(WXLIB): $(OBJS)
+	ar $(AROPTIONS) $@ $(OBJS)
+	$(RANLIB) $@
+
+#.SUFFIXES: .cpp .cxx .c
+
+#.c.o:
+#	$(CC) -c $(CFLAGS) $(CFLAGS) -o $@ $*.c
+
+.cxx.o:
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.cxx
+
+.cpp.o:
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.cpp
+
+#$(COMMDIR)/appcmn.o:    $(COMMDIR)/appcmn.cpp
+#	$(CC) -c $(CPPFLAGS) -o $@ $*.cpp
+
+#appcmn.o:	$(COMMDIR)/appcmn.cpp
+#	$(CC) $(CPPFLAGS) -c -o $@ $<
+
+cleanwx:
+	-$(RM) *.o
+	-$(RM) *.bak
+	-$(RM) core
+	-$(RM) ole/*.o
+	-$(RM) ../common/y_tab.c
+	-$(RM) ../common/lex_yy.c
+	-$(RM) ../common/*.o
+	-$(RM) ../common/*.bak
+	-$(RM) ../generic/*.o
+	-$(RM) ../generic/*.bak
+	-$(RM) ../univ/*.o
+	-$(RM) ../univ/*.bak
+	-$(RM) ../univ/themes/*.o
+	-$(RM) ../univ/themes/*.bak
+	-$(RM) ../unix/*.o
+	-$(RM) ../unix/*.bak
+	-$(RM) ../html/*.o
+	-$(RM) ../zlib/*.o
+	-$(RM) ../zlib/*.bak
+	-$(RM) ../png/*.o
+	-$(RM) ../png/*.bak
+	-$(RM) ../jpeg/*.o
+	-$(RM) ../jpeg/*.bak
+	-$(RM) ../tiff/*.o
+	-$(RM) ../tiff/*.bak

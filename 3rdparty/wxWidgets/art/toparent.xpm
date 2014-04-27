@@ -1,0 +1,21 @@
+/* XPM */
+static const char * toparent_xpm[] = {
+"16 15 3 1",
+" 	c None",
+".	c Black",
+"X	c Gray100",
+"                ",
+"      ..        ",
+"     .XX.       ",
+"    .XXXX.      ",
+"   .XXXXXX.     ",
+"  .XXXXXXXX.    ",
+" ....XXXX....   ",
+"    .XXXX.      ",
+"    .XXXX.....  ",
+"    .XXXXXXXX.  ",
+"    .XXXXXXXX.  ",
+"    .XXXXXXXX.  ",
+"    .XXXXXXXX.  ",
+"    ..........  ",
+"                "};

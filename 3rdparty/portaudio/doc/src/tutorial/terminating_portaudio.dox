@@ -1,0 +1,20 @@
+/** @page terminating_portaudio Closing a Stream and Terminating PortAudio
+@ingroup tutorial
+
+When you are done with a stream, you should close it to free up resources:
+
+@code
+    err = Pa_CloseStream( stream );
+    if( err != paNoError ) goto error;
+@endcode
+
+We've already mentioned this in \ref initializing_portaudio, but in case you forgot, be sure to terminate PortAudio when you are done:
+
+@code
+    err = Pa_Terminate( );
+    if( err != paNoError ) goto error;
+@endcode
+
+Previous: \ref start_stop_abort | Next: \ref utility_functions
+
+*/

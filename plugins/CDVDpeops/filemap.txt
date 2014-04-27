@@ -1,0 +1,52 @@
+#########################################################################
+
+- cdr.c / cdr.h
+  main plugin interface funcs
+
+- cdda.c / cdda.h
+  audio playing funcs
+
+- cfg.c / cfg.h
+  configuration dialogs/file reading funcs
+
+- cdvdPeops.*
+  Windows dll related files	(including msvc/devc++ project files)
+
+- generic.c / generic.h
+  generic stuff
+
+- ioctrl.c / ioctrl.h
+  w2k/xp ioctl functions
+
+- ppf.c / ppf.h
+  ppf caching funcs
+
+- read.c / read.h
+  the different read caching modes
+
+- scsi.c / scsi.h
+  all the used scsi commands
+
+- stdafx.h
+  main include file
+
+- sub.c / sub.h
+  sub data caching
+
+- toc.c / toc.h
+  toc related funcs
+
+- externals.h 
+  generic defines/external vars
+
+- defines.h
+  typedef structs/defines/inline funcs
+
+- resource.h
+  Windows resource header
+  
+- i386.asm
+  NASM funcs  
+
+#########################################################################
+

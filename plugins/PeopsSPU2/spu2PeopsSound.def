@@ -1,0 +1,34 @@
+; Declares the module parameters for the DLL.
+
+LIBRARY      "spu2PeopsSound"
+DESCRIPTION  'SPU2 PEOPS SOUND'
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType          @2
+	PS2EgetLibName          @3
+	PS2EgetLibVersion2      @4
+	SPU2configure           @5
+	SPU2about               @6
+	SPU2init                @7
+	SPU2shutdown            @8
+	SPU2test                @9						   
+	SPU2open                @10
+	SPU2close               @11
+	
+	SPU2write               @13
+	SPU2read                @14
+   
+    SPU2readDMA4Mem         @16
+    SPU2readDMA7Mem         @17
+    SPU2writeDMA4Mem        @18
+    SPU2writeDMA7Mem        @19
+    SPU2interruptDMA4       @20
+    SPU2interruptDMA7       @21
+
+	SPU2freeze              @33
+	SPU2async               @34
+	SPU2irqCallback			@36
+	
+	SPU2ReadMemAddr			@37
+	SPU2WriteMemAddr		@38

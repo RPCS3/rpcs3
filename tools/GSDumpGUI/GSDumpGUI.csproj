@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{825E4311-652D-4A1E-8AA1-F6D81B186E33}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GSDumpGUI</RootNamespace>
+    <AssemblyName>GSDumpGUI</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Forms\frmMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmMain.Designer.cs">
+      <DependentUpon>frmMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFPrim.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegNOP.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegUnimpl.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegAD.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegTEX0.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegFOG.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegXYZF.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegUV.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegST.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFReg.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GifImage.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPRIM.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegRGBAQ.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\IGifData.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFTag.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFUtil.cs" />
+    <Compile Include="Library\GSDump\GSData\GSData.cs" />
+    <Compile Include="Library\GSDump\GSDump.cs" />
+    <Compile Include="Library\GSDump\GSData\GSTransfer.cs" />
+    <Compile Include="Library\GSDXWrapper.cs" />
+    <Compile Include="Library\NativeMethods.cs" />
+    <Compile Include="Core\Program.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClient.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageServer.cs" />
+    <Compile Include="Library\TCPLibrary\Base\CancelArgs.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Client.cs" />
+    <Compile Include="Library\TCPLibrary\Base\ClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Data.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Server.cs" />
+    <Compile Include="Library\TCPLibrary\Message\TCPMessage.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Forms\frmMain.resx">
+      <DependentUpon>frmMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AppIcon.ico" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PostBuildEvent>
+</PostBuildEvent>
+  </PropertyGroup>
+</Project>

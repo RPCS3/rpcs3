@@ -1,0 +1,802 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2 Dev Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.9\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
+"PO-Revision-Date: 2012-05-20 13:26+0200\n"
+"Last-Translator: kmartimo <kimmo.martimo@gmail.com>\n"
+"Language-Team: kmartimo <kimmo.martimo@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: ..\\..\\..\\svn\\\n"
+"X-Poedit-Language: Finnish\n"
+"X-Poedit-Country: FINLAND\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid ""
+"There is not enough virtual memory available, or necessary virtual memory "
+"mappings have already been reserved by other processes, services, or DLLs."
+msgstr ""
+"Tarpeellista määrää virtuaalimuistia ei ole saatavilla tai tarpeelliset "
+"virtuaalimuistin kartoitukset on jo varattu muille prosseille, palveluille "
+"tai DLLeille."
+
+#: pcsx2/CDVD/CDVD.cpp:397
+msgid ""
+"Playstation game discs are not supported by PCSX2.  If you want to emulate "
+"PSX games then you'll have to download a PSX-specific emulator, such as "
+"ePSXe or PCSX."
+msgstr ""
+"PCSX2 ei tue Playstationin pelilevyjä. Jos haluat emuloida PSX-pelejä, sinun "
+"täytyy ladata PSX-emulaattori, kuten ePSXe tai PCSX."
+
+#: pcsx2/System.cpp:114
+#, fuzzy
+msgid ""
+"This recompiler was unable to reserve contiguous memory required for "
+"internal caches.  This error can be caused by low virtual memory resources, "
+"such as a small or disabled swapfile, or by another program that is hogging "
+"a lot of memory."
+msgstr ""
+"Uudelleenkääntäjä ei pystynyt varaamaan yhtenäistä muistialuetta, jota "
+"tarvitaan sisäisille välimuisteille. Tämän virheen voi aiheuttaa alhainen "
+"virtuaalimuistin määrä, kuten pieni tai käytöstä poistettu "
+"heittovaihtotiedosto, tai muu ohjelma joka vie paljon muistia. Voit myös "
+"yrittää vähentää oletusarvoisia välimuistin kokoja kaikille PCSX2:den "
+"uudelleenkääntäjille. Asetukset löytyvät isäntäasetuksista."
+
+#: pcsx2/System.cpp:350
+msgid ""
+"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
+"out some memory hogging background tasks and try again."
+msgstr ""
+"PCSX2 ei pysty varaamaan PS2-virtuaalikoneelle tarvittavaa muistia. Sulje "
+"joitakin paljon muistia vieviä taustatehtäviä ja kokeile uudelleen."
+
+#: pcsx2/gui/AppInit.cpp:45
+msgid ""
+"Warning: Your computer does not support SSE2, which is required by many "
+"PCSX2 recompilers and plugins. Your options will be limited and emulation "
+"will be *very* slow."
+msgstr ""
+"Varoitus: Tietokoneesi ei tue SSE2-käskykantalaajennosta, jota monet PCSX2:"
+"den uudelleenkääntäjät ja liitännäiset vaativat. Vaihtoehtosi ovat "
+"rajoitetut ja emulointi tulee olemaan *todella* hidasta."
+
+#: pcsx2/gui/AppInit.cpp:178
+msgid ""
+"Warning: Some of the configured PS2 recompilers failed to initialize and "
+"have been disabled:"
+msgstr ""
+"Varoitus: Joidenkin määriteltyjen PCSX2-uudelleenkääntäjien alustus "
+"epäonnistui ja ne on poistettu käytöstä:"
+
+#: pcsx2/gui/AppInit.cpp:226
+msgid ""
+"Note: Recompilers are not necessary for PCSX2 to run, however they typically "
+"improve emulation speed substantially. You may have to manually re-enable "
+"the recompilers listed above, if you resolve the errors."
+msgstr ""
+"Huom. Uudelleenkääntäjät eivät ole välttämättömät PCSX2:den toiminnalle, "
+"mutta ne parantavat emulaation nopeutta huomattavasti. Saatat joutua "
+"manuaalisesti ottamaan käyttöön yllä listatut uudelleenkääntäjät, jos saat "
+"virheet ratkaistua."
+
+#: pcsx2/gui/AppMain.cpp:585
+msgid ""
+"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
+"obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
+"count).  Please consult the FAQs and Guides for further instructions."
+msgstr ""
+"PCSX2 tarvitsee PS2 BIOS-tiedoston toimiakseen.  Laillisista syistä sinun "
+"*täytyy* hankkia BIOS-tiedosto omistamastasi PS2-järjestelmästä (lainaamista "
+"ei lasketa). Lisätietoja löydät UKK:sta (FAQ) ja oppaista."
+
+#: pcsx2/gui/AppMain.cpp:665
+msgid ""
+"'Ignore' to continue waiting for the thread to respond.\n"
+"'Cancel' to attempt to cancel the thread.\n"
+"'Terminate' to quit PCSX2 immediately.\n"
+msgstr ""
+"'Ohita' jatkaaksesi säikeen vastaamisen odottamista.\n"
+"'Peruuta' yrittääksesi peruuttaa säikeen.\n"
+"'Lopeta' sulkeaksesi PCSX2:den välittömästi.\n"
+
+#: pcsx2/gui/AppUserMode.cpp:57
+msgid ""
+"Please ensure that these folders are created and that your user account is "
+"granted write permissions to them -- or re-run PCSX2 with elevated "
+"(administrator) rights, which should grant PCSX2 the ability to create the "
+"necessary folders itself.  If you do not have elevated rights on this "
+"computer, then you will need to switch to User Documents mode (click button "
+"below)."
+msgstr ""
+"Ole hyvä ja varmista, että nämä kansiot on luotu ja että käyttäjätililläsi "
+"on oikeudet kirjoittaa niihin -- tai suorita PCSX2 uudelleen korotetuilla "
+"(järjestelmänvalvojan) oikeuksilla, joiden pitäisi antaa PCSX2:lle oikeudet "
+"luoda tarpeelliset kansiot itse. Jos sinulla ei ole korotettuja oikeuksia "
+"tällä tietokoneella, sinun tarvitsee siirtyä Käyttäjän Tiedostot -tilaan "
+"(paina allaolevaa nappia)."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid ""
+"NTFS compression can be changed manually at any time by using file "
+"properties from Windows Explorer."
+msgstr ""
+"NTFS-pakkausta voi vaihtaa manuaalisesti milloin tahansa käyttäen tiedoston "
+"ominaisuudet-ikkunaa Windowsin resurssienhallinnassa."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid ""
+"This is the folder where PCSX2 saves your settings, including settings "
+"generated by most plugins (some older plugins may not respect this value)."
+msgstr ""
+"Tämä on se kansio, mihin PCSX2 tallentaa asetuksesi, mukaanlukien "
+"liitännäisten luomat asetukset (jotkin vanhemmat liitännäiset eivät "
+"välttämättä ota tätä asetusta huomioon)."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:52
+msgid ""
+"You may optionally specify a location for your PCSX2 settings here.  If the "
+"location contains existing PCSX2 settings, you will be given the option to "
+"import or overwrite them."
+msgstr ""
+"Voit halutessasi valita sijainnin PCSX2:den asetuksille täällä. Jos "
+"sijainnissa on jo olemassaolevia PCSX2-asetuksia, sinulle annetaan "
+"mahdollisuus tuoda tai ylikirjoittaa ne."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
+#, c-format
+msgid ""
+"This wizard will help guide you through configuring plugins, memory cards, "
+"and BIOS.  It is recommended if this is your first time installing %s that "
+"you view the readme and configuration guide."
+msgstr ""
+"Tämä velho auttaa sinua liitännäisten, muistikorttien ja BIOSin "
+"konfiguroinnissa.  Jos tämä on ensimmäinen %s-asennuskertasi, on "
+"suositeltua, että luet lueminut-tiedoston ja konfiguraatio-oppaan."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
+msgid ""
+"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
+"You cannot use a copy obtained from a friend or the Internet.\n"
+"You must dump the BIOS from your *own* Playstation 2 console."
+msgstr ""
+"PCSX2 vaatii *laillisen* kopion PS2 BIOSista pelien suorittamiseen.\n"
+"Et voi käyttää ystävältä tai Internetistä hankittua kopiota.\n"
+"Sinun täytyy hankkia BIOS *omasta* Playstation 2-konsolistasi."
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+#, c-format
+msgid ""
+"Existing %s settings have been found in the configured settings folder.  "
+"Would you like to import these settings or overwrite them with %s default "
+"values?\n"
+"\n"
+"(or press Cancel to select a different settings folder)"
+msgstr ""
+"Määritellystä asetuskansiosta löytyi olemassaolevat %s-asetukset. "
+"Haluaisitko tuoda nämä asetukset vai ylikirjoittaa ne %s:den "
+"oletusarvoilla?\n"
+"\n"
+"(tai paina Peruuta valitaksesi toisen asetuskansion)"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid ""
+"NTFS compression is built-in, fast, and completely reliable; and typically "
+"compresses memory cards very well (this option is highly recommended)."
+msgstr ""
+"NTFS-pakkaus on sisäänrakennettu, nopea ja täysin luotettava sekä "
+"tyypillisesti pakkaa muistikortit todella hyvin (tätä asetusta suositellaan "
+"erittäin suuresti)."
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:39
+msgid ""
+"Avoids memory card corruption by forcing games to re-index card contents "
+"after loading from savestates.  May not be compatible with all games (Guitar "
+"Hero)."
+msgstr ""
+"Välttää muistikortin vioittumista pakottamalla pelit uudelleenindeksoimaan "
+"muistikortin sisällöntilatallennuksesta ladattaessa.  Ei ole välttämättä "
+"yhteensopiva kaikkien pelien kanssa (Guitar Hero)."
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+#, c-format
+msgid ""
+"The thread '%s' is not responding.  It could be deadlocked, or it might just "
+"be running *really* slowly."
+msgstr ""
+"Säie '%s' ei vastaa.  Se saattaa olla lukittunut, tai sitten se vain toimii "
+"*todella* hitaasti."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured settings.  These command line options will not be reflected in "
+"the Settings dialog, and will be disabled if you apply any changes here."
+msgstr ""
+"Varoitus!  Käytät PCSX2:ta komentorivivalinnoilla, jotka ohittavat "
+"määritellyt asetuksesi. Näiden komentorivivalintojen vaikutuksia ei näy "
+"asetusikkunassa, ja ne otetaan pois käytöstä jos teet mitään muutoksia "
+"täällä."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:55
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured plugin and/or folder settings.  These command line options will "
+"not be reflected in the settings dialog, and will be disabled when you apply "
+"settings changes here."
+msgstr ""
+"Varoitus!  Käytät PCSX2:ta komentorivivalinnoilla, jotka ohittavat "
+"määritellyt liitännäis ja/tai kansioasetuksesi. Näiden komentorivivalintojen "
+"vaikutuksia ei näy asetusikkunassa, ja ne otetaan pois käytöstä jos teet "
+"mitään muutoksia täällä."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:129
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"Presets info:\n"
+"1 -     The most accurate emulation but also the slowest.\n"
+"3 --> Tries to balance speed with compatibility.\n"
+"4 -     Some more aggressive hacks.\n"
+"6 -     Too many hacks which will probably slow down most games.\n"
+msgstr ""
+"Esiasetukset ottavat käyttöön viritelmiä, joitakin uudelleenkääntäjien "
+"valintoja ja joitakin pelikorjauksia, jotka tunnetusti\n"
+"auttavat nopeudessa. Tunnetut tärkeät pelikorjaukset otetaan käyttöön "
+"automaattisesti.\n"
+"\n"
+"Tietoja esiasetuksista:\n"
+"1 -     Kaikkein täsmällisin emulaatio, mutta myös hitain.\n"
+"3 --> Yrittää tasapainottaa nopeuden yhteensopivuuden kanssa.\n"
+"4 -     Joitakin aggressiivisempia viritelmiä.\n"
+"6 -     Liian paljon viritelmiä, mitkä todennäköisesti hidastavat useimpia "
+"pelejä.\n"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:136
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"--> Uncheck to modify settings manually (with current preset as base)"
+msgstr ""
+"Esiasetukset ottavat käyttöön viritelmiä, joitakin uudelleenkääntäjien "
+"valintoja ja joitakin pelikorjauksia, jotka tunnetusti\n"
+"auttavat nopeudessa. Tunnetut tärkeät pelikorjaukset otetaan käyttöön "
+"automaattisesti.\n"
+"\n"
+"--> Poista valinta muuttaaksesi asetuksia manuaalisesti (nykyisen "
+"esiasetuksen pohjalta)"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid ""
+"This action will reset the existing PS2 virtual machine state; all current "
+"progress will be lost.  Are you sure?"
+msgstr ""
+"Tämä toiminto resetoi olemassaolevan PS2-virtuaalikoneen tilan; kaikki "
+"nykyiset tiedot menetetään.  Oletko varma?"
+
+#: pcsx2/gui/MainMenuClicks.cpp:107
+#, c-format
+msgid ""
+"This command clears %s settings and allows you to re-run the First-Time "
+"Wizard.  You will need to manually restart %s after this operation.\n"
+"\n"
+"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, "
+"losing any current emulation progress.  Are you absolutely sure?\n"
+"\n"
+"(note: settings for plugins are unaffected)"
+msgstr ""
+"Tämä komento pyyhkii %s:den asetukset ja sallii sinun suorittaa uudelleen "
+"ensimmäisen käyttökerran asetusvelhon. Sinun täytyy manuaalisesti käynnistää "
+"%s uudelleen tämän toiminnon jälkeen.\n"
+"\n"
+"VAROITUS!!  Paina OK poistaaksesi *KAIKKI* %s-asetukset ja pakottaa ohjelman "
+"sulkeminen, menettäen kaikki nykyiset emulaatiotiedot.  Oletko ehdottoman "
+"varma?\n"
+"\n"
+"(huom. liitännäisten asetuksia ei poisteta)"
+
+#: pcsx2/gui/MemoryCardFile.cpp:80
+#, c-format
+msgid ""
+"The PS2-slot %d has been automatically disabled.  You can correct the "
+"problem\n"
+"and re-enable it at any time using Config:Memory cards from the main menu."
+msgstr ""
+"PS2-muistikorttipaikka %d on automaattisesti poistettu käytöstä.  Voit "
+"korjata ongelman\n"
+"ja ottaa se uudestaan käyttöön milloin tahansa valikosta Asetukset: "
+"Muistikortit."
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid ""
+"Please select a valid BIOS.  If you are unable to make a valid selection "
+"then press Cancel to close the Configuration panel."
+msgstr ""
+"Ole hyvä ja valitse kelvollinen BIOS. Jos et pysty tekemään kelvollista "
+"valintaa, paina Peruuta sulkeaksesi konfiguraatiopaneelin."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "Notice: Most games are fine with the default options. "
+msgstr "Huomautus: Useimmat pelit toimivat hyvin oletusasetuksilla."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:177
+msgid "Notice: Most games are fine with the default options."
+msgstr "Huomautus: Useimmat pelit toimivat hyvin oletusasetuksilla."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid ""
+"The specified path/directory does not exist.  Would you like to create it?"
+msgstr "Valittua polkua/hakemistoa ei ole olemassa.  Haluaisitko luoda sen?"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:157
+msgid ""
+"When checked this folder will automatically reflect the default associated "
+"with PCSX2's current usermode setting. "
+msgstr ""
+"Kun valittu, tämä kansio automaattisesti kuvaa PCSX2:den nykyiseen "
+"käyttäjätila-asetukseen liitettyä oletusarvoa."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid ""
+"Zoom = 100: Fit the entire image to the window without any cropping.\n"
+"Above/Below 100: Zoom In/Out\n"
+"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, "
+"some of the image goes out of screen).\n"
+"  NOTE: Some games draw their own black-bars, which will not be removed with "
+"'0'.\n"
+"\n"
+"Keyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + "
+"NUMPAD-*: Toggle 100/0"
+msgstr ""
+"Zoom = 100: Sovita koko kuva ikkunaan ilman rajaamista.\n"
+"Yli/alle 100: Zoomaus sisään/ulos\n"
+"0: Automaattinen zoomaus kunnes mustat palkit katoavat (kuvasuhde "
+"säilytetään, osa kuvasta menee näytön ulkopuolelle).\n"
+"  HUOM: Jotkin pelit piirtävät omat mustat palkkinsa, joita ei poisteta "
+"asetuksella '0'.\n"
+"\n"
+"Näppäimistö:\n"
+"CTRL + NUMERONÄPPÄIMISTÖ-PLUS: Zoomaus sisään\n"
+"CTRL + NUMERONÄPPÄIMISTÖ-MIINUS: Zoomaus ulos\n"
+"CTRL + NUMERONÄPPÄIMISTÖ-*: Vaihtelee 100/0 välillä"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+msgid ""
+"Vsync eliminates screen tearing but typically has a big performance hit. It "
+"usually only applies to fullscreen mode, and may not work with all GS "
+"plugins."
+msgstr ""
+"Pystytahdistus (Vsync) poistaa kuvan repeytymät, mutta yleensä aiheuttaa "
+"suuren suorituskyvyn laskun. Yleensä vaikuttaa vain koko ruudun tilaan, eikä "
+"välttämättä toimi kaikkien GS-liitännäisten kanssa."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:61
+msgid ""
+"Enables Vsync when the framerate is exactly at full speed. Should it fall "
+"below that, Vsync gets disabled to avoid further performance penalties. "
+"Note: This currently only works well with GSdx as GS plugin and with it "
+"configured to use DX10/11 hardware rendering. Any other plugin or rendering "
+"mode will either ignore it or produce a black frame that blinks whenever the "
+"mode switches. It also requires Vsync to be enabled."
+msgstr ""
+"Ottaa pystytahdistuksen (Vsync) käyttöön kun kehysnopeus on täsmälleen oikea "
+"(täysi nopeus). Jos kehysnopeus tippuu, pystytahdistus poistetaan käytöstä, "
+"jotta suorituskyky ei laske entisestään. Huom: Tällä hetkellä tämä toimii "
+"hyvin vain GS-liitännäisen ollessa GSdx ja se asetettuna käyttämään DX10/11 "
+"hardware rendering -tilaa. Mikä tahansa muu liitännäinen tai rendering-tila "
+"joko jättää asetuksen huomiotta tai tuottaa mustan vilkkuvan kuvan aina kun "
+"tilaa vaihetaan. Vaatii myös pystytahdistuksen käyttöönottoa."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
+msgid ""
+"Check this to force the mouse cursor invisible inside the GS window; useful "
+"if using the mouse as a primary control device for gaming.  By default the "
+"mouse auto-hides after 2 seconds of inactivity."
+msgstr ""
+"Valitse tämä pakottaaksesi hiiren kursorin näkymättömäksi GS-ikkunan "
+"sisällä; käytännöllinen jos käytät hiirtä peliohjaimena. Oletusarvoisesti "
+"kursori menee näkymättömäksi kahden sekunnin liikkumattomuuden jälkeen."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid ""
+"Enables automatic mode switch to fullscreen when starting or resuming "
+"emulation. You can still toggle fullscreen display at any time using alt-"
+"enter."
+msgstr ""
+"Ottaa käyttöön automaattisen koko ruudun tilan vaihdon aloittaessa tai "
+"jatkaessa emulaatiota. Voit silti kytkeä koko ruudun tilan päälle ja pois "
+"milloin tahansa näppäinyhdistelmällä alt-enter."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:74
+msgid ""
+"Completely closes the often large and bulky GS window when pressing ESC or "
+"pausing the emulator."
+msgstr ""
+"Sulkee täydellisesti usein suuren ja tilaavievän GS-ikkunan painessa ESCiä "
+"tai keskeyttäessä emulaation."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid ""
+"Known to affect following games:\n"
+" * Digital Devil Saga (Fixes FMV and crashes)\n"
+" * SSX (Fixes bad graphics and crashes)\n"
+" * Resident Evil: Dead Aim (Causes garbled textures)"
+msgstr ""
+"Tiedetään vaikuttavan seuraaviin peleihin:\n"
+"* Digital Devil Saga (Korjaa videot ja kaatumiset)\n"
+"* SSX (Korjaa grafiikkavirheet ja kaatumiset)\n"
+"* Resident Evil: Dead Aim (Aiheuttaa vääristyneitä tekstuureita)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:76
+msgid ""
+"Known to affect following games:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II and III\n"
+" * Wizardry"
+msgstr ""
+"Tiedetään vaikuttavan seuraaviin peleihin:\n"
+"* Bleach Blade Battler\n"
+"* Growlanser II ja III\n"
+"* Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:81
+msgid ""
+"Known to affect following games:\n"
+" * Mana Khemia 1 (Going \"off campus\")\n"
+msgstr ""
+"Tiedetään vaikuttavan seuraaviin peleihin:\n"
+"* Mana Khemia 1 (Mennessä 'pois kampukselta')\n"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:86
+msgid ""
+"Known to affect following games:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
+msgstr ""
+"Tiedetään vaikuttavan seuraaviin peleihin:\n"
+"* Test Drive Unlimited\n"
+"* Transformers"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+msgid ""
+"Gamefixes can work around wrong emulation in some titles. \n"
+"They may also cause compatibility or performance issues. \n"
+"\n"
+"It's better to enable 'Automatic game fixes' at the main menu instead, and "
+"leave this page empty. \n"
+"('Automatic' means: selectively use specific tested fixes for specific games)"
+msgstr ""
+"Pelikorjaukset voivat kiertää virheellisen emulaation vaikutuksia joissakin "
+"peleissä.\n"
+"Ne voivat myös aiheuttaa yhteensopivuus- ja suorituskykyongelmia.\n"
+"\n"
+"On parempi ottaa käyttöön 'Automaattiset pelikorjaukset' päävalikossa tämän "
+"sijaan, ja jättää tämä sivu tyhjäksi.\n"
+"('Automaattinen' tarkoittaa: valikoivasti käytä tiettyjä testattuja "
+"korjauksia tietyille peleille)"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
+#, c-format
+msgid ""
+"You are about to delete the formatted memory card '%s'. All data on this "
+"card will be lost!  Are you absolutely and quite positively sure?"
+msgstr ""
+"Olet poistamassa alustettua muistikorttia '%s'. Kaikki tämän kortin "
+"sisältämät tiedot menetetään!  Oletko aivan varma?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
+msgid ""
+"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
+msgstr ""
+"Epäonnistui: Kopiointi sallitaan vain tyhjään PS2-muistikorttipaikkaan tai "
+"tiedostojärjestelmään."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
+#, c-format
+msgid "Failed: Destination memory card '%s' is in use."
+msgstr "Epäonnistui: Kohdemuistikortti '%s' on käytössä."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
+msgid ""
+"Please select your preferred default location for PCSX2 user-level documents "
+"below (includes memory cards, screenshots, settings, and savestates).  These "
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
+msgstr ""
+"Ole hyvä ja valitse alla haluamasi oletussijainti PCSX2:den käyttäjätason "
+"tiedostoille (sisältäen muistikortit, ruutukaappaukset, asetukset ja "
+"tilatallennukset). Nämä kansiosijainnit voi ohittaa milloin tahansa käyttäen "
+"asetuspaneelia."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
+msgid ""
+"You can change the preferred default location for PCSX2 user-level documents "
+"here (includes memory cards, screenshots, settings, and savestates).  This "
+"option only affects Standard Paths which are set to use the installation "
+"default value."
+msgstr ""
+"Voit vaihtaa haluamasi oletussijainnin PCSX2:den käyttäjätason tiedostoille "
+"(sisältäen muistikortit, ruutukaappaukset, asetukset ja tilatallennukset). "
+"Tämä valinta vaikuttaa vain standardipolkuihin, jotka ovat asetettu "
+"käyttämään asennuksenaikaista oletusarvoa."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid ""
+"This folder is where PCSX2 records savestates; which are recorded either by "
+"using menus/toolbars, or by pressing F1/F3 (save/load)."
+msgstr ""
+"PCSX2 tallentaa tähän kansioon tilatallennukset; joita voi tallentaa joko "
+"käyttämällä valikoita/työkalurivejä tai painamalla F1/F3 (tallennus/lataus)."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:48
+msgid ""
+"This folder is where PCSX2 saves screenshots.  Actual screenshot image "
+"format and style may vary depending on the GS plugin being used."
+msgstr ""
+"PCSX2 tallentaa tähän kansioon ruutukaappaukset.  Todellinen "
+"ruutukaappauksen kuvaformaatti ja tyyli saattaa vaihdella riippuen käytössä "
+"olevasta GS-liitännäisestä."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:56
+msgid ""
+"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most "
+"plugins will also adhere to this folder, however some older plugins may "
+"ignore it."
+msgstr ""
+"PCSX2 tallentaa tähän kansioon lokitiedostonsa ja virheenkorjausvedoksensa. "
+"Useimmat liitännäiset käyttävät myös tätä kansiota, mutta jotkin vanhemmat "
+"liitännäiset saattavat jättää valinnan huomiotta."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid ""
+"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 "
+"virtual machine. PCSX2 will attempt to save and restore the state, but if "
+"the newly selected plugins are incompatible the recovery may fail, and "
+"current progress will be lost.\n"
+"\n"
+"Are you sure you want to apply settings now?"
+msgstr ""
+"Varoitus!  Liitännäisten vaihtaminen vaatii PS2-virtuaalikoneen täydellisen "
+"sammuttamisen ja resetoimisen. PCSX2 yrittää tallentaa ja ladata "
+"virtuaalikoneen tilan, mutta jos uudet käyttöönotetut liitännäiset ovat "
+"yhteensopimattomia, lataus voi epäonnistua ja nykyinen tila menetetään.\n"
+"\n"
+"Oletko varma, että haluat ottaa asetukset käyttöön nyt?"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
+#, c-format
+msgid ""
+"All plugins must have valid selections for %s to run.  If you are unable to "
+"make a valid selection due to missing plugins or an incomplete install of "
+"%s, then press Cancel to close the Configuration panel."
+msgstr ""
+"Kaikille liitännäisille täytyy olla kelvollinen valinta, jotta %s voi "
+"toimia. Jos et pysty tekemään kelvollista valintaa puuttuvien liitännäisten "
+"tai epätäydellisen %s-asennuksen takia, paina Peruuta sulkeaksesi "
+"asetuspaneelin."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid ""
+"1 - Default cyclerate. This closely matches the actual speed of a real PS2 "
+"EmotionEngine."
+msgstr ""
+"1 - Oletusarvoinen syklinopeus. Tämä vastaa hyvin pitkälle oikean PS2:den "
+"EmotionEnginen todellista nopeutta."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:31
+msgid ""
+"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games "
+"with high compatibility."
+msgstr ""
+"2 - Vähentää EE-prosessorin syklinopeutta noin 33%. Lievä nopeuslisäys "
+"useimmille peleille korkealla yhteensopivuudella."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:35
+msgid ""
+"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* "
+"cause stuttering audio on many FMVs."
+msgstr ""
+"3 - Vähentää EE-prosessorin syklinopeutta noin 50%. Kohtuullinen "
+"nopeuslisäys, mutta *tulee* aiheuttamaan pätkivää ääntä monissa videoissa."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:50
+msgid "0 - Disables VU Cycle Stealing.  Most compatible setting!"
+msgstr ""
+"0 - Poistaa VU-syklivarastamisen käytöstä. Kaikkein yhteensopivin asetus!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid ""
+"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most "
+"games."
+msgstr ""
+"1 - Lievä VU-syklivarastaminen. Alhaisempi yhteensopivuus, mutta nopeuttaa "
+"jonkin verran useimpia pelejä."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:58
+msgid ""
+"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant "
+"speedups in some games."
+msgstr ""
+"2 - Kohtuullinen VU-syklivarastaminen. Vielä alhaisempi yhteensopivuus, "
+"mutta huomattava nopeuslisäys joissain peleissä."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:63
+msgid ""
+"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause "
+"flickering visuals or slowdown in most games."
+msgstr ""
+"3 - Täysi VU-syklivarastaminen. Käytännöllisyys on rajoitettu, koska tämä "
+"aiheuttaa vilkkuvia grafiikoita tai nopeuden hidastumista useimmissa "
+"peleissä."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:88
+msgid ""
+"Speedhacks usually improve emulation speed, but can cause glitches, broken "
+"audio, and false FPS readings.  When having emulation problems, disable this "
+"panel first."
+msgstr ""
+"Nopeusviritelmät yleensä parantavat emulaationopeutta, mutta voivat "
+"aiheuttaa ongelmia, rikkinäistä ääntä ja virheellisiä FPS-lukemia. Kun "
+"kohtaat ongelmia emulaatiossa, ota tämä paneeli pois käytöstä ensin."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:118
+msgid ""
+"Setting higher values on this slider effectively reduces the clock speed of "
+"the EmotionEngine's R5900 core cpu, and typically brings big speedups to "
+"games that fail to utilize the full potential of the real PS2 hardware."
+msgstr ""
+"Korkeampien arvojen asettaminen tällä liukusäätimellä vähentää "
+"EmotionEnginen R5900-ydinprosessorin kellonopeutta, ja yleensä antaa suuren "
+"nopeuslisän peleihin, jotka eivät käytä oikean PS2:den laitteiston täyttä "
+"suorituskykyä hyväkseen."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:136
+msgid ""
+"This slider controls the amount of cycles the VU unit steals from the "
+"EmotionEngine.  Higher values increase the number of cycles stolen from the "
+"EE for each VU microprogram the game runs."
+msgstr ""
+"Tämä liukusäädin ohjaa VU-yksikön EmotionEngineltä varastamien syklien "
+"määrää. Korkeammat arvot lisäävät EE:ltä varastettujen syklien määrää "
+"jokaiselle VU-mikro-ohjelmalle joita peli suorittaa."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:153
+msgid ""
+"Updates Status Flags only on blocks which will read them, instead of all the "
+"time. This is safe most of the time, and Super VU does something similar by "
+"default."
+msgstr ""
+"Päivittää tilalippuja vain niillä lohkoilla, jotka lukevat niitä "
+"reaaliaikaisen päivittämisen sijaan. Tämä on useimmiten turvallista, ja "
+"Super VU tekee jotain samankaltaista oletuksena."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:156
+msgid ""
+"Runs VU1 on its own thread (microVU1-only). Generally a speedup on CPUs with "
+"3 or more cores. This is safe for most games, but a few games are "
+"incompatible and may hang. In the case of GS limited games, it may be a "
+"slowdown (especially on dual core CPUs)."
+msgstr ""
+"Suorittaa VU1:tä omassa säikeessään (vain microVU1). Yleensä nopeuttaa "
+"suorittimilla, joissa on kolme tai useampi ydintä. Tämä on turvallista "
+"suurimmalle osalle peleistä, mutta muutama peli on epäyhteensopiva ja "
+"saattaa jumiutua. GS-rajoitteisissa peleissä saattaa hidastaa nopeutta "
+"(erityisesti tuplaydinsuorittimilla)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid ""
+"This hack works best for games that use the INTC Status register to wait for "
+"vsyncs, which includes primarily non-3D RPG titles. Games that do not use "
+"this method of vsync will see little or no speedup from this hack."
+msgstr ""
+"Tämä viritelmä toimii parhaiten peleille, jotka käyttävät INTC "
+"tilarekisteriä odottaakseen pystytahdistusta (vsync), mikä sisältää lähinnä "
+"kaksiulotteisia RPG-pelejä. Pelejä, jotka eivät käytä tätä tapaa "
+"pystytahdistukseen saavat vain pienen tai ei yhtään nopeutusta tästä "
+"viritelmästä."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid ""
+"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this "
+"hack attempts to detect loops whose bodies are guaranteed to result in the "
+"same machine state for every iteration until a scheduled event triggers "
+"emulation of another unit.  After a single iteration of such loops, we "
+"advance to the time of the next event or the end of the processor's "
+"timeslice, whichever comes first."
+msgstr ""
+"Tähdäten ensisijaisesti EE-joutenolosilmukkaan ytimen osoitteessa 0x81FC0, "
+"tämä viritelmä yrittää tunnistaa silmukoita, joiden sisältö taatusti päätyy "
+"samaan laitteistotilaan jokaisella kierroksella kunnes ajoitettu tapahtuma "
+"laukaisee toisen yksikön emuloinnin. Tällaisissa silmukoissa yhden "
+"kierroksen jälkeen etenemme seuraavan tapahtuman ajankohtaan tai prosessorin "
+"aikasiivun loppuun, riippuen kumpi tulee ennemmin."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:180
+msgid ""
+"Check HDLoader compatibility lists for known games that have issues with "
+"this. (Often marked as needing 'mode 1' or 'slow DVD'"
+msgstr ""
+"Tarkista HDLoaderin yhteensopivuuslistasta tunnetut pelit, jotka eivät toimi "
+"tämän kanssa. (Usein merkitty tarvitsemaan 'mode 1' tai 'slow DVD'"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid ""
+"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will "
+"not be available either."
+msgstr ""
+"Huomioi, että kun nopeusrajoitus on poistettu käytöstä, nopeutus- ja "
+"hidastustilat eivät myöskään ole saatavilla."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:225
+msgid ""
+"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
+"Enabling it will cause severe graphical errors in some games."
+msgstr ""
+"Huomautus: PS2:den laitteistosuunnittelun vuoksi tarkka kehysten ohittaminen "
+"on mahdotonta. Sen ottaminen käyttöön aiheuttaa vakavia grafiikkavirheitä "
+"joissain peleissä."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid ""
+"Enable this if you think MTGS thread sync is causing crashes or graphical "
+"errors."
+msgstr ""
+"Ota tämä käyttöön jos epäilet MTGS:n säiesynkronoinnin aiheuttavan "
+"kaatumisia tai grafiikkavirheitä."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:305
+msgid ""
+"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This "
+"option is best used in conjunction with savestates: save a state at an ideal "
+"scene, enable this option, and re-load the savestate.\n"
+"\n"
+"Warning: This option can be enabled on-the-fly but typically cannot be "
+"disabled on-the-fly (video will typically be garbage)."
+msgstr ""
+"Poistaa kaiken MTGS-säikeen tai näytönohjaimen aiheuttaman häiriön "
+"suorituskykytesteissä. Tätä valintaa on parasta käyttää tilatallennuksien "
+"yhteydessä: tallenna ihanteellisessa tilanteessa, kytke tämä valinta päälle "
+"ja lataa tilatallennus.\n"
+"\n"
+"Varoitus: Tämän valinnan voi ottaa käyttöön lennosta, mutta yleensä ei voi "
+"poistaa käytöstä lennosta (pelikuvan tilalla on yleensä roskaa)."
+
+#: pcsx2/vtlb.cpp:731
+msgid ""
+"Your system is too low on virtual resources for PCSX2 to run. This can be "
+"caused by having a small or disabled swapfile, or by other programs that are "
+"hogging resources."
+msgstr ""
+"Järjestelmässäsi on liian vähän virtuaaliresursseja PCSX2:den toimimiseen. "
+"Tämän voi aiheuttaa pieni tai käytöstä poistettu heittovaihtotiedosto (swap "
+"file) tai muut ohjelmat, jotka vievät resursseja. "
+
+#: pcsx2/x86/sVU_zerorec.cpp:364
+msgid ""
+"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
+"specific memory ranges required, and will not be available for use.  This is "
+"not a critical error, since the sVU rec is obsolete, and you should use "
+"microVU instead anyway. :)"
+msgstr ""
+"Liian vähän muistia (tavallaan): SuperVU-uudelleenkääntäjä ei pystynyt "
+"varaamaan tiettyjä vaadittuja muistialueita, ja siten ei ole saatavilla. "
+"Tämä ei ole kriittinen virhe, sillä sVU on joka tapauksessa vanhentunut ja "
+"sinun kannattaisi käyttää sen sijaan microVU:ta. :)"

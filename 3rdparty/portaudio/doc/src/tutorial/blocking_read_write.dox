@@ -1,0 +1,68 @@
+/** @page blocking_read_write Blocking Read/Write Functions
+@ingroup tutorial
+
+PortAudio V19 adds a huge advance over previous versions with a feature called Blocking I/O. Although it may have lower performance that the callback method described earlier in this tutorial, blocking I/O is easier to understand and is, in some cases, more compatible with third party systems than the callback method. Most people starting audio programming also find Blocking I/O easier to learn.
+
+Blocking I/O works in much the same way as the callback method except that instead of providing a function to provide (or consume) audio data, you must feed data to (or consume data from) PortAudio at regular intervals, usually inside a loop. The example below, excepted from patest_read_write_wire.c, shows how to open the default device, and pass data from its input to its output for a set period of time. Note that we use the default high latency values to help avoid underruns since we are usually reading and writing audio data from a relatively low priority thread, and there is usually extra buffering required to make blocking I/O work.
+
+Note that not all API's implement Blocking I/O at this point, so for maximum portability or performance, you'll still want to use callbacks.
+
+@code
+    /* -- initialize PortAudio -- */
+    err = Pa_Initialize();
+    if( err != paNoError ) goto error;
+
+    /* -- setup input and output -- */
+    inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+    inputParameters.channelCount = NUM_CHANNELS;
+    inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+    inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency ;
+    inputParameters.hostApiSpecificStreamInfo = NULL;
+
+    outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+    outputParameters.channelCount = NUM_CHANNELS;
+    outputParameters.sampleFormat = PA_SAMPLE_TYPE;
+    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
+    outputParameters.hostApiSpecificStreamInfo = NULL;
+
+    /* -- setup stream -- */
+    err = Pa_OpenStream(
+              &stream,
+              &inputParameters,
+              &outputParameters,
+              SAMPLE_RATE,
+              FRAMES_PER_BUFFER,
+              paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+              NULL, /* no callback, use blocking API */
+              NULL ); /* no callback, so no callback userData */
+    if( err != paNoError ) goto error;
+
+    /* -- start stream -- */
+    err = Pa_StartStream( stream );
+    if( err != paNoError ) goto error;
+    printf("Wire on. Will run one minute.\n"); fflush(stdout);
+
+    /* -- Here's the loop where we pass data from input to output -- */
+    for( i=0; i<(60*SAMPLE_RATE)/FRAMES_PER_BUFFER; ++i )
+    {
+       err = Pa_WriteStream( stream, sampleBlock, FRAMES_PER_BUFFER );
+       if( err ) goto xrun;
+       err = Pa_ReadStream( stream, sampleBlock, FRAMES_PER_BUFFER );
+       if( err ) goto xrun;
+    }
+    /* -- Now we stop the stream -- */
+    err = Pa_StopStream( stream );
+    if( err != paNoError ) goto error;
+
+    /* -- don't forget to cleanup! -- */
+    err = Pa_CloseStream( stream );
+    if( err != paNoError ) goto error;
+
+    Pa_Terminate();
+    return 0;
+@endcode
+
+
+Previous: \ref querying_devices | Next: \ref exploring
+
+*/

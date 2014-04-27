@@ -1,0 +1,36 @@
+; DEV9null.def : Declares the module parameters for the DLL.
+
+
+;LIBRARY      "DEV9null"
+;DESCRIPTION  'DEV9null Driver'
+
+
+EXPORTS
+
+    ; Explicit exports can go here
+
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	DEV9init			@5
+	DEV9shutdown		@6
+	DEV9open			@7
+	DEV9close			@8
+	DEV9read8			@9
+	DEV9read16			@10
+	DEV9read32			@11
+	DEV9write8			@12
+	DEV9write16			@13
+	DEV9write32			@14
+	DEV9readDMA8Mem		@15
+	DEV9writeDMA8Mem	@16
+	DEV9configure		@17
+	DEV9test			@18
+	DEV9about			@19
+	DEV9irqCallback     @20
+	DEV9irqHandler      @21
+	DEV9dmaRead
+	DEV9dmaWrite
+	DEV9dmaInterrupt
+	
+	DEV9setSettingsDir

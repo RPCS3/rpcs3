@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <PcsxSubsection>plugins</PcsxSubsection>
+    <ProjectRootDir>$(ProjectDir)..</ProjectRootDir>
+    <SvnRootDir>$(ProjectRootDir)\..\..\..</SvnRootDir>
+    <SvnCommonDir>$(SvnRootDir)\common</SvnCommonDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+    <_PropertySheetDisplayName>PluginSvnRoot</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)\..\3rdparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="PcsxSubsection">
+      <Value>$(PcsxSubsection)</Value>
+    </BuildMacro>
+    <BuildMacro Include="ProjectRootDir">
+      <Value>$(ProjectRootDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="SvnRootDir">
+      <Value>$(SvnRootDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="SvnCommonDir">
+      <Value>$(SvnCommonDir)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

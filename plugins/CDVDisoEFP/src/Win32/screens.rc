@@ -1,0 +1,82 @@
+/* Wedit generated resource file */
+#ifdef __LCC__
+#include <windows.h>
+#endif
+#include "screens.h"
+
+
+DLG_0100 DIALOG 2, 2, 140, 59
+STYLE DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About CDVDisoEFP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CTEXT           "EFP Iso CDVD Driver v0.6", 101, 11, 6, 118, 12
+    CTEXT           "Current Author: efp", 102, 12, 16, 118, 12
+    CTEXT           "Original code by: linuzappz && shadow", 103, 12, 26, 118, 12
+    PUSHBUTTON      "Ok", IDC_0104, 50, 37, 40, 14
+END
+
+DLG_0200 DIALOG 4, 2, 241, 73
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDisoEFP Configuration"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Iso File:", 201, 14, 8, 27, 12
+    EDITTEXT        IDC_0202, 43, 7, 149, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse", IDC_0203, 197, 6, 34, 12
+    CTEXT           "File Type: ---", IDC_0204, 10, 21, 220, 12
+    PUSHBUTTON      "Ok", IDC_0205, 15, 53, 48, 14
+    PUSHBUTTON      "Get from Disc", IDC_0206, 69, 53, 48, 14
+    PUSHBUTTON      "Convert", IDC_0207, 123, 53, 48, 14
+    PUSHBUTTON      "Cancel", IDC_0208, 177, 53, 48, 14
+    AUTOCHECKBOX    "Show Configure screen when starting emulation", IDC_0209, 13, 32, 179, 10
+    AUTOCHECKBOX    "Show Configure screen when restarting emulation", IDC_0210, 13, 41, 180, 10
+END
+
+DLG_0300 DIALOG 3, 1, 255, 124
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDisoEFP ISO Creation"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Source CD/DVD Device:", 301, 10, 8, 80, 12
+    EDITTEXT        IDC_0302, 92, 7, 153, 12, ES_AUTOHSCROLL
+    CTEXT           "Device Type: ---", IDC_0303, 10, 22, 234, 12
+    LTEXT           "Iso File:", 304, 11, 39, 26, 12
+    EDITTEXT        IDC_0305, 37, 38, 172, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse", IDC_0306, 214, 37, 31, 14
+    CTEXT           "File Type: ---", IDC_0307, 9, 52, 236, 12
+    LTEXT           "New File Compression:", 308, 10, 71, 72, 12
+    COMBOBOX        IDC_0309, 83, 69, 100, 48, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Multiple Files (all under 2 GB):", 310, 10, 83, 94, 12
+    AUTOCHECKBOX    "", IDC_0311, 107, 83, 40, 10
+    PUSHBUTTON      "Make File", IDC_0312, 9, 104, 40, 14
+    PUSHBUTTON      "Cancel", IDC_0313, 205, 104, 40, 14
+END
+
+DLG_0400 DIALOG 4, 2, 234, 89
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDisoEFP File Conversion"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Iso File:", 401, 11, 7, 25, 12
+    EDITTEXT        IDC_0402, 37, 7, 146, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse", IDC_0403, 189, 6, 35, 12
+    CTEXT           "File Type: ---", IDC_0404, 10, 21, 214, 12
+    LTEXT           "Change Compression To:", 405, 9, 38, 81, 12
+    COMBOBOX        IDC_0406, 91, 36, 100, 50, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Multiple Files (all under 2 GB):", 407, 10, 51, 94, 12
+    AUTOCHECKBOX    "", IDC_0408, 105, 51, 40, 10
+    PUSHBUTTON      "Change File", IDC_0409, 10, 69, 40, 14
+    PUSHBUTTON      "Cancel", IDC_0410, 184, 68, 40, 14
+END
+
+DLG_0500 DIALOG 3, 0, 273, 66
+STYLE DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDisoEFP Progress"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CTEXT           "Twiddling my Thumbs", IDC_0501, 9, 7, 255, 12
+    CONTROL         "", IDC_0502, "msctls_progress32", 0x1 | WS_CLIPSIBLINGS, 8, 19, 257, 11
+    CTEXT           "10 of 10", 503, 10, 32, 254, 12
+    PUSHBUTTON      "Cancel", IDC_0504, 118, 45, 40, 14
+END

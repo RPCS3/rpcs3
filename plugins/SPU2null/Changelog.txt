@@ -1,0 +1,30 @@
+[           Legend:          ]
+[ + Added feature            ]
+[ * Improved/changed feature ]
+[ - Bug fixed (we hope)      ]
+[ ! Attention (Notes)	     ]
+
+ChangeLog:
+
+v0.5
+ [+] Added Seperate IRQ Callbacks with AutoDMA check (refraction)
+ [-] Updated Specs to 0.9 (refraction)
+
+v0.4
+ [+] added vsnet2005beta1 project files. 64bit dll should work fine now (not tested!!)
+
+v0.2
+
+15/06/03
+  [*] clear some stuff,made code more readable (shadow)
+
+
+9/06/03
+  [+] Added some work on CoRE1_ATTR to get bios work (linuzappz)
+
+9/06/03
+
+  [+] Added new SPU2 functions to PS2Edefs.h 0.3.2 version
+  [+] Added loggin system . IT can be enable in SPU2.H
+  [*] Update Ps2edefs to 0.3.1  (shadow)
+

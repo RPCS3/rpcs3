@@ -1,0 +1,27 @@
+pcsx2 log->debugger tty mapping              
+ออออออออออออออออออออออออัออัอออฤฤฤยฤฤฤยฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+Bios                    ณEEณ  0   ณIOPณ  Bios           ณ
+CPU & MMI & COP0 & FPU  ณEEณ  1   ณIOPณ  IOP cpu        ณ
+VU0 & VUMicro           ณEEณ  2   ณIOPณ  HW             ณ
+VIF                     ณEEณ  3   ณIOPณ  GTE            ณ
+GIF                     ณEEณ  4   ณIOPณ  GPU            ณ
+DMA                     ณEEณ  5   ณIOPณ  DMA            ณ
+HW & Unknown Memory     ณEEณ  6   ณIOPณ  Unknown Memory ณ
+ELF & Scratch pad       ณEEณ  7   ณIOPณ  PAD            ณ
+IPU                     ณEEณ  8   ณIOPณ  CDR            ณ
+SIF & RPC services      ณEEณ  9   ณIOPณ                 ณ
+                        ณ  ณ      ณ   ณ                 ณ
+SysMessage              ณEEณKernelณIOPณ  SysMessage     ณ
+ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤมฤฤมฤฤฤฤฤฤมฤฤฤมฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+PRODG: 230,130,    120,121,122,110-119,11F,210-219,21F,410
+CW:    230,130,150,120,121,    210-219,21F,110-119,11F
+
+0400 PROTO_NETMP
+0001 PROTO_DCMP
+     PROTO_MTWKS
+012? PROTO_DRFP (%s)
+0230 PROTO_ESDBG
+0130 PROTO_ISDBG
+011? PROTO_I%dTTY
+021? PROTO_E%dTTY
+

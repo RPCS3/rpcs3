@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+    <_PropertySheetDisplayName>w32pthreads</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SvnRootDir)\3rdparty\w32pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32_PTHREADS;__CLEANUP_SEH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <Link Condition="'$(Configuration)'=='Release' 
+				  or '$(Configuration)'=='Release SSE2'
+				  or '$(Configuration)'=='Release SSE4'
+				  or '$(Configuration)'=='Release SSSE3'">
+      <AdditionalDependencies>w32pthreads_lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug' 
+				  or '$(Configuration)'=='Debug SSE2'
+				  or '$(Configuration)'=='Debug SSE4'
+				  or '$(Configuration)'=='Debug SSSE3'">
+      <AdditionalDependencies>w32pthreads_lib-dbg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Devel'">
+      <AdditionalDependencies>w32pthreads_lib-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

@@ -1,0 +1,257 @@
+#
+# PortAudio V19 Makefile.in
+#
+# Dominic Mazzoni
+# Modifications by Mikael Magnusson
+# Modifications by Stelios Bounanos
+#
+
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+top_builddir = .
+PREFIX = @prefix@
+prefix = $(PREFIX)
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+libdir = @libdir@
+includedir = @includedir@
+CC = @CC@
+CXX = @CXX@
+CFLAGS = @CFLAGS@ @DEFS@
+LIBS = @LIBS@
+AR = @AR@
+RANLIB = @RANLIB@
+SHELL = @SHELL@
+LIBTOOL = @LIBTOOL@
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+SHARED_FLAGS = @SHARED_FLAGS@
+LDFLAGS = @LDFLAGS@
+DLL_LIBS = @DLL_LIBS@
+CXXFLAGS = @CXXFLAGS@
+NASM = @NASM@
+NASMOPT = @NASMOPT@
+LN_S = @LN_S@
+LT_CURRENT=@LT_CURRENT@
+LT_REVISION=@LT_REVISION@
+LT_AGE=@LT_AGE@
+
+OTHER_OBJS = @OTHER_OBJS@
+INCLUDES = @INCLUDES@
+
+PALIB = libportaudio.la
+PAINC = include/portaudio.h
+
+PA_LDFLAGS = $(LDFLAGS) $(SHARED_FLAGS) -rpath $(libdir) -no-undefined \
+	     -export-symbols-regex "(Pa|PaMacCore|PaJack|PaAlsa|PaAsio|PaOSS)_.*" \
+	     -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+
+COMMON_OBJS = \
+	src/common/pa_allocation.o \
+	src/common/pa_converters.o \
+	src/common/pa_cpuload.o \
+	src/common/pa_dither.o \
+	src/common/pa_debugprint.o \
+	src/common/pa_front.o \
+	src/common/pa_process.o \
+	src/common/pa_stream.o \
+	src/common/pa_trace.o \
+	src/hostapi/skeleton/pa_hostapi_skeleton.o
+
+LOOPBACK_OBJS = \
+	qa/loopback/src/audio_analyzer.o \
+	qa/loopback/src/biquad_filter.o \
+	qa/loopback/src/paqa_tools.o \
+	qa/loopback/src/test_audio_analyzer.o \
+	qa/loopback/src/write_wav.o \
+	qa/loopback/src/paqa.o
+	
+EXAMPLES = \
+	bin/pa_devs \
+	bin/pa_fuzz \
+	bin/paex_pink \
+	bin/paex_read_write_wire \
+	bin/paex_record \
+	bin/paex_saw \
+	bin/paex_sine \
+	bin/paex_write_sine \
+	bin/paex_write_sine_nonint
+
+SELFTESTS = \
+	bin/paqa_devs \
+	bin/paqa_errs \
+	bin/paqa_latency
+	
+TESTS = \
+	bin/patest1 \
+	bin/patest_buffer \
+	bin/patest_callbackstop \
+	bin/patest_clip \
+	bin/patest_dither \
+	bin/patest_hang \
+	bin/patest_in_overflow \
+	bin/patest_latency \
+	bin/patest_leftright \
+	bin/patest_longsine \
+	bin/patest_many \
+	bin/patest_maxsines \
+	bin/patest_mono \
+	bin/patest_multi_sine \
+	bin/patest_out_underflow \
+	bin/patest_prime \
+	bin/patest_ringmix \
+	bin/patest_sine8 \
+	bin/patest_sine_channelmaps \
+	bin/patest_sine_formats \
+	bin/patest_sine_time \
+	bin/patest_sine_srate \
+	bin/patest_start_stop \
+	bin/patest_stop \
+	bin/patest_stop_playout \
+	bin/patest_toomanysines \
+	bin/patest_two_rates \
+	bin/patest_underflow \
+	bin/patest_wire \
+	bin/pa_minlat
+
+# Most of these don't compile yet.  Put them in TESTS, above, if
+# you want to try to compile them...
+ALL_TESTS = \
+	$(TESTS) \
+	bin/patest_sync \
+	bin/debug_convert \
+	bin/debug_dither_calc \
+	bin/debug_dual \
+	bin/debug_multi_in \
+	bin/debug_multi_out \
+	bin/debug_record \
+	bin/debug_record_reuse \
+	bin/debug_sine_amp \
+	bin/debug_sine \
+	bin/debug_sine_formats \
+	bin/debug_srate \
+	bin/debug_test1
+
+OBJS := $(COMMON_OBJS) $(OTHER_OBJS)
+
+LTOBJS := $(OBJS:.o=.lo)
+
+SRC_DIRS = \
+	src/common \
+	src/hostapi/alsa \
+	src/hostapi/asihpi \
+	src/hostapi/asio \
+	src/hostapi/coreaudio \
+	src/hostapi/dsound \
+	src/hostapi/jack \
+	src/hostapi/oss \
+	src/hostapi/wasapi \
+	src/hostapi/wdmks \
+	src/hostapi/wmme \
+	src/os/unix \
+	src/os/win
+
+SUBDIRS =
+@ENABLE_CXX_TRUE@SUBDIRS += bindings/cpp
+
+all: lib/$(PALIB) all-recursive tests examples selftests
+
+tests: bin-stamp $(TESTS)
+
+examples: bin-stamp $(EXAMPLES)
+
+selftests: bin-stamp $(SELFTESTS)
+
+loopback: bin-stamp bin/paloopback
+
+# With ASIO enabled we must link libportaudio and all test programs with CXX
+lib/$(PALIB): lib-stamp $(LTOBJS) $(MAKEFILE) $(PAINC)
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) $(PA_LDFLAGS) -o lib/$(PALIB) $(LTOBJS) $(DLL_LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) $(PA_LDFLAGS) -o lib/$(PALIB) $(LTOBJS) $(DLL_LIBS)
+
+$(ALL_TESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) test/%.c
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
+
+$(EXAMPLES): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) examples/%.c
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
+
+$(SELFTESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) qa/%.c
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
+
+bin/paloopback: lib/$(PALIB) $(MAKEFILE) $(PAINC) $(LOOPBACK_OBJS)
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LOOPBACK_OBJS) lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@ $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS)  $(LOOPBACK_OBJS) lib/$(PALIB) $(LIBS)
+
+install: lib/$(PALIB) portaudio-2.0.pc
+	$(INSTALL) -d $(DESTDIR)$(libdir)
+	$(LIBTOOL) --mode=install $(INSTALL) lib/$(PALIB) $(DESTDIR)$(libdir)
+	$(INSTALL) -d $(DESTDIR)$(includedir)
+	for include in $(INCLUDES); do \
+		$(INSTALL_DATA) -m 644 $(top_srcdir)/include/$$include $(DESTDIR)$(includedir)/$$include; \
+	done
+	$(INSTALL) -d $(DESTDIR)$(libdir)/pkgconfig
+	$(INSTALL) -m 644 portaudio-2.0.pc $(DESTDIR)$(libdir)/pkgconfig/portaudio-2.0.pc
+	@echo ""
+	@echo "------------------------------------------------------------"
+	@echo "PortAudio was successfully installed."
+	@echo ""
+	@echo "On some systems (e.g. Linux) you should run 'ldconfig' now"
+	@echo "to make the shared object available.  You may also need to"
+	@echo "modify your LD_LIBRARY_PATH environment variable to include"
+	@echo "the directory $(libdir)"
+	@echo "------------------------------------------------------------"
+	@echo ""
+	$(MAKE) install-recursive
+
+uninstall:
+	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/$(PALIB)
+	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(includedir)/portaudio.h
+	$(MAKE) uninstall-recursive
+
+clean:
+	$(LIBTOOL) --mode=clean rm -f $(LTOBJS) $(LOOPBACK_OBJS) $(ALL_TESTS) lib/$(PALIB)
+	$(RM) bin-stamp lib-stamp
+	-$(RM) -r bin lib
+
+distclean: clean
+	$(RM) config.log config.status Makefile libtool portaudio-2.0.pc
+
+%.o: %.c $(MAKEFILE) $(PAINC)
+	$(CC) -c $(CFLAGS) $< -o $@
+
+%.lo: %.c $(MAKEFILE) $(PAINC)
+	$(LIBTOOL) --mode=compile $(CC) -c $(CFLAGS) $< -o $@
+
+%.lo: %.cpp $(MAKEFILE) $(PAINC)
+	$(LIBTOOL) --mode=compile --tag=CXX $(CXX) -c $(CXXFLAGS) $< -o $@
+
+%.o: %.cpp $(MAKEFILE) $(PAINC)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+%.o: %.asm
+	$(NASM) $(NASMOPT) -o $@ $<
+
+bin-stamp:
+	-mkdir bin
+	touch $@
+
+lib-stamp:
+	-mkdir lib
+	-mkdir -p $(SRC_DIRS)
+	touch $@
+
+Makefile: Makefile.in config.status
+	$(SHELL) config.status
+
+all-recursive:
+	if test -n "$(SUBDIRS)" ; then for dir in "$(SUBDIRS)"; do $(MAKE) -C $$dir all; done ; fi
+
+install-recursive:
+	if test -n "$(SUBDIRS)" ; then for dir in "$(SUBDIRS)"; do $(MAKE) -C $$dir install; done ; fi
+
+uninstall-recursive:
+	if test -n "$(SUBDIRS)" ; then for dir in "$(SUBDIRS)"; do $(MAKE) -C $$dir uninstall; done ; fi

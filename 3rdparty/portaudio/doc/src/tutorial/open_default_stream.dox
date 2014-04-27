@@ -1,0 +1,48 @@
+/** @page open_default_stream Opening a Stream Using Defaults
+@ingroup tutorial
+
+The next step is to open a stream, which is similar to opening a file. You can specify whether you want audio input and/or output, how many channels, the data format, sample rate, etc. Opening a ''default'' stream means opening the default input and output devices, which saves you the trouble of getting a list of devices and choosing one from the list. (We'll see how to do that later.)
+@code
+#define SAMPLE_RATE (44100)
+static paTestData data;
+
+.....
+
+    PaStream *stream;
+    PaError err;
+
+    /* Open an audio I/O stream. */
+    err = Pa_OpenDefaultStream( &stream,
+                                0,          /* no input channels */
+                                2,          /* stereo output */
+                                paFloat32,  /* 32 bit floating point output */
+                                SAMPLE_RATE,
+                                256,        /* frames per buffer, i.e. the number
+                                                   of sample frames that PortAudio will
+                                                   request from the callback. Many apps
+                                                   may want to use
+                                                   paFramesPerBufferUnspecified, which
+                                                   tells PortAudio to pick the best,
+                                                   possibly changing, buffer size.*/
+                                patestCallback, /* this is your callback function */
+                                &data ); /*This is a pointer that will be passed to
+                                                   your callback*/
+    if( err != paNoError ) goto error;
+@endcode
+
+The data structure and callback are described in \ref writing_a_callback.
+
+The above example opens the stream for writing, which is sufficient for playback. It is also possible to open a stream for reading, to do recording, or both reading and writing, for simultaneous recording and playback or even real-time audio processing. If you plan to do playback and recording at the same time, open only one stream with valid input and output parameters.
+
+There are some caveats to note about simultaneous read/write:
+
+ - Some platforms can only open a read/write stream using the same device.
+ - Although multiple streams can be opened, it is difficult to synchronize them.
+ - Some platforms don't support opening multiple streams on the same device.
+ - Using multiple streams may not be as well tested as other features.
+ - The PortAudio library calls must be made from the same thread or synchronized by the user.
+
+
+Previous: \ref initializing_portaudio | Next: \ref start_stop_abort
+
+*/

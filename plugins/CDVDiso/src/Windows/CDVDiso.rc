@@ -1,0 +1,127 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxresmw.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Spanish (Argentina) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ESS)
+#ifdef _WIN32
+LANGUAGE LANG_SPANISH, SUBLANG_SPANISH_ARGENTINA
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxresmw.h""\r\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG DIALOGEX 0, 0, 212, 161
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDconfigure"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,105,140,50,14
+    EDITTEXT        IDC_ISOFILE,10,10,145,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Cancel",IDCANCEL,160,140,50,14
+    PUSHBUTTON      "Select Iso",IDC_SELECTISO,160,10,45,14
+    PUSHBUTTON      "Compress Iso",IDC_COMPRESSISO,33,75,65,14
+    PUSHBUTTON      "Decompress Iso",IDC_DECOMPRESSISO,113,75,65,14
+    COMBOBOX        IDC_METHOD,120,55,85,50,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,10,35,145,14
+    LTEXT           "Compression Method:",IDC_STATIC,29,57,69,8
+    PUSHBUTTON      "Stop",IDC_STOP,160,35,45,14
+    GROUPBOX        "",IDC_STATIC,5,0,205,95
+    GROUPBOX        "Options",IDC_STATIC,5,100,205,30
+    CONTROL         "Enable Block Dump => ""ISO name.dump""",IDC_BLOCKDUMP,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,115,148,10
+END
+
+IDD_ABOUT DIALOG  0, 0, 177, 106
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDabout"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,65,85,50,14
+    LTEXT           "CDVDiso Driver",IDC_NAME,70,10,50,8
+    GROUPBOX        "",IDC_STATIC,5,35,170,40
+    LTEXT           "Thanks to:\n    mooby - coding hints and .bz support\n    Brenden Conte - linux conf bugfix",IDC_STATIC,10,45,160,25
+    LTEXT           "Author: linuzappz <linuzappz@hotmail.com>",IDC_STATIC,20,20,141,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 205
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 154
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 170
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 99
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Spanish (Argentina) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

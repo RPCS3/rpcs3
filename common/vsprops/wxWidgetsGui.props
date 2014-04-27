@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+    <_PropertySheetDisplayName>wxWidgets_UseGui</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SvnRootDir)\3rdparty\w32pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_UNICODE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <Link Condition="'$(Configuration)'=='Release' 
+				  or '$(Configuration)'=='Release SSE2'
+				  or '$(Configuration)'=='Release SSE4'
+				  or '$(Configuration)'=='Release SSSE3'">
+      <AdditionalDependencies>wxAdv28.lib;wxBase28.lib;wxCore28.lib;zlib.lib;libjpeg7.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug' 
+				  or '$(Configuration)'=='Debug SSE2'
+				  or '$(Configuration)'=='Debug SSE4'
+				  or '$(Configuration)'=='Debug SSSE3'">
+      <AdditionalDependencies>wxAdv28-dbg.lib;wxBase28-dbg.lib;wxCore28-dbg.lib;zlib-dbg.lib;libjpeg7-dbg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Devel'">
+      <AdditionalDependencies>wxAdv28-dev.lib;wxBase28-dev.lib;wxCore28-dev.lib;zlib-dev.lib;libjpeg7-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

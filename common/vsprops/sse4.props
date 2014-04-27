@@ -1,0 +1,19 @@
+﻿<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <SSEtype>SSE4</SSEtype>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_PropertySheetDisplayName>sse4</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_M_SSE=0x401;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="SSEtype">
+      <Value>$(SSEtype)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

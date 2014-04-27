@@ -1,0 +1,43 @@
+Changes:
+-------
+ CDVDlinuz v0.4 (efp):
+ * Moved all "threaded" code to CDVDEFP (actual directory) (efp)
+ * Copied mid-level (not low-level) device drivers from CDVDisoEFP (efp)
+ * In Windows, when newly selected from the PCSX2 configure screen, CDVDinit()
+     (as well as InitConf()) are not called. Fixed. (efp)
+
+ CDVDEFP v0.3 (efp):
+ * Protection against "Interrupted system call" errors enhanced (threading)
+ * Simplified ReadLoop completion detection code (threading)
+ * Separated buffer.c from device.c for cross-CDVD portability.
+
+ CDVDEFP v0.2 (efp):
+ * Separated out device command calls (for easier maintainability)
+ * Added a read cache (currently sized at 512kb)
+ * Added threading code (pthreads, because it's portable)
+ *   With threading comes tray polling (currently at 1/sec)
+ *   With threading comes a read-ahead function (currently set to 64kb)
+
+ CDVDEFP v0.1 (efp):
+ * Updated to 0.6.0 (beta) specs
+ * Removed Glade influence in Configure/About interfaces
+ * Added O_NONBLOCK so disc is not required to be in drive when Pcsx2 starts
+     discs can now be switched out at will.
+ * Separated CD and DVD access calls for better maintainability
+ * Removed 2GB byte limitation to DVD sector calls
+ * Collected all info on disc when disc is first inserted
+ * Expanded disc type detection to meet 0.6.0 specs.
+     CD/DVD detection. PS1/PS2/CDDA/other detection.
+ * Multilevel Debug info added (currently controlled by #defines)
+
+ CDVDlinuz v0.3 (linuzappz):
+ * Updated to 0.4.3 specs
+
+ CDVDlinuz v0.2 (linuzappz):
+ * Updated to 0.2.9 specs
+
+ CDVDlinuz v0.1 (linuzappz):
+ * First Release
+ * Tested with Pcsx2
+
+ Email: <linuzappz@hotmail.com>

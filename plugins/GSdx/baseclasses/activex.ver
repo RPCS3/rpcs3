@@ -1,0 +1,56 @@
+//------------------------------------------------------------------------------
+// File: Activex.ver
+//
+// Desc: DirectShow base classes - common versioning information for 
+//       ACTIVEX binaries.
+//
+// Copyright (c) 1996-2002, Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------------------------
+
+
+#ifndef _ACTIVEX_VER_
+#define _ACTIVEX_VER_
+
+// NOTE: all string resources that will be used in ACTIVEX.RCV for the
+// version resource information *MUST* have an explicit \0 terminator!
+
+#define VERSION_RES_MAJOR_VER   9
+#define VERSION_RES_MINOR_VER   0
+#define VERSION_RES_BUILD       0
+
+#define VERSION_RES_STRING_D    "9.00 (Debug)\0"
+#define VERSION_RES_STRING      "9.00\0"
+
+#define VERSION_RES_PRODUCT_NAME  "DirectX 9.0 Sample\0"
+#define VERSION_RES_COMMENT       "DirectShow Sample\0"
+#define VERSION_RES_COMPANY_NAME  "Microsoft Corporation\0"
+#define VERSION_RES_COPYRIGHT     "Copyright (C) 1992-2002 Microsoft Corporation\0"
+
+// The following defines are required on a file-by-file basis
+//
+// #define VERSION_RES_BIN_NAME         "sample.ax\0"
+// #define VERSION_RES_BIN_DESCRIPTION  "Sample Filter\0"
+//
+// Also required, if you don't want the defaults, are
+//
+// #define VERSION_RES_ACTIVEX  "Filter dll\0" (the default value)
+//
+// A string defining the type of component.
+//
+// #define VERSION_RES_TYPE     VFT_DLL (default)
+//                              VFT_APP
+//                              VFT_VXD
+//                              VFT_DRV
+//                              VFT_FONT
+//                              VFT_STATIC_LIB
+//                              VFT_UNKNOWN
+//
+// #define VERSION_RES_SUBTYPE  VFT2_UNKNOWN (default)
+//                              VFT2_DRV_INSTALLABLE
+//                              VFT2_DRV_SOUND
+//                              <several other options>
+//
+// See winver.h for further details
+
+#endif
+

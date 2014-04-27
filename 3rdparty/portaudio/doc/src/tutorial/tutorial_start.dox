@@ -1,0 +1,58 @@
+/** @page tutorial_start PortAudio Tutorials
+@ingroup tutorial
+
+These tutorials takes you through a hands-on example of using PortAudio to make sound. If you'd prefer to start with a top-down overview of the PortAudio API, check out the @ref api_overview.
+
+@section tut_start1 Downloading
+
+First thing you need to do is download the PortAudio source code either <a href="http://www.portaudio.com/download.html">as a tarball from the website</a>, or <a href="http://www.portaudio.com/usingsvn.html">from the Subversion Repository</a>.
+
+@section tut_start2 Compiling
+
+Once you've downloaded PortAudio you'll need to compile it, which of course, depends on your environment:
+
+ - Windows
+   - \ref compile_windows
+   - \ref compile_windows_mingw
+   - \ref compile_windows_asio_msvc
+   - \ref compile_cmake
+ - Mac OS X
+   - \ref compile_mac_coreaudio
+ - POSIX
+   - \ref compile_linux
+
+Many platforms with GCC/make can use the simple ./configure && make combination and simply use the resulting libraries in their code.
+
+@section tut_start3 Programming with PortAudio
+
+Below are the steps to writing a PortAudio application using the callback technique:
+
+ - Write a callback function that will be called by PortAudio when audio processing is needed.
+ - Initialize the PA library and open a stream for audio I/O.
+ - Start the stream. Your callback function will be now be called repeatedly by PA in the background.
+ - In your callback you can read audio data from the inputBuffer and/or write data to the outputBuffer.
+ - Stop the stream by returning 1 from your callback, or by calling a stop function.
+ - Close the stream and terminate the library.
+
+In addition to this "Callback" architecture, V19 also supports a "Blocking I/O" model which uses read and write calls which may be more familiar to non-audio programmers. Note that at this time, not all APIs support this functionality.
+
+In this tutorial, we'll show how to use the callback architecture to play a sawtooth wave. Much of the tutorial is taken from the file paex_saw.c, which is part of the PortAudio distribution. When you're done with this tutorial, you'll be armed with the basic knowledge you need to write an audio program. If you need more sample code, look in the "examples" and "test" directory of the PortAudio distribution. Another great source of info is the portaudio.h Doxygen page, which documents the entire V19 API. Also see the page for <a href="http://www.assembla.com/spaces/portaudio/wiki/Tips">tips on programming PortAudio</a> on the PortAudio wiki.
+
+@section tut_start4 Programming Tutorial Contents
+
+- \ref writing_a_callback
+- \ref initializing_portaudio
+- \ref open_default_stream
+- \ref start_stop_abort
+- \ref terminating_portaudio
+- \ref utility_functions
+- \ref querying_devices
+- \ref blocking_read_write
+
+If you are upgrading from V18, you may want to look at the <a href="http://www.portaudio.com/docs/proposals/index.html">Proposed Enhancements to PortAudio</a>, which describes the differences between V18 and V19.
+
+Once you have a basic understanding of how to use PortAudio, you might be interested in \ref exploring.
+
+Next: \ref writing_a_callback
+
+*/

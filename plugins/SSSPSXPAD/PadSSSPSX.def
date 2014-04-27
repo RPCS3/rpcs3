@@ -1,0 +1,24 @@
+;LIBRARY      "PadSSSPSX"
+
+EXPORTS
+    PSEgetLibType       @1
+    PSEgetLibName       @2
+    PSEgetLibVersion    @3
+    PS2EgetLibType      @4
+    PS2EgetLibName      @5
+    PS2EgetLibVersion2  @6
+    PADinit             @7
+    PADshutdown         @8
+    PADopen             @9
+    PADclose            @10
+    PADkeyEvent         @11
+    PADstartPoll        @12
+    PADpoll             @13
+    PADreadPort1        @14
+    PADreadPort2        @15
+    PADquery            @16
+    PADconfigure        @17
+    PADtest             @18
+    PADabout            @19
+    ;PADfreeze			@20
+	PADsetSettingsDir	@21

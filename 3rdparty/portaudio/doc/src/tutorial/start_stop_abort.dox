@@ -1,0 +1,35 @@
+/** @page start_stop_abort Starting, Stopping and Aborting a Stream
+@ingroup tutorial
+
+@section tut_startstop1 Starting, Stopping and Aborting a Stream
+
+PortAudio will not start playing back audio until you start the stream. After calling Pa_StartStream(), PortAudio will start calling your callback function to perform the audio processing.
+
+@code
+    err = Pa_StartStream( stream );
+    if( err != paNoError ) goto error;
+@endcode
+
+You can communicate with your callback routine through the data structure you passed in on the open call, or through global variables, or using other interprocess communication techniques, but please be aware that your callback function may be called at interrupt time when your foreground process is least expecting it. So avoid sharing complex data structures that are easily corrupted like double linked lists, and avoid using locks such as mutexs as this may cause your callback function to block and therefore drop audio. Such techniques may even cause deadlock on some platforms.
+
+PortAudio will continue to call your callback and process audio until you stop the stream. This can be done in one of several ways, but, before we do so, we'll want to see that some of our audio gets processed by sleeping for a few seconds. This is easy to do with Pa_Sleep(), which is used by many of the examples in the patests/ directory for exactly this purpose. Note that, for a variety of reasons, you can not rely on this function for accurate scheduling, so your stream may not run for exactly the same amount of time as you expect, but it's good enough for our example.
+
+@code
+    /* Sleep for several seconds. */
+    Pa_Sleep(NUM_SECONDS*1000);
+@endcode
+
+Now we need to stop playback. There are several ways to do this, the simplest of which is to call Pa_StopStream():
+
+@code
+    err = Pa_StopStream( stream );
+    if( err != paNoError ) goto error;
+@endcode
+
+Pa_StopStream() is designed to make sure that the buffers you've processed in your callback are all played, which may cause some delay. Alternatively, you could call Pa_AbortStream(). On some platforms, aborting the stream is much faster and may cause some data processed by your callback not to be played.
+
+Another way to stop the stream is to return either paComplete, or paAbort from your callback. paComplete ensures that the last buffer is played whereas paAbort stops the stream as soon as possible. If you stop the stream using this technique, you will need to call Pa_StopStream() before starting the stream again.
+
+Previous: \ref open_default_stream | Next: \ref terminating_portaudio
+
+*/

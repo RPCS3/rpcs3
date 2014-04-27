@@ -1,0 +1,29 @@
+; USBlinuz.def : Declares the module parameters for the DLL.
+
+;LIBRARY      "USBnull"
+;DESCRIPTION  'USBnull Driver'
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	USBinit				@5
+	USBshutdown			@6
+	USBopen				@7
+	USBclose			@8
+	USBread8			@9
+	USBread16			@10
+	USBread32			@11
+	USBwrite8			@12
+	USBwrite16			@13
+	USBwrite32			@14
+	USBirqCallback		@15
+	USBirqHandler		@16
+	USBsetRAM			@17
+
+	USBconfigure		@18
+	USBtest				@19
+	USBabout			@20
+	
+	USBsetSettingsDir

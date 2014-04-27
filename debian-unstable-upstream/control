@@ -1,0 +1,68 @@
+Source: pcsx2.snapshot
+Section: contrib/games
+Priority: optional
+Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
+Build-Depends: cmake (>= 2.8.5),
+    debhelper (>= 8.9),
+    dpkg-dev (>= 1.15.7),
+    libaio-dev,
+    libasound2-dev,
+    libbz2-dev,
+    libegl1-mesa-dev,
+    libgl1-mesa-dev,
+    libglew-dev,
+    libglu1-mesa-dev,
+    libgtk2.0-dev (>= 2.16),
+    libjpeg-dev,
+    libsdl1.2-dev,
+    libsoundtouch-dev,
+    libsparsehash-dev,
+    libwxbase2.8-dev,
+    libwxgtk2.8-dev,
+    libx11-dev,
+    locales | locales-all,
+# Future: depends on "nvidia-cg-dev" directly
+    libcg, nvidia-cg-toolkit (>= 3),
+    portaudio19-dev,
+    zlib1g-dev (>= 1:1.2.3.3)
+Standards-Version: 3.9.3
+Homepage: http://pcsx2.net/
+
+Package: pcsx2-unstable
+Architecture: i386
+Depends: ${shlibs:Depends}, ${misc:Depends}
+# libasound => alsa plugin for pulseaudio
+# libusb    => ps3 controller (and probably others)
+Recommends: libasound2-plugins,
+    libusb-0.1-4
+Conflicts: pcsx2,
+    pcsx2-data-unstable,
+    pcsx2-l10n-unstable,
+    pcsx2-plugins-unstable
+Replaces: pcsx2-data-unstable,
+    pcsx2-l10n-unstable,
+    pcsx2-plugins-unstable
+Description: Playstation 2 emulator
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux.
+ .
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
+
+Package: pcsx2-unstable-dbg
+Section: contrib/debug
+Priority: extra
+Architecture: i386
+Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
+Conflicts: pcsx2-dbg,
+    pcsx2-plugins-unstable-dbg
+Replaces: pcsx2-plugins-unstable-dbg
+Description: Debug symbols for pcsx2
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux.
+ .
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
+ .
+ This package contains the debug symbols for PCSX2.
+

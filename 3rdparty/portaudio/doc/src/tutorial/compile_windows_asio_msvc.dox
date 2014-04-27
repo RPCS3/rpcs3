@@ -1,0 +1,95 @@
+/** @page compile_windows_asio_msvc Building Portaudio for Windows with ASIO support using MSVC
+@ingroup tutorial
+
+@section comp_win_asiomsvc1 Portaudio Windows ASIO with MSVC
+
+This tutorial describes how to build PortAudio with ASIO support using MSVC *from scratch*, without an existing Visual Studio project. For instructions for building PortAudio (including ASIO support) using the bundled Visual Studio project file see the compiling instructions for \ref compile_windows.
+
+ASIO is a low latency audio API from Steinberg. To compile an ASIO
+application, you must first download the ASIO SDK from Steinberg. You also
+need to obtain ASIO drivers for your audio device. Download the ASIO SDK from Steinberg at http://www.steinberg.net/en/company/developer.html. The SDK is free but you will need to set up a developer account with Steinberg.
+
+This tutorial assumes that you have 3 directories set up at the same level (side by side), one containing PortAudio, one containing the ASIO SDK and one containing your Visual Studio project:
+
+@code
+/ASIOSDK2 
+/portaudio
+/DirContainingYourVisualStudioProject
+@endcode
+
+First, make sure that the Steinberg SDK and the portaudio files are "side by side" in the same directory.
+
+Open Microsoft Visual C++ and create a new blank Console exe Project/Workspace in that same directory.
+
+For example, the paths for all three groups might read like this:
+
+@code
+C:\Program Files\Microsoft Visual Studio\VC98\My Projects\ASIOSDK2
+C:\Program Files\Microsoft Visual Studio\VC98\My Projects\portaudio
+C:\Program Files\Microsoft Visual Studio\VC98\My Projects\Sawtooth
+@endcode
+
+
+Next, add the following Steinberg ASIO SDK files to the project Source Files: 
+
+@code
+asio.cpp                        (ASIOSDK2\common)
+asiodrivers.cpp                 (ASIOSDK2\host)
+asiolist.cpp                    (ASIOSDK2\host\pc)
+@endcode
+
+
+Then, add the following PortAudio files to the project Source Files:
+
+@code
+pa_asio.cpp                     (portaudio\src\hostapi\asio)
+pa_allocation.c                 (portaudio\src\common)
+pa_converters.c                 (portaudio\src\common)
+pa_cpuload.c                    (portaudio\src\common)
+pa_dither.c                     (portaudio\src\common)
+pa_front.c                      (portaudio\src\common)
+pa_process.c                    (portaudio\src\common)
+pa_ringbuffer.c                 (portaudio\src\common)
+pa_stream.c                     (portaudio\src\common)
+pa_trace.c                      (portaudio\src\common)
+pa_win_hostapis.c               (portaudio\src\os\win)
+pa_win_util.c                   (portaudio\src\os\win)
+pa_win_waveformat.c             (portaudio\src\os\win)
+pa_x86_plain_converters.c       (portaudio\src\os\win)
+patest_saw.c                    (portaudio\test)  (Or another file containing main() 
+                                                   for the console exe to be built.)
+@endcode
+
+
+Although not strictly necessary, you may also want to add the following files to the project Header Files:
+
+@code
+portaudio.h                     (portaudio\include)
+pa_asio.h                       (portaudio\include)
+@endcode
+
+These header files define the interfaces to the PortAudio API.
+
+
+Next, go to Project Settings > All Configurations  > C/C++ > Preprocessor > Preprocessor definitions and add
+PA_USE_ASIO=1 to any entries that might be there.
+
+eg: WIN32;_CONSOLE;_MBCS   changes to    WIN32;_CONSOLE,_MBCS;PA_USE_ASIO=1
+
+Then, on the same Project Settings tab, go down to Additional include directories: and enter the following relative include paths.
+
+@code
+..\portaudio\include,..\portaudio\src\common,..\asiosdk2\common,..\asiosdk2\host,..\asiosdk2\host\pc
+@endcode
+
+You'll need to make sure the relative paths are correct for the particular directory layout you're using. The above should work fine if you use the side-by-side layout we recommended earlier.
+
+You should now be able to build any of the test executables in the portaudio\test directory.
+We suggest that you start with patest_saw.c because it's one of the simplest test files.
+
+--- Chris Share, Tom McCandless, Ross Bencina
+
+[wiki:UsingThePortAudioSvnRepository  SVN instructions]
+Back to the Tutorial: \ref tutorial_start
+
+*/

@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "bin2cpp\bin2c.vcproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GSDumpGUI", "GSDumpGUI\GSDumpGUI.csproj", "{825E4311-652D-4A1E-8AA1-F6D81B186E33}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Debug|Win32.ActiveCfg = Debug|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Debug|Win32.Build.0 = Debug|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release|Win32.Build.0 = Release|Win32
+		{825E4311-652D-4A1E-8AA1-F6D81B186E33}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{825E4311-652D-4A1E-8AA1-F6D81B186E33}.Debug|Win32.Build.0 = Debug|Any CPU
+		{825E4311-652D-4A1E-8AA1-F6D81B186E33}.Release|Win32.ActiveCfg = Release|Any CPU
+		{825E4311-652D-4A1E-8AA1-F6D81B186E33}.Release|Win32.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

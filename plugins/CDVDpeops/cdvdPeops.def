@@ -1,0 +1,30 @@
+; cdvdPeops.def : Declares the module parameters for the DLL.
+
+LIBRARY      "cdvdPeops"
+
+EXPORTS
+    ; Explicit exports can go here
+	
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	CDVDinit			@5			  
+	CDVDshutdown		@6
+	CDVDopen			@7
+	CDVDclose			@8
+	CDVDconfigure		@9
+	CDVDabout			@10
+	CDVDtest			@11
+	CDVDgetTN			@12
+	CDVDgetTD			@13
+	CDVDreadTrack		@14
+	CDVDgetBuffer		@15
+	CDVDgetDiskType	    @16
+    CDVDgetTrayStatus	@17
+    CDVDreadSubQ		@18
+    CDVDgetTOC			@19
+    CDVDctrlTrayOpen	@20
+    CDVDctrlTrayClose	@21
+;    PS2EgetCpuPlatform  @18
+ 
+

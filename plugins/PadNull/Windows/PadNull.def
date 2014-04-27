@@ -1,0 +1,23 @@
+; FireWire.def : Declares the module parameters for the DLL.
+
+;LIBRARY      "PadNull"
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType			@2
+	PS2EgetLibName			@3
+	PS2EgetLibVersion2		@4
+	PADinit					@5
+	PADshutdown				@6
+	PADopen					@7
+	PADclose				@8
+	PADkeyEvent				@9
+	PADstartPoll			@10
+	PADpoll					@11
+	PADquery				@12
+	PADupdate				@13
+	PADgsDriverInfo			@14
+	PADfreeze				@15
+	PADconfigure			@16
+	PADtest					@17
+	PADabout				@18

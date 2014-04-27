@@ -1,0 +1,21 @@
+; FireWire.def : Declares the module parameters for the DLL.
+
+;LIBRARY      "FWnull"
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	FWinit			@5
+	FWshutdown		@6
+	FWopen			@7
+	FWclose			@8
+	FWread32			@11
+	FWwrite32			@14
+	FWirqCallback		@15
+	FWconfigure		@17
+	FWtest			@18
+	FWabout			@19
+	
+	FWsetSettingsDir

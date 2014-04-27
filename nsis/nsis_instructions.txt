@@ -1,0 +1,77 @@
+-------------------------------------
+  PCSX2 NSIS Installer Instructions
+-------------------------------------
+
+ * Install NSIS (tested with 2.46), make sure to include the "Modern User Interface"
+ * Install NSIS Script: Advanced Uninstall Log (you can find it on NSIS wiki)
+   ( Currently at http://nsis.sourceforge.net/Advanced_Uninstall_Log_NSIS_Header )
+
+/*******
+ -- Not needed as we now build using VS2013 --:
+* Download the Visual C++ 2008 SP1 Redistributable and save it to this nsis/ folder under the name:
+     vcredist_2008_sp1_x86.exe ( http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe )
+*******/
+
+/*******
+ -- Not needed as we now build using VS2013 --:
+ * Download the Visual C++ 2010 SP1 Redistributable and save it to this nsis/ folder.
+   ( http://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe )
+   Rename the download to "vcredist_2010_sp1_x86.exe".
+*******/
+
+  * Download the Visual C++ 2013 Redistributable and save it to this nsis/ folder.
+   ( http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe )
+   Rename the download to "vcredist_2013_x86.exe".
+   
+ * Download the DirectX Web Installer (dxwebsetup.exe) from Microsoft's website and save it to
+   this nsis/ folder.  (currently required, might be made optional later).
+   ( http://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe )
+   No name change is required. 
+ 
+ * Load the PCSX2 Suite solution and rebuild all in the following targets:
+    * Release SSE2
+    * Release SSSE3 (only needed if packaging plugins)
+    * Release SSE4 (only needed if packaging plugins)
+    * Release AVX (only needed if packaging plugins)
+    * Devel (optional) /* not enabled in the installer either, so need to do that as well */
+    
+    You may selectively unload plugins you do not wish to package prior to running the NSIS
+    script.
+
+ * Compile scripts (pcsx2_web_install.nsi and pcsx2_full_install.nsi)!
+   Output executables will be generated to the output/ folder.
+ 
+ 
+--------------------------------------------
+  Compilation Targets and Plugin Inclusion
+--------------------------------------------
+
+The installer will include plugins only if they are present.  If you do not build plugins, or
+remove some (or all) plugins before running the nsis script, only PCSX2 and whatever remaining
+plugins will be packaged.
+
+GSdx SSE2, SSSE3, SSE4 and AVX versions are all included into the installer *if* they are present.
+You will need to follow the above instructions and compile all release targets to get all the
+GSdx DLLs.
+
+
+--------------------------------------------
+      Recommendations to Developers
+--------------------------------------------
+
+From Air:  I use Eclipse to edit NSIS scripts.  Do a google search for 'nsis eclipse' and it
+should take you to the NSIS wiki with instructions on how to set up a NSIS environment in
+Eclipse.  This typically only takes me a few minutes (yes it's really that painless).  Via
+Eclipse you can use F2 and F3 for online help and context help on NSIS commands, and the syntax
+highlighting is very clean and NSIS-specific.  Additionally it'll give you Visual Studio-style
+hyperlinks for errors during compilation, so that you can simply click on an error and be taken
+right to the offending line of code.  Highly recommended! :)
+
+
+--------------------------------------------
+            TODO / Wish List!!
+--------------------------------------------
+
+ * pcsx2-dev should probably be an optional section, conditionally scripted only if the
+   file is present at compilation time, and packaged.
+ 

@@ -1,0 +1,32 @@
+ILOADP_MODULE_INFO{
+        u16     flags          дддд© <ддд©
+        u16     version        <ддды дддды
+        u32     addr
+	u32	sz_text
+	u32	sz_data
+	u32	sz_bss
+	u32	reserved1
+	u32	reserved2
+	u32	reserved3
+	u8*	name
+};
+
+ILOADP_HDR{
+	u8	cmd
+	u8	action
+	u8	result
+	u8	stamp
+	u32	module_id
+};
+
+ILOADP_START(cmd==00)
+------------------------------------------
+ILOADP_HDR_START{
+	ILOADP_HDR	hdr		//+00
+	u8*		modulename	//+10	//asciiz
+};					//=10+strlen(modulename)+1
+action		0D(IOP_LOAD_IRX)
+modulename	host:E:\TEMP2\GCC\share\SIO2D.IRX
+
+action		02(IOP_RUN)
+modulename	E:\TEMP2\GCC\share\SIO2D.IRX param

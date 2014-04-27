@@ -1,0 +1,6 @@
+?package(pcsx2-unstable): \
+    needs="X11" \
+    section="Applications/Emulators" \
+    title="pcsx2" \
+    longtitle="A playstation 2 emulator" \
+    command="/usr/games/pcsx2"

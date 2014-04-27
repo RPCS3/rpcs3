@@ -1,0 +1,66 @@
+/** @page writing_a_callback Writing a Callback Function
+@ingroup tutorial
+
+To write a program using PortAudio, you must include the "portaudio.h" include file. You may wish to read "portaudio.h" because it contains a complete description of the PortAudio functions and constants. Alternatively, you could browse the [http://www.portaudio.com/docs/v19-doxydocs/portaudio_8h.html "portaudio.h" Doxygen page]
+@code
+#include "portaudio.h"
+@endcode
+The next task is to write your own "callback" function. The "callback" is a function that is called by the PortAudio engine whenever it has captured audio data, or when it needs more audio data for output.
+
+Before we begin, it's important to realize that the callback is a delicate place. This is because some systems perform the callback in a special thread, or interrupt handler, and it is rarely treated the same as the rest of your code. In addition, if you want your audio to reach the speakers on time, you'll need to make sure whatever code you run in the callback runs quickly. What is safe or not safe will vary from platform to platform, but as a rule of thumb, don't do anything like allocating or freeing memory, reading or writing files, printf(), or anything else that might take an unbounded amount of time or rely on the OS or require a context switch. <i>Ed: is this still true?: Also do not call any PortAudio functions in the callback except for Pa_StreamTime() and Pa_GetCPULoad().</i>
+
+Your callback function must return an int and accept the exact parameters specified in this typedef:
+
+@code
+typedef int PaStreamCallback( const void *input,
+                                      void *output,
+                                      unsigned long frameCount,
+                                      const PaStreamCallbackTimeInfo* timeInfo,
+                                      PaStreamCallbackFlags statusFlags,
+                                      void *userData ) ;
+@endcode
+Here is an example callback function from the test file "patests/patest_saw.c". It calculates a simple left and right sawtooth signal and writes it to the output buffer. Notice that in this example, the signals are of float data type. The signals must be between -1.0 and +1.0. You can also use 16 bit integers or other formats which are specified during setup, but floats are easiest to work with. You can pass a pointer to your data structure through PortAudio which will appear as userData.
+
+@code
+typedef struct
+{
+    float left_phase;
+    float right_phase;
+}   
+paTestData;
+
+/* This routine will be called by the PortAudio engine when audio is needed.
+** It may called at interrupt level on some machines so don't do anything
+** that could mess up the system like calling malloc() or free().
+*/ 
+static int patestCallback( const void *inputBuffer, void *outputBuffer,
+                           unsigned long framesPerBuffer,
+                           const PaStreamCallbackTimeInfo* timeInfo,
+                           PaStreamCallbackFlags statusFlags,
+                           void *userData )
+{
+    /* Cast data passed through stream to our structure. */
+    paTestData *data = (paTestData*)userData; 
+    float *out = (float*)outputBuffer;
+    unsigned int i;
+    (void) inputBuffer; /* Prevent unused variable warning. */
+    
+    for( i=0; i<framesPerBuffer; i++ )
+    {
+        *out++ = data->left_phase;  /* left */
+        *out++ = data->right_phase;  /* right */
+        /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
+        data->left_phase += 0.01f;
+        /* When signal reaches top, drop back down. */
+        if( data->left_phase >= 1.0f ) data->left_phase -= 2.0f;
+        /* higher pitch so we can distinguish left and right. */
+        data->right_phase += 0.03f;
+        if( data->right_phase >= 1.0f ) data->right_phase -= 2.0f;
+    }
+    return 0;
+}
+@endcode
+
+Previous: \ref tutorial_start | Next: \ref initializing_portaudio
+
+*/

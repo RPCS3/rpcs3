@@ -1,0 +1,31 @@
+; SPU2null.def : Declares the module parameters for the DLL.
+
+LIBRARY      "SPU2null"
+DESCRIPTION  'SPU2 Null Driver'
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	SPU2init			@5
+	SPU2shutdown		@6
+	SPU2open			@7
+	SPU2close			@8
+	SPU2write			@9
+	SPU2read			@10
+    SPU2readDMA4Mem     @11
+    SPU2writeDMA4Mem    @12
+    SPU2readDMA7Mem     @13
+    SPU2writeDMA7Mem    @14
+    SPU2async           @15
+    SPU2interruptDMA4   @16
+    SPU2interruptDMA7   @17
+    SPU2freeze			@18
+	SPU2configure		@21
+	SPU2test			@22
+	SPU2about			@23
+
+	SPU2ReadMemAddr			@24
+	SPU2WriteMemAddr		@25
+	SPU2irqCallback			@26

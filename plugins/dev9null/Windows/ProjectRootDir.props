@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <SvnRootDir>$(ProjectRootDir)\..\..</SvnRootDir>
+    <SvnCommonDir>$(SvnRootDir)\common</SvnCommonDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <BuildMacro Include="SvnRootDir">
+      <Value>$(SvnRootDir)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

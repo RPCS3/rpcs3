@@ -1,0 +1,31 @@
+EXPORTS
+    GSabout = GSabout@0 @90
+    GSclose = GSclose@0 @91
+    GSconfigure = GSconfigure@0 @92
+    GSfreeze = GSfreeze@8 @93
+    GSgetDriverInfo = GSgetDriverInfo@4 @94
+    GSgifTransfer1 = GSgifTransfer1@8 @95
+    GSgifTransfer2 = GSgifTransfer2@8 @96
+    GSgifTransfer3 = GSgifTransfer3@8 @97
+    GSinit = GSinit@0 @99
+    GSirqCallback = GSirqCallback@4 @101
+    GSkeyEvent = GSkeyEvent@4 @102
+    GSmakeSnapshot = GSmakeSnapshot@4 @103
+    GSopen = GSopen@8 @104
+    GSprintf = GSprintf@0 @105
+    GSread16 = GSread16@4 @106
+    GSread32 = GSread32@4 @107
+    GSread64 = GSread64@4 @108
+    GSread8 = GSread8@4 @109
+    GSreadFIFO = GSreadFIFO@4 @110
+    GSreset @111
+    GSshutdown = GSshutdown@0 @112
+    GStest = GStest@0 @113
+    GSvsync = GSvsync@0 @115
+    GSwrite16 = GSwrite16@8 @117
+    GSwrite32 = GSwrite32@8 @118
+    GSwrite64 = GSwrite64@12 @119
+    GSwrite8 = GSwrite8@8 @120
+    PS2EgetLibName = PS2EgetLibName@0 @128
+    PS2EgetLibType = PS2EgetLibType@0 @129
+    PS2EgetLibVersion2 = PS2EgetLibVersion2@4 @130

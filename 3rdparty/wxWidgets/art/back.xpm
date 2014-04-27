@@ -1,0 +1,21 @@
+/* XPM */
+static const char * back_xpm[] = {
+"16 15 3 1",
+" 	c None",
+".	c Black",
+"X	c Gray100",
+"                ",
+"                ",
+"      .         ",
+"     ..         ",
+"    .X.         ",
+"   .XX........  ",
+"  .XXXXXXXXXX.  ",
+" .XXXXXXXXXXX.  ",
+" .XXXXXXXXXXX.  ",
+"  .XXXXXXXXXX.  ",
+"   .XX........  ",
+"    .X.         ",
+"     ..         ",
+"      .         ",
+"                "};

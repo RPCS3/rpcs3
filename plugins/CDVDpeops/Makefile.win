@@ -1,0 +1,72 @@
+# Project: cdvdPeops
+# Makefile created by Dev-C++ 4.9.9.0
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = cdvdPeops_private.res
+OBJ  = Release/cdr.o Release/cdvdPeops.o Release/cfg.o Release/generic.o Release/ioctrl.o Release/ppf.o Release/read.o Release/scsi.o Release/StdAfx.o Release/sub.o Release/toc.o Release/cdda.o Release/i386.o $(RES)
+LINKOBJ  = Release/cdr.o Release/cdvdPeops.o Release/cfg.o Release/generic.o Release/ioctrl.o Release/ppf.o Release/read.o Release/scsi.o Release/StdAfx.o Release/sub.o Release/toc.o Release/cdda.o Release/i386.o $(RES)
+LIBS =  -L"D:/vs/Dev-Cpp/lib" -lkernel32 -luser32 -ladvapi32 -lcomdlg32 --add-stdcall-alias  
+INCS =  -I"D:/vs/Dev-Cpp/include"  -I"d:/vs/vc98/MFC/include" 
+CXXINCS =  -I"D:/vs/Dev-Cpp/include/c++"  -I"D:/vs/Dev-Cpp/include/c++/mingw32"  -I"D:/vs/Dev-Cpp/include/c++/backward"  -I"D:/vs/Dev-Cpp/include"  -I"d:/vs/vc98/MFC/include" 
+BIN  = ../../../emus/pcsx2_0.6/plugins/cdvdPeops.dll
+CXXFLAGS = $(CXXINCS) -D__GNUWIN32__ -mcpu=pentium -D_M_IX86=500 -W -DWIN32 -DNDEBUG -D_WINDOWS -D_GCC   -fexpensive-optimizations -O3
+CFLAGS = $(INCS) -D__GNUWIN32__ -mcpu=pentium -D_M_IX86=500 -W -DWIN32 -DNDEBUG -D_WINDOWS -D_GCC   -fexpensive-optimizations -O3
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ../../../emus/pcsx2_0.6/plugins/cdvdPeops.dll all-after
+
+
+clean: clean-custom
+	rm -f $(OBJ) $(BIN)
+
+DLLWRAP=dllwrap.exe
+DEFFILE=../../../emus/pcsx2_0.6/plugins/libcdvdPeops.def
+STATICLIB=../../../emus/pcsx2_0.6/plugins/libcdvdPeops.a
+
+$(BIN): $(LINKOBJ)
+	$(DLLWRAP) --output-def $(DEFFILE) --driver-name c++ --implib $(STATICLIB) $(LINKOBJ) $(LIBS) -o $(BIN)
+
+Release/cdr.o: cdr.c
+	$(CC) -c cdr.c -o Release/cdr.o $(CFLAGS)
+
+Release/cdvdPeops.o: cdvdPeops.c
+	$(CC) -c cdvdPeops.c -o Release/cdvdPeops.o $(CFLAGS)
+
+Release/cfg.o: cfg.c
+	$(CC) -c cfg.c -o Release/cfg.o $(CFLAGS)
+
+Release/generic.o: generic.c
+	$(CC) -c generic.c -o Release/generic.o $(CFLAGS)
+
+Release/ioctrl.o: ioctrl.c
+	$(CC) -c ioctrl.c -o Release/ioctrl.o $(CFLAGS)
+
+Release/ppf.o: ppf.c
+	$(CC) -c ppf.c -o Release/ppf.o $(CFLAGS)
+
+Release/read.o: read.c
+	$(CC) -c read.c -o Release/read.o $(CFLAGS)
+
+Release/scsi.o: scsi.c
+	$(CC) -c scsi.c -o Release/scsi.o $(CFLAGS)
+
+Release/StdAfx.o: StdAfx.c
+	$(CC) -c StdAfx.c -o Release/StdAfx.o $(CFLAGS)
+
+Release/sub.o: sub.c
+	$(CC) -c sub.c -o Release/sub.o $(CFLAGS)
+
+Release/toc.o: toc.c
+	$(CC) -c toc.c -o Release/toc.o $(CFLAGS)
+
+Release/cdda.o: cdda.c
+	$(CC) -c cdda.c -o Release/cdda.o $(CFLAGS)
+
+Release/i386.o: i386.asm
+	nasmw.exe -f win32 -D__WIN32__ -D__i386__ i386.asm -o release\i386.o
+
+cdvdPeops_private.res: cdvdPeops_private.rc ../../../src/cdvdPeops/src/cdvdPeops.rc 
+	$(WINDRES) -i cdvdPeops_private.rc -I rc -o cdvdPeops_private.res -O coff 

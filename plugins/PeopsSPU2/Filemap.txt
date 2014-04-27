@@ -1,0 +1,49 @@
+#########################################################################
+
+- spu.c	/ spu.h
+  main spu handler - generic init and exit funcs
+
+- adsr.c / adsr.h
+  adsr handlers
+
+- dma.c / dma.h
+  memory transfer funcs
+
+- registers.c / registers.h	/ regs.h
+  spu register handling
+
+- reverb.c / reverb.h
+  simple reverb handlers
+
+- xa.c / xa.h
+  xa sound handlers
+
+- cfg.c / cfg.h
+  configuration dialogs/file reading funcs
+
+- dsound.c / oss.c / dsoundoss.h
+  Windows/Linux sound interfaces
+
+- freeze.c
+  save state laoding/saving
+
+- spu2PeopsSound.*
+  Windows dll related files	(including msvc project files)
+
+- Makefile
+  Linux makefile... just do a "make" command to build the plugin
+
+- stdafx.h
+  main include file
+
+- externals.h 
+  generic defines/external vars
+
+- psemuxa.h
+  psemu pro xa definitions
+
+- resource.h
+  Windows resource header
+
+#########################################################################
+

@@ -1,0 +1,21 @@
+EXPORTS
+    PS2EgetLibType = PS2EgetLibType@0 @2
+    PS2EgetLibName = PS2EgetLibName@0 @3
+    PS2EgetLibVersion2 = PS2EgetLibVersion2@4 @4
+    CDVDinit = CDVDinit@0 @5
+    CDVDshutdown = CDVDshutdown@0 @6
+    CDVDopen = CDVDopen@0 @7
+    CDVDclose = CDVDclose@0 @8
+    CDVDreadTrack = CDVDreadTrack@8 @9
+    CDVDgetBuffer = CDVDgetBuffer@0 @10
+    CDVDreadSubQ = CDVDreadSubQ@8 @11
+    CDVDgetTN = CDVDgetTN@4 @12
+    CDVDgetTD = CDVDgetTD@8 @13
+    CDVDgetTOC = CDVDgetTOC@4 @14
+    CDVDgetDiskType = CDVDgetDiskType@0 @15
+    CDVDgetTrayStatus = CDVDgetTrayStatus@0 @16
+    CDVDctrlTrayOpen = CDVDctrlTrayOpen@0 @17
+    CDVDctrlTrayClose = CDVDctrlTrayClose@0 @18
+    CDVDconfigure = CDVDconfigure@0 @19
+    CDVDtest = CDVDtest@0 @20
+    CDVDabout = CDVDabout@0 @21

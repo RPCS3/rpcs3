@@ -1,0 +1,772 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2 Dev Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.9\n"
+"Report-Msgid-Bugs-To: https://github.com/PCSX2/pcsx2/issues\n"
+"POT-Creation-Date: 2014-04-06 11:47+0200\n"
+"PO-Revision-Date: 2014-01-04 17:41+0100\n"
+"Last-Translator: \n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: hr_HR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Generator: Poedit 1.6.3\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid ""
+"There is not enough virtual memory available, or necessary virtual memory "
+"mappings have already been reserved by other processes, services, or DLLs."
+msgstr ""
+"Nema dovoljno virtualne memorije, ili je potrebna memorija već rezervirana "
+"od strane drugih procesa, usluga, ili DLLova."
+
+#: pcsx2/CDVD/CDVD.cpp:397
+msgid ""
+"Playstation game discs are not supported by PCSX2.  If you want to emulate "
+"PSX games then you'll have to download a PSX-specific emulator, such as "
+"ePSXe or PCSX."
+msgstr ""
+"PCSX2 ne podržava Play Station 1 diskove.  Ako želite emulirat PSX igre "
+"treba da skinete emulator za PSX, poput ePSXe ili PCSX."
+
+#: pcsx2/System.cpp:114
+msgid ""
+"This recompiler was unable to reserve contiguous memory required for "
+"internal caches.  This error can be caused by low virtual memory resources, "
+"such as a small or disabled swapfile, or by another program that is hogging "
+"a lot of memory."
+msgstr ""
+"Rekompajler nije u mogućnosti rezervirati potrbnu količinu memorije za "
+"unutarnju cache memoriju.  Ovo može biti urokovano niskom virtualnom "
+"memorijom, poput isključene ili male veličine swap datoteke, ili drugim "
+"programom koji guta puno memorije."
+
+#: pcsx2/System.cpp:350
+msgid ""
+"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
+"out some memory hogging background tasks and try again."
+msgstr ""
+"PCSX2 nemože dodijeliti dovoljno memorije potrebne za PS2 virtualni stroj. "
+"Zatvorite pozadinske programe koji troše memoriju i pokušajte ponovno."
+
+#: pcsx2/gui/AppInit.cpp:45
+msgid ""
+"Warning: Your computer does not support SSE2, which is required by many "
+"PCSX2 recompilers and plugins. Your options will be limited and emulation "
+"will be *very* slow."
+msgstr ""
+"Upozorenje: Računalo ne podržava SSE2, koji korite mnogi PCSX2 rekompajleri "
+"i dodaci. Mogućnosti će biti ograničene i emulacija će biti *veoma* spora."
+
+#: pcsx2/gui/AppInit.cpp:178
+msgid ""
+"Warning: Some of the configured PS2 recompilers failed to initialize and "
+"have been disabled:"
+msgstr ""
+"Upozorenje: Neki konfigurirani PS2 rekompajleri se nisu uspjeli pokrenuti te "
+"su isključeni:"
+
+#: pcsx2/gui/AppInit.cpp:226
+msgid ""
+"Note: Recompilers are not necessary for PCSX2 to run, however they typically "
+"improve emulation speed substantially. You may have to manually re-enable "
+"the recompilers listed above, if you resolve the errors."
+msgstr ""
+"Napomena: Rekompajleri nisu nužni da bi se PCSX2 program izvodio, ali obično "
+"značajno poboljšavaju brzinu emulacije. Možda ćete morati ponovno uključiti "
+"navedene rekompajlere, ako riješite probleme."
+
+#: pcsx2/gui/AppMain.cpp:585
+msgid ""
+"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
+"obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
+"count).  Please consult the FAQs and Guides for further instructions."
+msgstr ""
+"PCSX2 zahtijeva PS2 BIOS za pokretanje.  Zbog pravnih razloga, *morate* BIOS "
+"dobiti iz PS2 konzole u vašem vlasništvu (posuđena se ne računa).  Molimo "
+"pogledajte Najčešća pitanja ili Vodiče za daljnje upute."
+
+#: pcsx2/gui/AppMain.cpp:665
+msgid ""
+"'Ignore' to continue waiting for the thread to respond.\n"
+"'Cancel' to attempt to cancel the thread.\n"
+"'Terminate' to quit PCSX2 immediately.\n"
+msgstr ""
+"'Zanemariti' da nastavite čekati da thread reagira.\n"
+"'Poništiti' da pokušate poništiti thread.\n"
+"'Okončati' da bi odmah izašli iz PCSX2.\n"
+
+#: pcsx2/gui/AppUserMode.cpp:57
+msgid ""
+"Please ensure that these folders are created and that your user account is "
+"granted write permissions to them -- or re-run PCSX2 with elevated "
+"(administrator) rights, which should grant PCSX2 the ability to create the "
+"necessary folders itself.  If you do not have elevated rights on this "
+"computer, then you will need to switch to User Documents mode (click button "
+"below)."
+msgstr ""
+"Molimo osigurajte da su ove mape postoje i da vaš korisnički račun ima "
+"pristup njima -- ili ponovno pokrenite PCSX2 sa većim (administratorskim) "
+"pravima, koja bi trebala omogućiti da PCSX2 ima mogućnost stvaranja "
+"potrebnih mapa.  Ako nemate većih prava na ovom računalu, onda ćete morati "
+"prebaciti na način rada sa Korisničkim Dokumentima (pritisnite dugme ispod)."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid ""
+"NTFS compression can be changed manually at any time by using file "
+"properties from Windows Explorer."
+msgstr ""
+"NTFS sažimanje može biti promjenjeno ručno bilo kada koristeći svojstva "
+"(properties) datoteke iz Windows Explorera."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid ""
+"This is the folder where PCSX2 saves your settings, including settings "
+"generated by most plugins (some older plugins may not respect this value)."
+msgstr ""
+"U ovu mapu PCSX2 sprema vaše postavke, uključujući postavke većine dodataka "
+"(neki stariji dodaci možda neće postupati na taj način)."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:52
+msgid ""
+"You may optionally specify a location for your PCSX2 settings here.  If the "
+"location contains existing PCSX2 settings, you will be given the option to "
+"import or overwrite them."
+msgstr ""
+"Možete po želji ovdije odrediti mjesto za vaše PCSX2 postavke.  Ako se tu "
+"nalaze već postojeće PCSX2 postavke, bit će vam data mogućnost da uvezete "
+"ili prepišete preko njih."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
+#, c-format
+msgid ""
+"This wizard will help guide you through configuring plugins, memory cards, "
+"and BIOS.  It is recommended if this is your first time installing %s that "
+"you view the readme and configuration guide."
+msgstr ""
+"Ovaj čarobnjak će vas voditi konfiguraciju dodataka, memorijski kartica, i "
+"BIOS-a.  Ako prvi put instalirate %s preporučeno je da pogledate datoteku sa "
+"informacijama i konfiguracijski vodič."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
+msgid ""
+"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
+"You cannot use a copy obtained from a friend or the Internet.\n"
+"You must dump the BIOS from your *own* Playstation 2 console."
+msgstr ""
+"PCSX2 zahtjeva *zakonitu* kopiju PS2 BIOS-a da bi pokretao igre.\n"
+"Ne možete koristiti kopiju dobivenu od prijatelja ili sa Interneta.\n"
+"Morate dobiti BIOS iz *vlastite* Playstation 2 konzole."
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+#, c-format
+msgid ""
+"Existing %s settings have been found in the configured settings folder.  "
+"Would you like to import these settings or overwrite them with %s default "
+"values?\n"
+"\n"
+"(or press Cancel to select a different settings folder)"
+msgstr ""
+"Postojeće %s postavke su pronađene u mapi sa konfiguracijskim postavkama.  "
+"Želite li uvesti ove postavke ili prepisati preko njih sa %s zadanim "
+"vrijednostima?\n"
+"\n"
+"(ili pritisnite Poništiti da bi izabrali drugu mapu sa postavkama)"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid ""
+"NTFS compression is built-in, fast, and completely reliable; and typically "
+"compresses memory cards very well (this option is highly recommended)."
+msgstr ""
+"NTFS sažimanje je ugrađeno, brzo, i potpuno pouzdano; i najčešće sažima "
+"memorijske kartice veoma dobro (ovo je veoma preporučeno)."
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:39
+msgid ""
+"Avoids memory card corruption by forcing games to re-index card contents "
+"after loading from savestates.  May not be compatible with all games (Guitar "
+"Hero)."
+msgstr ""
+"Izbjegava pojavu grešaka na memorijskoj kartici prisiljavajući igre da "
+"promjene redosljed sadržaja na kartici nakon učitavanja iz spremljenih "
+"stanja.  Nije kompatibilno sa svim igrama (Guitar Hero)."
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+#, c-format
+msgid ""
+"The thread '%s' is not responding.  It could be deadlocked, or it might just "
+"be running *really* slowly."
+msgstr ""
+"Thread '%s' ne reagira.  Moguće da je u zastoju, ili se jednostavno izvodi "
+"*veoma* sporo."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured settings.  These command line options will not be reflected in "
+"the Settings dialog, and will be disabled if you apply any changes here."
+msgstr ""
+"Upozorenje!  Pokrećete PCSX2 sa tekstom u komandnom retku koji prekoračuje "
+"vaše konfigurirane postavke.  To neće biti prikazano u dijaloškom okviru "
+"postavki, i bit će onesposobljeno ako primjenite ovdje ikakve promjene."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:55
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured plugin and/or folder settings.  These command line options will "
+"not be reflected in the settings dialog, and will be disabled when you apply "
+"settings changes here."
+msgstr ""
+"Upozorenje!  Pokrećete PCSX2 sa tekstom u komandnom retku koji prekoračuje "
+"vaše postavke konfiguriranog dodatka i/ili mape.  To neće biti prikazano u "
+"dijaloškom okviru postavki, i bit će onesposobljeno ako primjenite ovdje "
+"ikakve promjene postavki."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:129
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"Presets info:\n"
+"1 -     The most accurate emulation but also the slowest.\n"
+"3 --> Tries to balance speed with compatibility.\n"
+"4 -     Some more aggressive hacks.\n"
+"6 -     Too many hacks which will probably slow down most games.\n"
+msgstr ""
+"Automatske postavke primjenjuju trikove za brzinu, neke mogućnosti za "
+"rekompajler i neke zakrpe za igre za koje se zna da povećavaju brzinu.\n"
+"Važne zakrpe za igru će biti primjenjene automatski.\n"
+"\n"
+"Informacije o automatskim postavkama:\n"
+"1 -     Najpreciznija i najsporija emulacija.\n"
+"3 --> Održava ravnotežu brzine i kompatibilnosti.\n"
+"4 -     Agresivniji trikovi.\n"
+"6 -     Previše trikova koji će vjerovatno usporiti većinu igara.\n"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:136
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"--> Uncheck to modify settings manually (with current preset as base)"
+msgstr ""
+"Automatske postavke primjenjuju trikove za brzinu, neke mogućnosti za "
+"rekompajler i neke zakrpe za igre za koje se zna da povećavaju brzinu.\n"
+"Važne zakrpe za igru će biti primjenjene automatski.\n"
+"\n"
+"--> Isključite da bi promjenili postavke ručno (sa trenutnim automatskim "
+"postavkama kao osnovom)"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid ""
+"This action will reset the existing PS2 virtual machine state; all current "
+"progress will be lost.  Are you sure?"
+msgstr ""
+"Ova radnja će restartirat stanje PS2 virtualnog stroja; sav trenutni "
+"napredak će biti izgubljen.  Jeste li sigurni?"
+
+#: pcsx2/gui/MainMenuClicks.cpp:107
+#, c-format
+msgid ""
+"This command clears %s settings and allows you to re-run the First-Time "
+"Wizard.  You will need to manually restart %s after this operation.\n"
+"\n"
+"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, "
+"losing any current emulation progress.  Are you absolutely sure?\n"
+"\n"
+"(note: settings for plugins are unaffected)"
+msgstr ""
+"Ova naredba poništava %s postavke i omogućava ponovno pokretanje Prvog "
+"Čarobnjaka.  Trebat ćete ponovno pokrenuti %s nakon ovoga.\n"
+"\n"
+"UPOZORENJE!!  Pritisnite U redu za brisanje *SVIH* postavki za %s i "
+"zatvaranje programa, i gubitak dosadašnjeg napretka.  Jeste li potpuno "
+"sigurni?\n"
+"\n"
+"(napomena: ovo ne utječe na postavke za dodatke)"
+
+#: pcsx2/gui/MemoryCardFile.cpp:80
+#, c-format
+msgid ""
+"The PS2-slot %d has been automatically disabled.  You can correct the "
+"problem\n"
+"and re-enable it at any time using Config:Memory cards from the main menu."
+msgstr ""
+"The PS2-slot %d je automatski onesposobljen.  Možete ispraviti problem\n"
+"i ponovno ga omogućiti u bilo koje vrijeme koristeći Konfiguracija:"
+"Memorijske kartice u glavnom izborniku."
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid ""
+"Please select a valid BIOS.  If you are unable to make a valid selection "
+"then press Cancel to close the Configuration panel."
+msgstr ""
+"Molimo odaberite važeći BIOS.  Ako niste u mogućnosti izabrati pritisnite "
+"Poništiti za zatvaranje Konfiguracijske table."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "Notice: Most games are fine with the default options. "
+msgstr "Napomena: Većina igara radi bez problema sa početnim postavkama."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:177
+msgid "Notice: Most games are fine with the default options."
+msgstr "Napomena: Većina igara radi bez problema sa početnim postavkama."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid ""
+"The specified path/directory does not exist.  Would you like to create it?"
+msgstr "Odabrana putanja/direktorij ne postoji.  Želite li ga stvoriti?"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:157
+msgid ""
+"When checked this folder will automatically reflect the default associated "
+"with PCSX2's current usermode setting. "
+msgstr ""
+"Kada je uključena ova mapa će automatski biti stavljena kao PCSX2 postavka "
+"za korisnički način rada. "
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid ""
+"Zoom = 100: Fit the entire image to the window without any cropping.\n"
+"Above/Below 100: Zoom In/Out\n"
+"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, "
+"some of the image goes out of screen).\n"
+"  NOTE: Some games draw their own black-bars, which will not be removed with "
+"'0'.\n"
+"\n"
+"Keyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + "
+"NUMPAD-*: Toggle 100/0"
+msgstr ""
+"Približavanje = 100: Prilagodba cijele slike prozoru bez obrezivanja.\n"
+"Iznad/Ispod 100: Približiti/Udaljiti\n"
+"0: Automatsko-Približavanje dok crne trake ne nestanu (Omjer ekrana je "
+"očuvan, dio slike ide izvan ekrana).\n"
+"  NAPOMENA: Neke igre iscrtavaju vlastite crne trake, koje neće biti "
+"uklonjene sa '0'.\n"
+"\n"
+"Tipkovnica: CTRL + NUMPAD-PLUS: Približiti, CTRL + NUMPAD-MINUS: Udaljiti, "
+"CTRL + NUMPAD-*: Podesiti 100/0"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+msgid ""
+"Vsync eliminates screen tearing but typically has a big performance hit. It "
+"usually only applies to fullscreen mode, and may not work with all GS "
+"plugins."
+msgstr ""
+"Vsync uklanja paranje na ekranu ali često veoma smanuje brzinu. Obično se "
+"samo primjenjuje za puni ekran, i možda neće raditi sa svim GS dodacima."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:61
+msgid ""
+"Enables Vsync when the framerate is exactly at full speed. Should it fall "
+"below that, Vsync gets disabled to avoid further performance penalties. "
+"Note: This currently only works well with GSdx as GS plugin and with it "
+"configured to use DX10/11 hardware rendering. Any other plugin or rendering "
+"mode will either ignore it or produce a black frame that blinks whenever the "
+"mode switches. It also requires Vsync to be enabled."
+msgstr ""
+"Uključuje Vsync kada je broj sličica na punom broju. Ako padne ispod, Vsync "
+"se gasi da bi se izbjeglo usporavanje. Napomena: Trenutno dobro radi jedino "
+"sa GSdx-om kao GS dodatkom i s njim namještenim da koristi DX10/11 "
+"hardverski prikaz. Svaki drugi dodatak ili način prikaza će ga zanemariti "
+"ili stvarati crne slike koje uzrokuju treptanje slike kada se prebaciva "
+"način rada. Također traži da Vsync bude omogućen."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
+msgid ""
+"Check this to force the mouse cursor invisible inside the GS window; useful "
+"if using the mouse as a primary control device for gaming.  By default the "
+"mouse auto-hides after 2 seconds of inactivity."
+msgstr ""
+"Omogućite ovo da bi sakrili pokazivač miša unutar GS prozora; korisno ako "
+"koristite miš kao glavni kontrolni uređaj za igranje.  Po zadanim postavkama "
+"pokazivač miša se sakrije nakon 2 sekunde neaktivnosti."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid ""
+"Enables automatic mode switch to fullscreen when starting or resuming "
+"emulation. You can still toggle fullscreen display at any time using alt-"
+"enter."
+msgstr ""
+"Omogućava automatsko prebacivanje u puni ekran kada se emulacija pokreće ili "
+"nastavlja. Možete uključiti prikaz preko punog ekrana bilo kada koristeći "
+"alt-enter."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:74
+msgid ""
+"Completely closes the often large and bulky GS window when pressing ESC or "
+"pausing the emulator."
+msgstr ""
+"Potpuno zatvara često veliki i glomazni GS prozor kada se pritisne ESC ili "
+"pauzira emulator."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid ""
+"Known to affect following games:\n"
+" * Digital Devil Saga (Fixes FMV and crashes)\n"
+" * SSX (Fixes bad graphics and crashes)\n"
+" * Resident Evil: Dead Aim (Causes garbled textures)"
+msgstr ""
+"Poznato je da utječe na sljedeće igre:\n"
+" * Digital Devil Saga (Popravlja FMV i rušenja)\n"
+" * SSX (Popravlja lošu grafiku i rušenja)\n"
+" * Resident Evil: Dead Aim (Uzrokuje neispravne teksture)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:76
+msgid ""
+"Known to affect following games:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II and III\n"
+" * Wizardry"
+msgstr ""
+"Poznato je da utječe na sljedeće igre:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II i III\n"
+" * Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:81
+msgid ""
+"Known to affect following games:\n"
+" * Mana Khemia 1 (Going \"off campus\")\n"
+msgstr ""
+"Poznato je da utječe na sljedeće igre::\n"
+" * Mana Khemia 1 (Kada se izlazi \"sa kampusa\")\n"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:86
+msgid ""
+"Known to affect following games:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
+msgstr ""
+"Poznato je da utječe na sljedeće igre:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+msgid ""
+"Gamefixes can work around wrong emulation in some titles. \n"
+"They may also cause compatibility or performance issues. \n"
+"\n"
+"It's better to enable 'Automatic game fixes' at the main menu instead, and "
+"leave this page empty. \n"
+"('Automatic' means: selectively use specific tested fixes for specific games)"
+msgstr ""
+"Zakrpe za igre mogu popraviti lošu emulaciju u nekim naslovima. \n"
+"Mogu također uzrokovati probleme sa kompatibilnošću i brzinom. \n"
+"\n"
+"Bolje je umjesto toga omogućiti 'Automatske zakrpe za igre' na glavnom "
+"izborniku, i ostaviti ovu stranicu praznom. \n"
+"('Automatske' znači: biranje testiranih zakrpa za pojedine igre)"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
+#, c-format
+msgid ""
+"You are about to delete the formatted memory card '%s'. All data on this "
+"card will be lost!  Are you absolutely and quite positively sure?"
+msgstr ""
+"Upravo ćete izbrisati formatiranu memorijsku karticu '%s'. Svi podaci na "
+"ovoj kartici bit će izgubljeni!  Jeste li apsolutno sigurni da želite to?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
+msgid ""
+"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
+msgstr ""
+"Neuspjelo: Kopiranje je dozvoljeno samo u prazan PS2 Port ili u datotečni "
+"sustav."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
+#, c-format
+msgid "Failed: Destination memory card '%s' is in use."
+msgstr "Neuspjelo: Odabrana memorijska kartica '%s' je u upotrebi."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid ""
+"Please select your preferred default location for PCSX2 user-level documents "
+"below (includes memory cards, screenshots, settings, and savestates).  These "
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
+msgstr ""
+"Molimo izaberite željeno mjesto za spremanje PCSX2 korisničkih dokumenata "
+"ispod (uključuje memorijske kartice, snimke, postavke, i spremljena "
+"stanja).  Ove lokacije mapa mogu biti promjenjene bilo kada koristeći tablu "
+"za Izbor Dodataka/BIOS-a."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
+msgid ""
+"You can change the preferred default location for PCSX2 user-level documents "
+"here (includes memory cards, screenshots, settings, and savestates).  This "
+"option only affects Standard Paths which are set to use the installation "
+"default value."
+msgstr ""
+"Možete promjeniti željeno mjesto za spremanje PCSX2 korisniči dokumenata "
+"ovdje (uključuje memorijske kartice, snimke, postavke, i spremljena "
+"stanja).  Ova mogućnost utječe na promjenu Standardne Putanje koja koristi "
+"zadanu putanju instalacije."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid ""
+"This folder is where PCSX2 records savestates; which are recorded either by "
+"using menus/toolbars, or by pressing F1/F3 (save/load)."
+msgstr ""
+"PCSX2 snima spremljena stanja u ovu mapu; koja su snimljena koristeći "
+"izbornike/alatne trake, ili pritiskom na F1/F3 (spremiti/učitati)."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:48
+msgid ""
+"This folder is where PCSX2 saves screenshots.  Actual screenshot image "
+"format and style may vary depending on the GS plugin being used."
+msgstr ""
+"PCSX2 sprema snimke u ovu mapu.  Format i stil slika mogu se razlikovati "
+"zavisno od GS dodatka koji se koristi."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:56
+msgid ""
+"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most "
+"plugins will also adhere to this folder, however some older plugins may "
+"ignore it."
+msgstr ""
+"PCSX2 sprema datoteke dnevnika i dijagnostičke ispise u ovu mapu.  Većina "
+"dodataka će se držati ove mape, ali neki stariji dodaci će je zanemariti."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid ""
+"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 "
+"virtual machine. PCSX2 will attempt to save and restore the state, but if "
+"the newly selected plugins are incompatible the recovery may fail, and "
+"current progress will be lost.\n"
+"\n"
+"Are you sure you want to apply settings now?"
+msgstr ""
+"Upozorenje!  Promjena dodataka zahtjeva gašenje i ponovno pokretanje PS2 "
+"virtualnog stroja. PCSX2 će pokušati spremiti i vratiti stanje, ali ako su "
+"novo izabrani dodaci nekompatibilni oporavak neće uspjeti, i trenutni "
+"napredak će biti izgubljen.\n"
+"\n"
+"Jeste li sigurni da želite primjeniti postavke sada?"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
+#, c-format
+msgid ""
+"All plugins must have valid selections for %s to run.  If you are unable to "
+"make a valid selection due to missing plugins or an incomplete install of "
+"%s, then press Cancel to close the Configuration panel."
+msgstr ""
+"Svi dodaci moraju biti ispravno odabrani da bi se %s pokrenuo.  Ako nemožete "
+"ispravno odabrati zbog nedostajućih dodataka ili %s nepotpune instalacije, "
+"pritisnite Poništiti za zatvaranje Konfiguracijskog izbornika."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid ""
+"1 - Default cyclerate. This closely matches the actual speed of a real PS2 "
+"EmotionEngine."
+msgstr ""
+"1 - Zadana brzina ciklusa. Ovo približno odgovara stvarnoj brzini PS2 "
+"EmotionEngina."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:31
+msgid ""
+"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games "
+"with high compatibility."
+msgstr ""
+"2 - Smanjuje EE-ovu brzinu ciklusa za oko 33%.  Blago ubrzanje za većinu "
+"igara sa visokom kompatibilnošću."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:35
+msgid ""
+"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* "
+"cause stuttering audio on many FMVs."
+msgstr ""
+"3 - Smanjuje EE-ovu brzinu ciklusa za oko 50%.  Blago ubrzanje, ali *će* "
+"uzrokovati zamuckivanje zvuka na mnogim FMV-ovima (video)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:50
+msgid "0 - Disables VU Cycle Stealing.  Most compatible setting!"
+msgstr "0 - Onemogućuje VU Krađu Ciklusa.  Najkompatibilnija postavka!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid ""
+"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most "
+"games."
+msgstr ""
+"1 - Manja Krađa VU Ciklusa.  Niža kompatibilnost, ali nešto ubrzanja za "
+"većinu igara."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:58
+msgid ""
+"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant "
+"speedups in some games."
+msgstr ""
+"2 - Umjerena Krađa VU Ciklusa.  Još niža kompatibilnost, ali značajna "
+"ubrzanja u nekim igrama."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:63
+msgid ""
+"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause "
+"flickering visuals or slowdown in most games."
+msgstr ""
+"3 - Najveća Krađa VU Ciklusa.  Korisnost je ograničena, jer će uzrokovati "
+"treptanje slike ili usporavanje u većini igara."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:88
+msgid ""
+"Speedhacks usually improve emulation speed, but can cause glitches, broken "
+"audio, and false FPS readings.  When having emulation problems, disable this "
+"panel first."
+msgstr ""
+"Trikovi za brzinu obično poboljšavaju brzinu izvođenja, ali mogu uzrokovati "
+"propuste, pokvaren zvuk, i lažna FPS očitavanja.  U slučaju problema sa "
+"emulacijom, onesposobite ovo najprije."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:118
+msgid ""
+"Setting higher values on this slider effectively reduces the clock speed of "
+"the EmotionEngine's R5900 core cpu, and typically brings big speedups to "
+"games that fail to utilize the full potential of the real PS2 hardware."
+msgstr ""
+"Veće vrijednosti na ovom klizaču efektivno smanjuju brzinu EmotionEnginovom "
+"R5900 glavnom procesoru, i često dolazi do velikih ubrzanja u igrama koje ne "
+"iskorištavaju hardver stvarnog PS2."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:136
+msgid ""
+"This slider controls the amount of cycles the VU unit steals from the "
+"EmotionEngine.  Higher values increase the number of cycles stolen from the "
+"EE for each VU microprogram the game runs."
+msgstr ""
+"Ovaj klizač upravlja količinom ciklusa koje VU jedinica ukrade od "
+"EmotionEngina.  Veće vrijednosti povećavaju broj ciklusa koji se ukradu od "
+"EE za svaki VU mikroprogram koji igra pokrene."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:153
+msgid ""
+"Updates Status Flags only on blocks which will read them, instead of all the "
+"time. This is safe most of the time, and Super VU does something similar by "
+"default."
+msgstr ""
+"Ažurira Status Flags samo na blokovima koji će ih čitati, umjesto da ih "
+"ažurira stalno. Ovo je sigurno većinu vremena, i Super VU radi nešto slično "
+"sam od sebe."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:156
+msgid ""
+"Runs VU1 on its own thread (microVU1-only). Generally a speedup on CPUs with "
+"3 or more cores. This is safe for most games, but a few games are "
+"incompatible and may hang. In the case of GS limited games, it may be a "
+"slowdown (especially on dual core CPUs)."
+msgstr ""
+"Pokreće VU1 zasebno na vlastitom threadu (samo za microVU1 radi). Uglavnom "
+"ubrzanje na procesorima sa 3 ili više jezgri. Sigurno je za većinu igara, "
+"ali ih je nekoliko nekompatibilno i mogu se potpuno zaustaviti. U slučaju "
+"igara ograničenih od strane GS-a, može biti usporavanje (posebno na "
+"dvojezgrenim procesorima)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid ""
+"This hack works best for games that use the INTC Status register to wait for "
+"vsyncs, which includes primarily non-3D RPG titles. Games that do not use "
+"this method of vsync will see little or no speedup from this hack."
+msgstr ""
+"Ovaj trik radi najbolje za igre koje koriste INTC Status registar za čekanje "
+"vsyncova, to uključuje uglavnom ne-3D RPG naslove. Igre koje ne koriste ovaj "
+"način vsynca će imati malo ili nimalo ubrzanja od ovog trika."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid ""
+"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this "
+"hack attempts to detect loops whose bodies are guaranteed to result in the "
+"same machine state for every iteration until a scheduled event triggers "
+"emulation of another unit.  After a single iteration of such loops, we "
+"advance to the time of the next event or the end of the processor's "
+"timeslice, whichever comes first."
+msgstr ""
+"Primarno usmjeren na EE idle petlju na adresi 0x81FC0 u kernelu, ovaj trik "
+"pokušava otkriti petlje čija tijela će rezultirati istim stanjem stroja za "
+"svaku iteraciju dok neki događaj ne izazove emulaciju druge jedinice.  Nakon "
+"jedne iteracije takvih petlji, napreduje se do sljedećeg događaja ili kraja "
+"procesorovog djelića vremena, što god od toga dođe prije."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:180
+msgid ""
+"Check HDLoader compatibility lists for known games that have issues with "
+"this. (Often marked as needing 'mode 1' or 'slow DVD'"
+msgstr ""
+"Provjerite HDLoader popis kompatibilnosti za poznatim igrama koje imaju "
+"problema sa ovime. (Često značeno kao potreban 'mode 1' ili 'slow DVD'"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid ""
+"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will "
+"not be available either."
+msgstr ""
+"Kada je isključeno Ograničavanje broja sličica, Turbo i Spori načina rada "
+"također neće biti dostupni."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:225
+msgid ""
+"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
+"Enabling it will cause severe graphical errors in some games."
+msgstr ""
+"Napomena: Zbog PS2 hardverskog dizajna, precizno preskakanje sličica je "
+"nemoguće. Njegovo omogućavanje će uzrokovati ozbiljne pogreške na slici u "
+"nekim igrama."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid ""
+"Enable this if you think MTGS thread sync is causing crashes or graphical "
+"errors."
+msgstr ""
+"Omogućite ovo ako mislite da MTGS thread sync uzrokuje rušenja i grafičke "
+"pogreške."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:305
+msgid ""
+"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This "
+"option is best used in conjunction with savestates: save a state at an ideal "
+"scene, enable this option, and re-load the savestate.\n"
+"\n"
+"Warning: This option can be enabled on-the-fly but typically cannot be "
+"disabled on-the-fly (video will typically be garbage)."
+msgstr ""
+"Uklanja šumove od mjerenja brzine koje uzrokuje MTGS thread ili viška "
+"grafičke kartice.  Ovu mogućnost je najbolje koristit sa spremljenim "
+"stanjima: spremite stanje pri idealnoj sceni, omogućite ovu mogućnost, i "
+"ponovno učitajte spremljeno stanje.\n"
+"\n"
+"Upozorenje: Ova mogućnost može biti omogućena za vrijeme izvođenja ali "
+"nemože biti onemogućena za vrijeme izvođenja (slika će najčešće biti loša)."
+
+#: pcsx2/vtlb.cpp:731
+msgid ""
+"Your system is too low on virtual resources for PCSX2 to run. This can be "
+"caused by having a small or disabled swapfile, or by other programs that are "
+"hogging resources."
+msgstr ""
+"Sustav ima premalo virtualne memorije da bi se PCSX2 pokrenuo. Ovo može biti "
+"uzrokovano malom veličinom ili isključenom swap datotekom, ili od drugih "
+"programa koji gutaju memoriju."
+
+#: pcsx2/x86/sVU_zerorec.cpp:364
+msgid ""
+"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
+"specific memory ranges required, and will not be available for use.  This is "
+"not a critical error, since the sVU rec is obsolete, and you should use "
+"microVU instead anyway. :)"
+msgstr ""
+"Nedostatak Memorije (na neki način): The SuperVU rekompajler nije u "
+"mogućnosti osigurati potrebne količine memorije, i neće biti dostupan za "
+"upotrebu.  Ovo nije kritična pogreška, jer je sVU rekompajler is zastario, i "
+"trebali bi koristiti microVU rekompajler. :)"

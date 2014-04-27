@@ -1,0 +1,29 @@
+/** @page compile_cmake Creating MSVC Build Files via CMake
+@ingroup tutorial
+
+This is a simple "How-to" for creating build files for Microsoft Visual C++ via CMake and the CMakeLists.txt file
+
+1. Install CMake if you haven't got it already ([http://www.cmake.org], minimum version required is 2.8).
+
+2. If you want ASIO support you need to D/L the ASIO2 SDK from Steinberg, and place it according to \ref compile_windows_asio_msvc
+
+3. Run the CMake GUI application and browse to <b>source files</b> directory and <b>build</b> directory:
+   a. The <b>source files</b> directory (<i>"Where is the source code"</i>) is where the portaudio CMakeLists.txt file is located.
+   b. The <b>build</b> directory (<i>"Where to build the binaries"</i>) is pretty much anywhere you like. A common practice though is to have the build directory located <b>outside</b> the
+      source files tree (a so called "out-of-source build")
+
+4. Click <i>Configure</i>. This will prompt you to select which build files to generate. <b>Note</b> Only Microsoft Visual C++ build files currently supported!
+
+5. In the CMake option list, enable the PORTAUDIO_xxx options you need, then click <i>Configure</i> again (Note that after this there are no options marked with red color)
+
+6. Click <i>Generate</i> and you'll now (hopefully) have your VS build files in your previously defined <b>build</b> directory.
+
+Both ASIO and DirectX SDK are automatically searched for by the CMake script, so if you have DirectX SDK installed and have placed the ASIO2 SDK according to point 2 above, you should be able to build portaudio with !DirectSound and ASIO support.
+
+Should you later on decide to change a portaudio option, just jump in at step 5 above (MSVC will then prompt you to reload projects/solutions/workspace)
+
+--- Robert Bielik
+
+Back to the Tutorial: \ref tutorial_start
+
+*/

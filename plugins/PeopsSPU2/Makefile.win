@@ -1,0 +1,79 @@
+# Project: spu2PeopsSound
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = Release/spu2PeopsSound_private.res
+OBJ  = Release/adsr.o Release/alsa.o Release/cfg.o Release/debug.o Release/dma.o Release/dsound.o Release/freeze.o Release/oss.o Release/record.o Release/registers.o Release/reverb.o Release/spu.o Release/spu2PeopsSound.o Release/StdAfx.o Release/xa.o $(RES)
+LINKOBJ  = Release/adsr.o Release/alsa.o Release/cfg.o Release/debug.o Release/dma.o Release/dsound.o Release/freeze.o Release/oss.o Release/record.o Release/registers.o Release/reverb.o Release/spu.o Release/spu2PeopsSound.o Release/StdAfx.o Release/xa.o $(RES)
+LIBS =  -L"lib" -ldsound -lwinmm -luser32 -lgdi32 -ladvapi32 --add-stdcall-alias  
+INCS =  -I"include"  -I"D:/Archivos de programa/Microsoft Visual Studio .NET 2003/SDK/v1.1/include" 
+CXXINCS =  -I"lib/gcc/mingw32/3.4.2/include"  -I"include/c++/3.4.2/backward"  -I"include/c++/3.4.2/mingw32"  -I"include/c++/3.4.2"  -I"include" 
+BIN  = ../SPU2PeopsDSound.dll
+CXXFLAGS = $(CXXINCS) -D__GNUWIN32__ -mcpu=pentium -D_M_IX86=500 -W -DWIN32 -DNDEBUG -D_WINDOWS -D_GCC   -O3
+CFLAGS = $(INCS) -D__GNUWIN32__ -mcpu=pentium -D_M_IX86=500 -W -DWIN32 -DNDEBUG -D_WINDOWS -D_GCC   -O3
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ../SPU2PeopsDSound.dll all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+DLLWRAP=dllwrap.exe
+DEFFILE=../libSPU2PeopsDSound.def
+STATICLIB=../libSPU2PeopsDSound.a
+
+$(BIN): $(LINKOBJ)
+	$(DLLWRAP) --output-def $(DEFFILE) --driver-name c++ --implib $(STATICLIB) $(LINKOBJ) $(LIBS) -o $(BIN)
+
+Release/adsr.o: adsr.c
+	$(CC) -c adsr.c -o Release/adsr.o $(CFLAGS)
+
+Release/alsa.o: alsa.c
+	$(CC) -c alsa.c -o Release/alsa.o $(CFLAGS)
+
+Release/cfg.o: cfg.c
+	$(CC) -c cfg.c -o Release/cfg.o $(CFLAGS)
+
+Release/debug.o: debug.c
+	$(CC) -c debug.c -o Release/debug.o $(CFLAGS)
+
+Release/dma.o: dma.c
+	$(CC) -c dma.c -o Release/dma.o $(CFLAGS)
+
+Release/dsound.o: dsound.c
+	$(CC) -c dsound.c -o Release/dsound.o $(CFLAGS)
+
+Release/freeze.o: freeze.c
+	$(CC) -c freeze.c -o Release/freeze.o $(CFLAGS)
+
+Release/oss.o: oss.c
+	$(CC) -c oss.c -o Release/oss.o $(CFLAGS)
+
+Release/record.o: record.c
+	$(CC) -c record.c -o Release/record.o $(CFLAGS)
+
+Release/registers.o: registers.c
+	$(CC) -c registers.c -o Release/registers.o $(CFLAGS)
+
+Release/reverb.o: reverb.c
+	$(CC) -c reverb.c -o Release/reverb.o $(CFLAGS)
+
+Release/spu.o: spu.c
+	$(CC) -c spu.c -o Release/spu.o $(CFLAGS)
+
+Release/spu2PeopsSound.o: spu2PeopsSound.c
+	$(CC) -c spu2PeopsSound.c -o Release/spu2PeopsSound.o $(CFLAGS)
+
+Release/StdAfx.o: StdAfx.c
+	$(CC) -c StdAfx.c -o Release/StdAfx.o $(CFLAGS)
+
+Release/xa.o: xa.c
+	$(CC) -c xa.c -o Release/xa.o $(CFLAGS)
+
+Release/spu2PeopsSound_private.res: spu2PeopsSound_private.rc 
+	$(WINDRES) -i spu2PeopsSound_private.rc --input-format=rc -o Release/spu2PeopsSound_private.res -O coff 

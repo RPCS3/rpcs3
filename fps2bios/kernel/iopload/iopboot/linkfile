@@ -1,0 +1,16 @@
+_stack_size = 0x80000;
+_heap_size = 1024*1024*10;
+
+ENTRY(_start);
+SECTIONS {
+	.text 0xbfc008f0 : {
+		*(.text)
+		*(.data)
+		*(.rdata)
+		*(.sdata)
+		*(.rodata)
+		*(.bss)
+		*(.sbss)
+	}
+}
+

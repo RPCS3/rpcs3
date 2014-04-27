@@ -1,0 +1,26 @@
+; cdvd.def : Declares the module parameters for the DLL.
+
+LIBRARY      "CDVDolio"
+
+EXPORTS
+    ; Explicit exports can go here
+    PS2EgetLibType
+    PS2EgetLibName
+    PS2EgetLibVersion2
+	CDVDinit
+	CDVDshutdown
+	CDVDopen
+	CDVDclose
+	CDVDreadTrack
+	CDVDgetBuffer
+	CDVDreadSubQ
+	CDVDgetTN
+	CDVDgetTD
+	CDVDgetTOC
+	CDVDgetDiskType
+    CDVDgetTrayStatus
+    CDVDctrlTrayOpen
+    CDVDctrlTrayClose
+	CDVDconfigure
+	CDVDtest
+	CDVDabout

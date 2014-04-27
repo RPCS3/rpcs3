@@ -1,0 +1,52 @@
+_stack_size = 0x80000;
+_heap_size = 1024*1024*10;
+
+ENTRY(_start);
+SECTIONS {
+
+	.text 0x00082000 : {
+		*(.text)
+		*(.rodata)
+	}
+	.reginfo ALIGN(128) : {
+		*(.reginfo)
+	}
+	.data ALIGN(128) : {
+		*(.data)
+	}
+	.rdata ALIGN(128) : {
+		*(.rdata)
+	}
+	_gp = ALIGN(128) + 0x7ff0;
+	.lit4 ALIGN(128) : {
+		*(.lit4)
+	}
+	.lit8 ALIGN(128) : {
+		*(.lit8)
+	}
+	.sdata ALIGN(128) : {
+		*(.sdata)
+	}
+
+	.sbss ALIGN(128) (NOLOAD) : {	/* uninitialized data */
+		_fbss = . ;
+		*(.scommon)
+		*(.sbss)
+	}
+	.bss ALIGN(128) (NOLOAD) : {	/* uninitialized data */
+		*(.bss)
+	}
+	.COMMON ALIGN(128) (NOLOAD) : {	/* uninitialized data */
+		*(COMMON)
+	}
+		_end_bss = . - 4;
+		_stack = .;
+		. += _stack_size ;
+		_end_stack = . - 8*5;
+		_end = . ;
+		__lc_bh = . ;
+		. += _heap_size ;
+		__lc_eh = .;
+
+}
+

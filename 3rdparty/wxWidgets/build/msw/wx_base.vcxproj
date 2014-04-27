@@ -1,0 +1,387 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|Win32">
+      <Configuration>Devel</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>wxBase28</ProjectName>
+    <ProjectGuid>{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}</ProjectGuid>
+    <RootNamespace>wxBase28</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Devel.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Debug.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_GUI=0;wxUSE_BASE=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\lib\vc_lib/wx_base.bsc</OutputFile>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;__WXDEBUG__;wxUSE_BASE=1;wxUSE_GUI=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\lib\vc_lib/wx_base.bsc</OutputFile>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_GUI=0;wxUSE_BASE=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\lib\vc_lib/wx_base.bsc</OutputFile>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\common\appbase.cpp" />
+    <ClCompile Include="..\..\src\common\arcall.cpp" />
+    <ClCompile Include="..\..\src\common\arcfind.cpp" />
+    <ClCompile Include="..\..\src\common\archive.cpp" />
+    <ClCompile Include="..\..\src\common\clntdata.cpp" />
+    <ClCompile Include="..\..\src\common\cmdline.cpp" />
+    <ClCompile Include="..\..\src\common\config.cpp" />
+    <ClCompile Include="..\..\src\common\convauto.cpp" />
+    <ClCompile Include="..\..\src\common\datetime.cpp" />
+    <ClCompile Include="..\..\src\common\datstrm.cpp" />
+    <ClCompile Include="..\..\src\common\dircmn.cpp" />
+    <ClCompile Include="..\..\src\common\dummy.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\common\dynarray.cpp" />
+    <ClCompile Include="..\..\src\common\dynlib.cpp" />
+    <ClCompile Include="..\..\src\common\dynload.cpp" />
+    <ClCompile Include="..\..\src\common\encconv.cpp" />
+    <ClCompile Include="..\..\src\common\event.cpp" />
+    <ClCompile Include="..\..\src\common\extended.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\common\ffile.cpp" />
+    <ClCompile Include="..\..\src\common\file.cpp" />
+    <ClCompile Include="..\..\src\common\fileback.cpp" />
+    <ClCompile Include="..\..\src\common\fileconf.cpp" />
+    <ClCompile Include="..\..\src\common\filefn.cpp" />
+    <ClCompile Include="..\..\src\common\filename.cpp" />
+    <ClCompile Include="..\..\src\common\filesys.cpp" />
+    <ClCompile Include="..\..\src\common\filtall.cpp" />
+    <ClCompile Include="..\..\src\common\filtfind.cpp" />
+    <ClCompile Include="..\..\src\common\fmapbase.cpp" />
+    <ClCompile Include="..\..\src\common\fs_arc.cpp" />
+    <ClCompile Include="..\..\src\common\fs_filter.cpp" />
+    <ClCompile Include="..\..\src\common\fs_mem.cpp" />
+    <ClCompile Include="..\..\src\common\hash.cpp" />
+    <ClCompile Include="..\..\src\common\hashmap.cpp" />
+    <ClCompile Include="..\..\src\common\init.cpp" />
+    <ClCompile Include="..\..\src\common\intl.cpp" />
+    <ClCompile Include="..\..\src\common\ipcbase.cpp" />
+    <ClCompile Include="..\..\src\common\list.cpp" />
+    <ClCompile Include="..\..\src\common\log.cpp" />
+    <ClCompile Include="..\..\src\common\longlong.cpp" />
+    <ClCompile Include="..\..\src\common\memory.cpp" />
+    <ClCompile Include="..\..\src\common\mimecmn.cpp" />
+    <ClCompile Include="..\..\src\common\module.cpp" />
+    <ClCompile Include="..\..\src\common\msgout.cpp" />
+    <ClCompile Include="..\..\src\common\mstream.cpp" />
+    <ClCompile Include="..\..\src\common\object.cpp" />
+    <ClCompile Include="..\..\src\common\platinfo.cpp" />
+    <ClCompile Include="..\..\src\common\powercmn.cpp" />
+    <ClCompile Include="..\..\src\common\process.cpp" />
+    <ClCompile Include="..\..\src\common\regex.cpp" />
+    <ClCompile Include="..\..\src\common\sstream.cpp" />
+    <ClCompile Include="..\..\src\common\stdpbase.cpp" />
+    <ClCompile Include="..\..\src\common\stopwatch.cpp" />
+    <ClCompile Include="..\..\src\common\strconv.cpp" />
+    <ClCompile Include="..\..\src\common\stream.cpp" />
+    <ClCompile Include="..\..\src\common\string.cpp" />
+    <ClCompile Include="..\..\src\common\sysopt.cpp" />
+    <ClCompile Include="..\..\src\common\tarstrm.cpp" />
+    <ClCompile Include="..\..\src\common\textbuf.cpp" />
+    <ClCompile Include="..\..\src\common\textfile.cpp" />
+    <ClCompile Include="..\..\src\common\tokenzr.cpp" />
+    <ClCompile Include="..\..\src\common\txtstrm.cpp" />
+    <ClCompile Include="..\..\src\common\uri.cpp" />
+    <ClCompile Include="..\..\src\common\utilscmn.cpp" />
+    <ClCompile Include="..\..\src\common\variant.cpp" />
+    <ClCompile Include="..\..\src\common\wfstream.cpp" />
+    <ClCompile Include="..\..\src\common\wxchar.cpp" />
+    <ClCompile Include="..\..\src\common\xti.cpp" />
+    <ClCompile Include="..\..\src\common\xtistrm.cpp" />
+    <ClCompile Include="..\..\src\common\zipstrm.cpp" />
+    <ClCompile Include="..\..\src\common\zstream.cpp" />
+    <ClCompile Include="..\..\src\msw\basemsw.cpp" />
+    <ClCompile Include="..\..\src\msw\crashrpt.cpp" />
+    <ClCompile Include="..\..\src\msw\dde.cpp" />
+    <ClCompile Include="..\..\src\msw\debughlp.cpp" />
+    <ClCompile Include="..\..\src\msw\dir.cpp" />
+    <ClCompile Include="..\..\src\msw\dlmsw.cpp" />
+    <ClCompile Include="..\..\src\msw\HeapAllocator.cpp" />
+    <ClCompile Include="..\..\src\msw\main.cpp" />
+    <ClCompile Include="..\..\src\msw\mimetype.cpp" />
+    <ClCompile Include="..\..\src\msw\mslu.cpp" />
+    <ClCompile Include="..\..\src\msw\power.cpp" />
+    <ClCompile Include="..\..\src\msw\regconf.cpp" />
+    <ClCompile Include="..\..\src\msw\registry.cpp" />
+    <ClCompile Include="..\..\src\msw\snglinst.cpp" />
+    <ClCompile Include="..\..\src\msw\stackwalk.cpp" />
+    <ClCompile Include="..\..\src\msw\stdpaths.cpp" />
+    <ClCompile Include="..\..\src\msw\thread.cpp" />
+    <ClCompile Include="..\..\src\msw\utils.cpp" />
+    <ClCompile Include="..\..\src\msw\utilsexc.cpp" />
+    <ClCompile Include="..\..\src\msw\volume.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\src\msw\version.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\wx\msw\apptbase.h" />
+    <ClInclude Include="..\..\include\wx\msw\apptrait.h" />
+    <ClInclude Include="..\..\include\wx\msw\chkconf.h" />
+    <ClInclude Include="..\..\include\wx\msw\crashrpt.h" />
+    <ClInclude Include="..\..\include\wx\msw\dde.h" />
+    <ClInclude Include="..\..\include\wx\msw\debughlp.h" />
+    <ClInclude Include="..\..\include\wx\msw\gccpriv.h" />
+    <ClInclude Include="..\..\include\wx\msw\HeapAllocator.h" />
+    <ClInclude Include="..\..\include\wx\msw\libraries.h" />
+    <ClInclude Include="..\..\include\wx\msw\mimetype.h" />
+    <ClInclude Include="..\..\include\wx\msw\mslu.h" />
+    <ClInclude Include="..\..\include\wx\msw\private.h" />
+    <ClInclude Include="..\..\include\wx\msw\regconf.h" />
+    <ClInclude Include="..\..\include\wx\msw\registry.h" />
+    <ClInclude Include="..\..\include\wx\msw\seh.h" />
+    <ClInclude Include="..\..\include\wx\msw\stackwalk.h" />
+    <ClInclude Include="..\..\include\wx\msw\stdpaths.h" />
+    <ClInclude Include="..\..\include\wx\msw\winundef.h" />
+    <ClInclude Include="..\..\include\wx\msw\wrapcctl.h" />
+    <ClInclude Include="..\..\include\wx\msw\wrapcdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\wrapwin.h" />
+    <ClInclude Include="..\..\include\wx\html\forcelnk.h" />
+    <ClInclude Include="..\..\include\wx\afterstd.h" />
+    <ClInclude Include="..\..\include\wx\app.h" />
+    <ClInclude Include="..\..\include\wx\apptrait.h" />
+    <ClInclude Include="..\..\include\wx\archive.h" />
+    <ClInclude Include="..\..\include\wx\arrstr.h" />
+    <ClInclude Include="..\..\include\wx\beforestd.h" />
+    <ClInclude Include="..\..\include\wx\buffer.h" />
+    <ClInclude Include="..\..\include\wx\build.h" />
+    <ClInclude Include="..\..\include\wx\chkconf.h" />
+    <ClInclude Include="..\..\include\wx\clntdata.h" />
+    <ClInclude Include="..\..\include\wx\cmdline.h" />
+    <ClInclude Include="..\..\include\wx\confbase.h" />
+    <ClInclude Include="..\..\include\wx\config.h" />
+    <ClInclude Include="..\..\include\wx\containr.h" />
+    <ClInclude Include="..\..\include\wx\convauto.h" />
+    <ClInclude Include="..\..\include\wx\cpp.h" />
+    <ClInclude Include="..\..\include\wx\datetime.h" />
+    <ClInclude Include="..\..\include\wx\datstrm.h" />
+    <ClInclude Include="..\..\include\wx\dde.h" />
+    <ClInclude Include="..\..\include\wx\debug.h" />
+    <ClInclude Include="..\..\include\wx\defs.h" />
+    <ClInclude Include="..\..\include\wx\dir.h" />
+    <ClInclude Include="..\..\include\wx\dlimpexp.h" />
+    <ClInclude Include="..\..\include\wx\dynarray.h" />
+    <ClInclude Include="..\..\include\wx\dynlib.h" />
+    <ClInclude Include="..\..\include\wx\dynload.h" />
+    <ClInclude Include="..\..\include\wx\encconv.h" />
+    <ClInclude Include="..\..\include\wx\event.h" />
+    <ClInclude Include="..\..\include\wx\except.h" />
+    <ClInclude Include="..\..\include\wx\features.h" />
+    <ClInclude Include="..\..\include\wx\ffile.h" />
+    <ClInclude Include="..\..\include\wx\file.h" />
+    <ClInclude Include="..\..\include\wx\fileconf.h" />
+    <ClInclude Include="..\..\include\wx\filefn.h" />
+    <ClInclude Include="..\..\include\wx\filename.h" />
+    <ClInclude Include="..\..\include\wx\filesys.h" />
+    <ClInclude Include="..\..\include\wx\fontenc.h" />
+    <ClInclude Include="..\..\include\wx\fontmap.h" />
+    <ClInclude Include="..\..\include\wx\fs_arc.h" />
+    <ClInclude Include="..\..\include\wx\fs_filter.h" />
+    <ClInclude Include="..\..\include\wx\fs_mem.h" />
+    <ClInclude Include="..\..\include\wx\fs_zip.h" />
+    <ClInclude Include="..\..\include\wx\hash.h" />
+    <ClInclude Include="..\..\include\wx\hashmap.h" />
+    <ClInclude Include="..\..\include\wx\hashset.h" />
+    <ClInclude Include="..\..\include\wx\iconloc.h" />
+    <ClInclude Include="..\..\include\wx\init.h" />
+    <ClInclude Include="..\..\include\wx\intl.h" />
+    <ClInclude Include="..\..\include\wx\iosfwrap.h" />
+    <ClInclude Include="..\..\include\wx\ioswrap.h" />
+    <ClInclude Include="..\..\include\wx\ipc.h" />
+    <ClInclude Include="..\..\include\wx\ipcbase.h" />
+    <ClInclude Include="..\..\include\wx\isql.h" />
+    <ClInclude Include="..\..\include\wx\isqlext.h" />
+    <ClInclude Include="..\..\include\wx\link.h" />
+    <ClInclude Include="..\..\include\wx\list.h" />
+    <ClInclude Include="..\..\include\wx\log.h" />
+    <ClInclude Include="..\..\include\wx\longlong.h" />
+    <ClInclude Include="..\..\include\wx\math.h" />
+    <ClInclude Include="..\..\include\wx\memconf.h" />
+    <ClInclude Include="..\..\include\wx\memory.h" />
+    <ClInclude Include="..\..\include\wx\memtext.h" />
+    <ClInclude Include="..\..\include\wx\mimetype.h" />
+    <ClInclude Include="..\..\include\wx\module.h" />
+    <ClInclude Include="..\..\include\wx\msgout.h" />
+    <ClInclude Include="..\..\include\wx\mstream.h" />
+    <ClInclude Include="..\..\include\wx\object.h" />
+    <ClInclude Include="..\..\include\wx\platform.h" />
+    <ClInclude Include="..\..\include\wx\platinfo.h" />
+    <ClInclude Include="..\..\include\wx\power.h" />
+    <ClInclude Include="..\..\include\wx\process.h" />
+    <ClInclude Include="..\..\include\wx\ptr_scpd.h" />
+    <ClInclude Include="..\..\include\wx\recguard.h" />
+    <ClInclude Include="..\..\include\wx\regex.h" />
+    <ClInclude Include="..\..\include\wx\scopeguard.h" />
+    <ClInclude Include="..\..\include\wx\snglinst.h" />
+    <ClInclude Include="..\..\include\wx\sstream.h" />
+    <ClInclude Include="..\..\include\wx\stack.h" />
+    <ClInclude Include="..\..\include\wx\stackwalk.h" />
+    <ClInclude Include="..\..\include\wx\stdpaths.h" />
+    <ClInclude Include="..\..\include\wx\stockitem.h" />
+    <ClInclude Include="..\..\include\wx\stopwatch.h" />
+    <ClInclude Include="..\..\include\wx\strconv.h" />
+    <ClInclude Include="..\..\include\wx\stream.h" />
+    <ClInclude Include="..\..\include\wx\string.h" />
+    <ClInclude Include="..\..\include\wx\sysopt.h" />
+    <ClInclude Include="..\..\include\wx\tarstrm.h" />
+    <ClInclude Include="..\..\include\wx\textbuf.h" />
+    <ClInclude Include="..\..\include\wx\textfile.h" />
+    <ClInclude Include="..\..\include\wx\thread.h" />
+    <ClInclude Include="..\..\include\wx\timer.h" />
+    <ClInclude Include="..\..\include\wx\tokenzr.h" />
+    <ClInclude Include="..\..\include\wx\txtstrm.h" />
+    <ClInclude Include="..\..\include\wx\types.h" />
+    <ClInclude Include="..\..\include\wx\uri.h" />
+    <ClInclude Include="..\..\include\wx\utils.h" />
+    <ClInclude Include="..\..\include\wx\variant.h" />
+    <ClInclude Include="..\..\include\wx\vector.h" />
+    <ClInclude Include="..\..\include\wx\version.h" />
+    <ClInclude Include="..\..\include\wx\volume.h" />
+    <ClInclude Include="..\..\include\wx\wfstream.h" />
+    <ClInclude Include="..\..\include\wx\wx.h" />
+    <ClInclude Include="..\..\include\wx\wxchar.h" />
+    <ClInclude Include="..\..\include\wx\wxprec.h" />
+    <ClInclude Include="..\..\include\wx\xti.h" />
+    <ClInclude Include="..\..\include\wx\xtistrm.h" />
+    <ClInclude Include="..\..\include\wx\zipstrm.h" />
+    <ClInclude Include="..\..\include\wx\zstream.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="wx_config.vcxproj">
+      <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,61 @@
+--------------------------------------------------------------------------
+25. December, 2004   Version 1.2
+
+- The plugin is tested with PCSX2 0.7!
+
+- I've repaired a stupid bug concerning calculating the track sizes.
+
+- I've added an hack for big DVDs (fake minute info in the CDVDgetTD
+  function). 
+
+
+--------------------------------------------------------------------------
+29. March, 2004   Version 1.1
+
+- Ah, to make it short: I've got some times this weekend, tried the 
+  PCSX2 0.6 version, noticed that my relatively new Plextor PX-708A 
+  drive didn't work with the P.E.Op.S. dvd plugin, and therefore 
+  added a new good working reading mode. 
+
+  So, if you had just some error message like 'unable to open dvd 
+  plugin' with PCSX2 and the P.E.Op.S. dvd plugin in the past, chances 
+  are high that this version will now give better results on your 
+  system. At least I was able to see the first intro screens of some 
+  games without problems :)
+
+
+--------------------------------------------------------------------------
+
+19. November, 2003   Version 1.0
+
+- What to say? Blame Shadow of the PCSX2 team... he wanted
+  a PS2 CDVD plugin from me, and he didn't give up asking until
+  I made one, sigh ;)
+
+  Ok, I have done this plugin using my old P.E.Op.S. PSX cdr
+  plugin sources, so you will notice some similaries, of course.
+
+  This plugin is able to play PS2 CDs and PS2 DVDs in your
+  PC's CD/DVD drives, and since all the old P.E.Op.S. cdr read
+  caching modes are available, the speed should be fine as well.
+
+  For the plugin settings, check out the included readme file
+  (but if you are familar with the P.E.Op.S. cdr config, you
+  will not have much troubles... the new plugin's config is even 
+  easier to use, since you don't have to specify a read method).
+
+  I cannot say much about compatibility (since I did the plugin
+  in a few hours last weekend, and I only have a Liteon DVD drive
+  for tests available right now), but I think it's free of major
+  bugs, so feel free to try it.
+
+  Some stuff is not available right now: PPF support and subchannel
+  reading, for example (but both are not very important at the 
+  moment, imho). 
+
+  The sources of the plugin (license: GPL) can be found on the 
+  P.E.Op.S. site on sourceforge, I've added a MS VisualStudio 6 
+  project file, as well as a Bloodshed Dev-C++ one (you will 
+  also need NASM for this one).
+
+  Ok, have fun :) 

@@ -1,0 +1,42 @@
+﻿<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <SSEtype>
+    </SSEtype>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_PropertySheetDisplayName>common</_PropertySheetDisplayName>
+    <OutDir>$(SolutionDir)bin\$(PcsxSubsection)</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <WarningLevel>Level3</WarningLevel>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <DisableSpecificWarnings>4512;4996</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>"$(SolutionDir)3rdparty";"$(SolutionDir)3rdparty\w32pthreads\include";"$(SolutionDir)common\include";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WIN32;_WIN32;__WIN32__;_WINDOWS;ENABLE_NLS;PACKAGE="pcsx2";TIXML_USE_STL;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <AdditionalLibraryDirectories>"$(SolutionDir)deps\$(Platform)\$(Configuration)";%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>$(SolutionDir)deps\$(Platform)\$(Configuration)\$(ProjectName).lib</ImportLibrary>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)common\include</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Manifest />
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="SSEtype">
+      <Value>$(SSEtype)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

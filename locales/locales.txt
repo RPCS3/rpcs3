@@ -1,0 +1,13 @@
+Folder: /trunk/locales
+Contains: PO files for gettext language translations
+
+
+The PO files in this folder are the most current/up-to-date translations for any given revision
+of PCSX2.  When checking out trunk, for example, these files are usually chasing a "moving
+target" that may have a number of language string changes from PO file contents.  When checking
+out a stable release branch (such as 0.9.8) the PO files should be fairly stable and unchanging.
+
+In general it is recommended that translators focus time on perfecting stable releases, and
+contribute to trunk/dev-branch languages only if you're feeling eagar, or if PCSX2 devs have
+announced a scheduled stable release in the future (ie, requested translators to update and
+submit new PO files).

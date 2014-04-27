@@ -1,0 +1,37 @@
+; Declares the module parameters for the DLL.
+
+;LIBRARY      "ZeroGS"
+;DESCRIPTION  'ZeroGS dll'
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	GSinit				@5
+	GSshutdown			@6
+	GSopen				@7
+	GSclose				@8
+	GSgifTransfer1		@13
+	GSgifTransfer2		@14
+	GSgifTransfer3		@15
+	GSreadFIFO			@16
+	GSvsync				@17
+	GSmakeSnapshot		@18
+	GSkeyEvent			@19
+	GSfreeze            @20
+	GSconfigure			@21
+	GStest				@22
+	GSabout				@23
+    GSreadFIFO2			@28
+    GSirqCallback		@29
+    GSsetBaseMem		@30
+    GSwriteCSR			@31
+    GSchangeSaveState	@32
+	GSreset				@33
+	GSgifSoftReset		@34
+	GSsetFrameSkip		@35
+	GSsetGameCRC		@36
+	GSgetLastTag		@37
+	GSsetupRecording	@38
+	GSsetSettingsDir	@39

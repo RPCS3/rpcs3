@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C++ Express 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZZOgl", "zerogsogl_2008.vcproj", "{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47} = {2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "..\..\..\..\common\build\Utilities\utilities.vcproj", "{4639972E-424E-4E13-8B07-CA403C481346}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "..\..\..\..\3rdparty\zlib\zlib.vcproj", "{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Devel|Win32 = Devel|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug|Win32.Build.0 = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Devel|Win32.ActiveCfg = Devel|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Devel|Win32.Build.0 = Devel|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release|Win32.ActiveCfg = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release|Win32.Build.0 = Release|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Debug|Win32.Build.0 = Debug|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Devel|Win32.ActiveCfg = Devel|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Devel|Win32.Build.0 = Devel|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Release|Win32.ActiveCfg = Release|Win32
+		{4639972E-424E-4E13-8B07-CA403C481346}.Release|Win32.Build.0 = Release|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Debug|Win32.Build.0 = Debug|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Devel|Win32.ActiveCfg = Devel|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Devel|Win32.Build.0 = Devel|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Release|Win32.ActiveCfg = Release|Win32
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
