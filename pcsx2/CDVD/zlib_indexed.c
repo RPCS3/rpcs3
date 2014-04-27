@@ -99,7 +99,11 @@ Comments) 1950 to 1952 in the files http://tools.ietf.org/html/rfc1950
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef __LINUX__
+#include <zlib.h>
+#else
 #include <zlib/zlib.h>
+#endif
 
 #include <Pcsx2Types.h>
 #ifdef WIN32

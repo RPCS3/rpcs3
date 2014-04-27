@@ -44,7 +44,7 @@ static s64 fsize(const wxString& filename) {
 static Access* ReadIndexFromFile(const wxString& filename) {
 	s64 size = fsize(filename);
 	if (size <= 0) {
-		Console.Error("Error: Can't open index file: '%s'", filename.To8BitData());
+		Console.Error("Error: Can't open index file: '%s'", (const char*)filename.To8BitData());
 		return 0;
 	}
 	std::ifstream infile(filename.ToUTF8(), std::ifstream::binary);
@@ -52,7 +52,7 @@ static Access* ReadIndexFromFile(const wxString& filename) {
 	char fileId[GZIP_ID_LEN + 1] = { 0 };
 	infile.read(fileId, GZIP_ID_LEN);
 	if (wxString::From8BitData(GZIP_ID) != wxString::From8BitData(fileId)) {
-		Console.Error("Error: Incompatible gzip index, please delete it manually: '%s'", filename.To8BitData());
+		Console.Error("Error: Incompatible gzip index, please delete it manually: '%s'", (const char*)filename.To8BitData());
 		infile.close();
 		return 0;
 	}
@@ -62,7 +62,7 @@ static Access* ReadIndexFromFile(const wxString& filename) {
 
 	s64 datasize = size - GZIP_ID_LEN - sizeof(Access);
 	if (datasize != index->have * sizeof(Point)) {
-		Console.Error("Error: unexpected size of gzip index, please delete it manually: '%s'.", filename.To8BitData());
+		Console.Error("Error: unexpected size of gzip index, please delete it manually: '%s'.", (const char*)filename.To8BitData());
 		infile.close();
 		free(index);
 		return 0;
@@ -77,7 +77,7 @@ static Access* ReadIndexFromFile(const wxString& filename) {
 
 static void WriteIndexToFile(Access* index, const wxString filename) {
 	if (wxFileName::FileExists(filename)) {
-		Console.Warning("WARNING: Won't write index - file name exists (please delete it manually): '%s'", filename.To8BitData());
+		Console.Warning("WARNING: Won't write index - file name exists (please delete it manually): '%s'", (const char*)filename.To8BitData());
 		return;
 	}
 
@@ -94,9 +94,9 @@ static void WriteIndexToFile(Access* index, const wxString filename) {
 
 	// Verify
 	if (fsize(filename) != (s64)GZIP_ID_LEN + sizeof(Access) + sizeof(Point) * index->have) {
-		Console.Warning("Warning: Can't write index file to disk: '%s'", filename.To8BitData());
+		Console.Warning("Warning: Can't write index file to disk: '%s'", (const char*)filename.To8BitData());
 	} else {
-		Console.WriteLn(Color_Green, "OK: Gzip quick access index file saved to disk: '%s'", filename.To8BitData());
+		Console.WriteLn(Color_Green, "OK: Gzip quick access index file saved to disk: '%s'", (const char*)filename.To8BitData());
 	}
 }
 
@@ -195,7 +195,7 @@ static wxString iso2indexname(const wxString& isoname) {
 static void WarnOldIndex(const wxString& filename) {
 	wxString oldName = filename + L".pcsx2.index.tmp";
 	if (wxFileName::FileExists(oldName)) {
-		Console.Warning("Note: Unused old index detected, please delete it manually: '%s'", oldName.To8BitData());
+		Console.Warning("Note: Unused old index detected, please delete it manually: '%s'", (const char*)oldName.To8BitData());
 	}
 }
 
@@ -256,7 +256,7 @@ bool GzippedFileReader::OkIndex() {
 	wxString indexfile = iso2indexname(m_filename);
 
 	if (wxFileName::FileExists(indexfile) && (m_pIndex = ReadIndexFromFile(indexfile))) {
-		Console.WriteLn(Color_Green, "OK: Gzip quick access index read from disk: '%s'", indexfile.To8BitData());
+		Console.WriteLn(Color_Green, "OK: Gzip quick access index read from disk: '%s'", (const char*)indexfile.To8BitData());
 		if (m_pIndex->span != SPAN_DEFAULT) {
 			Console.Warning("Note: This index has %1.1f MB intervals, while the current default for new indexes is %1.1f MB.", (float)m_pIndex->span / 1024 / 1024, (float)SPAN_DEFAULT / 1024 / 1024);
 			Console.Warning("It will work fine, but if you want to generate a new index with default intervals, delete this index file.");
@@ -278,7 +278,7 @@ bool GzippedFileReader::OkIndex() {
 		m_pIndex = index;
 		WriteIndexToFile((Access*)m_pIndex, indexfile);
 	} else {
-		Console.Error("ERROR (%d): index could not be generated for file '%s'", len, m_filename.To8BitData());
+		Console.Error("ERROR (%d): index could not be generated for file '%s'", len, (const char*)m_filename.To8BitData());
 		return false;
 	}
 
