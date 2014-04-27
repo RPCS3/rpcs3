@@ -102,6 +102,91 @@ static void WriteIndexToFile(Access* index, const wxString filename) {
 
 /////////// End of complementary utilities for zlib_indexed.c //////////
 
+class ChunksCache {
+public:
+	ChunksCache() : m_size(0), m_entries(0) { SetSize(1); };
+	~ChunksCache() { Drop(); };
+	void SetSize(int numChunks);
+
+	void Take(void* pMallocedSrc, PX_off_t offset, int length, int coverage);
+	int  Read(void* pDest,        PX_off_t offset, int length);
+private:
+	class CacheEntry {
+	public:
+		CacheEntry(void* pMallocedSrc, PX_off_t offset, int length, int coverage) :
+			data(pMallocedSrc),
+			offset(offset),
+			size(length),
+			coverage(coverage)
+			{};
+
+		~CacheEntry() { if (data) free(data); };
+
+		void* data;
+		PX_off_t offset;
+		int coverage;
+		int size;
+	};
+
+	void Drop();
+	CacheEntry** m_entries;
+	int m_size;
+};
+
+// Deallocate everything
+void ChunksCache::Drop() {
+	if (!m_size)
+		return;
+
+	for (int i = 0; i < m_size; i++)
+		if (m_entries[i])
+			delete m_entries[i];
+
+	delete[] m_entries;
+	m_entries = 0;
+	m_size = 0;
+}
+
+// Discarding the cache is OK for now
+void ChunksCache::SetSize(int numChunks) {
+	Drop();
+	if (numChunks <= 0)
+		return;
+	m_size = numChunks;
+	m_entries = new CacheEntry*[m_size];
+	for (int i = 0; i < m_size; i++)
+		m_entries[i] = 0;
+}
+
+void ChunksCache::Take(void* pMallocedSrc, PX_off_t offset, int length, int coverage) {
+	if (!m_size)
+		return;
+
+	if (m_entries[m_size - 1])
+		delete m_entries[m_size - 1];
+
+	for (int i = m_size - 1; i > 0; i--)
+		m_entries[i] = m_entries[i - 1];
+
+	m_entries[0] = new CacheEntry(pMallocedSrc, offset, length, coverage);
+}
+
+int ChunksCache::Read(void* pDest, PX_off_t offset, int length) {
+	for (int i = 0; i < m_size; i++) {
+		CacheEntry* e = m_entries[i];
+		if (e && offset >= e->offset && (offset + length) <= (e->offset + e->coverage)) {
+			int available = std::min((PX_off_t)length, e->offset + e->size - offset);
+			memcpy(pDest, (char*)e->data + offset - e->offset, available);
+			// Move to the top of the list (MRU)
+			for (int j = i; j > 0; j--)
+				m_entries[j] = m_entries[j - 1];
+			m_entries[0] = e;
+			return available;
+		}
+	}
+	return -1;
+}
+
 
 static wxString iso2indexname(const wxString& isoname) {
 	return isoname + L".pindex.tmp";
@@ -114,14 +199,18 @@ static void WarnOldIndex(const wxString& filename) {
 	}
 }
 
+#define SPAN_DEFAULT (1048576L * 4)   /* distance between access points when creating a new index */
+#define CACHED_CHUNKS 50              /* how many span chunks to cache */
 
 class GzippedFileReader : public AsyncFileReader
 {
 	DeclareNoncopyableObject(GzippedFileReader);
 public:
 	GzippedFileReader(void) :
-		m_pIndex(0)
-	{	m_blocksize = 2048; };
+		m_pIndex(0) {
+		m_blocksize = 2048;
+		m_cache.SetSize(CACHED_CHUNKS);
+	};
 
 	virtual ~GzippedFileReader(void) { Close(); };
 
@@ -146,9 +235,10 @@ public:
 	virtual void SetBlockSize(uint bytes) { m_blocksize = bytes; }
 	virtual void SetDataOffset(uint bytes) { m_dataoffset = bytes; }
 private:
-	bool	OkIndex();  // Verifies thatt we have an index, or try to create one
+	bool	OkIndex();  // Verifies that we have an index, or try to create one
 	int		mBytesRead; // Temp sync read result when simulating async read
 	Access* m_pIndex;   // Quick access index
+	ChunksCache m_cache;
 };
 
 
@@ -156,9 +246,6 @@ private:
 bool GzippedFileReader::CanHandle(const wxString& fileName) {
 	return wxFileName::FileExists(fileName) && fileName.Lower().EndsWith(L".gz");
 }
-
-
-#define SPAN_DEFAULT (1048576L * 2)   /* distance between access points when creating a new index */
 
 bool GzippedFileReader::OkIndex() {
 	if (m_pIndex)
@@ -221,6 +308,9 @@ int GzippedFileReader::FinishRead(void) {
 	return res;
 };
 
+#define PTT clock_t
+#define NOW() (clock() / (CLOCKS_PER_SEC / 1000))
+
 int GzippedFileReader::ReadSync(void* pBuffer, uint sector, uint count) {
 	if (!OkIndex())
 		return -1;
@@ -228,10 +318,26 @@ int GzippedFileReader::ReadSync(void* pBuffer, uint sector, uint count) {
 	PX_off_t offset = (s64)sector * m_blocksize + m_dataoffset;
 	int bytesToRead = count * m_blocksize;
 
+	int res = m_cache.Read(pBuffer, offset, bytesToRead);
+	if (res >= 0)
+		return res;
+
+	// Not available from cache. Decompress a chunk which is a multiple of span
+	// and at span boundaries, and contains the request.
+	s32 span = m_pIndex->span;
+	PX_off_t start = span * (offset / span);
+	PX_off_t end = span * (1 + (offset + bytesToRead - 1) / span);
+	void* chunk = malloc(end - start);
+
+	PTT s = NOW();
 	FILE* in = fopen(m_filename.ToUTF8(), "rb");
-	int res = extract(in, m_pIndex, offset, (unsigned char*)pBuffer, bytesToRead);
+	res = extract(in, m_pIndex, start, (unsigned char*)chunk, end - start);
+	m_cache.Take(chunk, start, res, end - start);
 	fclose(in);
-	return res;
+	Console.WriteLn("gzip: extracting %1.1f MB -> %d ms", (float)(end - start) / 1024 / 1024, (int)(NOW()- s));
+
+	// The cache now has a chunk which satisfies this request. Recurse (once)
+	return ReadSync(pBuffer, sector, count);
 }
 
 void GzippedFileReader::Close() {
