@@ -148,7 +148,7 @@ public:
 	if (#a1[0] == 'r') XmmInvalidate(a1); \
 	if (#a2[0] == 'r') XmmInvalidate(a2); \
 	if (#a3[0] == 'r') XmmInvalidate(a3); \
-	X86X64CallNode* call##a0 = c.call(imm_ptr(&opwr_##a0::opcode), kFuncConvHost, FuncBuilder4<FnVoid, u32, u32, u32, u32>()); \
+	X86X64CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<FnVoid, u32, u32, u32, u32>()); \
 	call##a0->setArg(0, imm_u(a0)); \
 	call##a0->setArg(1, imm_u(a1)); \
 	call##a0->setArg(2, imm_u(a2)); \
@@ -443,7 +443,7 @@ private:
 			}
 		};
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
-		X86X64CallNode* call = c.call(imm_ptr(&STOP_wrapper::STOP), kFuncConvHost, FuncBuilder1<FnVoid, u32>());
+		X86X64CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<FnVoid, u32>());
 		call->setArg(0, imm_u(code));
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		do_finalize = true;
@@ -1149,7 +1149,7 @@ private:
 
 		default:
 		{
-			X86X64CallNode* call = c.call(imm_ptr(&WRCH_wrapper::WRCH), kFuncConvHost, FuncBuilder2<FnVoid, u32, u32>());
+			X86X64CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&WRCH_wrapper::WRCH)), kFuncConvHost, FuncBuilder2<FnVoid, u32, u32>());
 			call->setArg(0, imm_u(ra));
 			call->setArg(1, v);
 		}
