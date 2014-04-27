@@ -109,16 +109,20 @@ public:
 #define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
 #define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
 #define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
+
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
 #else
 #define cpu_xmm(x) oword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
 #define cpu_qword(x) qword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
 #define cpu_dword(x) dword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
 #define cpu_word(x) word_ptr(*cpu_var, &(((SPUThread*)0)->x) )
 #define cpu_byte(x) byte_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, &(((g_imm_table_struct*)0)->x))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, &(((g_imm_table_struct*)0)->x))
 #endif
 
-#define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
-#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
 
 #define LOG_OPCODE(...) //ConLog.Write("Compiled "__FUNCTION__"(): "__VA_ARGS__)
 
