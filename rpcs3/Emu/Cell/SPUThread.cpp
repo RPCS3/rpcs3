@@ -75,11 +75,7 @@ void SPUThread::DoRun()
 		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
 	break;
 	case 2:
-		#ifdef _WIN32
 		m_dec = new SPURecompilerCore(*this);
-		#else
-		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
-		#endif
 	break;
 
 	default:

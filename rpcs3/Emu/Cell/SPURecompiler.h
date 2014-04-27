@@ -1,5 +1,4 @@
 #pragma once
-#ifdef _WIN32
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"
@@ -104,11 +103,19 @@ public:
 
 #define c (*compiler)
 
+#ifdef _WIN32
 #define cpu_xmm(x) oword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 16) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 16")
 #define cpu_qword(x) qword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 8) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 8")
 #define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
 #define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
 #define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
+#else
+#define cpu_xmm(x) oword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#define cpu_qword(x) qword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#define cpu_dword(x) dword_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#define cpu_word(x) word_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#define cpu_byte(x) byte_ptr(*cpu_var, &(((SPUThread*)0)->x) )
+#endif
 
 #define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
 #define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
@@ -3692,7 +3699,7 @@ private:
 		}
 		else
 		{
-			throw __FUNCTION__"(): invalid case";
+			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
 		}
 		LOG_OPCODE();
 	}
@@ -3777,7 +3784,7 @@ private:
 		}
 		else
 		{
-			throw __FUNCTION__"(): invalid case";
+			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
 		}
 		LOG_OPCODE();
 	}
@@ -3797,6 +3804,5 @@ private:
 
 	
 };
-#endif WIN32
 
 #undef c
