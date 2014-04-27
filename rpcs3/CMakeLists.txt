@@ -10,11 +10,13 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	#add_definitions(-D__WXGTK__)
 	#add_definitions(-Wfatal-errors)
 	add_definitions(-w) # TODO: remove me
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
 	add_definitions(-fpermissive) # TODO: remove me
 	add_definitions(-g)	# Debugging!!
 	add_definitions(-msse2)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
 endif()
 
 If( NOT RPCS3_SRC_DIR)
@@ -80,7 +82,8 @@ RPCS3_SRC
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 "${CMAKE_CURRENT_BINARY_DIR}/../asmjit/asmjit.a" ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjit/") #hack because the asmjit cmake file force fno exceptions
+target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 
 #set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 #cotire(rpcs3)
