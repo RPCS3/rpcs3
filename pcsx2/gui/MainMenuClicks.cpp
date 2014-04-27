@@ -255,14 +255,17 @@ bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 	
 	wxArrayString isoFilterTypes;
 
-	isoFilterTypes.Add(pxsFmt(_("All Supported (%s)"), (isoSupportedLabel + L" .dump").c_str()));
-	isoFilterTypes.Add(isoSupportedList + L";*.dump");
+	isoFilterTypes.Add(pxsFmt(_("All Supported (%s)"), (isoSupportedLabel + L" .dump" + L" .gz").c_str()));
+	isoFilterTypes.Add(isoSupportedList + L";*.dump" + L";*.gz");
 
 	isoFilterTypes.Add(pxsFmt(_("Disc Images (%s)"), isoSupportedLabel.c_str() ));
 	isoFilterTypes.Add(isoSupportedList);
 
 	isoFilterTypes.Add(pxsFmt(_("Blockdumps (%s)"), L".dump" ));
 	isoFilterTypes.Add(L"*.dump");
+
+	isoFilterTypes.Add(pxsFmt(_("Compressed (%s)"), L".gz"));
+	isoFilterTypes.Add(L"*.gz");
 
 	isoFilterTypes.Add(_("All Files (*.*)"));
 	isoFilterTypes.Add(L"*.*");

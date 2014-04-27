@@ -406,7 +406,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\CDVD\BlockdumpFileReader.cpp" />
+    <ClCompile Include="..\..\CDVD\CompressedFileReader.cpp" />
     <ClCompile Include="..\..\CDVD\OutputIsoFile.cpp" />
+    <ClInclude Include="..\..\CDVD\zlib_indexed.c" />
     <ClCompile Include="..\..\DebugTools\Breakpoints.cpp" />
     <ClCompile Include="..\..\DebugTools\DebugInterface.cpp" />
     <ClCompile Include="..\..\DebugTools\DisassemblyManager.cpp" />

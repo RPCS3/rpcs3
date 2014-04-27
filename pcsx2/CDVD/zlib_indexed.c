@@ -1,4 +1,33 @@
 /* zran.c -- example of zlib/gzip stream indexing and random access
+
+Copyright (C) 2005, 2012 Mark Adler
+
+This software is provided 'as-is', without any express or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+claim that you wrote the original software. If you use this software
+in a product, an acknowledgment in the product documentation would be
+appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+Jean-loup Gailly        Mark Adler
+jloup@gzip.org          madler@alumni.caltech.edu
+
+
+The data format used by the zlib library is described by RFCs (Request for
+Comments) 1950 to 1952 in the files http://tools.ietf.org/html/rfc1950
+(zlib format), rfc1951 (deflate format) and rfc1952 (gzip format).
+*/
+
+/* zran.c -- example of zlib/gzip stream indexing and random access
  * Copyright (C) 2005, 2012 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
    Version 1.1  29 Sep 2012  Mark Adler */
@@ -6,6 +35,18 @@
 /* Version History:
  1.0  29 May 2005  First version
  1.1  29 Sep 2012  Fix memory reallocation error
+
+ 1.1+ 16 Apr 2014  PCSX2 adaptation
+    (This is verbatim copy from zlib/examples/zran.c, with the following mods):
+  - Added an explicit license clause taken from zlib.h and removed the sample main(...).
+  - zlib include path and included Pcsx2Types.h for windows off_t (s64)
+  - fseeko and off_t #define'ed for windows too (on windows off_t is 32b and no fseeko)
+  - typedefs for struct access/point (Access/Point) and allocation type casts
+  - access: added members span and uncompressed_size which are filled by build_index.
+  - point and access packed for safety since they go to disk as is (but no endian-ness handling).
+      But they're still aligned since each member size is multiple of 4, so no perf issues.
+  - build_index(...) - added progress prints
+  - CHUNK changed from 16k to 512k
  */
 
 /* Illustrate the use of Z_BLOCK, inflatePrime(), and inflateSetDictionary()
@@ -52,31 +93,66 @@
    index in a file.
  */
 
+#ifndef __ZLIB_INDEXED_C__
+#define __ZLIB_INDEXED_C__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "zlib.h"
+#include <zlib/zlib.h>
+
+#include <Pcsx2Types.h>
+#ifdef WIN32
+#	define PX_fseeko _fseeki64
+#	define PX_off_t  s64        /* __int64 */
+#else
+#	define PX_fseeko fseeko
+#	define PX_off_t  off_t
+#endif
 
 #define local static
 
-#define SPAN 1048576L       /* desired distance between access points */
+//#define SPAN (1048576L*2)   /* desired distance between access points */
 #define WINSIZE 32768U      /* sliding window size */
-#define CHUNK 16384         /* file input buffer size */
+#define CHUNK (512 * 1024)  /* file input buffer size */
+
+#ifdef WIN32
+#    pragma pack(push, indexData, 1)
+#endif
 
 /* access point entry */
 struct point {
-    off_t out;          /* corresponding offset in uncompressed data */
-    off_t in;           /* offset in input file of first full byte */
+    PX_off_t out;       /* corresponding offset in uncompressed data */
+    PX_off_t in;        /* offset in input file of first full byte */
     int bits;           /* number of bits (1-7) from byte at in - 1, or 0 */
     unsigned char window[WINSIZE];  /* preceding 32K of uncompressed data */
-};
+}
+#ifndef WIN32
+__attribute__((packed))
+#endif
+;
+
+typedef struct point Point;
 
 /* access point list */
 struct access {
     int have;           /* number of list entries filled in */
-    int size;           /* number of list entries allocated */
+    int size;           /* number of list entries allocated (only used internally during build)*/
     struct point *list; /* allocated list */
-};
+
+    s32 span;           /* once the index is built, holds the span size used to build it */
+    PX_off_t uncompressed_size; /* filled by build_index */
+}
+#ifndef WIN32
+__attribute__((packed))
+#endif
+;
+
+typedef struct access Access;
+
+#ifdef WIN32
+#    pragma pack(pop, indexData)
+#endif
 
 /* Deallocate an index built by build_index() */
 local void free_index(struct access *index)
@@ -90,15 +166,15 @@ local void free_index(struct access *index)
 /* Add an entry to the access point list.  If out of memory, deallocate the
    existing list and return NULL. */
 local struct access *addpoint(struct access *index, int bits,
-    off_t in, off_t out, unsigned left, unsigned char *window)
+    PX_off_t in, PX_off_t out, unsigned left, unsigned char *window)
 {
     struct point *next;
 
     /* if list is empty, create it (start with eight points) */
     if (index == NULL) {
-        index = malloc(sizeof(struct access));
+        index = (Access*)malloc(sizeof(struct access));
         if (index == NULL) return NULL;
-        index->list = malloc(sizeof(struct point) << 3);
+        index->list = (Point*)malloc(sizeof(struct point) << 3);
         if (index->list == NULL) {
             free(index);
             return NULL;
@@ -110,7 +186,7 @@ local struct access *addpoint(struct access *index, int bits,
     /* if list is full, make it bigger */
     else if (index->have == index->size) {
         index->size <<= 1;
-        next = realloc(index->list, sizeof(struct point) * index->size);
+        next = (Point*)realloc(index->list, sizeof(struct point) * index->size);
         if (next == NULL) {
             free_index(index);
             return NULL;
@@ -141,11 +217,11 @@ local struct access *addpoint(struct access *index, int bits,
    returns the number of access points on success (>= 1), Z_MEM_ERROR for out
    of memory, Z_DATA_ERROR for an error in the input file, or Z_ERRNO for a
    file read error.  On success, *built points to the resulting index. */
-local int build_index(FILE *in, off_t span, struct access **built)
+local int build_index(FILE *in, PX_off_t span, struct access **built)
 {
     int ret;
-    off_t totin, totout;        /* our own total counters to avoid 4GB limit */
-    off_t last;                 /* totout value of last access point */
+    PX_off_t totin, totout, totPrinted;     /* our own total counters to avoid 4GB limit */
+    PX_off_t last;              /* totout value of last access point */
     struct access *index;       /* access points being generated */
     z_stream strm;
     unsigned char input[CHUNK];
@@ -164,7 +240,7 @@ local int build_index(FILE *in, off_t span, struct access **built)
     /* inflate the input, maintain a sliding window, and build an index -- this
        also validates the integrity of the compressed data using the check
        information at the end of the gzip or zlib stream */
-    totin = totout = last = 0;
+    totin = totout = last = totPrinted = 0;
     index = NULL;               /* will be allocated by first addpoint() */
     strm.avail_out = 0;
     do {
@@ -222,14 +298,20 @@ local int build_index(FILE *in, off_t span, struct access **built)
                 last = totout;
             }
         } while (strm.avail_in != 0);
+        if (totin / (50 * 1024 * 1024) != totPrinted / (50 * 1024 * 1024)) {
+            printf("%dMB ", (int)(totin / (1024 * 1024)));
+            totPrinted = totin;
+        }
     } while (ret != Z_STREAM_END);
 
     /* clean up and return index (release unused entries in list) */
     (void)inflateEnd(&strm);
-    index->list = realloc(index->list, sizeof(struct point) * index->have);
+    index->list = (Point*)realloc(index->list, sizeof(struct point) * index->have);
     index->size = index->have;
+    index->span = span;
+    index->uncompressed_size = totout;
     *built = index;
-    return index->size;
+    return index->have;
 
     /* return error */
   build_index_error:
@@ -246,7 +328,7 @@ local int build_index(FILE *in, off_t span, struct access **built)
    should not return a data error unless the file was modified since the index
    was generated.  extract() may also return Z_ERRNO if there is an error on
    reading or seeking the input file. */
-local int extract(FILE *in, struct access *index, off_t offset,
+local int extract(FILE *in, struct access *index, PX_off_t offset,
                   unsigned char *buf, int len)
 {
     int ret, skip;
@@ -274,7 +356,7 @@ local int extract(FILE *in, struct access *index, off_t offset,
     ret = inflateInit2(&strm, -15);         /* raw inflate */
     if (ret != Z_OK)
         return ret;
-    ret = fseeko(in, here->in - (here->bits ? 1 : 0), SEEK_SET);
+    ret = PX_fseeko(in, here->in - (here->bits ? 1 : 0), SEEK_SET);
     if (ret == -1)
         goto extract_ret;
     if (here->bits) {
@@ -348,62 +430,4 @@ local int extract(FILE *in, struct access *index, off_t offset,
     return ret;
 }
 
-/* Demonstrate the use of build_index() and extract() by processing the file
-   provided on the command line, and the extracting 16K from about 2/3rds of
-   the way through the uncompressed output, and writing that to stdout. */
-int main(int argc, char **argv)
-{
-    int len;
-    off_t offset;
-    FILE *in;
-    struct access *index = NULL;
-    unsigned char buf[CHUNK];
-
-    /* open input file */
-    if (argc != 2) {
-        fprintf(stderr, "usage: zran file.gz\n");
-        return 1;
-    }
-    in = fopen(argv[1], "rb");
-    if (in == NULL) {
-        fprintf(stderr, "zran: could not open %s for reading\n", argv[1]);
-        return 1;
-    }
-
-    /* build index */
-    len = build_index(in, SPAN, &index);
-    if (len < 0) {
-        fclose(in);
-        switch (len) {
-        case Z_MEM_ERROR:
-            fprintf(stderr, "zran: out of memory\n");
-            break;
-        case Z_DATA_ERROR:
-            fprintf(stderr, "zran: compressed data error in %s\n", argv[1]);
-            break;
-        case Z_ERRNO:
-            fprintf(stderr, "zran: read error on %s\n", argv[1]);
-            break;
-        default:
-            fprintf(stderr, "zran: error %d while building index\n", len);
-        }
-        return 1;
-    }
-    fprintf(stderr, "zran: built index with %d access points\n", len);
-
-    /* use index by reading some bytes from an arbitrary offset */
-    offset = (index->list[index->have - 1].out << 1) / 3;
-    len = extract(in, index, offset, buf, CHUNK);
-    if (len < 0)
-        fprintf(stderr, "zran: extraction failed: %s error\n",
-                len == Z_MEM_ERROR ? "out of memory" : "input corrupted");
-    else {
-        fwrite(buf, 1, len, stdout);
-        fprintf(stderr, "zran: extracted %d bytes at %llu\n", len, offset);
-    }
-
-    /* clean up and exit */
-    free_index(index);
-    fclose(in);
-    return 0;
-}
+#endif   /* __ZLIB_INDEXED_C__ */

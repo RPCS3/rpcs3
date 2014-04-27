@@ -852,7 +852,14 @@
     </ClCompile>
     <ClCompile Include="..\..\gui\Debugger\DebuggerLists.cpp">
       <Filter>AppHost\Debugger</Filter>
-    </ClCompile>  </ItemGroup>
+    </ClCompile>
+    <ClCompile Include="..\..\CDVD\CompressedFileReader.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\CDVD\zlib_indexed.c">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
       <Filter>Misc</Filter>
@@ -1262,7 +1269,8 @@
     </ClInclude>
     <ClInclude Include="..\..\gui\Debugger\DebuggerLists.h">
       <Filter>AppHost\Debugger</Filter>
-    </ClInclude>  </ItemGroup>
+    </ClInclude>
+  </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\3rdparty\wxWidgets\include\wx\msw\wx.rc">
       <Filter>AppHost\Resources</Filter>

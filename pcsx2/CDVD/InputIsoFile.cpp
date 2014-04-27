@@ -204,7 +204,7 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 	m_reader = new FlatFileReader();
 	m_reader->Open(m_filename);
 
-	bool isBlockdump;
+	bool isBlockdump, isCompressed = false;
 	if(isBlockdump = BlockdumpFileReader::DetectBlockdump(m_reader))
 	{
 		delete m_reader;
@@ -219,6 +219,10 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 		m_reader = bdr;
 
 		ReadUnit = 1;		
+	} else if (isCompressed = CompressedFileReader::DetectCompressed(m_reader)) {
+		delete m_reader;
+		m_reader = CompressedFileReader::GetNewReader(m_filename);
+		m_reader->Open(m_filename);
 	}
 
 	bool detected = Detect();
@@ -231,7 +235,7 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 			.SetUserMsg(_("Unrecognized ISO image file format"))
 			.SetDiagMsg(L"ISO mounting failed: PCSX2 is unable to identify the ISO image type.");
 
-	if(!isBlockdump)
+	if(!isBlockdump && !isCompressed)
 	{
 		ReadUnit = MaxReadUnit;
 		
