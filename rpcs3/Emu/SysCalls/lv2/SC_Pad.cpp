@@ -79,25 +79,25 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= pads.size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	const Pad& pad = pads[port_no];
+	Pad& pad = pads[port_no];
 	CellPadData data;
 	memset(&data, 0, sizeof(CellPadData));
 
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	pads[port_no].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+	pad.m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-	s32 len = 0;
-	for(Button& button : pads[port_no].m_buttons)
+	for(Button& button : pad.m_buttons)
 	{
-		if(!button.m_pressed)
-			continue;
-
 		switch(button.m_offset)
 		{
-		case CELL_PAD_BTN_OFFSET_DIGITAL1: if(!(d1 & button.m_outKeyCode)){d1 |= button.m_outKeyCode; len++;} break;
-		case CELL_PAD_BTN_OFFSET_DIGITAL2: if(!(d2 & button.m_outKeyCode)){d2 |= button.m_outKeyCode; len++;} break;
+		case CELL_PAD_BTN_OFFSET_DIGITAL1:
+			if (button.m_pressed) d1 |= button.m_outKeyCode;
+			break;
+		case CELL_PAD_BTN_OFFSET_DIGITAL2:
+			if (button.m_pressed) d2 |= button.m_outKeyCode;
+			break;
 		}
 
 		if(button.m_flush)
@@ -129,7 +129,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 			*res = 0;
 	}
 
-	data.len = len;
+	data.len = pad.m_buttons.size();
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = d1;
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = d2;
 	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = rx;
