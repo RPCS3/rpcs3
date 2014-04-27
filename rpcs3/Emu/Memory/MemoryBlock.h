@@ -293,7 +293,7 @@ public:
 	u64 getMappedAddress(u64 realAddress);
 };
 
-#include "DynamicMemoryBlockBase.inl"
+#include "DynamicMemoryBlockBase.h"
 
 typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
 typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;
