@@ -80,7 +80,7 @@ RPCS3_SRC
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-target_link_libraries(rpcs3 "${CMAKE_CURRENT_BINARY_DIR}/asmjit/asmjit.a" ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
+target_link_libraries(rpcs3 "${CMAKE_CURRENT_BINARY_DIR}/../asmjit/asmjit.a" ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 
 #set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 #cotire(rpcs3)
