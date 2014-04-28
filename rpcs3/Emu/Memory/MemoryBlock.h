@@ -187,6 +187,7 @@ public:
 
 class NullMemoryBlock : public MemoryBlock
 {
+public:
 	virtual bool IsNULL() { return true; }
 	virtual bool IsMyAddress(const u64 addr) { return true; }
 

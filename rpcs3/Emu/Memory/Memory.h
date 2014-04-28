@@ -105,12 +105,67 @@ public:
 
 	MemoryBlock& GetMemByAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
 		{
 			if(MemoryBlocks[i]->IsMyAddress(addr)) return *MemoryBlocks[i];
 		}
 
 		return NullMem;
+	}
+
+	bool Read8ByAddr(const u64 addr, u8 *value)
+	{
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
+		{
+			if (MemoryBlocks[i]->Read8(addr, value))
+				return true;
+		}
+
+		return NullMem.Read8(addr, value);
+	}
+
+	bool Read16ByAddr(const u64 addr, u16 *value)
+	{
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
+		{
+			if (MemoryBlocks[i]->Read16(addr, value))
+				return true;
+		}
+
+		return NullMem.Read16(addr, value);
+	}
+
+	bool Read32ByAddr(const u64 addr, u32 *value)
+	{
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
+		{
+			if (MemoryBlocks[i]->Read32(addr, value))
+				return true;
+		}
+
+		return NullMem.Read32(addr, value);
+	}
+
+	bool Read64ByAddr(const u64 addr, u64 *value)
+	{
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
+		{
+			if (MemoryBlocks[i]->Read64(addr, value))
+				return true;
+		}
+
+		return NullMem.Read64(addr, value);
+	}
+
+	bool Read128ByAddr(const u64 addr, u128 *value)
+	{
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
+		{
+			if (MemoryBlocks[i]->Read128(addr, value))
+				return true;
+		}
+
+		return NullMem.Read128(addr, value);
 	}
 
 	u8* GetMemFromAddr(const u64 addr)
@@ -188,7 +243,7 @@ public:
 
 	bool IsGoodAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
 		{
 			if(MemoryBlocks[i]->IsMyAddress(addr)) return true;
 		}
@@ -198,7 +253,7 @@ public:
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
 		{
 			if( MemoryBlocks[i]->IsMyAddress(addr) &&
 				MemoryBlocks[i]->IsMyAddress(addr + size - 1) ) return true;
@@ -214,7 +269,7 @@ public:
 
 		ConLog.Write("Closing memory...");
 
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (size_t i = 0, end = MemoryBlocks.size(); i < end; ++i)
 		{
 			MemoryBlocks[i]->Delete();
 		}

@@ -498,35 +498,35 @@ bool MemoryBase::Write128NN(u64 addr, const u128 data)
 u8 MemoryBase::Read8(u64 addr)
 {
 	u8 res;
-	GetMemByAddr(addr).Read8(addr, &res);
+	Read8ByAddr(addr, &res);
 	return res;
 }
 
 u16 MemoryBase::Read16(u64 addr)
 {
 	u16 res;
-	GetMemByAddr(addr).Read16(addr, &res);
+	Read16ByAddr(addr, &res);
 	return res;
 }
 
 u32 MemoryBase::Read32(u64 addr)
 {
 	u32 res;
-	GetMemByAddr(addr).Read32(addr, &res);
+	Read32ByAddr(addr, &res);
 	return res;
 }
 
 u64 MemoryBase::Read64(u64 addr)
 {
 	u64 res;
-	GetMemByAddr(addr).Read64(addr, &res);
+	Read64ByAddr(addr, &res);
 	return res;
 }
 
 u128 MemoryBase::Read128(u64 addr)
 {
 	u128 res;
-	GetMemByAddr(addr).Read128(addr, &res);
+	Read128ByAddr(addr, &res);
 	return res;
 }
 
@@ -655,9 +655,11 @@ bool VirtualMemoryBlock::Read16(const u64 addr, u16* value)
 
 bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
 {
-	u64 realAddr;
-	*value = Memory.Read32(realAddr = getRealAddr(addr));
-	return realAddr != 0;
+	u64 realAddr = getRealAddr(addr);
+	if (realAddr == 0)
+		return false;
+	*value = Memory.Read32(realAddr);
+	return true;
 }
 
 bool VirtualMemoryBlock::Read64(const u64 addr, u64* value)
