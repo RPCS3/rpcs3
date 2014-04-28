@@ -219,7 +219,7 @@ struct CCellFontInternal      //Module cellFont
 	bool m_bFontGcmInitialized;
 
 	CCellFontInternal()
-		: m_buffer_addr(NULL)
+		: m_buffer_addr(0)
 		, m_buffer_size(0)
 		, m_bInitialized(false)
 		, m_bFontGcmInitialized(false)
@@ -301,7 +301,7 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 	if (!stbtt_InitFont(&(font->stbfont), (unsigned char*)Memory.VirtualToRealAddr(fontAddr), 0))
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
-	font->renderer_addr = NULL;
+	font->renderer_addr = 0;
 	font->fontdata_addr = fontAddr;
 	font->origin = CELL_FONT_OPEN_MEMORY;
 	return CELL_FONT_OK;
@@ -531,7 +531,7 @@ int cellFontUnbindRenderer(mem_ptr_t<CellFont> font)
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 
-	font->renderer_addr = NULL;
+	font->renderer_addr = 0;
 	return CELL_FONT_OK;
 }
 

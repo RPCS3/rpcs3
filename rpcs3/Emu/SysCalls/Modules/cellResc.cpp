@@ -517,7 +517,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
 	videocfg->pitch        = s_rescInternalInstance->m_dstPitch;
 
-	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg.GetAddr(), NULL, 0);
+	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg.GetAddr(), 0, 0);
 
 	if (IsPalInterpolate())
 	{
@@ -527,7 +527,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(CCellRescInternal::IntrHandler50);
 		//cellGcmSetSecondVHandler(CCellRescInternal::IntrHandler60);
-		cellGcmSetFlipHandler(NULL);
+		cellGcmSetFlipHandler(0);
 	}
 	else if (IsPalDrop())
 	{
@@ -535,7 +535,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(NULL);
 		//cellGcmSetSecondVHandler(CCellRescInternal::IntrHandler60Drop);
-		cellGcmSetFlipHandler(NULL);
+		cellGcmSetFlipHandler(0);
 	} 
 	else if (IsPal60Hsync())
 	{

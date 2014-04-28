@@ -9,7 +9,7 @@ void cellGcmSys_unload();
 Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
 
 u32 local_size = 0;
-u32 local_addr = NULL;
+u32 local_addr = 0;
 
 enum
 {
@@ -956,10 +956,10 @@ void cellGcmSys_init()
 
 void cellGcmSys_load()
 {
-	current_config.ioAddress = NULL;
-	current_config.localAddress = NULL;
+	current_config.ioAddress = 0;
+	current_config.localAddress = 0;
 	local_size = 0;
-	local_addr = NULL;
+	local_addr = 0;
 }
 
 void cellGcmSys_unload()

@@ -421,7 +421,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != NULL)
+		if(self_hdr.se_shdroff != 0)
 		{
 			e.Seek(elf32_hdr.e_shoff);
 
@@ -482,7 +482,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != NULL)
+		if(self_hdr.se_shdroff != 0)
 		{
 			e.Seek(elf64_hdr.e_shoff);
 
