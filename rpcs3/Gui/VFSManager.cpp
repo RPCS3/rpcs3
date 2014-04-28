@@ -95,9 +95,9 @@ void VFSEntrySettingsDialog::OnSelectDevPath(wxCommandEvent& event)
 
 void VFSEntrySettingsDialog::OnOk(wxCommandEvent& event)
 {
-	m_entry.device_path = strdup( m_tctrl_dev_path->GetValue().c_str());
-	m_entry.path = strdup(m_tctrl_path->GetValue().c_str());
-	m_entry.mount = strdup(m_tctrl_mount->GetValue().c_str());
+	m_entry.device_path =  m_tctrl_dev_path->GetValue().ToStdString();
+	m_entry.path = m_tctrl_path->GetValue().ToStdString();
+	m_entry.mount = m_tctrl_mount->GetValue().ToStdString();
 	m_entry.device = (vfsDeviceType)m_ch_type->GetSelection();
 
 	EndModal(wxID_OK);
