@@ -31,7 +31,7 @@ struct SFunc
 {
 	func_caller* func;
 	void* ptr;
-	char* name;
+	const char* name;
 	std::vector<SFuncOp> ops;
 	u64 group;
 	u32 found;
@@ -117,7 +117,7 @@ public:
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 
-	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], char* name, T func);
+	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
 template<typename T>
@@ -127,7 +127,7 @@ __forceinline void Module::AddFunc(u32 id, T func)
 }
 
 template<typename T>
-__forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], char* name, T func)
+__forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T func)
 {
 	if (!ops[0]) return;
 
