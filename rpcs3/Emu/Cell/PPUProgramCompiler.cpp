@@ -160,7 +160,7 @@ bool CompilePPUProgram::IsEnd() const { return p >= (s64)m_asm.length(); }
 bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= (s64)m_asm.length(); }
 
 char CompilePPUProgram::NextChar() { return *m_asm.substr(p++, 1).c_str(); }
-void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ); if(!IsEnd()) m_line++; }
+void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ) continue; if(!IsEnd()) m_line++; }
 void CompilePPUProgram::EndLn()
 {
 	NextLn();
