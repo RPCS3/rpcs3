@@ -2,19 +2,22 @@
 #include "FnIdGenerator.h"
 
 FnIdGenerator::FnIdGenerator(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "FunctionID Generator", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "FunctionID Generator")
 	, m_list(nullptr)
 {
-	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_subpanel(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxHORIZONTAL));
+	wxBoxSizer* s_panel     = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel  = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel2 = new wxBoxSizer(wxHORIZONTAL);
 
 	m_list = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(300, 450));
 	m_list->InsertColumn(0, "Function Name", 0, 200);
 	m_list->InsertColumn(1, "Function ID", 0, 100);
 
 	wxButton *b_input_name = new wxButton(this, wxID_ANY, "Input Function Name", wxDefaultPosition, wxSize(140, -1));
+	b_input_name->Bind(wxEVT_BUTTON, &FnIdGenerator::OnInput, this);
+
 	wxButton *b_clear = new wxButton(this, wxID_ANY, "Clear List", wxDefaultPosition, wxSize(140, -1));
+	b_clear->Bind(wxEVT_BUTTON, &FnIdGenerator::OnClear, this);
 
 	s_subpanel2->Add(b_input_name);
 	s_subpanel2->AddSpacer(10);
@@ -29,10 +32,7 @@ FnIdGenerator::FnIdGenerator(wxWindow* parent)
 	s_panel->Add(s_subpanel);
 	s_panel->AddSpacer(5);
 
-	this->SetSizerAndFit(s_panel);
-
-	Connect(b_input_name->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FnIdGenerator::OnInput));
-	Connect(b_clear->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FnIdGenerator::OnClear));
+	SetSizerAndFit(s_panel);
 }
 
 FnIdGenerator::~FnIdGenerator()

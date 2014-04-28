@@ -21,8 +21,6 @@ extern std::vector<RSXDebuggerProgram> m_debug_programs;
 
 class RSXDebugger : public wxFrame
 {
-	AppConnector m_app_connector;
-
 	u32 m_addr;
 
 	u32 m_panel_width;

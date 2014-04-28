@@ -244,9 +244,6 @@
     <ClCompile Include="Gui\Debugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="AppConnector.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
@@ -821,9 +818,6 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h">
       <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="AppConnector.h">
-      <Filter>rpcs3</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h">
       <Filter>Emu\ARMv7</Filter>

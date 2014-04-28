@@ -7,8 +7,6 @@
 
 class DbgEmuPanel : public wxPanel
 {
-	AppConnector m_app_connector;
-
 	wxButton* m_btn_run;
 	wxButton* m_btn_stop;
 	wxButton* m_btn_restart;
@@ -16,26 +14,26 @@ class DbgEmuPanel : public wxPanel
 public:
 	DbgEmuPanel(wxWindow* parent) : wxPanel(parent)
 	{
-		m_btn_run     = new wxButton(this, wxID_ANY, "Run");
-		m_btn_stop    = new wxButton(this, wxID_ANY, "Stop");
+		m_btn_run = new wxButton(this, wxID_ANY, "Run");
+		m_btn_run->Bind(wxEVT_BUTTON, &DbgEmuPanel::OnRun, this);
+
+		m_btn_stop = new wxButton(this, wxID_ANY, "Stop");
+		m_btn_stop->Bind(wxEVT_BUTTON, &DbgEmuPanel::OnStop, this);
+
 		m_btn_restart = new wxButton(this, wxID_ANY, "Restart");
+		m_btn_restart->Bind(wxEVT_BUTTON, &DbgEmuPanel::OnRestart, this);
 
-		wxBoxSizer& s_b_main = *new wxBoxSizer(wxHORIZONTAL);
+		wxBoxSizer* s_b_main = new wxBoxSizer(wxHORIZONTAL);
+		s_b_main->Add(m_btn_run,     wxSizerFlags().Border(wxALL, 5));
+		s_b_main->Add(m_btn_stop,    wxSizerFlags().Border(wxALL, 5));
+		s_b_main->Add(new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL), 0, wxEXPAND);
+		s_b_main->Add(m_btn_restart, wxSizerFlags().Border(wxALL, 5));
 
-		s_b_main.Add(m_btn_run,     wxSizerFlags().Border(wxALL, 5));
-		s_b_main.Add(m_btn_stop,    wxSizerFlags().Border(wxALL, 5));
-		s_b_main.Add(new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL), 0, wxEXPAND);
-		s_b_main.Add(m_btn_restart, wxSizerFlags().Border(wxALL, 5));
-
-		SetSizerAndFit(&s_b_main);
+		SetSizerAndFit(s_b_main);
 		Layout();
 
 		UpdateUI();
-		Connect(m_btn_run->GetId(),     wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DbgEmuPanel::OnRun));
-		Connect(m_btn_stop->GetId(),    wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DbgEmuPanel::OnStop));
-		Connect(m_btn_restart->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DbgEmuPanel::OnRestart));
-
-		m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(DbgEmuPanel::HandleCommand), (wxObject*)0, this);
+		wxGetApp().Bind(wxEVT_DBG_COMMAND, &DbgEmuPanel::HandleCommand, this);
 	}
 
 	void UpdateUI()

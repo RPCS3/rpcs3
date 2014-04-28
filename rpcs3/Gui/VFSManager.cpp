@@ -12,34 +12,34 @@ VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry
 	m_tctrl_mount         = new wxTextCtrl(this, wxID_ANY);
 	m_ch_type             = new wxChoice(this, wxID_ANY);
 
-	wxBoxSizer& s_type(*new wxBoxSizer(wxHORIZONTAL));
-	s_type.Add(m_ch_type, 1, wxEXPAND);
+	wxBoxSizer* s_type = new wxBoxSizer(wxHORIZONTAL);
+	s_type->Add(m_ch_type, 1, wxEXPAND);
 
-	wxBoxSizer& s_dev_path(*new wxBoxSizer(wxHORIZONTAL));
-	s_dev_path.Add(m_tctrl_dev_path, 1, wxEXPAND);
-	s_dev_path.Add(m_btn_select_dev_path, 0, wxLEFT, 5);
+	wxBoxSizer* s_dev_path = new wxBoxSizer(wxHORIZONTAL);
+	s_dev_path->Add(m_tctrl_dev_path, 1, wxEXPAND);
+	s_dev_path->Add(m_btn_select_dev_path, 0, wxLEFT, 5);
 
-	wxBoxSizer& s_path(*new wxBoxSizer(wxHORIZONTAL));
-	s_path.Add(m_tctrl_path, 1, wxEXPAND);
-	s_path.Add(m_btn_select_path, 0, wxLEFT, 5);
+	wxBoxSizer* s_path = new wxBoxSizer(wxHORIZONTAL);
+	s_path->Add(m_tctrl_path, 1, wxEXPAND);
+	s_path->Add(m_btn_select_path, 0, wxLEFT, 5);
 
-	wxBoxSizer& s_mount(*new wxBoxSizer(wxHORIZONTAL));
-	s_mount.Add(m_tctrl_mount, 1, wxEXPAND);
+	wxBoxSizer* s_mount = new wxBoxSizer(wxHORIZONTAL);
+	s_mount->Add(m_tctrl_mount, 1, wxEXPAND);
 
-	wxBoxSizer& s_btns(*new wxBoxSizer(wxHORIZONTAL));
-	s_btns.Add(new wxButton(this, wxID_OK));
-	s_btns.AddSpacer(30);
-	s_btns.Add(new wxButton(this, wxID_CANCEL));
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK));
+	s_btns->AddSpacer(30);
+	s_btns->Add(new wxButton(this, wxID_CANCEL));
 
-	wxBoxSizer& s_main(*new wxBoxSizer(wxVERTICAL));
-	s_main.Add(&s_type,  1, wxEXPAND | wxALL, 10);
-	s_main.Add(&s_dev_path,  1, wxEXPAND | wxALL, 10);
-	s_main.Add(&s_path,  1, wxEXPAND | wxALL, 10);
-	s_main.Add(&s_mount, 1, wxEXPAND | wxALL, 10);
-	s_main.AddSpacer(10);
-	s_main.Add(&s_btns,  0, wxALL | wxCENTER, 10);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(s_type,  1, wxEXPAND | wxALL, 10);
+	s_main->Add(s_dev_path,  1, wxEXPAND | wxALL, 10);
+	s_main->Add(s_path,  1, wxEXPAND | wxALL, 10);
+	s_main->Add(s_mount, 1, wxEXPAND | wxALL, 10);
+	s_main->AddSpacer(10);
+	s_main->Add(s_btns,  0, wxALL | wxCENTER, 10);
 
-	SetSizerAndFit(&s_main);
+	SetSizerAndFit(s_main);
 
 	SetSize(350, -1);
 
@@ -48,10 +48,11 @@ VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry
 		m_ch_type->Append(i);
 	}
 
-	Connect(m_ch_type->GetId(),             wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectType));
-	Connect(m_btn_select_path->GetId(),     wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectPath));
-	Connect(m_btn_select_dev_path->GetId(), wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnSelectDevPath));
-	Connect(wxID_OK,                        wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(VFSEntrySettingsDialog::OnOk));
+
+	m_ch_type->Bind(wxEVT_CHOICE, &VFSEntrySettingsDialog::OnSelectType, this);
+	m_btn_select_path->Bind(wxEVT_BUTTON, &VFSEntrySettingsDialog::OnSelectPath, this);
+	m_btn_select_dev_path->Bind(wxEVT_BUTTON, &VFSEntrySettingsDialog::OnSelectDevPath, this);
+	Bind(wxEVT_BUTTON,  &VFSEntrySettingsDialog::OnOk, this, wxID_OK);
 
 	m_tctrl_dev_path->SetValue(m_entry.device_path);
 	m_tctrl_path->SetValue(m_entry.path);
@@ -115,10 +116,10 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 {
 	m_list = new wxListView(this);
 
-	wxBoxSizer& s_main(*new wxBoxSizer(wxVERTICAL));
-	s_main.Add(m_list, 1, wxEXPAND);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(m_list, 1, wxEXPAND);
 
-	SetSizerAndFit(&s_main);
+	SetSizerAndFit(s_main);
 	SetSize(800, 600);
 
 	m_list->InsertColumn(0, "Path");
@@ -126,12 +127,12 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 	m_list->InsertColumn(2, "Path to Device");
 	m_list->InsertColumn(3, "Device");
 
-	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
-	Connect(m_list->GetId(), wxEVT_COMMAND_RIGHT_CLICK,         wxCommandEventHandler(VFSManagerDialog::OnRightClick));
-	Connect(id_add,          wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnAdd));
-	Connect(id_remove,       wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnRemove));
-	Connect(id_config,       wxEVT_COMMAND_MENU_SELECTED,       wxCommandEventHandler(VFSManagerDialog::OnEntryConfig));
-	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(VFSManagerDialog::OnClose));
+	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VFSManagerDialog::OnEntryConfig, this);
+	m_list->Bind(wxEVT_RIGHT_DOWN, &VFSManagerDialog::OnRightClick, this);
+	Bind(wxEVT_MENU,         &VFSManagerDialog::OnAdd, this, id_add);
+	Bind(wxEVT_MENU,         &VFSManagerDialog::OnRemove, this, id_remove);
+	Bind(wxEVT_MENU,         &VFSManagerDialog::OnEntryConfig, this, id_config);
+	Bind(wxEVT_CLOSE_WINDOW, &VFSManagerDialog::OnClose, this);
 
 	LoadEntries();
 	UpdateList();
@@ -165,7 +166,7 @@ void VFSManagerDialog::OnEntryConfig(wxCommandEvent& event)
 	}
 }
 
-void VFSManagerDialog::OnRightClick(wxCommandEvent& event)
+void VFSManagerDialog::OnRightClick(wxMouseEvent& event)
 {
 	wxMenu* menu = new wxMenu();
 	int idx = m_list->GetFirstSelected();
@@ -175,7 +176,7 @@ void VFSManagerDialog::OnRightClick(wxCommandEvent& event)
 	menu->AppendSeparator();
 	menu->Append(id_config, "Config")->Enable(idx != wxNOT_FOUND);
 
-	PopupMenu( menu );
+	PopupMenu(menu);
 }
 
 void VFSManagerDialog::OnAdd(wxCommandEvent& event)

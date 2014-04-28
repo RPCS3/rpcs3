@@ -15,7 +15,6 @@ class InterpreterDisAsmFrame : public wxPanel
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
-	AppConnector m_app_connector;
 	u32 m_item_count;
 	wxChoice* m_choice_units;
 

@@ -23,8 +23,8 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title) : wxFrame(parent, wxID
 {
 	CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
 	SetClientSize(res.width, res.height);
-	wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(GSFrame::OnKeyDown), (wxObject*)0, this);
-	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(GSFrame::OnClose));
+	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
+	Bind(wxEVT_CLOSE_WINDOW, &GSFrame::OnClose, this);
 }
 
 void GSFrame::OnPaint(wxPaintEvent& event)

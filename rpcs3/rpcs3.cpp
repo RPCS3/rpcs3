@@ -11,7 +11,7 @@
 #include <X11/Xlib.h>
 #endif
 
-const wxEventType wxEVT_DBG_COMMAND = wxNewEventType();
+wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;

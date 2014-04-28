@@ -10,7 +10,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 
 	m_path = "/dev_hdd0/game/";
 
-	Connect(GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(GameViewer::DClick));
+	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
 
 	Refresh();
 }
