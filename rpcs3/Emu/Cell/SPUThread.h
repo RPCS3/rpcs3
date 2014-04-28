@@ -178,6 +178,10 @@ public:
 		
 		case 1:
 			return this->low >> 22 & 0x3;
+
+		default:
+			ConLog.Error("Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
+			return 0;
 		}
 	}
 
