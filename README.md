@@ -1,6 +1,8 @@
 RPCS3
 =====
 
+[![Build Status](https://travis-ci.org/DHrpcs3/rpcs3.svg?branch=master)](https://travis-ci.org/DHrpcs3/rpcs3)
+
 An open-source PlayStation 3 emulator/debugger written in C++.
 
 You can find some basic information in the [FAQ](https://github.com/DHrpcs3/rpcs3/wiki/FAQ). For discussion about this emulator and PS3 emulation please visit the [official forums](http://www.emunewz.net/forum/forumdisplay.php?fid=162).
@@ -15,7 +17,7 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 
 __Windows__
 * [Visual C++ Redistributable Packages for Visual Studio 2013](http://www.microsoft.com/en-us/download/details.aspx?id=40784)
-* [OpenAL32.dll](http://www.mediafire.com/?nwt3ilty2mo)
+* [OpenAL binaries](http://kcat.strangesoft.net/openal.html): download and copy `Win32\soft_oal.dll` to `rpcs3\bin\OpenAL32.dll`
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential`
