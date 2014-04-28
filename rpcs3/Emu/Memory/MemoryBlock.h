@@ -28,7 +28,7 @@ struct MemBlockInfo : public MemInfo
 	{
 		if(!mem)
 		{
-			ConLog.Error("Not enought free memory.");
+			ConLog.Error("Not enough free memory.");
 			assert(0);
 		}
 		memset(mem, 0, size);

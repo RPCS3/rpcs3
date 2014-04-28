@@ -474,6 +474,7 @@ public:
 
 	bool Unmap(const u64 addr)
 	{
+		bool result = false;
 		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
 			if(MemoryBlocks[i]->IsMirror())
@@ -482,9 +483,11 @@ public:
 				{
 					delete MemoryBlocks[i];
 					MemoryBlocks.erase(MemoryBlocks.begin() + i);
+					return true;
 				}
 			}
 		}
+		return false;
 	}
 
 	u8* operator + (const u64 vaddr)
