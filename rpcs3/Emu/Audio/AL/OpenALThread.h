@@ -12,7 +12,7 @@ private:
 	ALuint m_buffers[g_al_buffers_count];
 	ALCdevice* m_device;
 	ALCcontext* m_context;
-	u32 m_buffer_size;
+	ALsizei m_buffer_size;
 
 public:
 	~OpenALThread();
