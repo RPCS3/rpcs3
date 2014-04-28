@@ -105,11 +105,8 @@ public:
 	virtual bool IsMyAddress(const u64 addr);
 	virtual bool IsLocked(const u64 addr) { return false; }
 
-	__forceinline const u8 FastRead8(const u64 addr) const;
-	__forceinline const u16 FastRead16(const u64 addr) const;
-	__forceinline const u32 FastRead32(const u64 addr) const;
-	__forceinline const u64 FastRead64(const u64 addr) const;
-	__forceinline const u128 FastRead128(const u64 addr);
+	template <typename T>
+	__forceinline const T FastRead(const u64 addr) const;
 
 	virtual bool Read8(const u64 addr, u8* value);
 	virtual bool Read16(const u64 addr, u16* value);
@@ -117,11 +114,8 @@ public:
 	virtual bool Read64(const u64 addr, u64* value);
 	virtual bool Read128(const u64 addr, u128* value);
 
-	__forceinline void FastWrite8(const u64 addr, const u8 value);
-	__forceinline void FastWrite16(const u64 addr, const u16 value);
-	__forceinline void FastWrite32(const u64 addr, const u32 value);
-	__forceinline void FastWrite64(const u64 addr, const u64 value);
-	__forceinline void FastWrite128(const u64 addr, const u128 value);
+	template <typename T>
+	__forceinline void FastWrite(const u64 addr, const T value);
 
 	virtual bool Write8(const u64 addr, const u8 value);
 	virtual bool Write16(const u64 addr, const u16 value);
