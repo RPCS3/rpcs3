@@ -118,7 +118,6 @@ struct GLFragmentDecompilerThread : public ThreadBase
 		, m_location(0)
 		, m_ctrl(ctrl)
 	{
-		m_size = 0;
 	}
 
 	std::string GetMask();
