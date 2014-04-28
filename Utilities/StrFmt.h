@@ -84,7 +84,10 @@ namespace fmt{
 		for (;;)
 		{
 			std::vector<char> buffptr(length);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-wFormat-security"
 			int printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
+#pragma clang diagnostic pop
 			if (printlen >= 0 && printlen < length)
 			{
 				str = string(buffptr.data(), printlen);
