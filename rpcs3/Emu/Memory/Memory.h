@@ -105,12 +105,68 @@ public:
 
 	MemoryBlock& GetMemByAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (auto block : MemoryBlocks)
 		{
-			if(MemoryBlocks[i]->IsMyAddress(addr)) return *MemoryBlocks[i];
+			if (block->IsMyAddress(addr))
+				return *block;
 		}
 
 		return NullMem;
+	}
+
+	bool Read8ByAddr(const u64 addr, u8 *value)
+	{
+		for (auto block : MemoryBlocks)
+		{
+			if (block->Read8(addr, value))
+				return true;
+		}
+
+		return NullMem.Read8(addr, value);
+	}
+
+	bool Read16ByAddr(const u64 addr, u16 *value)
+	{
+		for (auto block : MemoryBlocks)
+		{
+			if (block->Read16(addr, value))
+				return true;
+		}
+
+		return NullMem.Read16(addr, value);
+	}
+
+	bool Read32ByAddr(const u64 addr, u32 *value)
+	{
+		for (auto block : MemoryBlocks)
+		{
+			if (block->Read32(addr, value))
+				return true;
+		}
+
+		return NullMem.Read32(addr, value);
+	}
+
+	bool Read64ByAddr(const u64 addr, u64 *value)
+	{
+		for (auto block : MemoryBlocks)
+		{
+			if (block->Read64(addr, value))
+				return true;
+		}
+
+		return NullMem.Read64(addr, value);
+	}
+
+	bool Read128ByAddr(const u64 addr, u128 *value)
+	{
+		for (auto block : MemoryBlocks)
+		{
+			if (block->Read128(addr, value))
+				return true;
+		}
+
+		return NullMem.Read128(addr, value);
 	}
 
 	u8* GetMemFromAddr(const u64 addr)
@@ -126,9 +182,9 @@ public:
 	u64 RealToVirtualAddr(const void* addr)
 	{
 		const u64 raddr = (u64)addr;
-		for(u32 i=0; i<MemoryBlocks.size(); ++i)
+		for (auto block : MemoryBlocks)
 		{
-			MemoryBlock& b = *MemoryBlocks[i];
+			MemoryBlock& b = *block;
 			const u64 baddr = (u64)b.GetMem();
 
 			if(raddr >= baddr && raddr < baddr + b.GetSize())
@@ -188,9 +244,10 @@ public:
 
 	bool IsGoodAddr(const u64 addr)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (auto block : MemoryBlocks)
 		{
-			if(MemoryBlocks[i]->IsMyAddress(addr)) return true;
+			if (block->IsMyAddress(addr))
+				return true;
 		}
 
 		return false;
@@ -198,10 +255,11 @@ public:
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		const u64 end = addr + size - 1;
+		for (auto block : MemoryBlocks)
 		{
-			if( MemoryBlocks[i]->IsMyAddress(addr) &&
-				MemoryBlocks[i]->IsMyAddress(addr + size - 1) ) return true;
+			if (block->IsMyAddress(addr) && block->IsMyAddress(end))
+				return true;
 		}
 
 		return false;
@@ -214,9 +272,9 @@ public:
 
 		ConLog.Write("Closing memory...");
 
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
+		for (auto block : MemoryBlocks)
 		{
-			MemoryBlocks[i]->Delete();
+			block->Delete();
 		}
 
 		MemoryBlocks.clear();

@@ -3,7 +3,9 @@
 
 u8 PPCDecoder::DecodeMemory(const u64 address)
 {
-	Decode(Memory.Read32(address));
+	u32 instr;
+	Memory.Read32ByAddr(address, &instr);
+	Decode(instr);
 
 	return 4;
 }
