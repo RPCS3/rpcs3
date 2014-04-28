@@ -42,9 +42,17 @@ find_package(OpenAL REQUIRED)
 include("${wxWidgets_USE_FILE}")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(PLATFORM_ARCH "linux/x86_64")
+	if(LINUX)
+		set(PLATFORM_ARCH "linux/x86_64")
+	elseif(APPLE)
+		set(PLATFORM_ARCH "macosx/x86_64")
+	endif()
 else()
-	set(PLATFORM_ARCH "linux/x86")
+	if(LINUX)
+		set(PLATFORM_ARCH "linux/x86")
+	elseif(APPLE)
+		set(PLATFORM_ARCH "macosx/x86")
+	endif()
 endif()
 
 include_directories(
@@ -72,6 +80,7 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
 "${RPCS3_SRC_DIR}/Ini.cpp"
+"${RPCS3_SRC_DIR}/../Utilities/GNU.cpp"
 "${RPCS3_SRC_DIR}/Emu/*"
 "${RPCS3_SRC_DIR}/Gui/*"
 "${RPCS3_SRC_DIR}/Loader/*"

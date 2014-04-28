@@ -3,7 +3,10 @@
 #if defined(__GNUG__)
 #include <cmath>
 #include <stdlib.h>
+
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 
 #define _fpclass(x) std::fpclassify(x)
 #define __forceinline __attribute__((always_inline))
@@ -16,8 +19,31 @@
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 #define InterlockedCompareExchange64(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
+
+#ifndef __APPLE__
 #define _aligned_malloc(size,alignment) memalign(alignment,size)
+#else
+void * _aligned_malloc(size_t size, size_t alignment);
+#define wxIsNaN(x) ((x) != (x))
+#endif
+
 #define _aligned_free  free
+
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 0
+#include <time.h>
+#include <sys/time.h>
+
+static int clock_gettime(int foo, struct timespec *ts) {
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  ts->tv_sec = tv.tv_sec;
+  ts->tv_nsec = tv.tv_usec * 1000;
+  return (0);
+}
+#endif /* !CLOCK_MONOTONIC */
+
 #define DWORD int32_t
 #endif
 
