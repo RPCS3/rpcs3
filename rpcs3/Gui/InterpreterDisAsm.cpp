@@ -455,7 +455,7 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		u64 pc = CPU ? CPU->PC : 0x0;
+		unsigned long pc = CPU ? CPU->PC : 0x0;
 		p_pc->GetValue().ToULong(&pc, 16);
 		Emu.GetMarkedPoints().push_back(pc);
 		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
