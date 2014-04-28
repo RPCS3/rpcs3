@@ -562,7 +562,7 @@ int32_t cellGcmAddressToOffset(u64 address, mem32_t offset)
 
 uint32_t cellGcmGetMaxIoMapSize()
 {
-	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetResevedAmount();
+	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount();
 }
 
 void cellGcmGetOffsetTable(mem_ptr_t<gcm_offset> table)
@@ -730,7 +730,7 @@ int32_t cellGcmUnreserveIoMapSize(u32 size)
 	if (size & 0xFFFFF)
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 
-	if (size > Memory.RSXIOMem.GetResevedAmount())
+	if (size > Memory.RSXIOMem.GetReservedAmount())
 		return CELL_GCM_ERROR_INVALID_VALUE;
 
 	Memory.RSXIOMem.Unreserve(size);

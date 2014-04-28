@@ -272,7 +272,7 @@ public:
 	virtual bool Unreserve(u32 size);
 
 	// Return the total amount of reserved memory
-	virtual u32 GetResevedAmount();
+	virtual u32 GetReservedAmount();
 
 	virtual bool Read8(const u64 addr, u8* value);
 	virtual bool Read16(const u64 addr, u16* value);
