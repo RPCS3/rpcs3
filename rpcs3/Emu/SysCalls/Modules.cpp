@@ -14,7 +14,7 @@ std::vector<SFunc *> g_static_funcs_list;
 struct ModuleInfo
 {
 	u32 id;
-	char* name;
+	const char* name;
 }
 static const g_module_list[] =
 {

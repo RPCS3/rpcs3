@@ -27,6 +27,10 @@ u64 get_time()
 	struct timespec ts;
 	if (!clock_gettime(CLOCK_MONOTONIC, &ts))
 		return ts.tv_sec * (s64)10000000 + (s64)ts.tv_nsec / (s64)100;
+
+	// Should never occur.
+	assert(0);
+	return 0;
 #endif
 }
 

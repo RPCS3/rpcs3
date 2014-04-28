@@ -827,7 +827,7 @@ public:
 				return true;
 			}
 		}
-		catch (std::invalid_argument& e)//if any of the stoull conversion fail
+		catch (std::invalid_argument&)//if any of the stoull conversion fail
 		{
 			return false;
 		}

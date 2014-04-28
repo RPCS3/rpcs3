@@ -230,8 +230,8 @@ int sys_spu_thread_group_start(u32 id)
 
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
-		CPUThread* t;
-		if (t = Emu.GetCPU().GetThread(group_info->list[i]))
+		CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]);
+		if (t)
 		{
 			t->Exec();
 		}

@@ -10,7 +10,7 @@
 #include <intrin.h>
 #else
 #include <x86intrin.h>
-#define _rotl64(x,r) (((u64)x << r) | ((u64)x >> (64 - r)))
+#define _rotl64(x,r) (((u64)(x) << (r)) | ((u64)(x) >> (64 - (r))))
 #endif
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)

@@ -29,7 +29,7 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 
-	current_subHandle->fd = NULL;
+	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
 	switch(src->srcSelect.ToBE())
@@ -41,7 +41,7 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	case const_se_t<u32, CELL_PNGDEC_FILE>::value:
 		// Get file descriptor
 		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName_addr, 0, fd.GetAddr(), NULL, 0);
+		int ret = cellFsOpen(src->fileName_addr, 0, fd.GetAddr(), 0, 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 

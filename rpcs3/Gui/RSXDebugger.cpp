@@ -780,7 +780,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 {
 	wxString disasm = wxEmptyString;
 
-#define DISASM(string, ...) if(disasm.IsEmpty()) disasm = wxString::Format((string), ##__VA_ARGS__); else disasm += (wxString(' ') + wxString::Format((string), ##__VA_ARGS__))
+#define DISASM(string, ...) { if(disasm.IsEmpty()) disasm = wxString::Format((string), ##__VA_ARGS__); else disasm += (wxString(' ') + wxString::Format((string), ##__VA_ARGS__)); }
 	if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 	{
 		u32 jumpAddr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);

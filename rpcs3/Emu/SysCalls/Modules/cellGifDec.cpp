@@ -57,7 +57,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 	// Get file descriptor
 	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(src->fileName, 0, fd, NULL, 0);
+	int ret = cellFsOpen(src->fileName, 0, fd, 0, 0);
 	current_subHandle->fd = fd->ToLE();
 	if(ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 

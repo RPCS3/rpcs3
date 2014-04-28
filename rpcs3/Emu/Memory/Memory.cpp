@@ -521,7 +521,7 @@ MemoryBlock* VirtualMemoryBlock::SetRange(const u64 start, const u32 size)
 
 bool VirtualMemoryBlock::IsInMyRange(const u64 addr)
 {
-	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize() - GetResevedAmount();
+	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize() - GetReservedAmount();
 }
 
 bool VirtualMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
@@ -554,7 +554,7 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 	}
 	else
 	{
-		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - GetResevedAmount() - size;)
+		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - GetReservedAmount() - size;)
 		{
 			bool is_good_addr = true;
 
@@ -718,7 +718,7 @@ void VirtualMemoryBlock::Delete()
 
 bool VirtualMemoryBlock::Reserve(u32 size)
 {
-	if(size + GetResevedAmount() > GetEndAddr() - GetStartAddr())
+	if(size + GetReservedAmount() > GetEndAddr() - GetStartAddr())
 		return false;
 
 	m_reserve_size += size;
@@ -727,14 +727,14 @@ bool VirtualMemoryBlock::Reserve(u32 size)
 
 bool VirtualMemoryBlock::Unreserve(u32 size)
 {
-	if(size > GetResevedAmount())
+	if(size > GetReservedAmount())
 		return false;
 
 	m_reserve_size -= size;
 	return true;
 }
 
-u32 VirtualMemoryBlock::GetResevedAmount()
+u32 VirtualMemoryBlock::GetReservedAmount()
 {
 	return m_reserve_size;
 }

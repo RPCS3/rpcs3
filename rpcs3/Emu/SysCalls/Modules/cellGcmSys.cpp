@@ -9,7 +9,7 @@ void cellGcmSys_unload();
 Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
 
 u32 local_size = 0;
-u32 local_addr = NULL;
+u32 local_addr = 0;
 
 enum
 {
@@ -562,7 +562,7 @@ int32_t cellGcmAddressToOffset(u64 address, mem32_t offset)
 
 uint32_t cellGcmGetMaxIoMapSize()
 {
-	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetResevedAmount();
+	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount();
 }
 
 void cellGcmGetOffsetTable(mem_ptr_t<gcm_offset> table)
@@ -681,8 +681,8 @@ int32_t cellGcmReserveIoMapSize(const u32 size)
 
 int32_t cellGcmUnmapEaIoAddress(u64 ea)
 {
-	u32 size;
-	if (size = Memory.RSXIOMem.UnmapRealAddress(ea))
+	u32 size = Memory.RSXIOMem.UnmapRealAddress(ea);
+	if (size)
 	{
 		u64 io;
 		ea = ea >> 20;
@@ -704,8 +704,8 @@ int32_t cellGcmUnmapEaIoAddress(u64 ea)
 
 int32_t cellGcmUnmapIoAddress(u64 io)
 {
-	u32 size;
-	if (size = Memory.RSXIOMem.UnmapAddress(io))
+	u32 size = Memory.RSXIOMem.UnmapAddress(io);
+	if (size)
 	{
 		u64 ea;
 		io = io >> 20;
@@ -730,7 +730,7 @@ int32_t cellGcmUnreserveIoMapSize(u32 size)
 	if (size & 0xFFFFF)
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 
-	if (size > Memory.RSXIOMem.GetResevedAmount())
+	if (size > Memory.RSXIOMem.GetReservedAmount())
 		return CELL_GCM_ERROR_INVALID_VALUE;
 
 	Memory.RSXIOMem.Unreserve(size);
@@ -956,10 +956,10 @@ void cellGcmSys_init()
 
 void cellGcmSys_load()
 {
-	current_config.ioAddress = NULL;
-	current_config.localAddress = NULL;
+	current_config.ioAddress = 0;
+	current_config.localAddress = 0;
 	local_size = 0;
-	local_addr = NULL;
+	local_addr = 0;
 }
 
 void cellGcmSys_unload()

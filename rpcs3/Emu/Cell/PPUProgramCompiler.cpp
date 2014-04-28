@@ -44,7 +44,7 @@ s64 FindOp(const std::string& text, const std::string& op, s64 from)
 {
 	if (text.length() < op.length()) return -1;
 
-	for (s64 i = from; i<text.length(); ++i)
+	for (s64 i = from; i < (s64)text.length(); ++i)
 	{
 		if(i - 1 < 0 || text[(size_t)i - 1] == '\n' || CompilePPUProgram::IsSkip(text[(size_t)i - 1]))
 		{
@@ -156,11 +156,11 @@ void CompilePPUProgram::WriteError(const std::string& error)
 
 bool CompilePPUProgram::IsSkip(const char c) { return c == ' ' || c == '\t'; }
 bool CompilePPUProgram::IsCommit(const char c) { return c == '#'; }
-bool CompilePPUProgram::IsEnd() const { return p >= m_asm.length(); }
-bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= m_asm.length(); }
+bool CompilePPUProgram::IsEnd() const { return p >= (s64)m_asm.length(); }
+bool CompilePPUProgram::IsEndLn(const char c) const { return c == '\n' || p - 1 >= (s64)m_asm.length(); }
 
 char CompilePPUProgram::NextChar() { return *m_asm.substr(p++, 1).c_str(); }
-void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ); if(!IsEnd()) m_line++; }
+void CompilePPUProgram::NextLn() { while( !IsEndLn(NextChar()) ) continue; if(!IsEnd()) m_line++; }
 void CompilePPUProgram::EndLn()
 {
 	NextLn();

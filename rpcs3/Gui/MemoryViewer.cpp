@@ -212,7 +212,7 @@ void MemoryViewerPanel::ShowMemory()
 	t_mem_ascii->SetValue(t_mem_ascii_str);
 }
 
-void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, int width, int height, bool flipv)
+void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
 	wxString title = wxString::Format("Raw Image @ 0x%x", addr);
 	

@@ -366,12 +366,6 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	// Enter the loop where the save files are read/created/deleted.
 	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
 
-	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
-	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuf;
-		entry.iconBuf = nullptr;
-	}
-
 	return ret;
 }
 
@@ -457,12 +451,6 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	// Enter the loop where the save files are read/created/deleted.
 	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
 
-	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
-	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuf;
-		entry.iconBuf = nullptr;
-	}
-
 	return ret;
 }
 
@@ -535,12 +523,6 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 	// Enter the loop where the save files are read/created/deleted.
 	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
 
-	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
-	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuf;
-		entry.iconBuf = nullptr;
-	}
-
 	return ret;
 }
 
@@ -612,12 +594,6 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 
 	// Enter the loop where the save files are read/created/deleted.
 	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
-
-	// TODO: There are other returns in this function that doesn't free the memory. Fix it (without using goto's, please).
-	for (auto& entry : saveEntries) {
-		delete[] entry.iconBuf;
-		entry.iconBuf = nullptr;
-	}
 
 	return ret;
 }

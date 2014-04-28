@@ -19,7 +19,7 @@ extern "C"
 void sys_net_init();
 Module sys_net((u16)0x0000, sys_net_init);
 
-mem32_t g_lastError(NULL);
+mem32_t g_lastError(0);
 
 
 // Auxiliary Functions
@@ -476,7 +476,7 @@ int sys_net_finalize_network()
 {
 	sys_net.Warning("sys_net_initialize_network_ex()");
 	Memory.Free(g_lastError.GetAddr());
-	g_lastError.SetAddr(NULL);
+	g_lastError.SetAddr(0);
 #ifdef _WIN32
 	WSACleanup();
 #endif

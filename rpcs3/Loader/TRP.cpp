@@ -64,7 +64,7 @@ bool TRPLoader::LoadHeader(bool show)
 	return true;
 }
 
-bool TRPLoader::ContainsEntry(char *filename)
+bool TRPLoader::ContainsEntry(const char *filename)
 {
 	for (const TRPEntry& entry : m_entries) {
 		if (!strcmp(entry.name, filename))
@@ -73,7 +73,7 @@ bool TRPLoader::ContainsEntry(char *filename)
 	return false;
 }
 
-void TRPLoader::RemoveEntry(char *filename)
+void TRPLoader::RemoveEntry(const char *filename)
 {
 	std::vector<TRPEntry>::iterator i = m_entries.begin();
 	while (i != m_entries.end()) {
@@ -84,7 +84,7 @@ void TRPLoader::RemoveEntry(char *filename)
 	}
 }
 
-void TRPLoader::RenameEntry(char *oldname, char *newname)
+void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 {
 	for (const TRPEntry& entry : m_entries) {
 		if (!strcmp(entry.name, oldname))

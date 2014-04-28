@@ -987,5 +987,8 @@
     <ClInclude Include="Crypto\lz.h">
       <Filter>Crypto</Filter>
     </ClInclude>
+    <ClInclude Include="Gui\AboutDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

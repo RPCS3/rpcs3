@@ -41,5 +41,5 @@ public:
 	void SetPC(const uint pc) { m_addr = pc; }
 
 	//Static methods
-	static void ShowImage(wxWindow* parent, u32 addr, int mode, int sizex, int sizey, bool flipv);
+	static void ShowImage(wxWindow* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);
 };

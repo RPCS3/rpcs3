@@ -512,7 +512,7 @@ bool adecCheckType(AudioCodecType type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: ConLog.Write("*** (???) type: ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX: ConLog.Write("*** (?) type: ATRAC3plus"); break;
 	case CELL_ADEC_TYPE_ATRACX_2CH: ConLog.Write("*** type: ATRAC3plus 2ch"); break;
 
 	case CELL_ADEC_TYPE_ATRACX_6CH:
