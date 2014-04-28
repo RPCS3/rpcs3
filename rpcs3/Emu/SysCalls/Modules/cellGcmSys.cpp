@@ -681,8 +681,8 @@ int32_t cellGcmReserveIoMapSize(const u32 size)
 
 int32_t cellGcmUnmapEaIoAddress(u64 ea)
 {
-	u32 size;
-	if (size = Memory.RSXIOMem.UnmapRealAddress(ea))
+	u32 size = Memory.RSXIOMem.UnmapRealAddress(ea);
+	if (size)
 	{
 		u64 io;
 		ea = ea >> 20;
@@ -704,8 +704,8 @@ int32_t cellGcmUnmapEaIoAddress(u64 ea)
 
 int32_t cellGcmUnmapIoAddress(u64 io)
 {
-	u32 size;
-	if (size = Memory.RSXIOMem.UnmapAddress(io))
+	u32 size = Memory.RSXIOMem.UnmapAddress(io);
+	if (size)
 	{
 		u64 ea;
 		io = io >> 20;
