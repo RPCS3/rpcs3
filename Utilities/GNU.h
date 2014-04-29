@@ -24,25 +24,16 @@
 #define _aligned_malloc(size,alignment) memalign(alignment,size)
 #else
 void * _aligned_malloc(size_t size, size_t alignment);
+int clock_gettime(int foo, struct timespec *ts);
 #define wxIsNaN(x) ((x) != (x))
-#endif
-
-#define _aligned_free  free
 
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 0
-#include <time.h>
-#include <sys/time.h>
-
-static int clock_gettime(int foo, struct timespec *ts) {
-  struct timeval tv;
-
-  gettimeofday(&tv, NULL);
-  ts->tv_sec = tv.tv_sec;
-  ts->tv_nsec = tv.tv_usec * 1000;
-  return (0);
-}
 #endif /* !CLOCK_MONOTONIC */
+
+#endif /* !__APPLE__ */
+
+#define _aligned_free free
 
 #define DWORD int32_t
 #endif
