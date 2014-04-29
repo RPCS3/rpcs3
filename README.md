@@ -22,10 +22,15 @@ __Windows__
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential`
 
+__Mac OSX__
+* Install with Homebrew: `brew install glew wxwidgets`
+* Remove '-framework QuickTime' from '_ldflags' in /usr/local/bin/wx-config
+
 
 ### Building
 
 To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
 * __Windows__: Install *Visual Studio 2013*. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
-* __Linux__:
+* __Linux & Mac OSX__:
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
+
