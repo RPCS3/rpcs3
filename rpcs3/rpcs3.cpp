@@ -72,10 +72,8 @@ void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 
 Rpcs3App::Rpcs3App()
 {
-	#ifdef __UNIX__
-	#ifndef __APPLE__
+	#if defined(__UNIX__) && !defined(__APPLE__)
 	XInitThreads();
-	#endif
 	#endif
 }
 /*
