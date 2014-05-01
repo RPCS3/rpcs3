@@ -2,8 +2,6 @@
 #ifndef _WIN32
 #include <GL/glew.h>
 #endif
-#include <GL/gl.h>
-#include "GL/glext.h"
 
 #ifdef _WIN32
 typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
@@ -14,7 +12,12 @@ typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 
+#elif __APPLE__
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+
 #else
+#include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
 #endif

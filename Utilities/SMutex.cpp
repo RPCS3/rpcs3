@@ -8,6 +8,8 @@ __forceinline void SM_Sleep()
 
 #ifdef _WIN32
 __declspec(thread)
+#elif __APPLE__
+__thread
 #else
 thread_local
 #endif
