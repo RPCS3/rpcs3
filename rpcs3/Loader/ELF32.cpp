@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "ELF32.h"
 
-void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr)
+void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -26,7 +26,7 @@ void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(wxFile& f, Elf32_Phdr& phdr)
+void WritePhdr(rFile& f, Elf32_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_offset);
@@ -38,7 +38,7 @@ void WritePhdr(wxFile& f, Elf32_Phdr& phdr)
 	Write32(f, phdr.p_align);
 }
 
-void WriteShdr(wxFile& f, Elf32_Shdr& shdr)
+void WriteShdr(rFile& f, Elf32_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);

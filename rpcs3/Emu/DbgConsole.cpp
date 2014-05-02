@@ -4,94 +4,91 @@
 #include "Emu/System.h"
 #include "DbgConsole.h"
 
-BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
-	EVT_CLOSE(DbgConsole::OnQuit)
-END_EVENT_TABLE()
+LogWriter ConLog;
+class LogFrame;
+extern LogFrame* ConLogFrame;
 
-DbgConsole::DbgConsole()
-	: FrameBase(nullptr, wxID_ANY, "Debug Console", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
-	, ThreadBase("DbgConsole thread")
-	, m_output(nullptr)
+_LogBuffer LogBuffer;
+
+std::mutex g_cs_conlog;
+
+const uint max_item_count = 500;
+const uint buffer_size = 1024 * 64;
+
+static const std::string g_log_colors[] =
 {
-	m_console = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
-		wxSize(500, 500), wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2);
-	m_console->SetBackgroundColour(wxColor("Black"));
-	m_console->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	"Black", "Green", "White", "Yellow", "Red",
+};
 
-	m_color_white = new wxTextAttr(wxColour(255, 255, 255));
-	m_color_red = new wxTextAttr(wxColour(255, 0, 0));
-
-	if (Ini.HLESaveTTY.GetValue())
-		m_output = new wxFile("tty.log", wxFile::write);
-}
-
-DbgConsole::~DbgConsole()
+LogWriter::LogWriter()
 {
-	ThreadBase::Stop();
-	m_dbg_buffer.Flush();
-
-	safe_delete(m_console);
-	safe_delete(m_color_white);
-	safe_delete(m_color_red);
-	safe_delete(m_output);
-}
-
-void DbgConsole::Write(int ch, const std::string& text)
-{
-	while (m_dbg_buffer.IsBusy())
+	if (!m_logfile.Open(_PRGNAME_ ".log", rFile::write))
 	{
-		if (Emu.IsStopped())
-		{
-			return;
-		}
-		Sleep(1);
+		rMessageBox("Can't create log file! (" _PRGNAME_ ".log)", rMessageBoxCaptionStr, rICON_ERROR);
 	}
-	m_dbg_buffer.Push(DbgPacket(ch, text));
-
-	if(!IsAlive()) Start();
 }
 
-void DbgConsole::Clear()
+void LogWriter::WriteToLog(const std::string& prefix, const std::string& value, u8 lvl/*, wxColour bgcolour*/)
 {
-	m_console->Clear();
-}
-
-void DbgConsole::Task()
-{
-	while(!TestDestroy())
+	std::string new_prefix = prefix;
+	if (!prefix.empty())
 	{
-		if(!m_dbg_buffer.HasNewPacket())
+		if (NamedThreadBase* thr = GetCurrentNamedThread())
+		{
+			new_prefix += " : " + thr->GetThreadName();
+		}
+	}
+
+	if (m_logfile.IsOpened() && !new_prefix.empty())
+		m_logfile.Write("[" + new_prefix + "]: " + value + "\n");
+
+	if (!ConLogFrame || Ini.HLELogLvl.GetValue() == 4 || (lvl != 0 && lvl <= Ini.HLELogLvl.GetValue()))
+		return;
+
+	std::lock_guard<std::mutex> lock(g_cs_conlog);
+
+	// TODO: Use ThreadBase instead, track main thread id
+	if (rThread::IsMain())
+	{
+		while (LogBuffer.IsBusy())
+		{
+			// need extra break condition?
+			rYieldIfNeeded();
+		}
+	}
+	else
+	{
+		while (LogBuffer.IsBusy())
 		{
 			if (Emu.IsStopped())
 			{
 				break;
 			}
 			Sleep(1);
-			continue;
 		}
-
-		DbgPacket packet = m_dbg_buffer.Pop();
-		m_console->SetDefaultStyle(packet.m_ch == 1 ? *m_color_red : *m_color_white);
-		m_console->SetInsertionPointEnd();
-		m_console->WriteText(fmt::FromUTF8(packet.m_text));
-
-		if (m_output && Ini.HLESaveTTY.GetValue())
-			m_output->Write(fmt::FromUTF8(packet.m_text));
-
-		if(!DbgConsole::IsShown()) Show();
 	}
+
+	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();
+
+	LogBuffer.Push(LogPacket(new_prefix, value, g_log_colors[lvl]));
 }
 
-void DbgConsole::OnQuit(wxCloseEvent& event)
+
+void LogWriter::SkipLn()
 {
-	ThreadBase::Stop(false);
-	Hide();
+	WriteToLog("", "", 0);
+}
 
-	if (m_output)
-	{
-		m_output->Close();
-		m_output = nullptr;
-	}
+void DbgConsole::Close()
+{
+	i = 1;
+}
 
-	//event.Skip();
+void DbgConsole::Clear()
+{
+	i = 2;
+}
+
+void DbgConsole::Write(int ch, const std::string &msg)
+{
 }

@@ -18,8 +18,9 @@ extern "C"
 
 #include "cellVdec.h"
 
-void cellVdec_init();
-Module cellVdec(0x0005, cellVdec_init);
+//void cellVdec_init();
+//Module cellVdec(0x0005, cellVdec_init);
+Module *cellVdec = nullptr;
 
 int vdecRead(void* opaque, u8* buf, int buf_size)
 {
@@ -107,9 +108,9 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 {
 	switch (type) // TODO: check profile levels
 	{
-	case CELL_VDEC_CODEC_TYPE_AVC: cellVdec.Warning("cellVdecQueryAttr: AVC (profile=%d)", profile); break;
-	case CELL_VDEC_CODEC_TYPE_MPEG2: cellVdec.Error("TODO: MPEG2 not supported"); break;
-	case CELL_VDEC_CODEC_TYPE_DIVX: cellVdec.Error("TODO: DIVX not supported"); break;
+	case CELL_VDEC_CODEC_TYPE_AVC: cellVdec->Warning("cellVdecQueryAttr: AVC (profile=%d)", profile); break;
+	case CELL_VDEC_CODEC_TYPE_MPEG2: cellVdec->Error("TODO: MPEG2 not supported"); break;
+	case CELL_VDEC_CODEC_TYPE_DIVX: cellVdec->Error("TODO: DIVX not supported"); break;
 	default: return CELL_VDEC_ERROR_ARG;
 	}
 
@@ -127,7 +128,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 	vdec.vdecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	u32 vdec_id = cellVdec.GetNewId(data);
+	u32 vdec_id = cellVdec->GetNewId(data);
 
 	vdec.id = vdec_id;
 
@@ -423,7 +424,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 int cellVdecQueryAttr(const mem_ptr_t<CellVdecType> type, mem_ptr_t<CellVdecAttr> attr)
 {
-	cellVdec.Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
+	cellVdec->Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
 	if (!type.IsGood() || !attr.IsGood())
 	{
@@ -435,7 +436,7 @@ int cellVdecQueryAttr(const mem_ptr_t<CellVdecType> type, mem_ptr_t<CellVdecAttr
 
 int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdecAttr> attr)
 {
-	cellVdec.Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
+	cellVdec->Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
 	if (!type.IsGood() || !attr.IsGood())
 	{
@@ -447,7 +448,7 @@ int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdec
 
 int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecResource> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
 {
-	cellVdec.Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
+	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
@@ -467,7 +468,7 @@ int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecRes
 
 int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVdecResourceEx> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
 {
-	cellVdec.Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
+	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
@@ -487,7 +488,7 @@ int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVde
 
 int cellVdecClose(u32 handle)
 {
-	cellVdec.Warning("cellVdecClose(handle=%d)", handle);
+	cellVdec->Warning("cellVdecClose(handle=%d)", handle);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -514,7 +515,7 @@ int cellVdecClose(u32 handle)
 
 int cellVdecStartSeq(u32 handle)
 {
-	cellVdec.Log("cellVdecStartSeq(handle=%d)", handle);
+	cellVdec->Log("cellVdecStartSeq(handle=%d)", handle);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -528,7 +529,7 @@ int cellVdecStartSeq(u32 handle)
 
 int cellVdecEndSeq(u32 handle)
 {
-	cellVdec.Warning("cellVdecEndSeq(handle=%d)", handle);
+	cellVdec->Warning("cellVdecEndSeq(handle=%d)", handle);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -564,7 +565,7 @@ int cellVdecEndSeq(u32 handle)
 
 int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const mem_ptr_t<CellVdecAuInfo> auInfo)
 {
-	cellVdec.Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.GetAddr());
+	cellVdec->Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.GetAddr());
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -588,7 +589,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const mem_ptr_t<CellVd
 
 int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u32 out_addr)
 {
-	cellVdec.Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, out_addr=0x%x)", handle, format.GetAddr(), out_addr);
+	cellVdec->Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, out_addr=0x%x)", handle, format.GetAddr(), out_addr);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -617,13 +618,13 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
-			cellVdec.Error("cellVdecGetPicture: TODO: unknown formatType(%d)", (u32)format->formatType);
+			cellVdec->Error("cellVdecGetPicture: TODO: unknown formatType(%d)", (u32)format->formatType);
 			return CELL_OK;
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			cellVdec.Error("cellVdecGetPicture: TODO: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
+			cellVdec->Error("cellVdecGetPicture: TODO: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
 			return CELL_OK;
 		}
 
@@ -640,13 +641,13 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 		int err = av_image_copy_to_buffer(buf, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
-			cellVdec.Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
+			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
 			Emu.Pause();
 		}
 
 		if (!Memory.CopyFromReal(out_addr, buf, buf_size))
 		{
-			cellVdec.Error("cellVdecGetPicture: data copying failed");
+			cellVdec->Error("cellVdecGetPicture: data copying failed");
 			Emu.Pause();
 		}
 
@@ -660,7 +661,7 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 {
-	cellVdec.Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.GetAddr());
+	cellVdec->Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.GetAddr());
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -775,7 +776,7 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 
 int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	cellVdec.Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
+	cellVdec->Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -793,17 +794,17 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 void cellVdec_init()
 {
-	cellVdec.AddFunc(0xff6f6ebe, cellVdecQueryAttr);
-	cellVdec.AddFunc(0xc982a84a, cellVdecQueryAttrEx);
-	cellVdec.AddFunc(0xb6bbcd5d, cellVdecOpen);
-	cellVdec.AddFunc(0x0053e2d8, cellVdecOpenEx);
-	cellVdec.AddFunc(0x16698e83, cellVdecClose);
-	cellVdec.AddFunc(0xc757c2aa, cellVdecStartSeq);
-	cellVdec.AddFunc(0x824433f0, cellVdecEndSeq);
-	cellVdec.AddFunc(0x2bf4ddd2, cellVdecDecodeAu);
-	cellVdec.AddFunc(0x807c861a, cellVdecGetPicture);
-	cellVdec.AddFunc(0x17c702b9, cellVdecGetPicItem);
-	cellVdec.AddFunc(0xe13ef6fc, cellVdecSetFrameRate);
+	cellVdec->AddFunc(0xff6f6ebe, cellVdecQueryAttr);
+	cellVdec->AddFunc(0xc982a84a, cellVdecQueryAttrEx);
+	cellVdec->AddFunc(0xb6bbcd5d, cellVdecOpen);
+	cellVdec->AddFunc(0x0053e2d8, cellVdecOpenEx);
+	cellVdec->AddFunc(0x16698e83, cellVdecClose);
+	cellVdec->AddFunc(0xc757c2aa, cellVdecStartSeq);
+	cellVdec->AddFunc(0x824433f0, cellVdecEndSeq);
+	cellVdec->AddFunc(0x2bf4ddd2, cellVdecDecodeAu);
+	cellVdec->AddFunc(0x807c861a, cellVdecGetPicture);
+	cellVdec->AddFunc(0x17c702b9, cellVdecGetPicItem);
+	cellVdec->AddFunc(0xe13ef6fc, cellVdecSetFrameRate);
 
 	av_register_all();
 	avcodec_register_all();

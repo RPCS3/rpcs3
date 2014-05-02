@@ -1136,10 +1136,3 @@ typedef mem_list_ptr_t<u16, u32> mem16_ptr_t;
 typedef mem_list_ptr_t<u32, u32> mem32_ptr_t;
 typedef mem_list_ptr_t<u64, u32> mem64_ptr_t;
 
-//#define re(val) MemoryBase::Reverse(val)
-#define re64(val) MemoryBase::Reverse64(val)
-#define re32(val) MemoryBase::Reverse32(val)
-#define re16(val) MemoryBase::Reverse16(val)
-
-template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
-template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }

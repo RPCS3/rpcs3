@@ -11,7 +11,7 @@ AudioDumper::~AudioDumper()
 
 bool AudioDumper::Init()
 {
-	return m_output.Open("audio.wav", wxFile::write);
+	return m_output.Open("audio.wav", rFile::write);
 }
 
 void AudioDumper::WriteHeader()

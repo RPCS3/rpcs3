@@ -2,12 +2,24 @@
 
 #include "Utilities/GNU.h"
 
+#include <algorithm>
+
+using std::min;
+using std::max;
+
+//#define re(val) MemoryBase::Reverse(val)
+#define re64(val) MemoryBase::Reverse64(val)
+#define re32(val) MemoryBase::Reverse32(val)
+#define re16(val) MemoryBase::Reverse16(val)
+
 template<typename T, int size = sizeof(T)> struct se_t;
 template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };
 template<typename T> struct se_t<T, 2> { static __forceinline void func(T& dst, const T src) { (u16&)dst = _byteswap_ushort((u16&)src); } };
 template<typename T> struct se_t<T, 4> { static __forceinline void func(T& dst, const T src) { (u32&)dst = _byteswap_ulong((u32&)src); } };
 template<typename T> struct se_t<T, 8> { static __forceinline void func(T& dst, const T src) { (u64&)dst = _byteswap_uint64((u64&)src); } };
 
+template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
+template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
 
 template<typename T, s64 _value, int size = sizeof(T)> struct const_se_t;
 template<typename T, s64 _value> struct const_se_t<T, _value, 1>

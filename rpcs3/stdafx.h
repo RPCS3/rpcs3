@@ -6,12 +6,16 @@
 	#include <crtdbg.h>
 #endif
 
-#define NOMINMAX
+/* size of statically declared array */
+#define SARRSIZEOF(array) (sizeof(array)/sizeof(array[0]))
 
+#define NOMINMAX
+//#ifdef wxGUI
 #ifndef QT_UI
 #ifdef _WIN32
-#include <wx/msw/setup.h>
+//#include <wx/msw/setup.h>
 #endif
+#include <wx/wxprec.h>
 #include <wx/config.h>
 #include <wx/string.h>
 #include <wx/propdlg.h>
@@ -37,9 +41,10 @@
 #include <wx/checkbox.h>
 #include "wx/app.h"
 #include <wx/timer.h>
+#include <wx/listctrl.h>
 
-#include <wx/wxprec.h>
 #endif
+//#endif
 
 #ifdef MSVC_CRT_MEMLEAK_DETECTION
 	#ifdef _DEBUG
@@ -274,19 +279,30 @@ enum Status
 };
 
 #include "Utilities/BEType.h"
+#include "Utilities/rFile.h"
+#include "Utilities/rTime.h"
+#include "Utilities/rXml.h"
+#include "Utilities/rConcurrency.h"
+#include "Utilities/rMsgBox.h"
+#include "Utilities/rPlatform.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
 #include "Utilities/StrFmt.h"
 
-#include "Emu/SysCalls/Callback.h"
-#include "Ini.h"
-#include "Gui/FrameBase.h"
-#include "Gui/ConLogFrame.h"
 #include "Emu/ConLog.h"
+#include "Emu/DbgConsole.h"
+#include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/SysCalls/Callback.h"
+#include "Emu/DbgCommand.h"
+//#ifdef wxGUI
+#include "Gui/FrameBase.h"
+#include "Gui/DbgFrame.h"
+#include "Gui/ConLogFrame.h"
+//#endif
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
@@ -300,6 +316,7 @@ enum Status
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
+//#ifdef wxGUI
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

@@ -1,15 +1,8 @@
 #pragma once
-#include <wx/listctrl.h>
-#include "Ini.h"
-#include "Gui/FrameBase.h"
 
 class LogWriter
 {
-	wxFile m_logfile;
-	wxColour m_txtcolour;
-
-	//wxString m_prefix;
-	//wxString m_value;
+	rFile m_logfile;
 
 	void WriteToLog(const std::string& prefix, const std::string& value, u8 lvl);
 
@@ -43,8 +36,9 @@ public:
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
 		WriteToLog("S", frmt, 1);
 	}
-	
-	virtual void SkipLn();	
+
+	virtual void SkipLn();
 };
+
 
 extern LogWriter ConLog;

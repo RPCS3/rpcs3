@@ -13,12 +13,13 @@ extern "C"
 
 #include "cellVpost.h"
 
-void cellVpost_init();
-Module cellVpost(0x0008, cellVpost_init);
+//void cellVpost_init();
+//Module cellVpost(0x0008, cellVpost_init);
+Module *cellVpost = nullptr;
 
 int cellVpostQueryAttr(const mem_ptr_t<CellVpostCfgParam> cfgParam, mem_ptr_t<CellVpostAttr> attr)
 {
-	cellVpost.Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.GetAddr(), attr.GetAddr());
+	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.GetAddr(), attr.GetAddr());
 
 	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_Q_ARG_CFG_NULL;
 	if (!attr.IsGood()) return CELL_VPOST_ERROR_Q_ARG_ATTR_NULL;
@@ -35,7 +36,7 @@ int cellVpostQueryAttr(const mem_ptr_t<CellVpostCfgParam> cfgParam, mem_ptr_t<Ce
 
 u32 vpostOpen(VpostInstance* data)
 {
-	u32 id = cellVpost.GetNewId(data);
+	u32 id = cellVpost->GetNewId(data);
 
 	ConLog.Write("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
 
@@ -44,7 +45,7 @@ u32 vpostOpen(VpostInstance* data)
 
 int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResource> resource, mem32_t handle)
 {
-	cellVpost.Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
 
 	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_O_ARG_CFG_NULL;
@@ -58,7 +59,7 @@ int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<C
 
 int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResourceEx> resource, mem32_t handle)
 {
-	cellVpost.Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
 
 	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_O_ARG_CFG_NULL;
@@ -72,7 +73,7 @@ int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t
 
 int cellVpostClose(u32 handle)
 {
-	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
+	cellVpost->Warning("cellVpostClose(handle=0x%x)", handle);
 
 	VpostInstance* vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))
@@ -87,7 +88,7 @@ int cellVpostClose(u32 handle)
 int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpostCtrlParam> ctrlParam,
 				  u32 outPicBuff_addr, mem_ptr_t<CellVpostPictureInfo> picInfo)
 {
-	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
+	cellVpost->Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
 		handle, inPicBuff_addr, ctrlParam.GetAddr(), outPicBuff_addr, picInfo.GetAddr());
 
 	VpostInstance* vpost;
@@ -170,19 +171,19 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	if (!Memory.CopyToReal(pY, inPicBuff_addr, w*h))
 	{
-		cellVpost.Error("cellVpostExec: data copying failed(pY)");
+		cellVpost->Error("cellVpostExec: data copying failed(pY)");
 		Emu.Pause();
 	}
 
 	if (!Memory.CopyToReal(pU, inPicBuff_addr + w*h, w*h/4))
 	{
-		cellVpost.Error("cellVpostExec: data copying failed(pU)");
+		cellVpost->Error("cellVpostExec: data copying failed(pU)");
 		Emu.Pause();
 	}
 
 	if (!Memory.CopyToReal(pV, inPicBuff_addr + w*h + w*h/4, w*h/4))
 	{
-		cellVpost.Error("cellVpostExec: data copying failed(pV)");
+		cellVpost->Error("cellVpostExec: data copying failed(pV)");
 		Emu.Pause();
 	}
 
@@ -207,7 +208,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	if (!Memory.CopyFromReal(outPicBuff_addr, res, ow*oh*4))
 	{
-		cellVpost.Error("cellVpostExec: data copying failed(result)");
+		cellVpost->Error("cellVpostExec: data copying failed(result)");
 		Emu.Pause();
 	}
 
@@ -224,9 +225,9 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 void cellVpost_init()
 {
-	cellVpost.AddFunc(0x95e788c3, cellVpostQueryAttr);
-	cellVpost.AddFunc(0xcd33f3e2, cellVpostOpen);
-	cellVpost.AddFunc(0x40524325, cellVpostOpenEx);
-	cellVpost.AddFunc(0x10ef39f6, cellVpostClose);
-	cellVpost.AddFunc(0xabb8cc3d, cellVpostExec);
+	cellVpost->AddFunc(0x95e788c3, cellVpostQueryAttr);
+	cellVpost->AddFunc(0xcd33f3e2, cellVpostOpen);
+	cellVpost->AddFunc(0x40524325, cellVpostOpenEx);
+	cellVpost->AddFunc(0x10ef39f6, cellVpostClose);
+	cellVpost->AddFunc(0xabb8cc3d, cellVpostExec);
 }

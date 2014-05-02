@@ -1,11 +1,14 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
+# Visual Studio Express 2013 for Windows Desktop
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3", "rpcs3\rpcs3.vcxproj", "{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}"
 	ProjectSection(ProjectDependencies) = postProject
 		{CD478F02-7550-58A5-E085-CE4BC0C0AD23} = {CD478F02-7550-58A5-E085-CE4BC0C0AD23}
 		{067D9406-2A93-DACA-9449-93A2D356357D} = {067D9406-2A93-DACA-9449-93A2D356357D}
+		{C4A10229-4712-4BD2-B63E-50D93C67A038} = {C4A10229-4712-4BD2-B63E-50D93C67A038}
 		{5C363C34-4741-7036-861C-2E2279CF552E} = {5C363C34-4741-7036-861C-2E2279CF552E}
 		{23E1C437-A951-5943-8639-A17F3CF2E606} = {23E1C437-A951-5943-8639-A17F3CF2E606}
 		{22B14659-C5B6-B775-868D-A49198FEAD4A} = {22B14659-C5B6-B775-868D-A49198FEAD4A}
@@ -135,6 +138,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjit", "asmjitsrc\asmjit.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "asmjit", "asmjit", "{E2A982F2-4B1A-48B1-8D77-A17A589C58D7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "emucore", "rpcs3\emucore.vcxproj", "{C4A10229-4712-4BD2-B63E-50D93C67A038}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug - MemLeak|x64 = Debug - MemLeak|x64
@@ -186,6 +191,7 @@ Global
 		{99C9EB95-DB4C-1996-490E-5212EFBF07C3}.Release|x64.Build.0 = Release|x64
 		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
 		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Debug - MemLeak|x64.Build.0 = Debug|x64
+		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Debug - MemLeak|x64.Deploy.0 = Debug|x64
 		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Debug|x64.ActiveCfg = Debug|x64
 		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Debug|x64.Build.0 = Debug|x64
 		{6EDC3B79-D217-F11A-406F-F11D856493F9}.Release|x64.ActiveCfg = Release|x64
@@ -281,10 +287,17 @@ Global
 		{74827EBD-93DC-5110-BA95-3F2AB029B6B0}.Release|x64.ActiveCfg = Release|x64
 		{74827EBD-93DC-5110-BA95-3F2AB029B6B0}.Release|x64.Build.0 = Release|x64
 		{AC40FF01-426E-4838-A317-66354CEFAE88}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
+		{AC40FF01-426E-4838-A317-66354CEFAE88}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
 		{AC40FF01-426E-4838-A317-66354CEFAE88}.Debug|x64.ActiveCfg = Debug|x64
 		{AC40FF01-426E-4838-A317-66354CEFAE88}.Debug|x64.Build.0 = Debug|x64
 		{AC40FF01-426E-4838-A317-66354CEFAE88}.Release|x64.ActiveCfg = Release|x64
 		{AC40FF01-426E-4838-A317-66354CEFAE88}.Release|x64.Build.0 = Release|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Debug - MemLeak|x64.ActiveCfg = Debug - MemLeak|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Debug - MemLeak|x64.Build.0 = Debug - MemLeak|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Debug|x64.ActiveCfg = Debug|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Debug|x64.Build.0 = Debug|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Release|x64.ActiveCfg = Release|x64
+		{C4A10229-4712-4BD2-B63E-50D93C67A038}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1833,7 +1833,7 @@ void RSXThread::Task()
 
 	while(!TestDestroy())
 	{
-		wxCriticalSectionLocker lock(m_cs_main);
+		rCriticalSectionLocker lock(m_cs_main);
 
 		inc=1;
 

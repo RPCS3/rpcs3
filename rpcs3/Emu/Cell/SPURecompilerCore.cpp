@@ -142,11 +142,11 @@ void SPURecompilerCore::Compile(u16 pos)
 	entry[start].pointer = compiler.make();
 	compiler.setLogger(nullptr); // crashes without it
 
-	wxFile log;
-	log.Open(wxString::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? wxFile::write : wxFile::write_append);
-	log.Write(wxString::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
-	log.Write(wxString(stringLogger.getString()));
-	log.Write(wxString::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+	rFile log;
+	log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
+	log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
+	log.Write(std::string(stringLogger.getString()));
+	log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
 		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
 	log.Close();
 	m_enc->compiler = nullptr;

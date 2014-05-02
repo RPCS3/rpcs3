@@ -1269,7 +1269,7 @@ static const std::string GetMethodName(const u32 id)
 		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "SetTransformBranchBits" } ,
 	};
 
-	for(u32 i = 0; i < WXSIZEOF(METHOD_NAME_LIST); ++i)
+	for (u32 i = 0; i < SARRSIZEOF(METHOD_NAME_LIST); ++i)
 	{
 		if(METHOD_NAME_LIST[i].id == id) return "cellGcm" + METHOD_NAME_LIST[i].name;
 	}

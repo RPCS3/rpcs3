@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/MouseHandler.h"
+#include <cstring> //for memset
 
 class NullMouseHandler final : public MouseHandlerBase
 {

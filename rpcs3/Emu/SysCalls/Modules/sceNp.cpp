@@ -9,71 +9,74 @@
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
-void sceNp_init();
-Module sceNp(0x0016, sceNp_init);
+//void sceNp_init();
+//Module sceNp(0x0016, sceNp_init);
+Module *sceNp = nullptr;
 
 int sceNpInit(u32 mem_size, u32 mem_addr)
 {
-	sceNp.Log("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+	sceNp->Log("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
 	return CELL_OK;
 }
 
 int sceNpTerm()
 {
-	sceNp.Log("sceNpTerm");
+	sceNp->Log("sceNpTerm");
 	return CELL_OK;
 }
 
 int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 {
-	sceNp.Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x)", k_licensee_addr, drm_path_addr);
+	sceNp->Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x)", k_licensee_addr, drm_path_addr);
 
-	wxString drm_path = fmt::FromUTF8(Memory.ReadString(drm_path_addr));
-	wxString k_licensee_str;
+	std::string drm_path = Memory.ReadString(drm_path_addr);
+	std::string k_licensee_str;
 	u8 k_licensee[0x10];
 	for(int i = 0; i < 0x10; i++)
 	{
 		k_licensee[i] = Memory.Read8(k_licensee_addr + i);
-		k_licensee_str += wxString::Format("%02x", k_licensee[i]);
+		k_licensee_str += fmt::Format("%02x", k_licensee[i]);
 	}
 
-	sceNp.Warning("sceNpDrmIsAvailable: Found DRM license file at %s", fmt::ToUTF8(drm_path).c_str());
-	sceNp.Warning("sceNpDrmIsAvailable: Using k_licensee 0x%s", fmt::ToUTF8(k_licensee_str).c_str());
+	sceNp->Warning("sceNpDrmIsAvailable: Found DRM license file at %s", drm_path.c_str());
+	sceNp->Warning("sceNpDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str.c_str());
 
 	// Set the necessary file paths.
-	wxString drm_file_name = drm_path.AfterLast('/'); 
-	wxString titleID = drm_path.AfterFirst('/').AfterFirst('/').AfterFirst('/').BeforeFirst('/'); 
+	std::string drm_file_name = fmt::AfterLast(drm_path,'/');
 
-	wxString enc_drm_path = wxGetCwd() + drm_path;
-	wxString dec_drm_path = wxGetCwd() + "/dev_hdd1/" + titleID + "/" + drm_file_name;
+	//make more explicit what this actually does (currently everything after the third slash and before the fourth slash)
+	std::string titleID = fmt::BeforeFirst(fmt::AfterFirst(fmt::AfterFirst(fmt::AfterFirst(drm_path,'/'),'/'),'/'),'/');
 
-	wxString rap_dir_path = wxGetCwd() + "/dev_usb000/";
-	wxString rap_file_path = rap_dir_path;
+	std::string enc_drm_path = rGetCwd() + drm_path;
+	std::string dec_drm_path = rGetCwd() + "/dev_hdd1/" + titleID + "/" + drm_file_name;
+
+	std::string rap_dir_path = rGetCwd() + "/dev_usb000/";
+	std::string rap_file_path = rap_dir_path;
 	
 	// Search dev_usb000 for a compatible RAP file. 
-	vfsDir *raps_dir = new vfsDir(fmt::ToUTF8(rap_dir_path));
+	vfsDir *raps_dir = new vfsDir(rap_dir_path);
 	if (!raps_dir->IsOpened())
-		sceNp.Warning("sceNpDrmIsAvailable: Can't find RAP file for DRM!");
+		sceNp->Warning("sceNpDrmIsAvailable: Can't find RAP file for DRM!");
 	else
 	{
 		const std::vector<DirEntryInfo> &entries = raps_dir->GetEntries();
 		for (auto &entry:  entries)
 		{
-			if (entry.name.find(fmt::ToUTF8(titleID)) != std::string::npos )
+			if (entry.name.find(titleID) != std::string::npos )
 			{
-				rap_file_path += fmt::FromUTF8(entry.name);
+				rap_file_path += entry.name;
 				break;
 			}
 		}
 	}
 
 	// Create a new directory under dev_hdd1/titleID to hold the decrypted data.
-	wxString tmp_dir = wxGetCwd() + "/dev_hdd1/" + titleID;
-	if (!wxDir::Exists(tmp_dir))
-		wxMkdir(wxGetCwd() + "/dev_hdd1/" + titleID);
+	std::string tmp_dir = rGetCwd() + "/dev_hdd1/" + titleID;
+	if (!rDir::Exists(tmp_dir))
+		rMkdir(rGetCwd() + "/dev_hdd1/" + titleID);
 
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
-	DecryptEDAT(fmt::ToUTF8(enc_drm_path), fmt::ToUTF8(dec_drm_path), 8, fmt::ToUTF8(rap_file_path), k_licensee, false);
+	DecryptEDAT(enc_drm_path, dec_drm_path, 8, rap_file_path, k_licensee, false);
 
 	return CELL_OK;
 }
@@ -110,7 +113,7 @@ int sceNpDrmGetTimelimit(u32 drm_path_addr, mem64_t time_remain_usec)
 
 int sceNpManagerGetStatus(mem32_t status)
 {
-	sceNp.Log("sceNpManagerGetStatus(status_addr=0x%x)", status.GetAddr());
+	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.GetAddr());
 
 	// TODO: Check if sceNpInit() was called, if not return SCE_NP_ERROR_NOT_INITIALIZED
 	if (!status.IsGood())
@@ -123,13 +126,13 @@ int sceNpManagerGetStatus(mem32_t status)
 
 void sceNp_init()
 {
-	sceNp.AddFunc(0xbd28fdbf, sceNpInit);
-	sceNp.AddFunc(0x4885aa18, sceNpTerm);
-	sceNp.AddFunc(0xad218faf, sceNpDrmIsAvailable);
-	sceNp.AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
-	sceNp.AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
-	sceNp.AddFunc(0xbe0e3ee2, sceNpDrmVerifyUpgradeLicense2);
-	sceNp.AddFunc(0xf283c143, sceNpDrmExecuteGamePurchase);
-	sceNp.AddFunc(0xcf51864b, sceNpDrmGetTimelimit);
-	sceNp.AddFunc(0xa7bff757, sceNpManagerGetStatus);
+	sceNp->AddFunc(0xbd28fdbf, sceNpInit);
+	sceNp->AddFunc(0x4885aa18, sceNpTerm);
+	sceNp->AddFunc(0xad218faf, sceNpDrmIsAvailable);
+	sceNp->AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
+	sceNp->AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
+	sceNp->AddFunc(0xbe0e3ee2, sceNpDrmVerifyUpgradeLicense2);
+	sceNp->AddFunc(0xf283c143, sceNpDrmExecuteGamePurchase);
+	sceNp->AddFunc(0xcf51864b, sceNpDrmGetTimelimit);
+	sceNp->AddFunc(0xa7bff757, sceNpManagerGetStatus);
 }

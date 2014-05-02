@@ -83,4 +83,4 @@ void cellCelpEnc_init()
 	cellCelpEnc.AddFunc(0x9b244272, cellCelpEncWaitForOutput);
 	cellCelpEnc.AddFunc(0x3773692f, cellCelpEncGetAu);
 }
-#endif
+#endif 

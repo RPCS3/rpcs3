@@ -124,9 +124,9 @@ public:
 	bool IsBusy() const { return m_busy; }
 };
 
-static __forceinline bool SemaphorePostAndWait(wxSemaphore& sem)
+static __forceinline bool SemaphorePostAndWait(rSemaphore& sem)
 {
-	if(sem.TryWait() != wxSEMA_BUSY) return false;
+	if(sem.TryWait() != rSEMA_BUSY) return false;
 
 	sem.Post();
 	sem.Wait();

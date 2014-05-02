@@ -5,6 +5,7 @@
 #include "rpcs3.h"
 #include "Ini.h"
 #include "Gui/ConLogFrame.h"
+#include "Emu/GameInfo.h"
 
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>
@@ -84,5 +85,22 @@ CPUThread& GetCPU(const u8 core)
 {
 	return Emu.GetCPU().Get(core);
 }*/
+
+//TODOB: remove this
+//convert a wxString to a std::string encoded in utf8
+//CAUTION, only use this to interface with wxWidgets classes
+std::string fmt::ToUTF8(const wxString& right)
+{
+	auto ret = std::string(((const char *)right.utf8_str()));
+	return ret;
+}
+
+//convert a std::string encoded in utf8 to a wxString
+//CAUTION, only use this to interface with wxWidgets classes
+wxString fmt::FromUTF8(const std::string& right)
+{
+	auto ret = wxString::FromUTF8(right.c_str());
+	return ret;
+}
 
 GameInfo CurGameInfo;

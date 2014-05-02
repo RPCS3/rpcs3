@@ -191,7 +191,7 @@ bool FPRdouble::IsINF(PPCdouble d)
 
 bool FPRdouble::IsNaN(PPCdouble d)
 {
-	return wxIsNaN(d) ? 1 : 0;
+	return isnan(d) ? 1 : 0;
 }
 
 bool FPRdouble::IsQNaN(PPCdouble d)

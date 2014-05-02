@@ -17,6 +17,7 @@
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"
+#include "Gui/GameViewer.h"
 #include <wx/dynlib.h>
 
 #include "Loader/PKG.h"
@@ -261,7 +262,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	
 	// Open and install PKG file
 	wxString filePath = ctrl.GetPath();
-	wxFile pkg_f(filePath, wxFile::read); // TODO: Use VFS to install PKG files
+	rFile pkg_f(filePath.ToStdString(), rFile::read); // TODO: Use VFS to install PKG files
 
 	if (pkg_f.IsOpened())
 	{

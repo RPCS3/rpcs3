@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "Emu/ConLog.h"
 #include "rpcs3/Ini.h"
-#include "rpcs3.h"
 #include "Mouse.h"
 #include "Null/NullMouseHandler.h"
-#include "Windows/WindowsMouseHandler.h"
 
 MouseManager::MouseManager()
 	: m_mouse_handler(nullptr)
@@ -22,17 +20,13 @@ void MouseManager::Init(const u32 max_connect)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 is available.
-	switch(Ini.MouseHandlerMode.GetValue())
+	int numHandlers = rPlatform::getMouseHandlerCount();
+	int selectedHandler = Ini.MouseHandlerMode.GetValue();
+	if (selectedHandler > numHandlers)
 	{
-	case 1:
-		m_mouse_handler.reset(new WindowsMouseHandler());
-		break;
-
-	default:
-	case 0:
-		m_mouse_handler.reset(new NullMouseHandler());
-		break;
+		selectedHandler = 0;
 	}
+	m_mouse_handler.reset(rPlatform::getMouseHandler(selectedHandler));
 
 	m_mouse_handler->Init(max_connect);
 	m_inited = true;

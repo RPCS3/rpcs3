@@ -15,24 +15,24 @@ bool vfsLocalDir::Open(const std::string& path)
 	if(!vfsDirBase::Open(path))
 		return false;
 
-	wxDir dir;
+	rDir dir;
 
 	if(!dir.Open(path))
 		return false;
 
-	wxString name;
+	std::string name;
 	for(bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
 	{
-		wxString dir_path = fmt::FromUTF8(path) + name;
+		std::string dir_path = path + name;
 
 		m_entries.emplace_back();
 		DirEntryInfo& info = m_entries.back();
-		info.name = fmt::ToUTF8(name);
+		info.name = name;
 
 		info.flags |= dir.Exists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
-		if(wxIsWritable(dir_path)) info.flags |= DirEntry_PermWritable;
-		if(wxIsReadable(dir_path)) info.flags |= DirEntry_PermReadable;
-		if(wxIsExecutable(dir_path)) info.flags |= DirEntry_PermExecutable;
+		if(rIsWritable(dir_path)) info.flags |= DirEntry_PermWritable;
+		if(rIsReadable(dir_path)) info.flags |= DirEntry_PermReadable;
+		if(rIsExecutable(dir_path)) info.flags |= DirEntry_PermExecutable;
 	}
 
 	return true;
@@ -40,7 +40,7 @@ bool vfsLocalDir::Open(const std::string& path)
 
 bool vfsLocalDir::Create(const std::string& path)
 {
-	return wxFileName::Mkdir(fmt::FromUTF8(path), 0777, wxPATH_MKDIR_FULL);
+	return rFileName::Mkdir(path, 0777, rPATH_MKDIR_FULL);
 }
 
 bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
@@ -50,5 +50,5 @@ bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
 
 bool vfsLocalDir::Remove(const std::string& path)
 {
-	return wxRmdir(fmt::FromUTF8(path));
+	return rRmdir(path);
 }

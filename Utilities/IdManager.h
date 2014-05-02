@@ -1,6 +1,8 @@
 #pragma once
 #include <unordered_map>
 
+#define rID_ANY -1 // was wxID_ANY
+
 typedef u32 ID_TYPE;
 
 class IDData
@@ -154,7 +156,7 @@ public:
 		{
 			std::lock_guard<std::mutex> lock(m_mtx_main);
 
-			if(id == wxID_ANY)
+			if(id == rID_ANY)
 				return m_id_map.begin() != m_id_map.end();
 		}
 

@@ -133,7 +133,7 @@ public:
 
 	u32 m_wait_thread_id;
 
-	wxCriticalSection m_cs_sync;
+	rCriticalSection m_cs_sync;
 	bool m_sync_wait;
 	void Wait(bool wait);
 	void Wait(const CPUThread& thr);
@@ -157,8 +157,8 @@ public:
 
 	void SetError(const u32 error);
 
-	static wxArrayString ErrorToString(const u32 error);
-	wxArrayString ErrorToString() { return ErrorToString(m_error); }
+	static std::vector<std::string> ErrorToString(const u32 error);
+	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
 
 	bool IsOk()		const { return m_error == 0; }
 	bool IsRunning()	const { return m_status == Running; }

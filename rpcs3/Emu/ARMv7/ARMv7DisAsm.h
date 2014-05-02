@@ -1,7 +1,6 @@
 #pragma once
 #include "Emu/ARMv7/ARMv7Opcodes.h"
 #include "Emu/CPU/CPUDisAsm.h"
-#include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
 static const char* g_arm_cond_name[16] =

@@ -11,8 +11,9 @@
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
 
-void cellGifDec_init();
-Module cellGifDec(0xf010, cellGifDec_init);
+//void cellGifDec_init();
+//Module cellGifDec(0xf010, cellGifDec_init);
+extern Module *cellGifDec = nullptr;
 
 int cellGifDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -73,7 +74,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 	current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle = cellGifDec.GetNewId(current_subHandle);
+	subHandle = cellGifDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
@@ -84,7 +85,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 		return CELL_GIFDEC_ERROR_ARG;
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -125,7 +126,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 		return CELL_GIFDEC_ERROR_ARG;
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	CellGifDecInfo& current_info = subHandle_data->info;
@@ -157,7 +158,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -206,7 +207,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 int cellGifDecClose(u32 mainHandle, u32 subHandle)
 {
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
@@ -223,17 +224,17 @@ int cellGifDecDestroy(u32 mainHandle)
 
 void cellGifDec_init()
 {
-	cellGifDec.AddFunc(0xb60d42a5, cellGifDecCreate);
-	cellGifDec.AddFunc(0x4711cb7f, cellGifDecExtCreate);
-	cellGifDec.AddFunc(0x75745079, cellGifDecOpen);
-	cellGifDec.AddFunc(0xf0da95de, cellGifDecReadHeader);
-	cellGifDec.AddFunc(0x41a90dc4, cellGifDecSetParameter);
-	cellGifDec.AddFunc(0x44b1bc61, cellGifDecDecodeData);
-	cellGifDec.AddFunc(0x116a7da9, cellGifDecClose);
-	cellGifDec.AddFunc(0xe74b2cb1, cellGifDecDestroy);
+	cellGifDec->AddFunc(0xb60d42a5, cellGifDecCreate);
+	cellGifDec->AddFunc(0x4711cb7f, cellGifDecExtCreate);
+	cellGifDec->AddFunc(0x75745079, cellGifDecOpen);
+	cellGifDec->AddFunc(0xf0da95de, cellGifDecReadHeader);
+	cellGifDec->AddFunc(0x41a90dc4, cellGifDecSetParameter);
+	cellGifDec->AddFunc(0x44b1bc61, cellGifDecDecodeData);
+	cellGifDec->AddFunc(0x116a7da9, cellGifDecClose);
+	cellGifDec->AddFunc(0xe74b2cb1, cellGifDecDestroy);
 	
-	/*cellGifDec.AddFunc(0x17fb83c1, cellGifDecExtOpen);
-	cellGifDec.AddFunc(0xe53f91f2, cellGifDecExtReadHeader);
-	cellGifDec.AddFunc(0x95cae771, cellGifDecExtSetParameter);
-	cellGifDec.AddFunc(0x02e7e03e, cellGifDecExtDecodeData);*/
+	/*cellGifDec->AddFunc(0x17fb83c1, cellGifDecExtOpen);
+	cellGifDec->AddFunc(0xe53f91f2, cellGifDecExtReadHeader);
+	cellGifDec->AddFunc(0x95cae771, cellGifDecExtSetParameter);
+	cellGifDec->AddFunc(0x02e7e03e, cellGifDecExtDecodeData);*/
 }

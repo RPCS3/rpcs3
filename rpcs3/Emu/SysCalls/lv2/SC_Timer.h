@@ -16,7 +16,7 @@ struct sys_timer_information_t
 
 struct timer
 {
-	wxTimer tmr;
+	rTimer tmr;
 	sys_timer_information_t timer_information_t;
 };
 
