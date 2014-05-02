@@ -42,8 +42,6 @@ struct SFunc
 	}
 };
 
-extern std::vector<SFunc *> g_static_funcs_list;
-
 class Module
 {
 	std::string m_name;
@@ -151,7 +149,7 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re(op.crc);
 		sf->ops.push_back(op);
 	}
-	g_static_funcs_list.push_back(sf);
+	Emu.GetSFuncManager().push_back(sf);
 }
 
 bool IsLoadedFunc(u32 id);

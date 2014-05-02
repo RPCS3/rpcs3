@@ -2095,11 +2095,11 @@ private:
 		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
 		case 0x3:
-			StaticExecute(CPU.GPR[11]);
+			Emu.GetSFuncManager().StaticExecute(CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
 				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
-					g_static_funcs_list[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
+					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
 		case 0x22: UNK("HyperCall LV1"); break;

@@ -11,6 +11,7 @@
 #include "lv2/SC_Condition.h"
 #include "lv2/SC_Spinlock.h"
 #include "Emu/event.h"
+#include "Static.h"
 //#define SYSCALLS_DEBUG
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
@@ -465,10 +466,6 @@ public:
 };
 
 //extern SysCalls SysCallsManager;
-
-void StaticAnalyse(void* ptr, u32 size, u32 base);
-void StaticExecute(u32 code);
-void StaticFinalize();
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \

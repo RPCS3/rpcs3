@@ -990,5 +990,8 @@
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Static.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

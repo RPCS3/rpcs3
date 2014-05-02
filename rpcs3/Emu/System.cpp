@@ -3,6 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Ini.h"
 
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -27,6 +28,7 @@ Emulator::Emulator()
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
 	, m_event_manager(new EventManager())
+	, m_sfunc_manager(new StaticFuncManager())
 {
 }
 

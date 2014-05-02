@@ -56,6 +56,7 @@ ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
 	, LoaderBase()
 {
+	int a = 0;
 }
 
 bool ELF64Loader::LoadInfo()
@@ -243,7 +244,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					{
 						elf64_f.Seek(phdr_arr[i].p_offset);
 						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
-						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
+						Emu.GetSFuncManager().StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
 					}
 				}
 			break;

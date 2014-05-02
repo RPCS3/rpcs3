@@ -9,7 +9,6 @@ uint g_max_module_id = 0;
 uint g_module_2_count = 0;
 std::vector<ModuleFunc *> g_modules_funcs_list;
 std::mutex g_funcs_lock;
-std::vector<SFunc *> g_static_funcs_list;
 
 struct ModuleInfo
 {
@@ -140,21 +139,6 @@ struct _InitNullModules
 		}
 	}
 } InitNullModules;
-
-/** HACK: Used to delete SFunc objects that get added to the global static function array (g_static_funcs_list).
- * The destructor of this static object gets called when the program shuts down.
- */
-struct StaticFunctionListCleaner_t
-{
-	StaticFunctionListCleaner_t() {}
-	~StaticFunctionListCleaner_t()
-	{
-		for (int i = 0; i < g_static_funcs_list.size(); ++i)
-		{
-			delete g_static_funcs_list[i];
-		}
-	}
-} StaticFunctionListCleaner;
 
 bool IsLoadedFunc(u32 id)
 {
