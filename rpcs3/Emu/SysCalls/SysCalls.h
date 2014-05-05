@@ -424,7 +424,7 @@ extern int sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 a3);
 extern int sys_rsx_device_unmap();
 extern int sys_rsx_attribute();
 
-#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: %s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module->Error("Unimplemented function: %s", __FUNCTION__)
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]
@@ -469,10 +469,10 @@ public:
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	module.AddFuncSub(group, name ## _table, #name, name)
+	module->AddFuncSub(group, name ## _table, #name, name)
 
 #define REG_SUB_EMPTY(module, group, name,...) \
 	static const u64 name ## _table[] = {0}; \
-	module.AddFuncSub(group, name ## _table, #name, name)
+	module->AddFuncSub(group, name ## _table, #name, name)
 
 extern u64 get_system_time();

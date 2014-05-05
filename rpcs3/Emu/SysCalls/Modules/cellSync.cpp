@@ -2,8 +2,9 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-void cellSync_init();
-Module cellSync("cellSync", cellSync_init);
+//void cellSync_init();
+//Module cellSync("cellSync", cellSync_init);
+Module *cellSync = nullptr;
 
 // Return Codes
 enum
@@ -43,7 +44,7 @@ static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong sizeof");
 
 int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
 
 	if (!mutex.IsGood())
 	{
@@ -60,7 +61,7 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 
 int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
 
 	if (!mutex.IsGood())
 	{
@@ -98,7 +99,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 
 int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
 
 	if (!mutex.IsGood())
 	{
@@ -134,7 +135,7 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 
 int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
 
 	if (!mutex.IsGood())
 	{
@@ -160,8 +161,8 @@ int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 
 void cellSync_init()
 {
-	cellSync.AddFunc(0xa9072dee, cellSyncMutexInitialize);
-	cellSync.AddFunc(0x1bb675c2, cellSyncMutexLock);
-	cellSync.AddFunc(0xd06918c4, cellSyncMutexTryLock);
-	cellSync.AddFunc(0x91f2b7b0, cellSyncMutexUnlock);
+	cellSync->AddFunc(0xa9072dee, cellSyncMutexInitialize);
+	cellSync->AddFunc(0x1bb675c2, cellSyncMutexLock);
+	cellSync->AddFunc(0xd06918c4, cellSyncMutexTryLock);
+	cellSync->AddFunc(0x91f2b7b0, cellSyncMutexUnlock);
 }

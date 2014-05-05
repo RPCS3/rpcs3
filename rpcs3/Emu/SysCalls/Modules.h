@@ -152,11 +152,3 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	Emu.GetSFuncManager().push_back(sf);
 }
 
-bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 num);
-bool UnloadFunc(u32 id);
-void UnloadModules();
-u32 GetFuncNumById(u32 id);
-Module* GetModuleByName(const std::string& name);
-Module* GetModuleById(u16 id);
-

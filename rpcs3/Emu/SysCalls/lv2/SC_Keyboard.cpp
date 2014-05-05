@@ -2,7 +2,7 @@
 #include "Emu/Io/Keyboard.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-extern Module sys_io;
+extern Module *sys_io;
 
 enum CELL_KB_ERROR_CODE
 {
@@ -18,7 +18,7 @@ enum CELL_KB_ERROR_CODE
 
 int cellKbInit(u32 max_connect)
 {
-	sys_io.Log("cellKbInit(max_connect=%d)", max_connect);
+	sys_io->Log("cellKbInit(max_connect=%d)", max_connect);
 	if(Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_ALREADY_INITIALIZED;
 	if(max_connect > 7) return CELL_KB_ERROR_INVALID_PARAMETER;
 
@@ -28,7 +28,7 @@ int cellKbInit(u32 max_connect)
 
 int cellKbEnd()
 {
-	sys_io.Log("cellKbEnd()");
+	sys_io->Log("cellKbEnd()");
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 	Emu.GetKeyboardManager().Close();
 	return CELL_OK;
@@ -36,7 +36,7 @@ int cellKbEnd()
 
 int cellKbClearBuf(u32 port_no)
 {
-	sys_io.Log("cellKbClearBuf(port_no=%d)", port_no);
+	sys_io->Log("cellKbClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetKeyboardManager().GetKeyboards().size()) return CELL_KB_ERROR_INVALID_PARAMETER;
 
@@ -47,7 +47,7 @@ int cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io.Log("cellKbCnvRawCode(arrange=%d,mkey=%d,led=%d,rawcode=%d)", arrange, mkey, led, rawcode);
+	sys_io->Log("cellKbCnvRawCode(arrange=%d,mkey=%d,led=%d,rawcode=%d)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if ((rawcode >= 0x00 && rawcode <= 0x03) || rawcode == 0x29 || rawcode == 0x35 ||
@@ -95,7 +95,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 int cellKbGetInfo(mem_class_t info)
 {
-	sys_io.Log("cellKbGetInfo(info_addr=0x%x)", info.GetAddr());
+	sys_io->Log("cellKbGetInfo(info_addr=0x%x)", info.GetAddr());
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 
 	const KbInfo& current_info = Emu.GetKeyboardManager().GetInfo();
@@ -112,7 +112,7 @@ int cellKbGetInfo(mem_class_t info)
 
 int cellKbRead(u32 port_no, mem_class_t data)
 {
-	sys_io.Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.GetAddr());
+	sys_io->Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.GetAddr());
 
 	const std::vector<Keyboard>& keyboards = Emu.GetKeyboardManager().GetKeyboards();
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
@@ -134,7 +134,7 @@ int cellKbRead(u32 port_no, mem_class_t data)
 
 int cellKbSetCodeType(u32 port_no, u32 type)
 {
-	sys_io.Log("cellKbSetCodeType(port_no=%d,type=%d)", port_no, type);
+	sys_io->Log("cellKbSetCodeType(port_no=%d,type=%d)", port_no, type);
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 	
 	CellKbConfig& current_config = Emu.GetKeyboardManager().GetConfig(port_no);
@@ -150,7 +150,7 @@ int cellKbSetLEDStatus(u32 port_no, u8 led)
 
 int cellKbSetReadMode(u32 port_no, u32 rmode)
 {
-	sys_io.Log("cellKbSetReadMode(port_no=%d,rmode=%d)", port_no, rmode);
+	sys_io->Log("cellKbSetReadMode(port_no=%d,rmode=%d)", port_no, rmode);
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 	
 	CellKbConfig& current_config = Emu.GetKeyboardManager().GetConfig(port_no);
@@ -161,7 +161,7 @@ int cellKbSetReadMode(u32 port_no, u32 rmode)
 
 int cellKbGetConfiguration(u32 port_no, mem_class_t config)
 {
-	sys_io.Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config.GetAddr());
+	sys_io->Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config.GetAddr());
 	if(!Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_UNINITIALIZED;
 
 	const CellKbConfig& current_config = Emu.GetKeyboardManager().GetConfig(port_no);

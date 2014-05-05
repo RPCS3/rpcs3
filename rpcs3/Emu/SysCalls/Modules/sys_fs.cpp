@@ -2,8 +2,9 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-void sys_fs_init();
-Module sys_fs(0x000e, sys_fs_init);
+//void sys_fs_init();
+//Module sys_fs(0x000e, sys_fs_init);
+Module *sys_fs = nullptr;
 
 bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 {
@@ -38,13 +39,13 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	
 	if(!packed_stream || !packed_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' not found! flags: 0x%08x", packed_file.c_str(), vfsRead);
+		sys_fs->Error("'%s' not found! flags: 0x%08x", packed_file.c_str(), vfsRead);
 		return CELL_ENOENT;
 	}
 
 	if(!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		sys_fs.Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.c_str(), vfsWrite);
+		sys_fs->Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.c_str(), vfsWrite);
 		return CELL_ENOENT;
 	}
 
@@ -53,7 +54,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	u32 format = re32(*(u32*)&buffer[0]);
 	if (format != 0x4E504400) // "NPD\x00"
 	{
-		sys_fs.Error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
+		sys_fs->Error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
 		return CELL_EFSSPECIFIC;
 	}
 
@@ -67,7 +68,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	// SDATA file is compressed
 	if (flags & 0x1)
 	{
-		sys_fs.Warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
+		sys_fs->Warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
 		return CELL_EFSSPECIFIC;
 	}
 
@@ -80,7 +81,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 		if (!sdata_check(version, flags, filesizeInput, filesizeTmp))
 		{
-			sys_fs.Error("cellFsSdataOpen: Wrong header information.");
+			sys_fs->Error("cellFsSdataOpen: Wrong header information.");
 			return CELL_EFSSPECIFIC;
 		}
 	
@@ -109,7 +110,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs.Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
+	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
 		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
 	if (!fd.IsGood() || (!arg.IsGood() && size))
@@ -128,7 +129,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
-	fd = sys_fs.GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
+	fd = sys_fs->GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
 
 	return CELL_OK;
 }
@@ -150,7 +151,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	}
 
 	vfsFileBase* orig_file;
-	if(!sys_fs.CheckId(fd, orig_file)) return;
+	if(!sys_fs->CheckId(fd, orig_file)) return;
 
 	u64 nbytes = aio->size;
 	u32 buf_addr = aio->buf_addr;
@@ -228,7 +229,7 @@ fin:
 
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs.Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
 
 	if (!aio.IsGood() || !aio_id.IsGood() || !func.IsGood())
 	{
@@ -242,7 +243,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	vfsFileBase* orig_file;
 	u32 fd = aio->fd;
-	if (!sys_fs.CheckId(fd, orig_file)) return CELL_EBADF;
+	if (!sys_fs->CheckId(fd, orig_file)) return CELL_EBADF;
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
@@ -259,7 +260,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 int cellFsAioInit(mem8_ptr_t mount_point)
 {
 	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs.Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
 	aio_init = true;
 	return CELL_OK;
 }
@@ -267,14 +268,14 @@ int cellFsAioInit(mem8_ptr_t mount_point)
 int cellFsAioFinish(mem8_ptr_t mount_point)
 {
 	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs.Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
 	aio_init = false;
 	return CELL_OK;
 }
 
 int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem64_t nread)
 {
-	sys_fs.Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
+	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
 		fd, offset, buf_addr, buffer_size, nread.GetAddr());
 
 	int ret;
@@ -293,43 +294,43 @@ int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem6
 
 void sys_fs_init()
 {
-	sys_fs.AddFunc(0x718bf5f8, cellFsOpen);
-	sys_fs.AddFunc(0xb1840b53, cellFsSdataOpen);
-	sys_fs.AddFunc(0x4d5ff8e2, cellFsRead);
-	sys_fs.AddFunc(0xecdcf2ab, cellFsWrite);
-	sys_fs.AddFunc(0x2cb51f0d, cellFsClose);
-	sys_fs.AddFunc(0x3f61245c, cellFsOpendir);
-	sys_fs.AddFunc(0x5c74903d, cellFsReaddir);
-	sys_fs.AddFunc(0xff42dcc3, cellFsClosedir);
-	sys_fs.AddFunc(0x7de6dced, cellFsStat);
-	sys_fs.AddFunc(0xef3efa34, cellFsFstat);
-	sys_fs.AddFunc(0xba901fe6, cellFsMkdir);
-	sys_fs.AddFunc(0xf12eecc8, cellFsRename);
-	sys_fs.AddFunc(0x2796fdf3, cellFsRmdir);
-	sys_fs.AddFunc(0x7f4677a8, cellFsUnlink);
-	sys_fs.AddFunc(0xa397d042, cellFsLseek);
-	sys_fs.AddFunc(0x0e2939e5, cellFsFtruncate);
-	sys_fs.AddFunc(0xc9dc3ac5, cellFsTruncate);
-	sys_fs.AddFunc(0xcb588dba, cellFsFGetBlockSize);
-	sys_fs.AddFunc(0xc1c507e7, cellFsAioRead);
-	sys_fs.AddFunc(0xdb869f20, cellFsAioInit);
-	sys_fs.AddFunc(0x9f951810, cellFsAioFinish);
-	sys_fs.AddFunc(0x1a108ab7, cellFsGetBlockSize);
-	sys_fs.AddFunc(0xaa3b4bcd, cellFsGetFreeSize);
-	sys_fs.AddFunc(0x0d5b4a14, cellFsReadWithOffset);
-	sys_fs.AddFunc(0x9b882495, cellFsGetDirectoryEntries);
-	sys_fs.AddFunc(0x2664c8ae, cellFsStReadInit);
-	sys_fs.AddFunc(0xd73938df, cellFsStReadFinish);
-	sys_fs.AddFunc(0xb3afee8b, cellFsStReadGetRingBuf);
-	sys_fs.AddFunc(0xcf34969c, cellFsStReadGetStatus);
-	sys_fs.AddFunc(0xbd273a88, cellFsStReadGetRegid);
-	sys_fs.AddFunc(0x8df28ff9, cellFsStReadStart);
-	sys_fs.AddFunc(0xf8e5d9a0, cellFsStReadStop);
-	sys_fs.AddFunc(0x27800c6b, cellFsStRead);
-	sys_fs.AddFunc(0x190912f6, cellFsStReadGetCurrentAddr);
-	sys_fs.AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
-	sys_fs.AddFunc(0x8f71c5b2, cellFsStReadWait);
-	sys_fs.AddFunc(0x866f6aec, cellFsStReadWaitCallback);
+	sys_fs->AddFunc(0x718bf5f8, cellFsOpen);
+	sys_fs->AddFunc(0xb1840b53, cellFsSdataOpen);
+	sys_fs->AddFunc(0x4d5ff8e2, cellFsRead);
+	sys_fs->AddFunc(0xecdcf2ab, cellFsWrite);
+	sys_fs->AddFunc(0x2cb51f0d, cellFsClose);
+	sys_fs->AddFunc(0x3f61245c, cellFsOpendir);
+	sys_fs->AddFunc(0x5c74903d, cellFsReaddir);
+	sys_fs->AddFunc(0xff42dcc3, cellFsClosedir);
+	sys_fs->AddFunc(0x7de6dced, cellFsStat);
+	sys_fs->AddFunc(0xef3efa34, cellFsFstat);
+	sys_fs->AddFunc(0xba901fe6, cellFsMkdir);
+	sys_fs->AddFunc(0xf12eecc8, cellFsRename);
+	sys_fs->AddFunc(0x2796fdf3, cellFsRmdir);
+	sys_fs->AddFunc(0x7f4677a8, cellFsUnlink);
+	sys_fs->AddFunc(0xa397d042, cellFsLseek);
+	sys_fs->AddFunc(0x0e2939e5, cellFsFtruncate);
+	sys_fs->AddFunc(0xc9dc3ac5, cellFsTruncate);
+	sys_fs->AddFunc(0xcb588dba, cellFsFGetBlockSize);
+	sys_fs->AddFunc(0xc1c507e7, cellFsAioRead);
+	sys_fs->AddFunc(0xdb869f20, cellFsAioInit);
+	sys_fs->AddFunc(0x9f951810, cellFsAioFinish);
+	sys_fs->AddFunc(0x1a108ab7, cellFsGetBlockSize);
+	sys_fs->AddFunc(0xaa3b4bcd, cellFsGetFreeSize);
+	sys_fs->AddFunc(0x0d5b4a14, cellFsReadWithOffset);
+	sys_fs->AddFunc(0x9b882495, cellFsGetDirectoryEntries);
+	sys_fs->AddFunc(0x2664c8ae, cellFsStReadInit);
+	sys_fs->AddFunc(0xd73938df, cellFsStReadFinish);
+	sys_fs->AddFunc(0xb3afee8b, cellFsStReadGetRingBuf);
+	sys_fs->AddFunc(0xcf34969c, cellFsStReadGetStatus);
+	sys_fs->AddFunc(0xbd273a88, cellFsStReadGetRegid);
+	sys_fs->AddFunc(0x8df28ff9, cellFsStReadStart);
+	sys_fs->AddFunc(0xf8e5d9a0, cellFsStReadStop);
+	sys_fs->AddFunc(0x27800c6b, cellFsStRead);
+	sys_fs->AddFunc(0x190912f6, cellFsStReadGetCurrentAddr);
+	sys_fs->AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
+	sys_fs->AddFunc(0x8f71c5b2, cellFsStReadWait);
+	sys_fs->AddFunc(0x866f6aec, cellFsStReadWaitCallback);
 
 	aio_init = false;
 }

@@ -4,8 +4,9 @@
 #include "cellJpgDec.h"
 #include "stblib/stb_image.h"
 
-void cellJpgDec_init();
-Module cellJpgDec(0x000f, cellJpgDec_init);
+//void cellJpgDec_init();
+//Module cellJpgDec(0x000f, cellJpgDec_init);
+extern Module *cellJpgDec = nullptr;
 
 int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -27,7 +28,7 @@ int cellJpgDecDestroy(u32 mainHandle)
 
 int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
 {
-	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
+	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
 	if (!subHandle.IsGood() || !src.IsGood() || !openInfo.IsGood())
@@ -48,7 +49,7 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle = cellJpgDec.GetNewId(current_subHandle);
+	subHandle = cellJpgDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
@@ -56,7 +57,7 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
 	CellJpgDecSubHandle* subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
@@ -67,13 +68,13 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 
 int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo> info)
 {
-	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
 
 	if (!info.IsGood())
 		return CELL_JPGDEC_ERROR_ARG;
 
 	CellJpgDecSubHandle* subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -133,7 +134,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	CellJpgDecSubHandle* subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -178,7 +179,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	case CELL_JPG_UPSAMPLE_ONLY:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_RGBA:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB:
-		cellJpgDec.Error("cellJpgDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellJpgDec->Error("cellJpgDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
 	break;
 
 	default:
@@ -199,7 +200,7 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJp
 		return CELL_JPGDEC_ERROR_ARG;
 
 	CellJpgDecSubHandle* subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	CellJpgDecInfo& current_info = subHandle_data->info;
@@ -239,17 +240,17 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJp
 
 void cellJpgDec_init()
 {
-	cellJpgDec.AddFunc(0xa7978f59, cellJpgDecCreate);
-	cellJpgDec.AddFunc(0x8b300f66, cellJpgDecExtCreate);
-	cellJpgDec.AddFunc(0x976ca5c2, cellJpgDecOpen);
-	cellJpgDec.AddFunc(0x6d9ebccf, cellJpgDecReadHeader);
-	cellJpgDec.AddFunc(0xe08f3910, cellJpgDecSetParameter);
-	cellJpgDec.AddFunc(0xaf8bb012, cellJpgDecDecodeData);
-	cellJpgDec.AddFunc(0x9338a07a, cellJpgDecClose);
-	cellJpgDec.AddFunc(0xd8ea91f8, cellJpgDecDestroy);
+	cellJpgDec->AddFunc(0xa7978f59, cellJpgDecCreate);
+	cellJpgDec->AddFunc(0x8b300f66, cellJpgDecExtCreate);
+	cellJpgDec->AddFunc(0x976ca5c2, cellJpgDecOpen);
+	cellJpgDec->AddFunc(0x6d9ebccf, cellJpgDecReadHeader);
+	cellJpgDec->AddFunc(0xe08f3910, cellJpgDecSetParameter);
+	cellJpgDec->AddFunc(0xaf8bb012, cellJpgDecDecodeData);
+	cellJpgDec->AddFunc(0x9338a07a, cellJpgDecClose);
+	cellJpgDec->AddFunc(0xd8ea91f8, cellJpgDecDestroy);
 
-	/*cellJpgDec.AddFunc(0xa9f703e3, cellJpgDecExtOpen);
-	cellJpgDec.AddFunc(0xb91eb3d2, cellJpgDecExtReadHeader);
-	cellJpgDec.AddFunc(0x65cbbb16, cellJpgDecExtSetParameter);
-	cellJpgDec.AddFunc(0x716f8792, cellJpgDecExtDecodeData);*/
+	/*cellJpgDec->AddFunc(0xa9f703e3, cellJpgDecExtOpen);
+	cellJpgDec->AddFunc(0xb91eb3d2, cellJpgDecExtReadHeader);
+	cellJpgDec->AddFunc(0x65cbbb16, cellJpgDecExtSetParameter);
+	cellJpgDec->AddFunc(0x716f8792, cellJpgDecExtDecodeData);*/
 }

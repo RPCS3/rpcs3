@@ -4,10 +4,11 @@
 #include "Emu/GS/GCM.h"
 #include "cellResc.h"
 
-void cellResc_init();
-void cellResc_load();
-void cellResc_unload();
-Module cellResc(0x001f, cellResc_init, cellResc_load, cellResc_unload);
+//void cellResc_init();
+//void cellResc_load();
+//void cellResc_unload();
+//Module cellResc(0x001f, cellResc_init, cellResc_load, cellResc_unload);
+Module *cellResc = nullptr;
 
 // Error Codes
 enum
@@ -415,7 +416,7 @@ void InitVertex(mem_ptr_t<CellGcmContextData>& cntxt)
 // Module Functions
 int cellRescInit(mem_ptr_t<CellRescInitConfig> initConfig)
 {
-	cellResc.Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.GetAddr());
+	cellResc->Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.GetAddr());
 
 	if(s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_REINITIALIZED;
@@ -441,7 +442,7 @@ void cellRescExit()
 
 int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, mem32_t bufferMode)
 {
-	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)",
+	cellResc->Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)",
 		resolutionId, bufferMode.GetAddr());
 
 	if (!bufferMode.IsGood())
@@ -461,7 +462,7 @@ int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, mem32_t buffer
 
 int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
 {
-	cellResc.Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.GetAddr());
+	cellResc->Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.GetAddr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -479,7 +480,7 @@ int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
 
 int cellRescSetDisplayMode(u32 displayMode)
 {
-	cellResc.Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
+	cellResc->Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -552,7 +553,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 
 int cellRescAdjustAspectRatio(float horizontal, float vertical)
 {
-	cellResc.Warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
+	cellResc->Warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -575,7 +576,7 @@ int cellRescAdjustAspectRatio(float horizontal, float vertical)
 
 int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 {
-	cellResc.Warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
+	cellResc->Warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -589,7 +590,7 @@ int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 
 int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fragmentShader)
 {
-	cellResc.Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
+	cellResc->Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
 		colorBuffers.GetAddr(), vertexArray.GetAddr(), fragmentShader.GetAddr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
@@ -619,7 +620,7 @@ int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fra
 
 int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 {
-	cellResc.Log("cellRescGetNumColorBuffers(dstMode=%d, palTemporalMode=%d, reserved=%d)", dstMode, palTemporalMode, reserved);
+	cellResc->Log("cellRescGetNumColorBuffers(dstMode=%d, palTemporalMode=%d, reserved=%d)", dstMode, palTemporalMode, reserved);
 
 	if(reserved != 0)
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -637,7 +638,7 @@ int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 
 int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<CellRescSrc> rescSrc)
 {
-	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)",
+	cellResc->Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)",
 		gcmSurface.GetAddr(), rescSrc.GetAddr());
 
 	if(!gcmSurface.IsGood() || !rescSrc.IsGood())
@@ -665,7 +666,7 @@ int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<C
 
 int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 {
-	cellResc.Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
+	cellResc->Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -674,11 +675,11 @@ int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 	if(src->width < 1 || 4096 < src->width || src->height < 1 || 4096 < src->height)
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 
-	cellResc.Log(" *** format=0x%x", src->format.ToLE());
-	cellResc.Log(" *** pitch=%d", src->pitch.ToLE());
-	cellResc.Log(" *** width=%d", src->width.ToLE());
-	cellResc.Log(" *** height=%d", src->height.ToLE());
-	cellResc.Log(" *** offset=0x%x", src->offset.ToLE());
+	cellResc->Log(" *** format=0x%x", src->format.ToLE());
+	cellResc->Log(" *** pitch=%d", src->pitch.ToLE());
+	cellResc->Log(" *** width=%d", src->width.ToLE());
+	cellResc->Log(" *** height=%d", src->height.ToLE());
+	cellResc->Log(" *** offset=0x%x", src->offset.ToLE());
 	//Emu.GetGSManager().GetRender().SetData(src.offset, 800, 600);
 	//Emu.GetGSManager().GetRender().Draw();
 
@@ -691,7 +692,7 @@ int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 
 int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
+	cellResc->Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -713,7 +714,7 @@ int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 
 int cellRescSetWaitFlip()
 {
-	cellResc.Log("cellRescSetWaitFlip()");
+	cellResc->Log("cellRescSetWaitFlip()");
 	GSLockCurrent lock(GS_LOCK_WAIT_FLIP); // could stall on exit
 
 	return CELL_OK;
@@ -721,7 +722,7 @@ int cellRescSetWaitFlip()
 
 int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fragmentShader)
 {
-	cellResc.Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
+	cellResc->Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
 		colorBuffers.GetAddr(), vertexArray.GetAddr(), fragmentShader.GetAddr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
@@ -761,7 +762,7 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 
 int cellRescSetFlipHandler(u32 handler_addr)
 {
-	cellResc.Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler_addr);
+	cellResc->Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler_addr);
 
 	if(handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 		return CELL_EFAULT;
@@ -773,42 +774,42 @@ int cellRescSetFlipHandler(u32 handler_addr)
 
 void cellRescResetFlipStatus()
 {
-	cellResc.Log("cellRescResetFlipStatus()");
+	cellResc->Log("cellRescResetFlipStatus()");
 
 	Emu.GetGSManager().GetRender().m_flip_status = 1;
 }
 
 int cellRescGetFlipStatus()
 {
-	cellResc.Log("cellRescGetFlipStatus()");
+	cellResc->Log("cellRescGetFlipStatus()");
 
 	return Emu.GetGSManager().GetRender().m_flip_status;
 }
 
 void cellResc_init()
 {
-	cellResc.AddFunc(0x25c107e6, cellRescSetConvertAndFlip);
-	cellResc.AddFunc(0x0d3c22ce, cellRescSetWaitFlip);
-	cellResc.AddFunc(0x2ea94661, cellRescSetFlipHandler);
-	cellResc.AddFunc(0x01220224, cellRescGcmSurface2RescSrc);
-	cellResc.AddFunc(0x0a2069c7, cellRescGetNumColorBuffers);
-	cellResc.AddFunc(0x10db5b1a, cellRescSetDsts);
-	cellResc.AddFunc(0x129922a0, cellRescResetFlipStatus);
-	cellResc.AddFunc(0x19a2a967, cellRescSetPalInterpolateDropFlexRatio);
-	//cellResc.AddFunc(0x1dd3c4cd, cellRescGetRegisterCount);
-	cellResc.AddFunc(0x22ae06d8, cellRescAdjustAspectRatio);
-	cellResc.AddFunc(0x23134710, cellRescSetDisplayMode);
-	cellResc.AddFunc(0x2ea3061e, cellRescExit);
-	cellResc.AddFunc(0x516ee89e, cellRescInit);
-	cellResc.AddFunc(0x5a338cdb, cellRescGetBufferSize);
-	//cellResc.AddFunc(0x66f5e388, cellRescGetLastFlipTime);
-	cellResc.AddFunc(0x6cd0f95f, cellRescSetSrc);
-	//cellResc.AddFunc(0x7af8a37f, cellRescSetRegisterCount);
-	cellResc.AddFunc(0x8107277c, cellRescSetBufferAddress);
-	cellResc.AddFunc(0xc47c5c22, cellRescGetFlipStatus);
-	cellResc.AddFunc(0xd1ca0503, cellRescVideoOutResolutionId2RescBufferMode);
-	//cellResc.AddFunc(0xd3758645, cellRescSetVBlankHandler);
-	//cellResc.AddFunc(0xe0cef79e, cellRescCreateInterlaceTable);
+	cellResc->AddFunc(0x25c107e6, cellRescSetConvertAndFlip);
+	cellResc->AddFunc(0x0d3c22ce, cellRescSetWaitFlip);
+	cellResc->AddFunc(0x2ea94661, cellRescSetFlipHandler);
+	cellResc->AddFunc(0x01220224, cellRescGcmSurface2RescSrc);
+	cellResc->AddFunc(0x0a2069c7, cellRescGetNumColorBuffers);
+	cellResc->AddFunc(0x10db5b1a, cellRescSetDsts);
+	cellResc->AddFunc(0x129922a0, cellRescResetFlipStatus);
+	cellResc->AddFunc(0x19a2a967, cellRescSetPalInterpolateDropFlexRatio);
+	//cellResc->AddFunc(0x1dd3c4cd, cellRescGetRegisterCount);
+	cellResc->AddFunc(0x22ae06d8, cellRescAdjustAspectRatio);
+	cellResc->AddFunc(0x23134710, cellRescSetDisplayMode);
+	cellResc->AddFunc(0x2ea3061e, cellRescExit);
+	cellResc->AddFunc(0x516ee89e, cellRescInit);
+	cellResc->AddFunc(0x5a338cdb, cellRescGetBufferSize);
+	//cellResc->AddFunc(0x66f5e388, cellRescGetLastFlipTime);
+	cellResc->AddFunc(0x6cd0f95f, cellRescSetSrc);
+	//cellResc->AddFunc(0x7af8a37f, cellRescSetRegisterCount);
+	cellResc->AddFunc(0x8107277c, cellRescSetBufferAddress);
+	cellResc->AddFunc(0xc47c5c22, cellRescGetFlipStatus);
+	cellResc->AddFunc(0xd1ca0503, cellRescVideoOutResolutionId2RescBufferMode);
+	//cellResc->AddFunc(0xd3758645, cellRescSetVBlankHandler);
+	//cellResc->AddFunc(0xe0cef79e, cellRescCreateInterlaceTable);
 }
 
 void cellResc_load()

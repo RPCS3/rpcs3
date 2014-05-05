@@ -378,6 +378,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp" />
+    <ClCompile Include="Emu\SysCalls\ModuleManager.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAtrac.cpp" />
@@ -560,6 +561,7 @@
     <ClInclude Include="Emu\SysCalls\lv2\SC_SPU_Thread.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Time.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Timer.h" />
+    <ClInclude Include="Emu\SysCalls\ModuleManager.h" />
     <ClInclude Include="Emu\SysCalls\Modules.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />

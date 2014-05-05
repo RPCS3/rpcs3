@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "ELF64.h"
 #include "Emu/Cell/PPUInstrTable.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/ModuleManager.h"
+
 using namespace PPU_instr;
 
 void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
@@ -335,7 +338,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						stub.s_text = re(stub.s_text);
 
 						const std::string& module_name = Memory.ReadString(stub.s_modulename);
-						Module* module = GetModuleByName(module_name);
+						Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
 						if(module)
 						{
 							//module->SetLoaded();
@@ -382,7 +385,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 							mem32_ptr_t out_tbl(tbl + i*8);
 							out_tbl += dst + i*section;
-							out_tbl += GetFuncNumById(nid);
+							out_tbl += Emu.GetModuleManager().GetFuncNumById(nid);
 
 							mem32_ptr_t out_dst(dst + i*section);
 							out_dst += OR(11, 2, 2, 0);
