@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -82,3 +83,4 @@ void cellCelp8Enc_init()
 	cellCelp8Enc.AddFunc(0x29da1ea6, cellCelp8EncWaitForOutput);
 	cellCelp8Enc.AddFunc(0x48c5020d, cellCelp8EncGetAu);
 }
+#endif

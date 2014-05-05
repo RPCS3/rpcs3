@@ -15,7 +15,7 @@
 //void sceNpTrophy_unload();
 //void sceNpTrophy_init();
 //Module sceNpTrophy(0xf035, sceNpTrophy_init, nullptr, sceNpTrophy_unload);
-extern Module *sceNpTrophy = nullptr;
+Module *sceNpTrophy = nullptr;
 
 // Internal Structs
 struct sceNpTrophyInternalContext

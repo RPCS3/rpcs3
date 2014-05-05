@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -286,3 +287,4 @@ void cellSailRec_init()
 
 	cellSailRec.AddFunc(0x37aad85f, cellSailRecorderDumpImage);
 }
+#endif 

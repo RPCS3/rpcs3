@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -108,3 +109,4 @@ void cellSsl_init()
 	cellSsl.AddFunc(0x006c4900, cellSslCertGetNameEntryInfo);
 	cellSsl.AddFunc(0x5e9253ca, cellSslCertGetMd5Fingerprint);
 }
+#endif 

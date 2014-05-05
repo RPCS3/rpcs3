@@ -6,7 +6,7 @@
 
 //void sceNp_init();
 //Module sceNp(0x0016, sceNp_init);
-extern Module *sceNp = nullptr;
+Module *sceNp = nullptr;
 
 int sceNpInit(u32 mem_size, u32 mem_addr)
 {

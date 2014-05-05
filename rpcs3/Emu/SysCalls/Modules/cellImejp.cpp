@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -304,3 +305,4 @@ void cellImejp_init()
 	cellImejp.AddFunc(0x1986f2cd, cellImeJpGetPredictList);
 	cellImejp.AddFunc(0xeede898c, cellImeJpConfirmPrediction);
 }
+#endif

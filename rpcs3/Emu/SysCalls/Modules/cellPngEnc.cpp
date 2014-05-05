@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -82,3 +83,4 @@ void cellPngEnc_init()
 	cellPngEnc.AddFunc(0x585269bc, cellPngEncGetStreamInfo);
 	cellPngEnc.AddFunc(0x6ac91de3, cellPngEncReset);
 }
+#endif

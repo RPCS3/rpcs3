@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -918,3 +919,4 @@ void cellSail_init()
 	cellSail.AddFunc(0xcc987ba6, cellSailPlayerDumpImage);
 	cellSail.AddFunc(0x025b4974, cellSailPlayerUnregisterSource);
 }
+#endif
