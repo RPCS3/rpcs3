@@ -90,8 +90,6 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	pad.m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-
 	for(Button& button : pad.m_buttons)
 	{
 		switch(button.m_offset)
@@ -191,7 +189,8 @@ int cellPadGetInfo(u32 info_addr)
 	info.now_connect = rinfo.now_connect;
 	info.system_info = rinfo.system_info;
 
-	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
+	//Can't have this as const, we need to reset Assign Changes Flag here
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	for(u32 i=0; i<CELL_MAX_PADS; ++i)
 	{
@@ -199,6 +198,7 @@ int cellPadGetInfo(u32 info_addr)
 			break;
 
 		info.status[i] = pads[i].m_port_status;
+		pads[i].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 		info.product_id[i] = 0x0268;
 		info.vendor_id[i] = 0x054C;
 	}
@@ -221,7 +221,7 @@ int cellPadGetInfo2(u32 info_addr)
 	info.now_connect = rinfo.now_connect;
 	info.system_info = rinfo.system_info;
 
-	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	for(u32 i=0; i<CELL_PAD_MAX_PORT_NUM; ++i)
 	{
@@ -229,6 +229,7 @@ int cellPadGetInfo2(u32 info_addr)
 			break;
 
 		info.port_status[i] = pads[i].m_port_status;
+		pads[i].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 		info.port_setting[i] = pads[i].m_port_setting;
 		info.device_capability[i] = pads[i].m_device_capability;
 		info.device_type[i] = pads[i].m_device_type;

@@ -215,7 +215,8 @@ public:
 				if(button.m_keyCode != code)
 					continue;
 
-				pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				//This is for reporting when a controller connects/disconnects, shouldn't be here
+				//pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 				if(button.m_pressed && !pressed)
 				{
@@ -231,8 +232,6 @@ public:
 			{
 				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code)
 					continue;
-
-				pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 				if (stick.m_keyCodeMax == code)
 				{
