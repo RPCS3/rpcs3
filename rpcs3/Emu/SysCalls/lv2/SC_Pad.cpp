@@ -49,6 +49,7 @@ int cellPadInit(u32 max_connect)
 {
 	sys_io.Log("cellPadInit(max_connect=%d)", max_connect);
 	if(Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_ALREADY_INITIALIZED;
+	if (max_connect > CELL_PAD_MAX_PORT_NUM) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	Emu.GetPadManager().Init(max_connect);
 	return CELL_OK;
 }
@@ -77,7 +78,10 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	sys_io.Log("cellPadGetData[port_no: %d, data_addr: 0x%x]", port_no, data_addr);
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= pads.size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
+	if(port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	//We have a choice here of NO_DEVICE or READ_FAILED...lets try no device for now
+	if(port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
 
 	Pad& pad = pads[port_no];
 	CellPadData data;
