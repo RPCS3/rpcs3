@@ -3,13 +3,14 @@
 
 class ModuleManager
 {
-	Module* g_modules[3][0xff];
-	uint g_max_module_id;
-	uint g_module_2_count;
-	std::mutex g_funcs_lock;
-	std::vector<ModuleFunc *> g_modules_funcs_list;
-	std::vector<Module*> m_modules;
+	Module* m_modules[3][0xff];
+	uint m_max_module_id;
+	uint m_module_2_count;
+	std::mutex m_funcs_lock;
+	std::vector<ModuleFunc *> m_modules_funcs_list;
+	std::vector<Module*> m_modules2;
 	std::vector<Module> m_mod_init;
+	bool initialized;
 public:
 	ModuleManager();
 	~ModuleManager();

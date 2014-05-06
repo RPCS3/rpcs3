@@ -184,97 +184,101 @@ static const g_module_list[] =
 
 void ModuleManager::init()
 {
-	for (auto& m : g_module_list)
+	if (!initialized)
 	{
-		m_modules.push_back(new Module(m.id, m.name));
+		for (auto& m : g_module_list)
+		{
+			m_modules2.push_back(new Module(m.id, m.name));
+		}
+		m_mod_init.reserve(m_mod_init.size() + 60);
+		m_mod_init.emplace_back("test", nullptr);
+		cellAdec = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0006, cellAdec_init);
+		cellAtrac = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0013, cellAtrac_init);
+		cellAudio = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0011, cellAudio_init);
+		cellDmux = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0007, cellDmux_init);
+		cellFont = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0019, cellFont_init, cellFont_load, cellFont_unload);
+		sys_net = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back((u16)0x0000, sys_net_init);
+		sceNpTrophy = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0xf035, sceNpTrophy_init, nullptr, sceNpTrophy_unload);
+		sceNp = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0016, sceNp_init);
+		cellUserInfo = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0032, cellUserInfo_init);
+		cellSysutil = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0015, cellSysutil_init);
+		cellSysutilAp = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0039, cellSysutilAp_init);
+		cellPngDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0018, cellPngDec_init);
+		cellNetCtl = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0014, cellNetCtl_init);
+		cellJpgDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x000f, cellJpgDec_init);
+		cellFontFT = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
+		cellGifDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0xf010, cellGifDec_init);
+		cellGcmSys = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
+		cellGame = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x003e, cellGame_init);
+		sys_io = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0017, sys_io_init);
+		cellL10n = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x001e, cellL10n_init);
+		cellPamf = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0012, cellPamf_init);
+		cellResc = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x001f, cellResc_init, cellResc_load, cellResc_unload);
+		cellRtc = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0009, cellRtc_init);
+		cellSpurs = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x000a, cellSpurs_init);
+		cellSync = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back("cellSync", cellSync_init);
+		cellSysmodule = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back("cellSysmodule", cellSysmodule_init);
+		cellVdec = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0005, cellVdec_init);
+		cellVpost = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0008, cellVpost_init);
+		libmixer = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back("libmixer", libmixer_init);
+		sysPrxForUser = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back("sysPrxForUser", sysPrxForUser_init);
+		sys_fs = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x000e, sys_fs_init);
+		initialized = true;
 	}
-	m_mod_init.reserve(m_mod_init.size() + 60);
-	//m_mod_init.emplace_back("test",nullptr);
-	cellAdec = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0006, cellAdec_init);
-	cellAtrac = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0013, cellAtrac_init);
-	cellAudio = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0011, cellAudio_init);
-	cellDmux = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0007, cellDmux_init);
-	cellFont = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0019, cellFont_init, cellFont_load, cellFont_unload);
-	sys_net = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back((u16)0x0000, sys_net_init);
-	sceNpTrophy = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0xf035, sceNpTrophy_init, nullptr, sceNpTrophy_unload);
-	sceNp = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0016, sceNp_init);
-	cellUserInfo = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0032, cellUserInfo_init);
-	cellSysutil = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0015, cellSysutil_init);
-	cellSysutilAp = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0039, cellSysutilAp_init);
-	cellPngDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0018, cellPngDec_init);
-	cellNetCtl = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0014, cellNetCtl_init);
-	cellJpgDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x000f, cellJpgDec_init);
-	cellFontFT = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
-	cellGifDec = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0xf010, cellGifDec_init);
-	cellGcmSys = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
-	cellGame = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x003e, cellGame_init);
-	sys_io = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0017, sys_io_init);
-	cellL10n = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x001e, cellL10n_init);
-	cellPamf = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0012, cellPamf_init);
-	cellResc = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x001f, cellResc_init, cellResc_load, cellResc_unload);
-	cellRtc = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0009, cellRtc_init);
-	cellSpurs = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x000a, cellSpurs_init);
-	cellSync = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back("cellSync", cellSync_init);
-	cellSysmodule = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back("cellSysmodule", cellSysmodule_init);
-	cellVdec = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0005, cellVdec_init);
-	cellVpost = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x0008, cellVpost_init);
-	libmixer = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back("libmixer", libmixer_init);
-	sysPrxForUser = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back("sysPrxForUser", sysPrxForUser_init);
-	sys_fs = static_cast <Module*>(&(m_mod_init.back())) + 1;
-	m_mod_init.emplace_back(0x000e, sys_fs_init);
-
 }
 
 ModuleManager::ModuleManager() :
-g_max_module_id(0),
-g_module_2_count(0)
+m_max_module_id(0),
+m_module_2_count(0),
+initialized(false)
 {
-	memset(g_modules, 0, 3 * 0xFF * sizeof(Module*));
+	memset(m_modules, 0, 3 * 0xFF * sizeof(Module*));
 }
 
 ModuleManager::~ModuleManager()
 {
-	for (int i = 0; i < m_modules.size(); ++i)
+	for (int i = 0; i < m_modules2.size(); ++i)
 	{
-		delete m_modules[i];
+		delete m_modules2[i];
 	}
 }
 
 bool ModuleManager::IsLoadedFunc(u32 id)
 {
-	for (u32 i = 0; i<g_modules_funcs_list.size(); ++i)
+	for (u32 i = 0; i<m_modules_funcs_list.size(); ++i)
 	{
-		if (g_modules_funcs_list[i]->id == id)
+		if (m_modules_funcs_list[i]->id == id)
 		{
 			return true;
 		}
@@ -282,18 +286,18 @@ bool ModuleManager::IsLoadedFunc(u32 id)
 
 	return false;
 }
-//std::vector<ModuleFunc *> ModuleManager::g_modules_funcs_list;
+
 bool ModuleManager::CallFunc(u32 num)
 {
 	func_caller* func = nullptr;
 	{
-		std::lock_guard<std::mutex> lock(g_funcs_lock);
+		std::lock_guard<std::mutex> lock(m_funcs_lock);
 
-		for (u32 i = 0; i<g_modules_funcs_list.size(); ++i)
+		for (u32 i = 0; i<m_modules_funcs_list.size(); ++i)
 		{
-			if (g_modules_funcs_list[i]->id == num)
+			if (m_modules_funcs_list[i]->id == num)
 			{
-				func = g_modules_funcs_list[i]->func;
+				func = m_modules_funcs_list[i]->func;
 				break;
 			}
 		}
@@ -308,13 +312,13 @@ bool ModuleManager::CallFunc(u32 num)
 
 bool ModuleManager::UnloadFunc(u32 id)
 {
-	std::lock_guard<std::mutex> lock(g_funcs_lock);
+	std::lock_guard<std::mutex> lock(m_funcs_lock);
 
-	for (u32 i = 0; i<g_modules_funcs_list.size(); ++i)
+	for (u32 i = 0; i<m_modules_funcs_list.size(); ++i)
 	{
-		if (g_modules_funcs_list[i]->id == id)
+		if (m_modules_funcs_list[i]->id == id)
 		{
-			g_modules_funcs_list.erase(g_modules_funcs_list.begin() + i);
+			m_modules_funcs_list.erase(m_modules_funcs_list.begin() + i);
 
 			return true;
 		}
@@ -332,36 +336,36 @@ void ModuleManager::UnloadModules()
 {
 	for (u32 i = 0; i<3; ++i)
 	{
-		for (u32 j = 0; j<g_max_module_id; ++j)
+		for (u32 j = 0; j<m_max_module_id; ++j)
 		{
-			if (g_modules[i][j])
+			if (m_modules[i][j])
 			{
-				g_modules[i][j]->UnLoad();
+				m_modules[i][j]->UnLoad();
 			}
 		}
 	}
 
-	std::lock_guard<std::mutex> lock(g_funcs_lock);
-	g_modules_funcs_list.clear();
+	std::lock_guard<std::mutex> lock(m_funcs_lock);
+	m_modules_funcs_list.clear();
 }
 
 Module* ModuleManager::GetModuleByName(const std::string& name)
 {
-	for (u32 i = 0; i<g_max_module_id; ++i)
+	for (u32 i = 0; i<m_max_module_id; ++i)
 	{
-		if (g_modules[0][i] && g_modules[0][i]->GetName() == name)
+		if (m_modules[0][i] && m_modules[0][i]->GetName() == name)
 		{
-			return g_modules[0][i];
+			return m_modules[0][i];
 		}
 
-		if (g_modules[1][i] && g_modules[1][i]->GetName() == name)
+		if (m_modules[1][i] && m_modules[1][i]->GetName() == name)
 		{
-			return g_modules[1][i];
+			return m_modules[1][i];
 		}
 
-		if (g_modules[2][i] && g_modules[2][i]->GetName() == name)
+		if (m_modules[2][i] && m_modules[2][i]->GetName() == name)
 		{
-			return g_modules[2][i];
+			return m_modules[2][i];
 		}
 	}
 
@@ -370,16 +374,16 @@ Module* ModuleManager::GetModuleByName(const std::string& name)
 
 Module* ModuleManager::GetModuleById(u16 id)
 {
-	for (u32 i = 0; i<g_max_module_id; ++i)
+	for (u32 i = 0; i<m_max_module_id; ++i)
 	{
-		if (g_modules[0][i] && g_modules[0][i]->GetID() == id)
+		if (m_modules[0][i] && m_modules[0][i]->GetID() == id)
 		{
-			return g_modules[0][i];
+			return m_modules[0][i];
 		}
 
-		if (g_modules[1][i] && g_modules[1][i]->GetID() == id)
+		if (m_modules[1][i] && m_modules[1][i]->GetID() == id)
 		{
-			return g_modules[1][i];
+			return m_modules[1][i];
 		}
 	}
 
@@ -390,9 +394,9 @@ void ModuleManager::SetModule(int id, Module* module, bool with_data)
 {
 	if (id != 0xffff)
 	{
-		if (u16((u8)id + 1) > g_max_module_id)
+		if (u16((u8)id + 1) > m_max_module_id)
 		{
-			g_max_module_id = u16((u8)id + 1);
+			m_max_module_id = u16((u8)id + 1);
 		}
 
 		int index;
@@ -403,32 +407,32 @@ void ModuleManager::SetModule(int id, Module* module, bool with_data)
 		default: assert(0); return;
 		}
 
-		if (g_modules[index][(u8)id])
+		if (m_modules[index][(u8)id])
 		{
 			if (with_data)
 			{
-				module->SetName(g_modules[index][(u8)id]->GetName());
-				// delete g_modules[index][(u8)id];
-				g_modules[index][(u8)id] = module;
+				module->SetName(m_modules[index][(u8)id]->GetName());
+				// delete m_modules[index][(u8)id];
+				m_modules[index][(u8)id] = module;
 			}
 			else
 			{
-				g_modules[index][(u8)id]->SetName(module->GetName());
+				m_modules[index][(u8)id]->SetName(module->GetName());
 				// delete module;
 			}
 		}
 		else
 		{
-			g_modules[index][(u8)id] = module;
+			m_modules[index][(u8)id] = module;
 		}
 	}
 	else
 	{
-		g_modules[2][g_module_2_count++] = module;
+		m_modules[2][m_module_2_count++] = module;
 
-		if (g_module_2_count > g_max_module_id)
+		if (m_module_2_count > m_max_module_id)
 		{
-			g_max_module_id = g_module_2_count;
+			m_max_module_id = m_module_2_count;
 		}
 	}
 }
@@ -436,11 +440,11 @@ void ModuleManager::SetModule(int id, Module* module, bool with_data)
 
 void ModuleManager::AddFunc(ModuleFunc *func)
 {
-	std::lock_guard<std::mutex> guard(g_funcs_lock);
+	std::lock_guard<std::mutex> guard(m_funcs_lock);
 
 	if (!IsLoadedFunc(func->id))
 	{
-		g_modules_funcs_list.push_back(func);
+		m_modules_funcs_list.push_back(func);
 	}
 }
 
