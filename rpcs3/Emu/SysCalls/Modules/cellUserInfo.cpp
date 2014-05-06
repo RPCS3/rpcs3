@@ -4,12 +4,13 @@
 
 #include "cellUserInfo.h"
 
-void cellUserInfo_init();
-Module cellUserInfo(0x0032, cellUserInfo_init);
+//void cellUserInfo_init();
+//Module cellUserInfo(0x0032, cellUserInfo_init);
+extern Module *cellUserInfo = nullptr;
 
 int cellUserInfoGetStat(u32 id, mem_ptr_t<CellUserInfoUserStat> stat)
 {
-	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.GetAddr());
+	cellUserInfo->Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.GetAddr());
 
 	if (!stat.IsGood())
 		return CELL_USERINFO_ERROR_PARAM;
@@ -57,7 +58,7 @@ int cellUserInfoEnableOverlay()
 
 int cellUserInfoGetList(mem32_t listNum, mem_ptr_t<CellUserInfoUserList> listBuf, mem32_t currentUserId)
 {
-	cellUserInfo.Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
+	cellUserInfo->Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
 		listNum.GetAddr(), listBuf.GetAddr(), currentUserId.GetAddr());
 
 	listNum = 1;
@@ -68,9 +69,9 @@ int cellUserInfoGetList(mem32_t listNum, mem_ptr_t<CellUserInfoUserList> listBuf
 
 void cellUserInfo_init()
 {
-	cellUserInfo.AddFunc(0x2b761140, cellUserInfoGetStat);
-	cellUserInfo.AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
-	cellUserInfo.AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);
-	cellUserInfo.AddFunc(0xb3516536, cellUserInfoEnableOverlay);
-	cellUserInfo.AddFunc(0xc55e338b, cellUserInfoGetList);
+	cellUserInfo->AddFunc(0x2b761140, cellUserInfoGetStat);
+	cellUserInfo->AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
+	cellUserInfo->AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);
+	cellUserInfo->AddFunc(0xb3516536, cellUserInfoEnableOverlay);
+	cellUserInfo->AddFunc(0xc55e338b, cellUserInfoGetList);
 }

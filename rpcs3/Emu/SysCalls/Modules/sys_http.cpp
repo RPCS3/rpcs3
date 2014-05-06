@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -702,3 +703,4 @@ void sys_http_init()
 	sys_http.AddFunc(0xccf57336, cellHttpClientGetSslVersion);
 	sys_http.AddFunc(0x7313c78d, cellHttpClientSetSslIdDestroyCallback);
 }
+#endif

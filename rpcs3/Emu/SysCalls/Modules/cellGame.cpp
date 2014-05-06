@@ -4,8 +4,9 @@
 
 #include "Loader/PSF.h"
 
-void cellGame_init();
-Module cellGame(0x003e, cellGame_init);
+//void cellGame_init();
+//Module cellGame(0x003e, cellGame_init);
+extern Module *cellGame = nullptr;
 
 // Return Codes
 enum
@@ -112,12 +113,12 @@ struct CellGameContentSize
 
 int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameContentSize> size, mem_list_ptr_t<u8> dirName)
 {
-	cellGame.Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
+	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
 
 	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
 	{
-		cellGame.Warning("cellGameBootCheck returns CELL_GAME_ERROR_PARAM. As a result size->hddFreeSizeKB may be 0.");
+		cellGame->Warning("cellGameBootCheck returns CELL_GAME_ERROR_PARAM. As a result size->hddFreeSizeKB may be 0.");
 		return CELL_GAME_ERROR_PARAM;
 	}
 
@@ -153,7 +154,7 @@ int cellGameDataCheck()
 
 int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath,  mem_list_ptr_t<u8> usrdirPath)
 {
-	cellGame.Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
+	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.GetAddr(), usrdirPath.GetAddr());
 	
 	if (!contentInfoPath.IsGood() || !usrdirPath.IsGood())
@@ -186,7 +187,7 @@ int cellGameDeleteGameData()
 
 int cellGameGetParamInt(u32 id, mem32_t value)
 {
-	cellGame.Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.GetAddr());
+	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.GetAddr());
 
 	if(!value.IsGood())
 		return CELL_GAME_ERROR_PARAM;
@@ -212,7 +213,7 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 
 int cellGameGetParamString(u32 id, u32 buf_addr, u32 bufsize)
 {
-	cellGame.Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf_addr, bufsize);
+	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf_addr, bufsize);
 
 	if(!Memory.IsGoodAddr(buf_addr))
 		return CELL_GAME_ERROR_PARAM;
@@ -287,7 +288,7 @@ int cellGameGetLocalWebContentPath()
 
 int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 {
-	cellGame.Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
+	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
 
 	if (Memory.IsGoodAddr(dirName_addr))
 		return CELL_GAME_ERROR_PARAM;
@@ -327,25 +328,25 @@ void cellGame_init()
 {
 	// (TODO: Disc Exchange functions missing)
 
-	cellGame.AddFunc(0xf52639ea, cellGameBootCheck);
-	cellGame.AddFunc(0xce4374f6, cellGamePatchCheck);
-	cellGame.AddFunc(0xdb9819f3, cellGameDataCheck);
-	cellGame.AddFunc(0x70acec67, cellGameContentPermit);
+	cellGame->AddFunc(0xf52639ea, cellGameBootCheck);
+	cellGame->AddFunc(0xce4374f6, cellGamePatchCheck);
+	cellGame->AddFunc(0xdb9819f3, cellGameDataCheck);
+	cellGame->AddFunc(0x70acec67, cellGameContentPermit);
 
-	cellGame.AddFunc(0x42a2e133, cellGameCreateGameData);
-	cellGame.AddFunc(0xb367c6e3, cellGameDeleteGameData);
+	cellGame->AddFunc(0x42a2e133, cellGameCreateGameData);
+	cellGame->AddFunc(0xb367c6e3, cellGameDeleteGameData);
 
-	cellGame.AddFunc(0xb7a45caf, cellGameGetParamInt);
-	//cellGame.AddFunc(, cellGameSetParamInt);
-	cellGame.AddFunc(0x3a5d726a, cellGameGetParamString);
-	cellGame.AddFunc(0xdaa5cd20, cellGameSetParamString);
-	cellGame.AddFunc(0xef9d42d5, cellGameGetSizeKB);
-	cellGame.AddFunc(0x2a8e6b92, cellGameGetDiscContentInfoUpdatePath);
-	cellGame.AddFunc(0xa80bf223, cellGameGetLocalWebContentPath);
+	cellGame->AddFunc(0xb7a45caf, cellGameGetParamInt);
+	//cellGame->AddFunc(, cellGameSetParamInt);
+	cellGame->AddFunc(0x3a5d726a, cellGameGetParamString);
+	cellGame->AddFunc(0xdaa5cd20, cellGameSetParamString);
+	cellGame->AddFunc(0xef9d42d5, cellGameGetSizeKB);
+	cellGame->AddFunc(0x2a8e6b92, cellGameGetDiscContentInfoUpdatePath);
+	cellGame->AddFunc(0xa80bf223, cellGameGetLocalWebContentPath);
 
-	cellGame.AddFunc(0xb0a1f8c6, cellGameContentErrorDialog);
+	cellGame->AddFunc(0xb0a1f8c6, cellGameContentErrorDialog);
 
-	cellGame.AddFunc(0xd24e3928, cellGameThemeInstall);
-	cellGame.AddFunc(0x87406734, cellGameThemeInstallFromBuffer);
-	//cellGame.AddFunc(, CellGameThemeInstallCallback);
+	cellGame->AddFunc(0xd24e3928, cellGameThemeInstall);
+	cellGame->AddFunc(0x87406734, cellGameThemeInstallFromBuffer);
+	//cellGame->AddFunc(, CellGameThemeInstallCallback);
 }

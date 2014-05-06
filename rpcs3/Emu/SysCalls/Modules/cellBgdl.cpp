@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -47,3 +48,4 @@ void cellBgdl_init()
 	cellBgdl.AddFunc(0x7e134a90, cellBGDLSetMode);
 	cellBgdl.AddFunc(0x74e57bdf, cellBGDLGetMode);
 }
+#endif 

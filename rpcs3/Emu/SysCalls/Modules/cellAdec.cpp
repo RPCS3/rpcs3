@@ -14,8 +14,9 @@ extern "C"
 
 #include "cellAdec.h"
 
-void cellAdec_init();
-Module cellAdec(0x0006, cellAdec_init);
+//void cellAdec_init();
+//Module cellAdec(0x0006, cellAdec_init);
+extern Module *cellAdec=nullptr;
 
 int adecRawRead(void* opaque, u8* buf, int buf_size)
 {
@@ -184,7 +185,7 @@ u32 adecOpen(AudioDecoder* data)
 
 	adec.adecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	u32 adec_id = cellAdec.GetNewId(data);
+	u32 adec_id = cellAdec->GetNewId(data);
 
 	adec.id = adec_id;
 
@@ -525,7 +526,7 @@ bool adecCheckType(AudioCodecType type)
 	case CELL_ADEC_TYPE_CELP:
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
-		cellAdec.Error("Unimplemented audio codec type (%d)", type);
+		cellAdec->Error("Unimplemented audio codec type (%d)", type);
 		break;
 	default:
 		return false;
@@ -536,7 +537,7 @@ bool adecCheckType(AudioCodecType type)
 
 int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr)
 {
-	cellAdec.Warning("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
+	cellAdec->Warning("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
 	if (!type.IsGood() || !attr.IsGood())
 	{
@@ -555,7 +556,7 @@ int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr
 
 int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	cellAdec.Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
+	cellAdec->Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
@@ -572,7 +573,7 @@ int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, 
 
 int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	cellAdec.Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
+	cellAdec->Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
@@ -589,7 +590,7 @@ int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> r
 
 int cellAdecClose(u32 handle)
 {
-	cellAdec.Warning("cellAdecClose(handle=%d)", handle);
+	cellAdec->Warning("cellAdecClose(handle=%d)", handle);
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -616,7 +617,7 @@ int cellAdecClose(u32 handle)
 
 int cellAdecStartSeq(u32 handle, u32 param_addr)
 {
-	cellAdec.Log("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
+	cellAdec->Log("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -631,7 +632,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	}
 	else*/
 	{
-		cellAdec.Warning("cellAdecStartSeq: (TODO) initialization");
+		cellAdec->Warning("cellAdecStartSeq: (TODO) initialization");
 	}
 	
 	adec->job.Push(task);
@@ -640,7 +641,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 
 int cellAdecEndSeq(u32 handle)
 {
-	cellAdec.Warning("cellAdecEndSeq(handle=%d)", handle);
+	cellAdec->Warning("cellAdecEndSeq(handle=%d)", handle);
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -654,7 +655,7 @@ int cellAdecEndSeq(u32 handle)
 
 int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 {
-	cellAdec.Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.GetAddr());
+	cellAdec->Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.GetAddr());
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -680,7 +681,7 @@ int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 
 int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 {
-	cellAdec.Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer_addr);
+	cellAdec->Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer_addr);
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -770,7 +771,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 {
-	cellAdec.Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.GetAddr());
+	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.GetAddr());
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -823,15 +824,15 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 
 void cellAdec_init()
 {
-	cellAdec.AddFunc(0x7e4a4a49, cellAdecQueryAttr);
-	cellAdec.AddFunc(0xd00a6988, cellAdecOpen);
-	cellAdec.AddFunc(0x8b5551a4, cellAdecOpenEx);
-	cellAdec.AddFunc(0x847d2380, cellAdecClose);
-	cellAdec.AddFunc(0x487b613e, cellAdecStartSeq);
-	cellAdec.AddFunc(0xe2ea549b, cellAdecEndSeq);
-	cellAdec.AddFunc(0x1529e506, cellAdecDecodeAu);
-	cellAdec.AddFunc(0x97ff2af1, cellAdecGetPcm);
-	cellAdec.AddFunc(0xbd75f78b, cellAdecGetPcmItem);
+	cellAdec->AddFunc(0x7e4a4a49, cellAdecQueryAttr);
+	cellAdec->AddFunc(0xd00a6988, cellAdecOpen);
+	cellAdec->AddFunc(0x8b5551a4, cellAdecOpenEx);
+	cellAdec->AddFunc(0x847d2380, cellAdecClose);
+	cellAdec->AddFunc(0x487b613e, cellAdecStartSeq);
+	cellAdec->AddFunc(0xe2ea549b, cellAdecEndSeq);
+	cellAdec->AddFunc(0x1529e506, cellAdecDecodeAu);
+	cellAdec->AddFunc(0x97ff2af1, cellAdecGetPcm);
+	cellAdec->AddFunc(0xbd75f78b, cellAdecGetPcmItem);
 
 	av_register_all();
 	avcodec_register_all();

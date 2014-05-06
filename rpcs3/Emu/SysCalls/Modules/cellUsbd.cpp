@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -206,3 +207,4 @@ void cellUsbd_init()
 	cellUsbd.AddFunc(0x074dbb39, cellUsbdAllocateMemory);
 	cellUsbd.AddFunc(0x4e456e81, cellUsbdFreeMemory);
 }
+#endif 

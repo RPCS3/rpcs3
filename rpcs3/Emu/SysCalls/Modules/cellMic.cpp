@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -329,3 +330,4 @@ void cellMic_init()
 	cellMic.AddFunc(0xf82bbf7c, cellMicSysShareEnd);
 	cellMic.AddFunc(0xfdbbe469, cellMicGetDeviceIdentifier);
 }
+#endif 

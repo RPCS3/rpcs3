@@ -4,10 +4,11 @@
 #include "cellFont.h"
 #include "stblib/stb_truetype.h"
 
-void cellFont_init();
-void cellFont_load();
-void cellFont_unload();
-Module cellFont(0x0019, cellFont_init, cellFont_load, cellFont_unload);
+//void cellFont_init();
+//void cellFont_load();
+//void cellFont_unload();
+//Module cellFont(0x0019, cellFont_init, cellFont_load, cellFont_unload);
+Module *cellFont = nullptr;
 
 // Font Set Types
 enum
@@ -232,7 +233,7 @@ CCellFontInternal* s_fontInternalInstance = nullptr;
 // Functions
 int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> config)
 {
-	cellFont.Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=0x%x)", revisionFlags, config.GetAddr());
+	cellFont->Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=0x%x)", revisionFlags, config.GetAddr());
 	
 	if (s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
@@ -243,7 +244,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> 
 	if (config->FileCache.size < 24)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (config->flags != 0)
-		cellFont.Warning("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
+		cellFont->Warning("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
 
 	s_fontInternalInstance->m_buffer_addr = config->FileCache.buffer_addr;
 	s_fontInternalInstance->m_buffer_size = config->FileCache.size;
@@ -261,7 +262,7 @@ int cellFontGetRevisionFlags(mem64_t revisionFlags)
 
 int cellFontInit(mem_ptr_t<CellFontConfig> config)
 {
-	cellFont.Log("cellFontInit(config=0x%x)", config.GetAddr());
+	cellFont->Log("cellFontInit(config=0x%x)", config.GetAddr());
 
 	MemoryAllocator<u64> revisionFlags = 0;
 	cellFontGetRevisionFlags(revisionFlags.GetAddr());
@@ -270,7 +271,7 @@ int cellFontInit(mem_ptr_t<CellFontConfig> config)
 
 int cellFontEnd()
 {
-	cellFont.Log("cellFontEnd()");
+	cellFont->Log("cellFontEnd()");
 
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
@@ -281,14 +282,14 @@ int cellFontEnd()
 
 s32 cellFontSetFontsetOpenMode(u32 openMode)
 {
-	cellFont.Log("cellFontSetFontsetOpenMode(openMode=0x%x)", openMode);
+	cellFont->Log("cellFontSetFontsetOpenMode(openMode=0x%x)", openMode);
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
 }
 
 int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32 fontSize, u32 subNum, u32 uniqueId, mem_ptr_t<CellFont> font)
 {
-	cellFont.Warning("cellFontOpenFontMemory(library_addr=0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font_addr=0x%x)",
+	cellFont->Warning("cellFontOpenFontMemory(library_addr=0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font_addr=0x%x)",
 		library.GetAddr(), fontAddr, fontSize, subNum, uniqueId, font.GetAddr());
 
 	if (!s_fontInternalInstance->m_bInitialized)
@@ -310,7 +311,7 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
 {
 	std::string fp(fontPath.GetString());
-	cellFont.Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
+	cellFont->Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
 		library.GetAddr(), fp.c_str(), subNum, uniqueId, font.GetAddr());
 
 	vfsFile f(fp);
@@ -327,7 +328,7 @@ int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath
 
 int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontType> fontType, mem_ptr_t<CellFont> font)
 {
-	cellFont.Log("cellFontOpenFontset(library_addr=0x%x, fontType_addr=0x%x, font_addr=0x%x)",
+	cellFont->Log("cellFontOpenFontset(library_addr=0x%x, fontType_addr=0x%x, font_addr=0x%x)",
 		library.GetAddr(), fontType.GetAddr(), font.GetAddr());
 
 	if (!library.IsGood() || !fontType.IsGood() || !font.IsGood())
@@ -335,7 +336,7 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
-		cellFont.Warning("cellFontOpenFontset: Only Unicode is supported");
+		cellFont->Warning("cellFontOpenFontset: Only Unicode is supported");
 	
 	std::string file;
 	switch((u32)fontType->type)
@@ -394,12 +395,12 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_RSANS2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_VAGR2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_VAGR2_SET:
-		cellFont.Warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
+		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
 		file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";
 		break;
 
 	default:
-		cellFont.Warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
+		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
@@ -413,7 +414,7 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 
 int cellFontOpenFontInstance(mem_ptr_t<CellFont> openedFont, mem_ptr_t<CellFont> font)
 {
-	cellFont.Warning("cellFontOpenFontInstance(openedFont=0x%x, font=0x%x)", openedFont.GetAddr(), font.GetAddr());
+	cellFont->Warning("cellFontOpenFontInstance(openedFont=0x%x, font=0x%x)", openedFont.GetAddr(), font.GetAddr());
 
 	if (!openedFont.IsGood() || !font.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -430,14 +431,14 @@ int cellFontOpenFontInstance(mem_ptr_t<CellFont> openedFont, mem_ptr_t<CellFont>
 
 s32 cellFontSetFontOpenMode(u32 openMode)
 {
-	cellFont.Log("cellFontSetFontOpenMode(openMode=0x%x)", openMode);
+	cellFont->Log("cellFontSetFontOpenMode(openMode=0x%x)", openMode);
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
 }
 
 int cellFontCreateRenderer(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontRendererConfig> config, mem_ptr_t<CellFontRenderer> Renderer)
 {
-	cellFont.Warning("cellFontCreateRenderer(library_addr=0x%x, config_addr=0x%x, Renderer_addr=0x%x)",
+	cellFont->Warning("cellFontCreateRenderer(library_addr=0x%x, config_addr=0x%x, Renderer_addr=0x%x)",
 		library.GetAddr(), config.GetAddr(), Renderer.GetAddr());
 
 	if (!library.IsGood() || !config.IsGood() || !Renderer.IsGood())
@@ -452,7 +453,7 @@ int cellFontCreateRenderer(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFon
 
 void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buffer_addr, s32 bufferWidthByte, s32 pixelSizeByte, s32 w, s32 h)
 {
-	cellFont.Warning("cellFontRenderSurfaceInit(surface_addr=0x%x, buffer_addr=0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)",
+	cellFont->Warning("cellFontRenderSurfaceInit(surface_addr=0x%x, buffer_addr=0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)",
 		surface.GetAddr(), buffer_addr, bufferWidthByte, pixelSizeByte, w, h);
 
 	surface->buffer_addr	= buffer_addr;
@@ -467,7 +468,7 @@ void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buf
 
 void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
 {
-	cellFont.Warning("cellFontRenderSurfaceSetScissor(surface_addr=0x%x, x0=%d, y0=%d, w=%d, h=%d)",
+	cellFont->Warning("cellFontRenderSurfaceSetScissor(surface_addr=0x%x, x0=%d, y0=%d, w=%d, h=%d)",
 		surface.GetAddr(), x0, y0, w, h);
 
 	surface->Scissor.x0 = x0;
@@ -480,7 +481,7 @@ int cellFontSetScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 {
 	w = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
 	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
-	cellFont.Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
+	cellFont->Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
 	if (!font.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -492,7 +493,7 @@ int cellFontSetScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 
 int cellFontGetHorizontalLayout(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontHorizontalLayout> layout)
 {
-	cellFont.Log("cellFontGetHorizontalLayout(font_addr=0x%x, layout_addr=0x%x)",
+	cellFont->Log("cellFontGetHorizontalLayout(font_addr=0x%x, layout_addr=0x%x)",
 		font.GetAddr(), layout.GetAddr());
 
 	if (!font.IsGood() || !layout.IsGood())
@@ -510,7 +511,7 @@ int cellFontGetHorizontalLayout(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontHori
 
 int cellFontBindRenderer(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontRenderer> renderer)
 {
-	cellFont.Warning("cellFontBindRenderer(font_addr=0x%x, renderer_addr=0x%x)",
+	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x, renderer_addr=0x%x)",
 		font.GetAddr(), renderer.GetAddr());
 	
 	if (!font.IsGood() || !renderer.IsGood())
@@ -524,7 +525,7 @@ int cellFontBindRenderer(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontRenderer> r
 
 int cellFontUnbindRenderer(mem_ptr_t<CellFont> font)
 {
-	cellFont.Warning("cellFontBindRenderer(font_addr=0x%x)", font.GetAddr());
+	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x)", font.GetAddr());
 	
 	if (!font.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -545,7 +546,7 @@ int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 {
 	w = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
 	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
-	cellFont.Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
+	cellFont->Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
 	if (!font.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -558,7 +559,7 @@ int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 
 int cellFontGetRenderCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontGlyphMetrics> metrics)
 {
-	cellFont.Log("cellFontGetRenderCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x)",
+	cellFont->Log("cellFontGetRenderCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x)",
 		font.GetAddr(), code, metrics.GetAddr());
 
 	if (!font.IsGood() || !metrics.IsGood())
@@ -574,7 +575,7 @@ int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<C
 {
 	x = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
 	y = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
-	cellFont.Log("cellFontRenderCharGlyphImage(font_addr=0x%x, code=0x%x, surface_addr=0x%x, x=%f, y=%f, metrics_addr=0x%x, trans_addr=0x%x)",
+	cellFont->Log("cellFontRenderCharGlyphImage(font_addr=0x%x, code=0x%x, surface_addr=0x%x, x=%f, y=%f, metrics_addr=0x%x, trans_addr=0x%x)",
 		font.GetAddr(), code, surface.GetAddr(), x, y, metrics.GetAddr(), transInfo.GetAddr());
 
 	if (!font.IsGood() || !surface.IsGood() || !metrics.IsGood() || !transInfo.IsGood())
@@ -621,7 +622,7 @@ int cellFontEndLibrary()
 int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 {
 	slantParam = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
-	cellFont.Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.GetAddr(), slantParam);
+	cellFont->Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.GetAddr(), slantParam);
 
 	if (!font.IsGood() || slantParam < -1.0 || slantParam > 1.0)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -632,7 +633,7 @@ int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 
 int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem32_t slantParam)
 {
-	cellFont.Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.GetAddr(), slantParam.GetAddr());
+	cellFont->Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.GetAddr(), slantParam.GetAddr());
 
 	if (!font.IsGood() || !slantParam.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -643,7 +644,7 @@ int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem32_t slantParam)
 
 int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, mem32_t fontId, mem32_t fontCode)
 {
-	cellFont.Log("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
+	cellFont->Log("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
 		font.GetAddr(), code, fontId.GetAddr(), fontCode.GetAddr());
 
 	if (!font.IsGood() || !fontId.IsGood()) //fontCode isn't used
@@ -655,7 +656,7 @@ int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, mem32_t fontId, me
 
 int cellFontCloseFont(mem_ptr_t<CellFont> font)
 {
-	cellFont.Warning("cellFontCloseFont(font_addr=0x%x)", font.GetAddr());
+	cellFont->Warning("cellFontCloseFont(font_addr=0x%x)", font.GetAddr());
 
 	if (!font.IsGood())
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -670,7 +671,7 @@ int cellFontCloseFont(mem_ptr_t<CellFont> font)
 
 int cellFontGetCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontGlyphMetrics> metrics)
 {
-	cellFont.Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x",
+	cellFont->Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x",
 		font.GetAddr(), code, metrics.GetAddr());
 
 	if (!font.IsGood() || metrics.IsGood())
@@ -810,7 +811,7 @@ int cellFontDeleteGlyph()
 
 int cellFontExtend(u32 a1, u32 a2, u32 a3)
 {
-	cellFont.Warning("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
+	cellFont->Warning("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
 	//In a test I did: a1=0xcfe00000, a2=0x0, a3=(pointer to something)
 	if (a1 == 0xcfe00000)
 		{
@@ -848,56 +849,56 @@ int cellFontGetCharGlyphMetricsVertical()
 
 void cellFont_init()
 {
-	cellFont.AddFunc(0x25c107e6, cellFontInit);
-	cellFont.AddFunc(0x6bf6f832, cellFontSetFontsetOpenMode);
-	cellFont.AddFunc(0x6cfada83, cellFontSetFontOpenMode);
-	cellFont.AddFunc(0x042e74e3, cellFontCreateRenderer);
-	cellFont.AddFunc(0x1387c45c, cellFontGetHorizontalLayout);
-	cellFont.AddFunc(0x21ebb248, cellFontDestroyRenderer);
-	cellFont.AddFunc(0x227e1e3c, cellFontSetupRenderScalePixel);
-	cellFont.AddFunc(0x29329541, cellFontOpenFontInstance);
-	cellFont.AddFunc(0x297f0e93, cellFontSetScalePixel);
-	cellFont.AddFunc(0x2da9fd9d, cellFontGetRenderCharGlyphMetrics);
-	cellFont.AddFunc(0x40d40544, cellFontEndLibrary);
-	cellFont.AddFunc(0x66a23100, cellFontBindRenderer);
-	cellFont.AddFunc(0x7ab47f7e, cellFontEnd);
-	cellFont.AddFunc(0x8657c8f5, cellFontSetEffectSlant);
-	cellFont.AddFunc(0xe16e679a, cellFontGetEffectSlant);
-	cellFont.AddFunc(0x88be4799, cellFontRenderCharGlyphImage);
-	cellFont.AddFunc(0x90b9465e, cellFontRenderSurfaceInit);
-	cellFont.AddFunc(0x98ac5524, cellFontGetFontIdCode);
-	cellFont.AddFunc(0xa885cc9b, cellFontOpenFontset);
-	cellFont.AddFunc(0xb276f1f6, cellFontCloseFont);
-	cellFont.AddFunc(0xb422b005, cellFontRenderSurfaceSetScissor);
-	cellFont.AddFunc(0xd8eaee9f, cellFontGetCharGlyphMetrics);
-	cellFont.AddFunc(0xf03dcc29, cellFontInitializeWithRevision);
-	cellFont.AddFunc(0x061049ad, cellFontGraphicsSetFontRGBA);
-	cellFont.AddFunc(0x073fa321, cellFontOpenFontsetOnMemory);
-	cellFont.AddFunc(0x0a7306a4, cellFontOpenFontFile);
-	cellFont.AddFunc(0x16322df1, cellFontGraphicsSetScalePixel);
-	cellFont.AddFunc(0x2388186c, cellFontGraphicsGetScalePixel);
-	cellFont.AddFunc(0x25253fe4, cellFontSetEffectWeight);
-	cellFont.AddFunc(0x53f529fe, cellFontGlyphSetupVertexesGlyph);
-	cellFont.AddFunc(0x698897f8, cellFontGetVerticalLayout);
-	cellFont.AddFunc(0x700e6223, cellFontGetRenderCharGlyphMetricsVertical);
-	cellFont.AddFunc(0x70f3e728, cellFontSetScalePoint);
-	cellFont.AddFunc(0x78d05e08, cellFontSetupRenderEffectSlant);
-	cellFont.AddFunc(0x7c83bc15, cellFontGraphicsSetLineRGBA);
-	cellFont.AddFunc(0x87bd650f, cellFontGraphicsSetDrawType);
-	cellFont.AddFunc(0x8a35c887, cellFontEndGraphics);
-	cellFont.AddFunc(0x970d4c22, cellFontGraphicsSetupDrawContext);
-	cellFont.AddFunc(0x9e19072b, cellFontOpenFontMemory);
-	cellFont.AddFunc(0xa6dc25d1, cellFontSetupRenderEffectWeight);
-	cellFont.AddFunc(0xa8fae920, cellFontGlyphGetOutlineControlDistance);
-	cellFont.AddFunc(0xb4d112af, cellFontGlyphGetVertexesGlyphSize);
-	cellFont.AddFunc(0xc17259de, cellFontGenerateCharGlyph);
-	cellFont.AddFunc(0xd62f5d76, cellFontDeleteGlyph);
-	cellFont.AddFunc(0xdee0836c, cellFontExtend);
-	cellFont.AddFunc(0xe857a0ca, cellFontRenderCharGlyphImageVertical);
-	cellFont.AddFunc(0xfb3341ba, cellFontSetResolutionDpi);
-	cellFont.AddFunc(0xfe9a6dd7, cellFontGetCharGlyphMetricsVertical);
-	cellFont.AddFunc(0xf16379fa, cellFontUnbindRenderer);
-	cellFont.AddFunc(0xb015a84e, cellFontGetRevisionFlags);
+	cellFont->AddFunc(0x25c107e6, cellFontInit);
+	cellFont->AddFunc(0x6bf6f832, cellFontSetFontsetOpenMode);
+	cellFont->AddFunc(0x6cfada83, cellFontSetFontOpenMode);
+	cellFont->AddFunc(0x042e74e3, cellFontCreateRenderer);
+	cellFont->AddFunc(0x1387c45c, cellFontGetHorizontalLayout);
+	cellFont->AddFunc(0x21ebb248, cellFontDestroyRenderer);
+	cellFont->AddFunc(0x227e1e3c, cellFontSetupRenderScalePixel);
+	cellFont->AddFunc(0x29329541, cellFontOpenFontInstance);
+	cellFont->AddFunc(0x297f0e93, cellFontSetScalePixel);
+	cellFont->AddFunc(0x2da9fd9d, cellFontGetRenderCharGlyphMetrics);
+	cellFont->AddFunc(0x40d40544, cellFontEndLibrary);
+	cellFont->AddFunc(0x66a23100, cellFontBindRenderer);
+	cellFont->AddFunc(0x7ab47f7e, cellFontEnd);
+	cellFont->AddFunc(0x8657c8f5, cellFontSetEffectSlant);
+	cellFont->AddFunc(0xe16e679a, cellFontGetEffectSlant);
+	cellFont->AddFunc(0x88be4799, cellFontRenderCharGlyphImage);
+	cellFont->AddFunc(0x90b9465e, cellFontRenderSurfaceInit);
+	cellFont->AddFunc(0x98ac5524, cellFontGetFontIdCode);
+	cellFont->AddFunc(0xa885cc9b, cellFontOpenFontset);
+	cellFont->AddFunc(0xb276f1f6, cellFontCloseFont);
+	cellFont->AddFunc(0xb422b005, cellFontRenderSurfaceSetScissor);
+	cellFont->AddFunc(0xd8eaee9f, cellFontGetCharGlyphMetrics);
+	cellFont->AddFunc(0xf03dcc29, cellFontInitializeWithRevision);
+	cellFont->AddFunc(0x061049ad, cellFontGraphicsSetFontRGBA);
+	cellFont->AddFunc(0x073fa321, cellFontOpenFontsetOnMemory);
+	cellFont->AddFunc(0x0a7306a4, cellFontOpenFontFile);
+	cellFont->AddFunc(0x16322df1, cellFontGraphicsSetScalePixel);
+	cellFont->AddFunc(0x2388186c, cellFontGraphicsGetScalePixel);
+	cellFont->AddFunc(0x25253fe4, cellFontSetEffectWeight);
+	cellFont->AddFunc(0x53f529fe, cellFontGlyphSetupVertexesGlyph);
+	cellFont->AddFunc(0x698897f8, cellFontGetVerticalLayout);
+	cellFont->AddFunc(0x700e6223, cellFontGetRenderCharGlyphMetricsVertical);
+	cellFont->AddFunc(0x70f3e728, cellFontSetScalePoint);
+	cellFont->AddFunc(0x78d05e08, cellFontSetupRenderEffectSlant);
+	cellFont->AddFunc(0x7c83bc15, cellFontGraphicsSetLineRGBA);
+	cellFont->AddFunc(0x87bd650f, cellFontGraphicsSetDrawType);
+	cellFont->AddFunc(0x8a35c887, cellFontEndGraphics);
+	cellFont->AddFunc(0x970d4c22, cellFontGraphicsSetupDrawContext);
+	cellFont->AddFunc(0x9e19072b, cellFontOpenFontMemory);
+	cellFont->AddFunc(0xa6dc25d1, cellFontSetupRenderEffectWeight);
+	cellFont->AddFunc(0xa8fae920, cellFontGlyphGetOutlineControlDistance);
+	cellFont->AddFunc(0xb4d112af, cellFontGlyphGetVertexesGlyphSize);
+	cellFont->AddFunc(0xc17259de, cellFontGenerateCharGlyph);
+	cellFont->AddFunc(0xd62f5d76, cellFontDeleteGlyph);
+	cellFont->AddFunc(0xdee0836c, cellFontExtend);
+	cellFont->AddFunc(0xe857a0ca, cellFontRenderCharGlyphImageVertical);
+	cellFont->AddFunc(0xfb3341ba, cellFontSetResolutionDpi);
+	cellFont->AddFunc(0xfe9a6dd7, cellFontGetCharGlyphMetricsVertical);
+	cellFont->AddFunc(0xf16379fa, cellFontUnbindRenderer);
+	cellFont->AddFunc(0xb015a84e, cellFontGetRevisionFlags);
 }
 
 void cellFont_load()

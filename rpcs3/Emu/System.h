@@ -14,7 +14,9 @@
 #include "SysCalls/Callback.h"
 
 class EventManager;
-extern void UnloadModules();
+class ModuleManager;
+class StaticFuncManager;
+
 
 struct EmuInfo
 {
@@ -92,6 +94,8 @@ class Emulator
 	CallbackManager m_callback_manager;
 	CPUThread* m_ppu_callback_thr;
 	std::unique_ptr<EventManager> m_event_manager;
+	std::unique_ptr<StaticFuncManager> m_sfunc_manager;
+	std::unique_ptr<ModuleManager> m_module_manager;
 
 	VFS m_vfs;
 
@@ -122,7 +126,9 @@ public:
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
-	
+	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
+	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
+
 	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
 	{
 		m_modules_init.push_back(std::move(m));

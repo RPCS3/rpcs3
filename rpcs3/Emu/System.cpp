@@ -3,6 +3,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Ini.h"
 
+#include "Emu/SysCalls/Static.h"
+#include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -27,6 +29,8 @@ Emulator::Emulator()
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
 	, m_event_manager(new EventManager())
+	, m_sfunc_manager(new StaticFuncManager())
+	, m_module_manager(new ModuleManager())
 {
 }
 
@@ -119,6 +123,8 @@ bool Emulator::BootGame(const std::string& path)
 
 void Emulator::Load()
 {
+	GetModuleManager().init();
+
 	if(!wxFileExists(fmt::FromUTF8(m_path))) return;
 
 	if(IsSelf(m_path))
@@ -392,7 +398,8 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	UnloadModules();
+	//not all modules unload cleanly, so we're not unloading them for now
+	//GetModuleManager().UnloadModules(); 
 
 	CurGameInfo.Reset();
 	Memory.Close();

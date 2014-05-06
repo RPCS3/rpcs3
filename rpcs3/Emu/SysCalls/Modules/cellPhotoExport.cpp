@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -61,3 +62,4 @@ void cellPhotoExport_init()
 	//cellPhotoExport.AddFunc(, cellPhotoExportFromFileWithCopy);
 	cellPhotoExport.AddFunc(0xde509ead, cellPhotoExportProgress);
 }
+#endif

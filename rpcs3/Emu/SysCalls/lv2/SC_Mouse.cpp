@@ -2,7 +2,7 @@
 #include "Emu/Io/Mouse.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-extern Module sys_io;
+extern Module *sys_io;
 
 enum CELL_MOUSE_ERROR_CODE
 {
@@ -18,7 +18,7 @@ enum CELL_MOUSE_ERROR_CODE
 
 int cellMouseInit(u32 max_connect)
 {
-	sys_io.Log("cellMouseInit(max_connect=%d)", max_connect);
+	sys_io->Log("cellMouseInit(max_connect=%d)", max_connect);
 	if(Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
 	if(max_connect > 7) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
@@ -29,7 +29,7 @@ int cellMouseInit(u32 max_connect)
 
 int cellMouseClearBuf(u32 port_no)
 {
-	sys_io.Log("cellMouseClearBuf(port_no=%d)", port_no);
+	sys_io->Log("cellMouseClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
@@ -40,7 +40,7 @@ int cellMouseClearBuf(u32 port_no)
 
 int cellMouseEnd()
 {
-	sys_io.Log("cellMouseEnd()");
+	sys_io->Log("cellMouseEnd()");
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	Emu.GetMouseManager().Close();
 	return CELL_OK;
@@ -48,7 +48,7 @@ int cellMouseEnd()
 
 int cellMouseGetInfo(mem_class_t info)
 {
-	sys_io.Log("cellMouseGetInfo(info_addr=0x%x)", info.GetAddr());
+	sys_io->Log("cellMouseGetInfo(info_addr=0x%x)", info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	const MouseInfo& current_info = Emu.GetMouseManager().GetInfo();
@@ -64,7 +64,7 @@ int cellMouseGetInfo(mem_class_t info)
 
 int cellMouseInfoTabletMode(u32 port_no, mem_class_t info)
 {
-	sys_io.Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no, info.GetAddr());
+	sys_io->Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no, info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
@@ -76,7 +76,7 @@ int cellMouseInfoTabletMode(u32 port_no, mem_class_t info)
 
 int cellMouseGetData(u32 port_no, mem_class_t data)
 {
-	sys_io.Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
+	sys_io->Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_NO_DEVICE;
 	
@@ -121,7 +121,7 @@ int cellMouseGetRawData(u32 port_no, mem_class_t data)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 
-	/*sys_io.Log("cellMouseGetRawData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
+	/*sys_io->Log("cellMouseGetRawData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_NO_DEVICE;
 

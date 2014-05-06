@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "ELF64.h"
 #include "Emu/Cell/PPUInstrTable.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/ModuleManager.h"
+
 using namespace PPU_instr;
 
 void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
@@ -56,6 +59,7 @@ ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
 	, LoaderBase()
 {
+	int a = 0;
 }
 
 bool ELF64Loader::LoadInfo()
@@ -243,7 +247,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					{
 						elf64_f.Seek(phdr_arr[i].p_offset);
 						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
-						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
+						Emu.GetSFuncManager().StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
 					}
 				}
 			break;
@@ -334,7 +338,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						stub.s_text = re(stub.s_text);
 
 						const std::string& module_name = Memory.ReadString(stub.s_modulename);
-						Module* module = GetModuleByName(module_name);
+						Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
 						if(module)
 						{
 							//module->SetLoaded();
@@ -381,7 +385,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 							mem32_ptr_t out_tbl(tbl + i*8);
 							out_tbl += dst + i*section;
-							out_tbl += GetFuncNumById(nid);
+							out_tbl += Emu.GetModuleManager().GetFuncNumById(nid);
 
 							mem32_ptr_t out_dst(dst + i*section);
 							out_dst += OR(11, 2, 2, 0);

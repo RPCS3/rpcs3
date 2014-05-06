@@ -2,8 +2,9 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-void cellSysutilAp_init();
-Module cellSysutilAp(0x0039, cellSysutilAp_init);
+//void cellSysutilAp_init();
+//Module cellSysutilAp(0x0039, cellSysutilAp_init);
+extern Module *cellSysutilAp = nullptr;
 
 // Return Codes
 enum
@@ -20,7 +21,7 @@ enum
 
 s32 cellSysutilApGetRequiredMemSize()
 {
-	cellSysutilAp.Log("cellSysutilApGetRequiredMemSize()");
+	cellSysutilAp->Log("cellSysutilApGetRequiredMemSize()");
 	return 1024*1024; // Return 1 MB as required size
 }
 
@@ -38,7 +39,7 @@ int cellSysutilApOff()
 
 void cellSysutilAp_init()
 {
-	cellSysutilAp.AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
-	cellSysutilAp.AddFunc(0x3343824c, cellSysutilApOn);
-	cellSysutilAp.AddFunc(0x90c2bb19, cellSysutilApOff);
+	cellSysutilAp->AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
+	cellSysutilAp->AddFunc(0x3343824c, cellSysutilApOn);
+	cellSysutilAp->AddFunc(0x90c2bb19, cellSysutilApOff);
 }

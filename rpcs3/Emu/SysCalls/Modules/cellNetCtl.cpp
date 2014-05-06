@@ -2,8 +2,9 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
-void cellNetCtl_init();
-Module cellNetCtl(0x0014, cellNetCtl_init);
+//void cellNetCtl_init();
+//Module cellNetCtl(0x0014, cellNetCtl_init);
+Module *cellNetCtl;
 
 // Error Codes
 enum
@@ -68,7 +69,7 @@ int cellNetCtlTerm()
 
 int cellNetCtlGetState(mem32_t state)
 {
-	cellNetCtl.Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
+	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
 
 	if (!state.IsGood())
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
@@ -121,18 +122,18 @@ int cellNetCtlGetNatInfo()
 
 void cellNetCtl_init()
 {
-	cellNetCtl.AddFunc(0xbd5a59fc, cellNetCtlInit);
-	cellNetCtl.AddFunc(0x105ee2cb, cellNetCtlTerm);
+	cellNetCtl->AddFunc(0xbd5a59fc, cellNetCtlInit);
+	cellNetCtl->AddFunc(0x105ee2cb, cellNetCtlTerm);
 
-	cellNetCtl.AddFunc(0x8b3eba69, cellNetCtlGetState);
-	cellNetCtl.AddFunc(0x0ce13c6b, cellNetCtlAddHandler);
-	cellNetCtl.AddFunc(0x901815c3, cellNetCtlDelHandler);
+	cellNetCtl->AddFunc(0x8b3eba69, cellNetCtlGetState);
+	cellNetCtl->AddFunc(0x0ce13c6b, cellNetCtlAddHandler);
+	cellNetCtl->AddFunc(0x901815c3, cellNetCtlDelHandler);
 
-	cellNetCtl.AddFunc(0x1e585b5d, cellNetCtlGetInfo);
+	cellNetCtl->AddFunc(0x1e585b5d, cellNetCtlGetInfo);
 
-	cellNetCtl.AddFunc(0x04459230, cellNetCtlNetStartDialogLoadAsync);
-	cellNetCtl.AddFunc(0x71d53210, cellNetCtlNetStartDialogAbortAsync);
-	cellNetCtl.AddFunc(0x0f1f13d3, cellNetCtlNetStartDialogUnloadAsync);
+	cellNetCtl->AddFunc(0x04459230, cellNetCtlNetStartDialogLoadAsync);
+	cellNetCtl->AddFunc(0x71d53210, cellNetCtlNetStartDialogAbortAsync);
+	cellNetCtl->AddFunc(0x0f1f13d3, cellNetCtlNetStartDialogUnloadAsync);
 
-	cellNetCtl.AddFunc(0x3a12865f, cellNetCtlGetNatInfo);
+	cellNetCtl->AddFunc(0x3a12865f, cellNetCtlGetNatInfo);
 }

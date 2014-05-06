@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -174,3 +175,4 @@ void cellSearch_init()
 	cellSearch.AddFunc(0x8fe376a6, cellSearchCancel);
 	cellSearch.AddFunc(0x774033d6, cellSearchEnd);
 }
+#endif

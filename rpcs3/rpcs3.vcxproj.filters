@@ -505,6 +505,9 @@
     <ClCompile Include="Crypto\lz.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -989,6 +992,12 @@
     </ClInclude>
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Static.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\ModuleManager.h">
+      <Filter>Emu\SysCalls</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

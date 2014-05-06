@@ -1,3 +1,4 @@
+#if 0
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
@@ -269,3 +270,4 @@ void cellVoice_init()
 	cellVoice.AddFunc(0x36472c57, cellVoiceReadFromOPort);
 	cellVoice.AddFunc(0x20bafe31, cellVoiceDebugTopology);
 }
+#endif 
