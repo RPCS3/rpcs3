@@ -118,6 +118,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
 			if (button.m_pressed) pad.m_digital_1 |= button.m_outKeyCode;
+			else pad.m_digital_1 &= ~button.m_outKeyCode;
 
 			switch (button.m_outKeyCode)
 			{
@@ -136,6 +137,8 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
 			if (button.m_pressed) pad.m_digital_2 |= button.m_outKeyCode;
+			else pad.m_digital_2 &= ~button.m_outKeyCode;
+
 			switch (button.m_outKeyCode)
 			{
 			case CELL_PAD_CTRL_SQUARE: pad.m_press_square = button.m_value; break;
