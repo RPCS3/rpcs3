@@ -86,6 +86,7 @@ enum ButtonDataOffset
 static const u32 CELL_MAX_PADS = 127;
 static const u32 CELL_PAD_MAX_PORT_NUM = 7;
 static const u32 CELL_PAD_MAX_CODES = 64;
+static const u32 CELL_PAD_MAX_CAPABILITY_INFO = 32;
 
 struct Button
 {
