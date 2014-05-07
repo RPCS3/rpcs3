@@ -93,6 +93,7 @@ struct Button
 	u32 m_offset;
 	u32 m_keyCode;
 	u32 m_outKeyCode;
+	u16 m_value;
 	bool m_pressed;
 	bool m_flush;
 
@@ -102,6 +103,7 @@ struct Button
 		, m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
+		, m_value(0)
 	{
 	}
 };
@@ -111,15 +113,17 @@ struct AnalogStick
 	u32 m_offset;
 	u32 m_keyCodeMin;
 	u32 m_keyCodeMax;
-	bool m_min_pressed;
-	bool m_max_pressed;
+	u16 m_value;
+	//bool m_min_pressed;
+	//bool m_max_pressed;
 
 	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
-		: m_min_pressed(false)
-		, m_max_pressed(false)
-		, m_offset(offset)
+		:// m_min_pressed(false)
+		//, m_max_pressed(false)
+		 m_offset(offset)
 		, m_keyCodeMin(keyCodeMin)
 		, m_keyCodeMax(keyCodeMax)
+		, m_value(128)
 	{
 	}
 };
@@ -134,10 +138,15 @@ struct Pad
 	std::vector<Button> m_buttons;
 	std::vector<AnalogStick> m_sticks;
 
-	s16 m_analog_left_x;
-	s16 m_analog_left_y;
-	s16 m_analog_right_x;
-	s16 m_analog_right_y;
+	//These hold bits for their respective buttons
+	u16 m_digital_1;
+	u16 m_digital_2;
+
+	//All sensors go from 0-255
+	u16 m_analog_left_x;
+	u16 m_analog_left_y;
+	u16 m_analog_right_x;
+	u16 m_analog_right_y;
 
 	u16 m_press_right;
 	u16 m_press_left;
@@ -152,6 +161,8 @@ struct Pad
 	u16 m_press_R1;
 	u16 m_press_R2;
 
+	//Except for these...0-1023
+	//~399 on sensor y is a level non moving controller
 	u16 m_sensor_x;
 	u16 m_sensor_y;
 	u16 m_sensor_z;
@@ -162,6 +173,9 @@ struct Pad
 		, m_port_setting(port_setting)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
+
+		, m_digital_1(0)
+		, m_digital_2(0)
 
 		, m_analog_left_x(128)
 		, m_analog_left_y(128)
@@ -182,7 +196,7 @@ struct Pad
 		, m_press_R2(0)
 
 		, m_sensor_x(0)
-		, m_sensor_y(0)
+		, m_sensor_y(399)
 		, m_sensor_z(0)
 		, m_sensor_g(0)
 	{
@@ -207,25 +221,34 @@ public:
 	virtual void Close()=0;
 	virtual ~PadHandlerBase() = default;
 
-	void Key(const u32 code, bool pressed)
+	//Set value to set pressure/axi to certain level, otherwise 0/255 default
+	void Key(const u32 code, bool pressed, u16 value=256)
 	{
 		for(Pad& pad : m_pads)
 		{
-			for(Button& button : pad.m_buttons)
+			for (Button& button : pad.m_buttons)
 			{
-				if(button.m_keyCode != code)
+				if (button.m_keyCode != code)
 					continue;
 
 				//This is for reporting when a controller connects/disconnects, shouldn't be here
 				//pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-				if(button.m_pressed && !pressed)
+				if (value >= 256){ value = 255; }
+
+				//Todo: Is this flush necessary once games hit decent speeds?
+				if (button.m_pressed && !pressed)
 				{
 					button.m_flush = true;
+					
 				}
 				else
 				{
 					button.m_pressed = pressed;
+					if (pressed)
+						button.m_value = value;
+					else
+						button.m_value = 0;
 				}
 			}
 
@@ -234,15 +257,25 @@ public:
 				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code)
 					continue;
 
+				//slightly less hack job for key based analog stick
+				//	should also fix/make transitions when using keys smoother
+				//	the logic here is that when a key is released, 
+				//	if we are at the opposite end of the axis, dont reset to middle
 				if (stick.m_keyCodeMax == code)
 				{
-					stick.m_min_pressed = false; //!!! need fix !!!
-					stick.m_max_pressed = pressed;
+					/*stick.m_min_pressed = false; //!!! need fix !!!
+					stick.m_max_pressed = pressed;*/
+					if (pressed) stick.m_value = 255;
+					else if (stick.m_value==0) stick.m_value = 0;
+					else stick.m_value = 128;
 				}
 				if (stick.m_keyCodeMin == code)
 				{
-					stick.m_max_pressed = false; //!!!
-					stick.m_min_pressed = pressed;
+					/*stick.m_max_pressed = false; //!!!
+					stick.m_min_pressed = pressed;*/
+					if (pressed) stick.m_value = 0;
+					else if (stick.m_value == 255) stick.m_value = 255;
+					else stick.m_value = 128;
 				}
 			}
 		}

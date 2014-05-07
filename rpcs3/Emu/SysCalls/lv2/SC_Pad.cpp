@@ -92,57 +92,79 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	CellPadData data;
 	memset(&data, 0, sizeof(CellPadData));
 
-	u16 d1 = 0;
-	u16 d2 = 0;
-
 	for(Button& button : pad.m_buttons)
 	{
-		switch(button.m_offset)
+		//using an if/else here, not doing switch in switch
+		//plus side is this gives us the ability to check if anything changed eventually
+
+		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
-		case CELL_PAD_BTN_OFFSET_DIGITAL1:
-			if (button.m_pressed) d1 |= button.m_outKeyCode;
-			break;
-		case CELL_PAD_BTN_OFFSET_DIGITAL2:
-			if (button.m_pressed) d2 |= button.m_outKeyCode;
-			break;
+			if (button.m_pressed) pad.m_digital_1 |= button.m_outKeyCode;
+
+			switch (button.m_outKeyCode)
+			{
+			case CELL_PAD_CTRL_LEFT: pad.m_press_left = button.m_value; break;
+			case CELL_PAD_CTRL_DOWN: pad.m_press_down = button.m_value; break;
+			case CELL_PAD_CTRL_RIGHT: pad.m_press_right = button.m_value; break;
+			case CELL_PAD_CTRL_UP: pad.m_press_up = button.m_value; break;
+			//These arent pressure btns
+			case CELL_PAD_CTRL_R3:
+			case CELL_PAD_CTRL_L3:
+			case CELL_PAD_CTRL_START:
+			case CELL_PAD_CTRL_SELECT:
+			default: break;
+			}
+		}
+		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		{
+			if (button.m_pressed) pad.m_digital_2 |= button.m_outKeyCode;
+			switch (button.m_outKeyCode)
+			{
+			case CELL_PAD_CTRL_SQUARE: pad.m_press_square = button.m_value; break;
+			case CELL_PAD_CTRL_CROSS: pad.m_press_cross = button.m_value; break;
+			case CELL_PAD_CTRL_CIRCLE: pad.m_press_circle = button.m_value; break;
+			case CELL_PAD_CTRL_TRIANGLE: pad.m_press_triangle = button.m_value; break;
+			case CELL_PAD_CTRL_R1: pad.m_press_R1 = button.m_value; break;
+			case CELL_PAD_CTRL_L1: pad.m_press_L1 = button.m_value; break;
+			case CELL_PAD_CTRL_R2: pad.m_press_R2 = button.m_value; break;
+			case CELL_PAD_CTRL_L2: pad.m_press_L2 = button.m_value; break;
+			default: break;
+			}
 		}
 
 		if(button.m_flush)
 		{
 			button.m_pressed = false;
 			button.m_flush = false;
+			button.m_value = 0;
 		}
 	}
 
-	u16 lx = 128;
-	u16 ly = 128;
-	u16 rx = 128;
-	u16 ry = 128;
 	for (const AnalogStick& stick : pads[port_no].m_sticks)
 	{
-		u16* res;
 		switch (stick.m_offset)
 		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: res = &lx; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: res = &ly; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: res = &rx; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: res = &ry; break;
-		default: continue;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: pad.m_analog_left_x = stick.m_value; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: pad.m_analog_left_y = stick.m_value; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: pad.m_analog_right_x = stick.m_value; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: pad.m_analog_right_y = stick.m_value; break;
+		default: break;
 		}
 
-		if (stick.m_max_pressed && !stick.m_min_pressed)
+		/*if (stick.m_max_pressed && !stick.m_min_pressed)
 			*res = 255;
 		if (stick.m_min_pressed && !stick.m_max_pressed)
 			*res = 0;
+		*/
 	}
-
+	
 	data.len = pad.m_buttons.size();
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = d1;
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = d2;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = rx;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = ry;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]  = lx;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]  = ly;
+	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
+	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = pad.m_analog_right_x;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = pad.m_analog_right_y;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]  = pad.m_analog_left_x;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]  = pad.m_analog_left_y;
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]    = pad.m_press_right;
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]     = pad.m_press_left;
 	data.button[CELL_PAD_BTN_OFFSET_PRESS_UP]       = pad.m_press_up;
