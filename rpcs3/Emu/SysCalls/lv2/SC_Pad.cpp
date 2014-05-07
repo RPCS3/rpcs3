@@ -71,10 +71,28 @@ int cellPadClearBuf(u32 port_no)
 {
 	sys_io.Log("cellPadClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if(port_no >= Emu.GetPadManager().GetPads().size()) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
+	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
 
-	//?
+	//It seems the system is supposed keeps track of previous values, and reports paddata with len 0 if 
+	//nothing has changed.
 
+	//We can at least reset the pad back to its default values for now
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
+	Pad& pad = pads[port_no];
+
+	pad.m_analog_left_x = pad.m_analog_left_y = pad.m_analog_right_x = pad.m_analog_right_y = 128;
+
+	pad.m_digital_1 = pad.m_digital_2 = 0;
+	pad.m_press_right = pad.m_press_left = pad.m_press_up = pad.m_press_down = 0;
+	pad.m_press_triangle = pad.m_press_circle = pad.m_press_cross = pad.m_press_square = 0;
+	pad.m_press_L1 = pad.m_press_L2 = pad.m_press_R1 = pad.m_press_R2 = 0;
+
+	//~399 on sensor y is a level non moving controller
+	pad.m_sensor_y = 399;
+	pad.m_sensor_x = pad.m_sensor_z = pad.m_sensor_g = 0;
+	
 	return CELL_OK;
 }
 
