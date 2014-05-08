@@ -1693,6 +1693,10 @@ private:
 	{
 		DisAsm_V1_R2("stvrx", sd, ra, rb);
 	}
+	void STFSUX(u32 frs, u32 ra, u32 rb)
+	{
+		DisAsm_F1_R2("stfsux", frs, ra, rb);
+	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
 		DisAsm_R2_INT1("stswi", rd, ra, nb);
@@ -1700,6 +1704,10 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		DisAsm_F1_R2("stfdx", frs, ra, rb);
+	}
+	void STFDUX(u32 frs, u32 ra, u32 rb)
+	{
+		DisAsm_F1_R2("stfdux", frs, ra, rb);
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{

@@ -361,8 +361,10 @@ namespace PPU_opcodes
 		STWBRX = 0x296,
 		STFSX  = 0x297,
 		STVRX  = 0x2a7, //Store Vector Right Indexed
+		STFSUX = 0x2b7,
 		STSWI  = 0x2d5,
 		STFDX  = 0x2d7, //Store Floating-Point Double Indexed
+		STFDUX = 0x2f7,
 		LVLXL  = 0x307, //Load Vector Left Indexed Last
 		LHBRX  = 0x316,
 		SRAW   = 0x318,
@@ -759,8 +761,10 @@ public:
 	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STVRX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STFSUX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STSWI(u32 rd, u32 ra, u32 nb) = 0;
 	virtual void STFDX(u32 frs, u32 ra, u32 rb) = 0;
+	virtual void STFDUX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void LVLXL(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void LHBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void SRAW(u32 ra, u32 rs, u32 rb, bool rc) = 0;

@@ -3129,6 +3129,12 @@ private:
 
 		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
 	}
+	void STFSUX(u32 frs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write32(addr, CPU.FPR[frs].To32());
+		CPU.GPR[ra] = addr;
+	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
 			u64 EA = ra ? CPU.GPR[ra] : 0;
@@ -3160,6 +3166,12 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		Memory.Write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u64&)CPU.FPR[frs]);
+	}
+	void STFDUX(u32 frs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write64(addr, (u64&)CPU.FPR[frs]);
+		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{

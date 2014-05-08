@@ -550,8 +550,10 @@ namespace PPU_instr
 	/*0x296*/bind_instr(g1f_list, STWBRX, RS, RA, RB);
 	/*0x297*/bind_instr(g1f_list, STFSX, FRS, RA, RB);
 	/*0x2a7*/bind_instr(g1f_list, STVRX, VS, RA, RB);
+	/*0x2b7*/bind_instr(g1f_list, STFSUX, FRS, RA, RB);
 	/*0x2d5*/bind_instr(g1f_list, STSWI, RS, RA, NB);
 	/*0x2d7*/bind_instr(g1f_list, STFDX, FRS, RA, RB);
+	/*0x2d7*/bind_instr(g1f_list, STFDUX, FRS, RA, RB);
 	/*0x307*/bind_instr(g1f_list, LVLXL, VD, RA, RB);
 	/*0x316*/bind_instr(g1f_list, LHBRX, RD, RA, RB);
 	/*0x318*/bind_instr(g1f_list, SRAW, RA, RS, RB, RC);
