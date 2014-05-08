@@ -1034,7 +1034,7 @@ private:
 		
 		Write(fmt::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
-	void SC(s32 sc_code)
+	void SC(u32 sc_code)
 	{
 		switch(sc_code)
 		{
@@ -1454,9 +1454,9 @@ private:
 	{
 		DisAsm_R3_OE_RC("mullw", rd, ra, rb, oe, rc);
 	}
-	void DCBTST(u32 th, u32 ra, u32 rb)
+	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
-		DisAsm_R3("dcbtst", th, ra, rb);
+		DisAsm_R3("dcbtst", ra, rb, th);
 	}
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{

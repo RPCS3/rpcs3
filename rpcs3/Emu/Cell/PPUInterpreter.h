@@ -20,7 +20,7 @@
 #endif
 
 static u64 rotate_mask[64][64];
-void InitRotateMask()
+inline void InitRotateMask()
 {
 	static bool inited = false;
 	if(inited) return;
@@ -34,11 +34,11 @@ void InitRotateMask()
 	inited = true;
 }
 
-u8 rotl8(const u8 x, const u8 n) { return (x << n) | (x >> (8 - n)); }
-u8 rotr8(const u8 x, const u8 n) { return (x >> n) | (x << (8 - n)); }
+inline u8 rotl8(const u8 x, const u8 n) { return (x << n) | (x >> (8 - n)); }
+inline u8 rotr8(const u8 x, const u8 n) { return (x >> n) | (x << (8 - n)); }
 
-u16 rotl16(const u16 x, const u8 n) { return (x << n) | (x >> (16 - n)); }
-u16 rotr16(const u16 x, const u8 n) { return (x >> n) | (x << (16 - n)); }
+inline u16 rotl16(const u16 x, const u8 n) { return (x << n) | (x >> (16 - n)); }
+inline u16 rotr16(const u16 x, const u8 n) { return (x >> n) | (x << (16 - n)); }
 /*
 u32 rotl32(const u32 x, const u8 n) { return (x << n) | (x >> (32 - n)); }
 u32 rotr32(const u32 x, const u8 n) { return (x >> n) | (x << (32 - n)); }
@@ -2088,7 +2088,7 @@ private:
 		}
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
-	void SC(s32 sc_code)
+	void SC(u32 sc_code)
 	{
 		switch(sc_code)
 		{
@@ -2796,7 +2796,7 @@ private:
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
 		if(oe) UNK("mullwo");
 	}
-	void DCBTST(u32 th, u32 ra, u32 rb)
+	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
 		//UNK("dcbtst", false);
 		_mm_mfence();
