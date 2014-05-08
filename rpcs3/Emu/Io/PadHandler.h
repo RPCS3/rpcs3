@@ -114,13 +114,9 @@ struct AnalogStick
 	u32 m_keyCodeMin;
 	u32 m_keyCodeMax;
 	u16 m_value;
-	//bool m_min_pressed;
-	//bool m_max_pressed;
 
 	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
-		:// m_min_pressed(false)
-		//, m_max_pressed(false)
-		 m_offset(offset)
+		: m_offset(offset)
 		, m_keyCodeMin(keyCodeMin)
 		, m_keyCodeMax(keyCodeMax)
 		, m_value(128)
@@ -263,16 +259,12 @@ public:
 				//	if we are at the opposite end of the axis, dont reset to middle
 				if (stick.m_keyCodeMax == code)
 				{
-					/*stick.m_min_pressed = false; //!!! need fix !!!
-					stick.m_max_pressed = pressed;*/
 					if (pressed) stick.m_value = 255;
 					else if (stick.m_value==0) stick.m_value = 0;
 					else stick.m_value = 128;
 				}
 				if (stick.m_keyCodeMin == code)
 				{
-					/*stick.m_max_pressed = false; //!!!
-					stick.m_min_pressed = pressed;*/
 					if (pressed) stick.m_value = 0;
 					else if (stick.m_value == 255) stick.m_value = 255;
 					else stick.m_value = 128;

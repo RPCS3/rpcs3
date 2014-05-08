@@ -171,12 +171,6 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: pad.m_analog_right_y = stick.m_value; break;
 		default: break;
 		}
-
-		/*if (stick.m_max_pressed && !stick.m_min_pressed)
-			*res = 255;
-		if (stick.m_min_pressed && !stick.m_max_pressed)
-			*res = 0;
-		*/
 	}
 	
 	data.len = pad.m_buttons.size();
