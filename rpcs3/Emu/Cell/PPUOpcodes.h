@@ -345,6 +345,7 @@ namespace PPU_opcodes
 		DIVW   = 0x1eb,
 		LVLX   = 0x207, //Load Vector Left Indexed
 		LDBRX  = 0x214,
+		LSWX   = 0x215,
 		LWBRX  = 0x216,
 		LFSX   = 0x217,
 		SRW    = 0x218,
@@ -356,6 +357,7 @@ namespace PPU_opcodes
 		LFDX   = 0x257,
 		LFDUX  = 0x277,
 		STVLX  = 0x287, //Store Vector Left Indexed
+		STSWX  = 0x295,
 		STWBRX = 0x296,
 		STFSX  = 0x297,
 		STVRX  = 0x2a7, //Store Vector Right Indexed
@@ -741,6 +743,7 @@ public:
 	virtual void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void LVLX(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void LDBRX(u32 rd, u32 ra, u32 rb) = 0;
+	virtual void LSWX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LWBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LFSX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void SRW(u32 ra, u32 rs, u32 rb, bool rc) = 0;
@@ -752,6 +755,7 @@ public:
 	virtual void LFDX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void LFDUX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void STVLX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STSWX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STVRX(u32 vs, u32 ra, u32 rb) = 0;

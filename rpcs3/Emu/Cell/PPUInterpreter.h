@@ -3016,6 +3016,10 @@ private:
 	{
 		CPU.GPR[rd] = (u64&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
 	}
+	void LSWX(u32 rd, u32 ra, u32 rb)
+	{
+		UNK("lswx");
+	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.GPR[rd] = (u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
@@ -3105,6 +3109,10 @@ private:
 		const u8 eb = addr & 0xf;
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
+	}
+	void STSWX(u32 rs, u32 ra, u32 rb)
+	{
+		UNK("stwsx");
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{

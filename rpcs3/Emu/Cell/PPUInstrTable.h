@@ -534,6 +534,7 @@ namespace PPU_instr
 	/*0x1eb*/bind_instr(g1f_list, DIVW, RD, RA, RB, OE, RC);
 	/*0x207*/bind_instr(g1f_list, LVLX, VD, RA, RB);
 	/*0x214*/bind_instr(g1f_list, LDBRX, RD, RA, RB);
+	/*0x215*/bind_instr(g1f_list, LSWX, RD, RA, RB);
 	/*0x216*/bind_instr(g1f_list, LWBRX, RD, RA, RB);
 	/*0x217*/bind_instr(g1f_list, LFSX, FRD, RA, RB);
 	/*0x218*/bind_instr(g1f_list, SRW, RA, RS, RB, RC);
@@ -545,6 +546,7 @@ namespace PPU_instr
 	/*0x257*/bind_instr(g1f_list, LFDX, FRD, RA, RB);
 	/*0x277*/bind_instr(g1f_list, LFDUX, FRD, RA, RB);
 	/*0x287*/bind_instr(g1f_list, STVLX, VS, RA, RB);
+	/*0x296*/bind_instr(g1f_list, STSWX, RS, RA, RB);
 	/*0x296*/bind_instr(g1f_list, STWBRX, RS, RA, RB);
 	/*0x297*/bind_instr(g1f_list, STFSX, FRS, RA, RB);
 	/*0x2a7*/bind_instr(g1f_list, STVRX, VS, RA, RB);
