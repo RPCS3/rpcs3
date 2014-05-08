@@ -782,7 +782,7 @@ public:
 	virtual void EXTSB(u32 ra, u32 rs, bool rc) = 0;
 	virtual void STFIWX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void EXTSW(u32 ra, u32 rs, bool rc) = 0;
-	//ICBI
+	virtual void ICBI(u32 ra, u32 rb) = 0;
 	virtual void DCBZ(u32 ra, u32 rb) = 0;
 	virtual void LWZ(u32 rd, u32 ra, s32 d) = 0;
 	virtual void LWZU(u32 rd, u32 ra, s32 d) = 0;

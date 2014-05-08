@@ -571,7 +571,7 @@ namespace PPU_instr
 	/*0x3ba*/bind_instr(g1f_list, EXTSB, RA, RS, RC);
 	/*0x3d7*/bind_instr(g1f_list, STFIWX, FRS, RA, RB);
 	/*0x3da*/bind_instr(g1f_list, EXTSW, RA, RS, RC);
-	/*0x3d6*///ICBI
+	/*0x3d6*/bind_instr(g1f_list, ICBI, RA, RB);
 	/*0x3f6*/bind_instr(g1f_list, DCBZ, RA, RB);
 
 	bind_instr(g3a_list, LD, RD, RA, DS);

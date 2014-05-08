@@ -3291,7 +3291,10 @@ private:
 		//CPU.XER.CA = ((s64)CPU.GPR[ra] < 0); // ???
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
-	/*0x3d6*///ICBI
+	void ICBI(u32 ra, u32 rs)
+	{
+		// Clear jit for the specified block?  Nothing to do in the interpreter.
+	}
 	void DCBZ(u32 ra, u32 rs)
 	{
 		//UNK("dcbz", false);
