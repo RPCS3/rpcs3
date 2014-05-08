@@ -280,6 +280,7 @@ namespace PPU_opcodes
 		LWZUX  = 0x037,
 		CNTLZD = 0x03a,
 		ANDC   = 0x03c,
+		TD     = 0x044,
 		LVEWX  = 0x047, //Load Vector Element Word Indexed
 		MULHD  = 0x049,
 		MULHW  = 0x04b,
@@ -676,6 +677,7 @@ public:
 	virtual void LWZUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void CNTLZD(u32 ra, u32 rs, bool rc) = 0;
 	virtual void ANDC(u32 ra, u32 rs, u32 rb, bool rc) = 0;
+	virtual void TD(u32 to, u32 ra, u32 rb) = 0;
 	virtual void LVEWX(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void MULHD(u32 rd, u32 ra, u32 rb, bool rc) = 0;
 	virtual void MULHW(u32 rd, u32 ra, u32 rb, bool rc) = 0;

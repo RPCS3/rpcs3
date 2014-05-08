@@ -2518,6 +2518,10 @@ private:
 		CPU.GPR[ra] = CPU.GPR[rs] & ~CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
+	void TD(u32 to, u32 ra, u32 rb)
+	{
+		UNK("td");
+	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;

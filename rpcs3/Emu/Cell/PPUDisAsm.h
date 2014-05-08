@@ -1320,6 +1320,10 @@ private:
 	{
 		DisAsm_R3_RC("andc", ra, rs, rb, rc);
 	}
+	void TD(u32 to, u32 ra, u32 rb)
+	{
+		DisAsm_INT1_R2("td", to, ra, rb);
+	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("lvewx", vd, ra, rb);

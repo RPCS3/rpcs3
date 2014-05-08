@@ -470,6 +470,7 @@ namespace PPU_instr
 	/*0x037*/bind_instr(g1f_list, LWZUX, RD, RA, RB);
 	/*0x03a*/bind_instr(g1f_list, CNTLZD, RA, RS, RC);
 	/*0x03c*/bind_instr(g1f_list, ANDC, RA, RS, RB, RC);
+	/*0x03c*/bind_instr(g1f_list, TD, TO, RA, RB);
 	/*0x047*/bind_instr(g1f_list, LVEWX, VD, RA, RB);
 	/*0x049*/bind_instr(g1f_list, MULHD, RD, RA, RB, RC);
 	/*0x04b*/bind_instr(g1f_list, MULHW, RD, RA, RB, RC);
