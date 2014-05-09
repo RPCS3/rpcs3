@@ -39,6 +39,31 @@ Module::Module(u16 id, void (*init)(), void (*load)(), void (*unload)())
 	if(init) init();
 }
 
+Module::Module(Module &&other)
+	: m_is_loaded(false)
+	, m_id(0)
+	, m_load_func(nullptr)
+	, m_unload_func(nullptr)
+{
+	std::swap(this->m_name,other.m_name);
+	std::swap(this->m_id, other.m_id);
+	std::swap(this->m_is_loaded, other.m_is_loaded);
+	std::swap(this->m_load_func, other.m_load_func);
+	std::swap(this->m_unload_func, other.m_unload_func);
+	std::swap(this->m_funcs_list, other.m_funcs_list);
+}
+
+Module &Module::operator =(Module &&other)
+{
+	std::swap(this->m_name, other.m_name);
+	std::swap(this->m_id, other.m_id);
+	std::swap(this->m_is_loaded, other.m_is_loaded);
+	std::swap(this->m_load_func, other.m_load_func);
+	std::swap(this->m_unload_func, other.m_unload_func);
+	std::swap(this->m_funcs_list, other.m_funcs_list);
+	return *this;
+}
+
 Module::~Module()
 {
 	UnLoad();

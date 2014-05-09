@@ -45,7 +45,7 @@ struct SFunc
 class Module
 {
 	std::string m_name;
-	const u16 m_id;
+	u16 m_id;
 	bool m_is_loaded;
 	void (*m_load_func)();
 	void (*m_unload_func)();
@@ -56,6 +56,12 @@ public:
 	Module(u16 id, const char* name);
 	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
 	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+
+	Module(Module &other) = delete;
+	Module(Module &&other);
+
+	Module &operator =(Module &other) = delete;
+	Module &operator =(Module &&other);
 
 	~Module();
 

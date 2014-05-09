@@ -8,7 +8,6 @@ class ModuleManager
 	uint m_module_2_count;
 	std::mutex m_funcs_lock;
 	std::vector<ModuleFunc *> m_modules_funcs_list;
-	std::vector<Module*> m_modules2;
 	std::vector<Module> m_mod_init;
 	bool initialized;
 public:

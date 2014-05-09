@@ -184,14 +184,17 @@ static const g_module_list[] =
 
 void ModuleManager::init()
 {
+	//this is a really bad hack and the whole idea of Modules and how they're implemented should probably be changed
+	//the contruction of the modules accessses the global variable for that module.
+	//For example cellAdec needs to be set before cellAdec_init is called but it would be called in the constructor of
+	//cellAdec, so we need to point cellAdec to where we will construct it in the future
 	if (!initialized)
 	{
+		m_mod_init.reserve(m_mod_init.size() + 160);//currently 131
 		for (auto& m : g_module_list)
 		{
-			m_modules2.push_back(new Module(m.id, m.name));
+			m_mod_init.emplace_back(m.id, m.name);
 		}
-		m_mod_init.reserve(m_mod_init.size() + 60);
-		m_mod_init.emplace_back("test", nullptr);
 		cellAdec = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0006, cellAdec_init);
 		cellAtrac = static_cast <Module*>(&(m_mod_init.back())) + 1;
@@ -268,10 +271,7 @@ initialized(false)
 
 ModuleManager::~ModuleManager()
 {
-	for (int i = 0; i < m_modules2.size(); ++i)
-	{
-		delete m_modules2[i];
-	}
+	m_mod_init.clear();
 }
 
 bool ModuleManager::IsLoadedFunc(u32 id)
