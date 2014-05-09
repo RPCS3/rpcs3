@@ -20,7 +20,7 @@
 #endif
 
 static u64 rotate_mask[64][64];
-void InitRotateMask()
+inline void InitRotateMask()
 {
 	static bool inited = false;
 	if(inited) return;
@@ -34,11 +34,11 @@ void InitRotateMask()
 	inited = true;
 }
 
-u8 rotl8(const u8 x, const u8 n) { return (x << n) | (x >> (8 - n)); }
-u8 rotr8(const u8 x, const u8 n) { return (x >> n) | (x << (8 - n)); }
+inline u8 rotl8(const u8 x, const u8 n) { return (x << n) | (x >> (8 - n)); }
+inline u8 rotr8(const u8 x, const u8 n) { return (x >> n) | (x << (8 - n)); }
 
-u16 rotl16(const u16 x, const u8 n) { return (x << n) | (x >> (16 - n)); }
-u16 rotr16(const u16 x, const u8 n) { return (x >> n) | (x << (16 - n)); }
+inline u16 rotl16(const u16 x, const u8 n) { return (x << n) | (x >> (16 - n)); }
+inline u16 rotr16(const u16 x, const u8 n) { return (x >> n) | (x << (16 - n)); }
 /*
 u32 rotl32(const u32 x, const u8 n) { return (x << n) | (x >> (32 - n)); }
 u32 rotr32(const u32 x, const u8 n) { return (x >> n) | (x << (32 - n)); }
@@ -2088,7 +2088,7 @@ private:
 		}
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
-	void SC(s32 sc_code)
+	void SC(u32 sc_code)
 	{
 		switch(sc_code)
 		{
@@ -2518,6 +2518,10 @@ private:
 		CPU.GPR[ra] = CPU.GPR[rs] & ~CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
+	void TD(u32 to, u32 ra, u32 rb)
+	{
+		UNK("td");
+	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
@@ -2796,7 +2800,7 @@ private:
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
 		if(oe) UNK("mullwo");
 	}
-	void DCBTST(u32 th, u32 ra, u32 rb)
+	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
 		//UNK("dcbtst", false);
 		_mm_mfence();
@@ -3012,6 +3016,10 @@ private:
 	{
 		CPU.GPR[rd] = (u64&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
 	}
+	void LSWX(u32 rd, u32 ra, u32 rb)
+	{
+		UNK("lswx");
+	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.GPR[rd] = (u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
@@ -3102,6 +3110,10 @@ private:
 
 		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
 	}
+	void STSWX(u32 rs, u32 ra, u32 rb)
+	{
+		UNK("stwsx");
+	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
 		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
@@ -3116,6 +3128,12 @@ private:
 		const u8 eb = addr & 0xf;
 
 		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+	}
+	void STFSUX(u32 frs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write32(addr, CPU.FPR[frs].To32());
+		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
@@ -3148,6 +3166,12 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		Memory.Write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u64&)CPU.FPR[frs]);
+	}
+	void STFDUX(u32 frs, u32 ra, u32 rb)
+	{
+		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
+		Memory.Write64(addr, (u64&)CPU.FPR[frs]);
+		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{
@@ -3267,7 +3291,10 @@ private:
 		//CPU.XER.CA = ((s64)CPU.GPR[ra] < 0); // ???
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
-	/*0x3d6*///ICBI
+	void ICBI(u32 ra, u32 rs)
+	{
+		// Clear jit for the specified block?  Nothing to do in the interpreter.
+	}
 	void DCBZ(u32 ra, u32 rs)
 	{
 		//UNK("dcbz", false);
