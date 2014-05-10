@@ -131,7 +131,7 @@ MainFrame::MainFrame()
 
 	Bind(wxEVT_MENU, &MainFrame::UpdateUI, this, id_update_dbg);
 
-	Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
+	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
 	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
 }
 
@@ -326,12 +326,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	nb_config->AddPage(p_hle,      wxT("HLE / Misc."));
 	nb_config->AddPage(p_system,   wxT("System"));
 
-	wxBoxSizer* s_subpanel_system = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_cpu = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_system   = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_cpu      = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_graphics = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_audio = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_io = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_hle = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_audio    = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_io       = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_hle      = new wxBoxSizer(wxVERTICAL);
 
 	// CPU/SPU settings
 	wxStaticBoxSizer* s_round_cpu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_cpu, _("CPU"));
@@ -339,13 +339,13 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
-	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default resolution"));
+	wxStaticBoxSizer* s_round_gs_res    = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default resolution"));
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default aspect ratio"));
 
 	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
+	wxStaticBoxSizer* s_round_io_pad_handler      = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
 	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Keyboard Handler"));
-	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse Handler"));
+	wxStaticBoxSizer* s_round_io_mouse_handler    = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse Handler"));
 	
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
@@ -356,28 +356,28 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
 
-	wxComboBox* cbox_cpu_decoder = new wxComboBox(p_cpu, wxID_ANY);
-	wxComboBox* cbox_spu_decoder = new wxComboBox(p_cpu, wxID_ANY);
-	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY);
-	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY);
-	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY);
-	wxComboBox* cbox_pad_handler = new wxComboBox(p_io, wxID_ANY);
+	wxComboBox* cbox_cpu_decoder      = new wxComboBox(p_cpu, wxID_ANY);
+	wxComboBox* cbox_spu_decoder      = new wxComboBox(p_cpu, wxID_ANY);
+	wxComboBox* cbox_gs_render        = new wxComboBox(p_graphics, wxID_ANY);
+	wxComboBox* cbox_gs_resolution    = new wxComboBox(p_graphics, wxID_ANY);
+	wxComboBox* cbox_gs_aspect        = new wxComboBox(p_graphics, wxID_ANY);
+	wxComboBox* cbox_pad_handler      = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
-	wxComboBox* cbox_mouse_handler = new wxComboBox(p_io, wxID_ANY);
-	wxComboBox* cbox_audio_out = new wxComboBox(p_audio, wxID_ANY);
-	wxComboBox* cbox_hle_loglvl = new wxComboBox(p_hle, wxID_ANY);
-	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY);
+	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
+	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
+	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
+	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(p_cpu, wxID_ANY, "Ignore Read/Write errors");
-	wxCheckBox* chbox_gs_log_prog   = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
-	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
-	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
-	wxCheckBox* chbox_hle_logging = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
-	wxCheckBox* chbox_hle_hook_stfunc = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
-	wxCheckBox* chbox_hle_savetty = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
-	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
+	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
+	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
+	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
+	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
+	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
+	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
+	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
+	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -441,27 +441,27 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Get values from .ini
 	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
-	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
-	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
-	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
-	chbox_audio_dump->SetValue(Ini.AudioDumpToFile.GetValue());
-	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
-	chbox_hle_hook_stfunc->SetValue(Ini.HLEHookStFunc.GetValue());
-	chbox_hle_savetty->SetValue(Ini.HLESaveTTY.GetValue());
-	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
+	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
+	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
+	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
+	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
+	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
+	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
+	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
+	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 
-	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
-	cbox_spu_decoder->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
-	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
-	cbox_gs_resolution->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
-	cbox_gs_aspect->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
-	cbox_pad_handler->SetSelection(Ini.PadHandlerMode.GetValue());
+	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
+	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
+	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
+	cbox_gs_resolution   ->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
+	cbox_gs_aspect       ->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
+	cbox_pad_handler     ->SetSelection(Ini.PadHandlerMode.GetValue());
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
-	cbox_mouse_handler->SetSelection(Ini.MouseHandlerMode.GetValue());
-	cbox_audio_out->SetSelection(Ini.AudioOutMode.GetValue());
-	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
-	cbox_sys_lang->SetSelection(Ini.SysLanguage.GetValue());
+	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
+	cbox_audio_out       ->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
+	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
 
 	// Enable / Disable parameters
