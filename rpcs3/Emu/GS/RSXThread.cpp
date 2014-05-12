@@ -1194,21 +1194,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		u8 type = a0 >> 24;
 		u32 offset = a0 & 0xffffff;
 
-		u64 data;
+		u32 value;
 		switch(type)
 		{
-		case 1:
-			data = get_system_time();
-			data *= 1000; // Microseconds to nanoseconds
+		case CELL_GCM_ZPASS_PIXEL_CNT:
+		case CELL_GCM_ZCULL_STATS:
+		case CELL_GCM_ZCULL_STATS1:
+		case CELL_GCM_ZCULL_STATS2:
+		case CELL_GCM_ZCULL_STATS3:
+			value = 0;
+			ConLog.Warning("NV4097_GET_REPORT: Unimplemented type %d", type);
 		break;
 
 		default:
-			data = 0;
-			ConLog.Error("NV4097_GET_REPORT: bad type %d", type);
+			value = 0;
+			ConLog.Error("NV4097_GET_REPORT: Bad type %d", type);
 		break;
 		}
 
-		Memory.Write64(m_local_mem_addr + offset, data);
+		// Get timestamp, and convert it from microseconds to nanoseconds
+		u64 timestamp = get_system_time() * 1000;
+
+		// TODO: Reports can be written to the main memory or the local memory (controlled by NV4097_SET_CONTEXT_DMA_REPORT)
+		Memory.Write64(m_local_mem_addr + offset + 0x0, timestamp);
+		Memory.Write32(m_local_mem_addr + offset + 0x8, value);
+		Memory.Write32(m_local_mem_addr + offset + 0xc, 0);
 	}
 	break;
 

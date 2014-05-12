@@ -73,6 +73,16 @@ enum
 	CELL_GCM_SURFACE_TARGET_MRT3    = 0x1f,
 };
 
+// GCM Reports
+enum
+{
+	CELL_GCM_ZPASS_PIXEL_CNT   = 1,
+	CELL_GCM_ZCULL_STATS       = 2,
+	CELL_GCM_ZCULL_STATS1      = 3,
+	CELL_GCM_ZCULL_STATS2      = 4,
+	CELL_GCM_ZCULL_STATS3      = 5,
+};
+
 struct CellGcmControl
 {
 	be_t<u32> put;
