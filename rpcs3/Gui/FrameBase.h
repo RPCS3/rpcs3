@@ -25,7 +25,7 @@ protected:
 
 		Bind(wxEVT_CLOSE_WINDOW, &FrameBase::OnClose, this);
 		Bind(wxEVT_MOVE, &FrameBase::OnMove, this);
-		Bind(wxEVT_SIZE, &FrameBase::OnSize, this);
+		Bind(wxEVT_SIZE, &FrameBase::OnResize, this);
 	}
 
 	~FrameBase()
