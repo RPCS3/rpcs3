@@ -68,24 +68,23 @@ u32 FnIdGenerator::GenerateFnId(const std::string& func_name)
 
 void FnIdGenerator::PrintId()
 {
-	const std::string temp;
-	TextInputDialog dial(0, temp, "Please input function name");
+	TextInputDialog dial(0, "", "Please input function name");
 	if (dial.ShowModal() == wxID_OK)
 	{
-		dial.GetResult();
+		const std::string& func_name = dial.GetResult();
+
+		if (func_name.length() == 0)
+			return;
+
+		const be_t<u32> result = GenerateFnId(func_name);
+		m_func_name.push_back(func_name);
+		m_func_id.push_back(result);
+
+		ConLog.Write("Function: %s, Id: 0x%08x ", func_name.c_str(), result);
+		UpdateInformation();
 	}
 
-	const std::string& func_name = dial.GetResult();
-
-	if (func_name.length() == 0)
-		return;
-
-	const be_t<u32> result = GenerateFnId(func_name);
-	m_func_name.push_back(func_name);
-	m_func_id.push_back(result);
-
-	ConLog.Write("Function: %s, Id: 0x%08x ", func_name.c_str(), result);
-	UpdateInformation();
+	return;
 }
 
 void FnIdGenerator::UpdateInformation()
