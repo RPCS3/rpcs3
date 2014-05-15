@@ -121,6 +121,18 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+		break;
+
+		case CELL_GCM_TEXTURE_R5G6B5:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+		break;
+		
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		{
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
