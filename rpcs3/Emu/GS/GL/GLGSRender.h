@@ -75,7 +75,7 @@ public:
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
-		int format = tex.GetFormat() & ~(0x20 | 0x40);
+		int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
 		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
@@ -83,15 +83,11 @@ public:
 
 		switch(format)
 		{
-		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_B8: // One 8-bit fixed-point number
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_BLUE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, GL_BLUE);
 			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
@@ -133,7 +129,7 @@ public:
 
 		break;
 		
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
 		{
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
 
@@ -142,7 +138,7 @@ public:
 		}
 		break;
 
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: // Compressed 4x4 pixels into 16 bytes
 		{
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
@@ -151,7 +147,7 @@ public:
 		}
 		break;
 
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: // Compressed 4x4 pixels into 16 bytes
 		{
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
@@ -160,7 +156,7 @@ public:
 		}
 		break;
 		
-		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_X16: // A 16-bit fixed-point number
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
@@ -169,12 +165,46 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_HALF_FLOAT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
-		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: // Four fp32 values
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_FLOAT, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case CELL_GCM_TEXTURE_X32_FLOAT: // One 32-bit floating-point number
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_FLOAT, pixels);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			break;
+
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // 24-bit unsigned float and 8 bits of garbage
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			break;
+
+		case CELL_GCM_TEXTURE_DEPTH16: // 16-bit unsigned fixed-point number
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // 16-bit unsigned float
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
@@ -189,7 +219,7 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.GetMipmap() - 1);
 		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.GetMipmap() > 1);
 
-		if(format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16)
+		if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
 		{
 			u8 remap_a = tex.GetRemap() & 0x3;
 			u8 remap_r = (tex.GetRemap() >> 2) & 0x3;
