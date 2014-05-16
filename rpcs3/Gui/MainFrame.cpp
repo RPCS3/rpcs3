@@ -351,7 +351,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
 	// HLE / Misc.
-	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log lvl"));
+	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
 
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
