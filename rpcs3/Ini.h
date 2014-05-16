@@ -219,8 +219,8 @@ public:
 		GSAspectRatio.Load(2);
 		GSVSyncEnable.Load(false);
 		GSLogPrograms.Load(false);
-		GSDumpColorBuffers.Load(true);
-		GSDumpDepthBuffer.Load(true);
+		GSDumpColorBuffers.Load(false);
+		GSDumpDepthBuffer.Load(false);
 		PadHandlerMode.Load(1);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
