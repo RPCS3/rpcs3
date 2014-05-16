@@ -177,7 +177,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	case CELL_PNGDEC_RGB:
 	case CELL_PNGDEC_RGBA:
 	{
-		const char nComponents = (CELL_PNGDEC_RGBA ? 4 : 3);
+		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
 		image_size *= nComponents;
 		if (dataCtrlParam->outputBytesPerLine > width * nComponents) //check if we need padding
 		{
