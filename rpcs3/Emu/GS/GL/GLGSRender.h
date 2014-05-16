@@ -84,11 +84,14 @@ public:
 		switch(format)
 		{
 		case CELL_GCM_TEXTURE_B8: // One 8-bit fixed-point number
+		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, GL_BLUE);
-			checkForGlError("GLTexture::Init() -> glTexParameteri");
+
+			GLint swizzleMask[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+		}
 		break;
 
 		case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -157,12 +160,14 @@ public:
 		break;
 		
 		case CELL_GCM_TEXTURE_X16: // A 16-bit fixed-point number
+		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			GLint swizzleMask[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzleMask);
+			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+		}
 		break;
 
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
@@ -176,12 +181,14 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_X32_FLOAT: // One 32-bit floating-point number
+		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_FLOAT, pixels);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			GLint swizzleMask[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+		}
 		break;
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
@@ -208,7 +215,9 @@ public:
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		}
 		break;
 
