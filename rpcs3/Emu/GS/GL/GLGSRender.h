@@ -165,7 +165,7 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
 			GLint swizzleMask[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzleMask);
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			checkForGlError("GLTexture::Init() -> glTexParameteriv");
 		}
 		break;
