@@ -83,9 +83,11 @@ public:
 	void Init(RSXTexture& tex)
 	{
 		Bind();
-		if(!Memory.IsGoodAddr(GetAddress(tex.GetOffset(), tex.GetLocation())))
+
+		const u64 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
+		if (!Memory.IsGoodAddr(texaddr))
 		{
-			ConLog.Error("Bad texture address=0x%x", GetAddress(tex.GetOffset(), tex.GetLocation()));
+			ConLog.Error("Bad texture address=0x%x", texaddr);
 			return;
 		}
 		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
@@ -96,8 +98,8 @@ public:
 		int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
-		u8* pixels = (u8*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
-		u8* unswizzledPixels;
+		const u8 *pixels = const_cast<const u8 *>(Memory.GetMemFromAddr(texaddr));
+		u8 *unswizzledPixels;
 		static const GLint glRemapStandard[4] = {GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE};
 		// NOTE: This must be in ARGB order in all forms below.
 		const GLint *glRemap = glRemapStandard;
