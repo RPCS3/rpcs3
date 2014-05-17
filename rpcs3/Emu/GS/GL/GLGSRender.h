@@ -117,7 +117,7 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_A1R5G5B5:
-			glPixelStorei(GL_UNPACK_SWAP_BYTES, TRUE);
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
 			// TODO: texture swizzling
@@ -266,7 +266,7 @@ public:
 		}
 		break;
 
-		case CELL_GCM_TEXTURE_Y16_X16: // A 16-bit fixed-point number
+		case CELL_GCM_TEXTURE_Y16_X16: // Two 16-bit fixed-point numbers
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_SHORT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
