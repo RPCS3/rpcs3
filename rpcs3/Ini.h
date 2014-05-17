@@ -212,7 +212,7 @@ public:
 	void Load()
 	{
 		CPUDecoderMode.Load(2);
-		CPUIgnoreRWErrors.Load(false);
+		CPUIgnoreRWErrors.Load(true);
 		SPUDecoderMode.Load(1);
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
