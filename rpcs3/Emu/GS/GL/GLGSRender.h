@@ -115,9 +115,15 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_A1R5G5B5:
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			// TODO: texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 
 		case CELL_GCM_TEXTURE_A4R4G4B4:
@@ -132,8 +138,16 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_R5G6B5:
+		{
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+		}
 		break;
 		
 		case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -251,8 +265,14 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_R5G5B5A1:
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 		
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
@@ -277,12 +297,18 @@ public:
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 		{
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			// TODO: Texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
 			static const GLint swizzleMaskX32_D1R5G5B5[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
 			glRemap = swizzleMaskX32_D1R5G5B5;
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		}
 		break;
 
