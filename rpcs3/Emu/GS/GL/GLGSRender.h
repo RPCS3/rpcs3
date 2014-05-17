@@ -62,12 +62,32 @@ public:
 		return GL_REPEAT;
 	}
 
+	inline static u8 Convert4To8(u8 v)
+	{
+		// Swizzle bits: 00001234 -> 12341234
+		return (v << 4) | (v);
+	}
+
+	inline static u8 Convert5To8(u8 v)
+	{
+		// Swizzle bits: 00012345 -> 12345123
+		return (v << 3) | (v >> 2);
+	}
+
+	inline static u8 Convert6To8(u8 v)
+	{
+		// Swizzle bits: 00123456 -> 12345612
+		return (v << 2) | (v >> 4);
+	}
+
 	void Init(RSXTexture& tex)
 	{
 		Bind();
-		if(!Memory.IsGoodAddr(GetAddress(tex.GetOffset(), tex.GetLocation())))
+
+		const u64 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
+		if (!Memory.IsGoodAddr(texaddr))
 		{
-			ConLog.Error("Bad texture address=0x%x", GetAddress(tex.GetOffset(), tex.GetLocation()));
+			ConLog.Error("Bad texture address=0x%x", texaddr);
 			return;
 		}
 		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
@@ -78,8 +98,11 @@ public:
 		int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
-		char* pixels = (char*)Memory.GetMemFromAddr(GetAddress(tex.GetOffset(), tex.GetLocation()));
-		char* unswizzledPixels;
+		const u8 *pixels = const_cast<const u8 *>(Memory.GetMemFromAddr(texaddr));
+		u8 *unswizzledPixels;
+		static const GLint glRemapStandard[4] = {GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE};
+		// NOTE: This must be in ARGB order in all forms below.
+		const GLint *glRemap = glRemapStandard;
 
 		switch(format)
 		{
@@ -88,27 +111,45 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			GLint swizzleMask[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+			static const GLint swizzleMaskB8[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
+			glRemap = swizzleMaskB8;
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_A1R5G5B5:
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			// TODO: texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 
 		case CELL_GCM_TEXTURE_A4R4G4B4:
-			// TODO: texture swizzling
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4_REV, pixels);
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			// We read it in as R4G4B4A4, so we need to remap each component.
+			static const GLint swizzleMaskA4R4G4B4[] = { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
+			glRemap = swizzleMaskA4R4G4B4;
+		}
 		break;
 
 		case CELL_GCM_TEXTURE_R5G6B5:
+		{
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+		}
 		break;
 		
 		case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -117,7 +158,7 @@ public:
 				u32 *src, *dst;
 				u32 log2width, log2height;
 
-				unswizzledPixels = (char*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
+				unswizzledPixels = (u8*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
 				src = (u32*)pixels;
 				dst = (u32*)unswizzledPixels;
 
@@ -164,6 +205,37 @@ public:
 		}
 		break;
 
+		case CELL_GCM_TEXTURE_G8B8:
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_BYTE, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			static const GLint swizzleMaskG8B8[] = { GL_ONE, GL_GREEN, GL_RED, GL_GREEN };
+			glRemap = swizzleMaskG8B8;
+		}
+		break;
+
+		case CELL_GCM_TEXTURE_R6G5B5:
+		{
+			// TODO: Probably need to actually unswizzle if is_swizzled.
+			const u32 numPixels = tex.GetWidth() * tex.GetHeight();
+			unswizzledPixels = (u8 *)malloc(numPixels * 4);
+			// TODO: Speed.
+			for (u32 i = 0; i < numPixels; ++i) {
+				u16 c = reinterpret_cast<const be_t<u16> *>(pixels)[i];
+				unswizzledPixels[i * 4 + 0] = Convert6To8((c >> 10) & 0x3F);
+				unswizzledPixels[i * 4 + 1] = Convert5To8((c >>  5) & 0x1F);
+				unswizzledPixels[i * 4 + 2] = Convert5To8((c >>  0) & 0x1F);
+				unswizzledPixels[i * 4 + 3] = 255;
+			}
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			free(unswizzledPixels);
+		}
+		break;
+
 		case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT_24_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
@@ -189,15 +261,20 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			GLint swizzleMask[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+			static const GLint swizzleMaskX16[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
+			glRemap = swizzleMaskX16;
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_R5G5B5A1:
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 		
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
@@ -215,19 +292,26 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_FLOAT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			GLint swizzleMask[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkForGlError("GLTexture::Init() -> glTexParameteriv");
+			static const GLint swizzleMaskX32_FLOAT[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
+			glRemap = swizzleMaskX32_FLOAT;
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
+		{
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
 			// TODO: Texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-			checkForGlError("GLTexture::Init() -> glTexParameteri");
+			static const GLint swizzleMaskX32_D1R5G5B5[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
+			glRemap = swizzleMaskX32_D1R5G5B5;
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+		}
 		break;
 
 		case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
@@ -235,8 +319,8 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-			checkForGlError("GLTexture::Init() -> glTexParameteri");
+			static const GLint swizzleMaskX32_D8R8G8B8[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
+			glRemap = swizzleMaskX32_D8R8G8B8;
 		}
 		break;
 
@@ -254,18 +338,18 @@ public:
 			u8 remap_g = (tex.GetRemap() >> 4) & 0x3;
 			u8 remap_b = (tex.GetRemap() >> 6) & 0x3;
 
-			static const int gl_remap[] =
-			{
-				GL_ALPHA,
-				GL_RED,
-				GL_GREEN,
-				GL_BLUE,
-			};
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
+		}
+		else
+		{
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, gl_remap[remap_a]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, gl_remap[remap_r]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, gl_remap[remap_g]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
 		}
 		
 		checkForGlError("GLTexture::Init() -> remap");
