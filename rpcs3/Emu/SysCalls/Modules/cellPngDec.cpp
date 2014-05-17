@@ -171,6 +171,9 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			);
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
+	const bool flip = current_outParam.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
+	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+
 	uint image_size = width * height;
 	switch((u32)current_outParam.outputColorSpace)
 	{
@@ -179,16 +182,15 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
 		image_size *= nComponents;
-		if (dataCtrlParam->outputBytesPerLine > width * nComponents) //check if we need padding
+		if (bytesPerLine != width * nComponents || flip) //check if we need padding
 		{
-			//TODO: find out if we can't do padding without an extra copy
-			char *output = (char *) malloc(dataCtrlParam->outputBytesPerLine*height);
+			const int linesize = std::min(bytesPerLine, width * nComponents);
 			for (int i = 0; i < height; i++)
 			{
-				memcpy(&output[i*dataCtrlParam->outputBytesPerLine], &image.get()[width*nComponents*i], width*nComponents);
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
+				Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
 			}
-			Memory.CopyFromReal(data.GetAddr(), output, dataCtrlParam->outputBytesPerLine*height);
-			free(output);
 		}
 		else
 		{
@@ -201,20 +203,24 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	{
 		const char nComponents = 4;
 		image_size *= nComponents;
-		if (dataCtrlParam->outputBytesPerLine > width * nComponents) //check if we need padding
+		if (bytesPerLine != width * nComponents || flip) //check if we need padding
 		{
 			//TODO: find out if we can't do padding without an extra copy
-			char *output = (char *) malloc(dataCtrlParam->outputBytesPerLine*height);
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			char *output = (char *) malloc(linesize);
 			for (int i = 0; i < height; i++)
 			{
-				for (int j = 0; j < width * nComponents; j += nComponents){
-					output[i*dataCtrlParam->outputBytesPerLine + j	  ] = image.get()[i*width * nComponents + j + 3];
-					output[i*dataCtrlParam->outputBytesPerLine + j + 1] = image.get()[i*width * nComponents + j + 0];
-					output[i*dataCtrlParam->outputBytesPerLine + j + 2] = image.get()[i*width * nComponents + j + 1];
-					output[i*dataCtrlParam->outputBytesPerLine + j + 3] = image.get()[i*width * nComponents + j + 2];
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
+				for (int j = 0; j < linesize; j += nComponents)
+				{
+					output[j + 0] = image.get()[srcOffset + j + 3];
+					output[j + 1] = image.get()[srcOffset + j + 0];
+					output[j + 2] = image.get()[srcOffset + j + 1];
+					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
+				Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize);
 			}
-			Memory.CopyFromReal(data.GetAddr(), output, dataCtrlParam->outputBytesPerLine*height);
 			free(output);
 		}
 		else
