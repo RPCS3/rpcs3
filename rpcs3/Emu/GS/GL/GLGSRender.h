@@ -266,6 +266,16 @@ public:
 		}
 		break;
 
+		case CELL_GCM_TEXTURE_Y16_X16: // A 16-bit fixed-point number
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_SHORT, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			static const GLint swizzleMaskX32_Y16_X16[] = { GL_GREEN, GL_RED, GL_GREEN, GL_RED };
+			glRemap = swizzleMaskX32_Y16_X16;
+		}
+		break;
+
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
