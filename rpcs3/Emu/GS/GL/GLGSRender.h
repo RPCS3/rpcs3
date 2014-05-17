@@ -64,7 +64,7 @@ public:
 
 	inline static u8 Convert4To8(u8 v)
 	{
-		// Swizzle bits: 00012345 -> 12345123
+		// Swizzle bits: 00001234 -> 12341234
 		return (v << 4) | (v);
 	}
 
