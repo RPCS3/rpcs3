@@ -84,8 +84,8 @@ namespace fmt{
 		for (;;)
 		{
 			std::vector<char> buffptr(length);
-			int printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
-			if (printlen >= 0 && (size_t)printlen < length)
+			size_t printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
+			if (printlen < length)
 			{
 				str = string(buffptr.data(), printlen);
 				break;
