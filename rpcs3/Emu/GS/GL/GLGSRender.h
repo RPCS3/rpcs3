@@ -109,7 +109,6 @@ public:
 		case CELL_GCM_TEXTURE_R5G6B5:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
-
 		break;
 		
 		case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -220,6 +219,15 @@ public:
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			checkForGlError("GLTexture::Init() -> glTexParameteriv");
 		}
+		break;
+
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+			// TODO: Texture swizzling
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
 		case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
