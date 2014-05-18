@@ -121,7 +121,7 @@ public:
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
 			// TODO: texture swizzling
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
