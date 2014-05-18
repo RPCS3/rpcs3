@@ -368,9 +368,8 @@ public:
 		}
 		break;
 
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN):
 		{
-			// TODO: Probably need to actually unswizzle if is_swizzled.
 			const u32 numPixels = tex.GetWidth() * tex.GetHeight();
 			unswizzledPixels = (u8 *)malloc(numPixels * 4);
 			// TODO: Speed.
@@ -394,9 +393,8 @@ public:
 		}
 		break;
 
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN):
 		{
-			// TODO: Probably need to actually unswizzle if is_swizzled.
 			const u32 numPixels = tex.GetWidth() * tex.GetHeight();
 			unswizzledPixels = (u8 *)malloc(numPixels * 4);
 			// TODO: Speed.
