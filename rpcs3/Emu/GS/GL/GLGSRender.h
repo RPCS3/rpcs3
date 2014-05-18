@@ -258,18 +258,30 @@ public:
 		
 		case CELL_GCM_TEXTURE_X16: // A 16-bit fixed-point number
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_SHORT, pixels);
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_UNSIGNED_SHORT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			static const GLint swizzleMaskX16[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
+			static const GLint swizzleMaskX16[] = { GL_RED, GL_ONE, GL_RED, GL_ONE };
 			glRemap = swizzleMaskX16;
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_Y16_X16: // Two 16-bit fixed-point numbers
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_SHORT, pixels);
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_SHORT, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
 			static const GLint swizzleMaskX32_Y16_X16[] = { GL_GREEN, GL_RED, GL_GREEN, GL_RED };
 			glRemap = swizzleMaskX32_Y16_X16;
