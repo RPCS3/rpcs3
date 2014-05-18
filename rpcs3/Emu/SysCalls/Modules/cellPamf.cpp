@@ -248,6 +248,9 @@ int cellPamfReaderGetNumberOfStreams(mem_ptr_t<CellPamfReader> pSelf)
 
 int cellPamfReaderGetNumberOfSpecificStreams(mem_ptr_t<CellPamfReader> pSelf, u8 streamType)
 {
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+		
 	cellPamf.Warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=0x%x, streamType=%d)",
 		pSelf.GetAddr(), streamType);
 
@@ -337,6 +340,9 @@ int cellPamfReaderSetStreamWithTypeAndChannel(mem_ptr_t<CellPamfReader> pSelf, u
 
 int cellPamfReaderSetStreamWithTypeAndIndex(mem_ptr_t<CellPamfReader> pSelf, u8 streamType, u8 streamIndex)
 {
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+		
 	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=0x%x, streamType=%d, streamIndex=%d)",
 		pSelf.GetAddr(), streamType, streamIndex);
 
