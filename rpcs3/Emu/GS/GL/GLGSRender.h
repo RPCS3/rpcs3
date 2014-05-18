@@ -313,7 +313,7 @@ public:
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
 			// TODO: Texture swizzling
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
 			static const GLint swizzleMaskX32_D1R5G5B5[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
