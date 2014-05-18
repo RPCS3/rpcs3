@@ -182,7 +182,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
 		image_size *= nComponents;
-		if (bytesPerLine != width * nComponents || flip) //check if we need padding
+		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
 			const int linesize = std::min(bytesPerLine, width * nComponents);
 			for (int i = 0; i < height; i++)
@@ -203,7 +203,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	{
 		const char nComponents = 4;
 		image_size *= nComponents;
-		if (bytesPerLine != width * nComponents || flip) //check if we need padding
+		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
 			//TODO: find out if we can't do padding without an extra copy
 			const int linesize = std::min(bytesPerLine, width * nComponents);
