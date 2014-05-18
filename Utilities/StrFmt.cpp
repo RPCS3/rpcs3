@@ -14,8 +14,8 @@ std::string fmt::FormatV(const char *fmt, va_list args)
 	for (;;)
 	{
 		std::vector<char> buffptr(length);
-		int printlen = vsnprintf(buffptr.data(), length, fmt, args);
-		if (printlen >= 0 && printlen < length)
+		size_t printlen = vsnprintf(buffptr.data(), length, fmt, args);
+		if (printlen < length)
 		{
 			str = std::string(buffptr.data(), printlen);
 			break;
