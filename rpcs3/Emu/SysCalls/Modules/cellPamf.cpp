@@ -112,6 +112,9 @@ int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSi
 	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pSize.GetAddr());
 
+	if (!pAddr.IsGood() || !pSize.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
@@ -124,6 +127,9 @@ int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attrib
 {
 	cellPamf.Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=0x%x, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, attribute, pSize.GetAddr());
+
+	if (!pAddr.IsGood() || !pSize.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
@@ -138,6 +144,9 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 	cellPamf.Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pOffset.GetAddr(), pSize.GetAddr());
 
+	if (!pAddr.IsGood() || !pOffset.IsGood() || !pSize.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
@@ -151,6 +160,10 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 int cellPamfVerify(mem_ptr_t<PamfHeader> pAddr, u64 fileSize)
 {
 	cellPamf.Warning("cellPamfVerify(pAddr=0x%x, fileSize=%d)", pAddr.GetAddr(), fileSize);
+
+	if (!pAddr.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	return CELL_OK;
 }
 
@@ -159,6 +172,9 @@ int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHead
 	cellPamf.Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)",
 		pSelf.GetAddr(), pAddr.GetAddr(), fileSize, attribute);
 	
+	if (!pSelf.IsGood() || !pAddr.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	if (fileSize)
 	{
 		pSelf->fileSize = fileSize;
@@ -183,6 +199,9 @@ int cellPamfReaderGetPresentationStartTime(mem_ptr_t<CellPamfReader> pSelf, mem_
 	cellPamf.Warning("cellPamfReaderGetPresentationStartTime(pSelf=0x%x, pTimeStamp_addr=0x%x)",
 		pSelf.GetAddr(), pTimeStamp.GetAddr());
 
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 	const u32 upper = (u16)pAddr->start_pts_high;
 	pTimeStamp->upper = upper;
@@ -195,6 +214,9 @@ int cellPamfReaderGetPresentationEndTime(mem_ptr_t<CellPamfReader> pSelf, mem_pt
 	cellPamf.Warning("cellPamfReaderGetPresentationEndTime(pSelf=0x%x, pTimeStamp_addr=0x%x)",
 		pSelf.GetAddr(), pTimeStamp.GetAddr());
 
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 	const u32 upper = (u16)pAddr->end_pts_high;
 	pTimeStamp->upper = upper;
@@ -206,6 +228,9 @@ int cellPamfReaderGetMuxRateBound(mem_ptr_t<CellPamfReader> pSelf)
 {
 	cellPamf.Warning("cellPamfReaderGetMuxRateBound(pSelf=0x%x)", pSelf.GetAddr());
 
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 	return pAddr->mux_rate_max;
 }
@@ -213,6 +238,9 @@ int cellPamfReaderGetMuxRateBound(mem_ptr_t<CellPamfReader> pSelf)
 int cellPamfReaderGetNumberOfStreams(mem_ptr_t<CellPamfReader> pSelf)
 {
 	cellPamf.Warning("cellPamfReaderGetNumberOfStreams(pSelf=0x%x)", pSelf.GetAddr());
+
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 	return pAddr->stream_count;
@@ -222,6 +250,9 @@ int cellPamfReaderGetNumberOfSpecificStreams(mem_ptr_t<CellPamfReader> pSelf, u8
 {
 	cellPamf.Warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=0x%x, streamType=%d)",
 		pSelf.GetAddr(), streamType);
+
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
@@ -256,6 +287,9 @@ int cellPamfReaderSetStreamWithIndex(mem_ptr_t<CellPamfReader> pSelf, u8 streamI
 	cellPamf.Warning("cellPamfReaderSetStreamWithIndex(pSelf=0x%x, streamIndex=%d)",
 		pSelf.GetAddr(), streamIndex);
 
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
 	if (streamIndex < pAddr->stream_count)
@@ -274,6 +308,9 @@ int cellPamfReaderSetStreamWithTypeAndChannel(mem_ptr_t<CellPamfReader> pSelf, u
 	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=0x%x, streamType=%d, ch=%d)",
 		pSelf.GetAddr(), streamType, ch);
 	
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
 	if (streamType > 5)
@@ -302,6 +339,9 @@ int cellPamfReaderSetStreamWithTypeAndIndex(mem_ptr_t<CellPamfReader> pSelf, u8 
 {
 	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=0x%x, streamType=%d, streamIndex=%d)",
 		pSelf.GetAddr(), streamType, streamIndex);
+
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
@@ -351,12 +391,18 @@ int cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId
 	cellPamf.Warning("cellPamfStreamTypeToEsFilterId(type=%d, ch=%d, pEsFilterId_addr=0x%x)",
 		type, ch, pEsFilterId.GetAddr());
 	
+	if (!pEsFilterId.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	return pamfStreamTypeToEsFilterId(type, ch, pEsFilterId);
 }
 
 int cellPamfReaderGetStreamIndex(mem_ptr_t<CellPamfReader> pSelf)
 {
 	cellPamf.Log("cellPamfReaderGetStreamIndex(pSelf=0x%x)", pSelf.GetAddr());
+
+	if (!pSelf.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	return pSelf->stream;
 }
@@ -365,6 +411,9 @@ int cellPamfReaderGetStreamTypeAndChannel(mem_ptr_t<CellPamfReader> pSelf, mem8_
 {
 	cellPamf.Warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=0x%x (stream=%d), pType_addr=0x%x, pCh_addr=0x%x",
 		pSelf.GetAddr(), pSelf->stream, pType.GetAddr(), pCh.GetAddr());
+
+	if (!pSelf.IsGood() || !pCh.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	pType = pamfGetStreamType(pSelf, pSelf->stream);
 	pCh = pamfGetStreamChannel(pSelf, pSelf->stream);
@@ -376,6 +425,9 @@ int cellPamfReaderGetEsFilterId(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<CellC
 	cellPamf.Warning("cellPamfReaderGetEsFilterId(pSelf=0x%x (stream=%d), pEsFilterId_addr=0x%x)",
 		pSelf.GetAddr(), pSelf->stream, pEsFilterId.GetAddr());
 
+	if (!pSelf.IsGood() || !pEsFilterId.IsGood())
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	return pamfStreamTypeToEsFilterId(pamfGetStreamType(pSelf, pSelf->stream), 
 		pamfGetStreamChannel(pSelf, pSelf->stream), pEsFilterId);
 }
@@ -384,6 +436,9 @@ int cellPamfReaderGetStreamInfo(mem_ptr_t<CellPamfReader> pSelf, u32 pInfo_addr,
 {
 	cellPamf.Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x (stream=%d), pInfo_addr=0x%x, size=%d)",
 		pSelf.GetAddr(), pSelf->stream, pInfo_addr, size);
+
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 
@@ -493,6 +548,9 @@ int cellPamfReaderGetNumberOfEp(mem_ptr_t<CellPamfReader> pSelf)
 	cellPamf.Warning("cellPamfReaderGetNumberOfEp(pSelf=0x%x (stream=%d))",
 		pSelf.GetAddr(), pSelf->stream);
 
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
+
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);	
 	return pAddr->stream_headers[pSelf->stream].ep_num;
 }
@@ -501,6 +559,9 @@ int cellPamfReaderGetEpIteratorWithIndex(mem_ptr_t<CellPamfReader> pSelf, u32 ep
 {
 	cellPamf.Error("cellPamfReaderGetEpIteratorWithIndex(pSelf=0x%x (stream=%d), epIndex=%d, pIt_addr=0x%x)",
 		pSelf.GetAddr(), pSelf->stream, epIndex, pIt.GetAddr());
+
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	const mem_ptr_t<PamfHeader> pAddr(pSelf->pAddr);
 	//TODO:
