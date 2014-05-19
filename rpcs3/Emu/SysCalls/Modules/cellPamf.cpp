@@ -172,7 +172,7 @@ int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHead
 	cellPamf.Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)",
 		pSelf.GetAddr(), pAddr.GetAddr(), fileSize, attribute);
 	
-	if (!pSelf.IsGood() || !pAddr.IsGood() || !Memory.IsGoodAddr(pSelf->pAddr))
+	if (!pSelf.IsGood() || !pAddr.IsGood())
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	if (fileSize)
