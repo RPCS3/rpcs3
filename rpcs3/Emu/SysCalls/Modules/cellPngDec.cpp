@@ -201,7 +201,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	case CELL_PNGDEC_ARGB:
 	{
-		const char nComponents = 4;
+		const int nComponents = 4;
 		image_size *= nComponents;
 		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
@@ -225,13 +225,19 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 		}
 		else
 		{
-			for (uint i = 0; i < image_size; i += nComponents)
+			uint* dest = (uint*)new char[image_size];
+			uint* source_current = (uint*)&(image.get()[0]);
+			uint* dest_current = dest;
+			for (uint i = 0; i < image_size / nComponents; i++) 
 			{
-				data += image.get()[i + 3];
-				data += image.get()[i + 0];
-				data += image.get()[i + 1];
-				data += image.get()[i + 2];
+				uint val = *source_current;
+				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
+				source_current++;
+				dest_current++;
 			}
+			// NOTE: AppendRawBytes has diff side-effect vs Memory.CopyFromReal
+			data.AppendRawBytes((u8*)dest, image_size); 
+			delete[] dest;
 		}
 	}
 	break;
