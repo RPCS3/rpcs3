@@ -719,6 +719,11 @@ void GLGSRender::ExecCMD()
 
 		switch(m_surface_depth_format)
 		{
+		case 0:
+			m_rbo.Storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
+		break;
+		
 		case 1:
 			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
