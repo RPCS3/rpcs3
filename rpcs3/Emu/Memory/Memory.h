@@ -333,11 +333,11 @@ public:
 		return true;
 	}
 
-	bool CopyFromReal(u32 to, void* real, u32 count) // (4K pages) copy from real to virtual memory
+	bool CopyFromReal(u32 to, const void* real, u32 count) // (4K pages) copy from real to virtual memory
 	{
 		if (!count) return true;
 
-		u8* from = (u8*)real;
+		const u8* from = (const u8*)real;
 
 		if (u32 frag = to & 4095)
 		{
