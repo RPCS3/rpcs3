@@ -191,20 +191,26 @@ void MemoryViewerPanel::ShowMemory()
 		t_mem_addr_str += wxString::Format("%08x ", addr);
 	}
 
-	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr++)
+	for (int row = 0; row < m_rowcount; row++) 
 	{
-		if (Memory.IsGoodAddr(addr))
+		for (int col = 0; col < m_colcount; col++) 
 		{
-			const u8 rmem = Memory.Read8(addr);
-			t_mem_hex_str += wxString::Format("%02x ", rmem);
-			const wxString c_rmem = wxString::Format("%c", rmem);
-			t_mem_ascii_str += c_rmem.IsEmpty() ? "." : c_rmem;
+			u32 addr = m_addr + row * m_colcount + col;	
+
+			if (Memory.IsGoodAddr(addr))
+			{
+				const u8 rmem = Memory.Read8(addr);
+				t_mem_hex_str += wxString::Format("%02x ", rmem);
+				const bool isPrintable = rmem >= 32 && rmem <= 126;
+				t_mem_ascii_str += isPrintable ? std::string(1, rmem) : ".";
+			}
+			else
+			{
+				t_mem_hex_str += "?? ";
+				t_mem_ascii_str += "?";
+			}
 		}
-		else
-		{
-			t_mem_hex_str += "?? ";
-			t_mem_ascii_str += "?";
-		}
+		t_mem_ascii_str += "\r\n";
 	}
 
 	t_mem_addr->SetValue(t_mem_addr_str);
