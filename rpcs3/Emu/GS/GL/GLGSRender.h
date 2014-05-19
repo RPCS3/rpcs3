@@ -129,18 +129,17 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_A4R4G4B4:
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 
-			// We read it in as R4G4B4A4, so we need to remap each component.
-			static const GLint swizzleMaskA4R4G4B4[] = { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
-			glRemap = swizzleMaskA4R4G4B4;
-		}
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 
 		case CELL_GCM_TEXTURE_R5G6B5:
-		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
@@ -149,33 +148,17 @@ public:
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 			checkForGlError("GLTexture::Init() -> glPixelStorei");
-		}
 		break;
 		
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			if(is_swizzled)
-			{
-				u32 *src, *dst;
-				u32 log2width, log2height;
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 
-				unswizzledPixels = (u8*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
-				src = (u32*)pixels;
-				dst = (u32*)unswizzledPixels;
-
-				log2width = log(tex.GetWidth())/log(2);
-				log2height = log(tex.GetHeight())/log(2);
-
-				for(int i=0; i<tex.GetHeight(); i++)
-				{
-					for(int j=0; j<tex.GetWidth(); j++)
-					{
-						dst[(i*tex.GetHeight()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
-					}
-				}
-			}
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
+
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+			checkForGlError("GLTexture::Init() -> glPixelStorei");
 		break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
@@ -237,7 +220,7 @@ public:
 		break;
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT_24_8, pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			break;
 
