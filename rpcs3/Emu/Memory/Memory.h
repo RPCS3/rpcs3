@@ -795,6 +795,12 @@ public:
 		return this->m_addr;
 	}
 
+	u32 AppendRawBytes(const u8 * bytes, size_t count) {
+		Memory.CopyFromReal(this->m_addr, bytes, count);
+		this->m_addr += count;
+		return this->m_addr;
+	}
+
 	u32 Skip(const u32 offset) { return this->m_addr += offset; }
 
 	operator be_t<T>*()			{ return GetPtr(); }
