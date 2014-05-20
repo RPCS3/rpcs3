@@ -195,7 +195,9 @@ public:
 
 	bool m_set_front_polygon_mode;
 	u32 m_front_polygon_mode;
-
+	bool m_set_back_polygon_mode;
+	u32 m_back_polygon_mode;
+	
 	u32 m_clear_surface_mask;
 	u32 m_clear_surface_z;
 	u8 m_clear_surface_s;
