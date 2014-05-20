@@ -862,9 +862,15 @@ void GLGSRender::ExecCMD()
 	if(m_set_front_polygon_mode)
 	{
 		glPolygonMode(GL_FRONT, m_front_polygon_mode);
-		checkForGlError("glPolygonMode");
+		checkForGlError("glPolygonMode(Front)");
 	}
 
+	if (m_set_back_polygon_mode)
+	{
+		glPolygonMode(GL_BACK, m_back_polygon_mode);
+		checkForGlError("glPolygonMode(Back)");
+	}
+	
 	Enable(m_depth_test_enable, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);

@@ -477,6 +477,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_front_polygon_mode = ARGS(0);
 	break;
 
+	case NV4097_SET_BACK_POLYGON_MODE:
+		m_set_back_polygon_mode = true;
+		m_back_polygon_mode = ARGS(0);
+	break;
+	
 	case NV4097_CLEAR_ZCULL_SURFACE:
 	{
 		u32 a0 = ARGS(0);
