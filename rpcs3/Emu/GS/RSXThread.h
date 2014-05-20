@@ -430,6 +430,9 @@ protected:
 		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
 
+		m_front_polygon_mode = 0x1B02; // GL_FILL
+		m_back_polygon_mode = 0x1B02; // GL_FILL
+		
 		m_point_x = 0;
 		m_point_y = 0;
 
@@ -457,6 +460,7 @@ protected:
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;
+		m_set_back_polygon_mode = false;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
 		m_set_stencil_mask = false;
