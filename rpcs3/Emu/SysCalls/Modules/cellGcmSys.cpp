@@ -339,16 +339,16 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 	{
 		ConLog.Warning("bad flip!");
 		//cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
- 		//copied:
+		//copied:
  
- 		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
  
- 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
+		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
- 		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
- 		ctxt->current = ctxt->begin + res;
- 		ctrl.put = res;
- 		ctrl.get = 0;
+		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
+		ctxt->current = ctxt->begin + res;
+		ctrl.put = res;
+		ctrl.get = 0;
 	}
 
 	current = ctxt->current;
@@ -575,9 +575,7 @@ int32_t cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
 {
 	u64 realAddr;
 
-	realAddr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ioOffset);
-
-	if (!realAddr)
+	if (!Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ioOffset, realAddr)) 
 		return CELL_GCM_ERROR_FAILURE;
 
 	Memory.Write64(address, realAddr);

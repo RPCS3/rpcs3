@@ -11,7 +11,10 @@ u32 GetAddress(u32 offset, u8 location)
 	switch(location)
 	{
 	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
+	case CELL_GCM_LOCATION_MAIN: 
+		u64 realAddr;
+		Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset, realAddr); // TODO: Error Check?
+		return realAddr;
 	}
 
 	ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);
