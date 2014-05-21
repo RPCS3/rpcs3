@@ -821,12 +821,6 @@ void GLGSRender::ExecCMD()
 		//checkForGlError("glViewport");
 	}
 
-	if(m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
-	}
-
 	if(m_clear_surface_mask)
 	{
 		GLbitfield f = 0;
@@ -859,18 +853,6 @@ void GLGSRender::ExecCMD()
 		glClear(f);
 	}
 
-	if(m_set_front_polygon_mode)
-	{
-		glPolygonMode(GL_FRONT, m_front_polygon_mode);
-		checkForGlError("glPolygonMode(Front)");
-	}
-
-	if (m_set_back_polygon_mode)
-	{
-		glPolygonMode(GL_BACK, m_back_polygon_mode);
-		checkForGlError("glPolygonMode(Back)");
-	}
-	
 	Enable(m_depth_test_enable, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
@@ -879,6 +861,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_cull_face_enable, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
+	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
@@ -900,6 +883,30 @@ void GLGSRender::ExecCMD()
 
 	checkForGlError("glEnable");
 
+
+	if (m_set_front_polygon_mode)
+	{
+		glPolygonMode(GL_FRONT, m_front_polygon_mode);
+		checkForGlError("glPolygonMode(Front)");
+	}
+
+	if (m_set_back_polygon_mode)
+	{
+		glPolygonMode(GL_BACK, m_back_polygon_mode);
+		checkForGlError("glPolygonMode(Back)");
+	}
+
+	if (m_set_logic_op)
+	{
+		glLogicOp(m_logic_op);
+		checkForGlError("glLogicOp");
+	}
+
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
 	if(m_set_two_sided_stencil_test_enable)
 	{
 		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
