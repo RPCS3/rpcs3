@@ -175,6 +175,11 @@ public:
 	bool m_set_poly_offset_line;
 	bool m_set_poly_offset_point;
 
+	bool m_set_poly_offset_scale_factor;
+	u32 m_poly_offset_scale_factor;
+	bool m_set_poly_offset_bias;
+	u32 m_poly_offset_bias;
+
 	bool m_set_restart_index;
 	u32 m_restart_index;
 
@@ -384,6 +389,7 @@ public:
 
 	u32 m_surface_colour_target;
 
+	bool m_set_front_face;
 	u32 m_front_face;
 
 	u8 m_begin_end;
@@ -427,6 +433,9 @@ protected:
 		m_clear_color_a = 0;
 		m_clear_z = 0xffffff;
 		m_clear_s = 0;
+
+		m_poly_offset_scale_factor = 0;
+		m_poly_offset_bias = 0;
 
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
@@ -500,6 +509,8 @@ protected:
 		m_set_poly_offset_fill = false;
 		m_set_poly_offset_line = false;
 		m_set_poly_offset_point = false;
+		m_set_poly_offset_scale_factor = false;
+		m_set_poly_offset_bias = false;
 		m_set_restart_index = false;
 
 		m_clear_surface_mask = 0;
