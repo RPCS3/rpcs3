@@ -858,7 +858,6 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_blend, GL_BLEND);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face_enable, GL_CULL_FACE);
-	//Enable(m_set_front_face, GL_FRONT_FACE); // glEnable : OpenGL error 0x0500
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
