@@ -1037,8 +1037,12 @@ void GLGSRender::ExecCMD()
 
 	if (m_set_front_face)
 	{
-		//glFrontFace(m_front_face); // glFrontFace : OpenGL error 0x0500
-		checkForGlError("glFrontFace");
+		// Sanity check . Disgaea 3 return 0x1d0 here and cause openGL 0x0500
+		if (m_front_face == GL_CW || m_front_face == GL_CCW)
+		{
+			glFrontFace(m_front_face);
+			checkForGlError("glFrontFace");
+		}
 	}
 
 	if(m_set_alpha_func && m_set_alpha_ref)
