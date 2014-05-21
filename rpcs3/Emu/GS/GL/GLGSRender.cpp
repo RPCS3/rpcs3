@@ -581,7 +581,7 @@ void GLGSRender::WriteColourBufferD()
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
-void GLGSRender::WriteBuffers()
+void GLGSRender::WriteColorBuffers()
 {
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
@@ -641,7 +641,6 @@ void GLGSRender::OnInitThread()
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_SCISSOR_TEST);
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
@@ -773,8 +772,10 @@ void GLGSRender::ExecCMD()
 	}
 		
 	m_fbo.Bind();
+
 	if(Ini.GSDumpDepthBuffer.GetValue())
 		WriteDepthBuffer();
+
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
 	switch(m_surface_colour_target)
@@ -812,8 +813,6 @@ void GLGSRender::ExecCMD()
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
 	}
-
-	//glFrontFace(m_front_face);
 
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
@@ -867,7 +866,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); //Requires OpenGL 3.1+
+	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); // Requires OpenGL 3.1+
 
 	if(m_set_clip_plane)
 	{
@@ -896,6 +895,12 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glPolygonMode(Back)");
 	}
 
+	if (m_set_poly_offset_scale_factor && m_set_poly_offset_bias)
+	{
+		glPolygonOffset(m_set_poly_offset_scale_factor, m_set_poly_offset_bias);
+		checkForGlError("glPolygonOffset");
+	}
+
 	if (m_set_logic_op)
 	{
 		glLogicOp(m_logic_op);
@@ -907,6 +912,7 @@ void GLGSRender::ExecCMD()
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
+
 	if(m_set_two_sided_stencil_test_enable)
 	{
 		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
@@ -1029,6 +1035,16 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glCullFace");
 	}
 
+	if (m_set_front_face)
+	{
+		// Sanity check . Disgaea 3 return 0x1d0 here and cause openGL 0x0500
+		if (m_front_face == GL_CW || m_front_face == GL_CCW)
+		{
+			glFrontFace(m_front_face);
+			checkForGlError("glFrontFace");
+		}
+	}
+
 	if(m_set_alpha_func && m_set_alpha_ref)
 	{
 		glAlphaFunc(m_alpha_func, m_alpha_ref/255.0f);
@@ -1052,7 +1068,7 @@ void GLGSRender::ExecCMD()
 	if(m_set_restart_index)
 	{
 		ConLog.Warning("m_set_restart_index requires glPrimitiveRestartIndex()");
-		//glPrimitiveRestartIndex(m_restart_index); //Requires OpenGL 3.1+
+		//glPrimitiveRestartIndex(m_restart_index); // Requires OpenGL 3.1+
 		//checkForGlError("glPrimitiveRestartIndex");
 	}
 
@@ -1117,8 +1133,8 @@ void GLGSRender::ExecCMD()
 		DisableVertexData();
 	}
 
-	if(Ini.GSDumpColorBuffers.GetValue())
-		WriteBuffers();
+	if (Ini.GSDumpColorBuffers.GetValue())
+		WriteColorBuffers();
 }
 
 void GLGSRender::Flip()

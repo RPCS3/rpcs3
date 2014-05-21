@@ -827,11 +827,11 @@ private:
 	virtual void Close();
 	bool LoadProgram();
 	void WriteDepthBuffer();
+	void WriteColorBuffers();
 	void WriteColourBufferA();
 	void WriteColourBufferB();
 	void WriteColourBufferC();
 	void WriteColourBufferD();
-	void WriteBuffers();
 
 	void DrawObjects();
 
