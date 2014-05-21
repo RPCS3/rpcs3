@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3", "rpcs3\rpcs3.vcxproj", "{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -131,7 +131,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "stc", "wxWidgets\build\msw\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxscintilla", "wxWidgets\build\msw\wx_vc10_wxscintilla.vcxproj", "{74827EBD-93DC-5110-BA95-3F2AB029B6B0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjit", "asmjit.vcxproj", "{AC40FF01-426E-4838-A317-66354CEFAE88}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjitsrc\asmjit", "asmjitsrc\asmjit.vcxproj", "{AC40FF01-426E-4838-A317-66354CEFAE88}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "asmjit", "asmjit", "{E2A982F2-4B1A-48B1-8D77-A17A589C58D7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -456,5 +458,6 @@ Global
 		{87B42A9C-3F5C-53D7-9017-2B1CAE39457D} = {5812E712-6213-4372-B095-9EB9BAA1F2DF}
 		{23E1C437-A951-5943-8639-A17F3CF2E606} = {5812E712-6213-4372-B095-9EB9BAA1F2DF}
 		{74827EBD-93DC-5110-BA95-3F2AB029B6B0} = {5812E712-6213-4372-B095-9EB9BAA1F2DF}
+		{AC40FF01-426E-4838-A317-66354CEFAE88} = {E2A982F2-4B1A-48B1-8D77-A17A589C58D7}
 	EndGlobalSection
 EndGlobal

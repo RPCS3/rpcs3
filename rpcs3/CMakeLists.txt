@@ -69,7 +69,7 @@ ${OPENAL_INCLUDE_DIR}
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
+"${RPCS3_SRC_DIR}/../asmjitsrc/asmjit/src/asmjit"
 )
 
 link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
@@ -94,7 +94,7 @@ RPCS3_SRC
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjit/") #hack because the asmjit cmake file force fno exceptions
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjitsrc/asmjit/") #hack because the asmjit cmake file force fno exceptions
 target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 
 #set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
