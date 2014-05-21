@@ -6,5 +6,5 @@
 	path = ffmpeg
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
 [submodule "asmjit"]
-	path = asmjitsrc/asmjit
+	path = asmjit
 	url = https://github.com/kobalicekp/asmjit

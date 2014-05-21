@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug - MemLeak|Win32">
@@ -95,7 +95,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86\Include;.\OpenAL\include;$(IncludePath);..\asmjitsrc\asmjit\src\asmjit</IncludePath>
+    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)-$(PlatformShortName)-dbg</TargetName>
@@ -107,7 +107,7 @@
     <TargetName>$(ProjectName)-$(PlatformShortName)-dbg</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjitsrc\asmjit\src\asmjit</IncludePath>
+    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)-$(PlatformShortName)-dbg</TargetName>
@@ -120,7 +120,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86\Include;.\OpenAL\include;$(IncludePath);..\asmjitsrc\asmjit\src\asmjit</IncludePath>
+    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -129,7 +129,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjitsrc\asmjit\src\asmjit</IncludePath>
+    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
