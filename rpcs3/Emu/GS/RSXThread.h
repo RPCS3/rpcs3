@@ -166,7 +166,6 @@ public:
 	bool m_set_blend;
 	bool m_set_depth_bounds_test;
 	bool m_depth_test_enable;
-	bool m_set_logic_op;
 	bool m_set_cull_face_enable;
 	bool m_set_dither;
 	bool m_set_stencil_test;
@@ -197,6 +196,9 @@ public:
 	u32 m_front_polygon_mode;
 	bool m_set_back_polygon_mode;
 	u32 m_back_polygon_mode;
+	
+	bool m_set_logic_op;
+	u32 m_logic_op;
 	
 	u32 m_clear_surface_mask;
 	u32 m_clear_surface_z;

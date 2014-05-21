@@ -762,6 +762,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_set_logic_op = ARGS(0) ? true : false;
 	break;
 
+	case NV4097_SET_LOGIC_OP:
+		m_logic_op = ARGS(0);
+	break;
+	
 	case NV4097_SET_CULL_FACE_ENABLE:
 		m_set_cull_face_enable = ARGS(0) ? true : false;
 	break;
