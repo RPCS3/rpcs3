@@ -1139,6 +1139,28 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
+	// Fast path for non-MRT using glBlitFramebuffer
+	// TODO: check for MRT samples 
+	if (m_fbo.IsCreated() && (m_surface_colour_target == CELL_GCM_SURFACE_TARGET_0 || m_surface_colour_target == CELL_GCM_SURFACE_TARGET_1))
+	{
+		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+		// Renderbuffer is upside turn , swapped srcY0 and srcY1
+		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		m_fbo.Bind();
+
+		for (uint i = 0; i<m_post_draw_objs.size(); ++i)
+		{
+			m_post_draw_objs[i].Draw();
+		}
+
+		m_frame->Flip(m_context);
+
+		m_fbo.Bind();
+
+		return;
+	}
+
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
 		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
@@ -1227,24 +1249,6 @@ void GLGSRender::Flip()
 			glVertex2i(0, 1);
 		glEnd();
 	}
-
-	/*GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-	GLfbo::Blit(
-		m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-		m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-		GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);*/
-	if(m_fbo.IsCreated())
-		m_fbo.Bind();
-
-	for(uint i=0; i<m_post_draw_objs.size(); ++i)
-	{
-		m_post_draw_objs[i].Draw();
-	}
-
-	m_frame->Flip(m_context);
-
-	if(m_fbo.IsCreated())
-		m_fbo.Bind();
 
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
