@@ -2084,9 +2084,10 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void SC(u32 sc_code)
 	{
@@ -2108,8 +2109,9 @@ private:
 	}
 	void B(s32 ll, u32 aa, u32 lk)
 	{
+		const u64 nextLR = CPU.PC + 4;
 		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
-		if(lk) CPU.LR = CPU.PC + 4;
+		if(lk) CPU.LR = nextLR;
 	}
 	void MCRF(u32 crfd, u32 crfs)
 	{
@@ -2119,9 +2121,10 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, CPU.LR), true);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
 	{
@@ -2171,9 +2174,10 @@ private:
 	{
 		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, CPU.CTR), true);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}	
 	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
