@@ -2820,7 +2820,6 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
-		CPU.XER.CA = CPU.IsCarry(RA, RB);
 		if(oe) UNK("addo");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
