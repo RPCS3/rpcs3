@@ -322,20 +322,28 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
 	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get);
-	t_addr->SetValue(wxString::Format("%08x", m_addr));
-	UpdateInformation();
-	event.Skip();
+	u64 realAddr;
+	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
+		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
+		t_addr->SetValue(wxString::Format("%08x", m_addr));
+		UpdateInformation();
+		event.Skip();
+	}
+	// TODO: We should probably throw something? 
 }
 
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
 	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put);
-	t_addr->SetValue(wxString::Format("%08x", m_addr));
-	UpdateInformation();
-	event.Skip();
+	u64 realAddr;
+	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
+		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
+		t_addr->SetValue(wxString::Format("%08x", m_addr));
+		UpdateInformation();
+		event.Skip();
+	}
+	// TODO: We should probably throw something? 
 }
 
 void RSXDebugger::UpdateInformation()

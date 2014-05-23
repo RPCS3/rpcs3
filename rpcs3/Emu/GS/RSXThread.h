@@ -166,7 +166,6 @@ public:
 	bool m_set_blend;
 	bool m_set_depth_bounds_test;
 	bool m_depth_test_enable;
-	bool m_set_logic_op;
 	bool m_set_cull_face_enable;
 	bool m_set_dither;
 	bool m_set_stencil_test;
@@ -175,6 +174,11 @@ public:
 	bool m_set_poly_offset_fill;
 	bool m_set_poly_offset_line;
 	bool m_set_poly_offset_point;
+
+	bool m_set_poly_offset_scale_factor;
+	u32 m_poly_offset_scale_factor;
+	bool m_set_poly_offset_bias;
+	u32 m_poly_offset_bias;
 
 	bool m_set_restart_index;
 	u32 m_restart_index;
@@ -195,7 +199,12 @@ public:
 
 	bool m_set_front_polygon_mode;
 	u32 m_front_polygon_mode;
-
+	bool m_set_back_polygon_mode;
+	u32 m_back_polygon_mode;
+	
+	bool m_set_logic_op;
+	u32 m_logic_op;
+	
 	u32 m_clear_surface_mask;
 	u32 m_clear_surface_z;
 	u8 m_clear_surface_s;
@@ -380,6 +389,7 @@ public:
 
 	u32 m_surface_colour_target;
 
+	bool m_set_front_face;
 	u32 m_front_face;
 
 	u8 m_begin_end;
@@ -424,10 +434,16 @@ protected:
 		m_clear_z = 0xffffff;
 		m_clear_s = 0;
 
+		m_poly_offset_scale_factor = 0;
+		m_poly_offset_bias = 0;
+
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
 
+		m_front_polygon_mode = 0x1B02; // GL_FILL
+		m_back_polygon_mode = 0x1B02; // GL_FILL
+		
 		m_point_x = 0;
 		m_point_y = 0;
 
@@ -455,6 +471,7 @@ protected:
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;
+		m_set_back_polygon_mode = false;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
 		m_set_stencil_mask = false;
@@ -492,6 +509,8 @@ protected:
 		m_set_poly_offset_fill = false;
 		m_set_poly_offset_line = false;
 		m_set_poly_offset_point = false;
+		m_set_poly_offset_scale_factor = false;
+		m_set_poly_offset_bias = false;
 		m_set_restart_index = false;
 
 		m_clear_surface_mask = 0;

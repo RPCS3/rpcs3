@@ -60,9 +60,17 @@ int cellUserInfoGetList(mem32_t listNum, mem_ptr_t<CellUserInfoUserList> listBuf
 	cellUserInfo.Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
 		listNum.GetAddr(), listBuf.GetAddr(), currentUserId.GetAddr());
 
-	listNum = 1;
-	listBuf->userId[0] = 1;
-	currentUserId = 1;
+	// If only listNum is NULL, an should will be returned
+	if (listBuf.IsGood() && !listNum.IsGood())
+		return CELL_USERINFO_ERROR_PARAM;
+	if (listNum.IsGood())
+		listNum = 1;
+	if (listBuf.IsGood())
+		listBuf->userId[0] = 1;
+
+	if (currentUserId.IsGood())
+		currentUserId = 1;
+	
 	return CELL_OK;
 }
 

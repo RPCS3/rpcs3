@@ -75,13 +75,13 @@ int cellPadClearBuf(u32 port_no)
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
 
-	//It seems the system is supposed keeps track of previous values, and reports paddata with len 0 if 
-	//nothing has changed.
+	//Set 'm_buffer_cleared' to force a resend of everything
+	//might as well also reset everything in our pad 'buffer' to nothing as well
 
-	//We can at least reset the pad back to its default values for now
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	Pad& pad = pads[port_no];
 
+	pad.m_buffer_cleared = true;
 	pad.m_analog_left_x = pad.m_analog_left_y = pad.m_analog_right_x = pad.m_analog_right_y = 128;
 
 	pad.m_digital_1 = pad.m_digital_2 = 0;
@@ -110,10 +110,14 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	CellPadData data;
 	memset(&data, 0, sizeof(CellPadData));
 
+	u16 d1Initial, d2Initial; 
+	d1Initial = pad.m_digital_1;
+	d2Initial = pad.m_digital_2;
+	bool btnChanged = false;
 	for(Button& button : pad.m_buttons)
 	{
-		//using an if/else here, not doing switch in switch
-		//plus side is this gives us the ability to check if anything changed eventually
+		//here we check btns, and set pad accordingly, 
+		//if something changed, set btnChanged
 
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
@@ -122,10 +126,22 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 
 			switch (button.m_outKeyCode)
 			{
-			case CELL_PAD_CTRL_LEFT: pad.m_press_left = button.m_value; break;
-			case CELL_PAD_CTRL_DOWN: pad.m_press_down = button.m_value; break;
-			case CELL_PAD_CTRL_RIGHT: pad.m_press_right = button.m_value; break;
-			case CELL_PAD_CTRL_UP: pad.m_press_up = button.m_value; break;
+			case CELL_PAD_CTRL_LEFT: 
+				if (pad.m_press_left != button.m_value) btnChanged = true;
+				pad.m_press_left = button.m_value;
+				break;
+			case CELL_PAD_CTRL_DOWN: 
+				if (pad.m_press_down != button.m_value) btnChanged = true;
+				pad.m_press_down = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_RIGHT: 
+				if (pad.m_press_right != button.m_value) btnChanged = true;
+				pad.m_press_right = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_UP: 
+				if (pad.m_press_up != button.m_value) btnChanged = true;
+				pad.m_press_up = button.m_value; 
+				break;
 			//These arent pressure btns
 			case CELL_PAD_CTRL_R3:
 			case CELL_PAD_CTRL_L3:
@@ -141,14 +157,38 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 
 			switch (button.m_outKeyCode)
 			{
-			case CELL_PAD_CTRL_SQUARE: pad.m_press_square = button.m_value; break;
-			case CELL_PAD_CTRL_CROSS: pad.m_press_cross = button.m_value; break;
-			case CELL_PAD_CTRL_CIRCLE: pad.m_press_circle = button.m_value; break;
-			case CELL_PAD_CTRL_TRIANGLE: pad.m_press_triangle = button.m_value; break;
-			case CELL_PAD_CTRL_R1: pad.m_press_R1 = button.m_value; break;
-			case CELL_PAD_CTRL_L1: pad.m_press_L1 = button.m_value; break;
-			case CELL_PAD_CTRL_R2: pad.m_press_R2 = button.m_value; break;
-			case CELL_PAD_CTRL_L2: pad.m_press_L2 = button.m_value; break;
+			case CELL_PAD_CTRL_SQUARE:
+				if (pad.m_press_square != button.m_value) btnChanged = true;
+				pad.m_press_square = button.m_value;
+				break;
+			case CELL_PAD_CTRL_CROSS:
+				if (pad.m_press_cross != button.m_value) btnChanged = true;
+				pad.m_press_cross = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_CIRCLE: 
+				if (pad.m_press_circle != button.m_value) btnChanged = true;
+				pad.m_press_circle = button.m_value;
+				break;
+			case CELL_PAD_CTRL_TRIANGLE:
+				if (pad.m_press_triangle != button.m_value) btnChanged = true;
+				pad.m_press_triangle = button.m_value;
+				break;
+			case CELL_PAD_CTRL_R1: 
+				if (pad.m_press_R1 != button.m_value) btnChanged = true;
+				pad.m_press_R1 = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_L1: 
+				if (pad.m_press_L1 != button.m_value) btnChanged = true;
+				pad.m_press_L1 = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_R2: 
+				if (pad.m_press_R2 != button.m_value) btnChanged = true;
+				pad.m_press_R2 = button.m_value; 
+				break;
+			case CELL_PAD_CTRL_L2: 
+				if (pad.m_press_L2 != button.m_value) btnChanged = true;
+				pad.m_press_L2 = button.m_value; 
+				break;
 			default: break;
 			}
 		}
@@ -165,15 +205,44 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	{
 		switch (stick.m_offset)
 		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: pad.m_analog_left_x = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: pad.m_analog_left_y = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: pad.m_analog_right_x = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: pad.m_analog_right_y = stick.m_value; break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: 
+			if (pad.m_analog_left_x != stick.m_value) btnChanged = true;
+			pad.m_analog_left_x = stick.m_value; 
+			break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: 
+			if (pad.m_analog_left_y != stick.m_value) btnChanged = true;
+			pad.m_analog_left_y = stick.m_value; 
+			break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: 
+			if (pad.m_analog_right_x != stick.m_value) btnChanged = true;
+			pad.m_analog_right_x = stick.m_value; 
+			break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: 
+			if (pad.m_analog_right_y != stick.m_value) btnChanged = true;
+			pad.m_analog_right_y = stick.m_value; 
+			break;
 		default: break;
 		}
 	}
-	
-	data.len = pad.m_buttons.size();
+	if (d1Initial != pad.m_digital_1 || d2Initial != pad.m_digital_2)
+	{
+		btnChanged = true;
+	}
+
+	//not sure if this should officially change with capabilities/portsettings :(
+	data.len = CELL_PAD_MAX_CODES;
+
+	//report len 0 if nothing changed and if we havent recently cleared buffer
+	if (pad.m_buffer_cleared)
+	{
+		pad.m_buffer_cleared = false;
+	}
+	else if (!btnChanged)
+	{
+		data.len = 0;
+	}
+
+	//lets still send new data anyway, not sure whats expected still
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
 	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
 	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = pad.m_analog_right_x;
@@ -353,9 +422,9 @@ int cellPadInfoSensorMode(u32 port_no)
 
 int cellPadSetPressMode(u32 port_no, u32 mode)
 {
-	sys_io.Log("cellPadSetPressMode(port_no=%d)", port_no);
+	sys_io.Log("cellPadSetPressMode(port_no=%u, mode=%u)", port_no, mode);
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if (mode != 0 || mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
@@ -372,9 +441,9 @@ int cellPadSetPressMode(u32 port_no, u32 mode)
 
 int cellPadSetSensorMode(u32 port_no, u32 mode)
 {
-	sys_io.Log("cellPadSetPressMode(port_no=%d)", port_no);
+	sys_io.Log("cellPadSetSensorMode(port_no=%u, mode=%u)", port_no, mode);
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if (mode != 0 || mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;

@@ -126,6 +126,7 @@ struct AnalogStick
 
 struct Pad
 {
+	bool m_buffer_cleared;
 	u32 m_port_status;
 	u32 m_port_setting;
 	u32 m_device_capability;
@@ -165,7 +166,8 @@ struct Pad
 	u16 m_sensor_g;
 
 	Pad(u32 port_status, u32 port_setting, u32 device_capability, u32 device_type)
-		: m_port_status(port_status)
+		: m_buffer_cleared(true)
+		, m_port_status(port_status)
 		, m_port_setting(port_setting)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
