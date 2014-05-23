@@ -3291,16 +3291,18 @@ private:
 	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
-		//CPU.XER.CA = ((s64)CPU.GPR[ra] < 0); // ???
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
 	void ICBI(u32 ra, u32 rs)
 	{
 		// Clear jit for the specified block?  Nothing to do in the interpreter.
 	}
-	void DCBZ(u32 ra, u32 rs)
+	void DCBZ(u32 ra, u32 rb)
 	{
-		//UNK("dcbz", false);
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		u8 *const cache_line = Memory.GetMemFromAddr(addr & ~127);
+		if (cache_line)
+			memset(cache_line, 0, 128);
 		_mm_mfence();
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
