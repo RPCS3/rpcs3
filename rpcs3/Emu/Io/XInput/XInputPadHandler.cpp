@@ -159,9 +159,9 @@ DWORD XInputPadHandler::ThreadProcedure()
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_value = state.Gamepad.bRightTrigger;
 
 				pad.m_sticks[0].m_value = ConvertAxis(state.Gamepad.sThumbLX);
-				pad.m_sticks[1].m_value = ConvertAxis(state.Gamepad.sThumbLY);
+				pad.m_sticks[1].m_value = ConvertAxis(-state.Gamepad.sThumbLY);
 				pad.m_sticks[2].m_value = ConvertAxis(state.Gamepad.sThumbRX);
-				pad.m_sticks[3].m_value = ConvertAxis(state.Gamepad.sThumbRY);
+				pad.m_sticks[3].m_value = ConvertAxis(-state.Gamepad.sThumbRY);
 				break;
 			}
 		}
