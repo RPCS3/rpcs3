@@ -9,7 +9,7 @@
 # Compiled Static libraries
 *.lai
 *.la
-*.a
+# *.a
 *.opensdf
 *.sdf
 *.suo
