@@ -333,11 +333,11 @@ public:
 		return true;
 	}
 
-	bool CopyFromReal(u32 to, void* real, u32 count) // (4K pages) copy from real to virtual memory
+	bool CopyFromReal(u32 to, const void* real, u32 count) // (4K pages) copy from real to virtual memory
 	{
 		if (!count) return true;
 
-		u8* from = (u8*)real;
+		const u8* from = (const u8*)real;
 
 		if (u32 frag = to & 4095)
 		{
@@ -792,6 +792,12 @@ public:
 	{
 		*this = right;
 		this->m_addr += sizeof(T);
+		return this->m_addr;
+	}
+
+	u32 AppendRawBytes(const u8 * bytes, size_t count) {
+		Memory.CopyFromReal(this->m_addr, bytes, count);
+		this->m_addr += count;
 		return this->m_addr;
 	}
 
