@@ -350,6 +350,7 @@
     <ClCompile Include="Emu\Io\Keyboard.cpp" />
     <ClCompile Include="Emu\Io\Mouse.cpp" />
     <ClCompile Include="Emu\Io\Pad.cpp" />
+    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
@@ -544,6 +545,7 @@
     <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h" />
     <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h" />
     <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h" />
+    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />

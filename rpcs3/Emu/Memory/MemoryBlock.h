@@ -281,8 +281,9 @@ public:
 	virtual bool Write64(const u64 addr, const u64 value);
 	virtual bool Write128(const u64 addr, const u128 value);
 
-	// return the real address given a mapped address, if not mapped return 0
-	u64 getRealAddr(u64 addr);
+	// try to get the real address given a mapped address
+	// return true for success
+	bool getRealAddr(u64 addr, u64& result);
 
 	// return the mapped address given a real address, if not mapped return 0
 	u64 getMappedAddress(u64 realAddress);

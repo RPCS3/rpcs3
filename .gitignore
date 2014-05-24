@@ -45,6 +45,10 @@
 /bin/*.exp
 rpcs3/git-version.h
 
+# Visual Studio Profiler Files
+*.vspx
+*.psess
+
 # Copyrighted files
 /bin/data/
 /bin/dev_flash/data/font

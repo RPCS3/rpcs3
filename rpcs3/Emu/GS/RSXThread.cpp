@@ -11,7 +11,10 @@ u32 GetAddress(u32 offset, u8 location)
 	switch(location)
 	{
 	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset);
+	case CELL_GCM_LOCATION_MAIN: 
+		u64 realAddr;
+		Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset, realAddr); // TODO: Error Check?
+		return realAddr;
 	}
 
 	ConLog.Error("GetAddress(offset=0x%x, location=0x%x)", location);
@@ -762,6 +765,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_set_logic_op = ARGS(0) ? true : false;
 	break;
 
+	case NV4097_SET_LOGIC_OP:
+		m_logic_op = ARGS(0);
+	break;
+	
 	case NV4097_SET_CULL_FACE_ENABLE:
 		m_set_cull_face_enable = ARGS(0) ? true : false;
 	break;

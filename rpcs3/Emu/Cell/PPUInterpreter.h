@@ -2084,9 +2084,10 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void SC(u32 sc_code)
 	{
@@ -2108,8 +2109,9 @@ private:
 	}
 	void B(s32 ll, u32 aa, u32 lk)
 	{
+		const u64 nextLR = CPU.PC + 4;
 		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
-		if(lk) CPU.LR = CPU.PC + 4;
+		if(lk) CPU.LR = nextLR;
 	}
 	void MCRF(u32 crfd, u32 crfs)
 	{
@@ -2119,9 +2121,10 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, CPU.LR), true);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
 	{
@@ -2171,9 +2174,10 @@ private:
 	{
 		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
 		{
+			const u64 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, CPU.CTR), true);
+			if(lk) CPU.LR = nextLR;
 		}
-		if(lk) CPU.LR = CPU.PC + 4;
 	}	
 	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
@@ -2816,7 +2820,6 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
-		CPU.XER.CA = CPU.IsCarry(RA, RB);
 		if(oe) UNK("addo");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -3288,16 +3291,18 @@ private:
 	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
-		//CPU.XER.CA = ((s64)CPU.GPR[ra] < 0); // ???
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
 	void ICBI(u32 ra, u32 rs)
 	{
 		// Clear jit for the specified block?  Nothing to do in the interpreter.
 	}
-	void DCBZ(u32 ra, u32 rs)
+	void DCBZ(u32 ra, u32 rb)
 	{
-		//UNK("dcbz", false);
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		u8 *const cache_line = Memory.GetMemFromAddr(addr & ~127);
+		if (cache_line)
+			memset(cache_line, 0, 128);
 		_mm_mfence();
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)

@@ -581,7 +581,7 @@ void GLGSRender::WriteColourBufferD()
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
-void GLGSRender::WriteBuffers()
+void GLGSRender::WriteColorBuffers()
 {
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
@@ -641,7 +641,6 @@ void GLGSRender::OnInitThread()
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_SCISSOR_TEST);
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
@@ -773,8 +772,10 @@ void GLGSRender::ExecCMD()
 	}
 		
 	m_fbo.Bind();
+
 	if(Ini.GSDumpDepthBuffer.GetValue())
 		WriteDepthBuffer();
+
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
 	switch(m_surface_colour_target)
@@ -813,18 +814,10 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glColorMask");
 	}
 
-	//glFrontFace(m_front_face);
-
 	if(m_set_viewport_horizontal && m_set_viewport_vertical)
 	{
 		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		//checkForGlError("glViewport");
-	}
-
-	if(m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
 	}
 
 	if(m_clear_surface_mask)
@@ -859,18 +852,6 @@ void GLGSRender::ExecCMD()
 		glClear(f);
 	}
 
-	if(m_set_front_polygon_mode)
-	{
-		glPolygonMode(GL_FRONT, m_front_polygon_mode);
-		checkForGlError("glPolygonMode(Front)");
-	}
-
-	if (m_set_back_polygon_mode)
-	{
-		glPolygonMode(GL_BACK, m_back_polygon_mode);
-		checkForGlError("glPolygonMode(Back)");
-	}
-	
 	Enable(m_depth_test_enable, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
@@ -879,12 +860,13 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_cull_face_enable, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
+	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); //Requires OpenGL 3.1+
+	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); // Requires OpenGL 3.1+
 
 	if(m_set_clip_plane)
 	{
@@ -899,6 +881,37 @@ void GLGSRender::ExecCMD()
 	}
 
 	checkForGlError("glEnable");
+
+
+	if (m_set_front_polygon_mode)
+	{
+		glPolygonMode(GL_FRONT, m_front_polygon_mode);
+		checkForGlError("glPolygonMode(Front)");
+	}
+
+	if (m_set_back_polygon_mode)
+	{
+		glPolygonMode(GL_BACK, m_back_polygon_mode);
+		checkForGlError("glPolygonMode(Back)");
+	}
+
+	if (m_set_poly_offset_scale_factor && m_set_poly_offset_bias)
+	{
+		glPolygonOffset(m_set_poly_offset_scale_factor, m_set_poly_offset_bias);
+		checkForGlError("glPolygonOffset");
+	}
+
+	if (m_set_logic_op)
+	{
+		glLogicOp(m_logic_op);
+		checkForGlError("glLogicOp");
+	}
+
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
 
 	if(m_set_two_sided_stencil_test_enable)
 	{
@@ -1022,6 +1035,16 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glCullFace");
 	}
 
+	if (m_set_front_face)
+	{
+		// Sanity check . Disgaea 3 return 0x1d0 here and cause openGL 0x0500
+		if (m_front_face == GL_CW || m_front_face == GL_CCW)
+		{
+			glFrontFace(m_front_face);
+			checkForGlError("glFrontFace");
+		}
+	}
+
 	if(m_set_alpha_func && m_set_alpha_ref)
 	{
 		glAlphaFunc(m_alpha_func, m_alpha_ref/255.0f);
@@ -1045,7 +1068,7 @@ void GLGSRender::ExecCMD()
 	if(m_set_restart_index)
 	{
 		ConLog.Warning("m_set_restart_index requires glPrimitiveRestartIndex()");
-		//glPrimitiveRestartIndex(m_restart_index); //Requires OpenGL 3.1+
+		//glPrimitiveRestartIndex(m_restart_index); // Requires OpenGL 3.1+
 		//checkForGlError("glPrimitiveRestartIndex");
 	}
 
@@ -1110,12 +1133,34 @@ void GLGSRender::ExecCMD()
 		DisableVertexData();
 	}
 
-	if(Ini.GSDumpColorBuffers.GetValue())
-		WriteBuffers();
+	if (Ini.GSDumpColorBuffers.GetValue())
+		WriteColorBuffers();
 }
 
 void GLGSRender::Flip()
 {
+	// Fast path for non-MRT using glBlitFramebuffer
+	// TODO: check for MRT samples 
+	if (m_fbo.IsCreated() && (m_surface_colour_target == CELL_GCM_SURFACE_TARGET_0 || m_surface_colour_target == CELL_GCM_SURFACE_TARGET_1))
+	{
+		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+		// Renderbuffer is upside turn , swapped srcY0 and srcY1
+		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		m_fbo.Bind();
+
+		for (uint i = 0; i<m_post_draw_objs.size(); ++i)
+		{
+			m_post_draw_objs[i].Draw();
+		}
+
+		m_frame->Flip(m_context);
+
+		m_fbo.Bind();
+
+		return;
+	}
+
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
 		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
@@ -1204,24 +1249,6 @@ void GLGSRender::Flip()
 			glVertex2i(0, 1);
 		glEnd();
 	}
-
-	/*GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-	GLfbo::Blit(
-		m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-		m_surface_clip_x, m_surface_clip_y, m_surface_clip_x + m_surface_clip_w, m_surface_clip_y + m_surface_clip_h,
-		GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);*/
-	if(m_fbo.IsCreated())
-		m_fbo.Bind();
-
-	for(uint i=0; i<m_post_draw_objs.size(); ++i)
-	{
-		m_post_draw_objs[i].Draw();
-	}
-
-	m_frame->Flip(m_context);
-
-	if(m_fbo.IsCreated())
-		m_fbo.Bind();
 
 	if(m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
