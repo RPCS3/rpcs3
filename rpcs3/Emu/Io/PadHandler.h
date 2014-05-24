@@ -220,7 +220,7 @@ public:
 	virtual ~PadHandlerBase() = default;
 
 	//Set value to set pressure/axi to certain level, otherwise 0/255 default
-	void Key(const u32 code, bool pressed, u16 value=256)
+	void Key(const u32 code, bool pressed, u16 value=255)
 	{
 		for(Pad& pad : m_pads)
 		{
