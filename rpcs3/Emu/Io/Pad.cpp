@@ -2,6 +2,9 @@
 #include "Pad.h"
 #include "Null/NullPadHandler.h"
 #include "Windows/WindowsPadHandler.h"
+#if defined(_WIN32)
+#include "XInput/XInputPadHandler.h"
+#endif
 
 PadManager::PadManager()
 	: m_pad_handler(nullptr)
@@ -24,6 +27,12 @@ void PadManager::Init(const u32 max_connect)
 	case 1:
 		m_pad_handler.reset(new WindowsPadHandler());
 		break;
+
+#if defined(_WIN32)
+	case 2:
+		m_pad_handler.reset(new XInputPadHandler());
+		break;
+#endif
 
 	default:
 	case 0:

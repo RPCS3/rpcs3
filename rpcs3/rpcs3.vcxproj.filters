@@ -71,6 +71,9 @@
     <Filter Include="Emu\Io\Windows">
       <UniqueIdentifier>{899523fa-c26a-44ea-b272-73c4585e3821}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Io\XInput">
+      <UniqueIdentifier>{a77ab520-4399-4c95-a7ee-985c9a5ad694}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -504,6 +507,9 @@
     </ClCompile>
     <ClCompile Include="Crypto\lz.cpp">
       <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
+      <Filter>Emu\Io\XInput</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -989,6 +995,9 @@
     </ClInclude>
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
+      <Filter>Emu\Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

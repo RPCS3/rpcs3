@@ -401,6 +401,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
+#if defined (_WIN32)
+	cbox_pad_handler->Append("XInput");
+#endif
 	//cbox_pad_handler->Append("DirectInput");
 
 	cbox_keyboard_handler->Append("Null");
