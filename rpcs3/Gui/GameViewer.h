@@ -140,8 +140,13 @@ public:
 
 			for(u32 i=0; i<col->data.size(); ++i)
 			{
-				if(list->GetItemCount() <= (int)i) list->InsertItem(i, wxEmptyString);
+				if (list->GetItemCount() <= (int)i)
+				{
+					list->InsertItem(i, wxEmptyString);
+					list->SetItemData(i, i);
+				}
 				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
+
 			}			
 		}
 	}
@@ -216,14 +221,32 @@ public:
 	}
 };
 
+class ListSortInfo
+{
+public:
+	ListSortInfo()
+	{
+		SortAscending = false;
+		Column = -1;
+	}
+
+	bool SortAscending;
+	int Column;
+	class GameViewer *GameViewerCtrl;
+
+};
+
 class GameViewer : public wxListView
 {
 	std::string m_path;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
-
+	
 public:
+
+	ListSortInfo SortInfo;
+
 	GameViewer(wxWindow* parent);
 	~GameViewer();
 
@@ -237,7 +260,7 @@ public:
 	void LoadSettings();
 
 	void Refresh();
-
 private:
 	virtual void DClick(wxListEvent& event);
+	void OnColClick(wxListEvent& event);
 };
