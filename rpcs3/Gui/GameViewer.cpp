@@ -26,14 +26,14 @@ void GameViewer::DoResize(wxSize size)
 	SetSize(size);
 }
 
-int wxCALLBACK ListItemCompare(long item1, long item2, long sortinfo) 
+int wxCALLBACK ListItemCompare(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortinfo)
 {
 	ListSortInfo *SortInfo = (ListSortInfo *)sortinfo;
 	int Column = SortInfo->Column;
 	GameViewer *pGameViewer = SortInfo->GameViewerCtrl; 
 	bool SortAscending = SortInfo->SortAscending; 
-	long index1 = pGameViewer->FindItem(0, item1);  
-	long index2 = pGameViewer->FindItem(0, item2);  
+	long index1 = pGameViewer->FindItem(-1, item1);  
+	long index2 = pGameViewer->FindItem(-1, item2);  
 	wxString string1 = pGameViewer->GetItemText(index1, Column); 
 	wxString string2 = pGameViewer->GetItemText(index2, Column); 
 
@@ -65,6 +65,7 @@ void GameViewer::OnColClick(wxListEvent& event)
 	SortInfo.Column = event.GetColumn();
 	SortInfo.GameViewerCtrl = this;  
 	SortItems(ListItemCompare, (long)&SortInfo);  
+
 }
 
 

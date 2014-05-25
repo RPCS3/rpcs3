@@ -140,8 +140,13 @@ public:
 
 			for(u32 i=0; i<col->data.size(); ++i)
 			{
-				if(list->GetItemCount() <= (int)i) list->InsertItem(i, wxEmptyString);
+				if (list->GetItemCount() <= (int)i)
+				{
+					list->InsertItem(i, wxEmptyString);
+					list->SetItemData(i, i);
+				}
 				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
+
 			}			
 		}
 	}
