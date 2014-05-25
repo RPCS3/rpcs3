@@ -216,6 +216,21 @@ public:
 	}
 };
 
+class ListSortInfo
+{
+public:
+	ListSortInfo()
+	{
+		SortAscending = false;
+		Column = -1;
+	}
+
+	bool SortAscending;
+	int Column;
+	class GameViewer *GameViewerCtrl;
+
+};
+
 class GameViewer : public wxListView
 {
 	std::string m_path;
@@ -223,7 +238,12 @@ class GameViewer : public wxListView
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
 
+	int n_lastItem;
+	
 public:
+
+	ListSortInfo SortInfo;
+
 	GameViewer(wxWindow* parent);
 	~GameViewer();
 
@@ -237,7 +257,7 @@ public:
 	void LoadSettings();
 
 	void Refresh();
-
 private:
 	virtual void DClick(wxListEvent& event);
+	void OnColClick(wxListEvent& event);
 };

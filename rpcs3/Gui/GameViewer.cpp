@@ -11,6 +11,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	m_path = "/dev_hdd0/game/";
 
 	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
+	Bind(wxEVT_LIST_COL_CLICK, &GameViewer::OnColClick, this);
 
 	Refresh();
 }
@@ -24,6 +25,48 @@ void GameViewer::DoResize(wxSize size)
 {
 	SetSize(size);
 }
+
+int wxCALLBACK ListItemCompare(long item1, long item2, long sortinfo) 
+{
+	ListSortInfo *SortInfo = (ListSortInfo *)sortinfo;
+	int Column = SortInfo->Column;
+	GameViewer *pGameViewer = SortInfo->GameViewerCtrl; 
+	bool SortAscending = SortInfo->SortAscending; 
+	long index1 = pGameViewer->FindItem(0, item1);  
+	long index2 = pGameViewer->FindItem(0, item2);  
+	wxString string1 = pGameViewer->GetItemText(index1, Column); 
+	wxString string2 = pGameViewer->GetItemText(index2, Column); 
+
+	if (string1.Cmp(string2) < 0)
+	{
+		return SortAscending ? -1 : 1;
+	}
+	else
+		if (string1.Cmp(string2) > 0)
+		{
+		return SortAscending ? 1 : -1;
+		}
+		else
+		{
+			return 0;
+		}
+}
+
+void GameViewer::OnColClick(wxListEvent& event)
+{
+	if (event.GetColumn() == SortInfo.Column)  
+	{
+		SortInfo.SortAscending = SortInfo.SortAscending ? FALSE : TRUE;
+	}
+	else 
+	{
+		SortInfo.SortAscending = TRUE;
+	}
+	SortInfo.Column = event.GetColumn();
+	SortInfo.GameViewerCtrl = this;  
+	SortItems(ListItemCompare, (long)&SortInfo);  
+}
+
 
 void GameViewer::LoadGames()
 {
