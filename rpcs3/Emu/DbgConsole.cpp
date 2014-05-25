@@ -6,7 +6,7 @@ BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
 END_EVENT_TABLE()
 
 DbgConsole::DbgConsole()
-	: FrameBase(nullptr, wxID_ANY, "DbgConsole", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
+	: FrameBase(nullptr, wxID_ANY, "Debug Console", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
 	, ThreadBase("DbgConsole thread")
 	, m_output(nullptr)
 {
