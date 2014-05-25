@@ -866,7 +866,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	//Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); // Requires OpenGL 3.1+
+	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); // Requires OpenGL 3.1+
 
 	if(m_set_clip_plane)
 	{
@@ -1067,9 +1067,8 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_restart_index)
 	{
-		ConLog.Warning("m_set_restart_index requires glPrimitiveRestartIndex()");
-		//glPrimitiveRestartIndex(m_restart_index); // Requires OpenGL 3.1+
-		//checkForGlError("glPrimitiveRestartIndex");
+		glPrimitiveRestartIndex(m_restart_index); // Requires OpenGL 3.1+
+		checkForGlError("glPrimitiveRestartIndex");
 	}
 
 	if(m_indexed_array.m_count && m_draw_array_count)
