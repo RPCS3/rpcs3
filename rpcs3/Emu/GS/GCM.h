@@ -71,6 +71,10 @@ enum
 	CELL_GCM_SURFACE_TARGET_MRT1    = 0x13,
 	CELL_GCM_SURFACE_TARGET_MRT2    = 0x17,
 	CELL_GCM_SURFACE_TARGET_MRT3    = 0x1f,
+
+	// Depth
+	CELL_GCM_SURFACE_Z16            = 1,
+	CELL_GCM_SURFACE_Z24S8          = 2,
 };
 
 // GCM Reports

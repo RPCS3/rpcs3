@@ -727,12 +727,12 @@ void GLGSRender::ExecCMD()
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
 		break;
 		
-		case 1:
+		case CELL_GCM_SURFACE_Z16:
 			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
 		break;
 
-		case 2:
+		case CELL_GCM_SURFACE_Z24S8:
 			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 		break;
