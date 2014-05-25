@@ -161,7 +161,8 @@ Ini::Ini()
 
 Ini::~Ini()
 {
-	safe_delete(m_Config);
+	// FIXME: Fix wxConfig deconstructor
+	// safe_delete(m_Config);
 }
 
 void Ini::Save(const wxString& key, int value)
