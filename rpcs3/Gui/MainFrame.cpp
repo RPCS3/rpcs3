@@ -379,6 +379,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -455,6 +456,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
+	chbox_hle_hide_debug_console->SetValue(Ini.HLEHideDebugConsole.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -522,6 +524,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_hle_hide_debug_console, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -566,6 +569,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
+		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
 
 		Ini.Save();
 	}

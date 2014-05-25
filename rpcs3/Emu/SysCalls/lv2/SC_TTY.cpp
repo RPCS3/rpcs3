@@ -15,7 +15,10 @@ int sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr)
 	if(ch > 15 || (s32)len <= 0) return CELL_EINVAL;
 	if(!Memory.IsGoodAddr(buf_addr)) return CELL_EFAULT;
 	
-	Emu.GetDbgCon().Write(ch, Memory.ReadString(buf_addr, len));
+	if (!Ini.HLEHideDebugConsole.GetValue())
+	{
+		Emu.GetDbgCon().Write(ch, Memory.ReadString(buf_addr, len));
+	}
 	
 	if(!Memory.IsGoodAddr(pwritelen_addr)) return CELL_EFAULT;
 

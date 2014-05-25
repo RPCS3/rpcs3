@@ -118,6 +118,7 @@ public:
 	IniEntry<u8> HLELogLvl;
 	IniEntry<u8> SysLanguage;
 	IniEntry<bool> SkipPamf;
+	IniEntry<bool> HLEHideDebugConsole;
 
 	IniEntry<int> PadHandlerLStickLeft;
 	IniEntry<int> PadHandlerLStickDown;
@@ -206,6 +207,7 @@ public:
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
 		HLELogLvl.Init("HLELogLvl", path);
+		HLEHideDebugConsole.Init("HLEHideDebugConsole", path);
 
 		path = DefPath + "/" + "System";
 		SysLanguage.Init("SysLanguage", path);
@@ -235,6 +237,7 @@ public:
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(0);
 		SysLanguage.Load(1);
+		HLEHideDebugConsole.Load(false);
 
 		PadHandlerLStickLeft.Load(314); //WXK_LEFT
 		PadHandlerLStickDown.Load(317); //WXK_DOWN
@@ -286,6 +289,7 @@ public:
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		SysLanguage.Save();
+		HLEHideDebugConsole.Save();
 
 		PadHandlerLStickLeft.Save();
 		PadHandlerLStickDown.Save();
