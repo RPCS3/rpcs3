@@ -483,6 +483,7 @@ void RSXDebugger::GetFlags()
 
 	LIST_FLAGS_ADD("Alpha test",        render.m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",             render.m_set_blend);
+	LIST_FLAGS_ADD("Scissor",	    render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
 	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face_enable);
 	LIST_FLAGS_ADD("Depth bounds test", render.m_set_depth_bounds_test);
 	LIST_FLAGS_ADD("Depth test",        render.m_depth_test_enable);
@@ -494,6 +495,7 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Poly offset line",  render.m_set_poly_offset_line);
 	LIST_FLAGS_ADD("Poly offset point", render.m_set_poly_offset_point);
 	LIST_FLAGS_ADD("Stencil test",      render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Primitive restart",  render.m_set_restart_index);
 
 #undef LIST_FLAGS_ADD
 }
