@@ -210,6 +210,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_NO_OPERATION:
+	{
+		ConLog.Warning("NV4097_NO_OPERATION");
+	}
 	break;
 
 	case NV406E_SET_REFERENCE:
@@ -218,11 +221,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*32)]
 	}
 	break;
 
@@ -295,6 +300,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL1 + (m_index*32)]
 	}
 	break;
 
@@ -310,25 +316,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_FILTER + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index * 32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEX_COORD_CONTROL, 4):
-		//TODO
+	{
+		ConLog.Warning("NV4097_SET_TEX_COORD_CONTROL");
+	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)]
 	}
 	break;
 
@@ -360,13 +372,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
-		if(ARGS(0)) ConLog.Warning("NV4097_SET_COLOR_MASK_MRT: %x", ARGS(0));
+		if(ARGS(0)) 
+			ConLog.Warning("NV4097_SET_COLOR_MASK_MRT: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_BLEND_ENABLE_MRT:
 	{
-		if(ARGS(0)) ConLog.Warning("NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
+		if(ARGS(0)) 
+			ConLog.Warning("NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
 	}
 	break;
 
@@ -673,6 +687,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK: %x", ARGS(0));
+
 		//VertexData[0].prog.attributeOutputMask = ARGS(0);
 		//FragmentData.prog.attributeInputMask = ARGS(0)/* & ~0x20*/;
 	}
@@ -732,10 +749,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VERTEX_ATTRIB_INPUT_MASK: %x", ARGS(0));
+
 		//VertexData[0].prog.attributeInputMask = ARGS(0);
+	}
 	break;
 
 	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_VERTEX_CACHE_FILE: %x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
@@ -896,14 +922,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_POINT_PARAMS_ENABLE:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_POINT_PARAMS_ENABLE");
+	{
+		if (ARGS(0))
+			ConLog.Error("NV4097_SET_POINT_PARAMS_ENABLE");
+	}
 	break;
 
 	case NV4097_SET_POINT_SPRITE_CONTROL:
-		if(ARGS(0) & 0x1)
-		{
+	{
+		if (ARGS(0) & 0x1)
 			ConLog.Error("NV4097_SET_POINT_SPRITE_CONTROL enable");
-		}
+	}
 	break;
 
 	case NV4097_SET_POLY_SMOOTH_ENABLE:
@@ -919,7 +948,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_BLEND_COLOR2:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_BLEND_COLOR2");
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_BLEND_COLOR2: 0x % x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_BLEND_EQUATION:
@@ -929,7 +961,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_REDUCE_DST_COLOR:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_REDUCE_DST_COLOR");
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_REDUCE_DST_COLOR: 0x % x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_DEPTH_MASK:
@@ -960,10 +995,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_INVALIDATE_VERTEX_FILE: break;
+	case NV4097_INVALIDATE_VERTEX_FILE:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_VERTEX_FILE: 0x%x", ARGS(0));
+	}
+	break;
 
 	case NV4097_SET_VIEWPORT_OFFSET:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VIEWPORT_OFFSET: %x", ARGS(0));
 		/*const u32 offset0 = ARGS(0);
 		const u32 offset1 = ARGS(1);
 		const u32 offset2 = ARGS(2);
@@ -1010,7 +1052,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV406E_SEMAPHORE_ACQUIRE:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV406E_SEMAPHORE_ACQUIRE: %x", ARGS(0));
 	}
 	break;
 
@@ -1020,7 +1063,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_INVALIDATE_L2:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_L2: %x", ARGS(0));
 	}
 	break;
 
@@ -1057,19 +1101,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_context_dma_z = ARGS(0);
 	}
 	break;
-	/*
-	case NV4097_SET_SURFACE_PITCH_A:
-	{
-		//TODO
-	}
-	break;
 
-	case NV4097_SET_SURFACE_PITCH_B:
-	{
-		//TODO
-	}
-	break;
-	*/
 	case NV4097_SET_SURFACE_PITCH_C:
 	{
 		if(count != 4)
@@ -1129,7 +1161,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_WINDOW_OFFSET:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_WINDOW_OFFSET: %x", ARGS(0));
 	}
 	break;
 
@@ -1141,7 +1174,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ANTI_ALIASING_CONTROL: %x", ARGS(0));
 	}
 	break;
 
@@ -1169,14 +1203,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZCULL_CONTROL0: %x", ARGS(0));
+
 		//m_set_depth_func = true;
 		//m_depth_func = ARGS(0) >> 4;
 	}
 	break;
-
+	
 	case NV4097_SET_ZCULL_CONTROL1:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZCULL_CONTROL1: %x", ARGS(0));
+
+		//m_set_depth_func = true;
+		//m_depth_func = ARGS(0) >> 4;
 	}
 	break;
 
@@ -1384,16 +1425,26 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_fog_param1 = (float&)a1;
 	}
 	break;
+
 	case NV4097_SET_VIEWPORT_SCALE:
 	{
-
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VIEWPORT_SCALE: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_ZMIN_MAX_CONTROL:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZMIN_MAX_CONTROL: %x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_WINDOW_CLIP_HORIZONTAL: %x", ARGS(0));
+	}
 	break;
 
 	case 0x000002c8:
@@ -1489,8 +1540,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_TRANSFORM_PROGRAM_START:
 	{
-		int a0 = ARGS(0);
-		if(a0) ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", a0);
+		if (ARGS(0)) 
+			ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", ARGS(0));
 	}
 	break;
 
