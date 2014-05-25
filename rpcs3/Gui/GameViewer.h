@@ -242,8 +242,6 @@ class GameViewer : public wxListView
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
-
-	int n_lastItem;
 	
 public:
 
