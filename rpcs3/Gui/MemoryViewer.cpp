@@ -191,9 +191,9 @@ void MemoryViewerPanel::ShowMemory()
 		t_mem_addr_str += wxString::Format("%08x ", addr);
 	}
 
-	for (int row = 0; row < m_rowcount; row++) 
+	for (u32 row = 0; row < m_rowcount; row++)
 	{
-		for (int col = 0; col < m_colcount; col++) 
+		for (u32 col = 0; col < m_colcount; col++)
 		{
 			u32 addr = m_addr + row * m_colcount + col;	
 

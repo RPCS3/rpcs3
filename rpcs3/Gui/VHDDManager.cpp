@@ -523,7 +523,7 @@ void VHDDManagerDialog::LoadPaths()
 {
 	IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
-	int count = 0;
+	size_t count = 0;
 	count = path_count.LoadValue(count);
 
 	for(size_t i=0; i<count; ++i)
