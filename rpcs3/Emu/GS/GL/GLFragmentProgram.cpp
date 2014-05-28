@@ -278,27 +278,26 @@ void GLFragmentDecompilerThread::Task()
 
 		case 0x10: AddCode("fract(" + GetSRC(src0) + ")"); break; // FRC
 		case 0x11: AddCode("floor(" + GetSRC(src0) + ")"); break; // FLR
-		//case 0x12: break; // KIL
-		//case 0x13: break; // PK4
-		//case 0x14: break; // UP4
+		case 0x12: AddCode("if (" + GetSRC(src0) + " < 0 ) exit()"); break; // KIL (kill fragment (if (A<0) exit())
+		//case 0x13: break; // PK4 (pack four signed 8-bit values)
+		//case 0x14: break; // UP4 (unpack four signed 8-bit values)
 		case 0x15: AddCode("dFdx(" + GetSRC(src0) + ")"); break; // DDX
 		case 0x16: AddCode("dFdy(" + GetSRC(src0) + ")"); break; // DDY
-		case 0x17: AddCode("texture(" + AddTex() + ", " + GetSRC(src0) + ".xy)"); break; //TEX
-		//case 0x18: break; // TXP
-		//case 0x19: break; // TXD
+		case 0x17: AddCode("texture(" + AddTex() + ", " + GetSRC(src0) + ".xy)"); break; // TEX (texture lookup)
+		//case 0x18: break; // TXP (projective texture lookup)
+		//case 0x19: break; // TXD (texture lookup w/partials)
 		case 0x1a: AddCode("1 / (" + GetSRC(src0) + ")"); break; // RCP
 		case 0x1b: AddCode("inversesqrt(" + GetSRC(src0) + ")"); break; // RSQ
 		case 0x1c: AddCode("exp2(" + GetSRC(src0) + ")"); break; // EX2
 		case 0x1d: AddCode("log2(" + GetSRC(src0) + ")"); break; // LG2
-		//case 0x1e: break; // LIT
-		//case 0x1f: break; // LRP
-
-		//case 0x20: break; // STR
-		//case 0x21: break; // SFL
+		//case 0x1e: break; // LIT (compute light coefficients)
+		case 0x1f: AddCode("(" + GetSRC(src0) + " * (" + GetSRC(src1) + " - " + GetSRC(src2) + ") +" + GetSRC(src2) + ")"); break; // LRP (linear interpolation)
+		//case 0x20: break; // STR (set on true)
+		//case 0x21: break; // SFL (set on false)
 		case 0x22: AddCode("cos(" + GetSRC(src0) + ")"); break; // COS
 		case 0x23: AddCode("sin(" + GetSRC(src0) + ")"); break; // SIN
-		//case 0x24: break; // PK2
-		//case 0x25: break; // UP2
+		//case 0x24: break; // PK2 (pack two 16-bit floats)
+		//case 0x25: break; // UP2 (unpack two 16-bit floats)
 		case 0x26: AddCode("pow(" + GetSRC(src0) + ", " + GetSRC(src1) +")"); break; // POW
 		//case 0x27: break; // PKB
 		//case 0x28: break; // UPB
@@ -326,7 +325,7 @@ void GLFragmentDecompilerThread::Task()
 
 		default:
 			ConLog.Error("Unknown opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
-			Emu.Pause();
+			//Emu.Pause();
 		break;
 		}
 
