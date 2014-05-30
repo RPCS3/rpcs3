@@ -146,50 +146,55 @@ public:
 	Callback m_flip_handler;
 
 public:
+	// Dither
+	bool m_set_dither;
+
+	// Color mask
 	bool m_set_color_mask;
 	bool m_color_mask_r;
 	bool m_color_mask_g;
 	bool m_color_mask_b;
 	bool m_color_mask_a;
 
+	// Clip 
 	bool m_set_clip;
 	float m_clip_min;
 	float m_clip_max;
 
+	// Depth test
+	bool m_set_depth_test;
 	bool m_set_depth_func;
 	int m_depth_func;
+	bool m_set_depth_mask;
+	u32 m_depth_mask;
+
+	// Depth bound test
+	bool m_set_depth_bounds_test;
 	bool m_set_depth_bounds;
 	float m_depth_bounds_min;
 	float m_depth_bounds_max;
 
-	bool m_set_alpha_test;
-	bool m_set_blend;
-	bool m_set_depth_bounds_test;
-	bool m_depth_test_enable;
-	bool m_set_cull_face_enable;
-	bool m_set_dither;
-	bool m_set_stencil_test;
-	bool m_set_line_smooth;
-	bool m_set_poly_smooth;
-	bool m_set_poly_offset_fill;
-	bool m_set_poly_offset_line;
-	bool m_set_poly_offset_point;
-
-	bool m_set_poly_offset_scale_factor;
-	u32 m_poly_offset_scale_factor;
-	bool m_set_poly_offset_bias;
-	u32 m_poly_offset_bias;
-
+	// Primitive restart 
 	bool m_set_restart_index;
 	u32 m_restart_index;
 
+	// Point 
+	bool m_set_point_size;
+	bool m_set_point_sprite_control;
+	u32	m_point_size;
+	u16 m_point_x;
+	u16 m_point_y;
+
+	// Line smooth
+	bool m_set_line_smooth;
+
+	// Viewport & scissor
 	bool m_set_viewport_horizontal;
 	bool m_set_viewport_vertical;
 	u16 m_viewport_x;
 	u16 m_viewport_y;
 	u16 m_viewport_w;
 	u16 m_viewport_h;
-
 	bool m_set_scissor_horizontal;
 	bool m_set_scissor_vertical;
 	u16 m_scissor_x;
@@ -197,14 +202,24 @@ public:
 	u16 m_scissor_w;
 	u16 m_scissor_h;
 
+	// Polygon
+	bool m_set_poly_smooth;
+	bool m_set_poly_offset_fill;
+	bool m_set_poly_offset_line;
+	bool m_set_poly_offset_point;
 	bool m_set_front_polygon_mode;
 	u32 m_front_polygon_mode;
 	bool m_set_back_polygon_mode;
 	u32 m_back_polygon_mode;
-	
+	bool m_set_poly_offset_mode;
+	u32 m_poly_offset_scale_factor;
+	u32 m_poly_offset_bias;
+
+	// Logic Ops
 	bool m_set_logic_op;
 	u32 m_logic_op;
 	
+	// Clearing
 	u32 m_clear_surface_mask;
 	u32 m_clear_surface_z;
 	u8 m_clear_surface_s;
@@ -212,78 +227,6 @@ public:
 	u8 m_clear_surface_color_g;
 	u8 m_clear_surface_color_b;
 	u8 m_clear_surface_color_a;
-
-	bool m_set_blend_sfactor;
-	u16 m_blend_sfactor_rgb;
-	u16 m_blend_sfactor_alpha;
-
-	bool m_set_blend_dfactor;
-	u16 m_blend_dfactor_rgb;
-	u16 m_blend_dfactor_alpha;
-
-	bool m_set_stencil_mask;
-	u32 m_stencil_mask;
-
-	bool m_set_stencil_func;
-	u32 m_stencil_func;
-
-	bool m_set_stencil_func_ref;
-	u32 m_stencil_func_ref;
-
-	bool m_set_stencil_func_mask;
-	u32 m_stencil_func_mask;
-
-	bool m_set_stencil_fail;
-	u32 m_stencil_fail;
-
-	bool m_set_stencil_zfail;
-	u32 m_stencil_zfail;
-
-	bool m_set_stencil_zpass;
-	u32 m_stencil_zpass;
-
-	bool m_set_two_sided_stencil_test_enable;
-
-	bool m_set_back_stencil_mask;
-	u32 m_back_stencil_mask;
-
-	bool m_set_back_stencil_func;
-	u32 m_back_stencil_func;
-
-	bool m_set_back_stencil_func_ref;
-	u32 m_back_stencil_func_ref;
-
-	bool m_set_back_stencil_func_mask;
-	u32 m_back_stencil_func_mask;
-
-	bool m_set_back_stencil_fail;
-	u32 m_back_stencil_fail;
-
-	bool m_set_back_stencil_zfail;
-	u32 m_back_stencil_zfail;
-
-	bool m_set_back_stencil_zpass;
-	u32 m_back_stencil_zpass;
-
-	bool m_set_blend_equation;
-	u16 m_blend_equation_rgb;
-	u16 m_blend_equation_alpha;
-
-	bool m_set_depth_mask;
-	u32 m_depth_mask;
-
-	bool m_set_line_width;
-	u32 m_line_width;
-
-	bool m_set_shade_mode;
-	u32 m_shade_mode;
-
-	bool m_set_blend_color;
-	u8 m_blend_color_r;
-	u8 m_blend_color_g;
-	u8 m_blend_color_b;
-	u8 m_blend_color_a;
-
 	u8 m_clear_color_r;
 	u8 m_clear_color_g;
 	u8 m_clear_color_b;
@@ -291,13 +234,70 @@ public:
 	u8 m_clear_s;
 	u32 m_clear_z;
 
-	u32 m_context_dma_img_src;
-	u32 m_context_dma_img_dst;
-	u32 m_dst_offset;
+	// Blending
+	bool m_set_blend;
+	bool m_set_blend_dfactor;
+	u16 m_blend_dfactor_rgb;
+	u16 m_blend_dfactor_alpha;
+	bool m_set_blend_sfactor;
+	u16 m_blend_sfactor_rgb;
+	u16 m_blend_sfactor_alpha;
+	bool m_set_blend_equation;
+	u16 m_blend_equation_rgb;
+	u16 m_blend_equation_alpha;
+	bool m_set_blend_color;
+	u8 m_blend_color_r;
+	u8 m_blend_color_g;
+	u8 m_blend_color_b;
+	u8 m_blend_color_a;
+
+	// Stencil Test
+	bool m_set_stencil_test;
+	bool m_set_stencil_mask;
+	u32 m_stencil_mask;
+	bool m_set_stencil_func;
+	u32 m_stencil_func;
+	bool m_set_stencil_func_ref;
+	u32 m_stencil_func_ref;
+	bool m_set_stencil_func_mask;
+	u32 m_stencil_func_mask;
+	bool m_set_stencil_fail;
+	u32 m_stencil_fail;
+	bool m_set_stencil_zfail;
+	u32 m_stencil_zfail;
+	bool m_set_stencil_zpass;
+	u32 m_stencil_zpass;
+	bool m_set_two_sided_stencil_test_enable;
+	bool m_set_back_stencil_mask;
+	u32 m_back_stencil_mask;
+	bool m_set_back_stencil_func;
+	u32 m_back_stencil_func;
+	bool m_set_back_stencil_func_ref;
+	u32 m_back_stencil_func_ref;
+	bool m_set_back_stencil_func_mask;
+	u32 m_back_stencil_func_mask;
+	bool m_set_back_stencil_fail;
+	u32 m_back_stencil_fail;
+	bool m_set_back_stencil_zfail;
+	u32 m_back_stencil_zfail;
+	bool m_set_back_stencil_zpass;
+	u32 m_back_stencil_zpass;
+
+	// Line width
+	bool m_set_line_width;
+	u32 m_line_width;
+
+	// Shader mode
+	bool m_set_shade_mode;
+	u32 m_shade_mode;
+
+	// Lighting 
+	bool m_set_specular;
+
+	// Color
 	u32 m_color_format;
 	u16 m_color_format_src_pitch;
 	u16 m_color_format_dst_pitch;
-
 	u32 m_color_conv;
 	u32 m_color_conv_fmt;
 	u32 m_color_conv_op;
@@ -312,16 +312,18 @@ public:
 	u32 m_color_conv_dsdx;
 	u32 m_color_conv_dtdy;
 
+	// Semaphore
 	bool m_set_semaphore_offset;
 	u32 m_semaphore_offset;
 
+	// Fog
 	bool m_set_fog_mode;
 	u32 m_fog_mode;
-
 	bool m_set_fog_params;
 	float m_fog_param0;
 	float m_fog_param1;
 
+	// Clip plane
 	bool m_set_clip_plane;
 	u32 m_clip_plane_0;
 	u32 m_clip_plane_1;
@@ -330,6 +332,7 @@ public:
 	u32 m_clip_plane_4;
 	u32 m_clip_plane_5;
 
+	// Surface 
 	bool m_set_surface_format;
 	u8 m_surface_color_format;
 	u8 m_surface_depth_format;
@@ -337,58 +340,56 @@ public:
 	u8 m_surface_antialias;
 	u8 m_surface_width;
 	u8 m_surface_height;
-
-	bool m_set_context_dma_color_a;
-	u32 m_context_dma_color_a;
-
-	bool m_set_context_dma_color_b;
-	u32 m_context_dma_color_b;
-
-	bool m_set_context_dma_color_c;
-	u32 m_context_dma_color_c;
-
-	bool m_set_context_dma_color_d;
-	u32 m_context_dma_color_d;
-
-	bool m_set_context_dma_z;
-	u32 m_context_dma_z;
-
 	bool m_set_surface_clip_horizontal;
 	u16 m_surface_clip_x;
 	u16 m_surface_clip_w;
 	bool m_set_surface_clip_vertical;
 	u16 m_surface_clip_y;
 	u16 m_surface_clip_h;
-
-	bool m_set_cull_face;
-	u32 m_cull_face;
-
-	bool m_set_alpha_func;
-	u32 m_alpha_func;
-
-	bool m_set_alpha_ref;
-	u32 m_alpha_ref;
-
 	u32 m_surface_pitch_a;
 	u32 m_surface_pitch_b;
 	u32 m_surface_pitch_c;
 	u32 m_surface_pitch_d;
 	u32 m_surface_pitch_z;
-
 	u32 m_surface_offset_a;
 	u32 m_surface_offset_b;
 	u32 m_surface_offset_c;
 	u32 m_surface_offset_d;
 	u32 m_surface_offset_z;
+	u32 m_surface_colour_target;
 
+	// DMA context
+	bool m_set_context_dma_color_a;
+	u32 m_context_dma_color_a;
+	bool m_set_context_dma_color_b;
+	u32 m_context_dma_color_b;
+	bool m_set_context_dma_color_c;
+	u32 m_context_dma_color_c;
+	bool m_set_context_dma_color_d;
+	u32 m_context_dma_color_d;
+	bool m_set_context_dma_z;
+	u32 m_context_dma_z;
+	u32 m_context_dma_img_src;
+	u32 m_context_dma_img_dst;
+	u32 m_dst_offset;
+
+	// Cull face
+	bool m_set_cull_face;
+	u32 m_cull_face;
+
+	// Alpha test
+	bool m_set_alpha_test;
+	bool m_set_alpha_func;
+	u32 m_alpha_func;
+	bool m_set_alpha_ref;
+	u32 m_alpha_ref;
+
+	// Shader
 	u16 m_shader_window_height;
 	u8 m_shader_window_origin;
 	u16 m_shader_window_pixel_centers;
 
-	u16 m_point_x, m_point_y;
-
-	u32 m_surface_colour_target;
-
+	// Front face
 	bool m_set_front_face;
 	u32 m_front_face;
 
@@ -413,19 +414,26 @@ protected:
 		, m_gcm_current_buffer(0)
 		, m_read_buffer(true)
 	{
+		m_set_depth_test = false;
 		m_set_alpha_test = false;
-		m_set_blend = false;
 		m_set_depth_bounds_test = false;
-		m_depth_test_enable = false;
+		m_set_blend = false;
 		m_set_logic_op = false;
-		m_set_cull_face_enable = false;
+		m_set_cull_face = false;
 		m_set_dither = false;
 		m_set_stencil_test = false;
+		m_set_scissor_horizontal = false;
+		m_set_scissor_vertical = false;
 		m_set_line_smooth = false;
 		m_set_poly_smooth = false;
+		m_set_point_size = false;
 		m_set_two_sided_stencil_test_enable = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
+		m_set_poly_offset_fill = false;
+		m_set_poly_offset_line = false;
+		m_set_poly_offset_point = false;
+		m_set_restart_index = false;
 
 		m_clear_color_r = 0;
 		m_clear_color_g = 0;
@@ -443,11 +451,11 @@ protected:
 
 		m_front_polygon_mode = 0x1B02; // GL_FILL
 		m_back_polygon_mode = 0x1B02; // GL_FILL
-		
+		m_front_face = 0x0901;
+
 		m_point_x = 0;
 		m_point_y = 0;
-
-		m_front_face = 0x0901;
+		m_point_size = 0;
 
 		// Construct Textures
 		for(int i=0; i<16; i++)
@@ -466,6 +474,7 @@ protected:
 		m_set_clip = false;
 		m_set_depth_func = false;
 		m_set_depth_bounds = false;
+		m_set_depth_test = false;
 		m_set_viewport_horizontal = false;
 		m_set_viewport_vertical = false;
 		m_set_scissor_horizontal = false;
@@ -504,14 +513,17 @@ protected:
 		m_set_context_dma_color_d = false;
 		m_set_context_dma_z = false;
 		m_set_cull_face = false;
+		m_set_front_face = false;
 		m_set_alpha_func = false;
 		m_set_alpha_ref = false;
 		m_set_poly_offset_fill = false;
 		m_set_poly_offset_line = false;
 		m_set_poly_offset_point = false;
-		m_set_poly_offset_scale_factor = false;
-		m_set_poly_offset_bias = false;
+		m_set_poly_offset_mode = false;
 		m_set_restart_index = false;
+		m_set_point_size = false;
+		m_set_point_sprite_control = false;
+		m_set_specular = false;
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
