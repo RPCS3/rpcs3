@@ -117,3 +117,10 @@ struct CellPngDecSubHandle
 	CellPngDecOutParam outParam;
 	CellPngDecSrc src;
 };
+
+struct CellPngDecMainHandle
+{
+	u32 mainHandle;
+	u32 threadInParam;
+	u32 threadOutParam;
+};
