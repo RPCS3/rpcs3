@@ -178,8 +178,6 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		if(stopped) Emu.Resume();
 		return;
 	}
-
-	Emu.Stop();
 	
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
