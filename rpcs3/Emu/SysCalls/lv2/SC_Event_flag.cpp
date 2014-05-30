@@ -62,7 +62,7 @@ int sys_event_flag_destroy(u32 eflag_id)
 
 int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout)
 {
-	sys_event_flag.Warning("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
+	sys_event_flag.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
 		eflag_id, bitptn, mode, result.GetAddr(), timeout);
 
 	if (result.IsGood()) result = 0;
@@ -133,7 +133,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 
 	while (true)
 	{
-		if (ef->signal.GetOwner() == tid)
+		if (ef->signal.unlock(tid, tid) == SMR_OK)
 		{
 			SMutexLocker lock(ef->m_mutex);
 
@@ -200,7 +200,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 
 int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 {
-	sys_event_flag.Warning("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
+	sys_event_flag.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
 		eflag_id, bitptn, mode, result.GetAddr());
 
 	if (result.IsGood()) result = 0;
@@ -257,7 +257,7 @@ int sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 
 int sys_event_flag_set(u32 eflag_id, u64 bitptn)
 {
-	sys_event_flag.Warning("sys_event_flag_set(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
+	sys_event_flag.Log("sys_event_flag_set(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
 
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -282,7 +282,7 @@ int sys_event_flag_set(u32 eflag_id, u64 bitptn)
 
 int sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 {
-	sys_event_flag.Warning("sys_event_flag_clear(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
+	sys_event_flag.Log("sys_event_flag_clear(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
 
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -295,7 +295,7 @@ int sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 
 int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 {
-	sys_event_flag.Warning("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.GetAddr());
+	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.GetAddr());
 
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -314,7 +314,6 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 	for (u32 i = 0; i < tids.size(); i++)
 	{
-		if (Emu.IsStopped()) break;
 		ef->signal.lock(tids[i]);
 	}
 
@@ -339,7 +338,7 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 int sys_event_flag_get(u32 eflag_id, mem64_t flags)
 {
-	sys_event_flag.Warning("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.GetAddr());
+	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.GetAddr());
 	
 	EventFlag* ef;
 	if(!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -349,7 +348,8 @@ int sys_event_flag_get(u32 eflag_id, mem64_t flags)
 		return CELL_EFAULT;
 	}
 
-	flags = ef->flags; // ???
+	SMutexLocker lock(ef->m_mutex);
+	flags = ef->flags;
 
 	return CELL_OK;
 }
