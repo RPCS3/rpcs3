@@ -19,7 +19,7 @@ CellPngDecMainHandle *getCellPngDecCtx(u32 mainHandle) {
 
 int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
-	cellPngDec.Error("cellPngDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
+	cellPngDec.Warning("cellPngDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
 	CellPngDecMainHandle *ctx = new CellPngDecMainHandle;
 	if (cellPngDecMap.find(mainHandle) != cellPngDecMap.end()) {
 		delete cellPngDecMap[mainHandle];
@@ -35,10 +35,10 @@ int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 
 int cellPngDecDestroy(u32 mainHandle)
 {
-	cellPngDec.Error("cellPngDecDestroy(mainHandle=0x%x)", mainHandle);
+	cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle);
 	CellPngDecMainHandle *ctx = getCellPngDecCtx(mainHandle);
 	if (!ctx) {
-		cellPngDec.Warning("cellPngDecCreate(mainHandle=0x%x): bad handle", mainHandle);
+		cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x): bad handle", mainHandle);
 		return -1;
 	}
 
