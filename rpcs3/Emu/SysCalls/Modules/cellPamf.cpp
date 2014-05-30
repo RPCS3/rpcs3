@@ -112,7 +112,7 @@ int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSi
 	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pSize.GetAddr());
 
-	if (!pAddr.IsGood() || !pSize.IsGood())
+	if (!Memory.IsGoodAddr(pAddr.GetAddr(), 2048) || !pSize.IsGood())
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	//if ((u32)pAddr->magic != 0x464d4150)
@@ -128,7 +128,7 @@ int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attrib
 	cellPamf.Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=0x%x, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, attribute, pSize.GetAddr());
 
-	if (!pAddr.IsGood() || !pSize.IsGood())
+	if (!Memory.IsGoodAddr(pAddr.GetAddr(), 2048) || !pSize.IsGood())
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	//if ((u32)pAddr->magic != 0x464d4150)
@@ -144,7 +144,7 @@ int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, me
 	cellPamf.Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)",
 		pAddr.GetAddr(), fileSize, pOffset.GetAddr(), pSize.GetAddr());
 
-	if (!pAddr.IsGood() || !pOffset.IsGood() || !pSize.IsGood())
+	if (!Memory.IsGoodAddr(pAddr.GetAddr(), 2048) || !pOffset.IsGood() || !pSize.IsGood())
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	//if ((u32)pAddr->magic != 0x464d4150)
@@ -161,7 +161,7 @@ int cellPamfVerify(mem_ptr_t<PamfHeader> pAddr, u64 fileSize)
 {
 	cellPamf.Warning("cellPamfVerify(pAddr=0x%x, fileSize=%d)", pAddr.GetAddr(), fileSize);
 
-	if (!pAddr.IsGood())
+	if (!Memory.IsGoodAddr(pAddr.GetAddr(), 2048))
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	return CELL_OK;
@@ -176,7 +176,7 @@ int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHead
 	cellPamf.Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)",
 		pSelf.GetAddr(), pAddr.GetAddr(), fileSize, attribute);
 	
-	if (!pSelf.IsGood() || !pAddr.IsGood())
+	if (!pSelf.IsGood() || !Memory.IsGoodAddr(pAddr.GetAddr(), 2048))
 		return CELL_PAMF_ERROR_INVALID_ARG;
 
 	if (fileSize)
