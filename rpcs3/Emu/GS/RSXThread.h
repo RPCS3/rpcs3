@@ -181,7 +181,7 @@ public:
 	// Point 
 	bool m_set_point_size;
 	bool m_set_point_sprite_control;
-	u32	m_point_size;
+	u32 m_point_size;
 	u16 m_point_x;
 	u16 m_point_y;
 
