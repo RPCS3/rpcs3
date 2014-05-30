@@ -56,12 +56,12 @@ int cellAudioInit()
 
 			uint oal_buffer_offset = 0;
 			uint oal_buffer_size = sizeof(buf2ch) / sizeof(float);
-			std::unique_ptr<u16[]> oal_buffer[32];
-			SQueue<u16*, 31> queue;
+			std::unique_ptr<float[]> oal_buffer[32];
+			SQueue<float*, 31> queue;
 			for (u32 i = 0; i < sizeof(oal_buffer) / sizeof(oal_buffer[0]); i++)
 			{
-				oal_buffer[i] = std::unique_ptr<u16[]>(new u16[oal_buffer_size]);
-				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(u16));
+				oal_buffer[i] = std::unique_ptr<float[]>(new float[oal_buffer_size]);
+				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(float));
 			}
 			queue.Clear();
 
@@ -70,7 +70,7 @@ int cellAudioInit()
 			if(m_audio_out)
 			{
 				m_audio_out->Init();
-				m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(u16));
+				m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(float));
 			}
 
 			m_config.start_time = get_system_time();
@@ -81,12 +81,12 @@ int cellAudioInit()
 			{
 				while (true)
 				{
-					u16* oal_buffer = nullptr;
+					float* oal_buffer = nullptr;
 					queue.Pop(oal_buffer);
 					
 					if (oal_buffer)
 					{
-						m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(u16));
+						m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(float));
 					}
 					else
 					{
@@ -140,7 +140,7 @@ int cellAudioInit()
 
 					auto buf = (be_t<float>*)&Memory[buf_addr];
 
-					static const float k = 1.0f; // may be 0.5f
+					static const float k = 0.5f; // may be 1.0f
 					const float m = port.level;
 
 					if (port.channel == 2)
@@ -299,32 +299,38 @@ int cellAudioInit()
 				// convert the data from float to u16 with clipping:
 				if (!first_mix)
 				{
-#ifndef _M_X64
+
 					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
 					{
-						oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buf2ch[i] * 0x8000, -0x8000), 0x7fff));
+						// Probably, use later?
+						/*
+						// for x86
+						//oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buf2ch[i] * 0x8000, -0x8000), 0x7fff));
+
+						// for x64
+						// 2x MULPS
+						// 2x MAXPS (optional)
+						// 2x MINPS (optional)
+						// 2x CVTPS2DQ (converts float to s32)
+						// PACKSSDW (converts s32 to s16 with clipping)
+						for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 8)
+						{
+							static const __m128 float2u16 = { 0x8000, 0x8000, 0x8000, 0x8000 };
+							(__m128i&)(oal_buffer[oal_pos][oal_buffer_offset + i]) = _mm_packs_epi32(
+								_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i]), float2u16)),
+								_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i + 4]), float2u16)));
+						}*/
+
+						oal_buffer[oal_pos][oal_buffer_offset + i] = buf2ch[i];
 					}
-#else
-					// 2x MULPS
-					// 2x MAXPS (optional)
-					// 2x MINPS (optional)
-					// 2x CVTPS2DQ (converts float to s32)
-					// PACKSSDW (converts s32 to s16 with clipping)
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 8)
-					{
-						static const __m128 float2u16 = { 0x8000, 0x8000, 0x8000, 0x8000 };
-						(__m128i&)(oal_buffer[oal_pos][oal_buffer_offset + i]) = _mm_packs_epi32(
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i]), float2u16)),
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i + 4]), float2u16)));
-					}
-#endif
+
 				}
 
 				const u64 stamp1 = get_system_time();
 
 				if (first_mix)
 				{
-					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(u16));
+					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(float));
 				}
 				oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
 

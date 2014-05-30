@@ -483,9 +483,10 @@ void RSXDebugger::GetFlags()
 
 	LIST_FLAGS_ADD("Alpha test",        render.m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",             render.m_set_blend);
-	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face_enable);
+	LIST_FLAGS_ADD("Scissor",           render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
+	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face);
 	LIST_FLAGS_ADD("Depth bounds test", render.m_set_depth_bounds_test);
-	LIST_FLAGS_ADD("Depth test",        render.m_depth_test_enable);
+	LIST_FLAGS_ADD("Depth test",        render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",            render.m_set_dither);
 	LIST_FLAGS_ADD("Line smooth",       render.m_set_line_smooth);
 	LIST_FLAGS_ADD("Logic op",          render.m_set_logic_op);
@@ -494,6 +495,9 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Poly offset line",  render.m_set_poly_offset_line);
 	LIST_FLAGS_ADD("Poly offset point", render.m_set_poly_offset_point);
 	LIST_FLAGS_ADD("Stencil test",      render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Primitive restart", render.m_set_restart_index);
+	LIST_FLAGS_ADD("Point Sprite",	    render.m_set_point_sprite_control);
+	LIST_FLAGS_ADD("Lighting ",	    render.m_set_specular);
 
 #undef LIST_FLAGS_ADD
 }
@@ -634,19 +638,24 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	GSRender& render = Emu.GetGSManager().GetRender();
 	switch(event.m_itemIndex)
 	{
-	case 0:  render.m_set_alpha_test        ^= true; break;
-	case 1:  render.m_set_blend             ^= true; break;
-	case 2:  render.m_set_cull_face_enable  ^= true; break;
-	case 3:  render.m_set_depth_bounds_test ^= true; break;
-	case 4:  render.m_depth_test_enable     ^= true; break;
-	case 5:  render.m_set_dither            ^= true; break;
-	case 6:  render.m_set_line_smooth       ^= true; break;
-	case 7:  render.m_set_logic_op          ^= true; break;
-	case 8:  render.m_set_poly_smooth       ^= true; break;
-	case 9:  render.m_set_poly_offset_fill  ^= true; break;
-	case 10: render.m_set_poly_offset_line  ^= true; break;
-	case 11: render.m_set_poly_offset_point ^= true; break;
-	case 12: render.m_set_stencil_test      ^= true; break;
+	case 0:  render.m_set_alpha_test		^= true; break;
+	case 1:  render.m_set_blend			^= true; break;
+	case 2:  render.m_set_cull_face			^= true; break;
+	case 3:  render.m_set_depth_bounds_test		^= true; break;
+	case 4:  render.m_set_depth_test		^= true; break;
+	case 5:  render.m_set_dither			^= true; break;
+	case 6:  render.m_set_line_smooth		^= true; break;
+	case 7:  render.m_set_logic_op			^= true; break;
+	case 8:  render.m_set_poly_smooth		^= true; break;
+	case 9:  render.m_set_poly_offset_fill		^= true; break;
+	case 10: render.m_set_poly_offset_line		^= true; break;
+	case 11: render.m_set_poly_offset_point		^= true; break;
+	case 12: render.m_set_stencil_test		^= true; break;
+	case 13: render.m_set_point_sprite_control	^= true; break;
+	case 14: render.m_set_restart_index		^= true; break;
+	case 15: render.m_set_specular			^= true; break;
+	case 16: render.m_set_scissor_horizontal	^= true; break;
+	case 17: render.m_set_scissor_vertical		^= true; break;
 	}
 
 	UpdateInformation();

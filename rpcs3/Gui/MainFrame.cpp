@@ -372,12 +372,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
+	wxCheckBox* chbox_skip_pamf	      = new wxCheckBox(p_graphics, wxID_ANY, "Skip Pamf");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -400,6 +402,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
+#if defined (_WIN32)
+	cbox_pad_handler->Append("XInput");
+#endif
 	//cbox_pad_handler->Append("DirectInput");
 
 	cbox_keyboard_handler->Append("Null");
@@ -444,12 +449,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
+	chbox_skip_pamf	         ->SetValue(Ini.SkipPamf.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
+	chbox_hle_hide_debug_console->SetValue(Ini.HLEHideDebugConsole.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -499,6 +506,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_skip_pamf, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
@@ -516,6 +524,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_hle_hide_debug_console, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -548,6 +557,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
+		Ini.SkipPamf.SetValue(chbox_skip_pamf->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
@@ -559,6 +569,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
+		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
 
 		Ini.Save();
 	}

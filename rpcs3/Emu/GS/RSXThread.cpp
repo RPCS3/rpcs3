@@ -210,24 +210,37 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_NO_OPERATION:
+	{
+		ConLog.Warning("NV4097_NO_OPERATION");
+	}
 	break;
 
 	case NV406E_SET_REFERENCE:
 		m_ctrl->ref = ARGS(0);
 	break;
-
+	
+	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20) :
+	{
+		// Done in ethodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)]
+	}
+	break;
+	
 	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*32)]
 	}
 	break;
 
 	case NV4097_SET_FRONT_FACE:
+	{
 		m_front_face = ARGS(0);
+	}
 	break;
 	
 	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4):
@@ -295,6 +308,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL1 + (m_index*32)]
 	}
 	break;
 
@@ -310,25 +324,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_FILTER + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index * 32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEX_COORD_CONTROL, 4):
-		//TODO
+	{
+		ConLog.Warning("NV4097_SET_TEX_COORD_CONTROL");
+	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*32)]
 	}
 	break;
 
 	case_16(NV4097_SET_TEXTURE_BORDER_COLOR,0x20):
 	{
+		// Done in methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)]
 	}
 	break;
 
@@ -360,13 +380,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
-		if(ARGS(0)) ConLog.Warning("NV4097_SET_COLOR_MASK_MRT: %x", ARGS(0));
+		if(ARGS(0)) 
+			ConLog.Warning("NV4097_SET_COLOR_MASK_MRT: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_BLEND_ENABLE_MRT:
 	{
-		if(ARGS(0)) ConLog.Warning("NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
+		if(ARGS(0)) 
+			ConLog.Warning("NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
 	}
 	break;
 
@@ -383,15 +405,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_ALPHA_TEST_ENABLE:
+	{
 		m_set_alpha_test = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_BLEND_ENABLE:
+	{
 		m_set_blend = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
+	{
 		m_set_depth_bounds_test = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_MIN:
@@ -408,6 +436,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_ALPHA_FUNC:
+	{
 		m_set_alpha_func = true;
 		m_alpha_func = ARGS(0);
 
@@ -416,16 +445,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			m_set_alpha_ref = true;
 			m_alpha_ref = ARGS(1);
 		}
+	}
 	break;
 
 	case NV4097_SET_ALPHA_REF:
+	{
 		m_set_alpha_ref = true;
 		m_alpha_ref = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_CULL_FACE:
+	{
 		m_set_cull_face = true;
 		m_cull_face = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_VIEWPORT_VERTICAL:
@@ -467,22 +501,30 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_DEPTH_FUNC:
+	{
 		m_set_depth_func = true;
 		m_depth_func = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_DEPTH_TEST_ENABLE:
-		m_depth_test_enable = ARGS(0) ? true : false;
+	{
+		m_set_depth_test = ARGS(0) ? true : false;
+	}
 	break;
-
+	
 	case NV4097_SET_FRONT_POLYGON_MODE:
+	{
 		m_set_front_polygon_mode = true;
 		m_front_polygon_mode = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_BACK_POLYGON_MODE:
+	{
 		m_set_back_polygon_mode = true;
 		m_back_polygon_mode = ARGS(0);
+	}
 	break;
 	
 	case NV4097_CLEAR_ZCULL_SURFACE:
@@ -673,6 +715,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK: %x", ARGS(0));
+
 		//VertexData[0].prog.attributeOutputMask = ARGS(0);
 		//FragmentData.prog.attributeInputMask = ARGS(0)/* & ~0x20*/;
 	}
@@ -732,10 +777,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VERTEX_ATTRIB_INPUT_MASK: %x", ARGS(0));
+
 		//VertexData[0].prog.attributeInputMask = ARGS(0);
+	}
 	break;
 
 	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_VERTEX_CACHE_FILE: %x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
@@ -762,31 +816,44 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_LOGIC_OP_ENABLE:
+	{
 		m_set_logic_op = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_LOGIC_OP:
+	{
 		m_logic_op = ARGS(0);
+	}
 	break;
 	
 	case NV4097_SET_CULL_FACE_ENABLE:
-		m_set_cull_face_enable = ARGS(0) ? true : false;
+	{
+		m_set_cull_face = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_DITHER_ENABLE:
+	{
 		m_set_dither = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_STENCIL_TEST_ENABLE:
+	{
 		m_set_stencil_test = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_STENCIL_MASK:
+	{
 		m_set_stencil_mask = true;
 		m_stencil_mask = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC:
+	{
 		m_set_stencil_func = true;
 		m_stencil_func = ARGS(0);
 		if(count >= 2)
@@ -800,19 +867,25 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 				m_stencil_func_mask = ARGS(2);
 			}
 		}
+	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC_REF:
+	{
 		m_set_stencil_func_ref = true;
 		m_stencil_func_ref = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC_MASK:
+	{
 		m_set_stencil_func_mask = true;
 		m_stencil_func_mask = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_STENCIL_OP_FAIL:
+	{
 		m_set_stencil_fail = true;
 		m_stencil_fail = ARGS(0);
 		if(count >= 2)
@@ -826,18 +899,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 				m_stencil_zpass = ARGS(2);
 			}
 		}
+	}
 	break;
 
 	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+	{
 		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_MASK:
+	{
 		m_set_back_stencil_mask = true;
 		m_back_stencil_mask = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC:
+	{
 		m_set_back_stencil_func = true;
 		m_back_stencil_func = ARGS(0);
 		if(count >= 2)
@@ -851,19 +930,25 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 				m_back_stencil_func_mask = ARGS(2);
 			}
 		}
+	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC_REF:
+	{
 		m_set_back_stencil_func_ref = true;
 		m_back_stencil_func_ref = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC_MASK:
+	{
 		m_set_back_stencil_func_mask = true;
 		m_back_stencil_func_mask = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_OP_FAIL:
+	{
 		m_set_stencil_fail = true;
 		m_stencil_fail = ARGS(0);
 		if(count >= 2)
@@ -877,64 +962,118 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 				m_back_stencil_zpass = ARGS(2);
 			}
 		}
+	}
 	break;
 
 	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
+	{
 		m_set_poly_offset_fill = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_POLY_OFFSET_LINE_ENABLE:
+	{
 		m_set_poly_offset_line = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_POLY_OFFSET_POINT_ENABLE:
+	{
 		m_set_poly_offset_point = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR:
+	{
+		m_set_depth_test = true;
+		m_set_poly_offset_mode = true;
+		m_poly_offset_scale_factor = ARGS(0);
+	}
+	break;
+
+	case NV4097_SET_POLYGON_OFFSET_BIAS:
+	{
+		m_set_depth_test = true;
+		m_set_poly_offset_mode = true;
+		m_poly_offset_bias = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_RESTART_INDEX_ENABLE:
+	{
 		m_set_restart_index = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_POINT_SIZE:
+	{
+		m_set_point_size = true;
+		m_point_size = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_POINT_PARAMS_ENABLE:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_POINT_PARAMS_ENABLE");
+	{
+		if (ARGS(0))
+			ConLog.Error("NV4097_SET_POINT_PARAMS_ENABLE");
+	}
 	break;
 
 	case NV4097_SET_POINT_SPRITE_CONTROL:
-		if(ARGS(0) & 0x1)
-		{
-			ConLog.Error("NV4097_SET_POINT_SPRITE_CONTROL enable");
-		}
+	{
+		m_set_point_sprite_control = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_SPECULAR_ENABLE:
+	{
+		m_set_specular = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_POLY_SMOOTH_ENABLE:
+	{
 		m_set_poly_smooth = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_BLEND_COLOR:
+	{
 		m_set_blend_color = true;
 		m_blend_color_r = ARGS(0) & 0xff;
 		m_blend_color_g = (ARGS(0) >> 8) & 0xff;
 		m_blend_color_b = (ARGS(0) >> 16) & 0xff;
 		m_blend_color_a = (ARGS(0) >> 24) & 0xff;
+	}
 	break;
 
 	case NV4097_SET_BLEND_COLOR2:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_BLEND_COLOR2");
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_BLEND_COLOR2: 0x % x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_BLEND_EQUATION:
+	{
 		m_set_blend_equation = true;
 		m_blend_equation_rgb = ARGS(0) & 0xffff;
 		m_blend_equation_alpha = ARGS(0) >> 16;
+	}
 	break;
 
 	case NV4097_SET_REDUCE_DST_COLOR:
-		if(ARGS(0)) ConLog.Error("NV4097_SET_REDUCE_DST_COLOR");
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_REDUCE_DST_COLOR: 0x % x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_DEPTH_MASK:
+	{
 		m_set_depth_mask = true;
 		m_depth_mask = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SCISSOR_VERTICAL:
@@ -960,10 +1099,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_INVALIDATE_VERTEX_FILE: break;
+	case NV4097_INVALIDATE_VERTEX_FILE:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_VERTEX_FILE: 0x%x", ARGS(0));
+	}
+	break;
 
 	case NV4097_SET_VIEWPORT_OFFSET:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VIEWPORT_OFFSET: %x", ARGS(0));
 		/*const u32 offset0 = ARGS(0);
 		const u32 offset1 = ARGS(1);
 		const u32 offset2 = ARGS(2);
@@ -1001,26 +1147,32 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV406E_SEMAPHORE_RELEASE:
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+	{
 		if(m_set_semaphore_offset)
 		{
 			m_set_semaphore_offset = false;
 			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
 		}
+	}
 	break;
 
 	case NV406E_SEMAPHORE_ACQUIRE:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV406E_SEMAPHORE_ACQUIRE: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_RESTART_INDEX:
+	{
 		m_restart_index = ARGS(0);
+	}
 	break;
 
 	case NV4097_INVALIDATE_L2:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_INVALIDATE_L2: %x", ARGS(0));
 	}
 	break;
 
@@ -1057,19 +1209,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_context_dma_z = ARGS(0);
 	}
 	break;
-	/*
-	case NV4097_SET_SURFACE_PITCH_A:
-	{
-		//TODO
-	}
-	break;
 
-	case NV4097_SET_SURFACE_PITCH_B:
-	{
-		//TODO
-	}
-	break;
-	*/
 	case NV4097_SET_SURFACE_PITCH_C:
 	{
 		if(count != 4)
@@ -1129,7 +1269,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_WINDOW_OFFSET:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_WINDOW_OFFSET: %x", ARGS(0));
 	}
 	break;
 
@@ -1141,22 +1282,29 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ANTI_ALIASING_CONTROL: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_LINE_SMOOTH_ENABLE:
+	{
 		m_set_line_smooth = ARGS(0) ? true : false;
+	}
 	break;
 
 	case NV4097_SET_LINE_WIDTH:
+	{
 		m_set_line_width = true;
 		m_line_width = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SHADE_MODE:
+	{
 		m_set_shade_mode = true;
 		m_shade_mode = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
@@ -1169,14 +1317,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZCULL_CONTROL0: %x", ARGS(0));
+
 		//m_set_depth_func = true;
 		//m_depth_func = ARGS(0) >> 4;
 	}
 	break;
-
+	
 	case NV4097_SET_ZCULL_CONTROL1:
 	{
-		//TODO
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZCULL_CONTROL1: %x", ARGS(0));
+
+		//m_set_depth_func = true;
+		//m_depth_func = ARGS(0) >> 4;
 	}
 	break;
 
@@ -1195,7 +1350,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		u32 a0 = ARGS(0);
 
-		m_depth_test_enable = a0 & 0x1 ? true : false;
+		m_set_depth_test = a0 & 0x1 ? true : false;
 		m_set_stencil_test = a0 & 0x2 ? true : false;
 	}
 	break;
@@ -1235,7 +1390,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV3062_SET_OFFSET_DESTIN:
+	{
 		m_dst_offset = ARGS(0);
+	}
 	break;
 
 	case NV308A_COLOR:
@@ -1342,24 +1499,32 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 	
 	case NV3089_SET_CONTEXT_DMA_IMAGE:
+	{
 		m_context_dma_img_src = ARGS(0);
+	}
 	break;
 
 	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
+	{
 		m_context_dma_img_dst = ARGS(0);
+	}
 	break;
 
 
 	case NV3089_SET_CONTEXT_SURFACE:
+	{
 		if(ARGS(0) != 0x313371C3)
 		{
 			ConLog.Warning("NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
 		}
+	}
 	break;
 
 	case NV4097_SET_FOG_MODE:
+	{
 		m_set_fog_mode = true;
 		m_fog_mode = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
@@ -1384,16 +1549,26 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_fog_param1 = (float&)a1;
 	}
 	break;
+
 	case NV4097_SET_VIEWPORT_SCALE:
 	{
-
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_VIEWPORT_SCALE: %x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_ZMIN_MAX_CONTROL:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_ZMIN_MAX_CONTROL: %x", ARGS(0));
+	}
 	break;
 
 	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
+	{
+		if (ARGS(0))
+			ConLog.Warning("NV4097_SET_WINDOW_CLIP_HORIZONTAL: %x", ARGS(0));
+	}
 	break;
 
 	case 0x000002c8:
@@ -1460,37 +1635,51 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
+	{
 		m_surface_offset_a = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_COLOR_BOFFSET:
+	{
 		m_surface_offset_b = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_COLOR_COFFSET:
+	{
 		m_surface_offset_c = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_COLOR_DOFFSET:
+	{
 		m_surface_offset_d = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_ZETA_OFFSET:
+	{
 		m_surface_offset_z = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_PITCH_A:
+	{
 		m_surface_pitch_a = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_SURFACE_PITCH_B:
+	{
 		m_surface_pitch_b = ARGS(0);
+	}
 	break;
 
 	case NV4097_SET_TRANSFORM_PROGRAM_START:
 	{
-		int a0 = ARGS(0);
-		if(a0) ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", a0);
+		if (ARGS(0)) 
+			ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", ARGS(0));
 	}
 	break;
 

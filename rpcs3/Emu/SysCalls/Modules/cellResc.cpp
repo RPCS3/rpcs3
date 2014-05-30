@@ -369,16 +369,17 @@ void InitContext(mem_ptr_t<CellGcmContextData>& cntxt)
 	r.m_set_blend = false;
 	//GcmCmdTypePrefix::cellGcmSetBlendEnableMrt(con, CELL_GCM_FALSE, CELL_GCM_FALSE, CELL_GCM_FALSE);
 	r.m_set_logic_op = false;
-	r.m_set_cull_face_enable = false;
+	r.m_set_cull_face = false;
 	r.m_set_depth_bounds_test = false;
-	r.m_depth_test_enable = false;
+	r.m_set_depth_test = false;
 	//GcmCmdTypePrefix::cellGcmSetPolygonOffsetFillEnable(con, CELL_GCM_FALSE);
 	r.m_set_stencil_test = false;
 	r.m_set_two_sided_stencil_test_enable = false;
 	//GcmCmdTypePrefix::cellGcmSetPointSpriteControl(con, CELL_GCM_FALSE, 0, 0);
 	r.m_set_dither = true;
-	r.m_set_shade_mode = true; r.m_shade_mode = 0x1D01; //CELL_GCM_SMOOTH
+	r.m_set_shade_mode = true; r.m_shade_mode = 0x1D01;
 	//GcmCmdTypePrefix::cellGcmSetFrequencyDividerOperation(con, 0);
+	r.m_set_specular = false;
 
 	r.m_set_viewport_horizontal = r.m_set_viewport_vertical = true;
 	r.m_viewport_x = 0;

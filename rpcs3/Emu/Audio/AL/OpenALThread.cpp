@@ -55,7 +55,7 @@ void OpenALThread::Play()
 {
 	ALint state;
 	alGetSourcei(m_source, AL_SOURCE_STATE, &state);
-	checkForAlError("alGetSourcei");
+	checkForAlError("OpenALThread::Play -> alGetSourcei");
 
 	if(state != AL_PLAYING)
 	{
@@ -90,7 +90,7 @@ void OpenALThread::Open(const void* src, ALsizei size)
 	checkForAlError("alGenBuffers");
 
 	alSourcei(m_source, AL_LOOPING, AL_FALSE);
-	checkForAlError("alSourcei");
+	checkForAlError("OpenALThread::Open ->alSourcei");
 
 	m_buffer_size = size;
 
@@ -109,9 +109,10 @@ void OpenALThread::AddData(const void* src, ALsizei size)
 	const char* bsrc = (const char*)src;
 	ALuint buffer;
 	ALint buffers_count;
-	alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &buffers_count);
-	checkForAlError("alGetSourcei");
 
+	alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &buffers_count);
+	checkForAlError("OpenALThread::AddData -> alGetSourcei");
+	
 	while(size)
 	{
 		if(buffers_count-- <= 0)
@@ -119,7 +120,8 @@ void OpenALThread::AddData(const void* src, ALsizei size)
 			Play();
 
 			alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &buffers_count);
-			checkForAlError("alGetSourcei");
+			checkForAlError("OpenALThread::AddData(in loop) -> alGetSourcei");
+			
 			continue;
 		}
 
@@ -127,7 +129,8 @@ void OpenALThread::AddData(const void* src, ALsizei size)
 		checkForAlError("alSourceUnqueueBuffers");
 
 		int bsize = size < m_buffer_size ? size : m_buffer_size;
-		AddBlock(buffer, bsize, bsrc);
+		if (!AddBlock(buffer, bsize, bsrc))
+			ConLog.Error("OpenALThread::AddBlock: invalid block size: %d", bsize);
 
 		alSourceQueueBuffers(m_source, 1, &buffer);
 		checkForAlError("alSourceQueueBuffers");
@@ -143,7 +146,7 @@ bool OpenALThread::AddBlock(const ALuint buffer_id, ALsizei size, const void* sr
 {
 	if (size < 1) return false;
 
-	alBufferData(buffer_id, AL_FORMAT_STEREO16, src, size, 48000);
+	alBufferData(buffer_id, AL_FORMAT_STEREO_FLOAT32, src, size, 48000);
 	checkForAlError("alBufferData");
 
 	return true;

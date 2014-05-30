@@ -117,6 +117,8 @@ public:
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<u8> HLELogLvl;
 	IniEntry<u8> SysLanguage;
+	IniEntry<bool> SkipPamf;
+	IniEntry<bool> HLEHideDebugConsole;
 
 	IniEntry<int> PadHandlerLStickLeft;
 	IniEntry<int> PadHandlerLStickDown;
@@ -161,6 +163,7 @@ public:
 		GSLogPrograms.Init("LogPrograms", path);
 		GSDumpColorBuffers.Init("DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("DumpDepthBuffer", path);
+		SkipPamf.Init("SkipPamf", path);
 
 		path = DefPath + "/" + "IO";
 		PadHandlerMode.Init("PadHandlerMode", path);
@@ -204,6 +207,7 @@ public:
 		HLESaveTTY.Init("HLESaveTTY", path);
 		HLEExitOnStop.Init("HLEExitOnStop", path);
 		HLELogLvl.Init("HLELogLvl", path);
+		HLEHideDebugConsole.Init("HLEHideDebugConsole", path);
 
 		path = DefPath + "/" + "System";
 		SysLanguage.Init("SysLanguage", path);
@@ -221,6 +225,7 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
+		SkipPamf.Load(false);
 		PadHandlerMode.Load(1);
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
@@ -232,6 +237,7 @@ public:
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(0);
 		SysLanguage.Load(1);
+		HLEHideDebugConsole.Load(false);
 
 		PadHandlerLStickLeft.Load(314); //WXK_LEFT
 		PadHandlerLStickDown.Load(317); //WXK_DOWN
@@ -271,6 +277,7 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
+		SkipPamf.Save();
 		PadHandlerMode.Save();
 		KeyboardHandlerMode.Save();
 		MouseHandlerMode.Save();
@@ -282,6 +289,7 @@ public:
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		SysLanguage.Save();
+		HLEHideDebugConsole.Save();
 
 		PadHandlerLStickLeft.Save();
 		PadHandlerLStickDown.Save();

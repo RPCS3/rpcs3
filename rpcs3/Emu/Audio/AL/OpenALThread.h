@@ -1,7 +1,6 @@
 #pragma once
 
-#include "OpenAL/include/al.h"
-#include "OpenAL/include/alc.h"
+#include "OpenAL/include/alext.h"
 
 class OpenALThread
 {

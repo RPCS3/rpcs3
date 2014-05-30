@@ -1788,9 +1788,9 @@ private:
 	{
 		DisAsm_R2("icbi", ra, rb);
 	}
-	void DCBZ(u32 ra, u32 rs)
+	void DCBZ(u32 ra, u32 rb)
 	{
-		DisAsm_R2("dcbz", ra, rs);
+		DisAsm_R2("dcbz", ra, rb);
 	}	
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
