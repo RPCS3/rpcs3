@@ -509,7 +509,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_DEPTH_TEST_ENABLE:
 	{
-		m_depth_test_enable = ARGS(0) ? true : false;
+		m_set_depth_test = ARGS(0) ? true : false;
 	}
 	break;
 	
@@ -829,7 +829,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	
 	case NV4097_SET_CULL_FACE_ENABLE:
 	{
-		m_set_cull_face_enable = ARGS(0) ? true : false;
+		m_set_cull_face = ARGS(0) ? true : false;
 	}
 	break;
 
@@ -983,9 +983,32 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR:
+	{
+		m_set_depth_test = true;
+		m_set_poly_offset_mode = true;
+		m_poly_offset_scale_factor = ARGS(0);
+	}
+	break;
+
+	case NV4097_SET_POLYGON_OFFSET_BIAS:
+	{
+		m_set_depth_test = true;
+		m_set_poly_offset_mode = true;
+		m_poly_offset_bias = ARGS(0);
+	}
+	break;
+
 	case NV4097_SET_RESTART_INDEX_ENABLE:
 	{
 		m_set_restart_index = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_POINT_SIZE:
+	{
+		m_set_point_size = true;
+		m_point_size = ARGS(0);
 	}
 	break;
 
@@ -998,8 +1021,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_POINT_SPRITE_CONTROL:
 	{
-		if (ARGS(0) & 0x1)
-			ConLog.Error("NV4097_SET_POINT_SPRITE_CONTROL enable");
+		m_set_point_sprite_control = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_SPECULAR_ENABLE:
+	{
+		m_set_specular = ARGS(0) ? true : false;
 	}
 	break;
 
@@ -1322,7 +1350,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		u32 a0 = ARGS(0);
 
-		m_depth_test_enable = a0 & 0x1 ? true : false;
+		m_set_depth_test = a0 & 0x1 ? true : false;
 		m_set_stencil_test = a0 & 0x2 ? true : false;
 	}
 	break;
