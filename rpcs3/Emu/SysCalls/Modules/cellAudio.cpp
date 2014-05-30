@@ -140,7 +140,7 @@ int cellAudioInit()
 
 					auto buf = (be_t<float>*)&Memory[buf_addr];
 
-					static const float k = 0.5f; // may be 1.0f
+					static const float k = 1.0f; // may be 1.0f
 					const float m = port.level;
 
 					if (port.channel == 2)

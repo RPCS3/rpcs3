@@ -1166,6 +1166,12 @@ void GLGSRender::Flip()
 		checkForGlError("glScissor");
 	}
 	
+	for (uint i = 0; i<m_post_draw_objs.size(); ++i)
+	{
+		m_post_draw_objs[i].Draw();
+	}
+
+	m_frame->Flip(m_context);
 
 	static u8* src_buffer = nullptr;
 	static u32 width = 0;
