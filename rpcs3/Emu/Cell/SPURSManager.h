@@ -54,8 +54,10 @@ public:
 		this->spuThreadGroupPriority = spuPriority;
 		this->ppuThreadPriority = ppuPriority;
 		this->exitIfNoWork = exitIfNoWork;
+
 		memset(this->namePrefix, 0, CELL_SPURS_NAME_MAX_LENGTH + 1);
 		this->threadGroupType = 0;
+		this->container = 0;
 	}
 
 	int _setNamePrefix(const char *name, u32 size)
@@ -71,13 +73,20 @@ public:
 		return 0;
 	}
 
+	int _setMemoryContainerForSpuThread(u32 container)
+	{
+		this->container = container;
+		return 0;
+	}
+
 protected:
 	be_t<int> nSpus; 
 	be_t<int> spuThreadGroupPriority; 
 	be_t<int> ppuThreadPriority; 
 	bool exitIfNoWork;
 	char namePrefix[CELL_SPURS_NAME_MAX_LENGTH+1];
-	be_t<int> threadGroupType; 
+	be_t<int> threadGroupType;
+	be_t<u32> container;
 };
 
 // Main SPURS manager class.
