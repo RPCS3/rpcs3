@@ -278,7 +278,7 @@ void GLFragmentDecompilerThread::Task()
 
 		case 0x10: AddCode("fract(" + GetSRC(src0) + ")"); break; // FRC
 		case 0x11: AddCode("floor(" + GetSRC(src0) + ")"); break; // FLR
-		case 0x12: AddCode("if (" + GetSRC(src0) + " < 0 ) discard"); break; // KIL (kill fragment)
+		//case 0x12: AddCode("clip(" + GetSRC(src0) + ")"); break; // KIL (kill fragment)
 		//case 0x13: break; // PK4 (pack four signed 8-bit values)
 		//case 0x14: break; // UP4 (unpack four signed 8-bit values)
 		case 0x15: AddCode("dFdx(" + GetSRC(src0) + ")"); break; // DDX
@@ -307,7 +307,7 @@ void GLFragmentDecompilerThread::Task()
 		//case 0x2b: break; // BEM
 		//case 0x2c: break; // PKG
 		//case 0x2d: break; // UPG
-		//case 0x2e: break; // DP2A (2-component dot product and add)
+		case 0x2e: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")");  break; // DP2A (2-component dot product and add)
 		//case 0x2f: break; // TXL (texture lookup with LOD)
  		
  		//case 0x30: break;
