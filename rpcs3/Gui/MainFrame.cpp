@@ -39,6 +39,7 @@ enum IDs
 	id_tools_fnid_generator,
 	id_help_about,
 	id_update_dbg,
+	id_boot_game_and_run,
 };
 
 wxString GetPaneName()
@@ -65,6 +66,7 @@ MainFrame::MainFrame()
 	wxMenu* menu_boot = new wxMenu();
 	menubar->Append(menu_boot, "Boot");
 	menu_boot->Append(id_boot_game, "Boot game");
+	menu_boot->Append(id_boot_game_and_run, "Boot game and start");
 	menu_boot->Append(id_install_pkg, "Install PKG");
 	menu_boot->AppendSeparator();
 	menu_boot->Append(id_boot_elf, "Boot (S)ELF");
@@ -109,6 +111,7 @@ MainFrame::MainFrame()
 	
 	// Events
 	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
+	Bind(wxEVT_MENU, &MainFrame::BootGameAndRun, this, id_boot_game_and_run);
 	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
 	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
 
@@ -184,6 +187,11 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
 		ConLog.Success("Game: boot done.");
+
+		if (Ini.CPUAlwaysStart.GetValue() && Emu.IsReady())
+		{
+			Emu.Run();
+		}
 	}
 	else
 	{
@@ -191,6 +199,40 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 }
 
+void MainFrame::BootGameAndRun(wxCommandEvent& WXUNUSED(event))
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
+
+	if (ctrl.ShowModal() == wxID_CANCEL)
+	{
+		if (stopped) Emu.Resume();
+		return;
+	}
+
+	Emu.Stop();
+
+	if (Emu.BootGame(ctrl.GetPath().ToStdString()))
+	{
+		ConLog.Success("Game: boot done.");
+	}
+	else
+	{
+		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+	}
+
+	if (Emu.IsReady())
+	{
+		Emu.Run();
+	}
+}
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
@@ -378,8 +420,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
-	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
+	wxCheckBox* chbox_cpu_always_start	  = new wxCheckBox(p_cpu, wxID_ANY, "Always start after boot");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -457,6 +500,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_hide_debug_console->SetValue(Ini.HLEHideDebugConsole.GetValue());
+	chbox_cpu_always_start   ->SetValue(Ini.CPUAlwaysStart.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -497,6 +541,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Core
 	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu_decoder->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_cpu_decoder->Add(chbox_cpu_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
@@ -570,6 +615,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
+		Ini.CPUAlwaysStart.SetValue(chbox_cpu_always_start->GetValue());
 
 		Ini.Save();
 	}

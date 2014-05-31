@@ -119,6 +119,7 @@ public:
 	IniEntry<u8> SysLanguage;
 	IniEntry<bool> SkipPamf;
 	IniEntry<bool> HLEHideDebugConsole;
+	IniEntry<bool> CPUAlwaysStart;
 
 	IniEntry<int> PadHandlerLStickLeft;
 	IniEntry<int> PadHandlerLStickDown;
@@ -217,6 +218,7 @@ public:
 	{
 		CPUDecoderMode.Load(2);
 		CPUIgnoreRWErrors.Load(true);
+		CPUAlwaysStart.Load(false);
 		SPUDecoderMode.Load(1);
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
@@ -269,6 +271,7 @@ public:
 	{
 		CPUDecoderMode.Save();
 		CPUIgnoreRWErrors.Save();
+		CPUAlwaysStart.Save();
 		SPUDecoderMode.Save();
 		GSRenderMode.Save();
 		GSResolution.Save();
