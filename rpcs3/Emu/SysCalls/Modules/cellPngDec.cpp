@@ -3,19 +3,48 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "cellPngDec.h"
 #include "stblib/stb_image.h"
+#include <map>
 
 void cellPngDec_init();
 Module cellPngDec(0x0018, cellPngDec_init);
 
+static std::map<u32, CellPngDecMainHandle *> cellPngDecMap;
+
+CellPngDecMainHandle *getCellPngDecCtx(u32 mainHandle) {
+	if (cellPngDecMap.find(mainHandle) == cellPngDecMap.end())
+		return NULL;
+
+	return cellPngDecMap[mainHandle];
+}
+
 int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
-	UNIMPLEMENTED_FUNC(cellPngDec);
+	cellPngDec.Warning("cellPngDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
+	CellPngDecMainHandle *ctx = new CellPngDecMainHandle;
+	if (cellPngDecMap.find(mainHandle) != cellPngDecMap.end()) {
+		delete cellPngDecMap[mainHandle];
+		cellPngDecMap.erase(mainHandle);
+	}
+	cellPngDecMap[mainHandle] = ctx;
+
+	ctx->threadInParam = threadInParam;
+	ctx->threadOutParam = threadOutParam;
+
 	return CELL_OK;
 }
 
 int cellPngDecDestroy(u32 mainHandle)
 {
-	UNIMPLEMENTED_FUNC(cellPngDec);
+	cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle);
+	CellPngDecMainHandle *ctx = getCellPngDecCtx(mainHandle);
+	if (!ctx) {
+		cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x): bad handle", mainHandle);
+		return -1;
+	}
+
+	delete ctx;
+	cellPngDecMap.erase(mainHandle);
+
 	return CELL_OK;
 }
 

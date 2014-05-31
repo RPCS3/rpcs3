@@ -852,17 +852,19 @@ void GLGSRender::ExecCMD()
 		glClear(f);
 	}
 
-	Enable(m_depth_test_enable, GL_DEPTH_TEST);
+	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
 	Enable(m_set_blend, GL_BLEND);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
-	Enable(m_set_cull_face_enable, GL_CULL_FACE);
+	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
+	Enable(m_set_point_sprite_control, GL_POINT_SPRITE);
+	Enable(m_set_specular, GL_LIGHTING);
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
@@ -895,9 +897,15 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glPolygonMode(Back)");
 	}
 
-	if (m_set_poly_offset_scale_factor && m_set_poly_offset_bias)
+	if (m_set_point_size)
 	{
-		glPolygonOffset(m_set_poly_offset_scale_factor, m_set_poly_offset_bias);
+		glPointSize(m_point_size);
+		checkForGlError("glPointSize");
+	}
+
+	if (m_set_poly_offset_mode)
+	{
+		glPolygonOffset(m_poly_offset_scale_factor, m_poly_offset_bias);
 		checkForGlError("glPolygonOffset");
 	}
 
@@ -1166,6 +1174,12 @@ void GLGSRender::Flip()
 		checkForGlError("glScissor");
 	}
 	
+	for (uint i = 0; i<m_post_draw_objs.size(); ++i)
+	{
+		m_post_draw_objs[i].Draw();
+	}
+
+	m_frame->Flip(m_context);
 
 	static u8* src_buffer = nullptr;
 	static u32 width = 0;

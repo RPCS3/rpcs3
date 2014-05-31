@@ -111,9 +111,16 @@ struct CellPngDecOutParam
 //Custom structs
 struct CellPngDecSubHandle
 {
-	u32 fd;
-	u64 fileSize;
+	be_t<u32> fd;
+	be_t<u64> fileSize;
 	CellPngDecInfo info;
 	CellPngDecOutParam outParam;
 	CellPngDecSrc src;
+};
+
+struct CellPngDecMainHandle
+{
+	be_t<u32> mainHandle;
+	be_t<u32> threadInParam;
+	be_t<u32> threadOutParam;
 };
