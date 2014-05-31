@@ -13,6 +13,8 @@ static SMutexGeneral audioMutex;
 
 AudioConfig m_config;
 
+static const bool g_is_u16 = Ini.AudioConvertToU16.GetValue();
+
 // libaudio Functions
 
 int cellAudioInit()
@@ -55,43 +57,80 @@ int cellAudioInit()
 			float buf8ch[8 * 256]; // intermediate buffer for 8 channels
 
 			uint oal_buffer_offset = 0;
-			uint oal_buffer_size = sizeof(buf2ch) / sizeof(float);
-			std::unique_ptr<float[]> oal_buffer[32];
-			SQueue<float*, 31> queue;
+			const uint oal_buffer_size = sizeof(buf2ch) / sizeof(float);
+
+			std::unique_ptr<s16[]> oal_buffer[32];
+			SQueue<s16*, 31> queue;
+
+			std::unique_ptr<float[]> oal_buffer_float[32];
+			SQueue<float*, 31> queue_float;
+
 			for (u32 i = 0; i < sizeof(oal_buffer) / sizeof(oal_buffer[0]); i++)
 			{
-				oal_buffer[i] = std::unique_ptr<float[]>(new float[oal_buffer_size]);
-				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(float));
+				oal_buffer[i] = std::unique_ptr<s16[]>(new s16[oal_buffer_size]);
+				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(s16));
 			}
 			queue.Clear();
+
+			for (u32 i = 0; i < sizeof(oal_buffer_float) / sizeof(oal_buffer_float[0]); i++)
+			{
+				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size]);
+				memset(oal_buffer_float[i].get(), 0, oal_buffer_size * sizeof(float));
+			}
+			queue_float.Clear();
 
 			std::vector<u64> keys;
 
 			if(m_audio_out)
 			{
 				m_audio_out->Init();
-				m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(float));
+
+				if (g_is_u16)
+					m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(s16));
+				
+				m_audio_out->Open(oal_buffer_float[0].get(), oal_buffer_size * sizeof(float));
 			}
 
 			m_config.start_time = get_system_time();
 
 			volatile bool internal_finished = false;
 
-			thread iat("Internal Audio Thread", [oal_buffer_size, &queue, &internal_finished]()
+			thread iat("Internal Audio Thread", [oal_buffer_size, &queue, &queue_float, &internal_finished]()
 			{
 				while (true)
 				{
-					float* oal_buffer = nullptr;
-					queue.Pop(oal_buffer);
+					s16* oal_buffer = nullptr;
+					float* oal_buffer_float = nullptr;
+
+					if (g_is_u16)
+						queue.Pop(oal_buffer);
+
+					queue_float.Pop(oal_buffer_float);
 					
-					if (oal_buffer)
+					if (g_is_u16)
 					{
-						m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(float));
+						if (oal_buffer)
+						{
+							m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(s16));
+						}
+						else
+						{
+							internal_finished = true;
+							return;
+						}
 					}
+
 					else
 					{
-						internal_finished = true;
-						return;
+						if (oal_buffer_float)
+						{
+							m_audio_out->AddData(oal_buffer_float, oal_buffer_size * sizeof(float));
+						}
+						else
+						{
+							internal_finished = true;
+							return;
+						}
 					}
 				}
 			});
@@ -119,6 +158,7 @@ int cellAudioInit()
 				m_config.counter++;
 
 				const u32 oal_pos = m_config.counter % (sizeof(oal_buffer) / sizeof(oal_buffer[0]));
+				const u32 oal_pos_float = m_config.counter % (sizeof(oal_buffer_float) / sizeof(oal_buffer_float[0]));
 
 				if (Emu.IsPaused())
 				{
@@ -299,38 +339,45 @@ int cellAudioInit()
 				// convert the data from float to u16 with clipping:
 				if (!first_mix)
 				{
-
+#ifndef _M_X64
 					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
 					{
-						// Probably, use later?
-						/*
-						// for x86
-						//oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buf2ch[i] * 0x8000, -0x8000), 0x7fff));
+						if (g_is_u16)
+							oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buf2ch[i] * 0x8000, -0x8000), 0x7fff));
+					
+						oal_buffer_float[oal_pos_float][oal_buffer_offset + i] = buf2ch[i];
+					}
+#else
+					// 2x MULPS
+					// 2x MAXPS (optional)
+					// 2x MINPS (optional)
+					// 2x CVTPS2DQ (converts float to s32)
+					// PACKSSDW (converts s32 to s16 with clipping)
 
-						// for x64
-						// 2x MULPS
-						// 2x MAXPS (optional)
-						// 2x MINPS (optional)
-						// 2x CVTPS2DQ (converts float to s32)
-						// PACKSSDW (converts s32 to s16 with clipping)
+					if (g_is_u16)
+					{
 						for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 8)
 						{
 							static const __m128 float2u16 = { 0x8000, 0x8000, 0x8000, 0x8000 };
 							(__m128i&)(oal_buffer[oal_pos][oal_buffer_offset + i]) = _mm_packs_epi32(
 								_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i]), float2u16)),
 								_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i + 4]), float2u16)));
-						}*/
-
-						oal_buffer[oal_pos][oal_buffer_offset + i] = buf2ch[i];
+						}
 					}
 
+					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
+					{
+						oal_buffer_float[oal_pos_float][oal_buffer_offset + i] = buf2ch[i];
+					}
+#endif
 				}
 
 				const u64 stamp1 = get_system_time();
 
 				if (first_mix)
 				{
-					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(float));
+					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(s16));
+					memset(&oal_buffer_float[oal_pos_float][0], 0, oal_buffer_size * sizeof(float));
 				}
 				oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
 
@@ -338,7 +385,10 @@ int cellAudioInit()
 				{
 					if(m_audio_out)
 					{
-						queue.Push(&oal_buffer[oal_pos][0]);
+						if (g_is_u16)
+							queue.Push(&oal_buffer[oal_pos][0]);
+
+						queue_float.Push(&oal_buffer_float[oal_pos_float][0]);
 					}
 
 					oal_buffer_offset = 0;
@@ -405,6 +455,7 @@ int cellAudioInit()
 			ConLog.Write("Audio finished");
 abort:
 			queue.Push(nullptr);
+			queue_float.Push(nullptr);
 
 			if(do_dump)
 				m_dump.Finalize();
