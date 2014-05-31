@@ -75,12 +75,13 @@ int _cellSpursAttributeInitialize(mem_ptr_t<CellSpursAttribute> attr, int nSpus,
 
 int cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribute> attr, u32 container)
 {
-	cellSpurs.Error("cellSpursAttributeSetMemoryContainerForSpuThread(attr_addr=0x%x, container=0x%x)",
+	cellSpurs.Warning("cellSpursAttributeSetMemoryContainerForSpuThread(attr_addr=0x%x, container=0x%x)",
 						attr.GetAddr(), container);
 
 	if(!attr.IsGood())
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 
+	attr->attr->_setMemoryContainerForSpuThread(container);
 	return CELL_OK;
 }
 
@@ -122,8 +123,8 @@ int cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, 
 	return CELL_OK;
 }
 
-int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, const u8 priority[8], 
-										   u32 maxSpu, const bool isPreemptible[8])
+int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, const u8 priority[CELL_SPURS_MAX_SPU],
+	u32 maxSpu, const bool isPreemptible[CELL_SPURS_MAX_SPU])
 {
 	cellSpurs.Error("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority[%u], maxSpu=%u, isPreemptible[%u])",
 						attr.GetAddr(), priority, maxSpu, isPreemptible);
@@ -131,7 +132,7 @@ int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, c
 	if(!attr.IsGood())
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	
-	for (int i=0; i<8; i++)
+	for (int i = 0; i < CELL_SPURS_MAX_SPU; i++)
 		if(priority[i] != 1 || maxSpu == 0)
 			return CELL_SPURS_CORE_ERROR_INVAL;
  
@@ -204,7 +205,7 @@ int cellSpursSetPriority(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 spuId, 
 	return CELL_OK;
 }
 
-int cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, const bool isPreemptible[8])
+int cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, const bool isPreemptible[CELL_SPURS_MAX_SPU])
 {
 	cellSpurs.Error("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible[%u])", 
 						spurs.GetAddr(), isPreemptible);
