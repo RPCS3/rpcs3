@@ -1,21 +1,28 @@
 #pragma once
 
-#include <wx/config.h>
+#include <utility>
+#include "../Utilities/simpleini/SimpleIni.h"
 
+//TODO: make thread safe/remove static singleton
+CSimpleIniCaseA *getIniFile();
+
+//TODO: move this to the gui module
 struct WindowInfo
 {
-	wxSize size;
-	wxPoint position;
+	std::pair<int, int> size;
+	std::pair<int, int> position;
 
-	WindowInfo(const wxSize _size = wxDefaultSize, const wxPoint _position = wxDefaultPosition)
+	//the (-1,-1) values are currently used because of wxWidgets using it gdicmn.h as default size and default postion
+	WindowInfo(const std::pair<int, int> _size = { -1, -1 }, const std::pair<int, int> _position = { -1, -1 })
 		: size(_size)
 		, position(_position)
 	{
 	}
 
-	static WindowInfo& GetDefault()
+	//TODO: remove
+	static WindowInfo GetDefault()
 	{
-		return *new WindowInfo(wxDefaultSize, wxDefaultPosition);
+		return WindowInfo({ -1, -1 }, { -1, -1 });
 	}
 };
 
@@ -25,38 +32,37 @@ public:
 	virtual ~Ini();
 
 protected:
-	wxConfigBase* m_Config;
+	CSimpleIniCaseA *m_Config;
 
 	Ini();
 
-	void Save(const wxString& key, int value);
-	void Save(const wxString& key, bool value);
-	void Save(const wxString& key, wxSize value);
-	void Save(const wxString& key, wxPoint value);
-	void Save(const wxString& key, const std::string& value);
-	void Save(const wxString& key, WindowInfo value);
+	void Save(const std::string& section, const std::string& key, int value);
+	void Save(const std::string& section, const std::string& key, bool value);
+	void Save(const std::string& section, const std::string& key, std::pair<int, int> value);
+	void Save(const std::string& section, const std::string& key, const std::string& value);
+	void Save(const std::string& section, const std::string& key, WindowInfo value);
 
-	int Load(const wxString& key, const int def_value);
-	bool Load(const wxString& key, const bool def_value);
-	wxSize Load(const wxString& key, const wxSize def_value);
-	wxPoint Load(const wxString& key, const wxPoint def_value);
-	std::string Load(const wxString& key, const std::string& def_value);
-	WindowInfo Load(const wxString& key, const WindowInfo& def_value);
+	int Load(const std::string& section, const std::string& key, const int def_value);
+	bool Load(const std::string& section, const std::string& key, const bool def_value);
+	std::pair<int, int> Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value);
+	std::string Load(const std::string& section, const std::string& key, const std::string& def_value);
+	WindowInfo Load(const std::string& section, const std::string& key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
 {
 	T m_value;
 	std::string m_key;
+	std::string m_section;
 
 	IniEntry() : Ini()
 	{
 	}
 
-	void Init(const std::string& key, const std::string& path)
+	void Init(const std::string& section, const std::string& key)
 	{
 		m_key = key;
-		m_Config->SetPath(fmt::FromUTF8(path));
+		m_section = section;
 	}
 
 	void SetValue(const T& value)
@@ -71,22 +77,22 @@ template<typename T> struct IniEntry : public Ini
 
 	T LoadValue(const T& defvalue)
 	{
-		return Ini::Load(m_key, defvalue);
+		return Ini::Load(m_section, m_key, defvalue);
 	}
 
 	void SaveValue(const T& value)
 	{
-		Ini::Save(m_key, value);
+		Ini::Save(m_section, m_key, value);
 	}
 
 	void Save()
 	{
-		Ini::Save(m_key, m_value);
+		Ini::Save(m_section, m_key, m_value);
 	}
 
 	T Load(const T& defvalue)
 	{
-		return (m_value = Ini::Load(m_key, defvalue));
+		return (m_value = Ini::Load(m_section, m_key, defvalue));
 	}
 };
 
@@ -151,68 +157,61 @@ public:
 	{
 		std::string path;
 
-		path = DefPath + "/" + "CPU";
-		CPUDecoderMode.Init("DecoderMode", path);
-		CPUIgnoreRWErrors.Init("IgnoreRWErrors", path);
-		SPUDecoderMode.Init("SPUDecoderMode", path);
+		path = DefPath;
+		CPUDecoderMode.Init(path, "CPU_DecoderMode");
+		CPUIgnoreRWErrors.Init(path, "CPU_IgnoreRWErrors");
+		SPUDecoderMode.Init(path, "CPU_SPUDecoderMode");
 
-		path = DefPath + "/" + "GS";
-		GSRenderMode.Init("RenderMode", path);
-		GSResolution.Init("Resolution", path);
-		GSAspectRatio.Init("AspectRatio", path);
-		GSVSyncEnable.Init("VSyncEnable", path);
-		GSLogPrograms.Init("LogPrograms", path);
-		GSDumpColorBuffers.Init("DumpColorBuffers", path);
-		GSDumpDepthBuffer.Init("DumpDepthBuffer", path);
-		SkipPamf.Init("SkipPamf", path);
+		GSRenderMode.Init(path, "GS_RenderMode");
+		GSResolution.Init(path, "GS_Resolution");
+		GSAspectRatio.Init(path, "GS_AspectRatio");
+		GSVSyncEnable.Init(path, "GS_VSyncEnable");
+		GSLogPrograms.Init(path, "GS_LogPrograms");
+		GSDumpColorBuffers.Init(path, "GS_DumpColorBuffers");
+		GSDumpDepthBuffer.Init(path, "GS_DumpDepthBuffer");
+		SkipPamf.Init(path, "GS_SkipPamf");
 
-		path = DefPath + "/" + "IO";
-		PadHandlerMode.Init("PadHandlerMode", path);
-		KeyboardHandlerMode.Init("KeyboardHandlerMode", path);
-		MouseHandlerMode.Init("MouseHandlerMode", path);
+		PadHandlerMode.Init(path, "IO_PadHandlerMode");
+		KeyboardHandlerMode.Init(path, "IO_KeyboardHandlerMode");
+		MouseHandlerMode.Init(path, "IO_MouseHandlerMode");
 
-		path = DefPath + "/" + "ControlSetings";
-		PadHandlerLStickLeft.Init("PadHandlerLStickLeft", path);
-		PadHandlerLStickDown.Init("PadHandlerLStickDown", path);
-		PadHandlerLStickRight.Init("PadHandlerLStickRight", path);
-		PadHandlerLStickUp.Init("PadHandlerLStickUp", path);
-		PadHandlerLeft.Init("PadHandlerLeft", path);
-		PadHandlerDown.Init("PadHandlerDown", path);
-		PadHandlerRight.Init("PadHandlerRight", path);
-		PadHandlerUp.Init("PadHandlerUp", path);
-		PadHandlerStart.Init("PadHandlerStart", path);
-		PadHandlerR3.Init("PadHandlerR3", path);
-		PadHandlerL3.Init("PadHandlerL3", path);
-		PadHandlerSelect.Init("PadHandlerSelect", path);
-		PadHandlerSquare.Init("PadHandlerSquare", path);
-		PadHandlerCross.Init("PadHandlerCross", path);
-		PadHandlerCircle.Init("PadHandlerCircle", path);
-		PadHandlerTriangle.Init("PadHandlerTriangle", path);
-		PadHandlerR1.Init("PadHandlerR1", path);
-		PadHandlerL1.Init("PadHandlerL1", path);
-		PadHandlerR2.Init("PadHandlerR2", path);
-		PadHandlerL2.Init("PadHandlerL2", path);
-		PadHandlerRStickLeft.Init("PadHandlerRStickLeft", path);
-		PadHandlerRStickDown.Init("PadHandlerRStickDown", path);
-		PadHandlerRStickRight.Init("PadHandlerRStickRight", path);
-		PadHandlerRStickUp.Init("PadHandlerRStickUp", path);
+		PadHandlerLStickLeft.Init(path, "ControlSetings_PadHandlerLStickLeft");
+		PadHandlerLStickDown.Init(path, "ControlSetings_PadHandlerLStickDown");
+		PadHandlerLStickRight.Init(path, "ControlSetings_PadHandlerLStickRight");
+		PadHandlerLStickUp.Init(path, "ControlSetings_PadHandlerLStickUp");
+		PadHandlerLeft.Init(path, "ControlSetings_PadHandlerLeft");
+		PadHandlerDown.Init(path, "ControlSetings_PadHandlerDown");
+		PadHandlerRight.Init(path, "ControlSetings_PadHandlerRight");
+		PadHandlerUp.Init(path, "ControlSetings_PadHandlerUp");
+		PadHandlerStart.Init(path, "ControlSetings_PadHandlerStart");
+		PadHandlerR3.Init(path, "ControlSetings_PadHandlerR3");
+		PadHandlerL3.Init(path, "ControlSetings_PadHandlerL3");
+		PadHandlerSelect.Init(path, "ControlSetings_PadHandlerSelect");
+		PadHandlerSquare.Init(path, "ControlSetings_PadHandlerSquare");
+		PadHandlerCross.Init(path, "ControlSetings_PadHandlerCross");
+		PadHandlerCircle.Init(path, "ControlSetings_PadHandlerCircle");
+		PadHandlerTriangle.Init(path, "ControlSetings_PadHandlerTriangle");
+		PadHandlerR1.Init(path, "ControlSetings_PadHandlerR1");
+		PadHandlerL1.Init(path, "ControlSetings_PadHandlerL1");
+		PadHandlerR2.Init(path, "ControlSetings_PadHandlerR2");
+		PadHandlerL2.Init(path, "ControlSetings_PadHandlerL2");
+		PadHandlerRStickLeft.Init(path, "ControlSetings_PadHandlerRStickLeft");
+		PadHandlerRStickDown.Init(path, "ControlSetings_PadHandlerRStickDown");
+		PadHandlerRStickRight.Init(path, "ControlSetings_PadHandlerRStickRight");
+		PadHandlerRStickUp.Init(path, "ControlSetings_PadHandlerRStickUp");
 
+		AudioOutMode.Init(path, "Audio_AudioOutMode");
+		AudioDumpToFile.Init(path, "Audio_AudioDumpToFile");
+		AudioConvertToU16.Init(path, "Audio_AudioConvertToU16");
 
-		path = DefPath + "/" + "Audio";
-		AudioOutMode.Init("AudioOutMode", path);
-		AudioDumpToFile.Init("AudioDumpToFile", path);
-		AudioConvertToU16.Init("AudioConvertToU16", path);
+		HLELogging.Init(path, "HLE_HLELogging");
+		HLEHookStFunc.Init(path, "HLE_HLEHookStFunc");
+		HLESaveTTY.Init(path, "HLE_HLESaveTTY");
+		HLEExitOnStop.Init(path, "HLE_HLEExitOnStop");
+		HLELogLvl.Init(path, "HLE_HLELogLvl");
+		HLEHideDebugConsole.Init(path, "HLE_HLEHideDebugConsole");
 
-		path = DefPath + "/" + "HLE";
-		HLELogging.Init("HLELogging", path);
-		HLEHookStFunc.Init("HLEHookStFunc", path);
-		HLESaveTTY.Init("HLESaveTTY", path);
-		HLEExitOnStop.Init("HLEExitOnStop", path);
-		HLELogLvl.Init("HLELogLvl", path);
-		HLEHideDebugConsole.Init("HLEHideDebugConsole", path);
-
-		path = DefPath + "/" + "System";
-		SysLanguage.Init("SysLanguage", path);
+		SysLanguage.Init(path, "Sytem_SysLanguage");
 	}
 
 	void Load()
