@@ -1146,109 +1146,98 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
-	// Fast path for non-MRT using glBlitFramebuffer
-	// TODO: check for MRT samples 
-	if (m_fbo.IsCreated() && (m_surface_colour_target == CELL_GCM_SURFACE_TARGET_0 || m_surface_colour_target == CELL_GCM_SURFACE_TARGET_1))
+	switch (m_surface_colour_target)
 	{
+	case CELL_GCM_SURFACE_TARGET_0:
+	case CELL_GCM_SURFACE_TARGET_1:
+	{
+		// Fast path for non-MRT using glBlitFramebuffer.
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 		// Renderbuffer is upside turn , swapped srcY0 and srcY1
 		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	}
+	break;
 
-		m_fbo.Bind();
-
-		for (uint i = 0; i<m_post_draw_objs.size(); ++i)
+	case CELL_GCM_SURFACE_TARGET_NONE:
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+	{
+		// Slow path for MRT/None target using glReadPixels.
+		if (m_set_scissor_horizontal && m_set_scissor_vertical)
 		{
-			m_post_draw_objs[i].Draw();
+			glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("glScissor");
 		}
 
-		m_frame->Flip(m_context);
+		static u8* src_buffer = nullptr;
+		static u32 width = 0;
+		static u32 height = 0;
+		GLenum format = GL_RGBA;
 
-		m_fbo.Bind();
-
-		return;
-	}
-
-	if(m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
-		checkForGlError("glScissor");
-	}
-	
-	for (uint i = 0; i<m_post_draw_objs.size(); ++i)
-	{
-		m_post_draw_objs[i].Draw();
-	}
-
-	m_frame->Flip(m_context);
-
-	static u8* src_buffer = nullptr;
-	static u32 width = 0;
-	static u32 height = 0;
-	GLenum format = GL_RGBA;
-
-	if(m_read_buffer)
-	{
-		format = GL_BGRA;
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-		u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
-
-		if(Memory.IsGoodAddr(addr))
+		if (m_read_buffer)
 		{
-			width = re(buffers[m_gcm_current_buffer].width);
-			height = re(buffers[m_gcm_current_buffer].height);
-			src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
+			format = GL_BGRA;
+			gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
+
+			if (Memory.IsGoodAddr(addr))
+			{
+				width = re(buffers[m_gcm_current_buffer].width);
+				height = re(buffers[m_gcm_current_buffer].height);
+				src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
+			}
+			else
+			{
+				src_buffer = nullptr;
+			}
+		}
+		else if (m_fbo.IsCreated())
+		{
+			format = GL_RGBA;
+			static std::vector<u8> pixels;
+			pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
+			m_fbo.Bind(GL_READ_FRAMEBUFFER);
+			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.data());
+
+			src_buffer = pixels.data();
+			width = RSXThread::m_width;
+			height = RSXThread::m_height;
 		}
 		else
-		{
 			src_buffer = nullptr;
-		}
-	}
-	else if(m_fbo.IsCreated())
-	{
-		format = GL_RGBA;
-		static std::vector<u8> pixels;
-		pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
-		m_fbo.Bind(GL_READ_FRAMEBUFFER);
-		glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.data());
 
-		src_buffer = pixels.data();
-		width = RSXThread::m_width;
-		height = RSXThread::m_height;
-	}
-	else
-		src_buffer = nullptr;
+		if (src_buffer)
+		{
+			glDisable(GL_STENCIL_TEST);
+			glDisable(GL_DEPTH_TEST);
+			glDisable(GL_CLIP_PLANE0);
+			glDisable(GL_CLIP_PLANE1);
+			glDisable(GL_CLIP_PLANE2);
+			glDisable(GL_CLIP_PLANE3);
+			glDisable(GL_CLIP_PLANE4);
+			glDisable(GL_CLIP_PLANE5);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, g_flip_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	if(src_buffer)
-	{
-		glDisable(GL_STENCIL_TEST);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CLIP_PLANE0);
-		glDisable(GL_CLIP_PLANE1);
-		glDisable(GL_CLIP_PLANE2);
-		glDisable(GL_CLIP_PLANE3);
-		glDisable(GL_CLIP_PLANE4);
-		glDisable(GL_CLIP_PLANE5);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, g_flip_tex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			glOrtho(0, 1, 0, 1, 0, 1);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
 
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, 1, 0, 1, 0, 1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+			GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 
-		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
+			m_program.UnUse();
+			m_program.Use();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
 
-		m_program.UnUse();
-		m_program.Use();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
-
-		glColor3f(1, 1, 1);
-		glBegin(GL_QUADS);
+			glColor3f(1, 1, 1);
+			glBegin(GL_QUADS);
 			glTexCoord2i(0, 1);
 			glVertex2i(0, 0);
 
@@ -1260,14 +1249,26 @@ void GLGSRender::Flip()
 
 			glTexCoord2i(0, 0);
 			glVertex2i(0, 1);
-		glEnd();
+			glEnd();
+		}
+
+		if (m_set_scissor_horizontal && m_set_scissor_vertical)
+		{
+			glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+			checkForGlError("glScissor");
+		}
+	}
+	break;
 	}
 
-	if(m_set_scissor_horizontal && m_set_scissor_vertical)
+	// Draw Objects
+	for (uint i = 0; i<m_post_draw_objs.size(); ++i)
 	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
+		m_post_draw_objs[i].Draw();
 	}
+
+	m_frame->Flip(m_context);
+
 }
 
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)

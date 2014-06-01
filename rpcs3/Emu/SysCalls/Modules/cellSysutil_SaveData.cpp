@@ -602,7 +602,55 @@ int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil.Warning("cellSaveDataAutoSave2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
+		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+
+	if (!setBuf.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
+		return CELL_SAVEDATA_ERROR_PARAM;
+
+	MemoryAllocator<CellSaveDataCBResult> result;
+	MemoryAllocator<CellSaveDataStatGet> statGet;
+	MemoryAllocator<CellSaveDataStatSet> statSet;
+
+	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
+	vfsDir dir(saveBaseDir);
+	if (!dir.IsOpened())
+		return CELL_SAVEDATA_ERROR_INTERNAL;
+
+	std::string dirName = Memory.ReadString(dirName_addr);
+	std::vector<SaveDataEntry> saveEntries;
+	for (const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
+	{
+		if (entry->flags & DirEntry_TypeDir && entry->name == dirName) {
+			addSaveDataEntry(saveEntries, saveBaseDir+dirName);
+		}
+	}
+
+	// The target entry does not exist
+	if (saveEntries.size() == 0) {
+		SaveDataEntry entry;
+		entry.dirName = dirName;
+		entry.sizeKB = 0;
+		entry.isNew = true;
+		saveEntries.push_back(entry);
+	}
+
+	getSaveDataStat(saveEntries[0], statGet.GetAddr()); // There should be only one element in this list
+	result->userdata_addr = userdata_addr;
+	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
+
+	Memory.Free(statGet->fileList.GetAddr());
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataAutoSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
+	/*if (statSet->setParam.IsGood())
+		// TODO: Write PARAM.SFO file
+	*/
+
+	// Enter the loop where the save files are read/created/deleted.
+	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
+
 	return CELL_SAVEDATA_RET_OK;
 }
 
@@ -610,7 +658,52 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+		cellSysutil.Warning("cellSaveDataAutoLoad2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
+		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+
+	if (!setBuf.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
+		return CELL_SAVEDATA_ERROR_PARAM;
+
+	MemoryAllocator<CellSaveDataCBResult> result;
+	MemoryAllocator<CellSaveDataStatGet> statGet;
+	MemoryAllocator<CellSaveDataStatSet> statSet;
+
+	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
+	vfsDir dir(saveBaseDir);
+	if (!dir.IsOpened())
+		return CELL_SAVEDATA_ERROR_INTERNAL;
+
+	std::string dirName = Memory.ReadString(dirName_addr);
+	std::vector<SaveDataEntry> saveEntries;
+	for (const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
+	{
+		if (entry->flags & DirEntry_TypeDir && entry->name == dirName) {
+			addSaveDataEntry(saveEntries, saveBaseDir+dirName);
+		}
+	}
+
+	// The target entry does not exist
+	if (saveEntries.size() == 0) {
+		ConLog.Warning("cellSaveDataAutoLoad2: Couldn't find save entry (%s)", dirName.c_str());
+		return CELL_SAVEDATA_ERROR_FAILURE;
+	}
+
+	getSaveDataStat(saveEntries[0], statGet.GetAddr()); // There should be only one element in this list
+	result->userdata_addr = userdata_addr;
+	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
+
+	Memory.Free(statGet->fileList.GetAddr());
+	if (result->result < 0)	{
+		ConLog.Error("cellSaveDataAutoLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
+	/*if (statSet->setParam.IsGood())
+		// TODO: Write PARAM.SFO file
+	*/
+
+	// Enter the loop where the save files are read/created/deleted.
+	s32 ret = modifySaveDataFiles(funcFile, result.GetAddr(), saveBaseDir + (char*)statGet->dir.dirName);
+
 	return CELL_SAVEDATA_RET_OK;
 }
 

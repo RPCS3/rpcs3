@@ -111,6 +111,7 @@ public:
 	IniEntry<u8> MouseHandlerMode;
 	IniEntry<u8> AudioOutMode;
 	IniEntry<bool> AudioDumpToFile;
+	IniEntry<bool> AudioConvertToU16;
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
@@ -200,6 +201,7 @@ public:
 		path = DefPath + "/" + "Audio";
 		AudioOutMode.Init("AudioOutMode", path);
 		AudioDumpToFile.Init("AudioDumpToFile", path);
+		AudioConvertToU16.Init("AudioConvertToU16", path);
 
 		path = DefPath + "/" + "HLE";
 		HLELogging.Init("HLELogging", path);
@@ -230,7 +232,8 @@ public:
 		KeyboardHandlerMode.Load(0);
 		MouseHandlerMode.Load(0);
 		AudioOutMode.Load(1);
-		AudioDumpToFile.Load(0);
+		AudioDumpToFile.Load(false);
+		AudioConvertToU16.Load(false);
 		HLELogging.Load(false);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
@@ -283,6 +286,7 @@ public:
 		MouseHandlerMode.Save();
 		AudioOutMode.Save();
 		AudioDumpToFile.Save();
+		AudioConvertToU16.Save();
 		HLELogging.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();

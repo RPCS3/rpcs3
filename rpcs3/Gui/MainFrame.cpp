@@ -372,9 +372,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_skip_pamf	      = new wxCheckBox(p_graphics, wxID_ANY, "Skip Pamf");
+	wxCheckBox* chbox_skip_pamf			  = new wxCheckBox(p_graphics, wxID_ANY, "Skip Pamf");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
+	wxCheckBox* chbox_audio_conv		  = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
 	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
@@ -452,6 +453,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_skip_pamf	         ->SetValue(Ini.SkipPamf.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
+	chbox_audio_conv		 ->SetValue(Ini.AudioConvertToU16.GetValue());
 	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
@@ -473,6 +475,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Enable / Disable parameters
 	chbox_audio_dump->Enable(Emu.IsStopped());
+	chbox_audio_conv->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
 
@@ -517,6 +520,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	s_subpanel_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// HLE / Misc.
 	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -563,6 +567,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
+		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
