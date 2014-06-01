@@ -59,7 +59,7 @@ template<typename T> struct IniEntry : public Ini
 	{
 	}
 
-	void Init(const std::string& section, const std::string& key)
+	void Init(const std::string& key, const std::string& section)
 	{
 		m_key = key;
 		m_section = section;
@@ -158,60 +158,60 @@ public:
 		std::string path;
 
 		path = DefPath;
-		CPUDecoderMode.Init(path, "CPU_DecoderMode");
-		CPUIgnoreRWErrors.Init(path, "CPU_IgnoreRWErrors");
-		SPUDecoderMode.Init(path, "CPU_SPUDecoderMode");
+		CPUDecoderMode.Init("CPU_DecoderMode", path);
+		CPUIgnoreRWErrors.Init("CPU_IgnoreRWErrors", path);
+		SPUDecoderMode.Init("CPU_SPUDecoderMode", path);
 
-		GSRenderMode.Init(path, "GS_RenderMode");
-		GSResolution.Init(path, "GS_Resolution");
-		GSAspectRatio.Init(path, "GS_AspectRatio");
-		GSVSyncEnable.Init(path, "GS_VSyncEnable");
-		GSLogPrograms.Init(path, "GS_LogPrograms");
-		GSDumpColorBuffers.Init(path, "GS_DumpColorBuffers");
-		GSDumpDepthBuffer.Init(path, "GS_DumpDepthBuffer");
-		SkipPamf.Init(path, "GS_SkipPamf");
+		GSRenderMode.Init("GS_RenderMode", path);
+		GSResolution.Init("GS_Resolution", path);
+		GSAspectRatio.Init("GS_AspectRatio", path);
+		GSVSyncEnable.Init("GS_VSyncEnable", path);
+		GSLogPrograms.Init("GS_LogPrograms", path);
+		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
+		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
+		SkipPamf.Init("GS_SkipPamf", path);
 
-		PadHandlerMode.Init(path, "IO_PadHandlerMode");
-		KeyboardHandlerMode.Init(path, "IO_KeyboardHandlerMode");
-		MouseHandlerMode.Init(path, "IO_MouseHandlerMode");
+		PadHandlerMode.Init("IO_PadHandlerMode", path);
+		KeyboardHandlerMode.Init("IO_KeyboardHandlerMode", path);
+		MouseHandlerMode.Init("IO_MouseHandlerMode", path);
 
-		PadHandlerLStickLeft.Init(path, "ControlSetings_PadHandlerLStickLeft");
-		PadHandlerLStickDown.Init(path, "ControlSetings_PadHandlerLStickDown");
-		PadHandlerLStickRight.Init(path, "ControlSetings_PadHandlerLStickRight");
-		PadHandlerLStickUp.Init(path, "ControlSetings_PadHandlerLStickUp");
-		PadHandlerLeft.Init(path, "ControlSetings_PadHandlerLeft");
-		PadHandlerDown.Init(path, "ControlSetings_PadHandlerDown");
-		PadHandlerRight.Init(path, "ControlSetings_PadHandlerRight");
-		PadHandlerUp.Init(path, "ControlSetings_PadHandlerUp");
-		PadHandlerStart.Init(path, "ControlSetings_PadHandlerStart");
-		PadHandlerR3.Init(path, "ControlSetings_PadHandlerR3");
-		PadHandlerL3.Init(path, "ControlSetings_PadHandlerL3");
-		PadHandlerSelect.Init(path, "ControlSetings_PadHandlerSelect");
-		PadHandlerSquare.Init(path, "ControlSetings_PadHandlerSquare");
-		PadHandlerCross.Init(path, "ControlSetings_PadHandlerCross");
-		PadHandlerCircle.Init(path, "ControlSetings_PadHandlerCircle");
-		PadHandlerTriangle.Init(path, "ControlSetings_PadHandlerTriangle");
-		PadHandlerR1.Init(path, "ControlSetings_PadHandlerR1");
-		PadHandlerL1.Init(path, "ControlSetings_PadHandlerL1");
-		PadHandlerR2.Init(path, "ControlSetings_PadHandlerR2");
-		PadHandlerL2.Init(path, "ControlSetings_PadHandlerL2");
-		PadHandlerRStickLeft.Init(path, "ControlSetings_PadHandlerRStickLeft");
-		PadHandlerRStickDown.Init(path, "ControlSetings_PadHandlerRStickDown");
-		PadHandlerRStickRight.Init(path, "ControlSetings_PadHandlerRStickRight");
-		PadHandlerRStickUp.Init(path, "ControlSetings_PadHandlerRStickUp");
+		PadHandlerLStickLeft.Init("ControlSetings_PadHandlerLStickLeft", path);
+		PadHandlerLStickDown.Init("ControlSetings_PadHandlerLStickDown", path);
+		PadHandlerLStickRight.Init("ControlSetings_PadHandlerLStickRight", path);
+		PadHandlerLStickUp.Init("ControlSetings_PadHandlerLStickUp", path);
+		PadHandlerLeft.Init("ControlSetings_PadHandlerLeft", path);
+		PadHandlerDown.Init("ControlSetings_PadHandlerDown", path);
+		PadHandlerRight.Init("ControlSetings_PadHandlerRight", path);
+		PadHandlerUp.Init("ControlSetings_PadHandlerUp", path);
+		PadHandlerStart.Init("ControlSetings_PadHandlerStart", path);
+		PadHandlerR3.Init("ControlSetings_PadHandlerR3", path);
+		PadHandlerL3.Init("ControlSetings_PadHandlerL3", path);
+		PadHandlerSelect.Init("ControlSetings_PadHandlerSelect", path);
+		PadHandlerSquare.Init("ControlSetings_PadHandlerSquare", path);
+		PadHandlerCross.Init("ControlSetings_PadHandlerCross", path);
+		PadHandlerCircle.Init("ControlSetings_PadHandlerCircle", path);
+		PadHandlerTriangle.Init("ControlSetings_PadHandlerTriangle", path);
+		PadHandlerR1.Init("ControlSetings_PadHandlerR1", path);
+		PadHandlerL1.Init("ControlSetings_PadHandlerL1", path);
+		PadHandlerR2.Init("ControlSetings_PadHandlerR2", path);
+		PadHandlerL2.Init("ControlSetings_PadHandlerL2", path);
+		PadHandlerRStickLeft.Init("ControlSetings_PadHandlerRStickLeft", path);
+		PadHandlerRStickDown.Init("ControlSetings_PadHandlerRStickDown", path);
+		PadHandlerRStickRight.Init("ControlSetings_PadHandlerRStickRight", path);
+		PadHandlerRStickUp.Init("ControlSetings_PadHandlerRStickUp", path);
 
-		AudioOutMode.Init(path, "Audio_AudioOutMode");
-		AudioDumpToFile.Init(path, "Audio_AudioDumpToFile");
-		AudioConvertToU16.Init(path, "Audio_AudioConvertToU16");
+		AudioOutMode.Init("Audio_AudioOutMode", path);
+		AudioDumpToFile.Init("Audio_AudioDumpToFile", path);
+		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
 
-		HLELogging.Init(path, "HLE_HLELogging");
-		HLEHookStFunc.Init(path, "HLE_HLEHookStFunc");
-		HLESaveTTY.Init(path, "HLE_HLESaveTTY");
-		HLEExitOnStop.Init(path, "HLE_HLEExitOnStop");
-		HLELogLvl.Init(path, "HLE_HLELogLvl");
-		HLEHideDebugConsole.Init(path, "HLE_HLEHideDebugConsole");
+		HLELogging.Init("HLE_HLELogging", path);
+		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
+		HLESaveTTY.Init("HLE_HLESaveTTY", path);
+		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
+		HLELogLvl.Init("HLE_HLELogLvl", path);
+		HLEHideDebugConsole.Init("HLE_HLEHideDebugConsole", path);
 
-		SysLanguage.Init(path, "Sytem_SysLanguage");
+		SysLanguage.Init("Sytem_SysLanguage", path);
 	}
 
 	void Load()
