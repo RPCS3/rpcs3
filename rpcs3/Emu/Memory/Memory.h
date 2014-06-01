@@ -627,70 +627,70 @@ public:
 
 	mem_ptr_t operator++ (int)
 	{
-		mem_ptr_t ret(m_addr);
-		m_addr += sizeof(AT);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr += sizeof(AT);
 		return ret;
 	}
 
 	mem_ptr_t& operator++ ()
 	{
-		m_addr += sizeof(AT);
+		this->m_addr += sizeof(AT);
 		return *this;
 	}
 
 	mem_ptr_t operator-- (int)
 	{
-		mem_ptr_t ret(m_addr);
-		m_addr -= sizeof(AT);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr -= sizeof(AT);
 		return ret;
 	}
 
 	mem_ptr_t& operator-- ()
 	{
-		m_addr -= sizeof(AT);
+		this->m_addr -= sizeof(AT);
 		return *this;
 	}
 
 	mem_ptr_t& operator += (uint count)
 	{
-		m_addr += count * sizeof(AT);
+		this->m_addr += count * sizeof(AT);
 		return *this;
 	}
 
 	mem_ptr_t& operator -= (uint count)
 	{
-		m_addr -= count * sizeof(AT);
+		this->m_addr -= count * sizeof(AT);
 		return *this;
 	}
 
 	mem_ptr_t operator + (uint count) const
 	{
-		return m_addr + count * sizeof(AT);
+		return this->m_addr + count * sizeof(AT);
 	}
 
 	mem_ptr_t operator - (uint count) const
 	{
-		return m_addr - count * sizeof(AT);
+		return this->m_addr - count * sizeof(AT);
 	}
 
 	__forceinline mem_ptr_t<T, lvl - 1, AT>& operator *()
 	{
-		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[m_addr];
+		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr];
 	}
 
 	__forceinline const mem_ptr_t<T, lvl - 1, AT>& operator *() const
 	{
-		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[m_addr];
+		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr];
 	}
 
 	__forceinline mem_ptr_t<T, lvl - 1, AT>& operator [](uint index)
 	{
-		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[m_addr + sizeof(AT) * index];
+		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr + sizeof(AT) * index];
 	}
 
 	__forceinline const mem_ptr_t<T, lvl - 1, AT>& operator [](uint index) const
 	{
-		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[m_addr + sizeof(AT) * index];
+		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr + sizeof(AT) * index];
 	}
 
 	bool IsGood() const
@@ -717,80 +717,80 @@ public:
 
 	__forceinline T* operator -> ()
 	{
-		return (T*)&Memory[m_addr];
+		return (T*)&Memory[this->m_addr];
 	}
 
 	__forceinline const T* operator -> () const
 	{
-		return (const T*)&Memory[m_addr];
+		return (const T*)&Memory[this->m_addr];
 	}
 
 	mem_ptr_t operator++ (int)
 	{
-		mem_ptr_t ret(m_addr);
-		m_addr += sizeof(T);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr += sizeof(T);
 		return ret;
 	}
 
 	mem_ptr_t& operator++ ()
 	{
-		m_addr += sizeof(T);
+		this->m_addr += sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t operator-- (int)
 	{
-		mem_ptr_t ret(m_addr);
-		m_addr -= sizeof(T);
+		mem_ptr_t ret(this->m_addr);
+		this->m_addr -= sizeof(T);
 		return ret;
 	}
 
 	mem_ptr_t& operator-- ()
 	{
-		m_addr -= sizeof(T);
+		this->m_addr -= sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t& operator += (uint count)
 	{
-		m_addr += count * sizeof(T);
+		this->m_addr += count * sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t& operator -= (uint count)
 	{
-		m_addr -= count * sizeof(T);
+		this->m_addr -= count * sizeof(T);
 		return *this;
 	}
 
 	mem_ptr_t operator + (uint count) const
 	{
-		return m_addr + count * sizeof(T);
+		return this->m_addr + count * sizeof(T);
 	}
 
 	mem_ptr_t operator - (uint count) const
 	{
-		return m_addr - count * sizeof(T);
+		return this->m_addr - count * sizeof(T);
 	}
 
 	__forceinline T& operator *()
 	{
-		return (T&)Memory[m_addr];
+		return (T&)Memory[this->m_addr];
 	}
 
 	__forceinline const T& operator *() const
 	{
-		return (T&)Memory[m_addr];
+		return (T&)Memory[this->m_addr];
 	}
 
 	__forceinline T& operator [](uint index)
 	{
-		return (T&)Memory[m_addr + sizeof(T) * index];
+		return (T&)Memory[this->m_addr + sizeof(T) * index];
 	}
 
 	__forceinline const T& operator [](uint index) const
 	{
-		return (const T&)Memory[m_addr + sizeof(T) * index];
+		return (const T&)Memory[this->m_addr + sizeof(T) * index];
 	}
 };
 
@@ -818,19 +818,19 @@ public:
 
 	mem_t& operator = (T right)
 	{
-		(be_t<T>&)Memory[m_addr] = right;
+		(be_t<T>&)Memory[this->m_addr] = right;
 
 		return *this;
 	}
 
 	__forceinline T GetValue()
 	{
-		return (be_t<T>&)Memory[m_addr];
+		return (be_t<T>&)Memory[this->m_addr];
 	}
 
 	operator const T() const
 	{
-		return (be_t<T>&)Memory[m_addr];
+		return (be_t<T>&)Memory[this->m_addr];
 	}
 
 	mem_t& operator += (T right) { return *this = (*this) + right; }
@@ -854,24 +854,24 @@ public:
 
 	void operator = (T right)
 	{
-		(be_t<T>&)Memory[m_addr] = right;
+		(be_t<T>&)Memory[this->m_addr] = right;
 	}
 
 	u32 operator += (T right)
 	{
 		*this = right;
-		m_addr += sizeof(T);
-		return m_addr;
+		this->m_addr += sizeof(T);
+		return this->m_addr;
 	}
 	
 	u32 AppendRawBytes(const u8 *bytes, size_t count)
 	{
-		Memory.CopyFromReal(m_addr, bytes, count);
-		m_addr += count;
-		return m_addr;
+		Memory.CopyFromReal(this->m_addr, bytes, count);
+		this->m_addr += count;
+		return this->m_addr;
 	}
 
-	u32 Skip(const u32 offset) { return m_addr += offset; }
+	u32 Skip(const u32 offset) { return this->m_addr += offset; }
 
 	operator be_t<T>*()			{ return GetPtr(); }
 	operator void*()			{ return GetPtr(); }
@@ -880,17 +880,17 @@ public:
 
 	const char* GetString() const
 	{
-		return (const char*)&Memory[m_addr];
+		return (const char*)&Memory[this->m_addr];
 	}
 
 	be_t<T>* GetPtr()
 	{
-		return (be_t<T>*)&Memory[m_addr];
+		return (be_t<T>*)&Memory[this->m_addr];
 	}
 
 	const be_t<T>* GetPtr() const
 	{
-		return (const be_t<T>*)&Memory[m_addr];
+		return (const be_t<T>*)&Memory[this->m_addr];
 	}
 };
 
@@ -964,7 +964,7 @@ class mem_func_ptr_t<RT (*)(), AT> : public mem_base_t<u64, AT>
 	__forceinline void call_func(bool is_async)
 	{
 		Callback cb;
-		cb.SetAddr(m_addr);
+		cb.SetAddr(this->m_addr);
 		cb.Branch(!is_async);
 	}
 
@@ -986,7 +986,7 @@ class mem_func_ptr_t<RT(*)(T...), AT> : public mem_base_t<u64, AT>
 	__forceinline void call_func(bool is_async, T... args)
 	{
 		Callback cb;
-		cb.SetAddr(m_addr);
+		cb.SetAddr(this->m_addr);
 		cb.Handle(_func_arg<T>::get_value(args)...);
 		cb.Branch(!is_async);
 	}
