@@ -1800,7 +1800,7 @@ void RSXThread::Task()
 
 		if(cmd == 0)
 		{
-			ConLog.Warning("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, m_ctrl->put, get);
+			ConLog.Error("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, m_ctrl->put, get);
 			Emu.Pause();
 			continue;
 		}
