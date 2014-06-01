@@ -857,7 +857,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	MemoryAllocator<CellHddGameStatGet> get;
 	MemoryAllocator<CellHddGameStatSet> set;
 
-	get->hddFreeSizeKB = 40000000; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->st_atime__  = 0; // TODO
