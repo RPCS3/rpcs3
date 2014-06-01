@@ -242,7 +242,7 @@ class GameViewer : public wxListView
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
-	
+	wxMenu* m_popup;
 public:
 
 	ListSortInfo SortInfo;
@@ -260,7 +260,10 @@ public:
 	void LoadSettings();
 
 	void Refresh();
+	void RemoveGame(wxCommandEvent& event);
+	bool RemoveFolder(std::string localPath);
 private:
 	virtual void DClick(wxListEvent& event);
-	void OnColClick(wxListEvent& event);
+	virtual void OnColClick(wxListEvent& event);
+	virtual void RightClick(wxListEvent& event);
 };

@@ -23,6 +23,7 @@ private:
 	void OnQuit(wxCloseEvent& event);
 
 	void BootGame(wxCommandEvent& event);
+	void BootGameAndRun(wxCommandEvent& event);
 	void InstallPkg(wxCommandEvent& event);
 	void BootElf(wxCommandEvent& event);
 	void Pause(wxCommandEvent& event);

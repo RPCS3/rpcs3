@@ -10,8 +10,12 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 
 	m_path = "/dev_hdd0/game/";
 
+	m_popup = new wxMenu();
+	m_popup->Append(0, _T("Remove Game"));
+
 	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
 	Bind(wxEVT_LIST_COL_CLICK, &GameViewer::OnColClick, this);
+	Bind(wxEVT_LIST_ITEM_RIGHT_CLICK, &GameViewer::RightClick, this);
 
 	Refresh();
 }
@@ -36,7 +40,7 @@ int wxCALLBACK ListItemCompare(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortinfo
 	long index2 = pGameViewer->FindItem(-1, item2);  
 	wxString string1 = pGameViewer->GetItemText(index1, Column); 
 	wxString string2 = pGameViewer->GetItemText(index2, Column); 
-
+	
 	if (string1.Cmp(string2) < 0)
 	{
 		return SortAscending ? -1 : 1;
@@ -84,6 +88,7 @@ void GameViewer::LoadGames()
 			m_games.push_back(info->name);
 		}
 	}
+	dir.Close();
 
 	//ConLog.Write("path: %s", m_path.wx_str());
 	//ConLog.Write("folders count: %d", m_games.GetCount());
@@ -162,4 +167,72 @@ void GameViewer::DClick(wxListEvent& event)
 		return;
 	}
 	Emu.Run();
+}
+
+void GameViewer::RightClick(wxListEvent& event)
+{
+	m_popup->Destroy(m_popup->FindItemByPosition(0));
+	
+	wxMenuItem *pMenuItemA = m_popup->Append(event.GetIndex(), _T("Remove Game"));
+	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, event.GetIndex());
+	PopupMenu(m_popup, event.GetPoint());
+}
+
+class WxDirDeleteTraverser : public wxDirTraverser
+{
+public:
+	virtual wxDirTraverseResult OnFile(const wxString& filename)
+	{
+		if (!wxRemoveFile(filename)){
+			ConLog.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+		}
+		return wxDIR_CONTINUE;
+	}
+	virtual wxDirTraverseResult OnDir(const wxString& dirname)
+	{
+		wxDir dir(dirname);
+		dir.Traverse(*this);
+		if (!wxRmDir(dirname)){
+			//this get triggered a few times while clearing folders
+			//but if this gets reimplented we should probably warn
+			//if directories can't be removed
+		}
+		return wxDIR_CONTINUE;
+	}
+};
+
+void GameViewer::RemoveGame(wxCommandEvent& event)
+{
+	wxString GameName = this->GetItemText(event.GetId(), 5);
+
+	Emu.GetVFS().Init(m_path);
+	vfsDir dir(m_path);	
+	if (!dir.IsOpened()) return;
+
+	std::string sPath = dir.GetPath();
+	std::string sGameFolder = GameName.mb_str().data();
+
+	Emu.GetVFS().UnMountAll();
+
+	sPath.erase(0, 1);
+
+	RemoveFolder(sPath + sGameFolder);
+
+	Refresh();
+
+}
+
+bool GameViewer::RemoveFolder(std::string localPath)
+{
+	//TODO: replace wxWidgetsSpecific filesystem stuff
+	if (wxDirExists(fmt::FromUTF8(localPath))){
+		WxDirDeleteTraverser deleter;
+		wxDir dir(localPath);
+		dir.Traverse(deleter);
+		return TRUE;
+	}
+	else{
+		return FALSE;
+	}
+
 }
