@@ -188,7 +188,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	{
 		ConLog.Success("Game: boot done.");
 
-		if (Ini.CPUAlwaysStart.GetValue() && Emu.IsReady())
+		if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
 		{
 			Emu.Run();
 		}
@@ -422,7 +422,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
-	wxCheckBox* chbox_cpu_always_start	  = new wxCheckBox(p_cpu, wxID_ANY, "Always start after boot");
+	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -500,7 +500,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_hide_debug_console->SetValue(Ini.HLEHideDebugConsole.GetValue());
-	chbox_cpu_always_start   ->SetValue(Ini.CPUAlwaysStart.GetValue());
+	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -541,7 +541,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Core
 	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_cpu_decoder->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_cpu_decoder->Add(chbox_cpu_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
@@ -570,6 +569,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_hide_debug_console, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -615,7 +615,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
-		Ini.CPUAlwaysStart.SetValue(chbox_cpu_always_start->GetValue());
+		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
 
 		Ini.Save();
 	}
