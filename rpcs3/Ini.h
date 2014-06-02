@@ -102,9 +102,12 @@ private:
 	const std::string DefPath;
 
 public:
+	// Core
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<u8> SPUDecoderMode;
 	IniEntry<bool> CPUIgnoreRWErrors;
+
+	// Graphics
 	IniEntry<u8> GSRenderMode;
 	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
@@ -112,22 +115,17 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<u8> PadHandlerMode;
-	IniEntry<u8> KeyboardHandlerMode;
-	IniEntry<u8> MouseHandlerMode;
+	IniEntry<bool> SkipPamf;
+
+	// Audio
 	IniEntry<u8> AudioOutMode;
 	IniEntry<bool> AudioDumpToFile;
 	IniEntry<bool> AudioConvertToU16;
-	IniEntry<bool> HLELogging;
-	IniEntry<bool> HLEHookStFunc;
-	IniEntry<bool> HLESaveTTY;
-	IniEntry<bool> HLEExitOnStop;
-	IniEntry<u8> HLELogLvl;
-	IniEntry<u8> SysLanguage;
-	IniEntry<bool> SkipPamf;
-	IniEntry<bool> HLEHideDebugConsole;
-	IniEntry<bool> HLEAlwaysStart;
 
+	// Input/Output
+	IniEntry<u8> PadHandlerMode;
+	IniEntry<u8> KeyboardHandlerMode;
+	IniEntry<u8> MouseHandlerMode;
 	IniEntry<int> PadHandlerLStickLeft;
 	IniEntry<int> PadHandlerLStickDown;
 	IniEntry<int> PadHandlerLStickRight;
@@ -153,16 +151,31 @@ public:
 	IniEntry<int> PadHandlerRStickRight;
 	IniEntry<int> PadHandlerRStickUp;
 
+	// HLE/Miscs
+	IniEntry<bool> HLELogging;
+	IniEntry<bool> HLEHookStFunc;
+	IniEntry<bool> HLESaveTTY;
+	IniEntry<bool> HLEExitOnStop;
+	IniEntry<u8> HLELogLvl;
+	IniEntry<bool> HLEHideDebugConsole;
+	IniEntry<bool> HLEAlwaysStart;
+
+	// Language
+	IniEntry<u8> SysLanguage;
+
 public:
 	Inis() : DefPath("EmuSettings")
 	{
 		std::string path;
 
 		path = DefPath;
+
+		// Core
 		CPUDecoderMode.Init("CPU_DecoderMode", path);
 		CPUIgnoreRWErrors.Init("CPU_IgnoreRWErrors", path);
 		SPUDecoderMode.Init("CPU_SPUDecoderMode", path);
 
+		// Graphics
 		GSRenderMode.Init("GS_RenderMode", path);
 		GSResolution.Init("GS_Resolution", path);
 		GSAspectRatio.Init("GS_AspectRatio", path);
@@ -172,10 +185,15 @@ public:
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
 		SkipPamf.Init("GS_SkipPamf", path);
 
+		// Audio
+		AudioOutMode.Init("Audio_AudioOutMode", path);
+		AudioDumpToFile.Init("Audio_AudioDumpToFile", path);
+		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
+
+		// Input/Output
 		PadHandlerMode.Init("IO_PadHandlerMode", path);
 		KeyboardHandlerMode.Init("IO_KeyboardHandlerMode", path);
 		MouseHandlerMode.Init("IO_MouseHandlerMode", path);
-
 		PadHandlerLStickLeft.Init("ControlSetings_PadHandlerLStickLeft", path);
 		PadHandlerLStickDown.Init("ControlSetings_PadHandlerLStickDown", path);
 		PadHandlerLStickRight.Init("ControlSetings_PadHandlerLStickRight", path);
@@ -201,26 +219,27 @@ public:
 		PadHandlerRStickRight.Init("ControlSetings_PadHandlerRStickRight", path);
 		PadHandlerRStickUp.Init("ControlSetings_PadHandlerRStickUp", path);
 
-		AudioOutMode.Init("Audio_AudioOutMode", path);
-		AudioDumpToFile.Init("Audio_AudioDumpToFile", path);
-		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
-
+		// HLE/Misc
 		HLELogging.Init("HLE_HLELogging", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEHideDebugConsole.Init("HLE_HLEHideDebugConsole", path);
+		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
 
+		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
 	}
 
 	void Load()
 	{
+		// Core
 		CPUDecoderMode.Load(2);
 		CPUIgnoreRWErrors.Load(true);
-		HLEAlwaysStart.Load(false);
 		SPUDecoderMode.Load(1);
+
+		// Graphics
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
@@ -229,20 +248,16 @@ public:
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
 		SkipPamf.Load(false);
-		PadHandlerMode.Load(1);
-		KeyboardHandlerMode.Load(0);
-		MouseHandlerMode.Load(0);
+
+		// Audio
 		AudioOutMode.Load(1);
 		AudioDumpToFile.Load(false);
 		AudioConvertToU16.Load(false);
-		HLELogging.Load(false);
-		HLEHookStFunc.Load(false);
-		HLESaveTTY.Load(false);
-		HLEExitOnStop.Load(false);
-		HLELogLvl.Load(0);
-		SysLanguage.Load(1);
-		HLEHideDebugConsole.Load(false);
 
+		// Input/Ouput
+		PadHandlerMode.Load(1);
+		KeyboardHandlerMode.Load(0);
+		MouseHandlerMode.Load(0);
 		PadHandlerLStickLeft.Load(314); //WXK_LEFT
 		PadHandlerLStickDown.Load(317); //WXK_DOWN
 		PadHandlerLStickRight.Load(316); //WXK_RIGHT
@@ -267,14 +282,29 @@ public:
 		PadHandlerRStickDown.Load(367); //WXK_PAGEDOWN
 		PadHandlerRStickRight.Load(312); //WXK_END
 		PadHandlerRStickUp.Load(366); //WXK_PAGEUP
+
+		// HLE/Miscs
+		HLELogging.Load(false);
+		HLEHookStFunc.Load(false);
+		HLESaveTTY.Load(false);
+		HLEExitOnStop.Load(false);
+		HLELogLvl.Load(0);
+		HLEHideDebugConsole.Load(false);
+		HLEAlwaysStart.Load(false);
+
+		// Language
+		SysLanguage.Load(1);
+
 	}
 
 	void Save()
 	{
+		// CPU/SPU
 		CPUDecoderMode.Save();
 		CPUIgnoreRWErrors.Save();
-		HLEAlwaysStart.Save();
 		SPUDecoderMode.Save();
+
+		// Graphics
 		GSRenderMode.Save();
 		GSResolution.Save();
 		GSAspectRatio.Save();
@@ -283,20 +313,16 @@ public:
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
 		SkipPamf.Save();
-		PadHandlerMode.Save();
-		KeyboardHandlerMode.Save();
-		MouseHandlerMode.Save();
+
+		// Audio 
 		AudioOutMode.Save();
 		AudioDumpToFile.Save();
 		AudioConvertToU16.Save();
-		HLELogging.Save();
-		HLEHookStFunc.Save();
-		HLESaveTTY.Save();
-		HLEExitOnStop.Save();
-		HLELogLvl.Save();
-		SysLanguage.Save();
-		HLEHideDebugConsole.Save();
 
+		// Input/Output
+		PadHandlerMode.Save();
+		KeyboardHandlerMode.Save();
+		MouseHandlerMode.Save();
 		PadHandlerLStickLeft.Save();
 		PadHandlerLStickDown.Save();
 		PadHandlerLStickRight.Save();
@@ -321,6 +347,18 @@ public:
 		PadHandlerRStickDown.Save();
 		PadHandlerRStickRight.Save();
 		PadHandlerRStickUp.Save();
+
+		// HLE/Miscs
+		HLELogging.Save();
+		HLEHookStFunc.Save();
+		HLESaveTTY.Save();
+		HLEExitOnStop.Save();
+		HLELogLvl.Save();
+		HLEHideDebugConsole.Save();
+		HLEAlwaysStart.Save();
+
+		// Language
+		SysLanguage.Save();
 	}
 };
 
