@@ -256,8 +256,8 @@ int cellGcmSetDebugOutputLevel(int level)
 
 int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
-	cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
-		id, offset, width ? pitch/width : pitch, width, height);
+	//cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
+	//	id, offset, width ? pitch/width : pitch, width, height);
 	if(id > 7) return CELL_EINVAL;
 
 	gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);

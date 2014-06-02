@@ -87,7 +87,7 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 
 bool MemoryBlock::IsMyAddress(const u64 addr)
 {
-	return mem && addr >= GetStartAddr() && addr <= GetEndAddr();
+	return mem && addr >= GetStartAddr() && addr < GetEndAddr();
 }
 
 template <typename T>

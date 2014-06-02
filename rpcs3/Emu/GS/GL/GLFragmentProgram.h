@@ -155,7 +155,7 @@ public:
 
 	/**
 	* Asynchronously decompile a fragment shader located in the PS3's Memory.
-	* When this function is called you must call Wait before GetShaderText() will return valid data.
+	* When this function is called you must call Wait() before GetShaderText() will return valid data.
 	* @param prog RSXShaderProgram specifying the location and size of the shader in memory
 	*/
 	void DecompileAsync(RSXShaderProgram& prog);

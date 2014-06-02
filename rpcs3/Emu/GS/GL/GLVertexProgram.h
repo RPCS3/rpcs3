@@ -172,10 +172,9 @@ struct GLVertexDecompilerThread : public ThreadBase
 	virtual void Task();
 };
 
-struct GLVertexProgram
+class GLVertexProgram
 { 
-	GLVertexDecompilerThread* m_decompiler_thread;
-
+public:
 	GLVertexProgram();
 	~GLVertexProgram();
 
@@ -183,15 +182,12 @@ struct GLVertexProgram
 	u32 id;
 	std::string shader;
 
-	void Wait()
-	{
-		if(m_decompiler_thread && m_decompiler_thread->IsAlive())
-		{
-			m_decompiler_thread->Join();
-		}
-	}
-
 	void Decompile(RSXVertexProgram& prog);
+	void DecompileAsync(RSXVertexProgram& prog);
+	void Wait();
 	void Compile();
+
+private:
+	GLVertexDecompilerThread* m_decompiler_thread;
 	void Delete();
 };
