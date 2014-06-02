@@ -163,9 +163,13 @@ int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, c
 	}
 
 	for (int i = 0; i < CELL_SPURS_MAX_SPU; i++)
-	if (priority[i] != 1 || maxSpu == 0)
-		return CELL_SPURS_CORE_ERROR_INVAL;
-
+	{
+		if (priority[i] != 1 || maxSpu == 0)
+		{
+			cellSpurs.Error("cellSpursAttributeEnableSystemWorkload : CELL_SPURS_CORE_ERROR_INVAL");
+			return CELL_SPURS_CORE_ERROR_INVAL;
+		}
+	}
 	return CELL_OK;
 }
 
