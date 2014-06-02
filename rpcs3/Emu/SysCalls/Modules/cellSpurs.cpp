@@ -111,6 +111,12 @@ int cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> a
 	return CELL_OK;
 }
 
+int cellSpursTaskAttributeSetExitCodeContainer()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
 int cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, int type)
 {
 	cellSpurs.Warning("cellSpursAttributeSetSpuThreadGroupType(attr_addr=0x%x, type=%u)", attr.GetAddr(), type);
@@ -280,6 +286,84 @@ int cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> event_flag, mem16_t fla
 	return CELL_OK;
 }
 
+int cellSpursEventFlagClear()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskAttributeInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursEventFlagSet()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursEventFlagTryWait()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursLFQueueInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursLFQueuePushBody()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursLFQueueDetachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursLFQueueAttachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueDetachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursQueueInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueuePopBody()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueuePushBody()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueAttachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
 int cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 {
 	cellSpurs.Error("cellSpursEnableExceptionEventHandler(spurs_addr=0x%x, flag=%u)", spurs.GetAddr(), flag);
@@ -329,6 +413,42 @@ int _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
 	if(!taskset.IsGood())
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 
+	return CELL_OK;
+}
+
+int cellSpursCreateJobChainWithAttribute()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursCreateJobChain()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJoinJobChain()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursKickJobChain()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursJobChainAttributeInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursCreateTasksetWithAttribute()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
 }
 
@@ -387,6 +507,150 @@ int cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, mem
 	return CELL_OK;
 }
 
+int cellSpursCreateTaskWithAttribute()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTasksetAttributeSetName()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursTasksetAttribute2Initialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskExitCodeGet()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskExitCodeInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskExitCodeTryGet()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskGetLoadableSegmentPattern()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskGetReadOnlyAreaPattern()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskGenerateLsPattern()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursTaskAttribute2Initialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTaskGetContextSaveAreaSize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursCreateTaskset2()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursCreateTask2()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJoinTask2()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursTryJoinTask2()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursDestroyTaskset2()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int _cellSpursTasksetAttributeInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJobGuardInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJobChainAttributeSetName()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursShutdownJobChain()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJobChainAttributeSetHaltOnError()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJobGuardNotify()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursRunJobChain()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursJobChainGetError()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
 void cellSpurs_init()
 {
 	//libspurs core functions
@@ -394,41 +658,84 @@ void cellSpurs_init()
 	cellSpurs.AddFunc(0xaa6269a8, cellSpursInitializeWithAttribute);
 	cellSpurs.AddFunc(0x30aa96c4, cellSpursInitializeWithAttribute2);
 	cellSpurs.AddFunc(0xca4c4600, cellSpursFinalize);
-
 	cellSpurs.AddFunc(0x95180230, _cellSpursAttributeInitialize);
 	cellSpurs.AddFunc(0x82275c1c, cellSpursAttributeSetMemoryContainerForSpuThread);
 	cellSpurs.AddFunc(0x07529113, cellSpursAttributeSetNamePrefix);
 	cellSpurs.AddFunc(0x1051d134, cellSpursAttributeEnableSpuPrintfIfAvailable);
 	cellSpurs.AddFunc(0xa839a4d9, cellSpursAttributeSetSpuThreadGroupType);
 	cellSpurs.AddFunc(0x9dcbcb5d, cellSpursAttributeEnableSystemWorkload);
-
 	cellSpurs.AddFunc(0x39c173fb, cellSpursGetSpuThreadGroupId);
 	cellSpurs.AddFunc(0xc56defb5, cellSpursGetNumSpuThread);
 	cellSpurs.AddFunc(0x6c960f6d, cellSpursGetSpuThreadId);
+	cellSpurs.AddFunc(0x1f402f8f, cellSpursGetInfo);
 	cellSpurs.AddFunc(0x84d2f6d5, cellSpursSetMaxContention);
-
 	cellSpurs.AddFunc(0x80a29e27, cellSpursSetPriorities);
 	cellSpurs.AddFunc(0x4de203e2, cellSpursSetPreemptionVictimHints);
-	
 	cellSpurs.AddFunc(0xb9bc6207, cellSpursAttachLv2EventQueue);
 	cellSpurs.AddFunc(0x4e66d483, cellSpursDetachLv2EventQueue);
+	cellSpurs.AddFunc(0xe0a6dbe4, _cellSpursSendSignal);
 	//cellSpurs.AddFunc(0x5ef96465, _cellSpursEventFlagInitialize);
 	cellSpurs.AddFunc(0x87630976, cellSpursEventFlagAttachLv2EventQueue);
 	cellSpurs.AddFunc(0x22aab31d, cellSpursEventFlagDetachLv2EventQueue);
 	cellSpurs.AddFunc(0x373523d4, cellSpursEventFlagWait);
-
+	cellSpurs.AddFunc(0x4ac7bae4, cellSpursEventFlagClear);
+	cellSpurs.AddFunc(0xf5507729, cellSpursEventFlagSet);
+	cellSpurs.AddFunc(0x6d2d9339, cellSpursEventFlagTryWait);
 	cellSpurs.AddFunc(0x32b94add, cellSpursEnableExceptionEventHandler);
 	cellSpurs.AddFunc(0x7517724a, cellSpursSetGlobalExceptionEventHandler);
 	cellSpurs.AddFunc(0x861237f8, cellSpursUnsetGlobalExceptionEventHandler);
-	
-	cellSpurs.AddFunc(0x1f402f8f, cellSpursGetInfo);
-	
-	cellSpurs.AddFunc(0xe0a6dbe4, _cellSpursSendSignal);
 
 	//libspurs task functions
 	cellSpurs.AddFunc(0x52cc6c82, cellSpursCreateTaskset);
+	cellSpurs.AddFunc(0xc10931cb, cellSpursCreateTasksetWithAttribute);
+	cellSpurs.AddFunc(0x16394a4e, _cellSpursTasksetAttributeInitialize);
+	cellSpurs.AddFunc(0xc2acdf43, _cellSpursTasksetAttribute2Initialize);
+	cellSpurs.AddFunc(0x652b70e2, cellSpursTasksetAttributeSetName);
 	cellSpurs.AddFunc(0x9f72add3, cellSpursJoinTaskset);
 	cellSpurs.AddFunc(0xe7dd87e1, cellSpursGetTasksetId);
 	cellSpurs.AddFunc(0xa789e631, cellSpursShutdownTaskset);
+	cellSpurs.AddFunc(0x4a6465e3, cellSpursCreateTaskset2);
+	cellSpurs.AddFunc(0xe14ca62d, cellSpursCreateTask2);
+	cellSpurs.AddFunc(0xa7a94892, cellSpursJoinTask2);
+	cellSpurs.AddFunc(0x838fa4f0, cellSpursTryJoinTask2);
+	cellSpurs.AddFunc(0x1ebcf459, cellSpursDestroyTaskset2);
+
 	cellSpurs.AddFunc(0xbeb600ac, cellSpursCreateTask);
+	cellSpurs.AddFunc(0x1d46fedf, cellSpursCreateTaskWithAttribute);
+	cellSpurs.AddFunc(0xb8474eff, cellSpursTaskAttributeInitialize);
+	cellSpurs.AddFunc(0x8adadf65, _cellSpursTaskAttribute2Initialize);
+	cellSpurs.AddFunc(0xa121a224, cellSpursTaskAttributeSetExitCodeContainer);
+	cellSpurs.AddFunc(0x13ae18f3, cellSpursTaskExitCodeGet);
+	cellSpurs.AddFunc(0x34552fa6, cellSpursTaskExitCodeInitialize);
+	cellSpurs.AddFunc(0xe717ac73, cellSpursTaskExitCodeTryGet);
+	cellSpurs.AddFunc(0x1d344406, cellSpursTaskGetLoadableSegmentPattern);
+	cellSpurs.AddFunc(0x7cb33c2e, cellSpursTaskGetReadOnlyAreaPattern);
+	cellSpurs.AddFunc(0x9197915f, cellSpursTaskGenerateLsPattern);
+	cellSpurs.AddFunc(0x9034e538, cellSpursTaskGetContextSaveAreaSize);
+
+	//libspurs job functions
+	cellSpurs.AddFunc(0x60eb2dec, cellSpursCreateJobChain);
+	cellSpurs.AddFunc(0x303c19cd, cellSpursCreateJobChainWithAttribute);
+	cellSpurs.AddFunc(0x738e40e6, cellSpursShutdownJobChain);
+	cellSpurs.AddFunc(0xa7c066de, cellSpursJoinJobChain);
+	cellSpurs.AddFunc(0xbfea60fa, cellSpursKickJobChain);
+	cellSpurs.AddFunc(0xf31731bb, cellSpursRunJobChain);
+	cellSpurs.AddFunc(0x68aaeba9, cellSpursJobGuardInitialize);
+	cellSpurs.AddFunc(0xd5d0b256, cellSpursJobGuardNotify);
+	cellSpurs.AddFunc(0x3548f483, _cellSpursJobChainAttributeInitialize);
+	cellSpurs.AddFunc(0x9fef70c2, cellSpursJobChainAttributeSetName);
+	cellSpurs.AddFunc(0xbb68d76e, cellSpursJobChainAttributeSetHaltOnError);
+	cellSpurs.AddFunc(0x161da6a7, cellSpursJobChainGetError);
+
+	//libspurs queue functions
+	cellSpurs.AddFunc(0x011ee38b, _cellSpursLFQueueInitialize);
+	cellSpurs.AddFunc(0x8a85674d, _cellSpursLFQueuePushBody);
+	cellSpurs.AddFunc(0x1656d49f, cellSpursLFQueueAttachLv2EventQueue);
+	cellSpurs.AddFunc(0x73e06f91, cellSpursLFQueueDetachLv2EventQueue);
+	cellSpurs.AddFunc(0x082bfb09, _cellSpursQueueInitialize);
+	cellSpurs.AddFunc(0x91066667, cellSpursQueuePopBody);
+	cellSpurs.AddFunc(0x92cff6ed, cellSpursQueuePushBody);
+	cellSpurs.AddFunc(0xe5443be7, cellSpursQueueAttachLv2EventQueue);
+	cellSpurs.AddFunc(0x039d70b7, cellSpursQueueDetachLv2EventQueue);
+
 }
