@@ -299,11 +299,7 @@ public:
 	{
 	public:
 		static const size_t max_count = _max_count;
-#ifdef _M_X64
-		static const bool x86 = false;
-#else
-		static const bool x86 = true;
-#endif
+
 	private:
 		union _CRT_ALIGN(8) {
 			struct {
@@ -327,7 +323,7 @@ public:
 
 		__forceinline bool Pop(u32& res)
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
@@ -358,7 +354,7 @@ public:
 
 		__forceinline bool Push(u32 value)
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
@@ -383,7 +379,7 @@ public:
 
 		__forceinline void PushUncond(u32 value)
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
@@ -400,7 +396,7 @@ public:
 
 		__forceinline void PushUncond_OR(u32 value)
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				if(m_index >= max_count) 
@@ -410,17 +406,13 @@ public:
 			}
 			else
 			{
-#ifdef _M_X64
 				InterlockedOr64((volatile __int64*)m_indval, ((u64)value << 32) | 1);
-#else
-				ConLog.Error("PushUncond_OR(): no code compiled");
-#endif
 			}
 		}
 
 		__forceinline void PopUncond(u32& res)
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				if(!m_index) 
@@ -445,7 +437,7 @@ public:
 
 		__forceinline u32 GetCount()
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				return m_index;
@@ -458,7 +450,7 @@ public:
 
 		__forceinline u32 GetFreeCount()
 		{
-			if (max_count > 1 || x86)
+			if (max_count > 1)
 			{
 				std::lock_guard<std::mutex> lock(m_lock);
 				return max_count - m_index;
