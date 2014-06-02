@@ -290,13 +290,12 @@ int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 {
 	cellSpurs.Error("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%u, flagDirection=%u)", spurs.GetAddr(), taskset.GetAddr(), eventFlag.GetAddr(), flagClearMode, flagDirection);
 
-	// Somehow Arkedo Series 01/02/03 always return spurs_addr as 0x0 but not other titles .Temporarily disable this memory checking.
-	/* if (!spurs.IsGood() || !taskset.IsGood() || !eventFlag.IsGood())
+	// Arkedo Series 01/02/03 return spurs_addr as 0x0 however eventFlag_addr should be always present and checked.
+	if (!eventFlag.IsGood())
 	{
 		cellSpurs.Error("_cellSpursEventFlagInitialize : CELL_SPURS_CORE_ERROR_NULL_POINTER");
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
-	*/
 
 	return CELL_OK;
 }
@@ -412,7 +411,7 @@ int cellSpursQueuePushBody()
 	return CELL_OK;
 }
 
-int cellSpursQueueAttachLv2EventQueue()
+int cellSpursQueueAttachLv2EventQueue()/
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
