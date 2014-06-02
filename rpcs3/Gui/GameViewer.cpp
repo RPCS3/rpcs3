@@ -3,13 +3,64 @@
 #include "Loader/PSF.h"
 
 static const std::string m_class_name = "GameViewer";
+
+// Auxiliary classes
+class sortGameData
+{
+	int sortColumn;
+	bool sortAscending;
+
+public:
+	sortGameData(u32 column, bool ascending) : sortColumn(column), sortAscending(ascending) {}	
+	bool operator()(const GameInfo& game1, const GameInfo& game2) const
+	{
+		// Note that the column index has to match the appropriate GameInfo member
+		switch (sortColumn)
+		{
+		case 0: return sortAscending ? (game1.name < game2.name)         : (game1.name > game2.name);
+		case 1: return sortAscending ? (game1.serial < game2.serial)     : (game1.serial > game2.serial);
+		case 2: return sortAscending ? (game1.fw < game2.fw)             : (game1.fw > game2.fw);
+		case 3: return sortAscending ? (game1.app_ver < game2.app_ver)   : (game1.app_ver > game2.app_ver);
+		case 4: return sortAscending ? (game1.category < game2.category) : (game1.category > game2.category);
+		case 5: return sortAscending ? (game1.root < game2.root)         : (game1.root > game2.root);
+		default: return false;
+		}
+	}
+};
+
+class WxDirDeleteTraverser : public wxDirTraverser
+{
+public:
+	virtual wxDirTraverseResult OnFile(const wxString& filename)
+	{
+		if (!wxRemoveFile(filename)){
+			ConLog.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+		}
+		return wxDIR_CONTINUE;
+	}
+	virtual wxDirTraverseResult OnDir(const wxString& dirname)
+	{
+		wxDir dir(dirname);
+		dir.Traverse(*this);
+		if (!wxRmDir(dirname)){
+			//this get triggered a few times while clearing folders
+			//but if this gets reimplented we should probably warn
+			//if directories can't be removed
+		}
+		return wxDIR_CONTINUE;
+	}
+};
+
+
+// GameViewer functions
 GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 {
 	LoadSettings();
 	m_columns.Show(this);
 
+	m_sortColumn = 0;
+	m_sortAscending = true;
 	m_path = "/dev_hdd0/game/";
-
 	m_popup = new wxMenu();
 	m_popup->Append(0, _T("Remove Game"));
 
@@ -30,48 +81,19 @@ void GameViewer::DoResize(wxSize size)
 	SetSize(size);
 }
 
-int wxCALLBACK ListItemCompare(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortinfo)
-{
-	ListSortInfo *SortInfo = (ListSortInfo *)sortinfo;
-	int Column = SortInfo->Column;
-	GameViewer *pGameViewer = SortInfo->GameViewerCtrl; 
-	bool SortAscending = SortInfo->SortAscending; 
-	long index1 = pGameViewer->FindItem(-1, item1);  
-	long index2 = pGameViewer->FindItem(-1, item2);  
-	wxString string1 = pGameViewer->GetItemText(index1, Column); 
-	wxString string2 = pGameViewer->GetItemText(index2, Column); 
-	
-	if (string1.Cmp(string2) < 0)
-	{
-		return SortAscending ? -1 : 1;
-	}
-	else
-		if (string1.Cmp(string2) > 0)
-		{
-		return SortAscending ? 1 : -1;
-		}
-		else
-		{
-			return 0;
-		}
-}
-
 void GameViewer::OnColClick(wxListEvent& event)
 {
-	if (event.GetColumn() == SortInfo.Column)  
-	{
-		SortInfo.SortAscending = SortInfo.SortAscending ? FALSE : TRUE;
-	}
-	else 
-	{
-		SortInfo.SortAscending = TRUE;
-	}
-	SortInfo.Column = event.GetColumn();
-	SortInfo.GameViewerCtrl = this;  
-	SortItems(ListItemCompare, (long)&SortInfo);  
+	if (event.GetColumn() == m_sortColumn)
+		m_sortAscending ^= true;
+	else
+		m_sortAscending = true;
+	m_sortColumn = event.GetColumn();
 
+	// Sort entries, update columns and refresh the panel
+	std::sort(m_game_data.begin(), m_game_data.end(), sortGameData(m_sortColumn, m_sortAscending));
+	m_columns.Update(m_game_data);
+	ShowData();
 }
-
 
 void GameViewer::LoadGames()
 {
@@ -124,6 +146,8 @@ void GameViewer::LoadPSF()
 		m_game_data.push_back(game);
 	}
 
+	// Sort entries and update columns
+	std::sort(m_game_data.begin(), m_game_data.end(), sortGameData(m_sortColumn, m_sortAscending));
 	m_columns.Update(m_game_data);
 }
 
@@ -178,61 +202,28 @@ void GameViewer::RightClick(wxListEvent& event)
 	PopupMenu(m_popup, event.GetPoint());
 }
 
-class WxDirDeleteTraverser : public wxDirTraverser
-{
-public:
-	virtual wxDirTraverseResult OnFile(const wxString& filename)
-	{
-		if (!wxRemoveFile(filename)){
-			ConLog.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
-		}
-		return wxDIR_CONTINUE;
-	}
-	virtual wxDirTraverseResult OnDir(const wxString& dirname)
-	{
-		wxDir dir(dirname);
-		dir.Traverse(*this);
-		if (!wxRmDir(dirname)){
-			//this get triggered a few times while clearing folders
-			//but if this gets reimplented we should probably warn
-			//if directories can't be removed
-		}
-		return wxDIR_CONTINUE;
-	}
-};
-
 void GameViewer::RemoveGame(wxCommandEvent& event)
 {
 	wxString GameName = this->GetItemText(event.GetId(), 5);
 
+	// TODO: VFS is only available at emulation time, this is a temporary solution to locate the game
 	Emu.GetVFS().Init(m_path);
-	vfsDir dir(m_path);	
-	if (!dir.IsOpened()) return;
 
-	std::string sPath = dir.GetPath();
-	std::string sGameFolder = GameName.mb_str().data();
+	vfsDir dir(m_path);	
+	if (!dir.IsOpened())
+		return;
+	const std::string sPath = dir.GetPath().erase(0, 1);
+	const std::string sGameFolder = GameName.mb_str().data();
+	const std::string localPath = sPath + sGameFolder;
 
 	Emu.GetVFS().UnMountAll();
 
-	sPath.erase(0, 1);
-
-	RemoveFolder(sPath + sGameFolder);
+	//TODO: Replace wxWidgetsSpecific filesystem stuff?
+	if (!wxDirExists(fmt::FromUTF8(localPath)))
+		return;
+	WxDirDeleteTraverser deleter;
+	wxDir localDir(localPath);
+	localDir.Traverse(deleter);
 
 	Refresh();
-
-}
-
-bool GameViewer::RemoveFolder(std::string localPath)
-{
-	//TODO: replace wxWidgetsSpecific filesystem stuff
-	if (wxDirExists(fmt::FromUTF8(localPath))){
-		WxDirDeleteTraverser deleter;
-		wxDir dir(localPath);
-		dir.Traverse(deleter);
-		return TRUE;
-	}
-	else{
-		return FALSE;
-	}
-
 }

@@ -41,22 +41,17 @@ find_package(OpenAL REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	if(APPLE)
-		set(PLATFORM_ARCH "macosx/x86_64")
-	elseif(WIN32)
-		set(PLATFORM_ARCH "Windows/x86_64")
-	else()
-		set(PLATFORM_ARCH "linux/x86_64")
-	endif()
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+	message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
+endif()
+
+
+if(APPLE)
+	set(PLATFORM_ARCH "macosx/x86_64")
+elseif(WIN32)
+	set(PLATFORM_ARCH "Windows/x86_64")
 else()
-	if(APPLE)
-		set(PLATFORM_ARCH "macosx/x86")
-	elseif(WIN32)
-		set(PLATFORM_ARCH "Windows/x86")
-	else()
-		set(PLATFORM_ARCH "linux/x86")
-	endif()
+	set(PLATFORM_ARCH "linux/x86_64")
 endif()
 
 include_directories(

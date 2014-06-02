@@ -339,15 +339,6 @@ int cellAudioInit()
 				// convert the data from float to u16 with clipping:
 				if (!first_mix)
 				{
-#ifndef _M_X64
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
-					{
-						if (g_is_u16)
-							oal_buffer[oal_pos][oal_buffer_offset + i] = (s16)(min<float>(max<float>(buf2ch[i] * 0x8000, -0x8000), 0x7fff));
-					
-						oal_buffer_float[oal_pos_float][oal_buffer_offset + i] = buf2ch[i];
-					}
-#else
 					// 2x MULPS
 					// 2x MAXPS (optional)
 					// 2x MINPS (optional)
@@ -369,7 +360,6 @@ int cellAudioInit()
 					{
 						oal_buffer_float[oal_pos_float][oal_buffer_offset + i] = buf2ch[i];
 					}
-#endif
 				}
 
 				const u64 stamp1 = get_system_time();
