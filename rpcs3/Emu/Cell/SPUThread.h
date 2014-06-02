@@ -406,7 +406,7 @@ public:
 			}
 			else
 			{
-				InterlockedOr64((volatile __int64*)m_indval, ((u64)value << 32) | 1);
+				InterlockedOr64((volatile s64*)m_indval, ((u64)value << 32) | 1);
 			}
 		}
 

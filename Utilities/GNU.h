@@ -20,6 +20,25 @@
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 #define InterlockedCompareExchange64(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 
+int64_t InterlockedOr64(volatile int64_t *dest, int64_t val)
+{
+	int64_t olderval;
+	int64_t oldval = *dest;
+	do
+	{
+		olderval = oldval;
+		oldval = InterlockedCompareExchange64(dest, olderval | val, olderval);
+	} while (olderval != oldval);
+	return oldval;
+}
+
+uint64_t __umulh(uint64_t a, uint64_t b)
+{
+	uint64_t result;
+	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
+	return result;
+}
+
 #ifndef __APPLE__
 #define _aligned_malloc(size,alignment) memalign(alignment,size)
 #else
@@ -37,4 +56,3 @@ int clock_gettime(int foo, struct timespec *ts);
 
 #define DWORD int32_t
 #endif
-
