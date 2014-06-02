@@ -92,7 +92,7 @@ public:
 		m_col_path     = &m_columns[5];
 	}
 
-	void Update(std::vector<GameInfo>& game_data)
+	void Update(const std::vector<GameInfo>& game_data)
 	{
 		m_col_name->data.clear();
 		m_col_serial->data.clear();
@@ -221,32 +221,17 @@ public:
 	}
 };
 
-class ListSortInfo
-{
-public:
-	ListSortInfo()
-	{
-		SortAscending = false;
-		Column = -1;
-	}
-
-	bool SortAscending;
-	int Column;
-	class GameViewer *GameViewerCtrl;
-
-};
-
 class GameViewer : public wxListView
 {
+	int m_sortColumn;
+	bool m_sortAscending;
 	std::string m_path;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
 	wxMenu* m_popup;
+
 public:
-
-	ListSortInfo SortInfo;
-
 	GameViewer(wxWindow* parent);
 	~GameViewer();
 
@@ -262,6 +247,7 @@ public:
 	void Refresh();
 	void RemoveGame(wxCommandEvent& event);
 	bool RemoveFolder(std::string localPath);
+
 private:
 	virtual void DClick(wxListEvent& event);
 	virtual void OnColClick(wxListEvent& event);
