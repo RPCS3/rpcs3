@@ -411,7 +411,7 @@ int cellSpursQueuePushBody()
 	return CELL_OK;
 }
 
-int cellSpursQueueAttachLv2EventQueue()/
+int cellSpursQueueAttachLv2EventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
