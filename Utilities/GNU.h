@@ -21,11 +21,31 @@
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 #define InterlockedCompareExchange64(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
 
-inline int64_t InterlockedOr64(volatile int64_t *dest, int64_t val);
+inline int64_t InterlockedOr64(volatile int64_t *dest, int64_t val)
+{
+	int64_t olderval;
+	int64_t oldval = *dest;
+	do
+	{
+		olderval = oldval;
+		oldval = InterlockedCompareExchange64(dest, olderval | val, olderval);
+	} while (olderval != oldval);
+	return oldval;
+}
 
-inline uint64_t __umulh(uint64_t a, uint64_t b);
+inline uint64_t __umulh(uint64_t a, uint64_t b)
+{
+	uint64_t result;
+	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
+	return result;
+}
 
-inline int64_t  __mulh(int64_t a, int64_t b);
+inline int64_t  __mulh(int64_t a, int64_t b)
+{
+	int64_t result;
+	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
+	return result;
+}
 
 #ifndef __APPLE__
 #define _aligned_malloc(size,alignment) memalign(alignment,size)
