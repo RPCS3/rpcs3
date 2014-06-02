@@ -1,7 +1,10 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
-#include "Emu/GS/GCM.h"
+#include "Emu/SysCalls/Modules.h"
 #include "cellResc.h"
 
 void cellResc_init();

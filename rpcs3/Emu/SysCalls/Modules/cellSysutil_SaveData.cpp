@@ -1,6 +1,12 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsDir.h"
 #include <algorithm>
 
 #include "cellSysutil_SaveData.h"
@@ -253,13 +259,13 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 			file = Emu.GetVFS().OpenFile(filepath, vfsRead);
-			fileGet->excSize = file->Read(buf, min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
+			fileGet->excSize = file->Read(buf, std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
 			break;
 		
 		case CELL_SAVEDATA_FILEOP_WRITE:
 			Emu.GetVFS().CreateFile(filepath);
 			file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
-			fileGet->excSize = file->Write(buf, min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
+			fileGet->excSize = file->Write(buf, std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
 			break;
 
 		case CELL_SAVEDATA_FILEOP_DELETE:

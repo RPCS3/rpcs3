@@ -2,6 +2,8 @@
 #include "unpkg.h"
 #include <wx/progdlg.h>
 
+#include "Emu/ConLog.h"
+
 // Decryption.
 bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
 {

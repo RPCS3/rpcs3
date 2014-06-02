@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
 #include "ELF32.h"
 
 void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr)

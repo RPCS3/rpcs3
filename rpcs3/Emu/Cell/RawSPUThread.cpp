@@ -1,4 +1,10 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/lv2/SC_Lwmutex.h"
+#include "Emu/SysCalls/lv2/SC_Event_flag.h" 
+
 #include "Emu/Cell/RawSPUThread.h"
 
 RawSPUThread::RawSPUThread(u32 index, CPUThreadType type)

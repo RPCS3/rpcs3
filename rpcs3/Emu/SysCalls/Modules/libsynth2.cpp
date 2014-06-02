@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -157,3 +158,4 @@ void libsynth2_init()
 	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2SetCoreAttr);
 	REG_SUB_EMPTY(libsynth2, "synth2", cellSoundSynth2Generate);
 }
+#endif

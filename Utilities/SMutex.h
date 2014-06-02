@@ -1,4 +1,5 @@
 #pragma once
+#include "BEType.h"
 
 extern void SM_Sleep();
 extern size_t SM_GetCurrentThreadId();

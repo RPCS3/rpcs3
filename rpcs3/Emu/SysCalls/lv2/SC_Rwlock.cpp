@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "SC_Rwlock.h"
 #include "Emu/SysCalls/SysCalls.h"
 

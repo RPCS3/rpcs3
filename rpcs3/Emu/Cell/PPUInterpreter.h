@@ -830,45 +830,45 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = max(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			CPU.VPR[vd]._f[w] = std::max(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VMAXSB(u32 vd, u32 va, u32 vb) //nf
 	{
 		for (uint b = 0; b < 16; b++)
-			CPU.VPR[vd]._s8[b] = max(CPU.VPR[va]._s8[b], CPU.VPR[vb]._s8[b]);
+			CPU.VPR[vd]._s8[b] = std::max(CPU.VPR[va]._s8[b], CPU.VPR[vb]._s8[b]);
 	}
 	void VMAXSH(u32 vd, u32 va, u32 vb)
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._s16[h] = max(CPU.VPR[va]._s16[h], CPU.VPR[vb]._s16[h]);
+			CPU.VPR[vd]._s16[h] = std::max(CPU.VPR[va]._s16[h], CPU.VPR[vb]._s16[h]);
 		}
 	}
 	void VMAXSW(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._s32[w] = max(CPU.VPR[va]._s32[w], CPU.VPR[vb]._s32[w]);
+			CPU.VPR[vd]._s32[w] = std::max(CPU.VPR[va]._s32[w], CPU.VPR[vb]._s32[w]);
 		}
 	}
 	void VMAXUB(u32 vd, u32 va, u32 vb)
 	{
 		for (uint b = 0; b < 16; b++)
-			CPU.VPR[vd]._u8[b] = max(CPU.VPR[va]._u8[b], CPU.VPR[vb]._u8[b]);
+			CPU.VPR[vd]._u8[b] = std::max(CPU.VPR[va]._u8[b], CPU.VPR[vb]._u8[b]);
 	}
 	void VMAXUH(u32 vd, u32 va, u32 vb)
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._u16[h] = max(CPU.VPR[va]._u16[h], CPU.VPR[vb]._u16[h]);
+			CPU.VPR[vd]._u16[h] = std::max(CPU.VPR[va]._u16[h], CPU.VPR[vb]._u16[h]);
 		}
 	}
 	void VMAXUW(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u32[w] = max(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u32[w]);
+			CPU.VPR[vd]._u32[w] = std::max(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u32[w]);
 		}
 	}
 	void VMHADDSHS(u32 vd, u32 va, u32 vb, u32 vc)
@@ -915,49 +915,49 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = min(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			CPU.VPR[vd]._f[w] = std::min(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VMINSB(u32 vd, u32 va, u32 vb) //nf
 	{
 		for (uint b = 0; b < 16; b++)
 		{
-			CPU.VPR[vd]._s8[b] = min(CPU.VPR[va]._s8[b], CPU.VPR[vb]._s8[b]);
+			CPU.VPR[vd]._s8[b] = std::min(CPU.VPR[va]._s8[b], CPU.VPR[vb]._s8[b]);
 		}
 	}
 	void VMINSH(u32 vd, u32 va, u32 vb)
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._s16[h] = min(CPU.VPR[va]._s16[h], CPU.VPR[vb]._s16[h]);
+			CPU.VPR[vd]._s16[h] = std::min(CPU.VPR[va]._s16[h], CPU.VPR[vb]._s16[h]);
 		}
 	}
 	void VMINSW(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._s32[w] = min(CPU.VPR[va]._s32[w], CPU.VPR[vb]._s32[w]);
+			CPU.VPR[vd]._s32[w] = std::min(CPU.VPR[va]._s32[w], CPU.VPR[vb]._s32[w]);
 		}
 	}
 	void VMINUB(u32 vd, u32 va, u32 vb)
 	{
 		for (uint b = 0; b < 16; b++)
 		{
-			CPU.VPR[vd]._u8[b] = min(CPU.VPR[va]._u8[b], CPU.VPR[vb]._u8[b]);
+			CPU.VPR[vd]._u8[b] = std::min(CPU.VPR[va]._u8[b], CPU.VPR[vb]._u8[b]);
 		}
 	}
 	void VMINUH(u32 vd, u32 va, u32 vb)
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._u16[h] = min(CPU.VPR[va]._u16[h], CPU.VPR[vb]._u16[h]);
+			CPU.VPR[vd]._u16[h] = std::min(CPU.VPR[va]._u16[h], CPU.VPR[vb]._u16[h]);
 		}
 	}
 	void VMINUW(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u32[w] = min(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u32[w]);
+			CPU.VPR[vd]._u32[w] = std::min(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u32[w]);
 		}
 	}
 	void VMLADDUHM(u32 vd, u32 va, u32 vb, u32 vc)

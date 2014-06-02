@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "rpcs3.h"
 #include "Ini.h"
-#include "Emu/System.h"
+#include "Gui/ConLogFrame.h"
 
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>

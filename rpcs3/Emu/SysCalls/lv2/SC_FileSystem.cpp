@@ -1,4 +1,13 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsDir.h"
+
 #include "SC_FileSystem.h"
 #include "Emu/SysCalls/SysCalls.h"
 
@@ -139,7 +148,7 @@ int cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 
 	if (count) if (u32 frag = buf_addr & 4095) // memory page fragment
 	{
-		u32 req = min(count, 4096 - frag);
+		u32 req = std::min(count, 4096 - frag);
 		u32 read = file->Read(Memory + buf_addr, req);
 		buf_addr += req;
 		res += read;

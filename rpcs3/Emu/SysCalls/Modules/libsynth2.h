@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 enum
@@ -17,3 +18,4 @@ struct CellSoundSynth2EffectAttr
 	be_t<u16> delay;
 	be_t<u16> feedback;
 };
+#endif

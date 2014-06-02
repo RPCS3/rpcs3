@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 SysCallBase sys_sem("sys_semaphore");

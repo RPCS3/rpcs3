@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "rpcs3/Ini.h"
+
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
 #include "GL/GLGSRender.h"

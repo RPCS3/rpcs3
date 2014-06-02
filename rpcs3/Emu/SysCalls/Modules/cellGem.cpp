@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -282,3 +283,4 @@ void cellGem_init()
 	cellGem.AddFunc(0x1f6328d8, cellGemWriteExternalPort);
 
 }
+#endif

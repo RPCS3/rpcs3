@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
 #include "PPCDecoder.h"
 
 u8 PPCDecoder::DecodeMemory(const u64 address)

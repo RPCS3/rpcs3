@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
 #include "PADManager.h"
 
 PADManager::PADManager(wxWindow* parent)

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 

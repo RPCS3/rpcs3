@@ -1,10 +1,20 @@
 #include "stdafx.h"
 
-#include "Gui/ConLog.h"
 #include <wx/listctrl.h>
-#include "Ini.h"
 #include <fstream>
 #include <vector>
+#include <mutex>
+
+#include "Ini.h"
+#include "Utilities/Thread.h"
+#include "Utilities/StrFmt.h"
+#include "Emu/ConLog.h"
+#include "Gui/ConLogFrame.h"
+
+#include "Utilities/BEType.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 
 LogWriter ConLog;
 LogFrame* ConLogFrame;

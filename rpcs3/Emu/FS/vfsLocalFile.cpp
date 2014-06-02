@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
 #include "vfsLocalFile.h"
 
 static const wxFile::OpenMode vfs2wx_mode(vfsOpenMode mode)

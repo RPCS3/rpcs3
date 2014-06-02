@@ -1,5 +1,4 @@
 #pragma once
-#include "rpcs3.h"
 
 enum
 {

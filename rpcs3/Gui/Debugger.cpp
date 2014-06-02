@@ -1,9 +1,14 @@
 #include "stdafx.h"
 #include <wx/statline.h>
 
-#include "Debugger.h"
+#include "Emu/ConLog.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
+#include "Debugger.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/Cell/PPCThread.h"
+
 
 class DbgEmuPanel : public wxPanel
 {

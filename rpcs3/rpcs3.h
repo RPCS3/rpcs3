@@ -1,16 +1,7 @@
 #pragma once
 #include "Gui/MainFrame.h"
 
-template<typename T> T min(const T a, const T b) { return a < b ? a : b; }
-template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
-
-//#define re(val) MemoryBase::Reverse(val)
-#define re64(val) MemoryBase::Reverse64(val)
-#define re32(val) MemoryBase::Reverse32(val)
-#define re16(val) MemoryBase::Reverse16(val)
-
-template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
-template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
+class CPUThread;
 
 wxDECLARE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 

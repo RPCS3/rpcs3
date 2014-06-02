@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
 #include "SELF.h"
 #include "ELF64.h"
 
