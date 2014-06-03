@@ -485,6 +485,9 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_z = false;
+
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -509,6 +512,9 @@ void GLGSRender::WriteColourBufferA()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_color_a = false;
+
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -528,6 +534,9 @@ void GLGSRender::WriteColourBufferB()
 	{
 		return;
 	}
+
+	// Reset the flag
+	m_set_context_dma_color_b = false;
 
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
@@ -549,6 +558,9 @@ void GLGSRender::WriteColourBufferC()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_color_c = false;
+
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -568,6 +580,9 @@ void GLGSRender::WriteColourBufferD()
 	{
 		return;
 	}
+
+	// Reset the flag
+	m_set_context_dma_color_d = false;
 
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
