@@ -411,11 +411,11 @@ void GLVertexDecompilerThread::Task()
 		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
 		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
 		case 0x10: AddVecCode("vec4(equal(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SEQ
-		//case 0x11: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //SFL
+		case 0x11: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(0)))"); break; //SFL
 		case 0x12: AddVecCode("vec4(greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGT
 		case 0x13: AddVecCode("vec4(lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLE
 		case 0x14: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SNE
-		//case 0x15: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", vec4(0, 0, 0, 0)))"); break; //STR
+		case 0x15: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(1)))"); break; //STR
 		case 0x16: AddVecCode("sign(" + GetSRC(0) + ")"); break; //SSG
 
 		default:
