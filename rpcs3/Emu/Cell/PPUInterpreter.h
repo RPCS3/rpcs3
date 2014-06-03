@@ -2325,32 +2325,7 @@ private:
 	}
 	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-#ifdef _M_X64
 		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
-#else
-		//ConLog.Warning("MULHDU");
-		const u64 RA = CPU.GPR[ra];
-		const u64 RB = CPU.GPR[rb];
-
-		u128 RD;
-
-		u64& lo =  (u64&)((u32*)&RD)[0];
-		u64& mid = (u64&)((u32*)&RD)[1];
-		u64& hi =  (u64&)((u32*)&RD)[2];
-
-		const u64 a0 = ((u32*)&RA)[0];
-		const u64 a1 = ((u32*)&RA)[1];
-		const u64 b0 = ((u32*)&RB)[0];
-		const u64 b1 = ((u32*)&RB)[1];
-
-		lo = a0 * b0;
-		hi = a1 * b1;
-
-		mid += (a0 + a1) * (b0 + b1) - (lo + hi);
-
-		CPU.GPR[rd] = RD._u64[1];
-#endif
-
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
@@ -2535,32 +2510,7 @@ private:
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-#ifdef _M_X64
 		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
-#else
-		//ConLog.Warning("MULHD");
-		const s64 RA = CPU.GPR[ra];
-		const s64 RB = CPU.GPR[rb];
-
-		u128 RT;
-
-		s64& lo =  (s64&)((s32*)&RT)[0];
-		s64& mid = (s64&)((s32*)&RT)[1];
-		s64& hi =  (s64&)((s32*)&RT)[2];
-
-		const s64 a0 = ((s32*)&RA)[0];
-		const s64 a1 = ((s32*)&RA)[1];
-		const s64 b0 = ((s32*)&RB)[0];
-		const s64 b1 = ((s32*)&RB)[1];
-
-		lo = a0 * b0;
-		hi = a1 * b1;
-
-		mid += (a0 + a1) * (b0 + b1) - (lo + hi);
-
-		CPU.GPR[rd] = RT._u64[1];
-#endif
-
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHW(u32 rd, u32 ra, u32 rb, bool rc)

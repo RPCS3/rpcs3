@@ -677,7 +677,6 @@ private:
 	}
 	void ROTMA(u32 rt, u32 ra, u32 rb)
 	{
-#ifdef _M_X64
 		XmmInvalidate(rt);
 		for (u32 i = 0; i < 4; i++)
 		{
@@ -688,14 +687,6 @@ private:
 			c.mov(cpu_dword(GPR[rt]._u32[i]), qw0->r32());
 		}
 		LOG_OPCODE();
-#else
-		WRAPPER_BEGIN(rt, ra, rb, zz);
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._u32[0]) & 0x3f) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._u32[1]) & 0x3f) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._u32[2]) & 0x3f) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._u32[3]) & 0x3f) : CPU.GPR[ra]._i32[3] >> 31;
-		WRAPPER_END(rt, ra, rb, 0);
-#endif
 	}
 	void SHL(u32 rt, u32 ra, u32 rb)
 	{
@@ -1948,19 +1939,12 @@ private:
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
-#ifdef _M_X64
 		c.movsxd(*qw0, cpu_dword(GPR[ra]._i32[0]));
 		c.movsxd(*qw1, cpu_dword(GPR[ra]._i32[2]));
 		c.mov(cpu_qword(GPR[rt]._i64[0]), *qw0);
 		c.mov(cpu_qword(GPR[rt]._i64[1]), *qw1);
 		XmmInvalidate(rt);
 		LOG_OPCODE();
-#else
-		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt]._i64[0] = (s64)CPU.GPR[ra]._i32[0];
-		CPU.GPR[rt]._i64[1] = (s64)CPU.GPR[ra]._i32[2];
-		WRAPPER_END(rt, ra, 0, 0);
-#endif
 	}
 	void XSHW(u32 rt, u32 ra)
 	{
