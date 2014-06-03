@@ -408,6 +408,7 @@ void GLVertexDecompilerThread::Task()
 		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
 		case 0x0b: AddVecCode("vec4(lessThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLT
 		case 0x0c: AddVecCode("vec4(greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGE
+		//case 0x0d: break;
 		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
 		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
 		case 0x10: AddVecCode("vec4(equal(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SEQ
