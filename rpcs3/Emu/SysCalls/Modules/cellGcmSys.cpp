@@ -68,7 +68,7 @@ u32 cellGcmGetLabelAddress(u8 index)
 
 u32 cellGcmGetReportDataAddressLocation(u8 location, u32 index)
 {
-	ConLog.Warning("cellGcmGetReportDataAddressLocation(location=%d, index=%d)", location, index);
+	cellGcmSys.Warning("cellGcmGetReportDataAddressLocation(location=%d, index=%d)", location, index);
 	return Emu.GetGSManager().GetRender().m_report_main_addr;
 }
 
@@ -76,6 +76,42 @@ u64 cellGcmGetTimeStamp(u32 index)
 {
 	cellGcmSys.Log("cellGcmGetTimeStamp(index=%d)", index);
 	return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+}
+
+int cellGcmGetCurrentField()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetNotifyDataAddress()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetReport()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetReportDataAddress()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetReportDataLocation()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetTimeStampLocation()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -91,13 +127,13 @@ u32 cellGcmGetControlRegister()
 
 u32 cellGcmGetDefaultCommandWordSize()
 {
-	cellGcmSys.Warning("cellGcmGetDefaultCommandWordSize()");
+	cellGcmSys.Log("cellGcmGetDefaultCommandWordSize()");
 	return 0x400;
 }
 
 u32 cellGcmGetDefaultSegmentWordSize()
 {
-	cellGcmSys.Warning("cellGcmGetDefaultSegmentWordSize()");
+	cellGcmSys.Log("cellGcmGetDefaultSegmentWordSize()");
 	return 0x100;
 }
 
@@ -123,6 +159,7 @@ int cellGcmBindTile(u8 index)
 
 	if (index >= RSXThread::m_tiles_count)
 	{
+		cellGcmSys.Error("cellGcmBindTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -143,7 +180,11 @@ int cellGcmGetConfiguration(mem_ptr_t<CellGcmConfig> config)
 {
 	cellGcmSys.Log("cellGcmGetConfiguration(config_addr=0x%x)", config.GetAddr());
 
-	if (!config.IsGood()) return CELL_EFAULT;
+	if (!config.IsGood())
+	{
+		cellGcmSys.Error("cellGcmGetConfiguration : CELL_EFAULT");
+		return CELL_EFAULT;
+	}
 
 	*config = current_config;
 
@@ -184,6 +225,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
 	{
 		Memory.MemoryBlocks.pop_back();
+		cellGcmSys.Error("cellGcmInit : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -258,7 +300,11 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 {
 	//cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
 	//	id, offset, width ? pitch/width : pitch, width, height);
-	if(id > 7) return CELL_EINVAL;
+	if (id > 7) 
+	{
+		cellGcmSys.Error("cellGcmSetDisplayBuffer : CELL_EINVAL");
+		return CELL_EINVAL;
+	}
 
 	gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
 
@@ -286,8 +332,10 @@ int cellGcmSetFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 int cellGcmSetFlipHandler(u32 handler_addr)
 {
 	cellGcmSys.Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
+
 	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 	{
+		cellGcmSys.Error("cellGcmSetFlipHandler : CELL_EFAULT");
 		return CELL_EFAULT;
 	}
 
@@ -327,6 +375,7 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 
 	if(id >= 8)
 	{
+		cellGcmSys.Error("cellGcmSetPrepareFlip : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -390,16 +439,19 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 
 	if (index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
+		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	if (offset & 0xffff || size & 0xffff || pitch & 0xf)
 	{
+		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
+		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -455,6 +507,7 @@ int cellGcmUnbindTile(u8 index)
 
 	if (index >= RSXThread::m_tiles_count)
 	{
+		cellGcmSys.Error("cellGcmUnbindTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -467,8 +520,12 @@ int cellGcmUnbindTile(u8 index)
 int cellGcmUnbindZcull(u8 index)
 {
 	cellGcmSys.Warning("cellGcmUnbindZcull(index=%d)", index);
+
 	if (index >= 8)
+	{
+		cellGcmSys.Error("cellGcmUnbindZcull : CELL_EINVAL");
 		return CELL_EINVAL;
+	}
 
 	return CELL_OK;
 }
@@ -497,11 +554,84 @@ int cellGcmGetCurrentDisplayBufferId(u32 id_addr)
 
 	if (!Memory.IsGoodAddr(id_addr))
 	{
+		cellGcmSys.Error("cellGcmGetCurrentDisplayBufferId : CELL_EFAULT");
 		return CELL_EFAULT;
 	}
 
 	Memory.Write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
 
+	return CELL_OK;
+}
+
+int cellGcmDumpGraphicsError()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetDisplayBufferByFlipIndex()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmgetLastFlipTime()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetLastSecondVTime()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmGetVBlankCount()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmInitSystemMode()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSetFlipImmediate()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSetGraphicsHandler()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSetQueueHandler()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSetSecondVHandler()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSetVBlankFrequency()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+int cellGcmSortRemapEaIoAddress()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
 }
 
@@ -552,6 +682,7 @@ int32_t cellGcmAddressToOffset(u64 address, mem32_t offset)
 		// address is not mapped in IO
 		else
 		{
+
 			return CELL_GCM_ERROR_FAILURE;
 		}
 	}
@@ -601,6 +732,7 @@ int32_t cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size)
 	}
 	else
 	{
+		cellGcmSys.Error("cellGcmMapEaIoAddress : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -657,6 +789,7 @@ int32_t cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
 	}
 	else
 	{
+		cellGcmSys.Error("cellGcmMapMainMemory : CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
 		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 	}
 
@@ -668,10 +801,16 @@ int32_t cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
 int32_t cellGcmReserveIoMapSize(const u32 size)
 {
 	if (size & 0xFFFFF)
+	{
+		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
+	}
 
 	if (size > cellGcmGetMaxIoMapSize())
+	{
+		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
+	}
 
 	Memory.RSXIOMem.Reserve(size);
 	return CELL_OK;
@@ -694,6 +833,7 @@ int32_t cellGcmUnmapEaIoAddress(u64 ea)
 	}
 	else
 	{
+		cellGcmSys.Error("cellGcmUnmapEaIoAddress : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -717,6 +857,7 @@ int32_t cellGcmUnmapIoAddress(u64 io)
 	}
 	else
 	{
+		cellGcmSys.Error("cellGcmUnmapIoAddress : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -725,11 +866,18 @@ int32_t cellGcmUnmapIoAddress(u64 io)
 
 int32_t cellGcmUnreserveIoMapSize(u32 size)
 {
+
 	if (size & 0xFFFFF)
+	{
+		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
+	}
 
 	if (size > Memory.RSXIOMem.GetReservedAmount())
+	{
+		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
+	}
 
 	Memory.RSXIOMem.Unreserve(size);
 	return CELL_OK;
@@ -756,7 +904,6 @@ int cellGcmSetCursorDisable()
 	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
 }
-
 
 int cellGcmUpdateCursor()
 {
@@ -816,16 +963,19 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	// Copied form cellGcmSetTileInfo
 	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
+		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	if(offset & 0xffff || size & 0xffff || pitch & 0xf)
 	{
+		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if(location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
+		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_ENUM");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -852,69 +1002,69 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 void cellGcmSys_init()
 {
 	// Data Retrieval
-	//cellGcmSys.AddFunc(0xc8f3bd09, cellGcmGetCurrentField);
+	cellGcmSys.AddFunc(0xc8f3bd09, cellGcmGetCurrentField);
 	cellGcmSys.AddFunc(0xf80196c1, cellGcmGetLabelAddress);
-	//cellGcmSys.AddFunc(0x21cee035, cellGcmGetNotifyDataAddress);
-	//cellGcmSys.AddFunc(0x99d397ac, cellGcmGetReport);
-	//cellGcmSys.AddFunc(0x9a0159af, cellGcmGetReportDataAddress);
+	cellGcmSys.AddFunc(0x21cee035, cellGcmGetNotifyDataAddress);
+	cellGcmSys.AddFunc(0x99d397ac, cellGcmGetReport);
+	cellGcmSys.AddFunc(0x9a0159af, cellGcmGetReportDataAddress);
 	cellGcmSys.AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
-	//cellGcmSys.AddFunc(0xa6b180ac, cellGcmGetReportDataLocation);
+	cellGcmSys.AddFunc(0xa6b180ac, cellGcmGetReportDataLocation);
 	cellGcmSys.AddFunc(0x5a41c10f, cellGcmGetTimeStamp);
-	//cellGcmSys.AddFunc(0x2ad4951b, cellGcmGetTimeStampLocation);
+	cellGcmSys.AddFunc(0x2ad4951b, cellGcmGetTimeStampLocation);
 
 	// Command Buffer Control
-	//cellGcmSys.AddFunc(, cellGcmCallbackForSnc);
-	//cellGcmSys.AddFunc(, cellGcmFinish);
-	//cellGcmSys.AddFunc(, cellGcmFlush);
 	cellGcmSys.AddFunc(0xa547adde, cellGcmGetControlRegister);
 	cellGcmSys.AddFunc(0x5e2ee0f0, cellGcmGetDefaultCommandWordSize);
 	cellGcmSys.AddFunc(0x8cdf8c70, cellGcmGetDefaultSegmentWordSize);
 	cellGcmSys.AddFunc(0xcaabd992, cellGcmInitDefaultFifoMode);
+	cellGcmSys.AddFunc(0x9ba451e4, cellGcmSetDefaultFifoSize);
 	//cellGcmSys.AddFunc(, cellGcmReserveMethodSize);
 	//cellGcmSys.AddFunc(, cellGcmResetDefaultCommandBuffer);
-	cellGcmSys.AddFunc(0x9ba451e4, cellGcmSetDefaultFifoSize);
 	//cellGcmSys.AddFunc(, cellGcmSetupContextData);
+	//cellGcmSys.AddFunc(, cellGcmCallbackForSnc);
+	//cellGcmSys.AddFunc(, cellGcmFinish);
+	//cellGcmSys.AddFunc(, cellGcmFlush);
 
 	// Hardware Resource Management
 	cellGcmSys.AddFunc(0x4524cccd, cellGcmBindTile);
 	cellGcmSys.AddFunc(0x9dc04436, cellGcmBindZcull);
-	//cellGcmSys.AddFunc(0x1f61b3ff, cellGcmDumpGraphicsError);
+	cellGcmSys.AddFunc(0x1f61b3ff, cellGcmDumpGraphicsError);
 	cellGcmSys.AddFunc(0xe315a0b2, cellGcmGetConfiguration);
-	//cellGcmSys.AddFunc(0x371674cf, cellGcmGetDisplayBufferByFlipIndex);
+	cellGcmSys.AddFunc(0x371674cf, cellGcmGetDisplayBufferByFlipIndex);
 	cellGcmSys.AddFunc(0x72a577ce, cellGcmGetFlipStatus);
-	//cellGcmSys.AddFunc(0x63387071, cellGcmgetLastFlipTime);
-	//cellGcmSys.AddFunc(0x23ae55a3, cellGcmGetLastSecondVTime);
+	cellGcmSys.AddFunc(0x63387071, cellGcmgetLastFlipTime);
+	cellGcmSys.AddFunc(0x23ae55a3, cellGcmGetLastSecondVTime);
 	cellGcmSys.AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
-	//cellGcmSys.AddFunc(0x723bbc7e, cellGcmGetVBlankCount);
+	cellGcmSys.AddFunc(0x723bbc7e, cellGcmGetVBlankCount);
 	cellGcmSys.AddFunc(0x15bae46b, cellGcmInit);
-	//cellGcmSys.AddFunc(0xfce9e764, cellGcmInitSystemMode);
+	cellGcmSys.AddFunc(0xfce9e764, cellGcmInitSystemMode);
 	cellGcmSys.AddFunc(0xb2e761d4, cellGcmResetFlipStatus);
 	cellGcmSys.AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
 	cellGcmSys.AddFunc(0xa53d12ae, cellGcmSetDisplayBuffer);
 	cellGcmSys.AddFunc(0xdc09357e, cellGcmSetFlip);
 	cellGcmSys.AddFunc(0xa41ef7e8, cellGcmSetFlipHandler);
-	//cellGcmSys.AddFunc(0xacee8542, cellGcmSetFlipImmediate);
+	cellGcmSys.AddFunc(0xacee8542, cellGcmSetFlipImmediate);
 	cellGcmSys.AddFunc(0x4ae8d215, cellGcmSetFlipMode);
 	cellGcmSys.AddFunc(0xa47c09ff, cellGcmSetFlipStatus);
-	//cellGcmSys.AddFunc(, cellGcmSetFlipWithWaitLabel);
-	//cellGcmSys.AddFunc(0xd01b570d, cellGcmSetGraphicsHandler);
+	cellGcmSys.AddFunc(0xd01b570d, cellGcmSetGraphicsHandler);
 	cellGcmSys.AddFunc(0x0b4b62d5, cellGcmSetPrepareFlip);
-	//cellGcmSys.AddFunc(0x0a862772, cellGcmSetQueueHandler);
+	cellGcmSys.AddFunc(0x0a862772, cellGcmSetQueueHandler);
 	cellGcmSys.AddFunc(0x4d7ce993, cellGcmSetSecondVFrequency);
-	//cellGcmSys.AddFunc(0xdc494430, cellGcmSetSecondVHandler);
+	cellGcmSys.AddFunc(0xdc494430, cellGcmSetSecondVHandler);
 	cellGcmSys.AddFunc(0xbd100dbc, cellGcmSetTileInfo);
 	cellGcmSys.AddFunc(0x06edea9e, cellGcmSetUserHandler);
-	//cellGcmSys.AddFunc(0xffe0160e, cellGcmSetVBlankFrequency);
+	cellGcmSys.AddFunc(0xffe0160e, cellGcmSetVBlankFrequency);
 	cellGcmSys.AddFunc(0xa91b0402, cellGcmSetVBlankHandler);
 	cellGcmSys.AddFunc(0x983fb9aa, cellGcmSetWaitFlip);
 	cellGcmSys.AddFunc(0xd34a420d, cellGcmSetZcull);
-	//cellGcmSys.AddFunc(0x25b40ab4, cellGcmSortRemapEaIoAddress);
+	cellGcmSys.AddFunc(0x25b40ab4, cellGcmSortRemapEaIoAddress);
 	cellGcmSys.AddFunc(0xd9b7653e, cellGcmUnbindTile);
 	cellGcmSys.AddFunc(0xa75640e8, cellGcmUnbindZcull);
 	cellGcmSys.AddFunc(0x657571f7, cellGcmGetTileInfo);
 	cellGcmSys.AddFunc(0xd9a0a879, cellGcmGetZcullInfo);
 	cellGcmSys.AddFunc(0x0e6b0dae, cellGcmGetDisplayInfo);
 	cellGcmSys.AddFunc(0x93806525, cellGcmGetCurrentDisplayBufferId);
+	//cellGcmSys.AddFunc(, cellGcmSetFlipWithWaitLabel);
 
 	// Memory Mapping
 	cellGcmSys.AddFunc(0x21ac3697, cellGcmAddressToOffset);
@@ -939,9 +1089,9 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0xbd2fa0a7, cellGcmUpdateCursor);
 
 	// Functions for Maintaining Compatibility
+	cellGcmSys.AddFunc(0xbc982946, cellGcmSetDefaultCommandBuffer);
 	//cellGcmSys.AddFunc(, cellGcmGetCurrentBuffer);
 	//cellGcmSys.AddFunc(, cellGcmSetCurrentBuffer);
-	cellGcmSys.AddFunc(0xbc982946, cellGcmSetDefaultCommandBuffer);
 	//cellGcmSys.AddFunc(, cellGcmSetDefaultCommandBufferAndSegmentWordSize);
 	//cellGcmSys.AddFunc(, cellGcmSetUserCallback);
 
