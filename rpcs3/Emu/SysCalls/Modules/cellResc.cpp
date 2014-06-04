@@ -649,9 +649,9 @@ int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<C
 	s32 xW = 1, xH = 1;
 	switch(gcmSurface->antialias)
 	{
-	case 5: xW=xH=2; break; //case CELL_GCM_SURFACE_SQUARE_ROTATED_4:
-	case 4: xW=xH=2; break; //case CELL_GCM_SURFACE_SQUARE_CENTERED_4:
-	case 3: xW=2;    break; //case CELL_GCM_SURFACE_DIAGONAL_CENTERED_2:
+	case CELL_GCM_SURFACE_SQUARE_ROTATED_4: xW=xH=2; break;
+	case CELL_GCM_SURFACE_SQUARE_CENTERED_4: xW=xH=2; break; 
+	case CELL_GCM_SURFACE_DIAGONAL_CENTERED_2: xW=2; break;
 	default:         break;
 	}
 

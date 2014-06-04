@@ -293,8 +293,8 @@ void GLFragmentDecompilerThread::Task()
 		//case 0x1e: break; // LIT (compute light coefficients)
 		case 0x1f: AddCode("(" + GetSRC(src0) + " * (" + GetSRC(src1) + " - " + GetSRC(src2) + ") +" + GetSRC(src2) + ")"); break; // LRP (linear interpolation)
 		
-		case 0x20: AddCode("vec4(1.0)"); break; // STR (set on true)
-		case 0x21: AddCode("vec4(0.0)"); break; // SFL (set on false)
+		case 0x20: AddCode("vec4(equal(" + GetSRC(src0) + ", vec4(1)))"); break; // STR (set on true)
+		case 0x21: AddCode("vec4(equal(" + GetSRC(src0) + ", vec4(0)))"); break; // SFL (set on false)
 		case 0x22: AddCode("cos(" + GetSRC(src0) + ")"); break; // COS
 		case 0x23: AddCode("sin(" + GetSRC(src0) + ")"); break; // SIN
 		//case 0x24: break; // PK2 (pack two 16-bit floats)
@@ -326,7 +326,7 @@ void GLFragmentDecompilerThread::Task()
 		case 0x3e: break; // FENCB
 
 		default:
-			ConLog.Error("Unknown opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
+			ConLog.Error("Unknown fp opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
 			//Emu.Pause();
 		break;
 		}

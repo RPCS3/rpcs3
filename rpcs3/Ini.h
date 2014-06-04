@@ -288,7 +288,7 @@ public:
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
-		HLELogLvl.Load(0);
+		HLELogLvl.Load(3);
 		HLEHideDebugConsole.Load(false);
 		HLEAlwaysStart.Load(false);
 

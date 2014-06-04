@@ -172,7 +172,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		dump.Write(wxString::Format("VertexData[%d]:\n", i));
 		switch(m_vertex_data[i].type)
 		{
-		case 1:
+		case CELL_GCM_VERTEX_S1:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
@@ -180,7 +180,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			}
 		break;
 
-		case 2:
+		case CELL_GCM_VERTEX_F:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=4)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
@@ -188,7 +188,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			}
 		break;
 
-		case 3:
+		case CELL_GCM_VERTEX_SF:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
@@ -196,7 +196,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			}
 		break;
 
-		case 4:
+		case CELL_GCM_VERTEX_UB:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
@@ -204,15 +204,17 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			}
 		break;
 
-		case 5:
+		case CELL_GCM_VERTEX_S32K:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 		break;
-
-		case 7:
+		
+		// case CELL_GCM_VERTEX_CMP:
+		
+		case CELL_GCM_VERTEX_UB256:
 			for(u32 j = 0; j<m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
@@ -254,8 +256,8 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			{
 				switch(m_vertex_data[i].type)
 				{
-				case 5:
-				case 1:
+				case CELL_GCM_VERTEX_S32K:
+				case CELL_GCM_VERTEX_S1:
 					switch(m_vertex_data[i].size)
 					{
 					case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
@@ -265,7 +267,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 					}
 				break;
 
-				case 2:
+				case CELL_GCM_VERTEX_F:
 					switch(m_vertex_data[i].size)
 					{
 					case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
@@ -275,8 +277,8 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 					}
 				break;
 
-				case 6:
-				case 4:
+				case CELL_GCM_VERTEX_CMP:
+				case CELL_GCM_VERTEX_UB:
 					glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
 				break;
 				}
@@ -485,6 +487,9 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_z = false;
+
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -509,6 +514,9 @@ void GLGSRender::WriteColourBufferA()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_color_a = false;
+
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -528,6 +536,9 @@ void GLGSRender::WriteColourBufferB()
 	{
 		return;
 	}
+
+	// Reset the flag
+	m_set_context_dma_color_b = false;
 
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
@@ -549,6 +560,9 @@ void GLGSRender::WriteColourBufferC()
 		return;
 	}
 
+	// Reset the flag
+	m_set_context_dma_color_c = false;
+
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
 	{
@@ -568,6 +582,9 @@ void GLGSRender::WriteColourBufferD()
 	{
 		return;
 	}
+
+	// Reset the flag
+	m_set_context_dma_color_d = false;
 
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if(!Memory.IsGoodAddr(address))
@@ -1114,12 +1131,12 @@ void GLGSRender::ExecCMD()
 	{
 		switch(m_indexed_array.m_type)
 		{
-		case 0:
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
 			checkForGlError("glDrawElements #4");
 		break;
 
-		case 1:
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
 			checkForGlError("glDrawElements #2");
 		break;

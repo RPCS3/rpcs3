@@ -685,7 +685,7 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 	// The target entry does not exist
 	if (saveEntries.size() == 0) {
 		ConLog.Warning("cellSaveDataAutoLoad2: Couldn't find save entry (%s)", dirName.c_str());
-		return CELL_SAVEDATA_ERROR_FAILURE;
+		return CELL_OK; // TODO: Can anyone check the actual behaviour of a PS3 when saves are not found?
 	}
 
 	getSaveDataStat(saveEntries[0], statGet.GetAddr()); // There should be only one element in this list
