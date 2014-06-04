@@ -66,15 +66,39 @@ u32 cellGcmGetLabelAddress(u8 index)
 	return Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
 }
 
-u32 cellGcmGetReportDataAddressLocation(u8 location, u32 index)
+u32 cellGcmGetReportDataAddressLocation(u32 index, u32 location)
 {
-	cellGcmSys.Warning("cellGcmGetReportDataAddressLocation(location=%d, index=%d)", location, index);
-	return Emu.GetGSManager().GetRender().m_report_main_addr;
+	cellGcmSys.Warning("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
+
+	if (location == CELL_GCM_LOCATION_LOCAL) {
+		if (index >= 2048) {
+			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
+			return 0;
+		}
+		return Memory.RSXFBMem.GetStartAddr() + index * 0x10;
+	}
+
+	if (location == CELL_GCM_LOCATION_MAIN) {
+		if (index >= 1024*1024) {
+			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
+			return 0;
+		}
+		// TODO: It seems m_report_main_addr is not initialized
+		return Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10;
+	}
+
+	cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
+	return 0;
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
 {
 	cellGcmSys.Log("cellGcmGetTimeStamp(index=%d)", index);
+
+	if (index >= 2048) {
+		cellGcmSys.Error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
+		return 0;
+	}
 	return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
 }
 
@@ -90,28 +114,77 @@ int cellGcmGetNotifyDataAddress()
 	return CELL_OK;
 }
 
-int cellGcmGetReport()
+u32 cellGcmGetReport(u32 type, u32 index)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.Warning("cellGcmGetReport(type=%d, index=%d)", type, index);
+
+	if (index >= 2048) {
+		cellGcmSys.Error("cellGcmGetReport: Wrong local index (%d)", index);
+		return 0;
+	}
+	// TODO: What does the argument type do?
+	return Memory.Read32(Memory.RSXFBMem.GetStartAddr() + index * 0x10 + 0x8);
 }
 
-int cellGcmGetReportDataAddress()
+u32 cellGcmGetReportDataAddress(u32 index)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.Warning("cellGcmGetReportDataAddress(index=%d)",  index);
+
+	if (index >= 2048) {
+		cellGcmSys.Error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
+		return 0;
+	}
+	return Memory.RSXFBMem.GetStartAddr() + index * 0x10;
 }
 
-int cellGcmGetReportDataLocation()
+u32 cellGcmGetReportDataLocation(u32 index, u32 location)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.Warning("cellGcmGetReportDataLocation(index=%d, location=%d)", index, location);
+
+	if (location == CELL_GCM_LOCATION_LOCAL) {
+		if (index >= 2048) {
+			cellGcmSys.Error("cellGcmGetReportDataLocation: Wrong local index (%d)", index);
+			return 0;
+		}
+		return Memory.Read32(Memory.RSXFBMem.GetStartAddr() + index * 0x10 + 0x8);
+	}
+
+	if (location == CELL_GCM_LOCATION_MAIN) {
+		if (index >= 1024*1024) {
+			cellGcmSys.Error("cellGcmGetReportDataLocation: Wrong main index (%d)", index);
+			return 0;
+		}
+		// TODO: It seems m_report_main_addr is not initialized
+		return Memory.Read32(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10 + 0x8);
+	}
+
+	cellGcmSys.Error("cellGcmGetReportDataLocation: Wrong location (%d)", location);
+	return 0;
 }
 
-int cellGcmGetTimeStampLocation()
+u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.Warning("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
+
+	if (location == CELL_GCM_LOCATION_LOCAL) {
+		if (index >= 2048) {
+			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
+			return 0;
+		}
+		return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+	}
+
+	if (location == CELL_GCM_LOCATION_MAIN) {
+		if (index >= 1024*1024) {
+			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
+			return 0;
+		}
+		// TODO: It seems m_report_main_addr is not initialized
+		return Memory.Read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
+	}
+
+	cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
+	return 0;
 }
 
 //----------------------------------------------------------------------------
