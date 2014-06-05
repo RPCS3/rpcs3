@@ -328,6 +328,8 @@ void LogFrame::Settings(wxCommandEvent& WXUNUSED(event))
 
 void LogFrame::UpdateListSize(wxSizeEvent& event)
 {
-	m_log.SetSize(this->GetSize());
+	int width, height;
+	this->DoGetSize(&width, &height);
+	m_log.SetSize(wxSize(width-15, height-55));
 	event.Skip();
 }
