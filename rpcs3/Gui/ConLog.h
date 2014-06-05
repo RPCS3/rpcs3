@@ -23,7 +23,6 @@ public:
 			return;
 
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
-
 		WriteToLog("!", frmt, 2);
 	}
 	
@@ -67,7 +66,7 @@ class LogFrame
 	wxListView& m_log;
 
 public:
-	LogFrame();
+	LogFrame(wxWindow *parent);
 	~LogFrame();
 
 	bool Close(bool force = false);

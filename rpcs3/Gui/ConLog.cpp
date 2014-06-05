@@ -173,8 +173,9 @@ BEGIN_EVENT_TABLE(LogFrame, FrameBase)
 	EVT_CLOSE(LogFrame::OnQuit)
 END_EVENT_TABLE()
 
-LogFrame::LogFrame()
-	: FrameBase(nullptr, wxID_ANY, "Log Frame", "LogFrame", wxSize(600, 500))
+LogFrame::LogFrame(wxWindow *parent)
+	: FrameBase(nullptr, wxID_ANY, "Log Frame", "LogFrame", wxSize(600, 500), 
+	wxPoint(parent->GetPosition().x + parent->GetSize().x, parent->GetPosition().y))
 	, ThreadBase("LogThread")
 	, m_log(*new wxListView(this))
 {
@@ -183,6 +184,7 @@ LogFrame::LogFrame()
 	wxMenu* menu_log_settings = new wxMenu();
 	menubar->Append(menu_log_settings, "Settings");
 	menu_log_settings->Append(id_log_level, "Log Level");
+	
 	SetMenuBar(menubar);
 
 	//events
@@ -274,8 +276,6 @@ void LogFrame::Settings(wxCommandEvent& WXUNUSED(event))
 	}
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
-	static const u32 height = 400;
-	static const u32 width = 385;
 
 	wxStaticBoxSizer* s_round_log_level = new wxStaticBoxSizer(wxVERTICAL, &diag, _("Log Level"));
 	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
