@@ -96,6 +96,7 @@ public:
 	static const uint m_vertex_count = 32;
 	static const uint m_fragment_count = 32;
 	static const uint m_tiles_count = 15;
+	static const uint m_zculls_count = 8;
 
 protected:
 	std::stack<u32> m_call_stack;
@@ -103,6 +104,7 @@ protected:
 
 public:
 	GcmTileInfo m_tiles[m_tiles_count];
+	GcmZcullInfo m_zculls[m_zculls_count];
 	RSXTexture m_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
 	RSXIndexArrayData m_indexed_array;

@@ -39,6 +39,18 @@ enum
 	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 = 1,
 };
 
+enum
+{
+	CELL_GCM_DISPLAY_FLIP_STATUS_        = 0,
+	CELL_GCM_DISPLAY_FLIP_STATUS_WAITING = 1,
+};
+
+enum
+{
+	CELL_GCM_LOCATION_LOCAL = 0,
+	CELL_GCM_LOCATION_MAIN  = 1,
+};
+
 // GCM Texture
 enum
 {
@@ -240,12 +252,6 @@ struct GcmTileInfo
 
 		return ret;
 	}
-};
-
-enum
-{
-	CELL_GCM_LOCATION_LOCAL,
-	CELL_GCM_LOCATION_MAIN,
 };
 
 enum
