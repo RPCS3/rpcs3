@@ -244,7 +244,16 @@ int cellGcmBindTile(u8 index)
 
 int cellGcmBindZcull(u8 index)
 {
-	cellGcmSys.Warning("TODO: cellGcmBindZcull(index=%d)", index);
+	cellGcmSys.Warning("cellGcmBindZcull(index=%d)", index);
+
+	if (index >= RSXThread::m_zculls_count)
+	{
+		cellGcmSys.Error("cellGcmBindZcull : CELL_GCM_ERROR_INVALID_VALUE");
+		return CELL_GCM_ERROR_INVALID_VALUE;
+	}
+
+	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
+	zcull.m_binded = true;
 
 	return CELL_OK;
 }
@@ -266,13 +275,16 @@ int cellGcmGetConfiguration(mem_ptr_t<CellGcmConfig> config)
 
 int cellGcmGetFlipStatus()
 {
+	cellGcmSys.Log("cellGcmGetFlipStatus()");
+
 	return Emu.GetGSManager().GetRender().m_flip_status;
 }
 
 u32 cellGcmGetTiledPitchSize(u32 size)
 {
-	//TODO
 	cellGcmSys.Warning("cellGcmGetTiledPitchSize(size=%d)", size);
+
+	// TODO:
 
 	return size;
 }
@@ -346,7 +358,9 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 
 int cellGcmResetFlipStatus()
 {
-	Emu.GetGSManager().GetRender().m_flip_status = 1;
+	cellGcmSys.Log("cellGcmResetFlipStatus()");
+
+	Emu.GetGSManager().GetRender().m_flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
 
 	return CELL_OK;
 }
@@ -371,8 +385,8 @@ int cellGcmSetDebugOutputLevel(int level)
 
 int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
-	//cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
-	//	id, offset, width ? pitch/width : pitch, width, height);
+	cellGcmSys.Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)", id, offset, width ? pitch / width : pitch, width, height);
+
 	if (id > 7) 
 	{
 		cellGcmSys.Error("cellGcmSetDisplayBuffer : CELL_EINVAL");
@@ -530,7 +544,7 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 
 	if (comp)
 	{
-		cellGcmSys.Error("cellGcmSetTileInfo: bad comp! (%d)", comp);
+		cellGcmSys.Error("cellGcmSetTileInfo: bad compression mode! (%d)", comp);
 	}
 
 	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
@@ -571,6 +585,28 @@ int cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	cellGcmSys.Warning("TODO: cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
+	if (index >= RSXThread::m_zculls_count)
+	{
+		cellGcmSys.Error("cellGcmSetZcull : CELL_GCM_ERROR_INVALID_VALUE");
+		return CELL_GCM_ERROR_INVALID_VALUE;
+	}
+
+	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
+	zcull.m_offset = offset;
+	zcull.m_width = width; 
+	zcull.m_height = height;
+	zcull.m_cullStart = cullStart;
+	zcull.m_zFormat = zFormat;
+	zcull.m_aaFormat = aaFormat;
+	zcull.m_zCullDir = zCullDir;
+	zcull.m_zCullFormat = zCullFormat;
+	zcull.m_sFunc = sFunc;
+	zcull.m_sRef = sRef;
+	zcull.m_sMask = sMask;
+
+	// TODO:
+	//Memory.WriteData(Emu.GetGSManager().GetRender().m_zculls_addr + sizeof(CellGcmZcullInfo)* index, zcull.Pack());
+
 	return CELL_OK;
 }
 
@@ -599,6 +635,9 @@ int cellGcmUnbindZcull(u8 index)
 		cellGcmSys.Error("cellGcmUnbindZcull : CELL_EINVAL");
 		return CELL_EINVAL;
 	}
+
+	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
+	zcull.m_binded = false;
 
 	return CELL_OK;
 }
@@ -633,6 +672,12 @@ int cellGcmGetCurrentDisplayBufferId(u32 id_addr)
 
 	Memory.Write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
 
+	return CELL_OK;
+}
+
+int cellGcmSetInvalidateTile()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
 }
 
@@ -1137,6 +1182,7 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0xd9a0a879, cellGcmGetZcullInfo);
 	cellGcmSys.AddFunc(0x0e6b0dae, cellGcmGetDisplayInfo);
 	cellGcmSys.AddFunc(0x93806525, cellGcmGetCurrentDisplayBufferId);
+	cellGcmSys.AddFunc(0xbd6d60d9, cellGcmSetInvalidateTile);
 	//cellGcmSys.AddFunc(, cellGcmSetFlipWithWaitLabel);
 
 	// Memory Mapping
