@@ -69,7 +69,7 @@ private:
 	{
 		SysCalls::DoSyscall(CPU.GPR[11]);
 
-		if(Ini.HLELogging.GetValue())
+		if (Ini.LogAllSysCalls.GetValue())
 		{
 			ConLog.Warning("SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)
@@ -2097,7 +2097,7 @@ private:
 		case 0x2: SysCall(); break;
 		case 0x3:
 			StaticExecute(CPU.GPR[11]);
-			if (Ini.HLELogging.GetValue())
+			if (Ini.LogAllSysCalls.GetValue())
 			{
 				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
 					g_static_funcs_list[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);

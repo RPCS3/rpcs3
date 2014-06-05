@@ -103,10 +103,9 @@ MainFrame::MainFrame()
 	// Panels
 	m_game_viewer = new GameViewer(this);
 	m_debugger_frame = new DebuggerPanel(this);
-	ConLogFrame = new LogFrame(this);
+	ConLogFrame = new LogFrame;
 
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
-	AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
@@ -392,9 +391,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
-	// HLE / Misc.
-	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
-
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
 
@@ -407,7 +403,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
-	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
 	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(p_cpu, wxID_ANY, "Ignore Read/Write errors");
@@ -418,10 +413,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv		  = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
-	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_exitonstop	  = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
 
@@ -462,12 +456,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
 
-	cbox_hle_loglvl->Append("All");
-	cbox_hle_loglvl->Append("Success");
-	cbox_hle_loglvl->Append("Warnings");
-	cbox_hle_loglvl->Append("Errors");
-	cbox_hle_loglvl->Append("Nothing");
-
 	cbox_sys_lang->Append("Japanese");
 	cbox_sys_lang->Append("English (US)");
 	cbox_sys_lang->Append("French");
@@ -497,7 +485,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_audio_conv		 ->SetValue(Ini.AudioConvertToU16.GetValue());
-	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
@@ -513,14 +500,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out       ->SetSelection(Ini.AudioOutMode.GetValue());
-	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
 
 	// Enable / Disable parameters
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_audio_conv->Enable(Emu.IsStopped());
-	chbox_hle_logging->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
 
 
@@ -536,8 +521,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_io_mouse_handler->Add(cbox_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -567,8 +550,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// HLE / Misc.
-	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->AddSpacer(15);
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -613,11 +595,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
-		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
-		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());

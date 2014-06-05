@@ -649,7 +649,7 @@ public:
 				break;
 			}
 
-			if (Ini.HLELogging.GetValue() || rec->s)
+			if (Ini.LogAllSysCalls.GetValue() || rec->s)
 				ConLog.Write("*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
 					i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
 
@@ -693,7 +693,7 @@ public:
 		case MFC_PUTR_CMD: // ???
 		case MFC_GET_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+			if (Ini.LogAllSysCalls.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
 				(op & MFC_PUT_CMD ? "PUT" : "GET"),
 				(op & MFC_RESULT_MASK ? "R" : ""),
 				(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -708,7 +708,7 @@ public:
 		case MFC_PUTRL_CMD: // ???
 		case MFC_GETL_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+			if (Ini.LogAllSysCalls.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
 				(op & MFC_PUT_CMD ? "PUT" : "GET"),
 				(op & MFC_RESULT_MASK ? "RL" : "L"),
 				(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -724,7 +724,7 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			if (Ini.HLELogging.GetValue() || size != 128) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+			if (Ini.LogAllSysCalls.GetValue() || size != 128) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 				op == MFC_PUTLLC_CMD ? "PUTLLC" :
 				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
@@ -921,7 +921,7 @@ public:
 						return;
 					}
 
-					if (Ini.HLELogging.GetValue())
+					if (Ini.LogAllSysCalls.GetValue())
 					{
 						ConLog.Write("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
 					}
@@ -1143,7 +1143,7 @@ public:
 				return;
 			}
 
-			if (Ini.HLELogging.GetValue())
+			if (Ini.LogAllSysCalls.GetValue())
 			{
 				ConLog.Write("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 			}
@@ -1208,7 +1208,7 @@ public:
 			{
 				ConLog.Error("sys_spu_thread_exit (no status, code 0x102)");
 			}
-			else if (Ini.HLELogging.GetValue())
+			else if (Ini.LogAllSysCalls.GetValue())
 			{
 				// the real exit status
 				ConLog.Write("sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());

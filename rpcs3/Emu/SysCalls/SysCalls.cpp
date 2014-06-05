@@ -555,8 +555,8 @@ void default_syscall()
 		return;
 
 		case 1000:
-			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			ConLog.Warning("Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
+			Ini.LogAllSysCalls.SetValue(!Ini.LogAllSysCalls.GetValue());
+			ConLog.Warning("Log %s", (Ini.LogAllSysCalls.GetValue() ? "enabled" : "disabled"));
 		return;
 	}
 
