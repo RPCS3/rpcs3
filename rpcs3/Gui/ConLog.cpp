@@ -9,6 +9,11 @@
 LogWriter ConLog;
 LogFrame* ConLogFrame;
 
+enum LogIDs
+{
+	id_log_level = 0x888,
+};
+
 std::mutex g_cs_conlog;
 
 static const uint max_item_count = 500;
@@ -122,7 +127,8 @@ void LogWriter::WriteToLog(const std::string& prefix, const std::string& value, 
 	if(m_logfile.IsOpened() && !new_prefix.empty())
 		m_logfile.Write(fmt::FromUTF8("[" + new_prefix + "]: " + value + "\n"));
 
-	if(!ConLogFrame || Ini.HLELogLvl.GetValue() == 4 || (lvl != 0 && lvl <= Ini.HLELogLvl.GetValue()))
+
+	if(!ConLogFrame)
 		return;
 
 	std::lock_guard<std::mutex> lock(g_cs_conlog);
@@ -163,15 +169,28 @@ void LogWriter::SkipLn()
 	WriteToLog("", "", 0);
 }
 
-BEGIN_EVENT_TABLE(LogFrame, wxPanel)
+BEGIN_EVENT_TABLE(LogFrame, FrameBase)
 	EVT_CLOSE(LogFrame::OnQuit)
 END_EVENT_TABLE()
 
-LogFrame::LogFrame(wxWindow* parent)
-	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
+LogFrame::LogFrame(wxWindow *parent)
+	: FrameBase(nullptr, wxID_ANY, "Log Frame", "LogFrame", wxSize(600, 500), 
+	wxPoint(parent->GetPosition().x + parent->GetSize().x, parent->GetPosition().y))
 	, ThreadBase("LogThread")
 	, m_log(*new wxListView(this))
 {
+	wxMenuBar* menubar = new wxMenuBar();
+
+	wxMenu* menu_log_settings = new wxMenu();
+	menubar->Append(menu_log_settings, "Settings");
+	menu_log_settings->Append(id_log_level, "Log Level");
+	
+	SetMenuBar(menubar);
+
+	//events
+	Bind(wxEVT_MENU, &LogFrame::Settings, this, id_log_level);
+	Bind(wxEVT_SIZE, &LogFrame::UpdateListSize, this);
+
 	m_log.InsertColumn(0, wxEmptyString);
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
@@ -243,5 +262,74 @@ void LogFrame::OnQuit(wxCloseEvent& event)
 {
 	Stop(false);
 	ConLogFrame = nullptr;
+	event.Skip();
+}
+
+void LogFrame::Settings(wxCommandEvent& WXUNUSED(event))
+{
+	bool paused = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		paused = true;
+	}
+
+	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
+
+	wxStaticBoxSizer* s_round_log_level = new wxStaticBoxSizer(wxVERTICAL, &diag, _("Log Level"));
+	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_loglvl = new wxBoxSizer(wxVERTICAL);
+
+	wxCheckBox* chbox_log_write		= new wxCheckBox(&diag, wxID_ANY, "Write");
+	wxCheckBox* chbox_log_error		= new wxCheckBox(&diag, wxID_ANY, "Error");
+	wxCheckBox* chbox_log_warning	= new wxCheckBox(&diag, wxID_ANY, "Warning");
+	wxCheckBox* chbox_log_success	= new wxCheckBox(&diag, wxID_ANY, "Success");
+	wxCheckBox* chbox_hle_logging	= new wxCheckBox(&diag, wxID_ANY, "Log all SysCalls");
+
+	s_round_log_level->Add(chbox_log_write, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_log_level->Add(chbox_log_error, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_log_level->Add(chbox_log_warning, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_log_level->Add(chbox_log_success, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_log_level->AddSpacer(20);
+	s_round_log_level->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	// get values from .ini
+	chbox_log_write->SetValue(Ini.LogWrite.GetValue());
+	chbox_log_warning->SetValue(Ini.LogWarning.GetValue());
+	chbox_log_error->SetValue(Ini.LogError.GetValue());
+	chbox_log_success->SetValue(Ini.LogSuccess.GetValue());
+	chbox_hle_logging->SetValue(Ini.LogAllSysCalls.GetValue());
+
+	s_subpanel_loglvl->Add(s_round_log_level, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
+	s_b_panel->Add(new wxButton(&diag, wxID_OK), wxSizerFlags().Border(wxALL, 5).Bottom());
+	s_b_panel->Add(new wxButton(&diag, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Bottom());
+
+	s_panel->Add(s_subpanel_loglvl);
+	s_panel->Add(s_b_panel);
+
+	diag.SetSizerAndFit(s_panel);
+
+	if (diag.ShowModal() == wxID_OK)
+	{
+		Ini.LogWrite.SetValue(chbox_log_write->GetValue());
+		Ini.LogWarning.SetValue(chbox_log_warning->GetValue());
+		Ini.LogError.SetValue(chbox_log_error->GetValue());
+		Ini.LogSuccess.SetValue(chbox_log_success->GetValue());
+		Ini.LogAllSysCalls.SetValue(chbox_hle_logging->GetValue());
+
+		Ini.Save();
+	}
+
+	if (paused) Emu.Resume();
+}
+
+void LogFrame::UpdateListSize(wxSizeEvent& event)
+{
+	int width, height;
+	this->DoGetSize(&width, &height);
+	m_log.SetSize(wxSize(width-15, height-55));
 	event.Skip();
 }

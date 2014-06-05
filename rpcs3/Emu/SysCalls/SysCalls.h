@@ -46,7 +46,7 @@ public:
 
 	void Log(const u32 id, std::string fmt, ...)
 	{
-		if(Ini.HLELogging.GetValue())
+		if (Ini.LogAllSysCalls.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);
@@ -57,7 +57,7 @@ public:
 
 	void Log(std::string fmt, ...)
 	{
-		if(Ini.HLELogging.GetValue())
+		if(Ini.LogAllSysCalls.GetValue())
 		{
 		va_list list;
 		va_start(list, fmt);

@@ -445,7 +445,7 @@ void Module::SetName(const std::string& name)
 
 void Module::Log(const u32 id, std::string fmt, ...)
 {
-	if(Ini.HLELogging.GetValue())
+	if(Ini.LogAllSysCalls.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);
@@ -456,7 +456,7 @@ void Module::Log(const u32 id, std::string fmt, ...)
 
 void Module::Log(std::string fmt, ...)
 {
-	if(Ini.HLELogging.GetValue())
+	if (Ini.LogAllSysCalls.GetValue())
 	{
 		va_list list;
 		va_start(list, fmt);

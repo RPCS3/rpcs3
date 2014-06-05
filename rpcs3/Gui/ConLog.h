@@ -19,6 +19,9 @@ public:
 	template <typename ...Arg>
 	void Write(const std::string &fmt, Arg&&... args)
 	{
+		if (!Ini.LogWrite.GetValue())
+			return;
+
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
 		WriteToLog("!", frmt, 2);
 	}
@@ -26,6 +29,9 @@ public:
 	template <typename ...Arg>
 	void Error(const std::string &fmt, Arg&&... args)
 	{
+		if (!Ini.LogError.GetValue())
+			return;
+
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
 		WriteToLog("E", frmt, 4);
 	}
@@ -33,6 +39,9 @@ public:
 	template <typename ...Arg>
 	void Warning(const std::string &fmt, Arg&&... args)
 	{
+		if (!Ini.LogWarning.GetValue())
+			return;
+
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
 		WriteToLog("W", frmt, 3);
 	}
@@ -40,6 +49,9 @@ public:
 	template <typename ...Arg>
 	void Success(const std::string &fmt, Arg&&... args)
 	{
+		if (!Ini.LogSuccess.GetValue())
+			return;
+
 		std::string frmt = fmt::Format(fmt, std::forward<Arg>(args)...);
 		WriteToLog("S", frmt, 1);
 	}
@@ -48,13 +60,13 @@ public:
 };
 
 class LogFrame 
-	: public wxPanel
+	: public FrameBase
 	, public ThreadBase
 {
 	wxListView& m_log;
 
 public:
-	LogFrame(wxWindow* parent);
+	LogFrame(wxWindow *parent);
 	~LogFrame();
 
 	bool Close(bool force = false);
@@ -62,6 +74,8 @@ public:
 private:
 	virtual void Task();
 
+	void Settings(wxCommandEvent& event);
+	void UpdateListSize(wxSizeEvent& event);
 	void OnQuit(wxCloseEvent& event);
 	
 	DECLARE_EVENT_TABLE();

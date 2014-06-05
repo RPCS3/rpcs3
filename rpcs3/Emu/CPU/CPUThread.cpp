@@ -297,7 +297,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	if (Ini.HLELogging.GetValue()) ConLog.Write("%s enter", CPUThread::GetFName().c_str());
+	if (Ini.LogAllSysCalls.GetValue()) ConLog.Write("%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
 
@@ -359,7 +359,7 @@ void CPUThread::Task()
 		ConLog.Success("Exit Code: %d", exitcode);
 	}
 
-	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().c_str());
+	if (Ini.LogAllSysCalls.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().c_str());
 }
 
 s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe

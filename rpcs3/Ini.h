@@ -152,13 +152,18 @@ public:
 	IniEntry<int> PadHandlerRStickUp;
 
 	// HLE/Miscs
-	IniEntry<bool> HLELogging;
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
-	IniEntry<u8> HLELogLvl;
-	IniEntry<bool> HLEHideDebugConsole;
 	IniEntry<bool> HLEAlwaysStart;
+	IniEntry<bool> HLEHideDebugConsole;
+
+	// ConLog
+	IniEntry<bool> LogAllSysCalls;
+	IniEntry<bool> LogWrite;
+	IniEntry<bool> LogWarning;
+	IniEntry<bool> LogError;
+	IniEntry<bool> LogSuccess;
 
 	// Language
 	IniEntry<u8> SysLanguage;
@@ -220,13 +225,18 @@ public:
 		PadHandlerRStickUp.Init("ControlSetings_PadHandlerRStickUp", path);
 
 		// HLE/Misc
-		HLELogging.Init("HLE_HLELogging", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
-		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEHideDebugConsole.Init("HLE_HLEHideDebugConsole", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+
+		// ConLog
+		LogAllSysCalls.Init("Log_LogAllSysCalls", path);
+		LogWrite.Init("Log_LogWrite", path);
+		LogWarning.Init("Log_LogWarning", path);
+		LogError.Init("Log_LogError", path);
+		LogSuccess.Init("Log_LogSuccess", path);
 
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
@@ -284,13 +294,18 @@ public:
 		PadHandlerRStickUp.Load(366); //WXK_PAGEUP
 
 		// HLE/Miscs
-		HLELogging.Load(false);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
-		HLELogLvl.Load(3);
 		HLEHideDebugConsole.Load(false);
 		HLEAlwaysStart.Load(false);
+
+		// ConLog
+		LogAllSysCalls.Load(false);
+		LogWrite.Load(true);
+		LogWarning.Load(false);
+		LogError.Load(true);
+		LogSuccess.Load(true);
 
 		// Language
 		SysLanguage.Load(1);
@@ -349,13 +364,18 @@ public:
 		PadHandlerRStickUp.Save();
 
 		// HLE/Miscs
-		HLELogging.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
-		HLELogLvl.Save();
 		HLEHideDebugConsole.Save();
 		HLEAlwaysStart.Save();
+
+		// ConLog
+		LogAllSysCalls.Save();
+		LogWrite.Save();
+		LogWarning.Save();
+		LogError.Save();
+		LogSuccess.Save();
 
 		// Language
 		SysLanguage.Save();
