@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 //libsnd3 Error Codes
@@ -52,3 +53,4 @@ struct CellSnd3RequestQueueCtx
 	void *rearQueue;
 	be_t<u32> rearQueueSize;
 };
+#endif

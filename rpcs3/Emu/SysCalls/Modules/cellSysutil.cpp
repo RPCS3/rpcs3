@@ -1,6 +1,11 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Emu/FS/vfsFile.h"
 #include "Emu/Audio/sysutil_audio.h"
 
 #include "cellSysutil.h"
@@ -886,16 +891,16 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 		get->getParam.resolution = psf.GetInteger("RESOLUTION");
 		get->getParam.soundFormat = psf.GetInteger("SOUND_FORMAT");
 		std::string title = psf.GetString("TITLE");
-		memcpy(get->getParam.title, title.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE,title.length()+1));
+		memcpy(get->getParam.title, title.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE,title.length()+1));
 		std::string app_ver = psf.GetString("APP_VER");
-		memcpy(get->getParam.dataVersion, app_ver.c_str(), min<size_t>(CELL_HDDGAME_SYSP_VERSION_SIZE,app_ver.length()+1));
-		memcpy(get->getParam.titleId, dirName.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLEID_SIZE,dirName.length()+1));
+		memcpy(get->getParam.dataVersion, app_ver.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_VERSION_SIZE,app_ver.length()+1));
+		memcpy(get->getParam.titleId, dirName.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLEID_SIZE,dirName.length()+1));
 
 		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
 			char key [16];
 			sprintf(key, "TITLE_%02d", i);
 			title = psf.GetString(key);
-			memcpy(get->getParam.titleLang[i], title.c_str(), min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE, title.length() + 1));
+			memcpy(get->getParam.titleLang[i], title.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE, title.length() + 1));
 		}
 	}
 

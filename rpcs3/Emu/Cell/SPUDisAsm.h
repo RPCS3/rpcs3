@@ -28,7 +28,7 @@ private:
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(max<int>(10 - (int)op.length(), 0),' ');
+		op.append(std::max<int>(10 - (int)op.length(), 0),' ');
 		return op;
 	}
 	void DisAsm(const char* op)

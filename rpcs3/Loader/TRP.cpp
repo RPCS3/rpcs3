@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/FS/vfsFile.h"
 #include "TRP.h"
 
 TRPLoader::TRPLoader(vfsStream& f) : trp_f(f)

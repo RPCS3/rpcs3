@@ -3,6 +3,7 @@
 #include "Emu/event.h"
 #include "Emu/SysCalls/lv2/SC_SPU_Thread.h"
 #include "MFC.h"
+#include "Emu/SysCalls/ErrorCodes.h"
 #include <mutex>
 
 static const char* spu_reg_name[128] =
@@ -653,7 +654,7 @@ public:
 				ConLog.Write("*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
 					i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
 
-			lsa += max(size, (u32)16);
+			lsa += std::max(size, (u32)16);
 
 			if (rec->s & se16(0x8000))
 			{

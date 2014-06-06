@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
 #include <wx/busyinfo.h>

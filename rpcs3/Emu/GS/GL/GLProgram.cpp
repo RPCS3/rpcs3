@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
 #include "GLProgram.h"
 #include "GLGSRender.h"
 

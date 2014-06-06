@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include <atomic>
+
+#include "Emu/ConLog.h"
 #include "Memory.h"
 #include "MemoryBlock.h"
-#include <atomic>
+#include "Emu/System.h"
 
 MemoryBase Memory;
 

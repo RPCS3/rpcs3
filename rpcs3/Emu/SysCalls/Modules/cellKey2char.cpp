@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -55,3 +56,4 @@ void cellKey2char_init()
 	cellKey2char.AddFunc(0xbfc03768, cellKey2CharSetMode);
 	cellKey2char.AddFunc(0x0dfbadfa, cellKey2CharSetArrangement);
 }
+#endif

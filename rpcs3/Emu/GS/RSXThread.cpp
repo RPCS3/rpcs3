@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "RSXThread.h"
 #include "Emu/SysCalls/lv2/SC_Time.h"
 
@@ -1258,7 +1261,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_surface_width = (a0 >> 16) & 0xff;
 		m_surface_height = (a0 >> 24) & 0xff;
 
-		switch (min((u32)6, count))
+		switch (std::min((u32)6, count))
 		{
 		case 6: m_surface_pitch_b  = ARGS(5);
 		case 5: m_surface_offset_b = ARGS(4);

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -255,3 +256,4 @@ void cellRudp_init()
 	cellRudp.AddFunc(0x6ee04954, cellRudpNetReceived);
 	cellRudp.AddFunc(0xfade48b2, cellRudpProcessEvents);
 }
+#endif

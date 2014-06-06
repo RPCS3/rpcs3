@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 #include "GLVertexProgram.h"
 
 std::string GLVertexDecompilerThread::GetMask(bool is_sca)

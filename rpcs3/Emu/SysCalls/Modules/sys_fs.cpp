@@ -1,6 +1,10 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
 
 void sys_fs_init();
 Module sys_fs(0x000e, sys_fs_init);
@@ -177,7 +181,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 
 	if (count) if (u32 frag = buf_addr & 4095) // memory page fragment
 	{
-		u32 req = min(count, 4096 - frag);
+		u32 req = std::min(count, 4096 - frag);
 		u32 read = file.Read(Memory + buf_addr, req);
 		buf_addr += req;
 		res += read;

@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+
 #include "Thread.h"
 
 #ifdef _WIN32

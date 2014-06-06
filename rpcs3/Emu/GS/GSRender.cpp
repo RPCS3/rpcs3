@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3/rpcs3.h"
+
 #include "GSRender.h"
 
 wxSize AspectRatio(wxSize rs, const wxSize as)

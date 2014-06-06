@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "unedat.h"
+#include "Emu/ConLog.h"
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {

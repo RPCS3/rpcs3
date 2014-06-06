@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
 
 SELFDecrypter::SELFDecrypter(vfsStream& s)

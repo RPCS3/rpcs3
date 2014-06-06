@@ -1,7 +1,10 @@
 #include "stdafx.h"
-#include "SysCalls.h"
-#include "Modules.h"
-#include "SC_FUNC.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
 
 namespace detail{
 	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)

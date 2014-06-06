@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "rpcs3/Ini.h"
+#include "rpcs3.h"
 #include "Mouse.h"
 #include "Null/NullMouseHandler.h"
 #include "Windows/WindowsMouseHandler.h"

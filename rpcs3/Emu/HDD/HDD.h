@@ -1,5 +1,7 @@
 #pragma once
+#include <algorithm>
 #include "Emu/FS/vfsDevice.h"
+#include "Emu/FS/vfsLocalFile.h"
 
 static const u64 g_hdd_magic = *(u64*)"PS3eHDD\0";
 static const u16 g_hdd_version = 0x0001;
@@ -193,7 +195,7 @@ class vfsHDDFile
 	{
 		m_hdd.Seek(block * m_hdd_info.block_size);
 		m_hdd.Write(&data, sizeof(vfsHDD_Entry));
-		m_hdd.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
+		m_hdd.Write(name.c_str(), std::min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
 	}
 
 	__forceinline u32 GetMaxNameLen() const
@@ -267,7 +269,7 @@ public:
 		//vfsDeviceLocker lock(m_hdd);
 
 		const u32 block_size = m_hdd_info.block_size - sizeof(vfsHDD_Block);
-		u64 rsize = min<u64>(block_size - m_position, size);
+		u64 rsize = std::min<u64>(block_size - m_position, size);
 
 		vfsHDD_Block cur_block_info;
 		m_hdd.Seek(m_cur_block * m_hdd_info.block_size);
@@ -291,7 +293,7 @@ public:
 			}
 
 			m_cur_block = cur_block_info.next_block;
-			rsize = min<u64>(block_size, size);
+			rsize = std::min<u64>(block_size, size);
 
 			m_hdd.Seek(cur_block_info.next_block * m_hdd_info.block_size);
 			m_hdd.Read(&cur_block_info, sizeof(vfsHDD_Block));
@@ -337,7 +339,7 @@ public:
 			m_position = 0;
 		}
 
-		u64 wsize = min<u64>(block_size - m_position, size);
+		u64 wsize = std::min<u64>(block_size - m_position, size);
 
 		vfsHDD_Block block_info;
 		ReadBlock(m_cur_block, block_info);
@@ -371,7 +373,7 @@ public:
 			}
 
 			m_cur_block = new_block;
-			wsize = min<u64>(block_size, size);
+			wsize = std::min<u64>(block_size, size);
 
 			block_info.next_block = m_cur_block;
 			m_hdd.Seek(last_block * m_hdd_info.block_size);
@@ -576,7 +578,7 @@ public:
 	{
 		m_hdd_file.Seek(block * m_hdd_info.block_size);
 		m_hdd_file.Write(&data, sizeof(vfsHDD_Entry));
-		m_hdd_file.Write(name.c_str(), min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
+		m_hdd_file.Write(name.c_str(), std::min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
 	}
 
 	bool Create(vfsHDD_EntryType type, const std::string& name)

@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "RSXThread.h"
+#include "RSXThread.h"
 #include "RSXTexture.h"
 
 RSXTexture::RSXTexture()
