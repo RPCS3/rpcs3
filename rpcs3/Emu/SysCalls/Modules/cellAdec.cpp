@@ -35,7 +35,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("adecRawRead() aborted");
+				ConLog.Warning("adecRawRead: aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -71,7 +71,7 @@ next:
 			}
 			break;
 		default:
-			ConLog.Error("adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
+			ConLog.Error("adecRawRead: sequence error (task %d)", adec.job.Peek().type);
 			return -1;
 		}
 
@@ -197,7 +197,7 @@ u32 adecOpen(AudioDecoder* data)
 
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{
-		ConLog.Write("Audio Decoder enter()");
+		ConLog.Write("Audio Decoder enter");
 
 		AdecTask& task = adec.task;
 
@@ -230,7 +230,7 @@ u32 adecOpen(AudioDecoder* data)
 			case adecStartSeq:
 				{
 					// TODO: reset data
-					ConLog.Warning("adecStartSeq:");
+					ConLog.Warning("adecStartSeq: open");
 
 					adec.reader.addr = 0;
 					adec.reader.size = 0;
@@ -246,7 +246,7 @@ u32 adecOpen(AudioDecoder* data)
 			case adecEndSeq:
 				{
 					// TODO: finalize
-					ConLog.Warning("adecEndSeq:");
+					ConLog.Warning("adecEndSeq: open");
 
 					/*Callback cb;
 					cb.SetAddr(adec.cbFunc);
@@ -263,6 +263,8 @@ u32 adecOpen(AudioDecoder* data)
 
 			case adecDecodeAu:
 				{
+					ConLog.Warning("adecDecodeAu: open");
+
 					int err = 0;
 
 					adec.reader.addr = task.au.addr;
@@ -370,7 +372,7 @@ u32 adecOpen(AudioDecoder* data)
 					{
 						if (Emu.IsStopped())
 						{
-							ConLog.Warning("adecDecodeAu aborted");
+							ConLog.Warning("adecDecodeAu: aborted");
 							return;
 						}
 
@@ -517,8 +519,8 @@ bool adecCheckType(AudioCodecType type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: ConLog.Write("*** (?) type: ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: ConLog.Write("*** type: ATRAC3plus 2ch"); break;
+	case CELL_ADEC_TYPE_ATRACX: ConLog.Write("adecCheckType: ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX_2CH: ConLog.Write("adecCheckType: ATRAC3plus 2ch"); break;
 
 	case CELL_ADEC_TYPE_ATRACX_6CH:
 	case CELL_ADEC_TYPE_ATRACX_8CH:
@@ -530,7 +532,7 @@ bool adecCheckType(AudioCodecType type)
 	case CELL_ADEC_TYPE_CELP:
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
-		cellAdec.Error("Unimplemented audio codec type (%d)", type);
+		cellAdec.Error("adecCheckType: unimplemented audio codec type (%d)", type);
 		break;
 	default:
 		return false;
@@ -545,11 +547,16 @@ int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr
 
 	if (!type.IsGood() || !attr.IsGood())
 	{
+		cellAdec.Error("cellAdecQueryAttr: CELL_ADEC_ERROR_FATAL");
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
-
+	if (!adecCheckType(type->audioCodecType))
+	{
+		cellAdec.Error("cellAdecQueryAttr: CELL_ADEC_ERROR_ARG");
+		return CELL_ADEC_ERROR_ARG;
+	}
+		
 	// TODO: check values
 	attr->adecVerLower = 0x280000; // from dmux
 	attr->adecVerUpper = 0x260000;
@@ -560,15 +567,19 @@ int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr
 
 int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	cellAdec.Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+	cellAdec.Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
 	{
+		cellAdec.Error("cellAdecOpen: CELL_ADEC_ERROR_FATAL");
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
+	if (!adecCheckType(type->audioCodecType))
+	{
+		cellAdec.Error("cellAdecOpen: CELL_ADEC_ERROR_ARG");
+		return CELL_ADEC_ERROR_ARG;
+	}
 
 	handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
@@ -577,15 +588,19 @@ int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, 
 
 int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
 {
-	cellAdec.Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+	cellAdec.Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
 	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
 	{
+		cellAdec.Error("cellAdecOpenEX: CELL_ADEC_ERROR_FATAL");
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
+	if (!adecCheckType(type->audioCodecType))
+	{
+		cellAdec.Error("cellAdecOpenEx: CELL_ADEC_ERROR_ARG");
+		return CELL_ADEC_ERROR_ARG;
+	}
 
 	handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
@@ -599,6 +614,7 @@ int cellAdecClose(u32 handle)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecClose: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
@@ -608,7 +624,7 @@ int cellAdecClose(u32 handle)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellAdecClose(%d) aborted", handle);
+			ConLog.Warning("cellAdecClose(%d): aborted", handle);
 			break;
 		}
 		Sleep(1);
@@ -626,6 +642,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecStartSeq: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
@@ -650,6 +667,7 @@ int cellAdecEndSeq(u32 handle)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecEndSeq: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
@@ -664,11 +682,13 @@ int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecDecodeAu: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	if (!auInfo.IsGood())
 	{
+		cellAdec.Error("cellAdecDecodeAu: CELL_ADEC_ERROR_FATAL");
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
@@ -690,11 +710,13 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecGetPcm: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	if (adec->frames.IsEmpty())
 	{
+		cellAdec.Error("cellAdecGetPcmu: CELL_ADEC_ERROR_EMPTY");
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
@@ -706,6 +728,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
 	{
+		cellAdec.Error("cellAdecGetPcmu: CELL_ADEC_ERROR_FATAL");
 		result = CELL_ADEC_ERROR_FATAL;
 		if (af.data)
 		{
@@ -780,11 +803,13 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
+		cellAdec.Error("cellAdecGetPcmItem: CELL_ADEC_ERROR_ARG");
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	if (!pcmItem_ptr.IsGood())
 	{
+		cellAdec.Error("cellAdecGetPcmItem: CELL_ADEC_ERROR_FATAL");
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
@@ -792,6 +817,7 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 
 	if (adec->frames.IsEmpty())
 	{
+		cellAdec.Error("cellAdecGetPcmItem: CELL_ADEC_ERROR_EMPTY");
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
