@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "rpcs3/Ini.h"
+#include "rpcs3.h"
 #include "Keyboard.h"
 #include "Null/NullKeyboardHandler.h"
 #include "Windows/WindowsKeyboardHandler.h"

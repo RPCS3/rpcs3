@@ -1,5 +1,7 @@
 #pragma once
 
+class PPCThread;
+
 class DisAsmFrame : public wxFrame
 {
 	static const uint LINES_OPCODES = 40;

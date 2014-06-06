@@ -1,4 +1,10 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/SysCalls/SysCalls.h"
 
@@ -121,7 +127,7 @@ int cellKbRead(u32 port_no, mem_class_t data)
 	CellKbData& current_data = Emu.GetKeyboardManager().GetData(port_no);
 	data += current_data.led;
 	data += current_data.mkey;
-	data += min((u32)current_data.len, CELL_KB_MAX_KEYCODES);
+	data += std::min((u32)current_data.len, CELL_KB_MAX_KEYCODES);
 	for(s32 i=0; i<current_data.len; i++)
 	{
 		data += current_data.keycode[i];

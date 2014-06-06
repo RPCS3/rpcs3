@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <algorithm>
 #include "vfsDevice.h"
 
 vfsDevice::vfsDevice(const std::string& ps3_path, const std::string& local_path)
@@ -25,7 +26,7 @@ void vfsDevice::SetPath(const std::string& ps3_path, const std::string& local_pa
 
 u32 vfsDevice::CmpPs3Path(const std::string& ps3_path)
 {
-	const u32 lim = min(m_ps3_path.length(), ps3_path.length());
+	const u32 lim = std::min(m_ps3_path.length(), ps3_path.length());
 	u32 ret = 0;
 
 	for(u32 i=0; i<lim; ++i, ++ret)
@@ -57,7 +58,7 @@ u32 vfsDevice::CmpLocalPath(const std::string& local_path)
 	wxArrayString arr0 = wxSplit(path0.GetFullPath(), DL);
 	wxArrayString arr1 = wxSplit(fmt::FromUTF8(local_path), DL);
 
-	const u32 lim = min(arr0.GetCount(), arr1.GetCount());
+	const u32 lim = std::min(arr0.GetCount(), arr1.GetCount());
 	u32 ret = 0;
 
 	for(u32 i=0; i<lim; ret += arr0[i++].Len() + 1)

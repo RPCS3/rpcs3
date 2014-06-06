@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3/Ini.h"
+
 #include "OpenALThread.h"
 
 ALenum g_last_al_error = AL_NO_ERROR;

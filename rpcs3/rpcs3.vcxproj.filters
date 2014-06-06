@@ -74,6 +74,9 @@
     <Filter Include="Emu\Io\XInput">
       <UniqueIdentifier>{a77ab520-4399-4c95-a7ee-985c9a5ad694}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\SysCalls\Modules\currently_unused">
+      <UniqueIdentifier>{c7dba541-6b78-47fd-b1aa-2325317a8bf0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -511,6 +514,111 @@
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
       <Filter>Emu\Io\XInput</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellFiber.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellGem.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellImejp.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellOvis.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellScreenshot.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellJpgEnc.cpp">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -565,9 +673,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Gui\CompilerELF.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="Gui\ConLog.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\Debugger.h">
@@ -998,6 +1103,15 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
       <Filter>Emu\Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ConLog.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
+      <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPCThread.h"
+
 #include "ARMv7Thread.h"
 #include "ARMv7Decoder.h"
 #include "ARMv7DisAsm.h"

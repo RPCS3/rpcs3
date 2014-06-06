@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
 #include "OpenGL.h"
 
 void InitProcTable()

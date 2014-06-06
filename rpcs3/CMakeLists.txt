@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
+
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/rpcs3/cmake_modules")
+include(cotire)
+
 project(rpcs3)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -92,5 +96,6 @@ add_executable(rpcs3 ${RPCS3_SRC})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjit/") #hack because the asmjit cmake file force fno exceptions
 target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
 
-#set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
-#cotire(rpcs3)
+set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
+cotire(rpcs3)
+

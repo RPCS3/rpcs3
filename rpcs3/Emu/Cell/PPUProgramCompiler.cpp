@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+
 #include "PPUProgramCompiler.h"
 
 using namespace PPU_instr;

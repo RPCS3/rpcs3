@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "event.h"
 
 void EventManager::Init()

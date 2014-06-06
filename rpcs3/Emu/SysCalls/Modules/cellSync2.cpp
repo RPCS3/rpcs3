@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -252,3 +253,4 @@ void cellSync2_init()
 	cellSync2.AddFunc(0x12f0a27d, cellSync2QueueGetSize);
 	cellSync2.AddFunc(0xf0e1471c, cellSync2QueueGetDepth);
 }
+#endif

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -89,3 +90,4 @@ void cellJpgEnc_init()
 	cellJpgEnc.AddFunc(0x4262e880, cellJpgEncGetStreamInfo);
 	cellJpgEnc.AddFunc(0x0cf2b78b, cellJpgEncReset);
 }
+#endif

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "SysCalls.h"
 
 #define FUNC_LOG_ERROR(x) ConLog.Error(x); return 0

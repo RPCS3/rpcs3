@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #if defined (_WIN32)
+#include <algorithm>
+#include "Emu/ConLog.h"
 #include "XInputPadHandler.h"
 #include <cstring>
 

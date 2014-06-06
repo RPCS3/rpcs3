@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "CompilerELF.h"
 #include "Emu/Cell/PPUProgramCompiler.h"
 using namespace PPU_opcodes;

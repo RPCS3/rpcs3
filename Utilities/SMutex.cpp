@@ -1,5 +1,10 @@
 #include <stdafx.h>
-#include <Utilities/SMutex.h>
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/CPU/CPUThread.h"
+
+#include "Utilities/SMutex.h"
 
 __forceinline void SM_Sleep()
 {

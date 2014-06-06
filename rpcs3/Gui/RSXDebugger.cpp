@@ -1,9 +1,15 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 #include "RSXDebugger.h"
 #include "Emu/GS/sysutil_video.h"
 #include "Emu/GS/GCM.h"
 
 #include "MemoryViewer.h"
+
+#include <wx/notebook.h>
 
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;

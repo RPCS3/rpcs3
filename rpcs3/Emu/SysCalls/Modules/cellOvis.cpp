@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 
@@ -44,3 +45,4 @@ void cellOvis_init()
 	cellOvis.AddFunc(0xce6cb776, cellOvisFixSpuSegments);
 	cellOvis.AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
 }
+#endif

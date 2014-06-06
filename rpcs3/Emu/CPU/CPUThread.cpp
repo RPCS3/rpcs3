@@ -1,4 +1,11 @@
 #include "stdafx.h"
+#include "Emu/SysCalls/ErrorCodes.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3/Ini.h"
+#include "rpcs3.h"
+
 #include "CPUThread.h"
 
 reservation_struct reservation;

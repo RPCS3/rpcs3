@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Ini.h"
 
+#include "Utilities/StrFmt.h"
+
 #include <algorithm>
 #include <cctype>
 

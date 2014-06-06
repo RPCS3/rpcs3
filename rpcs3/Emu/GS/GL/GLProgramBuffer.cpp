@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+#include "Emu/Memory/Memory.h"
+
 #include "GLProgramBuffer.h"
 
 int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& gl_fp)

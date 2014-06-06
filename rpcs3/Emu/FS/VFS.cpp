@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/ConLog.h"
+
 #include "VFS.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"

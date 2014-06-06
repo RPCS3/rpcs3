@@ -1,11 +1,13 @@
 #include "stdafx.h"
-#include "System.h"
+#include "Emu/ConLog.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Ini.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
+#include "Emu/FS/vfsFile.h"
 
 #include "../Crypto/unself.h"
 #include <cstdlib>
