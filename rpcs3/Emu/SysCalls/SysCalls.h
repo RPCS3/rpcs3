@@ -451,7 +451,7 @@ class SysCalls
 {
 public:
 	static void DoSyscall(u32 code);
-	static s64 DoFunc(const u32 id);
+	static std::string GetHLEFuncName(const u32 fid);
 };
 
 //extern SysCalls SysCallsManager;

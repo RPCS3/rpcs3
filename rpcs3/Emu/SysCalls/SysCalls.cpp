@@ -580,10 +580,9 @@ void SysCalls::DoSyscall(u32 code)
 	{
 		return;
 	}
-	//ConLog.Error("Unknown function 0x%08x", code);
-	//return 0;
 
-	//TODO: remove this
+
+	ConLog.Error("Unknown function 0x%08x", code);
 	declCPU();
-	RESULT(DoFunc(code));
+	RESULT(0);
 }

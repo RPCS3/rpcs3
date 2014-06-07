@@ -78,12 +78,6 @@ std::string GLFragmentDecompilerThread::GetMask()
 
 std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-	if(index >= 2 && index <= 4)
-	{
-		return m_parr.AddParam(PARAM_OUT, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), 
-							(fp16) ? -1 : (index - 1));
-	}
-
 	return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0, 0.0, 0.0, 0.0)");
 
 	//return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",

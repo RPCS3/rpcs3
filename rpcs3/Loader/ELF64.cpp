@@ -374,8 +374,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 							{
 								if(!module->Load(nid))
 								{
-									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name.c_str());
-									SysCalls::DoFunc(nid);
+									ConLog.Warning("Unimplemented function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
 								}
 							}
 #ifdef LOADER_DEBUG

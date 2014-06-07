@@ -71,9 +71,7 @@ private:
 
 		if(Ini.HLELogging.GetValue())
 		{
-			ConLog.Warning("SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
-			if(CPU.GPR[11] > 1024)
-				SysCalls::DoFunc(CPU.GPR[11]);
+			ConLog.Warning("SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
 		}
 		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
 		{
