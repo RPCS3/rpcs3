@@ -220,8 +220,8 @@ struct GcmZcullInfo
 	u32 m_cullStart;
 	u32 m_zFormat;
 	u32 m_aaFormat;
-	u32 m_zCullDir;
-	u32 m_zCullFormat;
+	u32 m_zcullDir;
+	u32 m_zcullFormat;
 	u32 m_sFunc;
 	u32 m_sRef;
 	u32 m_sMask;
@@ -230,6 +230,20 @@ struct GcmZcullInfo
 	GcmZcullInfo()
 	{
 		memset(this, 0, sizeof(*this));
+	}
+
+	CellGcmZcullInfo Pack()
+	{
+		CellGcmZcullInfo ret;
+
+		ret.region = (1<<0) | (m_zFormat<<4) | (m_aaFormat<<8);
+		ret.size = ((m_width>>6)<<22) | ((m_height>>6)<<6);
+		ret.start = m_cullStart&(~0xFFF);
+		ret.offset = m_offset;
+		ret.status0 = (m_zcullDir<<1) | (m_zcullFormat<<2) | ((m_sFunc&0xF)<<12) | (m_sRef<<16) | (m_sMask<<24);
+		ret.status1 = (0x2000<<0) | (0x20<<16);
+
+		return ret;
 	}
 };
 

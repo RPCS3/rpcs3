@@ -154,7 +154,7 @@ int cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
-	if (size > 15)
+	if (size > CELL_SPURS_NAME_MAX_LENGTH)
 	{
 		cellSpurs.Error("cellSpursAttributeSetNamePrefix : CELL_SPURS_CORE_ERROR_INVAL");
 		return CELL_SPURS_CORE_ERROR_INVAL;

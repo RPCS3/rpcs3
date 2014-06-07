@@ -603,14 +603,13 @@ int cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.m_cullStart = cullStart;
 	zcull.m_zFormat = zFormat;
 	zcull.m_aaFormat = aaFormat;
-	zcull.m_zCullDir = zCullDir;
-	zcull.m_zCullFormat = zCullFormat;
+	zcull.m_zcullDir = zCullDir;
+	zcull.m_zcullFormat = zCullFormat;
 	zcull.m_sFunc = sFunc;
 	zcull.m_sRef = sRef;
 	zcull.m_sMask = sMask;
 
-	// TODO:
-	//Memory.WriteData(Emu.GetGSManager().GetRender().m_zculls_addr + sizeof(CellGcmZcullInfo)* index, zcull.Pack());
+	Memory.WriteData(Emu.GetGSManager().GetRender().m_zculls_addr + sizeof(CellGcmZcullInfo)* index, zcull.Pack());
 
 	return CELL_OK;
 }
