@@ -41,6 +41,7 @@ enum IDs
 	id_tools_compiler,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
+	id_tools_debugger,
 	id_tools_fnid_generator,
 	id_help_about,
 	id_update_dbg,
@@ -98,6 +99,7 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer");
 	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger");
 	menu_tools->Append(id_tools_fnid_generator, "FunctionID Generator");
+	menu_tools->Append(id_tools_debugger, "Debugger");
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "Help");
@@ -107,12 +109,10 @@ MainFrame::MainFrame()
 
 	// Panels
 	m_game_viewer = new GameViewer(this);
-	m_debugger_frame = new DebuggerPanel(this);
 	ConLogFrame = new LogFrame(this);
 
-	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
-	AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
-	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
+	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
+	AddPane(ConLogFrame, "Log Console", wxAUI_DOCK_BOTTOM);
 	
 	// Events
 	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
@@ -134,6 +134,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
 	Bind(wxEVT_MENU, &MainFrame::OpenFnIdGenerator, this, id_tools_fnid_generator);
+	Bind(wxEVT_MENU, &MainFrame::OpenDebugger, this, id_tools_debugger);
 
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
@@ -668,6 +669,10 @@ void MainFrame::OpenFnIdGenerator(wxCommandEvent& WXUNUSED(event))
 	FnIdGenerator(this).ShowModal();
 }
 
+void MainFrame::OpenDebugger(wxCommandEvent& WXUNUSED(event))
+{
+	(new DebuggerPanel(this))->Show();
+}
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 {

@@ -103,7 +103,7 @@ public:
 	}
 };
 
-DebuggerPanel::DebuggerPanel(wxWindow* parent) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(400, 600), wxTAB_TRAVERSAL)
+DebuggerPanel::DebuggerPanel(wxWindow* parent) : wxFrame(parent, wxID_ANY, "Debugger", wxDefaultPosition, wxSize(800, 600))
 {
 	m_aui_mgr.SetManagedWindow(this);
 

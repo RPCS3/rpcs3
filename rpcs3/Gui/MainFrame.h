@@ -38,6 +38,7 @@ private:
 	void OpenMemoryViewer(wxCommandEvent& evt);
 	void OpenRSXDebugger(wxCommandEvent& evt);
 	void OpenFnIdGenerator(wxCommandEvent& evt);
+	void OpenDebugger(wxCommandEvent& evt);
 	void AboutDialogHandler(wxCommandEvent& event);
 	void UpdateUI(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);

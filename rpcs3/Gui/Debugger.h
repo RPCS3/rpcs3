@@ -2,7 +2,7 @@
 #include <wx/listctrl.h>
 #include <wx/aui/aui.h>
 
-class DebuggerPanel : public wxPanel
+class DebuggerPanel : public wxFrame
 {
 	wxAuiManager m_aui_mgr;
 
