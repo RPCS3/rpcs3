@@ -18,20 +18,20 @@ int sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 		return CELL_EFAULT;
 	}
 
-	switch (attr->protocol)
+	switch (attr->protocol.ToBE())
 	{
-	case SYS_SYNC_FIFO: break;
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_mtx.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT protocol"); break;
-	case SYS_SYNC_RETRY: sys_mtx.Error("Invalid SYS_SYNC_RETRY protocol"); return CELL_EINVAL;
+	case se32(SYS_SYNC_FIFO): break;
+	case se32(SYS_SYNC_PRIORITY): break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mtx.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT protocol"); break;
+	case se32(SYS_SYNC_RETRY): sys_mtx.Error("Invalid SYS_SYNC_RETRY protocol"); return CELL_EINVAL;
 	default: sys_mtx.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
 	bool is_recursive;
-	switch (attr->recursive)
+	switch (attr->recursive.ToBE())
 	{
-	case SYS_SYNC_RECURSIVE: is_recursive = true; break;
-	case SYS_SYNC_NOT_RECURSIVE: is_recursive = false; break;
+	case se32(SYS_SYNC_RECURSIVE): is_recursive = true; break;
+	case se32(SYS_SYNC_NOT_RECURSIVE): is_recursive = false; break;
 	default: sys_mtx.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
 	}
 

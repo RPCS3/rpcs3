@@ -15,19 +15,19 @@ int sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 
 	if (!lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
 
-	switch (attr->attr_recursive)
+	switch (attr->attr_recursive.ToBE())
 	{
-	case SYS_SYNC_RECURSIVE: break;
-	case SYS_SYNC_NOT_RECURSIVE: break;
+	case se32(SYS_SYNC_RECURSIVE): break;
+	case se32(SYS_SYNC_NOT_RECURSIVE): break;
 	default: sc_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->attr_recursive); return CELL_EINVAL;
 	}
 
-	switch (attr->attr_protocol)
+	switch (attr->attr_protocol.ToBE())
 	{
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: break;
-	case SYS_SYNC_PRIORITY_INHERIT: sc_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
-	case SYS_SYNC_FIFO: break;
+	case se32(SYS_SYNC_PRIORITY): break;
+	case se32(SYS_SYNC_RETRY): break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sc_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
+	case se32(SYS_SYNC_FIFO): break;
 	default: sc_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->attr_protocol); return CELL_EINVAL;
 	}
 
@@ -284,14 +284,14 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 		if (!recursive_count.ToBE())
 		{
 			be_t<u32> target = 0;
-			switch (attribute & SYS_SYNC_ATTR_PROTOCOL_MASK)
+			switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
 			{
-			case SYS_SYNC_FIFO:
-			case SYS_SYNC_PRIORITY:
+			case se32(SYS_SYNC_FIFO):
+			case se32(SYS_SYNC_PRIORITY):
 				SleepQueue* sq;
 				if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
 				target = attribute & SYS_SYNC_FIFO ? sq->pop() : sq->pop_prio();
-			case SYS_SYNC_RETRY: break;
+			case se32(SYS_SYNC_RETRY): break;
 			}
 			if (target) mutex.unlock(tid, target);
 			else mutex.unlock(tid);
@@ -311,10 +311,10 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	SleepQueue* sq;
 	if (!Emu.GetIdManager().GetIDData(sleep_queue, sq)) return CELL_ESRCH;
 
-	switch (attribute & SYS_SYNC_ATTR_PROTOCOL_MASK)
+	switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
 	{
-	case SYS_SYNC_PRIORITY:
-	case SYS_SYNC_FIFO:
+	case se32(SYS_SYNC_PRIORITY):
+	case se32(SYS_SYNC_FIFO):
 		sq->push(tid);
 	default: break;
 	}

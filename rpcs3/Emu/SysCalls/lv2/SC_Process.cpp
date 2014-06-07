@@ -175,7 +175,7 @@ int sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_siz
 
 #define ADD_OBJECTS(objects) { \
 	u32 i=0; \
-	for(auto& id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
+	for(auto id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
 		buffer[i] = *id; \
 	set_size = i; \
 	}
