@@ -79,9 +79,6 @@ std::string GLFragmentDecompilerThread::GetMask()
 std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
 	return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0, 0.0, 0.0, 0.0)");
-
-	//return m_parr.AddParam((index >= 2 && index <= 4) ? PARAM_OUT : PARAM_NONE, "vec4",
-	//		std::string(fp16 ? "h" : "r") + std::to_string(index), (fp16 || !index) ? -1 : ((index >= 2 && index <= 4) ? (index - 1) : -1));
 }
 
 bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
@@ -292,9 +289,9 @@ void GLFragmentDecompilerThread::Task()
 
 	while(true)
 	{
-		auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-
-		if (finded != m_end_offsets.end())
+		for (auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
+			finded != m_end_offsets.end();
+			finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
 			m_end_offsets.erase(finded);
 			m_code_level--;
@@ -302,9 +299,9 @@ void GLFragmentDecompilerThread::Task()
 			m_loop_count--;
 		}
 
-		finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-
-		if (finded != m_else_offsets.end())
+		for (auto finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
+			finded != m_else_offsets.end();
+			finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
 			m_else_offsets.erase(finded);
 			m_code_level--;
