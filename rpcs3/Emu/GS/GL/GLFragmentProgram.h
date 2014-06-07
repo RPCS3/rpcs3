@@ -148,7 +148,7 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	void AddCode(const std::string& code);
 	std::string AddReg(u32 index, int fp16);
 	bool HasReg(u32 index, int fp16);
-	std::string AddCond(int fp16);
+	std::string AddCond();
 	std::string AddConst();
 	std::string AddTex();
 	std::string Format(std::string code);

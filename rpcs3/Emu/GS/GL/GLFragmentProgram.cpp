@@ -39,16 +39,21 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 
 	std::string dest;
 
-	if(dst.no_dest)
+	if (dst.no_dest)
 	{
-		if(dst.set_cond)
+		if (dst.set_cond)
 		{
-			dest = m_parr.AddParam(PARAM_NONE , "vec4", std::string(dst.fp16 ? "hc" : "rc") + std::to_string(src0.cond_reg_index));
+			dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index));
 		}
 	}
 	else
 	{
 		dest = AddReg(dst.dest_reg, dst.fp16);
+
+		if (dst.set_cond)
+		{
+			dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + mask + " = " + dest;
+		}
 	}
 
 	AddCode(cond + (dest.length() ? dest + mask + " = " : "") + code + (append_mask ? mask : "") + ";");
@@ -87,9 +92,9 @@ bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
 		std::string(fp16 ? "h" : "r") + std::to_string(index));
 }
 
-std::string GLFragmentDecompilerThread::AddCond(int fp16)
+std::string GLFragmentDecompilerThread::AddCond()
 {
-	return m_parr.AddParam(PARAM_NONE , "vec4", std::string(fp16 ? "hc" : "rc") + std::to_string(src0.cond_mod_reg_index));
+	return m_parr.AddParam(PARAM_NONE , "vec4", "cc" + std::to_string(src0.cond_reg_index));
 }
 
 std::string GLFragmentDecompilerThread::AddConst()
@@ -178,7 +183,7 @@ std::string GLFragmentDecompilerThread::GetCond()
 		cond = "equal";
 	}
 
-	return "any(" + cond + "(" + AddCond(dst.no_dest) + swizzle + ", vec4(0.0)))";
+	return "any(" + cond + "(" + AddCond() + swizzle + ", vec4(0.0)))";
 }
 
 template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
