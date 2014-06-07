@@ -104,17 +104,13 @@ int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 	return CELL_OK;
 }
 
-int sys_memory_get_user_memory_size(u32 mem_info_addr)
+int sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
 {
-	sc_mem.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info_addr);
+	sc_mem.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.GetAddr());
 	
 	// Fetch the user memory available.
-	sys_memory_info info;
-	info.total_user_memory = re(Memory.GetUserMemTotalSize());
-	info.available_user_memory = re(Memory.GetUserMemAvailSize());
-	
-	Memory.WriteData(mem_info_addr, info);
-	
+	mem_info->total_user_memory = Memory.GetUserMemTotalSize();
+	mem_info->available_user_memory = Memory.GetUserMemAvailSize();
 	return CELL_OK;
 }
 
@@ -134,6 +130,7 @@ int sys_memory_container_create(mem32_t cid, u32 yield_size)
 	// Wrap the allocated memory in a memory container.
 	MemoryContainerInfo *ct = new MemoryContainerInfo(addr, yield_size);
 	cid = sc_mem.GetNewId(ct);
+	procObjects.mem_objects.insert(cid);
 
 	sc_mem.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, cid.GetValue());
 
@@ -156,9 +153,9 @@ int sys_memory_container_destroy(u32 cid)
 	return CELL_OK;
 }
 
-int sys_memory_container_get_size(u32 mem_info_addr, u32 cid)
+int sys_memory_container_get_size(mem_ptr_t<sys_memory_info_t> mem_info, u32 cid)
 {
-	sc_mem.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info_addr, cid);
+	sc_mem.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.GetAddr(), cid);
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;
@@ -166,12 +163,9 @@ int sys_memory_container_get_size(u32 mem_info_addr, u32 cid)
 		return CELL_ESRCH;
 
 	// HACK: Return all memory.
-	sys_memory_info info;
-	info.total_user_memory = re(ct->size);
-	info.available_user_memory = re(ct->size);
-	
-	Memory.WriteData(mem_info_addr, info);
-
+	sys_memory_info_t info;
+	mem_info->total_user_memory = ct->size;
+	mem_info->available_user_memory = ct->size;
 	return CELL_OK;
 }
 

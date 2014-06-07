@@ -3,31 +3,11 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "SC_Process.h"
 
 SysCallBase sc_p("Process");
 
-//Process Local Object
-enum
-{
-	SYS_MEM_OBJECT                   = (0x08UL),
-	SYS_MUTEX_OBJECT                 = (0x85UL),
-	SYS_COND_OBJECT                  = (0x86UL),
-	SYS_RWLOCK_OBJECT                = (0x88UL),
-	SYS_INTR_TAG_OBJECT              = (0x0AUL),
-	SYS_INTR_SERVICE_HANDLE_OBJECT   = (0x0BUL),
-	SYS_EVENT_QUEUE_OBJECT           = (0x8DUL),
-	SYS_EVENT_PORT_OBJECT            = (0x0EUL),
-	SYS_TRACE_OBJECT                 = (0x21UL),
-	SYS_SPUIMAGE_OBJECT              = (0x22UL),
-	SYS_PRX_OBJECT                   = (0x23UL),
-	SYS_SPUPORT_OBJECT               = (0x24UL),
-	SYS_LWMUTEX_OBJECT               = (0x95UL),
-	SYS_TIMER_OBJECT                 = (0x11UL),
-	SYS_SEMAPHORE_OBJECT             = (0x96UL),
-	SYS_FS_FD_OBJECT                 = (0x73UL),
-	SYS_LWCOND_OBJECT                = (0x97UL),
-	SYS_EVENT_FLAG_OBJECT            = (0x98UL),
-};
+sysProcessObjects_t procObjects;
 
 int sys_process_getpid()
 {
@@ -40,7 +20,7 @@ int sys_process_getppid()
 	return 0;
 }
 
-int sys_process_exit(int errorcode)
+int sys_process_exit(s32 errorcode)
 {
 	sc_p.Warning("sys_process_exit(%d)", errorcode);
 	Emu.Pause(); // Emu.Stop() does crash
@@ -150,169 +130,82 @@ void sys_game_process_exitspawn2(
 	return;
 }
 
-
 int sys_process_get_number_of_object(u32 object, mem32_t nump)
 {
-	sc_p.Warning("TODO: sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
+	sc_p.Warning("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
 		object, nump.GetAddr());
 	
+	if (!nump.IsGood())
+		return CELL_EFAULT;
+
 	switch(object)
 	{
-	case SYS_MEM_OBJECT:
-		nump = 0;
-		return CELL_OK;
+	case SYS_MEM_OBJECT:                  nump = procObjects.mem_objects.size();                 break;
+	case SYS_MUTEX_OBJECT:                nump = procObjects.mutex_objects.size();               break;
+	case SYS_COND_OBJECT:                 nump = procObjects.cond_objects.size();                break;
+	case SYS_RWLOCK_OBJECT:               nump = procObjects.rwlock_objects.size();              break;
+	case SYS_INTR_TAG_OBJECT:             nump = procObjects.intr_tag_objects.size();            break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:  nump = procObjects.intr_service_handle_objects.size(); break;
+	case SYS_EVENT_QUEUE_OBJECT:          nump = procObjects.event_queue_objects.size();         break;
+	case SYS_EVENT_PORT_OBJECT:           nump = procObjects.event_port_objects.size();          break;
+	case SYS_TRACE_OBJECT:                nump = procObjects.trace_objects.size();               break;
+	case SYS_SPUIMAGE_OBJECT:             nump = procObjects.spuimage_objects.size();            break;
+	case SYS_PRX_OBJECT:                  nump = procObjects.prx_objects.size();                 break;
+	case SYS_SPUPORT_OBJECT:              nump = procObjects.spuport_objects.size();             break;
+	case SYS_LWMUTEX_OBJECT:              nump = procObjects.lwmutex_objects.size();             break;
+	case SYS_TIMER_OBJECT:                nump = procObjects.timer_objects.size();               break;
+	case SYS_SEMAPHORE_OBJECT:            nump = procObjects.semaphore_objects.size();           break;
+	case SYS_FS_FD_OBJECT:                nump = procObjects.fs_fd_objects.size();               break;
+	case SYS_LWCOND_OBJECT:               nump = procObjects.lwcond_objects.size();              break;
 
-	case SYS_MUTEX_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_COND_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_RWLOCK_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_INTR_TAG_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_EVENT_QUEUE_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_EVENT_PORT_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_TRACE_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_SPUIMAGE_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_PRX_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_SPUPORT_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_LWMUTEX_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_TIMER_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_SEMAPHORE_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_FS_FD_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	case SYS_LWCOND_OBJECT:
-		nump = 0;
-		return CELL_OK;
-
-	default:
+	default:      
 		return CELL_EINVAL;
 	}
+
+	return CELL_OK;
 }
 
-int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size)
+int sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_size)
 {
 	sc_p.Warning("TODO: sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
 		object, buffer.GetAddr(), size, set_size.GetAddr());
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT:
-		set_size = 0;
-		return CELL_OK;
 
-	case SYS_MUTEX_OBJECT:
-		set_size = 0;
-		return CELL_OK;
+#define ADD_OBJECTS(objects) { \
+	u32 i=0; \
+	for(auto& id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
+		buffer[i] = *id; \
+	set_size = i; \
+	}
 
-	case SYS_COND_OBJECT:
-		set_size = 0;
-		return CELL_OK;
+	case SYS_MEM_OBJECT:                  ADD_OBJECTS(procObjects.mem_objects);                 break;
+	case SYS_MUTEX_OBJECT:                ADD_OBJECTS(procObjects.mutex_objects);               break;
+	case SYS_COND_OBJECT:                 ADD_OBJECTS(procObjects.cond_objects);                break;
+	case SYS_RWLOCK_OBJECT:               ADD_OBJECTS(procObjects.rwlock_objects);              break;
+	case SYS_INTR_TAG_OBJECT:             ADD_OBJECTS(procObjects.intr_tag_objects);            break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:  ADD_OBJECTS(procObjects.intr_service_handle_objects); break;
+	case SYS_EVENT_QUEUE_OBJECT:          ADD_OBJECTS(procObjects.event_queue_objects);         break;
+	case SYS_EVENT_PORT_OBJECT:           ADD_OBJECTS(procObjects.event_port_objects);          break;
+	case SYS_TRACE_OBJECT:                ADD_OBJECTS(procObjects.trace_objects);               break;
+	case SYS_SPUIMAGE_OBJECT:             ADD_OBJECTS(procObjects.spuimage_objects);            break;
+	case SYS_PRX_OBJECT:                  ADD_OBJECTS(procObjects.prx_objects);                 break;
+	case SYS_SPUPORT_OBJECT:              ADD_OBJECTS(procObjects.spuport_objects);             break;
+	case SYS_LWMUTEX_OBJECT:              ADD_OBJECTS(procObjects.lwmutex_objects);             break;
+	case SYS_TIMER_OBJECT:                ADD_OBJECTS(procObjects.timer_objects);               break;
+	case SYS_SEMAPHORE_OBJECT:            ADD_OBJECTS(procObjects.semaphore_objects);           break;
+	case SYS_FS_FD_OBJECT:                ADD_OBJECTS(procObjects.fs_fd_objects);               break;
+	case SYS_LWCOND_OBJECT:               ADD_OBJECTS(procObjects.lwcond_objects);              break;
+	case SYS_EVENT_FLAG_OBJECT:           ADD_OBJECTS(procObjects.event_flag_objects);          break;
 
-	case SYS_RWLOCK_OBJECT:
-		set_size = 0;
-		return CELL_OK;
+#undef ADD_OBJECTS
 
-	case SYS_INTR_TAG_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_EVENT_QUEUE_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_EVENT_PORT_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_TRACE_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_SPUIMAGE_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_PRX_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_SPUPORT_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_LWMUTEX_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_TIMER_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_SEMAPHORE_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_FS_FD_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_LWCOND_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	case SYS_EVENT_FLAG_OBJECT:
-		set_size = 0;
-		return CELL_OK;
-
-	default:
+	default:      
 		return CELL_EINVAL;
 	}
+
+	return CELL_OK;
 }
 
 int sys_process_get_paramsfo(mem8_ptr_t buffer)
@@ -334,57 +227,46 @@ int sys_process_get_paramsfo(mem8_ptr_t buffer)
 	return CELL_OK;*/
 }
 
-/*
-int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
+int sys_process_get_sdk_version(u32 pid, mem32_t version)
 {
-	ConLog.Warning("lv2ProcessWaitForChild");
+	sc_p.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.GetAddr());
+
+	if (!version.IsGood())
+		return CELL_EFAULT;
+
+	version = 0x360001; // TODO
 	return CELL_OK;
 }
-int SysCalls::lv2ProcessGetStatus(PPUThread& CPU)
+
+int sys_process_kill(u32 pid)
 {
-	ConLog.Warning("lv2ProcessGetStatus");
+	sc_p.Error("TODO: sys_process_kill(pid=%d)", pid);
+	return CELL_OK;
+}
+
+int sys_process_wait_for_child(u32 pid, mem32_t status, u64 unk)
+{
+	sc_p.Error("TODO: sys_process_wait_for_child(pid=%d, status_addr=0x%x, unk=0x%llx",
+		pid, status.GetAddr(), unk);
+	return CELL_OK;
+}
+
+int sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
+{
+	sc_p.Error("TODO: sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
+		unk1, unk2, unk3, unk4, unk5, unk6);
+	return CELL_OK;
+}
+
+int sys_process_get_status(u64 unk)
+{
+	sc_p.Error("TODO: sys_process_get_status(unk=0x%llx)", unk);
 	//Memory.Write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }
-int SysCalls::lv2ProcessDetachChild(PPUThread& CPU)
+
+int sys_process_detach_child(u64 unk)
 {
-	ConLog.Warning("lv2ProcessDetachChild");
+	sc_p.Error("TODO: sys_process_detach_child(unk=0x%llx)", unk);
 	return CELL_OK;
 }
-int SysCalls::lv2ProcessGetNumberOfObject(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessGetNumberOfObject");
-	Memory.Write32(CPU.GPR[4], 1);
-	return CELL_OK;
-}
-int SysCalls::lv2ProcessGetId(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessGetId");
-	Memory.Write32(CPU.GPR[4], CPU.GetId());
-	return CELL_OK;
-}
-int SysCalls::lv2ProcessGetPpid(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessGetPpid");
-	Memory.Write32(CPU.GPR[4], CPU.GetId());
-	return CELL_OK;
-}
-int SysCalls::lv2ProcessKill(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessKill[pid: 0x%llx]", CPU.GPR[3]);
-	CPU.Close();
-	return CELL_OK;
-}
-int SysCalls::lv2ProcessWaitForChild2(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessWaitForChild2[r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, r6: 0x%llx, r7: 0x%llx, r8: 0x%llx]",
-		CPU.GPR[3], CPU.GPR[4], CPU.GPR[5], CPU.GPR[6], CPU.GPR[7], CPU.GPR[8]);
-	return CELL_OK;
-}
-int SysCalls::lv2ProcessGetSdkVersion(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessGetSdkVersion[r3: 0x%llx, r4: 0x%llx]", CPU.GPR[3], CPU.GPR[4]);
-	CPU.GPR[4] = 0x360001; //TODO
-	return CELL_OK;
-}
-*/

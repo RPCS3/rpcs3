@@ -1113,5 +1113,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
       <Filter>Emu\SysCalls\Modules\currently_unused</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Process.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

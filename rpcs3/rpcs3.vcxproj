@@ -593,6 +593,7 @@
     <ClInclude Include="Emu\SysCalls\lv2\SC_Lwmutex.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Memory.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Mutex.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Process.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Rwlock.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Spinlock.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_SPU_Thread.h" />

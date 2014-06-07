@@ -1,5 +1,6 @@
 #pragma once
 #include "ErrorCodes.h"
+#include "lv2/SC_Process.h"
 #include "lv2/SC_FileSystem.h"
 #include "lv2/SC_Memory.h"
 #include "lv2/SC_Timer.h"
@@ -119,18 +120,6 @@ public:
 	}
 };
 
-//process
-extern int sys_process_getpid();
-extern int sys_process_getppid();
-extern int sys_process_get_number_of_object(u32 object, mem32_t nump);
-extern int sys_process_get_id(u32 object, mem8_ptr_t buffer, u32 size, mem32_t set_size);
-extern int sys_process_get_paramsfo(mem8_ptr_t buffer);
-extern int sys_process_exit(int errorcode);
-extern void sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
-								u32 data_addr, u32 data_size, u32 prio, u64 flags );
-extern void sys_game_process_exitspawn2(u32 path_addr, u32 argv_addr, u32 envp_addr,
-								u32 data_addr, u32 data_size, u32 prio, u64 flags);
-
 //sys_event
 extern int sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
 extern int sys_event_queue_destroy(u32 equeue_id, int mode);
@@ -227,10 +216,10 @@ extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr);
 extern int sys_memory_free(u32 start_addr);
 extern int sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr);
-extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
+extern int sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info);
 extern int sys_memory_container_create(mem32_t cid, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
-extern int sys_memory_container_get_size(u32 mem_info_addr, u32 cid);
+extern int sys_memory_container_get_size(mem_ptr_t<sys_memory_info_t> mem_info, u32 cid);
 extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 extern int sys_mmapper_allocate_fixed_address();
 extern int sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id);

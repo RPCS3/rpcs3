@@ -21,10 +21,10 @@ enum
 	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
 };
 
-struct sys_memory_info
+struct sys_memory_info_t
 {
-	u32 total_user_memory;
-	u32 available_user_memory;
+	be_t<u32> total_user_memory;
+	be_t<u32> available_user_memory;
 };
 
 
