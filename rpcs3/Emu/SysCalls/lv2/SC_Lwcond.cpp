@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "SC_Process.h"
 #include "SC_Lwmutex.h"
 #include "SC_Lwcond.h"
 
@@ -27,11 +26,11 @@ int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 
 	if (lwmutex.IsGood())
 	{
-		if (lwmutex->attribute & SYS_SYNC_RETRY)
+		if (lwmutex->attribute.ToBE() & se32(SYS_SYNC_RETRY))
 		{
 			sys_lwcond.Warning("Unsupported SYS_SYNC_RETRY lwmutex protocol");
 		}
-		if (lwmutex->attribute & SYS_SYNC_RECURSIVE)
+		if (lwmutex->attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
 			sys_lwcond.Warning("Recursive lwmutex(sq=%d)", (u32)lwmutex->sleep_queue);
 		}
@@ -90,7 +89,7 @@ int sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 
-	if (u32 target = (mutex->attribute == SYS_SYNC_PRIORITY ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
+	if (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
 	{
 		lw->signal.lock(target);
 
@@ -121,7 +120,7 @@ int sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 
-	while (u32 target = (mutex->attribute == SYS_SYNC_PRIORITY ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
+	while (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
 	{
 		lw->signal.lock(target);
 
@@ -204,7 +203,7 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 
 	lw->m_queue.push(tid_le);
 
-	if (mutex->recursive_count != 1)
+	if (mutex->recursive_count.ToBE() != se32(1))
 	{
 		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had wrong recursive value (%d)",
 			(u32)lwcond->lwcond_queue, (u32)mutex->recursive_count);
@@ -213,9 +212,9 @@ int sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 
 	if (sq)
 	{
-		mutex->mutex.unlock(tid, mutex->attribute == SYS_SYNC_PRIORITY ? sq->pop_prio() : sq->pop());
+		mutex->mutex.unlock(tid, mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop());
 	}
-	else if (mutex->attribute == SYS_SYNC_RETRY)
+	else if (mutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
 	{
 		mutex->mutex.unlock(tid); // SYS_SYNC_RETRY
 	}
