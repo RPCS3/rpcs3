@@ -490,7 +490,7 @@ int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!taskset.IsGood() || !eventFlag.IsGood())
+	if ((!spurs.IsGood() && !taskset.IsGood()) || !eventFlag.IsGood())
 	{
 		cellSpurs.Error("_cellSpursEventFlagInitialize : CELL_SPURS_TASK_ERROR_NULL_POINTER");
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
