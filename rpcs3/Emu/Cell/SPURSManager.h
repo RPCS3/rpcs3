@@ -89,13 +89,39 @@ protected:
 	be_t<u32> container;
 };
 
+class SPURSManagerEventFlag
+{
+public:
+	SPURSManagerEventFlag(u32 flagClearMode, u32 flagDirection)
+	{
+		this->flagClearMode = flagClearMode;
+		this->flagDirection = flagDirection;
+	}
+
+	u32 _getDirection()
+	{
+		return this->flagDirection;
+	}
+
+	u32 _getClearMode ()
+	{
+		return this->flagClearMode;
+	}
+
+protected:
+	be_t<u32> flagClearMode;
+	be_t<u32> flagDirection;
+};
+
 // Main SPURS manager class.
 class SPURSManager
 {
 public:
 	SPURSManager(SPURSManagerAttribute *attr);
+	SPURSManager(SPURSManagerEventFlag *eventFlag);
 	void Finalize();
 
 protected:
 	SPURSManagerAttribute *attr;
+	SPURSManagerEventFlag *eventFlag;
 };

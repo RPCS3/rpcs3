@@ -482,7 +482,7 @@ int cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 
 int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, mem_ptr_t<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
 {
-	cellSpurs.Error("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%u, flagDirection=%u)", spurs.GetAddr(), taskset.GetAddr(), eventFlag.GetAddr(), flagClearMode, flagDirection);
+	cellSpurs.Warning("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%u, flagDirection=%u)", spurs.GetAddr(), taskset.GetAddr(), eventFlag.GetAddr(), flagClearMode, flagDirection);
 
 	if ((taskset.GetAddr() % 128 != 0) || (eventFlag.GetAddr() % 128 != 0))
 	{
@@ -495,6 +495,8 @@ int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 		cellSpurs.Error("_cellSpursEventFlagInitialize : CELL_SPURS_TASK_ERROR_NULL_POINTER");
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
+
+	eventFlag->eventFlag = new SPURSManagerEventFlag(flagClearMode, flagDirection);
 
 	return CELL_OK;
 }
@@ -615,7 +617,7 @@ int cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t m
 
 int cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t direction)
 {
-	cellSpurs.Error("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=%u)", eventFlag.GetAddr(), direction.GetAddr());
+	cellSpurs.Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=%u)", eventFlag.GetAddr(), direction.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -629,12 +631,14 @@ int cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
+	direction = eventFlag->eventFlag->_getDirection();
+
 	return CELL_OK;
 }
 
 int cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t clear_mode)
 {
-	cellSpurs.Error("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=%u)", eventFlag.GetAddr(), clear_mode.GetAddr());
+	cellSpurs.Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=%u)", eventFlag.GetAddr(), clear_mode.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -647,6 +651,8 @@ int cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 		cellSpurs.Error("cellSpursEventFlagGetClearMode : CELL_SPURS_TASK_ERROR_NULL_POINTER");
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
+
+	clear_mode = eventFlag->eventFlag->_getClearMode();
 
 	return CELL_OK;
 }

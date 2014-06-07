@@ -242,7 +242,6 @@ struct CellSpursTaskBinInfo
 	CellSpursTaskLsPattern lsPattern;
 };
 
-// cellSpurs event flag.
 struct CellSpursEventFlag {
-	u8 skip[128];
+	SPURSManagerEventFlag *eventFlag;
 };
