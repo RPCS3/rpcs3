@@ -110,7 +110,7 @@ MainFrame::MainFrame()
 	m_debugger_frame = new DebuggerPanel(this);
 	ConLogFrame = new LogFrame(this);
 
-	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
+	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
 	AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	

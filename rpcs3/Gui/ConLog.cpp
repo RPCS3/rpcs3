@@ -182,7 +182,7 @@ LogFrame::LogFrame(wxWindow* parent)
 	, ThreadBase("LogThread")
 	, m_log(*new wxListView(this))
 {
-	m_log.InsertColumn(0, wxEmptyString);
+	m_log.InsertColumn(0, "Thread");
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
