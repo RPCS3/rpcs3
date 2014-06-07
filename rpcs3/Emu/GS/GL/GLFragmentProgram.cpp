@@ -183,7 +183,7 @@ std::string GLFragmentDecompilerThread::GetCond()
 
 template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 {
-	std::string ret = "";
+	std::string ret;
 
 	switch(src.reg_type)
 	{
@@ -198,7 +198,8 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 			"gl_Position",
 			"col0", "col1",
 			"fogc",
-			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7"
+			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
+			"ssa"
 		};
 
 		switch(dst.src_attr_reg_num)
@@ -341,7 +342,7 @@ void GLFragmentDecompilerThread::Task()
 
 		case 0x10: SetDst("fract($0)"); break; // FRC
 		case 0x11: SetDst("floor($0)"); break; // FLR
-		case 0x12: SetDst("discard"); break; // KIL (kill fragment)
+		case 0x12: SetDst("discard", false); break; // KIL (kill fragment)
 		//case 0x13: break; // PK4 (pack four signed 8-bit values)
 		//case 0x14: break; // UP4 (unpack four signed 8-bit values)
 		case 0x15: SetDst("dFdx($0)"); break; // DDX
