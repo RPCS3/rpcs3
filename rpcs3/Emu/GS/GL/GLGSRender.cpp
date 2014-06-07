@@ -372,7 +372,7 @@ void GLGSRender::InitFragmentData()
 		checkForGlError("glGetUniformLocation " + name);
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
 
 	//if(m_fragment_constants.GetCount())

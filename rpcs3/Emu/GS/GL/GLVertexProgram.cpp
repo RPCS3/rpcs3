@@ -192,7 +192,7 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, const std::string& pCode, bo
 
 		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		cond = fmt::Format("if(all(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
+		cond = fmt::Format("if(any(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
 	}
 
 	std::string mask = GetMask(is_sca);
@@ -372,10 +372,10 @@ void GLVertexDecompilerThread::Task()
 		case 0x01: AddScaCode(GetSRC(2, true)); break; // MOV
 		case 0x02: AddScaCode("1.0 / " + GetSRC(2, true)); break; // RCP
 		case 0x03: AddScaCode("clamp(1.0 / " + GetSRC(2, true) + ", 5.42101e-20, 1.884467e19)"); break; // RCC
-		case 0x04: AddScaCode("inversesqrt(" + GetSRC(2, true) + ")"); break; // RSQ
+		case 0x04: AddScaCode("inversesqrt(abs(" + GetSRC(2, true) + "))"); break; // RSQ
 		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
 		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
-		//case 0x07: break; // LIT
+		//case 0x07: AddVecCode("vec4(1.0, max(0.0, " + GetSRC(2, true) + ".x), ((" + GetSRC(2, true) + ".x > 0) ? pow(max(0.0, " + GetSRC(2, true) + ".y), " + GetSRC(2, true) + ".z) : 0), 1.0)"); break; // LIT
 		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; return; }", false, true); break; // BRA
 		case 0x09: AddScaCode("{ " + GetFunc() + "; return; }", false, true); break; // BRI : works differently (BRI o[1].x(TR) L0;)
 		case 0x0a: AddScaCode("/*CAL*/ " + GetFunc(), false, true); break; // CAL : works same as BRI

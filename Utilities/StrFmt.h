@@ -76,7 +76,7 @@ namespace fmt{
 
 	//wrapper to deal with advance sprintf formating options with automatic length finding
 	template<typename  ... Args>
-	string Format(const string &fmt, Args&& ... parameters)
+	string Format(const string &fmt, Args ... parameters)
 	{
 		size_t length = 256;
 		string str;
@@ -96,6 +96,57 @@ namespace fmt{
 			length *= 2;
 		}
 		return str;
+	}
+
+	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
+	std::string replace_all(std::string src, const std::string& from, const std::string& to);
+
+	template<size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::string>(&list)[list_size])
+	{
+		for (size_t pos = 0; pos < src.length(); ++pos)
+		{
+			for (size_t i = 0; i < list_size; ++i)
+			{
+				const size_t comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+					continue;
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + std::string(src.c_str() + pos + comp_length);
+					pos += list[i].second.length();
+					break;
+				}
+			}
+		}
+
+		return src;
+	}
+
+	template<size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>>(&list)[list_size])
+	{
+		for (size_t pos = 0; pos < src.length(); ++pos)
+		{
+			for (size_t i = 0; i < list_size; ++i)
+			{
+				const size_t comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+					continue;
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + std::string(src.c_str() + pos + comp_length);
+					pos += list[i].second().length();
+					break;
+				}
+			}
+		}
+
+		return src;
 	}
 
 	//convert a wxString to a std::string encoded in utf8

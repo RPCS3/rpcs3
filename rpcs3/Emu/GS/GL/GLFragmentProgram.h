@@ -75,11 +75,28 @@ struct GLFragmentDecompilerThread : public ThreadBase
 			u32 scale               : 3;
 			u32 opcode_is_branch    : 1;
 		};
+
+		struct
+		{
+			u32 else_offset : 31;
+			u32  : 1;
+		};
+
+		struct
+		{
+			u32			: 2;
+			u32 rep1	: 8;
+			u32 rep2	: 8;
+			u32			: 1;
+			u32 rep3	: 8;
+		};
 	} src1;
 
 	union SRC2
 	{
 		u32 HEX;
+
+		u32 end_offset;
 
 		struct
 		{
@@ -107,6 +124,10 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	u32 m_offset;
 	u32 m_location;
 	u32 m_ctrl;
+	u32 m_loop_count;
+	int m_code_level;
+	std::vector<u32> m_end_offsets;
+	std::vector<u32> m_else_offsets;
 
 	GLFragmentDecompilerThread(std::string& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
 		: ThreadBase("Fragment Shader Decompiler Thread")
@@ -123,13 +144,16 @@ struct GLFragmentDecompilerThread : public ThreadBase
 
 	std::string GetMask();
 
-	void AddCode(std::string code, bool append_mask = true);
+	void SetDst(std::string code, bool append_mask = true);
+	void AddCode(const std::string& code);
 	std::string AddReg(u32 index, int fp16);
 	bool HasReg(u32 index, int fp16);
 	std::string AddCond(int fp16);
 	std::string AddConst();
 	std::string AddTex();
+	std::string Format(std::string code);
 
+	std::string GetCond();
 	template<typename T> std::string GetSRC(T src);
 	std::string BuildCode();
 
