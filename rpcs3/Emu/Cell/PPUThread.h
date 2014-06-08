@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef PPUTHREAD_H
+#define PPUTHREAD_H
 #include "Emu/Cell/PPCThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3.h"
@@ -861,3 +862,4 @@ protected:
 };
 
 PPUThread& GetCurrentPPUThread();
+#endif //PPUTHREAD_H
