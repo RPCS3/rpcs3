@@ -135,6 +135,7 @@ int cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribut
 	}
 
 	attr->attr->_setMemoryContainerForSpuThread(container);
+
 	return CELL_OK;
 }
 
@@ -368,7 +369,7 @@ int cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, const bool isP
 
 int cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t port, int isDynamic)
 {
-	cellSpurs.Error("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=0x%x, port_addr=0x%x, isDynamic=%u)", spurs.GetAddr(), queue, port.GetAddr(), isDynamic);
+	cellSpurs.Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=0x%x, port_addr=0x%x, isDynamic=%u)", spurs.GetAddr(), queue, port.GetAddr(), isDynamic);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -382,12 +383,14 @@ int cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t p
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
+	spurs->spurs->AttachLv2EventQueue(queue, port, isDynamic);
+
 	return CELL_OK;
 }
 
 int cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 {
-	cellSpurs.Error("cellSpursDetachLv2EventQueue(spurs_addr=0x%x, port=0x%x)", spurs.GetAddr(), port);
+	cellSpurs.Warning("cellSpursDetachLv2EventQueue(spurs_addr=0x%x, port=0x%x)", spurs.GetAddr(), port);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -400,6 +403,8 @@ int cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 		cellSpurs.Error("cellSpursDetachLv2EventQueue : CELL_SPURS_CORE_ERROR_NULL_POINTER");
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
+
+	spurs->spurs->DetachLv2EventQueue(port);
 
 	return CELL_OK;
 }
@@ -953,6 +958,9 @@ int cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskse
 		cellSpurs.Error("cellSpursCreateTaskset : CELL_SPURS_TASK_ERROR_NULL_POINTER");
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
+
+	SPURSManagerTasksetAttribute *tattr = new SPURSManagerTasksetAttribute(args, priority, maxContention);
+	taskset->taskset = new SPURSManagerTaskset(taskset.GetAddr(), tattr);
 
 	return CELL_OK;
 }
