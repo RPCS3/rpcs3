@@ -49,6 +49,16 @@ struct CellSpursAttribute
 	SPURSManagerAttribute *attr;  
 };
 
+struct CellSpursEventFlag 
+{
+	SPURSManagerEventFlag *eventFlag;
+};
+
+struct CellSpursTaskset
+{
+	SPURSManagerTaskset *taskset;
+};
+
 struct CellSpursInfo
 { 
 	be_t<s32> nSpus;
@@ -133,12 +143,6 @@ struct CellSpursTracePacket
 		be_t<u64> user; 
 		be_t<u64> guid;
 	} data;
-};
-
-// cellSpurs taskset structures.
-struct CellSpursTaskset 
-{
-	u8 skip[6400];
 };
 
 // Exception handlers.
@@ -240,8 +244,4 @@ struct CellSpursTaskBinInfo
 	be_t<u32> sizeContext;
 	be_t<u32> __reserved__;
 	CellSpursTaskLsPattern lsPattern;
-};
-
-struct CellSpursEventFlag {
-	SPURSManagerEventFlag *eventFlag;
 };

@@ -113,15 +113,40 @@ protected:
 	be_t<u32> flagDirection;
 };
 
+class SPURSManagerTasksetAttribute
+{
+public:
+	SPURSManagerTasksetAttribute(u64 args, mem8_t priority, u32 maxContention)
+	{
+		this->args = args;
+		this->maxContention = maxContention;
+	}
+
+protected:
+	be_t<u64> args;
+	be_t<u32> maxContention;
+};
+
+class SPURSManagerTaskset
+{
+public:
+	SPURSManagerTaskset(u32 address, SPURSManagerTasksetAttribute *tattr);
+
+protected:
+	u32 address;
+	SPURSManagerTasksetAttribute *tattr;
+};
+
 // Main SPURS manager class.
 class SPURSManager
 {
 public:
 	SPURSManager(SPURSManagerAttribute *attr);
-	SPURSManager(SPURSManagerEventFlag *eventFlag);
+
 	void Finalize();
+	void AttachLv2EventQueue(u32 queue, mem8_t port, int isDynamic);
+	void DetachLv2EventQueue(u8 port);
 
 protected:
 	SPURSManagerAttribute *attr;
-	SPURSManagerEventFlag *eventFlag;
 };
