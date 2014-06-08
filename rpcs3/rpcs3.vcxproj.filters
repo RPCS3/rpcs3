@@ -99,10 +99,10 @@
     <ClCompile Include="Gui\GSFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Gui\DbgFrame.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\DbgCommand.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\DbgConsole.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
   </ItemGroup>
@@ -218,11 +218,11 @@
     <ClInclude Include="Gui\GSFrame.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Gui\DbgFrame.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
     <ClInclude Include="Gui\ConLogFrame.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\DbgConsole.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

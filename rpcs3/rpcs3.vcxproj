@@ -163,9 +163,9 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\DbgCommand.cpp" />
+    <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLog.cpp" />
-    <ClCompile Include="Gui\DbgFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
     <ClCompile Include="Gui\GameViewer.cpp" />
@@ -208,10 +208,10 @@
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="Emu\ConLog.h" />
+    <ClInclude Include="Emu\DbgConsole.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
     <ClInclude Include="Gui\CompilerELF.h" />
     <ClInclude Include="Gui\ConLogFrame.h" />
-    <ClInclude Include="Gui\DbgFrame.h" />
     <ClInclude Include="Gui\Debugger.h" />
     <ClInclude Include="Gui\DisAsmFrame.h" />
     <ClInclude Include="Gui\FrameBase.h" />

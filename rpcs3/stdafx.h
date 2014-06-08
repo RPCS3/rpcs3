@@ -291,17 +291,16 @@ enum Status
 #include "Utilities/IdManager.h"
 #include "Utilities/StrFmt.h"
 
+#include "rpcs3/Ini.h"
+#include "Gui/FrameBase.h"
+#include "Gui/ConLogFrame.h"
 #include "Emu/ConLog.h"
 #include "Emu/DbgConsole.h"
-#include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/DbgCommand.h"
 //#ifdef wxGUI
-#include "Gui/FrameBase.h"
-#include "Gui/DbgFrame.h"
-#include "Gui/ConLogFrame.h"
 //#endif
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"

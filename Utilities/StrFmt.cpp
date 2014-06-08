@@ -54,23 +54,22 @@ std::string replace_all(std::string src, const std::string& from, const std::str
 	return src;
 }
 
-//#ifdef wxGUI
-////convert a wxString to a std::string encoded in utf8
-////CAUTION, only use this to interface with wxWidgets classes
-//std::string fmt::ToUTF8(const wxString& right)
-//{
-//	auto ret = std::string(((const char *) right.utf8_str()));
-//	return ret;
-//}
-//
-////convert a std::string encoded in utf8 to a wxString
-////CAUTION, only use this to interface with wxWidgets classes
-//wxString fmt::FromUTF8(const std::string& right)
-//{
-//	auto ret = wxString::FromUTF8(right.c_str());
-//	return ret;
-//}
-//#endif
+//TODO: move this wx Stuff somewhere else
+//convert a wxString to a std::string encoded in utf8
+//CAUTION, only use this to interface with wxWidgets classes
+std::string fmt::ToUTF8(const wxString& right)
+{
+	auto ret = std::string(((const char *)right.utf8_str()));
+	return ret;
+}
+
+//convert a std::string encoded in utf8 to a wxString
+//CAUTION, only use this to interface with wxWidgets classes
+wxString fmt::FromUTF8(const std::string& right)
+{
+	auto ret = wxString::FromUTF8(right.c_str());
+	return ret;
+}
 
 //TODO: remove this after every snippet that uses it is gone
 //WARNING: not fully compatible with CmpNoCase from wxString

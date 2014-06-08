@@ -60,7 +60,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
-    <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Emu\Event.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
@@ -268,7 +267,6 @@
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUThreadManager.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
-    <ClInclude Include="Emu\DbgConsole.h" />
     <ClInclude Include="Emu\FS\VFS.h" />
     <ClInclude Include="Emu\FS\vfsDevice.h" />
     <ClInclude Include="Emu\FS\vfsDeviceLocalFile.h" />
