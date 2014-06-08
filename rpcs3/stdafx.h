@@ -280,7 +280,6 @@ enum Status
 #include "Utilities/IdManager.h"
 #include "Utilities/StrFmt.h"
 
-#ifdef _WIN32
 #include "Emu/SysCalls/Callback.h"
 #include "Ini.h"
 #include "Gui/FrameBase.h"
@@ -302,7 +301,6 @@ enum Status
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
 #include "rpcs3.h"
-#endif
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.4"
