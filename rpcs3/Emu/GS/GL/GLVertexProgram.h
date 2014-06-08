@@ -133,6 +133,26 @@ struct GLVertexDecompilerThread : public ThreadBase
 		std::string name;
 	};
 
+	struct Instruction
+	{
+		std::vector<std::string> body;
+		int open_scopes;
+		int close_scopes;
+		int put_close_scopes;
+		int do_count;
+
+		void reset()
+		{
+			body.clear();
+			put_close_scopes = open_scopes = close_scopes = do_count = 0;
+		}
+	};
+
+	static const size_t m_max_instr_count = 512;
+	Instruction m_instructions[m_max_instr_count];
+	Instruction* m_cur_instr;
+	size_t m_instr_count;
+
 	std::vector<std::string> m_body;
 
 	std::vector<FuncInfo> m_funcs;
@@ -161,11 +181,18 @@ struct GLVertexDecompilerThread : public ThreadBase
 	std::string GetVecMask();
 	std::string GetScaMask();
 	std::string GetDST(bool is_sca = false);
-	std::string GetSRC(const u32 n, bool is_sca = false);
+	std::string GetSRC(const u32 n);
 	std::string GetFunc();
-	void AddCode(bool is_sca, const std::string& code, bool src_mask = true, bool set_dst = true, bool set_cond = true);
-	void AddVecCode(const std::string& code, bool src_mask = true, bool set_dst = true);
-	void AddScaCode(const std::string& code, bool set_dst = true, bool set_cond = true);
+	std::string GetCond();
+	std::string AddAddrMask();
+	std::string AddAddrReg();
+	u32 GetAddr();
+	std::string Format(const std::string& code);
+
+	void AddCode(const std::string& code);
+	void SetDST(bool is_sca, std::string value);
+	void SetDSTVec(const std::string& code);
+	void SetDSTSca(const std::string& code);
 	std::string BuildFuncBody(const FuncInfo& func);
 	std::string BuildCode();
 

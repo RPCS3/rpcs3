@@ -1893,8 +1893,10 @@ void RSXThread::Task()
 
 		if(cmd == 0)
 		{
-			ConLog.Error("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, m_ctrl->put, get);
-			Emu.Pause();
+			//HACK! We couldn't be here
+			//ConLog.Error("null cmd: addr=0x%x, put=0x%x, get=0x%x", Memory.RSXIOMem.GetStartAddr() + get, m_ctrl->put, get);
+			//Emu.Pause();
+			m_ctrl->get = get + (count + 1) * 4;
 			continue;
 		}
 

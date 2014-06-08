@@ -82,6 +82,9 @@ public:
 
 	void Init(RSXTexture& tex)
 	{
+		if (tex.GetLocation() > 1)
+			return;
+
 		Bind();
 
 		const u64 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());

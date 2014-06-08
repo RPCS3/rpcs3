@@ -325,7 +325,7 @@ void GLGSRender::InitVertexData()
 	for(u32 i=0; i<m_transform_constants.size(); ++i)
 	{
 		const RSXTransformConstant& c = m_transform_constants[i];
-		const std::string name = fmt::Format("vc%u", c.id);
+		const std::string name = fmt::Format("vc[%u]", c.id);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
@@ -671,6 +671,7 @@ void GLGSRender::OnInitThread()
 		glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 	}*/
 #endif
+	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
 }

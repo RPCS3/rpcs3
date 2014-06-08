@@ -39,52 +39,32 @@ std::string GLVertexDecompilerThread::GetScaMask()
 
 std::string GLVertexDecompilerThread::GetDST(bool isSca)
 {
-	static const std::string reg_table[] = 
-	{
-		"gl_Position",
-		"col0", "col1",
-		"bfc0", "bfc1",
-		"gl_ClipDistance[%d]",
-		"gl_ClipDistance[%d]",
-		"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7"
-	};
-
 	std::string ret;
 
-	switch(isSca ? 0x1f : d3.dst)
+	switch(d3.dst)
 	{
-	case 0x0: case 0x5: case 0x6:
-		ret += reg_table[d3.dst];
-	break;
-
 	case 0x1f:
 		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
 	break;
 
 	default:
-		if(d3.dst < WXSIZEOF(reg_table))
-		{
-			ret += m_parr.AddParam(PARAM_OUT, "vec4", reg_table[d3.dst]);
-		}
-		else
-		{
-			ConLog.Error("Bad dst reg num: %d", fmt::by_value(d3.dst));
-			ret += m_parr.AddParam(PARAM_OUT, "vec4", "unk");
-		}
+		if (d3.dst > 15)
+			ConLog.Error("dst index out of range: %u", d3.dst);
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? "vec4(0.0f, 0.0f, 0.0f, 1.0f)" : "vec4(0.0)");
 	break;
 	}
 
 	return ret;
 }
 
-std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
+std::string GLVertexDecompilerThread::GetSRC(const u32 n)
 {
 	static const std::string reg_table[] = 
 	{
 		"in_pos", "in_weight", "in_normal",
-		"in_col0", "in_col1",
-		"in_fogc",
-		"in_6", "in_7",
+		"in_diff_color", "in_spec_color",
+		"in_fog",
+		"in_point_size", "in_7",
 		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
 		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 	};
@@ -94,7 +74,7 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	switch(src[n].reg_type)
 	{
 	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(src[n].tmp_src));
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", "tmp" + std::to_string(src[n].tmp_src));
 	break;
 	case 2: //input
 		if(d1.input_src < WXSIZEOF(reg_table))
@@ -108,7 +88,8 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		}
 	break;
 	case 3: //const
-		ret += m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("vc") + std::to_string(d1.const_src));
+		m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("vc[468]"));
+		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 	break;
 
 	default:
@@ -119,26 +100,14 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 
 	static const std::string f = "xyzw";
 
-	if (isSca)
-	{
-		assert(src[n].swz_x == src[n].swz_y);
-		assert(src[n].swz_z == src[n].swz_w);
-		assert(src[n].swz_x == src[n].swz_z);
+	std::string swizzle;
 
-		ret += '.';
-		ret += f[src[n].swz_x];
-	}
-	else
-	{
-		std::string swizzle;
+	swizzle += f[src[n].swz_x];
+	swizzle += f[src[n].swz_y];
+	swizzle += f[src[n].swz_z];
+	swizzle += f[src[n].swz_w];
 
-		swizzle += f[src[n].swz_x];
-		swizzle += f[src[n].swz_y];
-		swizzle += f[src[n].swz_z];
-		swizzle += f[src[n].swz_w];
-
-		if(swizzle != f) ret += '.' + swizzle;
-	}
+	if(swizzle != f) ret += '.' + swizzle;
 
 	bool abs;
 	
@@ -155,16 +124,109 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	return ret;
 }
 
-void GLVertexDecompilerThread::AddCode(bool is_sca, const std::string& pCode, bool src_mask, bool set_dst, bool set_cond)
+void GLVertexDecompilerThread::SetDST(bool is_sca, std::string value)
 {
-	std::string code = pCode;
 	if(d0.cond == 0) return;
+
 	enum
 	{
 		lt = 0x1,
 		eq = 0x2,
 		gt = 0x4,
 	};
+
+	std::string mask = GetMask(is_sca);
+
+	value += mask;
+
+	if(is_sca && d0.vec_result)
+	{
+		value = "vec4(" + value + ")" + mask;
+	}
+
+	if(d0.staturate)
+	{
+		value = "clamp(" + value + ", 0.0, 1.0)";
+	}
+
+	std::string dest;
+
+	if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
+	{
+		dest += m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(d0.cond_reg_sel_1), "vec4(0.0)") + mask  + " = ";
+	}
+
+	if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
+	{
+		dest += GetDST(is_sca) + mask + " = ";
+	}
+
+	std::string code;
+
+	if (d0.cond_test_enable)
+		code += "$ifcond ";
+
+	code += dest + value;
+
+	AddCode(code + ";");
+}
+
+std::string GLVertexDecompilerThread::GetFunc()
+{
+	std::string name = "func$a";
+
+	for(uint i=0; i<m_funcs.size(); ++i)
+	{
+		if(m_funcs[i].name.compare(name) == 0)
+			return name + "()";
+	}
+
+	m_funcs.emplace_back();
+	FuncInfo &idx = m_funcs.back();
+	idx.offset = GetAddr();
+	idx.name = name;
+
+	return name + "()";
+}
+
+std::string GLVertexDecompilerThread::Format(const std::string& code)
+{
+	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	{
+		{ "$$", []() -> std::string { return "$"; } },
+		{ "$0", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 0) },
+		{ "$1", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 1) },
+		{ "$2", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
+		{ "$s", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
+		{ "$am", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrMask), this) },
+		{ "$a", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrReg), this) },
+
+		{ "$fa", [this]()->std::string {return std::to_string(GetAddr()); } },
+		{ "$f()", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetFunc), this) },
+		{ "$ifcond ", [this]() -> std::string
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
+		},
+		{ "$cond", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetCond), this) }
+	};
+
+	return fmt::replace_all(code, repl_list);
+}
+
+std::string GLVertexDecompilerThread::GetCond()
+{
+	enum
+	{
+		lt = 0x1,
+		eq = 0x2,
+		gt = 0x4,
+	};
+
+	if (d0.cond == 0) return "false";
+	if (d0.cond == (lt | gt | eq)) return "true";
 
 	static const char* cond_string_table[(lt | gt | eq) + 1] =
 	{
@@ -178,102 +240,51 @@ void GLVertexDecompilerThread::AddCode(bool is_sca, const std::string& pCode, bo
 		"error"
 	};
 
-	std::string cond;
+	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
-	if((set_cond || d0.cond_test_enable) && d0.cond != (lt | gt | eq))
-	{
-		static const char f[4] = {'x', 'y', 'z', 'w'};
+	std::string swizzle;
+	swizzle += f[d0.mask_x];
+	swizzle += f[d0.mask_y];
+	swizzle += f[d0.mask_z];
+	swizzle += f[d0.mask_w];
 
-		std::string swizzle;
-		swizzle += f[d0.mask_x];
-		swizzle += f[d0.mask_y];
-		swizzle += f[d0.mask_z];
-		swizzle += f[d0.mask_w];
+	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-		swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-		cond = fmt::Format("if(any(%s(rc%s, vec4(0.0)%s))) ", cond_string_table[d0.cond], swizzle.c_str(), swizzle.c_str());
-	}
-
-	std::string mask = GetMask(is_sca);
-	std::string value = src_mask ? code + mask : code;
-
-	if(is_sca && d0.vec_result)
-	{
-		value = "vec4(" + value + ")" + mask;
-	}
-
-	if(d0.staturate)
-	{
-		value = "clamp(" + value + ", 0.0, 1.0)";
-	}
-
-	if(set_dst)
-	{
-		std::string dest;
-		if(d0.cond_update_enable_0)
-		{
-			dest = m_parr.AddParam(PARAM_NONE, "vec4", "rc", "vec4(0.0)") + mask;
-		}
-		else if(d3.dst == 5 || d3.dst == 6)
-		{
-			if(d3.vec_writemask_x)
-			{
-				dest = m_parr.AddParam(PARAM_OUT, "vec4", "fogc") + mask;
-			}
-			else
-			{
-				int num = d3.dst == 5 ? 0 : 3;
-
-				//if(d3.vec_writemask_y) num += 0;
-				if(d3.vec_writemask_z) num += 1;
-				else if(d3.vec_writemask_w) num += 2;
-
-				dest = fmt::Format(GetDST(is_sca) + "/*" + mask + "*/", num);
-			}
-		}
-		else
-		{
-			dest = GetDST(is_sca) + mask;
-		}
-
-		code = cond + dest + " = " + value;
-	}
-	else
-	{
-		code = cond + value;
-	}
-
-	m_body.push_back(code + ";");
+	return fmt::Format("any(%s(cc%d%s, vec4(0.0)%s))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str(), swizzle.c_str());
 }
 
-std::string GLVertexDecompilerThread::GetFunc()
+
+std::string GLVertexDecompilerThread::AddAddrMask()
 {
-	u32 offset = (d2.iaddrh << 3) | d3.iaddrl;
-	std::string name = fmt::Format("func%u", offset);
-
-	for(uint i=0; i<m_funcs.size(); ++i)
-	{
-		if(m_funcs[i].name.compare(name) == 0)
-			return name + "()";
-	}
-
-	m_funcs.emplace_back();
-	FuncInfo &idx = m_funcs.back();
-	idx.offset = offset;
-	idx.name = name;
-
-	return name + "()";
+	static const char f[] = { 'x', 'y', 'z', 'w' };
+	return std::string(".") + f[d0.addr_swz];
 }
 
-void GLVertexDecompilerThread::AddVecCode(const std::string& code, bool src_mask, bool set_dst)
+std::string GLVertexDecompilerThread::AddAddrReg()
 {
-	AddCode(false, code, src_mask, set_dst);
+	static const char f[] = { 'x', 'y', 'z', 'w' };
+	return m_parr.AddParam(PARAM_NONE, "ivec4", "a" + std::to_string(d0.addr_reg_sel_1), "ivec4(0)") + AddAddrMask();
 }
 
-void GLVertexDecompilerThread::AddScaCode(const std::string& code, bool set_dst, bool set_cond)
+u32 GLVertexDecompilerThread::GetAddr()
 {
-	AddCode(true, code, false, set_dst, set_cond);
+	return (d2.iaddrh << 3) | d3.iaddrl;
+}
+
+void GLVertexDecompilerThread::AddCode(const std::string& code)
+{
+	m_body.push_back(Format(code) + ";");
+	m_cur_instr->body.push_back(Format(code));
+}
+
+void GLVertexDecompilerThread::SetDSTVec(const std::string& code)
+{
+	SetDST(false, code);
+}
+
+void GLVertexDecompilerThread::SetDSTSca(const std::string& code)
+{
+	SetDST(true, code);
 }
 
 std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
@@ -309,26 +320,112 @@ std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
 
 std::string GLVertexDecompilerThread::BuildCode()
 {
+	struct reg_info
+	{
+		std::string name;
+		bool need_declare;
+		std::string src_reg;
+		std::string src_reg_mask;
+		bool need_cast;
+	};
+
+	static const reg_info reg_table[] =
+	{
+		{ "gl_Position", false, "dst_reg0", "", false },
+		{ "diff_color", true, "dst_reg1", "", false },
+		{ "spec_color", true, "dst_reg2", "", false },
+		{ "front_diff_color", true, "dst_reg3", "", false },
+		{ "front_spec_color", true, "dst_reg4", "", false },
+		{ "fogc", true, "dst_reg5", ".x", true },
+		{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
+		{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
+		{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
+		{ "gl_PointSize", false, "dst_reg6", ".x", false },
+		{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
+		{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
+		{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+		{ "tc0", true, "dst_reg7", "", false },
+		{ "tc1", true, "dst_reg8", "", false },
+		{ "tc2", true, "dst_reg9", "", false },
+		{ "tc3", true, "dst_reg10", "", false },
+		{ "tc4", true, "dst_reg11", "", false },
+		{ "tc5", true, "dst_reg12", "", false },
+		{ "tc6", true, "dst_reg13", "", false },
+		{ "tc7", true, "dst_reg14", "", false },
+		{ "tc8", true, "dst_reg15", "", false },
+		{ "tc9", true, "dst_reg6", "", false }
+	};
+
+	std::string f;
+
+	for (auto &i : reg_table)
+	{
+		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
+		{
+			if (i.need_declare)
+			{
+				m_parr.AddParam(PARAM_OUT, "vec4", i.name);
+			}
+
+			if (i.need_cast)
+			{
+				f += "\t" + i.name + " = vec4(" + i.src_reg + i.src_reg_mask + ");\n";
+			}
+			else
+			{
+				f += "\t" + i.name + " = " + i.src_reg + i.src_reg_mask + ";\n";
+			}
+		}
+	}
+
 	std::string p;
 
-	for(u32 i=0; i<m_parr.params.size(); ++i)
+	for (u32 i = 0; i<m_parr.params.size(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
 
 	std::string fp;
 
-	for(int i=m_funcs.size() - 1; i>0; --i)
+	for (int i = m_funcs.size() - 1; i>0; --i)
 	{
 		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
 	}
 
-	std::string f;
+	f = fmt::Format("void %s()\n{\n\t%s();\n%s\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
+		m_funcs[0].name.c_str(), m_funcs[1].name.c_str(), f.c_str());
 
-	f += fmt::Format("void %s()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n\t%s();\n\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
-		m_funcs[0].name.c_str(), m_funcs[1].name.c_str());
+	std::string main_body;
+	for (uint i = 0, lvl = 1; i < m_instr_count; i++)
+	{
+		lvl -= m_instructions[i].close_scopes;
+		if (lvl < 1) lvl = 1;
+		//assert(lvl >= 1);
+		for (uint j = 0; j < m_instructions[i].put_close_scopes; ++j)
+		{
+			--lvl;
+			if (lvl < 1) lvl = 1;
+			main_body.append(lvl, '\t') += "}\n";
+		}
 
-	for(uint i=1; i<m_funcs.size(); ++i)
+		for (uint j = 0; j < m_instructions[i].do_count; ++j)
+		{
+			main_body.append(lvl, '\t') += "do\n";
+			main_body.append(lvl, '\t') += "{\n";
+			lvl++;
+		}
+
+		for (uint j = 0; j < m_instructions[i].body.size(); ++j)
+		{
+			main_body.append(lvl, '\t') += m_instructions[i].body[j] + "\n";
+		}
+
+		lvl += m_instructions[i].open_scopes;
+	}
+
+	f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[1].name.c_str(), main_body.c_str());
+
+	for(uint i=2; i<m_funcs.size(); ++i)
 	{
 		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
@@ -347,9 +444,15 @@ std::string GLVertexDecompilerThread::BuildCode()
 void GLVertexDecompilerThread::Task()
 {
 	m_parr.params.clear();
+	m_instr_count = 0;
 
-	for(u32 i=0, intsCount=0;;intsCount++)
+	for (int i = 0; i < m_max_instr_count; ++i)
+		m_instructions[i].reset();
+
+	for (u32 i = 0; m_instr_count < m_max_instr_count; m_instr_count++)
 	{
+		m_cur_instr = &m_instructions[m_instr_count];
+
 		d0.HEX = m_data[i++];
 		d1.HEX = m_data[i++];
 		d2.HEX = m_data[i++];
@@ -369,22 +472,37 @@ void GLVertexDecompilerThread::Task()
 		switch(d1.sca_opcode)
 		{
 		case 0x00: break; // NOP
-		case 0x01: AddScaCode(GetSRC(2, true)); break; // MOV
-		case 0x02: AddScaCode("1.0 / " + GetSRC(2, true)); break; // RCP
-		case 0x03: AddScaCode("clamp(1.0 / " + GetSRC(2, true) + ", 5.42101e-20, 1.884467e19)"); break; // RCC
-		case 0x04: AddScaCode("inversesqrt(abs(" + GetSRC(2, true) + "))"); break; // RSQ
-		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
-		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
-		//case 0x07: AddVecCode("vec4(1.0, max(0.0, " + GetSRC(2, true) + ".x), ((" + GetSRC(2, true) + ".x > 0) ? pow(max(0.0, " + GetSRC(2, true) + ".y), " + GetSRC(2, true) + ".z) : 0), 1.0)"); break; // LIT
-		case 0x08: AddScaCode("{ /*BRA*/ " + GetFunc() + "; return; }", false, true); break; // BRA
-		case 0x09: AddScaCode("{ " + GetFunc() + "; return; }", false, true); break; // BRI : works differently (BRI o[1].x(TR) L0;)
-		case 0x0a: AddScaCode("/*CAL*/ " + GetFunc(), false, true); break; // CAL : works same as BRI
-		case 0x0b: AddScaCode("/*CLI*/ " + GetFunc(), false, true); break; // CLI : works same as BRI
-		case 0x0c: AddScaCode("return", false, true); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
-		case 0x0d: AddScaCode("log2(" + GetSRC(2, true) + ")"); break; // LG2
-		case 0x0e: AddScaCode("exp2(" + GetSRC(2, true) + ")"); break; // EX2
-		case 0x0f: AddScaCode("sin(" + GetSRC(2, true) + ")"); break; // SIN
-		case 0x10: AddScaCode("cos(" + GetSRC(2, true) + ")"); break; // COS
+		case 0x01: SetDSTSca("$s"); break; // MOV
+		case 0x02: SetDSTSca("(1.0 / $s)"); break; // RCP
+		case 0x03: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break; // RCC
+		case 0x04: SetDSTSca("inversesqrt(abs($s))"); break; // RSQ
+		case 0x05: SetDSTSca("exp($s)"); break; // EXP
+		case 0x06: SetDSTSca("log($s)"); break; // LOG
+		case 0x07: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0 ? exp2($s.w * log2($s.y)) : 0.0), 1.0)"); break; // LIT
+		//case 0x08: break; // BRA
+		case 0x09: // BRI : works differently (BRI o[1].x(TR) L0;)
+			//AddCode("$ifcond { $f(); return; }");
+			if (GetAddr() > m_instr_count)
+			{
+				AddCode("if(!$cond)");
+				AddCode("{");
+				m_cur_instr->open_scopes++;
+				m_instructions[GetAddr()].put_close_scopes++;
+			}
+			else
+			{
+				AddCode("} while ($cond);");
+				m_cur_instr->close_scopes++;
+				m_instructions[GetAddr()].do_count++;
+			}
+		break;
+		//case 0x0a: AddCode("$ifcond $f(); //CAL"); break; // CAL : works same as BRI
+		case 0x0b: AddCode("$ifcond $f(); //CLI"); break; // CLI : works same as BRI
+		case 0x0c: AddCode("$ifcond return;"); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
+		case 0x0d: SetDSTSca("log2($s)"); break; // LG2
+		case 0x0e: SetDSTSca("exp2($s)"); break; // EX2
+		case 0x0f: SetDSTSca("sin($s)"); break; // SIN
+		case 0x10: SetDSTSca("cos($s)"); break; // COS
 		//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
 		//case 0x12: break; // CLB : works same as BRB
 		//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
@@ -400,28 +518,28 @@ void GLVertexDecompilerThread::Task()
 		switch(d1.vec_opcode)
 		{
 		case 0x00: break; //NOP
-		case 0x01: AddVecCode(GetSRC(0)); break; //MOV
-		case 0x02: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
-		case 0x03: AddVecCode("(" + GetSRC(0) + " + " + GetSRC(2) + ")"); break; //ADD
-		case 0x04: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
-		case 0x05: AddVecCode("vec2(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz), 0).xxxx"); break; //DP3
-		case 0x06: AddVecCode("vec2(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + "), 0).xxxx"); break; //DPH
-		case 0x07: AddVecCode("vec2(dot(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DP4
-		case 0x08: AddVecCode("vec2(distance(" + GetSRC(0) + ", " + GetSRC(1) + "), 0).xxxx"); break; //DST
-		case 0x09: AddVecCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MIN
-		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
-		case 0x0b: AddVecCode("vec4(lessThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLT
-		case 0x0c: AddVecCode("vec4(greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGE
-		//case 0x0d: break;
-		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
-		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
-		case 0x10: AddVecCode("vec4(equal(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SEQ
-		case 0x11: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(0)))"); break; //SFL
-		case 0x12: AddVecCode("vec4(greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SGT
-		case 0x13: AddVecCode("vec4(lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLE
-		case 0x14: AddVecCode("vec4(notEqual(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SNE
-		case 0x15: AddVecCode("vec4(equal(" + GetSRC(0) + ", vec4(1)))"); break; //STR
-		case 0x16: AddVecCode("sign(" + GetSRC(0) + ")"); break; //SSG
+		case 0x01: SetDSTVec("$0"); break; //MOV
+		case 0x02: SetDSTVec("($0 * $1)"); break; //MUL
+		case 0x03: SetDSTVec("($0 + $2)"); break; //ADD
+		case 0x04: SetDSTVec("($0 * $1 + $2)"); break; //MAD
+		case 0x05: SetDSTVec("vec2(dot($0.xyz, $1.xyz), 0.0).xxxx"); break; //DP3
+		case 0x06: SetDSTVec("vec2(dot(vec4($0.xyz, 1.0), $1), 0.0).xxxx"); break; //DPH
+		case 0x07: SetDSTVec("vec2(dot($0, $1), 0.0).xxxx"); break; //DP4
+		case 0x08: SetDSTVec("vec2(distance($0, $1), 0.0).xxxx"); break; //DST
+		case 0x09: SetDSTVec("min($0, $1)"); break; //MIN
+		case 0x0a: SetDSTVec("max($0, $1)"); break; //MAX
+		case 0x0b: SetDSTVec("vec4(lessThan($0, $1))"); break; //SLT
+		case 0x0c: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break; //SGE
+		case 0x0d: AddCode("$ifcond $a = ivec4($0)$am;");  break; //ARL
+		case 0x0e: SetDSTVec("fract($0)"); break; //FRC
+		case 0x0f: SetDSTVec("floor($0)"); break; //FLR
+		case 0x10: SetDSTVec("vec4(equal($0, $1))"); break; //SEQ
+		case 0x11: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break; //SFL
+		case 0x12: SetDSTVec("vec4(greaterThan($0, $1))"); break; //SGT
+		case 0x13: SetDSTVec("vec4(lessThanEqual($0, $1))"); break; //SLE
+		case 0x14: SetDSTVec("vec4(notEqual($0, $1))"); break; //SNE
+		case 0x15: SetDSTVec("vec4(equal($0, vec4(1.0)))"); break; //STR
+		case 0x16: SetDSTVec("sign($0)"); break; //SSG
 
 		default:
 			m_body.push_back(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
@@ -432,6 +550,8 @@ void GLVertexDecompilerThread::Task()
 
 		if(d3.end)
 		{
+			m_instr_count++;
+
 			if(i < m_data.size())
 				ConLog.Error("Program end before buffer end.");
 

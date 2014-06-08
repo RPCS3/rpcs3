@@ -116,7 +116,7 @@ namespace fmt{
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
 					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + std::string(src.c_str() + pos + comp_length);
-					pos += list[i].second.length();
+					pos += list[i].second.length() - 1;
 					break;
 				}
 			}
@@ -140,7 +140,7 @@ namespace fmt{
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
 					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + std::string(src.c_str() + pos + comp_length);
-					pos += list[i].second().length();
+					pos += list[i].second().length() - 1;
 					break;
 				}
 			}

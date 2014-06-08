@@ -8,14 +8,6 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	const std::string mask = GetMask();
-	std::string cond;
-
-	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
-	{
-		cond = "if($cond) ";
-	}
-
 	switch(src1.scale)
 	{
 	case 0: break;
@@ -39,24 +31,17 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 
 	std::string dest;
 
-	if (dst.no_dest)
+	if (dst.set_cond)
 	{
-		if (dst.set_cond)
-		{
-			dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index));
-		}
-	}
-	else
-	{
-		dest = AddReg(dst.dest_reg, dst.fp16);
-
-		if (dst.set_cond)
-		{
-			dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + mask + " = " + dest;
-		}
+		dest += m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = ";
 	}
 
-	AddCode(cond + (dest.length() ? dest + mask + " = " : "") + code + (append_mask ? mask : "") + ";");
+	if (!dst.no_dest)
+	{
+		dest += AddReg(dst.dest_reg, dst.fp16) + "$m = ";
+	}
+
+	AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
 }
 
 void GLFragmentDecompilerThread::AddCode(const std::string& code)
@@ -122,7 +107,7 @@ std::string GLFragmentDecompilerThread::AddTex()
 	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
 }
 
-std::string GLFragmentDecompilerThread::Format(std::string code)
+std::string GLFragmentDecompilerThread::Format(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
@@ -131,6 +116,14 @@ std::string GLFragmentDecompilerThread::Format(std::string code)
 		{ "$1", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC1>), this, src1) },
 		{ "$2", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC2>), this, src2) },
 		{ "$t", std::bind(std::mem_fn(&GLFragmentDecompilerThread::AddTex), this) },
+		{ "$m", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetMask), this) },
+		{ "$ifcond ", [this]() -> std::string
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
+		},
 		{ "$cond", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetCond), this) },
 		{ "$c", std::bind(std::mem_fn(&GLFragmentDecompilerThread::AddConst), this) }
 	};
@@ -201,7 +194,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 		static const std::string reg_table[] =
 		{
 			"gl_Position",
-			"col0", "col1",
+			"diff_color", "spec_color",
 			"fogc",
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
 			"ssa"
@@ -359,7 +352,7 @@ void GLFragmentDecompilerThread::Task()
 		case 0x1b: SetDst("inversesqrt(abs($0))"); break; // RSQ
 		case 0x1c: SetDst("exp2($0)"); break; // EX2
 		case 0x1d: SetDst("log2($0)"); break; // LG2
-		case 0x1e: SetDst("vec4(1.0, $0.x, ($0.x > 0 ? exp($0.w * log($0.y)) : 0.0), 1.0)"); break; // LIT (compute light coefficients)
+		case 0x1e: SetDst("vec4(1.0, $0.x, ($0.x > 0 ? exp2($0.w * log2($0.y)) : 0.0), 1.0)"); break; // LIT (compute light coefficients)
 		case 0x1f: SetDst("($0 * ($1 - $2) + $2)"); break; // LRP (linear interpolation)
 		
 		case 0x20: SetDst("vec4(equal($0, vec4(1.0)))"); break; // STR (set on true)
@@ -405,7 +398,7 @@ void GLFragmentDecompilerThread::Task()
 		break;
 
 		case 0x43: //LOOP
-			AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
+			AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
 			m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
 			m_loop_count++;
 			m_end_offsets.push_back(src2.end_offset << 2);
