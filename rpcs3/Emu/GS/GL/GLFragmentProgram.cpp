@@ -13,7 +13,7 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
-		cond = "if(" + GetCond() + ") ";
+		cond = "if($cond) ";
 	}
 
 	switch(src1.scale)

@@ -247,10 +247,11 @@ union XERhdr
 
 	struct
 	{
-		u64 L   : 61;
-		u64 CA  : 1;
-		u64 OV  : 1;
-		u64 SO  : 1;
+		u32 L  : 29;
+		u32 CA : 1;
+		u32 OV : 1;
+		u32 SO : 1;
+		u32    : 32;
 	};
 };
 
@@ -721,7 +722,8 @@ public:
 
 	const u8 IsCR(const u32 bit) const { return (GetCR(bit >> 2) & GetCRBit(bit)) ? 1 : 0; }
 
-	bool IsCarry(const u64 a, const u64 b) { return a > (a + b); }
+	bool IsCarry(const u64 a, const u64 b) { return (a + b) < a; }
+	bool IsCarry(const u64 a, const u64 b, const u64 c) { return IsCarry(a, b) || IsCarry(a + b, c); }
 
 	void SetFPSCRException(const FPSCR_EXP mask)
 	{

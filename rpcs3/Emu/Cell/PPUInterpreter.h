@@ -2045,9 +2045,10 @@ private:
 	void SUBFIC(u32 rd, u32 ra, s32 simm16)
 	{
 		const u64 RA = CPU.GPR[ra];
-		const u64 IMM = (u64)(s64)simm16;
-		CPU.GPR[rd] = IMM - RA;
-		CPU.XER.CA = RA > IMM;
+		const u64 IMM = (s64)simm16;
+		CPU.GPR[rd] = ~RA + IMM + 1;
+
+		CPU.XER.CA = CPU.IsCarry(~RA, IMM, 1);
 	}
 	void CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16)
 	{
@@ -2181,17 +2182,17 @@ private:
 	{
 		const u64 mask = rotate_mask[32 + mb][32 + me];
 		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl32(CPU.GPR[rs], sh) & mask);
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
 		CPU.GPR[ra] = rotl32(CPU.GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, bool rc)
 	{
 		CPU.GPR[ra] = rotl32(CPU.GPR[rs], CPU.GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ORI(u32 ra, u32 rs, u32 uimm16)
 	{
@@ -2212,12 +2213,12 @@ private:
 	void ANDI_(u32 ra, u32 rs, u32 uimm16)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] & uimm16;
-		CPU.UpdateCR0<s16>(CPU.GPR[ra]);
+		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ANDIS_(u32 ra, u32 rs, u32 uimm16)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] & (uimm16 << 16);
-		CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
 	{
@@ -2305,10 +2306,10 @@ private:
 	}
 	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const s64 RA = CPU.GPR[ra];
-		const s64 RB = CPU.GPR[rb];
+		const u64 RA = CPU.GPR[ra];
+		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + 1;
-		CPU.XER.CA = CPU.IsCarry(RA, RB);
+		CPU.XER.CA = CPU.IsCarry(~RA, RB, 1);
 		if(oe) UNK("subfco");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2317,7 +2318,7 @@ private:
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
-		CPU.XER.CA = RA <= RB;
+		CPU.XER.CA = CPU.IsCarry(RA, RB);
 		if(oe) UNK("addco");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2331,7 +2332,7 @@ private:
 		u32 a = CPU.GPR[ra];
 		u32 b = CPU.GPR[rb];
 		CPU.GPR[rd] = ((u64)a * (u64)b) >> 32;
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MFOCRF(u32 a, u32 rd, u32 crm)
 	{
@@ -2389,7 +2390,7 @@ private:
 
 		CPU.GPR[ra] = r & m;
 
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void CNTLZW(u32 ra, u32 rs, bool rc)
 	{
@@ -2516,7 +2517,7 @@ private:
 		s32 a = CPU.GPR[ra];
 		s32 b = CPU.GPR[rb];
 		CPU.GPR[rd] = ((s64)a * (s64)b) >> 32;
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2571,7 +2572,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + CPU.XER.CA;
-		CPU.XER.CA = (~RA + CPU.XER.CA > ~RB) | ((RA == 0) & CPU.XER.CA);
+		CPU.XER.CA = CPU.IsCarry(~RA, RB, CPU.XER.CA);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 		if(oe) UNK("subfeo");
 	}
@@ -2694,7 +2695,7 @@ private:
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
-		CPU.XER.CA = ((RA == 0) & CPU.XER.CA);
+		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA);
 		if (oe) ConLog.Warning("subfzeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2726,8 +2727,8 @@ private:
 	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = ~RA + CPU.XER.CA + 0xFFFFFFFFFFFFFFFF;
-		CPU.XER.CA = (~RA + CPU.XER.CA > ~0xFFFFFFFFFFFFFFFF) | ((RA == 0) & CPU.XER.CA);
+		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
+		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA, ~0ULL);
 		if (oe) ConLog.Warning("subfmeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2749,7 +2750,7 @@ private:
 	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		CPU.GPR[rd] = (s64)((s64)(s32)CPU.GPR[ra] * (s64)(s32)CPU.GPR[rb]);
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 		if(oe) UNK("mullwo");
 	}
 	void DCBTST(u32 ra, u32 rb, u32 th)
@@ -2905,7 +2906,7 @@ private:
 			CPU.GPR[rd] = RA / RB;
 		}
 
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MTSPR(u32 spr, u32 rs)
 	{
@@ -2954,7 +2955,7 @@ private:
 			CPU.GPR[rd] = (u32)(RA / RB);
 		}
 
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LVLX(u32 vd, u32 ra, u32 rb)
 	{
@@ -2987,7 +2988,7 @@ private:
 		u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32 + n][63];
 		CPU.GPR[ra] = r & m;
 		
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void SRD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3218,7 +3219,7 @@ private:
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s16)CPU.GPR[rs];
-		if(rc) CPU.UpdateCR0<s16>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void STVRXL(u32 vs, u32 ra, u32 rb)
 	{
@@ -3230,7 +3231,7 @@ private:
 	void EXTSB(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s8)CPU.GPR[rs];
-		if(rc) CPU.UpdateCR0<s8>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3239,7 +3240,7 @@ private:
 	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
 		CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
-		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ICBI(u32 ra, u32 rs)
 	{
