@@ -78,6 +78,9 @@
     <Filter Include="Emu\Cell\currently_unused">
       <UniqueIdentifier>{ead7494f-a872-4b4d-a864-1a61c3b6012f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Io\XInput">
+      <UniqueIdentifier>{187d33b8-7b69-4081-9545-de6ad1d8fe98}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -572,6 +575,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
       <Filter>Emu\Cell\currently_unused</Filter>
     </ClCompile>
+    <ClCompile Include="L:\DEV\2014\rpcs3\rpcs3\Emu\Io\XInput\XInputPadHandler.cpp">
+      <Filter>Emu\Io\XInput</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1035,6 +1041,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
       <Filter>Emu\Cell\currently_unused</Filter>
+    </ClInclude>
+    <ClInclude Include="L:\DEV\2014\rpcs3\rpcs3\Emu\Io\XInput\XInputPadHandler.h">
+      <Filter>Emu\Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
