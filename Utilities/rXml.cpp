@@ -44,13 +44,27 @@ rXmlNode::~rXmlNode()
 std::shared_ptr<rXmlNode> rXmlNode::GetChildren()
 {
 	wxXmlNode* result = reinterpret_cast<wxXmlNode*>(handle)->GetChildren();
-	return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+	if (result)
+	{
+		return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+	}
+	else
+	{
+		return std::shared_ptr<rXmlNode>(nullptr);
+	}
 }
 
 std::shared_ptr<rXmlNode> rXmlNode::GetNext()
 {
 	wxXmlNode* result = reinterpret_cast<wxXmlNode*>(handle)->GetNext();
-	return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+	if (result)
+	{
+		return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+	}
+	else
+	{
+		return std::shared_ptr<rXmlNode>(nullptr);
+	}
 }
 
 std::string rXmlNode::GetName()

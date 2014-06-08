@@ -11,6 +11,10 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Windows/WindowsPadHandler.h"
+#if defined(_WIN32)
+#include "Emu/Io/XInput/XInputPadHandler.h"
+#endif
+
 
 rCanvas::rCanvas(void *parent)
 {
@@ -118,13 +122,16 @@ int rPlatform::getKeyboardHandlerCount()
 
 KeyboardHandlerBase *rPlatform::getKeyboardHandler(int i)
 {
-	if (i == 0)
+	switch (i)
 	{
-		return new NullKeyboardHandler();
-	}
-	else if (i == 1)
-	{
-		return new WindowsKeyboardHandler();
+		case 0:
+			return new NullKeyboardHandler();
+			break;
+		case 1:
+			return new WindowsKeyboardHandler();
+			break;
+		default:
+			return new NullKeyboardHandler();
 	}
 }
 
@@ -136,30 +143,45 @@ int rPlatform::getMouseHandlerCount()
 
 MouseHandlerBase *rPlatform::getMouseHandler(int i)
 {
-	if (i == 0)
+	switch (i)
 	{
+	case 0:
 		return new NullMouseHandler();
-	}
-	else if (i == 1)
-	{
+		break;
+	case 1:
 		return new WindowsMouseHandler();
+		break;
+	default:
+		return new NullMouseHandler();
 	}
 }
 
 int rPlatform::getPadHandlerCount()
 {
+#if defined(_WIN32)
+	return 3;
+#else
 	return 2;
+#endif
 }
 
 
 PadHandlerBase *rPlatform::getPadHandler(int i)
 {
-	if (i == 0)
+	switch (i)
 	{
+	case 0:
 		return new NullPadHandler();
-	}
-	else if (i == 1)
-	{
+		break;
+	case 1:
 		return new WindowsPadHandler();
+		break;
+#if defined(_WIN32)
+	case 2:
+		return new XInputPadHandler();
+		break;
+#endif
+	default:
+		return new NullPadHandler();
 	}
 }
