@@ -1211,12 +1211,19 @@ private:
 			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
 		}
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, *addr), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 0), *qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BI(u32 ra)
@@ -1350,12 +1357,19 @@ private:
 			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
 		}
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, *addr));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, *addr, 0, 0));
 		c.mov(*qw1, qword_ptr(*ls_var, *addr, 0, 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
@@ -2798,12 +2812,19 @@ private:
 	void STQA(u32 rt, s32 i16)
 	{
 		const u32 lsa = (i16 << 2) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, lsa), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, lsa), *qw1);
 		c.mov(qword_ptr(*ls_var, lsa + 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRNZ(u32 rt, s32 i16)
@@ -2842,12 +2863,19 @@ private:
 	void STQR(u32 rt, s32 i16)
 	{
 		const u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, lsa), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, lsa), *qw1);
 		c.mov(qword_ptr(*ls_var, lsa + 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRA(s32 i16)
@@ -2863,12 +2891,19 @@ private:
 		XmmInvalidate(rt);
 
 		const u32 lsa = (i16 << 2) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, lsa));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRASL(u32 rt, s32 i16)
@@ -2931,12 +2966,19 @@ private:
 		XmmInvalidate(rt);
 
 		const u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, lsa));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void IL(u32 rt, s32 i16)
@@ -3265,12 +3307,19 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (i10) c.add(*addr, i10);
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, *addr), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 0), *qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) // i10 is shifted left by 4 while decoding
@@ -3280,12 +3329,19 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (i10) c.add(*addr, i10);
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, *addr));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, *addr, 0, 0));
 		c.mov(*qw1, qword_ptr(*ls_var, *addr, 0, 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
