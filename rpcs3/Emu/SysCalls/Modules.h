@@ -42,12 +42,10 @@ struct SFunc
 	}
 };
 
-extern std::vector<SFunc *> g_static_funcs_list;
-
 class Module
 {
 	std::string m_name;
-	const u16 m_id;
+	u16 m_id;
 	bool m_is_loaded;
 	void (*m_load_func)();
 	void (*m_unload_func)();
@@ -58,6 +56,12 @@ public:
 	Module(u16 id, const char* name);
 	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
 	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+
+	Module(Module &other) = delete;
+	Module(Module &&other);
+
+	Module &operator =(Module &other) = delete;
+	Module &operator =(Module &&other);
 
 	~Module();
 
@@ -151,14 +155,6 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re(op.crc);
 		sf->ops.push_back(op);
 	}
-	g_static_funcs_list.push_back(sf);
+	Emu.GetSFuncManager().push_back(sf);
 }
-
-bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 num);
-bool UnloadFunc(u32 id);
-void UnloadModules();
-u32 GetFuncNumById(u32 id);
-Module* GetModuleByName(const std::string& name);
-Module* GetModuleById(u16 id);
 

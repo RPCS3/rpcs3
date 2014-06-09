@@ -8,10 +8,11 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "cellFont.h"
 
-void cellFontFT_init();
-void cellFontFT_load();
-void cellFontFT_unload();
-Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
+//void cellFontFT_init();
+//void cellFontFT_load();
+//void cellFontFT_unload();
+//Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
+extern Module *cellFontFT = nullptr;
 
 struct CellFontLibraryConfigFT
 {
@@ -44,7 +45,7 @@ CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 
 int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
 {
-	cellFontFT.Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
+	cellFontFT->Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
 		revisionFlags, config.GetAddr(), lib_addr_addr);
 
 	if (!config.IsGood() || !Memory.IsGoodAddr(lib_addr_addr))
@@ -71,9 +72,9 @@ int cellFontFTGetInitializedRevisionFlags()
 
 void cellFontFT_init()
 {
-	cellFontFT.AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
-	cellFontFT.AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
-	cellFontFT.AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);
+	cellFontFT->AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
+	cellFontFT->AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
+	cellFontFT->AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);
 }
 
 void cellFontFT_load()

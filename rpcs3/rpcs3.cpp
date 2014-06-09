@@ -5,6 +5,7 @@
 #include "rpcs3.h"
 #include "Ini.h"
 #include "Gui/ConLogFrame.h"
+#include "Emu/GameInfo.h"
 
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>

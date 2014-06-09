@@ -5,6 +5,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+#include "ModuleManager.h"
 
 namespace detail{
 	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)
@@ -576,7 +577,7 @@ void SysCalls::DoSyscall(u32 code)
 		return;
 	}
 	
-	if(CallFunc(code))
+	if(Emu.GetModuleManager().CallFunc(code))
 	{
 		return;
 	}

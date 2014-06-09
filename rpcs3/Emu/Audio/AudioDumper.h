@@ -55,7 +55,7 @@ class AudioDumper
 {
 private:
 	WAVHeader m_header;
-	wxFile m_output;
+	rFile m_output;
 	
 public:
 	AudioDumper(u8 ch);

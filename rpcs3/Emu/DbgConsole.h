@@ -1,5 +1,63 @@
 #pragma once
 
+#include <cstring> //for memset
+
+//struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
+//{
+//	_DbgBuffer() : MTPacketBuffer<DbgPacket>(1024)
+//	{
+//	}
+//
+//	void _push(const DbgPacket& data)
+//	{
+//		const u32 stext = data.m_text.length();
+//
+//		m_buffer.resize(m_buffer.size() + sizeof(int) + sizeof(u32) + stext);
+//
+//		u32 c_put = m_put;
+//
+//		memcpy(&m_buffer[c_put], &data.m_ch, sizeof(int));
+//		c_put += sizeof(int);
+//
+//		memcpy(&m_buffer[c_put], &stext, sizeof(u32));
+//		c_put += sizeof(u32);
+//		memcpy(&m_buffer[c_put], data.m_text.data(), stext);
+//		c_put += stext;
+//
+//		m_put = c_put;
+//		CheckBusy();
+//	}
+//
+//	DbgPacket _pop()
+//	{
+//		DbgPacket ret;
+//
+//		u32 c_get = m_get;
+//
+//		ret.m_ch = *(int*)&m_buffer[c_get];
+//		c_get += sizeof(int);
+//
+//		const u32& stext = *(u32*)&m_buffer[c_get];
+//		c_get += sizeof(u32);
+//		if (stext) ret.m_text = std::string(reinterpret_cast<const char*>(&m_buffer[c_get]), stext );
+//		c_get += stext;
+//
+//		m_get = c_get;
+//		if(!HasNewPacket()) Flush();
+//
+//		return ret;
+//	}
+//};
+//
+//struct DbgConsole
+//{
+//	void *congui;
+//	DbgConsole();
+//	void Close();
+//	void Clear();
+//	void Write(int ch, const std::string &msg);
+//};
+
 struct DbgPacket
 {
 	int m_ch;
@@ -58,11 +116,11 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 
 		const u32& stext = *(u32*)&m_buffer[c_get];
 		c_get += sizeof(u32);
-		if (stext) ret.m_text = std::string(reinterpret_cast<const char*>(&m_buffer[c_get]), stext );
+		if (stext) ret.m_text = std::string(reinterpret_cast<const char*>(&m_buffer[c_get]), stext);
 		c_get += stext;
 
 		m_get = c_get;
-		if(!HasNewPacket()) Flush();
+		if (!HasNewPacket()) Flush();
 
 		return ret;
 	}

@@ -77,7 +77,7 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n)
 		ret += m_parr.AddParam(PARAM_NONE, "vec4", "tmp" + std::to_string(src[n].tmp_src));
 	break;
 	case 2: //input
-		if(d1.input_src < WXSIZEOF(reg_table))
+		if (d1.input_src < SARRSIZEOF(reg_table))
 		{
 			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src], d1.input_src);
 		}

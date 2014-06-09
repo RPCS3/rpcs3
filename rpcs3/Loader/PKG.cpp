@@ -3,7 +3,7 @@
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 
-PKGLoader::PKGLoader(wxFile& f) : pkg_f(f)
+PKGLoader::PKGLoader(rFile& f) : pkg_f(f)
 {
 }
 
@@ -13,7 +13,7 @@ bool PKGLoader::Install(std::string dest)
 	if (!pkg_f.IsOpened())
 		return false;
 
-	dest = fmt::ToUTF8(wxGetCwd()) + dest;
+	dest = rGetCwd() + dest;
 	if (!dest.empty() && dest.back() != '/')
 		dest += '/';
 
@@ -24,9 +24,9 @@ bool PKGLoader::Install(std::string dest)
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (wxDirExists(fmt::FromUTF8(dest+titleID))) {
-		wxMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", wxYES_NO|wxCENTRE);
-		if (d_overwrite.ShowModal() != wxID_YES) {
+	if (rDirExists(dest+titleID)) {
+		rMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
+		if (d_overwrite.ShowModal() != rID_YES) {
 			ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
 			return false;
 		}
@@ -34,7 +34,7 @@ bool PKGLoader::Install(std::string dest)
 		ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
 		return false;
 	}
-	if (!wxMkdir(fmt::FromUTF8(dest+titleID))) {
+	if (!rMkdir(dest+titleID)) {
 		ConLog.Error("PKG Loader: Could not make the installation directory: %s", titleID.c_str());
 		return false;
 	}

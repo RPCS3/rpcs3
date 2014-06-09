@@ -63,7 +63,7 @@ public:
 
 	static void CreateHDD(const std::string& path, u64 size, u64 block_size)
 	{
-		wxFile f(fmt::FromUTF8(path), wxFile::write);
+		rFile f(path, rFile::write);
 
 		static const u64 cur_dir_block = 1;
 

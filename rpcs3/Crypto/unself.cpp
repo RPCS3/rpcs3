@@ -389,7 +389,7 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	wxFile e(elf.c_str(), wxFile::write);
+	rFile e(elf.c_str(), rFile::write);
 	if(!e.IsOpened())
 	{
 		ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
@@ -505,17 +505,17 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 
 	// Try to find a matching RAP file under dev_usb000.
 	std::string ci_str((const char *)content_id);
-	std::string rap_path(fmt::ToUTF8(wxGetCwd()) + "/dev_usb000/" + ci_str + ".rap");
+	std::string rap_path(rGetCwd() + "/dev_usb000/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!wxFile::Exists(fmt::FromUTF8(rap_path)))
+	if (!rFile::Exists(rap_path))
 	{
 		ConLog.Error("This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
 	// Open the RAP file and read the key.
-	wxFile rap_file(fmt::FromUTF8(rap_path), wxFile::read);
+	rFile rap_file(rap_path, rFile::read);
 
 	if (!rap_file.IsOpened())
 	{
@@ -569,7 +569,7 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	wxFile s(fmt::FromUTF8(self));
+	rFile s(self);
 
 	if(!s.IsOpened())
 	{
@@ -597,7 +597,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.Seek(elf_offset);
 
 		// Write the real ELF file back.
-		wxFile e(fmt::FromUTF8(elf), wxFile::write);
+		rFile e(elf, rFile::write);
 		if(!e.IsOpened())
 		{
 			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());

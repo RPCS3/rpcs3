@@ -32,7 +32,7 @@ bool vfsDirBase::IsOpened() const
 
 bool vfsDirBase::IsExists(const std::string& path) const
 {
-	return wxDirExists(fmt::FromUTF8(path));
+	return rDirExists(path);
 }
 
 const std::vector<DirEntryInfo>& vfsDirBase::GetEntries() const

@@ -1495,7 +1495,7 @@ void CompilePPUProgram::Compile()
 		s_shstrtab.sh_size = section_name_offset;
 		section_offset += s_shstrtab.sh_size;
 
-		wxFile f(fmt::FromUTF8(m_file_path), wxFile::write);
+		rFile f(m_file_path, rFile::write);
 
 		elf_info.e_magic = 0x7F454C46;
 		elf_info.e_class = 2; //ELF64
@@ -1585,7 +1585,7 @@ void CompilePPUProgram::Compile()
 		}
 
 		f.Seek(s_lib_stub_top.sh_offset);
-		f.Seek(s_lib_stub_top.sh_size, wxFromCurrent);
+		f.Seek(s_lib_stub_top.sh_size, rFromCurrent);
 
 		f.Seek(s_lib_stub.sh_offset);
 		for(u32 i=0, nameoffs=4, dataoffs=0; i<modules.size(); ++i)
@@ -1608,7 +1608,7 @@ void CompilePPUProgram::Compile()
 		}
 
 		f.Seek(s_lib_stub_btm.sh_offset);
-		f.Seek(s_lib_stub_btm.sh_size, wxFromCurrent);
+		f.Seek(s_lib_stub_btm.sh_size, rFromCurrent);
 
 		f.Seek(s_data_sceFStub.sh_offset);
 		for(const Module& module : modules)
@@ -1638,13 +1638,13 @@ void CompilePPUProgram::Compile()
 		f.Write(&prx_param, sizeof(sys_proc_prx_param));
 
 		f.Seek(s_lib_ent_top.sh_offset);
-		f.Seek(s_lib_ent_top.sh_size, wxFromCurrent);
+		f.Seek(s_lib_ent_top.sh_size, rFromCurrent);
 
 		f.Seek(s_lib_ent_btm.sh_offset);
-		f.Seek(s_lib_ent_btm.sh_size, wxFromCurrent);
+		f.Seek(s_lib_ent_btm.sh_size, rFromCurrent);
 
 		f.Seek(s_tbss.sh_offset);
-		f.Seek(s_tbss.sh_size, wxFromCurrent);
+		f.Seek(s_tbss.sh_size, rFromCurrent);
 
 		f.Seek(s_shstrtab.sh_offset + 1);
 		for(u32 i=0; i<sections_names.size(); ++i)

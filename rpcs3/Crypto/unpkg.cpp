@@ -5,7 +5,7 @@
 #include "Emu/ConLog.h"
 
 // Decryption.
-bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
+bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 {
 	if (m_header->pkg_magic != 0x7F504B47) {
 		ConLog.Error("PKG: Not a package file!");
@@ -48,7 +48,7 @@ bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-bool LoadHeader(wxFile& pkg_f, PKGHeader* m_header)
+bool LoadHeader(rFile& pkg_f, PKGHeader* m_header)
 {
 	pkg_f.Seek(0);
 	
@@ -63,7 +63,7 @@ bool LoadHeader(wxFile& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-int Decrypt(wxFile& pkg_f, wxFile& dec_pkg_f, PKGHeader* m_header)
+int Decrypt(rFile& pkg_f, rFile& dec_pkg_f, PKGHeader* m_header)
 {
 	if (!LoadHeader(pkg_f, m_header))
 		return -1;
@@ -135,7 +135,7 @@ int Decrypt(wxFile& pkg_f, wxFile& dec_pkg_f, PKGHeader* m_header)
 }
 
 // Unpacking.
-bool LoadEntries(wxFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
+bool LoadEntries(rFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
 {
 	dec_pkg_f.Seek(0);
 	dec_pkg_f.Read(m_entries, sizeof(PKGEntry) * m_header->file_count);
@@ -148,7 +148,7 @@ bool LoadEntries(wxFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
 	return true;
 }
 
-bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
+bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 {
 	u8 buf[BUF_SIZE];
 
@@ -163,8 +163,8 @@ bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 		case PKG_FILE_ENTRY_SDAT:
 		case PKG_FILE_ENTRY_REGULAR:
 		{
-			wxFile out;
-			out.Create(dir + buf);
+			rFile out;
+			out.Create(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
 			dec_pkg_f.Seek(entry.file_offset);
 
 			for (u64 size = 0; size < entry.file_size; ) {
@@ -179,18 +179,18 @@ bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 		break;
 			
 		case PKG_FILE_ENTRY_FOLDER:
-			wxMkdir(dir + buf);
+			rMkdir(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
 		break;
 	}
 	return true;
 }
 
-int Unpack(wxFile& pkg_f, std::string src, std::string dst)
+int Unpack(rFile& pkg_f, std::string src, std::string dst)
 {
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
-	wxFile dec_pkg_f;
-	std::string decryptedFile = wxGetCwd().ToStdString() + "/dev_hdd1/" + src + ".dec";
+	rFile dec_pkg_f;
+	std::string decryptedFile = rGetCwd() + "/dev_hdd1/" + src + ".dec";
 
 	dec_pkg_f.Create(decryptedFile, true);
 	
@@ -199,7 +199,7 @@ int Unpack(wxFile& pkg_f, std::string src, std::string dst)
 	
 	dec_pkg_f.Close();
 
-	wxFile n_dec_pkg_f(decryptedFile, wxFile::read);
+	rFile n_dec_pkg_f(decryptedFile, rFile::read);
 
 	std::vector<PKGEntry> m_entries;
 	m_entries.resize(m_header->file_count);

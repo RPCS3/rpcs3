@@ -5,13 +5,13 @@
 #include "DbgConsole.h"
 
 BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
-	EVT_CLOSE(DbgConsole::OnQuit)
+EVT_CLOSE(DbgConsole::OnQuit)
 END_EVENT_TABLE()
 
 DbgConsole::DbgConsole()
-	: FrameBase(nullptr, wxID_ANY, "Debug Console", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
-	, ThreadBase("DbgConsole thread")
-	, m_output(nullptr)
+: FrameBase(nullptr, wxID_ANY, "Debug Console", "", wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
+, ThreadBase("DbgConsole thread")
+, m_output(nullptr)
 {
 	m_console = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
 		wxSize(500, 500), wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2);
@@ -48,7 +48,7 @@ void DbgConsole::Write(int ch, const std::string& text)
 	}
 	m_dbg_buffer.Push(DbgPacket(ch, text));
 
-	if(!IsAlive()) Start();
+	if (!IsAlive()) Start();
 }
 
 void DbgConsole::Clear()
@@ -58,9 +58,9 @@ void DbgConsole::Clear()
 
 void DbgConsole::Task()
 {
-	while(!TestDestroy())
+	while (!TestDestroy())
 	{
-		if(!m_dbg_buffer.HasNewPacket())
+		if (!m_dbg_buffer.HasNewPacket())
 		{
 			if (Emu.IsStopped())
 			{
@@ -78,7 +78,7 @@ void DbgConsole::Task()
 		if (m_output && Ini.HLESaveTTY.GetValue())
 			m_output->Write(fmt::FromUTF8(packet.m_text));
 
-		if(!DbgConsole::IsShown()) Show();
+		if (!DbgConsole::IsShown()) Show();
 	}
 }
 

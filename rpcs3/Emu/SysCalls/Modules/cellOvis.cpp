@@ -45,4 +45,4 @@ void cellOvis_init()
 	cellOvis.AddFunc(0xce6cb776, cellOvisFixSpuSegments);
 	cellOvis.AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
 }
-#endif
+#endif 

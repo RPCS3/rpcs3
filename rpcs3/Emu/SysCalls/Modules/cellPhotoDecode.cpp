@@ -65,4 +65,4 @@ void cellPhotoDecode_init()
 	cellPhotoDecode.AddFunc(0xad7d8f38, cellPhotoDecodeFinalize);
 	cellPhotoDecode.AddFunc(0x28b22e44, cellPhotoDecodeFromFile);
 }
-#endif
+#endif 

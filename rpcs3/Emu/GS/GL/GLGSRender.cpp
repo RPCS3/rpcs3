@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
-#include "Gui/RSXDebugger.h"
 
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
@@ -39,53 +38,6 @@ void printGlError(GLenum err, const std::string& situation)
 	#define checkForGlError(x) /*x*/
 #endif
 
-GLGSFrame::GLGSFrame()
-	: GSFrame(nullptr, "GSFrame[OpenGL]")
-	, m_frames(0)
-{
-	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
-	canvas->SetSize(GetClientSize());
-
-	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
-}
-
-void GLGSFrame::Flip(wxGLContext *context)
-{
-	if(!canvas) return;
-	canvas->SetCurrent(*context);
-
-	static Timer fps_t;
-	canvas->SwapBuffers();
-	m_frames++;
-
-	if(fps_t.GetElapsedTimeInSec() >= 0.5)
-	{
-		SetTitle(wxString::Format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
-		m_frames = 0;
-		fps_t.Start();
-	}
-}
-
-void GLGSFrame::OnSize(wxSizeEvent& event)
-{
-	if(canvas) canvas->SetSize(GetClientSize());
-	event.Skip();
-}
-
-void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
-{
-	/*
-	//ConLog.Warning("SetViewport(x=%d, y=%d, w=%d, h=%d)", x, y, w, h);
-
-	const wxSize client = GetClientSize();
-	const wxSize viewport = AspectRatio(client, wxSize(w, h));
-
-	const int vx = (client.GetX() - viewport.GetX()) / 2;
-	const int vy = (client.GetY() - viewport.GetY()) / 2;
-
-	glViewport(vx + x, vy + y, viewport.GetWidth(), viewport.GetHeight());
-	*/
-}
 
 GLGSRender::GLGSRender()
 	: GSRender()
@@ -94,7 +46,7 @@ GLGSRender::GLGSRender()
 	, m_vp_buf_num(-1)
 	, m_context(nullptr)
 {
-	m_frame = new GLGSFrame();
+	m_frame = new rGLFrame();// new GLGSFrame();
 }
 
 GLGSRender::~GLGSRender()
@@ -164,7 +116,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	checkForGlError("initializing vbo");
 
 #if	DUMP_VERTEX_DATA
-	wxFile dump("VertexDataArray.dump", wxFile::write);
+	rFile dump("VertexDataArray.dump", rFile::write);
 #endif
 
 	for(u32 i=0; i<m_vertex_count; ++i)
@@ -406,7 +358,7 @@ bool GLGSRender::LoadProgram()
 		m_shader_prog.Compile();
 		checkForGlError("m_shader_prog.Compile");
 
-		wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
+		rFile f(rGetCwd() + "/FragmentProgram.txt", rFile::write);
 		f.Write(m_shader_prog.GetShaderText());
 	}
 
@@ -418,7 +370,7 @@ bool GLGSRender::LoadProgram()
 		m_vertex_prog.Compile();
 		checkForGlError("m_vertex_prog.Compile");
 
-		wxFile f(wxGetCwd() + "/VertexProgram.txt", wxFile::write);
+		rFile f(rGetCwd() + "/VertexProgram.txt", rFile::write);
 		f.Write(m_vertex_prog.shader);
 	}
 
@@ -656,9 +608,11 @@ void GLGSRender::OnInit()
 
 void GLGSRender::OnInitThread()
 {
-	m_context = new wxGLContext(m_frame->GetCanvas());
+	m_context = m_frame->GetNewContext();//new rGLContext(m_frame->GetCanvas());
 
-	m_frame->GetCanvas()->SetCurrent(*m_context);
+	//m_frame->GetCanvas()->SetCurrent(*m_context);
+	m_frame->SetCurrent(m_context);
+
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);

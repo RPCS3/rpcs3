@@ -3,7 +3,6 @@
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Cell/PPCDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
 class SPUDisAsm 

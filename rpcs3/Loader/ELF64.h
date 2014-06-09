@@ -186,6 +186,6 @@ private:
 	//bool LoadImports();
 };
 
-void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr);
-void WritePhdr(wxFile& f, Elf64_Phdr& phdr);
-void WriteShdr(wxFile& f, Elf64_Shdr& shdr);
+void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr);
+void WritePhdr(rFile& f, Elf64_Phdr& phdr);
+void WriteShdr(rFile& f, Elf64_Shdr& shdr);

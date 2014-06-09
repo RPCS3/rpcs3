@@ -4,7 +4,7 @@
 class vfsLocalFile : public vfsFileBase
 {
 private:
-	wxFile m_file;
+	rFile m_file;
 
 public:
 	vfsLocalFile(vfsDevice* device);

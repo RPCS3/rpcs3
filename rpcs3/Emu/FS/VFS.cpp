@@ -243,9 +243,9 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 	u32 max_eq;
 	s32 max_i=-1;
 
-	wxFileName file_path(fmt::FromUTF8(local_path));
+	rFileName file_path(local_path);
 	file_path.Normalize();
-	std::string mormalized_path = fmt::ToUTF8(file_path.GetFullPath());
+	std::string mormalized_path = file_path.GetFullPath();
 
 	for(u32 i=0; i<m_devices.size(); ++i)
 	{
@@ -289,10 +289,10 @@ void VFS::Init(const std::string& path)
 			continue;
 		}
 		
-		wxString mpath = entry.path;
-		mpath.Replace("$(EmulatorDir)", wxGetCwd());
-		mpath.Replace("$(GameDir)", fmt::FromUTF8(vfsDevice::GetRoot(path)));
-		Mount(entry.mount, fmt::ToUTF8(mpath), dev);
+		std::string mpath = entry.path;
+		fmt::Replace(mpath,"$(EmulatorDir)", rGetCwd());
+		fmt::Replace(mpath,"$(GameDir)", vfsDevice::GetRoot(path));
+		Mount(entry.mount, mpath, dev);
 	}
 }
 

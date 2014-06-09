@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Gui/Debugger.h"
-#include "Gui/GameViewer.h"
 
 #include <wx/aui/aui.h>
+
+class GameViewer;
 
 class MainFrame : public FrameBase
 {

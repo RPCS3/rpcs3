@@ -4,7 +4,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3/Ini.h"
-#include "rpcs3.h"
 
 #include "CPUThread.h"
 
@@ -86,13 +85,13 @@ void CPUThread::SetName(const std::string& name)
 
 void CPUThread::Wait(bool wait)
 {
-	wxCriticalSectionLocker lock(m_cs_sync);
+	rCriticalSectionLocker lock(m_cs_sync);
 	m_sync_wait = wait;
 }
 
 void CPUThread::Wait(const CPUThread& thr)
 {
-	wxCriticalSectionLocker lock(m_cs_sync);
+	rCriticalSectionLocker lock(m_cs_sync);
 	m_wait_thread_id = thr.GetId();
 	m_sync_wait = true;
 }
@@ -178,13 +177,13 @@ void CPUThread::SetError(const u32 error)
 	}
 }
 
-wxArrayString CPUThread::ErrorToString(const u32 error)
+std::vector<std::string> CPUThread::ErrorToString(const u32 error)
 {
-	wxArrayString earr;
+	std::vector<std::string> earr;
 
 	if(error == 0) return earr;
 
-	earr.Add("Unknown error");
+	earr.push_back("Unknown error");
 
 	return earr;
 }
@@ -196,9 +195,7 @@ void CPUThread::Run()
 
 	Reset();
 	
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
-#endif
+	SendDbgCommand(DID_START_THREAD, this);
 
 	m_status = Running;
 
@@ -208,18 +205,14 @@ void CPUThread::Run()
 	DoRun();
 	Emu.CheckStatus();
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STARTED_THREAD, this);
-#endif
+	SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
 void CPUThread::Resume()
 {
 	if(!IsPaused()) return;
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
-#endif
+	SendDbgCommand(DID_RESUME_THREAD, this);
 
 	m_status = Running;
 	DoResume();
@@ -227,36 +220,28 @@ void CPUThread::Resume()
 
 	ThreadBase::Start();
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, this);
-#endif
+	SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
 void CPUThread::Pause()
 {
 	if(!IsRunning()) return;
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
-#endif
+	SendDbgCommand(DID_PAUSE_THREAD, this);
 
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
 
 	// ThreadBase::Stop(); // "Abort() called" exception
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
-#endif
+	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
 void CPUThread::Stop()
 {
 	if(IsStopped()) return;
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
-#endif
+	SendDbgCommand(DID_STOP_THREAD, this);
 
 	m_status = Stopped;
 
@@ -270,17 +255,13 @@ void CPUThread::Stop()
 
 	Emu.CheckStatus();
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
-#endif
+	SendDbgCommand(DID_STOPED_THREAD, this);
 }
 
 void CPUThread::Exec()
 {
 	m_is_step = false;
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
-#endif
+	SendDbgCommand(DID_EXEC_THREAD, this);
 
 	if(IsRunning())
 		ThreadBase::Start();
@@ -289,17 +270,14 @@ void CPUThread::Exec()
 void CPUThread::ExecOnce()
 {
 	m_is_step = true;
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
-#endif
+	SendDbgCommand(DID_EXEC_THREAD, this);
+
 	m_status = Running;
 	ThreadBase::Start();
 	ThreadBase::Stop(true,false);
 	m_status = Paused;
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
-#endif
+	SendDbgCommand(DID_PAUSE_THREAD, this);
+	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
 void CPUThread::Task()

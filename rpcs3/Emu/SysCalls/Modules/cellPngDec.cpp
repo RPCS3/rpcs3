@@ -9,8 +9,9 @@
 #include "stblib/stb_image.h"
 #include <map>
 
-void cellPngDec_init();
-Module cellPngDec(0x0018, cellPngDec_init);
+//void cellPngDec_init();
+//Module cellPngDec(0x0018, cellPngDec_init);
+extern Module *cellPngDec = nullptr;
 
 static std::map<u32, CellPngDecMainHandle *> cellPngDecMap;
 
@@ -23,7 +24,7 @@ CellPngDecMainHandle *getCellPngDecCtx(u32 mainHandle) {
 
 int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
-	cellPngDec.Warning("cellPngDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
+	cellPngDec->Warning("cellPngDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
 	CellPngDecMainHandle *ctx = new CellPngDecMainHandle;
 	if (cellPngDecMap.find(mainHandle) != cellPngDecMap.end()) {
 		delete cellPngDecMap[mainHandle];
@@ -39,10 +40,10 @@ int cellPngDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 
 int cellPngDecDestroy(u32 mainHandle)
 {
-	cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle);
+	cellPngDec->Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle);
 	CellPngDecMainHandle *ctx = getCellPngDecCtx(mainHandle);
 	if (!ctx) {
-		cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x): bad handle", mainHandle);
+		cellPngDec->Warning("cellPngDecDestroy(mainHandle=0x%x): bad handle", mainHandle);
 		return -1;
 	}
 
@@ -54,7 +55,7 @@ int cellPngDecDestroy(u32 mainHandle)
 
 int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo)
 {
-	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
+	cellPngDec->Warning("cellPngDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
 	if (!subHandle.IsGood() || !src.IsGood())
@@ -87,17 +88,17 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle = cellPngDec.GetNewId(current_subHandle);
+	subHandle = cellPngDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
 
 int cellPngDecClose(u32 mainHandle, u32 subHandle)
 {
-	cellPngDec.Warning("cellPngDecClose(mainHandle=0x%x,subHandle=0x%x)", mainHandle, subHandle);
+	cellPngDec->Warning("cellPngDecClose(mainHandle=0x%x,subHandle=0x%x)", mainHandle, subHandle);
 
 	CellPngDecSubHandle* subHandle_data;
-	if(!cellPngDec.CheckId(subHandle, subHandle_data))
+	if(!cellPngDec->CheckId(subHandle, subHandle_data))
 		return CELL_PNGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
@@ -111,9 +112,9 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	if (!info.IsGood())
 		return CELL_PNGDEC_ERROR_ARG;
 
-	cellPngDec.Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
 	CellPngDecSubHandle* subHandle_data;
-	if(!cellPngDec.CheckId(subHandle, subHandle_data))
+	if(!cellPngDec->CheckId(subHandle, subHandle_data))
 		return CELL_PNGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -173,7 +174,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
 	CellPngDecSubHandle* subHandle_data;
-	if(!cellPngDec.CheckId(subHandle, subHandle_data))
+	if(!cellPngDec->CheckId(subHandle, subHandle_data))
 		return CELL_PNGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -211,6 +212,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
+		image_size = width * height;
 	case CELL_PNGDEC_RGBA:
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
@@ -278,7 +280,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	case CELL_PNGDEC_GRAYSCALE:
 	case CELL_PNGDEC_PALETTE:
 	case CELL_PNGDEC_GRAYSCALE_ALPHA:
-		cellPngDec.Error("cellPngDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("cellPngDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
 	break;
 
 	default:
@@ -296,7 +298,7 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPn
 		return CELL_PNGDEC_ERROR_ARG;
 
 	CellPngDecSubHandle* subHandle_data;
-	if(!cellPngDec.CheckId(subHandle, subHandle_data))
+	if(!cellPngDec->CheckId(subHandle, subHandle_data))
 		return CELL_PNGDEC_ERROR_FATAL;
 
 	CellPngDecInfo& current_info = subHandle_data->info;
@@ -333,34 +335,34 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPn
 
 void cellPngDec_init()
 {
-	cellPngDec.AddFunc(0x157d30c5, cellPngDecCreate);
-	cellPngDec.AddFunc(0x820dae1a, cellPngDecDestroy);
-	cellPngDec.AddFunc(0xd2bc5bfd, cellPngDecOpen);
-	cellPngDec.AddFunc(0x5b3d1ff1, cellPngDecClose);
-	cellPngDec.AddFunc(0x9ccdcc95, cellPngDecReadHeader);
-	cellPngDec.AddFunc(0x2310f155, cellPngDecDecodeData);
-	cellPngDec.AddFunc(0xe97c9bd4, cellPngDecSetParameter);
+	cellPngDec->AddFunc(0x157d30c5, cellPngDecCreate);
+	cellPngDec->AddFunc(0x820dae1a, cellPngDecDestroy);
+	cellPngDec->AddFunc(0xd2bc5bfd, cellPngDecOpen);
+	cellPngDec->AddFunc(0x5b3d1ff1, cellPngDecClose);
+	cellPngDec->AddFunc(0x9ccdcc95, cellPngDecReadHeader);
+	cellPngDec->AddFunc(0x2310f155, cellPngDecDecodeData);
+	cellPngDec->AddFunc(0xe97c9bd4, cellPngDecSetParameter);
 
-	/*cellPngDec.AddFunc(0x48436b2d, cellPngDecExtCreate);
-	cellPngDec.AddFunc(0x0c515302, cellPngDecExtOpen);
-	cellPngDec.AddFunc(0x8b33f863, cellPngDecExtReadHeader);
-	cellPngDec.AddFunc(0x726fc1d0, cellPngDecExtDecodeData);
-	cellPngDec.AddFunc(0x9e9d7d42, cellPngDecExtSetParameter);
-	cellPngDec.AddFunc(0x7585a275, cellPngDecGetbKGD);
-	cellPngDec.AddFunc(0x7a062d26, cellPngDecGetcHRM);
-	cellPngDec.AddFunc(0xb153629c, cellPngDecGetgAMA);
-	cellPngDec.AddFunc(0xb905ebb7, cellPngDecGethIST);
-	cellPngDec.AddFunc(0xf44b6c30, cellPngDecGetiCCP);
-	cellPngDec.AddFunc(0x27c921b5, cellPngDecGetoFFs);
-	cellPngDec.AddFunc(0xb4fe75e1, cellPngDecGetpCAL);
-	cellPngDec.AddFunc(0x3d50016a, cellPngDecGetpHYs);
-	cellPngDec.AddFunc(0x30cb334a, cellPngDecGetsBIT);
-	cellPngDec.AddFunc(0xc41e1198, cellPngDecGetsCAL);
-	cellPngDec.AddFunc(0xa5cdf57e, cellPngDecGetsPLT);
-	cellPngDec.AddFunc(0xe4416e82, cellPngDecGetsRGB);
-	cellPngDec.AddFunc(0x35a6846c, cellPngDecGettIME);
-	cellPngDec.AddFunc(0xb96fb26e, cellPngDecGettRNS);
-	cellPngDec.AddFunc(0xe163977f, cellPngDecGetPLTE);
-	cellPngDec.AddFunc(0x609ec7d5, cellPngDecUnknownChunks);
-	cellPngDec.AddFunc(0xb40ca175, cellPngDecGetTextChunk);*/
+	/*cellPngDec->AddFunc(0x48436b2d, cellPngDecExtCreate);
+	cellPngDec->AddFunc(0x0c515302, cellPngDecExtOpen);
+	cellPngDec->AddFunc(0x8b33f863, cellPngDecExtReadHeader);
+	cellPngDec->AddFunc(0x726fc1d0, cellPngDecExtDecodeData);
+	cellPngDec->AddFunc(0x9e9d7d42, cellPngDecExtSetParameter);
+	cellPngDec->AddFunc(0x7585a275, cellPngDecGetbKGD);
+	cellPngDec->AddFunc(0x7a062d26, cellPngDecGetcHRM);
+	cellPngDec->AddFunc(0xb153629c, cellPngDecGetgAMA);
+	cellPngDec->AddFunc(0xb905ebb7, cellPngDecGethIST);
+	cellPngDec->AddFunc(0xf44b6c30, cellPngDecGetiCCP);
+	cellPngDec->AddFunc(0x27c921b5, cellPngDecGetoFFs);
+	cellPngDec->AddFunc(0xb4fe75e1, cellPngDecGetpCAL);
+	cellPngDec->AddFunc(0x3d50016a, cellPngDecGetpHYs);
+	cellPngDec->AddFunc(0x30cb334a, cellPngDecGetsBIT);
+	cellPngDec->AddFunc(0xc41e1198, cellPngDecGetsCAL);
+	cellPngDec->AddFunc(0xa5cdf57e, cellPngDecGetsPLT);
+	cellPngDec->AddFunc(0xe4416e82, cellPngDecGetsRGB);
+	cellPngDec->AddFunc(0x35a6846c, cellPngDecGettIME);
+	cellPngDec->AddFunc(0xb96fb26e, cellPngDecGettRNS);
+	cellPngDec->AddFunc(0xe163977f, cellPngDecGetPLTE);
+	cellPngDec->AddFunc(0x609ec7d5, cellPngDecUnknownChunks);
+	cellPngDec->AddFunc(0xb40ca175, cellPngDecGetTextChunk);*/
 }

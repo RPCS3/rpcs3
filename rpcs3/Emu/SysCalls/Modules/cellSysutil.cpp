@@ -17,12 +17,13 @@ typedef void (*CellMsgDialogCallback)(int buttonType, mem_ptr_t<void> userData);
 typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
 
 
-void cellSysutil_init();
-Module cellSysutil(0x0015, cellSysutil_init);
+//void cellSysutil_init();
+//Module cellSysutil(0x0015, cellSysutil_init);
+Module *cellSysutil;
 
 int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {
-	cellSysutil.Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
+	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
 
 	if(!value.IsGood())
 	{
@@ -32,77 +33,77 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
 		value = Ini.SysLanguage.GetValue();
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
 		value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
 		value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
 		value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
 		value = 3;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
 		value = 1;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
 		value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
 		value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
 		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
 		value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
 		value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
 		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
 		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
 		value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
-		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
+		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
 		value = 0;
 	break;
 
@@ -115,7 +116,7 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 
 int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 {
-	cellSysutil.Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
+	cellSysutil->Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
 
 	if (!buf.IsGood())
 		return CELL_EFAULT;
@@ -125,12 +126,12 @@ int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
-		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
+		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
 		memcpy(buf, "Unknown", 8); //for example
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
-		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
+		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
 		memcpy(buf, "Unknown", 8);
 	break;
 
@@ -143,7 +144,7 @@ int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 
 int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
 {
-	cellSysutil.Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state_addr);
+	cellSysutil->Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state_addr);
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -181,7 +182,7 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
 
 int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution> resolution)
 {
-	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
+	cellSysutil->Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
 		resolutionId, resolution.GetAddr());
 
 	if (!resolution.IsGood())
@@ -199,7 +200,7 @@ int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution
 
 int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
+	cellSysutil->Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
 		videoOut, config_addr, option_addr, waitForEvent);
 
 	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration)))
@@ -240,7 +241,7 @@ int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 wa
 
 int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 {
-	cellSysutil.Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
+	cellSysutil->Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		videoOut, config_addr, option_addr);
 
 	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
@@ -271,7 +272,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 
 int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_ptr_t<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil.Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		videoOut, deviceIndex, info.GetAddr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -303,7 +304,7 @@ int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_ptr_t<CellVideo
 
 int cellVideoOutGetNumberOfDevice(u32 videoOut)
 {
-	cellSysutil.Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
+	cellSysutil->Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
 
 	switch(videoOut)
 	{
@@ -316,7 +317,7 @@ int cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=0x%x, option=0x%x)",
+	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=0x%x, option=0x%x)",
 		videoOut, resolutionId, aspect, option);
 
 	if(!ResolutionIdToNum(resolutionId))
@@ -338,7 +339,7 @@ extern std::atomic<u32> g_FsAioReadCur;
 
 int cellSysutilCheckCallback()
 {
-	cellSysutil.Log("cellSysutilCheckCallback()");
+	cellSysutil->Log("cellSysutilCheckCallback()");
 
 	Emu.GetCallbackManager().m_exit_callback.Check();
 
@@ -359,22 +360,22 @@ int cellSysutilCheckCallback()
 
 int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
 {
-	cellSysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
+	cellSysutil->Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
 
 	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
 
-	wxGetApp().SendDbgCommand(DID_REGISTRED_CALLBACK);
+	SendDbgCommand(DID_REGISTRED_CALLBACK);
 
 	return CELL_OK;
 }
 
 int cellSysutilUnregisterCallback(int slot)
 {
-	cellSysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
+	cellSysutil->Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 
 	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
 
-	wxGetApp().SendDbgCommand(DID_UNREGISTRED_CALLBACK);
+	SendDbgCommand(DID_UNREGISTRED_CALLBACK);
 
 	return CELL_OK;
 }
@@ -385,31 +386,31 @@ int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCa
 
 	if(type & CELL_MSGDIALOG_DIALOG_TYPE_NORMAL)
 	{
-		style |= wxICON_EXCLAMATION;
+		style |= rICON_EXCLAMATION;
 	}
 	else
 	{
-		style |= wxICON_ERROR;
+		style |= rICON_ERROR;
 	}
 
 	if(type & CELL_MSGDIALOG_BUTTON_TYPE_YESNO)
 	{
-		style |= wxYES_NO;
+		style |= rYES_NO;
 	}
 	else
 	{
-		style |= wxOK;
+		style |= rOK;
 	}
 
-	int res = wxMessageBox(wxString(msgString, wxConvUTF8), wxGetApp().GetAppName(), style);
+	int res = rMessageBox(std::string(msgString), rGetApp().GetAppName(), style);
 
 	u64 status;
 
 	switch(res)
 	{
-	case wxOK: status = CELL_MSGDIALOG_BUTTON_OK; break;
-	case wxYES: status = CELL_MSGDIALOG_BUTTON_YES; break;
-	case wxNO: status = CELL_MSGDIALOG_BUTTON_NO; break;
+	case rOK: status = CELL_MSGDIALOG_BUTTON_OK; break;
+	case rYES: status = CELL_MSGDIALOG_BUTTON_YES; break;
+	case rNO: status = CELL_MSGDIALOG_BUTTON_NO; break;
 
 	default:
 		if(res)
@@ -430,7 +431,7 @@ int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCa
 
 int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
-	cellSysutil.Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=%d, extParam=%d)",
+	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=%d, extParam=%d)",
 		errorCode, callback.GetAddr(), userData, extParam);
 
 	std::string errorMessage;
@@ -508,10 +509,10 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 	errorMessage.append(")\n");
 
 	u64 status;
-	int res = wxMessageBox(errorMessage, wxGetApp().GetAppName(), wxICON_ERROR | wxOK);
+	int res = rMessageBox(errorMessage, rGetApp().GetAppName(), rICON_ERROR | rOK);
 	switch(res)
 	{
-	case wxOK: status = CELL_MSGDIALOG_BUTTON_OK; break;
+	case rOK: status = CELL_MSGDIALOG_BUTTON_OK; break;
 	default:
 		if(res)
 		{
@@ -532,7 +533,7 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 
 int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)",
+	cellSysutil->Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)",
 		audioOut, type, fs, option);
 
 	option = 0;
@@ -573,7 +574,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)",
+	cellSysutil->Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)",
 		audioOut, type, fs, ch, option);
 
 	option = 0;
@@ -623,7 +624,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 {
-	cellSysutil.Warning("cellAudioOutGetState(audioOut=0x%x,deviceIndex=0x%x,state_addr=0x%x)",audioOut,deviceIndex,state_addr);
+	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x,deviceIndex=0x%x,state_addr=0x%x)",audioOut,deviceIndex,state_addr);
 	CellAudioOutState state;
 	memset(&state, 0, sizeof(CellAudioOutState));
 
@@ -655,7 +656,7 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 
 int cellAudioOutConfigure(u32 audioOut, mem_ptr_t<CellAudioOutConfiguration> config, mem_ptr_t<CellAudioOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
+	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
 		audioOut, config.GetAddr(), option.GetAddr(), waitForEvent);
 
 	if (!config.IsGood())
@@ -689,7 +690,7 @@ int cellAudioOutConfigure(u32 audioOut, mem_ptr_t<CellAudioOutConfiguration> con
 
 int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
 {
-	cellSysutil.Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)",
+	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		audioOut, config_addr, option_addr);
 
 	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration))) return CELL_EFAULT;
@@ -719,7 +720,7 @@ int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
 
 int cellAudioOutGetNumberOfDevice(u32 audioOut)
 {
-	cellSysutil.Warning("cellAudioOutGetNumberOfDevice(videoOut=%d)",audioOut);
+	cellSysutil->Warning("cellAudioOutGetNumberOfDevice(videoOut=%d)",audioOut);
 
 	switch(audioOut)
 	{
@@ -732,7 +733,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil.Error("Unimplemented function: cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Error("Unimplemented function: cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		audioOut, deviceIndex, info.GetAddr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -751,7 +752,7 @@ int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudio
 
 int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 {
-	cellSysutil.Warning("cellAudioOutSetCopyControl(audioOut=%d,control=%d)",audioOut,control);
+	cellSysutil->Warning("cellAudioOutSetCopyControl(audioOut=%d,control=%d)",audioOut,control);
 
 	switch(audioOut)
 	{
@@ -785,28 +786,28 @@ typedef struct{
 } CellSysCacheParam;
 
 
-class WxDirDeleteTraverser : public wxDirTraverser
-{
-public:
-	virtual wxDirTraverseResult OnFile(const wxString& filename)
-	{
-		if (!wxRemoveFile(filename)){
-			cellSysutil.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
-		}
-		return wxDIR_CONTINUE;
-	}
-	virtual wxDirTraverseResult OnDir(const wxString& dirname)
-	{
-		wxDir dir(dirname);
-		dir.Traverse(*this);
-		if (!wxRmDir(dirname)){
-		//this get triggered a few times while clearing folders
-		//but if this gets reimplented we should probably warn
-		//if directories can't be removed
-		}
-		return wxDIR_CONTINUE;
-	}
-};
+//class WxDirDeleteTraverser : public wxDirTraverser
+//{
+//public:
+//	virtual wxDirTraverseResult OnFile(const wxString& filename)
+//	{
+//		if (!wxRemoveFile(filename)){
+//			cellSysutil->Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+//		}
+//		return wxDIR_CONTINUE;
+//	}
+//	virtual wxDirTraverseResult OnDir(const wxString& dirname)
+//	{
+//		wxDir dir(dirname);
+//		dir.Traverse(*this);
+//		if (!wxRmDir(dirname)){
+//		//this get triggered a few times while clearing folders
+//		//but if this gets reimplented we should probably warn
+//		//if directories can't be removed
+//		}
+//		return wxDIR_CONTINUE;
+//	}
+//};
 
 int cellSysCacheClear(void)
 {
@@ -816,21 +817,23 @@ int cellSysCacheClear(void)
 	std::string localPath;
 	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
 	
-	//TODO: replace wxWidgetsSpecific filesystem stuff
-	if (wxDirExists(fmt::FromUTF8(localPath))){
-		WxDirDeleteTraverser deleter;
-		wxString f = wxFindFirstFile(fmt::FromUTF8(localPath+"\\*"),wxDIR);
-		while (!f.empty())
-		{
-			wxDir dir(f);
-			dir.Traverse(deleter);
-			f = wxFindNextFile();
-		}
-		return CELL_SYSCACHE_RET_OK_CLEARED;
-	}
-	else{
-		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
-	}
+	//TODO: implement
+	//if (rDirExists(localPath)){
+	//	WxDirDeleteTraverser deleter;
+	//	wxString f = wxFindFirstFile(fmt::FromUTF8(localPath+"\\*"),wxDIR);
+	//	while (!f.empty())
+	//	{
+	//		wxDir dir(f);
+	//		dir.Traverse(deleter);
+	//		f = wxFindNextFile();
+	//	}
+	//	return CELL_SYSCACHE_RET_OK_CLEARED;
+	//}
+	//else{
+	//	return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+	//}
+
+	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
 int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
@@ -847,7 +850,7 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 
 int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_t<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellSysutil.Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
+	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
 		version, dirName_addr, errDialog, funcStat, container);
 
 	if (!Memory.IsGoodAddr(dirName_addr) || !funcStat.IsGood())
@@ -918,7 +921,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 
 int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
 {
-	cellSysutil.Warning("cellSysutilGetBgmPlaybackStatus(status=0x%x)", status.GetAddr());
+	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus(status=0x%x)", status.GetAddr());
 
 	// non-essential, so always assume background music is stopped/disabled
 	status->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
@@ -939,74 +942,74 @@ int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 
 void cellSysutil_init()
 {
-	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
-	cellSysutil.AddFunc(0x938013a0, cellSysutilGetSystemParamString);
+	cellSysutil->AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
+	cellSysutil->AddFunc(0x938013a0, cellSysutilGetSystemParamString);
 
-	cellSysutil.AddFunc(0x887572d5, cellVideoOutGetState);
-	cellSysutil.AddFunc(0xe558748d, cellVideoOutGetResolution);
-	cellSysutil.AddFunc(0x0bae8772, cellVideoOutConfigure);
-	cellSysutil.AddFunc(0x15b0b0cd, cellVideoOutGetConfiguration);
-	cellSysutil.AddFunc(0x1e930eef, cellVideoOutGetDeviceInfo);
-	cellSysutil.AddFunc(0x75bbb672, cellVideoOutGetNumberOfDevice);
-	cellSysutil.AddFunc(0xa322db75, cellVideoOutGetResolutionAvailability);
+	cellSysutil->AddFunc(0x887572d5, cellVideoOutGetState);
+	cellSysutil->AddFunc(0xe558748d, cellVideoOutGetResolution);
+	cellSysutil->AddFunc(0x0bae8772, cellVideoOutConfigure);
+	cellSysutil->AddFunc(0x15b0b0cd, cellVideoOutGetConfiguration);
+	cellSysutil->AddFunc(0x1e930eef, cellVideoOutGetDeviceInfo);
+	cellSysutil->AddFunc(0x75bbb672, cellVideoOutGetNumberOfDevice);
+	cellSysutil->AddFunc(0xa322db75, cellVideoOutGetResolutionAvailability);
 
-	cellSysutil.AddFunc(0x189a74da, cellSysutilCheckCallback);
-	cellSysutil.AddFunc(0x9d98afa0, cellSysutilRegisterCallback);
-	cellSysutil.AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
+	cellSysutil->AddFunc(0x189a74da, cellSysutilCheckCallback);
+	cellSysutil->AddFunc(0x9d98afa0, cellSysutilRegisterCallback);
+	cellSysutil->AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
 
-	cellSysutil.AddFunc(0x7603d3db, cellMsgDialogOpen2);
-	cellSysutil.AddFunc(0x3e22cb4b, cellMsgDialogOpenErrorCode);
+	cellSysutil->AddFunc(0x7603d3db, cellMsgDialogOpen2);
+	cellSysutil->AddFunc(0x3e22cb4b, cellMsgDialogOpenErrorCode);
 
-	cellSysutil.AddFunc(0xf4e3caa0, cellAudioOutGetState);
-	cellSysutil.AddFunc(0x4692ab35, cellAudioOutConfigure);
-	cellSysutil.AddFunc(0xc01b4e7c, cellAudioOutGetSoundAvailability);
-	cellSysutil.AddFunc(0x2beac488, cellAudioOutGetSoundAvailability2);
-	cellSysutil.AddFunc(0x7663e368, cellAudioOutGetDeviceInfo);
-	cellSysutil.AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
-	cellSysutil.AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
-	cellSysutil.AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
+	cellSysutil->AddFunc(0xf4e3caa0, cellAudioOutGetState);
+	cellSysutil->AddFunc(0x4692ab35, cellAudioOutConfigure);
+	cellSysutil->AddFunc(0xc01b4e7c, cellAudioOutGetSoundAvailability);
+	cellSysutil->AddFunc(0x2beac488, cellAudioOutGetSoundAvailability2);
+	cellSysutil->AddFunc(0x7663e368, cellAudioOutGetDeviceInfo);
+	cellSysutil->AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
+	cellSysutil->AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
+	cellSysutil->AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
 
-	cellSysutil.AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
+	cellSysutil->AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
 
-	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
-	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
+	cellSysutil->AddFunc(0x1e7bff94, cellSysCacheMount);
+	cellSysutil->AddFunc(0x744c1544, cellSysCacheClear);
 
-	cellSysutil.AddFunc(0x9117df20, cellHddGameCheck);
-	//cellSysutil.AddFunc(0x4bdec82a, cellHddGameCheck2);
-	//cellSysutil.AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
-	//cellSysutil.AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
-	//cellSysutil.AddFunc(0xafd605b3, cellHddGameExitBroken);
+	cellSysutil->AddFunc(0x9117df20, cellHddGameCheck);
+	//cellSysutil->AddFunc(0x4bdec82a, cellHddGameCheck2);
+	//cellSysutil->AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
+	//cellSysutil->AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
+	//cellSysutil->AddFunc(0xafd605b3, cellHddGameExitBroken);
 
 	//cellSysutil_SaveData
-	//cellSysutil.AddFunc(0x04c06fc2, cellSaveDataGetListItem);
-	//cellSysutil.AddFunc(0x273d116a, cellSaveDataUserListExport);
-	//cellSysutil.AddFunc(0x27cb8bc2, cellSaveDataListDelete);
-	//cellSysutil.AddFunc(0x39d6ee43, cellSaveDataUserListImport);
-	//cellSysutil.AddFunc(0x46a2d878, cellSaveDataFixedExport);
-	//cellSysutil.AddFunc(0x491cc554, cellSaveDataListExport);
-	//cellSysutil.AddFunc(0x52541151, cellSaveDataFixedImport);
-	//cellSysutil.AddFunc(0x529231b0, cellSaveDataUserFixedImport);
-	//cellSysutil.AddFunc(0x6b4e0de6, cellSaveDataListImport);
-	//cellSysutil.AddFunc(0x7048a9ba, cellSaveDataUserListDelete);
-	//cellSysutil.AddFunc(0x95ae2cde, cellSaveDataUserFixedExport);
-	//cellSysutil.AddFunc(0xf6482036, cellSaveDataUserGetListItem);
-	cellSysutil.AddFunc(0x2de0d663, cellSaveDataListSave2);
-	cellSysutil.AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
-	cellSysutil.AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
-	cellSysutil.AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
-	cellSysutil.AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
-	cellSysutil.AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
-	//cellSysutil.AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
-	//cellSysutil.AddFunc(0x21425307, cellSaveDataListAutoLoad);
-	//cellSysutil.AddFunc(0xedadd797, cellSaveDataDelete2);
-	//cellSysutil.AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
-	//cellSysutil.AddFunc(0x39dd8425, cellSaveDataUserListLoad);
-	//cellSysutil.AddFunc(0x40b34847, cellSaveDataUserFixedSave);
-	//cellSysutil.AddFunc(0x6e7264ed, cellSaveDataUserFixedLoad);
-	//cellSysutil.AddFunc(0x52aac4fa, cellSaveDataUserAutoSave);
-	//cellSysutil.AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
-	//cellSysutil.AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
-	//cellSysutil.AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
+	//cellSysutil->AddFunc(0x04c06fc2, cellSaveDataGetListItem);
+	//cellSysutil->AddFunc(0x273d116a, cellSaveDataUserListExport);
+	//cellSysutil->AddFunc(0x27cb8bc2, cellSaveDataListDelete);
+	//cellSysutil->AddFunc(0x39d6ee43, cellSaveDataUserListImport);
+	//cellSysutil->AddFunc(0x46a2d878, cellSaveDataFixedExport);
+	//cellSysutil->AddFunc(0x491cc554, cellSaveDataListExport);
+	//cellSysutil->AddFunc(0x52541151, cellSaveDataFixedImport);
+	//cellSysutil->AddFunc(0x529231b0, cellSaveDataUserFixedImport);
+	//cellSysutil->AddFunc(0x6b4e0de6, cellSaveDataListImport);
+	//cellSysutil->AddFunc(0x7048a9ba, cellSaveDataUserListDelete);
+	//cellSysutil->AddFunc(0x95ae2cde, cellSaveDataUserFixedExport);
+	//cellSysutil->AddFunc(0xf6482036, cellSaveDataUserGetListItem);
+	cellSysutil->AddFunc(0x2de0d663, cellSaveDataListSave2);
+	cellSysutil->AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
+	cellSysutil->AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
+	cellSysutil->AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
+	cellSysutil->AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
+	cellSysutil->AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
+	//cellSysutil->AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
+	//cellSysutil->AddFunc(0x21425307, cellSaveDataListAutoLoad);
+	//cellSysutil->AddFunc(0xedadd797, cellSaveDataDelete2);
+	//cellSysutil->AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
+	//cellSysutil->AddFunc(0x39dd8425, cellSaveDataUserListLoad);
+	//cellSysutil->AddFunc(0x40b34847, cellSaveDataUserFixedSave);
+	//cellSysutil->AddFunc(0x6e7264ed, cellSaveDataUserFixedLoad);
+	//cellSysutil->AddFunc(0x52aac4fa, cellSaveDataUserAutoSave);
+	//cellSysutil->AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
+	//cellSysutil->AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
+	//cellSysutil->AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
 
-	cellSysutil.AddFunc(0x6d087930, cellWebBrowserEstimate2);
+	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
 }

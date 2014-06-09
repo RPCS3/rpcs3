@@ -75,42 +75,42 @@ __forceinline static u64 Read64LE(vfsStream& f)
 	return ((u64)Read32LE(f) | (u64)Read32LE(f) << 32);
 }
 
-__forceinline static void Write8(wxFile& f, const u8 data)
+__forceinline static void Write8(rFile& f, const u8 data)
 {
 	f.Write(&data, 1);
 }
 
-__forceinline static void Write16(wxFile& f, const u16 data)
+__forceinline static void Write16(rFile& f, const u16 data)
 {
 	Write8(f, data >> 8);
 	Write8(f, data);
 }
 
-__forceinline static void Write32(wxFile& f, const u32 data)
+__forceinline static void Write32(rFile& f, const u32 data)
 {
 	Write16(f, data >> 16);
 	Write16(f, data);
 }
 
-__forceinline static void Write64(wxFile& f, const u64 data)
+__forceinline static void Write64(rFile& f, const u64 data)
 {
 	Write32(f, data >> 32);
 	Write32(f, data);
 }
 
-__forceinline static void Write16LE(wxFile& f, const u16 data)
+__forceinline static void Write16LE(rFile& f, const u16 data)
 {
 	Write8(f, data);
 	Write8(f, data >> 8);
 }
 
-__forceinline static void Write32LE(wxFile& f, const u32 data)
+__forceinline static void Write32LE(rFile& f, const u32 data)
 {
 	Write16LE(f, data);
 	Write16LE(f, data >> 16);
 }
 
-__forceinline static void Write64LE(wxFile& f, const u64 data)
+__forceinline static void Write64LE(rFile& f, const u64 data)
 {
 	Write32LE(f, data);
 	Write32LE(f, data >> 32);

@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "Emu/ConLog.h"
 #include "rpcs3/Ini.h"
-#include "rpcs3.h"
 #include "Keyboard.h"
 #include "Null/NullKeyboardHandler.h"
-#include "Windows/WindowsKeyboardHandler.h"
 
 KeyboardManager::KeyboardManager()
 	: m_keyboard_handler(nullptr)
@@ -22,17 +20,13 @@ void KeyboardManager::Init(const u32 max_connect)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 comes out.
-	switch(Ini.KeyboardHandlerMode.GetValue())
+	int numHandlers = rPlatform::getKeyboardHandlerCount();
+	int selectedHandler = Ini.KeyboardHandlerMode.GetValue();
+	if (selectedHandler > numHandlers)
 	{
-	case 1:
-		m_keyboard_handler.reset(new WindowsKeyboardHandler());
-		break;
-
-	default:
-	case 0:
-		m_keyboard_handler.reset(new NullKeyboardHandler());
-		break;
+		selectedHandler = 0;
 	}
+	m_keyboard_handler.reset(rPlatform::getKeyboardHandler(selectedHandler));
 
 	m_keyboard_handler->Init(max_connect);
 	m_inited = true;

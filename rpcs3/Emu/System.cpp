@@ -4,10 +4,15 @@
 #include "Emu/System.h"
 #include "Ini.h"
 
+#include "Emu/GameInfo.h"
+#include "Emu/SysCalls/Static.h"
+#include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/FS/vfsFile.h"
+
+#include "Emu/CPU/CPUThreadManager.h" //gui dependency
 
 #include "../Crypto/unself.h"
 #include <cstdlib>
@@ -29,6 +34,9 @@ Emulator::Emulator()
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
 	, m_event_manager(new EventManager())
+	, m_sfunc_manager(new StaticFuncManager())
+	, m_module_manager(new ModuleManager())
+	, m_thread_manager(new CPUThreadManager())
 {
 }
 
@@ -107,7 +115,7 @@ bool Emulator::BootGame(const std::string& path)
 	{
 		const std::string& curpath = path + elf_path[i];
 
-		if(wxFile::Access(fmt::FromUTF8(curpath), wxFile::read))
+		if(rFile::Access(curpath, rFile::read))
 		{
 			SetPath(curpath);
 			Load();
@@ -121,20 +129,22 @@ bool Emulator::BootGame(const std::string& path)
 
 void Emulator::Load()
 {
-	if(!wxFileExists(fmt::FromUTF8(m_path))) return;
+	GetModuleManager().init();
+
+	if(!rFileExists(m_path)) return;
 
 	if(IsSelf(m_path))
 	{
 		std::string self_path = m_path;
-		std::string elf_path = fmt::ToUTF8(wxFileName(fmt::FromUTF8(m_path)).GetPath());
+		std::string elf_path = rFileName(m_path).GetPath();
 
-		if (wxFileName(fmt::FromUTF8(m_path)).GetFullName().CmpNoCase("EBOOT.BIN") == 0)
+		if (fmt::CmpNoCase(rFileName(m_path).GetFullName(),"EBOOT.BIN") == 0)
 		{
 			elf_path += "/BOOT.BIN";
 		}
 		else
 		{
-			elf_path += "/" + fmt::ToUTF8(wxFileName(fmt::FromUTF8(m_path)).GetName()) + ".elf";
+			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
 		}
 
 		if(!DecryptSelf(elf_path, self_path))
@@ -297,9 +307,7 @@ void Emulator::Load()
 	thread.Run();
 
 	m_status = Ready;
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_READY_EMU);
-#endif
+	SendDbgCommand(DID_READY_EMU);
 }
 
 void Emulator::Run()
@@ -316,9 +324,7 @@ void Emulator::Run()
 		Resume();
 		return;
 	}
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_START_EMU);
-#endif
+	SendDbgCommand(DID_START_EMU);
 
 	//ConLog.Write("run...");
 	m_status = Running;
@@ -330,40 +336,30 @@ void Emulator::Run()
 	//m_memory_viewer->ShowPC();
 
 	GetCPU().Exec();
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STARTED_EMU);
-#endif
+	SendDbgCommand(DID_STARTED_EMU);
 }
 
 void Emulator::Pause()
 {
 	if(!IsRunning()) return;
 	//ConLog.Write("pause...");
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
-#endif
+	SendDbgCommand(DID_PAUSE_EMU);
 
 	m_status = Paused;
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
-#endif
+	SendDbgCommand(DID_PAUSED_EMU);
 }
 
 void Emulator::Resume()
 {
 	if(!IsPaused()) return;
 	//ConLog.Write("resume...");
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
-#endif
+	SendDbgCommand(DID_RESUME_EMU);
 
 	m_status = Running;
 
 	CheckStatus();
 	//if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
-#endif
+	SendDbgCommand(DID_RESUMED_EMU);
 }
 
 void Emulator::Stop()
@@ -371,9 +367,7 @@ void Emulator::Stop()
 	if(IsStopped()) return;
 	//ConLog.Write("shutdown...");
 
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STOP_EMU);
-#endif
+	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
 	m_rsx_callback = 0;
@@ -394,15 +388,14 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	UnloadModules();
+	//not all modules unload cleanly, so we're not unloading them for now
+	//GetModuleManager().UnloadModules(); 
 
 	CurGameInfo.Reset();
 	Memory.Close();
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
-#ifndef QT_UI
-	wxGetApp().SendDbgCommand(DID_STOPPED_EMU);
-#endif
+	SendDbgCommand(DID_STOPPED_EMU);
 }
 
 void Emulator::SavePoints(const std::string& path)

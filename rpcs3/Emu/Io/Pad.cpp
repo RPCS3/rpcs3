@@ -1,13 +1,16 @@
 #include "stdafx.h"
 #include "Emu/ConLog.h"
 #include "rpcs3/Ini.h"
-#include "rpcs3.h"
 #include "Pad.h"
 #include "Null/NullPadHandler.h"
+#ifdef wxGUI
 #include "Windows/WindowsPadHandler.h"
+#include "rpcs3.h"
 #if defined(_WIN32)
 #include "XInput/XInputPadHandler.h"
 #endif
+#endif
+
 
 PadManager::PadManager()
 	: m_pad_handler(nullptr)
@@ -25,23 +28,13 @@ void PadManager::Init(const u32 max_connect)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 is available.
-	switch(Ini.PadHandlerMode.GetValue())
+	int numHandlers = rPlatform::getPadHandlerCount();
+	int selectedHandler = Ini.PadHandlerMode.GetValue();
+	if (selectedHandler > numHandlers)
 	{
-	case 1:
-		m_pad_handler.reset(new WindowsPadHandler());
-		break;
-
-#if defined(_WIN32)
-	case 2:
-		m_pad_handler.reset(new XInputPadHandler());
-		break;
-#endif
-
-	default:
-	case 0:
-		m_pad_handler.reset(new NullPadHandler());
-		break;
+		selectedHandler = 0;
 	}
+	m_pad_handler.reset(rPlatform::getPadHandler(selectedHandler));
 
 	m_pad_handler->Init(max_connect);
 	m_inited = true;

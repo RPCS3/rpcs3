@@ -46,24 +46,24 @@ u32 vfsDevice::CmpLocalPath(const std::string& local_path)
 	if(local_path.length() < m_local_path.length())
 		return 0;
 
-	wxFileName path0(fmt::FromUTF8(m_local_path));
+	rFileName path0(m_local_path);
 	path0.Normalize();
 
 #ifdef _WIN32
-#define DL '\\'
+#define DL "\\"
 #else
-#define DL '/'
+#define DL "/"
 #endif
 
-	wxArrayString arr0 = wxSplit(path0.GetFullPath(), DL);
-	wxArrayString arr1 = wxSplit(fmt::FromUTF8(local_path), DL);
+	std::vector<std::string> arr0 = fmt::rSplit(path0.GetFullPath(), DL);
+	std::vector<std::string> arr1 = fmt::rSplit(local_path, DL);
 
-	const u32 lim = std::min(arr0.GetCount(), arr1.GetCount());
+	const u32 lim = std::min(arr0.size(), arr1.size());
 	u32 ret = 0;
 
-	for(u32 i=0; i<lim; ret += arr0[i++].Len() + 1)
+	for(u32 i=0; i<lim; ret += arr0[i++].size() + 1)
 	{
-		if(arr0[i].CmpNoCase(arr1[i]) != 0)
+		if(fmt::CmpNoCase(arr0[i],arr1[i]) != 0)
 		{
 			break;
 		}
@@ -188,9 +188,9 @@ std::string vfsDevice::GetWinPath(const std::string& p, bool is_dir)
 
 	if(is_dir && ret[ret.length() - 1] != '/' && ret[ret.length() - 1] != '\\') ret += '/'; // ???
 
-	wxFileName res(fmt::FromUTF8(ret));
+	rFileName res(ret);
 	res.Normalize();
-	return fmt::ToUTF8(res.GetFullPath());
+	return res.GetFullPath();
 }
 
 std::string vfsDevice::GetWinPath(const std::string& l, const std::string& r)

@@ -142,9 +142,9 @@ public:
 	u32 m_draw_array_first;
 
 public:
-	wxCriticalSection m_cs_main;
-	wxSemaphore m_sem_flush;
-	wxSemaphore m_sem_flip;
+	rCriticalSection m_cs_main;
+	rSemaphore m_sem_flush;
+	rSemaphore m_sem_flip;
 	Callback m_flip_handler;
 
 public:

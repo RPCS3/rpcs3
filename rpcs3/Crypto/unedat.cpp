@@ -133,7 +133,7 @@ unsigned char* get_block_key(int block, NPD_HEADER *npd)
 }
 
 // EDAT/SDAT functions.
-int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(rFile *in, rFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
 {
 	// Get metadata info and setup buffers.
 	int block_num = (int) ((edat->file_size + edat->block_size - 1) / edat->block_size);
@@ -338,7 +338,7 @@ static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
 	return true;
 }
 
-int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFile *f, bool verbose)
+int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, rFile *f, bool verbose)
 {
 	f->Seek(0);
 	unsigned char *header = new unsigned char[0xA0];
@@ -490,7 +490,7 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	delete[] buf;
 }
 
-bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
+bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER *NPD = new NPD_HEADER();
@@ -604,9 +604,9 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 int DecryptEDAT(const std::string& input_file_name, const std::string& output_file_name, int mode, const std::string& rap_file_name, unsigned char *custom_klic, bool verbose)
 {
 	// Prepare the files.
-	wxFile input(input_file_name.c_str());
-	wxFile output(output_file_name.c_str(), wxFile::write);
-	wxFile rap(rap_file_name.c_str());
+	rFile input(input_file_name.c_str());
+	rFile output(output_file_name.c_str(), rFile::write);
+	rFile rap(rap_file_name.c_str());
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -682,7 +682,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	{
 		input.Close();
 		output.Close();
-		wxRemoveFile(output_file_name);
+		rRemoveFile(output_file_name);
 		return 0;
 	}
 	

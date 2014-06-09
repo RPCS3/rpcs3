@@ -1,20 +1,21 @@
 #pragma once
 
 #include <atomic>
-#include "Gui/MemoryViewer.h"
-#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/CPU/CPUThreadManager.h" //gui dependency
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
 #include "Emu/GS/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
-#include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
 #include "SysCalls/Callback.h"
 
 class EventManager;
-extern void UnloadModules();
+class ModuleManager;
+class StaticFuncManager;
+//class CPUThreadManager;
+//class CPUThread;
 
 struct EmuInfo
 {
@@ -74,14 +75,14 @@ class Emulator
 
 	u32 m_rsx_callback;
 	u32 m_ppu_thr_exit;
-	MemoryViewerPanel* m_memory_viewer;
+	//MemoryViewerPanel* m_memory_viewer; //GUI dependency
 	//ArrayF<CPUThread> m_cpu_threads;
 	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
 
-	CPUThreadManager m_thread_manager;
+	CPUThreadManager *m_thread_manager;
 	PadManager m_pad_manager;
 	KeyboardManager m_keyboard_manager;
 	MouseManager m_mouse_manager;
@@ -92,6 +93,8 @@ class Emulator
 	CallbackManager m_callback_manager;
 	CPUThread* m_ppu_callback_thr;
 	std::unique_ptr<EventManager> m_event_manager;
+	std::unique_ptr<StaticFuncManager> m_sfunc_manager;
+	std::unique_ptr<ModuleManager> m_module_manager;
 
 	VFS m_vfs;
 
@@ -108,7 +111,7 @@ public:
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
 
-	CPUThreadManager& GetCPU()             { return m_thread_manager; }
+	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
 	PadManager&       GetPadManager()      { return m_pad_manager; }
 	KeyboardManager&  GetKeyboardManager() { return m_keyboard_manager; }
 	MouseManager&     GetMouseManager()    { return m_mouse_manager; }
@@ -122,7 +125,9 @@ public:
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
-	
+	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
+	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
+
 	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
 	{
 		m_modules_init.push_back(std::move(m));

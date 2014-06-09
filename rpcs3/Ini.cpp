@@ -31,12 +31,12 @@ Inis Ini;
 
 static bool StringToBool(const wxString& str)
 {
-	if(
+	if (
 		!str.CmpNoCase("enable") ||
 		!str.CmpNoCase("e") ||
 		!str.CmpNoCase("1") ||
 		!str.CmpNoCase("true") ||
-		!str.CmpNoCase("t") )
+		!str.CmpNoCase("t"))
 	{
 		return true;
 	}
@@ -46,7 +46,7 @@ static bool StringToBool(const wxString& str)
 
 static wxString BoolToString(const bool b)
 {
-	if(b) return "true";
+	if (b) return "true";
 
 	return "false";
 }
@@ -100,20 +100,20 @@ static wxPoint StringToPosition(const wxString& str)
 {
 	wxPoint ret;
 
-	wxString s[2] = {wxEmptyString, wxEmptyString};
+	wxString s[2] = { wxEmptyString, wxEmptyString };
 
-	for(uint i=0, a=0; i<str.Length(); ++i)
+	for (uint i = 0, a = 0; i<str.Length(); ++i)
 	{
-		if(!str(i, 1).CmpNoCase("x"))
+		if (!str(i, 1).CmpNoCase("x"))
 		{
-			if(++a >= 2) return wxDefaultPosition;
+			if (++a >= 2) return wxDefaultPosition;
 			continue;
 		}
 
 		s[a] += str(i, 1);
 	}
-	
-	if(s[0].IsEmpty() || s[1].IsEmpty())
+
+	if (s[0].IsEmpty() || s[1].IsEmpty())
 	{
 		return wxDefaultPosition;
 	}
@@ -121,7 +121,7 @@ static wxPoint StringToPosition(const wxString& str)
 	s[0].ToLong((long*)&ret.x);
 	s[1].ToLong((long*)&ret.y);
 
-	if(ret.x <= 0 || ret.y <= 0)
+	if (ret.x <= 0 || ret.y <= 0)
 	{
 		return wxDefaultPosition;
 	}
@@ -179,7 +179,7 @@ static std::string WindowInfoToString(const WindowInfo& wind)
 //Ini
 Ini::Ini()
 {
-		m_Config = getIniFile();
+	m_Config = getIniFile();
 }
 
 Ini::~Ini()

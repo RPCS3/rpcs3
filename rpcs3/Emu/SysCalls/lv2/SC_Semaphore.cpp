@@ -18,7 +18,7 @@ struct semaphore_attr
 
 struct semaphore
 {
-	wxSemaphore sem;
+	rSemaphore sem;
 	semaphore_attr attr;
 	int sem_count;
 

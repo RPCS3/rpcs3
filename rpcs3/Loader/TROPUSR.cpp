@@ -4,8 +4,6 @@
 #include "Emu/System.h"
 #include "TROPUSR.h"
 
-#include "wx/xml/xml.h"
-
 TROPUSRLoader::TROPUSRLoader()
 {
 	m_file = NULL;
@@ -123,19 +121,19 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
 {
 	std::string path;
-	wxXmlDocument doc;
+	rXmlDocument doc;
 	Emu.GetVFS().GetDevice(configpath.c_str(), path);
-	doc.Load(fmt::FromUTF8(path));
+	doc.Load(path);
 
 	m_table4.clear();
 	m_table6.clear();
-	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
+	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy")
 		{
-			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
+			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
 			u32 trophy_grade;
-			switch (((const char *)n->GetAttribute("ttype").mb_str())[0])
+			switch (((const char *)n->GetAttribute("ttype").c_str())[0])
 			{
 			case 'B': trophy_grade = 4; break;
 			case 'S': trophy_grade = 3; break;
