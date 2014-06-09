@@ -572,7 +572,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
       <Filter>Emu\Cell\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="L:\DEV\2014\rpcs3\rpcs3\Emu\Io\XInput\XInputPadHandler.cpp">
+    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
       <Filter>Emu\Io\XInput</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1036,7 +1036,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
       <Filter>Emu\Cell\currently_unused</Filter>
     </ClInclude>
-    <ClInclude Include="L:\DEV\2014\rpcs3\rpcs3\Emu\Io\XInput\XInputPadHandler.h">
+    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
       <Filter>Emu\Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
