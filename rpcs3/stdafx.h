@@ -10,11 +10,7 @@
 #define SARRSIZEOF(array) (sizeof(array)/sizeof(array[0]))
 
 #define NOMINMAX
-//#ifdef wxGUI
 #ifndef QT_UI
-#ifdef _WIN32
-//#include <wx/msw/setup.h>
-#endif
 #include <wx/wxprec.h>
 #include <wx/config.h>
 #include <wx/string.h>
@@ -44,7 +40,6 @@
 #include <wx/listctrl.h>
 
 #endif
-//#endif
 
 #ifdef MSVC_CRT_MEMLEAK_DETECTION
 	#ifdef _DEBUG
@@ -54,11 +49,6 @@
 		#endif
 	#endif  // _DEBUG
 #endif // MSVC_CRT_MEMLEAK_DETECTION
-
-#ifndef _WIN32
-//hack, disabled
-//#define wx_str() ToStdString().c_str()
-#endif
 
 #include <cstdint>
 
@@ -300,8 +290,6 @@ enum Status
 #include "Emu/System.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/DbgCommand.h"
-//#ifdef wxGUI
-//#endif
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
@@ -315,7 +303,6 @@ enum Status
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
-//#ifdef wxGUI
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

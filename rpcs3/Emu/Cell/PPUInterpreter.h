@@ -4,7 +4,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
-//#include "rpcs3.h" //GUI dependency
 #include <stdint.h>
 #ifdef _MSC_VER
 #include <intrin.h>

@@ -608,9 +608,8 @@ void GLGSRender::OnInit()
 
 void GLGSRender::OnInitThread()
 {
-	m_context = m_frame->GetNewContext();//new rGLContext(m_frame->GetCanvas());
+	m_context = m_frame->GetNewContext();
 
-	//m_frame->GetCanvas()->SetCurrent(*m_context);
 	m_frame->SetCurrent(m_context);
 
 	InitProcTable();

@@ -3,14 +3,6 @@
 #include "rpcs3/Ini.h"
 #include "Pad.h"
 #include "Null/NullPadHandler.h"
-#ifdef wxGUI
-#include "Windows/WindowsPadHandler.h"
-#include "rpcs3.h"
-#if defined(_WIN32)
-#include "XInput/XInputPadHandler.h"
-#endif
-#endif
-
 
 PadManager::PadManager()
 	: m_pad_handler(nullptr)

@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 
-//struct rGLContext;
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
@@ -18,31 +17,7 @@ struct rCanvas
 	void *handle;
 };
 
-//struct rGLContext
-//{
-//	rGLContext();
-//	rGLContext(rGLContext &) = delete;
-//	rGLContext(rCanvas *canvas);
-//	~rGLContext();
-//
-//	void *handle;
-//};
-
-//struct rFrame
-//{
-//	rFrame();
-//	rFrame(rFrame &) = delete;
-//	~rFrame();
-//
-//	void Close();
-//	bool IsShown();
-//	void Hide();
-//	void Show();
-//
-//	void *handle;
-//};
-
-struct rGLFrame/*: public rFrame*/
+struct rGLFrame
 {
 	rGLFrame();
 	rGLFrame(const rGLFrame &) = delete;
@@ -56,7 +31,6 @@ struct rGLFrame/*: public rFrame*/
 	void *handle;
 
 	void SetCurrent( void *ctx);
-	//rCanvas *GetCanvas();
 	void *GetNewContext();
 	void Flip(/*rGLContext*/void *ctx);
 };
