@@ -926,6 +926,34 @@ int cellSysutilEnableBgmPlayback()
 	cellSysutil->Warning("cellSysutilEnableBgmPlayback()");
 
 	bgm_playback_enabled = true;
+
+	return CELL_OK;
+}
+
+int cellSysutilEnableBgmPlaybackEx()
+{
+	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx()");
+
+	bgm_playback_enabled = true;
+
+	return CELL_OK;
+}
+
+int cellSysutilDisableBgmPlayback()
+{
+	cellSysutil->Warning("cellSysutilDisableBgmPlayback()");
+
+	bgm_playback_enabled = false;
+
+	return CELL_OK;
+}
+
+int cellSysutilDisableBgmPlaybackEx()
+{
+	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx()");
+
+	bgm_playback_enabled = false;
+
 	return CELL_OK;
 }
 
@@ -938,6 +966,19 @@ int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
 	status->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
 	status->fadeRatio = 0; // volume ratio
 	memset(status->contentId, 0, sizeof(status->contentId));
+
+	return CELL_OK;
+}
+
+int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellBgmPlaybackStatus> status2)
+{
+	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus2(status=0x%x)", status2.GetAddr());
+
+	// TODO
+	status2->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
+	status2->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
+	status2->fadeRatio = 0; // volume ratio
+	memset(status2->contentId, 0, sizeof(status2->contentId));
 
 	return CELL_OK;
 }
@@ -980,7 +1021,11 @@ void cellSysutil_init()
 	cellSysutil->AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
 
 	cellSysutil->AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
+	cellSysutil->AddFunc(0x6cfd856f, cellSysutilGetBgmPlaybackStatus2);
 	cellSysutil->AddFunc(0x220894e3, cellSysutilEnableBgmPlayback);
+	cellSysutil->AddFunc(0xac58ad2b, cellSysutilEnableBgmPlaybackEx);
+	cellSysutil->AddFunc(0xcfdd8e87, cellSysutilDisableBgmPlayback);
+	cellSysutil->AddFunc(0xa36335a5, cellSysutilDisableBgmPlaybackEx);
 
 	cellSysutil->AddFunc(0x1e7bff94, cellSysCacheMount);
 	cellSysutil->AddFunc(0x744c1544, cellSysCacheClear);
