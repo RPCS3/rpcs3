@@ -169,20 +169,18 @@ int cellSysmoduleLoadModule(u16 id)
 		cellSysmodule->Error("cellSysmoduleLoadModule: TODO: CELL_SYSMODULE_LIBATRAC3MULTI");
 	}
 	cellSysmodule->Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
-	Module* m = Emu.GetModuleManager().GetModuleById(id);
 
-	if(!m)
+	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
+	{
+		// CELL_SYSMODULE_ERROR_DUPLICATED shouldn't be returned (it breaks some games)
+		// If some game requires it yet, there probably should be a configurable hack or something.
+		m->Load();
+		return CELL_OK;
+	}
+	else
 	{
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
-
-	if(m->IsLoaded() && id != 0x10) // CELL_SYSMODULE_GCM_SYS and CELL_SYSMODULE_GCM share the same ID
-	{
-		return CELL_SYSMODULE_ERROR_DUPLICATED;
-	}
-
-	m->Load();
-	return CELL_OK;
 }
 
 int cellSysmoduleUnloadModule(u16 id)

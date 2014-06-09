@@ -342,13 +342,17 @@ int cellSurMixerPause(u32 type)
 
 int cellSurMixerGetCurrentBlockTag(mem64_t tag)
 {
-	libmixer->Error("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.GetAddr());
+	libmixer->Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.GetAddr());
+
+	tag = mixcount;
 	return CELL_OK;
 }
 
 int cellSurMixerGetTimestamp(u64 tag, mem64_t stamp)
 {
-	libmixer->Error("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.GetAddr());
+	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.GetAddr());
+
+	stamp = m_config.start_time + (tag) * 256000000 / 48000; // ???
 	return CELL_OK;
 }
 
