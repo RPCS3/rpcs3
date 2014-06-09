@@ -5,11 +5,6 @@ rSemaphore::rSemaphore()
 	handle = reinterpret_cast<void*>(new wxSemaphore());
 }
 
-//rSemaphore::rSemaphore(rSemaphore& other)
-//{
-//	handle = reinterpret_cast<void*>(new wxSemaphore(*reinterpret_cast<wxSemaphore*>(other.handle)));
-//}
-
 rSemaphore::~rSemaphore()
 {
 	delete reinterpret_cast<wxSemaphore*>(handle);
@@ -53,11 +48,6 @@ rCriticalSection::rCriticalSection()
 	handle = reinterpret_cast<void*>(new wxCriticalSection());
 }
 
-//rCriticalSection::rCriticalSection(rCriticalSection&)
-//{
-//	handle = reinterpret_cast<void*>(new wxCriticalSection(*reinterpret_cast<wxCriticalSection*>(other.handle)));
-//}
-
 rCriticalSection::~rCriticalSection()
 {
 	delete reinterpret_cast<wxCriticalSection*>(handle);
@@ -77,11 +67,6 @@ rTimer::rTimer()
 {
 	handle = reinterpret_cast<void*>(new wxTimer());
 }
-
-//rTimer::rTimer(rTimer&)
-//{
-//	handle = reinterpret_cast<void*>(new wxTimer(*reinterpret_cast<wxTimer*>(other.handle)));
-//}
 
 rTimer::~rTimer()
 {

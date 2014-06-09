@@ -110,15 +110,12 @@ void Module::UnLoad()
 
 bool Module::Load(u32 id)
 {
-	//std::lock_guard<std::mutex> lock(g_funcs_lock);
-
 	if(Emu.GetModuleManager().IsLoadedFunc(id)) return false;
 
 	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{
 		if(m_funcs_list[i]->id == id)
 		{
-			//g_modules_funcs_list.push_back(m_funcs_list[i]);
 			Emu.GetModuleManager().AddFunc(m_funcs_list[i]);
 			return true;
 		}

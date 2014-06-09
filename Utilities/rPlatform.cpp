@@ -26,11 +26,6 @@ rCanvas::~rCanvas()
 	delete static_cast<wxGLCanvas*>(handle);
 }
 
-//void *rCanvas::GetCurrent()
-//{
-//	static_cast<wxGLCanvas*>(handle)->GetCur;
-//}
-
 bool rCanvas::SetCurrent(void *ctx)
 {
 	return static_cast<wxGLCanvas*>(handle)->SetCurrent(*static_cast<wxGLContext *>(ctx));

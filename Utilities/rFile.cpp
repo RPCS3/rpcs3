@@ -2,22 +2,6 @@
 
 const int rPATH_MKDIR_FULL = wxPATH_MKDIR_FULL;
 
-//enum rSeekMode
-//{
-//	rFromStart,
-//	rFromCurrent,
-//	rFromEnd
-//};
-//
-//	enum OpenMode
-//	{
-//		read,
-//		write,
-//		read_write,
-//		write_append,
-//		write_excl
-//	};
-
 wxFile::OpenMode convertOpenMode(rFile::OpenMode open)
 {
 	wxFile::OpenMode mode;

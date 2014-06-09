@@ -47,31 +47,6 @@ rDateSpan::rDateSpan(int a, int b, int c, int d)
 	handle = static_cast<void *>(new wxDateSpan(a,b,c,d));
 }
 
-	//enum TZ
-	//{
-	//	Local, GMT, UTC
-	//};
-	//enum Calender
-	//{
-	//	Gregorian
-	//};
-
-	//struct rTimeZone
-	//{
-	//	rTimeZone();
-	//	rTimeZone(rDateTime::TZ timezone);
-	//};
-	//struct WeekDay
-	//{
-	//	WeekDay();
-	//	WeekDay(int a);
-	//};
-	//struct Month
-	//{
-	//	Month();
-	//	Month(int a);
-	//};
-
 rDateTime::rDateTime()
 {
 	handle = static_cast<void *>(new wxDateTime());
@@ -143,11 +118,6 @@ void rDateTime::Add(const rDateSpan& span)
 	static_cast<wxDateTime*>(handle)->Add(*static_cast<wxDateSpan*>(span.handle));
 }
 
-//void rDateTime::Close()
-//{
-//	static_cast<wxDateTime*>(handle)->Close();
-//}
-
 wxDateTime::TimeZone convertTZ(rDateTime::rTimeZone tz)
 {
 	switch (tz)
@@ -170,7 +140,7 @@ std::string rDateTime::Format(const std::string &format, const rTimeZone &tz) co
 
 void rDateTime::ParseDateTime(const std::string & format)
 {
-	/*return fmt::ToUTF8(*/static_cast<wxDateTime*>(handle)->ParseDateTime(fmt::FromUTF8(format));
+	static_cast<wxDateTime*>(handle)->ParseDateTime(fmt::FromUTF8(format));
 }
 
 u32 rDateTime::GetAsDOS()

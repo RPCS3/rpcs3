@@ -9,29 +9,6 @@
 #define snprintf _snprintf
 #endif
 
-
-
-//int CmpNoCase(const std::string &str, const std::string &str2)
-//{
-//	bool same;
-//	if (str.size() > str2.size())
-//	{
-//		same = std::equal(str.cbegin(), str.cend(), str2.cbegin(), [](const char a, const char b) -> bool{ return tolower(a) == tolower(b); });
-//	}
-//	else
-//	{
-//		same = std::equal(str2.cbegin(), str2.cend(), str.cbegin(), [](const char a, const char b) -> bool{ return tolower(a) == tolower(b); });
-//	}
-//	if (same)
-//	{
-//		return 0;
-//	}
-//	else
-//	{
-//		return 1;
-//	}
-//}
-
 namespace fmt{
 	using std::string;
 	using std::ostream;

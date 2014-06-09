@@ -14,8 +14,6 @@
 class EventManager;
 class ModuleManager;
 class StaticFuncManager;
-//class CPUThreadManager;
-//class CPUThread;
 
 struct EmuInfo
 {
@@ -75,8 +73,6 @@ class Emulator
 
 	u32 m_rsx_callback;
 	u32 m_ppu_thr_exit;
-	//MemoryViewerPanel* m_memory_viewer; //GUI dependency
-	//ArrayF<CPUThread> m_cpu_threads;
 	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
