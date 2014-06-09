@@ -33,7 +33,8 @@ Else()
 EndIf()
 
 set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
-set(EXECUTABLE_OUTPUT_PATH "${RPCS3_SRC_DIR}/../bin") # TODO: do real installation, including copying directory structure
+# TODO: do real installation, including copying directory structure
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/../bin")
 #include(cotire)
 
 add_definitions(-DGL_GLEXT_PROTOTYPES)
