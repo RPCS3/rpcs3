@@ -969,8 +969,8 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_depth_func)
 	{
-		glDepthFunc(m_depth_func);
 		//ConLog.Warning("glDepthFunc(0x%x)", m_depth_func);
+		glDepthFunc(m_depth_func);
 		checkForGlError("glDepthFunc");
 	}
 
@@ -990,7 +990,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_line_width)
 	{
-		glLineWidth(m_line_width / 255.f);
+		glLineWidth(m_line_width);
 		checkForGlError("glLineWidth");
 	}
 
@@ -1020,17 +1020,13 @@ void GLGSRender::ExecCMD()
 
 	if (m_set_front_face)
 	{
-		// Sanity check . Disgaea 3 return 0x1d0 here and cause openGL 0x0500
-		if (m_front_face == GL_CW || m_front_face == GL_CCW)
-		{
-			glFrontFace(m_front_face);
-			checkForGlError("glFrontFace");
-		}
+		glFrontFace(m_front_face);
+		checkForGlError("glFrontFace");
 	}
 
 	if(m_set_alpha_func && m_set_alpha_ref)
 	{
-		glAlphaFunc(m_alpha_func, m_alpha_ref/255.0f);
+		glAlphaFunc(m_alpha_func, m_alpha_ref);
 		checkForGlError("glAlphaFunc");
 	}
 
@@ -1050,7 +1046,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_restart_index)
 	{
-		glPrimitiveRestartIndex(m_restart_index); // Requires OpenGL 3.1+
+		glPrimitiveRestartIndex(m_restart_index);
 		checkForGlError("glPrimitiveRestartIndex");
 	}
 
@@ -1116,7 +1112,9 @@ void GLGSRender::ExecCMD()
 	}
 
 	if (Ini.GSDumpColorBuffers.GetValue())
+	{
 		WriteColorBuffers();
+	}
 }
 
 void GLGSRender::Flip()
