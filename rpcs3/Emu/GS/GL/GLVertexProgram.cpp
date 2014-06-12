@@ -601,7 +601,8 @@ void GLVertexProgram::Wait()
 
 void GLVertexProgram::Decompile(RSXVertexProgram& prog)
 {
-	GLVertexDecompilerThread(prog.data, shader, parr);
+	GLVertexDecompilerThread decompiler(prog.data, shader, parr);
+	decompiler.Task();
 }
 
 void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
