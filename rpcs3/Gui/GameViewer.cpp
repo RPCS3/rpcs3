@@ -126,9 +126,18 @@ void GameViewer::LoadPSF()
 	m_game_data.clear();
 	for(uint i=0; i<m_games.size(); ++i)
 	{
-		const std::string path = m_path + m_games[i] + "/PARAM.SFO";
 		vfsFile f;
-		if(!f.Open(path))
+		std::string sfo;
+		std::string sfb;
+
+		sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
+
+		if (!f.Open(sfb))
+			sfo = m_path + m_games[i] + "/PARAM.SFO";
+		else
+			sfo = m_path + m_games[i] + "/PS3_GAME/PARAM.SFO";
+
+		if(!f.Open(sfo))
 			continue;
 
 		PSFLoader psf(f);
