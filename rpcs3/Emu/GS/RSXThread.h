@@ -183,7 +183,7 @@ public:
 	// Point 
 	bool m_set_point_size;
 	bool m_set_point_sprite_control;
-	u32 m_point_size;
+	float m_point_size;
 	u16 m_point_x;
 	u16 m_point_y;
 
@@ -214,8 +214,8 @@ public:
 	bool m_set_back_polygon_mode;
 	u32 m_back_polygon_mode;
 	bool m_set_poly_offset_mode;
-	u32 m_poly_offset_scale_factor;
-	u32 m_poly_offset_bias;
+	float m_poly_offset_scale_factor;
+	float m_poly_offset_bias;
 
 	// Logic Ops
 	bool m_set_logic_op;
@@ -287,7 +287,7 @@ public:
 
 	// Line width
 	bool m_set_line_width;
-	u32 m_line_width;
+	float m_line_width;
 
 	// Shader mode
 	bool m_set_shade_mode;
@@ -384,7 +384,7 @@ public:
 	bool m_set_alpha_func;
 	u32 m_alpha_func;
 	bool m_set_alpha_ref;
-	u32 m_alpha_ref;
+	float m_alpha_ref;
 
 	// Shader
 	u16 m_shader_window_height;

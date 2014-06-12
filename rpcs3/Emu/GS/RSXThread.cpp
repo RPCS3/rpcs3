@@ -219,7 +219,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV406E_SET_REFERENCE:
+	{
 		m_ctrl->ref = ARGS(0);
+	}
 	break;
 	
 	// Texture
@@ -279,7 +281,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case_16(NV4097_SET_TEXTURE_CONTROL3, 4) :
 	{
 		RSXTexture& tex = m_textures[index];
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
 		tex.SetControl3(depth, pitch);
@@ -289,11 +291,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Vertex data
 	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4):
 	{
-		u32 v = ARGS(0);
-		u8 v0 = v;
-		u8 v1 = v >> 8;
-		u8 v2 = v >> 16;
-		u8 v3 = v >> 24;
+		const u32 a0 = ARGS(0);
+		u8 v0 = a0;
+		u8 v1 = a0 >> 8;
+		u8 v2 = a0 >> 16;
+		u8 v3 = a0 >> 24;
 
 		m_vertex_data[index].Reset();
 		m_vertex_data[index].size = 4;
@@ -308,8 +310,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_VERTEX_DATA2F_M, 8):
 	{
-		u32 a0 = ARGS(0);
-		u32 a1 = ARGS(1);
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
 
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
@@ -327,10 +329,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_VERTEX_DATA4F_M, 16):
 	{
-		u32 a0 = ARGS(0);
-		u32 a1 = ARGS(1);
-		u32 a2 = ARGS(2);
-		u32 a3 = ARGS(3);
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
+		const u32 a2 = ARGS(2);
+		const u32 a3 = ARGS(3);
 
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
@@ -361,14 +363,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case_16(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4) :
 	{
-		u32 a0 = ARGS(0);
-		const u16 frequency = a0 >> 16;
-		const u8 stride = (a0 >> 8) & 0xff;
-		const u8 size = (a0 >> 4) & 0xf;
-		const u8 type = a0 & 0xf;
+		const u32 a0 = ARGS(0);
+		u16 frequency = a0 >> 16;
+		u8 stride = (a0 >> 8) & 0xff;
+		u8 size = (a0 >> 4) & 0xf;
+		u8 type = a0 & 0xf;
 
-		CMD_LOG("index=%d, frequency=%d, stride=%d, size=%d, type=%d",
-			index, frequency, stride, size, type);
+		CMD_LOG("index=%d, frequency=%d, stride=%d, size=%d, type=%d", index, frequency, stride, size, type);
 
 		RSXVertexData& cv = m_vertex_data[index];
 		cv.frequency = frequency;
@@ -401,13 +402,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Color Mask
 	case NV4097_SET_COLOR_MASK:
 	{
-		const u32 flags = ARGS(0);
+		const u32 a0 = ARGS(0);
 
 		m_set_color_mask = true;
-		m_color_mask_a = flags & 0x1000000 ? true : false;
-		m_color_mask_r = flags & 0x0010000 ? true : false;
-		m_color_mask_g = flags & 0x0000100 ? true : false;
-		m_color_mask_b = flags & 0x0000001 ? true : false;
+		m_color_mask_a = a0 & 0x1000000 ? true : false;
+		m_color_mask_r = a0 & 0x0010000 ? true : false;
+		m_color_mask_g = a0 & 0x0000100 ? true : false;
+		m_color_mask_b = a0 & 0x0000001 ? true : false;
 	}
 	break;
 
@@ -433,7 +434,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		if (count >= 2)
 		{
 			m_set_alpha_ref = true;
-			m_alpha_ref = ARGS(1);
+
+			const u32 a1 = ARGS(1);
+			m_alpha_ref = (float&)a1;
 		}
 	}
 	break;
@@ -441,7 +444,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_ALPHA_REF:
 	{
 		m_set_alpha_ref = true;
-		m_alpha_ref = ARGS(0);
+		const u32 a0 = ARGS(0);
+		m_alpha_ref = (float&)a0;
 	}
 	break;
 
@@ -544,12 +548,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_DEPTH_BOUNDS_MIN:
 	{
 		m_set_depth_bounds = true;
-		const u32 depth_bounds_min = ARGS(0);
-		m_depth_bounds_min = (float&)depth_bounds_min;
+		const u32 a0 = ARGS(0);
+		m_depth_bounds_min = (float&)a0;
 		if (count > 1)
 		{
-			const u32 depth_bounds_max = ARGS(1);
-			m_depth_bounds_max = (float&)depth_bounds_max;
+			const u32 a1 = ARGS(1);
+			m_depth_bounds_max = (float&)a1;
 		}
 	}
 	break;
@@ -608,12 +612,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Clipping
 	case NV4097_SET_CLIP_MIN:
 	{
-		const u32 clip_min = ARGS(0);
-		const u32 clip_max = ARGS(1);
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
 
 		m_set_clip = true;
-		m_clip_min = (float&)clip_min;
-		m_clip_max = (float&)clip_max;
+		m_clip_min = (float&)a0;
+		m_clip_max = (float&)a1;
 
 		CMD_LOG("clip_min=%.01f, clip_max=%.01f", m_clip_min, m_clip_max);
 	}
@@ -684,7 +688,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_depth_test = true;
 		m_set_poly_offset_mode = true;
-		m_poly_offset_scale_factor = ARGS(0);
+
+		const u32 a0 = ARGS(0);
+		m_poly_offset_scale_factor = (float&)a0;
 	}
 	break;
 
@@ -692,7 +698,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_depth_test = true;
 		m_set_poly_offset_mode = true;
-		m_poly_offset_bias = ARGS(0);
+
+		const u32 a0 = ARGS(0);
+		m_poly_offset_bias = (float&)a0;
 	}
 	break;
 
@@ -710,7 +718,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_CLEAR_SURFACE:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 
 		if(a0 & 0x01) m_clear_surface_z = m_clear_z;
 		if(a0 & 0x02) m_clear_surface_s = m_clear_s;
@@ -725,7 +733,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_clear_s = a0 & 0xff;
 		m_clear_z = a0 >> 8;
 	}
@@ -827,7 +835,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_BEGIN_END:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 
 		//ConLog.Warning("NV4097_SET_BEGIN_END: %x", a0);
 
@@ -849,7 +857,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_cur_shader_prog = &m_shader_progs[m_cur_shader_prog_num];
 		//m_cur_shader_prog_num = (m_cur_shader_prog_num + 1) % 16;
-		u32 a0 = ARGS(0);
+		const  u32 a0 = ARGS(0);
 		m_cur_shader_prog->offset = a0 & ~0x3;
 		m_cur_shader_prog->addr = GetAddress(m_cur_shader_prog->offset, (a0 & 0x3) - 1);
 		m_cur_shader_prog->ctrl = 0x40;
@@ -877,7 +885,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SHADER_WINDOW:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_shader_window_height = a0 & 0xfff;
 		m_shader_window_origin = (a0 >> 12) & 0xf;
 		m_shader_window_pixel_centers = a0 >> 16;
@@ -1134,7 +1142,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SCULL_CONTROL:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_set_stencil_func = m_set_stencil_func_ref = m_set_stencil_func_mask = true;
 
 		m_stencil_func = a0 & 0xffff;
@@ -1160,7 +1168,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_POINT_SIZE:
 	{
 		m_set_point_size = true;
-		m_point_size = ARGS(0);
+		const u32 a0 = ARGS(0);
+		m_point_size = (float&)a0;
 	}
 	break;
 
@@ -1252,7 +1261,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Depth/ Color buffer usage 
 	case NV4097_SET_SURFACE_FORMAT:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_set_surface_format = true;
 		m_surface_color_format = a0 & 0x1f;
 		m_surface_depth_format = (a0 >> 5) & 0x7;
@@ -1326,7 +1335,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SURFACE_PITCH_C:
 	{
-		if(count != 4)
+		if (count != 4)
 		{
 			ConLog.Error("NV4097_SET_SURFACE_PITCH_C: Bad count (%d)", count);
 			break;
@@ -1395,7 +1404,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SURFACE_CLIP_VERTICAL:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_set_surface_clip_vertical = true;
 		m_surface_clip_y = a0;
 		m_surface_clip_h = a0 >> 16;
@@ -1404,7 +1413,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 
 		m_set_surface_clip_horizontal = true;
 		m_surface_clip_x = a0;
@@ -1412,7 +1421,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 		if(count >= 2)
 		{
-			u32 a1 = ARGS(1);
+			const u32 a1 = ARGS(1);
 			m_set_surface_clip_vertical = true;
 			m_surface_clip_y = a1;
 			m_surface_clip_h = a1 >> 16;
@@ -1445,14 +1454,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_LINE_WIDTH:
 	{
 		m_set_line_width = true;
-		m_line_width = ARGS(0);
+		const u32 a0 = ARGS(0);
+		m_line_width = (float&)a0;
 	}
 	break;
 
 	// Zcull
 	case NV4097_SET_ZCULL_EN:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 
 		m_set_depth_test = a0 & 0x1 ? true : false;
 		m_set_stencil_test = a0 & 0x2 ? true : false;
@@ -1482,7 +1492,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Reporting
 	case NV4097_GET_REPORT:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		u8 type = a0 >> 24;
 		u32 offset = a0 & 0xffffff;
 
@@ -1517,7 +1527,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Clip Plane
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_set_clip_plane = true;
 		m_clip_plane_0 = a0 & 0xf;
 		m_clip_plane_1 = (a0 >> 4) & 0xf;
@@ -1532,8 +1542,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_FOG_PARAMS:
 	{
 		m_set_fog_params = true;
-		u32 a0 = ARGS(0);
-		u32 a1 = ARGS(1);
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
 		m_fog_param0 = (float&)a0;
 		m_fog_param1 = (float&)a1;
 	}
@@ -1657,14 +1667,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		RSXTransformConstant c;
 		c.id = m_dst_offset | ((u32)m_point_x << 2);
 
-		if(count >= 1)
+		if (count >= 1)
 		{
 			u32 a = ARGS(0);
 			a = a << 16 | a >> 16;
 			c.x = (float&)a;
 		}
 
-		if(count >= 2)
+		if (count >= 2)
 		{
 			u32 a = ARGS(1);
 			a = a << 16 | a >> 16;
@@ -1697,7 +1707,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV308A_POINT:
 	{
-		u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_point_x = a0 & 0xffff;
 		m_point_y = a0 >> 16;
 	}
@@ -1731,12 +1741,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV3089_IMAGE_IN_SIZE:
 	{
-		u16 w = ARGS(0);
-		u16 h = ARGS(0) >> 16;
+		u16 width = ARGS(0);
+		u16 height = ARGS(0) >> 16;
+
 		u16 pitch = ARGS(1);
 		u8 origin = ARGS(1) >> 16;
 		u8 inter = ARGS(1) >> 24;
+
 		u32 offset = ARGS(2);
+
 		u16 u = ARGS(3);
 		u16 v = ARGS(3) >> 16;
 
