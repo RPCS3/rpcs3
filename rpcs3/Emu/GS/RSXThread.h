@@ -181,9 +181,7 @@ public:
 	u32 m_restart_index;
 
 	// Point 
-	bool m_set_point_size;
 	bool m_set_point_sprite_control;
-	float m_point_size;
 	u16 m_point_x;
 	u16 m_point_y;
 
@@ -428,7 +426,6 @@ protected:
 		m_set_scissor_vertical = false;
 		m_set_line_smooth = false;
 		m_set_poly_smooth = false;
-		m_set_point_size = false;
 		m_set_two_sided_stencil_test_enable = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
@@ -457,7 +454,6 @@ protected:
 
 		m_point_x = 0;
 		m_point_y = 0;
-		m_point_size = 0;
 
 		// Construct Textures
 		for(int i=0; i<16; i++)
@@ -523,7 +519,6 @@ protected:
 		m_set_poly_offset_point = false;
 		m_set_poly_offset_mode = false;
 		m_set_restart_index = false;
-		m_set_point_size = false;
 		m_set_point_sprite_control = false;
 		m_set_specular = false;
 
