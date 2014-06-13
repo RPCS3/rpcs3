@@ -426,7 +426,6 @@ protected:
 		m_set_scissor_vertical = false;
 		m_set_line_smooth = false;
 		m_set_poly_smooth = false;
-		m_set_point_size = false;
 		m_set_two_sided_stencil_test_enable = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
