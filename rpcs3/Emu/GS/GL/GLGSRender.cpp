@@ -872,12 +872,6 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glPolygonMode(Back)");
 	}
 
-	if (m_set_point_size)
-	{
-		glPointSize(m_point_size);
-		checkForGlError("glPointSize");
-	}
-
 	if (m_set_poly_offset_mode)
 	{
 		glPolygonOffset(m_poly_offset_scale_factor, m_poly_offset_bias);

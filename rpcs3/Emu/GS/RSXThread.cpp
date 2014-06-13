@@ -227,7 +227,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Texture
 	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20) :
 	{
-		// Done in ethodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)]
+		// Done in methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)]
 	}
 	break;
 	
@@ -585,27 +585,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_VIEWPORT_SCALE:
-	{
-		if (ARGS(0))
-			ConLog.Warning("NV4097_SET_VIEWPORT_SCALE: %x", ARGS(0));
-	}
-	break;
-
 	case NV4097_SET_VIEWPORT_OFFSET:
 	{
-		if (ARGS(0))
-			ConLog.Warning("NV4097_SET_VIEWPORT_OFFSET: %x", ARGS(0));
-		/*const u32 offset0 = ARGS(0);
-		const u32 offset1 = ARGS(1);
-		const u32 offset2 = ARGS(2);
-		const u32 offset3 = ARGS(3);
-		const u32 scale0 = ARGS(4);
-		const u32 scale1 = ARGS(5);
-		const u32 scale2 = ARGS(6);
-		const u32 scale3 = ARGS(7);*/
-		//TODO
-		//ConLog.Warning("NV4097_SET_VIEWPORT_OFFSET: offset (%d, %d, %d, %d), scale (%d, %d, %d, %d)",
-			//offset0, offset1, offset2, offset3, scale0, scale1, scale2, scale3);
+		// Done in Vertex Shader
 	}
 	break;
 
@@ -1167,9 +1149,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Point 
 	case NV4097_SET_POINT_SIZE:
 	{
-		m_set_point_size = true;
-		const u32 a0 = ARGS(0);
-		m_point_size = (float&)a0;
+		// Done in Vertex Shader
 	}
 	break;
 
@@ -1455,7 +1435,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_line_width = true;
 		const u32 a0 = ARGS(0);
-		m_line_width = (float&)a0;
+		m_line_width = (float&)a0 / 8.0;
 	}
 	break;
 
