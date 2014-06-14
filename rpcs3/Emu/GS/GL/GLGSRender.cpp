@@ -843,7 +843,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART); // Requires OpenGL 3.1+
+	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART);
 
 	if(m_set_clip_plane)
 	{
@@ -870,6 +870,12 @@ void GLGSRender::ExecCMD()
 	{
 		glPolygonMode(GL_BACK, m_back_polygon_mode);
 		checkForGlError("glPolygonMode(Back)");
+	}
+
+	if (m_set_point_size)
+	{
+		glPointSize(m_point_size);
+		checkForGlError("glPointSize");
 	}
 
 	if (m_set_poly_offset_mode)
