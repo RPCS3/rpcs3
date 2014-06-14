@@ -216,6 +216,9 @@ public:
 	bool m_set_poly_offset_mode;
 	float m_poly_offset_scale_factor;
 	float m_poly_offset_bias;
+	bool m_set_line_stipple;
+	u16 m_line_stipple_pattern;
+	u16 m_line_stipple_factor;
 
 	// Logic Ops
 	bool m_set_logic_op;
@@ -437,6 +440,7 @@ protected:
 		m_set_poly_offset_line = false;
 		m_set_poly_offset_point = false;
 		m_set_restart_index = false;
+		m_set_line_stipple = false;
 
 		m_clear_color_r = 0;
 		m_clear_color_g = 0;
@@ -460,6 +464,8 @@ protected:
 		m_point_y = 0;
 		m_point_size = 1.0;
 		m_line_width = 1.0;
+		m_line_stipple_pattern = 0x1111;
+		m_line_stipple_factor = 1;
 
 		// Construct Textures
 		for(int i=0; i<16; i++)
@@ -528,6 +534,7 @@ protected:
 		m_set_restart_index = false;
 		m_set_point_sprite_control = false;
 		m_set_specular = false;
+		m_set_line_stipple = false;
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;

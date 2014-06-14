@@ -844,6 +844,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
 	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART);
+	Enable(m_set_line_stipple, GL_LINE_STIPPLE);
 
 	if(m_set_clip_plane)
 	{
@@ -858,7 +859,6 @@ void GLGSRender::ExecCMD()
 	}
 
 	checkForGlError("glEnable");
-
 
 	if (m_set_front_polygon_mode)
 	{
@@ -992,6 +992,12 @@ void GLGSRender::ExecCMD()
 	{
 		glLineWidth(m_line_width);
 		checkForGlError("glLineWidth");
+	}
+
+	if (m_set_line_stipple)
+	{
+		glLineStipple(m_line_stipple_factor, m_line_stipple_pattern);
+		checkForGlError("glLineStipple");
 	}
 
 	if(m_set_blend_equation)

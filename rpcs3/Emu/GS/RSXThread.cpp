@@ -1441,6 +1441,22 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	// Line/Polygon Stipple
+	case NV4097_SET_LINE_STIPPLE:
+	{
+		m_set_line_stipple = ARGS(0) ? true : false;
+	}
+	break;
+
+	case NV4097_SET_LINE_STIPPLE_PATTERN:
+	{
+		m_set_line_stipple = true;
+		const u32 a0 = ARGS(0);
+		m_line_stipple_factor = a0 & 0xffff;
+		m_line_stipple_pattern = a0 >> 16;
+	}
+	break;
+
 	// Zcull
 	case NV4097_SET_ZCULL_EN:
 	{
