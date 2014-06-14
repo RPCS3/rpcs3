@@ -1437,7 +1437,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_line_width = true;
 		const u32 a0 = ARGS(0);
-		m_line_width = (float&)a0 / 8.0;
+		m_line_width = (float)a0 / 8.0f;
 	}
 	break;
 
