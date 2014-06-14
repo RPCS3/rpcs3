@@ -1149,7 +1149,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	// Point 
 	case NV4097_SET_POINT_SIZE:
 	{
-		// Done in Vertex Shader
+		m_set_point_size = true;
+		const u32 a0 = ARGS(0);
+		m_point_size = (float&)a0;
 	}
 	break;
 
