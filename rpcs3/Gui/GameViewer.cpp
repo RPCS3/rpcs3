@@ -154,9 +154,15 @@ void GameViewer::LoadPSF()
 		game.parental_lvl = psf.GetInteger("PARENTAL_LEVEL");
 		game.resolution = psf.GetInteger("RESOLUTION");
 		game.sound_format = psf.GetInteger("SOUND_FORMAT");
+		
 		if(game.serial.length() == 9)
 			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
 
+		if (game.category.find("HG"))
+			game.category = "HDD Game";
+		else if (game.category.find("DG"))
+			game.category = "Disc Game";
+			
 		m_game_data.push_back(game);
 	}
 
