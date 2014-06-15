@@ -615,7 +615,11 @@ void GLGSRender::OnInitThread()
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);
-
+	glEnable(GL_SCISSOR_TEST);
+	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glGenTextures(1, &g_depth_tex);
+	glGenTextures(1, &g_flip_tex);
+	
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 // Undefined reference: glXSwapIntervalEXT
@@ -624,9 +628,7 @@ void GLGSRender::OnInitThread()
 		glXSwapIntervalEXT(glXGetCurrentDisplay(), drawable, Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 	}*/
 #endif
-	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glGenTextures(1, &g_depth_tex);
-	glGenTextures(1, &g_flip_tex);
+
 }
 
 void GLGSRender::OnExitThread()
@@ -794,7 +796,13 @@ void GLGSRender::ExecCMD()
 		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		//checkForGlError("glViewport");
 	}
-
+	
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
+	
 	if(m_clear_surface_mask)
 	{
 		GLbitfield f = 0;
@@ -835,7 +843,6 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
-	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
 	Enable(m_set_point_sprite_control, GL_POINT_SPRITE);
@@ -888,12 +895,6 @@ void GLGSRender::ExecCMD()
 	{
 		glLogicOp(m_logic_op);
 		checkForGlError("glLogicOp");
-	}
-
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
 	}
 
 	if(m_set_two_sided_stencil_test_enable)
@@ -1125,6 +1126,13 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
+	// Set scissor to FBO size 
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
+		checkForGlError("glScissor");
+	}
+	
 	switch (m_surface_colour_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
@@ -1143,12 +1151,6 @@ void GLGSRender::Flip()
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
 		// Slow path for MRT/None target using glReadPixels.
-		if (m_set_scissor_horizontal && m_set_scissor_vertical)
-		{
-			glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("glScissor");
-		}
-
 		static u8* src_buffer = nullptr;
 		static u32 width = 0;
 		static u32 height = 0;
@@ -1230,12 +1232,6 @@ void GLGSRender::Flip()
 			glVertex2i(0, 1);
 			glEnd();
 		}
-
-		if (m_set_scissor_horizontal && m_set_scissor_vertical)
-		{
-			glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-			checkForGlError("glScissor");
-		}
 	}
 	break;
 	}
@@ -1247,6 +1243,13 @@ void GLGSRender::Flip()
 	}
 
 	m_frame->Flip(m_context);
+	
+	// Restore scissor
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
 
 }
 
