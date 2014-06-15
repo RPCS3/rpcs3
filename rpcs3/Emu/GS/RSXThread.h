@@ -456,15 +456,15 @@ protected:
 		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
 
-		m_front_polygon_mode = 0x1B02; // GL_FILL
-		m_back_polygon_mode = 0x1B02; // GL_FILL
+		m_front_polygon_mode = 0x1b02; // GL_FILL
+		m_back_polygon_mode = 0x1b02; // GL_FILL
 		m_front_face = 0x0901;
 
 		m_point_x = 0;
 		m_point_y = 0;
 		m_point_size = 1.0;
 		m_line_width = 1.0;
-		m_line_stipple_pattern = 0x1111;
+		m_line_stipple_pattern = 0xffff;
 		m_line_stipple_factor = 1;
 
 		// Construct Textures
