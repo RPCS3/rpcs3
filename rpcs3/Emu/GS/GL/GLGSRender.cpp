@@ -615,7 +615,6 @@ void GLGSRender::OnInitThread()
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_SCISSOR_TEST);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
