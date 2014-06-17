@@ -79,9 +79,6 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			return;
 		}
 	}
-
-	glDetachShader(id, vp);
-	glDetachShader(id, fp);
 }
 
 void GLProgram::UnUse()
