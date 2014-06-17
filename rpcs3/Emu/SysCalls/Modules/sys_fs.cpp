@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -149,7 +149,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("fsAioRead() aborted");
+			LOG_WARNING(HLE, "fsAioRead() aborted");
 			return;
 		}
 	}
@@ -209,7 +209,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 fin:
 	file.Seek(old_pos);
 
-	ConLog.Warning("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
+	LOGF_WARNING(HLE, "*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
 		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
 
 	if (func) // start callback thread
@@ -223,7 +223,7 @@ fin:
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("fsAioRead() aborted");
+			LOGF_WARNING(HLE, "fsAioRead() aborted");
 			break;
 		}
 	}*/

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include <wx/statline.h>
 
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"

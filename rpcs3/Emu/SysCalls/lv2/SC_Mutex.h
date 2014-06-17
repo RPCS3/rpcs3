@@ -39,14 +39,14 @@ struct Mutex
 	{
 		if (u32 owner = m_mutex.GetOwner())
 		{
-			ConLog.Write("Mutex(%d) was owned by thread %d (recursive=%d)", id, owner, recursive);
+			LOGF_NOTICE(HLE, "Mutex(%d) was owned by thread %d (recursive=%d)", id, owner, recursive);
 		}
 
 		if (!m_queue.m_mutex.try_lock()) return;
 
 		for (u32 i = 0; i < m_queue.list.size(); i++)
 		{
-			if (u32 owner = m_queue.list[i]) ConLog.Write("Mutex(%d) was waited by thread %d", id, owner);
+			if (u32 owner = m_queue.list[i]) LOGF_NOTICE(HLE, "Mutex(%d) was waited by thread %d", id, owner);
 		}
 
 		m_queue.m_mutex.unlock();

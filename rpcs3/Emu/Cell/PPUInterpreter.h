@@ -70,16 +70,16 @@ private:
 
 		if(Ini.HLELogging.GetValue())
 		{
-			ConLog.Warning("SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
+			LOGF_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
 		}
 		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
 		{
-			ConLog.Error("SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+			LOGF_ERROR(PPU, "SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)
 				SysCalls::DoFunc(CPU.GPR[11]);
 		}*/
 #ifdef HLE_CALL_DEBUG
-		ConLog.Write("SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+		LOGF_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 #endif
 	}
 
@@ -2097,7 +2097,7 @@ private:
 			Emu.GetSFuncManager().StaticExecute(CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
-				ConLog.Write("'%s' done with code[0x%llx]! #pc: 0x%llx",
+				LOGF_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%llx",
 					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
@@ -2687,7 +2687,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = RA + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(RA, CPU.XER.CA);
-		if(oe) ConLog.Warning("addzeo");
+		if(oe) LOG_WARNING(PPU, "addzeo");
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
@@ -2695,7 +2695,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA);
-		if (oe) ConLog.Warning("subfzeo");
+		if (oe) LOG_WARNING(PPU, "subfzeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void STDCX_(u32 rs, u32 ra, u32 rb)
@@ -2728,7 +2728,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
 		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA, ~0ULL);
-		if (oe) ConLog.Warning("subfmeo");
+		if (oe) LOG_WARNING(PPU, "subfmeo");
 		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -3509,7 +3509,7 @@ private:
 	void MTFSB1(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
-		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
+		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		CPU.FPSCR.FPSCR |= mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3523,7 +3523,7 @@ private:
 	void MTFSB0(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << crbd);
-		if ((crbd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
+		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
 		CPU.FPSCR.FPSCR &= ~mask;
 
 		if(rc) UNIMPLEMENTED();
@@ -3534,12 +3534,12 @@ private:
 
 		if(i)
 		{
-			if ((crfd == 29) && !CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode enabled");
+			if ((crfd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
 			CPU.FPSCR.FPSCR |= mask;
 		}
 		else
 		{
-			if ((crfd == 29) && CPU.FPSCR.NI) ConLog.Warning("Non-IEEE mode disabled");
+			if ((crfd == 29) && CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
 			CPU.FPSCR.FPSCR &= ~mask;
 		}
 
@@ -3563,9 +3563,9 @@ private:
 		if (CPU.FPSCR.NI != oldNI)
 		{
 			if (oldNI)
-				ConLog.Warning("Non-IEEE mode disabled");
+				LOG_WARNING(PPU, "Non-IEEE mode disabled");
 			else
-				ConLog.Warning("Non-IEEE mode enabled");
+				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
 		if(rc) UNK("mtfsf.");
 	}
@@ -3995,20 +3995,20 @@ private:
 
 	void UNK(const std::string& err, bool pause = true)
 	{
-		ConLog.Error(err + fmt::Format(" #pc: 0x%llx", CPU.PC));
+		LOGF_ERROR(PPU, err + fmt::Format(" #pc: 0x%llx", CPU.PC));
 
 		if(!pause) return;
 
 		Emu.Pause();
 
-		for(uint i=0; i<32; ++i) ConLog.Write("r%d = 0x%llx", i, CPU.GPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) ConLog.Write("v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
-		ConLog.Write("CR = 0x%08x", CPU.CR);
-		ConLog.Write("LR = 0x%llx", CPU.LR);
-		ConLog.Write("CTR = 0x%llx", CPU.CTR);
-		ConLog.Write("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
-		ConLog.Write("FPSCR = 0x%x "
+		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
+		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
+		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
+		LOGF_NOTICE(PPU, "CR = 0x%08x", CPU.CR);
+		LOGF_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
+		LOGF_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);
+		LOGF_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
+		LOGF_NOTICE(PPU, "FPSCR = 0x%x "
 			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
 			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
 			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "

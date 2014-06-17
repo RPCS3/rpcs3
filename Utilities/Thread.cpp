@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 
 #include "Thread.h"
 
@@ -134,7 +134,7 @@ void thread::start(std::function<void()> func)
 		}
 		catch(...)
 		{
-			ConLog.Error("Crash :(");
+			LOG_ERROR(HLE, "Crash :(");
 			//std::terminate();
 		}
 

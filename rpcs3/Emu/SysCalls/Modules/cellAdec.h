@@ -1133,14 +1133,14 @@ public:
 		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
 		if (!codec)
 		{
-			ConLog.Error("AudioDecoder(): avcodec_find_decoder(ATRAC3P) failed");
+			LOGF_ERROR(HLE, "AudioDecoder(): avcodec_find_decoder(ATRAC3P) failed");
 			Emu.Pause();
 			return;
 		}
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
-			ConLog.Error("AudioDecoder(): avformat_alloc_context failed");
+			LOGF_ERROR(HLE, "AudioDecoder(): avformat_alloc_context failed");
 			Emu.Pause();
 			return;
 		}
@@ -1148,7 +1148,7 @@ public:
 		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, adecRead, NULL, NULL);
 		if (!fmt->pb)
 		{
-			ConLog.Error("AudioDecoder(): avio_alloc_context failed");
+			LOGF_ERROR(HLE, "AudioDecoder(): avio_alloc_context failed");
 			Emu.Pause();
 			return;
 		}

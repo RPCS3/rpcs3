@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -241,7 +241,7 @@ int cellSurMixerStart()
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("Surmixer aborted");
+				LOG_WARNING(HLE, "Surmixer aborted");
 				return;
 			}
 

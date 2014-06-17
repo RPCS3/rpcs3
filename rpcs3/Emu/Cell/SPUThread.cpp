@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/lv2/SC_Lwmutex.h"
@@ -86,7 +86,7 @@ void SPUThread::DoRun()
 	break;
 
 	default:
-		ConLog.Error("Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
+		LOGF_ERROR(Log::SPU, "Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
 		Emu.Pause();
 	}
 }

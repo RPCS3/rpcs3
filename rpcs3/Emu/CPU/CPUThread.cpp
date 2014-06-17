@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/ErrorCodes.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3/Ini.h"
@@ -149,7 +149,7 @@ void CPUThread::SetBranch(const u64 pc, bool record_branch)
 {
 	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().c_str(), m_offset + pc, m_offset + PC);
+		LOGF_ERROR(PPU, "%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().c_str(), m_offset + pc, m_offset + PC);
 		Emu.Pause();
 	}
 
@@ -282,7 +282,7 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	if (Ini.HLELogging.GetValue()) ConLog.Write("%s enter", CPUThread::GetFName().c_str());
+	if (Ini.HLELogging.GetValue()) LOGF_NOTICE(PPU, "%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
 
@@ -333,18 +333,18 @@ void CPUThread::Task()
 	}
 	catch(const std::string& e)
 	{
-		ConLog.Error("Exception: %s", e.c_str());
+		LOGF_ERROR(PPU, "Exception: %s", e.c_str());
 	}
 	catch(const char* e)
 	{
-		ConLog.Error("Exception: %s", e);
+		LOGF_ERROR(PPU, "Exception: %s", e);
 	}
 	catch(int exitcode)
 	{
-		ConLog.Success("Exit Code: %d", exitcode);
+		LOGF_SUCCESS(PPU, "Exit Code: %d", exitcode);
 	}
 
-	if (Ini.HLELogging.GetValue()) ConLog.Write("%s leave", CPUThread::GetFName().c_str());
+	if (Ini.HLELogging.GetValue()) LOGF_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
 }
 
 s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe
@@ -353,7 +353,7 @@ s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("ExecAsCallback() aborted");
+			LOGF_WARNING(PPU, "ExecAsCallback() aborted");
 			return CELL_ECANCELED; // doesn't mean anything
 		}
 		Sleep(1);
@@ -379,7 +379,7 @@ s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("ExecAsCallback(wait=%s) aborted", wait ? "true" : "false");
+			LOGF_WARNING(PPU, "ExecAsCallback(wait=%s) aborted", wait ? "true" : "false");
 			return CELL_EABORT; // doesn't mean anything
 		}
 		Sleep(1);

@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Callback.h"
@@ -66,7 +66,7 @@ again:
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("Callback::Branch() aborted");
+			LOG_WARNING(HLE, "Callback::Branch() aborted");
 			return;
 		}
 		Sleep(1);
@@ -80,7 +80,7 @@ again:
 	}
 	if (Emu.IsStopped())
 	{
-		ConLog.Warning("Callback::Branch() aborted");
+		LOG_WARNING(HLE, "Callback::Branch() aborted");
 		return;
 	}
 
@@ -109,7 +109,7 @@ again:
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("Callback::Branch(true) aborted (end)");
+			LOG_WARNING(HLE, "Callback::Branch(true) aborted (end)");
 			return;
 		}
 		Sleep(1);

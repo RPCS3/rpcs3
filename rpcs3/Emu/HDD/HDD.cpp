@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "HDD.h"
 
 vfsDeviceHDD::vfsDeviceHDD(const std::string& hdd_path) : m_hdd_path(hdd_path)

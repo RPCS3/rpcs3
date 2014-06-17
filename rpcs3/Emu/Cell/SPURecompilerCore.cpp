@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/lv2/SC_Lwmutex.h"
@@ -164,7 +164,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 
 	if (!pos)
 	{
-		ConLog.Error("SPURecompilerCore::DecodeMemory(): ls_addr = 0");
+		LOGF_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(): ls_addr = 0");
 		Emu.Pause();
 		return 0;
 	}
@@ -185,7 +185,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		if (!is_valid)
 		{
 			// TODO
-			ConLog.Error("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
+			LOGF_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
 			Emu.Pause();
 			return 0;
 		}
@@ -198,7 +198,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		did_compile = true;
 		if (entry[pos].valid == 0)
 		{
-			ConLog.Error("SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
+			LOGF_ERROR(Log::SPU, "SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
 			Emu.Pause();
 			return 0;
 		}
@@ -206,7 +206,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 
 	if (!entry[pos].pointer)
 	{
-		ConLog.Error("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): compilation failed", pos * sizeof(u32));
+		LOGF_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): compilation failed", pos * sizeof(u32));
 		Emu.Pause();
 		return 0;
 	}
@@ -223,7 +223,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		//if (pos == 0x19c >> 2)
 		{
 			//Emu.Pause();
-			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+			//for (uint i = 0; i < 128; ++i) LOGF_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 		}
 	}
 
@@ -243,7 +243,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		//if (pos == 0x340 >> 2)
 		{
 			//Emu.Pause();
-			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+			//for (uint i = 0; i < 128; ++i) LOGF_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 		}
 	}
 

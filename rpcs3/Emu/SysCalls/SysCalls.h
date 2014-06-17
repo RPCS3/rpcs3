@@ -54,7 +54,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
+		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
 		va_end(list);
 		}
 	}
@@ -65,7 +65,7 @@ public:
 		{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Write(GetName() + ": " + fmt::FormatV(fmt, list));
+		LOG_NOTICE(HLE, GetName() + ": " + fmt::FormatV(fmt, list));
 		va_end(list);
 		}
 	}
@@ -75,7 +75,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
+		LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
 		va_end(list);
 //#endif
 	}
@@ -85,7 +85,7 @@ public:
 //#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + " warning: " + fmt::FormatV(fmt, list));
+		LOG_WARNING(HLE, GetName() + " warning: " + fmt::FormatV(fmt, list));
 		va_end(list);
 //#endif
 	}
@@ -94,7 +94,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
+		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
 		va_end(list);
 	}
 
@@ -102,7 +102,7 @@ public:
 	{
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Error(GetName() + " error: " + fmt::FormatV(fmt, list));
+		LOG_ERROR(HLE, GetName() + " error: " + fmt::FormatV(fmt, list));
 		va_end(list);
 	}
 

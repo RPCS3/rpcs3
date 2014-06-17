@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/FS/vfsFile.h"
@@ -51,7 +51,7 @@ bool TRPLoader::LoadHeader(bool show)
 		return false;
 
 	if (show)
-		ConLog.Write("TRP version: %x", m_header.trp_version);
+		LOGF_NOTICE(LOADER, "TRP version: %x", m_header.trp_version);
 
 	m_entries.clear();
 	m_entries.resize(m_header.trp_files_count);
@@ -62,7 +62,7 @@ bool TRPLoader::LoadHeader(bool show)
 			return false;
 
 		if (show)
-			ConLog.Write("TRP entry #%d: %s", m_entries[i].name);
+			LOGF_NOTICE(LOADER, "TRP entry #%d: %s", m_entries[i].name);
 	}
 
 	return true;

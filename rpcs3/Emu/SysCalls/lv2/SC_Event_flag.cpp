@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -197,7 +197,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		}
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_event_flag_wait(id=%d) aborted", eflag_id);
+			LOGF_WARNING(HLE, "sys_event_flag_wait(id=%d) aborted", eflag_id);
 			return CELL_OK;
 		}
 	}
@@ -324,7 +324,7 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 	if (Emu.IsStopped())
 	{
-		ConLog.Warning("sys_event_flag_cancel(id=%d) aborted", eflag_id);
+		LOGF_WARNING(HLE, "sys_event_flag_cancel(id=%d) aborted", eflag_id);
 		return CELL_OK;
 	}
 

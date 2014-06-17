@@ -212,10 +212,10 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 		}
 	}
 
-	ConLog.Error("DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
+	LOGF_ERROR(MEMORY, "DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
 	for (u32 i = 0; i < m_allocated.size(); i++)
 	{
-		ConLog.Write("*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
+		LOGF_NOTICE(MEMORY, "*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
 	}
 	return false;
 }
@@ -233,7 +233,7 @@ u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const // lock-free, addr is fix
 		}
 	}
 
-	ConLog.Error("GetMem(%llx) from not allocated address.", addr);
+	LOGF_ERROR(MEMORY, "GetMem(%llx) from not allocated address.", addr);
 	assert(0);
 	return nullptr;
 }

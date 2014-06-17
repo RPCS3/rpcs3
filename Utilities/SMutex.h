@@ -148,7 +148,7 @@ public:
 		{
 			if (!Emu.IsStopped())
 			{
-				ConLog.Error("SMutexLockerBase: thread id == 0");
+				LOG_ERROR(HLE, "SMutexLockerBase: thread id == 0");
 				Emu.Pause();
 			}
 			return;

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include <atomic>
 
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Memory.h"
 #include "MemoryBlock.h"
 #include "Emu/System.h"
@@ -331,7 +331,7 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 //NullMemoryBlock
 bool NullMemoryBlock::Read8(const u64 addr, u8* )
 {
-	ConLog.Error("Read8 from null block: [%08llx]", addr);
+	LOGF_ERROR(MEMORY, "Read8 from null block: [%08llx]", addr);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -339,7 +339,7 @@ bool NullMemoryBlock::Read8(const u64 addr, u8* )
 
 bool NullMemoryBlock::Read16(const u64 addr, u16* )
 {
-	ConLog.Error("Read16 from null block: [%08llx]", addr);
+	LOGF_ERROR(MEMORY, "Read16 from null block: [%08llx]", addr);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -347,7 +347,7 @@ bool NullMemoryBlock::Read16(const u64 addr, u16* )
 
 bool NullMemoryBlock::Read32(const u64 addr, u32* )
 {
-	ConLog.Error("Read32 from null block: [%08llx]", addr);
+	LOGF_ERROR(MEMORY, "Read32 from null block: [%08llx]", addr);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -355,7 +355,7 @@ bool NullMemoryBlock::Read32(const u64 addr, u32* )
 
 bool NullMemoryBlock::Read64(const u64 addr, u64* )
 {
-	ConLog.Error("Read64 from null block: [%08llx]", addr);
+	LOGF_ERROR(MEMORY, "Read64 from null block: [%08llx]", addr);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -363,7 +363,7 @@ bool NullMemoryBlock::Read64(const u64 addr, u64* )
 
 bool NullMemoryBlock::Read128(const u64 addr, u128* )
 {
-	ConLog.Error("Read128 from null block: [%08llx]", addr);
+	LOGF_ERROR(MEMORY, "Read128 from null block: [%08llx]", addr);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -371,7 +371,7 @@ bool NullMemoryBlock::Read128(const u64 addr, u128* )
 
 bool NullMemoryBlock::Write8(const u64 addr, const u8 value)
 {
-	ConLog.Error("Write8 to null block: [%08llx]: %x", addr, value);
+	LOGF_ERROR(MEMORY, "Write8 to null block: [%08llx]: %x", addr, value);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -379,7 +379,7 @@ bool NullMemoryBlock::Write8(const u64 addr, const u8 value)
 
 bool NullMemoryBlock::Write16(const u64 addr, const u16 value)
 {
-	ConLog.Error("Write16 to null block: [%08llx]: %x", addr, value);
+	LOGF_ERROR(MEMORY, "Write16 to null block: [%08llx]: %x", addr, value);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -387,7 +387,7 @@ bool NullMemoryBlock::Write16(const u64 addr, const u16 value)
 
 bool NullMemoryBlock::Write32(const u64 addr, const u32 value)
 {
-	ConLog.Error("Write32 to null block: [%08llx]: %x", addr, value);
+	LOGF_ERROR(MEMORY, "Write32 to null block: [%08llx]: %x", addr, value);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -395,7 +395,7 @@ bool NullMemoryBlock::Write32(const u64 addr, const u32 value)
 
 bool NullMemoryBlock::Write64(const u64 addr, const u64 value)
 {
-	ConLog.Error("Write64 to null block: [%08llx]: %llx", addr, value);
+	LOGF_ERROR(MEMORY, "Write64 to null block: [%08llx]: %llx", addr, value);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;
@@ -403,7 +403,7 @@ bool NullMemoryBlock::Write64(const u64 addr, const u64 value)
 
 bool NullMemoryBlock::Write128(const u64 addr, const u128 value)
 {
-	ConLog.Error("Write128 to null block: [%08llx]: %llx_%llx", addr, value.hi, value.lo);
+	LOGF_ERROR(MEMORY, "Write128 to null block: [%08llx]: %llx_%llx", addr, value.hi, value.lo);
 	if (!Ini.CPUIgnoreRWErrors.GetValue())
 		Emu.Pause();
 	return false;

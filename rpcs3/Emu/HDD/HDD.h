@@ -445,7 +445,7 @@ public:
 		m_cur_dir_block = m_hdd_info.next_block;
 		if(!m_hdd_info.block_size)
 		{
-			ConLog.Error("Bad block size!");
+			LOG_ERROR(HLE, "Bad block size!");
 			m_hdd_info.block_size = 2048;
 		}
 		m_hdd_file.Seek(m_cur_dir_block * m_hdd_info.block_size);
@@ -486,7 +486,7 @@ public:
 
 	int OpenDir(const std::string& name)
 	{
-		ConLog.Warning("OpenDir(%s)", name.c_str());
+		LOGF_WARNING(HLE, "OpenDir(%s)", name.c_str());
 		u64 entry_block;
 		if(!SearchEntry(name, entry_block))
 			return -1;
@@ -594,7 +594,7 @@ public:
 			return false;
 		}
 
-		ConLog.Write("CREATING ENTRY AT 0x%llx", new_block);
+		LOGF_NOTICE(HLE, "CREATING ENTRY AT 0x%llx", new_block);
 		WriteBlock(new_block, g_used_block);
 
 		{
@@ -744,7 +744,7 @@ public:
 			return false;
 		}
 
-		ConLog.Write("ENTRY FOUND AT 0x%llx", file_block);
+		LOGF_NOTICE(HLE, "ENTRY FOUND AT 0x%llx", file_block);
 		m_file.Open(file_block);
 
 		return vfsFileBase::Open(path, mode);
@@ -774,7 +774,7 @@ public:
 
 			if(entry.type == vfsHDD_Entry_Dir && name != "." && name != "..")
 			{
-				ConLog.Warning("Removing sub folder '%s'", name.c_str());
+				LOGF_WARNING(HLE, "Removing sub folder '%s'", name.c_str());
 				RemoveBlocksDir(entry.data_block);
 			}
 			else if(entry.type == vfsHDD_Entry_File)

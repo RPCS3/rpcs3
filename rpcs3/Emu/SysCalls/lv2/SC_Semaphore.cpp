@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -39,7 +39,7 @@ int sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	}
 
 	sem = sys_sem.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64));
-	ConLog.Write("*** semaphore created [%s] (protocol=0x%x): id = %d",
+	LOGF_NOTICE(HLE, "*** semaphore created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, sem.GetValue());
 
 	return CELL_OK;
@@ -91,7 +91,7 @@ int sys_semaphore_wait(u32 sem_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_semaphore_wait(%d) aborted", sem_id);
+			LOGF_WARNING(HLE, "sys_semaphore_wait(%d) aborted", sem_id);
 			return CELL_OK;
 		}
 
@@ -165,7 +165,7 @@ int sys_semaphore_post(u32 sem_id, int count)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_semaphore_post(%d) aborted", sem_id);
+			LOGF_WARNING(HLE, "sys_semaphore_post(%d) aborted", sem_id);
 			return CELL_OK;
 		}
 

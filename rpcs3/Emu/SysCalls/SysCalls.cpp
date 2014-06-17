@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -553,7 +553,7 @@ void default_syscall()
 	{
 		//tty
 		case 988:
-			ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
+			LOGF_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
 				CPU.GPR[3], CPU.GPR[4], CPU.PC);
 			RESULT(0);
 		return;
@@ -561,16 +561,16 @@ void default_syscall()
 		case 999:
 			dump_enable = !dump_enable;
 			Emu.Pause();
-			ConLog.Warning("Dump %s", (dump_enable ? "enabled" : "disabled"));
+			LOGF_WARNING(HLE, "Dump %s", (dump_enable ? "enabled" : "disabled"));
 		return;
 
 		case 1000:
 			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			ConLog.Warning("Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
+			LOGF_WARNING(HLE, "Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
 		return;
 	}
 
-	ConLog.Error("Unknown syscall: %d - %08x", code, code);
+	LOGF_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
 	RESULT(0);
 	return;
 }
@@ -589,7 +589,7 @@ void SysCalls::DoSyscall(u32 code)
 	}
 
 
-	ConLog.Error("TODO: %s", GetHLEFuncName(code).c_str());
+	LOGF_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
 	declCPU();
 	RESULT(0);
 }

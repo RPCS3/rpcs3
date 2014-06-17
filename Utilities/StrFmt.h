@@ -4,6 +4,7 @@
 #include <ostream>
 #include <sstream>
 #include <cstdio>
+#include <functional>
 
 #if defined(_MSC_VER)
 #define snprintf _snprintf

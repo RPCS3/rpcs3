@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -169,7 +169,7 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 
 u32 SleepQueue::pop_prio_inherit() // (TODO)
 {
-	ConLog.Error("TODO: SleepQueue::pop_prio_inherit()");
+	LOG_ERROR(HLE, "TODO: SleepQueue::pop_prio_inherit()");
 	Emu.Pause();
 	return 0;
 }
@@ -251,7 +251,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
+			LOGF_WARNING(HLE, "(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
 			return CELL_ESRCH;
 		}
 		Sleep(1);
@@ -340,7 +340,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	case SMR_TIMEOUT:
 		sq->invalidate(tid); return CELL_ETIMEDOUT;
 	case SMR_ABORT:
-		if (Emu.IsStopped()) ConLog.Warning("sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
+		if (Emu.IsStopped()) LOGF_WARNING(HLE, "sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
 	default:
 		sq->invalidate(tid); return CELL_EINVAL;
 	}

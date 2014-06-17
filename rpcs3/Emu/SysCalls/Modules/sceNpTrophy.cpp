@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -361,7 +361,7 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, mem_ptr_t<SceNpTrop
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
 	count = ctxt.tropusr->GetTrophiesCount();
 	if (count.GetValue() > 128)
-		ConLog.Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+		LOG_WARNING(HLE, "sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
 
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id=0; id<count.GetValue(); id++)

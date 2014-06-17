@@ -27,6 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Utilities\Log.cpp" />
     <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
@@ -213,8 +214,10 @@
     <ClInclude Include="..\Utilities\Array.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\IdManager.h" />
+    <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\rConcurrency.h" />
     <ClInclude Include="..\Utilities\rFile.h" />
+    <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
