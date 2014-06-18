@@ -275,6 +275,7 @@ inline static u32 ResolutionNumToId(u32 num)
 		12,
 		13,
 		14,
+		15,
 	};
 
 	return num <= 10 ? res[num] : 0;
