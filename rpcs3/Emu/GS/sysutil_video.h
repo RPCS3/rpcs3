@@ -232,8 +232,8 @@ static const CellVideoOutResolution ResolutionTable[] =
 	{1440, 1080},       //11 - 6
 	{1280, 1080},       //12 - 7
 	{960, 1080},        //13 - 8
-	{960, 540},         //14 - 9
-	{1024,768},         //15 - 10
+	{960, 540},         //14 - 9 (Terraria [BLES01938])
+	{1024,768},         //15 - 10 (Eskiss Homebrew)
 };
 
 inline static u32 ResolutionIdToNum(u32 id)
