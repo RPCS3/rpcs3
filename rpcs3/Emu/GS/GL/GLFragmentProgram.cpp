@@ -536,7 +536,14 @@ void GLShaderProgram::Delete()
 
 	if (m_id)
 	{
-		glDeleteShader(m_id);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("GLShaderProgram::Delete(): glDeleteShader(%d) avoided", m_id);
+		}
+		else
+		{
+			glDeleteShader(m_id);
+		}
 		m_id = 0;
 	}
 }

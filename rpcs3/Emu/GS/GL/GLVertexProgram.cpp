@@ -665,7 +665,14 @@ void GLVertexProgram::Delete()
 
 	if(id)
 	{
-		glDeleteShader(id);
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
+		}
+		else
+		{
+			glDeleteShader(id);
+		}
 		id = 0;
 	}
 }
