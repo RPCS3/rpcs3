@@ -68,11 +68,11 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 
 	switch(src->srcSelect.ToBE())
 	{
-	case const_se_t<u32, CELL_PNGDEC_BUFFER>::value:
+	case se32(CELL_PNGDEC_BUFFER):
 		current_subHandle->fileSize = src->streamSize.ToLE();
 		break;
 
-	case const_se_t<u32, CELL_PNGDEC_FILE>::value:
+	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		MemoryAllocator<be_t<u32>> fd;
 		int ret = cellFsOpen(src->fileName_addr, 0, fd.GetAddr(), 0, 0);
@@ -128,12 +128,12 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	MemoryAllocator<be_t<u32>> buffer(34); // Alloc buffer for PNG header
 	MemoryAllocator<be_t<u64>> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToLE())
+	switch(subHandle_data->src.srcSelect.ToBE())
 	{
-	case CELL_PNGDEC_BUFFER:
+	case se32(CELL_PNGDEC_BUFFER):
 		Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
-	case CELL_PNGDEC_FILE:
+	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
 		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
 		break;
