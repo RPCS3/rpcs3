@@ -21,6 +21,7 @@ using namespace PPU_instr;
 
 static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
+extern std::atomic<u32> g_thread_count;
 
 ModuleInitializer::ModuleInitializer()
 {
@@ -345,8 +346,10 @@ void Emulator::Pause()
 	//ConLog.Write("pause...");
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	m_status = Paused;
-	SendDbgCommand(DID_PAUSED_EMU);
+	if (InterlockedCompareExchange((volatile unsigned long*)&m_status, Paused, Running) == Running)
+	{
+		SendDbgCommand(DID_PAUSED_EMU);
+	}
 }
 
 void Emulator::Resume()
@@ -370,7 +373,26 @@ void Emulator::Stop()
 	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
+	u32 uncounted = 0 + (u32)(bool)m_dbg_console;
+	u32 counter = 0;
+	while (true)
+	{
+		if (g_thread_count <= uncounted)
+		{
+			ConLog.Write("All threads stopped...");
+			break;
+		}
+		Sleep(1);
+		if (counter++ > 3000)
+		{
+			ConLog.Error("%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));
+			break;
+		}
+	}
+
 	m_rsx_callback = 0;
+
+	// TODO: check finalization order
 
 	SavePoints(BreakPointsDBName);
 	m_break_points.clear();
@@ -388,7 +410,7 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	//not all modules unload cleanly, so we're not unloading them for now
+	// TODO: not all modules unload cleanly, so we're not unloading them for now
 	//GetModuleManager().UnloadModules(); 
 
 	CurGameInfo.Reset();

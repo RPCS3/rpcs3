@@ -62,3 +62,5 @@ rpcs3/git-version.h
 
 # Ignore other system generated files
 bin/dev_hdd0/log.txt
+x64/Debug/emucore.lib
+x64/Release/emucore.lib
