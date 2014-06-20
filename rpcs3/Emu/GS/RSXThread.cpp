@@ -1264,6 +1264,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
 		m_width = re(buffers[m_gcm_current_buffer].width);
 		m_height = re(buffers[m_gcm_current_buffer].height);
+		
+		if (Ini.GSDownscale.GetValue())
+		{
+			if (m_width == 1280 && m_height == 720)
+			{
+				// Set scale ratio for 720p
+				m_width_scale = 1.125f;
+				m_height_scale = 1.33f;
+
+				// Downscale 720p to 480p
+				m_width = 720;
+				m_height = 480;
+			}
+
+			if (m_width == 1920 && m_height == 1080)
+			{
+				// Set scale ratio for 1080p
+				m_width_scale = 0.75f;
+				m_height_scale = 0.88f;
+
+				// Downscale 1080p to 480p
+				m_width = 720;
+				m_height = 480;
+			}
+		}
 	}
 	break;
 

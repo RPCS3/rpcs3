@@ -116,6 +116,7 @@ public:
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
 	IniEntry<bool> SkipPamf;
+	IniEntry<bool> GSDownscale;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -184,6 +185,7 @@ public:
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
 		SkipPamf.Init("GS_SkipPamf", path);
+		GSDownscale.Init("GS_Downscale", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -248,6 +250,7 @@ public:
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
 		SkipPamf.Load(false);
+		GSDownscale.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -313,6 +316,7 @@ public:
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
 		SkipPamf.Save();
+		GSDownscale.Save();
 
 		// Audio 
 		AudioOutMode.Save();
