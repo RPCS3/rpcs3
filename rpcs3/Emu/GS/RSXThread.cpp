@@ -1780,7 +1780,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV3089_SET_CONTEXT_SURFACE:
 	{
-		if(ARGS(0) != 0x313371C3)
+		if (ARGS(0) != CELL_GCM_CONTEXT_SURFACE2D)
 		{
 			ConLog.Warning("NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
 		}

@@ -132,6 +132,13 @@ enum
 	CELL_GCM_ZCULL_STATS3      = 5,
 };
 
+// GPU Class Handles
+enum
+{
+	CELL_GCM_CONTEXT_SURFACE2D = 0x313371C3,
+	CELL_GCM_CONTEXT_SWIZZLE2D = 0x31337A73,
+};
+
 struct CellGcmControl
 {
 	be_t<u32> put;

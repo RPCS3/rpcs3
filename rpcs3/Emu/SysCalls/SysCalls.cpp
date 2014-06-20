@@ -533,18 +533,6 @@ void default_syscall()
 	//TODO: remove this
 	switch(code)
 	{
-		/*
-		//process
-		case 2: RESULT(lv2ProcessWaitForChild(CPU)); return;
-		case 4: RESULT(lv2ProcessGetStatus(CPU)); return;
-		case 5: RESULT(lv2ProcessDetachChild(CPU)); return;
-		case 12: RESULT(lv2ProcessGetNumberOfObject(CPU)); return;
-		case 13: RESULT(lv2ProcessGetId(CPU)); return;
-		case 18: RESULT(lv2ProcessGetPpid(CPU)); return;
-		case 19: RESULT(lv2ProcessKill(CPU)); return;
-		case 23: RESULT(lv2ProcessWaitForChild2(CPU)); return;
-		case 25: RESULT(lv2ProcessGetSdkVersion(CPU)); return;
-		*/
 		//tty
 		case 988:
 			ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
@@ -583,7 +571,7 @@ void SysCalls::DoSyscall(u32 code)
 	}
 
 
-	ConLog.Error("Unknown function 0x%08x", code);
+	ConLog.Error("TODO: %s", GetHLEFuncName(code).c_str());
 	declCPU();
 	RESULT(0);
 }
