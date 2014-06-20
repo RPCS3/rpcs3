@@ -1265,8 +1265,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_width = re(buffers[m_gcm_current_buffer].width);
 		m_height = re(buffers[m_gcm_current_buffer].height);
 		
-		if (Ini.GSDownscale.GetValue())
+		if (Ini.GSDownscale.GetValue() && Ini.GSResolution.GetValue() == 4)
 		{
+			// Disable write color/depth buffer during downscaling as it is not yet scaled propertly
+			Ini.GSDumpColorBuffers.SetValue(false);
+			Ini.GSDumpDepthBuffer.SetValue(false);
+
 			if (m_width == 1280 && m_height == 720)
 			{
 				// Set scale ratio for 720p
