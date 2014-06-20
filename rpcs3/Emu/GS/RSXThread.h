@@ -7,6 +7,7 @@
 
 #include <stack>
 #include <set> // For tracking a list of used gcm commands
+#include "Utilities/SSemaphore.h"
 
 enum Method
 {
@@ -146,8 +147,8 @@ public:
 
 public:
 	rCriticalSection m_cs_main;
-	rSemaphore m_sem_flush;
-	rSemaphore m_sem_flip;
+	SSemaphore m_sem_flush;
+	SSemaphore m_sem_flip;
 	Callback m_flip_handler;
 
 public:

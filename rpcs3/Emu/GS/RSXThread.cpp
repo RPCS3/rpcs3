@@ -1891,9 +1891,9 @@ void RSXThread::Task()
 			if(put == get)
 			{
 				if(m_flip_status == 0)
-					SemaphorePostAndWait(m_sem_flip);
+					m_sem_flip.post_and_wait();
 
-				SemaphorePostAndWait(m_sem_flush);
+				m_sem_flush.post_and_wait();
 			}
 
 			Sleep(1);

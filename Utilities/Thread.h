@@ -6,6 +6,7 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <Utilities/SSemaphore.h>
 
 class ThreadExec;
 
@@ -137,16 +138,6 @@ public:
 	bool HasNewPacket() const { std::lock_guard<std::recursive_mutex> lock(m_cs_main); return m_put != m_get; }
 	bool IsBusy() const { return m_busy; }
 };
-
-static __forceinline bool SemaphorePostAndWait(rSemaphore& sem)
-{
-	if(sem.TryWait() != rSEMA_BUSY) return false;
-
-	sem.Post();
-	sem.Wait();
-
-	return true;
-}
 
 /*
 class StepThread : public ThreadBase

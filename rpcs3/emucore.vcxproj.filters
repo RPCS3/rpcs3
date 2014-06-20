@@ -575,6 +575,9 @@
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
       <Filter>Emu\Io\XInput</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\SSemaphore.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1041,6 +1044,9 @@
     </ClInclude>
     <ClInclude Include="Emu\event.h">
       <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\SSemaphore.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
