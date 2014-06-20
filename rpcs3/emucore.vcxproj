@@ -28,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\SMutex.cpp" />
+    <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
@@ -220,6 +221,7 @@
     <ClInclude Include="..\Utilities\simpleini\SimpleIni.h" />
     <ClInclude Include="..\Utilities\SMutex.h" />
     <ClInclude Include="..\Utilities\SQueue.h" />
+    <ClInclude Include="..\Utilities\SSemaphore.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
