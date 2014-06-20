@@ -267,6 +267,7 @@
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUThreadManager.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
+    <ClInclude Include="Emu\event.h" />
     <ClInclude Include="Emu\FS\VFS.h" />
     <ClInclude Include="Emu\FS\vfsDevice.h" />
     <ClInclude Include="Emu\FS\vfsDeviceLocalFile.h" />

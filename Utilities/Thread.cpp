@@ -3,14 +3,8 @@
 
 #include "Thread.h"
 
-#ifdef _WIN32
-__declspec(thread)
-#elif __APPLE__
-__thread
-#else
-thread_local
-#endif
-NamedThreadBase* g_tls_this_thread = nullptr;
+thread_local NamedThreadBase* g_tls_this_thread = nullptr;
+std::atomic<u32> g_thread_count(0);
 
 NamedThreadBase* GetCurrentNamedThread()
 {
@@ -56,10 +50,12 @@ void ThreadBase::Start()
 		[this]()
 		{
 			g_tls_this_thread = this;
+			g_thread_count++;
 
 			Task();
 
 			m_alive = false;
+			g_thread_count--;
 		});
 }
 
@@ -130,6 +126,7 @@ void thread::start(std::function<void()> func)
 	{
 		NamedThreadBase info(name);
 		g_tls_this_thread = &info;
+		g_thread_count++;
 
 		try
 		{
@@ -140,6 +137,8 @@ void thread::start(std::function<void()> func)
 			ConLog.Error("Crash :(");
 			//std::terminate();
 		}
+
+		g_thread_count--;
 	});
 }
 

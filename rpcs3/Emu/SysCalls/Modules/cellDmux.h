@@ -481,7 +481,7 @@ public:
 
 class ElementaryStream
 {
-	SMutex mutex;
+	std::mutex m_mutex;
 
 	SQueue<u32> entries; // AU starting addresses
 	u32 put_count; // number of AU written
@@ -566,19 +566,19 @@ public:
 
 	bool hasunseen()
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return peek_count < put_count;
 	}
 
 	bool hasdata()
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return size;
 	}
 
 	bool isfull()
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return is_full();
 	}
 
@@ -586,7 +586,7 @@ public:
 	{
 		u32 addr;
 		{
-			SMutexLocker lock(mutex);
+			std::lock_guard<std::mutex> lock(m_mutex);
 			//if (fidMajor != 0xbd) ConLog.Write(">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 
 			addr = put;
@@ -621,7 +621,7 @@ public:
 
 	void push(DemuxerStream& stream, u32 sz, PesHeader& pes)
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		if (is_full())
 		{
@@ -673,7 +673,7 @@ public:
 
 	bool release()
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		//if (fidMajor != 0xbd) ConLog.Write(">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		if (released >= put_count)
 		{
@@ -720,7 +720,7 @@ public:
 
 	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		//if (fidMajor != 0xbd) ConLog.Write(">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(), 
 			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
 		if (peek_count >= put_count) return false;
@@ -767,7 +767,7 @@ public:
 
 	void reset()
 	{
-		SMutexLocker lock(mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		//first = 0;
 		//peek = 0;
 		put = memAddr;

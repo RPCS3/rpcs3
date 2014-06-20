@@ -1869,6 +1869,11 @@ void RSXThread::Task()
 
 	while(!TestDestroy())
 	{
+		if (Emu.IsStopped())
+		{
+			ConLog.Warning("RSX thread aborted");
+			return;
+		}
 		rCriticalSectionLocker lock(m_cs_main);
 
 		inc=1;

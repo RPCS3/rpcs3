@@ -3,7 +3,7 @@
 template<typename T, u32 SQSize = 666>
 class SQueue
 {
-	SMutexGeneral m_mutex;
+	std::mutex m_mutex;
 	u32 m_pos;
 	u32 m_count;
 	T m_data[SQSize];
@@ -24,11 +24,6 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				return false;
-			}
-
 			if (m_count >= SQSize)
 			{
 				if (Emu.IsStopped())
@@ -40,7 +35,7 @@ public:
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
+				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (m_count >= SQSize) continue;
 
@@ -55,11 +50,6 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				return false;
-			}
-
 			if (!m_count)
 			{
 				if (Emu.IsStopped())
@@ -71,7 +61,7 @@ public:
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
+				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (!m_count) continue;
 
@@ -96,7 +86,7 @@ public:
 
 	void Clear()
 	{
-		SMutexGeneralLocker lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_count = 0;
 	}
 
@@ -104,11 +94,6 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				break;
-			}
-
 			if (!m_count)
 			{
 				if (Emu.IsStopped())
@@ -120,7 +105,7 @@ public:
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
+				std::lock_guard<std::mutex> lock(m_mutex);
 				if (m_count) break;
 			}
 		}

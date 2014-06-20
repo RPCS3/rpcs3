@@ -123,7 +123,7 @@ public:
 				default: return res;
 			}
 
-			wait();
+			if (wait) wait();
 
 			if (timeout && counter++ > timeout)
 			{
@@ -133,14 +133,14 @@ public:
 	}
 };
 
-template<typename T, T (get_tid)()>
+template<typename T, typename Tid, Tid (get_tid)()>
 class SMutexLockerBase
 {
-	SMutexBase<T>& sm;
+	T& sm;
 public:
-	const T tid;
+	const Tid tid;
 
-	__forceinline SMutexLockerBase(SMutexBase<T>& _sm)
+	__forceinline SMutexLockerBase(T& _sm)
 		: sm(_sm)
 		, tid(get_tid())
 	{
@@ -169,9 +169,9 @@ typedef SMutexBase<u32>
 typedef SMutexBase<be_t<u32>>
 	SMutexBE;
 
-typedef SMutexLockerBase<size_t, SM_GetCurrentThreadId>
+typedef SMutexLockerBase<SMutexGeneral, size_t, SM_GetCurrentThreadId>
 	SMutexGeneralLocker;
-typedef SMutexLockerBase<u32, SM_GetCurrentCPUThreadId>
+typedef SMutexLockerBase<SMutex, u32, SM_GetCurrentCPUThreadId>
 	SMutexLocker;
-typedef SMutexLockerBase<be_t<u32>, SM_GetCurrentCPUThreadIdBE>
+typedef SMutexLockerBase<SMutexBE, be_t<u32>, SM_GetCurrentCPUThreadIdBE>
 	SMutexBELocker;

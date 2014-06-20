@@ -280,20 +280,18 @@ int sys_event_port_destroy(u32 eport_id)
 		return CELL_ESRCH;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	if (eport->mutex.trylock(tid) != SMR_OK)
+	if (!eport->m_mutex.try_lock())
 	{
 		return CELL_EISCONN;
 	}
 
 	if (eport->eq)
 	{
-		eport->mutex.unlock(tid);
+		eport->m_mutex.unlock();
 		return CELL_EISCONN;
 	}
 
-	eport->mutex.unlock(tid, ~0);
+	eport->m_mutex.unlock();
 	Emu.GetIdManager().RemoveID(eport_id);
 	return CELL_OK;
 }
@@ -308,16 +306,14 @@ int sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_ESRCH;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	if (eport->mutex.trylock(tid) != SMR_OK)
+	if (!eport->m_mutex.try_lock())
 	{
 		return CELL_EISCONN;
 	}
 
 	if (eport->eq)
 	{
-		eport->mutex.unlock(tid);
+		eport->m_mutex.unlock();
 		return CELL_EISCONN;
 	}
 
@@ -325,7 +321,7 @@ int sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 	if (!Emu.GetIdManager().GetIDData(equeue_id, equeue))
 	{
 		sys_event.Error("sys_event_port_connect_local: event_queue(%d) not found!", equeue_id);
-		eport->mutex.unlock(tid);
+		eport->m_mutex.unlock();
 		return CELL_ESRCH;
 	}
 	else
@@ -334,7 +330,7 @@ int sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 	}
 
 	eport->eq = equeue;
-	eport->mutex.unlock(tid);
+	eport->m_mutex.unlock();
 	return CELL_OK;
 }
 
@@ -353,16 +349,14 @@ int sys_event_port_disconnect(u32 eport_id)
 		return CELL_ENOTCONN;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	if (eport->mutex.trylock(tid) != SMR_OK)
+	if (!eport->m_mutex.try_lock())
 	{
 		return CELL_EBUSY;
 	}
 
 	eport->eq->ports.remove(eport);
 	eport->eq = nullptr;
-	eport->mutex.unlock(tid);
+	eport->m_mutex.unlock();
 	return CELL_OK;
 }
 
@@ -377,7 +371,7 @@ int sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		return CELL_ESRCH;
 	}
 
-	SMutexLocker lock(eport->mutex);
+	std::lock_guard<std::mutex> lock(eport->m_mutex);
 
 	EventQueue* eq = eport->eq;
 	if (!eq)

@@ -8,7 +8,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "cellPamf.h"
 
-extern SMutexGeneral g_mutex_avcodec_open2;
+extern std::mutex g_mutex_avcodec_open2;
 
 extern "C"
 {
@@ -352,7 +352,7 @@ u32 adecOpen(AudioDecoder* data)
 						AVDictionary* opts = nullptr;
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
-							SMutexGeneralLocker lock(g_mutex_avcodec_open2);
+							std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
 							// not multithread-safe
 							err = avcodec_open2(adec.ctx, codec, &opts);
 						}

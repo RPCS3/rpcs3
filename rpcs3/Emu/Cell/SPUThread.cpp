@@ -115,7 +115,7 @@ void SPUThread::DoClose()
 	for (u32 i = 0; i < 64; i++)
 	{
 		EventPort& port = SPUPs[i];
-		SMutexLocker lock(port.mutex);
+		std::lock_guard<std::mutex> lock(port.m_mutex);
 		if (port.eq)
 		{
 			port.eq->ports.remove(&port);

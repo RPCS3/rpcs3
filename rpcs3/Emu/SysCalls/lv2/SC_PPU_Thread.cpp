@@ -83,7 +83,7 @@ void sys_ppu_thread_get_join_state(u32 isjoinable_addr)
 
 int sys_ppu_thread_set_priority(u32 thread_id, int prio)
 {
-	sysPrxForUser->Warning("sys_ppu_thread_set_priority(thread_id=%d, prio=%d)", thread_id, prio);
+	sysPrxForUser->Log("sys_ppu_thread_set_priority(thread_id=%d, prio=%d)", thread_id, prio);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;

@@ -1039,5 +1039,8 @@
     <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
       <Filter>Emu\Io\XInput</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\event.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

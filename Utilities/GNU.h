@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef _WIN32
+#define thread_local __declspec(thread)
+#elif __APPLE__
+#define thread_local __thread
+#endif
+
 #if defined(__GNUG__)
 #include <cmath>
 #include <stdlib.h>

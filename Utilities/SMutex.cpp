@@ -8,17 +8,17 @@
 
 __forceinline void SM_Sleep()
 {
-	Sleep(1);
+	if (NamedThreadBase* t = GetCurrentNamedThread())
+	{
+		t->WaitForAnySignal();
+	}
+	else
+	{
+		Sleep(1);
+	}
 }
 
-#ifdef _WIN32
-__declspec(thread)
-#elif __APPLE__
-__thread
-#else
-thread_local
-#endif
-size_t g_this_thread_id = 0;
+thread_local size_t g_this_thread_id = 0;
 
 __forceinline size_t SM_GetCurrentThreadId()
 {

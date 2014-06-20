@@ -471,7 +471,7 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could stall on exit
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could freeze on exit
 
 	u32 current = ctxt->current;
 	u32 end = ctxt->end;

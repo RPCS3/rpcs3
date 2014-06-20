@@ -733,7 +733,7 @@ public:
 
 			if (op == MFC_GETLLAR_CMD) // get reservation
 			{
-				SMutexLocker lock(reservation.mutex);
+				SMutexLockerR lock(reservation.mutex);
 				reservation.owner = lock.tid;
 				reservation.addr = ea;
 				reservation.size = 128;
@@ -746,7 +746,7 @@ public:
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
 			{
-				SMutexLocker lock(reservation.mutex);
+				SMutexLockerR lock(reservation.mutex);
 				if (reservation.owner == lock.tid) // succeeded
 				{
 					if (reservation.addr == ea && reservation.size == 128)
@@ -827,7 +827,7 @@ public:
 			}
 			else // store unconditional
 			{
-				SMutexLocker lock(reservation.mutex);
+				SMutexLockerR lock(reservation.mutex);
 				ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
 				if (op == MFC_PUTLLUC_CMD)
 				{
@@ -929,7 +929,7 @@ public:
 
 					EventPort& port = SPUPs[spup];
 
-					SMutexLocker lock(port.mutex);
+					std::lock_guard<std::mutex> lock(port.m_mutex);
 
 					if (!port.eq)
 					{
@@ -937,7 +937,7 @@ public:
 						return;
 					}
 
-					if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, lock.tid, ((u64)code << 32) | (v & 0x00ffffff), data))
+					if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetCurrentCPUThread()->GetId(), ((u64)code << 32) | (v & 0x00ffffff), data))
 					{
 						SPU.In_MBox.PushUncond(CELL_EBUSY);
 						return;

@@ -13,6 +13,9 @@ class NamedThreadBase
 {
 	std::string m_name;
 
+	std::condition_variable m_signal_cv;
+	std::mutex m_signal_mtx;
+
 public:
 	NamedThreadBase(const std::string& name) : m_name(name)
 	{
@@ -24,6 +27,17 @@ public:
 
 	virtual std::string GetThreadName() const;
 	virtual void SetThreadName(const std::string& name);
+
+	void WaitForAnySignal() // wait 1 ms for something
+	{
+		std::unique_lock<std::mutex> lock(m_signal_mtx);
+		m_signal_cv.wait_for(lock, std::chrono::milliseconds(1));
+	}
+
+	void Notify() // wake up waiting thread or nothing
+	{
+		m_signal_cv.notify_one();
+	}
 };
 
 NamedThreadBase* GetCurrentNamedThread();
