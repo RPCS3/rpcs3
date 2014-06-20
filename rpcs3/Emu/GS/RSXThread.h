@@ -137,7 +137,10 @@ public:
 public:
 	uint m_draw_mode;
 
-	u32 m_width, m_height;
+	u32 m_width;
+	u32 m_height;
+	float m_width_scale;
+	float m_height_scale;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
 

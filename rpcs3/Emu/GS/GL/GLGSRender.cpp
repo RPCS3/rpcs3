@@ -287,17 +287,17 @@ void GLGSRender::InitVertexData()
 	}
 
 	// Scale
-	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*0)] / (RSXThread::m_width / 2.0f);
-	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*1)] / (RSXThread::m_height / 2.0f);
+	scaleOffsetMat[0] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[5] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*2)];
 
 	// Offset
-	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*0)] - (RSXThread::m_width / 2.0f);
-	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*1)] - (RSXThread::m_height / 2.0f);
-	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4*2)] - 1/2.0f;
+	scaleOffsetMat[3] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[7] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
 
-	scaleOffsetMat[3] /= RSXThread::m_width / 2.0f;
-	scaleOffsetMat[7] /= RSXThread::m_height / 2.0f;
+	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
+	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
 
 	l = m_program.GetLocation("scaleOffsetMat");
 	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
@@ -598,6 +598,8 @@ void GLGSRender::OnInit()
 	m_skip_frames = 0;
 	RSXThread::m_width = 720;
 	RSXThread::m_height = 576;
+	RSXThread::m_width_scale = 2.0f;
+	RSXThread::m_height_scale = 2.0f;
 
 	last_width = 0;
 	last_height = 0;
