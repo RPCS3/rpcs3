@@ -1931,7 +1931,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
 		c.mov(*addr, 0);
-		c.setg(*addr);
+		c.setg(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -2311,7 +2311,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._u32[3]));
 		c.mov(*addr, 0);
-		c.seta(*addr);
+		c.seta(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -2729,7 +2729,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
 		c.mov(*addr, 0);
-		c.sete(*addr);
+		c.sete(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3391,7 +3391,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.setg(*addr);
+		c.setg(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3457,7 +3457,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.seta(*addr);
+		c.seta(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3508,7 +3508,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.sete(*addr);
+		c.sete(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);

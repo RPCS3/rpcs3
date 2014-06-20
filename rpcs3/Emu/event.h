@@ -58,7 +58,7 @@ struct EventPort
 {
 	u64 name; // generated or user-specified code that is passed to sys_event_data struct
 	EventQueue* eq; // event queue this port has been connected to
-	SMutex mutex; // may be locked until the event sending is finished
+	std::mutex m_mutex; // may be locked until the event sending is finished
 
 	EventPort(u64 name = 0)
 		: eq(nullptr)
@@ -70,7 +70,7 @@ struct EventPort
 class EventRingBuffer
 {
 	std::vector<sys_event_data> data;
-	SMutex m_lock;
+	std::mutex m_mutex;
 	u32 buf_pos;
 	u32 buf_count;
 
@@ -87,14 +87,14 @@ public:
 
 	void clear()
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		buf_count = 0;
 		buf_pos = 0;
 	}
 
 	bool push(u64 name, u64 d1, u64 d2, u64 d3)
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		if (buf_count >= size) return false;
 
 		sys_event_data& ref = data[(buf_pos + buf_count++) % size];
@@ -108,7 +108,7 @@ public:
 	
 	bool pop(sys_event_data& ref)
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		if (!buf_count) return false;
 
 		sys_event_data& from = data[buf_pos];
@@ -124,7 +124,7 @@ public:
 
 	u32 pop_all(sys_event_data* ptr, u32 max)
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		u32 res = 0;
 		while (buf_count && max)
@@ -152,16 +152,16 @@ public:
 class EventPortList
 {
 	std::vector<EventPort*> data;
-	SMutex m_lock;
+	std::mutex m_mutex;
 
 public:
 
 	void clear()
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		for (u32 i = 0; i < data.size(); i++)
 		{
-			SMutexLocker lock2(data[i]->mutex);
+			std::lock_guard<std::mutex> lock2(data[i]->m_mutex);
 			data[i]->eq = nullptr; // force all ports to disconnect
 		}
 		data.clear();
@@ -169,13 +169,13 @@ public:
 
 	void add(EventPort* port)
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		data.push_back(port);
 	}
 
 	void remove(EventPort* port)
 	{
-		SMutexLocker lock(m_lock);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		for (u32 i = 0; i < data.size(); i++)
 		{
 			if (data[i] == port)
@@ -215,7 +215,7 @@ struct EventQueue
 
 class EventManager
 {
-	SMutex m_lock;
+	std::mutex m_lock;
 	std::unordered_map<u64, EventQueue*> key_map;
 
 public:

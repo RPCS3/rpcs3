@@ -7,7 +7,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellPamf.h"
 
-SMutexGeneral g_mutex_avcodec_open2;
+std::mutex g_mutex_avcodec_open2;
 
 extern "C"
 {
@@ -284,7 +284,7 @@ u32 vdecOpen(VideoDecoder* data)
 						AVDictionary* opts = nullptr;
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
-							SMutexGeneralLocker lock(g_mutex_avcodec_open2);
+							std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
 							// not multithread-safe
 							err = avcodec_open2(vdec.ctx, codec, &opts);
 						}

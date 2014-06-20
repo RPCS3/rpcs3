@@ -2367,7 +2367,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLocker lock(reservation.mutex);
+		SMutexLockerR lock(reservation.mutex);
 		reservation.owner = lock.tid;
 		reservation.addr = addr;
 		reservation.size = 4;
@@ -2522,7 +2522,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLocker lock(reservation.mutex);
+		SMutexLockerR lock(reservation.mutex);
 		reservation.owner = lock.tid;
 		reservation.addr = addr;
 		reservation.size = 8;
@@ -2641,7 +2641,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLocker lock(reservation.mutex);
+		SMutexLockerR lock(reservation.mutex);
 		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 4)
 		{
 			// Memory.Write32(addr, CPU.GPR[rs]);
@@ -2702,7 +2702,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLocker lock(reservation.mutex);
+		SMutexLockerR lock(reservation.mutex);
 		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 8)
 		{
 			// Memory.Write64(addr, CPU.GPR[rs]);

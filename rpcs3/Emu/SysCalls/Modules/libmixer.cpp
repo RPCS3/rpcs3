@@ -17,7 +17,7 @@ CellSurMixerConfig surMixer;
 #define SUR_PORT (7)
 u32 surMixerCb = 0;
 u32 surMixerCbArg = 0;
-SMutex mixer_mutex;
+std::mutex mixer_mutex;
 float mixdata[8*256];
 u64 mixcount = 0;
 
@@ -53,7 +53,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		return CELL_OK;
 	}
 
-	SMutexLocker lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (type == CELL_SURMIXER_CHSTRIP_TYPE1A)
 	{
@@ -316,7 +316,7 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 		return CELL_OK;
 	}
 
-	SMutexLocker lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	for (u32 i = 0; i < samples; i++)
 	{

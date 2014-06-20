@@ -604,7 +604,7 @@ int sys_spu_thread_connect_event(u32 id, u32 eq_id, u32 et, u8 spup)
 
 	EventPort& port = spu.SPUPs[spup];
 
-	SMutexLocker lock(port.mutex);
+	std::lock_guard<std::mutex> lock(port.m_mutex);
 
 	if (port.eq)
 	{
@@ -645,7 +645,7 @@ int sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	EventPort& port = spu.SPUPs[spup];
 
-	SMutexLocker lock(port.mutex);
+	std::lock_guard<std::mutex> lock(port.m_mutex);
 
 	if (!port.eq)
 	{

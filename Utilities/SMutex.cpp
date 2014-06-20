@@ -8,7 +8,14 @@
 
 __forceinline void SM_Sleep()
 {
-	Sleep(1);
+	if (NamedThreadBase* t = GetCurrentNamedThread())
+	{
+		t->WaitForAnySignal();
+	}
+	else
+	{
+		Sleep(1);
+	}
 }
 
 thread_local size_t g_this_thread_id = 0;

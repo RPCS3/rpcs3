@@ -4,7 +4,7 @@
 #include "Thread.h"
 
 thread_local NamedThreadBase* g_tls_this_thread = nullptr;
-std::atomic<u32> g_thread_count = 0;
+std::atomic<u32> g_thread_count(0);
 
 NamedThreadBase* GetCurrentNamedThread()
 {

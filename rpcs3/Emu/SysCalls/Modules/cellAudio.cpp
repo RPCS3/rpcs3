@@ -15,7 +15,7 @@
 //Module cellAudio(0x0011, cellAudio_init);
 extern Module *cellAudio = nullptr;
 
-static SMutexGeneral audioMutex;
+static std::mutex audioMutex;
 
 AudioConfig m_config;
 
@@ -394,7 +394,7 @@ int cellAudioInit()
 
 				// send aftermix event (normal audio event)
 				{
-					SMutexGeneralLocker lock(audioMutex);
+					std::lock_guard<std::mutex> lock(audioMutex);
 					// update indexes:
 					for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
 					{
@@ -694,7 +694,7 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, mem64_t stamp)
 
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
-	SMutexGeneralLocker lock(audioMutex);
+	std::lock_guard<std::mutex> lock(audioMutex);
 
 	stamp = m_config.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
@@ -728,7 +728,7 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	SMutexGeneralLocker lock(audioMutex);
+	std::lock_guard<std::mutex> lock(audioMutex);
 
 	u64 tag_base = port.tag;
 	if (tag_base % port.block > blockNo)
@@ -756,7 +756,7 @@ int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 {
 	cellAudio->Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.GetAddr(), key.GetAddr());
 
-	SMutexGeneralLocker lock(audioMutex);
+	std::lock_guard<std::mutex> lock(audioMutex);
 
 	u64 event_key = 0;
 	while (Emu.GetEventManager().CheckKey((event_key << 48) | 0x80004d494f323221))
@@ -790,7 +790,7 @@ int cellAudioSetNotifyEventQueue(u64 key)
 {
 	cellAudio->Warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
-	SMutexGeneralLocker lock(audioMutex);
+	std::lock_guard<std::mutex> lock(audioMutex);
 
 	for (u32 i = 0; i < m_config.m_keys.size(); i++) // check for duplicates
 	{
@@ -822,7 +822,7 @@ int cellAudioRemoveNotifyEventQueue(u64 key)
 {
 	cellAudio->Warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
-	SMutexGeneralLocker lock(audioMutex);
+	std::lock_guard<std::mutex> lock(audioMutex);
 
 	bool found = false;
 	for (u32 i = 0; i < m_config.m_keys.size(); i++)
