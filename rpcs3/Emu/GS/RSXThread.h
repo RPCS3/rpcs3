@@ -140,6 +140,8 @@ public:
 
 	u32 m_width;
 	u32 m_height;
+	u32 m_buffer_width;
+	u32 m_buffer_height;
 	float m_width_scale;
 	float m_height_scale;
 	u32 m_draw_array_count;

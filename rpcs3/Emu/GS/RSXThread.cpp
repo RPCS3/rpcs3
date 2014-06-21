@@ -1267,10 +1267,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		
 		if (Ini.GSDownscale.GetValue() && Ini.GSResolution.GetValue() == 4)
 		{
-			// Disable write color/depth buffer during downscaling as it is not yet scaled propertly
-			Ini.GSDumpColorBuffers.SetValue(false);
-			Ini.GSDumpDepthBuffer.SetValue(false);
-
 			if (m_width == 1280 && m_height == 720)
 			{
 				// Set scale ratio for 720p
@@ -1867,7 +1863,7 @@ void RSXThread::End()
 void RSXThread::Task()
 {
 	u8 inc;
-	ConLog.Write("RSX thread entry");
+	ConLog.Write("RSX thread started");
 
 	OnInitThread();
 
@@ -1957,7 +1953,7 @@ void RSXThread::Task()
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 
-	ConLog.Write("RSX thread exit...");
+	ConLog.Write("RSX thread ended");
 
 	OnExitThread();
 }
