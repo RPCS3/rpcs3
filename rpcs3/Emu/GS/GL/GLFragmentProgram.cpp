@@ -423,11 +423,16 @@ void GLFragmentDecompilerThread::Task()
 
 		m_size += m_offset;
 
+		// Check emptyness of m_end_offsets 
+		if (m_end_offsets.empty()) break;
+
 		if(dst.end) break;
 
 		data.Skip(m_offset);
 	}
 
+	// flush m_code_level
+	m_code_level = 1;
 	m_shader = BuildCode();
 	main.clear();
 	m_parr.params.clear();
