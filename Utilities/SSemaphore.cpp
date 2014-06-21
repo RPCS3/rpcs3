@@ -43,29 +43,22 @@ bool SSemaphore::try_wait()
 	}
 }
 
-void SSemaphore::post(u32 value)
+void SSemaphore::post()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (m_count >= m_max)
 	{
-		value = 0;
-	}
-	else if (value > (m_max - m_count))
-	{
-		value = m_max - m_count;
+		return;
 	}
 
-	while (value)
-	{
-		m_count++;
-		value--;
-		m_cond.notify_one();
-	}
+	m_count++;
+	m_cond.notify_one();
 }
 
 bool SSemaphore::post_and_wait()
 {
+	// TODO: ???
 	if (try_wait()) return false;
 
 	post();
