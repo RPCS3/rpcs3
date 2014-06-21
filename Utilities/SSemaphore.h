@@ -28,7 +28,7 @@ public:
 
 	bool try_wait();
 
-	void post(u32 value = 1);
+	void post();
 
 	bool post_and_wait();
 };

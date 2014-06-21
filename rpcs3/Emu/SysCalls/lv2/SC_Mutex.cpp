@@ -93,7 +93,7 @@ int sys_mutex_destroy(u32 mutex_id)
 
 int sys_mutex_lock(u32 mutex_id, u64 timeout)
 {
-	sys_mtx.Log("sys_mutex_lock(mutex_id=%d, timeout=0x%llx)", mutex_id, timeout);
+	sys_mtx.Log("sys_mutex_lock(mutex_id=%d, timeout=%lld)", mutex_id, timeout);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))

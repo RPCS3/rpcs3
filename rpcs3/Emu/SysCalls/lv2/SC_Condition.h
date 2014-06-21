@@ -17,12 +17,15 @@ struct Cond
 {
 	Mutex* mutex; // associated with mutex
 	SMutex signal;
+	u32 signaler; // signaler thread id (for signal_all)
 	SleepQueue m_queue;
+
 	u64 signal_stamp;
 
 	Cond(Mutex* mutex, u64 name)
 		: mutex(mutex)
 		, m_queue(name)
+		, signaler(0)
 	{
 	}
 };

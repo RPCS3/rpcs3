@@ -11,6 +11,7 @@
 #include "lv2/SC_Event_flag.h"
 #include "lv2/SC_Condition.h"
 #include "lv2/SC_Spinlock.h"
+#include "lv2/SC_Semaphore.h"
 #include "Emu/event.h"
 #include "Static.h"
 //#define SYSCALLS_DEBUG
@@ -144,12 +145,12 @@ extern int sys_event_flag_cancel(u32 eflag_id, mem32_t num);
 extern int sys_event_flag_get(u32 eflag_id, mem64_t flags);
 
 //sys_semaphore
-extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);
-extern int sys_semaphore_destroy(u32 sem);
-extern int sys_semaphore_wait(u32 sem, u64 timeout);
-extern int sys_semaphore_trywait(u32 sem);
-extern int sys_semaphore_post(u32 sem, int count);
-extern int sys_semaphore_get_value(u32 sem, u32 count_addr);
+extern int sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count);
+extern int sys_semaphore_destroy(u32 sem_id);
+extern int sys_semaphore_wait(u32 sem_id, u64 timeout);
+extern int sys_semaphore_trywait(u32 sem_id);
+extern int sys_semaphore_post(u32 sem_id, int count);
+extern int sys_semaphore_get_value(u32 sem_id, mem32_t count);
 
 //sys_lwcond
 extern int sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr);

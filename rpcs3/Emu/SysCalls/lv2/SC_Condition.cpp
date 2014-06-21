@@ -81,6 +81,7 @@ int sys_cond_signal(u32 cond_id)
 	{
 		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
+		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
@@ -105,15 +106,19 @@ int sys_cond_signal_all(u32 cond_id)
 
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
+		cond->signaler = GetCurrentCPUThread()->GetId();
 		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
+		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
 			ConLog.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
+			break;
 		}
 	}
 
+	cond->signaler = 0;
 	return CELL_OK;
 }
 
@@ -143,6 +148,7 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	{
 		cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
+		Emu.GetCPU().NotifyThread(target);
 	}
 
 	if (Emu.IsStopped())
@@ -188,6 +194,7 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 	{
 		if (cond->signal.unlock(tid, tid) == SMR_OK)
 		{
+			const u64 stamp2 = get_system_time();
 			if (SMutexResult res = mutex->m_mutex.trylock(tid))
 			{
 				if (res != SMR_FAILED)
@@ -209,11 +216,12 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 			mutex->recursive = 1;
 			const volatile u64 stamp = cond->signal_stamp;
 			cond->signal.unlock(tid);
-			//ConLog.Write("sys_cond_wait(): signal latency %d", get_system_time() - stamp);
+			Emu.GetCPU().NotifyThread(cond->signaler);
+			//ConLog.Write("sys_cond_wait(): signal latency %lld (minimum %lld)", get_system_time() - stamp, stamp2 - stamp);
 			return CELL_OK;
 		}
 
-		Sleep(1);
+		SM_Sleep();
 
 		if (counter++ > max_counter)
 		{
