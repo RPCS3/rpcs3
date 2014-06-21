@@ -1262,9 +1262,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		}
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-		m_width = re(buffers[m_gcm_current_buffer].width);
-		m_height = re(buffers[m_gcm_current_buffer].height);
+		m_buffer_width = re(buffers[m_gcm_current_buffer].width);
+		m_buffer_height = re(buffers[m_gcm_current_buffer].height);
 		
+		m_width = m_buffer_width;
+		m_height = m_buffer_height;
+
 		if (Ini.GSDownscale.GetValue() && Ini.GSResolution.GetValue() == 4)
 		{
 			if (m_width == 1280 && m_height == 720)
