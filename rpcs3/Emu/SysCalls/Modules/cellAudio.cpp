@@ -50,11 +50,11 @@ int cellAudioInit()
 		
 			if (do_dump && !m_dump.Init())
 			{
-				ConLog.Error("Audio aborted: AudioDumper::Init() failed");
+				ConLog.Error("cellAudioInit(): AudioDumper::Init() failed");
 				return;
 			}
 
-			ConLog.Write("Audio started");
+			ConLog.Write("Audio thread started");
 
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
@@ -146,7 +146,7 @@ int cellAudioInit()
 			{
 				if (Emu.IsStopped())
 				{
-					ConLog.Warning("Audio aborted");
+					ConLog.Warning("Audio thread aborted");
 					goto abort;
 				}
 
@@ -426,7 +426,7 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data
 						{
-							ConLog.Error("Audio aborted: AudioDumper::WriteData() failed");
+							ConLog.Error("cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
@@ -434,13 +434,13 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data
 						{
-							ConLog.Error("Audio aborted: AudioDumper::WriteData() failed");
+							ConLog.Error("cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
 					else
 					{
-						ConLog.Error("Audio aborted: unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
+						ConLog.Error("cellAudioInit(): unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
 						goto abort;
 					}
 				}
@@ -448,7 +448,7 @@ int cellAudioInit()
 				//ConLog.Write("Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
 					//stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 			}
-			ConLog.Write("Audio finished");
+			ConLog.Write("Audio thread ended");
 abort:
 			queue.Push(nullptr);
 			queue_float.Push(nullptr);
@@ -505,7 +505,7 @@ int cellAudioQuit()
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellAudioQuit() aborted");
+			ConLog.Warning("cellAudioQuit(): aborted");
 			return CELL_OK;
 		}
 	}

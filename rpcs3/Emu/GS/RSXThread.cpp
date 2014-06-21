@@ -1863,7 +1863,7 @@ void RSXThread::End()
 void RSXThread::Task()
 {
 	u8 inc;
-	ConLog.Write("RSX thread enter");
+	ConLog.Write("RSX thread started");
 
 	OnInitThread();
 
@@ -1953,7 +1953,7 @@ void RSXThread::Task()
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 
-	ConLog.Write("RSX thread exit");
+	ConLog.Write("RSX thread ended");
 
 	OnExitThread();
 }

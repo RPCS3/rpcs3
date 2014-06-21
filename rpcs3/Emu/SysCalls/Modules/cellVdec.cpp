@@ -35,7 +35,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("vdecRead() aborted");
+				ConLog.Warning("vdecRead(): aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -52,7 +52,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, vdec.reader.addr, vdec.reader.size))
 				{
-					ConLog.Error("vdecRead: data reading failed (reader.size=0x%x)", vdec.reader.size);
+					ConLog.Error("vdecRead(): data reading failed (reader.size=0x%x)", vdec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -92,7 +92,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
 	{
-		ConLog.Error("vdecRead: data reading failed (buf_size=0x%x)", buf_size);
+		ConLog.Error("vdecRead(): data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
@@ -136,7 +136,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{
-		ConLog.Write("Video Decoder enter()");
+		ConLog.Write("Video Decoder thread started");
 
 		VdecTask& task = vdec.task;
 
@@ -305,7 +305,7 @@ u32 vdecOpen(VideoDecoder* data)
 					{
 						if (Emu.IsStopped())
 						{
-							ConLog.Warning("vdecDecodeAu aborted");
+							ConLog.Warning("vdecDecodeAu: aborted");
 							return;
 						}
 
@@ -398,7 +398,7 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecClose:
 				{
 					vdec.is_finished = true;
-					ConLog.Write("Video Decoder exit");
+					ConLog.Write("Video Decoder thread ended");
 					return;
 				}
 
@@ -409,12 +409,12 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 
 			default:
-				ConLog.Error("Video Decoder error: unknown task(%d)", task.type);
+				ConLog.Error("Video Decoder thread error: unknown task(%d)", task.type);
 			}
 		}
 
 		vdec.is_finished = true;
-		ConLog.Warning("Video Decoder aborted");
+		ConLog.Warning("Video Decoder thread aborted");
 	});
 
 	t.detach();
