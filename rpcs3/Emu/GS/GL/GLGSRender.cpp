@@ -289,12 +289,12 @@ void GLGSRender::InitVertexData()
 	// Scale
 	scaleOffsetMat[0] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
 	scaleOffsetMat[5] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
-	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4*2)];
+	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
 	scaleOffsetMat[3] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
 	scaleOffsetMat[7] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
-	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
+	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
 	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
@@ -452,11 +452,11 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glReadPixels");
 
 	glBindTexture(GL_TEXTURE_2D, g_depth_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, &Memory[address]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_buffer_width, RSXThread::m_buffer_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, &Memory[address]);
 	checkForGlError("glTexImage2D");
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glGetTexImage");
@@ -481,7 +481,7 @@ void GLGSRender::WriteColourBufferA()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT0)");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -504,7 +504,7 @@ void GLGSRender::WriteColourBufferB()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT1)");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -527,7 +527,7 @@ void GLGSRender::WriteColourBufferC()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT2)");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 
@@ -550,7 +550,7 @@ void GLGSRender::WriteColourBufferD()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("glReadBuffer(GL_COLOR_ATTACHMENT3)");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
 	checkForGlError("glReadPixels(GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)");
 }
 

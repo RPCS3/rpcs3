@@ -47,7 +47,7 @@ u32 dmuxOpen(Demuxer* data)
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
-		ConLog.Write("Demuxer enter (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
+		ConLog.Write("Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
 
 		DemuxerTask task;
 		DemuxerStream stream;
@@ -357,7 +357,7 @@ u32 dmuxOpen(Demuxer* data)
 			case dmuxClose:
 				{
 					dmux.is_finished = true;
-					ConLog.Write("Demuxer exit");
+					ConLog.Write("Demuxer thread ended");
 					return;
 				}
 
@@ -450,11 +450,11 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 
 			default:
-				ConLog.Error("Demuxer error: unknown task(%d)", task.type);
+				ConLog.Error("Demuxer thread error: unknown task(%d)", task.type);
 				return;
 			}
 		}
-		ConLog.Warning("Demuxer aborted");
+		ConLog.Warning("Demuxer thread aborted");
 	});
 
 	t.detach();

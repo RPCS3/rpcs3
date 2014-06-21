@@ -36,7 +36,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				ConLog.Warning("adecRawRead() aborted");
+				ConLog.Warning("adecRawRead(): aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -53,7 +53,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
 				{
-					ConLog.Error("adecRawRead: data reading failed (reader.size=0x%x)", adec.reader.size);
+					ConLog.Error("adecRawRead(): data reading failed (reader.size=0x%x)", adec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -89,7 +89,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
 	{
-		ConLog.Error("adecRawRead: data reading failed (buf_size=0x%x)", buf_size);
+		ConLog.Error("adecRawRead(): data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
@@ -111,7 +111,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 	{
 		if (buf_size < (int)adec.reader.rem_size)
 		{
-			ConLog.Error("adecRead: too small buf_size (rem_size = %d, buf_size = %d)", adec.reader.rem_size, buf_size);
+			ConLog.Error("adecRead(): too small buf_size (rem_size = %d, buf_size = %d)", adec.reader.rem_size, buf_size);
 			Emu.Pause();
 			return 0;
 		}
@@ -131,7 +131,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 		if (adecRawRead(opaque, header, 8) < 8) break;
 		if (header[0] != 0x0f || header[1] != 0xd0)
 		{
-			ConLog.Error("adecRead: 0x0FD0 header not found");
+			ConLog.Error("adecRead(): 0x0FD0 header not found");
 			Emu.Pause();
 			return -1;
 		}
@@ -141,7 +141,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 			OMAHeader oma(1 /* atrac3p id */, header[2], header[3]);
 			if (buf_size < sizeof(oma) + 8)
 			{
-				ConLog.Error("adecRead: OMAHeader writing failed");
+				ConLog.Error("adecRead(): OMAHeader writing failed");
 				Emu.Pause();
 				return 0;
 			}
@@ -198,7 +198,7 @@ u32 adecOpen(AudioDecoder* data)
 
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{
-		ConLog.Write("Audio Decoder enter()");
+		ConLog.Write("Audio Decoder thread started");
 
 		AdecTask& task = adec.task;
 
@@ -371,7 +371,7 @@ u32 adecOpen(AudioDecoder* data)
 					{
 						if (Emu.IsStopped())
 						{
-							ConLog.Warning("adecDecodeAu aborted");
+							ConLog.Warning("adecDecodeAu: aborted");
 							return;
 						}
 
@@ -497,16 +497,16 @@ u32 adecOpen(AudioDecoder* data)
 			case adecClose:
 				{
 					adec.is_finished = true;
-					ConLog.Write("Audio Decoder exit");
+					ConLog.Write("Audio Decoder thread ended");
 					return;
 				}
 
 			default:
-				ConLog.Error("Audio Decoder error: unknown task(%d)", task.type);
+				ConLog.Error("Audio Decoder thread error: unknown task(%d)", task.type);
 			}
 		}
 		adec.is_finished = true;
-		ConLog.Warning("Audio Decoder aborted");
+		ConLog.Warning("Audio Decoder thread aborted");
 	});
 
 	t.detach();
