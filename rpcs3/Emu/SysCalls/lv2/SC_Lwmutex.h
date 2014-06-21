@@ -60,6 +60,7 @@ struct SleepQueue
 	u32 pop_prio(); // SYS_SYNC_PRIORITY
 	u32 pop_prio_inherit(); // (TODO)
 	bool invalidate(u32 tid);
+	u32 count();
 	bool finalize();
 };
 

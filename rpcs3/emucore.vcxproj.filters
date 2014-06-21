@@ -1048,5 +1048,8 @@
     <ClInclude Include="..\Utilities\SSemaphore.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Semaphore.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

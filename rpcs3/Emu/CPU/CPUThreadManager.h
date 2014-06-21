@@ -17,6 +17,7 @@ public:
 
 	CPUThread& AddThread(CPUThreadType type);
 	void RemoveThread(const u32 id);
+	void NotifyThread(const u32 id);
 
 	std::vector<CPUThread*>& GetThreads() { return m_threads; }
 	s32 GetThreadNumById(CPUThreadType type, u32 id);

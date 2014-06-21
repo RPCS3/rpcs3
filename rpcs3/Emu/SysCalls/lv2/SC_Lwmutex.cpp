@@ -190,6 +190,13 @@ bool SleepQueue::invalidate(u32 tid)
 	return false;
 }
 
+u32 SleepQueue::count()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	return list.size();
+}
+
 bool SleepQueue::finalize()
 {
 	if (!m_mutex.try_lock()) return false;
