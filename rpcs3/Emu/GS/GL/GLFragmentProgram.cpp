@@ -423,9 +423,6 @@ void GLFragmentDecompilerThread::Task()
 
 		m_size += m_offset;
 
-		// Check emptyness of m_end_offsets 
-		if (m_end_offsets.empty()) break;
-
 		if(dst.end) break;
 
 		data.Skip(m_offset);
