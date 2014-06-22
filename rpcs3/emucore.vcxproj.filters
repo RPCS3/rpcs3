@@ -850,9 +850,6 @@
     <ClInclude Include="Emu\Cell\PPCThread.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\PPCThreadManager.h">
-      <Filter>Emu\Cell</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\PPUDecoder.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>

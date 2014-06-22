@@ -138,7 +138,7 @@ public:
 
 	u32 m_wait_thread_id;
 
-	rCriticalSection m_cs_sync;
+	std::mutex m_cs_sync;
 	bool m_sync_wait;
 	void Wait(bool wait);
 	void Wait(const CPUThread& thr);

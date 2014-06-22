@@ -148,7 +148,7 @@ public:
 	u32 m_draw_array_first;
 
 public:
-	rCriticalSection m_cs_main;
+	std::mutex m_cs_main;
 	SSemaphore m_sem_flush;
 	SSemaphore m_sem_flip;
 	Callback m_flip_handler;

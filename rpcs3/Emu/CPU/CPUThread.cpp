@@ -85,13 +85,13 @@ void CPUThread::SetName(const std::string& name)
 
 void CPUThread::Wait(bool wait)
 {
-	rCriticalSectionLocker lock(m_cs_sync);
+	std::lock_guard<std::mutex> lock(m_cs_sync);
 	m_sync_wait = wait;
 }
 
 void CPUThread::Wait(const CPUThread& thr)
 {
-	rCriticalSectionLocker lock(m_cs_sync);
+	std::lock_guard<std::mutex> lock(m_cs_sync);
 	m_wait_thread_id = thr.GetId();
 	m_sync_wait = true;
 }

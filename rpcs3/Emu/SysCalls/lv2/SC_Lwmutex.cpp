@@ -194,7 +194,12 @@ u32 SleepQueue::count()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	return list.size();
+	u32 result = 0;
+	for (u32 i = 0; i < list.size(); i++)
+	{
+		if (list[i]) result++;
+	}
+	return result;
 }
 
 bool SleepQueue::finalize()

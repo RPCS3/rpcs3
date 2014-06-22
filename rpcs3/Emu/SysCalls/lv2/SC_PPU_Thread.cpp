@@ -10,10 +10,17 @@
 extern Module *sysPrxForUser;
 
 static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU;
+
 enum
 {
 	SYS_PPU_THREAD_ONCE_INIT,
 	SYS_PPU_THREAD_DONE_INIT,
+};
+
+enum ppu_thread_flags : u64
+{
+	SYS_PPU_THREAD_CREATE_JOINABLE = 0x1,
+	SYS_PPU_THREAD_CREATE_INTERRUPT = 0x2,
 };
 
 void sys_ppu_thread_exit(u64 errorcode)
@@ -40,7 +47,7 @@ int sys_ppu_thread_yield()
 	return CELL_OK;
 }
 
-int sys_ppu_thread_join(u32 thread_id, mem64_t vptr)
+int sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 {
 	sysPrxForUser->Warning("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr.GetAddr());
 
@@ -61,7 +68,7 @@ int sys_ppu_thread_join(u32 thread_id, mem64_t vptr)
 	return CELL_OK;
 }
 
-int sys_ppu_thread_detach(u32 thread_id)
+int sys_ppu_thread_detach(u64 thread_id)
 {
 	sysPrxForUser->Error("sys_ppu_thread_detach(thread_id=%d)", thread_id);
 
@@ -81,7 +88,7 @@ void sys_ppu_thread_get_join_state(u32 isjoinable_addr)
 	Memory.Write32(isjoinable_addr, GetCurrentPPUThread().IsJoinable());
 }
 
-int sys_ppu_thread_set_priority(u32 thread_id, int prio)
+int sys_ppu_thread_set_priority(u64 thread_id, int prio)
 {
 	sysPrxForUser->Log("sys_ppu_thread_set_priority(thread_id=%d, prio=%d)", thread_id, prio);
 
@@ -93,7 +100,7 @@ int sys_ppu_thread_set_priority(u32 thread_id, int prio)
 	return CELL_OK;
 }
 
-int sys_ppu_thread_get_priority(u32 thread_id, u32 prio_addr)
+int sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 {
 	sysPrxForUser->Log("sys_ppu_thread_get_priority(thread_id=%d, prio_addr=0x%x)", thread_id, prio_addr);
 
@@ -120,7 +127,7 @@ int sys_ppu_thread_get_stack_information(u32 info_addr)
 	return CELL_OK;
 }
 
-int sys_ppu_thread_stop(u32 thread_id)
+int sys_ppu_thread_stop(u64 thread_id)
 {
 	sysPrxForUser->Warning("sys_ppu_thread_stop(thread_id=%d)", thread_id);
 
@@ -132,7 +139,7 @@ int sys_ppu_thread_stop(u32 thread_id)
 	return CELL_OK;
 }
 
-int sys_ppu_thread_restart(u32 thread_id)
+int sys_ppu_thread_restart(u64 thread_id)
 {
 	sysPrxForUser->Warning("sys_ppu_thread_restart(thread_id=%d)", thread_id);
 
@@ -145,30 +152,50 @@ int sys_ppu_thread_restart(u32 thread_id)
 	return CELL_OK;
 }
 
-int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
+int sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
 	std::string threadname = "";
 	if (Memory.IsGoodAddr(threadname_addr))
 	{
 		threadname = Memory.ReadString(threadname_addr);
 		sysPrxForUser->Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%x, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-			thread_id_addr, entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
+			thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
 	}
 	else
 	{
 		sysPrxForUser->Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%x, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x)",
-			thread_id_addr, entry, arg, prio, stacksize, flags, threadname_addr);
+			thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr);
 		if (threadname_addr != 0) return CELL_EFAULT;
 	}
 
-	if(!Memory.IsGoodAddr(entry) || !Memory.IsGoodAddr(thread_id_addr))
+	if (!Memory.IsGoodAddr(entry) || !thread_id.IsGood())
 	{
 		return CELL_EFAULT;
 	}
 
+	bool is_joinable = false;
+	bool is_interrupt = false;
+
+	switch (flags)
+	{
+	case 0: break;
+	case SYS_PPU_THREAD_CREATE_JOINABLE:
+	{
+		is_joinable = true;
+		break;
+	}
+	case SYS_PPU_THREAD_CREATE_INTERRUPT:
+	{
+		sysPrxForUser->Error("sys_ppu_thread_create: unimplemented flag (SYS_PPU_THREAD_CREATE_INTERRUPT)");
+		is_interrupt = true;
+		break;
+	}
+	default: sysPrxForUser->Error("sys_ppu_thread_create(): unknown flags value (0x%llx)", flags); return CELL_EPERM;
+	}
+
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	Memory.Write64(thread_id_addr, new_thread.GetId());
+	thread_id = new_thread.GetId();
 	new_thread.SetEntry(entry);
 	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
@@ -176,7 +203,7 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 
 	//new_thread.flags = flags;
 	new_thread.SetName(threadname);
 
-	ConLog.Write("*** New PPU Thread [%s] (): id = %d", new_thread.GetName().c_str(), new_thread.GetId());
+	ConLog.Write("*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
 
 	new_thread.Run();
 	new_thread.Exec();
