@@ -17,14 +17,15 @@ int sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 		return CELL_EFAULT;
 	}
 
-	if (max_count <= 0)
+	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
+		sys_sem.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
 		return CELL_EINVAL;
 	}
 	
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
-		sys_sem.Error("Invalid pshared attribute(0x%x)", (u32)attr->pshared);
+		sys_sem.Error("sys_semaphore_create(): invalid pshared value(0x%x)", (u32)attr->pshared);
 		return CELL_EINVAL;
 	}
 
@@ -96,6 +97,7 @@ int sys_semaphore_wait(u32 sem_id, u64 timeout)
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
+			sem->m_queue.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}
 
@@ -103,6 +105,10 @@ int sys_semaphore_wait(u32 sem_id, u64 timeout)
 		{
 			std::lock_guard<std::mutex> lock(sem->m_mutex);
 
+			if (tid != sem->signal)
+			{
+				continue;
+			}
 			sem->signal = 0;
 			// TODO: notify signaler
 			return CELL_OK;
@@ -150,9 +156,9 @@ int sys_semaphore_post(u32 sem_id, int count)
 		return CELL_EINVAL;
 	}
 
-	if (count + sem->m_value - sem->m_queue.count() > sem->max)
+	if (count + sem->m_value - (int)sem->m_queue.count() > sem->max)
 	{
-		return CELL_EINVAL;
+		return CELL_EBUSY;
 	}
 
 	while (count > 0)
@@ -190,6 +196,11 @@ int sys_semaphore_post(u32 sem_id, int count)
 int sys_semaphore_get_value(u32 sem_id, mem32_t count)
 {
 	sys_sem.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.GetAddr());
+
+	if (!count.IsGood())
+	{
+		return CELL_EFAULT;
+	}
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

@@ -1877,7 +1877,7 @@ void RSXThread::Task()
 			ConLog.Warning("RSX thread aborted");
 			return;
 		}
-		rCriticalSectionLocker lock(m_cs_main);
+		std::lock_guard<std::mutex> lock(m_cs_main);
 
 		inc=1;
 

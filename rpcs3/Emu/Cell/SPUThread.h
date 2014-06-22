@@ -900,6 +900,13 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
+			if (!group) // if RawSPU
+			{
+				// TODO: run PPU interrupt thread
+				ConLog.Error("SPU_WrOutIntrMbox interrupt unimplemented");
+				Emu.Pause();
+			}
+			else
 			{
 				u8 code = v >> 24;
 				if (code < 64) 
@@ -933,7 +940,9 @@ public:
 
 					if (!port.eq)
 					{
-						SPU.In_MBox.PushUncond(CELL_ENOTCONN); // check error passing
+						// spu_printf fails there
+						ConLog.Warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, v & 0x00ffffff, data);
+						SPU.In_MBox.PushUncond(CELL_ENOTCONN); // TODO: check error passing
 						return;
 					}
 

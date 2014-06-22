@@ -246,7 +246,6 @@
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPCInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPCThread.h" />
-    <ClInclude Include="Emu\Cell\PPCThreadManager.h" />
     <ClInclude Include="Emu\Cell\PPUDecoder.h" />
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPUInstrTable.h" />

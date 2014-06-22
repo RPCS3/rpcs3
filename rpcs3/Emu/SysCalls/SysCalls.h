@@ -201,15 +201,15 @@ extern void sys_spinlock_unlock(mem_ptr_t<spinlock> lock);
 //ppu_thread
 extern void sys_ppu_thread_exit(u64 errorcode);
 extern int sys_ppu_thread_yield();
-extern int sys_ppu_thread_join(u32 thread_id, mem64_t vptr);
-extern int sys_ppu_thread_detach(u32 thread_id);
+extern int sys_ppu_thread_join(u64 thread_id, mem64_t vptr);
+extern int sys_ppu_thread_detach(u64 thread_id);
 extern void sys_ppu_thread_get_join_state(u32 isjoinable_addr);
-extern int sys_ppu_thread_set_priority(u32 thread_id, int prio);
-extern int sys_ppu_thread_get_priority(u32 thread_id, u32 prio_addr);
+extern int sys_ppu_thread_set_priority(u64 thread_id, int prio);
+extern int sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr);
 extern int sys_ppu_thread_get_stack_information(u32 info_addr);
-extern int sys_ppu_thread_stop(u32 thread_id);
-extern int sys_ppu_thread_restart(u32 thread_id);
-extern int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
+extern int sys_ppu_thread_stop(u64 thread_id);
+extern int sys_ppu_thread_restart(u64 thread_id);
+extern int sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 extern void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry);
 extern int sys_ppu_thread_get_id(const u32 id_addr);
 
