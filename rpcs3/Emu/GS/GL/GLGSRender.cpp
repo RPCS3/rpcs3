@@ -17,8 +17,7 @@
 gcmBuffer gcmBuffers[8];
 GLuint g_flip_tex;
 GLuint g_depth_tex;
-GLuint g_color_pbo[4];
-GLuint g_depth_pbo;
+GLuint g_pbo[6];
 
 
 int last_width = 0, last_height = 0, last_depth_format = 0;
@@ -455,7 +454,7 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_depth_pbo);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[5]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_DYNAMIC_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 	checkForGlError("WriteDepthBuffer(): glReadPixels(GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE)");
@@ -491,7 +490,7 @@ void GLGSRender::WriteColourBufferA()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("WriteColourBufferA(): glReadBuffer(GL_COLOR_ATTACHMENT0)");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_color_pbo[0]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferA(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
@@ -520,7 +519,7 @@ void GLGSRender::WriteColourBufferB()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("WriteColourBufferB(): glReadBuffer(GL_COLOR_ATTACHMENT1)");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_color_pbo[1]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferB(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
@@ -550,7 +549,7 @@ void GLGSRender::WriteColourBufferC()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("WriteColourBufferC(): glReadBuffer(GL_COLOR_ATTACHMENT2)");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_color_pbo[2]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[2]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferC(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
@@ -579,7 +578,7 @@ void GLGSRender::WriteColourBufferD()
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("WriteColourBufferD(): glReadBuffer(GL_COLOR_ATTACHMENT3)");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_color_pbo[3]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[3]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferD(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
@@ -656,8 +655,7 @@ void GLGSRender::OnInitThread()
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
-	glGenBuffers(4, g_color_pbo);
-	glGenBuffers(1, &g_depth_pbo);
+	glGenBuffers(6, g_pbo);
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
@@ -674,8 +672,7 @@ void GLGSRender::OnExitThread()
 {
 	glDeleteTextures(1, &g_flip_tex);
 	glDeleteTextures(1, &g_depth_tex);
-	glDeleteBuffers(4, g_color_pbo);
-	glDeleteBuffers(1, &g_depth_pbo);
+	glDeleteBuffers(6, g_pbo);
 	
 	m_program.Delete();
 	m_rbo.Delete();
@@ -791,8 +788,10 @@ void GLGSRender::ExecCMD()
 		
 	m_fbo.Bind();
 
-	if(Ini.GSDumpDepthBuffer.GetValue())
+	if (Ini.GSDumpDepthBuffer.GetValue())
+	{
 		WriteDepthBuffer();
+	}
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
@@ -1178,6 +1177,9 @@ void GLGSRender::Flip()
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	case CELL_GCM_SURFACE_TARGET_1:
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
 		// Fast path for non-MRT using glBlitFramebuffer.
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
@@ -1187,9 +1189,6 @@ void GLGSRender::Flip()
 	break;
 
 	case CELL_GCM_SURFACE_TARGET_NONE:
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
 		// Slow path for MRT/None target using glReadPixels.
 		static u8* src_buffer = nullptr;
@@ -1220,7 +1219,14 @@ void GLGSRender::Flip()
 			static std::vector<u8> pixels;
 			pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
 			m_fbo.Bind(GL_READ_FRAMEBUFFER);
-			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, pixels.data());
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[5]);
+			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
+			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
+			checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
+			GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+			memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
+			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			src_buffer = pixels.data();
 			width = RSXThread::m_width;
