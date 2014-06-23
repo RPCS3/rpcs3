@@ -47,12 +47,6 @@ int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 	return CELL_OK;
 }
 
-s64 sys_prx_register_library(u32 lib_addr)
-{
-	sysPrxForUser->Error("sys_prx_register_library(lib_addr=0x%x)", lib_addr);
-	return CELL_OK;
-}
-
 s64 sys_prx_exitspawn_with_level()
 {
 	sysPrxForUser->Log("sys_prx_exitspawn_with_level()");
@@ -162,7 +156,16 @@ void sysPrxForUser_init()
 
 	sysPrxForUser->AddFunc(0x45fe2fce, sys_spu_printf_initialize);
 
+	sysPrxForUser->AddFunc(0x26090058, sys_prx_load_module);
+	sysPrxForUser->AddFunc(0x9f18429d, sys_prx_start_module);
+	sysPrxForUser->AddFunc(0x80fb0c19, sys_prx_stop_module);
+	sysPrxForUser->AddFunc(0xf0aece0d, sys_prx_unload_module);
 	sysPrxForUser->AddFunc(0x42b23552, sys_prx_register_library);
+	sysPrxForUser->AddFunc(0xd0ea47a7, sys_prx_unregister_library);
+	sysPrxForUser->AddFunc(0xa5d06bf0, sys_prx_get_module_list);
+	sysPrxForUser->AddFunc(0x84bb6774, sys_prx_get_module_info);
+	sysPrxForUser->AddFunc(0xe0998dbf, sys_prx_get_module_id_by_name);
+	sysPrxForUser->AddFunc(0xaa6d9bff, sys_prx_load_module_on_memcontainer);
 	sysPrxForUser->AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
 
 	sysPrxForUser->AddFunc(0x2d36462b, sys_strlen);

@@ -342,10 +342,28 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func, null_func, null_func, null_func, null_func, //469
 	null_func, null_func, null_func, null_func, null_func, //474
 	null_func, null_func, null_func, null_func, null_func, //479
-	null_func, null_func, null_func, null_func, null_func, //484
-	null_func, null_func, null_func, null_func, null_func, //489
-	null_func, null_func, null_func, null_func, null_func, //494
-	null_func, null_func, null_func, null_func, null_func, //499
+
+	bind_func(sys_prx_load_module),                         //480 (0x1E0)
+	bind_func(sys_prx_start_module),                        //481 (0x1E1)
+	bind_func(sys_prx_stop_module),                         //482 (0x1E2)
+	bind_func(sys_prx_unload_module),                       //483 (0x1E3)
+	bind_func(sys_prx_register_module),                     //484 (0x1E4)
+	bind_func(sys_prx_query_module),                        //485 (0x1E5)
+	bind_func(sys_prx_register_library),                    //486 (0x1E6)
+	bind_func(sys_prx_unregister_library),                  //487 (0x1E7)
+	bind_func(sys_prx_link_library),                        //488 (0x1E8)
+	bind_func(sys_prx_unlink_library),                      //489 (0x1E9)
+	bind_func(sys_prx_query_library),                       //490 (0x1EA)
+	null_func,                                              //491 (0x1EB)
+	null_func,                                              //492 (0x1EC)
+	null_func,//sys_prx_dbg_get_module_info                 //493 (0x1ED)
+	bind_func(sys_prx_get_module_list),                     //494 (0x1EE)
+	bind_func(sys_prx_get_module_info),                     //495 (0x1EF)
+	bind_func(sys_prx_get_module_id_by_name),               //496 (0x1F0)
+	bind_func(sys_prx_load_module_on_memcontainer),         //497 (0x1F1)
+	bind_func(sys_prx_start),                               //498 (0x1F2)
+	bind_func(sys_prx_stop),                                //499 (0x1F3)
+
 	null_func, null_func, null_func, null_func, null_func, //504
 	null_func, null_func, null_func, null_func, null_func, //509
 	null_func, null_func, null_func, null_func, null_func, //514

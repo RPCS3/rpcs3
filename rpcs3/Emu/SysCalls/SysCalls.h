@@ -1,6 +1,7 @@
 #pragma once
 #include "ErrorCodes.h"
 #include "lv2/SC_Process.h"
+#include "lv2/SC_PRX.h"
 #include "lv2/SC_FileSystem.h"
 #include "lv2/SC_Memory.h"
 #include "lv2/SC_Timer.h"

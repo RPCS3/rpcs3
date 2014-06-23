@@ -107,6 +107,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_PRX.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp" />
@@ -321,6 +322,8 @@
     <ClInclude Include="Emu\SysCalls\lv2\SC_Lwmutex.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Memory.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Mutex.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Process.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\SC_PRX.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Rwlock.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Semaphore.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Spinlock.h" />
