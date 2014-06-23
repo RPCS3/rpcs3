@@ -674,7 +674,9 @@ void GLGSRender::OnExitThread()
 {
 	glDeleteTextures(1, &g_flip_tex);
 	glDeleteTextures(1, &g_depth_tex);
-
+	glDeleteBuffers(4, g_color_pbo);
+	glDeleteBuffers(1, &g_depth_pbo);
+	
 	m_program.Delete();
 	m_rbo.Delete();
 	m_fbo.Delete();
