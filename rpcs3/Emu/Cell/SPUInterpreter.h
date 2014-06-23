@@ -679,7 +679,11 @@ private:
 	//HGT uses signed values.  HLGT uses unsigned values
 	void HGT(u32 rt, s32 ra, s32 rb)
 	{
-		if(CPU.GPR[ra]._i32[3] > CPU.GPR[rb]._i32[3])	CPU.Stop();
+		if (CPU.GPR[ra]._i32[3] > CPU.GPR[rb]._i32[3])
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
@@ -806,7 +810,11 @@ private:
 	}
 	void HLGT(u32 rt, u32 ra, u32 rb)
 	{
-		if(CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3])	CPU.Stop();
+		if (CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3])
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb)
 	{
@@ -1018,7 +1026,11 @@ private:
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
-		if(CPU.GPR[ra]._i32[3] == CPU.GPR[rb]._i32[3])	CPU.Stop();
+		if (CPU.GPR[ra]._i32[3] == CPU.GPR[rb]._i32[3])
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 
 	//0 - 9
@@ -1373,7 +1385,11 @@ private:
 	}
 	void HGTI(u32 rt, u32 ra, s32 i10)
 	{
-		if(CPU.GPR[ra]._i32[3] > i10)	CPU.Stop();
+		if (CPU.GPR[ra]._i32[3] > i10)
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
 	{
@@ -1396,7 +1412,11 @@ private:
 	}
 	void HLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		if(CPU.GPR[ra]._u32[3] > (u32)i10)	CPU.Stop();
+		if (CPU.GPR[ra]._u32[3] > (u32)i10)
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 	void MPYI(u32 rt, u32 ra, s32 i10)
 	{
@@ -1425,7 +1445,11 @@ private:
 	}
 	void HEQI(u32 rt, u32 ra, s32 i10)
 	{
-		if(CPU.GPR[ra]._i32[3] == i10)	CPU.Stop();
+		if (CPU.GPR[ra]._i32[3] == i10)
+		{
+			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+			CPU.Stop();
+		}
 	}
 
 

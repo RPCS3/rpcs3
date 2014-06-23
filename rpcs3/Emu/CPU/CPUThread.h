@@ -130,6 +130,10 @@ public:
 	u64 cycle;
 	bool m_is_branch;
 
+	bool m_is_interrupt;
+	bool m_has_interrupt;
+	u64 m_interrupt_arg;
+
 protected:
 	CPUThread(CPUThreadType type);
 

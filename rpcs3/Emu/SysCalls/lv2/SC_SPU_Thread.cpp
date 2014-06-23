@@ -364,20 +364,6 @@ int sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u
 	return CELL_OK;
 }
 
-//160
-int sys_raw_spu_create(mem32_t id, u32 attr_addr)
-{
-	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id.GetAddr(), attr_addr);
-
-	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
-	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
-	id = ((RawSPUThread&)new_thread).GetIndex();
-	new_thread.Run();
-	new_thread.Exec();
-
-	return CELL_OK;
-}
-
 //169
 int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 {
@@ -758,5 +744,198 @@ int sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
 	sc_spu.Error("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
 
+	return CELL_OK;
+}
+
+//160
+int sys_raw_spu_create(mem32_t id, u32 attr_addr)
+{
+	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id.GetAddr(), attr_addr);
+
+	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
+	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
+	id = ((RawSPUThread&)new_thread).GetIndex();
+	new_thread.Run();
+	new_thread.Exec();
+
+	return CELL_OK;
+}
+
+int sys_raw_spu_destroy(u32 id)
+{
+	sc_spu.Error("sys_raw_spu_destroy(id=%d)", id);
+
+	return CELL_OK;
+}
+
+int sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, mem32_t intrtag)
+{
+	sc_spu.Error("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag_addr=0x%x)", id, class_id, hwthread, intrtag.GetAddr());
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (!intrtag.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+	
+	if (t->m_intrtag[class_id].enabled)
+	{
+		return CELL_EAGAIN;
+	}
+
+	t->m_intrtag[class_id].enabled = 1;
+	intrtag = (id & 0xff) | (class_id << 8);
+
+	return CELL_OK;
+}
+
+int sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
+{
+	sc_spu.Warning("sys_raw_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	t->m_intrtag[class_id].mask = mask; // TODO: check this
+	return CELL_OK;
+}
+
+int sys_raw_spu_get_int_mask(u32 id, u32 class_id, mem64_t mask)
+{
+	sc_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.GetAddr());
+
+	if (!mask.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	mask = t->m_intrtag[class_id].mask;
+	return CELL_OK;
+}
+
+int sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
+{
+	sc_spu.Log("sys_raw_spu_set_int_stat(id=%d, class_id=%d, stat=0x%llx)", id, class_id, stat);
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	t->m_intrtag[class_id].stat = stat; // TODO: check this
+	return CELL_OK;
+}
+
+int sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat)
+{
+	sc_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.GetAddr());
+
+	if (!stat.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	stat = t->m_intrtag[class_id].stat;
+	return CELL_OK;
+}
+
+int sys_raw_spu_read_puint_mb(u32 id, mem32_t value)
+{
+	sc_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value_addr=0x%x)", id, value.GetAddr());
+
+	if (!value.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	u32 v;
+	t->SPU.Out_IntrMBox.PopUncond(v);
+	value = v;
+	return CELL_OK;
+}
+
+int sys_raw_spu_set_spu_cfg(u32 id, u32 value)
+{
+	sc_spu.Log("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	t->cfg.value = value;
+	return CELL_OK;
+}
+
+int sys_raw_spu_get_spu_cfg(u32 id, mem32_t value)
+{
+	sc_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value_addr=0x%x)", id, value.GetAddr());
+
+	if (!value.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	value = t->cfg.value;
 	return CELL_OK;
 }

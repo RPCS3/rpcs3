@@ -79,7 +79,7 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	case Prxy_QueryMask_offs:   ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_QueryMask)", m_index);    *value = Prxy.QueryMask.GetValue(); break;
 	case Prxy_TagStatus_offs:   ConLog.Warning("RawSPUThread[%d]: Read32(Prxy_TagStatus)", m_index);    *value = Prxy.TagStatus.GetValue(); break;
 	case SPU_Out_MBox_offs:
-		ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);
+		//ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Out_MBox)", m_index);
 		SPU.Out_MBox.PopUncond(*value); //if Out_MBox is empty yet, the result will be undefined 
 	break;
 	case SPU_In_MBox_offs:      ConLog.Warning("RawSPUThread[%d]: Read32(SPU_In_MBox)", m_index);       while(!SPU.In_MBox.Pop(*value)  && !Emu.IsStopped()) Sleep(1); break;
@@ -89,7 +89,10 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 		*value = SPU.MBox_Status.GetValue();
 		break;
 	case SPU_RunCntl_offs:      ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);       *value = SPU.RunCntl.GetValue(); break;
-	case SPU_Status_offs:       ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Status)", m_index);        *value = SPU.Status.GetValue(); break;
+	case SPU_Status_offs:
+		//ConLog.Warning("RawSPUThread[%d]: Read32(SPU_Status)", m_index);
+		*value = SPU.Status.GetValue();
+		break;
 	case SPU_NPC_offs:          ConLog.Warning("RawSPUThread[%d]: Read32(SPU_NPC)", m_index);           *value = SPU.NPC.GetValue(); break;
 	case SPU_RdSigNotify1_offs: ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify1)", m_index);  *value = SPU.SNR[0].GetValue(); break;
 	case SPU_RdSigNotify2_offs: ConLog.Warning("RawSPUThread[%d]: Read32(SPU_RdSigNotify2)", m_index);  *value = SPU.SNR[1].GetValue(); break;
@@ -199,7 +202,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	case Prxy_TagStatus_offs:   ConLog.Warning("RawSPUThread[%d]: Write32(Prxy_TagStatus, 0x%x)", m_index, value);      Prxy.TagStatus.SetValue(value); break;
 	case SPU_Out_MBox_offs:     ConLog.Warning("RawSPUThread[%d]: Write32(SPU_Out_MBox, 0x%x)", m_index, value);        while(!SPU.Out_MBox.Push(value) && !Emu.IsStopped()) Sleep(1); break;
 	case SPU_In_MBox_offs:
-		ConLog.Warning("RawSPUThread[%d]: Write32(SPU_In_MBox, 0x%x)", m_index, value);
+		//ConLog.Warning("RawSPUThread[%d]: Write32(SPU_In_MBox, 0x%x)", m_index, value);
 		SPU.In_MBox.PushUncond(value); //if In_MBox is already full, the last message will be overwritten  
 	break;
 	case SPU_MBox_Status_offs:  ConLog.Warning("RawSPUThread[%d]: Write32(SPU_MBox_Status, 0x%x)", m_index, value);     SPU.MBox_Status.SetValue(value); break;

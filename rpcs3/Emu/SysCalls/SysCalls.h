@@ -358,7 +358,6 @@ extern int sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 extern int sys_spu_thread_group_disconnect_event(u32 id, u32 et);
 extern int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
 extern int sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
-extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 extern int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
 extern int sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type);
@@ -371,6 +370,22 @@ extern int sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
 extern int sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
 extern int sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 extern int sys_spu_thread_get_exit_status(u32 id, mem32_t status);
+extern int sys_raw_spu_create(mem32_t id, u32 attr_addr);
+extern int sys_raw_spu_destroy(u32 id);
+extern int sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, mem32_t intrtag);
+extern int sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
+extern int sys_raw_spu_get_int_mask(u32 id, u32 class_id, mem64_t mask);
+extern int sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat);
+extern int sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat);
+extern int sys_raw_spu_read_puint_mb(u32 id, mem32_t value);
+extern int sys_raw_spu_set_spu_cfg(u32 id, u32 value);
+extern int sys_raw_spu_get_spu_cfg(u32 id, mem32_t value);
+
+//sys_interrupt
+extern int sys_interrupt_tag_destroy(u32 intrtag);
+extern int sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 arg);
+extern int sys_interrupt_thread_disestablish(u32 ih);
+extern void sys_interrupt_thread_eoi();
 
 //sys_time
 extern int sys_time_get_timezone(mem32_t timezone, mem32_t summertime);

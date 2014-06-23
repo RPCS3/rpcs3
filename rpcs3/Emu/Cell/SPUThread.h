@@ -295,6 +295,22 @@ public:
 	EventManager SPUQs; // SPU Queue Mapping
 	SpuGroupInfo* group; // associated SPU Thread Group (null for raw spu)
 
+	struct IntrTag
+	{
+		u32 enabled; // 1 == true
+		u32 thread; // established interrupt PPU thread
+		u64 mask;
+		u64 stat;
+
+		IntrTag()
+			: enabled(0)
+			, thread(0)
+			, mask(0)
+			, stat(0)
+		{
+		}
+	} m_intrtag[3];
+
 	template<size_t _max_count>
 	class Channel
 	{
@@ -510,6 +526,7 @@ public:
 	struct
 	{
 		Channel<1> Out_MBox;
+		Channel<1> Out_IntrMBox;
 		Channel<4> In_MBox;
 		Channel<1> MBox_Status;
 		Channel<1> RunCntl;
@@ -544,7 +561,7 @@ public:
 	{
 		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
-		if ((ea & 0xf0000000) == SYS_SPU_THREAD_BASE_LOW)
+		if (ea >= SYS_SPU_THREAD_BASE_LOW)
 		{
 			if (group)
 			{
@@ -902,9 +919,24 @@ public:
 		case SPU_WrOutIntrMbox:
 			if (!group) // if RawSPU
 			{
-				// TODO: run PPU interrupt thread
-				ConLog.Error("SPU_WrOutIntrMbox interrupt unimplemented");
-				Emu.Pause();
+				if (Ini.HLELogging.GetValue()) ConLog.Write("SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
+				SPU.Out_IntrMBox.PushUncond(v);
+				m_intrtag[2].stat |= 1;
+				if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
+				{
+					while (t->IsAlive())
+					{
+						Sleep(1);
+						if (Emu.IsStopped())
+						{
+							ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+							return;
+						}
+					}
+					t->SetArg(0, t->m_interrupt_arg);
+					t->Run();
+					t->Exec();
+				}
 			}
 			else
 			{
@@ -1223,6 +1255,7 @@ public:
 				// the real exit status
 				ConLog.Write("sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());
 			}
+			SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 			Stop();
 			break;
 		default:
@@ -1234,6 +1267,7 @@ public:
 			{
 				ConLog.Error("Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 			}
+			SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 			Stop();
 			break;
 		}

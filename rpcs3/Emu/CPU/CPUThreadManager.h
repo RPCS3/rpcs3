@@ -1,5 +1,6 @@
 #pragma once
 class CPUThread;
+class RawSPUThread;
 enum CPUThreadType : unsigned char;
 
 class CPUThreadManager
@@ -21,6 +22,7 @@ public:
 	std::vector<CPUThread*>& GetThreads() { return m_threads; }
 	s32 GetThreadNumById(CPUThreadType type, u32 id);
 	CPUThread* GetThread(u32 id);
+	RawSPUThread* GetRawSPUThread(u32 num);
 
 	void Exec();
 	void Task();
