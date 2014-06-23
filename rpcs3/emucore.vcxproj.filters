@@ -578,6 +578,9 @@
     <ClCompile Include="..\Utilities\SSemaphore.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Interrupt.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1046,6 +1049,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\SC_Semaphore.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Interrupt.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
   </ItemGroup>

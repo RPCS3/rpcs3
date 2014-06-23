@@ -97,6 +97,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Interrupt.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Keyboard.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwcond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
@@ -315,6 +316,7 @@
     <ClInclude Include="Emu\SysCalls\lv2\SC_Condition.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Event_flag.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_FileSystem.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\SC_Interrupt.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Lwcond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Lwmutex.h" />
     <ClInclude Include="Emu\SysCalls\lv2\SC_Memory.h" />

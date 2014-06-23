@@ -232,6 +232,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 
 	if (res > 0xffff)
 	{
+		CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
 		CPU.Stop();
 		res = ~res;
 	}

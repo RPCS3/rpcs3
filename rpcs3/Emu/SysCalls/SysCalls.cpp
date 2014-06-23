@@ -102,15 +102,15 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,
 
 	null_func,//bind_func(sys_interrupt_tag_create)         //80  (0x050)
-	null_func,//bind_func(sys_interrupt_tag_destroy)        //81  (0x051)
+	bind_func(sys_interrupt_tag_destroy),                   //81  (0x051)
 	bind_func(sys_event_flag_create),                       //82  (0x052)
 	bind_func(sys_event_flag_destroy),                      //83  (0x053)
-	null_func,//bind_func(sys_interrupt_thread_establish)   //84  (0x054)
+	bind_func(sys_interrupt_thread_establish),              //84  (0x054)
 	bind_func(sys_event_flag_wait),                         //85  (0x055)
 	bind_func(sys_event_flag_trywait),                      //86  (0x056)
 	bind_func(sys_event_flag_set),                          //87  (0x057)
-	null_func,//bind_func(sys_interrupt_thread_eoi)         //88  (0x058)
-	null_func,//bind_func(sys_interrupt_thread_disestablish)//89  (0x059)
+	bind_func(sys_interrupt_thread_eoi),                    //88  (0x058)
+	bind_func(sys_interrupt_thread_disestablish),           //89  (0x059)
 	bind_func(sys_semaphore_create),                        //90  (0x05A)
 	bind_func(sys_semaphore_destroy),                       //91  (0x05B)
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
@@ -174,20 +174,20 @@ static func_caller* sc_table[kSyscallTableLength] =
 	// Unused: 149
 	null_func,
 
-	null_func,//bind_func(sys_raw_spu_create_interrupt_tag) //150 (0x096)
-	null_func,//bind_func(sys_raw_spu_set_int_mask)         //151 (0x097)
-	null_func,//bind_func(sys_raw_spu_get_int_mask)         //152 (0x098)
-	null_func,//bind_func(sys_raw_spu_set_int_stat)         //153 (0x099)
-	null_func,//bind_func(sys_raw_spu_get_int_stat)         //154 (0x09A)
+	bind_func(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
+	bind_func(sys_raw_spu_set_int_mask),                    //151 (0x097)
+	bind_func(sys_raw_spu_get_int_mask),                    //152 (0x098)
+	bind_func(sys_raw_spu_set_int_stat),                    //153 (0x099)
+	bind_func(sys_raw_spu_get_int_stat),                    //154 (0x09A)
 	null_func,//bind_func(sys_spu_image_get_information?)   //155 (0x09B)
 	bind_func(sys_spu_image_open),                          //156 (0x09C)
 	null_func,//bind_func(sys_spu_image_import)             //157 (0x09D)
 	null_func,//bind_func(sys_spu_image_close)              //158 (0x09E)
 	null_func,//bind_func(sys_raw_spu_load)                 //159 (0x09F)
 	bind_func(sys_raw_spu_create),                          //160 (0x0A0)
-	null_func,//bind_func(sys_raw_spu_destroy)              //161 (0x0A1)
+	bind_func(sys_raw_spu_destroy),                         //161 (0x0A1)
 	null_func,                                              //
-	null_func,//bind_func(sys_raw_spu_read_puint_mb)        //163 (0x0A3)
+	bind_func(sys_raw_spu_read_puint_mb),                   //163 (0x0A3)
 	null_func,                                              //
 	bind_func(sys_spu_thread_get_exit_status),              //165 (0x0A5)
 	bind_func(sys_spu_thread_set_argument),                 //166 (0x0A6)
@@ -220,8 +220,8 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_spu_thread_bind_queue),                   //193 (0x0C1)
 	bind_func(sys_spu_thread_unbind_queue),                 //194 (0x0C2)
 	null_func,                                              //
-	null_func,//bind_func(sys_raw_spu_set_spu_cfg)          //196 (0x0C4)
-	null_func,//bind_func(sys_raw_spu_get_spu_cfg)          //197 (0x0C5)
+	bind_func(sys_raw_spu_set_spu_cfg),                     //196 (0x0C4)
+	bind_func(sys_raw_spu_get_spu_cfg),                     //197 (0x0C5)
 	null_func,//bind_func(sys_spu_thread_recover_page_fault)//198 (0x0C6)
 	null_func,//bind_func(sys_raw_spu_recover_page_fault)   //199 (0x0C7)
 

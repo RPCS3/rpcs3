@@ -108,6 +108,26 @@ CPUThread* CPUThreadManager::GetThread(u32 id)
 	return res;
 }
 
+RawSPUThread* CPUThreadManager::GetRawSPUThread(u32 num)
+{
+	std::lock_guard<std::mutex> lock(m_mtx_thread);
+
+	for (u32 i = 0; i < m_threads.size(); i++)
+	{
+		if (m_threads[i]->GetType() == CPU_THREAD_RAW_SPU)
+		{
+			RawSPUThread* t = (RawSPUThread*)m_threads[i];
+
+			if (t->GetIndex() == num)
+			{
+				return t;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 void CPUThreadManager::NotifyThread(const u32 id)
 {
 	if (!id) return;
