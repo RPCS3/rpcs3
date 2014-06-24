@@ -13,7 +13,7 @@
 
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
-#include "Emu/SysCalls/lv2/SC_Time.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include <algorithm>
 #include <memory>

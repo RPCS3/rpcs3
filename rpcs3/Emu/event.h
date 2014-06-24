@@ -1,5 +1,5 @@
 #pragma once
-#include "Emu/SysCalls/lv2/SC_Lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
 
 #define FIX_SPUQ(x) ((u64)x | 0x5350555100000000ULL)
 // arbitrary code to prevent "special" zero value in key argument

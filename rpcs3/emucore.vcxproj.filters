@@ -128,81 +128,6 @@
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Event_flag.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Keyboard.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Lwcond.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Mouse.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Mutex.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_RSX.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Rwlock.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Spinlock.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Timer.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Trace.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_VM.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -578,10 +503,79 @@
     <ClCompile Include="..\Utilities\SSemaphore.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_Interrupt.cpp">
+    <ClCompile Include="Emu\SysCalls\lv2\sys_process.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_PRX.cpp">
+    <ClCompile Include="Emu\SysCalls\lv2\sys_prx.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_memory.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_timer.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_lwcond.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_rwlock.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_lwmutex.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_mutex.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_semaphore.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_rsx.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_spinlock.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_ppu_thread.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_tty.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_vm.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_trace.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_spu.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_time.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_interrupt.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_mmapper.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\SC_Mouse.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\SC_Pad.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\SC_Keyboard.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\Log.cpp">
@@ -636,42 +630,6 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\SysCalls.h">
       <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Condition.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Event_flag.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_FileSystem.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Lwcond.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Lwmutex.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Memory.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Mutex.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Rwlock.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Spinlock.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_SPU_Thread.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Time.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Timer.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h">
       <Filter>Emu\SysCalls\Modules</Filter>
@@ -1057,16 +1015,70 @@
     <ClInclude Include="..\Utilities\SSemaphore.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Semaphore.h">
+    <ClInclude Include="Emu\SysCalls\lv2\sys_process.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Interrupt.h">
+    <ClInclude Include="Emu\SysCalls\lv2\sys_prx.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_PRX.h">
+    <ClInclude Include="Emu\SysCalls\lv2\sys_memory.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\SC_Process.h">
+    <ClInclude Include="Emu\SysCalls\lv2\sys_timer.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_lwcond.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_rwlock.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_lwmutex.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_mutex.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_semaphore.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_rsx.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_spinlock.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_ppu_thread.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_tty.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_vm.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_trace.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_event.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_spu.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_time.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_interrupt.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_mmapper.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\MTRingbuffer.h">

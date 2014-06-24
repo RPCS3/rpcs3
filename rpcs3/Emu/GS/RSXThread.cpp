@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "RSXThread.h"
-#include "Emu/SysCalls/lv2/SC_Time.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + m_ctrl->get + (4*(x+1))))
 
