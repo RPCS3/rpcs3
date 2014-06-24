@@ -158,9 +158,9 @@ void GameViewer::LoadPSF()
 		if(game.serial.length() == 9)
 			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
 
-		if (game.category.find("HG"))
+		if (game.category.substr(0, 2) == "HG")
 			game.category = "HDD Game";
-		else if (game.category.find("DG"))
+		else if (game.category.substr(0, 2) == "DG")
 			game.category = "Disc Game";
 			
 		m_game_data.push_back(game);
