@@ -129,6 +129,36 @@ enum : u32
 	SYS_SPU_THREAD_SNR2      = 0x05C00c,
 };
 
+enum
+{
+	MFC_LSA_offs = 0x3004,
+	MFC_EAH_offs = 0x3008,
+	MFC_EAL_offs = 0x300C,
+	MFC_Size_Tag_offs = 0x3010,
+	MFC_Class_CMD_offs = 0x3014,
+	MFC_CMDStatus_offs = 0x3014,
+	MFC_QStatus_offs = 0x3104,
+	Prxy_QueryType_offs = 0x3204,
+	Prxy_QueryMask_offs = 0x321C,
+	Prxy_TagStatus_offs = 0x322C,
+	SPU_Out_MBox_offs = 0x4004,
+	SPU_In_MBox_offs = 0x400C,
+	SPU_MBox_Status_offs = 0x4014,
+	SPU_RunCntl_offs = 0x401C,
+	SPU_Status_offs = 0x4024,
+	SPU_NPC_offs = 0x4034,
+	SPU_RdSigNotify1_offs = 0x1400C,
+	SPU_RdSigNotify2_offs = 0x1C00C,
+};
+
+enum : u64
+{
+	RAW_SPU_OFFSET = 0x0000000000100000,
+	RAW_SPU_BASE_ADDR = 0x00000000E0000000,
+	RAW_SPU_LS_OFFSET = 0x0000000000000000,
+	RAW_SPU_PROB_OFFSET = 0x0000000000040000,
+};
+
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class FPSCR
@@ -598,26 +628,65 @@ public:
 				return false;
 			}
 		}
-
-		//Sleep(1); // hack
-
-		switch(cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
+		else if (ea >= RAW_SPU_BASE_ADDR && size == 4)
 		{
-		case MFC_PUT_CMD:
+			switch (cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 			{
-				return Memory.Copy(ea, dmac.ls_offset + lsa, size);
+			case MFC_PUT_CMD:
+			{
+				Memory.Write32(ea, ReadLS32(lsa));
+				return true; 
 			}
 
-		case MFC_GET_CMD:
+			case MFC_GET_CMD:
 			{
-				return Memory.Copy(dmac.ls_offset + lsa, ea, size);
+				WriteLS32(lsa, Memory.Read32(ea));
+				return true;
 			}
 
-		default:
+			default:
 			{
 				ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
 				return false;
 			}
+			}
+		}
+
+		//Sleep(1); // hack
+
+		switch (cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
+		{
+		case MFC_PUT_CMD:
+		{
+			if (Memory.Copy(ea, dmac.ls_offset + lsa, size))
+			{
+				return true;
+			}
+			else
+			{
+				ConLog.Error("DMAC::ProcessCmd(): PUT* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				return false; // TODO: page fault (?)
+			}
+		}
+
+		case MFC_GET_CMD:
+		{
+			if (Memory.Copy(dmac.ls_offset + lsa, ea, size))
+			{
+				return true;
+			}
+			else
+			{
+				ConLog.Error("DMAC::ProcessCmd(): GET* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				return false; // TODO: page fault (?)
+			}
+		}
+
+		default:
+		{
+			ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
+			return false; // ???
+		}
 		}
 	}
 

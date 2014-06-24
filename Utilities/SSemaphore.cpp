@@ -1,29 +1,38 @@
 #include "stdafx.h"
 #include "Utilities/SSemaphore.h"
 
-bool SSemaphore::wait(u64 timeout)
+void SSemaphore::wait()
 {
-	std::unique_lock<std::mutex> lock(m_cv_mutex);
+	u32 order;
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		order = m_in_order++;
+	}
+
+	std::unique_lock<std::mutex> cv_lock(m_cv_mutex);
 	
-	u64 counter = 0;
 	while (true)
 	{
 		if (Emu.IsStopped())
 		{
-			return false;
+			return;
 		}
-		if (timeout && counter >= timeout)
-		{
-			return false;
-		}
-		m_cond.wait_for(lock, std::chrono::milliseconds(1));
-		counter++;
+		
+		m_cond.wait_for(cv_lock, std::chrono::milliseconds(1));
 
 		std::lock_guard<std::mutex> lock(m_mutex);
 		if (m_count)
 		{
-			m_count--;
-			return true;
+			if (m_out_order == order)
+			{
+				m_count--;
+				m_out_order++;
+				return;
+			}
+			else
+			{
+				m_cond.notify_one();
+			}
 		}
 	}
 }
@@ -32,7 +41,8 @@ bool SSemaphore::try_wait()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	if (m_count)
+	// TODO: ordering?
+	if (m_count && m_in_order == m_out_order)
 	{
 		m_count--;
 		return true;
