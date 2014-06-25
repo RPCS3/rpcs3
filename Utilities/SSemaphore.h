@@ -6,7 +6,8 @@ class SSemaphore
 	u32 m_count;
 	u32 m_in_order;
 	u32 m_out_order;
-	std::mutex m_mutex, m_cv_mutex;
+	std::mutex m_cv_mutex;
+	std::mutex m_mutex;
 	std::condition_variable m_cond;
 
 public:

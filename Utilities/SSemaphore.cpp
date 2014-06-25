@@ -6,6 +6,11 @@ void SSemaphore::wait()
 	u32 order;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_count && m_out_order == m_in_order)
+		{
+			m_count--;
+			return;
+		}
 		order = m_in_order++;
 	}
 
@@ -17,21 +22,23 @@ void SSemaphore::wait()
 		{
 			return;
 		}
-		
-		m_cond.wait_for(cv_lock, std::chrono::milliseconds(1));
 
-		std::lock_guard<std::mutex> lock(m_mutex);
-		if (m_count)
+		m_cond.wait_for(cv_lock, std::chrono::milliseconds(1));
+		
 		{
-			if (m_out_order == order)
+			std::lock_guard<std::mutex> lock(m_mutex);
+			if (m_count)
 			{
-				m_count--;
-				m_out_order++;
-				return;
-			}
-			else
-			{
-				m_cond.notify_one();
+				if (m_out_order == order)
+				{
+					m_count--;
+					m_out_order++;
+					return;
+				}
+				else
+				{
+					m_cond.notify_one();
+				}
 			}
 		}
 	}
@@ -41,7 +48,6 @@ bool SSemaphore::try_wait()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	// TODO: ordering?
 	if (m_count && m_in_order == m_out_order)
 	{
 		m_count--;
@@ -57,18 +63,21 @@ void SSemaphore::post()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	if (m_count >= m_max)
+	if (m_count < m_max)
+	{
+		m_count++;
+	}
+	else
 	{
 		return;
 	}
 
-	m_count++;
 	m_cond.notify_one();
 }
 
 bool SSemaphore::post_and_wait()
 {
-	// TODO: ???
+	// TODO: merge these functions? Probably has a race condition.
 	if (try_wait()) return false;
 
 	post();
