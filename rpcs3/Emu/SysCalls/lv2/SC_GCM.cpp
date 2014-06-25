@@ -13,7 +13,7 @@ extern gcmInfo gcm_info;
 
 int cellGcmCallback(u32 context_addr, u32 count)
 {
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could freeze on exit
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
 	CellGcmContextData& ctx = (CellGcmContextData&)Memory[context_addr];
 	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
@@ -24,6 +24,7 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	ctx.current = ctx.begin + res;
 
+	//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
 	ctrl.put = res;
 	ctrl.get = 0;
 	

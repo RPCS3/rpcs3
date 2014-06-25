@@ -471,7 +471,7 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH); // could freeze on exit
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
 	u32 current = ctxt->current;
 	u32 end = ctxt->end;
@@ -488,6 +488,8 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
  
 		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
 		ctxt->current = ctxt->begin + res;
+
+		//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
 		ctrl.put = res;
 		ctrl.get = 0;
 	}

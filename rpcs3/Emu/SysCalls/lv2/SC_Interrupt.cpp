@@ -13,7 +13,7 @@ static SysCallBase sc_int("sys_interrupt");
 
 int sys_interrupt_tag_destroy(u32 intrtag)
 {
-	sc_int.Error("sys_interrupt_tag_destroy(intrtag=%d)", intrtag);
+	sc_int.Warning("sys_interrupt_tag_destroy(intrtag=%d)", intrtag);
 
 	u32 id = intrtag & 0xff;
 	u32 class_id = intrtag >> 8;
@@ -40,7 +40,7 @@ int sys_interrupt_tag_destroy(u32 intrtag)
 
 int sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 arg)
 {
-	sc_int.Error("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
+	sc_int.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
 
 	if (!ih.IsGood())
 	{
