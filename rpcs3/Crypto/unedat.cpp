@@ -156,6 +156,12 @@ int decrypt_data(rFile *in, rFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd,
 		int length = 0;
 		int compression_end = 0;
 
+		if ((edat->flags & EDAT_FLAG_0x3C) != 0 || (edat->flags & EDAT_FLAG_0x3D) != 0)
+		{
+			ConLog.Error("EDAT: Flag 0x3C/0x3D EDAT files are unsupported yet");
+			return -1;
+		}
+		
 		if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 		{
 			unsigned char metadata[0x20];
