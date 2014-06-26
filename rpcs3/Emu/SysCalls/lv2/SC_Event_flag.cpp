@@ -142,8 +142,6 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		{
 			SMutexLocker lock(ef->m_mutex);
 
-			ef->signal.unlock(tid);
-
 			u64 flags = ef->flags;
 
 			for (u32 i = 0; i < ef->waiters.size(); i++)
@@ -161,6 +159,17 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 						ef->flags = 0;
 					}
 
+					if (u32 target = ef->check())
+					{
+						// if signal, leave both mutexes locked...
+						ef->signal.unlock(tid, target);
+						ef->m_mutex.unlock(tid, target);
+					}
+					else
+					{
+						ef->signal.unlock(tid);
+					}
+
 					if (result.IsGood())
 					{
 						result = flags;
@@ -175,6 +184,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 				}
 			}
 
+			ef->signal.unlock(tid);
 			return CELL_ECANCELED;
 		}
 
