@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -85,7 +85,7 @@ int sys_cond_signal(u32 cond_id)
 
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_cond_signal(id=%d) aborted", cond_id);
+			LOGF_WARNING(HLE, "sys_cond_signal(id=%d) aborted", cond_id);
 		}
 	}
 
@@ -113,7 +113,7 @@ int sys_cond_signal_all(u32 cond_id)
 
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
+			LOGF_WARNING(HLE, "sys_cond_signal_all(id=%d) aborted", cond_id);
 			break;
 		}
 	}
@@ -153,7 +153,7 @@ int sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	if (Emu.IsStopped())
 	{
-		ConLog.Warning("sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
+		LOGF_WARNING(HLE, "sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
 	}
 
 	return CELL_OK;
@@ -236,6 +236,6 @@ int sys_cond_wait(u32 cond_id, u64 timeout)
 	}
 
 abort:
-	ConLog.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+	LOGF_WARNING(HLE, "sys_cond_wait(id=%d) aborted", cond_id);
 	return CELL_OK;
 }

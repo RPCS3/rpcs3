@@ -24,9 +24,6 @@
     <ClCompile Include="Gui\MainFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Gui\ConLog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\MemoryViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -102,8 +99,8 @@
     <ClCompile Include="Emu\DbgCommand.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\DbgConsole.cpp">
-      <Filter>Emu</Filter>
+    <ClCompile Include="Gui\ConLogFrame.cpp">
+      <Filter>Gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -191,9 +188,6 @@
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\ConLog.h">
-      <Filter>Emu</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\rConcurrency.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -221,8 +215,8 @@
     <ClInclude Include="Gui\ConLogFrame.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\DbgConsole.h">
-      <Filter>Emu</Filter>
+    <ClInclude Include="..\Utilities\MTRingbuffer.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -134,7 +134,7 @@ public:
 
 			if(!col)
 			{
-				ConLog.Error("Columns loaded with error!");
+				LOGF_ERROR(HLE, "Columns loaded with error!");
 				return;
 			}
 
@@ -191,7 +191,7 @@ public:
 				{
 					if(m_columns[c1].pos == m_columns[c2].pos)
 					{
-						ConLog.Error("Columns loaded with error!");
+						LOGF_ERROR(HLE, "Columns loaded with error!");
 						Init();
 						return;
 					}
@@ -210,7 +210,7 @@ public:
 
 				if(!ishas)
 				{
-					ConLog.Error("Columns loaded with error!");
+					LOGF_ERROR(HLE, "Columns loaded with error!");
 					Init();
 					return;
 				}

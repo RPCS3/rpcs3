@@ -38,7 +38,7 @@
 #include "wx/app.h"
 #include <wx/timer.h>
 #include <wx/listctrl.h>
-
+#include <wx/aui/auibook.h>
 #endif
 
 #ifdef MSVC_CRT_MEMLEAK_DETECTION
@@ -268,6 +268,8 @@ enum Status
 	Ready,
 };
 
+#include "Utilities/StrFmt.h"
+#include "Utilities/Log.h"
 #include "Utilities/BEType.h"
 #include "Utilities/rFile.h"
 #include "Utilities/rTime.h"
@@ -279,13 +281,10 @@ enum Status
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
-#include "Utilities/StrFmt.h"
 
 #include "rpcs3/Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLogFrame.h"
-#include "Emu/ConLog.h"
-#include "Emu/DbgConsole.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Callback.h"

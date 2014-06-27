@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -109,10 +109,10 @@ MainFrame::MainFrame()
 	// Panels
 	m_game_viewer = new GameViewer(this);
 	m_debugger_frame = new DebuggerPanel(this);
-	ConLogFrame = new LogFrame(this);
+	m_log_frame = new LogFrame(this);
 
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
-	AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
+	AddPane(m_log_frame, "Log", wxAUI_DOCK_BOTTOM);
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
@@ -192,7 +192,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
-		ConLog.Success("Game: boot done.");
+		LOG_SUCCESS(HLE, "Game: boot done.");
 
 		if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
 		{
@@ -201,7 +201,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOGF_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 
@@ -227,11 +227,11 @@ void MainFrame::BootGameAndRun(wxCommandEvent& WXUNUSED(event))
 
 	if (Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
-		ConLog.Success("Game: boot done.");
+		LOG_SUCCESS(HLE, "Game: boot done.");
 	}
 	else
 	{
-		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOGF_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 
 	if (Emu.IsReady())
@@ -300,14 +300,14 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("(S)ELF: booting...");
+	LOG_NOTICE(HLE, "(S)ELF: booting...");
 
 	Emu.Stop();
 
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	ConLog.Success("(S)ELF: boot done.");
+	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))

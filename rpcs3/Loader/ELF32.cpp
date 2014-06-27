@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "ELF32.h"
 
@@ -93,7 +93,7 @@ bool ELF32Loader::LoadEhdrInfo()
 	if(!ehdr.CheckMagic()) return false;
 
 	if(ehdr.IsLittleEndian())
-		ConLog.Warning("ELF32 LE");
+		LOG_WARNING(LOADER, "ELF32 LE");
 
 	switch(ehdr.e_machine)
 	{
@@ -106,14 +106,14 @@ bool ELF32Loader::LoadEhdrInfo()
 
 	default:
 		machine = MACHINE_Unknown;
-		ConLog.Error("Unknown elf32 machine: 0x%x", ehdr.e_machine);
+		LOGF_ERROR(LOADER, "Unknown elf32 machine: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
 	entry = ehdr.GetEntry();
 	if(entry == 0)
 	{
-		ConLog.Error("elf32 error: entry is null!");
+		LOG_ERROR(LOADER, "elf32 error: entry is null!");
 		return false;
 	}
 
@@ -124,7 +124,7 @@ bool ELF32Loader::LoadPhdrInfo()
 {
 	if(ehdr.e_phoff == 0 && ehdr.e_phnum)
 	{
-		ConLog.Error("LoadPhdr32 error: Program header offset is null!");
+		LOG_ERROR(LOADER, "LoadPhdr32 error: Program header offset is null!");
 		return false;
 	}
 
@@ -149,7 +149,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
 			{
 				entry += phdr_arr[i].p_vaddr;
-				ConLog.Warning("virtual entry = 0x%x", entry);
+				LOGF_WARNING(LOADER, "virtual entry = 0x%x", entry);
 				break;
 			}
 		}
@@ -173,7 +173,7 @@ bool ELF32Loader::LoadShdrInfo()
 
 	if(ehdr.e_shstrndx >= shdr_arr.size())
 	{
-		ConLog.Warning("LoadShdr32 error: shstrndx too big!");
+		LOG_WARNING(LOADER, "LoadShdr32 error: shstrndx too big!");
 		return true;
 	}
 
@@ -197,9 +197,9 @@ bool ELF32Loader::LoadShdrInfo()
 bool ELF32Loader::LoadEhdrData(u64 offset)
 {
 #ifdef LOADER_DEBUG
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 	ehdr.Show();
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 #endif
 	return true;
 }
@@ -226,8 +226,9 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 			{
-				ConLog.Warning
-				( 
+				LOGF_WARNING
+				(
+					LOADER, 
 					"LoadPhdr32 different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
 					phdr_arr[i].p_paddr, phdr_arr[i].p_vaddr
 				);
@@ -255,41 +256,41 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(note.type != 1)
 			{
-				ConLog.Error("ELF32: Bad NOTE type (%d)", note.type);
+				LOGF_ERROR(LOADER, "ELF32: Bad NOTE type (%d)", note.type);
 				break;
 			}
 
 			if(note.namesz != sizeof(note.name))
 			{
-				ConLog.Error("ELF32: Bad NOTE namesz (%d)", note.namesz);
+				LOGF_ERROR(LOADER, "ELF32: Bad NOTE namesz (%d)", note.namesz);
 				break;
 			}
 
 			if(note.descsz != sizeof(note.desc) && note.descsz != 32)
 			{
-				ConLog.Error("ELF32: Bad NOTE descsz (%d)", note.descsz);
+				LOGF_ERROR(LOADER, "ELF32: Bad NOTE descsz (%d)", note.descsz);
 				break;
 			}
 
 			//if(note.desc.flags)
 			//{
-			//	ConLog.Error("ELF32: Bad NOTE flags (0x%x)", note.desc.flags);
+			//	LOG_ERROR(LOADER, "ELF32: Bad NOTE flags (0x%x)", note.desc.flags);
 			//	break;
 			//}
 
 			if(note.descsz == sizeof(note.desc))
 			{
-				ConLog.Warning("name = %s", std::string((const char *)note.name, 8).c_str());
-				ConLog.Warning("ls_size = %d", note.desc.ls_size);
-				ConLog.Warning("stack_size = %d", note.desc.stack_size);
+				LOGF_WARNING(LOADER, "name = %s", std::string((const char *)note.name, 8).c_str());
+				LOGF_WARNING(LOADER, "ls_size = %d", note.desc.ls_size);
+				LOGF_WARNING(LOADER, "stack_size = %d", note.desc.stack_size);
 			}
 			else
 			{
-				ConLog.Warning("desc = '%s'", std::string(note.desc_text, 32).c_str());
+				LOGF_WARNING(LOADER, "desc = '%s'", std::string(note.desc_text, 32).c_str());
 			}
 		}
 #ifdef LOADER_DEBUG
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, "");
 #endif
 	}
 
@@ -303,13 +304,13 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		Elf32_Shdr& shdr = shdr_arr[i];
 
 #ifdef LOADER_DEBUG
-		if(i < shdr_name_arr.size()) ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
+		if(i < shdr_name_arr.size()) LOGF_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
 		shdr.Show();
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, "");
 #endif
 		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
 		{
-			ConLog.Error("ELF32 ERROR: Relocation");
+			LOG_ERROR(LOADER, "ELF32 ERROR: Relocation");
 			continue;
 		}
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;

@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -350,7 +350,7 @@ int cellSysutilCheckCallback()
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellSysutilCheckCallback() aborted");
+			LOG_WARNING(HLE, "cellSysutilCheckCallback() aborted");
 			break;
 		}
 	}

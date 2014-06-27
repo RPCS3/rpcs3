@@ -260,7 +260,7 @@ public:
 protected:
 	void NULL_OP()
 	{
-		ConLog.Error("null");
+		LOG_ERROR(HLE, "null");
 		Emu.Pause();
 	}
 
@@ -316,7 +316,7 @@ protected:
 
 	void UNK(const u16 code0, const u16 code1)
 	{
-		ConLog.Error("Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1);
+		LOGF_ERROR(HLE, "Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1);
 		Emu.Pause();
 	}
 };

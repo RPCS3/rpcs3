@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -93,7 +93,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
+			LOGF_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
 			break;
 		}
 	}

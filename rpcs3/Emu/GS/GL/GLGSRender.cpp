@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
@@ -9,7 +9,7 @@
 #define DUMP_VERTEX_DATA 0
 
 #if CMD_DEBUG
-	#define CMD_LOG ConLog.Write
+	#define CMD_LOG(...) LOGF_NOTICE(RSX, __VA_ARGS__)
 #else
 	#define CMD_LOG(...)
 #endif
@@ -27,7 +27,7 @@ void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
 	{
-		ConLog.Error("%s: opengl error 0x%04x", situation, err);
+		LOGF_ERROR(RSX, "%s: opengl error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }
@@ -180,7 +180,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		default:
-			ConLog.Error("Bad cv type! %d", m_vertex_data[i].type);
+			LOGF_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
 		return;
 		}
 
@@ -309,7 +309,7 @@ void GLGSRender::InitFragmentData()
 {
 	if(!m_cur_shader_prog)
 	{
-		ConLog.Error("InitFragmentData: m_cur_shader_prog == NULL");
+		LOGF_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
 		return;
 	}
 
@@ -330,20 +330,20 @@ void GLGSRender::InitFragmentData()
 	}
 
 	//if(m_fragment_constants.GetCount())
-	//	ConLog.SkipLn();
+	//	LOG_NOTICE(HLE, "");
 }
 
 bool GLGSRender::LoadProgram()
 {
 	if(!m_cur_shader_prog)
 	{
-		ConLog.Warning("LoadProgram: m_cur_shader_prog == NULL");
+		LOGF_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
 	}
 
 	if(!m_cur_vertex_prog)
 	{
-		ConLog.Warning("LoadProgram: m_cur_vertex_prog == NULL");
+		LOGF_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
 		return false;
 	}
 
@@ -354,7 +354,7 @@ bool GLGSRender::LoadProgram()
 
 	if(m_fp_buf_num == -1)
 	{
-		ConLog.Warning("FP not found in buffer!");
+		LOGF_WARNING(RSX, "FP not found in buffer!");
 		m_shader_prog.DecompileAsync(*m_cur_shader_prog);
 		m_shader_prog.Wait();
 		m_shader_prog.Compile();
@@ -366,7 +366,7 @@ bool GLGSRender::LoadProgram()
 
 	if(m_vp_buf_num == -1)
 	{
-		ConLog.Warning("VP not found in buffer!");
+		LOGF_WARNING(RSX, "VP not found in buffer!");
 		m_vertex_prog.DecompileAsync(*m_cur_vertex_prog);
 		m_vertex_prog.Wait();
 		m_vertex_prog.Compile();
@@ -450,7 +450,7 @@ void GLGSRender::WriteDepthBuffer()
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		ConLog.Warning("Bad depth address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
+		LOGF_WARNING(RSX, "Bad depth address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
 		return;
 	}
 
@@ -484,7 +484,7 @@ void GLGSRender::WriteColourBufferA()
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		ConLog.Warning("Bad colour buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
+		LOGF_WARNING(RSX, "Bad colour buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
 		return;
 	}
 
@@ -513,7 +513,7 @@ void GLGSRender::WriteColourBufferB()
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		ConLog.Warning("Bad colour buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
+		LOGF_WARNING(RSX, "Bad colour buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
 		return;
 	}
 
@@ -543,7 +543,7 @@ void GLGSRender::WriteColourBufferC()
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		ConLog.Warning("Bad colour buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
+		LOGF_WARNING(RSX, "Bad colour buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
 		return;
 	}
 
@@ -572,7 +572,7 @@ void GLGSRender::WriteColourBufferD()
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		ConLog.Warning("Bad colour buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
+		LOGF_WARNING(RSX, "Bad colour buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
 		return;
 	}
 
@@ -703,14 +703,14 @@ void GLGSRender::ExecCMD()
 	//return;
 	if(!LoadProgram())
 	{
-		ConLog.Error("LoadProgram failed.");
+		LOGF_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
 		return;
 	}
 
 	if(!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
-		ConLog.Warning("New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
+		LOGF_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
@@ -753,7 +753,7 @@ void GLGSRender::ExecCMD()
 		break;
 
 		default:
-			ConLog.Error("Bad depth format! (%d)", m_surface_depth_format);
+			LOGF_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
 			assert(0);
 		break;
 		}
@@ -821,7 +821,7 @@ void GLGSRender::ExecCMD()
 	break;
 
 	default:
-		ConLog.Error("Bad surface colour target: %d", m_surface_colour_target);
+		LOGF_ERROR(RSX, "Bad surface colour target: %d", m_surface_colour_target);
 	break;
 	}
 
@@ -1099,7 +1099,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_indexed_array.m_count && m_draw_array_count)
 	{
-		ConLog.Warning("m_indexed_array.m_count && draw_array_count");
+		LOGF_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
 
 	for(u32 i=0; i<m_textures_count; ++i)
@@ -1142,7 +1142,7 @@ void GLGSRender::ExecCMD()
 		break;
 
 		default:
-			ConLog.Error("Bad indexed array type (%d)", m_indexed_array.m_type);
+			LOGF_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
 		break;
 		}
 

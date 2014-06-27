@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 
@@ -27,27 +27,27 @@ bool PKGLoader::Install(std::string dest)
 	if (rDirExists(dest+titleID)) {
 		rMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
 		if (d_overwrite.ShowModal() != rID_YES) {
-			ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
+			LOGF_ERROR(LOADER, "PKG Loader: Another installation found in: %s", titleID.c_str());
 			return false;
 		}
 		// TODO: Remove the following two lines and remove the folder dest+titleID
-		ConLog.Error("PKG Loader: Another installation found in: %s", titleID.c_str());
+		LOGF_ERROR(LOADER, "PKG Loader: Another installation found in: %s", titleID.c_str());
 		return false;
 	}
 	if (!rMkdir(dest+titleID)) {
-		ConLog.Error("PKG Loader: Could not make the installation directory: %s", titleID.c_str());
+		LOGF_ERROR(LOADER, "PKG Loader: Could not make the installation directory: %s", titleID.c_str());
 		return false;
 	}
 
 	// Decrypt and unpack the PKG file.
 	if (Unpack(pkg_f, titleID, dest) < 0)
 	{
-		ConLog.Error("PKG Loader: Failed to install package!");
+		LOG_ERROR(LOADER, "PKG Loader: Failed to install package!");
 		return false;
 	}
 	else
 	{
-		ConLog.Write("PKG Loader: Package successfully installed in: /dev_hdd0/game/%s", titleID.c_str());
+		LOGF_NOTICE(LOADER, "PKG Loader: Package successfully installed in: /dev_hdd0/game/%s", titleID.c_str());
 		return true;
 	}
 }

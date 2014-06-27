@@ -57,7 +57,7 @@ public:
 		case 8: return GL_MIRROR_CLAMP_EXT;
 		}
 
-		ConLog.Error("Texture wrap error: bad wrap (%d).", wrap);
+		LOGF_ERROR(RSX, "Texture wrap error: bad wrap (%d).", wrap);
 		return GL_REPEAT;
 	}
 
@@ -89,7 +89,7 @@ public:
 		const u64 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
 		if (!Memory.IsGoodAddr(texaddr))
 		{
-			ConLog.Error("Bad texture address=0x%x", texaddr);
+			LOGF_ERROR(RSX, "Bad texture address=0x%x", texaddr);
 			return;
 		}
 		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
@@ -420,7 +420,7 @@ public:
 		}
 		break;
 
-		default: ConLog.Error("Init tex error: Bad tex format (0x%x | %s | 0x%x)", format,
+		default: LOGF_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format,
 					 (is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40); break;
 		}
 

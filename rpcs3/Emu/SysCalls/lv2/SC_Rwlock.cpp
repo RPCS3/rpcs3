@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -69,7 +69,7 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			LOGF_WARNING(HLE, "sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
 		Sleep(1);
@@ -132,7 +132,7 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			LOGF_WARNING(HLE, "sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
 		Sleep(1);

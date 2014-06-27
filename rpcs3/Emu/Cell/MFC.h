@@ -183,7 +183,7 @@ struct DMAC
 		return true;
 
 		default:
-			ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
+			LOGF_ERROR(HLE, "DMAC::ProcessCmd(): Unknown DMA cmd.");
 		return true;
 		}
 	}
@@ -268,19 +268,19 @@ struct DMAC
 				u16 tag = (u16)size_tag;
 				u16 size = size_tag >> 16;
 
-				ConLog.Warning("RawSPU DMA %s:", op == MFC_PUT_CMD ? "PUT" : "GET");
-				ConLog.Warning("*** lsa  = 0x%x", lsa);
-				ConLog.Warning("*** ea   = 0x%llx", ea);
-				ConLog.Warning("*** tag  = 0x%x", tag);
-				ConLog.Warning("*** size = 0x%x", size);
-				ConLog.SkipLn();
+				LOGF_WARNING(HLE, "RawSPU DMA %s:", op == MFC_PUT_CMD ? "PUT" : "GET");
+				LOGF_WARNING(HLE, "*** lsa  = 0x%x", lsa);
+				LOGF_WARNING(HLE, "*** ea   = 0x%llx", ea);
+				LOGF_WARNING(HLE, "*** tag  = 0x%x", tag);
+				LOGF_WARNING(HLE, "*** size = 0x%x", size);
+				LOG_WARNING(HLE, " ");
 
 				MFC_CMDStatus.SetValue(dmac.Cmd(cmd, tag, lsa, ea, size));
 			}
 			break;
 
 			default:
-				ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x)", op, cmd);
+				LOGF_ERROR(HLE, "Unknown MFC cmd. (opcode=0x%x, cmd=0x%x)", op, cmd);
 			break;
 			}
 		}

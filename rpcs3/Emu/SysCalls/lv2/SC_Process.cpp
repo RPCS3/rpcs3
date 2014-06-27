@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -24,7 +24,7 @@ int sys_process_exit(s32 errorcode)
 {
 	sc_p.Warning("sys_process_exit(%d)", errorcode);
 	Emu.Pause(); // Emu.Stop() does crash
-	ConLog.Success("Process finished");
+	LOG_SUCCESS(HLE, "Process finished");
 
 	if (Ini.HLEExitOnStop.GetValue())
 	{

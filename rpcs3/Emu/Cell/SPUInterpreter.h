@@ -18,9 +18,9 @@
 #define MEM_AND_REG_HASH() \
 	unsigned char mem_h[20]; sha1(&Memory[CPU.dmac.ls_offset], 256*1024, mem_h); \
 	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
-	ConLog.Write("Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
+	LOGF_NOTICE(Log::SPU, "Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
 
-#define LOG2_OPCODE(...) //MEM_AND_REG_HASH(); ConLog.Write(__FUNCTION__ "(): " __VA_ARGS__)
+#define LOG2_OPCODE(...) //MEM_AND_REG_HASH(); LOGF_NOTICE(Log::SPU, __FUNCTION__ "(): " __VA_ARGS__)
 
 #define LOG5_OPCODE(...) ///
 
@@ -339,7 +339,7 @@ private:
 		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("STQX: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "STQX: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -438,7 +438,7 @@ private:
 
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("LQX: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "LQX: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1126,7 +1126,7 @@ private:
 		u32 lsa = (i16 << 2) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("STQA: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "STQA: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1177,7 +1177,7 @@ private:
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0; 
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("STQR: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "STQR: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1195,7 +1195,7 @@ private:
 		u32 lsa = (i16 << 2) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("LQA: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "LQA: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1245,7 +1245,7 @@ private:
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("LQR: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "LQR: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1334,11 +1334,11 @@ private:
 		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("STQD: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "STQD: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
-		//ConLog.Write("STQD(lsa=0x%x): GPR[%d] (0x%llx%llx)", lsa, rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
+		//LOGF_NOTICE(Log::SPU, "STQD(lsa=0x%x): GPR[%d] (0x%llx%llx)", lsa, rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
@@ -1346,7 +1346,7 @@ private:
 		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
 		if(!CPU.IsGoodLSA(lsa))
 		{
-			ConLog.Error("LQD: bad lsa (0x%x)", lsa);
+			LOGF_ERROR(Log::SPU, "LQD: bad lsa (0x%x)", lsa);
 			Emu.Pause();
 			return;
 		}
@@ -1540,8 +1540,8 @@ private:
 
 	void UNK(const std::string& err)
 	{
-		ConLog.Error(err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOGF_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
 		Emu.Pause();
-		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+		for(uint i=0; i<128; ++i) LOGF_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 	}
 };

@@ -120,7 +120,7 @@ size_t rFile::Write(const void *buffer, size_t count)
 
 bool rFile::Write(const std::string &text)
 {
-	return reinterpret_cast<wxFile*>(handle)->Write(fmt::FromUTF8(text));
+	return reinterpret_cast<wxFile*>(handle)->Write(reinterpret_cast<const void*>(text.c_str()),text.size());
 }
 
 bool rFile::Close()

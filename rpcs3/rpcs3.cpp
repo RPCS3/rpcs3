@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"
@@ -61,8 +61,6 @@ void Rpcs3App::Exit()
 {
 	Emu.Stop();
 	Ini.Save();
-
-	if(ConLogFrame && !ConLogFrame->IsBeingDeleted()) ConLogFrame->Close();
 
 	wxApp::Exit();
 }

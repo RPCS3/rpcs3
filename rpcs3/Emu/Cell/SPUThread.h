@@ -211,7 +211,7 @@ public:
 			return this->low >> 22 & 0x3;
 
 		default:
-			ConLog.Error("Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
+			LOGF_ERROR(SPU, "Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
 			return 0;
 		}
 	}
@@ -599,7 +599,7 @@ public:
 				u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
 				if (num >= group->list.size() || !group->list[num])
 				{
-					ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
+					LOGF_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
 					return false;
 				}
 
@@ -618,13 +618,13 @@ public:
 				}
 				else
 				{
-					ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx, size=%d, cmd=0x%x): invalid command", ea, size, cmd);
+					LOGF_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx, size=%d, cmd=0x%x): invalid command", ea, size, cmd);
 					return false;
 				}
 			}
 			else
 			{
-				ConLog.Error("DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): group not set", ea);
+				LOGF_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): group not set", ea);
 				return false;
 			}
 		}
@@ -646,7 +646,7 @@ public:
 
 			default:
 			{
-				ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
+				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
 				return false;
 			}
 			}
@@ -664,7 +664,7 @@ public:
 			}
 			else
 			{
-				ConLog.Error("DMAC::ProcessCmd(): PUT* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOGF_ERROR(Log::SPU, "DMAC::ProcessCmd(): PUT* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
 				return false; // TODO: page fault (?)
 			}
 		}
@@ -677,14 +677,14 @@ public:
 			}
 			else
 			{
-				ConLog.Error("DMAC::ProcessCmd(): GET* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOGF_ERROR(Log::SPU, "DMAC::ProcessCmd(): GET* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
 				return false; // TODO: page fault (?)
 			}
 		}
 
 		default:
 		{
-			ConLog.Error("DMAC::ProcessCmd(): Unknown DMA cmd.");
+			LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
 			return false; // ???
 		}
 		}
@@ -725,7 +725,7 @@ public:
 			u32 size = rec->ts;
 			if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
 			{
-				ConLog.Error("DMA List: invalid transfer size(%d)", size);
+				LOGF_ERROR(Log::SPU, "DMA List: invalid transfer size(%d)", size);
 				return;
 			}
 
@@ -737,7 +737,7 @@ public:
 			}
 
 			if (Ini.HLELogging.GetValue() || rec->s)
-				ConLog.Write("*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
+				LOGF_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
 					i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
 
 			lsa += std::max(size, (u32)16);
@@ -748,7 +748,7 @@ public:
 
 				if (StallList[tag].MFCArgs)
 				{
-					ConLog.Error("DMA List: existing stalled list found (tag=%d)", tag);
+					LOGF_ERROR(Log::SPU, "DMA List: existing stalled list found (tag=%d)", tag);
 				}
 				StallList[tag].MFCArgs = &MFCArgs;
 				StallList[tag].cmd = cmd;
@@ -780,7 +780,7 @@ public:
 		case MFC_PUTR_CMD: // ???
 		case MFC_GET_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
+			if (Ini.HLELogging.GetValue()) LOGF_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x", 
 				(op & MFC_PUT_CMD ? "PUT" : "GET"),
 				(op & MFC_RESULT_MASK ? "R" : ""),
 				(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -795,7 +795,7 @@ public:
 		case MFC_PUTRL_CMD: // ???
 		case MFC_GETL_CMD:
 		{
-			if (Ini.HLELogging.GetValue()) ConLog.Write("DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+			if (Ini.HLELogging.GetValue()) LOGF_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
 				(op & MFC_PUT_CMD ? "PUT" : "GET"),
 				(op & MFC_RESULT_MASK ? "RL" : "L"),
 				(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -811,7 +811,7 @@ public:
 		case MFC_PUTLLUC_CMD:
 		case MFC_PUTQLLUC_CMD:
 		{
-			if (Ini.HLELogging.GetValue() || size != 128) ConLog.Write("DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+			if (Ini.HLELogging.GetValue() || size != 128) LOGF_NOTICE(Log::SPU, "DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
 				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 				op == MFC_PUTLLC_CMD ? "PUTLLC" :
 				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
@@ -857,7 +857,7 @@ public:
 						{
 							if (buf[last].hi != reservation.data[last].hi && buf[last].lo != reservation.data[last].lo)
 							{
-								ConLog.Error("MFC_PUTLLC_CMD: TODO: 128bit compare and swap");
+								LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 128bit compare and swap");
 								Emu.Pause();
 								Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 							}
@@ -885,7 +885,7 @@ public:
 								}
 								else // full 64 bit
 								{
-									ConLog.Error("MFC_PUTLLC_CMD: TODO: 64bit compare and swap");
+									LOGF_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 64bit compare and swap");
 									Emu.Pause();
 									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 								}*/
@@ -894,7 +894,7 @@ public:
 						else
 						{
 							ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
-							ConLog.Error("MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 16x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
+							LOGF_ERROR(Log::SPU, "MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 16x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
 								changed, mask, op, cmd, lsa, ea, tag, size);
 							Emu.Pause();
 							Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
@@ -929,7 +929,7 @@ public:
 		break;
 
 		default:
-			ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)", 
+			LOGF_ERROR( Log::SPU, "Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)", 
 				op, cmd, lsa, ea, tag, size);
 		break;
 		}
@@ -949,7 +949,7 @@ public:
 			return count;
 
 		case SPU_WrOutIntrMbox:
-			ConLog.Warning("GetChannelCount(%s) = 0", spu_ch_name[ch]);
+			LOGF_WARNING(Log::SPU, "GetChannelCount(%s) = 0", spu_ch_name[ch]);
 			return 0;
 
 		case MFC_RdTagStat:
@@ -971,7 +971,7 @@ public:
 			return Prxy.AtomicStat.GetCount();
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).",
+			LOGF_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).",
 				__FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
@@ -988,7 +988,7 @@ public:
 		case SPU_WrOutIntrMbox:
 			if (!group) // if RawSPU
 			{
-				if (Ini.HLELogging.GetValue()) ConLog.Write("SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
+				if (Ini.HLELogging.GetValue()) LOGF_NOTICE(Log::SPU, "SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
 				SPU.Out_IntrMBox.PushUncond(v);
 				m_intrtag[2].stat |= 1;
 				if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
@@ -998,7 +998,7 @@ public:
 						Sleep(1);
 						if (Emu.IsStopped())
 						{
-							ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+							LOGF_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 							return;
 						}
 					}
@@ -1019,20 +1019,20 @@ public:
 					u32 data;
 					if (!SPU.Out_MBox.Pop(data))
 					{
-						ConLog.Error("sys_spu_thread_send_event(v=0x%x, spup=%d): Out_MBox is empty", v, spup);
+						LOGF_ERROR(Log::SPU, "sys_spu_thread_send_event(v=0x%x, spup=%d): Out_MBox is empty", v, spup);
 						return;
 					}
 
 					if (SPU.In_MBox.GetCount())
 					{
-						ConLog.Error("sys_spu_thread_send_event(v=0x%x, spup=%d): In_MBox is not empty", v, spup);
+						LOGF_ERROR(Log::SPU, "sys_spu_thread_send_event(v=0x%x, spup=%d): In_MBox is not empty", v, spup);
 						SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
 						return;
 					}
 
 					if (Ini.HLELogging.GetValue())
 					{
-						ConLog.Write("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
+						LOGF_NOTICE(Log::SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
 					}
 
 					EventPort& port = SPUPs[spup];
@@ -1042,7 +1042,7 @@ public:
 					if (!port.eq)
 					{
 						// spu_printf fails there
-						ConLog.Warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, v & 0x00ffffff, data);
+						LOGF_WARNING(Log::SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (v & 0x00ffffff), data);
 						SPU.In_MBox.PushUncond(CELL_ENOTCONN); // TODO: check error passing
 						return;
 					}
@@ -1064,25 +1064,25 @@ public:
 					u32 data;
 					if (!SPU.Out_MBox.Pop(data))
 					{
-						ConLog.Error("sys_event_flag_set_bit(v=0x%x (flag=%d)): Out_MBox is empty", v, flag);
+						LOGF_ERROR(Log::SPU, "sys_event_flag_set_bit(v=0x%x (flag=%d)): Out_MBox is empty", v, flag);
 						return;
 					}
 
 					if (flag > 63)
 					{
-						ConLog.Error("sys_event_flag_set_bit(id=%d, v=0x%x): flag > 63", data, v, flag);
+						LOGF_ERROR(Log::SPU, "sys_event_flag_set_bit(id=%d, v=0x%x): flag > 63", data, v, flag);
 						return;
 					}
 
 					//if (Ini.HLELogging.GetValue())
 					{
-						ConLog.Warning("sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d))", data, v, flag);
+						LOGF_WARNING(Log::SPU, "sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d))", data, v, flag);
 					}
 
 					EventFlag* ef;
 					if (!Emu.GetIdManager().GetIDData(data, ef))
 					{
-						ConLog.Error("sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
+						LOGF_ERROR(Log::SPU, "sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
 						SPU.In_MBox.PushUncond(CELL_ESRCH);
 						return;
 					}
@@ -1110,11 +1110,11 @@ public:
 					u32 data;
 					if (SPU.Out_MBox.Pop(data))
 					{
-						ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x); Out_MBox = 0x%x", v, data);
+						LOGF_ERROR(Log::SPU, "SPU_WrOutIntrMbox: unknown data (v=0x%x); Out_MBox = 0x%x", v, data);
 					}
 					else
 					{
-						ConLog.Error("SPU_WrOutIntrMbox: unknown data (v=0x%x)", v);
+						LOGF_ERROR(Log::SPU, "SPU_WrOutIntrMbox: unknown data (v=0x%x)", v);
 					}
 					SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
 					return;
@@ -1166,13 +1166,13 @@ public:
 		{
 			if (v >= 32)
 			{
-				ConLog.Error("MFC_WrListStallAck error: invalid tag(%d)", v);
+				LOGF_ERROR(Log::SPU, "MFC_WrListStallAck error: invalid tag(%d)", v);
 				return;
 			}
 			StalledList temp = StallList[v];
 			if (!temp.MFCArgs)
 			{
-				ConLog.Error("MFC_WrListStallAck error: empty tag(%d)", v);
+				LOGF_ERROR(Log::SPU, "MFC_WrListStallAck error: empty tag(%d)", v);
 				return;
 			}
 			StallList[v].MFCArgs = nullptr;
@@ -1181,11 +1181,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			LOGF_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
 
-		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+		if (Emu.IsStopped()) LOGF_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	void ReadChannel(SPU_GPR_hdr& r, u32 ch)
@@ -1224,11 +1224,11 @@ public:
 		break;
 
 		default:
-			ConLog.Error("%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			LOGF_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
 		break;
 		}
 
-		if (Emu.IsStopped()) ConLog.Warning("%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+		if (Emu.IsStopped()) LOGF_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 	}
 
 	void DoStop(u32 code)
@@ -1242,21 +1242,21 @@ public:
 			u32 spuq = 0;
 			if (!SPU.Out_MBox.Pop(spuq))
 			{
-				ConLog.Error("sys_spu_thread_receive_event: cannot read Out_MBox");
+				LOG_ERROR(Log::SPU, "sys_spu_thread_receive_event: cannot read Out_MBox");
 				SPU.In_MBox.PushUncond(CELL_EINVAL); // ???
 				return;
 			}
 
 			if (SPU.In_MBox.GetCount())
 			{
-				ConLog.Error("sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
+				LOGF_ERROR(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
 				SPU.In_MBox.PushUncond(CELL_EBUSY); // ???
 				return;
 			}
 
 			if (Ini.HLELogging.GetValue())
 			{
-				ConLog.Write("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
+				LOGF_NOTICE(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 			}
 
 			EventQueue* eq;
@@ -1307,7 +1307,7 @@ public:
 				Sleep(1);
 				if (Emu.IsStopped())
 				{
-					ConLog.Warning("sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
+					LOGF_WARNING(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
 					eq->sq.invalidate(tid);
 					return;
 				}
@@ -1317,12 +1317,12 @@ public:
 		case 0x102:
 			if (!SPU.Out_MBox.GetCount())
 			{
-				ConLog.Error("sys_spu_thread_exit (no status, code 0x102)");
+				LOG_ERROR(Log::SPU, "sys_spu_thread_exit (no status, code 0x102)");
 			}
 			else if (Ini.HLELogging.GetValue())
 			{
 				// the real exit status
-				ConLog.Write("sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());
+				LOGF_NOTICE(Log::SPU, "sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());
 			}
 			SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 			Stop();
@@ -1330,11 +1330,11 @@ public:
 		default:
 			if (!SPU.Out_MBox.GetCount())
 			{
-				ConLog.Error("Unknown STOP code: 0x%x (no message)", code);
+				LOGF_ERROR(Log::SPU, "Unknown STOP code: 0x%x (no message)", code);
 			}
 			else
 			{
-				ConLog.Error("Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
+				LOGF_ERROR(Log::SPU, "Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 			}
 			SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 			Stop();
