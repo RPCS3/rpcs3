@@ -24,9 +24,6 @@
     <ClCompile Include="Gui\MainFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Gui\ConLog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\MemoryViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -101,6 +98,9 @@
     </ClCompile>
     <ClCompile Include="Emu\DbgCommand.cpp">
       <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\ConLogFrame.cpp">
+      <Filter>Gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -164,7 +164,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\DbgCommand.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
-    <ClCompile Include="Gui\ConLog.cpp" />
+    <ClCompile Include="Gui\ConLogFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
     <ClCompile Include="Gui\GameViewer.cpp" />

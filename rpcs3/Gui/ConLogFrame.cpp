@@ -59,6 +59,7 @@ struct wxWriter : Log::LogListener
 			std::vector<char> local_messages(size);
 			messages.popN(&local_messages.front(), size);
 			messages.unlockGet();
+			newLog = false;
 
 			u32 cursor = 0;
 			u32 removed = 0;
@@ -95,7 +96,6 @@ struct wxWriter : Log::LogListener
 				m_log->Remove(0, m_log->GetLastPosition() - (GUI_BUFFER_MAX_SIZE/2));
 			}
 		}
-		newLog = false;
 	}
 
 	//put message into the log buffer
@@ -114,7 +114,7 @@ struct wxWriter : Log::LogListener
 		std::vector<char> temp_buffer(size);
 		msg.serialize(temp_buffer.data());
 		messages.pushRange(temp_buffer.begin(), temp_buffer.end());
-		if (!newLog.load(std::memory_order_relaxed))
+		if (!newLog.load())
 		{
 			newLog = true;
 			m_log->GetEventHandler()->QueueEvent(new wxCommandEvent(EVT_LOG_COMMAND));
