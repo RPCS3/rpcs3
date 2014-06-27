@@ -111,7 +111,7 @@ public:
 		case CELL_GCM_TEXTURE_B8: // One 8-bit fixed-point number
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_B8)");
 
 			static const GLint swizzleMaskB8[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
 			glRemap = swizzleMaskB8;
@@ -124,16 +124,16 @@ public:
 
 			// TODO: texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A1R5G5B5)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_A1R5G5B5)");
 		break;
 
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A4R4G4B4)");
 
 			// We read it in as R4G4B4A4, so we need to remap each component.
 			static const GLint swizzleMaskA4R4G4B4[] = { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
@@ -144,13 +144,13 @@ public:
 		case CELL_GCM_TEXTURE_R5G6B5:
 		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G6B5)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R5G6B5)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G6B5)");
 		}
 		break;
 		
@@ -177,7 +177,7 @@ public:
 			}
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A8R8G8B8)");
 		break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
@@ -185,7 +185,7 @@ public:
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
 
 			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
-			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT1)");
 		}
 		break;
 
@@ -194,7 +194,7 @@ public:
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
 			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
-			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT23)");
 		}
 		break;
 
@@ -203,14 +203,14 @@ public:
 			u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
 
 			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
-			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT45)");
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_G8B8:
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_BYTE, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_G8B8)");
 
 			static const GLint swizzleMaskG8B8[] = { GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 			glRemap = swizzleMaskG8B8;
@@ -232,42 +232,42 @@ public:
 			}
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R6G5B5)");
 
 			free(unswizzledPixels);
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT_24_8, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH24_D8)");
 			break;
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // 24-bit unsigned float and 8 bits of garbage
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT)");
 			break;
 
 		case CELL_GCM_TEXTURE_DEPTH16: // 16-bit unsigned fixed-point number
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_SHORT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH16)");
 		break;
 
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // 16-bit unsigned float
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH16_FLOAT)");
 		break;
 		
 		case CELL_GCM_TEXTURE_X16: // A 16-bit fixed-point number
 		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_X16)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_UNSIGNED_SHORT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_X16)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_X16)");
 
 			static const GLint swizzleMaskX16[] = { GL_RED, GL_ONE, GL_RED, GL_ONE };
 			glRemap = swizzleMaskX16;
@@ -277,13 +277,13 @@ public:
 		case CELL_GCM_TEXTURE_Y16_X16: // Two 16-bit fixed-point numbers
 		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_SHORT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_Y16_X16)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16)");
 
 			static const GLint swizzleMaskX32_Y16_X16[] = { GL_GREEN, GL_RED, GL_GREEN, GL_RED };
 			glRemap = swizzleMaskX32_Y16_X16;
@@ -292,35 +292,35 @@ public:
 
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G5B5A1)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R5G5B5A1)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G5B5A1)");
 		break;
 		
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_HALF_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 		break;
 
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: // Four fp32 values
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT)");
 		break;
 
 		case CELL_GCM_TEXTURE_X32_FLOAT: // One 32-bit floating-point number
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_X32_FLOAT)");
 
 			static const GLint swizzleMaskX32_FLOAT[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
 			glRemap = swizzleMaskX32_FLOAT;
@@ -330,24 +330,24 @@ public:
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_D1R5G5B5)");
 
 			// TODO: Texture swizzling
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_D1R5G5B5)");
 
 			static const GLint swizzleMaskX32_D1R5G5B5[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
 			glRemap = swizzleMaskX32_D1R5G5B5;
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_D1R5G5B5)");
 		}
 		break;
 
 		case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_D8R8G8B8)");
 
 			static const GLint swizzleMaskX32_D8R8G8B8[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
 			glRemap = swizzleMaskX32_D8R8G8B8;
@@ -357,13 +357,13 @@ public:
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: // Two fp16 values
 		{
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16_FLOAT)");
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_HALF_FLOAT, pixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_Y16_X16_FLOAT)");
 
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-			checkForGlError("GLTexture::Init() -> glPixelStorei");
+			checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16_FLOAT)");
 
 			static const GLint swizzleMaskX32_Y16_X16_FLOAT[] = { GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 			glRemap = swizzleMaskX32_Y16_X16_FLOAT;
@@ -389,7 +389,7 @@ public:
 			}
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)");
 
 			free(unswizzledPixels);
 		}
@@ -414,7 +414,7 @@ public:
 			}
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)");
 
 			free(unswizzledPixels);
 		}
@@ -465,15 +465,18 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.GetWrapS()));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.GetWrapT()));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.GetWrapR()));
+
+		checkForGlError("GLTexture::Init() -> wrap");
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
 
-		checkForGlError("GLTexture::Init() -> parameters1");
+		checkForGlError("GLTexture::Init() -> compare");
 		
 		glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.GetBias());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.GetMinLOD() >> 8));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.GetMaxLOD() >> 8));
 
-		checkForGlError("GLTexture::Init() -> parameters2");
+		checkForGlError("GLTexture::Init() -> lod");
 		
 		static const int gl_tex_filter[] =
 		{
