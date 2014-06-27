@@ -54,13 +54,13 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength+1];
 			memset(buf, 0, bufLength+1);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			LOGF_ERROR(RSX, "Could not link program: %s", buf);
+			LOG_ERROR(RSX, "Could not link program: %s", buf);
 			delete[] buf;
 
 			return;
 		}
 	}
-	//else LOGF_NOTICE(HLE, "program linked!");
+	//else LOG_NOTICE(HLE, "program linked!");
 
 	glGetProgramiv(id, GL_VALIDATE_STATUS, &linkStatus);
 	if(linkStatus != GL_TRUE)
@@ -73,7 +73,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			char* buf = new char[bufLength];
 			memset(buf, 0, bufLength);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
-			LOGF_ERROR(RSX, "Could not link program: %s", buf);
+			LOG_ERROR(RSX, "Could not link program: %s", buf);
 			delete[] buf;
 
 			return;

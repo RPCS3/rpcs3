@@ -25,8 +25,8 @@ class MTRingbuffer{
 public:
 	MTRingbuffer() : mGet(0), mPut(0){}
 
-	//blocks until there's something to get, so check "free()" if you want to avoid blocking
-	//also lock the get mutex around the free() check and the pop if you want to avoid racing
+	//blocks until there's something to get, so check "spaceLeft()" if you want to avoid blocking
+	//also lock the get mutex around the spaceLeft() check and the pop if you want to avoid racing
 	T pop()
 	{
 		std::lock_guard<std::recursive_mutex> lock(mMutGet);
@@ -63,7 +63,7 @@ public:
 	//returns the amount of free places, this is the amount of actual free spaces-1
 	//since mGet==mPut signals an empty buffer we can't actually use the last free
 	//space, so we shouldn't report it as free.
-	size_t free()
+	size_t spaceLeft() //apparently free() is a macro definition in msvc in some conditions
 	{
 		if (mGet < mPut)
 		{
@@ -81,8 +81,8 @@ public:
 
 	size_t size()
 	{
-		//the magic -1 is the same magic 1 that is explained in the free() function
-		return mBuffer.size() - free() - 1;
+		//the magic -1 is the same magic 1 that is explained in the spaceLeft() function
+		return mBuffer.size() - spaceLeft() - 1;
 	}
 
 	//takes random access iterator to T
@@ -94,7 +94,7 @@ public:
 
 		//if whatever we're trying to store is greater than the entire buffer the following loop will be infinite
 		assert(mBuffer.size() > length);
-		while (free() < length)
+		while (spaceLeft() < length)
 		{
 			//if this is reached a lot it's time to increase the buffer size
 			//or implement dynamic re-sizing

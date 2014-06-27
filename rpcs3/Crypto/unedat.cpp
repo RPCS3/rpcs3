@@ -275,8 +275,8 @@ int decrypt_data(rFile *in, rFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd,
 			
 			if (verbose)
 			{
-				LOGF_NOTICE(LOADER, "EDAT: Compressed block size: %d\n", pad_length);
-				LOGF_NOTICE(LOADER, "EDAT: Decompressed block size: %d\n", res);
+				LOG_NOTICE(LOADER, "EDAT: Compressed block size: %d\n", pad_length);
+				LOG_NOTICE(LOADER, "EDAT: Decompressed block size: %d\n", res);
 			}
 
 			edat->file_size -= res;
@@ -337,7 +337,7 @@ static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
 	}
 	else if (npd->version > 4)
 	{
-		LOGF_ERROR(LOADER, "EDAT: Unknown version - %d\n", npd->version);
+		LOG_ERROR(LOADER, "EDAT: Unknown version - %d\n", npd->version);
 		return false;
 	}
 
@@ -418,7 +418,7 @@ int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, rFil
 		if (!crypto(hash_mode, crypto_mode, (npd->version == 4), data, tmp, block_size, header_key, header_iv, key, hash_result))
 		{
 			if (verbose)
-				LOGF_WARNING(LOADER, "EDAT: Metadata hash from block 0x%08x is invalid!\n", metadata_offset + bytes_read);
+				LOG_WARNING(LOADER, "EDAT: Metadata hash from block 0x%08x is invalid!\n", metadata_offset + bytes_read);
 		}
 
 		// Adjust sizes.
@@ -535,14 +535,14 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 	if (verbose)
 	{
 		LOG_NOTICE(LOADER, "NPD HEADER\n");
-		LOGF_NOTICE(LOADER, "NPD version: %d\n", NPD->version);
-		LOGF_NOTICE(LOADER, "NPD license: %d\n", NPD->license);
-		LOGF_NOTICE(LOADER, "NPD type: %d\n", NPD->type);
+		LOG_NOTICE(LOADER, "NPD version: %d\n", NPD->version);
+		LOG_NOTICE(LOADER, "NPD license: %d\n", NPD->license);
+		LOG_NOTICE(LOADER, "NPD type: %d\n", NPD->type);
 		LOG_NOTICE(LOADER, "\n");
 		LOG_NOTICE(LOADER, "EDAT HEADER\n");
-		LOGF_NOTICE(LOADER, "EDAT flags: 0x%08X\n", EDAT->flags);
-		LOGF_NOTICE(LOADER, "EDAT block size: 0x%08X\n", EDAT->block_size);
-		LOGF_NOTICE(LOADER, "EDAT file size: 0x%08X\n", EDAT->file_size);
+		LOG_NOTICE(LOADER, "EDAT flags: 0x%08X\n", EDAT->flags);
+		LOG_NOTICE(LOADER, "EDAT block size: 0x%08X\n", EDAT->block_size);
+		LOG_NOTICE(LOADER, "EDAT file size: 0x%08X\n", EDAT->file_size);
 		LOG_NOTICE(LOADER, "\n");
 	}
 

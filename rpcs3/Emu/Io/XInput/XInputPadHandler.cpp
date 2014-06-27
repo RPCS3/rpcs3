@@ -113,7 +113,7 @@ void XInputPadHandler::Close()
 		{
 			active = false;
 			if (WaitForSingleObject(thread, THREAD_TIMEOUT) != WAIT_OBJECT_0)
-				LOGF_ERROR(HLE, "XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
+				LOG_ERROR(HLE, "XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
 			thread = nullptr;
 		}
 

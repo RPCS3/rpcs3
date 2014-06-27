@@ -9,7 +9,7 @@
 #define DUMP_VERTEX_DATA 0
 
 #if CMD_DEBUG
-	#define CMD_LOG(...) LOGF_NOTICE(RSX, __VA_ARGS__)
+	#define CMD_LOG(...) LOG_NOTICE(RSX, __VA_ARGS__)
 #else
 	#define CMD_LOG(...)
 #endif
@@ -27,7 +27,7 @@ void printGlError(GLenum err, const char* situation)
 {
 	if(err != GL_NO_ERROR)
 	{
-		LOGF_ERROR(RSX, "%s: opengl error 0x%04x", situation, err);
+		LOG_ERROR(RSX, "%s: opengl error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }
@@ -180,7 +180,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		break;
 
 		default:
-			LOGF_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
+			LOG_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
 		return;
 		}
 
@@ -309,7 +309,7 @@ void GLGSRender::InitFragmentData()
 {
 	if(!m_cur_shader_prog)
 	{
-		LOGF_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
+		LOG_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
 		return;
 	}
 
@@ -337,13 +337,13 @@ bool GLGSRender::LoadProgram()
 {
 	if(!m_cur_shader_prog)
 	{
-		LOGF_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
+		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
 	}
 
 	if(!m_cur_vertex_prog)
 	{
-		LOGF_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
+		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
 		return false;
 	}
 
@@ -354,7 +354,7 @@ bool GLGSRender::LoadProgram()
 
 	if(m_fp_buf_num == -1)
 	{
-		LOGF_WARNING(RSX, "FP not found in buffer!");
+		LOG_WARNING(RSX, "FP not found in buffer!");
 		m_shader_prog.DecompileAsync(*m_cur_shader_prog);
 		m_shader_prog.Wait();
 		m_shader_prog.Compile();
@@ -366,7 +366,7 @@ bool GLGSRender::LoadProgram()
 
 	if(m_vp_buf_num == -1)
 	{
-		LOGF_WARNING(RSX, "VP not found in buffer!");
+		LOG_WARNING(RSX, "VP not found in buffer!");
 		m_vertex_prog.DecompileAsync(*m_cur_vertex_prog);
 		m_vertex_prog.Wait();
 		m_vertex_prog.Compile();
@@ -450,7 +450,7 @@ void GLGSRender::WriteDepthBuffer()
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOGF_WARNING(RSX, "Bad depth address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
+		LOG_WARNING(RSX, "Bad depth address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
 		return;
 	}
 
@@ -484,7 +484,7 @@ void GLGSRender::WriteColourBufferA()
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOGF_WARNING(RSX, "Bad colour buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
+		LOG_WARNING(RSX, "Bad colour buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
 		return;
 	}
 
@@ -513,7 +513,7 @@ void GLGSRender::WriteColourBufferB()
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOGF_WARNING(RSX, "Bad colour buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
+		LOG_WARNING(RSX, "Bad colour buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
 		return;
 	}
 
@@ -543,7 +543,7 @@ void GLGSRender::WriteColourBufferC()
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOGF_WARNING(RSX, "Bad colour buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
+		LOG_WARNING(RSX, "Bad colour buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
 		return;
 	}
 
@@ -572,7 +572,7 @@ void GLGSRender::WriteColourBufferD()
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOGF_WARNING(RSX, "Bad colour buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
+		LOG_WARNING(RSX, "Bad colour buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
 		return;
 	}
 
@@ -703,14 +703,14 @@ void GLGSRender::ExecCMD()
 	//return;
 	if(!LoadProgram())
 	{
-		LOGF_ERROR(RSX, "LoadProgram failed.");
+		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
 		return;
 	}
 
 	if(!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
-		LOGF_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
+		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
@@ -753,7 +753,7 @@ void GLGSRender::ExecCMD()
 		break;
 
 		default:
-			LOGF_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
 			assert(0);
 		break;
 		}
@@ -821,7 +821,7 @@ void GLGSRender::ExecCMD()
 	break;
 
 	default:
-		LOGF_ERROR(RSX, "Bad surface colour target: %d", m_surface_colour_target);
+		LOG_ERROR(RSX, "Bad surface colour target: %d", m_surface_colour_target);
 	break;
 	}
 
@@ -1099,7 +1099,7 @@ void GLGSRender::ExecCMD()
 
 	if(m_indexed_array.m_count && m_draw_array_count)
 	{
-		LOGF_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
+		LOG_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
 
 	for(u32 i=0; i<m_textures_count; ++i)
@@ -1142,7 +1142,7 @@ void GLGSRender::ExecCMD()
 		break;
 
 		default:
-			LOGF_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
+			LOG_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
 		break;
 		}
 

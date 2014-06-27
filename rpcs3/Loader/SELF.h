@@ -24,14 +24,14 @@ struct SceHeader
 
 	void Show()
 	{
-		LOGF_NOTICE(LOADER, "Magic: %08x",   se_magic);
-		LOGF_NOTICE(LOADER, "Class: %s",     "SELF");
-		LOGF_NOTICE(LOADER, "hver: 0x%08x",  se_hver);
-		LOGF_NOTICE(LOADER, "flags: 0x%04x", se_flags);
-		LOGF_NOTICE(LOADER, "type: 0x%04x",  se_type);
-		LOGF_NOTICE(LOADER, "meta: 0x%08x",  se_meta);
-		LOGF_NOTICE(LOADER, "hsize: 0x%llx", se_hsize);
-		LOGF_NOTICE(LOADER, "esize: 0x%llx", se_esize);
+		LOG_NOTICE(LOADER, "Magic: %08x",   se_magic);
+		LOG_NOTICE(LOADER, "Class: %s",     "SELF");
+		LOG_NOTICE(LOADER, "hver: 0x%08x",  se_hver);
+		LOG_NOTICE(LOADER, "flags: 0x%04x", se_flags);
+		LOG_NOTICE(LOADER, "type: 0x%04x",  se_type);
+		LOG_NOTICE(LOADER, "meta: 0x%08x",  se_meta);
+		LOG_NOTICE(LOADER, "hsize: 0x%llx", se_hsize);
+		LOG_NOTICE(LOADER, "esize: 0x%llx", se_esize);
 	}
 
 	bool CheckMagic() const { return se_magic == 0x53434500; }
@@ -66,15 +66,15 @@ struct SelfHeader
 
 	void Show()
 	{
-		LOGF_NOTICE(LOADER, "header type: 0x%llx",           se_htype);
-		LOGF_NOTICE(LOADER, "app info offset: 0x%llx",       se_appinfooff);
-		LOGF_NOTICE(LOADER, "elf offset: 0x%llx",            se_elfoff);
-		LOGF_NOTICE(LOADER, "program header offset: 0x%llx", se_phdroff);
-		LOGF_NOTICE(LOADER, "section header offset: 0x%llx", se_shdroff);
-		LOGF_NOTICE(LOADER, "section info offset: 0x%llx",   se_secinfoff);
-		LOGF_NOTICE(LOADER, "sce version offset: 0x%llx",    se_sceveroff);
-		LOGF_NOTICE(LOADER, "control info offset: 0x%llx",   se_controloff);
-		LOGF_NOTICE(LOADER, "control info size: 0x%llx",     se_controlsize);
+		LOG_NOTICE(LOADER, "header type: 0x%llx",           se_htype);
+		LOG_NOTICE(LOADER, "app info offset: 0x%llx",       se_appinfooff);
+		LOG_NOTICE(LOADER, "elf offset: 0x%llx",            se_elfoff);
+		LOG_NOTICE(LOADER, "program header offset: 0x%llx", se_phdroff);
+		LOG_NOTICE(LOADER, "section header offset: 0x%llx", se_shdroff);
+		LOG_NOTICE(LOADER, "section info offset: 0x%llx",   se_secinfoff);
+		LOG_NOTICE(LOADER, "sce version offset: 0x%llx",    se_sceveroff);
+		LOG_NOTICE(LOADER, "control info offset: 0x%llx",   se_controloff);
+		LOG_NOTICE(LOADER, "control info size: 0x%llx",     se_controlsize);
 	}
 };
 

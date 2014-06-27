@@ -35,7 +35,7 @@ next:
 		{
 			if (Emu.IsStopped())
 			{
-				LOGF_WARNING(HLE, "vdecRead(): aborted");
+				LOG_WARNING(HLE, "vdecRead(): aborted");
 				return 0;
 			}
 			Sleep(1);
@@ -52,7 +52,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, vdec.reader.addr, vdec.reader.size))
 				{
-					LOGF_ERROR(HLE, "vdecRead(): data reading failed (reader.size=0x%x)", vdec.reader.size);
+					LOG_ERROR(HLE, "vdecRead(): data reading failed (reader.size=0x%x)", vdec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -71,11 +71,11 @@ next:
 
 				vdec.reader.addr = vdec.task.addr;
 				vdec.reader.size = vdec.task.size;
-				//LOGF_NOTICE(HLE, "Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", vdec.task.size, vdec.task.pts, vdec.task.dts);
+				//LOG_NOTICE(HLE, "Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", vdec.task.size, vdec.task.pts, vdec.task.dts);
 			}
 			break;
 		default:
-			LOGF_ERROR(HLE, "vdecRead(): sequence error (task %d)", vdec.job.Peek().type);
+			LOG_ERROR(HLE, "vdecRead(): sequence error (task %d)", vdec.job.Peek().type);
 			return 0;
 		}
 		
@@ -92,7 +92,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
 	{
-		LOGF_ERROR(HLE, "vdecRead(): data reading failed (buf_size=0x%x)", buf_size);
+		LOG_ERROR(HLE, "vdecRead(): data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
@@ -136,7 +136,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{
-		LOGF_NOTICE(HLE, "Video Decoder thread started");
+		LOG_NOTICE(HLE, "Video Decoder thread started");
 
 		VdecTask& task = vdec.task;
 
@@ -169,7 +169,7 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecStartSeq:
 				{
 					// TODO: reset data
-					LOGF_WARNING(HLE, "vdecStartSeq:");
+					LOG_WARNING(HLE, "vdecStartSeq:");
 
 					vdec.reader.addr = 0;
 					vdec.reader.size = 0;
@@ -181,7 +181,7 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecEndSeq:
 				{
 					// TODO: finalize
-					LOGF_WARNING(HLE, "vdecEndSeq:");
+					LOG_WARNING(HLE, "vdecEndSeq:");
 
 					vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 					/*Callback cb;
@@ -202,13 +202,13 @@ u32 vdecOpen(VideoDecoder* data)
 
 					if (task.mode != CELL_VDEC_DEC_MODE_NORMAL)
 					{
-						LOGF_ERROR(HLE, "vdecDecodeAu: unsupported decoding mode(%d)", task.mode);
+						LOG_ERROR(HLE, "vdecDecodeAu: unsupported decoding mode(%d)", task.mode);
 						break;
 					}
 
 					vdec.reader.addr = task.addr;
 					vdec.reader.size = task.size;
-					//LOGF_NOTICE(HLE, "Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", task.size, task.pts, task.dts);
+					//LOG_NOTICE(HLE, "Video AU: size = 0x%x, pts = 0x%llx, dts = 0x%llx", task.size, task.pts, task.dts);
 
 					if (vdec.just_started)
 					{
@@ -249,33 +249,33 @@ u32 vdecOpen(VideoDecoder* data)
 						err = avformat_open_input(&vdec.fmt, NULL, av_find_input_format("mpeg"), NULL);
 						if (err)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: avformat_open_input() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: avformat_open_input() failed");
 							Emu.Pause();
 							break;
 						}
 						AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264); // ???
 						if (!codec)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: avcodec_find_decoder() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: avcodec_find_decoder() failed");
 							Emu.Pause();
 							break;
 						}
 						/*err = avformat_find_stream_info(vdec.fmt, NULL);
 						if (err)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: avformat_find_stream_info() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: avformat_find_stream_info() failed");
 							Emu.Pause();
 							break;
 						}
 						if (!vdec.fmt->nb_streams)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: no stream found");
+							LOG_ERROR(HLE, "vdecDecodeAu: no stream found");
 							Emu.Pause();
 							break;
 						}*/
 						if (!avformat_new_stream(vdec.fmt, codec))
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: avformat_new_stream() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: avformat_new_stream() failed");
 							Emu.Pause();
 							break;
 						}
@@ -290,7 +290,7 @@ u32 vdecOpen(VideoDecoder* data)
 						}
 						if (err)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: avcodec_open2() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: avcodec_open2() failed");
 							Emu.Pause();
 							break;
 						}
@@ -305,7 +305,7 @@ u32 vdecOpen(VideoDecoder* data)
 					{
 						if (Emu.IsStopped())
 						{
-							LOGF_WARNING(HLE, "vdecDecodeAu: aborted");
+							LOG_WARNING(HLE, "vdecDecodeAu: aborted");
 							return;
 						}
 
@@ -338,7 +338,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 						if (!frame.data)
 						{
-							LOGF_ERROR(HLE, "vdecDecodeAu: av_frame_alloc() failed");
+							LOG_ERROR(HLE, "vdecDecodeAu: av_frame_alloc() failed");
 							Emu.Pause();
 							break;
 						}
@@ -351,7 +351,7 @@ u32 vdecOpen(VideoDecoder* data)
 						{
 							if (!last_frame && decode < 0)
 							{
-								LOGF_ERROR(HLE, "vdecDecodeAu: AU decoding error(0x%x)", decode);
+								LOG_ERROR(HLE, "vdecDecodeAu: AU decoding error(0x%x)", decode);
 							}
 							if (!got_picture && vdec.reader.size == 0) break; // video end?
 						}
@@ -374,7 +374,7 @@ u32 vdecOpen(VideoDecoder* data)
 							frame.dts = (frame.pts - vdec.first_pts) + vdec.first_dts;
 							frame.userdata = task.userData;
 
-							//LOGF_NOTICE(HLE, "got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);
+							//LOG_NOTICE(HLE, "got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);
 
 							vdec.frames.Push(frame); // !!!!!!!!
 							frame.data = nullptr; // to prevent destruction
@@ -398,23 +398,23 @@ u32 vdecOpen(VideoDecoder* data)
 			case vdecClose:
 				{
 					vdec.is_finished = true;
-					LOGF_NOTICE(HLE, "Video Decoder thread ended");
+					LOG_NOTICE(HLE, "Video Decoder thread ended");
 					return;
 				}
 
 			case vdecSetFrameRate:
 				{
-					LOGF_ERROR(HLE, "TODO: vdecSetFrameRate(%d)", task.frc);
+					LOG_ERROR(HLE, "TODO: vdecSetFrameRate(%d)", task.frc);
 				}
 				break;
 
 			default:
-				LOGF_ERROR(HLE, "Video Decoder thread error: unknown task(%d)", task.type);
+				LOG_ERROR(HLE, "Video Decoder thread error: unknown task(%d)", task.type);
 			}
 		}
 
 		vdec.is_finished = true;
-		LOGF_WARNING(HLE, "Video Decoder thread aborted");
+		LOG_WARNING(HLE, "Video Decoder thread aborted");
 	});
 
 	t.detach();
@@ -502,7 +502,7 @@ int cellVdecClose(u32 handle)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellVdecClose(%d) aborted", handle);
+			LOG_WARNING(HLE, "cellVdecClose(%d) aborted", handle);
 			break;
 		}
 		Sleep(1);
@@ -553,7 +553,7 @@ int cellVdecEndSeq(u32 handle)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellVdecEndSeq(%d) aborted", handle);
+			LOG_WARNING(HLE, "cellVdecEndSeq(%d) aborted", handle);
 			return CELL_OK;
 		}
 		Sleep(1);
@@ -751,13 +751,13 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 		}
 		else
 		{
-			LOGF_ERROR(HLE, "cellVdecGetPicItem: unsupported time_base.den (%d)", vdec->ctx->time_base.den);
+			LOG_ERROR(HLE, "cellVdecGetPicItem: unsupported time_base.den (%d)", vdec->ctx->time_base.den);
 			Emu.Pause();
 		}
 	}
 	else
 	{
-		LOGF_ERROR(HLE, "cellVdecGetPicItem: unsupported time_base.num (%d)", vdec->ctx->time_base.num);
+		LOG_ERROR(HLE, "cellVdecGetPicItem: unsupported time_base.num (%d)", vdec->ctx->time_base.num);
 		Emu.Pause();
 	}
 	avc->fixed_frame_rate_flag = true;

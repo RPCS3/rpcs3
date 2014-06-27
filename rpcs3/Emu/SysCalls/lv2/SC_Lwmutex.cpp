@@ -251,7 +251,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
+			LOG_WARNING(HLE, "(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
 			return CELL_ESRCH;
 		}
 		Sleep(1);
@@ -340,7 +340,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	case SMR_TIMEOUT:
 		sq->invalidate(tid); return CELL_ETIMEDOUT;
 	case SMR_ABORT:
-		if (Emu.IsStopped()) LOGF_WARNING(HLE, "sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
+		if (Emu.IsStopped()) LOG_WARNING(HLE, "sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
 	default:
 		sq->invalidate(tid); return CELL_EINVAL;
 	}

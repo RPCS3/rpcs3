@@ -70,16 +70,16 @@ private:
 
 		if(Ini.HLELogging.GetValue())
 		{
-			LOGF_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
+			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
 		}
 		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
 		{
-			LOGF_ERROR(PPU, "SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+			LOG_ERROR(PPU, "SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 			if(CPU.GPR[11] > 1024)
 				SysCalls::DoFunc(CPU.GPR[11]);
 		}*/
 #ifdef HLE_CALL_DEBUG
-		LOGF_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 #endif
 	}
 
@@ -2097,7 +2097,7 @@ private:
 			Emu.GetSFuncManager().StaticExecute(CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
-				LOGF_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%llx",
+				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%llx",
 					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
@@ -3995,20 +3995,20 @@ private:
 
 	void UNK(const std::string& err, bool pause = true)
 	{
-		LOGF_ERROR(PPU, err + fmt::Format(" #pc: 0x%llx", CPU.PC));
+		LOG_ERROR(PPU, err + fmt::Format(" #pc: 0x%llx", CPU.PC));
 
 		if(!pause) return;
 
 		Emu.Pause();
 
-		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
-		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) LOGF_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
-		LOGF_NOTICE(PPU, "CR = 0x%08x", CPU.CR);
-		LOGF_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
-		LOGF_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);
-		LOGF_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
-		LOGF_NOTICE(PPU, "FPSCR = 0x%x "
+		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
+		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
+		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
+		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR);
+		LOG_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
+		LOG_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);
+		LOG_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
+		LOG_NOTICE(PPU, "FPSCR = 0x%x "
 			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
 			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
 			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "

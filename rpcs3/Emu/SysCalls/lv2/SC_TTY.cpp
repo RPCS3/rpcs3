@@ -7,7 +7,7 @@
 int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
 {
 	//we currently do not support reading from the Console
-	LOGF_WARNING(HLE, "sys_tty_read: ch: %d, buf addr: %llx, len: %d", ch, buf_addr, len);
+	LOG_WARNING(HLE, "sys_tty_read: ch: %d, buf addr: %llx, len: %d", ch, buf_addr, len);
 	Memory.Write32NN(preadlen_addr, len);
 	Emu.Pause();
 

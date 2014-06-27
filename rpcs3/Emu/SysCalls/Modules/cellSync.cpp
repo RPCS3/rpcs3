@@ -93,7 +93,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
+			LOG_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
 			break;
 		}
 	}

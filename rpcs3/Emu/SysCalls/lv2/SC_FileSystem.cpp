@@ -126,7 +126,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	}
 
 	fd = sys_fs->GetNewId(stream, IDFlag_File);
-	LOGF_WARNING(HLE, "*** cellFsOpen(path=\"%s\"): fd = %d", path.c_str(), fd.GetValue());
+	LOG_WARNING(HLE, "*** cellFsOpen(path=\"%s\"): fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
 }
