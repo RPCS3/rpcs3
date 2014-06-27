@@ -139,14 +139,7 @@ LogFrame::LogFrame(wxWindow* parent)
 	m_tabs.AddPage(m_log, "Log");
 	m_tabs.AddPage(m_tty, "TTY");
 
-	Log::LogManager::getInstance().getChannel(Log::GENERAL).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::LOADER).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::MEMORY).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::RSX).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::HLE).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::PPU).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::SPU).addListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::TTY).addListener(listener);
+	Log::LogManager::getInstance().addListener(listener);
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 	s_main->Add(&m_tabs, 1, wxEXPAND);
@@ -158,14 +151,7 @@ LogFrame::LogFrame(wxWindow* parent)
 
 LogFrame::~LogFrame()
 {
-	Log::LogManager::getInstance().getChannel(Log::GENERAL).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::LOADER).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::MEMORY).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::RSX).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::HLE).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::PPU).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::SPU).removeListener(listener);
-	Log::LogManager::getInstance().getChannel(Log::TTY).removeListener(listener);
+	Log::LogManager::getInstance().removeListener(listener);
 }
 
 bool LogFrame::Close(bool force)

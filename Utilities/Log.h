@@ -113,6 +113,8 @@ namespace Log
 		static LogManager& getInstance();
 		LogChannel& getChannel(LogType type);
 		void log(LogMessage msg);
+		void addListener(std::shared_ptr<LogListener> listener);
+		void removeListener(std::shared_ptr<LogListener> listener);
 #ifdef BUFFERED_LOGGING
 		void consumeLog();
 #endif

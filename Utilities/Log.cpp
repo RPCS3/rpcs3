@@ -210,6 +210,20 @@ void LogManager::log(LogMessage msg)
 #endif
 }
 
+void LogManager::addListener(std::shared_ptr<LogListener> listener)
+{
+	for (auto& channel : mChannels)
+	{
+		channel.addListener(listener);
+	}
+}
+void LogManager::removeListener(std::shared_ptr<LogListener> listener)
+{
+	for (auto& channel : mChannels)
+	{
+		channel.removeListener(listener);
+	}
+}
 
 LogManager& LogManager::getInstance()
 {
