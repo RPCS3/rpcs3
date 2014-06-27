@@ -201,7 +201,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOGF_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 
@@ -231,7 +231,7 @@ void MainFrame::BootGameAndRun(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOGF_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 
 	if (Emu.IsReady())

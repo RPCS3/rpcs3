@@ -53,7 +53,7 @@ next:
 			{
 				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
 				{
-					LOGF_ERROR(HLE, "adecRawRead(): data reading failed (reader.size=0x%x)", adec.reader.size);
+					LOG_ERROR(HLE, "adecRawRead(): data reading failed (reader.size=0x%x)", adec.reader.size);
 					Emu.Pause();
 					return 0;
 				}
@@ -68,11 +68,11 @@ next:
 
 				adec.reader.addr = adec.task.au.addr;
 				adec.reader.size = adec.task.au.size;
-				//LOGF_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 			}
 			break;
 		default:
-			LOGF_ERROR(HLE, "adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
+			LOG_ERROR(HLE, "adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
 			return -1;
 		}
 
@@ -89,7 +89,7 @@ next:
 	}
 	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
 	{
-		LOGF_ERROR(HLE, "adecRawRead(): data reading failed (buf_size=0x%x)", buf_size);
+		LOG_ERROR(HLE, "adecRawRead(): data reading failed (buf_size=0x%x)", buf_size);
 		Emu.Pause();
 		return 0;
 	}
@@ -111,7 +111,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 	{
 		if (buf_size < (int)adec.reader.rem_size)
 		{
-			LOGF_ERROR(HLE, "adecRead(): too small buf_size (rem_size = %d, buf_size = %d)", adec.reader.rem_size, buf_size);
+			LOG_ERROR(HLE, "adecRead(): too small buf_size (rem_size = %d, buf_size = %d)", adec.reader.rem_size, buf_size);
 			Emu.Pause();
 			return 0;
 		}
@@ -131,7 +131,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 		if (adecRawRead(opaque, header, 8) < 8) break;
 		if (header[0] != 0x0f || header[1] != 0xd0)
 		{
-			LOGF_ERROR(HLE, "adecRead(): 0x0FD0 header not found");
+			LOG_ERROR(HLE, "adecRead(): 0x0FD0 header not found");
 			Emu.Pause();
 			return -1;
 		}
@@ -141,7 +141,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 			OMAHeader oma(1 /* atrac3p id */, header[2], header[3]);
 			if (buf_size < sizeof(oma) + 8)
 			{
-				LOGF_ERROR(HLE, "adecRead(): OMAHeader writing failed");
+				LOG_ERROR(HLE, "adecRead(): OMAHeader writing failed");
 				Emu.Pause();
 				return 0;
 			}
@@ -159,7 +159,7 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 
 		u32 size = (((header[2] & 0x3) << 8) | header[3]) * 8 + 8; // data to be read before next header
 
-		//LOGF_NOTICE(HLE, "*** audio block read: size = 0x%x", size);
+		//LOG_NOTICE(HLE, "*** audio block read: size = 0x%x", size);
 
 		if (buf_size < (int)size)
 		{
@@ -198,7 +198,7 @@ u32 adecOpen(AudioDecoder* data)
 
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{
-		LOGF_NOTICE(HLE, "Audio Decoder thread started");
+		LOG_NOTICE(HLE, "Audio Decoder thread started");
 
 		AdecTask& task = adec.task;
 
@@ -231,7 +231,7 @@ u32 adecOpen(AudioDecoder* data)
 			case adecStartSeq:
 				{
 					// TODO: reset data
-					LOGF_WARNING(HLE, "adecStartSeq:");
+					LOG_WARNING(HLE, "adecStartSeq:");
 
 					adec.reader.addr = 0;
 					adec.reader.size = 0;
@@ -247,7 +247,7 @@ u32 adecOpen(AudioDecoder* data)
 			case adecEndSeq:
 				{
 					// TODO: finalize
-					LOGF_WARNING(HLE, "adecEndSeq:");
+					LOG_WARNING(HLE, "adecEndSeq:");
 
 					/*Callback cb;
 					cb.SetAddr(adec.cbFunc);
@@ -268,7 +268,7 @@ u32 adecOpen(AudioDecoder* data)
 
 					adec.reader.addr = task.au.addr;
 					adec.reader.size = task.au.size;
-					//LOGF_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
+					//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
 					if (adec.just_started)
 					{
@@ -317,33 +317,33 @@ u32 adecOpen(AudioDecoder* data)
 						err = avformat_open_input(&adec.fmt, NULL, av_find_input_format("oma"), NULL);
 						if (err)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: avformat_open_input() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: avformat_open_input() failed");
 							Emu.Pause();
 							break;
 						}
 						AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P); // ???
 						if (!codec)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: avcodec_find_decoder() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: avcodec_find_decoder() failed");
 							Emu.Pause();
 							break;
 						}
 						/*err = avformat_find_stream_info(adec.fmt, NULL);
 						if (err)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: avformat_find_stream_info() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: avformat_find_stream_info() failed");
 							Emu.Pause();
 							break;
 						}
 						if (!adec.fmt->nb_streams)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: no stream found");
+							LOG_ERROR(HLE, "adecDecodeAu: no stream found");
 							Emu.Pause();
 							break;
 						}*/
 						if (!avformat_new_stream(adec.fmt, codec))
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: avformat_new_stream() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: avformat_new_stream() failed");
 							Emu.Pause();
 							break;
 						}
@@ -358,7 +358,7 @@ u32 adecOpen(AudioDecoder* data)
 						}
 						if (err)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: avcodec_open2() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: avcodec_open2() failed");
 							Emu.Pause();
 							break;
 						}
@@ -371,7 +371,7 @@ u32 adecOpen(AudioDecoder* data)
 					{
 						if (Emu.IsStopped())
 						{
-							LOGF_WARNING(HLE, "adecDecodeAu: aborted");
+							LOG_WARNING(HLE, "adecDecodeAu: aborted");
 							return;
 						}
 
@@ -420,7 +420,7 @@ u32 adecOpen(AudioDecoder* data)
 
 						if (!frame.data)
 						{
-							LOGF_ERROR(HLE, "adecDecodeAu: av_frame_alloc() failed");
+							LOG_ERROR(HLE, "adecDecodeAu: av_frame_alloc() failed");
 							Emu.Pause();
 							break;
 						}
@@ -433,7 +433,7 @@ u32 adecOpen(AudioDecoder* data)
 						{
 							if (!last_frame && decode < 0)
 							{
-								LOGF_ERROR(HLE, "adecDecodeAu: AU decoding error(0x%x)", decode);
+								LOG_ERROR(HLE, "adecDecodeAu: AU decoding error(0x%x)", decode);
 							}
 							if (!got_frame && adec.reader.size == 0) break;
 						}
@@ -460,18 +460,18 @@ u32 adecOpen(AudioDecoder* data)
 
 							if (frame.data->format != AV_SAMPLE_FMT_FLTP)
 							{
-								LOGF_ERROR(HLE, "adecDecodeaAu: unsupported frame format(%d)", frame.data->format);
+								LOG_ERROR(HLE, "adecDecodeaAu: unsupported frame format(%d)", frame.data->format);
 								Emu.Pause();
 								break;
 							}
 							if (frame.data->channels != 2)
 							{
-								LOGF_ERROR(HLE, "adecDecodeAu: unsupported channel count (%d)", frame.data->channels);
+								LOG_ERROR(HLE, "adecDecodeAu: unsupported channel count (%d)", frame.data->channels);
 								Emu.Pause();
 								break;
 							}
 
-							//LOGF_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+							//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 								//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate,
 								//av_get_bytes_per_sample((AVSampleFormat)frame.data->format));
 
@@ -497,16 +497,16 @@ u32 adecOpen(AudioDecoder* data)
 			case adecClose:
 				{
 					adec.is_finished = true;
-					LOGF_NOTICE(HLE, "Audio Decoder thread ended");
+					LOG_NOTICE(HLE, "Audio Decoder thread ended");
 					return;
 				}
 
 			default:
-				LOGF_ERROR(HLE, "Audio Decoder thread error: unknown task(%d)", task.type);
+				LOG_ERROR(HLE, "Audio Decoder thread error: unknown task(%d)", task.type);
 			}
 		}
 		adec.is_finished = true;
-		LOGF_WARNING(HLE, "Audio Decoder thread aborted");
+		LOG_WARNING(HLE, "Audio Decoder thread aborted");
 	});
 
 	t.detach();
@@ -518,8 +518,8 @@ bool adecCheckType(AudioCodecType type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: LOGF_NOTICE(HLE, "*** (?) type: ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: LOGF_NOTICE(HLE, "*** type: ATRAC3plus 2ch"); break;
+	case CELL_ADEC_TYPE_ATRACX: LOG_NOTICE(HLE, "*** (?) type: ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX_2CH: LOG_NOTICE(HLE, "*** type: ATRAC3plus 2ch"); break;
 
 	case CELL_ADEC_TYPE_ATRACX_6CH:
 	case CELL_ADEC_TYPE_ATRACX_8CH:
@@ -609,7 +609,7 @@ int cellAdecClose(u32 handle)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellAdecClose(%d) aborted", handle);
+			LOG_WARNING(HLE, "cellAdecClose(%d) aborted", handle);
 			break;
 		}
 		Sleep(1);
@@ -732,7 +732,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	if (!swr)
 	{
-		LOGF_ERROR(HLE, "cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
+		LOG_ERROR(HLE, "cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
 		Emu.Pause();
 		free(out);
 		if (af.data)
@@ -759,7 +759,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	if (!Memory.CopyFromReal(outBuffer_addr, out, af.size))
 	{
-		LOGF_ERROR(HLE, "cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
+		LOG_ERROR(HLE, "cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
 		Emu.Pause();
 	}
 

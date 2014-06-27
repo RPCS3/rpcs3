@@ -177,7 +177,7 @@ u32 TROPUSRLoader::GetTrophiesCount()
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >=  m_table6.size())
-		LOGF_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
 
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
 }
@@ -185,7 +185,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 u32 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 {
 	if (id >=  m_table6.size())
-		LOGF_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 
 	return m_table6[id].timestamp2; // Let's assume the trophies are stored ordered

@@ -289,7 +289,7 @@ void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
 	case id_pad_rstick_up: Ini.PadHandlerRStickUp.SetValue(keyEvent.GetKeyCode()); break;
 
 	case 0: break;
-	default: LOGF_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
 	}
 
 	UpdateLabel();
@@ -323,7 +323,7 @@ void PADManager::OnButtonClicked(wxCommandEvent &event)
 		case wxID_OK: Ini.Save(); break;
 		case wxID_CANCEL: break;
 
-		default: LOGF_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
+		default: LOG_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
 		}
 	}
 
@@ -509,7 +509,7 @@ void PADManager::UpdateTimerLabel(const u32 id)
 	case id_pad_rstick_right: b_right_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	case id_pad_rstick_up: b_up_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	
-	default: LOGF_ERROR(HLE, "Unknown button ID: %d", id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", id); break;
 	}
 }
 

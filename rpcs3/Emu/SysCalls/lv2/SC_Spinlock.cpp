@@ -22,8 +22,8 @@ void sys_spinlock_lock(mem_ptr_t<spinlock> lock)
 	be_t<u32> tid = GetCurrentPPUThread().GetId();
 	switch (lock->mutex.lock(tid))
 	{
-	case SMR_ABORT: LOGF_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr()); break;
-	case SMR_DEADLOCK: LOGF_ERROR(HLE, "sys_spinlock_lock(0x%x) reached deadlock", lock.GetAddr()); break; // ???
+	case SMR_ABORT: LOG_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr()); break;
+	case SMR_DEADLOCK: LOG_ERROR(HLE, "sys_spinlock_lock(0x%x) reached deadlock", lock.GetAddr()); break; // ???
 	default: break;
 	}
 }
@@ -36,8 +36,8 @@ int sys_spinlock_trylock(mem_ptr_t<spinlock> lock)
 	switch (lock->mutex.trylock(tid))
 	{
 	case SMR_FAILED: return CELL_EBUSY;
-	case SMR_ABORT: LOGF_WARNING(HLE, "sys_spinlock_trylock(0x%x) aborted", lock.GetAddr()); break;
-	case SMR_DEADLOCK: LOGF_ERROR(HLE, "sys_spinlock_trylock(0x%x) reached deadlock", lock.GetAddr()); break;
+	case SMR_ABORT: LOG_WARNING(HLE, "sys_spinlock_trylock(0x%x) aborted", lock.GetAddr()); break;
+	case SMR_DEADLOCK: LOG_ERROR(HLE, "sys_spinlock_trylock(0x%x) reached deadlock", lock.GetAddr()); break;
 	default: break;
 	}
 

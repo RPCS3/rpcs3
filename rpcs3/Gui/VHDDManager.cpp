@@ -33,7 +33,7 @@ wxDragResult VHDDListDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult def)
 {	
 	int flags = 0;
 	int dst_indx = m_parent->HitTest(wxPoint(x, y), flags);
-	LOGF_NOTICE(HLE, "OnData(%d -> %d)", m_src_indx, dst_indx);
+	LOG_NOTICE(HLE, "OnData(%d -> %d)", m_src_indx, dst_indx);
 	return def;
 }
 
@@ -189,7 +189,7 @@ void VHDDExplorer::OnDropFiles(wxDropFilesEvent& event)
 
 	for(int i=0; i<count; ++i)
 	{
-		LOGF_NOTICE(HLE, "Importing '%s'", dropped[i].wx_str());
+		LOG_NOTICE(HLE, "Importing '%s'", dropped[i].wx_str());
 		Import(fmt::ToUTF8(dropped[i]), fmt::ToUTF8(wxFileName(dropped[i]).GetFullName()));
 	}
 

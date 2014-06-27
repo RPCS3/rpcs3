@@ -163,7 +163,7 @@ void PPUThread::DoRun()
 	break;
 
 	default:
-		LOGF_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
 		Emu.Pause();
 	}
 }

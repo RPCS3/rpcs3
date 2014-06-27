@@ -49,7 +49,7 @@ std::string GLVertexDecompilerThread::GetDST(bool isSca)
 
 	default:
 		if (d3.dst > 15)
-			LOGF_ERROR(RSX, "dst index out of range: %u", d3.dst);
+			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
 		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? "vec4(0.0f, 0.0f, 0.0f, 1.0f)" : "vec4(0.0)");
 	break;
 	}
@@ -83,7 +83,7 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n)
 		}
 		else
 		{
-			LOGF_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
+			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
 			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
 		}
 	break;
@@ -93,7 +93,7 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n)
 	break;
 
 	default:
-		LOGF_ERROR(RSX, "Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type));
+		LOG_ERROR(RSX, "Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type));
 		Emu.Pause();
 	break;
 	}
@@ -510,7 +510,7 @@ void GLVertexDecompilerThread::Task()
 
 		default:
 			m_body.push_back(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
-			LOGF_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
+			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
 			Emu.Pause();
 		break;
 		}
@@ -543,7 +543,7 @@ void GLVertexDecompilerThread::Task()
 
 		default:
 			m_body.push_back(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
-			LOGF_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
+			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
 			Emu.Pause();
 		break;
 		}
@@ -647,14 +647,14 @@ void GLVertexProgram::Compile()
 			GLsizei len;
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
-			LOGF_ERROR(RSX, "Failed to compile vertex shader: %s", buf);
+			LOG_ERROR(RSX, "Failed to compile vertex shader: %s", buf);
 			delete[] buf;
 		}
 
 		LOG_NOTICE(RSX, shader);
 		Emu.Pause();
 	}
-	//else LOGF_WARNING(RSX, "Vertex shader compiled successfully!");
+	//else LOG_WARNING(RSX, "Vertex shader compiled successfully!");
 
 }
 
@@ -667,7 +667,7 @@ void GLVertexProgram::Delete()
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(RSX, "GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
+			LOG_WARNING(RSX, "GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
 		}
 		else
 		{

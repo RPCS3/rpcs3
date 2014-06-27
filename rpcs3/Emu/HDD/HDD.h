@@ -486,7 +486,7 @@ public:
 
 	int OpenDir(const std::string& name)
 	{
-		LOGF_WARNING(HLE, "OpenDir(%s)", name.c_str());
+		LOG_WARNING(HLE, "OpenDir(%s)", name.c_str());
 		u64 entry_block;
 		if(!SearchEntry(name, entry_block))
 			return -1;
@@ -594,7 +594,7 @@ public:
 			return false;
 		}
 
-		LOGF_NOTICE(HLE, "CREATING ENTRY AT 0x%llx", new_block);
+		LOG_NOTICE(HLE, "CREATING ENTRY AT 0x%llx", new_block);
 		WriteBlock(new_block, g_used_block);
 
 		{
@@ -744,7 +744,7 @@ public:
 			return false;
 		}
 
-		LOGF_NOTICE(HLE, "ENTRY FOUND AT 0x%llx", file_block);
+		LOG_NOTICE(HLE, "ENTRY FOUND AT 0x%llx", file_block);
 		m_file.Open(file_block);
 
 		return vfsFileBase::Open(path, mode);
@@ -774,7 +774,7 @@ public:
 
 			if(entry.type == vfsHDD_Entry_Dir && name != "." && name != "..")
 			{
-				LOGF_WARNING(HLE, "Removing sub folder '%s'", name.c_str());
+				LOG_WARNING(HLE, "Removing sub folder '%s'", name.c_str());
 				RemoveBlocksDir(entry.data_block);
 			}
 			else if(entry.type == vfsHDD_Entry_File)

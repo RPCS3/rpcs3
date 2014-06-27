@@ -53,7 +53,7 @@ bool vfsLocalFile::Open(const std::string& path, vfsOpenMode mode)
 
 bool vfsLocalFile::Create(const std::string& path)
 {
-	LOGF_WARNING(HLE, "vfsLocalFile::Create('%s')", path.c_str());
+	LOG_WARNING(HLE, "vfsLocalFile::Create('%s')", path.c_str());
 	for(uint p=1; p < path.length() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.length() && path[p] != '\0'; p++)
@@ -65,7 +65,7 @@ bool vfsLocalFile::Create(const std::string& path)
 		const std::string& dir = path.substr(0, p);
 		if(!rDirExists(dir))
 		{
-			LOGF_NOTICE(HLE, "create dir: %s", dir.c_str());
+			LOG_NOTICE(HLE, "create dir: %s", dir.c_str());
 			rMkdir(dir);
 		}
 	}

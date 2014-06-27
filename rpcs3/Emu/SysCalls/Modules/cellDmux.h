@@ -394,14 +394,14 @@ struct PesHeader
 				new_au = true;
 				if ((v & 0xF0) != 0x30 || (size - empty) < 10)
 				{
-					LOGF_ERROR(HLE, "PesHeader(): pts not found");
+					LOG_ERROR(HLE, "PesHeader(): pts not found");
 					Emu.Pause();
 				}
 				pts = stream.get_ts(v);
 				stream.get(v);
 				if ((v & 0xF0) != 0x10)
 				{
-					LOGF_ERROR(HLE, "PesHeader(): dts not found");
+					LOG_ERROR(HLE, "PesHeader(): dts not found");
 					Emu.Pause();				
 				}
 				dts = stream.get_ts(v);
@@ -557,7 +557,7 @@ public:
 	{
 		if (size > GetMaxAU())
 		{
-			LOGF_ERROR(HLE, "es::freespace(): last_size too big (size=0x%x, max_au=0x%x)", size, GetMaxAU());
+			LOG_ERROR(HLE, "es::freespace(): last_size too big (size=0x%x, max_au=0x%x)", size, GetMaxAU());
 			Emu.Pause();
 			return 0;
 		}
@@ -587,7 +587,7 @@ public:
 		u32 addr;
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
-			//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, ">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+			//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 
 			addr = put;
 			/*if (!first)
@@ -600,7 +600,7 @@ public:
 			}*/
 
 			mem_ptr_t<CellDmuxAuInfo> info(put);
-			//if (fidMajor != 0xbd) LOGF_WARNING(HLE, "es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
+			//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
 				//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
 				//(u32)info->auSize, put, (u32)info->ptsLower);
 
@@ -611,11 +611,11 @@ public:
 			size = 0;
 
 			put_count++;
-			//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, "<<< es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+			//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		}
 		if (!entries.Push(addr))
 		{
-			LOGF_ERROR(HLE, "es::finish() aborted (no space)");
+			LOG_ERROR(HLE, "es::finish() aborted (no space)");
 		}
 	}
 
@@ -625,7 +625,7 @@ public:
 
 		if (is_full())
 		{
-			LOGF_ERROR(HLE, "es::push(): buffer is full");
+			LOG_ERROR(HLE, "es::push(): buffer is full");
 			Emu.Pause();
 			return;
 		}
@@ -634,7 +634,7 @@ public:
 		size += sz;
 		if (!Memory.Copy(data_addr, stream.addr, sz))
 		{
-			LOGF_ERROR(HLE, "es::push(): data copying failed");
+			LOG_ERROR(HLE, "es::push(): data copying failed");
 			Emu.Pause();
 			return;
 		}
@@ -674,22 +674,22 @@ public:
 	bool release()
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, ">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		if (released >= put_count)
 		{
-			LOGF_ERROR(HLE, "es::release(): buffer is empty");
+			LOG_ERROR(HLE, "es::release(): buffer is empty");
 			return false;
 		}
 
 		u32 addr = entries.Peek();
 
 		mem_ptr_t<CellDmuxAuInfo> info(addr);
-		//if (fidMajor != 0xbd) LOGF_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+		//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
 			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, first, (u32)info->ptsLower);
 
 		if (released >= peek_count)
 		{
-			LOGF_ERROR(HLE, "es::release(): buffer has not been seen yet");
+			LOG_ERROR(HLE, "es::release(): buffer has not been seen yet");
 			return false;
 		}
 
@@ -711,30 +711,30 @@ public:
 		released++;
 		if (!entries.Pop(addr))
 		{
-			LOGF_ERROR(HLE, "es::release(): entries.Pop() aborted (no entries found)");
+			LOG_ERROR(HLE, "es::release(): entries.Pop() aborted (no entries found)");
 			return false;
 		}
-		//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, "<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 		return true;
 	}
 
 	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, ">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
 			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
 		if (peek_count >= put_count) return false;
 
 		if (peek_count < released)
 		{
-			LOGF_ERROR(HLE, "es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
+			LOG_ERROR(HLE, "es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
 			Emu.Pause();
 			return false;
 		}
 
 		u32 addr = entries.Peek(peek_count - released);
 		mem_ptr_t<CellDmuxAuInfo> info(addr);
-		//if (fidMajor != 0xbd) LOGF_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+		//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
 			//wxString(update_index ? "Get" : "Peek").wx_str(),
 			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek, (u32)info->ptsLower);
 
@@ -760,7 +760,7 @@ public:
 			peek_count++;
 		}
 
-		//if (fidMajor != 0xbd) LOGF_NOTICE(HLE, "<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
 			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
 		return true;
 	}

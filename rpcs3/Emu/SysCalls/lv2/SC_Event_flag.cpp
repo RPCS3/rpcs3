@@ -207,7 +207,7 @@ int sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		}
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "sys_event_flag_wait(id=%d) aborted", eflag_id);
+			LOG_WARNING(HLE, "sys_event_flag_wait(id=%d) aborted", eflag_id);
 			return CELL_OK;
 		}
 	}
@@ -334,7 +334,7 @@ int sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 	if (Emu.IsStopped())
 	{
-		LOGF_WARNING(HLE, "sys_event_flag_cancel(id=%d) aborted", eflag_id);
+		LOG_WARNING(HLE, "sys_event_flag_cancel(id=%d) aborted", eflag_id);
 		return CELL_OK;
 	}
 

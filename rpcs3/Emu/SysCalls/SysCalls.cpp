@@ -553,7 +553,7 @@ void default_syscall()
 	{
 		//tty
 		case 988:
-			LOGF_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
+			LOG_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
 				CPU.GPR[3], CPU.GPR[4], CPU.PC);
 			RESULT(0);
 		return;
@@ -561,16 +561,16 @@ void default_syscall()
 		case 999:
 			dump_enable = !dump_enable;
 			Emu.Pause();
-			LOGF_WARNING(HLE, "Dump %s", (dump_enable ? "enabled" : "disabled"));
+			LOG_WARNING(HLE, "Dump %s", (dump_enable ? "enabled" : "disabled"));
 		return;
 
 		case 1000:
 			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			LOGF_WARNING(HLE, "Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
+			LOG_WARNING(HLE, "Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
 		return;
 	}
 
-	LOGF_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
+	LOG_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
 	RESULT(0);
 	return;
 }
@@ -589,7 +589,7 @@ void SysCalls::DoSyscall(u32 code)
 	}
 
 
-	LOGF_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
+	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
 	declCPU();
 	RESULT(0);
 }

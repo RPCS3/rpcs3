@@ -32,7 +32,7 @@ void sys_ppu_thread_exit(u64 errorcode)
 
 	if (thr.owned_mutexes)
 	{
-		LOGF_ERROR(PPU, "Owned mutexes found (%d)", thr.owned_mutexes);
+		LOG_ERROR(PPU, "Owned mutexes found (%d)", thr.owned_mutexes);
 		thr.owned_mutexes = 0;
 	}
 
@@ -58,7 +58,7 @@ int sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(PPU, "sys_ppu_thread_join(%d) aborted", thread_id);
+			LOG_WARNING(PPU, "sys_ppu_thread_join(%d) aborted", thread_id);
 			return CELL_OK;
 		}
 		Sleep(1);
@@ -204,7 +204,7 @@ int sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, int prio, u32 s
 	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(threadname);
 
-	LOGF_NOTICE(PPU, "*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
+	LOG_NOTICE(PPU, "*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
 
 	if (!is_interrupt)
 	{
