@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -478,7 +478,7 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 
 	if(current + 8 >= end)
 	{
-		ConLog.Warning("bad flip!");
+		LOG_WARNING(HLE, "bad flip!");
 		//cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
 		//copied:
  

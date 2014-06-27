@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "SELF.h"
 #include "ELF64.h"
 
@@ -33,7 +33,7 @@ bool SELFLoader::LoadData(u64 offset)
 		!l.LoadShdrInfo(self_hdr.se_shdroff) ||
 		!l.LoadData(self_hdr.se_appinfooff) )
 	{
-		ConLog.Error("Broken SELF file.");
+		LOG_ERROR(LOADER, "Broken SELF file.");
 
 		return false;
 	}
@@ -43,6 +43,6 @@ bool SELFLoader::LoadData(u64 offset)
 
 	return true;
 
-	ConLog.Error("Boot SELF not supported yet!");
+	LOG_ERROR(LOADER, "Boot SELF not supported yet!");
 	return false;
 }

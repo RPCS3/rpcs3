@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "rpcs3/Ini.h"
 #include "Keyboard.h"
 #include "Null/NullKeyboardHandler.h"

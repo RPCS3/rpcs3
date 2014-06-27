@@ -25,10 +25,10 @@ struct AppInfo
 
   void Show()
   {
-	  ConLog.Write("AuthID: 0x%llx",			authid);
-	  ConLog.Write("VendorID: 0x%08x",			vendor_id);
-	  ConLog.Write("SELF type: 0x%08x",			self_type);
-	  ConLog.Write("Version: 0x%llx",		    version);
+	  LOGF_NOTICE(LOADER, "AuthID: 0x%llx",	   authid);
+	  LOGF_NOTICE(LOADER, "VendorID: 0x%08x",  vendor_id);
+	  LOGF_NOTICE(LOADER, "SELF type: 0x%08x", self_type);
+	  LOGF_NOTICE(LOADER, "Version: 0x%llx",   version);
   }
 };
 
@@ -53,12 +53,12 @@ struct SectionInfo
 
   void Show()
   {
-	  ConLog.Write("Offset: 0x%llx",			offset);
-	  ConLog.Write("Size: 0x%llx",				size);
-	  ConLog.Write("Compressed: 0x%08x",		compressed);
-	  ConLog.Write("Unknown1: 0x%08x",			unknown1);
-	  ConLog.Write("Unknown2: 0x%08x",			unknown2);
-	  ConLog.Write("Encrypted: 0x%08x",			encrypted);
+	  LOGF_NOTICE(LOADER, "Offset: 0x%llx",     offset);
+	  LOGF_NOTICE(LOADER, "Size: 0x%llx",       size);
+	  LOGF_NOTICE(LOADER, "Compressed: 0x%08x", compressed);
+	  LOGF_NOTICE(LOADER, "Unknown1: 0x%08x",   unknown1);
+	  LOGF_NOTICE(LOADER, "Unknown2: 0x%08x",   unknown2);
+	  LOGF_NOTICE(LOADER, "Encrypted: 0x%08x",  encrypted);
   }
 };
 
@@ -79,10 +79,10 @@ struct SCEVersionInfo
 
   void Show()
   {
-	  ConLog.Write("Sub-header type: 0x%08x",			subheader_type);
-	  ConLog.Write("Present: 0x%08x",					present);
-	  ConLog.Write("Size: 0x%08x",						size);
-	  ConLog.Write("Unknown: 0x%08x",					unknown);
+	  LOGF_NOTICE(LOADER, "Sub-header type: 0x%08x", subheader_type);
+	  LOGF_NOTICE(LOADER, "Present: 0x%08x",         present);
+	  LOGF_NOTICE(LOADER, "Size: 0x%08x",            size);
+	  LOGF_NOTICE(LOADER, "Unknown: 0x%08x",         unknown);
   }
 };
 
@@ -181,20 +181,20 @@ struct ControlInfo
 
   void Show()
   {
-	  ConLog.Write("Type: 0x%08x",			type);
-	  ConLog.Write("Size: 0x%08x",			size);
-	  ConLog.Write("Next: 0x%llx",			next);
+	  LOGF_NOTICE(LOADER, "Type: 0x%08x", type);
+	  LOGF_NOTICE(LOADER, "Size: 0x%08x", size);
+	  LOGF_NOTICE(LOADER, "Next: 0x%llx", next);
 
 	  if (type == 1)
 	  {
-		  ConLog.Write("Control flag 1: 0x%08x",			control_flags.ctrl_flag1);
-		  ConLog.Write("Unknown1: 0x%08x",					control_flags.unknown1);
-		  ConLog.Write("Unknown2: 0x%08x",					control_flags.unknown2);
-		  ConLog.Write("Unknown3: 0x%08x",					control_flags.unknown3);
-		  ConLog.Write("Unknown4: 0x%08x",					control_flags.unknown4);
-		  ConLog.Write("Unknown5: 0x%08x",					control_flags.unknown5);
-		  ConLog.Write("Unknown6: 0x%08x",					control_flags.unknown6);
-		  ConLog.Write("Unknown7: 0x%08x",					control_flags.unknown7);
+		  LOGF_NOTICE(LOADER, "Control flag 1: 0x%08x",	control_flags.ctrl_flag1);
+		  LOGF_NOTICE(LOADER, "Unknown1: 0x%08x",       control_flags.unknown1);
+		  LOGF_NOTICE(LOADER, "Unknown2: 0x%08x",       control_flags.unknown2);
+		  LOGF_NOTICE(LOADER, "Unknown3: 0x%08x",       control_flags.unknown3);
+		  LOGF_NOTICE(LOADER, "Unknown4: 0x%08x",       control_flags.unknown4);
+		  LOGF_NOTICE(LOADER, "Unknown5: 0x%08x",       control_flags.unknown5);
+		  LOGF_NOTICE(LOADER, "Unknown6: 0x%08x",       control_flags.unknown6);
+		  LOGF_NOTICE(LOADER, "Unknown7: 0x%08x",       control_flags.unknown7);
 	  }
 	  else if (type == 2)
 	  {
@@ -204,8 +204,8 @@ struct ControlInfo
 			  for (int i = 0; i < 20; i++)
 				  digest_str += fmt::Format("%02x", file_digest_30.digest[i]);
 
-			  ConLog.Write("Digest: %s",						digest_str.c_str());
-			  ConLog.Write("Unknown: 0x%llx",					file_digest_30.unknown);
+			  LOGF_NOTICE(LOADER, "Digest: %s",         digest_str.c_str());
+			  LOGF_NOTICE(LOADER, "Unknown: 0x%llx",    file_digest_30.unknown);
 		  }
 		  else if (size == 0x40)
 		  {
@@ -217,9 +217,9 @@ struct ControlInfo
 				  digest_str2 += fmt::Format("%02x", file_digest_40.digest2[i]);
 			  }
 			  
-			  ConLog.Write("Digest1: %s",						digest_str1.c_str());
-			  ConLog.Write("Digest2: %s",						digest_str2.c_str());
-			  ConLog.Write("Unknown: 0x%llx",					file_digest_40.unknown);
+			  LOGF_NOTICE(LOADER, "Digest1: %s",     digest_str1.c_str());
+			  LOGF_NOTICE(LOADER, "Digest2: %s",     digest_str2.c_str());
+			  LOGF_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_40.unknown);
 		  }
 	  }
 	  else if (type == 3)
@@ -237,16 +237,16 @@ struct ControlInfo
 			  xordigest_str += fmt::Format("%02x", npdrm.xordigest[i]);
 		  }
 
-		  ConLog.Write("Magic: 0x%08x",							npdrm.magic);
-		  ConLog.Write("Unknown1: 0x%08x",						npdrm.unknown1);
-		  ConLog.Write("License: 0x%08x",						npdrm.license);
-		  ConLog.Write("Type: 0x%08x",							npdrm.type);
-		  ConLog.Write("ContentID: %s",							contentid_str.c_str());
-		  ConLog.Write("Digest: %s",							digest_str.c_str());
-		  ConLog.Write("Inverse digest: %s",					invdigest_str.c_str());
-		  ConLog.Write("XOR digest: %s",						xordigest_str.c_str());
-		  ConLog.Write("Unknown2: 0x%llx",						npdrm.unknown2);
-		  ConLog.Write("Unknown3: 0x%llx",						npdrm.unknown3);
+		  LOGF_NOTICE(LOADER, "Magic: 0x%08x",      npdrm.magic);
+		  LOGF_NOTICE(LOADER, "Unknown1: 0x%08x",   npdrm.unknown1);
+		  LOGF_NOTICE(LOADER, "License: 0x%08x",    npdrm.license);
+		  LOGF_NOTICE(LOADER, "Type: 0x%08x",       npdrm.type);
+		  LOGF_NOTICE(LOADER, "ContentID: %s",      contentid_str.c_str());
+		  LOGF_NOTICE(LOADER, "Digest: %s",         digest_str.c_str());
+		  LOGF_NOTICE(LOADER, "Inverse digest: %s", invdigest_str.c_str());
+		  LOGF_NOTICE(LOADER, "XOR digest: %s",     xordigest_str.c_str());
+		  LOGF_NOTICE(LOADER, "Unknown2: 0x%llx",   npdrm.unknown2);
+		  LOGF_NOTICE(LOADER, "Unknown3: 0x%llx",   npdrm.unknown3);
 	  }
   }
 };
@@ -281,10 +281,10 @@ struct MetadataInfo
 		  iv_pad_str += fmt::Format("%02x", iv_pad[i]);
 	  }
 	  
-	  ConLog.Write("Key: %s", key_str.c_str());
-	  ConLog.Write("Key pad: %s", key_pad_str.c_str());
-	  ConLog.Write("IV: %s", iv_str.c_str());
-	  ConLog.Write("IV pad: %s", iv_pad_str.c_str());
+	  LOGF_NOTICE(LOADER, "Key: %s",     key_str.c_str());
+	  LOGF_NOTICE(LOADER, "Key pad: %s", key_pad_str.c_str());
+	  LOGF_NOTICE(LOADER, "IV: %s",      iv_str.c_str());
+	  LOGF_NOTICE(LOADER, "IV pad: %s",  iv_pad_str.c_str());
   }
 };
 
@@ -320,13 +320,13 @@ struct MetadataHeader
 
   void Show()
   {
-	  ConLog.Write("Signature input length: 0x%llx",			signature_input_length);
-	  ConLog.Write("Unknown1: 0x%08x",							unknown1);
-	  ConLog.Write("Section count: 0x%08x",						section_count);
-	  ConLog.Write("Key count: 0x%08x",							key_count);
-	  ConLog.Write("Optional header size: 0x%08x",				opt_header_size);
-	  ConLog.Write("Unknown2: 0x%08x",							unknown2);
-	  ConLog.Write("Unknown3: 0x%08x",							unknown3);
+	  LOGF_NOTICE(LOADER, "Signature input length: 0x%llx", signature_input_length);
+	  LOGF_NOTICE(LOADER, "Unknown1: 0x%08x",               unknown1);
+	  LOGF_NOTICE(LOADER, "Section count: 0x%08x",          section_count);
+	  LOGF_NOTICE(LOADER, "Key count: 0x%08x",              key_count);
+	  LOGF_NOTICE(LOADER, "Optional header size: 0x%08x",   opt_header_size);
+	  LOGF_NOTICE(LOADER, "Unknown2: 0x%08x",               unknown2);
+	  LOGF_NOTICE(LOADER, "Unknown3: 0x%08x",               unknown3);
   }
 };
 
@@ -371,16 +371,16 @@ struct MetadataSectionHeader
 
   void Show()
   {
-	  ConLog.Write("Data offset: 0x%llx",						data_offset);
-	  ConLog.Write("Data size: 0x%llx",							data_size);
-	  ConLog.Write("Type: 0x%08x",								type);
-	  ConLog.Write("Program index: 0x%08x",						program_idx);
-	  ConLog.Write("Hashed: 0x%08x",							hashed);
-	  ConLog.Write("SHA1 index: 0x%08x",						sha1_idx);
-	  ConLog.Write("Encrypted: 0x%08x",							encrypted);
-	  ConLog.Write("Key index: 0x%08x",							key_idx);
-	  ConLog.Write("IV index: 0x%08x",							iv_idx);
-	  ConLog.Write("Compressed: 0x%08x",						compressed);
+	  LOGF_NOTICE(LOADER, "Data offset: 0x%llx",   data_offset);
+	  LOGF_NOTICE(LOADER, "Data size: 0x%llx",     data_size);
+	  LOGF_NOTICE(LOADER, "Type: 0x%08x",          type);
+	  LOGF_NOTICE(LOADER, "Program index: 0x%08x", program_idx);
+	  LOGF_NOTICE(LOADER, "Hashed: 0x%08x",        hashed);
+	  LOGF_NOTICE(LOADER, "SHA1 index: 0x%08x",    sha1_idx);
+	  LOGF_NOTICE(LOADER, "Encrypted: 0x%08x",     encrypted);
+	  LOGF_NOTICE(LOADER, "Key index: 0x%08x",     key_idx);
+	  LOGF_NOTICE(LOADER, "IV index: 0x%08x",      iv_idx);
+	  LOGF_NOTICE(LOADER, "Compressed: 0x%08x",    compressed);
   }
 };
 

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #if defined (_WIN32)
 #include <algorithm>
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "XInputPadHandler.h"
 #include <cstring>
 
@@ -113,7 +113,7 @@ void XInputPadHandler::Close()
 		{
 			active = false;
 			if (WaitForSingleObject(thread, THREAD_TIMEOUT) != WAIT_OBJECT_0)
-				ConLog.Error("XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
+				LOGF_ERROR(HLE, "XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
 			thread = nullptr;
 		}
 

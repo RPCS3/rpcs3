@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLFragmentProgram.h"
@@ -19,7 +19,7 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 	case 7: code = "(" + code + " / 8.0)"; break;
 
 	default:
-		ConLog.Error("Bad scale: %d", fmt::by_value(src1.scale));
+		LOGF_ERROR(RSX, "Bad scale: %d", fmt::by_value(src1.scale));
 		Emu.Pause();
 	break;
 	}
@@ -210,7 +210,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 			}
 			else
 			{
-				ConLog.Error("Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
+				LOGF_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
 				ret += m_parr.AddParam(PARAM_IN, "vec4", "unk");
 				Emu.Pause();
 			}
@@ -224,7 +224,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 	break;
 
 	default:
-		ConLog.Error("Bad src type %d", fmt::by_value(src.reg_type));
+		LOGF_ERROR(RSX, "Bad src type %d", fmt::by_value(src.reg_type));
 		Emu.Pause();
 	break;
 	}
@@ -416,7 +416,7 @@ void GLFragmentDecompilerThread::Task()
 		//case 0x45: SetDst("return"); break; //RET
 
 		default:
-			ConLog.Error("Unknown fp opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
+			LOGF_ERROR(RSX, "Unknown fp opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
 			//Emu.Pause();
 		break;
 		}
@@ -515,12 +515,12 @@ void GLShaderProgram::Compile()
 			char* buf = new char[infoLength]; // Buffer to store infoLog
 
 			glGetShaderInfoLog(m_id, infoLength, &len, buf); // Retrieve the shader info log into our buffer
-			ConLog.Error("Failed to compile shader: %s", buf); // Write log to the console
+			LOGF_ERROR(RSX, "Failed to compile shader: %s", buf); // Write log to the console
 
 			delete[] buf;
 		}
 
-		ConLog.Write(m_shader.c_str()); // Log the text of the shader that failed to compile
+		LOG_NOTICE(RSX, m_shader.c_str()); // Log the text of the shader that failed to compile
 		Emu.Pause(); // Pause the emulator, we can't really continue from here
 	}
 }
@@ -540,7 +540,7 @@ void GLShaderProgram::Delete()
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("GLShaderProgram::Delete(): glDeleteShader(%d) avoided", m_id);
+			LOGF_WARNING(RSX, "GLShaderProgram::Delete(): glDeleteShader(%d) avoided", m_id);
 		}
 		else
 		{

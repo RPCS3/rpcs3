@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "vfsLocalFile.h"
 
 static const rFile::OpenMode vfs2wx_mode(vfsOpenMode mode)
@@ -53,7 +53,7 @@ bool vfsLocalFile::Open(const std::string& path, vfsOpenMode mode)
 
 bool vfsLocalFile::Create(const std::string& path)
 {
-	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
+	LOGF_WARNING(HLE, "vfsLocalFile::Create('%s')", path.c_str());
 	for(uint p=1; p < path.length() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.length() && path[p] != '\0'; p++)
@@ -65,7 +65,7 @@ bool vfsLocalFile::Create(const std::string& path)
 		const std::string& dir = path.substr(0, p);
 		if(!rDirExists(dir))
 		{
-			ConLog.Write("create dir: %s", dir.c_str());
+			LOGF_NOTICE(HLE, "create dir: %s", dir.c_str());
 			rMkdir(dir);
 		}
 	}

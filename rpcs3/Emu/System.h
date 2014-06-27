@@ -83,7 +83,6 @@ class Emulator
 	KeyboardManager m_keyboard_manager;
 	MouseManager m_mouse_manager;
 	IdManager m_id_manager;
-	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
 	AudioManager m_audio_manager;
 	CallbackManager m_callback_manager;
@@ -112,7 +111,6 @@ public:
 	KeyboardManager&  GetKeyboardManager() { return m_keyboard_manager; }
 	MouseManager&     GetMouseManager()    { return m_mouse_manager; }
 	IdManager&        GetIdManager()       { return m_id_manager; }
-	DbgConsole&       GetDbgCon()          { return *m_dbg_console; }
 	GSManager&        GetGSManager()       { return m_gs_manager; }
 	AudioManager&     GetAudioManager()    { return m_audio_manager; }
 	CallbackManager&  GetCallbackManager() { return m_callback_manager; }

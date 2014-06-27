@@ -2,13 +2,13 @@
 #include "unpkg.h"
 #include <wx/progdlg.h>
 
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 
 // Decryption.
 bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 {
 	if (m_header->pkg_magic != 0x7F504B47) {
-		ConLog.Error("PKG: Not a package file!");
+		LOG_ERROR(LOADER, "PKG: Not a package file!");
 		return false;
 	}
 
@@ -17,7 +17,7 @@ bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 	case PKG_RELEASE_TYPE_DEBUG:   break;
 	case PKG_RELEASE_TYPE_RELEASE: break;
 	default:
-		ConLog.Error("PKG: Unknown PKG type!");
+		LOG_ERROR(LOADER, "PKG: Unknown PKG type!");
 		return false;
 	}
 
@@ -26,22 +26,22 @@ bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 	case PKG_PLATFORM_TYPE_PS3: break;
 	case PKG_PLATFORM_TYPE_PSP: break;
 	default:
-		ConLog.Error("PKG: Unknown PKG type!");
+		LOG_ERROR(LOADER, "PKG: Unknown PKG type!");
 		return false;
 	}
 
 	if (m_header->header_size != PKG_HEADER_SIZE) {
-		ConLog.Error("PKG: Wrong header size!");
+		LOG_ERROR(LOADER, "PKG: Wrong header size!");
 		return false;
 	}
 
 	if (m_header->pkg_size != pkg_f.Length()) {
-		ConLog.Error("PKG: File size mismatch.");
+		LOG_ERROR(LOADER, "PKG: File size mismatch.");
 		return false;
 	}
 
 	if (m_header->data_size + m_header->data_offset + 0x60 != pkg_f.Length()) {
-		ConLog.Error("PKG: Data size mismatch.");
+		LOG_ERROR(LOADER, "PKG: Data size mismatch.");
 		return false;
 	}
 
@@ -53,7 +53,7 @@ bool LoadHeader(rFile& pkg_f, PKGHeader* m_header)
 	pkg_f.Seek(0);
 	
 	if (pkg_f.Read(m_header, sizeof(PKGHeader)) != sizeof(PKGHeader)) {
-		ConLog.Error("PKG: Package file is too short!");
+		LOG_ERROR(LOADER, "PKG: Package file is too short!");
 		return false;
 	}
 
@@ -141,7 +141,7 @@ bool LoadEntries(rFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
 	dec_pkg_f.Read(m_entries, sizeof(PKGEntry) * m_header->file_count);
 	
 	if (m_entries->name_offset / sizeof(PKGEntry) != m_header->file_count) {
-		ConLog.Error("PKG: Entries are damaged!");
+		LOG_ERROR(LOADER, "PKG: Entries are damaged!");
 		return false;
 	}
 

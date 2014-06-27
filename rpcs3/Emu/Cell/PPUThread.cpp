@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -76,7 +76,7 @@ void PPUThread::InitRegs()
 
 	if(thread_num < 0)
 	{
-		ConLog.Error("GetThreadNumById failed.");
+		LOG_ERROR(PPU, "GetThreadNumById failed.");
 		Emu.Pause();
 		return;
 	}
@@ -87,7 +87,7 @@ void PPUThread::InitRegs()
 
 	if(tls_size >= Emu.GetTLSMemsz())
 	{
-		ConLog.Error("Out of TLS memory.");
+		LOG_ERROR(PPU, "Out of TLS memory.");
 		Emu.Pause();
 		return;
 	}
@@ -163,7 +163,7 @@ void PPUThread::DoRun()
 	break;
 
 	default:
-		ConLog.Error("Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		LOGF_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
 		Emu.Pause();
 	}
 }

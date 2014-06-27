@@ -10,6 +10,7 @@ class MainFrame : public FrameBase
 {
 	DebuggerPanel* m_debugger_frame;
 	GameViewer* m_game_viewer;
+	LogFrame * m_log_frame;
 	wxAuiManager m_aui_mgr;
 	bool m_sys_menu_opened;
 

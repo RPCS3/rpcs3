@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/lv2/SC_Lwmutex.h"
@@ -152,7 +152,7 @@ public:
 
 	virtual void Task()
 	{
-		ConLog.Write("Start dump in thread %d!", (int)id);
+		LOGF_NOTICE(HLE, "Start dump in thread %d!", (int)id);
 		const u32 max_value = prog_dial->GetMaxValue(id);
 		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
@@ -180,14 +180,14 @@ public:
 			}
 		}
 
-		ConLog.Write("Finish dump in thread %d!", (int)id);
+		LOGF_NOTICE(HLE, "Finish dump in thread %d!", (int)id);
 
 		*done = true;
 	}
 
 	void OnExit()
 	{
-		ConLog.Write("CleanUp dump thread (%d)!", (int)id);
+		LOGF_NOTICE(HLE, "CleanUp dump thread (%d)!", (int)id);
 		safe_delete(decoder);
 	}
 };
@@ -223,7 +223,7 @@ struct WaitDumperThread : public ThreadBase
 			while(done[i] == false) Sleep(1);
 		}
 
-		ConLog.Write("Saving dump is started!");
+		LOGF_NOTICE(HLE, "Saving dump is started!");
 		const uint length_for_core = prog_dial.GetMaxValue(0);
 		const uint length = length_for_core * cores;
 		prog_dial.Close();
@@ -266,7 +266,7 @@ struct WaitDumperThread : public ThreadBase
 			fd.Write(wxString::Format("End of section header %d\n\n", sh));
 		}
 		
-		ConLog.Write("CleanUp dump saving!");
+		LOGF_NOTICE(HLE, "CleanUp dump saving!");
 
 		for(uint c=0; c<cores; ++c)
 		{
@@ -298,13 +298,13 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	vfsLocalFile& f_elf = *new vfsLocalFile(nullptr);
 	f_elf.Open(Emu.m_path);
 
-	ConLog.Write("path: %s", Emu.m_path.c_str());
+	LOGF_NOTICE(HLE, "path: %s", Emu.m_path.c_str());
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
 
 	if(!ehdr.CheckMagic())
 	{
-		ConLog.Error("Corrupted ELF!");
+		LOGF_ERROR(HLE, "Corrupted ELF!");
 		return;
 	}
 	std::vector<std::string> name_arr;
@@ -338,7 +338,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		if(l_elf32->shdr_arr.size() <= 0) return;
 	break;
 
-	default: ConLog.Error("Corrupted ELF!"); return;
+	default: LOGF_ERROR(HLE, "Corrupted ELF!"); return;
 	}
 
 	PPCDisAsm* disasm;

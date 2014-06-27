@@ -49,25 +49,25 @@ struct Elf64_Ehdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Magic: %08x",                           e_magic);
-		ConLog.Write("Class: %s",                             "ELF64");
-		ConLog.Write("Data: %s",                              Ehdr_DataToString(e_data).c_str());
-		ConLog.Write("Current Version: %d",                   e_curver);
-		ConLog.Write("OS/ABI: %s",                            Ehdr_OS_ABIToString(e_os_abi).c_str());
-		ConLog.Write("ABI version: %lld",                     e_abi_ver);
-		ConLog.Write("Type: %s",                              Ehdr_TypeToString(e_type).c_str());
-		ConLog.Write("Machine: %s",                           Ehdr_MachineToString(e_machine).c_str());
-		ConLog.Write("Version: %d",                           e_version);
-		ConLog.Write("Entry point address: 0x%08llx",         e_entry);
-		ConLog.Write("Program headers offset: 0x%08llx",      e_phoff);
-		ConLog.Write("Section headers offset: 0x%08llx",      e_shoff);
-		ConLog.Write("Flags: 0x%x",                           e_flags);
-		ConLog.Write("Size of this header: %d",               e_ehsize);
-		ConLog.Write("Size of program headers: %d",           e_phentsize);
-		ConLog.Write("Number of program headers: %d",         e_phnum);
-		ConLog.Write("Size of section headers: %d",           e_shentsize);
-		ConLog.Write("Number of section headers: %d",         e_shnum);
-		ConLog.Write("Section header string table index: %d", e_shstrndx);
+		LOGF_NOTICE(LOADER, "Magic: %08x",                           e_magic);
+		LOGF_NOTICE(LOADER, "Class: %s",                             "ELF64");
+		LOGF_NOTICE(LOADER, "Data: %s",                              Ehdr_DataToString(e_data).c_str());
+		LOGF_NOTICE(LOADER, "Current Version: %d",                   e_curver);
+		LOGF_NOTICE(LOADER, "OS/ABI: %s",                            Ehdr_OS_ABIToString(e_os_abi).c_str());
+		LOGF_NOTICE(LOADER, "ABI version: %lld",                     e_abi_ver);
+		LOGF_NOTICE(LOADER, "Type: %s",                              Ehdr_TypeToString(e_type).c_str());
+		LOGF_NOTICE(LOADER, "Machine: %s",                           Ehdr_MachineToString(e_machine).c_str());
+		LOGF_NOTICE(LOADER, "Version: %d",                           e_version);
+		LOGF_NOTICE(LOADER, "Entry point address: 0x%08llx",         e_entry);
+		LOGF_NOTICE(LOADER, "Program headers offset: 0x%08llx",      e_phoff);
+		LOGF_NOTICE(LOADER, "Section headers offset: 0x%08llx",      e_shoff);
+		LOGF_NOTICE(LOADER, "Flags: 0x%x",                           e_flags);
+		LOGF_NOTICE(LOADER, "Size of this header: %d",               e_ehsize);
+		LOGF_NOTICE(LOADER, "Size of program headers: %d",           e_phentsize);
+		LOGF_NOTICE(LOADER, "Number of program headers: %d",         e_phnum);
+		LOGF_NOTICE(LOADER, "Size of section headers: %d",           e_shentsize);
+		LOGF_NOTICE(LOADER, "Number of section headers: %d",         e_shnum);
+		LOGF_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
 #endif
 	}
 
@@ -105,16 +105,16 @@ struct Elf64_Shdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Name offset: %x",     sh_name);
-		ConLog.Write("Type: %d",            sh_type);
-		ConLog.Write("Addr: %llx",          sh_addr);
-		ConLog.Write("Offset: %llx",        sh_offset);
-		ConLog.Write("Size: %llx",          sh_size);
-		ConLog.Write("EntSize: %lld",       sh_entsize);
-		ConLog.Write("Flags: %llx",         sh_flags);
-		ConLog.Write("Link: %x",            sh_link);
-		ConLog.Write("Info: %x",            sh_info);
-		ConLog.Write("Address align: %llx", sh_addralign);
+		LOGF_NOTICE(LOADER, "Name offset: %x",     sh_name);
+		LOGF_NOTICE(LOADER, "Type: %d",            sh_type);
+		LOGF_NOTICE(LOADER, "Addr: %llx",          sh_addr);
+		LOGF_NOTICE(LOADER, "Offset: %llx",        sh_offset);
+		LOGF_NOTICE(LOADER, "Size: %llx",          sh_size);
+		LOGF_NOTICE(LOADER, "EntSize: %lld",       sh_entsize);
+		LOGF_NOTICE(LOADER, "Flags: %llx",         sh_flags);
+		LOGF_NOTICE(LOADER, "Link: %x",            sh_link);
+		LOGF_NOTICE(LOADER, "Info: %x",            sh_info);
+		LOGF_NOTICE(LOADER, "Address align: %llx", sh_addralign);
 #endif
 	}
 };
@@ -145,14 +145,14 @@ struct Elf64_Phdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		ConLog.Write("Type: %s",                   Phdr_TypeToString(p_type).c_str());
-		ConLog.Write("Offset: 0x%08llx",           p_offset);
-		ConLog.Write("Virtual address: 0x%08llx",  p_vaddr);
-		ConLog.Write("Physical address: 0x%08llx", p_paddr);
-		ConLog.Write("File size: 0x%08llx",        p_filesz);
-		ConLog.Write("Memory size: 0x%08llx",      p_memsz);
-		ConLog.Write("Flags: %s",                  Phdr_FlagsToString(p_flags).c_str());
-		ConLog.Write("Align: 0x%llx",              p_align);
+		LOGF_NOTICE(LOADER, "Type: %s",                   Phdr_TypeToString(p_type).c_str());
+		LOGF_NOTICE(LOADER, "Offset: 0x%08llx",           p_offset);
+		LOGF_NOTICE(LOADER, "Virtual address: 0x%08llx",  p_vaddr);
+		LOGF_NOTICE(LOADER, "Physical address: 0x%08llx", p_paddr);
+		LOGF_NOTICE(LOADER, "File size: 0x%08llx",        p_filesz);
+		LOGF_NOTICE(LOADER, "Memory size: 0x%08llx",      p_memsz);
+		LOGF_NOTICE(LOADER, "Flags: %s",                  Phdr_FlagsToString(p_flags).c_str());
+		LOGF_NOTICE(LOADER, "Align: 0x%llx",              p_align);
 #endif
 	}
 };

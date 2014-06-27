@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -47,7 +47,7 @@ u32 dmuxOpen(Demuxer* data)
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
-		ConLog.Write("Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
+		LOGF_NOTICE(HLE, "Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
 
 		DemuxerTask task;
 		DemuxerStream stream;
@@ -134,7 +134,7 @@ u32 dmuxOpen(Demuxer* data)
 
 						if (!pes.new_au) // temporarily
 						{
-							ConLog.Error("No pts info found");
+							LOGF_ERROR(HLE, "No pts info found");
 						}
 
 						// read additional header:
@@ -149,7 +149,7 @@ u32 dmuxOpen(Demuxer* data)
 							{
 								if (Emu.IsStopped())
 								{
-									ConLog.Warning("esATX[%d] was full, waiting aborted", ch);
+									LOGF_WARNING(HLE, "esATX[%d] was full, waiting aborted", ch);
 									return;
 								}
 								Sleep(1);
@@ -166,7 +166,7 @@ u32 dmuxOpen(Demuxer* data)
 
 							es.push(stream, len - pes.size - 3, pes);
 							es.finish(stream);
-							//ConLog.Write("*** AT3+ AU sent (len=0x%x, pts=0x%llx)", len - pes.size - 3, pes.pts);
+							//LOGF_NOTICE(HLE, "*** AT3+ AU sent (len=0x%x, pts=0x%llx)", len - pes.size - 3, pes.pts);
 							
 							mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
@@ -198,7 +198,7 @@ u32 dmuxOpen(Demuxer* data)
 							{
 								if (Emu.IsStopped())
 								{
-									ConLog.Warning("esAVC[%d] was full, waiting aborted", ch);
+									LOGF_WARNING(HLE, "esAVC[%d] was full, waiting aborted", ch);
 									return;
 								}
 								Sleep(1);
@@ -236,7 +236,7 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.new_au)
 							{
-								//ConLog.Write("*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
+								//LOGF_NOTICE(HLE, "*** AVC AU detected (pts=0x%llx, dts=0x%llx)", pes.pts, pes.dts);
 							}
 
 							if (es.isfull())
@@ -268,7 +268,7 @@ u32 dmuxOpen(Demuxer* data)
 				case 0x1dc: case 0x1dd: case 0x1de: case 0x1df:
 					{
 						// unknown
-						ConLog.Warning("Unknown MPEG stream found");
+						LOGF_WARNING(HLE, "Unknown MPEG stream found");
 						stream.skip(4);
 						stream.get(len);
 						stream.skip(len);
@@ -277,7 +277,7 @@ u32 dmuxOpen(Demuxer* data)
 
 				case USER_DATA_START_CODE:
 					{
-						ConLog.Error("USER_DATA_START_CODE found");
+						LOGF_ERROR(HLE, "USER_DATA_START_CODE found");
 						return;
 					}
 
@@ -304,7 +304,7 @@ u32 dmuxOpen(Demuxer* data)
 				{
 					if (task.stream.discontinuity)
 					{
-						ConLog.Warning("dmuxSetStream (beginning)");
+						LOGF_WARNING(HLE, "dmuxSetStream (beginning)");
 						for (u32 i = 0; i < 192; i++)
 						{
 							if (esALL[i])
@@ -318,13 +318,13 @@ u32 dmuxOpen(Demuxer* data)
 
 					if (updates_count != updates_signaled)
 					{
-						ConLog.Error("dmuxSetStream: stream update inconsistency (input=%d, signaled=%d)", updates_count, updates_signaled);
+						LOGF_ERROR(HLE, "dmuxSetStream: stream update inconsistency (input=%d, signaled=%d)", updates_count, updates_signaled);
 						return;
 					}
 
 					updates_count++;
 					stream = task.stream;
-					//ConLog.Write("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
+					//LOGF_NOTICE(HLE, "*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 						//stream.addr, stream.size, stream.discontinuity, stream.userdata);
 
 					dmux.is_running = true;
@@ -357,7 +357,7 @@ u32 dmuxOpen(Demuxer* data)
 			case dmuxClose:
 				{
 					dmux.is_finished = true;
-					ConLog.Write("Demuxer thread ended");
+					LOGF_NOTICE(HLE, "Demuxer thread ended");
 					return;
 				}
 
@@ -381,7 +381,7 @@ u32 dmuxOpen(Demuxer* data)
 					}
 					else
 					{
-						ConLog.Warning("dmuxEnableEs: (TODO) unsupported filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
+						LOGF_WARNING(HLE, "dmuxEnableEs: (TODO) unsupported filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
 					}
 					es.dmux = &dmux;
 				}
@@ -392,7 +392,7 @@ u32 dmuxOpen(Demuxer* data)
 					ElementaryStream& es = *task.es.es_ptr;
 					if (es.dmux != &dmux)
 					{
-						ConLog.Warning("dmuxDisableEs: invalid elementary stream");
+						LOGF_WARNING(HLE, "dmuxDisableEs: invalid elementary stream");
 						break;
 					}
 					for (u32 i = 0; i < 192; i++)
@@ -450,11 +450,11 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 
 			default:
-				ConLog.Error("Demuxer thread error: unknown task(%d)", task.type);
+				LOGF_ERROR(HLE, "Demuxer thread error: unknown task(%d)", task.type);
 				return;
 			}
 		}
-		ConLog.Warning("Demuxer thread aborted");
+		LOGF_WARNING(HLE, "Demuxer thread aborted");
 	});
 
 	t.detach();
@@ -598,7 +598,7 @@ int cellDmuxClose(u32 demuxerHandle)
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellDmuxClose(%d) aborted", demuxerHandle);
+			LOGF_WARNING(HLE, "cellDmuxClose(%d) aborted", demuxerHandle);
 			return CELL_OK;
 		}
 
@@ -630,7 +630,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
+			LOGF_WARNING(HLE, "cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
 			return CELL_OK;
 		}
 		Sleep(1);
@@ -649,12 +649,12 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	u32 addr;
 	if (!dmux->fbSetStream.Pop(addr))
 	{
-		ConLog.Warning("cellDmuxSetStream(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		LOGF_WARNING(HLE, "cellDmuxSetStream(%d) aborted (fbSetStream.Pop())", demuxerHandle);
 		return CELL_OK;
 	}
 	if (addr != info.addr)
 	{
-		ConLog.Error("cellDmuxSetStream(%d): wrong stream queued (right=0x%x, queued=0x%x)", demuxerHandle, info.addr, addr);
+		LOGF_ERROR(HLE, "cellDmuxSetStream(%d): wrong stream queued (right=0x%x, queued=0x%x)", demuxerHandle, info.addr, addr);
 		Emu.Pause();
 	}
 	return CELL_OK;
@@ -690,12 +690,12 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 	u32 addr;
 	if (!dmux->fbSetStream.Pop(addr))
 	{
-		ConLog.Warning("cellDmuxResetStreamAndWaitDone(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		LOGF_WARNING(HLE, "cellDmuxResetStreamAndWaitDone(%d) aborted (fbSetStream.Pop())", demuxerHandle);
 		return CELL_OK;
 	}
 	if (addr != 0)
 	{
-		ConLog.Error("cellDmuxResetStreamAndWaitDone(%d): wrong stream queued (0x%x)", demuxerHandle, addr);
+		LOGF_ERROR(HLE, "cellDmuxResetStreamAndWaitDone(%d): wrong stream queued (0x%x)", demuxerHandle, addr);
 		Emu.Pause();
 	}
 	return CELL_OK;

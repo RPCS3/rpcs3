@@ -211,7 +211,7 @@ public:
 		if(m_inited) return;
 		m_inited = true;
 
-		ConLog.Write("Initing memory...");
+		LOG_NOTICE(MEMORY, "Initing memory...");
 
 		switch(type)
 		{
@@ -240,7 +240,7 @@ public:
 		break;
 		}
 
-		ConLog.Write("Memory initialized.");
+		LOG_NOTICE(MEMORY, "Memory initialized.");
 	}
 
 	bool IsGoodAddr(const u64 addr)
@@ -271,7 +271,7 @@ public:
 		if(!m_inited) return;
 		m_inited = false;
 
-		ConLog.Write("Closing memory...");
+		LOG_NOTICE(MEMORY, "Closing memory...");
 
 		for (auto block : MemoryBlocks)
 		{
@@ -405,7 +405,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("ReadLeft[%d] from null block (0x%llx)", size, addr);
+			LOGF_ERROR(MEMORY, "ReadLeft[%d] from null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -418,7 +418,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("WriteLeft[%d] to null block (0x%llx)", size, addr);
+			LOGF_ERROR(MEMORY, "WriteLeft[%d] to null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -431,7 +431,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("ReadRight[%d] from null block (0x%llx)", size, addr);
+			LOGF_ERROR(MEMORY, "ReadRight[%d] from null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -444,7 +444,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("WriteRight[%d] to null block (0x%llx)", size, addr);
+			LOGF_ERROR(MEMORY, "WriteRight[%d] to null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -477,7 +477,7 @@ public:
 	{
 		if(!IsGoodAddr(addr, str.length()))
 		{
-			ConLog.Error("Memory::WriteString error: bad address (0x%llx)", addr);
+			LOGF_ERROR(MEMORY,"Memory::WriteString error: bad address (0x%llx)", addr);
 			return;
 		}
 
@@ -527,7 +527,7 @@ public:
 		}
 
 		MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
-		ConLog.Warning("memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
+		LOGF_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
 		return true;
 	}
 

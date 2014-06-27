@@ -584,6 +584,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_PRX.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\Log.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1062,6 +1065,12 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\SC_Process.h">
       <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\MTRingbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Log.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

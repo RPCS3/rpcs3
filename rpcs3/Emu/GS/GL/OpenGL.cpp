@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "OpenGL.h"
 
 void InitProcTable()
 {
 #ifdef _WIN32
 #define OPENGL_PROC(p, n) OPENGL_PROC2(p, n, gl##n)
-#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(gl##n = (p)wglGetProcAddress(#tn))) ConLog.Error("OpenGL: initialization of " #tn " failed.")
+#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(gl##n = (p)wglGetProcAddress(#tn))) LOG_ERROR(RSX, "OpenGL: initialization of " #tn " failed.")
 	#include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
@@ -40,7 +40,7 @@ void OpenGL::Init()
 {
 #ifdef _WIN32
 #define OPENGL_PROC(p, n) OPENGL_PROC2(p, n, gl##n)
-#define OPENGL_PROC2(p, n, tn) if(!(n = (p)wglGetProcAddress(#tn))) ConLog.Error("OpenGL: initialization of " #tn " failed.")
+#define OPENGL_PROC2(p, n, tn) if(!(n = (p)wglGetProcAddress(#tn))) LOG_ERROR(RSX, "OpenGL: initialization of " #tn " failed.")
 	#include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef OPENGL_PROC2

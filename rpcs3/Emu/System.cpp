@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Ini.h"
@@ -31,7 +31,6 @@ ModuleInitializer::ModuleInitializer()
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
-	, m_dbg_console(nullptr)
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
 	, m_event_manager(new EventManager())
@@ -154,17 +153,17 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	ConLog.Write("Loading '%s'...", m_path.c_str());
+	LOGF_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
-	ConLog.SkipLn();
-	ConLog.Write("Mount info:");
+	LOG_NOTICE(LOADER, " "); //used to be skip_line
+	LOG_NOTICE(LOADER, "Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.size(); ++i)
 	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
+		LOGF_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
 	}
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, " ");//used to be skip_line
 
 	if(m_elf_path.empty())
 	{
@@ -175,7 +174,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
+		LOGF_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
 		return;
 	}
 
@@ -208,12 +207,12 @@ void Emulator::Load()
 	}
 	catch(const std::string& e)
 	{
-		ConLog.Error(e);
+		LOG_ERROR(LOADER, e);
 		is_error = true;
 	}
 	catch(...)
 	{
-		ConLog.Error("Unhandled loader error.");
+		LOG_ERROR(LOADER, "Unhandled loader error.");
 		is_error = true;
 	}
 
@@ -228,7 +227,7 @@ void Emulator::Load()
 		case MACHINE_ARM: thread_type = CPU_THREAD_ARMv7; break;
 
 		default:
-			ConLog.Error("Unimplemented thread type for machine.");
+			LOG_ERROR(LOADER, "Unimplemented thread type for machine.");
 			is_error = true;
 		break;
 		}
@@ -248,8 +247,8 @@ void Emulator::Load()
 	switch(l.GetMachine())
 	{
 	case MACHINE_SPU:
-		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
-		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
+		LOGF_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
+		LOGF_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
 		Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
@@ -290,16 +289,6 @@ void Emulator::Load()
 	break;
 	}
 
-	if(!m_dbg_console)
-	{
-		m_dbg_console = new DbgConsole();
-	}
-	else
-	{
-		GetDbgCon().Close();
-		GetDbgCon().Clear();
-	}
-
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 	GetAudioManager().Init();
@@ -313,6 +302,7 @@ void Emulator::Load()
 
 void Emulator::Run()
 {
+
 	if(!IsReady())
 	{
 		Load();
@@ -373,19 +363,19 @@ void Emulator::Stop()
 	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
-	u32 uncounted = 0 + (u32)(bool)m_dbg_console;
+	u32 uncounted = 0;
 	u32 counter = 0;
 	while (true)
 	{
 		if (g_thread_count <= uncounted)
 		{
-			ConLog.Write("All threads stopped...");
+			LOG_NOTICE(HLE, "All threads stopped...");
 			break;
 		}
 		Sleep(1);
 		if (counter++ > 3000)
 		{
-			ConLog.Error("%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));
+			LOGF_ERROR(HLE, "%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));
 			break;
 		}
 	}
@@ -458,7 +448,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		ConLog.Error("'%s' is broken", path.c_str());
+		LOGF_ERROR(LOADER, "'%s' is broken", path.c_str());
 		return;
 	}
 

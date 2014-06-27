@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/ConLog.h"
+#include "Utilities/Log.h"
 #include "Loader.h"
 #include "ELF.h"
 #include "SELF.h"
@@ -142,7 +142,7 @@ bool Loader::Analyze()
 
 	if(!m_loader)
 	{
-		ConLog.Error("Unknown file type");
+		LOG_ERROR(LOADER, "Unknown file type");
 		return false;
 	}
 
@@ -159,7 +159,7 @@ bool Loader::Load()
 
 	if(!m_loader->LoadData(m_loader->GetMachine() == MACHINE_SPU ? g_spu_offset : 0))
 	{
-		ConLog.Error("Broken file");
+		LOG_ERROR(LOADER, "Broken file");
 		return false;
 	}
 
