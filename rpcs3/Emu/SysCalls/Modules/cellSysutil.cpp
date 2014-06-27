@@ -919,22 +919,24 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	return CELL_OK;
 }
 
-bool bgm_playback_enabled = false;
+bool bgm_playback_enabled = true;
 
 int cellSysutilEnableBgmPlayback()
 {
 	cellSysutil->Warning("cellSysutilEnableBgmPlayback()");
 
+	// TODO
 	bgm_playback_enabled = true;
 
 	return CELL_OK;
 }
 
-int cellSysutilEnableBgmPlaybackEx()
+int cellSysutilEnableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx()");
+	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
 
-	bgm_playback_enabled = true;
+	// TODO
+	bgm_playback_enabled = true; 
 
 	return CELL_OK;
 }
@@ -943,42 +945,43 @@ int cellSysutilDisableBgmPlayback()
 {
 	cellSysutil->Warning("cellSysutilDisableBgmPlayback()");
 
+	// TODO
 	bgm_playback_enabled = false;
 
 	return CELL_OK;
 }
 
-int cellSysutilDisableBgmPlaybackEx()
+int cellSysutilDisableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx()");
-
-	bgm_playback_enabled = false;
-
-	return CELL_OK;
-}
-
-int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
-{
-	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus(status=0x%x)", status.GetAddr());
+	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
 
 	// TODO
-	status->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
-	status->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
-	status->fadeRatio = 0; // volume ratio
+	bgm_playback_enabled = false;
+
+	return CELL_OK;
+}
+
+int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellSysutilBgmPlaybackStatus> status)
+{
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.GetAddr());
+
+	// TODO
+	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	status->enableState = bgm_playback_enabled ? CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE : CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
+	status->currentFadeRatio = 0; // current volume ratio (0%)
 	memset(status->contentId, 0, sizeof(status->contentId));
+	memset(status->reserved, 0, sizeof(status->reserved));
 
 	return CELL_OK;
 }
 
-int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellBgmPlaybackStatus> status2)
+int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus2(status=0x%x)", status2.GetAddr());
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.GetAddr());
 
 	// TODO
-	status2->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
-	status2->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
-	status2->fadeRatio = 0; // volume ratio
-	memset(status2->contentId, 0, sizeof(status2->contentId));
+	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	memset(status2->reserved, 0, sizeof(status2->reserved));
 
 	return CELL_OK;
 }

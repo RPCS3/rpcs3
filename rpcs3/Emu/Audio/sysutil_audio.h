@@ -257,23 +257,38 @@ struct CellAudioInDeviceConfiguration
 	u8 reserved[31];
 };
 
-enum CellBgmPlaybackStatusState
+enum CellSysutilBgmPlaybackStatusState
 {
-	CELL_BGMPLAYBACK_STATUS_PLAY = 0,
-	CELL_BGMPLAYBACK_STATUS_STOP = 1
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_PLAY = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP = 1
 };
 
-enum CellBgmPlaybackStatusEnabled
+enum CellSysutilBgmPlaybackStatusEnabled
 {
-	CELL_BGMPLAYBACK_STATUS_ENABLE = 0,
-	CELL_BGMPLAYBACK_STATUS_DISABLE = 1
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE = 1
 };
 
-struct CellBgmPlaybackStatus
+struct CellSysutilBgmPlaybackStatus
 {
-	u8 playbackState;
-	u8 enabled;
+	u8 playerState;
+	u8 enableState;
 	char contentId[16];
-	u8 fadeRatio;
+	u8 currentFadeRatio;
 	char reserved[13];
+};
+
+struct CellSysutilBgmPlaybackStatus2
+{
+	u8 playerState;
+	char reserved[7];
+};
+
+struct CellSysutilBgmPlaybackExtraParam
+{
+	be_t<s32> systemBgmFadeInTime;
+	be_t<s32> systemBgmFadeOutTime;
+	be_t<s32> gameBgmFadeInTime;
+	be_t<s32> gameBgmFadeOutTime;
+	char reserved[8];
 };
