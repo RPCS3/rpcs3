@@ -82,7 +82,7 @@ void FnIdGenerator::PrintId()
 		m_func_name.push_back(func_name);
 		m_func_id.push_back(result);
 
-		LOGF_NOTICE(HLE, "Function: %s, Id: 0x%08x ", func_name.c_str(), result);
+		LOG_NOTICE(HLE, "Function: %s, Id: 0x%08x ", func_name.c_str(), result);
 		UpdateInformation();
 	}
 

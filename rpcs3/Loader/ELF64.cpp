@@ -104,13 +104,13 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 	if(ehdr.e_phentsize != sizeof(Elf64_Phdr))
 	{
-		LOGF_ERROR(LOADER, "elf64 error:  e_phentsize[0x%x] != sizeof(Elf64_Phdr)[0x%x]", ehdr.e_phentsize, sizeof(Elf64_Phdr));
+		LOG_ERROR(LOADER, "elf64 error:  e_phentsize[0x%x] != sizeof(Elf64_Phdr)[0x%x]", ehdr.e_phentsize, sizeof(Elf64_Phdr));
 		return false;
 	}
 
 	if(ehdr.e_shentsize != sizeof(Elf64_Shdr))
 	{
-		LOGF_ERROR(LOADER, "elf64 error: e_shentsize[0x%x] != sizeof(Elf64_Shdr)[0x%x]", ehdr.e_shentsize, sizeof(Elf64_Shdr));
+		LOG_ERROR(LOADER, "elf64 error: e_shentsize[0x%x] != sizeof(Elf64_Shdr)[0x%x]", ehdr.e_shentsize, sizeof(Elf64_Shdr));
 		return false;
 	}
 
@@ -123,7 +123,7 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 	default:
 		machine = MACHINE_Unknown;
-		LOGF_ERROR(LOADER, "Unknown elf64 type: 0x%x", ehdr.e_machine);
+		LOG_ERROR(LOADER, "Unknown elf64 type: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
@@ -226,7 +226,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 		if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 		{
-			LOGF_WARNING
+			LOG_WARNING
 			(
 				LOADER,
 				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
@@ -271,12 +271,12 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 				if(re(proc_param.size) < sizeof(sys_process_param))
 				{
-					LOGF_WARNING(LOADER, "Bad proc param size! [0x%x : 0x%x]", re(proc_param.size), sizeof(sys_process_param));
+					LOG_WARNING(LOADER, "Bad proc param size! [0x%x : 0x%x]", re(proc_param.size), sizeof(sys_process_param));
 				}
 	
 				if(re(proc_param.magic) != 0x13bcc5f6)
 				{
-					LOGF_ERROR(LOADER, "Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
+					LOG_ERROR(LOADER, "Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
 				}
 				else
 				{
@@ -288,12 +288,12 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					info.ppc_seg = re(proc_param.info.ppc_seg);
 					//info.crash_dump_param_addr = re(proc_param.info.crash_dump_param_addr);
 #ifdef LOADER_DEBUG
-					LOGF_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
-					LOGF_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
-					LOGF_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
-					LOGF_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
-					LOGF_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
-					//LOGF_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
+					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
+					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
+					LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
+					LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
+					LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
+					//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 #endif
 				}
 			}
@@ -315,19 +315,19 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				proc_prx_param.ver = re(proc_prx_param.ver);
 
 #ifdef LOADER_DEBUG
-				LOGF_NOTICE(LOADER, "*** size: 0x%x", proc_prx_param.size);
-				LOGF_NOTICE(LOADER, "*** magic: 0x%x", proc_prx_param.magic);
-				LOGF_NOTICE(LOADER, "*** version: 0x%x", proc_prx_param.version);
-				LOGF_NOTICE(LOADER, "*** libentstart: 0x%x", proc_prx_param.libentstart);
-				LOGF_NOTICE(LOADER, "*** libentend: 0x%x", proc_prx_param.libentend);
-				LOGF_NOTICE(LOADER, "*** libstubstart: 0x%x", proc_prx_param.libstubstart);
-				LOGF_NOTICE(LOADER, "*** libstubend: 0x%x", proc_prx_param.libstubend);
-				LOGF_NOTICE(LOADER, "*** ver: 0x%x", proc_prx_param.ver);
+				LOG_NOTICE(LOADER, "*** size: 0x%x", proc_prx_param.size);
+				LOG_NOTICE(LOADER, "*** magic: 0x%x", proc_prx_param.magic);
+				LOG_NOTICE(LOADER, "*** version: 0x%x", proc_prx_param.version);
+				LOG_NOTICE(LOADER, "*** libentstart: 0x%x", proc_prx_param.libentstart);
+				LOG_NOTICE(LOADER, "*** libentend: 0x%x", proc_prx_param.libentend);
+				LOG_NOTICE(LOADER, "*** libstubstart: 0x%x", proc_prx_param.libstubstart);
+				LOG_NOTICE(LOADER, "*** libstubend: 0x%x", proc_prx_param.libstubend);
+				LOG_NOTICE(LOADER, "*** ver: 0x%x", proc_prx_param.ver);
 #endif
 
 				if(proc_prx_param.magic != 0x1b434cec)
 				{
-					LOGF_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic);
+					LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic);
 				}
 				else
 				{
@@ -352,19 +352,19 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						}
 						else
 						{
-							LOGF_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
+							LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 						}
 
 #ifdef LOADER_DEBUG
 						LOG_NOTICE(LOADER, "");
-						LOGF_NOTICE(LOADER, "*** size: 0x%x", stub.s_size);
-						LOGF_NOTICE(LOADER, "*** version: 0x%x", stub.s_version);
-						LOGF_NOTICE(LOADER, "*** unk0: 0x%x", stub.s_unk0);
-						LOGF_NOTICE(LOADER, "*** unk1: 0x%x", stub.s_unk1);
-						LOGF_NOTICE(LOADER, "*** imports: %d", stub.s_imports);
-						LOGF_NOTICE(LOADER, "*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename);
-						LOGF_NOTICE(LOADER, "*** nid: 0x%x", stub.s_nid);
-						LOGF_NOTICE(LOADER, "*** text: 0x%x", stub.s_text);
+						LOG_NOTICE(LOADER, "*** size: 0x%x", stub.s_size);
+						LOG_NOTICE(LOADER, "*** version: 0x%x", stub.s_version);
+						LOG_NOTICE(LOADER, "*** unk0: 0x%x", stub.s_unk0);
+						LOG_NOTICE(LOADER, "*** unk1: 0x%x", stub.s_unk1);
+						LOG_NOTICE(LOADER, "*** imports: %d", stub.s_imports);
+						LOG_NOTICE(LOADER, "*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename);
+						LOG_NOTICE(LOADER, "*** nid: 0x%x", stub.s_nid);
+						LOG_NOTICE(LOADER, "*** text: 0x%x", stub.s_text);
 #endif
 						static const u32 section = 4 * 3;
 						u64 tbl = Memory.MainMem.AllocAlign(stub.s_imports * 4 * 2);
@@ -379,13 +379,13 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 							{
 								if(!module->Load(nid))
 								{
-									LOGF_WARNING(LOADER, "Unimplemented function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+									LOG_WARNING(LOADER, "Unimplemented function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
 								}
 							}
 #ifdef LOADER_DEBUG
-							LOGF_NOTICE(LOADER, "import %d:", i+1);
-							LOGF_NOTICE(LOADER, "*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
-							LOGF_NOTICE(LOADER, "*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
+							LOG_NOTICE(LOADER, "import %d:", i+1);
+							LOG_NOTICE(LOADER, "*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
+							LOG_NOTICE(LOADER, "*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
 #endif
 							Memory.Write32(stub.s_text + i*4, tbl + i*8);
 
@@ -407,7 +407,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 			break;
 		}
 #ifdef LOADER_DEBUG
-		LOGF_NOTICE(LOADER, " ");
+		LOG_NOTICE(LOADER, " ");
 #endif
 	}
 
@@ -425,13 +425,13 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 		if(i < shdr_name_arr.size())
 		{
 #ifdef LOADER_DEBUG
-			LOGF_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
+			LOG_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
 #endif
 		}
 
 #ifdef LOADER_DEBUG
 		shdr.Show();
-		LOGF_NOTICE(LOADER, " ");
+		LOG_NOTICE(LOADER, " ");
 #endif
 		if(shdr.sh_addr + shdr.sh_size > max_addr) max_addr = shdr.sh_addr + shdr.sh_size;
 

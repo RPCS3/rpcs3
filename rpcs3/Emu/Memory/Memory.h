@@ -405,7 +405,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			LOGF_ERROR(MEMORY, "ReadLeft[%d] from null block (0x%llx)", size, addr);
+			LOG_ERROR(MEMORY, "ReadLeft[%d] from null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -418,7 +418,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			LOGF_ERROR(MEMORY, "WriteLeft[%d] to null block (0x%llx)", size, addr);
+			LOG_ERROR(MEMORY, "WriteLeft[%d] to null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -431,7 +431,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			LOGF_ERROR(MEMORY, "ReadRight[%d] from null block (0x%llx)", size, addr);
+			LOG_ERROR(MEMORY, "ReadRight[%d] from null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -444,7 +444,7 @@ public:
 
 		if(mem.IsNULL())
 		{
-			LOGF_ERROR(MEMORY, "WriteRight[%d] to null block (0x%llx)", size, addr);
+			LOG_ERROR(MEMORY, "WriteRight[%d] to null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -477,7 +477,7 @@ public:
 	{
 		if(!IsGoodAddr(addr, str.length()))
 		{
-			LOGF_ERROR(MEMORY,"Memory::WriteString error: bad address (0x%llx)", addr);
+			LOG_ERROR(MEMORY,"Memory::WriteString error: bad address (0x%llx)", addr);
 			return;
 		}
 
@@ -527,7 +527,7 @@ public:
 		}
 
 		MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
-		LOGF_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
+		LOG_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
 		return true;
 	}
 

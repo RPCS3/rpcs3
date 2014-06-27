@@ -106,7 +106,7 @@ bool ELF32Loader::LoadEhdrInfo()
 
 	default:
 		machine = MACHINE_Unknown;
-		LOGF_ERROR(LOADER, "Unknown elf32 machine: 0x%x", ehdr.e_machine);
+		LOG_ERROR(LOADER, "Unknown elf32 machine: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
@@ -149,7 +149,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
 			{
 				entry += phdr_arr[i].p_vaddr;
-				LOGF_WARNING(LOADER, "virtual entry = 0x%x", entry);
+				LOG_WARNING(LOADER, "virtual entry = 0x%x", entry);
 				break;
 			}
 		}
@@ -226,7 +226,7 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 			{
-				LOGF_WARNING
+				LOG_WARNING
 				(
 					LOADER, 
 					"LoadPhdr32 different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
@@ -256,19 +256,19 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(note.type != 1)
 			{
-				LOGF_ERROR(LOADER, "ELF32: Bad NOTE type (%d)", note.type);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE type (%d)", note.type);
 				break;
 			}
 
 			if(note.namesz != sizeof(note.name))
 			{
-				LOGF_ERROR(LOADER, "ELF32: Bad NOTE namesz (%d)", note.namesz);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE namesz (%d)", note.namesz);
 				break;
 			}
 
 			if(note.descsz != sizeof(note.desc) && note.descsz != 32)
 			{
-				LOGF_ERROR(LOADER, "ELF32: Bad NOTE descsz (%d)", note.descsz);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE descsz (%d)", note.descsz);
 				break;
 			}
 
@@ -280,13 +280,13 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(note.descsz == sizeof(note.desc))
 			{
-				LOGF_WARNING(LOADER, "name = %s", std::string((const char *)note.name, 8).c_str());
-				LOGF_WARNING(LOADER, "ls_size = %d", note.desc.ls_size);
-				LOGF_WARNING(LOADER, "stack_size = %d", note.desc.stack_size);
+				LOG_WARNING(LOADER, "name = %s", std::string((const char *)note.name, 8).c_str());
+				LOG_WARNING(LOADER, "ls_size = %d", note.desc.ls_size);
+				LOG_WARNING(LOADER, "stack_size = %d", note.desc.stack_size);
 			}
 			else
 			{
-				LOGF_WARNING(LOADER, "desc = '%s'", std::string(note.desc_text, 32).c_str());
+				LOG_WARNING(LOADER, "desc = '%s'", std::string(note.desc_text, 32).c_str());
 			}
 		}
 #ifdef LOADER_DEBUG
@@ -304,7 +304,7 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		Elf32_Shdr& shdr = shdr_arr[i];
 
 #ifdef LOADER_DEBUG
-		if(i < shdr_name_arr.size()) LOGF_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
+		if(i < shdr_name_arr.size()) LOG_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
 		shdr.Show();
 		LOG_NOTICE(LOADER, "");
 #endif

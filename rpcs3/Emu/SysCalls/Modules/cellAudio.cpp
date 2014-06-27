@@ -50,11 +50,11 @@ int cellAudioInit()
 		
 			if (do_dump && !m_dump.Init())
 			{
-				LOGF_ERROR(HLE, "cellAudioInit(): AudioDumper::Init() failed");
+				LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::Init() failed");
 				return;
 			}
 
-			LOGF_NOTICE(HLE, "Audio thread started");
+			LOG_NOTICE(HLE, "Audio thread started");
 
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
@@ -146,7 +146,7 @@ int cellAudioInit()
 			{
 				if (Emu.IsStopped())
 				{
-					LOGF_WARNING(HLE, "Audio thread aborted");
+					LOG_WARNING(HLE, "Audio thread aborted");
 					goto abort;
 				}
 
@@ -426,7 +426,7 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data
 						{
-							LOGF_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
+							LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
@@ -434,21 +434,21 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data
 						{
-							LOGF_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
+							LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
 					else
 					{
-						LOGF_ERROR(HLE, "cellAudioInit(): unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
+						LOG_ERROR(HLE, "cellAudioInit(): unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
 						goto abort;
 					}
 				}
 
-				//LOGF_NOTICE(HLE, "Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
+				//LOG_NOTICE(HLE, "Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
 					//stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 			}
-			LOGF_NOTICE(HLE, "Audio thread ended");
+			LOG_NOTICE(HLE, "Audio thread ended");
 abort:
 			queue.Push(nullptr);
 			queue_float.Push(nullptr);
@@ -480,7 +480,7 @@ abort:
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellAudioInit() aborted");
+			LOG_WARNING(HLE, "cellAudioInit() aborted");
 			return CELL_OK;
 		}
 		Sleep(1);
@@ -505,7 +505,7 @@ int cellAudioQuit()
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "cellAudioQuit(): aborted");
+			LOG_WARNING(HLE, "cellAudioQuit(): aborted");
 			return CELL_OK;
 		}
 	}

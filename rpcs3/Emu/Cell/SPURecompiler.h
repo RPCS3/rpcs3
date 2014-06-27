@@ -3845,7 +3845,7 @@ private:
 
 	void UNK(const std::string& err)
 	{
-		LOGF_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOG_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 		Emu.Pause();

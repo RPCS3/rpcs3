@@ -17,7 +17,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	// Check SCE magic.
 	if (!sce_hdr.CheckMagic())
 	{
-		LOGF_ERROR(LOADER, "SELF: Not a SELF file!");
+		LOG_ERROR(LOADER, "SELF: Not a SELF file!");
 		return false;
 	}
 
@@ -41,7 +41,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		phdr32_arr.clear();
 		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
-			LOGF_ERROR(LOADER, "SELF: ELF program header offset is null!");
+			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
 			return false;
 		}
 		self_f.Seek(self_hdr.se_phdroff);
@@ -56,7 +56,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		phdr64_arr.clear();
 		if(elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
-			LOGF_ERROR(LOADER, "SELF: ELF program header offset is null!");
+			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
 			return false;
 		}
 		self_f.Seek(self_hdr.se_phdroff);
@@ -101,7 +101,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		shdr32_arr.clear();
 		if(elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
-			LOGF_WARNING(LOADER, "SELF: ELF section header offset is null!");
+			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
 		self_f.Seek(self_hdr.se_shdroff);
@@ -116,7 +116,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		shdr64_arr.clear();
 		if(elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
-			LOGF_WARNING(LOADER, "SELF: ELF section header offset is null!");
+			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
 		self_f.Seek(self_hdr.se_shdroff);
@@ -132,46 +132,46 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 
 void SELFDecrypter::ShowHeaders(bool isElf32)
 {
-	LOGF_NOTICE(LOADER, "SCE header");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SCE header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	sce_hdr.Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "SELF header");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SELF header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	self_hdr.Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "APP INFO");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "APP INFO");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	app_info.Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "ELF header");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	isElf32 ? elf32_hdr.Show() : elf64_hdr.Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "ELF program headers");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF program headers");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
 		isElf32 ? phdr32_arr[i].Show() : phdr64_arr[i].Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "Section info");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "Section info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	for(unsigned int i = 0; i < secinfo_arr.size(); i++)
 		secinfo_arr[i].Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "SCE version info");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SCE version info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	scev_info.Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "Control info");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "Control info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 		ctrlinfo_arr[i].Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
-	LOGF_NOTICE(LOADER, "ELF section headers");
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF section headers");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
 		isElf32 ? shdr32_arr[i].Show() : shdr64_arr[i].Show();
-	LOGF_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 }
 
 bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
@@ -195,7 +195,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		LOGF_WARNING(LOADER, "SELF: No NPDRM control info found!");
+		LOG_WARNING(LOADER, "SELF: No NPDRM control info found!");
 		return true;
 	}
 
@@ -208,7 +208,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
-		LOGF_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
+		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
 		return false;
 	}
 	else if (ctrl->npdrm.license == 2)  // Local license.
@@ -216,7 +216,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		// Try to find a RAP file to get the key.
 		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
 		{
-			LOGF_ERROR(LOADER, "SELF: Can't find RAP file for NPDRM decryption!");
+			LOG_ERROR(LOADER, "SELF: Can't find RAP file for NPDRM decryption!");
 			return false;
 		}
 	}
@@ -227,7 +227,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	}
 	else
 	{
-		LOGF_ERROR(LOADER, "SELF: Invalid NPDRM license type!");
+		LOG_ERROR(LOADER, "SELF: Invalid NPDRM license type!");
 		return false;
 	}
 
@@ -290,7 +290,7 @@ bool SELFDecrypter::LoadMetadata()
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		LOGF_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
+		LOG_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
 		return false;
 	}
 
@@ -392,7 +392,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 	rFile e(elf.c_str(), rFile::write);
 	if(!e.IsOpened())
 	{
-		LOGF_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
+		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 		return false;
 	}
 
@@ -510,7 +510,7 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	// Check if we have a valid RAP file.
 	if (!rFile::Exists(rap_path))
 	{
-		LOGF_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
+		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
@@ -519,11 +519,11 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 
 	if (!rap_file.IsOpened())
 	{
-		LOGF_ERROR(LOADER, "Failed to load RAP file!");
+		LOG_ERROR(LOADER, "Failed to load RAP file!");
 		return false;
 	}
 
-	LOGF_NOTICE(LOADER, "Loading RAP file %s", (ci_str + ".rap").c_str());
+	LOG_NOTICE(LOADER, "Loading RAP file %s", (ci_str + ".rap").c_str());
 	rap_file.Read(rap_key, 0x10);
 	rap_file.Close();
 
@@ -573,7 +573,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 	if(!s.IsOpened())
 	{
-		LOGF_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
+		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
@@ -585,7 +585,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	// Check for DEBUG version.
 	if(swap16(key_version) == 0x8000)
 	{
-		LOGF_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
+		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
 		s.Seek(0x10);
@@ -600,7 +600,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		rFile e(elf, rFile::write);
 		if(!e.IsOpened())
 		{
-			LOGF_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
+			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 			return false;
 		}
 
@@ -640,28 +640,28 @@ bool DecryptSelf(const std::string& elf, const std::string& self)
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32))
 		{
-			LOGF_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
 			return false;
 		}
 		
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata())
 		{
-			LOGF_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
 			return false;
 		}
 		
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
-			LOGF_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
+			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
 			return false;
 		}
 		
 		// Make a new ELF file from this SELF.
 		if (!self_dec.MakeElf(elf, isElf32))
 		{
-			LOGF_ERROR(LOADER, "SELF: Failed to make ELF file from SELF!");
+			LOG_ERROR(LOADER, "SELF: Failed to make ELF file from SELF!");
 			return false;
 		}
 	}

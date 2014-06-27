@@ -52,13 +52,13 @@ u32 GLProgramBuffer::GetProg(u32 fp, u32 vp) const
 	if(fp == vp)
 	{
 		/*
-		LOGF_NOTICE(RSX, "Get program (%d):", fp);
-		LOGF_NOTICE(RSX, "*** prog id = %d", m_buf[fp].prog_id);
-		LOGF_NOTICE(RSX, "*** vp id = %d", m_buf[fp].vp_id);
-		LOGF_NOTICE(RSX, "*** fp id = %d", m_buf[fp].fp_id);
+		LOG_NOTICE(RSX, "Get program (%d):", fp);
+		LOG_NOTICE(RSX, "*** prog id = %d", m_buf[fp].prog_id);
+		LOG_NOTICE(RSX, "*** vp id = %d", m_buf[fp].vp_id);
+		LOG_NOTICE(RSX, "*** fp id = %d", m_buf[fp].fp_id);
 
-		LOGF_NOTICE(RSX, "*** vp shader = \n%s", m_buf[fp].vp_shader.wx_str());
-		LOGF_NOTICE(RSX, "*** fp shader = \n%s", m_buf[fp].fp_shader.wx_str());
+		LOG_NOTICE(RSX, "*** vp shader = \n%s", m_buf[fp].vp_shader.wx_str());
+		LOG_NOTICE(RSX, "*** fp shader = \n%s", m_buf[fp].fp_shader.wx_str());
 		*/
 		return m_buf[fp].prog_id;
 	}
@@ -70,13 +70,13 @@ u32 GLProgramBuffer::GetProg(u32 fp, u32 vp) const
 		if(CmpVP(vp, i) && CmpFP(fp, i))
 		{
 			/*
-			LOGF_NOTICE(RSX, "Get program (%d):", i);
-			LOGF_NOTICE(RSX, "*** prog id = %d", m_buf[i].prog_id);
-			LOGF_NOTICE(RSX, "*** vp id = %d", m_buf[i].vp_id);
-			LOGF_NOTICE(RSX, "*** fp id = %d", m_buf[i].fp_id);
+			LOG_NOTICE(RSX, "Get program (%d):", i);
+			LOG_NOTICE(RSX, "*** prog id = %d", m_buf[i].prog_id);
+			LOG_NOTICE(RSX, "*** vp id = %d", m_buf[i].vp_id);
+			LOG_NOTICE(RSX, "*** fp id = %d", m_buf[i].fp_id);
 
-			LOGF_NOTICE(RSX, "*** vp shader = \n%s", m_buf[i].vp_shader.wx_str());
-			LOGF_NOTICE(RSX, "*** fp shader = \n%s", m_buf[i].fp_shader.wx_str());
+			LOG_NOTICE(RSX, "*** vp shader = \n%s", m_buf[i].vp_shader.wx_str());
+			LOG_NOTICE(RSX, "*** fp shader = \n%s", m_buf[i].fp_shader.wx_str());
 			*/
 			return m_buf[i].prog_id;
 		}
@@ -89,15 +89,15 @@ void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProg
 {
 	GLBufferInfo new_buf;
 
-	LOGF_NOTICE(RSX, "Add program (%d):", m_buf.size());
-	LOGF_NOTICE(RSX, "*** prog id = %d", prog.id);
-	LOGF_NOTICE(RSX, "*** vp id = %d", gl_vp.id);
-	LOGF_NOTICE(RSX, "*** fp id = %d", gl_fp.GetId());
-	LOGF_NOTICE(RSX, "*** vp data size = %d", rsx_vp.data.size() * 4);
-	LOGF_NOTICE(RSX, "*** fp data size = %d", rsx_fp.size);
+	LOG_NOTICE(RSX, "Add program (%d):", m_buf.size());
+	LOG_NOTICE(RSX, "*** prog id = %d", prog.id);
+	LOG_NOTICE(RSX, "*** vp id = %d", gl_vp.id);
+	LOG_NOTICE(RSX, "*** fp id = %d", gl_fp.GetId());
+	LOG_NOTICE(RSX, "*** vp data size = %d", rsx_vp.data.size() * 4);
+	LOG_NOTICE(RSX, "*** fp data size = %d", rsx_fp.size);
 
-	LOGF_NOTICE(RSX, "*** vp shader = \n%s", gl_vp.shader.c_str());
-	LOGF_NOTICE(RSX, "*** fp shader = \n%s", gl_fp.GetShaderText().c_str());
+	LOG_NOTICE(RSX, "*** vp shader = \n%s", gl_vp.shader.c_str());
+	LOG_NOTICE(RSX, "*** fp shader = \n%s", gl_fp.GetShaderText().c_str());
 	
 
 	new_buf.prog_id = prog.id;

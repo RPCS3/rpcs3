@@ -49,25 +49,25 @@ struct Elf64_Ehdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		LOGF_NOTICE(LOADER, "Magic: %08x",                           e_magic);
-		LOGF_NOTICE(LOADER, "Class: %s",                             "ELF64");
-		LOGF_NOTICE(LOADER, "Data: %s",                              Ehdr_DataToString(e_data).c_str());
-		LOGF_NOTICE(LOADER, "Current Version: %d",                   e_curver);
-		LOGF_NOTICE(LOADER, "OS/ABI: %s",                            Ehdr_OS_ABIToString(e_os_abi).c_str());
-		LOGF_NOTICE(LOADER, "ABI version: %lld",                     e_abi_ver);
-		LOGF_NOTICE(LOADER, "Type: %s",                              Ehdr_TypeToString(e_type).c_str());
-		LOGF_NOTICE(LOADER, "Machine: %s",                           Ehdr_MachineToString(e_machine).c_str());
-		LOGF_NOTICE(LOADER, "Version: %d",                           e_version);
-		LOGF_NOTICE(LOADER, "Entry point address: 0x%08llx",         e_entry);
-		LOGF_NOTICE(LOADER, "Program headers offset: 0x%08llx",      e_phoff);
-		LOGF_NOTICE(LOADER, "Section headers offset: 0x%08llx",      e_shoff);
-		LOGF_NOTICE(LOADER, "Flags: 0x%x",                           e_flags);
-		LOGF_NOTICE(LOADER, "Size of this header: %d",               e_ehsize);
-		LOGF_NOTICE(LOADER, "Size of program headers: %d",           e_phentsize);
-		LOGF_NOTICE(LOADER, "Number of program headers: %d",         e_phnum);
-		LOGF_NOTICE(LOADER, "Size of section headers: %d",           e_shentsize);
-		LOGF_NOTICE(LOADER, "Number of section headers: %d",         e_shnum);
-		LOGF_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
+		LOG_NOTICE(LOADER, "Magic: %08x",                           e_magic);
+		LOG_NOTICE(LOADER, "Class: %s",                             "ELF64");
+		LOG_NOTICE(LOADER, "Data: %s",                              Ehdr_DataToString(e_data).c_str());
+		LOG_NOTICE(LOADER, "Current Version: %d",                   e_curver);
+		LOG_NOTICE(LOADER, "OS/ABI: %s",                            Ehdr_OS_ABIToString(e_os_abi).c_str());
+		LOG_NOTICE(LOADER, "ABI version: %lld",                     e_abi_ver);
+		LOG_NOTICE(LOADER, "Type: %s",                              Ehdr_TypeToString(e_type).c_str());
+		LOG_NOTICE(LOADER, "Machine: %s",                           Ehdr_MachineToString(e_machine).c_str());
+		LOG_NOTICE(LOADER, "Version: %d",                           e_version);
+		LOG_NOTICE(LOADER, "Entry point address: 0x%08llx",         e_entry);
+		LOG_NOTICE(LOADER, "Program headers offset: 0x%08llx",      e_phoff);
+		LOG_NOTICE(LOADER, "Section headers offset: 0x%08llx",      e_shoff);
+		LOG_NOTICE(LOADER, "Flags: 0x%x",                           e_flags);
+		LOG_NOTICE(LOADER, "Size of this header: %d",               e_ehsize);
+		LOG_NOTICE(LOADER, "Size of program headers: %d",           e_phentsize);
+		LOG_NOTICE(LOADER, "Number of program headers: %d",         e_phnum);
+		LOG_NOTICE(LOADER, "Size of section headers: %d",           e_shentsize);
+		LOG_NOTICE(LOADER, "Number of section headers: %d",         e_shnum);
+		LOG_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
 #endif
 	}
 
@@ -105,16 +105,16 @@ struct Elf64_Shdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		LOGF_NOTICE(LOADER, "Name offset: %x",     sh_name);
-		LOGF_NOTICE(LOADER, "Type: %d",            sh_type);
-		LOGF_NOTICE(LOADER, "Addr: %llx",          sh_addr);
-		LOGF_NOTICE(LOADER, "Offset: %llx",        sh_offset);
-		LOGF_NOTICE(LOADER, "Size: %llx",          sh_size);
-		LOGF_NOTICE(LOADER, "EntSize: %lld",       sh_entsize);
-		LOGF_NOTICE(LOADER, "Flags: %llx",         sh_flags);
-		LOGF_NOTICE(LOADER, "Link: %x",            sh_link);
-		LOGF_NOTICE(LOADER, "Info: %x",            sh_info);
-		LOGF_NOTICE(LOADER, "Address align: %llx", sh_addralign);
+		LOG_NOTICE(LOADER, "Name offset: %x",     sh_name);
+		LOG_NOTICE(LOADER, "Type: %d",            sh_type);
+		LOG_NOTICE(LOADER, "Addr: %llx",          sh_addr);
+		LOG_NOTICE(LOADER, "Offset: %llx",        sh_offset);
+		LOG_NOTICE(LOADER, "Size: %llx",          sh_size);
+		LOG_NOTICE(LOADER, "EntSize: %lld",       sh_entsize);
+		LOG_NOTICE(LOADER, "Flags: %llx",         sh_flags);
+		LOG_NOTICE(LOADER, "Link: %x",            sh_link);
+		LOG_NOTICE(LOADER, "Info: %x",            sh_info);
+		LOG_NOTICE(LOADER, "Address align: %llx", sh_addralign);
 #endif
 	}
 };
@@ -145,14 +145,14 @@ struct Elf64_Phdr
 	void Show()
 	{
 #ifdef LOADER_DEBUG
-		LOGF_NOTICE(LOADER, "Type: %s",                   Phdr_TypeToString(p_type).c_str());
-		LOGF_NOTICE(LOADER, "Offset: 0x%08llx",           p_offset);
-		LOGF_NOTICE(LOADER, "Virtual address: 0x%08llx",  p_vaddr);
-		LOGF_NOTICE(LOADER, "Physical address: 0x%08llx", p_paddr);
-		LOGF_NOTICE(LOADER, "File size: 0x%08llx",        p_filesz);
-		LOGF_NOTICE(LOADER, "Memory size: 0x%08llx",      p_memsz);
-		LOGF_NOTICE(LOADER, "Flags: %s",                  Phdr_FlagsToString(p_flags).c_str());
-		LOGF_NOTICE(LOADER, "Align: 0x%llx",              p_align);
+		LOG_NOTICE(LOADER, "Type: %s",                   Phdr_TypeToString(p_type).c_str());
+		LOG_NOTICE(LOADER, "Offset: 0x%08llx",           p_offset);
+		LOG_NOTICE(LOADER, "Virtual address: 0x%08llx",  p_vaddr);
+		LOG_NOTICE(LOADER, "Physical address: 0x%08llx", p_paddr);
+		LOG_NOTICE(LOADER, "File size: 0x%08llx",        p_filesz);
+		LOG_NOTICE(LOADER, "Memory size: 0x%08llx",      p_memsz);
+		LOG_NOTICE(LOADER, "Flags: %s",                  Phdr_FlagsToString(p_flags).c_str());
+		LOG_NOTICE(LOADER, "Align: 0x%llx",              p_align);
 #endif
 	}
 };

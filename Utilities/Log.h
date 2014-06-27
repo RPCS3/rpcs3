@@ -11,21 +11,12 @@
 
 //#define BUFFERED_LOGGING 1
 
-//another msvc bug makes these not work, uncomment these and replace it with the one at the bottom when it's fixed
-//#define LOG_MESSAGE(logType, severity, text) Log::LogManager::getInstance().log({logType, severity, text})
-
 //first parameter is of type Log::LogType and text is of type std::string
-#define LOG_MESSAGE(logType, severity, text) do{Log::LogMessage msg{logType, severity, text}; Log::LogManager::getInstance().log(msg);}while(0)
 
-#define LOG_SUCCESS(logType, text)           LOG_MESSAGE(logType, Log::Success, text)
-#define LOG_NOTICE(logType, text)            LOG_MESSAGE(logType, Log::Notice,  text) 
-#define LOG_WARNING(logType, text)           LOG_MESSAGE(logType, Log::Warning, text) 
-#define LOG_ERROR(logType, text)             LOG_MESSAGE(logType, Log::Error,   text)
-
-#define LOGF_SUCCESS(logType, fmtstring, ...)  LOG_SUCCESS(logType, fmt::Format(fmtstring, ##__VA_ARGS__ ))
-#define LOGF_NOTICE(logType, fmtstring, ...)   LOG_NOTICE(logType, fmt::Format(fmtstring, ##__VA_ARGS__ ))
-#define LOGF_WARNING(logType, fmtstring, ...)  LOG_WARNING(logType, fmt::Format(fmtstring, ##__VA_ARGS__ ))
-#define LOGF_ERROR(logType, fmtstring, ...)    LOG_ERROR(logType, fmt::Format(fmtstring, ##__VA_ARGS__ ))
+#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::Success, text, ##__VA_ARGS__)
+#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::Notice,  text, ##__VA_ARGS__) 
+#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::Warning, text, ##__VA_ARGS__) 
+#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::Error,   text, ##__VA_ARGS__)
 
 namespace Log
 {
@@ -139,3 +130,19 @@ static struct { inline operator Log::LogType() { return Log::LogType::HLE; } } H
 static struct { inline operator Log::LogType() { return Log::LogType::PPU; } } PPU;
 static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } SPU;
 static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
+
+inline void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
+{
+	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
+	//Log::LogManager::getInstance().log({logType, severity, text})
+
+	Log::LogMessage msg{type, sev, text};
+	Log::LogManager::getInstance().log(msg);
+}
+
+template<typename T, typename ...Ts> 
+inline void log_message(Log::LogType type, Log::LogSeverity sev, std::string text, T arg, Ts... args)
+{
+	Log::LogMessage msg{type, sev, fmt::Format(text,arg,args...)};
+	Log::LogManager::getInstance().log(msg);
+}

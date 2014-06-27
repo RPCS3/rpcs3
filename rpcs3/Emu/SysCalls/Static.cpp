@@ -54,14 +54,14 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 							k--;
 							if (can_skip) // cannot define this behaviour properly
 							{
-								LOGF_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (unchanged)", can_skip);
+								LOG_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (unchanged)", can_skip);
 							}
 						}
 						else
 						{
 							if (can_skip) // cannot define this behaviour properly
 							{
-								LOGF_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (set to 0)", can_skip);
+								LOG_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (set to 0)", can_skip);
 								can_skip = 0;
 							}
 						}
@@ -85,7 +85,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				}
 				if (found)
 				{
-					LOGF_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
+					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
 					m_static_funcs_list[j]->found++;
 					data[i+0] = re32(0x39600000 | j); // li r11, j
 					data[i+1] = se32(0x44000003); // sc 3
@@ -129,7 +129,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					if (count == 0)
 					{
 						res |= GSR_MISSING;
-						LOGF_ERROR(LOADER, "Function '%s' not found", m_static_funcs_list[j]->name);
+						LOG_ERROR(LOADER, "Function '%s' not found", m_static_funcs_list[j]->name);
 					}
 					else if (count > 1)
 					{
@@ -146,7 +146,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 							if (m_static_funcs_list[k]->found)
 							{
 								res |= GSR_EXCESS;
-								LOGF_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
+								LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
 							}
 						}
 					}
@@ -154,7 +154,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				else
 				{
 					res |= GSR_EXCESS;
-					LOGF_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
+					LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
 				}
 			}
 
@@ -170,11 +170,11 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 
 			if (res == GSR_SUCCESS)
 			{
-				LOGF_SUCCESS(LOADER, "Function group [%s] successfully hooked", std::string(name, 9).c_str());
+				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", std::string(name, 9).c_str());
 			}
 			else
 			{
-				LOGF_ERROR(LOADER, "Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
+				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
 					(res & GSR_MISSING ? " missing;" : ""),
 					(res & GSR_EXCESS ? " excess;" : ""));
 			}
@@ -190,7 +190,7 @@ void StaticFuncManager::StaticExecute(u32 code)
 	}
 	else
 	{
-		LOGF_ERROR(LOADER, "StaticExecute(%d): unknown function or illegal opcode", code);
+		LOG_ERROR(LOADER, "StaticExecute(%d): unknown function or illegal opcode", code);
 	}
 }
 

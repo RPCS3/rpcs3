@@ -314,7 +314,7 @@ struct PluginsManager
 
 		for(u32 i=0; i<res.GetCount(); ++i)
 		{
-			LOGF_NOTICE(HLE, "loading " + res[i] + "...");
+			LOG_NOTICE(HLE, "loading " + res[i] + "...");
 			Ps3EmuPlugin l(res[i]);
 			if(!l.Test()) continue;
 

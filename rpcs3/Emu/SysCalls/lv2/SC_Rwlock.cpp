@@ -69,7 +69,7 @@ int sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			LOG_WARNING(HLE, "sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
 		Sleep(1);
@@ -132,7 +132,7 @@ int sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
+			LOG_WARNING(HLE, "sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
 		Sleep(1);

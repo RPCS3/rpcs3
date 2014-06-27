@@ -153,7 +153,7 @@ void Emulator::Load()
 		m_path = elf_path;
 	}
 
-	LOGF_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
+	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
 	m_vfs.Init(m_path);
 
@@ -161,7 +161,7 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "Mount info:");
 	for(uint i=0; i<m_vfs.m_devices.size(); ++i)
 	{
-		LOGF_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
+		LOG_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
 	}
 	LOG_NOTICE(LOADER, " ");//used to be skip_line
 
@@ -174,7 +174,7 @@ void Emulator::Load()
 
 	if(!f.IsOpened())
 	{
-		LOGF_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
+		LOG_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
 		return;
 	}
 
@@ -247,8 +247,8 @@ void Emulator::Load()
 	switch(l.GetMachine())
 	{
 	case MACHINE_SPU:
-		LOGF_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
-		LOGF_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
+		LOG_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
+		LOG_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
 		Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
@@ -375,7 +375,7 @@ void Emulator::Stop()
 		Sleep(1);
 		if (counter++ > 3000)
 		{
-			LOGF_ERROR(HLE, "%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));
+			LOG_ERROR(HLE, "%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));
 			break;
 		}
 	}
@@ -448,7 +448,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if(version != bpdb_version ||
 		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		LOGF_ERROR(LOADER, "'%s' is broken", path.c_str());
+		LOG_ERROR(LOADER, "'%s' is broken", path.c_str());
 		return;
 	}
 

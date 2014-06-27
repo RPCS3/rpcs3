@@ -86,7 +86,7 @@ void SPUThread::DoRun()
 	break;
 
 	default:
-		LOGF_ERROR(Log::SPU, "Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
+		LOG_ERROR(Log::SPU, "Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
 		Emu.Pause();
 	}
 }

@@ -51,7 +51,7 @@ bool TRPLoader::LoadHeader(bool show)
 		return false;
 
 	if (show)
-		LOGF_NOTICE(LOADER, "TRP version: %x", m_header.trp_version);
+		LOG_NOTICE(LOADER, "TRP version: %x", m_header.trp_version);
 
 	m_entries.clear();
 	m_entries.resize(m_header.trp_files_count);
@@ -62,7 +62,7 @@ bool TRPLoader::LoadHeader(bool show)
 			return false;
 
 		if (show)
-			LOGF_NOTICE(LOADER, "TRP entry #%d: %s", m_entries[i].name);
+			LOG_NOTICE(LOADER, "TRP entry #%d: %s", m_entries[i].name);
 	}
 
 	return true;

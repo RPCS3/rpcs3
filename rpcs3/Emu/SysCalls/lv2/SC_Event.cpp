@@ -95,7 +95,7 @@ int sys_event_queue_destroy(u32 equeue_id, int mode)
 		Sleep(1);
 		if (Emu.IsStopped())
 		{
-			LOGF_WARNING(HLE, "sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
+			LOG_WARNING(HLE, "sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
 			break;
 		}
 	}
@@ -223,7 +223,7 @@ int sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 		Sleep(1);
 		if (counter++ > timeout || Emu.IsStopped())
 		{
-			if (Emu.IsStopped()) LOGF_WARNING(HLE, "sys_event_queue_receive(equeue=%d) aborted", equeue_id);
+			if (Emu.IsStopped()) LOG_WARNING(HLE, "sys_event_queue_receive(equeue=%d) aborted", equeue_id);
 			eq->sq.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}

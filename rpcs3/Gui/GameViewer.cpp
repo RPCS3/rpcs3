@@ -39,7 +39,7 @@ public:
 	virtual wxDirTraverseResult OnFile(const wxString& filename)
 	{
 		if (!wxRemoveFile(filename)){
-			LOGF_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+			LOG_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 		}
 		return wxDIR_CONTINUE;
 	}
@@ -103,7 +103,7 @@ void GameViewer::OnColClick(wxListEvent& event)
 void GameViewer::LoadGames()
 {
 	vfsDir dir(m_path);
-	LOGF_NOTICE(HLE, "path: %s", m_path.c_str());
+	LOG_NOTICE(HLE, "path: %s", m_path.c_str());
 	if(!dir.IsOpened()) return;
 
 	m_games.clear();
@@ -207,7 +207,7 @@ void GameViewer::DClick(wxListEvent& event)
 	std::string local_path;
 	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
 	{
-		LOGF_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
+		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
 		return;
 	}
 	Emu.Run();

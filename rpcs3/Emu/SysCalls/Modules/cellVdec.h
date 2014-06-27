@@ -741,14 +741,14 @@ public:
 		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec)
 		{
-			LOGF_ERROR(HLE, "VideoDecoder(): avcodec_find_decoder(H264) failed");
+			LOG_ERROR(HLE, "VideoDecoder(): avcodec_find_decoder(H264) failed");
 			Emu.Pause();
 			return;
 		}
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
-			LOGF_ERROR(HLE, "VideoDecoder(): avformat_alloc_context failed");
+			LOG_ERROR(HLE, "VideoDecoder(): avformat_alloc_context failed");
 			Emu.Pause();
 			return;
 		}
@@ -756,7 +756,7 @@ public:
 		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
 		if (!fmt->pb)
 		{
-			LOGF_ERROR(HLE, "VideoDecoder(): avio_alloc_context failed");
+			LOG_ERROR(HLE, "VideoDecoder(): avio_alloc_context failed");
 			Emu.Pause();
 			return;
 		}
