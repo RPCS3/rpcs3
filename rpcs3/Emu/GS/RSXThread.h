@@ -404,6 +404,9 @@ public:
 	bool m_set_front_face;
 	u32 m_front_face;
 
+	// Frequency divider
+	u32 m_set_frequency_divider_operation;
+
 	u8 m_begin_end;
 	bool m_read_buffer;
 
@@ -486,19 +489,27 @@ protected:
 
 	void Reset()
 	{
+		m_set_dither = false;
 		m_set_color_mask = false;
 		m_set_clip = false;
-		m_set_depth_func = false;
-		m_set_depth_bounds = false;
 		m_set_depth_test = false;
+		m_set_depth_func = false;
+		m_set_depth_mask = false;
+		m_set_depth_bounds_test = false;
+		m_set_depth_bounds = false;
 		m_set_viewport_horizontal = false;
 		m_set_viewport_vertical = false;
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;
 		m_set_back_polygon_mode = false;
+		m_set_blend = false;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
+		m_set_blend_equation = false;
+		m_set_blend_color = false;
+		m_set_stencil_test = false;
+		m_set_two_sided_stencil_test_enable = false;
 		m_set_stencil_mask = false;
 		m_set_stencil_func = false;
 		m_set_stencil_func_ref = false;
@@ -513,12 +524,11 @@ protected:
 		m_set_back_stencil_fail = false;
 		m_set_back_stencil_zfail = false;
 		m_set_back_stencil_zpass = false;
-		m_set_blend_equation = false;
-		m_set_depth_mask = false;
+		m_set_point_sprite_control = false;
 		m_set_point_size = false;
 		m_set_line_width = false;
+		m_set_line_smooth = false;
 		m_set_shade_mode = false;
-		m_set_blend_color = false;
 		m_set_semaphore_offset = false;
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
@@ -531,16 +541,21 @@ protected:
 		m_set_context_dma_z = false;
 		m_set_cull_face = false;
 		m_set_front_face = false;
+		m_set_alpha_test = false;
 		m_set_alpha_func = false;
 		m_set_alpha_ref = false;
+		m_set_poly_smooth = false;
 		m_set_poly_offset_fill = false;
 		m_set_poly_offset_line = false;
 		m_set_poly_offset_point = false;
 		m_set_poly_offset_mode = false;
 		m_set_restart_index = false;
-		m_set_point_sprite_control = false;
 		m_set_specular = false;
 		m_set_line_stipple = false;
+		m_set_logic_op = false;
+		m_set_surface_format = false;
+		m_set_surface_clip_horizontal = false;
+		m_set_surface_clip_vertical = false;
 
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
