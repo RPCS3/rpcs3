@@ -115,7 +115,6 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<bool> SkipPamf;
 	IniEntry<bool> GSDownscale;
 
 	// Audio
@@ -157,9 +156,9 @@ public:
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
-	IniEntry<u8> HLELogLvl;
-	IniEntry<bool> HLEHideDebugConsole;
+	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
+	IniEntry<bool> HLESkipPamf;
 
 	// Language
 	IniEntry<u8> SysLanguage;
@@ -184,7 +183,6 @@ public:
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
-		SkipPamf.Init("GS_SkipPamf", path);
 		GSDownscale.Init("GS_Downscale", path);
 
 		// Audio
@@ -227,8 +225,8 @@ public:
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
-		HLEHideDebugConsole.Init("HLE_HLEHideDebugConsole", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+		HLESkipPamf.Init("HLE_HLESkipPamf", path);
 
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
@@ -249,7 +247,6 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
-		SkipPamf.Load(false);
 		GSDownscale.Load(false);
 
 		// Audio
@@ -292,8 +289,8 @@ public:
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
-		HLEHideDebugConsole.Load(false);
 		HLEAlwaysStart.Load(false);
+		HLESkipPamf.Load(false);
 
 		// Language
 		SysLanguage.Load(1);
@@ -315,7 +312,6 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
-		SkipPamf.Save();
 		GSDownscale.Save();
 
 		// Audio 
@@ -358,8 +354,8 @@ public:
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
-		HLEHideDebugConsole.Save();
 		HLEAlwaysStart.Save();
+		HLESkipPamf.Save();
 
 		// Language
 		SysLanguage.Save();
