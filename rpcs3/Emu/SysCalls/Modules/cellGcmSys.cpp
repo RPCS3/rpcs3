@@ -421,18 +421,16 @@ int cellGcmSetFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 
-int cellGcmSetFlipHandler(u32 handler_addr)
+void cellGcmSetFlipHandler(u32 handler_addr)
 {
 	cellGcmSys->Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
 
 	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 	{
-		cellGcmSys->Error("cellGcmSetFlipHandler : CELL_EFAULT");
-		return CELL_EFAULT;
+		cellGcmSys->Error("cellGcmSetFlipHandler(handler_addr=%d): invalid address", handler_addr);
 	}
 
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
-	return CELL_OK;
 }
 
 int cellGcmSetFlipMode(u32 mode)
@@ -567,16 +565,28 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	return CELL_OK;
 }
 
-u32 cellGcmSetUserHandler(u32 handler)
+void cellGcmSetUserHandler(u32 handler_addr)
 {
-	cellGcmSys->Warning("cellGcmSetUserHandler(handler=0x%x)", handler);
-	return handler;
+	cellGcmSys->Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler_addr);
+
+	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
+	{
+		cellGcmSys->Error("cellGcmSetUserHandler(handler_addr=%d): invalid address", handler_addr);
+	}
+
+	Emu.GetGSManager().GetRender().m_user_handler.SetAddr(handler_addr);
 }
 
-int cellGcmSetVBlankHandler()
+void cellGcmSetVBlankHandler(u32 handler_addr)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys->Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler_addr);
+
+	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
+	{
+		cellGcmSys->Error("cellGcmSetVBlankHandler(handler_addr=%d): invalid address", handler_addr);
+	}
+
+	Emu.GetGSManager().GetRender().m_vblank_handler.SetAddr(handler_addr);
 }
 
 int cellGcmSetWaitFlip(mem_ptr_t<CellGcmContextData> ctxt)
@@ -699,7 +709,7 @@ int cellGcmGetDisplayBufferByFlipIndex()
 	return CELL_OK;
 }
 
-int cellGcmgetLastFlipTime()
+int cellGcmGetLastFlipTime()
 {
 	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
@@ -711,10 +721,11 @@ int cellGcmGetLastSecondVTime()
 	return CELL_OK;
 }
 
-int cellGcmGetVBlankCount()
+u64 cellGcmGetVBlankCount()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys->Log("cellGcmGetVBlankCount()");
+
+	return Emu.GetGSManager().GetRender().m_vblank_count;
 }
 
 int cellGcmInitSystemMode()
@@ -1156,7 +1167,7 @@ void cellGcmSys_init()
 	cellGcmSys->AddFunc(0xe315a0b2, cellGcmGetConfiguration);
 	cellGcmSys->AddFunc(0x371674cf, cellGcmGetDisplayBufferByFlipIndex);
 	cellGcmSys->AddFunc(0x72a577ce, cellGcmGetFlipStatus);
-	cellGcmSys->AddFunc(0x63387071, cellGcmgetLastFlipTime);
+	cellGcmSys->AddFunc(0x63387071, cellGcmGetLastFlipTime);
 	cellGcmSys->AddFunc(0x23ae55a3, cellGcmGetLastSecondVTime);
 	cellGcmSys->AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
 	cellGcmSys->AddFunc(0x723bbc7e, cellGcmGetVBlankCount);

@@ -1815,6 +1815,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case GCM_SET_USER_COMMAND:
+	{
+		const u32 cause = ARGS(0);
+		m_user_handler.Handle(cause);
+		m_user_handler.Branch(false);
+	}
+	break;
+
 	default:
 	{
 		std::string log = GetMethodName(cmd);
@@ -1869,6 +1877,40 @@ void RSXThread::Task()
 	LOG_NOTICE(RSX, "RSX thread started");
 
 	OnInitThread();
+
+	volatile bool is_vblank_stopped = false;
+
+	thread vblank("VBlank thread", [&]()
+	{
+		const u64 start_time = get_system_time();
+
+		m_vblank_count = 0;
+
+		while (!TestDestroy())
+		{
+			if (Emu.IsStopped())
+			{
+				LOG_WARNING(RSX, "VBlank thread aborted");
+				return;
+			}
+
+			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
+			{
+				m_vblank_count++;
+				if (m_vblank_handler)
+				{
+					m_vblank_handler.Handle(1);
+					m_vblank_handler.Branch(false);
+				}
+				continue;
+			}
+
+			Sleep(1);
+		}
+
+		is_vblank_stopped = true;
+	});
+	vblank.detach();
 
 	while(!TestDestroy())
 	{
@@ -1959,6 +2001,11 @@ void RSXThread::Task()
 
 		m_ctrl->get = get + (count + 1) * 4;
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
+	}
+
+	while (!is_vblank_stopped)
+	{
+		Sleep(1);
 	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");

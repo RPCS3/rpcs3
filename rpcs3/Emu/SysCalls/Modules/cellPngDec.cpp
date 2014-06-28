@@ -93,6 +93,16 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	return CELL_OK;
 }
 
+int cellPngDecExtOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo, mem_ptr_t<CellPngDecCbCtrlStrm> cbCtrlStrm, mem_ptr_t<CellPngDecOpnParam> opnParam)
+{
+	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x, cbCtrlStrm_addr=0x%x, opnParam=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo, cbCtrlStrm.GetAddr(), opnParam.GetAddr());
+
+	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", (u32)cbCtrlStrm->cbCtrlStrmFunc_addr);
+
+	return cellPngDecOpen(mainHandle, subHandle, src, openInfo);
+}
+
 int cellPngDecClose(u32 mainHandle, u32 subHandle)
 {
 	cellPngDec->Warning("cellPngDecClose(mainHandle=0x%x,subHandle=0x%x)", mainHandle, subHandle);
@@ -112,7 +122,7 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	if (!info.IsGood())
 		return CELL_PNGDEC_ERROR_ARG;
 
-	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.GetAddr());
 	CellPngDecSubHandle* subHandle_data;
 	if(!cellPngDec->CheckId(subHandle, subHandle_data))
 		return CELL_PNGDEC_ERROR_FATAL;
@@ -165,6 +175,14 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	*info = current_info;
 
 	return CELL_OK;
+}
+
+int cellPngDecExtReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo> info, mem_ptr_t<CellPngDecExtInfo> extInfo)
+{
+	cellPngDec->Warning("cellPngDecExtReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x, extInfo_addr=0x%x)",
+		mainHandle, subHandle, info.GetAddr(), extInfo.GetAddr());
+
+	return cellPngDecReadHeader(mainHandle, subHandle, info);
 }
 
 int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellPngDecDataOutInfo> dataOutInfo)
@@ -292,6 +310,17 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	return CELL_OK;
 }
 
+int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam,
+	mem_ptr_t<CellPngDecDataOutInfo> dataOutInfo, mem_ptr_t<CellPngDecCbCtrlDisp> cbCtrlDisp, mem_ptr_t<CellPngDecDispParam> dispParam)
+{
+	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam=0x%x",
+		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr(), cbCtrlDisp.GetAddr(), dispParam.GetAddr());
+
+	cellPngDec->Warning("*** cbCtrlDisp->cbCtrlDispFunc_addr=0x%x", (u32)scbCtrlDisp->cbCtrlDispFunc_addr);
+
+	return cellPngDecDecodeData(mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
+}
+
 int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPngDecInParam> inParam, mem_ptr_t<CellPngDecOutParam> outParam)
 {
 	if (!inParam.IsGood() || !outParam.IsGood())
@@ -333,6 +362,15 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPn
 	return CELL_OK;
 }
 
+int cellPngDecExtSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPngDecInParam> inParam, mem_ptr_t<CellPngDecOutParam> outParam,
+	mem_ptr_t<CellPngDecExtInParam> extInParam, mem_ptr_t<CellPngDecExtOutParam> extOutParam)
+{
+	cellPngDec->Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",
+		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr(), extInParam.GetAddr(), extOutParam.GetAddr());
+
+	return cellPngDecSetParameter(mainHandle, subHandle, inParam, outParam);
+}
+
 void cellPngDec_init()
 {
 	cellPngDec->AddFunc(0x157d30c5, cellPngDecCreate);
@@ -343,11 +381,12 @@ void cellPngDec_init()
 	cellPngDec->AddFunc(0x2310f155, cellPngDecDecodeData);
 	cellPngDec->AddFunc(0xe97c9bd4, cellPngDecSetParameter);
 
-	/*cellPngDec->AddFunc(0x48436b2d, cellPngDecExtCreate);
 	cellPngDec->AddFunc(0x0c515302, cellPngDecExtOpen);
 	cellPngDec->AddFunc(0x8b33f863, cellPngDecExtReadHeader);
 	cellPngDec->AddFunc(0x726fc1d0, cellPngDecExtDecodeData);
 	cellPngDec->AddFunc(0x9e9d7d42, cellPngDecExtSetParameter);
+
+	/*cellPngDec->AddFunc(0x48436b2d, cellPngDecExtCreate);
 	cellPngDec->AddFunc(0x7585a275, cellPngDecGetbKGD);
 	cellPngDec->AddFunc(0x7a062d26, cellPngDecGetcHRM);
 	cellPngDec->AddFunc(0xb153629c, cellPngDecGetgAMA);

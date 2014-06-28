@@ -124,3 +124,43 @@ struct CellPngDecMainHandle
 	be_t<u32> threadInParam;
 	be_t<u32> threadOutParam;
 };
+
+struct CellPngDecCbCtrlStrm
+{
+	be_t<u32> cbCtrlStrmFunc_addr;
+	be_t<u32> cbCtrlStrmArg;
+};
+
+struct CellPngDecCbCtrlDisp
+{
+	be_t<u32> cbCtrlDispFunc_addr;
+	be_t<u32> cbCtrlDispArg;
+};
+
+struct CellPngDecDispParam
+{
+	be_t<u32> nextOutputImage_addr;
+};
+
+struct CellPngDecExtInfo
+{
+	be_t<u64> reserved;
+};
+
+struct CellPngDecExtInParam
+{
+	be_t<u32> bufferMode; // CellPngDecBufferMode
+	be_t<u32> outputCounts;
+	be_t<u32> spuMode; // CellPngDecSpuMode
+};
+
+struct CellPngDecExtOutParam
+{
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputHeight;
+};
+
+struct CellPngDecOpnParam
+{
+	be_t<u32> selectChunk;
+};

@@ -382,6 +382,9 @@ int cellSysutilUnregisterCallback(int slot)
 
 int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
+	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
+		type, (u32)msgString, callback.GetAddr(), userData.GetAddr(), extParam);
+
 	long style = 0;
 
 	if(type & CELL_MSGDIALOG_DIALOG_TYPE_NORMAL)
