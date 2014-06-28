@@ -47,18 +47,36 @@ public:
 	{
 		switch(wrap)
 		{
-		case 1: return GL_REPEAT;
-		case 2: return GL_MIRRORED_REPEAT;
-		case 3: return GL_CLAMP_TO_EDGE;
-		case 4: return GL_CLAMP_TO_BORDER;
-		case 5: return GL_CLAMP_TO_EDGE;
-		case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
-		case 7: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
-		case 8: return GL_MIRROR_CLAMP_EXT;
+		case CELL_GCM_TEXTURE_WRAP: return GL_REPEAT;
+		case CELL_GCM_TEXTURE_MIRROR: return GL_MIRRORED_REPEAT;
+		case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
+		case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
+		case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP_TO_EDGE;
+		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
 		}
 
 		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d).", wrap);
 		return GL_REPEAT;
+	}
+
+	float GetMaxAniso(int aniso)
+	{
+		switch (aniso)
+		{
+		case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
+		case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+		}
+
+		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d).", aniso);
+		return 1.0f;
 	}
 
 	inline static u8 Convert4To8(u8 v)
@@ -478,22 +496,36 @@ public:
 
 		checkForGlError("GLTexture::Init() -> lod");
 		
-		static const int gl_tex_filter[] =
+		static const int gl_tex_min_filter[] =
 		{
-			GL_NEAREST,
+			GL_NEAREST, // unused
 			GL_NEAREST,
 			GL_LINEAR,
 			GL_NEAREST_MIPMAP_NEAREST,
 			GL_LINEAR_MIPMAP_NEAREST,
 			GL_NEAREST_MIPMAP_LINEAR,
 			GL_LINEAR_MIPMAP_LINEAR,
-			GL_NEAREST,
+			GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
 		};
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter[tex.GetMinFilter()]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter[tex.GetMagFilter()]);
+		static const int gl_tex_mag_filter[] = { 
+			GL_NEAREST, // unused
+			GL_NEAREST,
+			GL_LINEAR,
+			GL_NEAREST, // unused
+			GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
+		};
 
-		checkForGlError("GLTexture::Init() -> filters");
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.GetMinFilter()]);
+
+		checkForGlError("GLTexture::Init() -> min filters");
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.GetMagFilter()]);
+
+		checkForGlError("GLTexture::Init() -> mag filters");
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.GetMaxAniso()));
+
+		checkForGlError("GLTexture::Init() -> max anisotropy");
 
 		//Unbind();
 
