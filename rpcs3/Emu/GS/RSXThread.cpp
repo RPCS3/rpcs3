@@ -558,6 +558,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV4097_SET_DEPTH_BOUNDS_MAX:
+	{
+		m_set_depth_bounds = true;
+		const u32 a0 = ARGS(0);
+		m_depth_bounds_max = (float&)a0;
+	}
+	break;
+
 	// Viewport
 	case NV4097_SET_VIEWPORT_VERTICAL:
 	{
@@ -1616,6 +1624,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		if (ARGS(0))
 			LOG_WARNING(RSX, "NV4097_SET_WINDOW_CLIP_VERTICAL: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_SET_FREQUENCY_DIVIDER_OPERATION:
+	{
+		m_set_frequency_divider_operation = ARGS(0);
 	}
 	break;
 

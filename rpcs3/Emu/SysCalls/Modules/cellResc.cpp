@@ -60,10 +60,12 @@ struct CCellRescInternal
 	CellRescDsts m_rescDsts[4], *m_pRescDsts;
 
 	u32 m_colorBuffersEA_addr, m_vertexArrayEA_addr, m_fragmentUcodeEA_addr;
+	u32 m_bufIdFront;
 	s32 m_dstWidth, m_dstHeight, m_dstPitch;
 	u16 m_srcWidthInterlace, m_srcHeightInterlace;
 	u32 m_dstBufInterval, m_dstOffsets[MAX_DST_BUFFER_NUM];
 	s32 m_nVertex;
+	u32 m_bufIdFrontPrevDrop, m_bufIdPalMidPrev, m_bufIdPalMidNow;
 	float m_ratioAdjX, m_ratioAdjY;
 	bool m_bInitialized, m_bNewlyAdjustRatio;
 	
@@ -94,6 +96,7 @@ inline bool IsPalDrop()        { return (IsPal() && s_rescInternalInstance->m_in
 inline bool IsPalInterpolate() { return (IsPal() && ((s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE)
 												  || (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_30_DROP)
 												  || (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_DROP_FLEXIBLE))); }
+inline bool IsNotPalInterpolate() { return !IsPalInterpolate(); }
 inline int GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
 inline bool IsInterlace()      { return s_rescInternalInstance->m_initConfig.interlaceMode == CELL_RESC_INTERLACE_FILTER; }
 inline bool IsTextureNR()      { return !IsInterlace(); }
@@ -360,9 +363,81 @@ bool CheckInitConfig(mem_ptr_t<CellRescInitConfig> initConfig)
 
 void InitMembers()
 {
+	s_rescInternalInstance->m_dstMode = (CellRescBufferMode)0;
+	//s_rescInternalInstance->m_interlaceElement = CELL_RESC_ELEMENT_FLOAT;
+	s_rescInternalInstance->m_colorBuffersEA_addr = NULL;
+	s_rescInternalInstance->m_vertexArrayEA_addr = NULL;
+	s_rescInternalInstance->m_fragmentUcodeEA_addr = NULL;
+	//s_rescInternalInstance->m_interlaceTableEA = NULL;
+	s_rescInternalInstance->m_bufIdFront = 0;
+	s_rescInternalInstance->m_dstWidth = 0;
+	s_rescInternalInstance->m_dstHeight = 0;
+	s_rescInternalInstance->m_dstPitch = 0;
+	s_rescInternalInstance->m_srcWidthInterlace = 0;
+	s_rescInternalInstance->m_srcHeightInterlace = 0;
+	s_rescInternalInstance->m_dstBufInterval = 0;
+	s_rescInternalInstance->m_nVertex = 0;
+	s_rescInternalInstance->m_ratioAdjX = 1.f;
+	s_rescInternalInstance->m_ratioAdjY = 1.f;
+	//s_rescInternalInstance->m_interlaceTableLength = 32;
+	s_rescInternalInstance->m_bInitialized = false;
+	s_rescInternalInstance->m_bNewlyAdjustRatio = false;
+
+	//E PAL related variables
+	//s_rescInternalInstance->m_intrThread50 = 0;
+	//s_rescInternalInstance->m_lastDummyFlip = 0;
+	//s_rescInternalInstance->m_lastVsync60 = 0;
+	//s_rescInternalInstance->m_lastVsync50 = 0;
+	s_rescInternalInstance->m_bufIdFrontPrevDrop = 2;
+	s_rescInternalInstance->m_bufIdPalMidPrev = 4;
+	s_rescInternalInstance->m_bufIdPalMidNow = 5;
+	//s_rescInternalInstance->m_cgpTvalue = 0;
+	//s_rescInternalInstance->m_isDummyFlipped = true;
+	s_rescInternalInstance->m_flexRatio = 0.f;   // interpolate
+	//s_rescInternalInstance->m_commandIdxCaF = 1;
+	//s_rescInternalInstance->m_rcvdCmdIdx = 0;
+
+	//s_rescInternalInstance->m_lastV60.idx = 0;
+	//s_rescInternalInstance->m_lastV60.time = Util::GetSystemTime();
+	//s_rescInternalInstance->m_lastV50.idx = 0;
+	//s_rescInternalInstance->m_lastV50.time = Util::GetSystemTime();
+
+	//s_rescInternalInstance->m_feedback.interval60 = 1;
+
+	for (int i = 0; i<SRC_BUFFER_NUM; i++) {
+		s_rescInternalInstance->m_rescSrc[i].format = 0;
+		s_rescInternalInstance->m_rescSrc[i].pitch = 0;
+		s_rescInternalInstance->m_rescSrc[i].width = 0;
+		s_rescInternalInstance->m_rescSrc[i].height = 0;
+		s_rescInternalInstance->m_rescSrc[i].offset = 0;
+	}
+
+	for (int i = 0; i<MAX_DST_BUFFER_NUM; i++) {
+		s_rescInternalInstance->m_dstOffsets[i] = 0;
+	}
+
+	/*
+	for (int i = 0; i<RESC_PARAM_NUM; i++) {
+		s_rescInternalInstance->m_cgParamIndex[i] = 0xFF;
+	}
+	{
+		s_rescInternalInstance->m_rescDsts[0].format = CELL_RESC_SURFACE_A8R8G8B8;
+		s_rescInternalInstance->m_rescDsts[0].pitch = GcmSysTypePrefix::cellGcmGetTiledPitchSize(720 * 4);
+		s_rescInternalInstance->m_rescDsts[0].heightAlign = 8;
+		s_rescInternalInstance->m_rescDsts[1].format = CELL_RESC_SURFACE_A8R8G8B8;
+		s_rescInternalInstance->m_rescDsts[1].pitch = GcmSysTypePrefix::cellGcmGetTiledPitchSize(720 * 4);
+		s_rescInternalInstance->m_rescDsts[1].heightAlign = 8;
+		s_rescInternalInstance->m_rescDsts[2].format = CELL_RESC_SURFACE_A8R8G8B8;
+		s_rescInternalInstance->m_rescDsts[2].pitch = GcmSysTypePrefix::cellGcmGetTiledPitchSize(1280 * 4);
+		s_rescInternalInstance->m_rescDsts[2].heightAlign = 8;
+		s_rescInternalInstance->m_rescDsts[3].format = CELL_RESC_SURFACE_A8R8G8B8;
+		s_rescInternalInstance->m_rescDsts[3].pitch = GcmSysTypePrefix::cellGcmGetTiledPitchSize(1920 * 4);
+		s_rescInternalInstance->m_rescDsts[3].heightAlign = 8;
+	}
+	*/
 }
 
-void InitContext(mem_ptr_t<CellGcmContextData>& cntxt)
+void InitRSXContext(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
@@ -376,14 +451,13 @@ void InitContext(mem_ptr_t<CellGcmContextData>& cntxt)
 	r.m_set_cull_face = false;
 	r.m_set_depth_bounds_test = false;
 	r.m_set_depth_test = false;
-	//GcmCmdTypePrefix::cellGcmSetPolygonOffsetFillEnable(con, CELL_GCM_FALSE);
+	r.m_set_poly_offset_fill = false;
 	r.m_set_stencil_test = false;
 	r.m_set_two_sided_stencil_test_enable = false;
-	//GcmCmdTypePrefix::cellGcmSetPointSpriteControl(con, CELL_GCM_FALSE, 0, 0);
+	r.m_set_point_sprite_control = false;
 	r.m_set_dither = true;
-	r.m_set_shade_mode = true; r.m_shade_mode = 0x1D01;
-	//GcmCmdTypePrefix::cellGcmSetFrequencyDividerOperation(con, 0);
-	r.m_set_specular = false;
+	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
+	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
 
 	r.m_set_viewport_horizontal = r.m_set_viewport_vertical = true;
 	r.m_viewport_x = 0;
@@ -409,12 +483,57 @@ void InitContext(mem_ptr_t<CellGcmContextData>& cntxt)
 	}
 }
 
-void InitVertex(mem_ptr_t<CellGcmContextData>& cntxt)
+void InitVertexArrayContext(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
 	
 	//TODO
+}
+
+void InitSurfaces(mem_ptr_t<CellGcmContextData>& cntxt)
+{
+	bool isMrt;
+	u32 dstOffset0, dstOffset1;
+
+	if (IsNotPalInterpolate()) {
+		isMrt = false;
+		dstOffset0 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdFront];
+		dstOffset1 = 0;
+	}
+	else {
+		isMrt = true;
+		dstOffset0 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdFront];
+		dstOffset1 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdPalMidNow];
+	}
+
+	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
+	GSRender& r = Emu.GetGSManager().GetRender();
+
+	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
+	r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
+	r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
+	r.m_surface_colour_target = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
+	//surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_a = dstOffset0;
+	r.m_surface_pitch_a = s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[1] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_b = (!isMrt) ? 0 : dstOffset1;
+	r.m_surface_pitch_b = (!isMrt) ? 64 : s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[2] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_c = 0;
+	r.m_surface_pitch_c = 64;
+	//surface.colorLocation[3] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_d = 0;
+	r.m_surface_pitch_d = 64;
+	r.m_surface_depth_format = CELL_GCM_SURFACE_Z24S8;
+	//surface.depthLocation = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_z = 0;
+	r.m_surface_pitch_z = 64;
+	r.m_surface_width = s_rescInternalInstance->m_dstWidth;
+	r.m_surface_height = s_rescInternalInstance->m_dstHeight;
+	//surface.x = 0;
+	//surface.y = 0;
 }
 
 // Module Functions
@@ -789,8 +908,14 @@ int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 	if(!IsTextureNR())
 		BuildupVertexBufferUN(idx);
 
-	InitContext(cntxt);
-	InitVertex(cntxt);
+	// Init GPU internal status
+	InitRSXContext(cntxt);
+
+	// Init vertex array pointers
+	InitVertexArrayContext(cntxt);
+
+	// Init destination surfaces
+	InitSurfaces(cntxt);
 
 	//TODO: ?
 
