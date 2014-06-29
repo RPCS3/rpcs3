@@ -58,6 +58,12 @@ enum
 
 enum
 {
+	CELL_RESC_ELEMENT_HALF  = 0,
+	CELL_RESC_ELEMENT_FLOAT = 1,
+};
+
+enum
+{
 	CELL_GCM_FLAT   = 0x1D00,
 	CELL_GCM_SMOOTH = 0x1D01,
 };

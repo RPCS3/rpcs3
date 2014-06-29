@@ -39,8 +39,8 @@ enum
 static const float
 	PICTURE_SIZE                  = (1.0f),
 	UV_DELTA_PS                   = (1.f / 8.f),
-	UV_DELTA_LB                   = (1.f / 6.f);
-
+	UV_DELTA_LB                   = (1.f / 6.f),
+	XY_DELTA_LB                   = (1.f / 8.f);
 
 struct RescVertex_t
 {
@@ -51,6 +51,7 @@ struct RescVertex_t
 
 // Defines
 #define roundup(x,a) (((x)+(a)-1)&(~((a)-1)))
+#define SEVIRITY 80.f
 
 struct CCellRescInternal
 {
@@ -58,14 +59,17 @@ struct CCellRescInternal
 	CellRescSrc m_rescSrc[SRC_BUFFER_NUM];
 	u32 m_dstMode;
 	CellRescDsts m_rescDsts[4], *m_pRescDsts;
+	CellRescTableElement m_interlaceElement;
 
-	u32 m_colorBuffersEA_addr, m_vertexArrayEA_addr, m_fragmentUcodeEA_addr;
+	u32 m_colorBuffersEA, m_vertexArrayEA, m_fragmentUcodeEA;
 	u32 m_bufIdFront;
 	s32 m_dstWidth, m_dstHeight, m_dstPitch;
 	u16 m_srcWidthInterlace, m_srcHeightInterlace;
 	u32 m_dstBufInterval, m_dstOffsets[MAX_DST_BUFFER_NUM];
 	s32 m_nVertex;
 	u32 m_bufIdFrontPrevDrop, m_bufIdPalMidPrev, m_bufIdPalMidNow;
+	u32 m_interlaceTableEA;
+	int m_interlaceTableLength;
 	float m_ratioAdjX, m_ratioAdjY;
 	bool m_bInitialized, m_bNewlyAdjustRatio;
 	
@@ -121,7 +125,7 @@ void BuildupVertexBufferNR()
 	float U_PS0 = UV_CENTER - U_PS;
 	float U_PS1 = UV_CENTER + U_PS;
 
-	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
+	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
 		switch((u32)s_rescInternalInstance->m_initConfig.ratioMode){
@@ -197,7 +201,7 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	float U2_FS1 = s_rescInternalInstance->m_dstWidth;
 	float V2_FS1 = s_rescInternalInstance->m_dstHeight;
 
-	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA_addr);
+	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA);
 
 	if(s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576){
 		switch((u32)s_rescInternalInstance->m_initConfig.ratioMode){
@@ -364,11 +368,11 @@ bool CheckInitConfig(mem_ptr_t<CellRescInitConfig> initConfig)
 void InitMembers()
 {
 	s_rescInternalInstance->m_dstMode = (CellRescBufferMode)0;
-	//s_rescInternalInstance->m_interlaceElement = CELL_RESC_ELEMENT_FLOAT;
-	s_rescInternalInstance->m_colorBuffersEA_addr = NULL;
-	s_rescInternalInstance->m_vertexArrayEA_addr = NULL;
-	s_rescInternalInstance->m_fragmentUcodeEA_addr = NULL;
-	//s_rescInternalInstance->m_interlaceTableEA = NULL;
+	s_rescInternalInstance->m_interlaceElement = CELL_RESC_ELEMENT_FLOAT;
+	s_rescInternalInstance->m_colorBuffersEA = NULL;
+	s_rescInternalInstance->m_vertexArrayEA = NULL;
+	s_rescInternalInstance->m_fragmentUcodeEA = NULL;
+	s_rescInternalInstance->m_interlaceTableEA = NULL;
 	s_rescInternalInstance->m_bufIdFront = 0;
 	s_rescInternalInstance->m_dstWidth = 0;
 	s_rescInternalInstance->m_dstHeight = 0;
@@ -379,7 +383,7 @@ void InitMembers()
 	s_rescInternalInstance->m_nVertex = 0;
 	s_rescInternalInstance->m_ratioAdjX = 1.f;
 	s_rescInternalInstance->m_ratioAdjY = 1.f;
-	//s_rescInternalInstance->m_interlaceTableLength = 32;
+	s_rescInternalInstance->m_interlaceTableLength = 32;
 	s_rescInternalInstance->m_bInitialized = false;
 	s_rescInternalInstance->m_bNewlyAdjustRatio = false;
 
@@ -437,7 +441,7 @@ void InitMembers()
 	*/
 }
 
-void InitRSXContext(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupRsxRenderingStates(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
@@ -483,7 +487,7 @@ void InitRSXContext(mem_ptr_t<CellGcmContextData>& cntxt)
 	}
 }
 
-void InitVertexArrayContext(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupVertexArrays(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
@@ -491,7 +495,7 @@ void InitVertexArrayContext(mem_ptr_t<CellGcmContextData>& cntxt)
 	//TODO
 }
 
-void InitSurfaces(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupSurfaces(mem_ptr_t<CellGcmContextData>& cntxt)
 {
 	bool isMrt;
 	u32 dstOffset0, dstOffset1;
@@ -735,7 +739,7 @@ int cellRescAdjustAspectRatio(float horizontal, float vertical)
 	s_rescInternalInstance->m_ratioAdjX = horizontal;
 	s_rescInternalInstance->m_ratioAdjY = vertical;
 
-	if(s_rescInternalInstance->m_vertexArrayEA_addr)
+	if(s_rescInternalInstance->m_vertexArrayEA)
 	{
 		if(IsTextureNR())
 			BuildupVertexBufferNR();
@@ -908,14 +912,14 @@ int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
 	if(!IsTextureNR())
 		BuildupVertexBufferUN(idx);
 
-	// Init GPU internal status
-	InitRSXContext(cntxt);
+	// Setup GPU internal status
+	SetupRsxRenderingStates(cntxt);
 
-	// Init vertex array pointers
-	InitVertexArrayContext(cntxt);
+	// Setup vertex array pointers
+	SetupVertexArrays(cntxt);
 
-	// Init destination surfaces
-	InitSurfaces(cntxt);
+	// Setup surface
+	SetupSurfaces(cntxt);
 
 	//TODO: ?
 
@@ -956,12 +960,12 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
-	s_rescInternalInstance->m_colorBuffersEA_addr  = colorBuffers.GetAddr();
-	s_rescInternalInstance->m_vertexArrayEA_addr   = vertexArray.GetAddr();
-	s_rescInternalInstance->m_fragmentUcodeEA_addr = fragmentShader.GetAddr();
+	s_rescInternalInstance->m_colorBuffersEA  = colorBuffers.GetAddr();
+	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.GetAddr();
+	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.GetAddr();
 
 	MemoryAllocator<be_t<u32>> dstOffset;
-	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA_addr, dstOffset.GetAddr());
+	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset.GetAddr());
 
 	for(int i=0; i<GetNumColorBuffers(); i++)
 	{
@@ -1035,10 +1039,130 @@ int cellRescSetVBlankHandler()
 	return CELL_OK;
 }
 
-int cellRescCreateInterlaceTable()
+u16 FloatToHalf(float val)
 {
-	UNIMPLEMENTED_FUNC(cellResc);
+	u8 *tmp = (u8*)&val;
+	u32 bits = ((u32)tmp[0] << 24) | ((u32)tmp[1] << 16) | ((u32)tmp[2] << 8) | (u32)tmp[3];
+
+	if (bits == 0) 
+	{
+		return 0;
+	}
+	int32_t e = ((bits & 0x7f800000) >> 23) - 127 + 15;
+	if (e < 0) 
+	{
+		return 0;
+	}
+	else if (e > 31) 
+	{
+		e = 31;
+	}
+	u32 s = bits & 0x80000000;
+	u32 m = bits & 0x007fffff;
+
+	return ((s >> 16) & 0x8000) | ((e << 10) & 0x7c00) | ((m >> 13) & 0x03ff);
+}
+
+static void blackman(float window[])
+{
+	const float x0 = ((1.f * 2.f*M_PI) / 5.f) - M_PI;
+	const float x1 = ((2.f * 2.f*M_PI) / 5.f) - M_PI;
+	const float x2 = ((3.f * 2.f*M_PI) / 5.f) - M_PI;
+	const float x3 = ((4.f * 2.f*M_PI) / 5.f) - M_PI;
+
+	const float a0 = 0.42f + (0.50f * cosf(x0)) + (0.08f * cosf(2.f*x0));
+	const float a1 = 0.42f + (0.50f * cosf(x1)) + (0.08f * cosf(2.f*x1));
+	const float a2 = 0.42f + (0.50f * cosf(x2)) + (0.08f * cosf(2.f*x2));
+	const float a3 = 0.42f + (0.50f * cosf(x3)) + (0.08f * cosf(2.f*x3));
+
+	window[0] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a0);
+	window[1] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a1);
+	window[2] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a2);
+	window[3] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a3);
+}
+
+int CreateInterlaceTable(mem32_t ea, float srcH, float dstH, CellRescTableElement depth, int length)
+{
+	float phi[4], transient[4], *buf32 = (float*)ea.GetAddr();
+	float y_fraction;
+	float bandwidth = 0.5f / (srcH / dstH);
+	float phi_b = 2.f * M_PI * bandwidth;
+	float window[4];
+	u16 *buf16 = (u16*)ea.GetAddr();
+
+	blackman(window);
+
+	for (int i = 0; i<length; i++) 
+	{
+		y_fraction = (float)i / (float)length;
+
+		phi[0] = phi_b * (-1.5f - y_fraction);
+		phi[1] = phi_b * (-0.5f - y_fraction);
+		phi[2] = phi_b * (0.5f - y_fraction);
+		phi[3] = phi_b * (1.5f - y_fraction);
+
+		transient[0] = (fabsf(phi[0]) > 1E-10) ? (sinf(phi[0]) / phi[0] * window[0]) : window[0];
+		transient[1] = (fabsf(phi[1]) > 1E-10) ? (sinf(phi[1]) / phi[1] * window[1]) : window[1];
+		transient[2] = (fabsf(phi[2]) > 1E-10) ? (sinf(phi[2]) / phi[2] * window[2]) : window[2];
+		transient[3] = (fabsf(phi[3]) > 1E-10) ? (sinf(phi[3]) / phi[3] * window[3]) : window[3];
+
+		float total4 = transient[0] + transient[1] + transient[2] + transient[3];
+
+		if (depth == CELL_RESC_ELEMENT_HALF)
+		{
+			buf16[0] = FloatToHalf(transient[0] / total4);
+			buf16[1] = FloatToHalf(transient[1] / total4);
+			buf16[2] = FloatToHalf(transient[2] / total4);
+			buf16[3] = FloatToHalf(transient[3] / total4);
+			buf16 += 4;
+		}
+		else {
+			buf32[0] = transient[0] / total4;
+			buf32[1] = transient[1] / total4;
+			buf32[2] = transient[2] / total4;
+			buf32[3] = transient[3] / total4;
+			buf32 += 4;
+		}
+	}
 	return CELL_OK;
+}
+
+int cellRescCreateInterlaceTable(mem32_t ea, float srcH, CellRescTableElement depth, int length)
+{
+	cellResc->Warning("cellRescCreateInterlaceTable(ea=0x%x, depth = %i, length = %i)", ea.GetAddr(), depth, length);
+
+	if (!s_rescInternalInstance->m_bInitialized)
+	{
+		cellResc->Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
+		return CELL_RESC_ERROR_NOT_INITIALIZED;
+	}
+
+	if ((!ea.IsGood()) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
+	{
+		cellResc->Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
+		return CELL_RESC_ERROR_BAD_ARGUMENT;
+	}
+
+	if (s_rescInternalInstance->m_dstHeight == 0)
+	{
+		cellResc->Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_BAD_COMBINATION");
+		return CELL_RESC_ERROR_BAD_COMBINATION;
+	}
+
+	float ratioModeCoefficient = (s_rescInternalInstance->m_initConfig.ratioMode != CELL_RESC_LETTERBOX) ? 1.f : (1.f - 2.f * XY_DELTA_LB);
+	float dstH = s_rescInternalInstance->m_dstHeight * ratioModeCoefficient * s_rescInternalInstance->m_ratioAdjY;
+
+	if (int retValue = CreateInterlaceTable(ea, srcH, dstH, depth, length) == CELL_OK)
+	{
+		s_rescInternalInstance->m_interlaceTableEA = ea;
+		s_rescInternalInstance->m_interlaceElement = depth;
+		s_rescInternalInstance->m_interlaceTableLength = length;
+		return CELL_OK;
+	}
+	else 
+	{
+		return retValue;
+	}
 }
 
 
