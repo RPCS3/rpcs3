@@ -1158,6 +1158,7 @@ public:
 
 	~AudioDecoder()
 	{
+		// TODO: check finalization
 		if (ctx)
 		{
 			for (u32 i = frames.GetCount() - 1; ~i; i--)

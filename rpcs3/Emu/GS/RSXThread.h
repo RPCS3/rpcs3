@@ -151,6 +151,7 @@ public:
 	std::mutex m_cs_main;
 	SSemaphore m_sem_flush;
 	SSemaphore m_sem_flip;
+	u64 m_last_flip_time;
 	Callback m_flip_handler;
 	Callback m_user_handler;
 	u64 m_vblank_count;
