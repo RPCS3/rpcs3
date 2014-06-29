@@ -709,10 +709,11 @@ int cellGcmGetDisplayBufferByFlipIndex()
 	return CELL_OK;
 }
 
-int cellGcmGetLastFlipTime()
+u64 cellGcmGetLastFlipTime()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys->Log("cellGcmGetLastFlipTime()");
+
+	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
 int cellGcmGetLastSecondVTime()

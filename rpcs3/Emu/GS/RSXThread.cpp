@@ -197,6 +197,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		//if(cmd == 0xfeadffff)
 		{
 			Flip();
+			m_last_flip_time = get_system_time();
 
 			m_gcm_current_buffer = ARGS(0);
 			m_read_buffer = true;
@@ -1878,6 +1879,7 @@ void RSXThread::Task()
 
 	OnInitThread();
 
+	m_last_flip_time = get_system_time();
 	volatile bool is_vblank_stopped = false;
 
 	thread vblank("VBlank thread", [&]()

@@ -119,6 +119,15 @@ struct CellGameContentSize
 	be_t<s32> sysSizeKB;
 };
 
+struct CellGameSetInitParams
+{
+	char title[CELL_GAME_SYSP_TITLE_SIZE];
+	char titleId[CELL_GAME_SYSP_TITLEID_SIZE];
+	char reserved0[2];
+	char version[CELL_GAME_SYSP_VERSION_SIZE];
+	char reserved1[66];
+};
+
 std::string contentInfo = "";
 std::string usrdir = "";
 
@@ -293,7 +302,7 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath, mem_list_ptr_t<u8>
 
 	if (contentInfo == "" && usrdir == "")
 	{
-		cellGame->Error("cellGameContentPermit(): CELL_GAME_ERROR_FAILURE (calling order is invalid)");
+		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_FAILURE (no permission given)");
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
@@ -320,9 +329,13 @@ int cellGameDataCheckCreate(u32 version, u32 dirName_addr, u32 errDialog, u32 fu
 	return cellGameDataCheckCreate2(version, dirName_addr, errDialog, funcStat_addr, container);
 }
 
-int cellGameCreateGameData()
+int cellGameCreateGameData(mem_ptr_t<CellGameSetInitParams> init, mem_list_ptr_t<u8> tmp_contentInfoPath, mem_list_ptr_t<u8> tmp_usrdirPath)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame->Error("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
+		init.GetAddr(), tmp_contentInfoPath.GetAddr(), tmp_usrdirPath.GetAddr());
+
+	// TODO: create temporary game directory, set initial PARAM.SFO parameters
+	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement
 	return CELL_OK;
 }
 

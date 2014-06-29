@@ -31,7 +31,7 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 next:
 	if (vdec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
 	{
-		while (vdec.job.IsEmpty())
+		while (!vdec.job.GetCountUnsafe())
 		{
 			if (Emu.IsStopped())
 			{
@@ -44,6 +44,7 @@ next:
 		switch (vdec.job.Peek().type)
 		{
 		case vdecEndSeq:
+		case vdecClose:
 			{
 				buf_size = vdec.reader.size;
 			}
@@ -147,7 +148,7 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 			}
 
-			if (vdec.job.IsEmpty() && vdec.is_running)
+			if (!vdec.job.GetCountUnsafe() && vdec.is_running)
 			{
 				Sleep(1);
 				continue;
@@ -189,10 +190,8 @@ u32 vdecOpen(VideoDecoder* data)
 					cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 					cb.Branch(true); // ???*/
 
-					avcodec_close(vdec.ctx);
-					avformat_close_input(&vdec.fmt);
-
 					vdec.is_running = false;
+					vdec.just_finished = true;
 				}
 				break;
 
@@ -244,7 +243,13 @@ u32 vdecOpen(VideoDecoder* data)
 
 					} au(0);
 
-					if (vdec.just_started) // deferred initialization
+					if (vdec.just_started && vdec.just_finished)
+					{
+						avcodec_flush_buffers(vdec.ctx);
+						vdec.just_started = false;
+						vdec.just_finished = false;
+					}
+					else if (vdec.just_started) // deferred initialization
 					{
 						err = avformat_open_input(&vdec.fmt, NULL, av_find_input_format("mpeg"), NULL);
 						if (err)
@@ -285,7 +290,7 @@ u32 vdecOpen(VideoDecoder* data)
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
 							std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
-							// not multithread-safe
+							// not multithread-safe (???)
 							err = avcodec_open2(vdec.ctx, codec, &opts);
 						}
 						if (err)
@@ -294,8 +299,6 @@ u32 vdecOpen(VideoDecoder* data)
 							Emu.Pause();
 							break;
 						}
-						//vdec.ctx->flags |= CODEC_FLAG_TRUNCATED;
-						//vdec.ctx->flags2 |= CODEC_FLAG2_CHUNKS;
 						vdec.just_started = false;
 					}
 
@@ -303,8 +306,9 @@ u32 vdecOpen(VideoDecoder* data)
 
 					while (true)
 					{
-						if (Emu.IsStopped())
+						if (Emu.IsStopped() || vdec.job.PeekIfExist(VdecTask()).type == vdecClose)
 						{
+							vdec.is_finished = true;
 							LOG_WARNING(HLE, "vdecDecodeAu: aborted");
 							return;
 						}
@@ -498,7 +502,7 @@ int cellVdecClose(u32 handle)
 
 	vdec->job.Push(VdecTask(vdecClose));
 
-	while (!vdec->is_finished || !vdec->frames.IsEmpty())
+	while (!vdec->is_finished)
 	{
 		if (Emu.IsStopped())
 		{
@@ -674,13 +678,13 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 		return CELL_VDEC_ERROR_FATAL;
 	}
 
-	VdecFrame& vf = vdec->frames.Peek();
-
 	if (vdec->frames.IsEmpty())
 	{
-		Sleep(1);
+		Sleep(1); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
+
+	VdecFrame& vf = vdec->frames.Peek();
 
 	AVFrame& frame = *vf.data;
 

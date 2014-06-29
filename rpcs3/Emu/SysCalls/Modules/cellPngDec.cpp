@@ -98,9 +98,16 @@ int cellPngDecExtOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc
 	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x, cbCtrlStrm_addr=0x%x, opnParam=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo, cbCtrlStrm.GetAddr(), opnParam.GetAddr());
 
-	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", (u32)cbCtrlStrm->cbCtrlStrmFunc_addr);
+	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", cbCtrlStrm->cbCtrlStrmFunc.GetAddr());
 
-	return cellPngDecOpen(mainHandle, subHandle, src, openInfo);
+	MemoryAllocator<CellPngDecStrmInfo> streamInfo;
+	MemoryAllocator<CellPngDecStrmParam> streamParam;
+
+	int res = cellPngDecOpen(mainHandle, subHandle, src, openInfo);
+
+	if (!res) cbCtrlStrm->cbCtrlStrmFunc(streamInfo.GetAddr(), streamParam.GetAddr(), cbCtrlStrm->cbCtrlStrmArg);
+
+	return res;
 }
 
 int cellPngDecClose(u32 mainHandle, u32 subHandle)
@@ -316,7 +323,7 @@ int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, cons
 	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam=0x%x",
 		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr(), cbCtrlDisp.GetAddr(), dispParam.GetAddr());
 
-	cellPngDec->Warning("*** cbCtrlDisp->cbCtrlDispFunc_addr=0x%x", (u32)scbCtrlDisp->cbCtrlDispFunc_addr);
+	if (cbCtrlDisp.GetAddr()) cellPngDec->Warning("*** cbCtrlDisp->cbCtrlDispFunc_addr=0x%x", (u32)cbCtrlDisp->cbCtrlDispFunc_addr);
 
 	return cellPngDecDecodeData(mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 }

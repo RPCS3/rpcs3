@@ -125,9 +125,20 @@ struct CellPngDecMainHandle
 	be_t<u32> threadOutParam;
 };
 
+struct CellPngDecStrmInfo
+{
+	be_t<u32> decodedStrmSize;
+};
+
+struct CellPngDecStrmParam
+{
+	be_t<u32> strmPtr;
+	be_t<u32> strmSize;
+};
+
 struct CellPngDecCbCtrlStrm
 {
-	be_t<u32> cbCtrlStrmFunc_addr;
+	mem_func_beptr_t<void(*)(mem_ptr_t<CellPngDecStrmInfo> strmInfo, mem_ptr_t<CellPngDecStrmParam> strmParam, u32 cbCtrlStrmArg)> cbCtrlStrmFunc;
 	be_t<u32> cbCtrlStrmArg;
 };
 

@@ -71,7 +71,7 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 			}
 			
-			if (dmux.job.IsEmpty() && dmux.is_running)
+			if (!dmux.job.GetCountUnsafe() && dmux.is_running)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;

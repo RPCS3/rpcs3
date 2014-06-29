@@ -889,10 +889,11 @@ int cellRescGetRegisterCount()
 	return CELL_OK;
 }
 
-int cellRescGetLastFlipTime()
+u64 cellRescGetLastFlipTime()
 {
-	UNIMPLEMENTED_FUNC(cellResc);
-	return CELL_OK;
+	cellResc->Log("cellRescGetLastFlipTime()");
+
+	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
 int cellRescSetRegisterCount()

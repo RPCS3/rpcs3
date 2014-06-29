@@ -1076,6 +1076,7 @@ public:
 	volatile bool is_running;
 	volatile bool is_finished;
 	bool just_started;
+	bool just_finished;
 
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
@@ -1127,6 +1128,7 @@ public:
 		, is_running(false)
 		, is_finished(false)
 		, just_started(false)
+		, just_finished(false)
 		, ctx(nullptr)
 		, fmt(nullptr)
 	{
