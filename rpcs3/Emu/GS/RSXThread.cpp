@@ -193,6 +193,60 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	switch(cmd)
 	{
+	// NV406E
+	case NV406E_SET_REFERENCE:
+	{
+		m_ctrl->ref = ARGS(0);
+	}
+	break;
+
+	case NV406E_SET_CONTEXT_DMA_SEMAPHORE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV406E_SET_CONTEXT_DMA_SEMAPHORE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_SET_SEMAPHORE_OFFSET:
+	case NV406E_SEMAPHORE_OFFSET:
+	{
+		m_set_semaphore_offset = true;
+		m_semaphore_offset = ARGS(0);
+	}
+	break;
+
+	case NV406E_SEMAPHORE_ACQUIRE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV406E_SEMAPHORE_ACQUIRE: %x", ARGS(0));
+	}
+	break;
+
+	case NV406E_SEMAPHORE_RELEASE:
+	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+	{
+		if(m_set_semaphore_offset)
+		{
+			m_set_semaphore_offset = false;
+			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
+		}
+	}
+	break;
+
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+	{
+		if(m_set_semaphore_offset)
+		{
+			m_set_semaphore_offset = false;
+			u32 value = ARGS(0);
+			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
+
+			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
+		}
+	}
+	break;
+
+	// NV4097
 	case NV4097_SET_FLIP:
 		//if(cmd == 0xfeadffff)
 		{
@@ -214,16 +268,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_NO_OPERATION:
 	{
-		LOG_WARNING(RSX, "NV4097_NO_OPERATION");
+		// Nothing to do here 
 	}
 	break;
 
-	case NV406E_SET_REFERENCE:
+	case NV4097_NOTIFY:
 	{
-		m_ctrl->ref = ARGS(0);
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_NOTIFY: %x", ARGS(0));
 	}
 	break;
-	
+
+	case NV4097_WAIT_FOR_IDLE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_WAIT_FOR_IDLE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_PM_TRIGGER:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_PM_TRIGGER: %x", ARGS(0));
+	}
+	break;
+
 	// Texture
 	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20) :
 	{
@@ -431,10 +500,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_set_alpha_func = true;
 		m_alpha_func = ARGS(0);
 
-		if (count >= 2)
+		if (count == 2)
 		{
 			m_set_alpha_ref = true;
-
 			const u32 a1 = ARGS(1);
 			m_alpha_ref = (float&)a1;
 		}
@@ -480,6 +548,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		if (ARGS(0))
 			LOG_WARNING(RSX, "NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
+
+		// TODO:
+		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP(((mrt1) << 1) | ((mrt2) << 2) | ((mrt3) << 3));
 	}
 	break;
 
@@ -489,7 +560,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_blend_sfactor_rgb = ARGS(0) & 0xffff;
 		m_blend_sfactor_alpha = ARGS(0) >> 16;
 
-		if (count >= 2)
+		if (count == 2)
 		{
 			m_set_blend_dfactor = true;
 			m_blend_dfactor_rgb = ARGS(1) & 0xffff;
@@ -550,7 +621,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_set_depth_bounds = true;
 		const u32 a0 = ARGS(0);
 		m_depth_bounds_min = (float&)a0;
-		if (count > 1)
+
+		if (count == 2)
 		{
 			const u32 a1 = ARGS(1);
 			m_depth_bounds_max = (float&)a1;
@@ -567,21 +639,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	// Viewport
-	case NV4097_SET_VIEWPORT_VERTICAL:
-	{
-		m_set_viewport_vertical = true;
-		m_viewport_y = ARGS(0) & 0xffff;
-		m_viewport_h = ARGS(0) >> 16;
-	}
-	break;
-
 	case NV4097_SET_VIEWPORT_HORIZONTAL:
 	{
 		m_set_viewport_horizontal = true;
 		m_viewport_x = ARGS(0) & 0xffff;
 		m_viewport_w = ARGS(0) >> 16;
 
-		if(count == 2)
+		if (count == 2)
 		{
 			m_set_viewport_vertical = true;
 			m_viewport_y = ARGS(1) & 0xffff;
@@ -589,6 +653,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		}
 
 		CMD_LOG("x=%d, y=%d, w=%d, h=%d", m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+	}
+	break;
+
+	case NV4097_SET_VIEWPORT_VERTICAL:
+	{
+		m_set_viewport_vertical = true;
+		m_viewport_y = ARGS(0) & 0xffff;
+		m_viewport_h = ARGS(0) >> 16;
 	}
 	break;
 
@@ -641,7 +713,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Polygon
+	// Polygon mode/offset
 	case NV4097_SET_FRONT_POLYGON_MODE:
 	{
 		m_set_front_polygon_mode = true;
@@ -681,6 +753,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 		const u32 a0 = ARGS(0);
 		m_poly_offset_scale_factor = (float&)a0;
+
+		if (count == 2)
+		{
+			const u32 a1 = ARGS(1);
+			m_poly_offset_bias = (float&)a1;
+		}
 	}
 	break;
 
@@ -739,6 +817,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV4097_CLEAR_REPORT_VALUE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_CLEAR_REPORT_VALUE: %x", ARGS(0));
+	}
+	break;
+
 	case NV4097_SET_CLEAR_RECT_HORIZONTAL:
 	{
 		if (ARGS(0))
@@ -766,7 +851,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 			LoadVertexData(first, _count);
 
-			if(first < m_draw_array_first) m_draw_array_first = first;
+			if (first < m_draw_array_first)
+			{
+				m_draw_array_first = first;
+			}
+
 			m_draw_array_count += _count;
 		}
 	}
@@ -890,19 +979,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_cur_vertex_prog = &m_vertex_progs[ARGS(0)];
 		m_cur_vertex_prog->data.clear();
 
-		if(count == 2)
+		if (count == 2)
 		{
 			const u32 start = ARGS(1);
-			if(start)
+			if (start)
+			{
 				LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_LOAD: start = %d", start);
+			}
 		}
 	}
 	break;
 
 	case NV4097_SET_TRANSFORM_PROGRAM_START:
 	{
-		if (ARGS(0)) 
-			LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_START: 0x%x", ARGS(0));
+		const u32 start = ARGS(0);
+		if (start) 
+		{
+			LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_START: start = %d", start);
+		}
 	}
 	break;
 
@@ -921,6 +1015,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	case NV4097_SET_TRANSFORM_TIMEOUT:
+
+		// TODO:
+		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((count) | ((registerCount) << 16)); \
 
 		if(!m_cur_vertex_prog)
 		{
@@ -964,15 +1061,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_INVALIDATE_VERTEX_CACHE_FILE: %x", ARGS(0));
+		// Nothing to do here
 	}
 	break;
 
 	case NV4097_INVALIDATE_VERTEX_FILE:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_INVALIDATE_VERTEX_FILE: %x", ARGS(0));
+		// Nothing to do here
 	}
 	break;
 
@@ -1010,6 +1105,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+	{
+		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
+	}
+	break;
+
 	case NV4097_SET_STENCIL_MASK:
 	{
 		m_set_stencil_mask = true;
@@ -1021,6 +1122,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_stencil_func = true;
 		m_stencil_func = ARGS(0);
+
 		if(count >= 2)
 		{
 			m_set_stencil_func_ref = true;
@@ -1053,6 +1155,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_stencil_fail = true;
 		m_stencil_fail = ARGS(0);
+
 		if(count >= 2)
 		{
 			m_set_stencil_zfail = true;
@@ -1067,12 +1170,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
-	{
-		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
-	}
-	break;
-
 	case NV4097_SET_BACK_STENCIL_MASK:
 	{
 		m_set_back_stencil_mask = true;
@@ -1084,6 +1181,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_back_stencil_func = true;
 		m_back_stencil_func = ARGS(0);
+
 		if(count >= 2)
 		{
 			m_set_back_stencil_func_ref = true;
@@ -1116,6 +1214,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	{
 		m_set_stencil_fail = true;
 		m_stencil_fail = ARGS(0);
+
 		if(count >= 2)
 		{
 			m_set_back_stencil_zfail = true;
@@ -1173,6 +1272,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case NV4097_SET_POINT_SPRITE_CONTROL:
 	{
 		m_set_point_sprite_control = ARGS(0) ? true : false;
+
+		// TODO:
+		//(cmd)[1] = CELL_GCM_ENDIAN_SWAP((enable) | ((rmode) << 1) | (texcoordMask));
 	}
 	break;
 
@@ -1184,14 +1286,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	// Scissor
-	case NV4097_SET_SCISSOR_VERTICAL:
-	{
-		m_set_scissor_vertical = true;
-		m_scissor_y = ARGS(0) & 0xffff;
-		m_scissor_h = ARGS(0) >> 16;
-	}
-	break;
-
 	case NV4097_SET_SCISSOR_HORIZONTAL:
 	{
 		m_set_scissor_horizontal = true;
@@ -1207,46 +1301,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Semaphore
-	case NV4097_SET_SEMAPHORE_OFFSET:
-	case NV406E_SEMAPHORE_OFFSET:
+	case NV4097_SET_SCISSOR_VERTICAL:
 	{
-		m_set_semaphore_offset = true;
-		m_semaphore_offset = ARGS(0);
+		m_set_scissor_vertical = true;
+		m_scissor_y = ARGS(0) & 0xffff;
+		m_scissor_h = ARGS(0) >> 16;
 	}
 	break;
-
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-	{
-		if(m_set_semaphore_offset)
-		{
-			m_set_semaphore_offset = false;
-			u32 value = ARGS(0);
-			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
-
-			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
-		}
-	}
-	break;
-
-	case NV406E_SEMAPHORE_RELEASE:
-	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-	{
-		if(m_set_semaphore_offset)
-		{
-			m_set_semaphore_offset = false;
-			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
-		}
-	}
-	break;
-
-	case NV406E_SEMAPHORE_ACQUIRE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV406E_SEMAPHORE_ACQUIRE: %x", ARGS(0));
-	}
-	break;
-
 
 	// Depth/ Color buffer usage 
 	case NV4097_SET_SURFACE_FORMAT:
@@ -1420,12 +1481,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_SET_SURFACE_CLIP_VERTICAL:
+	case NV4097_SET_CONTEXT_DMA_SEMAPHORE:
 	{
-		const u32 a0 = ARGS(0);
-		m_set_surface_clip_vertical = true;
-		m_surface_clip_y = a0;
-		m_surface_clip_h = a0 >> 16;
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_SEMAPHORE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
 	}
 	break;
 
@@ -1437,7 +1503,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_surface_clip_x = a0;
 		m_surface_clip_w = a0 >> 16;
 
-		if(count >= 2)
+		if(count == 2)
 		{
 			const u32 a1 = ARGS(1);
 			m_set_surface_clip_vertical = true;
@@ -1447,15 +1513,27 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Antialiasing
+	case NV4097_SET_SURFACE_CLIP_VERTICAL:
+	{
+		const u32 a0 = ARGS(0);
+		m_set_surface_clip_vertical = true;
+		m_surface_clip_y = a0;
+		m_surface_clip_h = a0 >> 16;
+	}
+	break;
+
+	// Anti aliasing
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
 	{
+		// TODO:
+		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((enable) | ((alphaToCoverage) << 4) | ((alphaToOne) << 8) | ((sampleMask) << 16)); \
+
 		if (ARGS(0))
 			LOG_WARNING(RSX, "NV4097_SET_ANTI_ALIASING_CONTROL: %x", ARGS(0));
 	}
 	break;
 
-	// Line/Polygon Smoothing
+	// Line/Polygon smoothing
 	case NV4097_SET_LINE_SMOOTH_ENABLE:
 	{
 		m_set_line_smooth = ARGS(0) ? true : false;
@@ -1477,7 +1555,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Line/Polygon Stipple
+	// Line/Polygon stipple
 	case NV4097_SET_LINE_STIPPLE:
 	{
 		m_set_line_stipple = ARGS(0) ? true : false;
@@ -1490,6 +1568,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		const u32 a0 = ARGS(0);
 		m_line_stipple_factor = a0 & 0xffff;
 		m_line_stipple_pattern = a0 >> 16;
+	}
+	break;
+
+	case NV4097_SET_POLYGON_STIPPLE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_POLYGON_STIPPLE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_POLYGON_STIPPLE_PATTERN: %x", ARGS(0));
 	}
 	break;
 
@@ -1520,6 +1612,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 		//m_set_depth_func = true;
 		//m_depth_func = ARGS(0) >> 4;
+	}
+	break;
+
+	case NV4097_SET_ZCULL_STATS_ENABLE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_ZCULL_STATS_ENABLE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_ZCULL_SYNC:
+		{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_ZCULL_SYNC: %x", ARGS(0));
 	}
 	break;
 
@@ -1573,6 +1679,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	break;
 
 	// Fog
+	case NV4097_SET_FOG_MODE:
+	{
+		m_set_fog_mode = true;
+		m_fog_mode = ARGS(0);
+	}
+	break;
+
 	case NV4097_SET_FOG_PARAMS:
 	{
 		m_set_fog_params = true;
@@ -1583,18 +1696,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV4097_SET_FOG_MODE:
-	{
-		m_set_fog_mode = true;
-		m_fog_mode = ARGS(0);
-	}
-	break;
-
 	// Zmin_max
 	case NV4097_SET_ZMIN_MAX_CONTROL:
 	{
 		if (ARGS(0))
 			LOG_WARNING(RSX, "NV4097_SET_ZMIN_MAX_CONTROL: %x", ARGS(0));
+
+		// TODO:
+		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((cullNearFarEnable) | ((zclampEnable) << 4) | ((cullIgnoreW)<<8));
 	}
 	break;
 
@@ -1633,6 +1742,23 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV4097_SET_RENDER_ENABLE:
+	{
+		// TODO:
+		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((offset) | ((mode) << 24)); \
+
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_RENDER_ENABLE: %x", ARGS(0));
+	}
+	break;
+
+	case NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE: %x", ARGS(0));
+	}
+	break;
+
 	case 0x000002c8:
 	case 0x000002d0:
 	case 0x000002d8:
@@ -1640,6 +1766,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	case 0x000002e8:
 	case 0x000002f0:
 	case 0x000002f8:
+	break;
+
+	// NV0039
+	case NV0039_SET_OBJECT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_SET_OBJECT: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+	}
 	break;
 
 	case NV0039_SET_CONTEXT_DMA_BUFFER_IN: // [E : RSXThread]: TODO: unknown/illegal method [0x00002184](0xfeed0000, 0xfeed0000)
@@ -1654,6 +1795,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		{
 			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_BUFFER_IN: TODO: srcContext=0x%x, dstContext=0x%x", srcContext, dstContext);
 		}
+	}
+	break;
+
+	case NV0039_SET_CONTEXT_DMA_BUFFER_OUT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_BUFFER_OUT: %x", ARGS(0));
 	}
 	break;
 
@@ -1696,9 +1844,244 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	case NV0039_PITCH_IN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_PITCH_IN: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_PITCH_OUT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_PITCH_OUT: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_LINE_LENGTH_IN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_LINE_LENGTH_IN: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_LINE_COUNT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_LINE_COUNT: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_FORMAT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_FORMAT: %x", ARGS(0));
+	}
+	break;
+
+	case NV0039_BUFFER_NOTIFY:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY: %x", ARGS(0));
+	}
+	break;
+
+	// NV3062
+	case NV3062_SET_OBJECT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3062_SET_OBJECT: %x", ARGS(0));
+	}
+	break;
+
+	case NV3062_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3062_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+	}
+	break;
+
+	case NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE: %x", ARGS(0));
+	}
+	break;
+
+	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
+	{
+		m_context_dma_img_dst = ARGS(0);
+	}
+	break;
+
+	case NV3062_SET_COLOR_FORMAT:
+	{
+		m_color_format = ARGS(0);
+		m_color_format_src_pitch = ARGS(1);
+		m_color_format_dst_pitch = ARGS(1) >> 16;
+	}
+	break;
+
+	case NV3062_SET_PITCH:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3062_SET_PITCH: %x", ARGS(0));
+	}
+	break;
+
+	case NV3062_SET_OFFSET_SOURCE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3062_SET_OFFSET_SOURCE: %x", ARGS(0));
+	}
+	break;
+
 	case NV3062_SET_OFFSET_DESTIN:
 	{
 		m_dst_offset = ARGS(0);
+	}
+	break;
+
+	// NV309E
+	case NV309E_SET_OBJECT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV309E_SET_OBJECT: %x", ARGS(0));
+	}
+	break;
+
+	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+	}
+	break;
+
+	case NV309E_SET_CONTEXT_DMA_IMAGE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_IMAGE: %x", ARGS(0));
+	}
+	break;
+
+	case NV309E_SET_FORMAT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV309E_SET_FORMAT: %x", ARGS(0));
+	}
+	break;
+
+	case NV309E_SET_OFFSET:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV309E_SET_OFFSET: %x", ARGS(0));
+	}
+	break;
+
+	// NV308A
+	case NV308A_SET_OBJECT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_OBJECT: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_COLOR_KEY:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_COLOR_KEY: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_CLIP_RECTANGLE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_CLIP_RECTANGLE: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_PATTERN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_PATTERN: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_ROP:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_ROP: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_BETA1:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_BETA1: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_BETA4:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_BETA4: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_CONTEXT_SURFACE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_SURFACE: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_COLOR_CONVERSION:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_COLOR_CONVERSION: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_OPERATION:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_OPERATION: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SET_COLOR_FORMAT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SET_COLOR_FORMAT: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_POINT:
+	{
+		const u32 a0 = ARGS(0);
+		m_point_x = a0 & 0xffff;
+		m_point_y = a0 >> 16;
+	}
+	break;
+
+	case NV308A_SIZE_OUT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SIZE_OUT: %x", ARGS(0));
+	}
+	break;
+
+	case NV308A_SIZE_IN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV308A_SIZE_IN: %x", ARGS(0));
 	}
 	break;
 
@@ -1745,19 +2128,61 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	case NV308A_POINT:
+	// NV3089
+	case NV3089_SET_OBJECT:
 	{
-		const u32 a0 = ARGS(0);
-		m_point_x = a0 & 0xffff;
-		m_point_y = a0 >> 16;
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_OBJECT: %x", ARGS(0));
 	}
 	break;
 
-	case NV3062_SET_COLOR_FORMAT:
+	case NV3089_SET_CONTEXT_DMA_NOTIFIES:
 	{
-		m_color_format = ARGS(0);
-		m_color_format_src_pitch = ARGS(1);
-		m_color_format_dst_pitch = ARGS(1) >> 16;
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_DMA_IMAGE:
+	{
+		m_context_dma_img_src = ARGS(0);
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_PATTERN:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_PATTERN: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_ROP:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_ROP: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_BETA1:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_BETA1: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_BETA4:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_BETA4: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_CONTEXT_SURFACE:
+	{
+		if (ARGS(0) != CELL_GCM_CONTEXT_SURFACE2D)
+		{
+			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
+		}
 	}
 	break;
 
@@ -1776,6 +2201,62 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_color_conv_out_h = ARGS(6) >> 16;
 		m_color_conv_dsdx = ARGS(7);
 		m_color_conv_dtdy = ARGS(8);
+	}
+	break;
+
+	case NV3089_SET_COLOR_FORMAT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_COLOR_FORMAT: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_SET_OPERATION:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_SET_OPERATION: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_CLIP_POINT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_CLIP_POINT: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_CLIP_SIZE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_CLIP_SIZE: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_IMAGE_OUT_POINT:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_IMAGE_OUT_POINT: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_IMAGE_OUT_SIZE:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_IMAGE_OUT_SIZE: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_DS_DX:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_DS_DX: %x", ARGS(0));
+	}
+	break;
+
+	case NV3089_DT_DY:
+	{
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_DT_DY: %x", ARGS(0));
 	}
 	break;
 
@@ -1808,24 +2289,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 	
-	case NV3089_SET_CONTEXT_DMA_IMAGE:
+	case NV3089_IMAGE_IN_FORMAT:
 	{
-		m_context_dma_img_src = ARGS(0);
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_IMAGE_IN_FORMAT: %x", ARGS(0));
 	}
 	break;
 
-	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
+	case NV3089_IMAGE_IN_OFFSET:
 	{
-		m_context_dma_img_dst = ARGS(0);
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_IMAGE_IN_OFFSET: %x", ARGS(0));
 	}
 	break;
 
-	case NV3089_SET_CONTEXT_SURFACE:
+	case NV3089_IMAGE_IN:
 	{
-		if (ARGS(0) != CELL_GCM_CONTEXT_SURFACE2D)
-		{
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
-		}
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV3089_IMAGE_IN: %x", ARGS(0));
 	}
 	break;
 
