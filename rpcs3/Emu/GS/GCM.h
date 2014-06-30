@@ -56,7 +56,7 @@ enum
 	CELL_GCM_FREQUENCY_DIVIDE = 0,
 };
 
-enum
+enum CellRescTableElement
 {
 	CELL_RESC_ELEMENT_HALF  = 0,
 	CELL_RESC_ELEMENT_FLOAT = 1,
