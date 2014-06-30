@@ -50,6 +50,24 @@ enum
 	CELL_GCM_LOCATION_MAIN  = 1,
 };
 
+enum
+{
+	CELL_GCM_FREQUENCY_MODULO = 1,
+	CELL_GCM_FREQUENCY_DIVIDE = 0,
+};
+
+enum CellRescTableElement
+{
+	CELL_RESC_ELEMENT_HALF  = 0,
+	CELL_RESC_ELEMENT_FLOAT = 1,
+};
+
+enum
+{
+	CELL_GCM_FLAT   = 0x1D00,
+	CELL_GCM_SMOOTH = 0x1D01,
+};
+
 // GCM Texture
 enum
 {
