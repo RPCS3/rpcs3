@@ -10,6 +10,7 @@
 
 #include "cellSysutil.h"
 #include "cellSysutil_SaveData.h"
+#include "cellGame.h"
 
 #include "Loader/PSF.h"
 
@@ -997,6 +998,12 @@ int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 	return CELL_OK;
 }
 
+extern int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
+
+extern int cellGameDataCheckCreate(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
+
 void cellSysutil_init()
 {
 	cellSysutil->AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
@@ -1074,4 +1081,7 @@ void cellSysutil_init()
 	//cellSysutil->AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
 
 	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
+
+	cellSysutil->AddFunc(0xe7951dee, cellGameDataCheckCreate);
+	cellSysutil->AddFunc(0xc9645c41, cellGameDataCheckCreate2);
 }

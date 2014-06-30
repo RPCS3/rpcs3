@@ -339,6 +339,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGifDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
