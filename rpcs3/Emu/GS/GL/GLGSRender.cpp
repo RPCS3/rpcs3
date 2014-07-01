@@ -892,7 +892,8 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
 	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART);
 	Enable(m_set_line_stipple, GL_LINE_STIPPLE);
-
+	Enable(m_set_polygon_stipple, GL_POLYGON_STIPPLE);
+	
 	if(m_set_clip_plane)
 	{
 		Enable(m_clip_plane_0, GL_CLIP_PLANE0);
@@ -1041,6 +1042,12 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glLineStipple");
 	}
 
+	if (m_set_polygon_stipple)
+	{
+		glPolygonStipple((const GLubyte*)m_polygon_stipple_pattern);
+		checkForGlError("glPolygonStipple");
+	}
+	
 	if(m_set_blend_equation)
 	{
 		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);

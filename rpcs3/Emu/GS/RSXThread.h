@@ -210,7 +210,7 @@ public:
 	u16 m_scissor_w;
 	u16 m_scissor_h;
 
-	// Polygon
+	// Polygon mode/offset
 	bool m_set_poly_smooth;
 	bool m_set_poly_offset_fill;
 	bool m_set_poly_offset_line;
@@ -222,9 +222,13 @@ public:
 	bool m_set_poly_offset_mode;
 	float m_poly_offset_scale_factor;
 	float m_poly_offset_bias;
+
+	// Line/Polygon stipple
 	bool m_set_line_stipple;
 	u16 m_line_stipple_pattern;
 	u16 m_line_stipple_factor;
+	bool m_set_polygon_stipple;
+	u32 m_polygon_stipple_pattern[32];
 
 	// Logic Ops
 	bool m_set_logic_op;
@@ -450,6 +454,7 @@ protected:
 		m_set_poly_offset_point = false;
 		m_set_restart_index = false;
 		m_set_line_stipple = false;
+		m_set_polygon_stipple = false;
 
 		m_clear_color_r = 0;
 		m_clear_color_g = 0;
@@ -475,6 +480,11 @@ protected:
 		m_line_width = 1.0;
 		m_line_stipple_pattern = 0xffff;
 		m_line_stipple_factor = 1;
+		for (size_t i = 0; i < 32; i++)
+		{
+			// TODO: Check if the polygon stipple pattern is really "all ones"
+			m_polygon_stipple_pattern[i] = 0xFFFFFFFF;
+		}
 
 		// Construct Textures
 		for(int i=0; i<16; i++)
@@ -552,6 +562,7 @@ protected:
 		m_set_restart_index = false;
 		m_set_specular = false;
 		m_set_line_stipple = false;
+		m_set_polygon_stipple = false;
 		m_set_logic_op = false;
 		m_set_surface_format = false;
 		m_set_surface_clip_horizontal = false;
