@@ -1573,15 +1573,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_POLYGON_STIPPLE:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_POLYGON_STIPPLE: %x", ARGS(0));
+		m_set_polygon_stipple = ARGS(0) ? true : false;
 	}
 	break;
 
 	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_POLYGON_STIPPLE_PATTERN: %x", ARGS(0));
+		for (size_t i = 0; i < 32; i++)
+		{
+			m_polygon_stipple_pattern[i] = ARGS(i);
+		}
 	}
 	break;
 
