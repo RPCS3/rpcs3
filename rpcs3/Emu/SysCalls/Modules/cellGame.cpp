@@ -279,7 +279,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 		cellGame->Error("cellGameDataCheckCreate2(): TODO: writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.GetAddr());
 	}
 
-	switch (cbResult->result)
+	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 		// TODO: do not process game data
