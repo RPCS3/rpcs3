@@ -116,6 +116,12 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_EINVAL;
 	}
 
+	if (!Emu.GetVFS().ExistsFile(ppath))
+	{
+		sys_fs->Error("\"%s\" not found! flags: 0x%08x", ppath.c_str(), flags);
+		return CELL_ENOENT;
+	}
+
 	vfsFileBase* stream = Emu.GetVFS().OpenFile(ppath, o_mode);
 
 	if(!stream || !stream->IsOpened())
@@ -126,7 +132,7 @@ int cellFsOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	}
 
 	fd = sys_fs->GetNewId(stream, IDFlag_File);
-	LOG_WARNING(HLE, "*** cellFsOpen(path=\"%s\"): fd = %d", path.c_str(), fd.GetValue());
+	LOG_WARNING(HLE, "\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
 }

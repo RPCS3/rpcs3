@@ -32,7 +32,7 @@ int adecRawRead(void* opaque, u8* buf, int buf_size)
 next:
 	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
 	{
-		while (adec.job.IsEmpty())
+		while (!adec.job.GetCountUnsafe())
 		{
 			if (Emu.IsStopped())
 			{
@@ -45,6 +45,7 @@ next:
 		switch (adec.job.Peek().type)
 		{
 		case adecEndSeq:
+		case adecClose:
 			{
 				buf_size = adec.reader.size;
 			}
@@ -209,7 +210,7 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			if (adec.job.IsEmpty() && adec.is_running)
+			if (!adec.job.GetCountUnsafe() && adec.is_running)
 			{
 				Sleep(1);
 				continue;
@@ -255,10 +256,8 @@ u32 adecOpen(AudioDecoder* data)
 					cb.Branch(true); // ???*/
 					adec.adecCb->ExecAsCallback(adec.cbFunc, true, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
-					avcodec_close(adec.ctx);
-					avformat_close_input(&adec.fmt);
-
 					adec.is_running = false;
+					adec.just_finished = true;
 				}
 				break;
 
@@ -312,7 +311,14 @@ u32 adecOpen(AudioDecoder* data)
 						dump.Close();
 					}*/
 
-					if (adec.just_started) // deferred initialization
+					if (adec.just_started && adec.just_finished)
+					{
+						avcodec_flush_buffers(adec.ctx);
+						adec.reader.init = true;
+						adec.just_finished = false;
+						adec.just_started = false;
+					}
+					else if (adec.just_started) // deferred initialization
 					{
 						err = avformat_open_input(&adec.fmt, NULL, av_find_input_format("oma"), NULL);
 						if (err)
@@ -353,7 +359,7 @@ u32 adecOpen(AudioDecoder* data)
 						av_dict_set(&opts, "refcounted_frames", "1", 0);
 						{
 							std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
-							// not multithread-safe
+							// not multithread-safe (???)
 							err = avcodec_open2(adec.ctx, codec, &opts);
 						}
 						if (err)
@@ -605,7 +611,7 @@ int cellAdecClose(u32 handle)
 
 	adec->job.Push(AdecTask(adecClose));
 
-	while (!adec->is_finished || !adec->frames.IsEmpty())
+	while (!adec->is_finished)
 	{
 		if (Emu.IsStopped())
 		{
@@ -789,12 +795,13 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	AdecFrame& af = adec->frames.Peek();
-
 	if (adec->frames.IsEmpty())
 	{
+		Sleep(1); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
+
+	AdecFrame& af = adec->frames.Peek();
 
 	AVFrame* frame = af.data;
 

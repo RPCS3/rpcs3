@@ -88,13 +88,13 @@ CCellRescInternal* s_rescInternalInstance = nullptr;
 
 // Extern Functions
 extern int cellGcmSetFlipMode(u32 mode);
-extern int cellGcmSetFlipHandler(u32 handler_addr);
-extern s32 cellGcmAddressToOffset(u64 address, mem32_t offset);
+extern void cellGcmSetFlipHandler(u32 handler_addr);
+extern int cellGcmAddressToOffset(u64 address, mem32_t offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
 extern int cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
-extern u32 cellGcmSetVBlankHandler(u32 handler);
+extern void cellGcmSetVBlankHandler(u32 handler);
 extern u32 cellGcmSetSecondVHandler(u32 handler);
 extern u32 cellGcmGetTiledPitchSize(u32 size);
 
@@ -1096,19 +1096,16 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	return CELL_OK;
 }
 
-int cellRescSetFlipHandler(u32 handler_addr)
+void cellRescSetFlipHandler(u32 handler_addr)
 {
 	cellResc->Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler_addr);
 
 	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
 	{
-		cellResc->Error("cellRescSetFlipHandler : CELL_EFAULT");
-		return CELL_EFAULT;
+		cellResc->Error("cellRescSetFlipHandler(handler_addr=%d): invalid address", handler_addr);
 	}
 
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
-
-	return CELL_OK;
 }
 
 void cellRescResetFlipStatus()
@@ -1131,10 +1128,11 @@ int cellRescGetRegisterCount()
 	return CELL_OK;
 }
 
-int cellRescGetLastFlipTime()
+u64 cellRescGetLastFlipTime()
 {
-	UNIMPLEMENTED_FUNC(cellResc);
-	return CELL_OK;
+	cellResc->Log("cellRescGetLastFlipTime()");
+
+	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
 int cellRescSetRegisterCount()
@@ -1143,10 +1141,16 @@ int cellRescSetRegisterCount()
 	return CELL_OK;
 }
 
-int cellRescSetVBlankHandler()
+void cellRescSetVBlankHandler(u32 handler_addr)
 {
-	UNIMPLEMENTED_FUNC(cellResc);
-	return CELL_OK;
+	cellResc->Warning("cellRescSetVBlankHandler(handler_addr=0x%x)", handler_addr);
+
+	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
+	{
+		cellResc->Error("cellRescSetVBlankHandler(handler_addr=%d): invalid address", handler_addr);
+	}
+
+	Emu.GetGSManager().GetRender().m_vblank_handler.SetAddr(handler_addr);
 }
 
 u16 FloatToHalf(float val)

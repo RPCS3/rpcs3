@@ -71,7 +71,7 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 			}
 			
-			if (dmux.job.IsEmpty() && dmux.is_running)
+			if (!dmux.job.GetCountUnsafe() && dmux.is_running)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;
@@ -145,21 +145,19 @@ u32 dmuxOpen(Demuxer* data)
 						if (esATX[ch])
 						{
 							ElementaryStream& es = *esATX[ch];
-							while (es.isfull())
-							{
-								if (Emu.IsStopped())
-								{
-									LOG_WARNING(HLE, "esATX[%d] was full, waiting aborted", ch);
-									return;
-								}
-								Sleep(1);
-							}
-
-							if (es.hasunseen()) // hack, probably useless
+							if (es.isfull())
 							{
 								stream = backup;
+								Sleep(1);
 								continue;
 							}
+
+							/*if (es.hasunseen()) // hack, probably useless
+							{
+								stream = backup;
+								Sleep(1);
+								continue;
+							}*/
 
 							stream.skip(4);
 							len -= 4;
@@ -194,14 +192,10 @@ u32 dmuxOpen(Demuxer* data)
 						if (esAVC[ch])
 						{
 							ElementaryStream& es = *esAVC[ch];
-							while (es.isfull())
+							if (es.isfull())
 							{
-								if (Emu.IsStopped())
-								{
-									LOG_WARNING(HLE, "esAVC[%d] was full, waiting aborted", ch);
-									return;
-								}
 								Sleep(1);
+								continue;
 							}
 
 							DemuxerStream backup = stream;
@@ -217,11 +211,12 @@ u32 dmuxOpen(Demuxer* data)
 
 							if (pes.new_au && es.hasdata()) // new AU detected
 							{
-								if (es.hasunseen()) // hack, probably useless
+								/*if (es.hasunseen()) // hack, probably useless
 								{
 									stream = backup;
+									Sleep(1);
 									continue;
-								}
+								}*/
 								es.finish(stream);
 								// callback
 								mem_ptr_t<CellDmuxEsMsg> esMsg(a128(dmux.memAddr) + (cb_add ^= 16));
@@ -242,6 +237,7 @@ u32 dmuxOpen(Demuxer* data)
 							if (es.isfull())
 							{
 								stream = backup;
+								Sleep(1);
 								continue;
 							}
 

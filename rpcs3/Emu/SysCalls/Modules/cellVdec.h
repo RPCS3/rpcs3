@@ -647,6 +647,7 @@ struct CellVdecMpeg2Info
 
 enum VdecJobType : u32
 {
+	vdecInvalid,
 	vdecStartSeq,
 	vdecEndSeq,
 	vdecDecodeAu,
@@ -675,6 +676,7 @@ struct VdecTask
 	}
 
 	VdecTask()
+		: type(vdecInvalid)
 	{
 	}
 };
@@ -697,6 +699,7 @@ public:
 	volatile bool is_running;
 	volatile bool is_finished;
 	bool just_started;
+	bool just_finished;
 
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
@@ -735,6 +738,7 @@ public:
 		, is_finished(false)
 		, is_running(false)
 		, just_started(false)
+		, just_finished(false)
 		, ctx(nullptr)
 		, vdecCb(nullptr)
 	{
@@ -764,6 +768,7 @@ public:
 
 	~VideoDecoder()
 	{
+		// TODO: check finalization
 		if (ctx)
 		{
 			for (u32 i = frames.GetCount() - 1; ~i; i--)

@@ -11,6 +11,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsDeviceLocalFile.h"
 
 #include "Emu/CPU/CPUThreadManager.h" //gui dependency
 
@@ -162,6 +163,18 @@ void Emulator::Load()
 	for(uint i=0; i<m_vfs.m_devices.size(); ++i)
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
+	}
+	// bdvd inserting imitation
+	vfsFile f1("/app_home/dev_bdvd.path");
+	if (f1.IsOpened())
+	{
+		std::string bdvd;
+		bdvd.resize(f1.GetSize());
+		f1.Read(&bdvd[0], bdvd.size());
+
+		// load desired /dev_bdvd/ real directory and remount
+		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
+		LOG_NOTICE(LOADER, "/dev_bdvd/ remounted into %s", bdvd.c_str());
 	}
 	LOG_NOTICE(LOADER, " ");//used to be skip_line
 

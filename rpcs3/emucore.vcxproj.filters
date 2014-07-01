@@ -1072,5 +1072,8 @@
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellGame.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

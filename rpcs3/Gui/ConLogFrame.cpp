@@ -88,7 +88,7 @@ struct wxWriter : Log::LogListener
 					default:
 						break;
 					}
-					llogcon->AppendText(wxString(msg.mText));
+					llogcon->AppendText(fmt::FromUTF8(msg.mText));
 				}
 			}
 			if (m_log->GetLastPosition() > GUI_BUFFER_MAX_SIZE)

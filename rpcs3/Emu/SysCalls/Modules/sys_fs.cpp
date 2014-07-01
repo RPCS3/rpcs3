@@ -114,16 +114,16 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 {
 	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
+	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
 		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
-	if (!fd.IsGood() || (!arg.IsGood() && size))
+	/*if (!fd.IsGood() || (!arg.IsGood() && size))
 		return CELL_EFAULT;
 
 	if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
 
-	std::string suffix = path.substr(path.length() - 5, 4);
+	std::string suffix = path.substr(path.length() - 5, 5);
 	if (suffix != ".sdat" && suffix != ".SDAT")
 		return CELL_ENOTSDATA;
 
@@ -135,7 +135,9 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 
 	fd = sys_fs->GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
 
-	return CELL_OK;
+	return CELL_OK;*/
+
+	return cellFsOpen(path_addr, flags, fd, arg, size);
 }
 
 std::atomic<u32> g_FsAioReadID( 0 );

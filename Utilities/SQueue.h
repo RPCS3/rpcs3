@@ -4,8 +4,6 @@ template<typename T, u32 SQSize = 666>
 class SQueue
 {
 	std::mutex m_mutex;
-	NamedThreadBase* push_waiter;
-	NamedThreadBase* pop_waiter;
 	u32 m_pos;
 	u32 m_count;
 	T m_data[SQSize];
@@ -14,8 +12,6 @@ public:
 	SQueue()
 		: m_pos(0)
 		, m_count(0)
-		, push_waiter(nullptr)
-		, pop_waiter(nullptr)
 	{
 	}
 
@@ -26,9 +22,6 @@ public:
 
 	bool Push(const T& data)
 	{
-		NamedThreadBase* t = GetCurrentNamedThread();
-		push_waiter = t;
-
 		while (true)
 		{
 			if (m_count >= SQSize)
@@ -46,11 +39,9 @@ public:
 				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (m_count >= SQSize) continue;
-				if (pop_waiter && !m_count) pop_waiter->Notify();
 
 				m_data[(m_pos + m_count++) % SQSize] = data;
 
-				push_waiter = nullptr;
 				return true;
 			}
 		}
@@ -58,9 +49,6 @@ public:
 
 	bool Pop(T& data)
 	{
-		NamedThreadBase* t = GetCurrentNamedThread();
-		pop_waiter = t;
-
 		while (true)
 		{
 			if (!m_count)
@@ -78,43 +66,44 @@ public:
 				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (!m_count) continue;
-				if (push_waiter && m_count >= SQSize) push_waiter->Notify();
 
 				data = m_data[m_pos];
 				m_pos = (m_pos + 1) % SQSize;
 				m_count--;
 
-				pop_waiter = nullptr;
 				return true;
 			}
 		}
 	}
 
-	volatile u32 GetCount() // may be thread unsafe
+	u32 GetCount()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		return m_count;
+	}
+
+	u32 GetCountUnsafe()
 	{
 		return m_count;
 	}
 
-	volatile bool IsEmpty() // may be thread unsafe
+	bool IsEmpty()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return !m_count;
 	}
 
 	void Clear()
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		if (push_waiter && m_count >= SQSize) push_waiter->Notify();
 		m_count = 0;
 	}
 
 	T& Peek(u32 pos = 0)
 	{
-		NamedThreadBase* t = GetCurrentNamedThread();
-		pop_waiter = t;
-
 		while (true)
 		{
-			if (!m_count)
+			if (m_count <= pos)
 			{
 				if (Emu.IsStopped())
 				{
@@ -127,13 +116,27 @@ public:
 
 			{
 				std::lock_guard<std::mutex> lock(m_mutex);
-				if (m_count)
+				if (m_count > pos)
 				{
-					pop_waiter = nullptr;
 					break;
 				}
 			}
 		}
 		return m_data[(m_pos + pos) % SQSize];
+	}
+
+	T& PeekIfExist(u32 pos = 0)
+	{
+		static T def_value;
+
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_count <= pos)
+		{
+			return def_value;
+		}
+		else
+		{
+			return m_data[(m_pos + pos) % SQSize];
+		}
 	}
 };

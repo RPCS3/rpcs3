@@ -115,3 +115,8 @@ bool vfsLocalFile::IsOpened() const
 {
 	return m_file.IsOpened() && vfsFileBase::IsOpened();
 }
+
+bool vfsLocalFile::Exists(const std::string& path)
+{
+	return rFileExists(path);
+}

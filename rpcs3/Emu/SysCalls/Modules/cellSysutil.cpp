@@ -10,6 +10,7 @@
 
 #include "cellSysutil.h"
 #include "cellSysutil_SaveData.h"
+#include "cellGame.h"
 
 #include "Loader/PSF.h"
 
@@ -380,8 +381,11 @@ int cellSysutilUnregisterCallback(int slot)
 	return CELL_OK;
 }
 
-int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
+	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
+		type, msgString.GetAddr(), callback.GetAddr(), userData.GetAddr(), extParam);
+
 	long style = 0;
 
 	if(type & CELL_MSGDIALOG_DIALOG_TYPE_NORMAL)
@@ -402,7 +406,7 @@ int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCa
 		style |= rOK;
 	}
 
-	int res = rMessageBox(std::string(msgString), rGetApp().GetAppName(), style);
+	int res = rMessageBox(std::string(msgString.GetString()), rGetApp().GetAppName(), style);
 
 	u64 status;
 
@@ -919,22 +923,24 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	return CELL_OK;
 }
 
-bool bgm_playback_enabled = false;
+bool bgm_playback_enabled = true;
 
 int cellSysutilEnableBgmPlayback()
 {
 	cellSysutil->Warning("cellSysutilEnableBgmPlayback()");
 
+	// TODO
 	bgm_playback_enabled = true;
 
 	return CELL_OK;
 }
 
-int cellSysutilEnableBgmPlaybackEx()
+int cellSysutilEnableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx()");
+	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
 
-	bgm_playback_enabled = true;
+	// TODO
+	bgm_playback_enabled = true; 
 
 	return CELL_OK;
 }
@@ -943,42 +949,43 @@ int cellSysutilDisableBgmPlayback()
 {
 	cellSysutil->Warning("cellSysutilDisableBgmPlayback()");
 
+	// TODO
 	bgm_playback_enabled = false;
 
 	return CELL_OK;
 }
 
-int cellSysutilDisableBgmPlaybackEx()
+int cellSysutilDisableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx()");
-
-	bgm_playback_enabled = false;
-
-	return CELL_OK;
-}
-
-int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellBgmPlaybackStatus> status)
-{
-	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus(status=0x%x)", status.GetAddr());
+	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
 
 	// TODO
-	status->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
-	status->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
-	status->fadeRatio = 0; // volume ratio
+	bgm_playback_enabled = false;
+
+	return CELL_OK;
+}
+
+int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellSysutilBgmPlaybackStatus> status)
+{
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.GetAddr());
+
+	// TODO
+	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	status->enableState = bgm_playback_enabled ? CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE : CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
+	status->currentFadeRatio = 0; // current volume ratio (0%)
 	memset(status->contentId, 0, sizeof(status->contentId));
+	memset(status->reserved, 0, sizeof(status->reserved));
 
 	return CELL_OK;
 }
 
-int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellBgmPlaybackStatus> status2)
+int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil->Warning("cellSysutilGetBgmPlaybackStatus2(status=0x%x)", status2.GetAddr());
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.GetAddr());
 
 	// TODO
-	status2->playbackState = CELL_BGMPLAYBACK_STATUS_STOP;
-	status2->enabled = bgm_playback_enabled ? CELL_BGMPLAYBACK_STATUS_ENABLE : CELL_BGMPLAYBACK_STATUS_DISABLE;
-	status2->fadeRatio = 0; // volume ratio
-	memset(status2->contentId, 0, sizeof(status2->contentId));
+	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	memset(status2->reserved, 0, sizeof(status2->reserved));
 
 	return CELL_OK;
 }
@@ -990,6 +997,12 @@ int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 	*memSize = 1024 * 1024 * 1; // 1 MB
 	return CELL_OK;
 }
+
+extern int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
+
+extern int cellGameDataCheckCreate(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
 
 void cellSysutil_init()
 {
@@ -1068,4 +1081,7 @@ void cellSysutil_init()
 	//cellSysutil->AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
 
 	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
+
+	cellSysutil->AddFunc(0xe7951dee, cellGameDataCheckCreate);
+	cellSysutil->AddFunc(0xc9645c41, cellGameDataCheckCreate2);
 }

@@ -623,6 +623,8 @@ enum
 	NV3089_IMAGE_IN_FORMAT                   = 0x0000C404,
 	NV3089_IMAGE_IN_OFFSET                   = 0x0000C408,
 	NV3089_IMAGE_IN                          = 0x0000C40C,
+
+	GCM_SET_USER_COMMAND                     = 0x0000EB00,
 };
 
 static const std::string GetMethodName(const u32 id)
