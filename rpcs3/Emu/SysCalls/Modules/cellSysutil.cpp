@@ -381,10 +381,10 @@ int cellSysutilUnregisterCallback(int slot)
 	return CELL_OK;
 }
 
-int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
-		type, (u32)msgString, callback.GetAddr(), userData.GetAddr(), extParam);
+		type, msgString.GetAddr(), callback.GetAddr(), userData.GetAddr(), extParam);
 
 	long style = 0;
 
@@ -406,7 +406,7 @@ int cellMsgDialogOpen2(u32 type, char* msgString, mem_func_ptr_t<CellMsgDialogCa
 		style |= rOK;
 	}
 
-	int res = rMessageBox(std::string(msgString), rGetApp().GetAppName(), style);
+	int res = rMessageBox(std::string(msgString.GetString()), rGetApp().GetAppName(), style);
 
 	u64 status;
 
