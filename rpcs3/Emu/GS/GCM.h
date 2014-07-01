@@ -225,19 +225,16 @@ struct CellGcmSurface
 {
 	u8 type;
 	u8 antialias;
-
-	u8 color_format;
-	u8 color_target;
-	u8 color_location[4];
-	u32 color_offset[4];
-	u32 color_pitch[4];
-
-	u8 depth_format;
-	u8 depth_location;
-	u16 pad;
-	u32 depth_offset;
-	u32 depth_pitch;
-
+	u8 colorFormat;
+	u8 colorTarget;
+	u8 colorLocation[4];
+	u32 colorOffset[4];
+	u32 colorPitch[4];
+	u8 depthFormat;
+	u8 depthLocation;
+	u8 _padding[2];
+	u32 depthOffset;
+	u32 depthPitch;
 	u16 width;
 	u16 height;
 	u16 x;
@@ -335,14 +332,14 @@ struct GcmTileInfo
 
 enum
 {
-// NV406E
+	// NV40_CHANNEL_DMA (NV406E)
 	NV406E_SET_REFERENCE                     = 0x00000050,
 	NV406E_SET_CONTEXT_DMA_SEMAPHORE         = 0x00000060,
 	NV406E_SEMAPHORE_OFFSET                  = 0x00000064,
 	NV406E_SEMAPHORE_ACQUIRE                 = 0x00000068,
 	NV406E_SEMAPHORE_RELEASE                 = 0x0000006c,
 
-// NV4097
+	// NV40_CURIE_PRIMITIVE	(NV4097)
 	NV4097_SET_OBJECT                        = 0x00000000,
 	NV4097_NO_OPERATION                      = 0x00000100,
 	NV4097_NOTIFY                            = 0x00000104,
@@ -555,7 +552,7 @@ enum
 	NV4097_SET_TRANSFORM_BRANCH_BITS         = 0x00001ff8,
 	NV4097_SET_FLIP							 = 0x0003fead,
 
-// NV0039
+	// NV03_MEMORY_TO_MEMORY_FORMAT	(NV0039)
 	NV0039_SET_OBJECT                        = 0x00002000,
 	NV0039_SET_CONTEXT_DMA_NOTIFIES          = 0x00002180,
 	NV0039_SET_CONTEXT_DMA_BUFFER_IN         = 0x00002184,
@@ -569,7 +566,7 @@ enum
 	NV0039_FORMAT                            = 0x00002324,
 	NV0039_BUFFER_NOTIFY                     = 0x00002328,
 
-// NV3062
+	// NV30_CONTEXT_SURFACES_2D	(NV3062)
 	NV3062_SET_OBJECT                        = 0x00006000,
 	NV3062_SET_CONTEXT_DMA_NOTIFIES          = 0x00006180,
 	NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE      = 0x00006184,
@@ -579,14 +576,14 @@ enum
 	NV3062_SET_OFFSET_SOURCE                 = 0x00006308,
 	NV3062_SET_OFFSET_DESTIN                 = 0x0000630C,
 
-// NV309E
+	// NV30_CONTEXT_SURFACE_SWIZZLED (NV309E)
 	NV309E_SET_OBJECT                        = 0x00008000,
 	NV309E_SET_CONTEXT_DMA_NOTIFIES          = 0x00008180,
 	NV309E_SET_CONTEXT_DMA_IMAGE             = 0x00008184,
 	NV309E_SET_FORMAT                        = 0x00008300,
 	NV309E_SET_OFFSET                        = 0x00008304,
 
-// NV308A
+	// NV30_IMAGE_FROM_CPU (NV308A)
 	NV308A_SET_OBJECT                        = 0x0000A000,
 	NV308A_SET_CONTEXT_DMA_NOTIFIES          = 0x0000A180,
 	NV308A_SET_CONTEXT_COLOR_KEY             = 0x0000A184,
@@ -604,7 +601,7 @@ enum
 	NV308A_SIZE_IN                           = 0x0000A30C,
 	NV308A_COLOR                             = 0x0000A400,
 
-// NV3089
+	// NV30_SCALED_IMAGE_FROM_MEMORY (NV3089)
 	NV3089_SET_OBJECT                        = 0x0000C000,
 	NV3089_SET_CONTEXT_DMA_NOTIFIES          = 0x0000C180,
 	NV3089_SET_CONTEXT_DMA_IMAGE             = 0x0000C184,
