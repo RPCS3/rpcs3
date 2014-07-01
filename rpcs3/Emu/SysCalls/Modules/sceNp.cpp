@@ -30,6 +30,12 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	sceNp->Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x)", k_licensee_addr, drm_path_addr);
 
 	std::string drm_path = Memory.ReadString(drm_path_addr);
+	if (!Emu.GetVFS().ExistsFile(drm_path))
+	{
+		sceNp->Warning("sceNpDrmIsAvailable(): '%s' not found", drm_path.c_str());
+		return CELL_ENOENT;
+	}
+
 	std::string k_licensee_str;
 	u8 k_licensee[0x10];
 	for(int i = 0; i < 0x10; i++)
