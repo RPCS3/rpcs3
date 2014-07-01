@@ -647,6 +647,7 @@ struct CellVdecMpeg2Info
 
 enum VdecJobType : u32
 {
+	vdecInvalid,
 	vdecStartSeq,
 	vdecEndSeq,
 	vdecDecodeAu,
@@ -675,6 +676,7 @@ struct VdecTask
 	}
 
 	VdecTask()
+		: type(vdecInvalid)
 	{
 	}
 };

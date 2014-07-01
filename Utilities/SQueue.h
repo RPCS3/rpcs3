@@ -125,12 +125,14 @@ public:
 		return m_data[(m_pos + pos) % SQSize];
 	}
 
-	T& PeekIfExist(T& def, u32 pos = 0)
+	T& PeekIfExist(u32 pos = 0)
 	{
+		static T def_value;
+
 		std::lock_guard<std::mutex> lock(m_mutex);
 		if (m_count <= pos)
 		{
-			return def;
+			return def_value;
 		}
 		else
 		{

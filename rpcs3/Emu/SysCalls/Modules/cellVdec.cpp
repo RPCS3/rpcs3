@@ -306,7 +306,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 					while (true)
 					{
-						if (Emu.IsStopped() || vdec.job.PeekIfExist(VdecTask()).type == vdecClose)
+						if (Emu.IsStopped() || vdec.job.PeekIfExist().type == vdecClose)
 						{
 							vdec.is_finished = true;
 							LOG_WARNING(HLE, "vdecDecodeAu: aborted");
