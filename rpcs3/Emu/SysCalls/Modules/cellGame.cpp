@@ -24,7 +24,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
 
-	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || !dirName.IsGood())
+	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || (dirName.GetAddr() && !dirName.IsGood()))
 	{
 		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
@@ -56,7 +56,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	{
 		type = CELL_GAME_GAMETYPE_DISC;
 		attributes = 0; // TODO
-		Memory.WriteString(dirName.GetAddr(), ""); // ???
+		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -65,7 +65,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 		std::string titleId = psf.GetString("TITLE_ID");
 		type = CELL_GAME_GAMETYPE_HDD;
 		attributes = 0; // TODO
-		Memory.WriteString(dirName.GetAddr(), titleId);
+		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
 	}
@@ -74,7 +74,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 		std::string titleId = psf.GetString("TITLE_ID");
 		type = CELL_GAME_GAMETYPE_DISC;
 		attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
-		Memory.WriteString(dirName.GetAddr(), titleId); // ???
+		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -252,13 +252,13 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
 
 	cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
-	strncpy_s(cbGet->contentInfoPath, dir.c_str(), _TRUNCATE);
-	strncpy_s(cbGet->gameDataPath, (dir + "/USRDIR").c_str(), _TRUNCATE);
+	strcpy_trunc(cbGet->contentInfoPath, dir);
+	strcpy_trunc(cbGet->gameDataPath, dir + "/USRDIR");
 
 	// TODO: set correct time
-	cbGet->st_atime = 0;
-	cbGet->st_ctime = 0;
-	cbGet->st_mtime = 0;
+	cbGet->st_atime_ = 0;
+	cbGet->st_ctime_ = 0;
+	cbGet->st_mtime_ = 0;
 
 	// TODO: calculate data size, if necessary
 	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
@@ -266,9 +266,9 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
 	cbGet->getParam.parentalLevel = psf.GetInteger("PARENTAL_LEVEL");
-	strncpy_s(cbGet->getParam.dataVersion, psf.GetString("APP_VER").c_str(), _TRUNCATE);
-	strncpy_s(cbGet->getParam.titleId, psf.GetString("TITLE_ID").c_str(), _TRUNCATE);
-	strncpy_s(cbGet->getParam.title, psf.GetString("TITLE").c_str(), _TRUNCATE);
+	strcpy_trunc(cbGet->getParam.dataVersion, psf.GetString("APP_VER"));
+	strcpy_trunc(cbGet->getParam.titleId, psf.GetString("TITLE_ID"));
+	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
 	funcStat(cbResult.GetAddr(), cbGet.GetAddr(), cbSet.GetAddr());

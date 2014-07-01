@@ -6,6 +6,14 @@
 #define thread_local __thread
 #endif
 
+template<size_t size>
+void strcpy_trunc(char (&dst)[size], const std::string& src)
+{
+	const size_t count = (src.size() >= size) ? size - 1 /* truncation */ : src.size();
+	memcpy(dst, src.c_str(), count);
+	dst[count] = 0;
+}
+
 #if defined(__GNUG__)
 #include <cmath>
 #include <stdlib.h>

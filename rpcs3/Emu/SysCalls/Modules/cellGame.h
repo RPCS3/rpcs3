@@ -186,9 +186,9 @@ struct CellGameDataStatGet
 	char contentInfoPath[CELL_GAMEDATA_PATH_MAX];
 	char gameDataPath[CELL_GAMEDATA_PATH_MAX];
 	char reserved0[2];
-	be_t<s64> st_atime;
-	be_t<s64> st_mtime;
-	be_t<s64> st_ctime;
+	be_t<s64> st_atime_;
+	be_t<s64> st_mtime_;
+	be_t<s64> st_ctime_;
 	CellGameDataSystemFileParam getParam;
 	be_t<s32> sizeKB;
 	be_t<s32> sysSizeKB;
