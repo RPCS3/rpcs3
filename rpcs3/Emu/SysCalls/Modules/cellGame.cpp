@@ -279,28 +279,28 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 		cellGame->Error("cellGameDataCheckCreate2(): TODO: writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.GetAddr());
 	}
 
-	switch (cbResult->result.ToBE())
+	switch (cbResult->result)
 	{
-	case se32(CELL_GAMEDATA_CBRESULT_OK_CANCEL):
+	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 		// TODO: do not process game data
 		cellGame->Warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 
-	case se32(CELL_GAMEDATA_CBRESULT_OK):
+	case CELL_GAMEDATA_CBRESULT_OK:
 		return CELL_GAMEDATA_RET_OK;
 
-	case se32(CELL_GAMEDATA_CBRESULT_ERR_NOSPACE): // TODO: process errors, error message and needSizeKB result
+	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
 		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
-	case se32(CELL_GAMEDATA_CBRESULT_ERR_BROKEN):
+	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
 		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
-	case se32(CELL_GAMEDATA_CBRESULT_ERR_NODATA):
+	case CELL_GAMEDATA_CBRESULT_ERR_NODATA:
 		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
-	case se32(CELL_GAMEDATA_CBRESULT_ERR_INVALID):
+	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
 		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
