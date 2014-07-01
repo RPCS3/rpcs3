@@ -429,7 +429,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
-	wxCheckBox* chbox_hle_skip_pamf       = new wxCheckBox(p_hle, wxID_ANY, "Skip Pamf");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -508,7 +507,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
-	chbox_hle_skip_pamf      ->SetValue(Ini.HLESkipPamf.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -579,7 +577,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_skip_pamf, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -626,7 +623,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
-		Ini.HLESkipPamf.SetValue(chbox_hle_skip_pamf->GetValue());
 
 		Ini.Save();
 	}

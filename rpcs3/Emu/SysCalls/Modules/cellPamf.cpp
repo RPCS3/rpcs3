@@ -175,10 +175,6 @@ int cellPamfVerify(mem_ptr_t<PamfHeader> pAddr, u64 fileSize)
 
 int cellPamfReaderInitialize(mem_ptr_t<CellPamfReader> pSelf, mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
-	// Skip PAMF initialization 
-	if (Ini.HLESkipPamf.GetValue())
-		return -1;
-
 	cellPamf->Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)",
 		pSelf.GetAddr(), pAddr.GetAddr(), fileSize, attribute);
 	
