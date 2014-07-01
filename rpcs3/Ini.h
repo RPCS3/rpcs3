@@ -158,7 +158,6 @@ public:
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
-	IniEntry<bool> HLESkipPamf;
 
 	// Language
 	IniEntry<u8> SysLanguage;
@@ -226,7 +225,6 @@ public:
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
-		HLESkipPamf.Init("HLE_HLESkipPamf", path);
 
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
@@ -290,7 +288,6 @@ public:
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
 		HLEAlwaysStart.Load(false);
-		HLESkipPamf.Load(false);
 
 		// Language
 		SysLanguage.Load(1);
@@ -355,7 +352,6 @@ public:
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		HLEAlwaysStart.Save();
-		HLESkipPamf.Save();
 
 		// Language
 		SysLanguage.Save();
