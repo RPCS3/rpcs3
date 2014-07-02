@@ -461,8 +461,11 @@ void GLGSRender::WriteDepthBuffer()
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 	checkForGlError("WriteDepthBuffer(): glReadPixels(GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	if (packed)
+	{
+		memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 	glBindTexture(GL_TEXTURE_2D, g_depth_tex);
@@ -480,9 +483,6 @@ void GLGSRender::WriteColourBufferA()
 		return;
 	}
 
-	// Reset the flag
-	m_set_context_dma_color_a = false;
-
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
@@ -497,8 +497,11 @@ void GLGSRender::WriteColourBufferA()
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferA(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	if (packed)
+	{
+		memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
@@ -508,9 +511,6 @@ void GLGSRender::WriteColourBufferB()
 	{
 		return;
 	}
-
-	// Reset the flag
-	m_set_context_dma_color_b = false;
 
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
@@ -526,8 +526,11 @@ void GLGSRender::WriteColourBufferB()
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferB(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	if (packed)
+	{
+		memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 }
@@ -538,9 +541,6 @@ void GLGSRender::WriteColourBufferC()
 	{
 		return;
 	}
-
-	// Reset the flag
-	m_set_context_dma_color_c = false;
 
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
@@ -556,8 +556,11 @@ void GLGSRender::WriteColourBufferC()
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferC(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	if (packed)
+	{
+		memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
@@ -567,9 +570,6 @@ void GLGSRender::WriteColourBufferD()
 	{
 		return;
 	}
-
-	// Reset the flag
-	m_set_context_dma_color_d = false;
 
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
@@ -585,8 +585,11 @@ void GLGSRender::WriteColourBufferD()
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
 	checkForGlError("WriteColourBufferD(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	if (packed)
+	{
+		memcpy(&Memory[address], packed, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	}
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 }
