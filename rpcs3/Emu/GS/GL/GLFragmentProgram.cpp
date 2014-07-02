@@ -395,6 +395,7 @@ void GLFragmentDecompilerThread::Task()
 			m_end_offsets.push_back(src2.end_offset << 2);
 			AddCode("{");
 			m_code_level++;
+			AddCode("}");
 		break;
 
 		case 0x43: //LOOP
@@ -404,6 +405,7 @@ void GLFragmentDecompilerThread::Task()
 			m_end_offsets.push_back(src2.end_offset << 2);
 			AddCode("{");
 			m_code_level++;
+			AddCode("}");
 		break;
 		case 0x44: //REP
 			AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
@@ -412,6 +414,7 @@ void GLFragmentDecompilerThread::Task()
 			m_end_offsets.push_back(src2.end_offset << 2);
 			AddCode("{");
 			m_code_level++;
+			AddCode("}");
 		break;
 		//case 0x45: SetDst("return"); break; //RET
 
