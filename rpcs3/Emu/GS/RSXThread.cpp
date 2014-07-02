@@ -1332,34 +1332,61 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		}
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-		m_buffer_width = re(buffers[m_gcm_current_buffer].width);
-		m_buffer_height = re(buffers[m_gcm_current_buffer].height);
-		
-		m_width = m_buffer_width;
-		m_height = m_buffer_height;
+		m_width = m_buffer_width = re(buffers[m_gcm_current_buffer].width);
+		m_height = m_buffer_height = re(buffers[m_gcm_current_buffer].height);
 
-		if (Ini.GSDownscale.GetValue() && Ini.GSResolution.GetValue() == 4)
+		// Rescale native 1080p to fit 720p/480p window size
+		if (m_buffer_width == 1920 && m_buffer_height == 1080)
 		{
-			if (m_width == 1280 && m_height == 720)
+			switch (Ini.GSResolution.GetValue())
 			{
-				// Set scale ratio for 720p
+			case 2: // 1280x720 window size
+				m_width_scale = m_height_scale = 1.33f;
+				m_width = 1280;
+				m_height = 720;
+				break;
+			case 4: // 720x480 window size
+				m_width_scale = 0.75f;
+				m_height_scale = 0.88f;
+				m_width = 720;
+				m_height = 480;
+				break;
+			}
+		}
+
+		// Rescale native 720p to fit 480p window size
+		if (m_buffer_width == 1280 && m_buffer_height == 720)
+		{
+			if (Ini.GSResolution.GetValue() == 4) // 720x480 window size
+			{
 				m_width_scale = 1.125f;
 				m_height_scale = 1.33f;
-
-				// Downscale 720p to 480p
 				m_width = 720;
 				m_height = 480;
 			}
+		}
 
-			if (m_width == 1920 && m_height == 1080)
+		// Rescale native 960x540 to fit 1080p/720p/480p window size
+		if (m_buffer_width == 960 && m_buffer_height == 540)
+		{
+			switch (Ini.GSResolution.GetValue())
 			{
-				// Set scale ratio for 1080p
-				m_width_scale = 0.75f;
-				m_height_scale = 0.88f;
-
-				// Downscale 1080p to 480p
+			case 1:// 1920x1080 window size
+				m_width_scale = m_height_scale = 4.0f;
+				m_width = 1980;
+				m_height = 1080;
+				break;
+			case 2: // 1280x720 window size
+				m_width_scale = m_height_scale = 2.66f;
+				m_width = 1280;
+				m_height = 720;
+				break;
+			case 4: // 720x480 window size
+				m_width_scale = 1.5f;
+				m_height_scale = 1.77f;
 				m_width = 720;
 				m_height = 480;
+				break;
 			}
 		}
 	}

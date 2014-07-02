@@ -115,7 +115,6 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<bool> GSDownscale;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -182,7 +181,6 @@ public:
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
-		GSDownscale.Init("GS_Downscale", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -245,7 +243,6 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
-		GSDownscale.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -309,7 +306,6 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
-		GSDownscale.Save();
 
 		// Audio 
 		AudioOutMode.Save();

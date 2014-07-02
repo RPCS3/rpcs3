@@ -420,7 +420,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_downscale        = new wxCheckBox(p_graphics, wxID_ANY, "480p Downscale");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
@@ -498,7 +497,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_gs_downscale       ->SetValue(Ini.GSDownscale.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
@@ -558,7 +556,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics->Add(chbox_gs_downscale, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
 	s_subpanel_io->Add(s_round_io_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -606,7 +603,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
-		Ini.GSDownscale.SetValue(chbox_gs_downscale->GetValue());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
