@@ -587,6 +587,9 @@
     <ClCompile Include="..\Utilities\Log.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1073,6 +1076,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellGame.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>

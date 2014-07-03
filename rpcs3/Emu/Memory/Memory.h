@@ -962,20 +962,20 @@ template<typename T, typename AT = u32> class mem_func_beptr_t : public mem_func
 template<typename RT, typename AT>
 class mem_func_ptr_t<RT (*)(), AT> : public mem_base_t<u64, AT>
 {
-	__forceinline void call_func(bool is_async)
+	__forceinline RT call_func(bool is_async) const
 	{
 		Callback cb;
 		cb.SetAddr(this->m_addr);
-		cb.Branch(!is_async);
+		return (RT)cb.Branch(!is_async);
 	}
 
 public:
-	__forceinline void operator()()
+	__forceinline RT operator()() const
 	{
-		call_func(false);
+		return call_func(false);
 	}
 
-	__forceinline void async()
+	__forceinline void async() const
 	{
 		call_func(true);
 	}
@@ -984,21 +984,21 @@ public:
 template<typename AT, typename RT, typename ...T>
 class mem_func_ptr_t<RT(*)(T...), AT> : public mem_base_t<u64, AT>
 {
-	__forceinline void call_func(bool is_async, T... args)
+	__forceinline RT call_func(bool is_async, T... args) const
 	{
 		Callback cb;
 		cb.SetAddr(this->m_addr);
 		cb.Handle(_func_arg<T>::get_value(args)...);
-		cb.Branch(!is_async);
+		return (RT)cb.Branch(!is_async);
 	}
 
 public:
-	__forceinline void operator()(T... args)
+	__forceinline RT operator()(T... args) const
 	{
-		call_func(false, args...);
+		return call_func(false, args...);
 	}
 
-	__forceinline void async(T... args)
+	__forceinline void async(T... args) const
 	{
 		call_func(true, args...);
 	}
