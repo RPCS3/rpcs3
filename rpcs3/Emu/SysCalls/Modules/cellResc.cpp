@@ -76,6 +76,8 @@ struct CCellRescInternal
 	bool m_isDummyFlipped;
 	u8 m_cgParamIndex[RESC_PARAM_NUM];
 	u64 m_commandIdxCaF, m_rcvdCmdIdx;
+	u32 s_applicationFlipHandler;
+	u32 s_applicationVBlankHandler;
 
 	CCellRescInternal()
 		: m_bInitialized(false)
@@ -89,13 +91,12 @@ CCellRescInternal* s_rescInternalInstance = nullptr;
 // Extern Functions
 extern int cellGcmSetFlipMode(u32 mode);
 extern void cellGcmSetFlipHandler(u32 handler_addr);
+extern void cellGcmSetVBlankHandler(u32 handler_addr);
 extern int cellGcmAddressToOffset(u64 address, mem32_t offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
 extern int cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
-extern void cellGcmSetVBlankHandler(u32 handler);
-extern u32 cellGcmSetSecondVHandler(u32 handler);
 extern u32 cellGcmGetTiledPitchSize(u32 size);
 
 // Local Functions
@@ -109,6 +110,11 @@ inline bool IsPalInterpolate() { return (IsPal() && ((s_rescInternalInstance->m_
 												  || (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_30_DROP)
 												  || (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_DROP_FLEXIBLE))); }
 inline bool IsNotPalInterpolate() { return !IsPalInterpolate(); }
+inline bool IsPalTemporal() { return (IsPal() && s_rescInternalInstance->m_initConfig.palTemporalMode != CELL_RESC_PAL_50); }
+inline bool IsNotPalTemporal() { return !IsPalTemporal(); }
+inline bool IsNotPal() { return !IsPal(); }
+inline bool IsGcmFlip()  { return (IsNotPal() || (IsPal() && (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_50 
+							|| s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC)));}
 inline int GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
 inline bool IsInterlace()      { return s_rescInternalInstance->m_initConfig.interlaceMode == CELL_RESC_INTERLACE_FILTER; }
 inline bool IsTextureNR()      { return !IsInterlace(); }
@@ -467,6 +473,9 @@ void InitMembers()
 	s_rescInternalInstance->m_bInitialized = false;
 	s_rescInternalInstance->m_bNewlyAdjustRatio = false;
 
+	s_rescInternalInstance->s_applicationVBlankHandler = 0;
+	s_rescInternalInstance->s_applicationFlipHandler = 0;
+
 	//E PAL related variables
 	//s_rescInternalInstance->m_intrThread50 = 0;
 	//s_rescInternalInstance->m_lastDummyFlip = 0;
@@ -655,7 +664,22 @@ void cellRescExit()
 		return;
 	}
 
-	// TODO: ?
+	if (IsPalTemporal())
+	{
+		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
+		cellGcmSetVBlankHandler(NULL);
+		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
+
+		if (IsPalInterpolate())
+		{
+			// TODO: ExitSystemResource()
+			//int ret = ExitSystemResource();
+			//if (ret != CELL_OK)
+			//{
+			//	cellResc->Error("failed to clean up system resources.. continue. 0x%x\n", ret);
+			//}
+		}
+	}
 
 	s_rescInternalInstance->m_bInitialized = false;
 }
@@ -717,6 +741,52 @@ int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
 	s_rescInternalInstance->m_rescDsts[GetRescDestsIndex(dstsMode)] = *dsts;
 
 	return CELL_OK;
+}
+
+void SetVBlankHandler(u32 handler)
+{
+	if (!s_rescInternalInstance->m_bInitialized || s_rescInternalInstance->m_dstMode == 0) 
+	{
+		// If this function is called before SetDisplayMode, handler should be stored and set it properly later in SetDisplayMode.
+		s_rescInternalInstance->s_applicationVBlankHandler = handler;
+		return;
+	}
+
+	if (IsNotPalTemporal()) 
+	{
+		cellGcmSetVBlankHandler(handler);
+		s_rescInternalInstance->s_applicationVBlankHandler = NULL;
+	}
+	else if (IsPal60Hsync()) 
+	{
+		//cellGcmSetSecondVHandler(handler);
+		s_rescInternalInstance->s_applicationVBlankHandler = NULL;
+	}
+	else 
+	{
+		s_rescInternalInstance->s_applicationVBlankHandler = handler;
+	}
+}
+
+
+void SetFlipHandler(u32 handler)
+{
+	if (!s_rescInternalInstance->m_bInitialized || s_rescInternalInstance->m_dstMode == 0) 
+	{
+		// If this function is called before SetDisplayMode, handler should be stored and set it properly later in SetDisplayMode.
+		s_rescInternalInstance->s_applicationFlipHandler = handler;
+		return;
+	}
+
+	if (IsGcmFlip()) 
+	{
+		cellGcmSetFlipHandler(handler);
+		s_rescInternalInstance->s_applicationFlipHandler = NULL;
+	}
+	else 
+	{
+		s_rescInternalInstance->s_applicationFlipHandler = handler;
+	}
 }
 
 int cellRescSetDisplayMode(u32 displayMode)
@@ -786,24 +856,24 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(IntrHandler50);
 		//cellGcmSetSecondVHandler(IntrHandler60);
-		cellGcmSetFlipHandler(0);
+		cellGcmSetFlipHandler(NULL);
 	}
 	else if (IsPalDrop())
 	{
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		//cellGcmSetVBlankHandler(NULL);
+		cellGcmSetVBlankHandler(NULL);
 		//cellGcmSetSecondVHandler(IntrHandler60Drop);
-		cellGcmSetFlipHandler(0);
+		cellGcmSetFlipHandler(NULL);
 	} 
 	else if (IsPal60Hsync())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		//cellGcmSetVBlankHandler(NULL);
+		cellGcmSetVBlankHandler(NULL);
 	}
 
-	//if(s_applicationVBlankHandler) SetVBlankHandler(s_applicationVBlankHandler);
-	//if(s_applicationFlipHandler)   SetFlipHandler(s_applicationFlipHandler);
+	if (s_rescInternalInstance->s_applicationVBlankHandler) SetVBlankHandler(s_rescInternalInstance->s_applicationVBlankHandler);
+	if (s_rescInternalInstance->s_applicationFlipHandler)   SetFlipHandler(s_rescInternalInstance->s_applicationFlipHandler);
 	cellGcmSetFlipMode((s_rescInternalInstance->m_initConfig.flipMode == CELL_RESC_DISPLAY_VSYNC) ? CELL_GCM_DISPLAY_VSYNC : CELL_GCM_DISPLAY_HSYNC);
 
 	return CELL_OK;
