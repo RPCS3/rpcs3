@@ -113,7 +113,8 @@ inline bool IsNotPalInterpolate() { return !IsPalInterpolate(); }
 inline bool IsPalTemporal() { return (IsPal() && s_rescInternalInstance->m_initConfig.palTemporalMode != CELL_RESC_PAL_50); }
 inline bool IsNotPalTemporal() { return !IsPalTemporal(); }
 inline bool IsNotPal() { return !IsPal(); }
-inline bool IsGcmFlip()  { return (IsNotPal() || (IsPal() && (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_50 || s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC)));}
+inline bool IsGcmFlip()  { return (IsNotPal() || (IsPal() && (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_50 
+							|| s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC)));}
 inline int GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
 inline bool IsInterlace()      { return s_rescInternalInstance->m_initConfig.interlaceMode == CELL_RESC_INTERLACE_FILTER; }
 inline bool IsTextureNR()      { return !IsInterlace(); }
@@ -663,20 +664,21 @@ void cellRescExit()
 		return;
 	}
 
-	if (IsPalTemporal()){
+	if (IsPalTemporal())
+	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
 		cellGcmSetVBlankHandler(NULL);
 		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
 
-		/*
-		if (IsPalInterpolate()){
-			int ret = ExitSystemResource();
-			if (ret != CELL_OK)
-			{
-				cellResc->Error("failed to clean up system resources.. continue. 0x%x\n", ret);
-			}
+		if (IsPalInterpolate())
+		{
+			// TODO: ExitSystemResource()
+			//int ret = ExitSystemResource();
+			//if (ret != CELL_OK)
+			//{
+			//	cellResc->Error("failed to clean up system resources.. continue. 0x%x\n", ret);
+			//}
 		}
-		*/
 	}
 
 	s_rescInternalInstance->m_bInitialized = false;
