@@ -144,6 +144,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellNetCtl.cpp" />
@@ -342,6 +343,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGifDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />

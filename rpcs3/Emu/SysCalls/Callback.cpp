@@ -52,7 +52,7 @@ void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4)
 	m_has_data = true;
 }
 
-void Callback::Branch(bool wait)
+u64 Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
@@ -67,7 +67,7 @@ again:
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "Callback::Branch() aborted");
-			return;
+			return 0;
 		}
 		Sleep(1);
 	}
@@ -81,7 +81,7 @@ again:
 	if (Emu.IsStopped())
 	{
 		LOG_WARNING(HLE, "Callback::Branch() aborted");
-		return;
+		return 0;
 	}
 
 	thr.Stop();
@@ -102,7 +102,7 @@ again:
 
 	if (!wait)
 	{
-		return;
+		return 0;
 	}
 
 	while (thr.IsAlive())
@@ -110,10 +110,12 @@ again:
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "Callback::Branch(true) aborted (end)");
-			return;
+			return 0;
 		}
 		Sleep(1);
 	}
+
+	return thr.GetExitStatus();
 }
 
 void Callback::SetName(const std::string& name)
