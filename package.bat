@@ -16,7 +16,8 @@ xcopy /e bin\dev_flash build\rpcs3\dev_flash
 mkdir build\rpcs3\dev_usb000
 xcopy /e bin\dev_usb000 build\rpcs3\dev_usb000
 
-for /f "delims=" %%%%a in ('git describe') do @set gitrev=%%%%a
+for /f "delims=" %%a in ('git describe') do @set gitrev=%%a
 
 cd build
-7z a -mx9 ..\rpcs3-%%gitrev%%-windows-x86_64.7z rpcs3
+7z a -mx9 ..\rpcs3-%gitrev%-windows-x86_64.7z rpcs3
+cd ..
