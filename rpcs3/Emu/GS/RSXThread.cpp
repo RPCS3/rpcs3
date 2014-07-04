@@ -1232,12 +1232,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_SCULL_CONTROL:
 	{
-		const u32 a0 = ARGS(0);
-		m_set_stencil_func = m_set_stencil_func_ref = m_set_stencil_func_mask = true;
+		if (ARGS(0))
+			LOG_WARNING(RSX, "NV4097_SET_SCULL_CONTROL: %x", ARGS(0));
+		
+		//This is stencil culling , nothing to do with stencil masking on regular color or depth buffer 
+		//const u32 a0 = ARGS(0);
+		//m_set_stencil_func = m_set_stencil_func_ref = m_set_stencil_func_mask = true;
 
-		m_stencil_func = a0 & 0xffff;
-		m_stencil_func_ref = (a0 >> 16) & 0xff;
-		m_stencil_func_mask = (a0 >> 24) & 0xff;
+		//m_stencil_func = a0 & 0xffff;
+		//m_stencil_func_ref = (a0 >> 16) & 0xff;
+		//m_stencil_func_mask = (a0 >> 24) & 0xff;
 	}
 	break;
 
