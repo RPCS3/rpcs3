@@ -16,6 +16,7 @@ extern Module *cellGcmSys = nullptr;
 
 u32 local_size = 0;
 u32 local_addr = 0;
+u32 system_mode = 0;
 
 enum
 {
@@ -311,7 +312,17 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	cellGcmSys->Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
 
 	InitOffsetTable();
-	Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
+	{
+		cellGcmSys->Warning("cellGcmInit(): 512MB io address space used");
+		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x20000000/*512MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	}
+	else
+	{
+		cellGcmSys->Warning("cellGcmInit(): 256MB io address space used");
+		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+	}
+
 	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
 	{
 		Memory.MemoryBlocks.pop_back();
@@ -729,9 +740,12 @@ u64 cellGcmGetVBlankCount()
 	return Emu.GetGSManager().GetRender().m_vblank_count;
 }
 
-int cellGcmInitSystemMode()
+int cellGcmInitSystemMode(u64 mode)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys->Log("cellGcmInitSystemMode(mode=0x%x)", mode);
+
+	system_mode = mode;
+
 	return CELL_OK;
 }
 
