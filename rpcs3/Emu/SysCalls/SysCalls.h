@@ -179,8 +179,6 @@ public:
 	static std::string GetHLEFuncName(const u32 fid);
 };
 
-//extern SysCalls SysCallsManager;
-
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	module->AddFuncSub(group, name ## _table, #name, name)

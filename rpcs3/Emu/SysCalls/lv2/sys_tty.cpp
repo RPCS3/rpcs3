@@ -3,6 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "sys_tty.h"
 
 s32 sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
 {

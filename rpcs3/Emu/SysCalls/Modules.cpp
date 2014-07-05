@@ -5,12 +5,20 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Crypto/sha1.h"
 #include <mutex>
 #include "Emu/System.h"
 #include "ModuleManager.h"
 
+u32 getFunctionId(const std::string& name)
+{
+	const char* suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"; // Symbol name suffix
+	std::string input = name + suffix;
+	unsigned char output[20];
 
-
+	sha1((unsigned char*)input.c_str(), input.length(), output); // Compute SHA-1 hash
+	return (u32&)output[0];
+}
 
 Module::Module(u16 id, const char* name)
 	: m_is_loaded(false)
@@ -217,4 +225,3 @@ bool Module::CheckID(u32 id, ID*& _id) const
 {
 	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 }
-

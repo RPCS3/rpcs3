@@ -129,7 +129,6 @@ s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
 	// Wrap the allocated memory in a memory container.
 	MemoryContainerInfo *ct = new MemoryContainerInfo(addr, yield_size);
 	cid = sc_mem.GetNewId(ct);
-	procObjects.mem_objects.insert(cid);
 
 	sc_mem.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, cid.GetValue());
 

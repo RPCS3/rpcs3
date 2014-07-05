@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "sys_semaphore.h"
+#include "sys_time.h"
 
 SysCallBase sys_sem("sys_semaphore");
 

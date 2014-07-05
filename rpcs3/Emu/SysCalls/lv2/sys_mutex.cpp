@@ -44,7 +44,6 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	u32 tid = GetCurrentPPUThread().GetId();
 	Mutex* mutex = new Mutex((u32)attr->protocol, is_recursive, attr->name_u64);
 	u32 id = sys_mtx.GetNewId(mutex);
-	procObjects.mutex_objects.insert(id);
 	mutex->m_mutex.lock(tid);
 	mutex->id = id;
 	mutex_id = id;

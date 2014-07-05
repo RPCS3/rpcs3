@@ -3,8 +3,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_rwlock.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "sys_rwlock.h"
 
 SysCallBase sys_rwlock("sys_rwlock");
 

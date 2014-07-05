@@ -2,7 +2,6 @@
 
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
-
 //TODO
 struct ModuleFunc
 {
@@ -120,14 +119,22 @@ public:
 	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
-
+	template<typename T> __forceinline void AddFunc(const std::string& name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
+
+u32 getFunctionId(const std::string& name);
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
 	m_funcs_list.emplace_back(new ModuleFunc(id, bind_func(func)));
+}
+
+template<typename T>
+__forceinline void Module::AddFunc(const std::string& name, T func)
+{
+	AddFunc(getFunctionId(name), func);
 }
 
 template<typename T>
@@ -144,7 +151,6 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	sf->found = 0;
 
 	// TODO: check for self-inclusions, use CRC
-
 	for (u32 i = 0; ops[i]; i++)
 	{
 		SFuncOp op;
@@ -157,4 +163,3 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	}
 	Emu.GetSFuncManager().push_back(sf);
 }
-

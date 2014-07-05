@@ -22,7 +22,6 @@ s32 sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> l
 	u32 id = sys_lwcond.GetNewId(new Lwcond(attr->name_u64));
 	lwcond->lwmutex = lwmutex.GetAddr();
 	lwcond->lwcond_queue = id;
-	procObjects.lwcond_objects.insert(id);
 
 	if (lwmutex.IsGood())
 	{

@@ -2,9 +2,9 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "sys_timer.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/event.h"
+#include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
 

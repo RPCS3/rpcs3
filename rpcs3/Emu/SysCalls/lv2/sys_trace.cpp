@@ -3,6 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "sys_trace.h"
 
 SysCallBase sys_trace("sys_trace");
 
