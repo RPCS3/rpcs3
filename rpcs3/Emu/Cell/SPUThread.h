@@ -325,6 +325,9 @@ public:
 	EventManager SPUQs; // SPU Queue Mapping
 	SpuGroupInfo* group; // associated SPU Thread Group (null for raw spu)
 
+	u64 m_dec_start; // timestamp of writing decrementer value
+	u32 m_dec_value; // written decrementer value
+
 	struct IntrTag
 	{
 		u32 enabled; // 1 == true
@@ -937,46 +940,24 @@ public:
 
 	u32 GetChannelCount(u32 ch)
 	{
-		u32 count;
 		switch(ch)
 		{
-		case SPU_WrOutMbox:
-			return SPU.Out_MBox.GetFreeCount();
-
-		case SPU_RdInMbox:
-			count = SPU.In_MBox.GetCount();
-			//ConLog.Warning("GetChannelCount(%s) -> %d", spu_ch_name[ch], count);
-			return count;
-
-		case SPU_WrOutIntrMbox:
-			LOG_WARNING(Log::SPU, "GetChannelCount(%s) = 0", spu_ch_name[ch]);
-			return 0;
-
-		case MFC_RdTagStat:
-			return Prxy.TagStatus.GetCount();
-
-		case MFC_RdListStallStat:
-			return StallStat.GetCount();
-
-		case MFC_WrTagUpdate:
-			return Prxy.TagStatus.GetCount(); // hack
-
-		case SPU_RdSigNotify1:
-			return SPU.SNR[0].GetCount();
-
-		case SPU_RdSigNotify2:
-			return SPU.SNR[1].GetCount();
-
-		case MFC_RdAtomicStat:
-			return Prxy.AtomicStat.GetCount();
+		case SPU_WrOutMbox:       return SPU.Out_MBox.GetFreeCount();
+		case SPU_RdInMbox:        return SPU.In_MBox.GetCount();
+		case MFC_RdTagStat:       return Prxy.TagStatus.GetCount();
+		case MFC_RdListStallStat: return StallStat.GetCount();
+		case MFC_WrTagUpdate:     return Prxy.TagStatus.GetCount(); // hack
+		case SPU_RdSigNotify1:    return SPU.SNR[0].GetCount();
+		case SPU_RdSigNotify2:    return SPU.SNR[1].GetCount();
+		case MFC_RdAtomicStat:    return Prxy.AtomicStat.GetCount();
 
 		default:
+		{
 			LOG_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).",
 				__FUNCTION__, ch, spu_ch_name[ch]);
-		break;
+			return 0;
+		}	
 		}
-
-		return 0;
 	}
 
 	void WriteChannel(u32 ch, const SPU_GPR_hdr& r)
@@ -986,6 +967,7 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
+		{
 			if (!group) // if RawSPU
 			{
 				if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
@@ -1010,7 +992,7 @@ public:
 			else
 			{
 				u8 code = v >> 24;
-				if (code < 64) 
+				if (code < 64)
 				{
 					/* ===== sys_spu_thread_send_event ===== */
 
@@ -1120,47 +1102,67 @@ public:
 					return;
 				}
 			}
-		break;
+			break;
+		}
 
 		case SPU_WrOutMbox:
+		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
-		break;
+			break;
+		}
 
 		case MFC_WrTagMask:
+		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			Prxy.QueryMask.SetValue(v);
-		break;
+			break;
+		}
 
 		case MFC_WrTagUpdate:
+		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			Prxy.TagStatus.PushUncond(Prxy.QueryMask.GetValue());
-		break;
+			break;
+		}
 
 		case MFC_LSA:
+		{
 			MFC1.LSA.SetValue(v);
-		break;
+			break;
+		}
 
 		case MFC_EAH:
+		{
 			MFC1.EAH.SetValue(v);
-		break;
+			break;
+		}
 
 		case MFC_EAL:
+		{
 			MFC1.EAL.SetValue(v);
-		break;
+			break;
+		}
 
 		case MFC_Size:
+		{
 			MFC1.Size_Tag.SetValue((MFC1.Size_Tag.GetValue() & 0xffff) | (v << 16));
-		break;
+			break;
+		}
 
 		case MFC_TagID:
+		{
 			MFC1.Size_Tag.SetValue((MFC1.Size_Tag.GetValue() & ~0xffff) | (v & 0xffff));
-		break;
+			break;
+		}
+			
 
 		case MFC_Cmd:
+		{
 			MFC1.CMDStatus.SetValue(v);
 			EnqMfcCmd(MFC1);
-		break;
+			break;
+		}	
 
 		case MFC_WrListStallAck:
 		{
@@ -1177,12 +1179,21 @@ public:
 			}
 			StallList[v].MFCArgs = nullptr;
 			ListCmd(temp.lsa, temp.ea, temp.tag, temp.size, temp.cmd, *temp.MFCArgs);
+			break;
 		}
-		break;
+
+		case SPU_WrDec:
+		{
+			m_dec_start = get_system_time();
+			m_dec_value = v;
+			break;
+		}
 
 		default:
+		{
 			LOG_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
-		break;
+			break;
+		}
 		}
 
 		if (Emu.IsStopped()) LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
@@ -1196,36 +1207,57 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
+		{
 			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
-		break;
+			break;
+		}
 
 		case MFC_RdTagStat:
+		{
 			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
-		break;
+			break;
+		}
 
 		case SPU_RdSigNotify1:
+		{
 			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
-		break;
+			break;
+		}
 
 		case SPU_RdSigNotify2:
+		{
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
-		break;
+			break;
+		}
 
 		case MFC_RdAtomicStat:
+		{
 			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
-		break;
+			break;
+		}
 
 		case MFC_RdListStallStat:
+		{
 			while (!StallStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
-		break;
+			break;
+		}
+
+		case SPU_RdDec:
+		{
+			// decrementer freq is probably 80 MHz
+			v = m_dec_value - (u32)(get_system_time() - m_dec_start) * 80;
+			break;
+		}
 
 		default:
+		{
 			LOG_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
-		break;
+			break;
+		}	
 		}
 
 		if (Emu.IsStopped()) LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
