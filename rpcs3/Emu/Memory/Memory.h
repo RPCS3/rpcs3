@@ -15,6 +15,7 @@ enum MemoryType
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
+	void* m_base_addr;
 
 public:
 	std::vector<MemoryBlock*> MemoryBlocks;
@@ -57,6 +58,11 @@ public:
 		Close();
 	}
 
+	void* GetBaseAddr() const
+	{
+		return m_base_addr;
+	}
+
 	static __forceinline u16 Reverse16(const u16 val)
 	{
 		return _byteswap_ushort(val);
@@ -91,6 +97,14 @@ public:
 		*/
 	}
 
+	static __forceinline u128 Reverse128(const u128 val)
+	{
+		u128 ret;
+		ret.lo = re64(val.hi);
+		ret.hi = re64(val.lo);
+		return ret;
+	}
+
 	template<int size> static __forceinline u64 ReverseData(u64 val);
 
 	template<typename T> static __forceinline T Reverse(T val)
@@ -117,28 +131,40 @@ public:
 
 	bool Read8ByAddr(const u64 addr, u8 *value)
 	{
-		for (auto block : MemoryBlocks)
+		*value = *(u8*)((u64)GetBaseAddr() + addr);
+		return true;
+
+		/*for (auto block : MemoryBlocks)
 		{
 			if (block->Read8(addr, value))
 				return true;
 		}
 
-		return NullMem.Read8(addr, value);
+		return NullMem.Read8(addr, value);*/
 	}
 
 	bool Read16ByAddr(const u64 addr, u16 *value)
 	{
-		for (auto block : MemoryBlocks)
+		*value = re16(*(u16*)((u64)GetBaseAddr() + addr));
+		return true;
+
+		/*for (auto block : MemoryBlocks)
 		{
 			if (block->Read16(addr, value))
 				return true;
 		}
 
-		return NullMem.Read16(addr, value);
+		return NullMem.Read16(addr, value);*/
 	}
 
 	bool Read32ByAddr(const u64 addr, u32 *value)
 	{
+		if (addr < 0xE0000000 || (addr % 0x100000) < 0x40000)
+		{
+			*value = re32(*(u32*)((u64)GetBaseAddr() + addr));
+			return true;
+		}
+
 		for (auto block : MemoryBlocks)
 		{
 			if (block->Read32(addr, value))
@@ -150,29 +176,36 @@ public:
 
 	bool Read64ByAddr(const u64 addr, u64 *value)
 	{
-		for (auto block : MemoryBlocks)
+		*value = re64(*(u64*)((u64)GetBaseAddr() + addr));
+		return true;
+
+		/*for (auto block : MemoryBlocks)
 		{
 			if (block->Read64(addr, value))
 				return true;
 		}
 
-		return NullMem.Read64(addr, value);
+		return NullMem.Read64(addr, value);*/
 	}
 
 	bool Read128ByAddr(const u64 addr, u128 *value)
 	{
-		for (auto block : MemoryBlocks)
+		*value = re128(*(u128*)((u64)GetBaseAddr() + addr));
+		return true;
+
+		/*for (auto block : MemoryBlocks)
 		{
 			if (block->Read128(addr, value))
 				return true;
 		}
 
-		return NullMem.Read128(addr, value);
+		return NullMem.Read128(addr, value);*/
 	}
 
 	u8* GetMemFromAddr(const u64 addr)
 	{
-		return GetMemByAddr(addr).GetMemFromAddr(addr);
+		//return GetMemByAddr(addr).GetMemFromAddr(addr);
+		return (u8*)GetBaseAddr() + addr;
 	}
 
 	void* VirtualToRealAddr(const u64 vaddr)
@@ -211,7 +244,15 @@ public:
 		if(m_inited) return;
 		m_inited = true;
 
-		LOG_NOTICE(MEMORY, "Initing memory...");
+		m_base_addr = VirtualAlloc(0, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+		if (!m_base_addr)
+		{
+			LOG_ERROR(MEMORY, "Initing memory: VirtualAlloc() failed");
+		}
+		else
+		{
+			LOG_NOTICE(MEMORY, "Initing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
+		}
 
 		switch(type)
 		{
@@ -279,6 +320,11 @@ public:
 		}
 
 		MemoryBlocks.clear();
+
+		if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
+		{
+			LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
+		}
 	}
 
 	void Write8(const u64 addr, const u8 data);

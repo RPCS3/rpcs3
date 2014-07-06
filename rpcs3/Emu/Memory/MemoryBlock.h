@@ -22,13 +22,14 @@ struct MemBlockInfo : public MemInfo
 {
 	void *mem;
 
-	MemBlockInfo(u64 _addr, u32 _size)
+	MemBlockInfo(u64 _addr, u32 _size, void* base_addr)
 		: MemInfo(_addr, PAGE_4K(_size))
-		, mem(_aligned_malloc(PAGE_4K(_size), 128))
+		//, mem(_aligned_malloc(PAGE_4K(_size), 128))
+		, mem(VirtualAlloc((void*)((u64)base_addr + _addr), PAGE_4K(_size), MEM_COMMIT, PAGE_READWRITE))
 	{
 		if(!mem)
 		{
-			LOG_ERROR(MEMORY, "Not enough free memory.");
+			LOG_ERROR(MEMORY, "Out of memory or VirtualAlloc() failed (_addr=0x%llx, _size=0x%llx)", _addr, _size);
 			assert(0);
 		}
 		memset(mem, 0, size);
@@ -43,7 +44,8 @@ struct MemBlockInfo : public MemInfo
 	MemBlockInfo& operator =(MemBlockInfo &&other){
 		this->addr = other.addr;
 		this->size = other.size;
-		if (this->mem) _aligned_free(mem);
+		//if (this->mem) _aligned_free(mem);
+		if (this->mem) VirtualFree(this->mem, this->size, MEM_DECOMMIT);
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;
@@ -51,7 +53,8 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		if(mem) _aligned_free(mem);
+		//if(mem) _aligned_free(mem);
+		if (mem) VirtualFree(mem, size, MEM_DECOMMIT);
 		mem = nullptr;
 	}
 };
@@ -284,6 +287,13 @@ public:
 	// try to get the real address given a mapped address
 	// return true for success
 	bool getRealAddr(u64 addr, u64& result);
+
+	u64 RealAddr(u64 addr)
+	{
+		u64 realAddr = 0;
+		getRealAddr(addr, realAddr);
+		return realAddr;
+	}
 
 	// return the mapped address given a real address, if not mapped return 0
 	u64 getMappedAddress(u64 realAddress);

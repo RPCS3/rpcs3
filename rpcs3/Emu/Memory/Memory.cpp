@@ -31,14 +31,17 @@ void MemoryBlock::InitMemory()
 {
 	if(!range_size) return;
 
-	if(mem) safe_free(mem);
-	mem = (u8*)malloc(range_size);
+	//if(mem) safe_free(mem);
+	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
+	//mem = (u8*)malloc(range_size);
+	mem = (u8*)VirtualAlloc((void*)((u64)Memory.GetBaseAddr() + range_start), range_size, MEM_COMMIT, PAGE_READWRITE);
 	memset(mem, 0, range_size);
 }
 
 void MemoryBlock::Delete()
 {
-	if(mem) safe_free(mem);
+	//if(mem) safe_free(mem);
+	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
 	Init();
 }
 
@@ -412,27 +415,38 @@ bool NullMemoryBlock::Write128(const u64 addr, const u128 value)
 //MemoryBase
 void MemoryBase::Write8(u64 addr, const u8 data)
 {
-	GetMemByAddr(addr).Write8(addr, data);
+	//GetMemByAddr(addr).Write8(addr, data);
+	*(u8*)((u64)GetBaseAddr() + addr) = data;
 }
 
 void MemoryBase::Write16(u64 addr, const u16 data)
 {
-	GetMemByAddr(addr).Write16(addr, data);
+	//GetMemByAddr(addr).Write16(addr, data);
+	*(u16*)((u64)GetBaseAddr() + addr) = re16(data);
 }
 
 void MemoryBase::Write32(u64 addr, const u32 data)
 {
-	GetMemByAddr(addr).Write32(addr, data);
+	if (addr < 0xE0000000 || (addr % 0x100000) < 0x40000)
+	{
+		*(u32*)((u64)GetBaseAddr() + addr) = re32(data);
+	}
+	else
+	{
+		GetMemByAddr(addr).Write32(addr, data);
+	}
 }
 
 void MemoryBase::Write64(u64 addr, const u64 data)
 {
-	GetMemByAddr(addr).Write64(addr, data);
+	//GetMemByAddr(addr).Write64(addr, data);
+	*(u64*)((u64)GetBaseAddr() + addr) = re64(data);
 }
 
 void MemoryBase::Write128(u64 addr, const u128 data)
 {
-	GetMemByAddr(addr).Write128(addr, data);
+	//GetMemByAddr(addr).Write128(addr, data);
+	*(u128*)((u64)GetBaseAddr() + addr) = re128(data);
 }
 
 bool MemoryBase::Write8NN(u64 addr, const u8 data)
