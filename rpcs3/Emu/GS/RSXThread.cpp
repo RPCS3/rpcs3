@@ -547,11 +547,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 
 	case NV4097_SET_BLEND_ENABLE_MRT:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_BLEND_ENABLE_MRT: %x", ARGS(0));
-
-		// TODO:
-		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP(((mrt1) << 1) | ((mrt2) << 2) | ((mrt3) << 3));
+		m_set_blend_mrt1 = ARGS(0) & 0x02 ? true : false;
+		m_set_blend_mrt2 = ARGS(0) & 0x04 ? true : false;
+		m_set_blend_mrt3 = ARGS(0) & 0x08 ? true : false;
 	}
 	break;
 

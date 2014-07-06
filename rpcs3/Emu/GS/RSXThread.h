@@ -269,6 +269,9 @@ public:
 	u8 m_blend_color_g;
 	u8 m_blend_color_b;
 	u8 m_blend_color_a;
+	bool m_set_blend_mrt1;
+	bool m_set_blend_mrt2;
+	bool m_set_blend_mrt3;
 
 	// Stencil Test
 	bool m_set_stencil_test;
@@ -440,6 +443,9 @@ protected:
 		m_set_alpha_test = false;
 		m_set_depth_bounds_test = false;
 		m_set_blend = false;
+		m_set_blend_mrt1 = false;
+		m_set_blend_mrt2 = false;
+		m_set_blend_mrt3 = false;
 		m_set_logic_op = false;
 		m_set_cull_face = false;
 		m_set_dither = false;
@@ -518,6 +524,9 @@ protected:
 		m_set_front_polygon_mode = false;
 		m_set_back_polygon_mode = false;
 		m_set_blend = false;
+		m_set_blend_mrt1 = false;
+		m_set_blend_mrt2 = false;
+		m_set_blend_mrt3 = false;
 		m_set_blend_sfactor = false;
 		m_set_blend_dfactor = false;
 		m_set_blend_equation = false;

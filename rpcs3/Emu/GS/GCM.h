@@ -68,6 +68,11 @@ enum
 	CELL_GCM_SMOOTH = 0x1D01,
 };
 
+enum
+{
+	CELL_GCM_SYSTEM_MODE_IOMAP_512MB = 1,
+};
+
 // GCM Texture
 enum
 {

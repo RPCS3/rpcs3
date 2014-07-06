@@ -537,7 +537,7 @@ void SetupRsxRenderingStates(mem_ptr_t<CellGcmContextData>& cntxt)
 	r.m_set_depth_mask = true; r.m_depth_mask = 0;
 	r.m_set_alpha_test = false;
 	r.m_set_blend = false;
-	//GcmCmdTypePrefix::cellGcmSetBlendEnableMrt(con, CELL_GCM_FALSE, CELL_GCM_FALSE, CELL_GCM_FALSE);
+	r.m_set_blend_mrt1 = r.m_set_blend_mrt2 = r.m_set_blend_mrt3 = false;
 	r.m_set_logic_op = false;
 	r.m_set_cull_face = false;
 	r.m_set_depth_bounds_test = false;
