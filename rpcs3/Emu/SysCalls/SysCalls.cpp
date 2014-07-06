@@ -523,7 +523,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func, null_func, null_func, null_func, null_func, //1009
 	null_func, null_func, null_func, null_func, null_func, //1014
 	null_func, null_func, null_func, null_func, null_func, //1019
-	null_func, null_func, null_func, bind_func(cellGcmCallback), //1024
+	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023
 };
 
 /** HACK: Used to delete func_caller objects that get allocated and stored in sc_table (above).

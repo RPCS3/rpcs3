@@ -407,7 +407,6 @@ void Emulator::Stop()
 	GetAudioManager().Close();
 	GetEventManager().Clear();
 	GetCPU().Close();
-	//SysCallsManager.Close();
 	GetIdManager().Clear();
 	GetPadManager().Close();
 	GetKeyboardManager().Close();

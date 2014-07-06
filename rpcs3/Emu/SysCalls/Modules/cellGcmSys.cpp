@@ -1149,6 +1149,31 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 //----------------------------------------------------------------------------
 
+// TODO: This function was originally located in lv2/SC_GCM and appears in RPCS3 as a lv2 syscall with id 1023,
+//       which according to lv2 dumps isn't the case. So, is this a proper place for this function?
+
+int cellGcmCallback(u32 context_addr, u32 count)
+{
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+
+	CellGcmContextData& ctx = (CellGcmContextData&)Memory[context_addr];
+	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+
+	const s32 res = ctx.current - ctx.begin - ctrl.put;
+
+	if(res > 0) Memory.Copy(ctx.begin, ctx.current - res, res);
+
+	ctx.current = ctx.begin + res;
+
+	//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
+	ctrl.put = res;
+	ctrl.get = 0;
+	
+	return CELL_OK;
+}
+
+//----------------------------------------------------------------------------
+
 void cellGcmSys_init()
 {
 	// Data Retrieval

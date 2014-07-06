@@ -1,6 +1,6 @@
 #pragma once
 #include "SPUThread.h"
-#include "Emu/event.h"
+#include "Emu/Event.h"
 
 __forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)
 {

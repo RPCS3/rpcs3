@@ -213,3 +213,6 @@ struct CellHddGameCBResult
 	be_t<u32> invalidMsg_addr;  // char*
 	be_t<u32> reserved_addr;  // void*
 };
+
+// SysCalls
+s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent);

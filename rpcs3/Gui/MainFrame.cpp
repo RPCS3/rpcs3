@@ -9,7 +9,6 @@
 #include "MemoryViewer.h"
 #include "RSXDebugger.h"
 #include "PADManager.h"
-#include "FnIdGenerator.h"
 
 #include "git-version.h"
 #include "Ini.h"
@@ -96,9 +95,8 @@ MainFrame::MainFrame()
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
 	menu_tools->Append(id_tools_compiler, "ELF Compiler");
-	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer");
-	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger");
-	menu_tools->Append(id_tools_fnid_generator, "FunctionID Generator");
+	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer")->Enable(false);
+	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger")->Enable(false);
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "Help");
@@ -134,7 +132,6 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
-	Bind(wxEVT_MENU, &MainFrame::OpenFnIdGenerator, this, id_tools_fnid_generator);
 
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
@@ -656,11 +653,6 @@ void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 	(new RSXDebugger(this)) -> Show();
 }
 
-void MainFrame::OpenFnIdGenerator(wxCommandEvent& WXUNUSED(event))
-{
-	FnIdGenerator(this).ShowModal();
-}
-
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 {
@@ -729,20 +721,30 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 		is_ready = Emu.IsReady();
 	}
 
+	// Update menu items based on the state of the emulator
 	wxMenuBar& menubar( *GetMenuBar() );
+
+	// Emulation
 	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
-	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
-	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + E" : "Resume\tCtrl + E");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
-	//send_exit.Enable(false);
-	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
 
+	// PS3 Commands
+	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
+	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
+	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
 	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
+
+	// Tools
+	wxMenuItem& memory_viewer = *menubar.FindItem( id_tools_memory_viewer );
+	wxMenuItem& rsx_debugger = *menubar.FindItem( id_tools_rsx_debugger);
+	memory_viewer.Enable(!is_stopped);
+	rsx_debugger.Enable(!is_stopped);
+
 
 	//m_aui_mgr.Update();
 

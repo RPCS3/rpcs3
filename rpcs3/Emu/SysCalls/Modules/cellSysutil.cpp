@@ -199,7 +199,7 @@ int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution
 	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
-int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
 {
 	cellSysutil->Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
 		videoOut, config_addr, option_addr, waitForEvent);
