@@ -2,7 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "event.h"
+#include "Event.h"
 
 void EventManager::Init()
 {

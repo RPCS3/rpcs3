@@ -1,5 +1,5 @@
 #pragma once
-#include "Emu/event.h"
+#include "Emu/Event.h"
 
 enum
 {

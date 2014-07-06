@@ -1,6 +1,6 @@
 #pragma once
 #include "PPCThread.h"
-#include "Emu/event.h"
+#include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "MFC.h"
 #include "Emu/SysCalls/ErrorCodes.h"

@@ -24,7 +24,7 @@
 #include "lv2/sys_tty.h"
 #include "lv2/sys_vm.h"
 
-#include "Emu/event.h"
+#include "Emu/Event.h"
 
 //#define SYSCALLS_DEBUG
 
