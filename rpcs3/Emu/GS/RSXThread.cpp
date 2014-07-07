@@ -1373,7 +1373,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		{
 			switch (Ini.GSResolution.GetValue())
 			{
-			case 1:// 1920x1080 window size
+			case 1: // 1920x1080 window size
 				m_width_scale = m_height_scale = 4.0f;
 				m_width = 1980;
 				m_height = 1080;
@@ -1386,6 +1386,58 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 			case 4: // 720x480 window size
 				m_width_scale = 1.5f;
 				m_height_scale = 1.77f;
+				m_width = 720;
+				m_height = 480;
+				break;
+			}
+		}
+
+		// Rescale native 960x1080 to fit 1080p/720p/480p window size
+		if (m_buffer_width == 960 && m_buffer_height == 1080)
+		{
+			switch (Ini.GSResolution.GetValue())
+			{
+			case 1: // 1920x1080 window size
+				m_width_scale = 4.0f;
+				m_height_scale = 2.0f;
+				m_width = 1980;
+				m_height = 1080;
+				break;
+			case 2: // 1280x720 window size
+				m_width_scale = 2.66f;
+				m_height_scale = 1.33f;
+				m_width = 1280;
+				m_height = 720;
+				break;
+			case 4: // 720x480 window size
+				m_width_scale = 1.5f;
+				m_height_scale = 0.88f;
+				m_width = 720;
+				m_height = 480;
+				break;
+			}
+		}
+
+		// Rescale native 1024x768 to fit 1080p/720p/480p window size
+		if (m_buffer_width == 1024 && m_buffer_height == 768)
+		{
+			switch (Ini.GSResolution.GetValue())
+			{
+			case 1: // 1920x1080 window size
+				m_width_scale = 3.75f;
+				m_height_scale = 2.81f;
+				m_width = 1980;
+				m_height = 1080;
+				break;
+			case 2: // 1280x720 window size
+				m_width_scale = 2.5f;
+				m_height_scale = 1.87f;
+				m_width = 1280;
+				m_height = 720;
+				break;
+			case 4: // 720x480 window size
+				m_width_scale = 1.4f;
+				m_height_scale = 1.25f;
 				m_width = 720;
 				m_height = 480;
 				break;
