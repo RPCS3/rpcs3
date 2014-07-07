@@ -2492,6 +2492,7 @@ void RSXThread::Task()
 		{
 			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+			u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
 			m_ctrl->get = offs;
 			continue;
@@ -2501,7 +2502,6 @@ void RSXThread::Task()
 			//LOG_WARNING(RSX, "rsx return!");
 			u32 get = m_call_stack.top();
 			m_call_stack.pop();
-			u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
 			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 			m_ctrl->get = get;
 			continue;

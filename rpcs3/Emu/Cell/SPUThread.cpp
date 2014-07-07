@@ -61,8 +61,7 @@ void SPUThread::InitRegs()
 	dmac.proxy_lock = 0;
 	dmac.queue_lock = 0;*/
 
-	SPU.RunCntl.SetValue(SPU_RUNCNTL_STOP);
-	SPU.Status.SetValue(SPU_STATUS_RUNNING);
+	SPU.Status.SetValue(SPU_STATUS_STOPPED);
 	Prxy.QueryType.SetValue(0);
 	MFC1.CMDStatus.SetValue(0);
 	MFC2.CMDStatus.SetValue(0);

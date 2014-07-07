@@ -31,16 +31,13 @@ void MemoryBlock::InitMemory()
 {
 	if(!range_size) return;
 
-	//if(mem) safe_free(mem);
 	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
-	//mem = (u8*)malloc(range_size);
 	mem = (u8*)VirtualAlloc((void*)((u64)Memory.GetBaseAddr() + range_start), range_size, MEM_COMMIT, PAGE_READWRITE);
 	memset(mem, 0, range_size);
 }
 
 void MemoryBlock::Delete()
 {
-	//if(mem) safe_free(mem);
 	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
 	Init();
 }
@@ -54,7 +51,6 @@ bool MemoryBlock::GetMemFromAddr(void* dst, const u64 addr, const u32 size)
 {
 	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
 
-	// mem cpy(dst, GetMem(FixAddr(addr)), size);
 	return Memory.CopyToReal(dst, (u32)addr, size);
 }
 
@@ -62,7 +58,6 @@ bool MemoryBlock::SetMemFromAddr(void* src, const u64 addr, const u32 size)
 {
 	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
 
-	// mem cpy(GetMem(FixAddr(addr)), src, size);
 	return Memory.CopyFromReal((u32)addr, src, size);
 }
 
@@ -121,7 +116,6 @@ bool MemoryBlock::Read8(const u64 addr, u8* value)
 		return false;
 	}
 
-	//*value = std::atomic_load((volatile std::atomic<u8>*)GetMem(FixAddr(addr)));
 	*value = FastRead<u8>(FixAddr(addr));
 	return true;
 }
@@ -134,7 +128,6 @@ bool MemoryBlock::Read16(const u64 addr, u16* value)
 		return false;
 	}
 
-	//se_t<u16>::func(*value, std::atomic_load((volatile std::atomic<u16>*)GetMem(FixAddr(addr))));
 	*value = FastRead<u16>(FixAddr(addr));
 	return true;
 }
@@ -147,7 +140,6 @@ bool MemoryBlock::Read32(const u64 addr, u32* value)
 		return false;
 	}
 
-	//se_t<u32>::func(*value, std::atomic_load((volatile std::atomic<u32>*)GetMem(FixAddr(addr))));
 	*value = FastRead<u32>(FixAddr(addr));
 	return true;
 }
@@ -160,7 +152,6 @@ bool MemoryBlock::Read64(const u64 addr, u64* value)
 		return false;
 	}
 
-	//se_t<u64>::func(*value, std::atomic_load((volatile std::atomic<u64>*)GetMem(FixAddr(addr))));
 	*value = FastRead<u64>(FixAddr(addr));
 	return true;
 }
@@ -173,9 +164,6 @@ bool MemoryBlock::Read128(const u64 addr, u128* value)
 		return false;
 	}
 
-	//u64 f_addr = FixAddr(addr);
-	//se_t<u64>::func(value->lo, std::atomic_load((volatile std::atomic<u64>*)GetMem(f_addr)));
-	//se_t<u64>::func(value->hi, std::atomic_load((volatile std::atomic<u64>*)GetMem(f_addr + 8)));
 	*value = FastRead<u128>(FixAddr(addr));
 	return true;
 }
@@ -199,7 +187,6 @@ bool MemoryBlock::Write8(const u64 addr, const u8 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	//std::atomic_store((std::atomic<u8>*)GetMem(FixAddr(addr)), value);
 	FastWrite<u8>(FixAddr(addr), value);
 	return true;
 }
@@ -208,9 +195,6 @@ bool MemoryBlock::Write16(const u64 addr, const u16 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	//u16 re_value;
-	//se_t<u16>::func(re_value, value);
-	//std::atomic_store((std::atomic<u16>*)GetMem(FixAddr(addr)), re_value);
 	FastWrite<u16>(FixAddr(addr), value);
 	return true;
 }
@@ -219,9 +203,6 @@ bool MemoryBlock::Write32(const u64 addr, const u32 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	//u32 re_value;
-	//se_t<u32>::func(re_value, value);
-	//std::atomic_store((std::atomic<u32>*)GetMem(FixAddr(addr)), re_value);
 	FastWrite<u32>(FixAddr(addr), value);
 	return true;
 }
@@ -230,9 +211,6 @@ bool MemoryBlock::Write64(const u64 addr, const u64 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	//u64 re_value;
-	//se_t<u64>::func(re_value, value);
-	//std::atomic_store((std::atomic<u64>*)GetMem(FixAddr(addr)), re_value);
 	FastWrite<u64>(FixAddr(addr), value);
 	return true;
 }
@@ -241,12 +219,6 @@ bool MemoryBlock::Write128(const u64 addr, const u128 value)
 {
 	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
 
-	//u64 f_addr = FixAddr(addr);
-	//u64 re_value;
-	//se_t<u64>::func(re_value, value.lo);
-	//std::atomic_store((std::atomic<u64>*)GetMem(f_addr), re_value);
-	//se_t<u64>::func(re_value, value.hi);
-	//std::atomic_store((std::atomic<u64>*)GetMem(f_addr + 8), re_value);
 	FastWrite<u128>(FixAddr(addr), value);
 	return true;
 }
@@ -331,121 +303,36 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 	return true;
 }
 
-//NullMemoryBlock
-bool NullMemoryBlock::Read8(const u64 addr, u8* )
-{
-	LOG_ERROR(MEMORY, "Read8 from null block: [%08llx]", addr);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Read16(const u64 addr, u16* )
-{
-	LOG_ERROR(MEMORY, "Read16 from null block: [%08llx]", addr);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Read32(const u64 addr, u32* )
-{
-	LOG_ERROR(MEMORY, "Read32 from null block: [%08llx]", addr);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Read64(const u64 addr, u64* )
-{
-	LOG_ERROR(MEMORY, "Read64 from null block: [%08llx]", addr);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Read128(const u64 addr, u128* )
-{
-	LOG_ERROR(MEMORY, "Read128 from null block: [%08llx]", addr);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Write8(const u64 addr, const u8 value)
-{
-	LOG_ERROR(MEMORY, "Write8 to null block: [%08llx]: %x", addr, value);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Write16(const u64 addr, const u16 value)
-{
-	LOG_ERROR(MEMORY, "Write16 to null block: [%08llx]: %x", addr, value);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Write32(const u64 addr, const u32 value)
-{
-	LOG_ERROR(MEMORY, "Write32 to null block: [%08llx]: %x", addr, value);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Write64(const u64 addr, const u64 value)
-{
-	LOG_ERROR(MEMORY, "Write64 to null block: [%08llx]: %llx", addr, value);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
-bool NullMemoryBlock::Write128(const u64 addr, const u128 value)
-{
-	LOG_ERROR(MEMORY, "Write128 to null block: [%08llx]: %llx_%llx", addr, value.hi, value.lo);
-	if (!Ini.CPUIgnoreRWErrors.GetValue())
-		Emu.Pause();
-	return false;
-}
-
 //MemoryBase
 void MemoryBase::Write8(u64 addr, const u8 data)
 {
-	//GetMemByAddr(addr).Write8(addr, data);
 	*(u8*)((u64)GetBaseAddr() + addr) = data;
 }
 
 void MemoryBase::Write16(u64 addr, const u16 data)
 {
-	//GetMemByAddr(addr).Write16(addr, data);
 	*(u16*)((u64)GetBaseAddr() + addr) = re16(data);
 }
 
 void MemoryBase::Write32(u64 addr, const u32 data)
 {
-	if (addr < 0xE0000000 || (addr % 0x100000) < 0x40000)
+	if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
 	{
 		*(u32*)((u64)GetBaseAddr() + addr) = re32(data);
 	}
 	else
 	{
-		GetMemByAddr(addr).Write32(addr, data);
+		RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
 	}
 }
 
 void MemoryBase::Write64(u64 addr, const u64 data)
 {
-	//GetMemByAddr(addr).Write64(addr, data);
 	*(u64*)((u64)GetBaseAddr() + addr) = re64(data);
 }
 
 void MemoryBase::Write128(u64 addr, const u128 data)
 {
-	//GetMemByAddr(addr).Write128(addr, data);
 	*(u128*)((u64)GetBaseAddr() + addr) = re128(data);
 }
 
@@ -486,37 +373,36 @@ bool MemoryBase::Write128NN(u64 addr, const u128 data)
 
 u8 MemoryBase::Read8(u64 addr)
 {
-	u8 res;
-	Read8ByAddr(addr, &res);
-	return res;
+	return *(u8*)((u64)GetBaseAddr() + addr);
 }
 
 u16 MemoryBase::Read16(u64 addr)
 {
-	u16 res;
-	Read16ByAddr(addr, &res);
-	return res;
+	return re16(*(u16*)((u64)GetBaseAddr() + addr));
 }
 
 u32 MemoryBase::Read32(u64 addr)
 {
-	u32 res;
-	Read32ByAddr(addr, &res);
-	return res;
+	if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+	{
+		return re32(*(u32*)((u64)GetBaseAddr() + addr));
+	}
+	else
+	{
+		u32 res;
+		RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
+		return res;
+	}
 }
 
 u64 MemoryBase::Read64(u64 addr)
 {
-	u64 res;
-	Read64ByAddr(addr, &res);
-	return res;
+	return re64(*(u64*)((u64)GetBaseAddr() + addr));
 }
 
 u128 MemoryBase::Read128(u64 addr)
 {
-	u128 res;
-	Read128ByAddr(addr, &res);
-	return res;
+	return re128(*(u128*)((u64)GetBaseAddr() + addr));
 }
 
 template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }

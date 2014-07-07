@@ -162,73 +162,34 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	u64 nbytes = aio->size;
 	u32 buf_addr = aio->buf_addr;
 
-	u32 res = 0;
 	u32 error = CELL_OK;
 
 	vfsStream& file = *(vfsStream*)orig_file;
 	const u64 old_pos = file.Tell();
 	file.Seek((u64)aio->offset);
 
-	u32 count = nbytes;
-	if (nbytes != (u64)count)
+	// TODO: use code from cellFsRead or something
+
+	u64 res = 0;
+	if (nbytes != (u32)nbytes)
 	{
 		error = CELL_ENOMEM;
-		goto fin;
 	}
-
-	if (!Memory.IsGoodAddr(buf_addr))
+	else
 	{
-		error = CELL_EFAULT;
-		goto fin;
+		res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 	}
 
-	if (count) if (u32 frag = buf_addr & 4095) // memory page fragment
-	{
-		u32 req = std::min(count, 4096 - frag);
-		u32 read = file.Read(Memory + buf_addr, req);
-		buf_addr += req;
-		res += read;
-		count -= req;
-		if (read < req) goto fin;
-	}
-
-	for (u32 pages = count / 4096; pages > 0; pages--) // full pages
-	{
-		if (!Memory.IsGoodAddr(buf_addr)) goto fin; // ??? (probably EFAULT)
-		u32 read = file.Read(Memory + buf_addr, 4096);
-		buf_addr += 4096;
-		res += read;
-		count -= 4096;
-		if (read < 4096) goto fin;
-	}
-
-	if (count) // last fragment
-	{
-		if (!Memory.IsGoodAddr(buf_addr)) goto fin;
-		res += file.Read(Memory + buf_addr, count);
-	}
-
-fin:
 	file.Seek(old_pos);
 
-	LOG_WARNING(HLE, "*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
+	if (Ini.HLELogging.GetValue())
+		LOG_NOTICE(HLE, "*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
+			fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
 
 	if (func) // start callback thread
 	{
 		func.async(aio, error, xid, res);
 	}
-
-	/*CPUThread& thr = Emu.GetCallbackThread();
-	while (thr.IsAlive())
-	{
-		Sleep(1);
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(HLE, "fsAioRead() aborted");
-			break;
-		}
-	}*/
 
 	g_FsAioReadCur++;
 }

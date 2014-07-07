@@ -315,17 +315,16 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys->Warning("cellGcmInit(): 512MB io address space used");
-		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x20000000/*512MB*/));//TODO: implement allocateAdressSpace in memoryBase
+		Memory.RSXIOMem.SetRange(0x50000000, 0x20000000 /*512MB*/);
 	}
 	else
 	{
 		cellGcmSys->Warning("cellGcmInit(): 256MB io address space used");
-		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+		Memory.RSXIOMem.SetRange(0x50000000, 0x10000000 /*256MB*/);
 	}
 
 	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
 	{
-		Memory.MemoryBlocks.pop_back();
 		cellGcmSys->Error("cellGcmInit : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}

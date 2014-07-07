@@ -361,7 +361,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 				break;
 			}
 
-			if (mixcount > (port.tag + 15)) // preemptive buffer filling (probably hack)
+			if (mixcount > (port.tag + 14)) // preemptive buffer filling (probably hack)
 			{
 				Sleep(1);
 				continue;

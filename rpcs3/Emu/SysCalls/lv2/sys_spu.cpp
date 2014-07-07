@@ -391,14 +391,6 @@ s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 		return CELL_EINVAL;
 	}
 
-	//if(!Memory.InitSpuRawMem(max_raw_spu))
-	//{
-	//	return CELL_ENOMEM;
-	//}
-
-	//Ini.HLELogging.SetValue(true);
-	//dump_enable = true;
-
 	return CELL_OK;
 }
 
@@ -773,7 +765,6 @@ s32 sys_raw_spu_create(mem32_t id, u32 attr_addr)
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
 	id = ((RawSPUThread&)new_thread).GetIndex();
 	new_thread.Run();
-	new_thread.Exec();
 
 	return CELL_OK;
 }

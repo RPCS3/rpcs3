@@ -12,48 +12,13 @@ RawSPUThread::RawSPUThread(u32 index, CPUThreadType type)
 	, MemoryBlock()
 	, m_index(index)
 {
-	Memory.MemoryBlocks.push_back(SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_OFFSET));
+	Memory.InitRawSPU(SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET), m_index);
 	Reset();
 }
 
 RawSPUThread::~RawSPUThread()
 {
-	for(int i=0; i<Memory.MemoryBlocks.size(); ++i)
-	{
-		if(Memory.MemoryBlocks[i]->GetStartAddr() == GetStartAddr())
-		{
-			Memory.MemoryBlocks.erase(Memory.MemoryBlocks.begin() + i);
-			break;
-		}
-	}
-
-	//Close();
-}
-
-bool RawSPUThread::Read8(const u64 addr, u8* value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Read8(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read8(0x%x)", m_index, offset);
-	Emu.Pause();
-	return false;
-}
-
-bool RawSPUThread::Read16(const u64 addr, u16* value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Read16(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read16(0x%x)", m_index, offset);
-	Emu.Pause();
-	return false;
+	Memory.CloseRawSPU(this, m_index);
 }
 
 bool RawSPUThread::Read32(const u64 addr, u32* value)
@@ -88,7 +53,7 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 		SPU.MBox_Status.SetValue((SPU.Out_MBox.GetCount() & 0xff) | (SPU.In_MBox.GetFreeCount() << 8));
 		*value = SPU.MBox_Status.GetValue();
 		break;
-	case SPU_RunCntl_offs:      LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);       *value = SPU.RunCntl.GetValue(); break;
+	case SPU_RunCntl_offs:      LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Read32(SPU_RunCntl)", m_index);       *value = (u32)IsRunning(); break;
 	case SPU_Status_offs:
 		//LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Read32(SPU_Status)", m_index);
 		*value = SPU.Status.GetValue();
@@ -104,58 +69,6 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	}
 
 	return true;
-}
-
-bool RawSPUThread::Read64(const u64 addr, u64* value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Read64(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read64(0x%x)", m_index, offset);
-	Emu.Pause();
-	return false;
-}
-
-bool RawSPUThread::Read128(const u64 addr, u128* value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Read128(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read128(0x%x)", m_index, offset);
-	Emu.Pause();
-	return false;
-}
-
-bool RawSPUThread::Write8(const u64 addr, const u8 value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Write8(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write8(0x%x, 0x%x)", m_index, offset, value);
-	Emu.Pause();
-	return false;
-}
-
-bool RawSPUThread::Write16(const u64 addr, const u16 value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Write16(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write16(0x%x, 0x%x)", m_index, offset, value);
-	Emu.Pause();
-	return false;
 }
 
 bool RawSPUThread::Write32(const u64 addr, const u32 value)
@@ -206,7 +119,25 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 		SPU.In_MBox.PushUncond(value); //if In_MBox is already full, the last message will be overwritten  
 	break;
 	case SPU_MBox_Status_offs:  LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_MBox_Status, 0x%x)", m_index, value);     SPU.MBox_Status.SetValue(value); break;
-	case SPU_RunCntl_offs:      LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_RunCntl, 0x%x)", m_index, value);         SPU.RunCntl.SetValue(value); break;
+	case SPU_RunCntl_offs:
+	{
+		if (value == SPU_RUNCNTL_RUNNABLE)
+		{
+			SPU.Status.SetValue(SPU_STATUS_RUNNING);
+			Exec();
+		}
+		else if (value == SPU_RUNCNTL_STOP)
+		{
+			SPU.Status.SetValue(SPU_STATUS_STOPPED);
+			Stop();
+		}
+		else
+		{
+			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(SPU_RunCtrl, 0x%x): unknown value", m_index, value);
+			Emu.Pause();
+		}
+		break;
+	}
 	case SPU_Status_offs:       LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_Status, 0x%x)", m_index, value);          SPU.Status.SetValue(value); break;
 	case SPU_NPC_offs:          LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_NPC, 0x%x)", m_index, value);             SPU.NPC.SetValue(value); break;
 	case SPU_RdSigNotify1_offs: LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_RdSigNotify1, 0x%x)", m_index, value);    SPU.SNR[0].SetValue(value); break;
@@ -219,32 +150,6 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	}
 
 	return true;
-}
-
-bool RawSPUThread::Write64(const u64 addr, const u64 value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Write64(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write64(0x%x, 0x%llx)", m_index, offset, value);
-	Emu.Pause();
-	return false;
-}
-
-bool RawSPUThread::Write128(const u64 addr, const u128 value)
-{
-	if(addr < GetStartAddr() + RAW_SPU_PROB_OFFSET)
-	{
-		return MemoryBlock::Write128(addr, value);
-	}
-
-	u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write128(0x%x, 0x%llx_%llx)", m_index, offset, value._u64[1], value._u64[0]);
-	Emu.Pause();
-	return false;
 }
 
 void RawSPUThread::InitRegs()
@@ -260,88 +165,9 @@ u32 RawSPUThread::GetIndex() const
 
 void RawSPUThread::Task()
 {
-	if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "%s enter", PPCThread::GetFName().c_str());
+	PC = SPU.NPC.GetValue();
 
-	const std::vector<u64>& bp = Emu.GetBreakPoints();
+	CPUThread::Task();
 
-	try
-	{
-		for(uint i=0; i<bp.size(); ++i)
-		{
-			if(bp[i] == m_offset + PC)
-			{
-				Emu.Pause();
-				break;
-			}
-		}
-
-		bool is_last_paused = true;
-
-		while(true)
-		{
-			int status = ThreadStatus();
-
-			if(status == CPUThread_Stopped || status == CPUThread_Break)
-			{
-				break;
-			}
-
-			if(status == CPUThread_Sleeping)
-			{
-				Sleep(1);
-				continue;
-			}
-
-			//dmac.DoCmd();
-
-			if(SPU.RunCntl.GetValue() != SPU_RUNCNTL_RUNNABLE)
-			{
-				if(!is_last_paused)
-				{
-					is_last_paused = true;
-					SPU.NPC.SetValue(PC);
-					SPU.Status.SetValue(SPU_STATUS_WAITING_FOR_CHANNEL);
-				}
-
-				Sleep(1);
-				continue;
-			}
-
-			if(is_last_paused)
-			{
-				is_last_paused = false;
-				PC = SPU.NPC.GetValue();
-				SPU.Status.SetValue(SPU_STATUS_RUNNING);
-				LOG_WARNING(Log::SPU, "Starting RawSPU...");
-			}
-
-			Step();
-			NextPc(m_dec->DecodeMemory(PC + m_offset));
-
-			if(status == CPUThread_Step)
-			{
-				m_is_step = false;
-				continue;
-			}
-
-			for(uint i=0; i<bp.size(); ++i)
-			{
-				if(bp[i] == PC)
-				{
-					Emu.Pause();
-					continue;
-				}
-			}
-		}
-	}
-	catch(const std::string& e)
-	{
-		LOG_ERROR(Log::SPU, "Exception: %s", e.c_str());
-	}
-	catch(const char* e)
-	{
-		LOG_ERROR(Log::SPU, "Exception: %s", e);
-	}
-
-	if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "%s leave", PPCThread::GetFName().c_str());
+	SPU.NPC.SetValue(PC);
 }

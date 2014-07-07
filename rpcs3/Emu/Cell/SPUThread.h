@@ -151,14 +151,6 @@ enum
 	SPU_RdSigNotify2_offs = 0x1C00C,
 };
 
-enum : u64
-{
-	RAW_SPU_OFFSET = 0x0000000000100000,
-	RAW_SPU_BASE_ADDR = 0x00000000E0000000,
-	RAW_SPU_LS_OFFSET = 0x0000000000000000,
-	RAW_SPU_PROB_OFFSET = 0x0000000000040000,
-};
-
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class FPSCR
@@ -562,7 +554,6 @@ public:
 		Channel<1> Out_IntrMBox;
 		Channel<4> In_MBox;
 		Channel<1> MBox_Status;
-		Channel<1> RunCntl;
 		Channel<1> Status;
 		Channel<1> NPC;
 		Channel<1> SNR[2];

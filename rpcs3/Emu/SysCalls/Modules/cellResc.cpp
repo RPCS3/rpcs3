@@ -1135,7 +1135,7 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 
 	if(colorBuffers.GetAddr() % COLOR_BUFFER_ALIGNMENT || vertexArray.GetAddr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.GetAddr() % FRAGMENT_SHADER_ALIGNMENT)
 	{
-		cellResc->Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc->Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ARGUMENT (alignment)");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 

@@ -12,13 +12,21 @@ enum MemoryType
 	Memory_PSP,
 };
 
+enum : u64
+{
+	RAW_SPU_OFFSET = 0x0000000000100000,
+	RAW_SPU_BASE_ADDR = 0x00000000E0000000,
+	RAW_SPU_LS_OFFSET = 0x0000000000000000,
+	RAW_SPU_PROB_OFFSET = 0x0000000000040000,
+};
+
 class MemoryBase
 {
-	NullMemoryBlock NullMem;
 	void* m_base_addr;
+	std::vector<MemoryBlock*> MemoryBlocks;
+	std::mutex m_mutex;
 
 public:
-	std::vector<MemoryBlock*> MemoryBlocks;
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
@@ -27,8 +35,7 @@ public:
 	DynamicMemoryBlock MmaperMem;
 	DynamicMemoryBlock RSXFBMem;
 	DynamicMemoryBlock StackMem;
-	MemoryBlock SpuRawMem;
-	MemoryBlock SpuThrMem;
+	MemoryBlock* RawSPUMem[32];
 	VirtualMemoryBlock RSXIOMem;
 
 	struct
@@ -66,42 +73,23 @@ public:
 	static __forceinline u16 Reverse16(const u16 val)
 	{
 		return _byteswap_ushort(val);
-		//return ((val >> 8) & 0xff) | ((val << 8) & 0xff00);
 	}
 
 	static __forceinline u32 Reverse32(const u32 val)
 	{
 		return _byteswap_ulong(val);
-		/*
-		return
-			((val >> 24) & 0x000000ff) |
-			((val >>  8) & 0x0000ff00) |
-			((val <<  8) & 0x00ff0000) |
-			((val << 24) & 0xff000000);
-		*/
 	}
 
 	static __forceinline u64 Reverse64(const u64 val)
 	{
 		return _byteswap_uint64(val);
-		/*
-		return
-			((val >> 56) & 0x00000000000000ff) |
-			((val >> 40) & 0x000000000000ff00) |
-			((val >> 24) & 0x0000000000ff0000) |
-			((val >>  8) & 0x00000000ff000000) |
-			((val <<  8) & 0x000000ff00000000) |
-			((val << 24) & 0x0000ff0000000000) |
-			((val << 40) & 0x00ff000000000000) |
-			((val << 56) & 0xff00000000000000);
-		*/
 	}
 
 	static __forceinline u128 Reverse128(const u128 val)
 	{
 		u128 ret;
-		ret.lo = re64(val.hi);
-		ret.hi = re64(val.lo);
+		ret.lo = _byteswap_uint64(val.hi);
+		ret.hi = _byteswap_uint64(val.lo);
 		return ret;
 	}
 
@@ -112,99 +100,8 @@ public:
 		return (T)ReverseData<sizeof(T)>(val);
 	};
 
-	MemoryBlock& GetMemByNum(const u8 num)
-	{
-		if(num >= MemoryBlocks.size()) return NullMem;
-		return *MemoryBlocks[num];
-	}
-
-	MemoryBlock& GetMemByAddr(const u64 addr)
-	{
-		for (auto block : MemoryBlocks)
-		{
-			if (block->IsMyAddress(addr))
-				return *block;
-		}
-
-		return NullMem;
-	}
-
-	bool Read8ByAddr(const u64 addr, u8 *value)
-	{
-		*value = *(u8*)((u64)GetBaseAddr() + addr);
-		return true;
-
-		/*for (auto block : MemoryBlocks)
-		{
-			if (block->Read8(addr, value))
-				return true;
-		}
-
-		return NullMem.Read8(addr, value);*/
-	}
-
-	bool Read16ByAddr(const u64 addr, u16 *value)
-	{
-		*value = re16(*(u16*)((u64)GetBaseAddr() + addr));
-		return true;
-
-		/*for (auto block : MemoryBlocks)
-		{
-			if (block->Read16(addr, value))
-				return true;
-		}
-
-		return NullMem.Read16(addr, value);*/
-	}
-
-	bool Read32ByAddr(const u64 addr, u32 *value)
-	{
-		if (addr < 0xE0000000 || (addr % 0x100000) < 0x40000)
-		{
-			*value = re32(*(u32*)((u64)GetBaseAddr() + addr));
-			return true;
-		}
-
-		for (auto block : MemoryBlocks)
-		{
-			if (block->Read32(addr, value))
-				return true;
-		}
-
-		return NullMem.Read32(addr, value);
-	}
-
-	bool Read64ByAddr(const u64 addr, u64 *value)
-	{
-		*value = re64(*(u64*)((u64)GetBaseAddr() + addr));
-		return true;
-
-		/*for (auto block : MemoryBlocks)
-		{
-			if (block->Read64(addr, value))
-				return true;
-		}
-
-		return NullMem.Read64(addr, value);*/
-	}
-
-	bool Read128ByAddr(const u64 addr, u128 *value)
-	{
-		*value = re128(*(u128*)((u64)GetBaseAddr() + addr));
-		return true;
-
-		/*for (auto block : MemoryBlocks)
-		{
-			if (block->Read128(addr, value))
-				return true;
-		}
-
-		return NullMem.Read128(addr, value);*/
-	}
-
 	u8* GetMemFromAddr(const u64 addr)
 	{
-		//return GetMemByAddr(addr).GetMemFromAddr(addr);
 		return (u8*)GetBaseAddr() + addr;
 	}
 
@@ -215,36 +112,49 @@ public:
 
 	u64 RealToVirtualAddr(const void* addr)
 	{
-		const u64 raddr = (u64)addr;
-		for (auto block : MemoryBlocks)
+		const u64 res = (u64)addr - (u64)GetBaseAddr();
+		
+		if (res < 0x100000000)
 		{
-			MemoryBlock& b = *block;
-			const u64 baddr = (u64)b.GetMem();
-
-			if(raddr >= baddr && raddr < baddr + b.GetSize())
-			{
-				return b.GetStartAddr() + (raddr - baddr);
-			}
+			return res;
 		}
-
-		return 0;
+		else
+		{
+			return 0;
+		}
 	}
 
-	bool InitSpuRawMem(const u32 max_spu_raw)
+	void InitRawSPU(MemoryBlock* raw_spu, const u32 num)
 	{
-		//if(SpuRawMem.GetSize()) return false;
+		std::lock_guard<std::mutex> lock(m_mutex);
 
-		MemoryBlocks.push_back(SpuRawMem.SetRange(0xe0000000, 0x100000 * max_spu_raw));
+		MemoryBlocks.push_back(raw_spu);
+		if (num < 32) RawSPUMem[num] = raw_spu;
+	}
 
-		return true;
+	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		for (int i = 0; i < MemoryBlocks.size(); ++i)
+		{
+			if (MemoryBlocks[i] == raw_spu)
+			{
+				MemoryBlocks.erase(MemoryBlocks.begin() + i);
+				break;
+			}
+		}
+		if (num < 32) RawSPUMem[num] = nullptr;
 	}
 
 	void Init(MemoryType type)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		if(m_inited) return;
 		m_inited = true;
 
-		m_base_addr = VirtualAlloc(0, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+		m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 		if (!m_base_addr)
 		{
 			LOG_ERROR(MEMORY, "Initing memory: VirtualAlloc() failed");
@@ -252,6 +162,11 @@ public:
 		else
 		{
 			LOG_NOTICE(MEMORY, "Initing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
+		}
+
+		for (u32 i = 0; i < 32; i++)
+		{
+			RawSPUMem[i] = nullptr;
 		}
 
 		switch(type)
@@ -263,8 +178,6 @@ public:
 			MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
 			MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 			MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
-			//MemoryBlocks.push_back(SpuRawMem.SetRange(0xE0000000, 0x10000000));
-			//MemoryBlocks.push_back(SpuThrMem.SetRange(0xF0000000, 0x10000000));
 		break;
 
 		case Memory_PSV:
@@ -286,33 +199,67 @@ public:
 
 	bool IsGoodAddr(const u64 addr)
 	{
-		for (auto block : MemoryBlocks)
+		//std::lock_guard<std::mutex> lock(m_mutex);
+
+		__try
 		{
-			if (block->IsMyAddress(addr))
-				return true;
+			volatile const u8 test = *GetMemFromAddr(addr);
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			return false;
 		}
 
-		return false;
+		return true;
+
+		//for (auto block : MemoryBlocks)
+		//{
+		//	if (block->IsMyAddress(addr))
+		//		return true;
+		//}
+
+		//return false;
 	}
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		const u64 end = addr + size - 1;
-		for (auto block : MemoryBlocks)
+		//std::lock_guard<std::mutex> lock(m_mutex);
+
+		__try
 		{
-			if (block->IsMyAddress(addr) && block->IsMyAddress(end))
-				return true;
+			volatile const u8 test1 = *GetMemFromAddr(addr);
+			volatile const u8 test2 = *GetMemFromAddr(addr + size - 1);
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			return false;
 		}
 
-		return false;
+		return true;
+
+		//const u64 end = addr + size - 1;
+		//for (auto block : MemoryBlocks)
+		//{
+		//	if (block->IsMyAddress(addr) && block->IsMyAddress(end))
+		//		return true;
+		//}
+
+		//return false;
 	}
 
 	void Close()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		if(!m_inited) return;
 		m_inited = false;
 
 		LOG_NOTICE(MEMORY, "Closing memory...");
+
+		for (u32 i = 0; i < 32; i++)
+		{
+			RawSPUMem[i] = nullptr;
+		}
 
 		for (auto block : MemoryBlocks)
 		{
@@ -345,78 +292,25 @@ public:
 	u64 Read64(const u64 addr);
 	u128 Read128(const u64 addr);
 
-	bool CopyToReal(void* real, u32 from, u32 count) // (4K pages) copy from virtual to real memory
+	bool CopyToReal(void* real, u32 from, u32 count)
 	{
 		if (!count) return true;
 
-		u8* to = (u8*)real;
-
-		if (u32 frag = from & 4095)
-		{
-			if (!IsGoodAddr(from)) return false;
-			u32 num = 4096 - frag;
-			if (count < num) num = count;
-			memcpy(to, GetMemFromAddr(from), num);
-			to += num;
-			from += num;
-			count -= num;
-		}
-
-		for (u32 page = count / 4096; page > 0; page--)
-		{
-			if (!IsGoodAddr(from)) return false;
-			memcpy(to, GetMemFromAddr(from), 4096);
-			to += 4096;
-			from += 4096;
-			count -= 4096;
-		}
-
-		if (count)
-		{
-			if (!IsGoodAddr(from)) return false;
-			memcpy(to, GetMemFromAddr(from), count);
-		}
+		memcpy(real, GetMemFromAddr(from), count);
 
 		return true;
 	}
 
-	bool CopyFromReal(u32 to, const void* real, u32 count) // (4K pages) copy from real to virtual memory
+	bool CopyFromReal(u32 to, const void* real, u32 count)
 	{
 		if (!count) return true;
 
-		const u8* from = (const u8*)real;
-
-		if (u32 frag = to & 4095)
-		{
-			if (!IsGoodAddr(to)) return false;
-			u32 num = 4096 - frag;
-			if (count < num) num = count;
-			memcpy(GetMemFromAddr(to), from, num);
-			to += num;
-			from += num;
-			count -= num;
-		}
-
-		for (u32 page = count / 4096; page > 0; page--)
-		{
-			if (!IsGoodAddr(to)) return false;
-			memcpy(GetMemFromAddr(to), from, 4096);
-			to += 4096;
-			from += 4096;
-			count -= 4096;
-		}
-
-		if (count)
-		{
-			if (!IsGoodAddr(to)) return false;
-			memcpy(GetMemFromAddr(to), from, count);
-		}
+		memcpy(GetMemFromAddr(to), real, count);
 
 		return true;
-
 	}
 
-	bool Copy(u32 to, u32 from, u32 count) // (4K pages) copy from virtual to virtual memory through real
+	bool Copy(u32 to, u32 from, u32 count)
 	{
 		if (u8* buf = (u8*)malloc(count))
 		{
@@ -447,54 +341,22 @@ public:
 
 	void ReadLeft(u8* dst, const u64 addr, const u32 size)
 	{
-		MemoryBlock& mem = GetMemByAddr(addr);
-
-		if(mem.IsNULL())
-		{
-			LOG_ERROR(MEMORY, "ReadLeft[%d] from null block (0x%llx)", size, addr);
-			return;
-		}
-
-		for(u32 i=0; i<size; ++i) mem.Read8(addr + i, dst + size - 1 - i);
+		for (u32 i = 0; i < size; ++i) dst[size - 1 - i] = Read8(addr + i);
 	}
 
 	void WriteLeft(const u64 addr, const u32 size, const u8* src)
 	{
-		MemoryBlock& mem = GetMemByAddr(addr);
-
-		if(mem.IsNULL())
-		{
-			LOG_ERROR(MEMORY, "WriteLeft[%d] to null block (0x%llx)", size, addr);
-			return;
-		}
-
-		for(u32 i=0; i<size; ++i) mem.Write8(addr + i, src[size - 1 - i]);
+		for (u32 i = 0; i < size; ++i) Write8(addr + i, src[size - 1 - i]);
 	}
 
 	void ReadRight(u8* dst, const u64 addr, const u32 size)
 	{
-		MemoryBlock& mem = GetMemByAddr(addr);
-
-		if(mem.IsNULL())
-		{
-			LOG_ERROR(MEMORY, "ReadRight[%d] from null block (0x%llx)", size, addr);
-			return;
-		}
-
-		for(u32 i=0; i<size; ++i) mem.Read8(addr + (size - 1 - i), dst + i);
+		for (u32 i = 0; i < size; ++i) dst[i] = Read8(addr + (size - 1 - i));
 	}
 
 	void WriteRight(const u64 addr, const u32 size, const u8* src)
 	{
-		MemoryBlock& mem = GetMemByAddr(addr);
-
-		if(mem.IsNULL())
-		{
-			LOG_ERROR(MEMORY, "WriteRight[%d] to null block (0x%llx)", size, addr);
-			return;
-		}
-
-		for(u32 i=0; i<size; ++i) mem.Write8(addr + (size - 1 - i), src[i]);
+		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
 	}
 
 	template<typename T> void WriteData(const u64 addr, const T* data)
@@ -521,12 +383,6 @@ public:
 
 	void WriteString(const u64 addr, const std::string& str)
 	{
-		if(!IsGoodAddr(addr, str.length()))
-		{
-			LOG_ERROR(MEMORY,"Memory::WriteString error: bad address (0x%llx)", addr);
-			return;
-		}
-
 		strcpy((char*)GetMemFromAddr(addr), str.c_str());
 	}
 
@@ -567,6 +423,8 @@ public:
 
 	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		if(IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
 		{
 			return false;
@@ -579,6 +437,8 @@ public:
 
 	bool Unmap(const u64 addr)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		bool result = false;
 		for(uint i=0; i<MemoryBlocks.size(); ++i)
 		{
@@ -598,8 +458,6 @@ public:
 	u8* operator + (const u64 vaddr)
 	{
 		u8* ret = GetMemFromAddr(vaddr);
-		if(ret == nullptr)
-			throw fmt::Format("GetMemFromAddr(0x%x)", vaddr);
 		return ret;
 	}
 

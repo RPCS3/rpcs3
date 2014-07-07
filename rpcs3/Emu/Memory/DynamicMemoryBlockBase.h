@@ -41,7 +41,7 @@ bool DynamicMemoryBlockBase<PT>::IsMyAddress(const u64 addr)
 
 	const u32 index = MemoryBlock::FixAddr(addr) >> 12;
 
-	return m_pages[index] && !m_locked[index];
+	return m_pages[index] != nullptr;
 }
 
 template<typename PT>
@@ -54,9 +54,7 @@ MemoryBlock* DynamicMemoryBlockBase<PT>::SetRange(const u64 start, const u32 siz
 
 	const u32 page_count = m_max_size >> 12;
 	m_pages.resize(page_count);
-	m_locked.resize(page_count);
 	memset(m_pages.data(), 0, sizeof(u8*) * page_count);
-	memset(m_locked.data(), 0, sizeof(u8*) * page_count);
 
 	return this;
 }
@@ -70,7 +68,6 @@ void DynamicMemoryBlockBase<PT>::Delete()
 	m_max_size = 0;
 
 	m_pages.clear();
-	m_locked.clear();
 
 	MemoryBlock::Delete();
 }
@@ -108,8 +105,7 @@ bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 template<typename PT>
 void DynamicMemoryBlockBase<PT>::AppendMem(u64 addr, u32 size) /* private */
 {
-	//u8* pointer = (u8*)m_allocated[m_allocated.Move(new MemBlockInfo(addr, size))].mem;
-	m_allocated.emplace_back(addr, size);
+	m_allocated.emplace_back(addr, size, Memory.GetBaseAddr());
 	u8* pointer = (u8*) m_allocated.back().mem;
 
 	const u32 first = MemoryBlock::FixAddr(addr) >> 12;
@@ -119,7 +115,6 @@ void DynamicMemoryBlockBase<PT>::AppendMem(u64 addr, u32 size) /* private */
 	for (u32 i = first; i <= last; i++)
 	{
 		m_pages[i] = pointer;
-		m_locked[i] = nullptr;
 		pointer += 4096;
 	}
 }
@@ -195,16 +190,15 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 			const u32 last = first + ((m_allocated[num].size - 1) >> 12);
 
 			// check if locked:
-			for (u32 i = first; i <= last; i++)
-			{
-				if (!m_pages[i] || m_locked[i]) return false;
-			}
+			//for (u32 i = first; i <= last; i++)
+			//{
+			//	if (!m_pages[i]) return false;
+			//}
 
 			// clear pointers:
 			for (u32 i = first; i <= last; i++)
 			{
 				m_pages[i] = nullptr;
-				m_locked[i] = nullptr;
 			}
 
 			m_allocated.erase(m_allocated.begin() + num);
@@ -217,6 +211,7 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 	{
 		LOG_NOTICE(MEMORY, "*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
 	}
+	assert(0);
 	return false;
 }
 
@@ -233,97 +228,34 @@ u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const // lock-free, addr is fix
 		}
 	}
 
-	LOG_ERROR(MEMORY, "GetMem(%llx) from not allocated address.", addr);
+	LOG_ERROR(MEMORY, "GetMem(0x%llx) from not allocated address.", addr);
 	assert(0);
 	return nullptr;
 }
 
 template<typename PT>
-bool DynamicMemoryBlockBase<PT>::IsLocked(u64 addr) // lock-free
+bool DynamicMemoryBlockBase<PT>::IsLocked(u64 addr)
 {
-	if (IsInMyRange(addr))
-	{
-		const u32 index = MemoryBlock::FixAddr(addr) >> 12;
-
-		if (index < m_locked.size())
-		{
-			if (m_locked[index]) return true;
-		}
-	}
-
+	// TODO
+	LOG_ERROR(MEMORY, "IsLocked(0x%llx) not implemented", addr);
+	assert(0);
 	return false;
 }
 
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Lock(u64 addr, u32 size)
 {
-	size = PAGE_4K(size); // align size
-
-	addr &= ~4095; // align start address
-
-	if (!IsInMyRange(addr, size))
-	{
-		assert(0);
-		return false;
-	}
-
-	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
-	{
-		return false;
-	}
-
-	const u32 first = MemoryBlock::FixAddr(addr) >> 12;
-
-	const u32 last = first + ((size - 1) >> 12);
-
-	for (u32 i = first; i <= last; i++)
-	{
-		if (u8* pointer = m_pages[i])
-		{
-			m_locked[i] = pointer;
-			m_pages[i] = nullptr;
-		}
-		else // already locked or empty
-		{
-		}
-	}
-
-	return true;
+	// TODO
+	LOG_ERROR(MEMORY, "Lock(0x%llx, 0x%x) not implemented", addr, size);
+	assert(0);
+	return false;
 }
 
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Unlock(u64 addr, u32 size)
 {
-	size = PAGE_4K(size); // align size
-
-	addr &= ~4095; // align start address
-
-	if (!IsInMyRange(addr, size))
-	{
-		assert(0);
-		return false;
-	}
-
-	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
-	{
-		return false;
-	}
-
-	const u32 first = MemoryBlock::FixAddr(addr) >> 12;
-
-	const u32 last = first + ((size - 1) >> 12);
-
-	for (u32 i = first; i <= last; i++)
-	{
-		if (u8* pointer = m_locked[i])
-		{
-			m_pages[i] = pointer;
-			m_locked[i] = nullptr;
-		}
-		else // already unlocked or empty
-		{
-		}
-	}
-
-	return true;
+	// TODO
+	LOG_ERROR(MEMORY, "Unlock(0x%llx, 0x%x) not implemented", addr, size);
+	assert(0);
+	return false;
 }

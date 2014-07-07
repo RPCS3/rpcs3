@@ -24,7 +24,6 @@ struct MemBlockInfo : public MemInfo
 
 	MemBlockInfo(u64 _addr, u32 _size, void* base_addr)
 		: MemInfo(_addr, PAGE_4K(_size))
-		//, mem(_aligned_malloc(PAGE_4K(_size), 128))
 		, mem(VirtualAlloc((void*)((u64)base_addr + _addr), PAGE_4K(_size), MEM_COMMIT, PAGE_READWRITE))
 	{
 		if(!mem)
@@ -44,7 +43,6 @@ struct MemBlockInfo : public MemInfo
 	MemBlockInfo& operator =(MemBlockInfo &&other){
 		this->addr = other.addr;
 		this->size = other.size;
-		//if (this->mem) _aligned_free(mem);
 		if (this->mem) VirtualFree(this->mem, this->size, MEM_DECOMMIT);
 		this->mem = other.mem;
 		other.mem = nullptr;
@@ -53,7 +51,6 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		//if(mem) _aligned_free(mem);
 		if (mem) VirtualFree(mem, size, MEM_DECOMMIT);
 		mem = nullptr;
 	}
@@ -207,7 +204,6 @@ class DynamicMemoryBlockBase : public PT
 	mutable std::mutex m_lock;
 	std::vector<MemBlockInfo> m_allocated; // allocation info
 	std::vector<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
-	std::vector<u8*> m_locked; // locked pages should be moved here
 	
 	u32 m_max_size;
 
