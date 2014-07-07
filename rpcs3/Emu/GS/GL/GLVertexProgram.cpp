@@ -522,10 +522,10 @@ void GLVertexDecompilerThread::Task()
 		case 0x02: SetDSTVec("($0 * $1)"); break; //MUL
 		case 0x03: SetDSTVec("($0 + $2)"); break; //ADD
 		case 0x04: SetDSTVec("($0 * $1 + $2)"); break; //MAD
-		case 0x05: SetDSTVec("vec2(dot($0.xyz, $1.xyz), 0.0).xxxx"); break; //DP3
-		case 0x06: SetDSTVec("vec2(dot(vec4($0.xyz, 1.0), $1), 0.0).xxxx"); break; //DPH
-		case 0x07: SetDSTVec("vec2(dot($0, $1), 0.0).xxxx"); break; //DP4
-		case 0x08: SetDSTVec("vec2(distance($0, $1), 0.0).xxxx"); break; //DST
+		case 0x05: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break; //DP3
+		case 0x06: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break; //DPH
+		case 0x07: SetDSTVec("vec4(dot($0, $1))"); break; //DP4
+		case 0x08: SetDSTVec("vec4(distance($0, $1))"); break; //DST
 		case 0x09: SetDSTVec("min($0, $1)"); break; //MIN
 		case 0x0a: SetDSTVec("max($0, $1)"); break; //MAX
 		case 0x0b: SetDSTVec("vec4(lessThan($0, $1))"); break; //SLT
