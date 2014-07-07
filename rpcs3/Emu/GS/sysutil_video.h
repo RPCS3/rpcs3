@@ -231,9 +231,6 @@ static const CellVideoOutResolution ResolutionTable[] =
 	{1600, 1080},       //10 - 5
 	{1440, 1080},       //11 - 6
 	{1280, 1080},       //12 - 7
-	{960, 1080},        //13 - 8
-	{960, 540},         //14 - 9 (Terraria [BLES01938])
-	{1024,768},         //15 - 10 (Eskiss Homebrew)
 };
 
 inline static u32 ResolutionIdToNum(u32 id)
@@ -253,30 +250,24 @@ inline static u32 ResolutionIdToNum(u32 id)
 		5, //10
 		6, //11
 		7, //12
-		8, //13
-		9, //14
-		10, //15
 	};
 
-	return id <= 15 ? res[id] : 0;
+	return id <= 12 ? res[id] : 0;
 }
 
 inline static u32 ResolutionNumToId(u32 num)
 {
 	static const u32 res[] = 
 	{
-		0,
-		1,
-		2,
-		4,
-		5,
-		10,
-		11,
-		12,
-		13,
-		14,
-		15,
+		0,  //0
+		1,  //1
+		2,  //2
+		4,  //3
+		5,  //4
+		10, //5
+		11, //6
+		12, //7
 	};
 
-	return num <= 10 ? res[num] : 0;
+	return num <= 7 ? res[num] : 0;
 }
