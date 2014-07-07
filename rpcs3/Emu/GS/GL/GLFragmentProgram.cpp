@@ -326,9 +326,9 @@ void GLFragmentDecompilerThread::Task()
 		case 0x02: SetDst("($0 * $1)"); break; //MUL
 		case 0x03: SetDst("($0 + $1)"); break; //ADD
 		case 0x04: SetDst("($0 * $1 + $2)"); break; //MAD
-		case 0x05: SetDst("vec2(dot($0.xyz, $1.xyz), 0).xxxx"); break; // DP3
-		case 0x06: SetDst("vec2(dot($0, $1), 0).xxxx"); break; // DP4
-		case 0x07: SetDst("vec2(distance($0, $1), 0).xxxx"); break; // DST
+		case 0x05: SetDst("vec4(dot($0.xyz, $1.xyz))"); break; // DP3
+		case 0x06: SetDst("vec4(dot($0, $1))"); break; // DP4
+		case 0x07: SetDst("vec4(distance($0, $1))"); break; // DST
 		case 0x08: SetDst("min($0, $1)"); break; // MIN
 		case 0x09: SetDst("max($0, $1)"); break; // MAX
 		case 0x0a: SetDst("vec4(lessThan($0, $1))"); break; // SLT
@@ -379,7 +379,7 @@ void GLFragmentDecompilerThread::Task()
 		//case 0x35: break; // BEMLUM
 		case 0x36: SetDst("($0 - 2.0 * $1 * dot($0, $1))"); break; // RFL (reflection vector)
 		//case 0x37: break; // TIMESWTEX
-		case 0x38: SetDst("vec2(dot($0.xy, $1.xy)).xxxx"); break; // DP2
+		case 0x38: SetDst("vec4(dot($0.xy, $1.xy))"); break; // DP2
 		case 0x39: SetDst("normalize($0.xyz)"); break; // NRM
 		case 0x3a: SetDst("($0 / $1)"); break; // DIV
 		case 0x3b: SetDst("($0 / sqrt($1))"); break; // DIVSQ
