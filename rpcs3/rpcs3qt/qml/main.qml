@@ -6,16 +6,16 @@ import GLViewer 1.0
 ApplicationWindow {
 	visible: true
 	title: qsTr("RPCS3 Qt")
-	width: 500
-	height: 500
+	width: Screen.desktopAvailableWidth / 2
+	height: Screen.desktopAvailableHeight / 2
 	menuBar: MenuBar {
 		Menu {
 			title: qsTr("&Boot")
 			MenuItem { text: qsTr("&Boot Game...") }
+			MenuItem { text: qsTr("&Boot Game and Start...") }
 			MenuItem { text: qsTr("&Install PKG") }
 			MenuSeparator {}
-			MenuItem { text: qsTr("Boot &ELF") }
-			MenuItem { text: qsTr("Boot &SELF") }
+			MenuItem { text: qsTr("Boot &(S)ELF") }
 			MenuSeparator {}
 			MenuItem { text: qsTr("E\&xit"); onTriggered: Qt.quit() }
 		}
@@ -30,6 +30,7 @@ ApplicationWindow {
 		Menu {
 			title: qsTr("&Config")
 			MenuItem { text: qsTr("&Settings") }
+			MenuItem { text: qsTr("&PAD Settings") }
 			MenuSeparator {}
 			MenuItem { text: qsTr("Virtual &File System Manager") }
 			MenuItem { text: qsTr("Virtual &HDD Manager") }
@@ -38,6 +39,7 @@ ApplicationWindow {
 			title: qsTr("&Tools")
 			MenuItem { text: qsTr("&ELF Compiler") }
 			MenuItem { text: qsTr("&Memory Viewer") }
+			MenuItem { text: qsTr("&RSX Debugger") }
 		}
 		Menu {
 			title: qsTr("&Help")
