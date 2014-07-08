@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <regex>
 
 #define DEF_CONFIG_NAME "./rpcs3.ini"
 
@@ -27,28 +28,18 @@ void saveIniFile()
 }
 
 std::pair<int, int> rDefaultSize = { -1, -1 };
+std::pair<long, long> rDefaultPosition = { -1, -1 };
 Inis Ini;
 
-static bool StringToBool(const wxString& str)
+static bool StringToBool(const std::string& str)
 {
-	if (
-		!str.CmpNoCase("enable") ||
-		!str.CmpNoCase("e") ||
-		!str.CmpNoCase("1") ||
-		!str.CmpNoCase("true") ||
-		!str.CmpNoCase("t"))
-	{
-		return true;
-	}
-
-	return false;
+	return std::regex_match(str.begin(), str.end(),
+		std::regex("1|e|t|enable|true", std::regex_constants::icase));
 }
 
-static wxString BoolToString(const bool b)
+static inline std::string BoolToString(const bool b)
 {
-	if (b) return "true";
-
-	return "false";
+	return b ? "true" : "false";
 }
 
 //takes a string of format "[number]x[number]" and returns a pair of ints
@@ -56,37 +47,21 @@ static wxString BoolToString(const bool b)
 static std::pair<int, int> StringToSize(const std::string& str)
 {
 	std::pair<int, int> ret;
+	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
+	std::vector<std::string> vec(first, last);
+	if (vec.size() < 2)
+		return rDefaultSize;
 
-	std::string s[2] = { "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x"))
-		{
-			if (++a >= 2) return rDefaultSize;
-			continue;
-		}
-
-		s[a] += str.substr(i, 1);
+	try {
+		ret.first = std::stoi(vec.at(0));
+		ret.second = std::stoi(vec.at(1));
 	}
-
-	if (s[0].empty() || s[1].empty())
-	{
+	catch (const std::invalid_argument& e) {
 		return rDefaultSize;
 	}
 
-	try{
-		ret.first = std::stoi(s[0]);
-		ret.first = std::stoi(s[1]);
-	}
-	catch (const std::invalid_argument &e)
-	{
-		return rDefaultSize;
-	}
 	if (ret.first < 0 || ret.second < 0)
-	{
 		return rDefaultSize;
-	}
 
 	return ret;
 }
@@ -96,35 +71,19 @@ static std::string SizeToString(const std::pair<int, int>& size)
 	return fmt::Format("%dx%d", size.first, size.second);
 }
 
-static wxPoint StringToPosition(const wxString& str)
+static std::pair<long, long> StringToPosition(const std::string& str)
 {
-	wxPoint ret;
+	std::pair<long, long> ret;
+	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
+	std::vector<std::string> vec(first, last);
+	if (vec.size() < 2)
+		return rDefaultPosition;
 
-	wxString s[2] = { wxEmptyString, wxEmptyString };
+	ret.first = std::strtol(vec.at(0).c_str(), nullptr, 10);
+	ret.second = std::strtol(vec.at(1).c_str(), nullptr, 10);
 
-	for (uint i = 0, a = 0; i<str.Length(); ++i)
-	{
-		if (!str(i, 1).CmpNoCase("x"))
-		{
-			if (++a >= 2) return wxDefaultPosition;
-			continue;
-		}
-
-		s[a] += str(i, 1);
-	}
-
-	if (s[0].IsEmpty() || s[1].IsEmpty())
-	{
-		return wxDefaultPosition;
-	}
-
-	s[0].ToLong((long*)&ret.x);
-	s[1].ToLong((long*)&ret.y);
-
-	if (ret.x <= 0 || ret.y <= 0)
-	{
-		return wxDefaultPosition;
-	}
+	if (ret.first <= 0 || ret.second <= 0)
+		return rDefaultPosition;
 
 	return ret;
 }
@@ -133,29 +92,16 @@ static WindowInfo StringToWindowInfo(const std::string& str)
 {
 	WindowInfo ret = WindowInfo(rDefaultSize, rDefaultSize);
 
-	std::string s[4] = { "", "", "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x") || !fmt::CmpNoCase(str.substr(i, 1), ":"))
-		{
-			if (++a >= 4) return WindowInfo::GetDefault();
-			continue;
-		}
-
-		s[a] += str.substr(i, 1);
-	}
-
-	if (s[0].empty() || s[1].empty() || s[2].empty() || s[3].empty())
-	{
+	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x|:"), -1), last;
+	std::vector<std::string> vec(first, last);
+	if (vec.size() < 4)
 		return WindowInfo::GetDefault();
-	}
 
 	try{
-		ret.size.first = std::stoi(s[0]);
-		ret.size.second = std::stoi(s[1]);
-		ret.position.first = std::stoi(s[2]);
-		ret.position.second = std::stoi(s[3]);
+		ret.size.first = std::stoi(vec.at(0));
+		ret.size.second = std::stoi(vec.at(1));
+		ret.position.first = std::stoi(vec.at(2));
+		ret.position.second = std::stoi(vec.at(3));
 	}
 	catch (const std::invalid_argument &e)
 	{
