@@ -194,7 +194,7 @@ void LogManager::log(LogMessage msg)
 		}
 		if (NamedThreadBase* thr = GetCurrentNamedThread())
 		{
-			prefix += thr->GetThreadName();
+			prefix += "{" + thr->GetThreadName() + "} ";
 		}
 		msg.mText.insert(0, prefix);
 		msg.mText.append(1,'\n');

@@ -201,6 +201,10 @@ void Emulator::Load()
 			switch(l.GetMachine())
 			{
 			case MACHINE_SPU:
+				Memory.Init(Memory_PS3);
+				Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr(), 0x40000);
+			break;
+
 			case MACHINE_PPC64:
 				Memory.Init(Memory_PS3);
 			break;
@@ -263,7 +267,6 @@ void Emulator::Load()
 		LOG_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
 		LOG_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
-		Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
 	break;
 

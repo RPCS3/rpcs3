@@ -161,6 +161,8 @@ u64 DynamicMemoryBlockBase<PT>::AllocAlign(u32 size, u32 align)
 			addr = (addr + (align - 1)) & ~(align - 1);
 		}
 
+		//LOG_NOTICE(MEMORY, "AllocAlign(size=0x%x) -> 0x%llx", size, addr);
+
 		AppendMem(addr, size);
 
 		return addr;
@@ -201,6 +203,8 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 			{
 				m_pages[i] = nullptr;
 			}
+
+			//LOG_NOTICE(MEMORY, "Free(0x%llx)", addr);
 
 			m_allocated.erase(m_allocated.begin() + num);
 			return true;

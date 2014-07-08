@@ -78,18 +78,32 @@ public:
 
 	void RegisterPages(u64 addr, u32 size)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
 		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
 		{
 			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			if (m_pages[i])
+			{
+				LOG_ERROR(MEMORY, "Page already registered (page=0x%x)", i * 4096);
+			}
 			m_pages[i] = 1; // TODO: define page parameters
 		}
 	}
 
 	void UnregisterPages(u64 addr, u32 size)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
 		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
 		{
 			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			if (!m_pages[i])
+			{
+				LOG_ERROR(MEMORY, "Page not registered (page=0x%x)", i * 4096);
+			}
 			m_pages[i] = 0; // TODO: define page parameters
 		}
 	}
@@ -173,8 +187,6 @@ public:
 
 	void Init(MemoryType type)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
 		if(m_inited) return;
 		m_inited = true;
 
@@ -257,8 +269,6 @@ public:
 
 	void Close()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
 		if(!m_inited) return;
 		m_inited = false;
 

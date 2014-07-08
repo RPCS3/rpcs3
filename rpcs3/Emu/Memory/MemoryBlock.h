@@ -27,15 +27,21 @@ struct MemBlockInfo : public MemInfo
 	void Free();
 
 	MemBlockInfo(MemBlockInfo &other) = delete;
-	MemBlockInfo(MemBlockInfo &&other) : MemInfo(other.addr,other.size) ,mem(other.mem)
+
+	MemBlockInfo(MemBlockInfo &&other)
+		: MemInfo(other.addr,other.size)
+		, mem(other.mem)
 	{
 		other.mem = nullptr;
 	}
+
 	MemBlockInfo& operator =(MemBlockInfo &other) = delete;
-	MemBlockInfo& operator =(MemBlockInfo &&other){
+
+	MemBlockInfo& operator =(MemBlockInfo &&other)
+	{
+		this->Free();
 		this->addr = other.addr;
 		this->size = other.size;
-		this->Free();
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;

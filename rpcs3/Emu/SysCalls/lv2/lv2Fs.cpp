@@ -144,7 +144,11 @@ s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	if (nread.GetAddr() && !nread.IsGood()) return CELL_EFAULT;
+	if (nread.GetAddr() && !nread.IsGood())
+	{
+		sys_fs->Error("cellFsRead(): bad nread_addr(0x%x)", nread.GetAddr());
+		return CELL_EFAULT;
+	}
 
 	if (nbytes != (u32)nbytes) return CELL_ENOMEM;
 
