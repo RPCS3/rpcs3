@@ -24,6 +24,7 @@ class MemoryBase
 {
 	void* m_base_addr;
 	std::vector<MemoryBlock*> MemoryBlocks;
+	u32 m_pages[0x100000000 / 4096]; // information about every page
 	std::mutex m_mutex;
 
 public:
@@ -35,7 +36,7 @@ public:
 	DynamicMemoryBlock MmaperMem;
 	DynamicMemoryBlock RSXFBMem;
 	DynamicMemoryBlock StackMem;
-	MemoryBlock* RawSPUMem[32];
+	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
 	struct
@@ -68,6 +69,24 @@ public:
 	void* GetBaseAddr() const
 	{
 		return m_base_addr;
+	}
+
+	void RegisterPages(u64 addr, u32 size)
+	{
+		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
+		{
+			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			m_pages[i] = 1; // TODO: define page parameters
+		}
+	}
+
+	void UnregisterPages(u64 addr, u32 size)
+	{
+		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
+		{
+			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			m_pages[i] = 0; // TODO: define page parameters
+		}
 	}
 
 	static __forceinline u16 Reverse16(const u16 val)
@@ -129,7 +148,7 @@ public:
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		MemoryBlocks.push_back(raw_spu);
-		if (num < 32) RawSPUMem[num] = raw_spu;
+		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = raw_spu;
 	}
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
@@ -144,7 +163,7 @@ public:
 				break;
 			}
 		}
-		if (num < 32) RawSPUMem[num] = nullptr;
+		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = nullptr;
 	}
 
 	void Init(MemoryType type)
@@ -154,19 +173,24 @@ public:
 		if(m_inited) return;
 		m_inited = true;
 
+		memset(m_pages, 0, sizeof(m_pages));
+		memset(RawSPUMem, 0, sizeof(RawSPUMem));
+
+#ifdef _WIN32
 		m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 		if (!m_base_addr)
+#else
+		m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+		if (m_base_addr == (void*)-1)
+#endif
 		{
-			LOG_ERROR(MEMORY, "Initing memory: VirtualAlloc() failed");
+			m_base_addr = nullptr;
+			LOG_ERROR(MEMORY, "Initing memory failed");
+			assert(0);
 		}
 		else
 		{
 			LOG_NOTICE(MEMORY, "Initing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
-		}
-
-		for (u32 i = 0; i < 32; i++)
-		{
-			RawSPUMem[i] = nullptr;
 		}
 
 		switch(type)
@@ -199,52 +223,30 @@ public:
 
 	bool IsGoodAddr(const u64 addr)
 	{
-		//std::lock_guard<std::mutex> lock(m_mutex);
-
-		__try
-		{
-			volatile const u8 test = *GetMemFromAddr(addr);
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
+		if (addr >= 0x100000000 || !m_pages[addr / 4096]) // TODO: define page parameters
 		{
 			return false;
 		}
-
-		return true;
-
-		//for (auto block : MemoryBlocks)
-		//{
-		//	if (block->IsMyAddress(addr))
-		//		return true;
-		//}
-
-		//return false;
+		else
+		{
+			return true;
+		}
 	}
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		//std::lock_guard<std::mutex> lock(m_mutex);
-
-		__try
-		{
-			volatile const u8 test1 = *GetMemFromAddr(addr);
-			volatile const u8 test2 = *GetMemFromAddr(addr + size - 1);
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
+		if (addr + size > 0x100000000)
 		{
 			return false;
 		}
-
-		return true;
-
-		//const u64 end = addr + size - 1;
-		//for (auto block : MemoryBlocks)
-		//{
-		//	if (block->IsMyAddress(addr) && block->IsMyAddress(end))
-		//		return true;
-		//}
-
-		//return false;
+		else
+		{
+			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+			{
+				if (!m_pages[i]) return false; // TODO: define page parameters
+			}
+			return true;
+		}
 	}
 
 	void Close()
@@ -256,11 +258,6 @@ public:
 
 		LOG_NOTICE(MEMORY, "Closing memory...");
 
-		for (u32 i = 0; i < 32; i++)
-		{
-			RawSPUMem[i] = nullptr;
-		}
-
 		for (auto block : MemoryBlocks)
 		{
 			block->Delete();
@@ -268,10 +265,17 @@ public:
 
 		MemoryBlocks.clear();
 
+#ifdef _WIN32
 		if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
 		{
 			LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
 		}
+#else
+		if (::munmap(m_base_addr, 0x100000000))
+		{
+			LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
+		}
+#endif
 	}
 
 	void Write8(const u64 addr, const u8 data);

@@ -280,6 +280,7 @@ void CPUThread::ExecOnce()
 	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
+#ifdef _WIN32
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr = (u64)Memory.GetBaseAddr() - (u64)pExp->ExceptionRecord->ExceptionAddress;
@@ -296,6 +297,9 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 		return;
 	}
 }
+#else
+// TODO: linux version
+#endif
 
 void CPUThread::Task()
 {
@@ -312,7 +316,11 @@ void CPUThread::Task()
 		}
 	}
 
+#ifdef _WIN32
 	_set_se_translator(_se_translator);
+#else
+	// TODO: linux version
+#endif
 
 	while (true)
 	{

@@ -22,17 +22,9 @@ struct MemBlockInfo : public MemInfo
 {
 	void *mem;
 
-	MemBlockInfo(u64 _addr, u32 _size, void* base_addr)
-		: MemInfo(_addr, PAGE_4K(_size))
-		, mem(VirtualAlloc((void*)((u64)base_addr + _addr), PAGE_4K(_size), MEM_COMMIT, PAGE_READWRITE))
-	{
-		if(!mem)
-		{
-			LOG_ERROR(MEMORY, "Out of memory or VirtualAlloc() failed (_addr=0x%llx, _size=0x%llx)", _addr, _size);
-			assert(0);
-		}
-		memset(mem, 0, size);
-	}
+	MemBlockInfo(u64 _addr, u32 _size);
+
+	void Free();
 
 	MemBlockInfo(MemBlockInfo &other) = delete;
 	MemBlockInfo(MemBlockInfo &&other) : MemInfo(other.addr,other.size) ,mem(other.mem)
@@ -43,7 +35,7 @@ struct MemBlockInfo : public MemInfo
 	MemBlockInfo& operator =(MemBlockInfo &&other){
 		this->addr = other.addr;
 		this->size = other.size;
-		if (this->mem) VirtualFree(this->mem, this->size, MEM_DECOMMIT);
+		this->Free();
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;
@@ -51,7 +43,7 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		if (mem) VirtualFree(mem, size, MEM_DECOMMIT);
+		Free();
 		mem = nullptr;
 	}
 };
@@ -85,7 +77,9 @@ public:
 	virtual ~MemoryBlock();
 
 private:
+	MemBlockInfo* mem_inf;
 	void Init();
+	void Free();
 	void InitMemory();
 
 public:

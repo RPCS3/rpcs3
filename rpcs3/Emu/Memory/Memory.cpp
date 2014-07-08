@@ -8,8 +8,53 @@
 
 MemoryBase Memory;
 
+MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
+	: MemInfo(_addr, PAGE_4K(_size))
+{
+	void* real_addr = (void*)((u64)Memory.GetBaseAddr() + _addr);
+#ifdef _WIN32
+	mem = VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE);
+#else
+	if (::mprotect(real_addr, size, PROT_READ | PROT_WRITE))
+	{
+		mem = nullptr;
+	}
+	else
+	{
+		mem = real_addr;
+	}
+#endif
+	if (mem != real_addr)
+	{
+		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%llx, size=0x%llx)", addr, size);
+		Emu.Pause();
+	}
+	else
+	{
+		Memory.RegisterPages(_addr, PAGE_4K(_size));
+		memset(mem, 0, size);
+	}
+}
+
+void MemBlockInfo::Free()
+{
+	if (mem)
+	{
+		Memory.UnregisterPages(addr, size);
+#ifdef _WIN32
+		if (!VirtualFree(mem, size, MEM_DECOMMIT))
+#else
+		if (::mprotect(mem, size, PROT_NONE))
+#endif
+		{
+			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%llx, size=0x%llx)", addr, size);
+			Emu.Pause();
+		}
+	}
+}
+
 //MemoryBlock
-MemoryBlock::MemoryBlock()
+MemoryBlock::MemoryBlock() : mem_inf(nullptr)
 {
 	Init();
 }
@@ -29,16 +74,26 @@ void MemoryBlock::Init()
 
 void MemoryBlock::InitMemory()
 {
-	if(!range_size) return;
+	if (!range_size) return;
 
-	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
-	mem = (u8*)VirtualAlloc((void*)((u64)Memory.GetBaseAddr() + range_start), range_size, MEM_COMMIT, PAGE_READWRITE);
-	memset(mem, 0, range_size);
+	Free();
+	mem_inf = new MemBlockInfo(range_start, range_size);
+	mem = (u8*)mem_inf->mem;
+}
+
+void MemoryBlock::Free()
+{
+	if (mem_inf)
+	{
+		delete mem_inf;
+		mem_inf = nullptr;
+	}
+	mem = nullptr;
 }
 
 void MemoryBlock::Delete()
 {
-	if (mem) VirtualFree(mem, range_size, MEM_DECOMMIT);
+	Free();
 	Init();
 }
 
