@@ -87,6 +87,7 @@ bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 
 	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
 	{
+		assert(0);
 		return false;
 	}
 

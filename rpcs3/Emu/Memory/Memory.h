@@ -187,6 +187,7 @@ public:
 			m_base_addr = nullptr;
 			LOG_ERROR(MEMORY, "Initing memory failed");
 			assert(0);
+			return;
 		}
 		else
 		{
