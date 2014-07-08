@@ -231,6 +231,7 @@ static const CellVideoOutResolution ResolutionTable[] =
 	{1600, 1080},       //10 - 5
 	{1440, 1080},       //11 - 6
 	{1280, 1080},       //12 - 7
+	{960, 1080},        //13 - 8
 };
 
 inline static u32 ResolutionIdToNum(u32 id)
@@ -250,9 +251,10 @@ inline static u32 ResolutionIdToNum(u32 id)
 		5, //10
 		6, //11
 		7, //12
+		8, //13
 	};
 
-	return id <= 12 ? res[id] : 0;
+	return id <= 13 ? res[id] : 0;
 }
 
 inline static u32 ResolutionNumToId(u32 num)
@@ -267,7 +269,8 @@ inline static u32 ResolutionNumToId(u32 num)
 		10, //5
 		11, //6
 		12, //7
+		13, //8
 	};
 
-	return num <= 7 ? res[num] : 0;
+	return num <= 8 ? res[num] : 0;
 }
