@@ -1,6 +1,6 @@
-import QtQuick 2.1
-import QtQuick.Controls 1.0
-import QtQuick.Window 2.0
+import QtQuick 2.2
+import QtQuick.Controls 1.1
+import QtQuick.Window 2.1
 import GLViewer 1.0
 
 ApplicationWindow {
@@ -44,19 +44,18 @@ ApplicationWindow {
 			MenuItem { text: qsTr("&About...") }
 		}
 	}
-	GLViewer {
-		anchors.fill: parent
-		Rectangle {
-			color: Qt.rgba(0, 0.5, 0.35);
-			height: Math.round(parent.height / 2)
-			width: height
-			radius: width
+	GLViewer {}
+	Rectangle {
+		color: Qt.rgba(0, 0.5, 0.35);
+		height: Math.round(parent.height / 2)
+		width: height
+		radius: width
+		anchors.centerIn: parent
+		Text {
 			anchors.centerIn: parent
-			Text {
-				anchors.centerIn: parent
-				font.pixelSize: parent.height / 2
-				text: "Qt"
-			}
+			font.pixelSize: parent.height / 2
+			text: "Qt"
 		}
 	}
+
 }

@@ -1,23 +1,35 @@
 #pragma once
 
 #include <QQuickItem>
-#include <QOpenGLFramebufferObject>
+
+class GLRenderer : public QObject {
+    Q_OBJECT
+public:
+    GLRenderer() { }
+
+    void setViewportSize(const QSize &size) { m_viewportSize = size; }
+
+public slots:
+    void paint();
+
+private:
+    QSize m_viewportSize;
+};
 
 class GLViewer : public QQuickItem
 {
-    Q_OBJECT
+	Q_OBJECT
 public:
-    GLViewer(QQuickItem* parent = 0);
-    virtual ~GLViewer();
+	GLViewer();
+	~GLViewer() { cleanup(); }
 
-protected:
-    QSGNode* updatePaintNode(QSGNode* old, UpdatePaintNodeData* data);
-    void timerEvent(QTimerEvent* evt);
+public slots:
+	void sync();
+	void cleanup();
 
 private slots:
-    void cleanup();
+	void handleWindowChanged(QQuickWindow *win);
 
 private:
-    int m_timerID;
-    QOpenGLFramebufferObject* m_fbo;
+	GLRenderer *m_renderer;
 };
