@@ -1,4 +1,9 @@
 #pragma once
+
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
 #include "Emu/SysCalls/Callback.h"
 #include "MemoryBlock.h"
 #include <vector>
