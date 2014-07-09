@@ -5,16 +5,16 @@ copy bin\soft-oal.dll build\rpcs3
 copy bin\make_fself.cmd build\rpcs3
 
 mkdir build\rpcs3\dev_hdd1
-xcopy /e bin\dev_hdd1 build\rpcs3\dev_hdd1
+xcopy /Y /e bin\dev_hdd1 build\rpcs3\dev_hdd1
 
 mkdir build\rpcs3\dev_hdd0
-xcopy /e bin\dev_hdd0 build\rpcs3\dev_hdd0
+xcopy /Y /e bin\dev_hdd0 build\rpcs3\dev_hdd0
 
 mkdir build\rpcs3\dev_flash
-xcopy /e bin\dev_flash build\rpcs3\dev_flash
+xcopy /Y /e bin\dev_flash build\rpcs3\dev_flash
 
 mkdir build\rpcs3\dev_usb000
-xcopy /e bin\dev_usb000 build\rpcs3\dev_usb000
+xcopy /Y /e bin\dev_usb000 build\rpcs3\dev_usb000
 
 for /f "delims=" %%a in ('git describe') do @set gitrev=%%a
 
