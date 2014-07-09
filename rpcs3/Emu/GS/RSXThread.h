@@ -595,7 +595,8 @@ protected:
 
 	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count);
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);
-
+	void nativeRescale(float width, float height);
+	
 	virtual void OnInit() = 0;
 	virtual void OnInitThread() = 0;
 	virtual void OnExitThread() = 0;

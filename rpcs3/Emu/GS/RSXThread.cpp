@@ -10,6 +10,37 @@
 
 u32 methodRegisters[0xffff];
 
+void RSXThread::nativeRescale(float width, float height)
+{
+	switch (Ini.GSResolution.GetValue())
+	{
+	case 1: // 1920x1080 window size
+		m_width_scale = 1920 / width  * 2.0f;
+		m_height_scale = 1080 / height * 2.0f;
+		m_width = 1920;
+		m_height = 1080;
+		break;
+	case 2: // 1280x720 window size
+		m_width_scale = 1280 / width * 2.0f;
+		m_height_scale = 720 / height * 2.0f;
+		m_width = 1280;
+		m_height = 720;
+		break;
+	case 4: // 720x480 window size
+		m_width_scale = 720 / width * 2.0f;
+		m_height_scale = 480 / height * 2.0f;
+		m_width = 720;
+		m_height = 480;
+		break;
+	case 5: // 720x576 window size
+		m_width_scale = 720 / width * 2.0f;
+		m_height_scale = 576 / height * 2.0f;
+		m_width = 720;
+		m_height = 576;
+		break;
+	}
+}
+
 u32 GetAddress(u32 offset, u8 location)
 {
 	switch(location)
@@ -1338,60 +1369,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 		m_width = m_buffer_width = re(buffers[m_gcm_current_buffer].width);
 		m_height = m_buffer_height = re(buffers[m_gcm_current_buffer].height);
 
-		// Rescale native 1080p to fit 720p/480p window size
-		if (m_buffer_width == 1920 && m_buffer_height == 1080)
-		{
-			switch (Ini.GSResolution.GetValue())
-			{
-			case 2: // 1280x720 window size
-				m_width_scale = m_height_scale = 1.33f;
-				m_width = 1280;
-				m_height = 720;
-				break;
-			case 4: // 720x480 window size
-				m_width_scale = 0.75f;
-				m_height_scale = 0.88f;
-				m_width = 720;
-				m_height = 480;
-				break;
-			}
-		}
-
-		// Rescale native 720p to fit 480p window size
-		if (m_buffer_width == 1280 && m_buffer_height == 720)
-		{
-			if (Ini.GSResolution.GetValue() == 4) // 720x480 window size
-			{
-				m_width_scale = 1.125f;
-				m_height_scale = 1.33f;
-				m_width = 720;
-				m_height = 480;
-			}
-		}
-
-		// Rescale native 960x540 to fit 1080p/720p/480p window size
-		if (m_buffer_width == 960 && m_buffer_height == 540)
-		{
-			switch (Ini.GSResolution.GetValue())
-			{
-			case 1:// 1920x1080 window size
-				m_width_scale = m_height_scale = 4.0f;
-				m_width = 1980;
-				m_height = 1080;
-				break;
-			case 2: // 1280x720 window size
-				m_width_scale = m_height_scale = 2.66f;
-				m_width = 1280;
-				m_height = 720;
-				break;
-			case 4: // 720x480 window size
-				m_width_scale = 1.5f;
-				m_height_scale = 1.77f;
-				m_width = 720;
-				m_height = 480;
-				break;
-			}
-		}
+		// Rescale native resolution to fit 1080p/720p/480p/576p window size
+		nativeRescale((float)m_buffer_width, (float)m_buffer_height);
 	}
 	break;
 

@@ -50,6 +50,10 @@
 	#endif  // _DEBUG
 #endif // MSVC_CRT_MEMLEAK_DETECTION
 
+// This header should be frontend-agnostic, so don't assume wx includes everything
+#include <cstdio>
+#include <cstring>
+#include <cassert>
 #include <cstdint>
 
 typedef unsigned int uint;
@@ -302,7 +306,9 @@ enum Status
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
+#ifndef QT_UI
 #include "rpcs3.h"
+#endif
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.4"
