@@ -27,8 +27,6 @@ void saveIniFile()
 	getIniFile()->SaveFile(DEF_CONFIG_NAME);
 }
 
-std::pair<int, int> rDefaultSize = { -1, -1 };
-std::pair<long, long> rDefaultPosition = { -1, -1 };
 Inis Ini;
 
 static bool StringToBool(const std::string& str)
@@ -46,43 +44,23 @@ static inline std::string BoolToString(const bool b)
 //example input would be "123x456" and the returned value would be {123,456}
 static std::pair<int, int> StringToSize(const std::string& str)
 {
-	std::pair<int, int> ret;
-
-#if 1
-	std::string s[2] = { "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x"))
-		{
-			if (++a >= 2) return rDefaultSize;
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 2 && (found = str.find_first_of('x', start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
-
-		s[a] += str.substr(i, 1);
+		catch (const std::invalid_argument& e) {
+			return std::make_pair(-1, -1);
+		}
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
 	}
+	if (vec.size() < 2 || vec[0] < 0 || vec[1] < 0)
+		return std::make_pair(-1, -1);
 
-	if (s[0].empty() || s[1].empty())
-#else
-	// Requires GCC 4.9 or new stdlib for Clang
-	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
-	std::vector<std::string> s(first, last);
-	if (vec.size() < 2)
-#endif
-		return rDefaultSize;
-
-	try {
-		ret.first = std::stoi(s[0]);
-		ret.second = std::stoi(s[1]);
-	}
-	catch (const std::invalid_argument& e) {
-		return rDefaultSize;
-	}
-
-	if (ret.first < 0 || ret.second < 0)
-		return rDefaultSize;
-
-	return ret;
+	return std::make_pair(vec[0], vec[1]);
 }
 
 static std::string SizeToString(const std::pair<int, int>& size)
@@ -90,67 +68,25 @@ static std::string SizeToString(const std::pair<int, int>& size)
 	return fmt::Format("%dx%d", size.first, size.second);
 }
 
-// Unused?
-/*static std::pair<long, long> StringToPosition(const std::string& str)
-{
-	std::pair<long, long> ret;
-	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
-	std::vector<std::string> vec(first, last);
-	if (vec.size() < 2)
-		return rDefaultPosition;
-
-	ret.first = std::strtol(vec.at(0).c_str(), nullptr, 10);
-	ret.second = std::strtol(vec.at(1).c_str(), nullptr, 10);
-
-	if (ret.first <= 0 || ret.second <= 0)
-		return rDefaultPosition;
-
-	return ret;
-}*/
-
 static WindowInfo StringToWindowInfo(const std::string& str)
 {
-	WindowInfo ret = WindowInfo(rDefaultSize, rDefaultSize);
-
-#if 1
-	std::string s[4] = { "", "", "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x") || !fmt::CmpNoCase(str.substr(i, 1), ":"))
-		{
-			if (++a >= 4) return WindowInfo::GetDefault();
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 4 && (found = str.find_first_of("x:", start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
-
-		s[a] += str.substr(i, 1);
+		catch (const std::invalid_argument& e) {
+			return WindowInfo::GetDefault();
+		}
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
 	}
-
-	if (s[0].empty() || s[1].empty() || s[2].empty() || s[3].empty())
-#else
-	// Requires GCC 4.9 or new stdlib for Clang
-	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x|:"), -1), last;
-	std::vector<std::string> s(first, last);
-	if (vec.size() < 4)
-#endif
+	if (vec.size() < 4 || vec[0] <= 0 || vec[1] <= 0 || vec[2] < 0 || vec[3] < 0)
 		return WindowInfo::GetDefault();
 
-	try{
-		ret.size.first = std::stoi(s[0]);
-		ret.size.second = std::stoi(s[1]);
-		ret.position.first = std::stoi(s[2]);
-		ret.position.second = std::stoi(s[3]);
-	}
-	catch (const std::invalid_argument &e)
-	{
-		return WindowInfo::GetDefault();
-	}
-	if (ret.size.first <= 0 || ret.size.second <= 0)
-	{
-		return WindowInfo::GetDefault();
-	}
-
-	return ret;
+	return WindowInfo(std::make_pair(vec[0], vec[1]), std::make_pair(vec[2], vec[3]));
 }
 
 static std::string WindowInfoToString(const WindowInfo& wind)
