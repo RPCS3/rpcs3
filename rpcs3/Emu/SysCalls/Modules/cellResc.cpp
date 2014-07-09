@@ -1266,14 +1266,15 @@ static void blackman(float window[])
 	window[3] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a3);
 }
 
-int CreateInterlaceTable(mem32_t ea, float srcH, float dstH, CellRescTableElement depth, int length)
+int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableElement depth, int length)
 {
-	float phi[4], transient[4], *buf32 = (float*)ea.GetAddr();
+	float phi[4], transient[4];
 	float y_fraction;
 	float bandwidth = 0.5f / (srcH / dstH);
 	float phi_b = 2.f * M_PI * bandwidth;
 	float window[4];
-	u16 *buf16 = (u16*)ea.GetAddr();
+	mem16_ptr_t buf16(ea_addr);
+	mem32_ptr_t buf32(ea_addr);
 
 	blackman(window);
 
@@ -1312,9 +1313,9 @@ int CreateInterlaceTable(mem32_t ea, float srcH, float dstH, CellRescTableElemen
 	return CELL_OK;
 }
 
-int cellRescCreateInterlaceTable(mem32_t ea, float srcH, CellRescTableElement depth, int length)
+int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement depth, int length)
 {
-	cellResc->Warning("cellRescCreateInterlaceTable(ea=0x%x, depth = %i, length = %i)", ea.GetAddr(), depth, length);
+	cellResc->Warning("cellRescCreateInterlaceTable(ea_addr=0x%x, depth = %i, length = %i)", ea_addr, depth, length);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1322,7 +1323,7 @@ int cellRescCreateInterlaceTable(mem32_t ea, float srcH, CellRescTableElement de
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if ((!ea.IsGood()) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
+	if ((ea_addr == NULL) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
 	{
 		cellResc->Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -1337,9 +1338,9 @@ int cellRescCreateInterlaceTable(mem32_t ea, float srcH, CellRescTableElement de
 	float ratioModeCoefficient = (s_rescInternalInstance->m_initConfig.ratioMode != CELL_RESC_LETTERBOX) ? 1.f : (1.f - 2.f * XY_DELTA_LB);
 	float dstH = s_rescInternalInstance->m_dstHeight * ratioModeCoefficient * s_rescInternalInstance->m_ratioAdjY;
 
-	if (int retValue = CreateInterlaceTable(ea, srcH, dstH, depth, length) == CELL_OK)
+	if (int retValue = CreateInterlaceTable(ea_addr, srcH, dstH, depth, length) == CELL_OK)
 	{
-		s_rescInternalInstance->m_interlaceTableEA = ea;
+		s_rescInternalInstance->m_interlaceTableEA = ea_addr;
 		s_rescInternalInstance->m_interlaceElement = depth;
 		s_rescInternalInstance->m_interlaceTableLength = length;
 		return CELL_OK;
