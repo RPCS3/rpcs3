@@ -30,7 +30,7 @@ class MemoryBase
 	void* m_base_addr;
 	std::vector<MemoryBlock*> MemoryBlocks;
 	u32 m_pages[0x100000000 / 4096]; // information about every page
-	std::mutex m_mutex;
+	std::recursive_mutex m_mutex;
 
 public:
 	MemoryBlock* UserMemory;
@@ -78,7 +78,7 @@ public:
 
 	void RegisterPages(u64 addr, u32 size)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
 		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -94,7 +94,7 @@ public:
 
 	void UnregisterPages(u64 addr, u32 size)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
 		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -164,7 +164,7 @@ public:
 
 	void InitRawSPU(MemoryBlock* raw_spu, const u32 num)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		MemoryBlocks.push_back(raw_spu);
 		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = raw_spu;
@@ -172,7 +172,7 @@ public:
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		for (int i = 0; i < MemoryBlocks.size(); ++i)
 		{
@@ -187,6 +187,8 @@ public:
 
 	void Init(MemoryType type)
 	{
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 		if(m_inited) return;
 		m_inited = true;
 
@@ -269,6 +271,8 @@ public:
 
 	void Close()
 	{
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 		if(!m_inited) return;
 		m_inited = false;
 
@@ -443,7 +447,7 @@ public:
 
 	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		if(IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
 		{
@@ -457,7 +461,7 @@ public:
 
 	bool Unmap(const u64 addr)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		bool result = false;
 		for(uint i=0; i<MemoryBlocks.size(); ++i)
