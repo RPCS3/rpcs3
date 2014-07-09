@@ -8,6 +8,9 @@ branches:
   only:
     - master
 
+git:
+  submodules: false
+
 before_install:
   - echo "yes" | sudo apt-key adv --fetch-keys http://repos.codelite.org/CodeLite.asc
   - echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe'
@@ -25,11 +28,11 @@ before_install:
     sudo ./cmake-2.8.12.1-Linux-i386.sh --skip-license --prefix=/usr;
 
 before_script:
- - git submodule update --init --recursive
+ - git submodule update --init asmjit ffmpeg
  - mkdir build
  - cd build
  - cmake ..
 
 script:
- - make 
+ - make -j 4
 

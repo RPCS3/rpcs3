@@ -47,14 +47,33 @@ static inline std::string BoolToString(const bool b)
 static std::pair<int, int> StringToSize(const std::string& str)
 {
 	std::pair<int, int> ret;
+
+#if 1
+	std::string s[2] = { "", "" };
+
+	for (uint i = 0, a = 0; i<str.size(); ++i)
+	{
+		if (!fmt::CmpNoCase(str.substr(i, 1), "x"))
+		{
+			if (++a >= 2) return rDefaultSize;
+			continue;
+		}
+
+		s[a] += str.substr(i, 1);
+	}
+
+	if (s[0].empty() || s[1].empty())
+#else
+	// Requires GCC 4.9 or new stdlib for Clang
 	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
-	std::vector<std::string> vec(first, last);
+	std::vector<std::string> s(first, last);
 	if (vec.size() < 2)
+#endif
 		return rDefaultSize;
 
 	try {
-		ret.first = std::stoi(vec.at(0));
-		ret.second = std::stoi(vec.at(1));
+		ret.first = std::stoi(s[0]);
+		ret.second = std::stoi(s[1]);
 	}
 	catch (const std::invalid_argument& e) {
 		return rDefaultSize;
@@ -71,7 +90,8 @@ static std::string SizeToString(const std::pair<int, int>& size)
 	return fmt::Format("%dx%d", size.first, size.second);
 }
 
-static std::pair<long, long> StringToPosition(const std::string& str)
+// Unused?
+/*static std::pair<long, long> StringToPosition(const std::string& str)
 {
 	std::pair<long, long> ret;
 	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x"), -1), last;
@@ -86,22 +106,40 @@ static std::pair<long, long> StringToPosition(const std::string& str)
 		return rDefaultPosition;
 
 	return ret;
-}
+}*/
 
 static WindowInfo StringToWindowInfo(const std::string& str)
 {
 	WindowInfo ret = WindowInfo(rDefaultSize, rDefaultSize);
 
+#if 1
+	std::string s[4] = { "", "", "", "" };
+
+	for (uint i = 0, a = 0; i<str.size(); ++i)
+	{
+		if (!fmt::CmpNoCase(str.substr(i, 1), "x") || !fmt::CmpNoCase(str.substr(i, 1), ":"))
+		{
+			if (++a >= 4) return WindowInfo::GetDefault();
+			continue;
+		}
+
+		s[a] += str.substr(i, 1);
+	}
+
+	if (s[0].empty() || s[1].empty() || s[2].empty() || s[3].empty())
+#else
+	// Requires GCC 4.9 or new stdlib for Clang
 	std::sregex_token_iterator first(str.begin(), str.end(), std::regex("x|:"), -1), last;
-	std::vector<std::string> vec(first, last);
+	std::vector<std::string> s(first, last);
 	if (vec.size() < 4)
+#endif
 		return WindowInfo::GetDefault();
 
 	try{
-		ret.size.first = std::stoi(vec.at(0));
-		ret.size.second = std::stoi(vec.at(1));
-		ret.position.first = std::stoi(vec.at(2));
-		ret.position.second = std::stoi(vec.at(3));
+		ret.size.first = std::stoi(s[0]);
+		ret.size.second = std::stoi(s[1]);
+		ret.position.first = std::stoi(s[2]);
+		ret.position.second = std::stoi(s[3]);
 	}
 	catch (const std::invalid_argument &e)
 	{
