@@ -2,7 +2,6 @@
 #include "Ini.h"
 
 #include "Utilities/StrFmt.h"
-#include "Utilities/rPlatform.h"
 
 #include <algorithm>
 #include <cctype>

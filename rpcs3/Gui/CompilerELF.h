@@ -4,6 +4,7 @@
 #include "Loader/ELF64.h"
 #include <wx/aui/aui.h>
 #include <wx/richtext/richtextctrl.h>
+#include "Gui/MainFrame.h"
 
 class CompilerELF : public FrameBase
 {

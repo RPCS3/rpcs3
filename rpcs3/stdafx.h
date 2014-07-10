@@ -6,9 +6,6 @@
 	#include <crtdbg.h>
 #endif
 
-/* size of statically declared array */
-#define SARRSIZEOF(array) (sizeof(array)/sizeof(array[0]))
-
 #define NOMINMAX
 #ifndef QT_UI
 #include <wx/wxprec.h>
@@ -41,14 +38,10 @@
 #include <wx/aui/auibook.h>
 #endif
 
-#ifdef MSVC_CRT_MEMLEAK_DETECTION
-	#ifdef _DEBUG
-		#ifndef DBG_NEW
-			#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-			#define new DBG_NEW
-		#endif
-	#endif  // _DEBUG
-#endif // MSVC_CRT_MEMLEAK_DETECTION
+#if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
+	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+	#define new DBG_NEW
+#endif
 
 // This header should be frontend-agnostic, so don't assume wx includes everything
 #include <cstdio>
@@ -68,14 +61,6 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
-enum Status
-{
-	Running,
-	Paused,
-	Stopped,
-	Ready,
-};
-
 #include "Utilities/StrFmt.h"
 #include "Utilities/Log.h"
 #include "Utilities/BEType.h"
@@ -84,20 +69,15 @@ enum Status
 #include "Utilities/rXml.h"
 #include "Utilities/rConcurrency.h"
 #include "Utilities/rMsgBox.h"
-#include "Utilities/rPlatform.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
 
-#include "Gui/FrameBase.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/DbgCommand.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
-
 
 #include "Emu/FS/vfsDirBase.h"
 #include "Emu/FS/vfsFileBase.h"
@@ -107,9 +87,6 @@ enum Status
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
-#ifndef QT_UI
-#include "rpcs3.h"
-#endif
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.4"
