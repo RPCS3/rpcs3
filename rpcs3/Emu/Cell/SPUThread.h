@@ -581,19 +581,26 @@ public:
 
 	DMAC dmac;
 
+#define LOG_DMAC(type, text) type(Log::SPU, "DMAC::ProcessCmd(cmd=0x%x, tag=0x%x, lsa=0x%x, ea=0x%llx, size=0x%x): " text, cmd, tag, lsa, ea, size)
+
 	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
 		if (ea >= SYS_SPU_THREAD_BASE_LOW)
 		{
-			if (group)
+			if (ea >= 0x100000000)
+			{
+				LOG_DMAC(LOG_ERROR, "Invalid external address");
+				return false;
+			}
+			else if (group)
 			{
 				// SPU Thread Group MMIO (LS and SNR)
 				u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
 				if (num >= group->list.size() || !group->list[num])
 				{
-					LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
+					LOG_DMAC(LOG_ERROR, "Invalid thread (SPU Thread Group MMIO)");
 					return false;
 				}
 
@@ -612,13 +619,13 @@ public:
 				}
 				else
 				{
-					LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx, size=%d, cmd=0x%x): invalid command", ea, size, cmd);
+					LOG_DMAC(LOG_ERROR, "Invalid register (SPU Thread Group MMIO)");
 					return false;
 				}
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): group not set", ea);
+				LOG_DMAC(LOG_ERROR, "Thread group not set (SPU Thread Group MMIO)");
 				return false;
 			}
 		}
@@ -640,13 +647,11 @@ public:
 
 			default:
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
+				LOG_DMAC(LOG_ERROR, "Unknown DMA command");
 				return false;
 			}
 			}
 		}
-
-		//Sleep(1); // hack
 
 		switch (cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
@@ -658,7 +663,7 @@ public:
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): PUT* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOG_DMAC(LOG_ERROR, "PUT* cmd failed");
 				return false; // TODO: page fault (?)
 			}
 		}
@@ -671,18 +676,20 @@ public:
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): GET* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOG_DMAC(LOG_ERROR, "GET* cmd failed");
 				return false; // TODO: page fault (?)
 			}
 		}
 
 		default:
 		{
-			LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
+			LOG_DMAC(LOG_ERROR, "Unknown DMA command");
 			return false; // ???
 		}
 		}
 	}
+
+#undef LOG_CMD
 
 	u32 dmacCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
