@@ -1,5 +1,6 @@
 #pragma once
 #include "BEType.h"
+#include "Emu/System.h"
 
 extern void SM_Sleep();
 extern size_t SM_GetCurrentThreadId();
@@ -123,7 +124,7 @@ public:
 				default: return res;
 			}
 
-			if (wait) wait();
+			if (wait != nullptr) wait();
 
 			if (timeout && counter++ > timeout)
 			{
