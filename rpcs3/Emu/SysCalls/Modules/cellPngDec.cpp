@@ -11,7 +11,7 @@
 
 //void cellPngDec_init();
 //Module cellPngDec(0x0018, cellPngDec_init);
-extern Module *cellPngDec = nullptr;
+Module *cellPngDec = nullptr;
 
 static std::map<u32, CellPngDecMainHandle *> cellPngDecMap;
 

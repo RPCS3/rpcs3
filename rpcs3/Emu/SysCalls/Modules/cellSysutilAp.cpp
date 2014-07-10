@@ -8,7 +8,7 @@
 
 //void cellSysutilAp_init();
 //Module cellSysutilAp(0x0039, cellSysutilAp_init);
-extern Module *cellSysutilAp = nullptr;
+Module *cellSysutilAp = nullptr;
 
 // Return Codes
 enum

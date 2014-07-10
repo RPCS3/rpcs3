@@ -12,7 +12,7 @@
 //void cellGcmSys_load();
 //void cellGcmSys_unload();
 //Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
-extern Module *cellGcmSys = nullptr;
+Module *cellGcmSys = nullptr;
 
 u32 local_size = 0;
 u32 local_addr = 0;

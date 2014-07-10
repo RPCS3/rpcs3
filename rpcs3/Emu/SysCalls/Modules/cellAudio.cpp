@@ -13,7 +13,7 @@
 
 //void cellAudio_init();
 //Module cellAudio(0x0011, cellAudio_init);
-extern Module *cellAudio = nullptr;
+Module *cellAudio = nullptr;
 
 static std::mutex audioMutex;
 

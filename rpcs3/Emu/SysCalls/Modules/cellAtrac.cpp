@@ -7,7 +7,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-extern Module *cellAtrac = nullptr;
+Module *cellAtrac = nullptr;
 
 #include "cellAtrac.h"
 
