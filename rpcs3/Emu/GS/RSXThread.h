@@ -466,24 +466,39 @@ protected:
 		m_set_line_stipple = false;
 		m_set_polygon_stipple = false;
 
+		// Default value 
+		// TODO: Check against the default value on PS3 
 		m_clear_color_r = 0;
 		m_clear_color_g = 0;
 		m_clear_color_b = 0;
 		m_clear_color_a = 0;
 		m_clear_z = 0xffffff;
 		m_clear_s = 0;
-
 		m_poly_offset_scale_factor = 0.0;
 		m_poly_offset_bias = 0.0;
-
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
-
 		m_front_polygon_mode = 0x1b02; // GL_FILL
 		m_back_polygon_mode = 0x1b02; // GL_FILL
-		m_front_face = 0x0901;
-
+		m_front_face = 0x0901; // GL_CCW
+		m_cull_face = 0x0405; // GL_BACK
+		m_alpha_func = 0x0207; // GL_ALWAYS
+		m_alpha_ref = 0; 
+		m_logic_op = 0x1503; // GL_COPY
+		m_shade_mode = 0x1D01; // GL_SMOOTH
+		m_depth_mask = 1;
+		m_depth_func = 0x0201; // GL_LESS
+		m_depth_bounds_min = 0.0;
+		m_depth_bounds_max = 1.0;
+		m_clip_min = 0.0;
+		m_clip_max = 1.0;
+		m_blend_equation_rgb = 0x8006; // GL_FUNC_ADD
+		m_blend_equation_alpha = 0x8006; // GL_FUNC_ADD
+		m_blend_sfactor_rgb = 1; // GL_ONE
+		m_blend_dfactor_rgb = 0; // GL_ZERO
+		m_blend_sfactor_alpha = 1; // GL_ONE
+		m_blend_dfactor_alpha = 0; // GL_ZERO
 		m_point_x = 0;
 		m_point_y = 0;
 		m_point_size = 1.0;
@@ -492,7 +507,6 @@ protected:
 		m_line_stipple_factor = 1;
 		for (size_t i = 0; i < 32; i++)
 		{
-			// TODO: Check if the polygon stipple pattern is really "all ones"
 			m_polygon_stipple_pattern[i] = 0xFFFFFFFF;
 		}
 

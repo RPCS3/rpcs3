@@ -1016,21 +1016,18 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_depth_func)
 	{
-		//ConLog.Warning("glDepthFunc(0x%x)", m_depth_func);
 		glDepthFunc(m_depth_func);
 		checkForGlError("glDepthFunc");
 	}
 
 	if(m_set_depth_bounds)
 	{
-		//ConLog.Warning("glDepthBounds(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
 		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
 		checkForGlError("glDepthBounds");
 	}
 
 	if(m_set_clip)
 	{
-		//ConLog.Warning("glDepthRangef(%f, %f)", m_clip_min, m_clip_max);
 		glDepthRangef(m_clip_min, m_clip_max);
 		checkForGlError("glDepthRangef");
 	}

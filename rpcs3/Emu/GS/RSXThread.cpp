@@ -1287,7 +1287,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Point 
+	// Point size
 	case NV4097_SET_POINT_SIZE:
 	{
 		m_set_point_size = true;
@@ -1296,10 +1296,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
+	// Point sprite
 	case NV4097_SET_POINT_PARAMS_ENABLE:
 	{
 		if (ARGS(0))
-			LOG_ERROR(RSX, "NV4097_SET_POINT_PARAMS_ENABLE");
+			LOG_ERROR(RSX, "NV4097_SET_POINT_PARAMS_ENABLE: %x", ARGS(0));
 	}
 	break;
 
@@ -1343,7 +1344,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u3
 	}
 	break;
 
-	// Depth/ Color buffer usage 
+	// Depth/Color buffer usage 
 	case NV4097_SET_SURFACE_FORMAT:
 	{
 		const u32 a0 = ARGS(0);
