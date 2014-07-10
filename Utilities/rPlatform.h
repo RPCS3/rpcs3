@@ -46,6 +46,7 @@ struct rPlatform
 	static MouseHandlerBase *getMouseHandler(int i);
 	static int getPadHandlerCount();
 	static PadHandlerBase *getPadHandler(int i);
+	static std::string getConfigDir();
 };
 
 /**********************************************************************

@@ -15,6 +15,10 @@
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
+#ifndef _WIN32
+#include <dirent.h>
+#endif
+
 
 rCanvas::rCanvas(void *parent)
 {
@@ -133,6 +137,27 @@ KeyboardHandlerBase *rPlatform::getKeyboardHandler(int i)
 int rPlatform::getMouseHandlerCount()
 {
 	return 2;
+}
+
+std::string rPlatform::getConfigDir()
+{
+	static std::string dir = ".";
+	if (dir == ".") {
+#ifdef _WIN32
+		dir = "";
+		//mkdir(dir.c_str());
+#else
+		if (getenv("XDG_CONFIG_HOME") != NULL)
+			dir = getenv("XDG_CONFIG_HOME");
+		else if (getenv("HOME") != NULL)
+			dir = getenv("HOME") + std::string("/.config");
+		else // Just in case
+			dir = "./config";
+		dir = dir + "/rpcs3/";
+		mkdir(dir.c_str());
+#endif
+	}
+	return dir;
 }
 
 

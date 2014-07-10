@@ -18,12 +18,6 @@ struct WindowInfo
 		, position(_position)
 	{
 	}
-
-	//TODO: remove
-	static WindowInfo GetDefault()
-	{
-		return WindowInfo({ -1, -1 }, { -1, -1 });
-	}
 };
 
 class Ini
