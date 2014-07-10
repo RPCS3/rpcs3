@@ -5,7 +5,7 @@
 #include "RSXThread.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args) : args[x])
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args) : args[x].ToLE())
 
 u32 methodRegisters[0xffff];
 
