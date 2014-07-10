@@ -54,7 +54,7 @@ GLGSRender::GLGSRender()
 GLGSRender::~GLGSRender()
 {
 	m_frame->Close();
-	delete m_context;
+//	delete m_context; // This won't do anything (deleting void* instead of wglContext*)
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)
@@ -249,7 +249,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 				glEnableVertexAttribArray(i);
 				checkForGlError("glEnableVertexAttribArray");
-				glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, (void*)offset_list[i]);
+				glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
 				checkForGlError("glVertexAttribPointer");
 			}
 		}

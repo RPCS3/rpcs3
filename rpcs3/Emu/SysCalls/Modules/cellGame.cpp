@@ -14,7 +14,7 @@
 
 //void cellGame_init();
 //Module cellGame(0x003e, cellGame_init);
-extern Module *cellGame = nullptr;
+Module *cellGame = nullptr;
 
 std::string contentInfo = "";
 std::string usrdir = "";

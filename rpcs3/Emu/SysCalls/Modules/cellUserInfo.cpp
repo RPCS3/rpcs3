@@ -10,7 +10,7 @@
 
 //void cellUserInfo_init();
 //Module cellUserInfo(0x0032, cellUserInfo_init);
-extern Module *cellUserInfo = nullptr;
+Module *cellUserInfo = nullptr;
 
 int cellUserInfoGetStat(u32 id, mem_ptr_t<CellUserInfoUserStat> stat)
 {

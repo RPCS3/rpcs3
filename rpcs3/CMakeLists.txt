@@ -9,10 +9,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.0)
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
-	#add_definitions(-D__WXGTK__)
-	#add_definitions(-Wfatal-errors)
-	add_definitions(-w) # TODO: remove me
-	add_definitions(-fpermissive) # TODO: remove me
+	# Warnings
+	add_definitions(-Wno-attributes -Wno-enum-compare)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-offsetof")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	# TODO: stdlib?
 endif()

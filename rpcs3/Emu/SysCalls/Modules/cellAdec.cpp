@@ -21,7 +21,7 @@ extern "C"
 
 //void cellAdec_init();
 //Module cellAdec(0x0006, cellAdec_init);
-extern Module *cellAdec=nullptr;
+Module *cellAdec = nullptr;
 
 int adecRawRead(void* opaque, u8* buf, int buf_size)
 {

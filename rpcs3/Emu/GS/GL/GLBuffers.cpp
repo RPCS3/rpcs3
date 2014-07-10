@@ -67,11 +67,11 @@ void GLBufferObject::SetData(const void* data, u32 size, u32 usage)
 	SetData(m_type, data, size, usage);
 }
 
-void GLBufferObject::SetAttribPointer(int location, int size, int type, int pointer, int stride, bool normalized)
+void GLBufferObject::SetAttribPointer(int location, int size, int type, GLvoid* pointer, int stride, bool normalized)
 {
 	if(location < 0) return;
 
-	glVertexAttribPointer(location, size, type, normalized ? GL_TRUE : GL_FALSE, stride, (const GLvoid*)pointer);
+	glVertexAttribPointer(location, size, type, normalized ? GL_TRUE : GL_FALSE, stride, pointer);
 	glEnableVertexAttribArray(location);
 }
 
