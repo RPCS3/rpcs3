@@ -1080,7 +1080,7 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glFrontFace");
 	}
 
-	if(m_set_alpha_func && m_set_alpha_ref && m_alpha_func)
+	if(m_set_alpha_func && m_set_alpha_ref)
 	{
 		glAlphaFunc(m_alpha_func, m_alpha_ref);
 		checkForGlError("glAlphaFunc");
