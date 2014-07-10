@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rPlatform.h"
 #include "Log.h"
 #include <iostream>
 #include <string>
@@ -98,7 +99,7 @@ struct FileListener : LogListener
 	bool mPrependChannelName;
 
 	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)
-		: mFile(name + ".log", rFile::write),
+		: mFile(std::string(rPlatform::getConfigDir() + name + ".log").c_str(), rFile::write),
 		mPrependChannelName(prependChannel)
 	{
 		if (!mFile.IsOpened())
