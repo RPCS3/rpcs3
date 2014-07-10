@@ -1,6 +1,7 @@
 #pragma once
 #include "sysutil_video.h"
 #include "GSRender.h"
+#include "rpcs3/Ini.h"
 
 struct GSInfo
 {

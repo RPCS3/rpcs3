@@ -3,8 +3,6 @@
 
 #include "Utilities/Log.h"
 #include "Memory.h"
-#include "MemoryBlock.h"
-#include "Emu/System.h"
 
 MemoryBase Memory;
 

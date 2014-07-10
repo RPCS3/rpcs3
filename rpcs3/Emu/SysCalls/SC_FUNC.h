@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/Memory.h"
+
 #define RESULT(x) SC_ARGS_1 = (x)
 
 class func_caller

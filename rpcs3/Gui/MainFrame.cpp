@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Gui/ConLogFrame.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/Debugger.h"
+#include "Gui/ConLogFrame.h"
 
 #include <wx/aui/aui.h>
 
