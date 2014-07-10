@@ -69,7 +69,6 @@ typedef int64_t s64;
 #include "Utilities/rXml.h"
 #include "Utilities/rConcurrency.h"
 #include "Utilities/rMsgBox.h"
-#include "Utilities/rPlatform.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Array.h"
 #include "Utilities/Timer.h"

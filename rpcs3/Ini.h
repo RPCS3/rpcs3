@@ -1,7 +1,8 @@
 #pragma once
 
 #include <utility>
-#include "../Utilities/simpleini/SimpleIni.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/simpleini/SimpleIni.h"
 
 //TODO: make thread safe/remove static singleton
 CSimpleIniCaseA *getIniFile();
