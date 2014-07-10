@@ -1,9 +1,11 @@
 #pragma once
-#include "Emu/SysCalls/Callback.h"
 #include "MemoryBlock.h"
 #include <vector>
 
 using std::nullptr_t;
+
+#define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
+#define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
 enum MemoryType
 {

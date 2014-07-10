@@ -4,6 +4,7 @@
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/Memory/Memory.h"
 
 #include <stack>
 #include <set> // For tracking a list of used gcm commands
