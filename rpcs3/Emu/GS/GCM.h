@@ -1,5 +1,8 @@
 #pragma once
-
+enum
+{
+	Z_CULLING_BACKFACE = 0x00041D84;
+};
 enum
 {
 	CELL_GCM_DISPLAY_HSYNC            = 1,
