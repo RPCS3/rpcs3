@@ -1,5 +1,4 @@
 #pragma once
-#include "Array.h"
 #include <functional>
 #include <thread>
 #include <vector>
@@ -7,6 +6,13 @@
 #include <atomic>
 #include <condition_variable>
 #include <Utilities/SSemaphore.h>
+
+static std::thread::id main_thread;
+
+struct rThread
+{
+	static bool IsMain() { std::this_thread::get_id() == main_thread; }
+};
 
 class ThreadExec;
 

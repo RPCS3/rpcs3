@@ -69,9 +69,6 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\rConcurrency.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rFile.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -104,9 +101,6 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utilities\Array.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\IdManager.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -181,9 +175,6 @@
     </ClInclude>
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rConcurrency.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\rFile.h">
       <Filter>Utilities</Filter>

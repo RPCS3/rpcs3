@@ -26,13 +26,13 @@
 #include <wx/menuitem.h>
 #include <wx/stattext.h>
 #include <wx/msgdlg.h>
-#include "wx/gauge.h"
+#include <wx/gauge.h>
 #include <wx/stattext.h>
-#include "wx/scrolbar.h"
-#include "wx/frame.h"
+#include <wx/scrolbar.h>
+#include <wx/frame.h>
 #include <wx/combobox.h>
 #include <wx/checkbox.h>
-#include "wx/app.h"
+#include <wx/app.h>
 #include <wx/timer.h>
 #include <wx/listctrl.h>
 #include <wx/aui/auibook.h>
@@ -66,27 +66,10 @@ typedef int64_t s64;
 #include "Utilities/BEType.h"
 #include "Utilities/rFile.h"
 #include "Utilities/rTime.h"
-#include "Utilities/rXml.h"
-#include "Utilities/rConcurrency.h"
 #include "Utilities/rMsgBox.h"
 #include "Utilities/Thread.h"
-#include "Utilities/Array.h"
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
-
-#include "Emu/SysCalls/Callback.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
-#include "Emu/SysCalls/Modules.h"
-
-#include "Emu/FS/vfsDirBase.h"
-#include "Emu/FS/vfsFileBase.h"
-#include "Emu/FS/vfsLocalDir.h"
-#include "Emu/FS/vfsLocalFile.h"
-#include "Emu/FS/vfsStream.h"
-#include "Emu/FS/vfsStreamMemory.h"
-#include "Emu/FS/vfsFile.h"
-#include "Emu/FS/vfsDir.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.4"

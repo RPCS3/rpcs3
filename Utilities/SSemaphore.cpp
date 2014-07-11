@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/SSemaphore.h"
+#include "Emu/System.h"
 
 void SSemaphore::wait()
 {

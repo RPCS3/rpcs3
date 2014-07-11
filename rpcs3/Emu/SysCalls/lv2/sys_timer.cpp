@@ -54,7 +54,12 @@ s32 sys_timer_start(u32 timer_id, s64 base_time, u64 period)
 	timer_data->timer_information_t.period = period;
 	timer_data->timer_information_t.timer_state = SYS_TIMER_STATE_RUN;
 	//TODO: ?
-	timer_data->tmr.Start();
+	std::function<s32()> task(std::bind(sys_timer_stop, timer_id));
+	std::thread([period, task]() {
+		std::this_thread::sleep_for(std::chrono::milliseconds(period));
+		task();
+	}).detach();
+
 	return CELL_OK;
 }
 
@@ -66,7 +71,6 @@ s32 sys_timer_stop(u32 timer_id)
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
 
 	timer_data->timer_information_t.timer_state = SYS_TIMER_STATE_STOP;
-	timer_data->tmr.Stop();
 	return CELL_OK;
 }
 
@@ -100,7 +104,7 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 s32 sys_timer_sleep(u32 sleep_time)
 {
 	sys_timer.Warning("sys_timer_sleep(sleep_time=%d)", sleep_time);
-	rSleep(sleep_time);
+	std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
 	return CELL_OK;
 }
 
@@ -108,6 +112,6 @@ s32 sys_timer_usleep(u64 sleep_time)
 {
 	sys_timer.Log("sys_timer_usleep(sleep_time=%lld)", sleep_time);
 	if (sleep_time > 0xFFFFFFFFFFFF) sleep_time = 0xFFFFFFFFFFFF; //2^48-1
-	rMicroSleep(sleep_time); //TODO: If (sleep_time >= 2^32) shit may happen
+	std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));
 	return CELL_OK;
 }

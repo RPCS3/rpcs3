@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Emu/Memory/Memory.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SysCalls.h"
 
 #define RESULT(x) SC_ARGS_1 = (x)
 

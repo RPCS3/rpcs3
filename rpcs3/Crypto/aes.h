@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * \file aes.h
  *

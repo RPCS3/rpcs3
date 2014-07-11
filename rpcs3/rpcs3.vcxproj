@@ -155,7 +155,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Utilities\rConcurrency.cpp" />
     <ClCompile Include="..\Utilities\rFile.cpp" />
     <ClCompile Include="..\Utilities\rMsgBox.cpp" />
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
@@ -192,12 +191,10 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utilities\Array.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\IdManager.h" />
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
-    <ClInclude Include="..\Utilities\rConcurrency.h" />
     <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />

@@ -1,3 +1,5 @@
+#pragma once
+
 class RegisterEditorDialog : public wxDialog
 {
 	u64 pc;

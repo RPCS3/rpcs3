@@ -1,7 +1,5 @@
-﻿#ifndef PPUTHREAD_H
-#define PPUTHREAD_H
+#pragma once
 #include "Emu/Cell/PPCThread.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include <cmath>
 
 enum
@@ -861,4 +859,4 @@ protected:
 };
 
 PPUThread& GetCurrentPPUThread();
-#endif //PPUTHREAD_H
+

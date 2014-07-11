@@ -1,3 +1,4 @@
+#pragma once
 #include <string.h>
 
 int decode_range(unsigned int *range, unsigned int *code, unsigned char **src);

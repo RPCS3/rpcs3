@@ -1,5 +1,7 @@
 #pragma once
 #include "Gui/MainFrame.h"
+#include "Emu/DbgCommand.h"
+#include "Utilities/Thread.h"
 
 class CPUThread;
 
