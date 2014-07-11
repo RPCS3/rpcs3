@@ -359,34 +359,74 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 //MemoryBase
 void MemoryBase::Write8(u64 addr, const u8 data)
 {
-	*(u8*)((u64)GetBaseAddr() + (u32)addr) = data;
+	if ((u32)addr == addr)
+	{
+		*(u8*)((u64)GetBaseAddr() + addr) = data;
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+	}
 }
 
 void MemoryBase::Write16(u64 addr, const u16 data)
 {
-	*(u16*)((u64)GetBaseAddr() + (u32)addr) = re16(data);
+	if ((u32)addr == addr)
+	{
+		*(u16*)((u64)GetBaseAddr() + addr) = re16(data);
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+	}
 }
 
 void MemoryBase::Write32(u64 addr, const u32 data)
 {
-	if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || addr >= 0x100000000 || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+	if ((u32)addr == addr)
 	{
-		*(u32*)((u64)GetBaseAddr() + (u32)addr) = re32(data);
+		if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+		{
+			*(u32*)((u64)GetBaseAddr() + addr) = re32(data);
+		}
+		else
+		{
+			RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
+		}
 	}
 	else
 	{
-		RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
 	}
 }
 
 void MemoryBase::Write64(u64 addr, const u64 data)
 {
-	*(u64*)((u64)GetBaseAddr() + (u32)addr) = re64(data);
+	if ((u32)addr == addr)
+	{
+		*(u64*)((u64)GetBaseAddr() + addr) = re64(data);
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+	}
 }
 
 void MemoryBase::Write128(u64 addr, const u128 data)
 {
-	*(u128*)((u64)GetBaseAddr() + (u32)addr) = re128(data);
+	if ((u32)addr == addr)
+	{
+		*(u128*)((u64)GetBaseAddr() + addr) = re128(data);
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+	}
 }
 
 bool MemoryBase::Write8NN(u64 addr, const u8 data)
@@ -426,36 +466,81 @@ bool MemoryBase::Write128NN(u64 addr, const u128 data)
 
 u8 MemoryBase::Read8(u64 addr)
 {
-	return *(u8*)((u64)GetBaseAddr() + (u32)addr);
+	if ((u32)addr == addr)
+	{
+		return *(u8*)((u64)GetBaseAddr() + addr);
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+		return 0;
+	}
 }
 
 u16 MemoryBase::Read16(u64 addr)
 {
-	return re16(*(u16*)((u64)GetBaseAddr() + (u32)addr));
+	if ((u32)addr == addr)
+	{
+		return re16(*(u16*)((u64)GetBaseAddr() + addr));
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+		return 0;
+	}
 }
 
 u32 MemoryBase::Read32(u64 addr)
 {
-	if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || addr >= 0x100000000 || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+	if ((u32)addr == addr)
 	{
-		return re32(*(u32*)((u64)GetBaseAddr() + (u32)addr));
+		if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+		{
+			return re32(*(u32*)((u64)GetBaseAddr() + addr));
+		}
+		else
+		{
+			u32 res;
+			RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
+			return res;
+		}
 	}
 	else
 	{
-		u32 res;
-		RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
-		return res;
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+		return 0;
 	}
 }
 
 u64 MemoryBase::Read64(u64 addr)
 {
-	return re64(*(u64*)((u64)GetBaseAddr() + (u32)addr));
+	if ((u32)addr == addr)
+	{
+		return re64(*(u64*)((u64)GetBaseAddr() + addr));
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+		return 0;
+	}
 }
 
 u128 MemoryBase::Read128(u64 addr)
 {
-	return re128(*(u128*)((u64)GetBaseAddr() + (u32)addr));
+	if ((u32)addr == addr)
+	{
+		return re128(*(u128*)((u64)GetBaseAddr() + addr));
+	}
+	else
+	{
+		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		Emu.Pause();
+		return u128::From128(0, 0);
+	}
 }
 
 template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }
