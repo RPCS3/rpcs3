@@ -365,7 +365,7 @@ void MemoryBase::Write8(u64 addr, const u8 data)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 	}
 }
@@ -378,7 +378,7 @@ void MemoryBase::Write16(u64 addr, const u16 data)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 	}
 }
@@ -398,7 +398,7 @@ void MemoryBase::Write32(u64 addr, const u32 data)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 	}
 }
@@ -411,7 +411,7 @@ void MemoryBase::Write64(u64 addr, const u64 data)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 	}
 }
@@ -424,7 +424,7 @@ void MemoryBase::Write128(u64 addr, const u128 data)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 	}
 }
@@ -472,7 +472,7 @@ u8 MemoryBase::Read8(u64 addr)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 		return 0;
 	}
@@ -486,7 +486,7 @@ u16 MemoryBase::Read16(u64 addr)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 		return 0;
 	}
@@ -509,7 +509,7 @@ u32 MemoryBase::Read32(u64 addr)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 		return 0;
 	}
@@ -523,7 +523,7 @@ u64 MemoryBase::Read64(u64 addr)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 		return 0;
 	}
@@ -537,7 +537,7 @@ u128 MemoryBase::Read128(u64 addr)
 	}
 	else
 	{
-		LOG_ERROR(MEMORY, __FUNCTION__ "(): invalid address (0x%llx)", addr);
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
 		Emu.Pause();
 		return u128::From128(0, 0);
 	}
