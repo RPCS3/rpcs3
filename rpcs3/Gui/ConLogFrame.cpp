@@ -1,4 +1,4 @@
-#include "stdafx.h"
+
 
 #include <wx/listctrl.h>
 #include <fstream>
@@ -19,7 +19,7 @@
 wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);
 
 //amount of memory in bytes used to buffer log messages for the gui
-const int BUFFER_MAX_SIZE = 1024 * 1024; 
+const int BUFFER_MAX_SIZE = 10048526; 
 
 //amount of characters in the TextCtrl text-buffer for the emulation log
 const int GUI_BUFFER_MAX_SIZE = 1024 * 1024;
