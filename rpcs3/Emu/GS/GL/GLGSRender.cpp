@@ -54,7 +54,7 @@ GLGSRender::GLGSRender()
 GLGSRender::~GLGSRender()
 {
 	m_frame->Close();
-	delete m_context;
+//	delete m_context; // This won't do anything (deleting void* instead of wglContext*)
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)
@@ -249,7 +249,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 				glEnableVertexAttribArray(i);
 				checkForGlError("glEnableVertexAttribArray");
-				glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, (void*)offset_list[i]);
+				glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
 				checkForGlError("glVertexAttribPointer");
 			}
 		}
@@ -1016,21 +1016,18 @@ void GLGSRender::ExecCMD()
 
 	if(m_set_depth_func)
 	{
-		//ConLog.Warning("glDepthFunc(0x%x)", m_depth_func);
 		glDepthFunc(m_depth_func);
 		checkForGlError("glDepthFunc");
 	}
 
 	if(m_set_depth_bounds)
 	{
-		//ConLog.Warning("glDepthBounds(%f, %f)", m_depth_bounds_min, m_depth_bounds_max);
 		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
 		checkForGlError("glDepthBounds");
 	}
 
 	if(m_set_clip)
 	{
-		//ConLog.Warning("glDepthRangef(%f, %f)", m_clip_min, m_clip_max);
 		glDepthRangef(m_clip_min, m_clip_max);
 		checkForGlError("glDepthRangef");
 	}
@@ -1083,7 +1080,7 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glFrontFace");
 	}
 
-	if(m_set_alpha_func && m_set_alpha_ref && m_alpha_func)
+	if(m_set_alpha_func && m_set_alpha_ref)
 	{
 		glAlphaFunc(m_alpha_func, m_alpha_ref);
 		checkForGlError("glAlphaFunc");

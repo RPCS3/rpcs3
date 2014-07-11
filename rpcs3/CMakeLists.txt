@@ -7,22 +7,27 @@ project(rpcs3)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
 	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.0)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
-	add_definitions(-DwxGUI)
-	#add_definitions(-D__WXGTK__)
-	#add_definitions(-Wfatal-errors)
-	add_definitions(-w) # TODO: remove me
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
-	add_definitions(-fpermissive) # TODO: remove me
-	add_definitions(-g)	# Debugging!!
-	add_definitions(-msse2)
+	# Warnings
+	add_definitions(-Wno-attributes -Wno-enum-compare)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-offsetof")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	# TODO: stdlib?
+endif()
+
+if (NOT MSVC)
 	add_definitions(-DwxGUI)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -D_DEBUG")
+	set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -Os -D_NDEBUG")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1 -D_NDEBUG")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O1 -g -D_NDEBUG")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -D_DEBUG")
+	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -Os -D_NDEBUG")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O1 -D_NDEBUG")
+	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1 -g -D_NDEBUG")
+	add_definitions(-msse2)
 endif()
 
 If( NOT RPCS3_SRC_DIR)
@@ -47,11 +52,6 @@ find_package(ZLIB REQUIRED)
 find_package(OpenAL REQUIRED)
 
 include("${wxWidgets_USE_FILE}")
-
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-	message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
-endif()
-
 
 if(APPLE)
 	set(PLATFORM_ARCH "macosx/x86_64")

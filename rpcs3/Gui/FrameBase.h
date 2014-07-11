@@ -1,4 +1,5 @@
 #pragma once
+#include "rpcs3/Ini.h"
 
 class FrameBase : public wxFrame
 {

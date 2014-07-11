@@ -21,7 +21,7 @@ public:
 	void UnBind();
 	void SetData(u32 type, const void* data, u32 size, u32 usage = GL_DYNAMIC_DRAW);
 	void SetData(const void* data, u32 size, u32 usage = GL_DYNAMIC_DRAW);
-	void SetAttribPointer(int location, int size, int type, int pointer, int stride, bool normalized = false);
+	void SetAttribPointer(int location, int size, int type, GLvoid* pointer, int stride, bool normalized = false);
 	bool IsCreated() const;
 };
 

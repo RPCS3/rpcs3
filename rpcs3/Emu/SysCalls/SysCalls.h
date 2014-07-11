@@ -2,6 +2,9 @@
 #include "ErrorCodes.h"
 #include "Static.h"
 
+#include "Emu/Memory/Memory.h"
+
+// Most of the headers below rely on Memory.h
 #include "lv2/lv2Fs.h"
 #include "lv2/sys_cond.h"
 #include "lv2/sys_event.h"
@@ -25,6 +28,8 @@
 #include "lv2/sys_vm.h"
 
 #include "Emu/Event.h"
+
+#include "rpcs3/Ini.h"
 
 //#define SYSCALLS_DEBUG
 

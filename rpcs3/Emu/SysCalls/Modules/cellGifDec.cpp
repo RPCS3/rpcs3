@@ -13,7 +13,7 @@
 
 //void cellGifDec_init();
 //Module cellGifDec(0xf010, cellGifDec_init);
-extern Module *cellGifDec = nullptr;
+Module *cellGifDec = nullptr;
 
 int cellGifDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -174,7 +174,8 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
 	std::shared_ptr<unsigned char> image(stbi_load_from_memory(gif, fileSize, &width, &height, &actual_components, 4));
-	if (!image)	return CELL_GIFDEC_ERROR_STREAM_FORMAT;
+	if (!image)
+		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
 	uint image_size = width * height * 4;
 

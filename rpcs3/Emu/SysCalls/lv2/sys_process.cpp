@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "sys_process.h"
+#include "rpcs3.h"
 
 SysCallBase sc_p("Process");
 

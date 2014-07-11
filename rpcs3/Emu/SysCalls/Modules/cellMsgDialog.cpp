@@ -5,6 +5,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+#include "rpcs3.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"

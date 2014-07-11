@@ -16,7 +16,7 @@ CSimpleIniCaseA *getIniFile()
 	if (inited == false)
 	{
 		ini.SetUnicode(true);
-		ini.LoadFile(DEF_CONFIG_NAME);
+		ini.LoadFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
 		inited = true;
 	}
 	return &ini;
@@ -24,7 +24,7 @@ CSimpleIniCaseA *getIniFile()
 
 void saveIniFile()
 {
-	getIniFile()->SaveFile(DEF_CONFIG_NAME);
+	getIniFile()->SaveFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
 }
 
 Inis Ini;
@@ -77,14 +77,14 @@ static WindowInfo StringToWindowInfo(const std::string& str)
 			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
 		catch (const std::invalid_argument& e) {
-			return WindowInfo::GetDefault();
+			return WindowInfo();
 		}
 		if (found == std::string::npos)
 			break;
 		start = found + 1;
 	}
 	if (vec.size() < 4 || vec[0] <= 0 || vec[1] <= 0 || vec[2] < 0 || vec[3] < 0)
-		return WindowInfo::GetDefault();
+		return WindowInfo();
 
 	return WindowInfo(std::make_pair(vec[0], vec[1]), std::make_pair(vec[2], vec[3]));
 }

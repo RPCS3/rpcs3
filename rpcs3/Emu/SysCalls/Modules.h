@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/Memory.h"
+
 #define declCPU PPUThread& CPU = GetCurrentPPUThread
 
 //TODO

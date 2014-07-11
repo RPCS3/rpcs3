@@ -456,10 +456,10 @@ void InitMembers()
 {
 	s_rescInternalInstance->m_dstMode = (CellRescBufferMode)0;
 	s_rescInternalInstance->m_interlaceElement = CELL_RESC_ELEMENT_FLOAT;
-	s_rescInternalInstance->m_colorBuffersEA = NULL;
-	s_rescInternalInstance->m_vertexArrayEA = NULL;
-	s_rescInternalInstance->m_fragmentUcodeEA = NULL;
-	s_rescInternalInstance->m_interlaceTableEA = NULL;
+	s_rescInternalInstance->m_colorBuffersEA = 0;
+	s_rescInternalInstance->m_vertexArrayEA = 0;
+	s_rescInternalInstance->m_fragmentUcodeEA = 0;
+	s_rescInternalInstance->m_interlaceTableEA = 0;
 	s_rescInternalInstance->m_bufIdFront = 0;
 	s_rescInternalInstance->m_dstWidth = 0;
 	s_rescInternalInstance->m_dstHeight = 0;
@@ -668,7 +668,7 @@ void cellRescExit()
 	if (IsPalTemporal())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
-		cellGcmSetVBlankHandler(NULL);
+		cellGcmSetVBlankHandler(0);
 		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
 
 		if (IsPalInterpolate())
@@ -756,12 +756,12 @@ void SetVBlankHandler(u32 handler)
 	if (IsNotPalTemporal()) 
 	{
 		cellGcmSetVBlankHandler(handler);
-		s_rescInternalInstance->s_applicationVBlankHandler = NULL;
+		s_rescInternalInstance->s_applicationVBlankHandler = 0;
 	}
 	else if (IsPal60Hsync()) 
 	{
 		//cellGcmSetSecondVHandler(handler);
-		s_rescInternalInstance->s_applicationVBlankHandler = NULL;
+		s_rescInternalInstance->s_applicationVBlankHandler = 0;
 	}
 	else 
 	{
@@ -782,7 +782,7 @@ void SetFlipHandler(u32 handler)
 	if (IsGcmFlip()) 
 	{
 		cellGcmSetFlipHandler(handler);
-		s_rescInternalInstance->s_applicationFlipHandler = NULL;
+		s_rescInternalInstance->s_applicationFlipHandler = 0;
 	}
 	else 
 	{
@@ -857,20 +857,20 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(IntrHandler50);
 		//cellGcmSetSecondVHandler(IntrHandler60);
-		cellGcmSetFlipHandler(NULL);
+		cellGcmSetFlipHandler(0);
 	}
 	else if (IsPalDrop())
 	{
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(NULL);
+		cellGcmSetVBlankHandler(0);
 		//cellGcmSetSecondVHandler(IntrHandler60Drop);
-		cellGcmSetFlipHandler(NULL);
+		cellGcmSetFlipHandler(0);
 	} 
 	else if (IsPal60Hsync())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(NULL);
+		cellGcmSetVBlankHandler(0);
 	}
 
 	if (s_rescInternalInstance->s_applicationVBlankHandler) SetVBlankHandler(s_rescInternalInstance->s_applicationVBlankHandler);
@@ -1323,7 +1323,7 @@ int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if ((ea_addr == NULL) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
+	if ((ea_addr == 0) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
 	{
 		cellResc->Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;

@@ -12,7 +12,7 @@
 //void cellFontFT_load();
 //void cellFontFT_unload();
 //Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
-extern Module *cellFontFT = nullptr;
+Module *cellFontFT = nullptr;
 
 struct CellFontLibraryConfigFT
 {

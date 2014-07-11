@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GSFrame.h"
+#include "rpcs3.h"
 
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_PAINT(GSFrame::OnPaint)

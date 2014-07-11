@@ -20,7 +20,7 @@ typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult,
 
 //void cellSysutil_init();
 //Module cellSysutil(0x0015, cellSysutil_init);
-Module *cellSysutil;
+Module *cellSysutil = nullptr;
 
 int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {

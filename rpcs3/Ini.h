@@ -1,7 +1,8 @@
 #pragma once
 
 #include <utility>
-#include "../Utilities/simpleini/SimpleIni.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/simpleini/SimpleIni.h"
 
 //TODO: make thread safe/remove static singleton
 CSimpleIniCaseA *getIniFile();
@@ -17,12 +18,6 @@ struct WindowInfo
 		: size(_size)
 		, position(_position)
 	{
-	}
-
-	//TODO: remove
-	static WindowInfo GetDefault()
-	{
-		return WindowInfo({ -1, -1 }, { -1, -1 });
 	}
 };
 
