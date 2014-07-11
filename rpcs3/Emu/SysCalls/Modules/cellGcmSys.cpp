@@ -315,17 +315,16 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys->Warning("cellGcmInit(): 512MB io address space used");
-		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x20000000/*512MB*/));//TODO: implement allocateAdressSpace in memoryBase
+		Memory.RSXIOMem.SetRange(0x50000000, 0x20000000 /*512MB*/);
 	}
 	else
 	{
 		cellGcmSys->Warning("cellGcmInit(): 256MB io address space used");
-		Memory.MemoryBlocks.push_back(Memory.RSXIOMem.SetRange(0x50000000, 0x10000000/*256MB*/));//TODO: implement allocateAdressSpace in memoryBase
+		Memory.RSXIOMem.SetRange(0x50000000, 0x10000000 /*256MB*/);
 	}
 
 	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
 	{
-		Memory.MemoryBlocks.pop_back();
 		cellGcmSys->Error("cellGcmInit : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
@@ -495,7 +494,12 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
-		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
+		if (res > 0 && !Memory.Copy(ctxt->begin, ctxt->current - res, res))
+		{
+			cellGcmSys->Error("cellGcmSetPrepareFlip(): Memory.Copy(0x%x, 0x%x, 0x%x) failed", (u32)ctxt->begin, (u32)ctxt->current - res, res);
+			Emu.Pause();
+			return CELL_EFAULT;
+		}
 		ctxt->current = ctxt->begin + res;
 
 		//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
@@ -1161,7 +1165,12 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	if(res > 0) Memory.Copy(ctx.begin, ctx.current - res, res);
+	if (res > 0 && !Memory.Copy(ctx.begin, ctx.current - res, res))
+	{
+		cellGcmSys->Error("cellGcmCallback(): Memory.Copy(0x%x, 0x%x, 0x%x) failed", (u32)ctx.begin, (u32)ctx.current - res, res);
+		Emu.Pause();
+		return CELL_EFAULT;
+	}
 
 	ctx.current = ctx.begin + res;
 

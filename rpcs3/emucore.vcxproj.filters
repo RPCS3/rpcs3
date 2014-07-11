@@ -1093,5 +1093,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Memory\DynamicMemoryBlockBase.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

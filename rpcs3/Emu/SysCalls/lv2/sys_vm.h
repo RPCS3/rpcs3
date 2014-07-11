@@ -1,4 +1,4 @@
-#pragma pack
+#pragma once
 
 #define SYS_VM_TEST_INVALID                 0x0000ULL
 #define SYS_VM_TEST_UNUSED                  0x0001ULL

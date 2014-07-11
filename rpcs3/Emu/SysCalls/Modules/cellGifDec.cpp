@@ -182,7 +182,11 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
-		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+		if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+		{
+			cellGifDec->Error("cellGifDecDecodeData() failed (dataa_addr=0x%x)", data.GetAddr());
+			return CELL_EFAULT;
+		}
 	break;
 
 	case CELL_GIFDEC_ARGB:

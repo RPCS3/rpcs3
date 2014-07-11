@@ -20,8 +20,6 @@ struct timer
 	sys_timer_information_t timer_information_t;
 };
 
-#pragma pack()
-
 s32 sys_timer_create(mem32_t timer_id);
 s32 sys_timer_destroy(u32 timer_id);
 s32 sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info);

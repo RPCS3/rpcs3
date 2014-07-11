@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "sys_process.h"
+#include "rpcs3.h"
 
 SysCallBase sc_p("Process");
 
@@ -23,14 +24,16 @@ s32 sys_process_getppid()
 s32 sys_process_exit(s32 errorcode)
 {
 	sc_p.Warning("sys_process_exit(%d)", errorcode);
-	Emu.Pause(); // Emu.Stop() does crash
+	Emu.Pause();
 	LOG_SUCCESS(HLE, "Process finished");
-
-	if (Ini.HLEExitOnStop.GetValue())
+	wxGetApp().CallAfter([]()
 	{
-		Ini.HLEExitOnStop.SetValue(false);
-		// TODO: Find a way of calling Emu.Stop() and/or exiting RPCS3 (that is, TheApp->Exit()) without crashes
-	}
+		Emu.Stop();
+		if (Ini.HLEExitOnStop.GetValue())
+		{
+			wxGetApp().Exit();
+		}
+	});
 	return CELL_OK;
 }
 

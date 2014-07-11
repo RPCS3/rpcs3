@@ -608,8 +608,8 @@ protected:
 	void Begin(u32 draw_mode);
 	void End();
 
-	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count);
-	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count);
+	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, mem32_ptr_t args);
+	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32 count);
 	void nativeRescale(float width, float height);
 	
 	virtual void OnInit() = 0;
@@ -648,5 +648,17 @@ public:
 
 		OnInit();
 		ThreadBase::Start();
+	}
+
+	u32 ReadIO32(u32 addr)
+	{
+		u32 value;
+		Memory.RSXIOMem.Read32(Memory.RSXIOMem.GetStartAddr() + addr, &value);
+		return value;
+	}
+
+	void WriteIO32(u32 addr, u32 value)
+	{
+		Memory.RSXIOMem.Write32(Memory.RSXIOMem.GetStartAddr() + addr, value);
 	}
 };

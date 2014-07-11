@@ -151,14 +151,6 @@ enum
 	SPU_RdSigNotify2_offs = 0x1C00C,
 };
 
-enum : u64
-{
-	RAW_SPU_OFFSET = 0x0000000000100000,
-	RAW_SPU_BASE_ADDR = 0x00000000E0000000,
-	RAW_SPU_LS_OFFSET = 0x0000000000000000,
-	RAW_SPU_PROB_OFFSET = 0x0000000000040000,
-};
-
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class FPSCR
@@ -318,7 +310,7 @@ class SPUThread : public PPCThread
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
 	SPU_SPR_hdr SPR[128]; //Special-Purpose Registers
-//	FPSCR fpscr; //Unused
+	//FPSCR FPSCR;
 	SPU_SNRConfig_hdr cfg; //Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
 	EventPort SPUPs[64]; // SPU Thread Event Ports
@@ -562,7 +554,6 @@ public:
 		Channel<1> Out_IntrMBox;
 		Channel<4> In_MBox;
 		Channel<1> MBox_Status;
-		Channel<1> RunCntl;
 		Channel<1> Status;
 		Channel<1> NPC;
 		Channel<1> SNR[2];
@@ -590,19 +581,26 @@ public:
 
 	DMAC dmac;
 
+#define LOG_DMAC(type, text) type(Log::SPU, "DMAC::ProcessCmd(cmd=0x%x, tag=0x%x, lsa=0x%x, ea=0x%llx, size=0x%x): " text, cmd, tag, lsa, ea, size)
+
 	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
 		if (ea >= SYS_SPU_THREAD_BASE_LOW)
 		{
-			if (group)
+			if (ea >= 0x100000000)
+			{
+				LOG_DMAC(LOG_ERROR, "Invalid external address");
+				return false;
+			}
+			else if (group)
 			{
 				// SPU Thread Group MMIO (LS and SNR)
 				u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
 				if (num >= group->list.size() || !group->list[num])
 				{
-					LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): invalid thread", ea);
+					LOG_DMAC(LOG_ERROR, "Invalid thread (SPU Thread Group MMIO)");
 					return false;
 				}
 
@@ -621,13 +619,13 @@ public:
 				}
 				else
 				{
-					LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx, size=%d, cmd=0x%x): invalid command", ea, size, cmd);
+					LOG_DMAC(LOG_ERROR, "Invalid register (SPU Thread Group MMIO)");
 					return false;
 				}
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): SPU Thread Group MMIO Access (ea=0x%llx): group not set", ea);
+				LOG_DMAC(LOG_ERROR, "Thread group not set (SPU Thread Group MMIO)");
 				return false;
 			}
 		}
@@ -649,13 +647,11 @@ public:
 
 			default:
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
+				LOG_DMAC(LOG_ERROR, "Unknown DMA command");
 				return false;
 			}
 			}
 		}
-
-		//Sleep(1); // hack
 
 		switch (cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
 		{
@@ -667,7 +663,7 @@ public:
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): PUT* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOG_DMAC(LOG_ERROR, "PUT* cmd failed");
 				return false; // TODO: page fault (?)
 			}
 		}
@@ -680,18 +676,20 @@ public:
 			}
 			else
 			{
-				LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): GET* cmd failed (ea=0x%llx, lsa=0x%x, size=%d)", ea, lsa, size);
+				LOG_DMAC(LOG_ERROR, "GET* cmd failed");
 				return false; // TODO: page fault (?)
 			}
 		}
 
 		default:
 		{
-			LOG_ERROR(Log::SPU, "DMAC::ProcessCmd(): Unknown DMA cmd.");
+			LOG_DMAC(LOG_ERROR, "Unknown DMA command");
 			return false; // ???
 		}
 		}
 	}
+
+#undef LOG_CMD
 
 	u32 dmacCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{

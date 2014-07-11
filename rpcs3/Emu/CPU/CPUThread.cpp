@@ -280,68 +280,80 @@ void CPUThread::ExecOnce()
 	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
+#ifdef _WIN32
+void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
+{
+	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
+	if (addr < 0x100000000 && u == EXCEPTION_ACCESS_VIOLATION)
+	{
+		// TODO: allow recovering from a page fault
+		//GetCurrentPPUThread().Stop();
+		Emu.Pause();
+		throw fmt::Format("Access violation: addr = 0x%x", (u32)addr);
+	}
+	else
+	{
+		// some fatal error (should crash)
+		return;
+	}
+}
+#else
+// TODO: linux version
+#endif
+
 void CPUThread::Task()
 {
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
 
-	try
+	for (uint i = 0; i<bp.size(); ++i)
 	{
-		for(uint i=0; i<bp.size(); ++i)
+		if (bp[i] == m_offset + PC)
 		{
-			if(bp[i] == m_offset + PC)
+			Emu.Pause();
+			break;
+		}
+	}
+
+#ifdef _WIN32
+	_set_se_translator(_se_translator);
+#else
+	// TODO: linux version
+#endif
+
+	while (true)
+	{
+		int status = ThreadStatus();
+
+		if (status == CPUThread_Stopped || status == CPUThread_Break)
+		{
+			break;
+		}
+
+		if (status == CPUThread_Sleeping)
+		{
+			Sleep(1);
+			continue;
+		}
+
+		Step();
+		NextPc(m_dec->DecodeMemory(PC + m_offset));
+
+		if (status == CPUThread_Step)
+		{
+			m_is_step = false;
+			break;
+		}
+
+		for (uint i = 0; i < bp.size(); ++i)
+		{
+			if (bp[i] == PC)
 			{
 				Emu.Pause();
 				break;
 			}
 		}
-
-		while(true)
-		{
-			int status = ThreadStatus();
-
-			if(status == CPUThread_Stopped || status == CPUThread_Break)
-			{
-				break;
-			}
-
-			if(status == CPUThread_Sleeping)
-			{
-				Sleep(1);
-				continue;
-			}
-
-			Step();
-			NextPc(m_dec->DecodeMemory(PC + m_offset));
-
-			if(status == CPUThread_Step)
-			{
-				m_is_step = false;
-				break;
-			}
-
-			for(uint i=0; i<bp.size(); ++i)
-			{
-				if(bp[i] == PC)
-				{
-					Emu.Pause();
-					break;
-				}
-			}
-		}
-	}
-	catch(const std::string& e)
-	{
-		LOG_ERROR(PPU, "Exception: %s", e.c_str());
-	}
-	catch(const char* e)
-	{
-		LOG_ERROR(PPU, "Exception: %s", e);
-	}
-	catch(int exitcode)
-	{
-		LOG_SUCCESS(PPU, "Exit Code: %d", exitcode);
 	}
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());

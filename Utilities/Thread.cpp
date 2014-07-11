@@ -52,7 +52,22 @@ void ThreadBase::Start()
 			g_tls_this_thread = this;
 			g_thread_count++;
 
-			Task();
+			try
+			{
+				Task();
+			}
+			catch (const std::string& e)
+			{
+				LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+			}
+			catch (const char* e)
+			{
+				LOG_ERROR(GENERAL, "Exception: %s", e);
+			}
+			catch (int exitcode)
+			{
+				LOG_SUCCESS(GENERAL, "Exit Code: %d", exitcode);
+			}
 
 			m_alive = false;
 			g_thread_count--;

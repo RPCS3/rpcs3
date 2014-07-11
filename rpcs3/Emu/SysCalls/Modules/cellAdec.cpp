@@ -724,33 +724,11 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 
 	if (!af.data) // fake: empty data
 	{
-		/*u8* buf = (u8*)malloc(4096);
-		memset(buf, 0, 4096);
-		Memory.CopyFromReal(outBuffer_addr, buf, 4096);
-		free(buf);*/
 		return result;
 	}
+
 	// copy data
-	SwrContext* swr = nullptr;
-
-	/*swr = swr_alloc_set_opts(NULL, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_FLT, 48000,
-		frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
-
-	if (!swr)
-	{
-		LOG_ERROR(HLE, "cellAdecGetPcm(%d): swr_alloc_set_opts() failed", handle);
-		Emu.Pause();
-		free(out);
-		if (af.data)
-		{
-			av_frame_unref(af.data);
-			av_frame_free(&af.data);
-		}
-		return result;
-	}*/
 	u8* out = (u8*)malloc(af.size);
-	// something is wrong
-	//swr_convert(swr, &out, frame->nb_samples, (const u8**)frame->extended_data, frame->nb_samples);
 
 	// reverse byte order, extract data:
 	float* in_f[2];
@@ -770,7 +748,6 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	}
 
 	free(out);
-	if (swr) swr_free(&swr);
 
 	if (af.data)
 	{

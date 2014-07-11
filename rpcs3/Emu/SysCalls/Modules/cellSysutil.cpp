@@ -335,9 +335,6 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-extern std::atomic<u32> g_FsAioReadID;
-extern std::atomic<u32> g_FsAioReadCur;
-
 int cellSysutilCheckCallback()
 {
 	cellSysutil->Log("cellSysutilCheckCallback()");
@@ -346,7 +343,7 @@ int cellSysutilCheckCallback()
 
 	CPUThread& thr = Emu.GetCallbackThread();
 
-	while (thr.IsAlive() || (g_FsAioReadCur < g_FsAioReadID))
+	while (thr.IsAlive())
 	{
 		Sleep(1);
 		if (Emu.IsStopped())

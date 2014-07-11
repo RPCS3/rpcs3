@@ -14,8 +14,6 @@ struct sys_rwlock_attribute_t
 	};
 };
 
-#pragma pack()
-
 struct RWLock
 {
 	std::mutex m_lock; // internal lock

@@ -11,6 +11,7 @@ using std::max;
 #define re64(val) MemoryBase::Reverse64(val)
 #define re32(val) MemoryBase::Reverse32(val)
 #define re16(val) MemoryBase::Reverse16(val)
+#define re128(val) MemoryBase::Reverse128(val)
 
 template<typename T, int size = sizeof(T)> struct se_t;
 template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };

@@ -5,7 +5,7 @@
 #include "RSXThread.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count) : Memory.Read32(Memory.RSXIOMem.GetStartAddr() + m_ctrl->get + (4*(x+1))))
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args) : args[x].ToLE())
 
 u32 methodRegisters[0xffff];
 
@@ -45,10 +45,7 @@ u32 GetAddress(u32 offset, u8 location)
 	switch(location)
 	{
 	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: 
-		u64 realAddr;
-		Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + offset, realAddr); // TODO: Error Check?
-		return realAddr;
+	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
 	}
 
 	LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x)", location);
@@ -140,7 +137,7 @@ u32 RSXVertexData::GetTypeSize()
 	#define CMD_LOG(...)
 #endif
 
-u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count)
+u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, mem32_ptr_t args)
 {
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
@@ -206,7 +203,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count)
 	index = (cmd - a) / m; \
 	case a \
 
-void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t& args, const u32 count)
+void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32 count)
 {
 #if	CMD_DEBUG
 		std::string debug = GetMethodName(cmd);
@@ -2454,7 +2451,7 @@ void RSXThread::Task()
 		}
 
 		//ConLog.Write("addr = 0x%x", m_ioAddress + get);
-		const u32 cmd = Memory.Read32(Memory.RSXIOMem.GetStartAddr() + get);
+		const u32 cmd = ReadIO32(get);
 		const u32 count = (cmd >> 18) & 0x7ff;
 		//if(cmd == 0) continue;
 
@@ -2469,7 +2466,7 @@ void RSXThread::Task()
 		{
 			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
-			u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
+			//u32 addr = Memory.RSXIOMem.GetStartAddr() + offs;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
 			m_ctrl->get = offs;
 			continue;
@@ -2498,12 +2495,13 @@ void RSXThread::Task()
 			continue;
 		}
 
+		mem32_ptr_t args((u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + get + 4));
+
 		for(u32 i=0; i<count; i++)
 		{
 			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
 		}
 
-		mem32_ptr_t args(Memory.RSXIOMem.GetStartAddr() + get + 4);
 		DoCmd(cmd, cmd & 0x3ffff, args, count);
 
 		m_ctrl->get = get + (count + 1) * 4;

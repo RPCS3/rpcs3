@@ -209,28 +209,26 @@ struct MemBlockInfo : public MemInfo
 {
 	void *mem;
 
-	MemBlockInfo(u64 _addr, u32 _size)
-		: MemInfo(_addr, PAGE_4K(_size))
-		, mem(_aligned_malloc(PAGE_4K(_size), 128))
-	{
-		if(!mem)
-		{
-			LOG_ERROR(MEMORY, "Not enough free memory.");
-			assert(0);
-		}
-		memset(mem, 0, size);
-	}
+	MemBlockInfo(u64 _addr, u32 _size);
+
+	void Free();
 
 	MemBlockInfo(MemBlockInfo &other) = delete;
-	MemBlockInfo(MemBlockInfo &&other) : MemInfo(other.addr,other.size) ,mem(other.mem)
+
+	MemBlockInfo(MemBlockInfo &&other)
+		: MemInfo(other.addr,other.size)
+		, mem(other.mem)
 	{
 		other.mem = nullptr;
 	}
+
 	MemBlockInfo& operator =(MemBlockInfo &other) = delete;
-	MemBlockInfo& operator =(MemBlockInfo &&other){
+
+	MemBlockInfo& operator =(MemBlockInfo &&other)
+	{
+		this->Free();
 		this->addr = other.addr;
 		this->size = other.size;
-		if (this->mem) _aligned_free(mem);
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;
@@ -238,7 +236,7 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		if(mem) _aligned_free(mem);
+		Free();
 		mem = nullptr;
 	}
 };
@@ -272,7 +270,9 @@ public:
 	virtual ~MemoryBlock();
 
 private:
+	MemBlockInfo* mem_inf;
 	void Init();
+	void Free();
 	void InitMemory();
 
 public:
@@ -391,7 +391,6 @@ class DynamicMemoryBlockBase : public PT
 	mutable std::mutex m_lock;
 	std::vector<MemBlockInfo> m_allocated; // allocation info
 	std::vector<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
-	std::vector<u8*> m_locked; // locked pages should be moved here
 	
 	u32 m_max_size;
 
@@ -471,6 +470,13 @@ public:
 	// try to get the real address given a mapped address
 	// return true for success
 	bool getRealAddr(u64 addr, u64& result);
+
+	u64 RealAddr(u64 addr)
+	{
+		u64 realAddr = 0;
+		getRealAddr(addr, realAddr);
+		return realAddr;
+	}
 
 	// return the mapped address given a real address, if not mapped return 0
 	u64 getMappedAddress(u64 realAddress);

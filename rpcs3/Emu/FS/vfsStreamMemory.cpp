@@ -32,11 +32,14 @@ u64 vfsStreamMemory::Write(const void* src, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	if(!size || !Memory.IsGoodAddr(m_addr + Tell(), size)) return 0;
-
-	Memory.CopyFromReal(m_addr + Tell(), (void*)src, size);
-
-	return vfsStream::Write(src, size);
+	if (!Memory.CopyFromReal(m_addr + Tell(), (void*)src, size))
+	{
+		return 0;
+	}
+	else
+	{
+		return vfsStream::Write(src, size);
+	}
 }
 
 u64 vfsStreamMemory::Read(void* dst, u64 size)
@@ -46,9 +49,12 @@ u64 vfsStreamMemory::Read(void* dst, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	if(!size || !Memory.IsGoodAddr(m_addr + Tell(), size)) return 0;
-
-	Memory.CopyToReal(dst, m_addr + Tell(), size);
-
-	return vfsStream::Read(dst, size);
+	if (!Memory.CopyToReal(dst, m_addr + Tell(), size))
+	{
+		return 0;
+	}
+	else
+	{
+		return vfsStream::Read(dst, size);
+	}
 }

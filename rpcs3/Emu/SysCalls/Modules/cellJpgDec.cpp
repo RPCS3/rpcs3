@@ -164,7 +164,11 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	case CELL_JPG_RGBA:
 	case CELL_JPG_RGB:
 		image_size *= current_outParam.outputColorSpace == CELL_JPG_RGBA ? 4 : 3;
-		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+		if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+		{
+			cellJpgDec->Error("cellJpgDecDecodeData() failed (data_addr=0x%x)", data.GetAddr());
+			return CELL_EFAULT;
+		}
 	break;
 
 	case CELL_JPG_ARGB:
