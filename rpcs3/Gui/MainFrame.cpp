@@ -59,7 +59,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef _DEBUG
+
 	SetLabel(wxString::Format(_PRGNAME_ " git-" RPCS3_GIT_VERSION));
 #else
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
