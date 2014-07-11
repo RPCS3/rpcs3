@@ -104,7 +104,7 @@ struct FileListener : LogListener
 	{
 		if (!mFile.IsOpened())
 		{
-			rMessageBox("Can't create log file! (" + name + ".log)", rMessageBoxCaptionStr, rICON_ERROR);
+			rMessageBox("Can't create log file! (" + name + ".log)", "Error", rICON_ERROR);
 		}
 	}
 

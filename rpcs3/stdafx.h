@@ -12,13 +12,9 @@
 #include <wx/config.h>
 #include <wx/string.h>
 #include <wx/propdlg.h>
-#include <wx/stdpaths.h>
-#include <wx/filename.h>
-#include <wx/filefn.h>
 #include <wx/dcclient.h>
 
 #include <wx/wfstream.h>
-#include <wx/dir.h>
 #include <wx/spinctrl.h>
 #include <wx/datetime.h>
 #include <wx/filepicker.h>
@@ -32,8 +28,6 @@
 #include <wx/frame.h>
 #include <wx/combobox.h>
 #include <wx/checkbox.h>
-#include <wx/app.h>
-#include <wx/timer.h>
 #include <wx/listctrl.h>
 #include <wx/aui/auibook.h>
 #endif

@@ -287,14 +287,12 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 	default: errorMessage = "An error has occurred."; break;
 	}
 
-	char errorCodeHex[9];
-	sprintf(errorCodeHex, "%08x", errorCode);
-	errorMessage.append("\n(");
+	char errorCodeHex[12];
+	sprintf(errorCodeHex, "\n(%08x)", errorCode);
 	errorMessage.append(errorCodeHex);
-	errorMessage.append(")\n");
 
 	u64 status;
-	int res = rMessageBox(errorMessage, rGetApp().GetAppName(), rICON_ERROR | rOK);
+	int res = rMessageBox(errorMessage, "Error", rICON_ERROR | rOK);
 	switch (res)
 	{
 	case rOK: status = CELL_MSGDIALOG_BUTTON_OK; break;

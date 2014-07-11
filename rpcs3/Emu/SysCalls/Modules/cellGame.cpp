@@ -456,7 +456,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 
 	std::string errorMsg = fmt::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
 		errorName.c_str(), errNeedSizeKB, dirName);
-	rMessageBox(errorMsg, rGetApp().GetAppName(), rICON_ERROR | rOK);
+	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);
 	return CELL_OK;
 }
 

@@ -40,7 +40,7 @@ bool vfsLocalDir::Open(const std::string& path)
 
 bool vfsLocalDir::Create(const std::string& path)
 {
-	return rFileName::Mkdir(path, 0777, rPATH_MKDIR_FULL);
+	return rMkpath(path);
 }
 
 bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
