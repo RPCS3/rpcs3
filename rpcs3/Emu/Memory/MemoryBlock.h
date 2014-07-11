@@ -15,10 +15,8 @@ union u128
 	u16 _u16[8];
 	u8  _u8[16];
 
-	operator u64() const { return _u64[0]; }
-	operator u32() const { return _u32[0]; }
-	operator u16() const { return _u16[0]; }
-	operator u8()  const { return _u8[0];  }
+	void _64 {return _u64(const)};
+	void _128 {return _u128(const)};
 
 	operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
 
