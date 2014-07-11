@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-#include "ELF32.h"
+
 
 void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
 {
