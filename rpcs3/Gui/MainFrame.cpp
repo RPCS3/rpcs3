@@ -412,7 +412,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
-	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(p_cpu, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
@@ -489,7 +488,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 
 	// Get values from .ini
-	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
@@ -541,7 +539,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Core
 	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_cpu_decoder->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
@@ -593,7 +590,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
-		Ini.CPUIgnoreRWErrors.SetValue(chbox_cpu_ignore_rwerrors->GetValue());
 		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection() + 1);
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));

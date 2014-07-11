@@ -100,7 +100,6 @@ public:
 	// Core
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<u8> SPUDecoderMode;
-	IniEntry<bool> CPUIgnoreRWErrors;
 
 	// Graphics
 	IniEntry<u8> GSRenderMode;
@@ -165,7 +164,6 @@ public:
 
 		// Core
 		CPUDecoderMode.Init("CPU_DecoderMode", path);
-		CPUIgnoreRWErrors.Init("CPU_IgnoreRWErrors", path);
 		SPUDecoderMode.Init("CPU_SPUDecoderMode", path);
 
 		// Graphics
@@ -227,7 +225,6 @@ public:
 	{
 		// Core
 		CPUDecoderMode.Load(2);
-		CPUIgnoreRWErrors.Load(true);
 		SPUDecoderMode.Load(1);
 
 		// Graphics
@@ -290,7 +287,6 @@ public:
 	{
 		// CPU/SPU
 		CPUDecoderMode.Save();
-		CPUIgnoreRWErrors.Save();
 		SPUDecoderMode.Save();
 
 		// Graphics
