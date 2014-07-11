@@ -123,7 +123,7 @@ public:
 				default: return res;
 			}
 
-			if (wait) wait();
+			if (wait != nullptr) wait();
 
 			if (timeout && counter++ > timeout)
 			{
