@@ -71,7 +71,7 @@ enum cellFsStStatus
 };
 
 
-#pragma pack(4)
+#pragma pack(push, 4)
 
 struct CellFsStat
 {
@@ -98,7 +98,7 @@ struct CellFsDirent
 	char d_name[CELL_MAX_FS_FILE_NAME_LENGTH + 1];
 };
 
-#pragma pack()
+#pragma pack(pop)
 
 struct CellFsAio
 {

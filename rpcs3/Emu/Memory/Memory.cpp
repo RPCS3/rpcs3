@@ -104,14 +104,14 @@ bool MemoryBlock::GetMemFromAddr(void* dst, const u64 addr, const u32 size)
 {
 	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
 
-	return Memory.CopyToReal(dst, (u32)addr, size);
+	return Memory.CopyToReal(dst, addr, size);
 }
 
 bool MemoryBlock::SetMemFromAddr(void* src, const u64 addr, const u32 size)
 {
 	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
 
-	return Memory.CopyFromReal((u32)addr, src, size);
+	return Memory.CopyFromReal(addr, src, size);
 }
 
 bool MemoryBlock::GetMemFFromAddr(void* dst, const u64 addr)

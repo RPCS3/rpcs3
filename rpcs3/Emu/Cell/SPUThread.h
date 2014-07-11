@@ -310,7 +310,7 @@ class SPUThread : public PPCThread
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
 	SPU_SPR_hdr SPR[128]; //Special-Purpose Registers
-//	FPSCR fpscr; //Unused
+	FPSCR FPSCR;
 	SPU_SNRConfig_hdr cfg; //Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
 	EventPort SPUPs[64]; // SPU Thread Event Ports

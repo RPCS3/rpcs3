@@ -318,51 +318,31 @@ public:
 	u64 Read64(const u64 addr);
 	u128 Read128(const u64 addr);
 
-	bool CopyToReal(void* real, u32 from, u32 count)
+	bool CopyToReal(void* real, u64 from, u32 count)
 	{
-		if (!count) return true;
+		if (!IsGoodAddr(from, count)) return false;
 
 		memcpy(real, GetMemFromAddr(from), count);
 
 		return true;
 	}
 
-	bool CopyFromReal(u32 to, const void* real, u32 count)
+	bool CopyFromReal(u64 to, const void* real, u32 count)
 	{
-		if (!count) return true;
+		if (!IsGoodAddr(to, count)) return false;
 
 		memcpy(GetMemFromAddr(to), real, count);
 
 		return true;
 	}
 
-	bool Copy(u32 to, u32 from, u32 count)
+	bool Copy(u64 to, u64 from, u32 count)
 	{
-		if (u8* buf = (u8*)malloc(count))
-		{
-			if (CopyToReal(buf, from, count))
-			{
-				if (CopyFromReal(to, buf, count))
-				{
-					free(buf);
-					return true;
-				}
-				else
-				{
-					free(buf);
-					return false;
-				}
-			}
-			else
-			{
-				free(buf);
-				return false;
-			}
-		}
-		else
-		{
-			return false;
-		}
+		if (!IsGoodAddr(to, count) || !IsGoodAddr(from, count)) return false;
+
+		memmove(GetMemFromAddr(to), GetMemFromAddr(from), count);
+
+		return true;
 	}
 
 	void ReadLeft(u8* dst, const u64 addr, const u32 size)
@@ -797,7 +777,7 @@ public:
 	
 	u32 AppendRawBytes(const u8 *bytes, size_t count)
 	{
-		Memory.CopyFromReal(this->m_addr, bytes, count);
+		memmove(Memory + this->m_addr, bytes, count);
 		this->m_addr += count;
 		return this->m_addr;
 	}

@@ -148,7 +148,11 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
+		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize()))
+		{
+			cellPngDec->Error("cellPngDecReadHeader() failed ()");
+			return CELL_EFAULT;
+		}
 		break;
 	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
@@ -213,7 +217,11 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToLE())
 	{
 	case CELL_PNGDEC_BUFFER:
-		Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize());
+		if (!Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize()))
+		{
+			cellPngDec->Error("cellPngDecDecodeData() failed (I)");
+			return CELL_EFAULT;
+		}
 		break;
 	case CELL_PNGDEC_FILE:
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
@@ -249,12 +257,20 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
+				{
+					cellPngDec->Error("cellPngDecDecodeData() failed (II)");
+					return CELL_EFAULT;
+				}
 			}
 		}
 		else
 		{
-			Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+			{
+				cellPngDec->Error("cellPngDecDecodeData() failed (III)");
+				return CELL_EFAULT;
+			}
 		}
 	}
 	break;
@@ -279,7 +295,11 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize);
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
+				{
+					cellPngDec->Error("cellPngDecDecodeData() failed (IV)");
+					return CELL_EFAULT;
+				}
 			}
 			free(output);
 		}

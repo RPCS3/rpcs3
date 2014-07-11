@@ -494,7 +494,12 @@ int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
-		if(res > 0) Memory.Copy(ctxt->begin, ctxt->current - res, res);
+		if (res > 0 && !Memory.Copy(ctxt->begin, ctxt->current - res, res))
+		{
+			cellGcmSys->Error("cellGcmSetPrepareFlip(): Memory.Copy(0x%x, 0x%x, 0x%x) failed", (u32)ctxt->begin, (u32)ctxt->current - res, res);
+			Emu.Pause();
+			return CELL_EFAULT;
+		}
 		ctxt->current = ctxt->begin + res;
 
 		//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
@@ -1160,7 +1165,12 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	if(res > 0) Memory.Copy(ctx.begin, ctx.current - res, res);
+	if (res > 0 && !Memory.Copy(ctx.begin, ctx.current - res, res))
+	{
+		cellGcmSys->Error("cellGcmCallback(): Memory.Copy(0x%x, 0x%x, 0x%x) failed", (u32)ctx.begin, (u32)ctx.current - res, res);
+		Emu.Pause();
+		return CELL_EFAULT;
+	}
 
 	ctx.current = ctx.begin + res;
 
