@@ -3,11 +3,6 @@
 #include "SELF.h"
 #include "ELF64.h"
 
-SELFLoader::SELFLoader(vfsStream& f)
-	: self_f(f)
-	, LoaderBase()
-{
-}
 
 bool SELFLoader::LoadInfo()
 {

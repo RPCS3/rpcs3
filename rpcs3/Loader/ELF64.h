@@ -1,4 +1,4 @@
-#pragma once
+
 #include "Loader.h"
 
 struct Elf64_Ehdr
