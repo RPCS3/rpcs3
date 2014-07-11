@@ -283,7 +283,7 @@ void CPUThread::ExecOnce()
 #ifdef _WIN32
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
-	const u64 addr = (u64)Memory.GetBaseAddr() - (u64)pExp->ExceptionRecord->ExceptionAddress;
+	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
 	if (addr < 0x100000000 && u == EXCEPTION_ACCESS_VIOLATION)
 	{
 		// TODO: allow recovering from a page fault
