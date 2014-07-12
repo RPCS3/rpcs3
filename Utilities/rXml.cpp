@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "Utilities/rXml.h"
 #include <wx/xml/xml.h>
 
 rXmlNode::rXmlNode()

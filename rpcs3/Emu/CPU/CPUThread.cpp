@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/DbgCommand.h"
 #include "rpcs3/Ini.h"
 
 #include "CPUThread.h"
@@ -333,7 +334,7 @@ void CPUThread::Task()
 
 		if (status == CPUThread_Sleeping)
 		{
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
@@ -368,7 +369,7 @@ s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4)
 			LOG_WARNING(PPU, "ExecAsCallback() aborted");
 			return CELL_ECANCELED; // doesn't mean anything
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	Stop();
@@ -394,7 +395,7 @@ s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4)
 			LOG_WARNING(PPU, "ExecAsCallback(wait=%s) aborted", wait ? "true" : "false");
 			return CELL_EABORT; // doesn't mean anything
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	return wait * m_exit_status;

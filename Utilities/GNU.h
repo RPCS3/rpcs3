@@ -28,7 +28,6 @@ void strcpy_trunc(char (&dst)[size], const std::string& src)
 #define _byteswap_ushort(x) __builtin_bswap16(x)
 #define _byteswap_ulong(x) __builtin_bswap32(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
-#define Sleep(x) usleep(x * 1000)
 #define mkdir(x) mkdir(x, 0777)
 #define INFINITE 0xFFFFFFFF
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
@@ -61,10 +60,10 @@ inline int64_t  __mulh(int64_t a, int64_t b)
 	return result;
 }
 
-#ifndef __APPLE__
-#define _aligned_malloc(size,alignment) memalign(alignment,size)
-#else
+
 void * _aligned_malloc(size_t size, size_t alignment);
+
+#ifdef __APPLE__
 int clock_gettime(int foo, struct timespec *ts);
 #define wxIsNaN(x) ((x) != (x))
 
@@ -72,7 +71,7 @@ int clock_gettime(int foo, struct timespec *ts);
 #define CLOCK_MONOTONIC 0
 #endif /* !CLOCK_MONOTONIC */
 
-#endif /* !__APPLE__ */
+#endif /* __APPLE__ */
 
 #define _aligned_free free
 

@@ -389,7 +389,7 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 		"All Files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	if(ctrl.ShowModal() == rID_CANCEL) return;
 	LoadElf(fmt::ToUTF8(ctrl.GetPath()));
 }
 

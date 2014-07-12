@@ -220,7 +220,8 @@ struct WaitDumperThread : public ThreadBase
 	{
 		for(uint i=0; i<cores; i++)
 		{
-			while(done[i] == false) Sleep(1);
+			while(done[i] == false)
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		LOG_NOTICE(HLE, "Saving dump is started!");

@@ -2,9 +2,8 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/DbgCommand.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/Audio/sysutil_audio.h"
 
@@ -345,7 +344,7 @@ int cellSysutilCheckCallback()
 
 	while (thr.IsAlive())
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "cellSysutilCheckCallback() aborted");

@@ -370,7 +370,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 				LOG_WARNING(Log::SPU, "sys_spu_thread_group_join(id=%d, ...) aborted", id);
 				return CELL_OK;
 			}
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
 

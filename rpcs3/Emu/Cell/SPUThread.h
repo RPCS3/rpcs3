@@ -2,6 +2,8 @@
 #include "PPCThread.h"
 #include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 #include "MFC.h"
 #include "Emu/SysCalls/ErrorCodes.h"
 #include <mutex>
@@ -975,7 +977,7 @@ public:
 				{
 					while (t->IsAlive())
 					{
-						Sleep(1);
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						if (Emu.IsStopped())
 						{
 							LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
@@ -1106,7 +1108,7 @@ public:
 		case SPU_WrOutMbox:
 		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) Sleep(1);
+			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			break;
 		}
 
@@ -1206,41 +1208,41 @@ public:
 		{
 		case SPU_RdInMbox:
 		{
-			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case MFC_RdTagStat:
 		{
-			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case SPU_RdSigNotify1:
 		{
-			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case SPU_RdSigNotify2:
 		{
-			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case MFC_RdAtomicStat:
 		{
-			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			break;
 		}
 
 		case MFC_RdListStallStat:
 		{
-			while (!StallStat.Pop(v) && !Emu.IsStopped()) Sleep(1);
+			while (!StallStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			break;
 		}
 
@@ -1334,7 +1336,7 @@ public:
 				default: eq->sq.invalidate(tid); SPU.In_MBox.PushUncond(CELL_ECANCELED); return;
 				}
 
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				if (Emu.IsStopped())
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);

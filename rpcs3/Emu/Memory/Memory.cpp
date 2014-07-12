@@ -3,6 +3,8 @@
 
 #include "Utilities/Log.h"
 #include "Memory.h"
+#include "Emu/System.h"
+#include "Ini.h"
 
 MemoryBase Memory;
 
@@ -92,6 +94,7 @@ void MemoryBlock::Free()
 void MemoryBlock::Delete()
 {
 	Free();
+		safe_free(mem);
 	Init();
 }
 

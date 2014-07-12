@@ -6,6 +6,7 @@
 #include "Emu/FS/vfsFile.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
+#include <wx/dir.h>
 
 static const std::string m_class_name = "GameViewer";
 
@@ -238,9 +239,9 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	Emu.GetVFS().UnMountAll();
 
-	//TODO: Replace wxWidgetsSpecific filesystem stuff?
-	if (!wxDirExists(fmt::FromUTF8(localPath)))
+	if (!rFile::Exists(localPath))
 		return;
+	//TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;
 	wxDir localDir(localPath);
 	localDir.Traverse(deleter);

@@ -2,8 +2,6 @@
 
 #include <string>
 
-extern const int rPATH_MKDIR_FULL;
-
 enum rSeekMode
 {
 	rFromStart,
@@ -44,8 +42,9 @@ public:
 };
 
 std::string rGetCwd();
-bool rMkdir(const std::string &path);
-bool rRmdir(const std::string &path);
+bool rRmdir(const std::string& dir);
+bool rMkdir(const std::string& dir);
+bool rMkpath(const std::string& path);
 bool rDirExists(const std::string &path);
 bool rFileExists(const std::string &path);
 bool rRemoveFile(const std::string &path);
@@ -77,7 +76,6 @@ struct rFileName
 	std::string GetPath();
 	std::string GetName();
 	std::string GetFullName();
-	static bool Mkdir(const std::string& name, int permissions=0777, int flags=0);
 	bool Normalize();
 
 	void *handle;

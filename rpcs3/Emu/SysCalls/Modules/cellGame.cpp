@@ -2,7 +2,6 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -456,7 +455,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 
 	std::string errorMsg = fmt::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
 		errorName.c_str(), errNeedSizeKB, dirName);
-	rMessageBox(errorMsg, rGetApp().GetAppName(), rICON_ERROR | rOK);
+	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);
 	return CELL_OK;
 }
 

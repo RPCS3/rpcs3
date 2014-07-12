@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/Memory.h"
+
 // SPURS defines.
 enum SPURSKernelInterfaces
 {

@@ -66,8 +66,6 @@ ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
 "${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
-"${RPCS3_SRC_DIR}/Emu"
-"${RPCS3_SRC_DIR}/Gui"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."

@@ -2,8 +2,6 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 
 //void cellSync_init();
@@ -90,7 +88,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 
 	while (old_order != mutex->m_freed) 
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());

@@ -1,4 +1,4 @@
-
+#pragma once
 //DynamicMemoryBlockBase
 template<typename PT>
 DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase()

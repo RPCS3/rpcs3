@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/System.h"
 #include "rpcs3/Ini.h"
 
 #include "OpenALThread.h"

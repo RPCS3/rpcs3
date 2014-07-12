@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
+#include "Ini.h"
 #include <wx/busyinfo.h>
 
 VHDDListDropTarget::VHDDListDropTarget(wxListView* parent) : m_parent(parent)

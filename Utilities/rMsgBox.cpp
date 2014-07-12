@@ -1,8 +1,6 @@
 #include "stdafx.h"
 
-
-std::string rMessageBoxCaptionStr = "Message";
-
+#ifndef QT_UI
 rMessageDialog::rMessageDialog(void *parent, const std::string& msg, const std::string& title , long style )
 {
 	handle = reinterpret_cast<void*>(new wxMessageDialog(
@@ -28,24 +26,5 @@ long rMessageBox(const std::string& message, const std::string& title, long styl
 	return wxMessageBox(fmt::FromUTF8(message), fmt::FromUTF8(title),style);
 }
 
-std::string dummyApp::GetAppName()
-{
-	if (handle)
-	{
-		return fmt::ToUTF8(reinterpret_cast<wxApp*>(handle)->GetAppName());
-	}
-	else
-	{
-		return "NULL";
-	}
-}
-dummyApp::dummyApp() : handle(nullptr)
-{
+#endif
 
-}
-static dummyApp app;
-
-dummyApp& rGetApp()
-{
-	return app;
-}

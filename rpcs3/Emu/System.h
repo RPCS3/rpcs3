@@ -8,9 +8,7 @@
 #include "Emu/GS/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
-#include "Emu/DbgCommand.h"
 #include "Loader/Loader.h"
-#include "SysCalls/Callback.h"
 
 enum Status
 {

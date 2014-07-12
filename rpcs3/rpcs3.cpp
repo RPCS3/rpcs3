@@ -26,6 +26,8 @@ bool Rpcs3App::OnInit()
 	SetAppName(_PRGNAME_);
 	wxInitAllImageHandlers();
 
+	main_thread = std::this_thread::get_id();
+
 	Ini.Load();
 
 	m_MainFrame = new MainFrame();

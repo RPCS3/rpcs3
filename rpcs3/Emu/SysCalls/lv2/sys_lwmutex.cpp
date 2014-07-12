@@ -253,7 +253,7 @@ int sys_lwmutex_t::trylock(be_t<u32> tid)
 			LOG_WARNING(HLE, "(hack) sys_lwmutex_t::(try)lock aborted (waiting for recursive attribute, attr=0x%x)", (u32)attribute);
 			return CELL_ESRCH;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}*/
 
 	if (tid == owner_tid)

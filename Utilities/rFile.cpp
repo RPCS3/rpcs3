@@ -1,6 +1,19 @@
 #include "stdafx.h"
+#include <wx/dir.h>
 
-const int rPATH_MKDIR_FULL = wxPATH_MKDIR_FULL;
+#ifdef _WIN32
+// Maybe in StrFmt?
+std::wstring ConvertUTF8ToWString(const std::string &source) {
+	int len = (int)source.size();
+	int size = (int)MultiByteToWideChar(CP_UTF8, 0, source.c_str(), len, NULL, 0);
+	std::wstring str;
+	str.resize(size);
+	if (size > 0) {
+		MultiByteToWideChar(CP_UTF8, 0, source.c_str(), len, &str[0], size);
+	}
+	return str;
+}
+#endif
 
 wxFile::OpenMode convertOpenMode(rFile::OpenMode open)
 {
@@ -140,7 +153,13 @@ bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
 
 bool rFile::Exists(const std::string &file)
 {
-	return wxFile::Exists(fmt::FromUTF8(file));
+#ifdef _WIN32
+	std::wstring wstr = ConvertUTF8ToWString(filename);
+	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
+#else
+	struct stat buffer;   
+	return (stat (file.c_str(), &buffer) == 0); 
+#endif
 }
 
 bool rFile::IsOpened() const
@@ -173,14 +192,25 @@ std::string rGetCwd()
 	return fmt::ToUTF8(wxGetCwd());
 }
 
-bool rMkdir(const std::string &path)
+bool rMkdir(const std::string &dir)
 {
-	return wxMkdir(fmt::FromUTF8(path));
+	return mkdir(dir.c_str());
 }
 
-bool rRmdir(const std::string &path)
+bool rMkpath(const std::string& path)
 {
-	return wxRmdir(fmt::FromUTF8(path));
+	return wxFileName::Mkdir(fmt::FromUTF8(path), 0777, wxPATH_MKDIR_FULL);
+}
+
+bool rRmdir(const std::string &dir)
+{
+#ifdef _WIN32
+	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str())) {
+		ELOG("Error deleting directory %s: %i", dir, GetLastError());
+	}
+#else
+	rmdir(dir.c_str());
+#endif
 }
 
 bool rDirExists(const std::string &path)
@@ -235,7 +265,7 @@ bool rDir::Open(const std::string& path)
 
 bool rDir::Exists(const std::string &path)
 {
-	return wxDir::Exists(fmt::FromUTF8(path));
+	return rFile::Exists(path);
 }
 
 bool rDir::GetFirst(std::string *filename) const
@@ -297,11 +327,6 @@ std::string rFileName::GetName()
 std::string rFileName::GetFullName()
 {
 	return fmt::ToUTF8(reinterpret_cast<wxFileName*>(handle)->GetFullName());
-}
-
-bool rFileName::Mkdir(const std::string& name, int permissions , int flags )
-{
-	return wxFileName::Mkdir(fmt::FromUTF8(name), permissions, flags);
 }
 
 bool rFileName::Normalize()

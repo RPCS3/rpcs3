@@ -105,7 +105,8 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	case SPU_In_MBox_offs:
 	{
 		LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(SPU_In_MBox)", m_index);
-		while (!SPU.In_MBox.Pop(*value) && !Emu.IsStopped()) Sleep(1);
+		while (!SPU.In_MBox.Pop(*value) && !Emu.IsStopped())
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		break;
 	}
 
@@ -250,7 +251,8 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	case SPU_Out_MBox_offs:
 	{
 		LOG_WARNING(Log::SPU, "RawSPUThread[%d]: Write32(SPU_Out_MBox, 0x%x)", m_index, value);
-		while (!SPU.Out_MBox.Push(value) && !Emu.IsStopped()) Sleep(1);
+		while (!SPU.Out_MBox.Push(value) && !Emu.IsStopped())
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		break;
 	}
 

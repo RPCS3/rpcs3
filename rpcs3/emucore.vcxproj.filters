@@ -940,9 +940,6 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\Array.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\BEType.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -978,9 +975,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\simpleini\SimpleIni.h">
       <Filter>Utilities\SimpleIni</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rConcurrency.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\DbgCommand.h">
       <Filter>Emu</Filter>

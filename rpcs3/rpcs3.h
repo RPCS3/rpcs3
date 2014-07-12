@@ -1,5 +1,8 @@
 #pragma once
 #include "Gui/MainFrame.h"
+#include "Emu/DbgCommand.h"
+#include "Utilities/Thread.h"
+#include <wx/app.h>
 
 class CPUThread;
 

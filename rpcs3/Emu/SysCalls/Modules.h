@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Emu/Memory/Memory.h"
-
-#define declCPU PPUThread& CPU = GetCurrentPPUThread
+#include "Emu/SysCalls/SC_FUNC.h"
 
 //TODO
 struct ModuleFunc

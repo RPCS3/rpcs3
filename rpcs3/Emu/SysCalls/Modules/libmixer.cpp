@@ -3,7 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Audio/cellAudio.h"
 #include "libmixer.h"
@@ -363,7 +362,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 
 			if (mixcount > (port.tag + 14)) // preemptive buffer filling (probably hack)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 

@@ -4,6 +4,7 @@
 #include "VFS.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
+#include "Ini.h"
 
 int sort_devices(const void* _a, const void* _b)
 {

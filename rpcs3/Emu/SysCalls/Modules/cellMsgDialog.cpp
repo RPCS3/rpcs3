@@ -2,8 +2,6 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 #include "rpcs3.h"
 
@@ -185,7 +183,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 
 		while (!m_signal)
 		{
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		while (g_msg_dialog_state == msgDialogOpen || get_system_time() < m_wait_until)
@@ -195,7 +193,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 				g_msg_dialog_state = msgDialogAbort;
 				break;
 			}
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
@@ -287,14 +285,12 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 	default: errorMessage = "An error has occurred."; break;
 	}
 
-	char errorCodeHex[9];
-	sprintf(errorCodeHex, "%08x", errorCode);
-	errorMessage.append("\n(");
+	char errorCodeHex[12];
+	sprintf(errorCodeHex, "\n(%08x)", errorCode);
 	errorMessage.append(errorCodeHex);
-	errorMessage.append(")\n");
 
 	u64 status;
-	int res = rMessageBox(errorMessage, rGetApp().GetAppName(), rICON_ERROR | rOK);
+	int res = rMessageBox(errorMessage, "Error", rICON_ERROR | rOK);
 	switch (res)
 	{
 	case rOK: status = CELL_MSGDIALOG_BUTTON_OK; break;

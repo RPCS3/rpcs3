@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "sys_rwlock.h"
@@ -72,7 +70,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 			LOG_WARNING(HLE, "sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		if (rw->rlock_trylock(tid)) return CELL_OK;
 
@@ -135,7 +133,7 @@ s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 			LOG_WARNING(HLE, "sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		if (rw->wlock_trylock(tid, true)) return CELL_OK;
 
