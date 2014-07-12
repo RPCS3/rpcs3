@@ -1,6 +1,6 @@
 #pragma once
 
-class SFunc;
+struct SFunc;
 
 class StaticFuncManager
 {

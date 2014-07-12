@@ -69,16 +69,21 @@ void MemoryBlock::Init()
 	range_start = 0;
 	range_size = 0;
 
-	mem = nullptr;
+	mem = Memory.GetMemFromAddr(0);
 }
 
 void MemoryBlock::InitMemory()
 {
-	if (!range_size) return;
-
-	Free();
-	mem_inf = new MemBlockInfo(range_start, range_size);
-	mem = (u8*)mem_inf->mem;
+	if (!range_size)
+	{
+		mem = Memory.GetMemFromAddr(range_start);
+	}
+	else
+	{
+		Free();
+		mem_inf = new MemBlockInfo(range_start, range_size);
+		mem = (u8*)mem_inf->mem;
+	}
 }
 
 void MemoryBlock::Free()
@@ -88,13 +93,11 @@ void MemoryBlock::Free()
 		delete mem_inf;
 		mem_inf = nullptr;
 	}
-	mem = nullptr;
 }
 
 void MemoryBlock::Delete()
 {
 	Free();
-		safe_free(mem);
 	Init();
 }
 
@@ -135,6 +138,8 @@ u8* MemoryBlock::GetMemFromAddr(const u64 addr)
 
 MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 {
+	if (start + size > 0x100000000) return nullptr;
+
 	range_start = start;
 	range_size = size;
 

@@ -14,11 +14,11 @@ Module *libmixer = nullptr;
 CellSurMixerConfig surMixer;
 
 #define SUR_PORT (7)
-u32 surMixerCb = 0;
-u32 surMixerCbArg = 0;
+u32 surMixerCb;
+u32 surMixerCbArg;
 std::mutex mixer_mutex;
 float mixdata[8*256];
-u64 mixcount = 0;
+u64 mixcount;
 
 std::vector<SSPlayer> ssp;
 
@@ -342,6 +342,9 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 	libmixer->Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)",
 		(u32)surMixer.chStrips1, (u32)surMixer.chStrips2, (u32)surMixer.chStrips6, (u32)surMixer.chStrips8);
 
+	mixcount = 0;
+	surMixerCb = 0;
+
 	thread t("Surmixer Thread", []()
 	{
 		AudioPortConfig& port = m_config.m_ports[SUR_PORT];
@@ -349,8 +352,6 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 		CPUThread* mixerCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 		mixerCb->SetName("Surmixer Callback");
-
-		mixcount = 0;
 
 		while (port.m_is_audio_port_opened)
 		{

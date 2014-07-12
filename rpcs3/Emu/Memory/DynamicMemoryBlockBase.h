@@ -2,8 +2,8 @@
 //DynamicMemoryBlockBase
 template<typename PT>
 DynamicMemoryBlockBase<PT>::DynamicMemoryBlockBase()
-: PT()
-, m_max_size(0)
+	: PT()
+	, m_max_size(0)
 {
 }
 
@@ -39,9 +39,7 @@ bool DynamicMemoryBlockBase<PT>::IsMyAddress(const u64 addr)
 {
 	if (!IsInMyRange(addr)) return false;
 
-	const u32 index = MemoryBlock::FixAddr(addr) >> 12;
-
-	return m_pages[index] != nullptr;
+	return Memory.IsGoodAddr(addr);
 }
 
 template<typename PT>
@@ -50,11 +48,11 @@ MemoryBlock* DynamicMemoryBlockBase<PT>::SetRange(const u64 start, const u32 siz
 	std::lock_guard<std::mutex> lock(m_lock);
 
 	m_max_size = PAGE_4K(size);
-	MemoryBlock::SetRange(start, 0);
-
-	const u32 page_count = m_max_size >> 12;
-	m_pages.resize(page_count);
-	memset(m_pages.data(), 0, sizeof(u8*) * page_count);
+	if (!MemoryBlock::SetRange(start, 0))
+	{
+		assert(0);
+		return nullptr;
+	}
 
 	return this;
 }
@@ -66,8 +64,6 @@ void DynamicMemoryBlockBase<PT>::Delete()
 
 	m_allocated.clear();
 	m_max_size = 0;
-
-	m_pages.clear();
 
 	MemoryBlock::Delete();
 }
@@ -107,17 +103,6 @@ template<typename PT>
 void DynamicMemoryBlockBase<PT>::AppendMem(u64 addr, u32 size) /* private */
 {
 	m_allocated.emplace_back(addr, size);
-	u8* pointer = (u8*) m_allocated.back().mem;
-
-	const u32 first = MemoryBlock::FixAddr(addr) >> 12;
-
-	const u32 last = first + ((size - 1) >> 12);
-
-	for (u32 i = first; i <= last; i++)
-	{
-		m_pages[i] = pointer;
-		pointer += 4096;
-	}
 }
 
 template<typename PT>
@@ -186,24 +171,6 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 	{
 		if (addr == m_allocated[num].addr)
 		{
-			/* if(IsLocked(m_allocated[num].addr)) return false; */
-
-			const u32 first = MemoryBlock::FixAddr(addr) >> 12;
-
-			const u32 last = first + ((m_allocated[num].size - 1) >> 12);
-
-			// check if locked:
-			//for (u32 i = first; i <= last; i++)
-			//{
-			//	if (!m_pages[i]) return false;
-			//}
-
-			// clear pointers:
-			for (u32 i = first; i <= last; i++)
-			{
-				m_pages[i] = nullptr;
-			}
-
 			//LOG_NOTICE(MEMORY, "Free(0x%llx)", addr);
 
 			m_allocated.erase(m_allocated.begin() + num);
@@ -221,17 +188,9 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 }
 
 template<typename PT>
-u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const // lock-free, addr is fixed
+u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const
 {
-	const u32 index = addr >> 12;
-
-	if (index < m_pages.size())
-	{
-		if (u8* res = m_pages[index])
-		{
-			return res + (addr & 4095);
-		}
-	}
+	if (addr < GetSize() && Memory.IsGoodAddr(addr + GetStartAddr())) return mem + addr;
 
 	LOG_ERROR(MEMORY, "GetMem(0x%llx) from not allocated address.", addr);
 	assert(0);

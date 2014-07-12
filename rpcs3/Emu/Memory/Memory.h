@@ -286,6 +286,8 @@ public:
 			block->Delete();
 		}
 
+		RSXIOMem.Delete();
+
 		MemoryBlocks.clear();
 
 #ifdef _WIN32
