@@ -79,12 +79,6 @@ bool DynamicMemoryBlockBase<PT>::AllocFixed(u64 addr, u32 size)
 		return false;
 	}
 
-	if (IsMyAddress(addr) || IsMyAddress(addr + size - 1))
-	{
-		assert(0);
-		return false;
-	}
-
 	std::lock_guard<std::mutex> lock(m_lock);
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
