@@ -271,7 +271,7 @@ initialized(false)
 
 ModuleManager::~ModuleManager()
 {
-	m_mod_init.clear();
+	UnloadModules();
 }
 
 bool ModuleManager::IsLoadedFunc(u32 id)
@@ -332,6 +332,7 @@ u32 ModuleManager::GetFuncNumById(u32 id)
 	return id;
 }
 
+//to load the default modules after calling this call Init() again
 void ModuleManager::UnloadModules()
 {
 	for (u32 i = 0; i<3; ++i)
@@ -345,6 +346,16 @@ void ModuleManager::UnloadModules()
 		}
 	}
 
+	//reset state of the module manager
+	//this could be done by calling the destructor and then a placement-new
+	//to avoid repeating the initial values here but the defaults aren't
+	//complicated enough to complicate this by using the placement-new
+	m_mod_init.clear();
+	m_max_module_id = 0;
+	m_module_2_count = 0;
+	initialized = false;
+	memset(m_modules, 0, 3 * 0xFF * sizeof(Module*));
+	
 	std::lock_guard<std::mutex> lock(m_funcs_lock);
 	m_modules_funcs_list.clear();
 }
