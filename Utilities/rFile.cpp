@@ -194,7 +194,7 @@ std::string rGetCwd()
 
 bool rMkdir(const std::string &dir)
 {
-	return mkdir(dir.c_str());
+	return !_mkdir(dir.c_str());
 }
 
 bool rMkpath(const std::string& path)
