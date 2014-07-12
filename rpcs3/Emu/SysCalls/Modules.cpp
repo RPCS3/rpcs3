@@ -1,13 +1,9 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Crypto/sha1.h"
 #include <mutex>
-#include "Emu/System.h"
 #include "ModuleManager.h"
 
 u32 getFunctionId(const std::string& name)
