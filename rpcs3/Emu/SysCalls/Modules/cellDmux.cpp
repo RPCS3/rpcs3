@@ -148,14 +148,14 @@ u32 dmuxOpen(Demuxer* data)
 							if (es.isfull())
 							{
 								stream = backup;
-								Sleep(1);
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 								continue;
 							}
 
 							/*if (es.hasunseen()) // hack, probably useless
 							{
 								stream = backup;
-								Sleep(1);
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 								continue;
 							}*/
 
@@ -194,7 +194,7 @@ u32 dmuxOpen(Demuxer* data)
 							ElementaryStream& es = *esAVC[ch];
 							if (es.isfull())
 							{
-								Sleep(1);
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 								continue;
 							}
 
@@ -214,7 +214,7 @@ u32 dmuxOpen(Demuxer* data)
 								/*if (es.hasunseen()) // hack, probably useless
 								{
 									stream = backup;
-									Sleep(1);
+									std::this_thread::sleep_for(std::chrono::milliseconds(1));
 									continue;
 								}*/
 								es.finish(stream);
@@ -237,7 +237,7 @@ u32 dmuxOpen(Demuxer* data)
 							if (es.isfull())
 							{
 								stream = backup;
-								Sleep(1);
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 								continue;
 							}
 
@@ -598,7 +598,7 @@ int cellDmuxClose(u32 demuxerHandle)
 			return CELL_OK;
 		}
 
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
@@ -629,7 +629,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 			LOG_WARNING(HLE, "cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
 			return CELL_OK;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		return CELL_DMUX_ERROR_BUSY;
 	}
 

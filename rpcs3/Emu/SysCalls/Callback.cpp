@@ -69,7 +69,7 @@ again:
 			LOG_WARNING(HLE, "Callback::Branch() aborted");
 			return 0;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	std::lock_guard<std::mutex> lock(cb_mutex);
@@ -112,7 +112,7 @@ again:
 			LOG_WARNING(HLE, "Callback::Branch(true) aborted (end)");
 			return 0;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	return thr.GetExitStatus();

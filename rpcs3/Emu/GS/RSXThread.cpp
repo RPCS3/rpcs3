@@ -2409,7 +2409,7 @@ void RSXThread::Task()
 				continue;
 			}
 
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		is_vblank_stopped = true;
@@ -2446,7 +2446,7 @@ void RSXThread::Task()
 				m_sem_flush.post_and_wait();
 			}
 
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
@@ -2510,7 +2510,7 @@ void RSXThread::Task()
 
 	while (!is_vblank_stopped)
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");

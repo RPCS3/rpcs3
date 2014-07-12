@@ -90,7 +90,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 
 	while (old_order != mutex->m_freed) 
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());

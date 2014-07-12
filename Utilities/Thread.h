@@ -177,7 +177,7 @@ private:
 			Step();
 		}
 
-		while(!TestDestroy()) Sleep(0);
+		while(!TestDestroy()) std::this_thread::sleep_for(std::chrono::milliseconds(0));
 		if(m_destroy_sem.TryWait() != wxSEMA_NO_ERROR) m_destroy_sem.Post();
 	}
 
@@ -198,7 +198,7 @@ public:
 	{
 		if(!IsRunning()) return;
 
-		while(m_main_sem.TryWait() != wxSEMA_NO_ERROR) Sleep(0);
+		while(m_main_sem.TryWait() != wxSEMA_NO_ERROR) std::this_thread::sleep_for(std::chrono::milliseconds(0));
 	}
 
 	void Exit(bool wait = false)

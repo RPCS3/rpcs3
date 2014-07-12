@@ -39,7 +39,7 @@ next:
 				LOG_WARNING(HLE, "adecRawRead(): aborted");
 				return 0;
 			}
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		switch (adec.job.Peek().type)
@@ -212,13 +212,13 @@ u32 adecOpen(AudioDecoder* data)
 
 			if (!adec.job.GetCountUnsafe() && adec.is_running)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 
 			/*if (adec.frames.GetCount() >= 50)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}*/
 
@@ -283,8 +283,7 @@ u32 adecOpen(AudioDecoder* data)
 
 							if (size)
 							{
-								data = (u8*)av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
-								memset(data + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+								data = (u8*)av_calloc(1, size + FF_INPUT_BUFFER_PADDING_SIZE);
 								this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
 							}
 							else
@@ -618,7 +617,7 @@ int cellAdecClose(u32 handle)
 			LOG_WARNING(HLE, "cellAdecClose(%d) aborted", handle);
 			break;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
@@ -728,7 +727,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	}
 
 	// copy data
-	u8* out = (u8*)malloc(af.size);
+	u8* out = (u8*)calloc(1, af.size);
 
 	// reverse byte order, extract data:
 	float* in_f[2];
@@ -774,7 +773,7 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 
 	if (adec->frames.IsEmpty())
 	{
-		Sleep(1); // hack
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 

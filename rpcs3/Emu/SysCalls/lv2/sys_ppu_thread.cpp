@@ -32,7 +32,8 @@ void sys_ppu_thread_exit(u64 errorcode)
 s32 sys_ppu_thread_yield()
 {
 	sysPrxForUser->Log("sys_ppu_thread_yield()");
-	Sleep(1);
+	// Note: Or do we actually want to yield?
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	return CELL_OK;
 }
 
@@ -50,7 +51,7 @@ s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 			LOG_WARNING(PPU, "sys_ppu_thread_join(%d) aborted", thread_id);
 			return CELL_OK;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	vptr = thr->GetExitStatus();

@@ -2,7 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Ini.h"
+//#include "Ini.h"
 
 #include "Emu/GameInfo.h"
 #include "Emu/SysCalls/Static.h"
@@ -12,6 +12,7 @@
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDeviceLocalFile.h"
+#include "Emu/DbgCommand.h"
 
 #include "Emu/CPU/CPUThreadManager.h" //gui dependency
 
@@ -388,7 +389,7 @@ void Emulator::Stop()
 			LOG_NOTICE(HLE, "All threads stopped...");
 			break;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (counter++ > 3000)
 		{
 			LOG_ERROR(HLE, "%d threads not stopped (timeout)", (u32)(g_thread_count - uncounted));

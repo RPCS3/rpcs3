@@ -185,7 +185,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 
 		while (!m_signal)
 		{
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		while (g_msg_dialog_state == msgDialogOpen || get_system_time() < m_wait_until)
@@ -195,7 +195,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 				g_msg_dialog_state = msgDialogAbort;
 				break;
 			}
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))

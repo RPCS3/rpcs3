@@ -148,7 +148,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 {
 	while (g_FsAioReadCur != xid)
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "fsAioRead() aborted");

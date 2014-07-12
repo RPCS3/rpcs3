@@ -245,7 +245,7 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 			return CELL_OK;
 		}
 
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		if (counter++ > max_counter)
 		{

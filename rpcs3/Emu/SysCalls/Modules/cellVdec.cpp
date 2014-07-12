@@ -38,7 +38,7 @@ next:
 				LOG_WARNING(HLE, "vdecRead(): aborted");
 				return 0;
 			}
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		switch (vdec.job.Peek().type)
@@ -150,13 +150,13 @@ u32 vdecOpen(VideoDecoder* data)
 
 			if (!vdec.job.GetCountUnsafe() && vdec.is_running)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 
 			if (vdec.frames.GetCount() >= 50)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 
@@ -509,7 +509,7 @@ int cellVdecClose(u32 handle)
 			LOG_WARNING(HLE, "cellVdecClose(%d) aborted", handle);
 			break;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());
@@ -543,13 +543,13 @@ int cellVdecEndSeq(u32 handle)
 
 	/*if (!vdec->job.IsEmpty())
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		return CELL_VDEC_ERROR_BUSY; // ???
 	}
 
 	if (!vdec->frames.IsEmpty())
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		return CELL_VDEC_ERROR_BUSY; // ???
 	}*/
 
@@ -560,7 +560,7 @@ int cellVdecEndSeq(u32 handle)
 			LOG_WARNING(HLE, "cellVdecEndSeq(%d) aborted", handle);
 			return CELL_OK;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	vdec->job.Push(VdecTask(vdecEndSeq));
@@ -680,7 +680,7 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 
 	if (vdec->frames.IsEmpty())
 	{
-		Sleep(1); // hack
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 

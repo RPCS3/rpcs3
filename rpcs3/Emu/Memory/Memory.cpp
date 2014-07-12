@@ -94,6 +94,7 @@ void MemoryBlock::Free()
 void MemoryBlock::Delete()
 {
 	Free();
+		safe_free(mem);
 	Init();
 }
 

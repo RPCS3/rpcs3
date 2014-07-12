@@ -157,7 +157,7 @@ int cellAudioInit()
 				// precise time of sleeping: 5,(3) ms (or 256/48000 sec)
 				if (m_config.counter * 256000000 / 48000 >= stamp0 - m_config.start_time)
 				{
-					Sleep(1);
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					continue;
 				}
 
@@ -469,7 +469,7 @@ abort:
 
 			while (!internal_finished)
 			{
-				Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 
 			m_config.m_is_audio_finalized = true;
@@ -483,7 +483,7 @@ abort:
 			LOG_WARNING(HLE, "cellAudioInit() aborted");
 			return CELL_OK;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	return CELL_OK;
@@ -502,7 +502,7 @@ int cellAudioQuit()
 
 	while (!m_config.m_is_audio_finalized)
 	{
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(HLE, "cellAudioQuit(): aborted");
