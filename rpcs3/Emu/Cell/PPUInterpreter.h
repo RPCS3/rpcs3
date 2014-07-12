@@ -168,7 +168,7 @@ private:
 		}
 	}
 
-	void MFVSCR(u32 vd)
+	void MFVSCR(u32 vd) //nf
 	{
 		CPU.VPR[vd].Clear();
 		CPU.VPR[vd]._u32[0] = CPU.VSCR.VSCR;

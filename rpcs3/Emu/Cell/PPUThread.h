@@ -75,15 +75,15 @@ union FPSCRhdr
 		u32 RN      :2; //Floating-point rounding control
 		u32 NI      :1; //Floating-point non-IEEE mode
 		u32 XE      :1; //Floating-point inexact exception enable
-		u32 ZE      :1; //IEEE ﬂoating-point zero divide exception enable
-		u32 UE      :1; //IEEE ﬂoating-point underﬂow exception enable
-		u32 OE      :1; //IEEE ﬂoating-point overﬂow exception enable
+		u32 ZE      :1; //IEEE floating-point zero divide exception enable
+		u32 UE      :1; //IEEE floating-point underflow exception enable
+		u32 OE      :1; //IEEE floating-point overflow exception enable
 		u32 VE      :1; //Floating-point invalid operation exception enable
 		u32 VXCVI   :1; //Floating-point invalid operation exception for invalid integer convert
 		u32 VXSQRT  :1; //Floating-point invalid operation exception for invalid square root
 		u32 VXSOFT  :1; //Floating-point invalid operation exception for software request
 		u32         :1; //Reserved
-		u32 FPRF    :5; //Floating-point result ﬂags
+		u32 FPRF    :5; //Floating-point result flags
 		u32 FI      :1; //Floating-point fraction inexact
 		u32 FR      :1; //Floating-point fraction rounded
 		u32 VXVC    :1; //Floating-point invalid operation exception for invalid compare
@@ -94,8 +94,8 @@ union FPSCRhdr
 		u32 VXSNAN  :1; //Floating-point invalid operation exception for SNaN
 		u32 XX      :1; //Floating-point inexact exception
 		u32 ZX      :1; //Floating-point zero divide exception
-		u32 UX      :1; //Floating-point underﬂow exception
-		u32 OX      :1; //Floating-point overﬂow exception
+		u32 UX      :1; //Floating-point underflow exception
+		u32 OX      :1; //Floating-point overflow exception
 		u32 VX      :1; //Floating-point invalid operation exception summary
 		u32 FEX     :1; //Floating-point enabled exception summary
 		u32 FX      :1; //Floating-point exception summary
@@ -131,7 +131,7 @@ union MSRhdr
 		//1      Instruction address translation is enabled.
 		u64 IR  : 1;
 
-		//Exception preﬁx. The setting of this bit speciﬁes whether an exception vector offset 
+		//Exception prefix. The setting of this bit specifies whether an exception vector offset 
 		//is prepended with Fs or 0s. In the following description, nnnnn is the offset of the 
 		//exception.
 		//0      Exceptions are vectored to the physical address 0x0000_0000_000n_nnnn in 64-bit implementations.
@@ -168,9 +168,9 @@ union MSRhdr
 		u64 ME  : 1;
 
 		//Floating-point available 
-		//0      The processor prevents dispatch of ﬂoating-point instructions, including 
-		//ﬂoating-point loads, stores, and moves.
-		//1      The processor can execute ﬂoating-point instructions.
+		//0      The processor prevents dispatch of floating-point instructions, including 
+		//floating-point loads, stores, and moves.
+		//1      The processor can execute floating-point instructions.
 		u64 FP  : 1;
 
 		//Privilege level 
@@ -261,7 +261,7 @@ union VSCRhdr
 	{
 		/*
 		Saturation. A sticky status bit indicating that some field in a saturating instruction saturated since the last
-		time SAT was cleared. In other words when SAT = ‘1’ it remains set to ‘1’ until it is cleared to ‘0’ by an
+		time SAT was cleared. In other words when SAT = '1' it remains set to '1' until it is cleared to '0' by an
 		mtvscr instruction.
 		1	The vector saturate instruction implicitly sets when saturation has occurred on the results one of
 			the vector instructions having saturate in its name:
@@ -283,12 +283,12 @@ union VSCRhdr
 
 		/*
 		Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
-		in a Java-IEEE-C9X–compliant mode or a possibly faster non-Java/non-IEEE mode.
-		0	The Java-IEEE-C9X–compliant mode is selected. Denormalized values are handled as specified
+		in a Java-IEEE-C9X-compliant mode or a possibly faster non-Java/non-IEEE mode.
+		0	The Java-IEEE-C9X-compliant mode is selected. Denormalized values are handled as specified
 			by Java, IEEE, and C9X standard.
-		1	The non-Java/non-IEEE–compliant mode is selected. If an element in a source vector register
-			contains a denormalized value, the value ‘0’ is used instead. If an instruction causes an underflow
-			exception, the corresponding element in the target VR is cleared to ‘0’. In both cases, the ‘0’
+		1	The non-Java/non-IEEE-compliant mode is selected. If an element in a source vector register
+			contains a denormalized value, the value '0' is used instead. If an instruction causes an underflow
+			exception, the corresponding element in the target VR is cleared to '0'. In both cases, the '0'
 			has the same sign as the denormalized or underflowing value.
 		*/
 		u32 NJ  : 1;

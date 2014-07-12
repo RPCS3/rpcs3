@@ -390,8 +390,6 @@ class DynamicMemoryBlockBase : public PT
 {
 	mutable std::mutex m_lock;
 	std::vector<MemBlockInfo> m_allocated; // allocation info
-	std::vector<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
-	
 	u32 m_max_size;
 
 public:

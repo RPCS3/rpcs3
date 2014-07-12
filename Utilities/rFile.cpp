@@ -154,7 +154,7 @@ bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
 bool rFile::Exists(const std::string &file)
 {
 #ifdef _WIN32
-	std::wstring wstr = ConvertUTF8ToWString(filename);
+	std::wstring wstr = ConvertUTF8ToWString(file);
 	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
 #else
 	struct stat buffer;   
@@ -206,8 +206,10 @@ bool rRmdir(const std::string &dir)
 {
 #ifdef _WIN32
 	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str())) {
-		ELOG("Error deleting directory %s: %i", dir, GetLastError());
+		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir, GetLastError());
+		return false;
 	}
+	return true;
 #else
 	rmdir(dir.c_str());
 #endif
