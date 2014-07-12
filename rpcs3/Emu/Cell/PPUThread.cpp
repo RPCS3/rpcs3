@@ -4,11 +4,13 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
-
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUDisAsm.h"
+
 #include <thread>
+#include <cmath>
+
 extern gcmInfo gcm_info;
 
 PPUThread& GetCurrentPPUThread()
@@ -190,7 +192,7 @@ bool FPRdouble::IsINF(PPCdouble d)
 
 bool FPRdouble::IsNaN(PPCdouble d)
 {
-	return isnan(d) ? 1 : 0;
+	return std::isnan((double)d) ? 1 : 0;
 }
 
 bool FPRdouble::IsQNaN(PPCdouble d)

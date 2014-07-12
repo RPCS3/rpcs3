@@ -8,6 +8,15 @@
 #include "Emu/SysCalls/Callback.h"
 #include <vector>
 
+/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
+#ifndef MAP_ANONYMOUS
+    #ifdef MAP_ANON
+        #define MAP_ANONYMOUS MAP_ANON
+    #else
+        #define MAP_ANONYMOUS 0
+    #endif
+#endif
+
 using std::nullptr_t;
 
 #define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
