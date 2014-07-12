@@ -190,11 +190,7 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 template<typename PT>
 u8* DynamicMemoryBlockBase<PT>::GetMem(u64 addr) const
 {
-	if (addr < GetSize() && Memory.IsGoodAddr(addr + GetStartAddr())) return mem + addr;
-
-	LOG_ERROR(MEMORY, "GetMem(0x%llx) from not allocated address.", addr);
-	assert(0);
-	return nullptr;
+	return MemoryBlock::GetMem(addr);
 }
 
 template<typename PT>
