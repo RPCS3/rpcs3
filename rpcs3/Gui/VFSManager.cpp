@@ -120,8 +120,14 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 {
 	m_list = new wxListView(this);
 
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK));
+	s_btns->AddSpacer(30);
+	s_btns->Add(new wxButton(this, wxID_CANCEL));
+
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 	s_main->Add(m_list, 1, wxEXPAND);
+       s_main->Add(s_btns,  0, wxALL | wxCENTER, 10);
 
 	SetSizerAndFit(s_main);
 	SetSize(800, 600);
@@ -136,7 +142,7 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 	Bind(wxEVT_MENU,         &VFSManagerDialog::OnAdd, this, id_add);
 	Bind(wxEVT_MENU,         &VFSManagerDialog::OnRemove, this, id_remove);
 	Bind(wxEVT_MENU,         &VFSManagerDialog::OnEntryConfig, this, id_config);
-	Bind(wxEVT_CLOSE_WINDOW, &VFSManagerDialog::OnClose, this);
+	Bind(wxEVT_CLOSE_WINDOW, &VFSManagerDialog::OnClose, this, wxID_OK);
 
 	LoadEntries();
 	UpdateList();

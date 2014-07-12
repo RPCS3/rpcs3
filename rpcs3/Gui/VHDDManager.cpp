@@ -382,8 +382,14 @@ VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 {
 	m_list = new wxListView(this);
 
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK));
+	s_btns->AddSpacer(30);
+	s_btns->Add(new wxButton(this, wxID_CANCEL));
+
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 	s_main->Add(m_list, 1, wxEXPAND | wxALL, 5);
+       s_main->Add(s_btns,  0, wxALL | wxCENTER, 10);
 
 	SetSizerAndFit(s_main);
 	SetSize(800, 600);
@@ -399,7 +405,7 @@ VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnOpen, this, id_open);
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnRemove, this, id_remove);
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnCreateHDD, this, id_create_hdd);
-	Bind(wxEVT_CLOSE_WINDOW, &VHDDManagerDialog::OnClose, this);
+	Bind(wxEVT_CLOSE_WINDOW, &VHDDManagerDialog::OnClose, this, wxID_OK);
 	LoadPaths();
 	UpdateList();
 }
