@@ -37,9 +37,7 @@ bool DynamicMemoryBlockBase<PT>::IsInMyRange(const u64 addr, const u32 size)
 template<typename PT>
 bool DynamicMemoryBlockBase<PT>::IsMyAddress(const u64 addr)
 {
-	if (!IsInMyRange(addr)) return false;
-
-	return Memory.IsGoodAddr(addr);
+	return IsInMyRange(addr);
 }
 
 template<typename PT>
