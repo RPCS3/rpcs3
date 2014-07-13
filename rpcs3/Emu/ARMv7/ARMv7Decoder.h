@@ -21,8 +21,8 @@ public:
 	virtual u8 DecodeMemory(const u64 address)
 	{
 		using namespace ARMv7_opcodes;
-		const u16 code0 = Memory.Read16(address);
-		const u16 code1 = Memory.Read16(address + 2);
+		const u16 code0 = Memory.PSV.Read16(address);
+		const u16 code1 = Memory.PSV.Read16(address + 2);
 
 		switch(code0 >> 12) //15 - 12
 		{

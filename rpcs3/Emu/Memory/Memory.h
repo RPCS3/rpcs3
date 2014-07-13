@@ -56,20 +56,43 @@ public:
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
-	struct
+	struct Reader32LE
+	{
+	private:
+		void* m_base_addr;
+
+	public:
+		Reader32LE() : m_base_addr(nullptr) {}
+
+		void Write8(const u32 addr, const u8 data) { *(u8*)((u64)m_base_addr + addr) = data; }
+		void Write16(const u32 addr, const u16 data) { *(u16*)((u64)m_base_addr + addr) = data; }
+		void Write32(const u32 addr, const u32 data) { *(u32*)((u64)m_base_addr + addr) = data; }
+		void Write64(const u32 addr, const u64 data) { *(u64*)((u64)m_base_addr + addr) = data; }
+		void Write128(const u32 addr, const u128 data) { *(u128*)((u64)m_base_addr + addr) = data; }
+
+		u8 Read8(const u32 addr) { return *(u8*)((u64)m_base_addr + addr); }
+		u16 Read16(const u32 addr) { return *(u16*)((u64)m_base_addr + addr); }
+		u32 Read32(const u32 addr) { return *(u32*)((u64)m_base_addr + addr); }
+		u64 Read64(const u32 addr) { return *(u64*)((u64)m_base_addr + addr); }
+		u128 Read128(const u32 addr) { return *(u128*)((u64)m_base_addr + addr); }
+
+		void Init(void* real_addr) { m_base_addr = real_addr; }
+	};
+
+	struct : Reader32LE
 	{
 		DynamicMemoryBlockLE RAM;
 		DynamicMemoryBlockLE Userspace;
-	} PSVMemory;
+	} PSV;
 
-	struct
+	struct : Reader32LE
 	{
 		DynamicMemoryBlockLE Scratchpad;
 		DynamicMemoryBlockLE VRAM;
 		DynamicMemoryBlockLE RAM;
 		DynamicMemoryBlockLE Kernel;
 		DynamicMemoryBlockLE Userspace;
-	} PSPMemory;
+	} PSP;
 
 	bool m_inited;
 
@@ -150,17 +173,26 @@ public:
 		return (T)ReverseData<sizeof(T)>(val);
 	};
 
-	u8* GetMemFromAddr(const u64 addr)
+	template<typename T> u8* GetMemFromAddr(const T addr)
 	{
-		return (u8*)GetBaseAddr() + addr;
+		if ((u32)addr == addr)
+		{
+			return (u8*)GetBaseAddr() + addr;
+		}
+		else
+		{
+			LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
+			assert(0);
+			return (u8*)GetBaseAddr();
+		}
 	}
 
-	void* VirtualToRealAddr(const u64 vaddr)
+	template<typename T> void* VirtualToRealAddr(const T vaddr)
 	{
-		return GetMemFromAddr(vaddr);
+		return GetMemFromAddr<T>(vaddr);
 	}
 
-	u64 RealToVirtualAddr(const void* addr)
+	u32 RealToVirtualAddr(const void* addr)
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
 		
@@ -237,16 +269,18 @@ public:
 		break;
 
 		case Memory_PSV:
-			MemoryBlocks.push_back(PSVMemory.RAM.SetRange(0x81000000, 0x10000000));
-			MemoryBlocks.push_back(UserMemory = PSVMemory.Userspace.SetRange(0x91000000, 0x10000000));
+			MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
+			MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
+			PSV.Init(GetBaseAddr());
 		break;
 
 		case Memory_PSP:
-			MemoryBlocks.push_back(PSPMemory.Scratchpad.SetRange(0x00010000, 0x00004000));
-			MemoryBlocks.push_back(PSPMemory.VRAM.SetRange(0x04000000, 0x00200000));
-			MemoryBlocks.push_back(PSPMemory.RAM.SetRange(0x08000000, 0x02000000));
-			MemoryBlocks.push_back(PSPMemory.Kernel.SetRange(0x88000000, 0x00800000));
-			MemoryBlocks.push_back(UserMemory = PSPMemory.Userspace.SetRange(0x08800000, 0x01800000));
+			MemoryBlocks.push_back(PSP.Scratchpad.SetRange(0x00010000, 0x00004000));
+			MemoryBlocks.push_back(PSP.VRAM.SetRange(0x04000000, 0x00200000));
+			MemoryBlocks.push_back(PSP.RAM.SetRange(0x08000000, 0x02000000));
+			MemoryBlocks.push_back(PSP.Kernel.SetRange(0x88000000, 0x00800000));
+			MemoryBlocks.push_back(UserMemory = PSP.Userspace.SetRange(0x08800000, 0x01800000));
+			PSP.Init(GetBaseAddr());
 		break;
 		}
 
@@ -473,13 +507,13 @@ public:
 		return false;
 	}
 
-	u8* operator + (const u64 vaddr)
+	template<typename T> u8* operator + (const T vaddr)
 	{
-		u8* ret = GetMemFromAddr(vaddr);
+		u8* ret = GetMemFromAddr<T>(vaddr);
 		return ret;
 	}
 
-	u8& operator[] (const u64 vaddr)
+	template<typename T> u8& operator[] (const T vaddr)
 	{
 		return *(*this + vaddr);
 	}

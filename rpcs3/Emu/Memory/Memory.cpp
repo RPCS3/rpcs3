@@ -369,7 +369,7 @@ void MemoryBase::Write8(u64 addr, const u8 data)
 {
 	if ((u32)addr == addr)
 	{
-		*(u8*)((u64)GetBaseAddr() + addr) = data;
+		*(u8*)((u8*)GetBaseAddr() + addr) = data;
 	}
 	else
 	{
@@ -382,7 +382,7 @@ void MemoryBase::Write16(u64 addr, const u16 data)
 {
 	if ((u32)addr == addr)
 	{
-		*(u16*)((u64)GetBaseAddr() + addr) = re16(data);
+		*(u16*)((u8*)GetBaseAddr() + addr) = re16(data);
 	}
 	else
 	{
@@ -397,7 +397,7 @@ void MemoryBase::Write32(u64 addr, const u32 data)
 	{
 		if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
 		{
-			*(u32*)((u64)GetBaseAddr() + addr) = re32(data);
+			*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
 		}
 		else
 		{
@@ -415,7 +415,7 @@ void MemoryBase::Write64(u64 addr, const u64 data)
 {
 	if ((u32)addr == addr)
 	{
-		*(u64*)((u64)GetBaseAddr() + addr) = re64(data);
+		*(u64*)((u8*)GetBaseAddr() + addr) = re64(data);
 	}
 	else
 	{
@@ -428,7 +428,7 @@ void MemoryBase::Write128(u64 addr, const u128 data)
 {
 	if ((u32)addr == addr)
 	{
-		*(u128*)((u64)GetBaseAddr() + addr) = re128(data);
+		*(u128*)((u8*)GetBaseAddr() + addr) = re128(data);
 	}
 	else
 	{
@@ -476,7 +476,7 @@ u8 MemoryBase::Read8(u64 addr)
 {
 	if ((u32)addr == addr)
 	{
-		return *(u8*)((u64)GetBaseAddr() + addr);
+		return *(u8*)((u8*)GetBaseAddr() + addr);
 	}
 	else
 	{
@@ -490,7 +490,7 @@ u16 MemoryBase::Read16(u64 addr)
 {
 	if ((u32)addr == addr)
 	{
-		return re16(*(u16*)((u64)GetBaseAddr() + addr));
+		return re16(*(u16*)((u8*)GetBaseAddr() + addr));
 	}
 	else
 	{
@@ -506,7 +506,7 @@ u32 MemoryBase::Read32(u64 addr)
 	{
 		if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
 		{
-			return re32(*(u32*)((u64)GetBaseAddr() + addr));
+			return re32(*(u32*)((u8*)GetBaseAddr() + addr));
 		}
 		else
 		{
@@ -527,7 +527,7 @@ u64 MemoryBase::Read64(u64 addr)
 {
 	if ((u32)addr == addr)
 	{
-		return re64(*(u64*)((u64)GetBaseAddr() + addr));
+		return re64(*(u64*)((u8*)GetBaseAddr() + addr));
 	}
 	else
 	{
@@ -541,7 +541,7 @@ u128 MemoryBase::Read128(u64 addr)
 {
 	if ((u32)addr == addr)
 	{
-		return re128(*(u128*)((u64)GetBaseAddr() + addr));
+		return re128(*(u128*)((u8*)GetBaseAddr() + addr));
 	}
 	else
 	{
