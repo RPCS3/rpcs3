@@ -104,14 +104,31 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 s32 sys_timer_sleep(u32 sleep_time)
 {
 	sys_timer.Warning("sys_timer_sleep(sleep_time=%d)", sleep_time);
-	std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+	for (u32 i = 0; i < sleep_time; i++)
+	{
+		if (Emu.IsStopped())
+		{
+			sys_timer.Warning("sys_timer_sleep(sleep_time=%d)", sleep_time);
+			return CELL_OK;
+		}
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
 	return CELL_OK;
 }
 
 s32 sys_timer_usleep(u64 sleep_time)
 {
-	sys_timer.Log("sys_timer_usleep(sleep_time=%lld)", sleep_time);
+	sys_timer.Warning("sys_timer_usleep(sleep_time=%lld)", sleep_time);
 	if (sleep_time > 0xFFFFFFFFFFFF) sleep_time = 0xFFFFFFFFFFFF; //2^48-1
-	std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));
+	for (u64 i = 0; i < sleep_time; i += 1000000)
+	{
+		if (Emu.IsStopped())
+		{
+			sys_timer.Warning("sys_timer_usleep(sleep_time=%lld)", sleep_time);
+			return CELL_OK;
+		}
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+	std::this_thread::sleep_for(std::chrono::microseconds(sleep_time % 1000000));
 	return CELL_OK;
 }

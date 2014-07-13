@@ -205,20 +205,19 @@ s32 sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, s32 prio, u32 s
 	return CELL_OK;
 }
 
-void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
+void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 {
-	sysPrxForUser->Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl_addr, entry);
+	sysPrxForUser->Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl.GetAddr(), entry);
 
-	if(Memory.IsGoodAddr(once_ctrl_addr, 4) && Memory.Read32(once_ctrl_addr) == SYS_PPU_THREAD_ONCE_INIT)
+	be_t<u32> old = SYS_PPU_THREAD_ONCE_INIT;
+	if (once_ctrl->compare_exchange_weak(old, SYS_PPU_THREAD_DONE_INIT))
 	{
-		Memory.Write32(once_ctrl_addr, SYS_PPU_THREAD_DONE_INIT);
-
 		CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		new_thread.SetEntry(entry);
 		new_thread.Run();
 		new_thread.Exec();
 
-		//GetCurrentPPUThread().Wait(new_thread);
+		while (new_thread.IsAlive()) SM_Sleep();
 	}
 }
 

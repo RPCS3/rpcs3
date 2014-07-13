@@ -597,7 +597,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq_id, u32 et, u8 spup)
 		return CELL_EINVAL;
 	}
 
-	// TODO: check if can receive this events
+	// TODO: check if can receive these events
 
 	SPUThread& spu = *(SPUThread*)thr;
 
@@ -706,51 +706,82 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr)
+s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, mem8_t spup)
 {
-	sc_spu.Error("sys_spu_thread_group_connect_event_all_threads(id=%d, eq=%d, req=0x%llx, spup_addr=0x%x)",
-		id, eq, req, spup_addr);
+	sc_spu.Warning("sys_spu_thread_group_connect_event_all_threads(id=%d, eq_id=%d, req=0x%llx, spup_addr=0x%x)",
+		id, eq_id, req, spup.GetAddr());
 
-	EventQueue* equeue;
-	if(!sys_event.CheckId(eq, equeue))
+	if (!spup.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	EventQueue* eq;
+	if (!Emu.GetIdManager().GetIDData(eq_id, eq))
 	{
 		return CELL_ESRCH;
 	}
 
-	if(!req)
+	if (!req)
 	{
 		return CELL_EINVAL;
 	}
 
 	SpuGroupInfo* group;
-	if(!Emu.GetIdManager().GetIDData(id, group))
+	if (!Emu.GetIdManager().GetIDData(id, group))
 	{
 		return CELL_ESRCH;
 	}
-	
-	/*
-	for(u32 i=0; i<group->list.size(); ++i)
+
+	std::vector<SPUThread*> threads;
+	for (auto& v : group->list)
 	{
-		CPUThread* t;
-		if(t = Emu.GetCPU().GetThread(group->list[i]))
+		if (!v) continue;
+		CPUThread* thr = Emu.GetCPU().GetThread(v);
+		if (thr->GetType() != CPU_THREAD_SPU)
 		{
-			bool finded_port = false;
-			for(int j=0; j<equeue->pos; ++j)
+			sc_spu.Error("sys_spu_thread_group_connect_event_all_threads(): CELL_ESTAT (wrong thread type)");
+			return CELL_ESTAT;
+		}
+		threads.push_back((SPUThread*)thr);
+	}
+
+	if (threads.size() != group->m_count)
+	{
+		sc_spu.Error("sys_spu_thread_group_connect_event_all_threads(): CELL_ESTAT (%d from %d)", (u32)threads.size(), group->m_count);
+		return CELL_ESTAT;
+	}
+
+	for (u32 i = 0; i < 64; i++) // port number
+	{
+		bool found = true;
+		if (req & (1ull << i))
+		{
+			for (auto& t : threads) t->SPUPs[i].m_mutex.lock();
+
+			for (auto& t : threads) if (t->SPUPs[i].eq) found = false;
+
+			if (found)
 			{
-				if(!equeue->ports[j]->thread)
+				for (auto& t : threads)
 				{
-					finded_port = true;
-					equeue->ports[j]->thread = t;
+					eq->ports.add(&(t->SPUPs[i]));
+					t->SPUPs[i].eq = eq;
 				}
+				spup = (u8)i;
 			}
 
-			if(!finded_port)
-			{
-				return CELL_EISCONN;
-			}
+			for (auto& t : threads) t->SPUPs[i].m_mutex.unlock();
 		}
-	}*/
-	return CELL_OK;
+		else
+		{
+			found = false;
+		}
+
+		if (found) return CELL_OK;
+	}
+
+	return CELL_EISCONN;
 }
 
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)

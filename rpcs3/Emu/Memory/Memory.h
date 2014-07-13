@@ -56,36 +56,36 @@ public:
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
-	struct Reader32LE
+	struct Wrapper32LE
 	{
 	private:
 		void* m_base_addr;
 
 	public:
-		Reader32LE() : m_base_addr(nullptr) {}
+		Wrapper32LE() : m_base_addr(nullptr) {}
 
-		void Write8(const u32 addr, const u8 data) { *(u8*)((u64)m_base_addr + addr) = data; }
-		void Write16(const u32 addr, const u16 data) { *(u16*)((u64)m_base_addr + addr) = data; }
-		void Write32(const u32 addr, const u32 data) { *(u32*)((u64)m_base_addr + addr) = data; }
-		void Write64(const u32 addr, const u64 data) { *(u64*)((u64)m_base_addr + addr) = data; }
-		void Write128(const u32 addr, const u128 data) { *(u128*)((u64)m_base_addr + addr) = data; }
+		void Write8(const u32 addr, const u8 data) { *(u8*)((u8*)m_base_addr + addr) = data; }
+		void Write16(const u32 addr, const u16 data) { *(u16*)((u8*)m_base_addr + addr) = data; }
+		void Write32(const u32 addr, const u32 data) { *(u32*)((u8*)m_base_addr + addr) = data; }
+		void Write64(const u32 addr, const u64 data) { *(u64*)((u8*)m_base_addr + addr) = data; }
+		void Write128(const u32 addr, const u128 data) { *(u128*)((u8*)m_base_addr + addr) = data; }
 
-		u8 Read8(const u32 addr) { return *(u8*)((u64)m_base_addr + addr); }
-		u16 Read16(const u32 addr) { return *(u16*)((u64)m_base_addr + addr); }
-		u32 Read32(const u32 addr) { return *(u32*)((u64)m_base_addr + addr); }
-		u64 Read64(const u32 addr) { return *(u64*)((u64)m_base_addr + addr); }
-		u128 Read128(const u32 addr) { return *(u128*)((u64)m_base_addr + addr); }
+		u8 Read8(const u32 addr) { return *(u8*)((u8*)m_base_addr + addr); }
+		u16 Read16(const u32 addr) { return *(u16*)((u8*)m_base_addr + addr); }
+		u32 Read32(const u32 addr) { return *(u32*)((u8*)m_base_addr + addr); }
+		u64 Read64(const u32 addr) { return *(u64*)((u8*)m_base_addr + addr); }
+		u128 Read128(const u32 addr) { return *(u128*)((u8*)m_base_addr + addr); }
 
 		void Init(void* real_addr) { m_base_addr = real_addr; }
 	};
 
-	struct : Reader32LE
+	struct : Wrapper32LE
 	{
 		DynamicMemoryBlockLE RAM;
 		DynamicMemoryBlockLE Userspace;
 	} PSV;
 
-	struct : Reader32LE
+	struct : Wrapper32LE
 	{
 		DynamicMemoryBlockLE Scratchpad;
 		DynamicMemoryBlockLE VRAM;
