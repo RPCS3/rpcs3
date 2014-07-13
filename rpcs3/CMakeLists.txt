@@ -31,7 +31,7 @@ if (NOT MSVC)
 endif()
 
 if (APPLE)
-	set(CMAKE_CXX_FLAGS “${CMAKE_CXX_FLAGS} -I/opt/include/X11”)
+	set(CMAKE_CXX_FLAGS “${CMAKE_CXX_FLAGS} -I/opt/X11/include”)
 	set(CMAKE_C_FLAGS “${CMAKE_C_FLAGS} -I/opt/X11/include”)
 endif()
 
