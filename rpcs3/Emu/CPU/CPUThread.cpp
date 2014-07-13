@@ -341,7 +341,7 @@ void CPUThread::Task()
 		}
 
 		Step();
-		trace.push_back(PC);
+		//if (PC - 0x13ED4 < 0x288) trace.push_back(PC);
 		NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 		if (status == CPUThread_Step)
