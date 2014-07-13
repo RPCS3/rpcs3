@@ -31,8 +31,8 @@ if (NOT MSVC)
 endif()
 
 if (APPLE)
-	set(CMAKE_CXX_FLAGS “${CMAKE_CXX_FLAGS} -I/opt/X11/include”)
-	set(CMAKE_C_FLAGS “${CMAKE_C_FLAGS} -I/opt/X11/include”)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/X11/include")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/opt/X11/include")
 endif()
 
 If( NOT RPCS3_SRC_DIR)
