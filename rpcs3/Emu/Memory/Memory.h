@@ -10,11 +10,7 @@
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
-    #ifdef MAP_ANON
-        #define MAP_ANONYMOUS MAP_ANON
-    #else
-        #define MAP_ANONYMOUS 0
-    #endif
+	#define MAP_ANONYMOUS MAP_ANON
 #endif
 
 using std::nullptr_t;
