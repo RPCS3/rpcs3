@@ -153,7 +153,7 @@ bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
 
 bool rFile::Exists(const std::string &file)
 {
-	rExists(file);
+	return rExists(file);
 }
 
 bool rFile::IsOpened() const
