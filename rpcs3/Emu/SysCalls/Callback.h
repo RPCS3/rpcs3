@@ -15,6 +15,7 @@ public:
 	u64 a2;
 	u64 a3;
 	u64 a4;
+	u64 a5;
 
 	u32 GetSlot() const;
 	u64 GetAddr() const;
@@ -23,7 +24,7 @@ public:
 	bool HasData() const;
 
 	Callback(u32 slot = 0, u64 addr = 0);
-	void Handle(u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0);
+	void Handle(u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0, u64 a5 = 0);
 	u64 Branch(bool wait);
 	void SetName(const std::string& name);
 
