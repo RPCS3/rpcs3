@@ -13,12 +13,19 @@
 static const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
-: m_enc(new SPURecompiler(cpu, *this))
-, inter(new SPUInterpreter(cpu))
-, CPU(cpu)
-, first(true)
+	: m_enc(new SPURecompiler(cpu, *this))
+	, inter(new SPUInterpreter(cpu))
+	, CPU(cpu)
+	, first(true)
 {
 	memset(entry, 0, sizeof(entry));
+	X86CpuInfo inf;
+	X86CpuUtil::detect(&inf);
+	if (!inf.hasFeature(kX86CpuFeatureSse41))
+	{
+		LOG_ERROR(SPU, "SPU Recompiler requires SSE4.1 instruction set support");
+		Emu.Pause();
+	}
 }
 
 SPURecompilerCore::~SPURecompilerCore()

@@ -44,7 +44,7 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	if (!utf16.IsGood() || !utf16_len.IsGood() || !utf8_len.IsGood())
 		return SRCIllegal;
 
-	std::u16string wstr =(char16_t*)Memory.VirtualToRealAddr(utf16);
+	std::u16string wstr =(char16_t*)Memory.VirtualToRealAddr(utf16.GetAddr());
 	wstr.resize(utf16_len.GetValue()); // TODO: Is this really the role of utf16_len in this function?
 #ifdef _MSC_VER
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
