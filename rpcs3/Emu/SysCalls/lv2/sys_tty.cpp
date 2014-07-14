@@ -9,7 +9,7 @@ s32 sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr)
 {
 	// We currently do not support reading from the Console
 	LOG_WARNING(HLE, "sys_tty_read: ch: %d, buf addr: %llx, len: %d", ch, buf_addr, len);
-	Memory.Write32NN(preadlen_addr, len);
+	Memory.Write32(preadlen_addr, len);
 	Emu.Pause();
 
 	return CELL_OK;

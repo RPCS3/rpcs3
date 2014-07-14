@@ -531,7 +531,8 @@ int cellSurMixerStart()
 
 int cellSurMixerSetParameter(u32 param, float value)
 {
-	libmixer->Error("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
+	declCPU();
+	libmixer->Error("cellSurMixerSetParameter(param=0x%x, value=%f, FPR[1]=%f, FPR[2]=%f)", param, value, (float&)CPU.FPR[1], (float&)CPU.FPR[2]);
 	return CELL_OK;
 }
 
@@ -559,8 +560,7 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 	}
 	else
 	{
-		libmixer->Error("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
-		Emu.Pause();
+		libmixer->Error("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d): unknown parameters", busNo, offset, addr, samples);
 		return CELL_OK;
 	}
 
