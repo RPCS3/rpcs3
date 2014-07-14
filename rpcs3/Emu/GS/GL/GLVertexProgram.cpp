@@ -643,9 +643,8 @@ void GLVertexProgram::Compile()
 
 		if(r)
 		{
-			char* buf = new char[r+1];
+			char* buf = new char[r+1]();
 			GLsizei len;
-			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
 			LOG_ERROR(RSX, "Failed to compile vertex shader: %s", buf);
 			delete[] buf;

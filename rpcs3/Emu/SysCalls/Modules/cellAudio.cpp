@@ -21,6 +21,8 @@ static const bool g_is_u16 = Ini.AudioConvertToU16.GetValue();
 
 // libaudio Functions
 
+#define BUFFER_NUM 32
+#define BUFFER_SIZE 256
 int cellAudioInit()
 {
 	cellAudio->Warning("cellAudioInit()");
@@ -57,30 +59,25 @@ int cellAudioInit()
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
 
-			float buf2ch[2 * 256]; // intermediate buffer for 2 channels
-			float buf8ch[8 * 256]; // intermediate buffer for 8 channels
+			float buf2ch[2 * BUFFER_SIZE]; // intermediate buffer for 2 channels
+			float buf8ch[8 * BUFFER_SIZE]; // intermediate buffer for 8 channels
 
 			uint oal_buffer_offset = 0;
-			const uint oal_buffer_size = sizeof(buf2ch) / sizeof(float);
+			const uint oal_buffer_size = 2 * BUFFER_SIZE;
 
-			std::unique_ptr<s16[]> oal_buffer[32];
-			SQueue<s16*, 31> queue;
+			std::unique_ptr<s16[]> oal_buffer[BUFFER_NUM];
+			std::unique_ptr<float[]> oal_buffer_float[BUFFER_NUM];
 
-			std::unique_ptr<float[]> oal_buffer_float[32];
-			SQueue<float*, 31> queue_float;
-
-			for (u32 i = 0; i < sizeof(oal_buffer) / sizeof(oal_buffer[0]); i++)
+			for (u32 i = 0; i < BUFFER_NUM; i++)
 			{
-				oal_buffer[i] = std::unique_ptr<s16[]>(new s16[oal_buffer_size]);
-				memset(oal_buffer[i].get(), 0, oal_buffer_size * sizeof(s16));
+				oal_buffer[i] = std::unique_ptr<s16[]>(new s16[oal_buffer_size] {} );
+				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size] {} );
 			}
+
+			SQueue<s16*, 31> queue;
 			queue.Clear();
 
-			for (u32 i = 0; i < sizeof(oal_buffer_float) / sizeof(oal_buffer_float[0]); i++)
-			{
-				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size]);
-				memset(oal_buffer_float[i].get(), 0, oal_buffer_size * sizeof(float));
-			}
+			SQueue<float*, 31> queue_float;
 			queue_float.Clear();
 
 			std::vector<u64> keys;
@@ -89,10 +86,11 @@ int cellAudioInit()
 			{
 				m_audio_out->Init();
 
+				// Note: What if the ini value changes?
 				if (g_is_u16)
 					m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(s16));
-				
-				m_audio_out->Open(oal_buffer_float[0].get(), oal_buffer_size * sizeof(float));
+				else
+					m_audio_out->Open(oal_buffer_float[0].get(), oal_buffer_size * sizeof(float));
 			}
 
 			m_config.start_time = get_system_time();
@@ -108,34 +106,27 @@ int cellAudioInit()
 
 					if (g_is_u16)
 						queue.Pop(oal_buffer);
+					else
+						queue_float.Pop(oal_buffer_float);
 
-					queue_float.Pop(oal_buffer_float);
-					
 					if (g_is_u16)
 					{
 						if (oal_buffer)
 						{
 							m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(s16));
-						}
-						else
-						{
-							internal_finished = true;
-							return;
+							continue;
 						}
 					}
-
 					else
 					{
 						if (oal_buffer_float)
 						{
 							m_audio_out->AddData(oal_buffer_float, oal_buffer_size * sizeof(float));
-						}
-						else
-						{
-							internal_finished = true;
-							return;
+							continue;
 						}
 					}
+					internal_finished = true;
+					return;
 				}
 			});
 			iat.detach();
@@ -161,8 +152,8 @@ int cellAudioInit()
 
 				m_config.counter++;
 
-				const u32 oal_pos = m_config.counter % (sizeof(oal_buffer) / sizeof(oal_buffer[0]));
-				const u32 oal_pos_float = m_config.counter % (sizeof(oal_buffer_float) / sizeof(oal_buffer_float[0]));
+				const u32 oal_pos = m_config.counter % BUFFER_NUM;
+				const u32 oal_pos_float = m_config.counter % BUFFER_NUM;
 
 				if (Emu.IsPaused())
 				{
