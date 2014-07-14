@@ -148,8 +148,7 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
-	CellVideoOutState state;
-	memset(&state, 0, sizeof(CellVideoOutState));
+	CellVideoOutState state = {};
 
 	switch(videoOut)
 	{
@@ -246,8 +245,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 
 	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
 
-	CellVideoOutConfiguration config;
-	memset(&config, 0, sizeof(CellVideoOutConfiguration));
+	CellVideoOutConfiguration config = {};
 
 	switch(videoOut)
 	{
@@ -471,8 +469,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 {
 	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x,deviceIndex=0x%x,state_addr=0x%x)",audioOut,deviceIndex,state_addr);
-	CellAudioOutState state;
-	memset(&state, 0, sizeof(CellAudioOutState));
+	CellAudioOutState state = {};
 
 	switch(audioOut)
 	{
@@ -541,8 +538,7 @@ int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
 
 	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration))) return CELL_EFAULT;
 
-	CellAudioOutConfiguration config;
-	memset(&config, 0, sizeof(CellAudioOutConfiguration));
+	CellAudioOutConfiguration config = {};
 
 	switch(audioOut)
 	{

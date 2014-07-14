@@ -159,13 +159,11 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->reserved2 = 0;
 
 	u64 stamp0 = get_system_time();
-	
-	u8* pY = (u8*)malloc(w*h); // color planes
-	u8* pU = (u8*)malloc(w*h/4);
-	u8* pV = (u8*)malloc(w*h/4);
-	u8* pA = (u8*)malloc(w*h);
-	u32* res = (u32*)malloc(ow*oh*4); // RGBA interleaved output
-	const u8 alpha = ctrlParam->outAlpha;
+	auto pY = std::unique_ptr<u8[]>{ new u8[w*h] }.get(); // color planes
+	auto pU = std::unique_ptr<u8[]>{ new u8[w*h/4] }.get();
+	auto pV = std::unique_ptr<u8[]>{ new u8[w*h/4] }.get();
+	auto pA = std::unique_ptr<u8[]>{ new u8[w*h] }.get();
+	auto res = std::unique_ptr<u32[]>{ new u32[ow*oh*4] }.get(); // RGBA interleaved output
 
 	if (!Memory.CopyToReal(pY, inPicBuff_addr, w*h))
 	{
@@ -185,7 +183,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		Emu.Pause();
 	}
 
-	memset(pA, alpha, w*h);
+	memset(pA, (const u8)ctrlParam->outAlpha, w*h);
 
 	u64 stamp1 = get_system_time();
 
@@ -209,12 +207,6 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		cellVpost->Error("cellVpostExec: data copying failed(result)");
 		Emu.Pause();
 	}
-
-	free(pY);
-	free(pU);
-	free(pV);
-	free(pA);
-	free(res);
 
 	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
 		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);

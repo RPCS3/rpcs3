@@ -110,8 +110,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	if(port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
 
 	Pad& pad = pads[port_no];
-	CellPadData data;
-	memset(&data, 0, sizeof(CellPadData));
+	CellPadData data = {};
 
 	u16 d1Initial, d2Initial; 
 	d1Initial = pad.m_digital_1;
@@ -301,8 +300,7 @@ int cellPadGetInfo(u32 info_addr)
 	sys_io->Log("cellPadGetInfo(info_addr=0x%x)", info_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
-	CellPadInfo info;
-	memset(&info, 0, sizeof(CellPadInfo));
+	CellPadInfo info = {};
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	info.max_connect = rinfo.max_connect;
@@ -333,8 +331,7 @@ int cellPadGetInfo2(u32 info_addr)
 	sys_io->Log("cellPadGetInfo2(info_addr=0x%x)", info_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
-	CellPadInfo2 info;
-	memset(&info, 0, sizeof(CellPadInfo2));
+	CellPadInfo2 info = {};
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	info.max_connect = rinfo.max_connect;
@@ -370,8 +367,7 @@ int cellPadGetCapabilityInfo(u32 port_no, mem32_t info_addr)
 
 	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
-	CellCapabilityInfo data;
-	memset(&data, 0, sizeof(CellCapabilityInfo));
+	CellCapabilityInfo data = {};
 
 	//Should return the same as device capability mask, psl1ght has it backwards in pad.h
 	data.info[0] = pads[port_no].m_device_capability;
