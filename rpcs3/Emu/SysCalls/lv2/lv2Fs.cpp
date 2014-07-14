@@ -19,17 +19,9 @@ enum
 	IDFlag_Dir = 2,
 };
 
-struct FsRingBuffer
-{
-	u64 m_ringbuf_size;
-	u64 m_block_size;
-	u64 m_transfer_rate;
-	u32 m_copy;
-};
-
 struct FsRingBufferConfig
 {
-	FsRingBuffer m_ring_buffer;
+	CellFsRingBuffer m_ring_buffer; // Currently unused after assignment
 	u32 m_buffer;
 	u64 m_fs_status;
 	u64 m_regid;
@@ -41,15 +33,9 @@ struct FsRingBufferConfig
 		, m_regid(0)
 		, m_alloc_mem_size(0)
 		, m_current_addr(0)
-	{
-		memset(&m_ring_buffer, 0, sizeof(FsRingBuffer));
-	}
+		, m_ring_buffer() { }
 
-	~FsRingBufferConfig()
-	{
-		memset(&m_ring_buffer, 0, sizeof(FsRingBuffer));
-	}
-} m_fs_config;
+} fs_config;
 
 
 s32 cellFsOpen(u32 path_addr, s32 flags, mem32_t fd, mem32_t arg, u64 size)
@@ -563,22 +549,17 @@ s32 cellFsStReadInit(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
 	if(!ringbuf.IsGood())
 		return CELL_EFAULT;
 
-	FsRingBuffer& buffer = m_fs_config.m_ring_buffer;
+	fs_config.m_ring_buffer = *ringbuf;
 
-	buffer.m_block_size = ringbuf->block_size;
-	buffer.m_copy = ringbuf->copy;
-	buffer.m_ringbuf_size = ringbuf->ringbuf_size;
-	buffer.m_transfer_rate = ringbuf->transfer_rate;
-
-	if(buffer.m_ringbuf_size < 0x40000000) // If the size is less than 1MB
-		m_fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
-	m_fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+	if(ringbuf->ringbuf_size < 0x40000000) // If the size is less than 1MB
+		fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
+	fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
 
 	// alloc memory
-	m_fs_config.m_buffer = Memory.Alloc(m_fs_config.m_alloc_mem_size, 1024);
-	memset(Memory + m_fs_config.m_buffer, 0, m_fs_config.m_alloc_mem_size);
+	fs_config.m_buffer = Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
+	memset(Memory + fs_config.m_buffer, 0, fs_config.m_alloc_mem_size);
 
-	m_fs_config.m_fs_status = CELL_FS_ST_INITIALIZED;
+	fs_config.m_fs_status = CELL_FS_ST_INITIALIZED;
 
 	return CELL_OK;
 }
@@ -590,8 +571,8 @@ s32 cellFsStReadFinish(u32 fd)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	Memory.Free(m_fs_config.m_buffer);
-	m_fs_config.m_fs_status = CELL_FS_ST_NOT_INITIALIZED;
+	Memory.Free(fs_config.m_buffer);
+	fs_config.m_fs_status = CELL_FS_ST_NOT_INITIALIZED;
 
 	return CELL_OK;
 }
@@ -606,15 +587,10 @@ s32 cellFsStReadGetRingBuf(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
 	if(!ringbuf.IsGood())
 		return CELL_EFAULT;
 
-	FsRingBuffer& buffer = m_fs_config.m_ring_buffer;
+	*ringbuf = fs_config.m_ring_buffer;
 
-	ringbuf->block_size = buffer.m_block_size;
-	ringbuf->copy = buffer.m_copy;
-	ringbuf->ringbuf_size = buffer.m_ringbuf_size;
-	ringbuf->transfer_rate = buffer.m_transfer_rate;
-
-	sys_fs->Warning("*** fs stream config: block_size=0x%llx, copy=%d, ringbuf_size = 0x%llx, transfer_rate = 0x%llx", ringbuf->block_size, ringbuf->copy,
-																								ringbuf->ringbuf_size, ringbuf->transfer_rate);
+	sys_fs->Warning("*** fs stream config: block_size=0x%llx, copy=%d, ringbuf_size = 0x%llx, transfer_rate = 0x%llx",
+		ringbuf->block_size, ringbuf->copy,ringbuf->ringbuf_size, ringbuf->transfer_rate);
 	return CELL_OK;
 }
 
@@ -625,7 +601,7 @@ s32 cellFsStReadGetStatus(u32 fd, mem64_t status)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	status = m_fs_config.m_fs_status;
+	status = fs_config.m_fs_status;
 
 	return CELL_OK;
 }
@@ -637,7 +613,7 @@ s32 cellFsStReadGetRegid(u32 fd, mem64_t regid)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	regid = m_fs_config.m_regid;
+	regid = fs_config.m_regid;
 
 	return CELL_OK;
 }
@@ -649,8 +625,8 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	m_fs_config.m_current_addr = m_fs_config.m_buffer + (u32)offset;
-	m_fs_config.m_fs_status = CELL_FS_ST_PROGRESS;
+	fs_config.m_current_addr = fs_config.m_buffer + (u32)offset;
+	fs_config.m_fs_status = CELL_FS_ST_PROGRESS;
 
 	return CELL_OK;
 }
@@ -662,7 +638,7 @@ s32 cellFsStReadStop(u32 fd)
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	m_fs_config.m_fs_status = CELL_FS_ST_STOP;
+	fs_config.m_fs_status = CELL_FS_ST_STOP;
 
 	return CELL_OK;
 }
@@ -676,8 +652,8 @@ s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize)
 
 	if (rsize.GetAddr() && !rsize.IsGood()) return CELL_EFAULT;
 
-	m_fs_config.m_regid += size;
-	rsize = m_fs_config.m_regid;
+	fs_config.m_regid += size;
+	rsize = fs_config.m_regid;
 
 	return CELL_OK;
 }
