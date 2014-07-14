@@ -477,8 +477,6 @@ protected:
 		m_clear_s = 0;
 		m_poly_offset_scale_factor = 0.0;
 		m_poly_offset_bias = 0.0;
-		m_depth_bounds_min = 0.0;
-		m_depth_bounds_max = 1.0;
 		m_restart_index = 0xffffffff;
 		m_front_polygon_mode = 0x1b02; // GL_FILL
 		m_back_polygon_mode = 0x1b02; // GL_FILL
@@ -571,7 +569,6 @@ protected:
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
-		m_set_surface_format = false;
 		m_set_context_dma_color_a = false;
 		m_set_context_dma_color_b = false;
 		m_set_context_dma_color_c = false;
