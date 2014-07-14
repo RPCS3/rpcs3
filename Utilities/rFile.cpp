@@ -153,13 +153,7 @@ bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
 
 bool rFile::Exists(const std::string &file)
 {
-#ifdef _WIN32
-	std::wstring wstr = ConvertUTF8ToWString(file);
-	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
-#else
-	struct stat buffer;   
-	return (stat (file.c_str(), &buffer) == 0); 
-#endif
+	rExists(file);
 }
 
 bool rFile::IsOpened() const
@@ -212,6 +206,27 @@ bool rRmdir(const std::string &dir)
 	return true;
 #else
 	rmdir(dir.c_str());
+#endif
+}
+
+bool rRename(const std::string &from, const std::string &to)
+{
+	// TODO: Deal with case-sensitivity
+#ifdef _WIN32
+	return (MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()) == TRUE);
+#else
+	return (0 == rename(from.c_str(), to.c_str()));
+#endif
+}
+
+bool rExists(const std::string &file)
+{
+#ifdef _WIN32
+	std::wstring wstr = ConvertUTF8ToWString(file);
+	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
+#else
+	struct stat buffer;
+	return (stat (file.c_str(), &buffer) == 0);
 #endif
 }
 
@@ -287,8 +302,6 @@ bool rDir::GetNext(std::string *filename) const
 	*filename = str.ToStdString();
 	return res;
 }
-
-	
 	
 rFileName::rFileName()
 {
