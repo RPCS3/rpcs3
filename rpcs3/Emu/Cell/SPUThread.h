@@ -362,7 +362,7 @@ public:
 
 		void Init()
 		{
-			m_index = 0;
+			m_indval = 0;
 		}
 
 		__forceinline bool Pop(u32& res)

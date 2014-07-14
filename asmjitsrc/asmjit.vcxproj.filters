@@ -1,34 +1,58 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86assembler.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86compiler.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86context.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86cpuinfo.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86func.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\contrib\winremoteruntime.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\assembler.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\codegen.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\compiler.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\base\constpool.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\base\containers.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\context.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\cpuinfo.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\cputicks.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\error.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\globals.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\base\intutil.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\logger.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\base\podvector.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\base\operand.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\runtime.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\string.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\vmem.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\base\zone.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\base\constpool.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\base\operand.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86assembler.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86compiler.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86context.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86cpuinfo.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\x86\x86inst.cpp" />
     <ClCompile Include="..\asmjit\src\asmjit\x86\x86operand.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86regs.cpp" />
-    <ClCompile Include="..\asmjit\src\asmjit\x86\x86util.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86operand_regs.cpp" />
+    <ClCompile Include="..\asmjit\src\asmjit\x86\x86scheduler.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86assembler.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86compiler.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86context_p.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86cpuinfo.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86inst.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86operand.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\x86\x86scheduler_p.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\assembler.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\codegen.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\compiler.h" />
     <ClInclude Include="..\asmjit\src\asmjit\base\constpool.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\containers.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\context_p.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\cpuinfo.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\cputicks.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\error.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\globals.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\intutil.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\lock.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\logger.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\operand.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\runtime.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\string.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\vectypes.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\vmem.h" />
+    <ClInclude Include="..\asmjit\src\asmjit\base\zone.h" />
   </ItemGroup>
 </Project>

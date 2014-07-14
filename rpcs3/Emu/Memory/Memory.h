@@ -52,20 +52,43 @@ public:
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
-	struct
+	struct Wrapper32LE
+	{
+	private:
+		void* m_base_addr;
+
+	public:
+		Wrapper32LE() : m_base_addr(nullptr) {}
+
+		void Write8(const u32 addr, const u8 data) { *(u8*)((u8*)m_base_addr + addr) = data; }
+		void Write16(const u32 addr, const u16 data) { *(u16*)((u8*)m_base_addr + addr) = data; }
+		void Write32(const u32 addr, const u32 data) { *(u32*)((u8*)m_base_addr + addr) = data; }
+		void Write64(const u32 addr, const u64 data) { *(u64*)((u8*)m_base_addr + addr) = data; }
+		void Write128(const u32 addr, const u128 data) { *(u128*)((u8*)m_base_addr + addr) = data; }
+
+		u8 Read8(const u32 addr) { return *(u8*)((u8*)m_base_addr + addr); }
+		u16 Read16(const u32 addr) { return *(u16*)((u8*)m_base_addr + addr); }
+		u32 Read32(const u32 addr) { return *(u32*)((u8*)m_base_addr + addr); }
+		u64 Read64(const u32 addr) { return *(u64*)((u8*)m_base_addr + addr); }
+		u128 Read128(const u32 addr) { return *(u128*)((u8*)m_base_addr + addr); }
+
+		void Init(void* real_addr) { m_base_addr = real_addr; }
+	};
+
+	struct : Wrapper32LE
 	{
 		DynamicMemoryBlockLE RAM;
 		DynamicMemoryBlockLE Userspace;
-	} PSVMemory;
+	} PSV;
 
-	struct
+	struct : Wrapper32LE
 	{
 		DynamicMemoryBlockLE Scratchpad;
 		DynamicMemoryBlockLE VRAM;
 		DynamicMemoryBlockLE RAM;
 		DynamicMemoryBlockLE Kernel;
 		DynamicMemoryBlockLE Userspace;
-	} PSPMemory;
+	} PSP;
 
 	bool m_inited;
 
@@ -84,17 +107,26 @@ public:
 		return m_base_addr;
 	}
 
+	noinline void InvalidAddress(const char* func, const u64 addr)
+	{
+		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", func, addr);
+	}
+
 	void RegisterPages(u64 addr, u32 size)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
-		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
+		for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
 		{
-			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
+			{
+				InvalidAddress(__FUNCTION__, i * 4096);
+				break;
+			}
 			if (m_pages[i])
 			{
-				LOG_ERROR(MEMORY, "Page already registered (page=0x%x)", i * 4096);
+				LOG_ERROR(MEMORY, "Page already registered (addr=0x%llx)", i * 4096);
 			}
 			m_pages[i] = 1; // TODO: define page parameters
 		}
@@ -105,12 +137,16 @@ public:
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
-		for (u32 i = addr / 4096; i < (addr + size) / 4096; i++)
+		for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
 		{
-			if (i >= sizeof(m_pages) / sizeof(m_pages[0])) break;
+			if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
+			{
+				InvalidAddress(__FUNCTION__, i * 4096);
+				break;
+			}
 			if (!m_pages[i])
 			{
-				LOG_ERROR(MEMORY, "Page not registered (page=0x%x)", i * 4096);
+				LOG_ERROR(MEMORY, "Page not registered (addr=0x%llx)", i * 4096);
 			}
 			m_pages[i] = 0; // TODO: define page parameters
 		}
@@ -146,17 +182,25 @@ public:
 		return (T)ReverseData<sizeof(T)>(val);
 	};
 
-	u8* GetMemFromAddr(const u64 addr)
+	template<typename T> u8* GetMemFromAddr(const T addr)
 	{
-		return (u8*)GetBaseAddr() + addr;
+		if ((u32)addr == addr)
+		{
+			return (u8*)GetBaseAddr() + addr;
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return (u8*)GetBaseAddr();
+		}
 	}
 
-	void* VirtualToRealAddr(const u64 vaddr)
+	template<typename T> void* VirtualToRealAddr(const T vaddr)
 	{
-		return GetMemFromAddr(vaddr);
+		return GetMemFromAddr<T>(vaddr);
 	}
 
-	u64 RealToVirtualAddr(const void* addr)
+	u32 RealToVirtualAddr(const void* addr)
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
 		
@@ -233,25 +277,27 @@ public:
 		break;
 
 		case Memory_PSV:
-			MemoryBlocks.push_back(PSVMemory.RAM.SetRange(0x81000000, 0x10000000));
-			MemoryBlocks.push_back(UserMemory = PSVMemory.Userspace.SetRange(0x91000000, 0x10000000));
+			MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
+			MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
+			PSV.Init(GetBaseAddr());
 		break;
 
 		case Memory_PSP:
-			MemoryBlocks.push_back(PSPMemory.Scratchpad.SetRange(0x00010000, 0x00004000));
-			MemoryBlocks.push_back(PSPMemory.VRAM.SetRange(0x04000000, 0x00200000));
-			MemoryBlocks.push_back(PSPMemory.RAM.SetRange(0x08000000, 0x02000000));
-			MemoryBlocks.push_back(PSPMemory.Kernel.SetRange(0x88000000, 0x00800000));
-			MemoryBlocks.push_back(UserMemory = PSPMemory.Userspace.SetRange(0x08800000, 0x01800000));
+			MemoryBlocks.push_back(PSP.Scratchpad.SetRange(0x00010000, 0x00004000));
+			MemoryBlocks.push_back(PSP.VRAM.SetRange(0x04000000, 0x00200000));
+			MemoryBlocks.push_back(PSP.RAM.SetRange(0x08000000, 0x02000000));
+			MemoryBlocks.push_back(PSP.Kernel.SetRange(0x88000000, 0x00800000));
+			MemoryBlocks.push_back(UserMemory = PSP.Userspace.SetRange(0x08800000, 0x01800000));
+			PSP.Init(GetBaseAddr());
 		break;
 		}
 
 		LOG_NOTICE(MEMORY, "Memory initialized.");
 	}
 
-	bool IsGoodAddr(const u64 addr)
+	template<typename T> bool IsGoodAddr(const T addr)
 	{
-		if (addr >= 0x100000000 || !m_pages[addr / 4096]) // TODO: define page parameters
+		if ((u32)addr != addr || !m_pages[addr / 4096]) // TODO: define page parameters
 		{
 			return false;
 		}
@@ -261,9 +307,9 @@ public:
 		}
 	}
 
-	bool IsGoodAddr(const u64 addr, const u32 size)
+	template<typename T> bool IsGoodAddr(const T addr, const u32 size)
 	{
-		if (addr + size > 0x100000000)
+		if ((u32)addr != addr || (u64)addr + (u64)size > 0x100000000ull)
 		{
 			return false;
 		}
@@ -308,23 +354,152 @@ public:
 #endif
 	}
 
-	void Write8(const u64 addr, const u8 data);
-	void Write16(const u64 addr, const u16 data);
-	void Write32(const u64 addr, const u32 data);
-	void Write64(const u64 addr, const u64 data);
-	void Write128(const u64 addr, const u128 data);
+	//MemoryBase
+	template<typename T> void Write8(T addr, const u8 data)
+	{
+		if ((u32)addr == addr)
+		{
+			*(u8*)((u8*)GetBaseAddr() + addr) = data;
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			*(u8*)GetBaseAddr() = data;
+		}
+	}
 
-	bool Write8NN(const u64 addr, const u8 data);
-	bool Write16NN(const u64 addr, const u16 data);
-	bool Write32NN(const u64 addr, const u32 data);
-	bool Write64NN(const u64 addr, const u64 data);
-	bool Write128NN(const u64 addr, const u128 data);
+	template<typename T> void Write16(T addr, const u16 data)
+	{
+		if ((u32)addr == addr)
+		{
+			*(u16*)((u8*)GetBaseAddr() + addr) = re16(data);
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			*(u16*)GetBaseAddr() = data;
+		}
+	}
 
-	u8 Read8(const u64 addr);
-	u16 Read16(const u64 addr);
-	u32 Read32(const u64 addr);
-	u64 Read64(const u64 addr);
-	u128 Read128(const u64 addr);
+	template<typename T> void Write32(T addr, const u32 data)
+	{
+		if ((u32)addr == addr)
+		{
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+			{
+				*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
+			}
+			else
+			{
+				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
+			}
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			*(u32*)GetBaseAddr() = data;
+		}
+	}
+
+	template<typename T> void Write64(T addr, const u64 data)
+	{
+		if ((u32)addr == addr)
+		{
+			*(u64*)((u8*)GetBaseAddr() + addr) = re64(data);
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			*(u64*)GetBaseAddr() = data;
+		}
+	}
+
+	template<typename T> void Write128(T addr, const u128 data)
+	{
+		if ((u32)addr == addr)
+		{
+			*(u128*)((u8*)GetBaseAddr() + addr) = re128(data);
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			*(u128*)GetBaseAddr() = data;
+		}
+	}
+
+	template<typename T> u8 Read8(T addr)
+	{
+		if ((u32)addr == addr)
+		{
+			return *(u8*)((u8*)GetBaseAddr() + addr);
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u8*)GetBaseAddr();
+		}
+	}
+
+	template<typename T> u16 Read16(T addr)
+	{
+		if ((u32)addr == addr)
+		{
+			return re16(*(u16*)((u8*)GetBaseAddr() + addr));
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u16*)GetBaseAddr();
+		}
+	}
+
+	template<typename T> u32 Read32(T addr)
+	{
+		if ((u32)addr == addr)
+		{
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+			{
+				return re32(*(u32*)((u8*)GetBaseAddr() + addr));
+			}
+			else
+			{
+				u32 res;
+				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
+				return res;
+			}
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u32*)GetBaseAddr();
+		}
+	}
+
+	template<typename T> u64 Read64(T addr)
+	{
+		if ((u32)addr == addr)
+		{
+			return re64(*(u64*)((u8*)GetBaseAddr() + addr));
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u64*)GetBaseAddr();
+		}
+	}
+
+	template<typename T> u128 Read128(T addr)
+	{
+		if ((u32)addr == addr)
+		{
+			return re128(*(u128*)((u8*)GetBaseAddr() + addr));
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u128*)GetBaseAddr();
+		}
+	}
 
 	bool CopyToReal(void* real, u64 from, u32 count)
 	{
@@ -469,13 +644,13 @@ public:
 		return false;
 	}
 
-	u8* operator + (const u64 vaddr)
+	template<typename T> u8* operator + (const T vaddr)
 	{
-		u8* ret = GetMemFromAddr(vaddr);
+		u8* ret = GetMemFromAddr<T>(vaddr);
 		return ret;
 	}
 
-	u8& operator[] (const u64 vaddr)
+	template<typename T> u8& operator[] (const T vaddr)
 	{
 		return *(*this + vaddr);
 	}

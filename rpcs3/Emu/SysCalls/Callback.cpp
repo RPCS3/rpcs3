@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Callback.h"
 
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPCThread.h"
 
 Callback::Callback(u32 slot, u64 addr)
@@ -13,6 +14,7 @@ Callback::Callback(u32 slot, u64 addr)
 	, a2(0)
 	, a3(0)
 	, a4(0)
+	, a5(0)
 	, m_has_data(false)
 	, m_name("Callback")
 {
@@ -43,12 +45,13 @@ bool Callback::HasData() const
 	return m_has_data;
 }
 
-void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4)
+void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4, u64 _a5)
 {
 	a1 = _a1;
 	a2 = _a2;
 	a3 = _a3;
 	a4 = _a4;
+	a5 = _a5;
 	m_has_data = true;
 }
 
@@ -97,6 +100,7 @@ again:
 	thr.SetArg(2, a3);
 	thr.SetArg(3, a4);
 	thr.Run();
+	((PPUThread&)thr).GPR[7] = a5;
 
 	thr.Exec();
 

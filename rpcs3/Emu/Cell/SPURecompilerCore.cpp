@@ -13,12 +13,19 @@
 static const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
-: m_enc(new SPURecompiler(cpu, *this))
-, inter(new SPUInterpreter(cpu))
-, CPU(cpu)
-, first(true)
+	: m_enc(new SPURecompiler(cpu, *this))
+	, inter(new SPUInterpreter(cpu))
+	, CPU(cpu)
+	, first(true)
 {
 	memset(entry, 0, sizeof(entry));
+	X86CpuInfo inf;
+	X86CpuUtil::detect(&inf);
+	if (!inf.hasFeature(kX86CpuFeatureSse41))
+	{
+		LOG_ERROR(SPU, "SPU Recompiler requires SSE4.1 instruction set support");
+		Emu.Pause();
+	}
 }
 
 SPURecompilerCore::~SPURecompilerCore()
@@ -42,7 +49,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);
 
-	Compiler compiler(&runtime);
+	X86Compiler compiler(&runtime);
 	m_enc->compiler = &compiler;
 	compiler.setLogger(&stringLogger);
 
@@ -51,40 +58,40 @@ void SPURecompilerCore::Compile(u16 pos)
 	u32 excess = 0;
 	entry[start].count = 0;
 
-	GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
+	X86GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
 	compiler.setArg(0, cpu_var);
 	compiler.alloc(cpu_var);
 	m_enc->cpu_var = &cpu_var;
 
-	GpVar ls_var(compiler, kVarTypeIntPtr, "ls");
+	X86GpVar ls_var(compiler, kVarTypeIntPtr, "ls");
 	compiler.setArg(1, ls_var);
 	compiler.alloc(ls_var);
 	m_enc->ls_var = &ls_var;
 
-	GpVar imm_var(compiler, kVarTypeIntPtr, "imm");
+	X86GpVar imm_var(compiler, kVarTypeIntPtr, "imm");
 	compiler.setArg(2, imm_var);
 	compiler.alloc(imm_var);
 	m_enc->imm_var = &imm_var;
 
-	GpVar g_imm_var(compiler, kVarTypeIntPtr, "g_imm");
+	X86GpVar g_imm_var(compiler, kVarTypeIntPtr, "g_imm");
 	compiler.setArg(3, g_imm_var);
 	compiler.alloc(g_imm_var);
 	m_enc->g_imm_var = &g_imm_var;
 
-	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
+	X86GpVar pos_var(compiler, kVarTypeUInt32, "pos");
 	m_enc->pos_var = &pos_var;
-	GpVar addr_var(compiler, kVarTypeUInt32, "addr");
+	X86GpVar addr_var(compiler, kVarTypeUInt32, "addr");
 	m_enc->addr = &addr_var;
-	GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
+	X86GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
 	m_enc->qw0 = &qw0_var;
-	GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
+	X86GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
 	m_enc->qw1 = &qw1_var;
-	GpVar qw2_var(compiler, kVarTypeUInt64, "qw2");
+	X86GpVar qw2_var(compiler, kVarTypeUInt64, "qw2");
 	m_enc->qw2 = &qw2_var;
 
 	for (u32 i = 0; i < 16; i++)
 	{
-		m_enc->xmm_var[i].data = new XmmVar(compiler, kVarTypeXmm, fmt::Format("reg_%d", i).c_str());
+		m_enc->xmm_var[i].data = new X86XmmVar(compiler, kX86VarTypeXmm, fmt::Format("reg_%d", i).c_str());
 	}
 
 	compiler.xor_(pos_var, pos_var);

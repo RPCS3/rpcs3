@@ -275,7 +275,7 @@ protected:
 			if(regs_list & mask)
 			{
 				CPU.SP -= 4;
-				Memory.Write32(CPU.SP, CPU.read_gpr(i));
+				Memory.PSV.Write32(CPU.SP, CPU.read_gpr(i));
 			}
 		}
 	}
@@ -286,7 +286,7 @@ protected:
 		{
 			if(regs_list & mask)
 			{
-				CPU.write_gpr(i, Memory.Read32(CPU.SP));
+				CPU.write_gpr(i, Memory.PSV.Read32(CPU.SP));
 				CPU.SP += 4;
 			}
 		}

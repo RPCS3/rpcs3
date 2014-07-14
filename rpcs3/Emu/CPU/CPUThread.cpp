@@ -285,7 +285,7 @@ void CPUThread::ExecOnce()
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
-	if (addr < 0x100000000 && u == EXCEPTION_ACCESS_VIOLATION)
+	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000)
 	{
 		// TODO: allow recovering from a page fault
 		//GetCurrentPPUThread().Stop();
@@ -317,6 +317,8 @@ void CPUThread::Task()
 		}
 	}
 
+	std::vector<u64> trace;
+
 #ifdef _WIN32
 	_set_se_translator(_se_translator);
 #else
@@ -339,6 +341,7 @@ void CPUThread::Task()
 		}
 
 		Step();
+		//if (PC - 0x13ED4 < 0x288) trace.push_back(PC);
 		NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 		if (status == CPUThread_Step)
@@ -356,6 +359,8 @@ void CPUThread::Task()
 			}
 		}
 	}
+
+	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
 }

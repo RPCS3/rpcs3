@@ -6,6 +6,12 @@
 #define thread_local __thread
 #endif
 
+#ifdef _WIN32
+#define noinline __declspec(noinline)
+#else
+#define noinline __attribute__((noinline))
+#endif
+
 template<size_t size>
 void strcpy_trunc(char (&dst)[size], const std::string& src)
 {

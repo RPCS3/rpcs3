@@ -64,6 +64,7 @@ struct SpuGroupInfo
 	int m_prio;
 	int m_type;
 	int m_ct;
+	u32 m_count;
 
 	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct) 
 		: m_name(name)
@@ -71,13 +72,10 @@ struct SpuGroupInfo
 		, m_type(type)
 		, m_ct(ct)
 		, lock(0)
+		, m_count(num)
 	{
-		num = 256;
-		list.resize(num);
-		for (u32 i = 0; i < num; i++)
-		{
-			list[i] = 0;
-		}
+		list.resize(256);
+		for (auto& v : list) v = 0;
 	}
 };
 
@@ -95,7 +93,7 @@ s32 sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u
 s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et);
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 spup_addr);
+s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, mem8_t spup);
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
 s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
 s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type);
