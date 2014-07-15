@@ -33,7 +33,7 @@ public:
 	void OnAdd(wxCommandEvent& event);
 	void OnRemove(wxCommandEvent& event);
 
-	void OnClose(wxCloseEvent& event);
+	void OnClose(wxCommandEvent& event);
 	void LoadEntries();
 	void SaveEntries();
 };

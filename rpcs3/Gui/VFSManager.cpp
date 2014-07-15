@@ -139,10 +139,10 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 
 	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VFSManagerDialog::OnEntryConfig, this);
 	m_list->Bind(wxEVT_RIGHT_DOWN, &VFSManagerDialog::OnRightClick, this);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnAdd, this, id_add);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnRemove, this, id_remove);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnEntryConfig, this, id_config);
-	Bind(wxEVT_CLOSE_WINDOW, &VFSManagerDialog::OnClose, this, wxID_OK);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnAdd, this, id_add);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnRemove, this, id_remove);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnEntryConfig, this, id_config);
+	Bind(wxEVT_BUTTON, &VFSManagerDialog::OnClose, this, wxID_OK);
 
 	LoadEntries();
 	UpdateList();
@@ -214,7 +214,7 @@ void VFSManagerDialog::OnRemove(wxCommandEvent& event)
 	UpdateList();
 }
 
-void VFSManagerDialog::OnClose(wxCloseEvent& event)
+void VFSManagerDialog::OnClose(wxCommandEvent& event)
 {
 	SaveEntries();
 	event.Skip();
