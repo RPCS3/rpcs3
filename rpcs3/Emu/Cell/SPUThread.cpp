@@ -75,9 +75,13 @@ void SPUThread::InitRegs()
 	dmac.queue_lock = 0;*/
 
 	SPU.Status.SetValue(SPU_STATUS_STOPPED);
-	Prxy.QueryType.SetValue(0);
+
+	// TODO: check initialization if necessary
+	MFC2.QueryType.SetValue(0); // prxy
 	MFC1.CMDStatus.SetValue(0);
 	MFC2.CMDStatus.SetValue(0);
+	MFC1.TagStatus.SetValue(0);
+	MFC2.TagStatus.SetValue(0);
 	//PC = SPU.NPC.GetValue();
 }
 

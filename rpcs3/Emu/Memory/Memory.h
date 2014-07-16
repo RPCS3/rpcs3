@@ -401,7 +401,10 @@ public:
 			}
 			else
 			{
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
+				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
+				{
+					*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
+				}
 			}
 		}
 		else
@@ -474,7 +477,10 @@ public:
 			else
 			{
 				u32 res;
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
+				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
+				{
+					res = re32(*(u32*)((u8*)GetBaseAddr() + addr));
+				}
 				return res;
 			}
 		}

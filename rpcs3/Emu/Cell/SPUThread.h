@@ -523,16 +523,11 @@ public:
 		Channel<1> EAL;
 		Channel<1> Size_Tag;
 		Channel<1> CMDStatus;
-		Channel<1> QStatus;
-	} MFC1, MFC2;
-
-	struct
-	{
-		Channel<1> QueryType;
+		Channel<1> QueryType; // only for prxy
 		Channel<1> QueryMask;
 		Channel<1> TagStatus;
 		Channel<1> AtomicStat;
-	} Prxy;
+	} MFC1, MFC2;
 
 	struct StalledList
 	{
@@ -555,7 +550,6 @@ public:
 		Channel<1> Out_MBox;
 		Channel<1> Out_IntrMBox;
 		Channel<4> In_MBox;
-		Channel<1> MBox_Status;
 		Channel<1> Status;
 		Channel<1> NPC;
 		Channel<1> SNR[2];
@@ -831,7 +825,7 @@ public:
 					reservation.data[i] = *(u128*)&Memory[(u32)ea + i * 16];
 					*(u128*)&Memory[dmac.ls_offset + lsa + i * 16] = reservation.data[i];
 				}
-				Prxy.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
+				MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
 			{
@@ -854,7 +848,7 @@ public:
 						}
 						if (changed == 0) // nothing changed?
 						{
-							Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 						}
 						else if (changed == 1)
 						{
@@ -862,7 +856,7 @@ public:
 							{
 								LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 128bit compare and swap");
 								Emu.Pause();
-								Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+								MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 							}
 							else
 							{
@@ -871,11 +865,11 @@ public:
 								if (InterlockedCompareExchange64((volatile long long*)(Memory + (u32)ea + last * 16 + last_q * 8),
 									buf[last]._u64[last_q], reservation.data[last]._u64[last_q]) == reservation.data[last]._u64[last_q])
 								{
-									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 								}
 								else
 								{
-									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 								}
 								/*u32 last_d = last_q * 2;
 								if (buf[last]._u32[last_d] == reservation.data[last]._u32[last_d] && buf[last]._u32[last_d+1] != reservation.data[last]._u32[last_d+1])
@@ -890,7 +884,7 @@ public:
 								{
 									LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 64bit compare and swap");
 									Emu.Pause();
-									Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 								}*/
 							}
 						}
@@ -900,18 +894,18 @@ public:
 							LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 16x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
 								changed, mask, op, cmd, lsa, ea, tag, size);
 							Emu.Pause();
-							Prxy.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 						}
 					}
 					else
 					{
-						Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+						MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 					}
 					reservation.clear();
 				}
 				else // failed
 				{
-					Prxy.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+					MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 				}
 			}
 			else // store unconditional
@@ -920,7 +914,7 @@ public:
 				ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
 				if (op == MFC_PUTLLUC_CMD)
 				{
-					Prxy.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
+					MFCArgs.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
 				}
 				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
 					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
@@ -944,12 +938,12 @@ public:
 		{
 		case SPU_WrOutMbox:       return SPU.Out_MBox.GetFreeCount();
 		case SPU_RdInMbox:        return SPU.In_MBox.GetCount();
-		case MFC_RdTagStat:       return Prxy.TagStatus.GetCount();
+		case MFC_RdTagStat:       return MFC1.TagStatus.GetCount();
 		case MFC_RdListStallStat: return StallStat.GetCount();
-		case MFC_WrTagUpdate:     return Prxy.TagStatus.GetCount(); // hack
+		case MFC_WrTagUpdate:     return MFC1.TagStatus.GetCount(); // hack
 		case SPU_RdSigNotify1:    return SPU.SNR[0].GetCount();
 		case SPU_RdSigNotify2:    return SPU.SNR[1].GetCount();
-		case MFC_RdAtomicStat:    return Prxy.AtomicStat.GetCount();
+		case MFC_RdAtomicStat:    return MFC1.AtomicStat.GetCount();
 
 		default:
 		{
@@ -1115,14 +1109,14 @@ public:
 		case MFC_WrTagMask:
 		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			Prxy.QueryMask.SetValue(v);
+			MFC1.QueryMask.SetValue(v);
 			break;
 		}
 
 		case MFC_WrTagUpdate:
 		{
 			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
-			Prxy.TagStatus.PushUncond(Prxy.QueryMask.GetValue());
+			MFC1.TagStatus.PushUncond(MFC1.QueryMask.GetValue());
 			break;
 		}
 
@@ -1184,7 +1178,7 @@ public:
 
 		case SPU_WrDec:
 		{
-			m_dec_start = get_system_time();
+			m_dec_start = get_time();
 			m_dec_value = v;
 			break;
 		}
@@ -1215,7 +1209,7 @@ public:
 
 		case MFC_RdTagStat:
 		{
-			while (!Prxy.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!MFC1.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
@@ -1236,7 +1230,7 @@ public:
 
 		case MFC_RdAtomicStat:
 		{
-			while (!Prxy.AtomicStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!MFC1.AtomicStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			break;
 		}
 
@@ -1248,8 +1242,7 @@ public:
 
 		case SPU_RdDec:
 		{
-			// decrementer freq is probably 80 MHz
-			v = m_dec_value - (u32)(get_system_time() - m_dec_start) * 80;
+			v = m_dec_value - (u32)(get_time() - m_dec_start);
 			break;
 		}
 
