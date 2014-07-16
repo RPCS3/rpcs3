@@ -10,6 +10,8 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPURecompiler.h"
 
+#include <cfenv>
+
 SPUThread& GetCurrentSPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
@@ -33,6 +35,19 @@ SPUThread::SPUThread(CPUThreadType type) : PPCThread(type)
 
 SPUThread::~SPUThread()
 {
+}
+
+void SPUThread::Task()
+{
+	const int round = std::fegetround();
+	std::fesetround(FE_TOWARDZERO);
+
+	CPUThread::Task();
+	if (std::fegetround() != FE_TOWARDZERO)
+	{
+		LOG_ERROR(Log::SPU, "Rounding mode has changed(%d)", std::fegetround());
+	}
+	std::fesetround(round);
 }
 
 void SPUThread::DoReset()
