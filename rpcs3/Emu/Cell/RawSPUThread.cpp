@@ -7,12 +7,11 @@
 
 #include "Emu/Cell/RawSPUThread.h"
 
-RawSPUThread::RawSPUThread(u32 index, CPUThreadType type)
+RawSPUThread::RawSPUThread(CPUThreadType type)
 	: SPUThread(type)
 	, MemoryBlock()
-	, m_index(index)
 {
-	Memory.InitRawSPU(SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET), m_index);
+	m_index = Memory.InitRawSPU(this);
 	Reset();
 }
 
@@ -344,7 +343,7 @@ void RawSPUThread::Task()
 {
 	PC = SPU.NPC.GetValue();
 
-	CPUThread::Task();
+	SPUThread::Task();
 
 	SPU.NPC.SetValue(PC);
 }

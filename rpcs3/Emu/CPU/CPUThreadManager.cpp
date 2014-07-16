@@ -11,7 +11,6 @@
 #include "Emu/ARMv7/ARMv7Thread.h"
 
 CPUThreadManager::CPUThreadManager()
-	: m_raw_spu_num(0)
 {
 }
 
@@ -22,7 +21,6 @@ CPUThreadManager::~CPUThreadManager()
 
 void CPUThreadManager::Close()
 {
-	m_raw_spu_num = 0;
 	while(m_threads.size()) RemoveThread(m_threads[0]->GetId());
 }
 
@@ -34,10 +32,26 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 
 	switch(type)
 	{
-	case CPU_THREAD_PPU:     new_thread = new PPUThread(); break;
-	case CPU_THREAD_SPU:     new_thread = new SPUThread(); break;
-	case CPU_THREAD_RAW_SPU: new_thread = new RawSPUThread(m_raw_spu_num++); break;
-	case CPU_THREAD_ARMv7:   new_thread = new ARMv7Thread(); break;
+	case CPU_THREAD_PPU:
+	{
+		new_thread = new PPUThread();
+		break;
+	}
+	case CPU_THREAD_SPU:
+	{
+		new_thread = new SPUThread();
+		break;
+	}
+	case CPU_THREAD_RAW_SPU:
+	{
+		new_thread = new RawSPUThread();
+		break;
+	}
+	case CPU_THREAD_ARMv7:
+	{
+		new_thread = new ARMv7Thread();
+		break;
+	}
 	default: assert(0);
 	}
 	

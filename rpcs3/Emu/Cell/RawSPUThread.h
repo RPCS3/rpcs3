@@ -19,7 +19,7 @@ class RawSPUThread
 	u32 m_index;
 
 public:
-	RawSPUThread(u32 index, CPUThreadType type = CPU_THREAD_RAW_SPU);
+	RawSPUThread(CPUThreadType type = CPU_THREAD_RAW_SPU);
 	virtual ~RawSPUThread();
 
 	virtual bool Read32(const u64 addr, u32* value) override;
