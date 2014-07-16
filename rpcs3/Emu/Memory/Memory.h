@@ -214,12 +214,22 @@ public:
 		}
 	}
 
-	void InitRawSPU(MemoryBlock* raw_spu, const u32 num)
+	u32 InitRawSPU(MemoryBlock* raw_spu)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
-		MemoryBlocks.push_back(raw_spu);
-		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = raw_spu;
+		u32 index;
+		for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
+		{
+			if (!RawSPUMem[index])
+			{
+				RawSPUMem[index] = raw_spu;
+				break;
+			}
+		}
+
+		MemoryBlocks.push_back(raw_spu->SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET));
+		return index;
 	}
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
