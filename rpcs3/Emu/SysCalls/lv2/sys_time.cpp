@@ -14,22 +14,32 @@
 
 SysCallBase sys_time("sys_time");
 
-//static const u64 timebase_frequency = 79800000;
+static const u64 timebase_frequency = /*79800000*/ 80000000; // 80 Mhz
 extern int cellSysutilGetSystemParamInt(int id, mem32_t value);
 
 // Auxiliary functions
 u64 get_time()
 {
 #ifdef _WIN32
+	static struct PerformanceFreqHolder
+	{
+		u64 value;
+
+		PerformanceFreqHolder()
+		{
+			LARGE_INTEGER freq;
+			QueryPerformanceFrequency(&freq);
+			value = freq.QuadPart;
+		}
+	} freq;
+
 	LARGE_INTEGER cycle;
-	LARGE_INTEGER freq;
 	QueryPerformanceCounter(&cycle);
-	QueryPerformanceFrequency(&freq);
-	return cycle.QuadPart * 10000000 / freq.QuadPart;
+	return cycle.QuadPart * timebase_frequency / freq.value;
 #else
 	struct timespec ts;
 	if (!clock_gettime(CLOCK_MONOTONIC, &ts))
-		return ts.tv_sec * (s64)10000000 + (s64)ts.tv_nsec / (s64)100;
+		return ts.tv_sec * (s64)timebase_frequency + (s64)ts.tv_nsec * (s64)timebase_frequency / 1000000000;
 
 	// Should never occur.
 	assert(0);
@@ -40,7 +50,7 @@ u64 get_time()
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
-	return get_time() / 10;
+	return get_time() / (timebase_frequency / 1000000);
 }
 
 
@@ -61,8 +71,8 @@ s32 sys_time_get_current_time(u32 sec_addr, u32 nsec_addr)
 
 	u64 time = get_time();
 
-	Memory.Write64(sec_addr, time / 10000000);
-	Memory.Write64(nsec_addr, (time % 10000000) * 100);
+	Memory.Write64(sec_addr, time / timebase_frequency);
+	Memory.Write64(nsec_addr, (time % timebase_frequency) * 1000000000 / (s64)(timebase_frequency));
 
 	return CELL_OK;
 }
@@ -76,5 +86,5 @@ s64 sys_time_get_system_time()
 u64 sys_time_get_timebase_frequency()
 {
 	sys_time.Log("sys_time_get_timebase_frequency()");
-	return 10000000;
+	return timebase_frequency;
 }
