@@ -33,7 +33,7 @@ public:
 				switch((code0 >> 8) & 0x1)
 				{
 				case 1:
-					m_op.CBZ((code0 >> 11) & 0x1, branchTarget((((code0 >> 9) & 0x1) << 5) | (code0 >> 3) & 0x1f), code0 & 0x7, 2);
+					m_op.CBZ((code0 >> 11) & 0x1, branchTarget((((code0 >> 9) & 0x1) << 5) | ((code0 >> 3) & 0x1f)), code0 & 0x7, 2);
 				return 2;
 				}
 			break;
