@@ -35,7 +35,8 @@ u64 get_time()
 
 	LARGE_INTEGER cycle;
 	QueryPerformanceCounter(&cycle);
-	return cycle.QuadPart * timebase_frequency / freq.value;
+	u64 sec = cycle.QuadPart / freq.value;
+	return sec * timebase_frequency + (cycle.QuadPart % freq.value) * timebase_frequency / freq.value;
 #else
 	struct timespec ts;
 	if (!clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -50,7 +51,7 @@ u64 get_time()
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
-	return get_time() / (timebase_frequency / 1000000);
+	return get_time() / (timebase_frequency / MHZ);
 }
 
 
