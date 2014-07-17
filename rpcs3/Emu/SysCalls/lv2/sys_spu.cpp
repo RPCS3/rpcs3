@@ -18,46 +18,12 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 {
 	ELFLoader l(stream);
 	l.LoadInfo();
-	const u32 alloc_size = 256 * 1024 /*0x1000000 - stream.GetSize()*/;
+	const u32 alloc_size = 256 * 1024;
 	u32 spu_offset = Memory.MainMem.AllocAlign(alloc_size);
 	l.LoadData(spu_offset);
 	spu_ep = l.GetEntry();
 	return spu_offset;
 }
-/*u64 g_last_spu_offset = 0;
-static const u64 g_spu_alloc_size = 0x1000000;
-
-u32 LoadSpuImage(vfsStream& stream, u64 address)
-{
-	ELFLoader l(stream);
-	l.LoadInfo();
-	l.LoadData(address);
-
-	return address + l.GetEntry();
-}
-
-u32 LoadSpuImage(vfsStream& stream)
-{
-	g_last_spu_offset = Memory.MainMem.Alloc(g_spu_alloc_size);
-	return LoadSpuImage(stream, g_last_spu_offset);
-}*/
-
-/*u32 _max_usable_spu = 0;
-u32 _max_raw_spu = 0;
-
-s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
-{
-	sc_spu.Log("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
-	_max_usable_spu = max_usable_spu;
-	_max_raw_spu = max_raw_spu;
-	return CELL_OK;
-}
-
-s32 sys_raw_spu_create(u32 id_addr, u32 attr_addr)
-{
-	Memory.Write32(id_addr, Emu.GetIdManager().GetNewID("raw_spu"));
-	return CELL_OK;
-}*/
 
 //156
 s32 sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
@@ -349,13 +315,23 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		return CELL_ESRCH;
 	}
 
+	if (cause.GetAddr() && !cause.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
+	if (status.GetAddr() && !status.IsGood())
+	{
+		return CELL_EFAULT;
+	}
+
 	if (group_info->lock.exchange(1)) // acquire lock
 	{
 		return CELL_EBUSY;
 	}
 
-	cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-	status = 0; //unspecified because of ALL_THREADS_EXIT
+	if (cause.GetAddr()) cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+	if (status.GetAddr()) status = 0; //unspecified because of ALL_THREADS_EXIT
 
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
@@ -796,24 +772,38 @@ s32 sys_raw_spu_create(mem32_t id, u32 attr_addr)
 {
 	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id.GetAddr(), attr_addr);
 
-	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
+	if (((RawSPUThread&)new_thread).GetIndex() >= 5)
+	{
+		Emu.GetCPU().RemoveThread(new_thread.GetId());
+		return CELL_EAGAIN;
+	}
+
 	id = ((RawSPUThread&)new_thread).GetIndex();
 	new_thread.Run();
-
 	return CELL_OK;
 }
 
 s32 sys_raw_spu_destroy(u32 id)
 {
-	sc_spu.Error("sys_raw_spu_destroy(id=%d)", id);
+	sc_spu.Warning("sys_raw_spu_destroy(id=%d)", id);
 
+	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+
+	if (!t)
+	{
+		return CELL_ESRCH;
+	}
+
+	// TODO: check if busy
+
+	Emu.GetCPU().RemoveThread(t->GetId());
 	return CELL_OK;
 }
 
 s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, mem32_t intrtag)
 {
-	sc_spu.Error("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag_addr=0x%x)", id, class_id, hwthread, intrtag.GetAddr());
+	sc_spu.Warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag_addr=0x%x)", id, class_id, hwthread, intrtag.GetAddr());
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 

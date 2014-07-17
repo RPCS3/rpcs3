@@ -7,7 +7,6 @@ class CPUThreadManager
 {
 	std::vector<CPUThread*> m_threads;
 	std::mutex m_mtx_thread;
-	u32 m_raw_spu_num;
 
 public:
 	CPUThreadManager();
