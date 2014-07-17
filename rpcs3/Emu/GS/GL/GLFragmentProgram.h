@@ -79,16 +79,16 @@ struct GLFragmentDecompilerThread : public ThreadBase
 		struct
 		{
 			u32 else_offset : 31;
-			u32  : 1;
+			u32             : 1;
 		};
 
 		struct
 		{
-			u32			: 2;
-			u32 rep1	: 8;
-			u32 rep2	: 8;
-			u32			: 1;
-			u32 rep3	: 8;
+			u32      : 2;
+			u32 rep1 : 8;
+			u32 rep2 : 8;
+			u32      : 1;
+			u32 rep3 : 8;
 		};
 	} src1;
 
