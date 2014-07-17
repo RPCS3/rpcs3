@@ -82,7 +82,7 @@ public:
 	void OnRemove(wxCommandEvent& event);
 	void OnCreateHDD(wxCommandEvent& event);
 
-	void OnClose(wxCloseEvent& event);
+	void OnOk(wxCommandEvent& event);
 	void LoadPaths();
 	void SavePaths();
 };
