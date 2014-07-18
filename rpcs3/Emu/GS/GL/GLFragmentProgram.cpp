@@ -251,10 +251,10 @@ std::string GLFragmentDecompilerThread::BuildCode()
 	static const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r1" : "h2" },
-		{ "ocol2", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol3", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol4", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h2" },
+		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h4" },
+		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h6" },
+		{ "ocol4", m_ctrl & 0x40 ? "r5" : "h8" },
 	};
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
@@ -263,19 +263,19 @@ std::string GLFragmentDecompilerThread::BuildCode()
 			AddCode(m_parr.AddParam(PARAM_OUT, "vec4", table[i].first, i) + " = " + table[i].second + ";");
 	}
 
-	if(m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
+	if (m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
 
 	std::string p;
 
-	for(u32 i=0; i<m_parr.params.size(); ++i)
+	for (u32 i = 0; i<m_parr.params.size(); ++i)
 	{
 		p += m_parr.params[i].Format();
 	}
 
 	return std::string("#version 330\n"
-					   "\n"
-					   + p + "\n"
-					   "void main()\n{\n" + main + "}\n");
+		"\n"
+		+ p + "\n"
+		"void main()\n{\n" + main + "}\n");
 }
 
 void GLFragmentDecompilerThread::Task()
