@@ -49,6 +49,11 @@ public:
 		owner = GetFreeValue();
 	}
 
+	SMutexBase()
+	{
+		initialize();
+	}
+
 	void finalize()
 	{
 		owner = GetDeadValue();
