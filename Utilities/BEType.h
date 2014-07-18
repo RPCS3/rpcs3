@@ -118,7 +118,7 @@ public:
 		}
 		else if (sizeof(T1) > sizeof(T))
 		{
-			res.FromBE((T1)ToBE() << ((sizeof(T1)-sizeof(T)) * 8));
+			res.FromLE(ToLE());
 		}
 		else
 		{
