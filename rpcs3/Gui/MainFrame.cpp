@@ -304,6 +304,11 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.Load();
 
 	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
+	
+	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+	{
+		Emu.Run();
+	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
