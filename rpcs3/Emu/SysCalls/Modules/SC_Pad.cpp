@@ -332,6 +332,8 @@ int cellPadGetInfo2(u32 info_addr)
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
 	CellPadInfo2 info = {};
+	//sys_io->Warning("*** info{}: max_connect=0x%x, now_connect=0x%x, system_info=0x%x, port_status[0]=0x%x, port_setting[0]=0x%x",
+	//	(u32)info.max_connect, (u32)info.now_connect, (u32)info.system_info, (u32)info.port_status[0], (u32)info.port_setting[0]);
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	info.max_connect = rinfo.max_connect;

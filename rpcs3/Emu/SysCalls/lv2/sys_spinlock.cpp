@@ -19,7 +19,7 @@ void sys_spinlock_lock(mem_ptr_t<spinlock> lock)
 {
 	sys_spinlock.Log("sys_spinlock_lock(lock_addr=0x%x)", lock.GetAddr());
 
-	be_t<u32> tid = GetCurrentPPUThread().GetId();
+	be_t<u32> tid = be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId());
 	switch (lock->mutex.lock(tid))
 	{
 	case SMR_ABORT: LOG_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr()); break;
@@ -32,7 +32,7 @@ s32 sys_spinlock_trylock(mem_ptr_t<spinlock> lock)
 {
 	sys_spinlock.Log("sys_spinlock_trylock(lock_addr=0x%x)", lock.GetAddr());
 
-	be_t<u32> tid = GetCurrentPPUThread().GetId();
+	be_t<u32> tid = be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId());
 	switch (lock->mutex.trylock(tid))
 	{
 	case SMR_FAILED: return CELL_EBUSY;

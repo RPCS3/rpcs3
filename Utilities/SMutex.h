@@ -22,8 +22,8 @@ enum SMutexResult
 template
 <
 	typename T,
-	u64 free_value = 0,
-	u64 dead_value = 0xffffffff,
+	const u64 free_value = 0,
+	const u64 dead_value = 0xffffffffffffffffull,
 	void (*wait)() = SM_Sleep
 >
 class SMutexBase
@@ -32,35 +32,31 @@ class SMutexBase
 	std::atomic<T> owner;
 
 public:
-	SMutexBase()
-		: owner((T)free_value)
+	static const T GetFreeValue()
 	{
+		static const u64 value = free_value;
+		return (const T&)value;
+	}
+
+	static const T GetDeadValue()
+	{
+		static const u64 value = dead_value;
+		return (const T&)value;
 	}
 
 	void initialize()
 	{
-		(T&)owner = free_value;
+		owner = GetFreeValue();
 	}
 
-	~SMutexBase()
+	void finalize()
 	{
-		lock((T)dead_value);
-		owner = (T)dead_value;
+		owner = GetDeadValue();
 	}
 
 	__forceinline T GetOwner() const
 	{
 		return (T&)owner;
-	}
-
-	__forceinline T GetFreeValue() const
-	{
-		return (T)free_value;
-	}
-
-	__forceinline T GetDeadValue() const
-	{
-		return (T)dead_value;
 	}
 
 	SMutexResult trylock(T tid)
@@ -69,7 +65,7 @@ public:
 		{
 			return SMR_ABORT;
 		}
-		T old = (T)free_value;
+		T old = GetFreeValue();
 
 		if (!owner.compare_exchange_strong(old, tid))
 		{
@@ -77,7 +73,7 @@ public:
 			{
 				return SMR_DEADLOCK;
 			}
-			if (old == (T)dead_value)
+			if (old == GetDeadValue())
 			{
 				return SMR_DESTROYED;
 			}
@@ -87,7 +83,7 @@ public:
 		return SMR_OK;
 	}
 
-	SMutexResult unlock(T tid, T to = (T)free_value)
+	SMutexResult unlock(T tid, T to = GetFreeValue())
 	{
 		if (Emu.IsStopped())
 		{
@@ -97,11 +93,11 @@ public:
 
 		if (!owner.compare_exchange_strong(old, to))
 		{
-			if (old == (T)free_value)
+			if (old == GetFreeValue())
 			{
 				return SMR_FAILED;
 			}
-			if (old == (T)dead_value)
+			if (old == GetDeadValue())
 			{
 				return SMR_DESTROYED;
 			}

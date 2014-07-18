@@ -209,8 +209,8 @@ void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 {
 	sysPrxForUser->Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl.GetAddr(), entry);
 
-	be_t<u32> old = SYS_PPU_THREAD_ONCE_INIT;
-	if (once_ctrl->compare_exchange_weak(old, SYS_PPU_THREAD_DONE_INIT))
+	be_t<u32> old = be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_ONCE_INIT));
+	if (once_ctrl->compare_exchange_weak(old, be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_DONE_INIT))))
 	{
 		CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		new_thread.SetEntry(entry);

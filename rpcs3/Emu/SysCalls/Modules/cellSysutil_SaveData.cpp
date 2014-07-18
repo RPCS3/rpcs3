@@ -178,7 +178,7 @@ void getSaveDataStat(SaveDataEntry entry, mem_ptr_t<CellSaveDataStatGet> statGet
 	memcpy(statGet->getParam.listParam, entry.listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 
 	statGet->fileNum = 0;
-	statGet->fileList.SetAddr(0);
+	statGet->fileList.SetAddr(be_t<u32>::MakeFromBE(0));
 	statGet->fileListNum = 0;
 	std::string saveDir = "/dev_hdd0/home/00000001/savedata/" + entry.dirName; // TODO: Get the path of the current user
 	vfsDir dir(saveDir);
@@ -210,7 +210,7 @@ void getSaveDataStat(SaveDataEntry entry, mem_ptr_t<CellSaveDataStatGet> statGet
 		}
 	}
 
-	statGet->fileList.SetAddr(Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), sizeof(CellSaveDataFileStat)));
+	statGet->fileList.SetAddr(be_t<u32>::MakeFromLE(Memory.Alloc(sizeof(CellSaveDataFileStat)* fileEntries.size(), sizeof(CellSaveDataFileStat))));
 	for (u32 i=0; i<fileEntries.size(); i++)
 		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
 }
