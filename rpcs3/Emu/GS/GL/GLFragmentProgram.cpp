@@ -248,9 +248,9 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 std::string GLFragmentDecompilerThread::BuildCode()
 {
 	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
+	AddCode(m_parr.AddParam(PARAM_OUT, "vec4", "ocol0", 0) + " = " + (m_ctrl & 0x40 ? "r0" : "h0") + ";\n");
 	static const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
 		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h2" },
 		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h4" },
 		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h6" },
@@ -260,7 +260,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PARAM_NONE, "vec4", table[i].second))
-			AddCode(m_parr.AddParam(PARAM_OUT, "vec4", table[i].first, i) + " = " + table[i].second + ";");
+			AddCode(m_parr.AddParam(PARAM_OUT, "vec4", table[i].first, i+1) + " = " + table[i].second + ";");
 	}
 
 	if (m_ctrl & 0xe) main += "\tgl_FragDepth = r1.z;\n";
