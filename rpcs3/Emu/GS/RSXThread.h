@@ -348,12 +348,12 @@ public:
 
 	// Clip plane
 	bool m_set_clip_plane;
-	u32 m_clip_plane_0;
-	u32 m_clip_plane_1;
-	u32 m_clip_plane_2;
-	u32 m_clip_plane_3;
-	u32 m_clip_plane_4;
-	u32 m_clip_plane_5;
+	bool m_clip_plane_0;
+	bool m_clip_plane_1;
+	bool m_clip_plane_2;
+	bool m_clip_plane_3;
+	bool m_clip_plane_4;
+	bool m_clip_plane_5;
 
 	// Surface 
 	bool m_set_surface_format;

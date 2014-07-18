@@ -1677,12 +1677,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	{
 		const u32 a0 = ARGS(0);
 		m_set_clip_plane = true;
-		m_clip_plane_0 = a0 & 0xf;
-		m_clip_plane_1 = (a0 >> 4) & 0xf;
-		m_clip_plane_2 = (a0 >> 8) & 0xf;
-		m_clip_plane_3 = (a0 >> 12) & 0xf;
-		m_clip_plane_4 = (a0 >> 16) & 0xf;
-		m_clip_plane_5 = a0 >> 20;
+		m_clip_plane_0 = (a0 & 0xf) ? true : false;
+		m_clip_plane_1 = ((a0 >> 4)) & 0xf ? true : false;
+		m_clip_plane_2 = ((a0 >> 8)) & 0xf ? true : false;
+		m_clip_plane_3 = ((a0 >> 12)) & 0xf ? true : false;
+		m_clip_plane_4 = ((a0 >> 16)) & 0xf ? true : false;
+		m_clip_plane_5 = (a0 >> 20) ? true : false;
 	}
 	break;
 
