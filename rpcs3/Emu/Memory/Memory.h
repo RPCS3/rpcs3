@@ -517,29 +517,29 @@ public:
 		}
 	}
 
-	bool CopyToReal(void* real, u64 from, u32 count)
+	template<typename T> bool CopyToReal(void* real, T from, u32 count)
 	{
-		if (!IsGoodAddr(from, count)) return false;
+		if (!IsGoodAddr<T>(from, count)) return false;
 
-		memcpy(real, GetMemFromAddr(from), count);
+		memcpy(real, GetMemFromAddr<T>(from), count);
 
 		return true;
 	}
 
-	bool CopyFromReal(u64 to, const void* real, u32 count)
+	template<typename T> bool CopyFromReal(T to, const void* real, u32 count)
 	{
-		if (!IsGoodAddr(to, count)) return false;
+		if (!IsGoodAddr<T>(to, count)) return false;
 
-		memcpy(GetMemFromAddr(to), real, count);
+		memcpy(GetMemFromAddr<T>(to), real, count);
 
 		return true;
 	}
 
-	bool Copy(u64 to, u64 from, u32 count)
+	template<typename T1, typename T2> bool Copy(T1 to, T2 from, u32 count)
 	{
-		if (!IsGoodAddr(to, count) || !IsGoodAddr(from, count)) return false;
+		if (!IsGoodAddr<T1>(to, count) || !IsGoodAddr<T2>(from, count)) return false;
 
-		memmove(GetMemFromAddr(to), GetMemFromAddr(from), count);
+		memmove(GetMemFromAddr<T1>(to), GetMemFromAddr<T2>(from), count);
 
 		return true;
 	}
@@ -564,14 +564,14 @@ public:
 		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
 	}
 
-	template<typename T> void WriteData(const u64 addr, const T* data)
+	template<typename T, typename Td> void WriteData(const T addr, const Td* data)
 	{
-		memcpy(GetMemFromAddr(addr), data, sizeof(T));
+		memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
 	}
 
-	template<typename T> void WriteData(const u64 addr, const T data)
+	template<typename T, typename Td> void WriteData(const T addr, const Td data)
 	{
-		*(T*)GetMemFromAddr(addr) = data;
+		*(Td*)GetMemFromAddr<T>(addr) = data;
 	}
 
 	std::string ReadString(const u64 addr, const u64 len)

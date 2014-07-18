@@ -189,7 +189,7 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 
 	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
 	u32 tid_le = GetCurrentPPUThread().GetId();
-	be_t<u32> tid = tid_le;
+	be_t<u32> tid = be_t<u32>::MakeFromLE(tid_le);
 
 	SleepQueue* sq = nullptr;
 	Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq);
@@ -211,7 +211,7 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 
 	if (sq)
 	{
-		mutex->mutex.unlock(tid, mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop());
+		mutex->mutex.unlock(tid, be_t<u32>::MakeFromLE(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()));
 	}
 	else if (mutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
 	{

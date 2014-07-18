@@ -36,5 +36,5 @@ __forceinline u32 SM_GetCurrentCPUThreadId()
 
 __forceinline be_t<u32> SM_GetCurrentCPUThreadIdBE()
 {
-	return SM_GetCurrentCPUThreadId();
+	return be_t<u32>::MakeFromLE(SM_GetCurrentCPUThreadId());
 }
