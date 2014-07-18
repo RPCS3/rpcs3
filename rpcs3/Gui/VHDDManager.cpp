@@ -406,7 +406,7 @@ VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnOpen, this, id_open);
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnRemove, this, id_remove);
 	Bind(wxEVT_MENU, &VHDDManagerDialog::OnCreateHDD, this, id_create_hdd);
-	Bind(wxEVT_CLOSE_WINDOW, &VHDDManagerDialog::OnClose, this, wxID_OK);
+	Bind(wxEVT_BUTTON, &VHDDManagerDialog::OnOk, this, wxID_OK);
 	LoadPaths();
 	UpdateList();
 }
@@ -521,7 +521,7 @@ void VHDDManagerDialog::OnCreateHDD(wxCommandEvent& event)
 	}
 }
 
-void VHDDManagerDialog::OnClose(wxCloseEvent& event)
+void VHDDManagerDialog::OnOk(wxCommandEvent& event)
 {
 	SavePaths();
 	event.Skip();

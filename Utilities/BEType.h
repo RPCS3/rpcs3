@@ -63,24 +63,6 @@ class be_t
 
 public:
 	typedef T type;
-
-#ifdef _WIN32
-	be_t(){}
-#else
-	be_t()	noexcept = default;
-#endif
-
-	be_t(const be_t<T,size>& value) = default;
-	be_t(const T& value)
-	{
-		FromLE(value);
-	}
-
-	template<typename T1>
-	explicit be_t(const be_t<T1>& value)
-	{
-		FromBE(value.ToBE());
-	}
 	
 	const T& ToBE() const
 	{
@@ -130,7 +112,18 @@ public:
 	operator const be_t<T1>() const
 	{
 		be_t<T1> res;
-		res.FromBE(ToBE());
+		if (sizeof(T1) < sizeof(T))
+		{
+			res.FromBE(ToBE() >> ((sizeof(T)-sizeof(T1)) * 8));
+		}
+		else if (sizeof(T1) > sizeof(T))
+		{
+			res.FromLE(ToLE());
+		}
+		else
+		{
+			res.FromBE(ToBE());
+		}
 		return res;
 	}
 

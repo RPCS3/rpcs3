@@ -366,25 +366,6 @@ public:
 	}
 };
 
-class NullMemoryBlock : public MemoryBlock
-{
-public:
-	virtual bool IsNULL() { return true; }
-	virtual bool IsMyAddress(const u64 addr) { return true; }
-
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
-
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
-};
-
 template<typename PT>
 class DynamicMemoryBlockBase : public PT
 {

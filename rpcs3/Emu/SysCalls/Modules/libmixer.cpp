@@ -213,7 +213,7 @@ int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, m
 	ssp[handle].m_addr = waveInfo->addr;
 	ssp[handle].m_samples = waveInfo->samples;
 	ssp[handle].m_loop_start = waveInfo->loopStartOffset - 1;
-	ssp[handle].m_loop_mode = commonInfo.GetAddr() ? commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
+	ssp[handle].m_loop_mode = commonInfo.GetAddr() ? (u32)commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
 	ssp[handle].m_position = waveInfo->startOffset - 1;
 
 	return CELL_OK;

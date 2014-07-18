@@ -1485,8 +1485,8 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void ROTQBI(u32 rt, u32 ra, u32 rb)
@@ -1628,8 +1628,8 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void ROTQBII(u32 rt, u32 ra, s32 i7)

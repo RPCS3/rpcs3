@@ -214,12 +214,22 @@ public:
 		}
 	}
 
-	void InitRawSPU(MemoryBlock* raw_spu, const u32 num)
+	u32 InitRawSPU(MemoryBlock* raw_spu)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
-		MemoryBlocks.push_back(raw_spu);
-		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = raw_spu;
+		u32 index;
+		for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
+		{
+			if (!RawSPUMem[index])
+			{
+				RawSPUMem[index] = raw_spu;
+				break;
+			}
+		}
+
+		MemoryBlocks.push_back(raw_spu->SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET));
+		return index;
 	}
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
@@ -391,7 +401,10 @@ public:
 			}
 			else
 			{
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data);
+				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
+				{
+					*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
+				}
 			}
 		}
 		else
@@ -464,7 +477,10 @@ public:
 			else
 			{
 				u32 res;
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res);
+				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
+				{
+					res = re32(*(u32*)((u8*)GetBaseAddr() + addr));
+				}
 				return res;
 			}
 		}
@@ -501,29 +517,29 @@ public:
 		}
 	}
 
-	bool CopyToReal(void* real, u64 from, u32 count)
+	template<typename T> bool CopyToReal(void* real, T from, u32 count)
 	{
-		if (!IsGoodAddr(from, count)) return false;
+		if (!IsGoodAddr<T>(from, count)) return false;
 
-		memcpy(real, GetMemFromAddr(from), count);
+		memcpy(real, GetMemFromAddr<T>(from), count);
 
 		return true;
 	}
 
-	bool CopyFromReal(u64 to, const void* real, u32 count)
+	template<typename T> bool CopyFromReal(T to, const void* real, u32 count)
 	{
-		if (!IsGoodAddr(to, count)) return false;
+		if (!IsGoodAddr<T>(to, count)) return false;
 
-		memcpy(GetMemFromAddr(to), real, count);
+		memcpy(GetMemFromAddr<T>(to), real, count);
 
 		return true;
 	}
 
-	bool Copy(u64 to, u64 from, u32 count)
+	template<typename T1, typename T2> bool Copy(T1 to, T2 from, u32 count)
 	{
-		if (!IsGoodAddr(to, count) || !IsGoodAddr(from, count)) return false;
+		if (!IsGoodAddr<T1>(to, count) || !IsGoodAddr<T2>(from, count)) return false;
 
-		memmove(GetMemFromAddr(to), GetMemFromAddr(from), count);
+		memmove(GetMemFromAddr<T1>(to), GetMemFromAddr<T2>(from), count);
 
 		return true;
 	}
@@ -548,14 +564,14 @@ public:
 		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
 	}
 
-	template<typename T> void WriteData(const u64 addr, const T* data)
+	template<typename T, typename Td> void WriteData(const T addr, const Td* data)
 	{
-		memcpy(GetMemFromAddr(addr), data, sizeof(T));
+		memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
 	}
 
-	template<typename T> void WriteData(const u64 addr, const T data)
+	template<typename T, typename Td> void WriteData(const T addr, const Td data)
 	{
-		*(T*)GetMemFromAddr(addr) = data;
+		*(Td*)GetMemFromAddr<T>(addr) = data;
 	}
 
 	std::string ReadString(const u64 addr, const u64 len)
