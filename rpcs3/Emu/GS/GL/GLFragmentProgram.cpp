@@ -398,20 +398,36 @@ void GLFragmentDecompilerThread::Task()
 		break;
 
 		case 0x43: //LOOP
-			AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-			m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
-			m_loop_count++;
-			m_end_offsets.push_back(src2.end_offset << 2);
-			AddCode("{");
-			m_code_level++;
+			if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
+			{
+				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
+					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3, src2.end_offset));
+			}
+			else
+			{
+				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
+					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
+				m_loop_count++;
+				m_end_offsets.push_back(src2.end_offset << 2);
+				AddCode("{");
+				m_code_level++;
+			}
 		break;
 		case 0x44: //REP
-			AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-				m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
-			m_loop_count++;
-			m_end_offsets.push_back(src2.end_offset << 2);
-			AddCode("{");
-			m_code_level++;
+			if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
+			{
+				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
+					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3, src2.end_offset));
+			}
+			else
+			{
+				AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
+					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
+				m_loop_count++;
+				m_end_offsets.push_back(src2.end_offset << 2);
+				AddCode("{");
+				m_code_level++;
+			}
 		break;
 		//case 0x45: SetDst("return"); break; //RET
 
