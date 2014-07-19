@@ -340,13 +340,15 @@ bool GLGSRender::LoadProgram()
 		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
 	}
-
+	
+	m_cur_shader_prog->ctrl = m_shader_ctrl;
+	
 	if(!m_cur_vertex_prog)
 	{
 		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
 		return false;
 	}
-
+	
 	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog, m_shader_prog);
 	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
 

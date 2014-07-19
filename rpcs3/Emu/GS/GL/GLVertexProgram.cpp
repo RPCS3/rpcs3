@@ -41,7 +41,7 @@ std::string GLVertexDecompilerThread::GetDST(bool isSca)
 {
 	std::string ret;
 
-	switch(d3.dst)
+	switch(isSca ? 0x1f : d3.dst)
 	{
 	case 0x1f:
 		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));

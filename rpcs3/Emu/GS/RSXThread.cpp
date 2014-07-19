@@ -972,13 +972,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 
 	case NV4097_SET_SHADER_CONTROL:
 	{
-		if(!m_cur_shader_prog)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_SHADER_CONTROL: m_cur_shader_prog == NULL");
-			break;
-		}
-
-		m_cur_shader_prog->ctrl = ARGS(0);
+		m_shader_ctrl = ARGS(0);
 	}
 	break;
 

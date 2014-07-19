@@ -112,8 +112,8 @@ public:
 	RSXIndexArrayData m_indexed_array;
 	std::vector<RSXTransformConstant> m_fragment_constants;
 	std::vector<RSXTransformConstant> m_transform_constants;
-
-	u32 m_cur_shader_prog_num;
+	
+	u32 m_shader_ctrl, m_cur_shader_prog_num;
 	RSXShaderProgram m_shader_progs[m_fragment_count];
 	RSXShaderProgram* m_cur_shader_prog;
 	RSXVertexProgram m_vertex_progs[m_vertex_count];
@@ -428,6 +428,7 @@ protected:
 	RSXThread()
 		: ThreadBase("RSXThread")
 		, m_ctrl(nullptr)
+		, m_shader_ctrl(0x40)
 		, m_flip_status(0)
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
 		, m_debug_level(CELL_GCM_DEBUG_LEVEL0)
