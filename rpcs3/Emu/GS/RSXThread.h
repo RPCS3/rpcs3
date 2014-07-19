@@ -615,6 +615,7 @@ protected:
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
+	virtual void ExecCMD(u32 cmd) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)

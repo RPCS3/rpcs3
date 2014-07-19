@@ -822,7 +822,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		if(a0 & 0x40) m_clear_surface_color_b = m_clear_color_b;
 		if(a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
 
-		m_clear_surface_mask |= a0;
+		m_clear_surface_mask = a0;
+		ExecCMD(NV4097_CLEAR_SURFACE);
 	}
 	break;
 

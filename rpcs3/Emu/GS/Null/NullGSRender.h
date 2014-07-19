@@ -30,7 +30,11 @@ private:
 	virtual void OnReset()
 	{
 	}
-
+	
+	virtual void ExecCMD(u32 cmd)
+	{
+	}
+	
 	virtual void ExecCMD()
 	{
 	}

@@ -846,6 +846,7 @@ private:
 	void Enable(bool enable, const u32 cap);
 	virtual void Close();
 	bool LoadProgram();
+	void WriteBuffers();
 	void WriteDepthBuffer();
 	void WriteColorBuffers();
 	void WriteColourBufferA();
@@ -854,12 +855,14 @@ private:
 	void WriteColourBufferD();
 
 	void DrawObjects();
+	void InitDrawBuffers();
 
 protected:
 	virtual void OnInit();
 	virtual void OnInitThread();
 	virtual void OnExitThread();
 	virtual void OnReset();
+	virtual void ExecCMD(u32 cmd);
 	virtual void ExecCMD();
 	virtual void Flip();
 };

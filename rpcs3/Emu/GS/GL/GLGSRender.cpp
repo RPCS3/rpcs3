@@ -441,6 +441,19 @@ bool GLGSRender::LoadProgram()
 	return true;
 }
 
+void GLGSRender::WriteBuffers()
+{
+	if (Ini.GSDumpDepthBuffer.GetValue())
+	{
+		WriteDepthBuffer();
+	}
+
+	if (Ini.GSDumpColorBuffers.GetValue())
+	{
+		WriteColorBuffers();
+	}
+}
+
 void GLGSRender::WriteDepthBuffer()
 {
 	if (!m_set_context_dma_z)
@@ -705,16 +718,8 @@ void GLGSRender::OnReset()
 	m_vao.Delete();
 }
 
-void GLGSRender::ExecCMD()
+void GLGSRender::InitDrawBuffers()
 {
-	//return;
-	if(!LoadProgram())
-	{
-		LOG_ERROR(RSX, "LoadProgram failed.");
-		Emu.Pause();
-		return;
-	}
-
 	if(!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
@@ -795,11 +800,6 @@ void GLGSRender::ExecCMD()
 		
 	m_fbo.Bind();
 
-	if (Ini.GSDumpDepthBuffer.GetValue())
-	{
-		WriteDepthBuffer();
-	}
-
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
 	switch(m_surface_colour_target)
@@ -831,6 +831,13 @@ void GLGSRender::ExecCMD()
 		LOG_ERROR(RSX, "Bad surface colour target: %d", m_surface_colour_target);
 	break;
 	}
+}
+
+void GLGSRender::ExecCMD(u32 cmd)
+{
+	assert(cmd == NV4097_CLEAR_SURFACE);
+	
+	InitDrawBuffers();
 
 	if(m_set_color_mask)
 	{
@@ -838,49 +845,55 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glColorMask");
 	}
 
-	if(m_set_viewport_horizontal && m_set_viewport_vertical)
-	{
-		//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
-		//checkForGlError("glViewport");
-	}
-	
 	if (m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
-	
-	if(m_clear_surface_mask)
+
+	GLbitfield f = 0;
+
+	if (m_clear_surface_mask & 0x1)
 	{
-		GLbitfield f = 0;
+		glClearDepth(m_clear_surface_z / (float)0xffffff);
 
-		if (m_clear_surface_mask & 0x1)
-		{
-			glClearDepth(m_clear_surface_z / (float)0xffffff);
-
-			f |= GL_DEPTH_BUFFER_BIT;
-		}
-
-		if (m_clear_surface_mask & 0x2)
-		{
-			glClearStencil(m_clear_surface_s);
-
-			f |= GL_STENCIL_BUFFER_BIT;
-		}
-
-		if (m_clear_surface_mask & 0xF0)
-		{
-			glClearColor(
-				m_clear_surface_color_r / 255.0f,
-				m_clear_surface_color_g / 255.0f,
-				m_clear_surface_color_b / 255.0f,
-				m_clear_surface_color_a / 255.0f);
-
-			f |= GL_COLOR_BUFFER_BIT;
-		}
-
-		glClear(f);
+		f |= GL_DEPTH_BUFFER_BIT;
 	}
+
+	if (m_clear_surface_mask & 0x2)
+	{
+		glClearStencil(m_clear_surface_s);
+
+		f |= GL_STENCIL_BUFFER_BIT;
+	}
+
+	if (m_clear_surface_mask & 0xF0)
+	{
+		glClearColor(
+			m_clear_surface_color_r / 255.0f,
+			m_clear_surface_color_g / 255.0f,
+			m_clear_surface_color_b / 255.0f,
+			m_clear_surface_color_a / 255.0f);
+
+		f |= GL_COLOR_BUFFER_BIT;
+	}
+
+	glClear(f);
+	
+	WriteBuffers();
+}
+
+void GLGSRender::ExecCMD()
+{
+	//return;
+	if(!LoadProgram())
+	{
+		LOG_ERROR(RSX, "LoadProgram failed.");
+		Emu.Pause();
+		return;
+	}
+
+	InitDrawBuffers();
 
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
@@ -1168,11 +1181,8 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glDrawArrays");
 		DisableVertexData();
 	}
-
-	if (Ini.GSDumpColorBuffers.GetValue())
-	{
-		WriteColorBuffers();
-	}
+	
+	WriteBuffers();
 }
 
 void GLGSRender::Flip()
