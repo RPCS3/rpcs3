@@ -849,10 +849,10 @@ private:
 	void WriteBuffers();
 	void WriteDepthBuffer();
 	void WriteColorBuffers();
-	void WriteColourBufferA();
-	void WriteColourBufferB();
-	void WriteColourBufferC();
-	void WriteColourBufferD();
+	void WriteColorBufferA();
+	void WriteColorBufferB();
+	void WriteColorBufferC();
+	void WriteColorBufferD();
 
 	void DrawObjects();
 	void InitDrawBuffers();

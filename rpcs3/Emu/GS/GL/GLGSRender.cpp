@@ -461,9 +461,6 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	// Reset the flag
-	m_set_context_dma_z = false;
-
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
@@ -491,7 +488,7 @@ void GLGSRender::WriteDepthBuffer()
 
 }
 
-void GLGSRender::WriteColourBufferA()
+void GLGSRender::WriteColorBufferA()
 {
 	if (!m_set_context_dma_color_a)
 	{
@@ -501,16 +498,16 @@ void GLGSRender::WriteColourBufferA()
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOG_WARNING(RSX, "Bad colour buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
+		LOG_WARNING(RSX, "Bad color buffer a address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
 		return;
 	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkForGlError("WriteColourBufferA(): glReadBuffer(GL_COLOR_ATTACHMENT0)");
+	checkForGlError("WriteColorBufferA(): glReadBuffer(GL_COLOR_ATTACHMENT0)");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColourBufferA(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
+	checkForGlError("WriteColorBufferA(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
@@ -520,7 +517,7 @@ void GLGSRender::WriteColourBufferA()
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
-void GLGSRender::WriteColourBufferB()
+void GLGSRender::WriteColorBufferB()
 {
 	if (!m_set_context_dma_color_b)
 	{
@@ -530,16 +527,16 @@ void GLGSRender::WriteColourBufferB()
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOG_WARNING(RSX, "Bad colour buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
+		LOG_WARNING(RSX, "Bad color buffer b address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
 		return;
 	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
-	checkForGlError("WriteColourBufferB(): glReadBuffer(GL_COLOR_ATTACHMENT1)");
+	checkForGlError("WriteColorBufferB(): glReadBuffer(GL_COLOR_ATTACHMENT1)");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColourBufferB(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
+	checkForGlError("WriteColorBufferB(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
@@ -550,7 +547,7 @@ void GLGSRender::WriteColourBufferB()
 
 }
 
-void GLGSRender::WriteColourBufferC()
+void GLGSRender::WriteColorBufferC()
 {
 	if (!m_set_context_dma_color_c)
 	{
@@ -560,16 +557,16 @@ void GLGSRender::WriteColourBufferC()
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOG_WARNING(RSX, "Bad colour buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
+		LOG_WARNING(RSX, "Bad color buffer c address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
 		return;
 	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
-	checkForGlError("WriteColourBufferC(): glReadBuffer(GL_COLOR_ATTACHMENT2)");
+	checkForGlError("WriteColorBufferC(): glReadBuffer(GL_COLOR_ATTACHMENT2)");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[2]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColourBufferC(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
+	checkForGlError("WriteColorBufferC(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
@@ -579,7 +576,7 @@ void GLGSRender::WriteColourBufferC()
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
-void GLGSRender::WriteColourBufferD()
+void GLGSRender::WriteColorBufferD()
 {
 	if (!m_set_context_dma_color_d)
 	{
@@ -589,16 +586,16 @@ void GLGSRender::WriteColourBufferD()
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 	if (!Memory.IsGoodAddr(address))
 	{
-		LOG_WARNING(RSX, "Bad colour buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
+		LOG_WARNING(RSX, "Bad color buffer d address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
 		return;
 	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
-	checkForGlError("WriteColourBufferD(): glReadBuffer(GL_COLOR_ATTACHMENT3)");
+	checkForGlError("WriteColorBufferD(): glReadBuffer(GL_COLOR_ATTACHMENT3)");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[3]);
 	glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_buffer_width * RSXThread::m_buffer_height * 4, 0, GL_STREAM_READ);
 	glReadPixels(0, 0, RSXThread::m_buffer_width, RSXThread::m_buffer_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColourBufferD(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
+	checkForGlError("WriteColorBufferD(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
@@ -614,35 +611,35 @@ void GLGSRender::WriteColorBuffers()
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 
-	switch(m_surface_colour_target)
+	switch(m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		WriteColourBufferA();
+		WriteColorBufferA();
 	break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		WriteColourBufferB();
+		WriteColorBufferB();
 	break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		WriteColourBufferA();
-		WriteColourBufferB();
+		WriteColorBufferA();
+		WriteColorBufferB();
 	break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		WriteColourBufferA();
-		WriteColourBufferB();
-		WriteColourBufferC();
+		WriteColorBufferA();
+		WriteColorBufferB();
+		WriteColorBufferC();
 	break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		WriteColourBufferA();
-		WriteColourBufferB();
-		WriteColourBufferC();
-		WriteColourBufferD();
+		WriteColorBufferA();
+		WriteColorBufferB();
+		WriteColorBufferC();
+		WriteColorBufferD();
 	break;
 	}
 }
@@ -802,7 +799,7 @@ void GLGSRender::InitDrawBuffers()
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
-	switch(m_surface_colour_target)
+	switch(m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		break;
@@ -828,7 +825,7 @@ void GLGSRender::InitDrawBuffers()
 	break;
 
 	default:
-		LOG_ERROR(RSX, "Bad surface colour target: %d", m_surface_colour_target);
+		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	break;
 	}
 }
@@ -1194,7 +1191,7 @@ void GLGSRender::Flip()
 		checkForGlError("glScissor");
 	}
 	
-	switch (m_surface_colour_target)
+	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	case CELL_GCM_SURFACE_TARGET_1:
