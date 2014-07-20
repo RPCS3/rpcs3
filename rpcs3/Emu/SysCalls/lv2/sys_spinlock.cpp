@@ -4,53 +4,59 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
+
 #include "sys_spinlock.h"
 
 SysCallBase sys_spinlock("sys_spinlock");
 
-void sys_spinlock_initialize(mem_ptr_t<spinlock> lock)
+void sys_spinlock_initialize(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_initialize(lock_addr=0x%x)", lock.GetAddr());
 
-	lock->mutex.initialize();
+	// prx: set 0 and sync
+	*lock = be_t<u32>::MakeFromBE(0);
 }
 
-void sys_spinlock_lock(mem_ptr_t<spinlock> lock)
+void sys_spinlock_lock(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_lock(lock_addr=0x%x)", lock.GetAddr());
 
-	be_t<u32> tid = be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId());
-	switch (lock->mutex.lock(tid))
+	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
+	while (lock->exchange(be_t<u32>::MakeFromBE(se32(0xabadcafe))).ToBE())
 	{
-	case SMR_ABORT: LOG_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr()); break;
-	case SMR_DEADLOCK: LOG_ERROR(HLE, "sys_spinlock_lock(0x%x) reached deadlock", lock.GetAddr()); break; // ???
-	default: break;
+		while (lock->load(std::memory_order_relaxed).ToBE())
+		{
+			if (Emu.IsStopped())
+			{
+				break;
+			}
+		}
+
+		if (Emu.IsStopped())
+		{
+			LOG_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr());
+			break;
+		}
 	}
 }
 
-s32 sys_spinlock_trylock(mem_ptr_t<spinlock> lock)
+s32 sys_spinlock_trylock(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_trylock(lock_addr=0x%x)", lock.GetAddr());
 
-	be_t<u32> tid = be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId());
-	switch (lock->mutex.trylock(tid))
+	// prx: exchange with 0xabadcafe, translate exchanged value
+	if (lock->exchange(be_t<u32>::MakeFromBE(se32(0xabadcafe))).ToBE())
 	{
-	case SMR_FAILED: return CELL_EBUSY;
-	case SMR_ABORT: LOG_WARNING(HLE, "sys_spinlock_trylock(0x%x) aborted", lock.GetAddr()); break;
-	case SMR_DEADLOCK: LOG_ERROR(HLE, "sys_spinlock_trylock(0x%x) reached deadlock", lock.GetAddr()); break;
-	default: break;
+		return CELL_EBUSY;
 	}
 
 	return CELL_OK;
 }
 
-void sys_spinlock_unlock(mem_ptr_t<spinlock> lock)
+void sys_spinlock_unlock(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_unlock(lock_addr=0x%x)", lock.GetAddr());
 
-	while(true)
-	{
-		if (lock->mutex.unlock(lock->mutex.GetOwner()) != SMR_PERMITTED)
-			break;
-	}
+	// prx: sync and set 0
+	*lock = be_t<u32>::MakeFromBE(0);
 }
