@@ -429,12 +429,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
 
-	//cbox_cpu_decoder->Append("DisAsm");
-	cbox_cpu_decoder->Append("Interpreter & DisAsm");
-	cbox_cpu_decoder->Append("Interpreter");
+	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
+	cbox_cpu_decoder->Append("PPU Interpreter");
 
-	cbox_spu_decoder->Append("Interpreter");
-	cbox_spu_decoder->Append("Recompiler");
+	cbox_spu_decoder->Append("SPU Interpreter");
+	cbox_spu_decoder->Append("SPU JIT (asmjit)");
 
 	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
 	{

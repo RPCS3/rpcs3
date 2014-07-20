@@ -23,7 +23,7 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	X86CpuUtil::detect(&inf);
 	if (!inf.hasFeature(kX86CpuFeatureSse41))
 	{
-		LOG_ERROR(SPU, "SPU Recompiler requires SSE4.1 instruction set support");
+		LOG_ERROR(SPU, "SPU JIT requires SSE4.1 instruction set support");
 		Emu.Pause();
 	}
 }
@@ -168,13 +168,6 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);
 	u32* ls = (u32*)&Memory[m_offset];
-
-	if (!pos)
-	{
-		LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(): ls_addr = 0");
-		Emu.Pause();
-		return 0;
-	}
 
 	if (entry[pos].pointer)
 	{
