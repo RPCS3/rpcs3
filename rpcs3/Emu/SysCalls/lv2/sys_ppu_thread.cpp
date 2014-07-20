@@ -10,12 +10,10 @@
 
 extern Module *sysPrxForUser;
 
-static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU;
+static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU/*UUUUUUUUUUuuuuuuuuuu~~~~~~~~*/;
 
-void sys_ppu_thread_exit(u64 errorcode)
+void ppu_thread_exit(u64 errorcode)
 {
-	sysPrxForUser->Log("sys_ppu_thread_exit(0x%llx)", errorcode);
-	
 	PPUThread& thr = GetCurrentPPUThread();
 	u32 tid = thr.GetId();
 
@@ -27,6 +25,20 @@ void sys_ppu_thread_exit(u64 errorcode)
 
 	thr.SetExitStatus(errorcode);
 	thr.Stop();
+}
+
+void sys_ppu_thread_exit(u64 errorcode)
+{
+	sysPrxForUser->Log("sys_ppu_thread_exit(0x%llx)", errorcode);
+	
+	ppu_thread_exit(errorcode);
+}
+
+void sys_internal_ppu_thread_exit(u64 errorcode)
+{
+	sysPrxForUser->Log("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
+
+	ppu_thread_exit(errorcode);
 }
 
 s32 sys_ppu_thread_yield()
