@@ -24,7 +24,8 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 	}
 
 	// prx: set zero and sync
-	InterlockedExchange(&mutex->m_data(), 0);
+	mutex->m_data = 0;
+	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
 	return CELL_OK;
 }
 
