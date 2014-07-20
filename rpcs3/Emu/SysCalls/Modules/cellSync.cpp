@@ -4,51 +4,17 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "cellSync.h"
+
 //void cellSync_init();
 //Module cellSync("cellSync", cellSync_init);
 Module *cellSync = nullptr;
-
-// Return Codes
-enum
-{
-	CELL_SYNC_ERROR_AGAIN                  = 0x80410101,
-	CELL_SYNC_ERROR_INVAL                  = 0x80410102,
-	CELL_SYNC_ERROR_NOMEM                  = 0x80410104,
-	CELL_SYNC_ERROR_DEADLK                 = 0x80410108,
-	CELL_SYNC_ERROR_PERM                   = 0x80410109,
-	CELL_SYNC_ERROR_BUSY                   = 0x8041010A,
-	CELL_SYNC_ERROR_STAT                   = 0x8041010F,
-	CELL_SYNC_ERROR_ALIGN                  = 0x80410110,
-	CELL_SYNC_ERROR_NULL_POINTER           = 0x80410111,
-	CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD   = 0x80410112,
-	CELL_SYNC_ERROR_NO_NOTIFIER            = 0x80410113,
-	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114,
-};
-
-struct CellSyncMutex
-{
-	be_t<u16> m_freed;
-	be_t<u16> m_order;
-
-	volatile u32& m_data()
-	{
-		return *reinterpret_cast<u32*>(this);
-	};
-	/*
-	(???) Initialize: set zeros
-	(???) Lock: increase m_order and wait until m_freed == old m_order
-	(???) Unlock: increase m_freed
-	(???) TryLock: ?????
-	*/
-};
-
-static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong sizeof");
 
 int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
 	cellSync->Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
 
-	if (!mutex.IsGood())
+	if (!mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -57,7 +23,8 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	mutex->m_data() = 0;
+	// prx: set zero and sync
+	InterlockedExchange(&mutex->m_data(), 0);
 	return CELL_OK;
 }
 
@@ -65,7 +32,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 {
 	cellSync->Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
 
-	if (!mutex.IsGood())
+	if (!mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -74,6 +41,7 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
+	// prx: increase u16 and remember its old value
 	be_t<u16> old_order;
 	while (true)
 	{
@@ -82,11 +50,12 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		new_mutex.m_data() = old_data;
 
 		old_order = new_mutex.m_order;
-		new_mutex.m_order++;
+		new_mutex.m_order++; // increase m_order
 		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
 	}
 
-	while (old_order != mutex->m_freed) 
+	// prx: wait until another u16 value == old value
+	while (old_order != mutex->m_freed)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
@@ -95,7 +64,9 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 			break;
 		}
 	}
-	_mm_mfence();
+
+	// prx: sync
+	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
 	return CELL_OK;
 }
 
@@ -103,7 +74,7 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 {
 	cellSync->Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
 
-	if (!mutex.IsGood())
+	if (!mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -111,8 +82,6 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
-
-	int res;
 
 	while (true)
 	{
@@ -120,26 +89,26 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 		CellSyncMutex new_mutex;
 		new_mutex.m_data() = old_data;
 
+		// prx: compare two u16 values and exit if not equal
 		if (new_mutex.m_order != new_mutex.m_freed)
 		{
-			res = CELL_SYNC_ERROR_BUSY;
+			return CELL_SYNC_ERROR_BUSY;
 		}
 		else
 		{
 			new_mutex.m_order++;
-			res = CELL_OK;
 		}
 		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
 	}
 
-	return res;
+	return CELL_OK;
 }
 
 int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 {
 	cellSync->Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
 
-	if (!mutex.IsGood())
+	if (!mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -147,6 +116,8 @@ int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
+
+	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
 
 	while (true)
 	{
