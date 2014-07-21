@@ -379,7 +379,7 @@ public:
 	u32 m_surface_offset_c;
 	u32 m_surface_offset_d;
 	u32 m_surface_offset_z;
-	u32 m_surface_colour_target;
+	u32 m_surface_color_target;
 
 	// DMA context
 	bool m_set_context_dma_color_a;
