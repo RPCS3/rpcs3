@@ -148,7 +148,7 @@ u16 Module::GetID() const
 	return m_id;
 }
 
-std::string Module::GetName() const
+const std::string& Module::GetName() const
 {
 	return m_name;
 }

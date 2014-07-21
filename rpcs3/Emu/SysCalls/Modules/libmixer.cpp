@@ -1206,7 +1206,7 @@ void libmixer_init()
 		0xf000000048000000 // b
 	);
 
-	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB);
-	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex);
-	REG_SUB_EMPTY(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio);
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB, 0);
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex, 0);
+	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio, 0);
 }

@@ -1093,5 +1093,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\LogBase.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
