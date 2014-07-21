@@ -10,9 +10,9 @@
 //Module cellSync("cellSync", cellSync_init);
 Module *cellSync = nullptr;
 
-int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
+s32 cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync->Log("cellSyncMutexInitialize(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.GetAddr());
 
 	if (!mutex)
 	{
@@ -29,9 +29,9 @@ int cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
+s32 cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync->Log("cellSyncMutexLock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexLock(mutex_addr=0x%x)", mutex.GetAddr());
 
 	if (!mutex)
 	{
@@ -58,10 +58,10 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 	// prx: wait until another u16 value == old value
 	while (old_order != mutex->m_freed)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellSyncMutexLock(mutex=0x%x) aborted", mutex.GetAddr());
+			LOG_WARNING(HLE, "cellSyncMutexLock(mutex_addr=0x%x) aborted", mutex.GetAddr());
 			break;
 		}
 	}
@@ -71,9 +71,9 @@ int cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
+s32 cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync->Log("cellSyncMutexTryLock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexTryLock(mutex_addr=0x%x)", mutex.GetAddr());
 
 	if (!mutex)
 	{
@@ -105,9 +105,9 @@ int cellSyncMutexTryLock(mem_ptr_t<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
+s32 cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync->Log("cellSyncMutexUnlock(mutex=0x%x)", mutex.GetAddr());
+	cellSync->Log("cellSyncMutexUnlock(mutex_addr=0x%x)", mutex.GetAddr());
 
 	if (!mutex)
 	{
@@ -133,10 +133,108 @@ int cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
+s32 cellSyncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_count)
+{
+	cellSync->Log("cellSyncBarrierInitialize(barrier_addr=0x%x, total_count=%d)", barrier.GetAddr(), total_count);
+
+	if (!barrier)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (barrier.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+	if (!total_count || total_count > 32767)
+	{
+		return CELL_SYNC_ERROR_INVAL;
+	}
+
+	// prx: zeroize first u16, write total_count in second u16 and sync
+	barrier->m_value = 0;
+	barrier->m_count = total_count;
+	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	return CELL_OK;
+}
+
+s32 cellSyncBarrierNotify(mem_ptr_t<CellSyncBarrier> barrier)
+{
+	cellSync->Todo("cellSyncBarrierNotify(barrier_addr=0x%x)", barrier.GetAddr());
+
+	if (!barrier)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (barrier.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// TODO
+	return CELL_OK;
+}
+
+s32 cellSyncBarrierTryNotify(mem_ptr_t<CellSyncBarrier> barrier)
+{
+	cellSync->Todo("cellSyncBarrierTryNotify(barrier_addr=0x%x)", barrier.GetAddr());
+
+	if (!barrier)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (barrier.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// TODO
+	return CELL_OK;
+}
+
+s32 cellSyncBarrierWait(mem_ptr_t<CellSyncBarrier> barrier)
+{
+	cellSync->Todo("cellSyncBarrierWait(barrier_addr=0x%x)", barrier.GetAddr());
+
+	if (!barrier)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (barrier.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// TODO
+	return CELL_OK;
+}
+
+s32 cellSyncBarrierTryWait(mem_ptr_t<CellSyncBarrier> barrier)
+{
+	cellSync->Todo("cellSyncBarrierTryWait(barrier_addr=0x%x)", barrier.GetAddr());
+
+	if (!barrier)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (barrier.GetAddr() % 4)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// TODO
+	return CELL_OK;
+}
+
 void cellSync_init()
 {
 	cellSync->AddFunc(0xa9072dee, cellSyncMutexInitialize);
 	cellSync->AddFunc(0x1bb675c2, cellSyncMutexLock);
 	cellSync->AddFunc(0xd06918c4, cellSyncMutexTryLock);
 	cellSync->AddFunc(0x91f2b7b0, cellSyncMutexUnlock);
+
+	cellSync->AddFunc(0x07254fda, cellSyncBarrierInitialize);
+	cellSync->AddFunc(0xf06a6415, cellSyncBarrierNotify);
+	cellSync->AddFunc(0x268edd6d, cellSyncBarrierTryNotify);
+	cellSync->AddFunc(0x35f21355, cellSyncBarrierWait);
+	cellSync->AddFunc(0x6c272124, cellSyncBarrierTryWait);
 }
