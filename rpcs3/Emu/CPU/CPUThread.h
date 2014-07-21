@@ -12,7 +12,7 @@ struct reservation_struct
 	// std::mutex doesn't work because it probably wakes up waiting threads in the most unwanted order
 	// and doesn't give a chance to finish some work before losing the reservation
 	u32 owner; // id of thread that got reservation
-	u32 addr;
+	u64 addr;
 	u32 size;
 	u32 data32;
 	u64 data64;
