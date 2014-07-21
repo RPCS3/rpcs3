@@ -5,14 +5,20 @@ class LogBase
 	bool m_logging;
 
 public:
-	LogBase()
-		: m_logging(false)
-	{
-	}
-
 	void SetLogging(bool value)
 	{
 		m_logging = value;
+	}
+
+	bool GetLogging()
+	{
+		//return m_logging; // TODO
+		return Ini.HLELogging.GetValue();
+	}
+
+	LogBase()
+	{
+		SetLogging(false);
 	}
 
 	virtual const std::string& GetName() const = 0;
@@ -29,7 +35,7 @@ public:
 
 	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args)
 	{
-		if (m_logging)
+		if (GetLogging())
 		{
 			Notice(fmt, args...);
 		}
@@ -37,7 +43,7 @@ public:
 
 	template<typename... Targs> __forceinline void Log(const u32 id, const char* fmt, Targs... args)
 	{
-		if (m_logging)
+		if (GetLogging())
 		{
 			Notice(id, fmt, args...);
 		}
