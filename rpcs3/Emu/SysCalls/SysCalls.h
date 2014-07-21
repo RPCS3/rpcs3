@@ -64,62 +64,65 @@ public:
 
 	const std::string& GetName() const { return m_module_name; }
 
-	void Log(const u32 id, std::string fmt, ...)
+	bool IsLogging()
 	{
-		if(Ini.HLELogging.GetValue())
+		return Ini.HLELogging.GetValue();
+	}
+
+	template<typename... Targs> void Notice(const u32 id, const char* fmt, Targs... args)
+	{
+		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::Format(fmt, args...));
+	}
+
+	template<typename... Targs> void Notice(const char* fmt, Targs... args)
+	{
+		LOG_NOTICE(HLE, GetName() + ": " + fmt::Format(fmt, args...));
+	}
+
+	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args)
+	{
+		if (IsLogging())
 		{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
+			Notice(fmt, args...);
 		}
 	}
 
-	void Log(std::string fmt, ...)
+	template<typename... Targs> __forceinline void Log(const u32 id, const char* fmt, Targs... args)
 	{
-		if(Ini.HLELogging.GetValue())
+		if (IsLogging())
 		{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + ": " + fmt::FormatV(fmt, list));
-		va_end(list);
+			Notice(id, fmt, args...);
 		}
 	}
 
-	void Warning(const u32 id, std::string fmt, ...)
+	template<typename... Targs> void Warning(const u32 id, const char* fmt, Targs... args)
 	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
-//#endif
+		LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::Format(fmt, args...));
 	}
 
-	void Warning(std::string fmt, ...)
+	template<typename... Targs> void Warning(const char* fmt, Targs... args)
 	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		LOG_WARNING(HLE, GetName() + " warning: " + fmt::FormatV(fmt, list));
-		va_end(list);
-//#endif
+		LOG_WARNING(HLE, GetName() + " warning: " + fmt::Format(fmt, args...));
 	}
 
-	void Error(const u32 id, std::string fmt, ...)
+	template<typename... Targs> void Error(const u32 id, const char* fmt, Targs... args)
 	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
+		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::Format(fmt, args...));
 	}
 
-	void Error(std::string fmt, ...)
+	template<typename... Targs> void Error(const char* fmt, Targs... args)
 	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_ERROR(HLE, GetName() + " error: " + fmt::FormatV(fmt, list));
-		va_end(list);
+		LOG_ERROR(HLE, GetName() + " error: " + fmt::Format(fmt, args...));
+	}
+
+	template<typename... Targs> void Todo(const u32 id, const char* fmt, Targs... args)
+	{
+		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] TODO: ", id) + fmt::Format(fmt, args...));
+	}
+
+	template<typename... Targs> void Todo(const char* fmt, Targs... args)
+	{
+		LOG_ERROR(HLE, GetName() + " TODO: " + fmt::Format(fmt, args...));
 	}
 
 	bool CheckId(u32 id) const
