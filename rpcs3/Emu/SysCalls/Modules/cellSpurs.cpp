@@ -167,7 +167,7 @@ int cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 
 int cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> attr)
 {
-	cellSpurs->Error("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.GetAddr());
+	cellSpurs->Todo("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.GetAddr());
 
 	if (attr.GetAddr() % 8 != 0)
 	{
@@ -208,7 +208,7 @@ int cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, 
 int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, const u8 priority[CELL_SPURS_MAX_SPU],
 	u32 maxSpu, const bool isPreemptible[CELL_SPURS_MAX_SPU])
 {
-	cellSpurs->Error("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority[%u], maxSpu=%u, isPreemptible[%u])", attr.GetAddr(), priority, maxSpu, isPreemptible);
+	cellSpurs->Todo("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority[%u], maxSpu=%u, isPreemptible[%u])", attr.GetAddr(), priority, maxSpu, isPreemptible);
 
 	if (attr.GetAddr() % 8 != 0)
 	{
@@ -235,7 +235,7 @@ int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, c
 
 int cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
 {
-	cellSpurs->Error("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.GetAddr(), group.GetAddr());
+	cellSpurs->Todo("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.GetAddr(), group.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -254,7 +254,7 @@ int cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
 
 int cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
 {
-	cellSpurs->Error("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), nThreads.GetAddr());
+	cellSpurs->Todo("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), nThreads.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -273,7 +273,7 @@ int cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
 
 int cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t nThreads)
 {
-	cellSpurs->Error("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), thread.GetAddr(), nThreads.GetAddr());
+	cellSpurs->Todo("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), thread.GetAddr(), nThreads.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -292,7 +292,7 @@ int cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t 
 
 int cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 maxContention)
 {
-	cellSpurs->Error("cellSpursSetMaxContention(spurs_addr=0x%x, workloadId=%u, maxContention=%u)", spurs.GetAddr(), workloadId, maxContention);
+	cellSpurs->Todo("cellSpursSetMaxContention(spurs_addr=0x%x, workloadId=%u, maxContention=%u)", spurs.GetAddr(), workloadId, maxContention);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -311,7 +311,7 @@ int cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 ma
 
 int cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const u8 priorities[CELL_SPURS_MAX_SPU])
 {
-	cellSpurs->Error("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%u, priorities[%u])", spurs.GetAddr(), workloadId, priorities);
+	cellSpurs->Todo("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%u, priorities[%u])", spurs.GetAddr(), workloadId, priorities);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -330,7 +330,7 @@ int cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const u8 
 
 int cellSpursSetPriority(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 spuId, u32 priority)
 {
-	cellSpurs->Error("cellSpursSetPriority(spurs_addr=0x%x, workloadId=%u, spuId=%u, priority=%u)", spurs.GetAddr(), workloadId, spuId, priority);
+	cellSpurs->Todo("cellSpursSetPriority(spurs_addr=0x%x, workloadId=%u, spuId=%u, priority=%u)", spurs.GetAddr(), workloadId, spuId, priority);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -349,7 +349,7 @@ int cellSpursSetPriority(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 spuId, 
 
 int cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, const bool isPreemptible[CELL_SPURS_MAX_SPU])
 {
-	cellSpurs->Error("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible[%u])", spurs.GetAddr(), isPreemptible);
+	cellSpurs->Todo("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible[%u])", spurs.GetAddr(), isPreemptible);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -410,7 +410,7 @@ int cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 
 int cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 {
-	cellSpurs->Error("cellSpursEnableExceptionEventHandler(spurs_addr=0x%x, flag=%u)", spurs.GetAddr(), flag);
+	cellSpurs->Todo("cellSpursEnableExceptionEventHandler(spurs_addr=0x%x, flag=%u)", spurs.GetAddr(), flag);
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -429,7 +429,7 @@ int cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 
 int cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, mem_func_ptr_t<CellSpursGlobalExceptionEventHandler> eaHandler, mem_ptr_t<void> arg)
 {
-	cellSpurs->Error("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x,)", spurs.GetAddr(), eaHandler.GetAddr(), arg.GetAddr());
+	cellSpurs->Todo("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x,)", spurs.GetAddr(), eaHandler.GetAddr(), arg.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -448,7 +448,7 @@ int cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, mem_func
 
 int cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
 {
-	cellSpurs->Error("cellSpursUnsetGlobalExceptionEventHandler(spurs_addr=0x%x)", spurs.GetAddr());
+	cellSpurs->Todo("cellSpursUnsetGlobalExceptionEventHandler(spurs_addr=0x%x)", spurs.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -467,7 +467,7 @@ int cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
 
 int cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 {
-	cellSpurs->Error("cellSpursGetInfo(spurs_addr=0x%x, info_addr=0x%x)", spurs.GetAddr(), info.GetAddr());
+	cellSpurs->Todo("cellSpursGetInfo(spurs_addr=0x%x, info_addr=0x%x)", spurs.GetAddr(), info.GetAddr());
 
 	if (spurs.GetAddr() % 128 != 0)
 	{
@@ -507,7 +507,7 @@ int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 
 int cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
 {
-	cellSpurs->Error("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
+	cellSpurs->Todo("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -526,7 +526,7 @@ int cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 
 int cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
 {
-	cellSpurs->Error("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
+	cellSpurs->Todo("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -545,7 +545,7 @@ int cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 
 int cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
 {
-	cellSpurs->Error("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask=0x%x, mode=%u)", eventFlag.GetAddr(), mask.GetAddr(), mode);
+	cellSpurs->Todo("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask=0x%x, mode=%u)", eventFlag.GetAddr(), mask.GetAddr(), mode);
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -564,7 +564,7 @@ int cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask
 
 int cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 {
-	cellSpurs->Error("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=%u)", eventFlag.GetAddr(), bits);
+	cellSpurs->Todo("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=%u)", eventFlag.GetAddr(), bits);
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -583,7 +583,7 @@ int cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 
 int cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 {
-	cellSpurs->Error("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=%u)", eventFlag.GetAddr(), bits);
+	cellSpurs->Todo("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=%u)", eventFlag.GetAddr(), bits);
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -602,7 +602,7 @@ int cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 
 int cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
 {
-	cellSpurs->Error("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%u)", eventFlag.GetAddr(), mask.GetAddr(), mode);
+	cellSpurs->Todo("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%u)", eventFlag.GetAddr(), mask.GetAddr(), mode);
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -663,7 +663,7 @@ int cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 
 int cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag, mem_ptr_t<CellSpursTaskset> taskset)
 {
-	cellSpurs->Error("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.GetAddr(), taskset.GetAddr());
+	cellSpurs->Todo("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.GetAddr(), taskset.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -944,7 +944,7 @@ int cellSpursCreateTasksetWithAttribute()
 
 int cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, u64 args, mem8_t priority, u32 maxContention)
 {
-	cellSpurs->Error("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%x, priority_addr=0x%x, maxContention=%u)", spurs.GetAddr(), taskset.GetAddr(), args, priority.GetAddr(), maxContention);
+	cellSpurs->Todo("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%x, priority_addr=0x%x, maxContention=%u)", spurs.GetAddr(), taskset.GetAddr(), args, priority.GetAddr(), maxContention);
 
 	if ((spurs.GetAddr() % 128 != 0) || (taskset.GetAddr() % 128 != 0))
 	{
@@ -966,7 +966,7 @@ int cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskse
 
 int cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 {
-	cellSpurs->Error("cellSpursJoinTaskset(taskset_addr=0x%x)", taskset.GetAddr());
+	cellSpurs->Todo("cellSpursJoinTaskset(taskset_addr=0x%x)", taskset.GetAddr());
 
 	if (taskset.GetAddr() % 128 != 0)
 	{
@@ -985,7 +985,7 @@ int cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 
 int cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadId)
 {
-	cellSpurs->Error("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.GetAddr(), workloadId.GetAddr());
+	cellSpurs->Todo("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.GetAddr(), workloadId.GetAddr());
 
 	if (taskset.GetAddr() % 128 != 0)
 	{
@@ -1004,7 +1004,7 @@ int cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadI
 
 int cellSpursShutdownTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 {
-	cellSpurs->Error("cellSpursShutdownTaskset(taskset_addr=0x%x)", taskset.GetAddr());
+	cellSpurs->Todo("cellSpursShutdownTaskset(taskset_addr=0x%x)", taskset.GetAddr());
 
 	if (taskset.GetAddr() % 128 != 0)
 	{
@@ -1025,7 +1025,7 @@ int cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, mem
 	mem_ptr_t<void> context_addr, u32 context_size, mem_ptr_t<CellSpursTaskLsPattern> lsPattern,
 	mem_ptr_t<CellSpursTaskArgument> argument)
 {
-	cellSpurs->Error("cellSpursCreateTask(taskset_addr=0x%x, taskID_addr=0x%x, elf_addr_addr=0x%x, context_addr_addr=0x%x, context_size=%u, lsPattern_addr=0x%x, argument_addr=0x%x)",
+	cellSpurs->Todo("cellSpursCreateTask(taskset_addr=0x%x, taskID_addr=0x%x, elf_addr_addr=0x%x, context_addr_addr=0x%x, context_size=%u, lsPattern_addr=0x%x, argument_addr=0x%x)",
 		taskset.GetAddr(), taskID.GetAddr(), elf_addr.GetAddr(), context_addr.GetAddr(), context_size, lsPattern.GetAddr(), argument.GetAddr());
 
 	if (taskset.GetAddr() % 128 != 0)
@@ -1045,7 +1045,7 @@ int cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, mem
 
 int _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
 {
-	cellSpurs->Error("_cellSpursSendSignal(taskset_addr=0x%x, taskID=%u)", taskset.GetAddr(), taskID);
+	cellSpurs->Todo("_cellSpursSendSignal(taskset_addr=0x%x, taskID=%u)", taskset.GetAddr(), taskID);
 
 	if (taskset.GetAddr() % 128 != 0)
 	{

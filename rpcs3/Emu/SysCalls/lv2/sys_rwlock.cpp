@@ -14,9 +14,9 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 
 	switch (attr->attr_protocol.ToBE())
 	{
-	case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Warning("TODO: SYS_SYNC_PRIORITY attr"); break;
-	case se(attr->attr_protocol, SYS_SYNC_RETRY): sys_rwlock.Error("Invalid SYS_SYNC_RETRY attr"); break;
-	case se(attr->attr_protocol, SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
+	case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;
+	case se(attr->attr_protocol, SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
+	case se(attr->attr_protocol, SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
 	case se(attr->attr_protocol, SYS_SYNC_FIFO): break;
 	default: return CELL_EINVAL;
 	}

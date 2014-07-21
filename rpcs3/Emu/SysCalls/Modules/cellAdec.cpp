@@ -534,7 +534,7 @@ bool adecCheckType(AudioCodecType type)
 	case CELL_ADEC_TYPE_CELP:
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
-		cellAdec->Error("Unimplemented audio codec type (%d)", type);
+		cellAdec->Todo("Unimplemented audio codec type (%d)", type);
 		break;
 	default:
 		return false;
@@ -640,7 +640,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	}
 	else*/
 	{
-		cellAdec->Warning("cellAdecStartSeq: (TODO) initialization");
+		cellAdec->Todo("cellAdecStartSeq(): initialization");
 	}
 	
 	adec->job.Push(task);

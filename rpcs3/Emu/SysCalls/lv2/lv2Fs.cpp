@@ -620,7 +620,7 @@ s32 cellFsStReadGetRegid(u32 fd, mem64_t regid)
 
 s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
-	sys_fs->Warning("TODO: cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
+	sys_fs->Todo("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -645,7 +645,7 @@ s32 cellFsStReadStop(u32 fd)
 
 s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize)
 {
-	sys_fs->Warning("TODO: cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.GetAddr());
+	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.GetAddr());
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -660,7 +660,7 @@ s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize)
 
 s32 cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size)
 {
-	sys_fs->Warning("TODO: cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr_addr.GetAddr(), size.GetAddr());
+	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr_addr.GetAddr(), size.GetAddr());
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -672,7 +672,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size)
 
 s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 {
-	sys_fs->Warning("TODO: cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size = 0x%llx)", fd, addr_addr, size);
+	sys_fs->Todo("cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size = 0x%llx)", fd, addr_addr, size);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -684,7 +684,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
-	sys_fs->Warning("TODO: cellFsStReadWait(fd=%d, size = 0x%llx)", fd, size);
+	sys_fs->Todo("cellFsStReadWait(fd=%d, size = 0x%llx)", fd, size);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -694,7 +694,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 
 s32 cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(int xfd, u64 xsize)> func)
 {
-	sys_fs->Warning("TODO: cellFsStReadWaitCallback(fd=%d, size = 0x%llx, func_addr = 0x%x)", fd, size, func.GetAddr());
+	sys_fs->Todo("cellFsStReadWaitCallback(fd=%d, size = 0x%llx, func_addr = 0x%x)", fd, size, func.GetAddr());
 
 	if (!func.IsGood())
 		return CELL_EFAULT;

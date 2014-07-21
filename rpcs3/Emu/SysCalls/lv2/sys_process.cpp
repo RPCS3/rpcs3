@@ -17,7 +17,7 @@ s32 sys_process_getpid()
 
 s32 sys_process_getppid()
 {
-	sc_p.Warning("TODO: sys_process_getppid() returns 0");
+	sc_p.Todo("sys_process_getppid() -> 0");
 	return 0;
 }
 
@@ -46,7 +46,7 @@ void sys_game_process_exitspawn(
 			u32 prio,
 			u64 flags )
 {
-	sc_p.Error("sys_game_process_exitspawn UNIMPLEMENTED");
+	sc_p.Todo("sys_game_process_exitspawn()");
 	sc_p.Warning("path: %s", Memory.ReadString(path_addr).c_str());
 	sc_p.Warning("argv: 0x%x", argv_addr);
 	sc_p.Warning("envp: 0x%x", envp_addr);
@@ -94,7 +94,7 @@ void sys_game_process_exitspawn2(
 			u32 prio,
 			u64 flags)
 {
-	sc_p.Error("sys_game_process_exitspawn2 UNIMPLEMENTED");
+	sc_p.Todo("sys_game_process_exitspawn2");
 	sc_p.Warning("path: %s", Memory.ReadString(path_addr).c_str());
 	sc_p.Warning("argv: 0x%x", argv_addr);
 	sc_p.Warning("envp: 0x%x", envp_addr);
@@ -170,7 +170,7 @@ s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
 
 s32 sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_size)
 {
-	sc_p.Warning("TODO: sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
+	sc_p.Todo("sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
 		object, buffer.GetAddr(), size, set_size.GetAddr());
 
 	switch(object)
@@ -213,7 +213,7 @@ s32 sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_siz
 
 s32 sys_process_get_paramsfo(mem8_ptr_t buffer)
 {
-	sc_p.Warning("TODO: sys_process_get_paramsfo(buffer_addr=0x%x) returns CELL_ENOENT", buffer.GetAddr());
+	sc_p.Todo("sys_process_get_paramsfo(buffer_addr=0x%x) -> CELL_ENOENT", buffer.GetAddr());
 	return CELL_ENOENT;
 
 	/*//Before uncommenting this code, we should check if it is actually working.
@@ -243,33 +243,33 @@ s32 sys_process_get_sdk_version(u32 pid, mem32_t version)
 
 s32 sys_process_kill(u32 pid)
 {
-	sc_p.Error("TODO: sys_process_kill(pid=%d)", pid);
+	sc_p.Todo("sys_process_kill(pid=%d)", pid);
 	return CELL_OK;
 }
 
 s32 sys_process_wait_for_child(u32 pid, mem32_t status, u64 unk)
 {
-	sc_p.Error("TODO: sys_process_wait_for_child(pid=%d, status_addr=0x%x, unk=0x%llx",
+	sc_p.Todo("sys_process_wait_for_child(pid=%d, status_addr=0x%x, unk=0x%llx",
 		pid, status.GetAddr(), unk);
 	return CELL_OK;
 }
 
 s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
 {
-	sc_p.Error("TODO: sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
+	sc_p.Todo("sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
 		unk1, unk2, unk3, unk4, unk5, unk6);
 	return CELL_OK;
 }
 
 s32 sys_process_get_status(u64 unk)
 {
-	sc_p.Error("TODO: sys_process_get_status(unk=0x%llx)", unk);
+	sc_p.Todo("sys_process_get_status(unk=0x%llx)", unk);
 	//Memory.Write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }
 
 s32 sys_process_detach_child(u64 unk)
 {
-	sc_p.Error("TODO: sys_process_detach_child(unk=0x%llx)", unk);
+	sc_p.Todo("sys_process_detach_child(unk=0x%llx)", unk);
 	return CELL_OK;
 }

@@ -156,7 +156,7 @@ int cellSysmoduleFinalize()
 
 int cellSysmoduleSetMemcontainer(u32 ct_id)
 {
-	cellSysmodule->Warning("TODO: cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
+	cellSysmodule->Todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
@@ -164,7 +164,7 @@ int cellSysmoduleLoadModule(u16 id)
 {
 	if (id == 0xf054)
 	{
-		cellSysmodule->Error("cellSysmoduleLoadModule: TODO: CELL_SYSMODULE_LIBATRAC3MULTI");
+		cellSysmodule->Todo("cellSysmoduleLoadModule: CELL_SYSMODULE_LIBATRAC3MULTI");
 	}
 	cellSysmodule->Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
 

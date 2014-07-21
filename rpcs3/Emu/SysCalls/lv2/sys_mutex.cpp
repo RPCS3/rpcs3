@@ -22,8 +22,8 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mtx.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT protocol"); break;
-	case se32(SYS_SYNC_RETRY): sys_mtx.Error("Invalid SYS_SYNC_RETRY protocol"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mtx.Todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_mtx.Error("sys_mutex_create(): SYS_SYNC_RETRY"); return CELL_EINVAL;
 	default: sys_mtx.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 

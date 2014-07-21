@@ -143,7 +143,7 @@ public:
 extern int cellGcmCallback(u32 context_addr, u32 count);
 
 
-#define UNIMPLEMENTED_FUNC(module) module->Error("Unimplemented function: %s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]

@@ -736,7 +736,7 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, mem64_t tag)
 
 int cellAudioSetPortLevel(u32 portNum, float level)
 {
-	cellAudio->Error("cellAudioSetPortLevel(portNum=0x%x, level=%f)", portNum, level);
+	cellAudio->Todo("cellAudioSetPortLevel(portNum=0x%x, level=%f)", portNum, level);
 	return CELL_OK;
 }
 
@@ -771,7 +771,7 @@ int cellAudioCreateNotifyEventQueue(mem32_t id, mem64_t key)
 
 int cellAudioCreateNotifyEventQueueEx(mem32_t id, mem64_t key, u32 iFlags)
 {
-	cellAudio->Error("cellAudioCreateNotifyEventQueueEx(id_addr=0x%x, key_addr=0x%x, iFlags=0x%x)", id.GetAddr(), key.GetAddr(), iFlags);
+	cellAudio->Todo("cellAudioCreateNotifyEventQueueEx(id_addr=0x%x, key_addr=0x%x, iFlags=0x%x)", id.GetAddr(), key.GetAddr(), iFlags);
 	return CELL_OK;
 }
 
@@ -803,7 +803,7 @@ int cellAudioSetNotifyEventQueue(u64 key)
 
 int cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 {
-	cellAudio->Error("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
+	cellAudio->Todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 	return CELL_OK;
 }
 
@@ -843,49 +843,49 @@ int cellAudioRemoveNotifyEventQueue(u64 key)
 
 int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 {
-	cellAudio->Error("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
+	cellAudio->Todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 	return CELL_OK;
 }
 
 int cellAudioAddData(u32 portNum, mem32_t src, u32 samples, float volume)
 {
-	cellAudio->Error("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.GetAddr(), samples, volume);
+	cellAudio->Todo("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.GetAddr(), samples, volume);
 	return CELL_OK;
 }
 
 int cellAudioAdd2chData(u32 portNum, mem32_t src, u32 samples, float volume) 
 {
-	cellAudio->Error("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.GetAddr(), samples, volume);
+	cellAudio->Todo("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.GetAddr(), samples, volume);
 	return CELL_OK;
 }
 
 int cellAudioAdd6chData(u32 portNum, mem32_t src, float volume)
 {
-	cellAudio->Error("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.GetAddr(), volume);
+	cellAudio->Todo("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.GetAddr(), volume);
 	return CELL_OK;
 }
 
 int cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 {
-	cellAudio->Error("cellAudioMiscSetAccessoryVolume(devNum=0x%x, volume=%f)", devNum, volume);
+	cellAudio->Todo("cellAudioMiscSetAccessoryVolume(devNum=0x%x, volume=%f)", devNum, volume);
 	return CELL_OK;
 }
 
 int cellAudioSendAck(u64 data3)
 {
-	cellAudio->Error("cellAudioSendAck(data3=0x%llx)", data3);
+	cellAudio->Todo("cellAudioSendAck(data3=0x%llx)", data3);
 	return CELL_OK;
 }
 
 int cellAudioSetPersonalDevice(int iPersonalStream, int iDevice)
 {
-	cellAudio->Error("cellAudioSetPersonalDevice(iPersonalStream=0x%x, iDevice=0x%x)", iPersonalStream, iDevice);
+	cellAudio->Todo("cellAudioSetPersonalDevice(iPersonalStream=0x%x, iDevice=0x%x)", iPersonalStream, iDevice);
 	return CELL_OK;
 }
 
 int cellAudioUnsetPersonalDevice(int iPersonalStream)
 {
-	cellAudio->Error("cellAudioUnsetPersonalDevice(iPersonalStream=0x%x)", iPersonalStream);
+	cellAudio->Todo("cellAudioUnsetPersonalDevice(iPersonalStream=0x%x)", iPersonalStream);
 	return CELL_OK;
 }
 

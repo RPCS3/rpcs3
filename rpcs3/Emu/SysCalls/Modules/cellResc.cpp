@@ -659,7 +659,7 @@ void cellRescExit()
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc->Error("cellRescExit()");
+		cellResc->Error("cellRescExit(): not initialized");
 		return;
 	}
 

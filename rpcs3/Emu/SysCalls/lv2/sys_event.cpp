@@ -66,7 +66,7 @@ s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 
 s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 {
-	sys_event.Error("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
+	sys_event.Todo("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -111,7 +111,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 
 s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number)
 {
-	sys_event.Error("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
+	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.GetAddr(), size, number.GetAddr());
 
 	if (size < 0 || !number.IsGood())
@@ -403,8 +403,8 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_event.Warning("TODO: SYS_SYNC_RETRY attr"); break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT attr"); break;
+	case se32(SYS_SYNC_RETRY): sys_event.Todo("sys_event_flag_create(): SYS_SYNC_RETRY"); break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event.Todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
 	case se32(SYS_SYNC_FIFO): break;
 	default: return CELL_EINVAL;
 	}

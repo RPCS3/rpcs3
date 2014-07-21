@@ -10,103 +10,103 @@ Module libsynth2("libsynth2", libsynth2_init);
 
 int cellSoundSynth2Config(s16 param, int value)
 {
-	libsynth2.Error("cellSoundSynth2Config(param=%d, value=%d)", param, value);
+	libsynth2.Todo("cellSoundSynth2Config(param=%d, value=%d)", param, value);
 	return CELL_OK;
 }
 
 int cellSoundSynth2Init(s16 flag)
 {
-	libsynth2.Error("cellSoundSynth2Init(flag=%d)", flag);
+	libsynth2.Todo("cellSoundSynth2Init(flag=%d)", flag);
 	return CELL_OK;
 }
 
 int cellSoundSynth2Exit()
 {
-	libsynth2.Error("cellSoundSynth2Exit()");
+	libsynth2.Todo("cellSoundSynth2Exit()");
 	return CELL_OK;
 }
 
 void cellSoundSynth2SetParam(u16 reg, u16 value)
 {
-	libsynth2.Error("cellSoundSynth2SetParam(register=0x%x, value=0x%x)", reg, value);
+	libsynth2.Todo("cellSoundSynth2SetParam(register=0x%x, value=0x%x)", reg, value);
 }
 
 u16 cellSoundSynth2GetParam(u16 reg)
 {
-	libsynth2.Error("cellSoundSynth2GetParam(register=0x%x) -> 0", reg);
+	libsynth2.Todo("cellSoundSynth2GetParam(register=0x%x) -> 0", reg);
 	return 0;
 }
 
 void cellSoundSynth2SetSwitch(u16 reg, u32 value)
 {
-	libsynth2.Error("cellSoundSynth2SetSwitch(register=0x%x, value=0x%x)", reg, value);
+	libsynth2.Todo("cellSoundSynth2SetSwitch(register=0x%x, value=0x%x)", reg, value);
 }
 
 u32 cellSoundSynth2GetSwitch(u16 reg)
 {
-	libsynth2.Error("cellSoundSynth2GetSwitch(register=0x%x) -> 0", reg);
+	libsynth2.Todo("cellSoundSynth2GetSwitch(register=0x%x) -> 0", reg);
 	return 0;
 }
 
 int cellSoundSynth2SetAddr(u16 reg, u32 value)
 {
-	libsynth2.Error("cellSoundSynth2SetAddr(register=0x%x, value=0x%x)", reg, value);
+	libsynth2.Todo("cellSoundSynth2SetAddr(register=0x%x, value=0x%x)", reg, value);
 	return CELL_OK;
 }
 
 u32 cellSoundSynth2GetAddr(u16 reg)
 {
-	libsynth2.Error("cellSoundSynth2GetAddr(register=0x%x) -> 0", reg);
+	libsynth2.Todo("cellSoundSynth2GetAddr(register=0x%x) -> 0", reg);
 	return 0;
 }
 
 int cellSoundSynth2SetEffectAttr(s16 bus, mem_ptr_t<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Error("cellSoundSynth2SetEffectAttr(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
+	libsynth2.Todo("cellSoundSynth2SetEffectAttr(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
 	return CELL_OK;
 }
 
 int cellSoundSynth2SetEffectMode(s16 bus, mem_ptr_t<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Error("cellSoundSynth2SetEffectMode(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
+	libsynth2.Todo("cellSoundSynth2SetEffectMode(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
 	return CELL_OK;
 }
 
 void cellSoundSynth2SetCoreAttr(u16 entry, u16 value)
 {
-	libsynth2.Error("cellSoundSynth2SetCoreAttr(entry=0x%x, value=0x%x)", entry, value);
+	libsynth2.Todo("cellSoundSynth2SetCoreAttr(entry=0x%x, value=0x%x)", entry, value);
 }
 
 int cellSoundSynth2Generate(u16 samples, u32 L_addr, u32 R_addr, u32 Lr_addr, u32 Rr_addr)
 {
-	libsynth2.Error("cellSoundSynth2Generate(samples=0x%x, left=0x%x, right=0x%x, left_rear=0x%x, right_rear=0x%x)",
+	libsynth2.Todo("cellSoundSynth2Generate(samples=0x%x, left=0x%x, right=0x%x, left_rear=0x%x, right_rear=0x%x)",
 		samples, L_addr, R_addr, Lr_addr, Rr_addr);
 	return CELL_OK;
 }
 
 int cellSoundSynth2VoiceTrans(s16 channel, u16 mode, u32 mem_side_addr, u32 lib_side_addr, u32 size)
 {
-	libsynth2.Error("cellSoundSynth2VoiceTrans(channel=%d, mode=0x%x, m_addr=0x%x, s_addr=0x%x, size=0x%x)",
+	libsynth2.Todo("cellSoundSynth2VoiceTrans(channel=%d, mode=0x%x, m_addr=0x%x, s_addr=0x%x, size=0x%x)",
 		channel, mode, mem_side_addr, lib_side_addr, size);
 	return CELL_OK;
 }
 
 int cellSoundSynth2VoiceTransStatus(s16 channel, s16 flag)
 {
-	libsynth2.Error("cellSoundSynth2VoiceTransStatus(channel=%d, flag=%d)", channel, flag);
+	libsynth2.Todo("cellSoundSynth2VoiceTransStatus(channel=%d, flag=%d)", channel, flag);
 	return CELL_OK;
 }
 
 u16 cellSoundSynth2Note2Pitch(u16 center_note, u16 center_fine, u16 note, s16 fine)
 {
-	libsynth2.Error("cellSoundSynth2Note2Pitch(center_note=0x%x, center_fine=0x%x, note=0x%x, fine=%d) -> 0",
+	libsynth2.Todo("cellSoundSynth2Note2Pitch(center_note=0x%x, center_fine=0x%x, note=0x%x, fine=%d) -> 0",
 		center_note, center_fine, note, fine);
 	return 0;
 }
 
 u16 cellSoundSynth2Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 {
-	libsynth2.Error("cellSoundSynth2Pitch2Note(center_note=0x%x, center_fine=0x%x, pitch=0x%x) -> 0",
+	libsynth2.Todo("cellSoundSynth2Pitch2Note(center_note=0x%x, center_fine=0x%x, pitch=0x%x) -> 0",
 		center_note, center_fine, pitch);
 	return 0;
 }

@@ -83,7 +83,7 @@ s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 
 
 s32 sys_interrupt_thread_disestablish(u32 ih)
 {
-	sc_int.Error("sys_interrupt_thread_disestablish(ih=%d)", ih);
+	sc_int.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
 
 	CPUThread* it = Emu.GetCPU().GetThread(ih);
 	if (!it)

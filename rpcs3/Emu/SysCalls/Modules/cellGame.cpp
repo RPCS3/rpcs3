@@ -221,7 +221,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 
 	if (!Emu.GetVFS().ExistsDir(dir))
 	{
-		cellGame->Error("cellGameDataCheckCreate2(): TODO: creating directory '%s'", dir.c_str());
+		cellGame->Todo("cellGameDataCheckCreate2(): creating directory '%s'", dir.c_str());
 		// TODO: create data
 		return CELL_GAMEDATA_RET_OK;
 	}
@@ -275,7 +275,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	if (cbSet->setParam.GetAddr())
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Error("cellGameDataCheckCreate2(): TODO: writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.GetAddr());
+		cellGame->Todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.GetAddr());
 	}
 
 	switch ((s32)cbResult->result)
@@ -318,7 +318,7 @@ int cellGameDataCheckCreate(u32 version, const mem_list_ptr_t<u8> dirName, u32 e
 
 int cellGameCreateGameData(mem_ptr_t<CellGameSetInitParams> init, mem_list_ptr_t<u8> tmp_contentInfoPath, mem_list_ptr_t<u8> tmp_usrdirPath)
 {
-	cellGame->Error("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
+	cellGame->Todo("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
 		init.GetAddr(), tmp_contentInfoPath.GetAddr(), tmp_usrdirPath.GetAddr());
 
 	// TODO: create temporary game directory, set initial PARAM.SFO parameters

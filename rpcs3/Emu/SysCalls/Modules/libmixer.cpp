@@ -532,7 +532,7 @@ int cellSurMixerStart()
 int cellSurMixerSetParameter(u32 param, float value)
 {
 	declCPU();
-	libmixer->Error("cellSurMixerSetParameter(param=0x%x, value=%f, FPR[1]=%f, FPR[2]=%f)", param, value, (float&)CPU.FPR[1], (float&)CPU.FPR[2]);
+	libmixer->Todo("cellSurMixerSetParameter(param=0x%x, value=%f, FPR[1]=%f, FPR[2]=%f)", param, value, (float&)CPU.FPR[1], (float&)CPU.FPR[2]);
 	return CELL_OK;
 }
 
@@ -560,7 +560,7 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 	}
 	else
 	{
-		libmixer->Error("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d): unknown parameters", busNo, offset, addr, samples);
+		libmixer->Todo("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
 		return CELL_OK;
 	}
 
@@ -578,7 +578,7 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 
 int cellSurMixerChStripSetParameter(u32 type, u32 index, mem_ptr_t<CellSurMixerChStripParam> param)
 {
-	libmixer->Error("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.GetAddr());
+	libmixer->Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.GetAddr());
 	return CELL_OK;
 }
 
@@ -614,14 +614,14 @@ int cellSurMixerGetTimestamp(u64 tag, mem64_t stamp)
 
 void cellSurMixerBeep(u32 arg)
 {
-	libmixer->Error("cellSurMixerBeep(arg=%d)", arg);
+	libmixer->Todo("cellSurMixerBeep(arg=%d)", arg);
 	return;
 }
 
 void cellSurMixerUtilGetLevelFromDB(float dB)
 {
 	// not hooked, probably unnecessary
-	libmixer->Error("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
+	libmixer->Todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
 	declCPU();
 	(float&)CPU.FPR[0] = 0.0f;
 }
@@ -629,7 +629,7 @@ void cellSurMixerUtilGetLevelFromDB(float dB)
 void cellSurMixerUtilGetLevelFromDBIndex(int index)
 {
 	// not hooked, probably unnecessary
-	libmixer->Error("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
+	libmixer->Todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
 	declCPU();
 	(float&)CPU.FPR[0] = 0.0f;
 }
@@ -637,7 +637,7 @@ void cellSurMixerUtilGetLevelFromDBIndex(int index)
 void cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
 	// not hooked, probably unnecessary
-	libmixer->Error("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
+	libmixer->Todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
 	declCPU();
 	(float&)CPU.FPR[0] = 0.0f;
 }

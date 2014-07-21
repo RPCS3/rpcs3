@@ -72,7 +72,7 @@ s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 
 s32 sys_ppu_thread_detach(u64 thread_id)
 {
-	sysPrxForUser->Error("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
+	sysPrxForUser->Todo("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;

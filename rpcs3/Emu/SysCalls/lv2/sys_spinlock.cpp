@@ -26,6 +26,7 @@ void sys_spinlock_lock(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 	{
 		while (lock->load(std::memory_order_relaxed).ToBE())
 		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			if (Emu.IsStopped())
 			{
 				break;
