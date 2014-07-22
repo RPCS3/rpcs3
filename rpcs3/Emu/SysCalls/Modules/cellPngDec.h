@@ -49,6 +49,7 @@ enum CellPngDecOutputMode
 	CELL_PNGDEC_BOTTOM_TO_TOP = 1,
 };
 
+
 // Structs
 struct CellPngDecDataOutInfo
 {
@@ -108,23 +109,6 @@ struct CellPngDecOutParam
 	be_t<u32> useMemorySpace;
 };
 
-//Custom structs
-struct CellPngDecSubHandle
-{
-	be_t<u32> fd;
-	be_t<u64> fileSize;
-	CellPngDecInfo info;
-	CellPngDecOutParam outParam;
-	CellPngDecSrc src;
-};
-
-struct CellPngDecMainHandle
-{
-	be_t<u32> mainHandle;
-	be_t<u32> threadInParam;
-	be_t<u32> threadOutParam;
-};
-
 struct CellPngDecStrmInfo
 {
 	be_t<u32> decodedStrmSize;
@@ -174,4 +158,22 @@ struct CellPngDecExtOutParam
 struct CellPngDecOpnParam
 {
 	be_t<u32> selectChunk;
+};
+
+
+// Custom structs
+struct CellPngDecSubHandle
+{
+	be_t<u32> fd;
+	be_t<u64> fileSize;
+	CellPngDecInfo info;
+	CellPngDecOutParam outParam;
+	CellPngDecSrc src;
+};
+
+struct CellPngDecMainHandle
+{
+	be_t<u32> mainHandle;
+	be_t<u32> threadInParam;
+	be_t<u32> threadOutParam;
 };

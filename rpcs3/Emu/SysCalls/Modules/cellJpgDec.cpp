@@ -33,24 +33,36 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
-	if (!subHandle.IsGood() || !src.IsGood() || !openInfo.IsGood())
+	if (!subHandle.IsGood() || !src.IsGood())
 		return CELL_JPGDEC_ERROR_ARG;
 
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
-	// Get file descriptor
-	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(src->fileName, 0, fd, 0, 0);
-	current_subHandle->fd = fd->ToLE();
-	if(ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
+	current_subHandle->fd = 0;
+	current_subHandle->src = *src;
 
-	// Get size of file
-	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
-	if(ret != CELL_OK) return ret;
-	current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+	switch(src->srcSelect.ToBE())
+	{
+	case se32(CELL_JPGDEC_BUFFER):
+		current_subHandle->fileSize = src->streamSize.ToLE();
+		break;
 
-	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
+	case se32(CELL_JPGDEC_FILE):
+		// Get file descriptor
+		MemoryAllocator<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd.GetAddr(), 0, 0);
+		current_subHandle->fd = fd->ToLE();
+		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
+
+		// Get size of file
+		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		if (ret != CELL_OK) return ret;
+		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+		break;
+	}
+
+	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
 	subHandle = cellJpgDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
@@ -83,12 +95,24 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	const u64& fileSize = subHandle_data->fileSize;
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
-	//Copy the JPG file to a buffer
+	//Write the header to buffer
 	MemoryAllocator<u8> buffer(fileSize);
 	MemoryAllocator<be_t<u64>> pos, nread;
 
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_JPGDEC_BUFFER):
+		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
+			cellJpgDec->Error("cellJpgDecReadHeader() failed ()");
+			return CELL_EFAULT;
+		}
+		break;
+
+	case se32(CELL_JPGDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		break;
+	}
 
 	if (*buffer.To<u32>(0) != 0xE0FFD8FF || // Error: Not a valid SOI header
 		*buffer.To<u32>(6) != 0x4649464A)   // Error: Not a valid JFIF string
@@ -146,8 +170,21 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	//Copy the JPG file to a buffer
 	MemoryAllocator<unsigned char> jpg(fileSize);
 	MemoryAllocator<u64> pos, nread;
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread);
+
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_JPGDEC_BUFFER):
+		if (!Memory.Copy(jpg.GetAddr(), subHandle_data->src.streamPtr.ToLE(), jpg.GetSize())) {
+			cellJpgDec->Error("cellJpgDecDecodeData() failed (I)");
+			return CELL_EFAULT;
+		}
+		break;
+
+	case se32(CELL_JPGDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread);
+		break;
+	}
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;

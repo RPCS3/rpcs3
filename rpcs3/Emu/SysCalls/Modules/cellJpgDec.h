@@ -27,6 +27,12 @@ enum CellJpgDecColorSpace
 	CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB = 41,
 };
 
+enum CellJpgDecStreamSrcSel
+{
+	CELL_JPGDEC_FILE   = 0,
+	CELL_JPGDEC_BUFFER = 1,
+};
+
 enum CellJpgDecDecodeStatus
 {
 	CELL_JPGDEC_DEC_STATUS_FINISH = 0, //Decoding finished
@@ -92,10 +98,12 @@ struct CellJpgDecDataOutInfo
 	be_t<u32> status;
 };
 
-struct CellJpgDecSubHandle //Custom struct
+// Custom structs
+struct CellJpgDecSubHandle
 {
 	u32 fd;
 	u64 fileSize;
 	CellJpgDecInfo info;
 	CellJpgDecOutParam outParam;
+	CellJpgDecSrc src;
 };

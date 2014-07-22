@@ -29,49 +29,33 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 {
 	if (!subHandle.IsGood() || !src.IsGood())
 		return CELL_GIFDEC_ERROR_ARG;
-	/*
-	vfsStream* stream;
-
-	switch(src->srcSelect)
-	{
-	case CELL_GIFDEC_FILE:
-		stream = Emu.GetVFS().Open(src->fileName.GetString(), vfsRead);
-		stream->Seek(src->fileOffset);
-		src->fileSize;
-	break;
-
-	case CELL_GIFDEC_BUFFER:
-		if(src->streamSize < 5)
-			return CELL_GIFDEC_ERROR_ARG;
-
-		stream = new vfsStreamMemory(src->streamPtr.GetAddr(), src->streamSize);
-	break;
-
-	default:
-		return CELL_GIFDEC_ERROR_ARG;
-	}
-
-	if(!stream->IsOpened())
-	{
-		return CELL_GIFDEC_ERROR_OPEN_FILE;
-	}
-	*/
-
+	
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
+	current_subHandle->fd = 0;
+	current_subHandle->src = *src;
 
-	// Get file descriptor
-	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(src->fileName, 0, fd, 0, 0);
-	current_subHandle->fd = fd->ToLE();
-	if(ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
+	switch(src->srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		current_subHandle->fileSize = src->streamSize.ToLE();
+		break;
 
-	// Get size of file
-	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
-	if(ret != CELL_OK) return ret;
-	current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
+	case se32(CELL_GIFDEC_FILE):
+		// Get file descriptor
+		MemoryAllocator<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd.GetAddr(), 0, 0);
+		current_subHandle->fd = fd->ToLE();
+		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
-	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
+		// Get size of file
+		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		if (ret != CELL_OK) return ret;
+		current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
+		break;
+	}
+
+	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
 	subHandle = cellGifDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
@@ -94,8 +78,20 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	MemoryAllocator<u8> buffer(13); // Alloc buffer for GIF header
 	MemoryAllocator<be_t<u64>> pos, nread;
 
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
+			cellGifDec->Error("cellGifDecReadHeader() failed ()");
+			return CELL_EFAULT;
+		}
+		break;
+
+	case se32(CELL_GIFDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		break;
+	}
 
 	if (*buffer.To<be_t<u32>>(0) != 0x47494638 ||
 		(*buffer.To<u16>(4) != 0x6139 && *buffer.To<u16>(4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
@@ -166,8 +162,21 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	//Copy the GIF file to a buffer
 	MemoryAllocator<unsigned char> gif(fileSize);
 	MemoryAllocator<u64> pos, nread;
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread);
+
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		if (!Memory.Copy(gif.GetAddr(), subHandle_data->src.streamPtr.ToLE(), gif.GetSize())) {
+			cellGifDec->Error("cellGifDecDecodeData() failed (I)");
+			return CELL_EFAULT;
+		}
+		break;
+
+	case se32(CELL_GIFDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
+		cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread);
+		break;
+	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
