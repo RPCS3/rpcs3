@@ -358,6 +358,92 @@ s32 cellSyncRwmTryWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 	return CELL_OK;
 }
 
+s32 cellSyncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth)
+{
+	cellSync->Todo("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.GetAddr(), buffer_addr, size, depth);
+
+	if (!queue)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (size && !buffer_addr)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32 || buffer_addr % 16)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+	if (!depth || size % 16)
+	{
+		return CELL_SYNC_ERROR_INVAL;
+	}
+
+	// prx: zeroize first u64, write size in third u32, write depth in fourth u32, write address in third u64 and sync
+	queue->m_data() = 0;
+	queue->m_size = size;
+	queue->m_depth = depth;
+	queue->m_addr = (u64)buffer_addr;
+	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	return CELL_OK;
+}
+
+s32 cellSyncQueuePush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueuePush(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueueTryPush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueueTryPush(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueuePop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueuePop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueueTryPop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueueTryPop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueuePeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueuePeek(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueueTryPeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
+{
+	cellSync->Todo("cellSyncQueueTryPeek(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueueSize(mem_ptr_t<CellSyncQueue> queue)
+{
+	cellSync->Todo("cellSyncQueueSize(queue_addr=0x%x)", queue.GetAddr());
+
+	return CELL_OK;
+}
+
+s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
+{
+	cellSync->Todo("cellSyncQueueClear(queue_addr=0x%x)", queue.GetAddr());
+
+	return CELL_OK;
+}
+
 void cellSync_init()
 {
 	cellSync->AddFunc(0xa9072dee, cellSyncMutexInitialize);
@@ -376,4 +462,14 @@ void cellSync_init()
 	cellSync->AddFunc(0xa6669751, cellSyncRwmTryRead);
 	cellSync->AddFunc(0xed773f5f, cellSyncRwmWrite);
 	cellSync->AddFunc(0xba5bee48, cellSyncRwmTryWrite);
+
+	cellSync->AddFunc(0x3929948d, cellSyncQueueInitialize);
+	cellSync->AddFunc(0x5ae841e5, cellSyncQueuePush);
+	cellSync->AddFunc(0x705985cd, cellSyncQueueTryPush);
+	cellSync->AddFunc(0x4da6d7e0, cellSyncQueuePop);
+	cellSync->AddFunc(0xa58df87f, cellSyncQueueTryPop);
+	cellSync->AddFunc(0x48154c9b, cellSyncQueuePeek);
+	cellSync->AddFunc(0x68af923c, cellSyncQueueTryPeek);
+	cellSync->AddFunc(0x4da349b2, cellSyncQueueSize);
+	cellSync->AddFunc(0xa5362e73, cellSyncQueueClear);
 }
