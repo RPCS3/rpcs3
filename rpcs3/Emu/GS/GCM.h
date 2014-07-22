@@ -639,700 +639,700 @@ static const std::string GetMethodName(const u32 id)
 		const u32 id;
 		const std::string& name;
 	} static const METHOD_NAME_LIST[] = {
-		{ NV4097_NO_OPERATION , "NoOperation" } ,
-		{ NV4097_NOTIFY , "Notify" } ,
-		{ NV4097_WAIT_FOR_IDLE , "WaitForIdle" } ,
-		{ NV4097_PM_TRIGGER , "PmTrigger" } ,
-		{ NV4097_SET_CONTEXT_DMA_NOTIFIES , "SetContextDmaNotifies" } ,
-		{ NV4097_SET_CONTEXT_DMA_A , "SetContextDmaA" } ,
-		{ NV4097_SET_CONTEXT_DMA_B , "SetContextDmaB" } ,
-		{ NV4097_SET_CONTEXT_DMA_COLOR_B , "SetContextDmaColorB" } ,
-		{ NV4097_SET_CONTEXT_DMA_STATE , "SetContextDmaState" } ,
-		{ NV4097_SET_CONTEXT_DMA_COLOR_A , "SetContextDmaColorA" } ,
-		{ NV4097_SET_CONTEXT_DMA_ZETA , "SetContextDmaZeta" } ,
-		{ NV4097_SET_CONTEXT_DMA_VERTEX_A , "SetContextDmaVertexA" } ,
-		{ NV4097_SET_CONTEXT_DMA_VERTEX_B , "SetContextDmaVertexB" } ,
-		{ NV4097_SET_CONTEXT_DMA_SEMAPHORE , "SetContextDmaSemaphore" } ,
-		{ NV4097_SET_CONTEXT_DMA_REPORT , "SetContextDmaReport" } ,
-		{ NV4097_SET_CONTEXT_DMA_CLIP_ID , "SetContextDmaClipId" } ,
-		{ NV4097_SET_CONTEXT_DMA_CULL_DATA , "SetContextDmaCullData" } ,
-		{ NV4097_SET_CONTEXT_DMA_COLOR_C , "SetContextDmaColorC" } ,
-		{ NV4097_SET_CONTEXT_DMA_COLOR_D , "SetContextDmaColorD" } ,
-		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL , "SetSurfaceClipHorizontal" } ,
-		{ NV4097_SET_SURFACE_CLIP_VERTICAL , "SetSurfaceClipVertical" } ,
-		{ NV4097_SET_SURFACE_FORMAT , "SetSurfaceFormat" } ,
-		{ NV4097_SET_SURFACE_PITCH_A , "SetSurfacePitchA" } ,
-		{ NV4097_SET_SURFACE_COLOR_AOFFSET , "SetSurfaceColorAOffset" } ,
-		{ NV4097_SET_SURFACE_ZETA_OFFSET , "SetSurfaceZetaOffset" } ,
-		{ NV4097_SET_SURFACE_COLOR_BOFFSET , "SetSurfaceColorBOffset" } ,
-		{ NV4097_SET_SURFACE_PITCH_B , "SetSurfacePitchB" } ,
-		{ NV4097_SET_SURFACE_COLOR_TARGET , "SetSurfaceColorTarget" } ,
-		{ NV4097_SET_SURFACE_PITCH_Z , "SetSurfacePitchZ" } ,
-		{ NV4097_INVALIDATE_ZCULL , "InvalidateZcull" } ,
-		{ NV4097_SET_CYLINDRICAL_WRAP , "SetCylindricalWrap" } ,
-		{ NV4097_SET_CYLINDRICAL_WRAP1 , "SetCylindricalWrap1" } ,
-		{ NV4097_SET_SURFACE_PITCH_C , "SetSurfacePitchC" } ,
-		{ NV4097_SET_SURFACE_PITCH_D , "SetSurfacePitchD" } ,
-		{ NV4097_SET_SURFACE_COLOR_COFFSET , "SetSurfaceColorCOffset" } ,
-		{ NV4097_SET_SURFACE_COLOR_DOFFSET , "SetSurfaceColorDOffset" } ,
-		{ NV4097_SET_WINDOW_OFFSET , "SetWindowOffset" } ,
-		{ NV4097_SET_DITHER_ENABLE , "SetDitherEnable" } ,
-		{ NV4097_SET_ALPHA_TEST_ENABLE , "SetAlphaTestEnable" } ,
-		{ NV4097_SET_ALPHA_FUNC , "SetAlphaFunc" } ,
-		{ NV4097_SET_ALPHA_REF , "SetAlphaRef" } ,
-		{ NV4097_SET_BLEND_ENABLE , "SetBlendEnable" } ,
-		{ NV4097_SET_BLEND_FUNC_SFACTOR , "SetBlendFuncSfactor" } ,
-		{ NV4097_SET_BLEND_FUNC_DFACTOR , "SetBlendFuncDfactor" } ,
-		{ NV4097_SET_BLEND_COLOR , "SetBlendColor" } ,
-		{ NV4097_SET_BLEND_EQUATION , "SetBlendEquation" } ,
-		{ NV4097_SET_COLOR_MASK , "SetColorMask" } ,
-		{ NV4097_SET_STENCIL_TEST_ENABLE , "SetStencilTestEnable" } ,
-		{ NV4097_SET_STENCIL_MASK , "SetStencilMask" } ,
-		{ NV4097_SET_STENCIL_FUNC , "SetStencilFunc" } ,
-		{ NV4097_SET_STENCIL_FUNC_REF , "SetStencilFuncRef" } ,
-		{ NV4097_SET_STENCIL_FUNC_MASK , "SetStencilFuncMask" } ,
-		{ NV4097_SET_STENCIL_OP_FAIL , "SetStencilOpFail" } ,
-		{ NV4097_SET_STENCIL_OP_ZFAIL , "SetStencilOpZfail" } ,
-		{ NV4097_SET_STENCIL_OP_ZPASS , "SetStencilOpZpass" } ,
-		{ NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE , "SetTwoSidedStencilTestEnable" } ,
-		{ NV4097_SET_BACK_STENCIL_MASK , "SetBackStencilMask" } ,
-		{ NV4097_SET_BACK_STENCIL_FUNC , "SetBackStencilFunc" } ,
-		{ NV4097_SET_BACK_STENCIL_FUNC_REF , "SetBackStencilFuncRef" } ,
-		{ NV4097_SET_BACK_STENCIL_FUNC_MASK , "SetBackStencilFuncMask" } ,
-		{ NV4097_SET_BACK_STENCIL_OP_FAIL , "SetBackStencilOpFail" } ,
-		{ NV4097_SET_BACK_STENCIL_OP_ZFAIL , "SetBackStencilOpZfail" } ,
-		{ NV4097_SET_BACK_STENCIL_OP_ZPASS , "SetBackStencilOpZpass" } ,
-		{ NV4097_SET_SHADE_MODE , "SetShadeMode" } ,
-		{ NV4097_SET_BLEND_ENABLE_MRT , "SetBlendEnableMRT" } ,
-		{ NV4097_SET_COLOR_MASK_MRT , "SetColorMaskMRT" } ,
-		{ NV4097_SET_LOGIC_OP_ENABLE , "SetLogicOpEnable" } ,
-		{ NV4097_SET_LOGIC_OP , "SetLogicOp" } ,
-		{ NV4097_SET_BLEND_COLOR2 , "SetBlendColor2" } ,
-		{ NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE , "SetDepthBoundsTestEnable" } ,
-		{ NV4097_SET_DEPTH_BOUNDS_MIN , "SetDepthBoundsMin" } ,
-		{ NV4097_SET_DEPTH_BOUNDS_MAX , "SetDepthBoundsMax" } ,
-		{ NV4097_SET_CLIP_MIN , "SetClipMin" } ,
-		{ NV4097_SET_CLIP_MAX , "SetClipMax" } ,
-		{ NV4097_SET_CONTROL0 , "SetControl0" } ,
-		{ NV4097_SET_LINE_WIDTH , "SetLineWidth" } ,
-		{ NV4097_SET_LINE_SMOOTH_ENABLE , "SetLineSmoothEnable" } ,
-		{ NV4097_SET_ANISO_SPREAD , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 4 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 8 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 12 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 16 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 20 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 24 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 28 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 32 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 36 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 40 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 44 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 48 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 52 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 56 , "SetAnisoSpread" } ,
-		{ NV4097_SET_ANISO_SPREAD + 60 , "SetAnisoSpread" } ,
-		{ NV4097_SET_SCISSOR_HORIZONTAL , "SetScissorHorizontal" } ,
-		{ NV4097_SET_SCISSOR_VERTICAL , "SetScissorVertical" } ,
-		{ NV4097_SET_FOG_MODE , "SetFogMode" } ,
-		{ NV4097_SET_FOG_PARAMS , "SetFogParams" } ,
-		{ NV4097_SET_FOG_PARAMS + 4 , "SetFogParams" } ,
-		{ NV4097_SET_FOG_PARAMS + 8 , "SetFogParams" } ,
-		{ NV4097_SET_SHADER_PROGRAM , "SetShaderProgram" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_OFFSET , "SetVertexTexture_Offset" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FORMAT , "SetVertexTexture_Format" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS , "SetVertexTexture_Address" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 , "SetVertexTexture_Control0" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 , "SetVertexTexture_Control3" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FILTER , "SetVertexTexture_Filter" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT , "SetVertexTexture_ImageRect" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR , "SetVertexTexture_BorderColor" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x20, "SetVertexTexture_Offset" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x20, "SetVertexTexture_Format" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x20, "SetVertexTexture_Address" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x20, "SetVertexTexture_Control0" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x20, "SetVertexTexture_Control3" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x20, "SetVertexTexture_Filter" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x20, "SetVertexTexture_ImageRect" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x20, "SetVertexTexture_BorderColor" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x40, "SetVertexTexture_Offset" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x40, "SetVertexTexture_Format" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x40, "SetVertexTexture_Address" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x40, "SetVertexTexture_Control0" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x40, "SetVertexTexture_Control3" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x40, "SetVertexTexture_Filter" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x40, "SetVertexTexture_ImageRect" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x40, "SetVertexTexture_BorderColor" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x60, "SetVertexTexture_Offset" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x60, "SetVertexTexture_Format" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x60, "SetVertexTexture_Address" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x60, "SetVertexTexture_Control0" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x60, "SetVertexTexture_Control3" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x60, "SetVertexTexture_Filter" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x60, "SetVertexTexture_ImageRect" } ,
-		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x60, "SetVertexTexture_BorderColor" } ,
-		{ NV4097_SET_VIEWPORT_HORIZONTAL , "SetViewportHorizontal" } ,
-		{ NV4097_SET_VIEWPORT_VERTICAL , "SetViewportVertical" } ,
-		{ NV4097_SET_VIEWPORT_OFFSET , "SetViewportOffset" } ,
-		{ NV4097_SET_VIEWPORT_SCALE , "SetViewportScale" } ,
-		{ NV4097_SET_POLY_OFFSET_LINE_ENABLE , "SetPolyOffsetLineEnable" } ,
-		{ NV4097_SET_POLY_OFFSET_FILL_ENABLE , "SetPolyOffsetFillEnable" } ,
-		{ NV4097_SET_DEPTH_FUNC , "SetDepthFunc" } ,
-		{ NV4097_SET_DEPTH_MASK , "SetDepthMask" } ,
-		{ NV4097_SET_DEPTH_TEST_ENABLE , "SetDepthTestEnable" } ,
-		{ NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR , "SetPolygonOffsetScaleFactor" } ,
-		{ NV4097_SET_POLYGON_OFFSET_BIAS , "SetPolygonOffsetBias" } ,
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 4 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 8 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 12 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 16 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 20 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 24 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 28 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 32 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 36 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 40, "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 44 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 48 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 52 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 56 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 60 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 64 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 68 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 72 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 76 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 80 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 84 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 88 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 92 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 96 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 100 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 104 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 108 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 112 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 116 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 120 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 124 , "SetVertexDataScaled4s_M"},
-		{ NV4097_SET_TEXTURE_CONTROL2 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 4 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 8 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 12 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 16 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 20 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 24 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 28 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 32 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 36 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 40 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 44 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 48 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 52 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 56 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEXTURE_CONTROL2 + 60 , "SetTextureControl2" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 4 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 8 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 12 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 16 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 20 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 24 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 28 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 32 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TEX_COORD_CONTROL + 36 , "SetTexCoordControl" } ,
-		{ NV4097_SET_TRANSFORM_PROGRAM , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 4 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 8 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 12 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 16 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 20 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 24 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 28 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 32 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 36 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 40 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 44 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 48 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 52 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 56 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 60 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 64 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 68 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 72 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 76 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 80 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 84 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 88 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 92 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 96 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 100 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 104 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 108 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 112 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 116 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 120 , "SetTransformProgram"},
-		{ NV4097_SET_TRANSFORM_PROGRAM + 124 , "SetTransformProgram"},
-		{ NV4097_SET_TWO_SIDE_LIGHT_EN , "SetTwoSideLightEn" } ,
-		{ NV4097_CLEAR_ZCULL_SURFACE , "ClearZcullSurface" } ,
-		{ NV4097_SET_USER_CLIP_PLANE_CONTROL , "SetUserClipPlaneControl" } ,
-		{ NV4097_SET_POLYGON_STIPPLE , "SetPolygonStipple" } ,
-		{ NV4097_SET_POLYGON_STIPPLE_PATTERN , "SetPolygonStipplePattern" } ,
-		{ NV4097_SET_VERTEX_DATA3F_M , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 4 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 8 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 12 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 16 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 20 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 24 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 28 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 32 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 36 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 40 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 44 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 48 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 52 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 56 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 60 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 64 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 68 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 72 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 76 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 80 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 84 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 88 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 92 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 96 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 100 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 104 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 108 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 112 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 116 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 120 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 124 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 128 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 132 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 136 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 140 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 144 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 148 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 152 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 156 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 160 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 164 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 168 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 172 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 176 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 180 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 184 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA3F_M + 188 , "SetVertexData3f_M"},
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 8 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 12 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 16 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 20 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 24 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 28 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 32 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 36 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 40 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 44 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 48 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 52 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 56 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 60 , "SetVertexDataArrayOffset" } ,
-		{ NV4097_INVALIDATE_VERTEX_CACHE_FILE , "InvalidateVertexCacheFile" } ,
-		{ NV4097_INVALIDATE_VERTEX_FILE , "InvalidateVertexFile" } ,
-		{ NV4097_SET_VERTEX_DATA_BASE_OFFSET , "SetVertexDataBaseOffset" } ,
-		{ NV4097_SET_VERTEX_DATA_BASE_INDEX , "SetVertexDataBaseIndex" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 4 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 8 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 12 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 16 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 20 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 24 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 28 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 32 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 36 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 40 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 44 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 48 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 52 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 56 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 60 , "SetVertexDataArrayFormat" } ,
-		{ NV4097_CLEAR_REPORT_VALUE , "ClearReportValue" } ,
-		{ NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE , "SetZpassPixelCountEnable" } ,
-		{ NV4097_GET_REPORT , "GetReport" } ,
-		{ NV4097_SET_ZCULL_STATS_ENABLE , "SetZcullStatsEnable" } ,
-		{ NV4097_SET_BEGIN_END , "SetBeginEnd" } ,
-		{ NV4097_ARRAY_ELEMENT16 , "ArrayElement16" } ,
-		{ NV4097_ARRAY_ELEMENT32 , "ArrayElement32" } ,
-		{ NV4097_DRAW_ARRAYS , "DrawArrays" } ,
-		{ NV4097_INLINE_ARRAY , "InlineArray" } ,
-		{ NV4097_SET_INDEX_ARRAY_ADDRESS , "SetIndexArrayAddress" } ,
-		{ NV4097_SET_INDEX_ARRAY_DMA , "SetIndexArrayDMA" } ,
-		{ NV4097_DRAW_INDEX_ARRAY , "DrawIndexArray" } ,
-		{ NV4097_SET_FRONT_POLYGON_MODE , "SetFrontPolygonMode" } ,
-		{ NV4097_SET_BACK_POLYGON_MODE , "SetBackPolygonMode" } ,
-		{ NV4097_SET_CULL_FACE , "SetCullFace" } ,
-		{ NV4097_SET_FRONT_FACE , "SetFrontFace" } ,
-		{ NV4097_SET_POLY_SMOOTH_ENABLE , "SetPolySmoothEnable" } ,
-		{ NV4097_SET_CULL_FACE_ENABLE , "SetCullFaceEnable" } ,
-		{ NV4097_SET_TEXTURE_CONTROL3 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 4 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 8 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 12 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 16 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 20 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 24 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 28 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 32 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 36 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 40 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 44 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 48 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 52 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 56 , "SetTextureControl3"},
-		{ NV4097_SET_TEXTURE_CONTROL3 + 60 , "SetTextureControl3"},
-		{ NV4097_SET_VERTEX_DATA2F_M , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 4 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 8 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 12 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 16 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 20 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 24 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 28 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 32 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 36 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 40 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 44 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 48 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 52 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 56 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 60 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 64 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 68 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 72 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 76 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 80 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 84 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 88 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 92 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 96 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 100 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 104 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 108 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 112 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 116 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 120 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2F_M + 124 , "SetVertexData2f_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 4 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 8 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 12 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 16 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 20 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 24 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 28 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 32 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 36 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 40 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 44 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 48 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 52 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 56 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA2S_M + 60 , "SetVertexData2s_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 4 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 8 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 12 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 16 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 20 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 24 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 28 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 32 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 36 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 40 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 44 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 48 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 52 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 56 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4UB_M + 60 , "SetVertexData4ub_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 4 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 8 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 12 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 16 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 20 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 24 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 28 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 32 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 36 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 40 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 44 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 48 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 52 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 56 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 60 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 64 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 68 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 72 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 76 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 80 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 84 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 88 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 92 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 96 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 100 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 104 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 108 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 112 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 116 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 120 , "SetVertexData4s_M"},
-		{ NV4097_SET_VERTEX_DATA4S_M + 124 , "SetVertexData4s_M"},
-		{ NV4097_SET_TEXTURE_OFFSET , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x20 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x20 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x20 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x20 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x20 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x20 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x20 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x20 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x40 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x40 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x40 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x40 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x40 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x40 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x40 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x40 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x60 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x60 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x60 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x60 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x60 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x60 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x60 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x60 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x80 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x80 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x80 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x80 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x80 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x80 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x80 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x80 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0xa0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0xa0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0xa0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0xa0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0xa0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0xa0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xa0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xa0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0xc0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0xc0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0xc0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0xc0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0xc0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0xc0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xc0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xc0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0xe0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0xe0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0xe0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0xe0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0xe0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0xe0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xe0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xe0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x100 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x100 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x100 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x100 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x100 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x100 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x100 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x100 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x120 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x120 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x120 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x120 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x120 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x120 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x120 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x120 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x140 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x140 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x140 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x140 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x140 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x140 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x140 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x140 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x160 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x160 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x160 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x160 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x160 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x160 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x160 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x160 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x180 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x180 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x180 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x180 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x180 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x180 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x180 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x180 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x1a0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x1a0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x1a0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1a0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1a0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x1a0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1a0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1a0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x1c0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x1c0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x1c0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1c0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1c0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x1c0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1c0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1c0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_TEXTURE_OFFSET + 0x1e0 , "SetTexture_Offset" } ,
-		{ NV4097_SET_TEXTURE_FORMAT + 0x1e0 , "SetTexture_Format" } ,
-		{ NV4097_SET_TEXTURE_ADDRESS + 0x1e0 , "SetTexture_Address" } ,
-		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1e0 , "SetTexture_Control0" } ,
-		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1e0 , "SetTexture_Control1" } ,
-		{ NV4097_SET_TEXTURE_FILTER + 0x1e0 , "SetTexture_Filter" } ,
-		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1e0 , "SetTexture_ImageRect" } ,
-		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1e0 , "SetTexture_BorderColor" } ,
-		{ NV4097_SET_VERTEX_DATA4F_M , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 4 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 8 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 12 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 16 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 20 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 24 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 28 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 32 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 36 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 40 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 44 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 48 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 52 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 56 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 60 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 64 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 68 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 72 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 76 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 80 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 84 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 88 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 92 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 96 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 100 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 104 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 108 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 112 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 116 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 120 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 124 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 128 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 132 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 136 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 140 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 144 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 148 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 152 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 156 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 160 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 164 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 168 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 172 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 176 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 180 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 184 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 188 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 192 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 196 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 200 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 204 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 208 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 212 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 216 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 220 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 224 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 228 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 232 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 236 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 240 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 244 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 248 , "SetVertexData4f_M"},
-		{ NV4097_SET_VERTEX_DATA4F_M + 252 , "SetVertexData4f_M"},
-		{ NV4097_SET_SHADER_CONTROL , "SetShaderControl" } ,
-		{ NV4097_SET_SEMAPHORE_OFFSET , "SetSemaphoreOffset" } ,
-		{ NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE , "BackEndWriteSemaphoreRelease" } ,
-		{ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE , "TextureReadSemaphoreRelease" } ,
-		{ NV4097_SET_ZMIN_MAX_CONTROL , "SetZMinMaxControl" } ,
-		{ NV4097_SET_ANTI_ALIASING_CONTROL , "SetAntiAliasingControl" } ,
-		{ NV4097_SET_ZCULL_EN , "SetZcullEn" } ,
-		{ NV4097_SET_SHADER_WINDOW , "SetShaderWindow" } ,
-		{ NV4097_SET_ZSTENCIL_CLEAR_VALUE , "SetZStencilClearValue" } ,
-		{ NV4097_SET_COLOR_CLEAR_VALUE , "SetColorClearValue" } ,
-		{ NV4097_CLEAR_SURFACE , "ClearSurface" } ,
-		{ NV4097_SET_RESTART_INDEX_ENABLE , "SetRestartIndexEnable" } ,
-		{ NV4097_SET_RESTART_INDEX , "SetRestartIndex" } ,
-		{ NV4097_SET_LINE_STIPPLE , "SetLineStipple" } ,
-		{ NV4097_SET_LINE_STIPPLE_PATTERN , "SetLineStipplePattern" } ,
-		{ NV4097_SET_VERTEX_DATA1F_M , "SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 4 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 8 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 12 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 16 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 20 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 24 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 28 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 32 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 36 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 40 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 44 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 48 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 52 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 56 ,"SetVertexData1f_M"},
-		{ NV4097_SET_VERTEX_DATA1F_M + 60 ,"SetVertexData1f_M"},
-		{ NV4097_SET_RENDER_ENABLE , "SetRenderEnable" } ,
-		{ NV4097_SET_TRANSFORM_PROGRAM_LOAD , "SetTransformProgramLoad" } ,
-		{ NV4097_SET_TRANSFORM_PROGRAM_START , "SetTransformProgramStart" } ,
-		{ NV4097_SET_ZCULL_CONTROL0 , "SetZcullControl0" } ,
-		{ NV4097_SET_ZCULL_CONTROL1 , "SetZcullControl1" } ,
-		{ NV4097_SET_SCULL_CONTROL , "SetScullControl" } ,
-		{ NV4097_SET_POINT_SIZE , "SetPointSize" } ,
-		{ NV4097_SET_POINT_PARAMS_ENABLE , "SetPointParamsEnable" } ,
-		{ NV4097_SET_POINT_SPRITE_CONTROL , "SetPointSpriteControl" } ,
-		{ NV4097_SET_TRANSFORM_TIMEOUT , "SetTransformTimeout" } ,
-		{ NV4097_SET_TRANSFORM_CONSTANT_LOAD , "SetTransformConstantLoad" } ,
-		{ NV4097_SET_FREQUENCY_DIVIDER_OPERATION , "SetFrequencyDividerOperation" } ,
-		{ NV4097_INVALIDATE_L2 , "InvalidateL2" } ,
-		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "SetTransformBranchBits" } ,
+		{ NV4097_NO_OPERATION , "NV4097_NO_OPERATION" }
+		{ NV4097_NOTIFY , "NV4097_NOTIFY" }
+		{ NV4097_WAIT_FOR_IDLE , "NV4097_WAIT_FOR_IDLE" }
+		{ NV4097_PM_TRIGGER , "NV4097_PM_TRIGGER" }
+		{ NV4097_SET_CONTEXT_DMA_NOTIFIES , "NV4097_SET_CONTEXT_DMA_NOTIFIES" }
+		{ NV4097_SET_CONTEXT_DMA_A , "NV4097_SET_CONTEXT_DMA_A" }
+		{ NV4097_SET_CONTEXT_DMA_B , "NV4097_SET_CONTEXT_DMA_B" }
+		{ NV4097_SET_CONTEXT_DMA_COLOR_B , "NV4097_SET_CONTEXT_DMA_COLOR_B" }
+		{ NV4097_SET_CONTEXT_DMA_STATE , "NV4097_SET_CONTEXT_DMA_STATE" }
+		{ NV4097_SET_CONTEXT_DMA_COLOR_A , "NV4097_SET_CONTEXT_DMA_COLOR_A" }
+		{ NV4097_SET_CONTEXT_DMA_ZETA , "NV4097_SET_CONTEXT_DMA_ZETA" }
+		{ NV4097_SET_CONTEXT_DMA_VERTEX_A , "NV4097_SET_CONTEXT_DMA_VERTEX_A" }
+		{ NV4097_SET_CONTEXT_DMA_VERTEX_B , "NV4097_SET_CONTEXT_DMA_VERTEX_B" }
+		{ NV4097_SET_CONTEXT_DMA_SEMAPHORE , "NV4097_SET_CONTEXT_DMA_SEMAPHORE" }
+		{ NV4097_SET_CONTEXT_DMA_REPORT , "NV4097_SET_CONTEXT_DMA_REPORT" }
+		{ NV4097_SET_CONTEXT_DMA_CLIP_ID , "NV4097_SET_CONTEXT_DMA_CLIP_ID" }
+		{ NV4097_SET_CONTEXT_DMA_CULL_DATA , "NV4097_SET_CONTEXT_DMA_CULL_DATA" }
+		{ NV4097_SET_CONTEXT_DMA_COLOR_C , "NV4097_SET_CONTEXT_DMA_COLOR_C" }
+		{ NV4097_SET_CONTEXT_DMA_COLOR_D , "NV4097_SET_CONTEXT_DMA_COLOR_D" }
+		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL , "NV4097_SET_SURFACE_CLIP_HORIZONTAL" }
+		{ NV4097_SET_SURFACE_CLIP_VERTICAL , "NV4097_SET_SURFACE_CLIP_VERTICAL" }
+		{ NV4097_SET_SURFACE_FORMAT , "NV4097_SET_SURFACE_FORMAT" }
+		{ NV4097_SET_SURFACE_PITCH_A , "NV4097_SET_SURFACE_PITCH_A" }
+		{ NV4097_SET_SURFACE_COLOR_AOFFSET , "NV4097_SET_SURFACE_COLOR_AOFFSET" }
+		{ NV4097_SET_SURFACE_ZETA_OFFSET , "NV4097_SET_SURFACE_ZETA_OFFSET" }
+		{ NV4097_SET_SURFACE_COLOR_BOFFSET , "NV4097_SET_SURFACE_COLOR_BOFFSET" }
+		{ NV4097_SET_SURFACE_PITCH_B , "NV4097_SET_SURFACE_PITCH_B" }
+		{ NV4097_SET_SURFACE_COLOR_TARGET , "NV4097_SET_SURFACE_COLOR_TARGET" }
+		{ NV4097_SET_SURFACE_PITCH_Z , "NV4097_SET_SURFACE_PITCH_Z" }
+		{ NV4097_INVALIDATE_ZCULL , "NV4097_INVALIDATE_ZCULL" }
+		{ NV4097_SET_CYLINDRICAL_WRAP , "NV4097_SET_CYLINDRICAL_WRAP" }
+		{ NV4097_SET_CYLINDRICAL_WRAP1 , "NV4097_SET_CYLINDRICAL_WRAP1" }
+		{ NV4097_SET_SURFACE_PITCH_C , "NV4097_SET_SURFACE_PITCH_C" }
+		{ NV4097_SET_SURFACE_PITCH_D , "NV4097_SET_SURFACE_PITCH_D" }
+		{ NV4097_SET_SURFACE_COLOR_COFFSET , "NV4097_SET_SURFACE_COLOR_COFFSET" }
+		{ NV4097_SET_SURFACE_COLOR_DOFFSET , "NV4097_SET_SURFACE_COLOR_DOFFSET" }
+		{ NV4097_SET_WINDOW_OFFSET , "NV4097_SET_WINDOW_OFFSET" }
+		{ NV4097_SET_DITHER_ENABLE , "NV4097_SET_DITHER_ENABLE" }
+		{ NV4097_SET_ALPHA_TEST_ENABLE , "NV4097_SET_ALPHA_TEST_ENABLE" }
+		{ NV4097_SET_ALPHA_FUNC , "NV4097_SET_ALPHA_FUNC" }
+		{ NV4097_SET_ALPHA_REF , "NV4097_SET_ALPHA_REF" }
+		{ NV4097_SET_BLEND_ENABLE , "NV4097_SET_BLEND_ENABLE" }
+		{ NV4097_SET_BLEND_FUNC_SFACTOR , "NV4097_SET_BLEND_FUNC_SFACTOR" }
+		{ NV4097_SET_BLEND_FUNC_DFACTOR , "NV4097_SET_BLEND_FUNC_DFACTOR" }
+		{ NV4097_SET_BLEND_COLOR , "NV4097_SET_BLEND_COLOR" }
+		{ NV4097_SET_BLEND_EQUATION , "NV4097_SET_BLEND_EQUATION" }
+		{ NV4097_SET_COLOR_MASK , "NV4097_SET_COLOR_MASK" }
+		{ NV4097_SET_STENCIL_TEST_ENABLE , "NV4097_SET_STENCIL_TEST_ENABLE" }
+		{ NV4097_SET_STENCIL_MASK , "NV4097_SET_STENCIL_MASK" }
+		{ NV4097_SET_STENCIL_FUNC , "NV4097_SET_STENCIL_FUNC" }
+		{ NV4097_SET_STENCIL_FUNC_REF , "NV4097_SET_STENCIL_FUNC_REF" }
+		{ NV4097_SET_STENCIL_FUNC_MASK , "NV4097_SET_STENCIL_FUNC_MASK" }
+		{ NV4097_SET_STENCIL_OP_FAIL , "NV4097_SET_STENCIL_OP_FAIL" }
+		{ NV4097_SET_STENCIL_OP_ZFAIL , "NV4097_SET_STENCIL_OP_ZFAIL" }
+		{ NV4097_SET_STENCIL_OP_ZPASS , "NV4097_SET_STENCIL_OP_ZPASS" }
+		{ NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE , "NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE" }
+		{ NV4097_SET_BACK_STENCIL_MASK , "NV4097_SET_BACK_STENCIL_MASK" }
+		{ NV4097_SET_BACK_STENCIL_FUNC , "NV4097_SET_BACK_STENCIL_FUNC" }
+		{ NV4097_SET_BACK_STENCIL_FUNC_REF , "NV4097_SET_BACK_STENCIL_FUNC_REF" }
+		{ NV4097_SET_BACK_STENCIL_FUNC_MASK , "NV4097_SET_BACK_STENCIL_FUNC_MASK" }
+		{ NV4097_SET_BACK_STENCIL_OP_FAIL , "NV4097_SET_BACK_STENCIL_OP_FAIL" }
+		{ NV4097_SET_BACK_STENCIL_OP_ZFAIL , "NV4097_SET_BACK_STENCIL_OP_ZFAIL" }
+		{ NV4097_SET_BACK_STENCIL_OP_ZPASS , "NV4097_SET_BACK_STENCIL_OP_ZPASS" }
+		{ NV4097_SET_SHADE_MODE , "NV4097_SET_SHADE_MODE" }
+		{ NV4097_SET_BLEND_ENABLE_MRT , "NV4097_SET_BLEND_ENABLE_MRT" }
+		{ NV4097_SET_COLOR_MASK_MRT , "NV4097_SET_COLOR_MASK_MRT" }
+		{ NV4097_SET_LOGIC_OP_ENABLE , "NV4097_SET_LOGIC_OP_ENABLE" }
+		{ NV4097_SET_LOGIC_OP , "NV4097_SET_LOGIC_OP" }
+		{ NV4097_SET_BLEND_COLOR2 , "NV4097_SET_BLEND_COLOR2" }
+		{ NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE , "NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE" }
+		{ NV4097_SET_DEPTH_BOUNDS_MIN , "NV4097_SET_DEPTH_BOUNDS_MIN" }
+		{ NV4097_SET_DEPTH_BOUNDS_MAX , "NV4097_SET_DEPTH_BOUNDS_MAX" }
+		{ NV4097_SET_CLIP_MIN , "NV4097_SET_CLIP_MIN" }
+		{ NV4097_SET_CLIP_MAX , "NV4097_SET_CLIP_MAX" }
+		{ NV4097_SET_CONTROL0 , "NV4097_SET_CONTROL0" }
+		{ NV4097_SET_LINE_WIDTH , "NV4097_SET_LINE_WIDTH" }
+		{ NV4097_SET_LINE_SMOOTH_ENABLE , "NV4097_SET_LINE_SMOOTH_ENABLE" }
+		{ NV4097_SET_ANISO_SPREAD , "NV4097_SET_ANISO_SPREAD" }
+		{ NV4097_SET_ANISO_SPREAD + 4 , "NV4097_SET_ANISO_SPREAD + 4" }
+		{ NV4097_SET_ANISO_SPREAD + 8 , "NV4097_SET_ANISO_SPREAD + 8" }
+		{ NV4097_SET_ANISO_SPREAD + 12 , "NV4097_SET_ANISO_SPREAD + 12" }
+		{ NV4097_SET_ANISO_SPREAD + 16 , "NV4097_SET_ANISO_SPREAD + 16" }
+		{ NV4097_SET_ANISO_SPREAD + 20 , "NV4097_SET_ANISO_SPREAD + 20" }
+		{ NV4097_SET_ANISO_SPREAD + 24 , "NV4097_SET_ANISO_SPREAD + 24" }
+		{ NV4097_SET_ANISO_SPREAD + 28 , "NV4097_SET_ANISO_SPREAD + 28" }
+		{ NV4097_SET_ANISO_SPREAD + 32 , "NV4097_SET_ANISO_SPREAD + 32" }
+		{ NV4097_SET_ANISO_SPREAD + 36 , "NV4097_SET_ANISO_SPREAD + 36" }
+		{ NV4097_SET_ANISO_SPREAD + 40 , "NV4097_SET_ANISO_SPREAD + 40" }
+		{ NV4097_SET_ANISO_SPREAD + 44 , "NV4097_SET_ANISO_SPREAD + 44" }
+		{ NV4097_SET_ANISO_SPREAD + 48 , "NV4097_SET_ANISO_SPREAD + 48" }
+		{ NV4097_SET_ANISO_SPREAD + 52 , "NV4097_SET_ANISO_SPREAD + 52" }
+		{ NV4097_SET_ANISO_SPREAD + 56 , "NV4097_SET_ANISO_SPREAD + 56" }
+		{ NV4097_SET_ANISO_SPREAD + 60 , "NV4097_SET_ANISO_SPREAD + 60" }
+		{ NV4097_SET_SCISSOR_HORIZONTAL , "NV4097_SET_SCISSOR_HORIZONTAL" }
+		{ NV4097_SET_SCISSOR_VERTICAL , "NV4097_SET_SCISSOR_VERTICAL" }
+		{ NV4097_SET_FOG_MODE , "NV4097_SET_FOG_MODE" }
+		{ NV4097_SET_FOG_PARAMS , "NV4097_SET_FOG_PARAMS" }
+		{ NV4097_SET_FOG_PARAMS + 4 , "NV4097_SET_FOG_PARAMS + 4" }
+		{ NV4097_SET_FOG_PARAMS + 8 , "NV4097_SET_FOG_PARAMS + 8" }
+		{ NV4097_SET_SHADER_PROGRAM , "NV4097_SET_SHADER_PROGRAM" }
+		{ NV4097_SET_VERTEX_TEXTURE_OFFSET , "NV4097_SET_VERTEX_TEXTURE_OFFSET" }
+		{ NV4097_SET_VERTEX_TEXTURE_FORMAT , "NV4097_SET_VERTEX_TEXTURE_FORMAT" }
+		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS , "NV4097_SET_VERTEX_TEXTURE_ADDRESS" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 , "NV4097_SET_VERTEX_TEXTURE_CONTROL0" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 , "NV4097_SET_VERTEX_TEXTURE_CONTROL3" }
+		{ NV4097_SET_VERTEX_TEXTURE_FILTER , "NV4097_SET_VERTEX_TEXTURE_FILTER" }
+		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT , "NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT" }
+		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR , "NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR" }
+		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x20, "NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x20, "NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x20, "NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x20, "NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x20, "NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x20, "NV4097_SET_VERTEX_TEXTURE_FILTER + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x20, "NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x20, "NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x20" }
+		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x40, "NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x40, "NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x40, "NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x40, "NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x40, "NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x40, "NV4097_SET_VERTEX_TEXTURE_FILTER + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x40, "NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x40, "NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x40" }
+		{ NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x60, "NV4097_SET_VERTEX_TEXTURE_OFFSET + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x60, "NV4097_SET_VERTEX_TEXTURE_FORMAT + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x60, "NV4097_SET_VERTEX_TEXTURE_ADDRESS + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x60, "NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x60, "NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_FILTER + 0x60, "NV4097_SET_VERTEX_TEXTURE_FILTER + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x60, "NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 0x60" }
+		{ NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x60, "NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 0x60" }
+		{ NV4097_SET_VIEWPORT_HORIZONTAL , "NV4097_SET_VIEWPORT_HORIZONTAL" }
+		{ NV4097_SET_VIEWPORT_VERTICAL , "NV4097_SET_VIEWPORT_VERTICAL" }
+		{ NV4097_SET_VIEWPORT_OFFSET , "NV4097_SET_VIEWPORT_OFFSET" }
+		{ NV4097_SET_VIEWPORT_SCALE , "NV4097_SET_VIEWPORT_SCALE" }
+		{ NV4097_SET_POLY_OFFSET_LINE_ENABLE , "NV4097_SET_POLY_OFFSET_LINE_ENABLE" }
+		{ NV4097_SET_POLY_OFFSET_FILL_ENABLE , "NV4097_SET_POLY_OFFSET_FILL_ENABLE" }
+		{ NV4097_SET_DEPTH_FUNC , "NV4097_SET_DEPTH_FUNC" }
+		{ NV4097_SET_DEPTH_MASK , "NV4097_SET_DEPTH_MASK" }
+		{ NV4097_SET_DEPTH_TEST_ENABLE , "NV4097_SET_DEPTH_TEST_ENABLE" }
+		{ NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR , "NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR" }
+		{ NV4097_SET_POLYGON_OFFSET_BIAS , "NV4097_SET_POLYGON_OFFSET_BIAS" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M , "NV4097_SET_VERTEX_DATA_SCALED4S_M" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 4 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 4" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 8 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 8" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 12 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 12" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 16 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 16" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 20 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 20" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 24 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 24" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 28 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 28" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 32 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 32" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 36 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 36" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 40, "NV4097_SET_VERTEX_DATA_SCALED4S_M + 40" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 44 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 44" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 48 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 48" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 52 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 52" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 56 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 56" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 60 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 60" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 64 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 64" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 68 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 68" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 72 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 72" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 76 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 76" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 80 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 80" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 84 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 84" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 88 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 88" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 92 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 92" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 96 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 96" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 100 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 100" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 104 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 104" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 108 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 108" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 112 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 112" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 116 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 116" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 120 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 120" }
+		{ NV4097_SET_VERTEX_DATA_SCALED4S_M + 124 , "NV4097_SET_VERTEX_DATA_SCALED4S_M + 124" }
+		{ NV4097_SET_TEXTURE_CONTROL2 , "NV4097_SET_TEXTURE_CONTROL2" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 4 , "NV4097_SET_TEXTURE_CONTROL2 + 4" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 8 , "NV4097_SET_TEXTURE_CONTROL2 + 8" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 12 , "NV4097_SET_TEXTURE_CONTROL2 + 12" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 16 , "NV4097_SET_TEXTURE_CONTROL2 + 16" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 20 , "NV4097_SET_TEXTURE_CONTROL2 + 20" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 24 , "NV4097_SET_TEXTURE_CONTROL2 + 24" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 28 , "NV4097_SET_TEXTURE_CONTROL2 + 28" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 32 , "NV4097_SET_TEXTURE_CONTROL2 + 32" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 36 , "NV4097_SET_TEXTURE_CONTROL2 + 36" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 40 , "NV4097_SET_TEXTURE_CONTROL2 + 40" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 44 , "NV4097_SET_TEXTURE_CONTROL2 + 44" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 48 , "NV4097_SET_TEXTURE_CONTROL2 + 48" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 52 , "NV4097_SET_TEXTURE_CONTROL2 + 52" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 56 , "NV4097_SET_TEXTURE_CONTROL2 + 56" }
+		{ NV4097_SET_TEXTURE_CONTROL2 + 60 , "NV4097_SET_TEXTURE_CONTROL2 + 60" }
+		{ NV4097_SET_TEX_COORD_CONTROL , "NV4097_SET_TEX_COORD_CONTROL" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 4 , "NV4097_SET_TEX_COORD_CONTROL + 4" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 8 , "NV4097_SET_TEX_COORD_CONTROL + 8" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 12 , "NV4097_SET_TEX_COORD_CONTROL + 12" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 16 , "NV4097_SET_TEX_COORD_CONTROL + 16" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 20 , "NV4097_SET_TEX_COORD_CONTROL + 20" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 24 , "NV4097_SET_TEX_COORD_CONTROL + 24" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 28 , "NV4097_SET_TEX_COORD_CONTROL + 28" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 32 , "NV4097_SET_TEX_COORD_CONTROL + 32" }
+		{ NV4097_SET_TEX_COORD_CONTROL + 36 , "NV4097_SET_TEX_COORD_CONTROL + 36" }
+		{ NV4097_SET_TRANSFORM_PROGRAM , "NV4097_SET_TRANSFORM_PROGRAM" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 4 , "NV4097_SET_TRANSFORM_PROGRAM + 4" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 8 , "NV4097_SET_TRANSFORM_PROGRAM + 8" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 12 , "NV4097_SET_TRANSFORM_PROGRAM + 12" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 16 , "NV4097_SET_TRANSFORM_PROGRAM + 16" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 20 , "NV4097_SET_TRANSFORM_PROGRAM + 20" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 24 , "NV4097_SET_TRANSFORM_PROGRAM + 24" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 28 , "NV4097_SET_TRANSFORM_PROGRAM + 28" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 32 , "NV4097_SET_TRANSFORM_PROGRAM + 32" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 36 , "NV4097_SET_TRANSFORM_PROGRAM + 36" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 40 , "NV4097_SET_TRANSFORM_PROGRAM + 40" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 44 , "NV4097_SET_TRANSFORM_PROGRAM + 44" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 48 , "NV4097_SET_TRANSFORM_PROGRAM + 48" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 52 , "NV4097_SET_TRANSFORM_PROGRAM + 52" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 56 , "NV4097_SET_TRANSFORM_PROGRAM + 56" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 60 , "NV4097_SET_TRANSFORM_PROGRAM + 60" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 64 , "NV4097_SET_TRANSFORM_PROGRAM + 64" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 68 , "NV4097_SET_TRANSFORM_PROGRAM + 68" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 72 , "NV4097_SET_TRANSFORM_PROGRAM + 72" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 76 , "NV4097_SET_TRANSFORM_PROGRAM + 76" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 80 , "NV4097_SET_TRANSFORM_PROGRAM + 80" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 84 , "NV4097_SET_TRANSFORM_PROGRAM + 84" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 88 , "NV4097_SET_TRANSFORM_PROGRAM + 88" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 92 , "NV4097_SET_TRANSFORM_PROGRAM + 92" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 96 , "NV4097_SET_TRANSFORM_PROGRAM + 96" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 100 , "NV4097_SET_TRANSFORM_PROGRAM + 100" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 104 , "NV4097_SET_TRANSFORM_PROGRAM + 104" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 108 , "NV4097_SET_TRANSFORM_PROGRAM + 108" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 112 , "NV4097_SET_TRANSFORM_PROGRAM + 112" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 116 , "NV4097_SET_TRANSFORM_PROGRAM + 116" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 120 , "NV4097_SET_TRANSFORM_PROGRAM + 120" }
+		{ NV4097_SET_TRANSFORM_PROGRAM + 124 , "NV4097_SET_TRANSFORM_PROGRAM + 124" }
+		{ NV4097_SET_TWO_SIDE_LIGHT_EN , "NV4097_SET_TWO_SIDE_LIGHT_EN" }
+		{ NV4097_CLEAR_ZCULL_SURFACE , "NV4097_CLEAR_ZCULL_SURFACE" }
+		{ NV4097_SET_USER_CLIP_PLANE_CONTROL , "NV4097_SET_USER_CLIP_PLANE_CONTROL" }
+		{ NV4097_SET_POLYGON_STIPPLE , "NV4097_SET_POLYGON_STIPPLE" }
+		{ NV4097_SET_POLYGON_STIPPLE_PATTERN , "NV4097_SET_POLYGON_STIPPLE_PATTERN" }
+		{ NV4097_SET_VERTEX_DATA3F_M , "NV4097_SET_VERTEX_DATA3F_M" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 4 , "NV4097_SET_VERTEX_DATA3F_M + 4" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 8 , "NV4097_SET_VERTEX_DATA3F_M + 8" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 12 , "NV4097_SET_VERTEX_DATA3F_M + 12" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 16 , "NV4097_SET_VERTEX_DATA3F_M + 16" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 20 , "NV4097_SET_VERTEX_DATA3F_M + 20" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 24 , "NV4097_SET_VERTEX_DATA3F_M + 24" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 28 , "NV4097_SET_VERTEX_DATA3F_M + 28" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 32 , "NV4097_SET_VERTEX_DATA3F_M + 32" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 36 , "NV4097_SET_VERTEX_DATA3F_M + 36" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 40 , "NV4097_SET_VERTEX_DATA3F_M + 40" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 44 , "NV4097_SET_VERTEX_DATA3F_M + 44" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 48 , "NV4097_SET_VERTEX_DATA3F_M + 48" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 52 , "NV4097_SET_VERTEX_DATA3F_M + 52" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 56 , "NV4097_SET_VERTEX_DATA3F_M + 56" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 60 , "NV4097_SET_VERTEX_DATA3F_M + 60" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 64 , "NV4097_SET_VERTEX_DATA3F_M + 64" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 68 , "NV4097_SET_VERTEX_DATA3F_M + 68" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 72 , "NV4097_SET_VERTEX_DATA3F_M + 72" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 76 , "NV4097_SET_VERTEX_DATA3F_M + 76" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 80 , "NV4097_SET_VERTEX_DATA3F_M + 80" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 84 , "NV4097_SET_VERTEX_DATA3F_M + 84" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 88 , "NV4097_SET_VERTEX_DATA3F_M + 88" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 92 , "NV4097_SET_VERTEX_DATA3F_M + 92" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 96 , "NV4097_SET_VERTEX_DATA3F_M + 96" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 100 , "NV4097_SET_VERTEX_DATA3F_M + 100" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 104 , "NV4097_SET_VERTEX_DATA3F_M + 104" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 108 , "NV4097_SET_VERTEX_DATA3F_M + 108" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 112 , "NV4097_SET_VERTEX_DATA3F_M + 112" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 116 , "NV4097_SET_VERTEX_DATA3F_M + 116" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 120 , "NV4097_SET_VERTEX_DATA3F_M + 120" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 124 , "NV4097_SET_VERTEX_DATA3F_M + 124" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 128 , "NV4097_SET_VERTEX_DATA3F_M + 128" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 132 , "NV4097_SET_VERTEX_DATA3F_M + 132" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 136 , "NV4097_SET_VERTEX_DATA3F_M + 136" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 140 , "NV4097_SET_VERTEX_DATA3F_M + 140" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 144 , "NV4097_SET_VERTEX_DATA3F_M + 144" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 148 , "NV4097_SET_VERTEX_DATA3F_M + 148" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 152 , "NV4097_SET_VERTEX_DATA3F_M + 152" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 156 , "NV4097_SET_VERTEX_DATA3F_M + 156" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 160 , "NV4097_SET_VERTEX_DATA3F_M + 160" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 164 , "NV4097_SET_VERTEX_DATA3F_M + 164" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 168 , "NV4097_SET_VERTEX_DATA3F_M + 168" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 172 , "NV4097_SET_VERTEX_DATA3F_M + 172" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 176 , "NV4097_SET_VERTEX_DATA3F_M + 176" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 180 , "NV4097_SET_VERTEX_DATA3F_M + 180" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 184 , "NV4097_SET_VERTEX_DATA3F_M + 184" }
+		{ NV4097_SET_VERTEX_DATA3F_M + 188 , "NV4097_SET_VERTEX_DATA3F_M + 188" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 8 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 8" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 12 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 12" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 16 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 16" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 20 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 20" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 24 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 24" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 28 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 28" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 32 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 32" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 36 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 36" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 40 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 40" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 44 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 44" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 48 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 48" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 52 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 52" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 56 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 56" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 60 , "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 60" }
+		{ NV4097_INVALIDATE_VERTEX_CACHE_FILE , "NV4097_INVALIDATE_VERTEX_CACHE_FILE" }
+		{ NV4097_INVALIDATE_VERTEX_FILE , "NV4097_INVALIDATE_VERTEX_FILE" }
+		{ NV4097_SET_VERTEX_DATA_BASE_OFFSET , "NV4097_SET_VERTEX_DATA_BASE_OFFSET" }
+		{ NV4097_SET_VERTEX_DATA_BASE_INDEX , "NV4097_SET_VERTEX_DATA_BASE_INDEX" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 4 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 4" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 8 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 8" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 12 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 12" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 16 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 16" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 20 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 20" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 24 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 24" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 28 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 28" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 32 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 32" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 36 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 36" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 40 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 40" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 44 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 44" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 48 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 48" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 52 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 52" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 56 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 56" }
+		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 60 , "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 60" }
+		{ NV4097_CLEAR_REPORT_VALUE , "NV4097_CLEAR_REPORT_VALUE" }
+		{ NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE , "NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE" }
+		{ NV4097_GET_REPORT , "NV4097_GET_REPORT" }
+		{ NV4097_SET_ZCULL_STATS_ENABLE , "NV4097_SET_ZCULL_STATS_ENABLE" }
+		{ NV4097_SET_BEGIN_END , "NV4097_SET_BEGIN_END" }
+		{ NV4097_ARRAY_ELEMENT16 , "NV4097_ARRAY_ELEMENT16" }
+		{ NV4097_ARRAY_ELEMENT32 , "NV4097_ARRAY_ELEMENT32" }
+		{ NV4097_DRAW_ARRAYS , "NV4097_DRAW_ARRAYS" }
+		{ NV4097_INLINE_ARRAY , "NV4097_INLINE_ARRAY" }
+		{ NV4097_SET_INDEX_ARRAY_ADDRESS , "NV4097_SET_INDEX_ARRAY_ADDRESS" }
+		{ NV4097_SET_INDEX_ARRAY_DMA , "NV4097_SET_INDEX_ARRAY_DMA" }
+		{ NV4097_DRAW_INDEX_ARRAY , "NV4097_DRAW_INDEX_ARRAY" }
+		{ NV4097_SET_FRONT_POLYGON_MODE , "NV4097_SET_FRONT_POLYGON_MODE" }
+		{ NV4097_SET_BACK_POLYGON_MODE , "NV4097_SET_BACK_POLYGON_MODE" }
+		{ NV4097_SET_CULL_FACE , "NV4097_SET_CULL_FACE" }
+		{ NV4097_SET_FRONT_FACE , "NV4097_SET_FRONT_FACE" }
+		{ NV4097_SET_POLY_SMOOTH_ENABLE , "NV4097_SET_POLY_SMOOTH_ENABLE" }
+		{ NV4097_SET_CULL_FACE_ENABLE , "NV4097_SET_CULL_FACE_ENABLE" }
+		{ NV4097_SET_TEXTURE_CONTROL3 , "NV4097_SET_TEXTURE_CONTROL3" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 4 , "NV4097_SET_TEXTURE_CONTROL3 + 4" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 8 , "NV4097_SET_TEXTURE_CONTROL3 + 8" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 12 , "NV4097_SET_TEXTURE_CONTROL3 + 12" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 16 , "NV4097_SET_TEXTURE_CONTROL3 + 16" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 20 , "NV4097_SET_TEXTURE_CONTROL3 + 20" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 24 , "NV4097_SET_TEXTURE_CONTROL3 + 24" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 28 , "NV4097_SET_TEXTURE_CONTROL3 + 28" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 32 , "NV4097_SET_TEXTURE_CONTROL3 + 32" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 36 , "NV4097_SET_TEXTURE_CONTROL3 + 36" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 40 , "NV4097_SET_TEXTURE_CONTROL3 + 40" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 44 , "NV4097_SET_TEXTURE_CONTROL3 + 44" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 48 , "NV4097_SET_TEXTURE_CONTROL3 + 48" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 52 , "NV4097_SET_TEXTURE_CONTROL3 + 52" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 56 , "NV4097_SET_TEXTURE_CONTROL3 + 56" }
+		{ NV4097_SET_TEXTURE_CONTROL3 + 60 , "NV4097_SET_TEXTURE_CONTROL3 + 60" }
+		{ NV4097_SET_VERTEX_DATA2F_M , "NV4097_SET_VERTEX_DATA2F_M" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 4 , "NV4097_SET_VERTEX_DATA2F_M + 4" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 8 , "NV4097_SET_VERTEX_DATA2F_M + 8" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 12 , "NV4097_SET_VERTEX_DATA2F_M + 12" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 16 , "NV4097_SET_VERTEX_DATA2F_M + 16" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 20 , "NV4097_SET_VERTEX_DATA2F_M + 20" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 24 , "NV4097_SET_VERTEX_DATA2F_M + 24" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 28 , "NV4097_SET_VERTEX_DATA2F_M + 28" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 32 , "NV4097_SET_VERTEX_DATA2F_M + 32" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 36 , "NV4097_SET_VERTEX_DATA2F_M + 36" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 40 , "NV4097_SET_VERTEX_DATA2F_M + 40" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 44 , "NV4097_SET_VERTEX_DATA2F_M + 44" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 48 , "NV4097_SET_VERTEX_DATA2F_M + 48" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 52 , "NV4097_SET_VERTEX_DATA2F_M + 52" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 56 , "NV4097_SET_VERTEX_DATA2F_M + 56" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 60 , "NV4097_SET_VERTEX_DATA2F_M + 60" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 64 , "NV4097_SET_VERTEX_DATA2F_M + 64" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 68 , "NV4097_SET_VERTEX_DATA2F_M + 68" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 72 , "NV4097_SET_VERTEX_DATA2F_M + 72" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 76 , "NV4097_SET_VERTEX_DATA2F_M + 76" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 80 , "NV4097_SET_VERTEX_DATA2F_M + 80" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 84 , "NV4097_SET_VERTEX_DATA2F_M + 84" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 88 , "NV4097_SET_VERTEX_DATA2F_M + 88" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 92 , "NV4097_SET_VERTEX_DATA2F_M + 92" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 96 , "NV4097_SET_VERTEX_DATA2F_M + 96" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 100 , "NV4097_SET_VERTEX_DATA2F_M + 100" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 104 , "NV4097_SET_VERTEX_DATA2F_M + 104" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 108 , "NV4097_SET_VERTEX_DATA2F_M + 108" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 112 , "NV4097_SET_VERTEX_DATA2F_M + 112" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 116 , "NV4097_SET_VERTEX_DATA2F_M + 116" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 120 , "NV4097_SET_VERTEX_DATA2F_M + 120" }
+		{ NV4097_SET_VERTEX_DATA2F_M + 124 , "NV4097_SET_VERTEX_DATA2F_M + 124" }
+		{ NV4097_SET_VERTEX_DATA2S_M , "NV4097_SET_VERTEX_DATA2S_M" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 4 , "NV4097_SET_VERTEX_DATA2S_M + 4" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 8 , "NV4097_SET_VERTEX_DATA2S_M + 8" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 12 , "NV4097_SET_VERTEX_DATA2S_M + 12" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 16 , "NV4097_SET_VERTEX_DATA2S_M + 16" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 20 , "NV4097_SET_VERTEX_DATA2S_M + 20" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 24 , "NV4097_SET_VERTEX_DATA2S_M + 24" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 28 , "NV4097_SET_VERTEX_DATA2S_M + 28" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 32 , "NV4097_SET_VERTEX_DATA2S_M + 32" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 36 , "NV4097_SET_VERTEX_DATA2S_M + 36" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 40 , "NV4097_SET_VERTEX_DATA2S_M + 40" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 44 , "NV4097_SET_VERTEX_DATA2S_M + 44" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 48 , "NV4097_SET_VERTEX_DATA2S_M + 48" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 52 , "NV4097_SET_VERTEX_DATA2S_M + 52" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 56 , "NV4097_SET_VERTEX_DATA2S_M + 56" }
+		{ NV4097_SET_VERTEX_DATA2S_M + 60 , "NV4097_SET_VERTEX_DATA2S_M + 60" }
+		{ NV4097_SET_VERTEX_DATA4UB_M , "NV4097_SET_VERTEX_DATA4UB_M" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 4 , "NV4097_SET_VERTEX_DATA4UB_M + 4" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 8 , "NV4097_SET_VERTEX_DATA4UB_M + 8" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 12 , "NV4097_SET_VERTEX_DATA4UB_M + 12" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 16 , "NV4097_SET_VERTEX_DATA4UB_M + 16" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 20 , "NV4097_SET_VERTEX_DATA4UB_M + 20" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 24 , "NV4097_SET_VERTEX_DATA4UB_M + 24" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 28 , "NV4097_SET_VERTEX_DATA4UB_M + 28" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 32 , "NV4097_SET_VERTEX_DATA4UB_M + 32" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 36 , "NV4097_SET_VERTEX_DATA4UB_M + 36" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 40 , "NV4097_SET_VERTEX_DATA4UB_M + 40" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 44 , "NV4097_SET_VERTEX_DATA4UB_M + 44" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 48 , "NV4097_SET_VERTEX_DATA4UB_M + 48" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 52 , "NV4097_SET_VERTEX_DATA4UB_M + 52" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 56 , "NV4097_SET_VERTEX_DATA4UB_M + 56" }
+		{ NV4097_SET_VERTEX_DATA4UB_M + 60 , "NV4097_SET_VERTEX_DATA4UB_M + 60" }
+		{ NV4097_SET_VERTEX_DATA4S_M , "NV4097_SET_VERTEX_DATA4S_M" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 4 , "NV4097_SET_VERTEX_DATA4S_M + 4" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 8 , "NV4097_SET_VERTEX_DATA4S_M + 8" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 12 , "NV4097_SET_VERTEX_DATA4S_M + 12" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 16 , "NV4097_SET_VERTEX_DATA4S_M + 16" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 20 , "NV4097_SET_VERTEX_DATA4S_M + 20" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 24 , "NV4097_SET_VERTEX_DATA4S_M + 24" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 28 , "NV4097_SET_VERTEX_DATA4S_M + 28" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 32 , "NV4097_SET_VERTEX_DATA4S_M + 32" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 36 , "NV4097_SET_VERTEX_DATA4S_M + 36" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 40 , "NV4097_SET_VERTEX_DATA4S_M + 40" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 44 , "NV4097_SET_VERTEX_DATA4S_M + 44" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 48 , "NV4097_SET_VERTEX_DATA4S_M + 48" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 52 , "NV4097_SET_VERTEX_DATA4S_M + 52" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 56 , "NV4097_SET_VERTEX_DATA4S_M + 56" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 60 , "NV4097_SET_VERTEX_DATA4S_M + 60" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 64 , "NV4097_SET_VERTEX_DATA4S_M + 64" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 68 , "NV4097_SET_VERTEX_DATA4S_M + 68" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 72 , "NV4097_SET_VERTEX_DATA4S_M + 72" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 76 , "NV4097_SET_VERTEX_DATA4S_M + 76" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 80 , "NV4097_SET_VERTEX_DATA4S_M + 80" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 84 , "NV4097_SET_VERTEX_DATA4S_M + 84" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 88 , "NV4097_SET_VERTEX_DATA4S_M + 88" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 92 , "NV4097_SET_VERTEX_DATA4S_M + 92" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 96 , "NV4097_SET_VERTEX_DATA4S_M + 96" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 100 , "NV4097_SET_VERTEX_DATA4S_M + 100" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 104 , "NV4097_SET_VERTEX_DATA4S_M + 104" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 108 , "NV4097_SET_VERTEX_DATA4S_M + 108" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 112 , "NV4097_SET_VERTEX_DATA4S_M + 112" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 116 , "NV4097_SET_VERTEX_DATA4S_M + 116" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 120 , "NV4097_SET_VERTEX_DATA4S_M + 120" }
+		{ NV4097_SET_VERTEX_DATA4S_M + 124 , "NV4097_SET_VERTEX_DATA4S_M + 124" }
+		{ NV4097_SET_TEXTURE_OFFSET , "NV4097_SET_TEXTURE_OFFSET" }
+		{ NV4097_SET_TEXTURE_FORMAT , "NV4097_SET_TEXTURE_FORMAT" }
+		{ NV4097_SET_TEXTURE_ADDRESS , "NV4097_SET_TEXTURE_ADDRESS" }
+		{ NV4097_SET_TEXTURE_CONTROL0 , "NV4097_SET_TEXTURE_CONTROL0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 , "NV4097_SET_TEXTURE_CONTROL1" }
+		{ NV4097_SET_TEXTURE_FILTER , "NV4097_SET_TEXTURE_FILTER" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT , "NV4097_SET_TEXTURE_IMAGE_RECT" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR , "NV4097_SET_TEXTURE_BORDER_COLOR" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x20 , "NV4097_SET_TEXTURE_OFFSET + 0x20" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x20 , "NV4097_SET_TEXTURE_FORMAT + 0x20" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x20 , "NV4097_SET_TEXTURE_ADDRESS + 0x20" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x20 , "NV4097_SET_TEXTURE_CONTROL0 + 0x20" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x20 , "NV4097_SET_TEXTURE_CONTROL1 + 0x20" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x20 , "NV4097_SET_TEXTURE_FILTER + 0x20" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x20 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x20" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x20 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x20" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x40 , "NV4097_SET_TEXTURE_OFFSET + 0x40" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x40 , "NV4097_SET_TEXTURE_FORMAT + 0x40" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x40 , "NV4097_SET_TEXTURE_ADDRESS + 0x40" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x40 , "NV4097_SET_TEXTURE_CONTROL0 + 0x40" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x40 , "NV4097_SET_TEXTURE_CONTROL1 + 0x40" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x40 , "NV4097_SET_TEXTURE_FILTER + 0x40" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x40 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x40" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x40 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x40" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x60 , "NV4097_SET_TEXTURE_OFFSET + 0x60" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x60 , "NV4097_SET_TEXTURE_FORMAT + 0x60" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x60 , "NV4097_SET_TEXTURE_ADDRESS + 0x60" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x60 , "NV4097_SET_TEXTURE_CONTROL0 + 0x60" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x60 , "NV4097_SET_TEXTURE_CONTROL1 + 0x60" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x60 , "NV4097_SET_TEXTURE_FILTER + 0x60" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x60 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x60" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x60 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x60" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x80 , "NV4097_SET_TEXTURE_OFFSET + 0x80" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x80 , "NV4097_SET_TEXTURE_FORMAT + 0x80" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x80 , "NV4097_SET_TEXTURE_ADDRESS + 0x80" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x80 , "NV4097_SET_TEXTURE_CONTROL0 + 0x80" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x80 , "NV4097_SET_TEXTURE_CONTROL1 + 0x80" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x80 , "NV4097_SET_TEXTURE_FILTER + 0x80" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x80 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x80" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x80 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x80" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0xa0 , "NV4097_SET_TEXTURE_OFFSET + 0xa0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0xa0 , "NV4097_SET_TEXTURE_FORMAT + 0xa0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0xa0 , "NV4097_SET_TEXTURE_ADDRESS + 0xa0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0xa0 , "NV4097_SET_TEXTURE_CONTROL0 + 0xa0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0xa0 , "NV4097_SET_TEXTURE_CONTROL1 + 0xa0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0xa0 , "NV4097_SET_TEXTURE_FILTER + 0xa0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xa0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0xa0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xa0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0xa0" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0xc0 , "NV4097_SET_TEXTURE_OFFSET + 0xc0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0xc0 , "NV4097_SET_TEXTURE_FORMAT + 0xc0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0xc0 , "NV4097_SET_TEXTURE_ADDRESS + 0xc0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0xc0 , "NV4097_SET_TEXTURE_CONTROL0 + 0xc0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0xc0 , "NV4097_SET_TEXTURE_CONTROL1 + 0xc0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0xc0 , "NV4097_SET_TEXTURE_FILTER + 0xc0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xc0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0xc0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xc0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0xc0" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0xe0 , "NV4097_SET_TEXTURE_OFFSET + 0xe0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0xe0 , "NV4097_SET_TEXTURE_FORMAT + 0xe0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0xe0 , "NV4097_SET_TEXTURE_ADDRESS + 0xe0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0xe0 , "NV4097_SET_TEXTURE_CONTROL0 + 0xe0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0xe0 , "NV4097_SET_TEXTURE_CONTROL1 + 0xe0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0xe0 , "NV4097_SET_TEXTURE_FILTER + 0xe0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0xe0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0xe0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0xe0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0xe0" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x100 , "NV4097_SET_TEXTURE_OFFSET + 0x100" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x100 , "NV4097_SET_TEXTURE_FORMAT + 0x100" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x100 , "NV4097_SET_TEXTURE_ADDRESS + 0x100" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x100 , "NV4097_SET_TEXTURE_CONTROL0 + 0x100" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x100 , "NV4097_SET_TEXTURE_CONTROL1 + 0x100" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x100 , "NV4097_SET_TEXTURE_FILTER + 0x100" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x100 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x100" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x100 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x100" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x120 , "NV4097_SET_TEXTURE_OFFSET + 0x120" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x120 , "NV4097_SET_TEXTURE_FORMAT + 0x120" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x120 , "NV4097_SET_TEXTURE_ADDRESS + 0x120" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x120 , "NV4097_SET_TEXTURE_CONTROL0 + 0x120" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x120 , "NV4097_SET_TEXTURE_CONTROL1 + 0x120" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x120 , "NV4097_SET_TEXTURE_FILTER + 0x120" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x120 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x120" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x120 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x120" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x140 , "NV4097_SET_TEXTURE_OFFSET + 0x140" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x140 , "NV4097_SET_TEXTURE_FORMAT + 0x140" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x140 , "NV4097_SET_TEXTURE_ADDRESS + 0x140" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x140 , "NV4097_SET_TEXTURE_CONTROL0 + 0x140" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x140 , "NV4097_SET_TEXTURE_CONTROL1 + 0x140" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x140 , "NV4097_SET_TEXTURE_FILTER + 0x140" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x140 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x140" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x140 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x140" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x160 , "NV4097_SET_TEXTURE_OFFSET + 0x160" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x160 , "NV4097_SET_TEXTURE_FORMAT + 0x160" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x160 , "NV4097_SET_TEXTURE_ADDRESS + 0x160" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x160 , "NV4097_SET_TEXTURE_CONTROL0 + 0x160" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x160 , "NV4097_SET_TEXTURE_CONTROL1 + 0x160" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x160 , "NV4097_SET_TEXTURE_FILTER + 0x160" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x160 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x160" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x160 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x160" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x180 , "NV4097_SET_TEXTURE_OFFSET + 0x180" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x180 , "NV4097_SET_TEXTURE_FORMAT + 0x180" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x180 , "NV4097_SET_TEXTURE_ADDRESS + 0x180" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x180 , "NV4097_SET_TEXTURE_CONTROL0 + 0x180" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x180 , "NV4097_SET_TEXTURE_CONTROL1 + 0x180" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x180 , "NV4097_SET_TEXTURE_FILTER + 0x180" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x180 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x180" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x180 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x180" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x1a0 , "NV4097_SET_TEXTURE_OFFSET + 0x1a0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x1a0 , "NV4097_SET_TEXTURE_FORMAT + 0x1a0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x1a0 , "NV4097_SET_TEXTURE_ADDRESS + 0x1a0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1a0 , "NV4097_SET_TEXTURE_CONTROL0 + 0x1a0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1a0 , "NV4097_SET_TEXTURE_CONTROL1 + 0x1a0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x1a0 , "NV4097_SET_TEXTURE_FILTER + 0x1a0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1a0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x1a0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1a0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x1a0" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x1c0 , "NV4097_SET_TEXTURE_OFFSET + 0x1c0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x1c0 , "NV4097_SET_TEXTURE_FORMAT + 0x1c0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x1c0 , "NV4097_SET_TEXTURE_ADDRESS + 0x1c0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1c0 , "NV4097_SET_TEXTURE_CONTROL0 + 0x1c0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1c0 , "NV4097_SET_TEXTURE_CONTROL1 + 0x1c0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x1c0 , "NV4097_SET_TEXTURE_FILTER + 0x1c0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1c0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x1c0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1c0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x1c0" }
+		{ NV4097_SET_TEXTURE_OFFSET + 0x1e0 , "NV4097_SET_TEXTURE_OFFSET + 0x1e0" }
+		{ NV4097_SET_TEXTURE_FORMAT + 0x1e0 , "NV4097_SET_TEXTURE_FORMAT + 0x1e0" }
+		{ NV4097_SET_TEXTURE_ADDRESS + 0x1e0 , "NV4097_SET_TEXTURE_ADDRESS + 0x1e0" }
+		{ NV4097_SET_TEXTURE_CONTROL0 + 0x1e0 , "NV4097_SET_TEXTURE_CONTROL0 + 0x1e0" }
+		{ NV4097_SET_TEXTURE_CONTROL1 + 0x1e0 , "NV4097_SET_TEXTURE_CONTROL1 + 0x1e0" }
+		{ NV4097_SET_TEXTURE_FILTER + 0x1e0 , "NV4097_SET_TEXTURE_FILTER + 0x1e0" }
+		{ NV4097_SET_TEXTURE_IMAGE_RECT + 0x1e0 , "NV4097_SET_TEXTURE_IMAGE_RECT + 0x1e0" }
+		{ NV4097_SET_TEXTURE_BORDER_COLOR + 0x1e0 , "NV4097_SET_TEXTURE_BORDER_COLOR + 0x1e0" }
+		{ NV4097_SET_VERTEX_DATA4F_M , "NV4097_SET_VERTEX_DATA4F_M" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 4 , "NV4097_SET_VERTEX_DATA4F_M + 4" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 8 , "NV4097_SET_VERTEX_DATA4F_M + 8" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 12 , "NV4097_SET_VERTEX_DATA4F_M + 12" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 16 , "NV4097_SET_VERTEX_DATA4F_M + 16" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 20 , "NV4097_SET_VERTEX_DATA4F_M + 20" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 24 , "NV4097_SET_VERTEX_DATA4F_M + 24" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 28 , "NV4097_SET_VERTEX_DATA4F_M + 28" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 32 , "NV4097_SET_VERTEX_DATA4F_M + 32" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 36 , "NV4097_SET_VERTEX_DATA4F_M + 36" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 40 , "NV4097_SET_VERTEX_DATA4F_M + 40" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 44 , "NV4097_SET_VERTEX_DATA4F_M + 44" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 48 , "NV4097_SET_VERTEX_DATA4F_M + 48" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 52 , "NV4097_SET_VERTEX_DATA4F_M + 52" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 56 , "NV4097_SET_VERTEX_DATA4F_M + 56" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 60 , "NV4097_SET_VERTEX_DATA4F_M + 60" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 64 , "NV4097_SET_VERTEX_DATA4F_M + 64" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 68 , "NV4097_SET_VERTEX_DATA4F_M + 68" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 72 , "NV4097_SET_VERTEX_DATA4F_M + 72" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 76 , "NV4097_SET_VERTEX_DATA4F_M + 76" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 80 , "NV4097_SET_VERTEX_DATA4F_M + 80" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 84 , "NV4097_SET_VERTEX_DATA4F_M + 84" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 88 , "NV4097_SET_VERTEX_DATA4F_M + 88" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 92 , "NV4097_SET_VERTEX_DATA4F_M + 92" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 96 , "NV4097_SET_VERTEX_DATA4F_M + 96" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 100 , "NV4097_SET_VERTEX_DATA4F_M + 100" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 104 , "NV4097_SET_VERTEX_DATA4F_M + 104" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 108 , "NV4097_SET_VERTEX_DATA4F_M + 108" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 112 , "NV4097_SET_VERTEX_DATA4F_M + 112" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 116 , "NV4097_SET_VERTEX_DATA4F_M + 116" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 120 , "NV4097_SET_VERTEX_DATA4F_M + 120" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 124 , "NV4097_SET_VERTEX_DATA4F_M + 124" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 128 , "NV4097_SET_VERTEX_DATA4F_M + 128" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 132 , "NV4097_SET_VERTEX_DATA4F_M + 132" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 136 , "NV4097_SET_VERTEX_DATA4F_M + 136" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 140 , "NV4097_SET_VERTEX_DATA4F_M + 140" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 144 , "NV4097_SET_VERTEX_DATA4F_M + 144" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 148 , "NV4097_SET_VERTEX_DATA4F_M + 148" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 152 , "NV4097_SET_VERTEX_DATA4F_M + 152" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 156 , "NV4097_SET_VERTEX_DATA4F_M + 156" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 160 , "NV4097_SET_VERTEX_DATA4F_M + 160" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 164 , "NV4097_SET_VERTEX_DATA4F_M + 164" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 168 , "NV4097_SET_VERTEX_DATA4F_M + 168" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 172 , "NV4097_SET_VERTEX_DATA4F_M + 172" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 176 , "NV4097_SET_VERTEX_DATA4F_M + 176" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 180 , "NV4097_SET_VERTEX_DATA4F_M + 180" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 184 , "NV4097_SET_VERTEX_DATA4F_M + 184" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 188 , "NV4097_SET_VERTEX_DATA4F_M + 188" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 192 , "NV4097_SET_VERTEX_DATA4F_M + 192" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 196 , "NV4097_SET_VERTEX_DATA4F_M + 196" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 200 , "NV4097_SET_VERTEX_DATA4F_M + 200" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 204 , "NV4097_SET_VERTEX_DATA4F_M + 204" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 208 , "NV4097_SET_VERTEX_DATA4F_M + 208" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 212 , "NV4097_SET_VERTEX_DATA4F_M + 212" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 216 , "NV4097_SET_VERTEX_DATA4F_M + 216" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 220 , "NV4097_SET_VERTEX_DATA4F_M + 220" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 224 , "NV4097_SET_VERTEX_DATA4F_M + 224" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 228 , "NV4097_SET_VERTEX_DATA4F_M + 228" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 232 , "NV4097_SET_VERTEX_DATA4F_M + 232" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 236 , "NV4097_SET_VERTEX_DATA4F_M + 236" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 240 , "NV4097_SET_VERTEX_DATA4F_M + 240" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 244 , "NV4097_SET_VERTEX_DATA4F_M + 244" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 248 , "NV4097_SET_VERTEX_DATA4F_M + 248" }
+		{ NV4097_SET_VERTEX_DATA4F_M + 252 , "NV4097_SET_VERTEX_DATA4F_M + 252" }
+		{ NV4097_SET_SHADER_CONTROL , "NV4097_SET_SHADER_CONTROL" }
+		{ NV4097_SET_SEMAPHORE_OFFSET , "NV4097_SET_SEMAPHORE_OFFSET" }
+		{ NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE , "NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE" }
+		{ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE , "NV4097_TEXTURE_READ_SEMAPHORE_RELEASE" }
+		{ NV4097_SET_ZMIN_MAX_CONTROL , "NV4097_SET_ZMIN_MAX_CONTROL" }
+		{ NV4097_SET_ANTI_ALIASING_CONTROL , "NV4097_SET_ANTI_ALIASING_CONTROL" }
+		{ NV4097_SET_ZCULL_EN , "NV4097_SET_ZCULL_EN" }
+		{ NV4097_SET_SHADER_WINDOW , "NV4097_SET_SHADER_WINDOW" }
+		{ NV4097_SET_ZSTENCIL_CLEAR_VALUE , "NV4097_SET_ZSTENCIL_CLEAR_VALUE" }
+		{ NV4097_SET_COLOR_CLEAR_VALUE , "NV4097_SET_COLOR_CLEAR_VALUE" }
+		{ NV4097_CLEAR_SURFACE , "NV4097_CLEAR_SURFACE" }
+		{ NV4097_SET_RESTART_INDEX_ENABLE , "NV4097_SET_RESTART_INDEX_ENABLE" }
+		{ NV4097_SET_RESTART_INDEX , "NV4097_SET_RESTART_INDEX" }
+		{ NV4097_SET_LINE_STIPPLE , "NV4097_SET_LINE_STIPPLE" }
+		{ NV4097_SET_LINE_STIPPLE_PATTERN , "NV4097_SET_LINE_STIPPLE_PATTERN" }
+		{ NV4097_SET_VERTEX_DATA1F_M , "NV4097_SET_VERTEX_DATA1F_M" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 4 , "NV4097_SET_VERTEX_DATA1F_M + 4" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 8 , "NV4097_SET_VERTEX_DATA1F_M + 8" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 12 , "NV4097_SET_VERTEX_DATA1F_M + 12" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 16 , "NV4097_SET_VERTEX_DATA1F_M + 16" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 20 , "NV4097_SET_VERTEX_DATA1F_M + 20" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 24 , "NV4097_SET_VERTEX_DATA1F_M + 24" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 28 , "NV4097_SET_VERTEX_DATA1F_M + 28" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 32 , "NV4097_SET_VERTEX_DATA1F_M + 32" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 36 , "NV4097_SET_VERTEX_DATA1F_M + 36" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 40 , "NV4097_SET_VERTEX_DATA1F_M + 40" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 44 , "NV4097_SET_VERTEX_DATA1F_M + 44" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 48 , "NV4097_SET_VERTEX_DATA1F_M + 48" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 52 , "NV4097_SET_VERTEX_DATA1F_M + 52" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 56 , "NV4097_SET_VERTEX_DATA1F_M + 56" }
+		{ NV4097_SET_VERTEX_DATA1F_M + 60 , "NV4097_SET_VERTEX_DATA1F_M + 60" }
+		{ NV4097_SET_RENDER_ENABLE , "NV4097_SET_RENDER_ENABLE" }
+		{ NV4097_SET_TRANSFORM_PROGRAM_LOAD , "NV4097_SET_TRANSFORM_PROGRAM_LOAD" }
+		{ NV4097_SET_TRANSFORM_PROGRAM_START , "NV4097_SET_TRANSFORM_PROGRAM_START" }
+		{ NV4097_SET_ZCULL_CONTROL0 , "NV4097_SET_ZCULL_CONTROL0" }
+		{ NV4097_SET_ZCULL_CONTROL1 , "NV4097_SET_ZCULL_CONTROL1" }
+		{ NV4097_SET_SCULL_CONTROL , "NV4097_SET_SCULL_CONTROL" }
+		{ NV4097_SET_POINT_SIZE , "NV4097_SET_POINT_SIZE" }
+		{ NV4097_SET_POINT_PARAMS_ENABLE , "NV4097_SET_POINT_PARAMS_ENABLE" }
+		{ NV4097_SET_POINT_SPRITE_CONTROL , "NV4097_SET_POINT_SPRITE_CONTROL" }
+		{ NV4097_SET_TRANSFORM_TIMEOUT , "NV4097_SET_TRANSFORM_TIMEOUT" }
+		{ NV4097_SET_TRANSFORM_CONSTANT_LOAD , "NV4097_SET_TRANSFORM_CONSTANT_LOAD" }
+		{ NV4097_SET_FREQUENCY_DIVIDER_OPERATION , "NV4097_SET_FREQUENCY_DIVIDER_OPERATION" }
+		{ NV4097_INVALIDATE_L2 , "NV4097_INVALIDATE_L2" }
+		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "NV4097_SET_TRANSFORM_BRANCH_BITS" }
 	};
 
 	for(auto& s: METHOD_NAME_LIST) {
 		if(s.id == id)
-			return "cellGcm" + s.name;
+			return "CELL_GCM_" + s.name;
 	}
 
 	return fmt::Format("unknown/illegal method [0x%08x]", id);
