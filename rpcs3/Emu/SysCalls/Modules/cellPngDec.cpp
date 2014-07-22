@@ -237,12 +237,11 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	const bool flip = current_outParam.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
 	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
-
 	uint image_size = width * height;
+
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
-		image_size = width * height;
 	case CELL_PNGDEC_RGBA:
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;

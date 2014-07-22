@@ -180,30 +180,91 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	std::shared_ptr<unsigned char> image(stbi_load_from_memory(gif, fileSize, &width, &height, &actual_components, 4));
+	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
+		(
+			stbi_load_from_memory(gif.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			&::free
+		);
+
 	if (!image)
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
-	uint image_size = width * height * 4;
+	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const char nComponents = 4;
+	uint image_size = width * height * nComponents;
 
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
-		if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+	{
+		if (bytesPerLine > width * nComponents) // Check if we need padding
 		{
-			cellGifDec->Error("cellGifDecDecodeData() failed (dataa_addr=0x%x)", data.GetAddr());
-			return CELL_EFAULT;
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * i;
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
+				{
+					cellGifDec->Error("cellGifDecDecodeData() failed (II)");
+					return CELL_EFAULT;
+				}
+			}
 		}
+		else
+		{
+			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+			{
+				cellGifDec->Error("cellGifDecDecodeData() failed (III)");
+				return CELL_EFAULT;
+			}
+		}
+	}
 	break;
 
 	case CELL_GIFDEC_ARGB:
-		for(uint i = 0; i < image_size; i+=4)
+	{
+		if (bytesPerLine > width * nComponents) // Check if we need padding
 		{
-			data += image.get()[i+3];
-			data += image.get()[i+0];
-			data += image.get()[i+1];
-			data += image.get()[i+2];
+			//TODO: find out if we can't do padding without an extra copy
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			char *output = (char *) malloc(linesize);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * i;
+				for (int j = 0; j < linesize; j += nComponents)
+				{
+					output[j + 0] = image.get()[srcOffset + j + 3];
+					output[j + 1] = image.get()[srcOffset + j + 0];
+					output[j + 2] = image.get()[srcOffset + j + 1];
+					output[j + 3] = image.get()[srcOffset + j + 2];
+				}
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
+				{
+					cellGifDec->Error("cellGifDecDecodeData() failed (IV)");
+					return CELL_EFAULT;
+				}
+			}
+			free(output);
 		}
+		else
+		{
+			uint* dest = (uint*)new char[image_size];
+			uint* source_current = (uint*)&(image.get()[0]);
+			uint* dest_current = dest;
+			for (uint i = 0; i < image_size / nComponents; i++) 
+			{
+				uint val = *source_current;
+				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
+				source_current++;
+				dest_current++;
+			}
+			// NOTE: AppendRawBytes has diff side-effect vs Memory.CopyFromReal
+			data.AppendRawBytes((u8*)dest, image_size); 
+			delete[] dest;
+		}
+	}
 	break;
 
 	default:

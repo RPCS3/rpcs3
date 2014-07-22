@@ -35,8 +35,14 @@ enum CellJpgDecStreamSrcSel
 
 enum CellJpgDecDecodeStatus
 {
-	CELL_JPGDEC_DEC_STATUS_FINISH = 0, //Decoding finished
-	CELL_JPGDEC_DEC_STATUS_STOP   = 1, //Decoding halted
+	CELL_JPGDEC_DEC_STATUS_FINISH = 0, // Decoding finished
+	CELL_JPGDEC_DEC_STATUS_STOP   = 1, // Decoding halted
+};
+
+enum CellJpgDecOutputMode
+{
+	CELL_JPGDEC_TOP_TO_BOTTOM = 0, // Top left to bottom right
+	CELL_JPGDEC_BOTTOM_TO_TOP = 1, // Bottom left to top right
 };
 
 struct CellJpgDecInfo

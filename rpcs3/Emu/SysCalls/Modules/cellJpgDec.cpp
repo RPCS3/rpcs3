@@ -188,34 +188,96 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	std::shared_ptr<unsigned char> image(stbi_load_from_memory(jpg, fileSize, &width, &height, &actual_components, 4));
+	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
+		(
+			stbi_load_from_memory(jpg.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			&::free
+		);
 
 	if (!image)
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
-	uint image_size = width * height;
+	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
+	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	size_t image_size = width * height;
+
 	switch((u32)current_outParam.outputColorSpace)
 	{
-	case CELL_JPG_RGBA:
 	case CELL_JPG_RGB:
-		image_size *= current_outParam.outputColorSpace == CELL_JPG_RGBA ? 4 : 3;
-		if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+	case CELL_JPG_RGBA:
+	{
+		const char nComponents = current_outParam.outputColorSpace == CELL_JPG_RGBA ? 4 : 3;
+		image_size *= nComponents;
+		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
-			cellJpgDec->Error("cellJpgDecDecodeData() failed (data_addr=0x%x)", data.GetAddr());
-			return CELL_EFAULT;
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
+				{
+					cellJpgDec->Error("cellJpgDecDecodeData() failed (II)");
+					return CELL_EFAULT;
+				}
+			}
 		}
+		else
+		{
+			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
+			{
+				cellJpgDec->Error("cellJpgDecDecodeData() failed (III)");
+				return CELL_EFAULT;
+			}
+		}
+	}
 	break;
 
 	case CELL_JPG_ARGB:
-		image_size *= 4;
-
-		for(u32 i = 0; i < image_size; i+=4)
+	{
+		const int nComponents = 4;
+		image_size *= nComponents;
+		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
-			data += image.get()[i+3];
-			data += image.get()[i+0];
-			data += image.get()[i+1];
-			data += image.get()[i+2];
+			//TODO: Find out if we can't do padding without an extra copy
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			char *output = (char *) malloc(linesize);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
+				for (int j = 0; j < linesize; j += nComponents)
+				{
+					output[j + 0] = image.get()[srcOffset + j + 3];
+					output[j + 1] = image.get()[srcOffset + j + 0];
+					output[j + 2] = image.get()[srcOffset + j + 1];
+					output[j + 3] = image.get()[srcOffset + j + 2];
+				}
+				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
+				{
+					cellJpgDec->Error("cellJpgDecDecodeData() failed (IV)");
+					return CELL_EFAULT;
+				}
+			}
+			free(output);
 		}
+		else
+		{
+			uint* dest = (uint*)new char[image_size];
+			uint* source_current = (uint*)&(image.get()[0]);
+			uint* dest_current = dest;
+			for (uint i = 0; i < image_size / nComponents; i++) 
+			{
+				uint val = *source_current;
+				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
+				source_current++;
+				dest_current++;
+			}
+			// NOTE: AppendRawBytes has diff side-effect vs Memory.CopyFromReal
+			data.AppendRawBytes((u8*)dest, image_size); 
+			delete[] dest;
+		}
+	}
 	break;
 
 	case CELL_JPG_GRAYSCALE:
