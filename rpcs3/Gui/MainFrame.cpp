@@ -40,10 +40,8 @@ enum IDs
 	id_tools_compiler,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
-	id_tools_fnid_generator,
 	id_help_about,
 	id_update_dbg,
-	id_boot_game_and_run,
 };
 
 wxString GetPaneName()
@@ -69,11 +67,10 @@ MainFrame::MainFrame()
 
 	wxMenu* menu_boot = new wxMenu();
 	menubar->Append(menu_boot, "Boot");
+	menu_boot->Append(id_boot_elf, "Boot ELF / SELF file");
 	menu_boot->Append(id_boot_game, "Boot game");
-	menu_boot->Append(id_boot_game_and_run, "Boot game and start");
-	menu_boot->Append(id_install_pkg, "Install PKG");
 	menu_boot->AppendSeparator();
-	menu_boot->Append(id_boot_elf, "Boot (S)ELF");
+	menu_boot->Append(id_install_pkg, "Install PKG");
 
 	wxMenu* menu_sys = new wxMenu();
 	menubar->Append(menu_sys, "System");
@@ -113,10 +110,9 @@ MainFrame::MainFrame()
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
-	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
-	Bind(wxEVT_MENU, &MainFrame::BootGameAndRun, this, id_boot_game_and_run);
-	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
 	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
+	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
+	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
 
 	Bind(wxEVT_MENU, &MainFrame::Pause, this, id_sys_pause);
 	Bind(wxEVT_MENU, &MainFrame::Stop, this, id_sys_stop);
@@ -201,40 +197,6 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 }
 
-void MainFrame::BootGameAndRun(wxCommandEvent& WXUNUSED(event))
-{
-	bool stopped = false;
-
-	if (Emu.IsRunning())
-	{
-		Emu.Pause();
-		stopped = true;
-	}
-
-	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
-
-	if (ctrl.ShowModal() == wxID_CANCEL)
-	{
-		if (stopped) Emu.Resume();
-		return;
-	}
-
-	Emu.Stop();
-
-	if (Emu.BootGame(ctrl.GetPath().ToStdString()))
-	{
-		LOG_SUCCESS(HLE, "Game: boot done.");
-	}
-	else
-	{
-		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
-	}
-
-	if (Emu.IsReady())
-	{
-		Emu.Run();
-	}
-}
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
@@ -299,7 +261,6 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	LOG_NOTICE(HLE, "(S)ELF: booting...");
 
 	Emu.Stop();
-
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 

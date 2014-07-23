@@ -353,7 +353,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 		{ "tc6", true, "dst_reg13", "", false },
 		{ "tc7", true, "dst_reg14", "", false },
 		{ "tc8", true, "dst_reg15", "", false },
-		{ "tc9", true, "dst_reg6", "", false }
+		{ "tc9", true, "dst_reg6",  "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 	};
 
 	std::string f;
