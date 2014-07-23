@@ -72,7 +72,8 @@ static_assert(sizeof(CellSyncRwm) == 16, "CellSyncBarrier: wrong size");
 
 struct CellSyncQueue
 {
-	be_t<u64> m_value;
+	be_t<u32> m_v1;
+	be_t<u32> m_v2;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
 	be_t<u64> m_addr;
