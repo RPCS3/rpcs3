@@ -276,7 +276,7 @@ public:
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
-		HLEAlwaysStart.Load(false);
+		HLEAlwaysStart.Load(true);
 
 		// Language
 		SysLanguage.Load(1);

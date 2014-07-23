@@ -1524,7 +1524,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	// Anti aliasing
+	// Anti-aliasing
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
 	{
 		// TODO:
