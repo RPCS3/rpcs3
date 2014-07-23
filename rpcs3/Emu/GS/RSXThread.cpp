@@ -1969,8 +1969,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 
 	case NV309E_SET_FORMAT:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV309E_SET_FORMAT: %x", ARGS(0));
+		const u8 height = ARGS(0) >> 24;
+		const u8 width = ARGS(0) >> 16;
+		const u8 format = ARGS(0);
+		const u32 offset = ARGS(1);
+		LOG_WARNING(RSX, "NV309E_SET_FORMAT: Format:0x%x, Width:%d, Height:%d, Offset:0x%x", format, width, height, offset);
 	}
 	break;
 
@@ -2041,7 +2044,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	case NV308A_SET_CONTEXT_SURFACE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_SURFACE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_SURFACE: %x", ARGS(0));
 	}
 	break;
 
