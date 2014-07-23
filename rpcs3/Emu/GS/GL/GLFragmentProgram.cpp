@@ -248,7 +248,7 @@ template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
 std::string GLFragmentDecompilerThread::BuildCode()
 {
 	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
-	static const std::pair<std::string, std::string> table[] =
+	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
 		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h2" },
