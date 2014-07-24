@@ -206,12 +206,14 @@ void GameViewer::DClick(wxListEvent& event)
 	Emu.Stop();
 	Emu.GetVFS().Init(path);
 	std::string local_path;
-	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
-	{
+	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path)) {
 		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
 		return;
 	}
-	Emu.Run();
+
+	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady()) {
+		Emu.Run();
+	}
 }
 
 void GameViewer::RightClick(wxListEvent& event)

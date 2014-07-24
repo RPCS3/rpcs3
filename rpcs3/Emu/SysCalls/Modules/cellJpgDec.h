@@ -27,10 +27,22 @@ enum CellJpgDecColorSpace
 	CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB = 41,
 };
 
+enum CellJpgDecStreamSrcSel
+{
+	CELL_JPGDEC_FILE   = 0,
+	CELL_JPGDEC_BUFFER = 1,
+};
+
 enum CellJpgDecDecodeStatus
 {
-	CELL_JPGDEC_DEC_STATUS_FINISH = 0, //Decoding finished
-	CELL_JPGDEC_DEC_STATUS_STOP   = 1, //Decoding halted
+	CELL_JPGDEC_DEC_STATUS_FINISH = 0, // Decoding finished
+	CELL_JPGDEC_DEC_STATUS_STOP   = 1, // Decoding halted
+};
+
+enum CellJpgDecOutputMode
+{
+	CELL_JPGDEC_TOP_TO_BOTTOM = 0, // Top left to bottom right
+	CELL_JPGDEC_BOTTOM_TO_TOP = 1, // Bottom left to top right
 };
 
 struct CellJpgDecInfo
@@ -92,10 +104,12 @@ struct CellJpgDecDataOutInfo
 	be_t<u32> status;
 };
 
-struct CellJpgDecSubHandle //Custom struct
+// Custom structs
+struct CellJpgDecSubHandle
 {
 	u32 fd;
 	u64 fileSize;
 	CellJpgDecInfo info;
 	CellJpgDecOutParam outParam;
+	CellJpgDecSrc src;
 };

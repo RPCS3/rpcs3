@@ -16,8 +16,8 @@ enum
 
 enum CellGifDecStreamSrcSel
 {
-	CELL_GIFDEC_FILE   = 0, //Input from a file
-	CELL_GIFDEC_BUFFER = 1, //Input from a buffer
+	CELL_GIFDEC_FILE   = 0, // Input from a file
+	CELL_GIFDEC_BUFFER = 1, // Input from a buffer
 };
 
 enum CellGifDecColorSpace
@@ -105,10 +105,12 @@ struct CellGifDecDataCtrlParam
 	be_t<u64> outputBytesPerLine;
 };
 
-struct CellGifDecSubHandle //Custom struct
+//Custom structs
+struct CellGifDecSubHandle
 {
 	u32 fd;
 	u64 fileSize;
 	CellGifDecInfo info;
 	CellGifDecOutParam outParam;
+	CellGifDecSrc src;
 };

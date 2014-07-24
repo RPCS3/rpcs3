@@ -156,9 +156,9 @@ int decrypt_data(rFile *in, rFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd,
 		int length = 0;
 		int compression_end = 0;
 
-		if ((edat->flags & EDAT_FLAG_0x3C) != 0 || (edat->flags & EDAT_FLAG_0x3D) != 0)
+		if ((edat->flags & EDAT_FLAG_0x04) != 0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Flag 0x3C/0x3D EDAT files are unsupported yet");
+			LOG_ERROR(LOADER, "EDAT: Flag 0x04 is not yet supported");
 			return -1;
 		}
 		

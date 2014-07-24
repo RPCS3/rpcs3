@@ -60,7 +60,6 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 		return CELL_PNGDEC_ERROR_ARG;
 
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
-
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
@@ -212,16 +211,16 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	MemoryAllocator<unsigned char> png(fileSize);
 	MemoryAllocator<u64> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToLE())
+	switch(subHandle_data->src.srcSelect.ToBE())
 	{
-	case CELL_PNGDEC_BUFFER:
-		if (!Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize()))
-		{
+	case se32(CELL_PNGDEC_BUFFER):
+		if (!Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize())) {
 			cellPngDec->Error("cellPngDecDecodeData() failed (I)");
 			return CELL_EFAULT;
 		}
 		break;
-	case CELL_PNGDEC_FILE:
+
+	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
 		cellFsRead(fd, png.GetAddr(), png.GetSize(), nread.GetAddr());
 		break;
@@ -238,12 +237,11 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	const bool flip = current_outParam.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
 	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
-
 	uint image_size = width * height;
+
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
-		image_size = width * height;
 	case CELL_PNGDEC_RGBA:
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
