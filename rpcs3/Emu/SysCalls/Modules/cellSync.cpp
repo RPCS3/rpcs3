@@ -465,8 +465,69 @@ s32 cellSyncQueueTryPush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 s32 cellSyncQueuePop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncQueuePop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncQueuePop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
 
+	if (!queue || !buffer_addr)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	const u32 size = (u32)queue->m_size;
+	const u32 depth = (u32)queue->m_depth;
+	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
+	{
+		cellSync->Error("cellSyncQueuePop(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
+		Emu.Pause();
+	}
+	
+	u32 position;
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		const u32 v1 = (u32)new_queue.m_v1;
+		const u32 v2 = (u32)new_queue.m_v2;
+		// prx: extract first u8, repeat if not zero
+		// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
+		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			if (Emu.IsStopped())
+			{
+				cellSync->Warning("cellSyncQueuePop(queue_addr=0x%x) aborted", queue.GetAddr());
+				return CELL_OK;
+			}
+			continue;
+		}
+
+		// prx: insert 1 in first u8
+		// prx: extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
+		// prx: extract second u32 (u24), decrease it, insert it back
+		new_queue.m_v1 = 0x1000000 | v1;
+		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
+		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
+
+	// prx: (sync), memcpy(buffer_addr, position * m_size + m_addr, m_size)
+	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+
+	// prx: atomically insert 0 in first u8
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
 	return CELL_OK;
 }
 
@@ -493,15 +554,95 @@ s32 cellSyncQueueTryPeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 s32 cellSyncQueueSize(mem_ptr_t<CellSyncQueue> queue)
 {
-	cellSync->Todo("cellSyncQueueSize(queue_addr=0x%x)", queue.GetAddr());
+	cellSync->Log("cellSyncQueueSize(queue_addr=0x%x)", queue.GetAddr());
 
-	return CELL_OK;
+	if (!queue)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	const u32 count = (u32)queue->m_v2 & 0xffffff;
+	const u32 depth = (u32)queue->m_depth;
+	if (((u32)queue->m_v1 & 0xffffff) > depth || count > depth)
+	{
+		cellSync->Error("cellSyncQueueSize(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
+		Emu.Pause();
+	}
+
+	return count;
 }
 
 s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
 {
-	cellSync->Todo("cellSyncQueueClear(queue_addr=0x%x)", queue.GetAddr());
+	cellSync->Log("cellSyncQueueClear(queue_addr=0x%x)", queue.GetAddr());
 
+	if (!queue)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	const u32 depth = (u32)queue->m_depth;
+	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
+	{
+		cellSync->Error("cellSyncQueueSize(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
+		Emu.Pause();
+	}
+
+	// TODO: optimize if possible
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		const u32 v1 = (u32)new_queue.m_v1;
+		// prx: extract first u8, repeat if not zero, insert 1
+		if (v1 >> 24)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			if (Emu.IsStopped())
+			{
+				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (I)", queue.GetAddr());
+				return CELL_OK;
+			}
+			continue;
+		}
+		new_queue.m_v1 = v1 | 0x1000000;
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
+
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		const u32 v2 = (u32)new_queue.m_v2;
+		// prx: extract 5th u8, repeat if not zero, insert 1
+		if (v2 >> 24)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			if (Emu.IsStopped())
+			{
+				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (II)", queue.GetAddr());
+				return CELL_OK;
+			}
+			continue;
+		}
+		new_queue.m_v2 = v2 | 0x1000000;
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
+
+	queue->m_data() = 0;
+	InterlockedCompareExchange(&queue->m_data(), 0, 0);
 	return CELL_OK;
 }
 
