@@ -66,4 +66,4 @@ typedef int64_t s64;
 #include "Utilities/IdManager.h"
 
 #define _PRGNAME_ "RPCS3"
-#define _PRGVER_ "0.0.0.4"
+#define _PRGVER_ "0.0.0.5"
