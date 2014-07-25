@@ -275,7 +275,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	break;
 
 	// NV4097
-	case NV4097_SET_FLIP:
+	case 0x0003fead:
 		//if(cmd == 0xfeadffff)
 		{
 			Flip();
