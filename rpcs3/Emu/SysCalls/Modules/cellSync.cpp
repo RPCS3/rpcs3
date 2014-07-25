@@ -458,8 +458,56 @@ s32 cellSyncQueuePush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 s32 cellSyncQueueTryPush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncQueueTryPush(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncQueueTryPush(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
 
+	if (!queue || !buffer_addr)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	const u32 size = (u32)queue->m_size;
+	const u32 depth = (u32)queue->m_depth;
+	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
+	{
+		cellSync->Error("cellSyncQueueTryPush(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
+		Emu.Pause();
+	}
+
+	u32 position;
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		const u32 v1 = (u32)new_queue.m_v1;
+		const u32 v2 = (u32)new_queue.m_v2;
+		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+
+		position = (v1 & 0xffffff);
+		new_queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
+		new_queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
+
+	memcpy(Memory + (u64)queue->m_addr + position * size, Memory + buffer_addr, size);
+
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		new_queue.m_v2 &= 0xffffff; // TODO: use InterlockedAnd() or something
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
 	return CELL_OK;
 }
 
@@ -533,8 +581,56 @@ s32 cellSyncQueuePop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 s32 cellSyncQueueTryPop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncQueueTryPop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncQueueTryPop(queue_addr=0x%x, buffer_addr=0x%x)", queue.GetAddr(), buffer_addr);
 
+	if (!queue || !buffer_addr)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 32)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	const u32 size = (u32)queue->m_size;
+	const u32 depth = (u32)queue->m_depth;
+	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
+	{
+		cellSync->Error("cellSyncQueueTryPop(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
+		Emu.Pause();
+	}
+
+	u32 position;
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		const u32 v1 = (u32)new_queue.m_v1;
+		const u32 v2 = (u32)new_queue.m_v2;
+		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+
+		new_queue.m_v1 = 0x1000000 | v1;
+		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
+		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
+
+	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+
+	while (true)
+	{
+		const u64 old_data = queue->m_data();
+		CellSyncQueue new_queue;
+		new_queue.m_data() = old_data;
+
+		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
+		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+	}
 	return CELL_OK;
 }
 
