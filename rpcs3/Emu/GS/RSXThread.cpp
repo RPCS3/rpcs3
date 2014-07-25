@@ -323,60 +323,26 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	break;
 
 	// Texture
-	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_FORMAT + (m_index*32)]
-	}
-	break;
-	
+	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20):
 	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_OFFSET + (m_index*32)]
-	}
-	break;
-
-	case_16(NV4097_SET_TEXTURE_FILTER, 0x20) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_FILTER + (m_index*32)]
-	}
-	break;
-
-	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index * 32)]
-	}
-	break;
-
-	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index*32)]
-	}
-	break;
-
-	case_16(NV4097_SET_TEXTURE_BORDER_COLOR, 0x20) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)]
-	}
-	break;
+	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
+	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
+	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32):
+	case_16(NV4097_SET_TEXTURE_BORDER_COLOR, 0x20):
 	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
+	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
 	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*32)]
+		// Done using methodRegisters in RSXTexture.cpp
 	}
 	break;
 
-	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20) :
-	{
-		// Done in methodRegisters[NV4097_SET_TEXTURE_CONTROL1 + (m_index*32)]
-	}
-	break;
-
-	case_16(NV4097_SET_TEX_COORD_CONTROL, 4) :
+	case_16(NV4097_SET_TEX_COORD_CONTROL, 4):
 	{
 		LOG_WARNING(RSX, "NV4097_SET_TEX_COORD_CONTROL");
 	}
 	break;
 
-	case_16(NV4097_SET_TEXTURE_CONTROL3, 4) :
+	case_16(NV4097_SET_TEXTURE_CONTROL3, 4):
 	{
 		RSXTexture& tex = m_textures[index];
 		const u32 a0 = ARGS(0);
@@ -450,7 +416,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4) :
+	case_16(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4):
 	{
 		const u32 addr = GetAddress(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
 		CMD_LOG("num=%d, addr=0x%x", index, addr);
@@ -459,7 +425,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4) :
+	case_16(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4):
 	{
 		const u32 a0 = ARGS(0);
 		u16 frequency = a0 >> 16;
@@ -632,7 +598,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	case NV4097_SET_REDUCE_DST_COLOR:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_REDUCE_DST_COLOR: 0x % x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_REDUCE_DST_COLOR: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -714,8 +680,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 
 	case NV4097_SET_CLIP_MAX:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CLIP_MAX: %x", ARGS(0));
+		const u32 a0 = ARGS(0);
+
+		m_set_clip = true;
+		m_clip_max = (float&)a0;
+
+		CMD_LOG("clip_max=%.01f", m_clip_max);
 	}
 	break;
 
@@ -842,13 +812,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		m_clear_color_r = (color >> 16) & 0xff;
 		m_clear_color_g = (color >> 8) & 0xff;
 		m_clear_color_b = color & 0xff;
-	}
-	break;
-
-	case NV4097_CLEAR_REPORT_VALUE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_CLEAR_REPORT_VALUE: %x", ARGS(0));
 	}
 	break;
 
@@ -1527,11 +1490,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	// Anti-aliasing
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
 	{
-		// TODO:
-		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((enable) | ((alphaToCoverage) << 4) | ((alphaToOne) << 8) | ((sampleMask) << 16)); \
+		const u32 a0 = ARGS(0);
 
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ANTI_ALIASING_CONTROL: %x", ARGS(0));
+		const u8 enable = a0 & 0xf;
+		const u8 alphaToCoverage = (a0 >> 4) & 0xf;
+		const u8 alphaToOne = (a0 >> 8) & 0xf;
+		const u16 sampleMask = a0 >> 16;
+		
+		LOG_WARNING(RSX, "TODO: NV4097_SET_ANTI_ALIASING_CONTROL: %x", a0);
 	}
 	break;
 
@@ -1626,13 +1592,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	break;
 
 	case NV4097_ZCULL_SYNC:
-		{
+	{
 		if (ARGS(0))
 			LOG_WARNING(RSX, "NV4097_ZCULL_SYNC: %x", ARGS(0));
 	}
 	break;
 
-	// Reporting
+	// Reports
 	case NV4097_GET_REPORT:
 	{
 		const u32 a0 = ARGS(0);
@@ -1664,6 +1630,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		Memory.Write64(m_local_mem_addr + offset + 0x0, timestamp);
 		Memory.Write32(m_local_mem_addr + offset + 0x8, value);
 		Memory.Write32(m_local_mem_addr + offset + 0xc, 0);
+	}
+	break;
+
+	case NV4097_CLEAR_REPORT_VALUE:
+	{
+		const u32 type = ARGS(0);
+
+		switch(type)
+		{
+		case CELL_GCM_ZPASS_PIXEL_CNT:
+			LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZPASS_PIXEL_CNT");
+			break;
+		case CELL_GCM_ZCULL_STATS:
+			LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZCULL_STATS");
+			break;
+		default:
+			LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", type);
+		}	
 	}
 	break;
 
@@ -1702,40 +1686,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	// Zmin_max
 	case NV4097_SET_ZMIN_MAX_CONTROL:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ZMIN_MAX_CONTROL: %x", ARGS(0));
-
-		// TODO:
-		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((cullNearFarEnable) | ((zclampEnable) << 4) | ((cullIgnoreW)<<8));
+		const u8 cullNearFarEnable = ARGS(0) & 0xf;
+		const u8 zclampEnable = (ARGS(0) >> 4) & 0xf;
+		const u8 cullIgnoreW = (ARGS(0) >> 8) & 0xf;
+		LOG_WARNING(RSX, "TODO: NV4097_SET_ZMIN_MAX_CONTROL: cullNearFarEnable=%d, zclampEnable=%d, cullIgnoreW=%d",
+			cullNearFarEnable, zclampEnable, cullIgnoreW);
 	}
 	break;
 
 	// Windows Clipping
 	case NV4097_SET_WINDOW_OFFSET:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_WINDOW_OFFSET: %x", ARGS(0));
-	}
-	break;
-
-	case NV4097_SET_WINDOW_CLIP_TYPE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_WINDOW_CLIP_TYPE: %x", ARGS(0));
-	}
-	break;
-
-	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_WINDOW_CLIP_HORIZONTAL: %x", ARGS(0));
-	}
-	break;
-
-	case NV4097_SET_WINDOW_CLIP_VERTICAL:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_WINDOW_CLIP_VERTICAL: %x", ARGS(0));
+		const u16 x = ARGS(0);
+		const u16 y = ARGS(0) >> 16;
+		LOG_WARNING(RSX, "TODO: NV4097_SET_WINDOW_OFFSET: x=%d, y=%d", x, y);
 	}
 	break;
 
@@ -1747,68 +1711,30 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 
 	case NV4097_SET_RENDER_ENABLE:
 	{
-		// TODO:
-		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((offset) | ((mode) << 24)); \
-
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_RENDER_ENABLE: %x", ARGS(0));
+		const u32 offset = ARGS(0) & 0xffffff;
+		const u8 mode = ARGS(0) >> 24;
+		LOG_WARNING(RSX, "NV4097_SET_RENDER_ENABLE: Offset=%06x, Mode=%x", offset, mode);
 	}
 	break;
 
 	case NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE: %x", ARGS(0));
+		const u32 enable = ARGS(0);	
+		LOG_WARNING(RSX, "TODO: NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE: %d", enable);
 	}
-	break;
-
-	case 0x000002c8:
-	case 0x000002d0:
-	case 0x000002d8:
-	case 0x000002e0:
-	case 0x000002e8:
-	case 0x000002f0:
-	case 0x000002f8:
 	break;
 
 	// NV0039
-	case NV0039_SET_OBJECT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_SET_OBJECT: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_SET_CONTEXT_DMA_NOTIFIES:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_SET_CONTEXT_DMA_BUFFER_IN: // [E : RSXThread]: TODO: unknown/illegal method [0x00002184](0xfeed0000, 0xfeed0000)
+	case NV0039_SET_CONTEXT_DMA_BUFFER_IN:
 	{
 		const u32 srcContext = ARGS(0);
 		const u32 dstContext = ARGS(1);
-
-		if (srcContext == 0xfeed0000 && dstContext == 0xfeed0000)
-		{
-		}
-		else
-		{
-			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_BUFFER_IN: TODO: srcContext=0x%x, dstContext=0x%x", srcContext, dstContext);
-		}
+		m_context_dma_buffer_in_src = srcContext;
+		m_context_dma_buffer_in_dst = dstContext;
 	}
 	break;
 
-	case NV0039_SET_CONTEXT_DMA_BUFFER_OUT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_SET_CONTEXT_DMA_BUFFER_OUT: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_OFFSET_IN: // [E : RSXThread]: TODO: unknown/illegal method [0x0000230c](0x0, 0xb00400, 0x0, 0x0, 0x384000, 0x1, 0x101, 0x0)
+	case NV0039_OFFSET_IN:
 	{
 		const u32 inOffset = ARGS(0);
 		const u32 outOffset = ARGS(1);
@@ -1816,12 +1742,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		const u32 outPitch = ARGS(3);
 		const u32 lineLength = ARGS(4);
 		const u32 lineCount = ARGS(5);
-		const u32 format = ARGS(6);
-		const u8 outFormat = (format >> 8);
-		const u8 inFormat = (format >> 0);
+		const u8 outFormat = (ARGS(6) >> 8);
+		const u8 inFormat = (ARGS(6) >> 0);
 		const u32 notify = ARGS(7);
 
-		if (lineCount == 1 && !inPitch && !outPitch && !notify && format == 0x101)
+		// The existing GCM commands use only the value 0x1 for inFormat and outFormat
+		if (inFormat != 0x01 || outFormat != 0x01) {
+			LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", inFormat, outFormat);
+		}
+
+		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
 			memcpy(&Memory[GetAddress(outOffset, 0)], &Memory[GetAddress(inOffset, 0)], lineLength);
 		}
@@ -1854,34 +1784,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	case NV0039_PITCH_OUT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_PITCH_OUT: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_LINE_LENGTH_IN:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_LINE_LENGTH_IN: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_LINE_COUNT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_LINE_COUNT: %x", ARGS(0));
-	}
-	break;
-
-	case NV0039_FORMAT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_FORMAT: %x", ARGS(0));
-	}
-	break;
-
 	case NV0039_BUFFER_NOTIFY:
 	{
 		if (ARGS(0))
@@ -1890,30 +1792,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	break;
 
 	// NV3062
-	case NV3062_SET_OBJECT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3062_SET_OBJECT: %x", ARGS(0));
-	}
-	break;
-
-	case NV3062_SET_CONTEXT_DMA_NOTIFIES:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3062_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
-	}
-	break;
-
-	case NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE: %x", ARGS(0));
-	}
-	break;
-
 	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
 	{
 		m_context_dma_img_dst = ARGS(0);
+	}
+	break;
+
+	case NV3062_SET_OFFSET_DESTIN:
+	{
+		m_dst_offset = ARGS(0);
 	}
 	break;
 
@@ -1925,41 +1812,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	case NV3062_SET_PITCH:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3062_SET_PITCH: %x", ARGS(0));
-	}
-	break;
-
-	case NV3062_SET_OFFSET_SOURCE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3062_SET_OFFSET_SOURCE: %x", ARGS(0));
-	}
-	break;
-
-	case NV3062_SET_OFFSET_DESTIN:
-	{
-		m_dst_offset = ARGS(0);
-	}
-	break;
-
 	// NV309E
-	case NV309E_SET_OBJECT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV309E_SET_OBJECT: %x", ARGS(0));
-	}
-	break;
-
-	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
-	}
-	break;
-
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
 	{
 		if (ARGS(0))
@@ -1977,117 +1830,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
-	case NV309E_SET_OFFSET:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV309E_SET_OFFSET: %x", ARGS(0));
-	}
-	break;
-
 	// NV308A
-	case NV308A_SET_OBJECT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_OBJECT: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_DMA_NOTIFIES:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_COLOR_KEY:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_COLOR_KEY: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_CLIP_RECTANGLE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_CLIP_RECTANGLE: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_PATTERN:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_PATTERN: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_ROP:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_ROP: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_BETA1:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_BETA1: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_BETA4:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_BETA4: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_CONTEXT_SURFACE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_CONTEXT_SURFACE: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_COLOR_CONVERSION:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_COLOR_CONVERSION: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_OPERATION:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_OPERATION: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SET_COLOR_FORMAT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SET_COLOR_FORMAT: %x", ARGS(0));
-	}
-	break;
-
 	case NV308A_POINT:
 	{
 		const u32 a0 = ARGS(0);
 		m_point_x = a0 & 0xffff;
 		m_point_y = a0 >> 16;
-	}
-	break;
-
-	case NV308A_SIZE_OUT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SIZE_OUT: %x", ARGS(0));
-	}
-	break;
-
-	case NV308A_SIZE_IN:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV308A_SIZE_IN: %x", ARGS(0));
 	}
 	break;
 
@@ -2135,51 +1883,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	break;
 
 	// NV3089
-	case NV3089_SET_OBJECT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_OBJECT: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_SET_CONTEXT_DMA_NOTIFIES:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
-	}
-	break;
-
 	case NV3089_SET_CONTEXT_DMA_IMAGE:
 	{
 		m_context_dma_img_src = ARGS(0);
-	}
-	break;
-
-	case NV3089_SET_CONTEXT_PATTERN:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_PATTERN: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_SET_CONTEXT_ROP:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_ROP: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_SET_CONTEXT_BETA1:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_BETA1: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_SET_CONTEXT_BETA4:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_BETA4: %x", ARGS(0));
 	}
 	break;
 
@@ -2189,80 +1895,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		{
 			LOG_WARNING(RSX, "NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
 		}
-	}
-	break;
-
-	case NV3089_SET_COLOR_CONVERSION:
-	{
-		m_color_conv = ARGS(0);
-		m_color_conv_fmt = ARGS(1);
-		m_color_conv_op = ARGS(2);
-		m_color_conv_in_x = ARGS(3);
-		m_color_conv_in_y = ARGS(3) >> 16;
-		m_color_conv_in_w = ARGS(4);
-		m_color_conv_in_h = ARGS(4) >> 16;
-		m_color_conv_out_x = ARGS(5);
-		m_color_conv_out_y = ARGS(5) >> 16;
-		m_color_conv_out_w = ARGS(6);
-		m_color_conv_out_h = ARGS(6) >> 16;
-		m_color_conv_dsdx = ARGS(7);
-		m_color_conv_dtdy = ARGS(8);
-	}
-	break;
-
-	case NV3089_SET_COLOR_FORMAT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_COLOR_FORMAT: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_SET_OPERATION:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_SET_OPERATION: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_CLIP_POINT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_CLIP_POINT: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_CLIP_SIZE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_CLIP_SIZE: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_IMAGE_OUT_POINT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_IMAGE_OUT_POINT: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_IMAGE_OUT_SIZE:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_IMAGE_OUT_SIZE: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_DS_DX:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_DS_DX: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_DT_DY:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_DT_DY: %x", ARGS(0));
 	}
 	break;
 
@@ -2294,25 +1926,22 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		}
 	}
 	break;
-	
-	case NV3089_IMAGE_IN_FORMAT:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_IMAGE_IN_FORMAT: %x", ARGS(0));
-	}
-	break;
 
-	case NV3089_IMAGE_IN_OFFSET:
+	case NV3089_SET_COLOR_CONVERSION:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_IMAGE_IN_OFFSET: %x", ARGS(0));
-	}
-	break;
-
-	case NV3089_IMAGE_IN:
-	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV3089_IMAGE_IN: %x", ARGS(0));
+		m_color_conv = ARGS(0);
+		m_color_conv_fmt = ARGS(1);
+		m_color_conv_op = ARGS(2);
+		m_color_conv_in_x = ARGS(3);
+		m_color_conv_in_y = ARGS(3) >> 16;
+		m_color_conv_in_w = ARGS(4);
+		m_color_conv_in_h = ARGS(4) >> 16;
+		m_color_conv_out_x = ARGS(5);
+		m_color_conv_out_y = ARGS(5) >> 16;
+		m_color_conv_out_w = ARGS(6);
+		m_color_conv_out_h = ARGS(6) >> 16;
+		m_color_conv_dsdx = ARGS(7);
+		m_color_conv_dtdy = ARGS(8);
 	}
 	break;
 
@@ -2324,14 +1953,105 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
+	// Note: What is this? NV4097 offsets?
+	case 0x000002c8:
+	case 0x000002d0:
+	case 0x000002d8:
+	case 0x000002e0:
+	case 0x000002e8:
+	case 0x000002f0:
+	case 0x000002f8:
+	break;
+
+	// The existing GCM commands don't use any of the following NV4097 / NV0039 / NV3062 / NV309E / NV308A / NV3089 methods
+	case NV4097_SET_WINDOW_CLIP_TYPE:
+	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
+	case NV4097_SET_WINDOW_CLIP_VERTICAL:
+	{
+		LOG_WARNING(RSX, "Unused NV4097 method 0x%x detected!", cmd);
+	}
+	break;
+
+	case NV0039_SET_CONTEXT_DMA_BUFFER_OUT:
+	case NV0039_PITCH_OUT:
+	case NV0039_LINE_LENGTH_IN:
+	case NV0039_LINE_COUNT:
+	case NV0039_FORMAT:
+	case NV0039_SET_OBJECT:
+	case NV0039_SET_CONTEXT_DMA_NOTIFIES:
+	{
+		LOG_WARNING(RSX, "Unused NV0039 method 0x%x detected!", cmd);
+	}
+	break;
+
+	case NV3062_SET_OBJECT:
+	case NV3062_SET_CONTEXT_DMA_NOTIFIES:
+	case NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE:
+	case NV3062_SET_PITCH:
+	case NV3062_SET_OFFSET_SOURCE:
+	{
+		LOG_WARNING(RSX, "Unused NV3062 method 0x%x detected!", cmd);
+	}
+	break;
+
+	case NV308A_SET_OBJECT:
+	case NV308A_SET_CONTEXT_DMA_NOTIFIES:
+	case NV308A_SET_CONTEXT_COLOR_KEY:
+	case NV308A_SET_CONTEXT_CLIP_RECTANGLE:
+	case NV308A_SET_CONTEXT_PATTERN:
+	case NV308A_SET_CONTEXT_ROP:
+	case NV308A_SET_CONTEXT_BETA1:
+	case NV308A_SET_CONTEXT_BETA4:
+	case NV308A_SET_CONTEXT_SURFACE:
+	case NV308A_SET_COLOR_CONVERSION:
+	case NV308A_SET_OPERATION:
+	case NV308A_SET_COLOR_FORMAT:
+	case NV308A_SIZE_OUT:
+	case NV308A_SIZE_IN:
+	{
+		LOG_WARNING(RSX, "Unused NV308A method 0x%x detected!", cmd);
+	}
+	break;
+
+	case NV309E_SET_OBJECT:
+	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
+	case NV309E_SET_OFFSET:
+	{
+		LOG_WARNING(RSX, "Unused NV309E method 0x%x detected!", cmd);
+	}
+	break;
+
+	case NV3089_SET_OBJECT:
+	case NV3089_SET_CONTEXT_DMA_NOTIFIES:
+	case NV3089_SET_CONTEXT_PATTERN:
+	case NV3089_SET_CONTEXT_ROP:
+	case NV3089_SET_CONTEXT_BETA1:
+	case NV3089_SET_CONTEXT_BETA4:
+	case NV3089_SET_COLOR_FORMAT:
+	case NV3089_SET_OPERATION:
+	case NV3089_CLIP_POINT:
+	case NV3089_CLIP_SIZE:
+	case NV3089_IMAGE_OUT_POINT:
+	case NV3089_IMAGE_OUT_SIZE:
+	case NV3089_DS_DX:
+	case NV3089_DT_DY:
+	case NV3089_IMAGE_IN_FORMAT:
+	case NV3089_IMAGE_IN_OFFSET:
+	case NV3089_IMAGE_IN:
+	{
+		LOG_WARNING(RSX, "Unused NV3089 method 0x%x detected!", cmd);
+	}
+	break;
+
 	default:
 	{
 		std::string log = GetMethodName(cmd);
 		log += "(";
-		for(u32 i=0; i<count; ++i) log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
+		for (u32 i=0; i<count; ++i) {
+			log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
+		}
 		log += ")";
-		LOG_WARNING(RSX, "TODO: " + log);
-		//Emu.Pause();
+		LOG_ERROR(RSX, "TODO: " + log);
 	}
 	break;
 	}

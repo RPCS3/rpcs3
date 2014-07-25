@@ -394,6 +394,8 @@ public:
 	u32 m_context_dma_z;
 	u32 m_context_dma_img_src;
 	u32 m_context_dma_img_dst;
+	u32 m_context_dma_buffer_in_src;
+	u32 m_context_dma_buffer_in_dst;
 	u32 m_dst_offset;
 
 	// Cull face
