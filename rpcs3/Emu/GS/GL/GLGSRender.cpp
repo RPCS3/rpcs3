@@ -896,6 +896,7 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
 	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
+	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
@@ -955,6 +956,12 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glLogicOp");
 	}
 
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
+	
 	if(m_set_two_sided_stencil_test_enable)
 	{
 		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
