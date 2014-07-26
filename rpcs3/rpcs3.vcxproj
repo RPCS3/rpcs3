@@ -173,6 +173,7 @@
     <ClCompile Include="Gui\GLGSFrame.cpp" />
     <ClCompile Include="Gui\GSFrame.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
+    <ClCompile Include="Gui\KernelExplorer.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
@@ -218,6 +219,7 @@
     <ClInclude Include="Gui\GLGSFrame.h" />
     <ClInclude Include="Gui\GSFrame.h" />
     <ClInclude Include="Gui\InterpreterDisAsm.h" />
+    <ClInclude Include="Gui\KernelExplorer.h" />
     <ClInclude Include="Gui\MainFrame.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />

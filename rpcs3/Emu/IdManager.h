@@ -26,7 +26,7 @@ enum IDType
 	TYPE_LWCOND,
 	TYPE_EVENT_FLAG,
 
-	// Generic
+	// Any other objects
 	TYPE_OTHER,
 };
 
@@ -104,7 +104,7 @@ class IdManager
 	static const u32 s_max_id = -1;
 
 	std::unordered_map<u32, ID> m_id_map;
-	std::set<IDType> m_types[TYPE_OTHER];
+	std::set<u32> m_types[TYPE_OTHER];
 	std::mutex m_mtx_main;
 
 	u32 m_cur_id;
@@ -179,12 +179,13 @@ public:
 
 	bool HasID(const s64 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		{
+			std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		if(id == rID_ANY) {
-			return m_id_map.begin() != m_id_map.end();
+			if(id == rID_ANY) {
+				return m_id_map.begin() != m_id_map.end();
+			}
 		}
-
 		return CheckID(id);
 	}
 

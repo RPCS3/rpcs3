@@ -4,20 +4,22 @@
 #include "Emu/System.h"
 #include "rpcs3.h"
 #include "MainFrame.h"
-#include "CompilerELF.h"
-#include "MemoryViewer.h"
-#include "RSXDebugger.h"
-#include "PADManager.h"
 
 #include "git-version.h"
 #include "Ini.h"
 #include "Emu/RSX/sysutil_video.h"
+#include "Gui/PADManager.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
+#include "Gui/CompilerELF.h"
 #include "Gui/AutoPauseManager.h"
 #include "Gui/SaveDataUtility.h"
+#include "Gui/KernelExplorer.h"
+#include "Gui/MemoryViewer.h"
+#include "Gui/RSXDebugger.h"
+
 #include <wx/dynlib.h>
 
 #include "Loader/PKG.h"
@@ -42,6 +44,7 @@ enum IDs
 	id_config_autopause_manager,
 	id_config_savedata_manager,
 	id_tools_compiler,
+	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
 	id_help_about,
@@ -98,6 +101,7 @@ MainFrame::MainFrame()
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
 	menu_tools->Append(id_tools_compiler, "ELF Compiler");
+	menu_tools->Append(id_tools_kernel_explorer, "Kernel Explorer")->Enable(false);
 	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer")->Enable(false);
 	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger")->Enable(false);
 
@@ -134,6 +138,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
+	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
 
@@ -635,6 +640,11 @@ void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 	(new CompilerELF(this)) -> Show();
 }
 
+void MainFrame::OpenKernelExplorer(wxCommandEvent& WXUNUSED(event))
+{
+	(new KernelExplorer(this)) -> Show();
+}
+
 void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
 {
 	(new MemoryViewerPanel(this)) -> Show();
@@ -732,8 +742,10 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	send_exit.Enable(enable_commands);
 
 	// Tools
-	wxMenuItem& memory_viewer = *menubar.FindItem( id_tools_memory_viewer );
-	wxMenuItem& rsx_debugger = *menubar.FindItem( id_tools_rsx_debugger);
+	wxMenuItem& kernel_explorer = *menubar.FindItem(id_tools_kernel_explorer);
+	wxMenuItem& memory_viewer = *menubar.FindItem(id_tools_memory_viewer);
+	wxMenuItem& rsx_debugger = *menubar.FindItem(id_tools_rsx_debugger);
+	kernel_explorer.Enable(!is_stopped);
 	memory_viewer.Enable(!is_stopped);
 	rsx_debugger.Enable(!is_stopped);
 
