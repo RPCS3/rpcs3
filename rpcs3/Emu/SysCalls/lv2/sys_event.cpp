@@ -50,7 +50,7 @@ s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 		return CELL_EAGAIN;
 	}
 
-	equeue_id = sys_event.GetNewId(eq);
+	equeue_id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
 
@@ -237,7 +237,7 @@ s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
 	}
 
 	EventPort* eport = new EventPort();
-	u32 id = sys_event.GetNewId(eport);
+	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	eport->name = name ? name : ((u64)sys_process_getpid() << 32) | (u64)id;
 	eport_id = id;
 	sys_event.Warning("*** sys_event_port created: id = %d", id);

@@ -63,7 +63,7 @@ typedef int64_t s64;
 #include "Utilities/rMsgBox.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
-#include "Utilities/IdManager.h"
+#include "Emu/IdManager.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

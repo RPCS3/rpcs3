@@ -23,34 +23,6 @@ enum
 	SYS_EVENT_FLAG_OBJECT            = (0x98UL),
 };
 
-// Datatypes
-// TODO: Would it be better if improved the existing IDManager, instead of creating this datatype?
-//       Another option would be improving SysCallBase::GetNewId
-struct sysProcessObjects_t
-{
-	std::set<u32> mem_objects;
-	std::set<u32> mutex_objects;
-	std::set<u32> cond_objects;
-	std::set<u32> rwlock_objects;
-	std::set<u32> intr_tag_objects;
-	std::set<u32> intr_service_handle_objects;
-	std::set<u32> event_queue_objects;
-	std::set<u32> event_port_objects;
-	std::set<u32> trace_objects;
-	std::set<u32> spuimage_objects;
-	std::set<u32> prx_objects;
-	std::set<u32> spuport_objects;
-	std::set<u32> lwmutex_objects;
-	std::set<u32> timer_objects;
-	std::set<u32> semaphore_objects;
-	std::set<u32> fs_fd_objects;
-	std::set<u32> lwcond_objects;
-	std::set<u32> event_flag_objects;
-};
-
-// Extern
-extern sysProcessObjects_t procObjects;
-
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);

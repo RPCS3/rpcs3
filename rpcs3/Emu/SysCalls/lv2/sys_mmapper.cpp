@@ -121,7 +121,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 	ct->size = size;
 
 	// Generate a new mem ID.
-	mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags));
+	mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
 
 	return CELL_OK;
 }

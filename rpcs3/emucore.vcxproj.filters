@@ -937,9 +937,6 @@
     <ClInclude Include="..\Utilities\BEType.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\IdManager.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\SMutex.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1158,6 +1155,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+	</ClInclude>
+    <ClInclude Include="Emu\IdManager.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

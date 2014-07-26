@@ -13,12 +13,6 @@
 
 extern Module *sys_fs;
 
-enum
-{
-	IDFlag_File = 1,
-	IDFlag_Dir = 2,
-};
-
 struct FsRingBufferConfig
 {
 	CellFsRingBuffer m_ring_buffer; // Currently unused after assignment
@@ -117,7 +111,7 @@ s32 cellFsOpen(u32 path_addr, s32 flags, mem32_t fd, mem32_t arg, u64 size)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs->GetNewId(stream, IDFlag_File);
+	fd = sys_fs->GetNewId(stream, TYPE_FS_FILE);
 	LOG_NOTICE(HLE, "\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
@@ -181,7 +175,7 @@ s32 cellFsOpendir(u32 path_addr, mem32_t fd)
 		return CELL_ENOENT;
 	}
 
-	fd = sys_fs->GetNewId(dir, IDFlag_Dir);
+	fd = sys_fs->GetNewId(dir, TYPE_FS_DIR);
 	return CELL_OK;
 }
 
@@ -263,9 +257,11 @@ s32 cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb)
 {
 	sys_fs->Log("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.GetAddr());
 
-	u32 attr;
+	IDType type;
 	vfsStream* file;
-	if(!sys_fs->CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
+	if(!sys_fs->CheckId(fd, file, type) || type != TYPE_FS_FILE) {
+		return CELL_ESRCH;
+	}
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -398,9 +394,11 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 	return CELL_EINVAL;
 	}
 
-	u32 attr;
+	IDType type;
 	vfsStream* file;
-	if(!sys_fs->CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
+	if (!sys_fs->CheckId(fd, file, type) || type != TYPE_FS_FILE) {
+		return CELL_ESRCH;
+	}
 	pos = file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
@@ -408,9 +406,12 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 s32 cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs->Log("cellFsFtruncate(fd=%d, size=%lld)", fd, size);
-	u32 attr;
+	
+	IDType type;
 	vfsStream* file;
-	if(!sys_fs->CheckId(fd, file, attr) || attr != IDFlag_File) return CELL_ESRCH;
+	if (!sys_fs->CheckId(fd, file, type) || type != TYPE_FS_FILE) {
+		return CELL_ESRCH;
+	}
 	u64 initialSize = file->GetSize();
 
 	if (initialSize < size)

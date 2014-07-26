@@ -128,7 +128,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
-	fd = sys_fs->GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), flags);
+	fd = sys_fs->GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);
 
 	return CELL_OK;*/
 

@@ -78,9 +78,9 @@ public:
 	}
 
 	template<typename T>
-	u32 GetNewId(T* data, u8 flags = 0)
+	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, flags);
+		return Emu.GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 };
 

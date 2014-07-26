@@ -25,7 +25,7 @@ s32 sys_prx_load_module(u32 path_addr, u64 flags, mem_ptr_t<sys_prx_load_module_
 
 	// Create the PRX object and return its id
 	sys_prx_t* prx = new sys_prx_t(prx_size, prx_address);
-	u32 id = sys_prx.GetNewId(prx);
+	u32 id = sys_prx.GetNewId(prx, TYPE_PRX);
 	return id;
 }
 
