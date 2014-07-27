@@ -117,9 +117,11 @@ void GLProgramBuffer::Clear()
 {
 	for(u32 i=0; i<m_buf.size(); ++i)
 	{
-		glDeleteProgram(m_buf[i].prog_id);
+		glDetachShader(m_buf[i].prog_id, m_buf[i].fp_id);
+		glDetachShader(m_buf[i].prog_id, m_buf[i].vp_id);
 		glDeleteShader(m_buf[i].fp_id);
 		glDeleteShader(m_buf[i].vp_id);
+		glDeleteProgram(m_buf[i].prog_id);
 
 		m_buf[i].fp_data.clear();
 		m_buf[i].vp_data.clear();
