@@ -917,6 +917,12 @@ void GLGSRender::ExecCMD()
 
 	InitDrawBuffers();
 
+	if (m_set_color_mask)
+	{
+		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
+		checkForGlError("glColorMask");
+	}
+
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
