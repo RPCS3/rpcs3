@@ -18,6 +18,11 @@ static func_caller *null_func = bind_func(default_syscall);
 
 static const int kSyscallTableLength = 1024;
 
+// UNS = Unused
+// ROOT = Root
+// DBG = Debug
+// PM = Product Mode
+// AuthID = Authentication ID
 static func_caller* sc_table[kSyscallTableLength] =
 {
 	null_func,
@@ -27,19 +32,17 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_process_get_status),                      //4   (0x004)  DBG
 	bind_func(sys_process_detach_child),                    //5   (0x005)  DBG
 
-	// Unused: 6-11
-	null_func, null_func, null_func, null_func, null_func, null_func,
+	null_func, null_func, null_func, null_func, null_func, null_func, //6-11  UNS
 
 	bind_func(sys_process_get_number_of_object),            //12  (0x00B)
 	bind_func(sys_process_get_id),                          //13  (0x00C)
 	null_func,//bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00D)
 
-	// Unused: 15-17
-	null_func, null_func, null_func,
+	null_func, null_func, null_func,                        //15-17  UNS
 	
 	bind_func(sys_process_getppid),                         //18  (0x012)
 	bind_func(sys_process_kill),                            //19  (0x013)
-	null_func,                                              //
+	null_func,                                              //20  (0x014)  UNS
 	null_func,//bind_func(_sys_process_spawn),              //21  (0x015)  DBG
 	bind_func(sys_process_exit),                            //22  (0x016)
 	bind_func(sys_process_wait_for_child2),                 //23  (0x017)  DBG
@@ -52,11 +55,10 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_process_get_paramsfo),                    //30  (0x01E)
 	null_func,//bind_func(sys_process_get_ppu_guid),        //31  (0x01F)
 	
-	// Unused: 32-40
-	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func,
+	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
 
-	bind_func(sys_internal_ppu_thread_exit),                      //41  (0x029)
-	null_func,                                              //
+	bind_func(sys_internal_ppu_thread_exit),                //41  (0x029)
+	null_func,                                              //42  (0x02A)  UNS
 	bind_func(sys_ppu_thread_yield),                        //43  (0x02B)
 	bind_func(sys_ppu_thread_join),                         //44  (0x02C)
 	bind_func(sys_ppu_thread_detach),                       //45  (0x02D)
@@ -68,15 +70,12 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_ppu_thread_restart),          //51  (0x033)  ROOT
 	null_func,//bind_func(sys_ppu_thread_create),           //52  (0x034)  DBG
 	null_func,//bind_func(sys_ppu_thread_start),            //53  (0x035)
-	null_func,//bind_func(),                                //54  (0x036)  ROOT
-	null_func,//bind_func(),                                //55  (0x037)  ROOT
+	null_func,//bind_func(sys_ppu_...),                     //54  (0x036)  ROOT
+	null_func,//bind_func(sys_ppu_...),                     //55  (0x037)  ROOT
 	null_func,//bind_func(sys_ppu_thread_rename),           //56  (0x038)
 	null_func,//bind_func(sys_ppu_thread_recover_page_fault)//57  (0x039)
 	null_func,//bind_func(sys_ppu_thread_get_page_fault_context),//58 (0x03A)
-	
-	// Unused: 59
-	null_func,
-
+	null_func,                                              //59  (0x03B)  UNS
 	bind_func(sys_trace_create),                            //60  (0x03C)
 	bind_func(sys_trace_start),                             //61  (0x03D)
 	bind_func(sys_trace_stop),                              //62  (0x03E)
@@ -95,11 +94,8 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_timer_connect_event_queue),               //75  (0x04B)
 	bind_func(sys_timer_disconnect_event_queue),            //76  (0x04C)
 	null_func,//bind_func(sys_trace_create2_in_cbepm),      //77  (0x04D)
-	null_func,//bind_func()                                 //78  (0x04E)
-
-	// Unused: 79
-	null_func,
-
+	null_func,//bind_func(sys_trace_...)                    //78  (0x04E)
+	null_func,                                              //79  (0x04F)  UNS
 	null_func,//bind_func(sys_interrupt_tag_create)         //80  (0x050)
 	bind_func(sys_interrupt_tag_destroy),                   //81  (0x051)
 	bind_func(sys_event_flag_create),                       //82  (0x052)
@@ -135,11 +131,11 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_lwcond_destroy)               //112 (0x070)
 	null_func,//bind_func(sys_lwcond_queue_wait)            //113 (0x071)
 	bind_func(sys_semaphore_get_value),                     //114 (0x072)
-	null_func,//bind_func()                                 //115 (0x073)
-	null_func,//bind_func()                                 //116 (0x074)
-	null_func,//bind_func()                                 //117 (0x075)
+	null_func,//bind_func(sys_semaphore_...)                //115 (0x073)
+	null_func,//bind_func(sys_semaphore_...)                //116 (0x074)
+	null_func,//bind_func(sys_semaphore_...)                //117 (0x075)
 	bind_func(sys_event_flag_clear),                        //118 (0x076)
-	null_func,//bind_func()                                 //119 (0x077)  ROOT
+	null_func,//bind_func(sys_event_...)                    //119 (0x077)  ROOT
 	bind_func(sys_rwlock_create),                           //120 (0x078)
 	bind_func(sys_rwlock_destroy),                          //121 (0x079)
 	bind_func(sys_rwlock_rlock),                            //122 (0x07A)
@@ -169,10 +165,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_time_get_system_time),        //146 (0x092)  ROOT
 	bind_func(sys_time_get_timebase_frequency),             //147 (0x093)
 	null_func,//bind_func(sys_rwlock_trywlock)              //148 (0x094)
-	
-	// Unused: 149
-	null_func,
-
+	null_func,                                              //149 (0x095)  UNS
 	bind_func(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	bind_func(sys_raw_spu_set_int_mask),                    //151 (0x097)
 	bind_func(sys_raw_spu_get_int_mask),                    //152 (0x098)
@@ -185,13 +178,13 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_raw_spu_load)                 //159 (0x09F)
 	bind_func(sys_raw_spu_create),                          //160 (0x0A0)
 	bind_func(sys_raw_spu_destroy),                         //161 (0x0A1)
-	null_func,                                              //
+	null_func,                                              //162 (0x0A2)  UNS
 	bind_func(sys_raw_spu_read_puint_mb),                   //163 (0x0A3)
-	null_func,                                              //
+	null_func,                                              //164 (0x0A4)  UNS
 	bind_func(sys_spu_thread_get_exit_status),              //165 (0x0A5)
 	bind_func(sys_spu_thread_set_argument),                 //166 (0x0A6)
 	null_func,//bind_func(sys_spu_thread_group_start_on_exit)//167(0x0A7)
-	null_func,                                              //
+	null_func,                                              //168 (0x0A8)  UNS
 	bind_func(sys_spu_initialize),                          //169 (0x0A9)
 	bind_func(sys_spu_thread_group_create),                 //170 (0x0AA)
 	bind_func(sys_spu_thread_group_destroy),                //171 (0x0AB)
@@ -206,54 +199,75 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_spu_thread_group_get_priority)//180 (0x0B4)
 	bind_func(sys_spu_thread_write_ls),                     //181 (0x0B5)
 	bind_func(sys_spu_thread_read_ls),                      //182 (0x0B6)
-	null_func,                                              //
+	null_func,                                              //183 (0x0B7)  UNS
 	bind_func(sys_spu_thread_write_snr),                    //184 (0x0B8)
 	bind_func(sys_spu_thread_group_connect_event),          //185 (0x0B9)
 	bind_func(sys_spu_thread_group_disconnect_event),       //186 (0x0BA)
 	bind_func(sys_spu_thread_set_spu_cfg),                  //187 (0x0BB)
 	bind_func(sys_spu_thread_get_spu_cfg),                  //188 (0x0BC)
-	null_func,                                              //
+	null_func,                                              //189 (0x0BD)  UNS
 	bind_func(sys_spu_thread_write_spu_mb),                 //190 (0x0BE)
 	bind_func(sys_spu_thread_connect_event),                //191 (0x0BF)
 	bind_func(sys_spu_thread_disconnect_event),             //192 (0x0C0)
 	bind_func(sys_spu_thread_bind_queue),                   //193 (0x0C1)
 	bind_func(sys_spu_thread_unbind_queue),                 //194 (0x0C2)
-	null_func,                                              //
+	null_func,                                              //195 (0x0C3)  UNS
 	bind_func(sys_raw_spu_set_spu_cfg),                     //196 (0x0C4)
 	bind_func(sys_raw_spu_get_spu_cfg),                     //197 (0x0C5)
 	null_func,//bind_func(sys_spu_thread_recover_page_fault)//198 (0x0C6)
 	null_func,//bind_func(sys_raw_spu_recover_page_fault)   //199 (0x0C7)
 
-	null_func, null_func, null_func, null_func, null_func, //204(0x104)
-	null_func, null_func, null_func, null_func, null_func, //209
-	null_func, null_func, null_func, null_func, null_func, //214
-	null_func, null_func, null_func, null_func, null_func, //219
-	null_func, null_func, null_func, null_func, null_func, //224
-	null_func, null_func, null_func, null_func, null_func, //229
-	null_func, null_func, null_func, null_func, null_func, //234
-	null_func, null_func, null_func, null_func, null_func, //239
-	null_func, null_func, null_func, null_func, null_func, //244
-	null_func, null_func, null_func, null_func, null_func, //249
-	null_func,                                             //250
+	null_func, null_func, null_func, null_func, null_func,  //204  UNS?
+	null_func, null_func, null_func, null_func, null_func,  //209  UNS?
+	null_func, null_func, null_func, null_func, null_func,  //214  UNS?
 
-	bind_func(sys_spu_thread_group_connect_event_all_threads),//251 (0x0FB)
-	bind_func(sys_spu_thread_group_disconnect_event_all_threads),//252 (0x0FC)
+	null_func,//bind_func(sys_dbg_mat_set_condition)        //215 (0x0D7)
+	null_func,//bind_func(sys_dbg_mat_get_condition)        //216 (0x0D8)
+	null_func,//bind_func(sys_dbg_...)                      //217 (0x0D9)  DBG  UNS?
+	null_func,//bind_func(sys_dbg_...)                      //218 (0x0DA)  DBG  UNS?
+	null_func,//bind_func(sys_dbg_...)                      //219 (0x0DB)  DBG  UNS?
+
+	null_func, null_func, null_func, null_func, null_func,  //224  UNS
+	null_func, null_func, null_func, null_func, null_func,  //229  UNS?
+
+	null_func,//bind_func(sys_isolated_spu_create)          //230 (0x0E6)  ROOT
+	null_func,//bind_func(sys_isolated_spu_destroy)         //231 (0x0E7)  ROOT
+	null_func,//bind_func(sys_isolated_spu_start)           //232 (0x0E8)  ROOT
+	null_func,//bind_func(sys_isolated_spu_create_interrupt_tag) //233 (0x0E9)  ROOT
+	null_func,//bind_func(sys_isolated_spu_set_int_mask)    //234 (0x0EA)  ROOT
+	null_func,//bind_func(sys_isolated_spu_get_int_mask)    //235 (0x0EB)  ROOT
+	null_func,//bind_func(sys_isolated_spu_set_int_stat)    //236 (0x0EC)  ROOT
+	null_func,//bind_func(sys_isolated_spu_get_int_stat)    //237 (0x0ED)  ROOT
+	null_func,//bind_func(sys_isolated_spu_set_spu_cfg)     //238 (0x0EE)  ROOT
+	null_func,//bind_func(sys_isolated_spu_get_spu_cfg)     //239 (0x0EF)  ROOT
+	null_func,//bind_func(sys_isolated_spu_read_puint_mb)   //240 (0x0F0)  ROOT
+	null_func,                                              //241 (0x0F1)  ROOT  UNS
+	null_func,                                              //242 (0x0F2)  ROOT  UNS
+	null_func,                                              //243 (0x0F3)  ROOT  UNS
+	null_func,//bind_func(sys_spu_thread_group_system_set_next_group) //244 (0x0F4)  ROOT
+	null_func,//bind_func(sys_spu_thread_group_system_unset_next_group) //245 (0x0F5)  ROOT
+	null_func,//bind_func(sys_spu_thread_group_system_set_switch_group) //246 (0x0F6)  ROOT
+	null_func,//bind_func(sys_spu_thread_group_system_unset_switch_group) //247 (0x0F7)  ROOT
+	null_func,//bind_func(sys_spu_thread_group...)          //248 (0x0F8)  ROOT
+	null_func,//bind_func(sys_spu_thread_group...)          //249 (0x0F9)  ROOT
+	null_func,//bind_func(sys_spu_thread_group_set_cooperative_victims) //250 (0x0FA)
+	bind_func(sys_spu_thread_group_connect_event_all_threads), //251 (0x0FB)
+	bind_func(sys_spu_thread_group_disconnect_event_all_threads), //252 (0x0FC)
 	null_func,//bind_func()                                 //253 (0x0FD)
 	null_func,//bind_func(sys_spu_thread_group_log)         //254 (0x0FE)
 
-	// Unused: 255-259
-	null_func, null_func, null_func, null_func, null_func,
+	null_func, null_func, null_func, null_func, null_func,  //255-259  UNS
 
 	null_func,//bind_func(sys_spu_image_open_by_fd)         //260 (0x104)
 	
-	null_func, null_func, null_func, null_func,            //264
-	null_func, null_func, null_func, null_func, null_func, //269
-	null_func, null_func, null_func, null_func, null_func, //274
-	null_func, null_func, null_func, null_func, null_func, //279
-	null_func, null_func, null_func, null_func, null_func, //284
-	null_func, null_func, null_func, null_func, null_func, //289
-	null_func, null_func, null_func, null_func, null_func, //294
-	null_func, null_func, null_func, null_func, null_func, //299
+	null_func, null_func, null_func, null_func,             //264  UNS
+	null_func, null_func, null_func, null_func, null_func,  //269  UNS
+	null_func, null_func, null_func, null_func, null_func,  //274  UNS
+	null_func, null_func, null_func, null_func, null_func,  //279  UNS
+	null_func, null_func, null_func, null_func, null_func,  //284  UNS
+	null_func, null_func, null_func, null_func, null_func,  //289  UNS
+	null_func, null_func, null_func, null_func, null_func,  //294  UNS
+	null_func, null_func, null_func, null_func, null_func,  //299  UNS
 
 	bind_func(sys_vm_memory_map),                           //300 (0x12C)
 	bind_func(sys_vm_unmap),                                //301 (0x12D)
@@ -268,18 +282,17 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_vm_sync),                                 //310 (0x136)
 	bind_func(sys_vm_test),                                 //311 (0x137)
 	bind_func(sys_vm_get_statistics),                       //312 (0x138)
-	null_func,//bind_func()                                 //313 (0x139)
-	null_func,//bind_func()                                 //314 (0x13A)
-	null_func,//bind_func()                                 //315 (0x13B)
+	null_func,//bind_func(sys_vm_memory_map (different))    //313 (0x139)
+	null_func,//bind_func(sys_...)                          //314 (0x13A)
+	null_func,//bind_func(sys_...)                          //315 (0x13B)
 	
-	// Unused: 316-323
-	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func,
+	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //316-323  UNS
 
-	bind_func(sys_memory_container_create),                 //324 (0x144)
-	bind_func(sys_memory_container_destroy),                //325 (0x145)
+	bind_func(sys_memory_container_create),                 //324 (0x144)  DBG
+	bind_func(sys_memory_container_destroy),                //325 (0x145)  DBG
 	bind_func(sys_mmapper_allocate_fixed_address),          //326 (0x146)
 	bind_func(sys_mmapper_enable_page_fault_notification),  //327 (0x147)
-	null_func,//bind_func()                                 //328 (0x148)
+	null_func,//bind_func(sys_mmapper_...)                  //328 (0x148)
 	null_func,//bind_func(sys_mmapper_free_shared_memory)   //329 (0x149)
 	bind_func(sys_mmapper_allocate_address),                //330 (0x14A)
 	bind_func(sys_mmapper_free_address),                    //331 (0x14B)
@@ -290,57 +303,121 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_mmapper_change_address_access_right),     //336 (0x150)
 	bind_func(sys_mmapper_search_and_map),                  //337 (0x151)
 	null_func,//bind_func(sys_mmapper_get_shared_memory_attribute) //338 (0x152)
-	null_func,//bind_func()                                 //339 (0x153)
-	null_func,//bind_func()                                 //340 (0x154)
+	null_func,//bind_func(sys_...)                          //339 (0x153)
+	null_func,//bind_func(sys_...)                          //340 (0x154)
 	bind_func(sys_memory_container_create),                 //341 (0x155)
 	bind_func(sys_memory_container_destroy),                //342 (0x156)
 	bind_func(sys_memory_container_get_size),               //343 (0x157)
 	null_func,//bind_func(sys_memory_budget_set)            //344 (0x158)
-	null_func,//bind_func()                                 //345 (0x159)
-	null_func,//bind_func()                                 //346 (0x15A)
-	null_func,                                              //
+	null_func,//bind_func(sys_memory_...)                   //345 (0x159)
+	null_func,//bind_func(sys_memory_...)                   //346 (0x15A)
+	null_func,                                              //347 (0x15B)  UNS
 	bind_func(sys_memory_allocate),                         //348 (0x15C)
 	bind_func(sys_memory_free),                             //349 (0x15D)
 	bind_func(sys_memory_allocate_from_container),          //350 (0x15E)
 	bind_func(sys_memory_get_page_attribute),               //351 (0x15F)
 	bind_func(sys_memory_get_user_memory_size),             //352 (0x160)
 	null_func,//bind_func(sys_memory_get_user_memory_stat)  //353 (0x161)
-	null_func,//bind_func()                                 //354 (0x162)
-	null_func,//bind_func()                                 //355 (0x163)
+	null_func,//bind_func(sys_memory_...)                   //354 (0x162)
+	null_func,//bind_func(sys_memory_...)                   //355 (0x163)
 	null_func,//bind_func(sys_memory_allocate_colored)      //356 (0x164)
-	null_func,//bind_func()                                 //357 (0x165)
-	null_func,//bind_func()                                 //358 (0x166)
-	null_func,//bind_func()                                 //359 (0x167)
-	null_func,//bind_func()                                 //360 (0x168)
+	null_func,//bind_func(sys_memory_...)                   //357 (0x165)
+	null_func,//bind_func(sys_memory_...)                   //358 (0x166)
+	null_func,//bind_func(sys_memory_...)                   //359 (0x167)
+	null_func,//bind_func(sys_memory_...)                   //360 (0x168)
 	null_func,//bind_func(sys_memory_allocate_from_container_colored) //361 (0x169)
 	null_func,//bind_func(sys_mmapper_allocate_memory_from_container) //362 (0x16A)
-	null_func,//bind_func()                                 //363 (0x16B)
-	null_func,//bind_func()                                 //364 (0x16C)
+	null_func,//bind_func(sys_mmapper_...)                  //363 (0x16B)
+	null_func,//bind_func(sys_mmapper_...)                  //364 (0x16C)
+	null_func,                                              //365 (0x16D)  UNS
+	null_func,                                              //366 (0x16E)  UNS
+	null_func,//bind_func(sys_uart_initialize)              //367 (0x16F)  ROOT
+	null_func,//bind_func(sys_uart_receive)                 //368 (0x170)  ROOT
+	null_func,//bind_func(sys_uart_send)                    //369 (0x171)  ROOT
+	null_func,//bind_func(sys_uart_get_params)              //370 (0x172)  ROOT
+	null_func,                                              //371 (0x173)  UNS
+	null_func,//bind_func(sys_game_watchdog_start)          //372 (0x174)
+	null_func,//bind_func(sys_game_watchdog_stop)           //373 (0x175)
+	null_func,//bind_func(sys_game_watchdog_clear)          //374 (0x176)
+	null_func,//bind_func(sys_game_set_system_sw_version)   //375 (0x177)  ROOT
+	null_func,//bind_func(sys_game_get_system_sw_version)   //376 (0x178)  ROOT
+	null_func,//bind_func(sys_sm_set_shop_mode)             //377 (0x179)  ROOT
+	null_func,//bind_func(sys_sm_get_ext_event2)            //378 (0x17A)  ROOT
+	null_func,//bind_func(sys_sm_shutdown)                  //379 (0x17B)  ROOT
+	null_func,//bind_func(sys_sm_get_params)                //380 (0x17C)  DBG
+	null_func,//bind_func(sys_sm_get_inter_lpar_parameter)  //381 (0x17D)  ROOT
+	null_func,//bind_func(sys_sm_)                          //382 (0x17E)  ROOT
+	null_func,//bind_func(sys_game_get_temperature)         //383 (0x17F)  ROOT
+	null_func,//bind_func(sys_sm_get_tzpb)                  //384 (0x180)  ROOT
+	null_func,//bind_func(sys_sm_request_led)               //385 (0x181)  ROOT
+	null_func,//bind_func(sys_sm_control_led)               //386 (0x182)  ROOT
+	null_func,//bind_func(sys_sm_get_platform_info)         //387 (0x183)  DBG
+	null_func,//bind_func(sys_sm_ring_buzzer)               //388 (0x184)  ROOT
+	null_func,//bind_func(sys_sm_set_fan_policy)            //389 (0x185)  PM
+	null_func,//bind_func(sys_sm_request_error_log)         //390 (0x186)  ROOT
+	null_func,//bind_func(sys_sm_request_be_count)          //391 (0x187)  ROOT
+	null_func,//bind_func(sys_sm_ring_buzzer)               //392 (0x188)  ROOT
+	null_func,//bind_func(sys_sm_get_hw_config)             //393 (0x189)  ROOT
+	null_func,//bind_func(sys_sm_request_scversion)         //394 (0x18A)  ROOT
+	null_func,//bind_func(sys_sm_request_system_event_log)  //395 (0x18B)  PM
+	null_func,//bind_func(sys_sm_set_rtc_alarm)             //396 (0x18C)  ROOT
+	null_func,//bind_func(sys_sm_get_rtc_alarm)             //397 (0x18D)  ROOT
+	null_func,//bind_func(sys_console_write)                //398 (0x18E)  ROOT
+	null_func,                                              //399 (0x18F)  UNS
+	null_func,//bind_func(sys_sm_...)                       //400 (0x190)  PM
+	null_func,//bind_func(sys_sm_...)                       //401 (0x191)  ROOT
+	bind_func(sys_tty_read),                                //402 (0x192)
+	bind_func(sys_tty_write),                               //403 (0x193)
+	null_func,//bind_func(sys_...)                          //404 (0x194)  ROOT
+	null_func,//bind_func(sys_...)                          //405 (0x195)  PM
+	null_func,//bind_func(sys_...)                          //406 (0x196)  PM
+	null_func,//bind_func(sys_...)                          //407 (0x197)  PM
+	null_func,//bind_func(sys_sm_get_tzpb)                  //408 (0x198)  PM
+	null_func,//bind_func(sys_sm_get_fan_policy)            //409 (0x199)  PM
+	null_func,//bind_func(sys_game_board_storage_read)      //410 (0x19A)
+	null_func,//bind_func(sys_game_board_storage_write)     //411 (0x19B)
+	null_func,//bind_func(sys_game_get_rtc_status)          //412 (0x19C)
+	null_func,//bind_func(sys_...)                          //413 (0x19D)  ROOT
+	null_func,//bind_func(sys_...)                          //414 (0x19E)  ROOT
+	null_func,//bind_func(sys_...)                          //415 (0x19F)  ROOT
 
+	null_func, null_func, null_func, null_func,             //419  UNS
+	null_func, null_func, null_func, null_func, null_func,  //424  UNS
+	null_func, null_func, null_func, null_func, null_func,  //429  UNS
+	null_func, null_func, null_func, null_func, null_func,  //434  UNS
+	null_func, null_func, null_func, null_func, null_func,  //439  UNS
+	null_func, null_func, null_func, null_func, null_func,  //444  UNS
+	null_func, null_func, null_func, null_func, null_func,  //449  UNS
 
-	null_func, null_func, null_func, null_func, null_func, //369
-	null_func, null_func, null_func, null_func, null_func, //374
-	null_func, null_func, null_func, null_func, null_func, //379
-	null_func, null_func, null_func, null_func, null_func, //384
-	null_func, null_func, null_func, null_func, null_func, //389
-	null_func, null_func, null_func, null_func, null_func, //394
-	null_func, null_func, null_func, null_func, null_func, //399
-	null_func, null_func, bind_func(sys_tty_read), bind_func(sys_tty_write), null_func, //404
-	null_func, null_func, null_func, null_func, null_func, //409
-	null_func, null_func, null_func, null_func, null_func, //414
-	null_func, null_func, null_func, null_func, null_func, //419
-	null_func, null_func, null_func, null_func, null_func, //424
-	null_func, null_func, null_func, null_func, null_func, //429
-	null_func, null_func, null_func, null_func, null_func, //434
-	null_func, null_func, null_func, null_func, null_func, //439
-	null_func, null_func, null_func, null_func, null_func, //444
-	null_func, null_func, null_func, null_func, null_func, //449
-	null_func, null_func, null_func, null_func, null_func, //454
-	null_func, null_func, null_func, null_func, null_func, //459
-	null_func, null_func, null_func, null_func, null_func, //464
-	null_func, null_func, null_func, null_func, null_func, //469
-	null_func, null_func, null_func, null_func, null_func, //474
-	null_func, null_func, null_func, null_func, null_func, //479
+	null_func,//bind_func(sys_overlay_load_module)          //450 (0x1C2)
+	null_func,//bind_func(sys_overlay_unload_module)        //451 (0x1C3)
+	null_func,//bind_func(sys_overlay_get_module_list)      //452 (0x1C4)
+	null_func,//bind_func(sys_overlay_get_module_info)      //453 (0x1C5)
+	null_func,//bind_func(sys_overlay_load_module_by_fd)    //454 (0x1C6)
+	null_func,//bind_func(sys_overlay_get_module_info2)     //455 (0x1C7)
+	null_func,//bind_func(sys_overlay_get_sdk_version)      //456 (0x1C8)
+	null_func,//bind_func(sys_overlay_get_module_dbg_info)  //457 (0x1C9)
+	null_func,//bind_func(sys_overlay_get_module_dbg_info)  //458 (0x1CA)
+	null_func,                                              //459 (0x1CB)  UNS
+	null_func,//bind_func(sys_prx_dbg_get_module_id_list)   //460 (0x1CC)  ROOT
+	null_func,//bind_func(sys_prx_get_module_id_by_address) //461 (0x1CD)
+	null_func,                                              //462 (0x1CE)  UNS
+	null_func,//bind_func(sys_prx_load_module_by_fd)        //463 (0x1CF)
+	null_func,//bind_func(sys_prx_load_module_on_memcontainer_by_fd) //464 (0x1D0)
+	null_func,//bind_func(sys_prx_load_module_list)         //465 (0x1D1)
+	null_func,//bind_func(sys_prx_load_module_list_on_memcontainer) //466 (0x1D2)
+	null_func,//bind_func(sys_prx_get_ppu_guid)             //467 (0x1D3)
+	null_func,//bind_func(sys_...)                          //468 (0x1D4)  ROOT
+	null_func,                                              //469 (0x1D5)  UNS
+	null_func,//bind_func(sys_...)                          //470 (0x1D6)  ROOT
+	null_func,//bind_func(sys_...)                          //471 (0x1D7)  ROOT
+	null_func,//bind_func(sys_...)                          //472 (0x1D8)  ROOT
+	null_func,//bind_func(sys_...)                          //473 (0x1D9)
+	null_func,//bind_func(sys_...)                          //474 (0x1DA)
+	null_func,//bind_func(sys_...)                          //475 (0x1DB)  ROOT
+	null_func,//bind_func(sys_...)                          //476 (0x1DC)  ROOT
+	
+	null_func, null_func, null_func,                        //477-479  UNS
 
 	null_func,//bind_func(sys_prx_load_module),             //480 (0x1E0)
 	null_func,//bind_func(sys_prx_start_module),            //481 (0x1E1)
@@ -353,50 +430,172 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_prx_link_library),                        //488 (0x1E8)
 	bind_func(sys_prx_unlink_library),                      //489 (0x1E9)
 	bind_func(sys_prx_query_library),                       //490 (0x1EA)
-	null_func,                                              //491 (0x1EB)
-	null_func,                                              //492 (0x1EC)
-	null_func,//sys_prx_dbg_get_module_info                 //493 (0x1ED)
+	null_func,                                              //491 (0x1EB)  UNS
+	null_func,//bind_func(sys_...)                          //492 (0x1EC)  DBG
+	null_func,//bind_func(sys_prx_dbg_get_module_info)      //493 (0x1ED)  DBG
 	null_func,//bind_func(sys_prx_get_module_list),         //494 (0x1EE)
 	null_func,//bind_func(sys_prx_get_module_info),         //495 (0x1EF)
 	null_func,//bind_func(sys_prx_get_module_id_by_name),   //496 (0x1F0)
 	null_func,//bind_func(sys_prx_load_module_on_memcontainer),//497 (0x1F1)
 	bind_func(sys_prx_start),                               //498 (0x1F2)
 	bind_func(sys_prx_stop),                                //499 (0x1F3)
+	null_func,//bind_func(sys_hid_manager_open)             //500 (0x1F4)
+	null_func,//bind_func(sys_hid_manager_close)            //501 (0x1F5)
+	null_func,//bind_func(sys_hid_manager_read)             //502 (0x1F6)  ROOT
+	null_func,//bind_func(sys_hid_manager_ioctl)            //503 (0x1F7)
+	null_func,//bind_func(sys_hid_manager_map_logical_id_to_port_id) //504 (0x1F8)  ROOT
+	null_func,//bind_func(sys_hid_manager_unmap_logical_id_to_port_id) //505 (0x1F9)  ROOT
+	null_func,//bind_func(sys_hid_manager_add_hot_key_observer) //506 (0x1FA)  ROOT
+	null_func,//bind_func(sys_hid_manager_remove_hot_key_observer) //507 (0x1FB)  ROOT
+	null_func,//bind_func(sys_hid_manager_grab_focus)       //508 (0x1FC)  ROOT
+	null_func,//bind_func(sys_hid_manager_release_focus)    //509 (0x1FD)  ROOT
+	null_func,//bind_func(sys_hid_manager_...)              //510 (0x1FE)
+	null_func,//bind_func(sys_hid_manager_set_...)          //511 (0x1FF)  ROOT
+	null_func,//bind_func(sys_hid_manager_...)              //512 (0x200)  ROOT
+	null_func,//bind_func(sys_hid_manager_...)              //513 (0x201)
+	null_func,//bind_func(sys_hid_manager_...)              //514 (0x202)
+	null_func,                                              //515 (0x203)  UNS
+	null_func,//bind_func(sys_config_open)                  //516 (0x204)
+	null_func,//bind_func(sys_config_close)                 //517 (0x205)
+	null_func,//bind_func(sys_config_get_service_event)     //518 (0x206)
+	null_func,//bind_func(sys_config_add_service_listener)  //519 (0x207)
+	null_func,//bind_func(sys_config_remove_service_listener) //520 (0x208)
+	null_func,//bind_func(sys_config_register_service)      //521 (0x209)
+	null_func,//bind_func(sys_config_unregister_service)    //522 (0x20A)
+	null_func,//bind_func(sys_config_io_event)              //523 (0x20B)
+	null_func,//bind_func(sys_config_...)                   //524 (0x20C)
+	null_func,//bind_func(sys_config_...)                   //525 (0x20D)
+	null_func,                                              //526 (0x20E)  UNS
+	null_func,                                              //527 (0x20F)  UNS
+	null_func,                                              //528 (0x210)  UNS
+	null_func,                                              //529 (0x211)  UNS
+	null_func,//bind_func(sys_usbd_initialize)              //530 (0x212)
+	null_func,//bind_func(sys_usbd_finalize)                //531 (0x213)
+	null_func,//bind_func(sys_usbd_get_device_list)         //532 (0x214)
+	null_func,//bind_func(sys_usbd_get_descriptor_size)     //533 (0x215)
+	null_func,//bind_func(sys_usbd_get_descriptor)          //534 (0x216)
+	null_func,//bind_func(sys_usbd_register_ldd)            //535 (0x217)
+	null_func,//bind_func(sys_usbd_unregister_ldd)          //536 (0x218)
+	null_func,//bind_func(sys_usbd_open_pipe)               //537 (0x219)
+	null_func,//bind_func(sys_usbd_open_default_pipe)       //538 (0x21A)
+	null_func,//bind_func(sys_usbd_close_pipe)              //539 (0x21B)
+	null_func,//bind_func(sys_usbd_receive_event)           //540 (0x21C)
+	null_func,//bind_func(sys_usbd_detect_event)            //541 (0x21D)
+	null_func,//bind_func(sys_usbd_attach)                  //542 (0x21E)
+	null_func,//bind_func(sys_usbd_transfer_data)           //543 (0x21F)
+	null_func,//bind_func(sys_usbd_isochronous_transfer_data) //544 (0x220)
+	null_func,//bind_func(sys_usbd_get_transfer_status)     //545 (0x221)
+	null_func,//bind_func(sys_usbd_get_isochronous_transfer_status) //546 (0x222)
+	null_func,//bind_func(sys_usbd_get_device_location)     //547 (0x223)
+	null_func,//bind_func(sys_usbd_send_event)              //548 (0x224)
+	null_func,//bind_func(sys_ubsd_...)                     //549 (0x225)
+	null_func,//bind_func(sys_usbd_allocate_memory)         //550 (0x226)
+	null_func,//bind_func(sys_usbd_free_memory)             //551 (0x227)
+	null_func,//bind_func(sys_ubsd_...)                     //552 (0x228)
+	null_func,//bind_func(sys_ubsd_...)                     //553 (0x229)
+	null_func,//bind_func(sys_ubsd_...)                     //554 (0x22A)
+	null_func,//bind_func(sys_ubsd_...)                     //555 (0x22B)
+	null_func,//bind_func(sys_usbd_get_device_speed)        //556 (0x22C)
+	null_func,//bind_func(sys_ubsd_...)                     //557 (0x22D)
+	null_func,//bind_func(sys_ubsd_...)                     //558 (0x22E)
+	null_func,//bind_func(sys_usbd_register_extra_ldd)      //559 (0x22F)
+	null_func,//bind_func(sys_...)                          //560 (0x230)  ROOT
+	null_func,//bind_func(sys_...)                          //561 (0x231)  ROOT
+	null_func,//bind_func(sys_...)                          //562 (0x232)  ROOT
+	null_func,//bind_func(sys_...)                          //563 (0x233)
+	null_func,//bind_func(sys_...)                          //564 (0x234)
+	null_func,//bind_func(sys_...)                          //565 (0x235)
+	null_func,//bind_func(sys_...)                          //566 (0x236)
+	null_func,//bind_func(sys_...)                          //567 (0x237)
+	null_func,//bind_func(sys_...)                          //568 (0x238)
+	null_func,//bind_func(sys_...)                          //569 (0x239)
+	null_func,//bind_func(sys_...)                          //570 (0x23A)
+	null_func,//bind_func(sys_pad_ldd_unregister_controller) //571 (0x23B)
+	null_func,//bind_func(sys_pad_ldd_data_insert)          //572 (0x23C)
+	null_func,//bind_func(sys_pad_dbg_ldd_set_data_insert_mode) //573 (0x23D)
+	null_func,//bind_func(sys_pad_ldd_register_controller)  //574 (0x23E)
+	null_func,//bind_func(sys_pad_ldd_get_port_no)          //575 (0x23F)
+	null_func,                                              //576 (0x240)  UNS
+	null_func,//bind_func(sys_pad_manager_...)              //577 (0x241)  ROOT  PM
+	null_func,//bind_func(sys_bluetooth_...)                //578 (0x242)
+	null_func,//bind_func(sys_bluetooth_...)                //579 (0x243)
+	null_func,//bind_func(sys_bluetooth_...)                //580 (0x244)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //581 (0x245)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //582 (0x246)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //583 (0x247)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //584 (0x248)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //585 (0x249)
+	null_func,//bind_func(sys_bluetooth_...)                //586 (0x24A)
+	null_func,//bind_func(sys_bluetooth_...)                //587 (0x24B)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //588 (0x24C)
+	null_func,//bind_func(sys_bluetooth_...)                //589 (0x24D)
+	null_func,//bind_func(sys_bluetooth_...)                //590 (0x24E)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //591 (0x24F)
+	null_func,//bind_func(sys_bluetooth_...)                //592 (0x250)
+	null_func,//bind_func(sys_bluetooth_...)                //593 (0x251)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //594 (0x252)
+	null_func,//bind_func(sys_bluetooth_...)                //595 (0x253)
+	null_func,//bind_func(sys_bluetooth_...)                //596 (0x254)
+	null_func,//bind_func(sys_bluetooth_...)                //597 (0x255)
+	null_func,//bind_func(sys_bluetooth_...)                //598 (0x256)  ROOT
+	null_func,//bind_func(sys_bluetooth_...)                //599 (0x257)  ROOT
+	null_func,//bind_func(sys_storage_open)                 //600 (0x258)  ROOT
+	null_func,//bind_func(sys_storage_close)                //601 (0x259)
+	null_func,//bind_func(sys_storage_read)                 //602 (0x25A)
+	null_func,//bind_func(sys_storage_write)                //603 (0x25B)
+	null_func,//bind_func(sys_storage_send_device_command)  //604 (0x25C)
+	null_func,//bind_func(sys_storage_async_configure)      //605 (0x25D)
+	null_func,//bind_func(sys_storage_async_read)           //606 (0x25E)
+	null_func,//bind_func(sys_storage_async_write)          //607 (0x25F)
+	null_func,//bind_func(sys_storage_async_cancel)         //608 (0x260)
+	null_func,//bind_func(sys_storage_get_device_info)      //609 (0x261)  ROOT
+	null_func,//bind_func(sys_storage_get_device_config)    //610 (0x262)  ROOT
+	null_func,//bind_func(sys_storage_report_devices)       //611 (0x263)  ROOT
+	null_func,//bind_func(sys_storage_configure_medium_event) //612 (0x264)  ROOT
+	null_func,//bind_func(sys_storage_set_medium_polling_interval) //613 (0x265)
+	null_func,//bind_func(sys_storage_create_region)        //614 (0x266)
+	null_func,//bind_func(sys_storage_delete_region)        //615 (0x267)
+	null_func,//bind_func(sys_storage_execute_device_command) //616 (0x268)
+	null_func,//bind_func(sys_storage_check_region_acl)     //617 (0x269)
+	null_func,//bind_func(sys_storage_set_region_acl)       //618 (0x26A)
+	null_func,//bind_func(sys_storage_async_send_device_command) //619 (0x26B)
+	null_func,//bind_func(sys_...)                          //620 (0x26C)  ROOT
+	null_func,//bind_func(sys_gamepad_ycon_if)              //621 (0x26D)
+	null_func,//bind_func(sys_storage_get_region_offset)    //622 (0x26E)
+	null_func,//bind_func(sys_storage_set_emulated_speed)   //623 (0x26F)
+	null_func,//bind_func(sys_io_buffer_create)             //624 (0x270)
+	null_func,//bind_func(sys_io_buffer_destroy)            //625 (0x271)
+	null_func,//bind_func(sys_io_buffer_allocate)           //626 (0x272)
+	null_func,//bind_func(sys_io_buffer_free)               //627 (0x273)
+	null_func,                                              //628 (0x274)  UNS
+	null_func,                                              //629 (0x275)  UNS
+	null_func,//bind_func(sys_gpio_set)                     //630 (0x276)
+	null_func,//bind_func(sys_gpio_get)                     //631 (0x277)
+	null_func,                                              //632 (0x278)  UNS
+	null_func,//bind_func(sys_fsw_connect_event)            //633 (0x279)
+	null_func,//bind_func(sys_fsw_disconnect_event)         //634 (0x27A)
+	null_func,//bind_func(sys_btsetting_if)                 //635 (0x27B)
+	null_func,//bind_func(sys_...)                          //636 (0x27C)
+	null_func,//bind_func(sys_...)                          //637 (0x27D)
+	null_func,//bind_func(sys_...)                          //638 (0x27E)
 
-	null_func, null_func, null_func, null_func, null_func, //504
-	null_func, null_func, null_func, null_func, null_func, //509
-	null_func, null_func, null_func, null_func, null_func, //514
-	null_func, null_func, null_func, null_func, null_func, //519
-	null_func, null_func, null_func, null_func, null_func, //524
-	null_func, null_func, null_func, null_func, null_func, //529
-	null_func, null_func, null_func, null_func, null_func, //534
-	null_func, null_func, null_func, null_func, null_func, //539
-	null_func, null_func, null_func, null_func, null_func, //544
-	null_func, null_func, null_func, null_func, null_func, //549
-	null_func, null_func, null_func, null_func, null_func, //554
-	null_func, null_func, null_func, null_func, null_func, //559
-	null_func, null_func, null_func, null_func, null_func, //564
-	null_func, null_func, null_func, null_func, null_func, //569
-	null_func, null_func, null_func, null_func, null_func, //574
-	null_func, null_func, null_func, null_func, null_func, //579
-	null_func, null_func, null_func, null_func, null_func, //584
-	null_func, null_func, null_func, null_func, null_func, //589
-	null_func, null_func, null_func, null_func, null_func, //594
-	null_func, null_func, null_func, null_func, null_func, //599
-	null_func, null_func, null_func, null_func, null_func, //604
-	null_func, null_func, null_func, null_func, null_func, //609
-	null_func, null_func, null_func, null_func, null_func, //614
-	null_func, null_func, null_func, null_func, null_func, //619
-	null_func, null_func, null_func, null_func, null_func, //624
-	null_func, null_func, null_func, null_func, null_func, //629
-	null_func, null_func, null_func, null_func, null_func, //634
-	null_func, null_func, null_func, null_func, null_func, //639
-	null_func, null_func, null_func, null_func, null_func, //644
-	null_func, null_func, null_func, null_func, null_func, //649
-	null_func, null_func, null_func, null_func, null_func, //654
-	null_func, null_func, null_func, null_func, null_func, //659
-	null_func, null_func, null_func, null_func, null_func, //664
-	null_func,                                             //665
+	null_func,                                              //639  DEPRECATED
+	null_func, null_func, null_func, null_func, null_func,  //644  DEPRECATED
+	null_func, null_func, null_func, null_func, null_func,  //649  DEPRECATED
+
+	null_func,//bind_func(sys_rsxaudio_initialize)          //650 (0x28A)
+	null_func,//bind_func(sys_rsxaudio_finalize)            //651 (0x28B)
+	null_func,//bind_func(sys_rsxaudio_import_shared_memory) //652 (0x28C)
+	null_func,//bind_func(sys_rsxaudio_unimport_shared_memory) //653 (0x28D)
+	null_func,//bind_func(sys_rsxaudio_create_connection)   //654 (0x28E)
+	null_func,//bind_func(sys_rsxaudio_close_connection)    //655 (0x28F)
+	null_func,//bind_func(sys_rsxaudio_prepare_process)     //656 (0x290)
+	null_func,//bind_func(sys_rsxaudio_start_process)       //657 (0x291)
+	null_func,//bind_func(sys_rsxaudio_)                    //658 (0x292)
+	null_func,//bind_func(sys_rsxaudio_)                    //659 (0x293)
+
+	null_func, null_func, null_func, null_func, null_func,  //664  UNS
+	null_func,                                              //665  UNS
 
 	bind_func(sys_rsx_device_open),                         //666 (0x29A)
 	bind_func(sys_rsx_device_close),                        //667 (0x29B)
@@ -410,33 +609,71 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_rsx_device_map),                          //675 (0x2A3)
 	bind_func(sys_rsx_device_unmap),                        //676 (0x2A4)
 	bind_func(sys_rsx_attribute),                           //677 (0x2A5)
-	null_func,                                              //678 (0x2A6)
-	null_func,                                              //679 (0x2A7)  ROOT
+	null_func,//bind_func(sys_...)                          //678 (0x2A6)
+	null_func,//bind_func(sys_...)                          //679 (0x2A7)  ROOT
+	null_func,//bind_func(sys_...)                          //680 (0x2A8)  ROOT
+	null_func,//bind_func(sys_...)                          //681 (0x2A9)  ROOT
+	null_func,//bind_func(sys_...)                          //682 (0x2AA)  ROOT
+	null_func,//bind_func(sys_...)                          //683 (0x2AB)  ROOT
+	null_func,//bind_func(sys_...)                          //684 (0x2AC)  ROOT
+	null_func,//bind_func(sys_...)                          //685 (0x2AD)  ROOT
+	null_func,//bind_func(sys_...)                          //686 (0x2AE)  ROOT
+	null_func,//bind_func(sys_...)                          //687 (0x2AF)  ROOT
+	null_func,//bind_func(sys_...)                          //688 (0x2B0)  ROOT
+	null_func,//bind_func(sys_...)                          //689 (0x2B1)  ROOT
+	null_func,//bind_func(sys_...)                          //690 (0x2B2)  ROOT
+	null_func,//bind_func(sys_...)                          //691 (0x2B3)  ROOT
+	null_func,//bind_func(sys_...)                          //692 (0x2B4)  ROOT
+	null_func,//bind_func(sys_...)                          //693 (0x2B5)  ROOT
+	null_func,//bind_func(sys_...)                          //694 (0x2B6)  DEPRECATED
+	null_func,//bind_func(sys_...)                          //695 (0x2B7)  DEPRECATED
+	null_func,//bind_func(sys_...)                          //696 (0x2B8)  ROOT
+	null_func,//bind_func(sys_...)                          //697 (0x2B9)  UNS
+	null_func,//bind_func(sys_...)                          //698 (0x2BA)  UNS
+	null_func,//bind_func(sys_bdemu_send_command)           //699 (0x2BB)
+	null_func,//bind_func(sys_net_bnet_accept)              //700 (0x2BC)
+	null_func,//bind_func(sys_net_bnet_bind)                //701 (0x2BD)
+	null_func,//bind_func(sys_net_bnet_connect)             //702 (0x2BE)
+	null_func,//bind_func(sys_net_bnet_getpeername)         //703 (0x2BF)
+	null_func,//bind_func(sys_net_bnet_getsockname)         //704 (0x2C0)
+	null_func,//bind_func(sys_net_bnet_getsockopt)          //705 (0x2C1)
+	null_func,//bind_func(sys_net_bnet_listen)              //706 (0x2C2)
+	null_func,//bind_func(sys_net_bnet_recvfrom)            //707 (0x2C3)
+	null_func,//bind_func(sys_net_bnet_recvmsg)             //708 (0x2C4)
+	null_func,//bind_func(sys_net_bnet_sendmsg)             //709 (0x2C5)
+	null_func,//bind_func(sys_net_bnet_sendto)              //710 (0x2C6)
+	null_func,//bind_func(sys_net_bnet_setsockop)           //711 (0x2C7)
+	null_func,//bind_func(sys_net_bnet_shutdown)            //712 (0x2C8)
+	null_func,//bind_func(sys_net_bnet_socket)              //713 (0x2C9)
+	null_func,//bind_func(sys_net_bnet_close)               //714 (0x2CA)
+	null_func,//bind_func(sys_net_bnet_poll)                //715 (0x2CB)
+	null_func,//bind_func(sys_net_bnet_select)              //716 (0x2CC)
+	null_func,//bind_func(sys_net_open_dump)                //717 (0x2CD)
+	null_func,//bind_func(sys_net_read_dump)                //718 (0x2CE)
+	null_func,//bind_func(sys_net_close_dump)               //719 (0x2CF)
+	null_func,//bind_func(sys_net_write_dump)               //720 (0x2D0)
+	null_func,//bind_func(sys_net_abort)                    //721 (0x2D1)
+	null_func,//bind_func(sys_net_infoctl)                  //722 (0x2D2)
+	null_func,//bind_func(sys_net_control)                  //723 (0x2D3)
+	null_func,//bind_func(sys_net_bnet_ioctl)               //724 (0x2D4)
+	null_func,//bind_func(sys_net_bnet_sysctl)              //725 (0x2D5)
+	null_func,//bind_func(sys_net_eurus_post_command)       //726 (0x2D6)
 
-	null_func, null_func, null_func, null_func, null_func, //684
-	null_func, null_func, null_func, null_func, null_func, //689
-	null_func, null_func, null_func, null_func, null_func, //694
-	null_func, null_func, null_func, null_func, null_func, //699
-	null_func, null_func, null_func, null_func, null_func, //704
-	null_func, null_func, null_func, null_func, null_func, //709
-	null_func, null_func, null_func, null_func, null_func, //714
-	null_func, null_func, null_func, null_func, null_func, //719
-	null_func, null_func, null_func, null_func, null_func, //724
-	null_func, null_func, null_func, null_func, null_func, //729
-	null_func, null_func, null_func, null_func, null_func, //734
-	null_func, null_func, null_func, null_func, null_func, //739
-	null_func, null_func, null_func, null_func, null_func, //744
-	null_func, null_func, null_func, null_func, null_func, //749
-	null_func, null_func, null_func, null_func, null_func, //754
-	null_func, null_func, null_func, null_func, null_func, //759
-	null_func, null_func, null_func, null_func, null_func, //764
-	null_func, null_func, null_func, null_func, null_func, //769
-	null_func, null_func, null_func, null_func, null_func, //774
-	null_func, null_func, null_func, null_func, null_func, //779
-	null_func, null_func, null_func, null_func, null_func, //784
-	null_func, null_func, null_func, null_func, null_func, //789
-	null_func, null_func, null_func, null_func, null_func, //794
-	null_func, null_func, null_func, null_func, null_func, //799
+	null_func, null_func, null_func,                        //729  UNS
+	null_func, null_func, null_func, null_func, null_func,  //734  UNS
+	null_func, null_func, null_func, null_func, null_func,  //739  UNS
+	null_func, null_func, null_func, null_func, null_func,  //744  UNS
+	null_func, null_func, null_func, null_func, null_func,  //749  UNS
+	null_func, null_func, null_func, null_func, null_func,  //754  UNS
+	null_func, null_func, null_func, null_func, null_func,  //759  UNS
+	null_func, null_func, null_func, null_func, null_func,  //764  UNS
+	null_func, null_func, null_func, null_func, null_func,  //769  UNS
+	null_func, null_func, null_func, null_func, null_func,  //774  UNS
+	null_func, null_func, null_func, null_func, null_func,  //779  UNS
+	null_func, null_func, null_func, null_func, null_func,  //784  UNS
+	null_func, null_func, null_func, null_func, null_func,  //789  UNS
+	null_func, null_func, null_func, null_func, null_func,  //794  UNS
+	null_func, null_func, null_func, null_func, null_func,  //799  UNS
 
 	null_func,//bind_func(sys_fs_test),                     //800 (0x320)
 	bind_func(cellFsOpen),                                  //801 (0x321)
@@ -487,42 +724,148 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_fs_mapped_free),              //846 (0x34E)
 	null_func,//bind_func(sys_fs_truncate2),                //847 (0x34F)
 	
-	null_func, null_func, //849
-	null_func, null_func, null_func, null_func, null_func, //854
-	null_func, null_func, null_func, null_func, null_func, //859
-	null_func, null_func, null_func, null_func, null_func, //864
-	null_func, null_func, null_func, null_func, null_func, //869
-	null_func, null_func, null_func, null_func, null_func, //874
-	null_func, null_func, null_func, null_func, null_func, //879
-	null_func, null_func, null_func, null_func, null_func, //884
-	null_func, null_func, null_func, null_func, null_func, //889
-	null_func, null_func, null_func, null_func, null_func, //894
-	null_func, null_func, null_func, null_func, null_func, //899
-	null_func, null_func, null_func, null_func, null_func, //904
-	null_func, null_func, null_func, null_func, null_func, //909
-	null_func, null_func, null_func, null_func, null_func, //914
-	null_func, null_func, null_func, null_func, null_func, //919
-	null_func, null_func, null_func, null_func, null_func, //924
-	null_func, null_func, null_func, null_func, null_func, //929
-	null_func, null_func, null_func, null_func, null_func, //934
-	null_func, null_func, null_func, null_func, null_func, //939
-	null_func, null_func, null_func, null_func, null_func, //944
-	null_func, null_func, null_func, null_func, null_func, //949
-	null_func, null_func, null_func, null_func, null_func, //954
-	null_func, null_func, null_func, null_func, null_func, //959
-	null_func, null_func, null_func, null_func, null_func, //964
-	null_func, null_func, null_func, null_func, null_func, //969
-	null_func, null_func, null_func, null_func, null_func, //974
-	null_func, null_func, null_func, null_func, null_func, //979
-	null_func, null_func, null_func, null_func, null_func, //984
-	null_func, null_func, null_func, null_func, null_func, //989
-	null_func, null_func, null_func, null_func, null_func, //994
-	null_func, null_func, null_func, null_func, null_func, //999
-	null_func, null_func, null_func, null_func, null_func, //1004
-	null_func, null_func, null_func, null_func, null_func, //1009
-	null_func, null_func, null_func, null_func, null_func, //1014
-	null_func, null_func, null_func, null_func, null_func, //1019
-	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023
+	null_func, null_func,                                   //849  UNS
+	null_func, null_func, null_func, null_func, null_func,  //854  UNS
+	null_func, null_func, null_func, null_func, null_func,  //859  UNS
+	
+	null_func,//bind_func(syscall_sys_ss_get_cache_of_analog_sunset_flag), //860 (0x35C)  AUTHID
+	null_func,//bind_func(syscall_...)                      //861  ROOT
+	null_func,//bind_func(syscall_...)                      //862  ROOT
+	null_func,//bind_func(syscall_...)                      //863  ROOT
+	null_func,//bind_func(syscall_...)                      //864  DBG
+	null_func,//bind_func(sys_ss_random_number_generator),  //865 (0x361)  ROOT  AUTHID
+	null_func,//bind_func(sys_...)                          //866  ROOT
+	null_func,//bind_func(sys_...)                          //867  ROOT
+	null_func,//bind_func(sys_...)                          //868  ROOT / DBG  AUTHID
+	null_func,//bind_func(sys_...)                          //869  ROOT
+	null_func,//bind_func(sys_ss_get_console_id),           //870 (0x366)
+	null_func,//bind_func(sys_ss_access_control_engine),    //871 (0x367)  DBG
+	null_func,//bind_func(sys_ss_get_open_psid),            //872 (0x368)
+	null_func,//bind_func(sys_ss_get_cache_of_product_mode), //873 (0x369)
+	null_func,//bind_func(sys_ss_get_cache_of_flash_ext_flag), //874 (0x36A)
+	null_func,//bind_func(sys_ss_get_boot_device)           //875 (0x36B)
+	null_func,//bind_func(sys_ss_disc_access_control)       //876 (0x36C)
+	null_func,//bind_func(sys_ss_~utoken_if)                //877 (0x36D)  ROOT
+	null_func,//bind_func(sys_ss_ad_sign)                   //878 (0x36E)
+	null_func,//bind_func(sys_ss_media_id)                  //879 (0x36F)
+	null_func,//bind_func(sys_deci3_open)                   //880 (0x370)
+	null_func,//bind_func(sys_deci3_create_event_path)      //881 (0x371)
+	null_func,//bind_func(sys_deci3_close)                  //882 (0x372)
+	null_func,//bind_func(sys_deci3_send)                   //883 (0x373)
+	null_func,//bind_func(sys_deci3_receive)                //884 (0x374)
+	null_func,//bind_func(sys_deci3_open2)                  //885 (0x375)
+	null_func,                                              //886 (0x376)  UNS
+	null_func,                                              //887 (0x377)  UNS
+	null_func,                                              //888 (0x378)  UNS
+	null_func,//bind_func(sys_...)                          //889 (0x379)  ROOT
+	null_func,//bind_func(sys_deci3_initialize)             //890 (0x37A)
+	null_func,//bind_func(sys_deci3_terminate)              //891 (0x37B)
+	null_func,//bind_func(sys_deci3_debug_mode)             //892 (0x37C)
+	null_func,//bind_func(sys_deci3_show_status)            //893 (0x37D)
+	null_func,//bind_func(sys_deci3_echo_test)              //894 (0x37E)
+	null_func,//bind_func(sys_deci3_send_dcmp_packet)       //895 (0x37F)
+	null_func,//bind_func(sys_deci3_dump_cp_register)	    //896 (0x380)
+	null_func,//bind_func(sys_deci3_dump_cp_buffer)         //897 (0x381)
+	null_func,                                              //898 (0x382)  UNS
+	null_func,//bind_func(sys_deci3_test)                   //899 (0x383)
+	null_func,//bind_func(sys_dbg_stop_processes)           //900 (0x384)
+	null_func,//bind_func(sys_dbg_continue_processes)       //901 (0x385)
+	null_func,//bind_func(sys_dbg_stop_threads)             //902 (0x386)
+	null_func,//bind_func(sys_dbg_continue_threads)         //903 (0x387)
+	null_func,//bind_func(sys_dbg_read_process_memory)      //904 (0x388)
+	null_func,//bind_func(sys_dbg_write_process_memory)     //905 (0x389)
+	null_func,//bind_func(sys_dbg_read_thread_register)     //906 (0x38A)
+	null_func,//bind_func(sys_dbg_write_thread_register)    //907 (0x38B)
+	null_func,//bind_func(sys_dbg_get_process_list)         //908 (0x38C)
+	null_func,//bind_func(sys_dbg_get_thread_list)          //909 (0x38D)
+	null_func,//bind_func(sys_dbg_get_thread_info)          //910 (0x38E)
+	null_func,//bind_func(sys_dbg_spu_thread_read_from_ls)  //911 (0x38F)
+	null_func,//bind_func(sys_dbg_spu_thread_write_to_ls)   //912 (0x390)
+	null_func,//bind_func(sys_dbg_kill_process)             //913 (0x391)
+	null_func,//bind_func(sys_dbg_get_process_info)         //914 (0x392)
+	null_func,//bind_func(sys_dbg_set_run_control_bit_to_spu) //915 (0x393)
+	null_func,//bind_func(sys_dbg_spu_thread_get_exception_cause) //916 (0x394)
+	null_func,//bind_func(sys_dbg_create_kernel_event_queue) //917 (0x395)
+	null_func,//bind_func(sys_dbg_read_kernel_event_queue)  //918 (0x396)
+	null_func,//bind_func(sys_dbg_destroy_kernel_event_queue) //919 (0x397)
+	null_func,//bind_func(sys_dbg_get_process_event_ctrl_flag) //920 (0x398)
+	null_func,//bind_func(sys_dbg_set_process_event_cntl_flag) //921 (0x399)
+	null_func,//bind_func(sys_dbg_get_spu_thread_group_event_cntl_flag) //922 (0x39A)
+	null_func,//bind_func(sys_dbg_set_spu_thread_group_event_cntl_flag) //923 (0x39B)
+	null_func,//bind_func(sys_...)                          //924 (0x39C)
+	null_func,//bind_func(sys_dbg_get_raw_spu_list)         //925 (0x39D)
+	null_func,//bind_func(sys_...)                          //926 (0x39E)
+	null_func,//bind_func(sys_...)                          //927 (0x3A0)
+	null_func,//bind_func(sys_...)                          //928 (0x3A1)
+	null_func,//bind_func(sys_...)                          //929 (0x3A2)
+	null_func,//bind_func(sys_...)                          //930 (0x3A3)
+	null_func,//bind_func(sys_...)                          //931 (0x3A4)
+	null_func,//bind_func(sys_dbg_get_mutex_list)           //932 (0x3A4)
+	null_func,//bind_func(sys_dbg_get_mutex_information)    //933 (0x3A5)
+	null_func,//bind_func(sys_dbg_get_cond_list)            //934 (0x3A6)
+	null_func,//bind_func(sys_dbg_get_cond_information)     //935 (0x3A7)
+	null_func,//bind_func(sys_dbg_get_rwlock_list)          //936 (0x3A8)
+	null_func,//bind_func(sys_dbg_get_rwlock_information)   //937 (0x3A9)
+	null_func,//bind_func(sys_dbg_get_lwmutex_list)         //938 (0x3AA)
+	null_func,//bind_func(sys_dbg_get_address_from_dabr)    //939 (0x3AB)
+	null_func,//bind_func(sys_dbg_set_address_to_dabr)      //940 (0x3AC)
+	null_func,//bind_func(sys_dbg_get_lwmutex_information)  //941 (0x3AD)
+	null_func,//bind_func(sys_dbg_get_event_queue_list)     //942 (0x3AE)
+	null_func,//bind_func(sys_dbg_get_event_queue_information) //943 (0x3AF)
+	null_func,//bind_func(sys_dbg_initialize_ppu_exception_handler) //944 (0x3B0)
+	null_func,//bind_func(sys_dbg_finalize_ppu_exception_handler) //945 (0x3B1)  DBG
+	null_func,//bind_func(sys_dbg_get_semaphore_list)       //946 (0x3B2)
+	null_func,//bind_func(sys_dbg_get_semaphore_information) //947 (0x3B3)
+	null_func,//bind_func(sys_dbg_get_kernel_thread_list)   //948 (0x3B4)
+	null_func,//bind_func(sys_dbg_get_kernel_thread_info)   //949 (0x3B5)
+	null_func,//bind_func(sys_dbg_get_lwcond_list)          //950 (0x3B6)
+	null_func,//bind_func(sys_dbg_get_lwcond_information)   //951 (0x3B7)
+	null_func,//bind_func(sys_dbg_create_scratch_data_area_ext) //952 (0x3B8)
+	null_func,//bind_func(sys_dbg_vm_get_page_information)  //953 (0x3B9)
+	null_func,//bind_func(sys_dbg_vm_get_info)              //954 (0x3BA)
+	null_func,//bind_func(sys_dbg_enable_floating_point_enabled_exception) //955 (0x3BB)
+	null_func,//bind_func(sys_dbg_disable_floating_point_enabled_exception) //956 (0x3BC)
+	null_func,//bind_func(sys_dbg_...)                      //957 (0x3BD)  DBG
+	null_func,                                              //958 (0x3BE)  UNS
+	null_func,//bind_func(sys_dbg_...)                      //959 (0x3BF)
+	null_func,//bind_func(sys_dbg_perfomance_monitor)       //960 (0x3C0)
+	null_func,//bind_func(sys_dbg_...)                      //961 (0x3C1)
+	null_func,//bind_func(sys_dbg_...)                      //962 (0x3C2)
+	null_func,//bind_func(sys_dbg_...)                      //963 (0x3C3)
+	null_func,//bind_func(sys_dbg_...)                      //964 (0x3C4)
+	null_func,//bind_func(sys_dbg_...)                      //965 (0x3C5)
+	null_func,//bind_func(sys_dbg_...)                      //966 (0x3C6)
+	null_func,//bind_func(sys_dbg_...)                      //967 (0x3C7)
+	null_func,//bind_func(sys_dbg_...)                      //968 (0x3C8)
+	null_func,//bind_func(sys_dbg_...)                      //969 (0x3C9)
+	null_func,//bind_func(sys_dbg_get_event_flag_list)      //970 (0x3CA)
+	null_func,//bind_func(sys_dbg_get_event_flag_information) //971 (0x3CB)
+	null_func,//bind_func(sys_dbg_...)                      //972 (0x3CC)
+	null_func,//bind_func(sys_dbg_...)                      //973 (0x3CD)
+	null_func,//bind_func(sys_dbg_...)                      //974 (0x3CE)
+	null_func,//bind_func(sys_dbg_read_spu_thread_context2) //975 (0x3CF)
+	null_func,//bind_func(sys_dbg_...)                      //976 (0x3D0)
+	null_func,//bind_func(sys_dbg_...)                      //977 (0x3D1)
+	null_func,//bind_func(sys_dbg_...)                      //978 (0x3D2)  ROOT
+	null_func,//bind_func(sys_dbg_...)                      //979 (0x3D3)
+	null_func,//bind_func(sys_dbg_...)                      //980 (0x3D4)
+	null_func,//bind_func(sys_dbg_...)                      //981 (0x3D5)  ROOT
+	null_func,//bind_func(sys_dbg_...)                      //982 (0x3D6)
+	null_func,//bind_func(sys_dbg_...)                      //983 (0x3D7)
+	null_func,//bind_func(sys_dbg_...)                      //984 (0x3D8)
+	null_func,//bind_func(sys_dbg_get_console_type)         //985 (0x3D9)  ROOT
+	null_func,//bind_func(sys_dbg_...)                      //986 (0x3DA)  ROOT  DBG
+	null_func,//bind_func(sys_dbg_...)                      //987 (0x3DB)  ROOT
+	null_func,//bind_func(sys_dbg_..._ppu_exception_handler) //988 (0x3DC)
+	null_func,//bind_func(sys_dbg_...)                      //989 (0x3DD)
+
+	null_func, null_func, null_func, null_func, null_func,  //994  UNS
+	null_func, null_func, null_func, null_func, null_func,  //999  UNS
+	null_func, null_func, null_func, null_func, null_func,  //1004  UNS
+	null_func, null_func, null_func, null_func, null_func,  //1009  UNS
+	null_func, null_func, null_func, null_func, null_func,  //1014  UNS
+	null_func, null_func, null_func, null_func, null_func,  //1019  UNS
+	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023  UNS
 };
 
 /** HACK: Used to delete func_caller objects that get allocated and stored in sc_table (above).
