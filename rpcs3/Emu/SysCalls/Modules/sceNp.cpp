@@ -2257,13 +2257,17 @@ int sceNpUtilBandwidthTestGetStatus()
 	return CELL_OK;
 }
 
-
 int sceNpUtilBandwidthTestAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
+int sceNpSignalingDestroyCtx()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
 
 void sceNp_init()
 {
@@ -2632,4 +2636,5 @@ void sceNp_init()
 	sceNp->AddFunc(0xc2ced2b7, sceNpUtilBandwidthTestInitStart);
 	sceNp->AddFunc(0xc880f37d, sceNpUtilBandwidthTestGetStatus);
 	sceNp->AddFunc(0xc99ee313, sceNpUtilBandwidthTestAbort);
+	sceNp->AddFunc(0xa8cf8451, sceNpSignalingDestroyCtx);
 }
