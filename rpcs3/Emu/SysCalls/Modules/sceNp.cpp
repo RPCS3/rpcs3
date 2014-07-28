@@ -142,602 +142,602 @@ int sceNpBasicSendMessageGui()
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetResult()
+int sceNpMatchingGetResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendListEntry()
+int sceNpBasicGetFriendListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreRecordGameData()
+int sceNpScoreRecordGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetDataFlagAbort()
+int sceNpCommerceGetDataFlagAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMatchingInvitationEntry()
+int sceNpBasicGetMatchingInvitationEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByNpId()
+int sceNpScoreGetRankingByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetTicket()
+int sceNpManagerGetTicket()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingQuickMatchGUI()
+int sceNpMatchingQuickMatchGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetConnectionInfo()
+int sceNpSignalingGetConnectionInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupNpId()
+int sceNpLookupNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreRecordScore()
+int sceNpScoreRecordScore()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicAddPlayersHistory()
+int sceNpBasicAddPlayersHistory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetAccountAge()
+int sceNpManagerGetAccountAge()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetPsHandle()
+int sceNpManagerGetPsHandle()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreWaitAsync()
+int sceNpScoreWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuUserData()
+int sceNpCommerceGetSkuUserData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicAddBlockListEntry()
+int sceNpBasicAddBlockListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupUserProfileWithAvatarSizeAsync()
+int sceNpLookupUserProfileWithAvatarSizeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByRangeAsync()
+int sceNpScoreGetRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansRankingByClanIdAsync()
+int sceNpScoreGetClansRankingByClanIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreDestroyTitleCtx()
+int sceNpScoreDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendPresenceByNpId2()
+int sceNpBasicGetFriendPresenceByNpId2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetCtxOpt()
+int sceNpSignalingGetCtxOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetResultGUI()
+int sceNpMatchingGetResultGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductCategoryStart()
+int sceNpCommerceGetProductCategoryStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreSetPlayerCharacterId()
+int sceNpScoreSetPlayerCharacterId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingSetCtxOpt()
+int sceNpSignalingSetCtxOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicAddFriend()
+int sceNpBasicAddFriend()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreSetTimeout()
+int sceNpScoreSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansRankingByClanId()
+int sceNpScoreGetClansRankingByClanId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingAcceptInvitationGUI()
+int sceNpMatchingAcceptInvitationGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetNumOfChildCategory()
+int sceNpCommerceGetNumOfChildCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreSanitizeCommentAsync()
+int sceNpScoreSanitizeCommentAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingDestroyCtx()
+int sceNpMatchingDestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpProfileAbortGui()
+int sceNpProfileAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupUserProfileWithAvatarSize()
+int sceNpLookupUserProfileWithAvatarSize()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMessageEntry()
+int sceNpBasicGetMessageEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetMyLanguages()
+int sceNpManagerGetMyLanguages()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendPresenceByIndex()
+int sceNpBasicGetFriendPresenceByIndex()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreInit()
+int sceNpScoreInit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingSearchJoinRoomGUI()
+int sceNpMatchingSearchJoinRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingKickRoomMember()
+int sceNpMatchingKickRoomMember()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetConnectionFromPeerAddress()
+int sceNpSignalingGetConnectionFromPeerAddress()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCategoryDescription()
+int sceNpCommerceGetCategoryDescription()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetAvatarUrl()
+int sceNpManagerGetAvatarUrl()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuId()
+int sceNpCommerceGetSkuId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetGameData()
+int sceNpScoreGetGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingCreateRoomGUI()
+int sceNpMatchingCreateRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupAbortTransaction()
+int sceNpLookupAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByNpIdAsync()
+int sceNpScoreGetRankingByNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicSetPresence()
+int sceNpBasicSetPresence()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductCategoryResult()
+int sceNpCommerceGetProductCategoryResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicRegisterContextSensitiveHandler()
+int sceNpBasicRegisterContextSensitiveHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByNpIdPcId()
+int sceNpScoreGetClansMembersRankingByNpIdPcId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByNpIdPcIdAsync()
+int sceNpScoreGetClansMembersRankingByNpIdPcIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicSendMessageAttachment()
+int sceNpBasicSendMessageAttachment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerSubSignin()
+int sceNpManagerSubSignin()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCustomMenuRegisterActions()
+int sceNpCustomMenuRegisterActions()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingJoinRoomGUI()
+int sceNpMatchingJoinRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicAbortGui()
+int sceNpBasicAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingSetRoomInfoNoLimit()
+int sceNpMatchingSetRoomInfoNoLimit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetCachedInfo()
+int sceNpManagerGetCachedInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByRangeAsync()
+int sceNpScoreGetClansMembersRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetClanMessageEntry()
+int sceNpBasicGetClanMessageEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingAddExtendedHandler()
+int sceNpSignalingAddExtendedHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerUnregisterCallback()
+int sceNpManagerUnregisterCallback()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetTicketParam()
+int sceNpManagerGetTicketParam()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMessageAttachmentEntry()
+int sceNpBasicGetMessageAttachmentEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupDestroyTitleCtx()
+int sceNpLookupDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupTitleStorageAsync()
+int sceNpLookupTitleStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	
 	return CELL_OK;
 }
 
-int	sceNpBasicSetPresenceDetails2()
+int sceNpBasicSetPresenceDetails2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupInit()
+int sceNpLookupInit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerSubSigninAbortGui()
+int sceNpManagerSubSigninAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingActivateConnection()
+int sceNpSignalingActivateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingCreateCtx()
+int sceNpSignalingCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendPresenceByIndex2()
+int sceNpBasicGetFriendPresenceByIndex2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicRecvMessageAttachmentLoad()
+int sceNpBasicRecvMessageAttachmentLoad()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingCancelPeerNetInfo()
+int sceNpSignalingCancelPeerNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductCategoryAbort()
+int sceNpCommerceGetProductCategoryAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetRoomInfo()
+int sceNpMatchingGetRoomInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceDestroyProductCategory()
+int sceNpCommerceDestroyProductCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByRange()
+int sceNpScoreGetClansMembersRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCategoryName()
+int sceNpCommerceGetCategoryName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetContentRatingFlag()
+int sceNpManagerGetContentRatingFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreCreateTransactionCtx()
+int sceNpScoreCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingSetRoomInfo()
+int sceNpMatchingSetRoomInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupSetTimeout()
+int sceNpLookupSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetNumOfChildProductSku()
+int sceNpCommerceGetNumOfChildProductSku()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetBlockListEntryCount()
+int sceNpBasicGetBlockListEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetRoomMemberListLocal()
+int sceNpMatchingGetRoomMemberListLocal()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClanMemberGameData()
+int sceNpScoreGetClanMemberGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupPollAsync()
+int sceNpLookupPollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetPeerNetInfo()
+int sceNpSignalingGetPeerNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuPrice()
+int sceNpCommerceGetSkuPrice()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCurrencyCode()
+int sceNpCommerceGetCurrencyCode()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansRankingByRangeAsync()
+int sceNpScoreGetClansRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreCensorCommentAsync()
+int sceNpScoreCensorCommentAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreCensorComment()
+int sceNpScoreCensorComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerRequestTicket()
+int sceNpManagerRequestTicket()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicRecvMessageCustom()
+int sceNpBasicRecvMessageCustom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -749,522 +749,522 @@ int	_sceNpSysutilClientFree()
 	return CELL_OK;
 }
 
-int	sceNpManagerRequestTicket2()
+int sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupTerm()
+int sceNpLookupTerm()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupTitleSmallStorageAsync()
+int sceNpLookupTitleSmallStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingSendInvitationGUI()
+int sceNpMatchingSendInvitationGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceInitProductCategory()
+int sceNpCommerceInitProductCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceSetDataFlagFinish()
+int sceNpCommerceSetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMessageAttachmentEntryCount()
+int sceNpBasicGetMessageAttachmentEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetDataFlagFinish()
+int sceNpCommerceGetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductId()
+int sceNpCommerceGetProductId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCategoryImageURL()
+int sceNpCommerceGetCategoryImageURL()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCustomMenuRegisterExceptionList()
+int sceNpCustomMenuRegisterExceptionList()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingTerminateConnection()
+int sceNpSignalingTerminateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreTerm()
+int sceNpScoreTerm()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceSetDataFlagStart()
+int sceNpCommerceSetDataFlagStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetLocalNetInfo()
+int sceNpSignalingGetLocalNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupTitleStorage()
+int sceNpLookupTitleStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetPlayersHistoryEntryCount()
+int sceNpBasicGetPlayersHistoryEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetEntitlementById()
+int sceNpManagerGetEntitlementById()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingSetRoomSearchFlag()
+int sceNpMatchingSetRoomSearchFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScorePollAsync()
+int sceNpScorePollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuDescription()
+int sceNpCommerceGetSkuDescription()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetCustomInvitationEntryCount()
+int sceNpBasicGetCustomInvitationEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpDrmProcessExitSpawn()
+int sceNpDrmProcessExitSpawn()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingCreateCtx()
+int sceNpMatchingCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicUnregisterHandler()
+int sceNpBasicUnregisterHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCategoryId()
+int sceNpCommerceGetCategoryId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceDoCheckoutFinishAsync()
+int sceNpCommerceDoCheckoutFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMatchingInvitationEntryCount()
+int sceNpBasicGetMatchingInvitationEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCurrencyDecimals()
+int sceNpCommerceGetCurrencyDecimals()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendListEntryCount()
+int sceNpBasicGetFriendListEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetRoomInfoNoLimit()
+int sceNpMatchingGetRoomInfoNoLimit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansRankingByRange()
+int sceNpScoreGetClansRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCurrencyInfo()
+int sceNpCommerceGetCurrencyInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetAccountRegion()
+int sceNpManagerGetAccountRegion()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicRecvMessageAttachment()
+int sceNpBasicRecvMessageAttachment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupAvatarImage()
+int sceNpLookupAvatarImage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetEntitlementIdList()
+int sceNpManagerGetEntitlementIdList()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreCreateTitleCtx()
+int sceNpScoreCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetChildCategoryInfo()
+int sceNpCommerceGetChildCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetPlayersHistoryEntry()
+int sceNpBasicGetPlayersHistoryEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicRegisterHandler()
+int sceNpBasicRegisterHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicAddPlayersHistoryAsync()
+int sceNpBasicAddPlayersHistoryAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetNetworkTime()
+int sceNpManagerGetNetworkTime()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetOnlineId()
+int sceNpManagerGetOnlineId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpDrmVerifyUpgradeLicense2()
+int sceNpDrmVerifyUpgradeLicense2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicSetPresenceDetails()
+int sceNpBasicSetPresenceDetails()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClanMemberGameDataAsync()
+int sceNpScoreGetClanMemberGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetClanMessageEntryCount()
+int sceNpBasicGetClanMessageEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupAvatarImageAsync()
+int sceNpLookupAvatarImageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByNpIdPcId()
+int sceNpScoreGetRankingByNpIdPcId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByNpIdPcIdAsync()
+int sceNpScoreGetRankingByNpIdPcIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreDestroyTransactionCtx()
+int sceNpScoreDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetConnectionStatus()
+int sceNpSignalingGetConnectionStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupTitleSmallStorage()
+int sceNpLookupTitleSmallStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuImageURL()
+int sceNpCommerceGetSkuImageURL()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupCreateTitleCtx()
+int sceNpLookupCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpProfileCallGui()
+int sceNpProfileCallGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductCategoryFinish()
+int sceNpCommerceGetProductCategoryFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetDataFlagState()
+int sceNpCommerceGetDataFlagState()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetCustomInvitationEntry()
+int sceNpBasicGetCustomInvitationEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetPeerNetInfoResult()
+int sceNpSignalingGetPeerNetInfoResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupNpIdAsync()
+int sceNpLookupNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpUtilCmpNpId()
+int sceNpUtilCmpNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingKickRoomMemberWithOpt()
+int sceNpMatchingKickRoomMemberWithOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupWaitAsync()
+int sceNpLookupWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpFriendlistCustom()
+int sceNpFriendlistCustom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGrantOwnership()
+int sceNpMatchingGrantOwnership()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetGameDataAsync()
+int sceNpScoreGetGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
-int	sceNpCommerceGetDataFlagStart()
+int sceNpCommerceGetDataFlagStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetBoardInfoAsync()
+int sceNpScoreGetBoardInfoAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByNpId()
+int sceNpScoreGetClansMembersRankingByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupUserProfile()
+int sceNpLookupUserProfile()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetEvent()
+int sceNpBasicGetEvent()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicMarkMessageAsUsed()
+int sceNpBasicMarkMessageAsUsed()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetRoomListLimitGUI()
+int sceNpMatchingGetRoomListLimitGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceDestroyCtx()
+int sceNpCommerceDestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceDoCheckoutStartAsync()
+int sceNpCommerceDoCheckoutStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpDrmProcessExitSpawn2()
+int sceNpDrmProcessExitSpawn2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerRegisterCallback()
+int sceNpManagerRegisterCallback()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingGetConnectionFromNpId()
+int sceNpSignalingGetConnectionFromNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetClansMembersRankingByNpIdAsync()
+int sceNpScoreGetClansMembersRankingByNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupCreateTransactionCtx()
+int sceNpLookupCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetProductName()
+int sceNpCommerceGetProductName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetChatRestrictionFlag()
+int sceNpManagerGetChatRestrictionFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetCategoryInfo()
+int sceNpCommerceGetCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicSendMessage()
+int sceNpBasicSendMessage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetMessageEntryCount()
+int sceNpBasicGetMessageEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -1276,346 +1276,346 @@ int	_sceNpSysutilClientMalloc()
 	return CELL_OK;
 }
 
-int	sceNpCommerceGetSkuName()
+int sceNpCommerceGetSkuName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreAbortTransaction()
+int sceNpScoreAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingGetRoomSearchFlag()
+int sceNpMatchingGetRoomSearchFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpFriendlist()
+int sceNpFriendlist()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreRecordScoreAsync()
+int sceNpScoreRecordScoreAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreSanitizeComment()
+int sceNpScoreSanitizeComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
-int	sceNpBasicGetBlockListEntry()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-
-int	sceNpManagerGetOnlineName()
+int sceNpBasicGetBlockListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetBoardInfo()
+int sceNpManagerGetOnlineName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpFriendlistAbortGui()
+int sceNpScoreGetBoardInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpUtilCmpNpIdInOrder()
+int sceNpFriendlistAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreRecordGameDataAsync()
+int sceNpUtilCmpNpIdInOrder()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpMatchingLeaveRoom()
+int sceNpScoreRecordGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCustomMenuActionSetActivation()
+int sceNpMatchingLeaveRoom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupDestroyTransactionCtx()
+int sceNpCustomMenuActionSetActivation()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpScoreGetRankingByRange()
+int sceNpLookupDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerceCreateCtx()
+int sceNpScoreGetRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpSignalingDeactivateConnection()
+int sceNpCommerceCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpBasicGetFriendPresenceByNpId()
+int sceNpSignalingDeactivateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpManagerGetNpId()
+int sceNpBasicGetFriendPresenceByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpLookupUserProfileAsync()
+int sceNpManagerGetNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSendInvitationResponse()
+int sceNpLookupUserProfileAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansUpdateClanInfo()
+int sceNpClansSendInvitationResponse()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRetrieveChallenges()
+int sceNpClansUpdateClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSearchByProfile()
+int sceNpClansRetrieveChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetMemberInfo()
+int sceNpClansSearchByProfile()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansCancelMembershipRequest()
+int sceNpClansGetMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetAutoAcceptStatus()
+int sceNpClansCancelMembershipRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansTerm()
+int sceNpClansGetAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansDisbandClan()
+int sceNpClansTerm()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetClanInfo()
+int sceNpClansDisbandClan()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansAddBlacklistEntry()
+int sceNpClansGetClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansLeaveClan()
+int sceNpClansAddBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetBlacklist()
+int sceNpClansLeaveClan()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSendMembershipRequest()
+int sceNpClansGetBlacklist()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRemoveBlacklistEntry()
+int sceNpClansSendMembershipRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansUpdateAutoAcceptStatus()
+int sceNpClansRemoveBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetClanListByNpId()
+int sceNpClansUpdateAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansCancelInvitation()
+int sceNpClansGetClanListByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRetrieveAnnouncements()
+int sceNpClansCancelInvitation()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansPostChallenge()
+int sceNpClansRetrieveAnnouncements()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetMemberList()
+int sceNpClansPostChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRetrievePostedChallenges()
+int sceNpClansGetMemberList()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSendMembershipResponse()
+int sceNpClansRetrievePostedChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansCreateRequest()
+int sceNpClansSendMembershipResponse()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansInit()
+int sceNpClansCreateRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansChangeMemberRole()
+int sceNpClansInit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansCreateClan()
+int sceNpClansChangeMemberRole()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansKickMember()
+int sceNpClansCreateClan()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSearchByName()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-int	sceNpClansPostAnnouncement()
+int sceNpClansKickMember()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansSendInvitation()
+int sceNpClansSearchByName()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+int sceNpClansPostAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansGetClanList()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-int	sceNpClansRemoveChallenge()
+int sceNpClansSendInvitation()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRemovePostedChallenge()
+int sceNpClansGetClanList()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+int sceNpClansRemoveChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansDestroyRequest()
+int sceNpClansRemovePostedChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansJoinClan()
+int sceNpClansDestroyRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpClansRemoveAnnouncement()
+int sceNpClansJoinClan()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+int sceNpClansRemoveAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -1627,638 +1627,638 @@ int sceNpClansAbortRequest()
 	return CELL_OK;
 }
 
-int	sceNpClansUpdateMemberInfo()
+int sceNpClansUpdateMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoCheckoutStartAsync()
+int sceNpCommerce2DoCheckoutStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoListGetResult()
+int sceNpCommerce2GetProductInfoListGetResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetContentRatingDescriptor()
+int sceNpCommerce2GetContentRatingDescriptor()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetBGDLAvailability()
+int sceNpCommerce2GetBGDLAvailability()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetStoreBrowseUserdata()
+int sceNpCommerce2GetStoreBrowseUserdata()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DestroyReq()
+int sceNpCommerce2DestroyReq()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2Init()
+int sceNpCommerce2Init()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetCategoryContentsStart()
+int sceNpCommerce2GetCategoryContentsStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoDlListFinishAsync()
+int sceNpCommerce2DoDlListFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2Term()
+int sceNpCommerce2Term()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2CreateSessionAbort()
+int sceNpCommerce2CreateSessionAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoDlListStartAsync()
+int sceNpCommerce2DoDlListStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DestroyCtx()
+int sceNpCommerce2DestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetCategoryContentsCreateReq()
+int sceNpCommerce2GetCategoryContentsCreateReq()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2AbortReq()
+int sceNpCommerce2AbortReq()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoStart()
+int sceNpCommerce2GetProductInfoStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2CreateSessionFinish()
+int sceNpCommerce2CreateSessionFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetContentInfo()
+int sceNpCommerce2GetContentInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoProductBrowseStartAsync()
+int sceNpCommerce2DoProductBrowseStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoListStart()
+int sceNpCommerce2GetProductInfoListStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DestroyGetCategoryContentsResult()
+int sceNpCommerce2DestroyGetCategoryContentsResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2SetBGDLAvailability()
+int sceNpCommerce2SetBGDLAvailability()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoCreateReq()
+int sceNpCommerce2GetProductInfoCreateReq()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoProductCodeFinishAsync()
+int sceNpCommerce2DoProductCodeFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetContentRatingInfoFromCategoryInfo()
+int sceNpCommerce2GetContentRatingInfoFromCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoProductBrowseFinishAsync()
+int sceNpCommerce2DoProductBrowseFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetCategoryInfo()
+int sceNpCommerce2GetCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoGetResult()
+int sceNpCommerce2GetProductInfoGetResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetCategoryContentsGetResult()
+int sceNpCommerce2GetCategoryContentsGetResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2CreateSessionStart()
+int sceNpCommerce2CreateSessionStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoCheckoutFinishAsync()
+int sceNpCommerce2DoCheckoutFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2InitGetCategoryContentsResult()
+int sceNpCommerce2InitGetCategoryContentsResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult()
+int sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2CreateCtx()
+int sceNpCommerce2CreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetPrice()
+int sceNpCommerce2GetPrice()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetGameSkuInfoFromGameProductInfo()
+int sceNpCommerce2GetGameSkuInfoFromGameProductInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DoProductCodeStartAsync()
+int sceNpCommerce2DoProductCodeStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2InitGetProductInfoListResult()
+int sceNpCommerce2InitGetProductInfoListResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetProductInfoListCreateReq()
+int sceNpCommerce2GetProductInfoListCreateReq()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetGameProductInfoFromContentInfo()
+int sceNpCommerce2GetGameProductInfoFromContentInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetContentRatingInfoFromGameProductInfo()
+int sceNpCommerce2GetContentRatingInfoFromGameProductInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2ExecuteStoreBrowse()
+int sceNpCommerce2ExecuteStoreBrowse()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetGameProductInfo()
+int sceNpCommerce2GetGameProductInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DestroyGetProductInfoResult()
+int sceNpCommerce2DestroyGetProductInfoResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2DestroyGetProductInfoListResult()
+int sceNpCommerce2DestroyGetProductInfoListResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2InitGetProductInfoResult()
+int sceNpCommerce2InitGetProductInfoResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpCommerce2GetCategoryInfoFromContentInfo()
+int sceNpCommerce2GetCategoryInfoFromContentInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotDataVUser()
+int sceNpTusDeleteMultiSlotDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotVariable()
+int sceNpTusGetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetMultiSlotVariableAsync()
+int sceNpTusSetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetDataVUser()
+int sceNpTusSetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserVariable()
+int sceNpTusGetMultiUserVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusTryAndSetVariableVUserAsync()
+int sceNpTusTryAndSetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusCreateTransactionCtx()
+int sceNpTusCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusPollAsync()
+int sceNpTusPollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusAddAndGetVariableAsync()
+int sceNpTusAddAndGetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusTerm()
+int sceNpTusTerm()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotVariableVUser()
+int sceNpTusGetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotDataStatusVUserAsync()
+int sceNpTusGetMultiSlotDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserDataStatusVUser()
+int sceNpTusGetMultiUserDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDestroyTitleCtx()
+int sceNpTusDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotDataAsync()
+int sceNpTusDeleteMultiSlotDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusAbortTransaction()
+int sceNpTusAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserDataStatus()
+int sceNpTusGetMultiUserDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusTryAndSetVariableVUser()
+int sceNpTusTryAndSetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserDataStatusVUserAsync()
+int sceNpTusGetMultiUserDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetDataVUserAsync()
+int sceNpTusGetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDestroyTransactionCtx()
+int sceNpTusDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusTryAndSetVariable()
+int sceNpTusTryAndSetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetDataAsync()
+int sceNpTusGetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetTimeout()
+int sceNpTusSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotDataStatusAsync()
+int sceNpTusGetMultiSlotDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserVariableVUser()
+int sceNpTusGetMultiUserVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusCreateTitleCtx()
+int sceNpTusCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetData()
+int sceNpTusSetData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetData()
+int sceNpTusGetData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusInit()
+int sceNpTusInit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusAddAndGetVariable()
+int sceNpTusAddAndGetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserVariableVUserAsync()
+int sceNpTusGetMultiUserVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetMultiSlotVariableVUserAsync()
+int sceNpTusSetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetDataVUserAsync()
+int sceNpTusSetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotDataStatusVUser()
+int sceNpTusGetMultiSlotDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusAddAndGetVariableVUserAsync()
+int sceNpTusAddAndGetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetDataVUser()
+int sceNpTusGetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotVariable()
+int sceNpTusDeleteMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusWaitAsync()
+int sceNpTusWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotVariableAsync()
+int sceNpTusGetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusTryAndSetVariableAsync()
+int sceNpTusTryAndSetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotVariableVUserAsync()
+int sceNpTusDeleteMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotVariableVUser()
+int sceNpTusDeleteMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserDataStatusAsync()
+int sceNpTusGetMultiUserDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotDataVUserAsync()
+int sceNpTusDeleteMultiSlotDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotDataStatus()
+int sceNpTusGetMultiSlotDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiUserVariableAsync()
+int sceNpTusGetMultiUserVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetMultiSlotVariable()
+int sceNpTusSetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotData()
+int sceNpTusDeleteMultiSlotData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetDataAsync()
+int sceNpTusSetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusDeleteMultiSlotVariableAsync()
+int sceNpTusDeleteMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusAddAndGetVariableVUser()
+int sceNpTusAddAndGetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusSetMultiSlotVariableVUser()
+int sceNpTusSetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpTusGetMultiSlotVariableVUserAsync()
+int sceNpTusGetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpUtilBandwidthTestShutdown()
+int sceNpUtilBandwidthTestShutdown()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpUtilBandwidthTestInitStart()
+int sceNpUtilBandwidthTestInitStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	sceNpUtilBandwidthTestGetStatus()
+int sceNpUtilBandwidthTestGetStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
 
-int	sceNpUtilBandwidthTestAbort()
+int sceNpUtilBandwidthTestAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
