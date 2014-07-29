@@ -148,7 +148,7 @@ u16 Module::GetID() const
 	return m_id;
 }
 
-std::string Module::GetName() const
+const std::string& Module::GetName() const
 {
 	return m_name;
 }
@@ -156,60 +156,6 @@ std::string Module::GetName() const
 void Module::SetName(const std::string& name)
 {
 	m_name = name;
-}
-
-void Module::Log(const u32 id, std::string fmt, ...)
-{
-	if(Ini.HLELogging.GetValue())
-	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
-	}
-}
-
-void Module::Log(std::string fmt, ...)
-{
-	if(Ini.HLELogging.GetValue())
-	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + ": " + fmt::FormatV(fmt, list));
-		va_end(list);
-	}
-}
-
-void Module::Warning(const u32 id, std::string fmt, ...)
-{
-	va_list list;
-	va_start(list, fmt);
-	LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
-	va_end(list);
-}
-
-void Module::Warning(std::string fmt, ...)
-{
-	va_list list;
-	va_start(list, fmt);
-	LOG_WARNING(HLE, GetName() + " warning: " + fmt::FormatV(fmt, list));
-	va_end(list);
-}
-
-void Module::Error(const u32 id, std::string fmt, ...)
-{
-	va_list list;
-	va_start(list, fmt);
-	LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
-	va_end(list);
-}
-
-void Module::Error(std::string fmt, ...)
-{
-	va_list list;
-	va_start(list, fmt);
-	LOG_ERROR(HLE, GetName() + " error: " + fmt::FormatV(fmt, list));
-	va_end(list);
 }
 
 bool Module::CheckID(u32 id) const

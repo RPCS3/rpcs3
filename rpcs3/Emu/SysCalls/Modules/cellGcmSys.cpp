@@ -612,7 +612,7 @@ int cellGcmSetWaitFlip(mem_ptr_t<CellGcmContextData> ctxt)
 
 int cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
 {
-	cellGcmSys->Warning("TODO: cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
+	cellGcmSys->Todo("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
 	if (index >= RSXThread::m_zculls_count)
@@ -1096,7 +1096,7 @@ int cellGcmSetFlipCommand(u32 ctx, u32 id)
 
 s64 cellGcmFunc15()
 {
-	cellGcmSys->Error("cellGcmFunc15()");
+	cellGcmSys->Todo("cellGcmFunc15()");
 	return 0;
 }
 

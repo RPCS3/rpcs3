@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "LogBase.h"
 
 //TODO
 struct ModuleFunc
@@ -41,7 +42,7 @@ struct SFunc
 	}
 };
 
-class Module
+class Module : public LogBase
 {
 	std::string m_name;
 	u16 m_id;
@@ -73,20 +74,10 @@ public:
 	bool IsLoaded() const;
 
 	u16 GetID() const;
-	std::string GetName() const;
+	virtual const std::string& GetName() const override;
 	void SetName(const std::string& name);
 
 public:
-	//TODO: use variadic function templates here to be able to use string references and forward all arguments without copying
-	void Log(const u32 id, std::string fmt, ...);
-	void Log(std::string fmt, ...);
-
-	void Warning(const u32 id, std::string fmt, ...);
-	void Warning(std::string fmt, ...);
-
-	void Error(const u32 id, std::string fmt, ...);
-	void Error(std::string fmt, ...);
-
 	bool CheckID(u32 id) const;
 	template<typename T> bool CheckId(u32 id, T*& data)
 	{

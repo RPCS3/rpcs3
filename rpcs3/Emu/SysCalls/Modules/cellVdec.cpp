@@ -108,8 +108,8 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 	switch (type) // TODO: check profile levels
 	{
 	case CELL_VDEC_CODEC_TYPE_AVC: cellVdec->Warning("cellVdecQueryAttr: AVC (profile=%d)", profile); break;
-	case CELL_VDEC_CODEC_TYPE_MPEG2: cellVdec->Error("TODO: MPEG2 not supported"); break;
-	case CELL_VDEC_CODEC_TYPE_DIVX: cellVdec->Error("TODO: DIVX not supported"); break;
+	case CELL_VDEC_CODEC_TYPE_MPEG2: cellVdec->Todo("MPEG2 not supported"); break;
+	case CELL_VDEC_CODEC_TYPE_DIVX: cellVdec->Todo("DIVX not supported"); break;
 	default: return CELL_VDEC_ERROR_ARG;
 	}
 
@@ -620,13 +620,13 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
-			cellVdec->Error("cellVdecGetPicture: TODO: unknown formatType(%d)", (u32)format->formatType);
+			cellVdec->Todo("cellVdecGetPicture: unknown formatType(%d)", (u32)format->formatType);
 			return CELL_OK;
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			cellVdec->Error("cellVdecGetPicture: TODO: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
+			cellVdec->Todo("cellVdecGetPicture: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
 			return CELL_OK;
 		}
 

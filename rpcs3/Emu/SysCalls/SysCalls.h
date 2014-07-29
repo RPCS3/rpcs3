@@ -30,6 +30,7 @@
 #include "Emu/Event.h"
 
 #include "rpcs3/Ini.h"
+#include "LogBase.h"
 
 //#define SYSCALLS_DEBUG
 
@@ -49,7 +50,7 @@ namespace detail{
 	template<> bool CheckId<ID>(u32 id, ID*& _id,const std::string &name);
 }
 
-class SysCallBase //Module
+class SysCallBase : public LogBase
 {
 private:
 	std::string m_module_name;
@@ -62,64 +63,9 @@ public:
 	{
 	}
 
-	const std::string& GetName() const { return m_module_name; }
-
-	void Log(const u32 id, std::string fmt, ...)
+	virtual const std::string& GetName() const override
 	{
-		if(Ini.HLELogging.GetValue())
-		{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
-		}
-	}
-
-	void Log(std::string fmt, ...)
-	{
-		if(Ini.HLELogging.GetValue())
-		{
-		va_list list;
-		va_start(list, fmt);
-		LOG_NOTICE(HLE, GetName() + ": " + fmt::FormatV(fmt, list));
-		va_end(list);
-		}
-	}
-
-	void Warning(const u32 id, std::string fmt, ...)
-	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
-//#endif
-	}
-
-	void Warning(std::string fmt, ...)
-	{
-//#ifdef SYSCALLS_DEBUG
-		va_list list;
-		va_start(list, fmt);
-		LOG_WARNING(HLE, GetName() + " warning: " + fmt::FormatV(fmt, list));
-		va_end(list);
-//#endif
-	}
-
-	void Error(const u32 id, std::string fmt, ...)
-	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::FormatV(fmt, list));
-		va_end(list);
-	}
-
-	void Error(std::string fmt, ...)
-	{
-		va_list list;
-		va_start(list, fmt);
-		LOG_ERROR(HLE, GetName() + " error: " + fmt::FormatV(fmt, list));
-		va_end(list);
+		return m_module_name;
 	}
 
 	bool CheckId(u32 id) const
@@ -143,7 +89,7 @@ public:
 extern int cellGcmCallback(u32 context_addr, u32 count);
 
 
-#define UNIMPLEMENTED_FUNC(module) module->Error("Unimplemented function: %s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)
 
 #define SC_ARG_0 CPU.GPR[3]
 #define SC_ARG_1 CPU.GPR[4]
@@ -186,8 +132,4 @@ public:
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	module->AddFuncSub(group, name ## _table, #name, name)
-
-#define REG_SUB_EMPTY(module, group, name,...) \
-	static const u64 name ## _table[] = {0}; \
 	module->AddFuncSub(group, name ## _table, #name, name)

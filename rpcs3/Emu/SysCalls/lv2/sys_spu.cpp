@@ -356,7 +356,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 
 s32 sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
-	sc_spu.Error("sys_spu_thread_create(thread_id_addr=0x%x, entry_addr=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x",
+	sc_spu.Todo("sys_spu_thread_create(thread_id_addr=0x%x, entry_addr=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x",
 		thread_id.GetAddr(), entry.GetAddr(), arg, prio, stacksize, flags, threadname_addr);
 	return CELL_OK;
 }
@@ -524,14 +524,14 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 {
-	sc_spu.Error("sys_spu_thread_group_connect_event(id=%d, eq=%d, et=0x%x)", id, eq, et);
+	sc_spu.Todo("sys_spu_thread_group_connect_event(id=%d, eq=%d, et=0x%x)", id, eq, et);
 
 	return CELL_OK;
 }
 
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 {
-	sc_spu.Error("sys_spu_thread_group_disconnect_event(id=%d, et=0x%x)", id, et);
+	sc_spu.Todo("sys_spu_thread_group_disconnect_event(id=%d, et=0x%x)", id, et);
 
 	return CELL_OK;
 }
@@ -762,7 +762,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, m
 
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
-	sc_spu.Error("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
+	sc_spu.Todo("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
 
 	return CELL_OK;
 }

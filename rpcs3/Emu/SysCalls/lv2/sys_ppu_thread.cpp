@@ -10,12 +10,10 @@
 
 extern Module *sysPrxForUser;
 
-static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU;
+static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU/*UUUUUUUUUUuuuuuuuuuu~~~~~~~~*/;
 
-void sys_ppu_thread_exit(u64 errorcode)
+void ppu_thread_exit(u64 errorcode)
 {
-	sysPrxForUser->Log("sys_ppu_thread_exit(0x%llx)", errorcode);
-	
 	PPUThread& thr = GetCurrentPPUThread();
 	u32 tid = thr.GetId();
 
@@ -27,6 +25,20 @@ void sys_ppu_thread_exit(u64 errorcode)
 
 	thr.SetExitStatus(errorcode);
 	thr.Stop();
+}
+
+void sys_ppu_thread_exit(u64 errorcode)
+{
+	sysPrxForUser->Log("sys_ppu_thread_exit(0x%llx)", errorcode);
+	
+	ppu_thread_exit(errorcode);
+}
+
+void sys_internal_ppu_thread_exit(u64 errorcode)
+{
+	sysPrxForUser->Log("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
+
+	ppu_thread_exit(errorcode);
 }
 
 s32 sys_ppu_thread_yield()
@@ -60,7 +72,7 @@ s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 
 s32 sys_ppu_thread_detach(u64 thread_id)
 {
-	sysPrxForUser->Error("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
+	sysPrxForUser->Todo("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;

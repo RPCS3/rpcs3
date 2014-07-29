@@ -3840,7 +3840,7 @@ private:
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
 	{
-		UNK(fmt::Format("(SPURecompiler) Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+		UNK(fmt::Format("Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 
 	void UNK(const std::string& err)

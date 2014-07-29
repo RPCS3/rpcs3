@@ -20,7 +20,7 @@ s32 sys_timer_create(mem32_t timer_id)
 
 s32 sys_timer_destroy(u32 timer_id)
 {
-	sys_timer.Warning("TODO: sys_timer_destroy(timer_id=%d)", timer_id);
+	sys_timer.Todo("sys_timer_destroy(timer_id=%d)", timer_id);
 
 	if(!sys_timer.CheckId(timer_id)) return CELL_ESRCH;
 
@@ -65,7 +65,7 @@ s32 sys_timer_start(u32 timer_id, s64 base_time, u64 period)
 
 s32 sys_timer_stop(u32 timer_id)
 {
-	sys_timer.Warning("TODO: sys_timer_stop()");
+	sys_timer.Todo("sys_timer_stop()");
 
 	timer* timer_data = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
@@ -91,7 +91,7 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 s32 sys_timer_disconnect_event_queue(u32 timer_id)
 {
-	sys_timer.Warning("TODO: sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
+	sys_timer.Todo("sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
 
 	timer* timer_data = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;

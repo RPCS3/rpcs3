@@ -14,6 +14,7 @@ enum ppu_thread_flags : u64
 
 // SysCalls
 void sys_ppu_thread_exit(u64 errorcode);
+void sys_internal_ppu_thread_exit(u64 errorcode);
 s32 sys_ppu_thread_yield();
 s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr);
 s32 sys_ppu_thread_detach(u64 thread_id);

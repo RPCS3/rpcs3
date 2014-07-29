@@ -315,6 +315,7 @@
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
+    <ClInclude Include="Emu\SysCalls\LogBase.h" />
     <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
@@ -352,6 +353,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil_SaveData.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />

@@ -10,7 +10,7 @@ Module *cellAtrac = nullptr;
 
 int cellAtracSetDataAndGetMemSize(mem_ptr_t<CellAtracHandle> pHandle, u32 pucBufferAddr, u32 uiReadByte, u32 uiBufferByte, mem32_t puiWorkMemByte)
 {
-	cellAtrac->Error("cellAtracSetDataAndGetMemSize(pHandle=0x%x, pucBufferAddr=0x%x, uiReadByte=0x%x, uiBufferByte=0x%x, puiWorkMemByte_addr=0x%x)",
+	cellAtrac->Todo("cellAtracSetDataAndGetMemSize(pHandle=0x%x, pucBufferAddr=0x%x, uiReadByte=0x%x, uiBufferByte=0x%x, puiWorkMemByte_addr=0x%x)",
 		pHandle.GetAddr(), pucBufferAddr, uiReadByte, uiBufferByte, puiWorkMemByte.GetAddr());
 
 	puiWorkMemByte = 0x1000; // unproved
@@ -19,7 +19,7 @@ int cellAtracSetDataAndGetMemSize(mem_ptr_t<CellAtracHandle> pHandle, u32 pucBuf
 
 int cellAtracCreateDecoder(mem_ptr_t<CellAtracHandle> pHandle, u32 pucWorkMem_addr, u32 uiPpuThreadPriority, u32 uiSpuThreadPriority)
 {
-	cellAtrac->Error("cellAtracCreateDecoder(pHandle=0x%x, pucWorkMem_addr=0x%x, uiPpuThreadPriority=%d, uiSpuThreadPriority=%d)",
+	cellAtrac->Todo("cellAtracCreateDecoder(pHandle=0x%x, pucWorkMem_addr=0x%x, uiPpuThreadPriority=%d, uiSpuThreadPriority=%d)",
 		pHandle.GetAddr(), pucWorkMem_addr, uiPpuThreadPriority, uiSpuThreadPriority);
 
 	pHandle->data.pucWorkMem_addr = pucWorkMem_addr;
@@ -28,7 +28,7 @@ int cellAtracCreateDecoder(mem_ptr_t<CellAtracHandle> pHandle, u32 pucWorkMem_ad
 
 int cellAtracCreateDecoderExt(mem_ptr_t<CellAtracHandle> pHandle, u32 pucWorkMem_addr, u32 uiPpuThreadPriority, mem_ptr_t<CellAtracExtRes> pExtRes)
 {
-	cellAtrac->Error("cellAtracCreateDecoderExt(pHandle=0x%x, pucWorkMem_addr=0x%x, uiPpuThreadPriority=%d, pExtRes_addr=0x%x)",
+	cellAtrac->Todo("cellAtracCreateDecoderExt(pHandle=0x%x, pucWorkMem_addr=0x%x, uiPpuThreadPriority=%d, pExtRes_addr=0x%x)",
 		pHandle.GetAddr(), pucWorkMem_addr, uiPpuThreadPriority, pExtRes.GetAddr());
 
 	pHandle->data.pucWorkMem_addr = pucWorkMem_addr;
@@ -37,13 +37,13 @@ int cellAtracCreateDecoderExt(mem_ptr_t<CellAtracHandle> pHandle, u32 pucWorkMem
 
 int cellAtracDeleteDecoder(mem_ptr_t<CellAtracHandle> pHandle)
 {
-	cellAtrac->Error("cellAtracDeleteDecoder(pHandle=0x%x)", pHandle.GetAddr());
+	cellAtrac->Todo("cellAtracDeleteDecoder(pHandle=0x%x)", pHandle.GetAddr());
 	return CELL_OK;
 }
 
 int cellAtracDecode(mem_ptr_t<CellAtracHandle> pHandle, u32 pfOutAddr, mem32_t puiSamples, mem32_t puiFinishflag, mem32_t piRemainFrame)
 {
-	cellAtrac->Error("cellAtracDecode(pHandle=0x%x, pfOutAddr=0x%x, puiSamples_addr=0x%x, puiFinishFlag_addr=0x%x, piRemainFrame_addr=0x%x)",
+	cellAtrac->Todo("cellAtracDecode(pHandle=0x%x, pfOutAddr=0x%x, puiSamples_addr=0x%x, puiFinishFlag_addr=0x%x, piRemainFrame_addr=0x%x)",
 		pHandle.GetAddr(), pfOutAddr, puiSamples.GetAddr(), puiFinishflag.GetAddr(), piRemainFrame.GetAddr());
 
 	puiSamples = 0;
@@ -54,7 +54,7 @@ int cellAtracDecode(mem_ptr_t<CellAtracHandle> pHandle, u32 pfOutAddr, mem32_t p
 
 int cellAtracGetStreamDataInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t ppucWritePointer, mem32_t puiWritableByte, mem32_t puiReadPosition)
 {
-	cellAtrac->Error("cellAtracGetStreamDataInfo(pHandle=0x%x, ppucWritePointer_addr=0x%x, puiWritableByte_addr=0x%x, puiReadPosition_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetStreamDataInfo(pHandle=0x%x, ppucWritePointer_addr=0x%x, puiWritableByte_addr=0x%x, puiReadPosition_addr=0x%x)",
 		pHandle.GetAddr(), ppucWritePointer.GetAddr(), puiWritableByte.GetAddr(), puiReadPosition.GetAddr());
 
 	ppucWritePointer = pHandle->data.pucWorkMem_addr;
@@ -65,13 +65,13 @@ int cellAtracGetStreamDataInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t ppucW
 
 int cellAtracAddStreamData(mem_ptr_t<CellAtracHandle> pHandle, u32 uiAddByte)
 {
-	cellAtrac->Error("cellAtracAddStreamData(pHandle=0x%x, uiAddByte=0x%x)", pHandle.GetAddr(), uiAddByte);
+	cellAtrac->Todo("cellAtracAddStreamData(pHandle=0x%x, uiAddByte=0x%x)", pHandle.GetAddr(), uiAddByte);
 	return CELL_OK;
 }
 
 int cellAtracGetRemainFrame(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piRemainFrame)
 {
-	cellAtrac->Error("cellAtracGetRemainFrame(pHandle=0x%x, piRemainFrame_addr=0x%x)", pHandle.GetAddr(), piRemainFrame.GetAddr());
+	cellAtrac->Todo("cellAtracGetRemainFrame(pHandle=0x%x, piRemainFrame_addr=0x%x)", pHandle.GetAddr(), piRemainFrame.GetAddr());
 
 	piRemainFrame = CELL_ATRAC_ALLDATA_IS_ON_MEMORY;
 	return CELL_OK;
@@ -79,7 +79,7 @@ int cellAtracGetRemainFrame(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piRemain
 
 int cellAtracGetVacantSize(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiVacantSize)
 {
-	cellAtrac->Error("cellAtracGetVacantSize(pHandle=0x%x, puiVacantSize_addr=0x%x)", pHandle.GetAddr(), puiVacantSize.GetAddr());
+	cellAtrac->Todo("cellAtracGetVacantSize(pHandle=0x%x, puiVacantSize_addr=0x%x)", pHandle.GetAddr(), puiVacantSize.GetAddr());
 
 	puiVacantSize = 0x1000;
 	return CELL_OK;
@@ -87,13 +87,13 @@ int cellAtracGetVacantSize(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiVacant
 
 int cellAtracIsSecondBufferNeeded(mem_ptr_t<CellAtracHandle> pHandle)
 {
-	cellAtrac->Error("cellAtracIsSecondBufferNeeded(pHandle=0x%x)", pHandle.GetAddr());
+	cellAtrac->Todo("cellAtracIsSecondBufferNeeded(pHandle=0x%x)", pHandle.GetAddr());
 	return CELL_OK;
 }
 
 int cellAtracGetSecondBufferInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiReadPosition, mem32_t puiDataByte)
 {
-	cellAtrac->Error("cellAtracGetSecondBufferInfo(pHandle=0x%x, puiReadPosition_addr=0x%x, puiDataByte_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetSecondBufferInfo(pHandle=0x%x, puiReadPosition_addr=0x%x, puiDataByte_addr=0x%x)",
 		pHandle.GetAddr(), puiReadPosition.GetAddr(), puiDataByte.GetAddr());
 
 	puiReadPosition = 0;
@@ -103,14 +103,14 @@ int cellAtracGetSecondBufferInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t pui
 
 int cellAtracSetSecondBuffer(mem_ptr_t<CellAtracHandle> pHandle, u32 pucSecondBufferAddr, u32 uiSecondBufferByte)
 {
-	cellAtrac->Error("cellAtracSetSecondBuffer(pHandle=0x%x, pucSecondBufferAddr=0x%x, uiSecondBufferByte=0x%x)",
+	cellAtrac->Todo("cellAtracSetSecondBuffer(pHandle=0x%x, pucSecondBufferAddr=0x%x, uiSecondBufferByte=0x%x)",
 		pHandle.GetAddr(), pucSecondBufferAddr, uiSecondBufferByte);
 	return CELL_OK;
 }
 
 int cellAtracGetChannel(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiChannel)
 {
-	cellAtrac->Error("cellAtracGetChannel(pHandle=0x%x, puiChannel_addr=0x%x)", pHandle.GetAddr(), puiChannel.GetAddr());
+	cellAtrac->Todo("cellAtracGetChannel(pHandle=0x%x, puiChannel_addr=0x%x)", pHandle.GetAddr(), puiChannel.GetAddr());
 
 	puiChannel = 2;
 	return CELL_OK;
@@ -118,7 +118,7 @@ int cellAtracGetChannel(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiChannel)
 
 int cellAtracGetMaxSample(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiMaxSample)
 {
-	cellAtrac->Error("cellAtracGetMaxSample(pHandle=0x%x, puiMaxSample_addr=0x%x)", pHandle.GetAddr(), puiMaxSample.GetAddr());
+	cellAtrac->Todo("cellAtracGetMaxSample(pHandle=0x%x, puiMaxSample_addr=0x%x)", pHandle.GetAddr(), puiMaxSample.GetAddr());
 
 	puiMaxSample = 512;
 	return CELL_OK;
@@ -126,7 +126,7 @@ int cellAtracGetMaxSample(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiMaxSamp
 
 int cellAtracGetNextSample(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiNextSample)
 {
-	cellAtrac->Error("cellAtracGetNextSample(pHandle=0x%x, puiNextSample_addr=0x%x)", pHandle.GetAddr(), puiNextSample.GetAddr());
+	cellAtrac->Todo("cellAtracGetNextSample(pHandle=0x%x, puiNextSample_addr=0x%x)", pHandle.GetAddr(), puiNextSample.GetAddr());
 
 	puiNextSample = 0;
 	return CELL_OK;
@@ -134,7 +134,7 @@ int cellAtracGetNextSample(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiNextSa
 
 int cellAtracGetSoundInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piEndSample, mem32_t piLoopStartSample, mem32_t piLoopEndSample)
 {
-	cellAtrac->Error("cellAtracGetSoundInfo(pHandle=0x%x, piEndSample_addr=0x%x, piLoopStartSample_addr=0x%x, piLoopEndSample_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetSoundInfo(pHandle=0x%x, piEndSample_addr=0x%x, piLoopStartSample_addr=0x%x, piLoopEndSample_addr=0x%x)",
 		pHandle.GetAddr(), piEndSample.GetAddr(), piLoopStartSample.GetAddr(), piLoopEndSample.GetAddr());
 
 	piEndSample = 0;
@@ -145,7 +145,7 @@ int cellAtracGetSoundInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piEndSampl
 
 int cellAtracGetNextDecodePosition(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiSamplePosition)
 {
-	cellAtrac->Error("cellAtracGetNextDecodePosition(pHandle=0x%x, puiSamplePosition_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetNextDecodePosition(pHandle=0x%x, puiSamplePosition_addr=0x%x)",
 		pHandle.GetAddr(), puiSamplePosition.GetAddr());
 
 	puiSamplePosition = 0;
@@ -154,7 +154,7 @@ int cellAtracGetNextDecodePosition(mem_ptr_t<CellAtracHandle> pHandle, mem32_t p
 
 int cellAtracGetBitrate(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiBitrate)
 {
-	cellAtrac->Error("cellAtracGetBitrate(pHandle=0x%x, puiBitrate_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetBitrate(pHandle=0x%x, puiBitrate_addr=0x%x)",
 		pHandle.GetAddr(), puiBitrate.GetAddr());
 
 	puiBitrate = 128;
@@ -163,7 +163,7 @@ int cellAtracGetBitrate(mem_ptr_t<CellAtracHandle> pHandle, mem32_t puiBitrate)
 
 int cellAtracGetLoopInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piLoopNum, mem32_t puiLoopStatus)
 {
-	cellAtrac->Error("cellAtracGetLoopInfo(pHandle=0x%x, piLoopNum_addr=0x%x, puiLoopStatus_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetLoopInfo(pHandle=0x%x, piLoopNum_addr=0x%x, puiLoopStatus_addr=0x%x)",
 		pHandle.GetAddr(), piLoopNum.GetAddr(), puiLoopStatus.GetAddr());
 
 	piLoopNum = 0;
@@ -173,13 +173,13 @@ int cellAtracGetLoopInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piLoopNum, 
 
 int cellAtracSetLoopNum(mem_ptr_t<CellAtracHandle> pHandle, int iLoopNum)
 {
-	cellAtrac->Error("cellAtracSetLoopNum(pHandle=0x%x, iLoopNum=0x%x)", pHandle.GetAddr(), iLoopNum);
+	cellAtrac->Todo("cellAtracSetLoopNum(pHandle=0x%x, iLoopNum=0x%x)", pHandle.GetAddr(), iLoopNum);
 	return CELL_OK;
 }
 
 int cellAtracGetBufferInfoForResetting(mem_ptr_t<CellAtracHandle> pHandle, u32 uiSample, mem_ptr_t<CellAtracBufferInfo> pBufferInfo)
 {
-	cellAtrac->Error("cellAtracGetBufferInfoForResetting(pHandle=0x%x, uiSample=0x%x, pBufferInfo_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetBufferInfoForResetting(pHandle=0x%x, uiSample=0x%x, pBufferInfo_addr=0x%x)",
 		pHandle.GetAddr(), uiSample, pBufferInfo.GetAddr());
 
 	pBufferInfo->pucWriteAddr = pHandle->data.pucWorkMem_addr;
@@ -191,14 +191,14 @@ int cellAtracGetBufferInfoForResetting(mem_ptr_t<CellAtracHandle> pHandle, u32 u
 
 int cellAtracResetPlayPosition(mem_ptr_t<CellAtracHandle> pHandle, u32 uiSample, u32 uiWriteByte)
 {
-	cellAtrac->Error("cellAtracResetPlayPosition(pHandle=0x%x, uiSample=0x%x, uiWriteByte=0x%x)",
+	cellAtrac->Todo("cellAtracResetPlayPosition(pHandle=0x%x, uiSample=0x%x, uiWriteByte=0x%x)",
 		pHandle.GetAddr(), uiSample, uiWriteByte);
 	return CELL_OK;
 }
 
 int cellAtracGetInternalErrorInfo(mem_ptr_t<CellAtracHandle> pHandle, mem32_t piResult)
 {
-	cellAtrac->Error("cellAtracGetInternalErrorInfo(pHandle=0x%x, piResult_addr=0x%x)",
+	cellAtrac->Todo("cellAtracGetInternalErrorInfo(pHandle=0x%x, piResult_addr=0x%x)",
 		pHandle.GetAddr(), piResult.GetAddr());
 
 	piResult = 0;

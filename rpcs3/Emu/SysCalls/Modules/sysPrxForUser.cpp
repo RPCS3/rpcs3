@@ -77,11 +77,10 @@ s64 sys_process_at_Exitspawn()
 
 int sys_process_is_stack(u32 p)
 {
-	PPCThread* CPU = GetCurrentPPCThread();
-	if (p >= CPU->GetStackAddr() && p <= CPU->GetStackAddr() + CPU->GetStackSize())
-		return 1;
+	sysPrxForUser->Log("sys_process_is_stack(p=0x%x)", p);
 
-	return 0;
+	// prx: compare high 4 bits with "0xD"
+	return (int)(bool)(p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr());
 }
 
 int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)

@@ -64,5 +64,6 @@ rpcs3/git-version.h
 bin/dev_hdd0/*.txt
 x64/Debug/emucore.lib
 x64/Release/emucore.lib
+rpcs3/x64/*
 
 .DS_Store

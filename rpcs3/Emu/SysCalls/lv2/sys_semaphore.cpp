@@ -35,8 +35,8 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_sem.Warning("TODO: SYS_SYNC_PRIORITY_INHERIT protocol"); break;
-	case se32(SYS_SYNC_RETRY): sys_sem.Error("Invalid SYS_SYNC_RETRY protocol"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_sem.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_sem.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
 	default: sys_sem.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 

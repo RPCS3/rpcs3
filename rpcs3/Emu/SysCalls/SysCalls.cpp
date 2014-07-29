@@ -28,7 +28,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
 	bind_func(sys_process_wait_for_child),                  //2   (0x002)  ROOT
-	bind_func(sys_process_exit),                            //3   (0x003)
+	null_func,//bind_func(sys_process_exit),                //3   (0x003)
 	bind_func(sys_process_get_status),                      //4   (0x004)  DBG
 	bind_func(sys_process_detach_child),                    //5   (0x005)  DBG
 
@@ -57,7 +57,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
 
-	bind_func(sys_ppu_thread_exit),                         //41  (0x029)
+	bind_func(sys_internal_ppu_thread_exit),                //41  (0x029)
 	null_func,                                              //42  (0x02A)  UNS
 	bind_func(sys_ppu_thread_yield),                        //43  (0x02B)
 	bind_func(sys_ppu_thread_join),                         //44  (0x02C)
@@ -66,9 +66,9 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_ppu_thread_set_priority),                 //47  (0x02F)  DBG
 	bind_func(sys_ppu_thread_get_priority),                 //48  (0x030)
 	bind_func(sys_ppu_thread_get_stack_information),        //49  (0x031)
-	bind_func(sys_ppu_thread_stop),                         //50  (0x032)  ROOT
-	bind_func(sys_ppu_thread_restart),                      //51  (0x033)  ROOT
-	bind_func(sys_ppu_thread_create),                       //52  (0x034)  DBG
+	null_func,//bind_func(sys_ppu_thread_stop),             //50  (0x032)  ROOT
+	null_func,//bind_func(sys_ppu_thread_restart),          //51  (0x033)  ROOT
+	null_func,//bind_func(sys_ppu_thread_create),           //52  (0x034)  DBG
 	null_func,//bind_func(sys_ppu_thread_start),            //53  (0x035)
 	null_func,//bind_func(sys_ppu_...),                     //54  (0x036)  ROOT
 	null_func,//bind_func(sys_ppu_...),                     //55  (0x037)  ROOT
@@ -111,11 +111,11 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
 	bind_func(sys_semaphore_trywait),                       //93  (0x05D)
 	bind_func(sys_semaphore_post),                          //94  (0x05E)
-	bind_func(sys_lwmutex_create),                          //95  (0x05F)
-	bind_func(sys_lwmutex_destroy),                         //96  (0x060)
-	bind_func(sys_lwmutex_lock),                            //97  (0x061)
-	bind_func(sys_lwmutex_trylock),                         //98  (0x062)
-	bind_func(sys_lwmutex_unlock),                          //99  (0x063)
+	null_func,//bind_func(sys_lwmutex_create),              //95  (0x05F)
+	null_func,//bind_func(sys_lwmutex_destroy),             //96  (0x060)
+	null_func,//bind_func(sys_lwmutex_lock),                //97  (0x061)
+	null_func,//bind_func(sys_lwmutex_trylock),             //98  (0x062)
+	null_func,//bind_func(sys_lwmutex_unlock),              //99  (0x063)
 	bind_func(sys_mutex_create),                            //100 (0x064)
 	bind_func(sys_mutex_destroy),                           //101 (0x065)
 	bind_func(sys_mutex_lock),                              //102 (0x066)
@@ -162,7 +162,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_time_set_timezone)            //143 (0x08F)  ROOT
 	bind_func(sys_time_get_timezone),                       //144 (0x090)
 	bind_func(sys_time_get_current_time),                   //145 (0x091)
-	bind_func(sys_time_get_system_time),                    //146 (0x092)  ROOT
+	null_func,//bind_func(sys_time_get_system_time),        //146 (0x092)  ROOT
 	bind_func(sys_time_get_timebase_frequency),             //147 (0x093)
 	null_func,//bind_func(sys_rwlock_trywlock)              //148 (0x094)
 	null_func,                                              //149 (0x095)  UNS
@@ -419,24 +419,24 @@ static func_caller* sc_table[kSyscallTableLength] =
 	
 	null_func, null_func, null_func,                        //477-479  UNS
 
-	bind_func(sys_prx_load_module),                         //480 (0x1E0)
-	bind_func(sys_prx_start_module),                        //481 (0x1E1)
-	bind_func(sys_prx_stop_module),                         //482 (0x1E2)
-	bind_func(sys_prx_unload_module),                       //483 (0x1E3)
-	bind_func(sys_prx_register_module),                     //484 (0x1E4)
+	null_func,//bind_func(sys_prx_load_module),             //480 (0x1E0)
+	null_func,//bind_func(sys_prx_start_module),            //481 (0x1E1)
+	null_func,//bind_func(sys_prx_stop_module),             //482 (0x1E2)
+	null_func,//bind_func(sys_prx_unload_module),           //483 (0x1E3)
+	null_func,//bind_func(sys_prx_register_module),         //484 (0x1E4)
 	bind_func(sys_prx_query_module),                        //485 (0x1E5)
 	bind_func(sys_prx_register_library),                    //486 (0x1E6)
-	bind_func(sys_prx_unregister_library),                  //487 (0x1E7)
+	null_func,//bind_func(sys_prx_unregister_library),      //487 (0x1E7)
 	bind_func(sys_prx_link_library),                        //488 (0x1E8)
 	bind_func(sys_prx_unlink_library),                      //489 (0x1E9)
 	bind_func(sys_prx_query_library),                       //490 (0x1EA)
 	null_func,                                              //491 (0x1EB)  UNS
 	null_func,//bind_func(sys_...)                          //492 (0x1EC)  DBG
 	null_func,//bind_func(sys_prx_dbg_get_module_info)      //493 (0x1ED)  DBG
-	bind_func(sys_prx_get_module_list),                     //494 (0x1EE)
-	bind_func(sys_prx_get_module_info),                     //495 (0x1EF)
-	bind_func(sys_prx_get_module_id_by_name),               //496 (0x1F0)
-	bind_func(sys_prx_load_module_on_memcontainer),         //497 (0x1F1)
+	null_func,//bind_func(sys_prx_get_module_list),         //494 (0x1EE)
+	null_func,//bind_func(sys_prx_get_module_info),         //495 (0x1EF)
+	null_func,//bind_func(sys_prx_get_module_id_by_name),   //496 (0x1F0)
+	null_func,//bind_func(sys_prx_load_module_on_memcontainer),//497 (0x1F1)
 	bind_func(sys_prx_start),                               //498 (0x1F2)
 	bind_func(sys_prx_stop),                                //499 (0x1F3)
 	null_func,//bind_func(sys_hid_manager_open)             //500 (0x1F4)

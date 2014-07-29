@@ -579,7 +579,7 @@ public:
 
 #define LOG_DMAC(type, text) type(Log::SPU, "DMAC::ProcessCmd(cmd=0x%x, tag=0x%x, lsa=0x%x, ea=0x%llx, size=0x%x): " text, cmd, tag, lsa, ea, size)
 
-	bool ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
+	void ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 		if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
@@ -588,7 +588,8 @@ public:
 			if (ea >= 0x100000000)
 			{
 				LOG_DMAC(LOG_ERROR, "Invalid external address");
-				return false;
+				Emu.Pause();
+				return;
 			}
 			else if (group)
 			{
@@ -597,7 +598,8 @@ public:
 				if (num >= group->list.size() || !group->list[num])
 				{
 					LOG_DMAC(LOG_ERROR, "Invalid thread (SPU Thread Group MMIO)");
-					return false;
+					Emu.Pause();
+					return;
 				}
 
 				SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
@@ -611,18 +613,20 @@ public:
 				else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 				{
 					spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, Memory.Read32(dmac.ls_offset + lsa));
-					return true;
+					return;
 				}
 				else
 				{
 					LOG_DMAC(LOG_ERROR, "Invalid register (SPU Thread Group MMIO)");
-					return false;
+					Emu.Pause();
+					return;
 				}
 			}
 			else
 			{
 				LOG_DMAC(LOG_ERROR, "Thread group not set (SPU Thread Group MMIO)");
-				return false;
+				Emu.Pause();
+				return;
 			}
 		}
 		else if (ea >= RAW_SPU_BASE_ADDR && size == 4)
@@ -632,19 +636,20 @@ public:
 			case MFC_PUT_CMD:
 			{
 				Memory.Write32(ea, ReadLS32(lsa));
-				return true; 
+				return;
 			}
 
 			case MFC_GET_CMD:
 			{
 				WriteLS32(lsa, Memory.Read32(ea));
-				return true;
+				return;
 			}
 
 			default:
 			{
 				LOG_DMAC(LOG_ERROR, "Unknown DMA command");
-				return false;
+				Emu.Pause();
+				return;
 			}
 			}
 		}
@@ -653,52 +658,26 @@ public:
 		{
 		case MFC_PUT_CMD:
 		{
-			if (Memory.Copy(ea, dmac.ls_offset + lsa, size))
-			{
-				return true;
-			}
-			else
-			{
-				LOG_DMAC(LOG_ERROR, "PUT* cmd failed");
-				return false; // TODO: page fault (?)
-			}
+			memcpy(Memory + ea, Memory + dmac.ls_offset + lsa, size);
+			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			if (Memory.Copy(dmac.ls_offset + lsa, ea, size))
-			{
-				return true;
-			}
-			else
-			{
-				LOG_DMAC(LOG_ERROR, "GET* cmd failed");
-				return false; // TODO: page fault (?)
-			}
+			memcpy(Memory + dmac.ls_offset + lsa, Memory + ea, size);
+			return;
 		}
 
 		default:
 		{
 			LOG_DMAC(LOG_ERROR, "Unknown DMA command");
-			return false; // ???
+			Emu.Pause();
+			return;
 		}
 		}
 	}
 
 #undef LOG_CMD
-
-	u32 dmacCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
-	{
-		/*if(proxy_pos >= MFC_PPU_MAX_QUEUE_SPACE)
-		{
-			return MFC_PPU_DMA_QUEUE_FULL;
-		}*/
-
-		if (ProcessCmd(cmd, tag, lsa, ea, size))
-			return MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
-		else
-			return MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
-	}
 
 	void ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs)
 	{
@@ -713,7 +692,7 @@ public:
 			be_t<u32> ea; // External Address Low
 		};
 
-		u32 result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+		u32 result = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
 
 		for (u32 i = 0; i < list_size; i++)
 		{
@@ -723,15 +702,12 @@ public:
 			if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
 			{
 				LOG_ERROR(Log::SPU, "DMA List: invalid transfer size(%d)", size);
-				return;
+				result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+				break;
 			}
 
 			u32 addr = rec->ea;
-			result = dmacCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
-			if (result == MFC_PPU_DMA_CMD_SEQUENCE_ERROR)
-			{
-				break;
-			}
+			ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
 
 			if (Ini.HLELogging.GetValue() || rec->s)
 				LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
@@ -746,6 +722,8 @@ public:
 				if (StallList[tag].MFCArgs)
 				{
 					LOG_ERROR(Log::SPU, "DMA List: existing stalled list found (tag=%d)", tag);
+					result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+					break;
 				}
 				StallList[tag].MFCArgs = &MFCArgs;
 				StallList[tag].cmd = cmd;
@@ -753,7 +731,7 @@ public:
 				StallList[tag].lsa = lsa;
 				StallList[tag].size = (list_size - i - 1) * 8;
 
-				return;
+				break;
 			}
 		}
 
@@ -784,7 +762,8 @@ public:
 				(op & MFC_FENCE_MASK ? "F" : ""),
 				lsa, ea, tag, size, cmd);
 
-			MFCArgs.CMDStatus.SetValue(dmacCmd(cmd, tag, lsa, ea, size));
+			ProcessCmd(cmd, tag, lsa, ea, size);
+			MFCArgs.CMDStatus.SetValue(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
 		}
 		break;
 
@@ -871,21 +850,6 @@ public:
 								{
 									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 								}
-								/*u32 last_d = last_q * 2;
-								if (buf[last]._u32[last_d] == reservation.data[last]._u32[last_d] && buf[last]._u32[last_d+1] != reservation.data[last]._u32[last_d+1])
-								{
-									last_d++;
-								}
-								else if (buf[last]._u32[last_d+1] == reservation.data[last]._u32[last_d+1])
-								{
-									last_d;
-								}
-								else // full 64 bit
-								{
-									LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 64bit compare and swap");
-									Emu.Pause();
-									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
-								}*/
 							}
 						}
 						else
