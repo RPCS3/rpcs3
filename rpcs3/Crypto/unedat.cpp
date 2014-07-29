@@ -522,7 +522,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 	unsigned char npd_magic[4] = {0x4E, 0x50, 0x44, 0x00};  //NPD0
 	if(memcmp(NPD->magic, npd_magic, 4))
 	{
-		LOG_ERROR(LOADER, "EDAT: File has invalid NPD header.");
+		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
 		delete NPD;
 		delete EDAT;
 		return 1;
