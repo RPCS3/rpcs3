@@ -443,7 +443,9 @@ void RSXDebugger::GetBuffers()
 
 		wxImage img(width, height, buffer);
 		wxClientDC dc_canvas(pnl);
-		dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		
+		if (img.IsOk())
+			dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
 	}
 
 	// Draw Texture
