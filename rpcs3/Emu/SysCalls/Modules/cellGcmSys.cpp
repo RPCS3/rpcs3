@@ -1133,7 +1133,7 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 	if(comp)
 	{
-		cellGcmSys->Error("cellGcmSetTile: bad comp! (%d)", comp);
+		cellGcmSys->Error("cellGcmSetTile: bad compression mode! (%d)", comp);
 	}
 
 	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
