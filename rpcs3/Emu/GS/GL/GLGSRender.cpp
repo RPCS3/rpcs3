@@ -15,7 +15,7 @@
 #endif
 
 gcmBuffer gcmBuffers[8];
-GLuint g_flip_tex, g_depth_tex, g_pbo[5];
+GLuint g_flip_tex, g_depth_tex, g_pbo[6];
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
 GLenum g_last_gl_error = GL_NO_ERROR;
@@ -703,7 +703,7 @@ void GLGSRender::OnInitThread()
 
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
-	glGenBuffers(5, g_pbo); // 4 color + 1 depth 
+	glGenBuffers(6, g_pbo); // 4 for color buffers + 1 for depth buffer + 1 for flip()
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
@@ -720,7 +720,7 @@ void GLGSRender::OnExitThread()
 {
 	glDeleteTextures(1, &g_flip_tex);
 	glDeleteTextures(1, &g_depth_tex);
-	glDeleteBuffers(5, g_pbo);
+	glDeleteBuffers(6, g_pbo);
 	
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
