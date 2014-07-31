@@ -1105,5 +1105,11 @@
     <ClInclude Include="Emu\SysCalls\LogBase.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

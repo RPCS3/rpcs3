@@ -346,6 +346,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGifDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
@@ -367,6 +368,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNp.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\Static.h" />
