@@ -359,7 +359,8 @@ bool GLGSRender::LoadProgram()
 		m_shader_prog.Compile();
 		checkForGlError("m_shader_prog.Compile");
 
-		rFile f(rGetCwd() + "/FragmentProgram.txt", rFile::write);
+		// TODO: This shouldn't use current dir
+		rFile f("./FragmentProgram.txt", rFile::write);
 		f.Write(m_shader_prog.GetShaderText());
 	}
 
@@ -372,7 +373,8 @@ bool GLGSRender::LoadProgram()
 		m_vertex_prog.Compile();
 		checkForGlError("m_vertex_prog.Compile");
 
-		rFile f(rGetCwd() + "/VertexProgram.txt", rFile::write);
+		// TODO: This shouldn't use current dir
+		rFile f("./VertexProgram.txt", rFile::write);
 		f.Write(m_vertex_prog.shader);
 	}
 

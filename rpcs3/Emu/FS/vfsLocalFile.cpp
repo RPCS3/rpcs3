@@ -63,7 +63,7 @@ bool vfsLocalFile::Create(const std::string& path)
 			break;
 
 		const std::string& dir = path.substr(0, p);
-		if(!rDirExists(dir))
+		if(!rExists(dir))
 		{
 			LOG_NOTICE(HLE, "create dir: %s", dir.c_str());
 			rMkdir(dir);
@@ -72,7 +72,7 @@ bool vfsLocalFile::Create(const std::string& path)
 
 	//create file
 	const char m = path[path.length() - 1];
-	if(m != '/' && m != '\\' && !rFileExists(path)) // ???
+	if(m != '/' && m != '\\' && !rExists(path)) // ???
 	{
 		rFile f;
 		return f.Create(path);
@@ -118,5 +118,5 @@ bool vfsLocalFile::IsOpened() const
 
 bool vfsLocalFile::Exists(const std::string& path)
 {
-	return rFileExists(path);
+	return rExists(path);
 }

@@ -13,7 +13,8 @@ bool PKGLoader::Install(std::string dest)
 	if (!pkg_f.IsOpened())
 		return false;
 
-	dest = rGetCwd() + dest;
+	// TODO: This shouldn't use current dir
+	dest.insert(0, 1, '.');
 	if (!dest.empty() && dest.back() != '/')
 		dest += '/';
 
@@ -24,7 +25,7 @@ bool PKGLoader::Install(std::string dest)
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (rDirExists(dest+titleID)) {
+	if (rExists(dest+titleID)) {
 		rMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
 		if (d_overwrite.ShowModal() != rID_YES) {
 			LOG_ERROR(LOADER, "PKG Loader: Another installation found in: %s", titleID.c_str());

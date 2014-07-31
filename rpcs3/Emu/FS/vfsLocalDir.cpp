@@ -26,13 +26,18 @@ bool vfsLocalDir::Open(const std::string& path)
 		std::string dir_path = path + name;
 
 		m_entries.emplace_back();
+		// TODO: Use same info structure as fileinfo?
 		DirEntryInfo& info = m_entries.back();
 		info.name = name;
 
-		info.flags |= dir.Exists(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
-		if(rIsWritable(dir_path)) info.flags |= DirEntry_PermWritable;
-		if(rIsReadable(dir_path)) info.flags |= DirEntry_PermReadable;
-		if(rIsExecutable(dir_path)) info.flags |= DirEntry_PermExecutable;
+		FileInfo fileinfo;
+		getFileInfo(dir_path.c_str(), &fileinfo);
+
+		// Not sure of purpose for below. I hope these don't need to be correct
+		info.flags |= rIsDir(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
+		if(fileinfo.isWritable) info.flags |= DirEntry_PermWritable;
+		info.flags |= DirEntry_PermReadable; // Always?
+		info.flags |= DirEntry_PermExecutable; // Always?
 	}
 
 	return true;

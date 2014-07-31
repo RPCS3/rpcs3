@@ -191,7 +191,8 @@ int Unpack(rFile& pkg_f, std::string src, std::string dst)
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
 	rFile dec_pkg_f;
-	std::string decryptedFile = rGetCwd() + "/dev_hdd1/" + src + ".dec";
+	// TODO: This shouldn't use current dir
+	std::string decryptedFile = "./dev_hdd1/" + src + ".dec";
 
 	dec_pkg_f.Create(decryptedFile, true);
 	

@@ -53,10 +53,12 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	//make more explicit what this actually does (currently everything after the third slash and before the fourth slash)
 	std::string titleID = fmt::BeforeFirst(fmt::AfterFirst(fmt::AfterFirst(fmt::AfterFirst(drm_path,'/'),'/'),'/'),'/');
 
-	std::string enc_drm_path = rGetCwd() + drm_path;
-	std::string dec_drm_path = rGetCwd() + "/dev_hdd1/" + titleID + "/" + drm_file_name;
+	// TODO: These shouldn't use current dir
+	std::string enc_drm_path = drm_path;
+	drm_path.insert(0, 1, '.');
+	std::string dec_drm_path = "./dev_hdd1/" + titleID + "/" + drm_file_name;
 
-	std::string rap_dir_path = rGetCwd() + "/dev_usb000/";
+	std::string rap_dir_path = "./dev_usb000/";
 	std::string rap_file_path = rap_dir_path;
 	
 	// Search dev_usb000 for a compatible RAP file. 
@@ -77,9 +79,10 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	}
 
 	// Create a new directory under dev_hdd1/titleID to hold the decrypted data.
-	std::string tmp_dir = rGetCwd() + "/dev_hdd1/" + titleID;
-	if (!rDir::Exists(tmp_dir))
-		rMkdir(rGetCwd() + "/dev_hdd1/" + titleID);
+	// TODO: These shouldn't use current dir
+	std::string tmp_dir = "./dev_hdd1/" + titleID;
+	if (!rExists(tmp_dir))
+		rMkdir("./dev_hdd1/" + titleID);
 
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
 	DecryptEDAT(enc_drm_path, dec_drm_path, 8, rap_file_path, k_licensee, false);

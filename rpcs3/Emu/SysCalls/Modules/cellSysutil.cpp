@@ -660,7 +660,7 @@ int cellSysCacheClear(void)
 	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
 	
 	//TODO: implement
-	//if (rDirExists(localPath)){
+	//if (rIsDir(localPath)){
 	//	WxDirDeleteTraverser deleter;
 	//	wxString f = wxFindFirstFile(fmt::FromUTF8(localPath+"\\*"),wxDIR);
 	//	while (!f.empty())
