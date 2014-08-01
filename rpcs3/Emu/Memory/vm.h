@@ -3,6 +3,7 @@
 namespace vm
 {
 	//TODO
+	/*
 	bool check_addr(u32 addr)
 	{
 		return false;
@@ -41,6 +42,7 @@ namespace vm
 	{
 		return false;
 	}
+	*/
 }
 
 #include "vm_ptr.h"
