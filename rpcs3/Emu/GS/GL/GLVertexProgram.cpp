@@ -557,54 +557,57 @@ void GLVertexDecompilerThread::Task()
 		case 0x07: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0 ? exp2($s.w * log2($s.y)) : 0.0), 1.0)"); break; // LIT
 		case 0x08: // BRA
 		{
-					   AddCode("$if ($cond)");
-					   AddCode("{");
-					   m_cur_instr->open_scopes++;
-					   AddCode("jump_position = $a$am;");
-					   AddCode("continue;");
-					   m_cur_instr->close_scopes++;
-					   AddCode("}");
+			AddCode("$if ($cond)");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode("jump_position = $a$am;");
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
 		}
 			break;
 		case 0x09: // BRI : works differently (BRI o[1].x(TR) L0;)
 		{
-					   uint jump_position;
+			uint jump_position;
 
-					   if (is_has_BRA)
-					   {
-						   jump_position = GetAddr();
-					   }
-					   else
-					   {
-						   int addr = GetAddr();
+			if (is_has_BRA)
+			{
+				jump_position = GetAddr();
+			}
+			else
+			{
+				int addr = GetAddr();
 
-						   for (jump_position = 0; jump_position < m_jump_lvls.size(); ++jump_position)
-						   {
-							   if (m_jump_lvls[jump_position] == addr)
-								   break;
-						   }
-					   }
+				jump_position = 0;
+				for (auto pos : m_jump_lvls)
+				{
+					if (addr == pos)
+					break;
 
-					   AddCode("$ifcond ");
-					   AddCode("{");
-					   m_cur_instr->open_scopes++;
-					   AddCode(fmt::Format("jump_position = %u;", jump_position));
-					   AddCode("continue;");
-					   m_cur_instr->close_scopes++;
-					   AddCode("}");
+					++jump_position;
+				}
+			}
+
+			AddCode("$ifcond ");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode(fmt::Format("jump_position = %u;", jump_position));
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
 		}
-			break;
-			//case 0x0a: AddCode("$ifcond $f(); //CAL"); break; // CAL : works same as BRI
+		break;
+		//case 0x0a: AddCode("$ifcond $f(); //CAL"); break; // CAL : works same as BRI
 		case 0x0b: AddCode("$ifcond $f(); //CLI"); break; // CLI : works same as BRI
 		case 0x0c: AddCode("$ifcond return;"); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
 		case 0x0d: SetDSTSca("log2($s)"); break; // LG2
 		case 0x0e: SetDSTSca("exp2($s)"); break; // EX2
 		case 0x0f: SetDSTSca("sin($s)"); break; // SIN
 		case 0x10: SetDSTSca("cos($s)"); break; // COS
-			//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
-			//case 0x12: break; // CLB : works same as BRB
-			//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
-			//case 0x14: break; // POP : works differently (POP o[1].x;)
+		//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
+		//case 0x12: break; // CLB : works same as BRB
+		//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
+		//case 0x14: break; // POP : works differently (POP o[1].x;)
 
 		default:
 			AddCode(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
