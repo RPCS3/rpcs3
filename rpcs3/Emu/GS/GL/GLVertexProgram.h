@@ -1,6 +1,7 @@
 #pragma once
 #include "GLShaderParam.h"
 #include "Emu/GS/RSXVertexProgram.h"
+#include <set>
 
 struct GLVertexDecompilerThread : public ThreadBase
 {
@@ -10,26 +11,26 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 addr_swz             : 2;
-			u32 mask_w               : 2;
-			u32 mask_z               : 2;
-			u32 mask_y               : 2;
-			u32 mask_x               : 2;
-			u32 cond                 : 3;
-			u32 cond_test_enable     : 1;
+			u32 addr_swz : 2;
+			u32 mask_w : 2;
+			u32 mask_z : 2;
+			u32 mask_y : 2;
+			u32 mask_x : 2;
+			u32 cond : 3;
+			u32 cond_test_enable : 1;
 			u32 cond_update_enable_0 : 1;
-			u32 dst_tmp              : 6;
-			u32 src0_abs             : 1;
-			u32 src1_abs             : 1;
-			u32 src2_abs             : 1;
-			u32 addr_reg_sel_1       : 1;
-			u32 cond_reg_sel_1       : 1;
-			u32 staturate            : 1;
-			u32 index_input          : 1;
-			u32                      : 1;
+			u32 dst_tmp : 6;
+			u32 src0_abs : 1;
+			u32 src1_abs : 1;
+			u32 src2_abs : 1;
+			u32 addr_reg_sel_1 : 1;
+			u32 cond_reg_sel_1 : 1;
+			u32 staturate : 1;
+			u32 index_input : 1;
+		u32: 1;
 			u32 cond_update_enable_1 : 1;
-			u32 vec_result           : 1;
-			u32                      : 1;
+			u32 vec_result : 1;
+		u32: 1;
 		};
 	} d0;
 
@@ -39,9 +40,9 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 src0h      : 8;
-			u32 input_src  : 4;
-			u32 const_src  : 10;
+			u32 src0h : 8;
+			u32 input_src : 4;
+			u32 const_src : 10;
 			u32 vec_opcode : 5;
 			u32 sca_opcode : 5;
 		};
@@ -53,14 +54,14 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 src2h  : 6;
-			u32 src1   : 17;
-			u32 src0l  : 9;
+			u32 src2h : 6;
+			u32 src1 : 17;
+			u32 src0l : 9;
 		};
 		struct
 		{
 			u32 iaddrh : 6;
-			u32        : 26;
+		u32: 26;
 		};
 	} d2;
 
@@ -70,10 +71,10 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 end		    : 1;
-			u32 index_const	    : 1;
-			u32 dst		    : 5;
-			u32 sca_dst_tmp	    : 6;
+			u32 end : 1;
+			u32 index_const : 1;
+			u32 dst : 5;
+			u32 sca_dst_tmp : 6;
 			u32 vec_writemask_w : 1;
 			u32 vec_writemask_z : 1;
 			u32 vec_writemask_y : 1;
@@ -82,11 +83,11 @@ struct GLVertexDecompilerThread : public ThreadBase
 			u32 sca_writemask_z : 1;
 			u32 sca_writemask_y : 1;
 			u32 sca_writemask_x : 1;
-			u32 src2l	    : 11;
+			u32 src2l : 11;
 		};
 		struct
 		{
-			u32        : 29;
+		u32: 29;
 			u32 iaddrl : 3;
 		};
 	} d3;
@@ -105,7 +106,7 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 			struct
 			{
-				u32 src1  : 17;
+				u32 src1 : 17;
 			};
 
 			struct
@@ -118,12 +119,12 @@ struct GLVertexDecompilerThread : public ThreadBase
 		struct
 		{
 			u32 reg_type : 2;
-			u32 tmp_src  : 6;
-			u32 swz_w    : 2;
-			u32 swz_z    : 2;
-			u32 swz_y    : 2;
-			u32 swz_x    : 2;
-			u32 neg      : 1;
+			u32 tmp_src : 6;
+			u32 swz_w : 2;
+			u32 swz_z : 2;
+			u32 swz_y : 2;
+			u32 swz_x : 2;
+			u32 neg : 1;
 		};
 	} src[3];
 
@@ -147,6 +148,8 @@ struct GLVertexDecompilerThread : public ThreadBase
 			put_close_scopes = open_scopes = close_scopes = do_count = 0;
 		}
 	};
+
+	std::set<int> m_jump_lvls;
 
 	static const size_t m_max_instr_count = 512;
 	Instruction m_instructions[m_max_instr_count];
@@ -200,7 +203,7 @@ struct GLVertexDecompilerThread : public ThreadBase
 };
 
 class GLVertexProgram
-{ 
+{
 public:
 	GLVertexProgram();
 	~GLVertexProgram();
