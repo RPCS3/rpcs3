@@ -34,20 +34,10 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? (T*)&Memory[m_addr] : nullptr;
+			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
 		}
 
 		void dealloc()
-		{
-			if (check())
-			{
-				Memory.Free(m_addr);
-				m_addr = 0;
-				m_ptr = nullptr;
-			}
-		}
-
-		void clear()
 		{
 			if (check())
 			{
@@ -64,7 +54,7 @@ namespace vm
 			res.m_addr = addr;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = Memory.IsGoodAddr(m_addr, sizeof(T)) ? (T*)&Memory[m_addr] : nullptr;
+			res.m_ptr = Memory.IsGoodAddr(addr, size) ? get_ptr<T>(addr) : nullptr;
 
 			return res;
 		}
@@ -166,7 +156,7 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? (T*)&Memory[m_addr] : nullptr;
+			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
 		}
 
 		void dealloc()
@@ -187,7 +177,7 @@ namespace vm
 			res.m_count = count;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = Memory.IsGoodAddr(m_addr, size()) ? (T*)&Memory[m_addr] : nullptr;
+			res.m_ptr = Memory.IsGoodAddr(addr, size * count) ? get_ptr<T>(addr) : nullptr;
 
 			return res;
 		}
@@ -297,17 +287,17 @@ namespace vm
 		T& at(uint index)
 		{
 			if (index >= count())
-				throw std::out_of_range();
+				throw std::out_of_range(std::to_string(index) + " >= " + count());
 
-			return *(m_ptr + index);
+			return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
 		}
 
 		const T& at(uint index) const
 		{
 			if (index >= count())
-				throw std::out_of_range();
+				throw std::out_of_range(std::to_string(index) + " >= " + count());
 
-			return *(m_ptr + index);
+			return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
 		}
 
 		T* ptr()
@@ -365,7 +355,7 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? (T*)&Memory[m_addr] : nullptr;
+			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
 		}
 
 		void dealloc()
@@ -479,23 +469,23 @@ namespace vm
 		const T& operator [](uint index) const
 		{
 			assert(index < count());
-			return return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
+			return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
 		}
 		
 		T& at(uint index)
 		{
 			if (index >= count())
-				throw std::out_of_range();
+				throw std::out_of_range(std::to_string(index) + " >= " + count());
 
-			return *(m_ptr + index);
+			return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
 		}
 		
 		const T& at(uint index) const
 		{
 			if (index >= count())
-				throw std::out_of_range();
+				throw std::out_of_range(std::to_string(index) + " >= " + count());
 
-			return *(m_ptr + index);
+			return *(T*)((u8*)m_ptr + (m_size < m_align ? m_align : m_size) * index);
 		}
 
 		/*

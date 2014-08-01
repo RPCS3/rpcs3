@@ -584,6 +584,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Memory\vm.cpp">
+      <Filter>Emu\Memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
