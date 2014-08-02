@@ -54,6 +54,8 @@ extern void cellResc_init();
 extern void cellResc_load();
 extern void cellResc_unload();
 extern Module *cellResc;
+extern void cellSail_init();
+extern Module *cellSail;
 extern void cellRtc_init();
 extern Module *cellRtc;
 extern void cellSpurs_init();
@@ -237,6 +239,8 @@ void ModuleManager::init()
 		m_mod_init.emplace_back(0x001e, cellL10n_init);
 		cellPamf = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0012, cellPamf_init);
+		cellSail = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back("cellSail", cellSail_init);
 		cellResc = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x001f, cellResc_init, cellResc_load, cellResc_unload);
 		cellRtc = static_cast <Module*>(&(m_mod_init.back())) + 1;

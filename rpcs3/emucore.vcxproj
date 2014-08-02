@@ -151,6 +151,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp" />
@@ -351,6 +352,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
