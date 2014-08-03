@@ -42,14 +42,14 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
-		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd.GetAddr(), 0, 0);
+		vm::var<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd.addr(), 0, 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
-		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb.addr());
 		if (ret != CELL_OK) return ret;
 		current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
 		break;
@@ -75,21 +75,21 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	CellGifDecInfo& current_info = subHandle_data->info;
 	
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer(13); // Alloc buffer for GIF header
-	MemoryAllocator<be_t<u64>> pos, nread;
+	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
+		if (!Memory.Copy(buffer.addr(), subHandle_data->src.streamPtr.ToLE(), buffer.size())) {
 			cellGifDec->Error("cellGifDecReadHeader() failed ()");
 			return CELL_EFAULT;
 		}
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread.addr());
 		break;
 	}
 
@@ -160,21 +160,21 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellGifDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the GIF file to a buffer
-	MemoryAllocator<unsigned char> gif(fileSize);
-	MemoryAllocator<u64> pos, nread;
+	vm::var<unsigned char[]> gif(fileSize);
+	vm::var<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(gif.GetAddr(), subHandle_data->src.streamPtr.ToLE(), gif.GetSize())) {
+		if (!Memory.Copy(gif.addr(), subHandle_data->src.streamPtr.ToLE(), gif.size())) {
 			cellGifDec->Error("cellGifDecDecodeData() failed (I)");
 			return CELL_EFAULT;
 		}
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, gif.addr(), gif.size(), nread.addr());
 		break;
 	}
 
@@ -182,7 +182,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(gif.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(gif.ptr(), fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 

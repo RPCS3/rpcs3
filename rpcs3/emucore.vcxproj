@@ -314,6 +314,10 @@
     <ClInclude Include="Emu\Memory\DynamicMemoryBlockBase.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
+    <ClInclude Include="Emu\Memory\vm.h" />
+    <ClInclude Include="Emu\Memory\vm_ptr.h" />
+    <ClInclude Include="Emu\Memory\vm_ref.h" />
+    <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
