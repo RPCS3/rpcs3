@@ -1,6 +1,6 @@
 #pragma once
-#include "Emu/GS/GSRender.h"
-#include "Emu/GS/RSXThread.h"
+#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Utilities/rPlatform.h"
 #include "GLBuffers.h"
 #include "GLProgramBuffer.h"

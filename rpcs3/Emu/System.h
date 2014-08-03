@@ -5,7 +5,7 @@
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
-#include "Emu/GS/GSManager.h"
+#include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "Loader/Loader.h"

@@ -33,15 +33,6 @@
     <Filter Include="Emu\Io\Windows">
       <UniqueIdentifier>{c04826b8-05a1-4015-b3aa-ef44805531a2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\GS">
-      <UniqueIdentifier>{c344f241-48a9-4950-8b94-8b60adc4a67f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\GS\GL">
-      <UniqueIdentifier>{9aaa9b5c-c890-485c-a729-d2b5e783406f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\GS\Null">
-      <UniqueIdentifier>{f81523a6-0846-4abc-96b2-1284b2506485}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\FS">
       <UniqueIdentifier>{b26b6b08-a8ce-4bb5-8339-c5352a23ce96}</UniqueIdentifier>
     </Filter>
@@ -80,6 +71,15 @@
     </Filter>
     <Filter Include="Emu\Io\XInput">
       <UniqueIdentifier>{187d33b8-7b69-4081-9545-de6ad1d8fe98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\RSX">
+      <UniqueIdentifier>{fadb4b36-57af-4583-891d-d22ff369e266}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\RSX\Null">
+      <UniqueIdentifier>{4adca4fa-b90f-4662-9eb0-1d29cf3cd2eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\RSX\GL">
+      <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -235,39 +235,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\Pad.cpp">
       <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GSManager.cpp">
-      <Filter>Emu\GS</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GSRender.cpp">
-      <Filter>Emu\GS</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\RSXTexture.cpp">
-      <Filter>Emu\GS</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\RSXThread.cpp">
-      <Filter>Emu\GS</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLBuffers.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLFragmentProgram.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLGSRender.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLProgram.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLProgramBuffer.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\GLVertexProgram.cpp">
-      <Filter>Emu\GS\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\GS\GL\OpenGL.cpp">
-      <Filter>Emu\GS\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\FS\VFS.cpp">
       <Filter>Emu\FS</Filter>
@@ -587,6 +554,39 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLProgram.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\OpenGL.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GSManager.cpp">
+      <Filter>Emu\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GSRender.cpp">
+      <Filter>Emu\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXTexture.cpp">
+      <Filter>Emu\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXThread.cpp">
+      <Filter>Emu\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -729,54 +729,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h">
       <Filter>Emu\Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GCM.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GSManager.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GSRender.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\RSXFragmentProgram.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\RSXTexture.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\RSXThread.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\RSXVertexProgram.h">
-      <Filter>Emu\GS</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLBuffers.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLFragmentProgram.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLGSRender.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLProgram.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLProgramBuffer.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLShaderParam.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\GLVertexProgram.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\GL\OpenGL.h">
-      <Filter>Emu\GS\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\GS\Null\NullGSRender.h">
-      <Filter>Emu\GS\Null</Filter>
     </ClInclude>
     <ClInclude Include="Emu\FS\VFS.h">
       <Filter>Emu\FS</Filter>
@@ -1110,6 +1062,60 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
+      <Filter>Emu\RSX\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLGSRender.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProcTable.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProgram.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLShaderParam.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\OpenGL.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLBuffers.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h">
+      <Filter>Emu\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GSManager.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GSRender.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXTexture.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXThread.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\sysutil_video.h">
+      <Filter>Emu\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GCM.h">
+      <Filter>Emu\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

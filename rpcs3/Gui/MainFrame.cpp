@@ -11,7 +11,7 @@
 
 #include "git-version.h"
 #include "Ini.h"
-#include "Emu/GS/sysutil_video.h"
+#include "Emu/RSX/sysutil_video.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"

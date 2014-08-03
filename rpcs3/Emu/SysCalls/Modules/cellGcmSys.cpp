@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/GS/GCM.h"
+#include "Emu/RSX/GCM.h"
 #include "sysPrxForUser.h"
 #include "cellGcmSys.h"
 

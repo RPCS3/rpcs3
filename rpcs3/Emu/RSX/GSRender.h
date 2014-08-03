@@ -1,6 +1,6 @@
 #pragma once
-#include "Emu/GS/GCM.h"
-#include "Emu/GS/RSXThread.h"
+#include "Emu/RSX/GCM.h"
+#include "Emu/RSX/RSXThread.h"
 
 struct GSRender : public RSXThread
 {

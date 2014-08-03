@@ -4,8 +4,8 @@
 #include "Emu/System.h"
 
 #include "RSXDebugger.h"
-#include "Emu/GS/sysutil_video.h"
-#include "Emu/GS/GCM.h"
+#include "Emu/RSX/sysutil_video.h"
+#include "Emu/RSX/GCM.h"
 
 #include "MemoryViewer.h"
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "Emu/GS/GSRender.h"
+#include "Emu/RSX/GSRender.h"
 
 class NullGSRender
 	: public GSRender
