@@ -649,6 +649,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
