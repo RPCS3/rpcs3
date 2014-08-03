@@ -1105,5 +1105,17 @@
     <ClInclude Include="Emu\SysCalls\LogBase.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Memory\vm.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_ptr.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_ref.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_var.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
