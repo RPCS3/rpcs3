@@ -4,58 +4,11 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "cellNetCtl.h"
+
 //void cellNetCtl_init();
 //Module cellNetCtl(0x0014, cellNetCtl_init);
 Module *cellNetCtl;
-
-// Error Codes
-enum
-{
-	CELL_NET_CTL_ERROR_NOT_INITIALIZED               = 0x80130101,
-	CELL_NET_CTL_ERROR_NOT_TERMINATED                = 0x80130102,
-	CELL_NET_CTL_ERROR_HANDLER_MAX                   = 0x80130103,
-	CELL_NET_CTL_ERROR_ID_NOT_FOUND                  = 0x80130104,
-	CELL_NET_CTL_ERROR_INVALID_ID                    = 0x80130105,
-	CELL_NET_CTL_ERROR_INVALID_CODE                  = 0x80130106,
-	CELL_NET_CTL_ERROR_INVALID_ADDR                  = 0x80130107,
-	CELL_NET_CTL_ERROR_NOT_CONNECTED                 = 0x80130108,
-	CELL_NET_CTL_ERROR_NOT_AVAIL                     = 0x80130109,
-	CELL_NET_CTL_ERROR_INVALID_TYPE                  = 0x8013010a,
-	CELL_NET_CTL_ERROR_INVALID_SIZE                  = 0x8013010b,
-	CELL_NET_CTL_ERROR_NET_DISABLED                  = 0x80130181,
-	CELL_NET_CTL_ERROR_NET_NOT_CONNECTED             = 0x80130182,
-	CELL_NET_CTL_ERROR_NP_NO_ACCOUNT                 = 0x80130183,
-	CELL_NET_CTL_ERROR_NP_RESERVED1                  = 0x80130184,
-	CELL_NET_CTL_ERROR_NP_RESERVED2                  = 0x80130185,
-	CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED       = 0x80130186,
-	CELL_NET_CTL_ERROR_DIALOG_CANCELED               = 0x80130190,
-	CELL_NET_CTL_ERROR_DIALOG_ABORTED                = 0x80130191,
-
-	CELL_NET_CTL_ERROR_WLAN_DEAUTHED                 = 0x80130137,
-	CELL_NET_CTL_ERROR_WLAN_KEYINFO_EXCHNAGE_TIMEOUT = 0x8013013d,
-	CELL_NET_CTL_ERROR_WLAN_ASSOC_FAILED             = 0x8013013e,
-	CELL_NET_CTL_ERROR_WLAN_AP_DISAPPEARED           = 0x8013013f,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_INIT            = 0x80130409,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADO         = 0x8013040a,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADS         = 0x8013040b,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_GET_PADT        = 0x8013040d,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_SERVICE_NAME    = 0x8013040f,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_AC_SYSTEM       = 0x80130410,
-	CELL_NET_CTL_ERROR_PPPOE_SESSION_GENERIC         = 0x80130411,
-	CELL_NET_CTL_ERROR_PPPOE_STATUS_AUTH             = 0x80130412,
-	CELL_NET_CTL_ERROR_PPPOE_STATUS_NETWORK          = 0x80130413,
-	CELL_NET_CTL_ERROR_PPPOE_STATUS_TERMINATE        = 0x80130414,
-	CELL_NET_CTL_ERROR_DHCP_LEASE_TIME               = 0x80130504,
-};
-
-// Network connection states
-enum
-{
-	CELL_NET_CTL_STATE_Disconnected = 0,
-	CELL_NET_CTL_STATE_Connecting   = 1,
-	CELL_NET_CTL_STATE_IPObtaining  = 2,
-	CELL_NET_CTL_STATE_IPObtained   = 3,
-};
 
 int cellNetCtlInit()
 {
@@ -74,7 +27,10 @@ int cellNetCtlGetState(mem32_t state)
 	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
 
 	if (!state.IsGood())
+	{
+		cellNetCtl->Error("cellNetCtlGetState : CELL_NET_CTL_ERROR_INVALID_ADDR");
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
 
 	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 	return CELL_OK;
@@ -98,9 +54,16 @@ int cellNetCtlGetInfo()
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogLoadAsync()
+int cellNetCtlNetStartDialogLoadAsync(mem_ptr_t<CellNetCtlNetStartDialogParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.GetAddr());
+
+	if (!param.IsGood())
+	{
+		cellNetCtl->Error("cellNetCtlNetStartDialogLoadAsync : CELL_NET_CTL_ERROR_INVALID_ADDR");
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
 	return CELL_OK;
 }
 
@@ -110,15 +73,35 @@ int cellNetCtlNetStartDialogAbortAsync()
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogUnloadAsync()
+int cellNetCtlNetStartDialogUnloadAsync(mem_ptr_t<CellNetCtlNetStartDialogResult> result)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.GetAddr());
+
+	if (!result.IsGood())
+	{
+		cellNetCtl->Error("cellNetCtlNetStartDialogLoadAsync : CELL_NET_CTL_ERROR_INVALID_ADDR");
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
 	return CELL_OK;
 }
 
-int cellNetCtlGetNatInfo()
+int cellNetCtlGetNatInfo(mem_ptr_t<CellNetCtlNatInfo> natInfo)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.GetAddr());
+
+	if (!natInfo.IsGood())
+	{
+		cellNetCtl->Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_ADDR");
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
+	if (natInfo->size == 0)
+	{
+		cellNetCtl->Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
+		return CELL_NET_CTL_ERROR_INVALID_SIZE;
+	}
+	
 	return CELL_OK;
 }
 
