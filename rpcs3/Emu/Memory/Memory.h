@@ -1113,6 +1113,7 @@ public:
 	}
 };
 
+/*
 template<typename T>
 class MemoryAllocator
 {
@@ -1222,6 +1223,7 @@ public:
 		return (NT*)(m_ptr + offset);
 	}
 };
+*/
 
 typedef mem_t<u8, u32> mem8_t;
 typedef mem_t<u16, u32> mem16_t;
@@ -1244,4 +1246,6 @@ typedef mem_list_ptr_t<u8, u32> mem8_ptr_t;
 typedef mem_list_ptr_t<u16, u32> mem16_ptr_t;
 typedef mem_list_ptr_t<u32, u32> mem32_ptr_t;
 typedef mem_list_ptr_t<u64, u32> mem64_ptr_t;
+
+#include "vm.h"
 

@@ -241,11 +241,11 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	}
 
 	// TODO: use memory container
-	MemoryAllocator<CellGameDataCBResult> cbResult;
-	MemoryAllocator<CellGameDataStatGet> cbGet;
-	MemoryAllocator<CellGameDataStatSet> cbSet;
+	vm::var<CellGameDataCBResult> cbResult;
+	vm::var<CellGameDataStatGet> cbGet;
+	vm::var<CellGameDataStatSet> cbSet;
 
-	memset(cbGet.GetPtr(), 0, sizeof(CellGameDataStatGet));
+	cbGet.value() = {};
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
@@ -270,7 +270,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
-	funcStat(cbResult.GetAddr(), cbGet.GetAddr(), cbSet.GetAddr());
+	funcStat(cbResult.addr(), cbGet.addr(), cbSet.addr());
 
 	if (cbSet->setParam.GetAddr())
 	{

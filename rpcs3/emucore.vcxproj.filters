@@ -587,6 +587,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Memory\vm.cpp">
+      <Filter>Emu\Memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1104,6 +1107,18 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\LogBase.h">
       <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_ptr.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_ref.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\vm_var.h">
+      <Filter>Emu\Memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
