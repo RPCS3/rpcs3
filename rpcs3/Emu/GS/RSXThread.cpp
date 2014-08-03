@@ -1321,11 +1321,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		}
 
 		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-		m_width = m_buffer_width = re(buffers[m_gcm_current_buffer].width);
-		m_height = m_buffer_height = re(buffers[m_gcm_current_buffer].height);
+		m_width = re(buffers[m_gcm_current_buffer].width);
+		m_height = re(buffers[m_gcm_current_buffer].height);
 
 		// Rescale native resolution to fit 1080p/720p/480p/576p window size
-		nativeRescale((float)m_buffer_width, (float)m_buffer_height);
+		nativeRescale((float)m_width, (float)m_height);
 	}
 	break;
 
