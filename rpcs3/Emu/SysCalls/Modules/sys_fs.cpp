@@ -246,14 +246,14 @@ int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem6
 		fd, offset, buf_addr, buffer_size, nread.GetAddr());
 
 	int ret;
-	MemoryAllocator<be_t<u64>> oldPos, newPos;
-	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos.GetAddr());       // Save the current position
+	vm::var<be_t<u64>> oldPos, newPos;
+	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos.addr());       // Save the current position
 	if (ret) return ret;
-	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos.GetAddr());  // Move to the specified offset
+	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos.addr());  // Move to the specified offset
 	if (ret) return ret;
 	ret = cellFsRead(fd, buf_addr, buffer_size, nread.GetAddr());    // Read the file
 	if (ret) return ret;
-	ret = cellFsLseek(fd, Memory.Read64(oldPos.GetAddr()), CELL_SEEK_SET, newPos.GetAddr());  // Return to the old position
+	ret = cellFsLseek(fd, oldPos.value(), CELL_SEEK_SET, newPos.addr());  // Return to the old position
 	if (ret) return ret;
 
 	return CELL_OK;

@@ -90,6 +90,7 @@
     <ClCompile Include="Emu\Io\Mouse.cpp" />
     <ClCompile Include="Emu\Io\Pad.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
+    <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp" />
@@ -313,6 +314,10 @@
     <ClInclude Include="Emu\Memory\DynamicMemoryBlockBase.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
+    <ClInclude Include="Emu\Memory\vm.h" />
+    <ClInclude Include="Emu\Memory\vm_ptr.h" />
+    <ClInclude Include="Emu\Memory\vm_ref.h" />
+    <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
@@ -514,7 +519,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
