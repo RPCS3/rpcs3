@@ -210,12 +210,12 @@ struct CellNetCtlSSID
 struct CellNetCtlInfo
 {
 	be_t<u32> device;
-	struct CellNetCtlEtherAddr ether_addr;
+	CellNetCtlEtherAddr ether_addr;
 	be_t<u32> mtu;
 	be_t<u32> link;
 	be_t<u32> link_type;
-	struct CellNetCtlEtherAddr bssid;
-	struct CellNetCtlSSID ssid;
+	CellNetCtlEtherAddr bssid;
+	CellNetCtlSSID ssid;
 	be_t<u32> wlan_security;
 	be_t<u32> auth_8021x_type;
 	s8 auth_8021x_auth_name[128];
@@ -254,5 +254,5 @@ struct CellNetCtlNatInfo
 	be_t<s32> upnp_status;
 	be_t<s32> stun_status;
 	be_t<s32> nat_type;
-	struct in_addr mapped_addr;
+	be_t<u32> mapped_addr;
 };
