@@ -10,24 +10,11 @@
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Loader/ELF.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "sysPrxForUser.h"
 
 //void sysPrxForUser_init();
 //Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 Module *sysPrxForUser = nullptr;
-
-struct HeapInfo
-{
-	u32 heap_addr;
-	u32 align;
-	u32 size;
-
-	HeapInfo(u32 _heap_addr, u32 _align, u32 _size)
-		: heap_addr(_heap_addr)
-		, align(_align)
-		, size(_size)
-	{
-	}
-};
 
 int sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {	
@@ -177,6 +164,14 @@ int sys_raw_spu_image_load(int id, mem_ptr_t<sys_spu_image> img)
 	return CELL_OK;
 }
 
+s32 _sys_memset(u32 addr, s32 value, u32 size)
+{
+	sysPrxForUser->Log("_sys_memset(addr=0x%x, value=%d, size=%d)", addr, value, size);
+
+	memset(Memory + addr, value, size);
+	return CELL_OK;
+}
+
 void sysPrxForUser_init()
 {
 	sysPrxForUser->AddFunc(0x744680a2, sys_initialize_tls);
@@ -249,4 +244,6 @@ void sysPrxForUser_init()
 
 	sysPrxForUser->AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
 	sysPrxForUser->AddFunc(0xfc52a7a9, sys_game_process_exitspawn);
+
+	sysPrxForUser->AddFunc(0x68b9b011, _sys_memset);
 }
