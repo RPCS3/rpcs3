@@ -593,10 +593,10 @@ public:
 		static const std::string& dir_path = "textures";
 		static const std::string& file_fmt = dir_path + "/" + "tex[%d].png";
 
-		if(!rDirExists(dir_path)) rMkdir(dir_path);
+		if(!rExists(dir_path)) rMkdir(dir_path);
 
 		u32 count = 0;
-		while(rFileExists(fmt::Format(file_fmt, count))) count++;
+		while(rExists(fmt::Format(file_fmt, count))) count++;
 		Save(tex, fmt::Format(file_fmt, count));
 	}
 

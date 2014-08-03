@@ -2,6 +2,24 @@
 
 #include <string>
 
+struct FileInfo {
+	std::string name;
+	std::string fullName;
+	bool exists;
+	bool isDirectory;
+	bool isWritable;
+	uint64_t size;
+};
+
+bool getFileInfo(const char *path, FileInfo *fileInfo);
+bool rIsDir(const std::string& filename);
+bool rRmdir(const std::string& dir);
+bool rMkdir(const std::string& dir);
+bool rMkpath(const std::string& path);
+bool rRename(const std::string &from, const std::string &to);
+bool rExists(const std::string &path);
+bool rRemoveFile(const std::string &path);
+
 enum rSeekMode
 {
 	rFromStart,
@@ -40,20 +58,6 @@ public:
 
 	void *handle;
 };
-
-std::string rGetCwd();
-bool rRmdir(const std::string& dir);
-bool rMkdir(const std::string& dir);
-bool rMkpath(const std::string& path);
-bool rRename(const std::string &from, const std::string &to);
-bool rExists(const std::string &path);
-bool rDirExists(const std::string &path);
-bool rFileExists(const std::string &path);
-bool rRemoveFile(const std::string &path);
-
-bool rIsWritable(const std::string& path);
-bool rIsReadable(const std::string& path);
-bool rIsExecutable(const std::string& path);
 
 struct rDir
 {

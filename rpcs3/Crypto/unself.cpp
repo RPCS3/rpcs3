@@ -505,10 +505,11 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 
 	// Try to find a matching RAP file under dev_usb000.
 	std::string ci_str((const char *)content_id);
-	std::string rap_path(rGetCwd() + "/dev_usb000/" + ci_str + ".rap");
+	// TODO: This shouldn't use current dir
+	std::string rap_path("./dev_usb000/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!rFile::Exists(rap_path))
+	if (!rExists(rap_path))
 	{
 		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;

@@ -241,7 +241,7 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	Emu.GetVFS().UnMountAll();
 
-	if (!rFile::Exists(localPath))
+	if (!rExists(localPath))
 		return;
 	//TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;

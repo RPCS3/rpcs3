@@ -291,7 +291,8 @@ void VFS::Init(const std::string& path)
 		}
 		
 		std::string mpath = entry.path;
-		fmt::Replace(mpath,"$(EmulatorDir)", rGetCwd());
+		// TODO: This shouldn't use current dir
+		fmt::Replace(mpath,"$(EmulatorDir)", ".");
 		fmt::Replace(mpath,"$(GameDir)", vfsDevice::GetRoot(path));
 		Mount(entry.mount, mpath, dev);
 	}

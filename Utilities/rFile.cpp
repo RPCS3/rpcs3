@@ -15,6 +15,125 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 }
 #endif
 
+bool getFileInfo(const char *path, FileInfo *fileInfo) {
+	// TODO: Expand relative paths?
+	fileInfo->fullName = path;
+
+#ifdef _WIN32
+	WIN32_FILE_ATTRIBUTE_DATA attrs;
+	if (!GetFileAttributesExW(ConvertUTF8ToWString(path).c_str(), GetFileExInfoStandard, &attrs)) {
+		fileInfo->size = 0;
+		fileInfo->isDirectory = false;
+		fileInfo->exists = false;
+		return false;
+	}
+	fileInfo->size = (uint64_t)attrs.nFileSizeLow | ((uint64_t)attrs.nFileSizeHigh << 32);
+	fileInfo->isDirectory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	fileInfo->isWritable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	fileInfo->exists = true;
+#else
+	struct stat64 file_info;
+	int result = stat64(path, &file_info);
+
+	if (result < 0) {
+		LOG_NOTICE(GENERAL, "IsDirectory: stat failed on %s", path);
+		fileInfo->exists = false;
+		return false;
+	}
+
+	fileInfo->isDirectory = S_ISDIR(file_info.st_mode);
+	fileInfo->isWritable = false;
+	fileInfo->size = file_info.st_size;
+	fileInfo->exists = true;
+	// HACK: approximation
+	if (file_info.st_mode & 0200)
+		fileInfo->isWritable = true;
+#endif
+	return true;
+}
+
+bool rIsDir(const std::string &filename) {
+	FileInfo info;
+	getFileInfo(filename.c_str(), &info);
+	return info.isDirectory;
+}
+
+bool rMkdir(const std::string &dir)
+{
+	return !mkdir(dir.c_str());
+}
+
+bool rMkpath(const std::string &path)
+{
+	size_t start=0, pos;
+	std::string dir;
+	bool ret;
+
+	while (true) {
+		if ((pos = path.find_first_of('/', start)) == std::string::npos)
+			pos = path.length();
+
+		dir = path.substr(0,pos++);
+		start = pos;
+		if(dir.size() == 0)
+			continue;
+		if((ret = mkdir(dir.c_str())) && errno != EEXIST){
+			return !ret;
+		}
+		if (pos == path.length())
+			return true;
+	}
+	return true;
+}
+
+bool rRmdir(const std::string &dir)
+{
+#ifdef _WIN32
+	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str())) {
+		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir.c_str(), GetLastError());
+		return false;
+	}
+	return true;
+#else
+	rmdir(dir.c_str());
+#endif
+}
+
+bool rRename(const std::string &from, const std::string &to)
+{
+	// TODO: Deal with case-sensitivity
+#ifdef _WIN32
+	return (MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()) == TRUE);
+#else
+	return (0 == rename(from.c_str(), to.c_str()));
+#endif
+}
+
+bool rExists(const std::string &file)
+{
+#ifdef _WIN32
+	std::wstring wstr = ConvertUTF8ToWString(file);
+	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
+#else
+	struct stat buffer;
+	return (stat (file.c_str(), &buffer) == 0);
+#endif
+}
+
+bool rRemoveFile(const std::string &file)
+{
+#ifdef _WIN32
+	if (!DeleteFile(ConvertUTF8ToWString(file).c_str())) {
+		LOG_ERROR(GENERAL, "Error deleting %s: %i", file.c_str(), GetLastError());
+	}
+#else
+	int err = unlink(file.c_str());
+	if (err) {
+		LOG_ERROR(GENERAL, "Error unlinking %s: %i", file.c_str(), err);
+	}
+#endif
+}
+
 wxFile::OpenMode convertOpenMode(rFile::OpenMode open)
 {
 	wxFile::OpenMode mode;
@@ -143,17 +262,12 @@ bool rFile::Close()
 
 bool rFile::Create(const std::string &filename, bool overwrite, int access)
 {
-	return reinterpret_cast<wxFile*>(handle)->Create(fmt::FromUTF8(filename),overwrite,access);
+	return reinterpret_cast<wxFile*>(handle)->Create(fmt::FromUTF8(filename), overwrite, access);
 }
 
 bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
 {
 	return reinterpret_cast<wxFile*>(handle)->Open(fmt::FromUTF8(filename), convertOpenMode(mode), access);
-}
-
-bool rFile::Exists(const std::string &file)
-{
-	return rExists(file);
 }
 
 bool rFile::IsOpened() const
@@ -181,85 +295,6 @@ size_t rFile::Tell() const
 	return reinterpret_cast<wxFile*>(handle)->Tell();
 }
 
-std::string rGetCwd()
-{
-	return fmt::ToUTF8(wxGetCwd());
-}
-
-bool rMkdir(const std::string &dir)
-{
-	return !mkdir(dir.c_str());
-}
-
-bool rMkpath(const std::string& path)
-{
-	return wxFileName::Mkdir(fmt::FromUTF8(path), 0777, wxPATH_MKDIR_FULL);
-}
-
-bool rRmdir(const std::string &dir)
-{
-#ifdef _WIN32
-	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str())) {
-		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir, GetLastError());
-		return false;
-	}
-	return true;
-#else
-	rmdir(dir.c_str());
-#endif
-}
-
-bool rRename(const std::string &from, const std::string &to)
-{
-	// TODO: Deal with case-sensitivity
-#ifdef _WIN32
-	return (MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()) == TRUE);
-#else
-	return (0 == rename(from.c_str(), to.c_str()));
-#endif
-}
-
-bool rExists(const std::string &file)
-{
-#ifdef _WIN32
-	std::wstring wstr = ConvertUTF8ToWString(file);
-	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
-#else
-	struct stat buffer;
-	return (stat (file.c_str(), &buffer) == 0);
-#endif
-}
-
-bool rDirExists(const std::string &path)
-{
-	return wxDirExists(fmt::FromUTF8(path));
-}
-
-bool rFileExists(const std::string &path)
-{
-	return wxFileExists(fmt::FromUTF8(path));
-}
-
-bool rRemoveFile(const std::string &path)
-{
-	return wxRemoveFile(fmt::FromUTF8(path));
-}
-
-bool rIsWritable(const std::string& path)
-{
-	return wxIsWritable(fmt::FromUTF8(path));
-}
-
-bool rIsReadable(const std::string& path)
-{
-	return wxIsReadable(fmt::FromUTF8(path));
-}
-
-bool rIsExecutable(const std::string& path)
-{
-	return wxIsExecutable(fmt::FromUTF8(path));
-}
-
 rDir::rDir()
 {
 	handle = reinterpret_cast<void*>(new wxDir());
@@ -278,11 +313,6 @@ rDir::rDir(const std::string &path)
 bool rDir::Open(const std::string& path)
 {
 	return reinterpret_cast<wxDir*>(handle)->Open(fmt::FromUTF8(path));
-}
-
-bool rDir::Exists(const std::string &path)
-{
-	return rFile::Exists(path);
 }
 
 bool rDir::GetFirst(std::string *filename) const

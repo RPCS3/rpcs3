@@ -133,7 +133,7 @@ void Emulator::Load()
 {
 	GetModuleManager().init();
 
-	if(!rFileExists(m_path)) return;
+	if(!rExists(m_path)) return;
 
 	if(IsSelf(m_path))
 	{
