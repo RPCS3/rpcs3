@@ -125,13 +125,16 @@ bool rRemoveFile(const std::string &file)
 #ifdef _WIN32
 	if (!DeleteFile(ConvertUTF8ToWString(file).c_str())) {
 		LOG_ERROR(GENERAL, "Error deleting %s: %i", file.c_str(), GetLastError());
+		return false;
 	}
 #else
 	int err = unlink(file.c_str());
 	if (err) {
 		LOG_ERROR(GENERAL, "Error unlinking %s: %i", file.c_str(), err);
+		return false;
 	}
 #endif
+	return true;
 }
 
 wxFile::OpenMode convertOpenMode(rFile::OpenMode open)
