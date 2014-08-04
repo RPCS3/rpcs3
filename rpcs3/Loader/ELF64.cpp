@@ -343,8 +343,13 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						const u32 nid = Memory.Read32(stub.s_nid + i*4);
 						const u32 text = Memory.Read32(stub.s_text + i*4);
 
-						if (module && !module->Load(nid)) {
+						if (module && !module->Load(nid))
+						{
 							LOG_WARNING(LOADER, "Unimplemented function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+						}
+						else //if (Ini.HLELogging.GetValue())
+						{
+							LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
 						}
 #ifdef LOADER_DEBUG
 						LOG_NOTICE(LOADER, "import %d:", i+1);
