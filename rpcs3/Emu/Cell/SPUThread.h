@@ -901,6 +901,7 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutMbox:       return SPU.Out_MBox.GetFreeCount();
+		case SPU_WrOutIntrMbox:   return SPU.Out_IntrMBox.GetFreeCount();
 		case SPU_RdInMbox:        return SPU.In_MBox.GetCount();
 		case MFC_RdTagStat:       return MFC1.TagStatus.GetCount();
 		case MFC_RdListStallStat: return StallStat.GetCount();
@@ -929,16 +930,24 @@ public:
 			if (!group) // if RawSPU
 			{
 				if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
-				SPU.Out_IntrMBox.PushUncond(v);
+				while (!SPU.Out_IntrMBox.Push(v))
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					if (Emu.IsStopped())
+					{
+						LOG_WARNING(Log::SPU, "%s(%s) aborted (I)", __FUNCTION__, spu_ch_name[ch]);
+						return;
+					}
+				}
 				m_intrtag[2].stat |= 1;
 				if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
 				{
-					while (t->IsAlive())
+					while (t->IsAlive()) // TODO: ???
 					{
 						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						if (Emu.IsStopped())
 						{
-							LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+							LOG_WARNING(Log::SPU, "%s(%s) aborted (II)", __FUNCTION__, spu_ch_name[ch]);
 							return;
 						}
 					}
@@ -1065,21 +1074,18 @@ public:
 
 		case SPU_WrOutMbox:
 		{
-			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			break;
 		}
 
 		case MFC_WrTagMask:
 		{
-			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			MFC1.QueryMask.SetValue(v);
 			break;
 		}
 
 		case MFC_WrTagUpdate:
 		{
-			//ConLog.Warning("%s: %s = 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 			MFC1.TagStatus.PushUncond(MFC1.QueryMask.GetValue());
 			break;
 		}
@@ -1167,28 +1173,24 @@ public:
 		case SPU_RdInMbox:
 		{
 			while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case MFC_RdTagStat:
 		{
 			while (!MFC1.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case SPU_RdSigNotify1:
 		{
 			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
 		case SPU_RdSigNotify2:
 		{
 			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//ConLog.Warning("%s: 0x%x = %s", __FUNCTION__, v, spu_ch_name[ch]);
 			break;
 		}
 
