@@ -135,7 +135,7 @@ s32 sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg)
 	sc_spu.Warning("sys_spu_thread_set_argument(id=%d, arg_addr=0x%x)", id, arg.GetAddr());
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -165,7 +165,7 @@ s32 sys_spu_thread_get_exit_status(u32 id, mem32_t status)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -382,7 +382,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -415,7 +415,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -452,7 +452,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -469,7 +469,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -491,7 +491,7 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, mem64_t value)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -507,7 +507,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 	sc_spu.Log("sys_spu_thread_write_snr(id=%d, number=%d, value=0x%x)", id, number, value);
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -550,7 +550,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq_id, u32 et, u8 spup)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -599,7 +599,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -650,7 +650,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 eq_id, u32 spuq_num)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -669,7 +669,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || (thr->GetType() != CPU_THREAD_SPU && thr->GetType() != CPU_THREAD_RAW_SPU))
+	if(!thr || thr->GetType() != CPU_THREAD_SPU)
 	{
 		return CELL_ESRCH;
 	}
