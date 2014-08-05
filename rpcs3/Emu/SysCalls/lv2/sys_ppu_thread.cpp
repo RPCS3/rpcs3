@@ -108,7 +108,6 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
-	if(!Memory.IsGoodAddr(prio_addr)) return CELL_EFAULT;
 
 	Memory.Write32(prio_addr, thr->GetPrio());
 
@@ -118,8 +117,6 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 s32 sys_ppu_thread_get_stack_information(u32 info_addr)
 {
 	sysPrxForUser->Log("sys_ppu_thread_get_stack_information(info_addr=0x%x)", info_addr);
-
-	if(!Memory.IsGoodAddr(info_addr)) return CELL_EFAULT;
 
 	declCPU();
 
@@ -157,23 +154,10 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 s32 sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
 	std::string threadname = "";
-	if (Memory.IsGoodAddr(threadname_addr))
-	{
-		threadname = Memory.ReadString(threadname_addr);
-		sysPrxForUser->Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-			thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
-	}
-	else
-	{
-		sysPrxForUser->Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x)",
-			thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr);
-		if (threadname_addr != 0) return CELL_EFAULT;
-	}
-
-	if (!Memory.IsGoodAddr(entry) || !thread_id.IsGood())
-	{
-		return CELL_EFAULT;
-	}
+	if (threadname_addr) threadname = Memory.ReadString(threadname_addr);
+	
+	sysPrxForUser->Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
+		thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
 
 	bool is_joinable = false;
 	bool is_interrupt = false;

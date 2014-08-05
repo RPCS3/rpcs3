@@ -105,11 +105,6 @@ int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
 {
 	sysPrxForUser->Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=0x%x)", img.GetAddr(), src, type);
 
-	if(!img.IsGood() || !Memory.IsGoodAddr(src))
-	{
-		return CELL_EFAULT;
-	}
-
 	vfsStreamMemory f(src);
 	u32 entry;
 	u32 offset = LoadSpuImage(f, entry);

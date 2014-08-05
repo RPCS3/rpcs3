@@ -146,7 +146,7 @@ void setSaveDataFixed(std::vector<SaveDataEntry>& saveEntries, mem_ptr_t<CellSav
 		saveEntries.push_back(entry);
 	}
 
-	if (fixedSet->newIcon.IsGood())
+	if (fixedSet->newIcon.GetAddr())
 	{
 		saveEntries[0].iconBuf = Memory.VirtualToRealAddr(fixedSet->newIcon->iconBuf_addr);
 		saveEntries[0].iconBufSize = fixedSet->newIcon->iconBufSize;
@@ -295,9 +295,6 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	cellSysutil->Warning("cellSaveDataListSave2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcList_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=%d, userdata_addr=0x%x)",
 		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
 
-	if (!setList.IsGood() || !setBuf.IsGood() || !funcList.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
-
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
 	MemoryAllocator<CellSaveDataListSet> listSet;
@@ -340,11 +337,9 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		LOG_ERROR(HLE, "cellSaveDataListSave2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	if (!listSet->fixedList.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
-	if (listSet->newData.IsGood())
+	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
 		LOG_WARNING(HLE, "cellSaveDataListSave2: No save entries found!"); // TODO: Find a better way to handle this error
@@ -363,7 +358,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		LOG_ERROR(HLE, "cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr()); // TODO: This *is* wrong
 	*/
 
@@ -380,9 +375,6 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	cellSysutil->Warning("cellSaveDataListLoad2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcList_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=%d, userdata_addr=0x%x)",
 		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
 	
-	if (!setList.IsGood() || !setBuf.IsGood() || !funcList.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
-
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
 	MemoryAllocator<CellSaveDataListSet> listSet;
@@ -425,11 +417,9 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		LOG_ERROR(HLE, "cellSaveDataListLoad2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	if (!listSet->fixedList.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
-	if (listSet->newData.IsGood())
+	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
 		LOG_WARNING(HLE, "cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
@@ -448,7 +438,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		LOG_ERROR(HLE, "cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		// TODO: Write PARAM.SFO file
 	*/
 
@@ -464,9 +454,6 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 {
 	cellSysutil->Warning("cellSaveDataFixedSave2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcFixed_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=%d, userdata_addr=0x%x)",
 		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
-
-	if (!setList.IsGood() || !setBuf.IsGood() || !funcFixed.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
@@ -520,7 +507,7 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 		LOG_ERROR(HLE, "cellSaveDataFixedSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		// TODO: Write PARAM.SFO file
 	*/
 
@@ -536,9 +523,6 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 {
 	cellSysutil->Warning("cellSaveDataFixedLoad2(version=%d, setList_addr=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
 		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
-
-	if (!setList.IsGood() || !setBuf.IsGood() || !funcFixed.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataListGet> listGet;
@@ -592,7 +576,7 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 		LOG_ERROR(HLE, "cellSaveDataFixedLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		// TODO: Write PARAM.SFO file
 	*/
 
@@ -608,9 +592,6 @@ int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 {
 	cellSysutil->Warning("cellSaveDataAutoSave2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
 		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
-
-	if (!setBuf.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataStatGet> statGet;
@@ -648,7 +629,7 @@ int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 		LOG_ERROR(HLE, "cellSaveDataAutoSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		// TODO: Write PARAM.SFO file
 	*/
 
@@ -662,11 +643,8 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
-		cellSysutil->Warning("cellSaveDataAutoLoad2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
+	cellSysutil->Warning("cellSaveDataAutoLoad2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=%d, userdata_addr=0x%x)",
 		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
-
-	if (!setBuf.IsGood() || !funcStat.IsGood() || !funcFile.IsGood())
-		return CELL_SAVEDATA_ERROR_PARAM;
 
 	MemoryAllocator<CellSaveDataCBResult> result;
 	MemoryAllocator<CellSaveDataStatGet> statGet;
@@ -701,7 +679,7 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 		LOG_ERROR(HLE, "cellSaveDataAutoLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
-	/*if (statSet->setParam.IsGood())
+	/*if (statSet->setParam.GetAddr())
 		// TODO: Write PARAM.SFO file
 	*/
 

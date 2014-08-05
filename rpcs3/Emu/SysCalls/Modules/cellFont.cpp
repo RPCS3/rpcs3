@@ -242,10 +242,6 @@ int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> 
 	
 	if (s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
-	if (!config.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
-	if (!Memory.IsGoodAddr(config->FileCache.buffer_addr))
-		return CELL_FONT_ERROR_INVALID_CACHE_BUFFER;
 	if (config->FileCache.size < 24)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (config->flags != 0)
@@ -299,10 +295,6 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
-	if (!library.IsGood() || !font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
-	if (!Memory.IsGoodAddr(fontAddr))
-		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
 	if (!stbtt_InitFont(&(font->stbfont), (unsigned char*)Memory.VirtualToRealAddr(fontAddr), 0))
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
@@ -336,8 +328,6 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 	cellFont->Log("cellFontOpenFontset(library_addr=0x%x, fontType_addr=0x%x, font_addr=0x%x)",
 		library.GetAddr(), fontType.GetAddr(), font.GetAddr());
 
-	if (!library.IsGood() || !fontType.IsGood() || !font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
@@ -421,9 +411,6 @@ int cellFontOpenFontInstance(mem_ptr_t<CellFont> openedFont, mem_ptr_t<CellFont>
 {
 	cellFont->Warning("cellFontOpenFontInstance(openedFont=0x%x, font=0x%x)", openedFont.GetAddr(), font.GetAddr());
 
-	if (!openedFont.IsGood() || !font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
-
 	font->renderer_addr = openedFont->renderer_addr;
 	font->scale_x = openedFont->scale_x;
 	font->scale_y = openedFont->scale_y;
@@ -446,8 +433,6 @@ int cellFontCreateRenderer(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFon
 	cellFont->Warning("cellFontCreateRenderer(library_addr=0x%x, config_addr=0x%x, Renderer_addr=0x%x)",
 		library.GetAddr(), config.GetAddr(), Renderer.GetAddr());
 
-	if (!library.IsGood() || !config.IsGood() || !Renderer.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	
@@ -488,9 +473,6 @@ int cellFontSetScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
-	if (!font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
-
 	font->scale_x = w;
 	font->scale_y = h;
 	return CELL_FONT_OK;
@@ -500,9 +482,6 @@ int cellFontGetHorizontalLayout(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontHori
 {
 	cellFont->Log("cellFontGetHorizontalLayout(font_addr=0x%x, layout_addr=0x%x)",
 		font.GetAddr(), layout.GetAddr());
-
-	if (!font.IsGood() || !layout.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 
 	int ascent, descent, lineGap;
 	float scale = stbtt_ScaleForPixelHeight(&(font->stbfont), font->scale_y);
@@ -518,9 +497,7 @@ int cellFontBindRenderer(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontRenderer> r
 {
 	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x, renderer_addr=0x%x)",
 		font.GetAddr(), renderer.GetAddr());
-	
-	if (!font.IsGood() || !renderer.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
+
 	if (font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_ALREADY_BIND;
 
@@ -532,8 +509,6 @@ int cellFontUnbindRenderer(mem_ptr_t<CellFont> font)
 {
 	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x)", font.GetAddr());
 	
-	if (!font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 
@@ -553,8 +528,6 @@ int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
-	if (!font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 
@@ -567,8 +540,6 @@ int cellFontGetRenderCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_pt
 	cellFont->Log("cellFontGetRenderCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x)",
 		font.GetAddr(), code, metrics.GetAddr());
 
-	if (!font.IsGood() || !metrics.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 
@@ -583,8 +554,6 @@ int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<C
 	cellFont->Log("cellFontRenderCharGlyphImage(font_addr=0x%x, code=0x%x, surface_addr=0x%x, x=%f, y=%f, metrics_addr=0x%x, trans_addr=0x%x)",
 		font.GetAddr(), code, surface.GetAddr(), x, y, metrics.GetAddr(), transInfo.GetAddr());
 
-	if (!font.IsGood() || !surface.IsGood() || !metrics.IsGood() || !transInfo.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 
@@ -629,7 +598,7 @@ int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 	slantParam = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.GetAddr(), slantParam);
 
-	if (!font.IsGood() || slantParam < -1.0 || slantParam > 1.0)
+	if (slantParam < -1.0 || slantParam > 1.0)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 
 	font->slant = slantParam;
@@ -640,20 +609,14 @@ int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem32_t slantParam)
 {
 	cellFont->Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.GetAddr(), slantParam.GetAddr());
 
-	if (!font.IsGood() || !slantParam.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
-
 	slantParam = font->slant; //Does this conversion from be_t<float> to *mem32_t work?
 	return CELL_FONT_OK;
 }
 
 int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, mem32_t fontId, mem32_t fontCode)
 {
-	cellFont->Log("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
+	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
 		font.GetAddr(), code, fontId.GetAddr(), fontCode.GetAddr());
-
-	if (!font.IsGood() || !fontId.IsGood()) //fontCode isn't used
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 
 	// TODO: ?
 	return CELL_FONT_OK;
@@ -662,9 +625,6 @@ int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, mem32_t fontId, me
 int cellFontCloseFont(mem_ptr_t<CellFont> font)
 {
 	cellFont->Warning("cellFontCloseFont(font_addr=0x%x)", font.GetAddr());
-
-	if (!font.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
 		font->origin == CELL_FONT_OPEN_FONT_FILE ||
@@ -678,9 +638,6 @@ int cellFontGetCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<Ce
 {
 	cellFont->Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x",
 		font.GetAddr(), code, metrics.GetAddr());
-
-	if (!font.IsGood() || metrics.IsGood())
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 
 	int x0, y0, x1, y1;
 	int advanceWidth, leftSideBearing;

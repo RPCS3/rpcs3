@@ -117,10 +117,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
 		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
 
-	/*if (!fd.IsGood() || (!arg.IsGood() && size))
-		return CELL_EFAULT;
-
-	if (flags != CELL_O_RDONLY)
+	/*if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
 
 	std::string suffix = path.substr(path.length() - 5, 5);
@@ -197,11 +194,6 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
-
-	if (!aio.IsGood() || !aio_id.IsGood() || !func.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	if (!aio_init)
 	{

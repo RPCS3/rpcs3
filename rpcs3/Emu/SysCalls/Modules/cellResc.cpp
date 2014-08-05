@@ -640,7 +640,7 @@ int cellRescInit(mem_ptr_t<CellRescInitConfig> initConfig)
 		return CELL_RESC_ERROR_REINITIALIZED;
 	}
 
-	if (!initConfig.IsGood() || InternalVersion(initConfig.GetAddr()) == -1 || !CheckInitConfig(initConfig))
+	if (InternalVersion(initConfig.GetAddr()) == -1 || !CheckInitConfig(initConfig))
 	{
 		cellResc->Error("cellRescInit : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -687,12 +687,6 @@ int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, mem32_t buffer
 {
 	cellResc->Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.GetAddr());
 
-	if (!bufferMode.IsGood())
-	{
-		cellResc->Error("cellRescVideoOutResolutionId2RescBufferMode : CELL_RESC_ERROR_BAD_ARGUMENT");
-		return CELL_RESC_ERROR_BAD_ARGUMENT;
-	}
-
 	switch (resolutionId)
 	{
 	case CELL_VIDEO_OUT_RESOLUTION_1080: 
@@ -723,12 +717,6 @@ int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
 	{
 		cellResc->Error("cellRescSetDst : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!dsts.IsGood())
-	{
-		cellResc->Error("cellRescSetDst : CELL_RESC_ERROR_BAD_ARGUMENT");
-		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
 	if ((dstsMode != CELL_RESC_720x480) && (dstsMode != CELL_RESC_720x576) && (dstsMode != CELL_RESC_1280x720) && (dstsMode != CELL_RESC_1920x1080))
@@ -958,17 +946,17 @@ int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fra
 		fragmentUcodeSize = 0x300;
 	}
 
-	if (colorBuffers.IsGood())
+	if (colorBuffers.GetAddr())
 	{
 		colorBuffers = colorBuffersSize;
 	}
 
-	if (vertexArray.IsGood())
+	if (vertexArray.GetAddr())
 	{
 		vertexArray = vertexArraySize;
 	}
 
-	if (fragmentShader.IsGood())
+	if (fragmentShader.GetAddr())
 	{
 		fragmentShader = fragmentUcodeSize;
 	}
@@ -1000,12 +988,6 @@ int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<CellRescSrc> rescSrc)
 {
 	cellResc->Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)", gcmSurface.GetAddr(), rescSrc.GetAddr());
-
-	if (!gcmSurface.IsGood() || !rescSrc.IsGood())
-	{
-		cellResc->Error("cellRescGcmSurface2RescSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
-		return CELL_RESC_ERROR_BAD_ARGUMENT;
-	}
 
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
@@ -1044,7 +1026,7 @@ int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(idx < 0 || SRC_BUFFER_NUM <= idx || !src.IsGood())
+	if(idx < 0 || SRC_BUFFER_NUM <= idx)
 	{
 		cellResc->Error("cellRescSetSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -1125,12 +1107,6 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(!colorBuffers.IsGood() || !vertexArray.IsGood() || !fragmentShader.IsGood()) 
-	{
-		cellResc->Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ARGUMENT");
-		return CELL_RESC_ERROR_BAD_ARGUMENT;
-	}
-
 	if(colorBuffers.GetAddr() % COLOR_BUFFER_ALIGNMENT || vertexArray.GetAddr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.GetAddr() % FRAGMENT_SHADER_ALIGNMENT)
 	{
 		cellResc->Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ALIGNMENT");
@@ -1168,11 +1144,6 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 void cellRescSetFlipHandler(u32 handler_addr)
 {
 	cellResc->Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler_addr);
-
-	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
-	{
-		cellResc->Error("cellRescSetFlipHandler(handler_addr=%d): invalid address", handler_addr);
-	}
 
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
 }
@@ -1213,11 +1184,6 @@ int cellRescSetRegisterCount()
 void cellRescSetVBlankHandler(u32 handler_addr)
 {
 	cellResc->Warning("cellRescSetVBlankHandler(handler_addr=0x%x)", handler_addr);
-
-	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
-	{
-		cellResc->Error("cellRescSetVBlankHandler(handler_addr=%d): invalid address", handler_addr);
-	}
 
 	Emu.GetGSManager().GetRender().m_vblank_handler.SetAddr(handler_addr);
 }

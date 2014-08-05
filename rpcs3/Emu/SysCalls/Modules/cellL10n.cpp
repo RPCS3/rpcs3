@@ -41,16 +41,13 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 	cellL10n->Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
 		utf16.GetAddr(), utf16_len.GetAddr(), utf8.GetAddr(), utf8_len.GetAddr());
 
-	if (!utf16.IsGood() || !utf16_len.IsGood() || !utf8_len.IsGood())
-		return SRCIllegal;
-
 	std::u16string wstr =(char16_t*)Memory.VirtualToRealAddr(utf16.GetAddr());
 	wstr.resize(utf16_len.GetValue()); // TODO: Is this really the role of utf16_len in this function?
 #ifdef _MSC_VER
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
 	std::string str = convert.to_bytes(wstr);
 
-	if (!utf8.IsGood() || utf8_len.GetValue() < str.size())
+	if (utf8_len.GetValue() < str.size())
 	{
 		utf8_len = str.size();
 		return DSTExhausted;
@@ -64,12 +61,7 @@ int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t
 
 int jstrchk(mem8_ptr_t jstr)
 {
-	if (!jstr.IsGood())
-		cellL10n->Error("jstrchk(jstr_addr=0x%x): invalid address", jstr.GetAddr());
-	else if (jstr[0])
-		cellL10n->Log("jstrchk(jstr_addr=0x%x): utf-8: [%s]", jstr.GetAddr(), Memory.ReadString(jstr.GetAddr()).c_str());
-	else
-		cellL10n->Log("jstrchk(jstr_addr=0x%x): empty string", jstr.GetAddr());
+	cellL10n->Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.GetAddr());
 
 	return L10N_STR_UTF8;
 }

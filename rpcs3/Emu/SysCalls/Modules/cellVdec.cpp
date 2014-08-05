@@ -428,22 +428,12 @@ int cellVdecQueryAttr(const mem_ptr_t<CellVdecType> type, mem_ptr_t<CellVdecAttr
 {
 	cellVdec->Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
-	if (!type.IsGood() || !attr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
 int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdecAttr> attr)
 {
 	cellVdec->Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
-
-	if (!type.IsGood() || !attr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
@@ -452,16 +442,6 @@ int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecRes
 {
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
-
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(res->memAddr, res->memSize) || !Memory.IsGoodAddr(cb->cbFunc))
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
@@ -472,16 +452,6 @@ int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVde
 {
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
-
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(res->memAddr, res->memSize) || !Memory.IsGoodAddr(cb->cbFunc))
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
@@ -599,11 +569,6 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (!format.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
 	if (vdec->frames.IsEmpty())
 	{
 		return CELL_VDEC_ERROR_EMPTY;
@@ -612,11 +577,6 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 	if (out_addr)
 	{
 		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
-
-		if (!Memory.IsGoodAddr(out_addr, buf_size))
-		{
-			return CELL_VDEC_ERROR_FATAL;
-		}
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
@@ -669,11 +629,6 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
-	}
-
-	if (!picItem_ptr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
 	}
 
 	if (vdec->frames.IsEmpty())

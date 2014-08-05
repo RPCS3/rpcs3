@@ -243,12 +243,6 @@ int cellGcmGetConfiguration(mem_ptr_t<CellGcmConfig> config)
 {
 	cellGcmSys->Log("cellGcmGetConfiguration(config_addr=0x%x)", config.GetAddr());
 
-	if (!config.IsGood())
-	{
-		cellGcmSys->Error("cellGcmGetConfiguration : CELL_EFAULT");
-		return CELL_EFAULT;
-	}
-
 	*config = current_config;
 
 	return CELL_OK;
@@ -413,11 +407,6 @@ void cellGcmSetFlipHandler(u32 handler_addr)
 {
 	cellGcmSys->Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
 
-	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
-	{
-		cellGcmSys->Error("cellGcmSetFlipHandler(handler_addr=%d): invalid address", handler_addr);
-	}
-
 	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
 }
 
@@ -562,22 +551,12 @@ void cellGcmSetUserHandler(u32 handler_addr)
 {
 	cellGcmSys->Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler_addr);
 
-	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
-	{
-		cellGcmSys->Error("cellGcmSetUserHandler(handler_addr=%d): invalid address", handler_addr);
-	}
-
 	Emu.GetGSManager().GetRender().m_user_handler.SetAddr(handler_addr);
 }
 
 void cellGcmSetVBlankHandler(u32 handler_addr)
 {
 	cellGcmSys->Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler_addr);
-
-	if (handler_addr != 0 && !Memory.IsGoodAddr(handler_addr))
-	{
-		cellGcmSys->Error("cellGcmSetVBlankHandler(handler_addr=%d): invalid address", handler_addr);
-	}
 
 	Emu.GetGSManager().GetRender().m_vblank_handler.SetAddr(handler_addr);
 }
@@ -672,12 +651,6 @@ u32 cellGcmGetDisplayInfo()
 int cellGcmGetCurrentDisplayBufferId(u32 id_addr)
 {
 	cellGcmSys->Warning("cellGcmGetCurrentDisplayBufferId(id_addr=0x%x)", id_addr);
-
-	if (!Memory.IsGoodAddr(id_addr))
-	{
-		cellGcmSys->Error("cellGcmGetCurrentDisplayBufferId : CELL_EFAULT");
-		return CELL_EFAULT;
-	}
 
 	Memory.Write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
 

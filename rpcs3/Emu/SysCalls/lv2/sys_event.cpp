@@ -23,11 +23,6 @@ s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 		return CELL_EINVAL;
 	}
 
-	if(!equeue_id.IsGood() || !attr.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
@@ -114,16 +109,6 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.GetAddr(), size, number.GetAddr());
 
-	if (size < 0 || !number.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
-	if (size && !Memory.IsGoodAddr(event_array.GetAddr(), sizeof(sys_event_data) * size))
-	{
-		return CELL_EFAULT;
-	}
-
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
@@ -162,11 +147,6 @@ s32 sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 {
 	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
 		equeue_id, event.GetAddr(), timeout);
-
-	if (!event.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -251,11 +231,6 @@ s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
 {
 	sys_event.Warning("sys_event_port_create(eport_id_addr=0x%x, port_type=0x%x, name=0x%llx)",
 		eport_id.GetAddr(), port_type, name);
-
-	if (!eport_id.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	if (port_type != SYS_EVENT_PORT_LOCAL)
 	{
@@ -395,11 +370,6 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	sys_event.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
 		eflag_id.GetAddr(), attr.GetAddr(), init);
 
-	if(!eflag_id.IsGood() || !attr.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
@@ -451,7 +421,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 	sys_event.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
 		eflag_id, bitptn, mode, result.GetAddr(), timeout);
 
-	if (result.IsGood()) result = 0;
+	if (result.GetAddr()) result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -500,17 +470,9 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 				ef->flags = 0;
 			}
 
-			if (result.IsGood())
-			{
-				result = flags;
-				return CELL_OK;
-			}
-
-			if (!result.GetAddr())
-			{
-				return CELL_OK;
-			}
-			return CELL_EFAULT;
+			if (result.GetAddr()) result = flags;
+			
+			return CELL_OK;
 		}
 	}
 
@@ -551,17 +513,9 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
  						ef->signal.unlock(tid);
  					}
 
-					if (result.IsGood())
-					{
-						result = flags;
-						return CELL_OK;
-					}
+					if (result.GetAddr()) result = flags;
 
-					if (!result.GetAddr())
-					{
-						return CELL_OK;
-					}
-					return CELL_EFAULT;
+					return CELL_OK;
 				}
 			}
 
@@ -599,7 +553,7 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 	sys_event.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
 		eflag_id, bitptn, mode, result.GetAddr());
 
-	if (result.IsGood()) result = 0;
+	if (result.GetAddr()) result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -635,17 +589,9 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 			ef->flags = 0;
 		}
 
-		if (result.IsGood())
-		{
-			result = flags;
-			return CELL_OK;
-		}
-
-		if (!result.GetAddr())
-		{
-			return CELL_OK;
-		}
-		return CELL_EFAULT;
+		if (result.GetAddr()) result = flags;
+		
+		return CELL_OK;
 	}
 
 	return CELL_EBUSY;
@@ -719,17 +665,9 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 		return CELL_OK;
 	}
 
-	if (num.IsGood())
-	{
-		num = tids.size();
-		return CELL_OK;
-	}
+	if (num.GetAddr()) num = tids.size();
 
-	if (!num.GetAddr())
-	{
-		return CELL_OK;
-	}
-	return CELL_EFAULT;
+	return CELL_OK;
 }
 
 s32 sys_event_flag_get(u32 eflag_id, mem64_t flags)
@@ -738,11 +676,6 @@ s32 sys_event_flag_get(u32 eflag_id, mem64_t flags)
 	
 	EventFlag* ef;
 	if(!sys_event.CheckId(eflag_id, ef)) return CELL_ESRCH;
-
-	if (!flags.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	SMutexLocker lock(ef->m_mutex);
 	flags = ef->flags;

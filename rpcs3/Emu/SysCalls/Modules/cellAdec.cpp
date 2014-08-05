@@ -547,11 +547,6 @@ int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr
 {
 	cellAdec->Warning("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
-	if (!type.IsGood() || !attr.IsGood())
-	{
-		return CELL_ADEC_ERROR_FATAL;
-	}
-
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
 	// TODO: check values
@@ -567,11 +562,6 @@ int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, 
 	cellAdec->Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
 
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_ADEC_ERROR_FATAL;
-	}
-
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
 	handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
@@ -583,11 +573,6 @@ int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> r
 {
 	cellAdec->Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
-
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_ADEC_ERROR_FATAL;
-	}
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
@@ -671,11 +656,6 @@ int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	if (!auInfo.IsGood())
-	{
-		return CELL_ADEC_ERROR_FATAL;
-	}
-
 	AdecTask task(adecDecodeAu);
 	task.au.auInfo_addr = auInfo.GetAddr();
 	task.au.addr = auInfo->startAddr;
@@ -706,22 +686,9 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	adec->frames.Pop(af);
 	AVFrame* frame = af.data;
 
-	int result = CELL_OK;
-
-	if (!Memory.IsGoodAddr(outBuffer_addr, af.size))
-	{
-		result = CELL_ADEC_ERROR_FATAL;
-		if (af.data)
-		{
-			av_frame_unref(af.data);
-			av_frame_free(&af.data);
-		}
-		return result;
-	}
-
 	if (!af.data) // fake: empty data
 	{
-		return result;
+		return CELL_OK;
 	}
 
 	// copy data
@@ -751,7 +718,7 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		av_frame_unref(af.data);
 		av_frame_free(&af.data);
 	}
-	return result;
+	return CELL_OK;
 }
 
 int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
@@ -762,11 +729,6 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
-	}
-
-	if (!pcmItem_ptr.IsGood())
-	{
-		return CELL_ADEC_ERROR_FATAL;
 	}
 
 	if (adec->frames.IsEmpty())

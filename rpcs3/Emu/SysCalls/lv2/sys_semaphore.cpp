@@ -14,11 +14,6 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	sys_sem.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.GetAddr(), attr.GetAddr(), initial_count, max_count);
 
-	if (!sem.IsGood() || !attr.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
 		sys_sem.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
@@ -198,11 +193,6 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 s32 sys_semaphore_get_value(u32 sem_id, mem32_t count)
 {
 	sys_sem.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.GetAddr());
-
-	if (!count.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

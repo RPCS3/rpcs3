@@ -19,9 +19,6 @@ int cellVpostQueryAttr(const mem_ptr_t<CellVpostCfgParam> cfgParam, mem_ptr_t<Ce
 {
 	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.GetAddr(), attr.GetAddr());
 
-	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_Q_ARG_CFG_NULL;
-	if (!attr.IsGood()) return CELL_VPOST_ERROR_Q_ARG_ATTR_NULL;
-
 	// TODO: check cfgParam and output values
 
 	attr->delay = 0;
@@ -46,10 +43,6 @@ int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<C
 	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
 
-	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_O_ARG_CFG_NULL;
-	if (!resource.IsGood()) return CELL_VPOST_ERROR_O_ARG_RSRC_NULL;
-	if (!handle.IsGood()) return CELL_VPOST_ERROR_O_ARG_HDL_NULL;
-
 	// TODO: check values
 	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
 	return CELL_OK;
@@ -59,10 +52,6 @@ int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t
 {
 	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
-
-	if (!cfgParam.IsGood()) return CELL_VPOST_ERROR_O_ARG_CFG_NULL;
-	if (!resource.IsGood()) return CELL_VPOST_ERROR_O_ARG_RSRC_NULL;
-	if (!handle.IsGood()) return CELL_VPOST_ERROR_O_ARG_HDL_NULL;
 
 	// TODO: check values
 	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
@@ -95,30 +84,10 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 		return CELL_VPOST_ERROR_E_ARG_HDL_INVALID;
 	}
 
-	if (!ctrlParam.IsGood())
-	{
-		return CELL_VPOST_ERROR_E_ARG_CTRL_INVALID;
-	}
-
 	s32 w = ctrlParam->inWidth;
 	u32 h = ctrlParam->inHeight;
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
-
-	if (!Memory.IsGoodAddr(inPicBuff_addr, w*h*3/2))
-	{
-		return CELL_VPOST_ERROR_E_ARG_INPICBUF_INVALID;
-	}
-
-	if (!Memory.IsGoodAddr(outPicBuff_addr, ow*oh*4))
-	{
-		return CELL_VPOST_ERROR_E_ARG_OUTPICBUF_INVALID;
-	}
-
-	if (!picInfo.IsGood())
-	{
-		return CELL_VPOST_ERROR_E_ARG_PICINFO_NULL;
-	}
 
 	ctrlParam->inWindow; // ignored
 	if (ctrlParam->inWindow.x) LOG_WARNING(HLE, "*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);

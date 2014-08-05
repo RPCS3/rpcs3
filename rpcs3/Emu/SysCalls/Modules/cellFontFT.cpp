@@ -46,8 +46,6 @@ int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, mem_ptr_t<CellFon
 	cellFontFT->Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
 		revisionFlags, config.GetAddr(), lib_addr_addr);
 
-	if (!config.IsGood() || !Memory.IsGoodAddr(lib_addr_addr))
-		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	//if (s_fontInternalInstance->m_bInitialized)
 		//return CELL_FONT_ERROR_UNINITIALIZED;
 

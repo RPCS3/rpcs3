@@ -138,7 +138,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			phdr_arr.back().Load(elf32_f);
 	}
 
-	if(/*!Memory.IsGoodAddr(entry)*/ entry & 0x1)
+	if(entry & 0x1)
 	{
 		//entry is physical, convert to virtual
 

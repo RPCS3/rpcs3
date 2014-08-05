@@ -31,11 +31,6 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
 		type, msgString.GetAddr(), callback.GetAddr(), userData, extParam);
 	
-	if (!msgString.IsGood() || !callback.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE;
 	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO;
 
@@ -356,13 +351,6 @@ int cellMsgDialogAbort()
 
 int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgString)
 {
-	if (!msgString.IsGood())
-	{
-		cellSysutil->Error("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x): CELL_EFAULT",
-			progressBarIndex, msgString.GetAddr());
-		return CELL_EFAULT;
-	}
-
 	cellSysutil->Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x): '%s'",
 		progressBarIndex, msgString.GetAddr(), msgString.GetString());
 

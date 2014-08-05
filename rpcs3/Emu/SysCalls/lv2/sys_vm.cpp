@@ -13,12 +13,6 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	sc_vm.Warning("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
 		vsize, psize, cid, flag, policy, addr);
 
-	// Check output address.
-	if(!Memory.IsGoodAddr(addr, 4))
-	{
-		return CELL_EFAULT;
-	}
-
 	// Check virtual size.
 	if((vsize < (0x100000 * 32)) || (vsize > (0x100000 * 256)))
 	{
@@ -83,7 +77,7 @@ s32 sys_vm_append_memory(u32 addr, u32 size)
 	sc_vm.Warning("sys_vm_append_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (size <= 0))
+	if((current_ct->addr != addr) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -105,7 +99,7 @@ s32 sys_vm_return_memory(u32 addr, u32 size)
 	sc_vm.Warning("sys_vm_return_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (size <= 0))
+	if((current_ct->addr != addr) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -127,7 +121,7 @@ s32 sys_vm_lock(u32 addr, u32 size)
 	sc_vm.Warning("sys_vm_lock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -149,7 +143,7 @@ s32 sys_vm_unlock(u32 addr, u32 size)
 	sc_vm.Warning("sys_vm_unlock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -164,7 +158,7 @@ s32 sys_vm_touch(u32 addr, u32 size)
 	sc_vm.Warning("Unimplemented function: sys_vm_touch(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -181,7 +175,7 @@ s32 sys_vm_flush(u32 addr, u32 size)
 	sc_vm.Warning("Unimplemented function: sys_vm_flush(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -198,7 +192,7 @@ s32 sys_vm_invalidate(u32 addr, u32 size)
 	sc_vm.Warning("Unimplemented function: sys_vm_invalidate(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -215,7 +209,7 @@ s32 sys_vm_store(u32 addr, u32 size)
 	sc_vm.Warning("Unimplemented function: sys_vm_store(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -232,7 +226,7 @@ s32 sys_vm_sync(u32 addr, u32 size)
 	sc_vm.Warning("Unimplemented function: sys_vm_sync(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -248,7 +242,7 @@ s32 sys_vm_test(u32 addr, u32 size, u32 result_addr)
 	sc_vm.Warning("Unimplemented function: sys_vm_test(addr=0x%x,size=0x%x,result_addr=0x%x)", addr, size, result_addr);
 
 	// Check address and size.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
+	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
 	{
 		return CELL_EINVAL;
 	}
@@ -267,7 +261,7 @@ s32 sys_vm_get_statistics(u32 addr, u32 stat_addr)
 	sc_vm.Warning("Unimplemented function: sys_vm_get_statistics(addr=0x%x,stat_addr=0x%x)", addr, stat_addr);
 
 	// Check address.
-	if(!Memory.IsGoodAddr(addr, 4) ||  (current_ct->addr != addr))
+	if(current_ct->addr != addr)
 	{
 		return CELL_EINVAL;
 	}

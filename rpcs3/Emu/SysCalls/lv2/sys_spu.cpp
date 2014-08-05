@@ -28,13 +28,8 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 //156
 s32 sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 {
-	const std::string path = Memory.ReadString(path_addr).c_str();
+	const std::string path = Memory.ReadString(path_addr);
 	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.c_str());
-
-	if(!img.IsGood() || !Memory.IsGoodAddr(path_addr))
-	{
-		return CELL_EFAULT;
-	}
 
 	vfsFile f(path);
 	if(!f.IsOpened())
@@ -64,19 +59,6 @@ s32 sys_spu_thread_initialize(mem32_t thread, u32 group, u32 spu_num, mem_ptr_t<
 	if(!Emu.GetIdManager().GetIDData(group, group_info))
 	{
 		return CELL_ESRCH;
-	}
-
-	if(!thread.IsGood() || !img.IsGood() || !attr.IsGood() || !arg.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
-	if (attr->name_addr)
-	{
-		if(!Memory.IsGoodAddr(attr->name_addr, attr->name_len))
-		{
-			return CELL_EFAULT;
-		}
 	}
 
 	if(spu_num >= group_info->list.size())
@@ -140,11 +122,6 @@ s32 sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg)
 		return CELL_ESRCH;
 	}
 
-	if(!arg.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	thr->SetArg(0, arg->arg1);
 	thr->SetArg(1, arg->arg2);
 	thr->SetArg(2, arg->arg3);
@@ -157,11 +134,6 @@ s32 sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg)
 s32 sys_spu_thread_get_exit_status(u32 id, mem32_t status)
 {
 	sc_spu.Warning("sys_spu_thread_get_exit_status(id=%d, status_addr=0x%x)", id, status.GetAddr());
-
-	if (!status.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
@@ -286,10 +258,6 @@ s32 sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu
 	sc_spu.Warning("sys_spu_thread_group_create(id_addr=0x%x, num=%d, prio=%d, attr_addr=0x%x)",
 		id.GetAddr(), num, prio, attr.GetAddr());
 
-	if (!id.IsGood() || !attr.IsGood()) return CELL_EFAULT;
-
-	if (!Memory.IsGoodAddr(attr->name_addr, attr->name_len)) return CELL_EFAULT;
-
 	if (num > 256) return CELL_EINVAL;
 
 	if (prio < 16 || prio > 255) return CELL_EINVAL;
@@ -313,16 +281,6 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 	if(!Emu.GetIdManager().GetIDData(id, group_info))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cause.GetAddr() && !cause.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
-	if (status.GetAddr() && !status.IsGood())
-	{
-		return CELL_EFAULT;
 	}
 
 	if (group_info->lock.exchange(1)) // acquire lock
@@ -392,7 +350,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 		return CELL_ESTAT;
 	}
 
-	if (!(*(SPUThread*)thr).IsGoodLSA(address) || (address % type)) // +check alignment
+	if (address % type) // check alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -425,12 +383,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 		return CELL_ESTAT;
 	}
 
-	if(!value.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
-	if (!(*(SPUThread*)thr).IsGoodLSA(address) || (address % type)) // +check alignment
+	if (address % type) // check alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -687,11 +640,6 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, m
 	sc_spu.Warning("sys_spu_thread_group_connect_event_all_threads(id=%d, eq_id=%d, req=0x%llx, spup_addr=0x%x)",
 		id, eq_id, req, spup.GetAddr());
 
-	if (!spup.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(eq_id, eq))
 	{
@@ -817,11 +765,6 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, mem32_t
 		return CELL_EINVAL;
 	}
 
-	if (!intrtag.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-	
 	if (t->m_intrtag[class_id].enabled)
 	{
 		return CELL_EAGAIN;
@@ -855,11 +798,6 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, mem64_t mask)
 {
 	sc_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.GetAddr());
-
-	if (!mask.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)
@@ -899,11 +837,6 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat)
 {
 	sc_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.GetAddr());
 
-	if (!stat.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)
 	{
@@ -922,11 +855,6 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat)
 s32 sys_raw_spu_read_puint_mb(u32 id, mem32_t value)
 {
 	sc_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value_addr=0x%x)", id, value.GetAddr());
-
-	if (!value.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)
@@ -957,11 +885,6 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 s32 sys_raw_spu_get_spu_cfg(u32 id, mem32_t value)
 {
 	sc_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value_addr=0x%x)", id, value.GetAddr());
-
-	if (!value.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)

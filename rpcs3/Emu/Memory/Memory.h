@@ -519,7 +519,7 @@ public:
 
 	template<typename T> bool CopyToReal(void* real, T from, u32 count)
 	{
-		if (!IsGoodAddr<T>(from, count)) return false;
+		if (!IsGoodAddr<T>(from, count)) return false; // TODO: eliminate
 
 		memcpy(real, GetMemFromAddr<T>(from), count);
 
@@ -528,7 +528,7 @@ public:
 
 	template<typename T> bool CopyFromReal(T to, const void* real, u32 count)
 	{
-		if (!IsGoodAddr<T>(to, count)) return false;
+		if (!IsGoodAddr<T>(to, count)) return false; // TODO: eliminate
 
 		memcpy(GetMemFromAddr<T>(to), real, count);
 
@@ -537,7 +537,7 @@ public:
 
 	template<typename T1, typename T2> bool Copy(T1 to, T2 from, u32 count)
 	{
-		if (!IsGoodAddr<T1>(to, count) || !IsGoodAddr<T2>(from, count)) return false;
+		if (!IsGoodAddr<T1>(to, count) || !IsGoodAddr<T2>(from, count)) return false; // TODO: eliminate
 
 		memmove(GetMemFromAddr<T1>(to), GetMemFromAddr<T2>(from), count);
 
@@ -574,21 +574,21 @@ public:
 		*(Td*)GetMemFromAddr<T>(addr) = data;
 	}
 
-	std::string ReadString(const u64 addr, const u64 len)
+	template<typename T> std::string ReadString(const T addr, const u64 len)
 	{
-		std::string ret((const char *)GetMemFromAddr(addr), len);
+		std::string ret((const char *)GetMemFromAddr<T>(addr), len);
 
 		return ret;
 	}
 
-	std::string ReadString(const u64 addr)
+	template<typename T> std::string ReadString(const T addr)
 	{
-		return std::string((const char*)GetMemFromAddr(addr));
+		return std::string((const char*)GetMemFromAddr<T>(addr));
 	}
 
-	void WriteString(const u64 addr, const std::string& str)
+	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
-		strcpy((char*)GetMemFromAddr(addr), str.c_str());
+		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
 	}
 
 	static u64 AlignAddr(const u64 addr, const u64 align)

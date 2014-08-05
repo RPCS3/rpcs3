@@ -337,12 +337,6 @@ private:
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
 		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "STQX: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
@@ -435,13 +429,6 @@ private:
 		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
 
 		u32 lsa = (a + b) & 0x3fff0;
-
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "LQX: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
@@ -1169,12 +1156,6 @@ private:
 	void STQA(u32 rt, s32 i16)
 	{
 		u32 lsa = (i16 << 2) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "STQA: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
@@ -1220,12 +1201,6 @@ private:
 	void STQR(u32 rt, s32 i16)
 	{
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0; 
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "STQR: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
@@ -1238,12 +1213,6 @@ private:
 	void LQA(u32 rt, s32 i16)
 	{
 		u32 lsa = (i16 << 2) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "LQA: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
@@ -1288,12 +1257,6 @@ private:
 	void LQR(u32 rt, s32 i16)
 	{
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "LQR: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}
@@ -1377,24 +1340,13 @@ private:
 	void STQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
 		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "STQD: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
+
 		//LOG_NOTICE(Log::SPU, "STQD(lsa=0x%x): GPR[%d] (0x%llx%llx)", lsa, rt, CPU.GPR[rt]._u64[1], CPU.GPR[rt]._u64[0]);
 		CPU.WriteLS128(lsa, CPU.GPR[rt]._u128);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
 		const u32 lsa = (CPU.GPR[ra]._i32[3] + i10) & 0x3fff0;
-		if(!CPU.IsGoodLSA(lsa))
-		{
-			LOG_ERROR(Log::SPU, "LQD: bad lsa (0x%x)", lsa);
-			Emu.Pause();
-			return;
-		}
 
 		CPU.GPR[rt]._u128 = CPU.ReadLS128(lsa);
 	}

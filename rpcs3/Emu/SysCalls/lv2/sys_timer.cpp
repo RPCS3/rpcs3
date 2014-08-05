@@ -12,8 +12,6 @@ s32 sys_timer_create(mem32_t timer_id)
 {
 	sys_timer.Warning("sys_timer_create(timer_id_addr=0x%x)", timer_id.GetAddr());
 
-	if(!Memory.IsGoodAddr(timer_id.GetAddr())) return CELL_EFAULT;
-
 	timer_id = sys_timer.GetNewId(new timer);
 	return CELL_OK;
 }

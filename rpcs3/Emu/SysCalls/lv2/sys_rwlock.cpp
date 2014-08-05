@@ -10,8 +10,6 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 {
 	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.GetAddr(), attr.GetAddr());
 
-	if (!rw_lock_id.IsGood() || !attr.IsGood()) return CELL_EFAULT;
-
 	switch (attr->attr_protocol.ToBE())
 	{
 	case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;

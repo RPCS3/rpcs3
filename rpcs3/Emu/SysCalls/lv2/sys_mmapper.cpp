@@ -15,9 +15,6 @@ s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 	sys_mmapper.Warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%llx, alignment=0x%x, alloc_addr=0x%x)", 
 		size, flags, alignment, alloc_addr);
 
-	if(!Memory.IsGoodAddr(alloc_addr))
-		return CELL_EFAULT;
-
 	// Check for valid alignment.
 	if(alignment > 0x80000000)
 		return CELL_EALIGN;
@@ -61,9 +58,6 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
 {
 	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.GetAddr());
 
-	if(!mem_id.IsGood())
-		return CELL_EFAULT;
-
 	// Check page granularity.
 	u32 addr;
 	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
@@ -97,9 +91,6 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 {
 	sys_mmapper.Warning("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=%d, flags=0x%llx, mem_id_addr=0x%x)", 
 		size, cid, flags, mem_id.GetAddr());
-
-	if(!mem_id.IsGood())
-		return CELL_EFAULT;
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;
@@ -139,9 +130,6 @@ s32 sys_mmapper_change_address_access_right(u32 start_addr, u64 flags)
 {
 	sys_mmapper.Warning("sys_mmapper_change_address_access_right(start_addr=0x%x, flags=0x%llx)", start_addr, flags);
 
-	if (!Memory.IsGoodAddr(start_addr))
-		return CELL_EINVAL;
-
 	// TODO
 
 	return CELL_OK;
@@ -151,9 +139,6 @@ s32 sys_mmapper_free_address(u32 start_addr)
 {
 	sys_mmapper.Warning("sys_mmapper_free_address(start_addr=0x%x)", start_addr);
 
-	if(!Memory.IsGoodAddr(start_addr))
-		return CELL_EINVAL;
-	
 	// Free the address.
 	Memory.Free(start_addr);
 	return CELL_OK;
@@ -199,9 +184,6 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 	sys_mmapper.Warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=0x%x)",
 		start_addr, mem_id, flags, alloc_addr);
 
-	if(!Memory.IsGoodAddr(alloc_addr))
-		return CELL_EFAULT;
-
 	// Check if this mem ID is valid.
 	mmapper_info* info;
 	if(!sys_mmapper.CheckId(mem_id, info))
@@ -221,8 +203,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 		}
 	}
 
-	// Check if the address is valid.
-	if (!Memory.IsGoodAddr(addr) || !found)
+	if (!found)
 		return CELL_ENOMEM;
 	
 	// Write back the start address of the allocated area.
@@ -238,12 +219,6 @@ s32 sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr)
 {
 	sys_mmapper.Warning("sys_mmapper_unmap_memory(start_addr=0x%x, mem_id_addr=0x%x)", start_addr, mem_id_addr);
 
-	if (!Memory.IsGoodAddr(start_addr))
-		return CELL_EINVAL;
-
-	if (!Memory.IsGoodAddr(mem_id_addr))
-		return CELL_EFAULT;
-
 	// Write back the mem ID of the unmapped area.
 	u32 mem_id = mmapper_info_map.find(start_addr)->first;
 	Memory.Write32(mem_id_addr, mem_id);
@@ -254,9 +229,6 @@ s32 sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr)
 s32 sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 q_id)
 {
 	sys_mmapper.Warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, q_id=0x%x)", start_addr, q_id);
-
-	if (!Memory.IsGoodAddr(start_addr))
-		return CELL_EINVAL;
 
 	// TODO
 

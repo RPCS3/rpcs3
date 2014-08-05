@@ -1333,8 +1333,7 @@ public:
 		}
 	}
 
-	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset) && lsa < 0x40000; }
-	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + m_offset); } // m_offset & 0x3fffc ?????
+	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + m_offset); }
 	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
 	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
 	virtual u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }

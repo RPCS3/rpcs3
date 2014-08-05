@@ -26,12 +26,6 @@ int cellNetCtlGetState(mem32_t state)
 {
 	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
 
-	if (!state.IsGood())
-	{
-		cellNetCtl->Error("cellNetCtlGetState : CELL_NET_CTL_ERROR_INVALID_ADDR");
-		return CELL_NET_CTL_ERROR_INVALID_ADDR;
-	}
-
 	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 	return CELL_OK;
 }
@@ -58,12 +52,6 @@ int cellNetCtlNetStartDialogLoadAsync(mem_ptr_t<CellNetCtlNetStartDialogParam> p
 {
 	cellNetCtl->Todo("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.GetAddr());
 
-	if (!param.IsGood())
-	{
-		cellNetCtl->Error("cellNetCtlNetStartDialogLoadAsync : CELL_NET_CTL_ERROR_INVALID_ADDR");
-		return CELL_NET_CTL_ERROR_INVALID_ADDR;
-	}
-
 	return CELL_OK;
 }
 
@@ -77,24 +65,12 @@ int cellNetCtlNetStartDialogUnloadAsync(mem_ptr_t<CellNetCtlNetStartDialogResult
 {
 	cellNetCtl->Todo("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.GetAddr());
 
-	if (!result.IsGood())
-	{
-		cellNetCtl->Error("cellNetCtlNetStartDialogLoadAsync : CELL_NET_CTL_ERROR_INVALID_ADDR");
-		return CELL_NET_CTL_ERROR_INVALID_ADDR;
-	}
-
 	return CELL_OK;
 }
 
 int cellNetCtlGetNatInfo(mem_ptr_t<CellNetCtlNatInfo> natInfo)
 {
 	cellNetCtl->Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.GetAddr());
-
-	if (!natInfo.IsGood())
-	{
-		cellNetCtl->Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_ADDR");
-		return CELL_NET_CTL_ERROR_INVALID_ADDR;
-	}
 
 	if (natInfo->size == 0)
 	{

@@ -13,11 +13,6 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 {
 	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
 
-	if (!mutex_id.IsGood() || !attr.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_FIFO): break;
