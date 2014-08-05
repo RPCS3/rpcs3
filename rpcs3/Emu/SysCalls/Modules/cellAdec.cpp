@@ -50,12 +50,7 @@ next:
 			break;
 		case adecDecodeAu:
 			{
-				if (!Memory.CopyToReal(buf, adec.reader.addr, adec.reader.size))
-				{
-					LOG_ERROR(HLE, "adecRawRead(): data reading failed (reader.size=0x%x)", adec.reader.size);
-					Emu.Pause();
-					return 0;
-				}
+				memcpy(buf, Memory + adec.reader.addr, adec.reader.size);
 
 				buf += adec.reader.size;
 				buf_size -= adec.reader.size;
@@ -86,14 +81,10 @@ next:
 	{
 		return res;
 	}
-	else if (!Memory.CopyToReal(buf, adec.reader.addr, buf_size))
-	{
-		LOG_ERROR(HLE, "adecRawRead(): data reading failed (buf_size=0x%x)", buf_size);
-		Emu.Pause();
-		return 0;
-	}
 	else
 	{
+		memcpy(buf, Memory + adec.reader.addr, buf_size);
+
 		adec.reader.addr += buf_size;
 		adec.reader.size -= buf_size;
 		return res + buf_size;
@@ -691,27 +682,16 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 		return CELL_OK;
 	}
 
-	// copy data
-	u8* out = (u8*)calloc(1, af.size);
-
 	// reverse byte order, extract data:
 	float* in_f[2];
 	in_f[0] = (float*)frame->extended_data[0];
 	in_f[1] = (float*)frame->extended_data[1];
-	be_t<float>* out_f = (be_t<float>*)out;
+	be_t<float>* out_f = (be_t<float>*)Memory.GetMemFromAddr(outBuffer_addr);
 	for (u32 i = 0; i < af.size / 8; i++)
 	{
 		out_f[i*2] = in_f[0][i];
 		out_f[i*2+1] = in_f[1][i];
 	}
-
-	if (!Memory.CopyFromReal(outBuffer_addr, out, af.size))
-	{
-		LOG_ERROR(HLE, "cellAdecGetPcm(%d): data copying failed (addr=0x%x)", handle, outBuffer_addr);
-		Emu.Pause();
-	}
-
-	free(out);
 
 	if (af.data)
 	{

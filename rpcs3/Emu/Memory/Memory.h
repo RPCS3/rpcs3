@@ -391,20 +391,32 @@ public:
 		}
 	}
 
+	noinline void WriteMMIO32(u32 addr, const u32 data)
+	{
+		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+			if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
+				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
+			{
+				return;
+			}
+		}
+
+		*(u32*)((u8*)GetBaseAddr() + addr) = re32(data); // provoke error
+	}
+
 	template<typename T> void Write32(T addr, const u32 data)
 	{
 		if ((u32)addr == addr)
 		{
-			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET)
 			{
 				*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
 			}
 			else
 			{
-				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
-				{
-					*(u32*)((u8*)GetBaseAddr() + addr) = re32(data);
-				}
+				WriteMMIO32(addr, data);
 			}
 		}
 		else
@@ -466,22 +478,34 @@ public:
 		}
 	}
 
+	noinline u32 ReadMMIO32(u32 addr)
+	{
+		u32 res;
+		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+			if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
+				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
+			{
+				return res;
+			}
+		}
+
+		res = re32(*(u32*)((u8*)GetBaseAddr() + addr)); // provoke error
+		return res;
+	}
+
 	template<typename T> u32 Read32(T addr)
 	{
 		if ((u32)addr == addr)
 		{
-			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET)
 			{
 				return re32(*(u32*)((u8*)GetBaseAddr() + addr));
 			}
 			else
 			{
-				u32 res;
-				if (!RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
-				{
-					res = re32(*(u32*)((u8*)GetBaseAddr() + addr));
-				}
-				return res;
+				return ReadMMIO32(addr);
 			}
 		}
 		else
@@ -515,33 +539,6 @@ public:
 			InvalidAddress(__FUNCTION__, addr);
 			return *(u128*)GetBaseAddr();
 		}
-	}
-
-	template<typename T> bool CopyToReal(void* real, T from, u32 count)
-	{
-		if (!IsGoodAddr<T>(from, count)) return false; // TODO: eliminate
-
-		memcpy(real, GetMemFromAddr<T>(from), count);
-
-		return true;
-	}
-
-	template<typename T> bool CopyFromReal(T to, const void* real, u32 count)
-	{
-		if (!IsGoodAddr<T>(to, count)) return false; // TODO: eliminate
-
-		memcpy(GetMemFromAddr<T>(to), real, count);
-
-		return true;
-	}
-
-	template<typename T1, typename T2> bool Copy(T1 to, T2 from, u32 count)
-	{
-		if (!IsGoodAddr<T1>(to, count) || !IsGoodAddr<T2>(from, count)) return false; // TODO: eliminate
-
-		memmove(GetMemFromAddr<T1>(to), GetMemFromAddr<T2>(from), count);
-
-		return true;
 	}
 
 	void ReadLeft(u8* dst, const u64 addr, const u32 size)

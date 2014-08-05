@@ -75,10 +75,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
-			cellGifDec->Error("cellGifDecReadHeader() failed ()");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -154,10 +151,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(gif.GetAddr(), subHandle_data->src.streamPtr.ToLE(), gif.GetSize())) {
-			cellGifDec->Error("cellGifDecDecodeData() failed (I)");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + gif.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), gif.GetSize());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -192,20 +186,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
-				{
-					cellGifDec->Error("cellGifDecDecodeData() failed (II)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
-			{
-				cellGifDec->Error("cellGifDecDecodeData() failed (III)");
-				return CELL_EFAULT;
-			}
+			memcpy(Memory + data.GetAddr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -228,11 +214,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
-				{
-					cellGifDec->Error("cellGifDecDecodeData() failed (IV)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
 			}
 			free(output);
 		}

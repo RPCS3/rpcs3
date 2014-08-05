@@ -96,10 +96,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
-			cellJpgDec->Error("cellJpgDecReadHeader() failed ()");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
@@ -165,10 +162,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		if (!Memory.Copy(jpg.GetAddr(), subHandle_data->src.streamPtr.ToLE(), jpg.GetSize())) {
-			cellJpgDec->Error("cellJpgDecDecodeData() failed (I)");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + jpg.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.GetSize());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
@@ -206,20 +200,12 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
-				{
-					cellJpgDec->Error("cellJpgDecDecodeData() failed (II)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
-			{
-				cellJpgDec->Error("cellJpgDecDecodeData() failed (III)");
-				return CELL_EFAULT;
-			}
+			memcpy(Memory + data.GetAddr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -244,11 +230,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
-				{
-					cellJpgDec->Error("cellJpgDecDecodeData() failed (IV)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
 			}
 			free(output);
 		}

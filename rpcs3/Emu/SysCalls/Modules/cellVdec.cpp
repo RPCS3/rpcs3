@@ -49,12 +49,7 @@ next:
 			break;
 		case vdecDecodeAu:
 			{
-				if (!Memory.CopyToReal(buf, vdec.reader.addr, vdec.reader.size))
-				{
-					LOG_ERROR(HLE, "vdecRead(): data reading failed (reader.size=0x%x)", vdec.reader.size);
-					Emu.Pause();
-					return 0;
-				}
+				memcpy(buf, Memory + vdec.reader.addr, vdec.reader.size);
 
 				buf += vdec.reader.size;
 				buf_size -= vdec.reader.size;
@@ -89,14 +84,10 @@ next:
 	{
 		return res;
 	}
-	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
-	{
-		LOG_ERROR(HLE, "vdecRead(): data reading failed (buf_size=0x%x)", buf_size);
-		Emu.Pause();
-		return 0;
-	}
 	else
 	{
+		memcpy(buf, Memory + vdec.reader.addr, buf_size);
+
 		vdec.reader.addr += buf_size;
 		vdec.reader.size -= buf_size;
 		return res + buf_size;
@@ -596,26 +587,17 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 		AVFrame& frame = *vf.data;
 
-		u8* buf = (u8*)malloc(buf_size);
-
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(buf, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(Memory + out_addr, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
 			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
 			Emu.Pause();
 		}
 
-		if (!Memory.CopyFromReal(out_addr, buf, buf_size))
-		{
-			cellVdec->Error("cellVdecGetPicture: data copying failed");
-			Emu.Pause();
-		}
-
 		av_frame_unref(vf.data);
 		av_frame_free(&vf.data);
-		free(buf);
 	}
 
 	return CELL_OK;

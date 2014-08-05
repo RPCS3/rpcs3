@@ -353,9 +353,6 @@ s32 cellFsUnlink(u32 path_addr)
 	const std::string& ps3_path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsUnlink(path=\"%s\")", ps3_path.c_str());
 
-	if (ps3_path.empty())
-		return CELL_EFAULT;
-
 	if (Emu.GetVFS().ExistsDir(ps3_path))
 		return CELL_EISDIR;
 

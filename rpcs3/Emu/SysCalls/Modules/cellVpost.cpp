@@ -128,29 +128,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->reserved2 = 0;
 
 	u64 stamp0 = get_system_time();
-	std::unique_ptr<u8[]> pY(new u8[w*h]); // color planes
-	std::unique_ptr<u8[]> pU(new u8[w*h/4]);
-	std::unique_ptr<u8[]> pV(new u8[w*h/4]);
 	std::unique_ptr<u8[]> pA(new u8[w*h]);
-	std::unique_ptr<u32[]> res(new u32[ow*oh*4]); // RGBA interleaved output
-
-	if (!Memory.CopyToReal(pY.get(), inPicBuff_addr, w*h))
-	{
-		cellVpost->Error("cellVpostExec: data copying failed(pY)");
-		Emu.Pause();
-	}
-
-	if (!Memory.CopyToReal(pU.get(), inPicBuff_addr + w*h, w*h/4))
-	{
-		cellVpost->Error("cellVpostExec: data copying failed(pU)");
-		Emu.Pause();
-	}
-
-	if (!Memory.CopyToReal(pV.get(), inPicBuff_addr + w*h + w*h/4, w*h/4))
-	{
-		cellVpost->Error("cellVpostExec: data copying failed(pV)");
-		Emu.Pause();
-	}
 
 	memset(pA.get(), (const u8)ctrlParam->outAlpha, w*h);
 
@@ -160,22 +138,16 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	u64 stamp2 = get_system_time();
 
-	u8* in_data[4] = { pY.get(), pU.get(), pV.get(), pA.get() };
+	u8* in_data[4] = { Memory.GetMemFromAddr(inPicBuff_addr), Memory.GetMemFromAddr(inPicBuff_addr + w*h), Memory.GetMemFromAddr(inPicBuff_addr + w*h + w*h / 4), pA.get() };
 	int in_line[4] = { w, w/2, w/2, w };
-	u8* out_data[4] = { (u8*)res.get(), NULL, NULL, NULL };
+	u8* out_data[4] = { Memory.GetMemFromAddr(outPicBuff_addr), NULL, NULL, NULL };
 	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
 
 	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
 
-	sws_freeContext(sws);
-
 	u64 stamp3 = get_system_time();
 
-	if (!Memory.CopyFromReal(outPicBuff_addr, res.get(), ow*oh*4))
-	{
-		cellVpost->Error("cellVpostExec: data copying failed(result)");
-		Emu.Pause();
-	}
+	sws_freeContext(sws);
 
 	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
 		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);

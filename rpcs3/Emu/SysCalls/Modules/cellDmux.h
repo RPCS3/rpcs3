@@ -632,12 +632,7 @@ public:
 
 		u32 data_addr = put + 128 + size;
 		size += sz;
-		if (!Memory.Copy(data_addr, stream.addr, sz))
-		{
-			LOG_ERROR(HLE, "es::push(): data copying failed");
-			Emu.Pause();
-			return;
-		}
+		memcpy(Memory + data_addr, Memory + stream.addr, sz);
 		stream.skip(sz);
 
 		mem_ptr_t<CellDmuxAuInfoEx> info(put);

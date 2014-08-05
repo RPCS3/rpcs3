@@ -82,7 +82,7 @@ s32 sys_memory_free(u32 start_addr)
 
 	// Release the allocated memory.
 	if(!Memory.Free(start_addr))
-		return CELL_EFAULT;
+		return CELL_EINVAL;
 
 	return CELL_OK;
 }
