@@ -51,7 +51,7 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	std::string drm_file_name = fmt::AfterLast(drm_path,'/');
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
-	std::string titleID = fmt::BeforeFirst(fmt::AfterFirst(fmt::AfterFirst(fmt::AfterFirst(drm_path,'/'),'/'),'/'),'/');
+	std::string titleID = drm_path.substr(15, 9);
 
 	// TODO: These shouldn't use current dir
 	std::string enc_drm_path = drm_path;
