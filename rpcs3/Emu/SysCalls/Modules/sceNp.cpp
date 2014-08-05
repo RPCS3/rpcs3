@@ -50,19 +50,16 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 	// Set the necessary file paths.
 	std::string drm_file_name = fmt::AfterLast(drm_path,'/');
 
-	//make more explicit what this actually does (currently everything after the third slash and before the fourth slash)
-	std::string titleID = fmt::BeforeFirst(fmt::AfterFirst(fmt::AfterFirst(fmt::AfterFirst(drm_path,'/'),'/'),'/'),'/');
+	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
+	std::string titleID = drm_path.substr(15, 9);
 
 	// TODO: These shouldn't use current dir
 	std::string enc_drm_path = drm_path;
-	drm_path.insert(0, 1, '.');
-	std::string dec_drm_path = "./dev_hdd1/" + titleID + "/" + drm_file_name;
-
-	std::string rap_dir_path = "./dev_usb000/";
-	std::string rap_file_path = rap_dir_path;
+	std::string dec_drm_path = "/dev_hdd1/" + titleID + "/" + drm_file_name;
+	std::string rap_path = "/dev_usb000/";
 	
 	// Search dev_usb000 for a compatible RAP file. 
-	vfsDir *raps_dir = new vfsDir(rap_dir_path);
+	vfsDir *raps_dir = new vfsDir(rap_path);
 	if (!raps_dir->IsOpened())
 		sceNp->Warning("sceNpDrmIsAvailable: Can't find RAP file for DRM!");
 	else
@@ -72,7 +69,7 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 		{
 			if (entry.name.find(titleID) != std::string::npos )
 			{
-				rap_file_path += entry.name;
+				rap_path += entry.name;
 				break;
 			}
 		}
@@ -85,8 +82,12 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 		rMkdir("./dev_hdd1/" + titleID);
 
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
-	DecryptEDAT(enc_drm_path, dec_drm_path, 8, rap_file_path, k_licensee, false);
+	std::string enc_drm_path_local, dec_drm_path_local, rap_path_local;
+	Emu.GetVFS().GetDevice(enc_drm_path, enc_drm_path_local);
+	Emu.GetVFS().GetDevice(dec_drm_path, dec_drm_path_local);
+	Emu.GetVFS().GetDevice(rap_path, rap_path_local);
 
+	DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false);
 	return CELL_OK;
 }
 
