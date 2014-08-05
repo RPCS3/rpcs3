@@ -118,7 +118,7 @@ s32 cellFsOpen(u32 path_addr, s32 flags, mem32_t fd, mem32_t arg, u64 size)
 	}
 
 	fd = sys_fs->GetNewId(stream, IDFlag_File);
-	LOG_WARNING(HLE, "\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
+	LOG_NOTICE(HLE, "\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
 }
@@ -222,7 +222,7 @@ s32 cellFsClosedir(u32 fd)
 s32 cellFsStat(const u32 path_addr, mem_ptr_t<CellFsStat> sb)
 {
 	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs->Log("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.c_str(), sb.GetAddr());
+	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.c_str(), sb.GetAddr());
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -307,6 +307,7 @@ s32 cellFsRename(u32 from_addr, u32 to_addr)
 {
 	const std::string& ps3_from = Memory.ReadString(from_addr);
 	const std::string& ps3_to = Memory.ReadString(to_addr);
+	sys_fs->Log("cellFsRename(from='%s' (from_addr=0x%x), to='%s' (to_addr=0x%x))", ps3_from.c_str(), from_addr, ps3_to.c_str(), to_addr);
 
 	{
 		vfsDir dir;

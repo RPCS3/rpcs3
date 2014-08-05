@@ -30,8 +30,8 @@ int cellJpgDecDestroy(u32 mainHandle)
 
 int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
 {
-	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
+	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
 
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
@@ -67,6 +67,9 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 
 int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
+	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)",
+		mainHandle, subHandle);
+
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
@@ -79,7 +82,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 
 int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo> info)
 {
-	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%llx)", mainHandle, subHandle, info.GetAddr());
+	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.GetAddr());
 
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
@@ -146,6 +149,9 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 
 int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellJpgDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellJpgDecDataOutInfo> dataOutInfo)
 {
+	cellJpgDec->Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
+
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
@@ -275,6 +281,9 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJpgDecInParam> inParam, mem_ptr_t<CellJpgDecOutParam> outParam)
 {
+	cellJpgDec->Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
+
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;

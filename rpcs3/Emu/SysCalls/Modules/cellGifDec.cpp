@@ -27,6 +27,9 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 
 int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
+	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
+
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
@@ -60,6 +63,9 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
 {
+	cellGifDec->Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
+		mainHandle, subHandle, info.GetAddr());
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -107,6 +113,9 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 
 int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
 {
+	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
@@ -134,6 +143,9 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 
 int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
+	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
+
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	CellGifDecSubHandle* subHandle_data;
@@ -249,6 +261,9 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 int cellGifDecClose(u32 mainHandle, u32 subHandle)
 {
+	cellGifDec->Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)",
+		mainHandle, subHandle);
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;

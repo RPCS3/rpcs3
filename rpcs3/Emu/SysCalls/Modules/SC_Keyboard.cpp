@@ -21,7 +21,7 @@ enum CELL_KB_ERROR_CODE
 
 int cellKbInit(u32 max_connect)
 {
-	sys_io->Log("cellKbInit(max_connect=%d)", max_connect);
+	sys_io->Warning("cellKbInit(max_connect=%d)", max_connect);
 	if(Emu.GetKeyboardManager().IsInited()) return CELL_KB_ERROR_ALREADY_INITIALIZED;
 	if(max_connect > 7) return CELL_KB_ERROR_INVALID_PARAMETER;
 

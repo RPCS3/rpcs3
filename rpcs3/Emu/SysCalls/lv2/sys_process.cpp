@@ -12,6 +12,7 @@ sysProcessObjects_t procObjects;
 
 s32 sys_process_getpid()
 {
+	sc_p.Log("sys_process_getpid() -> 1");
 	return 1;
 }
 
