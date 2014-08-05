@@ -70,7 +70,7 @@ bool rMkpath(const std::string &path)
 	bool ret;
 
 	while (true) {
-		if ((pos = path.find_first_of('/', start)) == std::string::npos)
+		if ((pos = path.find_first_of("/\\", start)) == std::string::npos)
 			pos = path.length();
 
 		dir = path.substr(0,pos++);
@@ -80,7 +80,7 @@ bool rMkpath(const std::string &path)
 		if((ret = mkdir(dir.c_str())) && errno != EEXIST){
 			return !ret;
 		}
-		if (pos == path.length())
+		if (pos >= path.length())
 			return true;
 	}
 	return true;
