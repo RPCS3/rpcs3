@@ -15,8 +15,6 @@ bool vfsLocalDir::Open(const std::string& path)
 	if(!vfsDirBase::Open(path))
 		return false;
 
-	rDir dir;
-
 	if(!dir.Open(path))
 		return false;
 
@@ -56,4 +54,9 @@ bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
 bool vfsLocalDir::Remove(const std::string& path)
 {
 	return rRmdir(path);
+}
+
+bool vfsLocalDir::IsOpened() const
+{
+	return dir.IsOpened() && vfsDirBase::IsOpened();
 }
