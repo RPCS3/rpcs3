@@ -628,6 +628,8 @@ typedef struct{
 
 int cellSysCacheClear(void)
 {
+	cellSysutil->Warning("cellSysCacheClear()");
+
 	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
 	//it was mounted before, for that we would need to save the state which I don't know
 	//where to put
@@ -655,6 +657,8 @@ int cellSysCacheClear(void)
 
 int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 {
+	cellSysutil->Warning("cellSysCacheMount(param_addr=0x%x)", param.GetAddr());
+
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
@@ -802,6 +806,8 @@ int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> st
 
 int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 {
+	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", _config.GetAddr(), memSize.GetAddr());
+
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
 	*memSize = 1024 * 1024 * 1; // 1 MB

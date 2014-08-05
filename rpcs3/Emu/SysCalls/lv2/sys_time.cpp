@@ -58,6 +58,8 @@ u64 get_system_time()
 // Functions
 s32 sys_time_get_timezone(mem32_t timezone, mem32_t summertime)
 {
+	sys_time.Warning("sys_time_get_timezone(timezone_addr=0x%x, summertime_addr=0x%x)", timezone.GetAddr(), summertime.GetAddr());
+
 	int ret;
 	ret = cellSysutilGetSystemParamInt(0x0116, timezone);   //0x0116 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE
 	if (ret != CELL_OK) return ret;
