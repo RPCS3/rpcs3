@@ -246,7 +246,7 @@ s32 cellSyncBarrierTryNotify(mem_ptr_t<CellSyncBarrier> barrier)
 
 s32 cellSyncBarrierWait(mem_ptr_t<CellSyncBarrier> barrier)
 {
-	cellSync->Todo("cellSyncBarrierWait(barrier_addr=0x%x)", barrier.GetAddr());
+	cellSync->Log("cellSyncBarrierWait(barrier_addr=0x%x)", barrier.GetAddr());
 
 	if (!barrier)
 	{
@@ -257,13 +257,42 @@ s32 cellSyncBarrierWait(mem_ptr_t<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO
+	// prx: sync, extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
+	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+
+	while (true)
+	{
+		const u32 old_data = barrier->m_data();
+		CellSyncBarrier new_barrier;
+		new_barrier.m_data() = old_data;
+
+		s16 value = (s16)new_barrier.m_value;
+		if (value >= 0)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			if (Emu.IsStopped())
+			{
+				LOG_WARNING(HLE, "cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.GetAddr());
+				return CELL_OK;
+			}
+			continue;
+		}
+
+		value--;
+		if (value == (s16)0x8000)
+		{
+			value = 0;
+		}
+		new_barrier.m_value = value;
+		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellSyncBarrierTryWait(mem_ptr_t<CellSyncBarrier> barrier)
 {
-	cellSync->Todo("cellSyncBarrierTryWait(barrier_addr=0x%x)", barrier.GetAddr());
+	cellSync->Log("cellSyncBarrierTryWait(barrier_addr=0x%x)", barrier.GetAddr());
 
 	if (!barrier)
 	{
@@ -274,7 +303,29 @@ s32 cellSyncBarrierTryWait(mem_ptr_t<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO
+	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+
+	while (true)
+	{
+		const u32 old_data = barrier->m_data();
+		CellSyncBarrier new_barrier;
+		new_barrier.m_data() = old_data;
+
+		s16 value = (s16)new_barrier.m_value;
+		if (value >= 0)
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+
+		value--;
+		if (value == (s16)0x8000)
+		{
+			value = 0;
+		}
+		new_barrier.m_value = value;
+		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+	}
+
 	return CELL_OK;
 }
 
