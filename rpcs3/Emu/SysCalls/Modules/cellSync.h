@@ -68,7 +68,7 @@ struct CellSyncRwm
 	};
 };
 
-static_assert(sizeof(CellSyncRwm) == 16, "CellSyncBarrier: wrong size");
+static_assert(sizeof(CellSyncRwm) == 16, "CellSyncRwm: wrong size");
 
 struct CellSyncQueue
 {

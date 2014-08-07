@@ -413,7 +413,7 @@ s32 cellSyncRwmRead(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 
 s32 cellSyncRwmTryRead(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncRwmTryRead(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncRwmTryRead(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
 
 	if (!rwm || !buffer_addr)
 	{
@@ -424,13 +424,44 @@ s32 cellSyncRwmTryRead(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO
+	while (true)
+	{
+		const u32 old_data = rwm->m_data();
+		CellSyncRwm new_rwm;
+		new_rwm.m_data() = old_data;
+
+		if (new_rwm.m_writers.ToBE())
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+
+		new_rwm.m_readers++;
+		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+	}
+
+	memcpy(Memory + buffer_addr, Memory + (u64)rwm->m_addr, (u32)rwm->m_size);
+
+	while (true)
+	{
+		const u32 old_data = rwm->m_data();
+		CellSyncRwm new_rwm;
+		new_rwm.m_data() = old_data;
+
+		if (!new_rwm.m_readers.ToBE())
+		{
+			cellSync->Error("cellSyncRwmRead(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", rwm.GetAddr(), (u16)new_rwm.m_writers);
+			return CELL_SYNC_ERROR_ABORT;
+		}
+
+		new_rwm.m_readers--;
+		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+	}
 	return CELL_OK;
 }
 
 s32 cellSyncRwmWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncRwmWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncRwmWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
 
 	if (!rwm || !buffer_addr)
 	{
@@ -441,13 +472,51 @@ s32 cellSyncRwmWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO
+	// prx: atomically compare second u16 (m_writers) with 0, repeat if not 0, set 1, sync
+	while (true)
+	{
+		const u32 old_data = rwm->m_data();
+		CellSyncRwm new_rwm;
+		new_rwm.m_data() = old_data;
+
+		if (new_rwm.m_writers.ToBE())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			if (Emu.IsStopped())
+			{
+				cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (I)", rwm.GetAddr());
+				return CELL_OK;
+			}
+			continue;
+		}
+
+		new_rwm.m_writers = 1;
+		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+	}
+
+	// prx: wait until m_readers == 0
+	while (rwm->m_readers.ToBE())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
+		{
+			cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (II)", rwm.GetAddr());
+			return CELL_OK;
+		}
+	}
+
+	// prx: copy data from buffer_addr
+	memcpy(Memory + (u64)rwm->m_addr, Memory + buffer_addr, (u32)rwm->m_size);
+
+	// prx: sync and zeroize m_readers and m_writers
+	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
+	rwm->m_data() = 0;
 	return CELL_OK;
 }
 
 s32 cellSyncRwmTryWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 {
-	cellSync->Todo("cellSyncRwmTryWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
+	cellSync->Log("cellSyncRwmTryWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.GetAddr(), buffer_addr);
 
 	if (!rwm || !buffer_addr)
 	{
@@ -458,7 +527,15 @@ s32 cellSyncRwmTryWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO
+	// prx: compare m_readers | m_writers with 0, return busy if not zero, set m_writers to 1
+	if (InterlockedCompareExchange(&rwm->m_data(), se32(1), 0) != 0) return CELL_SYNC_ERROR_BUSY;
+
+	// prx: copy data from buffer_addr
+	memcpy(Memory + (u64)rwm->m_addr, Memory + buffer_addr, (u32)rwm->m_size);
+
+	// prx: sync and zeroize m_readers and m_writers
+	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
+	rwm->m_data() = 0;
 	return CELL_OK;
 }
 
