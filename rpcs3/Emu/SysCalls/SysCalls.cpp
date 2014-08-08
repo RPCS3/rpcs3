@@ -34,9 +34,9 @@ static func_caller* sc_table[kSyscallTableLength] =
 
 	null_func, null_func, null_func, null_func, null_func, null_func, //6-11  UNS
 
-	bind_func(sys_process_get_number_of_object),            //12  (0x00B)
-	bind_func(sys_process_get_id),                          //13  (0x00C)
-	null_func,//bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00D)
+	bind_func(sys_process_get_number_of_object),            //12  (0x00C)
+	bind_func(sys_process_get_id),                          //13  (0x00D)
+	null_func,//bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00E)
 
 	null_func, null_func, null_func,                        //15-17  UNS
 	
