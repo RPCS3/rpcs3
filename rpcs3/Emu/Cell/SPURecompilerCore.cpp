@@ -2,8 +2,6 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
-#include "Emu/SysCalls/lv2/sys_event.h" 
 
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"

@@ -8,6 +8,7 @@
 #include "lv2/lv2Fs.h"
 #include "lv2/sys_cond.h"
 #include "lv2/sys_event.h"
+#include "lv2/sys_event_flag.h"
 #include "lv2/sys_interrupt.h"
 #include "lv2/sys_lwcond.h"
 #include "lv2/sys_lwmutex.h"

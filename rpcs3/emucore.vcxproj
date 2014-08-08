@@ -95,6 +95,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_interrupt.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_lwcond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_lwmutex.cpp" />
@@ -321,6 +322,7 @@
     <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_interrupt.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_lwcond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_lwmutex.h" />

@@ -1,77 +1,216 @@
 #pragma once
-#include "Emu/Event.h"
 
-enum
+#include "sys_lwmutex.h"
+
+#define FIX_SPUQ(x) ((u64)x | 0x5350555100000000ULL)
+// arbitrary code to prevent "special" zero value in key argument
+
+enum EventQueueType
 {
-	SYS_SYNC_WAITER_SINGLE = 0x10000,
-	SYS_SYNC_WAITER_MULTIPLE = 0x20000,
-	
-	SYS_EVENT_FLAG_WAIT_AND = 0x01,
-	SYS_EVENT_FLAG_WAIT_OR = 0x02,
-
-	SYS_EVENT_FLAG_WAIT_CLEAR = 0x10,
-	SYS_EVENT_FLAG_WAIT_CLEAR_ALL = 0x20,
+	SYS_PPU_QUEUE = 1,
+	SYS_SPU_QUEUE = 2,
 };
 
-struct sys_event_flag_attr
+enum EventQueueDestroyMode
 {
-	be_t<u32> protocol;
-	be_t<u32> pshared;
-	be_t<u64> ipc_key;
-	be_t<int> flags;
-	be_t<int> type;
-	char name[8];
+	// DEFAULT = 0,
+	SYS_EVENT_QUEUE_DESTROY_FORCE = 1,
 };
 
-struct EventFlagWaiter
+enum EventPortType
 {
-	u32 tid;
-	u32 mode;
-	u64 bitptn;
+	SYS_EVENT_PORT_LOCAL = 1,
 };
 
-struct EventFlag
+enum EventSourceType
 {
-	SMutex m_mutex;
-	u64 flags;
-	std::vector<EventFlagWaiter> waiters;
-	SMutex signal;
-	const u32 m_protocol;
-	const int m_type;
+	SYS_SPU_THREAD_EVENT_USER = 1,
+	/* SYS_SPU_THREAD_EVENT_DMA = 2, */ // not supported
+};
 
-	EventFlag(u64 pattern, u32 protocol, int type)
-		: flags(pattern)
-		, m_protocol(protocol)
-		, m_type(type)
+enum EventSourceKey : u64
+{
+	SYS_SPU_THREAD_EVENT_USER_KEY = 0xFFFFFFFF53505501,
+	/* SYS_SPU_THREAD_EVENT_DMA_KEY = 0xFFFFFFFF53505502, */
+};
+
+struct sys_event_queue_attr
+{
+	be_t<u32> protocol; // SYS_SYNC_PRIORITY or SYS_SYNC_FIFO
+	be_t<int> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
+};
+
+struct sys_event_data
+{
+	be_t<u64> source;
+	be_t<u64> data1;
+	be_t<u64> data2;
+	be_t<u64> data3;
+};
+
+struct EventQueue;
+
+struct EventPort
+{
+	u64 name; // generated or user-specified code that is passed to sys_event_data struct
+	EventQueue* eq; // event queue this port has been connected to
+	std::mutex m_mutex; // may be locked until the event sending is finished
+
+	EventPort(u64 name = 0)
+		: eq(nullptr)
+		, name(name)
 	{
 	}
+};
 
-	u32 check()
+class EventRingBuffer
+{
+	std::vector<sys_event_data> data;
+	std::mutex m_mutex;
+	u32 buf_pos;
+	u32 buf_count;
+
+public:
+	const u32 size;
+
+	EventRingBuffer(u32 size)
+		: size(size)
+		, buf_pos(0)
+		, buf_count(0)
 	{
-		SleepQueue sq; // TODO: implement without SleepQueue
+		data.resize(size);
+	}
 
-		u32 target = 0;
+	void clear()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		buf_count = 0;
+		buf_pos = 0;
+	}
 
-		for (u32 i = 0; i < waiters.size(); i++)
+	bool push(u64 name, u64 d1, u64 d2, u64 d3)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (buf_count >= size) return false;
+
+		sys_event_data& ref = data[(buf_pos + buf_count++) % size];
+		ref.source = name;
+		ref.data1 = d1;
+		ref.data2 = d2;
+		ref.data3 = d3;
+
+		return true;
+	}
+
+	bool pop(sys_event_data& ref)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (!buf_count) return false;
+
+		sys_event_data& from = data[buf_pos];
+		buf_pos = (buf_pos + 1) % size;
+		buf_count--;
+		ref.source = from.source;
+		ref.data1 = from.data1;
+		ref.data2 = from.data2;
+		ref.data3 = from.data3;
+
+		return true;
+	}
+
+	u32 pop_all(sys_event_data* ptr, u32 max)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		u32 res = 0;
+		while (buf_count && max)
 		{
-			if (((waiters[i].mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & waiters[i].bitptn) == waiters[i].bitptn) ||
-				((waiters[i].mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & waiters[i].bitptn)))
+			sys_event_data& from = data[buf_pos];
+			ptr->source = from.source;
+			ptr->data1 = from.data1;
+			ptr->data2 = from.data2;
+			ptr->data3 = from.data3;
+			buf_pos = (buf_pos + 1) % size;
+			buf_count--;
+			max--;
+			ptr++;
+			res++;
+		}
+		return res;
+	}
+
+	u32 count() const
+	{
+		return buf_count;
+	}
+};
+
+class EventPortList
+{
+	std::vector<EventPort*> data;
+	std::mutex m_mutex;
+
+public:
+
+	void clear()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		for (u32 i = 0; i < data.size(); i++)
+		{
+			std::lock_guard<std::mutex> lock2(data[i]->m_mutex);
+			data[i]->eq = nullptr; // force all ports to disconnect
+		}
+		data.clear();
+	}
+
+	void add(EventPort* port)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		data.push_back(port);
+	}
+
+	void remove(EventPort* port)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		for (u32 i = 0; i < data.size(); i++)
+		{
+			if (data[i] == port)
 			{
-				if (m_protocol == SYS_SYNC_FIFO)
-				{
-					target = waiters[i].tid;
-					break;
-				}
-				sq.list.push_back(waiters[i].tid);
+				data.erase(data.begin() + i);
+				return;
 			}
 		}
+	}
+};
 
-		if (m_protocol == SYS_SYNC_PRIORITY)
-		{
-			target = sq.pop_prio();
-		}
+struct EventQueue
+{
+	SleepQueue sq;
+	EventPortList ports;
+	EventRingBuffer events;
+	SMutex owner;
 
-		return target;
+	const union
+	{
+		u64 name_u64;
+		char name[8];
+	};
+	const u32 protocol;
+	const int type;
+	const u64 key;
+
+	EventQueue(u32 protocol, int type, u64 name, u64 key, int size)
+		: type(type)
+		, protocol(protocol)
+		, name_u64(name)
+		, key(key)
+		, events(size) // size: max event count this queue can hold
+	{
 	}
 };
 
@@ -87,12 +226,3 @@ s32 sys_event_port_destroy(u32 eport_id);
 s32 sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 s32 sys_event_port_disconnect(u32 eport_id);
 s32 sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
-
-s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init);
-s32 sys_event_flag_destroy(u32 eflag_id);
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout);
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result);
-s32 sys_event_flag_set(u32 eflag_id, u64 bitptn);
-s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn);
-s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num);
-s32 sys_event_flag_get(u32 eflag_id, mem64_t flags);

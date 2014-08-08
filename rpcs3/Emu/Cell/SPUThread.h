@@ -3,6 +3,7 @@
 #include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
+#include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "MFC.h"
 #include "Emu/SysCalls/ErrorCodes.h"
