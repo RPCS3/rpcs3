@@ -55,7 +55,7 @@ struct CellCapabilityInfo
 
 int cellPadInit(u32 max_connect)
 {
-	sys_io->Log("cellPadInit(max_connect=%d)", max_connect);
+	sys_io->Warning("cellPadInit(max_connect=%d)", max_connect);
 	if(Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 	if (max_connect > CELL_PAD_MAX_PORT_NUM) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	Emu.GetPadManager().Init(max_connect);

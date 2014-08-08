@@ -148,12 +148,6 @@ void CPUThread::NextPc(u8 instr_size)
 
 void CPUThread::SetBranch(const u64 pc, bool record_branch)
 {
-	if(!Memory.IsGoodAddr(m_offset + pc))
-	{
-		LOG_ERROR(PPU, "%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName().c_str(), m_offset + pc, m_offset + PC);
-		Emu.Pause();
-	}
-
 	m_is_branch = true;
 	nPC = pc;
 

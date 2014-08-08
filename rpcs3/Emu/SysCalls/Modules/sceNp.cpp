@@ -120,8 +120,6 @@ int sceNpManagerGetStatus(mem32_t status)
 	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.GetAddr());
 
 	// TODO: Check if sceNpInit() was called, if not return SCE_NP_ERROR_NOT_INITIALIZED
-	if (!status.IsGood())
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
 
 	// TODO: Support different statuses
 	status = SCE_NP_MANAGER_STATUS_OFFLINE;

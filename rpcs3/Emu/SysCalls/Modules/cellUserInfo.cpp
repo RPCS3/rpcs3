@@ -14,8 +14,6 @@ int cellUserInfoGetStat(u32 id, mem_ptr_t<CellUserInfoUserStat> stat)
 {
 	cellUserInfo->Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.GetAddr());
 
-	if (!stat.IsGood())
-		return CELL_USERINFO_ERROR_PARAM;
 	if (id > CELL_USERINFO_USER_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
 
@@ -64,14 +62,14 @@ int cellUserInfoGetList(mem32_t listNum, mem_ptr_t<CellUserInfoUserList> listBuf
 		listNum.GetAddr(), listBuf.GetAddr(), currentUserId.GetAddr());
 
 	// If only listNum is NULL, an error will be returned
-	if (listBuf.IsGood() && !listNum.IsGood())
+	if (listBuf.GetAddr() && !listNum.GetAddr())
 		return CELL_USERINFO_ERROR_PARAM;
-	if (listNum.IsGood())
+	if (listNum.GetAddr())
 		listNum = 1;
-	if (listBuf.IsGood())
+	if (listBuf.GetAddr())
 		listBuf->userId[0] = 1;
 
-	if (currentUserId.IsGood())
+	if (currentUserId.GetAddr())
 		currentUserId = 1;
 	
 	return CELL_OK;

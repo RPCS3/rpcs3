@@ -25,11 +25,6 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 {
 	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
 
-	if(!value.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
@@ -118,9 +113,6 @@ int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
 {
 	cellSysutil->Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
 
-	if (!buf.IsGood())
-		return CELL_EFAULT;
-
 	memset(buf, 0, bufsize);
 
 	switch(id)
@@ -184,9 +176,6 @@ int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution
 	cellSysutil->Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
 		resolutionId, resolution.GetAddr());
 
-	if (!resolution.IsGood())
-		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
-	
 	u32 num = ResolutionIdToNum(resolutionId);
 	if(!num)
 		return CELL_EINVAL;
@@ -201,11 +190,6 @@ s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 wa
 {
 	cellSysutil->Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
 		videoOut, config_addr, option_addr, waitForEvent);
-
-	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration)))
-	{
-		return CELL_EFAULT;
-	}
 
 	CellVideoOutConfiguration& config = (CellVideoOutConfiguration&)Memory[config_addr];
 
@@ -242,8 +226,6 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 {
 	cellSysutil->Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		videoOut, config_addr, option_addr);
-
-	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
 
 	CellVideoOutConfiguration config = {};
 
@@ -502,11 +484,6 @@ int cellAudioOutConfigure(u32 audioOut, mem_ptr_t<CellAudioOutConfiguration> con
 	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
 		audioOut, config.GetAddr(), option.GetAddr(), waitForEvent);
 
-	if (!config.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
@@ -535,8 +512,6 @@ int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
 {
 	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		audioOut, config_addr, option_addr);
-
-	if(!Memory.IsGoodAddr(config_addr, sizeof(CellAudioOutConfiguration))) return CELL_EFAULT;
 
 	CellAudioOutConfiguration config = {};
 
@@ -653,6 +628,8 @@ typedef struct{
 
 int cellSysCacheClear(void)
 {
+	cellSysutil->Warning("cellSysCacheClear()");
+
 	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
 	//it was mounted before, for that we would need to save the state which I don't know
 	//where to put
@@ -680,6 +657,8 @@ int cellSysCacheClear(void)
 
 int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 {
+	cellSysutil->Warning("cellSysCacheMount(param_addr=0x%x)", param.GetAddr());
+
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
@@ -694,9 +673,6 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 {
 	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
 		version, dirName_addr, errDialog, funcStat, container);
-
-	if (!Memory.IsGoodAddr(dirName_addr) || !funcStat.IsGood())
-		return CELL_HDDGAME_ERROR_PARAM;
 
 	std::string dirName = Memory.ReadString(dirName_addr);
 	if (dirName.size() != 9)
@@ -830,6 +806,8 @@ int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> st
 
 int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 {
+	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", _config.GetAddr(), memSize.GetAddr());
+
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
 	*memSize = 1024 * 1024 * 1; // 1 MB

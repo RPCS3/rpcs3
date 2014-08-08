@@ -106,36 +106,6 @@ u64 MemoryBlock::FixAddr(const u64 addr) const
 	return addr - GetStartAddr();
 }
 
-bool MemoryBlock::GetMemFromAddr(void* dst, const u64 addr, const u32 size)
-{
-	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
-
-	return Memory.CopyToReal(dst, addr, size);
-}
-
-bool MemoryBlock::SetMemFromAddr(void* src, const u64 addr, const u32 size)
-{
-	if(!IsMyAddress(addr) || FixAddr(addr) + size > GetSize()) return false;
-
-	return Memory.CopyFromReal(addr, src, size);
-}
-
-bool MemoryBlock::GetMemFFromAddr(void* dst, const u64 addr)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	dst = GetMem(FixAddr(addr));
-
-	return true;
-}
-
-u8* MemoryBlock::GetMemFromAddr(const u64 addr)
-{
-	if(!IsMyAddress(addr) || IsNULL()) return nullptr;
-
-	return GetMem(FixAddr(addr));
-}
-
 MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 {
 	if (start + size > 0x100000000) return nullptr;

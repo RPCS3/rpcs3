@@ -21,12 +21,6 @@ int cellSpursInitialize(mem_ptr_t<CellSpurs> spurs, int nSpus, int spuPriority,
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursInitialize : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	SPURSManagerAttribute *attr = new SPURSManagerAttribute(nSpus, spuPriority, ppuPriority, exitIfNoWork);
 	spurs->spurs = new SPURSManager(attr);
 
@@ -41,12 +35,6 @@ int cellSpursFinalize(mem_ptr_t<CellSpurs> spurs)
 	{
 		cellSpurs->Error("cellSpursFinalize : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursFinalize : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	spurs->spurs->Finalize();
@@ -64,12 +52,6 @@ int cellSpursInitializeWithAttribute(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood() || !attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursInitializeWithAttribute : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	spurs->spurs = new SPURSManager(attr->attr);
 
 	return CELL_OK;
@@ -83,12 +65,6 @@ int cellSpursInitializeWithAttribute2(mem_ptr_t<CellSpurs2> spurs, const mem_ptr
 	{
 		cellSpurs->Error("cellSpursInitializeWithAttribute2 : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood() || !attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursInitializeWithAttribute2 : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	spurs->spurs = new SPURSManager(attr->attr);
@@ -106,12 +82,6 @@ int _cellSpursAttributeInitialize(mem_ptr_t<CellSpursAttribute> attr, int nSpus,
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!attr.IsGood())
-	{
-		cellSpurs->Error("_cellSpursAttributeInitialize : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	attr->attr = new SPURSManagerAttribute(nSpus, spuPriority, ppuPriority, exitIfNoWork);
 
 	return CELL_OK;
@@ -127,12 +97,6 @@ int cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribut
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttributeSetMemoryContainerForSpuThread : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	attr->attr->_setMemoryContainerForSpuThread(container);
 
 	return CELL_OK;
@@ -146,12 +110,6 @@ int cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 	{
 		cellSpurs->Error("cellSpursAttributeSetNamePrefix : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!attr.IsGood() || !prefix.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttributeSetNamePrefix : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	if (size > CELL_SPURS_NAME_MAX_LENGTH)
@@ -175,12 +133,6 @@ int cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> a
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttributeEnableSpuPrintfIfAvailable : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -192,12 +144,6 @@ int cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, 
 	{
 		cellSpurs->Error("cellSpursAttributeSetNamePrefix : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttributeSetSpuThreadGroupType : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	attr->attr->_setSpuThreadGroupType(type);
@@ -214,12 +160,6 @@ int cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, c
 	{
 		cellSpurs->Error("cellSpursAttributeEnableSystemWorkload : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!attr.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttributeEnableSystemWorkload : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	for (int i = 0; i < CELL_SPURS_MAX_SPU; i++)
@@ -243,12 +183,6 @@ int cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood() || group.IsGood())
-	{
-		cellSpurs->Error("cellSpursGetSpuThreadGroupId : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -260,12 +194,6 @@ int cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
 	{
 		cellSpurs->Error("cellSpursGetNumSpuThread : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood() || nThreads.IsGood())
-	{
-		cellSpurs->Error("cellSpursGetNumSpuThread : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -281,12 +209,6 @@ int cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t 
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood() || !thread.IsGood() || nThreads.IsGood())
-	{
-		cellSpurs->Error("cellSpursGetSpuThreadId : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -298,12 +220,6 @@ int cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 ma
 	{
 		cellSpurs->Error("cellSpursSetMaxContention : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursSetMaxContention : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -319,12 +235,6 @@ int cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const u8 
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursSetPriorities : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -336,12 +246,6 @@ int cellSpursSetPriority(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 spuId, 
 	{
 		cellSpurs->Error("cellSpursSetPriority : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursSetPriority : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -357,12 +261,6 @@ int cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, const bool isP
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursSetPreemptionVictimHints : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -374,12 +272,6 @@ int cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t p
 	{
 		cellSpurs->Error("cellSpursAttachLv2EventQueue : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood() || !port.IsGood())
-	{
-		cellSpurs->Error("cellSpursAttachLv2EventQueue : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	spurs->spurs->AttachLv2EventQueue(queue, port, isDynamic);
@@ -397,12 +289,6 @@ int cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursDetachLv2EventQueue : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	spurs->spurs->DetachLv2EventQueue(port);
 
 	return CELL_OK;
@@ -418,12 +304,6 @@ int cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursEnableExceptionEventHandler : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -435,12 +315,6 @@ int cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, mem_func
 	{
 		cellSpurs->Error("cellSpursSetGlobalExceptionEventHandler : CELL_SPURS_CORE_ERROR_ALIGN");
 		return CELL_SPURS_CORE_ERROR_ALIGN;
-	}
-
-	if (!spurs.IsGood() || eaHandler.IsGood())
-	{
-		cellSpurs->Error("cellSpursSetGlobalExceptionEventHandler : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -456,12 +330,6 @@ int cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood())
-	{
-		cellSpurs->Error("cellSpursUnsetGlobalExceptionEventHandler : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -475,12 +343,6 @@ int cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood() || !info.IsGood())
-	{
-		cellSpurs->Error("cellSpursGetInfo : CELL_SPURS_CORE_ERROR_NULL_POINTER");
-		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -492,12 +354,6 @@ int _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 	{
 		cellSpurs->Error("_cellSpursEventFlagInitialize : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if ((!spurs.IsGood() && !taskset.IsGood()) || !eventFlag.IsGood())
-	{
-		cellSpurs->Error("_cellSpursEventFlagInitialize : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	eventFlag->eventFlag = new SPURSManagerEventFlag(flagClearMode, flagDirection);
@@ -515,12 +371,6 @@ int cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!eventFlag.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagAttachLv2EventQueue : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -532,12 +382,6 @@ int cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 	{
 		cellSpurs->Error("cellSpursEventFlagDetachLv2EventQueue : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!eventFlag.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagDetachLv2EventQueue : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -553,12 +397,6 @@ int cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!eventFlag.IsGood() || !mask.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagWait : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -570,12 +408,6 @@ int cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 	{
 		cellSpurs->Error("cellSpursEventFlagClear : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!eventFlag.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagClear : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -591,12 +423,6 @@ int cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!eventFlag.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagSet : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -610,12 +436,6 @@ int cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t m
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!eventFlag.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagTryWait : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -627,12 +447,6 @@ int cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 	{
 		cellSpurs->Error("cellSpursEventFlagGetDirection : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!eventFlag.IsGood() || !direction.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagGetDirection : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	direction = eventFlag->eventFlag->_getDirection();
@@ -650,12 +464,6 @@ int cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!eventFlag.IsGood() || !clear_mode.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagGetClearMode : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	clear_mode = eventFlag->eventFlag->_getClearMode();
 
 	return CELL_OK;
@@ -669,12 +477,6 @@ int cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag,
 	{
 		cellSpurs->Error("cellSpursEventFlagTryWait : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!eventFlag.IsGood() || !taskset.IsGood())
-	{
-		cellSpurs->Error("cellSpursEventFlagTryWait : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -704,12 +506,6 @@ int cellSpursLFQueueAttachLv2EventQueue()
 	return CELL_OK;
 }
 
-int cellSpursQueueDetachLv2EventQueue()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
 int _cellSpursLFQueuePopBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -717,166 +513,6 @@ int _cellSpursLFQueuePopBody()
 }
 
 int cellSpursLFQueueGetTasksetAddress()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncLFQueueGetEntrySize()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-int cellSyncLFQueueSize()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncLFQueueClear()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-int _cellSyncLFQueueCompletePushPointer2()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueGetPopPointer2()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueuePeek()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueueSize()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueuePop()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueCompletePushPointer()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueAttachLv2EventQueue()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueuePush()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueueTryPeek()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueGetPushPointer2()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueueTryPush()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueGetPopPointer()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueCompletePopPointer2()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueDetachLv2EventQueue()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueueClear()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncQueueTryPop()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncLFQueueInitialize()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueGetSignalAddress()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueuePushBody()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncLFQueueGetDirection()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int cellSyncLFQueueDepth()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueuePopBody()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueGetPushPointer()
-{
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
-}
-
-int _cellSyncLFQueueCompletePopPointer()
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
@@ -901,6 +537,48 @@ int cellSpursQueuePushBody()
 }
 
 int cellSpursQueueAttachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueDetachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueGetTasksetAddress()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueClear()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueDepth()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueGetEntrySize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueSize()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
+int cellSpursQueueGetDirection()
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
@@ -952,12 +630,6 @@ int cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskse
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!spurs.IsGood() || !taskset.IsGood())
-	{
-		cellSpurs->Error("cellSpursCreateTaskset : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	SPURSManagerTasksetAttribute *tattr = new SPURSManagerTasksetAttribute(args, priority, maxContention);
 	taskset->taskset = new SPURSManagerTaskset(taskset.GetAddr(), tattr);
 
@@ -974,12 +646,6 @@ int cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!taskset.IsGood())
-	{
-		cellSpurs->Error("cellSpursJoinTaskset : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -993,12 +659,6 @@ int cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadI
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!taskset.IsGood() || !workloadId.IsGood())
-	{
-		cellSpurs->Error("cellSpursGetTasksetId : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -1010,12 +670,6 @@ int cellSpursShutdownTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 	{
 		cellSpurs->Error("cellSpursShutdownTaskset : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!taskset.IsGood())
-	{
-		cellSpurs->Error("cellSpursShutdownTaskset : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -1034,12 +688,6 @@ int cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, mem
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (!taskset.IsGood())
-	{
-		cellSpurs->Error("cellSpursCreateTask : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
-
 	return CELL_OK;
 }
 
@@ -1051,12 +699,6 @@ int _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
 	{
 		cellSpurs->Error("_cellSpursSendSignal : CELL_SPURS_TASK_ERROR_ALIGN");
 		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (!taskset.IsGood())
-	{
-		cellSpurs->Error("_cellSpursSendSignal : CELL_SPURS_TASK_ERROR_NULL_POINTER");
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
 	return CELL_OK;
@@ -1357,45 +999,25 @@ void cellSpurs_init()
 	cellSpurs->AddFunc(0xd5d0b256, cellSpursJobGuardNotify);
 	cellSpurs->AddFunc(0x00af2519, cellSpursJobGuardReset);
 	
-	// Queue/LFQueue
+	// LFQueue
 	cellSpurs->AddFunc(0x011ee38b, _cellSpursLFQueueInitialize);
 	cellSpurs->AddFunc(0x8a85674d, _cellSpursLFQueuePushBody);
 	cellSpurs->AddFunc(0x1656d49f, cellSpursLFQueueAttachLv2EventQueue);
 	cellSpurs->AddFunc(0x73e06f91, cellSpursLFQueueDetachLv2EventQueue);
+	cellSpurs->AddFunc(0x35dae22b, _cellSpursLFQueuePopBody);
+	cellSpurs->AddFunc(0xb792ca1a, cellSpursLFQueueGetTasksetAddress);
+
+	// Queue
 	cellSpurs->AddFunc(0x082bfb09, _cellSpursQueueInitialize);
 	cellSpurs->AddFunc(0x91066667, cellSpursQueuePopBody);
 	cellSpurs->AddFunc(0x92cff6ed, cellSpursQueuePushBody);
 	cellSpurs->AddFunc(0xe5443be7, cellSpursQueueAttachLv2EventQueue);
 	cellSpurs->AddFunc(0x039d70b7, cellSpursQueueDetachLv2EventQueue);
-	cellSpurs->AddFunc(0x35dae22b, _cellSpursLFQueuePopBody);
-	cellSpurs->AddFunc(0xb792ca1a, cellSpursLFQueueGetTasksetAddress);
-	cellSpurs->AddFunc(0x0c7cb9f7, cellSyncLFQueueGetEntrySize);
-	cellSpurs->AddFunc(0x167ea63e, cellSyncLFQueueSize);
-	cellSpurs->AddFunc(0x2af0c515, cellSyncLFQueueClear);
-	cellSpurs->AddFunc(0x35bbdad2, _cellSyncLFQueueCompletePushPointer2);
-	cellSpurs->AddFunc(0x46356fe0, _cellSyncLFQueueGetPopPointer2);
-	cellSpurs->AddFunc(0x48154c9b, cellSyncQueuePeek);
-	cellSpurs->AddFunc(0x4da349b2, cellSyncQueueSize);
-	cellSpurs->AddFunc(0x4da6d7e0, cellSyncQueuePop);
-	cellSpurs->AddFunc(0x4e88c68d, _cellSyncLFQueueCompletePushPointer);
-	cellSpurs->AddFunc(0x54fc2032, _cellSyncLFQueueAttachLv2EventQueue);
-	cellSpurs->AddFunc(0x5ae841e5, cellSyncQueuePush);
-	cellSpurs->AddFunc(0x68af923c, cellSyncQueueTryPeek);
-	cellSpurs->AddFunc(0x6bb4ef9d,_cellSyncLFQueueGetPushPointer2);
-	cellSpurs->AddFunc(0x705985cd, cellSyncQueueTryPush);
-	cellSpurs->AddFunc(0x74c37666, _cellSyncLFQueueGetPopPointer);
-	cellSpurs->AddFunc(0x7a51deee, _cellSyncLFQueueCompletePopPointer2);
-	cellSpurs->AddFunc(0x811d148e, _cellSyncLFQueueDetachLv2EventQueue);
-	cellSpurs->AddFunc(0xa5362e73, cellSyncQueueClear);
-	cellSpurs->AddFunc(0xa58df87f, cellSyncQueueTryPop);
-	cellSpurs->AddFunc(0xaa355278, cellSyncLFQueueInitialize);
-	cellSpurs->AddFunc(0xaff7627a, _cellSyncLFQueueGetSignalAddress);
-	cellSpurs->AddFunc(0xba5961ca, _cellSyncLFQueuePushBody);
-	cellSpurs->AddFunc(0xd59aa307, cellSyncLFQueueGetDirection);
-	cellSpurs->AddFunc(0xe18c273c, cellSyncLFQueueDepth);
-	cellSpurs->AddFunc(0xe1bc7add, _cellSyncLFQueuePopBody);
-	cellSpurs->AddFunc(0xe9bf2110, _cellSyncLFQueueGetPushPointer);
-	cellSpurs->AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
-
+	cellSpurs->AddFunc(0x2093252b, cellSpursQueueGetTasksetAddress);
+	cellSpurs->AddFunc(0x247414d0, cellSpursQueueClear);
+	cellSpurs->AddFunc(0x35f02287, cellSpursQueueDepth);
+	cellSpurs->AddFunc(0x369fe03d, cellSpursQueueGetEntrySize);
+	cellSpurs->AddFunc(0x54876603, cellSpursQueueSize);
+	cellSpurs->AddFunc(0xec68442c, cellSpursQueueGetDirection);
 }
 

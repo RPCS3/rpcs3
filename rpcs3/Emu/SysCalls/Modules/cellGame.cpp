@@ -23,12 +23,6 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
 
-	if (!type.IsGood() || !attributes.IsGood() || !size.IsGood() || (dirName.GetAddr() && !dirName.IsGood()))
-	{
-		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_PARAM");
-		return CELL_GAME_ERROR_PARAM;
-	}
-
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	size->hddFreeSizeKB = 40000000; // 40 GB
 
@@ -90,7 +84,7 @@ int cellGamePatchCheck(mem_ptr_t<CellGameContentSize> size, u32 reserved_addr)
 {
 	cellGame->Warning("cellGamePatchCheck(size_addr=0x%x, reserved_addr=0x%x)", size.GetAddr(), reserved_addr);
 
-	if (!size.IsGood() || reserved_addr != 0)
+	if (reserved_addr != 0)
 	{
 		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
@@ -135,7 +129,7 @@ int cellGameDataCheck(u32 type, const mem_list_ptr_t<u8> dirName, mem_ptr_t<Cell
 {
 	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.GetAddr(), size.GetAddr());
 
-	if ((type - 1) >= 3 || !size.IsGood() || !dirName.IsGood())
+	if ((type - 1) >= 3)
 	{
 		cellGame->Error("cellGameDataCheck(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
@@ -181,12 +175,6 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath, mem_list_ptr_t<u8>
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.GetAddr(), usrdirPath.GetAddr());
 	
-	if (!contentInfoPath.IsGood() || !usrdirPath.IsGood())
-	{
-		cellGame->Error("cellGameContentPermit(): CELL_GAME_ERROR_PARAM");
-		return CELL_GAME_ERROR_PARAM;
-	}
-
 	if (contentInfo == "" && usrdir == "")
 	{
 		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_FAILURE (no permission given)");
@@ -209,7 +197,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	cellGame->Warning("cellGameDataCheckCreate2(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
 		version, dirName.GetAddr(), errDialog, funcStat.GetAddr(), container);
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || !dirName.IsGood() || errDialog > 1 || !funcStat.IsGood())
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
 		cellGame->Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_PARAM");
 		return CELL_GAMEDATA_ERROR_PARAM;
@@ -336,9 +324,6 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 {
 	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.GetAddr());
 
-	if(!value.IsGood())
-		return CELL_GAME_ERROR_PARAM;
-
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/PARAM.SFO");
 	PSFLoader psf(f);
@@ -361,9 +346,6 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 int cellGameGetParamString(u32 id, u32 buf_addr, u32 bufsize)
 {
 	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf_addr, bufsize);
-
-	if(!Memory.IsGoodAddr(buf_addr))
-		return CELL_GAME_ERROR_PARAM;
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/PARAM.SFO");
@@ -436,9 +418,6 @@ int cellGameGetLocalWebContentPath()
 int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 {
 	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
-
-	if (Memory.IsGoodAddr(dirName_addr))
-		return CELL_GAME_ERROR_PARAM;
 
 	char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	std::string errorName;

@@ -44,8 +44,8 @@ static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong size");
 
 struct CellSyncBarrier
 {
-	be_t<u16> m_value;
-	be_t<u16> m_count;
+	be_t<s16> m_value;
+	be_t<s16> m_count;
 
 	volatile u32& m_data()
 	{
@@ -68,7 +68,7 @@ struct CellSyncRwm
 	};
 };
 
-static_assert(sizeof(CellSyncRwm) == 16, "CellSyncBarrier: wrong size");
+static_assert(sizeof(CellSyncRwm) == 16, "CellSyncRwm: wrong size");
 
 struct CellSyncQueue
 {

@@ -32,14 +32,9 @@ u64 vfsStreamMemory::Write(const void* src, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	if (!Memory.CopyFromReal(m_addr + Tell(), (void*)src, size))
-	{
-		return 0;
-	}
-	else
-	{
-		return vfsStream::Write(src, size);
-	}
+	memcpy(Memory + m_addr + Tell(), (void*)src, size);
+
+	return vfsStream::Write(src, size);
 }
 
 u64 vfsStreamMemory::Read(void* dst, u64 size)
@@ -49,12 +44,7 @@ u64 vfsStreamMemory::Read(void* dst, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	if (!Memory.CopyToReal(dst, m_addr + Tell(), size))
-	{
-		return 0;
-	}
-	else
-	{
-		return vfsStream::Read(dst, size);
-	}
+	memcpy(dst, Memory + m_addr + Tell(), size);
+
+	return vfsStream::Read(dst, size);
 }

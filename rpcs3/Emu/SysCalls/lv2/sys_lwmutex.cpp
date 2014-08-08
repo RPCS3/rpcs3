@@ -13,8 +13,6 @@ s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	sc_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)", 
 		lwmutex.GetAddr(), attr.GetAddr());
 
-	if (!lwmutex.IsGood() || !attr.IsGood()) return CELL_EFAULT;
-
 	switch (attr->attr_recursive.ToBE())
 	{
 	case se32(SYS_SYNC_RECURSIVE): break;
@@ -51,8 +49,6 @@ s32 sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
 	sc_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
-	if (!lwmutex.IsGood()) return CELL_EFAULT;
-
 	u32 sq_id = lwmutex->sleep_queue;
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
 
@@ -72,8 +68,6 @@ s32 sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 {
 	sc_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
 
-	if (!lwmutex.IsGood()) return CELL_EFAULT;
-
 	//ConLog.Write("*** lock mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
 
@@ -84,16 +78,12 @@ s32 sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
 	sc_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
-	if (!lwmutex.IsGood()) return CELL_EFAULT;
-
 	return lwmutex->trylock(be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId()));
 }
 
 s32 sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
 	sc_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
-
-	if (!lwmutex.IsGood()) return CELL_EFAULT;
 
 	//ConLog.Write("*** unlocking mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);

@@ -27,9 +27,9 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 
 int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
-	if (!subHandle.IsGood() || !src.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
-	
+	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
+
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
@@ -63,8 +63,8 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 
 int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
 {
-	if (!info.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
+		mainHandle, subHandle, info.GetAddr());
 
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
@@ -81,10 +81,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize())) {
-			cellGifDec->Error("cellGifDecReadHeader() failed ()");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -116,8 +113,8 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 
 int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
 {
-	if (!inParam.IsGood() || !outParam.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
 
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
@@ -146,8 +143,8 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 
 int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
-	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
@@ -166,10 +163,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		if (!Memory.Copy(gif.GetAddr(), subHandle_data->src.streamPtr.ToLE(), gif.GetSize())) {
-			cellGifDec->Error("cellGifDecDecodeData() failed (I)");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + gif.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), gif.GetSize());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -204,20 +198,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
-				{
-					cellGifDec->Error("cellGifDecDecodeData() failed (II)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
-			{
-				cellGifDec->Error("cellGifDecDecodeData() failed (III)");
-				return CELL_EFAULT;
-			}
+			memcpy(Memory + data.GetAddr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -240,11 +226,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
-				{
-					cellGifDec->Error("cellGifDecDecodeData() failed (IV)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
 			}
 			free(output);
 		}
@@ -279,6 +261,9 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 int cellGifDecClose(u32 mainHandle, u32 subHandle)
 {
+	cellGifDec->Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)",
+		mainHandle, subHandle);
+
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;

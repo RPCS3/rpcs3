@@ -56,9 +56,6 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	cellPngDec->Warning("cellPngDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
 		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
 
-	if (!subHandle.IsGood() || !src.IsGood())
-		return CELL_PNGDEC_ERROR_ARG;
-
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
@@ -123,9 +120,6 @@ int cellPngDecClose(u32 mainHandle, u32 subHandle)
 
 int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo> info)
 {
-	if (!info.IsGood())
-		return CELL_PNGDEC_ERROR_ARG;
-
 	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.GetAddr());
 	CellPngDecSubHandle* subHandle_data;
 	if(!cellPngDec->CheckId(subHandle, subHandle_data))
@@ -145,11 +139,7 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		if (!Memory.Copy(buffer.GetAddr(), subHandle_data->src.streamPtr.ToLE(), buffer.GetSize()))
-		{
-			cellPngDec->Error("cellPngDecReadHeader() failed ()");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
 		break;
 	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
@@ -195,8 +185,8 @@ int cellPngDecExtReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecI
 
 int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellPngDecDataOutInfo> dataOutInfo)
 {
-	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
-		return CELL_PNGDEC_ERROR_ARG;
+	cellPngDec->Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
 
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
 	CellPngDecSubHandle* subHandle_data;
@@ -214,10 +204,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		if (!Memory.Copy(png.GetAddr(), subHandle_data->src.streamPtr.ToLE(), png.GetSize())) {
-			cellPngDec->Error("cellPngDecDecodeData() failed (I)");
-			return CELL_EFAULT;
-		}
+		memmove(Memory + png.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), png.GetSize());
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
@@ -253,20 +240,12 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize))
-				{
-					cellPngDec->Error("cellPngDecDecodeData() failed (II)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			if (!Memory.CopyFromReal(data.GetAddr(), image.get(), image_size))
-			{
-				cellPngDec->Error("cellPngDecDecodeData() failed (III)");
-				return CELL_EFAULT;
-			}
+			memcpy(Memory + data.GetAddr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -291,11 +270,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				if (!Memory.CopyFromReal(data.GetAddr() + dstOffset, output, linesize))
-				{
-					cellPngDec->Error("cellPngDecDecodeData() failed (IV)");
-					return CELL_EFAULT;
-				}
+				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
 			}
 			free(output);
 		}
@@ -336,7 +311,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellPngDecDataCtrlParam> dataCtrlParam,
 	mem_ptr_t<CellPngDecDataOutInfo> dataOutInfo, mem_ptr_t<CellPngDecCbCtrlDisp> cbCtrlDisp, mem_ptr_t<CellPngDecDispParam> dispParam)
 {
-	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam=0x%x",
+	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam=0x%x)",
 		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr(), cbCtrlDisp.GetAddr(), dispParam.GetAddr());
 
 	if (cbCtrlDisp.GetAddr()) cellPngDec->Warning("*** cbCtrlDisp->cbCtrlDispFunc_addr=0x%x", (u32)cbCtrlDisp->cbCtrlDispFunc_addr);
@@ -346,8 +321,8 @@ int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, cons
 
 int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellPngDecInParam> inParam, mem_ptr_t<CellPngDecOutParam> outParam)
 {
-	if (!inParam.IsGood() || !outParam.IsGood())
-		return CELL_PNGDEC_ERROR_ARG;
+	cellPngDec->Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
 
 	CellPngDecSubHandle* subHandle_data;
 	if(!cellPngDec->CheckId(subHandle, subHandle_data))

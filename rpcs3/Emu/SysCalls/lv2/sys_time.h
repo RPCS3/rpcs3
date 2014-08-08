@@ -1,6 +1,6 @@
 #pragma once
 
-#define MHZ (10000000)
+#define MHZ (1000000)
 
 // Auxiliary functions
 u64 get_time();

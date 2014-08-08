@@ -82,7 +82,7 @@ s32 sys_memory_free(u32 start_addr)
 
 	// Release the allocated memory.
 	if(!Memory.Free(start_addr))
-		return CELL_EFAULT;
+		return CELL_EINVAL;
 
 	return CELL_OK;
 }
@@ -90,9 +90,6 @@ s32 sys_memory_free(u32 start_addr)
 s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 {
 	sc_mem.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.GetAddr());
-
-	if (!attr.IsGood())
-		return CELL_EFAULT;
 
 	// TODO: Implement per thread page attribute setting.
 	attr->attribute = 0;
@@ -116,9 +113,6 @@ s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
 s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
 {
 	sc_mem.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.GetAddr(), yield_size);
-
-	if (!cid.IsGood())
-		return CELL_EFAULT;
 
 	yield_size &= ~0xfffff; //round down to 1 MB granularity
 	u64 addr = Memory.Alloc(yield_size, 0x100000); //1 MB alignment

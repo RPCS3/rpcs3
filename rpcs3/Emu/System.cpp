@@ -416,7 +416,8 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	GetModuleManager().UnloadModules(); 
+	GetModuleManager().UnloadModules();
+	GetSFuncManager().StaticFinalize();
 
 	CurGameInfo.Reset();
 	Memory.Close();

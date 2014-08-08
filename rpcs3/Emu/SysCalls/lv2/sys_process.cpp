@@ -12,6 +12,7 @@ sysProcessObjects_t procObjects;
 
 s32 sys_process_getpid()
 {
+	sc_p.Log("sys_process_getpid() -> 1");
 	return 1;
 }
 
@@ -60,13 +61,13 @@ void sys_game_process_exitspawn(
 	std::vector<std::string> env;
 
 	mem_ptr_t<u32> argvp(argv_addr);
-	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
+	while (argvp.GetAddr() && *argvp)
 	{
 		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
 		argvp++;
 	}
 	mem_ptr_t<u32> envp(envp_addr);
-	while (envp.GetAddr() && envp.IsGood() && *envp)
+	while (envp.GetAddr() && *envp)
 	{
 		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
 		envp++;
@@ -108,13 +109,13 @@ void sys_game_process_exitspawn2(
 	std::vector<std::string> env;
 
 	mem_ptr_t<u32> argvp(argv_addr);
-	while (argvp.GetAddr() && argvp.IsGood() && *argvp)
+	while (argvp.GetAddr() && *argvp)
 	{
 		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
 		argvp++;
 	}
 	mem_ptr_t<u32> envp(envp_addr);
-	while (envp.GetAddr() && envp.IsGood() && *envp)
+	while (envp.GetAddr() && *envp)
 	{
 		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
 		envp++;
@@ -137,9 +138,6 @@ s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
 {
 	sc_p.Warning("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
 		object, nump.GetAddr());
-	
-	if (!nump.IsGood())
-		return CELL_EFAULT;
 
 	switch(object)
 	{
@@ -233,9 +231,6 @@ s32 sys_process_get_paramsfo(mem8_ptr_t buffer)
 s32 sys_process_get_sdk_version(u32 pid, mem32_t version)
 {
 	sc_p.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.GetAddr());
-
-	if (!version.IsGood())
-		return CELL_EFAULT;
 
 	version = 0x360001; // TODO
 	return CELL_OK;

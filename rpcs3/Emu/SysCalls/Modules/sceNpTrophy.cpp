@@ -96,8 +96,6 @@ int sceNpTrophyCreateContext(mem32_t context, mem_ptr_t<SceNpCommunicationId> co
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!context.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	// TODO: There are other possible errors
@@ -135,8 +133,6 @@ int sceNpTrophyCreateHandle(mem32_t handle)
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!handle.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
 	// TODO: ?
@@ -144,15 +140,13 @@ int sceNpTrophyCreateHandle(mem32_t handle)
 	return CELL_OK;
 }
 
-int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 arg_addr, u64 options)
+int sceNpTrophyRegisterContext(u32 context, u32 handle, mem_func_ptr_t<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
 {
 	sceNpTrophy->Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
-		context, handle, statusCb_addr, arg_addr, options);
+		context, handle, statusCb.GetAddr(), arg_addr, options);
 
 	if (!(s_npTrophyInstance.m_bInitialized))
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!Memory.IsGoodAddr(statusCb_addr))
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	if (context >= s_npTrophyInstance.contexts.size())
@@ -205,6 +199,8 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, u32 statusCb_addr, u32 a
 	ctxt.tropusr.reset(tropusr);
 
 	// TODO: Callbacks
+	statusCb(context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg_addr);
+	statusCb(context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg_addr);
 	
 	return CELL_OK;
 }
@@ -228,8 +224,6 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!reqspace.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	if (context >= s_npTrophyInstance.contexts.size())
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
@@ -261,8 +255,6 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, mem_ptr_t<SceNpTrophyGameDet
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!details.IsGood() || !data.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
 	std::string path;
@@ -321,8 +313,6 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, mem32_t plati
 	
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!platinumId.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
@@ -354,8 +344,6 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, mem_ptr_t<SceNpTrop
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!flags.IsGood() || !count.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
 
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
@@ -388,10 +376,8 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (!details.IsGood() || !data.IsGood())
-		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	// TODO: There are other possible errors
-
+	
 	std::string path;
 	rXmlDocument doc;
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];

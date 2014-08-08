@@ -460,11 +460,6 @@ int cellDmuxQueryAttr(const mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellD
 {
 	cellDmux->Warning("cellDmuxQueryAttr(demuxerType_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType.GetAddr(), demuxerAttr.GetAddr());
 
-	if (!demuxerType.IsGood() || !demuxerAttr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
 		return CELL_DMUX_ERROR_ARG;
@@ -477,11 +472,6 @@ int cellDmuxQueryAttr(const mem_ptr_t<CellDmuxType> demuxerType, mem_ptr_t<CellD
 int cellDmuxQueryAttr2(const mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<CellDmuxAttr> demuxerAttr)
 {
 	cellDmux->Warning("cellDmuxQueryAttr2(demuxerType2_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType2.GetAddr(), demuxerAttr.GetAddr());
-
-	if (!demuxerType2.IsGood() || !demuxerAttr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
 
 	if (demuxerType2->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
@@ -498,19 +488,9 @@ int cellDmuxOpen(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<Cell
 	cellDmux->Warning("cellDmuxOpen(demuxerType_addr=0x%x, demuxerResource_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.GetAddr(), demuxerResource.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
 
-	if (!demuxerType.IsGood() || !demuxerResource.IsGood() || !demuxerCb.IsGood() || !demuxerHandle.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!Memory.IsGoodAddr(demuxerResource->memAddr, demuxerResource->memSize))
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	// TODO: check demuxerResource and demuxerCb arguments
@@ -526,19 +506,9 @@ int cellDmuxOpenEx(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<Ce
 	cellDmux->Warning("cellDmuxOpenEx(demuxerType_addr=0x%x, demuxerResourceEx_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.GetAddr(), demuxerResourceEx.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
 
-	if (!demuxerType.IsGood() || !demuxerResourceEx.IsGood() || !demuxerCb.IsGood() || !demuxerHandle.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!Memory.IsGoodAddr(demuxerResourceEx->memAddr, demuxerResourceEx->memSize))
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
@@ -554,19 +524,9 @@ int cellDmuxOpen2(const mem_ptr_t<CellDmuxType2> demuxerType2, const mem_ptr_t<C
 	cellDmux->Warning("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType2.GetAddr(), demuxerResource2.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
 
-	if (!demuxerType2.IsGood() || !demuxerResource2.IsGood() || !demuxerCb.IsGood() || !demuxerHandle.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	if (demuxerType2->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!Memory.IsGoodAddr(demuxerResource2->memAddr, demuxerResource2->memSize))
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
@@ -613,11 +573,6 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	if (!Emu.GetIdManager().GetIDData(demuxerHandle, dmux))
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!Memory.IsGoodAddr(streamAddress, streamSize))
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	if (dmux->is_running)
@@ -701,17 +656,6 @@ int cellDmuxQueryEsAttr(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr
 	cellDmux->Warning("cellDmuxQueryEsAttr(demuxerType_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
 		demuxerType.GetAddr(), esFilterId.GetAddr(), esSpecificInfo_addr, esAttr.GetAddr());
 
-	if (!demuxerType.IsGood() || !esFilterId.IsGood() || !esAttr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(esSpecificInfo_addr, 12))
-	{
-		cellDmux->Error("cellDmuxQueryEsAttr: invalid specific info addr (0x%x)", esSpecificInfo_addr);
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
 		return CELL_DMUX_ERROR_ARG;
@@ -728,17 +672,6 @@ int cellDmuxQueryEsAttr2(const mem_ptr_t<CellDmuxType2> demuxerType2, const mem_
 {
 	cellDmux->Warning("cellDmuxQueryEsAttr2(demuxerType2_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
 		demuxerType2.GetAddr(), esFilterId.GetAddr(), esSpecificInfo_addr, esAttr.GetAddr());
-
-	if (!demuxerType2.IsGood() || !esFilterId.IsGood() || !esAttr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(esSpecificInfo_addr, 12))
-	{
-		cellDmux->Error("cellDmuxQueryEsAttr2: invalid specific info addr (0x%x)", esSpecificInfo_addr);
-		return CELL_DMUX_ERROR_FATAL;
-	}
 
 	if (demuxerType2->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
@@ -758,22 +691,6 @@ int cellDmuxEnableEs(u32 demuxerHandle, const mem_ptr_t<CellCodecEsFilterId> esF
 	cellDmux->Warning("cellDmuxEnableEs(demuxerHandle=%d, esFilterId_addr=0x%x, esResourceInfo_addr=0x%x, esCb_addr=0x%x, "
 		"esSpecificInfo_addr=0x%x, esHandle_addr=0x%x)", demuxerHandle, esFilterId.GetAddr(), esResourceInfo.GetAddr(),
 		esCb.GetAddr(), esSpecificInfo_addr, esHandle.GetAddr());
-
-	if (!esFilterId.IsGood() || !esResourceInfo.IsGood() || !esCb.IsGood() || !esHandle.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(esSpecificInfo_addr, 12))
-	{
-		cellDmux->Error("cellDmuxEnableEs: invalid specific info addr (0x%x)", esSpecificInfo_addr);
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(esResourceInfo->memAddr, esResourceInfo->memSize))
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
 
 	Demuxer* dmux;
 	if (!Emu.GetIdManager().GetIDData(demuxerHandle, dmux))
@@ -849,11 +766,6 @@ int cellDmuxGetAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (!auInfo_ptr.IsGood() || !auSpecificInfo_ptr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	u32 info;
 	u32 spec;
 	if (!es->peek(info, true, spec, true))
@@ -875,11 +787,6 @@ int cellDmuxPeekAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!auInfo_ptr.IsGood() || !auSpecificInfo_ptr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	u32 info;
@@ -905,11 +812,6 @@ int cellDmuxGetAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_p
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (!auInfoEx_ptr.IsGood() || !auSpecificInfo_ptr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
-	}
-
 	u32 info;
 	u32 spec;
 	if (!es->peek(info, false, spec, true))
@@ -931,11 +833,6 @@ int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
 	{
 		return CELL_DMUX_ERROR_ARG;
-	}
-
-	if (!auInfoEx_ptr.IsGood() || !auSpecificInfo_ptr.IsGood())
-	{
-		return CELL_DMUX_ERROR_FATAL;
 	}
 
 	u32 info;

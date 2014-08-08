@@ -146,11 +146,6 @@ int cellSSPlayerCreate(mem32_t handle, mem_ptr_t<CellSSPlayerConfig> config)
 	libmixer->Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
 		handle.GetAddr(), config.GetAddr());
 
-	if (!config.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	if (config->outputMode != 0 || config->channels - 1 >= 2)
 	{
 		libmixer->Error("cellSSPlayerCreate(config.outputMode=%d, config.channels=%d): invalid parameters",
@@ -195,11 +190,6 @@ int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, m
 	libmixer->Warning("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
 		handle, waveInfo.GetAddr(), commonInfo.GetAddr());
 
-	if (!waveInfo.IsGood() || (commonInfo.GetAddr() && !commonInfo.IsGood()))
-	{
-		return CELL_EFAULT;
-	}
-
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
@@ -222,11 +212,6 @@ int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, m
 int cellSSPlayerPlay(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer->Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
-
-	if (!info.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -270,11 +255,6 @@ int cellSSPlayerStop(u32 handle, u32 mode)
 int cellSSPlayerSetParam(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer->Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
-
-	if (!info.IsGood())
-	{
-		return CELL_EFAULT;
-	}
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 

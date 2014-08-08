@@ -21,7 +21,7 @@ enum CELL_MOUSE_ERROR_CODE
 
 int cellMouseInit(u32 max_connect)
 {
-	sys_io->Log("cellMouseInit(max_connect=%d)", max_connect);
+	sys_io->Warning("cellMouseInit(max_connect=%d)", max_connect);
 	if(Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
 	if(max_connect > 7) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 

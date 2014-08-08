@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/SQueue.h"
+#include "Emu/Event.h"
 #include "Emu/Audio/cellAudio.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
@@ -509,11 +510,6 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 {
 	cellAudio->Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.GetAddr(), portNum.GetAddr());
 
-	if(!audioParam.IsGood() || !portNum.IsGood())
-	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
 	if (audioParam->nChannel > 8 || audioParam->nBlock > 16)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
@@ -562,7 +558,7 @@ int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfi
 {
 	cellAudio->Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig_addr=0x%x)", portNum, portConfig.GetAddr());
 
-	if (!portConfig.IsGood() || portNum >= m_config.AUDIO_PORT_COUNT) 
+	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}

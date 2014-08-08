@@ -318,6 +318,11 @@ bool rDir::Open(const std::string& path)
 	return reinterpret_cast<wxDir*>(handle)->Open(fmt::FromUTF8(path));
 }
 
+bool rDir::IsOpened() const
+{
+	return reinterpret_cast<wxDir*>(handle)->IsOpened();
+}
+
 bool rDir::GetFirst(std::string *filename) const
 {
 	wxString str;

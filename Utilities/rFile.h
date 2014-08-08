@@ -66,6 +66,7 @@ struct rDir
 	rDir(const rDir& other) = delete;
 	rDir(const std::string &path);
 	bool Open(const std::string& path);
+	bool IsOpened() const;
 	static bool Exists(const std::string &path);
 	bool 	GetFirst(std::string *filename) const;
 	bool 	GetNext(std::string *filename) const;

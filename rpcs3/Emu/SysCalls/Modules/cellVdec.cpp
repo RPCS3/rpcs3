@@ -49,12 +49,7 @@ next:
 			break;
 		case vdecDecodeAu:
 			{
-				if (!Memory.CopyToReal(buf, vdec.reader.addr, vdec.reader.size))
-				{
-					LOG_ERROR(HLE, "vdecRead(): data reading failed (reader.size=0x%x)", vdec.reader.size);
-					Emu.Pause();
-					return 0;
-				}
+				memcpy(buf, Memory + vdec.reader.addr, vdec.reader.size);
 
 				buf += vdec.reader.size;
 				buf_size -= vdec.reader.size;
@@ -89,14 +84,10 @@ next:
 	{
 		return res;
 	}
-	else if (!Memory.CopyToReal(buf, vdec.reader.addr, buf_size))
-	{
-		LOG_ERROR(HLE, "vdecRead(): data reading failed (buf_size=0x%x)", buf_size);
-		Emu.Pause();
-		return 0;
-	}
 	else
 	{
+		memcpy(buf, Memory + vdec.reader.addr, buf_size);
+
 		vdec.reader.addr += buf_size;
 		vdec.reader.size -= buf_size;
 		return res + buf_size;
@@ -428,22 +419,12 @@ int cellVdecQueryAttr(const mem_ptr_t<CellVdecType> type, mem_ptr_t<CellVdecAttr
 {
 	cellVdec->Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
 
-	if (!type.IsGood() || !attr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
 int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdecAttr> attr)
 {
 	cellVdec->Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
-
-	if (!type.IsGood() || !attr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
@@ -452,16 +433,6 @@ int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecRes
 {
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
-
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(res->memAddr, res->memSize) || !Memory.IsGoodAddr(cb->cbFunc))
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
@@ -472,16 +443,6 @@ int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVde
 {
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
-
-	if (!type.IsGood() || !res.IsGood() || !cb.IsGood() || !handle.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
-	if (!Memory.IsGoodAddr(res->memAddr, res->memSize) || !Memory.IsGoodAddr(cb->cbFunc))
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
 
 	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
@@ -599,11 +560,6 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (!format.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
-	}
-
 	if (vdec->frames.IsEmpty())
 	{
 		return CELL_VDEC_ERROR_EMPTY;
@@ -612,11 +568,6 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 	if (out_addr)
 	{
 		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
-
-		if (!Memory.IsGoodAddr(out_addr, buf_size))
-		{
-			return CELL_VDEC_ERROR_FATAL;
-		}
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
@@ -636,26 +587,17 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 		AVFrame& frame = *vf.data;
 
-		u8* buf = (u8*)malloc(buf_size);
-
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(buf, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(Memory + out_addr, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
 			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
 			Emu.Pause();
 		}
 
-		if (!Memory.CopyFromReal(out_addr, buf, buf_size))
-		{
-			cellVdec->Error("cellVdecGetPicture: data copying failed");
-			Emu.Pause();
-		}
-
 		av_frame_unref(vf.data);
 		av_frame_free(&vf.data);
-		free(buf);
 	}
 
 	return CELL_OK;
@@ -669,11 +611,6 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
-	}
-
-	if (!picItem_ptr.IsGood())
-	{
-		return CELL_VDEC_ERROR_FATAL;
 	}
 
 	if (vdec->frames.IsEmpty())

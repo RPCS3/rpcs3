@@ -41,11 +41,6 @@ s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 
 {
 	sc_int.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
 
-	if (!ih.IsGood())
-	{
-		return CELL_EFAULT;
-	}
-
 	u32 id = intrtag & 0xff;
 	u32 class_id = intrtag >> 8;
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);

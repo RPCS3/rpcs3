@@ -283,11 +283,6 @@ public:
 
 	u64 FixAddr(const u64 addr) const;
 
-	bool GetMemFromAddr(void* dst, const u64 addr, const u32 size);
-	bool SetMemFromAddr(void* src, const u64 addr, const u32 size);
-	bool GetMemFFromAddr(void* dst, const u64 addr);
-	u8* GetMemFromAddr(const u64 addr);
-
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
 	virtual bool IsLocked(const u64 addr) { return false; }
