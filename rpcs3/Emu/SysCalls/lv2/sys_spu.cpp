@@ -347,7 +347,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 		return CELL_ESTAT;
 	}
 
-	if (address % type) // check alignment
+	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -380,7 +380,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 		return CELL_ESTAT;
 	}
 
-	if (address % type) // check alignment
+	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
