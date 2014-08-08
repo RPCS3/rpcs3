@@ -1023,6 +1023,118 @@ s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
 	return CELL_OK;
 }
 
+int cellSyncLFQueueGetEntrySize()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+int cellSyncLFQueueSize()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int cellSyncLFQueueClear()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+int _cellSyncLFQueueCompletePushPointer2()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueGetPopPointer2()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueCompletePushPointer()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueAttachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueGetPushPointer2()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueGetPopPointer()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueCompletePopPointer2()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueDetachLv2EventQueue()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int cellSyncLFQueueInitialize()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueGetSignalAddress()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueuePushBody()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int cellSyncLFQueueGetDirection()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int cellSyncLFQueueDepth()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueuePopBody()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueGetPushPointer()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
+int _cellSyncLFQueueCompletePopPointer()
+{
+	UNIMPLEMENTED_FUNC(cellSync);
+	return CELL_OK;
+}
+
 void cellSync_init()
 {
 	cellSync->AddFunc(0xa9072dee, cellSyncMutexInitialize);
@@ -1051,4 +1163,24 @@ void cellSync_init()
 	cellSync->AddFunc(0x68af923c, cellSyncQueueTryPeek);
 	cellSync->AddFunc(0x4da349b2, cellSyncQueueSize);
 	cellSync->AddFunc(0xa5362e73, cellSyncQueueClear);
+
+	cellSync->AddFunc(0x0c7cb9f7, cellSyncLFQueueGetEntrySize);
+	cellSync->AddFunc(0x167ea63e, cellSyncLFQueueSize);
+	cellSync->AddFunc(0x2af0c515, cellSyncLFQueueClear);
+	cellSync->AddFunc(0x35bbdad2, _cellSyncLFQueueCompletePushPointer2);
+	cellSync->AddFunc(0x46356fe0, _cellSyncLFQueueGetPopPointer2);
+	cellSync->AddFunc(0x4e88c68d, _cellSyncLFQueueCompletePushPointer);
+	cellSync->AddFunc(0x54fc2032, _cellSyncLFQueueAttachLv2EventQueue);
+	cellSync->AddFunc(0x6bb4ef9d, _cellSyncLFQueueGetPushPointer2);
+	cellSync->AddFunc(0x74c37666, _cellSyncLFQueueGetPopPointer);
+	cellSync->AddFunc(0x7a51deee, _cellSyncLFQueueCompletePopPointer2);
+	cellSync->AddFunc(0x811d148e, _cellSyncLFQueueDetachLv2EventQueue);
+	cellSync->AddFunc(0xaa355278, cellSyncLFQueueInitialize);
+	cellSync->AddFunc(0xaff7627a, _cellSyncLFQueueGetSignalAddress);
+	cellSync->AddFunc(0xba5961ca, _cellSyncLFQueuePushBody);
+	cellSync->AddFunc(0xd59aa307, cellSyncLFQueueGetDirection);
+	cellSync->AddFunc(0xe18c273c, cellSyncLFQueueDepth);
+	cellSync->AddFunc(0xe1bc7add, _cellSyncLFQueuePopBody);
+	cellSync->AddFunc(0xe9bf2110, _cellSyncLFQueueGetPushPointer);
+	cellSync->AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
 }
