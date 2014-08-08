@@ -967,7 +967,7 @@
     <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
       <Filter>Emu\Io\XInput</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\event.h">
+    <ClInclude Include="Emu\Event.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\SSemaphore.h">
