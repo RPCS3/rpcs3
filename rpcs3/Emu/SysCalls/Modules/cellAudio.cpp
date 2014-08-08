@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/SQueue.h"
+#include "Emu/Event.h"
 #include "Emu/Audio/cellAudio.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"

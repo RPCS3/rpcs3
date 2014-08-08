@@ -6,7 +6,6 @@
 
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Event.h"
 
 #include "sys_event.h"
 

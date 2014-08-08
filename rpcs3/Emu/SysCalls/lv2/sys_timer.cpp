@@ -3,7 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Event.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
