@@ -952,7 +952,7 @@ s32 cellGcmUnmapEaIoAddress(u64 ea)
 
 s32 cellGcmUnmapIoAddress(u64 io)
 {
-	cellGcmSys->Log("cellGcmUnmapIoAddress(io=0x%x)", io);
+	cellGcmSys->Log("cellGcmUnmapIoAddress(io=0x%llx)", io);
 
 	u32 size = Memory.RSXIOMem.UnmapAddress(io);
 	if (size)
@@ -1071,7 +1071,7 @@ s64 cellGcmFunc15(u32 unk_addr)
 
 int cellGcmSetFlipCommandWithWaitLabel(u32 ctx, u32 id, u32 label_index, u32 label_value)
 {
-	cellGcmSys->Log("cellGcmSetFlipCommandWithWaitLabel(ctx=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x",
+	cellGcmSys->Log("cellGcmSetFlipCommandWithWaitLabel(ctx=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)",
 		ctx, id, label_index, label_value);
 
 	int res = cellGcmSetPrepareFlip(ctx, id);
