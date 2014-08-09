@@ -5,10 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellPamf.h"
 
-//void cellPamf_init();
-//Module cellPamf(0x0012, cellPamf_init);
 Module *cellPamf = nullptr;
-
 
 int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pEsFilterId)
 {
@@ -42,7 +39,7 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pE
 			pEsFilterId->supplementalInfo2 = 0;
 		}
 		else
-			cellPamf->Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_ATRAC3PLUS (ch=%d)", ch);
+			cellPamf->Todo("pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_ATRAC3PLUS (ch=%d)", ch);
 		break;
 	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
 		if (ch == 0)
@@ -53,7 +50,7 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pE
 			pEsFilterId->supplementalInfo2 = 0;
 		}
 		else
-			cellPamf->Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_LPCM (ch=%d)", ch);
+			cellPamf->Todo("pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_LPCM (ch=%d)", ch);
 		break;
 	case CELL_PAMF_STREAM_TYPE_USER_DATA:
 		if (ch == 0)
@@ -64,13 +61,13 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, mem_ptr_t<CellCodecEsFilterId> pE
 			pEsFilterId->supplementalInfo2 = 0;
 		}
 		else
-			cellPamf->Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_USER_DATA (ch=%d)", ch);
+			cellPamf->Todo("pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_USER_DATA (ch=%d)", ch);
 		break;
 	case CELL_PAMF_STREAM_TYPE_AC3:
-		cellPamf->Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_AC3 (ch=%d)", ch);
+		cellPamf->Todo("pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_AC3 (ch=%d)", ch);
 		break;
 	case CELL_PAMF_STREAM_TYPE_M2V:
-		cellPamf->Error("*** TODO: pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_M2V (ch=%d)", ch);
+		cellPamf->Todo("pamfStreamTypeToEsFilterId: CELL_PAMF_STREAM_TYPE_M2V (ch=%d)", ch);
 		break;
 	default:
 		return CELL_PAMF_ERROR_INVALID_ARG;
@@ -90,7 +87,7 @@ u8 pamfGetStreamType(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
 	default:
-		cellPamf->Error("*** TODO: pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
+		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
 		return 0;
 	}
 }
@@ -113,16 +110,16 @@ u8 pamfGetStreamChannel(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 			return 0;
 		}
 	case 0xdc:
-		cellPamf->Error("*** TODO: pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_ATRAC3PLUS");
+		cellPamf->Todo("pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_ATRAC3PLUS");
 		return 0;
 	case 0x80:
-		cellPamf->Error("*** TODO: pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_PAMF_LPCM");
+		cellPamf->Todo("pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_PAMF_LPCM");
 		return 0;
 	case 0xdd:
-		cellPamf->Error("*** TODO: pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_USER_DATA");
+		cellPamf->Todo("pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_USER_DATA");
 		return 0;
 	default:
-		cellPamf->Error("*** TODO: pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
+		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
 		return 0;
 	}
 

@@ -333,6 +333,24 @@ s32 cellFsRename(u32 from_addr, u32 to_addr)
 
 	return CELL_ENOENT;
 }
+s32 cellFsChmod(u32 path_addr, u32 mode)
+{
+	const std::string& ps3_path = Memory.ReadString(path_addr);
+	sys_fs->Todo("cellFsChmod(path=\"%s\", mode=0x%x)", ps3_path.c_str(), mode);
+
+	// TODO:
+
+	return CELL_OK;
+}
+
+s32 cellFsFsync(u32 fd)
+{
+	sys_fs->Todo("cellFsFsync(fd=0x%x)", fd);
+
+	// TODO:
+
+	return CELL_OK;
+}
 
 s32 cellFsRmdir(u32 path_addr)
 {
