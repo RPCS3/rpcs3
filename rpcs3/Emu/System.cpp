@@ -16,6 +16,8 @@
 
 #include "Emu/CPU/CPUThreadManager.h" //gui dependency
 
+#include "../Loader/PSF.h"
+
 #include "../Crypto/unself.h"
 #include <cstdlib>
 #include <fstream>
@@ -165,6 +167,16 @@ void Emulator::Load()
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
 	}
+
+	LOG_NOTICE(LOADER, " ");//used to be skip_line
+	vfsFile sfo("/app_home/PARAM.SFO");
+	PSFLoader psf(sfo);
+	psf.Load(false);
+	std::string title = psf.GetString("TITLE");
+	std::string title_id = psf.GetString("TITLE_ID");
+	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
+	LOG_NOTICE(LOADER, "Serial: %s", title_id.c_str());
+
 	// bdvd inserting imitation
 	vfsFile f1("/app_home/dev_bdvd.path");
 	if (f1.IsOpened())
