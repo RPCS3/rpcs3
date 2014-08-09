@@ -266,13 +266,13 @@ public:
 #endif
 		{
 			m_base_addr = nullptr;
-			LOG_ERROR(MEMORY, "Initing memory failed");
+			LOG_ERROR(MEMORY, "Initialing memory failed");
 			assert(0);
 			return;
 		}
 		else
 		{
-			LOG_NOTICE(MEMORY, "Initing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
+			LOG_NOTICE(MEMORY, "Initialing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
 		}
 
 		switch(type)
