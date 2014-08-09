@@ -66,6 +66,7 @@ private:
 
 	void SysCall()
 	{
+		CPU.m_last_syscall = CPU.GPR[11];
 		SysCalls::DoSyscall(CPU.GPR[11]);
 
 		if(Ini.HLELogging.GetValue())
@@ -81,6 +82,8 @@ private:
 #ifdef HLE_CALL_DEBUG
 		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 #endif
+
+		CPU.m_last_syscall = 0;
 	}
 
 	void NULL_OP()

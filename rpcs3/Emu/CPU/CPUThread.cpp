@@ -28,6 +28,7 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_is_step(false)
 	, m_is_branch(false)
 	, m_status(Stopped)
+	, m_last_syscall(0)
 {
 }
 
@@ -284,7 +285,8 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 		// TODO: allow recovering from a page fault
 		//GetCurrentPPUThread().Stop();
 		Emu.Pause();
-		throw fmt::Format("Access violation: addr = 0x%x", (u32)addr);
+		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx)",
+			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall);
 	}
 	else
 	{
