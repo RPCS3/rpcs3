@@ -86,3 +86,40 @@ struct CellSyncQueue
 };
 
 static_assert(sizeof(CellSyncQueue) == 32, "CellSyncQueue: wrong size");
+
+enum CellSyncQueueDirection : u32
+{
+	CELL_SYNC_QUEUE_SPU2SPU = 0, // SPU to SPU
+	CELL_SYNC_QUEUE_SPU2PPU = 1, // SPU to PPU
+	CELL_SYNC_QUEUE_PPU2SPU = 2, // PPU to SPU
+	CELL_SYNC_QUEUE_ANY2ANY = 3, // SPU/PPU to SPU/PPU
+};
+
+struct CellSyncLFQueue
+{
+	be_t<u64> m_v1;
+	be_t<u64> m_v2;
+	be_t<u32> m_size;
+	be_t<u32> m_depth;
+	be_t<u64> m_buffer;
+	be_t<u32> m_v5;
+	be_t<CellSyncQueueDirection> m_direction;
+	be_t<u64> m_v6;
+	be_t<u64> m_v7;
+	be_t<u64> m_v8;
+	be_t<u64> m_v9;
+	be_t<u64> m_v10;
+	be_t<u64> m_v11;
+	be_t<u64> m_v12;
+	be_t<u64> m_v13;
+	be_t<u64> m_v14;
+	be_t<u64> m_eaSignal;
+	be_t<u64> reserved;
+
+	volatile u32& m_data1()
+	{
+		return *reinterpret_cast<u32*>((u8*)this + 0x2c);
+	}
+};
+
+static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");
