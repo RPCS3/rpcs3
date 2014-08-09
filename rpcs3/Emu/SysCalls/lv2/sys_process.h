@@ -51,6 +51,10 @@ struct sysProcessObjects_t
 // Extern
 extern sysProcessObjects_t procObjects;
 
+// Auxiliary functions
+s32 process_getpid();
+s32 process_get_sdk_version(u32 pid, s32& ver);
+
 // SysCalls
 s32 sys_process_getpid();
 s32 sys_process_getppid();
