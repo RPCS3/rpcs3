@@ -133,6 +133,7 @@ public:
 	bool m_is_interrupt;
 	bool m_has_interrupt;
 	u64 m_interrupt_arg;
+	u64 m_last_syscall;
 
 protected:
 	CPUThread(CPUThreadType type);
