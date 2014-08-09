@@ -202,7 +202,11 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	vfsFileBase* orig_file;
 	u32 fd = aio->fd;
-	if (!sys_fs->CheckId(fd, orig_file)) return CELL_EBADF;
+
+	if (!sys_fs->CheckId(fd, orig_file))
+	{
+		return CELL_EBADF;
+	}
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
@@ -212,6 +216,15 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
 		t.detach();
 	}
+
+	return CELL_OK;
+}
+
+int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+{
+	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+
+	// TODO:
 
 	return CELL_OK;
 }
@@ -265,6 +278,7 @@ void sys_fs_init()
 	sys_fs->AddFunc(0xef3efa34, cellFsFstat);
 	sys_fs->AddFunc(0xba901fe6, cellFsMkdir);
 	sys_fs->AddFunc(0xf12eecc8, cellFsRename);
+	sys_fs->AddFunc(0x99406d0b, cellFsChmod);
 	sys_fs->AddFunc(0x2796fdf3, cellFsRmdir);
 	sys_fs->AddFunc(0x7f4677a8, cellFsUnlink);
 	sys_fs->AddFunc(0xa397d042, cellFsLseek);
@@ -272,6 +286,7 @@ void sys_fs_init()
 	sys_fs->AddFunc(0xc9dc3ac5, cellFsTruncate);
 	sys_fs->AddFunc(0xcb588dba, cellFsFGetBlockSize);
 	sys_fs->AddFunc(0xc1c507e7, cellFsAioRead);
+	sys_fs->AddFunc(0x4cef342e, cellFsAioWrite);
 	sys_fs->AddFunc(0xdb869f20, cellFsAioInit);
 	sys_fs->AddFunc(0x9f951810, cellFsAioFinish);
 	sys_fs->AddFunc(0x1a108ab7, cellFsGetBlockSize);

@@ -135,6 +135,7 @@ s32 cellFsStat(u32 path_addr, mem_ptr_t<CellFsStat> sb);
 s32 cellFsFstat(u32 fd, mem_ptr_t<CellFsStat> sb);
 s32 cellFsMkdir(u32 path_addr, u32 mode);
 s32 cellFsRename(u32 from_addr, u32 to_addr);
+s32 cellFsChmod(u32 path_addr, u32 mode);
 s32 cellFsRmdir(u32 path_addr);
 s32 cellFsUnlink(u32 path_addr);
 s32 cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos);
