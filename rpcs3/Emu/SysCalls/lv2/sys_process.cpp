@@ -10,10 +10,16 @@ SysCallBase sc_p("Process");
 
 sysProcessObjects_t procObjects;
 
+s32 process_getpid()
+{
+	// TODO: get current process id
+	return 1;
+}
+
 s32 sys_process_getpid()
 {
 	sc_p.Log("sys_process_getpid() -> 1");
-	return 1;
+	return process_getpid();
 }
 
 s32 sys_process_getppid()
@@ -228,12 +234,29 @@ s32 sys_process_get_paramsfo(mem8_ptr_t buffer)
 	return CELL_OK;*/
 }
 
+s32 process_get_sdk_version(u32 pid, s32& ver)
+{
+	// TODO: get correct SDK version for selected pid
+	ver = Emu.m_sdk_version;
+
+	return CELL_OK;
+}
+
 s32 sys_process_get_sdk_version(u32 pid, mem32_t version)
 {
 	sc_p.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.GetAddr());
 
-	version = 0x360001; // TODO
-	return CELL_OK;
+	s32 sdk_ver;
+	s32 ret = process_get_sdk_version(pid, sdk_ver);
+	if (ret != CELL_OK)
+	{
+		return ret; // error code
+	}
+	else
+	{
+		version = sdk_ver;
+		return CELL_OK;
+	}
 }
 
 s32 sys_process_kill(u32 pid)
