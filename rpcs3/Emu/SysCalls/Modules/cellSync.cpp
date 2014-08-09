@@ -1025,113 +1025,219 @@ s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
 
 int cellSyncLFQueueGetEntrySize()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("cellSyncLFQueueGetEntrySize()");
 	return CELL_OK;
 }
+
 int cellSyncLFQueueSize()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("cellSyncLFQueueSize()");
 	return CELL_OK;
 }
 
 int cellSyncLFQueueClear()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("cellSyncLFQueueClear()");
 	return CELL_OK;
 }
+
 int _cellSyncLFQueueCompletePushPointer2()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueCompletePushPointer2()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueGetPopPointer2()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueGetPopPointer2()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueCompletePushPointer()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueCompletePushPointer()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueAttachLv2EventQueue()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueGetPushPointer2()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueGetPushPointer2()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueGetPopPointer()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueGetPopPointer()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueCompletePopPointer2()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueCompletePopPointer2()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueDetachLv2EventQueue()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue()");
 	return CELL_OK;
 }
 
-int cellSyncLFQueueInitialize()
+void syncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+
+}
+
+int cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
+{
+	cellSync->Todo("cellSyncLFQueueInitialize(ea_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal_addr=0x%x)",
+		ea.GetAddr(), buffer_addr, size, depth, direction, eaSignal_addr);
+
+	if (!ea)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (size)
+	{
+		if (!buffer_addr)
+		{
+			return CELL_SYNC_ERROR_NULL_POINTER;
+		}
+		if (size > 0x4000 || size % 16)
+		{
+			return CELL_SYNC_ERROR_INVAL;
+		}
+	}
+	if (!depth || (depth >> 15) || direction > 3)
+	{
+		return CELL_SYNC_ERROR_INVAL;
+	}
+	if (ea.GetAddr() % 128 || buffer_addr % 16)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// prx: get sdk version of current process, return non-zero result of sys_process_get_sdk_version
+	s32 sdk_ver;
+	s32 ret = process_get_sdk_version(process_getpid(), sdk_ver);
+	if (ret != CELL_OK)
+	{
+		return ret;
+	}
+	if (sdk_ver == -1)
+	{
+		sdk_ver = 0x460000;
+	}
+
+	// prx: reserve u32 at 0x2c offset
+	u32 old_value;
+	while (true)
+	{
+		const u32 old_data = ea->m_data1();
+		CellSyncLFQueue new_data;
+		new_data.m_data1() = old_data;
+
+		if (old_data)
+		{
+			if (sdk_ver > 0x17ffff && old_data != se32(2))
+			{
+				return CELL_SYNC_ERROR_STAT;
+			}
+			old_value = old_data;
+		}
+		else
+		{
+			if (sdk_ver > 0x17ffff)
+			{
+				for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i++)
+				{
+					if ((u64&)Memory[ea.GetAddr() + i * sizeof(u64)])
+					{
+						return CELL_SYNC_ERROR_STAT;
+					}
+				}
+			}
+			new_data.m_data1() = se32(1);
+			old_value = se32(1);
+		}
+		
+		if (InterlockedCompareExchange(&ea->m_data1(), new_data.m_data1(), old_data) == old_data) break;
+	}
+
+	if (old_value == se32(2))
+	{
+		if ((u32)ea->m_size != size || (u32)ea->m_depth != depth || (u64)ea->m_buffer != (u64)buffer_addr)
+		{
+			return CELL_SYNC_ERROR_INVAL;
+		}
+		if (sdk_ver > 0x17ffff)
+		{
+			if ((u64)ea->m_eaSignal != (u64)eaSignal_addr || (u32)ea->m_direction != direction)
+			{
+				return CELL_SYNC_ERROR_INVAL;
+			}
+		}
+	}
+	else
+	{
+		// prx: call internal function with same arguments
+
+
+		// prx: sync, zeroize u32 at 0x2c offset
+		InterlockedCompareExchange(&ea->m_data1(), 0, 0);
+		ea->m_data1() = 0;
+	}
+
+	// prx: sync
+	InterlockedCompareExchange(&ea->m_data1(), 0, 0);
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueGetSignalAddress()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueGetSignalAddress()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueuePushBody()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueuePushBody()");
 	return CELL_OK;
 }
 
 int cellSyncLFQueueGetDirection()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("cellSyncLFQueueGetDirection()");
 	return CELL_OK;
 }
 
 int cellSyncLFQueueDepth()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("cellSyncLFQueueDepth()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueuePopBody()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueuePopBody()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueGetPushPointer()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueGetPushPointer()");
 	return CELL_OK;
 }
 
 int _cellSyncLFQueueCompletePopPointer()
 {
-	UNIMPLEMENTED_FUNC(cellSync);
+	cellSync->Todo("_cellSyncLFQueueCompletePopPointer()");
 	return CELL_OK;
 }
 
