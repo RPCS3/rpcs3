@@ -512,8 +512,8 @@ bool adecCheckType(AudioCodecType type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: LOG_NOTICE(HLE, "*** (?) type: ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: LOG_NOTICE(HLE, "*** type: ATRAC3plus 2ch"); break;
+	case CELL_ADEC_TYPE_ATRACX: LOG_NOTICE(HLE, "adecCheckType: ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX_2CH: LOG_NOTICE(HLE, "adecCheckType: ATRAC3plus 2ch"); break;
 
 	case CELL_ADEC_TYPE_ATRACX_6CH:
 	case CELL_ADEC_TYPE_ATRACX_8CH:
