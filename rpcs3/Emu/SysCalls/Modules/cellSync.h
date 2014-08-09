@@ -97,26 +97,27 @@ enum CellSyncQueueDirection : u32
 
 struct CellSyncLFQueue
 {
-	be_t<u64> m_v1;
-	be_t<u64> m_v2;
-	be_t<u32> m_size;
-	be_t<u32> m_depth;
-	be_t<u64> m_buffer;
-	be_t<u32> m_v5;
-	be_t<CellSyncQueueDirection> m_direction;
-	be_t<u64> m_v6;
-	be_t<u64> m_v7;
-	be_t<u64> m_v8;
-	be_t<u64> m_v9;
-	be_t<u64> m_v10;
-	be_t<u64> m_v11;
-	be_t<u64> m_v12;
-	be_t<u64> m_v13;
-	be_t<u64> m_v14;
-	be_t<u64> m_eaSignal;
-	be_t<u64> reserved;
+	be_t<u16> m_h1;      // 0x0
+	be_t<u16> m_h2;      // 0x2
+	be_t<u16> m_h3;      // 0x4
+	be_t<u16> m_h4;      // 0x6
+	be_t<u16> m_h5;      // 0x8
+	be_t<u16> m_h6;      // 0xA
+	be_t<u16> m_h7;      // 0xC
+	be_t<u16> m_h8;      // 0xE
+	be_t<u32> m_size;    // 0x10
+	be_t<u32> m_depth;   // 0x14
+	be_t<u64> m_buffer;  // 0x18
+	u8        m_bs[4];   // 0x20
+	be_t<CellSyncQueueDirection> m_direction; // 0x24
+	be_t<u32> m_v1;      // 0x28
+	be_t<u32> m_sync;    // 0x2C
+	be_t<u16> m_hs[32];  // 0x30
+	be_t<u64> m_eaSignal;// 0x70
+	be_t<u32> m_v2;      // 0x78
+	be_t<u32> m_v3;      // 0x7C
 
-	volatile u32& m_data1()
+	volatile u32& m_data()
 	{
 		return *reinterpret_cast<u32*>((u8*)this + 0x2c);
 	}

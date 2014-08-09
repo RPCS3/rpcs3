@@ -1091,7 +1091,49 @@ int _cellSyncLFQueueDetachLv2EventQueue()
 
 void syncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
 {
+	ea->m_h1 = 0;
+	ea->m_h2 = 0;
+	ea->m_h4 = 0;
+	ea->m_h5 = 0;
+	ea->m_h6 = 0;
+	ea->m_h8 = 0;
+	ea->m_size = size;
+	ea->m_depth = depth;
+	ea->m_buffer = (u64)buffer_addr;
+	ea->m_direction = direction;
+	for (u32 i = 0; i < sizeof(ea->m_hs) / sizeof(u16); i++)
+	{
+		ea->m_hs[i] = 0;
+	}
+	ea->m_eaSignal = (u64)eaSignal_addr;
 
+	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
+	{
+		ea->m_h3 = 0;
+		ea->m_h7 = 0;
+		ea->m_buffer = (u64)buffer_addr | 1;
+		ea->m_bs[0] = -1;
+		ea->m_bs[1] = -1;
+		//m_bs[2]
+		//m_bs[3]
+		ea->m_v1 = -1;
+		ea->m_hs[0] = -1;
+		ea->m_hs[16] = -1;
+		ea->m_v2 = 0;
+		ea->m_v3 = 0;
+	}
+	else
+	{
+		//m_h3
+		//m_h7
+		ea->m_bs[0] = -1; // written as u32
+		ea->m_bs[1] = -1;
+		ea->m_bs[2] = -1;
+		ea->m_bs[3] = -1;
+		ea->m_v1 = 0;
+		ea->m_v2 = 0; // written as u64
+		ea->m_v3 = 0;
+	}
 }
 
 int cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
@@ -1139,9 +1181,9 @@ int cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u3
 	u32 old_value;
 	while (true)
 	{
-		const u32 old_data = ea->m_data1();
+		const u32 old_data = ea->m_data();
 		CellSyncLFQueue new_data;
-		new_data.m_data1() = old_data;
+		new_data.m_data() = old_data;
 
 		if (old_data)
 		{
@@ -1163,11 +1205,11 @@ int cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u3
 					}
 				}
 			}
-			new_data.m_data1() = se32(1);
+			new_data.m_data() = se32(1);
 			old_value = se32(1);
 		}
 		
-		if (InterlockedCompareExchange(&ea->m_data1(), new_data.m_data1(), old_data) == old_data) break;
+		if (InterlockedCompareExchange(&ea->m_data(), new_data.m_data(), old_data) == old_data) break;
 	}
 
 	if (old_value == se32(2))
@@ -1190,12 +1232,12 @@ int cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> ea, u32 buffer_addr, u3
 
 
 		// prx: sync, zeroize u32 at 0x2c offset
-		InterlockedCompareExchange(&ea->m_data1(), 0, 0);
-		ea->m_data1() = 0;
+		InterlockedCompareExchange(&ea->m_data(), 0, 0);
+		ea->m_data() = 0;
 	}
 
 	// prx: sync
-	InterlockedCompareExchange(&ea->m_data1(), 0, 0);
+	InterlockedCompareExchange(&ea->m_data(), 0, 0);
 	return CELL_OK;
 }
 
