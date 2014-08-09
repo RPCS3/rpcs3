@@ -6,8 +6,6 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 
-//void sys_fs_init();
-//Module sys_fs(0x000e, sys_fs_init);
 Module *sys_fs = nullptr;
 
 bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
@@ -279,6 +277,7 @@ void sys_fs_init()
 	sys_fs->AddFunc(0xba901fe6, cellFsMkdir);
 	sys_fs->AddFunc(0xf12eecc8, cellFsRename);
 	sys_fs->AddFunc(0x99406d0b, cellFsChmod);
+	sys_fs->AddFunc(0x967a162b, cellFsFsync);
 	sys_fs->AddFunc(0x2796fdf3, cellFsRmdir);
 	sys_fs->AddFunc(0x7f4677a8, cellFsUnlink);
 	sys_fs->AddFunc(0xa397d042, cellFsLseek);
