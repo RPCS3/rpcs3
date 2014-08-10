@@ -471,7 +471,7 @@ int cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 
 int cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag, mem_ptr_t<CellSpursTaskset> taskset)
 {
-	cellSpurs->Todo("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.GetAddr(), taskset.GetAddr());
+	cellSpurs->Todo("cellSpursEventFlagGetTasksetAddress(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.GetAddr(), taskset.GetAddr());
 
 	if (eventFlag.GetAddr() % 128 != 0)
 	{
@@ -716,9 +716,23 @@ int cellSpursTasksetAttributeSetName()
 	return CELL_OK;
 }
 
-int _cellSpursTasksetAttribute2Initialize()
+int _cellSpursTasksetAttribute2Initialize(mem_ptr_t<CellSpursTasksetAttribute2> attribute, u32 revision)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs->Warning("_cellSpursTasksetAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.GetAddr(), revision);
+	
+	attribute->revision = revision;
+	attribute->name_addr = NULL;
+	attribute->argTaskset = 0;
+
+	for (int i = 0; i < 8; i++)
+	{
+		attribute->priority[i] = 1;
+	}
+
+	attribute->maxContention = 8;
+	attribute->enableClearLs = 0;
+	attribute->CellSpursTaskNameBuffer_addr = 0;
+
 	return CELL_OK;
 }
 
@@ -770,9 +784,26 @@ int cellSpursTaskAttributeSetExitCodeContainer()
 	return CELL_OK;
 }
 
-int _cellSpursTaskAttribute2Initialize()
+int _cellSpursTaskAttribute2Initialize(mem_ptr_t<CellSpursTaskAttribute2> attribute, u32 revision)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs->Warning("_cellSpursTaskAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.GetAddr(), revision);
+
+	attribute->revision = revision;
+	attribute->sizeContext = 0;
+	attribute->eaContext = NULL;
+	
+	for (int c = 0; c < 4; c++)
+	{
+		attribute->lsPattern.u32[c] = 0;
+	}
+
+	for (int i = 0; i < 2; i++)
+	{
+		attribute->lsPattern.u64[i] = 0;
+	}
+
+	attribute->name_addr = 0;
+
 	return CELL_OK;
 }
 
