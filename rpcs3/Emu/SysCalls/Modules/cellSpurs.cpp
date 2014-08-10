@@ -784,9 +784,26 @@ int cellSpursTaskAttributeSetExitCodeContainer()
 	return CELL_OK;
 }
 
-int _cellSpursTaskAttribute2Initialize()
+int _cellSpursTaskAttribute2Initialize(mem_ptr_t<CellSpursTaskAttribute2> attribute, u32 revision)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs->Warning("_cellSpursTaskAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.GetAddr(), revision);
+
+	attribute->revision = revision;
+	attribute->sizeContext = 0;
+	attribute->eaContext = NULL;
+	
+	for (int c = 0; c < 4; c++)
+	{
+		attribute->lsPattern.u32[c] = 0;
+	}
+
+	for (int i = 0; i < 2; i++)
+	{
+		attribute->lsPattern.u64[i] = 0;
+	}
+
+	attribute->name_addr = 0;
+
 	return CELL_OK;
 }
 
