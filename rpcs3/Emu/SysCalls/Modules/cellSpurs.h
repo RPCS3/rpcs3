@@ -214,7 +214,7 @@ struct CellSpursTaskAttribute2
 	be_t<u32> revision;
 	be_t<u32> sizeContext;
 	be_t<u64> eaContext;
-	CellSpursTaskLsPattern lsPattern; //???
+	CellSpursTaskLsPattern lsPattern;
 	be_t<u32> name_addr;
 	//be_t<u32> __reserved__[];
 };
