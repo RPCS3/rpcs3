@@ -1031,12 +1031,15 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, mem_ptr_t<s32> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 useEventQueue)
 {
 	cellSync->Todo("_cellSyncLFQueueGetPushPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
 		queue.GetAddr(), pointer.GetAddr(), isBlocking, useEventQueue);
 
-	return syncLFQueueGetPushPointer(queue, *pointer, isBlocking, useEventQueue);
+	s32 pointer_value;
+	s32 result = syncLFQueueGetPushPointer(queue, pointer_value, isBlocking, useEventQueue);
+	pointer = pointer_value;
+	return result;
 }
 
 s32 syncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
@@ -1045,13 +1048,16 @@ s32 syncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem_ptr_t<s32> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync->Todo("_cellSyncLFQueueGetPushPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
 		queue.GetAddr(), pointer.GetAddr(), isBlocking, useEventQueue);
 
-	return syncLFQueueGetPushPointer2(queue, *pointer, isBlocking, useEventQueue);
+	s32 pointer_value;
+	s32 result = syncLFQueueGetPushPointer2(queue, pointer_value, isBlocking, useEventQueue);
+	pointer = pointer_value;
+	return result;
 }
 
 s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal)
@@ -1149,13 +1155,16 @@ s32 syncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, mem_ptr_t<s32> pointer, u32 isBlocking, u32 arg4, u32 arg5)
+s32 _cellSyncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 arg4, u32 arg5)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer (arg4, arg5 not used)
 	cellSync->Todo("_cellSyncLFQueueGetPopPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, arg4=%d, arg5=%d)",
 		queue.GetAddr(), pointer.GetAddr(), isBlocking, arg4, arg5);
 
-	return syncLFQueueGetPopPointer(queue, *pointer, isBlocking, arg4, arg5);
+	s32 pointer_value;
+	s32 result = syncLFQueueGetPopPointer(queue, pointer_value, isBlocking, arg4, arg5);
+	pointer = pointer_value;
+	return result;
 }
 
 s32 syncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 arg4, u32 arg5)
@@ -1164,13 +1173,16 @@ s32 syncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem_ptr_t<s32> pointer, u32 isBlocking, u32 arg4, u32 arg5)
+s32 _cellSyncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 arg4, u32 arg5)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer (arg5 not used)
 	cellSync->Todo("_cellSyncLFQueueGetPopPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, arg4=%d, arg5=%d)",
 		queue.GetAddr(), pointer.GetAddr(), isBlocking, arg4, arg5);
 
-	return syncLFQueueGetPopPointer2(queue, *pointer, isBlocking, arg4, arg5);
+	s32 pointer_value;
+	s32 result = syncLFQueueGetPopPointer2(queue, pointer_value, isBlocking, arg4, arg5);
+	pointer = pointer_value;
+	return result;
 }
 
 s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1451,13 +1463,13 @@ s32 _cellSyncLFQueueGetSignalAddress(mem_ptr_t<CellSyncLFQueue> queue, mem32_t p
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueAttachLv2EventQueue(mem_ptr_t<u32> spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.GetAddr());
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueDetachLv2EventQueue(mem_ptr_t<u32> spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.GetAddr());
 	return CELL_OK;
