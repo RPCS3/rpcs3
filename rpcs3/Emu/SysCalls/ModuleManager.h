@@ -10,6 +10,7 @@ class ModuleManager
 	std::vector<ModuleFunc *> m_modules_funcs_list;
 	std::vector<Module> m_mod_init;
 	bool initialized;
+	std::vector<u32> m_funcs_pause_funcs;
 public:
 	ModuleManager();
 	~ModuleManager();
@@ -24,5 +25,5 @@ public:
 	u32 GetFuncNumById(u32 id);
 	Module* GetModuleByName(const std::string& name);
 	Module* GetModuleById(u16 id);
-
+	void LoadFuncPauses(void);
 };
