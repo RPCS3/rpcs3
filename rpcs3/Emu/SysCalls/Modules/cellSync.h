@@ -87,7 +87,7 @@ struct CellSyncQueue
 
 static_assert(sizeof(CellSyncQueue) == 32, "CellSyncQueue: wrong size");
 
-enum CellSyncQueueDirection : u32
+enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 {
 	CELL_SYNC_QUEUE_SPU2SPU = 0, // SPU to SPU
 	CELL_SYNC_QUEUE_SPU2PPU = 1, // SPU to PPU
