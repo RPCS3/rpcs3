@@ -301,7 +301,7 @@ bool ModuleManager::CallFunc(u32 num)
 		if (num == m_funcs_pause_funcs[i])
 		{
 			Emu.Pause();	//So it is now pause, yep.
-			LOG_ERROR(HLE, "TEST PAUSE AT %x", num);	//Used Error
+			LOG_ERROR(HLE, "AUTO PAUSE AT %x", num);	//Used Error
 		}
 	}
 	
@@ -318,7 +318,7 @@ bool ModuleManager::CallFunc(u32 num)
 			}
 		}
 	}
-	
+
 	if (func)
 	{
 		(*func)();
