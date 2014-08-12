@@ -23,12 +23,15 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
 
-	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	size->hddFreeSizeKB = 40000000; // 40 GB
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40000000; // 40 GB
 
-	// TODO: Calculate data size for HG and DG games, if necessary.
-	size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-	size->sysSizeKB = 0;
+		// TODO: Calculate data size for HG and DG games, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0;
+	}
 
 	vfsFile f("/app_home/PARAM.SFO");
 	if (!f.IsOpened())
