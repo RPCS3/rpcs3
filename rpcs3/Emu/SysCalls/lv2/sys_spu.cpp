@@ -160,10 +160,19 @@ s32 sys_spu_thread_group_destroy(u32 id)
 		return CELL_ESRCH;
 	}
 
-	if (group_info->lock) // ???
+	//TODO: New method to check busy. and even maybe in other sys_spu_thread_group_ calls.
+
+	//TODO: SPU_THREAD_GROUP lock may not be gracefully implemented now.
+	//		But it could still be set using simple way?
+	//Check the state it should be in NOT_INITIALIZED / INITIALIZED.
+	if ((group_info->m_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED))
 	{
-		return CELL_EBUSY;
+		sc_spu.Error("sys_spu_thread_group_destroy(id=%d) is not in NOT_INITIALIZED / INITIALIZED, state=%d", id, group_info->m_state);
+		return CELL_ESTAT;	//Indeed this should not be encountered. If program itself all right.
 	}
+	//SET BUSY
+
 
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
@@ -171,6 +180,9 @@ s32 sys_spu_thread_group_destroy(u32 id)
 
 		Emu.GetCPU().RemoveThread(group_info->list[i]);
 	}
+
+	group_info->m_state = SPU_THREAD_GROUP_STATUS_UNKNOWN;
+	//REMOVE BUSY
 
 	Emu.GetIdManager().RemoveID(id);
 	return CELL_OK;
@@ -189,6 +201,14 @@ s32 sys_spu_thread_group_start(u32 id)
 
 	// TODO: check group state
 
+	//Check for BUSY?
+
+	//SET BUSY
+
+	//Different from what i expected. Or else there would not be any with RUNNING.
+	group_info->m_state = SPU_THREAD_GROUP_STATUS_READY;	//Added Group State
+	//Notice: I can not know the action preformed below be following the definition, but left unchanged.
+
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]);
@@ -197,6 +217,9 @@ s32 sys_spu_thread_group_start(u32 id)
 			t->Exec();
 		}
 	}
+
+	group_info->m_state = SPU_THREAD_GROUP_STATUS_RUNNING;	//SPU Thread Group now all in running.
+	//REMOVE BUSY
 
 	return CELL_OK;
 }
@@ -213,6 +236,17 @@ s32 sys_spu_thread_group_suspend(u32 id)
 	}
 
 	// TODO: check group state
+	//Experimental implementation for the state checking
+	if ((group_info->m_state != SPU_THREAD_GROUP_STATUS_READY)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_RUNNING)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_WAITING))
+	{
+		return CELL_ESTAT;
+	}
+
+	//Check for BUSY?
+
+	//SET BUSY
 
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
@@ -221,6 +255,18 @@ s32 sys_spu_thread_group_suspend(u32 id)
 			t->Pause();
 		}
 	}
+
+	//Now the state changes.
+	if ((group_info->m_state == SPU_THREAD_GROUP_STATUS_READY)
+		|| (group_info->m_state == SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+		group_info->m_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+	}
+	else if (group_info->m_state == SPU_THREAD_GROUP_STATUS_WAITING)
+	{
+		group_info->m_state = SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
+	}
+	//REMOVE BUSY
 
 	return CELL_OK;
 }
@@ -237,6 +283,24 @@ s32 sys_spu_thread_group_resume(u32 id)
 	}
 
 	// TODO: check group state
+	if ((group_info->m_state != SPU_THREAD_GROUP_STATUS_SUSPENDED)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED))
+	{
+		return CELL_ESTAT;
+	}
+
+	//Maybe check for BUSY
+
+	//SET BUSY
+
+	if (group_info->m_state == SPU_THREAD_GROUP_STATUS_SUSPENDED)
+	{
+		group_info->m_state = SPU_THREAD_GROUP_STATUS_READY;
+	}
+	else if (group_info->m_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+	{
+		group_info->m_state = SPU_THREAD_GROUP_STATUS_WAITING;
+	}
 
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
@@ -246,6 +310,105 @@ s32 sys_spu_thread_group_resume(u32 id)
 		}
 	}
 
+	if (group_info->m_state == SPU_THREAD_GROUP_STATUS_READY)
+	{
+		group_info->m_state = SPU_THREAD_GROUP_STATUS_RUNNING;
+	}
+	//REMOVE BUSY
+
+	return CELL_OK;
+}
+
+//176: Stub
+s32 sys_spu_thread_group_yield(u32 id)
+{
+	sc_spu.Error("sys_spu_thread_group_yield(id=%d)", id);
+
+	SpuGroupInfo* group_info;
+	if (!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
+	
+	////TODO::implement sys_spu_thread_group_yield
+	//Sorry i don't know where to get the caller SPU thread group. So Only checking.
+	//Tried to get SPU using GetCurrentSPUThread. FAILED:: Cause Mutex trouble with EventPort!
+	//Orz. I doubt is there any safe ways to get those infos. the caller must be valid isn't it.
+
+	//SPUThread current_thread = GetCurrentSPUThread();
+	//SpuGroupInfo* current_group_info = current_thread.group;
+	//u32 current_id = current_thread.GetId();
+	//sc_spu.Todo("sys_spu_thread_group_yield(id=%d), caller: %d, spu group info: %x",
+	//	id, current_id, current_group_info);
+
+	//if ((group_info->m_prio < current_group_info->m_prio)
+	//	||(group_info->m_state != SPU_THREAD_GROUP_STATUS_READY))
+	//{
+	//	return CELL_OK;
+	//}
+	
+	////Maybe Check for BUSY
+
+	////SET BUSY
+	//for (u32 i = 0; i < current_group_info->list.size(); i++)
+	//{
+		//if (CPUThread* t = Emu.GetCPU().GetThread(current_group_info->list[i]))
+		//{
+			//Not finding anything that suite the yield test. Do nothing.
+			//t->WaitFor(group_info);
+		//}
+	//}
+
+	//Do nothing now, so not entering the WAITING state.
+	//current_group_info->m_state = SPU_THREAD_GROUP_STATUS_WAITING;
+	
+	////CLEAR BUSY
+
+	return CELL_OK;
+}
+
+//177: Stub
+s32 sys_spu_thread_group_terminate(u32 id, int value)
+{
+	sc_spu.Error("sys_spu_thread_group_terminate(id=%d, value=%d)", id, value);
+
+	SpuGroupInfo* group_info;
+	if (!Emu.GetIdManager().GetIDData(id, group_info))
+	{
+		return CELL_ESRCH;
+	}
+	if ((group_info->m_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		&& (group_info->m_state != SPU_THREAD_GROUP_STATUS_WAITING))
+	{
+		return CELL_ESTAT;
+	}
+	//TODO::Cause i don't know who is calling such a command.. I don't check EPERM.
+	//Tried to get SPU using GetCurrentSPUThread. FAILED:: Cause Mutex trouble with EventPort!
+	//Also i don't know how to check that is a primary or not. so disabled the EPERM check.
+
+	//SPUThread current_thread = GetCurrentSPUThread();
+	//SpuGroupInfo* current_group_info = current_thread.group;
+	//u32 current_id = current_thread.GetId();
+	//sc_spu.Todo("sys_spu_thread_group_terminate(id=%d, value=%d), caller: %d, spu group info: %x",
+	//	id, value, current_id, current_group_info);
+
+	//Attention. This action may not check for BUSY
+	
+	//SET BUSY
+	for (u32 i = 0; i < group_info->list.size(); i++)
+	{
+		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
+		{
+			t->Stop();
+		}
+	}
+	group_info->m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;	// In initialized state but not running, maybe.
+	//Remove BUSY
+
+	group_info->m_exit_status = value;
+	
+	////TODO::implement sys_spu_thread_group_terminate
 	return CELL_OK;
 }
 
@@ -280,7 +443,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		return CELL_ESRCH;
 	}
 
-	if (group_info->lock.exchange(1)) // acquire lock
+	if (group_info->lock.exchange(1)) // acquire lock	TODO:: The lock might be replaced.
 	{
 		return CELL_EBUSY;
 	}
@@ -305,7 +468,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		}
 	}
 
-	group_info->lock = 0; // release lock
+	group_info->lock = 0; // release lock	TODO: this LOCK may be replaced.
 	return CELL_OK;
 }
 
