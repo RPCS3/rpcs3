@@ -418,23 +418,37 @@ int cellGameGetLocalWebContentPath()
 int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 {
 	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
-
-	char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	std::string errorName;
-	switch(type)
+	std::string errorMsg;
+	char* dirName;
+
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
-		case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
-		case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
-		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
-		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
-		case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
-		default: return CELL_GAME_ERROR_PARAM;
+		char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	}
 
-	std::string errorMsg = fmt::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
-		errorName.c_str(), errNeedSizeKB, dirName);
+	switch (type)
+	{
+	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
+	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
+	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
+	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
+	default: return CELL_GAME_ERROR_PARAM;
+	}
+
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
+	{
+		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB\nDirectory name: %s", errorName.c_str(), errNeedSizeKB, dirName);
+	}
+	else
+	{
+		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+	}
+
 	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);
+
 	return CELL_OK;
 }
 
