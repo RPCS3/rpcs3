@@ -97,7 +97,71 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 
 int sceNpDrmIsAvailable2(u32 k_licensee_addr, u32 drm_path_addr)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x)", k_licensee_addr, drm_path_addr);
+
+	std::string drm_path = Memory.ReadString(drm_path_addr);
+	if (!Emu.GetVFS().ExistsFile(drm_path))
+	{
+		sceNp->Warning("sceNpDrmIsAvailable2(): '%s' not found", drm_path.c_str());
+		return CELL_ENOENT;
+	}
+
+	std::string k_licensee_str = "0";
+	u8 k_licensee[0x10];
+
+	if (k_licensee_addr)
+	{
+		for (int i = 0; i < 0x10; i++)
+		{
+			k_licensee[i] = Memory.Read8(k_licensee_addr + i);
+			k_licensee_str += fmt::Format("%02x", k_licensee[i]);
+		}
+	}
+
+	sceNp->Warning("sceNpDrmIsAvailable2: Found DRM license file at %s", drm_path.c_str());
+	sceNp->Warning("sceNpDrmIsAvailable2: Using k_licensee 0x%s", k_licensee_str.c_str());
+
+	// Set the necessary file paths.
+	std::string drm_file_name = fmt::AfterLast(drm_path, '/');
+
+	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
+	std::string titleID = drm_path.substr(15, 9);
+
+	// TODO: These shouldn't use current dir
+	std::string enc_drm_path = drm_path;
+	std::string dec_drm_path = "/dev_hdd1/" + titleID + "/" + drm_file_name;
+	std::string rap_path = "/dev_usb000/";
+
+	// Search dev_usb000 for a compatible RAP file. 
+	vfsDir *raps_dir = new vfsDir(rap_path);
+	if (!raps_dir->IsOpened())
+		sceNp->Warning("sceNpDrmIsAvailable2: Can't find RAP file for DRM!");
+	else
+	{
+		const std::vector<DirEntryInfo> &entries = raps_dir->GetEntries();
+		for (auto &entry : entries)
+		{
+			if (entry.name.find(titleID) != std::string::npos)
+			{
+				rap_path += entry.name;
+				break;
+			}
+		}
+	}
+
+	// Create a new directory under dev_hdd1/titleID to hold the decrypted data.
+	// TODO: These shouldn't use current dir
+	std::string tmp_dir = "./dev_hdd1/" + titleID;
+	if (!rExists(tmp_dir))
+		rMkdir("./dev_hdd1/" + titleID);
+
+	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
+	std::string enc_drm_path_local, dec_drm_path_local, rap_path_local;
+	Emu.GetVFS().GetDevice(enc_drm_path, enc_drm_path_local);
+	Emu.GetVFS().GetDevice(dec_drm_path, dec_drm_path_local);
+	Emu.GetVFS().GetDevice(rap_path, rap_path_local);
+
+	DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false);
 	return CELL_OK;
 }
 
