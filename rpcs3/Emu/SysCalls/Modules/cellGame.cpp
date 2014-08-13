@@ -433,7 +433,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 
 	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
+		dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	}
 
 	switch (type)
