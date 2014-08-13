@@ -584,11 +584,7 @@ s32 cellSyncQueuePush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueuePush(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (true)
@@ -652,11 +648,7 @@ s32 cellSyncQueueTryPush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueueTryPush(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (true)
@@ -707,11 +699,7 @@ s32 cellSyncQueuePop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueuePop(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
 	while (true)
@@ -775,11 +763,7 @@ s32 cellSyncQueueTryPop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueueTryPop(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (true)
@@ -830,11 +814,7 @@ s32 cellSyncQueuePeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueuePeek(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (true)
@@ -890,11 +870,7 @@ s32 cellSyncQueueTryPeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueueTryPeek(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (true)
@@ -944,11 +920,7 @@ s32 cellSyncQueueSize(mem_ptr_t<CellSyncQueue> queue)
 
 	const u32 count = (u32)queue->m_v2 & 0xffffff;
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || count > depth)
-	{
-		cellSync->Error("cellSyncQueueSize(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && count <= depth);
 
 	return count;
 }
@@ -967,11 +939,7 @@ s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
 	}
 
 	const u32 depth = (u32)queue->m_depth;
-	if (((u32)queue->m_v1 & 0xffffff) > depth || ((u32)queue->m_v2 & 0xffffff) > depth)
-	{
-		cellSync->Error("cellSyncQueueSize(queue_addr=0x%x): m_depth limit broken", queue.GetAddr());
-		Emu.Pause();
-	}
+	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
 	while (true)
@@ -1038,6 +1006,11 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 	{
 		while (true)
 		{
+			if (Emu.IsStopped())
+			{
+				return -1;
+			}
+
 			const u64 old_data = InterlockedCompareExchange(&queue->m_push1(), 0, 0);
 			CellSyncLFQueue new_queue;
 			new_queue.m_push1() = old_data;
@@ -1118,14 +1091,9 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 		u32 eq = (u32)queue->m_v3; // 0x7c
 		sys_event_data event;
 		assert(0);
-		// sys_event_queue_receive (seems event data is not used)
+		// run sys_event_queue_receive (seems event data is not used)
 		// assert if error returned (but continue anyway?)
 		var0 = 1;
-
-		if (Emu.IsStopped())
-		{
-			return CELL_OK;
-		}
 	}
 }
 
@@ -1162,10 +1130,146 @@ s32 _cellSyncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem32_t po
 
 s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
-	// TODO
-	//if (fpSendSignal) return fpSendSignal(0, 0);
-	assert(0);
-	return CELL_OK;
+	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	{
+		return CELL_SYNC_ERROR_PERM;
+	}
+
+	s32 depth = (u32)queue->m_depth;
+
+	while (true)
+	{
+		const u32 old_data = InterlockedCompareExchange(&queue->m_push2(), 0, 0);
+		CellSyncLFQueue new_queue;
+		new_queue.m_push2() = old_data;
+
+		const u32 old_data2 = queue->m_push3();
+
+		s32 var1 = pointer - (u16)queue->m_h5;
+		if (var1 < 0)
+		{
+			var1 += depth * 2;
+		}
+
+		s32 var2 = (s32)(s16)queue->m_h4 - (s32)(u16)queue->m_h1;
+		if (var2 < 0)
+		{
+			var2 += depth * 2;
+		}
+
+		s32 var9_ = (15 - var1) & 0x3f;
+		// calculate (1 slw (15 - var1))
+		if (var9_ & 0x30)
+		{
+			var9_ = 0;
+		}
+		else
+		{
+			var9_ = 1 << var9_;
+		}
+		s32 var9 = ~(u16)var9_ & ~(u16)queue->m_h6;
+		if ((u16)var9)
+		{
+			var9 = __lzcnt16((u16)var9);
+		}
+		else
+		{
+			var9 = 16;
+		}
+		
+		s32 var5 = (s32)(u16)queue->m_h6 | var9_;
+		if (var9 & 0x30)
+		{
+			var5 = 0;
+		}
+		else
+		{
+			var5 <<= var9;
+		}
+
+		s32 var3 = (u16)queue->m_h5 + var9;
+		if (var3 >= depth * 2)
+		{
+			var3 -= depth * 2;
+		}
+
+		const u16 pack = new_queue.m_hs[0]; // three packed 5-bit fields
+
+		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
+		if (var4 < 0)
+		{
+			var4 += 0x1e;
+		}
+
+		u32 var6;
+		if (var2 + var4 <= 15 && ((pack >> 10) & 0x1f) != (pack & 0x1f))
+		{
+			s32 var8 = (pack & 0x1f) - ((pack >> 10) & 0x1f);
+			if (var8 < 0)
+			{
+				var8 += 0x1e;
+			}
+
+			if (var9 > 1 && (u32)var8 > 1)
+			{
+				assert(16 - var2 <= 1);
+			}
+
+			s32 var11 = (pack >> 10) & 0x1f;
+			if (var11 >= 15)
+			{
+				var11 -= 15;
+			}
+
+			u16 var12 = (pack >> 10) & 0x1f;
+			if (var12 == 0x1d)
+			{
+				var12 = 0;
+			}
+			else
+			{
+				var12 = (var12 + 1) << 10;
+			}
+
+			new_queue.m_hs[0] = (pack & 0x83ff) | var12;
+			var6 = (u16)queue->m_hs[1 + 2 * var11];
+		}
+		else
+		{
+			var6 = -1;
+		}
+
+		s32 var7 = (var3 << 16) | (var5 & 0xffff);
+
+		if (InterlockedCompareExchange(&queue->m_push2(), new_queue.m_push2(), old_data) == old_data)
+		{
+			// break;
+			assert(var2 + var4 < 16);
+			if (var6 == -1)
+			{
+				if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+				{
+					return CELL_OK;
+				}
+			}
+			else
+			{
+				const u16 pack2 = queue->m_hs[0];
+				if ((pack2 & 0x1f) == ((pack >> 10) & 0x1f))
+				{
+					if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+					{
+						assert(fpSendSignal);
+						return fpSendSignal((u64)queue->m_eaSignal, var6);
+					}
+				}
+				else
+				{
+					assert(queue->m_push3() == old_data2);
+				}
+			}
+		}
+	}
 }
 
 s32 _cellSyncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal)
