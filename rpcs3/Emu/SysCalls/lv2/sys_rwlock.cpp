@@ -10,37 +10,28 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 {
 	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.GetAddr(), attr.GetAddr());
 
-	if (attr)
+	if (!attr)
+		return CELL_EFAULT;
+
+	switch (attr->attr_protocol.ToBE())
 	{
-		switch (attr->attr_protocol.ToBE())
-		{
-		case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;
-		case se(attr->attr_protocol, SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
-		case se(attr->attr_protocol, SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-		case se(attr->attr_protocol, SYS_SYNC_FIFO): break;
-		default: return CELL_EINVAL;
-		}
-
-		if (attr->attr_pshared.ToBE() != se32(0x200))
-		{
-			sys_rwlock.Error("Invalid attr_pshared(0x%x)", (u32)attr->attr_pshared);
-			return CELL_EINVAL;
-		}
-
-		rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64));
-
-		sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
-			std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());
+	case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;
+	case se(attr->attr_protocol, SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
+	case se(attr->attr_protocol, SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se(attr->attr_protocol, SYS_SYNC_FIFO): break;
+	default: return CELL_EINVAL;
 	}
-	else
+
+	if (attr->attr_pshared.ToBE() != se32(0x200))
 	{
-		sys_rwlock.Todo("SYS_SYNC_PRIORITY");
-
-		rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)SYS_SYNC_PRIORITY, (u64)"default"));
-
-		sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
-			std::string("default", 8).c_str(), (u32)SYS_SYNC_PRIORITY, rw_lock_id.GetValue());
+		sys_rwlock.Error("Invalid attr_pshared(0x%x)", (u32)attr->attr_pshared);
+		return CELL_EINVAL;
 	}
+
+	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64));
+
+	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
+		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());
 
 	return CELL_OK;
 }
