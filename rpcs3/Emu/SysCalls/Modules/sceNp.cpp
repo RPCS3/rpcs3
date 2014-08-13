@@ -36,12 +36,16 @@ int sceNpDrmIsAvailable(u32 k_licensee_addr, u32 drm_path_addr)
 		return CELL_ENOENT;
 	}
 
-	std::string k_licensee_str;
+	std::string k_licensee_str = "0";
 	u8 k_licensee[0x10];
-	for(int i = 0; i < 0x10; i++)
+
+	if (k_licensee_addr)
 	{
-		k_licensee[i] = Memory.Read8(k_licensee_addr + i);
-		k_licensee_str += fmt::Format("%02x", k_licensee[i]);
+		for (int i = 0; i < 0x10; i++)
+		{
+			k_licensee[i] = Memory.Read8(k_licensee_addr + i);
+			k_licensee_str += fmt::Format("%02x", k_licensee[i]);
+		}
 	}
 
 	sceNp->Warning("sceNpDrmIsAvailable: Found DRM license file at %s", drm_path.c_str());

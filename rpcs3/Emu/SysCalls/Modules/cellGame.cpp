@@ -23,12 +23,15 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
 
-	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	size->hddFreeSizeKB = 40000000; // 40 GB
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40000000; // 40 GB
 
-	// TODO: Calculate data size for HG and DG games, if necessary.
-	size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-	size->sysSizeKB = 0;
+		// TODO: Calculate data size for HG and DG games, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0;
+	}
 
 	vfsFile f("/app_home/PARAM.SFO");
 	if (!f.IsOpened())
@@ -90,12 +93,15 @@ int cellGamePatchCheck(mem_ptr_t<CellGameContentSize> size, u32 reserved_addr)
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	size->hddFreeSizeKB = 40000000; // 40 GB
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40000000; // 40 GB
 
-	// TODO: Calculate data size for patch data, if necessary.
-	size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-	size->sysSizeKB = 0;
+		// TODO: Calculate data size for patch data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0;
+	}
 
 	vfsFile f("/app_home/PARAM.SFO");
 	if (!f.IsOpened())
@@ -135,12 +141,15 @@ int cellGameDataCheck(u32 type, const mem_list_ptr_t<u8> dirName, mem_ptr_t<Cell
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	size->hddFreeSizeKB = 40000000; //40 GB
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40000000; //40 GB
 
-	// TODO: Calculate data size for game data, if necessary.
-	size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-	size->sysSizeKB = 0;
+		// TODO: Calculate data size for game data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0;
+	}
 
 	if (type == CELL_GAME_GAMETYPE_DISC)
 	{
@@ -418,23 +427,37 @@ int cellGameGetLocalWebContentPath()
 int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 {
 	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
-
-	char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	std::string errorName;
-	switch(type)
+	std::string errorMsg;
+	char* dirName;
+
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
-		case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
-		case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
-		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
-		case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
-		case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
-		default: return CELL_GAME_ERROR_PARAM;
+		dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	}
 
-	std::string errorMsg = fmt::Format("%s\nSpace needed: %d KB\nDirectory name: %s",
-		errorName.c_str(), errNeedSizeKB, dirName);
+	switch (type)
+	{
+	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
+	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
+	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
+	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
+	default: return CELL_GAME_ERROR_PARAM;
+	}
+
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
+	{
+		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB\nDirectory name: %s", errorName.c_str(), errNeedSizeKB, dirName);
+	}
+	else
+	{
+		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+	}
+
 	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);
+
 	return CELL_OK;
 }
 

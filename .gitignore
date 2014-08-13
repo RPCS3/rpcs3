@@ -30,6 +30,8 @@
 *.dump
 *.wav
 
+/build
+
 /libs
 /ipch
 /rpcs3/Debug

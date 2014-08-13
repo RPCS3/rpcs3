@@ -440,7 +440,7 @@ s32 cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 {
 	cellGcmSys->Log("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctxt.GetAddr(), id);
 
-	if(id >= 8)
+	if(id > 7)
 	{
 		cellGcmSys->Error("cellGcmSetPrepareFlip : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
@@ -700,9 +700,18 @@ int cellGcmInitSystemMode(u64 mode)
 	return CELL_OK;
 }
 
-int cellGcmSetFlipImmediate()
+int cellGcmSetFlipImmediate(u8 id)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys->Todo("cellGcmSetFlipImmediate(fid=0x%x)", id);
+
+	if (id > 7)
+	{
+		cellGcmSys->Error("cellGcmSetFlipImmediate : CELL_GCM_ERROR_FAILURE");
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	cellGcmSetFlipMode(id);
+
 	return CELL_OK;
 }
 
