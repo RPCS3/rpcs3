@@ -263,7 +263,6 @@ void ModuleManager::init()
 		m_mod_init.emplace_back(0x000e, sys_fs_init);
 		initialized = true;
 	}
-	LoadFuncPauses();	//Load the list of pause functions
 }
 
 ModuleManager::ModuleManager() :
@@ -294,17 +293,6 @@ bool ModuleManager::IsLoadedFunc(u32 id)
 
 bool ModuleManager::CallFunc(u32 num)
 {
-	//Pause at specified function calls
-	for (u32 i = 0; i < m_funcs_pause_funcs.size(); ++i)
-	{
-		//Add Call Pause Here. This call is from BLJS10157
-		if (num == m_funcs_pause_funcs[i])
-		{
-			Emu.Pause();	//So it is now pause, yep.
-			LOG_ERROR(HLE, "AUTO PAUSE AT %x", num);	//Used Error
-		}
-	}
-	
 	func_caller* func = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(m_funcs_lock);
@@ -375,9 +363,6 @@ void ModuleManager::UnloadModules()
 	
 	std::lock_guard<std::mutex> lock(m_funcs_lock);
 	m_modules_funcs_list.clear();
-
-	//unload pause list
-	m_funcs_pause_funcs.clear();
 }
 
 Module* ModuleManager::GetModuleByName(const std::string& name)
@@ -476,37 +461,5 @@ void ModuleManager::AddFunc(ModuleFunc *func)
 	if (!IsLoadedFunc(func->id))
 	{
 		m_modules_funcs_list.push_back(func);
-	}
-}
-
-//read pause.bin to get some function id that should auto-pause at call.
-//you can make this file with Hex Editors, such as MadEdit..
-//you can find the function ids in \rpcs3\rpcs3\Emu\SysCalls\FuncList.cpp
-//or just by searching the function name with grep within repo.
-//Example if i want it to pause at 0x1051d134, i create the file with 34D15110(Hex, start from 00).
-void ModuleManager::LoadFuncPauses(void)
-{
-	if (rExists("pause.bin"))
-	{
-		m_funcs_pause_funcs.reserve(16);
-		rFile list;
-		list.Open("pause.bin", rFile::read);
-		u32 num;
-		size_t fmax = list.Length();
-		size_t fcur = 0;
-		list.Seek(0);
-		while (fcur <= fmax - sizeof(u32))
-		{
-			list.Read(&num, sizeof(u32));
-			fcur += sizeof(u32);
-			if (num == 0xFFFFFFFF) break;
-			m_funcs_pause_funcs.push_back(num);
-			LOG_WARNING(HLE, "Read Pause Function ID: %x", num);
-		}
-		list.Close();
-	}
-	else
-	{
-		LOG_WARNING(HLE, "No Pause Function ID specified in pause.bin");
 	}
 }
