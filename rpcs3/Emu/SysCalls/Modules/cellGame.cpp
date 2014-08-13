@@ -425,7 +425,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	std::string errorMsg;
 	char* dirName;
 
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
 		char* dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	}
@@ -441,7 +441,7 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	default: return CELL_GAME_ERROR_PARAM;
 	}
 
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
 		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB\nDirectory name: %s", errorName.c_str(), errNeedSizeKB, dirName);
 	}
