@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/AutoPause.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -204,6 +205,9 @@ void GameViewer::DClick(wxListEvent& event)
 	const std::string& path = m_path + m_game_data[i].root;
 
 	Emu.Stop();
+
+	Debug::AutoPause::getInstance().Reload();
+
 	Emu.GetVFS().Init(path);
 	std::string local_path;
 	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path)) {

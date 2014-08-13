@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -192,8 +193,8 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_spu_thread_group_start),                  //173 (0x0AD)
 	bind_func(sys_spu_thread_group_suspend),                //174 (0x0AE)
 	bind_func(sys_spu_thread_group_resume),                 //175 (0x0AF)
-	null_func,//bind_func(sys_spu_thread_group_yield)       //176 (0x0B0)
-	null_func,//bind_func(sys_spu_thread_group_terminate)   //177 (0x0B1)
+	bind_func(sys_spu_thread_group_yield),                  //176 (0x0B0)
+	bind_func(sys_spu_thread_group_terminate),              //177 (0x0B1)
 	bind_func(sys_spu_thread_group_join),                   //178 (0x0B2)
 	null_func,//bind_func(sys_spu_thread_group_set_priority)//179 (0x0B3)
 	null_func,//bind_func(sys_spu_thread_group_get_priority)//180 (0x0B4)
@@ -919,6 +920,9 @@ void default_syscall()
 
 void SysCalls::DoSyscall(u32 code)
 {
+	//Auto-Pause using simple singleton.
+	Debug::AutoPause::getInstance().TryPause(code);
+
 	if(code < 1024)
 	{
 		(*sc_table[code])();
