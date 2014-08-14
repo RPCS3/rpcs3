@@ -618,7 +618,7 @@ s32 cellSyncQueuePush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 	}
 
 	// prx: memcpy(position * m_size + m_addr, buffer_addr, m_size), sync
-	memcpy(Memory + (u64)queue->m_addr + position * size, Memory + buffer_addr, size);
+	memcpy(Memory + ((u64)queue->m_addr + position * size), Memory + buffer_addr, size);
 
 	// prx: atomically insert 0 in 5th u8
 	while (true)
@@ -670,7 +670,7 @@ s32 cellSyncQueueTryPush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
-	memcpy(Memory + (u64)queue->m_addr + position * size, Memory + buffer_addr, size);
+	memcpy(Memory + ((u64)queue->m_addr + position * size), Memory + buffer_addr, size);
 
 	while (true)
 	{
@@ -733,7 +733,7 @@ s32 cellSyncQueuePop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 	}
 
 	// prx: (sync), memcpy(buffer_addr, position * m_size + m_addr, m_size)
-	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+	memcpy(Memory + buffer_addr, Memory + ((u64)queue->m_addr + position * size), size);
 
 	// prx: atomically insert 0 in first u8
 	while (true)
@@ -785,7 +785,7 @@ s32 cellSyncQueueTryPop(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
-	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+	memcpy(Memory + buffer_addr, Memory + ((u64)queue->m_addr + position * size), size);
 
 	while (true)
 	{
@@ -841,7 +841,7 @@ s32 cellSyncQueuePeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
-	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+	memcpy(Memory + buffer_addr, Memory + ((u64)queue->m_addr + position * size), size);
 
 	while (true)
 	{
@@ -891,7 +891,7 @@ s32 cellSyncQueueTryPeek(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
 		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
-	memcpy(Memory + buffer_addr, Memory + (u64)queue->m_addr + position * size, size);
+	memcpy(Memory + buffer_addr, Memory + ((u64)queue->m_addr + position * size), size);
 
 	while (true)
 	{
@@ -1015,7 +1015,7 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 			CellSyncLFQueue new_queue;
 			new_queue.m_push1() = old_data;
 
-			if (!var0)
+			if (var0)
 			{
 				new_queue.m_h7 = 0;
 			}
@@ -1024,7 +1024,7 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s16)new_queue.m_h8;
+			s32 var2 = (s32)(s16)new_queue.m_h8;
 			s32 res;
 			if (isBlocking && ((s32)(u16)new_queue.m_h5 != var2 || new_queue.m_h7.ToBE() != 0))
 			{
@@ -1168,13 +1168,16 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 			var9_ = 1 << var9_;
 		}
 		s32 var9 = ~(u16)var9_ & ~(u16)queue->m_h6;
-		if ((u16)var9)
+		// count leading zeros in u16
 		{
-			var9 = __lzcnt16((u16)var9);
-		}
-		else
-		{
-			var9 = 16;
+			u16 v = var9;
+			for (var9 = 0; var9 < 16; var9++)
+			{
+				if (v & (1 << (15 - var9)))
+				{
+					break;
+				}
+			}
 		}
 		
 		s32 var5 = (s32)(u16)queue->m_h6 | var9_;
@@ -1343,7 +1346,7 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 
 	s32 depth = (u32)queue->m_depth;
 	s32 size = (u32)queue->m_size;
-	memcpy(Memory + ((u64)queue->m_buffer & ~1ull) + size * (position > depth ? position - depth : position), Memory + buffer_addr, size);
+	memcpy(Memory + (((u64)queue->m_buffer & ~1ull) + size * (position > depth ? position - depth : position)), Memory + buffer_addr, size);
 
 	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 	{
@@ -1475,7 +1478,7 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 
 	s32 depth = (u32)queue->m_depth;
 	s32 size = (u32)queue->m_size;
-	memcpy(Memory + buffer_addr, Memory + ((u64)queue->m_buffer & ~1ull) + size * (position > depth ? position - depth : position), size);
+	memcpy(Memory + buffer_addr, Memory + (((u64)queue->m_buffer & ~1ull) + size * (position > depth ? position - depth : position)), size);
 
 	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 	{

@@ -658,13 +658,13 @@ public:
 		{
 		case MFC_PUT_CMD:
 		{
-			memcpy(Memory + ea, Memory + dmac.ls_offset + lsa, size);
+			memcpy(Memory + ea, Memory + (dmac.ls_offset + lsa), size);
 			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			memcpy(Memory + dmac.ls_offset + lsa, Memory + ea, size);
+			memcpy(Memory + (dmac.ls_offset + lsa), Memory + ea, size);
 			return;
 		}
 
@@ -841,7 +841,7 @@ public:
 							{
 								const u32 last_q = (buf[last].hi == reservation.data[last].hi);
 
-								if (InterlockedCompareExchange64((volatile long long*)(Memory + (u32)ea + last * 16 + last_q * 8),
+								if (InterlockedCompareExchange64((volatile long long*)(Memory + ((u32)ea + last * 16 + last_q * 8)),
 									buf[last]._u64[last_q], reservation.data[last]._u64[last_q]) == reservation.data[last]._u64[last_q])
 								{
 									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);

@@ -461,7 +461,7 @@ s32 cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
-		memmove(Memory + ctxt->begin, Memory + ctxt->current - res, res);
+		memmove(Memory + ctxt->begin, Memory + (ctxt->current - res), res);
 
 		ctxt->current = ctxt->begin + res;
 
@@ -1146,7 +1146,7 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	memmove(Memory + ctx.begin, Memory + ctx.current - res, res);
+	memmove(Memory + ctx.begin, Memory + (ctx.current - res), res);
 
 	ctx.current = ctx.begin + res;
 

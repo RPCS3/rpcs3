@@ -240,7 +240,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
+				memcpy(Memory + (data.GetAddr() + dstOffset), &image.get()[srcOffset], linesize);
 			}
 		}
 		else
@@ -270,7 +270,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
+				memcpy(Memory + (data.GetAddr() + dstOffset), output, linesize);
 			}
 			free(output);
 		}

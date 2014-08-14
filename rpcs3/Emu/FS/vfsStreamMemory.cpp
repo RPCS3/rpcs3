@@ -32,7 +32,7 @@ u64 vfsStreamMemory::Write(const void* src, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	memcpy(Memory + m_addr + Tell(), (void*)src, size);
+	memcpy(Memory + (m_addr + Tell()), (void*)src, size);
 
 	return vfsStream::Write(src, size);
 }
@@ -44,7 +44,7 @@ u64 vfsStreamMemory::Read(void* dst, u64 size)
 		size = GetSize() - Tell();
 	}
 
-	memcpy(dst, Memory + m_addr + Tell(), size);
+	memcpy(dst, Memory + (m_addr + Tell()), size);
 
 	return vfsStream::Read(dst, size);
 }
