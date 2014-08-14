@@ -287,16 +287,14 @@ void AutoPauseSettingsDialog::OnUpdateValue(wxCommandEvent& event)
 
 	m_entry_convert.clear();
 	m_entry_convert.str("");
-	m_entry_convert << "Currently it gets an id of \""
-		<< std::hex << std::setw(8) << std::setfill('0') << m_entry;
+	m_entry_convert << std::hex << /*std::setw(8) << std::setfill('0') <<*/ m_entry;
 	m_entry_convert.clear();
-	m_entry_convert << "\".";
 	if (m_entry_convert.str() == m_id->GetValue())
 	{
-		m_entry_convert << " SAME.";
+		m_current_converted->SetLabelText("Currently it gets an id of \"" + m_entry_convert.str() + "\" - SAME.");
 	}
-
-	m_current_converted->SetLabelText(m_entry_convert.str());
-
+	else {
+		m_current_converted->SetLabelText("Currently it gets an id of \"" + m_entry_convert.str() + "\".");
+	}
 	event.Skip();
 }
