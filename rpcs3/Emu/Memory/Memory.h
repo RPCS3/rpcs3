@@ -657,15 +657,14 @@ public:
 		return false;
 	}
 
-	template<typename T> u8* operator + (const T vaddr)
+	template<typename T> void* operator + (const T vaddr)
 	{
-		u8* ret = GetMemFromAddr<T>(vaddr);
-		return ret;
+		return GetMemFromAddr<T>(vaddr);
 	}
 
 	template<typename T> u8& operator[] (const T vaddr)
 	{
-		return *(*this + vaddr);
+		return *GetMemFromAddr<T>(vaddr);
 	}
 };
 

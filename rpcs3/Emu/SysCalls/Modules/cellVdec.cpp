@@ -589,7 +589,7 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(Memory + out_addr, buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(Memory.GetMemFromAddr(out_addr), buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
 			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
