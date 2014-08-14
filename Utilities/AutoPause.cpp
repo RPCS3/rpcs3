@@ -23,7 +23,7 @@ AutoPause::AutoPause(void)
 	m_pause_syscall.reserve(16);
 	initialized = false;
 	//Reload(false, false);
-	Reload(true, true);	//Temporarily use auto enable
+	Reload();
 }
 
 //Notice: I would not allow to write the binary to file in this command.
@@ -79,15 +79,9 @@ void AutoPause::Reload(void)
 	{
 		LOG_WARNING(HLE, "No Pause ID specified in pause.bin, Auto-Pause would not act.");
 	}
-
+	m_pause_syscall_enable = Ini.DBGAutoPauseSystemCall.GetValue();
+	m_pause_function_enable = Ini.DBGAutoPauseFunctionCall.GetValue();
 	initialized = true;
-}
-
-void AutoPause::Reload(bool enable_pause_syscall, bool enable_pause_function)
-{
-	Reload();
-	m_pause_syscall_enable = enable_pause_syscall;
-	m_pause_function_enable = enable_pause_function;
 }
 
 void AutoPause::TryPause(u32 code) {

@@ -20,8 +20,6 @@ namespace Debug {
 	public:
 		static AutoPause& getInstance(void);
 
-		void Reload(bool enable_pause_syscall, bool enable_pause_function);
-
 		void Reload(void);
 
 		void TryPause(u32 code);

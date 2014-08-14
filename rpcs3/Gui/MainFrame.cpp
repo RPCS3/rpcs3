@@ -16,6 +16,7 @@
 #include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
+#include "Gui/AutoPauseManager.h"
 #include <wx/dynlib.h>
 
 #include "Loader/PKG.h"
@@ -37,6 +38,7 @@ enum IDs
 	id_config_pad,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
+	id_config_autopause_manager,
 	id_tools_compiler,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
@@ -85,8 +87,10 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_emu, "Settings");
 	menu_conf->Append(id_config_pad, "PAD Settings");
 	menu_conf->AppendSeparator();
+	menu_conf->Append(id_config_autopause_manager, "Auto-Pause Settings");
+	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
-	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
+	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");	
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
@@ -123,6 +127,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigPad, this, id_config_pad);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
@@ -389,6 +394,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
+	//Auto-Pause related
+	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto-Pause at System Call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto-Pause at Function Call");
 
 	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("PPU Interpreter");
@@ -464,6 +472,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
+	//Auto-Pause related
+	chbox_dbg_ap_systemcall  ->SetValue(Ini.DBGAutoPauseSystemCall.GetValue());
+	chbox_dbg_ap_functioncall->SetValue(Ini.DBGAutoPauseFunctionCall.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -532,6 +543,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
+	//Auto-Pause
+	s_subpanel_hle->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -576,6 +590,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
+		//Auto-Pause
+		Ini.DBGAutoPauseFunctionCall.SetValue(chbox_dbg_ap_functioncall->GetValue());
+		Ini.DBGAutoPauseSystemCall.SetValue(chbox_dbg_ap_systemcall->GetValue());
 
 		Ini.Save();
 	}
@@ -596,6 +613,11 @@ void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 {
 	VHDDManagerDialog(this).ShowModal();
+}
+
+void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
+{
+	AutoPauseManagerDialog(this).ShowModal();
 }
 
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
