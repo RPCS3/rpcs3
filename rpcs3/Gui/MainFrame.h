@@ -38,6 +38,7 @@ private:
 	void ConfigPad(wxCommandEvent& event);
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);
+	void ConfigAutoPause(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);
 	void OpenRSXDebugger(wxCommandEvent& evt);
