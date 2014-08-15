@@ -27,7 +27,8 @@ struct SaveDataEntry
 
 enum
 {
-	id_copy,
+	//Reserved some Ids for Sort-By Submenu.
+	id_copy = 64,
 	id_remove,
 	id_info
 };

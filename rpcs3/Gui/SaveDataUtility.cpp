@@ -216,6 +216,11 @@ SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 	Bind(wxEVT_MENU, &SaveDataListDialog::OnEntryRemove, this, id_remove);
 	Bind(wxEVT_MENU, &SaveDataListDialog::OnEntryInfo, this, id_info);
 
+	//Looks stupid, isn't it. I can't find Bind for range use..
+	Bind(wxEVT_MENU, &SaveDataListDialog::OnSort, this, 0);
+	Bind(wxEVT_MENU, &SaveDataListDialog::OnSort, this, 1);
+	Bind(wxEVT_MENU, &SaveDataListDialog::OnSort, this, 2);
+
 	SetSizerAndFit(s_main);
 	Layout();
 	Centre(wxBOTH);
@@ -226,13 +231,12 @@ SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 //After you pick a menu item from the sort sub-menu
 void SaveDataListDialog::OnSort(wxCommandEvent& event)
 {
-	LOG_WARNING(HLE, "Stub - SaveDataUtility: SaveDataListDialog: OnSort called.");
-	int idx = event.GetSelection();
+	int idx = event.GetId();
+	LOG_WARNING(HLE, "Stub - SaveDataUtility: SaveDataListDialog: OnSort called. Type Value:%d", idx);
 	if ((idx < m_sort_options->GetMenuItemCount())
 		&& (idx >= 0))
 	{
 		m_sort_type = idx;
-		LOG_WARNING(HLE, "Stub - SaveDataUtility: SaveDataListDialog: OnSort called. Type Value:%d",m_sort_type);
 	}
 }
 //Copy a existing save, need to get more arguments. maybe a new dialog.
@@ -300,8 +304,6 @@ void SaveDataListDialog::OnRightClick(wxMouseEvent& event)
 	m_sort_options->Append(0, "UserID");
 	m_sort_options->Append(1, "Title");
 	m_sort_options->Append(2, "Subtitle");
-	//Well you can not use direct index cause you can not get its index through wxCommandEvent
-	m_sort_options->Bind(wxEVT_MENU, &SaveDataListDialog::OnSort, this);
 
 	menu->AppendSubMenu(m_sort_options, "&Sort");
 	menu->AppendSeparator();
