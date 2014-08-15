@@ -13,7 +13,8 @@ enum
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Auto-Pause Manager")
 {
-	SetSizeHints(wxSize(400, 300), wxDefaultSize);
+	//SetSizeHints(wxSize(400, 300), wxDefaultSize);
+	SetMinSize(wxSize(400, 360));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
@@ -38,11 +39,11 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	wxBoxSizer* s_action = new wxBoxSizer(wxHORIZONTAL);
 
 	s_action->Add(new wxButton(this, wxID_CLEAR, wxT("Cl&ear"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_REFRESH, wxT("&Reload"), wxDefaultPosition, wxDefaultSize, 0), 1, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_SAVE, wxT("&Save"), wxDefaultPosition, wxDefaultSize, 0), 2, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 3, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_REFRESH, wxT("&Reload"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_SAVE, wxT("&Save"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
-	s_main->Add(s_action, 2, wxALL, 5);
+	s_main->Add(s_action, 0, wxALL, 5);
 
 	Bind(wxEVT_MENU, &AutoPauseManagerDialog::OnAdd, this, id_add);
 	Bind(wxEVT_MENU, &AutoPauseManagerDialog::OnRemove, this, id_remove);
@@ -59,7 +60,7 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	UpdateList();
 
 	SetSizerAndFit(s_main);
-	SetSize(wxSize(400, 360));
+	//SetSize(wxSize(400, 360));
 	Layout();
 	Centre(wxBOTH);
 }
@@ -220,7 +221,8 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 	, m_presult(entry)
 {
 	m_entry = *m_presult;
-	SetSizeHints(wxSize(400, -1), wxDefaultSize);
+	//SetSizeHints(wxSize(400, -1), wxDefaultSize);
+	SetMinSize(wxSize(400, -1));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
@@ -236,14 +238,14 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 	wxBoxSizer* s_config = new wxBoxSizer(wxHORIZONTAL);
 
 	m_id = new wxTextCtrl(this, wxID_STATIC, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-	s_config->Add(m_id, 0, wxALL | wxEXPAND, 5);
-	s_config->Add(new wxButton(this, wxID_OK, wxT("&OK"), wxDefaultPosition, wxDefaultSize, 0), 1, wxALL, 5);
-	s_config->Add(new wxButton(this, wxID_CANCEL, wxT("&Cancel"), wxDefaultPosition, wxDefaultSize, 0), 1, wxALL, 5);
+	s_config->Add(m_id, 1, wxALL | wxEXPAND, 5);
+	s_config->Add(new wxButton(this, wxID_OK, wxT("&OK"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_config->Add(new wxButton(this, wxID_CANCEL, wxT("&Cancel"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
-	s_main->Add(s_config, 1, wxEXPAND, 5);
+	s_main->Add(s_config, 0, wxEXPAND, 5);
 
 	m_current_converted = new wxStaticText(this, wxID_ANY, wxT("Currently it gets an id of \"Unset\"."), wxDefaultPosition, wxDefaultSize, 0);
-	s_main->Add(m_current_converted, 2, wxALL | wxEXPAND, 5);
+	s_main->Add(m_current_converted, 0, wxALL, 5);
 
 	m_entry_convert.clear();
 	m_entry_convert.str("");
@@ -256,7 +258,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 	Bind(wxEVT_TEXT, &AutoPauseSettingsDialog::OnUpdateValue, this, wxID_STATIC);
 
 	SetSizerAndFit(s_main);
-	SetSize(wxSize(400, -1));
+	//SetSize(wxSize(400, -1));
 	Layout();
 	Centre(wxBOTH);
 
