@@ -212,7 +212,19 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpClans.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpCommerce2.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpSns.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpTus.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
@@ -700,7 +712,19 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNp.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpClans.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpCommerce2.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h">
