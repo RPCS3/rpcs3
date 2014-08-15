@@ -1,6 +1,6 @@
 #pragma once
-#include "cellRtc.h"
 
+// Error codes
 enum
 {
 	SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED          = 0x80022901,
