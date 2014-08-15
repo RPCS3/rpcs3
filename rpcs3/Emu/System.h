@@ -106,6 +106,7 @@ public:
 	std::string m_path;
 	std::string m_elf_path;
 	std::string m_title_id;
+	u32 m_ppu_thr_stop;
 	s32 m_sdk_version;
 
 	Emulator();

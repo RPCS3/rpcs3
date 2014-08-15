@@ -2104,6 +2104,7 @@ private:
 					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
+		case 0x4: CPU.FastStop(); break;
 		case 0x22: UNK("HyperCall LV1"); break;
 		default: UNK(fmt::Format("Unknown sc: %x", sc_code));
 		}
@@ -2368,13 +2369,9 @@ private:
 	}
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-
-		SMutexLockerR lock(reservation.mutex);
-		reservation.owner = lock.tid;
-		reservation.addr = addr;
-		reservation.size = 4;
-		reservation.data32 = CPU.GPR[rd] = Memory.Read32(addr);
+		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		CPU.R_VALUE = (u32&)Memory[CPU.R_ADDR];
+		CPU.GPR[rd] = re32((u32)CPU.R_VALUE);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2523,13 +2520,9 @@ private:
 	}
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-
-		SMutexLockerR lock(reservation.mutex);
-		reservation.owner = lock.tid;
-		reservation.addr = addr;
-		reservation.size = 8;
-		reservation.data64 = CPU.GPR[rd] = Memory.Read64(addr);
+		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		CPU.R_VALUE = (u64&)Memory[CPU.R_ADDR];
+		CPU.GPR[rd] = re64(CPU.R_VALUE);
 	}
 	void DCBF(u32 ra, u32 rb)
 	{
@@ -2644,17 +2637,13 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLockerR lock(reservation.mutex);
-		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 4)
+		if (CPU.R_ADDR == addr)
 		{
-			// Memory.Write32(addr, CPU.GPR[rs]);
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile long*) (Memory + addr), re((u32) CPU.GPR[rs]), re(reservation.data32)) == re(reservation.data32));
-			reservation.clear();
+			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u32*)(Memory + addr), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
-			if (lock.tid == reservation.owner) reservation.clear();
 		}
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
@@ -2705,17 +2694,13 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		SMutexLockerR lock(reservation.mutex);
-		if (lock.tid == reservation.owner && reservation.addr == addr && reservation.size == 8)
+		if (CPU.R_ADDR == addr)
 		{
-			// Memory.Write64(addr, CPU.GPR[rs]);
-			CPU.SetCR_EQ(0, InterlockedCompareExchange64((volatile long long*)(Memory + addr), re(CPU.GPR[rs]), re(reservation.data64)) == re(reservation.data64));
-			reservation.clear();
+			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u64*)(Memory + addr), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
-			if (lock.tid == reservation.owner) reservation.clear();
 		}
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)

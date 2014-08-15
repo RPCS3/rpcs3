@@ -550,7 +550,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil->Todo("Unimplemented function: cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		audioOut, deviceIndex, info.GetAddr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;

@@ -45,7 +45,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_process_kill),                            //19  (0x013)
 	null_func,                                              //20  (0x014)  UNS
 	null_func,//bind_func(_sys_process_spawn),              //21  (0x015)  DBG
-	bind_func(sys_process_exit),                            //22  (0x016)
+	null_func,//bind_func(sys_process_exit),                //22  (0x016)
 	bind_func(sys_process_wait_for_child2),                 //23  (0x017)  DBG
 	null_func,//bind_func(),                                //24  (0x018)  DBG
 	bind_func(sys_process_get_sdk_version),                 //25  (0x019)
