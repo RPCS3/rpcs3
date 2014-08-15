@@ -96,8 +96,7 @@ SaveDataManageDialog::SaveDataManageDialog(wxWindow* parent, unsigned int* sort_
 	if (m_sort_type != nullptr)
 	{
 		//Check sort type and set it to combo box
-		if ((*m_sort_type >= m_sort_options->GetCount())
-			|| (*m_sort_type < 0))
+		if (*m_sort_type >= m_sort_options->GetCount())
 		{
 			*m_sort_type = 0;
 		}
