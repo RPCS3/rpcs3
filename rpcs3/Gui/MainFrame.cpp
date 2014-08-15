@@ -17,6 +17,7 @@
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
 #include "Gui/AutoPauseManager.h"
+#include "Gui/SaveDataUtility.h"
 #include <wx/dynlib.h>
 
 #include "Loader/PKG.h"
@@ -39,6 +40,7 @@ enum IDs
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
 	id_config_autopause_manager,
+	id_config_savedata_manager,
 	id_tools_compiler,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
@@ -90,7 +92,8 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_autopause_manager, "Auto-Pause Settings");
 	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
-	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");	
+	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
+	menu_conf->Append(id_config_savedata_manager, "Save Data Utility");
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
@@ -128,6 +131,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
@@ -618,6 +622,11 @@ void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
 {
 	AutoPauseManagerDialog(this).ShowModal();
+}
+
+void MainFrame::ConfigSaveData(wxCommandEvent& event)
+{
+	SaveDataListDialog(this, true).ShowModal();
 }
 
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
