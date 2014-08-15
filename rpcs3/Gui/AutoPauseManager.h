@@ -25,7 +25,6 @@ public:
 	void OnClear(wxCommandEvent& event);
 	void OnReload(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
-	//void OnClose(wxCommandEvent& event);
 	
 	void LoadEntries(void);
 	void SaveEntries(void);

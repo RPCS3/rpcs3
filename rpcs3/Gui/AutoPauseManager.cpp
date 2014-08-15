@@ -13,7 +13,6 @@ enum
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Auto-Pause Manager")
 {
-	//SetSizeHints(wxSize(400, 300), wxDefaultSize);
 	SetMinSize(wxSize(400, 360));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
@@ -52,7 +51,6 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	Bind(wxEVT_BUTTON, &AutoPauseManagerDialog::OnClear, this, wxID_CLEAR);
 	Bind(wxEVT_BUTTON, &AutoPauseManagerDialog::OnReload, this, wxID_REFRESH);
 	Bind(wxEVT_BUTTON, &AutoPauseManagerDialog::OnSave, this, wxID_SAVE);
-	//Bind(wxEVT_BUTTON, &AutoPauseManagerDialog::OnClose, this, wxID_CLOSE);
 
 	Emu.Stop();
 
@@ -60,7 +58,6 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	UpdateList();
 
 	SetSizerAndFit(s_main);
-	//SetSize(wxSize(400, 360));
 	Layout();
 	Centre(wxBOTH);
 }

@@ -177,6 +177,7 @@
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
+    <ClCompile Include="Gui\SaveDataUtility.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
@@ -221,6 +222,7 @@
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />
     <ClInclude Include="Gui\RSXDebugger.h" />
+    <ClInclude Include="Gui\SaveDataUtility.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />
