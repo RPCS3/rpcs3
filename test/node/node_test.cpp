@@ -258,5 +258,16 @@ TEST(NodeTest, CloneNull) {
   Node clone = Clone(node);
   EXPECT_EQ(NodeType::Null, clone.Type());
 }
+
+TEST(NodeTest, KeyNodeExitsScope) {
+  Node node;
+  {
+    Node temp("Hello, world");
+    node[temp] = 0;
+  }
+  for (const auto &kv : node) {
+    (void)kv;
+  }
+}
 }
 }
