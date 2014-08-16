@@ -1320,7 +1320,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		case 2: m_surface_pitch_a  = ARGS(1);
 		}
 
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
 		m_width = re(buffers[m_gcm_current_buffer].width);
 		m_height = re(buffers[m_gcm_current_buffer].height);
 

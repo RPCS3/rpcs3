@@ -238,17 +238,17 @@ struct CellGcmSurface
 	u8 colorFormat;
 	u8 colorTarget;
 	u8 colorLocation[4];
-	u32 colorOffset[4];
-	u32 colorPitch[4];
+	be_t<u32> colorOffset[4];
+	be_t<u32> colorPitch[4];
 	u8 depthFormat;
 	u8 depthLocation;
 	u8 _padding[2];
-	u32 depthOffset;
-	u32 depthPitch;
-	u16 width;
-	u16 height;
-	u16 x;
-	u16 y;
+	be_t<u32> depthOffset;
+	be_t<u32> depthPitch;
+	be_t<u16> width;
+	be_t<u16> height;
+	be_t<u16> x;
+	be_t<u16> y;
 };
 
 struct CellGcmReportData
@@ -266,6 +266,14 @@ struct CellGcmZcullInfo
 	u32 offset;
 	u32 status0;
 	u32 status1;
+};
+
+struct CellGcmDisplayInfo
+{
+	be_t<u32> offset;
+	be_t<u32> pitch;
+	be_t<u32> width;
+	be_t<u32> height;
 };
 
 struct CellGcmTileInfo

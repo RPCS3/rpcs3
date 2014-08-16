@@ -14,7 +14,7 @@
 	#define CMD_LOG(...)
 #endif
 
-gcmBuffer gcmBuffers[8];
+CellGcmDisplayInfo gcmBuffers[8];
 GLuint g_flip_tex, g_depth_tex, g_pbo[6];
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
@@ -1272,13 +1272,13 @@ void GLGSRender::Flip()
 		if (m_read_buffer)
 		{
 			format = GL_BGRA;
-			gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-			u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
+			CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 			if (Memory.IsGoodAddr(addr))
 			{
-				width = re(buffers[m_gcm_current_buffer].width);
-				height = re(buffers[m_gcm_current_buffer].height);
+				width = buffers[m_gcm_current_buffer].width;
+				height = buffers[m_gcm_current_buffer].height;
 				src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
 			}
 			else
