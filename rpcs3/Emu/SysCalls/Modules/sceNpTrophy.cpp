@@ -8,6 +8,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/FS/vfsDir.h"
 
+#include "cellRtc.h"
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 

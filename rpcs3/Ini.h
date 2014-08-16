@@ -152,6 +152,10 @@ public:
 	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
 
+	//Auto-Pause
+	IniEntry<bool> DBGAutoPauseSystemCall;
+	IniEntry<bool> DBGAutoPauseFunctionCall;
+
 	// Language
 	IniEntry<u8> SysLanguage;
 
@@ -217,6 +221,10 @@ public:
 		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
 
+		// Auto-Pause
+		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
+		DBGAutoPauseSystemCall.Init("DBG_AutoPauseSystemCall", path);
+
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
 	}
@@ -277,6 +285,9 @@ public:
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
 		HLEAlwaysStart.Load(true);
+		//Auto-Pause
+		DBGAutoPauseFunctionCall.Load(false);
+		DBGAutoPauseSystemCall.Load(false);
 
 		// Language
 		SysLanguage.Load(1);
@@ -339,6 +350,9 @@ public:
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		HLEAlwaysStart.Save();
+		//Auto-Pause
+		DBGAutoPauseFunctionCall.Save();
+		DBGAutoPauseSystemCall.Save();
 
 		// Language
 		SysLanguage.Save();

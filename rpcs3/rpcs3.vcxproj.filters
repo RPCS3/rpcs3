@@ -96,6 +96,12 @@
     <ClCompile Include="Gui\ConLogFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\AutoPauseManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\SaveDataUtility.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -202,6 +208,12 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\MTRingbuffer.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\AutoPauseManager.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SaveDataUtility.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

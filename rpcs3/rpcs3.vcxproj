@@ -164,6 +164,7 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\DbgCommand.cpp" />
+    <ClCompile Include="Gui\AutoPauseManager.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
+    <ClCompile Include="Gui\SaveDataUtility.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
@@ -206,6 +208,7 @@
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
+    <ClInclude Include="Gui\AutoPauseManager.h" />
     <ClInclude Include="Gui\CompilerELF.h" />
     <ClInclude Include="Gui\ConLogFrame.h" />
     <ClInclude Include="Gui\Debugger.h" />
@@ -219,6 +222,7 @@
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />
     <ClInclude Include="Gui\RSXDebugger.h" />
+    <ClInclude Include="Gui\SaveDataUtility.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />

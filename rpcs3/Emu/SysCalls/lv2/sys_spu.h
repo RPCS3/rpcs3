@@ -4,9 +4,32 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 enum
 {
+	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
+	SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL = 0x01,
+	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM = 0x02,
+	SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER = 0x04,
+	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT = 0x08,
+	SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT = 0x18,
+	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20
+};
+
+enum
+{
 	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT = 0x0001,
 	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
 	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
+};
+
+enum {
+	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
+	SPU_THREAD_GROUP_STATUS_INITIALIZED,
+	SPU_THREAD_GROUP_STATUS_READY,
+	SPU_THREAD_GROUP_STATUS_WAITING,
+	SPU_THREAD_GROUP_STATUS_SUSPENDED,
+	SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED,
+	SPU_THREAD_GROUP_STATUS_RUNNING,
+	SPU_THREAD_GROUP_STATUS_STOPPED,
+	SPU_THREAD_GROUP_STATUS_UNKNOWN
 };
 
 enum
@@ -65,6 +88,8 @@ struct SpuGroupInfo
 	int m_type;
 	int m_ct;
 	u32 m_count;
+	int m_state;	//SPU Thread Group State.
+	int m_exit_status;
 
 	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct) 
 		: m_name(name)
@@ -74,8 +99,11 @@ struct SpuGroupInfo
 		, lock(0)
 		, m_count(num)
 	{
+		m_state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED;	//Before all the nums done, it is not initialized.
 		list.resize(256);
 		for (auto& v : list) v = 0;
+		m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;	//Then Ready to Start. Cause Reference use New i can only place this here.
+		m_exit_status = 0;
 	}
 };
 
@@ -88,6 +116,8 @@ s32 sys_spu_thread_group_destroy(u32 id);
 s32 sys_spu_thread_group_start(u32 id);
 s32 sys_spu_thread_group_suspend(u32 id);
 s32 sys_spu_thread_group_resume(u32 id);
+s32 sys_spu_thread_group_yield(u32 id);	
+s32 sys_spu_thread_group_terminate(u32 id, int value);
 s32 sys_spu_thread_group_create(mem32_t id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr);
 s32 sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
 s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
