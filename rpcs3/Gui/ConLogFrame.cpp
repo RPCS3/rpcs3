@@ -2,6 +2,7 @@
 
 #include <wx/listctrl.h>
 #include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #include <fstream>
 #include <vector>
 #include <mutex>
