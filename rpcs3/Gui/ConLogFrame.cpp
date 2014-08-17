@@ -180,7 +180,7 @@ void LogFrame::OnRightClick(wxMouseEvent& event)
 {
 	wxMenu* menu = new wxMenu();
 
-	menu->Append(id_log_copy, "&Copy Ctrl+C");
+	menu->Append(id_log_copy, "&Copy");
 	menu->AppendSeparator();
 	menu->Append(id_log_clear, "C&lear");
 

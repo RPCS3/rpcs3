@@ -52,7 +52,7 @@ void SaveDataInfoDialog::UpdateData()
 	m_list->SetItem(3, 1, "Stub it first");
 
 	m_list->InsertItem(4, 4);
-	m_list->SetItem(4, 0, "Copy-Able?");
+	m_list->SetItem(4, 0, "Copyable");
 	m_list->SetItem(4, 1, "1 (Not allowed)");
 
 	m_list->InsertItem(5, 5);
@@ -105,7 +105,7 @@ SaveDataManageDialog::SaveDataManageDialog(wxWindow* parent, unsigned int* sort_
 	m_sort_options->SetSelection(*m_sort_type);
 	s_sort->Add(m_sort_options, 1, wxALL | wxEXPAND, 5);
 
-	wxButton* s_sort_action = new wxButton(this, wxID_ANY, wxT("&Apply!"), wxDefaultPosition, wxDefaultSize, 0);
+	wxButton* s_sort_action = new wxButton(this, wxID_ANY, wxT("&Apply"), wxDefaultPosition, wxDefaultSize, 0);
 	s_sort_action->Bind(wxEVT_BUTTON, &SaveDataManageDialog::OnApplySort, this);
 	s_sort->Add(s_sort_action, 0, wxALL, 5);
 	
@@ -173,8 +173,7 @@ SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 
 	m_entry_convert.clear();
 	m_entry_convert.str("");
-	m_entry_convert << "This is only a stub now. Don't expect real effect from this."
-		<< "Cause related functions hasn't been implemented yet.";
+	m_entry_convert << "This is only a stub for now. This doesn't work yet due to related functions not being implemented.";
 	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(), wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);

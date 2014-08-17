@@ -33,8 +33,8 @@ struct sceNpTrophyInternalContext
 
 	std::unique_ptr<TROPUSRLoader> tropusr;
 
-//TODO: remove the following code when Visual C++ no longer generates
-//compiler errors for it. All of this should be auto-generated
+// TODO: remove the following code when Visual C++ no longer generates
+//       compiler errors for it. All of this should be auto-generated
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 	sceNpTrophyInternalContext()
 		: trp_stream(),
