@@ -904,10 +904,10 @@ int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<C
 	}
 
 	rescSrc->format  = textureFormat;
-	rescSrc->pitch   = re(gcmSurface->colorPitch[0]);
-	rescSrc->width   = re(gcmSurface->width)  * xW;
-	rescSrc->height  = re(gcmSurface->height) * xH;
-	rescSrc->offset  = re(gcmSurface->colorOffset[0]);
+	rescSrc->pitch   = gcmSurface->colorPitch[0];
+	rescSrc->width   = gcmSurface->width  * xW;
+	rescSrc->height  = gcmSurface->height * xH;
+	rescSrc->offset  = gcmSurface->colorOffset[0];
 
 	return CELL_OK;
 }

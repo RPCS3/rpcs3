@@ -33,14 +33,6 @@ struct GSInfo
 	}
 };
 
-struct gcmBuffer
-{
-	u32 offset;
-	u32 pitch;
-	u32 width;
-	u32 height;
-};
-
 class GSManager
 {
 	GSInfo m_info;

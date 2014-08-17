@@ -7,7 +7,7 @@ enum
 	CELL_GCM_ERROR_INVALID_ENUM      = 0x80210002,
 	CELL_GCM_ERROR_INVALID_VALUE     = 0x80210003,
 	CELL_GCM_ERROR_INVALID_ALIGNMENT = 0x80210004,
-	CELL_GCM_ERROR_ADDRESS_OVERWRAP  = 0x80210005
+	CELL_GCM_ERROR_ADDRESS_OVERWRAP  = 0x80210005,
 };
 
 struct gcm_offset
@@ -18,6 +18,8 @@ struct gcm_offset
 
 // Auxiliary functions
 void InitOffsetTable();
+u32 gcmGetLocalMemorySize();
+
 
 // SysCalls
 s32 cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id);
