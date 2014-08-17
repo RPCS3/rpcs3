@@ -16,7 +16,7 @@ AutoPause& AutoPause::getInstance(void)
 	return *gAutoPause;
 }
 
-//Still use binary format. Default Setting should be "disable all auto-pause".
+//Still use binary format. Default Setting should be "disable all auto pause".
 AutoPause::AutoPause(void)
 {
 	m_pause_function.reserve(16);
@@ -36,7 +36,7 @@ AutoPause::~AutoPause(void)
 	m_pause_syscall_enable = false;
 }
 
-//Load Auto-Pause Configuration from file "pause.bin"
+//Load Auto Pause Configuration from file "pause.bin"
 //This would be able to create in a GUI window.
 void AutoPause::Reload(void)
 {
@@ -65,19 +65,19 @@ void AutoPause::Reload(void)
 				//Less than 1024 - be regarded as a system call.
 				//emplace_back may not cause reductant move/copy operation.
 				m_pause_syscall.emplace_back(num);
-				LOG_WARNING(HLE, "Auto-Pause: Find System Call ID %x", num);
+				LOG_WARNING(HLE, "Auto Pause: Find System Call ID %x", num);
 			}
 			else
 			{
 				m_pause_function.emplace_back(num);
-				LOG_WARNING(HLE, "Auto-Pause: Find Function Call ID %x", num);
+				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID %x", num);
 			}
 		}
 		list.Close();
 	}
 	else
 	{
-		LOG_WARNING(HLE, "No Pause ID specified in pause.bin, Auto-Pause would not act.");
+		LOG_WARNING(HLE, "No pause.bin found, Auto Pause will not work.");
 	}
 	m_pause_syscall_enable = Ini.DBGAutoPauseSystemCall.GetValue();
 	m_pause_function_enable = Ini.DBGAutoPauseFunctionCall.GetValue();
@@ -99,7 +99,7 @@ void AutoPause::TryPause(u32 code) {
 			if (code == m_pause_syscall[i])
 			{
 				Emu.Pause();
-				LOG_ERROR(HLE, "Auto-Pause Triggered: System call %x", code);	//Used Error
+				LOG_ERROR(HLE, "Auto Pause Triggered: System call %x", code);	//Used Error
 			}
 		}
 	}
@@ -117,7 +117,7 @@ void AutoPause::TryPause(u32 code) {
 			if (code == m_pause_function[i])
 			{
 				Emu.Pause();
-				LOG_ERROR(HLE, "Auto-Pause Triggered: Function call %x", code);	//Used Error
+				LOG_ERROR(HLE, "Auto Pause Triggered: Function call %x", code);	//Used Error
 			}
 		}
 	}

@@ -11,7 +11,7 @@ enum
 
 //TODO::Get the enable configuration from ini.
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Auto-Pause Manager")
+	: wxDialog(parent, wxID_ANY, "Auto Pause Manager")
 {
 	SetMinSize(wxSize(400, 360));
 
@@ -19,8 +19,7 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 
 	m_entry_convert.clear();
 	m_entry_convert.str("");
-	m_entry_convert << "To use Auto-Pause: need the IDs of Function call or System call. Need Restart game."
-		<< " Disable/enable using setting Misc.";
+	m_entry_convert << "To use auto pause: enter the ID(s) of a function or a system call. Restart of the game is required to apply. You can enable/disable this in the settings.";
 
 	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(),wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
@@ -197,7 +196,7 @@ void AutoPauseManagerDialog::OnRemove(wxCommandEvent& event)
 void AutoPauseManagerDialog::OnSave(wxCommandEvent& event)
 {
 	SaveEntries();
-	LOG_SUCCESS(HLE,"Auto-Pause: File pause.bin was updated.");
+	LOG_SUCCESS(HLE,"Auto Pause: File pause.bin was updated.");
 	//event.Skip();
 }
 
@@ -214,7 +213,7 @@ void AutoPauseManagerDialog::OnReload(wxCommandEvent& event)
 }
 
 AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
-	: wxDialog(parent, wxID_ANY, "Auto-Pause Setting")
+	: wxDialog(parent, wxID_ANY, "Auto Pause Setting")
 	, m_presult(entry)
 {
 	m_entry = *m_presult;
@@ -225,8 +224,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 	m_entry_convert.clear();
 	m_entry_convert.str("");
-	m_entry_convert << "Specify ID of System Call or Function Call below."
-		<< " Please remember give the Hexidemical id.";
+	m_entry_convert << "Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID.";
 
 	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(), wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
@@ -249,7 +247,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 	m_entry_convert << std::hex << std::setw(8) << std::setfill('0') << m_entry;
 	m_id->SetValue(m_entry_convert.str());
 
-	SetTitle("Auto-Pause Setting: "+m_entry_convert.str());
+	SetTitle("Auto Pause Setting: "+m_entry_convert.str());
 
 	Bind(wxEVT_BUTTON, &AutoPauseSettingsDialog::OnOk, this, wxID_OK);
 	Bind(wxEVT_TEXT, &AutoPauseSettingsDialog::OnUpdateValue, this, wxID_STATIC);
