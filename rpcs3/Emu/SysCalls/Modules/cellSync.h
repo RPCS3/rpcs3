@@ -136,6 +136,21 @@ struct CellSyncLFQueue
 	{
 		return *reinterpret_cast<u32*>((u8*)this + 0x8);
 	}
+
+	volatile u64& m_pop1()
+	{
+		return *reinterpret_cast<u64*>((u8*)this + 0x0);
+	}
+
+	volatile u32& m_pop2()
+	{
+		return *reinterpret_cast<u32*>((u8*)this + 0x50);
+	}
+
+	volatile u32& m_pop3()
+	{
+		return *reinterpret_cast<u32*>((u8*)this + 0x0);
+	}
 };
 
 static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");
