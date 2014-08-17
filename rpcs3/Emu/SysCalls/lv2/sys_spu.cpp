@@ -457,6 +457,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		}
 	}
 
+	group_info->m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group_info->lock = 0; // release lock	TODO: this LOCK may be replaced.
 	return CELL_OK;
 }
