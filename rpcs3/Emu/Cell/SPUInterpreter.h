@@ -61,17 +61,6 @@ private:
 	void MFSPR(u32 rt, u32 sa)
 	{
 		UNIMPLEMENTED();
-		//If register is a dummy register (register labeled 0x0)
-		if(sa == 0x0)
-		{
-			CPU.GPR[rt]._u128.hi = 0x0;
-			CPU.GPR[rt]._u128.lo = 0x0;
-		}
-		else
-		{
-			CPU.GPR[rt]._u128.hi =  CPU.SPR[sa]._u128.hi;
-			CPU.GPR[rt]._u128.lo =  CPU.SPR[sa]._u128.lo;
-		}
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -267,11 +256,7 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		if(sa != 0)
-		{
-			CPU.SPR[sa]._u128.hi = CPU.GPR[rt]._u128.hi;
-			CPU.SPR[sa]._u128.lo = CPU.GPR[rt]._u128.lo;
-		}
+		UNIMPLEMENTED();
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
