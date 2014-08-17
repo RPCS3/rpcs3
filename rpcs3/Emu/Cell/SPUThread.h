@@ -271,25 +271,6 @@ union SPU_GPR_hdr
 	}
 };
 
-union SPU_SPR_hdr
-{
-	u32 _u32[4];
-	u128 _u128;
-	s128 _i128;
-
-	SPU_SPR_hdr() {}
-
-	std::string ToString() const
-	{
-		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
-	}
-
-	void Reset()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-};
-
 union SPU_SNRConfig_hdr
 {
 	u64 value;
