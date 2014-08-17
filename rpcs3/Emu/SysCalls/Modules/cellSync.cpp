@@ -1066,29 +1066,26 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 					}
 					res = CELL_OK;
 				}
+				else if (!isBlocking)
+				{
+					res = CELL_SYNC_ERROR_AGAIN;
+					if (!new_queue.m_h7.ToBE() || res)
+					{
+						return res;
+					}
+					break;
+				}
+				else if (!useEventQueue)
+				{
+					continue;
+				}
 				else
 				{
-					if (!isBlocking)
+					res = CELL_OK;
+					new_queue.m_h7 = 3;
+					if (isBlocking != 3)
 					{
-						res = CELL_SYNC_ERROR_AGAIN;
-						if (!new_queue.m_h7.ToBE() || res)
-						{
-							return res;
-						}
 						break;
-					}
-					else if (!useEventQueue)
-					{
-						continue;
-					}
-					else
-					{
-						res = CELL_OK;
-						new_queue.m_h7 = 3;
-						if (isBlocking != 3)
-						{
-							break;
-						}
 					}
 				}
 			}
@@ -1158,8 +1155,9 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 		new_queue.m_push2() = old_data;
 
 		const u32 old_data2 = queue->m_push3();
+		new_queue.m_push3() = old_data2;
 
-		s32 var1 = pointer - (u16)queue->m_h5;
+		s32 var1 = pointer - (u16)new_queue.m_h5;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
@@ -1181,7 +1179,7 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)queue->m_h6);
+		s32 var9 = ~(var9_ | (u16)new_queue.m_h6);
 		// count leading zeros in u16
 		{
 			u16 v = var9;
@@ -1194,7 +1192,7 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 			}
 		}
 		
-		s32 var5 = (s32)(u16)queue->m_h6 | var9_;
+		s32 var5 = (s32)(u16)new_queue.m_h6 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1204,13 +1202,13 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)queue->m_h5 + var9;
+		s32 var3 = (u16)new_queue.m_h5 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		const u16 pack = new_queue.m_hs[0]; // three packed 5-bit fields
+		u16 pack = new_queue.m_hs[0]; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1260,11 +1258,12 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 
 		if (InterlockedCompareExchange(&queue->m_push2(), new_queue.m_push2(), old_data) == old_data)
 		{
-			// break;
 			assert(var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+				bool exch = InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2;
+				assert(exch);
+				if (exch)
 				{
 					assert(fpSendSignal);
 					return fpSendSignal((u64)queue->m_eaSignal, var6);
@@ -1272,17 +1271,13 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 			}
 			else
 			{
-				const u16 pack2 = queue->m_hs[0];
-				if ((pack2 & 0x1f) == ((pack >> 10) & 0x1f))
+				pack = queue->m_hs[0];
+				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
 					if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
 					{
 						return CELL_OK;
 					}
-				}
-				else
-				{
-					assert(queue->m_push3() == old_data2);
 				}
 			}
 		}
@@ -1461,29 +1456,26 @@ s32 syncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32
 					}
 					res = CELL_OK;
 				}
+				else if (!isBlocking)
+				{
+					res = CELL_SYNC_ERROR_AGAIN;
+					if (!new_queue.m_h3.ToBE() || res)
+					{
+						return res;
+					}
+					break;
+				}
+				else if (!useEventQueue)
+				{
+					continue;
+				}
 				else
 				{
-					if (!isBlocking)
+					res = CELL_OK;
+					new_queue.m_h3 = 3;
+					if (isBlocking != 3)
 					{
-						res = CELL_SYNC_ERROR_AGAIN;
-						if (!new_queue.m_h3.ToBE() || res)
-						{
-							return res;
-						}
 						break;
-					}
-					else if (!useEventQueue)
-					{
-						continue;
-					}
-					else
-					{
-						res = CELL_OK;
-						new_queue.m_h3 = 3;
-						if (isBlocking != 3)
-						{
-							break;
-						}
 					}
 				}
 			}
@@ -1539,9 +1531,7 @@ s32 _cellSyncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, mem32_t poi
 
 s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
-	assert(0); // TODO
-
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_SPU2PPU))
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1550,19 +1540,20 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_push2(), 0, 0);
+		const u32 old_data = InterlockedCompareExchange(&queue->m_pop2(), 0, 0);
 		CellSyncLFQueue new_queue;
-		new_queue.m_push2() = old_data;
+		new_queue.m_pop2() = old_data;
 
-		const u32 old_data2 = queue->m_push3();
+		const u32 old_data2 = queue->m_pop3();
+		new_queue.m_pop3() = old_data2;
 
-		s32 var1 = pointer - (u16)queue->m_h5;
+		s32 var1 = pointer - (u16)new_queue.m_h1;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
 		}
 
-		s32 var2 = (s32)(s16)queue->m_h4 - (s32)(u16)queue->m_h1;
+		s32 var2 = (s32)(s16)queue->m_h8 - (s32)(u16)queue->m_h5;
 		if (var2 < 0)
 		{
 			var2 += depth * 2;
@@ -1578,7 +1569,7 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)queue->m_h6);
+		s32 var9 = ~(var9_ | (u16)new_queue.m_h2);
 		// count leading zeros in u16
 		{
 			u16 v = var9;
@@ -1591,7 +1582,7 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 			}
 		}
 
-		s32 var5 = (s32)(u16)queue->m_h6 | var9_;
+		s32 var5 = (s32)(u16)new_queue.m_h2 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1601,13 +1592,13 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)queue->m_h5 + var9;
+		s32 var3 = (u16)new_queue.m_h1 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		const u16 pack = new_queue.m_hs[0]; // three packed 5-bit fields
+		u16 pack = new_queue.m_hs[16]; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1616,7 +1607,11 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 		}
 
 		u32 var6;
-		if (var2 + var4 <= 15 && ((pack >> 10) & 0x1f) != (pack & 0x1f))
+		if (noQueueFull || var2 + var4 > 15 || ((pack >> 10) & 0x1f) == (pack & 0x1f))
+		{
+			var6 = -1;
+		}
+		else
 		{
 			s32 var8 = (pack & 0x1f) - ((pack >> 10) & 0x1f);
 			if (var8 < 0)
@@ -1646,22 +1641,18 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 			}
 
 			new_queue.m_hs[0] = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs[1 + 2 * var11];
-		}
-		else
-		{
-			var6 = -1;
+			var6 = (u16)queue->m_hs[17 + 2 * var11];
 		}
 
 		s32 var7 = (var3 << 16) | (var5 & 0xffff);
 
-		if (InterlockedCompareExchange(&queue->m_push2(), new_queue.m_push2(), old_data) == old_data)
+		if (InterlockedCompareExchange(&queue->m_pop2(), new_queue.m_pop2(), old_data) == old_data)
 		{
-			// break;
-			assert(var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+				bool exch = InterlockedCompareExchange(&queue->m_pop3(), re32(var7), old_data2) == old_data2;
+				assert(exch);
+				if (exch)
 				{
 					assert(fpSendSignal);
 					return fpSendSignal((u64)queue->m_eaSignal, var6);
@@ -1669,17 +1660,13 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 			}
 			else
 			{
-				const u16 pack2 = queue->m_hs[0];
-				if ((pack2 & 0x1f) == ((pack >> 10) & 0x1f))
+				pack = queue->m_hs[16];
+				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
-					if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+					if (InterlockedCompareExchange(&queue->m_pop3(), re32(var7), old_data2) == old_data2)
 					{
 						return CELL_OK;
 					}
-				}
-				else
-				{
-					assert(queue->m_push3() == old_data2);
 				}
 			}
 		}
@@ -1776,7 +1763,7 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 	s32 res;
 	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 	{
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 		res = GetCurrentPPUThread().FastCall(libsre + 0x2CA8, queue.GetAddr(), position, 0, 0);
 #else
 		res = syncLFQueueCompletePopPointer(queue, position, nullptr, 0);
