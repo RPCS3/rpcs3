@@ -383,8 +383,6 @@ int cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
 	sys_io->Log("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if ((port_setting < CELL_PAD_SETTING_PRESS_ON) || port_setting >(CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON) && port_setting != 0)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
