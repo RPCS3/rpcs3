@@ -14,7 +14,6 @@
 	#define CMD_LOG(...)
 #endif
 
-CellGcmDisplayInfo gcmBuffers[8];
 GLuint g_flip_tex, g_depth_tex, g_pbo[6];
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
