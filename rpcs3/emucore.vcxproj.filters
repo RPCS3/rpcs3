@@ -1156,5 +1156,8 @@
     <ClInclude Include="..\Utilities\AutoPause.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
