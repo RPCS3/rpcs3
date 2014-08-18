@@ -220,13 +220,15 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 	return CR_SO;
 }
 
-u64 PPUThread::FastCall(u64 addr, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
+u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
 	auto old_LR = LR;
+	auto old_rtoc = GPR[2];
 
 	PC = addr;
+	GPR[2] = rtoc;
 	GPR[3] = arg1;
 	GPR[4] = arg2;
 	GPR[5] = arg3;
@@ -239,6 +241,7 @@ u64 PPUThread::FastCall(u64 addr, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 ar
 
 	Task();
 
+	GPR[2] = old_rtoc;
 	LR = old_LR;
 	PC = old_PC;
 	m_status = old_status;
