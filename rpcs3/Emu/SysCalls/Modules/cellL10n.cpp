@@ -116,7 +116,7 @@ bool _L10nCodeParse(int code, std::string& retCode)
 
 //translate code id to code name.
 //If this makes your compilation fail, try replace the string code with one in "iconv -l"
-bool _L10nCodeParse(int code, UINT& retCode)
+bool _L10nCodeParse(int code, unsigned int & retCode)
 {
 	retCode = 0;
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
@@ -185,7 +185,7 @@ bool _L10nCodeParse(int code, UINT& retCode)
 #ifdef _MSC_VER
 
 //Use code page to transform std::string to std::wstring.
-int _OEM2Wide(UINT oem_code, const std::string src, std::wstring& dst)
+int _OEM2Wide(unsigned int oem_code, const std::string src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
 	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
@@ -199,7 +199,7 @@ int _OEM2Wide(UINT oem_code, const std::string src, std::wstring& dst)
 }
 
 //Use Code page to transform std::wstring to std::string.
-int _Wide2OEM(UINT oem_code, const std::wstring src, std::string& dst)
+int _Wide2OEM(unsigned int oem_code, const std::wstring src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
 	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
@@ -213,7 +213,7 @@ int _Wide2OEM(UINT oem_code, const std::wstring src, std::string& dst)
 }
 
 //Convert Codepage to Codepage (all char*)
-std::string _OemToOem(UINT src_code, UINT dst_code, const std::string str)
+std::string _OemToOem(unsigned int src_code, unsigned int dst_code, const std::string str)
 {
 	std::wstring wide; std::string result;
 	_OEM2Wide(src_code, str, wide);
@@ -226,7 +226,7 @@ std::string _OemToOem(UINT src_code, UINT dst_code, const std::string str)
 //The Char -> Char Execution of this function has already been tested using VS and CJK text with encoding.
 int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_code, void *dst, size_t * dst_len)
 {
-	UINT srcCode = 0, dstCode = 0;	//OEM code pages
+	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
 
@@ -284,7 +284,7 @@ int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, 
 		src_code, src.GetAddr(), src_len.GetValue(), dst_code, dst.GetAddr(), dst_len.GetValue());
 	LOG_ERROR(HLE, "L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)Memory.VirtualToRealAddr(src.GetAddr())));
 #ifdef _MSC_VER
-	UINT srcCode = 0, dstCode = 0;	//OEM code pages
+	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
 
