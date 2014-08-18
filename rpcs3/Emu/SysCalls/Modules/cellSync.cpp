@@ -16,10 +16,8 @@ Module *cellSync = nullptr;
 u32 libsre = 0;
 #endif
 
-s32 cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
+s32 syncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 {
-	cellSync->Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.GetAddr());
-
 	if (!mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -33,6 +31,13 @@ s32 cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
 	mutex->m_data() = 0;
 	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
 	return CELL_OK;
+}
+
+s32 cellSyncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
+{
+	cellSync->Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.GetAddr());
+
+	return syncMutexInitialize(mutex);
 }
 
 s32 cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
@@ -139,10 +144,8 @@ s32 cellSyncMutexUnlock(mem_ptr_t<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-s32 cellSyncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_count)
+s32 syncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_count)
 {
-	cellSync->Log("cellSyncBarrierInitialize(barrier_addr=0x%x, total_count=%d)", barrier.GetAddr(), total_count);
-
 	if (!barrier)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -161,6 +164,13 @@ s32 cellSyncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_coun
 	barrier->m_count = total_count;
 	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
 	return CELL_OK;
+}
+
+s32 cellSyncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_count)
+{
+	cellSync->Log("cellSyncBarrierInitialize(barrier_addr=0x%x, total_count=%d)", barrier.GetAddr(), total_count);
+
+	return syncBarrierInitialize(barrier, total_count);
 }
 
 s32 cellSyncBarrierNotify(mem_ptr_t<CellSyncBarrier> barrier)
@@ -335,10 +345,8 @@ s32 cellSyncBarrierTryWait(mem_ptr_t<CellSyncBarrier> barrier)
 	return CELL_OK;
 }
 
-s32 cellSyncRwmInitialize(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size)
+s32 syncRwmInitialize(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size)
 {
-	cellSync->Log("cellSyncRwmInitialize(rwm_addr=0x%x, buffer_addr=0x%x, buffer_size=0x%x)", rwm.GetAddr(), buffer_addr, buffer_size);
-
 	if (!rwm || !buffer_addr)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -358,6 +366,13 @@ s32 cellSyncRwmInitialize(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr, u32 buffe
 	rwm->m_addr = (u64)buffer_addr;
 	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
 	return CELL_OK;
+}
+
+s32 cellSyncRwmInitialize(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size)
+{
+	cellSync->Log("cellSyncRwmInitialize(rwm_addr=0x%x, buffer_addr=0x%x, buffer_size=0x%x)", rwm.GetAddr(), buffer_addr, buffer_size);
+
+	return syncRwmInitialize(rwm, buffer_addr, buffer_size);
 }
 
 s32 cellSyncRwmRead(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
@@ -545,10 +560,8 @@ s32 cellSyncRwmTryWrite(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr)
 	return CELL_OK;
 }
 
-s32 cellSyncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth)
+s32 syncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth)
 {
-	cellSync->Log("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.GetAddr(), buffer_addr, size, depth);
-
 	if (!queue)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -573,6 +586,13 @@ s32 cellSyncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32
 	queue->m_addr = (u64)buffer_addr;
 	InterlockedCompareExchange(&queue->m_data(), 0, 0);
 	return CELL_OK;
+}
+
+s32 cellSyncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth)
+{
+	cellSync->Log("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.GetAddr(), buffer_addr, size, depth);
+
+	return syncQueueInitialize(queue, buffer_addr, size, depth);
 }
 
 s32 cellSyncQueuePush(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr)
@@ -1006,6 +1026,168 @@ void syncLFQueueDump(mem_ptr_t<CellSyncLFQueue> queue)
 	{
 		LOG_NOTICE(HLE, "*** 0x%.16llx 0x%.16llx", Memory.Read64(queue.GetAddr() + i * 16), Memory.Read64(queue.GetAddr() + i * 16 + 8));
 	}
+}
+
+void syncLFQueueInit(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
+{
+	queue->m_h1 = 0;
+	queue->m_h2 = 0;
+	queue->m_h4 = 0;
+	queue->m_h5 = 0;
+	queue->m_h6 = 0;
+	queue->m_h8 = 0;
+	queue->m_size = size;
+	queue->m_depth = depth;
+	queue->m_buffer = (u64)buffer_addr;
+	queue->m_direction = direction;
+	for (u32 i = 0; i < sizeof(queue->m_hs) / sizeof(queue->m_hs[0]); i++)
+	{
+		queue->m_hs[i] = 0;
+	}
+	queue->m_eaSignal = (u64)eaSignal_addr;
+
+	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
+	{
+		queue->m_h3 = 0;
+		queue->m_h7 = 0;
+		queue->m_buffer = (u64)buffer_addr | 1;
+		queue->m_bs[0] = -1;
+		queue->m_bs[1] = -1;
+		//m_bs[2]
+		//m_bs[3]
+		queue->m_v1 = -1;
+		queue->m_hs[0] = -1;
+		queue->m_hs[16] = -1;
+		queue->m_v2 = 0;
+		queue->m_v3 = 0;
+	}
+	else
+	{
+		//m_h3
+		//m_h7
+		queue->m_bs[0] = -1; // written as u32
+		queue->m_bs[1] = -1;
+		queue->m_bs[2] = -1;
+		queue->m_bs[3] = -1;
+		queue->m_v1 = 0;
+		queue->m_v2 = 0; // written as u64
+		queue->m_v3 = 0;
+	}
+}
+
+s32 syncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
+{
+#ifdef PRX_DEBUG_XXX
+	return GetCurrentPPUThread().FastCall(libsre + 0x205C, queue.GetAddr(), buffer_addr, size, depth, direction, eaSignal_addr);
+#else
+
+	if (!queue)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (size)
+	{
+		if (!buffer_addr)
+		{
+			return CELL_SYNC_ERROR_NULL_POINTER;
+		}
+		if (size > 0x4000 || size % 16)
+		{
+			return CELL_SYNC_ERROR_INVAL;
+		}
+	}
+	if (!depth || (depth >> 15) || direction > 3)
+	{
+		return CELL_SYNC_ERROR_INVAL;
+	}
+	if (queue.GetAddr() % 128 || buffer_addr % 16)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// prx: get sdk version of current process, return non-zero result of sys_process_get_sdk_version
+	s32 sdk_ver;
+	s32 ret = process_get_sdk_version(process_getpid(), sdk_ver);
+	if (ret != CELL_OK)
+	{
+		return ret;
+	}
+	if (sdk_ver == -1)
+	{
+		sdk_ver = 0x460000;
+	}
+
+	// prx: reserve u32 at 0x2c offset
+	u32 old_value;
+	while (true)
+	{
+		const u32 old_data = queue->m_data();
+		CellSyncLFQueue new_data;
+		new_data.m_data() = old_data;
+
+		if (old_data)
+		{
+			if (sdk_ver > 0x17ffff && old_data != se32(2))
+			{
+				return CELL_SYNC_ERROR_STAT;
+			}
+			old_value = old_data;
+		}
+		else
+		{
+			if (sdk_ver > 0x17ffff)
+			{
+				for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i++)
+				{
+					if ((u64&)Memory[queue.GetAddr() + i * sizeof(u64)])
+					{
+						return CELL_SYNC_ERROR_STAT;
+					}
+				}
+			}
+			new_data.m_data() = se32(1);
+			old_value = se32(1);
+		}
+
+		if (InterlockedCompareExchange(&queue->m_data(), new_data.m_data(), old_data) == old_data) break;
+	}
+
+	if (old_value == se32(2))
+	{
+		if ((u32)queue->m_size != size || (u32)queue->m_depth != depth || (u64)queue->m_buffer != (u64)buffer_addr)
+		{
+			return CELL_SYNC_ERROR_INVAL;
+		}
+		if (sdk_ver > 0x17ffff)
+		{
+			if ((u64)queue->m_eaSignal != (u64)eaSignal_addr || (u32)queue->m_direction != direction)
+			{
+				return CELL_SYNC_ERROR_INVAL;
+			}
+		}
+	}
+	else
+	{
+		// prx: call internal function with same arguments
+		syncLFQueueInit(queue, buffer_addr, size, depth, direction, eaSignal_addr);
+
+		// prx: sync, zeroize u32 at 0x2c offset
+		InterlockedCompareExchange(&queue->m_data(), 0, 0);
+		queue->m_data() = 0;
+	}
+
+	// prx: sync
+	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	return CELL_OK;
+#endif
+}
+
+s32 cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
+{
+	cellSync->Warning("cellSyncLFQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal_addr=0x%x)",
+		queue.GetAddr(), buffer_addr, size, depth, direction, eaSignal_addr);
+
+	return syncLFQueueInitialize(queue, buffer_addr, size, depth, direction, eaSignal_addr);
 }
 
 s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
@@ -1789,163 +1971,6 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 	return res;
 }
 
-void syncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
-{
-	queue->m_h1 = 0;
-	queue->m_h2 = 0;
-	queue->m_h4 = 0;
-	queue->m_h5 = 0;
-	queue->m_h6 = 0;
-	queue->m_h8 = 0;
-	queue->m_size = size;
-	queue->m_depth = depth;
-	queue->m_buffer = (u64)buffer_addr;
-	queue->m_direction = direction;
-	for (u32 i = 0; i < sizeof(queue->m_hs) / sizeof(queue->m_hs[0]); i++)
-	{
-		queue->m_hs[i] = 0;
-	}
-	queue->m_eaSignal = (u64)eaSignal_addr;
-
-	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
-	{
-		queue->m_h3 = 0;
-		queue->m_h7 = 0;
-		queue->m_buffer = (u64)buffer_addr | 1;
-		queue->m_bs[0] = -1;
-		queue->m_bs[1] = -1;
-		//m_bs[2]
-		//m_bs[3]
-		queue->m_v1 = -1;
-		queue->m_hs[0] = -1;
-		queue->m_hs[16] = -1;
-		queue->m_v2 = 0;
-		queue->m_v3 = 0;
-	}
-	else
-	{
-		//m_h3
-		//m_h7
-		queue->m_bs[0] = -1; // written as u32
-		queue->m_bs[1] = -1;
-		queue->m_bs[2] = -1;
-		queue->m_bs[3] = -1;
-		queue->m_v1 = 0;
-		queue->m_v2 = 0; // written as u64
-		queue->m_v3 = 0;
-	}
-}
-
-s32 cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr)
-{
-	cellSync->Warning("cellSyncLFQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal_addr=0x%x)",
-		queue.GetAddr(), buffer_addr, size, depth, direction, eaSignal_addr);
-
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall(libsre + 0x205C, queue.GetAddr(), buffer_addr, size, depth, direction, eaSignal_addr);
-#else
-
-	if (!queue)
-	{
-		return CELL_SYNC_ERROR_NULL_POINTER;
-	}
-	if (size)
-	{
-		if (!buffer_addr)
-		{
-			return CELL_SYNC_ERROR_NULL_POINTER;
-		}
-		if (size > 0x4000 || size % 16)
-		{
-			return CELL_SYNC_ERROR_INVAL;
-		}
-	}
-	if (!depth || (depth >> 15) || direction > 3)
-	{
-		return CELL_SYNC_ERROR_INVAL;
-	}
-	if (queue.GetAddr() % 128 || buffer_addr % 16)
-	{
-		return CELL_SYNC_ERROR_ALIGN;
-	}
-
-	// prx: get sdk version of current process, return non-zero result of sys_process_get_sdk_version
-	s32 sdk_ver;
-	s32 ret = process_get_sdk_version(process_getpid(), sdk_ver);
-	if (ret != CELL_OK)
-	{
-		return ret;
-	}
-	if (sdk_ver == -1)
-	{
-		sdk_ver = 0x460000;
-	}
-
-	// prx: reserve u32 at 0x2c offset
-	u32 old_value;
-	while (true)
-	{
-		const u32 old_data = queue->m_data();
-		CellSyncLFQueue new_data;
-		new_data.m_data() = old_data;
-
-		if (old_data)
-		{
-			if (sdk_ver > 0x17ffff && old_data != se32(2))
-			{
-				return CELL_SYNC_ERROR_STAT;
-			}
-			old_value = old_data;
-		}
-		else
-		{
-			if (sdk_ver > 0x17ffff)
-			{
-				for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i++)
-				{
-					if ((u64&)Memory[queue.GetAddr() + i * sizeof(u64)])
-					{
-						return CELL_SYNC_ERROR_STAT;
-					}
-				}
-			}
-			new_data.m_data() = se32(1);
-			old_value = se32(1);
-		}
-		
-		if (InterlockedCompareExchange(&queue->m_data(), new_data.m_data(), old_data) == old_data) break;
-	}
-
-	if (old_value == se32(2))
-	{
-		if ((u32)queue->m_size != size || (u32)queue->m_depth != depth || (u64)queue->m_buffer != (u64)buffer_addr)
-		{
-			return CELL_SYNC_ERROR_INVAL;
-		}
-		if (sdk_ver > 0x17ffff)
-		{
-			if ((u64)queue->m_eaSignal != (u64)eaSignal_addr || (u32)queue->m_direction != direction)
-			{
-				return CELL_SYNC_ERROR_INVAL;
-			}
-		}
-	}
-	else
-	{
-		// prx: call internal function with same arguments
-		syncLFQueueInitialize(queue, buffer_addr, size, depth, direction, eaSignal_addr);
-
-		// prx: sync, zeroize u32 at 0x2c offset
-		InterlockedCompareExchange(&queue->m_data(), 0, 0);
-		queue->m_data() = 0;
-	}
-
-	// prx: sync
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
-	return CELL_OK;
-#endif
-}
-
 s32 cellSyncLFQueueClear(mem_ptr_t<CellSyncLFQueue> queue)
 {
 	cellSync->Warning("cellSyncLFQueueClear(queue_addr=0x%x)", queue.GetAddr());
@@ -2100,16 +2125,32 @@ s32 cellSyncLFQueueGetEntrySize(mem_ptr_t<CellSyncLFQueue> queue, mem32_t entry_
 	return CELL_OK;
 }
 
+s32 syncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
+{
+	// TODO
+	assert(0);
+	return CELL_OK;
+}
+
 s32 _cellSyncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.GetAddr());
+
+	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
+}
+
+s32 syncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
+{
+	// TODO
+	assert(0);
 	return CELL_OK;
 }
 
 s32 _cellSyncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.GetAddr());
-	return CELL_OK;
+
+	return syncLFQueueDetachLv2EventQueue(spus, num, queue);
 }
 
 void cellSync_init()
