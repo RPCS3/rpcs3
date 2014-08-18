@@ -62,6 +62,7 @@ bool _L10nCodeParse(int code, std::string& retCode)
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
 	{
+	//I don't know these Unicode Variants is LB or BE.
 	case L10N_UTF8:         retCode = "UTF-8";          return true;
 	case L10N_UTF16:        retCode = "UTF-16";         return true;
 	case L10N_UTF32:        retCode = "UTF-32";         return true;
@@ -123,14 +124,16 @@ bool _L10nCodeParse(int code, std::string& retCode)
 //If this makes your compilation fail, try replace the string code with one in "iconv -l"
 bool _L10nCodeParse(int code, UINT& retCode)
 {
+	retCode = 0;
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
 	{
-	//case L10N_UTF8:         retCode = -1;        return true;
-	//case L10N_UTF16:        retCode = -2;         return true;	//1200=LE,1201=BE
-	//case L10N_UTF32:        retCode = -3;        return true;	//12000=LE,12001=BE
-	//case L10N_UCS2:         retCode = -4;           return false;	//Not found in OEM CP
-	//case L10N_UCS4:         retCode = -5;           return false;	//Not found in OEM CP
+	case L10N_UTF8:         retCode = 65001;        return false;
+	case L10N_UTF16:        retCode = 1200;         return false;	//1200=LE,1201=BE
+	case L10N_UTF32:        retCode = 12000;        return false;	//12000=LE,12001=BE
+	case L10N_UCS2:         retCode = 1200;         return false;	//Not in OEM, but just the same as UTF16
+	case L10N_UCS4:         retCode = 12000;        return false;	//Not in OEM, but just the same as UTF32
+	//All OEM Code Pages are Multi-Byte, not wchar_t,u16,u32.
 	case L10N_ISO_8859_1:   retCode = 28591;        return true;
 	case L10N_ISO_8859_2:   retCode = 28592;        return true;
 	case L10N_ISO_8859_3:   retCode = 28593;        return true;
@@ -218,40 +221,86 @@ int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code,
 //Use code page to transform std::string to std::wstring.
 int _OEM2Unicode(UINT oem_code, const std::string src, std::wstring& dst)
 {
+	//Such length returned should include the '\0' character.
 	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
-	wchar_t *store = new wchar_t[length + 1];
-	memset(store, 0, (length + 1)*sizeof(wchar_t));
+	wchar_t *store = new wchar_t[length];
+	memset(store, 0, (length)*sizeof(wchar_t));
 	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
 	std::wstring result(store);
 	dst = result;
 	delete store; store = NULL;
-	return length;
+	return length - 1;
 }
 
 //Use Code page to transform std::wstring to std::string.
 int _Unicode2OEM(UINT oem_code, const std::wstring src, std::string& dst)
 {
+	//Such length returned should include the '\0' character.
 	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
-	char *store = new char[length + 1];
-	memset(store, 0, (length + 1)*sizeof(char));
+	char *store = new char[length];
+	memset(store, 0, (length)*sizeof(char));
 	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
 	std::string result(store);
 	dst = result;
 	delete store; store = NULL;
-	return length;
+	return length - 1;
 }
 
-//Tip: src_len and dst_len is in units. such as char/wchat_t.
-//TODO: use _OEM2Unicode and _Unicode2OEM to complete this.
+//Tip: src_len and dst_len is in units. such as char/wchat_t. says, number of bytes or halfwords.
+//TODO: use _OEM2Unicode and _Unicode2OEM to complete this. this is incompleted so do not switch this on!
 int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code, void *dst, size_t *dst_len)
 {
 	UINT srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
+
+	if (((!src_page_converted) && (srcCode == 0))
+		|| ((!dst_page_converted) && (dstCode == 0)))
+		return ConverterUnknown;
+
 	if (src_page_converted&&dst_page_converted)
 	{
 		//Both not Unicode Variants.
+		if (strnlen((char*)src, *src_len) != *src_len) return SRCIllegal;	//Corrupted Input.
+
+		std::string src_warpper((char*)src);
+		std::wstring unistr; std::string mbsstr;
+		int unilen = _OEM2Unicode(srcCode, src_warpper, unistr);
+		int mbslen = _Unicode2OEM(dstCode, unistr, mbsstr);
+		if (*dst_len <= mbslen) return DSTExhausted;
+		//memcpy_s(dst, (*dst_len)*sizeof(char), mbsstr.c_str(), (mbslen + 1)*sizeof(char));
+		Memory.WriteString(dst, mbsstr.c_str());
 	}
+
+	//Stub.
+	/*
+	if (src_page_converted && (!dst_page_converted))
+	{
+		//Source is not Unicode Variants, but Target does.
+		if (strnlen((char*)src, *src_len) != *src_len) return SRCIllegal;	//Corrupted Input.
+		std::string src_warpper((char*)src);
+		std::wstring unistr; std::string mbsstr;
+		int unilen = _OEM2Unicode(srcCode, src_warpper, unistr);
+		int mbslen = _Unicode2OEM(dstCode, unistr, mbsstr);
+		if ((src_code == L10N_UTF16) || (src_code == L10N_UCS2))
+		{
+			//Stub.
+		}
+		else if ((src_code == L10N_UTF32) || (src_code == L10N_UCS4))
+		{
+
+		}
+		else if (src_code == L10N_UTF8)
+		{
+
+		}
+		else
+		{
+			return ConverterUnknown;
+		}
+	}
+	*/
+	return ConversionOK;
 }
 #endif
 
