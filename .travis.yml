@@ -25,6 +25,8 @@ before_install:
     aria2c -x 16 http://www.cmake.org/files/v3.0/cmake-3.0.0-Linux-i386.sh &&
     chmod a+x cmake-3.0.0-Linux-i386.sh &&
     sudo ./cmake-3.0.0-Linux-i386.sh --skip-license --prefix=/usr;
+  - aria2c -x 16 http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz &&
+    tar xvf libiconv-1.14.tar.gz && cd libiconv-1.14 && ./configure && make && sudo make install;
 
 before_script:
  - git submodule update --init asmjit ffmpeg
