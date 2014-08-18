@@ -1106,6 +1106,8 @@ s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u3
 		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
 		var1 = 1;
 	}
+
+	assert(0);
 }
 
 s32 _cellSyncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 useEventQueue)
@@ -1282,6 +1284,8 @@ s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer
 			}
 		}
 	}
+
+	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal)
@@ -1496,6 +1500,8 @@ s32 syncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32
 		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
 		var1 = 1;
 	}
+
+	assert(0);
 }
 
 s32 _cellSyncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, mem32_t pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
@@ -1671,6 +1677,8 @@ s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer,
 			}
 		}
 	}
+
+	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1938,39 +1946,157 @@ s32 cellSyncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr,
 #endif
 }
 
-s32 cellSyncLFQueueGetDirection(mem_ptr_t<CellSyncLFQueue> queue, mem32_t direction)
+s32 cellSyncLFQueueClear(mem_ptr_t<CellSyncLFQueue> queue)
 {
-	cellSync->Todo("cellSyncLFQueueGetDirection(queue_addr=0x%x, direction_addr=0x%x)", queue.GetAddr(), direction.GetAddr());
-	return CELL_OK;
-}
+	cellSync->Warning("cellSyncLFQueueClear(queue_addr=0x%x)", queue.GetAddr());
 
-s32 cellSyncLFQueueDepth(mem_ptr_t<CellSyncLFQueue> queue, mem32_t depth)
-{
-	cellSync->Todo("cellSyncLFQueueDepth(queue_addr=0x%x, depth_addr=0x%x)", queue.GetAddr(), depth.GetAddr());
-	return CELL_OK;
-}
+	if (!queue)
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
 
-s32 cellSyncLFQueueGetEntrySize(mem_ptr_t<CellSyncLFQueue> queue, mem32_t entry_size)
-{
-	cellSync->Todo("cellSyncLFQueueGetEntrySize(queue_addr=0x%x, entry_size_addr=0x%x)", queue.GetAddr(), entry_size.GetAddr());
+	// TODO: optimize if possible
+	while (true)
+	{
+		const u64 old_data = InterlockedCompareExchange(&queue->m_pop1(), 0, 0);
+		CellSyncLFQueue new_queue;
+		new_queue.m_pop1() = old_data;
+
+		const u64 new_data = queue->m_push1();
+		new_queue.m_push1() = new_data;
+
+		s32 var1, var2;
+		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		{
+			var1 = var2 = (u16)queue->m_hs[16];
+		}
+		else
+		{
+			var1 = (u16)new_queue.m_h7;
+			var2 = (u16)new_queue.m_h3;
+		}
+
+		if ((s32)(s16)new_queue.m_h4 != (s32)(u16)new_queue.m_h1 ||
+			(s32)(s16)new_queue.m_h8 != (s32)(u16)new_queue.m_h5 ||
+			((var2 >> 10) & 0x1f) != (var2 & 0x1f) ||
+			((var1 >> 10) & 0x1f) != (var1 & 0x1f))
+		{
+			return CELL_SYNC_ERROR_BUSY;
+		}
+
+		if (InterlockedCompareExchange(&queue->m_pop1(), new_data, old_data) == old_data) break;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellSyncLFQueueSize(mem_ptr_t<CellSyncLFQueue> queue, mem32_t size)
 {
-	cellSync->Todo("cellSyncLFQueueSize(queue_addr=0x%x, size_addr=0x%x)", queue.GetAddr(), size.GetAddr());
-	return CELL_OK;
+	cellSync->Warning("cellSyncLFQueueSize(queue_addr=0x%x, size_addr=0x%x)", queue.GetAddr(), size.GetAddr());
+
+	if (!queue || !size.GetAddr())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	// TODO: optimize if possible
+	while (true)
+	{
+		const u32 old_data = InterlockedCompareExchange(&queue->m_pop3(), 0, 0);
+
+		u32 var1 = (u16)queue->m_h1;
+		u32 var2 = (u16)queue->m_h5;
+
+		if (InterlockedCompareExchange(&queue->m_pop3(), old_data, old_data) == old_data)
+		{
+			if (var1 <= var2)
+			{
+				size = var2 - var1;
+			}
+			else
+			{
+				size = var2 - var1 + (u32)queue->m_depth * 2;
+			}
+			return CELL_OK;
+		}
+	}
+
+	assert(0);
 }
 
-s32 cellSyncLFQueueClear(mem_ptr_t<CellSyncLFQueue> queue)
+s32 cellSyncLFQueueDepth(mem_ptr_t<CellSyncLFQueue> queue, mem32_t depth)
 {
-	cellSync->Todo("cellSyncLFQueueClear(queue_addr=0x%x)", queue.GetAddr());
+	cellSync->Log("cellSyncLFQueueDepth(queue_addr=0x%x, depth_addr=0x%x)", queue.GetAddr(), depth.GetAddr());
+
+	if (!queue || !depth.GetAddr())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	depth = queue->m_depth;
 	return CELL_OK;
 }
 
 s32 _cellSyncLFQueueGetSignalAddress(mem_ptr_t<CellSyncLFQueue> queue, mem32_t ppSignal)
 {
-	cellSync->Todo("_cellSyncLFQueueGetSignalAddress(queue_addr=0x%x, ppSignal_addr=0x%x)", queue.GetAddr(), ppSignal.GetAddr());
+	cellSync->Log("_cellSyncLFQueueGetSignalAddress(queue_addr=0x%x, ppSignal_addr=0x%x)", queue.GetAddr(), ppSignal.GetAddr());
+
+	if (!queue || !ppSignal.GetAddr())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	ppSignal = queue->m_eaSignal;
+	return CELL_OK;
+}
+
+s32 cellSyncLFQueueGetDirection(mem_ptr_t<CellSyncLFQueue> queue, mem32_t direction)
+{
+	cellSync->Log("cellSyncLFQueueGetDirection(queue_addr=0x%x, direction_addr=0x%x)", queue.GetAddr(), direction.GetAddr());
+
+	if (!queue || !direction.GetAddr())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	direction = queue->m_direction;
+	return CELL_OK;
+}
+
+s32 cellSyncLFQueueGetEntrySize(mem_ptr_t<CellSyncLFQueue> queue, mem32_t entry_size)
+{
+	cellSync->Log("cellSyncLFQueueGetEntrySize(queue_addr=0x%x, entry_size_addr=0x%x)", queue.GetAddr(), entry_size.GetAddr());
+
+	if (!queue || !entry_size.GetAddr())
+	{
+		return CELL_SYNC_ERROR_NULL_POINTER;
+	}
+	if (queue.GetAddr() % 128)
+	{
+		return CELL_SYNC_ERROR_ALIGN;
+	}
+
+	entry_size = queue->m_size;
 	return CELL_OK;
 }
 
