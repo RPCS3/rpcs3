@@ -1130,8 +1130,14 @@ private:
 		}
 		}*/
 	}
-	void BIZ(u32 rt, u32 ra)
+	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1142,8 +1148,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BINZ(u32 rt, u32 ra)
+	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1154,8 +1166,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BIHZ(u32 rt, u32 ra)
+	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1166,8 +1184,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BIHNZ(u32 rt, u32 ra)
+	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1181,7 +1205,6 @@ private:
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
 		UNIMPLEMENTED();
-		Emu.Pause();
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -1210,8 +1233,14 @@ private:
 
 		LOG_OPCODE();
 	}
-	void BI(u32 ra)
+	void BI(u32 intr, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1219,8 +1248,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BISL(u32 rt, u32 ra)
+	void BISL(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		XmmInvalidate(rt);
 
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
@@ -1238,9 +1273,8 @@ private:
 	void IRET(u32 ra)
 	{
 		UNIMPLEMENTED();
-		//SetBranch(SRR0);
 	}
-	void BISLED(u32 rt, u32 ra)
+	void BISLED(u32 intr, u32 rt, u32 ra)
 	{
 		UNIMPLEMENTED();
 	}
@@ -2049,18 +2083,7 @@ private:
 	}
 	void DFCGT(u32 rt, u32 ra, u32 rb)
 	{
-		// reverted less-than
-		const XmmLink& vb = XmmGet(rb, rt);
-		if (const XmmLink* va = XmmRead(ra))
-		{
-			c.cmppd(vb.get(), va->read(), 1);
-		}
-		else
-		{
-			c.cmppd(vb.get(), cpu_xmm(GPR[ra]), 1);
-		}
-		XmmFinalize(vb, rt);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
@@ -2190,15 +2213,7 @@ private:
 	}
 	void DFCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		// reverted less-than
-		const XmmLink& vb = XmmGet(rb, rt);
-		const XmmLink& va = XmmGet(ra);
-		c.andpd(vb.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.andpd(va.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.cmppd(vb.get(), va.get(), 1);
-		XmmFinalize(vb, rt);
-		XmmFinalize(va);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
@@ -2484,58 +2499,7 @@ private:
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7) //nf
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const u64 DoubleExpMask = 0x7ff0000000000000;
-		const u64 DoubleFracMask = 0x000fffffffffffff;
-		const u64 DoubleSignMask = 0x8000000000000000;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		if (i7 & 1) //Negative Denorm Check (-, exp is zero, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == DoubleSignMask)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 2) //Positive Denorm Check (+, exp is zero, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == 0)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 4) //Negative Zero Check (-, exp is zero, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == DoubleSignMask)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 8) //Positive Zero Check (+, exp is zero, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == 0)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 16) //Negative Infinity Check (-, exp is 0x7ff, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == (DoubleSignMask | DoubleExpMask))
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 32) //Positive Infinity Check (+, exp is 0x7ff, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == DoubleExpMask)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 64) //Not-a-Number Check (any sign, exp is 0x7ff, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & DoubleExpMask) == DoubleExpMask)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		WRAPPER_END(rt, ra, i7, 0);
+		UNIMPLEMENTED();
 	}
 	void FCEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -2554,18 +2518,7 @@ private:
 	}
 	void DFCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		// compare equal
-		const XmmLink& vb = XmmGet(rb, rt);
-		if (const XmmLink* va = XmmRead(ra))
-		{
-			c.cmppd(vb.get(), va->read(), 0);
-		}
-		else
-		{
-			c.cmppd(vb.get(), cpu_xmm(GPR[ra]), 0);
-		}
-		XmmFinalize(vb, rt);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void MPY(u32 rt, u32 ra, u32 rb)
 	{
@@ -2649,14 +2602,7 @@ private:
 	}
 	void DFCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		const XmmLink& vb = XmmGet(rb, rt);
-		const XmmLink& va = XmmGet(ra);
-		c.andpd(vb.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.andpd(va.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.cmppd(vb.get(), va.get(), 0); // ==
-		XmmFinalize(vb, rt);
-		XmmFinalize(va);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{

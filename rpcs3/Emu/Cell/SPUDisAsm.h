@@ -223,19 +223,19 @@ private:
 	{
 		DisAsm("wrch", spu_ch_name[ra], spu_reg_name[rt]);
 	}
-	void BIZ(u32 rt, u32 ra)
+	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("biz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BINZ(u32 rt, u32 ra)
+	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("binz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BIHZ(u32 rt, u32 ra)
+	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bihz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BIHNZ(u32 rt, u32 ra)
+	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bihnz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
@@ -247,11 +247,11 @@ private:
 	{
 		DisAsm("stqx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
-	void BI(u32 ra)
+	void BI(u32 intr, u32 ra)
 	{
 		DisAsm("bi", spu_reg_name[ra]);
 	}
-	void BISL(u32 rt, u32 ra)
+	void BISL(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bisl", spu_reg_name[rt], spu_reg_name[ra]);
 	}
@@ -259,7 +259,7 @@ private:
 	{
 		DisAsm("iret", spu_reg_name[ra]);
 	}
-	void BISLED(u32 rt, u32 ra)
+	void BISLED(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bisled", spu_reg_name[rt], spu_reg_name[ra]);
 	}
