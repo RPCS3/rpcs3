@@ -6,19 +6,13 @@
 #include "cellL10n.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _LIBICONV_H
-#include <iconv.h>
-#endif
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #include <wchar.h>
-#endif
-
-
-// Requires GCC 4.10 apparently..
-#ifdef _MSC_VER
 #include <codecvt>
+#else
+#include <iconv.h>
 #endif
 
 //void cellL10n_init();
@@ -187,15 +181,82 @@ bool _L10nCodeParse(int code, UINT& retCode)
 	}
 }
 
-#ifdef _LIBICONV_H
-//int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t utf8_len);
-int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code, void *dst, size_t *dst_len)
+//TODO: check and complete transforms. note: unicode to/from other Unicode Formats is needed.
+#ifdef _MSC_VER
+
+//Use code page to transform std::string to std::wstring.
+int _OEM2Wide(UINT oem_code, const std::string src, std::wstring& dst)
+{
+	//Such length returned should include the '\0' character.
+	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
+	wchar_t *store = new wchar_t[length];
+	memset(store, 0, (length)*sizeof(wchar_t));
+	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
+	std::wstring result(store);
+	dst = result;
+	delete store; store = NULL;
+	return length - 1;
+}
+
+//Use Code page to transform std::wstring to std::string.
+int _Wide2OEM(UINT oem_code, const std::wstring src, std::string& dst)
+{
+	//Such length returned should include the '\0' character.
+	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
+	char *store = new char[length];
+	memset(store, 0, (length)*sizeof(char));
+	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
+	std::string result(store);
+	dst = result;
+	delete store; store = NULL;
+	return length - 1;
+}
+
+//Convert Codepage to Codepage (all char*)
+std::string _OemToOem(UINT src_code, UINT dst_code, const std::string str)
+{
+	std::wstring wide; std::string result;
+	_OEM2Wide(src_code, str, wide);
+	_Wide2OEM(dst_code, wide, result);
+	return result;
+}
+
+/*
+//Original piece of code. and this is for windows using with _OEM2Wide,_Wide2OEM,_OemToOem.
+//The Char -> Char Execution of this function has already been tested using VS and CJK text with encoding.
+int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_code, void *dst, size_t * dst_len)
+{
+	UINT srcCode = 0, dstCode = 0;	//OEM code pages
+	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
+	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
+
+	if (((!src_page_converted) && (srcCode == 0))
+		|| ((!dst_page_converted) && (dstCode == 0)))
+		return ConverterUnknown;
+
+	if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
+	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	std::string wrapped_source((char*)src);
+	//if (wrapped_source.length != src_len.GetValue()) return SRCIllegal;
+	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
+
+	if (target.length() > *dst_len) return DSTExhausted;
+
+	Memory.WriteString(dst, target.c_str());
+
+	return ConversionOK;
+}
+//This is the one used with iconv library for linux/mac. Also char->char.
+//I've tested the code with console apps using codeblocks.
+int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_code, void * dst, size_t * dst_len)
 {
 	std::string srcCode, dstCode;
 	int retValue = ConversionOK;
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
+		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
 		char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
@@ -213,43 +274,14 @@ int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code,
 	}
 	else retValue = ConverterUnknown;
 	return retValue;
-}
+}*/
 #endif
 
-//TODO: check and complete transforms. note: unicode to/from other Unicode Formats is needed.
-#ifdef WIN32
-//Use code page to transform std::string to std::wstring.
-int _OEM2Unicode(UINT oem_code, const std::string src, std::wstring& dst)
+//TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
+int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, mem8_ptr_t dst, mem64_t dst_len)
 {
-	//Such length returned should include the '\0' character.
-	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
-	wchar_t *store = new wchar_t[length];
-	memset(store, 0, (length)*sizeof(wchar_t));
-	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
-	std::wstring result(store);
-	dst = result;
-	delete store; store = NULL;
-	return length - 1;
-}
-
-//Use Code page to transform std::wstring to std::string.
-int _Unicode2OEM(UINT oem_code, const std::wstring src, std::string& dst)
-{
-	//Such length returned should include the '\0' character.
-	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
-	char *store = new char[length];
-	memset(store, 0, (length)*sizeof(char));
-	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
-	std::string result(store);
-	dst = result;
-	delete store; store = NULL;
-	return length - 1;
-}
-
-//Tip: src_len and dst_len is in units. such as char/wchat_t. says, number of bytes or halfwords.
-//TODO: use _OEM2Unicode and _Unicode2OEM to complete this. this is incompleted so do not switch this on!
-int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code, void *dst, size_t *dst_len)
-{
+	LOG_ERROR(HLE, "l10n_convert_str(src_code=%d,src=0x%x,src_len=0x%x,dst_code=%d,dst=0x%x,dst_len=0x%x");
+#ifdef _MSC_VER
 	UINT srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
@@ -258,52 +290,45 @@ int L10nConvertStr(int src_code, const void *src, size_t *src_len, int dst_code,
 		|| ((!dst_page_converted) && (dstCode == 0)))
 		return ConverterUnknown;
 
-	if (src_page_converted&&dst_page_converted)
-	{
-		//Both not Unicode Variants.
-		if (strnlen((char*)src, *src_len) != *src_len) return SRCIllegal;	//Corrupted Input.
+	//if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
+	std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	//std::string wrapped_source((char*)src);
+	if (wrapped_source.length() != src_len.GetValue()) return SRCIllegal;
+	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-		std::string src_warpper((char*)src);
-		std::wstring unistr; std::string mbsstr;
-		int unilen = _OEM2Unicode(srcCode, src_warpper, unistr);
-		int mbslen = _Unicode2OEM(dstCode, unistr, mbsstr);
-		if (*dst_len <= mbslen) return DSTExhausted;
-		//memcpy_s(dst, (*dst_len)*sizeof(char), mbsstr.c_str(), (mbslen + 1)*sizeof(char));
-		Memory.WriteString(dst, mbsstr.c_str());
-	}
+	if (target.length() > dst_len.GetValue()) return DSTExhausted;
 
-	//Stub.
-	/*
-	if (src_page_converted && (!dst_page_converted))
-	{
-		//Source is not Unicode Variants, but Target does.
-		if (strnlen((char*)src, *src_len) != *src_len) return SRCIllegal;	//Corrupted Input.
-		std::string src_warpper((char*)src);
-		std::wstring unistr; std::string mbsstr;
-		int unilen = _OEM2Unicode(srcCode, src_warpper, unistr);
-		int mbslen = _Unicode2OEM(dstCode, unistr, mbsstr);
-		if ((src_code == L10N_UTF16) || (src_code == L10N_UCS2))
-		{
-			//Stub.
-		}
-		else if ((src_code == L10N_UTF32) || (src_code == L10N_UCS4))
-		{
+	Memory.WriteString(dst, target.c_str());
 
-		}
-		else if (src_code == L10N_UTF8)
-		{
-
-		}
-		else
-		{
-			return ConverterUnknown;
-		}
-	}
-	*/
 	return ConversionOK;
-}
+#else
+	std::string srcCode, dstCode;
+	int retValue = ConversionOK;
+	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
+	{
+		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
+		char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+		char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		//char *srcBuf = (char*)src, *dstBuf = (char*)dst;
+		//size_t srcLen = *src_len, dstLen = *dst_len;
+		size_t srcLen = src_len.GetValue(), dstLen = dst_len.GetValue();
+		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
+		if (ictd != src_len.GetValue())//if (ictd != *src_len)
+		{
+			if (errno == EILSEQ)
+				retValue = SRCIllegal;  //Invalid multi-byte sequence
+			else if (errno == E2BIG)
+				retValue = DSTExhausted;//Not enough space
+			else if (errno == EINVAL)
+				retValue = SRCIllegal;
+		}
+		iconv_close(ict);
+		//retValue = ConversionOK;
+	}
+	else retValue = ConverterUnknown;
+	return retValue;
 #endif
-
+}
 
 void cellL10n_init()
 {
@@ -410,7 +435,7 @@ void cellL10n_init()
 	// cellL10n->AddFunc(0x8f472054, UTF8stoEUCCNs);
 	// cellL10n->AddFunc(0x90e9b5d2, EUCJPstoUCS2s);
 	// cellL10n->AddFunc(0x91a99765, UHCtoUCS2);
-	// cellL10n->AddFunc(0x931ff25a, L10nConvertStr);
+	cellL10n->AddFunc(0x931ff25a, L10nConvertStr);
 	// cellL10n->AddFunc(0x949bb14c, GBKstoUTF8s);
 	// cellL10n->AddFunc(0x9557ac9b, UTF8toUHC);
 	// cellL10n->AddFunc(0x9768b6d3, UTF32toUTF8);
@@ -460,7 +485,7 @@ void cellL10n_init()
 	// cellL10n->AddFunc(0xdefa1c17, UTF8stoHZs);
 	// cellL10n->AddFunc(0xe2eabb32, eucjp2kuten);
 	// cellL10n->AddFunc(0xe6d9e234, UTF8toBIG5);
-	cellL10n->AddFunc(0xe6f5711b, UTF16stoUTF8s);
+	// cellL10n->AddFunc(0xe6f5711b, UTF16stoUTF8s);
 	// cellL10n->AddFunc(0xe956dc64, JISstoUCS2s);
 	// cellL10n->AddFunc(0xeabc3d00, GB18030toUTF8);
 	// cellL10n->AddFunc(0xeb3dc670, UTF8toSJIS);
