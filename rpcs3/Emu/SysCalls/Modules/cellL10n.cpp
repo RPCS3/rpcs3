@@ -3,38 +3,21 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "cellL10n.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-// Requires GCC 4.10 apparently..
 #ifdef _MSC_VER
+#include <windows.h>
+#include <wchar.h>
 #include <codecvt>
+#else
+#include <iconv.h>
 #endif
 
 //void cellL10n_init();
 //Module cellL10n(0x001e, cellL10n_init);
 Module *cellL10n = nullptr;
-
-
-// L10nResult
-enum
-{
-	ConversionOK,
-	SRCIllegal,
-	DSTExhausted,
-	ConverterUnknown,
-};
-
-// detection result
-enum
-{
-	L10N_STR_UNKNOWN = (1 << 0),
-	L10N_STR_ASCII   = (1 << 1),
-	L10N_STR_JIS     = (1 << 2),
-	L10N_STR_EUCJP   = (1 << 3),
-	L10N_STR_SJIS    = (1 << 4),
-	L10N_STR_UTF8    = (1 << 5),
-	L10N_STR_ILLEGAL = (1 << 16),
-	L10N_STR_ERROR   = (1 << 17),
-};
 
 int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t utf8_len)
 {
@@ -64,6 +47,289 @@ int jstrchk(mem8_ptr_t jstr)
 	cellL10n->Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.GetAddr());
 
 	return L10N_STR_UTF8;
+}
+
+//translate code id to code name. some codepage may has another name.
+//If this makes your compilation fail, try replace the string code with one in "iconv -l"
+bool _L10nCodeParse(int code, std::string& retCode)
+{
+	if ((code >= _L10N_CODE_) || (code < 0)) return false;
+	switch (code)
+	{
+	//I don't know these Unicode Variants is LB or BE.
+	case L10N_UTF8:         retCode = "UTF-8";          return true;
+	case L10N_UTF16:        retCode = "UTF-16";         return true;
+	case L10N_UTF32:        retCode = "UTF-32";         return true;
+	case L10N_UCS2:         retCode = "UCS-2";          return true;
+	case L10N_UCS4:         retCode = "UCS-4";          return true;
+	case L10N_ISO_8859_1:   retCode = "ISO-8859-1";     return true;
+	case L10N_ISO_8859_2:   retCode = "ISO-8859-2";     return true;
+	case L10N_ISO_8859_3:   retCode = "ISO-8859-3";     return true;
+	case L10N_ISO_8859_4:   retCode = "ISO-8859-4";     return true;
+	case L10N_ISO_8859_5:   retCode = "ISO-8859-5";     return true;
+	case L10N_ISO_8859_6:   retCode = "ISO-8859-6";     return true;
+	case L10N_ISO_8859_7:   retCode = "ISO-8859-7";     return true;
+	case L10N_ISO_8859_8:   retCode = "ISO-8859-8";     return true;
+	case L10N_ISO_8859_9:   retCode = "ISO-8859-9";     return true;
+	case L10N_ISO_8859_10:  retCode = "ISO-8859-10";    return true;
+	case L10N_ISO_8859_11:  retCode = "ISO-8859-11";    return true;
+	case L10N_ISO_8859_13:  retCode = "ISO-8859-13";    return true;    //No ISO-8859-12 ha ha.
+	case L10N_ISO_8859_14:  retCode = "ISO-8859-14";    return true;
+	case L10N_ISO_8859_15:  retCode = "ISO-8859-15";    return true;
+	case L10N_ISO_8859_16:  retCode = "ISO-8859-16";    return true;
+	case L10N_CODEPAGE_437: retCode = "CP437";          return true;
+	case L10N_CODEPAGE_850: retCode = "CP850";          return true;
+	case L10N_CODEPAGE_863: retCode = "CP863";          return true;
+	case L10N_CODEPAGE_866: retCode = "CP866";          return true;
+	case L10N_CODEPAGE_932: retCode = "CP932";          return true;
+	case L10N_CODEPAGE_936: retCode = "CP936";          return true;
+	case L10N_CODEPAGE_949: retCode = "CP949";          return true;
+	case L10N_CODEPAGE_950: retCode = "CP950";          return true;
+	case L10N_CODEPAGE_1251:retCode = "CP1251";         return true;    //CYRL
+	case L10N_CODEPAGE_1252:retCode = "CP1252";         return true;    //ANSI
+	case L10N_EUC_CN:       retCode = "EUC-CN";         return true;    //GB2312
+	case L10N_EUC_JP:       retCode = "EUC-JP";         return true;
+	case L10N_EUC_KR:       retCode = "EUC-KR";         return true;
+	case L10N_ISO_2022_JP:  retCode = "ISO-2022-JP";    return true;
+	case L10N_ARIB:         retCode = "ARABIC";         return true;    //TODO: think that should be ARABIC.
+	case L10N_HZ:           retCode = "HZ";             return true;
+	case L10N_GB18030:      retCode = "GB18030";        return true;
+	case L10N_RIS_506:      retCode = "SHIFT-JIS";      return true;    //MusicShiftJIS, MS_KANJI
+		//These are only supported with FW 3.10 and above
+	case L10N_CODEPAGE_852: retCode = "CP852";          return true;
+	case L10N_CODEPAGE_1250:retCode = "CP1250";         return true;    //EE
+	case L10N_CODEPAGE_737: retCode = "CP737";          return true;
+	case L10N_CODEPAGE_1253:retCode = "CP1253";         return true;    //Greek
+	case L10N_CODEPAGE_857: retCode = "CP857";          return true;
+	case L10N_CODEPAGE_1254:retCode = "CP1254";         return true;    //Turk
+	case L10N_CODEPAGE_775: retCode = "CP775";          return true;
+	case L10N_CODEPAGE_1257:retCode = "CP1257";         return true;    //WINBALTRIM
+	case L10N_CODEPAGE_855: retCode = "CP855";          return true;
+	case L10N_CODEPAGE_858: retCode = "CP858";          return true;
+	case L10N_CODEPAGE_860: retCode = "CP860";          return true;
+	case L10N_CODEPAGE_861: retCode = "CP861";          return true;
+	case L10N_CODEPAGE_865: retCode = "CP865";          return true;
+	case L10N_CODEPAGE_869: retCode = "CP869";          return true;
+	default:                                            return false;
+	}
+}
+
+//translate code id to code name.
+//If this makes your compilation fail, try replace the string code with one in "iconv -l"
+bool _L10nCodeParse(int code, unsigned int & retCode)
+{
+	retCode = 0;
+	if ((code >= _L10N_CODE_) || (code < 0)) return false;
+	switch (code)
+	{
+	case L10N_UTF8:         retCode = 65001;        return false;
+	case L10N_UTF16:        retCode = 1200;         return false;	//1200=LE,1201=BE
+	case L10N_UTF32:        retCode = 12000;        return false;	//12000=LE,12001=BE
+	case L10N_UCS2:         retCode = 1200;         return false;	//Not in OEM, but just the same as UTF16
+	case L10N_UCS4:         retCode = 12000;        return false;	//Not in OEM, but just the same as UTF32
+	//All OEM Code Pages are Multi-Byte, not wchar_t,u16,u32.
+	case L10N_ISO_8859_1:   retCode = 28591;        return true;
+	case L10N_ISO_8859_2:   retCode = 28592;        return true;
+	case L10N_ISO_8859_3:   retCode = 28593;        return true;
+	case L10N_ISO_8859_4:   retCode = 28594;        return true;
+	case L10N_ISO_8859_5:   retCode = 28595;        return true;
+	case L10N_ISO_8859_6:   retCode = 28596;        return true;
+	case L10N_ISO_8859_7:   retCode = 28597;        return true;
+	case L10N_ISO_8859_8:   retCode = 28598;        return true;
+	case L10N_ISO_8859_9:   retCode = 28599;        return true;
+	case L10N_ISO_8859_10:  retCode = 28600;        return true;
+	case L10N_ISO_8859_11:  retCode = 28601;        return true;
+	case L10N_ISO_8859_13:  retCode = 28603;        return true;    //No ISO-8859-12 ha ha.
+	case L10N_ISO_8859_14:  retCode = 28604;        return true;
+	case L10N_ISO_8859_15:  retCode = 28605;        return true;
+	case L10N_ISO_8859_16:  retCode = 28606;        return true;
+	case L10N_CODEPAGE_437: retCode = 437;          return true;
+	case L10N_CODEPAGE_850: retCode = 850;          return true;
+	case L10N_CODEPAGE_863: retCode = 863;          return true;
+	case L10N_CODEPAGE_866: retCode = 866;          return true;
+	case L10N_CODEPAGE_932: retCode = 932;          return true;
+	case L10N_CODEPAGE_936: retCode = 936;          return true;
+	case L10N_CODEPAGE_949: retCode = 949;          return true;
+	case L10N_CODEPAGE_950: retCode = 950;          return true;
+	case L10N_CODEPAGE_1251:retCode = 1251;         return true;    //CYRL
+	case L10N_CODEPAGE_1252:retCode = 1252;         return true;    //ANSI
+	case L10N_EUC_CN:       retCode = 51936;        return true;    //GB2312
+	case L10N_EUC_JP:       retCode = 51932;        return true;
+	case L10N_EUC_KR:       retCode = 51949;        return true;
+	case L10N_ISO_2022_JP:  retCode = 50222;        return true;
+	//Maybe 708/720/864/1256/10004/20420/28596/
+	case L10N_ARIB:         retCode = 20420;        return true;    //TODO: think that should be ARABIC.
+	case L10N_HZ:           retCode = 52936;        return true;
+	case L10N_GB18030:      retCode = 54936;        return true;
+	case L10N_RIS_506:      retCode = 932;          return true;    //MusicShiftJIS, MS_KANJI, TODO: Code page
+		//These are only supported with FW 3.10 and above
+	case L10N_CODEPAGE_852: retCode = 852;          return true;
+	case L10N_CODEPAGE_1250:retCode = 1250;         return true;    //EE
+	case L10N_CODEPAGE_737: retCode = 737;          return true;
+	case L10N_CODEPAGE_1253:retCode = 1253;         return true;    //Greek
+	case L10N_CODEPAGE_857: retCode = 857;          return true;
+	case L10N_CODEPAGE_1254:retCode = 1254;         return true;    //Turk
+	case L10N_CODEPAGE_775: retCode = 775;          return true;
+	case L10N_CODEPAGE_1257:retCode = 1257;         return true;    //WINBALTRIM
+	case L10N_CODEPAGE_855: retCode = 855;          return true;
+	case L10N_CODEPAGE_858: retCode = 858;          return true;
+	case L10N_CODEPAGE_860: retCode = 860;          return true;
+	case L10N_CODEPAGE_861: retCode = 861;          return true;
+	case L10N_CODEPAGE_865: retCode = 865;          return true;
+	case L10N_CODEPAGE_869: retCode = 869;          return true;
+	default:                                        return false;
+	}
+}
+
+//TODO: check and complete transforms. note: unicode to/from other Unicode Formats is needed.
+#ifdef _MSC_VER
+
+//Use code page to transform std::string to std::wstring.
+int _OEM2Wide(unsigned int oem_code, const std::string src, std::wstring& dst)
+{
+	//Such length returned should include the '\0' character.
+	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
+	wchar_t *store = new wchar_t[length];
+	memset(store, 0, (length)*sizeof(wchar_t));
+	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
+	std::wstring result(store);
+	dst = result;
+	delete store; store = NULL;
+	return length - 1;
+}
+
+//Use Code page to transform std::wstring to std::string.
+int _Wide2OEM(unsigned int oem_code, const std::wstring src, std::string& dst)
+{
+	//Such length returned should include the '\0' character.
+	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
+	char *store = new char[length];
+	memset(store, 0, (length)*sizeof(char));
+	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
+	std::string result(store);
+	dst = result;
+	delete store; store = NULL;
+	return length - 1;
+}
+
+//Convert Codepage to Codepage (all char*)
+std::string _OemToOem(unsigned int src_code, unsigned int dst_code, const std::string str)
+{
+	std::wstring wide; std::string result;
+	_OEM2Wide(src_code, str, wide);
+	_Wide2OEM(dst_code, wide, result);
+	return result;
+}
+
+/*
+//Original piece of code. and this is for windows using with _OEM2Wide,_Wide2OEM,_OemToOem.
+//The Char -> Char Execution of this function has already been tested using VS and CJK text with encoding.
+int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_code, void *dst, size_t * dst_len)
+{
+	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
+	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
+	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
+
+	if (((!src_page_converted) && (srcCode == 0))
+		|| ((!dst_page_converted) && (dstCode == 0)))
+		return ConverterUnknown;
+
+	if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
+	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	std::string wrapped_source((char*)src);
+	//if (wrapped_source.length != src_len.GetValue()) return SRCIllegal;
+	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
+
+	if (target.length() > *dst_len) return DSTExhausted;
+
+	Memory.WriteString(dst, target.c_str());
+
+	return ConversionOK;
+}
+//This is the one used with iconv library for linux/mac. Also char->char.
+//I've tested the code with console apps using codeblocks.
+int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_code, void * dst, size_t * dst_len)
+{
+	std::string srcCode, dstCode;
+	int retValue = ConversionOK;
+	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
+	{
+		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
+		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		char *srcBuf = (char*)src, *dstBuf = (char*)dst;
+		size_t srcLen = *src_len, dstLen = *dst_len;
+		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
+		if (ictd != *src_len)
+		{
+			if (errno == EILSEQ)
+				retValue = SRCIllegal;  //Invalid multi-byte sequence
+			else if (errno == E2BIG)
+				retValue = DSTExhausted;//Not enough space
+			else if (errno == EINVAL)
+				retValue = SRCIllegal;
+		}
+		iconv_close(ict);
+		//retValue = ConversionOK;
+	}
+	else retValue = ConverterUnknown;
+	return retValue;
+}*/
+#endif
+
+//TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
+int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, mem8_ptr_t dst, mem64_t dst_len)
+{
+	LOG_ERROR(HLE, "L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
+		src_code, src.GetAddr(), src_len.GetValue(), dst_code, dst.GetAddr(), dst_len.GetValue());
+	LOG_ERROR(HLE, "L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)Memory.VirtualToRealAddr(src.GetAddr())));
+#ifdef _MSC_VER
+	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
+	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
+	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
+
+	if (((!src_page_converted) && (srcCode == 0))
+		|| ((!dst_page_converted) && (dstCode == 0)))
+		return ConverterUnknown;
+
+	//if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
+	std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	//std::string wrapped_source((char*)src);
+	if (wrapped_source.length() != src_len.GetValue()) return SRCIllegal;
+	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
+
+	if (target.length() > dst_len.GetValue()) return DSTExhausted;
+
+	Memory.WriteString(dst, target.c_str());
+
+	return ConversionOK;
+#else
+	std::string srcCode, dstCode;
+	int retValue = ConversionOK;
+	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
+	{
+		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
+		char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+		char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		//char *srcBuf = (char*)src, *dstBuf = (char*)dst;
+		//size_t srcLen = *src_len, dstLen = *dst_len;
+		size_t srcLen = src_len.GetValue(), dstLen = dst_len.GetValue();
+		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
+		if (ictd != src_len.GetValue())//if (ictd != *src_len)
+		{
+			if (errno == EILSEQ)
+				retValue = SRCIllegal;  //Invalid multi-byte sequence
+			else if (errno == E2BIG)
+				retValue = DSTExhausted;//Not enough space
+			else if (errno == EINVAL)
+				retValue = SRCIllegal;
+		}
+		iconv_close(ict);
+		//retValue = ConversionOK;
+	}
+	else retValue = ConverterUnknown;
+	return retValue;
+#endif
 }
 
 void cellL10n_init()
@@ -171,7 +437,7 @@ void cellL10n_init()
 	// cellL10n->AddFunc(0x8f472054, UTF8stoEUCCNs);
 	// cellL10n->AddFunc(0x90e9b5d2, EUCJPstoUCS2s);
 	// cellL10n->AddFunc(0x91a99765, UHCtoUCS2);
-	// cellL10n->AddFunc(0x931ff25a, L10nConvertStr);
+	cellL10n->AddFunc(0x931ff25a, L10nConvertStr);
 	// cellL10n->AddFunc(0x949bb14c, GBKstoUTF8s);
 	// cellL10n->AddFunc(0x9557ac9b, UTF8toUHC);
 	// cellL10n->AddFunc(0x9768b6d3, UTF32toUTF8);
@@ -221,7 +487,7 @@ void cellL10n_init()
 	// cellL10n->AddFunc(0xdefa1c17, UTF8stoHZs);
 	// cellL10n->AddFunc(0xe2eabb32, eucjp2kuten);
 	// cellL10n->AddFunc(0xe6d9e234, UTF8toBIG5);
-	cellL10n->AddFunc(0xe6f5711b, UTF16stoUTF8s);
+	// cellL10n->AddFunc(0xe6f5711b, UTF16stoUTF8s);
 	// cellL10n->AddFunc(0xe956dc64, JISstoUCS2s);
 	// cellL10n->AddFunc(0xeabc3d00, GB18030toUTF8);
 	// cellL10n->AddFunc(0xeb3dc670, UTF8toSJIS);
