@@ -101,13 +101,25 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	switch(package_id)
 	{
-	case 0x001: // ?
+	case 0x001: // FIFO
+		break;
+	
+	case 0x100: // Display mode set
 		break;
 
-	case 0x101: // ?
+	case 0x101: // Display sync
+		break;
+
+	case 0x102: // Display flip
+		break;
+
+	case 0x103: // ?
 		break;
 
 	case 0x104: // Display buffer
+		break;
+
+	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
 	case 0x10a: // ?
@@ -119,9 +131,19 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	case 0x301: // Depth-buffer (Z-cull)
 		break;
 
-	default:
+	case 0x600: // Framebuffer setup
 		break;
+
+	case 0x601: // Framebuffer blit
+		break;
+
+	case 0x602: // Framebuffer blit sync
+		break;
+
+	default:
+		return CELL_EINVAL;
 	}
+
 	return CELL_OK;
 }
 
@@ -129,7 +151,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
  * @param a1 (OUT): For example: In vsh.self it is 0x60000000, global semaphore. For a game it is 0x40000000.
  * @param a2 (OUT): Unused?
- * @param dev_id (IN): An immediate value and always 8.
+ * @param dev_id (IN): An immediate value and always 8. (cellGcmInitPerfMon uses 11, 10, 9, 7, 12 successively).
  */
 s32 sys_rsx_device_map(mem32_t a1, mem32_t a2, u32 dev_id)
 {

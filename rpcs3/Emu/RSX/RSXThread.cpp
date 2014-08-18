@@ -117,16 +117,18 @@ u32 RSXVertexData::GetTypeSize()
 {
 	switch (type)
 	{
-	case 1: return 2;
-	case 2: return 4;
-	case 3: return 2;
-	case 4: return 1;
-	case 5: return 2;
-	case 7: return 1;
-	}
+	case CELL_GCM_VERTEX_S1:    return 2;
+	case CELL_GCM_VERTEX_F:     return 4;
+	case CELL_GCM_VERTEX_SF:    return 2;
+	case CELL_GCM_VERTEX_UB:    return 1;
+	case CELL_GCM_VERTEX_S32K:  return 2;
+	case CELL_GCM_VERTEX_CMP:   return 4;
+	case CELL_GCM_VERTEX_UB256: return 1;
 
-	LOG_ERROR(RSX, "Bad vertex data type! %d", type);
-	return 1;
+	default:
+		LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+		return 1;
+	}
 }
 
 #define CMD_DEBUG 0
