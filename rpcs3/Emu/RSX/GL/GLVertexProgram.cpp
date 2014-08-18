@@ -175,10 +175,10 @@ std::string GLVertexDecompilerThread::GetFunc()
 {
 	std::string name = "func$a";
 
-	for(uint i=0; i<m_funcs.size(); ++i)
-	{
-		if(m_funcs[i].name.compare(name) == 0)
+	for (const auto& func : m_funcs) {
+		if (func.name.compare(name) == 0) {
 			return name + "()";
+		}
 	}
 
 	m_funcs.emplace_back();
@@ -380,9 +380,8 @@ std::string GLVertexDecompilerThread::BuildCode()
 
 	std::string p;
 
-	for (u32 i = 0; i<m_parr.params.size(); ++i)
-	{
-		p += m_parr.params[i].Format();
+	for (auto& param : m_parr.params) {
+		p += param.Format();
 	}
 
 	std::string fp;
