@@ -5,10 +5,9 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
-#include "ELF64.h"
 #include "Emu/Cell/PPUInstrTable.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/ModuleManager.h"
+#include "ELF64.h"
 
 using namespace PPU_instr;
 

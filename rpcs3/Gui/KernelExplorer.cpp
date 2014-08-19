@@ -43,7 +43,7 @@ void KernelExplorer::Update()
 	char name[4096];
 
 	m_tree->DeleteAllItems();
-	auto& root = m_tree->AddRoot("Process, ID = 0x00000001, Total Memory Usage = 0x0C8A9000 (200.7 MB)");
+	auto& root = m_tree->AddRoot("Process, ID = 0x00000001, Total Memory Usage = 0x???????? (???.? MB)");
 
 	// TODO: PPU Threads
 	// TODO: SPU/RawSPU Threads

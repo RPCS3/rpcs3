@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wx/listctrl.h>
 #include <wx/treectrl.h>
 
 class KernelExplorer : public wxFrame
