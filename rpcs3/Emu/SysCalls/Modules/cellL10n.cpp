@@ -189,12 +189,15 @@ int _OEM2Wide(unsigned int oem_code, const std::string src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
 	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
-	wchar_t *store = new wchar_t[length];
-	memset(store, 0, (length)*sizeof(wchar_t));
+	wchar_t *store = new wchar_t[length]();
+
 	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
 	std::wstring result(store);
 	dst = result;
-	delete store; store = NULL;
+
+	delete[] store;
+	store = nullptr;
+
 	return length - 1;
 }
 
@@ -203,12 +206,15 @@ int _Wide2OEM(unsigned int oem_code, const std::wstring src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
 	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
-	char *store = new char[length];
-	memset(store, 0, (length)*sizeof(char));
+	char *store = new char[length]();
+
 	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
 	std::string result(store);
 	dst = result;
-	delete store; store = NULL;
+
+	delete[] store;
+	store = nullptr;
+
 	return length - 1;
 }
 
