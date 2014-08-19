@@ -73,7 +73,7 @@ void RSXVertexData::Reset()
 	data.clear();
 }
 
-void RSXVertexData::Load(u32 start, u32 count)
+void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 {
 	if(!addr) return;
 
@@ -83,7 +83,7 @@ void RSXVertexData::Load(u32 start, u32 count)
 
 	for(u32 i=start; i<start + count; ++i)
 	{
-		const u8* src = Memory.GetMemFromAddr(addr) + stride * i;
+		const u8* src = Memory.GetMemFromAddr(addr) + baseOffset + stride * (i+baseIndex);
 		u8* dst = &data[i * tsize * size];
 
 		switch(tsize)
@@ -902,6 +902,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 
 			m_indexed_array.m_count += _count;
 		}
+	}
+	break;
+
+	case NV4097_SET_VERTEX_DATA_BASE_OFFSET:
+	{
+		m_vertex_data_base_offset = ARGS(0);
+		if (count >= 2) {
+			m_vertex_data_base_index = ARGS(1);
+		}
+	}
+	break;
+
+	case NV4097_SET_VERTEX_DATA_BASE_INDEX:
+	{
+		m_vertex_data_base_index = ARGS(0);
 	}
 	break;
 

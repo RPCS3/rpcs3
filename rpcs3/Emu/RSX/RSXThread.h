@@ -36,7 +36,7 @@ struct RSXVertexData
 
 	void Reset();
 	bool IsEnabled() const { return size > 0; }
-	void Load(u32 start, u32 count);
+	void Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex);
 
 	u32 GetTypeSize();
 };
@@ -412,6 +412,10 @@ public:
 	u8 m_shader_window_origin;
 	u16 m_shader_window_pixel_centers;
 
+	// Vertex Data
+	u32 m_vertex_data_base_offset;
+	u32 m_vertex_data_base_index;
+
 	// Front face
 	bool m_set_front_face;
 	u32 m_front_face;
@@ -505,8 +509,9 @@ protected:
 		m_line_width = 1.0;
 		m_line_stipple_pattern = 0xffff;
 		m_line_stipple_factor = 1;
-		for (size_t i = 0; i < 32; i++)
-		{
+		m_vertex_data_base_offset = 0;
+		m_vertex_data_base_index = 0;
+		for (size_t i = 0; i < 32; i++) {
 			m_polygon_stipple_pattern[i] = 0xFFFFFFFF;
 		}
 
@@ -624,7 +629,7 @@ protected:
 		{
 			if(!m_vertex_data[i].IsEnabled()) continue;
 
-			m_vertex_data[i].Load(first, count);
+			m_vertex_data[i].Load(first, count, m_vertex_data_base_offset, m_vertex_data_base_index);
 		}
 	}
 

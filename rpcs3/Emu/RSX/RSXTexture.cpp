@@ -26,7 +26,7 @@ void RSXTexture::Init()
 	// Address
 	methodRegisters[NV4097_SET_TEXTURE_ADDRESS + (m_index*32)] =
 		((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) | 
-		 ((/*wrapr*/2) << 16) | ((/*gamma*/0) << 20) |((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+		((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) |((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
 
 	// Control0
 	methodRegisters[NV4097_SET_TEXTURE_CONTROL0 + (m_index*32)] =
