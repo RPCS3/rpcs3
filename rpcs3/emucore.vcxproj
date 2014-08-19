@@ -218,7 +218,6 @@
   <ItemGroup>
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
-    <ClInclude Include="..\Utilities\IdManager.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\Log.h" />
@@ -291,6 +290,7 @@
     <ClInclude Include="Emu\FS\vfsStreamMemory.h" />
     <ClInclude Include="Emu\GameInfo.h" />
     <ClInclude Include="Emu\HDD\HDD.h" />
+    <ClInclude Include="Emu\IdManager.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\KeyboardHandler.h" />
     <ClInclude Include="Emu\Io\Mouse.h" />

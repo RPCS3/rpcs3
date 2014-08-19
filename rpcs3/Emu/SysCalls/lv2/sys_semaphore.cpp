@@ -35,7 +35,7 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	default: sys_sem.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	sem = sys_sem.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64));
+	sem = sys_sem.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
 	LOG_NOTICE(HLE, "*** semaphore created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, sem.GetValue());
 

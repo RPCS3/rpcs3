@@ -32,7 +32,7 @@ s32 sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 	}
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
-	u32 id = sys_cond.GetNewId(cond);
+	u32 id = sys_cond.GetNewId(cond, TYPE_COND);
 	cond_id = id;
 	mutex->cond_count++;
 	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, cond_id.GetValue());

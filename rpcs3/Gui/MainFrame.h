@@ -41,6 +41,7 @@ private:
 	void ConfigAutoPause(wxCommandEvent& event);
 	void ConfigSaveData(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
+	void OpenKernelExplorer(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);
 	void OpenRSXDebugger(wxCommandEvent& evt);
 	void OpenFnIdGenerator(wxCommandEvent& evt);

@@ -51,15 +51,15 @@ struct sys_prx_unload_module_option_t
 };
 
 // Auxiliary data types
-struct sys_prx_t {
+struct sys_prx_t
+{
 	u32 size;
 	u32 address;
+	std::string path;
 	bool isStarted;
 
-	sys_prx_t(u32 prx_size, u32 prx_address)
-		: size(prx_size)
-		, address(prx_address)
-		, isStarted(false)
+	sys_prx_t()
+		: isStarted(false)
 	{
 	}
 };

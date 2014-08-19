@@ -3,7 +3,32 @@
 
 #define rID_ANY -1 // was wxID_ANY
 
-typedef u32 ID_TYPE;
+enum IDType
+{
+	// Special objects
+	TYPE_MEM,
+	TYPE_MUTEX,
+	TYPE_COND,
+	TYPE_RWLOCK,
+	TYPE_INTR_TAG,
+	TYPE_INTR_SERVICE_HANDLE,
+	TYPE_EVENT_QUEUE,
+	TYPE_EVENT_PORT,
+	TYPE_TRACE,
+	TYPE_SPUIMAGE,
+	TYPE_PRX,
+	TYPE_SPUPORT,
+	TYPE_LWMUTEX,
+	TYPE_TIMER,
+	TYPE_SEMAPHORE,
+	TYPE_FS_FILE,
+	TYPE_FS_DIR,
+	TYPE_LWCOND,
+	TYPE_EVENT_FLAG,
+
+	// Any other objects
+	TYPE_OTHER,
+};
 
 class IDData
 {
@@ -37,13 +62,13 @@ public:
 struct ID
 {
 	std::string m_name;
-	u32 m_attr;
 	IDData* m_data;
+	IDType m_type;
 
 	template<typename T>
-	ID(const std::string& name, T* data, const u32 attr)
+	ID(const std::string& name, T* data, const IDType type)
 		: m_name(name)
-		, m_attr(attr)
+		, m_type(type)
 	{
 		m_data = new IDData(data, [](void *ptr) -> void { delete (T*)ptr; });
 	}
@@ -55,14 +80,14 @@ struct ID
 	ID(ID&& other)
 	{
 		m_name = other.m_name;
-		m_attr = other.m_attr;
+		m_type = other.m_type;
 		m_data = other.m_data;
 		other.m_data = nullptr;
 	}
 	ID& operator=(ID&& other)
 	{
 		std::swap(m_name,other.m_name);
-		std::swap(m_attr,other.m_attr);
+		std::swap(m_type,other.m_type);
 		std::swap(m_data,other.m_data);
 		return *this;
 	}
@@ -75,13 +100,14 @@ struct ID
 
 class IdManager
 {
-	static const ID_TYPE s_first_id = 1;
-	static const ID_TYPE s_max_id = -1;
+	static const u32 s_first_id = 1;
+	static const u32 s_max_id = -1;
 
-	std::unordered_map<ID_TYPE, ID> m_id_map;
+	std::unordered_map<u32, ID> m_id_map;
+	std::set<u32> m_types[TYPE_OTHER];
 	std::mutex m_mtx_main;
 
-	ID_TYPE m_cur_id;
+	u32 m_cur_id;
 
 public:
 	IdManager() : m_cur_id(s_first_id)
@@ -93,7 +119,7 @@ public:
 		Clear();
 	}
 
-	bool CheckID(const ID_TYPE id)
+	bool CheckID(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
@@ -104,8 +130,7 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		for(auto& i : m_id_map)
-		{
+		for(auto& i : m_id_map) {
 			i.second.Kill();
 		}
 
@@ -118,16 +143,19 @@ public:
 		= char
 #endif
 	>
-	ID_TYPE GetNewID(const std::string& name = "", T* data = nullptr, const u32 attr = 0)
+	u32 GetNewID(const std::string& name = "", T* data = nullptr, const IDType type = TYPE_OTHER)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		m_id_map[m_cur_id] = ID(name, data, attr);
+		m_id_map[m_cur_id] = ID(name, data, type);
+		if (type < TYPE_OTHER) {
+			m_types[type].insert(m_cur_id);
+		}
 
 		return m_cur_id++;
 	}
 	
-	ID& GetID(const ID_TYPE id)
+	ID& GetID(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
@@ -135,14 +163,12 @@ public:
 	}
 
 	template<typename T>
-	bool GetIDData(const ID_TYPE id, T*& result)
+	bool GetIDData(const u32 id, T*& result)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		auto f = m_id_map.find(id);
-
-		if(f == m_id_map.end())
-		{
+		if (f == m_id_map.end()) {
 			return false;
 		}
 
@@ -156,24 +182,43 @@ public:
 		{
 			std::lock_guard<std::mutex> lock(m_mtx_main);
 
-			if(id == rID_ANY)
+			if(id == rID_ANY) {
 				return m_id_map.begin() != m_id_map.end();
+			}
 		}
-
 		return CheckID(id);
 	}
 
-	bool RemoveID(const ID_TYPE id)
+	bool RemoveID(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		auto item = m_id_map.find(id);
 
-		if(item == m_id_map.end()) return false;
+		if (item == m_id_map.end()) {
+			return false;
+		}
+		if (item->second.m_type < TYPE_OTHER) {
+			m_types[item->second.m_type].erase(id);
+		}
 
 		item->second.Kill();
 		m_id_map.erase(item);
 
 		return true;
+	}
+
+	u32 GetTypeCount(IDType type)
+	{
+		if (type < TYPE_OTHER) {
+			return m_types[type].size();
+		}
+		return 1;
+	}
+
+	const std::set<u32>& GetTypeIDs(IDType type)
+	{
+		assert(type < TYPE_OTHER);
+		return m_types[type];
 	}
 };

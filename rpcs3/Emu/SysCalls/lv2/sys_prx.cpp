@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/FS/vfsFile.h"
+#include "Crypto/unself.h"
 #include "sys_prx.h"
 
 SysCallBase sys_prx("sys_prx");
@@ -13,19 +14,31 @@ s32 sys_prx_load_module(u32 path_addr, u64 flags, mem_ptr_t<sys_prx_load_module_
 	std::string path = Memory.ReadString(path_addr);
 	sys_prx.Todo("sys_prx_load_module(path=\"%s\", flags=0x%llx, pOpt=0x%x)", path.c_str(), flags, pOpt.GetAddr());
 
+	// Check if the file is SPRX
+	std::string local_path;
+	Emu.GetVFS().GetDevice(path, local_path);
+	if (IsSelf(local_path)) {
+		if (!DecryptSelf(local_path+".prx", local_path)) {
+			return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
+		}
+		path += ".prx";
+	}
+
 	vfsFile f(path);
 	if (!f.IsOpened()) {
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
-	// Load the PRX into memory
-	u64 prx_size = f.GetSize();
-	u32 prx_address = Memory.Alloc(prx_size, 4);
-	f.Read(Memory.VirtualToRealAddr(prx_address), prx_size);
-
 	// Create the PRX object and return its id
-	sys_prx_t* prx = new sys_prx_t(prx_size, prx_address);
-	u32 id = sys_prx.GetNewId(prx);
+	sys_prx_t* prx = new sys_prx_t();
+	prx->size = f.GetSize();
+	prx->address = Memory.Alloc(prx->size, 4);
+	prx->path = path;
+	
+	// Load the PRX into memory
+	f.Read(Memory.VirtualToRealAddr(prx->address), prx->size);
+
+	u32 id = sys_prx.GetNewId(prx, TYPE_PRX);
 	return id;
 }
 

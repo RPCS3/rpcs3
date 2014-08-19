@@ -90,23 +90,23 @@ public:
 		return true;
 	}
 
-	template<typename T> bool CheckId(u32 id, T*& data, u32& attr)
+	template<typename T> bool CheckId(u32 id, T*& data, IDType& type)
 	{
 		ID* id_data;
 
 		if(!CheckID(id, id_data)) return false;
 
 		data = id_data->m_data->get<T>();
-		attr = id_data->m_attr;
+		type = id_data->m_type;
 
 		return true;
 	}
 	bool CheckID(u32 id, ID*& _id) const;
 
 	template<typename T>
-	u32 GetNewId(T* data, u8 flags = 0)
+	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, flags);
+		return Emu.GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
