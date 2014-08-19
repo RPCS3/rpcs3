@@ -110,11 +110,11 @@ public:
 	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const std::string& name, T func);
+	template<typename T> __forceinline void AddFunc(const char* name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
-u32 getFunctionId(const std::string& name);
+u32 getFunctionId(const char* name);
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
@@ -123,7 +123,7 @@ __forceinline void Module::AddFunc(u32 id, T func)
 }
 
 template<typename T>
-__forceinline void Module::AddFunc(const std::string& name, T func)
+__forceinline void Module::AddFunc(const char* name, T func)
 {
 	AddFunc(getFunctionId(name), func);
 }

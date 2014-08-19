@@ -6,13 +6,19 @@
 #include <mutex>
 #include "ModuleManager.h"
 
-u32 getFunctionId(const std::string& name)
+u32 getFunctionId(const char* name)
 {
 	const char* suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"; // Symbol name suffix
-	std::string input = name + suffix;
-	unsigned char output[20];
+	u8 output[20];
 
-	sha1((unsigned char*)input.c_str(), input.length(), output); // Compute SHA-1 hash
+	// Compute SHA-1 hash
+	sha1_context ctx;
+
+	sha1_starts(&ctx);
+	sha1_update(&ctx, (const u8*)name, strlen(name));
+	sha1_update(&ctx, (const u8*)suffix, strlen(suffix));
+	sha1_finish(&ctx, output);
+
 	return (u32&)output[0];
 }
 

@@ -2209,6 +2209,15 @@ void cellSync_init()
 		libsre = Memory.PRXMem.AllocAlign(sizeof(libsre_data), 4096);
 		memcpy(Memory + libsre, libsre_data, sizeof(libsre_data));
 		libsre_rtoc = libsre + 0x399B0;
+
+#define FIX_IMPORT(addr, func) \
+		Memory.Write32((addr), 0x3d600000 | (getFunctionId(#func) >> 16)); /* lis r11, (func_id >> 16) */\
+		Memory.Write32((addr), 0x616b0000 | (getFunctionId(#func) & 0xffff)); /* ori r11, (func_id & 0xffff) */\
+		Memory.Write64((addr), 0x440000024e800020ull) /* sc + blr */
+
+		
+
+#undef FIX_IMPORT
 	});
 #endif
 }

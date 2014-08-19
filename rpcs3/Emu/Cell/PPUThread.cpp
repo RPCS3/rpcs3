@@ -249,6 +249,27 @@ u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 ar
 	return GPR[3];
 }
 
+u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
+{
+	auto old_status = m_status;
+	auto old_PC = PC;
+	auto old_LR = LR;
+	auto old_rtoc = GPR[2];
+
+	PC = addr;
+	GPR[2] = rtoc;
+	LR = Emu.m_ppu_thr_stop;
+
+	Task();
+
+	GPR[2] = old_rtoc;
+	LR = old_LR;
+	PC = old_PC;
+	m_status = old_status;
+
+	return GPR[3];
+}
+
 void PPUThread::FastStop()
 {
 	m_status = Stopped;

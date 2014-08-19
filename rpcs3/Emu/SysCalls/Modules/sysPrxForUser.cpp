@@ -82,13 +82,6 @@ s64 sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-s64 sys_strlen(u32 addr)
-{
-	const std::string& str = Memory.ReadString(addr);
-	sysPrxForUser->Log("sys_strlen(0x%x - \"%s\")", addr, str.c_str());
-	return str.length();
-}
-
 int sys_spu_elf_get_information(u32 elf_img, mem32_t entry, mem32_t nseg)
 {
 	sysPrxForUser->Warning("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.GetAddr(), nseg.GetAddr());
@@ -155,23 +148,89 @@ int sys_raw_spu_image_load(int id, mem_ptr_t<sys_spu_image> img)
 	return CELL_OK;
 }
 
-s32 _sys_memset(u32 addr, s32 value, u32 size)
+u32 _sys_memset(u32 addr, s32 value, u32 size)
 {
 	sysPrxForUser->Log("_sys_memset(addr=0x%x, value=%d, size=%d)", addr, value, size);
 
 	memset(Memory + addr, value, size);
-	return CELL_OK;
+	return addr;
+}
+
+u32 _sys_memcpy(u32 dest, u32 source, u32 size)
+{
+	sysPrxForUser->Log("_sys_memcpy(dest=0x%x, source=0x%x, size=%d)", dest, source, size);
+
+	memcpy(Memory + dest, Memory + source, size);
+	return dest;
+}
+
+s32 _sys_memcmp(u32 addr1, u32 addr2, u32 size)
+{
+	sysPrxForUser->Log("_sys_memcmp(addr1=0x%x, addr2=0x%x, size=%d)", addr1, addr2, size);
+
+	return memcmp(Memory + addr1, Memory + addr2, size);
+}
+
+s32 _sys_strlen(u32 addr)
+{
+	sysPrxForUser->Log("_sys_strlen(addr=0x%x)", addr);
+
+	return strlen((char*)(Memory + addr));
+}
+
+s32 _sys_strncmp(u32 str1, u32 str2, s32 max)
+{
+	sysPrxForUser->Log("_sys_strncmp(str1=0x%x, str2=0x%x, max=%d)", str1, str2, max);
+
+	return strncmp((char*)(Memory + str1), (char*)(Memory + str2), max);
+}
+
+u32 _sys_strcat(u32 dest, u32 source)
+{
+	sysPrxForUser->Log("_sys_strcat(dest=0x%x, source=0x%x)", dest, source);
+
+	assert(Memory.RealToVirtualAddr(strcat((char*)(Memory + dest), (char*)(Memory + source))) == dest);
+	return dest;
+}
+
+u32 _sys_strncat(u32 dest, u32 source, u32 len)
+{
+	sysPrxForUser->Log("_sys_strncat(dest=0x%x, source=0x%x, len=%d)", dest, source, len);
+
+	assert(Memory.RealToVirtualAddr(strncat((char*)(Memory + dest), (char*)(Memory + source), len)) == dest);
+	return dest;
+}
+
+u32 _sys_strcpy(u32 dest, u32 source)
+{
+	sysPrxForUser->Log("_sys_strcpy(dest=0x%x, source=0x%x)", dest, source);
+
+	assert(Memory.RealToVirtualAddr(strcpy((char*)(Memory + dest), (char*)(Memory + source))) == dest);
+	return dest;
+}
+
+u32 _sys_strncpy(u32 dest, u32 source, u32 len)
+{
+	sysPrxForUser->Log("_sys_strncpy(dest=0x%x, source=0x%x, len=%d)", dest, source, len);
+
+	if (!dest || !source)
+	{
+		return 0;
+	}
+
+	assert(Memory.RealToVirtualAddr(strncpy((char*)(Memory + dest), (char*)(Memory + source), len)) == dest);
+	return dest;
 }
 
 void sysPrxForUser_init()
 {
-	sysPrxForUser->AddFunc(0x744680a2, sys_initialize_tls);
+	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	
-	sysPrxForUser->AddFunc(0x2f85c0ef, sys_lwmutex_create);
-	sysPrxForUser->AddFunc(0xc3476d0c, sys_lwmutex_destroy);
-	sysPrxForUser->AddFunc(0x1573dc3f, sys_lwmutex_lock);
-	sysPrxForUser->AddFunc(0xaeb78725, sys_lwmutex_trylock);
-	sysPrxForUser->AddFunc(0x1bc200f4, sys_lwmutex_unlock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
 
 	sysPrxForUser->AddFunc(0x8461e528, sys_time_get_system_time);
 
@@ -198,8 +257,6 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0xe0998dbf, sys_prx_get_module_id_by_name);
 	sysPrxForUser->AddFunc(0xaa6d9bff, sys_prx_load_module_on_memcontainer);
 	sysPrxForUser->AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
-
-	sysPrxForUser->AddFunc(0x2d36462b, sys_strlen);
 
 	sysPrxForUser->AddFunc(0x35168520, sys_heap_malloc);
 	//sysPrxForUser->AddFunc(0xaede4b03, sys_heap_free);
@@ -236,5 +293,12 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
 	sysPrxForUser->AddFunc(0xfc52a7a9, sys_game_process_exitspawn);
 
-	sysPrxForUser->AddFunc(0x68b9b011, _sys_memset);
+	REG_FUNC(sysPrxForUser, _sys_memset);
+	REG_FUNC(sysPrxForUser, _sys_memcpy);
+	REG_FUNC(sysPrxForUser, _sys_memcmp);
+	REG_FUNC(sysPrxForUser, _sys_strlen);
+	REG_FUNC(sysPrxForUser, _sys_strncmp);
+	REG_FUNC(sysPrxForUser, _sys_strcat);
+	REG_FUNC(sysPrxForUser, _sys_strncat);
+	REG_FUNC(sysPrxForUser, _sys_strncpy);
 }

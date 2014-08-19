@@ -132,3 +132,5 @@ public:
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	module->AddFuncSub(group, name ## _table, #name, name)
+
+#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)

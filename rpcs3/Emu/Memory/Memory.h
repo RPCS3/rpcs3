@@ -210,6 +210,7 @@ public:
 		}
 		else
 		{
+			assert(!addr);
 			return 0;
 		}
 	}
