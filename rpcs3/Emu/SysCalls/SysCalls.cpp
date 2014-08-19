@@ -920,7 +920,7 @@ void default_syscall()
 
 void SysCalls::DoSyscall(u32 code)
 {
-	//Auto-Pause using simple singleton.
+	//Auto Pause using simple singleton.
 	Debug::AutoPause::getInstance().TryPause(code);
 
 	if(code < 1024)

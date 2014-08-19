@@ -14,7 +14,6 @@
 	#define CMD_LOG(...)
 #endif
 
-gcmBuffer gcmBuffers[8];
 GLuint g_flip_tex, g_depth_tex, g_pbo[6];
 int last_width = 0, last_height = 0, last_depth_format = 0;
 
@@ -189,64 +188,67 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			GL_HALF_FLOAT,
 			GL_UNSIGNED_BYTE,
 			GL_SHORT,
+			GL_FLOAT, // Needs conversion
 			GL_UNSIGNED_BYTE,
 		};
 
 		static const bool gl_normalized[] =
 		{
-			true,
-			false,
-			false,
-			true,
-			false,
-			false,
+			GL_TRUE,
+			GL_FALSE,
+			GL_FALSE,
+			GL_TRUE,
+			GL_FALSE,
+			GL_TRUE,
+			GL_FALSE,
 		};
 
-		if(m_vertex_data[i].type >= 1 && m_vertex_data[i].type <= 7)
+		if (m_vertex_data[i].type < 1 && m_vertex_data[i].type > 7) {
+			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
+		}
+
+		if(!m_vertex_data[i].addr)
 		{
-			if(!m_vertex_data[i].addr)
+			switch(m_vertex_data[i].type)
 			{
-				switch(m_vertex_data[i].type)
+			case CELL_GCM_VERTEX_S32K:
+			case CELL_GCM_VERTEX_S1:
+				switch(m_vertex_data[i].size)
 				{
-				case CELL_GCM_VERTEX_S32K:
-				case CELL_GCM_VERTEX_S1:
-					switch(m_vertex_data[i].size)
-					{
-					case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
-					case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-					case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-					case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-					}
-				break;
-
-				case CELL_GCM_VERTEX_F:
-					switch(m_vertex_data[i].size)
-					{
-					case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
-					case 2: glVertexAttrib2fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-					case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-					case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-					}
-				break;
-
-				case CELL_GCM_VERTEX_CMP:
-				case CELL_GCM_VERTEX_UB:
-					glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
-				break;
+				case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
 				}
+			break;
 
-				checkForGlError("glVertexAttrib");
-			}
-			else
-			{
-				u32 gltype = gl_types[m_vertex_data[i].type - 1];
-				bool normalized = gl_normalized[m_vertex_data[i].type - 1];
+			case CELL_GCM_VERTEX_F:
+				switch(m_vertex_data[i].size)
+				{
+				case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				}
+			break;
 
-				glEnableVertexAttribArray(i);
-				checkForGlError("glEnableVertexAttribArray");
-				glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
-				checkForGlError("glVertexAttribPointer");
+			case CELL_GCM_VERTEX_CMP:
+			case CELL_GCM_VERTEX_UB:
+				glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
+			break;
 			}
+
+			checkForGlError("glVertexAttrib");
+		}
+		else
+		{
+			u32 gltype = gl_types[m_vertex_data[i].type - 1];
+			bool normalized = gl_normalized[m_vertex_data[i].type - 1];
+
+			glEnableVertexAttribArray(i);
+			checkForGlError("glEnableVertexAttribArray");
+			glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
+			checkForGlError("glVertexAttribPointer");
 		}
 	}
 }
@@ -265,15 +267,15 @@ void GLGSRender::DisableVertexData()
 
 void GLGSRender::InitVertexData()
 {
-	GLfloat scaleOffsetMat[16] = {1.0f, 0.0f, 0.0f, 0.0f, 
-								  0.0f, 1.0f, 0.0f, 0.0f, 
-								  0.0f, 0.0f, 1.0f, 0.0f, 
-								  0.0f, 0.0f, 0.0f, 1.0f};
 	int l;
+	GLfloat scaleOffsetMat[16] = {
+		1.0f, 0.0f, 0.0f, 0.0f, 
+		0.0f, 1.0f, 0.0f, 0.0f, 
+		0.0f, 0.0f, 1.0f, 0.0f, 
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
 
-	for(u32 i=0; i<m_transform_constants.size(); ++i)
-	{
-		const RSXTransformConstant& c = m_transform_constants[i];
+	for (const RSXTransformConstant& c : m_transform_constants) {
 		const std::string name = fmt::Format("vc[%u]", c.id);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
@@ -284,13 +286,13 @@ void GLGSRender::InitVertexData()
 	}
 
 	// Scale
-	scaleOffsetMat[0] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[5] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
-	scaleOffsetMat[3] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[7] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
@@ -309,10 +311,7 @@ void GLGSRender::InitFragmentData()
 		return;
 	}
 
-	for(u32 i=0; i<m_fragment_constants.size(); ++i)
-	{
-		const RSXTransformConstant& c = m_fragment_constants[i];
-
+	for(const RSXTransformConstant& c : m_fragment_constants) {
 		u32 id = c.id - m_cur_shader_prog->offset;
 
 		//LOG_WARNING(RSX,"fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
@@ -1272,13 +1271,13 @@ void GLGSRender::Flip()
 		if (m_read_buffer)
 		{
 			format = GL_BGRA;
-			gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-			u32 addr = GetAddress(re(buffers[m_gcm_current_buffer].offset), CELL_GCM_LOCATION_LOCAL);
+			CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 			if (Memory.IsGoodAddr(addr))
 			{
-				width = re(buffers[m_gcm_current_buffer].width);
-				height = re(buffers[m_gcm_current_buffer].height);
+				width = buffers[m_gcm_current_buffer].width;
+				height = buffers[m_gcm_current_buffer].height;
 				src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
 			}
 			else

@@ -16,7 +16,7 @@ before_install:
   - echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe'
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update
-  - sudo apt-get install libwxgtk3.0-dev libopenal-dev freeglut3-dev libglew-dev
+  - sudo apt-get install libwxgtk3.0-dev libopenal-dev freeglut3-dev libglew-dev libc6-dev
   - sudo apt-get install aria2 -qq
   - download_extract() { aria2c -x 16 $1 -o $2 && tar -xf $2; }
   - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; export CXX="g++-4.8" CC="gcc-4.8"; else sudo apt-get install libstdc++-4.8-dev; fi

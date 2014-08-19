@@ -292,7 +292,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const mem_ptr_t<gcmBuffer> buffers = render.m_gcm_buffers_addr;
+	const mem_ptr_t<CellGcmDisplayInfo> buffers = render.m_gcm_buffers_addr;
 
 	if(!buffers.IsGood())
 		return;
@@ -300,9 +300,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render.m_local_mem_addr + re(buffers[id].offset); \
-		if(Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
-			MemoryViewerPanel::ShowImage(this, addr, 3, re(buffers[id].width), re(buffers[id].height), true); \
+		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
+		if (Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
+			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
 	} \
 
@@ -409,16 +409,16 @@ void RSXDebugger::GetBuffers()
 		if(!Memory.IsGoodAddr(render.m_gcm_buffers_addr))
 			continue;
 
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(render.m_gcm_buffers_addr);
-		u32 RSXbuffer_addr = render.m_local_mem_addr + re(buffers[bufferId].offset);
+		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(render.m_gcm_buffers_addr);
+		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!Memory.IsGoodAddr(RSXbuffer_addr))
 			continue;
 
 		unsigned char* RSXbuffer = (unsigned char*)Memory.VirtualToRealAddr(RSXbuffer_addr);
 		
-		u32 width  = re(buffers[bufferId].width);
-		u32 height = re(buffers[bufferId].height);
+		u32 width  = buffers[bufferId].width;
+		u32 height = buffers[bufferId].height;
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 
 		// ABGR to RGB and flip vertically

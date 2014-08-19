@@ -89,7 +89,7 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_emu, "Settings");
 	menu_conf->Append(id_config_pad, "PAD Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "Auto-Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "Auto Pause Settings");
 	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
@@ -398,9 +398,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
-	//Auto-Pause related
-	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto-Pause at System Call");
-	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto-Pause at Function Call");
+
+	//Auto Pause
+	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
 	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("PPU Interpreter");
@@ -463,7 +464,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_sys_lang->Append("Polish");
 	cbox_sys_lang->Append("English (UK)");
 
-
 	// Get values from .ini
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
@@ -476,7 +476,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
-	//Auto-Pause related
+
+	//Auto Pause related
 	chbox_dbg_ap_systemcall  ->SetValue(Ini.DBGAutoPauseSystemCall.GetValue());
 	chbox_dbg_ap_functioncall->SetValue(Ini.DBGAutoPauseFunctionCall.GetValue());
 
@@ -492,13 +493,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
-
-	// Enable / Disable parameters
+	// Enable/Disable parameters
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_audio_conv->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
-
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -547,7 +546,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
-	//Auto-Pause
+
+	//Auto Pause
 	s_subpanel_hle->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -594,7 +594,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
-		//Auto-Pause
+
+		//Auto Pause
 		Ini.DBGAutoPauseFunctionCall.SetValue(chbox_dbg_ap_functioncall->GetValue());
 		Ini.DBGAutoPauseSystemCall.SetValue(chbox_dbg_ap_systemcall->GetValue());
 

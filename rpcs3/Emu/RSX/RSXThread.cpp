@@ -73,7 +73,7 @@ void RSXVertexData::Reset()
 	data.clear();
 }
 
-void RSXVertexData::Load(u32 start, u32 count)
+void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 {
 	if(!addr) return;
 
@@ -83,7 +83,7 @@ void RSXVertexData::Load(u32 start, u32 count)
 
 	for(u32 i=start; i<start + count; ++i)
 	{
-		const u8* src = Memory.GetMemFromAddr(addr) + stride * i;
+		const u8* src = Memory.GetMemFromAddr(addr) + baseOffset + stride * (i+baseIndex);
 		u8* dst = &data[i * tsize * size];
 
 		switch(tsize)
@@ -117,16 +117,18 @@ u32 RSXVertexData::GetTypeSize()
 {
 	switch (type)
 	{
-	case 1: return 2;
-	case 2: return 4;
-	case 3: return 2;
-	case 4: return 1;
-	case 5: return 2;
-	case 7: return 1;
-	}
+	case CELL_GCM_VERTEX_S1:    return 2;
+	case CELL_GCM_VERTEX_F:     return 4;
+	case CELL_GCM_VERTEX_SF:    return 2;
+	case CELL_GCM_VERTEX_UB:    return 1;
+	case CELL_GCM_VERTEX_S32K:  return 2;
+	case CELL_GCM_VERTEX_CMP:   return 4;
+	case CELL_GCM_VERTEX_UB256: return 1;
 
-	LOG_ERROR(RSX, "Bad vertex data type! %d", type);
-	return 1;
+	default:
+		LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+		return 1;
+	}
 }
 
 #define CMD_DEBUG 0
@@ -903,6 +905,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 	}
 	break;
 
+	case NV4097_SET_VERTEX_DATA_BASE_OFFSET:
+	{
+		m_vertex_data_base_offset = ARGS(0);
+		if (count >= 2) {
+			m_vertex_data_base_index = ARGS(1);
+		}
+	}
+	break;
+
+	case NV4097_SET_VERTEX_DATA_BASE_INDEX:
+	{
+		m_vertex_data_base_index = ARGS(0);
+	}
+	break;
+
 	case NV4097_SET_BEGIN_END:
 	{
 		const u32 a0 = ARGS(0);
@@ -1320,9 +1337,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32
 		case 2: m_surface_pitch_a  = ARGS(1);
 		}
 
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
-		m_width = re(buffers[m_gcm_current_buffer].width);
-		m_height = re(buffers[m_gcm_current_buffer].height);
+		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		m_width = buffers[m_gcm_current_buffer].width;
+		m_height = buffers[m_gcm_current_buffer].height;
 
 		// Rescale native resolution to fit 1080p/720p/480p/576p window size
 		nativeRescale((float)m_width, (float)m_height);

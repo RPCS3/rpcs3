@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/RSX/GCM.h"
+#include "Emu/SysCalls/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 #include "cellGcmSys.h"
 
@@ -36,6 +37,29 @@ gcmInfo gcm_info;
 
 u32 map_offset_addr = 0;
 u32 map_offset_pos = 0;
+
+// Auxiliary functions
+
+/*
+ * Get usable local memory size for a specific game SDK version
+ * Example: For 0x00446000 (FW 4.46) we get a localSize of 0x0F900000 (249MB)
+ */ 
+u32 gcmGetLocalMemorySize(u32 sdk_version)
+{
+	if (sdk_version >= 0x00220000) {
+		return 0x0F900000;  // 249MB
+	}
+	if (sdk_version >= 0x00200000) {
+		return 0x0F200000;  // 242MB
+	}
+	if (sdk_version >= 0x00190000) {
+		return 0x0EA00000;  // 234MB
+	}
+	if (sdk_version >= 0x00180000) {
+		return 0x0E800000;  // 232MB
+	}
+	return 0x0E000000;  // 224MB
+}
 
 //----------------------------------------------------------------------------
 // Data Retrieval
@@ -267,16 +291,29 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 	return 0;
 }
 
-int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
+void _cellGcmFunc1()
 {
-	cellGcmSys->Warning("cellGcmInit(context_addr=0x%x,cmdSize=0x%x,ioSize=0x%x,ioAddress=0x%x)", context_addr, cmdSize, ioSize, ioAddress);
+	cellGcmSys->Todo("_cellGcmFunc1()");
+	return;
+}
+
+void _cellGcmFunc15(mem_ptr_t<CellGcmContextData> context)
+{
+	cellGcmSys->Todo("_cellGcmFunc15(context_addr=0x%x)", context.GetAddr());
+	return;
+}
+
+// Called by cellGcmInit
+s32 _cellGcmInitBody(mem_ptr_t<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
+{
+	cellGcmSys->Warning("_cellGcmInitBody(context_addr=0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context.GetAddr(), cmdSize, ioSize, ioAddress);
 
 	if(!cellGcmSys->IsLoaded())
 		cellGcmSys->Load();
 
 	if(!local_size && !local_addr)
 	{
-		local_size = 0xf900000; //TODO
+		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
 		local_addr = Memory.RSXFBMem.GetStartAddr();
 		Memory.RSXFBMem.AllocAlign(local_size);
 	}
@@ -323,7 +360,7 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	Memory.WriteData(gcm_info.context_addr, current_context);
-	Memory.Write32(context_addr, gcm_info.context_addr);
+	Memory.Write32(context.GetAddr(), gcm_info.context_addr);
 
 	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
 	ctrl.put = 0;
@@ -331,8 +368,8 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	ctrl.ref = -1;
 
 	auto& render = Emu.GetGSManager().GetRender();
-	render.m_ctxt_addr = context_addr;
-	render.m_gcm_buffers_addr = Memory.Alloc(sizeof(gcmBuffer) * 8, sizeof(gcmBuffer));
+	render.m_ctxt_addr = context.GetAddr();
+	render.m_gcm_buffers_addr = Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo));
 	render.m_zculls_addr = Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
 	render.m_tiles_addr = Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
 	render.m_gcm_buffers_count = 0;
@@ -374,21 +411,19 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 {
 	cellGcmSys->Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)", id, offset, width ? pitch / width : pitch, width, height);
 
-	if (id > 7) 
-	{
+	if (id > 7) {
 		cellGcmSys->Error("cellGcmSetDisplayBuffer : CELL_EINVAL");
 		return CELL_EINVAL;
 	}
 
-	gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+	CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
 
-	buffers[id].offset = re(offset);
-	buffers[id].pitch = re(pitch);
-	buffers[id].width = re(width);
-	buffers[id].height = re(height);
+	buffers[id].offset = offset;
+	buffers[id].pitch = pitch;
+	buffers[id].width = width;
+	buffers[id].height = height;
 
-	if(id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count)
-	{
+	if (id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count) {
 		Emu.GetGSManager().GetRender().m_gcm_buffers_count = id + 1;
 	}
 
@@ -1066,18 +1101,6 @@ int cellGcmSetFlipCommand(u32 ctx, u32 id)
 	return cellGcmSetPrepareFlip(ctx, id);
 }
 
-s64 cellGcmFunc15(u32 unk_addr)
-{
-	cellGcmSys->Todo("cellGcmFunc15(unk_addr=0x%x)", unk_addr);
-
-	if (0/*TODO: If what?*/) {
-		_sys_memset(unk_addr, 0, 0x84);
-	}
-
-	// TODO
-	return 0;
-}
-
 int cellGcmSetFlipCommandWithWaitLabel(u32 ctx, u32 id, u32 label_index, u32 label_value)
 {
 	cellGcmSys->Log("cellGcmSetFlipCommandWithWaitLabel(ctx=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)",
@@ -1196,7 +1219,9 @@ void cellGcmSys_init()
 	cellGcmSys->AddFunc(0x23ae55a3, cellGcmGetLastSecondVTime);
 	cellGcmSys->AddFunc(0x055bd74d, cellGcmGetTiledPitchSize);
 	cellGcmSys->AddFunc(0x723bbc7e, cellGcmGetVBlankCount);
-	cellGcmSys->AddFunc(0x15bae46b, cellGcmInit);
+	cellGcmSys->AddFunc(0x5f909b17, _cellGcmFunc1);
+	cellGcmSys->AddFunc(0x3a33c1fd, _cellGcmFunc15);
+	cellGcmSys->AddFunc(0x15bae46b, _cellGcmInitBody);
 	cellGcmSys->AddFunc(0xfce9e764, cellGcmInitSystemMode);
 	cellGcmSys->AddFunc(0xb2e761d4, cellGcmResetFlipStatus);
 	cellGcmSys->AddFunc(0x51c9d62b, cellGcmSetDebugOutputLevel);
@@ -1258,7 +1283,6 @@ void cellGcmSys_init()
 
 	// Other
 	cellGcmSys->AddFunc(0x21397818, cellGcmSetFlipCommand);
-	cellGcmSys->AddFunc(0x3a33c1fd, cellGcmFunc15);
 	cellGcmSys->AddFunc(0xd8f88e1a, cellGcmSetFlipCommandWithWaitLabel);
 	cellGcmSys->AddFunc(0xd0b1d189, cellGcmSetTile);
 }

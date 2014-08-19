@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <wx/listctrl.h>
+#include <wx/clipbrd.h>
 #include <fstream>
 #include <vector>
 #include <mutex>
@@ -23,6 +24,12 @@ const int BUFFER_MAX_SIZE = 1024 * 1024;
 
 //amount of characters in the TextCtrl text-buffer for the emulation log
 const int GUI_BUFFER_MAX_SIZE = 1024 * 1024;
+
+enum
+{
+	id_log_copy,	//Copy log to ClipBoard
+	id_log_clear	//Clear log
+};
 
 struct wxWriter : Log::LogListener
 {
@@ -146,6 +153,10 @@ LogFrame::LogFrame(wxWindow* parent)
 	SetSizer(s_main);
 	Layout();
 
+	m_log->Bind(wxEVT_RIGHT_DOWN, &LogFrame::OnRightClick, this);
+	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_clear);
+	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_copy);
+
 	Show();
 }
 
@@ -162,4 +173,40 @@ bool LogFrame::Close(bool force)
 void LogFrame::OnQuit(wxCloseEvent& event)
 {
 	event.Skip();
+}
+
+//Deals with the RightClick on Log Console, shows up the Context Menu.
+void LogFrame::OnRightClick(wxMouseEvent& event)
+{
+	wxMenu* menu = new wxMenu();
+
+	menu->Append(id_log_copy, "&Copy");
+	menu->AppendSeparator();
+	menu->Append(id_log_clear, "C&lear");
+
+	PopupMenu(menu);
+}
+//Well you can bind more than one control to a single handler.
+void LogFrame::OnContextMenu(wxCommandEvent& event)
+{
+	int id = event.GetId();
+	switch (id)
+	{
+	case id_log_clear:
+		m_log->Clear();
+		break;
+	case id_log_copy:
+		if (wxTheClipboard->Open())
+		{
+			m_tdo = new wxTextDataObject(m_log->GetStringSelection());
+			if (m_tdo->GetTextLength() > 0)
+			{
+				wxTheClipboard->SetData(new wxTextDataObject(m_log->GetStringSelection()));
+			}
+			wxTheClipboard->Close();
+		}
+		break;
+	default:
+		event.Skip();
+	}
 }

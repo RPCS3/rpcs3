@@ -10,21 +10,21 @@ struct GLFragmentDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 end                 : 1;
-			u32 dest_reg            : 6;
-			u32 fp16                : 1;
-			u32 set_cond            : 1;
+			u32 end                 : 1; // Set to 1 if this is the last instruction
+			u32 dest_reg            : 6; // Destination register index
+			u32 fp16                : 1; // Destination is a half register (H0 to H47)
+			u32 set_cond            : 1; // Condition Code Registers (CC0 and CC1) are updated
 			u32 mask_x              : 1;
 			u32 mask_y              : 1;
 			u32 mask_z              : 1;
 			u32 mask_w              : 1;
 			u32 src_attr_reg_num    : 4;
 			u32 tex_num             : 4;
-			u32 exp_tex             : 1;
+			u32 exp_tex             : 1; // _bx2
 			u32 prec                : 2;
 			u32 opcode              : 6;
 			u32 no_dest             : 1;
-			u32 saturate            : 1;
+			u32 saturate            : 1; // _sat
 		};
 	} dst;
 
@@ -82,13 +82,14 @@ struct GLFragmentDecompilerThread : public ThreadBase
 			u32             : 1;
 		};
 
+		// LOOP, REP
 		struct
 		{
-			u32      : 2;
-			u32 rep1 : 8;
-			u32 rep2 : 8;
-			u32      : 1;
-			u32 rep3 : 8;
+			u32              : 2;
+			u32 end_counter  : 8; // End counter value for LOOP or rep count for REP
+			u32 init_counter : 8; // Initial counter value for LOOP
+			u32              : 1;
+			u32 increment    : 8; // Increment value for LOOP
 		};
 	} src1;
 

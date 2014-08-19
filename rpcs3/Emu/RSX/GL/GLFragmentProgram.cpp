@@ -267,9 +267,8 @@ std::string GLFragmentDecompilerThread::BuildCode()
 
 	std::string p;
 
-	for (u32 i = 0; i<m_parr.params.size(); ++i)
-	{
-		p += m_parr.params[i].Format();
+	for (auto& param : m_parr.params) {
+		p += param.Format();
 	}
 
 	return std::string("#version 330\n"
@@ -321,115 +320,114 @@ void GLFragmentDecompilerThread::Task()
 
 		switch(opcode)
 		{
-		case 0x00: break; //NOP
-		case 0x01: SetDst("$0"); break; //MOV
-		case 0x02: SetDst("($0 * $1)"); break; //MUL
-		case 0x03: SetDst("($0 + $1)"); break; //ADD
-		case 0x04: SetDst("($0 * $1 + $2)"); break; //MAD
-		case 0x05: SetDst("vec4(dot($0.xyz, $1.xyz))"); break; // DP3
-		case 0x06: SetDst("vec4(dot($0, $1))"); break; // DP4
-		case 0x07: SetDst("vec4(distance($0, $1))"); break; // DST
-		case 0x08: SetDst("min($0, $1)"); break; // MIN
-		case 0x09: SetDst("max($0, $1)"); break; // MAX
-		case 0x0a: SetDst("vec4(lessThan($0, $1))"); break; // SLT
-		case 0x0b: SetDst("vec4(greaterThanEqual($0, $1))"); break; // SGE
-		case 0x0c: SetDst("vec4(lessThanEqual($0, $1))"); break; // SLE
-		case 0x0d: SetDst("vec4(greaterThan($0, $1))"); break; // SGT
-		case 0x0e: SetDst("vec4(notEqual($0, $1))"); break; // SNE
-		case 0x0f: SetDst("vec4(equal($0, $1))"); break; // SEQ
+		case RSX_FP_OPCODE_NOP: break;
+		case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
+		case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
+		case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
+		case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
+		case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
+		case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
+		case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); break;
+		case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
+		case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
+		case RSX_FP_OPCODE_SLT: SetDst("vec4(lessThan($0, $1))"); break;
+		case RSX_FP_OPCODE_SGE: SetDst("vec4(greaterThanEqual($0, $1))"); break;
+		case RSX_FP_OPCODE_SLE: SetDst("vec4(lessThanEqual($0, $1))"); break;
+		case RSX_FP_OPCODE_SGT: SetDst("vec4(greaterThan($0, $1))"); break;
+		case RSX_FP_OPCODE_SNE: SetDst("vec4(notEqual($0, $1))"); break;
+		case RSX_FP_OPCODE_SEQ: SetDst("vec4(equal($0, $1))"); break;
 
-		case 0x10: SetDst("fract($0)"); break; // FRC
-		case 0x11: SetDst("floor($0)"); break; // FLR
-		case 0x12: SetDst("discard", false); break; // KIL (kill fragment)
-		//case 0x13: break; // PK4 (pack four signed 8-bit values)
-		//case 0x14: break; // UP4 (unpack four signed 8-bit values)
-		case 0x15: SetDst("dFdx($0)"); break; // DDX
-		case 0x16: SetDst("dFdy($0)"); break; // DDY
-		case 0x17: SetDst("texture($t, $0.xy)"); break; // TEX (texture lookup)
-		//case 0x18: break; // TXP (projective texture lookup)
-		//case 0x19: break; // TXD (texture lookup with derivatives)
-		case 0x1a: SetDst("(1 / $0)"); break; // RCP
-		case 0x1b: SetDst("inversesqrt(abs($0))"); break; // RSQ
-		case 0x1c: SetDst("exp2($0)"); break; // EX2
-		case 0x1d: SetDst("log2($0)"); break; // LG2
-		case 0x1e: SetDst("vec4(1.0, $0.x, ($0.x > 0 ? exp2($0.w * log2($0.y)) : 0.0), 1.0)"); break; // LIT (compute light coefficients)
-		case 0x1f: SetDst("($0 * ($1 - $2) + $2)"); break; // LRP (linear interpolation)
+		case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
+		case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
+		case RSX_FP_OPCODE_KIL: SetDst("discard", false); break;
+		//case RSX_FP_OPCODE_PK4: break;
+		//case RSX_FP_OPCODE_UP4: break;
+		case RSX_FP_OPCODE_DDX: SetDst("dFdx($0)"); break;
+		case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
+		case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)"); break;
+		//case RSX_FP_OPCODE_TXP: break;
+		//case RSX_FP_OPCODE_TXD: break;
+		case RSX_FP_OPCODE_RCP: SetDst("(1 / $0)"); break;
+		case RSX_FP_OPCODE_RSQ: SetDst("inversesqrt(abs($0))"); break;
+		case RSX_FP_OPCODE_EX2: SetDst("exp2($0)"); break;
+		case RSX_FP_OPCODE_LG2: SetDst("log2($0)"); break;
+		case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0 ? exp2($0.w * log2($0.y)) : 0.0), 1.0)"); break;
+		case RSX_FP_OPCODE_LRP: SetDst("($0 * ($1 - $2) + $2)"); break;
 		
-		case 0x20: SetDst("vec4(equal($0, vec4(1.0)))"); break; // STR (set on true)
-		case 0x21: SetDst("vec4(equal($0, vec4(0.0)))"); break; // SFL (set on false)
-		case 0x22: SetDst("cos($0)"); break; // COS
-		case 0x23: SetDst("sin($0)"); break; // SIN
-		//case 0x24: break; // PK2 (pack two 16-bit floats)
-		//case 0x25: break; // UP2 (unpack two 16-bit floats)
-		case 0x26: SetDst("pow($0, $1)"); break; // POW
-		//case 0x27: break; // PKB
-		//case 0x28: break; // UPB
-		//case 0x29: break; // PK16
-		//case 0x2a: break; // UP16
-		//case 0x2b: break; // BEM
-		//case 0x2c: break; // PKG
-		//case 0x2d: break; // UPG
-		case 0x2e: SetDst("($0.x * $1.x + $0.y * $1.y + $2.x)");  break; // DP2A (2-component dot product and add)
-		//case 0x2f: break; // TXL (texture lookup with LOD)
+		case RSX_FP_OPCODE_STR: SetDst("vec4(equal($0, vec4(1.0)))"); break;
+		case RSX_FP_OPCODE_SFL: SetDst("vec4(equal($0, vec4(0.0)))"); break;
+		case RSX_FP_OPCODE_COS: SetDst("cos($0)"); break;
+		case RSX_FP_OPCODE_SIN: SetDst("sin($0)"); break;
+		//case RSX_FP_OPCODE_PK2: break;
+		//case RSX_FP_OPCODE_UP2: break;
+		case RSX_FP_OPCODE_POW: SetDst("pow($0, $1)"); break;
+		//case RSX_FP_OPCODE_PKB: break;
+		//case RSX_FP_OPCODE_UPB: break;
+		//case RSX_FP_OPCODE_PK16: break;
+		//case RSX_FP_OPCODE_UP16: break;
+		//case RSX_FP_OPCODE_BEM: break;
+		//case RSX_FP_OPCODE_PKG: break;
+		//case RSX_FP_OPCODE_UPG: break;
+		case RSX_FP_OPCODE_DP2A: SetDst("($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
+		//case RSX_FP_OPCODE_TXL: break;
  		
- 		//case 0x30: break;
-		//case 0x31: break; // TXB (texture lookup with bias)
-		//case 0x33: break; // TEXBEM
-		//case 0x34: break; // TXPBEM
-		//case 0x35: break; // BEMLUM
-		case 0x36: SetDst("($0 - 2.0 * $1 * dot($0, $1))"); break; // RFL (reflection vector)
-		//case 0x37: break; // TIMESWTEX
-		case 0x38: SetDst("vec4(dot($0.xy, $1.xy))"); break; // DP2
-		case 0x39: SetDst("normalize($0.xyz)"); break; // NRM
-		case 0x3a: SetDst("($0 / $1)"); break; // DIV
-		case 0x3b: SetDst("($0 / sqrt($1))"); break; // DIVSQ
-		case 0x3c: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break; // LIF
-		case 0x3d: break; // FENCT
-		case 0x3e: break; // FENCB
+		//case RSX_FP_OPCODE_TXB: break;
+		//case RSX_FP_OPCODE_TEXBEM: break;
+		//case RSX_FP_OPCODE_TXPBEM: break;
+		//case RSX_FP_OPCODE_BEMLUM: break;
+		case RSX_FP_OPCODE_REFL: SetDst("($0 - 2.0 * $1 * dot($0, $1))"); break;
+		//case RSX_FP_OPCODE_TIMESWTEX: break;
+		case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
+		case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); break;
+		case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
+		case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1))"); break;
+		case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
+		case RSX_FP_OPCODE_FENCT: break;
+		case RSX_FP_OPCODE_FENCB: break;
 
-		case 0x40: SetDst("break"); break; //BRK
-		//case 0x41: break; //CAL
-		case 0x42:
-			AddCode("if($cond)"); //IF
+		case RSX_FP_OPCODE_BRK: SetDst("break"); break;
+		//case RSX_FP_OPCODE_CAL: break;
+		case RSX_FP_OPCODE_IFE:
+			AddCode("if($cond)");
 			m_else_offsets.push_back(src1.else_offset << 2);
 			m_end_offsets.push_back(src2.end_offset << 2);
 			AddCode("{");
 			m_code_level++;
 		break;
 
-		case 0x43: //LOOP
+		case RSX_FP_OPCODE_LOOP:
 			if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 			{
 				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
-					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3, src2.end_offset));
+					m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 			}
 			else
 			{
 				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
+					m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
 				m_loop_count++;
 				m_end_offsets.push_back(src2.end_offset << 2);
 				AddCode("{");
 				m_code_level++;
 			}
 		break;
-		case 0x44: //REP
+		case RSX_FP_OPCODE_REP:
 			if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 			{
 				AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
-					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3, src2.end_offset));
+					m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 			}
 			else
 			{
 				AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-					m_loop_count, src1.rep2, m_loop_count, src1.rep1, m_loop_count, src1.rep3));
+					m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
 				m_loop_count++;
 				m_end_offsets.push_back(src2.end_offset << 2);
 				AddCode("{");
 				m_code_level++;
 			}
 		break;
-		//case 0x45: SetDst("return"); break; //RET
+		//case RSX_FP_OPCODE_RET: SetDst("return"); break;
 
 		default:
 			LOG_ERROR(RSX, "Unknown fp opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
@@ -543,10 +541,9 @@ void GLShaderProgram::Compile()
 
 void GLShaderProgram::Delete()
 {
-	for (u32 i = 0; i<m_parr.params.size(); ++i)
-	{
-		m_parr.params[i].items.clear();
-		m_parr.params[i].type.clear();
+	for (auto& param : m_parr.params) {
+		param.items.clear();
+		param.type.clear();
 	}
 
 	m_parr.params.clear();
