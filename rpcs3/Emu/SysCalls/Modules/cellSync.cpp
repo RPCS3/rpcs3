@@ -15,6 +15,18 @@ Module *cellSync = nullptr;
 #include "prx_libsre.h"
 u32 libsre;
 u32 libsre_rtoc;
+
+void fix_import(Module* module, u32 func, u32 addr)
+{
+	Memory.Write32((addr), 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
+	Memory.Write32((addr) + 4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
+	Memory.Write64((addr) + 8, 0x440000024e800020ull); /* sc + blr */
+
+	module->Load(func);
+}
+
+#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
+	
 #endif
 
 s32 syncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
@@ -1501,6 +1513,8 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 	// cellSyncLFQueuePush has 1 in isBlocking param, cellSyncLFQueueTryPush has 0
 	cellSync->Warning("_cellSyncLFQueuePushBody(queue_addr=0x%x, buffer_addr=0x%x, isBlocking=%d)", queue.GetAddr(), buffer_addr, isBlocking);
 
+	//return GetCurrentPPUThread().FastCall2(libsre + 0x1674, libsre_rtoc); // test
+
 	if (!queue || !buffer_addr)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -2210,16 +2224,41 @@ void cellSync_init()
 		memcpy(Memory + libsre, libsre_data, sizeof(libsre_data));
 		libsre_rtoc = libsre + 0x399B0;
 
-#define FIX_IMPORT(addr, func) \
-		Memory.Write32((addr), 0x3d600000 | (getFunctionId(#func) >> 16)); /* lis r11, (func_id >> 16) */\
-		Memory.Write32((addr), 0x616b0000 | (getFunctionId(#func) & 0xffff)); /* ori r11, (func_id & 0xffff) */\
-		Memory.Write64((addr), 0x440000024e800020ull) /* sc + blr */
+		extern Module* sysPrxForUser;
 
-		
-
-#undef FIX_IMPORT
+		FIX_IMPORT(sysPrxForUser, _sys_strncmp                  , libsre + 0x1D5FC);
+		FIX_IMPORT(sysPrxForUser, _sys_strcat                   , libsre + 0x1D61C);
+		FIX_IMPORT(sysPrxForUser, _sys_vsnprintf                , libsre + 0x1D63C);
+		FIX_IMPORT(sysPrxForUser, _sys_snprintf                 , libsre + 0x1D65C);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_lock              , libsre + 0x1D67C);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_unlock            , libsre + 0x1D69C);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_destroy            , libsre + 0x1D6BC);
+		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_create         , libsre + 0x1D6DC);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_wait               , libsre + 0x1D6FC);
+		FIX_IMPORT(sysPrxForUser, _sys_strlen                   , libsre + 0x1D71C);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_create            , libsre + 0x1D73C);
+		FIX_IMPORT(sysPrxForUser, _sys_spu_printf_detach_group  , libsre + 0x1D75C);
+		FIX_IMPORT(sysPrxForUser, _sys_memset                   , libsre + 0x1D77C);
+		FIX_IMPORT(sysPrxForUser, _sys_memcpy                   , libsre + 0x1D79C);
+		FIX_IMPORT(sysPrxForUser, _sys_strncat                  , libsre + 0x1D7BC);
+		FIX_IMPORT(sysPrxForUser, _sys_strcpy                   , libsre + 0x1D7DC);
+		FIX_IMPORT(sysPrxForUser, _sys_printf                   , libsre + 0x1D7FC);
+		fix_import(sysPrxForUser, 0x9FB6228E                    , libsre + 0x1D81C);
+		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_exit           , libsre + 0x1D83C);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_destroy           , libsre + 0x1D85C);
+		FIX_IMPORT(sysPrxForUser, _sys_strncpy                  , libsre + 0x1D87C);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_create             , libsre + 0x1D89C);
+		FIX_IMPORT(sysPrxForUser, _sys_spu_printf_attach_group  , libsre + 0x1D8BC);
+		FIX_IMPORT(sysPrxForUser, sys_prx_get_module_id_by_name , libsre + 0x1D8DC);
+		FIX_IMPORT(sysPrxForUser, sys_spu_image_close           , libsre + 0x1D8FC);
+		fix_import(sysPrxForUser, 0xE75C40F2                    , libsre + 0x1D91C);
+		FIX_IMPORT(sysPrxForUser, sys_spu_image_import          , libsre + 0x1D93C);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_signal             , libsre + 0x1D95C);
+		FIX_IMPORT(sysPrxForUser, _sys_vprintf                  , libsre + 0x1D97C);
+		FIX_IMPORT(sysPrxForUser, _sys_memcmp                   , libsre + 0x1D99C);
 	});
 #endif
 }
 
 #undef PRX_DEBUG
+#undef FIX_IMPORT
