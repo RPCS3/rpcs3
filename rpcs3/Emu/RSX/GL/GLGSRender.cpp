@@ -203,7 +203,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			GL_FALSE,
 		};
 
-		if (m_vertex_data[i].type < 1 && m_vertex_data[i].type > 7) {
+		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7) {
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
 
