@@ -225,8 +225,9 @@ s32 _sys_spu_printf_initialize(u32 agcb, u32 dgcb, u32 atcb, u32 dtcb)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_initialize(agcb=0x%x, dgcb=0x%x, atcb=0x%x, dtcb=0x%x)", agcb, dgcb, atcb, dtcb);
 
+	// prx: register some callbacks
 	spu_printf_agcb = agcb;
-	spu_printf_dgcb = atcb;
+	spu_printf_dgcb = dgcb;
 	spu_printf_atcb = atcb;
 	spu_printf_dtcb = dtcb;
 	return CELL_OK;
@@ -289,6 +290,16 @@ s32 _sys_spu_printf_detach_thread(u32 arg)
 	}
 
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dtcb), Memory.Read32(spu_printf_dtcb + 4), arg);
+}
+
+s32 _sys_printf(u32 arg1)
+{
+	sysPrxForUser->Todo("_sys_printf(arg1=0x%x)", arg1);
+
+	// probably, assertion failed
+	LOG_WARNING(TTY, "%s", (char*)(Memory + arg1));
+	Emu.Pause();
+	return CELL_OK;
 }
 
 void sysPrxForUser_init()
@@ -381,4 +392,6 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_group);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_attach_thread);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_thread);
+
+	REG_FUNC(sysPrxForUser, _sys_printf);
 }

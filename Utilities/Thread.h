@@ -48,6 +48,7 @@ public:
 };
 
 NamedThreadBase* GetCurrentNamedThread();
+void SetCurrentNamedThread(NamedThreadBase* value);
 
 class ThreadBase : public NamedThreadBase
 {

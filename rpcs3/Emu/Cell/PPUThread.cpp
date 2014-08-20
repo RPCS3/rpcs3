@@ -222,13 +222,6 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 
 u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
 {
-	auto old_status = m_status;
-	auto old_PC = PC;
-	auto old_LR = LR;
-	auto old_rtoc = GPR[2];
-
-	PC = addr;
-	GPR[2] = rtoc;
 	GPR[3] = arg1;
 	GPR[4] = arg2;
 	GPR[5] = arg3;
@@ -237,35 +230,31 @@ u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 ar
 	GPR[8] = arg6;
 	GPR[9] = arg7;
 	GPR[10] = arg8;
-	LR = Emu.m_ppu_thr_stop;
-
-	Task();
-
-	GPR[2] = old_rtoc;
-	LR = old_LR;
-	PC = old_PC;
-	m_status = old_status;
-
-	return GPR[3];
+	
+	return FastCall2(addr, rtoc);
 }
 
 u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
-	auto old_LR = LR;
 	auto old_rtoc = GPR[2];
+	auto old_LR = LR;
+	auto old_thread = GetCurrentNamedThread();
 
+	m_status = Running;
 	PC = addr;
 	GPR[2] = rtoc;
 	LR = Emu.m_ppu_thr_stop;
+	SetCurrentNamedThread(this);
 
 	Task();
 
+	m_status = old_status;
+	PC = old_PC;
 	GPR[2] = old_rtoc;
 	LR = old_LR;
-	PC = old_PC;
-	m_status = old_status;
+	SetCurrentNamedThread(old_thread);
 
 	return GPR[3];
 }
