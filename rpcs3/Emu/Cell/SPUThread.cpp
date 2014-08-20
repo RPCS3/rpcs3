@@ -81,6 +81,9 @@ void SPUThread::InitRegs()
 	MFC1.TagStatus.SetValue(0);
 	MFC2.TagStatus.SetValue(0);
 	//PC = SPU.NPC.GetValue();
+
+	m_event_mask = 0;
+	m_events = 0;
 }
 
 u64 SPUThread::GetFreeStackSize() const

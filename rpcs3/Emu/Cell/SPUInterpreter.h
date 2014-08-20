@@ -936,7 +936,8 @@ private:
 	
 	void FSCRRD(u32 rt)
 	{
-		UNIMPLEMENTED(); // TODO (rarely used)
+		// TODO (rarely used)
+		CPU.GPR[rt].Reset();
 	}
 	void FESD(u32 rt, u32 ra)
 	{
@@ -952,7 +953,12 @@ private:
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED(); // TODO (rarely used)
+		// TODO (rarely used)
+		if (CPU.GPR[ra]._u128)
+		{
+			LOG_ERROR(SPU, "FSCRWR(%d,%d): value = %s", rt, ra, CPU.GPR[ra].ToString().c_str());
+			UNIMPLEMENTED();
+		}
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{

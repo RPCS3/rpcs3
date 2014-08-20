@@ -106,6 +106,24 @@ enum MFCchannels
 	MFC_RdAtomicStat    = 27, //Read completion status of last completed immediate MFC atomic update command
 };
 
+enum SPUEvents
+{
+	SPU_EVENT_MS = 0x1000, // multisource synchronization event
+	SPU_EVENT_A  = 0x800, // privileged attention event
+	SPU_EVENT_LR = 0x400, // lock line reservation lost event
+	SPU_EVENT_S1 = 0x200, // signal notification register 1 available
+	SPU_EVENT_S2 = 0x100, // signal notification register 2 available
+	SPU_EVENT_LE = 0x80, // SPU outbound mailbox available
+	SPU_EVENT_ME = 0x40, // SPU outbound interrupt mailbox available
+	SPU_EVENT_TM = 0x20, // SPU decrementer became negative (?)
+	SPU_EVENT_MB = 0x10, // SPU inbound mailbox available
+	SPU_EVENT_QV = 0x4, // MFC SPU command queue available
+	SPU_EVENT_SN = 0x2, // MFC list command stall-and-notify event
+	SPU_EVENT_TG = 0x1, // MFC tag-group status update event
+
+	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR,
+};
+
 enum
 {
 	SPU_RUNCNTL_STOP     = 0,
@@ -301,6 +319,9 @@ public:
 
 	u64 m_dec_start; // timestamp of writing decrementer value
 	u32 m_dec_value; // written decrementer value
+
+	u32 m_event_mask;
+	u32 m_events;
 
 	struct IntrTag
 	{
@@ -855,6 +876,32 @@ public:
 		}
 	}
 
+	bool CheckEvents() // checks events
+	{
+		// SPU_EVENT_LR:
+		{
+			SMutexLockerR lock(reservation.mutex);
+
+			if (reservation.owner == lock.tid)
+			{
+				for (u32 i = 0; i < 16; i++)
+				{
+					if (*(u64*)&Memory[reservation.addr + i * 8] != reservation.data[i])
+					{
+						m_events |= SPU_EVENT_LR;
+						reservation.clear();
+					}
+				}
+			}
+			else
+			{
+				m_events |= SPU_EVENT_LR; // ???
+			}
+		}
+		
+		return (m_events & m_event_mask) != 0;
+	}
+
 	u32 GetChannelCount(u32 ch)
 	{
 		switch(ch)
@@ -868,6 +915,7 @@ public:
 		case SPU_RdSigNotify1:    return SPU.SNR[0].GetCount();
 		case SPU_RdSigNotify2:    return SPU.SNR[1].GetCount();
 		case MFC_RdAtomicStat:    return MFC1.AtomicStat.GetCount();
+		case SPU_RdEventStat:     return CheckEvents() ? 1 : 0;
 
 		default:
 		{
@@ -1112,6 +1160,19 @@ public:
 			break;
 		}
 
+		case SPU_WrEventMask:
+		{
+			m_event_mask = v;
+			if (v & ~(SPU_EVENT_IMPLEMENTED)) LOG_ERROR(Log::SPU, "SPU_WrEventMask: unsupported event masked (0x%x)");
+			break;
+		}
+
+		case SPU_WrEventAck:
+		{
+			m_events &= ~v;
+			break;
+		}
+
 		default:
 		{
 			LOG_ERROR(Log::SPU, "%s error (v=0x%x): unknown/illegal channel (%d [%s]).", __FUNCTION__, v, ch, spu_ch_name[ch]);
@@ -1138,6 +1199,12 @@ public:
 		case MFC_RdTagStat:
 		{
 			while (!MFC1.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			break;
+		}
+
+		case MFC_RdTagMask:
+		{
+			v = MFC1.QueryMask.GetValue();
 			break;
 		}
 
@@ -1168,6 +1235,19 @@ public:
 		case SPU_RdDec:
 		{
 			v = m_dec_value - (u32)(get_time() - m_dec_start);
+			break;
+		}
+
+		case SPU_RdEventMask:
+		{
+			v = m_event_mask;
+			break;
+		}
+
+		case SPU_RdEventStat:
+		{
+			while (!CheckEvents() && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			v = m_events & m_event_mask;
 			break;
 		}
 
