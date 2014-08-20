@@ -70,12 +70,6 @@ int sys_process_is_stack(u32 p)
 	return (int)(bool)(p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr());
 }
 
-int _sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
-{
-	sysPrxForUser->Todo("_sys_spu_printf_initialize(0x%x, 0x%x, 0x%x, 0x%x, 0x%x)", a1, a2, a3, a4, a5);
-	return CELL_OK;
-}
-
 s64 sys_prx_exitspawn_with_level()
 {
 	sysPrxForUser->Log("sys_prx_exitspawn_with_level()");
@@ -222,6 +216,81 @@ u32 _sys_strncpy(u32 dest, u32 source, u32 len)
 	return dest;
 }
 
+u32 spu_printf_agcb;
+u32 spu_printf_dgcb;
+u32 spu_printf_atcb;
+u32 spu_printf_dtcb;
+
+s32 _sys_spu_printf_initialize(u32 agcb, u32 dgcb, u32 atcb, u32 dtcb)
+{
+	sysPrxForUser->Warning("_sys_spu_printf_initialize(agcb=0x%x, dgcb=0x%x, atcb=0x%x, dtcb=0x%x)", agcb, dgcb, atcb, dtcb);
+
+	spu_printf_agcb = agcb;
+	spu_printf_dgcb = atcb;
+	spu_printf_atcb = atcb;
+	spu_printf_dtcb = dtcb;
+	return CELL_OK;
+}
+
+s32 _sys_spu_printf_finalize()
+{
+	sysPrxForUser->Warning("_sys_spu_printf_finalize()");
+
+	spu_printf_agcb = 0;
+	spu_printf_dgcb = 0;
+	spu_printf_atcb = 0;
+	spu_printf_dtcb = 0;
+	return CELL_OK;
+}
+
+s32 _sys_spu_printf_attach_group(u32 arg)
+{
+	sysPrxForUser->Warning("_sys_spu_printf_attach_group(arg=0x%x)", arg);
+
+	if (!spu_printf_agcb)
+	{
+		return CELL_ESTAT;
+	}
+
+	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_agcb), Memory.Read32(spu_printf_agcb + 4), arg);
+}
+
+s32 _sys_spu_printf_detach_group(u32 arg)
+{
+	sysPrxForUser->Warning("_sys_spu_printf_detach_group(arg=0x%x)", arg);
+
+	if (!spu_printf_dgcb)
+	{
+		return CELL_ESTAT;
+	}
+
+	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dgcb), Memory.Read32(spu_printf_dgcb + 4), arg);
+}
+
+s32 _sys_spu_printf_attach_thread(u32 arg)
+{
+	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(arg=0x%x)", arg);
+
+	if (!spu_printf_atcb)
+	{
+		return CELL_ESTAT;
+	}
+
+	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_atcb), Memory.Read32(spu_printf_atcb + 4), arg);
+}
+
+s32 _sys_spu_printf_detach_thread(u32 arg)
+{
+	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(arg=0x%x)", arg);
+
+	if (!spu_printf_dtcb)
+	{
+		return CELL_ESTAT;
+	}
+
+	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dtcb), Memory.Read32(spu_printf_dtcb + 4), arg);
+}
+
 void sysPrxForUser_init()
 {
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
@@ -243,8 +312,6 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0x350d454e, sys_ppu_thread_get_id);
 	sysPrxForUser->AddFunc(0xaff080a4, sys_ppu_thread_exit);
 	sysPrxForUser->AddFunc(0xa3e3be68, sys_ppu_thread_once);
-
-	sysPrxForUser->AddFunc(0x45fe2fce, _sys_spu_printf_initialize);
 
 	sysPrxForUser->AddFunc(0x26090058, sys_prx_load_module);
 	sysPrxForUser->AddFunc(0x9f18429d, sys_prx_start_module);
@@ -302,4 +369,16 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_strncat);
 	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
+
+	spu_printf_agcb = 0;
+	spu_printf_dgcb = 0;
+	spu_printf_atcb = 0;
+	spu_printf_dtcb = 0;
+
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_initialize);
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_finalize);
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_attach_group);
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_group);
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_attach_thread);
+	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_thread);
 }
