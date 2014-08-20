@@ -18,9 +18,12 @@ u32 libsre_rtoc;
 
 void fix_import(Module* module, u32 func, u32 addr)
 {
-	Memory.Write32((addr), 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
-	Memory.Write32((addr) + 4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	Memory.Write64((addr) + 8, 0x440000024e800020ull); /* sc + blr */
+	Memory.Write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
+	Memory.Write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
+	Memory.Write32(addr + 0x8, 0x60000000); /* nop */
+	// leave rtoc saving at 0xC
+	Memory.Write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
+	Memory.Write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
 
 	module->Load(func);
 }
@@ -1513,8 +1516,6 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 	// cellSyncLFQueuePush has 1 in isBlocking param, cellSyncLFQueueTryPush has 0
 	cellSync->Warning("_cellSyncLFQueuePushBody(queue_addr=0x%x, buffer_addr=0x%x, isBlocking=%d)", queue.GetAddr(), buffer_addr, isBlocking);
 
-	//return GetCurrentPPUThread().FastCall2(libsre + 0x1674, libsre_rtoc); // test
-
 	if (!queue || !buffer_addr)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -2226,6 +2227,9 @@ void cellSync_init()
 
 		extern Module* sysPrxForUser;
 
+		FIX_IMPORT(sysPrxForUser, cellUserTraceRegister         , libsre + 0x1D5BC); // ???
+		FIX_IMPORT(sysPrxForUser, cellUserTraceUnregister       , libsre + 0x1D5DC); // ???
+
 		FIX_IMPORT(sysPrxForUser, _sys_strncmp                  , libsre + 0x1D5FC);
 		FIX_IMPORT(sysPrxForUser, _sys_strcat                   , libsre + 0x1D61C);
 		FIX_IMPORT(sysPrxForUser, _sys_vsnprintf                , libsre + 0x1D63C);
@@ -2256,6 +2260,12 @@ void cellSync_init()
 		FIX_IMPORT(sysPrxForUser, sys_lwcond_signal             , libsre + 0x1D95C);
 		FIX_IMPORT(sysPrxForUser, _sys_vprintf                  , libsre + 0x1D97C);
 		FIX_IMPORT(sysPrxForUser, _sys_memcmp                   , libsre + 0x1D99C);
+
+		// fix xrefs
+		for (u32 i = libsre + 0x30EAC; i < libsre + 0x31EE0; i += 4)
+		{
+			Memory.Write32(i, Memory.Read32(i) + libsre);
+		}
 	});
 #endif
 }

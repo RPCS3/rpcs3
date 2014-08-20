@@ -13,10 +13,7 @@ struct reservation_struct
 	// and doesn't give a chance to finish some work before losing the reservation
 	u32 owner; // id of thread that got reservation
 	u64 addr;
-	u32 size;
-	u32 data32;
-	u64 data64;
-	u128 data[8];
+	u64 data[16];
 
 	__forceinline void clear()
 	{

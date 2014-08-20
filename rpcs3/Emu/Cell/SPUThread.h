@@ -778,67 +778,47 @@ public:
 				SMutexLockerR lock(reservation.mutex);
 				reservation.owner = lock.tid;
 				reservation.addr = ea;
-				reservation.size = 128;
-				for (u32 i = 0; i < 8; i++)
+				for (u32 i = 0; i < 16; i++)
 				{
-					reservation.data[i] = *(u128*)&Memory[(u32)ea + i * 16];
-					*(u128*)&Memory[dmac.ls_offset + lsa + i * 16] = reservation.data[i];
+					reservation.data[i] = *(u64*)&Memory[(u32)ea + i * 8];
+					*(u64*)&Memory[dmac.ls_offset + lsa + i * 8] = reservation.data[i];
 				}
 				MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 			}
 			else if (op == MFC_PUTLLC_CMD) // store conditional
 			{
 				SMutexLockerR lock(reservation.mutex);
+				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
+
 				if (reservation.owner == lock.tid) // succeeded
 				{
-					if (reservation.addr == ea && reservation.size == 128)
+					if (reservation.addr == ea)
 					{
-						u128 buf[8]; // data being written newly
+						u64 buf[16]; // data being written newly
 						u32 changed = 0, mask = 0, last = 0;
-						for (u32 i = 0; i < 8; i++)
+						for (u32 i = 0; i < 16; i++)
 						{
-							buf[i] = *(u128*)&Memory[dmac.ls_offset + lsa + i * 16];
+							buf[i] = *(u64*)&Memory[dmac.ls_offset + lsa + i * 8];
 							if (buf[i] != reservation.data[i])
 							{
 								changed++;
 								last = i;
-								mask |= (0xf << (i * 4));
-							}
-						}
-						if (changed == 0) // nothing changed?
-						{
-							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
-						}
-						else if (changed == 1)
-						{
-							if (buf[last].hi != reservation.data[last].hi && buf[last].lo != reservation.data[last].lo)
-							{
-								LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: TODO: 128bit compare and swap");
-								Emu.Pause();
-								MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
-							}
-							else
-							{
-								const u32 last_q = (buf[last].hi == reservation.data[last].hi);
+								mask |= (0x3 << (i * 2));
 
-								if (InterlockedCompareExchange64((volatile long long*)(Memory + ((u32)ea + last * 16 + last_q * 8)),
-									buf[last]._u64[last_q], reservation.data[last]._u64[last_q]) == reservation.data[last]._u64[last_q])
-								{
-									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
-								}
-								else
+								if (InterlockedCompareExchange64((volatile long long*)(Memory + ((u32)ea + last * 8)), buf[last], reservation.data[last]) != reservation.data[last])
 								{
 									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+
+									if (changed > 1)
+									{
+										LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 8x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
+											changed, mask, op, cmd, lsa, ea, tag, size);
+										Emu.Pause();
+									}
+
+									break;
 								}
 							}
-						}
-						else
-						{
-							ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
-							LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: Reservation Error: impossibru (~ 16x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
-								changed, mask, op, cmd, lsa, ea, tag, size);
-							Emu.Pause();
-							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 						}
 					}
 					else
@@ -860,8 +840,7 @@ public:
 				{
 					MFCArgs.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
 				}
-				if ((reservation.addr + reservation.size > ea && reservation.addr <= ea + size) || 
-					(ea + size > reservation.addr && ea <= reservation.addr + reservation.size))
+				if (reservation.addr == ea)
 				{
 					reservation.clear();
 				}
@@ -1135,7 +1114,7 @@ public:
 
 		default:
 		{
-			LOG_ERROR(Log::SPU, "%s error: unknown/illegal channel (%d [%s]).", __FUNCTION__, ch, spu_ch_name[ch]);
+			LOG_ERROR(Log::SPU, "%s error (v=0x%x): unknown/illegal channel (%d [%s]).", __FUNCTION__, v, ch, spu_ch_name[ch]);
 			break;
 		}
 		}

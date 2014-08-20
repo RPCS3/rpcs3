@@ -16,18 +16,18 @@
 //Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 Module *sysPrxForUser = nullptr;
 
-int sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
+int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {	
-	sysPrxForUser->Warning("sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);
+	sysPrxForUser->Warning("_sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);
 
 	u32 heap_id = sysPrxForUser->GetNewId(new HeapInfo(heap_addr, align, size));
 	sysPrxForUser->Warning("*** sys_heap created: id = %d", heap_id);
 	return heap_id;
 }
 
-int sys_heap_malloc(const u32 heap_id, const u32 size)
+int _sys_heap_malloc(const u32 heap_id, const u32 size)
 {
-	sysPrxForUser->Warning("sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
+	sysPrxForUser->Warning("_sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
 
 	HeapInfo* heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
@@ -50,15 +50,15 @@ void sys_initialize_tls()
 	sysPrxForUser->Log("sys_initialize_tls()");
 }
 
-s64 sys_process_atexitspawn()
+s64 _sys_process_atexitspawn()
 {
-	sysPrxForUser->Log("sys_process_atexitspawn()");
+	sysPrxForUser->Log("_sys_process_atexitspawn()");
 	return CELL_OK;
 }
 
-s64 sys_process_at_Exitspawn()
+s64 _sys_process_at_Exitspawn()
 {
-	sysPrxForUser->Log("sys_process_at_Exitspawn");
+	sysPrxForUser->Log("_sys_process_at_Exitspawn");
 	return CELL_OK;
 }
 
@@ -70,9 +70,9 @@ int sys_process_is_stack(u32 p)
 	return (int)(bool)(p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr());
 }
 
-int sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
+int _sys_spu_printf_initialize(int a1, int a2, int a3, int a4, int a5)
 {
-	sysPrxForUser->Warning("sys_spu_printf_initialize(0x%x, 0x%x, 0x%x, 0x%x, 0x%x)", a1, a2, a3, a4, a5);
+	sysPrxForUser->Todo("_sys_spu_printf_initialize(0x%x, 0x%x, 0x%x, 0x%x, 0x%x)", a1, a2, a3, a4, a5);
 	return CELL_OK;
 }
 
@@ -235,8 +235,8 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0x8461e528, sys_time_get_system_time);
 
 	sysPrxForUser->AddFunc(0xe6f2c1e7, sys_process_exit);
-	sysPrxForUser->AddFunc(0x2c847572, sys_process_atexitspawn);
-	sysPrxForUser->AddFunc(0x96328741, sys_process_at_Exitspawn);
+	sysPrxForUser->AddFunc(0x2c847572, _sys_process_atexitspawn);
+	sysPrxForUser->AddFunc(0x96328741, _sys_process_at_Exitspawn);
 	sysPrxForUser->AddFunc(0x4f7172c9, sys_process_is_stack);
 
 	sysPrxForUser->AddFunc(0x24a1ea07, sys_ppu_thread_create);
@@ -244,7 +244,7 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0xaff080a4, sys_ppu_thread_exit);
 	sysPrxForUser->AddFunc(0xa3e3be68, sys_ppu_thread_once);
 
-	sysPrxForUser->AddFunc(0x45fe2fce, sys_spu_printf_initialize);
+	sysPrxForUser->AddFunc(0x45fe2fce, _sys_spu_printf_initialize);
 
 	sysPrxForUser->AddFunc(0x26090058, sys_prx_load_module);
 	sysPrxForUser->AddFunc(0x9f18429d, sys_prx_start_module);
@@ -258,10 +258,10 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0xaa6d9bff, sys_prx_load_module_on_memcontainer);
 	sysPrxForUser->AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
 
-	sysPrxForUser->AddFunc(0x35168520, sys_heap_malloc);
-	//sysPrxForUser->AddFunc(0xaede4b03, sys_heap_free);
-	//sysPrxForUser->AddFunc(0x8a561d92, sys_heap_delete_heap);
-	sysPrxForUser->AddFunc(0xb2fcf2c8, sys_heap_create_heap);
+	sysPrxForUser->AddFunc(0x35168520, _sys_heap_malloc);
+	//sysPrxForUser->AddFunc(0xaede4b03, _sys_heap_free);
+	//sysPrxForUser->AddFunc(0x8a561d92, _sys_heap_delete_heap);
+	sysPrxForUser->AddFunc(0xb2fcf2c8, _sys_heap_create_heap);
 	sysPrxForUser->AddFunc(0x44265c08, _sys_heap_memalign);
 
 	sysPrxForUser->AddFunc(0xb257540b, sys_mmapper_allocate_memory);
@@ -300,5 +300,6 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_strncmp);
 	REG_FUNC(sysPrxForUser, _sys_strcat);
 	REG_FUNC(sysPrxForUser, _sys_strncat);
+	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
 }
