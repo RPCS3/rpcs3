@@ -100,6 +100,6 @@ void sys_interrupt_thread_eoi()
 {
 	sc_int.Log("sys_interrupt_thread_eoi()");
 
-	GetCurrentPPUThread().Stop();
+	GetCurrentPPUThread().FastStop();
 	return;
 }

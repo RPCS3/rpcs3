@@ -1,5 +1,5 @@
 #pragma once
-#include "PPCThread.h"
+#include "PPUThread.h"
 #include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
@@ -889,7 +889,8 @@ public:
 					if (*(u64*)&Memory[reservation.addr + i * 8] != reservation.data[i])
 					{
 						m_events |= SPU_EVENT_LR;
-						reservation.clear();
+						//reservation.clear(); // ???
+						break;
 					}
 				}
 			}
@@ -942,25 +943,20 @@ public:
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					if (Emu.IsStopped())
 					{
-						LOG_WARNING(Log::SPU, "%s(%s) aborted (I)", __FUNCTION__, spu_ch_name[ch]);
+						LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 						return;
 					}
 				}
 				m_intrtag[2].stat |= 1;
 				if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
 				{
-					while (t->IsAlive()) // TODO: ???
+					if (t->GetType() == CPU_THREAD_PPU && !t->IsAlive())
 					{
-						std::this_thread::sleep_for(std::chrono::milliseconds(1));
-						if (Emu.IsStopped())
-						{
-							LOG_WARNING(Log::SPU, "%s(%s) aborted (II)", __FUNCTION__, spu_ch_name[ch]);
-							return;
-						}
+						PPUThread& ppu = *(PPUThread*)t;
+						ppu.FastStop();
+						ppu.Run();
+						ppu.FastCall(ppu.PC, ppu.GPR[2], ppu.m_interrupt_arg);
 					}
-					t->SetArg(0, t->m_interrupt_arg);
-					t->Run();
-					t->Exec();
 				}
 			}
 			else
