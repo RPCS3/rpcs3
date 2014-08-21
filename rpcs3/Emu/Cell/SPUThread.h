@@ -815,18 +815,26 @@ public:
 				{
 					if (reservation.addr == ea)
 					{
-						u64 buf[16]; // data being written newly
-						u32 changed = 0, mask = 0, last = 0;
 						for (u32 i = 0; i < 16; i++)
 						{
-							buf[i] = *(u64*)&Memory[dmac.ls_offset + lsa + i * 8];
-							if (buf[i] != reservation.data[i])
+							if (*(u64*)&Memory[reservation.addr + i * 8] != reservation.data[i])
+							{
+								MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
+								reservation.clear();
+								return;
+							}
+						}
+
+						u32 changed = 0, mask = 0;
+						for (u32 i = 0; i < 16; i++)
+						{
+							u64 buf = *(u64*)&Memory[dmac.ls_offset + lsa + i * 8];
+							if (buf != reservation.data[i])
 							{
 								changed++;
-								last = i;
 								mask |= (0x3 << (i * 2));
 
-								if (InterlockedCompareExchange64((volatile long long*)(Memory + ((u32)ea + last * 8)), buf[last], reservation.data[last]) != reservation.data[last])
+								if (InterlockedCompareExchange64((volatile long long*)(Memory + ((u32)ea + i * 8)), buf, reservation.data[i]) != reservation.data[i])
 								{
 									MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 
@@ -889,7 +897,7 @@ public:
 					if (*(u64*)&Memory[reservation.addr + i * 8] != reservation.data[i])
 					{
 						m_events |= SPU_EVENT_LR;
-						//reservation.clear(); // ???
+						reservation.clear(); // ???
 						break;
 					}
 				}
@@ -1055,6 +1063,53 @@ public:
 					}
 
 					SPU.In_MBox.PushUncond(CELL_OK);
+					return;
+				}
+				else if (code == 192)
+				{
+					/* ===== sys_event_flag_set_bit_impatient ===== */
+					u32 flag = v & 0xffffff;
+
+					u32 data;
+					if (!SPU.Out_MBox.Pop(data))
+					{
+						LOG_ERROR(Log::SPU, "sys_event_flag_set_bit_impatient(v=0x%x (flag=%d)): Out_MBox is empty", v, flag);
+						return;
+					}
+
+					if (flag > 63)
+					{
+						LOG_ERROR(Log::SPU, "sys_event_flag_set_bit_impatient(id=%d, v=0x%x): flag > 63", data, v, flag);
+						return;
+					}
+
+					//if (Ini.HLELogging.GetValue())
+					{
+						LOG_WARNING(Log::SPU, "sys_event_flag_set_bit_impatient(id=%d, v=0x%x (flag=%d))", data, v, flag);
+					}
+
+					EventFlag* ef;
+					if (!Emu.GetIdManager().GetIDData(data, ef))
+					{
+						LOG_WARNING(Log::SPU, "sys_event_flag_set_bit_impatient(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
+						return;
+					}
+
+					u32 tid = GetCurrentCPUThread()->GetId();
+
+					ef->m_mutex.lock(tid);
+					ef->flags |= (u64)1 << flag;
+					if (u32 target = ef->check())
+					{
+						// if signal, leave both mutexes locked...
+						ef->signal.lock(target);
+						ef->m_mutex.unlock(tid, target);
+					}
+					else
+					{
+						ef->m_mutex.unlock(tid);
+					}
+
 					return;
 				}
 				else
