@@ -3,26 +3,6 @@
 #include "Emu/CPU/CPUDecoder.h"
 #include "Utilities/SMutex.h"
 
-typedef SMutexBase<u32, 0, 0xffffffff, /* busy wait: specify nullptr */ SM_Sleep> SMutexR;
-typedef SMutexLockerBase<SMutexR, u32, SM_GetCurrentCPUThreadId> SMutexLockerR;
-
-struct reservation_struct
-{
-	SMutexR mutex; // mutex for updating reservation_owner and data 
-	// std::mutex doesn't work because it probably wakes up waiting threads in the most unwanted order
-	// and doesn't give a chance to finish some work before losing the reservation
-	u32 owner; // id of thread that got reservation
-	u64 addr;
-	u64 data[16];
-
-	__forceinline void clear()
-	{
-		owner = 0;
-	}
-};
-
-extern reservation_struct reservation;
-
 enum CPUThreadType :unsigned char
 {
 	CPU_THREAD_PPU,
