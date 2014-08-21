@@ -2475,7 +2475,11 @@ private:
 	}
 	void FSCRRD(u32 rt)
 	{
-		UNIMPLEMENTED();
+		// zero (hack)
+		const XmmLink& v0 = XmmAlloc(rt);
+		c.pxor(v0.get(), v0.get());
+		XmmFinalize(v0, rt);
+		LOG_OPCODE();
 	}
 	void FESD(u32 rt, u32 ra)
 	{
@@ -2495,9 +2499,10 @@ private:
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
+		// nop (not implemented)
+		LOG_OPCODE();
 	}
-	void DFTSV(u32 rt, u32 ra, s32 i7) //nf
+	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{
 		UNIMPLEMENTED();
 	}
