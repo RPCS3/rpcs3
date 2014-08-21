@@ -302,6 +302,15 @@ s32 _sys_printf(u32 arg1)
 	return CELL_OK;
 }
 
+s32 _unnamed_E75C40F2(u32 dest)
+{
+	sysPrxForUser->Todo("Unnamed function 0xE75C40F2 (dest=0x%x) -> CELL_ENOENT", dest);
+
+	// prx: load some data (0x40 bytes) previously set by sys_process_get_paramsfo
+	//memset(Memory + dest, 0, 0x40);
+	return CELL_ENOENT;
+}
+
 void sysPrxForUser_init()
 {
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
@@ -380,6 +389,7 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_strncat);
 	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
+	sysPrxForUser->AddFunc(0xe75c40f2, _unnamed_E75C40F2); // real name is unknown
 
 	spu_printf_agcb = 0;
 	spu_printf_dgcb = 0;

@@ -842,6 +842,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, m
 					eq->ports.add(&(t->SPUPs[i]));
 					t->SPUPs[i].eq = eq;
 				}
+				LOG_NOTICE(HLE, "*** spup -> %d", i);
 				spup = (u8)i;
 			}
 
