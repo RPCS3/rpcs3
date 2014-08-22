@@ -43,6 +43,8 @@
 #include <cassert>
 #include <cstdint>
 
+#include "Utilities/GNU.h"
+
 typedef unsigned int uint;
 
 typedef uint8_t u8;
@@ -249,7 +251,6 @@ struct u128
 #define AlignAddr(addr, align) (((addr) + ((align) - 1)) & ~((align) - 1))
 
 #include "Utilities/StrFmt.h"
-#include "Utilities/GNU.h"
 #include "Utilities/BEType.h"
 #include "Utilities/rFile.h"
 #include "Utilities/Thread.h"
