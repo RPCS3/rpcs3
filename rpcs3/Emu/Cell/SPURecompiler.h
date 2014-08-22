@@ -1,8 +1,4 @@
 #pragma once
-#include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
 
 #define ASMJIT_STATIC
 
@@ -438,7 +434,7 @@ private:
 			static void STOP(u32 code)
 			{
 				SPUThread& CPU = *(SPUThread*)GetCurrentCPUThread();
-				CPU.DoStop(code);
+				CPU.StopAndSignal(code);
 				LOG2_OPCODE();
 			}
 		};

@@ -42,7 +42,7 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		CPU.DoStop(code);
+		CPU.StopAndSignal(code);
 		LOG2_OPCODE();
 	}
 	void LNOP()

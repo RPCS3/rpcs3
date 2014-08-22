@@ -7,14 +7,8 @@
 #include <mutex>
 
 #include "Ini.h"
-#include "Utilities/Thread.h"
-#include "Utilities/StrFmt.h"
-#include "Utilities/Log.h"
-#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 
-#include "Utilities/BEType.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);

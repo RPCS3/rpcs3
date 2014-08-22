@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "AutoPause.h"
+#include "Utilities/Log.h"
+#include "Emu/System.h"
 
 using namespace Debug;
 

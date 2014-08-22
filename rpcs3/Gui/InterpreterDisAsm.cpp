@@ -249,7 +249,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	}
 	else
 	{
-		disasm->offset = CPU->GetOffset();
+		disasm->offset = Memory.GetMemFromAddr(CPU->GetOffset());
 		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
 			if(!Memory.IsGoodAddr(CPU->GetOffset() + PC, 4))

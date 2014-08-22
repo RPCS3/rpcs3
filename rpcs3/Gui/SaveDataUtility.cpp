@@ -1,5 +1,10 @@
 #include "stdafx.h"
 #include "SaveDataUtility.h"
+#include "stdafx.h"
+#include <iomanip>
+#include <sstream>
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 
 //Cause i can not decide what struct to be used to fill those. Just use no real data now.
 //Currently variable info isn't used. it supposed to be a container for the information passed by other.

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Utilities/rMsgBox.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SC_FUNC.h"

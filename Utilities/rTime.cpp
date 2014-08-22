@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rTime.h"
 
 #include <wx/datetime.h>
 

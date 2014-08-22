@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GLGSFrame.h"
+#include "Utilities/Timer.h"
 
 GLGSFrame::GLGSFrame()
 	: GSFrame(nullptr, "GSFrame[OpenGL]")

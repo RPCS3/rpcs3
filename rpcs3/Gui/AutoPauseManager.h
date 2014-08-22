@@ -1,9 +1,4 @@
 #pragma once
-#include "stdafx.h"
-#include <iomanip>
-#include <sstream>
-#include "Utilities/Log.h"
-#include "Utilities/rFile.h"
 
 class AutoPauseManagerDialog : public wxDialog
 {

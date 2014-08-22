@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/SysCalls/Modules.h"
 #include "sceNpSns.h"
 

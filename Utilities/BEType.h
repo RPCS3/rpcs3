@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/GNU.h"
-
 #include <algorithm>
 
 using std::min;

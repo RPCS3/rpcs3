@@ -56,13 +56,10 @@ typedef int32_t s32;
 typedef int64_t s64;
 
 #include "Utilities/StrFmt.h"
-#include "Utilities/Log.h"
+#include "Utilities/GNU.h"
 #include "Utilities/BEType.h"
 #include "Utilities/rFile.h"
-#include "Utilities/rTime.h"
-#include "Utilities/rMsgBox.h"
 #include "Utilities/Thread.h"
-#include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
 
 #define _PRGNAME_ "RPCS3"

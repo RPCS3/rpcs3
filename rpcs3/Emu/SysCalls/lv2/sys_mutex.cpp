@@ -9,6 +9,23 @@
 
 SysCallBase sys_mtx("sys_mutex");
 
+Mutex::~Mutex()
+{
+	if (u32 owner = m_mutex.GetOwner())
+	{
+		LOG_NOTICE(HLE, "Mutex(%d) was owned by thread %d (recursive=%d)", id, owner, recursive);
+	}
+
+	if (!m_queue.m_mutex.try_lock()) return;
+
+	for (u32 i = 0; i < m_queue.list.size(); i++)
+	{
+		if (u32 owner = m_queue.list[i]) LOG_NOTICE(HLE, "Mutex(%d) was waited by thread %d", id, owner);
+	}
+
+	m_queue.m_mutex.unlock();
+}
+
 s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 {
 	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
