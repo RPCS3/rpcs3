@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/FS/vfsFile.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"
@@ -215,7 +216,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
 
-	if(Emu.IsRunning())
+	if (Emu.IsRunning())
 	{
 		Emu.Pause();
 		stopped = true;
@@ -224,27 +225,31 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
-	if(ctrl.ShowModal() == wxID_CANCEL)
+	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stopped) Emu.Resume();
+		if (stopped) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
 	
+	// Init VFS
+	std::string vfs;
+	Emu.GetVFS().Init(vfs);
+
 	// Open and install PKG file
-	wxString filePath = ctrl.GetPath();
-	rFile pkg_f(filePath.ToStdString(), rFile::read); // TODO: Use VFS to install PKG files
+	std::string filePath = ctrl.GetPath().ToStdString();
+	vfsFile pkg_f(filePath);
 
 	if (pkg_f.IsOpened())
 	{
 		PKGLoader pkg(pkg_f);
 		pkg.Install("/dev_hdd0/game/");
 		pkg.Close();
-	}
 
-	// Refresh game list
-	m_game_viewer->Refresh();
+		// Refresh game list
+		m_game_viewer->Refresh();
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))

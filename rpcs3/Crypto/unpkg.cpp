@@ -1,11 +1,12 @@
 #include "stdafx.h"
+#include "Emu/FS/vfsFile.h"
 #include "unpkg.h"
 #include <wx/progdlg.h>
 
 #include "Utilities/Log.h"
 
 // Decryption.
-bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
+bool CheckHeader(vfsFile& pkg_f, PKGHeader* m_header)
 {
 	if (m_header->pkg_magic != 0x7F504B47) {
 		LOG_ERROR(LOADER, "PKG: Not a package file!");
@@ -35,12 +36,12 @@ bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 		return false;
 	}
 
-	if (m_header->pkg_size != pkg_f.Length()) {
+	if (m_header->pkg_size != pkg_f.GetSize()) {
 		LOG_ERROR(LOADER, "PKG: File size mismatch.");
 		return false;
 	}
 
-	if (m_header->data_size + m_header->data_offset + 0x60 != pkg_f.Length()) {
+	if (m_header->data_size + m_header->data_offset + 0x60 != pkg_f.GetSize()) {
 		LOG_ERROR(LOADER, "PKG: Data size mismatch.");
 		return false;
 	}
@@ -48,7 +49,7 @@ bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-bool LoadHeader(rFile& pkg_f, PKGHeader* m_header)
+bool LoadHeader(vfsFile& pkg_f, PKGHeader* m_header)
 {
 	pkg_f.Seek(0);
 	
@@ -63,7 +64,7 @@ bool LoadHeader(rFile& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-int Decrypt(rFile& pkg_f, rFile& dec_pkg_f, PKGHeader* m_header)
+int Decrypt(vfsFile& pkg_f, rFile& dec_pkg_f, PKGHeader* m_header)
 {
 	if (!LoadHeader(pkg_f, m_header))
 		return -1;
@@ -186,7 +187,7 @@ bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 	return true;
 }
 
-int Unpack(rFile& pkg_f, std::string src, std::string dst)
+int Unpack(vfsFile& pkg_f, std::string src, std::string dst)
 {
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
