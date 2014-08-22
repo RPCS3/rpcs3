@@ -150,8 +150,7 @@ public:
 		{
 			if (!Emu.IsStopped())
 			{
-				LOG_ERROR(HLE, "SMutexLockerBase: thread id == 0");
-				Emu.Pause();
+				assert(!"SMutexLockerBase: thread id == 0");
 			}
 			return;
 		}

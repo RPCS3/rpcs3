@@ -605,6 +605,9 @@
     <ClCompile Include="..\Utilities\AutoPause.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\LogBase.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1155,7 +1158,7 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
       <Filter>Emu\SysCalls\Modules</Filter>
-	</ClInclude>
+    </ClInclude>
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
     </ClInclude>
