@@ -36,7 +36,7 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	default: return CELL_EINVAL;
 	}
 
-	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type));
+	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
 
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());

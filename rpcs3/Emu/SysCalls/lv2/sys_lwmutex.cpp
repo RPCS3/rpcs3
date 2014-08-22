@@ -36,7 +36,7 @@ s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
 
-	u32 sq_id = sc_lwmutex.GetNewId(new SleepQueue(attr->name_u64));
+	u32 sq_id = sc_lwmutex.GetNewId(new SleepQueue(attr->name_u64), TYPE_LWMUTEX);
 	lwmutex->sleep_queue = sq_id;
 
 	sc_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", 

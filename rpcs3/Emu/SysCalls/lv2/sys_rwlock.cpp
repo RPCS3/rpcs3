@@ -28,7 +28,7 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 		return CELL_EINVAL;
 	}
 
-	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64));
+	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
 
 	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());

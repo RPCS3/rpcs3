@@ -60,7 +60,7 @@ typedef int64_t s64;
 #include "Utilities/BEType.h"
 #include "Utilities/rFile.h"
 #include "Utilities/Thread.h"
-#include "Utilities/IdManager.h"
+#include "Emu/IdManager.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

@@ -8,8 +8,6 @@
 
 SysCallBase sc_p("Process");
 
-sysProcessObjects_t procObjects;
-
 s32 process_getpid()
 {
 	// TODO: get current process id
@@ -147,23 +145,26 @@ s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT:                  nump = procObjects.mem_objects.size();                 break;
-	case SYS_MUTEX_OBJECT:                nump = procObjects.mutex_objects.size();               break;
-	case SYS_COND_OBJECT:                 nump = procObjects.cond_objects.size();                break;
-	case SYS_RWLOCK_OBJECT:               nump = procObjects.rwlock_objects.size();              break;
-	case SYS_INTR_TAG_OBJECT:             nump = procObjects.intr_tag_objects.size();            break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:  nump = procObjects.intr_service_handle_objects.size(); break;
-	case SYS_EVENT_QUEUE_OBJECT:          nump = procObjects.event_queue_objects.size();         break;
-	case SYS_EVENT_PORT_OBJECT:           nump = procObjects.event_port_objects.size();          break;
-	case SYS_TRACE_OBJECT:                nump = procObjects.trace_objects.size();               break;
-	case SYS_SPUIMAGE_OBJECT:             nump = procObjects.spuimage_objects.size();            break;
-	case SYS_PRX_OBJECT:                  nump = procObjects.prx_objects.size();                 break;
-	case SYS_SPUPORT_OBJECT:              nump = procObjects.spuport_objects.size();             break;
-	case SYS_LWMUTEX_OBJECT:              nump = procObjects.lwmutex_objects.size();             break;
-	case SYS_TIMER_OBJECT:                nump = procObjects.timer_objects.size();               break;
-	case SYS_SEMAPHORE_OBJECT:            nump = procObjects.semaphore_objects.size();           break;
-	case SYS_FS_FD_OBJECT:                nump = procObjects.fs_fd_objects.size();               break;
-	case SYS_LWCOND_OBJECT:               nump = procObjects.lwcond_objects.size();              break;
+	case SYS_MEM_OBJECT:                  nump = Emu.GetIdManager().GetTypeCount(TYPE_MEM);                 break;
+	case SYS_MUTEX_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_MUTEX);               break;
+	case SYS_COND_OBJECT:                 nump = Emu.GetIdManager().GetTypeCount(TYPE_COND);                break;
+	case SYS_RWLOCK_OBJECT:               nump = Emu.GetIdManager().GetTypeCount(TYPE_RWLOCK);              break;
+	case SYS_INTR_TAG_OBJECT:             nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_TAG);            break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:  nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_SERVICE_HANDLE); break;
+	case SYS_EVENT_QUEUE_OBJECT:          nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_QUEUE);         break;
+	case SYS_EVENT_PORT_OBJECT:           nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_PORT);          break;
+	case SYS_TRACE_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_TRACE);               break;
+	case SYS_SPUIMAGE_OBJECT:             nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUIMAGE);            break;
+	case SYS_PRX_OBJECT:                  nump = Emu.GetIdManager().GetTypeCount(TYPE_PRX);                 break;
+	case SYS_SPUPORT_OBJECT:              nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUPORT);             break;
+	case SYS_LWMUTEX_OBJECT:              nump = Emu.GetIdManager().GetTypeCount(TYPE_LWMUTEX);             break;
+	case SYS_TIMER_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_TIMER);               break;
+	case SYS_SEMAPHORE_OBJECT:            nump = Emu.GetIdManager().GetTypeCount(TYPE_SEMAPHORE);           break;
+	case SYS_LWCOND_OBJECT:               nump = Emu.GetIdManager().GetTypeCount(TYPE_LWCOND);              break;
+	case SYS_EVENT_FLAG_OBJECT:           nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_FLAG);          break;
+	case SYS_FS_FD_OBJECT:
+		nump = Emu.GetIdManager().GetTypeCount(TYPE_FS_FILE) + Emu.GetIdManager().GetTypeCount(TYPE_FS_DIR);
+		break;
 
 	default:      
 		return CELL_EINVAL;
@@ -180,31 +181,32 @@ s32 sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_siz
 	switch(object)
 	{
 
-#define ADD_OBJECTS(objects) { \
+#define ADD_OBJECTS(type) { \
 	u32 i=0; \
+	const auto& objects = Emu.GetIdManager().GetTypeIDs(type); \
 	for(auto id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
 		buffer[i] = *id; \
 	set_size = i; \
 	}
 
-	case SYS_MEM_OBJECT:                  ADD_OBJECTS(procObjects.mem_objects);                 break;
-	case SYS_MUTEX_OBJECT:                ADD_OBJECTS(procObjects.mutex_objects);               break;
-	case SYS_COND_OBJECT:                 ADD_OBJECTS(procObjects.cond_objects);                break;
-	case SYS_RWLOCK_OBJECT:               ADD_OBJECTS(procObjects.rwlock_objects);              break;
-	case SYS_INTR_TAG_OBJECT:             ADD_OBJECTS(procObjects.intr_tag_objects);            break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:  ADD_OBJECTS(procObjects.intr_service_handle_objects); break;
-	case SYS_EVENT_QUEUE_OBJECT:          ADD_OBJECTS(procObjects.event_queue_objects);         break;
-	case SYS_EVENT_PORT_OBJECT:           ADD_OBJECTS(procObjects.event_port_objects);          break;
-	case SYS_TRACE_OBJECT:                ADD_OBJECTS(procObjects.trace_objects);               break;
-	case SYS_SPUIMAGE_OBJECT:             ADD_OBJECTS(procObjects.spuimage_objects);            break;
-	case SYS_PRX_OBJECT:                  ADD_OBJECTS(procObjects.prx_objects);                 break;
-	case SYS_SPUPORT_OBJECT:              ADD_OBJECTS(procObjects.spuport_objects);             break;
-	case SYS_LWMUTEX_OBJECT:              ADD_OBJECTS(procObjects.lwmutex_objects);             break;
-	case SYS_TIMER_OBJECT:                ADD_OBJECTS(procObjects.timer_objects);               break;
-	case SYS_SEMAPHORE_OBJECT:            ADD_OBJECTS(procObjects.semaphore_objects);           break;
-	case SYS_FS_FD_OBJECT:                ADD_OBJECTS(procObjects.fs_fd_objects);               break;
-	case SYS_LWCOND_OBJECT:               ADD_OBJECTS(procObjects.lwcond_objects);              break;
-	case SYS_EVENT_FLAG_OBJECT:           ADD_OBJECTS(procObjects.event_flag_objects);          break;
+	case SYS_MEM_OBJECT:                  ADD_OBJECTS(TYPE_MEM);                 break;
+	case SYS_MUTEX_OBJECT:                ADD_OBJECTS(TYPE_MUTEX);               break;
+	case SYS_COND_OBJECT:                 ADD_OBJECTS(TYPE_COND);                break;
+	case SYS_RWLOCK_OBJECT:               ADD_OBJECTS(TYPE_RWLOCK);              break;
+	case SYS_INTR_TAG_OBJECT:             ADD_OBJECTS(TYPE_INTR_TAG);            break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:  ADD_OBJECTS(TYPE_INTR_SERVICE_HANDLE); break;
+	case SYS_EVENT_QUEUE_OBJECT:          ADD_OBJECTS(TYPE_EVENT_QUEUE);         break;
+	case SYS_EVENT_PORT_OBJECT:           ADD_OBJECTS(TYPE_EVENT_PORT);          break;
+	case SYS_TRACE_OBJECT:                ADD_OBJECTS(TYPE_TRACE);               break;
+	case SYS_SPUIMAGE_OBJECT:             ADD_OBJECTS(TYPE_SPUIMAGE);            break;
+	case SYS_PRX_OBJECT:                  ADD_OBJECTS(TYPE_PRX);                 break;
+	case SYS_SPUPORT_OBJECT:              ADD_OBJECTS(TYPE_SPUPORT);             break;
+	case SYS_LWMUTEX_OBJECT:              ADD_OBJECTS(TYPE_LWMUTEX);             break;
+	case SYS_TIMER_OBJECT:                ADD_OBJECTS(TYPE_TIMER);               break;
+	case SYS_SEMAPHORE_OBJECT:            ADD_OBJECTS(TYPE_SEMAPHORE);           break;
+	case SYS_FS_FD_OBJECT:                ADD_OBJECTS(TYPE_FS_FILE);/*TODO:DIR*/ break;
+	case SYS_LWCOND_OBJECT:               ADD_OBJECTS(TYPE_LWCOND);              break;
+	case SYS_EVENT_FLAG_OBJECT:           ADD_OBJECTS(TYPE_EVENT_FLAG);          break;
 
 #undef ADD_OBJECTS
 

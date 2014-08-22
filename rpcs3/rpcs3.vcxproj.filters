@@ -102,6 +102,9 @@
     <ClCompile Include="Gui\SaveDataUtility.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\KernelExplorer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -213,6 +216,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\SaveDataUtility.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\KernelExplorer.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>

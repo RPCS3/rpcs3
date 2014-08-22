@@ -141,29 +141,24 @@ void Ini::Save(const std::string& section, const std::string& key, WindowInfo va
 int Ini::Load(const std::string& section, const std::string& key, const int def_value)
 {
 	return m_Config->GetLongValue(section.c_str(), key.c_str(), def_value);
-	saveIniFile();
 }
 
 bool Ini::Load(const std::string& section, const std::string& key, const bool def_value)
 {
 	return StringToBool(m_Config->GetValue(section.c_str(), key.c_str(), BoolToString(def_value).c_str()));
-	saveIniFile();
 }
 
 std::pair<int, int> Ini::Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value)
 {
 	return StringToSize(m_Config->GetValue(section.c_str(), key.c_str(), SizeToString(def_value).c_str()));
-	saveIniFile();
 }
 
 std::string Ini::Load(const std::string& section, const std::string& key, const std::string& def_value)
 {
 	return std::string(m_Config->GetValue(section.c_str(), key.c_str(), def_value.c_str()));
-	saveIniFile();
 }
 
 WindowInfo Ini::Load(const std::string& section, const std::string& key, const WindowInfo& def_value)
 {
 	return StringToWindowInfo(m_Config->GetValue(section.c_str(), key.c_str(), WindowInfoToString(def_value).c_str()));
-	saveIniFile();
 }
