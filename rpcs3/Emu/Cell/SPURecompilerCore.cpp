@@ -3,8 +3,12 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+#include "Emu/SysCalls/lv2/sys_time.h"
+
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"
+
+#include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 

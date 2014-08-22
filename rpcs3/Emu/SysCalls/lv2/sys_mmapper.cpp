@@ -25,13 +25,13 @@ s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 	{
 	default:
 	case SYS_MEMORY_PAGE_SIZE_1M:
-		if(Memory.AlignAddr(size, alignment) & 0xfffff)
+		if(AlignAddr(size, alignment) & 0xfffff)
 			return CELL_EALIGN;
 		addr = Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
-		if(Memory.AlignAddr(size, alignment) & 0xffff)
+		if(AlignAddr(size, alignment) & 0xffff)
 			return CELL_EALIGN;
 		addr = Memory.Alloc(size, 0x10000);
 	break;

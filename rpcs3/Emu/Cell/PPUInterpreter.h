@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
+
 #include <stdint.h>
 #ifdef _MSC_VER
 #include <intrin.h>

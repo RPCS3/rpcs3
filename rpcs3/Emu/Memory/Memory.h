@@ -1,16 +1,7 @@
 #pragma once
 
-#ifndef _WIN32
-#include <sys/mman.h>
-#endif
-
 #include "MemoryBlock.h"
 #include "Emu/SysCalls/Callback.h"
-
-/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
-#ifndef MAP_ANONYMOUS
-	#define MAP_ANONYMOUS MAP_ANON
-#endif
 
 using std::nullptr_t;
 
@@ -111,36 +102,6 @@ public:
 	void RegisterPages(u64 addr, u32 size);
 
 	void UnregisterPages(u64 addr, u32 size);
-
-	static __forceinline u16 Reverse16(const u16 val)
-	{
-		return _byteswap_ushort(val);
-	}
-
-	static __forceinline u32 Reverse32(const u32 val)
-	{
-		return _byteswap_ulong(val);
-	}
-
-	static __forceinline u64 Reverse64(const u64 val)
-	{
-		return _byteswap_uint64(val);
-	}
-
-	static __forceinline u128 Reverse128(const u128 val)
-	{
-		u128 ret;
-		ret.lo = _byteswap_uint64(val.hi);
-		ret.hi = _byteswap_uint64(val.lo);
-		return ret;
-	}
-
-	template<int size> static __forceinline u64 ReverseData(u64 val);
-
-	template<typename T> static __forceinline T Reverse(T val)
-	{
-		return (T)ReverseData<sizeof(T)>(val);
-	};
 
 	template<typename T> u8* GetMemFromAddr(const T addr)
 	{
@@ -433,11 +394,6 @@ public:
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
 		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
-	}
-
-	static u64 AlignAddr(const u64 addr, const u64 align)
-	{
-		return (addr + (align-1)) & ~(align-1);
 	}
 
 	u32 GetUserMemTotalSize()

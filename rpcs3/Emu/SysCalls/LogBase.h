@@ -4,6 +4,7 @@ class LogBase
 {
 	bool m_logging;
 
+	bool CheckLogging() const;
 	void LogNotice(const std::string& text);
 	void LogWarning(const std::string& text);
 	void LogError(const std::string& text);
@@ -33,7 +34,7 @@ public:
 
 	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args)
 	{
-		if (m_logging)
+		if (CheckLogging())
 		{
 			Notice(fmt, args...);
 		}
@@ -41,7 +42,7 @@ public:
 
 	template<typename... Targs> __forceinline void Log(const u32 id, const char* fmt, Targs... args)
 	{
-		if (m_logging)
+		if (CheckLogging())
 		{
 			Notice(id, fmt, args...);
 		}

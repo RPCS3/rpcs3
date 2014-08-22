@@ -6,7 +6,6 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
-#include "Emu/Cell/PPUDisAsm.h"
 
 #include <thread>
 #include <cmath>
@@ -57,7 +56,7 @@ void PPUThread::DoReset()
 void PPUThread::AddArgv(const std::string& arg)
 {
 	m_stack_point -= arg.length() + 1;
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
+	m_stack_point = AlignAddr(m_stack_point, 0x10) - 0x10;
 	m_argv_addr.push_back(m_stack_point);
 	Memory.WriteString(m_stack_point, arg);
 }
@@ -94,7 +93,7 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x200) - 0x200;
+	m_stack_point = AlignAddr(m_stack_point, 0x200) - 0x200;
 
 	GPR[1] = m_stack_point;
 	GPR[2] = rtoc;

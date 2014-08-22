@@ -1,12 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/FS/vfsFile.h"
 #include "sys_spu.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Loader/ELF.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include <atomic>
@@ -450,7 +446,7 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 			}
 			if (Emu.IsStopped())
 			{
-				LOG_WARNING(Log::SPU, "sys_spu_thread_group_join(id=%d) aborted", id);
+				sc_spu.Warning("sys_spu_thread_group_join(id=%d) aborted", id);
 				return CELL_OK;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -842,7 +838,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, m
 					eq->ports.add(&(t->SPUPs[i]));
 					t->SPUPs[i].eq = eq;
 				}
-				LOG_NOTICE(HLE, "*** spup -> %d", i);
+				sc_spu.Warning("*** spup -> %d", i);
 				spup = (u8)i;
 			}
 

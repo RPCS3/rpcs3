@@ -1,11 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
-
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Cell/SPUThread.h"
 
 #include "sys_event.h"
 
@@ -90,7 +86,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
+			sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
 			break;
 		}
 	}
@@ -203,7 +199,7 @@ s32 sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (counter++ > timeout || Emu.IsStopped())
 		{
-			if (Emu.IsStopped()) LOG_WARNING(HLE, "sys_event_queue_receive(equeue=%d) aborted", equeue_id);
+			if (Emu.IsStopped()) sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
 			eq->sq.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}

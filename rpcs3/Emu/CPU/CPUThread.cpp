@@ -5,7 +5,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/DbgCommand.h"
-#include "rpcs3/Ini.h"
 
 #include "CPUThread.h"
 

@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/System.h"
 #include "LogBase.h"
+
+bool LogBase::CheckLogging() const
+{
+	return Ini.HLELogging.GetValue();
+}
 
 void LogBase::LogNotice(const std::string& text)
 {

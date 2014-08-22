@@ -4,7 +4,15 @@
 #include "Utilities/Log.h"
 #include "Memory.h"
 #include "Emu/System.h"
-#include "Ini.h"
+
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
+/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 MemoryBase Memory;
 
@@ -534,12 +542,6 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 	*(u128*)GetMem(FixAddr(addr)) = value;
 	return true;
 }
-
-// MemoryBase
-template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }
-template<> __forceinline u64 MemoryBase::ReverseData<2>(u64 val) { return Reverse16(val); }
-template<> __forceinline u64 MemoryBase::ReverseData<4>(u64 val) { return Reverse32(val); }
-template<> __forceinline u64 MemoryBase::ReverseData<8>(u64 val) { return Reverse64(val); }
 
 VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock(), m_reserve_size(0)
 {

@@ -8,6 +8,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
+#include "Emu/Event.h"
 #include "Loader/Loader.h"
 
 enum Status

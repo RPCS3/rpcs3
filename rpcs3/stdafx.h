@@ -147,6 +147,14 @@ union u128
 	{
 		return From128(~hi, ~lo);
 	}
+
+	static __forceinline u128 byteswap(const u128 val)
+	{
+		u128 ret;
+		ret.lo = _byteswap_uint64(val.hi);
+		ret.hi = _byteswap_uint64(val.lo);
+		return ret;
+	}
 };
 
 union s128
@@ -237,6 +245,8 @@ struct u128
 	}
 };
 */
+
+#define AlignAddr(addr, align) (((addr) + ((align) - 1)) & ~((align) - 1))
 
 #include "Utilities/StrFmt.h"
 #include "Utilities/GNU.h"

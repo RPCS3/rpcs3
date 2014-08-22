@@ -1,19 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Crypto/sha1.h"
-
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
-
-/* typedef union _CRT_ALIGN(16) __u32x4 {
-	u32 _u32[4];
-	__m128i m128i;
-	__m128 m128;
-	__m128d m128d;
- } __u32x4; */
 
 #define MEM_AND_REG_HASH() \
 	unsigned char mem_h[20]; sha1(&Memory[CPU.dmac.ls_offset], 256*1024, mem_h); \

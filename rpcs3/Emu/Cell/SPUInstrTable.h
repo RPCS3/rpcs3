@@ -1,5 +1,4 @@
 #pragma once
-#include "PPCInstrTable.h"
 #include "PPCDecoder.h"
 #include "SPUOpcodes.h"
 

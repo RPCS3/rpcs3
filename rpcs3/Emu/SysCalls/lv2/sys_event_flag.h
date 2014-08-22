@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/SMutex.h"
+
 enum
 {
 	SYS_SYNC_WAITER_SINGLE = 0x10000,

@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-
 #include "PPUProgramCompiler.h"
 
 using namespace PPU_instr;
@@ -83,7 +80,7 @@ SectionInfo::SectionInfo(const std::string& _name)
 void SectionInfo::SetDataSize(u32 size, u32 align)
 {
 	if(align) shdr.sh_addralign = align;
-	if(shdr.sh_addralign) size = Memory.AlignAddr(size, shdr.sh_addralign);
+	if(shdr.sh_addralign) size = AlignAddr(size, shdr.sh_addralign);
 
 	if(!code.empty())
 	{
@@ -987,7 +984,7 @@ void CompilePPUProgram::Compile()
 	elf_info.e_shnum = 15;
 	elf_info.e_shstrndx = elf_info.e_shnum - 1;
 	elf_info.e_phoff = elf_info.e_ehsize;
-	u32 section_offset = Memory.AlignAddr(elf_info.e_phoff + elf_info.e_phnum * elf_info.e_phentsize, 0x100);
+	u32 section_offset = AlignAddr(elf_info.e_phoff + elf_info.e_phnum * elf_info.e_phentsize, 0x100);
 
 	static const u32 sceStub_text_block = 8 * 4;
 
@@ -1145,7 +1142,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_sceStub_text;
 	memset(&s_sceStub_text, 0, sizeof(Elf64_Shdr));
 	s_sceStub_text.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_sceStub_text.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_sceStub_text.sh_addralign);
 	s_sceStub_text.sh_type = 1;
 	s_sceStub_text.sh_offset = section_offset;
 	s_sceStub_text.sh_addr = section_offset + 0x10000;
@@ -1169,7 +1166,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_lib_stub_top;
 	memset(&s_lib_stub_top, 0, sizeof(Elf64_Shdr));
 	s_lib_stub_top.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_lib_stub_top.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_lib_stub_top.sh_addralign);
 	s_lib_stub_top.sh_type = 1;
 	s_lib_stub_top.sh_name = section_name_offset;
 	s_lib_stub_top.sh_offset = section_offset;
@@ -1209,7 +1206,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_rodata_sceFNID;
 	memset(&s_rodata_sceFNID, 0, sizeof(Elf64_Shdr));
 	s_rodata_sceFNID.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_rodata_sceFNID.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_rodata_sceFNID.sh_addralign);
 	s_rodata_sceFNID.sh_type = 1;
 	s_rodata_sceFNID.sh_name = section_name_offset;
 	s_rodata_sceFNID.sh_offset = section_offset;
@@ -1223,7 +1220,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_rodata_sceResident;
 	memset(&s_rodata_sceResident, 0, sizeof(Elf64_Shdr));
 	s_rodata_sceResident.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_rodata_sceResident.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_rodata_sceResident.sh_addralign);
 	s_rodata_sceResident.sh_type = 1;
 	s_rodata_sceResident.sh_name = section_name_offset;
 	s_rodata_sceResident.sh_offset = section_offset;
@@ -1234,7 +1231,7 @@ void CompilePPUProgram::Compile()
 	{
 		s_rodata_sceResident.sh_size += module.m_name.length() + 1;
 	}
-	s_rodata_sceResident.sh_size = Memory.AlignAddr(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
+	s_rodata_sceResident.sh_size = AlignAddr(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
 	sections_names.push_back(".rodata.sceResident");
 	section_name_offset += std::string(".rodata.sceResident").length() + 1;
 	section_offset += s_rodata_sceResident.sh_size;
@@ -1242,7 +1239,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_lib_ent_top;
 	memset(&s_lib_ent_top, 0, sizeof(Elf64_Shdr));
 	s_lib_ent_top.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_lib_ent_top.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_lib_ent_top.sh_addralign);
 	s_lib_ent_top.sh_size = 4;
 	s_lib_ent_top.sh_flags = 2;
 	s_lib_ent_top.sh_type = 1;
@@ -1269,7 +1266,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_sys_proc_prx_param;
 	memset(&s_sys_proc_prx_param, 0, sizeof(Elf64_Shdr));
 	s_sys_proc_prx_param.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_sys_proc_prx_param.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_sys_proc_prx_param.sh_addralign);
 	s_sys_proc_prx_param.sh_type = 1;
 	s_sys_proc_prx_param.sh_size = sizeof(sys_proc_prx_param);
 	s_sys_proc_prx_param.sh_name = section_name_offset;
@@ -1282,14 +1279,14 @@ void CompilePPUProgram::Compile()
 
 	const u32 prog_load_0_end = section_offset;
 
-	section_offset = Memory.AlignAddr(section_offset + 0x10000, 0x10000);
+	section_offset = AlignAddr(section_offset + 0x10000, 0x10000);
 	const u32 prog_load_1_start = section_offset;
 
 	Elf64_Shdr s_data_sceFStub;
 	memset(&s_data_sceFStub, 0, sizeof(Elf64_Shdr));
 	s_data_sceFStub.sh_name = section_name_offset;
 	s_data_sceFStub.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_data_sceFStub.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_data_sceFStub.sh_addralign);
 	s_data_sceFStub.sh_flags = 3;
 	s_data_sceFStub.sh_type = 1;
 	s_data_sceFStub.sh_offset = section_offset;
@@ -1302,7 +1299,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_tbss;
 	memset(&s_tbss, 0, sizeof(Elf64_Shdr));
 	s_tbss.sh_addralign = 4;
-	section_offset = Memory.AlignAddr(section_offset, s_tbss.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_tbss.sh_addralign);
 	s_tbss.sh_size = 4;
 	s_tbss.sh_flags = 0x403;
 	s_tbss.sh_type = 8;
@@ -1316,7 +1313,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_opd;
 	memset(&s_opd, 0, sizeof(Elf64_Shdr));
 	s_opd.sh_addralign = 8;
-	section_offset = Memory.AlignAddr(section_offset, s_opd.sh_addralign);
+	section_offset = AlignAddr(section_offset, s_opd.sh_addralign);
 	s_opd.sh_size = 2*4;
 	s_opd.sh_type = 1;
 	s_opd.sh_offset = section_offset;
@@ -1477,7 +1474,7 @@ void CompilePPUProgram::Compile()
 
 	if(!m_file_path.empty() && !m_analyze && !m_error)
 	{
-		s_opd.sh_size = Memory.AlignAddr(s_opd.sh_size, s_opd.sh_addralign);
+		s_opd.sh_size = AlignAddr(s_opd.sh_size, s_opd.sh_addralign);
 		section_offset += s_opd.sh_size;
 
 		const u32 prog_load_1_end = section_offset;
@@ -1485,7 +1482,7 @@ void CompilePPUProgram::Compile()
 		Elf64_Shdr s_shstrtab;
 		memset(&s_shstrtab, 0, sizeof(Elf64_Shdr));
 		s_shstrtab.sh_addralign = 1;
-		section_offset = Memory.AlignAddr(section_offset, s_shstrtab.sh_addralign);
+		section_offset = AlignAddr(section_offset, s_shstrtab.sh_addralign);
 		s_shstrtab.sh_name = section_name_offset;
 		s_shstrtab.sh_type = 3;
 		s_shstrtab.sh_offset = section_offset;
@@ -1507,7 +1504,7 @@ void CompilePPUProgram::Compile()
 		elf_info.e_machine = MACHINE_PPC64; //PowerPC64
 		elf_info.e_version = 1; //ver 1
 		elf_info.e_flags = 0x0;
-		elf_info.e_shoff = Memory.AlignAddr(section_offset, 4);
+		elf_info.e_shoff = AlignAddr(section_offset, 4);
 
 		u8* opd_data = new u8[s_opd.sh_size];
 		u32 entry_point = s_text.sh_addr;
