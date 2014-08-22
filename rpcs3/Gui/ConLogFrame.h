@@ -1,7 +1,11 @@
 #pragma once
 #include <wx/dataobj.h>
-#include "Utilities/Log.h"
+#include <memory>
 
+namespace Log
+{
+	struct LogListener;
+}
 
 class LogFrame
 	: public wxPanel

@@ -7,6 +7,7 @@
 #include <mutex>
 
 #include "Ini.h"
+#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 
 #include "Emu/System.h"
