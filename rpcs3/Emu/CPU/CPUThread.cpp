@@ -36,6 +36,10 @@ CPUThread::~CPUThread()
 	safe_delete(m_dec);
 }
 
+bool CPUThread::IsRunning() const { return m_status == Running; }
+bool CPUThread::IsPaused() const { return m_status == Paused; }
+bool CPUThread::IsStopped() const { return m_status == Stopped; }
+
 void CPUThread::Close()
 {
 	ThreadBase::Stop(m_sync_wait);

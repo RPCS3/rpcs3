@@ -1,7 +1,5 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
 #include "Emu/CPU/CPUDecoder.h"
-#include "Utilities/SMutex.h"
 
 enum CPUThreadType :unsigned char
 {
@@ -147,13 +145,13 @@ public:
 	static std::vector<std::string> ErrorToString(const u32 error);
 	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsOk()		const { return m_error == 0; }
-	bool IsRunning()	const { return m_status == Running; }
-	bool IsPaused()		const { return m_status == Paused; }
-	bool IsStopped()	const { return m_status == Stopped; }
+	bool IsOk()	const { return m_error == 0; }
+	bool IsRunning() const;
+	bool IsPaused() const;
+	bool IsStopped() const;
 
 	bool IsJoinable() const { return m_joinable; }
-	bool IsJoining()  const { return m_joining; }
+	bool IsJoining() const { return m_joining; }
 	void SetJoinable(bool joinable) { m_joinable = joinable; }
 	void SetJoining(bool joining) { m_joining = joining; }
 

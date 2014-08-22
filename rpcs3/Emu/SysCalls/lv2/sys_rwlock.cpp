@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "sys_rwlock.h"
 

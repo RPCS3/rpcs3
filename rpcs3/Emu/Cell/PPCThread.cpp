@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PPCThread.h"
+#include "Emu/Memory/Memory.h"
 
 PPCThread* GetCurrentPPCThread()
 {

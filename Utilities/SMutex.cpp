@@ -6,7 +6,12 @@
 
 #include "Utilities/SMutex.h"
 
-__forceinline void SM_Sleep()
+bool SM_IsAborted()
+{
+	return Emu.IsStopped();
+}
+
+void SM_Sleep()
 {
 	if (NamedThreadBase* t = GetCurrentNamedThread())
 	{
@@ -20,12 +25,12 @@ __forceinline void SM_Sleep()
 
 thread_local size_t g_this_thread_id = 0;
 
-__forceinline size_t SM_GetCurrentThreadId()
+size_t SM_GetCurrentThreadId()
 {
 	return g_this_thread_id ? g_this_thread_id : g_this_thread_id = std::hash<std::thread::id>()(std::this_thread::get_id());
 }
 
-__forceinline u32 SM_GetCurrentCPUThreadId()
+u32 SM_GetCurrentCPUThreadId()
 {
 	if (CPUThread* t = GetCurrentCPUThread())
 	{
@@ -34,7 +39,7 @@ __forceinline u32 SM_GetCurrentCPUThreadId()
 	return 0;
 }
 
-__forceinline be_t<u32> SM_GetCurrentCPUThreadIdBE()
+be_t<u32> SM_GetCurrentCPUThreadIdBE()
 {
 	return be_t<u32>::MakeFromLE(SM_GetCurrentCPUThreadId());
 }

@@ -54,6 +54,7 @@ class SysCallBase : public LogBase
 private:
 	std::string m_module_name;
 	//u32 m_id;
+	IdManager& GetIdManager() const;
 
 public:
 	SysCallBase(const std::string& name/*, u32 id*/)
@@ -69,7 +70,7 @@ public:
 
 	bool CheckId(u32 id) const
 	{
-		return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
+		return GetIdManager().CheckID(id) && GetIdManager().GetID(id).m_name == GetName();
 	}
 
 	template<typename T> bool CheckId(u32 id, T*& data)
@@ -80,7 +81,7 @@ public:
 	template<typename T>
 	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, type);
+		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 };
 

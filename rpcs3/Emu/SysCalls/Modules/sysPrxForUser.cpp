@@ -16,6 +16,8 @@
 //Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 Module *sysPrxForUser = nullptr;
 
+extern u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
+
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {	
 	sysPrxForUser->Warning("_sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);

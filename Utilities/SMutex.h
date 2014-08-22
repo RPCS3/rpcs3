@@ -1,11 +1,10 @@
 #pragma once
-#include "BEType.h"
-#include "Emu/System.h"
 
-extern void SM_Sleep();
-extern size_t SM_GetCurrentThreadId();
-extern u32 SM_GetCurrentCPUThreadId();
-extern be_t<u32> SM_GetCurrentCPUThreadIdBE();
+bool SM_IsAborted();
+void SM_Sleep();
+size_t SM_GetCurrentThreadId();
+u32 SM_GetCurrentCPUThreadId();
+be_t<u32> SM_GetCurrentCPUThreadIdBE();
 
 enum SMutexResult
 {
@@ -66,7 +65,7 @@ public:
 
 	SMutexResult trylock(T tid)
 	{
-		if (Emu.IsStopped())
+		if (SM_IsAborted())
 		{
 			return SMR_ABORT;
 		}
@@ -90,7 +89,7 @@ public:
 
 	SMutexResult unlock(T tid, T to = GetFreeValue())
 	{
-		if (Emu.IsStopped())
+		if (SM_IsAborted())
 		{
 			return SMR_ABORT;
 		}
@@ -148,7 +147,7 @@ public:
 	{
 		if (!tid)
 		{
-			if (!Emu.IsStopped())
+			if (!SM_IsAborted())
 			{
 				assert(!"SMutexLockerBase: thread id == 0");
 			}

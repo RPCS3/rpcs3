@@ -939,3 +939,8 @@ void SysCalls::DoSyscall(u32 code)
 	declCPU();
 	RESULT(0);
 }
+
+IdManager& SysCallBase::GetIdManager() const
+{
+	return Emu.GetIdManager();
+}
