@@ -3,10 +3,10 @@
 
 class PKGLoader
 {
-	rFile& pkg_f;
+	vfsFile& pkg_f;
 
 public:
-	PKGLoader(rFile& f);
+	PKGLoader(vfsFile& f);
 	virtual bool Install(std::string dest);
 	virtual bool Close();
 };
