@@ -50,6 +50,9 @@ class Module : public LogBase
 	void (*m_load_func)();
 	void (*m_unload_func)();
 
+	IdManager& GetIdManager() const;
+	StaticFuncManager& GetSFuncManager() const;
+
 public:
 	std::vector<ModuleFunc*> m_funcs_list;
 
@@ -106,7 +109,7 @@ public:
 	template<typename T>
 	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, type);
+		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
@@ -152,5 +155,5 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re(op.crc);
 		sf->ops.push_back(op);
 	}
-	Emu.GetSFuncManager().push_back(sf);
+	GetSFuncManager().push_back(sf);
 }

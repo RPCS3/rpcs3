@@ -173,3 +173,13 @@ bool Module::CheckID(u32 id, ID*& _id) const
 {
 	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
 }
+
+IdManager& Module::GetIdManager() const
+{
+	return Emu.GetIdManager();
+}
+
+StaticFuncManager& Module::GetSFuncManager() const
+{
+	return Emu.GetSFuncManager();
+}
