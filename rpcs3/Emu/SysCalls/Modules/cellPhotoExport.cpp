@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellPhotoExport_init();
 Module cellPhotoExport(0xf029, cellPhotoExport_init);

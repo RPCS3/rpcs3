@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "ErrorCodes.h"
 #include "LogBase.h"
 
 //TODO
@@ -17,7 +17,7 @@ struct ModuleFunc
 
 	~ModuleFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
 
@@ -38,9 +38,11 @@ struct SFunc
 
 	~SFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
+
+class StaticFuncManager;
 
 class Module : public LogBase
 {
@@ -49,6 +51,9 @@ class Module : public LogBase
 	bool m_is_loaded;
 	void (*m_load_func)();
 	void (*m_unload_func)();
+
+	IdManager& GetIdManager() const;
+	void PushNewFuncSub(SFunc* func);
 
 public:
 	std::vector<ModuleFunc*> m_funcs_list;
@@ -106,15 +111,17 @@ public:
 	template<typename T>
 	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, type);
+		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 
+	bool RemoveId(u32 id);
+
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const std::string& name, T func);
+	template<typename T> __forceinline void AddFunc(const char* name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
-u32 getFunctionId(const std::string& name);
+u32 getFunctionId(const char* name);
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
@@ -123,7 +130,7 @@ __forceinline void Module::AddFunc(u32 id, T func)
 }
 
 template<typename T>
-__forceinline void Module::AddFunc(const std::string& name, T func)
+__forceinline void Module::AddFunc(const char* name, T func)
 {
 	AddFunc(getFunctionId(name), func);
 }
@@ -152,5 +159,13 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re(op.crc);
 		sf->ops.push_back(op);
 	}
-	Emu.GetSFuncManager().push_back(sf);
+	PushNewFuncSub(sf);
 }
+
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
+	module->AddFuncSub(group, name ## _table, #name, name)
+
+#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)
+
+#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)

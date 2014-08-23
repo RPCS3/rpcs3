@@ -1,8 +1,5 @@
-
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellCelpEnc_init();
 Module cellCelpEnc(0xf00a, cellCelpEnc_init);

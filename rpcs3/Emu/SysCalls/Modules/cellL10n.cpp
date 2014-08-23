@@ -1,8 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "cellL10n.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -286,9 +285,9 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
 int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, mem8_ptr_t dst, mem64_t dst_len)
 {
-	LOG_ERROR(HLE, "L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
+	cellL10n->Todo("L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
 		src_code, src.GetAddr(), src_len.GetValue(), dst_code, dst.GetAddr(), dst_len.GetValue());
-	LOG_ERROR(HLE, "L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)Memory.VirtualToRealAddr(src.GetAddr())));
+	cellL10n->Todo("L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)Memory.VirtualToRealAddr(src.GetAddr())));
 #ifdef _MSC_VER
 	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.

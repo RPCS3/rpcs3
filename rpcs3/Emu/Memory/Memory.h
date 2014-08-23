@@ -1,17 +1,7 @@
 #pragma once
 
-#ifndef _WIN32
-#include <sys/mman.h>
-#endif
-
 #include "MemoryBlock.h"
 #include "Emu/SysCalls/Callback.h"
-#include <vector>
-
-/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
-#ifndef MAP_ANONYMOUS
-	#define MAP_ANONYMOUS MAP_ANON
-#endif
 
 using std::nullptr_t;
 
@@ -107,80 +97,11 @@ public:
 		return m_base_addr;
 	}
 
-	noinline void InvalidAddress(const char* func, const u64 addr)
-	{
-		LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", func, addr);
-	}
+	__noinline void InvalidAddress(const char* func, const u64 addr);
 
-	void RegisterPages(u64 addr, u32 size)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	void RegisterPages(u64 addr, u32 size);
 
-		//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
-		for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
-		{
-			if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
-			{
-				InvalidAddress(__FUNCTION__, i * 4096);
-				break;
-			}
-			if (m_pages[i])
-			{
-				LOG_ERROR(MEMORY, "Page already registered (addr=0x%llx)", i * 4096);
-			}
-			m_pages[i] = 1; // TODO: define page parameters
-		}
-	}
-
-	void UnregisterPages(u64 addr, u32 size)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
-		for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
-		{
-			if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
-			{
-				InvalidAddress(__FUNCTION__, i * 4096);
-				break;
-			}
-			if (!m_pages[i])
-			{
-				LOG_ERROR(MEMORY, "Page not registered (addr=0x%llx)", i * 4096);
-			}
-			m_pages[i] = 0; // TODO: define page parameters
-		}
-	}
-
-	static __forceinline u16 Reverse16(const u16 val)
-	{
-		return _byteswap_ushort(val);
-	}
-
-	static __forceinline u32 Reverse32(const u32 val)
-	{
-		return _byteswap_ulong(val);
-	}
-
-	static __forceinline u64 Reverse64(const u64 val)
-	{
-		return _byteswap_uint64(val);
-	}
-
-	static __forceinline u128 Reverse128(const u128 val)
-	{
-		u128 ret;
-		ret.lo = _byteswap_uint64(val.hi);
-		ret.hi = _byteswap_uint64(val.lo);
-		return ret;
-	}
-
-	template<int size> static __forceinline u64 ReverseData(u64 val);
-
-	template<typename T> static __forceinline T Reverse(T val)
-	{
-		return (T)ReverseData<sizeof(T)>(val);
-	};
+	void UnregisterPages(u64 addr, u32 size);
 
 	template<typename T> u8* GetMemFromAddr(const T addr)
 	{
@@ -210,100 +131,16 @@ public:
 		}
 		else
 		{
+			assert(!addr);
 			return 0;
 		}
 	}
 
-	u32 InitRawSPU(MemoryBlock* raw_spu)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	u32 InitRawSPU(MemoryBlock* raw_spu);
 
-		u32 index;
-		for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
-		{
-			if (!RawSPUMem[index])
-			{
-				RawSPUMem[index] = raw_spu;
-				break;
-			}
-		}
+	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num);
 
-		MemoryBlocks.push_back(raw_spu->SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET));
-		return index;
-	}
-
-	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		for (int i = 0; i < MemoryBlocks.size(); ++i)
-		{
-			if (MemoryBlocks[i] == raw_spu)
-			{
-				MemoryBlocks.erase(MemoryBlocks.begin() + i);
-				break;
-			}
-		}
-		if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = nullptr;
-	}
-
-	void Init(MemoryType type)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		if(m_inited) return;
-		m_inited = true;
-
-		memset(m_pages, 0, sizeof(m_pages));
-		memset(RawSPUMem, 0, sizeof(RawSPUMem));
-
-#ifdef _WIN32
-		m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
-		if (!m_base_addr)
-#else
-		m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-		if (m_base_addr == (void*)-1)
-#endif
-		{
-			m_base_addr = nullptr;
-			LOG_ERROR(MEMORY, "Initializing memory failed");
-			assert(0);
-			return;
-		}
-		else
-		{
-			LOG_NOTICE(MEMORY, "Initializing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
-		}
-
-		switch(type)
-		{
-		case Memory_PS3:
-			MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
-			MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
-			MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-			MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
-			MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
-			MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
-		break;
-
-		case Memory_PSV:
-			MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
-			MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
-			PSV.Init(GetBaseAddr());
-		break;
-
-		case Memory_PSP:
-			MemoryBlocks.push_back(PSP.Scratchpad.SetRange(0x00010000, 0x00004000));
-			MemoryBlocks.push_back(PSP.VRAM.SetRange(0x04000000, 0x00200000));
-			MemoryBlocks.push_back(PSP.RAM.SetRange(0x08000000, 0x02000000));
-			MemoryBlocks.push_back(PSP.Kernel.SetRange(0x88000000, 0x00800000));
-			MemoryBlocks.push_back(UserMemory = PSP.Userspace.SetRange(0x08800000, 0x01800000));
-			PSP.Init(GetBaseAddr());
-		break;
-		}
-
-		LOG_NOTICE(MEMORY, "Memory initialized.");
-	}
+	void Init(MemoryType type);
 
 	template<typename T> bool IsGoodAddr(const T addr)
 	{
@@ -333,36 +170,7 @@ public:
 		}
 	}
 
-	void Close()
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		if(!m_inited) return;
-		m_inited = false;
-
-		LOG_NOTICE(MEMORY, "Closing memory...");
-
-		for (auto block : MemoryBlocks)
-		{
-			block->Delete();
-		}
-
-		RSXIOMem.Delete();
-
-		MemoryBlocks.clear();
-
-#ifdef _WIN32
-		if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
-		{
-			LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
-		}
-#else
-		if (::munmap(m_base_addr, 0x100000000))
-		{
-			LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
-		}
-#endif
-	}
+	void Close();
 
 	//MemoryBase
 	template<typename T> void Write8(T addr, const u8 data)
@@ -391,7 +199,7 @@ public:
 		}
 	}
 
-	noinline void WriteMMIO32(u32 addr, const u32 data)
+	__noinline void WriteMMIO32(u32 addr, const u32 data)
 	{
 		{
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
@@ -478,7 +286,7 @@ public:
 		}
 	}
 
-	noinline u32 ReadMMIO32(u32 addr)
+	__noinline u32 ReadMMIO32(u32 addr)
 	{
 		u32 res;
 		{
@@ -588,11 +396,6 @@ public:
 		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
 	}
 
-	static u64 AlignAddr(const u64 addr, const u64 align)
-	{
-		return (addr + (align-1)) & ~(align-1);
-	}
-
 	u32 GetUserMemTotalSize()
 	{
 		return UserMemory->GetSize();
@@ -623,49 +426,18 @@ public:
 		return UserMemory->Unlock(addr, size);
 	}
 
-	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size)
+	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size);
+
+	bool Unmap(const u64 addr);
+
+	template<typename T> void* operator + (const T vaddr)
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		if(IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
-		{
-			return false;
-		}
-
-		MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
-		LOG_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
-		return true;
-	}
-
-	bool Unmap(const u64 addr)
-	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-		bool result = false;
-		for(uint i=0; i<MemoryBlocks.size(); ++i)
-		{
-			if(MemoryBlocks[i]->IsMirror())
-			{
-				if(MemoryBlocks[i]->GetStartAddr() == addr)
-				{
-					delete MemoryBlocks[i];
-					MemoryBlocks.erase(MemoryBlocks.begin() + i);
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	template<typename T> u8* operator + (const T vaddr)
-	{
-		u8* ret = GetMemFromAddr<T>(vaddr);
-		return ret;
+		return GetMemFromAddr<T>(vaddr);
 	}
 
 	template<typename T> u8& operator[] (const T vaddr)
 	{
-		return *(*this + vaddr);
+		return *GetMemFromAddr<T>(vaddr);
 	}
 };
 

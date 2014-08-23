@@ -2,10 +2,9 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Callback.h"
-
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/PPCThread.h"
+
+#include "Callback.h"
 
 Callback::Callback(u32 slot, u64 addr)
 	: m_addr(addr)

@@ -1117,67 +1117,7 @@ public:
 
 	CPUThread* adecCb;
 
-	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
-		: type(type)
-		, memAddr(addr)
-		, memSize(size)
-		, memBias(0)
-		, cbFunc(func)
-		, cbArg(arg)
-		, adecCb(nullptr)
-		, is_running(false)
-		, is_finished(false)
-		, just_started(false)
-		, just_finished(false)
-		, ctx(nullptr)
-		, fmt(nullptr)
-	{
-		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
-		if (!codec)
-		{
-			LOG_ERROR(HLE, "AudioDecoder(): avcodec_find_decoder(ATRAC3P) failed");
-			Emu.Pause();
-			return;
-		}
-		fmt = avformat_alloc_context();
-		if (!fmt)
-		{
-			LOG_ERROR(HLE, "AudioDecoder(): avformat_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-		io_buf = (u8*)av_malloc(4096);
-		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, adecRead, NULL, NULL);
-		if (!fmt->pb)
-		{
-			LOG_ERROR(HLE, "AudioDecoder(): avio_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-	}
+	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg);
 
-	~AudioDecoder()
-	{
-		// TODO: check finalization
-		if (ctx)
-		{
-			for (u32 i = frames.GetCount() - 1; ~i; i--)
-			{
-				AdecFrame& af = frames.Peek(i);
-				av_frame_unref(af.data);
-				av_frame_free(&af.data);
-			}
-			avcodec_close(ctx);
-			avformat_close_input(&fmt);
-		}
-		if (fmt)
-		{
-			if (io_buf)
-			{
-				av_free(io_buf);
-			}
-			if (fmt->pb) av_free(fmt->pb);
-			avformat_free_context(fmt);
-		}
-	}
+	~AudioDecoder();
 };

@@ -2,14 +2,117 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
-#include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "ELF64.h"
 
 using namespace PPU_instr;
+
+void Elf64_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+	e_abi_ver = Read64(f);
+	e_type = Read16(f);
+	e_machine = Read16(f);
+	e_version = Read32(f);
+	e_entry = Read64(f);
+	e_phoff = Read64(f);
+	e_shoff = Read64(f);
+	e_flags = Read32(f);
+	e_ehsize = Read16(f);
+	e_phentsize = Read16(f);
+	e_phnum = Read16(f);
+	e_shentsize = Read16(f);
+	e_shnum = Read16(f);
+	e_shstrndx = Read16(f);
+}
+
+void Elf64_Ehdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Magic: %08x", e_magic);
+	LOG_NOTICE(LOADER, "Class: %s", "ELF64");
+	LOG_NOTICE(LOADER, "Data: %s", Ehdr_DataToString(e_data).c_str());
+	LOG_NOTICE(LOADER, "Current Version: %d", e_curver);
+	LOG_NOTICE(LOADER, "OS/ABI: %s", Ehdr_OS_ABIToString(e_os_abi).c_str());
+	LOG_NOTICE(LOADER, "ABI version: %lld", e_abi_ver);
+	LOG_NOTICE(LOADER, "Type: %s", Ehdr_TypeToString(e_type).c_str());
+	LOG_NOTICE(LOADER, "Machine: %s", Ehdr_MachineToString(e_machine).c_str());
+	LOG_NOTICE(LOADER, "Version: %d", e_version);
+	LOG_NOTICE(LOADER, "Entry point address: 0x%08llx", e_entry);
+	LOG_NOTICE(LOADER, "Program headers offset: 0x%08llx", e_phoff);
+	LOG_NOTICE(LOADER, "Section headers offset: 0x%08llx", e_shoff);
+	LOG_NOTICE(LOADER, "Flags: 0x%x", e_flags);
+	LOG_NOTICE(LOADER, "Size of this header: %d", e_ehsize);
+	LOG_NOTICE(LOADER, "Size of program headers: %d", e_phentsize);
+	LOG_NOTICE(LOADER, "Number of program headers: %d", e_phnum);
+	LOG_NOTICE(LOADER, "Size of section headers: %d", e_shentsize);
+	LOG_NOTICE(LOADER, "Number of section headers: %d", e_shnum);
+	LOG_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
+#endif
+}
+
+void Elf64_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read64(f);
+	sh_addr = Read64(f);
+	sh_offset = Read64(f);
+	sh_size = Read64(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read64(f);
+	sh_entsize = Read64(f);
+}
+
+void Elf64_Shdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Name offset: %x", sh_name);
+	LOG_NOTICE(LOADER, "Type: %d", sh_type);
+	LOG_NOTICE(LOADER, "Addr: %llx", sh_addr);
+	LOG_NOTICE(LOADER, "Offset: %llx", sh_offset);
+	LOG_NOTICE(LOADER, "Size: %llx", sh_size);
+	LOG_NOTICE(LOADER, "EntSize: %lld", sh_entsize);
+	LOG_NOTICE(LOADER, "Flags: %llx", sh_flags);
+	LOG_NOTICE(LOADER, "Link: %x", sh_link);
+	LOG_NOTICE(LOADER, "Info: %x", sh_info);
+	LOG_NOTICE(LOADER, "Address align: %llx", sh_addralign);
+#endif
+}
+
+void Elf64_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_flags = Read32(f);
+	p_offset = Read64(f);
+	p_vaddr = Read64(f);
+	p_paddr = Read64(f);
+	p_filesz = Read64(f);
+	p_memsz = Read64(f);
+	p_align = Read64(f);
+}
+
+void Elf64_Phdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Type: %s", Phdr_TypeToString(p_type).c_str());
+	LOG_NOTICE(LOADER, "Offset: 0x%08llx", p_offset);
+	LOG_NOTICE(LOADER, "Virtual address: 0x%08llx", p_vaddr);
+	LOG_NOTICE(LOADER, "Physical address: 0x%08llx", p_paddr);
+	LOG_NOTICE(LOADER, "File size: 0x%08llx", p_filesz);
+	LOG_NOTICE(LOADER, "Memory size: 0x%08llx", p_memsz);
+	LOG_NOTICE(LOADER, "Flags: %s", Phdr_FlagsToString(p_flags).c_str());
+	LOG_NOTICE(LOADER, "Align: 0x%llx", p_align);
+#endif
+}
 
 void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr)
 {

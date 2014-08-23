@@ -1,28 +1,29 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+
 #include "Emu/Cell/PPUThread.h"
 #include "sys_semaphore.h"
 #include "sys_time.h"
+//#include "Utilities/SMutex.h"
 
-SysCallBase sys_sem("sys_semaphore");
+SysCallBase sys_semaphore("sys_semaphore");
 
 s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count)
 {
-	sys_sem.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
+	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.GetAddr(), attr.GetAddr(), initial_count, max_count);
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
-		sys_sem.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
+		sys_semaphore.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
 		return CELL_EINVAL;
 	}
 	
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
-		sys_sem.Error("sys_semaphore_create(): invalid pshared value(0x%x)", (u32)attr->pshared);
+		sys_semaphore.Error("sys_semaphore_create(): invalid pshared value(0x%x)", (u32)attr->pshared);
 		return CELL_EINVAL;
 	}
 
@@ -30,13 +31,13 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_sem.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_RETRY): sys_sem.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
-	default: sys_sem.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_semaphore.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_semaphore.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
+	default: sys_semaphore.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	sem = sys_sem.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
-	LOG_NOTICE(HLE, "*** semaphore created [%s] (protocol=0x%x): id = %d",
+	sem = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
+	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, sem.GetValue());
 
 	return CELL_OK;
@@ -44,7 +45,7 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 
 s32 sys_semaphore_destroy(u32 sem_id)
 {
-	sys_sem.Warning("sys_semaphore_destroy(sem_id=%d)", sem_id);
+	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=%d)", sem_id);
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -63,7 +64,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 
 s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 {
-	sys_sem.Log("sys_semaphore_wait(sem_id=%d, timeout=%lld)", sem_id, timeout);
+	sys_semaphore.Log("sys_semaphore_wait(sem_id=%d, timeout=%lld)", sem_id, timeout);
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -88,7 +89,7 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_semaphore_wait(%d) aborted", sem_id);
+			sys_semaphore.Warning("sys_semaphore_wait(%d) aborted", sem_id);
 			return CELL_OK;
 		}
 
@@ -117,7 +118,7 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 
 s32 sys_semaphore_trywait(u32 sem_id)
 {
-	sys_sem.Log("sys_semaphore_trywait(sem_id=%d)", sem_id);
+	sys_semaphore.Log("sys_semaphore_trywait(sem_id=%d)", sem_id);
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -140,7 +141,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 
 s32 sys_semaphore_post(u32 sem_id, int count)
 {
-	sys_sem.Log("sys_semaphore_post(sem_id=%d, count=%d)", sem_id, count);
+	sys_semaphore.Log("sys_semaphore_post(sem_id=%d, count=%d)", sem_id, count);
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -162,7 +163,7 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_semaphore_post(%d) aborted", sem_id);
+			sys_semaphore.Warning("sys_semaphore_post(%d) aborted", sem_id);
 			return CELL_OK;
 		}
 
@@ -192,7 +193,7 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 
 s32 sys_semaphore_get_value(u32 sem_id, mem32_t count)
 {
-	sys_sem.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.GetAddr());
+	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.GetAddr());
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

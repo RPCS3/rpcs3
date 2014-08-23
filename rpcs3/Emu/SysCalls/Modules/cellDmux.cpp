@@ -1,16 +1,308 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
+
 #include "cellPamf.h"
 #include "cellDmux.h"
 
 //void cellDmux_init();
 //Module cellDmux(0x0007, cellDmux_init);
 Module *cellDmux = nullptr;
+
+PesHeader::PesHeader(DemuxerStream& stream)
+	: pts(0xffffffffffffffffull)
+	, dts(0xffffffffffffffffull)
+	, size(0)
+	, new_au(false)
+{
+	u16 header;
+	stream.get(header);
+	stream.get(size);
+	if (size)
+	{
+		u8 empty = 0;
+		u8 v;
+		while (true)
+		{
+			stream.get(v);
+			if (v != 0xFF) break; // skip padding bytes
+			empty++;
+			if (empty == size) return;
+		};
+
+		if ((v & 0xF0) == 0x20 && (size - empty) >= 5) // pts only
+		{
+			new_au = true;
+			pts = stream.get_ts(v);
+			stream.skip(size - empty - 5);
+		}
+		else
+		{
+			new_au = true;
+			if ((v & 0xF0) != 0x30 || (size - empty) < 10)
+			{
+				cellDmux->Error("PesHeader(): pts not found");
+				Emu.Pause();
+			}
+			pts = stream.get_ts(v);
+			stream.get(v);
+			if ((v & 0xF0) != 0x10)
+			{
+				cellDmux->Error("PesHeader(): dts not found");
+				Emu.Pause();
+			}
+			dts = stream.get_ts(v);
+			stream.skip(size - empty - 10);
+		}
+	}
+}
+
+bool ElementaryStream::is_full()
+{
+	if (released < put_count)
+	{
+		u32 first = entries.Peek();
+		if (first >= put)
+		{
+			return (first - put) < GetMaxAU();
+		}
+		else
+		{
+			// probably, always false
+			return (put + GetMaxAU()) > (memAddr + memSize);
+		}
+	}
+	else
+	{
+		return false;
+	}
+}
+
+const u32 ElementaryStream::GetMaxAU() const
+{
+	return (fidMajor == 0xbd) ? 4096 : 640 * 1024 + 128; // TODO
+}
+
+u32 ElementaryStream::freespace()
+{
+	if (size > GetMaxAU())
+	{
+		cellDmux->Error("es::freespace(): last_size too big (size=0x%x, max_au=0x%x)", size, GetMaxAU());
+		Emu.Pause();
+		return 0;
+	}
+	return GetMaxAU() - size;
+}
+
+bool ElementaryStream::hasunseen()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	return peek_count < put_count;
+}
+
+bool ElementaryStream::hasdata()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	return size != 0;
+}
+
+bool ElementaryStream::isfull()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	return is_full();
+}
+
+void ElementaryStream::finish(DemuxerStream& stream) // not multithread-safe
+{
+	u32 addr;
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+
+		addr = put;
+		/*if (!first)
+		{
+		first = put;
+		}
+		if (!peek)
+		{
+		peek = put;
+		}*/
+
+		mem_ptr_t<CellDmuxAuInfo> info(put);
+		//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
+		//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
+		//(u32)info->auSize, put, (u32)info->ptsLower);
+
+		u32 new_addr = a128(put + 128 + size);
+		put = ((new_addr + GetMaxAU()) > (memAddr + memSize))
+			? memAddr : new_addr;
+
+		size = 0;
+
+		put_count++;
+		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+	}
+	if (!entries.Push(addr))
+	{
+		cellDmux->Error("es::finish() aborted (no space)");
+	}
+}
+
+void ElementaryStream::push(DemuxerStream& stream, u32 sz, PesHeader& pes)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	if (is_full())
+	{
+		cellDmux->Error("es::push(): buffer is full");
+		Emu.Pause();
+		return;
+	}
+
+	u32 data_addr = put + 128 + size;
+	size += sz;
+	memcpy(Memory + data_addr, Memory + stream.addr, sz);
+	stream.skip(sz);
+
+	mem_ptr_t<CellDmuxAuInfoEx> info(put);
+	info->auAddr = put + 128;
+	info->auSize = size;
+	if (pes.new_au)
+	{
+		info->dts.lower = (u32)pes.dts;
+		info->dts.upper = (u32)(pes.dts >> 32);
+		info->pts.lower = (u32)pes.pts;
+		info->pts.upper = (u32)(pes.pts >> 32);
+		info->isRap = false; // TODO: set valid value
+		info->reserved = 0;
+		info->userData = stream.userdata;
+	}
+
+	mem_ptr_t<CellDmuxPamfAuSpecificInfoAvc> tail(put + sizeof(CellDmuxAuInfoEx));
+	tail->reserved1 = 0;
+
+	mem_ptr_t<CellDmuxAuInfo> inf(put + 64);
+	inf->auAddr = put + 128;
+	inf->auSize = size;
+	if (pes.new_au)
+	{
+		inf->dtsLower = (u32)pes.dts;
+		inf->dtsUpper = (u32)(pes.dts >> 32);
+		inf->ptsLower = (u32)pes.pts;
+		inf->ptsUpper = (u32)(pes.pts >> 32);
+		inf->auMaxSize = 0; // ?????
+		inf->userData = stream.userdata;
+	}
+}
+
+bool ElementaryStream::release()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+	if (released >= put_count)
+	{
+		cellDmux->Error("es::release(): buffer is empty");
+		return false;
+	}
+
+	u32 addr = entries.Peek();
+
+	mem_ptr_t<CellDmuxAuInfo> info(addr);
+	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+	//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, first, (u32)info->ptsLower);
+
+	if (released >= peek_count)
+	{
+		cellDmux->Error("es::release(): buffer has not been seen yet");
+		return false;
+	}
+
+	/*u32 new_addr = a128(info.GetAddr() + 128 + info->auSize);
+
+	if (new_addr == put)
+	{
+	first = 0;
+	}
+	else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
+	{
+	first = memAddr;
+	}
+	else
+	{
+	first = new_addr;
+	}*/
+
+	released++;
+	if (!entries.Pop(addr))
+	{
+		cellDmux->Error("es::release(): entries.Pop() aborted (no entries found)");
+		return false;
+	}
+	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+	return true;
+}
+
+bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
+	//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
+	if (peek_count >= put_count) return false;
+
+	if (peek_count < released)
+	{
+		cellDmux->Error("es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
+		Emu.Pause();
+		return false;
+	}
+
+	u32 addr = entries.Peek(peek_count - released);
+	mem_ptr_t<CellDmuxAuInfo> info(addr);
+	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
+	//wxString(update_index ? "Get" : "Peek").wx_str(),
+	//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek, (u32)info->ptsLower);
+
+	out_data = addr;
+	out_spec = out_data + sizeof(CellDmuxAuInfoEx);
+	if (no_ex) out_data += 64;
+
+	if (update_index)
+	{
+		/*u32 new_addr = a128(peek + 128 + info->auSize);
+		if (new_addr == put)
+		{
+		peek = 0;
+		}
+		else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
+		{
+		peek = memAddr;
+		}
+		else
+		{
+		peek = new_addr;
+		}*/
+		peek_count++;
+	}
+
+	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
+	//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
+	return true;
+}
+
+void ElementaryStream::reset()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	//first = 0;
+	//peek = 0;
+	put = memAddr;
+	size = 0;
+	entries.Clear();
+	put_count = 0;
+	released = 0;
+	peek_count = 0;
+}
 
 void dmuxQueryAttr(u32 info_addr /* may be 0 */, mem_ptr_t<CellDmuxAttr> attr)
 {
@@ -45,7 +337,7 @@ u32 dmuxOpen(Demuxer* data)
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
-		LOG_NOTICE(HLE, "Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
+		cellDmux->Notice("Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
 
 		DemuxerTask task;
 		DemuxerStream stream;
@@ -132,7 +424,7 @@ u32 dmuxOpen(Demuxer* data)
 
 						if (!pes.new_au) // temporarily
 						{
-							LOG_ERROR(HLE, "No pts info found");
+							cellDmux->Error("No pts info found");
 						}
 
 						// read additional header:
@@ -262,7 +554,7 @@ u32 dmuxOpen(Demuxer* data)
 				case 0x1dc: case 0x1dd: case 0x1de: case 0x1df:
 					{
 						// unknown
-						LOG_WARNING(HLE, "Unknown MPEG stream found");
+						cellDmux->Warning("Unknown MPEG stream found");
 						stream.skip(4);
 						stream.get(len);
 						stream.skip(len);
@@ -271,7 +563,7 @@ u32 dmuxOpen(Demuxer* data)
 
 				case USER_DATA_START_CODE:
 					{
-						LOG_ERROR(HLE, "USER_DATA_START_CODE found");
+						cellDmux->Error("USER_DATA_START_CODE found");
 						return;
 					}
 
@@ -298,7 +590,7 @@ u32 dmuxOpen(Demuxer* data)
 				{
 					if (task.stream.discontinuity)
 					{
-						LOG_WARNING(HLE, "dmuxSetStream (beginning)");
+						cellDmux->Warning("dmuxSetStream (beginning)");
 						for (u32 i = 0; i < 192; i++)
 						{
 							if (esALL[i])
@@ -312,7 +604,7 @@ u32 dmuxOpen(Demuxer* data)
 
 					if (updates_count != updates_signaled)
 					{
-						LOG_ERROR(HLE, "dmuxSetStream: stream update inconsistency (input=%d, signaled=%d)", updates_count, updates_signaled);
+						cellDmux->Error("dmuxSetStream: stream update inconsistency (input=%d, signaled=%d)", updates_count, updates_signaled);
 						return;
 					}
 
@@ -351,7 +643,7 @@ u32 dmuxOpen(Demuxer* data)
 			case dmuxClose:
 				{
 					dmux.is_finished = true;
-					LOG_NOTICE(HLE, "Demuxer thread ended");
+					cellDmux->Notice("Demuxer thread ended");
 					return;
 				}
 
@@ -375,7 +667,7 @@ u32 dmuxOpen(Demuxer* data)
 					}
 					else
 					{
-						LOG_WARNING(HLE, "dmuxEnableEs: (TODO) unsupported filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
+						cellDmux->Warning("dmuxEnableEs: (TODO) unsupported filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
 					}
 					es.dmux = &dmux;
 				}
@@ -386,7 +678,7 @@ u32 dmuxOpen(Demuxer* data)
 					ElementaryStream& es = *task.es.es_ptr;
 					if (es.dmux != &dmux)
 					{
-						LOG_WARNING(HLE, "dmuxDisableEs: invalid elementary stream");
+						cellDmux->Warning("dmuxDisableEs: invalid elementary stream");
 						break;
 					}
 					for (u32 i = 0; i < 192; i++)
@@ -444,11 +736,11 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 
 			default:
-				LOG_ERROR(HLE, "Demuxer thread error: unknown task(%d)", task.type);
+				cellDmux->Error("Demuxer thread error: unknown task(%d)", task.type);
 				return;
 			}
 		}
-		LOG_WARNING(HLE, "Demuxer thread aborted");
+		cellDmux->Warning("Demuxer thread aborted");
 	});
 
 	t.detach();
@@ -552,7 +844,7 @@ int cellDmuxClose(u32 demuxerHandle)
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellDmuxClose(%d) aborted", demuxerHandle);
+			cellDmux->Warning("cellDmuxClose(%d) aborted", demuxerHandle);
 			return CELL_OK;
 		}
 
@@ -579,7 +871,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
+			cellDmux->Warning("cellDmuxSetStream(%d) aborted (waiting)", demuxerHandle);
 			return CELL_OK;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -598,12 +890,12 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	u32 addr;
 	if (!dmux->fbSetStream.Pop(addr))
 	{
-		LOG_WARNING(HLE, "cellDmuxSetStream(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		cellDmux->Warning("cellDmuxSetStream(%d) aborted (fbSetStream.Pop())", demuxerHandle);
 		return CELL_OK;
 	}
 	if (addr != info.addr)
 	{
-		LOG_ERROR(HLE, "cellDmuxSetStream(%d): wrong stream queued (right=0x%x, queued=0x%x)", demuxerHandle, info.addr, addr);
+		cellDmux->Error("cellDmuxSetStream(%d): wrong stream queued (right=0x%x, queued=0x%x)", demuxerHandle, info.addr, addr);
 		Emu.Pause();
 	}
 	return CELL_OK;
@@ -639,12 +931,12 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 	u32 addr;
 	if (!dmux->fbSetStream.Pop(addr))
 	{
-		LOG_WARNING(HLE, "cellDmuxResetStreamAndWaitDone(%d) aborted (fbSetStream.Pop())", demuxerHandle);
+		cellDmux->Warning("cellDmuxResetStreamAndWaitDone(%d) aborted (fbSetStream.Pop())", demuxerHandle);
 		return CELL_OK;
 	}
 	if (addr != 0)
 	{
-		LOG_ERROR(HLE, "cellDmuxResetStreamAndWaitDone(%d): wrong stream queued (0x%x)", demuxerHandle, addr);
+		cellDmux->Error("cellDmuxResetStreamAndWaitDone(%d): wrong stream queued (0x%x)", demuxerHandle, addr);
 		Emu.Pause();
 	}
 	return CELL_OK;

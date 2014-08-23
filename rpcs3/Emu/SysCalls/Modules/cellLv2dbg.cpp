@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellLv2dbg_init();
 Module cellLv2dbg(0x002e, cellLv2dbg_init);

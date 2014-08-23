@@ -1,18 +1,18 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/DbgCommand.h"
-#include "Emu/FS/vfsFile.h"
-#include "Emu/Audio/sysutil_audio.h"
 
-#include "cellSysutil.h"
-#include "cellSysutil_SaveData.h"
+#include "rpcs3/Ini.h"
+#include "Emu/FS/vfsFile.h"
+#include "Loader/PSF.h"
+#include "Emu/Audio/sysutil_audio.h"
+#include "Emu/RSX/sysutil_video.h"
 #include "cellMsgDialog.h"
 #include "cellGame.h"
-
-#include "Loader/PSF.h"
+#include "cellSysutil.h"
+#include "cellSysutil_SaveData.h"
 
 typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
 
@@ -327,7 +327,7 @@ int cellSysutilCheckCallback()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellSysutilCheckCallback() aborted");
+			cellSysutil->Warning("cellSysutilCheckCallback() aborted");
 			break;
 		}
 	}
@@ -550,7 +550,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil->Todo("Unimplemented function: cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
 		audioOut, deviceIndex, info.GetAddr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;

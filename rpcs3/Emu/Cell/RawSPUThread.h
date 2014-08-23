@@ -6,11 +6,6 @@ __forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)
 	return RAW_SPU_OFFSET * num + RAW_SPU_BASE_ADDR + RAW_SPU_PROB_OFFSET + offset;
 }
 
-__forceinline static u32 GetRawSPURegAddrById(int id, int offset)
-{
-	return GetRawSPURegAddrByNum(Emu.GetCPU().GetThreadNumById(CPU_THREAD_RAW_SPU, id), offset);
-}
-
 class RawSPUThread
 	: public SPUThread
 	, public MemoryBlock

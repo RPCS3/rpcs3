@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Cell/SPUThread.h"
 
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Event.h"
+#include "sys_process.h"
 #include "sys_event.h"
 
 SysCallBase sys_event("sys_event");
@@ -90,7 +89,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
+			sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
 			break;
 		}
 	}
@@ -203,7 +202,7 @@ s32 sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (counter++ > timeout || Emu.IsStopped())
 		{
-			if (Emu.IsStopped()) LOG_WARNING(HLE, "sys_event_queue_receive(equeue=%d) aborted", equeue_id);
+			if (Emu.IsStopped()) sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
 			eq->sq.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}
@@ -238,7 +237,7 @@ s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
 
 	EventPort* eport = new EventPort();
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
-	eport->name = name ? name : ((u64)sys_process_getpid() << 32) | (u64)id;
+	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
 	eport_id = id;
 	sys_event.Warning("*** sys_event_port created: id = %d", id);
 

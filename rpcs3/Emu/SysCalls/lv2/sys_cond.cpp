@@ -1,10 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-
 #include "Emu/SysCalls/SysCalls.h"
+
+#include "Emu/Cell/PPUThread.h"
 #include "sys_cond.h"
 
 SysCallBase sys_cond("sys_cond");
@@ -74,13 +73,13 @@ s32 sys_cond_signal(u32 cond_id)
 
 	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		cond->signal_stamp = get_system_time();
+		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_cond_signal(id=%d) aborted", cond_id);
+			sys_cond.Warning("sys_cond_signal(id=%d) aborted", cond_id);
 		}
 	}
 
@@ -102,13 +101,13 @@ s32 sys_cond_signal_all(u32 cond_id)
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
 		cond->signaler = GetCurrentCPUThread()->GetId();
-		cond->signal_stamp = get_system_time();
+		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_cond_signal_all(id=%d) aborted", cond_id);
+			sys_cond.Warning("sys_cond_signal_all(id=%d) aborted", cond_id);
 			break;
 		}
 	}
@@ -141,14 +140,14 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
-		cond->signal_stamp = get_system_time();
+		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 		Emu.GetCPU().NotifyThread(target);
 	}
 
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(HLE, "sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
+		sys_cond.Warning("sys_cond_signal_to(id=%d, to=%d) aborted", cond_id, thread_id);
 	}
 
 	return CELL_OK;
@@ -189,7 +188,7 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	{
 		if (cond->signal.unlock(tid, tid) == SMR_OK)
 		{
-			const u64 stamp2 = get_system_time();
+			//const u64 stamp2 = get_system_time();
 			if (SMutexResult res = mutex->m_mutex.trylock(tid))
 			{
 				if (res != SMR_FAILED)
@@ -231,6 +230,6 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	}
 
 abort:
-	LOG_WARNING(HLE, "sys_cond_wait(id=%d) aborted", cond_id);
+	sys_cond.Warning("sys_cond_wait(id=%d) aborted", cond_id);
 	return CELL_OK;
 }

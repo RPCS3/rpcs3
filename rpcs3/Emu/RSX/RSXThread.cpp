@@ -1,11 +1,12 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "RSXThread.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args) : args[x].ToLE())
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.GetAddr()) : args[x].ToLE())
 
 u32 methodRegisters[0xffff];
 
@@ -139,8 +140,9 @@ u32 RSXVertexData::GetTypeSize()
 	#define CMD_LOG(...)
 #endif
 
-u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, mem32_ptr_t args)
+u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
+	mem32_ptr_t args(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
@@ -205,8 +207,10 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, mem3
 	index = (cmd - a) / m; \
 	case a \
 
-void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32 count)
+void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
+	mem32_ptr_t args(args_addr);
+
 #if	CMD_DEBUG
 		std::string debug = GetMethodName(cmd);
 		debug += "(";
@@ -2237,7 +2241,7 @@ void RSXThread::Task()
 			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
 		}
 
-		DoCmd(cmd, cmd & 0x3ffff, args, count);
+		DoCmd(cmd, cmd & 0x3ffff, args.GetAddr(), count);
 
 		m_ctrl->get = get + (count + 1) * 4;
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
@@ -2251,4 +2255,34 @@ void RSXThread::Task()
 	LOG_NOTICE(RSX, "RSX thread ended");
 
 	OnExitThread();
+}
+
+void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+{
+	m_ctrl = (CellGcmControl*)&Memory[ctrlAddress];
+	m_ioAddress = ioAddress;
+	m_ioSize = ioSize;
+	m_ctrlAddress = ctrlAddress;
+	m_local_mem_addr = localAddress;
+
+	m_cur_vertex_prog = nullptr;
+	m_cur_shader_prog = nullptr;
+	m_cur_shader_prog_num = 0;
+
+	m_used_gcm_commands.clear();
+
+	OnInit();
+	ThreadBase::Start();
+}
+
+u32 RSXThread::ReadIO32(u32 addr)
+{
+	u32 value;
+	Memory.RSXIOMem.Read32(Memory.RSXIOMem.GetStartAddr() + addr, &value);
+	return value;
+}
+
+void RSXThread::WriteIO32(u32 addr, u32 value)
+{
+	Memory.RSXIOMem.Write32(Memory.RSXIOMem.GetStartAddr() + addr, value);
 }

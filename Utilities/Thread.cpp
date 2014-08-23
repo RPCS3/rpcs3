@@ -12,6 +12,11 @@ NamedThreadBase* GetCurrentNamedThread()
 	return g_tls_this_thread;
 }
 
+void SetCurrentNamedThread(NamedThreadBase* value)
+{
+	g_tls_this_thread = value;
+}
+
 std::string NamedThreadBase::GetThreadName() const
 {
 	return m_name;
@@ -47,32 +52,27 @@ void ThreadBase::Start()
 	m_destroy = false;
 	m_alive = true;
 
-	m_executor = new std::thread(
-		[this]()
+	m_executor = new std::thread([this]()
+	{
+		SetCurrentNamedThread(this);
+		g_thread_count++;
+
+		try
 		{
-			g_tls_this_thread = this;
-			g_thread_count++;
+			Task();
+		}
+		catch (const std::string& e)
+		{
+			LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+		}
+		catch (const char* e)
+		{
+			LOG_ERROR(GENERAL, "Exception: %s", e);
+		}
 
-			try
-			{
-				Task();
-			}
-			catch (const std::string& e)
-			{
-				LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
-			}
-			catch (const char* e)
-			{
-				LOG_ERROR(GENERAL, "Exception: %s", e);
-			}
-			catch (int exitcode)
-			{
-				LOG_SUCCESS(GENERAL, "Exit Code: %d", exitcode);
-			}
-
-			m_alive = false;
-			g_thread_count--;
-		});
+		m_alive = false;
+		g_thread_count--;
+	});
 }
 
 void ThreadBase::Stop(bool wait, bool send_destroy)
@@ -141,7 +141,7 @@ void thread::start(std::function<void()> func)
 	m_thr = std::thread([func, name]()
 	{
 		NamedThreadBase info(name);
-		g_tls_this_thread = &info;
+		SetCurrentNamedThread(&info);
 		g_thread_count++;
 
 		try

@@ -1,7 +1,5 @@
 #pragma once
 
-u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
-
 enum
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,

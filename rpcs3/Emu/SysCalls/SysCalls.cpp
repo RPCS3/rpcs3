@@ -1,11 +1,35 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/Modules.h"
 #include "ModuleManager.h"
+
+#include "lv2/lv2Fs.h"
+#include "lv2/sys_cond.h"
+#include "lv2/sys_event.h"
+#include "lv2/sys_event_flag.h"
+#include "lv2/sys_interrupt.h"
+#include "lv2/sys_lwcond.h"
+#include "lv2/sys_lwmutex.h"
+#include "lv2/sys_memory.h"
+#include "lv2/sys_mmapper.h"
+#include "lv2/sys_ppu_thread.h"
+#include "lv2/sys_process.h"
+#include "lv2/sys_prx.h"
+#include "lv2/sys_rsx.h"
+#include "lv2/sys_rwlock.h"
+#include "lv2/sys_semaphore.h"
+#include "lv2/sys_spinlock.h"
+#include "lv2/sys_spu.h"
+#include "lv2/sys_time.h"
+#include "lv2/sys_timer.h"
+#include "lv2/sys_trace.h"
+#include "lv2/sys_tty.h"
+#include "lv2/sys_vm.h"
+
+#include "SysCalls.h"
 
 namespace detail{
 	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)
@@ -18,6 +42,8 @@ void default_syscall();
 static func_caller *null_func = bind_func(default_syscall);
 
 static const int kSyscallTableLength = 1024;
+
+extern int cellGcmCallback(u32 context_addr, u32 count);
 
 // UNS = Unused
 // ROOT = Root
@@ -45,7 +71,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_process_kill),                            //19  (0x013)
 	null_func,                                              //20  (0x014)  UNS
 	null_func,//bind_func(_sys_process_spawn),              //21  (0x015)  DBG
-	bind_func(sys_process_exit),                            //22  (0x016)
+	null_func,//bind_func(sys_process_exit),                //22  (0x016)
 	bind_func(sys_process_wait_for_child2),                 //23  (0x017)  DBG
 	null_func,//bind_func(),                                //24  (0x018)  DBG
 	bind_func(sys_process_get_sdk_version),                 //25  (0x019)
@@ -938,4 +964,14 @@ void SysCalls::DoSyscall(u32 code)
 	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
 	declCPU();
 	RESULT(0);
+}
+
+IdManager& SysCallBase::GetIdManager() const
+{
+	return Emu.GetIdManager();
+}
+
+bool SysCallBase::RemoveId(u32 id)
+{
+	return Emu.GetIdManager().RemoveID(id);
 }

@@ -1,15 +1,13 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/ErrorCodes.h"
+#include "rpcs3/Ini.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/DbgCommand.h"
-#include "rpcs3/Ini.h"
 
+#include "CPUDecoder.h"
 #include "CPUThread.h"
-
-reservation_struct reservation;
 
 CPUThread* GetCurrentCPUThread()
 {
@@ -37,6 +35,10 @@ CPUThread::~CPUThread()
 {
 	safe_delete(m_dec);
 }
+
+bool CPUThread::IsRunning() const { return m_status == Running; }
+bool CPUThread::IsPaused() const { return m_status == Paused; }
+bool CPUThread::IsStopped() const { return m_status == Stopped; }
 
 void CPUThread::Close()
 {

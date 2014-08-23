@@ -1,7 +1,4 @@
 #pragma once
-#include "Utilities/Log.h"
-#include "Utilities/rFile.h"
-#include "Emu/System.h"
 
 //Regarded as a Debugger Enchantment
 namespace Debug {

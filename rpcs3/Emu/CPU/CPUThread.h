@@ -1,30 +1,4 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
-#include "Emu/CPU/CPUDecoder.h"
-#include "Utilities/SMutex.h"
-
-typedef SMutexBase<u32, 0, 0xffffffff, /* busy wait: specify nullptr */ SM_Sleep> SMutexR;
-typedef SMutexLockerBase<SMutexR, u32, SM_GetCurrentCPUThreadId> SMutexLockerR;
-
-struct reservation_struct
-{
-	SMutexR mutex; // mutex for updating reservation_owner and data 
-	// std::mutex doesn't work because it probably wakes up waiting threads in the most unwanted order
-	// and doesn't give a chance to finish some work before losing the reservation
-	u32 owner; // id of thread that got reservation
-	u64 addr;
-	u32 size;
-	u32 data32;
-	u64 data64;
-	u128 data[8];
-
-	__forceinline void clear()
-	{
-		owner = 0;
-	}
-};
-
-extern reservation_struct reservation;
 
 enum CPUThreadType :unsigned char
 {
@@ -44,6 +18,8 @@ enum CPUThreadStatus
 	CPUThread_Break,
 	CPUThread_Step,
 };
+
+class CPUDecoder;
 
 class CPUThread : public ThreadBase
 {
@@ -170,13 +146,13 @@ public:
 	static std::vector<std::string> ErrorToString(const u32 error);
 	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsOk()		const { return m_error == 0; }
-	bool IsRunning()	const { return m_status == Running; }
-	bool IsPaused()		const { return m_status == Paused; }
-	bool IsStopped()	const { return m_status == Stopped; }
+	bool IsOk()	const { return m_error == 0; }
+	bool IsRunning() const;
+	bool IsPaused() const;
+	bool IsStopped() const;
 
 	bool IsJoinable() const { return m_joinable; }
-	bool IsJoining()  const { return m_joining; }
+	bool IsJoining() const { return m_joining; }
 	void SetJoinable(bool joinable) { m_joinable = joinable; }
 	void SetJoining(bool joining) { m_joining = joining; }
 

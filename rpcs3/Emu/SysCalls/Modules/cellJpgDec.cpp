@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "cellJpgDec.h"
+
 #include "stblib/stb_image.h"
+#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "cellJpgDec.h"
 
 //void cellJpgDec_init();
 //Module cellJpgDec(0x000f, cellJpgDec_init);
@@ -75,7 +75,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	cellJpgDec->RemoveId(subHandle);
 
 	return CELL_OK;
 }
@@ -206,7 +206,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + data.GetAddr() + dstOffset, &image.get()[srcOffset], linesize);
+				memcpy(Memory + (data.GetAddr() + dstOffset), &image.get()[srcOffset], linesize);
 			}
 		}
 		else
@@ -236,7 +236,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + data.GetAddr() + dstOffset, output, linesize);
+				memcpy(Memory + (data.GetAddr() + dstOffset), output, linesize);
 			}
 			free(output);
 		}

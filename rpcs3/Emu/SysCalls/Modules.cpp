@@ -1,18 +1,24 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
 #include <mutex>
 #include "ModuleManager.h"
 
-u32 getFunctionId(const std::string& name)
+u32 getFunctionId(const char* name)
 {
 	const char* suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"; // Symbol name suffix
-	std::string input = name + suffix;
-	unsigned char output[20];
+	u8 output[20];
 
-	sha1((unsigned char*)input.c_str(), input.length(), output); // Compute SHA-1 hash
+	// Compute SHA-1 hash
+	sha1_context ctx;
+
+	sha1_starts(&ctx);
+	sha1_update(&ctx, (const u8*)name, strlen(name));
+	sha1_update(&ctx, (const u8*)suffix, strlen(suffix));
+	sha1_finish(&ctx, output);
+
 	return (u32&)output[0];
 }
 
@@ -166,4 +172,19 @@ bool Module::CheckID(u32 id) const
 bool Module::CheckID(u32 id, ID*& _id) const
 {
 	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
+}
+
+bool Module::RemoveId(u32 id)
+{
+	return Emu.GetIdManager().RemoveID(id);
+}
+
+IdManager& Module::GetIdManager() const
+{
+	return Emu.GetIdManager();
+}
+
+void Module::PushNewFuncSub(SFunc* func)
+{
+	Emu.GetSFuncManager().push_back(func);
 }

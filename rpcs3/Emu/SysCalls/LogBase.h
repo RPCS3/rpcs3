@@ -3,17 +3,23 @@
 class LogBase
 {
 	bool m_logging;
+	bool CheckLogging() const;
+
+	enum LogType
+	{
+		LogNotice,
+		LogSuccess,
+		LogWarning,
+		LogError,
+	};
+
+	void LogOutput(LogType type, const char* info, const std::string& text);
+	void LogOutput(LogType type, const u32 id, const char* info, const std::string& text);
 
 public:
 	void SetLogging(bool value)
 	{
 		m_logging = value;
-	}
-
-	bool GetLogging()
-	{
-		//return m_logging; // TODO
-		return Ini.HLELogging.GetValue();
 	}
 
 	LogBase()
@@ -25,17 +31,17 @@ public:
 
 	template<typename... Targs> void Notice(const u32 id, const char* fmt, Targs... args)
 	{
-		LOG_NOTICE(HLE, GetName() + fmt::Format("[%d]: ", id) + fmt::Format(fmt, args...));
+		LogOutput(LogNotice, id, ": ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Notice(const char* fmt, Targs... args)
 	{
-		LOG_NOTICE(HLE, GetName() + ": " + fmt::Format(fmt, args...));
+		LogOutput(LogNotice, ": ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args)
 	{
-		if (GetLogging())
+		if (CheckLogging())
 		{
 			Notice(fmt, args...);
 		}
@@ -43,39 +49,49 @@ public:
 
 	template<typename... Targs> __forceinline void Log(const u32 id, const char* fmt, Targs... args)
 	{
-		if (GetLogging())
+		if (CheckLogging())
 		{
 			Notice(id, fmt, args...);
 		}
 	}
 
+	template<typename... Targs> void Success(const u32 id, const char* fmt, Targs... args)
+	{
+		LogOutput(LogSuccess, id, ": ", fmt::Format(fmt, args...));
+	}
+
+	template<typename... Targs> void Success(const char* fmt, Targs... args)
+	{
+		LogOutput(LogSuccess, ": ", fmt::Format(fmt, args...));
+	}
+
 	template<typename... Targs> void Warning(const u32 id, const char* fmt, Targs... args)
 	{
-		LOG_WARNING(HLE, GetName() + fmt::Format("[%d] warning: ", id) + fmt::Format(fmt, args...));
+		LogOutput(LogWarning, id, " warning: ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Warning(const char* fmt, Targs... args)
 	{
-		LOG_WARNING(HLE, GetName() + " warning: " + fmt::Format(fmt, args...));
+		LogOutput(LogWarning, " warning: ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Error(const u32 id, const char* fmt, Targs... args)
 	{
-		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] error: ", id) + fmt::Format(fmt, args...));
+		LogOutput(LogError, id, " error: ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Error(const char* fmt, Targs... args)
 	{
-		LOG_ERROR(HLE, GetName() + " error: " + fmt::Format(fmt, args...));
+		LogOutput(LogError, " error: ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Todo(const u32 id, const char* fmt, Targs... args)
 	{
-		LOG_ERROR(HLE, GetName() + fmt::Format("[%d] TODO: ", id) + fmt::Format(fmt, args...));
+		LogOutput(LogError, id, " TODO: ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> void Todo(const char* fmt, Targs... args)
 	{
-		LOG_ERROR(HLE, GetName() + " TODO: " + fmt::Format(fmt, args...));
+		LogOutput(LogError, " TODO: ", fmt::Format(fmt, args...));
 	}
 };

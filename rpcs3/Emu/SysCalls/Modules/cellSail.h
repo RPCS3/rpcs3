@@ -137,7 +137,7 @@ typedef void(*CellSailSourceCheckFuncError)(u32 pArg, s8 pMsg, s32 line);
 typedef int(*CellSailFsFuncOpen)(s8 pPath, s32 flag, s32 pFd, u32 pArg, u64 size);
 typedef int(*CellSailFsFuncOpenSecond)(s8 pPath, s32 flag, s32 fd, u32 pArg, u64 size);
 typedef int(*CellSailFsFuncClose)(s32 fd);
-typedef int(*CellSailFsFuncFstat)(s32 fd, mem_ptr_t<CellFsStat> pStat);
+typedef int(*CellSailFsFuncFstat)(s32 fd, u32 pStat_addr);
 typedef int(*CellSailFsFuncRead)(s32 fd, u32 pBuf, u64 numBytes, u64 pNumRead);
 typedef int(*CellSailFsFuncLseek)(s32 fd, s64 offset, s32 whence, u64 pPosition);
 typedef int(*CellSailFsFuncCancel)(s32 fd);
@@ -569,7 +569,7 @@ struct CellSailPlayerAttribute
 
 struct CellSailPlayerResource
 {
-	CellSpurs pSpurs;
+	be_t<u32> pSpurs;
 	be_t<u32> reserved0; // All three specify 0
 	be_t<u32> reserved1;
 	be_t<u32> reserved2;

@@ -1,14 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
+
+#include "Utilities/rMsgBox.h"
 #include "Emu/FS/vfsFile.h"
-
 #include "Loader/PSF.h"
-
 #include "cellGame.h"
 
 //void cellGame_init();

@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/listctrl.h>
+#include "rpcs3/Ini.h"
 #include "Emu/GameInfo.h"
 
 struct Column

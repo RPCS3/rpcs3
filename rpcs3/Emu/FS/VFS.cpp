@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
+#include <memory>
 
 #include "VFS.h"
 #include "Emu/HDD/HDD.h"

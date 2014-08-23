@@ -362,53 +362,7 @@ struct PesHeader
 	u8 size;
 	bool new_au;
 
-	PesHeader(DemuxerStream& stream)
-		: pts(0xffffffffffffffff)
-		, dts(0xffffffffffffffff)
-		, size(0)
-		, new_au(false)
-	{
-		u16 header;
-		stream.get(header);
-		stream.get(size);
-		if (size)
-		{
-			u8 empty = 0;
-			u8 v;
-			while (true)
-			{
-				stream.get(v);
-				if (v != 0xFF) break; // skip padding bytes
-				empty++;
-				if (empty == size) return;
-			};
-
-			if ((v & 0xF0) == 0x20 && (size - empty) >= 5) // pts only
-			{
-				new_au = true;
-				pts = stream.get_ts(v);
-				stream.skip(size - empty - 5);
-			}
-			else
-			{
-				new_au = true;
-				if ((v & 0xF0) != 0x30 || (size - empty) < 10)
-				{
-					LOG_ERROR(HLE, "PesHeader(): pts not found");
-					Emu.Pause();
-				}
-				pts = stream.get_ts(v);
-				stream.get(v);
-				if ((v & 0xF0) != 0x10)
-				{
-					LOG_ERROR(HLE, "PesHeader(): dts not found");
-					Emu.Pause();				
-				}
-				dts = stream.get_ts(v);
-				stream.skip(size - empty - 10);
-			}
-		}
-	}
+	PesHeader(DemuxerStream& stream);
 };
 
 class ElementaryStream;
@@ -493,26 +447,7 @@ class ElementaryStream
 	//u32 first; // AU that will be released
 	//u32 peek; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
 
-	bool is_full()
-	{
-		if (released < put_count)
-		{
-			u32 first = entries.Peek();
-			if (first >= put)
-			{
-				return (first - put) < GetMaxAU();
-			}
-			else
-			{
-				// probably, always false
-				return (put + GetMaxAU()) > (memAddr + memSize);
-			}
-		}
-		else
-		{
-			return false;
-		}
-	}
+	bool is_full();
 	
 public:
 	Demuxer* dmux;
@@ -548,228 +483,23 @@ public:
 	{
 	}
 
-	const u32 GetMaxAU() const
-	{
-		return (fidMajor == 0xbd) ? 4096 : 640 * 1024 + 128; // TODO
-	}
+	const u32 GetMaxAU() const;
 
-	u32 freespace()
-	{
-		if (size > GetMaxAU())
-		{
-			LOG_ERROR(HLE, "es::freespace(): last_size too big (size=0x%x, max_au=0x%x)", size, GetMaxAU());
-			Emu.Pause();
-			return 0;
-		}
-		return GetMaxAU() - size;
-	}
+	u32 freespace();
 
-	bool hasunseen()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return peek_count < put_count;
-	}
+	bool hasunseen();
 
-	bool hasdata()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return size;
-	}
+	bool hasdata();
 
-	bool isfull()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return is_full();
-	}
+	bool isfull();
 
-	void finish(DemuxerStream& stream) // not multithread-safe
-	{
-		u32 addr;
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
+	void finish(DemuxerStream& stream);
 
-			addr = put;
-			/*if (!first)
-			{
-				first = put;
-			}
-			if (!peek)
-			{
-				peek = put;
-			}*/
+	void push(DemuxerStream& stream, u32 sz, PesHeader& pes);
 
-			mem_ptr_t<CellDmuxAuInfo> info(put);
-			//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::finish(): (%s) size = 0x%x, info_addr=0x%x, pts = 0x%x",
-				//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(),
-				//(u32)info->auSize, put, (u32)info->ptsLower);
+	bool release();
 
-			u32 new_addr = a128(put + 128 + size);
-			put = ((new_addr + GetMaxAU()) > (memAddr + memSize))
-			    ? memAddr : new_addr;
+	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index);
 
-			size = 0;
-
-			put_count++;
-			//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::finish(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
-		}
-		if (!entries.Push(addr))
-		{
-			LOG_ERROR(HLE, "es::finish() aborted (no space)");
-		}
-	}
-
-	void push(DemuxerStream& stream, u32 sz, PesHeader& pes)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (is_full())
-		{
-			LOG_ERROR(HLE, "es::push(): buffer is full");
-			Emu.Pause();
-			return;
-		}
-
-		u32 data_addr = put + 128 + size;
-		size += sz;
-		memcpy(Memory + data_addr, Memory + stream.addr, sz);
-		stream.skip(sz);
-
-		mem_ptr_t<CellDmuxAuInfoEx> info(put);
-		info->auAddr = put + 128;
-		info->auSize = size;
-		if (pes.new_au)
-		{
-			info->dts.lower = (u32)pes.dts;
-			info->dts.upper = (u32)(pes.dts >> 32);
-			info->pts.lower = (u32)pes.pts;
-			info->pts.upper = (u32)(pes.pts >> 32);
-			info->isRap = false; // TODO: set valid value
-			info->reserved = 0;
-			info->userData = stream.userdata;
-		}
-
-		mem_ptr_t<CellDmuxPamfAuSpecificInfoAvc> tail(put + sizeof(CellDmuxAuInfoEx));
-		tail->reserved1 = 0;
-
-		mem_ptr_t<CellDmuxAuInfo> inf(put + 64);
-		inf->auAddr = put + 128;
-		inf->auSize = size;
-		if (pes.new_au)
-		{
-			inf->dtsLower = (u32)pes.dts;
-			inf->dtsUpper = (u32)(pes.dts >> 32);
-			inf->ptsLower = (u32)pes.pts;
-			inf->ptsUpper = (u32)(pes.pts >> 32);
-			inf->auMaxSize = 0; // ?????
-			inf->userData = stream.userdata;
-		}
-	}
-
-	bool release()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
-		if (released >= put_count)
-		{
-			LOG_ERROR(HLE, "es::release(): buffer is empty");
-			return false;
-		}
-
-		u32 addr = entries.Peek();
-
-		mem_ptr_t<CellDmuxAuInfo> info(addr);
-		//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
-			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, first, (u32)info->ptsLower);
-
-		if (released >= peek_count)
-		{
-			LOG_ERROR(HLE, "es::release(): buffer has not been seen yet");
-			return false;
-		}
-
-		/*u32 new_addr = a128(info.GetAddr() + 128 + info->auSize);
-
-		if (new_addr == put)
-		{
-			first = 0;
-		}
-		else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
-		{
-			first = memAddr;
-		}
-		else
-		{
-			first = new_addr;
-		}*/
-
-		released++;
-		if (!entries.Pop(addr))
-		{
-			LOG_ERROR(HLE, "es::release(): entries.Pop() aborted (no entries found)");
-			return false;
-		}
-		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
-		return true;
-	}
-
-	bool peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
-			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
-		if (peek_count >= put_count) return false;
-
-		if (peek_count < released)
-		{
-			LOG_ERROR(HLE, "es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
-			Emu.Pause();
-			return false;
-		}
-
-		u32 addr = entries.Peek(peek_count - released);
-		mem_ptr_t<CellDmuxAuInfo> info(addr);
-		//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
-			//wxString(update_index ? "Get" : "Peek").wx_str(),
-			//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek, (u32)info->ptsLower);
-
-		out_data = addr;
-		out_spec = out_data + sizeof(CellDmuxAuInfoEx);
-		if (no_ex) out_data += 64;
-
-		if (update_index)
-		{
-			/*u32 new_addr = a128(peek + 128 + info->auSize);
-			if (new_addr == put)
-			{
-				peek = 0;
-			}
-			else if ((new_addr + GetMaxAU()) > (memAddr + memSize))
-			{
-				peek = memAddr;
-			}
-			else
-			{
-				peek = new_addr;
-			}*/
-			peek_count++;
-		}
-
-		//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
-			//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
-		return true;
-	}
-
-	void reset()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		//first = 0;
-		//peek = 0;
-		put = memAddr;
-		size = 0;
-		entries.Clear();
-		put_count = 0;
-		released = 0;
-		peek_count = 0;
-	}
+	void reset();
 };

@@ -7,9 +7,9 @@
 #endif
 
 #ifdef _WIN32
-#define noinline __declspec(noinline)
+#define __noinline __declspec(noinline)
 #else
-#define noinline __attribute__((noinline))
+#define __noinline __attribute__((noinline))
 #endif
 
 template<size_t size>

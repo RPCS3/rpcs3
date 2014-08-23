@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "rPlatform.h"
 #include "Log.h"
+#include "rMsgBox.h"
 #include <iostream>
 #include <string>
 #include <cinttypes>

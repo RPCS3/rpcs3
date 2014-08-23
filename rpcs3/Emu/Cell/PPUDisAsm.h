@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPCDisAsm.h"
-#include "Emu/Cell/PPCThread.h"
-#include "Emu/Memory/Memory.h"
 
 class PPUDisAsm
 	: public PPUOpcodes

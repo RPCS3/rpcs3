@@ -170,12 +170,12 @@ bool DynamicMemoryBlockBase<PT>::Free(u64 addr)
 		}
 	}
 
-	LOG_ERROR(MEMORY, "DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
-	for (u32 i = 0; i < m_allocated.size(); i++)
-	{
-		LOG_NOTICE(MEMORY, "*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
-	}
-	assert(0);
+	//LOG_ERROR(MEMORY, "DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
+	//for (u32 i = 0; i < m_allocated.size(); i++)
+	//{
+	//	LOG_NOTICE(MEMORY, "*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
+	//}
+	assert(!"DynamicMemoryBlock::Free() failed");
 	return false;
 }
 
@@ -189,7 +189,6 @@ template<typename PT>
 bool DynamicMemoryBlockBase<PT>::IsLocked(u64 addr)
 {
 	// TODO
-	LOG_ERROR(MEMORY, "IsLocked(0x%llx) not implemented", addr);
 	assert(0);
 	return false;
 }
@@ -198,7 +197,6 @@ template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Lock(u64 addr, u32 size)
 {
 	// TODO
-	LOG_ERROR(MEMORY, "Lock(0x%llx, 0x%x) not implemented", addr, size);
 	assert(0);
 	return false;
 }
@@ -207,7 +205,6 @@ template<typename PT>
 bool DynamicMemoryBlockBase<PT>::Unlock(u64 addr, u32 size)
 {
 	// TODO
-	LOG_ERROR(MEMORY, "Unlock(0x%llx, 0x%x) not implemented", addr, size);
 	assert(0);
 	return false;
 }

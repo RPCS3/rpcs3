@@ -1,12 +1,14 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
-#include "Emu/Cell/PPUDisAsm.h"
 
 #include <thread>
 #include <cmath>
@@ -57,7 +59,7 @@ void PPUThread::DoReset()
 void PPUThread::AddArgv(const std::string& arg)
 {
 	m_stack_point -= arg.length() + 1;
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
+	m_stack_point = AlignAddr(m_stack_point, 0x10) - 0x10;
 	m_argv_addr.push_back(m_stack_point);
 	Memory.WriteString(m_stack_point, arg);
 }
@@ -94,7 +96,7 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x200) - 0x200;
+	m_stack_point = AlignAddr(m_stack_point, 0x200) - 0x200;
 
 	GPR[1] = m_stack_point;
 	GPR[2] = rtoc;
@@ -218,4 +220,53 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 	if(a == b) return CR_EQ;
 
 	return CR_SO;
+}
+
+u64 PPUThread::GetStackArg(s32 i)
+{
+	return Memory.Read64(GPR[1] + 0x70 + 0x8 * (i - 9));
+}
+
+u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
+{
+	GPR[3] = arg1;
+	GPR[4] = arg2;
+	GPR[5] = arg3;
+	GPR[6] = arg4;
+	GPR[7] = arg5;
+	GPR[8] = arg6;
+	GPR[9] = arg7;
+	GPR[10] = arg8;
+	
+	return FastCall2(addr, rtoc);
+}
+
+u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
+{
+	auto old_status = m_status;
+	auto old_PC = PC;
+	auto old_rtoc = GPR[2];
+	auto old_LR = LR;
+	auto old_thread = GetCurrentNamedThread();
+
+	m_status = Running;
+	PC = addr;
+	GPR[2] = rtoc;
+	LR = Emu.m_ppu_thr_stop;
+	SetCurrentNamedThread(this);
+
+	Task();
+
+	m_status = old_status;
+	PC = old_PC;
+	GPR[2] = old_rtoc;
+	LR = old_LR;
+	SetCurrentNamedThread(old_thread);
+
+	return GPR[3];
+}
+
+void PPUThread::FastStop()
+{
+	m_status = Stopped;
 }

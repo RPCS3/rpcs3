@@ -1,10 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+
+#include "Emu/SysCalls/lv2/lv2Fs.h"
 
 Module *sys_fs = nullptr;
 
@@ -155,7 +154,7 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "fsAioRead() aborted");
+			sys_fs->Warning("fsAioRead() aborted");
 			return;
 		}
 	}
@@ -186,9 +185,8 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 
 	file.Seek(old_pos);
 
-	if (Ini.HLELogging.GetValue())
-		LOG_NOTICE(HLE, "*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
-			fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
+	sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
+		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
 
 	if (func) // start callback thread
 	{

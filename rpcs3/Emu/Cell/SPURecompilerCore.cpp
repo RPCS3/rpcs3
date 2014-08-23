@@ -3,8 +3,12 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+#include "Emu/SysCalls/lv2/sys_time.h"
+
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"
+
+#include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
@@ -43,6 +47,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	u64 time0 = 0;
 
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	dis_asm.offset = Memory.GetMemFromAddr(CPU.dmac.ls_offset);
 
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);
@@ -102,7 +107,7 @@ void SPURecompilerCore::Compile(u16 pos)
 		{
 			const u64 stamp1 = get_system_time();
 			// disasm for logging:
-			dis_asm.dump_pc = CPU.dmac.ls_offset + pos * 4;
+			dis_asm.dump_pc = pos * 4;
 			(*SPU_instr::rrr_list)(&dis_asm, opcode);
 			compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
 			// compile single opcode:
@@ -171,21 +176,28 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	{
 		// check data (hard way)
 		bool is_valid = true;
-		/*for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
-		{
-			if (entry[i].valid != ls[i])
-			{
-				is_valid = false;
-				break;
-			}
-		}*/
+		//for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
+		//{
+		//	if (entry[i].valid != ls[i])
+		//	{
+		//		is_valid = false;
+		//		break;
+		//	}
+		//}
 		// invalidate if necessary
 		if (!is_valid)
 		{
-			// TODO
-			LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
-			Emu.Pause();
-			return 0;
+			for (u32 i = 0; i < 0x10000; i++)
+			{
+				if (entry[i].pointer &&
+					i + (u32)entry[i].count > (u32)pos &&
+					i < (u32)pos + (u32)entry[pos].count)
+				{
+					runtime.release(entry[i].pointer);
+					entry[i].pointer = nullptr;
+				}
+			}
+			//LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
 		}
 	}
 

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 
 #include "Emu/Cell/RawSPUThread.h"
 
@@ -149,7 +148,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 		else
 		{
 			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(SPU_RunCtrl, 0x%x): unknown value", m_index, value);
-			Emu.Pause();
+			return false;
 		}
 		break;
 	}

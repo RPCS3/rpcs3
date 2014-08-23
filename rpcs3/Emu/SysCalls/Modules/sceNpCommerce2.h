@@ -1,4 +1,5 @@
 #pragma once
+#include "cellRtc.h"
 
 // Return codes
 enum

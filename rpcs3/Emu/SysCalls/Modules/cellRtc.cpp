@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Utilities/rTime.h"
 #include "cellRtc.h"
 
 //void cellRtc_init();

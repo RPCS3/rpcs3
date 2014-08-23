@@ -1,9 +1,6 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Static.h"
 

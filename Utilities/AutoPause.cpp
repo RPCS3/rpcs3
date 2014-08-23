@@ -1,5 +1,8 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "AutoPause.h"
+#include "Utilities/Log.h"
+#include "Emu/System.h"
 
 using namespace Debug;
 

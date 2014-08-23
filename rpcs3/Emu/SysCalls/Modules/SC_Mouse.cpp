@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "Emu/Io/Mouse.h"
 
 extern Module *sys_io;

@@ -1,14 +1,41 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/Cell/PPUThread.h"
+#include "sys_lwmutex.h"
 #include "sys_event_flag.h"
 
 SysCallBase sys_event_flag("sys_event_flag");
+
+u32 EventFlag::check()
+{
+	SleepQueue sq; // TODO: implement without SleepQueue
+
+	u32 target = 0;
+
+	for (u32 i = 0; i < waiters.size(); i++)
+	{
+		if (((waiters[i].mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & waiters[i].bitptn) == waiters[i].bitptn) ||
+			((waiters[i].mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & waiters[i].bitptn)))
+		{
+			if (m_protocol == SYS_SYNC_FIFO)
+			{
+				target = waiters[i].tid;
+				break;
+			}
+			sq.list.push_back(waiters[i].tid);
+		}
+	}
+
+	if (m_protocol == SYS_SYNC_PRIORITY)
+	{
+		target = sq.pop_prio();
+	}
+
+	return target;
+}
 
 s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
 {
@@ -36,7 +63,7 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	default: return CELL_EINVAL;
 	}
 
-	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type));
+	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
 
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());
@@ -187,7 +214,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		}
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_event_flag_wait(id=%d) aborted", eflag_id);
+			sys_event_flag.Warning("sys_event_flag_wait(id=%d) aborted", eflag_id);
 			return CELL_OK;
 		}
 	}
@@ -306,7 +333,7 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(HLE, "sys_event_flag_cancel(id=%d) aborted", eflag_id);
+		sys_event_flag.Warning("sys_event_flag_cancel(id=%d) aborted", eflag_id);
 		return CELL_OK;
 	}
 

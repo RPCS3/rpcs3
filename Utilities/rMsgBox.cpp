@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rMsgBox.h"
 
 #ifndef QT_UI
 rMessageDialog::rMessageDialog(void *parent, const std::string& msg, const std::string& title , long style )

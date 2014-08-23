@@ -1,25 +1,41 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Utilities/SMutex.h"
+
+#include "Emu/Cell/PPUThread.h"
 #include "sys_mutex.h"
 
-SysCallBase sys_mtx("sys_mutex");
+SysCallBase sys_mutex("sys_mutex");
+
+Mutex::~Mutex()
+{
+	if (u32 owner = m_mutex.GetOwner())
+	{
+		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id, owner, recursive);
+	}
+
+	if (!m_queue.m_mutex.try_lock()) return;
+
+	for (u32 i = 0; i < m_queue.list.size(); i++)
+	{
+		if (u32 owner = m_queue.list[i]) sys_mutex.Notice("Mutex(%d) was waited by thread %d", id, owner);
+	}
+
+	m_queue.m_mutex.unlock();
+}
 
 s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 {
-	sys_mtx.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
+	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
 
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mtx.Todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_RETRY): sys_mtx.Error("sys_mutex_create(): SYS_SYNC_RETRY"); return CELL_EINVAL;
-	default: sys_mtx.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mutex.Todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_mutex.Error("sys_mutex_create(): SYS_SYNC_RETRY"); return CELL_EINVAL;
+	default: sys_mutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
 	bool is_recursive;
@@ -27,23 +43,23 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	{
 	case se32(SYS_SYNC_RECURSIVE): is_recursive = true; break;
 	case se32(SYS_SYNC_NOT_RECURSIVE): is_recursive = false; break;
-	default: sys_mtx.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
+	default: sys_mutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
 	}
 
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
-		sys_mtx.Error("Unknown pshared attribute(0x%x)", (u32)attr->pshared);
+		sys_mutex.Error("Unknown pshared attribute(0x%x)", (u32)attr->pshared);
 		return CELL_EINVAL;
 	}
 
 	u32 tid = GetCurrentPPUThread().GetId();
 	Mutex* mutex = new Mutex((u32)attr->protocol, is_recursive, attr->name_u64);
-	u32 id = sys_mtx.GetNewId(mutex, TYPE_MUTEX);
+	u32 id = sys_mutex.GetNewId(mutex, TYPE_MUTEX);
 	mutex->m_mutex.lock(tid);
 	mutex->id = id;
 	mutex_id = id;
 	mutex->m_mutex.unlock(tid);
-	sys_mtx.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
+	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		std::string(attr->name, 8).c_str(), (u32) attr->protocol,
 		(is_recursive ? "true" : "false"), mutex_id.GetValue());
 
@@ -54,7 +70,7 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 
 s32 sys_mutex_destroy(u32 mutex_id)
 {
-	sys_mtx.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
+	sys_mutex.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -87,7 +103,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 s32 sys_mutex_lock(u32 mutex_id, u64 timeout)
 {
-	sys_mtx.Log("sys_mutex_lock(mutex_id=%d, timeout=%lld)", mutex_id, timeout);
+	sys_mutex.Log("sys_mutex_lock(mutex_id=%d, timeout=%lld)", mutex_id, timeout);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -120,7 +136,7 @@ s32 sys_mutex_lock(u32 mutex_id, u64 timeout)
 		}
 		else
 		{
-			sys_mtx.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+			sys_mutex.Error("sys_mutex_lock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
 		}
 	}
 
@@ -148,7 +164,7 @@ s32 sys_mutex_lock(u32 mutex_id, u64 timeout)
 abort:
 	if (Emu.IsStopped())
 	{
-		sys_mtx.Warning("sys_mutex_lock(id=%d) aborted", mutex_id);
+		sys_mutex.Warning("sys_mutex_lock(id=%d) aborted", mutex_id);
 		return CELL_OK;
 	}
 	return CELL_ESRCH;
@@ -156,7 +172,7 @@ abort:
 
 s32 sys_mutex_trylock(u32 mutex_id)
 {
-	sys_mtx.Log("sys_mutex_trylock(mutex_id=%d)", mutex_id);
+	sys_mutex.Log("sys_mutex_trylock(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -189,7 +205,7 @@ s32 sys_mutex_trylock(u32 mutex_id)
 		}
 		else
 		{
-			sys_mtx.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
+			sys_mutex.Error("sys_mutex_trylock(%d): deadlock on invalid thread(%d)", mutex_id, owner);
 		}
 	}
 
@@ -203,7 +219,7 @@ s32 sys_mutex_trylock(u32 mutex_id)
 
 s32 sys_mutex_unlock(u32 mutex_id)
 {
-	sys_mtx.Log("sys_mutex_unlock(mutex_id=%d)", mutex_id);
+	sys_mutex.Log("sys_mutex_unlock(mutex_id=%d)", mutex_id);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -218,7 +234,7 @@ s32 sys_mutex_unlock(u32 mutex_id)
 	{
 		if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
 		{
-			sys_mtx.Error("sys_mutex_unlock(%d): wrong recursive value fixed (%d)", mutex_id, mutex->recursive);
+			sys_mutex.Error("sys_mutex_unlock(%d): wrong recursive value fixed (%d)", mutex_id, mutex->recursive);
 			mutex->recursive = 1;
 		}
 		mutex->recursive--;

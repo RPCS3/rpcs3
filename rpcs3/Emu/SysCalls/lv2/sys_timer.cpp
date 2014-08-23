@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+
+#include "Emu/Event.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
@@ -10,10 +11,6 @@ SysCallBase sys_timer("sys_timer");
 s32 sys_timer_create(mem32_t timer_id)
 {
 	sys_timer.Warning("sys_timer_create(timer_id_addr=0x%x)", timer_id.GetAddr());
-
-	if (!timer_id.IsGood()) {
-		return CELL_EFAULT;
-	}
 
 	timer_id = sys_timer.GetNewId(new timer, TYPE_TIMER);
 	return CELL_OK;

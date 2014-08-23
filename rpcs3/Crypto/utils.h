@@ -1,6 +1,4 @@
 #pragma once
-#include "aes.h"
-#include "sha1.h"
 
 // Auxiliary functions (endian swap and xor).
 u16 swap16(u16 i);

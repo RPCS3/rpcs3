@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Log.h"
 #include <wx/dir.h>
 
 #ifdef _WIN32

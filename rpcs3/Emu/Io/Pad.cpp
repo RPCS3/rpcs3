@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "rpcs3/Ini.h"
 #include "Pad.h"
 #include "Null/NullPadHandler.h"

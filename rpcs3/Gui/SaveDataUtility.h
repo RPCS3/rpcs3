@@ -1,9 +1,4 @@
 #pragma once
-#include "stdafx.h"
-#include <iomanip>
-#include <sstream>
-#include "Utilities/Log.h"
-#include "Utilities/rFile.h"
 
 //TODO: Implement function calls related to Save Data List.
 //Those function calls may be needed to use this GUI.

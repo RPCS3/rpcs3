@@ -1,8 +1,6 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_spinlock.h"
@@ -35,7 +33,7 @@ void sys_spinlock_lock(mem_ptr_t<std::atomic<be_t<u32>>> lock)
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_spinlock_lock(0x%x) aborted", lock.GetAddr());
+			sys_spinlock.Warning("sys_spinlock_lock(0x%x) aborted", lock.GetAddr());
 			break;
 		}
 	}

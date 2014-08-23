@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
@@ -33,7 +32,7 @@ u32 vpostOpen(VpostInstance* data)
 {
 	u32 id = cellVpost->GetNewId(data);
 
-	LOG_NOTICE(HLE, "*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
+	cellVpost->Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
 
 	return id;
 }
@@ -90,15 +89,15 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	u32 oh = ctrlParam->outHeight;
 
 	ctrlParam->inWindow; // ignored
-	if (ctrlParam->inWindow.x) LOG_WARNING(HLE, "*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
-	if (ctrlParam->inWindow.y) LOG_WARNING(HLE, "*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
-	if (ctrlParam->inWindow.width != w) LOG_WARNING(HLE, "*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
-	if (ctrlParam->inWindow.height != h) LOG_WARNING(HLE, "*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
+	if (ctrlParam->inWindow.x) cellVpost->Notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
+	if (ctrlParam->inWindow.y) cellVpost->Notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
+	if (ctrlParam->inWindow.width != w) cellVpost->Notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
+	if (ctrlParam->inWindow.height != h) cellVpost->Notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
 	ctrlParam->outWindow; // ignored
-	if (ctrlParam->outWindow.x) LOG_WARNING(HLE, "*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
-	if (ctrlParam->outWindow.y) LOG_WARNING(HLE, "*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
-	if (ctrlParam->outWindow.width != ow) LOG_WARNING(HLE, "*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
-	if (ctrlParam->outWindow.height != oh) LOG_WARNING(HLE, "*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
+	if (ctrlParam->outWindow.x) cellVpost->Notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
+	if (ctrlParam->outWindow.y) cellVpost->Notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
+	if (ctrlParam->outWindow.width != ow) cellVpost->Notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
+	if (ctrlParam->outWindow.height != oh) cellVpost->Notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
 	ctrlParam->execType; // ignored
 	ctrlParam->scalerType; // ignored
 	ctrlParam->ipcType; // ignored
@@ -127,16 +126,16 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
 
-	u64 stamp0 = get_system_time();
+	//u64 stamp0 = get_system_time();
 	std::unique_ptr<u8[]> pA(new u8[w*h]);
 
 	memset(pA.get(), (const u8)ctrlParam->outAlpha, w*h);
 
-	u64 stamp1 = get_system_time();
+	//u64 stamp1 = get_system_time();
 
 	SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
 
-	u64 stamp2 = get_system_time();
+	//u64 stamp2 = get_system_time();
 
 	u8* in_data[4] = { Memory.GetMemFromAddr(inPicBuff_addr), Memory.GetMemFromAddr(inPicBuff_addr + w*h), Memory.GetMemFromAddr(inPicBuff_addr + w*h + w*h / 4), pA.get() };
 	int in_line[4] = { w, w/2, w/2, w };
@@ -145,7 +144,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
 
-	u64 stamp3 = get_system_time();
+	//u64 stamp3 = get_system_time();
 
 	sws_freeContext(sws);
 

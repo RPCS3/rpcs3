@@ -4,7 +4,6 @@
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/Memory/Memory.h"
 
 #include <stack>
 #include <set> // For tracking a list of used gcm commands
@@ -611,8 +610,8 @@ protected:
 	void Begin(u32 draw_mode);
 	void End();
 
-	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, mem32_ptr_t args);
-	void DoCmd(const u32 fcmd, const u32 cmd, mem32_ptr_t args, const u32 count);
+	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
+	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
 	void nativeRescale(float width, float height);
 	
 	virtual void OnInit() = 0;
@@ -636,33 +635,9 @@ protected:
 	virtual void Task();
 
 public:
-	void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
-	{
-		m_ctrl = (CellGcmControl*)&Memory[ctrlAddress];
-		m_ioAddress = ioAddress;
-		m_ioSize = ioSize;
-		m_ctrlAddress = ctrlAddress;
-		m_local_mem_addr = localAddress;
+	void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 
-		m_cur_vertex_prog = nullptr;
-		m_cur_shader_prog = nullptr;
-		m_cur_shader_prog_num = 0;
+	u32 ReadIO32(u32 addr);
 
-		m_used_gcm_commands.clear();
-
-		OnInit();
-		ThreadBase::Start();
-	}
-
-	u32 ReadIO32(u32 addr)
-	{
-		u32 value;
-		Memory.RSXIOMem.Read32(Memory.RSXIOMem.GetStartAddr() + addr, &value);
-		return value;
-	}
-
-	void WriteIO32(u32 addr, u32 value)
-	{
-		Memory.RSXIOMem.Write32(Memory.RSXIOMem.GetStartAddr() + addr, value);
-	}
+	void WriteIO32(u32 addr, u32 value);
 };

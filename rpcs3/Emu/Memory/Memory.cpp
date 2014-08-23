@@ -4,9 +4,218 @@
 #include "Utilities/Log.h"
 #include "Memory.h"
 #include "Emu/System.h"
-#include "Ini.h"
+
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
+/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 MemoryBase Memory;
+
+void MemoryBase::InvalidAddress(const char* func, const u64 addr)
+{
+	LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", func, addr);
+}
+
+void MemoryBase::RegisterPages(u64 addr, u32 size)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
+	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
+	{
+		if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
+		{
+			InvalidAddress(__FUNCTION__, i * 4096);
+			break;
+		}
+		if (m_pages[i])
+		{
+			LOG_ERROR(MEMORY, "Page already registered (addr=0x%llx)", i * 4096);
+		}
+		m_pages[i] = 1; // TODO: define page parameters
+	}
+}
+
+void MemoryBase::UnregisterPages(u64 addr, u32 size)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
+	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
+	{
+		if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
+		{
+			InvalidAddress(__FUNCTION__, i * 4096);
+			break;
+		}
+		if (!m_pages[i])
+		{
+			LOG_ERROR(MEMORY, "Page not registered (addr=0x%llx)", i * 4096);
+		}
+		m_pages[i] = 0; // TODO: define page parameters
+	}
+}
+
+u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	u32 index;
+	for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
+	{
+		if (!RawSPUMem[index])
+		{
+			RawSPUMem[index] = raw_spu;
+			break;
+		}
+	}
+
+	MemoryBlocks.push_back(raw_spu->SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET));
+	return index;
+}
+
+void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	for (int i = 0; i < MemoryBlocks.size(); ++i)
+	{
+		if (MemoryBlocks[i] == raw_spu)
+		{
+			MemoryBlocks.erase(MemoryBlocks.begin() + i);
+			break;
+		}
+	}
+	if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = nullptr;
+}
+
+void MemoryBase::Init(MemoryType type)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	if (m_inited) return;
+	m_inited = true;
+
+	memset(m_pages, 0, sizeof(m_pages));
+	memset(RawSPUMem, 0, sizeof(RawSPUMem));
+
+#ifdef _WIN32
+	m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+	if (!m_base_addr)
+#else
+	m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+	if (m_base_addr == (void*)-1)
+#endif
+	{
+		m_base_addr = nullptr;
+		LOG_ERROR(MEMORY, "Initializing memory failed");
+		assert(0);
+		return;
+	}
+	else
+	{
+		LOG_NOTICE(MEMORY, "Initializing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
+	}
+
+	switch (type)
+	{
+	case Memory_PS3:
+		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
+		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
+		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
+		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
+		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
+		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
+		break;
+
+	case Memory_PSV:
+		MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
+		MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
+		PSV.Init(GetBaseAddr());
+		break;
+
+	case Memory_PSP:
+		MemoryBlocks.push_back(PSP.Scratchpad.SetRange(0x00010000, 0x00004000));
+		MemoryBlocks.push_back(PSP.VRAM.SetRange(0x04000000, 0x00200000));
+		MemoryBlocks.push_back(PSP.RAM.SetRange(0x08000000, 0x02000000));
+		MemoryBlocks.push_back(PSP.Kernel.SetRange(0x88000000, 0x00800000));
+		MemoryBlocks.push_back(UserMemory = PSP.Userspace.SetRange(0x08800000, 0x01800000));
+		PSP.Init(GetBaseAddr());
+		break;
+	}
+
+	LOG_NOTICE(MEMORY, "Memory initialized.");
+}
+
+void MemoryBase::Close()
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	if (!m_inited) return;
+	m_inited = false;
+
+	LOG_NOTICE(MEMORY, "Closing memory...");
+
+	for (auto block : MemoryBlocks)
+	{
+		block->Delete();
+	}
+
+	RSXIOMem.Delete();
+
+	MemoryBlocks.clear();
+
+#ifdef _WIN32
+	if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
+	{
+		LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
+	}
+#else
+	if (::munmap(m_base_addr, 0x100000000))
+	{
+		LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
+	}
+#endif
+}
+
+bool MemoryBase::Map(const u64 dst_addr, const u64 src_addr, const u32 size)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	if (IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
+	{
+		return false;
+	}
+
+	MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
+	LOG_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
+	return true;
+}
+
+bool MemoryBase::Unmap(const u64 addr)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+	bool result = false;
+	for (uint i = 0; i<MemoryBlocks.size(); ++i)
+	{
+		if (MemoryBlocks[i]->IsMirror())
+		{
+			if (MemoryBlocks[i]->GetStartAddr() == addr)
+			{
+				delete MemoryBlocks[i];
+				MemoryBlocks.erase(MemoryBlocks.begin() + i);
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	: MemInfo(_addr, PAGE_4K(_size))
@@ -333,12 +542,6 @@ bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
 	*(u128*)GetMem(FixAddr(addr)) = value;
 	return true;
 }
-
-// MemoryBase
-template<> __forceinline u64 MemoryBase::ReverseData<1>(u64 val) { return val; }
-template<> __forceinline u64 MemoryBase::ReverseData<2>(u64 val) { return Reverse16(val); }
-template<> __forceinline u64 MemoryBase::ReverseData<4>(u64 val) { return Reverse32(val); }
-template<> __forceinline u64 MemoryBase::ReverseData<8>(u64 val) { return Reverse64(val); }
 
 VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock(), m_reserve_size(0)
 {
