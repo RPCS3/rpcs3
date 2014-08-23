@@ -746,7 +746,7 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	funcFixed(result.GetAddr(), listGet.GetAddr(), listSet.GetAddr());
 
 	if (result->result < 0)	{
-		LOG_ERROR(HLE, "cellSaveDataListAutoSave: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
@@ -754,7 +754,7 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
-		LOG_WARNING(HLE, "cellSaveDataListAutoSave: No save entries found!"); // TODO: Find a better way to handle this error
+		cellSysutil->Warning("cellSaveDataListAutoSave: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_SAVEDATA_RET_OK;
 	}
 
@@ -767,7 +767,7 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	funcStat(result.GetAddr(), statGet.GetAddr(), statSet.GetAddr());
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
-		LOG_ERROR(HLE, "cellSaveDataListAutoSave: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
@@ -830,7 +830,7 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	funcFixed(result.GetAddr(), listGet.GetAddr(), listSet.GetAddr());
 
 	if (result->result < 0)	{
-		LOG_ERROR(HLE, "cellSaveDataListAutoLoad: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
@@ -838,7 +838,7 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
-		LOG_WARNING(HLE, "cellSaveDataListAutoLoad: No save entries found!"); // TODO: Find a better way to handle this error
+		cellSysutil->Warning("cellSaveDataListAutoLoad: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_SAVEDATA_RET_OK;
 	}
 
@@ -852,7 +852,7 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	Memory.Free(statGet->fileList.GetAddr());
 
 	if (result->result < 0)	{
-		LOG_ERROR(HLE, "cellSaveDataListAutoLoad: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
