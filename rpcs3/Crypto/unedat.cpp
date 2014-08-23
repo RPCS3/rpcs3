@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "utils.h"
+#include "key_vault.h"
 #include "unedat.h"
 #include "Utilities/Log.h"
 

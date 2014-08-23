@@ -1,16 +1,17 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "sys_memory.h"
 
-SysCallBase sc_vm("vm");
+#include "sys_memory.h"
+#include "sys_vm.h"
+
+SysCallBase sys_vm("vm");
 MemoryContainerInfo* current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)
 {
-	sc_vm.Warning("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
+	sys_vm.Warning("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
 		vsize, psize, cid, flag, policy, addr);
 
 	// Check virtual size.
@@ -51,7 +52,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	{
 		// Check memory container.
 		MemoryContainerInfo* ct;
-		if(!sc_vm.CheckId(cid, ct)) return CELL_ESRCH;
+		if(!sys_vm.CheckId(cid, ct)) return CELL_ESRCH;
 
 		current_ct = ct;
 	}
@@ -64,7 +65,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 
 s32 sys_vm_unmap(u32 addr)
 {
-	sc_vm.Warning("sys_vm_unmap(addr=0x%x)", addr);
+	sys_vm.Warning("sys_vm_unmap(addr=0x%x)", addr);
 
 	// Simply free the memory to unmap.
 	if(!Memory.Free(addr)) return CELL_EINVAL;
@@ -74,7 +75,7 @@ s32 sys_vm_unmap(u32 addr)
 
 s32 sys_vm_append_memory(u32 addr, u32 size)
 {
-	sc_vm.Warning("sys_vm_append_memory(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Warning("sys_vm_append_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (size <= 0))
@@ -96,7 +97,7 @@ s32 sys_vm_append_memory(u32 addr, u32 size)
 
 s32 sys_vm_return_memory(u32 addr, u32 size)
 {
-	sc_vm.Warning("sys_vm_return_memory(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Warning("sys_vm_return_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (size <= 0))
@@ -118,7 +119,7 @@ s32 sys_vm_return_memory(u32 addr, u32 size)
 
 s32 sys_vm_lock(u32 addr, u32 size)
 {
-	sc_vm.Warning("sys_vm_lock(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Warning("sys_vm_lock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -140,7 +141,7 @@ s32 sys_vm_lock(u32 addr, u32 size)
 
 s32 sys_vm_unlock(u32 addr, u32 size)
 {
-	sc_vm.Warning("sys_vm_unlock(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Warning("sys_vm_unlock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -155,7 +156,7 @@ s32 sys_vm_unlock(u32 addr, u32 size)
 
 s32 sys_vm_touch(u32 addr, u32 size)
 {
-	sc_vm.Todo("sys_vm_touch(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_touch(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -172,7 +173,7 @@ s32 sys_vm_touch(u32 addr, u32 size)
 
 s32 sys_vm_flush(u32 addr, u32 size)
 {
-	sc_vm.Todo("sys_vm_flush(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_flush(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -189,7 +190,7 @@ s32 sys_vm_flush(u32 addr, u32 size)
 
 s32 sys_vm_invalidate(u32 addr, u32 size)
 {
-	sc_vm.Todo("sys_vm_invalidate(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_invalidate(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -206,7 +207,7 @@ s32 sys_vm_invalidate(u32 addr, u32 size)
 
 s32 sys_vm_store(u32 addr, u32 size)
 {
-	sc_vm.Todo("sys_vm_store(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_store(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -223,7 +224,7 @@ s32 sys_vm_store(u32 addr, u32 size)
 
 s32 sys_vm_sync(u32 addr, u32 size)
 {
-	sc_vm.Todo("sys_vm_sync(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_sync(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -239,7 +240,7 @@ s32 sys_vm_sync(u32 addr, u32 size)
 
 s32 sys_vm_test(u32 addr, u32 size, u32 result_addr)
 {
-	sc_vm.Todo("sys_vm_test(addr=0x%x,size=0x%x,result_addr=0x%x)", addr, size, result_addr);
+	sys_vm.Todo("sys_vm_test(addr=0x%x,size=0x%x,result_addr=0x%x)", addr, size, result_addr);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -258,7 +259,7 @@ s32 sys_vm_test(u32 addr, u32 size, u32 result_addr)
 
 s32 sys_vm_get_statistics(u32 addr, u32 stat_addr)
 {
-	sc_vm.Todo("sys_vm_get_statistics(addr=0x%x,stat_addr=0x%x)", addr, stat_addr);
+	sys_vm.Todo("sys_vm_get_statistics(addr=0x%x,stat_addr=0x%x)", addr, stat_addr);
 
 	// Check address.
 	if(current_ct->addr != addr)

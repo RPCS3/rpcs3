@@ -842,6 +842,7 @@ public:
 public:
 	virtual void InitRegs(); 
 	virtual u64 GetFreeStackSize() const;
+	u64 GetStackArg(s32 i);
 	u64 FastCall(u64 addr, u64 rtoc, u64 arg1 = 0, u64 arg2 = 0, u64 arg3 = 0, u64 arg4 = 0, u64 arg5 = 0, u64 arg6 = 0, u64 arg7 = 0, u64 arg8 = 0);
 	u64 FastCall2(u64 addr, u64 rtoc);
 	void FastStop();
@@ -866,3 +867,4 @@ protected:
 
 PPUThread& GetCurrentPPUThread();
 
+#define declCPU PPUThread& CPU = GetCurrentPPUThread

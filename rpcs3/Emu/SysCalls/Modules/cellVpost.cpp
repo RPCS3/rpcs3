@@ -127,16 +127,16 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
 
-	u64 stamp0 = get_system_time();
+	//u64 stamp0 = get_system_time();
 	std::unique_ptr<u8[]> pA(new u8[w*h]);
 
 	memset(pA.get(), (const u8)ctrlParam->outAlpha, w*h);
 
-	u64 stamp1 = get_system_time();
+	//u64 stamp1 = get_system_time();
 
 	SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
 
-	u64 stamp2 = get_system_time();
+	//u64 stamp2 = get_system_time();
 
 	u8* in_data[4] = { Memory.GetMemFromAddr(inPicBuff_addr), Memory.GetMemFromAddr(inPicBuff_addr + w*h), Memory.GetMemFromAddr(inPicBuff_addr + w*h + w*h / 4), pA.get() };
 	int in_line[4] = { w, w/2, w/2, w };
@@ -145,7 +145,7 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpos
 
 	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
 
-	u64 stamp3 = get_system_time();
+	//u64 stamp3 = get_system_time();
 
 	sws_freeContext(sws);
 

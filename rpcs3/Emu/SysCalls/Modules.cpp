@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
 #include <mutex>
 #include "ModuleManager.h"
@@ -179,7 +180,7 @@ IdManager& Module::GetIdManager() const
 	return Emu.GetIdManager();
 }
 
-StaticFuncManager& Module::GetSFuncManager() const
+void Module::PushNewFuncSub(SFunc* func)
 {
-	return Emu.GetSFuncManager();
+	Emu.GetSFuncManager().push_back(func);
 }

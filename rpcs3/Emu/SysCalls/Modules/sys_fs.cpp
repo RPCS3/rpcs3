@@ -4,8 +4,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/Modules.h"
+
+#include "Emu/SysCalls/lv2/lv2Fs.h"
 
 Module *sys_fs = nullptr;
 

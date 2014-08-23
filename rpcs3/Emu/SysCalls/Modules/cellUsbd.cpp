@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellUsbd_init();
 Module cellUsbd(0x001c, cellUsbd_init);

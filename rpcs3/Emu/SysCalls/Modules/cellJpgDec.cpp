@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellJpgDec.h"
 #include "stblib/stb_image.h"
+#include "Emu/SysCalls/lv2/lv2Fs.h"
 
 //void cellJpgDec_init();
 //Module cellJpgDec(0x000f, cellJpgDec_init);

@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "cellPamf.h"
 #include "cellDmux.h"
 

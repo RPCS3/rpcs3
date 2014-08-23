@@ -6,10 +6,10 @@
 * GNU LGPL 2.1 license
 * */
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+
 #include "sys_time.h"
 
 SysCallBase sys_time("sys_time");

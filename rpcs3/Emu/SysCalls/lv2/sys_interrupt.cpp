@@ -1,18 +1,17 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/SysCalls/SysCalls.h"
+
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
-#include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "sys_interrupt.h"
 
-static SysCallBase sc_int("sys_interrupt");
+static SysCallBase sys_interrupt("sys_interrupt");
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
 {
-	sc_int.Warning("sys_interrupt_tag_destroy(intrtag=%d)", intrtag);
+	sys_interrupt.Warning("sys_interrupt_tag_destroy(intrtag=%d)", intrtag);
 
 	u32 id = intrtag & 0xff;
 	u32 class_id = intrtag >> 8;
@@ -39,7 +38,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 
 s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 arg)
 {
-	sc_int.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
+	sys_interrupt.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
 
 	u32 id = intrtag & 0xff;
 	u32 class_id = intrtag >> 8;
@@ -78,7 +77,7 @@ s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 
 
 s32 sys_interrupt_thread_disestablish(u32 ih)
 {
-	sc_int.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
+	sys_interrupt.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
 
 	CPUThread* it = Emu.GetCPU().GetThread(ih);
 	if (!it)
@@ -98,7 +97,7 @@ s32 sys_interrupt_thread_disestablish(u32 ih)
 
 void sys_interrupt_thread_eoi()
 {
-	sc_int.Log("sys_interrupt_thread_eoi()");
+	sys_interrupt.Log("sys_interrupt_thread_eoi()");
 
 	GetCurrentPPUThread().FastStop();
 	return;

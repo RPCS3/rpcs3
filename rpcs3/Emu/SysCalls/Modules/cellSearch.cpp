@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellSearch_init();
 Module cellSearch(0xf02f, cellSearch_init);

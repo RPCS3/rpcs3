@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellFiber_init();
 Module cellFiber(0x0043, cellFiber_init);

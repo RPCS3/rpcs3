@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellScreenshot_init();
 Module cellScreenshot(0x004e, cellScreenshot_init);

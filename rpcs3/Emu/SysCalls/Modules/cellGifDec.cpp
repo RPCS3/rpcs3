@@ -3,9 +3,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "cellGifDec.h"
 
+#include "Emu/SysCalls/lv2/lv2Fs.h"
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
 

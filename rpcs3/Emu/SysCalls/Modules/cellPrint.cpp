@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellPrint_init();
 Module cellPrint(0xf02a, cellPrint_init);

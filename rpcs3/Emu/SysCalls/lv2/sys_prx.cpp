@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+
 #include "Emu/FS/vfsFile.h"
 #include "Crypto/unself.h"
 #include "sys_prx.h"

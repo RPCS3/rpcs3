@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
+
+#include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
@@ -63,7 +63,7 @@ s32 sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_lwcond_signal(id=%d) aborted", (u32)lwcond->lwcond_queue);
+			sys_lwcond.Warning("sys_lwcond_signal(id=%d) aborted", (u32)lwcond->lwcond_queue);
 			return CELL_OK;
 		}
 	}
@@ -89,7 +89,7 @@ s32 sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_lwcond_signal_all(id=%d) aborted", (u32)lwcond->lwcond_queue);
+			sys_lwcond.Warning("sys_lwcond_signal_all(id=%d) aborted", (u32)lwcond->lwcond_queue);
 			return CELL_OK;
 		}
 	}
@@ -123,7 +123,7 @@ s32 sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "sys_lwcond_signal_to(id=%d, to=%d) aborted", (u32)lwcond->lwcond_queue, ppu_thread_id);
+			sys_lwcond.Warning("sys_lwcond_signal_to(id=%d, to=%d) aborted", (u32)lwcond->lwcond_queue, ppu_thread_id);
 			return CELL_OK;
 		}
 	}
@@ -213,6 +213,6 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 	}
 
 abort:
-	LOG_WARNING(HLE, "sys_lwcond_wait(id=%d) aborted", (u32)lwcond->lwcond_queue);
+	sys_lwcond.Warning("sys_lwcond_wait(id=%d) aborted", (u32)lwcond->lwcond_queue);
 	return CELL_OK;
 }

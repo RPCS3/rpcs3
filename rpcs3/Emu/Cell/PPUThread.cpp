@@ -4,7 +4,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
@@ -218,6 +220,11 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 	if(a == b) return CR_EQ;
 
 	return CR_SO;
+}
+
+u64 PPUThread::GetStackArg(s32 i)
+{
+	return Memory.Read64(GPR[1] + 0x70 + 0x8 * (i - 9));
 }
 
 u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)

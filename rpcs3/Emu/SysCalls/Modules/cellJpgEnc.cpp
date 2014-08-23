@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #if 0
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
 void cellJpgEnc_init();
 Module cellJpgEnc(0x003d, cellJpgEnc_init);

@@ -1,15 +1,12 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+//#include "Emu/SysCalls/SysCalls.h"
+
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
-
 #include "lv2Fs.h"
-#include "Emu/SysCalls/SysCalls.h"
 
 extern Module *sys_fs;
 
@@ -112,7 +109,7 @@ s32 cellFsOpen(u32 path_addr, s32 flags, mem32_t fd, mem32_t arg, u64 size)
 	}
 
 	fd = sys_fs->GetNewId(stream, TYPE_FS_FILE);
-	LOG_NOTICE(HLE, "\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
+	sys_fs->Notice("\"%s\" opened: fd = %d", path.c_str(), fd.GetValue());
 
 	return CELL_OK;
 }

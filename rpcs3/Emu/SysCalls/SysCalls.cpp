@@ -5,8 +5,33 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/SC_FUNC.h"
 #include "ModuleManager.h"
+
+#include "lv2/lv2Fs.h"
+#include "lv2/sys_cond.h"
+#include "lv2/sys_event.h"
+#include "lv2/sys_event_flag.h"
+#include "lv2/sys_interrupt.h"
+#include "lv2/sys_lwcond.h"
+#include "lv2/sys_lwmutex.h"
+#include "lv2/sys_memory.h"
+#include "lv2/sys_mmapper.h"
+#include "lv2/sys_ppu_thread.h"
+#include "lv2/sys_process.h"
+#include "lv2/sys_prx.h"
+#include "lv2/sys_rsx.h"
+#include "lv2/sys_rwlock.h"
+#include "lv2/sys_semaphore.h"
+#include "lv2/sys_spinlock.h"
+#include "lv2/sys_spu.h"
+#include "lv2/sys_time.h"
+#include "lv2/sys_timer.h"
+#include "lv2/sys_trace.h"
+#include "lv2/sys_tty.h"
+#include "lv2/sys_vm.h"
+
+#include "SysCalls.h"
 
 namespace detail{
 	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)
@@ -19,6 +44,8 @@ void default_syscall();
 static func_caller *null_func = bind_func(default_syscall);
 
 static const int kSyscallTableLength = 1024;
+
+extern int cellGcmCallback(u32 context_addr, u32 count);
 
 // UNS = Unused
 // ROOT = Root

@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "utils.h"
+#include "aes.h"
+#include "sha1.h"
+#include "key_vault.h"
 #include "unpkg.h"
 #include <wx/progdlg.h>
 

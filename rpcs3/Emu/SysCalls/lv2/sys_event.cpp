@@ -1,9 +1,11 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
+#include "sys_process.h"
 #include "sys_event.h"
 
 SysCallBase sys_event("sys_event");
@@ -235,7 +237,7 @@ s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
 
 	EventPort* eport = new EventPort();
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
-	eport->name = name ? name : ((u64)sys_process_getpid() << 32) | (u64)id;
+	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
 	eport_id = id;
 	sys_event.Warning("*** sys_event_port created: id = %d", id);
 

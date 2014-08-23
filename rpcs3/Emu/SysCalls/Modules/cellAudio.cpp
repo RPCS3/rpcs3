@@ -4,9 +4,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/SQueue.h"
 #include "Emu/Event.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/Audio/cellAudio.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
@@ -359,7 +359,7 @@ int cellAudioInit()
 					}
 				}
 
-				const u64 stamp1 = get_system_time();
+				//const u64 stamp1 = get_system_time();
 
 				if (first_mix)
 				{
@@ -381,7 +381,7 @@ int cellAudioInit()
 					oal_buffer_offset = 0;
 				}
 
-				const u64 stamp2 = get_system_time();
+				//const u64 stamp2 = get_system_time();
 
 				// send aftermix event (normal audio event)
 				{
@@ -409,7 +409,7 @@ int cellAudioInit()
 					Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
 				}
 
-				const u64 stamp3 = get_system_time();
+				//const u64 stamp3 = get_system_time();
 
 				if (do_dump && !first_mix)
 				{

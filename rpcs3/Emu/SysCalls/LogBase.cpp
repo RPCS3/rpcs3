@@ -9,17 +9,24 @@ bool LogBase::CheckLogging() const
 	return Ini.HLELogging.GetValue();
 }
 
-void LogBase::LogNotice(const std::string& text)
+void LogBase::LogOutput(LogType type, const char* info, const std::string& text)
 {
-	LOG_NOTICE(HLE, "%s", text.c_str());
+	switch (type)
+	{
+	case LogNotice: LOG_NOTICE(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
+	case LogSuccess: LOG_SUCCESS(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
+	case LogWarning: LOG_WARNING(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
+	case LogError: LOG_ERROR(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
+	}
 }
 
-void LogBase::LogWarning(const std::string& text)
+void LogBase::LogOutput(LogType type, const u32 id, const char* info, const std::string& text)
 {
-	LOG_WARNING(HLE, "%s", text.c_str());
-}
-
-void LogBase::LogError(const std::string& text)
-{
-	LOG_ERROR(HLE, "%s", text.c_str());
+	switch (type)
+	{
+	case LogNotice: LOG_NOTICE(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
+	case LogSuccess: LOG_SUCCESS(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
+	case LogWarning: LOG_WARNING(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
+	case LogError: LOG_ERROR(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
+	}
 }

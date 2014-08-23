@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/SMutex.h"
+
 template<typename T, u32 SQSize = 666>
 class SQueue
 {

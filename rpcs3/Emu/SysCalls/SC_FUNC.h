@@ -1,10 +1,8 @@
 #pragma once
 
-#include "Emu/Memory/Memory.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
 
-#define RESULT(x) SC_ARGS_1 = (x)
+#define RESULT(x) CPU.GPR[3] = (x)
 
 class func_caller
 {
@@ -25,7 +23,8 @@ struct get_arg<false, false, false, T, i> // not fp, not ptr, 1..8
 template<bool is_fp, typename T, int i>
 struct get_arg<false, is_fp, true, T, i> // ptr, 1..8
 {
-	static __forceinline T func(PPUThread& CPU) { return CPU.GPR[i + 2] ? (T)&Memory[CPU.GPR[i + 2]] : nullptr; }
+	static_assert(i == 0, "Invalid function argument type: pointer");
+	static __forceinline T func(PPUThread& CPU) { return nullptr; }
 };
 
 template<bool is_in_sp, typename T, int i>
@@ -37,13 +36,14 @@ struct get_arg<is_in_sp, true, false, T, i> // fp, 1..12
 template<typename T, int i>
 struct get_arg<true, false, false, T, i> // not fp, not ptr, 9..12
 {
-	static __forceinline T func(PPUThread& CPU) { u64 res = Memory.Read64(CPU.GPR[1] + 0x70 + 0x8 * (i - 9)); return (T&)res; }
+	static __forceinline T func(PPUThread& CPU) { u64 res = CPU.GetStackArg(i); return (T&)res; }
 };
 
 template<bool is_fp, typename T, int i>
 struct get_arg<true, is_fp, true, T, i> // ptr, 9..12
 {
-	static __forceinline T func(PPUThread& CPU) { u64 addr = Memory.Read64(CPU.GPR[1] + 0x70 + 0x8 * (i - 9)); return addr ? (T)&Memory[addr] : nullptr; }
+	static_assert(i == 0, "Invalid function argument type: pointer");
+	static __forceinline T func(PPUThread& CPU) { return nullptr; }
 };
 
 #define ARG(n) get_arg<((n) > 8), std::is_floating_point<T##n>::value, std::is_pointer<T##n>::value, T##n, n>::func(CPU)

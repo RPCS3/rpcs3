@@ -3,7 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "cellFont.h"
 
 //void cellFontFT_init();

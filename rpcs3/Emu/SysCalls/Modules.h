@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "ErrorCodes.h"
 #include "LogBase.h"
 
 //TODO
@@ -17,7 +17,7 @@ struct ModuleFunc
 
 	~ModuleFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
 
@@ -38,9 +38,11 @@ struct SFunc
 
 	~SFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
+
+class StaticFuncManager;
 
 class Module : public LogBase
 {
@@ -51,7 +53,7 @@ class Module : public LogBase
 	void (*m_unload_func)();
 
 	IdManager& GetIdManager() const;
-	StaticFuncManager& GetSFuncManager() const;
+	void PushNewFuncSub(SFunc* func);
 
 public:
 	std::vector<ModuleFunc*> m_funcs_list;
@@ -155,5 +157,13 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re(op.crc);
 		sf->ops.push_back(op);
 	}
-	GetSFuncManager().push_back(sf);
+	PushNewFuncSub(sf);
 }
+
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
+	module->AddFuncSub(group, name ## _table, #name, name)
+
+#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)
+
+#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)

@@ -349,12 +349,12 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 
 			if (port.m_is_audio_port_started)
 			{
-				u64 stamp0 = get_system_time();
+				//u64 stamp0 = get_system_time();
 
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb) mixerCb->ExecAsCallback(surMixerCb, true, surMixerCbArg, mixcount, 256);
 
-				u64 stamp1 = get_system_time();
+				//u64 stamp1 = get_system_time();
 
 				{
 					std::lock_guard<std::mutex> lock(mixer_mutex);
@@ -435,7 +435,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 					}
 				}
 
-				u64 stamp2 = get_system_time();
+				//u64 stamp2 = get_system_time();
 
 				auto buf = (be_t<float>*)&Memory[m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float)];
 
@@ -445,7 +445,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 					buf[i] = mixdata[i];
 				}
 
-				u64 stamp3 = get_system_time();
+				//u64 stamp3 = get_system_time();
 
 				//ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
 			}

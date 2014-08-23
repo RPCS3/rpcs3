@@ -1,32 +1,34 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
+
+#include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 
-SysCallBase sc_lwmutex("sys_lwmutex");
+SysCallBase sys_lwmutex("sys_lwmutex");
+
+// TODO: move SleepQueue somewhere
 
 s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr)
 {
-	sc_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)", 
+	sys_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)",
 		lwmutex.GetAddr(), attr.GetAddr());
 
 	switch (attr->attr_recursive.ToBE())
 	{
 	case se32(SYS_SYNC_RECURSIVE): break;
 	case se32(SYS_SYNC_NOT_RECURSIVE): break;
-	default: sc_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->attr_recursive); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->attr_recursive); return CELL_EINVAL;
 	}
 
 	switch (attr->attr_protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
 	case se32(SYS_SYNC_RETRY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sc_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
 	case se32(SYS_SYNC_FIFO): break;
-	default: sc_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->attr_protocol); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->attr_protocol); return CELL_EINVAL;
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
@@ -36,10 +38,10 @@ s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 	lwmutex->pad = 0;
 	lwmutex->recursive_count = 0;
 
-	u32 sq_id = sc_lwmutex.GetNewId(new SleepQueue(attr->name_u64), TYPE_LWMUTEX);
+	u32 sq_id = sys_lwmutex.GetNewId(new SleepQueue(attr->name_u64), TYPE_LWMUTEX);
 	lwmutex->sleep_queue = sq_id;
 
-	sc_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", 
+	sys_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d",
 		std::string(attr->name, 8).c_str(), (u32) lwmutex->attribute, sq_id);
 
 	return CELL_OK;
@@ -47,7 +49,7 @@ s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_a
 
 s32 sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	sc_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+	sys_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	u32 sq_id = lwmutex->sleep_queue;
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
@@ -66,7 +68,7 @@ s32 sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex)
 
 s32 sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 {
-	sc_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
+	sys_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.GetAddr(), timeout);
 
 	//ConLog.Write("*** lock mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
@@ -76,14 +78,14 @@ s32 sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout)
 
 s32 sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	sc_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+	sys_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	return lwmutex->trylock(be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId()));
 }
 
 s32 sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex)
 {
-	sc_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
+	sys_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.GetAddr());
 
 	//ConLog.Write("*** unlocking mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.GetAddr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
@@ -158,7 +160,7 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 
 u32 SleepQueue::pop_prio_inherit() // (TODO)
 {
-	LOG_ERROR(HLE, "TODO: SleepQueue::pop_prio_inherit()");
+	sys_lwmutex.Error("TODO: SleepQueue::pop_prio_inherit()");
 	Emu.Pause();
 	return 0;
 }
@@ -278,7 +280,7 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 	{
 		if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
 		{
-			sc_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
+			sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
 			recursive_count = 1;
 		}
 		recursive_count -= 1;
@@ -329,7 +331,7 @@ int sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	case SMR_TIMEOUT:
 		sq->invalidate(tid); return CELL_ETIMEDOUT;
 	case SMR_ABORT:
-		if (Emu.IsStopped()) LOG_WARNING(HLE, "sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
+		if (Emu.IsStopped()) sys_lwmutex.Warning("sys_lwmutex_t::lock(sq=%d) aborted", (u32)sleep_queue);
 	default:
 		sq->invalidate(tid); return CELL_EINVAL;
 	}

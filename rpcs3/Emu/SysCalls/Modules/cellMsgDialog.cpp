@@ -4,6 +4,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 #include "rpcs3.h"
 
 #include "cellSysutil.h"

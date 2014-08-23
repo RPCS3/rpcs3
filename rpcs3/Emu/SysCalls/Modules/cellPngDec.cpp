@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellPngDec.h"
 #include "stblib/stb_image.h"
+#include "Emu/SysCalls/lv2/lv2Fs.h"
 #include <map>
 
 //void cellPngDec_init();

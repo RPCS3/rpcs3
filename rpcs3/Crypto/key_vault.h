@@ -1,5 +1,4 @@
 #pragma once
-#include "utils.h"
 
 enum SELF_KEY_TYPE {
 	KEY_LV0 = 1,
@@ -22,17 +21,7 @@ struct SELF_KEY {
 	u8 priv[0x15];
 	u32 curve_type;
 
-	SELF_KEY(u64 ver, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
-	{
-		version = ver;
-		revision = rev;
-		self_type = type;
-		hex_to_bytes(erk, e.c_str()); 
-		hex_to_bytes(riv, r.c_str());
-		hex_to_bytes(pub, pb.c_str());
-		hex_to_bytes(priv, pr.c_str());
-		curve_type = ct;		
-	}
+	SELF_KEY(u64 ver, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct);
 };
 
 static u8 PKG_AES_KEY[0x10] = {
