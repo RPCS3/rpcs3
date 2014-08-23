@@ -3,7 +3,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-
+#include "Emu/SysCalls/lv2/sys_cond.h"
+#include "Emu/SysCalls/lv2/sys_mutex.h"
+#include "cellSpurs.h"
 #include "cellSail.h"
 
 Module *cellSail = nullptr;
