@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Emu/SysCalls/ErrorCodes.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/Log.h"

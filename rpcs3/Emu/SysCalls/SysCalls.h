@@ -28,7 +28,6 @@
 #include "lv2/sys_tty.h"
 #include "lv2/sys_vm.h"
 
-#include "rpcs3/Ini.h"
 #include "LogBase.h"
 
 //#define SYSCALLS_DEBUG

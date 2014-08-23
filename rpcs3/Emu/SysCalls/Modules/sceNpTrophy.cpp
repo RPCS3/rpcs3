@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Utilities/rXml.h"
 #include "Emu/Memory/Memory.h"

@@ -3,8 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
-#include "Emu/SysCalls/lv2/sys_event.h" 
 #include "InterpreterDisAsm.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"

@@ -1,7 +1,5 @@
 #pragma once
-#include "sysutil_video.h"
 #include "GSRender.h"
-#include "rpcs3/Ini.h"
 
 struct GSInfo
 {
@@ -21,16 +19,7 @@ struct GSInfo
 	{
 	}
 
-	void Init()
-	{
-		mode.resolutionId = Ini.GSResolution.GetValue();
-		mode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_INTERLACE;
-		mode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		mode.aspect = Ini.GSAspectRatio.GetValue();
-		mode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_50HZ;
-		mode.format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
-		mode.pitch = 4;
-	}
+	void Init();
 };
 
 class GSManager

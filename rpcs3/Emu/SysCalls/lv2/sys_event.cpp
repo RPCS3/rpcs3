@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/Event.h"
 #include "sys_event.h"
 
 SysCallBase sys_event("sys_event");

@@ -10,6 +10,34 @@
 
 SysCallBase sys_event_flag("sys_event_flag");
 
+u32 EventFlag::check()
+{
+	SleepQueue sq; // TODO: implement without SleepQueue
+
+	u32 target = 0;
+
+	for (u32 i = 0; i < waiters.size(); i++)
+	{
+		if (((waiters[i].mode & SYS_EVENT_FLAG_WAIT_AND) && (flags & waiters[i].bitptn) == waiters[i].bitptn) ||
+			((waiters[i].mode & SYS_EVENT_FLAG_WAIT_OR) && (flags & waiters[i].bitptn)))
+		{
+			if (m_protocol == SYS_SYNC_FIFO)
+			{
+				target = waiters[i].tid;
+				break;
+			}
+			sq.list.push_back(waiters[i].tid);
+		}
+	}
+
+	if (m_protocol == SYS_SYNC_PRIORITY)
+	{
+		target = sq.pop_prio();
+	}
+
+	return target;
+}
+
 s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",

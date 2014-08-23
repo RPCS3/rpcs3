@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "cellSysutil.h"
+#include "Emu/RSX/sysutil_video.h"
 #include "cellResc.h"
 
 Module *cellResc = nullptr;

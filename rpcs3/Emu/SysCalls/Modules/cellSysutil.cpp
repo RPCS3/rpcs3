@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -9,6 +10,7 @@
 
 #include "cellSysutil.h"
 #include "cellSysutil_SaveData.h"
+#include "Emu/RSX/sysutil_video.h"
 #include "cellMsgDialog.h"
 #include "cellGame.h"
 

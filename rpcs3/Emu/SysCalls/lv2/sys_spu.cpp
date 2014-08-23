@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/FS/vfsFile.h"
 #include "sys_spu.h"
 #include "Emu/SysCalls/SysCalls.h"
