@@ -1,7 +1,5 @@
 #pragma once
 
-#include "cellSpurs.h"
-
 // Had to use define, since enum doesn't allow floats
 #define CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 
@@ -90,7 +88,7 @@ struct CellGemAttribute
 	be_t<u32> version;
 	be_t<u32> max_connect;
 	be_t<u32> memory_ptr;
-	CellSpurs spurs;
+	be_t<u32> spurs_addr;
 	u8 spu_priorities[8];
 };
 
