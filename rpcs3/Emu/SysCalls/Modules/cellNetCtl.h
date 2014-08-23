@@ -207,7 +207,7 @@ struct CellNetCtlSSID
 	u8 padding[3];
 };
 
-struct CellNetCtlInfo
+union CellNetCtlInfo
 {
 	be_t<u32> device;
 	CellNetCtlEtherAddr ether_addr;
@@ -256,3 +256,5 @@ struct CellNetCtlNatInfo
 	be_t<s32> nat_type;
 	be_t<u32> mapped_addr;
 };
+
+typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, mem32_t arg);

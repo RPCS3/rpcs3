@@ -233,18 +233,18 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	wxString filePath = ctrl.GetPath();
-	rFile pkg_f(filePath.ToStdString(), rFile::read); // TODO: Use VFS to install PKG files
+	std::string filePath = ctrl.GetPath().ToStdString();
+	rFile pkg_f(filePath, rFile::read); // TODO: Use VFS to install PKG files
 
 	if (pkg_f.IsOpened())
 	{
 		PKGLoader pkg(pkg_f);
 		pkg.Install("/dev_hdd0/game/");
 		pkg.Close();
-	}
 
-	// Refresh game list
-	m_game_viewer->Refresh();
+		// Refresh game list
+		m_game_viewer->Refresh();
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))

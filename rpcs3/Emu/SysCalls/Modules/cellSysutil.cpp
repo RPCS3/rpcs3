@@ -889,8 +889,8 @@ void cellSysutil_init()
 	cellSysutil->AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
 	cellSysutil->AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
 	cellSysutil->AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
-	//cellSysutil->AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
-	//cellSysutil->AddFunc(0x21425307, cellSaveDataListAutoLoad);
+	cellSysutil->AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
+	cellSysutil->AddFunc(0x21425307, cellSaveDataListAutoLoad);
 	//cellSysutil->AddFunc(0xedadd797, cellSaveDataDelete2);
 	//cellSysutil->AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
 	//cellSysutil->AddFunc(0x39dd8425, cellSaveDataUserListLoad);

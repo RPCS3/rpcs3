@@ -25,24 +25,28 @@ int cellNetCtlGetState(mem32_t state)
 	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
 
 	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
+
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler()
+int cellNetCtlAddHandler(mem_ptr_t<cellNetCtlHandler> handler, mem32_t arg, s32 hid)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.GetAddr(), arg.GetAddr(), hid);
+
 	return CELL_OK;
 }
 
-int cellNetCtlDelHandler()
+int cellNetCtlDelHandler(s32 hid)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlDelHandler(hid=%x)", hid);
+
 	return CELL_OK;
 }
 
-int cellNetCtlGetInfo()
+int cellNetCtlGetInfo(s32 code, mem_ptr_t<CellNetCtlInfo> info)
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlGetInfo(code=%x, info_addr=0x%x)", code, info.GetAddr());
+
 	return CELL_OK;
 }
 
@@ -55,7 +59,8 @@ int cellNetCtlNetStartDialogLoadAsync(mem_ptr_t<CellNetCtlNetStartDialogParam> p
 
 int cellNetCtlNetStartDialogAbortAsync()
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Todo("cellNetCtlNetStartDialogAbortAsync()");
+
 	return CELL_OK;
 }
 
