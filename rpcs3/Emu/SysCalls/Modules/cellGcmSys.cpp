@@ -1,11 +1,10 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/RSX/GCM.h"
-#include "Emu/SysCalls/lv2/sys_process.h"
-#include "sysPrxForUser.h"
+
+//#include "Emu/RSX/GCM.h"
+//#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 
 //void cellGcmSys_init();
@@ -487,7 +486,7 @@ s32 cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id)
 
 	if(current + 8 >= end)
 	{
-		LOG_WARNING(HLE, "bad flip!");
+		cellGcmSys->Error("bad flip!");
 		//cellGcmCallback(ctxt.GetAddr(), current + 8 - end);
 		//copied:
  

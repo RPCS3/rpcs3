@@ -1,4 +1,5 @@
 #pragma once
+#include "cellRtc.h"
 
 // Constants for TUS functions and structures
 enum

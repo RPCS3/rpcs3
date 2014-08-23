@@ -1,9 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/Cell/SPURSManager.h"
 #include "cellSpurs.h"
 
 //void cellSpurs_init();
@@ -258,10 +257,10 @@ s32 cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 #endif
 }
 
-s32 cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, mem_func_ptr_t<CellSpursGlobalExceptionEventHandler> eaHandler, u32 arg_addr)
+s32 cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, u32 eaHandler_addr, u32 arg_addr)
 {
-	cellSpurs->Warning("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x,)",
-		spurs.GetAddr(), eaHandler.GetAddr(), arg_addr);
+	cellSpurs->Warning("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x)",
+		spurs.GetAddr(), eaHandler_addr, arg_addr);
 
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0xD6D0, libsre_rtoc);

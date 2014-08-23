@@ -1,5 +1,4 @@
 #pragma once
-#include "Emu/CPU/CPUDecoder.h"
 
 enum CPUThreadType :unsigned char
 {
@@ -19,6 +18,8 @@ enum CPUThreadStatus
 	CPUThread_Break,
 	CPUThread_Step,
 };
+
+class CPUDecoder;
 
 class CPUThread : public ThreadBase
 {

@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Emu/Cell/PPUThread.h"
 
 #define RESULT(x) CPU.GPR[3] = (x)

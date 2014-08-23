@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Utilities/rMsgBox.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
-#include "rpcs3.h"
 
+#include "rpcs3.h"
+#include "Utilities/rMsgBox.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
@@ -46,8 +45,8 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(Log::HLE, "%s", msgString.GetString()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(Log::HLE, "%s", msgString.GetString()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil->Warning("Message: \n%s", msgString.GetString()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil->Error("Message: \n%s", msgString.GetString()); break;
 		}
 
 		switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -361,7 +360,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgS
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (u32)(bool)m_gauge1 + (u32)(bool)m_gauge2)
+	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -390,7 +389,7 @@ int cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (u32)(bool)m_gauge1 + (u32)(bool)m_gauge2)
+	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -415,7 +414,7 @@ int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (u32)(bool)m_gauge1 + (u32)(bool)m_gauge2)
+	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}

@@ -727,67 +727,7 @@ public:
 
 	CPUThread* vdecCb;
 
-	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
-		: type(type)
-		, profile(profile)
-		, memAddr(addr)
-		, memSize(size)
-		, memBias(0)
-		, cbFunc(func)
-		, cbArg(arg)
-		, is_finished(false)
-		, is_running(false)
-		, just_started(false)
-		, just_finished(false)
-		, ctx(nullptr)
-		, vdecCb(nullptr)
-	{
-		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-		if (!codec)
-		{
-			LOG_ERROR(HLE, "VideoDecoder(): avcodec_find_decoder(H264) failed");
-			Emu.Pause();
-			return;
-		}
-		fmt = avformat_alloc_context();
-		if (!fmt)
-		{
-			LOG_ERROR(HLE, "VideoDecoder(): avformat_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-		io_buf = (u8*)av_malloc(4096);
-		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
-		if (!fmt->pb)
-		{
-			LOG_ERROR(HLE, "VideoDecoder(): avio_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-	}
+	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg);
 
-	~VideoDecoder()
-	{
-		// TODO: check finalization
-		if (ctx)
-		{
-			for (u32 i = frames.GetCount() - 1; ~i; i--)
-			{
-				VdecFrame& vf = frames.Peek(i);
-				av_frame_unref(vf.data);
-				av_frame_free(&vf.data);
-			}
-			avcodec_close(ctx);
-			avformat_close_input(&fmt);
-		}
-		if (fmt)
-		{
-			if (io_buf)
-			{
-				av_free(io_buf);
-			}
-			if (fmt->pb) av_free(fmt->pb);
-			avformat_free_context(fmt);
-		}
-	}
+	~VideoDecoder();
 };

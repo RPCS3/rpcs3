@@ -1,15 +1,15 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
+#include "rpcs3/Ini.h"
 #include "Utilities/SQueue.h"
 #include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
-#include "Emu/Audio/cellAudio.h"
-#include "Emu/Audio/AudioManager.h"
+//#include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
+#include "Emu/Audio/cellAudio.h"
 
 //void cellAudio_init();
 //Module cellAudio(0x0011, cellAudio_init);
@@ -52,11 +52,11 @@ int cellAudioInit()
 		
 			if (do_dump && !m_dump.Init())
 			{
-				LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::Init() failed");
+				cellAudio->Error("cellAudioInit(): AudioDumper::Init() failed");
 				return;
 			}
 
-			LOG_NOTICE(HLE, "Audio thread started");
+			cellAudio->Notice("Audio thread started");
 
 			if (Ini.AudioDumpToFile.GetValue())
 				m_dump.WriteHeader();
@@ -137,7 +137,7 @@ int cellAudioInit()
 			{
 				if (Emu.IsStopped())
 				{
-					LOG_WARNING(HLE, "Audio thread aborted");
+					cellAudio->Warning("Audio thread aborted");
 					goto abort;
 				}
 
@@ -417,7 +417,7 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data
 						{
-							LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
+							cellAudio->Error("cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
@@ -425,13 +425,13 @@ int cellAudioInit()
 					{
 						if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data
 						{
-							LOG_ERROR(HLE, "cellAudioInit(): AudioDumper::WriteData() failed");
+							cellAudio->Error("cellAudioInit(): AudioDumper::WriteData() failed");
 							goto abort;
 						}
 					}
 					else
 					{
-						LOG_ERROR(HLE, "cellAudioInit(): unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
+						cellAudio->Error("cellAudioInit(): unknown AudioDumper::GetCh() value (%d)", m_dump.GetCh());
 						goto abort;
 					}
 				}
@@ -439,7 +439,7 @@ int cellAudioInit()
 				//LOG_NOTICE(HLE, "Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
 					//stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 			}
-			LOG_NOTICE(HLE, "Audio thread ended");
+			cellAudio->Notice("Audio thread ended");
 abort:
 			queue.Push(nullptr);
 			queue_float.Push(nullptr);
@@ -471,7 +471,7 @@ abort:
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellAudioInit() aborted");
+			cellAudio->Warning("cellAudioInit() aborted");
 			return CELL_OK;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -496,7 +496,7 @@ int cellAudioQuit()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellAudioQuit(): aborted");
+			cellAudio->Warning("cellAudioQuit(): aborted");
 			return CELL_OK;
 		}
 	}

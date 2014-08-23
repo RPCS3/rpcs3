@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
@@ -173,6 +172,11 @@ bool Module::CheckID(u32 id) const
 bool Module::CheckID(u32 id, ID*& _id) const
 {
 	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
+}
+
+bool Module::RemoveId(u32 id)
+{
+	return Emu.GetIdManager().RemoveID(id);
 }
 
 IdManager& Module::GetIdManager() const

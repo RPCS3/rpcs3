@@ -4,8 +4,6 @@
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 #include "ModuleManager.h"
 
 #include "lv2/lv2Fs.h"
@@ -971,4 +969,9 @@ void SysCalls::DoSyscall(u32 code)
 IdManager& SysCallBase::GetIdManager() const
 {
 	return Emu.GetIdManager();
+}
+
+bool SysCallBase::RemoveId(u32 id)
+{
+	return Emu.GetIdManager().RemoveID(id);
 }

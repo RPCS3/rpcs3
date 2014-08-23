@@ -1162,5 +1162,8 @@
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

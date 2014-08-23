@@ -52,6 +52,8 @@ public:
 	{
 		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
+
+	bool RemoveId(u32 id);
 };
 
 extern bool dump_enable;

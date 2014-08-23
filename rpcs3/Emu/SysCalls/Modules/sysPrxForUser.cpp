@@ -1,9 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
@@ -306,8 +304,7 @@ s32 _sys_printf(u32 arg1)
 	sysPrxForUser->Todo("_sys_printf(arg1=0x%x)", arg1);
 
 	// probably, assertion failed
-	LOG_WARNING(TTY, "%s", (char*)(Memory + arg1));
-	Emu.Pause();
+	sysPrxForUser->Warning("_sys_printf: \n%s", (char*)(Memory + arg1));
 	return CELL_OK;
 }
 

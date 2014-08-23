@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/rXml.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "TROPUSR.h"
 
@@ -212,7 +211,8 @@ bool TROPUSRLoader::Close()
 {
 	if (m_file && m_file->Close())
 	{
-		safe_delete(m_file);
+		delete m_file;
+		m_file = nullptr;
 		return true;
 	}
 	return false;

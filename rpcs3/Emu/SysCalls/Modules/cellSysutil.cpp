@@ -1,20 +1,18 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/DbgCommand.h"
-#include "Emu/FS/vfsFile.h"
-#include "Emu/Audio/sysutil_audio.h"
 
-#include "cellSysutil.h"
-#include "cellSysutil_SaveData.h"
+#include "rpcs3/Ini.h"
+#include "Emu/FS/vfsFile.h"
+#include "Loader/PSF.h"
+#include "Emu/Audio/sysutil_audio.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "cellMsgDialog.h"
 #include "cellGame.h"
-
-#include "Loader/PSF.h"
+#include "cellSysutil.h"
+#include "cellSysutil_SaveData.h"
 
 typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
 
@@ -329,7 +327,7 @@ int cellSysutilCheckCallback()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellSysutilCheckCallback() aborted");
+			cellSysutil->Warning("cellSysutilCheckCallback() aborted");
 			break;
 		}
 	}

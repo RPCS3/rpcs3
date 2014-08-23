@@ -1,11 +1,10 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "cellPngDec.h"
+
 #include "stblib/stb_image.h"
 #include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "cellPngDec.h"
 #include <map>
 
 //void cellPngDec_init();
@@ -114,7 +113,7 @@ int cellPngDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_PNGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	cellPngDec->RemoveId(subHandle);
 
 	return CELL_OK;
 }

@@ -6,6 +6,7 @@
 #include "Emu/System.h"
 #include "Emu/DbgCommand.h"
 
+#include "CPUDecoder.h"
 #include "CPUThread.h"
 
 CPUThread* GetCurrentCPUThread()

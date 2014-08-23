@@ -1,6 +1,15 @@
 #include "stdafx.h"
-#include "Loader.h"
 #include "ELF.h"
+
+void Elf_Ehdr::Show()
+{
+}
+
+void Elf_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+}
 
 ELFLoader::ELFLoader(vfsStream& f)
 	: elf_f(f)

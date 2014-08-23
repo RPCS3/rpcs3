@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_memory.h"
@@ -140,7 +139,7 @@ s32 sys_memory_container_destroy(u32 cid)
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(ct->addr);
-	Emu.GetIdManager().RemoveID(cid);
+	sys_memory.RemoveId(cid);
 
 	return CELL_OK;
 }

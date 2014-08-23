@@ -1,11 +1,10 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "cellJpgDec.h"
+
 #include "stblib/stb_image.h"
 #include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "cellJpgDec.h"
 
 //void cellJpgDec_init();
 //Module cellJpgDec(0x000f, cellJpgDec_init);
@@ -76,7 +75,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	cellJpgDec->RemoveId(subHandle);
 
 	return CELL_OK;
 }

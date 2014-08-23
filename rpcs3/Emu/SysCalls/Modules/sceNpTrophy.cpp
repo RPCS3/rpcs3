@@ -1,21 +1,16 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
-#include "Utilities/Log.h"
-#include "Utilities/rXml.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/FS/vfsDir.h"
 
-#include "cellRtc.h"
-#include "sceNp.h"
-#include "sceNpTrophy.h"
-
+#include "rpcs3/Ini.h"
+#include "Utilities/rXml.h"
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
+#include "Emu/FS/vfsDir.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
-
+#include "sceNp.h"
+#include "sceNpTrophy.h"
 #include <algorithm>
 #include <memory>
 
@@ -350,7 +345,7 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, mem_ptr_t<SceNpTrop
 	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
 	count = ctxt.tropusr->GetTrophiesCount();
 	if (count.GetValue() > 128)
-		LOG_WARNING(HLE, "sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
 
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id=0; id<count.GetValue(); id++)

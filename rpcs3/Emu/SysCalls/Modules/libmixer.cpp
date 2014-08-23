@@ -1,9 +1,8 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "Emu/Audio/cellAudio.h"
 #include "libmixer.h"
 
@@ -337,7 +336,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 		{
 			if (Emu.IsStopped())
 			{
-				LOG_WARNING(HLE, "Surmixer aborted");
+				libmixer->Warning("Surmixer aborted");
 				break;
 			}
 

@@ -1,11 +1,10 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "Emu/Event.h"
-
 #include "cellSync.h"
 
 //void cellSync_init();
@@ -90,7 +89,7 @@ s32 cellSyncMutexLock(mem_ptr_t<CellSyncMutex> mutex)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "cellSyncMutexLock(mutex_addr=0x%x) aborted", mutex.GetAddr());
+			cellSync->Warning("cellSyncMutexLock(mutex_addr=0x%x) aborted", mutex.GetAddr());
 			break;
 		}
 	}
@@ -219,7 +218,7 @@ s32 cellSyncBarrierNotify(mem_ptr_t<CellSyncBarrier> barrier)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			if (Emu.IsStopped())
 			{
-				LOG_WARNING(HLE, "cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.GetAddr());
+				cellSync->Warning("cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.GetAddr());
 				return CELL_OK;
 			}
 			continue;
@@ -306,7 +305,7 @@ s32 cellSyncBarrierWait(mem_ptr_t<CellSyncBarrier> barrier)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			if (Emu.IsStopped())
 			{
-				LOG_WARNING(HLE, "cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.GetAddr());
+				cellSync->Warning("cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.GetAddr());
 				return CELL_OK;
 			}
 			continue;
@@ -1039,10 +1038,10 @@ s32 cellSyncQueueClear(mem_ptr_t<CellSyncQueue> queue)
 
 void syncLFQueueDump(mem_ptr_t<CellSyncLFQueue> queue)
 {
-	LOG_NOTICE(HLE, "CellSyncLFQueue dump: addr = 0x%x", queue.GetAddr());
+	cellSync->Notice("CellSyncLFQueue dump: addr = 0x%x", queue.GetAddr());
 	for (u32 i = 0; i < sizeof(CellSyncLFQueue) / 16; i++)
 	{
-		LOG_NOTICE(HLE, "*** 0x%.16llx 0x%.16llx", Memory.Read64(queue.GetAddr() + i * 16), Memory.Read64(queue.GetAddr() + i * 16 + 8));
+		cellSync->Notice("*** 0x%.16llx 0x%.16llx", Memory.Read64(queue.GetAddr() + i * 16), Memory.Read64(queue.GetAddr() + i * 16 + 8));
 	}
 }
 
@@ -2309,7 +2308,7 @@ void cellSync_init()
 			}
 			else
 			{
-				LOG_NOTICE(HLE, "libsre: 0x%x : 0x%llx", i - libsre, flag);
+				cellSync->Notice("libsre: 0x%x : 0x%llx", i - libsre, flag);
 			}
 		}
 	});

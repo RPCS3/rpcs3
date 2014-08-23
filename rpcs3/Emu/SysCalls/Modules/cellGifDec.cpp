@@ -1,13 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "cellGifDec.h"
 
-#include "Emu/SysCalls/lv2/lv2Fs.h"
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
+#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "cellGifDec.h"
 
 //void cellGifDec_init();
 //Module cellGifDec(0xf010, cellGifDec_init);
@@ -269,7 +267,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	cellGifDec->RemoveId(subHandle);
 
 	return CELL_OK;
 }

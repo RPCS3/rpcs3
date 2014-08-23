@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Emu/CPU/CPUThread.h"
 
 class PPCThread : public CPUThread

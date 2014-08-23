@@ -114,6 +114,8 @@ public:
 		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 
+	bool RemoveId(u32 id);
+
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
 	template<typename T> __forceinline void AddFunc(const char* name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);

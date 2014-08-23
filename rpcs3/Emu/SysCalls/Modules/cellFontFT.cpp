@@ -1,42 +1,15 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
 #include "cellFont.h"
+#include "cellFontFT.h"
 
 //void cellFontFT_init();
 //void cellFontFT_load();
 //void cellFontFT_unload();
 //Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
 Module *cellFontFT = nullptr;
-
-struct CellFontLibraryConfigFT
-{
-	u32 library_addr; //void*
-	CellFontMemoryInterface MemoryIF;
-};
-
-struct CellFontRendererConfigFT
-{
-	struct {
-		u32 buffer_addr; //void*
-		u32 initSize;
-		u32 maxSize;
-		u32 expandSize;
-		u32 resetSize;
-	} BufferingPolicy;
-};
-
-struct CCellFontFTInternal
-{
-	bool m_bInitialized;
-
-	CCellFontFTInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
 
 CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 

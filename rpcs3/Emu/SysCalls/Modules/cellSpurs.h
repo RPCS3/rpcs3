@@ -1,5 +1,4 @@
 #pragma once
-#include "Emu/Cell/SPURSManager.h"
 
 // Core return codes.
 enum
@@ -32,6 +31,55 @@ enum
 	CELL_SPURS_TASK_ERROR_FATAL        = 0x80410914,
 	CELL_SPURS_TASK_ERROR_SHUTDOWN     = 0x80410920,
 };
+
+// SPURS defines.
+enum SPURSKernelInterfaces
+{
+	CELL_SPURS_MAX_SPU = 8,
+	CELL_SPURS_MAX_WORKLOAD = 16,
+	CELL_SPURS_MAX_WORKLOAD2 = 32,
+	CELL_SPURS_MAX_PRIORITY = 16,
+	CELL_SPURS_NAME_MAX_LENGTH = 15,
+	CELL_SPURS_SIZE = 4096,
+	CELL_SPURS_SIZE2 = 8192,
+	CELL_SPURS_ALIGN = 128,
+	CELL_SPURS_ATTRIBUTE_SIZE = 512,
+	CELL_SPURS_ATTRIBUTE_ALIGN = 8,
+	CELL_SPURS_INTERRUPT_VECTOR = 0x0,
+	CELL_SPURS_LOCK_LINE = 0x80,
+	CELL_SPURS_KERNEL_DMA_TAG_ID = 31,
+};
+
+enum RangeofEventQueuePortNumbers
+{
+	CELL_SPURS_STATIC_PORT_RANGE_BOTTOM = 15,
+	CELL_SPURS_DYNAMIC_PORT_RANGE_TOP = 16,
+	CELL_SPURS_DYNAMIC_PORT_RANGE_BOTTOM = 63,
+};
+
+enum SPURSTraceTypes
+{
+	CELL_SPURS_TRACE_TAG_LOAD = 0x2a,
+	CELL_SPURS_TRACE_TAG_MAP = 0x2b,
+	CELL_SPURS_TRACE_TAG_START = 0x2c,
+	CELL_SPURS_TRACE_TAG_STOP = 0x2d,
+	CELL_SPURS_TRACE_TAG_USER = 0x2e,
+	CELL_SPURS_TRACE_TAG_GUID = 0x2f,
+};
+
+// SPURS task defines.
+enum TaskConstants
+{
+	CELL_SPURS_MAX_TASK = 128,
+	CELL_SPURS_TASK_TOP = 0x3000,
+	CELL_SPURS_TASK_BOTTOM = 0x40000,
+	CELL_SPURS_MAX_TASK_NAME_LENGTH = 32,
+};
+
+class SPURSManager;
+class SPURSManagerAttribute;
+class SPURSManagerEventFlag;
+class SPURSManagerTaskset;
 
 // Core CellSpurs structures.
 struct CellSpurs
@@ -146,11 +194,11 @@ struct CellSpursTracePacket
 };
 
 // Exception handlers.
-typedef void (*CellSpursGlobalExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursExceptionInfo> info, 
-													 u32 id, mem_ptr_t<void> arg);
-
-typedef void (*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
-													 u32 idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
+//typedef void (*CellSpursGlobalExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursExceptionInfo> info, 
+//													 u32 id, mem_ptr_t<void> arg);
+//
+//typedef void (*CellSpursTasksetExceptionEventHandler)(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, 
+//													 u32 idTask, const mem_ptr_t<CellSpursExceptionInfo> info, mem_ptr_t<void> arg);
 
 struct CellSpursTasksetInfo
 {
@@ -159,7 +207,7 @@ struct CellSpursTasksetInfo
 	be_t<u32> idWorkload;
 	be_t<u32> idLastScheduledTask; //typedef unsigned CellSpursTaskId
 	be_t<u32> name_addr;
-	CellSpursTasksetExceptionEventHandler exceptionEventHandler;
+	be_t<u32> exceptionEventHandler_addr;
 	be_t<u32> exceptionEventHandlerArgument_addr; //void *exceptionEventHandlerArgument
 	be_t<u64> sizeTaskset;
 	//be_t<u8> reserved[];

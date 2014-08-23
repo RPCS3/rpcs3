@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_memory.h"
@@ -155,7 +154,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(info->addr);
-	Emu.GetIdManager().RemoveID(mem_id);
+	sys_mmapper.RemoveId(mem_id);
 
 	return CELL_OK;
 }

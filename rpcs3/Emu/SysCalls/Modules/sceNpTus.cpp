@@ -1,8 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
-#include "cellRtc.h"
+
 #include "sceNp.h"
 #include "sceNpTus.h"
 

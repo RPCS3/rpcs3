@@ -1,11 +1,6 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules.h"
-
-#include "sys_net.h"
 
 #ifdef _WIN32
 #include <winsock.h>
@@ -18,6 +13,8 @@ extern "C"
 #include <arpa/inet.h>
 }
 #endif
+
+#include "sys_net.h"
 
 //void sys_net_init();
 //Module sys_net((u16)0x0000, sys_net_init);
