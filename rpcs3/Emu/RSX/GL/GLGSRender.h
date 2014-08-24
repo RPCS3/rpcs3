@@ -1,6 +1,5 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
-#include "Utilities/rPlatform.h"
 #include "GLBuffers.h"
 #include "GLProgramBuffer.h"
 
@@ -110,6 +109,28 @@ public:
 	void InitializeLocations();
 };
 
+class GSFrameBase
+{
+public:
+	GSFrameBase() {}
+	GSFrameBase(const GSFrameBase&) = delete;
+	virtual void Close() = 0;
+
+	virtual bool IsShown() = 0;
+	virtual void Hide() = 0;
+	virtual void Show() = 0;
+
+	virtual void* GetNewContext() = 0;
+	virtual void SetCurrent(void* ctx) = 0;
+	virtual void DeleteContext(void* ctx) = 0;
+	virtual void Flip(void* ctx) = 0;
+
+};
+
+typedef GSFrameBase*(*GetGSFrameCb)();
+
+void SetGetGSFrameCallback(GetGSFrameCb value);
+
 class GLGSRender //TODO: find out why this used to inherit from wxWindow
 	: //public wxWindow
 	/*,*/ public GSRender
@@ -136,7 +157,7 @@ private:
 	void* m_context;
 
 public:
-	rGLFrame* m_frame;
+	GSFrameBase* m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 

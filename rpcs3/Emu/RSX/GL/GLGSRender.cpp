@@ -1,9 +1,17 @@
 #include "stdafx.h"
 #include "rpcs3/Ini.h"
+#include "Utilities/rPlatform.h" // only for rImage
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+
+GetGSFrameCb GetGSFrame = nullptr;
+
+void SetGetGSFrameCallback(GetGSFrameCb value)
+{
+	GetGSFrame = value;
+}
 
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
@@ -767,13 +775,13 @@ GLGSRender::GLGSRender()
 	, m_vp_buf_num(-1)
 	, m_context(nullptr)
 {
-	m_frame = new rGLFrame();// new GLGSFrame();
+	m_frame = GetGSFrame();
 }
 
 GLGSRender::~GLGSRender()
 {
 	m_frame->Close();
-//	delete m_context; // This won't do anything (deleting void* instead of wglContext*)
+	m_frame->DeleteContext(m_context);
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)

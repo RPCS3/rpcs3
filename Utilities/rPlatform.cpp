@@ -1,79 +1,10 @@
 #include "stdafx.h"
 
-#include <wx/glcanvas.h>
-#include "Gui/GLGSFrame.h"
-
 #ifndef _WIN32
 #include <dirent.h>
 #endif
 
 #include "rPlatform.h"
-
-rCanvas::rCanvas(void *parent)
-{
-	handle = static_cast<void*>(new wxGLCanvas(static_cast<wxWindow *>(parent),wxID_ANY,NULL));
-}
-
-rCanvas::~rCanvas()
-{
-	delete static_cast<wxGLCanvas*>(handle);
-}
-
-bool rCanvas::SetCurrent(void *ctx)
-{
-	return static_cast<wxGLCanvas*>(handle)->SetCurrent(*static_cast<wxGLContext *>(ctx));
-}
-
-
-rGLFrame::rGLFrame()
-{
-	handle = static_cast<void*>(new GLGSFrame());
-}
-
-rGLFrame::~rGLFrame()
-{
-	delete static_cast<GLGSFrame*>(handle);
-}
-
-void rGLFrame::Close()
-{
-	static_cast<GLGSFrame*>(handle)->Close();
-}
-
-bool rGLFrame::IsShown()
-{
-	return static_cast<GLGSFrame*>(handle)->IsShown();
-}
-
-void rGLFrame::Hide()
-{
-	static_cast<GLGSFrame*>(handle)->Hide();
-}
-
-void rGLFrame::Show()
-{
-	static_cast<GLGSFrame*>(handle)->Show();
-}
-
-
-void *rGLFrame::GetNewContext()
-{
-	return static_cast<void *>(new wxGLContext(
-		static_cast<GLGSFrame*>(handle)->GetCanvas()
-		));
-}
-
-void rGLFrame::Flip(void *ctx)
-{
-	static_cast<GLGSFrame*>(handle)->Flip(
-		static_cast<wxGLContext*>(ctx));
-}
-
-void rGLFrame::SetCurrent(void *ctx)
-{
-	static_cast<GLGSFrame*>(handle)->GetCanvas()->SetCurrent(*static_cast<wxGLContext*>(ctx));
-}
-
 
 rImage::rImage()
 {

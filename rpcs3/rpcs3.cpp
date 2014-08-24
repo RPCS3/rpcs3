@@ -17,6 +17,9 @@
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
+#include "Emu/RSX/GL/GLGSRender.h"
+#include "Gui/GLGSFrame.h"
+
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>
 #endif
@@ -102,6 +105,10 @@ bool Rpcs3App::OnInit()
 		default:
 			return new NullPadHandler();
 		}
+	});
+	SetGetGSFrameCallback([]() -> GSFrameBase*
+	{
+		return new GLGSFrame();
 	});
 
 	TheApp = this;

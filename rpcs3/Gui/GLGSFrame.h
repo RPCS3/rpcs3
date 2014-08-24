@@ -1,16 +1,26 @@
 #pragma once
 #include "wx/glcanvas.h"
 #include "Gui/GSFrame.h"
+#include "Emu/RSX/GL/GLGSRender.h"
 
-struct GLGSFrame : public GSFrame
+struct GLGSFrame : public GSFrame, public GSFrameBase
 {
 	wxGLCanvas* canvas;
 	u32 m_frames;
 
 	GLGSFrame();
-	~GLGSFrame() {}
+	~GLGSFrame();
 
-	void Flip(wxGLContext *context);
+	virtual void Close() override;
+
+	virtual bool IsShown() override;
+	virtual void Hide() override;
+	virtual void Show() override;
+
+	virtual void* GetNewContext() override;
+	virtual void SetCurrent(void* ctx) override;
+	virtual void DeleteContext(void* ctx) override;
+	virtual void Flip(void* context) override;
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 

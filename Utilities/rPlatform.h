@@ -2,39 +2,8 @@
 #include <vector>
 #include <string>
 
-struct rCanvas
-{
-	rCanvas(void *parent);
-	rCanvas(const rCanvas &) = delete;
-	~rCanvas();
-	/*rGLContext*/void *GetCurrent();
-	bool SetCurrent(/*rGLContext &*/ void *ctx);
-
-	void *handle;
-};
-
-struct rGLFrame
-{
-	rGLFrame();
-	rGLFrame(const rGLFrame &) = delete;
-	~rGLFrame();
-
-	void Close();
-	bool IsShown();
-	void Hide();
-	void Show();
-
-	void *handle;
-
-	void SetCurrent( void *ctx);
-	void *GetNewContext();
-	void Flip(/*rGLContext*/void *ctx);
-};
-
 struct rPlatform
 {
-	rGLFrame *getGLGSFrame();
-	static rPlatform &getPlatform();
 	static std::string getConfigDir();
 };
 
