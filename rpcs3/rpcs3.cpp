@@ -17,7 +17,6 @@
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
-#include "Emu/RSX/GL/GLGSRender.h"
 #include "Gui/GLGSFrame.h"
 
 #ifdef _WIN32
