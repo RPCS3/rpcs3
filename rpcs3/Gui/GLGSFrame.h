@@ -1,7 +1,7 @@
 #pragma once
-#include "wx/glcanvas.h"
-#include "Gui/GSFrame.h"
 #include "Emu/RSX/GL/GLGSRender.h"
+#include "Gui/GSFrame.h"
+#include "wx/glcanvas.h"
 
 struct GLGSFrame : public GSFrame, public GSFrameBase
 {
