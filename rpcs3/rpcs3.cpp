@@ -5,6 +5,18 @@
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
 
+#include "Emu/Io/Null/NullKeyboardHandler.h"
+#include "Emu/Io/Windows/WindowsKeyboardHandler.h"
+
+#include "Emu/Io/Null/NullMouseHandler.h"
+#include "Emu/Io/Windows/WindowsMouseHandler.h"
+
+#include "Emu/Io/Null/NullPadHandler.h"
+#include "Emu/Io/Windows/WindowsPadHandler.h"
+#if defined(_WIN32)
+#include "Emu/Io/XInput/XInputPadHandler.h"
+#endif
+
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>
 #endif
@@ -20,6 +32,78 @@ Rpcs3App* TheApp;
 
 bool Rpcs3App::OnInit()
 {
+	SetSendDbgCommandCallback([](DbgCommand id, CPUThread* t)
+	{
+		wxGetApp().SendDbgCommand(id, t);
+	});
+	SetCallAfterCallback([](std::function<void()> func)
+	{
+		wxGetApp().CallAfter(func);
+	});
+	SetGetKeyboardHandlerCountCallback([]()
+	{
+		return 2;
+	});
+	SetGetKeyboardHandlerCallback([](int i) -> KeyboardHandlerBase*
+	{
+		switch (i)
+		{
+		case 0:
+			return new NullKeyboardHandler();
+			break;
+		case 1:
+			return new WindowsKeyboardHandler();
+			break;
+		default:
+			return new NullKeyboardHandler();
+		}
+	});
+	SetGetMouseHandlerCountCallback([]()
+	{
+		return 2;
+	});
+	SetGetMouseHandlerCallback([](int i) -> MouseHandlerBase*
+	{
+		switch (i)
+		{
+		case 0:
+			return new NullMouseHandler();
+			break;
+		case 1:
+			return new WindowsMouseHandler();
+			break;
+		default:
+			return new NullMouseHandler();
+		}
+	});
+	SetGetPadHandlerCountCallback([]()
+	{
+#if defined(_WIN32)
+		return 3;
+#else
+		return 2;
+#endif
+	});
+	SetGetPadHandlerCallback([](int i) -> PadHandlerBase*
+	{
+		switch (i)
+		{
+		case 0:
+			return new NullPadHandler();
+			break;
+		case 1:
+			return new WindowsPadHandler();
+			break;
+#if defined(_WIN32)
+		case 2:
+			return new XInputPadHandler();
+			break;
+#endif
+		default:
+			return new NullPadHandler();
+		}
+	});
+
 	TheApp = this;
 	SetAppName(_PRGNAME_);
 	wxInitAllImageHandlers();
@@ -78,10 +162,5 @@ Rpcs3App::Rpcs3App()
 	XInitThreads();
 	#endif
 }
-/*
-CPUThread& GetCPU(const u8 core)
-{
-	return Emu.GetCPU().Get(core);
-}*/
 
 GameInfo CurGameInfo;

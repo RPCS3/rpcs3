@@ -13,8 +13,6 @@
 #include "Emu/FS/vfsDeviceLocalFile.h"
 #include "Emu/DbgCommand.h"
 
-#include "Emu/CPU/CPUThreadManager.h" //gui dependency
-
 #include "Loader/PSF.h"
 
 #include "../Crypto/unself.h"
@@ -514,3 +512,15 @@ void Emulator::LoadPoints(const std::string& path)
 }
 
 Emulator Emu;
+
+CallAfterCbType CallAfterCallback = nullptr;
+
+void CallAfter(std::function<void()> func)
+{
+	CallAfterCallback(func);
+}
+
+void SetCallAfterCallback(CallAfterCbType cb)
+{
+	CallAfterCallback = cb;
+}

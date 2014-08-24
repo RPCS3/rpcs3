@@ -1,7 +1,14 @@
 #include "stdafx.h"
-#include "rpcs3.h"
+#include "DbgCommand.h"
 
-void SendDbgCommand(DbgCommand id, CPUThread* thr )
+SendDbgCommandCb SendDbgCommandFunc = nullptr;
+
+void SendDbgCommand(DbgCommand id, CPUThread* t)
 {
-	wxGetApp().SendDbgCommand(id, thr);
+	SendDbgCommandFunc(id, t);
+}
+
+void SetSendDbgCommandCallback(SendDbgCommandCb cb)
+{
+	SendDbgCommandFunc = cb;
 }

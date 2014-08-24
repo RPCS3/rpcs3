@@ -4,7 +4,6 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_process.h"
-#include "rpcs3.h"
 
 SysCallBase sys_process("sys_process");
 
@@ -31,13 +30,9 @@ s32 sys_process_exit(s32 errorcode)
 	sys_process.Warning("sys_process_exit(%d)", errorcode);
 	Emu.Pause();
 	sys_process.Success("Process finished");
-	wxGetApp().CallAfter([]()
+	CallAfter([]()
 	{
 		Emu.Stop();
-		if (Ini.HLEExitOnStop.GetValue())
-		{
-			wxGetApp().Exit();
-		}
 	});
 	return CELL_OK;
 }

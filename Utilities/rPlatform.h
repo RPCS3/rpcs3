@@ -2,10 +2,6 @@
 #include <vector>
 #include <string>
 
-#include "Emu/Io/Null/NullKeyboardHandler.h"
-#include "Emu/Io/Null/NullMouseHandler.h"
-#include "Emu/Io/Null/NullPadHandler.h"
-
 struct rCanvas
 {
 	rCanvas(void *parent);
@@ -39,13 +35,6 @@ struct rPlatform
 {
 	rGLFrame *getGLGSFrame();
 	static rPlatform &getPlatform();
-
-	static int getKeyboardHandlerCount();
-	static KeyboardHandlerBase *getKeyboardHandler(int i);
-	static int getMouseHandlerCount();
-	static MouseHandlerBase *getMouseHandler(int i);
-	static int getPadHandlerCount();
-	static PadHandlerBase *getPadHandler(int i);
 	static std::string getConfigDir();
 };
 

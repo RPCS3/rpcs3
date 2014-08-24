@@ -1,10 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include "PadHandler.h"
 
-class PadManager //: public wxWindow
+class PadManager
 {
 	bool m_inited;
 	std::unique_ptr<PadHandlerBase> m_pad_handler;
@@ -21,7 +20,10 @@ public:
 	std::vector<Button>& GetButtons(const u32 pad) { return m_pad_handler->GetButtons(pad); }
 
 	bool IsInited() const { return m_inited; }
-
-//private:
-	//DECLARE_EVENT_TABLE();
 };
+
+typedef int(*GetPadHandlerCountCb)();
+typedef PadHandlerBase*(*GetPadHandlerCb)(int i);
+
+void SetGetPadHandlerCountCallback(GetPadHandlerCountCb cb);
+void SetGetPadHandlerCallback(GetPadHandlerCb cb);

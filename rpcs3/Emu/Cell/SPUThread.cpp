@@ -349,8 +349,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 
 		ProcessCmd(cmd, tag, lsa, ea, size);
 		MFCArgs.CMDStatus.SetValue(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
-	}
 		break;
+	}
 
 	case MFC_PUTL_CMD:
 	case MFC_PUTRL_CMD: // ???
@@ -364,8 +364,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			lsa, ea, tag, size, cmd);
 
 		ListCmd(lsa, ea, tag, size, cmd, MFCArgs);
-	}
 		break;
+	}
 
 	case MFC_GETLLAR_CMD:
 	case MFC_PUTLLC_CMD:
@@ -433,7 +433,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 									changed, mask, op, cmd, lsa, ea, tag, size);
 								Emu.Pause();
 							}
-
+							
 							break;
 						}
 					}
@@ -478,8 +478,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			}
 			R_ADDR = 0;
 		}
-	}
 		break;
+	}
 
 	default:
 		LOG_ERROR(Log::SPU, "Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",

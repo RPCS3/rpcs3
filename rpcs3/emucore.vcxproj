@@ -63,6 +63,7 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
+    <ClCompile Include="Emu\DbgCommand.cpp" />
     <ClCompile Include="Emu\Event.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
     <ClCompile Include="Emu\FS\vfsDevice.cpp" />
@@ -197,7 +198,7 @@
     <ClCompile Include="Emu\SysCalls\Static.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
-    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
+    <ClCompile Include="Ini.cpp" />
     <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\ELF32.cpp" />
     <ClCompile Include="Loader\ELF64.cpp" />
@@ -296,12 +297,11 @@
     <ClInclude Include="Emu\Io\KeyboardHandler.h" />
     <ClInclude Include="Emu\Io\Mouse.h" />
     <ClInclude Include="Emu\Io\MouseHandler.h" />
+    <ClInclude Include="Emu\Io\Null\NullKeyboardHandler.h" />
+    <ClInclude Include="Emu\Io\Null\NullMouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
     <ClInclude Include="Emu\Io\Pad.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h" />
     <ClInclude Include="Emu\Memory\DynamicMemoryBlockBase.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
@@ -391,7 +391,7 @@
     <ClInclude Include="Emu\SysCalls\Static.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
-    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h" />
+    <ClInclude Include="Ini.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\ELF32.h" />
     <ClInclude Include="Loader\ELF64.h" />

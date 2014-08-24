@@ -27,12 +27,6 @@
     <Filter Include="Emu\Io">
       <UniqueIdentifier>{1df5b438-f263-4ff4-9b86-a9ea368f2106}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\Io\Null">
-      <UniqueIdentifier>{d489f5c9-f7b7-4402-9cfb-6aa2c813cdf6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\Io\Windows">
-      <UniqueIdentifier>{c04826b8-05a1-4015-b3aa-ef44805531a2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\FS">
       <UniqueIdentifier>{b26b6b08-a8ce-4bb5-8339-c5352a23ce96}</UniqueIdentifier>
     </Filter>
@@ -69,9 +63,6 @@
     <Filter Include="Emu\Cell\currently_unused">
       <UniqueIdentifier>{ead7494f-a872-4b4d-a864-1a61c3b6012f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\Io\XInput">
-      <UniqueIdentifier>{187d33b8-7b69-4081-9545-de6ad1d8fe98}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\RSX">
       <UniqueIdentifier>{fadb4b36-57af-4583-891d-d22ff369e266}</UniqueIdentifier>
     </Filter>
@@ -80,6 +71,9 @@
     </Filter>
     <Filter Include="Emu\RSX\GL">
       <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Null">
+      <UniqueIdentifier>{fcac6852-b45f-4cf2-afee-cf56bcea14e5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -479,9 +473,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
       <Filter>Emu\Cell\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
-      <Filter>Emu\Io\XInput</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\SSemaphore.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -607,6 +598,12 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\LogBase.cpp">
       <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\DbgCommand.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Ini.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -753,18 +750,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\PadHandler.h">
       <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Null\NullPadHandler.h">
-      <Filter>Emu\Io\Null</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h">
-      <Filter>Emu\Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h">
-      <Filter>Emu\Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h">
-      <Filter>Emu\Io\Windows</Filter>
     </ClInclude>
     <ClInclude Include="Emu\FS\VFS.h">
       <Filter>Emu\FS</Filter>
@@ -994,9 +979,6 @@
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
       <Filter>Emu\Cell\currently_unused</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
-      <Filter>Emu\Io\XInput</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Event.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
@@ -1164,6 +1146,18 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Ini.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\NullPadHandler.h">
+      <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\NullKeyboardHandler.h">
+      <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\NullMouseHandler.h">
+      <Filter>Emu\Io\Null</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include "Emu/CPU/CPUThreadManager.h" //gui dependency
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"
@@ -171,3 +171,9 @@ public:
 };
 
 extern Emulator Emu;
+
+typedef void(*CallAfterCbType)(std::function<void()> func);
+
+void CallAfter(std::function<void()> func);
+
+void SetCallAfterCallback(CallAfterCbType cb);

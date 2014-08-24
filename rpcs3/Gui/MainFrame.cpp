@@ -715,6 +715,14 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 			default:
 				return;
 		}
+
+		if (event.GetId() == DID_STOPPED_EMU)
+		{
+			if (Ini.HLEExitOnStop.GetValue())
+			{
+				wxGetApp().Exit();
+			}
+		}
 	}
 	else
 	{
