@@ -12,7 +12,6 @@
 Module *cellSync = nullptr;
 
 #ifdef PRX_DEBUG
-#include "rpcs3.h"
 #include "prx_libsre.h"
 u32 libsre;
 u32 libsre_rtoc;
@@ -2220,7 +2219,7 @@ void cellSync_init()
 	cellSync->AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
 
 #ifdef PRX_DEBUG
-	wxGetApp().CallAfter([&]()
+	CallAfter([]()
 	{
 		libsre = Memory.PRXMem.AllocAlign(sizeof(libsre_data), 4096);
 		memcpy(Memory + libsre, libsre_data, sizeof(libsre_data));

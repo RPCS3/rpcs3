@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <vector>
 #include "Emu/Io/KeyboardHandler.h"
-#include "rpcs3.h"
 
 class WindowsKeyboardHandler final
 	: public wxWindow

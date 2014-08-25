@@ -1,7 +1,6 @@
 #pragma once
 
 #include <utility>
-#include "Utilities/rPlatform.h"
 #include "Utilities/simpleini/SimpleIni.h"
 
 //TODO: make thread safe/remove static singleton

@@ -163,7 +163,7 @@
     <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
-    <ClCompile Include="Emu\DbgCommand.cpp" />
+    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
     <ClCompile Include="Gui\AutoPauseManager.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
@@ -182,7 +182,6 @@
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
-    <ClCompile Include="Ini.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -208,6 +207,10 @@
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h" />
+    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h" />
+    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h" />
+    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
     <ClInclude Include="Gui\AutoPauseManager.h" />
     <ClInclude Include="Gui\CompilerELF.h" />
@@ -228,7 +231,6 @@
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />
-    <ClInclude Include="Ini.h" />
     <ClInclude Include="rpcs3.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

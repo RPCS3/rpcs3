@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Emu">
-      <UniqueIdentifier>{29c70b04-59a5-4d5b-98f9-3584df137ed1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Gui">
       <UniqueIdentifier>{98fb6fa5-9a9a-48a6-a6b4-be4b9a69b76e}</UniqueIdentifier>
     </Filter>
@@ -12,6 +9,15 @@
     </Filter>
     <Filter Include="Utilities">
       <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io">
+      <UniqueIdentifier>{6da015d7-ee99-4d6b-9588-42414b63ee0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\Windows">
+      <UniqueIdentifier>{ce9ce942-07dd-4cbc-9b76-0f754c363eda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\XInput">
+      <UniqueIdentifier>{b30572ce-b602-4c10-ad69-bd3f1c8a0144}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -29,9 +35,6 @@
     </ClCompile>
     <ClCompile Include="Gui\DisAsmFrame.cpp">
       <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Ini.cpp">
-      <Filter>rpcs3</Filter>
     </ClCompile>
     <ClCompile Include="Gui\CompilerELF.cpp">
       <Filter>Gui</Filter>
@@ -90,9 +93,6 @@
     <ClCompile Include="Gui\GSFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\DbgCommand.cpp">
-      <Filter>Emu</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\ConLogFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -104,6 +104,9 @@
     </ClCompile>
     <ClCompile Include="Gui\KernelExplorer.cpp">
       <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
+      <Filter>Io\XInput</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -167,9 +170,6 @@
     <ClInclude Include="Gui\VHDDManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Ini.h">
-      <Filter>rpcs3</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
@@ -220,6 +220,18 @@
     </ClInclude>
     <ClInclude Include="Gui\KernelExplorer.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h">
+      <Filter>Io\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h">
+      <Filter>Io\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h">
+      <Filter>Io\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
+      <Filter>Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

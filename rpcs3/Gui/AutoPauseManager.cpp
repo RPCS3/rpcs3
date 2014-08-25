@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "AutoPauseManager.h"
-#include "stdafx.h"
 #include <iomanip>
 #include <sstream>
 #include "Utilities/Log.h"

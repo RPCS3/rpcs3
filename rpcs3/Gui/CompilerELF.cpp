@@ -1,11 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "CompilerELF.h"
+
 #include "Emu/Cell/PPUProgramCompiler.h"
 using namespace PPU_opcodes;
+#include "CompilerELF.h"
 
 enum CompilerIDs
 {

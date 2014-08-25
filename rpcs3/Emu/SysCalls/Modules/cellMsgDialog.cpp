@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "rpcs3.h"
 #include "Utilities/rMsgBox.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
@@ -70,7 +69,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		u64 status = CELL_MSGDIALOG_BUTTON_NONE;
 
 		volatile bool m_signal = false;
-		wxGetApp().CallAfter([&]()
+		CallAfter([&]()
 		{
 			wxWindow* parent = nullptr; // TODO: align it better
 
@@ -195,7 +194,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 			callback.async(status, userData);
 
-		wxGetApp().CallAfter([&]()
+		CallAfter([&]()
 		{
 			delete g_msg_dialog;
 			g_msg_dialog = nullptr;
@@ -367,7 +366,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgS
 
 	std::string text(msgString.GetString());
 
-	wxGetApp().CallAfter([text, progressBarIndex]()
+	CallAfter([text, progressBarIndex]()
 	{
 		if (g_msg_dialog && !Emu.IsStopped())
 		{
@@ -394,7 +393,7 @@ int cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	wxGetApp().CallAfter([=]()
+	CallAfter([=]()
 	{
 		if (g_msg_dialog)
 		{
@@ -419,7 +418,7 @@ int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	wxGetApp().CallAfter([=]()
+	CallAfter([=]()
 	{
 		if (g_msg_dialog)
 		{

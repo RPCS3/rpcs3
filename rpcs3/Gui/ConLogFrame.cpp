@@ -10,8 +10,6 @@
 #include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 
-#include "Emu/System.h"
-
 wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);
 
 //amount of memory in bytes used to buffer log messages for the gui

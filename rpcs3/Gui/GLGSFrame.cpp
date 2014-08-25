@@ -12,10 +12,49 @@ GLGSFrame::GLGSFrame()
 	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
-void GLGSFrame::Flip(wxGLContext *context)
+GLGSFrame::~GLGSFrame()
+{
+}
+
+void GLGSFrame::Close()
+{
+	GSFrame::Close();
+}
+
+bool GLGSFrame::IsShown()
+{
+	return GSFrame::IsShown();
+}
+
+void GLGSFrame::Hide()
+{
+	GSFrame::Hide();
+}
+
+void GLGSFrame::Show()
+{
+	GSFrame::Show();
+}
+
+void* GLGSFrame::GetNewContext()
+{
+	return new wxGLContext(GetCanvas());
+}
+
+void GLGSFrame::SetCurrent(void* ctx)
+{
+	GetCanvas()->SetCurrent(*(wxGLContext*)ctx);
+}
+
+void GLGSFrame::DeleteContext(void* ctx)
+{
+	delete (wxGLContext*)ctx;
+}
+
+void GLGSFrame::Flip(void* context)
 {
 	if (!canvas) return;
-	canvas->SetCurrent(*context);
+	canvas->SetCurrent(*(wxGLContext*)context);
 
 	static Timer fps_t;
 	canvas->SwapBuffers();

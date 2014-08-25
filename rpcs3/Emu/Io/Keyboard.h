@@ -1,10 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include "KeyboardHandler.h"
 
-class KeyboardManager //: public wxWindow
+class KeyboardManager
 {
 	bool m_inited;
 	std::unique_ptr<KeyboardHandlerBase> m_keyboard_handler;
@@ -23,7 +22,10 @@ public:
 	CellKbConfig& GetConfig(const u32 keyboard) { return m_keyboard_handler->GetConfig(keyboard); }
 
 	bool IsInited() const { return m_inited; }
-
-//private:
-	//DECLARE_EVENT_TABLE();
 };
+
+typedef int(*GetKeyboardHandlerCountCb)();
+typedef KeyboardHandlerBase*(*GetKeyboardHandlerCb)(int i);
+
+void SetGetKeyboardHandlerCountCallback(GetKeyboardHandlerCountCb cb);
+void SetGetKeyboardHandlerCallback(GetKeyboardHandlerCb cb);
