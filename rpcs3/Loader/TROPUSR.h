@@ -1,5 +1,7 @@
 #pragma once
 
+struct vfsStream;
+
 struct TROPUSRHeader
 {
 	be_t<u32> magic;         // 81 8F 54 AD

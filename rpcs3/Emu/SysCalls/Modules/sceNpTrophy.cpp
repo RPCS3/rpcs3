@@ -8,6 +8,7 @@
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
 #include "Emu/FS/vfsDir.h"
+#include "Emu/FS/vfsFileBase.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "sceNp.h"
 #include "sceNpTrophy.h"

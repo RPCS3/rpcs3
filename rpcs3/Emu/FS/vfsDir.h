@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "vfsDirBase.h"
 
 class vfsDir : public vfsDirBase

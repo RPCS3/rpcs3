@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/FS/vfsFileBase.h"
 #include "Emu/SysCalls/lv2/lv2Fs.h"
 
 Module *sys_fs = nullptr;

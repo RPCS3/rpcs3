@@ -1,7 +1,8 @@
 #pragma once
-#include "vfsFileBase.h"
-#include "vfsDirBase.h"
 #include <mutex>
+
+struct vfsFileBase;
+class vfsDirBase;
 
 class vfsDevice
 {

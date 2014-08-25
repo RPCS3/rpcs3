@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/FS/vfsFileBase.h"
 #include "cellUserInfo.h"
 
 //void cellUserInfo_init();

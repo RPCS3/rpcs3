@@ -1,7 +1,6 @@
 #include "stdafx.h"
-#include "vfsDevice.h"
-#include "vfsDirBase.h"
 #include "Utilities/rFile.h"
+#include "vfsDirBase.h"
 
 vfsDirBase::vfsDirBase(vfsDevice* device)
 	: m_pos(0)

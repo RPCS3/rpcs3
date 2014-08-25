@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "VFS.h"
+#include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
 #include "Ini.h"
