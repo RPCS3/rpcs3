@@ -3,7 +3,7 @@
 class vfsDevice;
 struct vfsFileBase;
 class vfsDirBase;
-enum vfsOpenMode;
+enum vfsOpenMode : u8;
 
 enum vfsDeviceType
 {
