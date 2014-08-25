@@ -99,7 +99,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(sys_ppu_thread_start),            //53  (0x035)
 	null_func,//bind_func(sys_ppu_...),                     //54  (0x036)  ROOT
 	null_func,//bind_func(sys_ppu_...),                     //55  (0x037)  ROOT
-	null_func,//bind_func(sys_ppu_thread_rename),           //56  (0x038)
+	bind_func(sys_ppu_thread_rename),                       //56  (0x038)
 	null_func,//bind_func(sys_ppu_thread_recover_page_fault)//57  (0x039)
 	null_func,//bind_func(sys_ppu_thread_get_page_fault_context),//58 (0x03A)
 	null_func,                                              //59  (0x03B)  UNS

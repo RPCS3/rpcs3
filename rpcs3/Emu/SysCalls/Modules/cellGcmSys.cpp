@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "sysPrxForUser.h"
 
 //#include "Emu/RSX/GCM.h"
 //#include "Emu/SysCalls/lv2/sys_process.h"
@@ -803,25 +804,26 @@ s32 cellGcmAddressToOffset(u64 address, mem32_t offset)
 {
 	cellGcmSys->Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.GetAddr());
 
-	if (address >= 0xD0000000/*not on main memory or local*/)
+	// Address not on main memory or local memory
+	if (address >= 0xD0000000) {
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
 	u32 result;
 
-	// If address is in range of local memory
-	if (Memory.RSXFBMem.IsInMyRange(address))
-	{
+	// Address in local memory
+	if (Memory.RSXFBMem.IsInMyRange(address)) {
 		result = address - Memory.RSXFBMem.GetStartAddr();
 	}
-	// else check if the adress (main memory) is mapped in IO
+	// Address in main memory else check 
 	else
 	{
 		u16 upper12Bits = Memory.Read16(offsetTable.ioAddress + sizeof(u16)*(address >> 20));
 
+		// If the address is mapped in IO
 		if (upper12Bits != 0xFFFF) {
-			result = (((u64)upper12Bits << 20) | (address & (0xFFFFF)));
+			result = ((u64)upper12Bits << 20) | (address & 0xFFFFF);
 		}
-		// address is not mapped in IO
 		else {
 			return CELL_GCM_ERROR_FAILURE;
 		}
