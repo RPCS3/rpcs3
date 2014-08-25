@@ -7,6 +7,7 @@
 #include <wx/progdlg.h>
 
 #include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 
 // Decryption.
 bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/IdManager.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Mouse.h"

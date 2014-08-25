@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"

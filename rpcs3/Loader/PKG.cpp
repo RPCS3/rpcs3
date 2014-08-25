@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"
+#include "Utilities/rFile.h"
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 

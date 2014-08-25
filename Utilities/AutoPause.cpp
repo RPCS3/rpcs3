@@ -2,6 +2,7 @@
 #include "rpcs3/Ini.h"
 #include "AutoPause.h"
 #include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 #include "Emu/System.h"
 
 using namespace Debug;

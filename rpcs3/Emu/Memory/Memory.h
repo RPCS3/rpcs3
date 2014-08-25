@@ -199,20 +199,7 @@ public:
 		}
 	}
 
-	__noinline void WriteMMIO32(u32 addr, const u32 data)
-	{
-		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-			if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
-			{
-				return;
-			}
-		}
-
-		*(u32*)((u8*)GetBaseAddr() + addr) = re32(data); // provoke error
-	}
+	__noinline void WriteMMIO32(u32 addr, const u32 data);
 
 	template<typename T> void Write32(T addr, const u32 data)
 	{
@@ -286,22 +273,7 @@ public:
 		}
 	}
 
-	__noinline u32 ReadMMIO32(u32 addr)
-	{
-		u32 res;
-		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-			if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-				RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
-			{
-				return res;
-			}
-		}
-
-		res = re32(*(u32*)((u8*)GetBaseAddr() + addr)); // provoke error
-		return res;
-	}
+	__noinline u32 ReadMMIO32(u32 addr);
 
 	template<typename T> u32 Read32(T addr)
 	{

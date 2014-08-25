@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 bool SM_IsAborted();
 void SM_Sleep();
 size_t SM_GetCurrentThreadId();

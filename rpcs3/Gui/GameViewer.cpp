@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/AutoPause.h"
 #include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/FS/vfsDir.h"

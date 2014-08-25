@@ -1,6 +1,7 @@
 #pragma once
 #include "GLShaderParam.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
+#include "Utilities/Thread.h"
 
 struct GLFragmentDecompilerThread : public ThreadBase
 {

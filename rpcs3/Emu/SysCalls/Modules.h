@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/IdManager.h"
 #include "ErrorCodes.h"
 #include "LogBase.h"
 

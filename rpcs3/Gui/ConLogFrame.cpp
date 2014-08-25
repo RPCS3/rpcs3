@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "Ini.h"
 #include "Utilities/Log.h"

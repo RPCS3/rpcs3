@@ -1,6 +1,8 @@
 #pragma once
 #include "Loader.h"
 
+struct vfsStream;
+
 struct TRPHeader
 {
 	be_t<u32> trp_magic;

@@ -183,3 +183,87 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se16(x) _se<u16, decltype(x), x>::value
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
+
+template<typename T> __forceinline static u8 Read8(T& f)
+{
+	u8 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u16 Read16(T& f)
+{
+	be_t<u16> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u32 Read32(T& f)
+{
+	be_t<u32> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u64 Read64(T& f)
+{
+	be_t<u64> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u16 Read16LE(T& f)
+{
+	u16 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u32 Read32LE(T& f)
+{
+	u32 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static u64 Read64LE(T& f)
+{
+	u64 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+template<typename T> __forceinline static void Write8(T& f, const u8 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+template<typename T> __forceinline static void Write16LE(T& f, const u16 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+template<typename T> __forceinline static void Write32LE(T& f, const u32 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+template<typename T> __forceinline static void Write64LE(T& f, const u64 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+template<typename T> __forceinline static void Write16(T& f, const u16 data)
+{
+	Write16LE(f, re16(data));
+}
+
+template<typename T> __forceinline static void Write32(T& f, const u32 data)
+{
+	Write32LE(f, re32(data));
+}
+
+template<typename T> __forceinline static void Write64(T& f, const u64 data)
+{
+	Write64LE(f, re64(data));
+}

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <algorithm>
 #include "vfsDevice.h"
+#include "Utilities/rFile.h"
 
 vfsDevice::vfsDevice(const std::string& ps3_path, const std::string& local_path)
 	: m_ps3_path(ps3_path)

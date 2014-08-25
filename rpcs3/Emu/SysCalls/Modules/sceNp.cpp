@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Utilities/rFile.h"
 #include "Emu/FS/vfsDir.h"
 #include "Crypto/unedat.h"
 #include "sceNp.h"

@@ -1,5 +1,6 @@
 #pragma once
-#include "Loader.h"
+
+class rFile;
 
 class PKGLoader
 {

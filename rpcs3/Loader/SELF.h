@@ -1,6 +1,8 @@
 #pragma once
 #include "Loader.h"
 
+struct vfsStream;
+
 struct SceHeader
 {
 	u32 se_magic;
