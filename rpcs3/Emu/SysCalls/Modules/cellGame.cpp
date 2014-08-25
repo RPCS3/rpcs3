@@ -426,9 +426,9 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
 	std::string errorName;
 	std::string errorMsg;
-	char* dirName;
+	char* dirName = "Unknown";
 
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
+	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT && dirName_addr)
 	{
 		dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
 	}
