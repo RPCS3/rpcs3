@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "DisAsmFrame.h"
 #include "Emu/FS/vfsLocalFile.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPCThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"

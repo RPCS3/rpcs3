@@ -12,6 +12,7 @@ extern "C"
 #include "libavutil/imgutils.h"
 }
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellVdec.h"
 

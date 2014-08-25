@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 
+#include "VFS.h"
 #include "vfsFile.h"
 
 vfsFile::vfsFile()

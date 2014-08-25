@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 //#include "Emu/RSX/GCM.h"
+#include "Emu/RSX/GSManager.h"
 //#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 

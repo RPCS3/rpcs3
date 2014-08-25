@@ -7,7 +7,7 @@
 #include "Utilities/SQueue.h"
 #include "Emu/Event.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
-//#include "Emu/Audio/AudioManager.h"
+#include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
 #include "Emu/Audio/cellAudio.h"
 

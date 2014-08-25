@@ -1,14 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/IdManager.h"
-#include "Emu/Io/Pad.h"
-#include "Emu/Io/Keyboard.h"
-#include "Emu/Io/Mouse.h"
-#include "Emu/RSX/GSManager.h"
-#include "Emu/Audio/AudioManager.h"
-#include "Emu/FS/VFS.h"
+#include <memory>
+#include <vector>
 #include "Loader/Loader.h"
 
 enum Status
@@ -19,9 +13,19 @@ enum Status
 	Ready,
 };
 
+class CPUThreadManager;
+class PadManager;
+class KeyboardManager;
+class MouseManager;
+class IdManager;
+class GSManager;
+class AudioManager;
+struct CallbackManager;
+class CPUThread;
 class EventManager;
 class ModuleManager;
 class StaticFuncManager;
+struct VFS;
 
 struct EmuInfo
 {
@@ -86,20 +90,19 @@ class Emulator
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
 
-	CPUThreadManager *m_thread_manager;
-	PadManager m_pad_manager;
-	KeyboardManager m_keyboard_manager;
-	MouseManager m_mouse_manager;
-	IdManager m_id_manager;
-	GSManager m_gs_manager;
-	AudioManager m_audio_manager;
-	CallbackManager m_callback_manager;
+	CPUThreadManager* m_thread_manager;
+	PadManager* m_pad_manager;
+	KeyboardManager* m_keyboard_manager;
+	MouseManager* m_mouse_manager;
+	IdManager* m_id_manager;
+	GSManager* m_gs_manager;
+	AudioManager* m_audio_manager;
+	CallbackManager* m_callback_manager;
 	CPUThread* m_ppu_callback_thr;
-	std::unique_ptr<EventManager> m_event_manager;
-	std::unique_ptr<StaticFuncManager> m_sfunc_manager;
-	std::unique_ptr<ModuleManager> m_module_manager;
-
-	VFS m_vfs;
+	EventManager* m_event_manager;
+	StaticFuncManager* m_sfunc_manager;
+	ModuleManager* m_module_manager;
+	VFS* m_vfs;
 
 	EmuInfo m_info;
 
@@ -111,20 +114,21 @@ public:
 	s32 m_sdk_version;
 
 	Emulator();
+	~Emulator();
 
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
 
 	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
-	PadManager&       GetPadManager()      { return m_pad_manager; }
-	KeyboardManager&  GetKeyboardManager() { return m_keyboard_manager; }
-	MouseManager&     GetMouseManager()    { return m_mouse_manager; }
-	IdManager&        GetIdManager()       { return m_id_manager; }
-	GSManager&        GetGSManager()       { return m_gs_manager; }
-	AudioManager&     GetAudioManager()    { return m_audio_manager; }
-	CallbackManager&  GetCallbackManager() { return m_callback_manager; }
-	VFS&              GetVFS()             { return m_vfs; }
+	PadManager&       GetPadManager()      { return *m_pad_manager; }
+	KeyboardManager&  GetKeyboardManager() { return *m_keyboard_manager; }
+	MouseManager&     GetMouseManager()    { return *m_mouse_manager; }
+	IdManager&        GetIdManager()       { return *m_id_manager; }
+	GSManager&        GetGSManager()       { return *m_gs_manager; }
+	AudioManager&     GetAudioManager()    { return *m_audio_manager; }
+	CallbackManager&  GetCallbackManager() { return *m_callback_manager; }
+	VFS&              GetVFS()             { return *m_vfs; }
 	std::vector<u64>& GetBreakPoints()     { return m_break_points; }
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }

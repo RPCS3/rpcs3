@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Crypto/unself.h"
 #include "sys_prx.h"

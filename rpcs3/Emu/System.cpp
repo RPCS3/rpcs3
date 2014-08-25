@@ -14,6 +14,15 @@
 #include "Emu/FS/vfsDeviceLocalFile.h"
 #include "Emu/DbgCommand.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/IdManager.h"
+#include "Emu/Io/Pad.h"
+#include "Emu/Io/Keyboard.h"
+#include "Emu/Io/Mouse.h"
+#include "Emu/RSX/GSManager.h"
+#include "Emu/Audio/AudioManager.h"
+#include "Emu/FS/VFS.h"
+
 #include "Loader/PSF.h"
 
 #include "../Crypto/unself.h"
@@ -35,11 +44,35 @@ Emulator::Emulator()
 	, m_mode(DisAsm)
 	, m_rsx_callback(0)
 	, m_ppu_callback_thr(0)
+	, m_thread_manager(new CPUThreadManager())
+	, m_pad_manager(new PadManager())
+	, m_keyboard_manager(new KeyboardManager())
+	, m_mouse_manager(new MouseManager())
+	, m_id_manager(new IdManager())
+	, m_gs_manager(new GSManager())
+	, m_audio_manager(new AudioManager())
+	, m_callback_manager(new CallbackManager())
 	, m_event_manager(new EventManager())
 	, m_sfunc_manager(new StaticFuncManager())
 	, m_module_manager(new ModuleManager())
-	, m_thread_manager(new CPUThreadManager())
+	, m_vfs(new VFS())
 {
+}
+
+Emulator::~Emulator()
+{
+	delete m_thread_manager;
+	delete m_pad_manager;
+	delete m_keyboard_manager;
+	delete m_mouse_manager;
+	delete m_id_manager;
+	delete m_gs_manager;
+	delete m_audio_manager;
+	delete m_callback_manager;
+	delete m_event_manager;
+	delete m_sfunc_manager;
+	delete m_module_manager;
+	delete m_vfs;
 }
 
 void Emulator::Init()
@@ -157,13 +190,13 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
-	m_vfs.Init(m_path);
+	GetVFS().Init(m_path);
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
-	for(uint i=0; i<m_vfs.m_devices.size(); ++i)
+	for(uint i=0; i<GetVFS().m_devices.size(); ++i)
 	{
-		LOG_NOTICE(LOADER, "%s -> %s", m_vfs.m_devices[i]->GetPs3Path().c_str(), m_vfs.m_devices[i]->GetLocalPath().c_str());
+		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
 
 	LOG_NOTICE(LOADER, " ");//used to be skip_line
@@ -436,7 +469,7 @@ void Emulator::Stop()
 	m_break_points.clear();
 	m_marked_points.clear();
 
-	m_vfs.UnMountAll();
+	GetVFS().UnMountAll();
 
 	GetGSManager().Close();
 	GetAudioManager().Close();

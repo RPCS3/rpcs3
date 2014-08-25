@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellDmux.h"
 

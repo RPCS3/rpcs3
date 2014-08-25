@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 
+#include "GSManager.h"
 #include "GSRender.h"
 
 GSLock::GSLock(GSRender& renderer, GSLockType type)

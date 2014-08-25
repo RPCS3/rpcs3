@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/DbgCommand.h"
 
+#include "Emu/IdManager.h"
 #include "CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"

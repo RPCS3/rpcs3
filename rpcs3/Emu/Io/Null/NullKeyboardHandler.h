@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Io/KeyboardHandler.h"
-#include <cstring> //for memset
 
 class NullKeyboardHandler final : public KeyboardHandlerBase
 {

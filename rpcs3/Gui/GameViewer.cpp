@@ -4,6 +4,7 @@
 #include "Utilities/rFile.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFile.h"
 #include "GameViewer.h"

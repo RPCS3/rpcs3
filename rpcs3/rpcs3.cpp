@@ -5,12 +5,15 @@
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
 
+#include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Windows/WindowsKeyboardHandler.h"
 
+#include "Emu/Io/Mouse.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/Windows/WindowsMouseHandler.h"
 
+#include "Emu/Io/Pad.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Windows/WindowsPadHandler.h"
 #if defined(_WIN32)

@@ -3,6 +3,8 @@
 #define roundup(x,a) (((x)+(a)-1)&(~((a)-1)))
 #define SEVIRITY 80.f
 
+#include "Emu/RSX/GCM.h"
+
 enum
 {
 	CELL_RESC_ERROR_NOT_INITIALIZED = 0x80210301,
