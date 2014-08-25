@@ -23,6 +23,26 @@ static const char* spu_reg_name[128] =
 	"$120", "$121", "$122", "$123", "$124", "$125", "$126", "$127",
 };
 
+static const char* spu_spreg_name[128] =
+{
+	"$sp0", "$sp1", "$sp2", "$sp3", "$sp4", "$sp5", "$sp6", "$sp7",
+	"$sp8", "$sp9", "$sp10", "$sp11", "$sp12", "$sp13", "$sp14", "$sp15",
+	"$sp16", "$sp17", "$sp18", "$sp19", "$sp20", "$sp21", "$sp22", "$sp23",
+	"$sp24", "$sp25", "$sp26", "$sp27", "$sp28", "$sp29", "$sp30", "$sp31",
+	"$sp32", "$sp33", "$sp34", "$sp35", "$sp36", "$sp37", "$sp38", "$sp39",
+	"$sp40", "$sp41", "$sp42", "$sp43", "$sp44", "$sp45", "$sp46", "$sp47",
+	"$sp48", "$sp49", "$sp50", "$sp51", "$sp52", "$sp53", "$sp54", "$sp55",
+	"$sp56", "$sp57", "$sp58", "$sp59", "$sp60", "$sp61", "$sp62", "$sp63",
+	"$sp64", "$sp65", "$sp66", "$sp67", "$sp68", "$sp69", "$sp70", "$sp71",
+	"$sp72", "$sp73", "$sp74", "$sp75", "$sp76", "$sp77", "$sp78", "$sp79",
+	"$sp80", "$sp81", "$sp82", "$sp83", "$sp84", "$sp85", "$sp86", "$sp87",
+	"$sp88", "$sp89", "$sp90", "$sp91", "$sp92", "$sp93", "$sp94", "$sp95",
+	"$sp96", "$sp97", "$sp98", "$sp99", "$sp100", "$sp101", "$sp102", "$sp103",
+	"$sp104", "$sp105", "$sp106", "$sp107", "$sp108", "$sp109", "$sp110", "$sp111",
+	"$sp112", "$sp113", "$sp114", "$sp115", "$sp116", "$sp117", "$sp118", "$sp119",
+	"$sp120", "$sp121", "$sp122", "$sp123", "$sp124", "$sp125", "$sp126", "$sp127",
+};
+
 static const char* spu_ch_name[128] =
 {
 	"$SPU_RdEventStat", "$SPU_WrEventMask", "$SPU_WrEventAck", "$SPU_RdSigNotify1",
@@ -134,7 +154,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);
+		DisAsm("mfspr", spu_reg_name[rt], spu_spreg_name[sa]);
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -258,7 +278,7 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mtspr", spu_reg_name[rt], spu_reg_name[sa]);
+		DisAsm("mtspr", spu_spreg_name[sa], spu_reg_name[rt]);
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
