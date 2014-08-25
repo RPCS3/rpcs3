@@ -255,7 +255,7 @@ struct CellGcmReportData
 {
 	u64 timer;
 	u32 value;
-	u32 pad;
+	u32 padding;
 };
 
 struct CellGcmZcullInfo

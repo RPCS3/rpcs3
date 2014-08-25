@@ -13,3 +13,6 @@ struct HeapInfo
 	{
 	}
 };
+
+// SysCalls
+u32 _sys_memset(u32 addr, s32 value, u32 size);

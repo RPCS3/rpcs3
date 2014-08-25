@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "sysPrxForUser.h"
 
 //#include "Emu/RSX/GCM.h"
 //#include "Emu/SysCalls/lv2/sys_process.h"
@@ -59,6 +60,17 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 	return 0x0E000000;  // 224MB
 }
 
+CellGcmOffsetTable offsetTable;
+
+void InitOffsetTable()
+{
+	offsetTable.ioAddress = Memory.Alloc(3072 * sizeof(u16), 1);
+	offsetTable.eaAddress = Memory.Alloc(512 * sizeof(u16), 1);
+
+	_sys_memset(offsetTable.ioAddress, 0xFF, 3072 * sizeof(u16));
+	_sys_memset(offsetTable.eaAddress, 0xFF, 512 * sizeof(u16));
+}
+
 //----------------------------------------------------------------------------
 // Data Retrieval
 //----------------------------------------------------------------------------
@@ -111,10 +123,29 @@ int cellGcmGetCurrentField()
 	return CELL_OK;
 }
 
-int cellGcmGetNotifyDataAddress()
+u32 cellGcmGetNotifyDataAddress(u32 index)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys->Warning("cellGcmGetNotifyDataAddress(index=%d)", index);
+
+	// Get address of 'IO table' and 'EA table'
+	MemoryAllocator<CellGcmOffsetTable> table;
+	cellGcmGetOffsetTable(table.GetAddr());
+
+	// If entry not in use, return NULL
+	u16 entry = mem_ptr_t<u16>(table->eaAddress)[241];
+	if (entry == 0xFFFF) {
+		return 0;
+	}
+
+	return (entry << 20) + (index * 0x20);
+}
+
+/*
+ *  Get base address of local report data area
+ */
+u32 _cellGcmFunc12()
+{
+	return Memory.RSXFBMem.GetStartAddr(); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -123,10 +154,15 @@ u32 cellGcmGetReport(u32 type, u32 index)
 
 	if (index >= 2048) {
 		cellGcmSys->Error("cellGcmGetReport: Wrong local index (%d)", index);
-		return 0;
+		return -1;
 	}
-	// TODO: What does the argument type do?
-	return Memory.Read32(Memory.RSXFBMem.GetStartAddr() + index * 0x10 + 0x8);
+
+	if (type < 1 || type > 5) {
+		return -1;
+	}
+
+	mem_ptr_t<CellGcmReportData> local_reports = _cellGcmFunc12();
+	return local_reports[index].value;
 }
 
 u32 cellGcmGetReportDataAddress(u32 index)
@@ -144,25 +180,8 @@ u32 cellGcmGetReportDataLocation(u32 index, u32 location)
 {
 	cellGcmSys->Warning("cellGcmGetReportDataLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
-			cellGcmSys->Error("cellGcmGetReportDataLocation: Wrong local index (%d)", index);
-			return 0;
-		}
-		return Memory.Read32(Memory.RSXFBMem.GetStartAddr() + index * 0x10 + 0x8);
-	}
-
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024*1024) {
-			cellGcmSys->Error("cellGcmGetReportDataLocation: Wrong main index (%d)", index);
-			return 0;
-		}
-		// TODO: It seems m_report_main_addr is not initialized
-		return Memory.Read32(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10 + 0x8);
-	}
-
-	cellGcmSys->Error("cellGcmGetReportDataLocation: Wrong location (%d)", location);
-	return 0;
+	mem_ptr_t<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(index, location);
+	return report->value;
 }
 
 u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
@@ -781,47 +800,30 @@ int cellGcmSortRemapEaIoAddress()
 //----------------------------------------------------------------------------
 // Memory Mapping
 //----------------------------------------------------------------------------
-
-gcm_offset offsetTable = { 0, 0 };
-
-void InitOffsetTable()
-{
-	offsetTable.io = Memory.Alloc(3072 * sizeof(u16), 1);
-	for (int i = 0; i<3072; i++)
-	{
-		Memory.Write16(offsetTable.io + sizeof(u16)*i, 0xFFFF);
-	}
-
-	offsetTable.ea = Memory.Alloc(256 * sizeof(u16), 1);//TODO: check flags
-	for (int i = 0; i<256; i++)
-	{
-		Memory.Write16(offsetTable.ea + sizeof(u16)*i, 0xFFFF);
-	}
-}
-
 s32 cellGcmAddressToOffset(u64 address, mem32_t offset)
 {
 	cellGcmSys->Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.GetAddr());
 
-	if (address >= 0xD0000000/*not on main memory or local*/)
+	// Address not on main memory or local memory
+	if (address >= 0xD0000000) {
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
 	u32 result;
 
-	// If address is in range of local memory
-	if (Memory.RSXFBMem.IsInMyRange(address))
-	{
+	// Address in local memory
+	if (Memory.RSXFBMem.IsInMyRange(address)) {
 		result = address - Memory.RSXFBMem.GetStartAddr();
 	}
-	// else check if the adress (main memory) is mapped in IO
+	// Address in main memory else check 
 	else
 	{
-		u16 upper12Bits = Memory.Read16(offsetTable.io + sizeof(u16)*(address >> 20));
+		u16 upper12Bits = Memory.Read16(offsetTable.ioAddress + sizeof(u16)*(address >> 20));
 
+		// If the address is mapped in IO
 		if (upper12Bits != 0xFFFF) {
-			result = (((u64)upper12Bits << 20) | (address & (0xFFFFF)));
+			result = ((u64)upper12Bits << 20) | (address & 0xFFFFF);
 		}
-		// address is not mapped in IO
 		else {
 			return CELL_GCM_ERROR_FAILURE;
 		}
@@ -838,12 +840,12 @@ u32 cellGcmGetMaxIoMapSize()
 	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount();
 }
 
-void cellGcmGetOffsetTable(mem_ptr_t<gcm_offset> table)
+void cellGcmGetOffsetTable(mem_ptr_t<CellGcmOffsetTable> table)
 {
 	cellGcmSys->Log("cellGcmGetOffsetTable(table_addr=0x%x)", table.GetAddr());
 
-	table->io = re(offsetTable.io);
-	table->ea = re(offsetTable.ea);
+	table->ioAddress = offsetTable.ioAddress;
+	table->eaAddress = offsetTable.eaAddress;
 }
 
 s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
@@ -866,14 +868,14 @@ s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
 
 	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
-	//check if the mapping was successfull
+	// Check if the mapping was successfull
 	if (Memory.RSXIOMem.Map(ea, size, Memory.RSXIOMem.GetStartAddr() + io))
 	{
-		//fill the offset table
+		// Fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			Memory.Write16(offsetTable.io + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
-			Memory.Write16(offsetTable.ea + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
+			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
+			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
 		}
 	}
 	else
@@ -929,8 +931,8 @@ s32 cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			Memory.Write16(offsetTable.io + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
-			Memory.Write16(offsetTable.ea + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
+			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
+			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
 		}
 
 		offset = io;
@@ -975,12 +977,12 @@ s32 cellGcmUnmapEaIoAddress(u64 ea)
 	{
 		u64 io;
 		ea = ea >> 20;
-		io = Memory.Read16(offsetTable.io + (ea*sizeof(u16)));
+		io = Memory.Read16(offsetTable.ioAddress + (ea*sizeof(u16)));
 
 		for (u32 i = 0; i<size; i++)
 		{
-			Memory.Write16(offsetTable.io + ((ea + i)*sizeof(u16)), 0xFFFF);
-			Memory.Write16(offsetTable.ea + ((io + i)*sizeof(u16)), 0xFFFF);
+			Memory.Write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
+			Memory.Write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
 		}
 	}
 	else
@@ -1001,12 +1003,12 @@ s32 cellGcmUnmapIoAddress(u64 io)
 	{
 		u64 ea;
 		io = io >> 20;
-		ea = Memory.Read16(offsetTable.ea + (io*sizeof(u16)));
+		ea = Memory.Read16(offsetTable.eaAddress + (io*sizeof(u16)));
 
 		for (u32 i = 0; i<size; i++)
 		{
-			Memory.Write16(offsetTable.io + ((ea + i)*sizeof(u16)), 0xFFFF);
-			Memory.Write16(offsetTable.ea + ((io + i)*sizeof(u16)), 0xFFFF);
+			Memory.Write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
+			Memory.Write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
 		}
 	}
 	else
@@ -1186,6 +1188,7 @@ void cellGcmSys_init()
 	cellGcmSys->AddFunc(0xc8f3bd09, cellGcmGetCurrentField);
 	cellGcmSys->AddFunc(0xf80196c1, cellGcmGetLabelAddress);
 	cellGcmSys->AddFunc(0x21cee035, cellGcmGetNotifyDataAddress);
+	cellGcmSys->AddFunc(0x661fe266, _cellGcmFunc12);
 	cellGcmSys->AddFunc(0x99d397ac, cellGcmGetReport);
 	cellGcmSys->AddFunc(0x9a0159af, cellGcmGetReportDataAddress);
 	cellGcmSys->AddFunc(0x8572bce2, cellGcmGetReportDataAddressLocation);
