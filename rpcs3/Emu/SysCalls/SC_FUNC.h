@@ -23,26 +23,46 @@ namespace detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_GENERAL, g_count, f_count, v_count>
 	{
-		static __forceinline T func(PPUThread& CPU) { return (T&)CPU.GPR[g_count + 2]; }
+		static_assert(sizeof(T) <= 8, "Wrong argument type for ARG_GENERAL");
+
+		static __forceinline T func(PPUThread& CPU)
+		{
+			return (T&)CPU.GPR[g_count + 2];
+		}
 	};
 
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_FLOAT, g_count, f_count, v_count>
 	{
-		static __forceinline T func(PPUThread& CPU) { return (T&)CPU.FPR[f_count]; }
+		static_assert(sizeof(T) <= 8, "Wrong argument type for ARG_FLOAT");
+
+		static __forceinline T func(PPUThread& CPU)
+		{
+			return (T&)CPU.FPR[f_count];
+		}
 	};
 
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(v_count == 0, "ARG_VECTOR not supported");
-		static __forceinline T func(PPUThread& CPU) { return T(); }
+		static_assert(sizeof(T) == 16, "Wrong argument type for ARG_VECTOR");
+
+		static __forceinline T func(PPUThread& CPU)
+		{
+			return (T&)CPU.VPR[v_count + 1]._u128;
+		}
 	};
 
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_STACK, g_count, f_count, v_count>
 	{
-		static __forceinline T func(PPUThread& CPU) { return CPU.GetStackArg(8 + std::max(g_count - 8, 0) + std::max(f_count - 12, 0)); }
+		static_assert(sizeof(T) <= 8 && v_count <= 12, "Wrong argument type for ARG_STACK");
+
+		static __forceinline T func(PPUThread& CPU)
+		{
+			const u64 res = CPU.GetStackArg(8 + std::max(g_count - 8, 0) + std::max(f_count - 12, 0));
+			return (T&)res;
+		}
 	};
 
 	template<typename T>
@@ -96,16 +116,16 @@ namespace detail
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
 	static __forceinline std::tuple<T, A...> iterate(PPUThread& CPU)
 	{
+		static_assert(!std::is_pointer<T>::value, "Invalid function argument type: pointer");
 		// TODO: check calculations
-		const bind_arg_type t = std::is_floating_point<T>::value
+		const bool is_float = std::is_floating_point<T>::value;
+		const bind_arg_type t = is_float
 			? ((f_count >= 12) ? ARG_STACK : ARG_FLOAT)
 			: ((g_count >= 8) ? ARG_STACK : ARG_GENERAL);
-		const int g = g_count + (std::is_floating_point<T>::value ? 0 : 1);
-		const int f = f_count + (std::is_floating_point<T>::value ? 1 : 0);
-		const int v = v_count; // TODO: vector arguments support (if possible)
-		static_assert(!v_count, "ARG_VECTOR not supported");
-		static_assert(!std::is_pointer<T>::value, "Invalid function argument type: pointer");
-		return std::tuple_cat<std::tuple<T>, std::tuple<A...>>(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
+		const int g = g_count + (is_float ? 0 : 1);
+		const int f = f_count + (is_float ? 1 : 0);
+		const int v = v_count; // TODO: vector argument support (if possible)
+		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
 	}
 
 	template<typename RT, typename... TA>
