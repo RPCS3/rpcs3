@@ -211,10 +211,23 @@ void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 	}
 }
 
-s32 sys_ppu_thread_get_id(const u32 id_addr)
+s32 sys_ppu_thread_get_id(mem64_t thread_id)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_get_id(id_addr=0x%x)", id_addr);
+	sys_ppu_thread.Log("sys_ppu_thread_get_id(thread_id_addr=0x%x)", thread_id.GetAddr());
 
-	Memory.Write64(id_addr, GetCurrentPPUThread().GetId());
+	thread_id = GetCurrentPPUThread().GetId();
+	return CELL_OK;
+}
+
+s32 sys_ppu_thread_rename(u64 thread_id, u32 name_addr)
+{
+	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x)", thread_id, name_addr);
+
+	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	if (!thr) {
+		return CELL_ESRCH;
+	}
+
+	thr->SetThreadName(Memory.ReadString(name_addr));
 	return CELL_OK;
 }

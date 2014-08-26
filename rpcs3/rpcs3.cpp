@@ -21,6 +21,7 @@
 #endif
 
 #include "Gui/GLGSFrame.h"
+#include <wx/stdpaths.h>
 
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>
@@ -117,10 +118,13 @@ bool Rpcs3App::OnInit()
 	SetAppName(_PRGNAME_);
 	wxInitAllImageHandlers();
 
+	// RPCS3 assumes the current working directory is the folder where it is contained, so we make sure this is true
+	const wxString executablePath = wxStandardPaths::Get().GetExecutablePath();
+	wxSetWorkingDirectory(wxPathOnly(executablePath));
+
 	main_thread = std::this_thread::get_id();
 
 	Ini.Load();
-
 	m_MainFrame = new MainFrame();
 	SetTopWindow(m_MainFrame);
 	Emu.Init();

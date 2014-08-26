@@ -10,10 +10,10 @@ enum
 	CELL_GCM_ERROR_ADDRESS_OVERWRAP  = 0x80210005,
 };
 
-struct gcm_offset
+struct CellGcmOffsetTable
 {
-	u64 io;
-	u64 ea;
+	be_t<u32> ioAddress; // u16*
+	be_t<u32> eaAddress; // u16*
 };
 
 // Auxiliary functions
@@ -26,7 +26,7 @@ s32 cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctxt, u32 id);
 
 s32 cellGcmAddressToOffset(u64 address, mem32_t offset);
 u32 cellGcmGetMaxIoMapSize();
-void cellGcmGetOffsetTable(mem_ptr_t<gcm_offset> table);
+void cellGcmGetOffsetTable(mem_ptr_t<CellGcmOffsetTable> table);
 s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address);
 s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size);
 s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags);
