@@ -924,13 +924,7 @@ int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(idx < 0 || SRC_BUFFER_NUM <= idx)
-	{
-		cellResc->Error("cellRescSetSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
-		return CELL_RESC_ERROR_BAD_ARGUMENT;
-	}
-
-	if(src->width < 1 || 4096 < src->width || src->height < 1 || 4096 < src->height)
+	if (idx < 0 || idx >= SRC_BUFFER_NUM || src->width < 1 || src->width > 4096 || src->height < 1 || src->height > 4096)
 	{
 		cellResc->Error("cellRescSetSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
