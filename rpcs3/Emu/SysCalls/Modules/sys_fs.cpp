@@ -314,6 +314,9 @@ void sys_fs_init()
 	sys_fs->AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
 	sys_fs->AddFunc(0x8f71c5b2, cellFsStReadWait);
 	sys_fs->AddFunc(0x866f6aec, cellFsStReadWaitCallback);
+}
 
+void sys_fs_load()
+{
 	aio_init = false;
 }

@@ -35,6 +35,9 @@ VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 si
 	, ctx(nullptr)
 	, vdecCb(nullptr)
 {
+	av_register_all();
+	avcodec_register_all();
+
 	AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 	if (!codec)
 	{
@@ -808,7 +811,4 @@ void cellVdec_init()
 	cellVdec->AddFunc(0x807c861a, cellVdecGetPicture);
 	cellVdec->AddFunc(0x17c702b9, cellVdecGetPicItem);
 	cellVdec->AddFunc(0xe13ef6fc, cellVdecSetFrameRate);
-
-	av_register_all();
-	avcodec_register_all();
 }
