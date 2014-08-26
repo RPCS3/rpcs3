@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
@@ -187,4 +188,16 @@ IdManager& Module::GetIdManager() const
 void Module::PushNewFuncSub(SFunc* func)
 {
 	Emu.GetSFuncManager().push_back(func);
+}
+
+void fix_import(Module* module, u32 func, u32 addr)
+{
+	Memory.Write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
+	Memory.Write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
+	Memory.Write32(addr + 0x8, 0x60000000); /* nop */
+	// leave rtoc saving at 0xC
+	Memory.Write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
+	Memory.Write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
+
+	module->Load(func);
 }

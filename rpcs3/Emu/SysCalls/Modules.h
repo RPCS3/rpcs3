@@ -162,6 +162,10 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	PushNewFuncSub(sf);
 }
 
+void fix_import(Module* module, u32 func, u32 addr);
+
+#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
+
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	module->AddFuncSub(group, name ## _table, #name, name)

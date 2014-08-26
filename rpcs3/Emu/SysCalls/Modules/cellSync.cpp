@@ -14,22 +14,7 @@ Module *cellSync = nullptr;
 #ifdef PRX_DEBUG
 #include "prx_libsre.h"
 u32 libsre;
-u32 libsre_rtoc;
-
-void fix_import(Module* module, u32 func, u32 addr)
-{
-	Memory.Write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
-	Memory.Write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	Memory.Write32(addr + 0x8, 0x60000000); /* nop */
-	// leave rtoc saving at 0xC
-	Memory.Write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
-	Memory.Write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
-
-	module->Load(func);
-}
-
-#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
-	
+u32 libsre_rtoc;	
 #endif
 
 s32 syncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex)
@@ -2217,10 +2202,7 @@ void cellSync_init()
 	cellSync->AddFunc(0xe1bc7add, _cellSyncLFQueuePopBody);
 	cellSync->AddFunc(0xe9bf2110, _cellSyncLFQueueGetPushPointer);
 	cellSync->AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
-}
 
-void cellSync_load()
-{
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
@@ -2318,4 +2300,3 @@ void cellSync_load()
 }
 
 #undef PRX_DEBUG
-#undef FIX_IMPORT
