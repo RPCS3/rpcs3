@@ -4,17 +4,19 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+#include "Emu/IdManager.h"
+#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/ErrorCodes.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/Event.h"
 
-#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUInterpreter.h"
-#include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPURecompiler.h"
 
 #include <cfenv>

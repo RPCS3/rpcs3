@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/rXml.h"
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
 #include "Emu/System.h"
 #include "TROPUSR.h"
 

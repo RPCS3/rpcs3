@@ -6,6 +6,7 @@
 #include "rpcs3.h"
 #include "Debugger.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPCThread.h"
 
 

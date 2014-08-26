@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-
 #include "Thread.h"
 
 thread_local NamedThreadBase* g_tls_this_thread = nullptr;
@@ -27,6 +24,17 @@ void NamedThreadBase::SetThreadName(const std::string& name)
 	m_name = name;
 }
 
+void NamedThreadBase::WaitForAnySignal() // wait 1 ms for something
+{
+	std::unique_lock<std::mutex> lock(m_signal_mtx);
+	m_signal_cv.wait_for(lock, std::chrono::milliseconds(1));
+}
+
+void NamedThreadBase::Notify() // wake up waiting thread or nothing
+{
+	m_signal_cv.notify_one();
+}
+
 ThreadBase::ThreadBase(const std::string& name)
 	: NamedThreadBase(name)
 	, m_executor(nullptr)
@@ -40,7 +48,8 @@ ThreadBase::~ThreadBase()
 	if(IsAlive())
 		Stop(false);
 
-	safe_delete(m_executor);
+	delete m_executor;
+	m_executor = nullptr;
 }
 
 void ThreadBase::Start()
@@ -57,18 +66,7 @@ void ThreadBase::Start()
 		SetCurrentNamedThread(this);
 		g_thread_count++;
 
-		try
-		{
-			Task();
-		}
-		catch (const std::string& e)
-		{
-			LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
-		}
-		catch (const char* e)
-		{
-			LOG_ERROR(GENERAL, "Exception: %s", e);
-		}
+		Task();
 
 		m_alive = false;
 		g_thread_count--;
@@ -144,15 +142,7 @@ void thread::start(std::function<void()> func)
 		SetCurrentNamedThread(&info);
 		g_thread_count++;
 
-		try
-		{
-			func();
-		}
-		catch(...)
-		{
-			LOG_ERROR(HLE, "Crash :(");
-			//std::terminate();
-		}
+		func();
 
 		g_thread_count--;
 	});

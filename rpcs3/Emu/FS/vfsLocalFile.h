@@ -1,5 +1,6 @@
 #pragma once
 #include "vfsFileBase.h"
+#include "Utilities/rFile.h"
 
 class vfsLocalFile : public vfsFileBase
 {

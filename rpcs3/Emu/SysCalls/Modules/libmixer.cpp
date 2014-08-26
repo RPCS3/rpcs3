@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Audio/cellAudio.h"
 #include "libmixer.h"
 

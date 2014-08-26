@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sys_mutex.h"
 

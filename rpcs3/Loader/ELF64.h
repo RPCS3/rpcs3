@@ -1,6 +1,9 @@
 #pragma once
 #include "Loader.h"
 
+struct vfsStream;
+class rFile;
+
 struct Elf64_Ehdr
 {
 	u32 e_magic;

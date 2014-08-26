@@ -3,6 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+#include "Emu/IdManager.h"
 #include "KernelExplorer.h"
 
 KernelExplorer::KernelExplorer(wxWindow* parent) 

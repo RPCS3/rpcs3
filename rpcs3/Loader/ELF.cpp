@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/FS/vfsStream.h"
 #include "ELF.h"
 
 void Elf_Ehdr::Show()

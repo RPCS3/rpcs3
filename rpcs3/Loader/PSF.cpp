@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/FS/vfsStream.h"
 #include "PSF.h"
 
 PSFLoader::PSFLoader(vfsStream& f) : psf_f(f)

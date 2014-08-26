@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PPUProgramCompiler.h"
+#include "Utilities/rFile.h"
 
 using namespace PPU_instr;
 

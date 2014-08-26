@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/IdManager.h"
 #include "ErrorCodes.h"
 #include "LogBase.h"
 
@@ -140,7 +141,6 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 {
 	if (!ops[0]) return;
 
-	//TODO: track down where this is supposed to be deleted
 	SFunc* sf = new SFunc;
 	sf->ptr = (void *)func;
 	sf->func = bind_func(func);

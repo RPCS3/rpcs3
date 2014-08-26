@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "vfsFileBase.h"
 
 class vfsFile : public vfsFileBase

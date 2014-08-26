@@ -12,6 +12,8 @@
 #include <thread>
 #include <set>
 #include <array>
+#include "Thread.h"
+#include "rFile.h"
 
 using namespace Log;
 

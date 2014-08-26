@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Io/PadHandler.h"
-#include <cstring> //for memset
 
 class NullPadHandler final : public PadHandlerBase
 {

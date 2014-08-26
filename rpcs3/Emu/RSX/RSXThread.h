@@ -8,6 +8,7 @@
 #include <stack>
 #include <set> // For tracking a list of used gcm commands
 #include "Utilities/SSemaphore.h"
+#include "Utilities/Thread.h"
 
 enum Method
 {

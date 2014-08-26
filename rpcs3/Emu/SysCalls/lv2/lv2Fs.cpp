@@ -4,6 +4,7 @@
 //#include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
 #include "lv2Fs.h"

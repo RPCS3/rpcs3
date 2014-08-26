@@ -1,6 +1,7 @@
 #pragma once
 #include "GLShaderParam.h"
 #include "Emu/RSX/RSXVertexProgram.h"
+#include "Utilities/Thread.h"
 
 struct GLVertexDecompilerThread : public ThreadBase
 {

@@ -5,6 +5,7 @@
 
 #include "cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
+#include "Emu/RSX/GSManager.h"
 #include "cellResc.h"
 
 Module *cellResc = nullptr;

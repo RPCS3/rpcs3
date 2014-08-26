@@ -2217,7 +2217,10 @@ void cellSync_init()
 	cellSync->AddFunc(0xe1bc7add, _cellSyncLFQueuePopBody);
 	cellSync->AddFunc(0xe9bf2110, _cellSyncLFQueueGetPushPointer);
 	cellSync->AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
+}
 
+void cellSync_load()
+{
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{

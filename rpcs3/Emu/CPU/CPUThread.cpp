@@ -324,39 +324,50 @@ void CPUThread::Task()
 	// TODO: linux version
 #endif
 
-	while (true)
+	try
 	{
-		int status = ThreadStatus();
-
-		if (status == CPUThread_Stopped || status == CPUThread_Break)
+		while (true)
 		{
-			break;
-		}
+			int status = ThreadStatus();
 
-		if (status == CPUThread_Sleeping)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			continue;
-		}
-
-		Step();
-		//if (PC - 0x13ED4 < 0x288) trace.push_back(PC);
-		NextPc(m_dec->DecodeMemory(PC + m_offset));
-
-		if (status == CPUThread_Step)
-		{
-			m_is_step = false;
-			break;
-		}
-
-		for (uint i = 0; i < bp.size(); ++i)
-		{
-			if (bp[i] == PC)
+			if (status == CPUThread_Stopped || status == CPUThread_Break)
 			{
-				Emu.Pause();
 				break;
 			}
+
+			if (status == CPUThread_Sleeping)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				continue;
+			}
+
+			Step();
+			//if (PC - 0x13ED4 < 0x288) trace.push_back(PC);
+			NextPc(m_dec->DecodeMemory(PC + m_offset));
+
+			if (status == CPUThread_Step)
+			{
+				m_is_step = false;
+				break;
+			}
+
+			for (uint i = 0; i < bp.size(); ++i)
+			{
+				if (bp[i] == PC)
+				{
+					Emu.Pause();
+					break;
+				}
+			}
 		}
+	}
+	catch (const std::string& e)
+	{
+		LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+	}
+	catch (const char* e)
+	{
+		LOG_ERROR(GENERAL, "Exception: %s", e);
 	}
 
 	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);

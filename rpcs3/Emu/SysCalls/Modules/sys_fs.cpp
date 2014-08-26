@@ -3,6 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
 #include "Emu/SysCalls/lv2/lv2Fs.h"
 
 Module *sys_fs = nullptr;
@@ -312,6 +314,9 @@ void sys_fs_init()
 	sys_fs->AddFunc(0x81f33783, cellFsStReadPutCurrentAddr);
 	sys_fs->AddFunc(0x8f71c5b2, cellFsStReadWait);
 	sys_fs->AddFunc(0x866f6aec, cellFsStReadWaitCallback);
+}
 
+void sys_fs_load()
+{
 	aio_init = false;
 }

@@ -12,6 +12,7 @@ extern "C"
 #include "libswresample/swresample.h"
 }
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
@@ -34,6 +35,9 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u3
 	, ctx(nullptr)
 	, fmt(nullptr)
 {
+	av_register_all();
+	avcodec_register_all();
+
 	AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
 	if (!codec)
 	{
@@ -823,7 +827,4 @@ void cellAdec_init()
 	REG_FUNC(cellAdec, cellAdecDecodeAu);
 	REG_FUNC(cellAdec, cellAdecGetPcm);
 	REG_FUNC(cellAdec, cellAdecGetPcmItem);
-
-	av_register_all();
-	avcodec_register_all();
 }

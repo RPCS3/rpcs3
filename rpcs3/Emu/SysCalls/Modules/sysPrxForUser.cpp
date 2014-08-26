@@ -397,11 +397,6 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
 	sysPrxForUser->AddFunc(0xe75c40f2, _unnamed_E75C40F2); // real name is unknown
 
-	spu_printf_agcb = 0;
-	spu_printf_dgcb = 0;
-	spu_printf_atcb = 0;
-	spu_printf_dtcb = 0;
-
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_initialize);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_finalize);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_attach_group);
@@ -410,4 +405,12 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_thread);
 
 	REG_FUNC(sysPrxForUser, _sys_printf);
+}
+
+void sysPrxForUser_load()
+{
+	spu_printf_agcb = 0;
+	spu_printf_dgcb = 0;
+	spu_printf_atcb = 0;
+	spu_printf_dtcb = 0;
 }

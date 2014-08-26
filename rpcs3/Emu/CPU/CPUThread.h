@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/Thread.h"
+
 enum CPUThreadType :unsigned char
 {
 	CPU_THREAD_PPU,

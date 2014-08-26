@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/ELF.h"

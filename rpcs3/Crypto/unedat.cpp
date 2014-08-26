@@ -3,6 +3,7 @@
 #include "key_vault.h"
 #include "unedat.h"
 #include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {

@@ -193,6 +193,10 @@ void StaticFuncManager::StaticExecute(u32 code)
 
 void StaticFuncManager::StaticFinalize()
 {
+	for (SFunc *s : m_static_funcs_list)
+	{
+		delete s;
+	}
 	m_static_funcs_list.clear();
 }
 
@@ -208,9 +212,6 @@ SFunc *StaticFuncManager::operator[](size_t i)
 
 StaticFuncManager::~StaticFuncManager()
 {
-	for (SFunc *s : m_static_funcs_list)
-	{
-		delete s;
-	}
+	StaticFinalize();
 }
 

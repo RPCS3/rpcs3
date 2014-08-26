@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 enum
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,

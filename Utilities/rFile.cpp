@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Log.h"
 #include <wx/dir.h>
+#include "rFile.h"
 
 #ifdef _WIN32
 // Maybe in StrFmt?

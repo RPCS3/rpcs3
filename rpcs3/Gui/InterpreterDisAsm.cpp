@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "rpcs3.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDecoder.h"

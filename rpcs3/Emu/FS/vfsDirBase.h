@@ -1,5 +1,7 @@
 #pragma once
 
+class vfsDevice;
+
 enum DirEntryFlags
 {
 	DirEntry_TypeDir = 0x1,

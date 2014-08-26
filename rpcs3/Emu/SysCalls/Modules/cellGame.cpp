@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "Utilities/rMsgBox.h"
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/PSF.h"
 #include "cellGame.h"

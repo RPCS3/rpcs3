@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "TRP.h"
 

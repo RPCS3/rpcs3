@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/SysCalls/lv2/sys_event.h"
+#include <unordered_map>
 
 class EventManager
 {

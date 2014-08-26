@@ -13,7 +13,7 @@
 #include <thread>
 #include <cmath>
 
-extern gcmInfo gcm_info;
+//extern gcmInfo gcm_info;
 
 PPUThread& GetCurrentPPUThread()
 {
