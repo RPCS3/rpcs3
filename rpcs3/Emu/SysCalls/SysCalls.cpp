@@ -924,7 +924,7 @@ void default_syscall()
 		case 988:
 			LOG_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
 				CPU.GPR[3], CPU.GPR[4], CPU.PC);
-			RESULT(0);
+			CPU.GPR[3] = 0;
 		return;
 
 		case 999:
@@ -940,7 +940,7 @@ void default_syscall()
 	}
 
 	LOG_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
-	RESULT(0);
+	CPU.GPR[3] = 0;
 	return;
 }
 
@@ -963,7 +963,7 @@ void SysCalls::DoSyscall(u32 code)
 
 	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
 	declCPU();
-	RESULT(0);
+	CPU.GPR[3] = 0;
 }
 
 IdManager& SysCallBase::GetIdManager() const

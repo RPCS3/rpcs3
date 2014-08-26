@@ -754,6 +754,10 @@ public:
 	{
 	}
 
+	mem_class_t() : m_addr(0)
+	{
+	}
+
 	template<typename T> u32 operator += (T right)
 	{
 		mem_t<T>& m((mem_t<T>&)*this);
