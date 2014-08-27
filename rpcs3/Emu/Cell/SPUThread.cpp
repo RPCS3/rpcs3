@@ -494,6 +494,7 @@ bool SPUThread::CheckEvents()
 {
 	// checks events:
 	// SPU_EVENT_LR:
+	if (R_ADDR)
 	{
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -949,11 +950,14 @@ void SPUThread::ReadChannel(SPU_GPR_hdr& r, u32 ch)
 void SPUThread::StopAndSignal(u32 code)
 {
 	SetExitStatus(code); // exit code (not status)
+	// TODO: process interrupts for RawSPU
 
 	switch (code)
 	{
-	case 0x110: /* ===== sys_spu_thread_receive_event ===== */
+	case 0x110:
 	{
+		/* ===== sys_spu_thread_receive_event ===== */
+
 		u32 spuq = 0;
 		if (!SPU.Out_MBox.Pop(spuq))
 		{
@@ -1027,22 +1031,60 @@ void SPUThread::StopAndSignal(u32 code)
 				return;
 			}
 		}
-	}
 		break;
+	}
+
+	case 0x101:
+	{
+		/* ===== sys_spu_thread_group_exit ===== */
+
+		if (!group)
+		{
+			LOG_ERROR(Log::SPU, "sys_spu_thread_group_exit(): group not set");
+			break;
+		}
+		else if (!SPU.Out_MBox.GetCount())
+		{
+			LOG_ERROR(Log::SPU, "sys_spu_thread_group_exit(): Out_MBox is empty");
+		}
+		else if (Ini.HLELogging.GetValue())
+		{
+			LOG_NOTICE(Log::SPU, "sys_spu_thread_group_exit(status=0x%x)", SPU.Out_MBox.GetValue());
+		}
+		
+		group->m_group_exit = true;
+		group->m_exit_status = SPU.Out_MBox.GetValue();
+		for (auto& v : group->list)
+		{
+			if (CPUThread* t = Emu.GetCPU().GetThread(v))
+			{
+				t->Stop();
+			}
+		}
+
+		break;
+	}
+
 	case 0x102:
+	{
+		/* ===== sys_spu_thread_exit ===== */
+
 		if (!SPU.Out_MBox.GetCount())
 		{
-			LOG_ERROR(Log::SPU, "sys_spu_thread_exit (no status, code 0x102)");
+			LOG_ERROR(Log::SPU, "sys_spu_thread_exit(): Out_MBox is empty");
 		}
 		else if (Ini.HLELogging.GetValue())
 		{
 			// the real exit status
-			LOG_NOTICE(Log::SPU, "sys_spu_thread_exit (status=0x%x)", SPU.Out_MBox.GetValue());
+			LOG_NOTICE(Log::SPU, "sys_spu_thread_exit(status=0x%x)", SPU.Out_MBox.GetValue());
 		}
 		SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 		Stop();
 		break;
+	}
+
 	default:
+	{
 		if (!SPU.Out_MBox.GetCount())
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (no message)", code);
@@ -1051,8 +1093,8 @@ void SPUThread::StopAndSignal(u32 code)
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 		}
-		SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_STOP);
 		Stop();
 		break;
+	}
 	}
 }

@@ -89,21 +89,24 @@ struct SpuGroupInfo
 	int m_ct;
 	u32 m_count;
 	int m_state;	//SPU Thread Group State.
-	int m_exit_status;
+	u32 m_exit_status;
+	bool m_group_exit;
 
-	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct) 
+	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct)
 		: m_name(name)
 		, m_prio(prio)
 		, m_type(type)
 		, m_ct(ct)
 		, lock(0)
 		, m_count(num)
+		, m_state(0)
+		, m_exit_status(0)
+		, m_group_exit(false)
 	{
 		m_state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED;	//Before all the nums done, it is not initialized.
 		list.resize(256);
 		for (auto& v : list) v = 0;
 		m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;	//Then Ready to Start. Cause Reference use New i can only place this here.
-		m_exit_status = 0;
 	}
 };
 
