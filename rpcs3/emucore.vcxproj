@@ -164,6 +164,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
@@ -370,6 +371,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />

@@ -605,6 +605,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1160,6 +1163,9 @@
       <Filter>Emu\Io\Null</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>
