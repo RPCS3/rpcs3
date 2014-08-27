@@ -2246,57 +2246,7 @@ void cellSync_init()
 		FIX_IMPORT(sysPrxForUser, _sys_vprintf                  , libsre + 0x1D97C);
 		FIX_IMPORT(sysPrxForUser, _sys_memcmp                   , libsre + 0x1D99C);
 
-		const u32 seg2 = 0x2DF00;
-		// start of table:
-		// addr = (u64) addr - seg2, (u32) 1, (u32) 1, (u64) ptr
-		// addr = (u64) addr - seg2, (u32) 0x101, (u32) 1, (u64) ptr - seg2 (???)
-		// addr = (u64) addr, (u32) 0x100, (u32) 1, (u64) ptr - seg2 (???)
-		// addr = (u64) addr, (u32) 0, (u32) 1, (u64) ptr (???)
-		
-		for (u32 i = libsre + 0x31EE0; i < libsre + 0x3A4F0; i += 24)
-		{
-			u64 addr = Memory.Read64(i);
-			const u64 flag = Memory.Read64(i + 8);
-			
-			if (flag == 0x10100000001ull)
-			{
-				addr = addr + seg2 + libsre;
-				u32 value = Memory.Read32(addr);
-				assert(value == Memory.Read64(i + 16) + seg2);
-				Memory.Write32(addr, value + libsre);
-			}
-			else if (flag == 0x100000001ull)
-			{
-				addr = addr + seg2 + libsre;
-				u32 value = Memory.Read32(addr);
-				assert(value == Memory.Read64(i + 16));
-				Memory.Write32(addr, value + libsre);
-			}
-			else if (flag == 0x10000000001ull)
-			{
-				addr = addr + libsre;
-				u32 value = Memory.Read32(addr);
-				assert(value == Memory.Read64(i + 16) + seg2);
-				Memory.Write32(addr, value + libsre);
-			}
-			else if (flag == 1)
-			{
-				addr = addr + libsre;
-				u32 value = Memory.Read32(addr);
-				assert(value == Memory.Read64(i + 16));
-				Memory.Write32(addr, value + libsre);
-			}
-			else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
-			{
-				// seems to be instruction modifiers for imports (done in other way in FIX_IMPORT)
-			}
-			else
-			{
-				cellSync->Notice("libsre: 0x%x : 0x%llx", i - libsre, flag);
-			}
-		}
+		fix_relocs(cellSync, libsre, 0x31EE0, 0x3A4F0, 0x2DF00);
 	});
 #endif
 }
-
-#undef PRX_DEBUG

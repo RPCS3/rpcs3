@@ -166,6 +166,8 @@ void fix_import(Module* module, u32 func, u32 addr);
 
 #define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
 
+void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
+
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	module->AddFuncSub(group, name ## _table, #name, name)

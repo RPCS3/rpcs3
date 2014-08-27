@@ -17,194 +17,354 @@ u32 libsync2_rtoc;
 
 int _cellSync2MutexAttributeInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x16A0, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexEstimateBufferSize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0xC3C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1584, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexFinalize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x142C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexLock()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1734, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexTryLock()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1A2C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2MutexUnlock()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x186C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int _cellSync2CondAttributeInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x26DC, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondEstimateBufferSize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1B90, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x25DC, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondFinalize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x23E0, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondWait()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x283C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondSignal()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2768, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2CondSignalAll()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2910, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int _cellSync2SemaphoreAttributeInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x5644, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreEstimateBufferSize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4AC4, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x54E0, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreFinalize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x52F0, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreAcquire()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x57A4, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreTryAcquire()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x56D8, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreRelease()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x5870, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2SemaphoreGetCount()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4B4C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int _cellSync2QueueAttributeInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3C5C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueEstimateBufferSize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2A98, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueInitialize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3F98, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueFinalize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3C28, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueuePush()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x478C, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueTryPush()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4680, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueuePop()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4974, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueTryPop()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4880, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueGetSize()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2C00, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 int cellSync2QueueGetDepth()
 {
+#ifdef PRX_DEBUG
+	cellSync2->Warning("%s()", __FUNCTION__);
+	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2B90, libsync2_rtoc);
+#else
 	UNIMPLEMENTED_FUNC(cellSync2);
 	return CELL_OK;
+#endif
 }
 
 void cellSync2_init()
@@ -246,5 +406,33 @@ void cellSync2_init()
 	cellSync2->AddFunc(0xf0e1471c, cellSync2QueueGetDepth);
 
 #ifdef PRX_DEBUG
+	CallAfter([]()
+	{
+		libsync2 = Memory.PRXMem.AllocAlign(sizeof(libsync2_data), 4096);
+		memcpy(Memory + libsync2, libsync2_data, sizeof(libsync2_data));
+		libsync2_rtoc = libsync2 + 0xF280;
+
+		extern Module* sysPrxForUser;
+		extern Module* cellSpurs;
+		//extern Module* cellSpursJq;
+		//extern Module* cellFiber;
+
+		FIX_IMPORT(cellSpurs, _cellSpursSendSignal                    , libsync2 + 0x61F0);
+		FIX_IMPORT(cellSync2, cellSpursJobQueueSendSignal             , libsync2 + 0x6210); // !
+		FIX_IMPORT(cellSync2, cellFiberPpuUtilWorkerControlSendSignal , libsync2 + 0x6230); // !
+		FIX_IMPORT(cellSync2, cellFiberPpuSelf                        , libsync2 + 0x6250); // !
+		FIX_IMPORT(cellSync2, cellFiberPpuWaitSignal                  , libsync2 + 0x6270); // !
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_lock                    , libsync2 + 0x6290);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_unlock                  , libsync2 + 0x62B0);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_create                  , libsync2 + 0x62D0);
+		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_get_id               , libsync2 + 0x62F0);
+		FIX_IMPORT(sysPrxForUser, _sys_memset                         , libsync2 + 0x6310);
+		FIX_IMPORT(sysPrxForUser, _sys_printf                         , libsync2 + 0x6330);
+		fix_import(sysPrxForUser, 0x9FB6228E                          , libsync2 + 0x6350);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_destroy                 , libsync2 + 0x6370);
+		FIX_IMPORT(sysPrxForUser, _sys_strncpy                        , libsync2 + 0x6390);
+
+		fix_relocs(cellSync2, libsync2, 0x73A0, 0x95A0, 0x6B90);
+	});
 #endif
 }

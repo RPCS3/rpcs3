@@ -201,3 +201,55 @@ void fix_import(Module* module, u32 func, u32 addr)
 
 	module->Load(func);
 }
+
+void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)
+{
+	// start of table:
+	// addr = (u64) addr - seg2, (u32) 1, (u32) 1, (u64) ptr
+	// addr = (u64) addr - seg2, (u32) 0x101, (u32) 1, (u64) ptr - seg2 (???)
+	// addr = (u64) addr, (u32) 0x100, (u32) 1, (u64) ptr - seg2 (???)
+	// addr = (u64) addr, (u32) 0, (u32) 1, (u64) ptr (???)
+
+	for (u32 i = lib + start; i < lib + end; i += 24)
+	{
+		u64 addr = Memory.Read64(i);
+		const u64 flag = Memory.Read64(i + 8);
+
+		if (flag == 0x10100000001ull)
+		{
+			addr = addr + seg2 + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16) + seg2);
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x100000001ull)
+		{
+			addr = addr + seg2 + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16));
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x10000000001ull)
+		{
+			addr = addr + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16) + seg2);
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 1)
+		{
+			addr = addr + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16));
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
+		{
+			// seems to be instruction modifiers for imports (done in other way in FIX_IMPORT)
+		}
+		else
+		{
+			module->Notice("fix_relocs(): 0x%x : 0x%llx", i - lib, flag);
+		}
+	}
+}

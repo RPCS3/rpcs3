@@ -64,24 +64,22 @@ private:
 
 	void SysCall()
 	{
-		CPU.m_last_syscall = CPU.GPR[11];
-		SysCalls::DoSyscall(CPU.GPR[11]);
+		const u64 sc = CPU.GPR[11];
+		const u64 old_sc = CPU.m_last_syscall;
+
+		CPU.m_last_syscall = sc;
+		SysCalls::DoSyscall(sc);
 
 		if(Ini.HLELogging.GetValue())
 		{
-			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
+			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx",
+				sc, SysCalls::GetHLEFuncName(sc).c_str(), CPU.GPR[3], CPU.PC);
 		}
-		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
-		{
-			LOG_ERROR(PPU, "SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
-			if(CPU.GPR[11] > 1024)
-				SysCalls::DoFunc(CPU.GPR[11]);
-		}*/
 #ifdef HLE_CALL_DEBUG
-		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", sc, CPU.GPR[3], CPU.PC);
 #endif
 
-		CPU.m_last_syscall = 0;
+		CPU.m_last_syscall = old_sc;
 	}
 
 	void NULL_OP()
