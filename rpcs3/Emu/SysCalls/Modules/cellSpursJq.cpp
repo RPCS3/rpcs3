@@ -770,7 +770,7 @@ void cellSpursJq_init()
 
 		extern Module* sysPrxForUser;
 		extern Module* cellSpurs;
-		//extern Module* cellFiber;
+		extern Module* cellFiber;
 
 		FIX_IMPORT(cellSpurs, cellSpursSendWorkloadSignal           , libspurs_jq + 0x6728);
 		FIX_IMPORT(cellSpurs, cellSpursWorkloadAttributeSetName     , libspurs_jq + 0x6748);
@@ -781,8 +781,8 @@ void cellSpursJq_init()
 		FIX_IMPORT(cellSpurs, cellSpursAddWorkloadWithAttribute     , libspurs_jq + 0x67E8);
 		FIX_IMPORT(cellSpurs, cellSpursSetExceptionEventHandler     , libspurs_jq + 0x6808);
 		FIX_IMPORT(cellSpurs, _cellSpursWorkloadAttributeInitialize , libspurs_jq + 0x6828);
-		FIX_IMPORT(cellSpurs, cellFiberPpuSelf                      , libspurs_jq + 0x6848); // !
-		FIX_IMPORT(cellSpurs, cellFiberPpuWaitSignal                , libspurs_jq + 0x6868); // !
+		FIX_IMPORT(cellFiber, cellFiberPpuSelf                      , libspurs_jq + 0x6848);
+		FIX_IMPORT(cellFiber, cellFiberPpuWaitSignal                , libspurs_jq + 0x6868);
 		FIX_IMPORT(sysPrxForUser, _sys_strncmp                      , libspurs_jq + 0x6888);
 		FIX_IMPORT(sysPrxForUser, _sys_snprintf                     , libspurs_jq + 0x68A8);
 		FIX_IMPORT(sysPrxForUser, sys_lwcond_destroy                , libspurs_jq + 0x68C8);

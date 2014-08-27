@@ -9,6 +9,8 @@ extern void cellAudio_init();
 extern Module *cellAudio;
 extern void cellDmux_init();
 extern Module *cellDmux;
+extern void cellFiber_init();
+extern Module *cellFiber;
 extern void cellFont_init();
 extern void cellFont_load();
 extern void cellFont_unload();
@@ -225,6 +227,8 @@ void ModuleManager::init()
 		m_mod_init.emplace_back(0x0011, cellAudio_init);
 		cellDmux = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0007, cellDmux_init);
+		cellFiber = static_cast <Module*>(&(m_mod_init.back())) + 1;
+		m_mod_init.emplace_back(0x0043, cellFiber_init);
 		cellFont = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0019, cellFont_init, cellFont_load, cellFont_unload);
 		cellFontFT = static_cast <Module*>(&(m_mod_init.back())) + 1;
