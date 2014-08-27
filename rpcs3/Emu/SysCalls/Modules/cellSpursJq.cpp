@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "cellSpurs.h"
 #include "cellSpursJq.h"
 
 Module* cellSpursJq = nullptr;
@@ -761,6 +762,39 @@ void cellSpursJq_init()
 	REG_FUNC(cellSpursJq, cellSpursJobQueueUnsetExceptionEventHandler);
 
 #ifdef PRX_DEBUG
+	CallAfter([]()
+	{
+		libspurs_jq = Memory.PRXMem.AllocAlign(sizeof(libspurs_jq_data), 4096);
+		memcpy(Memory + libspurs_jq, libspurs_jq_data, sizeof(libspurs_jq_data));
+		libspurs_jq_rtoc = libspurs_jq + 0x17E80;
 
+		extern Module* sysPrxForUser;
+		extern Module* cellSpurs;
+		//extern Module* cellFiber;
+
+		FIX_IMPORT(cellSpurs, cellSpursSendWorkloadSignal           , libspurs_jq + 0x6728);
+		FIX_IMPORT(cellSpurs, cellSpursWorkloadAttributeSetName     , libspurs_jq + 0x6748);
+		FIX_IMPORT(cellSpurs, cellSpursRemoveWorkload               , libspurs_jq + 0x6768);
+		FIX_IMPORT(cellSpurs, cellSpursWaitForWorkloadShutdown      , libspurs_jq + 0x6788);
+		FIX_IMPORT(cellSpurs, cellSpursWakeUp                       , libspurs_jq + 0x67A8);
+		FIX_IMPORT(cellSpurs, cellSpursShutdownWorkload             , libspurs_jq + 0x67C8);
+		FIX_IMPORT(cellSpurs, cellSpursAddWorkloadWithAttribute     , libspurs_jq + 0x67E8);
+		FIX_IMPORT(cellSpurs, cellSpursSetExceptionEventHandler     , libspurs_jq + 0x6808);
+		FIX_IMPORT(cellSpurs, _cellSpursWorkloadAttributeInitialize , libspurs_jq + 0x6828);
+		FIX_IMPORT(cellSpurs, cellFiberPpuSelf                      , libspurs_jq + 0x6848); // !
+		FIX_IMPORT(cellSpurs, cellFiberPpuWaitSignal                , libspurs_jq + 0x6868); // !
+		FIX_IMPORT(sysPrxForUser, _sys_strncmp                      , libspurs_jq + 0x6888);
+		FIX_IMPORT(sysPrxForUser, _sys_snprintf                     , libspurs_jq + 0x68A8);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_destroy                , libspurs_jq + 0x68C8);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_create                , libspurs_jq + 0x68E8);
+		FIX_IMPORT(sysPrxForUser, _sys_memset                       , libspurs_jq + 0x6908);
+		FIX_IMPORT(sysPrxForUser, _sys_printf                       , libspurs_jq + 0x6928);
+		fix_import(sysPrxForUser, 0x9FB6228E                        , libspurs_jq + 0x6948);
+		FIX_IMPORT(sysPrxForUser, sys_lwmutex_destroy               , libspurs_jq + 0x6968);
+		FIX_IMPORT(sysPrxForUser, sys_lwcond_create                 , libspurs_jq + 0x6988);
+		fix_import(sysPrxForUser, 0xE75C40F2                        , libspurs_jq + 0x69A8);
+
+		fix_relocs(cellSpursJq, libspurs_jq, 0xFF70, 0x12370, 0xED00);
+	});
 #endif
 }

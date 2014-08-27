@@ -91,10 +91,9 @@ s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.GetAddr());
 
 	// TODO: Implement per thread page attribute setting.
-	attr->attribute = 0;
-	attr->page_size = 0;
-	attr->access_right = 0;
-	attr->pad = 0;
+	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE
+	attr->access_right = 0xFull; // SYS_MEMORY_ACCESS_RIGHT_ANY
+	attr->page_size = 4096;
 
 	return CELL_OK;
 }

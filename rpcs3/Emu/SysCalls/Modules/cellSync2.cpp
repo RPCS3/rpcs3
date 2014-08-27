@@ -414,11 +414,11 @@ void cellSync2_init()
 
 		extern Module* sysPrxForUser;
 		extern Module* cellSpurs;
-		//extern Module* cellSpursJq;
+		extern Module* cellSpursJq;
 		//extern Module* cellFiber;
 
 		FIX_IMPORT(cellSpurs, _cellSpursSendSignal                    , libsync2 + 0x61F0);
-		FIX_IMPORT(cellSync2, cellSpursJobQueueSendSignal             , libsync2 + 0x6210); // !
+		FIX_IMPORT(cellSpursJq, cellSpursJobQueueSendSignal           , libsync2 + 0x6210);
 		FIX_IMPORT(cellSync2, cellFiberPpuUtilWorkerControlSendSignal , libsync2 + 0x6230); // !
 		FIX_IMPORT(cellSync2, cellFiberPpuSelf                        , libsync2 + 0x6250); // !
 		FIX_IMPORT(cellSync2, cellFiberPpuWaitSignal                  , libsync2 + 0x6270); // !
