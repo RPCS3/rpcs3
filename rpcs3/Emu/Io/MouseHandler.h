@@ -26,32 +26,32 @@ enum MouseButtonCodes
 	CELL_MOUSE_BUTTON_8 = 0x00000080,
 };
 
-static const u32 CELL_MAX_MICE = 127;
-static const u32 CELL_MOUSE_MAX_DATA_LIST_NUM = 8;
-static const u32 CELL_MOUSE_MAX_CODES = 64;
+static const u32 MAX_MICE = 127;
+static const u32 MOUSE_MAX_DATA_LIST_NUM = 8;
+static const u32 MOUSE_MAX_CODES = 64;
 
 struct MouseInfo
 {
 	u32 max_connect;
 	u32 now_connect;
 	u32 info;
-	u16 vendor_id[CELL_MAX_MICE];
-	u16 product_id[CELL_MAX_MICE];
-	u8 status[CELL_MAX_MICE];
+	u16 vendor_id[MAX_MICE];
+	u16 product_id[MAX_MICE];
+	u8 status[MAX_MICE];
 };
 
-struct CellMouseRawData
+struct MouseRawData
 {
 	s32 len;
-	u8 data[CELL_MOUSE_MAX_CODES];
+	u8 data[MOUSE_MAX_CODES];
 
-	CellMouseRawData()
+	MouseRawData()
 		: len(0)
 	{
 	}
 };
 
-struct CellMouseData
+struct MouseData
 {
 	u8 update;
 	u8 buttons;
@@ -60,7 +60,7 @@ struct CellMouseData
 	s8 wheel;
 	s8 tilt;  // (TODO)
 
-	CellMouseData()
+	MouseData()
 		: update(0)
 		, buttons(0)
 		, x_axis(0)
@@ -71,12 +71,12 @@ struct CellMouseData
 	}
 };
 
-struct CellMouseDataList
+struct MouseDataList
 {
 	u32 list_num;
-	CellMouseData list[CELL_MOUSE_MAX_DATA_LIST_NUM];
+	MouseData list[MOUSE_MAX_DATA_LIST_NUM];
 
-	CellMouseDataList()
+	MouseDataList()
 		: list_num(0)
 	{
 	}
@@ -87,8 +87,8 @@ struct Mouse
 	s16 x_pos;
 	s16 y_pos;
 
-	CellMouseData m_data;
-	CellMouseRawData m_rawdata;
+	MouseData m_data;
+	MouseRawData m_rawdata;
 
 	Mouse()
 		: m_data()
@@ -113,7 +113,7 @@ public:
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
-				CellMouseData& data = GetData(p);
+				MouseData& data = GetData(p);
 				data.update = CELL_MOUSE_DATA_UPDATE;
 				if (pressed) data.buttons |= button;
 				else data.buttons &= ~button;
@@ -127,7 +127,7 @@ public:
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
-				CellMouseData& data = GetData(p);
+				MouseData& data = GetData(p);
 				data.update = CELL_MOUSE_DATA_UPDATE;
 				data.wheel = rotation/120; //120=event.GetWheelDelta()
 			}
@@ -140,7 +140,7 @@ public:
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
-				CellMouseData& data = GetData(p);
+				MouseData& data = GetData(p);
 				data.update = CELL_MOUSE_DATA_UPDATE;
 				data.x_axis += x_pos_new - m_mice[p].x_pos;
 				data.y_axis += y_pos_new - m_mice[p].y_pos;
@@ -157,6 +157,6 @@ public:
 
 	MouseInfo& GetInfo() { return m_info; }
 	std::vector<Mouse>& GetMice() { return m_mice; }
-	CellMouseData& GetData(const u32 mouse) { return m_mice[mouse].m_data; }
-	CellMouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
+	MouseData& GetData(const u32 mouse) { return m_mice[mouse].m_data; }
+	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
 };

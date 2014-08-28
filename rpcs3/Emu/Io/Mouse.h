@@ -17,8 +17,8 @@ public:
 
 	std::vector<Mouse>& GetMice() { return m_mouse_handler->GetMice(); }
 	MouseInfo& GetInfo() { return m_mouse_handler->GetInfo(); }
-	CellMouseData& GetData(const u32 mouse) { return m_mouse_handler->GetData(mouse); }
-	CellMouseRawData& GetRawData(const u32 mouse) { return m_mouse_handler->GetRawData(mouse); }
+	MouseData& GetData(const u32 mouse) { return m_mouse_handler->GetData(mouse); }
+	MouseRawData& GetRawData(const u32 mouse) { return m_mouse_handler->GetRawData(mouse); }
 
 	bool IsInited() const { return m_inited; }
 };

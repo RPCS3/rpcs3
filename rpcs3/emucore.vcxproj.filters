@@ -1171,5 +1171,11 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Keyboard.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Mouse.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

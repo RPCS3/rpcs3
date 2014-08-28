@@ -257,4 +257,4 @@ struct CellNetCtlNatInfo
 	be_t<u32> mapped_addr;
 };
 
-typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, mem32_t arg);
+typedef void(*cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, mem32_t arg);

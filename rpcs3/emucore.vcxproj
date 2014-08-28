@@ -389,6 +389,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Keyboard.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Mouse.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />

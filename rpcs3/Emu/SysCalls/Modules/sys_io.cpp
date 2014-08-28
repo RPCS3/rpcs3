@@ -2,6 +2,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "SC_Keyboard.h"
+#include "SC_Mouse.h"
+
 //void sys_io_init();
 //Module sys_io(0x0017, sys_io_init);
 Module *sys_io = nullptr;
@@ -21,30 +24,6 @@ extern int cellPadInfoSensorMode(u32 port_no);
 extern int cellPadSetPressMode(u32 port_no, u32 mode);
 extern int cellPadSetSensorMode(u32 port_no, u32 mode);
 extern int cellPadGetCapabilityInfo(u32 port_no, mem32_t info_addr);
-
-//cellKb
-extern int cellKbInit(u32 max_connect);
-extern int cellKbEnd();
-extern int cellKbClearBuf(u32 port_no);
-extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode);
-extern int cellKbGetInfo(mem_class_t info);
-extern int cellKbRead(u32 port_no, mem_class_t data);
-extern int cellKbSetCodeType(u32 port_no, u32 type);
-extern int cellKbSetLEDStatus(u32 port_no, u8 led);
-extern int cellKbSetReadMode(u32 port_no, u32 rmode);
-extern int cellKbGetConfiguration(u32 port_no, mem_class_t config);
-
-//cellMouse
-extern int cellMouseInit(u32 max_connect);
-extern int cellMouseClearBuf(u32 port_no);
-extern int cellMouseEnd();
-extern int cellMouseGetInfo(mem_class_t info);
-extern int cellMouseInfoTabletMode(u32 port_no, mem_class_t info);
-extern int cellMouseGetData(u32 port_no, mem_class_t data);
-extern int cellMouseGetDataList(u32 port_no, mem_class_t data);
-extern int cellMouseSetTabletMode(u32 port_no, u32 mode);
-extern int cellMouseGetTabletDataList(u32 port_no, mem_class_t data);
-extern int cellMouseGetRawData(u32 port_no, mem_class_t data);
 
 void sys_io_init()
 {
