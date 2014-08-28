@@ -3,15 +3,7 @@
 #include "Log.h"
 #include "rMsgBox.h"
 #include <iostream>
-#include <string>
 #include <cinttypes>
-#include <memory>
-#include <vector>
-#include <mutex>
-#include <condition_variable>
-#include <thread>
-#include <set>
-#include <array>
 #include "Thread.h"
 #include "rFile.h"
 

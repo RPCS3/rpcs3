@@ -4,7 +4,6 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
-#include <mutex>
 #include "ModuleManager.h"
 
 u32 getFunctionId(const char* name)

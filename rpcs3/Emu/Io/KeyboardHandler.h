@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
 
 enum KbPortStatus

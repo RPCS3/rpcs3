@@ -8,7 +8,6 @@
 #include "Emu/FS/vfsFile.h"
 #include "Loader/ELF.h"
 #include "sys_spu.h"
-#include <atomic>
 
 static SysCallBase sys_spu("sys_spu");
 

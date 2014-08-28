@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 enum MousePortStatus
 {
 	CELL_MOUSE_STATUS_DISCONNECTED = 0x00000000,

@@ -10,11 +10,6 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
-#include <thread>
-#include <cmath>
-
-//extern gcmInfo gcm_info;
-
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();

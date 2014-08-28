@@ -13,8 +13,6 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "sceNp.h"
 #include "sceNpTrophy.h"
-#include <algorithm>
-#include <memory>
 
 //void sceNpTrophy_unload();
 //void sceNpTrophy_init();

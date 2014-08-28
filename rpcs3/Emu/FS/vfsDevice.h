@@ -1,5 +1,4 @@
 #pragma once
-#include <mutex>
 
 struct vfsFileBase;
 class vfsDirBase;

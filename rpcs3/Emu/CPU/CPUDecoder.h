@@ -1,5 +1,4 @@
 #pragma once
-#include <algorithm>
 #include "CPUInstrTable.h"
 #pragma warning( disable : 4800 )
 

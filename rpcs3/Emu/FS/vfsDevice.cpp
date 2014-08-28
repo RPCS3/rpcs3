@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <algorithm>
 #include "vfsDevice.h"
 #include "Utilities/rFile.h"
 

@@ -1,7 +1,4 @@
 #pragma once
-
-#include <algorithm>
-#include <vector>
 #include "Emu/Io/KeyboardHandler.h"
 
 class WindowsKeyboardHandler final

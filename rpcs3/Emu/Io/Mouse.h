@@ -1,6 +1,4 @@
 #pragma once
-
-#include <memory>
 #include "MouseHandler.h"
 
 class MouseManager

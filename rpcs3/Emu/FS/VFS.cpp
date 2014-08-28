@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include <memory>
-
 #include "VFS.h"
 #include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"

@@ -1,6 +1,5 @@
 #pragma once
 #include <wx/dataobj.h>
-#include <memory>
 
 namespace Log
 {

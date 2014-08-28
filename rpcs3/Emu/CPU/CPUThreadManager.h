@@ -1,7 +1,5 @@
 #pragma once
 
-#include <mutex>
-
 class CPUThread;
 class RawSPUThread;
 enum CPUThreadType : unsigned char;

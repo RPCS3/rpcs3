@@ -2,7 +2,6 @@
 #include "PPCThread.h"
 #include "Emu/Event.h"
 #include "MFC.h"
-#include <mutex>
 
 enum SPUchannels 
 {

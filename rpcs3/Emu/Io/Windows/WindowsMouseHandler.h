@@ -1,6 +1,4 @@
 #pragma once
-
-#include <algorithm>
 #include "Emu/Io/MouseHandler.h"
 
 class WindowsMouseHandler final

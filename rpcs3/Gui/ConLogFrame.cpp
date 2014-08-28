@@ -3,9 +3,6 @@
 #include <wx/listctrl.h>
 #include <wx/clipbrd.h>
 #include <fstream>
-#include <vector>
-#include <mutex>
-#include <atomic>
 
 #include "Ini.h"
 #include "Utilities/Log.h"

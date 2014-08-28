@@ -42,6 +42,19 @@
 #include <cstring>
 #include <cassert>
 #include <cstdint>
+#include <cmath>
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <memory>
+#include <vector>
+#include <set>
+#include <string>
+#include <ostream>
+#include <sstream>
+#include <functional>
+#include <algorithm>
 
 #include "Utilities/GNU.h"
 

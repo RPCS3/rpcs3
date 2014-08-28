@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include <wx/dnd.h>
 #include "Emu/HDD/HDD.h"
 

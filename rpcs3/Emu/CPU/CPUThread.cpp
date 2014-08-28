@@ -286,8 +286,6 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000)
 	{
 		// TODO: allow recovering from a page fault
-		//GetCurrentPPUThread().Stop();
-		Emu.Pause();
 		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx (%s))",
 			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall, SysCalls::GetHLEFuncName((u64)GetCurrentCPUThread()->m_last_syscall).c_str());
 	}
@@ -364,10 +362,12 @@ void CPUThread::Task()
 	catch (const std::string& e)
 	{
 		LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+		Emu.Pause();
 	}
 	catch (const char* e)
 	{
 		LOG_ERROR(GENERAL, "Exception: %s", e);
+		Emu.Pause();
 	}
 
 	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);

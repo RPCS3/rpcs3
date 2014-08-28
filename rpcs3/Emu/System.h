@@ -1,8 +1,4 @@
 #pragma once
-
-#include <atomic>
-#include <memory>
-#include <vector>
 #include "Loader/Loader.h"
 
 enum Status
@@ -90,6 +86,8 @@ class Emulator
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
 
+	std::recursive_mutex m_core_mutex;
+
 	CPUThreadManager* m_thread_manager;
 	PadManager* m_pad_manager;
 	KeyboardManager* m_keyboard_manager;
@@ -119,6 +117,8 @@ public:
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
+
+	std::recursive_mutex& GetCoreMutex()   { return m_core_mutex; }
 
 	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
@@ -174,6 +174,8 @@ public:
 	__forceinline bool IsStopped() const { return m_status == Stopped; }
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
+
+#define LV2_LOCK(x) std::lock_guard<std::recursive_mutex> x(Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

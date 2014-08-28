@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 struct FileInfo {
 	std::string name;
 	std::string fullName;
