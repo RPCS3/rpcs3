@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include <wx/statline.h>
 
 #include "Emu/Memory/Memory.h"

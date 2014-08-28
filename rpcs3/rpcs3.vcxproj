@@ -82,6 +82,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
+      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -106,6 +108,8 @@
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
+      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -136,6 +140,8 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,14 +161,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Utilities\rFile.cpp" />
-    <ClCompile Include="..\Utilities\rMsgBox.cpp" />
-    <ClCompile Include="..\Utilities\rPlatform.cpp" />
-    <ClCompile Include="..\Utilities\rTime.cpp" />
-    <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\SMutex.cpp" />
-    <ClCompile Include="..\Utilities\StrFmt.cpp" />
-    <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
     <ClCompile Include="Gui\AutoPauseManager.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
@@ -183,30 +182,18 @@
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
     <ClCompile Include="rpcs3.cpp" />
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+    <ClCompile Include="stdafx_gui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utilities\BEType.h" />
-    <ClInclude Include="..\Utilities\IdManager.h" />
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
-    <ClInclude Include="..\Utilities\MTRingbuffer.h" />
-    <ClInclude Include="..\Utilities\rFile.h" />
-    <ClInclude Include="..\Utilities\rMsgBox.h" />
-    <ClInclude Include="..\Utilities\rPlatform.h" />
-    <ClInclude Include="..\Utilities\rTime.h" />
-    <ClInclude Include="..\Utilities\rXml.h" />
-    <ClInclude Include="..\Utilities\SMutex.h" />
-    <ClInclude Include="..\Utilities\SQueue.h" />
-    <ClInclude Include="..\Utilities\StrFmt.h" />
-    <ClInclude Include="..\Utilities\Thread.h" />
-    <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
     <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h" />
     <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h" />
     <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h" />
@@ -232,7 +219,7 @@
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />
     <ClInclude Include="rpcs3.h" />
-    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="stdafx_gui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -29,6 +29,11 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />
+    <ClCompile Include="..\Utilities\rFile.cpp" />
+    <ClCompile Include="..\Utilities\rMsgBox.cpp" />
+    <ClCompile Include="..\Utilities\rPlatform.cpp" />
+    <ClCompile Include="..\Utilities\rTime.cpp" />
+    <ClCompile Include="..\Utilities\rXml.cpp" />
     <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
@@ -55,7 +60,6 @@
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
-    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp" />
@@ -221,9 +225,10 @@
   <ItemGroup>
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
-    <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\Log.h" />
+    <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
@@ -262,7 +267,6 @@
     <ClInclude Include="Emu\Cell\PPUInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
-    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
@@ -408,6 +412,9 @@
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="stdafx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>

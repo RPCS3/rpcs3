@@ -11,7 +11,6 @@
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
-#include "Emu/Event.h"
 
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
@@ -424,7 +423,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				{
 					if (buf[i] != R_DATA[i])
 					{
-						if (InterlockedCompareExchange64((volatile long long*)(Memory + (ea + i * 8)), buf[i], R_DATA[i]) != R_DATA[i])
+						if (InterlockedCompareExchange((volatile u64*)(Memory + (ea + i * 8)), buf[i], R_DATA[i]) != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);

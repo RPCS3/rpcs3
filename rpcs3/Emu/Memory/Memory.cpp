@@ -5,6 +5,8 @@
 
 #ifndef _WIN32
 #include <sys/mman.h>
+#else
+#include <Windows.h>
 #endif
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */

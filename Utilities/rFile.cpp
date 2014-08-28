@@ -1,9 +1,13 @@
 #include "stdafx.h"
 #include "Log.h"
 #include <wx/dir.h>
+#include <wx/file.h>
+#include <wx/filename.h>
 #include "rFile.h"
 
 #ifdef _WIN32
+#include <Windows.h>
+
 // Maybe in StrFmt?
 std::wstring ConvertUTF8ToWString(const std::string &source) {
 	int len = (int)source.size();

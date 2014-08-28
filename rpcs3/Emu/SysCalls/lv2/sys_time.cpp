@@ -10,6 +10,9 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #include "sys_time.h"
 
 SysCallBase sys_time("sys_time");

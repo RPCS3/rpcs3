@@ -365,7 +365,7 @@ public:
 
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
-		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
+		memcpy(GetMemFromAddr<T>(addr), str.c_str(), str.size());
 	}
 
 	u32 GetUserMemTotalSize()

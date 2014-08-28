@@ -1,16 +1,40 @@
 #pragma once
 
 #ifdef MSVC_CRT_MEMLEAK_DETECTION
-	#define _CRTDBG_MAP_ALLOC
-	#include <stdlib.h>
-	#include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
 #endif
 
 #define NOMINMAX
+#ifndef QT_UI
+#include <wx/wxprec.h>
+#include <wx/config.h>
+#include <wx/string.h>
+#include <wx/propdlg.h>
+#include <wx/dcclient.h>
+
+#include <wx/wfstream.h>
+#include <wx/spinctrl.h>
+#include <wx/datetime.h>
+#include <wx/filepicker.h>
+#include <wx/menu.h>
+#include <wx/menuitem.h>
+#include <wx/stattext.h>
+#include <wx/msgdlg.h>
+#include <wx/gauge.h>
+#include <wx/stattext.h>
+#include <wx/scrolbar.h>
+#include <wx/frame.h>
+#include <wx/combobox.h>
+#include <wx/checkbox.h>
+#include <wx/listctrl.h>
+#include <wx/aui/auibook.h>
+#endif
 
 #if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
-	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-	#define new DBG_NEW
+#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+#define new DBG_NEW
 #endif
 
 // This header should be frontend-agnostic, so don't assume wx includes everything
@@ -198,42 +222,42 @@ union s128
 /*
 struct u128
 {
-	__m128 m_val;
+__m128 m_val;
 
-	u128 GetValue128()
-	{
-		u128 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
+u128 GetValue128()
+{
+u128 ret;
+_mm_store_ps( (float*)&ret, m_val );
+return ret;
+}
 
-	u64 GetValue64()
-	{
-		u64 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
+u64 GetValue64()
+{
+u64 ret;
+_mm_store_ps( (float*)&ret, m_val );
+return ret;
+}
 
-	u32 GetValue32()
-	{
-		u32 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
+u32 GetValue32()
+{
+u32 ret;
+_mm_store_ps( (float*)&ret, m_val );
+return ret;
+}
 
-	u16 GetValue16()
-	{
-		u16 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
+u16 GetValue16()
+{
+u16 ret;
+_mm_store_ps( (float*)&ret, m_val );
+return ret;
+}
 
-	u8 GetValue8()
-	{
-		u8 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
+u8 GetValue8()
+{
+u8 ret;
+_mm_store_ps( (float*)&ret, m_val );
+return ret;
+}
 };
 */
 

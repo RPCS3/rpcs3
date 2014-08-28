@@ -4,9 +4,6 @@
     <Filter Include="Gui">
       <UniqueIdentifier>{98fb6fa5-9a9a-48a6-a6b4-be4b9a69b76e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="rpcs3">
-      <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utilities">
       <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
     </Filter>
@@ -19,12 +16,12 @@
     <Filter Include="Io\XInput">
       <UniqueIdentifier>{b30572ce-b602-4c10-ad69-bd3f1c8a0144}</UniqueIdentifier>
     </Filter>
+    <Filter Include="rpcs3">
+      <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
     <ClCompile Include="Gui\MainFrame.cpp">
@@ -45,9 +42,6 @@
     <ClCompile Include="Gui\GameViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\Thread.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\Debugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -65,27 +59,6 @@
     </ClCompile>
     <ClCompile Include="Gui\PADManager.cpp">
       <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\SMutex.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\StrFmt.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\rFile.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\rMsgBox.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\rPlatform.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\rTime.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\rXml.cpp">
-      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Gui\GLGSFrame.cpp">
       <Filter>Gui</Filter>
@@ -108,33 +81,18 @@
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
+    <ClCompile Include="stdafx_gui.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utilities\IdManager.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\MTProgressDialog.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\Thread.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\Timer.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\BEType.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SMutex.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SQueue.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\StrFmt.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Gui\CompilerELF.h">
@@ -170,9 +128,6 @@
     <ClInclude Include="Gui\VHDDManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>rpcs3</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
@@ -185,21 +140,6 @@
     <ClInclude Include="Gui\AboutDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\rFile.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rMsgBox.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rPlatform.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rTime.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rXml.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Gui\GLGSFrame.h">
       <Filter>Gui</Filter>
     </ClInclude>
@@ -208,9 +148,6 @@
     </ClInclude>
     <ClInclude Include="Gui\ConLogFrame.h">
       <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\MTRingbuffer.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Gui\AutoPauseManager.h">
       <Filter>Gui</Filter>
@@ -232,6 +169,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
       <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx_gui.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

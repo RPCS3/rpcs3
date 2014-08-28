@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <wx/image.h>
 
 #ifndef _WIN32
 #include <dirent.h>

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <wx/msgdlg.h>
 #include "rMsgBox.h"
 
 #ifndef QT_UI

@@ -422,7 +422,7 @@ void Emulator::Pause()
 	//ConLog.Write("pause...");
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (InterlockedCompareExchange((volatile unsigned long*)&m_status, Paused, Running) == Running)
+	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
 	}
@@ -512,9 +512,10 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	struct stat buf;
-	if (!stat(path.c_str(), &buf))
-		return;
+	if (!rExists(path)) return;
+	//struct stat buf;
+	//if (!stat(path.c_str(), &buf))
+		//return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;

@@ -3,6 +3,11 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include <wx/dialog.h>
+#include <wx/gauge.h>
+#include <wx/stattext.h>
+#include <wx/sizer.h>
+#include <wx/button.h>
 #include "Utilities/rMsgBox.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"

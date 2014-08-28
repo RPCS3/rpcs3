@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"

@@ -161,7 +161,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, mem_func_ptr_t<SceNpTrop
 	const size_t kTargetBufferLength = 31;
 	char target[kTargetBufferLength+1];
 	target[kTargetBufferLength] = 0;
-	snprintf(target, kTargetBufferLength, "TROP_%02d.SFM", Ini.SysLanguage.GetValue());
+	strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", Ini.SysLanguage.GetValue()));
 
 	if (trp.ContainsEntry(target)) {
 		trp.RemoveEntry("TROPCONF.SFM");
@@ -178,7 +178,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, mem_func_ptr_t<SceNpTrop
 
 	// Discard unnecessary TROP_XX.SFM files
 	for (int i=0; i<=18; i++) {
-		snprintf(target, kTargetBufferLength, "TROP_%02d.SFM", i);
+		strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", i));
 		if (i != Ini.SysLanguage.GetValue())
 			trp.RemoveEntry(target);
 	}

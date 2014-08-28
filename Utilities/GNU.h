@@ -83,3 +83,14 @@ int clock_gettime(int foo, struct timespec *ts);
 
 #define DWORD int32_t
 #endif
+
+#ifndef InterlockedCompareExchange
+static __forceinline uint32_t InterlockedCompareExchange(volatile uint32_t* dest, uint32_t exch, uint32_t comp)
+{
+	return _InterlockedCompareExchange((volatile long*)dest, exch, comp);
+}
+static __forceinline uint64_t InterlockedCompareExchange(volatile uint64_t* dest, uint64_t exch, uint64_t comp)
+{
+	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp);
+}
+#endif

@@ -365,9 +365,6 @@
     <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
-      <Filter>Emu\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -607,6 +604,21 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellFiber.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\rFile.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\rMsgBox.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\rPlatform.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\rTime.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\rXml.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -919,9 +931,6 @@
     <ClInclude Include="Loader\TROPUSR.h">
       <Filter>Loader</Filter>
     </ClInclude>
-    <ClInclude Include="Loader\TRP.h">
-      <Filter>Loader</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -949,9 +958,6 @@
     <ClInclude Include="Emu\SysCalls\Static.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\rFile.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h">
       <Filter>Utilities\SimpleIni</Filter>
     </ClInclude>
@@ -960,21 +966,6 @@
     </ClInclude>
     <ClInclude Include="Emu\DbgCommand.h">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rTime.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rXml.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rMsgBox.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rPlatform.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
-      <Filter>Emu\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h">
       <Filter>Emu\SysCalls\currently_unused</Filter>
@@ -1053,9 +1044,6 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\MTRingbuffer.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
@@ -1177,5 +1165,32 @@
     <ClInclude Include="Emu\SysCalls\Modules\SC_Mouse.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\MTRingbuffer.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\rFile.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\rMsgBox.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\rPlatform.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\rTime.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\rXml.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\GNU.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\TRP.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #if defined (_WIN32)
 #include "Utilities/Log.h"
 #include "XInputPadHandler.h"

@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include <wx/math.h>
 #include "cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Emu/RSX/GSManager.h"

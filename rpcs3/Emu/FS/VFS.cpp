@@ -5,6 +5,8 @@
 #include "vfsDeviceLocalFile.h"
 #include "Ini.h"
 
+#undef CreateFile // TODO: what's wrong with it?
+
 int sort_devices(const void* _a, const void* _b)
 {
 	const vfsDevice& a =  **(const vfsDevice**)_a;
