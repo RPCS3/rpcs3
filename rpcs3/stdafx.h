@@ -42,10 +42,15 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+static const u32 U32_MAX = 0xffffffff;
+
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
+
+static const s32 S32_MIN = -0x80000000;
+static const s32 S32_MAX = 0x7fffffff;
 
 union u128
 {
