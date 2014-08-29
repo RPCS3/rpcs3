@@ -1,5 +1,5 @@
 #pragma once
-#include <wx/string.h>
+class wxString;
 
 #if defined(_MSC_VER)
 #define snprintf _snprintf

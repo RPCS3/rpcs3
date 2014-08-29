@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include <wx/math.h>
 #include "cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Emu/RSX/GSManager.h"
@@ -15,7 +14,8 @@ static const float
 PICTURE_SIZE = (1.0f),
 UV_DELTA_PS = (1.f / 8.f),
 UV_DELTA_LB = (1.f / 6.f),
-XY_DELTA_LB = (1.f / 8.f);
+XY_DELTA_LB = (1.f / 8.f),
+M_PI = 3.1415926535897932384626433832795;
 
 void BuildupVertexBufferNR()
 {

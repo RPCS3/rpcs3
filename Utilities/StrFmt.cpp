@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "StrFmt.h"
+#include <wx/string.h>
 
 extern const std::string fmt::placeholder = "???";
 
