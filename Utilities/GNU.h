@@ -24,6 +24,7 @@ void strcpy_trunc(char (&dst)[size], const std::string& src)
 #include <cmath>
 #include <stdlib.h>
 #include <cstdint>
+#include <stat.h>
 
 #ifndef __APPLE__
 #include <malloc.h>
