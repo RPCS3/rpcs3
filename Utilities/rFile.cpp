@@ -66,7 +66,11 @@ bool rIsDir(const std::string &filename) {
 
 bool rMkdir(const std::string &dir)
 {
-	return !mkdir(dir.c_str());
+#ifdef _WIN32
+	return !_mkdir(dir.c_str());
+#else
+	return !mkdir(dir.c_str(), 0777);
+#endif
 }
 
 bool rMkpath(const std::string &path)
@@ -83,7 +87,11 @@ bool rMkpath(const std::string &path)
 		start = pos;
 		if(dir.size() == 0)
 			continue;
-		if((ret = mkdir(dir.c_str())) && errno != EEXIST){
+#ifdef _WIN32
+		if((ret = _mkdir(dir.c_str())) && errno != EEXIST){
+#else
+		if((ret = mkdir(dir.c_str(), 0777)) && errno != EEXIST){
+#endif
 			return !ret;
 		}
 		if (pos >= path.length())

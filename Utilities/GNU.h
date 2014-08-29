@@ -34,7 +34,6 @@ void strcpy_trunc(char (&dst)[size], const std::string& src)
 #define _byteswap_ushort(x) __builtin_bswap16(x)
 #define _byteswap_ulong(x) __builtin_bswap32(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
-#define mkdir(x) mkdir(x, 0777)
 #define INFINITE 0xFFFFFFFF
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)

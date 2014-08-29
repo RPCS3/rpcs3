@@ -48,7 +48,7 @@ std::string rPlatform::getConfigDir()
 		else // Just in case
 			dir = "./config";
 		dir = dir + "/rpcs3/";
-		mkdir(dir.c_str());
+		mkdir(dir.c_str(), 0777);
 #endif
 	}
 	return dir;
