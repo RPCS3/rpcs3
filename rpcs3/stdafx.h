@@ -32,6 +32,7 @@
 #include <functional>
 #include <algorithm>
 
+#include <sys/stat.h>
 #include "Utilities/GNU.h"
 
 typedef unsigned int uint;

@@ -512,10 +512,9 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	if (!rExists(path)) return;
-	//struct stat buf;
-	//if (!stat(path.c_str(), &buf))
-		//return;
+	struct stat buf;
+	if (!stat(path.c_str(), &buf))
+		return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;
