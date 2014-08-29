@@ -87,6 +87,9 @@
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\MsgDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -174,6 +177,9 @@
       <Filter>rpcs3</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MsgDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>

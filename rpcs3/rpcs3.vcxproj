@@ -175,6 +175,7 @@
     <ClCompile Include="Gui\KernelExplorer.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
+    <ClCompile Include="Gui\MsgDialog.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
     <ClCompile Include="Gui\SaveDataUtility.cpp" />
@@ -212,6 +213,7 @@
     <ClInclude Include="Gui\KernelExplorer.h" />
     <ClInclude Include="Gui\MainFrame.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
+    <ClInclude Include="Gui\MsgDialog.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />
     <ClInclude Include="Gui\RSXDebugger.h" />
     <ClInclude Include="Gui\SaveDataUtility.h" />

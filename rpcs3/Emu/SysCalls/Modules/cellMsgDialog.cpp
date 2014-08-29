@@ -3,11 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include <wx/dialog.h>
-#include <wx/gauge.h>
-#include <wx/stattext.h>
-#include <wx/sizer.h>
-#include <wx/button.h>
 #include "Utilities/rMsgBox.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
@@ -24,25 +19,67 @@ enum MsgDialogState
 };
 
 std::atomic<MsgDialogState> g_msg_dialog_state(msgDialogNone);
-wxDialog* g_msg_dialog = nullptr;
-wxGauge* m_gauge1 = nullptr;
-wxGauge* m_gauge2 = nullptr;
-wxStaticText* m_text1 = nullptr;
-wxStaticText* m_text2 = nullptr;
-u64 m_wait_until;
+u64 g_msg_dialog_wait_until;
+u32 g_msg_dialog_progress_bar_count;
+
+MsgDialogCreateCb MsgDialogCreate = nullptr;
+MsgDialogDestroyCb MsgDialogDestroy = nullptr;
+MsgDialogProgressBarSetMsgCb MsgDialogProgressBarSetMsg = nullptr;
+MsgDialogProgressBarResetCb MsgDialogProgressBarReset = nullptr;
+MsgDialogProgressBarIncCb MsgDialogProgressBarInc = nullptr;
+
+void SetMsgDialogCreateCallback(MsgDialogCreateCb cb)
+{
+	MsgDialogCreate = cb;
+}
+
+void SetMsgDialogDestroyCallback(MsgDialogDestroyCb cb)
+{
+	MsgDialogDestroy = cb;
+}
+
+void SetMsgDialogProgressBarSetMsgCallback(MsgDialogProgressBarSetMsgCb cb)
+{
+	MsgDialogProgressBarSetMsg = cb;
+}
+
+void SetMsgDialogProgressBarResetCallback(MsgDialogProgressBarResetCb cb)
+{
+	MsgDialogProgressBarReset = cb;
+}
+
+void SetMsgDialogProgressBarIncCallback(MsgDialogProgressBarIncCb cb)
+{
+	MsgDialogProgressBarInc = cb;
+}
+
+void MsgDialogClose()
+{
+	g_msg_dialog_state = msgDialogClose;
+	g_msg_dialog_wait_until = get_system_time();
+}
 
 int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
 		type, msgString.GetAddr(), callback.GetAddr(), userData, extParam);
 	
-	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE;
-	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO;
+	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE | CELL_MSGDIALOG_TYPE_BG_INVISIBLE;
+	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO;
 
 	MsgDialogState old = msgDialogNone;
 	if (!g_msg_dialog_state.compare_exchange_strong(old, msgDialogOpen))
 	{
 		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
+	g_msg_dialog_wait_until = get_system_time() + 31536000000000ull; // some big value
+
+	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+	{
+	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: g_msg_dialog_progress_bar_count = 2; break;
+	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: g_msg_dialog_progress_bar_count = 1; break;
+	default: g_msg_dialog_progress_bar_count = 0; break; // ???
 	}
 
 	thread t("MsgDialog thread", [=]()
@@ -59,124 +96,12 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		case CELL_MSGDIALOG_TYPE_SE_MUTE_ON: break;
 		}
 
-		switch (type & CELL_MSGDIALOG_TYPE_BG) // TODO
-		{
-		case CELL_MSGDIALOG_TYPE_BG_INVISIBLE: break; 
-		case CELL_MSGDIALOG_TYPE_BG_VISIBLE: break;
-		}
-
-		switch (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR) // TODO
-		{
-		case CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO: break;
-		default: break;
-		}
-
 		u64 status = CELL_MSGDIALOG_BUTTON_NONE;
 
 		volatile bool m_signal = false;
 		CallAfter([&]()
 		{
-			wxWindow* parent = nullptr; // TODO: align it better
-
-			m_gauge1 = nullptr;
-			m_gauge2 = nullptr;
-			m_text1 = nullptr;
-			m_text2 = nullptr;
-			wxButton* m_button_ok = nullptr;
-			wxButton* m_button_yes = nullptr;
-			wxButton* m_button_no = nullptr;
-
-			g_msg_dialog = new wxDialog(parent, wxID_ANY, type & CELL_MSGDIALOG_TYPE_SE_TYPE ? "" : "Error", wxDefaultPosition, wxDefaultSize);
-
-			g_msg_dialog->SetExtraStyle(g_msg_dialog->GetExtraStyle() | wxWS_EX_TRANSIENT);
-
-			wxSizer* sizer1 = new wxBoxSizer(wxVERTICAL);
-
-			wxStaticText* m_text = new wxStaticText(g_msg_dialog, wxID_ANY, wxString(msgString.GetString(), wxConvUTF8));
-			sizer1->Add(m_text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
-
-			switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
-			{
-			case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE:
-				m_gauge2 = new wxGauge(g_msg_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-				m_text2 = new wxStaticText(g_msg_dialog, wxID_ANY, "");
-				m_text2->SetAutoLayout(true);
-				
-			case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE:
-				m_gauge1 = new wxGauge(g_msg_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-				m_text1 = new wxStaticText(g_msg_dialog, wxID_ANY, "");
-				m_text1->SetAutoLayout(true);
-				
-			case CELL_MSGDIALOG_TYPE_PROGRESSBAR_NONE:
-				break;
-			}
-
-			if (m_gauge1)
-			{
-				sizer1->Add(m_text1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
-				sizer1->Add(m_gauge1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
-				m_gauge1->SetValue(0);
-			}
-			if (m_gauge2)
-			{
-				sizer1->Add(m_text2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
-				sizer1->Add(m_gauge2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
-				m_gauge2->SetValue(0);
-			}
-				
-			wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
-
-			switch (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE)
-			{
-			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
-				break;
-
-			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
-				m_button_yes = new wxButton(g_msg_dialog, wxID_YES);
-				buttons->Add(m_button_yes, 0, wxALIGN_CENTER_HORIZONTAL | wxRIGHT, 8);
-				m_button_no = new wxButton(g_msg_dialog, wxID_NO);
-				buttons->Add(m_button_no, 0, wxALIGN_CENTER_HORIZONTAL, 16);
-
-				sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
-				break;
-
-			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
-				m_button_ok = new wxButton(g_msg_dialog, wxID_OK);
-				buttons->Add(m_button_ok, 0, wxALIGN_CENTER_HORIZONTAL, 16);
-
-				sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
-				break;
-			}
-
-			sizer1->AddSpacer(16);
-
-			g_msg_dialog->SetSizerAndFit(sizer1);
-			g_msg_dialog->Centre(wxBOTH);
-			g_msg_dialog->Show();
-			g_msg_dialog->Enable();
-
-			g_msg_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
-			{
-				status = (event.GetId() == wxID_NO) ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES /* OK */;
-				g_msg_dialog->Hide();
-				m_wait_until = get_system_time();
-				g_msg_dialog_state = msgDialogClose;
-			});
-
-
-			g_msg_dialog->Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent& event)
-			{
-				if (type & CELL_MSGDIALOG_TYPE_DISABLE_CANCEL)
-				{
-				}
-				else
-				{
-					status = CELL_MSGDIALOG_BUTTON_ESCAPE;
-					g_msg_dialog->Hide();
-					m_wait_until = get_system_time();
-					g_msg_dialog_state = msgDialogClose;
-				}
-			});
+			MsgDialogCreate(type, (char*)msgString.GetPtr(), status);
 
 			m_signal = true;
 		});
@@ -186,7 +111,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
-		while (g_msg_dialog_state == msgDialogOpen || get_system_time() < m_wait_until)
+		while (g_msg_dialog_state == msgDialogOpen || (s64)(get_system_time() - g_msg_dialog_wait_until) < 0)
 		{
 			if (Emu.IsStopped())
 			{
@@ -201,8 +126,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 
 		CallAfter([&]()
 		{
-			delete g_msg_dialog;
-			g_msg_dialog = nullptr;
+			MsgDialogDestroy();
 		});
 
 		g_msg_dialog_state = msgDialogNone;
@@ -329,7 +253,7 @@ int cellMsgDialogClose(float delay)
 	}
 
 	if (delay < 0.0f) delay = 0.0f;
-	m_wait_until = get_system_time() + (u64)(delay * 1000);
+	g_msg_dialog_wait_until = get_system_time() + (u64)(delay * 1000);
 	return CELL_OK;
 }
 
@@ -350,7 +274,7 @@ int cellMsgDialogAbort()
 		}
 	}
 
-	m_wait_until = get_system_time();
+	g_msg_dialog_wait_until = get_system_time();
 	return CELL_OK;
 }
 
@@ -364,7 +288,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgS
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
+	if (progressBarIndex >= g_msg_dialog_progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -373,13 +297,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgS
 
 	CallAfter([text, progressBarIndex]()
 	{
-		if (g_msg_dialog && !Emu.IsStopped())
-		{
-			if (progressBarIndex == 0 && m_text1) m_text1->SetLabelText(fmt::FromUTF8(text));
-			if (progressBarIndex == 1 && m_text2) m_text2->SetLabelText(fmt::FromUTF8(text));
-			g_msg_dialog->Layout();
-			g_msg_dialog->Fit();
-		}
+		MsgDialogProgressBarSetMsg(progressBarIndex, text.c_str());
 	});
 	return CELL_OK;
 }
@@ -393,18 +311,14 @@ int cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
+	if (progressBarIndex >= g_msg_dialog_progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
 	CallAfter([=]()
 	{
-		if (g_msg_dialog)
-		{
-			if (progressBarIndex == 0 && m_gauge1) m_gauge1->SetValue(0);
-			if (progressBarIndex == 1 && m_gauge2) m_gauge2->SetValue(0);
-		}
+		MsgDialogProgressBarReset(progressBarIndex);
 	});
 	return CELL_OK;
 }
@@ -418,18 +332,14 @@ int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= (m_gauge1 ? 1u : 0u) + (m_gauge2 ? 1u : 0u))
+	if (progressBarIndex >= g_msg_dialog_progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
 	CallAfter([=]()
 	{
-		if (g_msg_dialog)
-		{
-			if (progressBarIndex == 0 && m_gauge1) m_gauge1->SetValue(m_gauge1->GetValue() + delta);
-			if (progressBarIndex == 1 && m_gauge2) m_gauge2->SetValue(m_gauge2->GetValue() + delta);
-		}
+		MsgDialogProgressBarInc(progressBarIndex, delta);
 	});
 	return CELL_OK;
 }
