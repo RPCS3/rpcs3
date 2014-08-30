@@ -33,7 +33,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = Memory.Alloc(size(), m_align);
+			m_addr = (u32)Memory.Alloc(size(), m_align);
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 

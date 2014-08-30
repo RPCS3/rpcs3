@@ -23,6 +23,6 @@ namespace vm
 	void write32(u32 addr, u32 value);
 }
 
-#include "vm_ptr.h"
 #include "vm_ref.h"
+#include "vm_ptr.h"
 #include "vm_var.h"

@@ -85,11 +85,6 @@ namespace vm
 		{
 			return m_addr;
 		}
-		
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr, sizeof(AT));
-		}
 
 		static ptr make(u32 addr)
 		{
@@ -208,11 +203,6 @@ namespace vm
 			return vm::get_ptr<T>(m_addr);
 		}
 		
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr, sizeof(T));
-		}
-
 		static ptr make(u32 addr)
 		{
 			return (ptr&)addr;
@@ -233,11 +223,6 @@ namespace vm
 		void* get_ptr() const
 		{
 			return vm::get_ptr<void>(m_addr);
-		}
-		
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr);
 		}
 
 		operator bool() const
@@ -286,11 +271,6 @@ namespace vm
 			return *((type*)vm::get_ptr<void*>(m_addr));
 		}
 
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr);
-		}
-
 		operator bool() const
 		{
 			return m_addr != 0;
@@ -307,35 +287,35 @@ namespace vm
 	{
 		AT m_addr;
 
+		template<typename TT>
+		struct _func_arg
+		{
+			__forceinline static u64 get_value(const TT& arg)
+			{
+				return arg;
+			}
+		};
+
+		template<typename TT, typename ATT>
+		struct _func_arg<ptr<TT, 1, ATT>>
+		{
+			__forceinline static u64 get_value(const ptr<TT, 1, ATT> arg)
+			{
+				return arg.addr();
+			}
+		};
+
+		template<typename TT, typename ATT>
+		struct _func_arg<_ref_base<TT, ATT>>
+		{
+			__forceinline static u64 get_value(const _ref_base<TT, ATT> arg)
+			{
+				return arg.addr();
+			}
+		};
+
 		__forceinline RT call_func(bool is_async, T... args) const
 		{
-			template<typename TT>
-			struct _func_arg
-			{
-				__forceinline static u64 get_value(const TT& arg)
-				{
-					return arg;
-				}
-			};
-
-			template<typename TT, typename ATT>
-			struct _func_arg<ptr<TT, ATT>>
-			{
-				__forceinline static u64 get_value(const ptr<TT, ATT> arg)
-				{
-					return arg.addr();
-				}
-			};
-
-			template<typename TT, typename ATT>
-			struct _func_arg<ref<TT, ATT>>
-			{
-				__forceinline static u64 get_value(const ref<TT, ATT> arg)
-				{
-					return arg.addr();
-				}
-			};
-
 			Callback cb;
 			cb.SetAddr(m_addr);
 			cb.Handle(_func_arg<T>::get_value(args)...);
@@ -363,11 +343,6 @@ namespace vm
 		type get_ptr() const
 		{
 			return *((type*)vm::get_ptr<void*>(m_addr));
-		}
-
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr);
 		}
 
 		operator bool() const

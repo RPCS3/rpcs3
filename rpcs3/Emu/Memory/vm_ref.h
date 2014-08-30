@@ -23,11 +23,6 @@ namespace vm
 			return m_addr;
 		}
 
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr, sizeof(T));
-		}
-
 		static _ref_base make(u32 addr)
 		{
 			return (_ref_base&)addr;
