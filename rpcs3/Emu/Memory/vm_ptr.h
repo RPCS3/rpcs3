@@ -105,12 +105,12 @@ namespace vm
 	public:
 		__forceinline T* operator -> ()
 		{
-			return get_ptr<T>(m_addr);
+			return vm::get_ptr<T>(m_addr);
 		}
 
 		__forceinline const T* operator -> () const
 		{
-			return get_ptr<const T>(m_addr);
+			return vm::get_ptr<const T>(m_addr);
 		}
 
 		ptr operator++ (int)
@@ -309,28 +309,28 @@ namespace vm
 
 		__forceinline RT call_func(bool is_async, T... args) const
 		{
-			template<typename T>
+			template<typename TT>
 			struct _func_arg
 			{
-				__forceinline static u64 get_value(const T& arg)
+				__forceinline static u64 get_value(const TT& arg)
 				{
 					return arg;
 				}
 			};
 
-			template<typename T, typename AT>
-			struct _func_arg<ptr<T, AT>>
+			template<typename TT, typename ATT>
+			struct _func_arg<ptr<TT, ATT>>
 			{
-				__forceinline static u64 get_value(const ptr<T, AT> arg)
+				__forceinline static u64 get_value(const ptr<TT, ATT> arg)
 				{
 					return arg.addr();
 				}
 			};
 
-			template<typename T, typename AT>
-			struct _func_arg<ref<T, AT>>
+			template<typename TT, typename ATT>
+			struct _func_arg<ref<TT, ATT>>
 			{
-				__forceinline static u64 get_value(const ref<T, AT> arg)
+				__forceinline static u64 get_value(const ref<TT, ATT> arg)
 				{
 					return arg.addr();
 				}

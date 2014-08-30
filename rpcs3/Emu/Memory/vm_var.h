@@ -34,16 +34,16 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
+			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
 		void dealloc()
 		{
-			if (check())
+			if (m_addr)
 			{
 				Memory.Free(m_addr);
 				m_addr = 0;
-				m_ptr = nullptr;
+				m_ptr = vm::get_ptr<T>(0);
 			}
 		}
 		
@@ -54,7 +54,7 @@ namespace vm
 			res.m_addr = addr;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = (T*)Memory.VirtualToRealAddr(addr);
+			res.m_ptr = vm::get_ptr<T>(addr);
 
 			return res;
 		}
@@ -97,11 +97,6 @@ namespace vm
 		u32 size() const
 		{
 			return m_size;
-		}
-
-		bool check() const
-		{
-			return m_ptr != nullptr;
 		}
 
 		/*
@@ -155,13 +150,13 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
+			m_addr = (u32)Memory.Alloc(size(), m_align);
+			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
 		void dealloc()
 		{
-			if (check())
+			if (m_addr)
 			{
 				Memory.Free(m_addr);
 				m_addr = 0;
@@ -177,7 +172,7 @@ namespace vm
 			res.m_count = count;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = (T*)Memory.VirtualToRealAddr(addr);
+			res.m_ptr = vm::get_ptr<T>(addr);
 
 			return res;
 		}
@@ -235,11 +230,6 @@ namespace vm
 		uint count() const
 		{
 			return m_count;
-		}
-
-		bool check() const
-		{
-			return Memory.IsGoodAddr(m_addr, size());
 		}
 
 		template<typename T1>
@@ -354,17 +344,17 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
+			m_addr = (u32)Memory.Alloc(size(), m_align);
+			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
 		void dealloc()
 		{
-			if (check())
+			if (m_addr)
 			{
 				Memory.Free(m_addr);
 				m_addr = 0;
-				m_ptr = nullptr;
+				m_ptr = vm::get_ptr<T>(0);
 			}
 		}
 
@@ -421,11 +411,6 @@ namespace vm
 		uint size() const
 		{
 			return _count * m_size;
-		}
-
-		bool check() const
-		{
-			return m_ptr != nullptr;
 		}
 
 		template<typename T1>
