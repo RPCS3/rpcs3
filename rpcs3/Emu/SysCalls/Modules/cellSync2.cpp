@@ -9,7 +9,7 @@
 //Module cellSync2(0x0055, cellSync2_init);
 Module* cellSync2 = nullptr;
 
-#ifdef PRX_DEBUG
+#ifdef _WIN32
 #include "prx_libsync2.h"
 u32 libsync2;
 u32 libsync2_rtoc;

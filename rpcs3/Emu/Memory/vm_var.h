@@ -34,7 +34,7 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
+			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
 		}
 
 		void dealloc()
@@ -54,7 +54,7 @@ namespace vm
 			res.m_addr = addr;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = Memory.IsGoodAddr(addr, size) ? get_ptr<T>(addr) : nullptr;
+			res.m_ptr = (T*)Memory.VirtualToRealAddr(addr);
 
 			return res;
 		}
@@ -156,7 +156,7 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
+			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
 		}
 
 		void dealloc()
@@ -177,7 +177,7 @@ namespace vm
 			res.m_count = count;
 			res.m_size = size;
 			res.m_align = align;
-			res.m_ptr = Memory.IsGoodAddr(addr, size * count) ? get_ptr<T>(addr) : nullptr;
+			res.m_ptr = (T*)Memory.VirtualToRealAddr(addr);
 
 			return res;
 		}
@@ -355,7 +355,7 @@ namespace vm
 		void alloc()
 		{
 			m_addr = Memory.Alloc(size(), m_align);
-			m_ptr = Memory.IsGoodAddr(m_addr, size()) ? get_ptr<T>(m_addr) : nullptr;
+			m_ptr = (T*)Memory.VirtualToRealAddr(m_addr);
 		}
 
 		void dealloc()

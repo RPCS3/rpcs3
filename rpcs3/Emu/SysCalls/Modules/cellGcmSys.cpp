@@ -129,8 +129,8 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 	cellGcmSys->Warning("cellGcmGetNotifyDataAddress(index=%d)", index);
 
 	// Get address of 'IO table' and 'EA table'
-	MemoryAllocator<CellGcmOffsetTable> table;
-	cellGcmGetOffsetTable(table.GetAddr());
+	vm::var<CellGcmOffsetTable> table;
+	cellGcmGetOffsetTable(table.addr());
 
 	// If entry not in use, return NULL
 	u16 entry = mem_ptr_t<u16>(table->eaAddress)[241];

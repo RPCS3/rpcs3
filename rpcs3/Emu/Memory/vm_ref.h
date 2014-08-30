@@ -28,9 +28,9 @@ namespace vm
 			return Memory.IsGoodAddr(m_addr, sizeof(T));
 		}
 
-		static ref make(u32 addr)
+		static _ref_base make(u32 addr)
 		{
-			return (ref&)addr;
+			return (_ref_base&)addr;
 		}
 	};
 
@@ -49,15 +49,15 @@ namespace vm
 	namespace ps3
 	{
 		//default reference for HLE functions (LE reference to BE data)
-		template<typename T, typename AT = u32> class ref : public lrefb {};
+		template<typename T, typename AT = u32> class ref : public lrefb<T, AT> {};
 
 		//default reference for HLE structures (BE reference to BE data)
-		template<typename T, typename AT = u32> class bref : public brefb {};
+		template<typename T, typename AT = u32> class bref : public brefb<T, AT> {};
 	}
 
 	namespace psv
 	{
 		//default reference for HLE functions & structures (LE reference to LE data)
-		template<typename T, typename AT = u32> class ref : public lrefl {};
+		template<typename T, typename AT = u32> class ref : public lrefl<T, AT> {};
 	}
 }

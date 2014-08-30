@@ -8,7 +8,7 @@
 
 Module* cellSpursJq = nullptr;
 
-#ifdef PRX_DEBUG
+#ifdef _WIN32
 #include "prx_libspurs_jq.h"
 u32 libspurs_jq;
 u32 libspurs_jq_rtoc;

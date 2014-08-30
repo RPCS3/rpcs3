@@ -11,7 +11,7 @@
 //Module cellSync("cellSync", cellSync_init);
 Module *cellSync = nullptr;
 
-#ifdef PRX_DEBUG
+#ifdef _WIN32
 #include "prx_libsre.h"
 u32 libsre;
 u32 libsre_rtoc;	
@@ -1514,7 +1514,7 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 	//syncLFQueueDump(queue);
 
 #ifdef PRX_DEBUG
-	MemoryAllocator<be_t<s32>> position_v;
+	vm::var<be_t<s32>> position_v;
 #endif
 	while (true)
 	{
@@ -1523,7 +1523,7 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 		{
 #ifdef PRX_DEBUG_XXX
-			res = GetCurrentPPUThread().FastCall(libsre + 0x24B0, libsre_rtoc, queue.GetAddr(), position_v.GetAddr(), isBlocking, 0);
+			res = GetCurrentPPUThread().FastCall(libsre + 0x24B0, libsre_rtoc, queue.GetAddr(), position_v.addr(), isBlocking, 0);
 			position = position_v->ToLE();
 #else
 			res = syncLFQueueGetPushPointer(queue, position, isBlocking, 0);
@@ -1532,7 +1532,7 @@ s32 _cellSyncLFQueuePushBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, 
 		else
 		{
 #ifdef PRX_DEBUG
-			res = (s32)GetCurrentPPUThread().FastCall(libsre + 0x3050, libsre_rtoc, queue.GetAddr(), position_v.GetAddr(), isBlocking, 0);
+			res = (s32)GetCurrentPPUThread().FastCall(libsre + 0x3050, libsre_rtoc, queue.GetAddr(), position_v.addr(), isBlocking, 0);
 			position = position_v->ToLE();
 #else
 			res = syncLFQueueGetPushPointer2(queue, position, isBlocking, 0);
@@ -1906,7 +1906,7 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 
 	s32 position;
 #ifdef PRX_DEBUG
-	MemoryAllocator<be_t<s32>> position_v;
+	vm::var<be_t<s32>> position_v;
 #endif
 	while (true)
 	{
@@ -1914,7 +1914,7 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 		{
 #ifdef PRX_DEBUG_XXX
-			res = GetCurrentPPUThread().FastCall(libsre + 0x2A90, libsre_rtoc, queue.GetAddr(), position_v.GetAddr(), isBlocking, 0, 0);
+			res = GetCurrentPPUThread().FastCall(libsre + 0x2A90, libsre_rtoc, queue.GetAddr(), position_v.addr(), isBlocking, 0, 0);
 			position = position_v->ToLE();
 #else
 			res = syncLFQueueGetPopPointer(queue, position, isBlocking, 0, 0);
@@ -1923,7 +1923,7 @@ s32 _cellSyncLFQueuePopBody(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u
 		else
 		{
 #ifdef PRX_DEBUG
-			res = (s32)GetCurrentPPUThread().FastCall(libsre + 0x39AC, libsre_rtoc, queue.GetAddr(), position_v.GetAddr(), isBlocking, 0);
+			res = (s32)GetCurrentPPUThread().FastCall(libsre + 0x39AC, libsre_rtoc, queue.GetAddr(), position_v.addr(), isBlocking, 0);
 			position = position_v->ToLE();
 #else
 			res = syncLFQueueGetPopPointer2(queue, position, isBlocking, 0);
