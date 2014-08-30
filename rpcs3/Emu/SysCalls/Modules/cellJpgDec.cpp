@@ -93,7 +93,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer(fileSize);
+	MemoryAllocator<u8> buffer((u32)fileSize);
 	MemoryAllocator<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
@@ -104,7 +104,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 
 	case se32(CELL_JPGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
 		break;
 	}
 
@@ -162,7 +162,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the JPG file to a buffer
-	MemoryAllocator<unsigned char> jpg(fileSize);
+	MemoryAllocator<unsigned char> jpg((u32)fileSize);
 	MemoryAllocator<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
@@ -173,7 +173,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	case se32(CELL_JPGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread);
+		cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread.GetAddr());
 		break;
 	}
 
@@ -181,7 +181,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(jpg.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(jpg.GetPtr(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 
@@ -189,7 +189,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	size_t image_size = width * height;
 
 	switch((u32)current_outParam.outputColorSpace)
@@ -274,7 +274,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_FINISH;
 
 	if(dataCtrlParam->outputBytesPerLine)
-		dataOutInfo->outputLines = image_size / dataCtrlParam->outputBytesPerLine;
+		dataOutInfo->outputLines = (u32)(image_size / dataCtrlParam->outputBytesPerLine);
 
 	return CELL_OK;
 }

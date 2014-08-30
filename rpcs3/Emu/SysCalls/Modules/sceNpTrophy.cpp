@@ -404,7 +404,7 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, mem_ptr_t<Sc
 			}
 
 			data->trophyId = trophyId;
-			data->unlocked = ctxt.tropusr->GetTrophyUnlockState(trophyId);
+			data->unlocked = ctxt.tropusr->GetTrophyUnlockState(trophyId) ? true : false; // ???
 			data->timestamp.tick = ctxt.tropusr->GetTrophyTimestamp(trophyId);
 		}		
 	}

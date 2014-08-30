@@ -5,11 +5,11 @@
 
 struct mmapper_info
 {
-	u64 addr;
+	u32 addr;
 	u32 size;
-	u32 flags;
+	u64 flags;
 
-	mmapper_info(u64 _addr, u32 _size, u32 _flags)
+	mmapper_info(u32 _addr, u32 _size, u64 _flags)
 		: addr(_addr)
 		, size(_size)
 		, flags(_flags)

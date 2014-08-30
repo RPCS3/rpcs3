@@ -162,7 +162,7 @@ int cellSSPlayerCreate(mem32_t handle, mem_ptr_t<CellSSPlayerConfig> config)
 	p.m_channels = config->channels;
 	
 	ssp.push_back(p);
-	handle = ssp.size() - 1;
+	handle = (u32)ssp.size() - 1;
 	return CELL_OK;
 }
 

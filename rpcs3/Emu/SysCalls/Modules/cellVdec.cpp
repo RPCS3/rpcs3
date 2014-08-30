@@ -702,11 +702,11 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	info->size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
 	info->auNum = 1;
-	info->auPts[0].lower = vf.pts;
+	info->auPts[0].lower = (u32)vf.pts;
 	info->auPts[0].upper = vf.pts >> 32;
 	info->auPts[1].lower = 0xffffffff;
 	info->auPts[1].upper = 0xffffffff;
-	info->auDts[0].lower = vf.dts;
+	info->auDts[0].lower = (u32)vf.dts;
 	info->auDts[0].upper = vf.dts >> 32;
 	info->auDts[1].lower = 0xffffffff;
 	info->auDts[1].upper = 0xffffffff;

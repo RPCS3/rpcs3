@@ -52,12 +52,12 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x100000);
+		ct->addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x10000);
+		ct->addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default: return CELL_EINVAL;
@@ -113,7 +113,7 @@ s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
 	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.GetAddr(), yield_size);
 
 	yield_size &= ~0xfffff; //round down to 1 MB granularity
-	u64 addr = Memory.Alloc(yield_size, 0x100000); //1 MB alignment
+	u32 addr = (u32)Memory.Alloc(yield_size, 0x100000); //1 MB alignment
 
 	if(!addr)
 		return CELL_ENOMEM;

@@ -345,7 +345,7 @@ int socketselect()
 int sys_net_initialize_network_ex(mem_ptr_t<sys_net_initialize_parameter> param)
 {
 	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.GetAddr());
-	g_lastError.SetAddr(Memory.Alloc(4, 1));
+	g_lastError.SetAddr((u32)Memory.Alloc(4, 1));
 #ifdef _WIN32
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1,1);

@@ -14,7 +14,7 @@ LogManager *gLogManager = nullptr;
 u32 LogMessage::size()
 {
 	//1 byte for NULL terminator
-	return sizeof(LogMessage::size_type) + sizeof(LogType) + sizeof(LogSeverity) + sizeof(std::string::value_type)*mText.size() + 1;
+	return (u32)(sizeof(LogMessage::size_type) + sizeof(LogType) + sizeof(LogSeverity) + sizeof(std::string::value_type) * mText.size() + 1);
 }
 
 void LogMessage::serialize(char *output)

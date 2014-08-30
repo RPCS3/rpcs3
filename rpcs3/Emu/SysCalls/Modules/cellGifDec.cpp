@@ -84,7 +84,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
 		break;
 	}
 
@@ -155,7 +155,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellGifDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the GIF file to a buffer
-	MemoryAllocator<unsigned char> gif(fileSize);
+	MemoryAllocator<unsigned char> gif((u32)fileSize);
 	MemoryAllocator<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
@@ -166,7 +166,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread);
+		cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread.GetAddr());
 		break;
 	}
 
@@ -174,14 +174,14 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(gif.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(gif.GetPtr(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 
 	if (!image)
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
-	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	const char nComponents = 4;
 	uint image_size = width * height * nComponents;
 

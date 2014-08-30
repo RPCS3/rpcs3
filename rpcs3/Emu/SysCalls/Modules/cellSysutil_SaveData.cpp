@@ -74,7 +74,7 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 	saveEntry.title = psf.GetString("TITLE");
 	saveEntry.subtitle = psf.GetString("SUB_TITLE");
 	saveEntry.details = psf.GetString("DETAIL");
-	saveEntry.sizeKB = getSaveDataSize(saveDir)/1024;
+	saveEntry.sizeKB = (u32)(getSaveDataSize(saveDir) / 1024);
 	saveEntry.st_atime_ = 0; // TODO
 	saveEntry.st_mtime_ = 0; // TODO
 	saveEntry.st_ctime_ = 0; // TODO
@@ -209,7 +209,7 @@ void getSaveDataStat(SaveDataEntry entry, mem_ptr_t<CellSaveDataStatGet> statGet
 		}
 	}
 
-	statGet->fileList.SetAddr(be_t<u32>::MakeFromLE(Memory.Alloc(sizeof(CellSaveDataFileStat)* fileEntries.size(), sizeof(CellSaveDataFileStat))));
+	statGet->fileList.SetAddr(be_t<u32>::MakeFromLE((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
 	for (u32 i=0; i<fileEntries.size(); i++)
 		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
 }
@@ -256,13 +256,13 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 			file = Emu.GetVFS().OpenFile(filepath, vfsRead);
-			fileGet->excSize = file->Read(buf, std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
+			fileGet->excSize = (u32)file->Read(buf, (u32)std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
 			break;
 		
 		case CELL_SAVEDATA_FILEOP_WRITE:
 			Emu.GetVFS().CreateFile(filepath);
 			file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
-			fileGet->excSize = file->Write(buf, std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
+			fileGet->excSize = (u32)file->Write(buf, (u32)std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
 			break;
 
 		case CELL_SAVEDATA_FILEOP_DELETE:

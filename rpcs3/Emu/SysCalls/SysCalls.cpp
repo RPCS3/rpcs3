@@ -916,7 +916,7 @@ struct SyscallTableCleaner_t
 void default_syscall()
 {
 	declCPU();
-	u32 code = CPU.GPR[11];
+	u32 code = (u32)CPU.GPR[11];
 	//TODO: remove this
 	switch(code)
 	{

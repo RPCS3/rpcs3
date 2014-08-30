@@ -122,7 +122,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
-			callback.async(status, userData);
+			callback.async((s32)status, userData); // TODO: this callback should be registered
 
 		CallAfter([&]()
 		{
@@ -230,7 +230,7 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallba
 	}
 
 	if (callback)
-		callback(status, userData);
+		callback((s32)status, userData);
 
 	return CELL_OK;
 }

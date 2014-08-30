@@ -198,7 +198,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellPngDecOutParam& current_outParam = subHandle_data->outParam;
 
 	//Copy the PNG file to a buffer
-	MemoryAllocator<unsigned char> png(fileSize);
+	MemoryAllocator<unsigned char> png((u32)fileSize);
 	MemoryAllocator<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
@@ -217,13 +217,13 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 			(
-				stbi_load_from_memory(png.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+				stbi_load_from_memory(png.GetPtr(), (s32)fileSize, &width, &height, &actual_components, 4),
 				&::free
 			);
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 
 	const bool flip = current_outParam.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	uint image_size = width * height;
 
 	switch((u32)current_outParam.outputColorSpace)

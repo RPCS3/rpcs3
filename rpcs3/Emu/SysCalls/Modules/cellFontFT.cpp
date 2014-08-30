@@ -21,7 +21,7 @@ int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, mem_ptr_t<CellFon
 	//if (s_fontInternalInstance->m_bInitialized)
 		//return CELL_FONT_ERROR_UNINITIALIZED;
 
-	Memory.Write32(lib_addr_addr, Memory.Alloc(sizeof(CellFontLibrary), 1));
+	Memory.Write32(lib_addr_addr, (u32)Memory.Alloc(sizeof(CellFontLibrary), 1));
 
 	return CELL_OK;
 }

@@ -66,7 +66,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	u32 blockSize      = re32(*(u32*)&buffer[0x84]);
 	u64 filesizeOutput = re64(*(u64*)&buffer[0x88]);
 	u64 filesizeInput  = packed_stream->GetSize();
-	u32 blockCount     = (filesizeOutput + blockSize-1) / blockSize;
+	u32 blockCount     = (u32)((filesizeOutput + blockSize - 1) / blockSize);
 
 	// SDATA file is compressed
 	if (flags & 0x1)
@@ -99,7 +99,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 				packed_stream->Seek(packed_stream->Tell() + t1);
 
 			if (!(blockCount-i-1))
-				blockSize = filesizeOutput-i*blockSize;
+				blockSize = (u32)(filesizeOutput - i * blockSize);
 
 			packed_stream->Read(buffer+256, blockSize);
 			unpacked_stream->Write(buffer+256, blockSize);

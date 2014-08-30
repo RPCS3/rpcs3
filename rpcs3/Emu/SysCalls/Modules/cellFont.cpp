@@ -96,8 +96,8 @@ int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath
 	if (!f.IsOpened())
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
-	u32 fileSize = f.GetSize();
-	u32 bufferAddr = Memory.Alloc(fileSize, 1); // Freed in cellFontCloseFont
+	u32 fileSize = (u32)f.GetSize();
+	u32 bufferAddr = (u32)Memory.Alloc(fileSize, 1); // Freed in cellFontCloseFont
 	f.Read(Memory.VirtualToRealAddr(bufferAddr), fileSize);
 	int ret = cellFontOpenFontMemory(library.GetAddr(), bufferAddr, fileSize, subNum, uniqueId, font.GetAddr());
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
@@ -180,7 +180,7 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	u32 file_addr = Memory.Alloc(file.length()+1, 1);
+	u32 file_addr = (u32)Memory.Alloc((u32)file.length() + 1, 1);
 	Memory.WriteString(file_addr, file);
 	int ret = cellFontOpenFontFile(library.GetAddr(), file_addr, 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
@@ -234,7 +234,7 @@ void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buf
 	surface->height			= h;
 
 	if (!buffer_addr)
-		surface->buffer_addr = Memory.Alloc(bufferWidthByte * h, 1); // TODO: Huge memory leak
+		surface->buffer_addr = (u32)Memory.Alloc(bufferWidthByte * h, 1); // TODO: Huge memory leak
 }
 
 void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
@@ -250,8 +250,6 @@ void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s
 
 int cellFontSetScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 {
-	w = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
-	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
 	font->scale_x = w;
@@ -305,8 +303,6 @@ int cellFontDestroyRenderer()
 
 int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 {
-	w = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
-	h = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
 
 	if (!font->renderer_addr)
@@ -330,8 +326,6 @@ int cellFontGetRenderCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_pt
 
 int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontRenderSurface> surface, float x, float y, mem_ptr_t<CellFontGlyphMetrics> metrics, mem_ptr_t<CellFontImageTransInfo> transInfo)
 {
-	x = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
-	y = GetCurrentPPUThread().FPR[2]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontRenderCharGlyphImage(font_addr=0x%x, code=0x%x, surface_addr=0x%x, x=%f, y=%f, metrics_addr=0x%x, trans_addr=0x%x)",
 		font.GetAddr(), code, surface.GetAddr(), x, y, metrics.GetAddr(), transInfo.GetAddr());
 
@@ -348,7 +342,7 @@ int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<C
 	int baseLineY;
 	int ascent, descent, lineGap;
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
-	baseLineY = ascent * scale;
+	baseLineY = (int)((float)ascent * scale); // ???
 
 	// Move the rendered character to the surface
 	unsigned char* buffer = (unsigned char*)Memory.VirtualToRealAddr(surface->buffer_addr);
@@ -376,7 +370,6 @@ int cellFontEndLibrary()
 
 int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 {
-	slantParam = GetCurrentPPUThread().FPR[1]; // TODO: Something is wrong with the float arguments
 	cellFont->Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.GetAddr(), slantParam);
 
 	if (slantParam < -1.0 || slantParam > 1.0)
@@ -386,11 +379,11 @@ int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 	return CELL_FONT_OK;
 }
 
-int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem32_t slantParam)
+int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem_ptr_t<be_t<float>> slantParam)
 {
 	cellFont->Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.GetAddr(), slantParam.GetAddr());
 
-	slantParam = font->slant; //Does this conversion from be_t<float> to *mem32_t work?
+	*slantParam = font->slant;
 	return CELL_FONT_OK;
 }
 

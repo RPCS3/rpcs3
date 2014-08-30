@@ -225,7 +225,7 @@ int cellRtcTickAddMinutes(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> 
 	cellRtc->Log("cellRtcTickAddMinutes(pTick0=0x%x, pTick1=0x%x, lAdd=%lld)", pTick0.GetAddr(), pTick1.GetAddr(), lAdd);
 	
 	rDateTime date = rDateTime((time_t)pTick1->tick);
-	rTimeSpan minutes = rTimeSpan(0, lAdd, 0, 0);
+	rTimeSpan minutes = rTimeSpan(0, lAdd, 0, 0); // ???
 	date.Add(minutes);
 	pTick0->tick = date.GetTicks();
 
@@ -237,7 +237,7 @@ int cellRtcTickAddHours(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pT
 	cellRtc->Log("cellRtcTickAddHours(pTick0=0x%x, pTick1=0x%x, iAdd=%d)", pTick0.GetAddr(), pTick1.GetAddr(), iAdd);
 
 	rDateTime date = rDateTime((time_t)pTick1->tick);
-	rTimeSpan hours = rTimeSpan(iAdd, 0, 0, 0);
+	rTimeSpan hours = rTimeSpan(iAdd, 0, 0, 0); // ???
 	date.Add(hours);
 	pTick0->tick = date.GetTicks();
 
@@ -249,7 +249,7 @@ int cellRtcTickAddDays(mem_ptr_t<CellRtcTick> pTick0, mem_ptr_t<CellRtcTick> pTi
 	cellRtc->Log("cellRtcTickAddDays(pTick0=0x%x, pTick1=0x%x, iAdd=%d)", pTick0.GetAddr(), pTick1.GetAddr(), iAdd);
 
 	rDateTime date = rDateTime((time_t)pTick1->tick);
-	rDateSpan days = rDateSpan(0, 0, 0, iAdd);
+	rDateSpan days = rDateSpan(0, 0, 0, iAdd); // ???
 	date.Add(days);
 	pTick0->tick = date.GetTicks();
 

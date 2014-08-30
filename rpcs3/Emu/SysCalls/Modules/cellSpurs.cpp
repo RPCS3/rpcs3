@@ -14,7 +14,7 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
-s32 cellSpursInitialize(mem_ptr_t<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s64 cellSpursInitialize(mem_ptr_t<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
 {
 	cellSpurs->Warning("cellSpursInitialize(spurs_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)", spurs.GetAddr(), nSpus, spuPriority, ppuPriority, exitIfNoWork);
 
@@ -28,7 +28,7 @@ s32 cellSpursInitialize(mem_ptr_t<CellSpurs> spurs, s32 nSpus, s32 spuPriority, 
 #endif
 }
 
-s32 cellSpursFinalize(mem_ptr_t<CellSpurs> spurs)
+s64 cellSpursFinalize(mem_ptr_t<CellSpurs> spurs)
 {
 	cellSpurs->Warning("cellSpursFinalize(spurs_addr=0x%x)", spurs.GetAddr());
 
@@ -41,7 +41,7 @@ s32 cellSpursFinalize(mem_ptr_t<CellSpurs> spurs)
 #endif
 }
 
-s32 cellSpursInitializeWithAttribute(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursAttribute> attr)
+s64 cellSpursInitializeWithAttribute(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t<CellSpursAttribute> attr)
 {
 	cellSpurs->Warning("cellSpursInitializeWithAttribute(spurs_addr=0x%x, spurs_addr=0x%x)", spurs.GetAddr(), attr.GetAddr());
 
@@ -54,7 +54,7 @@ s32 cellSpursInitializeWithAttribute(mem_ptr_t<CellSpurs> spurs, const mem_ptr_t
 #endif
 }
 
-s32 cellSpursInitializeWithAttribute2(mem_ptr_t<CellSpurs2> spurs, const mem_ptr_t<CellSpursAttribute> attr)
+s64 cellSpursInitializeWithAttribute2(mem_ptr_t<CellSpurs2> spurs, const mem_ptr_t<CellSpursAttribute> attr)
 {
 	cellSpurs->Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, spurs_addr=0x%x)", spurs.GetAddr(), attr.GetAddr());
 
@@ -67,7 +67,7 @@ s32 cellSpursInitializeWithAttribute2(mem_ptr_t<CellSpurs2> spurs, const mem_ptr
 #endif
 }
 
-s32 _cellSpursAttributeInitialize(mem_ptr_t<CellSpursAttribute> attr, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s64 _cellSpursAttributeInitialize(mem_ptr_t<CellSpursAttribute> attr, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
 {
 	cellSpurs->Warning("_cellSpursAttributeInitialize(attr_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		attr.GetAddr(), nSpus, spuPriority, ppuPriority, exitIfNoWork);
@@ -81,7 +81,7 @@ s32 _cellSpursAttributeInitialize(mem_ptr_t<CellSpursAttribute> attr, s32 nSpus,
 #endif
 }
 
-s32 cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribute> attr, u32 container)
+s64 cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribute> attr, u32 container)
 {
 	cellSpurs->Warning("cellSpursAttributeSetMemoryContainerForSpuThread(attr_addr=0x%x, container=0x%x)", attr.GetAddr(), container);
 
@@ -94,7 +94,7 @@ s32 cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribut
 #endif
 }
 
-s32 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const mem8_t prefix, u32 size)
+s64 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const mem8_t prefix, u32 size)
 {
 	cellSpurs->Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=0x%x)", attr.GetAddr(), prefix.GetAddr(), size);
 
@@ -113,7 +113,7 @@ s32 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 #endif
 }
 
-s32 cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> attr)
+s64 cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> attr)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.GetAddr());
@@ -124,7 +124,7 @@ s32 cellSpursAttributeEnableSpuPrintfIfAvailable(mem_ptr_t<CellSpursAttribute> a
 #endif
 }
 
-s32 cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, s32 type)
+s64 cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, s32 type)
 {
 	cellSpurs->Warning("cellSpursAttributeSetSpuThreadGroupType(attr_addr=0x%x, type=%d)", attr.GetAddr(), type);
 
@@ -137,7 +137,7 @@ s32 cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, 
 #endif
 }
 
-s32 cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, mem8_ptr_t priority, u32 maxSpu, mem8_ptr_t isPreemptible)
+s64 cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, mem8_ptr_t priority, u32 maxSpu, mem8_ptr_t isPreemptible)
 {
 	cellSpurs->Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
 		attr.GetAddr(), priority.GetAddr(), maxSpu, isPreemptible.GetAddr());
@@ -157,7 +157,7 @@ s32 cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, m
 #endif
 }
 
-s32 cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
+s64 cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.GetAddr(), group.GetAddr());
@@ -168,7 +168,7 @@ s32 cellSpursGetSpuThreadGroupId(mem_ptr_t<CellSpurs> spurs, mem32_t group)
 #endif
 }
 
-s32 cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
+s64 cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), nThreads.GetAddr());
@@ -179,7 +179,7 @@ s32 cellSpursGetNumSpuThread(mem_ptr_t<CellSpurs> spurs, mem32_t nThreads)
 #endif
 }
 
-s32 cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t nThreads)
+s64 cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t nThreads)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.GetAddr(), thread.GetAddr(), nThreads.GetAddr());
@@ -190,7 +190,7 @@ s32 cellSpursGetSpuThreadId(mem_ptr_t<CellSpurs> spurs, mem32_t thread, mem32_t 
 #endif
 }
 
-s32 cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 maxContention)
+s64 cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 maxContention)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursSetMaxContention(spurs_addr=0x%x, workloadId=%d, maxContention=%d)", spurs.GetAddr(), workloadId, maxContention);
@@ -201,7 +201,7 @@ s32 cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 ma
 #endif
 }
 
-s32 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const mem8_ptr_t priorities)
+s64 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const mem8_ptr_t priorities)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%d, priorities_addr=0x%x)", spurs.GetAddr(), workloadId, priorities.GetAddr());
@@ -212,7 +212,7 @@ s32 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const mem
 #endif
 }
 
-s32 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, mem8_ptr_t isPreemptible)
+s64 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, mem8_ptr_t isPreemptible)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible_addr=0x%x)", spurs.GetAddr(), isPreemptible.GetAddr());
@@ -223,7 +223,7 @@ s32 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, mem8_ptr_t isP
 #endif
 }
 
-s32 cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t port, s32 isDynamic)
+s64 cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t port, s32 isDynamic)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=%d, port_addr=0x%x, isDynamic=%d)",
@@ -235,7 +235,7 @@ s32 cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t p
 #endif
 }
 
-s32 cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
+s64 cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursDetachLv2EventQueue(spurs_addr=0x%x, port=0x%x)", spurs.GetAddr(), port);
@@ -246,7 +246,7 @@ s32 cellSpursDetachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u8 port)
 #endif
 }
 
-s32 cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
+s64 cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEnableExceptionEventHandler(spurs_addr=0x%x, flag=%d)", spurs.GetAddr(), flag);
@@ -257,7 +257,7 @@ s32 cellSpursEnableExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, bool flag)
 #endif
 }
 
-s32 cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, u32 eaHandler_addr, u32 arg_addr)
+s64 cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, u32 eaHandler_addr, u32 arg_addr)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x)",
@@ -269,7 +269,7 @@ s32 cellSpursSetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs, u32 eaHa
 #endif
 }
 
-s32 cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
+s64 cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursUnsetGlobalExceptionEventHandler(spurs_addr=0x%x)", spurs.GetAddr());
@@ -280,7 +280,7 @@ s32 cellSpursUnsetGlobalExceptionEventHandler(mem_ptr_t<CellSpurs> spurs)
 #endif
 }
 
-s32 cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
+s64 cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetInfo(spurs_addr=0x%x, info_addr=0x%x)", spurs.GetAddr(), info.GetAddr());
@@ -291,7 +291,7 @@ s32 cellSpursGetInfo(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursInfo> info)
 #endif
 }
 
-s32 _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, mem_ptr_t<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
+s64 _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, mem_ptr_t<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%d, flagDirection=%d)",
@@ -303,7 +303,7 @@ s32 _cellSpursEventFlagInitialize(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpur
 #endif
 }
 
-s32 cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
+s64 cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
@@ -314,7 +314,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 #endif
 }
 
-s32 cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
+s64 cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFlag)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.GetAddr());
@@ -325,7 +325,7 @@ s32 cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 #endif
 }
 
-s32 cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
+s64 cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.GetAddr(), mask.GetAddr(), mode);
@@ -336,7 +336,7 @@ s32 cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask
 #endif
 }
 
-s32 cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
+s64 cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.GetAddr(), bits);
@@ -347,7 +347,7 @@ s32 cellSpursEventFlagClear(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 #endif
 }
 
-s32 cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
+s64 cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.GetAddr(), bits);
@@ -358,7 +358,7 @@ s32 cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 #endif
 }
 
-s32 cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
+s64 cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.GetAddr(), mask.GetAddr(), mode);
@@ -369,7 +369,7 @@ s32 cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t m
 #endif
 }
 
-s32 cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t direction)
+s64 cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t direction)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=0x%x)", eventFlag.GetAddr(), direction.GetAddr());
@@ -380,7 +380,7 @@ s32 cellSpursEventFlagGetDirection(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 #endif
 }
 
-s32 cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t clear_mode)
+s64 cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem32_t clear_mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=0x%x)", eventFlag.GetAddr(), clear_mode.GetAddr());
@@ -391,7 +391,7 @@ s32 cellSpursEventFlagGetClearMode(mem_ptr_t<CellSpursEventFlag> eventFlag, mem3
 #endif
 }
 
-s32 cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag, mem_ptr_t<CellSpursTaskset> taskset)
+s64 cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag, mem_ptr_t<CellSpursTaskset> taskset)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetTasksetAddress(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.GetAddr(), taskset.GetAddr());
@@ -402,7 +402,7 @@ s32 cellSpursEventFlagGetTasksetAddress(mem_ptr_t<CellSpursEventFlag> eventFlag,
 #endif
 }
 
-s32 _cellSpursLFQueueInitialize()
+s64 _cellSpursLFQueueInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -413,7 +413,7 @@ s32 _cellSpursLFQueueInitialize()
 #endif
 }
 
-s32 _cellSpursLFQueuePushBody()
+s64 _cellSpursLFQueuePushBody()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -424,7 +424,7 @@ s32 _cellSpursLFQueuePushBody()
 #endif
 }
 
-s32 cellSpursLFQueueDetachLv2EventQueue()
+s64 cellSpursLFQueueDetachLv2EventQueue()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -435,7 +435,7 @@ s32 cellSpursLFQueueDetachLv2EventQueue()
 #endif
 }
 
-s32 cellSpursLFQueueAttachLv2EventQueue()
+s64 cellSpursLFQueueAttachLv2EventQueue()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -446,7 +446,7 @@ s32 cellSpursLFQueueAttachLv2EventQueue()
 #endif
 }
 
-s32 _cellSpursLFQueuePopBody()
+s64 _cellSpursLFQueuePopBody()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -457,7 +457,7 @@ s32 _cellSpursLFQueuePopBody()
 #endif
 }
 
-s32 cellSpursLFQueueGetTasksetAddress()
+s64 cellSpursLFQueueGetTasksetAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -468,7 +468,7 @@ s32 cellSpursLFQueueGetTasksetAddress()
 #endif
 }
 
-s32 _cellSpursQueueInitialize()
+s64 _cellSpursQueueInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -479,7 +479,7 @@ s32 _cellSpursQueueInitialize()
 #endif
 }
 
-s32 cellSpursQueuePopBody()
+s64 cellSpursQueuePopBody()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -490,7 +490,7 @@ s32 cellSpursQueuePopBody()
 #endif
 }
 
-s32 cellSpursQueuePushBody()
+s64 cellSpursQueuePushBody()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -501,7 +501,7 @@ s32 cellSpursQueuePushBody()
 #endif
 }
 
-s32 cellSpursQueueAttachLv2EventQueue()
+s64 cellSpursQueueAttachLv2EventQueue()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -512,7 +512,7 @@ s32 cellSpursQueueAttachLv2EventQueue()
 #endif
 }
 
-s32 cellSpursQueueDetachLv2EventQueue()
+s64 cellSpursQueueDetachLv2EventQueue()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -523,7 +523,7 @@ s32 cellSpursQueueDetachLv2EventQueue()
 #endif
 }
 
-s32 cellSpursQueueGetTasksetAddress()
+s64 cellSpursQueueGetTasksetAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -534,7 +534,7 @@ s32 cellSpursQueueGetTasksetAddress()
 #endif
 }
 
-s32 cellSpursQueueClear()
+s64 cellSpursQueueClear()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -545,7 +545,7 @@ s32 cellSpursQueueClear()
 #endif
 }
 
-s32 cellSpursQueueDepth()
+s64 cellSpursQueueDepth()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -556,7 +556,7 @@ s32 cellSpursQueueDepth()
 #endif
 }
 
-s32 cellSpursQueueGetEntrySize()
+s64 cellSpursQueueGetEntrySize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -567,7 +567,7 @@ s32 cellSpursQueueGetEntrySize()
 #endif
 }
 
-s32 cellSpursQueueSize()
+s64 cellSpursQueueSize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -578,7 +578,7 @@ s32 cellSpursQueueSize()
 #endif
 }
 
-s32 cellSpursQueueGetDirection()
+s64 cellSpursQueueGetDirection()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -589,7 +589,7 @@ s32 cellSpursQueueGetDirection()
 #endif
 }
 
-s32 cellSpursCreateJobChainWithAttribute()
+s64 cellSpursCreateJobChainWithAttribute()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -600,7 +600,7 @@ s32 cellSpursCreateJobChainWithAttribute()
 #endif
 }
 
-s32 cellSpursCreateJobChain()
+s64 cellSpursCreateJobChain()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -611,7 +611,7 @@ s32 cellSpursCreateJobChain()
 #endif
 }
 
-s32 cellSpursJoinJobChain()
+s64 cellSpursJoinJobChain()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -622,7 +622,7 @@ s32 cellSpursJoinJobChain()
 #endif
 }
 
-s32 cellSpursKickJobChain()
+s64 cellSpursKickJobChain()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -633,7 +633,7 @@ s32 cellSpursKickJobChain()
 #endif
 }
 
-s32 _cellSpursJobChainAttributeInitialize()
+s64 _cellSpursJobChainAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -644,7 +644,7 @@ s32 _cellSpursJobChainAttributeInitialize()
 #endif
 }
 
-s32 cellSpursGetJobChainId()
+s64 cellSpursGetJobChainId()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -655,7 +655,7 @@ s32 cellSpursGetJobChainId()
 #endif
 }
 
-s32 cellSpursJobChainSetExceptionEventHandler()
+s64 cellSpursJobChainSetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -666,7 +666,7 @@ s32 cellSpursJobChainSetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursJobChainUnsetExceptionEventHandler()
+s64 cellSpursJobChainUnsetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -677,7 +677,7 @@ s32 cellSpursJobChainUnsetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursGetJobChainInfo()
+s64 cellSpursGetJobChainInfo()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -688,7 +688,7 @@ s32 cellSpursGetJobChainInfo()
 #endif
 }
 
-s32 cellSpursJobChainGetSpursAddress()
+s64 cellSpursJobChainGetSpursAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -699,7 +699,7 @@ s32 cellSpursJobChainGetSpursAddress()
 #endif
 }
 
-s32 cellSpursCreateTasksetWithAttribute()
+s64 cellSpursCreateTasksetWithAttribute()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -710,7 +710,7 @@ s32 cellSpursCreateTasksetWithAttribute()
 #endif
 }
 
-s32 cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, u64 args, mem8_t priority, u32 maxContention)
+s64 cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, u64 args, mem8_t priority, u32 maxContention)
 {
 	cellSpurs->Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
 		spurs.GetAddr(), taskset.GetAddr(), args, priority.GetAddr(), maxContention);
@@ -725,7 +725,7 @@ s32 cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskse
 #endif
 }
 
-s32 cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
+s64 cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursJoinTaskset(taskset_addr=0x%x)", taskset.GetAddr());
@@ -736,7 +736,7 @@ s32 cellSpursJoinTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 #endif
 }
 
-s32 cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadId)
+s64 cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadId)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.GetAddr(), workloadId.GetAddr());
@@ -747,7 +747,7 @@ s32 cellSpursGetTasksetId(mem_ptr_t<CellSpursTaskset> taskset, mem32_t workloadI
 #endif
 }
 
-s32 cellSpursShutdownTaskset(mem_ptr_t<CellSpursTaskset> taskset)
+s64 cellSpursShutdownTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursShutdownTaskset(taskset_addr=0x%x)", taskset.GetAddr());
@@ -758,7 +758,7 @@ s32 cellSpursShutdownTaskset(mem_ptr_t<CellSpursTaskset> taskset)
 #endif
 }
 
-s32 cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, u32 elf_addr, u32 context_addr, u32 context_size, mem_ptr_t<CellSpursTaskLsPattern> lsPattern,
+s64 cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, u32 elf_addr, u32 context_addr, u32 context_size, mem_ptr_t<CellSpursTaskLsPattern> lsPattern,
 	mem_ptr_t<CellSpursTaskArgument> argument)
 {
 #ifdef PRX_DEBUG
@@ -771,7 +771,7 @@ s32 cellSpursCreateTask(mem_ptr_t<CellSpursTaskset> taskset, mem32_t taskID, u32
 #endif
 }
 
-s32 _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
+s64 _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("_cellSpursSendSignal(taskset_addr=0x%x, taskID=%d)", taskset.GetAddr(), taskID);
@@ -782,7 +782,7 @@ s32 _cellSpursSendSignal(mem_ptr_t<CellSpursTaskset> taskset, u32 taskID)
 #endif
 }
 
-s32 cellSpursCreateTaskWithAttribute()
+s64 cellSpursCreateTaskWithAttribute()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -793,7 +793,7 @@ s32 cellSpursCreateTaskWithAttribute()
 #endif
 }
 
-s32 cellSpursTasksetAttributeSetName()
+s64 cellSpursTasksetAttributeSetName()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -804,7 +804,7 @@ s32 cellSpursTasksetAttributeSetName()
 #endif
 }
 
-s32 cellSpursTasksetAttributeSetTasksetSize()
+s64 cellSpursTasksetAttributeSetTasksetSize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -815,7 +815,7 @@ s32 cellSpursTasksetAttributeSetTasksetSize()
 #endif
 }
 
-s32 cellSpursTasksetAttributeEnableClearLS()
+s64 cellSpursTasksetAttributeEnableClearLS()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -826,7 +826,7 @@ s32 cellSpursTasksetAttributeEnableClearLS()
 #endif
 }
 
-s32 _cellSpursTasksetAttribute2Initialize(mem_ptr_t<CellSpursTasksetAttribute2> attribute, u32 revision)
+s64 _cellSpursTasksetAttribute2Initialize(mem_ptr_t<CellSpursTasksetAttribute2> attribute, u32 revision)
 {
 	cellSpurs->Warning("_cellSpursTasksetAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.GetAddr(), revision);
 	
@@ -850,7 +850,7 @@ s32 _cellSpursTasksetAttribute2Initialize(mem_ptr_t<CellSpursTasksetAttribute2> 
 #endif
 }
 
-s32 cellSpursTaskExitCodeGet()
+s64 cellSpursTaskExitCodeGet()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -861,7 +861,7 @@ s32 cellSpursTaskExitCodeGet()
 #endif
 }
 
-s32 cellSpursTaskExitCodeInitialize()
+s64 cellSpursTaskExitCodeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -872,7 +872,7 @@ s32 cellSpursTaskExitCodeInitialize()
 #endif
 }
 
-s32 cellSpursTaskExitCodeTryGet()
+s64 cellSpursTaskExitCodeTryGet()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -883,7 +883,7 @@ s32 cellSpursTaskExitCodeTryGet()
 #endif
 }
 
-s32 cellSpursTaskGetLoadableSegmentPattern()
+s64 cellSpursTaskGetLoadableSegmentPattern()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -894,7 +894,7 @@ s32 cellSpursTaskGetLoadableSegmentPattern()
 #endif
 }
 
-s32 cellSpursTaskGetReadOnlyAreaPattern()
+s64 cellSpursTaskGetReadOnlyAreaPattern()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -905,7 +905,7 @@ s32 cellSpursTaskGetReadOnlyAreaPattern()
 #endif
 }
 
-s32 cellSpursTaskGenerateLsPattern()
+s64 cellSpursTaskGenerateLsPattern()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -916,7 +916,7 @@ s32 cellSpursTaskGenerateLsPattern()
 #endif
 }
 
-s32 _cellSpursTaskAttributeInitialize()
+s64 _cellSpursTaskAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -927,7 +927,7 @@ s32 _cellSpursTaskAttributeInitialize()
 #endif
 }
 
-s32 cellSpursTaskAttributeSetExitCodeContainer()
+s64 cellSpursTaskAttributeSetExitCodeContainer()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -938,7 +938,7 @@ s32 cellSpursTaskAttributeSetExitCodeContainer()
 #endif
 }
 
-s32 _cellSpursTaskAttribute2Initialize(mem_ptr_t<CellSpursTaskAttribute2> attribute, u32 revision)
+s64 _cellSpursTaskAttribute2Initialize(mem_ptr_t<CellSpursTaskAttribute2> attribute, u32 revision)
 {
 	cellSpurs->Warning("_cellSpursTaskAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.GetAddr(), revision);
 
@@ -965,7 +965,7 @@ s32 _cellSpursTaskAttribute2Initialize(mem_ptr_t<CellSpursTaskAttribute2> attrib
 #endif
 }
 
-s32 cellSpursTaskGetContextSaveAreaSize()
+s64 cellSpursTaskGetContextSaveAreaSize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -976,7 +976,7 @@ s32 cellSpursTaskGetContextSaveAreaSize()
 #endif
 }
 
-s32 cellSpursCreateTaskset2()
+s64 cellSpursCreateTaskset2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -987,7 +987,7 @@ s32 cellSpursCreateTaskset2()
 #endif
 }
 
-s32 cellSpursCreateTask2()
+s64 cellSpursCreateTask2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -998,7 +998,7 @@ s32 cellSpursCreateTask2()
 #endif
 }
 
-s32 cellSpursJoinTask2()
+s64 cellSpursJoinTask2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1009,7 +1009,7 @@ s32 cellSpursJoinTask2()
 #endif
 }
 
-s32 cellSpursTryJoinTask2()
+s64 cellSpursTryJoinTask2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1020,7 +1020,7 @@ s32 cellSpursTryJoinTask2()
 #endif
 }
 
-s32 cellSpursDestroyTaskset2()
+s64 cellSpursDestroyTaskset2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1031,7 +1031,7 @@ s32 cellSpursDestroyTaskset2()
 #endif
 }
 
-s32 cellSpursCreateTask2WithBinInfo()
+s64 cellSpursCreateTask2WithBinInfo()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1042,7 +1042,7 @@ s32 cellSpursCreateTask2WithBinInfo()
 #endif
 }
 
-s32 cellSpursTasksetSetExceptionEventHandler()
+s64 cellSpursTasksetSetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1053,7 +1053,7 @@ s32 cellSpursTasksetSetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursTasksetUnsetExceptionEventHandler()
+s64 cellSpursTasksetUnsetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1064,7 +1064,7 @@ s32 cellSpursTasksetUnsetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursLookUpTasksetAddress()
+s64 cellSpursLookUpTasksetAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1075,7 +1075,7 @@ s32 cellSpursLookUpTasksetAddress()
 #endif
 }
 
-s32 cellSpursTasksetGetSpursAddress()
+s64 cellSpursTasksetGetSpursAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1086,7 +1086,7 @@ s32 cellSpursTasksetGetSpursAddress()
 #endif
 }
 
-s32 cellSpursSetExceptionEventHandler()
+s64 cellSpursSetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1097,7 +1097,7 @@ s32 cellSpursSetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursUnsetExceptionEventHandler()
+s64 cellSpursUnsetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1108,7 +1108,7 @@ s32 cellSpursUnsetExceptionEventHandler()
 #endif
 }
 
-s32 cellSpursGetTasksetInfo()
+s64 cellSpursGetTasksetInfo()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1119,7 +1119,7 @@ s32 cellSpursGetTasksetInfo()
 #endif
 }
 
-s32 _cellSpursTasksetAttributeInitialize()
+s64 _cellSpursTasksetAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1130,7 +1130,7 @@ s32 _cellSpursTasksetAttributeInitialize()
 #endif
 }
 
-s32 cellSpursJobGuardInitialize()
+s64 cellSpursJobGuardInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1141,7 +1141,7 @@ s32 cellSpursJobGuardInitialize()
 #endif
 }
 
-s32 cellSpursJobChainAttributeSetName()
+s64 cellSpursJobChainAttributeSetName()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1152,7 +1152,7 @@ s32 cellSpursJobChainAttributeSetName()
 #endif
 }
 
-s32 cellSpursShutdownJobChain()
+s64 cellSpursShutdownJobChain()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1163,7 +1163,7 @@ s32 cellSpursShutdownJobChain()
 #endif
 }
 
-s32 cellSpursJobChainAttributeSetHaltOnError()
+s64 cellSpursJobChainAttributeSetHaltOnError()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1174,7 +1174,7 @@ s32 cellSpursJobChainAttributeSetHaltOnError()
 #endif
 }
 
-s32 cellSpursJobChainAttributeSetJobTypeMemoryCheck()
+s64 cellSpursJobChainAttributeSetJobTypeMemoryCheck()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1185,7 +1185,7 @@ s32 cellSpursJobChainAttributeSetJobTypeMemoryCheck()
 #endif
 }
 
-s32 cellSpursJobGuardNotify()
+s64 cellSpursJobGuardNotify()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1196,7 +1196,7 @@ s32 cellSpursJobGuardNotify()
 #endif
 }
 
-s32  cellSpursJobGuardReset()
+s64 cellSpursJobGuardReset()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1207,7 +1207,7 @@ s32  cellSpursJobGuardReset()
 #endif
 }
 
-s32 cellSpursRunJobChain()
+s64 cellSpursRunJobChain()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1218,7 +1218,7 @@ s32 cellSpursRunJobChain()
 #endif
 }
 
-s32 cellSpursJobChainGetError()
+s64 cellSpursJobChainGetError()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1229,7 +1229,7 @@ s32 cellSpursJobChainGetError()
 #endif
 }
 
-s32 cellSpursWorkloadAttributeSetName()
+s64 cellSpursWorkloadAttributeSetName()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1240,7 +1240,7 @@ s32 cellSpursWorkloadAttributeSetName()
 #endif
 }
 
-s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook()
+s64 cellSpursWorkloadAttributeSetShutdownCompletionEventHook()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1251,7 +1251,7 @@ s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook()
 #endif
 }
 
-s32 cellSpursAddWorkloadWithAttribute()
+s64 cellSpursAddWorkloadWithAttribute()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1262,7 +1262,7 @@ s32 cellSpursAddWorkloadWithAttribute()
 #endif
 }
 
-s32 cellSpursRemoveWorkload()
+s64 cellSpursRemoveWorkload()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1273,7 +1273,7 @@ s32 cellSpursRemoveWorkload()
 #endif
 }
 
-s32 cellSpursWaitForWorkloadShutdown()
+s64 cellSpursWaitForWorkloadShutdown()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1284,7 +1284,7 @@ s32 cellSpursWaitForWorkloadShutdown()
 #endif
 }
 
-s32 cellSpursAddWorkload()
+s64 cellSpursAddWorkload()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1295,7 +1295,7 @@ s32 cellSpursAddWorkload()
 #endif
 }
 
-s32 cellSpursWakeUp()
+s64 cellSpursWakeUp()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1306,7 +1306,7 @@ s32 cellSpursWakeUp()
 #endif
 }
 
-s32 cellSpursShutdownWorkload()
+s64 cellSpursShutdownWorkload()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1317,7 +1317,7 @@ s32 cellSpursShutdownWorkload()
 #endif
 }
 
-s32 _cellSpursWorkloadFlagReceiver()
+s64 _cellSpursWorkloadFlagReceiver()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1328,7 +1328,7 @@ s32 _cellSpursWorkloadFlagReceiver()
 #endif
 }
 
-s32 cellSpursGetWorkloadFlag()
+s64 cellSpursGetWorkloadFlag()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1339,7 +1339,7 @@ s32 cellSpursGetWorkloadFlag()
 #endif
 }
 
-s32 cellSpursReadyCountStore()
+s64 cellSpursReadyCountStore()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1350,7 +1350,7 @@ s32 cellSpursReadyCountStore()
 #endif
 }
 
-s32 _cellSpursWorkloadAttributeInitialize()
+s64 _cellSpursWorkloadAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1361,7 +1361,7 @@ s32 _cellSpursWorkloadAttributeInitialize()
 #endif
 }
 
-s32 cellSpursSendWorkloadSignal()
+s64 cellSpursSendWorkloadSignal()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1372,7 +1372,7 @@ s32 cellSpursSendWorkloadSignal()
 #endif
 }
 
-s32 cellSpursGetWorkloadData()
+s64 cellSpursGetWorkloadData()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1383,7 +1383,7 @@ s32 cellSpursGetWorkloadData()
 #endif
 }
 
-s32 cellSpursReadyCountAdd()
+s64 cellSpursReadyCountAdd()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1394,7 +1394,7 @@ s32 cellSpursReadyCountAdd()
 #endif
 }
 
-s32 cellSpursReadyCountCompareAndSwap()
+s64 cellSpursReadyCountCompareAndSwap()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1405,7 +1405,7 @@ s32 cellSpursReadyCountCompareAndSwap()
 #endif
 }
 
-s32 cellSpursReadyCountSwap()
+s64 cellSpursReadyCountSwap()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1416,7 +1416,7 @@ s32 cellSpursReadyCountSwap()
 #endif
 }
 
-s32 cellSpursRequestIdleSpu()
+s64 cellSpursRequestIdleSpu()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1427,7 +1427,7 @@ s32 cellSpursRequestIdleSpu()
 #endif
 }
 
-s32 cellSpursGetWorkloadInfo()
+s64 cellSpursGetWorkloadInfo()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1438,7 +1438,7 @@ s32 cellSpursGetWorkloadInfo()
 #endif
 }
 
-s32 cellSpursGetSpuGuid()
+s64 cellSpursGetSpuGuid()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1449,7 +1449,7 @@ s32 cellSpursGetSpuGuid()
 #endif
 }
 
-s32 _cellSpursWorkloadFlagReceiver2()
+s64 _cellSpursWorkloadFlagReceiver2()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1460,7 +1460,7 @@ s32 _cellSpursWorkloadFlagReceiver2()
 #endif
 }
 
-s32 cellSpursGetJobPipelineInfo()
+s64 cellSpursGetJobPipelineInfo()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1471,7 +1471,7 @@ s32 cellSpursGetJobPipelineInfo()
 #endif
 }
 
-s32 cellSpursJobSetMaxGrab()
+s64 cellSpursJobSetMaxGrab()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1482,7 +1482,7 @@ s32 cellSpursJobSetMaxGrab()
 #endif
 }
 
-s32 cellSpursJobHeaderSetJobbin2Param()
+s64 cellSpursJobHeaderSetJobbin2Param()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1493,7 +1493,7 @@ s32 cellSpursJobHeaderSetJobbin2Param()
 #endif
 }
 
-s32 cellSpursAddUrgentCommand()
+s64 cellSpursAddUrgentCommand()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1504,7 +1504,7 @@ s32 cellSpursAddUrgentCommand()
 #endif
 }
 
-s32 cellSpursAddUrgentCall()
+s64 cellSpursAddUrgentCall()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1515,7 +1515,7 @@ s32 cellSpursAddUrgentCall()
 #endif
 }
 
-s32 cellSpursBarrierInitialize()
+s64 cellSpursBarrierInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1526,7 +1526,7 @@ s32 cellSpursBarrierInitialize()
 #endif
 }
 
-s32 cellSpursBarrierGetTasksetAddress()
+s64 cellSpursBarrierGetTasksetAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1537,7 +1537,7 @@ s32 cellSpursBarrierGetTasksetAddress()
 #endif
 }
 
-s32 _cellSpursSemaphoreInitialize()
+s64 _cellSpursSemaphoreInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -1548,7 +1548,7 @@ s32 _cellSpursSemaphoreInitialize()
 #endif
 }
 
-s32 cellSpursSemaphoreGetTasksetAddress()
+s64 cellSpursSemaphoreGetTasksetAddress()
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);

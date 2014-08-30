@@ -108,7 +108,7 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
-	Memory.Write32(prio_addr, thr->GetPrio());
+	Memory.Write32(prio_addr, (s32)thr->GetPrio());
 
 	return CELL_OK;
 }
@@ -119,8 +119,8 @@ s32 sys_ppu_thread_get_stack_information(u32 info_addr)
 
 	declCPU();
 
-	Memory.Write32(info_addr,   CPU.GetStackAddr());
-	Memory.Write32(info_addr+4, CPU.GetStackSize());
+	Memory.Write32(info_addr, (u32)CPU.GetStackAddr());
+	Memory.Write32(info_addr + 4, CPU.GetStackSize());
 
 	return CELL_OK;
 }

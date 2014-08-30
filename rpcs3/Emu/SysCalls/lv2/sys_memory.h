@@ -35,7 +35,7 @@ struct MemoryContainerInfo
 	u32 addr;
 	u32 size;
 
-	MemoryContainerInfo(u64 addr, u32 size)
+	MemoryContainerInfo(u32 addr, u32 size)
 		: addr(addr)
 		, size(size)
 	{

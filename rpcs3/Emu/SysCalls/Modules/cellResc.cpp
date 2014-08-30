@@ -15,7 +15,7 @@ PICTURE_SIZE = (1.0f),
 UV_DELTA_PS = (1.f / 8.f),
 UV_DELTA_LB = (1.f / 6.f),
 XY_DELTA_LB = (1.f / 8.f),
-PI = 3.1415926535897932384626433832795;
+PI = 3.141592741f;
 
 void BuildupVertexBufferNR()
 {
@@ -124,8 +124,8 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	float U_PS1 = U_CENTER + U_PS;
 	float U2_FS0 = 0.0f;
 	float V2_FS0 = 0.0f;
-	float U2_FS1 = s_rescInternalInstance->m_dstWidth;
-	float V2_FS1 = s_rescInternalInstance->m_dstHeight;
+	float U2_FS1 = (float)s_rescInternalInstance->m_dstWidth;
+	float V2_FS1 = (float)s_rescInternalInstance->m_dstHeight;
 
 	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA);
 

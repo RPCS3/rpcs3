@@ -32,8 +32,8 @@ s32 sys_prx_load_module(u32 path_addr, u64 flags, mem_ptr_t<sys_prx_load_module_
 
 	// Create the PRX object and return its id
 	sys_prx_t* prx = new sys_prx_t();
-	prx->size = f.GetSize();
-	prx->address = Memory.Alloc(prx->size, 4);
+	prx->size = (u32)f.GetSize();
+	prx->address = (u32)Memory.Alloc(prx->size, 4);
 	prx->path = path;
 	
 	// Load the PRX into memory

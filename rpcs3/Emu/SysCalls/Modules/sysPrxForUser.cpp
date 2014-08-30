@@ -32,24 +32,24 @@ int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 	return heap_id;
 }
 
-int _sys_heap_malloc(const u32 heap_id, const u32 size)
+u32 _sys_heap_malloc(const u32 heap_id, const u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
 
 	HeapInfo* heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
-	return Memory.Alloc(size, 1);
+	return (u32)Memory.Alloc(size, 1);
 }
 
-int _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
+u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_memalign(heap_id=%d, align=0x%x, size=0x%x)", heap_id, align, size);
 
 	HeapInfo* heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
-	return Memory.Alloc(size, align);
+	return (u32)Memory.Alloc(size, align);
 }
 
 void sys_initialize_tls()
@@ -172,7 +172,7 @@ s32 _sys_memcmp(u32 addr1, u32 addr2, u32 size)
 	return memcmp(Memory + addr1, Memory + addr2, size);
 }
 
-s32 _sys_strlen(u32 addr)
+s64 _sys_strlen(u32 addr)
 {
 	sysPrxForUser->Log("_sys_strlen(addr=0x%x)", addr);
 
@@ -251,7 +251,7 @@ s32 _sys_spu_printf_finalize()
 	return CELL_OK;
 }
 
-s32 _sys_spu_printf_attach_group(u32 arg)
+s64 _sys_spu_printf_attach_group(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_group(arg=0x%x)", arg);
 
@@ -263,7 +263,7 @@ s32 _sys_spu_printf_attach_group(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_agcb), Memory.Read32(spu_printf_agcb + 4), arg);
 }
 
-s32 _sys_spu_printf_detach_group(u32 arg)
+s64 _sys_spu_printf_detach_group(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_group(arg=0x%x)", arg);
 
@@ -275,7 +275,7 @@ s32 _sys_spu_printf_detach_group(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dgcb), Memory.Read32(spu_printf_dgcb + 4), arg);
 }
 
-s32 _sys_spu_printf_attach_thread(u32 arg)
+s64 _sys_spu_printf_attach_thread(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(arg=0x%x)", arg);
 
@@ -287,7 +287,7 @@ s32 _sys_spu_printf_attach_thread(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_atcb), Memory.Read32(spu_printf_atcb + 4), arg);
 }
 
-s32 _sys_spu_printf_detach_thread(u32 arg)
+s64 _sys_spu_printf_detach_thread(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(arg=0x%x)", arg);
 

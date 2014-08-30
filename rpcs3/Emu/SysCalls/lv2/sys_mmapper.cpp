@@ -26,13 +26,13 @@ s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(AlignAddr(size, alignment) & 0xfffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(AlignAddr(size, alignment) & 0xffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 	}
 
@@ -64,13 +64,13 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:
@@ -102,13 +102,13 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x100000);
+		ct->addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x10000);
+		ct->addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:

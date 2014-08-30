@@ -162,7 +162,7 @@ public:
 		}
 		else
 		{
-			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+			for (u32 i = (u32)addr / 4096; i <= ((u32)addr + size - 1) / 4096; i++)
 			{
 				if (!m_pages[i]) return false; // TODO: define page parameters
 			}
@@ -718,7 +718,7 @@ public:
 	u32 AppendRawBytes(const u8 *bytes, size_t count)
 	{
 		memmove(Memory + this->m_addr, bytes, count);
-		this->m_addr += count;
+		this->m_addr += (u32)count;
 		return this->m_addr;
 	}
 
@@ -835,7 +835,7 @@ class MemoryAllocator
 public:
 	MemoryAllocator(u32 size = sizeof(T), u32 align = 1)
 		: m_size(size)
-		, m_addr(Memory.Alloc(size, align))
+		, m_addr((u32)Memory.Alloc(size, align))
 		, m_ptr((T*)&Memory[m_addr])
 	{
 	}

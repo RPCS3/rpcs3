@@ -29,7 +29,7 @@ const u32 tiled_pitches[] = {
 
 u32 local_size = 0;
 u32 local_addr = 0;
-u32 system_mode = 0;
+u64 system_mode = 0;
 
 CellGcmConfig current_config;
 CellGcmContextData current_context;
@@ -65,8 +65,8 @@ CellGcmOffsetTable offsetTable;
 
 void InitOffsetTable()
 {
-	offsetTable.ioAddress = Memory.Alloc(3072 * sizeof(u16), 1);
-	offsetTable.eaAddress = Memory.Alloc(512 * sizeof(u16), 1);
+	offsetTable.ioAddress = (u32)Memory.Alloc(3072 * sizeof(u16), 1);
+	offsetTable.eaAddress = (u32)Memory.Alloc(512 * sizeof(u16), 1);
 
 	_sys_memset(offsetTable.ioAddress, 0xFF, 3072 * sizeof(u16));
 	_sys_memset(offsetTable.eaAddress, 0xFF, 512 * sizeof(u16));
@@ -79,7 +79,7 @@ void InitOffsetTable()
 u32 cellGcmGetLabelAddress(u8 index)
 {
 	cellGcmSys->Log("cellGcmGetLabelAddress(index=%d)", index);
-	return Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
+	return (u32)Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
 }
 
 u32 cellGcmGetReportDataAddressLocation(u32 index, u32 location)
@@ -91,7 +91,7 @@ u32 cellGcmGetReportDataAddressLocation(u32 index, u32 location)
 			cellGcmSys->Error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 			return 0;
 		}
-		return Memory.RSXFBMem.GetStartAddr() + index * 0x10;
+		return (u32)Memory.RSXFBMem.GetStartAddr() + index * 0x10;
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
@@ -146,7 +146,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 u32 _cellGcmFunc12()
 {
-	return Memory.RSXFBMem.GetStartAddr(); // TODO
+	return (u32)Memory.RSXFBMem.GetStartAddr(); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -174,7 +174,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		cellGcmSys->Error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 		return 0;
 	}
-	return Memory.RSXFBMem.GetStartAddr() + index * 0x10;
+	return (u32)Memory.RSXFBMem.GetStartAddr() + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -332,7 +332,7 @@ s32 _cellGcmInitBody(mem_ptr_t<CellGcmContextData> context, u32 cmdSize, u32 ioS
 	if(!local_size && !local_addr)
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = Memory.RSXFBMem.GetStartAddr();
+		local_addr = (u32)Memory.RSXFBMem.GetStartAddr();
 		Memory.RSXFBMem.AllocAlign(local_size);
 	}
 
@@ -374,7 +374,7 @@ s32 _cellGcmInitBody(mem_ptr_t<CellGcmContextData> context, u32 cmdSize, u32 ioS
 	current_context.current = current_context.begin;
 	current_context.callback = Emu.GetRSXCallback() - 4;
 
-	gcm_info.context_addr = Memory.MainMem.AllocAlign(0x1000);
+	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	Memory.WriteData(gcm_info.context_addr, current_context);
@@ -387,9 +387,9 @@ s32 _cellGcmInitBody(mem_ptr_t<CellGcmContextData> context, u32 cmdSize, u32 ioS
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.m_ctxt_addr = context.GetAddr();
-	render.m_gcm_buffers_addr = Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo));
-	render.m_zculls_addr = Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
-	render.m_tiles_addr = Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
+	render.m_gcm_buffers_addr = (u32)Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo));
+	render.m_zculls_addr = (u32)Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
+	render.m_tiles_addr = (u32)Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
 	render.m_gcm_buffers_count = 0;
 	render.m_gcm_current_buffer = 0;
 	render.m_main_mem_addr = 0;
@@ -814,7 +814,7 @@ s32 cellGcmAddressToOffset(u64 address, mem32_t offset)
 
 	// Address in local memory
 	if (Memory.RSXFBMem.IsInMyRange(address)) {
-		result = address - Memory.RSXFBMem.GetStartAddr();
+		result = (u32)(address - Memory.RSXFBMem.GetStartAddr());
 	}
 	// Address in main memory else check 
 	else
@@ -838,7 +838,7 @@ u32 cellGcmGetMaxIoMapSize()
 {
 	cellGcmSys->Log("cellGcmGetMaxIoMapSize()");
 
-	return Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount();
+	return (u32)(Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount());
 }
 
 void cellGcmGetOffsetTable(mem_ptr_t<CellGcmOffsetTable> table)
@@ -901,7 +901,7 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	if (!local_size && !local_addr)
 	{
 		local_size = 0xf900000; //TODO
-		local_addr = Memory.RSXFBMem.GetStartAddr();
+		local_addr = (u32)Memory.RSXFBMem.GetStartAddr();
 		Memory.RSXFBMem.AllocAlign(local_size);
 		Memory.Write32(address, local_addr);
 		Memory.Write32(size, local_size);
@@ -915,25 +915,25 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	return CELL_OK;
 }
 
-s32 cellGcmMapMainMemory(u64 ea, u32 size, mem32_t offset)
+s32 cellGcmMapMainMemory(u32 ea, u32 size, mem32_t offset)
 {
 	cellGcmSys->Warning("cellGcmMapMainMemory(ea=0x%x,size=0x%x,offset_addr=0x%x)", ea, size, offset.GetAddr());
 
-	u64 io;
+	u32 io;
 
 	if ((ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
 	//check if the mapping was successfull
-	if (io = Memory.RSXIOMem.Map(ea, size, 0))
+	if (io = (u32)Memory.RSXIOMem.Map(ea, size, 0))
 	{
 		// convert to offset
-		io = io - Memory.RSXIOMem.GetStartAddr();
+		io = io - (u32)Memory.RSXIOMem.GetStartAddr();
 
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
-			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
+			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i) * sizeof(u16), (u16)(io >> 20) + i);
+			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i) * sizeof(u16), (u16)(ea >> 20) + i);
 		}
 
 		offset = io;
