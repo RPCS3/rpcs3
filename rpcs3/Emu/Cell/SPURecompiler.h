@@ -85,6 +85,9 @@ public:
 		u16 count; // count of instructions compiled from current point (and to be checked)
 		u32 valid; // copy of valid opcode for validation
 		void* pointer; // pointer to executable memory object
+#ifdef _WIN32
+		//_IMAGE_RUNTIME_FUNCTION_ENTRY info;
+#endif
 	};
 
 	SPURecEntry entry[0x10000];

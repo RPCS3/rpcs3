@@ -157,8 +157,23 @@ void SPURecompilerCore::Compile(u16 pos)
 	log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
 	log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
 	log.Write(std::string(stringLogger.getString()));
-	log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
-		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+	if (!entry[start].pointer)
+	{
+		LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
+		log.Write("========== FAILED ============\n\n");
+		Emu.Pause();
+	}
+	else
+	{
+		log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+			entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+#ifdef _WIN32
+		//if (!RtlAddFunctionTable(&info, 1, (u64)entry[start].pointer))
+		//{
+		//	LOG_ERROR(Log::SPU, "RtlAddFunctionTable() failed");
+		//}
+#endif
+	}
 	log.Close();
 	m_enc->compiler = nullptr;
 	first = false;
@@ -195,6 +210,9 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 					i < (u32)pos + (u32)entry[pos].count)
 				{
 					runtime.release(entry[i].pointer);
+#ifdef _WIN32
+					//RtlDeleteFunctionTable(&entry[i].info);
+#endif
 					entry[i].pointer = nullptr;
 				}
 			}
@@ -215,12 +233,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		}
 	}
 
-	if (!entry[pos].pointer)
-	{
-		LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): compilation failed", pos * sizeof(u32));
-		Emu.Pause();
-		return 0;
-	}
+	if (!entry[pos].pointer) return 0;
 
 	typedef u32(*Func)(const void* _cpu, const void* _ls, const void* _imm, const void* _g_imm);
 
