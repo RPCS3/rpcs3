@@ -546,11 +546,11 @@ s32 cellFsStReadInit(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
 	fs_config.m_ring_buffer = *ringbuf;
 
 	if(ringbuf->ringbuf_size < 0x40000000) // If the size is less than 1MB
-		fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
-	fs_config.m_alloc_mem_size = ((ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+		fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
+	fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
 
 	// alloc memory
-	fs_config.m_buffer = Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
+	fs_config.m_buffer = (u32)Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
 	memset(Memory + fs_config.m_buffer, 0, fs_config.m_alloc_mem_size);
 
 	fs_config.m_fs_status = CELL_FS_ST_INITIALIZED;

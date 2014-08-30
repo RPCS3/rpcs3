@@ -155,11 +155,11 @@ void SPUThread::WriteSNR(bool number, u32 value)
 {
 	if (cfg.value & ((u64)1 << (u64)number))
 	{
-		SPU.SNR[number].PushUncond_OR(value); // logical OR
+		SPU.SNR[number ? 1 : 0].PushUncond_OR(value); // logical OR
 	}
 	else
 	{
-		SPU.SNR[number].PushUncond(value); // overwrite
+		SPU.SNR[number ? 1 : 0].PushUncond(value); // overwrite
 	}
 }
 
@@ -282,7 +282,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		mem_ptr_t<list_element> rec(dmac.ls_offset + list_addr + i * 8);
+		mem_ptr_t<list_element> rec((u32)dmac.ls_offset + list_addr + i * 8);
 
 		u32 size = rec->ts;
 		if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
@@ -446,7 +446,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 						changed, mask, op, cmd, lsa, ea, tag, size);
 
 					SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-					for (s32 i = PC; i < PC + 4 * 7; i += 4)
+					for (s32 i = (s32)PC; i < (s32)PC + 4 * 7; i += 4)
 					{
 						dis_asm.dump_pc = i;
 						dis_asm.offset = Memory.GetMemFromAddr(dmac.ls_offset);
@@ -1013,9 +1013,9 @@ void SPUThread::StopAndSignal(u32 code)
 				eq->events.pop(event);
 				eq->owner.unlock(tid);
 				SPU.In_MBox.PushUncond(CELL_OK);
-				SPU.In_MBox.PushUncond(event.data1);
-				SPU.In_MBox.PushUncond(event.data2);
-				SPU.In_MBox.PushUncond(event.data3);
+				SPU.In_MBox.PushUncond((u32)event.data1);
+				SPU.In_MBox.PushUncond((u32)event.data2);
+				SPU.In_MBox.PushUncond((u32)event.data3);
 				return;
 			}
 			case SMR_FAILED: break;

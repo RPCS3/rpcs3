@@ -107,7 +107,7 @@ public:
 
 	void Button(u8 button, bool pressed)
 	{
-		for(u64 p=0; p < m_mice.size(); ++p)
+		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -121,7 +121,7 @@ public:
 
 	void Scroll(const s8 rotation)
 	{
-		for(u64 p=0; p < m_mice.size(); ++p)
+		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -134,7 +134,7 @@ public:
 
 	void Move(const s16 x_pos_new, const s16 y_pos_new)
 	{
-		for(u64 p=0; p< m_mice.size(); ++p)
+		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
 			{

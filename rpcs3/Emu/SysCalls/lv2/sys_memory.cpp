@@ -17,12 +17,12 @@ s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default: return CELL_EINVAL;

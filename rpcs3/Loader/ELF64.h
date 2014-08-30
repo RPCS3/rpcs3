@@ -31,7 +31,7 @@ struct Elf64_Ehdr
 	void Show();
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
-	u32 GetEntry() const { return e_entry; }
+	u64 GetEntry() const { return e_entry; }
 };
 
 struct Elf64_Shdr

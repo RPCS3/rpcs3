@@ -33,11 +33,11 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 		switch(flag)
 		{
 		case SYS_MEMORY_PAGE_SIZE_1M:
-			new_addr = Memory.Alloc(psize, 0x100000);
+			new_addr = (u32)Memory.Alloc(psize, 0x100000);
 			break;
 
 		case SYS_MEMORY_PAGE_SIZE_64K:
-			new_addr = Memory.Alloc(psize, 0x10000);
+			new_addr = (u32)Memory.Alloc(psize, 0x10000);
 			break;
 
 		default: return CELL_EINVAL;

@@ -65,8 +65,8 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	if (rw->rlock_trylock(tid)) return CELL_OK;
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
 		if (Emu.IsStopped())
@@ -128,8 +128,8 @@ s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 
 	if (rw->wlock_trylock(tid, true)) return CELL_OK;
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
 		if (Emu.IsStopped())

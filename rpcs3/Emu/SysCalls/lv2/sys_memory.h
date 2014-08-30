@@ -32,7 +32,7 @@ struct sys_page_attr_t
 
 struct MemoryContainerInfo
 {
-	u64 addr;
+	u32 addr;
 	u32 size;
 
 	MemoryContainerInfo(u64 addr, u32 size)

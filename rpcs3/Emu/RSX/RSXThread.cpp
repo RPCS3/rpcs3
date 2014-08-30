@@ -45,8 +45,8 @@ u32 GetAddress(u32 offset, u8 location)
 {
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
+	case CELL_GCM_LOCATION_LOCAL: return (u32)Memory.RSXFBMem.GetStartAddr() + offset;
+	case CELL_GCM_LOCATION_MAIN: return (u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
 	}
 
 	LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x)", location);
@@ -881,7 +881,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				{
 					case 0:
 					{
-						int pos = m_indexed_array.m_data.size();
+						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
 						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
 						*(u32*)&m_indexed_array.m_data[pos] = index;
@@ -891,7 +891,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 					case 1:
 					{
-						int pos = m_indexed_array.m_data.size();
+						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
 						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
 						//LOG_WARNING(RSX, "index 2: %d", index);
@@ -1568,7 +1568,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
 	{
-		for (size_t i = 0; i < 32; i++)
+		for (u32 i = 0; i < 32; i++)
 		{
 			m_polygon_stipple_pattern[i] = ARGS(i);
 		}

@@ -328,8 +328,8 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	}
 	else
 	{
-		count = res.size();
-		entries_count.SaveValue(res.size());
+		count = (int)res.size();
+		entries_count.SaveValue(count);
 	}
 
 	for(int i=0; i<count; ++i)

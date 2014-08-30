@@ -182,8 +182,8 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	mutex->recursive = 0;
 	mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0ull;
 
 	while (true)
 	{

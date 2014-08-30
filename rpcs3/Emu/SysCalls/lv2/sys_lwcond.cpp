@@ -177,8 +177,8 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 			(u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
 	}
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
 
 	while (true)
 	{

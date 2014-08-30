@@ -34,8 +34,8 @@ size_t AudioDumper::WriteData(const void* buffer, size_t size)
 	if (!do_save) return size; // ignore empty data
 #endif
 	size_t ret = m_output.Write(buffer, size);
-	m_header.Size += ret;
-	m_header.RIFF.Size += ret;
+	m_header.Size += (u32)ret;
+	m_header.RIFF.Size += (u32)ret;
 	return ret;
 }
 

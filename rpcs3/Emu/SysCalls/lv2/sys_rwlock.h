@@ -51,7 +51,7 @@ struct RWLock
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		for (u32 i = rlock_list.size() - 1; ~i; i--)
+		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
@@ -70,7 +70,7 @@ struct RWLock
 		{
 			return false; // deadlock
 		}
-		for (u32 i = rlock_list.size() - 1; ~i; i--)
+		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
@@ -90,7 +90,7 @@ struct RWLock
 			{
 				return false; // do not enqueue
 			}
-			for (u32 i = wlock_queue.size() - 1; ~i; i--)
+			for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
 			{
 				if (wlock_queue[i] == tid)
 				{
@@ -117,7 +117,7 @@ struct RWLock
 					{
 						return false; // do not enqueue
 					}
-					for (u32 i = wlock_queue.size() - 1; ~i; i--)
+					for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
 					{
 						if (wlock_queue[i] == tid)
 						{

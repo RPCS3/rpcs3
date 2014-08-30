@@ -148,8 +148,8 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 		}
 	}
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
 
 	while (true)
 	{
@@ -337,7 +337,7 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 		return CELL_OK;
 	}
 
-	if (num.GetAddr()) num = tids.size();
+	if (num.GetAddr()) num = (u32)tids.size();
 
 	return CELL_OK;
 }

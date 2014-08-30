@@ -800,7 +800,7 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = af.pts;
+	pcm->auInfo.pts.lower = (u32)af.pts;
 	pcm->auInfo.pts.upper = af.pts >> 32;
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;

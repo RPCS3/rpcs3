@@ -128,7 +128,7 @@ u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
 	{
 		if (list.size())
 		{
-			u32 highest_prio = ~0;
+			u64 highest_prio = ~0ull;
 			u32 sel = 0;
 			for (u32 i = 0; i < list.size(); i++)
 			{

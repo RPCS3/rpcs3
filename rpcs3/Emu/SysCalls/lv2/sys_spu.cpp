@@ -16,7 +16,7 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 	ELFLoader l(stream);
 	l.LoadInfo();
 	const u32 alloc_size = 256 * 1024;
-	u32 spu_offset = Memory.MainMem.AllocAlign(alloc_size);
+	u32 spu_offset = (u32)Memory.MainMem.AllocAlign(alloc_size);
 	l.LoadData(spu_offset);
 	spu_ep = l.GetEntry();
 	return spu_offset;
@@ -518,9 +518,9 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 	switch (type)
 	{
-	case 1: (*(SPUThread*)thr).WriteLS8(address, value); return CELL_OK;
-	case 2: (*(SPUThread*)thr).WriteLS16(address, value); return CELL_OK;
-	case 4: (*(SPUThread*)thr).WriteLS32(address, value); return CELL_OK;
+	case 1: (*(SPUThread*)thr).WriteLS8(address, (u8)value); return CELL_OK;
+	case 2: (*(SPUThread*)thr).WriteLS16(address, (u16)value); return CELL_OK;
+	case 4: (*(SPUThread*)thr).WriteLS32(address, (u32)value); return CELL_OK;
 	case 8: (*(SPUThread*)thr).WriteLS64(address, value); return CELL_OK;
 	default: return CELL_EINVAL;
 	}
@@ -631,7 +631,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	(*(SPUThread*)thr).WriteSNR(number, value);
+	(*(SPUThread*)thr).WriteSNR(number ? true : false, value);
 
 	return CELL_OK;
 }
@@ -1054,6 +1054,6 @@ s32 sys_raw_spu_get_spu_cfg(u32 id, mem32_t value)
 		return CELL_ESRCH;
 	}
 
-	value = t->cfg.value;
+	value = (u32)t->cfg.value;
 	return CELL_OK;
 }

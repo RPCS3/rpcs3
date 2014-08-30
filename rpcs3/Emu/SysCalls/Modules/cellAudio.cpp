@@ -39,9 +39,9 @@ int cellAudioInit()
 	m_config.counter = 0;
 
 	// alloc memory
-	m_config.m_buffer = Memory.Alloc(128 * 1024 * m_config.AUDIO_PORT_COUNT, 1024); 
+	m_config.m_buffer = (u32)Memory.Alloc(128 * 1024 * m_config.AUDIO_PORT_COUNT, 1024); 
 	memset(Memory + m_config.m_buffer, 0, 128 * 1024 * m_config.AUDIO_PORT_COUNT);
-	m_config.m_indexes = Memory.Alloc(sizeof(u64) * m_config.AUDIO_PORT_COUNT, 16);
+	m_config.m_indexes = (u32)Memory.Alloc(sizeof(u64) * m_config.AUDIO_PORT_COUNT, 16);
 	memset(Memory + m_config.m_indexes, 0, sizeof(u64) * m_config.AUDIO_PORT_COUNT);
 
 	thread t("Audio Thread", []()
@@ -527,8 +527,8 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, mem32_t portNum)
 		{
 			AudioPortConfig& port = m_config.m_ports[i];
 	
-			port.channel = audioParam->nChannel;
-			port.block = audioParam->nBlock;
+			port.channel = (u8)audioParam->nChannel;
+			port.block = (u8)audioParam->nBlock;
 			port.attr = audioParam->attr;
 			if (port.attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 			{
