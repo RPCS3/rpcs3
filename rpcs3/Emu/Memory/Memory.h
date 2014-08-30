@@ -125,9 +125,9 @@ public:
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
 		
-		if (res < 0x100000000)
+		if ((u32)res == res)
 		{
-			return res;
+			return (u32)res;
 		}
 		else
 		{
@@ -211,7 +211,7 @@ public:
 			}
 			else
 			{
-				WriteMMIO32(addr, data);
+				WriteMMIO32((u32)addr, data);
 			}
 		}
 		else
@@ -285,7 +285,7 @@ public:
 			}
 			else
 			{
-				return ReadMMIO32(addr);
+				return ReadMMIO32((u32)addr);
 			}
 		}
 		else

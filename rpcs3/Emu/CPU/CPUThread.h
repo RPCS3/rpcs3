@@ -37,7 +37,7 @@ protected:
 	bool m_is_step;
 
 	u64 m_stack_addr;
-	u64 m_stack_size;
+	u32 m_stack_size;
 	u64 m_stack_point;
 
 	u64 m_exit_status;
@@ -51,11 +51,11 @@ public:
 	virtual void CloseStack();
 
 	u64 GetStackAddr() const { return m_stack_addr; }
-	u64 GetStackSize() const { return m_stack_size; }
+	u32 GetStackSize() const { return m_stack_size; }
 	virtual u64 GetFreeStackSize() const=0;
 
 	void SetStackAddr(u64 stack_addr) { m_stack_addr = stack_addr; }
-	void SetStackSize(u64 stack_size) { m_stack_size = stack_size; }
+	void SetStackSize(u32 stack_size) { m_stack_size = stack_size; }
 
 	virtual void SetArg(const uint pos, const u64 arg) = 0;
 

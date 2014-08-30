@@ -389,7 +389,7 @@ struct PPCdouble
 
 	u32 To32() const
 	{
-		float res = _double;
+		float res = (float)_double;
 
 		return (u32&)res;
 	}
@@ -686,7 +686,7 @@ public:
 		}
 		else
 		{
-			UpdateCRn<u32>(n, a, b);
+			UpdateCRn<u32>(n, (u32)a, (u32)b);
 		}
 	}
 
@@ -694,11 +694,11 @@ public:
 	{
 		if(l)
 		{
-			UpdateCRn<s64>(n, a, b);
+			UpdateCRn<s64>(n, (s64)a, (s64)b);
 		}
 		else
 		{
-			UpdateCRn<s32>(n, a, b);
+			UpdateCRn<s32>(n, (s32)a, (s32)b);
 		}
 	}
 
@@ -822,7 +822,7 @@ public:
 			}
 			if (reg == "CR" || reg == "FPSCR")
 			{
-				unsigned long reg_value;
+				unsigned long long reg_value;
 				reg_value = std::stoull(value.substr(24, 31), 0, 16);
 				if (reg == "CR") CR.CR = (u32)reg_value;
 				if (reg == "FPSCR") FPSCR.FPSCR = (u32)reg_value;

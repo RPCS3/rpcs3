@@ -22,7 +22,7 @@ public:
 protected:
 	virtual u32 DisAsmBranchTarget(const s32 imm)
 	{
-		return dump_pc + imm;
+		return (u32)dump_pc + imm;
 	}
 
 	std::string GetRegsListString(u16 regs_list)

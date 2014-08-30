@@ -177,7 +177,7 @@ public:
 		return true;
 	}
 
-	bool HasID(const s64 id)
+	bool HasID(const u32 id)
 	{
 		{
 			std::lock_guard<std::mutex> lock(m_mtx_main);
@@ -211,7 +211,7 @@ public:
 	u32 GetTypeCount(IDType type)
 	{
 		if (type < TYPE_OTHER) {
-			return m_types[type].size();
+			return (u32)m_types[type].size();
 		}
 		return 1;
 	}
