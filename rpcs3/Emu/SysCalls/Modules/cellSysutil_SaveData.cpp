@@ -8,7 +8,6 @@
 #include "Emu/FS/vfsDir.h"
 #include "Loader/PSF.h"
 #include "cellSysutil_SaveData.h"
-#include <algorithm>
 
 extern Module *cellSysutil;
 

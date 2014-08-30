@@ -1,7 +1,4 @@
 #include "stdafx.h"
-
-#include <memory>
-
 #include "Utilities/rXml.h"
 #include <wx/xml/xml.h>
 

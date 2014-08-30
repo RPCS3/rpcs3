@@ -1,7 +1,5 @@
 #pragma once
-#include <mutex>
 #include <unordered_map>
-#include <set>
 
 #define rID_ANY -1 // was wxID_ANY
 

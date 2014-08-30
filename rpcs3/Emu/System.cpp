@@ -422,7 +422,7 @@ void Emulator::Pause()
 	//ConLog.Write("pause...");
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (InterlockedCompareExchange((volatile unsigned long*)&m_status, Paused, Running) == Running)
+	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
 	}

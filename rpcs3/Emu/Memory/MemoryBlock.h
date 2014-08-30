@@ -2,9 +2,7 @@
 
 #define PAGE_4K(x) (x + 4095) & ~(4095)
 
-#include <memory>
-#include <mutex>
-#include <emmintrin.h>
+//#include <emmintrin.h>
 
 struct MemInfo
 {

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include "PPUProgramCompiler.h"
 #include "Utilities/rFile.h"
 

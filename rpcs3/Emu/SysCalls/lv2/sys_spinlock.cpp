@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include <thread>
 #include "sys_spinlock.h"
 
 SysCallBase sys_spinlock("sys_spinlock");

@@ -1,9 +1,7 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #if defined (_WIN32)
-#include <algorithm>
 #include "Utilities/Log.h"
 #include "XInputPadHandler.h"
-#include <cstring>
 
 namespace {
 	const DWORD THREAD_TIMEOUT = 1000;

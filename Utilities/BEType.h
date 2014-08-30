@@ -1,10 +1,5 @@
 #pragma once
 
-#include <algorithm>
-
-using std::min;
-using std::max;
-
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
 #define re64(val) _byteswap_uint64(val)

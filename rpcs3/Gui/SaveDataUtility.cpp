@@ -1,6 +1,5 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include "SaveDataUtility.h"
-#include "stdafx.h"
 #include <iomanip>
 #include <sstream>
 #include "Utilities/Log.h"

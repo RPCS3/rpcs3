@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include "TextInputDialog.h"
 
 TextInputDialog::TextInputDialog(wxWindow* parent, const std::string& defvalue, const std::string& label)

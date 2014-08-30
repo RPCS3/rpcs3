@@ -365,7 +365,7 @@ public:
 
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
-		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
+		memcpy(GetMemFromAddr<T>(addr), str.c_str(), str.size());
 	}
 
 	u32 GetUserMemTotalSize()
@@ -743,39 +743,6 @@ public:
 	{
 		return (const be_t<T>*)&Memory[this->m_addr];
 	}
-};
-
-class mem_class_t
-{
-	u32 m_addr;
-
-public:
-	mem_class_t(u32 addr) : m_addr(addr)
-	{
-	}
-
-	mem_class_t() : m_addr(0)
-	{
-	}
-
-	template<typename T> u32 operator += (T right)
-	{
-		mem_t<T>& m((mem_t<T>&)*this);
-		m = right;
-		m_addr += sizeof(T);
-		return m_addr;
-	}
-
-	template<typename T> operator T()
-	{
-		mem_t<T>& m((mem_t<T>&)*this);
-		const T ret = m;
-		m_addr += sizeof(T);
-		return ret;
-	}
-
-	u64 GetAddr() const { return m_addr; }
-	void SetAddr(const u64 addr) { m_addr = addr; }
 };
 
 template<typename T>

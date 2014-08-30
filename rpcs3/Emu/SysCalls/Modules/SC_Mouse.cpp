@@ -4,20 +4,9 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "Emu/Io/Mouse.h"
+#include "SC_Mouse.h"
 
 extern Module *sys_io;
-
-enum CELL_MOUSE_ERROR_CODE
-{
-	CELL_MOUSE_ERROR_FATAL                      = 0x80121201,
-	CELL_MOUSE_ERROR_INVALID_PARAMETER          = 0x80121202,
-	CELL_MOUSE_ERROR_ALREADY_INITIALIZED        = 0x80121203,
-	CELL_MOUSE_ERROR_UNINITIALIZED              = 0x80121204,
-	CELL_MOUSE_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121205,
-	CELL_MOUSE_ERROR_DATA_READ_FAILED           = 0x80121206,
-	CELL_MOUSE_ERROR_NO_DEVICE                  = 0x80121207,
-	CELL_MOUSE_ERROR_SYS_SETTING_FAILED         = 0x80121208,
-};
 
 int cellMouseInit(u32 max_connect)
 {
@@ -49,47 +38,47 @@ int cellMouseEnd()
 	return CELL_OK;
 }
 
-int cellMouseGetInfo(mem_class_t info)
+int cellMouseGetInfo(mem_ptr_t<CellMouseInfo> info)
 {
 	sys_io->Log("cellMouseGetInfo(info_addr=0x%x)", info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	const MouseInfo& current_info = Emu.GetMouseManager().GetInfo();
-	info += current_info.max_connect;
-	info += current_info.now_connect;
-	info += current_info.info;
-	for(u32 i=0; i<CELL_MAX_MICE; i++)	info += current_info.vendor_id[i];
-	for(u32 i=0; i<CELL_MAX_MICE; i++)	info += current_info.product_id[i];
-	for(u32 i=0; i<CELL_MAX_MICE; i++)	info += current_info.status[i];
+	info->max_connect = current_info.max_connect;
+	info->now_connect = current_info.now_connect;
+	info->info = current_info.info;
+	for(u32 i=0; i<CELL_MAX_MICE; i++)	info->vendor_id[i] = current_info.vendor_id[i];
+	for(u32 i=0; i<CELL_MAX_MICE; i++)	info->product_id[i] = current_info.product_id[i];
+	for(u32 i=0; i<CELL_MAX_MICE; i++)	info->status[i] = current_info.status[i];
 	
 	return CELL_OK;
 }
 
-int cellMouseInfoTabletMode(u32 port_no, mem_class_t info)
+int cellMouseInfoTabletMode(u32 port_no, mem_ptr_t<CellMouseInfoTablet> info)
 {
 	sys_io->Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no, info.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
-	info += 0;		// Unimplemented: (0=Tablet mode is not supported)
-	info += 1;		// Unimplemented: (1=Mouse mode)
+	info->is_supported = 0; // Unimplemented: (0=Tablet mode is not supported)
+	info->mode = 1; // Unimplemented: (1=Mouse mode)
 	
 	return CELL_OK;
 }
 
-int cellMouseGetData(u32 port_no, mem_class_t data)
+int cellMouseGetData(u32 port_no, mem_ptr_t<CellMouseData> data)
 {
 	sys_io->Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no, data.GetAddr());
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_NO_DEVICE;
 	
-	CellMouseData& current_data = Emu.GetMouseManager().GetData(port_no);
-	data += current_data.update;
-	data += current_data.buttons;
-	data += current_data.x_axis;
-	data += current_data.y_axis;
-	data += current_data.wheel;
-	data += current_data.tilt;
+	MouseData& current_data = Emu.GetMouseManager().GetData(port_no);
+	data->update = current_data.update;
+	data->buttons = current_data.buttons;
+	data->x_axis = current_data.x_axis;
+	data->y_axis = current_data.y_axis;
+	data->wheel = current_data.wheel;
+	data->tilt = current_data.tilt;
 
 	current_data.update = CELL_MOUSE_DATA_NON;
 	current_data.x_axis = 0;
@@ -99,7 +88,7 @@ int cellMouseGetData(u32 port_no, mem_class_t data)
 	return CELL_OK;
 }
 
-int cellMouseGetDataList(u32 port_no, mem_class_t data)
+int cellMouseGetDataList(u32 port_no, mem_ptr_t<CellMouseDataList> data)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 	
@@ -113,14 +102,14 @@ int cellMouseSetTabletMode(u32 port_no, u32 mode)
 	return CELL_OK;
 }
 
-int cellMouseGetTabletDataList(u32 port_no, mem_class_t data)
+int cellMouseGetTabletDataList(u32 port_no, u32 data_addr)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 	
 	return CELL_OK;
 }
 
-int cellMouseGetRawData(u32 port_no, mem_class_t data)
+int cellMouseGetRawData(u32 port_no, u32 data_addr)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
 

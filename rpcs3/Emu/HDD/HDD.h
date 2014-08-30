@@ -1,5 +1,4 @@
 #pragma once
-#include <algorithm>
 #include "Emu/FS/vfsDevice.h"
 #include "Emu/FS/vfsLocalFile.h"
 

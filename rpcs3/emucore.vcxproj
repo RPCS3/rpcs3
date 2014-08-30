@@ -29,6 +29,11 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />
+    <ClCompile Include="..\Utilities\rFile.cpp" />
+    <ClCompile Include="..\Utilities\rMsgBox.cpp" />
+    <ClCompile Include="..\Utilities\rPlatform.cpp" />
+    <ClCompile Include="..\Utilities\rTime.cpp" />
+    <ClCompile Include="..\Utilities\rXml.cpp" />
     <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
@@ -55,7 +60,6 @@
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
-    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp" />
@@ -164,6 +168,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
@@ -220,9 +225,10 @@
   <ItemGroup>
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
-    <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\Log.h" />
+    <ClInclude Include="..\Utilities\rFile.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
@@ -261,7 +267,6 @@
     <ClInclude Include="Emu\Cell\PPUInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
-    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
@@ -354,6 +359,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
@@ -370,7 +376,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil_SaveData.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
@@ -385,6 +393,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Keyboard.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\SC_Mouse.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />

@@ -29,7 +29,7 @@ int cellNetCtlGetState(mem32_t state)
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler(mem_ptr_t<cellNetCtlHandler> handler, mem32_t arg, s32 hid)
+int cellNetCtlAddHandler(mem_func_ptr_t<cellNetCtlHandler> handler, mem32_t arg, s32 hid)
 {
 	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.GetAddr(), arg.GetAddr(), hid);
 

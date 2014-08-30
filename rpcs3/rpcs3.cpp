@@ -1,4 +1,5 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rpcs3.h"
 #include "Ini.h"
@@ -19,6 +20,9 @@
 #if defined(_WIN32)
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
+
+#include "Emu/SysCalls/Modules/cellMsgDialog.h"
+#include "Gui/MsgDialog.h"
 
 #include "Gui/GLGSFrame.h"
 #include <wx/stdpaths.h>
@@ -113,6 +117,11 @@ bool Rpcs3App::OnInit()
 	{
 		return new GLGSFrame();
 	});
+	SetMsgDialogCreateCallback(MsgDialogCreate);
+	SetMsgDialogDestroyCallback(MsgDialogDestroy);
+	SetMsgDialogProgressBarSetMsgCallback(MsgDialogProgressBarSetMsg);
+	SetMsgDialogProgressBarResetCallback(MsgDialogProgressBarReset);
+	SetMsgDialogProgressBarIncCallback(MsgDialogProgressBarInc);
 
 	TheApp = this;
 	SetAppName(_PRGNAME_);

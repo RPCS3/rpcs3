@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #include "Utilities/rMsgBox.h"
 
 #include "Emu/Cell/PPUProgramCompiler.h"

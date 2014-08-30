@@ -1,9 +1,9 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
-#include <mutex>
 #include "ModuleManager.h"
 
 u32 getFunctionId(const char* name)
@@ -187,4 +187,68 @@ IdManager& Module::GetIdManager() const
 void Module::PushNewFuncSub(SFunc* func)
 {
 	Emu.GetSFuncManager().push_back(func);
+}
+
+void fix_import(Module* module, u32 func, u32 addr)
+{
+	Memory.Write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
+	Memory.Write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
+	Memory.Write32(addr + 0x8, 0x60000000); /* nop */
+	// leave rtoc saving at 0xC
+	Memory.Write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
+	Memory.Write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
+
+	module->Load(func);
+}
+
+void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)
+{
+	// start of table:
+	// addr = (u64) addr - seg2, (u32) 1, (u32) 1, (u64) ptr
+	// addr = (u64) addr - seg2, (u32) 0x101, (u32) 1, (u64) ptr - seg2 (???)
+	// addr = (u64) addr, (u32) 0x100, (u32) 1, (u64) ptr - seg2 (???)
+	// addr = (u64) addr, (u32) 0, (u32) 1, (u64) ptr (???)
+
+	for (u32 i = lib + start; i < lib + end; i += 24)
+	{
+		u64 addr = Memory.Read64(i);
+		const u64 flag = Memory.Read64(i + 8);
+
+		if (flag == 0x10100000001ull)
+		{
+			addr = addr + seg2 + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16) + seg2);
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x100000001ull)
+		{
+			addr = addr + seg2 + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16));
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x10000000001ull)
+		{
+			addr = addr + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16) + seg2);
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 1)
+		{
+			addr = addr + lib;
+			u32 value = Memory.Read32(addr);
+			assert(value == Memory.Read64(i + 16));
+			Memory.Write32(addr, value + lib);
+		}
+		else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
+		{
+			// seems to be instruction modifiers for imports (done in other way in FIX_IMPORT)
+		}
+		else
+		{
+			module->Notice("fix_relocs(): 0x%x : 0x%llx", i - lib, flag);
+		}
+	}
 }

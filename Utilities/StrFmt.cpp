@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "StrFmt.h"
+#include <wx/string.h>
 
 extern const std::string fmt::placeholder = "???";
 
@@ -14,7 +15,11 @@ std::string fmt::FormatV(const char *fmt, va_list args)
 	for (;;)
 	{
 		std::vector<char> buffptr(length);
+#if !defined(_MSC_VER)
 		size_t printlen = vsnprintf(buffptr.data(), length, fmt, args);
+#else
+		size_t printlen = vsnprintf_s(buffptr.data(), length, length - 1, fmt, args);
+#endif
 		if (printlen < length)
 		{
 			str = std::string(buffptr.data(), printlen);

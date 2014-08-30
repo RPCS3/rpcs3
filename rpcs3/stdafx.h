@@ -7,30 +7,6 @@
 #endif
 
 #define NOMINMAX
-#ifndef QT_UI
-#include <wx/wxprec.h>
-#include <wx/config.h>
-#include <wx/string.h>
-#include <wx/propdlg.h>
-#include <wx/dcclient.h>
-
-#include <wx/wfstream.h>
-#include <wx/spinctrl.h>
-#include <wx/datetime.h>
-#include <wx/filepicker.h>
-#include <wx/menu.h>
-#include <wx/menuitem.h>
-#include <wx/stattext.h>
-#include <wx/msgdlg.h>
-#include <wx/gauge.h>
-#include <wx/stattext.h>
-#include <wx/scrolbar.h>
-#include <wx/frame.h>
-#include <wx/combobox.h>
-#include <wx/checkbox.h>
-#include <wx/listctrl.h>
-#include <wx/aui/auibook.h>
-#endif
 
 #if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
 	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
@@ -42,7 +18,21 @@
 #include <cstring>
 #include <cassert>
 #include <cstdint>
+#include <cmath>
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <memory>
+#include <vector>
+#include <set>
+#include <string>
+#include <ostream>
+#include <sstream>
+#include <functional>
+#include <algorithm>
 
+#include <sys/stat.h>
 #include "Utilities/GNU.h"
 
 typedef unsigned int uint;
@@ -52,10 +42,15 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+static const u32 U32_MAX = 0xffffffff;
+
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
+
+static const s32 S32_MIN = -0x80000000;
+static const s32 S32_MAX = 0x7fffffff;
 
 union u128
 {

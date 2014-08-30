@@ -64,24 +64,22 @@ private:
 
 	void SysCall()
 	{
-		CPU.m_last_syscall = CPU.GPR[11];
-		SysCalls::DoSyscall(CPU.GPR[11]);
+		const u64 sc = CPU.GPR[11];
+		const u64 old_sc = CPU.m_last_syscall;
+
+		CPU.m_last_syscall = sc;
+		SysCalls::DoSyscall(sc);
 
 		if(Ini.HLELogging.GetValue())
 		{
-			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], SysCalls::GetHLEFuncName(CPU.GPR[11]).c_str(), CPU.GPR[3], CPU.PC);
+			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx",
+				sc, SysCalls::GetHLEFuncName(sc).c_str(), CPU.GPR[3], CPU.PC);
 		}
-		/*else if ((s64)CPU.GPR[3] < 0) // probably, error code
-		{
-			LOG_ERROR(PPU, "SysCall[0x%llx] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
-			if(CPU.GPR[11] > 1024)
-				SysCalls::DoFunc(CPU.GPR[11]);
-		}*/
 #ifdef HLE_CALL_DEBUG
-		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", sc, CPU.GPR[3], CPU.PC);
 #endif
 
-		CPU.m_last_syscall = 0;
+		CPU.m_last_syscall = old_sc;
 	}
 
 	void NULL_OP()
@@ -773,10 +771,10 @@ private:
 		{		
 			float result = CPU.VPR[vb]._f[w] * nScale;
 
-			if (result > INT_MAX)
-				CPU.VPR[vd]._s32[w] = (int)INT_MAX;
-			else if (result < INT_MIN)
-				CPU.VPR[vd]._s32[w] = (int)INT_MIN;
+			if (result > S32_MAX)
+				CPU.VPR[vd]._s32[w] = (int)S32_MAX;
+			else if (result < S32_MIN)
+				CPU.VPR[vd]._s32[w] = (int)S32_MIN;
 			else // C rounding = Round towards 0
 				CPU.VPR[vd]._s32[w] = (int)result;
 		}
@@ -790,8 +788,8 @@ private:
 			// C rounding = Round towards 0
 			s64 result = (s64)(CPU.VPR[vb]._f[w] * nScale);
 
-			if (result > UINT_MAX)
-				CPU.VPR[vd]._u32[w] = (u32)UINT_MAX;
+			if (result > U32_MAX)
+				CPU.VPR[vd]._u32[w] = (u32)U32_MAX;
 			else if (result < 0)
 				CPU.VPR[vd]._u32[w] = 0;
 			else
@@ -1063,14 +1061,14 @@ private:
 
 			result += CPU.VPR[vc]._s32[w];
 
-			if (result > INT_MAX)
+			if (result > S32_MAX)
 			{
-				saturated = INT_MAX;
+				saturated = S32_MAX;
 				CPU.VSCR.SAT = 1;
 			}
-			else if (result < INT_MIN)
+			else if (result < S32_MIN)
 			{
-				saturated = INT_MIN;
+				saturated = S32_MIN;
 				CPU.VSCR.SAT = 1;
 			}
 			else
@@ -1123,9 +1121,9 @@ private:
 
 			result += CPU.VPR[vc]._u32[w];
 
-			if (result > UINT_MAX)
+			if (result > U32_MAX)
 			{
-				saturated = UINT_MAX;
+				saturated = U32_MAX;
 				CPU.VSCR.SAT = 1;
 			}
 			else

@@ -24,10 +24,10 @@ struct sys_memory_info_t
 
 struct sys_page_attr_t
 {
-	u64 attribute;
-	u64 access_right;
-	u32 page_size;
-	u32 pad;
+	be_t<u64> attribute;
+	be_t<u64> access_right;
+	be_t<u32> page_size;
+	be_t<u32> pad;
 };
 
 struct MemoryContainerInfo

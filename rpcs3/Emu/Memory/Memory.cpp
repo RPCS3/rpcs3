@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include <atomic>
-
 #include "Utilities/Log.h"
-#include "Memory.h"
 #include "Emu/System.h"
+#include "Memory.h"
 
 #ifndef _WIN32
 #include <sys/mman.h>
+#else
+#include <Windows.h>
 #endif
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
@@ -36,6 +36,7 @@ void MemoryBase::RegisterPages(u64 addr, u32 size)
 		if (m_pages[i])
 		{
 			LOG_ERROR(MEMORY, "Page already registered (addr=0x%llx)", i * 4096);
+			Emu.Pause();
 		}
 		m_pages[i] = 1; // TODO: define page parameters
 	}
@@ -56,6 +57,7 @@ void MemoryBase::UnregisterPages(u64 addr, u32 size)
 		if (!m_pages[i])
 		{
 			LOG_ERROR(MEMORY, "Page not registered (addr=0x%llx)", i * 4096);
+			Emu.Pause();
 		}
 		m_pages[i] = 0; // TODO: define page parameters
 	}

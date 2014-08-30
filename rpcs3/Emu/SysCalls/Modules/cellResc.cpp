@@ -14,7 +14,8 @@ static const float
 PICTURE_SIZE = (1.0f),
 UV_DELTA_PS = (1.f / 8.f),
 UV_DELTA_LB = (1.f / 6.f),
-XY_DELTA_LB = (1.f / 8.f);
+XY_DELTA_LB = (1.f / 8.f),
+PI = 3.1415926535897932384626433832795;
 
 void BuildupVertexBufferNR()
 {
@@ -1112,10 +1113,10 @@ u16 FloatToHalf(float val)
 
 static void blackman(float window[])
 {
-	const float x0 = ((1.f * 2.f*M_PI) / 5.f) - M_PI;
-	const float x1 = ((2.f * 2.f*M_PI) / 5.f) - M_PI;
-	const float x2 = ((3.f * 2.f*M_PI) / 5.f) - M_PI;
-	const float x3 = ((4.f * 2.f*M_PI) / 5.f) - M_PI;
+	const float x0 = ((1.f * 2.f*PI) / 5.f) - PI;
+	const float x1 = ((2.f * 2.f*PI) / 5.f) - PI;
+	const float x2 = ((3.f * 2.f*PI) / 5.f) - PI;
+	const float x3 = ((4.f * 2.f*PI) / 5.f) - PI;
 
 	const float a0 = 0.42f + (0.50f * cosf(x0)) + (0.08f * cosf(2.f*x0));
 	const float a1 = 0.42f + (0.50f * cosf(x1)) + (0.08f * cosf(2.f*x1));
@@ -1133,7 +1134,7 @@ int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 	float phi[4], transient[4];
 	float y_fraction;
 	float bandwidth = 0.5f / (srcH / dstH);
-	float phi_b = 2.f * M_PI * bandwidth;
+	float phi_b = 2.f * PI * bandwidth;
 	float window[4];
 	mem16_ptr_t buf16(ea_addr);
 	mem32_ptr_t buf32(ea_addr);

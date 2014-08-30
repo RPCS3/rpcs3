@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include "PPUInstrTable.h"
 #include "Loader/ELF64.h"
 

@@ -1,11 +1,11 @@
 #include "stdafx.h"
-#include <memory>
-
 #include "VFS.h"
 #include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
 #include "Ini.h"
+
+#undef CreateFile // TODO: what's wrong with it?
 
 int sort_devices(const void* _a, const void* _b)
 {

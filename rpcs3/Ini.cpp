@@ -3,7 +3,6 @@
 #include "Utilities/StrFmt.h"
 
 #include "Ini.h"
-#include <algorithm>
 #include <cctype>
 #include <regex>
 

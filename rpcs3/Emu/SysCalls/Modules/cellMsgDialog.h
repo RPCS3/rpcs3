@@ -89,3 +89,17 @@ int cellMsgDialogProgressBarReset(u32 progressBarIndex);
 int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta);
 int cellMsgDialogClose(float delay);
 int cellMsgDialogAbort();
+
+typedef void(*MsgDialogCreateCb)(u32 type, const char* msg, u64& status);
+typedef void(*MsgDialogDestroyCb)();
+typedef void(*MsgDialogProgressBarSetMsgCb)(u32 progressBarIndex, const char* msg);
+typedef void(*MsgDialogProgressBarResetCb)(u32 progressBarIndex);
+typedef void(*MsgDialogProgressBarIncCb)(u32 progressBarIndex, u32 delta);
+
+void SetMsgDialogCreateCallback(MsgDialogCreateCb cb);
+void SetMsgDialogDestroyCallback(MsgDialogDestroyCb cb);
+void SetMsgDialogProgressBarSetMsgCallback(MsgDialogProgressBarSetMsgCb cb);
+void SetMsgDialogProgressBarResetCallback(MsgDialogProgressBarResetCb cb);
+void SetMsgDialogProgressBarIncCallback(MsgDialogProgressBarIncCb cb);
+
+void MsgDialogClose();

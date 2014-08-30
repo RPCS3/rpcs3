@@ -2155,7 +2155,7 @@ void RSXThread::Task()
 	});
 	vblank.detach();
 
-	while(!TestDestroy())
+	while(!TestDestroy()) try
 	{
 		if (Emu.IsStopped())
 		{
@@ -2246,6 +2246,16 @@ void RSXThread::Task()
 		m_ctrl->get = get + (count + 1) * 4;
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
+	catch (const std::string& e)
+	{
+		LOG_ERROR(RSX, "Exception: %s", e.c_str());
+		Emu.Pause();
+	}
+	catch (const char* e)
+	{
+		LOG_ERROR(RSX, "Exception: %s", e);
+		Emu.Pause();
+	}
 
 	while (!is_vblank_stopped)
 	{
@@ -2278,11 +2288,17 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 u32 RSXThread::ReadIO32(u32 addr)
 {
 	u32 value;
-	Memory.RSXIOMem.Read32(Memory.RSXIOMem.GetStartAddr() + addr, &value);
+	if (!Memory.RSXIOMem.Read32(Memory.RSXIOMem.GetStartAddr() + addr, &value))
+	{
+		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+	}
 	return value;
 }
 
 void RSXThread::WriteIO32(u32 addr, u32 value)
 {
-	Memory.RSXIOMem.Write32(Memory.RSXIOMem.GetStartAddr() + addr, value);
+	if (!Memory.RSXIOMem.Write32(Memory.RSXIOMem.GetStartAddr() + addr, value))
+	{
+		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+	}
 }

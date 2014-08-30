@@ -1,10 +1,5 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <ostream>
-#include <sstream>
-#include <cstdio>
-#include <functional>
+class wxString;
 
 #if defined(_MSC_VER)
 #define snprintf _snprintf
@@ -117,10 +112,14 @@ namespace fmt{
 		for (;;)
 		{
 			std::vector<char> buffptr(length);
+#if !defined(_MSC_VER)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
 			size_t printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
 #pragma clang diagnostic pop
+#else
+			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt.c_str(), std::forward<Args>(parameters)...);
+#endif
 			if (printlen < length)
 			{
 				str = string(buffptr.data(), printlen);

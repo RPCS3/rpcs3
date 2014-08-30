@@ -8,7 +8,6 @@
 #include "Emu/FS/vfsFile.h"
 #include "Loader/ELF.h"
 #include "sys_spu.h"
-#include <atomic>
 
 static SysCallBase sys_spu("sys_spu");
 
@@ -387,6 +386,7 @@ s32 sys_spu_thread_group_terminate(u32 id, int value)
 	{
 		if (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
+			((SPUThread*)t)->SPU.Status.SetValue(SPU_STATUS_STOPPED);
 			t->Stop();
 		}
 	}
@@ -435,15 +435,17 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 		return CELL_EBUSY;
 	}
 
-	if (cause.GetAddr()) cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-	if (status.GetAddr()) status = 0; //unspecified because of ALL_THREADS_EXIT
-
+	bool all_threads_exit = true;
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		while (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
 			if (!t->IsRunning())
 			{
+				if (((SPUThread*)t)->SPU.Status.GetValue() != SPU_STATUS_STOPPED_BY_STOP)
+				{
+					all_threads_exit = false;
+				}
 				break;
 			}
 			if (Emu.IsStopped())
@@ -454,6 +456,17 @@ s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
+
+	if (cause.GetAddr())
+	{
+		cause = group_info->m_group_exit
+			? SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT
+			: (all_threads_exit
+				? SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT
+				: SYS_SPU_THREAD_GROUP_JOIN_TERMINATED);
+	}
+
+	if (status.GetAddr()) status = group_info->m_exit_status;
 
 	group_info->m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group_info->lock = 0; // release lock	TODO: this LOCK may be replaced.

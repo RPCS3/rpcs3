@@ -1,9 +1,4 @@
 #pragma once
-#include <functional>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
 
 static std::thread::id main_thread;
 

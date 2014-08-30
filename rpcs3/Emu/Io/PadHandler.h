@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 enum PortStatus
 {
 	CELL_PAD_STATUS_DISCONNECTED   = 0x00000000,

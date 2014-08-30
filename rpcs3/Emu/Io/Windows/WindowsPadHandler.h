@@ -1,6 +1,4 @@
 #pragma once
-
-#include <algorithm>
 #include "Emu/Io/PadHandler.h"
 
 class WindowsPadHandler final

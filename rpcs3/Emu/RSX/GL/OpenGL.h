@@ -4,6 +4,7 @@
 #endif
 
 #ifdef _WIN32
+#include <Windows.h>
 #include "GL/gl.h"
 #include "GL/glext.h"
 typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);

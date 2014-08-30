@@ -34,7 +34,6 @@ void strcpy_trunc(char (&dst)[size], const std::string& src)
 #define _byteswap_ushort(x) __builtin_bswap16(x)
 #define _byteswap_ulong(x) __builtin_bswap32(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
-#define mkdir(x) mkdir(x, 0777)
 #define INFINITE 0xFFFFFFFF
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
@@ -82,4 +81,15 @@ int clock_gettime(int foo, struct timespec *ts);
 #define _aligned_free free
 
 #define DWORD int32_t
+#endif
+
+#ifndef InterlockedCompareExchange
+static __forceinline uint32_t InterlockedCompareExchange(volatile uint32_t* dest, uint32_t exch, uint32_t comp)
+{
+	return _InterlockedCompareExchange((volatile long*)dest, exch, comp);
+}
+static __forceinline uint64_t InterlockedCompareExchange(volatile uint64_t* dest, uint64_t exch, uint64_t comp)
+{
+	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp);
+}
 #endif

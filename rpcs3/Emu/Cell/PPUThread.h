@@ -1,6 +1,5 @@
 #pragma once
 #include "Emu/Cell/PPCThread.h"
-#include <cmath>
 
 enum
 {
