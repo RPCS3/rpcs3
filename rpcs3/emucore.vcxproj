@@ -96,6 +96,7 @@
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
+    <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
@@ -328,6 +329,10 @@
     <ClInclude Include="Emu\RSX\RSXThread.h" />
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h" />
     <ClInclude Include="Emu\RSX\sysutil_video.h" />
+    <ClInclude Include="Emu\Memory\vm.h" />
+    <ClInclude Include="Emu\Memory\vm_ptr.h" />
+    <ClInclude Include="Emu\Memory\vm_ref.h" />
+    <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
@@ -546,7 +551,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>

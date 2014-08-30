@@ -15,7 +15,7 @@ static std::map<u32, CellPngDecMainHandle *> cellPngDecMap;
 
 CellPngDecMainHandle *getCellPngDecCtx(u32 mainHandle) {
 	if (cellPngDecMap.find(mainHandle) == cellPngDecMap.end())
-		return NULL;
+		return nullptr;
 
 	return cellPngDecMap[mainHandle];
 }
@@ -68,14 +68,14 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
-		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName_addr, 0, fd.GetAddr(), 0, 0);
+		vm::var<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName_addr, 0, fd.addr(), 0, 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
-		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb.addr());
 		if(ret != CELL_OK) return ret;
 		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 		break;
@@ -94,12 +94,12 @@ int cellPngDecExtOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc
 
 	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", cbCtrlStrm->cbCtrlStrmFunc.GetAddr());
 
-	MemoryAllocator<CellPngDecStrmInfo> streamInfo;
-	MemoryAllocator<CellPngDecStrmParam> streamParam;
+	vm::var<CellPngDecStrmInfo> streamInfo;
+	vm::var<CellPngDecStrmParam> streamParam;
 
 	int res = cellPngDecOpen(mainHandle, subHandle, src, openInfo);
 
-	if (!res) cbCtrlStrm->cbCtrlStrmFunc(streamInfo.GetAddr(), streamParam.GetAddr(), cbCtrlStrm->cbCtrlStrmArg);
+	if (!res) cbCtrlStrm->cbCtrlStrmFunc(streamInfo.addr(), streamParam.addr(), cbCtrlStrm->cbCtrlStrmArg);
 
 	return res;
 }
@@ -133,28 +133,29 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	if(fileSize < 29) return CELL_PNGDEC_ERROR_HEADER;	// Error: The file is smaller than the length of a PNG header
 	
 	//Write the header to buffer
-	MemoryAllocator<be_t<u32>> buffer(34); // Alloc buffer for PNG header
-	MemoryAllocator<be_t<u64>> pos, nread;
+	vm::var<u8[34]> buffer; // Alloc buffer for PNG header
+	auto buffer_32 = buffer.To<be_t<u32>>();
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
+		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
 		break;
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread.addr());
 		break;
 	}
 
-	if (buffer[0] != 0x89504E47 ||
-		buffer[1] != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
-		buffer[3] != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
+	if (buffer_32[0].ToBE() != se32(0x89504E47) ||
+		buffer_32[1].ToBE() != se32(0x0D0A1A0A) ||  // Error: The first 8 bytes are not a valid PNG signature
+		buffer_32[3].ToBE() != se32(0x49484452))   // Error: The PNG file does not start with an IHDR chunk
 	{
 		return CELL_PNGDEC_ERROR_HEADER; 
 	}
 
-	switch (buffer.To<u8>()[25])
+	switch (buffer[25])
 	{
 	case 0: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE;       current_info.numComponents = 1; break;
 	case 2: current_info.colorSpace = CELL_PNGDEC_RGB;             current_info.numComponents = 3; break;
@@ -164,10 +165,10 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 	default: return CELL_PNGDEC_ERROR_HEADER; // Not supported color type
 	}
 
-	current_info.imageWidth       = buffer[4];
-	current_info.imageHeight      = buffer[5];
-	current_info.bitDepth         = buffer.To<u8>()[24];
-	current_info.interlaceMethod  = buffer.To<u8>()[28];
+	current_info.imageWidth       = buffer_32[4];
+	current_info.imageHeight      = buffer_32[5];
+	current_info.bitDepth         = buffer[24];
+	current_info.interlaceMethod  = buffer[28];
 	current_info.chunkInformation = 0; // Unimplemented
 
 	*info = current_info;
@@ -198,18 +199,18 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellPngDecOutParam& current_outParam = subHandle_data->outParam;
 
 	//Copy the PNG file to a buffer
-	MemoryAllocator<unsigned char> png((u32)fileSize);
-	MemoryAllocator<u64> pos, nread;
+	vm::var<unsigned char[]> png((u32)fileSize);
+	vm::var<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + png.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), png.GetSize());
+		memmove(Memory + png.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), png.size());
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, png.GetAddr(), png.GetSize(), nread.GetAddr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, png.addr(), png.size(), nread.addr());
 		break;
 	}
 
@@ -217,7 +218,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 			(
-				stbi_load_from_memory(png.GetPtr(), (s32)fileSize, &width, &height, &actual_components, 4),
+				stbi_load_from_memory(png.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
 				&::free
 			);
 	if (!image)	return CELL_PNGDEC_ERROR_STREAM_FORMAT;

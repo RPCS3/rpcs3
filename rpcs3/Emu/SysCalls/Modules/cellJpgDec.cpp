@@ -46,14 +46,14 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 
 	case se32(CELL_JPGDEC_FILE):
 		// Get file descriptor
-		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd.GetAddr(), 0, 0);
+		vm::var<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd.addr(), 0, 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
-		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb.addr());
 		if (ret != CELL_OK) return ret;
 		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 		break;
@@ -93,18 +93,18 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer((u32)fileSize);
-	MemoryAllocator<be_t<u64>> pos, nread;
+	vm::var<u8[]> buffer((u32)fileSize);
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
+		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread.GetAddr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread.addr());
 		break;
 	}
 
@@ -162,18 +162,18 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the JPG file to a buffer
-	MemoryAllocator<unsigned char> jpg((u32)fileSize);
-	MemoryAllocator<u64> pos, nread;
+	vm::var<unsigned char[]> jpg((u32)fileSize);
+	vm::var<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + jpg.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.GetSize());
+		memmove(Memory + jpg.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread.GetAddr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
+		cellFsRead(fd, jpg.addr(), jpg.size(), nread.addr());
 		break;
 	}
 
@@ -181,7 +181,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(jpg.GetPtr(), (s32)fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(jpg.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 

@@ -44,8 +44,9 @@ int cellFontInit(mem_ptr_t<CellFontConfig> config)
 {
 	cellFont->Log("cellFontInit(config=0x%x)", config.GetAddr());
 
-	MemoryAllocator<u64> revisionFlags = 0;
-	cellFontGetRevisionFlags(revisionFlags.GetAddr());
+	vm::var<u64> revisionFlags;
+	revisionFlags.value() = 0;
+	cellFontGetRevisionFlags(revisionFlags.addr());
 	return cellFontInitializeWithRevision(revisionFlags, config.GetAddr());
 }
 

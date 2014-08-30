@@ -726,13 +726,13 @@ int cellRescSetDisplayMode(u32 displayMode)
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
 	}*/
 
-	MemoryAllocator<CellVideoOutConfiguration> videocfg;
+	vm::var<CellVideoOutConfiguration> videocfg;
 	videocfg->resolutionId = RescBufferMode2SysutilResolutionId(s_rescInternalInstance->m_dstMode);
 	videocfg->format       = RescDstFormat2SysutilFormat(s_rescInternalInstance->m_pRescDsts->format );
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
 	videocfg->pitch        = s_rescInternalInstance->m_dstPitch;
 
-	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg.GetAddr(), 0, 0);
+	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg.addr(), 0, 0);
 
 	if (IsPalInterpolate())
 	{
@@ -1016,8 +1016,8 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.GetAddr();
 	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.GetAddr();
 
-	MemoryAllocator<be_t<u32>> dstOffset;
-	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset.GetAddr());
+	vm::var<be_t<u32>> dstOffset;
+	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset.addr());
 
 	for (int i=0; i<GetNumColorBuffers(); i++)
 	{

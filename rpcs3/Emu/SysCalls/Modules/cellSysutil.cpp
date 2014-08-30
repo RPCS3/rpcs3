@@ -681,10 +681,10 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 	if (dirName.size() != 9)
 		return CELL_HDDGAME_ERROR_PARAM;
 
-	MemoryAllocator<CellHddGameSystemFileParam> param;
-	MemoryAllocator<CellHddGameCBResult> result;
-	MemoryAllocator<CellHddGameStatGet> get;
-	MemoryAllocator<CellHddGameStatSet> set;
+	vm::var<CellHddGameSystemFileParam> param;
+	vm::var<CellHddGameCBResult> result;
+	vm::var<CellHddGameStatGet> get;
+	vm::var<CellHddGameStatSet> set;
 
 	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
@@ -730,7 +730,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 
 	// TODO ?
 
-	funcStat(result.GetAddr(), get.GetAddr(), set.GetAddr());
+	funcStat(result.addr(), get.addr(), set.addr());
 	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
 		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
 		return CELL_HDDGAME_ERROR_CBRESULT;
