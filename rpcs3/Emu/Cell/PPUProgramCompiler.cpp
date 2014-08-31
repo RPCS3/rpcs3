@@ -528,7 +528,7 @@ void CompilePPUProgram::LoadArgs()
 	m_end_args = m_args.size() > 0;
 }
 
-u32 CompilePPUProgram::GetBranchValue(const std::string& branch_name)
+u32 CompilePPUProgram::GetBranchValue(const std::string& branch_name) const
 {
 	for(const Branch& branch : m_branches)
 	{

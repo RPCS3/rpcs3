@@ -131,14 +131,14 @@ private:
 	void LoadSelfAPPKeys();
 	void LoadSelfUNK7Keys();
 	void LoadSelfNPDRMKeys();
-	SELF_KEY GetSelfLV0Key();
-	SELF_KEY GetSelfLDRKey();
-	SELF_KEY GetSelfLV1Key(u64 version);
-	SELF_KEY GetSelfLV2Key(u64 version);
-	SELF_KEY GetSelfISOKey(u16 revision, u64 version);
-	SELF_KEY GetSelfAPPKey(u16 revision);
-	SELF_KEY GetSelfUNK7Key(u64 version);
-	SELF_KEY GetSelfNPDRMKey(u16 revision);
+	SELF_KEY GetSelfLV0Key() const;
+	SELF_KEY GetSelfLDRKey() const;
+	SELF_KEY GetSelfLV1Key(u64 version) const;
+	SELF_KEY GetSelfLV2Key(u64 version) const;
+	SELF_KEY GetSelfISOKey(u16 revision, u64 version) const;
+	SELF_KEY GetSelfAPPKey(u16 revision) const;
+	SELF_KEY GetSelfUNK7Key(u64 version) const;
+	SELF_KEY GetSelfNPDRMKey(u16 revision) const;
 };
 
 // RAP to RIF function.

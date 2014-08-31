@@ -64,7 +64,7 @@ template<typename T> struct IniEntry : public Ini
 		m_value = value;
 	}
 
-	T GetValue()
+	T GetValue() const
 	{
 		return m_value;
 	}

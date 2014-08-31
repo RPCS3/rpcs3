@@ -593,17 +593,17 @@ void KeyVault::LoadSelfUNK7Keys()
 		0x0F);
 }
 
-SELF_KEY KeyVault::GetSelfLV0Key()
+SELF_KEY KeyVault::GetSelfLV0Key() const
 {
 	return sk_LV0_arr[0];
 }
 
-SELF_KEY KeyVault::GetSelfLDRKey()
+SELF_KEY KeyVault::GetSelfLDRKey() const
 {
 	return sk_LDR_arr[0];
 }
 
-SELF_KEY KeyVault::GetSelfLV1Key(u64 version)
+SELF_KEY KeyVault::GetSelfLV1Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -619,7 +619,7 @@ SELF_KEY KeyVault::GetSelfLV1Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfLV2Key(u64 version)
+SELF_KEY KeyVault::GetSelfLV2Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -635,7 +635,7 @@ SELF_KEY KeyVault::GetSelfLV2Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version)
+SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -652,7 +652,7 @@ SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfAPPKey(u16 revision)
+SELF_KEY KeyVault::GetSelfAPPKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -668,7 +668,7 @@ SELF_KEY KeyVault::GetSelfAPPKey(u16 revision)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfUNK7Key(u64 version)
+SELF_KEY KeyVault::GetSelfUNK7Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -684,7 +684,7 @@ SELF_KEY KeyVault::GetSelfUNK7Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision)
+SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 

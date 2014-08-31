@@ -43,7 +43,8 @@ public:
 		return GetIdManager().CheckID(id) && GetIdManager().GetID(id).m_name == GetName();
 	}
 
-	template<typename T> bool CheckId(u32 id, T*& data)
+	template<typename T>
+	bool CheckId(u32 id, T*& data) const
 	{
 		return detail::CheckId(id,data,GetName());
 	}

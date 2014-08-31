@@ -233,7 +233,7 @@ public:
 		return result;
 	}
 
-	bool ConditionPassed(u8 cond)
+	bool ConditionPassed(u8 cond) const
 	{
 		bool result = false;
 
