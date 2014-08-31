@@ -38,7 +38,7 @@ namespace detail
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T&)CPU.FPR[f_count];
+			return (T)CPU.FPR[f_count];
 		}
 	};
 
