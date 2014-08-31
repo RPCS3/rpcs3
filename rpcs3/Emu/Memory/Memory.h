@@ -768,7 +768,6 @@ public:
 	}
 };
 
-typedef mem_t<u16, u32> mem16_t;
 typedef mem_t<u32, u32> mem32_t;
 typedef mem_t<u64, u32> mem64_t;
 

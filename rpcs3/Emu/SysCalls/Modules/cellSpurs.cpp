@@ -325,10 +325,10 @@ s64 cellSpursEventFlagDetachLv2EventQueue(mem_ptr_t<CellSpursEventFlag> eventFla
 #endif
 }
 
-s64 cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
+s64 cellSpursEventFlagWait(mem_ptr_t<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u16>> mask, u32 mode)
 {
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.GetAddr(), mask.GetAddr(), mode);
+	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.GetAddr(), mask.addr(), mode);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15E68, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -358,10 +358,10 @@ s64 cellSpursEventFlagSet(mem_ptr_t<CellSpursEventFlag> eventFlag, u16 bits)
 #endif
 }
 
-s64 cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, mem16_t mask, u32 mode)
+s64 cellSpursEventFlagTryWait(mem_ptr_t<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u16>> mask, u32 mode)
 {
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.GetAddr(), mask.GetAddr(), mode);
+	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.GetAddr(), mask.addr(), mode);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15E70, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);

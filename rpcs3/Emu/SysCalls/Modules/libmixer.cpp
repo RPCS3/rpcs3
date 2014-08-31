@@ -361,6 +361,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 
 					for (auto& p : ssp) if (p.m_active && p.m_created)
 					{
+						auto v = vm::ptr<s16>::make(p.m_addr); // 16-bit LE audio data
 						float left = 0.0f;
 						float right = 0.0f;
 						float speed = fabs(p.m_speed);
@@ -398,15 +399,12 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 							p.m_position += (u32)pos_inc;
 							if (p.m_channels == 1) // get mono data
 							{
-								mem16_t v(p.m_addr + pos * sizeof(u16));
-								left = right = (float)(s16)re16(v.GetValue()) / 0x8000 * p.m_level;
+								left = right = (float)v[pos] / 0x8000 * p.m_level;
 							}
 							else if (p.m_channels == 2) // get stereo data
 							{
-								mem16_t v1(p.m_addr + (pos * 2 + 0) * sizeof(u16));
-								mem16_t v2(p.m_addr + (pos * 2 + 1) * sizeof(u16));
-								left = (float)(s16)re16(v1.GetValue()) / 0x8000 * p.m_level;
-								right = (float)(s16)re16(v2.GetValue()) / 0x8000 * p.m_level;
+								left = (float)v[pos * 2 + 0] / 0x8000 * p.m_level;
+								right = (float)v[pos * 2 + 1] / 0x8000 * p.m_level;
 							}
 							if (p.m_connected) // mix
 							{
