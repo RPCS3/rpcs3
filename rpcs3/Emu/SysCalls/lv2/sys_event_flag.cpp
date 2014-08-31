@@ -88,12 +88,12 @@ s32 sys_event_flag_destroy(u32 eflag_id)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout)
+s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result, u64 timeout)
 {
 	sys_event_flag.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
-		eflag_id, bitptn, mode, result.GetAddr(), timeout);
+		eflag_id, bitptn, mode, result.addr(), timeout);
 
-	if (result.GetAddr()) result = 0;
+	if (result) *result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -142,7 +142,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 				ef->flags = 0;
 			}
 
-			if (result.GetAddr()) result = flags;
+			if (result) *result = flags;
 
 			return CELL_OK;
 		}
@@ -185,7 +185,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 						ef->signal.unlock(tid);
 					}
 
-					if (result.GetAddr()) result = flags;
+					if (result) *result = flags;
 
 					return CELL_OK;
 				}
@@ -220,12 +220,12 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 	}
 }
 
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
+s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result)
 {
 	sys_event_flag.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
-		eflag_id, bitptn, mode, result.GetAddr());
+		eflag_id, bitptn, mode, result.addr());
 
-	if (result.GetAddr()) result = 0;
+	if (result) *result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -261,7 +261,7 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 			ef->flags = 0;
 		}
 
-		if (result.GetAddr()) result = flags;
+		if (result) *result = flags;
 
 		return CELL_OK;
 	}
@@ -342,15 +342,15 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_get(u32 eflag_id, mem64_t flags)
+s32 sys_event_flag_get(u32 eflag_id, vm::ptr<be_t<u64>> flags)
 {
-	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.GetAddr());
+	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.addr());
 
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	SMutexLocker lock(ef->m_mutex);
-	flags = ef->flags;
+	*flags = ef->flags;
 
 	return CELL_OK;
 }

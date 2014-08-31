@@ -527,10 +527,10 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 }
 
 //182
-s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
+s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<be_t<u64>> value, u32 type)
 {
 	sys_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value_addr=0x%x, type=0x%x)",
-		id, address, value.GetAddr(), type);
+		id, address, value.addr(), type);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
@@ -551,10 +551,10 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type)
 
 	switch (type)
 	{
-	case 1: value = (*(SPUThread*)thr).ReadLS8(address); return CELL_OK;
-	case 2: value = (*(SPUThread*)thr).ReadLS16(address); return CELL_OK;
-	case 4: value = (*(SPUThread*)thr).ReadLS32(address); return CELL_OK;
-	case 8: value = (*(SPUThread*)thr).ReadLS64(address); return CELL_OK;
+	case 1: *value = (*(SPUThread*)thr).ReadLS8(address); return CELL_OK;
+	case 2: *value = (*(SPUThread*)thr).ReadLS16(address); return CELL_OK;
+	case 4: *value = (*(SPUThread*)thr).ReadLS32(address); return CELL_OK;
+	case 8: *value = (*(SPUThread*)thr).ReadLS64(address); return CELL_OK;
 	default: return CELL_EINVAL;
 	}
 }
@@ -599,9 +599,9 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 }
 
 //188
-s32 sys_spu_thread_get_spu_cfg(u32 id, mem64_t value)
+s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<be_t<u64>> value)
 {
-	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value_addr=0x%x)", id, value.GetAddr());
+	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value_addr=0x%x)", id, value.addr());
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
@@ -610,7 +610,7 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, mem64_t value)
 		return CELL_ESRCH;
 	}
 
-	value = (*(SPUThread*)thr).cfg.value;
+	*value = (*(SPUThread*)thr).cfg.value;
 
 	return CELL_OK;
 }
@@ -957,9 +957,9 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, mem64_t mask)
+s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<be_t<u64>> mask)
 {
-	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.GetAddr());
+	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.addr());
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)
@@ -972,7 +972,7 @@ s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, mem64_t mask)
 		return CELL_EINVAL;
 	}
 
-	mask = t->m_intrtag[class_id].mask;
+	*mask = t->m_intrtag[class_id].mask;
 	return CELL_OK;
 }
 
@@ -995,9 +995,9 @@ s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat)
+s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<be_t<u64>> stat)
 {
-	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.GetAddr());
+	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.addr());
 
 	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
 	if (!t)
@@ -1010,7 +1010,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, mem64_t stat)
 		return CELL_EINVAL;
 	}
 
-	stat = t->m_intrtag[class_id].stat;
+	*stat = t->m_intrtag[class_id].stat;
 	return CELL_OK;
 }
 

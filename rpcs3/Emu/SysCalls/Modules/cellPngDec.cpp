@@ -143,8 +143,8 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellPngDecInfo
 		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
 		break;
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread.addr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
 		break;
 	}
 
@@ -200,7 +200,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 
 	//Copy the PNG file to a buffer
 	vm::var<unsigned char[]> png((u32)fileSize);
-	vm::var<u64> pos, nread;
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
@@ -209,8 +209,8 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
-		cellFsRead(fd, png.addr(), png.size(), nread.addr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, png.addr(), png.size(), nread);
 		break;
 	}
 

@@ -105,6 +105,11 @@ namespace vm
 			return addr();
 		}
 		*/
+
+		template<typename AT> operator ptr<T, 1, AT>() const
+		{
+			return ptr<T, 1, AT>::make(m_addr);
+		}
 		
 		operator T&()
 		{

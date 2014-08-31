@@ -103,8 +103,8 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread.addr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
 		break;
 	}
 
@@ -163,7 +163,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 
 	//Copy the JPG file to a buffer
 	vm::var<unsigned char[]> jpg((u32)fileSize);
-	vm::var<u64> pos, nread;
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
@@ -172,8 +172,8 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.addr());
-		cellFsRead(fd, jpg.addr(), jpg.size(), nread.addr());
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, jpg.addr(), jpg.size(), nread);
 		break;
 	}
 

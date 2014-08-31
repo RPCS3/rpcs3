@@ -9,14 +9,16 @@
 //Module cellRtc(0x0009, cellRtc_init);
 Module *cellRtc = nullptr;
 
-long convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
+s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
 {
-	return (seconds + minutes*60 + hours*3600 + days*86400 + (years-70)*31536000 + ((years-69)/4)*86400 - ((years-1)/100)*86400 + ((years+299)/400)*86400);
+	return (s64)seconds + (s64)minutes * 60 + (s64)hours * 3600 + (s64)days * 86400 + 
+		(s64)(years - 70) * 31536000 + (s64)((years - 69) / 4) * 86400 -
+		(s64)((years - 1) / 100) * 86400 + (s64)((years + 299) / 400) * 86400;
 }
 
 u64 convertToWin32FILETIME(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
 {
-	long unixtime = convertToUNIXTime(seconds, minutes, hours, days, years);
+	s64 unixtime = convertToUNIXTime(seconds, minutes, hours, days, years);
 	u64 win32time = u64(unixtime) * u64(10000000) + u64(116444736000000000);
 	u64 win32filetime = win32time | win32time >> 32;
 	return win32filetime;
@@ -323,25 +325,25 @@ int cellRtcGetDosTime(mem_ptr_t<CellRtcDateTime> pDateTime, mem32_t puiDosTime)
 	return CELL_OK;
 }
 
-int cellRtcGetTime_t(mem_ptr_t<CellRtcDateTime> pDateTime, mem64_t piTime)
+int cellRtcGetTime_t(mem_ptr_t<CellRtcDateTime> pDateTime, vm::ptr<be_t<s64>> piTime)
 {
-	cellRtc->Log("cellRtcGetTime_t(pDateTime=0x%x, piTime=0x%x)", pDateTime.GetAddr(), piTime.GetAddr());
+	cellRtc->Log("cellRtcGetTime_t(pDateTime=0x%x, piTime=0x%x)", pDateTime.GetAddr(), piTime.addr());
 
 	// Convert to POSIX time_t.
 	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
-	piTime = convertToUNIXTime(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
+	*piTime = convertToUNIXTime(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
 		date_time.GetHour(rDateTime::TZ::UTC), date_time.GetDay(rDateTime::TZ::UTC), date_time.GetYear(rDateTime::TZ::UTC));
 
 	return CELL_OK;
 }
 
-int cellRtcGetWin32FileTime(mem_ptr_t<CellRtcDateTime> pDateTime, mem64_t pulWin32FileTime)
+int cellRtcGetWin32FileTime(mem_ptr_t<CellRtcDateTime> pDateTime, vm::ptr<be_t<u64>> pulWin32FileTime)
 {
-	cellRtc->Log("cellRtcGetWin32FileTime(pDateTime=0x%x, pulWin32FileTime=0x%x)", pDateTime.GetAddr(), pulWin32FileTime.GetAddr());
+	cellRtc->Log("cellRtcGetWin32FileTime(pDateTime=0x%x, pulWin32FileTime=0x%x)", pDateTime.GetAddr(), pulWin32FileTime.addr());
 
 	// Convert to WIN32 FILETIME.
 	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
-	pulWin32FileTime = convertToWin32FILETIME(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
+	*pulWin32FileTime = convertToWin32FILETIME(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
 		date_time.GetHour(rDateTime::TZ::UTC), date_time.GetDay(rDateTime::TZ::UTC), date_time.GetYear(rDateTime::TZ::UTC));
 
 	return CELL_OK;

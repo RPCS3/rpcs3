@@ -177,7 +177,7 @@ int sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(u32 drm_path_addr, mem64_t time_remain_usec)
+int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<be_t<u64>> time_remain_usec)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;

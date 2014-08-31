@@ -124,41 +124,41 @@ u8 pamfGetStreamChannel(mem_ptr_t<CellPamfReader> pSelf, u8 stream)
 
 }
 
-int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pSize)
+int cellPamfGetHeaderSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, vm::ptr<be_t<u64>> pSize)
 {
-	cellPamf->Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, pSize.GetAddr());
+	cellPamf->Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pSize = offset;
+	*pSize = offset;
 	return CELL_OK;
 }
 
-int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attribute, mem64_t pSize)
+int cellPamfGetHeaderSize2(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, u32 attribute, vm::ptr<be_t<u64>> pSize)
 {
-	cellPamf->Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=0x%x, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, attribute, pSize.GetAddr());
+	cellPamf->Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=0x%x, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, attribute, pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pSize = offset;
+	*pSize = offset;
 	return CELL_OK;
 }
 
-int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, mem64_t pOffset, mem64_t pSize)
+int cellPamfGetStreamOffsetAndSize(mem_ptr_t<PamfHeader> pAddr, u64 fileSize, vm::ptr<be_t<u64>> pOffset, vm::ptr<be_t<u64>> pSize)
 {
-	cellPamf->Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, pOffset.GetAddr(), pSize.GetAddr());
+	cellPamf->Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)", pAddr.GetAddr(), fileSize, pOffset.addr(), pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150)
 		//return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
 	const u64 offset = (u64)pAddr->data_offset << 11;
-	pOffset = offset;
+	*pOffset = offset;
 	const u64 size = (u64)pAddr->data_size << 11;
-	pSize = size;
+	*pSize = size;
 	return CELL_OK;
 }
 

@@ -574,19 +574,19 @@ int cellSurMixerPause(u32 type)
 	return CELL_OK;
 }
 
-int cellSurMixerGetCurrentBlockTag(mem64_t tag)
+int cellSurMixerGetCurrentBlockTag(vm::ptr<be_t<u64>> tag)
 {
-	libmixer->Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.GetAddr());
+	libmixer->Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.addr());
 
-	tag = mixcount;
+	*tag = mixcount;
 	return CELL_OK;
 }
 
-int cellSurMixerGetTimestamp(u64 tag, mem64_t stamp)
+int cellSurMixerGetTimestamp(u64 tag, vm::ptr<be_t<u64>> stamp)
 {
-	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.GetAddr());
+	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
 
-	stamp = m_config.start_time + (tag) * 256000000 / 48000; // ???
+	*stamp = m_config.start_time + (tag) * 256000000 / 48000; // ???
 	return CELL_OK;
 }
 

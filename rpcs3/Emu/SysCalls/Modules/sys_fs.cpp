@@ -250,20 +250,20 @@ int cellFsAioFinish(vm::ptr<const char> mount_point)
 	return CELL_OK;
 }
 
-int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem64_t nread)
+int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
-		fd, offset, buf_addr, buffer_size, nread.GetAddr());
+		fd, offset, buf_addr, buffer_size, nread.addr());
 
 	int ret;
 	vm::var<be_t<u64>> oldPos, newPos;
-	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos.addr());       // Save the current position
+	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos);       // Save the current position
 	if (ret) return ret;
-	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos.addr());  // Move to the specified offset
+	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos);  // Move to the specified offset
 	if (ret) return ret;
-	ret = cellFsRead(fd, buf_addr, buffer_size, nread.GetAddr());    // Read the file
+	ret = cellFsRead(fd, buf_addr, buffer_size, nread);    // Read the file
 	if (ret) return ret;
-	ret = cellFsLseek(fd, oldPos.value(), CELL_SEEK_SET, newPos.addr());  // Return to the old position
+	ret = cellFsLseek(fd, oldPos.value(), CELL_SEEK_SET, newPos);  // Return to the old position
 	if (ret) return ret;
 
 	return CELL_OK;

@@ -769,7 +769,6 @@ public:
 };
 
 typedef mem_t<u32, u32> mem32_t;
-typedef mem_t<u64, u32> mem64_t;
 
 #include "vm.h"
 

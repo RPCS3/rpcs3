@@ -18,24 +18,24 @@
 //Module cellL10n(0x001e, cellL10n_init);
 Module *cellL10n = nullptr;
 
-int UTF16stoUTF8s(vm::ptr<const be_t<u16>> utf16, mem64_t utf16_len, vm::ptr<char> utf8, mem64_t utf8_len)
+int UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len, vm::ptr<char> utf8, vm::ptr<be_t<u32>> utf8_len)
 {
 	cellL10n->Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
-		utf16.addr(), utf16_len.GetAddr(), utf8.addr(), utf8_len.GetAddr());
+		utf16.addr(), utf16_len.addr(), utf8.addr(), utf8_len.addr());
 
-	std::u16string wstr =(char16_t*)utf16.get_ptr();
-	wstr.resize(utf16_len.GetValue()); // TODO: Is this really the role of utf16_len in this function?
+	std::u16string wstr = utf16.get_ptr(); // ???
+	wstr.resize(*utf16_len); // TODO: Is this really the role of utf16_len in this function?
 #ifdef _MSC_VER
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
 	std::string str = convert.to_bytes(wstr);
 
-	if (utf8_len.GetValue() < str.size())
+	if (*utf8_len < str.size())
 	{
-		utf8_len = str.size();
+		*utf8_len = str.size();
 		return DSTExhausted;
 	}
 
-	utf8_len = str.size();
+	*utf8_len = str.size();
 	Memory.WriteString(utf8.addr(), str);
 #endif
 	return ConversionOK;

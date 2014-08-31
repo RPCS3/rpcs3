@@ -115,10 +115,10 @@ s32 cellFsOpen(u32 path_addr, s32 flags, mem32_t fd, mem32_t arg, u64 size)
 	return CELL_OK;
 }
 
-s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
+s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Log("cellFsRead(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nread_addr=0x%x)",
-		fd, buf_addr, nbytes, nread.GetAddr());
+		fd, buf_addr, nbytes, nread.addr());
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -128,15 +128,15 @@ s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nread)
 
 	const u64 res = nbytes ? file->Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 
-	if (nread.GetAddr()) nread = res; // write value if not NULL
+	if (nread) *nread = res;
 
 	return CELL_OK;
 }
 
-s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
+s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nwrite)
 {
 	sys_fs->Log("cellFsWrite(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nwrite_addr=0x%x)",
-		fd, buf_addr, nbytes, nwrite.GetAddr());
+		fd, buf_addr, nbytes, nwrite.addr());
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -146,7 +146,7 @@ s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, mem64_t nwrite)
 
 	const u64 res = nbytes ? file->Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
 
-	if (nwrite.GetAddr()) nwrite = res; // write value if not NULL
+	if (nwrite) *nwrite = res;
 
 	return CELL_OK;
 }
@@ -177,9 +177,9 @@ s32 cellFsOpendir(u32 path_addr, mem32_t fd)
 	return CELL_OK;
 }
 
-s32 cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
+s32 cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
 {
-	sys_fs->Log("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.GetAddr(), nread.GetAddr());
+	sys_fs->Log("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.GetAddr(), nread.addr());
 
 	vfsDirBase* directory;
 	if(!sys_fs->CheckId(fd, directory))
@@ -188,14 +188,14 @@ s32 cellFsReaddir(u32 fd, mem_ptr_t<CellFsDirent> dir, mem64_t nread)
 	const DirEntryInfo* info = directory->Read();
 	if(info)
 	{
-		nread = 1;
+		*nread = 1;
 		Memory.WriteString(dir.GetAddr()+2, info->name);
 		dir->d_namlen = info->name.length();
 		dir->d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
 	}
 	else
 	{
-		nread = 0;
+		*nread = 0;
 	}
 
 	return CELL_OK;
@@ -378,10 +378,10 @@ s32 cellFsUnlink(u32 path_addr)
 	return CELL_OK;
 }
 
-s32 cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
+s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 {
 	vfsSeekMode seek_mode;
-	sys_fs->Log("cellFsLseek(fd=%d, offset=0x%llx, whence=0x%x, pos_addr=0x%x)", fd, offset, whence, pos.GetAddr());
+	sys_fs->Log("cellFsLseek(fd=%d, offset=0x%llx, whence=0x%x, pos_addr=0x%x)", fd, offset, whence, pos.addr());
 	switch(whence)
 	{
 	case CELL_SEEK_SET: seek_mode = vfsSeekSet; break;
@@ -397,7 +397,7 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, mem64_t pos)
 	if (!sys_fs->CheckId(fd, file, type) || type != TYPE_FS_FILE) {
 		return CELL_ESRCH;
 	}
-	pos = file->Seek(offset, seek_mode);
+	*pos = file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
 
@@ -461,41 +461,43 @@ s32 cellFsTruncate(u32 path_addr, u64 size)
 	return CELL_OK;
 }
 
-s32 cellFsFGetBlockSize(u32 fd, mem64_t sector_size, mem64_t block_size)
+s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsFGetBlockSize(fd=%d, sector_size_addr: 0x%x, block_size_addr: 0x%x)", fd, sector_size.GetAddr(), block_size.GetAddr());
+	sys_fs->Log("cellFsFGetBlockSize(fd=%d, sector_size_addr: 0x%x, block_size_addr: 0x%x)",
+		fd, sector_size.addr(), block_size.addr());
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	sector_size = 4096; // ?
-	block_size = 4096; // ?
+	*sector_size = 4096; // ?
+	*block_size = 4096; // ?
 
 	return CELL_OK;
 }
 
-s32 cellFsGetBlockSize(u32 path_addr, mem64_t sector_size, mem64_t block_size)
+s32 cellFsGetBlockSize(u32 path_addr, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)", Memory.ReadString(path_addr).c_str(), sector_size.GetAddr(), block_size.GetAddr());
+	sys_fs->Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)",
+		Memory.ReadString(path_addr).c_str(), sector_size.addr(), block_size.addr());
 
-	sector_size = 4096; // ?
-	block_size = 4096; // ?
+	*sector_size = 4096; // ?
+	*block_size = 4096; // ?
 
 	return CELL_OK;
 }
 
-s32 cellFsGetFreeSize(u32 path_addr, mem32_t block_size, mem64_t block_count)
+s32 cellFsGetFreeSize(u32 path_addr, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count)
 {
 	const std::string& ps3_path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
-		ps3_path.c_str(), block_size.GetAddr(), block_count.GetAddr());
+		ps3_path.c_str(), block_size.addr(), block_count.addr());
 
 	if (ps3_path.empty())
 		return CELL_EINVAL;
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
-	block_size = 4096; // ?
-	block_count = 10485760; // ?
+	*block_size = 4096; // ?
+	*block_count = 10485760; // ?
 
 	return CELL_OK;
 }
@@ -585,26 +587,26 @@ s32 cellFsStReadGetRingBuf(u32 fd, mem_ptr_t<CellFsRingBuffer> ringbuf)
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetStatus(u32 fd, mem64_t status)
+s32 cellFsStReadGetStatus(u32 fd, vm::ptr<be_t<u64>> status)
 {
-	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, status_addr=0x%x)", fd, status.GetAddr());
+	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, status_addr=0x%x)", fd, status.addr());
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	status = fs_config.m_fs_status;
+	*status = fs_config.m_fs_status;
 
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetRegid(u32 fd, mem64_t regid)
+s32 cellFsStReadGetRegid(u32 fd, vm::ptr<be_t<u64>> regid)
 {
-	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, regid_addr=0x%x)", fd, regid.GetAddr());
+	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, regid_addr=0x%x)", fd, regid.addr());
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
-	regid = fs_config.m_regid;
+	*regid = fs_config.m_regid;
 
 	return CELL_OK;
 }
@@ -634,22 +636,22 @@ s32 cellFsStReadStop(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, mem64_t rsize)
+s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 {
-	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.GetAddr());
+	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.addr());
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
 	fs_config.m_regid += size;
-	rsize = fs_config.m_regid;
+	*rsize = fs_config.m_regid;
 
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, mem64_t size)
+s32 cellFsStReadGetCurrentAddr(u32 fd, mem32_t addr_addr, vm::ptr<be_t<u64>> size)
 {
-	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr_addr.GetAddr(), size.GetAddr());
+	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr_addr.GetAddr(), size.addr());
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;

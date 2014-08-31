@@ -213,10 +213,10 @@ int sceNpTrophySetSoundLevel()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u64 options)
+int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<be_t<u64>> reqspace, u64 options)
 {
 	sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
-		context, handle, reqspace.GetAddr(), options);
+		context, handle, reqspace.addr(), options);
 
 	if (!s_npTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
@@ -228,7 +228,7 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, mem64_t reqspace, u
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
-	reqspace = ctxt.trp_stream->GetSize(); // TODO: This is not accurate. It's just an approximation of the real value
+	*reqspace = ctxt.trp_stream->GetSize(); // TODO: This is not accurate. It's just an approximation of the real value
 	return CELL_OK;
 }
 

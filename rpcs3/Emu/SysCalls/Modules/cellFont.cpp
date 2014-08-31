@@ -34,7 +34,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> 
 	return CELL_FONT_OK;
 }
 
-int cellFontGetRevisionFlags(mem64_t revisionFlags)
+int cellFontGetRevisionFlags(vm::ptr<be_t<u64>> revisionFlags)
 {
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
@@ -44,10 +44,10 @@ int cellFontInit(mem_ptr_t<CellFontConfig> config)
 {
 	cellFont->Log("cellFontInit(config=0x%x)", config.GetAddr());
 
-	vm::var<u64> revisionFlags;
+	vm::var<be_t<u64>> revisionFlags;
 	revisionFlags.value() = 0;
-	cellFontGetRevisionFlags(revisionFlags.addr());
-	return cellFontInitializeWithRevision(revisionFlags, config.GetAddr());
+	cellFontGetRevisionFlags(revisionFlags);
+	return cellFontInitializeWithRevision(revisionFlags.value(), config.GetAddr());
 }
 
 int cellFontEnd()
@@ -183,7 +183,7 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 
 	vm::var<const char> f((u32)file.length() + 1, 1);
 	Memory.WriteString(f.addr(), file);
-	int ret = cellFontOpenFontFile(library.GetAddr(), vm::ptr<const char>::make(f.addr()), 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
+	int ret = cellFontOpenFontFile(library.GetAddr(), f, 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 	return ret;
 }
