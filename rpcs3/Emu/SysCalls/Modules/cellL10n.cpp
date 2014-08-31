@@ -314,8 +314,8 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, mem32_t src_len, int d
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
-		char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
-		char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		const char *srcBuf = (const char*)src.get_ptr();
+		char *dstBuf = (char*)dst.get_ptr();
 		//char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		//size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t srcLen = src_len.GetValue(), dstLen = dst_len.GetValue();
