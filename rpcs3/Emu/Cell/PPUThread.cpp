@@ -108,8 +108,8 @@ void PPUThread::InitRegs()
 		m_stack_point -= 0xc + 4 * argc;
 		u64 argv = m_stack_point;
 
-		mem64_ptr_t argv_list((u32)argv);
-		for(int i=0; i<argc; ++i) argv_list += m_argv_addr[i];
+		auto argv_list = vm::ptr<be_t<u64>>::make((u32)argv);
+		for(int i=0; i<argc; ++i) argv_list[i] = m_argv_addr[i];
 
 		GPR[3] = argc;
 		GPR[4] = argv;

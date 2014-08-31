@@ -16,10 +16,10 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameContentSize> size, mem_list_ptr_t<u8> dirName)
+int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameContentSize> size, vm::ptr<char> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
-		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.GetAddr());
+		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.addr());
 
 	if (size)
 	{
@@ -50,7 +50,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	{
 		type = CELL_GAME_GAMETYPE_DISC;
 		attributes = 0; // TODO
-		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), ""); // ???
+		if (dirName) Memory.WriteString(dirName.addr(), ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -59,7 +59,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 		std::string titleId = psf.GetString("TITLE_ID");
 		type = CELL_GAME_GAMETYPE_HDD;
 		attributes = 0; // TODO
-		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), titleId);
+		if (dirName) Memory.WriteString(dirName.addr(), titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
 	}
@@ -68,7 +68,7 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 		std::string titleId = psf.GetString("TITLE_ID");
 		type = CELL_GAME_GAMETYPE_DISC;
 		attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
-		if (dirName.GetAddr()) Memory.WriteString(dirName.GetAddr(), titleId); // ???
+		if (dirName) Memory.WriteString(dirName.addr(), titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -129,9 +129,9 @@ int cellGamePatchCheck(mem_ptr_t<CellGameContentSize> size, u32 reserved_addr)
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameDataCheck(u32 type, const mem_list_ptr_t<u8> dirName, mem_ptr_t<CellGameContentSize> size)
+int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, mem_ptr_t<CellGameContentSize> size)
 {
-	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.GetAddr(), size.GetAddr());
+	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.addr(), size.GetAddr());
 
 	if ((type - 1) >= 3)
 	{
@@ -163,7 +163,7 @@ int cellGameDataCheck(u32 type, const mem_list_ptr_t<u8> dirName, mem_ptr_t<Cell
 	}
 	else
 	{
-		std::string dir = "/dev_hdd0/game/" + std::string(dirName.GetString());
+		const std::string dir = std::string("/dev_hdd0/game/") + dirName.get_ptr();
 
 		if (!Emu.GetVFS().ExistsDir(dir))
 		{
@@ -177,10 +177,10 @@ int cellGameDataCheck(u32 type, const mem_list_ptr_t<u8> dirName, mem_ptr_t<Cell
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath, mem_list_ptr_t<u8> usrdirPath)
+int cellGameContentPermit(vm::ptr<char> contentInfoPath, vm::ptr<char> usrdirPath)
 {
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
-		contentInfoPath.GetAddr(), usrdirPath.GetAddr());
+		contentInfoPath.addr(), usrdirPath.addr());
 	
 	if (contentInfo == "" && usrdir == "")
 	{
@@ -189,8 +189,8 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath, mem_list_ptr_t<u8>
 	}
 
 	// TODO: make it better
-	Memory.WriteString(contentInfoPath.GetAddr(), contentInfo);
-	Memory.WriteString(usrdirPath.GetAddr(), usrdir);
+	Memory.WriteString(contentInfoPath.addr(), contentInfo);
+	Memory.WriteString(usrdirPath.addr(), usrdir);
 
 	contentInfo = "";
 	usrdir = "";
@@ -198,11 +198,11 @@ int cellGameContentPermit(mem_list_ptr_t<u8> contentInfoPath, mem_list_ptr_t<u8>
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	cellGame->Warning("cellGameDataCheckCreate2(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
-		version, dirName.GetAddr(), errDialog, funcStat.GetAddr(), container);
+		version, dirName.addr(), errDialog, funcStat.GetAddr(), container);
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
@@ -212,7 +212,7 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 
 	// TODO: output errors (errDialog)
 
-	const std::string dir = "/dev_hdd0/game/" + std::string(dirName.GetString());
+	const std::string dir = std::string("/dev_hdd0/game/") + dirName.get_ptr();
 
 	if (!Emu.GetVFS().ExistsDir(dir))
 	{
@@ -304,17 +304,17 @@ int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 
 	}
 }
 
-int cellGameDataCheckCreate(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog, 
+int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog, 
 	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
 	return cellGameDataCheckCreate2(version, dirName, errDialog, funcStat, container);
 }
 
-int cellGameCreateGameData(mem_ptr_t<CellGameSetInitParams> init, mem_list_ptr_t<u8> tmp_contentInfoPath, mem_list_ptr_t<u8> tmp_usrdirPath)
+int cellGameCreateGameData(mem_ptr_t<CellGameSetInitParams> init, vm::ptr<char> tmp_contentInfoPath, vm::ptr<char> tmp_usrdirPath)
 {
 	cellGame->Todo("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
-		init.GetAddr(), tmp_contentInfoPath.GetAddr(), tmp_usrdirPath.GetAddr());
+		init.GetAddr(), tmp_contentInfoPath.addr(), tmp_usrdirPath.addr());
 
 	// TODO: create temporary game directory, set initial PARAM.SFO parameters
 	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement

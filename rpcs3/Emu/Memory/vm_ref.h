@@ -23,7 +23,7 @@ namespace vm
 			return m_addr;
 		}
 
-		static _ref_base make(u32 addr)
+		static _ref_base make(AT addr)
 		{
 			return (_ref_base&)addr;
 		}

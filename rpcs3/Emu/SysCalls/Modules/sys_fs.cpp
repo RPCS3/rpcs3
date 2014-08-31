@@ -236,18 +236,16 @@ int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void
 	return CELL_OK;
 }
 
-int cellFsAioInit(mem8_ptr_t mount_point)
+int cellFsAioInit(vm::ptr<const char> mount_point)
 {
-	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
 	aio_init = true;
 	return CELL_OK;
 }
 
-int cellFsAioFinish(mem8_ptr_t mount_point)
+int cellFsAioFinish(vm::ptr<const char> mount_point)
 {
-	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
 	aio_init = false;
 	return CELL_OK;
 }

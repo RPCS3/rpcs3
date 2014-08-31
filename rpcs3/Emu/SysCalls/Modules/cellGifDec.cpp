@@ -139,10 +139,10 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
-		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
+		mainHandle, subHandle, data.addr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
@@ -196,12 +196,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				memcpy(Memory + (data.GetAddr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.GetAddr(), image.get(), image_size);
+			memcpy(Memory + data.addr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -224,15 +224,15 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.GetAddr() + dstOffset), output, linesize);
+				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
 			}
 			free(output);
 		}
 		else
 		{
-			uint* dest = (uint*)new char[image_size];
+			uint* img = (uint*)new char[image_size];
 			uint* source_current = (uint*)&(image.get()[0]);
-			uint* dest_current = dest;
+			uint* dest_current = img;
 			for (uint i = 0; i < image_size / nComponents; i++) 
 			{
 				uint val = *source_current;
@@ -240,9 +240,8 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 				source_current++;
 				dest_current++;
 			}
-			// NOTE: AppendRawBytes has diff side-effect vs Memory.CopyFromReal
-			data.AppendRawBytes((u8*)dest, image_size); 
-			delete[] dest;
+			memcpy(data.get_ptr(), img, image_size); 
+			delete[] img;
 		}
 	}
 	break;

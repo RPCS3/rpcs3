@@ -2126,30 +2126,30 @@ s32 cellSyncLFQueueGetEntrySize(vm::ptr<CellSyncLFQueue> queue, mem32_t entry_si
 	return CELL_OK;
 }
 
-s32 syncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	// TODO
 	assert(0);
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.addr());
+	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 
 	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
 }
 
-s32 syncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	// TODO
 	assert(0);
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.GetAddr(), num, queue.addr());
+	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 
 	return syncLFQueueDetachLv2EventQueue(spus, num, queue);
 }

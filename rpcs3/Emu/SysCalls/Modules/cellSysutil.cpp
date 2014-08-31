@@ -112,22 +112,22 @@ int cellSysutilGetSystemParamInt(int id, mem32_t value)
 	return CELL_OK;
 }
 
-int cellSysutilGetSystemParamString(s32 id, mem_list_ptr_t<u8> buf, u32 bufsize)
+int cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellSysutil->Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.GetAddr(), bufsize);
+	cellSysutil->Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
-	memset(buf, 0, bufsize);
+	memset(buf.get_ptr(), 0, bufsize);
 
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
 		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
-		memcpy(buf, "Unknown", 8); //for example
+		memcpy(buf.get_ptr(), "Unknown", 8); // for example
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
 		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
-		memcpy(buf, "Unknown", 8);
+		memcpy(buf.get_ptr(), "Unknown", 8);
 	break;
 
 	default:
@@ -807,9 +807,9 @@ int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> st
 	return CELL_OK;
 }
 
-int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
+int cellWebBrowserEstimate2(const vm::ptr<const u8> _config, vm::ptr<be_t<u32>> memSize)
 {
-	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", _config.GetAddr(), memSize.GetAddr());
+	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", _config.addr(), memSize.addr());
 
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
@@ -817,10 +817,10 @@ int cellWebBrowserEstimate2(mem8_ptr_t _config, mem32_ptr_t memSize)
 	return CELL_OK;
 }
 
-extern int cellGameDataCheckCreate2(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
 
-extern int cellGameDataCheckCreate(u32 version, const mem_list_ptr_t<u8> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
 
 void cellSysutil_init()

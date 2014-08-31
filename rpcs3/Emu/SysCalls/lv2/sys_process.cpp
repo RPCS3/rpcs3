@@ -168,10 +168,10 @@ s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
 	return CELL_OK;
 }
 
-s32 sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_size)
+s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, mem32_t set_size)
 {
 	sys_process.Todo("sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
-		object, buffer.GetAddr(), size, set_size.GetAddr());
+		object, buffer.addr(), size, set_size.GetAddr());
 
 	switch(object)
 	{
@@ -212,9 +212,9 @@ s32 sys_process_get_id(u32 object, mem32_ptr_t buffer, u32 size, mem32_t set_siz
 	return CELL_OK;
 }
 
-s32 sys_process_get_paramsfo(mem8_ptr_t buffer)
+s32 sys_process_get_paramsfo(vm::ptr<u8> buffer)
 {
-	sys_process.Todo("sys_process_get_paramsfo(buffer_addr=0x%x) -> CELL_ENOENT", buffer.GetAddr());
+	sys_process.Todo("sys_process_get_paramsfo(buffer_addr=0x%x) -> CELL_ENOENT", buffer.addr());
 	return CELL_ENOENT;
 
 	/*//Before uncommenting this code, we should check if it is actually working.

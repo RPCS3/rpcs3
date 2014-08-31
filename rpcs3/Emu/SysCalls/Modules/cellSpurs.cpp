@@ -94,9 +94,9 @@ s64 cellSpursAttributeSetMemoryContainerForSpuThread(mem_ptr_t<CellSpursAttribut
 #endif
 }
 
-s64 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const mem8_t prefix, u32 size)
+s64 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, vm::ptr<const char> prefix, u32 size)
 {
-	cellSpurs->Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=0x%x)", attr.GetAddr(), prefix.GetAddr(), size);
+	cellSpurs->Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=0x%x)", attr.GetAddr(), prefix.addr(), size);
 
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x7234, libsre_rtoc);
@@ -107,7 +107,7 @@ s64 cellSpursAttributeSetNamePrefix(mem_ptr_t<CellSpursAttribute> attr, const me
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
 
-	attr->attr->_setNamePrefix(Memory.ReadString(prefix.GetAddr(), size).c_str(), size);
+	attr->attr->_setNamePrefix(prefix.get_ptr(), size);
 
 	return CELL_OK;
 #endif
@@ -137,10 +137,10 @@ s64 cellSpursAttributeSetSpuThreadGroupType(mem_ptr_t<CellSpursAttribute> attr, 
 #endif
 }
 
-s64 cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, mem8_ptr_t priority, u32 maxSpu, mem8_ptr_t isPreemptible)
+s64 cellSpursAttributeEnableSystemWorkload(mem_ptr_t<CellSpursAttribute> attr, vm::ptr<const u8> priority, u32 maxSpu, vm::ptr<const bool> isPreemptible)
 {
 	cellSpurs->Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
-		attr.GetAddr(), priority.GetAddr(), maxSpu, isPreemptible.GetAddr());
+		attr.GetAddr(), priority.addr(), maxSpu, isPreemptible.addr());
 
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0xF410, libsre_rtoc);
@@ -201,10 +201,10 @@ s64 cellSpursSetMaxContention(mem_ptr_t<CellSpurs> spurs, u32 workloadId, u32 ma
 #endif
 }
 
-s64 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const mem8_ptr_t priorities)
+s64 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, vm::ptr<const u8> priorities)
 {
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%d, priorities_addr=0x%x)", spurs.GetAddr(), workloadId, priorities.GetAddr());
+	cellSpurs->Warning("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%d, priorities_addr=0x%x)", spurs.GetAddr(), workloadId, priorities.addr());
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8BC0, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -212,10 +212,10 @@ s64 cellSpursSetPriorities(mem_ptr_t<CellSpurs> spurs, u32 workloadId, const mem
 #endif
 }
 
-s64 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, mem8_ptr_t isPreemptible)
+s64 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, vm::ptr<const bool> isPreemptible)
 {
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible_addr=0x%x)", spurs.GetAddr(), isPreemptible.GetAddr());
+	cellSpurs->Warning("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible_addr=0x%x)", spurs.GetAddr(), isPreemptible.addr());
 	return GetCurrentPPUThread().FastCall2(libsre + 0xF5A4, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -223,11 +223,11 @@ s64 cellSpursSetPreemptionVictimHints(mem_ptr_t<CellSpurs> spurs, mem8_ptr_t isP
 #endif
 }
 
-s64 cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, mem8_t port, s32 isDynamic)
+s64 cellSpursAttachLv2EventQueue(mem_ptr_t<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=%d, port_addr=0x%x, isDynamic=%d)",
-		spurs.GetAddr(), queue, port.GetAddr(), isDynamic);
+		spurs.GetAddr(), queue, port.addr(), isDynamic);
 	return GetCurrentPPUThread().FastCall2(libsre + 0xAFE0, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -710,10 +710,10 @@ s64 cellSpursCreateTasksetWithAttribute()
 #endif
 }
 
-s64 cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, u64 args, mem8_t priority, u32 maxContention)
+s64 cellSpursCreateTaskset(mem_ptr_t<CellSpurs> spurs, mem_ptr_t<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8> priority, u32 maxContention)
 {
 	cellSpurs->Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
-		spurs.GetAddr(), taskset.GetAddr(), args, priority.GetAddr(), maxContention);
+		spurs.GetAddr(), taskset.GetAddr(), args, priority.addr(), maxContention);
 
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x14CB8, libsre_rtoc);

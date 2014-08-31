@@ -689,55 +689,6 @@ public:
 	mem_t& operator >>= (T right) { return *this = (*this) >> right; }
 };
 
-template<typename T, typename AT = u32> class mem_list_ptr_t : public mem_base_t<T, AT>
-{
-public:
-	mem_list_ptr_t(u32 addr) : mem_base_t<T>(addr)
-	{
-	}
-
-	void operator = (T right)
-	{
-		(be_t<T>&)Memory[this->m_addr] = right;
-	}
-
-	u32 operator += (T right)
-	{
-		*this = right;
-		this->m_addr += sizeof(T);
-		return this->m_addr;
-	}
-	
-	u32 AppendRawBytes(const u8 *bytes, size_t count)
-	{
-		memmove(Memory + this->m_addr, bytes, count);
-		this->m_addr += (u32)count;
-		return this->m_addr;
-	}
-
-	u32 Skip(const u32 offset) { return this->m_addr += offset; }
-
-	operator be_t<T>*()			{ return GetPtr(); }
-	operator void*()			{ return GetPtr(); }
-	operator be_t<T>*()	const	{ return GetPtr(); }
-	operator void*()	const	{ return GetPtr(); }
-
-	const char* GetString() const
-	{
-		return (const char*)&Memory[this->m_addr];
-	}
-
-	be_t<T>* GetPtr()
-	{
-		return (be_t<T>*)&Memory[this->m_addr];
-	}
-
-	const be_t<T>* GetPtr() const
-	{
-		return (const be_t<T>*)&Memory[this->m_addr];
-	}
-};
-
 template<typename T>
 struct _func_arg
 {
@@ -758,7 +709,6 @@ struct _func_arg<mem_base_t<T, u32>>
 
 template<typename T, int lvl> struct _func_arg<mem_ptr_t<T, lvl, u32>> : public _func_arg<mem_base_t<T, u32>> {};
 template<int lvl> struct _func_arg<mem_ptr_t<void, lvl, u32>> : public _func_arg<mem_base_t<u8, u32>>{};
-template<typename T> struct _func_arg<mem_list_ptr_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
 template<typename T> struct _func_arg<mem_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
 
 template<typename T>
@@ -818,139 +768,9 @@ public:
 	}
 };
 
-/*
-template<typename T>
-class MemoryAllocator
-{
-	u32 m_addr;
-	u32 m_size;
-	T* m_ptr;
-
-public:
-	MemoryAllocator(u32 size = sizeof(T), u32 align = 1)
-		: m_size(size)
-		, m_addr((u32)Memory.Alloc(size, align))
-		, m_ptr((T*)&Memory[m_addr])
-	{
-	}
-
-	~MemoryAllocator()
-	{
-		Memory.Free(m_addr);
-	}
-
-	T* operator -> ()
-	{
-		return m_ptr;
-	}
-
-	T* GetPtr()
-	{
-		return m_ptr;
-	}
-
-	const T* GetPtr() const
-	{
-		return m_ptr;
-	}
-
-	const T* operator -> () const
-	{
-		return m_ptr;
-	}
-
-	u32 GetAddr() const
-	{
-		return m_addr;
-	}
-
-	u32 GetSize() const
-	{
-		return m_size;
-	}
-
-	bool IsGood() const
-	{
-		return Memory.IsGoodAddr(m_addr, sizeof(T));
-	}
-
-	template<typename T1>
-	operator const T1() const
-	{
-		return T1(*m_ptr);
-	}
-
-	template<typename T1>
-	operator T1()
-	{
-		return T1(*m_ptr);
-	}
-
-	operator const T&() const
-	{
-		return *m_ptr;
-	}
-
-	operator T&()
-	{
-		return *m_ptr;
-	}
-
-	operator const T*() const
-	{
-		return m_ptr;
-	}
-
-	operator T*()
-	{
-		return m_ptr;
-	}
-
-	T operator [](int index)
-	{
-		return *(m_ptr + index);
-	}
-
-	template<typename T1>
-	operator const mem_t<T1>() const
-	{
-		return GetAddr();
-	}
-
-	operator const mem_ptr_t<T>() const
-	{
-		return GetAddr();
-	}
-
-	template<typename NT>
-	NT* To(uint offset = 0)
-	{
-		return (NT*)(m_ptr + offset);
-	}
-};
-*/
-
-typedef mem_t<u8, u32> mem8_t;
 typedef mem_t<u16, u32> mem16_t;
 typedef mem_t<u32, u32> mem32_t;
 typedef mem_t<u64, u32> mem64_t;
-
-/*
-typedef mem_ptr_t<be_t<u8>> mem8_ptr_t;
-typedef mem_ptr_t<be_t<u16>> mem16_ptr_t;
-typedef mem_ptr_t<be_t<u32>> mem32_ptr_t;
-typedef mem_ptr_t<be_t<u64>> mem64_ptr_t;
-
-typedef mem_list_ptr_t<u8> mem8_lptr_t;
-typedef mem_list_ptr_t<u16> mem16_lptr_t;
-typedef mem_list_ptr_t<u32> mem32_lptr_t;
-typedef mem_list_ptr_t<u64> mem64_lptr_t;
-*/
-
-typedef mem_list_ptr_t<u8, u32> mem8_ptr_t;
-typedef mem_list_ptr_t<u16, u32> mem16_ptr_t;
-typedef mem_list_ptr_t<u32, u32> mem32_ptr_t;
-typedef mem_list_ptr_t<u64, u32> mem64_ptr_t;
 
 #include "vm.h"
 

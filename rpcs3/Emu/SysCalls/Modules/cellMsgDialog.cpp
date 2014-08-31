@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
@@ -59,10 +60,10 @@ void MsgDialogClose()
 	g_msg_dialog_wait_until = get_system_time();
 }
 
-int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
-		type, msgString.GetAddr(), callback.GetAddr(), userData, extParam);
+		type, msgString.addr(), callback.GetAddr(), userData, extParam);
 	
 	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE | CELL_MSGDIALOG_TYPE_BG_INVISIBLE;
 	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO;
@@ -82,12 +83,14 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 	default: g_msg_dialog_progress_bar_count = 0; break; // ???
 	}
 
-	thread t("MsgDialog thread", [=]()
+	std::string msg = msgString.get_ptr();
+
+	thread t("MsgDialog thread", [type, msg, callback, userData, extParam]()
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil->Warning("Message: \n%s", msgString.GetString()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil->Error("Message: \n%s", msgString.GetString()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "%s", msg.c_str()); break;
 		}
 
 		switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -99,9 +102,9 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		u64 status = CELL_MSGDIALOG_BUTTON_NONE;
 
 		volatile bool m_signal = false;
-		CallAfter([&]()
+		CallAfter([type, msg, &status, &m_signal]()
 		{
-			MsgDialogCreate(type, (char*)msgString.GetPtr(), status);
+			MsgDialogCreate(type, msg.c_str(), status);
 
 			m_signal = true;
 		});
@@ -124,7 +127,7 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 			callback.async((s32)status, userData); // TODO: this callback should be registered
 
-		CallAfter([&]()
+		CallAfter([]()
 		{
 			MsgDialogDestroy();
 		});
@@ -136,9 +139,9 @@ int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<Ce
 	return CELL_OK;
 }
 
-int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam)
+int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
-	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=%d, extParam=%d)",
+	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=0x%x, extParam=%d)",
 		errorCode, callback.GetAddr(), userData, extParam);
 
 	std::string errorMessage;
@@ -278,10 +281,10 @@ int cellMsgDialogAbort()
 	return CELL_OK;
 }
 
-int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgString)
+int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
 {
-	cellSysutil->Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x): '%s'",
-		progressBarIndex, msgString.GetAddr(), msgString.GetString());
+	cellSysutil->Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x ['%s'])",
+		progressBarIndex, msgString.addr(), msgString.get_ptr());
 
 	if (g_msg_dialog_state != msgDialogOpen)
 	{
@@ -293,7 +296,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgS
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	std::string text(msgString.GetString());
+	std::string text = msgString.get_ptr();
 
 	CallAfter([text, progressBarIndex]()
 	{

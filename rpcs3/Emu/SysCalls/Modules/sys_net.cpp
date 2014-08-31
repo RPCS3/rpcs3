@@ -169,11 +169,10 @@ int getsockopt()
 	return CELL_OK;
 }
 
-int sys_net_inet_addr(mem8_ptr_t cp)
+int sys_net_inet_addr(vm::ptr<const char> cp)
 {
-	std::string cp_ = Memory.ReadString(cp.GetAddr());
-	sys_net->Warning("inet_addr(cp=\"%s\")", cp_.c_str());
-	return htonl(inet_addr(cp_.c_str())); // return a big-endian IP address
+	sys_net->Warning("inet_addr(cp_addr=0x%x['%s'])", cp.addr(), cp.get_ptr());
+	return htonl(inet_addr(cp.get_ptr())); // return a big-endian IP address
 }
 
 int inet_aton()

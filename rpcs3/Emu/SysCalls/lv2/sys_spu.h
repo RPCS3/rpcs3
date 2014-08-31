@@ -124,7 +124,7 @@ s32 sys_spu_thread_create(mem32_t thread_id, mem32_t entry, u64 arg, int prio, u
 s32 sys_spu_thread_group_join(u32 id, mem32_t cause, mem32_t status);
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et);
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, mem8_t spup);
+s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup);
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
 s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
 s32 sys_spu_thread_read_ls(u32 id, u32 address, mem64_t value, u32 type);

@@ -87,9 +87,9 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 	return CELL_FONT_OK;
 }
 
-int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, mem8_ptr_t fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
+int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, vm::ptr<const char> fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
 {
-	std::string fp(fontPath.GetString());
+	std::string fp(fontPath.get_ptr());
 	cellFont->Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
 		library.GetAddr(), fp.c_str(), subNum, uniqueId, font.GetAddr());
 
@@ -181,11 +181,10 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	u32 file_addr = (u32)Memory.Alloc((u32)file.length() + 1, 1);
-	Memory.WriteString(file_addr, file);
-	int ret = cellFontOpenFontFile(library.GetAddr(), file_addr, 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
+	vm::var<const char> f((u32)file.length() + 1, 1);
+	Memory.WriteString(f.addr(), file);
+	int ret = cellFontOpenFontFile(library.GetAddr(), vm::ptr<const char>::make(f.addr()), 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
-	Memory.Free(file_addr);
 	return ret;
 }
 

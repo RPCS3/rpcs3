@@ -1136,8 +1136,8 @@ int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 	float bandwidth = 0.5f / (srcH / dstH);
 	float phi_b = 2.f * PI * bandwidth;
 	float window[4];
-	mem16_ptr_t buf16(ea_addr);
-	mem32_ptr_t buf32(ea_addr);
+	auto buf16 = vm::ptr<be_t<u16>>::make(ea_addr);
+	auto buf32 = vm::ptr<be_t<float>>::make(ea_addr);
 
 	blackman(window);
 
@@ -1165,7 +1165,8 @@ int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 			buf16[3] = FloatToHalf(transient[3] / total4);
 			buf16 += 4;
 		}
-		else {
+		else
+		{
 			buf32[0] = transient[0] / total4;
 			buf32[1] = transient[1] / total4;
 			buf32[2] = transient[2] / total4;

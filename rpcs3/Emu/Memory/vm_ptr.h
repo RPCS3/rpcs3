@@ -86,7 +86,7 @@ namespace vm
 			return m_addr;
 		}
 
-		static ptr make(u32 addr)
+		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
 		}
@@ -203,7 +203,7 @@ namespace vm
 			return vm::get_ptr<T>(m_addr);
 		}
 		
-		static ptr make(u32 addr)
+		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
 		}
@@ -230,7 +230,34 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(u32 addr)
+		static ptr make(AT addr)
+		{
+			return (ptr&)addr;
+		}
+	};
+
+	template<typename AT>
+	class ptr<const void, 1, AT>
+	{
+		AT m_addr;
+
+	public:
+		AT addr() const
+		{
+			return m_addr;
+		}
+
+		const void* const get_ptr() const
+		{
+			return vm::get_ptr<const void>(m_addr);
+		}
+
+		operator bool() const
+		{
+			return m_addr != 0;
+		}
+
+		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
 		}
@@ -276,7 +303,7 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(u32 addr)
+		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
 		}
@@ -350,7 +377,7 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(u32 addr)
+		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
 		}

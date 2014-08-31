@@ -368,12 +368,13 @@ int cellPamfReaderGetStreamIndex(mem_ptr_t<CellPamfReader> pSelf)
 	return pSelf->stream;
 }
 
-int cellPamfReaderGetStreamTypeAndChannel(mem_ptr_t<CellPamfReader> pSelf, mem8_t pType, mem8_t pCh)
+int cellPamfReaderGetStreamTypeAndChannel(mem_ptr_t<CellPamfReader> pSelf, vm::ptr<u8> pType, vm::ptr<u8> pCh)
 {
-	cellPamf->Warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=0x%x (stream=%d), pType_addr=0x%x, pCh_addr=0x%x", pSelf.GetAddr(), pSelf->stream, pType.GetAddr(), pCh.GetAddr());
+	cellPamf->Warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=0x%x (stream=%d), pType_addr=0x%x, pCh_addr=0x%x",
+		pSelf.GetAddr(), pSelf->stream, pType.addr(), pCh.addr());
 
-	pType = pamfGetStreamType(pSelf, pSelf->stream);
-	pCh = pamfGetStreamChannel(pSelf, pSelf->stream);
+	*pType = pamfGetStreamType(pSelf, pSelf->stream);
+	*pCh = pamfGetStreamChannel(pSelf, pSelf->stream);
 	return CELL_OK;
 }
 

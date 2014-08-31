@@ -796,10 +796,10 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, mem8_t spup)
+s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup)
 {
 	sys_spu.Warning("sys_spu_thread_group_connect_event_all_threads(id=%d, eq_id=%d, req=0x%llx, spup_addr=0x%x)",
-		id, eq_id, req, spup.GetAddr());
+		id, eq_id, req, spup.addr());
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(eq_id, eq))
@@ -854,7 +854,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, m
 					t->SPUPs[i].eq = eq;
 				}
 				sys_spu.Warning("*** spup -> %d", i);
-				spup = (u8)i;
+				*spup = (u8)i;
 			}
 
 			for (auto& t : threads) t->SPUPs[i].m_mutex.unlock();

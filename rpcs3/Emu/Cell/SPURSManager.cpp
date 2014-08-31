@@ -40,7 +40,7 @@ SPURSManagerEventFlag::SPURSManagerEventFlag(u32 flagClearMode, u32 flagDirectio
 	this->flagDirection = flagDirection;
 }
 
-SPURSManagerTasksetAttribute::SPURSManagerTasksetAttribute(u64 args, mem8_t priority, u32 maxContention)
+SPURSManagerTasksetAttribute::SPURSManagerTasksetAttribute(u64 args, vm::ptr<const u8> priority, u32 maxContention)
 {
 	this->args = args;
 	this->maxContention = maxContention;
@@ -56,7 +56,7 @@ void SPURSManager::Finalize()
 	delete this->attr;
 }
 
-void SPURSManager::AttachLv2EventQueue(u32 queue, mem8_t port, int isDynamic)
+void SPURSManager::AttachLv2EventQueue(u32 queue, vm::ptr<u8> port, int isDynamic)
 {
 	//TODO:
 }
