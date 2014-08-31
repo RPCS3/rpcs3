@@ -421,6 +421,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("PPU Interpreter");
+	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
 
 	cbox_spu_decoder->Append("SPU Interpreter");
 	cbox_spu_decoder->Append("SPU JIT (asmjit)");

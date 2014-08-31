@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug - MemLeak|Win32">
@@ -216,6 +216,7 @@
     <ClCompile Include="Loader\SELF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
+    <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">Create</PrecompiledHeader>
@@ -425,7 +426,7 @@
     <ClInclude Include="Loader\SELF.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
-    <ClInclude Include="restore_new.h" />
+    <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -527,6 +528,7 @@
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -540,6 +542,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -554,6 +557,7 @@
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -568,6 +572,7 @@
       <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -582,6 +587,7 @@
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -599,6 +605,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <AdditionalIncludeDirectories>D:\Projects\LLVM\llvm-3.4.2\include;D:\Projects\LLVM\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

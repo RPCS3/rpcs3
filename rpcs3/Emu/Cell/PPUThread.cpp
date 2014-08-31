@@ -9,6 +9,7 @@
 #include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
+#include "Emu/Cell/PPULLVMRecompiler.h"
 
 PPUThread& GetCurrentPPUThread()
 {
@@ -108,6 +109,10 @@ void PPUThread::DoRun()
 		auto ppui = new PPUInterpreter(*this);
 		m_dec = new PPUDecoder(ppui);
 	}
+	break;
+
+	case 3:
+		m_dec = new PPULLVMRecompiler(*this);
 	break;
 
 	default:

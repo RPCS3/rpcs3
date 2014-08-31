@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -626,6 +626,9 @@
     <ClCompile Include="Crypto\ec.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1230,6 +1233,9 @@
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
+      <Filter>Emu\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
