@@ -17,7 +17,7 @@ public:
 	void init();
 	void AddFunc(ModuleFunc *func);
 	void SetModule(int id, Module* module, bool with_data);
-	bool IsLoadedFunc(u32 id);
+	bool IsLoadedFunc(u32 id) const;
 	bool CallFunc(u32 num);
 	bool UnloadFunc(u32 id);
 	void UnloadModules();

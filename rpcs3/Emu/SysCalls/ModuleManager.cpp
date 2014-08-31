@@ -316,7 +316,7 @@ ModuleManager::~ModuleManager()
 	UnloadModules();
 }
 
-bool ModuleManager::IsLoadedFunc(u32 id)
+bool ModuleManager::IsLoadedFunc(u32 id) const
 {
 	for (u32 i = 0; i<m_modules_funcs_list.size(); ++i)
 	{

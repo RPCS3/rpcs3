@@ -29,12 +29,12 @@ class SPURSManagerEventFlag
 public:
 	SPURSManagerEventFlag(u32 flagClearMode, u32 flagDirection);
 
-	u32 _getDirection()
+	u32 _getDirection() const
 	{
 		return this->flagDirection;
 	}
 
-	u32 _getClearMode ()
+	u32 _getClearMode() const
 	{
 		return this->flagClearMode;
 	}
