@@ -364,7 +364,7 @@ void Emulator::Load()
 
 		auto ppu_thr_stop_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_stop);
 		ppu_thr_stop_data[0] = SC(4);
-		ppu_thr_exit_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
+		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 
 		Memory.Write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 	}
