@@ -8,6 +8,8 @@ using std::nullptr_t;
 #define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
 #define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
+extern void* const m_base_addr;
+
 enum MemoryType
 {
 	Memory_PS3,
@@ -25,7 +27,6 @@ enum : u64
 
 class MemoryBase
 {
-	void* m_base_addr;
 	std::vector<MemoryBlock*> MemoryBlocks;
 	u32 m_pages[0x100000000 / 4096]; // information about every page
 	std::recursive_mutex m_mutex;
@@ -44,12 +45,6 @@ public:
 
 	struct Wrapper32LE
 	{
-	private:
-		void* m_base_addr;
-
-	public:
-		Wrapper32LE() : m_base_addr(nullptr) {}
-
 		void Write8(const u32 addr, const u8 data) { *(u8*)((u8*)m_base_addr + addr) = data; }
 		void Write16(const u32 addr, const u16 data) { *(u16*)((u8*)m_base_addr + addr) = data; }
 		void Write32(const u32 addr, const u32 data) { *(u32*)((u8*)m_base_addr + addr) = data; }
@@ -61,8 +56,6 @@ public:
 		u32 Read32(const u32 addr) { return *(u32*)((u8*)m_base_addr + addr); }
 		u64 Read64(const u32 addr) { return *(u64*)((u8*)m_base_addr + addr); }
 		u128 Read128(const u32 addr) { return *(u128*)((u8*)m_base_addr + addr); }
-
-		void Init(void* real_addr) { m_base_addr = real_addr; }
 	};
 
 	struct : Wrapper32LE
@@ -92,7 +85,7 @@ public:
 		Close();
 	}
 
-	void* GetBaseAddr() const
+	static void* const GetBaseAddr()
 	{
 		return m_base_addr;
 	}

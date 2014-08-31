@@ -341,7 +341,7 @@ void Emulator::Load()
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.AllocAlign(0x1000);
 		thread.InitStack();
-		thread.AddArgv(m_elf_path);
+		thread.AddArgv(m_elf_path); // it doesn't work
 		//thread.AddArgv("-emu");
 
 		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;

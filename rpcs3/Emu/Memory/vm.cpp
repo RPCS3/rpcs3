@@ -1,4 +1,20 @@
 #include "stdafx.h"
+#include "Memory.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+
+static void* const m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+#else
+#include <sys/mman.h>
+
+/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+
+static void* const m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+#endif
 
 namespace vm
 {
@@ -26,15 +42,6 @@ namespace vm
 	}
 
 	void unalloc(u32 addr)
-	{
-	}
-
-	u32 read32(u32 addr)
-	{
-		return 0;
-	}
-
-	void write32(u32 addr, u32 value)
 	{
 	}
 }

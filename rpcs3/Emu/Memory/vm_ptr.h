@@ -98,12 +98,12 @@ namespace vm
 		AT m_addr;
 		
 	public:
-		__forceinline T* operator -> ()
+		__forceinline T* const operator -> ()
 		{
 			return vm::get_ptr<T>(m_addr);
 		}
 
-		__forceinline const T* operator -> () const
+		__forceinline const T* const operator -> () const
 		{
 			return vm::get_ptr<const T>(m_addr);
 		}
@@ -198,7 +198,7 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		T* get_ptr() const
+		T* const get_ptr() const
 		{
 			return vm::get_ptr<T>(m_addr);
 		}
@@ -220,7 +220,7 @@ namespace vm
 			return m_addr;
 		}
 
-		void* get_ptr() const
+		void* const get_ptr() const
 		{
 			return vm::get_ptr<void>(m_addr);
 		}
@@ -266,7 +266,7 @@ namespace vm
 			return m_addr;
 		}
 
-		type get_ptr() const
+		type const get_ptr() const
 		{
 			return *((type*)vm::get_ptr<void*>(m_addr));
 		}
@@ -340,7 +340,7 @@ namespace vm
 			return m_addr;
 		}
 
-		type get_ptr() const
+		type const get_ptr() const
 		{
 			return *((type*)vm::get_ptr<void*>(m_addr));
 		}
