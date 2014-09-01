@@ -23,7 +23,7 @@ extern int cellPadInfoPressMode(u32 port_no);
 extern int cellPadInfoSensorMode(u32 port_no);
 extern int cellPadSetPressMode(u32 port_no, u32 mode);
 extern int cellPadSetSensorMode(u32 port_no, u32 mode);
-extern int cellPadGetCapabilityInfo(u32 port_no, mem32_t info_addr);
+extern int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<be_t<u32>> info_addr);
 
 void sys_io_init()
 {

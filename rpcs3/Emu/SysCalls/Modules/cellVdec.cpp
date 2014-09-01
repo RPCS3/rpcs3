@@ -496,22 +496,22 @@ int cellVdecQueryAttrEx(const mem_ptr_t<CellVdecTypeEx> type, mem_ptr_t<CellVdec
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
 
-int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecResource> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
+int cellVdecOpen(const mem_ptr_t<CellVdecType> type, const mem_ptr_t<CellVdecResource> res, const mem_ptr_t<CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.addr());
 
-	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
 
-int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVdecResourceEx> res, const mem_ptr_t<CellVdecCb> cb, mem32_t handle)
+int cellVdecOpenEx(const mem_ptr_t<CellVdecTypeEx> type, const mem_ptr_t<CellVdecResourceEx> res, const mem_ptr_t<CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.addr());
 
-	handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -670,9 +670,9 @@ int cellVdecGetPicture(u32 handle, const mem_ptr_t<CellVdecPicFormat> format, u3
 	return CELL_OK;
 }
 
-int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
+int cellVdecGetPicItem(u32 handle, vm::ptr<be_t<u32>> picItem_ptr)
 {
-	cellVdec->Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.GetAddr());
+	cellVdec->Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.addr());
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -775,7 +775,7 @@ int cellVdecGetPicItem(u32 handle, mem32_t picItem_ptr)
 	avc->reserved[0] = 0;
 	avc->reserved[1] = 0;
 	
-	picItem_ptr = info.GetAddr();
+	*picItem_ptr = info.GetAddr();
 
 	return CELL_OK;
 }

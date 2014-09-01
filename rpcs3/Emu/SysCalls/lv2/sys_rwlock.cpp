@@ -9,9 +9,9 @@
 
 SysCallBase sys_rwlock("sys_rwlock");
 
-s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr)
+s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr)
 {
-	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.GetAddr(), attr.GetAddr());
+	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.addr(), attr.GetAddr());
 
 	if (!attr)
 		return CELL_EFAULT;
@@ -31,10 +31,11 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 		return CELL_EINVAL;
 	}
 
-	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
+	u32 id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
+	*rw_lock_id = id;
 
 	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, id);
 
 	return CELL_OK;
 }

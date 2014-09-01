@@ -83,15 +83,15 @@ s64 sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-int sys_spu_elf_get_information(u32 elf_img, mem32_t entry, mem32_t nseg)
+int sys_spu_elf_get_information(u32 elf_img, vm::ptr<be_t<u32>> entry, vm::ptr<be_t<u32>> nseg)
 {
-	sysPrxForUser->Warning("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.GetAddr(), nseg.GetAddr());
+	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.addr(), nseg.addr());
 	return CELL_OK;
 }
 
 int sys_spu_elf_get_segments(u32 elf_img, mem_ptr_t<sys_spu_segment> segments, int nseg)
 {
-	sysPrxForUser->Warning("sys_spu_elf_get_segments(elf_img=0x%x, segments_addr=0x%x, nseg=0x%x)", elf_img, segments.GetAddr(), nseg);
+	sysPrxForUser->Todo("sys_spu_elf_get_segments(elf_img=0x%x, segments_addr=0x%x, nseg=0x%x)", elf_img, segments.GetAddr(), nseg);
 	return CELL_OK;
 }
 
@@ -117,11 +117,11 @@ int sys_spu_image_close(mem_ptr_t<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
+int sys_raw_spu_load(int id, u32 path_addr, vm::ptr<be_t<u32>> entry)
 {
 	const std::string path = Memory.ReadString(path_addr);
 	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
-		id, path_addr, path.c_str(), entry.GetAddr());
+		id, path_addr, path.c_str(), entry.addr());
 
 	vfsFile f(path);
 	if(!f.IsOpened())
@@ -134,7 +134,7 @@ int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
 	l.LoadInfo();
 	l.LoadData(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
-	entry = l.GetEntry();
+	*entry = l.GetEntry();
 
 	return CELL_OK;
 }

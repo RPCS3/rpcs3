@@ -314,13 +314,13 @@ int cellRtcConvertLocalTimeToUtc(mem_ptr_t<CellRtcTick> pLocalTime, mem_ptr_t<Ce
 	return CELL_OK;
 }
 
-int cellRtcGetDosTime(mem_ptr_t<CellRtcDateTime> pDateTime, mem32_t puiDosTime)
+int cellRtcGetDosTime(mem_ptr_t<CellRtcDateTime> pDateTime, vm::ptr<be_t<u32>> puiDosTime)
 {
-	cellRtc->Log("cellRtcGetDosTime(pDateTime=0x%x, puiDosTime=0x%x)", pDateTime.GetAddr(), puiDosTime.GetAddr());
+	cellRtc->Log("cellRtcGetDosTime(pDateTime=0x%x, puiDosTime=0x%x)", pDateTime.GetAddr(), puiDosTime.addr());
 
 	// Convert to DOS time.
 	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
-	puiDosTime = date_time.GetAsDOS();
+	*puiDosTime = date_time.GetAsDOS();
 
 	return CELL_OK;
 }

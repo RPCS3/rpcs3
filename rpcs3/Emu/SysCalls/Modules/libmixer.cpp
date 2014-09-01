@@ -141,10 +141,10 @@ int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 	return CELL_OK;
 }
  
-int cellSSPlayerCreate(mem32_t handle, mem_ptr_t<CellSSPlayerConfig> config)
+int cellSSPlayerCreate(vm::ptr<be_t<u32>> handle, mem_ptr_t<CellSSPlayerConfig> config)
 {
 	libmixer->Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
-		handle.GetAddr(), config.GetAddr());
+		handle.addr(), config.GetAddr());
 
 	if (config->outputMode != 0 || config->channels - 1 >= 2)
 	{
@@ -162,7 +162,7 @@ int cellSSPlayerCreate(mem32_t handle, mem_ptr_t<CellSSPlayerConfig> config)
 	p.m_channels = config->channels;
 	
 	ssp.push_back(p);
-	handle = (u32)ssp.size() - 1;
+	*handle = (u32)ssp.size() - 1;
 	return CELL_OK;
 }
 
@@ -463,17 +463,17 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 	return CELL_OK;
 }
 
-int cellSurMixerGetAANHandle(mem32_t handle)
+int cellSurMixerGetAANHandle(vm::ptr<be_t<u32>> handle)
 {
-	libmixer->Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.GetAddr(), 0x11111111);
-	handle = 0x11111111;
+	libmixer->Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.addr(), 0x11111111);
+	*handle = 0x11111111;
 	return CELL_OK;
 }
 
-int cellSurMixerChStripGetAANPortNo(mem32_t port, u32 type, u32 index)
+int cellSurMixerChStripGetAANPortNo(vm::ptr<be_t<u32>> port, u32 type, u32 index)
 {
-	libmixer->Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.GetAddr(), type, index, (type << 16) | index);
-	port = (type << 16) | index;
+	libmixer->Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.addr(), type, index, (type << 16) | index);
+	*port = (type << 16) | index;
 	return CELL_OK;
 }
 

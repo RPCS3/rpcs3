@@ -53,9 +53,9 @@ s32 sys_mmapper_allocate_fixed_address()
 	return CELL_OK;
 }
 
-s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
+s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<be_t<u32>> mem_id)
 {
-	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.GetAddr());
+	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.addr());
 
 	// Check page granularity.
 	u32 addr;
@@ -81,15 +81,15 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
 		return CELL_ENOMEM;
 
 	// Generate a new mem ID.
-	mem_id = sys_mmapper.GetNewId(new mmapper_info(addr, size, flags));
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(addr, size, flags));
 
 	return CELL_OK;
 }
 
-s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem32_t mem_id)
+s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm::ptr<be_t<u32>> mem_id)
 {
 	sys_mmapper.Warning("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=%d, flags=0x%llx, mem_id_addr=0x%x)", 
-		size, cid, flags, mem_id.GetAddr());
+		size, cid, flags, mem_id.addr());
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;
@@ -120,7 +120,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 	ct->size = size;
 
 	// Generate a new mem ID.
-	mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
 
 	return CELL_OK;
 }

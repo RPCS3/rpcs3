@@ -582,23 +582,23 @@ void cellRescExit()
 	s_rescInternalInstance->m_bInitialized = false;
 }
 
-int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, mem32_t bufferMode)
+int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<be_t<u32>> bufferMode)
 {
-	cellResc->Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.GetAddr());
+	cellResc->Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.addr());
 
 	switch (resolutionId)
 	{
 	case CELL_VIDEO_OUT_RESOLUTION_1080: 
-		bufferMode = CELL_RESC_1920x1080; 
+		*bufferMode = CELL_RESC_1920x1080; 
 		break;
 	case CELL_VIDEO_OUT_RESOLUTION_720:  
-		bufferMode = CELL_RESC_1280x720;  
+		*bufferMode = CELL_RESC_1280x720;  
 		break;
 	case CELL_VIDEO_OUT_RESOLUTION_480:  
-		bufferMode = CELL_RESC_720x480;   
+		*bufferMode = CELL_RESC_720x480;   
 		break;
 	case CELL_VIDEO_OUT_RESOLUTION_576:  
-		bufferMode = CELL_RESC_720x576;   
+		*bufferMode = CELL_RESC_720x576;   
 		break;
 	default: 
 		cellResc->Error("cellRescVideoOutResolutionId2RescBufferMod : CELL_RESC_ERROR_BAD_ARGUMENT");
@@ -820,9 +820,10 @@ int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 	return CELL_OK;
 }
 
-int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fragmentShader)
+int cellRescGetBufferSize(vm::ptr<be_t<u32>> colorBuffers, vm::ptr<be_t<u32>> vertexArray, vm::ptr<be_t<u32>> fragmentShader)
 {
-	cellResc->Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.GetAddr(), vertexArray.GetAddr(), fragmentShader.GetAddr());
+	cellResc->Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
+		colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -845,19 +846,19 @@ int cellRescGetBufferSize(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fra
 		fragmentUcodeSize = 0x300;
 	}
 
-	if (colorBuffers.GetAddr())
+	if (colorBuffers)
 	{
-		colorBuffers = colorBuffersSize;
+		*colorBuffers = colorBuffersSize;
 	}
 
-	if (vertexArray.GetAddr())
+	if (vertexArray)
 	{
-		vertexArray = vertexArraySize;
+		*vertexArray = vertexArraySize;
 	}
 
-	if (fragmentShader.GetAddr())
+	if (fragmentShader)
 	{
-		fragmentShader = fragmentUcodeSize;
+		*fragmentShader = fragmentUcodeSize;
 	}
 
 	return CELL_OK;
@@ -996,9 +997,9 @@ int cellRescSetWaitFlip()
 	return CELL_OK;
 }
 
-int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t fragmentShader)
+int cellRescSetBufferAddress(vm::ptr<be_t<u32>> colorBuffers, vm::ptr<be_t<u32>> vertexArray, vm::ptr<be_t<u32>> fragmentShader)
 {
-	cellResc->Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.GetAddr(), vertexArray.GetAddr(), fragmentShader.GetAddr());
+	cellResc->Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1006,18 +1007,18 @@ int cellRescSetBufferAddress(mem32_t colorBuffers, mem32_t vertexArray, mem32_t 
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(colorBuffers.GetAddr() % COLOR_BUFFER_ALIGNMENT || vertexArray.GetAddr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.GetAddr() % FRAGMENT_SHADER_ALIGNMENT)
+	if(colorBuffers.addr() % COLOR_BUFFER_ALIGNMENT || vertexArray.addr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.addr() % FRAGMENT_SHADER_ALIGNMENT)
 	{
 		cellResc->Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ALIGNMENT");
 		return CELL_RESC_ERROR_BAD_ALIGNMENT;
 	}
 
-	s_rescInternalInstance->m_colorBuffersEA  = colorBuffers.GetAddr();
-	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.GetAddr();
-	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.GetAddr();
+	s_rescInternalInstance->m_colorBuffersEA  = colorBuffers.addr();
+	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.addr();
+	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.addr();
 
 	vm::var<be_t<u32>> dstOffset;
-	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset.addr());
+	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset);
 
 	for (int i=0; i<GetNumColorBuffers(); i++)
 	{

@@ -108,9 +108,9 @@ s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
 	return CELL_OK;
 }
 
-s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
+s32 sys_memory_container_create(vm::ptr<be_t<u32>> cid, u32 yield_size)
 {
-	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.GetAddr(), yield_size);
+	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.addr(), yield_size);
 
 	yield_size &= ~0xfffff; //round down to 1 MB granularity
 	u32 addr = (u32)Memory.Alloc(yield_size, 0x100000); //1 MB alignment
@@ -120,9 +120,10 @@ s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
 
 	// Wrap the allocated memory in a memory container.
 	MemoryContainerInfo *ct = new MemoryContainerInfo(addr, yield_size);
-	cid = sys_memory.GetNewId(ct, TYPE_MEM);
+	u32 id = sys_memory.GetNewId(ct, TYPE_MEM);
+	*cid = id;
 
-	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, cid.GetValue());
+	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, id);
 
 	return CELL_OK;
 }

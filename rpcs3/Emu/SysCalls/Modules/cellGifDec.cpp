@@ -23,10 +23,10 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
+		mainHandle, subHandle.addr(), src.GetAddr(), openInfo.GetAddr());
 
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
 	current_subHandle->fd = 0;
@@ -41,7 +41,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd.addr(), 0, 0);
+		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
@@ -54,7 +54,7 @@ int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDec
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	subHandle = cellGifDec->GetNewId(current_subHandle);
+	*subHandle = cellGifDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }

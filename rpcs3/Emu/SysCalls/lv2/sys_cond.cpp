@@ -9,10 +9,10 @@
 
 SysCallBase sys_cond("sys_cond");
 
-s32 sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr)
+s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr)
 {
 	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)",
-		cond_id.GetAddr(), mutex_id, attr.GetAddr());
+		cond_id.addr(), mutex_id, attr.GetAddr());
 
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
@@ -33,9 +33,9 @@ s32 sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
 	u32 id = sys_cond.GetNewId(cond, TYPE_COND);
-	cond_id = id;
+	*cond_id = id;
 	mutex->cond_count++;
-	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, cond_id.GetValue());
+	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
 
 	return CELL_OK;
 }

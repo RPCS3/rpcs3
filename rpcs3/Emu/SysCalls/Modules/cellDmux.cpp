@@ -776,10 +776,10 @@ int cellDmuxQueryAttr2(const mem_ptr_t<CellDmuxType2> demuxerType2, mem_ptr_t<Ce
 }
 
 int cellDmuxOpen(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<CellDmuxResource> demuxerResource, 
-				 const mem_ptr_t<CellDmuxCb> demuxerCb, mem32_t demuxerHandle)
+	const mem_ptr_t<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen(demuxerType_addr=0x%x, demuxerResource_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
-		demuxerType.GetAddr(), demuxerResource.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
+		demuxerType.GetAddr(), demuxerResource.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.addr());
 
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
@@ -788,16 +788,16 @@ int cellDmuxOpen(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<Cell
 
 	// TODO: check demuxerResource and demuxerCb arguments
 
-	demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
 
 	return CELL_OK;
 }
 
 int cellDmuxOpenEx(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<CellDmuxResourceEx> demuxerResourceEx, 
-				   const mem_ptr_t<CellDmuxCb> demuxerCb, mem32_t demuxerHandle)
+	const mem_ptr_t<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpenEx(demuxerType_addr=0x%x, demuxerResourceEx_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
-		demuxerType.GetAddr(), demuxerResourceEx.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
+		demuxerType.GetAddr(), demuxerResourceEx.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.addr());
 
 	if (demuxerType->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
@@ -806,16 +806,16 @@ int cellDmuxOpenEx(const mem_ptr_t<CellDmuxType> demuxerType, const mem_ptr_t<Ce
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
 
-	demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
 
 	return CELL_OK;
 }
 
 int cellDmuxOpen2(const mem_ptr_t<CellDmuxType2> demuxerType2, const mem_ptr_t<CellDmuxResource2> demuxerResource2, 
-				  const mem_ptr_t<CellDmuxCb> demuxerCb, mem32_t demuxerHandle)
+	const mem_ptr_t<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
-		demuxerType2.GetAddr(), demuxerResource2.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.GetAddr());
+		demuxerType2.GetAddr(), demuxerResource2.GetAddr(), demuxerCb.GetAddr(), demuxerHandle.addr());
 
 	if (demuxerType2->streamType != CELL_DMUX_STREAM_TYPE_PAMF)
 	{
@@ -824,7 +824,7 @@ int cellDmuxOpen2(const mem_ptr_t<CellDmuxType2> demuxerType2, const mem_ptr_t<C
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
 
-	demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
 
 	return CELL_OK;
 }
@@ -979,11 +979,11 @@ int cellDmuxQueryEsAttr2(const mem_ptr_t<CellDmuxType2> demuxerType2, const mem_
 
 int cellDmuxEnableEs(u32 demuxerHandle, const mem_ptr_t<CellCodecEsFilterId> esFilterId, 
 					 const mem_ptr_t<CellDmuxEsResource> esResourceInfo, const mem_ptr_t<CellDmuxEsCb> esCb,
-					 const u32 esSpecificInfo_addr, mem32_t esHandle)
+					 const u32 esSpecificInfo_addr, vm::ptr<be_t<u32>> esHandle)
 {
 	cellDmux->Warning("cellDmuxEnableEs(demuxerHandle=%d, esFilterId_addr=0x%x, esResourceInfo_addr=0x%x, esCb_addr=0x%x, "
 		"esSpecificInfo_addr=0x%x, esHandle_addr=0x%x)", demuxerHandle, esFilterId.GetAddr(), esResourceInfo.GetAddr(),
-		esCb.GetAddr(), esSpecificInfo_addr, esHandle.GetAddr());
+		esCb.GetAddr(), esSpecificInfo_addr, esHandle.addr());
 
 	Demuxer* dmux;
 	if (!Emu.GetIdManager().GetIDData(demuxerHandle, dmux))
@@ -999,7 +999,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, const mem_ptr_t<CellCodecEsFilterId> esF
 
 	u32 id = cellDmux->GetNewId(es);
 	es->id = id;
-	esHandle = id;
+	*esHandle = id;
 
 	cellDmux->Warning("*** New ES(dmux=%d, addr=0x%x, size=0x%x, filter(0x%x, 0x%x, 0x%x, 0x%x), cb=0x%x(arg=0x%x), spec=0x%x): id = %d",
 		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, (u32)esCb->cbEsMsgFunc, es->cbArg, es->spec, id);
@@ -1048,10 +1048,10 @@ int cellDmuxResetEs(u32 esHandle)
 	return CELL_OK;
 }
 
-int cellDmuxGetAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
+int cellDmuxGetAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxGetAu(esHandle=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
-		esHandle, auInfo_ptr.GetAddr(), auSpecificInfo_ptr.GetAddr());
+		esHandle, auInfo_ptr.addr(), auSpecificInfo_ptr.addr());
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
@@ -1066,15 +1066,15 @@ int cellDmuxGetAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
 		return CELL_DMUX_ERROR_EMPTY;
 	}
 
-	auInfo_ptr = info;
-	auSpecificInfo_ptr = spec;
+	*auInfo_ptr = info;
+	*auSpecificInfo_ptr = spec;
 	return CELL_OK;
 }
 
-int cellDmuxPeekAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
+int cellDmuxPeekAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxPeekAu(esHandle=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
-		esHandle, auInfo_ptr.GetAddr(), auSpecificInfo_ptr.GetAddr());
+		esHandle, auInfo_ptr.addr(), auSpecificInfo_ptr.addr());
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
@@ -1089,15 +1089,15 @@ int cellDmuxPeekAu(u32 esHandle, mem32_t auInfo_ptr, mem32_t auSpecificInfo_ptr)
 		return CELL_DMUX_ERROR_EMPTY;
 	}
 
-	auInfo_ptr = info;
-	auSpecificInfo_ptr = spec;
+	*auInfo_ptr = info;
+	*auSpecificInfo_ptr = spec;
 	return CELL_OK;
 }
 
-int cellDmuxGetAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_ptr)
+int cellDmuxGetAuEx(u32 esHandle, vm::ptr<be_t<u32>> auInfoEx_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxGetAuEx(esHandle=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
-		esHandle, auInfoEx_ptr.GetAddr(), auSpecificInfo_ptr.GetAddr());
+		esHandle, auInfoEx_ptr.addr(), auSpecificInfo_ptr.addr());
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
@@ -1112,15 +1112,15 @@ int cellDmuxGetAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_p
 		return CELL_DMUX_ERROR_EMPTY;
 	}
 
-	auInfoEx_ptr = info;
-	auSpecificInfo_ptr = spec;
+	*auInfoEx_ptr = info;
+	*auSpecificInfo_ptr = spec;
 	return CELL_OK;
 }
 
-int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_ptr)
+int cellDmuxPeekAuEx(u32 esHandle, vm::ptr<be_t<u32>> auInfoEx_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxPeekAuEx(esHandle=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
-		esHandle, auInfoEx_ptr.GetAddr(), auSpecificInfo_ptr.GetAddr());
+		esHandle, auInfoEx_ptr.addr(), auSpecificInfo_ptr.addr());
 
 	ElementaryStream* es;
 	if (!Emu.GetIdManager().GetIDData(esHandle, es))
@@ -1135,8 +1135,8 @@ int cellDmuxPeekAuEx(u32 esHandle, mem32_t auInfoEx_ptr, mem32_t auSpecificInfo_
 		return CELL_DMUX_ERROR_EMPTY;
 	}
 
-	auInfoEx_ptr = info;
-	auSpecificInfo_ptr = spec;
+	*auInfoEx_ptr = info;
+	*auSpecificInfo_ptr = spec;
 	return CELL_OK;
 }
 

@@ -28,10 +28,10 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
+int cellJpgDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
 {
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
+		mainHandle, subHandle.addr(), src.GetAddr(), openInfo.GetAddr());
 
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
@@ -47,7 +47,7 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 	case se32(CELL_JPGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd.addr(), 0, 0);
+		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
@@ -60,7 +60,7 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
-	subHandle = cellJpgDec->GetNewId(current_subHandle);
+	*subHandle = cellJpgDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }

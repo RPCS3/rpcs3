@@ -768,7 +768,5 @@ public:
 	}
 };
 
-typedef mem_t<u32, u32> mem32_t;
-
 #include "vm.h"
 

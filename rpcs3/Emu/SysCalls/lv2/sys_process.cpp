@@ -133,32 +133,32 @@ void sys_game_process_exitspawn2(
 	return;
 }
 
-s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
+s32 sys_process_get_number_of_object(u32 object, vm::ptr<be_t<u32>> nump)
 {
 	sys_process.Warning("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
-		object, nump.GetAddr());
+		object, nump.addr());
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT:                  nump = Emu.GetIdManager().GetTypeCount(TYPE_MEM);                 break;
-	case SYS_MUTEX_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_MUTEX);               break;
-	case SYS_COND_OBJECT:                 nump = Emu.GetIdManager().GetTypeCount(TYPE_COND);                break;
-	case SYS_RWLOCK_OBJECT:               nump = Emu.GetIdManager().GetTypeCount(TYPE_RWLOCK);              break;
-	case SYS_INTR_TAG_OBJECT:             nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_TAG);            break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:  nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_SERVICE_HANDLE); break;
-	case SYS_EVENT_QUEUE_OBJECT:          nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_QUEUE);         break;
-	case SYS_EVENT_PORT_OBJECT:           nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_PORT);          break;
-	case SYS_TRACE_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_TRACE);               break;
-	case SYS_SPUIMAGE_OBJECT:             nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUIMAGE);            break;
-	case SYS_PRX_OBJECT:                  nump = Emu.GetIdManager().GetTypeCount(TYPE_PRX);                 break;
-	case SYS_SPUPORT_OBJECT:              nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUPORT);             break;
-	case SYS_LWMUTEX_OBJECT:              nump = Emu.GetIdManager().GetTypeCount(TYPE_LWMUTEX);             break;
-	case SYS_TIMER_OBJECT:                nump = Emu.GetIdManager().GetTypeCount(TYPE_TIMER);               break;
-	case SYS_SEMAPHORE_OBJECT:            nump = Emu.GetIdManager().GetTypeCount(TYPE_SEMAPHORE);           break;
-	case SYS_LWCOND_OBJECT:               nump = Emu.GetIdManager().GetTypeCount(TYPE_LWCOND);              break;
-	case SYS_EVENT_FLAG_OBJECT:           nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_FLAG);          break;
+	case SYS_MEM_OBJECT:                  *nump = Emu.GetIdManager().GetTypeCount(TYPE_MEM);                 break;
+	case SYS_MUTEX_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_MUTEX);               break;
+	case SYS_COND_OBJECT:                 *nump = Emu.GetIdManager().GetTypeCount(TYPE_COND);                break;
+	case SYS_RWLOCK_OBJECT:               *nump = Emu.GetIdManager().GetTypeCount(TYPE_RWLOCK);              break;
+	case SYS_INTR_TAG_OBJECT:             *nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_TAG);            break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:  *nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_SERVICE_HANDLE); break;
+	case SYS_EVENT_QUEUE_OBJECT:          *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_QUEUE);         break;
+	case SYS_EVENT_PORT_OBJECT:           *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_PORT);          break;
+	case SYS_TRACE_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_TRACE);               break;
+	case SYS_SPUIMAGE_OBJECT:             *nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUIMAGE);            break;
+	case SYS_PRX_OBJECT:                  *nump = Emu.GetIdManager().GetTypeCount(TYPE_PRX);                 break;
+	case SYS_SPUPORT_OBJECT:              *nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUPORT);             break;
+	case SYS_LWMUTEX_OBJECT:              *nump = Emu.GetIdManager().GetTypeCount(TYPE_LWMUTEX);             break;
+	case SYS_TIMER_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_TIMER);               break;
+	case SYS_SEMAPHORE_OBJECT:            *nump = Emu.GetIdManager().GetTypeCount(TYPE_SEMAPHORE);           break;
+	case SYS_LWCOND_OBJECT:               *nump = Emu.GetIdManager().GetTypeCount(TYPE_LWCOND);              break;
+	case SYS_EVENT_FLAG_OBJECT:           *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_FLAG);          break;
 	case SYS_FS_FD_OBJECT:
-		nump = Emu.GetIdManager().GetTypeCount(TYPE_FS_FILE) + Emu.GetIdManager().GetTypeCount(TYPE_FS_DIR);
+		*nump = Emu.GetIdManager().GetTypeCount(TYPE_FS_FILE) + Emu.GetIdManager().GetTypeCount(TYPE_FS_DIR);
 		break;
 
 	default:      
@@ -168,10 +168,10 @@ s32 sys_process_get_number_of_object(u32 object, mem32_t nump)
 	return CELL_OK;
 }
 
-s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, mem32_t set_size)
+s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, vm::ptr<be_t<u32>> set_size)
 {
 	sys_process.Todo("sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
-		object, buffer.addr(), size, set_size.GetAddr());
+		object, buffer.addr(), size, set_size.addr());
 
 	switch(object)
 	{
@@ -181,7 +181,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, mem32_t 
 	const auto& objects = Emu.GetIdManager().GetTypeIDs(type); \
 	for(auto id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
 		buffer[i] = *id; \
-	set_size = i; \
+	*set_size = i; \
 	}
 
 	case SYS_MEM_OBJECT:                  ADD_OBJECTS(TYPE_MEM);                 break;
@@ -239,9 +239,9 @@ s32 process_get_sdk_version(u32 pid, s32& ver)
 	return CELL_OK;
 }
 
-s32 sys_process_get_sdk_version(u32 pid, mem32_t version)
+s32 sys_process_get_sdk_version(u32 pid, vm::ptr<be_t<s32>> version)
 {
-	sys_process.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.GetAddr());
+	sys_process.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.addr());
 
 	s32 sdk_ver;
 	s32 ret = process_get_sdk_version(pid, sdk_ver);
@@ -251,7 +251,7 @@ s32 sys_process_get_sdk_version(u32 pid, mem32_t version)
 	}
 	else
 	{
-		version = sdk_ver;
+		*version = sdk_ver;
 		return CELL_OK;
 	}
 }
@@ -262,10 +262,10 @@ s32 sys_process_kill(u32 pid)
 	return CELL_OK;
 }
 
-s32 sys_process_wait_for_child(u32 pid, mem32_t status, u64 unk)
+s32 sys_process_wait_for_child(u32 pid, vm::ptr<be_t<u32>> status, u64 unk)
 {
 	sys_process.Todo("sys_process_wait_for_child(pid=%d, status_addr=0x%x, unk=0x%llx",
-		pid, status.GetAddr(), unk);
+		pid, status.addr(), unk);
 	return CELL_OK;
 }
 

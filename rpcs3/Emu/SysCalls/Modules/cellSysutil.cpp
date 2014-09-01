@@ -24,85 +24,85 @@ typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult,
 //Module cellSysutil(0x0015, cellSysutil_init);
 Module *cellSysutil = nullptr;
 
-int cellSysutilGetSystemParamInt(int id, mem32_t value)
+int cellSysutilGetSystemParamInt(int id, vm::ptr<be_t<u32>> value)
 {
-	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.GetAddr());
+	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.addr());
 
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
-		value = Ini.SysLanguage.GetValue();
+		*value = Ini.SysLanguage.GetValue();
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
-		value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
+		*value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
-		value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
+		*value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
-		value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
+		*value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
-		value = 3;
+		*value = 3;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
-		value = 1;
+		*value = 1;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
-		value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
+		*value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
-		value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
+		*value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
-		value = 0;
+		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
-		value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
+		*value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
-		value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
+		*value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
-		value = 0;
+		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
-		value = 0;
+		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
-		value = 0;
+		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
 		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
-		value = 0;
+		*value = 0;
 	break;
 
 	default:

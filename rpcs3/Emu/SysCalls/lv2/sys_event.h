@@ -162,8 +162,9 @@ public:
 		std::lock_guard<std::mutex> lock(m_mutex);
 		for (u32 i = 0; i < data.size(); i++)
 		{
-			std::lock_guard<std::mutex> lock2(data[i]->m_mutex);
-			data[i]->eq = nullptr; // force all ports to disconnect
+			// TODO: force all ports to disconnect
+			//std::lock_guard<std::mutex> lock2(data[i]->m_mutex);
+			//data[i]->eq = nullptr;
 		}
 		data.clear();
 	}
@@ -215,13 +216,13 @@ struct EventQueue
 };
 
 // SysCalls
-s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
+s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size);
 s32 sys_event_queue_destroy(u32 equeue_id, int mode);
 s32 sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 timeout);
-s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number);
+s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, vm::ptr<be_t<u32>> number);
 s32 sys_event_queue_drain(u32 event_queue_id);
 
-s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name);
+s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, int port_type, u64 name);
 s32 sys_event_port_destroy(u32 eport_id);
 s32 sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 s32 sys_event_port_disconnect(u32 eport_id);

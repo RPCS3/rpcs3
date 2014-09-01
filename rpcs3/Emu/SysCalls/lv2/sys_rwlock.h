@@ -150,7 +150,7 @@ struct RWLock
 };
 
 // SysCalls
-s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
+s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
 s32 sys_rwlock_destroy(u32 rw_lock_id);
 s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
 s32 sys_rwlock_tryrlock(u32 rw_lock_id);

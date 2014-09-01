@@ -18,7 +18,7 @@
 SysCallBase sys_time("sys_time");
 
 static const u64 timebase_frequency = /*79800000*/ 80000000; // 80 Mhz
-extern int cellSysutilGetSystemParamInt(int id, mem32_t value);
+extern int cellSysutilGetSystemParamInt(int id, vm::ptr<be_t<u32>> value);
 
 // Auxiliary functions
 u64 get_time()
@@ -59,9 +59,9 @@ u64 get_system_time()
 
 
 // Functions
-s32 sys_time_get_timezone(mem32_t timezone, mem32_t summertime)
+s32 sys_time_get_timezone(vm::ptr<be_t<u32>> timezone, vm::ptr<be_t<u32>> summertime)
 {
-	sys_time.Warning("sys_time_get_timezone(timezone_addr=0x%x, summertime_addr=0x%x)", timezone.GetAddr(), summertime.GetAddr());
+	sys_time.Warning("sys_time_get_timezone(timezone_addr=0x%x, summertime_addr=0x%x)", timezone.addr(), summertime.addr());
 
 	int ret;
 	ret = cellSysutilGetSystemParamInt(0x0116, timezone);   //0x0116 = CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE

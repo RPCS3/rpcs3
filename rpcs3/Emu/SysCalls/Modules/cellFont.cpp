@@ -387,10 +387,10 @@ int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem_ptr_t<be_t<float>> slan
 	return CELL_FONT_OK;
 }
 
-int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, mem32_t fontId, mem32_t fontCode)
+int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, vm::ptr<be_t<u32>> fontId, vm::ptr<be_t<u32>> fontCode)
 {
 	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
-		font.GetAddr(), code, fontId.GetAddr(), fontCode.GetAddr());
+		font.GetAddr(), code, fontId.addr(), fontCode.addr());
 
 	// TODO: ?
 	return CELL_FONT_OK;

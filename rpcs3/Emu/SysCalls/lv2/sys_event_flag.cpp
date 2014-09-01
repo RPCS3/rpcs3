@@ -37,10 +37,10 @@ u32 EventFlag::check()
 	return target;
 }
 
-s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
+s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
-		eflag_id.GetAddr(), attr.GetAddr(), init);
+		eflag_id.addr(), attr.GetAddr(), init);
 
 	switch (attr->protocol.ToBE())
 	{
@@ -63,10 +63,10 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	default: return CELL_EINVAL;
 	}
 
-	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
-
+	u32 id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
+	*eflag_id = id;
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
 
 	return CELL_OK;
 }
@@ -307,9 +307,9 @@ s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
+s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num)
 {
-	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.GetAddr());
+	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.addr());
 
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -337,7 +337,7 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 		return CELL_OK;
 	}
 
-	if (num.GetAddr()) num = (u32)tids.size();
+	if (num) *num = (u32)tids.size();
 
 	return CELL_OK;
 }

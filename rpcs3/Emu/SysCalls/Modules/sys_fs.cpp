@@ -110,11 +110,11 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 }
 	
 
-int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
+int cellFsSdataOpen(u32 path_addr, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
 {
 	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
-		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.c_str(), flags, fd.addr(), arg.addr(), size);
 
 	/*if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
@@ -136,9 +136,10 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return cellFsOpen(path_addr, flags, fd, arg, size);
 }
 
-int cellFsSdataOpenByFd(int mself_fd, int flags, mem32_t sdata_fd, u64 offset, mem32_t arg, u64 size)
+int cellFsSdataOpenByFd(int mself_fd, int flags, vm::ptr<be_t<u32>> sdata_fd, u64 offset, vm::ptr<be_t<u32>> arg, u64 size)
 {
-	sys_fs->Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=0x%x, sdata_fd_addr=0x%x, offset=0x%llx, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()", mself_fd, flags, sdata_fd.GetAddr(), offset, arg.GetAddr(), size);
+	sys_fs->Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=0x%x, sdata_fd_addr=0x%x, offset=0x%llx, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
+		mself_fd, flags, sdata_fd.addr(), offset, arg.addr(), size);
 
 	// TODO:
 
@@ -198,9 +199,9 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioRead(mem_ptr_t<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.addr(), func.GetAddr());
 
 	if (!aio_init)
 	{
@@ -217,7 +218,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-	aio_id = xid;
+	*aio_id = xid;
 
 	{
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
@@ -227,9 +228,9 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	return CELL_OK;
 }
 
-int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.addr(), func.GetAddr());
 
 	// TODO:
 

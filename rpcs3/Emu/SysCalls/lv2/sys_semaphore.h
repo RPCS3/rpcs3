@@ -38,9 +38,9 @@ struct Semaphore
 };
 
 // SysCalls
-s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count);
+s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count);
 s32 sys_semaphore_destroy(u32 sem_id);
 s32 sys_semaphore_wait(u32 sem_id, u64 timeout);
 s32 sys_semaphore_trywait(u32 sem_id);
 s32 sys_semaphore_post(u32 sem_id, int count);
-s32 sys_semaphore_get_value(u32 sem_id, mem32_t count);
+s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<be_t<s32>> count);

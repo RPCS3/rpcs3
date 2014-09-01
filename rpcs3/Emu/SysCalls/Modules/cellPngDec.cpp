@@ -51,10 +51,10 @@ int cellPngDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo)
+int cellPngDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo)
 {
 	cellPngDec->Warning("cellPngDecOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo);
+		mainHandle, subHandle.addr(), src.GetAddr(), openInfo);
 
 	CellPngDecSubHandle *current_subHandle = new CellPngDecSubHandle;
 	current_subHandle->fd = 0;
@@ -69,7 +69,7 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName_addr, 0, fd.addr(), 0, 0);
+		int ret = cellFsOpen(src->fileName_addr, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
@@ -82,15 +82,15 @@ int cellPngDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> s
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle = cellPngDec->GetNewId(current_subHandle);
+	*subHandle = cellPngDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
 
-int cellPngDecExtOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo, mem_ptr_t<CellPngDecCbCtrlStrm> cbCtrlStrm, mem_ptr_t<CellPngDecOpnParam> opnParam)
+int cellPngDecExtOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, mem_ptr_t<CellPngDecSrc> src, u32 openInfo, mem_ptr_t<CellPngDecCbCtrlStrm> cbCtrlStrm, mem_ptr_t<CellPngDecOpnParam> opnParam)
 {
 	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x, cbCtrlStrm_addr=0x%x, opnParam=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo, cbCtrlStrm.GetAddr(), opnParam.GetAddr());
+		mainHandle, subHandle.addr(), src.GetAddr(), openInfo, cbCtrlStrm.GetAddr(), opnParam.GetAddr());
 
 	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", cbCtrlStrm->cbCtrlStrmFunc.GetAddr());
 

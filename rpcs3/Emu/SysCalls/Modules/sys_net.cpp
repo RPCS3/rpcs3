@@ -21,7 +21,7 @@ extern "C"
 //Module sys_net((u16)0x0000, sys_net_init);
 Module *sys_net = nullptr;
 
-mem32_t g_lastError(0);
+vm::ptr<be_t<s32>> g_lastError = vm::ptr<be_t<s32>>::make(0);
 
 
 // Auxiliary Functions
@@ -94,21 +94,21 @@ using pck_len_t = u32;
 #endif
 
 // Functions
-int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
+int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
 {
-	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.GetAddr(), paddrlen.GetAddr());
+	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.GetAddr(), paddrlen.addr());
 	if (addr.GetAddr() == 0) {
 		int ret = accept(s, NULL, NULL);
-		g_lastError = getLastError();
+		*g_lastError = getLastError();
 		return ret;
 	}
 	else {
 		sockaddr _addr;
 		memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
-		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.GetAddr());
+		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.addr());
 		int ret = accept(s, &_addr, _paddrlen);
-		g_lastError = getLastError();
+		*g_lastError = getLastError();
 		return ret;
 	}
 }
@@ -122,7 +122,7 @@ int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
 	const char *ipaddr = inet_ntoa(saddr.sin_addr);
 	sys_net->Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 	int ret = bind(s, (const sockaddr *)&saddr, addrlen);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -135,7 +135,7 @@ int sys_net_connect(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
 	const char *ipaddr = inet_ntoa(saddr.sin_addr);
 	sys_net->Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 	int ret = connect(s, (const sockaddr *) &saddr, addrlen);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -229,7 +229,7 @@ int sys_net_listen(s32 s, s32 backlog)
 {
 	sys_net->Warning("listen(s=%d, backlog=%d)", s, backlog);
 	int ret = listen(s, backlog);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -238,22 +238,22 @@ int sys_net_recv(s32 s, u32 buf_addr, u32 len, s32 flags)
 	sys_net->Warning("recv(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf_addr, len, flags);
 	char *buf = (char *)Memory.VirtualToRealAddr(buf_addr);
 	int ret = recv(s, buf, len, flags);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
-int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_sockaddr> addr, mem32_t paddrlen)
+int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
 {
 	sys_net->Warning("recvfrom(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr_addr=0x%x, paddrlen=0x%x)",
-		s, buf_addr, len, flags, addr.GetAddr(), paddrlen.GetAddr());
+		s, buf_addr, len, flags, addr.GetAddr(), paddrlen.addr());
 
 	char *_buf_addr = (char *)Memory.VirtualToRealAddr(buf_addr);
 	sockaddr _addr;
 	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
-	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.GetAddr());
+	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.addr());
 	int ret = recvfrom(s, _buf_addr, len, flags, &_addr, _paddrlen);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -268,7 +268,7 @@ int sys_net_send(s32 s, u32 buf_addr, u32 len, s32 flags)
 	sys_net->Warning("send(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf_addr, len, flags);
 	char *buf = (char *)Memory.VirtualToRealAddr(buf_addr);
 	int ret = send(s, buf, len, flags);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -288,7 +288,7 @@ int sys_net_sendto(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_so
 	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
 	int ret = sendto(s, _buf_addr, len, flags, &_addr, addrlen);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -297,7 +297,7 @@ int sys_net_setsockopt(s32 s, s32 level, s32 optname, u32 optval_addr, u32 optle
 	sys_net->Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%u)", s, level, optname, optval_addr, optlen);
 	char *_optval_addr = (char *)Memory.VirtualToRealAddr(optval_addr);
 	int ret = setsockopt(s, level, optname, _optval_addr, optlen);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -305,7 +305,7 @@ int sys_net_shutdown(s32 s, s32 how)
 {
 	sys_net->Warning("shutdown(s=%d, how=%d)", s, how);
 	int ret = shutdown(s, how);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -313,7 +313,7 @@ int sys_net_socket(s32 family, s32 type, s32 protocol)
 {
 	sys_net->Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 	int ret = socket(family, type, protocol);
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -325,7 +325,7 @@ int sys_net_socketclose(s32 s)
 #else
 	int ret = close(s);
 #endif
-	g_lastError = getLastError();
+	*g_lastError = getLastError();
 	return ret;
 }
 
@@ -344,7 +344,7 @@ int socketselect()
 int sys_net_initialize_network_ex(mem_ptr_t<sys_net_initialize_parameter> param)
 {
 	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.GetAddr());
-	g_lastError.SetAddr((u32)Memory.Alloc(4, 1));
+	g_lastError = vm::ptr<be_t<s32>>::make((u32)Memory.Alloc(4, 1));
 #ifdef _WIN32
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1,1);
@@ -407,10 +407,10 @@ int sys_net_show_nameserver()
 	return CELL_OK;
 }
 
-s32 _sys_net_errno_loc()
+u32 _sys_net_errno_loc()
 {
 	sys_net->Warning("_sys_net_errno_loc()");
-	return g_lastError.GetAddr();
+	return g_lastError.addr();
 }
 
 int sys_net_set_resolver_configurations()
@@ -476,8 +476,8 @@ int sys_net_show_ifconfig()
 int sys_net_finalize_network()
 {
 	sys_net->Warning("sys_net_initialize_network_ex()");
-	Memory.Free(g_lastError.GetAddr());
-	g_lastError.SetAddr(0);
+	Memory.Free(g_lastError.addr());
+	g_lastError = vm::ptr<be_t<s32>>::make(0);
 #ifdef _WIN32
 	WSACleanup();
 #endif

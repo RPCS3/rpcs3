@@ -283,10 +283,10 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 #endif
 
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
-int L10nConvertStr(int src_code, vm::ptr<const void> src, mem32_t src_len, int dst_code, vm::ptr<void> dst, mem32_t dst_len)
+int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<be_t<u32>> src_len, int dst_code, vm::ptr<void> dst, vm::ptr<be_t<u32>> dst_len)
 {
 	cellL10n->Todo("L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
-		src_code, src.addr(), src_len.GetValue(), dst_code, dst.addr(), dst_len.GetValue());
+		src_code, src.addr(), src_len.addr(), dst_code, dst.addr(), dst_len.addr());
 	cellL10n->Todo("L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
 	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
@@ -300,10 +300,10 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, mem32_t src_len, int d
 	//if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
 	std::string wrapped_source = (char*)src.get_ptr();
 	//std::string wrapped_source((char*)src);
-	if (wrapped_source.length() != src_len.GetValue()) return SRCIllegal;
+	if (wrapped_source.length() != *src_len) return SRCIllegal;
 	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-	if (target.length() > dst_len.GetValue()) return DSTExhausted;
+	if (target.length() > *dst_len) return DSTExhausted;
 
 	Memory.WriteString(dst.addr(), target);
 
@@ -318,9 +318,9 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, mem32_t src_len, int d
 		char *dstBuf = (char*)dst.get_ptr();
 		//char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		//size_t srcLen = *src_len, dstLen = *dst_len;
-		size_t srcLen = src_len.GetValue(), dstLen = dst_len.GetValue();
+		size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
-		if (ictd != src_len.GetValue())//if (ictd != *src_len)
+		if (ictd != *src_len)//if (ictd != *src_len)
 		{
 			if (errno == EILSEQ)
 				retValue = SRCIllegal;  //Invalid multi-byte sequence

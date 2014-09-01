@@ -16,10 +16,10 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameContentSize> size, vm::ptr<char> dirName)
+int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, mem_ptr_t<CellGameContentSize> size, vm::ptr<char> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
-		type.GetAddr(), attributes.GetAddr(), size.GetAddr(), dirName.addr());
+		type.addr(), attributes.addr(), size.GetAddr(), dirName.addr());
 
 	if (size)
 	{
@@ -48,8 +48,8 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	std::string category = psf.GetString("CATEGORY");
 	if (category.substr(0, 2) == "DG")
 	{
-		type = CELL_GAME_GAMETYPE_DISC;
-		attributes = 0; // TODO
+		*type = CELL_GAME_GAMETYPE_DISC;
+		*attributes = 0; // TODO
 		if (dirName) Memory.WriteString(dirName.addr(), ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
@@ -57,8 +57,8 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	else if (category.substr(0, 2) == "HG")
 	{
 		std::string titleId = psf.GetString("TITLE_ID");
-		type = CELL_GAME_GAMETYPE_HDD;
-		attributes = 0; // TODO
+		*type = CELL_GAME_GAMETYPE_HDD;
+		*attributes = 0; // TODO
 		if (dirName) Memory.WriteString(dirName.addr(), titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
@@ -66,8 +66,8 @@ int cellGameBootCheck(mem32_t type, mem32_t attributes, mem_ptr_t<CellGameConten
 	else if (category.substr(0, 2) == "GD")
 	{
 		std::string titleId = psf.GetString("TITLE_ID");
-		type = CELL_GAME_GAMETYPE_DISC;
-		attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
+		*type = CELL_GAME_GAMETYPE_DISC;
+		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 		if (dirName) Memory.WriteString(dirName.addr(), titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
@@ -327,9 +327,9 @@ int cellGameDeleteGameData()
 	return CELL_OK;
 }
 
-int cellGameGetParamInt(u32 id, mem32_t value)
+int cellGameGetParamInt(u32 id, vm::ptr<be_t<u32>> value)
 {
-	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.GetAddr());
+	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/PARAM.SFO");
@@ -339,9 +339,9 @@ int cellGameGetParamInt(u32 id, mem32_t value)
 
 	switch(id)
 	{
-	case CELL_GAME_PARAMID_PARENTAL_LEVEL:  value = psf.GetInteger("PARENTAL_LEVEL"); break;
-	case CELL_GAME_PARAMID_RESOLUTION:      value = psf.GetInteger("RESOLUTION");     break;
-	case CELL_GAME_PARAMID_SOUND_FORMAT:    value = psf.GetInteger("SOUND_FORMAT");   break;
+	case CELL_GAME_PARAMID_PARENTAL_LEVEL:  *value = psf.GetInteger("PARENTAL_LEVEL"); break;
+	case CELL_GAME_PARAMID_RESOLUTION:      *value = psf.GetInteger("RESOLUTION");     break;
+	case CELL_GAME_PARAMID_SOUND_FORMAT:    *value = psf.GetInteger("SOUND_FORMAT");   break;
 
 	default:
 		return CELL_GAME_ERROR_INVALID_ID;

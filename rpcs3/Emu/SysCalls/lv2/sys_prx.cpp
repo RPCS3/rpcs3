@@ -61,10 +61,10 @@ s32 sys_prx_load_module_on_memcontainer_by_fd()
 	return CELL_OK;
 }
 
-s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, mem32_t modres, u64 flags, mem_ptr_t<sys_prx_start_module_option_t> pOpt)
+s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_start_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_start_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
-		id, args, argp_addr, modres.GetAddr(), flags, pOpt.GetAddr());
+		id, args, argp_addr, modres.addr(), flags, pOpt.GetAddr());
 
 	sys_prx_t* prx;
 	if (!Emu.GetIdManager().GetIDData(id, prx))
@@ -76,10 +76,10 @@ s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, mem32_t modres, u64 fl
 	return CELL_OK;
 }
 
-s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, mem32_t modres, u64 flags, mem_ptr_t<sys_prx_stop_module_option_t> pOpt)
+s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_stop_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_stop_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
-		id, args, argp_addr, modres.GetAddr(), flags, pOpt.GetAddr());
+		id, args, argp_addr, modres.addr(), flags, pOpt.GetAddr());
 
 	sys_prx_t* prx;
 	if (!Emu.GetIdManager().GetIDData(id, prx))

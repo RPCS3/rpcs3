@@ -19,7 +19,7 @@ struct timer
 	sys_timer_information_t timer_information_t;
 };
 
-s32 sys_timer_create(mem32_t timer_id);
+s32 sys_timer_create(vm::ptr<be_t<u32>> timer_id);
 s32 sys_timer_destroy(u32 timer_id);
 s32 sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info);
 s32 sys_timer_start(u32 timer_id, s64 basetime, u64 period);

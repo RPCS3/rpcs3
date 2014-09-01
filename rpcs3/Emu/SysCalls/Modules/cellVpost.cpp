@@ -37,23 +37,23 @@ u32 vpostOpen(VpostInstance* data)
 	return id;
 }
 
-int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResource> resource, mem32_t handle)
+int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResource> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
-		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
+		cfgParam.GetAddr(), resource.GetAddr(), handle.addr());
 
 	// TODO: check values
-	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
 	return CELL_OK;
 }
 
-int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResourceEx> resource, mem32_t handle)
+int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResourceEx> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
-		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
+		cfgParam.GetAddr(), resource.GetAddr(), handle.addr());
 
 	// TODO: check values
-	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
 	return CELL_OK;
 }
 

@@ -20,18 +20,18 @@ int cellNetCtlTerm()
 	return CELL_OK;
 }
 
-int cellNetCtlGetState(mem32_t state)
+int cellNetCtlGetState(vm::ptr<be_t<u32>> state)
 {
-	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
+	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
-	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
+	*state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler(mem_func_ptr_t<cellNetCtlHandler> handler, mem32_t arg, s32 hid)
+int cellNetCtlAddHandler(mem_func_ptr_t<cellNetCtlHandler> handler, vm::ptr<be_t<u32>> arg, s32 hid)
 {
-	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.GetAddr(), arg.GetAddr(), hid);
+	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.GetAddr(), arg.addr(), hid);
 
 	return CELL_OK;
 }
