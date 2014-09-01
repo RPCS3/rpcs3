@@ -175,11 +175,9 @@ template<typename T, typename T2 = T>
 struct is_be_t : public std::integral_constant<bool, false> {};
 
 template<typename T, typename T2>
-struct is_be_t<be_t<T, T2>, T2> : public std::integral_constant<bool, true>
-{
-};
+struct is_be_t<be_t<T, T2>, T2> : public std::integral_constant<bool, true> {};
 
-template<typename T>
+template<typename T, typename T2 = T>
 struct remove_be_t
 {
 	typedef T type;

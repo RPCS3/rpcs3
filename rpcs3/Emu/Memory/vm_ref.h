@@ -10,6 +10,8 @@ namespace vm
 
 	public:
 		typedef T type;
+		typedef typename remove_be_t<T>::type le_type;
+		typedef typename to_be_t<T>::type be_type;
 
 		operator T&()
 		{
@@ -30,34 +32,54 @@ namespace vm
 		{
 			return (_ref_base&)addr;
 		}
+
+		_ref_base& operator = (le_type right)
+		{
+			get_ref<T>(m_addr) = right;
+			return *this;
+		}
+
+		const _ref_base& operator = (le_type right) const
+		{
+			get_ref<T>(m_addr) = right;
+			return *this;
+		}
+
+		_ref_base& operator = (be_type right)
+		{
+			get_ref<T>(m_addr) = right;
+			return *this;
+		}
+
+		const _ref_base& operator = (be_type right) const
+		{
+			get_ref<T>(m_addr) = right;
+			return *this;
+		}
 	};
 
 	//BE reference to LE data
 	template<typename T, typename AT = u32> struct brefl : public _ref_base<T, typename to_be_t<AT>::type>
 	{
-		brefl& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-		const brefl& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+		using _ref_base::operator=;
 	};
 
 	//BE reference to BE data
 	template<typename T, typename AT = u32> struct brefb : public _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>
 	{
-		brefb& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-		const brefb& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+		using _ref_base::operator=;
 	};
 
 	//LE reference to BE data
 	template<typename T, typename AT = u32> struct lrefb : public _ref_base<typename to_be_t<T>::type, AT>
 	{
-		lrefb& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-		const lrefb& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+		using _ref_base::operator=;
 	};
 
 	//LE reference to LE data
 	template<typename T, typename AT = u32> struct lrefl : public _ref_base<T, AT>
 	{
-		lrefl& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-		const lrefl& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+		using _ref_base::operator=;
 	};
 
 	namespace ps3
@@ -65,15 +87,13 @@ namespace vm
 		//default reference for HLE functions (LE reference to BE data)
 		template<typename T, typename AT = u32> struct ref : public lrefb<T, AT>
 		{
-			ref& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-			const ref& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+			using _ref_base::operator=;
 		};
 
 		//default reference for HLE structures (BE reference to BE data)
 		template<typename T, typename AT = u32> struct bref : public brefb<T, AT>
 		{
-			bref& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-			const bref& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+			using _ref_base::operator=;
 		};
 	}
 
@@ -82,8 +102,7 @@ namespace vm
 		//default reference for HLE functions & structures (LE reference to LE data)
 		template<typename T, typename AT = u32> struct ref : public lrefl<T, AT>
 		{
-			ref& operator = (T right) { get_ref<T>(m_addr) = right; return *this; }
-			const ref& operator = (T right) const { get_ref<T>(m_addr) = right; return *this; }
+			using _ref_base::operator=;
 		};
 	}
 
