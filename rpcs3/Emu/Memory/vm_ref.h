@@ -102,7 +102,7 @@ namespace vm
 		//default reference for HLE functions & structures (LE reference to LE data)
 		template<typename T, typename AT = u32> struct ref : public lrefl<T, AT>
 		{
-			using _ref_base::operator=;
+			using lrefl<T, AT>::operator=;
 		};
 	}
 
