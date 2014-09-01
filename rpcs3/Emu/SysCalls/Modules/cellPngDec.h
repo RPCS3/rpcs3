@@ -122,7 +122,7 @@ struct CellPngDecStrmParam
 
 struct CellPngDecCbCtrlStrm
 {
-	vm::beptr<void(*)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, u32 cbCtrlStrmArg)> cbCtrlStrmFunc;
+	vm::bptr<void(*)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, u32 cbCtrlStrmArg)> cbCtrlStrmFunc;
 	be_t<u32> cbCtrlStrmArg;
 };
 

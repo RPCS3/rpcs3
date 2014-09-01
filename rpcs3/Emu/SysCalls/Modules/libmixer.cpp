@@ -361,7 +361,7 @@ int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
 
 					for (auto& p : ssp) if (p.m_active && p.m_created)
 					{
-						auto v = vm::ptr<s16>::make(p.m_addr); // 16-bit LE audio data
+						auto v = vm::lptrl<s16>::make(p.m_addr); // 16-bit LE audio data
 						float left = 0.0f;
 						float right = 0.0f;
 						float speed = fabs(p.m_speed);

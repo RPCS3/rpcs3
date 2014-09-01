@@ -18,7 +18,7 @@
 //Module cellL10n(0x001e, cellL10n_init);
 Module *cellL10n = nullptr;
 
-int UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len, vm::ptr<char> utf8, vm::ptr<be_t<u32>> utf8_len)
+int UTF16stoUTF8s(vm::lptrl<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len, vm::ptr<char> utf8, vm::ptr<be_t<u32>> utf8_len)
 {
 	cellL10n->Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
 		utf16.addr(), utf16_len.addr(), utf8.addr(), utf8_len.addr());

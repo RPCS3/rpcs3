@@ -106,9 +106,9 @@ namespace vm
 		}
 		*/
 
-		template<typename AT> operator ptr<T, 1, AT>() const
+		template<typename AT> operator ps3::ptr<T, 1, AT>() const
 		{
-			return ptr<T, 1, AT>::make(m_addr);
+			return ps3::ptr<T, 1, AT>::make(m_addr);
 		}
 		
 		operator T&()

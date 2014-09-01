@@ -3,77 +3,79 @@
 namespace vm
 {
 	template<typename T, int lvl = 1, typename AT = u32>
-	class ptr
+	class _ptr_base
 	{
 		AT m_addr;
 
 	public:
-		ptr operator++ (int)
+		typedef T type;
+
+		_ptr_base operator++ (int)
 		{
 			AT result = m_addr;
 			m_addr += sizeof(AT);
-			return { result };
+			return make(result);
 		}
 
-		ptr& operator++ ()
+		_ptr_base& operator++ ()
 		{
 			m_addr += sizeof(AT);
 			return *this;
 		}
 
-		ptr operator-- (int)
+		_ptr_base operator-- (int)
 		{
 			AT result = m_addr;
 			m_addr -= sizeof(AT);
-			return { result };
+			return make(result);
 		}
 
-		ptr& operator-- ()
+		_ptr_base& operator-- ()
 		{
 			m_addr -= sizeof(AT);
 			return *this;
 		}
 
-		ptr& operator += (int count)
+		_ptr_base& operator += (int count)
 		{
 			m_addr += count * sizeof(AT);
 			return *this;
 		}
 
-		ptr& operator -= (int count)
+		_ptr_base& operator -= (int count)
 		{
 			m_addr -= count * sizeof(AT);
 			return *this;
 		}
 
-		ptr operator + (int count) const
+		_ptr_base operator + (int count) const
 		{
-			return { m_addr + count * sizeof(AT) };
+			return make(m_addr + count * sizeof(AT));
 		}
 
-		ptr operator - (int count) const
+		_ptr_base operator - (int count) const
 		{
-			return { m_addr - count * sizeof(AT) };
+			return make(m_addr - count * sizeof(AT));
 		}
 
-		__forceinline ptr<T, lvl - 1, AT>& operator *()
+		__forceinline _ptr_base<T, lvl - 1, AT>& operator *()
 		{
-			return get_ref<ptr<T, lvl - 1, AT>>(m_addr);
+			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr);
 		}
 
-		__forceinline const ptr<T, lvl - 1, AT>& operator *() const
+		__forceinline const _ptr_base<T, lvl - 1, AT>& operator *() const
 		{
-			return get_ref<const ptr<T, lvl - 1, AT>>(m_addr);
+			return vm::get_ref<const _ptr_base<T, lvl - 1, AT>>(m_addr);
 		}
 
-		__forceinline ptr<T, lvl - 1, AT>& operator [](int index)
+		__forceinline _ptr_base<T, lvl - 1, AT>& operator [](int index)
 		{
-			return get_ref<ptr<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
+			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
 		}
 
-		__forceinline const ptr<T, lvl - 1, AT>& operator [](int index) const
+		__forceinline const _ptr_base<T, lvl - 1, AT>& operator [](int index) const
 		{
-			return get_ref<const ptr<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
+			return vm::get_ref<const _ptr_base<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
 		}
 
 		operator bool() const
@@ -86,14 +88,14 @@ namespace vm
 			return m_addr;
 		}
 
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 	};
 	
 	template<typename T, typename AT>
-	class ptr<T, 1, AT>
+	class _ptr_base<T, 1, AT>
 	{
 		AT m_addr;
 		
@@ -108,52 +110,52 @@ namespace vm
 			return vm::get_ptr<const T>(m_addr);
 		}
 
-		ptr operator++ (int)
+		_ptr_base operator++ (int)
 		{
 			AT result = m_addr;
 			m_addr += sizeof(T);
-			return { result };
+			return make(result);
 		}
 
-		ptr& operator++ ()
+		_ptr_base& operator++ ()
 		{
 			m_addr += sizeof(T);
 			return *this;
 		}
 
-		ptr operator-- (int)
+		_ptr_base operator-- (int)
 		{
 			AT result = m_addr;
 			m_addr -= sizeof(T);
-			return { result };
+			return make(result);
 		}
 
-		ptr& operator-- ()
+		_ptr_base& operator-- ()
 		{
 			m_addr -= sizeof(T);
 			return *this;
 		}
 
-		ptr& operator += (int count)
+		_ptr_base& operator += (int count)
 		{
 			m_addr += count * sizeof(T);
 			return *this;
 		}
 
-		ptr& operator -= (int count)
+		_ptr_base& operator -= (int count)
 		{
 			m_addr -= count * sizeof(T);
 			return *this;
 		}
 
-		ptr operator + (int count) const
+		_ptr_base operator + (int count) const
 		{
-			return { m_addr + count * sizeof(T) };
+			return make(m_addr + count * sizeof(T));
 		}
 
-		ptr operator - (int count) const
+		_ptr_base operator - (int count) const
 		{
-			return { m_addr - count * sizeof(T) };
+			return make(m_addr - count * sizeof(T));
 		}
 
 		__forceinline T& operator *()
@@ -177,14 +179,14 @@ namespace vm
 		}
 		
 		/*
-		operator ref<T>()
+		operator _ref_base<T, AT>()
 		{
-			return { m_addr };
+			return _ref_base<T, AT>::make(m_addr);
 		}
 		
-		operator const ref<T>() const
+		operator const _ref_base<T, AT>() const
 		{
-			return { m_addr };
+			return _ref_base<T, AT>::make(m_addr);
 		}
 		*/
 		
@@ -203,14 +205,14 @@ namespace vm
 			return vm::get_ptr<T>(m_addr);
 		}
 		
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 	};
 
 	template<typename AT>
-	class ptr<void, 1, AT>
+	class _ptr_base<void, 1, AT>
 	{
 		AT m_addr;
 		
@@ -230,14 +232,14 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 	};
 
 	template<typename AT>
-	class ptr<const void, 1, AT>
+	class _ptr_base<const void, 1, AT>
 	{
 		AT m_addr;
 
@@ -257,14 +259,14 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 	};
 	
 	template<typename RT, typename AT>
-	class ptr<RT(*)(), 1, AT>
+	class _ptr_base<RT(*)(), 1, AT>
 	{
 		AT m_addr;
 
@@ -298,9 +300,9 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 
 		operator std::function<RT()>() const
@@ -311,7 +313,7 @@ namespace vm
 	};
 
 	template<typename AT, typename RT, typename ...T>
-	class ptr<RT(*)(T...), 1, AT>
+	class _ptr_base<RT(*)(T...), 1, AT>
 	{
 		AT m_addr;
 
@@ -325,9 +327,9 @@ namespace vm
 		};
 
 		template<typename TT, typename ATT>
-		struct _func_arg<ptr<TT, 1, ATT>>
+		struct _func_arg<_ptr_base<TT, 1, ATT>>
 		{
-			__forceinline static u64 get_value(const ptr<TT, 1, ATT> arg)
+			__forceinline static u64 get_value(const _ptr_base<TT, 1, ATT> arg)
 			{
 				return arg.addr();
 			}
@@ -384,9 +386,9 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		static ptr make(AT addr)
+		static _ptr_base make(AT addr)
 		{
-			return (ptr&)addr;
+			return (_ptr_base&)addr;
 		}
 
 		operator std::function<RT(T...)>() const
@@ -396,6 +398,33 @@ namespace vm
 		}
 	};
 
-	template<typename T, int lvl = 1, typename AT = u32>
-	class beptr : public ptr<T, lvl, be_t<AT>> {};
+	//BE pointer to LE data
+	template<typename T, int lvl = 1, typename AT = u32> class bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type> {};
+	//BE pointer to BE data
+	template<typename T, int lvl = 1, typename AT = u32> class bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type> {};
+	//LE pointer to BE data
+	template<typename T, int lvl = 1, typename AT = u32> class lptrb : public _ptr_base<typename to_be_t<T>::type, lvl, AT> {};
+	//LE pointer to LE data
+	template<typename T, int lvl = 1, typename AT = u32> class lptrl : public _ptr_base<T, lvl, AT> {};
+	namespace ps3
+	{
+		//default pointer for HLE functions (LE ptrerence to BE data)
+		template<typename T, int lvl = 1, typename AT = u32> class ptr : public lptrb<T, lvl, AT>
+		{
+		public:
+			static ptr make(AT addr)
+			{
+				return (ptr&)addr;
+			}
+		};
+		//default pointer for HLE structures (BE ptrerence to BE data)
+		template<typename T, int lvl = 1, typename AT = u32> class bptr : public bptrb<T, lvl, AT> {};
+	}
+	namespace psv
+	{
+		//default pointer for HLE functions & structures (LE ptrerence to LE data)
+		template<typename T, int lvl = 1, typename AT = u32> class ptr : public lptrl<T, lvl, AT> {};
+	}
+	//PS3 emulation is main now, so lets it be as default
+	using namespace ps3;
 }

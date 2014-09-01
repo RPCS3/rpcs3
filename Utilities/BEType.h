@@ -47,10 +47,10 @@ template<typename T, s64 _value> struct const_se_t<T, _value, 8>
 		((_value << 56) & 0xff00000000000000);
 };
 
-template<typename T, int size=sizeof(T)>
+template<typename T, typename T2 = T>
 class be_t
 {
-	static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Bad be_t type");
+	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
 	T m_data;
 
 public:
@@ -65,7 +65,7 @@ public:
 	{
 		T res;
 
-		se_t<T>::func(res, m_data);
+		se_t<T, sizeof(T2)>::func(res, m_data);
 
 		return res;
 	}
@@ -77,7 +77,7 @@ public:
 
 	void FromLE(const T& value)
 	{
-		se_t<T>::func(m_data, value);
+		se_t<T, sizeof(T2)>::func(m_data, value);
 	}
 
 	static be_t MakeFromLE(const T value)
@@ -125,7 +125,7 @@ public:
 		return *this;
 	}
 
-	be_t<T,size>& operator = (const be_t<T,size>& right) = default;
+	be_t& operator = (const be_t& right) = default;
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
 	template<typename T1> be_t& operator -= (T1 right) { return *this = T(*this) - right; }
@@ -169,6 +169,71 @@ public:
 	be_t operator-- (int) { be_t res = *this; *this -= 1; return res; }
 	be_t& operator++ () { *this += 1; return *this; }
 	be_t& operator-- () { *this -= 1; return *this; }
+};
+
+template<typename T, typename T2 = T>
+struct is_be_t : public std::integral_constant<bool, false> {};
+
+template<typename T, typename T2>
+struct is_be_t<be_t<T, T2>, T2> : public std::integral_constant<bool, true>
+{
+};
+
+template<typename T>
+struct remove_be_t
+{
+	typedef T type;
+};
+
+template<typename T, typename T2>
+struct remove_be_t<be_t<T, T2>>
+{
+	typedef T type;
+};
+
+template<typename T, typename T2 = T>
+class to_be_t
+{
+	template<typename T, typename T2, bool is_need_swap>
+	struct _be_type_selector
+	{
+		typedef typename T type;
+	};
+
+	template<typename T, typename T2>
+	struct _be_type_selector<T, T2, true>
+	{
+		typedef typename be_t<T, T2> type;
+	};
+
+public:
+	//true if need swap endianes for be
+	static const bool value = (sizeof(T2) > 1) && std::is_arithmetic<T>::value;
+
+	//be_t<T, size> if need swap endianes, T otherwise
+	typedef typename _be_type_selector< T, T2, value >::type type;
+};
+
+template<typename T>
+class to_be_t<T, void>
+{
+public:
+	//true if need swap endianes for be
+	static const bool value = false;
+
+	//be_t<T, size> if need swap endianes, T otherwise
+	typedef void type;
+};
+
+template<typename T>
+class to_be_t<T, const void>
+{
+public:
+	//true if need swap endianes for be
+	static const bool value = false;
+
+	//be_t<T, size> if need swap endianes, T otherwise
+	typedef void type;
 };
 
 template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
