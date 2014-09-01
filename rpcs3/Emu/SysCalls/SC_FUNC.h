@@ -5,6 +5,7 @@ class func_caller
 {
 public:
 	virtual void operator()() = 0;
+	virtual ~func_caller(){};
 };
 
 namespace detail

@@ -2,13 +2,6 @@
 
 static std::thread::id main_thread;
 
-struct rThread
-{
-	static bool IsMain() { std::this_thread::get_id() == main_thread; }
-};
-
-class ThreadExec;
-
 class NamedThreadBase
 {
 	std::string m_name;
