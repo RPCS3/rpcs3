@@ -314,7 +314,7 @@ namespace vm
 
 	namespace ps3
 	{
-		template<typename T, int lvl, typename AT> class ptr;
+		template<typename T, int lvl, typename AT> struct ptr;
 	}
 
 	template<typename AT, typename RT, typename ...T>
@@ -413,32 +413,88 @@ namespace vm
 	};
 
 	//BE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> class bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type> {};
+	template<typename T, int lvl = 1, typename AT = u32> struct bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type>
+	{
+		static bptrl make(AT addr)
+		{
+			return (bptrl&)addr;
+		}
+
+		using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator=;
+	};
+
 	//BE pointer to BE data
-	template<typename T, int lvl = 1, typename AT = u32> class bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type> {};
+	template<typename T, int lvl = 1, typename AT = u32> struct bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>
+	{
+		static bptrb make(AT addr)
+		{
+			return (bptrb&)addr;
+		}
+
+		using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator=;
+	};
+
 	//LE pointer to BE data
-	template<typename T, int lvl = 1, typename AT = u32> class lptrb : public _ptr_base<typename to_be_t<T>::type, lvl, AT> {};
+	template<typename T, int lvl = 1, typename AT = u32> struct lptrb : public _ptr_base<typename to_be_t<T>::type, lvl, AT>
+	{
+		static lptrb make(AT addr)
+		{
+			return (lptrb&)addr;
+		}
+
+		using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator=;
+	};
+
 	//LE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> class lptrl : public _ptr_base<T, lvl, AT> {};
+	template<typename T, int lvl = 1, typename AT = u32> struct lptrl : public _ptr_base<T, lvl, AT>
+	{
+		static lptrl make(AT addr)
+		{
+			return (lptrl&)addr;
+		}
+
+		using _ptr_base<T, lvl, AT>::operator=;
+	};
+
 	namespace ps3
 	{
 		//default pointer for HLE functions (LE ptrerence to BE data)
-		template<typename T, int lvl = 1, typename AT = u32> class ptr : public lptrb<T, lvl, AT>
+		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrb<T, lvl, AT>
 		{
-		public:
 			static ptr make(AT addr)
 			{
 				return (ptr&)addr;
 			}
+
+			using lptrb<T, lvl, AT>::operator=;
 		};
+
 		//default pointer for HLE structures (BE ptrerence to BE data)
-		template<typename T, int lvl = 1, typename AT = u32> class bptr : public bptrb<T, lvl, AT> {};
+		template<typename T, int lvl = 1, typename AT = u32> struct bptr : public bptrb<T, lvl, AT>
+		{
+			static bptr make(AT addr)
+			{
+				return (bptr&)addr;
+			}
+
+			using bptrb<T, lvl, AT>::operator=;
+		};
 	}
+
 	namespace psv
 	{
 		//default pointer for HLE functions & structures (LE ptrerence to LE data)
-		template<typename T, int lvl = 1, typename AT = u32> class ptr : public lptrl<T, lvl, AT> {};
+		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrl<T, lvl, AT>
+		{
+			static ptr make(AT addr)
+			{
+				return (ptr&)addr;
+			}
+
+			using lptrl<T, lvl, AT>::operator=;
+		};
 	}
+
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
 }

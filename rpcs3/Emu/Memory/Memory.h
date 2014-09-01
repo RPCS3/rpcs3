@@ -650,9 +650,6 @@ public:
 	template<typename NT> operator const mem_ptr_t<NT, 1, AT>&() const { return (const mem_ptr_t<NT, 1, AT>&)*this; }
 };
 
-template<typename T, int lvl = 1, typename AT = u32>
-class mem_beptr_t : public mem_ptr_t<T, lvl, be_t<AT>> {};
-
 template<typename T, typename AT = u32> class mem_t : public mem_base_t<T, AT>
 {
 public:

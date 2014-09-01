@@ -116,7 +116,7 @@ struct CellSaveDataListNewData
 { 
 	be_t<u32> iconPosition;
 	be_t<u32> dirName_addr; // char*
-	mem_beptr_t<CellSaveDataNewDataIcon> icon;
+	vm::bptr<CellSaveDataNewDataIcon> icon;
 };
 
 struct CellSaveDataDirList
@@ -129,7 +129,7 @@ struct CellSaveDataListGet
 { 
 	be_t<u32> dirNum;
 	be_t<u32> dirListNum;
-	mem_beptr_t<CellSaveDataDirList> dirList;
+	vm::bptr<CellSaveDataDirList> dirList;
 };
 
 struct CellSaveDataListSet
@@ -137,15 +137,15 @@ struct CellSaveDataListSet
 	be_t<u32> focusPosition;
 	be_t<u32> focusDirName_addr; // char*
 	be_t<u32> fixedListNum;
-	mem_beptr_t<CellSaveDataDirList> fixedList;
-	mem_beptr_t<CellSaveDataListNewData> newData;
+	vm::bptr<CellSaveDataDirList> fixedList;
+	vm::bptr<CellSaveDataListNewData> newData;
 	be_t<u32> reserved_addr;  // void*
 };
 
 struct CellSaveDataFixedSet
 { 
 	be_t<u32> dirName_addr; // char*
-	mem_beptr_t<CellSaveDataNewDataIcon> newIcon;
+	vm::bptr<CellSaveDataNewDataIcon> newIcon;
 	be_t<u32> option;
 };
 
@@ -191,7 +191,7 @@ struct CellSaveDataStatGet
 	be_t<s32> sysSizeKB;
 	be_t<u32> fileNum;
 	be_t<u32> fileListNum;
-	mem_beptr_t<CellSaveDataFileStat> fileList;
+	vm::bptr<CellSaveDataFileStat> fileList;
 };
 
 struct CellSaveDataAutoIndicator
@@ -205,9 +205,9 @@ struct CellSaveDataAutoIndicator
 
 struct CellSaveDataStatSet 
 { 
-	mem_beptr_t<CellSaveDataSystemFileParam> setParam;
+	vm::bptr<CellSaveDataSystemFileParam> setParam;
 	be_t<u32> reCreateMode;
-	mem_beptr_t<CellSaveDataAutoIndicator> indicator;
+	vm::bptr<CellSaveDataAutoIndicator> indicator;
 };
 
 struct CellSaveDataFileGet

@@ -197,6 +197,6 @@ struct CellGameDataStatGet
 
 struct CellGameDataStatSet
 {
-	mem_beptr_t<CellGameDataSystemFileParam> setParam;
+	vm::bptr<CellGameDataSystemFileParam> setParam;
 	be_t<u32> reserved;
 };

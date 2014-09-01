@@ -202,7 +202,7 @@ struct CellHddGameStatGet
 
 struct CellHddGameStatSet
 {
-	mem_beptr_t<CellHddGameSystemFileParam> setParam;
+	vm::bptr<CellHddGameSystemFileParam> setParam;
 	be_t<u32> reserved_addr;  // void*
 };
 

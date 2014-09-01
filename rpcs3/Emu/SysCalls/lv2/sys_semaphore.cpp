@@ -11,7 +11,7 @@
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-s32 sys_semaphore_create(vm::ref<u32> sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count)
+s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.GetAddr(), initial_count, max_count);
@@ -38,7 +38,7 @@ s32 sys_semaphore_create(vm::ref<u32> sem, mem_ptr_t<sys_semaphore_attribute> at
 	}
 
 	u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
-	sem = id;
+	*sem = id;
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, id);
 

@@ -267,10 +267,10 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 
 	funcStat(cbResult, cbGet, cbSet);
 
-	if (cbSet->setParam.GetAddr())
+	if (cbSet->setParam)
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.GetAddr());
+		cellGame->Todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr());
 	}
 
 	switch ((s32)cbResult->result)
