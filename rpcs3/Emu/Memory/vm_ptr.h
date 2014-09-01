@@ -312,6 +312,11 @@ namespace vm
 		}
 	};
 
+	namespace ps3
+	{
+		template<typename T, int lvl, typename AT> class ptr;
+	}
+
 	template<typename AT, typename RT, typename ...T>
 	class _ptr_base<RT(*)(T...), 1, AT>
 	{
@@ -329,7 +334,16 @@ namespace vm
 		template<typename TT, typename ATT>
 		struct _func_arg<_ptr_base<TT, 1, ATT>>
 		{
-			__forceinline static u64 get_value(const _ptr_base<TT, 1, ATT> arg)
+			__forceinline static u64 get_value(const _ptr_base<TT, 1, ATT>& arg)
+			{
+				return arg.addr();
+			}
+		};
+
+		template<typename TT, typename ATT>
+		struct _func_arg<ps3::ptr<TT, 1, ATT>>
+		{
+			__forceinline static u64 get_value(const ps3::ptr<TT, 1, ATT>& arg)
 			{
 				return arg.addr();
 			}
@@ -338,7 +352,7 @@ namespace vm
 		template<typename TT, typename ATT>
 		struct _func_arg<_ref_base<TT, ATT>>
 		{
-			__forceinline static u64 get_value(const _ref_base<TT, ATT> arg)
+			__forceinline static u64 get_value(const _ref_base<TT, ATT>& arg)
 			{
 				return arg.addr();
 			}
@@ -349,7 +363,7 @@ namespace vm
 		{
 			static_assert(!i, "Invalid callback argument type (mem_ptr_t), use vm::ptr");
 			
-			__forceinline static u64 get_value(const mem_ptr_t<TT, i, ATT> arg)
+			__forceinline static u64 get_value(const mem_ptr_t<TT, i, ATT>& arg)
 			{
 				return 0;
 			}

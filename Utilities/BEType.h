@@ -197,13 +197,13 @@ class to_be_t
 	template<typename TT, typename TT2, bool is_need_swap>
 	struct _be_type_selector
 	{
-		typedef typename TT type;
+		typedef TT type;
 	};
 
 	template<typename TT, typename TT2>
 	struct _be_type_selector<TT, TT2, true>
 	{
-		typedef typename be_t<TT, TT2> type;
+		typedef be_t<TT, TT2> type;
 	};
 
 public:
