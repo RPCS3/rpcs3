@@ -270,6 +270,10 @@ namespace vm
 	{
 		AT m_addr;
 
+		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
+
+		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
+
 		__forceinline RT call_func(bool is_async) const
 		{
 			Callback cb;
@@ -312,60 +316,27 @@ namespace vm
 		}
 	};
 
-	namespace ps3
-	{
-		template<typename T, int lvl, typename AT> struct ptr;
-	}
-
 	template<typename AT, typename RT, typename ...T>
 	class _ptr_base<RT(*)(T...), 1, AT>
 	{
 		AT m_addr;
 
+		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
+
+		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
+
 		template<typename TT>
 		struct _func_arg
 		{
+			static_assert(!std::is_floating_point<TT>::value, "TODO: Unsupported callback argument type (floating point)");
+
+			static_assert(!std::is_pointer<TT>::value, "Invalid callback argument type (pointer)");
+
 			__forceinline static u64 get_value(const TT& arg)
 			{
-				return arg;
-			}
-		};
-
-		template<typename TT, typename ATT>
-		struct _func_arg<_ptr_base<TT, 1, ATT>>
-		{
-			__forceinline static u64 get_value(const _ptr_base<TT, 1, ATT>& arg)
-			{
-				return arg.addr();
-			}
-		};
-
-		template<typename TT, typename ATT>
-		struct _func_arg<ps3::ptr<TT, 1, ATT>>
-		{
-			__forceinline static u64 get_value(const ps3::ptr<TT, 1, ATT>& arg)
-			{
-				return arg.addr();
-			}
-		};
-
-		template<typename TT, typename ATT>
-		struct _func_arg<_ref_base<TT, ATT>>
-		{
-			__forceinline static u64 get_value(const _ref_base<TT, ATT>& arg)
-			{
-				return arg.addr();
-			}
-		};
-
-		template<typename TT, int i, typename ATT>
-		struct _func_arg<mem_ptr_t<TT, i, ATT>>
-		{
-			static_assert(!i, "Invalid callback argument type (mem_ptr_t), use vm::ptr");
-			
-			__forceinline static u64 get_value(const mem_ptr_t<TT, i, ATT>& arg)
-			{
-				return 0;
+				u64 res = 0;
+				(TT&)res = arg;
+				return res;
 			}
 		};
 

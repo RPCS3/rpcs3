@@ -74,7 +74,7 @@ namespace detail
 			static_assert(!std::is_pointer<T>::value, "Invalid function result type: pointer");
 			if (std::is_floating_point<T>::value)
 			{
-				(T&)CPU.FPR[1] = value;
+				CPU.FPR[1] = (double)value;
 			}
 			else
 			{
