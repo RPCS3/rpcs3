@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/System.h"
 
 #include "cellNetCtl.h"
 
@@ -52,7 +53,10 @@ int cellNetCtlGetInfo(s32 code, mem_ptr_t<CellNetCtlInfo> info)
 
 int cellNetCtlNetStartDialogLoadAsync(mem_ptr_t<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl->Todo("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.GetAddr());
+	cellNetCtl->Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.GetAddr());
+
+	// TODO: Actually sign into PSN
+	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 
 	return CELL_OK;
 }
@@ -66,7 +70,9 @@ int cellNetCtlNetStartDialogAbortAsync()
 
 int cellNetCtlNetStartDialogUnloadAsync(mem_ptr_t<CellNetCtlNetStartDialogResult> result)
 {
-	cellNetCtl->Todo("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.GetAddr());
+	cellNetCtl->Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.GetAddr());
+
+	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
 	return CELL_OK;
 }
