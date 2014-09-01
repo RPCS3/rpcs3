@@ -61,25 +61,25 @@ namespace vm
 	//BE reference to LE data
 	template<typename T, typename AT = u32> struct brefl : public _ref_base<T, typename to_be_t<AT>::type>
 	{
-		using _ref_base::operator=;
+		using _ref_base<T, typename to_be_t<AT>::type>::operator=;
 	};
 
 	//BE reference to BE data
 	template<typename T, typename AT = u32> struct brefb : public _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>
 	{
-		using _ref_base::operator=;
+		using _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>::operator=;
 	};
 
 	//LE reference to BE data
 	template<typename T, typename AT = u32> struct lrefb : public _ref_base<typename to_be_t<T>::type, AT>
 	{
-		using _ref_base::operator=;
+		using _ref_base<typename to_be_t<T>::type, AT>::operator=;
 	};
 
 	//LE reference to LE data
 	template<typename T, typename AT = u32> struct lrefl : public _ref_base<T, AT>
 	{
-		using _ref_base::operator=;
+		using _ref_base<T, AT>::operator=;
 	};
 
 	namespace ps3
@@ -87,13 +87,13 @@ namespace vm
 		//default reference for HLE functions (LE reference to BE data)
 		template<typename T, typename AT = u32> struct ref : public lrefb<T, AT>
 		{
-			using _ref_base::operator=;
+			using lrefb<T, AT>::operator=;
 		};
 
 		//default reference for HLE structures (BE reference to BE data)
 		template<typename T, typename AT = u32> struct bref : public brefb<T, AT>
 		{
-			using _ref_base::operator=;
+			using brefb<T, AT>::operator=;
 		};
 	}
 
