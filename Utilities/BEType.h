@@ -194,16 +194,16 @@ struct remove_be_t<be_t<T, T2>>
 template<typename T, typename T2 = T>
 class to_be_t
 {
-	template<typename T, typename T2, bool is_need_swap>
+	template<typename TT, typename TT2, bool is_need_swap>
 	struct _be_type_selector
 	{
-		typedef typename T type;
+		typedef typename TT type;
 	};
 
-	template<typename T, typename T2>
-	struct _be_type_selector<T, T2, true>
+	template<typename TT, typename TT2>
+	struct _be_type_selector<TT, TT2, true>
 	{
-		typedef typename be_t<T, T2> type;
+		typedef typename be_t<TT, TT2> type;
 	};
 
 public:
