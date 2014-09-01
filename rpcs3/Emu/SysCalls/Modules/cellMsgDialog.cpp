@@ -60,10 +60,10 @@ void MsgDialogClose()
 	g_msg_dialog_wait_until = get_system_time();
 }
 
-int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
+int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
-		type, msgString.addr(), callback.GetAddr(), userData, extParam);
+		type, msgString.addr(), callback.addr(), userData, extParam);
 	
 	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE | CELL_MSGDIALOG_TYPE_BG_INVISIBLE;
 	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO;
@@ -139,10 +139,10 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, mem_func_ptr_t<C
 	return CELL_OK;
 }
 
-int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
+int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=0x%x, extParam=%d)",
-		errorCode, callback.GetAddr(), userData, extParam);
+		errorCode, callback.addr(), userData, extParam);
 
 	std::string errorMessage;
 	switch (errorCode)

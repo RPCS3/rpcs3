@@ -293,11 +293,6 @@ namespace vm
 			return m_addr;
 		}
 
-		type const get_ptr() const
-		{
-			return *((type*)vm::get_ptr<void*>(m_addr));
-		}
-
 		operator bool() const
 		{
 			return m_addr != 0;
@@ -306,6 +301,12 @@ namespace vm
 		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
+		}
+
+		operator std::function<RT()>() const
+		{
+			const AT addr = m_addr;
+			return [addr]() -> RT { return make(addr)(); };
 		}
 	};
 
@@ -341,6 +342,17 @@ namespace vm
 			}
 		};
 
+		template<typename TT, int i, typename ATT>
+		struct _func_arg<mem_ptr_t<TT, i, ATT>>
+		{
+			static_assert(!i, "Invalid callback argument type (mem_ptr_t), use vm::ptr");
+			
+			__forceinline static u64 get_value(const mem_ptr_t<TT, i, ATT> arg)
+			{
+				return 0;
+			}
+		};
+
 		__forceinline RT call_func(bool is_async, T... args) const
 		{
 			Callback cb;
@@ -367,11 +379,6 @@ namespace vm
 			return m_addr;
 		}
 
-		type const get_ptr() const
-		{
-			return *((type*)vm::get_ptr<void*>(m_addr));
-		}
-
 		operator bool() const
 		{
 			return m_addr != 0;
@@ -380,6 +387,12 @@ namespace vm
 		static ptr make(AT addr)
 		{
 			return (ptr&)addr;
+		}
+
+		operator std::function<RT(T...)>() const
+		{
+			const AT addr = m_addr;
+			return [addr](T... args) -> RT { return make(addr)(args...); };
 		}
 	};
 

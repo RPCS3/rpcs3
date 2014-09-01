@@ -9,7 +9,7 @@
 //Module cellSpurs(0x000a, cellSpurs_init);
 Module *cellSpurs = nullptr;
 
-#ifdef _WIN32
+#ifdef PRX_DEBUG
 extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif

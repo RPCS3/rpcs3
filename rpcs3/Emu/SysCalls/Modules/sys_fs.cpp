@@ -150,7 +150,7 @@ std::atomic<u32> g_FsAioReadID( 0 );
 std::atomic<u32> g_FsAioReadCur( 0 );
 bool aio_init = false;
 
-void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	while (g_FsAioReadCur != xid)
 	{
@@ -199,9 +199,9 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.addr(), func.GetAddr());
+	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
 
 	if (!aio_init)
 	{
@@ -228,9 +228,9 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, mem_func_
 	return CELL_OK;
 }
 
-int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.addr(), func.GetAddr());
+	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
 
 	// TODO:
 

@@ -92,14 +92,14 @@ int cellPngDecExtOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, mem_ptr_t<Ce
 	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle=0x%x, src_addr=0x%x, openInfo=0x%x, cbCtrlStrm_addr=0x%x, opnParam=0x%x)",
 		mainHandle, subHandle.addr(), src.GetAddr(), openInfo, cbCtrlStrm.GetAddr(), opnParam.GetAddr());
 
-	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", cbCtrlStrm->cbCtrlStrmFunc.GetAddr());
+	cellPngDec->Warning("*** cbCtrlStrm->cbCtrlStrmFunc_addr=0x%x", cbCtrlStrm->cbCtrlStrmFunc.addr());
 
 	vm::var<CellPngDecStrmInfo> streamInfo;
 	vm::var<CellPngDecStrmParam> streamParam;
 
 	int res = cellPngDecOpen(mainHandle, subHandle, src, openInfo);
 
-	if (!res) cbCtrlStrm->cbCtrlStrmFunc(streamInfo.addr(), streamParam.addr(), cbCtrlStrm->cbCtrlStrmArg);
+	if (!res) cbCtrlStrm->cbCtrlStrmFunc(streamInfo, streamParam, cbCtrlStrm->cbCtrlStrmArg);
 
 	return res;
 }

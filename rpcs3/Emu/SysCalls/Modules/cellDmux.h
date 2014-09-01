@@ -222,7 +222,7 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-typedef mem_func_ptr_t<void (*)(u32 demuxerHandle, mem_ptr_t<CellDmuxMsg> demuxerMsg, u32 cbArg_addr)> CellDmuxCbMsg;
+typedef u32(*CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg_addr);
 
 struct CellDmuxCb
 {
@@ -231,7 +231,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg_addr;
 };
 
-typedef mem_func_ptr_t<void (*)(u32 demuxerHandle, u32 esHandle, mem_ptr_t<CellDmuxEsMsg> esMsg, u32 cbArg_addr)> CellDmuxCbEsMsg;
+typedef u32(*CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg_addr);
 
 struct CellDmuxEsCb
 {

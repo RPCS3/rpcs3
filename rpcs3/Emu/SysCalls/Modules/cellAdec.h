@@ -360,7 +360,7 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-typedef mem_func_ptr_t<int (*)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg)> CellAdecCbMsg;
+typedef s32(*CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg);
 
 struct CellAdecCb
 {

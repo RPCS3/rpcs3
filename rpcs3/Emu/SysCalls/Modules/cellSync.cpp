@@ -11,7 +11,7 @@
 //Module cellSync("cellSync", cellSync_init);
 Module *cellSync = nullptr;
 
-#ifdef _WIN32
+#ifdef PRX_DEBUG
 #include "prx_libsre.h"
 u32 libsre;
 u32 libsre_rtoc;	
@@ -1471,12 +1471,12 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 	assert(0);
 }
 
-s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
 {
 	cellSync->Todo("_cellSyncLFQueueCompletePushPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
-		queue.addr(), pointer, fpSendSignal.GetAddr());
+		queue.addr(), pointer, fpSendSignal.addr());
 
-	return syncLFQueueCompletePushPointer(queue, pointer, [fpSendSignal](u32 addr, u32 arg){ return fpSendSignal(addr, arg); });
+	return syncLFQueueCompletePushPointer(queue, pointer, fpSendSignal);
 }
 
 s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
@@ -1487,13 +1487,13 @@ s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer,
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync->Todo("_cellSyncLFQueueCompletePushPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
-		queue.addr(), pointer, fpSendSignal.GetAddr());
+		queue.addr(), pointer, fpSendSignal.addr());
 
-	return syncLFQueueCompletePushPointer2(queue, pointer, [fpSendSignal](u32 addr, u32 arg){ return fpSendSignal(addr, arg); });
+	return syncLFQueueCompletePushPointer2(queue, pointer, fpSendSignal);
 }
 
 s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, u32 buffer_addr, u32 isBlocking)
@@ -1864,13 +1864,13 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 	assert(0);
 }
 
-s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer + unknown argument (noQueueFull taken from LFQueue2CompletePopPointer)
 	cellSync->Todo("_cellSyncLFQueueCompletePopPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",
-		queue.addr(), pointer, fpSendSignal.GetAddr(), noQueueFull);
+		queue.addr(), pointer, fpSendSignal.addr(), noQueueFull);
 
-	return syncLFQueueCompletePopPointer(queue, pointer, [fpSendSignal](u32 addr, u32 arg){ return fpSendSignal(addr, arg); }, noQueueFull);
+	return syncLFQueueCompletePopPointer(queue, pointer, fpSendSignal, noQueueFull);
 }
 
 s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1881,13 +1881,13 @@ s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, mem_func_ptr_t<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync->Todo("_cellSyncLFQueueCompletePopPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",
-		queue.addr(), pointer, fpSendSignal.GetAddr(), noQueueFull);
+		queue.addr(), pointer, fpSendSignal.addr(), noQueueFull);
 
-	return syncLFQueueCompletePopPointer2(queue, pointer, [fpSendSignal](u32 addr, u32 arg){ return fpSendSignal(addr, arg); }, noQueueFull);
+	return syncLFQueueCompletePopPointer2(queue, pointer, fpSendSignal, noQueueFull);
 }
 
 s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, u32 buffer_addr, u32 isBlocking)

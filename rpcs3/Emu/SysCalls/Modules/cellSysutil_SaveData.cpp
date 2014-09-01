@@ -214,7 +214,7 @@ void getSaveDataStat(SaveDataEntry entry, mem_ptr_t<CellSaveDataStatGet> statGet
 		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
 }
 
-s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_ptr_t<CellSaveDataCBResult> result, const std::string& saveDataDir)
+s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<CellSaveDataCBResult> result, const std::string& saveDataDir)
 {
 	vm::var<CellSaveDataFileGet> fileGet;
 	vm::var<CellSaveDataFileSet> fileSet;
@@ -225,7 +225,7 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 	fileGet->excSize = 0;
 	while (true)
 	{
-		funcFile(result.GetAddr(), fileGet.addr(), fileSet.addr());
+		funcFile(result, fileGet, fileSet);
 		if (result->result < 0)	{
 			cellSysutil->Error("modifySaveDataFiles: CellSaveDataFileCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 			return CELL_SAVEDATA_ERROR_CBRESULT;
@@ -288,11 +288,11 @@ s32 modifySaveDataFiles(mem_func_ptr_t<CellSaveDataFileCallback>& funcFile, mem_
 
 // Functions
 int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						  vm::ptr<CellSaveDataListCallback> funcList, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataListSave2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcList_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcList.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
@@ -333,7 +333,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
 
-	funcList(result.addr(), listGet.addr(), listSet.addr());
+	funcList(result, listGet, listSet);
 
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListSave2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -354,7 +354,7 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	getSaveDataStat(saveEntries[selectedIndex], statGet.addr());
 	result->userdata_addr = userdata_addr;
 
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -366,17 +366,17 @@ int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return ret;
 }
 
 int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						  vm::ptr<CellSaveDataListCallback> funcList, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataListLoad2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcList_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcList.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcList.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
@@ -418,7 +418,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
 
-	funcList(result.addr(), listGet.addr(), listSet.addr());
+	funcList(result, listGet, listSet);
 
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListLoad2: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -439,7 +439,7 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	getSaveDataStat(saveEntries[selectedIndex], statGet.addr());
 	result->userdata_addr = userdata_addr;
 
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -451,17 +451,17 @@ int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, m
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return ret;
 }
 
 int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						   mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						   vm::ptr<CellSaveDataFixedCallback> funcFixed, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						   u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataFixedSave2(version=%d, setList_addr=0x%x, setBuf_addr=0x%x, funcFixed_addr=0x%x, funcStat_addr=0x%x, funcFile_addr=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
@@ -499,7 +499,7 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
-	funcFixed(result.addr(), listGet.addr(), fixedSet.addr());
+	funcFixed(result, listGet, fixedSet);
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataFixedSave2: CellSaveDataFixedCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
@@ -509,7 +509,7 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 	// TODO: Display the Yes|No dialog here
 	result->userdata_addr = userdata_addr;
 
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataFixedSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -520,17 +520,17 @@ int cellSaveDataFixedSave2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return ret;
 }
 
 int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						   mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						   vm::ptr<CellSaveDataFixedCallback> funcFixed, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						   u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataFixedLoad2(version=%d, setList_addr=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, setList.GetAddr(), setBuf.GetAddr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
@@ -568,7 +568,7 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
-	funcFixed(result.addr(), listGet.addr(), fixedSet.addr());
+	funcFixed(result, listGet, fixedSet);
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataFixedLoad2: CellSaveDataFixedCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
@@ -578,7 +578,7 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 	// TODO: Display the Yes|No dialog here
 	result->userdata_addr = userdata_addr;
 
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataFixedLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
@@ -589,17 +589,17 @@ int cellSaveDataFixedLoad2(u32 version,  mem_ptr_t<CellSaveDataSetList> setList,
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return ret;
 }
 
 int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataAutoSave2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataStatGet> statGet;
@@ -630,7 +630,7 @@ int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 
 	getSaveDataStat(saveEntries[0], statGet.addr()); // There should be only one element in this list
 	result->userdata_addr = userdata_addr;
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
@@ -642,17 +642,17 @@ int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return CELL_SAVEDATA_RET_OK;
 }
 
 int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+						  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataAutoLoad2(version=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, dirName_addr, errDialog, setBuf.GetAddr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataStatGet> statGet;
@@ -680,7 +680,7 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 
 	getSaveDataStat(saveEntries[0], statGet.addr()); // There should be only one element in this list
 	result->userdata_addr = userdata_addr;
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
@@ -692,20 +692,20 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed,
-							 mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
+int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataListAutoSave(version=%d, errDialog=%d, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
-		version, errDialog, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+		version, errDialog, setList.GetAddr(), setBuf.GetAddr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
-	vm::var<CellSaveDataListSet> listSet;
+	vm::var<CellSaveDataFixedSet> fixedSet;
 	vm::var<CellSaveDataStatGet> statGet;
 	vm::var<CellSaveDataStatSet> statSet;
 
@@ -743,14 +743,15 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
 
-	funcFixed(result.addr(), listGet.addr(), listSet.addr());
+	throw fmt::Format("%s(): implementation broken", __FUNCTION__);
+	funcFixed(result, listGet, fixedSet);
 
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
+	/*setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
 	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
@@ -764,32 +765,32 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	getSaveDataStat(saveEntries[selectedIndex], statGet.addr());
 	result->userdata_addr = userdata_addr;
 
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
+	funcStat(result, statGet, statSet);
 	Memory.Free(statGet->fileList.GetAddr());
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}
+	}*/
 
 	/*if (statSet->setParam.GetAddr())
 	addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr()); // TODO: This *is* wrong
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed,
-							 mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
+int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
 	cellSysutil->Warning("cellSaveDataListAutoLoad(version=%d, errDialog=%d, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
-					  version, errDialog, setList.GetAddr(), setBuf.GetAddr(), funcFixed.GetAddr(), funcStat.GetAddr(), funcFile.GetAddr(), container, userdata_addr);
+					  version, errDialog, setList.GetAddr(), setBuf.GetAddr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 
 	vm::var<CellSaveDataCBResult> result;
 	vm::var<CellSaveDataListGet> listGet;
-	vm::var<CellSaveDataListSet> listSet;
+	vm::var<CellSaveDataFixedSet> fixedSet;
 	vm::var<CellSaveDataStatGet> statGet;
 	vm::var<CellSaveDataStatSet> statSet;
 
@@ -827,14 +828,15 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
 	}
 
-	funcFixed(result.addr(), listGet.addr(), listSet.addr());
+	throw fmt::Format("%s(): implementation broken", __FUNCTION__);
+	funcFixed(result, listGet, fixedSet);
 
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
+	/*setSaveDataList(saveEntries, (u32)listSet->fixedList.GetAddr(), listSet->fixedListNum);
 	if (listSet->newData.GetAddr())
 		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.GetAddr());
 	if (saveEntries.size() == 0) {
@@ -854,14 +856,14 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataS
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}
+	}*/
 
 	/*if (statSet->setParam.GetAddr())
 	// TODO: Write PARAM.SFO file
 	*/
 
 	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result.addr(), saveBaseDir + (char*)statGet->dir.dirName);
+	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
 
 	return CELL_SAVEDATA_RET_OK;
 }

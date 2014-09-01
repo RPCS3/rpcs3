@@ -199,10 +199,10 @@ int cellGameContentPermit(vm::ptr<char> contentInfoPath, vm::ptr<char> usrdirPat
 }
 
 int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container)
+	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	cellGame->Warning("cellGameDataCheckCreate2(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
-		version, dirName.addr(), errDialog, funcStat.GetAddr(), container);
+		version, dirName.addr(), errDialog, funcStat.addr(), container);
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
@@ -265,7 +265,7 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
-	funcStat(cbResult.addr(), cbGet.addr(), cbSet.addr());
+	funcStat(cbResult, cbGet, cbSet);
 
 	if (cbSet->setParam.GetAddr())
 	{
@@ -305,7 +305,7 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 }
 
 int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog, 
-	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container)
+	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
 	return cellGameDataCheckCreate2(version, dirName, errDialog, funcStat, container);

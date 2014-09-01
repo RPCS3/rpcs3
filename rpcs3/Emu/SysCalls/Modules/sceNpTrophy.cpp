@@ -136,10 +136,10 @@ int sceNpTrophyCreateHandle(vm::ptr<be_t<u32>> handle)
 	return CELL_OK;
 }
 
-int sceNpTrophyRegisterContext(u32 context, u32 handle, mem_func_ptr_t<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
+int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
 {
 	sceNpTrophy->Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
-		context, handle, statusCb.GetAddr(), arg_addr, options);
+		context, handle, statusCb.addr(), arg_addr, options);
 
 	if (!(s_npTrophyInstance.m_bInitialized))
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;

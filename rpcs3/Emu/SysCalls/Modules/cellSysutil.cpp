@@ -17,7 +17,7 @@
 #include "cellSysutil.h"
 #include "cellSysutil_SaveData.h"
 
-typedef void (*CellHddGameStatCallback)(mem_ptr_t<CellHddGameCBResult> cbResult, mem_ptr_t<CellHddGameStatGet> get, mem_ptr_t<CellHddGameStatSet> set);
+typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
 
 //void cellSysutil_init();
@@ -672,10 +672,10 @@ int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }
 
-int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_t<CellHddGameStatCallback> funcStat, u32 container)
+int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
-		version, dirName_addr, errDialog, funcStat, container);
+		version, dirName_addr, errDialog, funcStat.addr(), container);
 
 	std::string dirName = Memory.ReadString(dirName_addr);
 	if (dirName.size() != 9)
@@ -730,7 +730,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, mem_func_ptr_
 
 	// TODO ?
 
-	funcStat(result.addr(), get.addr(), set.addr());
+	funcStat(result, get, set);
 	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
 		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
 		return CELL_HDDGAME_ERROR_CBRESULT;
@@ -818,10 +818,10 @@ int cellWebBrowserEstimate2(const vm::ptr<const u8> _config, vm::ptr<be_t<u32>> 
 }
 
 extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	mem_func_ptr_t<void(*)(mem_ptr_t<CellGameDataCBResult> cbResult, mem_ptr_t<CellGameDataStatGet> get, mem_ptr_t<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 void cellSysutil_init()
 {

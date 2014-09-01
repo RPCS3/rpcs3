@@ -157,4 +157,4 @@ s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize);
 s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr_addr, vm::ptr<be_t<u64>> size);
 s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size);
 s32 cellFsStReadWait(u32 fd, u64 size);
-s32 cellFsStReadWaitCallback(u32 fd, u64 size, mem_func_ptr_t<void (*)(int xfd, u64 xsize)> func);
+s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void (*)(int xfd, u64 xsize)> func);
