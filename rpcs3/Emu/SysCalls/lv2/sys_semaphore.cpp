@@ -11,10 +11,10 @@
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count)
+s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, int initial_count, int max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
-		sem.addr(), attr.GetAddr(), initial_count, max_count);
+		sem.addr(), attr.addr(), initial_count, max_count);
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{

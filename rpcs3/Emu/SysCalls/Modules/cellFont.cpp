@@ -15,9 +15,9 @@ Module *cellFont = nullptr;
 CCellFontInternal* s_fontInternalInstance = nullptr;
 
 // Functions
-int cellFontInitializeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontConfig> config)
+int cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
-	cellFont->Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=0x%x)", revisionFlags, config.GetAddr());
+	cellFont->Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=0x%x)", revisionFlags, config.addr());
 	
 	if (s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
@@ -40,14 +40,14 @@ int cellFontGetRevisionFlags(vm::ptr<be_t<u64>> revisionFlags)
 	return CELL_FONT_OK;
 }
 
-int cellFontInit(mem_ptr_t<CellFontConfig> config)
+int cellFontInit(vm::ptr<CellFontConfig> config)
 {
-	cellFont->Log("cellFontInit(config=0x%x)", config.GetAddr());
+	cellFont->Log("cellFontInit(config=0x%x)", config.addr());
 
 	vm::var<be_t<u64>> revisionFlags;
 	revisionFlags.value() = 0;
 	cellFontGetRevisionFlags(revisionFlags);
-	return cellFontInitializeWithRevision(revisionFlags.value(), config.GetAddr());
+	return cellFontInitializeWithRevision(revisionFlags.value(), config);
 }
 
 int cellFontEnd()
@@ -68,10 +68,10 @@ s32 cellFontSetFontsetOpenMode(u32 openMode)
 	return CELL_FONT_OK;
 }
 
-int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32 fontSize, u32 subNum, u32 uniqueId, mem_ptr_t<CellFont> font)
+int cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 fontSize, u32 subNum, u32 uniqueId, vm::ptr<CellFont> font)
 {
 	cellFont->Warning("cellFontOpenFontMemory(library_addr=0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font_addr=0x%x)",
-		library.GetAddr(), fontAddr, fontSize, subNum, uniqueId, font.GetAddr());
+		library.addr(), fontAddr, fontSize, subNum, uniqueId, font.addr());
 
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
@@ -87,11 +87,11 @@ int cellFontOpenFontMemory(mem_ptr_t<CellFontLibrary> library, u32 fontAddr, u32
 	return CELL_FONT_OK;
 }
 
-int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, vm::ptr<const char> fontPath, u32 subNum, s32 uniqueId, mem_ptr_t<CellFont> font)
+int cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::ptr<const char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
 {
 	std::string fp(fontPath.get_ptr());
 	cellFont->Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",
-		library.GetAddr(), fp.c_str(), subNum, uniqueId, font.GetAddr());
+		library.addr(), fp.c_str(), subNum, uniqueId, font.addr());
 
 	vfsFile f(fp);
 	if (!f.IsOpened())
@@ -100,15 +100,15 @@ int cellFontOpenFontFile(mem_ptr_t<CellFontLibrary> library, vm::ptr<const char>
 	u32 fileSize = (u32)f.GetSize();
 	u32 bufferAddr = (u32)Memory.Alloc(fileSize, 1); // Freed in cellFontCloseFont
 	f.Read(Memory.VirtualToRealAddr(bufferAddr), fileSize);
-	int ret = cellFontOpenFontMemory(library.GetAddr(), bufferAddr, fileSize, subNum, uniqueId, font.GetAddr());
+	int ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
 	return ret;
 }
 
-int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontType> fontType, mem_ptr_t<CellFont> font)
+int cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont->Log("cellFontOpenFontset(library_addr=0x%x, fontType_addr=0x%x, font_addr=0x%x)",
-		library.GetAddr(), fontType.GetAddr(), font.GetAddr());
+		library.addr(), fontType.addr(), font.addr());
 
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
@@ -183,14 +183,14 @@ int cellFontOpenFontset(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontTy
 
 	vm::var<const char> f((u32)file.length() + 1, 1);
 	Memory.WriteString(f.addr(), file);
-	int ret = cellFontOpenFontFile(library.GetAddr(), f, 0, 0, font.GetAddr()); //TODO: Find the correct values of subNum, uniqueId
+	int ret = cellFontOpenFontFile(library, f, 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 	return ret;
 }
 
-int cellFontOpenFontInstance(mem_ptr_t<CellFont> openedFont, mem_ptr_t<CellFont> font)
+int cellFontOpenFontInstance(vm::ptr<CellFont> openedFont, vm::ptr<CellFont> font)
 {
-	cellFont->Warning("cellFontOpenFontInstance(openedFont=0x%x, font=0x%x)", openedFont.GetAddr(), font.GetAddr());
+	cellFont->Warning("cellFontOpenFontInstance(openedFont=0x%x, font=0x%x)", openedFont.addr(), font.addr());
 
 	font->renderer_addr = openedFont->renderer_addr;
 	font->scale_x = openedFont->scale_x;
@@ -209,10 +209,10 @@ s32 cellFontSetFontOpenMode(u32 openMode)
 	return CELL_FONT_OK;
 }
 
-int cellFontCreateRenderer(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFontRendererConfig> config, mem_ptr_t<CellFontRenderer> Renderer)
+int cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRendererConfig> config, vm::ptr<CellFontRenderer> Renderer)
 {
 	cellFont->Warning("cellFontCreateRenderer(library_addr=0x%x, config_addr=0x%x, Renderer_addr=0x%x)",
-		library.GetAddr(), config.GetAddr(), Renderer.GetAddr());
+		library.addr(), config.addr(), Renderer.addr());
 
 	if (!s_fontInternalInstance->m_bInitialized)
 		return CELL_FONT_ERROR_UNINITIALIZED;
@@ -222,10 +222,10 @@ int cellFontCreateRenderer(mem_ptr_t<CellFontLibrary> library, mem_ptr_t<CellFon
 	return CELL_FONT_OK;
 }
 
-void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buffer_addr, s32 bufferWidthByte, s32 pixelSizeByte, s32 w, s32 h)
+void cellFontRenderSurfaceInit(vm::ptr<CellFontRenderSurface> surface, u32 buffer_addr, s32 bufferWidthByte, s32 pixelSizeByte, s32 w, s32 h)
 {
 	cellFont->Warning("cellFontRenderSurfaceInit(surface_addr=0x%x, buffer_addr=0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)",
-		surface.GetAddr(), buffer_addr, bufferWidthByte, pixelSizeByte, w, h);
+		surface.addr(), buffer_addr, bufferWidthByte, pixelSizeByte, w, h);
 
 	surface->buffer_addr	= buffer_addr;
 	surface->widthByte		= bufferWidthByte;
@@ -237,10 +237,10 @@ void cellFontRenderSurfaceInit(mem_ptr_t<CellFontRenderSurface> surface, u32 buf
 		surface->buffer_addr = (u32)Memory.Alloc(bufferWidthByte * h, 1); // TODO: Huge memory leak
 }
 
-void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
+void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
 {
 	cellFont->Warning("cellFontRenderSurfaceSetScissor(surface_addr=0x%x, x0=%d, y0=%d, w=%d, h=%d)",
-		surface.GetAddr(), x0, y0, w, h);
+		surface.addr(), x0, y0, w, h);
 
 	surface->Scissor.x0 = x0;
 	surface->Scissor.y0 = y0;
@@ -248,19 +248,19 @@ void cellFontRenderSurfaceSetScissor(mem_ptr_t<CellFontRenderSurface> surface, s
 	surface->Scissor.y1 = h;
 }
 
-int cellFontSetScalePixel(mem_ptr_t<CellFont> font, float w, float h)
+int cellFontSetScalePixel(vm::ptr<CellFont> font, float w, float h)
 {
-	cellFont->Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
+	cellFont->Log("cellFontSetScalePixel(font_addr=0x%x, w=%f, h=%f)", font.addr(), w, h);
 
 	font->scale_x = w;
 	font->scale_y = h;
 	return CELL_FONT_OK;
 }
 
-int cellFontGetHorizontalLayout(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontHorizontalLayout> layout)
+int cellFontGetHorizontalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontHorizontalLayout> layout)
 {
 	cellFont->Log("cellFontGetHorizontalLayout(font_addr=0x%x, layout_addr=0x%x)",
-		font.GetAddr(), layout.GetAddr());
+		font.addr(), layout.addr());
 
 	int ascent, descent, lineGap;
 	float scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
@@ -272,21 +272,21 @@ int cellFontGetHorizontalLayout(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontHori
 	return CELL_FONT_OK;
 }
 
-int cellFontBindRenderer(mem_ptr_t<CellFont> font, mem_ptr_t<CellFontRenderer> renderer)
+int cellFontBindRenderer(vm::ptr<CellFont> font, vm::ptr<CellFontRenderer> renderer)
 {
 	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x, renderer_addr=0x%x)",
-		font.GetAddr(), renderer.GetAddr());
+		font.addr(), renderer.addr());
 
 	if (font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_ALREADY_BIND;
 
-	font->renderer_addr = renderer.GetAddr();
+	font->renderer_addr = renderer.addr();
 	return CELL_FONT_OK;
 }
 
-int cellFontUnbindRenderer(mem_ptr_t<CellFont> font)
+int cellFontUnbindRenderer(vm::ptr<CellFont> font)
 {
-	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x)", font.GetAddr());
+	cellFont->Warning("cellFontBindRenderer(font_addr=0x%x)", font.addr());
 	
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
@@ -301,9 +301,9 @@ int cellFontDestroyRenderer()
 	return CELL_FONT_OK;
 }
 
-int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
+int cellFontSetupRenderScalePixel(vm::ptr<CellFont> font, float w, float h)
 {
-	cellFont->Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.GetAddr(), w, h);
+	cellFont->Log("cellFontSetupRenderScalePixel(font_addr=0x%x, w=%f, h=%f)", font.addr(), w, h);
 
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
@@ -312,10 +312,10 @@ int cellFontSetupRenderScalePixel(mem_ptr_t<CellFont> font, float w, float h)
 	return CELL_FONT_OK;
 }
 
-int cellFontGetRenderCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontGlyphMetrics> metrics)
+int cellFontGetRenderCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
 	cellFont->Log("cellFontGetRenderCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x)",
-		font.GetAddr(), code, metrics.GetAddr());
+		font.addr(), code, metrics.addr());
 
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
@@ -324,10 +324,10 @@ int cellFontGetRenderCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_pt
 	return CELL_FONT_OK;
 }
 
-int cellFontRenderCharGlyphImage(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontRenderSurface> surface, float x, float y, mem_ptr_t<CellFontGlyphMetrics> metrics, mem_ptr_t<CellFontImageTransInfo> transInfo)
+int cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, float x, float y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
 	cellFont->Log("cellFontRenderCharGlyphImage(font_addr=0x%x, code=0x%x, surface_addr=0x%x, x=%f, y=%f, metrics_addr=0x%x, trans_addr=0x%x)",
-		font.GetAddr(), code, surface.GetAddr(), x, y, metrics.GetAddr(), transInfo.GetAddr());
+		font.addr(), code, surface.addr(), x, y, metrics.addr(), transInfo.addr());
 
 	if (!font->renderer_addr)
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
@@ -368,9 +368,9 @@ int cellFontEndLibrary()
 	return CELL_FONT_OK;
 }
 
-int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
+int cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
 {
-	cellFont->Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.GetAddr(), slantParam);
+	cellFont->Log("cellFontSetEffectSlant(font_addr=0x%x, slantParam=%f)", font.addr(), slantParam);
 
 	if (slantParam < -1.0 || slantParam > 1.0)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -379,26 +379,26 @@ int cellFontSetEffectSlant(mem_ptr_t<CellFont> font, float slantParam)
 	return CELL_FONT_OK;
 }
 
-int cellFontGetEffectSlant(mem_ptr_t<CellFont> font, mem_ptr_t<be_t<float>> slantParam)
+int cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<be_t<float>> slantParam)
 {
-	cellFont->Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.GetAddr(), slantParam.GetAddr());
+	cellFont->Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.addr(), slantParam.addr());
 
 	*slantParam = font->slant;
 	return CELL_FONT_OK;
 }
 
-int cellFontGetFontIdCode(mem_ptr_t<CellFont> font, u32 code, vm::ptr<be_t<u32>> fontId, vm::ptr<be_t<u32>> fontCode)
+int cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<be_t<u32>> fontId, vm::ptr<be_t<u32>> fontCode)
 {
 	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
-		font.GetAddr(), code, fontId.addr(), fontCode.addr());
+		font.addr(), code, fontId.addr(), fontCode.addr());
 
 	// TODO: ?
 	return CELL_FONT_OK;
 }
 
-int cellFontCloseFont(mem_ptr_t<CellFont> font)
+int cellFontCloseFont(vm::ptr<CellFont> font)
 {
-	cellFont->Warning("cellFontCloseFont(font_addr=0x%x)", font.GetAddr());
+	cellFont->Warning("cellFontCloseFont(font_addr=0x%x)", font.addr());
 
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
 		font->origin == CELL_FONT_OPEN_FONT_FILE ||
@@ -408,10 +408,10 @@ int cellFontCloseFont(mem_ptr_t<CellFont> font)
 	return CELL_FONT_OK;
 }
 
-int cellFontGetCharGlyphMetrics(mem_ptr_t<CellFont> font, u32 code, mem_ptr_t<CellFontGlyphMetrics> metrics)
+int cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
 	cellFont->Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x",
-		font.GetAddr(), code, metrics.GetAddr());
+		font.addr(), code, metrics.addr());
 
 	int x0, y0, x1, y1;
 	int advanceWidth, leftSideBearing;

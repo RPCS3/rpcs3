@@ -448,6 +448,11 @@ namespace vm
 				return (bptr&)addr;
 			}
 
+			operator ptr<T, lvl, AT>() const
+			{
+				return ptr<T, lvl, AT>::make(addr());
+			}
+
 			using bptrb<T, lvl, AT>::operator=;
 		};
 	}

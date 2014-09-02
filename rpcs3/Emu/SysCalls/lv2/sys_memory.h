@@ -46,8 +46,8 @@ struct MemoryContainerInfo
 s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
 s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr);
 s32 sys_memory_free(u32 start_addr);
-s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr);
-s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info);
+s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr);
+s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info);
 s32 sys_memory_container_create(vm::ptr<be_t<u32>> cid, u32 yield_size);
 s32 sys_memory_container_destroy(u32 cid);
-s32 sys_memory_container_get_size(mem_ptr_t<sys_memory_info_t> mem_info, u32 cid);
+s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid);

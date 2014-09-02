@@ -86,9 +86,9 @@ s32 sys_memory_free(u32 start_addr)
 	return CELL_OK;
 }
 
-s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
+s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.GetAddr());
+	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.addr());
 
 	// TODO: Implement per thread page attribute setting.
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE
@@ -98,9 +98,9 @@ s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 	return CELL_OK;
 }
 
-s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
+s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
-	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.GetAddr());
+	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.addr());
 	
 	// Fetch the user memory available.
 	mem_info->total_user_memory = Memory.GetUserMemTotalSize();
@@ -144,9 +144,9 @@ s32 sys_memory_container_destroy(u32 cid)
 	return CELL_OK;
 }
 
-s32 sys_memory_container_get_size(mem_ptr_t<sys_memory_info_t> mem_info, u32 cid)
+s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.GetAddr(), cid);
+	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.addr(), cid);
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;

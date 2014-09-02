@@ -155,7 +155,7 @@ extern void cellGcmSetFlipHandler(u32 handler_addr);
 extern void cellGcmSetVBlankHandler(u32 handler_addr);
 extern int cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern int cellGcmSetPrepareFlip(mem_ptr_t<CellGcmContextData> ctx, u32 id);
+extern int cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
 extern int cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
 extern u32 cellGcmGetTiledPitchSize(u32 size);

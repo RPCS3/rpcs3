@@ -174,10 +174,10 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellVideoOutGetResolution(u32 resolutionId, mem_ptr_t<CellVideoOutResolution> resolution)
+int cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> resolution)
 {
 	cellSysutil->Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
-		resolutionId, resolution.GetAddr());
+		resolutionId, resolution.addr());
 
 	u32 num = ResolutionIdToNum(resolutionId);
 	if(!num)
@@ -253,10 +253,10 @@ int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, mem_ptr_t<CellVideoOutDeviceInfo> info)
+int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
 	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
-		videoOut, deviceIndex, info.GetAddr());
+		videoOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -482,10 +482,10 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 }
 
-int cellAudioOutConfigure(u32 audioOut, mem_ptr_t<CellAudioOutConfiguration> config, mem_ptr_t<CellAudioOutOption> option, u32 waitForEvent)
+int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option, u32 waitForEvent)
 {
 	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
-		audioOut, config.GetAddr(), option.GetAddr(), waitForEvent);
+		audioOut, config.addr(), option.addr(), waitForEvent);
 
 	switch(audioOut)
 	{
@@ -551,10 +551,10 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 }
 
-int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, mem_ptr_t<CellAudioOutDeviceInfo> info)
+int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo> info)
 {
 	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
-		audioOut, deviceIndex, info.GetAddr());
+		audioOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -602,7 +602,7 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 typedef struct{
 	char cacheId[CELL_SYSCACHE_ID_SIZE];
 	char getCachePath[CELL_SYSCACHE_PATH_MAX];
-	mem_ptr_t<void> reserved;
+	vm::ptr<void> reserved;
 } CellSysCacheParam;
 
 
@@ -658,9 +658,9 @@ int cellSysCacheClear(void)
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
-int cellSysCacheMount(mem_ptr_t<CellSysCacheParam> param)
+int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
-	cellSysutil->Warning("cellSysCacheMount(param_addr=0x%x)", param.GetAddr());
+	cellSysutil->Warning("cellSysCacheMount(param_addr=0x%x)", param.addr());
 
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
@@ -752,9 +752,9 @@ int cellSysutilEnableBgmPlayback()
 	return CELL_OK;
 }
 
-int cellSysutilEnableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
+int cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
+	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.addr());
 
 	// TODO
 	bgm_playback_enabled = true; 
@@ -772,9 +772,9 @@ int cellSysutilDisableBgmPlayback()
 	return CELL_OK;
 }
 
-int cellSysutilDisableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> param)
+int cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.GetAddr());
+	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.addr());
 
 	// TODO
 	bgm_playback_enabled = false;
@@ -782,9 +782,9 @@ int cellSysutilDisableBgmPlaybackEx(mem_ptr_t<CellSysutilBgmPlaybackExtraParam> 
 	return CELL_OK;
 }
 
-int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellSysutilBgmPlaybackStatus> status)
+int cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
 {
-	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.GetAddr());
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.addr());
 
 	// TODO
 	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -796,9 +796,9 @@ int cellSysutilGetBgmPlaybackStatus(mem_ptr_t<CellSysutilBgmPlaybackStatus> stat
 	return CELL_OK;
 }
 
-int cellSysutilGetBgmPlaybackStatus2(mem_ptr_t<CellSysutilBgmPlaybackStatus2> status2)
+int cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.GetAddr());
+	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.addr());
 
 	// TODO
 	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;

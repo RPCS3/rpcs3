@@ -240,7 +240,7 @@ int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_cod
 		return ConverterUnknown;
 
 	if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
-	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.addr());
 	std::string wrapped_source((char*)src);
 	//if (wrapped_source.length != src_len.GetValue()) return SRCIllegal;
 	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
@@ -260,8 +260,8 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
-		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
-		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.addr());
+		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.addr());
 		char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);

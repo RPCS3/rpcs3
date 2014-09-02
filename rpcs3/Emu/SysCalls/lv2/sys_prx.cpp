@@ -10,10 +10,10 @@
 
 SysCallBase sys_prx("sys_prx");
 
-s32 sys_prx_load_module(u32 path_addr, u64 flags, mem_ptr_t<sys_prx_load_module_option_t> pOpt)
+s32 sys_prx_load_module(u32 path_addr, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	std::string path = Memory.ReadString(path_addr);
-	sys_prx.Todo("sys_prx_load_module(path=\"%s\", flags=0x%llx, pOpt=0x%x)", path.c_str(), flags, pOpt.GetAddr());
+	sys_prx.Todo("sys_prx_load_module(path=\"%s\", flags=0x%llx, pOpt=0x%x)", path.c_str(), flags, pOpt.addr());
 
 	// Check if the file is SPRX
 	std::string local_path;
@@ -61,10 +61,10 @@ s32 sys_prx_load_module_on_memcontainer_by_fd()
 	return CELL_OK;
 }
 
-s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_start_module_option_t> pOpt)
+s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_start_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
-		id, args, argp_addr, modres.addr(), flags, pOpt.GetAddr());
+		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
 	sys_prx_t* prx;
 	if (!Emu.GetIdManager().GetIDData(id, prx))
@@ -76,10 +76,10 @@ s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> mod
 	return CELL_OK;
 }
 
-s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_stop_module_option_t> pOpt)
+s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_stop_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
-		id, args, argp_addr, modres.addr(), flags, pOpt.GetAddr());
+		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
 	sys_prx_t* prx;
 	if (!Emu.GetIdManager().GetIDData(id, prx))
@@ -91,9 +91,9 @@ s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modr
 	return CELL_OK;
 }
 
-s32 sys_prx_unload_module(s32 id, u64 flags, mem_ptr_t<sys_prx_unload_module_option_t> pOpt)
+s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)
 {
-	sys_prx.Todo("sys_prx_unload_module(id=%d, flags=0x%llx, pOpt=0x%x)", id, flags, pOpt.GetAddr());
+	sys_prx.Todo("sys_prx_unload_module(id=%d, flags=0x%llx, pOpt=0x%x)", id, flags, pOpt.addr());
 
 	// Get the PRX, free the used memory and delete the object and its ID
 	sys_prx_t* prx;

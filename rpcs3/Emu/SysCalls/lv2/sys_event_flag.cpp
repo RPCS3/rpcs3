@@ -37,10 +37,10 @@ u32 EventFlag::check()
 	return target;
 }
 
-s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
+s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
-		eflag_id.addr(), attr.GetAddr(), init);
+		eflag_id.addr(), attr.addr(), init);
 
 	switch (attr->protocol.ToBE())
 	{

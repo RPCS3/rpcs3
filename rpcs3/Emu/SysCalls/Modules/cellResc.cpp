@@ -37,7 +37,7 @@ void BuildupVertexBufferNR()
 	float U_PS0 = UV_CENTER - U_PS;
 	float U_PS1 = UV_CENTER + U_PS;
 
-	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA);
+	auto vv = vm::ptr<RescVertex_t>::make(s_rescInternalInstance->m_vertexArrayEA);
 
 	if (s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576)
 	{
@@ -127,7 +127,7 @@ void BuildupVertexBufferUN(s32 srcIdx)
 	float U2_FS1 = (float)s_rescInternalInstance->m_dstWidth;
 	float V2_FS1 = (float)s_rescInternalInstance->m_dstHeight;
 
-	mem_ptr_t<RescVertex_t> vv(s_rescInternalInstance->m_vertexArrayEA);
+	auto vv = vm::ptr<RescVertex_t>::make(s_rescInternalInstance->m_vertexArrayEA);
 
 	if (s_rescInternalInstance->m_dstMode == CELL_RESC_720x480 || s_rescInternalInstance->m_dstMode == CELL_RESC_720x576)
 	{
@@ -171,7 +171,7 @@ UN_PANSCAN:
 	return;
 }
 
-inline int InternalVersion(mem_ptr_t<CellRescInitConfig> conf)
+inline int InternalVersion(vm::ptr<CellRescInitConfig> conf)
 {
 	switch ((u32)conf->size)
 	{
@@ -323,7 +323,7 @@ int CalculateMaxColorBuffersSize()
 	return maxBufSize;
 }
 
-bool CheckInitConfig(mem_ptr_t<CellRescInitConfig> initConfig)
+bool CheckInitConfig(vm::ptr<CellRescInitConfig> initConfig)
 {
 	if ((initConfig->resourcePolicy & ~((u32)0x3)) || (initConfig->supportModes & 0xF) == 0 || (initConfig->ratioMode > 2) || (initConfig->palTemporalMode > 5))
 	{
@@ -426,7 +426,7 @@ void InitMembers()
 	}
 }
 
-void SetupRsxRenderingStates(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
@@ -473,7 +473,7 @@ void SetupRsxRenderingStates(mem_ptr_t<CellGcmContextData>& cntxt)
 	}
 }
 
-void SetupVertexArrays(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupVertexArrays(vm::ptr<CellGcmContextData>& cntxt)
 {
 	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
@@ -481,7 +481,7 @@ void SetupVertexArrays(mem_ptr_t<CellGcmContextData>& cntxt)
 	//TODO
 }
 
-void SetupSurfaces(mem_ptr_t<CellGcmContextData>& cntxt)
+void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 {
 	bool isMrt;
 	u32 dstOffset0, dstOffset1;
@@ -529,9 +529,9 @@ void SetupSurfaces(mem_ptr_t<CellGcmContextData>& cntxt)
 }
 
 // Module Functions
-int cellRescInit(mem_ptr_t<CellRescInitConfig> initConfig)
+int cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {
-	cellResc->Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.GetAddr());
+	cellResc->Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.addr());
 
 	if (s_rescInternalInstance->m_bInitialized)
 	{
@@ -539,7 +539,7 @@ int cellRescInit(mem_ptr_t<CellRescInitConfig> initConfig)
 		return CELL_RESC_ERROR_REINITIALIZED;
 	}
 
-	if (InternalVersion(initConfig.GetAddr()) == -1 || !CheckInitConfig(initConfig))
+	if (InternalVersion(initConfig) == -1 || !CheckInitConfig(initConfig))
 	{
 		cellResc->Error("cellRescInit : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -608,9 +608,9 @@ int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<be_t<u
 	return CELL_OK;
 }
 
-int cellRescSetDsts(u32 dstsMode, mem_ptr_t<CellRescDsts> dsts)
+int cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
 {
-	cellResc->Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.GetAddr());
+	cellResc->Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.addr());
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -885,9 +885,9 @@ int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 		: 2;
 }
 
-int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<CellRescSrc> rescSrc)
+int cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellRescSrc> rescSrc)
 {
-	cellResc->Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)", gcmSurface.GetAddr(), rescSrc.GetAddr());
+	cellResc->Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)", gcmSurface.addr(), rescSrc.addr());
 
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
@@ -916,9 +916,9 @@ int cellRescGcmSurface2RescSrc(mem_ptr_t<CellGcmSurface> gcmSurface, mem_ptr_t<C
 	return CELL_OK;
 }
 
-int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
+int cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 {
-	cellResc->Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.GetAddr());
+	cellResc->Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.addr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -951,9 +951,9 @@ int cellRescSetSrc(s32 idx, mem_ptr_t<CellRescSrc> src)
 	return 0;
 }
 
-int cellRescSetConvertAndFlip(mem_ptr_t<CellGcmContextData> cntxt, s32 idx)
+int cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc->Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.GetAddr(), idx);
+	cellResc->Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.addr(), idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{

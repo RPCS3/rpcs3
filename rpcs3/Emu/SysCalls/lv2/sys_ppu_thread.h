@@ -25,6 +25,6 @@ s32 sys_ppu_thread_get_stack_information(u32 info_addr);
 s32 sys_ppu_thread_stop(u64 thread_id);
 s32 sys_ppu_thread_restart(u64 thread_id);
 s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, u32 threadname_addr);
-void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry);
+void sys_ppu_thread_once(vm::ptr<std::atomic<be_t<u32>>> once_ctrl, u32 entry);
 s32 sys_ppu_thread_get_id(vm::ptr<be_t<u64>> thread_id);
 s32 sys_ppu_thread_rename(u64 thread_id, u32 name_addr);

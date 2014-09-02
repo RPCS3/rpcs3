@@ -26,9 +26,9 @@ s32 sys_timer_destroy(u32 timer_id)
 	return CELL_OK;
 }
 
-s32 sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info)
+s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
-	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info_addr=0x%x)", timer_id, info.GetAddr());
+	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info_addr=0x%x)", timer_id, info.addr());
 	
 	timer* timer_data = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;

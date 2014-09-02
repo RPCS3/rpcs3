@@ -295,9 +295,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const mem_ptr_t<CellGcmDisplayInfo> buffers = render.m_gcm_buffers_addr;
+	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
 
-	if(!buffers.IsGood())
+	if(!buffers)
 		return;
 
 	// TODO: Is there any better way to choose the color buffers

@@ -21,7 +21,7 @@ struct timer
 
 s32 sys_timer_create(vm::ptr<be_t<u32>> timer_id);
 s32 sys_timer_destroy(u32 timer_id);
-s32 sys_timer_get_information(u32 timer_id, mem_ptr_t<sys_timer_information_t> info);
+s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info);
 s32 sys_timer_start(u32 timer_id, s64 basetime, u64 period);
 s32 sys_timer_stop(u32 timer_id);
 s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);

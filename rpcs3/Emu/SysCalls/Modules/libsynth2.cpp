@@ -58,15 +58,15 @@ u32 cellSoundSynth2GetAddr(u16 reg)
 	return 0;
 }
 
-int cellSoundSynth2SetEffectAttr(s16 bus, mem_ptr_t<CellSoundSynth2EffectAttr> attr)
+int cellSoundSynth2SetEffectAttr(s16 bus, vm::ptr<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Todo("cellSoundSynth2SetEffectAttr(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
+	libsynth2.Todo("cellSoundSynth2SetEffectAttr(bus=%d, attr_addr=0x%x)", bus, attr.addr());
 	return CELL_OK;
 }
 
-int cellSoundSynth2SetEffectMode(s16 bus, mem_ptr_t<CellSoundSynth2EffectAttr> attr)
+int cellSoundSynth2SetEffectMode(s16 bus, vm::ptr<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Todo("cellSoundSynth2SetEffectMode(bus=%d, attr_addr=0x%x)", bus, attr.GetAddr());
+	libsynth2.Todo("cellSoundSynth2SetEffectMode(bus=%d, attr_addr=0x%x)", bus, attr.addr());
 	return CELL_OK;
 }
 

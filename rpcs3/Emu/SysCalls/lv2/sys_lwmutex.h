@@ -80,8 +80,8 @@ struct sys_lwmutex_t
 };
 
 // SysCalls
-s32 sys_lwmutex_create(mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwmutex_attribute_t> attr);
-s32 sys_lwmutex_destroy(mem_ptr_t<sys_lwmutex_t> lwmutex);
-s32 sys_lwmutex_lock(mem_ptr_t<sys_lwmutex_t> lwmutex, u64 timeout);
-s32 sys_lwmutex_trylock(mem_ptr_t<sys_lwmutex_t> lwmutex);
-s32 sys_lwmutex_unlock(mem_ptr_t<sys_lwmutex_t> lwmutex);
+s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr);
+s32 sys_lwmutex_destroy(vm::ptr<sys_lwmutex_t> lwmutex);
+s32 sys_lwmutex_lock(vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout);
+s32 sys_lwmutex_trylock(vm::ptr<sys_lwmutex_t> lwmutex);
+s32 sys_lwmutex_unlock(vm::ptr<sys_lwmutex_t> lwmutex);

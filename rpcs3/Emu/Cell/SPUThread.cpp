@@ -282,7 +282,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		mem_ptr_t<list_element> rec((u32)dmac.ls_offset + list_addr + i * 8);
+		auto rec = vm::ptr<list_element>::make((u32)dmac.ls_offset + list_addr + i * 8);
 
 		u32 size = rec->ts;
 		if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)

@@ -65,13 +65,13 @@ struct sys_prx_t
 };
 
 // SysCalls
-s32 sys_prx_load_module(u32 path_addr, u64 flags, mem_ptr_t<sys_prx_load_module_option_t> pOpt);
+s32 sys_prx_load_module(u32 path_addr, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
 s32 sys_prx_load_module_on_memcontainer();
 s32 sys_prx_load_module_by_fd();
 s32 sys_prx_load_module_on_memcontainer_by_fd();
-s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_start_module_option_t> pOpt);
-s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, mem_ptr_t<sys_prx_stop_module_option_t> pOpt);
-s32 sys_prx_unload_module(s32 id, u64 flags, mem_ptr_t<sys_prx_unload_module_option_t> pOpt);
+s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt);
+s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt);
+s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
 s32 sys_prx_get_module_list();
 s32 sys_prx_get_my_module_id();
 s32 sys_prx_get_module_id_by_address();

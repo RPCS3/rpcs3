@@ -94,17 +94,17 @@ using pck_len_t = u32;
 #endif
 
 // Functions
-int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
+int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
 {
-	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.GetAddr(), paddrlen.addr());
-	if (addr.GetAddr() == 0) {
+	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.addr(), paddrlen.addr());
+	if (!addr) {
 		int ret = accept(s, NULL, NULL);
 		*g_lastError = getLastError();
 		return ret;
 	}
 	else {
 		sockaddr _addr;
-		memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
+		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
 		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.addr());
 		int ret = accept(s, &_addr, _paddrlen);
@@ -113,11 +113,11 @@ int sys_net_accept(s32 s, mem_ptr_t<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> p
 	}
 }
 
-int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
+int sys_net_bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 {
-	sys_net->Warning("bind(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.GetAddr(), addrlen);
+	sys_net->Warning("bind(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.addr(), addrlen);
 	sockaddr_in saddr;
-	memcpy(&saddr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr_in));
+	memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 	saddr.sin_family = addr->sin_family;
 	const char *ipaddr = inet_ntoa(saddr.sin_addr);
 	sys_net->Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
@@ -126,11 +126,11 @@ int sys_net_bind(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
 	return ret;
 }
 
-int sys_net_connect(s32 s, mem_ptr_t<sys_net_sockaddr_in> addr, u32 addrlen)
+int sys_net_connect(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 {
-	sys_net->Warning("connect(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.GetAddr(), addrlen);
+	sys_net->Warning("connect(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.addr(), addrlen);
 	sockaddr_in saddr;
-	memcpy(&saddr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr_in));
+	memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 	saddr.sin_family = addr->sin_family;
 	const char *ipaddr = inet_ntoa(saddr.sin_addr);
 	sys_net->Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
@@ -242,14 +242,14 @@ int sys_net_recv(s32 s, u32 buf_addr, u32 len, s32 flags)
 	return ret;
 }
 
-int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
+int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
 {
 	sys_net->Warning("recvfrom(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr_addr=0x%x, paddrlen=0x%x)",
-		s, buf_addr, len, flags, addr.GetAddr(), paddrlen.addr());
+		s, buf_addr, len, flags, addr.addr(), paddrlen.addr());
 
 	char *_buf_addr = (char *)Memory.VirtualToRealAddr(buf_addr);
 	sockaddr _addr;
-	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
+	memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
 	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.addr());
 	int ret = recvfrom(s, _buf_addr, len, flags, &_addr, _paddrlen);
@@ -278,14 +278,14 @@ int sendmsg()
 	return CELL_OK;
 }
 
-int sys_net_sendto(s32 s, u32 buf_addr, u32 len, s32 flags, mem_ptr_t<sys_net_sockaddr> addr, u32 addrlen)
+int sys_net_sendto(s32 s, u32 buf_addr, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 {
 	sys_net->Warning("sendto(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr=0x%x, addrlen=%u)",
-		s, buf_addr, len, flags, addr.GetAddr(), addrlen);
+		s, buf_addr, len, flags, addr.addr(), addrlen);
 
 	char *_buf_addr = (char *)Memory.VirtualToRealAddr(buf_addr);
 	sockaddr _addr;
-	memcpy(&_addr, Memory.VirtualToRealAddr(addr.GetAddr()), sizeof(sockaddr));
+	memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
 	int ret = sendto(s, _buf_addr, len, flags, &_addr, addrlen);
 	*g_lastError = getLastError();
@@ -341,9 +341,9 @@ int socketselect()
 	return CELL_OK;
 }
 
-int sys_net_initialize_network_ex(mem_ptr_t<sys_net_initialize_parameter> param)
+int sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
 {
-	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.GetAddr());
+	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.addr());
 	g_lastError = vm::ptr<be_t<s32>>::make((u32)Memory.Alloc(4, 1));
 #ifdef _WIN32
 	WSADATA wsaData;

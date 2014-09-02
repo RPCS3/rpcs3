@@ -26,9 +26,9 @@ Mutex::~Mutex()
 	m_queue.m_mutex.unlock();
 }
 
-s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
+s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> attr)
 {
-	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.GetAddr());
+	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.addr());
 
 	switch (attr->protocol.ToBE())
 	{

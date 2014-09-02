@@ -507,9 +507,9 @@ int cellAudioQuit()
 	return CELL_OK;
 }
 
-int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, vm::ptr<be_t<u32>> portNum)
+int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<be_t<u32>> portNum)
 {
-	cellAudio->Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.GetAddr(), portNum.addr());
+	cellAudio->Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.addr(), portNum.addr());
 
 	if (audioParam->nChannel > 8 || audioParam->nBlock > 16)
 	{
@@ -555,9 +555,9 @@ int cellAudioPortOpen(mem_ptr_t<CellAudioPortParam> audioParam, vm::ptr<be_t<u32
 	return CELL_AUDIO_ERROR_PORT_FULL;
 }
 
-int cellAudioGetPortConfig(u32 portNum, mem_ptr_t<CellAudioPortConfig> portConfig)
+int cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 {
-	cellAudio->Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig_addr=0x%x)", portNum, portConfig.GetAddr());
+	cellAudio->Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig_addr=0x%x)", portNum, portConfig.addr());
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT) 
 	{

@@ -141,10 +141,10 @@ int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 	return CELL_OK;
 }
  
-int cellSSPlayerCreate(vm::ptr<be_t<u32>> handle, mem_ptr_t<CellSSPlayerConfig> config)
+int cellSSPlayerCreate(vm::ptr<be_t<u32>> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer->Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
-		handle.addr(), config.GetAddr());
+		handle.addr(), config.addr());
 
 	if (config->outputMode != 0 || config->channels - 1 >= 2)
 	{
@@ -185,10 +185,10 @@ int cellSSPlayerRemove(u32 handle)
 	return CELL_OK;
 }
 
-int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, mem_ptr_t<CellSSPlayerCommonParam> commonInfo)
+int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm::ptr<CellSSPlayerCommonParam> commonInfo)
 {
 	libmixer->Warning("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
-		handle, waveInfo.GetAddr(), commonInfo.GetAddr());
+		handle, waveInfo.addr(), commonInfo.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -203,15 +203,15 @@ int cellSSPlayerSetWave(u32 handle, mem_ptr_t<CellSSPlayerWaveParam> waveInfo, m
 	ssp[handle].m_addr = waveInfo->addr;
 	ssp[handle].m_samples = waveInfo->samples;
 	ssp[handle].m_loop_start = waveInfo->loopStartOffset - 1;
-	ssp[handle].m_loop_mode = commonInfo.GetAddr() ? (u32)commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
+	ssp[handle].m_loop_mode = commonInfo ? (u32)commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
 	ssp[handle].m_position = waveInfo->startOffset - 1;
 
 	return CELL_OK;
 }
 
-int cellSSPlayerPlay(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
+int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer->Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
+	libmixer->Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -252,9 +252,9 @@ int cellSSPlayerStop(u32 handle, u32 mode)
 	return CELL_OK;
 }
 
-int cellSSPlayerSetParam(u32 handle, mem_ptr_t<CellSSPlayerRuntimeInfo> info)
+int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer->Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.GetAddr());
+	libmixer->Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -295,9 +295,9 @@ int cellSSPlayerGetState(u32 handle)
 	return CELL_SSPLAYER_STATE_OFF;
 }
 
-int cellSurMixerCreate(const mem_ptr_t<CellSurMixerConfig> config)
+int cellSurMixerCreate(const vm::ptr<CellSurMixerConfig> config)
 {
-	libmixer->Warning("cellSurMixerCreate(config_addr=0x%x)", config.GetAddr());
+	libmixer->Warning("cellSurMixerCreate(config_addr=0x%x)", config.addr());
 
 	surMixer = *config;
 
@@ -554,9 +554,9 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 	return CELL_OK;
 }
 
-int cellSurMixerChStripSetParameter(u32 type, u32 index, mem_ptr_t<CellSurMixerChStripParam> param)
+int cellSurMixerChStripSetParameter(u32 type, u32 index, vm::ptr<CellSurMixerChStripParam> param)
 {
-	libmixer->Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.GetAddr());
+	libmixer->Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.addr());
 	return CELL_OK;
 }
 

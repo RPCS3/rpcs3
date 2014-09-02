@@ -16,10 +16,10 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, mem_ptr_t<CellGameContentSize> size, vm::ptr<char> dirName)
+int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
-		type.addr(), attributes.addr(), size.GetAddr(), dirName.addr());
+		type.addr(), attributes.addr(), size.addr(), dirName.addr());
 
 	if (size)
 	{
@@ -81,9 +81,9 @@ int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, me
 	return CELL_GAME_RET_OK;
 }
 
-int cellGamePatchCheck(mem_ptr_t<CellGameContentSize> size, u32 reserved_addr)
+int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 {
-	cellGame->Warning("cellGamePatchCheck(size_addr=0x%x, reserved_addr=0x%x)", size.GetAddr(), reserved_addr);
+	cellGame->Warning("cellGamePatchCheck(size_addr=0x%x, reserved_addr=0x%x)", size.addr(), reserved_addr);
 
 	if (reserved_addr != 0)
 	{
@@ -129,9 +129,9 @@ int cellGamePatchCheck(mem_ptr_t<CellGameContentSize> size, u32 reserved_addr)
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, mem_ptr_t<CellGameContentSize> size)
+int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameContentSize> size)
 {
-	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.addr(), size.GetAddr());
+	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.addr(), size.addr());
 
 	if ((type - 1) >= 3)
 	{
@@ -311,10 +311,10 @@ int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDia
 	return cellGameDataCheckCreate2(version, dirName, errDialog, funcStat, container);
 }
 
-int cellGameCreateGameData(mem_ptr_t<CellGameSetInitParams> init, vm::ptr<char> tmp_contentInfoPath, vm::ptr<char> tmp_usrdirPath)
+int cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char> tmp_contentInfoPath, vm::ptr<char> tmp_usrdirPath)
 {
 	cellGame->Todo("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
-		init.GetAddr(), tmp_contentInfoPath.addr(), tmp_usrdirPath.addr());
+		init.addr(), tmp_contentInfoPath.addr(), tmp_usrdirPath.addr());
 
 	// TODO: create temporary game directory, set initial PARAM.SFO parameters
 	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement

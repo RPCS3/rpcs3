@@ -23,10 +23,10 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle, subHandle.addr(), src.GetAddr(), openInfo.GetAddr());
+		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
 	current_subHandle->fd = 0;
@@ -47,7 +47,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const mem_ptr_t
 
 		// Get size of file
 		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb.addr());
+		ret = cellFsFstat(current_subHandle->fd, sb);
 		if (ret != CELL_OK) return ret;
 		current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
 		break;
@@ -59,10 +59,10 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const mem_ptr_t
 	return CELL_OK;
 }
 
-int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
+int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> info)
 {
 	cellGifDec->Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
-		mainHandle, subHandle, info.GetAddr());
+		mainHandle, subHandle, info.addr());
 
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
@@ -109,10 +109,10 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	return CELL_OK;
 }
 
-int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
+int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
 {
 	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
-		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
+		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	CellGifDecSubHandle* subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
@@ -139,10 +139,10 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
-		mainHandle, subHandle, data.addr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
+		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 

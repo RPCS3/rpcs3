@@ -59,16 +59,16 @@ void sys_game_process_exitspawn(
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	mem_ptr_t<u32> argvp(argv_addr);
-	while (argvp.GetAddr() && *argvp)
+	auto argvp = vm::ptr<u32>::make(argv_addr);
+	while (argvp && *argvp)
 	{
-		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
+		argv.push_back(Memory.ReadString(Memory.Read32(argvp.addr())));
 		argvp++;
 	}
-	mem_ptr_t<u32> envp(envp_addr);
-	while (envp.GetAddr() && *envp)
+	auto envp = vm::ptr<u32>::make(envp_addr);
+	while (envp && *envp)
 	{
-		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
+		env.push_back(Memory.ReadString(Memory.Read32(envp.addr())));
 		envp++;
 	}
 
@@ -107,16 +107,16 @@ void sys_game_process_exitspawn2(
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	mem_ptr_t<u32> argvp(argv_addr);
-	while (argvp.GetAddr() && *argvp)
+	auto argvp = vm::ptr<u32>::make(argv_addr);
+	while (argvp && *argvp)
 	{
-		argv.push_back(Memory.ReadString(Memory.Read32(argvp.GetAddr())));
+		argv.push_back(Memory.ReadString(Memory.Read32(argvp.addr())));
 		argvp++;
 	}
-	mem_ptr_t<u32> envp(envp_addr);
-	while (envp.GetAddr() && *envp)
+	auto envp = vm::ptr<u32>::make(envp_addr);
+	while (envp && *envp)
 	{
-		env.push_back(Memory.ReadString(Memory.Read32(envp.GetAddr())));
+		env.push_back(Memory.ReadString(Memory.Read32(envp.addr())));
 		envp++;
 	}
 
@@ -225,7 +225,7 @@ s32 sys_process_get_paramsfo(vm::ptr<u8> buffer)
 
 	MemoryAllocator<be_t<u64>> pos, nread;
 	cellFsLseek(fd, 0, CELL_SEEK_SET, pos); //TODO: Move to the appropriate offset (probably 0x3F7)
-	cellFsRead(fd, buffer.GetAddr(), 40, nread); //WARNING: If offset==0x3F7: The file will end before the buffer (40 bytes) is filled!
+	cellFsRead(fd, buffer.addr(), 40, nread); //WARNING: If offset==0x3F7: The file will end before the buffer (40 bytes) is filled!
 	cellFsClose(fd);
 
 	return CELL_OK;*/

@@ -23,10 +23,10 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 }
 
 //156
-s32 sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
+s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, u32 path_addr)
 {
 	const std::string path = Memory.ReadString(path_addr);
-	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.GetAddr(), path_addr, path.c_str());
+	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path_addr, path.c_str());
 
 	vfsFile f(path);
 	if(!f.IsOpened())
@@ -47,10 +47,10 @@ s32 sys_spu_image_open(mem_ptr_t<sys_spu_image> img, u32 path_addr)
 }
 
 //172
-s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num, mem_ptr_t<sys_spu_image> img, mem_ptr_t<sys_spu_thread_attribute> attr, mem_ptr_t<sys_spu_thread_argument> arg)
+s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.Warning("sys_spu_thread_initialize(thread_addr=0x%x, group=0x%x, spu_num=%d, img_addr=0x%x, attr_addr=0x%x, arg_addr=0x%x)",
-		thread.addr(), group, spu_num, img.GetAddr(), attr.GetAddr(), arg.GetAddr());
+		thread.addr(), group, spu_num, img.addr(), attr.addr(), arg.addr());
 
 	SpuGroupInfo* group_info;
 	if(!Emu.GetIdManager().GetIDData(group, group_info))
@@ -107,9 +107,9 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 }
 
 //166
-s32 sys_spu_thread_set_argument(u32 id, mem_ptr_t<sys_spu_thread_argument> arg)
+s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 {
-	sys_spu.Warning("sys_spu_thread_set_argument(id=%d, arg_addr=0x%x)", id, arg.GetAddr());
+	sys_spu.Warning("sys_spu_thread_set_argument(id=%d, arg_addr=0x%x)", id, arg.addr());
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 
 	if(!thr || thr->GetType() != CPU_THREAD_SPU)
@@ -401,10 +401,10 @@ s32 sys_spu_thread_group_terminate(u32 id, int value)
 }
 
 //170
-s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, int prio, mem_ptr_t<sys_spu_thread_group_attribute> attr)
+s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, int prio, vm::ptr<sys_spu_thread_group_attribute> attr)
 {
 	sys_spu.Warning("sys_spu_thread_group_create(id_addr=0x%x, num=%d, prio=%d, attr_addr=0x%x)",
-		id.addr(), num, prio, attr.GetAddr());
+		id.addr(), num, prio, attr.addr());
 
 	if (num > 256) return CELL_EINVAL;
 
