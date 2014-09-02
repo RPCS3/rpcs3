@@ -340,9 +340,9 @@ int cellSaveDataListSave2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm:
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, listSet->fixedList, listSet->fixedListNum);
+	setSaveDataList(saveEntries, vm::ptr<CellSaveDataDirList>::make(listSet->fixedList.addr()), listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, listSet->newData);
+		addNewSaveDataEntry(saveEntries, vm::ptr<CellSaveDataListNewData>::make(listSet->newData.addr()));
 	if (saveEntries.size() == 0) {
 		cellSysutil->Warning("cellSaveDataListSave2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_SAVEDATA_RET_OK;
@@ -425,9 +425,9 @@ int cellSaveDataListLoad2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm:
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, listSet->fixedList, listSet->fixedListNum);
+	setSaveDataList(saveEntries, vm::ptr<CellSaveDataDirList>::make(listSet->fixedList.addr()), listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, listSet->newData);
+		addNewSaveDataEntry(saveEntries, vm::ptr<CellSaveDataListNewData>::make(listSet->newData.addr()));
 	if (saveEntries.size() == 0) {
 		cellSysutil->Warning("cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_SAVEDATA_RET_OK;
