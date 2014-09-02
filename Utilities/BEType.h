@@ -231,7 +231,7 @@ public:
 	static const bool value = false;
 
 	//be_t<T, size> if need swap endianes, T otherwise
-	typedef void type;
+	typedef const void type;
 };
 
 template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
