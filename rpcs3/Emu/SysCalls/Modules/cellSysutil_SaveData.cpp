@@ -700,231 +700,94 @@ int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<
 int cellSaveDataListAutoSave(u32 version, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
 							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	cellSysutil->Warning("cellSaveDataListAutoSave(version=%d, errDialog=%d, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
+	cellSysutil->Todo("cellSaveDataListAutoSave(version=%d, errDialog=%d, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
 		version, errDialog, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
-
-	vm::var<CellSaveDataCBResult> result;
-	vm::var<CellSaveDataListGet> listGet;
-	vm::var<CellSaveDataFixedSet> fixedSet;
-	vm::var<CellSaveDataStatGet> statGet;
-	vm::var<CellSaveDataStatSet> statSet;
-
-	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
-	vfsDir dir(saveBaseDir);
-
-	if (!dir.IsOpened())
-		return CELL_SAVEDATA_ERROR_INTERNAL;
-
-	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr);
-	std::vector<SaveDataEntry> saveEntries;
-
-	for (const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
-	{
-		if (entry->flags & DirEntry_TypeDir && entry->name.substr(0, dirNamePrefix.size()) == dirNamePrefix)
-		{
-			// Count the amount of matches and the amount of listed directories
-			listGet->dirListNum++;
-			if (listGet->dirListNum > setBuf->dirListMax)
-				continue;
-			listGet->dirNum++;
-
-			std::string saveDir = saveBaseDir + entry->name;
-			addSaveDataEntry(saveEntries, saveDir);
-		}
-	}
-
-	// Sort the entries and fill the listGet->dirList array
-	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf_addr);
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
-
-	for (u32 i = 0; i<saveEntries.size(); i++) {
-		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
-		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
-	}
-
-	throw fmt::Format("%s(): implementation broken", __FUNCTION__);
-	funcFixed(result, listGet, fixedSet);
-
-	if (result->result < 0)	{
-		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
-		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}
-
-	/*setSaveDataList(saveEntries, (u32)listSet->fixedList.addr(), listSet->fixedListNum);
-	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.addr());
-	if (saveEntries.size() == 0) {
-		cellSysutil->Warning("cellSaveDataListAutoSave: No save entries found!"); // TODO: Find a better way to handle this error
-		return CELL_SAVEDATA_RET_OK;
-	}
-
-	u32 focusIndex = focusSaveDataEntry(saveEntries, listSet->focusPosition);
-	// TODO: Display the dialog here
-	u32 selectedIndex = focusIndex; // TODO: Until the dialog is implemented, select always the focused entry
-	getSaveDataStat(saveEntries[selectedIndex], statGet.addr());
-	result->userdata_addr = userdata_addr;
-
-	funcStat(result, statGet, statSet);
-	Memory.Free(statGet->fileList.addr());
-	if (result->result < 0)	{
-		cellSysutil->Error("cellSaveDataListAutoSave: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
-		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}*/
-
-	/*if (statSet->setParam)
-	addNewSaveDataEntry(saveEntries, (u32)listSet->newData.addr()); // TODO: This *is* wrong
-	*/
-
-	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
-
 	return CELL_SAVEDATA_RET_OK;
 }
 
 int cellSaveDataListAutoLoad(u32 version, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
 							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	cellSysutil->Warning("cellSaveDataListAutoLoad(version=%d, errDialog=%d, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
+	cellSysutil->Todo("cellSaveDataListAutoLoad(version=%d, errDialog=%d, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
 					  version, errDialog, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
-
-	vm::var<CellSaveDataCBResult> result;
-	vm::var<CellSaveDataListGet> listGet;
-	vm::var<CellSaveDataFixedSet> fixedSet;
-	vm::var<CellSaveDataStatGet> statGet;
-	vm::var<CellSaveDataStatSet> statSet;
-
-	std::string saveBaseDir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current user
-	vfsDir dir(saveBaseDir);
-
-	if (!dir.IsOpened())
-		return CELL_SAVEDATA_ERROR_INTERNAL;
-
-	std::string dirNamePrefix = Memory.ReadString(setList->dirNamePrefix_addr);
-	std::vector<SaveDataEntry> saveEntries;
-
-	for (const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
-	{
-		if (entry->flags & DirEntry_TypeDir && entry->name.substr(0, dirNamePrefix.size()) == dirNamePrefix)
-		{
-			// Count the amount of matches and the amount of listed directories
-			listGet->dirListNum++;
-			if (listGet->dirListNum > setBuf->dirListMax)
-				continue;
-			listGet->dirNum++;
-
-			std::string saveDir = saveBaseDir + entry->name;
-			addSaveDataEntry(saveEntries, saveDir);
-		}
-	}
-
-	// Sort the entries and fill the listGet->dirList array
-	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf_addr);
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
-
-	for (u32 i = 0; i<saveEntries.size(); i++) {
-		memcpy(dirList[i].dirName, saveEntries[i].dirName.c_str(), CELL_SAVEDATA_DIRNAME_SIZE);
-		memcpy(dirList[i].listParam, saveEntries[i].listParam.c_str(), CELL_SAVEDATA_SYSP_LPARAM_SIZE);
-	}
-
-	throw fmt::Format("%s(): implementation broken", __FUNCTION__);
-	funcFixed(result, listGet, fixedSet);
-
-	if (result->result < 0)	{
-		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataListCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
-		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}
-
-	/*setSaveDataList(saveEntries, (u32)listSet->fixedList.addr(), listSet->fixedListNum);
-	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, (u32)listSet->newData.addr());
-	if (saveEntries.size() == 0) {
-		cellSysutil->Warning("cellSaveDataListAutoLoad: No save entries found!"); // TODO: Find a better way to handle this error
-		return CELL_SAVEDATA_RET_OK;
-	}
-
-	u32 focusIndex = focusSaveDataEntry(saveEntries, listSet->focusPosition);
-	// TODO: Display the dialog here
-	u32 selectedIndex = focusIndex; // TODO: Until the dialog is implemented, select always the focused entry
-	getSaveDataStat(saveEntries[selectedIndex], statGet.addr());
-	result->userdata_addr = userdata_addr;
-
-	funcStat(result.addr(), statGet.addr(), statSet.addr());
-	Memory.Free(statGet->fileList.addr());
-
-	if (result->result < 0)	{
-		cellSysutil->Error("cellSaveDataListAutoLoad: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
-		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}*/
-
-	/*if (statSet->setParam)
-	// TODO: Write PARAM.SFO file
-	*/
-
-	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result, saveBaseDir + (char*)statGet->dir.dirName);
-
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataDelete2() //sys_memory_container_t container
+int cellSaveDataDelete2(u32 container)
 {	 
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataDelete2(container=0x%x)", container);
 	return CELL_SAVEDATA_RET_CANCEL;
 }
 
-int cellSaveDataFixedDelete() //CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataDoneCallback funcDone, sys_memory_container_t container, void *userdata
+int cellSaveDataFixedDelete(vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed, vm::ptr<CellSaveDataDoneCallback> funcDone,
+							u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataFixedDelete(setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcDone=0x%x, container=0x%x, userdata_addr=0x%x)", setList.addr(), setBuf.addr(), funcFixed.addr(),
+					  funcDone.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListSave() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListSave(u32 version, u32 userId, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataListCallback> funcList,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserListSave(version=%d, userId=%d, setList=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, setList.addr(), setBuf.addr(), funcList.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListLoad() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataListCallback funcList, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListLoad(u32 version, u32 userId, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataListCallback> funcList,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserListLoad(version=%d, userId=%d, setList=0x%x, setBuf=0x%x, funcList=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, setList.addr(), setBuf.addr(), funcList.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedSave() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedSave(u32 version, u32 userId, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserFixedSave(version=%d, userId=%d, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserFixedLoad() //u32 version, CellSysutilUserId userId, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserFixedLoad(u32 version, u32 userId, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserFixedLoad(version=%d, userId=%d, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserAutoSave() //u32 version, CellSysutilUserId userId, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserAutoSave(u32 version, u32 userId, u32 dirName_addr, u32 errDialog, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataStatCallback> funcStat,
+							 vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserAutoSave(version=%d, userId=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, dirName_addr, errDialog, setBuf.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserAutoLoad() //u32 version, CellSysutilUserId userId, const char *dirName, u32 errDialog, CellSaveDataSetBuf *setBuf, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserAutoLoad(u32 version, u32 userId, u32 dirName_addr, u32 errDialog, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataStatCallback> funcStat,
+							 vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserAutoLoad(version=%d, userId=%d, dirName_addr=0x%x, errDialog=%d, setBuf=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)", version,
+					  userId, dirName_addr, errDialog, setBuf.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListAutoSave() //u32 version, CellSysutilUserId userId, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListAutoSave(u32 version, u32 userId, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+								 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserListAutoSave(version=%d, userId=%d, errDialog=%d, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
+					  version, userId, errDialog, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserListAutoLoad() //u32 version, CellSysutilUserId userId, u32 errDialog, CellSaveDataSetList *setList, CellSaveDataSetBuf *setBuf, CellSaveDataFixedCallback funcFixed, CellSaveDataStatCallback funcStat, CellSaveDataFileCallback funcFile, sys_memory_container_t container, void *userdata
+int cellSaveDataUserListAutoLoad(u32 version, u32 userId, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+								 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	cellSysutil->Todo("cellSaveDataUserListAutoLoad(version=%d, userId=%d, errDialog=%D, setList=0x%x, setBuf=0x%x, funcFixed=0x%x, funcStat=0x%x, funcFile=0x%x, container=0x%x, userdata_addr=0x%x)",
+					  version, userId,  errDialog, setList.addr(), setBuf.addr(), funcFixed.addr(), funcStat.addr(), funcFile.addr(), container, userdata_addr);
 	return CELL_SAVEDATA_RET_OK;
 }
 
