@@ -357,7 +357,7 @@ private:
 
 		u64 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;		
+		CPU.GPR[rt]._u32[3] = (u32)CPU.PC + 4;		
 		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
@@ -1063,7 +1063,7 @@ private:
 				if (CPU.GPR[rt]._f[i] > 0xffffffff) //if big, result = max
 					CPU.GPR[rt]._u32[i] = 0xffffffff;
 				else
-					CPU.GPR[rt]._u32[i] = floor(CPU.GPR[rt]._f[i]);
+					CPU.GPR[rt]._u32[i] = (u32)floor(CPU.GPR[rt]._f[i]);
 			}
 		}
 	}
@@ -1072,7 +1072,7 @@ private:
 		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
-			CPU.GPR[rt]._f[i] = (s32)CPU.GPR[ra]._i32[i];
+			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._i32[i];
 
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
@@ -1178,7 +1178,7 @@ private:
 	{
 		u64 target = branchTarget(0, i16);
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.GPR[rt]._u32[3] = (u32)CPU.PC + 4;
 		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}
@@ -1208,7 +1208,7 @@ private:
 	{
 		u64 target = branchTarget(CPU.PC, i16);
 		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.GPR[rt]._u32[3] = (u32)CPU.PC + 4;
 		LOG5_OPCODE("branch (0x%llx)", target);
 		CPU.SetBranch(target);
 	}

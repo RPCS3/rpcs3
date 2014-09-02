@@ -231,7 +231,7 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 		return false;
 	}
 
-	entry = ehdr.GetEntry();
+	entry = (u32)ehdr.GetEntry();
 	if(entry == 0)
 	{
 		LOG_ERROR(LOADER, "elf64 error: entry is null!");
@@ -320,12 +320,12 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 		if (phdr.p_vaddr < min_addr)
 		{
-			min_addr = phdr.p_vaddr;
+			min_addr = (u32)phdr.p_vaddr;
 		}
 
 		if (phdr.p_vaddr + phdr.p_memsz > max_addr)
 		{
-			max_addr = phdr.p_vaddr + phdr.p_memsz;
+			max_addr = (u32)(phdr.p_vaddr + phdr.p_memsz);
 		}
 
 		if (phdr.p_vaddr != phdr.p_paddr)
@@ -334,7 +334,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				phdr.p_paddr, phdr.p_vaddr);
 		}
 
-		if(!Memory.MainMem.IsInMyRange(offset + phdr.p_vaddr, phdr.p_memsz))
+		if(!Memory.MainMem.IsInMyRange(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 		{
 #ifdef LOADER_DEBUG
 			LOG_WARNING(LOADER, "Skipping...");
@@ -348,13 +348,15 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 			case 0x00000001: //LOAD
 				if(phdr.p_memsz)
 				{
-					Memory.MainMem.AllocFixed(offset + phdr.p_vaddr, phdr.p_memsz);
-
-					if(phdr.p_filesz)
+					if (!Memory.MainMem.AllocFixed(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
+					{
+						LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, offset + phdr.p_vaddr, phdr.p_memsz);
+					}
+					else if (phdr.p_filesz)
 					{
 						elf64_f.Seek(phdr.p_offset);
 						elf64_f.Read(&Memory[offset + phdr.p_vaddr], phdr.p_filesz);
-						Emu.GetSFuncManager().StaticAnalyse(&Memory[offset + phdr.p_vaddr], phdr.p_filesz, phdr.p_vaddr);
+						Emu.GetSFuncManager().StaticAnalyse(&Memory[offset + phdr.p_vaddr], (u32)phdr.p_filesz, (u32)phdr.p_vaddr);
 					}
 				}
 			break;
@@ -460,16 +462,16 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						LOG_NOTICE(LOADER, "*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
 						LOG_NOTICE(LOADER, "*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
 #endif
-						Memory.Write32(stub.s_text + i*4, tbl + i*8);
+						Memory.Write32(stub.s_text + i*4, (u32)tbl + i*8);
 
-						mem32_ptr_t out_tbl(tbl + i*8);
-						out_tbl += dst + i*section;
-						out_tbl += Emu.GetModuleManager().GetFuncNumById(nid);
+						auto out_tbl = vm::ptr<be_t<u32>>::make((u32)tbl + i * 8);
+						out_tbl[0] = (u32)dst + i*section;
+						out_tbl[1] = Emu.GetModuleManager().GetFuncNumById(nid);
 
-						mem32_ptr_t out_dst(dst + i*section);
-						out_dst += OR(11, 2, 2, 0);
-						out_dst += SC(2);
-						out_dst += BCLR(0x10 | 0x04, 0, 0, 0);
+						auto out_dst = vm::ptr<be_t<u32>>::make((u32)dst + i*section);
+						out_dst[0] = OR(11, 2, 2, 0);
+						out_dst[1] = SC(2);
+						out_dst[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 					}
 				}
 #ifdef LOADER_DEBUG
@@ -512,16 +514,16 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 		const u64 addr = shdr.sh_addr;
 		const u64 size = shdr.sh_size;
 
-		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
+		if(size == 0 || !Memory.IsGoodAddr(offset + addr, (u32)size)) continue;
 
 		if(shdr.sh_addr && shdr.sh_addr < min_addr)
 		{
-			min_addr = shdr.sh_addr;
+			min_addr = (u32)shdr.sh_addr;
 		}
 
 		if(shdr.sh_addr + shdr.sh_size > max_addr)
 		{
-			max_addr = shdr.sh_addr + shdr.sh_size;
+			max_addr = (u32)(shdr.sh_addr + shdr.sh_size);
 		}
 
 		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))

@@ -11,9 +11,9 @@
 //Module cellUserInfo(0x0032, cellUserInfo_init);
 Module *cellUserInfo = nullptr;
 
-int cellUserInfoGetStat(u32 id, mem_ptr_t<CellUserInfoUserStat> stat)
+int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
-	cellUserInfo->Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.GetAddr());
+	cellUserInfo->Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.addr());
 
 	if (id > CELL_USERINFO_USER_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
@@ -57,21 +57,21 @@ int cellUserInfoEnableOverlay()
 	return CELL_OK;
 }
 
-int cellUserInfoGetList(mem32_t listNum, mem_ptr_t<CellUserInfoUserList> listBuf, mem32_t currentUserId)
+int cellUserInfoGetList(vm::ptr<be_t<u32>> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<be_t<u32>> currentUserId)
 {
 	cellUserInfo->Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
-		listNum.GetAddr(), listBuf.GetAddr(), currentUserId.GetAddr());
+		listNum.addr(), listBuf.addr(), currentUserId.addr());
 
 	// If only listNum is NULL, an error will be returned
-	if (listBuf.GetAddr() && !listNum.GetAddr())
+	if (listBuf && !listNum)
 		return CELL_USERINFO_ERROR_PARAM;
-	if (listNum.GetAddr())
-		listNum = 1;
-	if (listBuf.GetAddr())
+	if (listNum)
+		*listNum = 1;
+	if (listBuf)
 		listBuf->userId[0] = 1;
 
-	if (currentUserId.GetAddr())
-		currentUserId = 1;
+	if (currentUserId)
+		*currentUserId = 1;
 	
 	return CELL_OK;
 }

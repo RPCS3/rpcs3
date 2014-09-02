@@ -68,12 +68,12 @@ private:
 		const u64 old_sc = CPU.m_last_syscall;
 
 		CPU.m_last_syscall = sc;
-		SysCalls::DoSyscall(sc);
+		SysCalls::DoSyscall((u32)sc);
 
 		if(Ini.HLELogging.GetValue())
 		{
 			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx",
-				sc, SysCalls::GetHLEFuncName(sc).c_str(), CPU.GPR[3], CPU.PC);
+				sc, SysCalls::GetHLEFuncName((u32)sc).c_str(), CPU.GPR[3], CPU.PC);
 		}
 #ifdef HLE_CALL_DEBUG
 		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", sc, CPU.GPR[3], CPU.PC);
@@ -155,7 +155,7 @@ private:
 
 	void TWI(u32 to, u32 ra, s32 simm16)
 	{
-		s32 a = CPU.GPR[ra];
+		s32 a = (s32)CPU.GPR[ra];
 
 		if( (a < simm16  && (to & 0x10)) ||
 			(a > simm16  && (to & 0x8))  ||
@@ -208,7 +208,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 			else
-				CPU.VPR[vd]._s8[b] = result;
+				CPU.VPR[vd]._s8[b] = (s8)result;
 		}
 	}
 	void VADDSHS(u32 vd, u32 va, u32 vb)
@@ -248,7 +248,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 			else
-				CPU.VPR[vd]._s32[w] = result;
+				CPU.VPR[vd]._s32[w] = (s32)result;
 		}
 	}
 	void VADDUBM(u32 vd, u32 va, u32 vb)
@@ -270,7 +270,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 			else
-				CPU.VPR[vd]._u8[b] = result;
+				CPU.VPR[vd]._u8[b] = (u8)result;
 		}
 	}
 	void VADDUHM(u32 vd, u32 va, u32 vb)
@@ -314,7 +314,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 			else
-				CPU.VPR[vd]._u32[w] = result;
+				CPU.VPR[vd]._u32[w] = (u32)result;
 		}
 	}
 	void VAND(u32 vd, u32 va, u32 vb)
@@ -1256,7 +1256,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 				
-			CPU.VPR[vd]._s8[b+8] = result;
+			CPU.VPR[vd]._s8[b+8] = (s8)result;
 
 			result = CPU.VPR[vb]._s16[b];
 
@@ -1271,7 +1271,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 
-			CPU.VPR[vd]._s8[b] = result;
+			CPU.VPR[vd]._s8[b] = (s8)result;
 		}
 	}
 	void VPKSHUS(u32 vd, u32 va, u32 vb)
@@ -1291,7 +1291,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 				
-			CPU.VPR[vd]._u8[b+8] = result;
+			CPU.VPR[vd]._u8[b+8] = (u8)result;
 
 			result = CPU.VPR[vb]._s16[b];
 
@@ -1306,7 +1306,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 				
-			CPU.VPR[vd]._u8[b] = result;
+			CPU.VPR[vd]._u8[b] = (u8)result;
 		}
 	}
 	void VPKSWSS(u32 vd, u32 va, u32 vb)
@@ -1399,7 +1399,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 				
-			CPU.VPR[vd]._u8[b+8] = result;
+			CPU.VPR[vd]._u8[b+8] = (u8)result;
 
 			result = CPU.VPR[vb]._u16[b];
 
@@ -1409,7 +1409,7 @@ private:
 				CPU.VSCR.SAT = 1;
 			}
 				
-			CPU.VPR[vd]._u8[b] = result;
+			CPU.VPR[vd]._u8[b] = (u8)result;
 		}
 	}
 	void VPKUWUM(u32 vd, u32 va, u32 vb)
@@ -1502,7 +1502,7 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u32[w] = rotl32(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u8[w*4] & 0x1f);
+			CPU.VPR[vd]._u32[w] = (u32)rotl32(CPU.VPR[va]._u32[w], CPU.VPR[vb]._u8[w*4] & 0x1f);
 		}
 	}
 	void VRSQRTEFP(u32 vd, u32 vb)
@@ -2093,7 +2093,7 @@ private:
 		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
 		case 0x3:
-			Emu.GetSFuncManager().StaticExecute(CPU.GPR[11]);
+			Emu.GetSFuncManager().StaticExecute((u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
 				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%llx",
@@ -2244,11 +2244,11 @@ private:
 	{
 		if (is_r) // rldcr
 		{
-			RLDICR(ra, rs, CPU.GPR[rb], m_eb, rc);
+			RLDICR(ra, rs, (u32)CPU.GPR[rb], m_eb, rc);
 		}
 		else // rldcl
 		{
-			RLDICL(ra, rs, CPU.GPR[rb], m_eb, rc);
+			RLDICL(ra, rs, (u32)CPU.GPR[rb], m_eb, rc);
 		}
 	}
 	void CMP(u32 crfd, u32 l, u32 ra, u32 rb)
@@ -2257,8 +2257,8 @@ private:
 	}
 	void TW(u32 to, u32 ra, u32 rb)
 	{
-		s32 a = CPU.GPR[ra];
-		s32 b = CPU.GPR[rb];
+		s32 a = (s32)CPU.GPR[ra];
+		s32 b = (s32)CPU.GPR[rb];
 
 		if( (a < b  && (to & 0x10)) ||
 			(a > b  && (to & 0x8))  ||
@@ -2328,8 +2328,8 @@ private:
 	}
 	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-		u32 a = CPU.GPR[ra];
-		u32 b = CPU.GPR[rb];
+		u32 a = (u32)CPU.GPR[ra];
+		u32 b = (u32)CPU.GPR[rb];
 		CPU.GPR[rd] = ((u64)a * (u64)b) >> 32;
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2380,8 +2380,8 @@ private:
 	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
-		u32 r = rotl32((u32)CPU.GPR[rs], n);
-		u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32][63 - n];
+		u32 r = (u32)rotl32((u32)CPU.GPR[rs], n);
+		u32 m = ((u32)CPU.GPR[rb] & 0x20) ? 0 : (u32)rotate_mask[32][63 - n];
 
 		CPU.GPR[ra] = r & m;
 
@@ -2509,8 +2509,8 @@ private:
 	}
 	void MULHW(u32 rd, u32 ra, u32 rb, bool rc)
 	{
-		s32 a = CPU.GPR[ra];
-		s32 b = CPU.GPR[rb];
+		s32 a = (s32)CPU.GPR[ra];
+		s32 b = (s32)CPU.GPR[rb];
 		CPU.GPR[rd] = ((s64)a * (s64)b) >> 32;
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
@@ -2644,7 +2644,7 @@ private:
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+		Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u32)CPU.GPR[rs]);
 	}
 	void STVEHX(u32 vs, u32 ra, u32 rb)
 	{
@@ -2661,7 +2661,7 @@ private:
 	void STWUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write32(addr, CPU.GPR[rs]);
+		Memory.Write32(addr, (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
@@ -2701,7 +2701,7 @@ private:
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write8((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+		Memory.Write8((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u8)CPU.GPR[rs]);
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
@@ -2744,7 +2744,7 @@ private:
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write8(addr, CPU.GPR[rs]);
+		Memory.Write8(addr, (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -2834,7 +2834,7 @@ private:
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], CPU.GPR[rs]);
+		Memory.Write16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u16)CPU.GPR[rs]);
 	}
 	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2844,12 +2844,12 @@ private:
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
 		//HACK!
-		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u32)CPU.GPR[rs]);
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write16(addr, CPU.GPR[rs]);
+		Memory.Write16(addr, (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2876,8 +2876,8 @@ private:
 	}
 	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const u32 RA = CPU.GPR[ra];
-		const u32 RB = CPU.GPR[rb];
+		const u32 RA = (u32)CPU.GPR[ra];
+		const u32 RB = (u32)CPU.GPR[rb];
 
 		if(RB == 0)
 		{
@@ -2925,8 +2925,8 @@ private:
 	}
 	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const s32 RA = CPU.GPR[ra];
-		const s32 RB = CPU.GPR[rb];
+		const s32 RA = (s32)CPU.GPR[ra];
+		const s32 RB = (s32)CPU.GPR[rb];
 
 		if (RB == 0 || ((u32)RA == (1 << 31) && RB == -1))
 		{
@@ -2967,8 +2967,8 @@ private:
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
-		u32 r = rotl32((u32)CPU.GPR[rs], 64 - n);
-		u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32 + n][63];
+		u32 r = (u32)rotl32((u32)CPU.GPR[rs], 64 - n);
+		u32 m = ((u32)CPU.GPR[rb] & 0x20) ? 0 : (u32)rotate_mask[32 + n][63];
 		CPU.GPR[ra] = r & m;
 		
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -2993,7 +2993,7 @@ private:
 	{
 		u64 EA = ra ? CPU.GPR[ra] : 0;
 		u64 N = nb ? nb : 32;
-		u8 reg = CPU.GPR[rd];
+		u8 reg = (u8)CPU.GPR[rd];
 
 		while (N > 0)
 		{
@@ -3051,7 +3051,7 @@ private:
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3072,31 +3072,31 @@ private:
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
-			u64 EA = ra ? CPU.GPR[ra] : 0;
-			u64 N = nb ? nb : 32;
-			u8 reg = CPU.GPR[rd];
+		u64 EA = ra ? CPU.GPR[ra] : 0;
+		u64 N = nb ? nb : 32;
+		u8 reg = (u8)CPU.GPR[rd];
 
-			while (N > 0)
+		while (N > 0)
+		{
+			if (N > 3)
 			{
-				if (N > 3)
-				{
-					Memory.Write32(EA, CPU.GPR[reg]);
-					EA += 4;
-					N -= 4;
-				}
-				else
-				{
-					u32 buf = CPU.GPR[reg];
-					while (N > 0)
-					{
-						N = N - 1;
-						Memory.Write8(EA, (0xFF000000 & buf) >> 24);
-						buf <<= 8;
-						EA = EA + 1;
-					}
-				}
-				reg = (reg + 1) % 32;
+				Memory.Write32(EA, (u32)CPU.GPR[reg]);
+				EA += 4;
+				N -= 4;
 			}
+			else
+			{
+				u32 buf = (u32)CPU.GPR[reg];
+				while (N > 0)
+				{
+					N = N - 1;
+					Memory.Write8(EA, (0xFF000000 & buf) >> 24);
+					buf <<= 8;
+					EA = EA + 1;
+				}
+			}
+			reg = (reg + 1) % 32;
+		}
 	}
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3121,7 +3121,7 @@ private:
 	}
 	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
-		s32 RS = CPU.GPR[rs];
+		s32 RS = (s32)CPU.GPR[rs];
 		u8 shift = CPU.GPR[rb] & 63;
 		if (shift > 31)
 		{
@@ -3197,7 +3197,7 @@ private:
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = CPU.GPR[rs];
+		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u16)CPU.GPR[rs];
 	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
@@ -3259,22 +3259,22 @@ private:
 	}
 	void STW(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write32(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
+		Memory.Write32(ra ? CPU.GPR[ra] + d : d, (u32)CPU.GPR[rs]);
 	}
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write32(addr, CPU.GPR[rs]);
+		Memory.Write32(addr, (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STB(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write8(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
+		Memory.Write8(ra ? CPU.GPR[ra] + d : d, (u8)CPU.GPR[rs]);
 	}
 	void STBU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write8(addr, CPU.GPR[rs]);
+		Memory.Write8(addr, (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LHZ(u32 rd, u32 ra, s32 d)
@@ -3299,12 +3299,12 @@ private:
 	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write16(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
+		Memory.Write16(ra ? CPU.GPR[ra] + d : d, (u16)CPU.GPR[rs]);
 	}
 	void STHU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write16(addr, CPU.GPR[rs]);
+		Memory.Write16(addr, (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LMW(u32 rd, u32 ra, s32 d)
@@ -3320,7 +3320,7 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rs; i<32; ++i, addr += 4)
 		{
-			Memory.Write32(addr, CPU.GPR[i]);
+			Memory.Write32(addr, (u32)CPU.GPR[i]);
 		}
 	}
 	void LFS(u32 frd, u32 ra, s32 d)
@@ -3891,7 +3891,7 @@ private:
 				break;
 			}
 			r = (u64)i;
-			double di = i;
+			double di = (double)i;
 			if (di == b)
 			{
 				CPU.SetFPSCR_FI(0);
@@ -3930,7 +3930,7 @@ private:
 		else
 		{
 			s64 i = (s64)b;
-			double di = i;
+			double di = (double)i;
 			if (di == b)
 			{
 				CPU.SetFPSCR_FI(0);

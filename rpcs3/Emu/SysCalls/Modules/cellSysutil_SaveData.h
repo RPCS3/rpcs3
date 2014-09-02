@@ -116,7 +116,7 @@ struct CellSaveDataListNewData
 { 
 	be_t<u32> iconPosition;
 	be_t<u32> dirName_addr; // char*
-	mem_beptr_t<CellSaveDataNewDataIcon> icon;
+	vm::bptr<CellSaveDataNewDataIcon> icon;
 };
 
 struct CellSaveDataDirList
@@ -129,7 +129,7 @@ struct CellSaveDataListGet
 { 
 	be_t<u32> dirNum;
 	be_t<u32> dirListNum;
-	mem_beptr_t<CellSaveDataDirList> dirList;
+	vm::bptr<CellSaveDataDirList> dirList;
 };
 
 struct CellSaveDataListSet
@@ -137,15 +137,15 @@ struct CellSaveDataListSet
 	be_t<u32> focusPosition;
 	be_t<u32> focusDirName_addr; // char*
 	be_t<u32> fixedListNum;
-	mem_beptr_t<CellSaveDataDirList> fixedList;
-	mem_beptr_t<CellSaveDataListNewData> newData;
+	vm::bptr<CellSaveDataDirList> fixedList;
+	vm::bptr<CellSaveDataListNewData> newData;
 	be_t<u32> reserved_addr;  // void*
 };
 
 struct CellSaveDataFixedSet
 { 
 	be_t<u32> dirName_addr; // char*
-	mem_beptr_t<CellSaveDataNewDataIcon> newIcon;
+	vm::bptr<CellSaveDataNewDataIcon> newIcon;
 	be_t<u32> option;
 };
 
@@ -191,7 +191,7 @@ struct CellSaveDataStatGet
 	be_t<s32> sysSizeKB;
 	be_t<u32> fileNum;
 	be_t<u32> fileListNum;
-	mem_beptr_t<CellSaveDataFileStat> fileList;
+	vm::bptr<CellSaveDataFileStat> fileList;
 };
 
 struct CellSaveDataAutoIndicator
@@ -205,9 +205,9 @@ struct CellSaveDataAutoIndicator
 
 struct CellSaveDataStatSet 
 { 
-	mem_beptr_t<CellSaveDataSystemFileParam> setParam;
+	vm::bptr<CellSaveDataSystemFileParam> setParam;
 	be_t<u32> reCreateMode;
-	mem_beptr_t<CellSaveDataAutoIndicator> indicator;
+	vm::bptr<CellSaveDataAutoIndicator> indicator;
 };
 
 struct CellSaveDataFileGet
@@ -247,11 +247,11 @@ struct CellSaveDataDoneGet
 
 
 // Callback Functions
-typedef void (*CellSaveDataFixedCallback)(mem_ptr_t<CellSaveDataCBResult> cbResult, mem_ptr_t<CellSaveDataListGet> get, mem_ptr_t<CellSaveDataFixedSet> set);
-typedef void (*CellSaveDataListCallback) (mem_ptr_t<CellSaveDataCBResult> cbResult, mem_ptr_t<CellSaveDataListGet> get, mem_ptr_t<CellSaveDataListSet> set);
-typedef void (*CellSaveDataStatCallback) (mem_ptr_t<CellSaveDataCBResult> cbResult, mem_ptr_t<CellSaveDataStatGet> get, mem_ptr_t<CellSaveDataStatSet> set);
-typedef void (*CellSaveDataFileCallback) (mem_ptr_t<CellSaveDataCBResult> cbResult, mem_ptr_t<CellSaveDataFileGet> get, mem_ptr_t<CellSaveDataFileSet> set);
-typedef void (*CellSaveDataDoneCallback) (mem_ptr_t<CellSaveDataCBResult> cbResult, mem_ptr_t<CellSaveDataDoneGet> get);
+typedef void(*CellSaveDataFixedCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataFixedSet> set);
+typedef void(*CellSaveDataListCallback) (vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataListSet> set);
+typedef void(*CellSaveDataStatCallback) (vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataStatGet> get, vm::ptr<CellSaveDataStatSet> set);
+typedef void(*CellSaveDataFileCallback) (vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataFileGet> get, vm::ptr<CellSaveDataFileSet> set);
+typedef void(*CellSaveDataDoneCallback) (vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataDoneGet> get);
 
 
 // Auxiliary Structs
@@ -273,32 +273,32 @@ struct SaveDataEntry
 
 
 // Function declarations
-int cellSaveDataListSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-                          mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataListSave2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf,
+                          vm::ptr<CellSaveDataListCallback> funcList, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
                           u32 container, u32 userdata_addr);
 
-int cellSaveDataListLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-                          mem_func_ptr_t<CellSaveDataListCallback> funcList, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataListLoad2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf,
+                          vm::ptr<CellSaveDataListCallback> funcList, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
                           u32 container, u32 userdata_addr);
 
-int cellSaveDataFixedSave2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-                          mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataFixedSave2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf,
+                          vm::ptr<CellSaveDataFixedCallback> funcFixed, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
                           u32 container, u32 userdata_addr);
 
-int cellSaveDataFixedLoad2(u32 version, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-                          mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed, mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataFixedLoad2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf,
+                          vm::ptr<CellSaveDataFixedCallback> funcFixed, vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
                           u32 container, u32 userdata_addr);
 
-int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataAutoSave2(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellSaveDataSetBuf> setBuf,
+						  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr);
 
-int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, mem_ptr_t<CellSaveDataSetBuf> setBuf,
-						  mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile,
+int cellSaveDataAutoLoad2(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellSaveDataSetBuf> setBuf,
+						  vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile,
 						  u32 container, u32 userdata_addr);
 
-int cellSaveDataListAutoSave(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed,
-							 mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr);
+int cellSaveDataListAutoSave(u32 version, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr);
 
-int cellSaveDataListAutoLoad(u32 version, u32 errDialog, mem_ptr_t<CellSaveDataSetList> setList, mem_ptr_t<CellSaveDataSetBuf> setBuf, mem_func_ptr_t<CellSaveDataFixedCallback> funcFixed,
-							 mem_func_ptr_t<CellSaveDataStatCallback> funcStat, mem_func_ptr_t<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr);
+int cellSaveDataListAutoLoad(u32 version, u32 errDialog, vm::ptr<CellSaveDataSetList> setList, vm::ptr<CellSaveDataSetBuf> setBuf, vm::ptr<CellSaveDataFixedCallback> funcFixed,
+							 vm::ptr<CellSaveDataStatCallback> funcStat, vm::ptr<CellSaveDataFileCallback> funcFile, u32 container, u32 userdata_addr);

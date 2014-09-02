@@ -18,7 +18,7 @@ void ARMv7Thread::InitRegs()
 	memset(GPR, 0, sizeof(GPR[0]) * 15);
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
-	SP = m_stack_point;
+	SP = (u32)m_stack_point;
 }
 
 void ARMv7Thread::InitStack()

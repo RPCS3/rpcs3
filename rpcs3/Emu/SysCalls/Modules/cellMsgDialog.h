@@ -81,10 +81,10 @@ enum
 
 typedef void(*CellMsgDialogCallback)(int buttonType, u32 userData);
 
-int cellMsgDialogOpen2(u32 type, mem_list_ptr_t<u8> msgString, mem_func_ptr_t<CellMsgDialogCallback> callback, u32 userData, u32 extParam);
-int cellMsgDialogOpenErrorCode(u32 errorCode, mem_func_ptr_t<CellMsgDialogCallback> callback, mem_ptr_t<void> userData, u32 extParam);
+int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam);
+int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam);
 
-int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, mem_list_ptr_t<u8> msgString);
+int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString);
 int cellMsgDialogProgressBarReset(u32 progressBarIndex);
 int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta);
 int cellMsgDialogClose(float delay);

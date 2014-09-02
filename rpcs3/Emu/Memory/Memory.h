@@ -8,6 +8,8 @@ using std::nullptr_t;
 #define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
 #define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
+extern void* const m_base_addr;
+
 enum MemoryType
 {
 	Memory_PS3,
@@ -25,7 +27,6 @@ enum : u64
 
 class MemoryBase
 {
-	void* m_base_addr;
 	std::vector<MemoryBlock*> MemoryBlocks;
 	u32 m_pages[0x100000000 / 4096]; // information about every page
 	std::recursive_mutex m_mutex;
@@ -44,12 +45,6 @@ public:
 
 	struct Wrapper32LE
 	{
-	private:
-		void* m_base_addr;
-
-	public:
-		Wrapper32LE() : m_base_addr(nullptr) {}
-
 		void Write8(const u32 addr, const u8 data) { *(u8*)((u8*)m_base_addr + addr) = data; }
 		void Write16(const u32 addr, const u16 data) { *(u16*)((u8*)m_base_addr + addr) = data; }
 		void Write32(const u32 addr, const u32 data) { *(u32*)((u8*)m_base_addr + addr) = data; }
@@ -61,8 +56,6 @@ public:
 		u32 Read32(const u32 addr) { return *(u32*)((u8*)m_base_addr + addr); }
 		u64 Read64(const u32 addr) { return *(u64*)((u8*)m_base_addr + addr); }
 		u128 Read128(const u32 addr) { return *(u128*)((u8*)m_base_addr + addr); }
-
-		void Init(void* real_addr) { m_base_addr = real_addr; }
 	};
 
 	struct : Wrapper32LE
@@ -92,7 +85,7 @@ public:
 		Close();
 	}
 
-	void* GetBaseAddr() const
+	static void* const GetBaseAddr()
 	{
 		return m_base_addr;
 	}
@@ -125,9 +118,9 @@ public:
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
 		
-		if (res < 0x100000000)
+		if ((u32)res == res)
 		{
-			return res;
+			return (u32)res;
 		}
 		else
 		{
@@ -162,7 +155,7 @@ public:
 		}
 		else
 		{
-			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+			for (u32 i = (u32)addr / 4096; i <= ((u32)addr + size - 1) / 4096; i++)
 			{
 				if (!m_pages[i]) return false; // TODO: define page parameters
 			}
@@ -211,7 +204,7 @@ public:
 			}
 			else
 			{
-				WriteMMIO32(addr, data);
+				WriteMMIO32((u32)addr, data);
 			}
 		}
 		else
@@ -285,7 +278,7 @@ public:
 			}
 			else
 			{
-				return ReadMMIO32(addr);
+				return ReadMMIO32((u32)addr);
 			}
 		}
 		else
@@ -365,7 +358,7 @@ public:
 
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
-		memcpy(GetMemFromAddr<T>(addr), str.c_str(), str.size());
+		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
 	}
 
 	u32 GetUserMemTotalSize()
@@ -415,545 +408,5 @@ public:
 
 extern MemoryBase Memory;
 
-template<typename T, typename AT = u32>
-class mem_base_t
-{
-protected:
-	AT m_addr;
-
-public:
-	mem_base_t(AT addr) : m_addr(addr)
-	{
-	}
-
-	__forceinline AT GetAddr() const { return m_addr; }
-
-	__forceinline void SetAddr(AT addr) { m_addr = addr; }
-
-	__forceinline bool IsGood() const
-	{
-		return Memory.IsGoodAddr(m_addr, sizeof(T));
-	}
-
-	__forceinline operator bool() const
-	{
-		return m_addr != 0;
-	}
-
-	__forceinline bool operator != (nullptr_t) const
-	{
-		return m_addr != 0;
-	}
-
-	__forceinline bool operator == (nullptr_t) const
-	{
-		return m_addr == 0;
-	}
-	
-	bool operator == (const mem_base_t& right) const { return m_addr == right.m_addr; }
-	bool operator != (const mem_base_t& right) const { return m_addr != right.m_addr; }
-	bool operator > (const mem_base_t& right) const { return m_addr > right.m_addr; }
-	bool operator < (const mem_base_t& right) const { return m_addr < right.m_addr; }
-	bool operator >= (const mem_base_t& right) const { return m_addr >= right.m_addr; }
-	bool operator <= (const mem_base_t& right) const { return m_addr <= right.m_addr; }
-
-	bool operator == (T* right) const { return (T*)&Memory[m_addr] == right; }
-	bool operator != (T* right) const { return (T*)&Memory[m_addr] != right; }
-	bool operator > (T* right) const { return (T*)&Memory[m_addr] > right; }
-	bool operator < (T* right) const { return (T*)&Memory[m_addr] < right; }
-	bool operator >= (T* right) const { return (T*)&Memory[m_addr] >= right; }
-	bool operator <= (T* right) const { return (T*)&Memory[m_addr] <= right; }
-};
-
-template<typename T, int lvl = 1, typename AT = u32>
-class mem_ptr_t : public mem_base_t<AT, AT>
-{
-public:
-	mem_ptr_t(AT addr) : mem_base_t<AT, AT>(addr)
-	{
-	}
-
-	template<typename NT> operator mem_ptr_t<NT, lvl, AT>&() { return (mem_ptr_t<NT, lvl, AT>&)*this; }
-	template<typename NT> operator const mem_ptr_t<NT, lvl, AT>&() const { return (const mem_ptr_t<NT, lvl, AT>&)*this; }
-
-	mem_ptr_t operator++ (int)
-	{
-		mem_ptr_t ret(this->m_addr);
-		this->m_addr += sizeof(AT);
-		return ret;
-	}
-
-	mem_ptr_t& operator++ ()
-	{
-		this->m_addr += sizeof(AT);
-		return *this;
-	}
-
-	mem_ptr_t operator-- (int)
-	{
-		mem_ptr_t ret(this->m_addr);
-		this->m_addr -= sizeof(AT);
-		return ret;
-	}
-
-	mem_ptr_t& operator-- ()
-	{
-		this->m_addr -= sizeof(AT);
-		return *this;
-	}
-
-	mem_ptr_t& operator += (uint count)
-	{
-		this->m_addr += count * sizeof(AT);
-		return *this;
-	}
-
-	mem_ptr_t& operator -= (uint count)
-	{
-		this->m_addr -= count * sizeof(AT);
-		return *this;
-	}
-
-	mem_ptr_t operator + (uint count) const
-	{
-		return this->m_addr + count * sizeof(AT);
-	}
-
-	mem_ptr_t operator - (uint count) const
-	{
-		return this->m_addr - count * sizeof(AT);
-	}
-
-	__forceinline mem_ptr_t<T, lvl - 1, AT>& operator *()
-	{
-		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr];
-	}
-
-	__forceinline const mem_ptr_t<T, lvl - 1, AT>& operator *() const
-	{
-		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr];
-	}
-
-	__forceinline mem_ptr_t<T, lvl - 1, AT>& operator [](uint index)
-	{
-		return (mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr + sizeof(AT) * index];
-	}
-
-	__forceinline const mem_ptr_t<T, lvl - 1, AT>& operator [](uint index) const
-	{
-		return (const mem_ptr_t<T, lvl - 1, AT>&)Memory[this->m_addr + sizeof(AT) * index];
-	}
-
-	bool IsGood() const
-	{
-		return (*this)->IsGood() && mem_base_t<T, AT>::IsGood();
-	}
-
-	__forceinline bool IsGoodAddr() const
-	{
-		return mem_base_t<T, AT>::IsGood();
-	}
-};
-
-template<typename T, typename AT>
-class mem_ptr_t<T, 1, AT> : public mem_base_t<T, AT>
-{
-public:
-	mem_ptr_t(AT addr) : mem_base_t<T, AT>(addr)
-	{
-	}
-
-	template<typename NT> operator mem_ptr_t<NT, 1, AT>&() { return (mem_ptr_t<NT, 1, AT>&)*this; }
-	template<typename NT> operator const mem_ptr_t<NT, 1, AT>&() const { return (const mem_ptr_t<NT, 1, AT>&)*this; }
-
-	__forceinline T* operator -> ()
-	{
-		return (T*)&Memory[this->m_addr];
-	}
-
-	__forceinline const T* operator -> () const
-	{
-		return (const T*)&Memory[this->m_addr];
-	}
-
-	mem_ptr_t operator++ (int)
-	{
-		mem_ptr_t ret(this->m_addr);
-		this->m_addr += sizeof(T);
-		return ret;
-	}
-
-	mem_ptr_t& operator++ ()
-	{
-		this->m_addr += sizeof(T);
-		return *this;
-	}
-
-	mem_ptr_t operator-- (int)
-	{
-		mem_ptr_t ret(this->m_addr);
-		this->m_addr -= sizeof(T);
-		return ret;
-	}
-
-	mem_ptr_t& operator-- ()
-	{
-		this->m_addr -= sizeof(T);
-		return *this;
-	}
-
-	mem_ptr_t& operator += (uint count)
-	{
-		this->m_addr += count * sizeof(T);
-		return *this;
-	}
-
-	mem_ptr_t& operator -= (uint count)
-	{
-		this->m_addr -= count * sizeof(T);
-		return *this;
-	}
-
-	mem_ptr_t operator + (uint count) const
-	{
-		return this->m_addr + count * sizeof(T);
-	}
-
-	mem_ptr_t operator - (uint count) const
-	{
-		return this->m_addr - count * sizeof(T);
-	}
-
-	__forceinline T& operator *()
-	{
-		return (T&)Memory[this->m_addr];
-	}
-
-	__forceinline const T& operator *() const
-	{
-		return (T&)Memory[this->m_addr];
-	}
-
-	__forceinline T& operator [](uint index)
-	{
-		return (T&)Memory[this->m_addr + sizeof(T) * index];
-	}
-
-	__forceinline const T& operator [](uint index) const
-	{
-		return (const T&)Memory[this->m_addr + sizeof(T) * index];
-	}
-};
-
-template<typename AT>
-class mem_ptr_t<void, 1, AT> : public mem_base_t<u8, AT>
-{
-public:
-	mem_ptr_t(AT addr) : mem_base_t<u8, AT>(addr)
-	{
-	}
-
-	template<typename NT> operator mem_ptr_t<NT, 1, AT>&() { return (mem_ptr_t<NT, 1, AT>&)*this; }
-	template<typename NT> operator const mem_ptr_t<NT, 1, AT>&() const { return (const mem_ptr_t<NT, 1, AT>&)*this; }
-};
-
-template<typename T, int lvl = 1, typename AT = u32>
-class mem_beptr_t : public mem_ptr_t<T, lvl, be_t<AT>> {};
-
-template<typename T, typename AT = u32> class mem_t : public mem_base_t<T, AT>
-{
-public:
-	mem_t(AT addr) : mem_base_t<T, AT>(addr)
-	{
-	}
-
-	mem_t& operator = (T right)
-	{
-		(be_t<T>&)Memory[this->m_addr] = right;
-
-		return *this;
-	}
-
-	__forceinline T GetValue()
-	{
-		return (be_t<T>&)Memory[this->m_addr];
-	}
-
-	operator const T() const
-	{
-		return (be_t<T>&)Memory[this->m_addr];
-	}
-
-	mem_t& operator += (T right) { return *this = (*this) + right; }
-	mem_t& operator -= (T right) { return *this = (*this) - right; }
-	mem_t& operator *= (T right) { return *this = (*this) * right; }
-	mem_t& operator /= (T right) { return *this = (*this) / right; }
-	mem_t& operator %= (T right) { return *this = (*this) % right; }
-	mem_t& operator &= (T right) { return *this = (*this) & right; }
-	mem_t& operator |= (T right) { return *this = (*this) | right; }
-	mem_t& operator ^= (T right) { return *this = (*this) ^ right; }
-	mem_t& operator <<= (T right) { return *this = (*this) << right; }
-	mem_t& operator >>= (T right) { return *this = (*this) >> right; }
-};
-
-template<typename T, typename AT = u32> class mem_list_ptr_t : public mem_base_t<T, AT>
-{
-public:
-	mem_list_ptr_t(u32 addr) : mem_base_t<T>(addr)
-	{
-	}
-
-	void operator = (T right)
-	{
-		(be_t<T>&)Memory[this->m_addr] = right;
-	}
-
-	u32 operator += (T right)
-	{
-		*this = right;
-		this->m_addr += sizeof(T);
-		return this->m_addr;
-	}
-	
-	u32 AppendRawBytes(const u8 *bytes, size_t count)
-	{
-		memmove(Memory + this->m_addr, bytes, count);
-		this->m_addr += count;
-		return this->m_addr;
-	}
-
-	u32 Skip(const u32 offset) { return this->m_addr += offset; }
-
-	operator be_t<T>*()			{ return GetPtr(); }
-	operator void*()			{ return GetPtr(); }
-	operator be_t<T>*()	const	{ return GetPtr(); }
-	operator void*()	const	{ return GetPtr(); }
-
-	const char* GetString() const
-	{
-		return (const char*)&Memory[this->m_addr];
-	}
-
-	be_t<T>* GetPtr()
-	{
-		return (be_t<T>*)&Memory[this->m_addr];
-	}
-
-	const be_t<T>* GetPtr() const
-	{
-		return (const be_t<T>*)&Memory[this->m_addr];
-	}
-};
-
-template<typename T>
-struct _func_arg
-{
-	__forceinline static u64 get_value(const T& arg)
-	{
-		return arg;
-	}
-};
-
-template<typename T>
-struct _func_arg<mem_base_t<T, u32>>
-{
-	__forceinline static u64 get_value(const mem_base_t<T, u32> arg)
-	{
-		return arg.GetAddr();
-	}
-};
-
-template<typename T, int lvl> struct _func_arg<mem_ptr_t<T, lvl, u32>> : public _func_arg<mem_base_t<T, u32>> {};
-template<int lvl> struct _func_arg<mem_ptr_t<void, lvl, u32>> : public _func_arg<mem_base_t<u8, u32>>{};
-template<typename T> struct _func_arg<mem_list_ptr_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
-template<typename T> struct _func_arg<mem_t<T, u32>> : public _func_arg<mem_base_t<T, u32>> {};
-
-template<typename T>
-struct _func_arg<be_t<T>>
-{
-	__forceinline static u64 get_value(const be_t<T>& arg)
-	{
-		return arg.ToLE();
-	}
-};
-
-template<typename T, typename AT = u32> class mem_func_ptr_t;
-template<typename T, typename AT = u32> class mem_func_beptr_t : public mem_func_ptr_t<T, be_t<AT>> {};
-
-template<typename RT, typename AT>
-class mem_func_ptr_t<RT (*)(), AT> : public mem_base_t<u64, AT>
-{
-	__forceinline RT call_func(bool is_async) const
-	{
-		Callback cb;
-		cb.SetAddr(this->m_addr);
-		return (RT)cb.Branch(!is_async);
-	}
-
-public:
-	__forceinline RT operator()() const
-	{
-		return call_func(false);
-	}
-
-	__forceinline void async() const
-	{
-		call_func(true);
-	}
-};
-
-template<typename AT, typename RT, typename ...T>
-class mem_func_ptr_t<RT(*)(T...), AT> : public mem_base_t<u64, AT>
-{
-	__forceinline RT call_func(bool is_async, T... args) const
-	{
-		Callback cb;
-		cb.SetAddr(this->m_addr);
-		cb.Handle(_func_arg<T>::get_value(args)...);
-		return (RT)cb.Branch(!is_async);
-	}
-
-public:
-	__forceinline RT operator()(T... args) const
-	{
-		return call_func(false, args...);
-	}
-
-	__forceinline void async(T... args) const
-	{
-		call_func(true, args...);
-	}
-};
-
-template<typename T>
-class MemoryAllocator
-{
-	u32 m_addr;
-	u32 m_size;
-	T* m_ptr;
-
-public:
-	MemoryAllocator(u32 size = sizeof(T), u32 align = 1)
-		: m_size(size)
-		, m_addr(Memory.Alloc(size, align))
-		, m_ptr((T*)&Memory[m_addr])
-	{
-	}
-
-	~MemoryAllocator()
-	{
-		Memory.Free(m_addr);
-	}
-
-	T* operator -> ()
-	{
-		return m_ptr;
-	}
-
-	T* GetPtr()
-	{
-		return m_ptr;
-	}
-
-	const T* GetPtr() const
-	{
-		return m_ptr;
-	}
-
-	const T* operator -> () const
-	{
-		return m_ptr;
-	}
-
-	u32 GetAddr() const
-	{
-		return m_addr;
-	}
-
-	u32 GetSize() const
-	{
-		return m_size;
-	}
-
-	bool IsGood() const
-	{
-		return Memory.IsGoodAddr(m_addr, sizeof(T));
-	}
-
-	template<typename T1>
-	operator const T1() const
-	{
-		return T1(*m_ptr);
-	}
-
-	template<typename T1>
-	operator T1()
-	{
-		return T1(*m_ptr);
-	}
-
-	operator const T&() const
-	{
-		return *m_ptr;
-	}
-
-	operator T&()
-	{
-		return *m_ptr;
-	}
-
-	operator const T*() const
-	{
-		return m_ptr;
-	}
-
-	operator T*()
-	{
-		return m_ptr;
-	}
-
-	T operator [](int index)
-	{
-		return *(m_ptr + index);
-	}
-
-	template<typename T1>
-	operator const mem_t<T1>() const
-	{
-		return GetAddr();
-	}
-
-	operator const mem_ptr_t<T>() const
-	{
-		return GetAddr();
-	}
-
-	template<typename NT>
-	NT* To(uint offset = 0)
-	{
-		return (NT*)(m_ptr + offset);
-	}
-};
-
-typedef mem_t<u8, u32> mem8_t;
-typedef mem_t<u16, u32> mem16_t;
-typedef mem_t<u32, u32> mem32_t;
-typedef mem_t<u64, u32> mem64_t;
-
-/*
-typedef mem_ptr_t<be_t<u8>> mem8_ptr_t;
-typedef mem_ptr_t<be_t<u16>> mem16_ptr_t;
-typedef mem_ptr_t<be_t<u32>> mem32_ptr_t;
-typedef mem_ptr_t<be_t<u64>> mem64_ptr_t;
-
-typedef mem_list_ptr_t<u8> mem8_lptr_t;
-typedef mem_list_ptr_t<u16> mem16_lptr_t;
-typedef mem_list_ptr_t<u32> mem32_lptr_t;
-typedef mem_list_ptr_t<u64> mem64_lptr_t;
-*/
-
-typedef mem_list_ptr_t<u8, u32> mem8_ptr_t;
-typedef mem_list_ptr_t<u16, u32> mem16_ptr_t;
-typedef mem_list_ptr_t<u32, u32> mem32_ptr_t;
-typedef mem_list_ptr_t<u64, u32> mem64_ptr_t;
+#include "vm.h"
 

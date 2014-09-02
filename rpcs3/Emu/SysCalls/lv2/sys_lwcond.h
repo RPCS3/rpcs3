@@ -27,9 +27,9 @@ struct Lwcond
 };
 
 // SysCalls
-s32 sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr);
-s32 sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id);
-s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout);
+s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr);
+s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond);
+s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond);
+s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond);
+s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id);
+s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout);

@@ -145,10 +145,10 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 			}
 
 			TROPUSREntry4 entry4 = { be_t<u32>::MakeFromBE(se32(4)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry4) - 0x10)),
-				be_t<u32>::MakeFromLE(m_table4.size()), be_t<u32>::MakeFromBE(se32(0)), be_t<u32>::MakeFromLE(trophy_id),
+				be_t<u32>::MakeFromLE((u32)m_table4.size()), be_t<u32>::MakeFromBE(se32(0)), be_t<u32>::MakeFromLE(trophy_id),
 				be_t<u32>::MakeFromLE(trophy_grade), be_t<u32>::MakeFromBE(se32(0xFFFFFFFF)) };
 			TROPUSREntry6 entry6 = { be_t<u32>::MakeFromBE(se32(6)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry6) - 0x10)),
-				be_t<u32>::MakeFromLE(m_table6.size()), be_t<u32>::MakeFromBE(0), be_t<u32>::MakeFromLE(trophy_id) };
+				be_t<u32>::MakeFromLE((u32)m_table6.size()), be_t<u32>::MakeFromBE(0), be_t<u32>::MakeFromLE(trophy_id) };
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -157,10 +157,10 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
 	TROPUSRTableHeader table4header = { be_t<u32>::MakeFromBE(se32(4)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry4)-0x10)),
-		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE(m_table4.size()), be_t<u64>::MakeFromLE(offset) };
+		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE((u32)m_table4.size()), be_t<u64>::MakeFromLE(offset) };
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
 	TROPUSRTableHeader table6header = { be_t<u32>::MakeFromBE(se32(6)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry6)-0x10)),
-		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE(m_table6.size()), be_t<u64>::MakeFromLE(offset) };
+		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE((u32)m_table6.size()), be_t<u64>::MakeFromLE(offset) };
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();
@@ -169,7 +169,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 	m_header.magic = 0x818F54AD;
 	m_header.unk1 = 0x00010000;
-	m_header.tables_count = m_tableHeaders.size();
+	m_header.tables_count = (u32)m_tableHeaders.size();
 	m_header.unk2 = 0;
 
 	Save(filepath);
@@ -178,7 +178,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 u32 TROPUSRLoader::GetTrophiesCount()
 {
-	return m_table6.size();
+	return (u32)m_table6.size();
 }
 
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
@@ -189,9 +189,9 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
 }
 
-u32 TROPUSRLoader::GetTrophyTimestamp(u32 id)
+u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 {
-	if (id >=  m_table6.size())
+	if (id >= m_table6.size())
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 

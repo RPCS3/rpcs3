@@ -48,9 +48,9 @@ s32 sys_ppu_thread_yield()
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
+s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<be_t<u64>> vptr)
 {
-	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%lld, vptr_addr=0x%x)", thread_id, vptr.GetAddr());
+	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%lld, vptr_addr=0x%x)", thread_id, vptr.addr());
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
@@ -65,7 +65,7 @@ s32 sys_ppu_thread_join(u64 thread_id, mem64_t vptr)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
-	vptr = thr->GetExitStatus();
+	*vptr = thr->GetExitStatus();
 	return CELL_OK;
 }
 
@@ -108,7 +108,7 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
-	Memory.Write32(prio_addr, thr->GetPrio());
+	Memory.Write32(prio_addr, (s32)thr->GetPrio());
 
 	return CELL_OK;
 }
@@ -119,8 +119,8 @@ s32 sys_ppu_thread_get_stack_information(u32 info_addr)
 
 	declCPU();
 
-	Memory.Write32(info_addr,   CPU.GetStackAddr());
-	Memory.Write32(info_addr+4, CPU.GetStackSize());
+	Memory.Write32(info_addr, (u32)CPU.GetStackAddr());
+	Memory.Write32(info_addr + 4, CPU.GetStackSize());
 
 	return CELL_OK;
 }
@@ -150,13 +150,13 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, u32 threadname_addr)
+s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
 	std::string threadname = "";
 	if (threadname_addr) threadname = Memory.ReadString(threadname_addr);
 	
 	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-		thread_id.GetAddr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
+		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
 
 	bool is_joinable = false;
 	bool is_interrupt = false;
@@ -179,7 +179,7 @@ s32 sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, s32 prio, u32 s
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	thread_id = new_thread.GetId();
+	*thread_id = new_thread.GetId();
 	new_thread.SetEntry(entry);
 	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
@@ -200,9 +200,9 @@ s32 sys_ppu_thread_create(mem64_t thread_id, u32 entry, u64 arg, s32 prio, u32 s
 	return CELL_OK;
 }
 
-void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
+void sys_ppu_thread_once(vm::ptr<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 {
-	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl.GetAddr(), entry);
+	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl.addr(), entry);
 
 	be_t<u32> old = be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_ONCE_INIT));
 	if (once_ctrl->compare_exchange_weak(old, be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_DONE_INIT))))
@@ -211,11 +211,11 @@ void sys_ppu_thread_once(mem_ptr_t<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 	}
 }
 
-s32 sys_ppu_thread_get_id(mem64_t thread_id)
+s32 sys_ppu_thread_get_id(vm::ptr<be_t<u64>> thread_id)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_get_id(thread_id_addr=0x%x)", thread_id.GetAddr());
+	sys_ppu_thread.Log("sys_ppu_thread_get_id(thread_id_addr=0x%x)", thread_id.addr());
 
-	thread_id = GetCurrentPPUThread().GetId();
+	*thread_id = GetCurrentPPUThread().GetId();
 	return CELL_OK;
 }
 

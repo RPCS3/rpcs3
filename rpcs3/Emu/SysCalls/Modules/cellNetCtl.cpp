@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/SysCalls/Modules.h"
 #include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
 #include "cellNetCtl.h"
 
@@ -21,18 +21,18 @@ int cellNetCtlTerm()
 	return CELL_OK;
 }
 
-int cellNetCtlGetState(mem32_t state)
+int cellNetCtlGetState(vm::ptr<be_t<u32>> state)
 {
-	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.GetAddr());
+	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
-	state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
+	*state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler(mem_func_ptr_t<cellNetCtlHandler> handler, mem32_t arg, s32 hid)
+int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<be_t<u32>> arg, s32 hid)
 {
-	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.GetAddr(), arg.GetAddr(), hid);
+	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=%x)", handler.addr(), arg.addr(), hid);
 
 	return CELL_OK;
 }
@@ -44,20 +44,19 @@ int cellNetCtlDelHandler(s32 hid)
 	return CELL_OK;
 }
 
-int cellNetCtlGetInfo(s32 code, mem_ptr_t<CellNetCtlInfo> info)
+int cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl->Todo("cellNetCtlGetInfo(code=%x, info_addr=0x%x)", code, info.GetAddr());
+	cellNetCtl->Todo("cellNetCtlGetInfo(code=%x, info_addr=0x%x)", code, info.addr());
 
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogLoadAsync(mem_ptr_t<CellNetCtlNetStartDialogParam> param)
+int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl->Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.GetAddr());
+	cellNetCtl->Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
 
 	// TODO: Actually sign into PSN
 	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
-
 	return CELL_OK;
 }
 
@@ -68,18 +67,17 @@ int cellNetCtlNetStartDialogAbortAsync()
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogUnloadAsync(mem_ptr_t<CellNetCtlNetStartDialogResult> result)
+int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
-	cellNetCtl->Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.GetAddr());
+	cellNetCtl->Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
 
 	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
-
 	return CELL_OK;
 }
 
-int cellNetCtlGetNatInfo(mem_ptr_t<CellNetCtlNatInfo> natInfo)
+int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
-	cellNetCtl->Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.GetAddr());
+	cellNetCtl->Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.addr());
 
 	if (natInfo->size == 0)
 	{

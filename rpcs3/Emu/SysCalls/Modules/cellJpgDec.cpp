@@ -28,10 +28,10 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> src, mem_ptr_t<CellJpgDecOpnInfo> openInfo)
+int cellJpgDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
 {
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle, subHandle.GetAddr(), src.GetAddr(), openInfo.GetAddr());
+		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
 	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
 
@@ -46,21 +46,21 @@ int cellJpgDecOpen(u32 mainHandle, mem32_t subHandle, mem_ptr_t<CellJpgDecSrc> s
 
 	case se32(CELL_JPGDEC_FILE):
 		// Get file descriptor
-		MemoryAllocator<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd.GetAddr(), 0, 0);
+		vm::var<be_t<u32>> fd;
+		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
-		MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
+		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb);
 		if (ret != CELL_OK) return ret;
 		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
 		break;
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
-	subHandle = cellJpgDec->GetNewId(current_subHandle);
+	*subHandle = cellJpgDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
@@ -80,9 +80,9 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo> info)
+int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
 {
-	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.GetAddr());
+	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
 
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
@@ -93,18 +93,18 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer(fileSize);
-	MemoryAllocator<be_t<u64>> pos, nread;
+	vm::var<u8[]> buffer((u32)fileSize);
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + buffer.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.GetSize());
+		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
 		break;
 	}
 
@@ -147,10 +147,10 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellJpgDecInfo
 	return CELL_OK;
 }
 
-int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellJpgDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellJpgDecDataOutInfo> dataOutInfo)
+int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
 {
 	cellJpgDec->Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
-		mainHandle, subHandle, data.GetAddr(), dataCtrlParam.GetAddr(), dataOutInfo.GetAddr());
+		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	CellJpgDecSubHandle* subHandle_data;
@@ -162,18 +162,18 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the JPG file to a buffer
-	MemoryAllocator<unsigned char> jpg(fileSize);
-	MemoryAllocator<u64> pos, nread;
+	vm::var<unsigned char[]> jpg((u32)fileSize);
+	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + jpg.GetAddr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.GetSize());
+		memmove(Memory + jpg.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos.GetAddr());
-		cellFsRead(fd, jpg.GetAddr(), jpg.GetSize(), nread);
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, jpg.addr(), jpg.size(), nread);
 		break;
 	}
 
@@ -181,7 +181,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(jpg.GetPtr(), fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(jpg.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 
@@ -189,7 +189,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	size_t image_size = width * height;
 
 	switch((u32)current_outParam.outputColorSpace)
@@ -206,12 +206,12 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + (data.GetAddr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.GetAddr(), image.get(), image_size);
+			memcpy(Memory + data.addr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -236,15 +236,15 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.GetAddr() + dstOffset), output, linesize);
+				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
 			}
 			free(output);
 		}
 		else
 		{
-			uint* dest = (uint*)new char[image_size];
+			uint* img = (uint*)new char[image_size];
 			uint* source_current = (uint*)&(image.get()[0]);
-			uint* dest_current = dest;
+			uint* dest_current = img;
 			for (uint i = 0; i < image_size / nComponents; i++) 
 			{
 				uint val = *source_current;
@@ -252,9 +252,8 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 				source_current++;
 				dest_current++;
 			}
-			// NOTE: AppendRawBytes has diff side-effect vs Memory.CopyFromReal
-			data.AppendRawBytes((u8*)dest, image_size); 
-			delete[] dest;
+			memcpy(data.get_ptr(), img, image_size); 
+			delete[] img;
 		}
 	}
 	break;
@@ -274,15 +273,15 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_FINISH;
 
 	if(dataCtrlParam->outputBytesPerLine)
-		dataOutInfo->outputLines = image_size / dataCtrlParam->outputBytesPerLine;
+		dataOutInfo->outputLines = (u32)(image_size / dataCtrlParam->outputBytesPerLine);
 
 	return CELL_OK;
 }
 
-int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellJpgDecInParam> inParam, mem_ptr_t<CellJpgDecOutParam> outParam)
+int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
 	cellJpgDec->Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
-		mainHandle, subHandle, inParam.GetAddr(), outParam.GetAddr());
+		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	CellJpgDecSubHandle* subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))

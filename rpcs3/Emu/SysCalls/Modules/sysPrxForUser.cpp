@@ -32,24 +32,24 @@ int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 	return heap_id;
 }
 
-int _sys_heap_malloc(const u32 heap_id, const u32 size)
+u32 _sys_heap_malloc(const u32 heap_id, const u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
 
 	HeapInfo* heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
-	return Memory.Alloc(size, 1);
+	return (u32)Memory.Alloc(size, 1);
 }
 
-int _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
+u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_memalign(heap_id=%d, align=0x%x, size=0x%x)", heap_id, align, size);
 
 	HeapInfo* heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
-	return Memory.Alloc(size, align);
+	return (u32)Memory.Alloc(size, align);
 }
 
 void sys_initialize_tls()
@@ -83,21 +83,21 @@ s64 sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-int sys_spu_elf_get_information(u32 elf_img, mem32_t entry, mem32_t nseg)
+int sys_spu_elf_get_information(u32 elf_img, vm::ptr<be_t<u32>> entry, vm::ptr<be_t<u32>> nseg)
 {
-	sysPrxForUser->Warning("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.GetAddr(), nseg.GetAddr());
+	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.addr(), nseg.addr());
 	return CELL_OK;
 }
 
-int sys_spu_elf_get_segments(u32 elf_img, mem_ptr_t<sys_spu_segment> segments, int nseg)
+int sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, int nseg)
 {
-	sysPrxForUser->Warning("sys_spu_elf_get_segments(elf_img=0x%x, segments_addr=0x%x, nseg=0x%x)", elf_img, segments.GetAddr(), nseg);
+	sysPrxForUser->Todo("sys_spu_elf_get_segments(elf_img=0x%x, segments_addr=0x%x, nseg=0x%x)", elf_img, segments.addr(), nseg);
 	return CELL_OK;
 }
 
-int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
+int sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
-	sysPrxForUser->Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=0x%x)", img.GetAddr(), src, type);
+	sysPrxForUser->Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=0x%x)", img.addr(), src, type);
 
 	vfsStreamMemory f(src);
 	u32 entry;
@@ -111,17 +111,17 @@ int sys_spu_image_import(mem_ptr_t<sys_spu_image> img, u32 src, u32 type)
 	return CELL_OK;
 }
 
-int sys_spu_image_close(mem_ptr_t<sys_spu_image> img)
+int sys_spu_image_close(vm::ptr<sys_spu_image> img)
 {
-	sysPrxForUser->Warning("sys_spu_image_close(img=0x%x)", img.GetAddr());
+	sysPrxForUser->Warning("sys_spu_image_close(img=0x%x)", img.addr());
 	return CELL_OK;
 }
 
-int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
+int sys_raw_spu_load(int id, u32 path_addr, vm::ptr<be_t<u32>> entry)
 {
 	const std::string path = Memory.ReadString(path_addr);
 	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
-		id, path_addr, path.c_str(), entry.GetAddr());
+		id, path_addr, path.c_str(), entry.addr());
 
 	vfsFile f(path);
 	if(!f.IsOpened())
@@ -134,14 +134,14 @@ int sys_raw_spu_load(int id, u32 path_addr, mem32_t entry)
 	l.LoadInfo();
 	l.LoadData(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
-	entry = l.GetEntry();
+	*entry = l.GetEntry();
 
 	return CELL_OK;
 }
 
-int sys_raw_spu_image_load(int id, mem_ptr_t<sys_spu_image> img)
+int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 {
-	sysPrxForUser->Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.GetAddr());
+	sysPrxForUser->Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.addr());
 
 	memcpy(Memory + (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), Memory + (u32)img->segs_addr, 256 * 1024);
 	Memory.Write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
@@ -172,7 +172,7 @@ s32 _sys_memcmp(u32 addr1, u32 addr2, u32 size)
 	return memcmp(Memory + addr1, Memory + addr2, size);
 }
 
-s32 _sys_strlen(u32 addr)
+s64 _sys_strlen(u32 addr)
 {
 	sysPrxForUser->Log("_sys_strlen(addr=0x%x)", addr);
 
@@ -251,7 +251,7 @@ s32 _sys_spu_printf_finalize()
 	return CELL_OK;
 }
 
-s32 _sys_spu_printf_attach_group(u32 arg)
+s64 _sys_spu_printf_attach_group(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_group(arg=0x%x)", arg);
 
@@ -263,7 +263,7 @@ s32 _sys_spu_printf_attach_group(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_agcb), Memory.Read32(spu_printf_agcb + 4), arg);
 }
 
-s32 _sys_spu_printf_detach_group(u32 arg)
+s64 _sys_spu_printf_detach_group(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_group(arg=0x%x)", arg);
 
@@ -275,7 +275,7 @@ s32 _sys_spu_printf_detach_group(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dgcb), Memory.Read32(spu_printf_dgcb + 4), arg);
 }
 
-s32 _sys_spu_printf_attach_thread(u32 arg)
+s64 _sys_spu_printf_attach_thread(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(arg=0x%x)", arg);
 
@@ -287,7 +287,7 @@ s32 _sys_spu_printf_attach_thread(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_atcb), Memory.Read32(spu_printf_atcb + 4), arg);
 }
 
-s32 _sys_spu_printf_detach_thread(u32 arg)
+s64 _sys_spu_printf_detach_thread(u32 arg)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(arg=0x%x)", arg);
 

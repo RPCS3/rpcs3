@@ -9,9 +9,9 @@
 
 SysCallBase sys_rwlock("sys_rwlock");
 
-s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr)
+s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
-	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.GetAddr(), attr.GetAddr());
+	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.addr(), attr.addr());
 
 	if (!attr)
 		return CELL_EFAULT;
@@ -31,10 +31,11 @@ s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr
 		return CELL_EINVAL;
 	}
 
-	rw_lock_id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
+	u32 id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
+	*rw_lock_id = id;
 
 	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, rw_lock_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->attr_protocol, id);
 
 	return CELL_OK;
 }
@@ -65,8 +66,8 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	if (rw->rlock_trylock(tid)) return CELL_OK;
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
 		if (Emu.IsStopped())
@@ -128,8 +129,8 @@ s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 
 	if (rw->wlock_trylock(tid, true)) return CELL_OK;
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : 20000;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : 20000;
 	do
 	{
 		if (Emu.IsStopped())

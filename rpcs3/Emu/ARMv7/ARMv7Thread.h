@@ -51,7 +51,7 @@ public:
 		u32 IPSR;
 	} IPSR;
 
-	void write_gpr(u8 n, u32 value)
+	void write_gpr(u32 n, u32 value)
 	{
 		assert(n < 16);
 
@@ -65,7 +65,7 @@ public:
 		}
 	}
 
-	u32 read_gpr(u8 n)
+	u32 read_gpr(u32 n)
 	{
 		assert(n < 16);
 
@@ -74,7 +74,7 @@ public:
 			return GPR[n];
 		}
 		
-		return PC;
+		return (u32)PC;
 	}
 
 public:

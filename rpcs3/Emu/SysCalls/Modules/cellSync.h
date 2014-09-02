@@ -155,22 +155,22 @@ struct CellSyncLFQueue
 
 static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");
 
-s32 syncMutexInitialize(mem_ptr_t<CellSyncMutex> mutex);
+s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex);
 
-s32 syncBarrierInitialize(mem_ptr_t<CellSyncBarrier> barrier, u16 total_count);
+s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count);
 
-s32 syncRwmInitialize(mem_ptr_t<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size);
+s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size);
 
-s32 syncQueueInitialize(mem_ptr_t<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth);
+s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth);
 
-s32 syncLFQueueInitialize(mem_ptr_t<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr);
-s32 syncLFQueueGetPushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
-s32 syncLFQueueGetPushPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
-s32 syncLFQueueCompletePushPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
-s32 syncLFQueueCompletePushPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
-s32 syncLFQueueGetPopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue);
-s32 syncLFQueueGetPopPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
-s32 syncLFQueueCompletePopPointer(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
-s32 syncLFQueueCompletePopPointer2(mem_ptr_t<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
-s32 syncLFQueueAttachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue);
-s32 syncLFQueueDetachLv2EventQueue(mem32_ptr_t spus, u32 num, mem_ptr_t<CellSyncLFQueue> queue);
+s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr);
+s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
+s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
+s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue);
+s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
+s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
+s32 syncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue);
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue);

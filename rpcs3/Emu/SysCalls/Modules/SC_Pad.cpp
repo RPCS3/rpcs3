@@ -359,9 +359,9 @@ int cellPadGetInfo2(u32 info_addr)
 	return CELL_OK;
 }
 
-int cellPadGetCapabilityInfo(u32 port_no, mem32_t info_addr)
+int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<be_t<u32>> info_addr)
 {
-	sys_io->Log("cellPadGetCapabilityInfo[port_no: %d, data_addr: 0x%x]", port_no, info_addr.GetAddr());
+	sys_io->Log("cellPadGetCapabilityInfo[port_no: %d, data_addr: 0x%x]", port_no, info_addr.addr());
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
@@ -374,7 +374,7 @@ int cellPadGetCapabilityInfo(u32 port_no, mem32_t info_addr)
 	//Should return the same as device capability mask, psl1ght has it backwards in pad.h
 	data.info[0] = pads[port_no].m_device_capability;
 
-	Memory.WriteData(info_addr.GetAddr(), data);
+	Memory.WriteData(info_addr.addr(), data);
 
 	return CELL_OK;
 }

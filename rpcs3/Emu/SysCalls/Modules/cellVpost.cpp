@@ -14,9 +14,9 @@ extern "C"
 //Module cellVpost(0x0008, cellVpost_init);
 Module *cellVpost = nullptr;
 
-int cellVpostQueryAttr(const mem_ptr_t<CellVpostCfgParam> cfgParam, mem_ptr_t<CellVpostAttr> attr)
+int cellVpostQueryAttr(const vm::ptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {
-	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.GetAddr(), attr.GetAddr());
+	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.addr(), attr.addr());
 
 	// TODO: check cfgParam and output values
 
@@ -37,23 +37,23 @@ u32 vpostOpen(VpostInstance* data)
 	return id;
 }
 
-int cellVpostOpen(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResource> resource, mem32_t handle)
+int cellVpostOpen(const vm::ptr<CellVpostCfgParam> cfgParam, const vm::ptr<CellVpostResource> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
-		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
+		cfgParam.addr(), resource.addr(), handle.addr());
 
 	// TODO: check values
-	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
 	return CELL_OK;
 }
 
-int cellVpostOpenEx(const mem_ptr_t<CellVpostCfgParam> cfgParam, const mem_ptr_t<CellVpostResourceEx> resource, mem32_t handle)
+int cellVpostOpenEx(const vm::ptr<CellVpostCfgParam> cfgParam, const vm::ptr<CellVpostResourceEx> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
-		cfgParam.GetAddr(), resource.GetAddr(), handle.GetAddr());
+		cfgParam.addr(), resource.addr(), handle.addr());
 
 	// TODO: check values
-	handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
 	return CELL_OK;
 }
 
@@ -71,11 +71,11 @@ int cellVpostClose(u32 handle)
 	return CELL_OK;
 }
 
-int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const mem_ptr_t<CellVpostCtrlParam> ctrlParam,
-				  u32 outPicBuff_addr, mem_ptr_t<CellVpostPictureInfo> picInfo)
+int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const vm::ptr<CellVpostCtrlParam> ctrlParam,
+				  u32 outPicBuff_addr, vm::ptr<CellVpostPictureInfo> picInfo)
 {
 	cellVpost->Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
-		handle, inPicBuff_addr, ctrlParam.GetAddr(), outPicBuff_addr, picInfo.GetAddr());
+		handle, inPicBuff_addr, ctrlParam.addr(), outPicBuff_addr, picInfo.addr());
 
 	VpostInstance* vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))

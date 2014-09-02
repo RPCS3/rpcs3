@@ -287,7 +287,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	{
 		// TODO: allow recovering from a page fault
 		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx (%s))",
-			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall, SysCalls::GetHLEFuncName((u64)GetCurrentCPUThread()->m_last_syscall).c_str());
+			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall, SysCalls::GetHLEFuncName((u32)GetCurrentCPUThread()->m_last_syscall).c_str());
 	}
 	else
 	{

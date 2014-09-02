@@ -167,7 +167,7 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
-typedef mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)> CellVdecCbMsg;
+typedef void(*CellVdecCbMsg)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr);
 
 // Callback Function Information
 struct CellVdecCb

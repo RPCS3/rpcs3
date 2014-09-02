@@ -5,6 +5,7 @@ class func_caller
 {
 public:
 	virtual void operator()() = 0;
+	virtual ~func_caller(){};
 };
 
 namespace detail
@@ -38,7 +39,7 @@ namespace detail
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T&)CPU.FPR[f_count];
+			return (T)CPU.FPR[f_count];
 		}
 	};
 
@@ -73,7 +74,7 @@ namespace detail
 			static_assert(!std::is_pointer<T>::value, "Invalid function result type: pointer");
 			if (std::is_floating_point<T>::value)
 			{
-				(T&)CPU.FPR[1] = value;
+				CPU.FPR[1] = (double)value;
 			}
 			else
 			{

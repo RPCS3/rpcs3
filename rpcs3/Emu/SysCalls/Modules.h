@@ -153,7 +153,7 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	{
 		SFuncOp op;
 		op.mask = ops[i] >> 32;
-		op.crc = ops[i];
+		op.crc = (u32)ops[i];
 		if (op.mask) op.crc &= op.mask;
 		op.mask = re(op.mask);
 		op.crc = re(op.crc);

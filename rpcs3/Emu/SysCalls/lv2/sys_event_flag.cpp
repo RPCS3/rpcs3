@@ -37,10 +37,10 @@ u32 EventFlag::check()
 	return target;
 }
 
-s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr, u64 init)
+s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
-		eflag_id.GetAddr(), attr.GetAddr(), init);
+		eflag_id.addr(), attr.addr(), init);
 
 	switch (attr->protocol.ToBE())
 	{
@@ -63,10 +63,10 @@ s32 sys_event_flag_create(mem32_t eflag_id, mem_ptr_t<sys_event_flag_attr> attr,
 	default: return CELL_EINVAL;
 	}
 
-	eflag_id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
-
+	u32 id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
+	*eflag_id = id;
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, eflag_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
 
 	return CELL_OK;
 }
@@ -88,12 +88,12 @@ s32 sys_event_flag_destroy(u32 eflag_id)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 timeout)
+s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result, u64 timeout)
 {
 	sys_event_flag.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
-		eflag_id, bitptn, mode, result.GetAddr(), timeout);
+		eflag_id, bitptn, mode, result.addr(), timeout);
 
-	if (result.GetAddr()) result = 0;
+	if (result) *result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -142,14 +142,14 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 				ef->flags = 0;
 			}
 
-			if (result.GetAddr()) result = flags;
+			if (result) *result = flags;
 
 			return CELL_OK;
 		}
 	}
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
 
 	while (true)
 	{
@@ -185,7 +185,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 						ef->signal.unlock(tid);
 					}
 
-					if (result.GetAddr()) result = flags;
+					if (result) *result = flags;
 
 					return CELL_OK;
 				}
@@ -220,12 +220,12 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result, u64 
 	}
 }
 
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
+s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result)
 {
 	sys_event_flag.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
-		eflag_id, bitptn, mode, result.GetAddr());
+		eflag_id, bitptn, mode, result.addr());
 
-	if (result.GetAddr()) result = 0;
+	if (result) *result = 0;
 
 	switch (mode & 0xf)
 	{
@@ -261,7 +261,7 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, mem64_t result)
 			ef->flags = 0;
 		}
 
-		if (result.GetAddr()) result = flags;
+		if (result) *result = flags;
 
 		return CELL_OK;
 	}
@@ -307,9 +307,9 @@ s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
+s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num)
 {
-	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.GetAddr());
+	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.addr());
 
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
@@ -337,20 +337,20 @@ s32 sys_event_flag_cancel(u32 eflag_id, mem32_t num)
 		return CELL_OK;
 	}
 
-	if (num.GetAddr()) num = tids.size();
+	if (num) *num = (u32)tids.size();
 
 	return CELL_OK;
 }
 
-s32 sys_event_flag_get(u32 eflag_id, mem64_t flags)
+s32 sys_event_flag_get(u32 eflag_id, vm::ptr<be_t<u64>> flags)
 {
-	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.GetAddr());
+	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.addr());
 
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	SMutexLocker lock(ef->m_mutex);
-	flags = ef->flags;
+	*flags = ef->flags;
 
 	return CELL_OK;
 }

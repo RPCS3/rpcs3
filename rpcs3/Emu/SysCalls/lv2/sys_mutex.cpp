@@ -26,9 +26,9 @@ Mutex::~Mutex()
 	m_queue.m_mutex.unlock();
 }
 
-s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
+s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> attr)
 {
-	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.GetAddr(), attr.GetAddr());
+	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.addr());
 
 	switch (attr->protocol.ToBE())
 	{
@@ -58,11 +58,10 @@ s32 sys_mutex_create(mem32_t mutex_id, mem_ptr_t<sys_mutex_attribute> attr)
 	u32 id = sys_mutex.GetNewId(mutex, TYPE_MUTEX);
 	mutex->m_mutex.lock(tid);
 	mutex->id = id;
-	mutex_id = id;
+	*mutex_id = id;
 	mutex->m_mutex.unlock(tid);
 	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
-		std::string(attr->name, 8).c_str(), (u32) attr->protocol,
-		(is_recursive ? "true" : "false"), mutex_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32) attr->protocol, (is_recursive ? "true" : "false"), id);
 
 	// TODO: unlock mutex when owner thread does exit
 

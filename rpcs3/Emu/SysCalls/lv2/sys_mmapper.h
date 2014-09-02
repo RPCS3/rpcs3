@@ -5,11 +5,11 @@
 
 struct mmapper_info
 {
-	u64 addr;
+	u32 addr;
 	u32 size;
-	u32 flags;
+	u64 flags;
 
-	mmapper_info(u64 _addr, u32 _size, u32 _flags)
+	mmapper_info(u32 _addr, u32 _size, u64 _flags)
 		: addr(_addr)
 		, size(_size)
 		, flags(_flags)
@@ -24,8 +24,8 @@ struct mmapper_info
 // SysCalls
 s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 s32 sys_mmapper_allocate_fixed_address();
-s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id);
-s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem32_t mem_id);
+s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<be_t<u32>> mem_id);
+s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm::ptr<be_t<u32>> mem_id);
 s32 sys_mmapper_change_address_access_right(u32 start_addr, u64 flags);
 s32 sys_mmapper_free_address(u32 start_addr);
 s32 sys_mmapper_free_memory(u32 mem_id);

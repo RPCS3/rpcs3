@@ -341,30 +341,30 @@ void Emulator::Load()
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.AllocAlign(0x1000);
 		thread.InitStack();
-		thread.AddArgv(m_elf_path);
+		thread.AddArgv(m_elf_path); // it doesn't work
 		//thread.AddArgv("-emu");
 
-		m_rsx_callback = Memory.MainMem.AllocAlign(4 * 4) + 4;
+		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
 		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
 
-		mem32_ptr_t callback_data(m_rsx_callback);
-		callback_data += ADDI(11, 0, 0x3ff);
-		callback_data += SC(2);
-		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
+		auto callback_data = vm::ptr<be_t<u32>>::make(m_rsx_callback);
+		callback_data[0] = ADDI(11, 0, 0x3ff);
+		callback_data[1] = SC(2);
+		callback_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_exit = Memory.MainMem.AllocAlign(4 * 4);
+		m_ppu_thr_exit = (u32)Memory.MainMem.AllocAlign(4 * 4);
 
-		mem32_ptr_t ppu_thr_exit_data(m_ppu_thr_exit);
+		auto ppu_thr_exit_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_exit);
 		//ppu_thr_exit_data += ADDI(3, 0, 0); // why it kills return value (GPR[3]) ?
-		ppu_thr_exit_data += ADDI(11, 0, 41);
-		ppu_thr_exit_data += SC(2);
-		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+		ppu_thr_exit_data[0] = ADDI(11, 0, 41);
+		ppu_thr_exit_data[1] = SC(2);
+		ppu_thr_exit_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_stop = Memory.MainMem.AllocAlign(2 * 4);
+		m_ppu_thr_stop = (u32)Memory.MainMem.AllocAlign(2 * 4);
 
-		mem32_ptr_t ppu_thr_stop_data(m_ppu_thr_stop);
-		ppu_thr_stop_data += SC(4);
-		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+		auto ppu_thr_stop_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_stop);
+		ppu_thr_stop_data[0] = SC(4);
+		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 
 		Memory.Write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 	}
@@ -494,8 +494,8 @@ void Emulator::SavePoints(const std::string& path)
 {
 	std::ofstream f(path, std::ios::binary | std::ios::trunc);
 
-	u32 break_count = m_break_points.size();
-	u32 marked_count = m_marked_points.size();
+	u32 break_count = (u32)m_break_points.size();
+	u32 marked_count = (u32)m_marked_points.size();
 
 	f << bpdb_version << break_count << marked_count;
 	
@@ -519,7 +519,7 @@ void Emulator::LoadPoints(const std::string& path)
 	if (!f.is_open())
 		return;
 	f.seekg(0, std::ios::end);
-	int length = f.tellg();
+	int length = (int)f.tellg();
 	f.seekg(0, std::ios::beg);
 	u32 break_count, marked_count;
 	u16 version;

@@ -600,9 +600,9 @@ bool adecCheckType(AudioCodecType type)
 	return true;
 }
 
-int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr)
+int cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 {
-	cellAdec->Warning("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.GetAddr(), attr.GetAddr());
+	cellAdec->Warning("cellAdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.addr(), attr.addr());
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
@@ -614,26 +614,26 @@ int cellAdecQueryAttr(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecAttr> attr
 	return CELL_OK;
 }
 
-int cellAdecOpen(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResource> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
+int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellAdec->Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+		type.addr(), res.addr(), cb.addr(), handle.addr());
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
 
-int cellAdecOpenEx(mem_ptr_t<CellAdecType> type, mem_ptr_t<CellAdecResourceEx> res, mem_ptr_t<CellAdecCb> cb, mem32_t handle)
+int cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellAdec->Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
-		type.GetAddr(), res.GetAddr(), cb.GetAddr(), handle.GetAddr());
+		type.addr(), res.addr(), cb.addr(), handle.addr());
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -703,9 +703,9 @@ int cellAdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
+int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
-	cellAdec->Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.GetAddr());
+	cellAdec->Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.addr());
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -714,7 +714,7 @@ int cellAdecDecodeAu(u32 handle, mem_ptr_t<CellAdecAuInfo> auInfo)
 	}
 
 	AdecTask task(adecDecodeAu);
-	task.au.auInfo_addr = auInfo.GetAddr();
+	task.au.auInfo_addr = auInfo.addr();
 	task.au.addr = auInfo->startAddr;
 	task.au.size = auInfo->size;
 	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
@@ -767,9 +767,9 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	return CELL_OK;
 }
 
-int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
+int cellAdecGetPcmItem(u32 handle, vm::ptr<be_t<u32>> pcmItem_ptr)
 {
-	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.GetAddr());
+	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.addr());
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -787,7 +787,7 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 
 	AVFrame* frame = af.data;
 
-	mem_ptr_t<CellAdecPcmItem> pcm(adec->memAddr + adec->memBias);
+	auto pcm = vm::ptr<CellAdecPcmItem>::make(adec->memAddr + adec->memBias);
 
 	adec->memBias += 512;
 	if (adec->memBias + 512 > adec->memSize)
@@ -796,22 +796,22 @@ int cellAdecGetPcmItem(u32 handle, mem32_t pcmItem_ptr)
 	}
 
 	pcm->pcmHandle = 0; // ???
-	pcm->pcmAttr.bsiInfo_addr = pcm.GetAddr() + sizeof(CellAdecPcmItem);
+	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + sizeof(CellAdecPcmItem);
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = af.pts;
+	pcm->auInfo.pts.lower = (u32)af.pts;
 	pcm->auInfo.pts.upper = af.pts >> 32;
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;
 
-	mem_ptr_t<CellAdecAtracXInfo> atx(pcm.GetAddr() + sizeof(CellAdecPcmItem));
+	auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + sizeof(CellAdecPcmItem));
 	atx->samplingFreq = frame->sample_rate; // ???
 	atx->nbytes = frame->nb_samples * frame->channels * sizeof(float); // ???
 	atx->channelConfigIndex = CELL_ADEC_CH_STEREO; // ???
 
-	pcmItem_ptr = pcm.GetAddr();
+	*pcmItem_ptr = pcm.addr();
 
 	return CELL_OK;
 }

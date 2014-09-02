@@ -26,13 +26,13 @@ s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(AlignAddr(size, alignment) & 0xfffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(AlignAddr(size, alignment) & 0xffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 	}
 
@@ -53,9 +53,9 @@ s32 sys_mmapper_allocate_fixed_address()
 	return CELL_OK;
 }
 
-s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
+s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<be_t<u32>> mem_id)
 {
-	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.GetAddr());
+	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.addr());
 
 	// Check page granularity.
 	u32 addr;
@@ -64,13 +64,13 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:
@@ -81,15 +81,15 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, mem32_t mem_id)
 		return CELL_ENOMEM;
 
 	// Generate a new mem ID.
-	mem_id = sys_mmapper.GetNewId(new mmapper_info(addr, size, flags));
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(addr, size, flags));
 
 	return CELL_OK;
 }
 
-s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem32_t mem_id)
+s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm::ptr<be_t<u32>> mem_id)
 {
 	sys_mmapper.Warning("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=%d, flags=0x%llx, mem_id_addr=0x%x)", 
-		size, cid, flags, mem_id.GetAddr());
+		size, cid, flags, mem_id.addr());
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;
@@ -102,13 +102,13 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x100000);
+		ct->addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x10000);
+		ct->addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:
@@ -120,7 +120,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, mem
 	ct->size = size;
 
 	// Generate a new mem ID.
-	mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
 
 	return CELL_OK;
 }

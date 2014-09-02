@@ -66,7 +66,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	u32 blockSize      = re32(*(u32*)&buffer[0x84]);
 	u64 filesizeOutput = re64(*(u64*)&buffer[0x88]);
 	u64 filesizeInput  = packed_stream->GetSize();
-	u32 blockCount     = (filesizeOutput + blockSize-1) / blockSize;
+	u32 blockCount     = (u32)((filesizeOutput + blockSize - 1) / blockSize);
 
 	// SDATA file is compressed
 	if (flags & 0x1)
@@ -99,7 +99,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 				packed_stream->Seek(packed_stream->Tell() + t1);
 
 			if (!(blockCount-i-1))
-				blockSize = filesizeOutput-i*blockSize;
+				blockSize = (u32)(filesizeOutput - i * blockSize);
 
 			packed_stream->Read(buffer+256, blockSize);
 			unpacked_stream->Write(buffer+256, blockSize);
@@ -110,11 +110,11 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 }
 	
 
-int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
+int cellFsSdataOpen(u32 path_addr, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
 {
 	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
-		path.c_str(), flags, fd.GetAddr(), arg.GetAddr(), size);
+		path.c_str(), flags, fd.addr(), arg.addr(), size);
 
 	/*if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
@@ -136,9 +136,10 @@ int cellFsSdataOpen(u32 path_addr, int flags, mem32_t fd, mem32_t arg, u64 size)
 	return cellFsOpen(path_addr, flags, fd, arg, size);
 }
 
-int cellFsSdataOpenByFd(int mself_fd, int flags, mem32_t sdata_fd, u64 offset, mem32_t arg, u64 size)
+int cellFsSdataOpenByFd(int mself_fd, int flags, vm::ptr<be_t<u32>> sdata_fd, u64 offset, vm::ptr<be_t<u32>> arg, u64 size)
 {
-	sys_fs->Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=0x%x, sdata_fd_addr=0x%x, offset=0x%llx, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()", mself_fd, flags, sdata_fd.GetAddr(), offset, arg.GetAddr(), size);
+	sys_fs->Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=0x%x, sdata_fd_addr=0x%x, offset=0x%llx, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
+		mself_fd, flags, sdata_fd.addr(), offset, arg.addr(), size);
 
 	// TODO:
 
@@ -149,7 +150,7 @@ std::atomic<u32> g_FsAioReadID( 0 );
 std::atomic<u32> g_FsAioReadCur( 0 );
 bool aio_init = false;
 
-void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	while (g_FsAioReadCur != xid)
 	{
@@ -198,9 +199,9 @@ void fsAioRead(u32 fd, mem_ptr_t<CellFsAio> aio, int xid, mem_func_ptr_t<void (*
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void (*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
 
 	if (!aio_init)
 	{
@@ -217,7 +218,7 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-	aio_id = xid;
+	*aio_id = xid;
 
 	{
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
@@ -227,45 +228,43 @@ int cellFsAioRead(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void 
 	return CELL_OK;
 }
 
-int cellFsAioWrite(mem_ptr_t<CellFsAio> aio, mem32_t aio_id, mem_func_ptr_t<void(*)(mem_ptr_t<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.GetAddr(), aio_id.GetAddr(), func.GetAddr());
+	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
 
 	// TODO:
 
 	return CELL_OK;
 }
 
-int cellFsAioInit(mem8_ptr_t mount_point)
+int cellFsAioInit(vm::ptr<const char> mount_point)
 {
-	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
 	aio_init = true;
 	return CELL_OK;
 }
 
-int cellFsAioFinish(mem8_ptr_t mount_point)
+int cellFsAioFinish(vm::ptr<const char> mount_point)
 {
-	std::string mp = Memory.ReadString(mount_point.GetAddr());
-	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.GetAddr(), mp.c_str());
+	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
 	aio_init = false;
 	return CELL_OK;
 }
 
-int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, mem64_t nread)
+int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
-		fd, offset, buf_addr, buffer_size, nread.GetAddr());
+		fd, offset, buf_addr, buffer_size, nread.addr());
 
 	int ret;
-	MemoryAllocator<be_t<u64>> oldPos, newPos;
-	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos.GetAddr());       // Save the current position
+	vm::var<be_t<u64>> oldPos, newPos;
+	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos);       // Save the current position
 	if (ret) return ret;
-	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos.GetAddr());  // Move to the specified offset
+	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos);  // Move to the specified offset
 	if (ret) return ret;
-	ret = cellFsRead(fd, buf_addr, buffer_size, nread.GetAddr());    // Read the file
+	ret = cellFsRead(fd, buf_addr, buffer_size, nread);    // Read the file
 	if (ret) return ret;
-	ret = cellFsLseek(fd, Memory.Read64(oldPos.GetAddr()), CELL_SEEK_SET, newPos.GetAddr());  // Return to the old position
+	ret = cellFsLseek(fd, oldPos.value(), CELL_SEEK_SET, newPos);  // Return to the old position
 	if (ret) return ret;
 
 	return CELL_OK;

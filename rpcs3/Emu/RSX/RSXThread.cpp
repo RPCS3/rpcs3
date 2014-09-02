@@ -6,7 +6,7 @@
 #include "RSXThread.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.GetAddr()) : args[x].ToLE())
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())
 
 u32 methodRegisters[0xffff];
 
@@ -45,8 +45,8 @@ u32 GetAddress(u32 offset, u8 location)
 {
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
+	case CELL_GCM_LOCATION_LOCAL: return (u32)Memory.RSXFBMem.GetStartAddr() + offset;
+	case CELL_GCM_LOCATION_MAIN: return (u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
 	}
 
 	LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x)", location);
@@ -142,7 +142,7 @@ u32 RSXVertexData::GetTypeSize()
 
 u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
-	mem32_ptr_t args(args_addr);
+	auto args = vm::ptr<be_t<u32>>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
@@ -209,7 +209,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
-	mem32_ptr_t args(args_addr);
+	auto args = vm::ptr<be_t<u32>>::make(args_addr);
 
 #if	CMD_DEBUG
 		std::string debug = GetMethodName(cmd);
@@ -881,7 +881,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				{
 					case 0:
 					{
-						int pos = m_indexed_array.m_data.size();
+						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
 						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
 						*(u32*)&m_indexed_array.m_data[pos] = index;
@@ -891,7 +891,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 					case 1:
 					{
-						int pos = m_indexed_array.m_data.size();
+						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
 						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
 						//LOG_WARNING(RSX, "index 2: %d", index);
@@ -1568,7 +1568,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
 	{
-		for (size_t i = 0; i < 32; i++)
+		for (u32 i = 0; i < 32; i++)
 		{
 			m_polygon_stipple_pattern[i] = ARGS(i);
 		}
@@ -2234,14 +2234,14 @@ void RSXThread::Task()
 			continue;
 		}
 
-		mem32_ptr_t args((u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + get + 4));
+		auto args = vm::ptr<be_t<u32>>::make((u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + get + 4));
 
 		for(u32 i=0; i<count; i++)
 		{
 			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
 		}
 
-		DoCmd(cmd, cmd & 0x3ffff, args.GetAddr(), count);
+		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
 
 		m_ctrl->get = get + (count + 1) * 4;
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);

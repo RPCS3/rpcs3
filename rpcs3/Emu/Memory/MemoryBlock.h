@@ -78,7 +78,7 @@ class MemoryBlock
 protected:
 	u8* mem;
 	u64 range_start;
-	u64 range_size;
+	u32 range_size;
 
 public:
 	MemoryBlock();
@@ -102,24 +102,6 @@ public:
 	virtual bool IsMyAddress(const u64 addr);
 	virtual bool IsLocked(const u64 addr) { return false; }
 
-	template <typename T>
-	__forceinline const T FastRead(const u64 addr) const;
-
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
-
-	template <typename T>
-	__forceinline void FastWrite(const u64 addr, const T value);
-
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
-
 	const u64 GetStartAddr() const { return range_start; }
 	const u64 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
 	virtual const u32 GetSize() const { return range_size; }
@@ -137,18 +119,7 @@ public:
 
 class MemoryBlockLE : public MemoryBlock
 {
-public:
-	virtual bool Read8(const u64 addr, u8* value) override;
-	virtual bool Read16(const u64 addr, u16* value) override;
-	virtual bool Read32(const u64 addr, u32* value) override;
-	virtual bool Read64(const u64 addr, u64* value) override;
-	virtual bool Read128(const u64 addr, u128* value) override;
 
-	virtual bool Write8(const u64 addr, const u8 value) override;
-	virtual bool Write16(const u64 addr, const u16 value) override;
-	virtual bool Write32(const u64 addr, const u32 value) override;
-	virtual bool Write64(const u64 addr, const u64 value) override;
-	virtual bool Write128(const u64 addr, const u128 value) override;
 };
 
 class MemoryMirror : public MemoryBlock
@@ -244,17 +215,17 @@ public:
 	// Return the total amount of reserved memory
 	virtual u32 GetReservedAmount();
 
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
+	bool Read8(const u64 addr, u8* value);
+	bool Read16(const u64 addr, u16* value);
+	bool Read32(const u64 addr, u32* value);
+	bool Read64(const u64 addr, u64* value);
+	bool Read128(const u64 addr, u128* value);
 
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
+	bool Write8(const u64 addr, const u8 value);
+	bool Write16(const u64 addr, const u16 value);
+	bool Write32(const u64 addr, const u32 value);
+	bool Write64(const u64 addr, const u64 value);
+	bool Write128(const u64 addr, const u128 value);
 
 	// try to get the real address given a mapped address
 	// return true for success

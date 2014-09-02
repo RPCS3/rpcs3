@@ -90,7 +90,7 @@ std::string GLFragmentDecompilerThread::AddConst()
 		return name;
 	}
 
-	mem32_ptr_t data(m_addr + m_size + m_offset);
+	auto data = vm::ptr<be_t<u32>>::make(m_addr + m_size + m_offset);
 
 	m_offset += 4 * 4;
 	u32 x = GetData(data[0]);
@@ -279,7 +279,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 
 void GLFragmentDecompilerThread::Task()
 {
-	mem32_ptr_t data(m_addr);
+	auto data = vm::ptr<be_t<u32>>::make(m_addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -314,7 +314,7 @@ void GLFragmentDecompilerThread::Task()
 		src1.HEX = GetData(data[2]);
 		src2.HEX = GetData(data[3]);
 
-		m_offset = 4 * 4;
+		m_offset = 4 * sizeof(u32);
 
 		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
 
@@ -439,7 +439,8 @@ void GLFragmentDecompilerThread::Task()
 
 		if(dst.end) break;
 
-		data.Skip(m_offset);
+		assert(m_offset % sizeof(u32) == 0);
+		data += m_offset / sizeof(u32);
 	}
 
 	// flush m_code_level

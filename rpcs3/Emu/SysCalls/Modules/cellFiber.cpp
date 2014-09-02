@@ -81,12 +81,12 @@ int cellFiberPpuJoinFiber()
 	return CELL_OK;
 }
 
-u32 cellFiberPpuSelf()
+vm::ptr<void> cellFiberPpuSelf()
 {
 	cellFiber->Log("cellFiberPpuSelf() -> nullptr"); // TODO
 
 	// returns fiber structure (zero for simple PPU thread)
-	return 0;
+	return vm::ptr<void>::make(0);
 }
 
 int cellFiberPpuSendSignal()

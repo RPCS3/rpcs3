@@ -2,16 +2,17 @@
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Memory.h"
+#include "Emu/Cell/RawSPUThread.h"
 
 #ifndef _WIN32
 #include <sys/mman.h>
-#else
-#include <Windows.h>
-#endif
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
+#endif
+#else
+#include <Windows.h>
 #endif
 
 MemoryBase Memory;
@@ -107,14 +108,11 @@ void MemoryBase::Init(MemoryType type)
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
 #ifdef _WIN32
-	m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 	if (!m_base_addr)
 #else
-	m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-	if (m_base_addr == (void*)-1)
+	if ((s64)m_base_addr == (s64)-1)
 #endif
 	{
-		m_base_addr = nullptr;
 		LOG_ERROR(MEMORY, "Initializing memory failed");
 		assert(0);
 		return;
@@ -138,7 +136,6 @@ void MemoryBase::Init(MemoryType type)
 	case Memory_PSV:
 		MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
 		MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
-		PSV.Init(GetBaseAddr());
 		break;
 
 	case Memory_PSP:
@@ -147,7 +144,6 @@ void MemoryBase::Init(MemoryType type)
 		MemoryBlocks.push_back(PSP.RAM.SetRange(0x08000000, 0x02000000));
 		MemoryBlocks.push_back(PSP.Kernel.SetRange(0x88000000, 0x00800000));
 		MemoryBlocks.push_back(UserMemory = PSP.Userspace.SetRange(0x08800000, 0x01800000));
-		PSP.Init(GetBaseAddr());
 		break;
 	}
 
@@ -172,17 +168,17 @@ void MemoryBase::Close()
 
 	MemoryBlocks.clear();
 
-#ifdef _WIN32
-	if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
-	{
-		LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
-	}
-#else
-	if (::munmap(m_base_addr, 0x100000000))
-	{
-		LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
-	}
-#endif
+//#ifdef _WIN32
+//	if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
+//	{
+//		LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
+//	}
+//#else
+//	if (::munmap(m_base_addr, 0x100000000))
+//	{
+//		LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
+//	}
+//#endif
 }
 
 void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
@@ -191,7 +187,7 @@ void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-			RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Write32(addr, data))
+			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
 		{
 			return;
 		}
@@ -207,7 +203,7 @@ u32 MemoryBase::ReadMMIO32(u32 addr)
 		std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-			RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET]->Read32(addr, &res))
+			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
 		{
 			return res;
 		}
@@ -363,218 +359,6 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 bool MemoryBlock::IsMyAddress(const u64 addr)
 {
 	return mem && addr >= GetStartAddr() && addr < GetEndAddr();
-}
-
-template <typename T>
-__forceinline const T MemoryBlock::FastRead(const u64 addr) const
-{
-	volatile const T data = *(const T *)GetMem(addr);
-	return re(data);
-}
-
-template <>
-__forceinline const u128 MemoryBlock::FastRead<u128>(const u64 addr) const
-{
-	volatile const u128 data = *(const u128 *)GetMem(addr);
-	u128 ret;
-	ret.lo = re(data.hi);
-	ret.hi = re(data.lo);
-	return ret;
-}
-
-bool MemoryBlock::Read8(const u64 addr, u8* value)
-{
-	if(!IsMyAddress(addr))
-	{
-		*value = 0;
-		return false;
-	}
-
-	*value = FastRead<u8>(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlock::Read16(const u64 addr, u16* value)
-{
-	if(!IsMyAddress(addr))
-	{
-		*value = 0;
-		return false;
-	}
-
-	*value = FastRead<u16>(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlock::Read32(const u64 addr, u32* value)
-{
-	if(!IsMyAddress(addr))
-	{
-		*value = 0;
-		return false;
-	}
-
-	*value = FastRead<u32>(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlock::Read64(const u64 addr, u64* value)
-{
-	if(!IsMyAddress(addr))
-	{
-		*value = 0;
-		return false;
-	}
-
-	*value = FastRead<u64>(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlock::Read128(const u64 addr, u128* value)
-{
-	if(!IsMyAddress(addr))
-	{
-		*value = u128::From32(0);
-		return false;
-	}
-
-	*value = FastRead<u128>(FixAddr(addr));
-	return true;
-}
-
-template <typename T>
-__forceinline void MemoryBlock::FastWrite(const u64 addr, const T value)
-{
-	*(T *)GetMem(addr) = re(value);
-}
-
-template <>
-__forceinline void MemoryBlock::FastWrite<u128>(const u64 addr, const u128 value)
-{
-	u128 res;
-	res.lo = re(value.hi);
-	res.hi = re(value.lo);
-	*(u128*)GetMem(addr) = res;
-}
-
-bool MemoryBlock::Write8(const u64 addr, const u8 value)
-{
-	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
-
-	FastWrite<u8>(FixAddr(addr), value);
-	return true;
-}
-
-bool MemoryBlock::Write16(const u64 addr, const u16 value)
-{
-	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
-
-	FastWrite<u16>(FixAddr(addr), value);
-	return true;
-}
-
-bool MemoryBlock::Write32(const u64 addr, const u32 value)
-{
-	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
-
-	FastWrite<u32>(FixAddr(addr), value);
-	return true;
-}
-
-bool MemoryBlock::Write64(const u64 addr, const u64 value)
-{
-	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
-
-	FastWrite<u64>(FixAddr(addr), value);
-	return true;
-}
-
-bool MemoryBlock::Write128(const u64 addr, const u128 value)
-{
-	if(!IsMyAddress(addr) || IsLocked(addr)) return false;
-
-	FastWrite<u128>(FixAddr(addr), value);
-	return true;
-}
-
-bool MemoryBlockLE::Read8(const u64 addr, u8* value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*value = *(u8*)GetMem(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlockLE::Read16(const u64 addr, u16* value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*value = *(u16*)GetMem(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlockLE::Read32(const u64 addr, u32* value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*value = *(u32*)GetMem(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlockLE::Read64(const u64 addr, u64* value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*value = *(u64*)GetMem(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlockLE::Read128(const u64 addr, u128* value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*value = *(u128*)GetMem(FixAddr(addr));
-	return true;
-}
-
-bool MemoryBlockLE::Write8(const u64 addr, const u8 value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*(u8*)GetMem(FixAddr(addr)) = value;
-	return true;
-}
-
-bool MemoryBlockLE::Write16(const u64 addr, const u16 value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*(u16*)GetMem(FixAddr(addr)) = value;
-	return true;
-}
-
-bool MemoryBlockLE::Write32(const u64 addr, const u32 value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*(u32*)GetMem(FixAddr(addr)) = value;
-	return true;
-}
-
-bool MemoryBlockLE::Write64(const u64 addr, const u64 value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*(u64*)GetMem(FixAddr(addr)) = value;
-	return true;
-}
-
-bool MemoryBlockLE::Write128(const u64 addr, const u128 value)
-{
-	if(!IsMyAddress(addr)) return false;
-
-	*(u128*)GetMem(FixAddr(addr)) = value;
-	return true;
 }
 
 VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock(), m_reserve_size(0)

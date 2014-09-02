@@ -9,10 +9,10 @@
 
 SysCallBase sys_cond("sys_cond");
 
-s32 sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute> attr)
+s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr)
 {
 	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)",
-		cond_id.GetAddr(), mutex_id, attr.GetAddr());
+		cond_id.addr(), mutex_id, attr.addr());
 
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
@@ -33,9 +33,9 @@ s32 sys_cond_create(mem32_t cond_id, u32 mutex_id, mem_ptr_t<sys_cond_attribute>
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
 	u32 id = sys_cond.GetNewId(cond, TYPE_COND);
-	cond_id = id;
+	*cond_id = id;
 	mutex->cond_count++;
-	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, cond_id.GetValue());
+	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
 
 	return CELL_OK;
 }
@@ -182,8 +182,8 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	mutex->recursive = 0;
 	mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0ull;
 
 	while (true)
 	{

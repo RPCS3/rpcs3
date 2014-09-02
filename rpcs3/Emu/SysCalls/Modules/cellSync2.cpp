@@ -15,7 +15,7 @@ u32 libsync2;
 u32 libsync2_rtoc;
 #endif
 
-int _cellSync2MutexAttributeInitialize()
+s64 _cellSync2MutexAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -26,7 +26,7 @@ int _cellSync2MutexAttributeInitialize()
 #endif
 }
 
-int cellSync2MutexEstimateBufferSize()
+s64 cellSync2MutexEstimateBufferSize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -37,7 +37,7 @@ int cellSync2MutexEstimateBufferSize()
 #endif
 }
 
-int cellSync2MutexInitialize()
+s64 cellSync2MutexInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -48,7 +48,7 @@ int cellSync2MutexInitialize()
 #endif
 }
 
-int cellSync2MutexFinalize()
+s64 cellSync2MutexFinalize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -59,7 +59,7 @@ int cellSync2MutexFinalize()
 #endif
 }
 
-int cellSync2MutexLock()
+s64 cellSync2MutexLock()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -70,7 +70,7 @@ int cellSync2MutexLock()
 #endif
 }
 
-int cellSync2MutexTryLock()
+s64 cellSync2MutexTryLock()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -81,7 +81,7 @@ int cellSync2MutexTryLock()
 #endif
 }
 
-int cellSync2MutexUnlock()
+s64 cellSync2MutexUnlock()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -92,7 +92,7 @@ int cellSync2MutexUnlock()
 #endif
 }
 
-int _cellSync2CondAttributeInitialize()
+s64 _cellSync2CondAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -103,7 +103,7 @@ int _cellSync2CondAttributeInitialize()
 #endif
 }
 
-int cellSync2CondEstimateBufferSize()
+s64 cellSync2CondEstimateBufferSize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -114,7 +114,7 @@ int cellSync2CondEstimateBufferSize()
 #endif
 }
 
-int cellSync2CondInitialize()
+s64 cellSync2CondInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -125,7 +125,7 @@ int cellSync2CondInitialize()
 #endif
 }
 
-int cellSync2CondFinalize()
+s64 cellSync2CondFinalize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -136,7 +136,7 @@ int cellSync2CondFinalize()
 #endif
 }
 
-int cellSync2CondWait()
+s64 cellSync2CondWait()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -147,7 +147,7 @@ int cellSync2CondWait()
 #endif
 }
 
-int cellSync2CondSignal()
+s64 cellSync2CondSignal()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -158,7 +158,7 @@ int cellSync2CondSignal()
 #endif
 }
 
-int cellSync2CondSignalAll()
+s64 cellSync2CondSignalAll()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -169,7 +169,7 @@ int cellSync2CondSignalAll()
 #endif
 }
 
-int _cellSync2SemaphoreAttributeInitialize()
+s64 _cellSync2SemaphoreAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -180,7 +180,7 @@ int _cellSync2SemaphoreAttributeInitialize()
 #endif
 }
 
-int cellSync2SemaphoreEstimateBufferSize()
+s64 cellSync2SemaphoreEstimateBufferSize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -191,7 +191,7 @@ int cellSync2SemaphoreEstimateBufferSize()
 #endif
 }
 
-int cellSync2SemaphoreInitialize()
+s64 cellSync2SemaphoreInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -202,7 +202,7 @@ int cellSync2SemaphoreInitialize()
 #endif
 }
 
-int cellSync2SemaphoreFinalize()
+s64 cellSync2SemaphoreFinalize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -213,7 +213,7 @@ int cellSync2SemaphoreFinalize()
 #endif
 }
 
-int cellSync2SemaphoreAcquire()
+s64 cellSync2SemaphoreAcquire()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -224,7 +224,7 @@ int cellSync2SemaphoreAcquire()
 #endif
 }
 
-int cellSync2SemaphoreTryAcquire()
+s64 cellSync2SemaphoreTryAcquire()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -235,7 +235,7 @@ int cellSync2SemaphoreTryAcquire()
 #endif
 }
 
-int cellSync2SemaphoreRelease()
+s64 cellSync2SemaphoreRelease()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -246,7 +246,7 @@ int cellSync2SemaphoreRelease()
 #endif
 }
 
-int cellSync2SemaphoreGetCount()
+s64 cellSync2SemaphoreGetCount()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -257,7 +257,7 @@ int cellSync2SemaphoreGetCount()
 #endif
 }
 
-int _cellSync2QueueAttributeInitialize()
+s64 _cellSync2QueueAttributeInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -268,7 +268,7 @@ int _cellSync2QueueAttributeInitialize()
 #endif
 }
 
-int cellSync2QueueEstimateBufferSize()
+s64 cellSync2QueueEstimateBufferSize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -279,7 +279,7 @@ int cellSync2QueueEstimateBufferSize()
 #endif
 }
 
-int cellSync2QueueInitialize()
+s64 cellSync2QueueInitialize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -290,7 +290,7 @@ int cellSync2QueueInitialize()
 #endif
 }
 
-int cellSync2QueueFinalize()
+s64 cellSync2QueueFinalize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -301,7 +301,7 @@ int cellSync2QueueFinalize()
 #endif
 }
 
-int cellSync2QueuePush()
+s64 cellSync2QueuePush()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -312,7 +312,7 @@ int cellSync2QueuePush()
 #endif
 }
 
-int cellSync2QueueTryPush()
+s64 cellSync2QueueTryPush()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -323,7 +323,7 @@ int cellSync2QueueTryPush()
 #endif
 }
 
-int cellSync2QueuePop()
+s64 cellSync2QueuePop()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -334,7 +334,7 @@ int cellSync2QueuePop()
 #endif
 }
 
-int cellSync2QueueTryPop()
+s64 cellSync2QueueTryPop()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -345,7 +345,7 @@ int cellSync2QueueTryPop()
 #endif
 }
 
-int cellSync2QueueGetSize()
+s64 cellSync2QueueGetSize()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -356,7 +356,7 @@ int cellSync2QueueGetSize()
 #endif
 }
 
-int cellSync2QueueGetDepth()
+s64 cellSync2QueueGetDepth()
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
@@ -408,7 +408,7 @@ void cellSync2_init()
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libsync2 = Memory.PRXMem.AllocAlign(sizeof(libsync2_data), 4096);
+		libsync2 = (u32)Memory.PRXMem.AllocAlign(sizeof(libsync2_data), 4096);
 		memcpy(Memory + libsync2, libsync2_data, sizeof(libsync2_data));
 		libsync2_rtoc = libsync2 + 0xF280;
 

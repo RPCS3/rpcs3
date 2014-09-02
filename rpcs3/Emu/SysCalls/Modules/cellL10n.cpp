@@ -18,32 +18,32 @@
 //Module cellL10n(0x001e, cellL10n_init);
 Module *cellL10n = nullptr;
 
-int UTF16stoUTF8s(mem16_ptr_t utf16, mem64_t utf16_len, mem8_ptr_t utf8, mem64_t utf8_len)
+int UTF16stoUTF8s(vm::lptrl<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len, vm::ptr<char> utf8, vm::ptr<be_t<u32>> utf8_len)
 {
 	cellL10n->Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
-		utf16.GetAddr(), utf16_len.GetAddr(), utf8.GetAddr(), utf8_len.GetAddr());
+		utf16.addr(), utf16_len.addr(), utf8.addr(), utf8_len.addr());
 
-	std::u16string wstr =(char16_t*)Memory.VirtualToRealAddr(utf16.GetAddr());
-	wstr.resize(utf16_len.GetValue()); // TODO: Is this really the role of utf16_len in this function?
+	std::u16string wstr = utf16.get_ptr(); // ???
+	wstr.resize(*utf16_len); // TODO: Is this really the role of utf16_len in this function?
 #ifdef _MSC_VER
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
 	std::string str = convert.to_bytes(wstr);
 
-	if (utf8_len.GetValue() < str.size())
+	if (*utf8_len < str.size())
 	{
-		utf8_len = str.size();
+		*utf8_len = str.size();
 		return DSTExhausted;
 	}
 
-	utf8_len = str.size();
-	Memory.WriteString(utf8, str.c_str());
+	*utf8_len = str.size();
+	Memory.WriteString(utf8.addr(), str);
 #endif
 	return ConversionOK;
 }
 
-int jstrchk(mem8_ptr_t jstr)
+int jstrchk(vm::ptr<const char> jstr)
 {
-	cellL10n->Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.GetAddr());
+	cellL10n->Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.addr());
 
 	return L10N_STR_UTF8;
 }
@@ -240,14 +240,14 @@ int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_cod
 		return ConverterUnknown;
 
 	if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
-	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	//std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.addr());
 	std::string wrapped_source((char*)src);
 	//if (wrapped_source.length != src_len.GetValue()) return SRCIllegal;
 	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
 	if (target.length() > *dst_len) return DSTExhausted;
 
-	Memory.WriteString(dst, target.c_str());
+	Memory.WriteString(dst.addr(), target);
 
 	return ConversionOK;
 }
@@ -260,8 +260,8 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
-		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
-		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		//char *srcBuf = (char*)Memory.VirtualToRealAddr(src.addr());
+		//char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.addr());
 		char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
@@ -283,11 +283,11 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 #endif
 
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
-int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, mem8_ptr_t dst, mem64_t dst_len)
+int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<be_t<u32>> src_len, int dst_code, vm::ptr<void> dst, vm::ptr<be_t<u32>> dst_len)
 {
 	cellL10n->Todo("L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
-		src_code, src.GetAddr(), src_len.GetValue(), dst_code, dst.GetAddr(), dst_len.GetValue());
-	cellL10n->Todo("L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)Memory.VirtualToRealAddr(src.GetAddr())));
+		src_code, src.addr(), src_len.addr(), dst_code, dst.addr(), dst_len.addr());
+	cellL10n->Todo("L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
 	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
@@ -298,14 +298,14 @@ int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, 
 		return ConverterUnknown;
 
 	//if (strnlen_s((char*)src, *src_len) != *src_len) return SRCIllegal;
-	std::string wrapped_source = (char*)Memory.VirtualToRealAddr(src.GetAddr());
+	std::string wrapped_source = (char*)src.get_ptr();
 	//std::string wrapped_source((char*)src);
-	if (wrapped_source.length() != src_len.GetValue()) return SRCIllegal;
+	if (wrapped_source.length() != *src_len) return SRCIllegal;
 	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-	if (target.length() > dst_len.GetValue()) return DSTExhausted;
+	if (target.length() > *dst_len) return DSTExhausted;
 
-	Memory.WriteString(dst, target.c_str());
+	Memory.WriteString(dst.addr(), target);
 
 	return ConversionOK;
 #else
@@ -314,13 +314,13 @@ int L10nConvertStr(int src_code, mem8_ptr_t src, mem64_t src_len, int dst_code, 
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
-		char *srcBuf = (char*)Memory.VirtualToRealAddr(src.GetAddr());
-		char *dstBuf = (char*)Memory.VirtualToRealAddr(dst.GetAddr());
+		char *srcBuf = (char*)src.get_ptr();
+		char *dstBuf = (char*)dst.get_ptr();
 		//char *srcBuf = (char*)src, *dstBuf = (char*)dst;
 		//size_t srcLen = *src_len, dstLen = *dst_len;
-		size_t srcLen = src_len.GetValue(), dstLen = dst_len.GetValue();
+		size_t srcLen = *src_len, dstLen = *dst_len;
 		size_t ictd = iconv(ict, &srcBuf, &srcLen, &dstBuf, &dstLen);
-		if (ictd != src_len.GetValue())//if (ictd != *src_len)
+		if (ictd != *src_len)//if (ictd != *src_len)
 		{
 			if (errno == EILSEQ)
 				retValue = SRCIllegal;  //Invalid multi-byte sequence

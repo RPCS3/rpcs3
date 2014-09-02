@@ -10,10 +10,10 @@
 
 SysCallBase sys_event("sys_event");
 
-s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> attr, u64 event_queue_key, int size)
+s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, int size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id_addr=0x%x, attr_addr=0x%x, event_queue_key=0x%llx, size=%d)",
-		equeue_id.GetAddr(), attr.GetAddr(), event_queue_key, size);
+		equeue_id.addr(), attr.addr(), event_queue_key, size);
 
 	if(size <= 0 || size > 127)
 	{
@@ -49,9 +49,10 @@ s32 sys_event_queue_create(mem32_t equeue_id, mem_ptr_t<sys_event_queue_attr> at
 		return CELL_EAGAIN;
 	}
 
-	equeue_id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	*equeue_id = id;
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, equeue_id.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
 
 	return CELL_OK;
 }
@@ -101,10 +102,10 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 	return CELL_OK;
 }
 
-s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_array, int size, mem32_t number)
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, int size, vm::ptr<be_t<u32>> number)
 {
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
-		equeue_id, event_array.GetAddr(), size, number.GetAddr());
+		equeue_id, event_array.addr(), size, number.addr());
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -119,7 +120,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 
 	if (size == 0)
 	{
-		number = 0;
+		*number = 0;
 		return CELL_OK;
 	}
 
@@ -129,21 +130,21 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, mem_ptr_t<sys_event_data> event_ar
 	eq->owner.lock(tid);
 	if (eq->sq.list.size())
 	{
-		number = 0;
+		*number = 0;
 		eq->owner.unlock(tid);
 		eq->sq.m_mutex.unlock();
 		return CELL_OK;
 	}
-	number = eq->events.pop_all((sys_event_data*)(Memory + event_array.GetAddr()), size);
+	*number = eq->events.pop_all((sys_event_data*)(Memory + event_array.addr()), size);
 	eq->owner.unlock(tid);
 	eq->sq.m_mutex.unlock();
 	return CELL_OK;
 }
 
-s32 sys_event_queue_receive(u32 equeue_id, mem_ptr_t<sys_event_data> event, u64 timeout)
+s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 timeout)
 {
 	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
-		equeue_id, event.GetAddr(), timeout);
+		equeue_id, event.addr(), timeout);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -224,10 +225,10 @@ s32 sys_event_queue_drain(u32 equeue_id)
 	return CELL_OK;
 }
 
-s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
+s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, int port_type, u64 name)
 {
 	sys_event.Warning("sys_event_port_create(eport_id_addr=0x%x, port_type=0x%x, name=0x%llx)",
-		eport_id.GetAddr(), port_type, name);
+		eport_id.addr(), port_type, name);
 
 	if (port_type != SYS_EVENT_PORT_LOCAL)
 	{
@@ -238,7 +239,7 @@ s32 sys_event_port_create(mem32_t eport_id, int port_type, u64 name)
 	EventPort* eport = new EventPort();
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
-	eport_id = id;
+	*eport_id = id;
 	sys_event.Warning("*** sys_event_port created: id = %d", id);
 
 	return CELL_OK;

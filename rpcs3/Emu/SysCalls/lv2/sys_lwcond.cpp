@@ -9,24 +9,24 @@
 
 SysCallBase sys_lwcond("sys_lwcond");
 
-s32 sys_lwcond_create(mem_ptr_t<sys_lwcond_t> lwcond, mem_ptr_t<sys_lwmutex_t> lwmutex, mem_ptr_t<sys_lwcond_attribute_t> attr)
+s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
 	sys_lwcond.Log("sys_lwcond_create(lwcond_addr=0x%x, lwmutex_addr=0x%x, attr_addr=0x%x)",
-		lwcond.GetAddr(), lwmutex.GetAddr(), attr.GetAddr());
+		lwcond.addr(), lwmutex.addr(), attr.addr());
 
 	u32 id = sys_lwcond.GetNewId(new Lwcond(attr->name_u64), TYPE_LWCOND);
-	lwcond->lwmutex = lwmutex.GetAddr();
+	lwcond->lwmutex = lwmutex.addr();
 	lwcond->lwcond_queue = id;
 
 	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex_addr=0x%x): id = %d", 
-		std::string(attr->name, 8).c_str(), lwmutex.GetAddr(), (u32) lwcond->lwcond_queue);
+		std::string(attr->name, 8).c_str(), lwmutex.addr(), (u32) lwcond->lwcond_queue);
 
 	return CELL_OK;
 }
 
-s32 sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond)
+s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 {
-	sys_lwcond.Warning("sys_lwcond_destroy(lwcond_addr=0x%x)", lwcond.GetAddr());
+	sys_lwcond.Warning("sys_lwcond_destroy(lwcond_addr=0x%x)", lwcond.addr());
 
 	u32 id = lwcond->lwcond_queue;
 
@@ -45,9 +45,9 @@ s32 sys_lwcond_destroy(mem_ptr_t<sys_lwcond_t> lwcond)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
+s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 {
-	sys_lwcond.Log("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.GetAddr());
+	sys_lwcond.Log("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.addr());
 
 	Lwcond* lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
@@ -55,7 +55,7 @@ s32 sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex);
 
 	if (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
 	{
@@ -71,9 +71,9 @@ s32 sys_lwcond_signal(mem_ptr_t<sys_lwcond_t> lwcond)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
+s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 {
-	sys_lwcond.Log("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.GetAddr());
+	sys_lwcond.Log("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.addr());
 
 	Lwcond* lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
@@ -81,7 +81,7 @@ s32 sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex);
 
 	while (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
 	{
@@ -97,9 +97,9 @@ s32 sys_lwcond_signal_all(mem_ptr_t<sys_lwcond_t> lwcond)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
+s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
-	sys_lwcond.Log("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.GetAddr(), ppu_thread_id);
+	sys_lwcond.Log("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.addr(), ppu_thread_id);
 
 	Lwcond* lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
@@ -131,9 +131,9 @@ s32 sys_lwcond_signal_to(mem_ptr_t<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
+s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
-	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.GetAddr(), timeout);
+	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.addr(), timeout);
 
 	Lwcond* lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
@@ -141,7 +141,7 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	mem_ptr_t<sys_lwmutex_t> mutex(lwcond->lwmutex);
+	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex);
 	u32 tid_le = GetCurrentPPUThread().GetId();
 	be_t<u32> tid = be_t<u32>::MakeFromLE(tid_le);
 
@@ -177,8 +177,8 @@ s32 sys_lwcond_wait(mem_ptr_t<sys_lwcond_t> lwcond, u64 timeout)
 			(u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
 	}
 
-	u32 counter = 0;
-	const u32 max_counter = timeout ? (timeout / 1000) : ~0;
+	u64 counter = 0;
+	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
 
 	while (true)
 	{

@@ -17,12 +17,12 @@ s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x100000);
+		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		addr = Memory.Alloc(size, 0x10000);
+		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default: return CELL_EINVAL;
@@ -52,12 +52,12 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff) return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x100000);
+		ct->addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff) return CELL_EALIGN;
-		ct->addr = Memory.Alloc(size, 0x10000);
+		ct->addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default: return CELL_EINVAL;
@@ -86,9 +86,9 @@ s32 sys_memory_free(u32 start_addr)
 	return CELL_OK;
 }
 
-s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
+s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.GetAddr());
+	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.addr());
 
 	// TODO: Implement per thread page attribute setting.
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE
@@ -98,9 +98,9 @@ s32 sys_memory_get_page_attribute(u32 addr, mem_ptr_t<sys_page_attr_t> attr)
 	return CELL_OK;
 }
 
-s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
+s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
-	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.GetAddr());
+	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.addr());
 	
 	// Fetch the user memory available.
 	mem_info->total_user_memory = Memory.GetUserMemTotalSize();
@@ -108,21 +108,22 @@ s32 sys_memory_get_user_memory_size(mem_ptr_t<sys_memory_info_t> mem_info)
 	return CELL_OK;
 }
 
-s32 sys_memory_container_create(mem32_t cid, u32 yield_size)
+s32 sys_memory_container_create(vm::ptr<be_t<u32>> cid, u32 yield_size)
 {
-	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.GetAddr(), yield_size);
+	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.addr(), yield_size);
 
 	yield_size &= ~0xfffff; //round down to 1 MB granularity
-	u64 addr = Memory.Alloc(yield_size, 0x100000); //1 MB alignment
+	u32 addr = (u32)Memory.Alloc(yield_size, 0x100000); //1 MB alignment
 
 	if(!addr)
 		return CELL_ENOMEM;
 
 	// Wrap the allocated memory in a memory container.
 	MemoryContainerInfo *ct = new MemoryContainerInfo(addr, yield_size);
-	cid = sys_memory.GetNewId(ct, TYPE_MEM);
+	u32 id = sys_memory.GetNewId(ct, TYPE_MEM);
+	*cid = id;
 
-	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, cid.GetValue());
+	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, id);
 
 	return CELL_OK;
 }
@@ -143,9 +144,9 @@ s32 sys_memory_container_destroy(u32 cid)
 	return CELL_OK;
 }
 
-s32 sys_memory_container_get_size(mem_ptr_t<sys_memory_info_t> mem_info, u32 cid)
+s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.GetAddr(), cid);
+	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.addr(), cid);
 
 	// Check if this container ID is valid.
 	MemoryContainerInfo* ct;

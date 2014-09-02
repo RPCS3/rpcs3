@@ -177,20 +177,20 @@ int sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(u32 drm_path_addr, mem64_t time_remain_usec)
+int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<be_t<u64>> time_remain_usec)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetStatus(mem32_t status)
+int sceNpManagerGetStatus(vm::ptr<be_t<u32>> status)
 {
-	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.GetAddr());
+	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
 	// TODO: Check if sceNpInit() was called, if not return SCE_NP_ERROR_NOT_INITIALIZED
 
 	// TODO: Support different statuses
-	status = SCE_NP_MANAGER_STATUS_OFFLINE;
+	*status = SCE_NP_MANAGER_STATUS_OFFLINE;
 	return CELL_OK;
 }
 

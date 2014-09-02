@@ -51,7 +51,7 @@ struct RWLock
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		for (u32 i = rlock_list.size() - 1; ~i; i--)
+		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
@@ -70,7 +70,7 @@ struct RWLock
 		{
 			return false; // deadlock
 		}
-		for (u32 i = rlock_list.size() - 1; ~i; i--)
+		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
 		{
 			if (rlock_list[i] == tid)
 			{
@@ -90,7 +90,7 @@ struct RWLock
 			{
 				return false; // do not enqueue
 			}
-			for (u32 i = wlock_queue.size() - 1; ~i; i--)
+			for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
 			{
 				if (wlock_queue[i] == tid)
 				{
@@ -117,7 +117,7 @@ struct RWLock
 					{
 						return false; // do not enqueue
 					}
-					for (u32 i = wlock_queue.size() - 1; ~i; i--)
+					for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
 					{
 						if (wlock_queue[i] == tid)
 						{
@@ -150,7 +150,7 @@ struct RWLock
 };
 
 // SysCalls
-s32 sys_rwlock_create(mem32_t rw_lock_id, mem_ptr_t<sys_rwlock_attribute_t> attr);
+s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);
 s32 sys_rwlock_destroy(u32 rw_lock_id);
 s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
 s32 sys_rwlock_tryrlock(u32 rw_lock_id);

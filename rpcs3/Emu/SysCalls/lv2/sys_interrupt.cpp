@@ -37,9 +37,9 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 arg)
+s32 sys_interrupt_thread_establish(vm::ptr<be_t<u32>> ih, u32 intrtag, u64 intrthread, u64 arg)
 {
-	sys_interrupt.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.GetAddr(), intrtag, intrthread, arg);
+	sys_interrupt.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.addr(), intrtag, intrthread, arg);
 
 	u32 id = intrtag & 0xff;
 	u32 class_id = intrtag >> 8;
@@ -71,7 +71,7 @@ s32 sys_interrupt_thread_establish(mem32_t ih, u32 intrtag, u64 intrthread, u64 
 		return CELL_EAGAIN;
 	}
 
-	ih = (t->m_intrtag[class_id].thread = intrthread);
+	*ih = (t->m_intrtag[class_id].thread = intrthread);
 	it->m_interrupt_arg = arg;
 	return CELL_OK;
 }

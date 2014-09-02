@@ -11,10 +11,10 @@
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, int initial_count, int max_count)
+s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, int initial_count, int max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
-		sem.GetAddr(), attr.GetAddr(), initial_count, max_count);
+		sem.addr(), attr.addr(), initial_count, max_count);
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
@@ -37,9 +37,10 @@ s32 sys_semaphore_create(mem32_t sem, mem_ptr_t<sys_semaphore_attribute> attr, i
 	default: sys_semaphore.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	sem = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
+	u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
+	*sem = id;
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, sem.GetValue());
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, id);
 
 	return CELL_OK;
 }
@@ -192,9 +193,9 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 	return CELL_OK;
 }
 
-s32 sys_semaphore_get_value(u32 sem_id, mem32_t count)
+s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<be_t<s32>> count)
 {
-	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.GetAddr());
+	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.addr());
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -204,7 +205,7 @@ s32 sys_semaphore_get_value(u32 sem_id, mem32_t count)
 
 	std::lock_guard<std::mutex> lock(sem->m_mutex);
 	
-	count = sem->m_value;
+	*count = sem->m_value;
 
 	return CELL_OK;
 }

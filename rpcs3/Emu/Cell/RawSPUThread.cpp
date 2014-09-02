@@ -155,6 +155,12 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 
 	case SPU_NPC_offs:
 	{
+		if (value & 3)
+		{
+			// least significant bit contains some interrupt flag
+			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(SPU_NPC_offs, 0x%x): lowest bits set", m_index, value);
+			return false;
+		}
 		SPU.NPC.SetValue(value);
 		break;
 	}
@@ -199,5 +205,5 @@ void RawSPUThread::Task()
 
 	SPUThread::Task();
 
-	SPU.NPC.SetValue(PC);
+	SPU.NPC.SetValue((u32)PC);
 }

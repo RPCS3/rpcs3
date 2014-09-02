@@ -16,9 +16,9 @@ public:
 	RawSPUThread(CPUThreadType type = CPU_THREAD_RAW_SPU);
 	virtual ~RawSPUThread();
 
-	virtual bool Read32(const u64 addr, u32* value) override;
+	bool Read32(const u64 addr, u32* value);
 
-	virtual bool Write32(const u64 addr, const u32 value) override;
+	bool Write32(const u64 addr, const u32 value);
 
 public:
 	virtual void InitRegs();

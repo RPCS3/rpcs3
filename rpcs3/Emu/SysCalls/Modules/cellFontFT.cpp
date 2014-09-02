@@ -13,15 +13,15 @@ Module *cellFontFT = nullptr;
 
 CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 
-int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, mem_ptr_t<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
+int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
 {
 	cellFontFT->Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
-		revisionFlags, config.GetAddr(), lib_addr_addr);
+		revisionFlags, config.addr(), lib_addr_addr);
 
 	//if (s_fontInternalInstance->m_bInitialized)
 		//return CELL_FONT_ERROR_UNINITIALIZED;
 
-	Memory.Write32(lib_addr_addr, Memory.Alloc(sizeof(CellFontLibrary), 1));
+	Memory.Write32(lib_addr_addr, (u32)Memory.Alloc(sizeof(CellFontLibrary), 1));
 
 	return CELL_OK;
 }

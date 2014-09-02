@@ -47,7 +47,7 @@ protected:
 class SPURSManagerTasksetAttribute
 {
 public:
-	SPURSManagerTasksetAttribute(u64 args, mem8_t priority, u32 maxContention);
+	SPURSManagerTasksetAttribute(u64 args, vm::ptr<const u8> priority, u32 maxContention);
 
 protected:
 	be_t<u64> args;
@@ -71,7 +71,7 @@ public:
 	SPURSManager(SPURSManagerAttribute *attr);
 
 	void Finalize();
-	void AttachLv2EventQueue(u32 queue, mem8_t port, int isDynamic);
+	void AttachLv2EventQueue(u32 queue, vm::ptr<u8> port, int isDynamic);
 	void DetachLv2EventQueue(u8 port);
 
 protected:
