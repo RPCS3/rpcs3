@@ -308,7 +308,6 @@
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
     <ClInclude Include="Emu\Io\Pad.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
-    <ClInclude Include="Emu\Memory\DynamicMemoryBlockBase.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />

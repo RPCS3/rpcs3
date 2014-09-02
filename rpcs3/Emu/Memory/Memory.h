@@ -29,7 +29,6 @@ class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;
 	u32 m_pages[0x100000000 / 4096]; // information about every page
-	std::recursive_mutex m_mutex;
 
 public:
 	MemoryBlock* UserMemory;
@@ -60,17 +59,17 @@ public:
 
 	struct : Wrapper32LE
 	{
-		DynamicMemoryBlockLE RAM;
-		DynamicMemoryBlockLE Userspace;
+		DynamicMemoryBlock RAM;
+		DynamicMemoryBlock Userspace;
 	} PSV;
 
 	struct : Wrapper32LE
 	{
-		DynamicMemoryBlockLE Scratchpad;
-		DynamicMemoryBlockLE VRAM;
-		DynamicMemoryBlockLE RAM;
-		DynamicMemoryBlockLE Kernel;
-		DynamicMemoryBlockLE Userspace;
+		DynamicMemoryBlock Scratchpad;
+		DynamicMemoryBlock VRAM;
+		DynamicMemoryBlock RAM;
+		DynamicMemoryBlock Kernel;
+		DynamicMemoryBlock Userspace;
 	} PSP;
 
 	bool m_inited;
@@ -391,7 +390,7 @@ public:
 		return UserMemory->Unlock(addr, size);
 	}
 
-	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size);
+	bool Map(const u64 addr, const u32 size);
 
 	bool Unmap(const u64 addr);
 

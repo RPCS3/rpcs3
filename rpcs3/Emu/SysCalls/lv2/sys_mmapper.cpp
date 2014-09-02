@@ -58,30 +58,24 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<be_t<u32>> mem_id)
 	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.addr());
 
 	// Check page granularity.
-	u32 addr;
 	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:
 		return CELL_EINVAL;
 	}
 
-	if(!addr)
-		return CELL_ENOMEM;
-
 	// Generate a new mem ID.
-	*mem_id = sys_mmapper.GetNewId(new mmapper_info(addr, size, flags));
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(size, flags));
 
 	return CELL_OK;
 }
@@ -102,25 +96,21 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	case SYS_MEMORY_PAGE_SIZE_1M:
 		if(size & 0xfffff)
 			return CELL_EALIGN;
-		ct->addr = (u32)Memory.Alloc(size, 0x100000);
 	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
 		if(size & 0xffff)
 			return CELL_EALIGN;
-		ct->addr = (u32)Memory.Alloc(size, 0x10000);
 	break;
 
 	default:
 		return CELL_EINVAL;
 	}
 
-	if(!ct->addr)
-		return CELL_ENOMEM;
 	ct->size = size;
 
 	// Generate a new mem ID.
-	*mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->addr, ct->size, flags), TYPE_MEM);
+	*mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->size, flags), TYPE_MEM);
 
 	return CELL_OK;
 }
@@ -153,7 +143,6 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 		return CELL_ESRCH;
 
 	// Release the allocated memory and remove the ID.
-	Memory.Free(info->addr);
 	sys_mmapper.RemoveId(mem_id);
 
 	return CELL_OK;
@@ -169,7 +158,7 @@ s32 sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 		return CELL_ESRCH;
 
 	// Map the memory into the process address.
-	if(!Memory.Map(start_addr, info->addr, info->size))
+	if(!Memory.Map(start_addr, info->size))
 		sys_mmapper.Error("sys_mmapper_map_memory failed!");
 
 	// Keep track of mapped addresses.
@@ -194,7 +183,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 	for (int i = 0; i < SYS_MMAPPER_FIXED_SIZE; i += 0x100000)
 	{
 		addr = start_addr + i;
-		found = Memory.Map(addr, info->addr, info->size);
+		found = Memory.Map(addr, info->size);
 		if(found)
 		{
 			sys_mmapper.Warning("Found and mapped address 0x%x", addr);

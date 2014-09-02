@@ -93,9 +93,6 @@ private:
 public:
 	virtual void Delete();
 
-	virtual bool IsNULL() { return false; }
-	virtual bool IsMirror() { return false; }
-
 	u64 FixAddr(const u64 addr) const;
 
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
@@ -117,40 +114,8 @@ public:
 	virtual bool Unlock(u64 addr, u32 size) { return false; }
 };
 
-class MemoryBlockLE : public MemoryBlock
+class DynamicMemoryBlockBase : public MemoryBlock
 {
-
-};
-
-class MemoryMirror : public MemoryBlock
-{
-public:
-	virtual bool IsMirror() { return true; }
-
-	virtual MemoryBlock* SetRange(const u64 start, const u32 size)
-	{
-		range_start = start;
-		range_size = size;
-
-		return this;
-	}
-
-	void SetMemory(u8* memory)
-	{
-		mem = memory;
-	}
-
-	MemoryBlock* SetRange(u8* memory, const u64 start, const u32 size)
-	{
-		SetMemory(memory);
-		return SetRange(start, size);
-	}
-};
-
-template<typename PT>
-class DynamicMemoryBlockBase : public PT
-{
-	mutable std::mutex m_lock;
 	std::vector<MemBlockInfo> m_allocated; // allocation info
 	u32 m_max_size;
 
@@ -215,17 +180,9 @@ public:
 	// Return the total amount of reserved memory
 	virtual u32 GetReservedAmount();
 
-	bool Read8(const u64 addr, u8* value);
-	bool Read16(const u64 addr, u16* value);
 	bool Read32(const u64 addr, u32* value);
-	bool Read64(const u64 addr, u64* value);
-	bool Read128(const u64 addr, u128* value);
 
-	bool Write8(const u64 addr, const u8 value);
-	bool Write16(const u64 addr, const u16 value);
 	bool Write32(const u64 addr, const u32 value);
-	bool Write64(const u64 addr, const u64 value);
-	bool Write128(const u64 addr, const u128 value);
 
 	// try to get the real address given a mapped address
 	// return true for success
@@ -242,8 +199,5 @@ public:
 	u64 getMappedAddress(u64 realAddress);
 };
 
-#include "DynamicMemoryBlockBase.h"
-
-typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
-typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;
+typedef DynamicMemoryBlockBase DynamicMemoryBlock;
 
