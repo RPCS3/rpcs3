@@ -427,7 +427,7 @@ void cellSync2_init()
 		FIX_IMPORT(sysPrxForUser, sys_lwmutex_create                  , libsync2 + 0x62D0);
 		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_get_id               , libsync2 + 0x62F0);
 		FIX_IMPORT(sysPrxForUser, _sys_memset                         , libsync2 + 0x6310);
-		FIX_IMPORT(sysPrxForUser, _sys_prs64f                         , libsync2 + 0x6330);
+		FIX_IMPORT(sysPrxForUser, _sys_printf                         , libsync2 + 0x6330);
 		fix_import(sysPrxForUser, 0x9FB6228E                          , libsync2 + 0x6350);
 		FIX_IMPORT(sysPrxForUser, sys_lwmutex_destroy                 , libsync2 + 0x6370);
 		FIX_IMPORT(sysPrxForUser, _sys_strncpy                        , libsync2 + 0x6390);
