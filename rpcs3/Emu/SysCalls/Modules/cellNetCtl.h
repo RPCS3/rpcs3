@@ -239,7 +239,7 @@ struct CellNetCtlNetStartDialogParam
 {
 	be_t<u32> size;
 	be_t<s32> type;
-	be_t<u32> cid;
+	be_t<u32> cid; // Unused
 };
 
 struct CellNetCtlNetStartDialogResult

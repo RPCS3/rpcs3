@@ -145,7 +145,7 @@ public:
 		this->low = this->low & mask;
 	}
 	//Slice 0 or 1
-	u8 checkSliceRounding(u8 slice)
+	u8 checkSliceRounding(u8 slice) const
 	{
 		switch(slice)
 		{

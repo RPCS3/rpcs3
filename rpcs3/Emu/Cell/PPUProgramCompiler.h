@@ -147,7 +147,7 @@ protected:
 
 	void DetectArgInfo(Arg& arg);
 	void LoadArgs();
-	u32 GetBranchValue(const std::string& branch);
+	u32 GetBranchValue(const std::string& branch) const;
 
 	bool SetNextArgType(u32 types, bool show_err = true);
 	bool SetNextArgBranch(u8 aa, bool show_err = true);
