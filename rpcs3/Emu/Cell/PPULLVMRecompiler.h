@@ -451,6 +451,9 @@ private:
     /// Global variable in m_module that corresponds to m_ppu.GPR
     llvm::GlobalVariable * m_gpr;
 
+    /// Global variable in m_module that corresponds to m_ppu.CR
+    llvm::GlobalVariable * m_cr;
+
     /// Global variable in m_module that corresponds to m_ppu.VPR
     llvm::GlobalVariable * m_vpr;
 

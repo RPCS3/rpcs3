@@ -22,11 +22,13 @@ PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
 
     m_module = new Module("Module", m_llvm_context);
     m_gpr    = new GlobalVariable(*m_module, ArrayType::get(Type::getInt64Ty(m_llvm_context), 32), false, GlobalValue::ExternalLinkage, nullptr, "gpr");
+    m_cr     = new GlobalVariable(*m_module, Type::getInt32Ty(m_llvm_context), false, GlobalValue::ExternalLinkage, nullptr, "cr");
     m_vpr    = new GlobalVariable(*m_module, ArrayType::get(Type::getIntNTy(m_llvm_context, 128), 32), false, GlobalValue::ExternalLinkage, nullptr, "vpr");
     m_vscr   = new GlobalVariable(*m_module, Type::getInt32Ty(m_llvm_context), false, GlobalValue::ExternalLinkage, nullptr, "vscr");
 
     m_execution_engine = EngineBuilder(m_module).create();
     m_execution_engine->addGlobalMapping(m_gpr, m_ppu.GPR);
+    m_execution_engine->addGlobalMapping(m_cr, &m_ppu.CR);
     m_execution_engine->addGlobalMapping(m_vpr, m_ppu.VPR);
     m_execution_engine->addGlobalMapping(m_vscr, &m_ppu.VSCR);
 
@@ -333,57 +335,62 @@ void PPULLVMRecompiler::VAVGUW(u32 vd, u32 va, u32 vb) {
 }
 
 void PPULLVMRecompiler::VCFSX(u32 vd, u32 uimm5, u32 vb) {
-    u32 scale = 1 << uimm5;
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    auto res_v4f32 = m_ir_builder.CreateSIToFP(vb_v4i32, VectorType::get(Type::getFloatTy(m_llvm_context), 4));
 
-    for (uint w = 0; w < 4; w++) {
-        m_ppu.VPR[vd]._f[w] = ((float)m_ppu.VPR[vb]._s32[w]) / scale;
+    if (uimm5) {
+        float scale          = (float)(1 << uimm5);
+        float scale_v4f32[4] = {scale, scale, scale, scale};
+        res_v4f32            = m_ir_builder.CreateFDiv(res_v4f32, ConstantDataVector::get(m_llvm_context, scale_v4f32));
     }
+
+    SetVr(vd, res_v4f32);
 }
 
 void PPULLVMRecompiler::VCFUX(u32 vd, u32 uimm5, u32 vb) {
-    u32 scale = 1 << uimm5;
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    auto res_v4f32 = m_ir_builder.CreateUIToFP(vb_v4i32, VectorType::get(Type::getFloatTy(m_llvm_context), 4));
 
-    for (uint w = 0; w < 4; w++) {
-        m_ppu.VPR[vd]._f[w] = ((float)m_ppu.VPR[vb]._u32[w]) / scale;
+    if (uimm5) {
+        float scale          = (float)(1 << uimm5);
+        float scale_v4f32[4] = {scale, scale, scale, scale};
+        res_v4f32            = m_ir_builder.CreateFDiv(res_v4f32, ConstantDataVector::get(m_llvm_context, scale_v4f32));
     }
+
+    SetVr(vd, res_v4f32);
 }
 
 void PPULLVMRecompiler::VCMPBFP(u32 vd, u32 va, u32 vb) {
-    //for (uint w = 0; w < 4; w++)
-    //{
-    //	u32 mask = 0;
+    auto va_v4f32     = GetVrAsFloatVec(va);
+    auto vb_v4f32     = GetVrAsFloatVec(vb);
+    auto cmp_gt_v4i1  = m_ir_builder.CreateFCmpOGT(va_v4f32, vb_v4f32);
+    vb_v4f32          = m_ir_builder.CreateFNeg(vb_v4f32);
+    auto cmp_lt_v4i1  = m_ir_builder.CreateFCmpOLT(va_v4f32, vb_v4f32);
+    auto cmp_gt_v4i32 = m_ir_builder.CreateZExt(cmp_gt_v4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+    auto cmp_lt_v4i32 = m_ir_builder.CreateZExt(cmp_lt_v4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+    cmp_gt_v4i32      = m_ir_builder.CreateShl(cmp_gt_v4i32, 31);
+    cmp_lt_v4i32      = m_ir_builder.CreateShl(cmp_lt_v4i32, 30);
+    auto res_v4i32    = m_ir_builder.CreateOr(cmp_gt_v4i32, cmp_lt_v4i32);
+    SetVr(vd, res_v4i32);
 
-    //	const float A = CheckVSCR_NJ(m_ppu.VPR[va]._f[w]);
-    //	const float B = CheckVSCR_NJ(m_ppu.VPR[vb]._f[w]);
-
-    //	if (A >  B) mask |= 1 << 31;
-    //	if (A < -B) mask |= 1 << 30;
-
-    //	m_ppu.VPR[vd]._u32[w] = mask;
-    //}
+    // TODO: Implement NJ mode
 }
 
 void PPULLVMRecompiler::VCMPBFP_(u32 vd, u32 va, u32 vb) {
-    //bool allInBounds = true;
+    VCMPBFP(vd, va, vb);
 
-    //for (uint w = 0; w < 4; w++)
-    //{
-    //	u32 mask = 0;
-
-    //	const float A = CheckVSCR_NJ(m_ppu.VPR[va]._f[w]);
-    //	const float B = CheckVSCR_NJ(m_ppu.VPR[vb]._f[w]);
-
-    //	if (A >  B) mask |= 1 << 31;
-    //	if (A < -B) mask |= 1 << 30;
-
-    //	m_ppu.VPR[vd]._u32[w] = mask;
-
-    //	if (mask)
-    //		allInBounds = false;
-    //}
-
-    //// Bit n°2 of CR6
-    //m_ppu.SetCRBit(6, 0x2, allInBounds);
+    auto vd_v16i8     = GetVrAsIntVec(vd, 8);
+    u8 mask_v16i8[16] = {3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    vd_v16i8          = m_ir_builder.CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_ssse3_pshuf_b_128), vd_v16i8, ConstantDataVector::get(m_llvm_context, mask_v16i8));
+    auto vd_v4i32     = m_ir_builder.CreateBitCast(vd_v16i8, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+    auto vd_mask_i32  = m_ir_builder.CreateExtractElement(vd_v4i32, m_ir_builder.getInt32(0));
+    auto cmp_i1       = m_ir_builder.CreateICmpEQ(vd_mask_i32, m_ir_builder.getInt32(0));
+    auto cmp_i32      = m_ir_builder.CreateZExt(cmp_i1, Type::getInt32Ty(m_llvm_context));
+    cmp_i32           = m_ir_builder.CreateShl(cmp_i32, 5);
+    auto cr_i32       = (Value *)m_ir_builder.CreateLoad(m_cr);
+    cr_i32            = m_ir_builder.CreateAnd(cr_i32, 0xFFFFFF0F);
+    cr_i32            = m_ir_builder.CreateOr(cr_i32, cmp_i32);
+    m_ir_builder.CreateStore(cr_i32, m_cr);
 }
 
 void PPULLVMRecompiler::VCMPEQFP(u32 vd, u32 va, u32 vb) {
