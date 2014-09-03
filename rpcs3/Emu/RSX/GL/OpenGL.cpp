@@ -11,7 +11,7 @@ void InitProcTable()
 #undef OPENGL_PROC
 #undef OPENGL_PROC2
 #endif
-#ifdef __UNIX__
+#ifdef __unix__
 	glewExperimental = true;
 	glewInit();
 #endif

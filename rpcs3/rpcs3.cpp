@@ -31,7 +31,7 @@
 #include <wx/msw/wrapwin.h>
 #endif
 
-#ifdef __UNIX__
+#ifdef __unix__
 #include <X11/Xlib.h>
 #endif
 
@@ -180,7 +180,7 @@ void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 
 Rpcs3App::Rpcs3App()
 {
-	#if defined(__UNIX__) && !defined(__APPLE__)
+	#if defined(__unix__) && !defined(__APPLE__)
 	XInitThreads();
 	#endif
 }
