@@ -156,7 +156,7 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 		return CELL_VIDEO_OUT_SUCCEEDED;
 		
 	case CELL_VIDEO_OUT_SECONDARY:
-		//*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
+		*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
 
@@ -219,7 +219,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	cellSysutil->Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		videoOut, config.addr(), option.addr());
 
-	//if (option) *option = {};
+	if (option) *option = {};
 
 	switch(videoOut)
 	{
@@ -227,13 +227,13 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		config->resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
 		config->format = Emu.GetGSManager().GetInfo().mode.format;
 		config->aspect = Emu.GetGSManager().GetInfo().mode.aspect;
-		//*config->reserved = {};
+		*config->reserved = {};
 		config->pitch = Emu.GetGSManager().GetInfo().mode.pitch;
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 
 	case CELL_VIDEO_OUT_SECONDARY:
-		//*config = {}; // ???
+		*config = {}; // ???
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
@@ -448,7 +448,7 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 	case CELL_AUDIO_OUT_PRIMARY:
 		state->state = Emu.GetAudioManager().GetState();
 		state->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		//*state->reserved = {};
+		*state->reserved = {};
 		state->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
 		state->soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
 		state->soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
@@ -458,7 +458,7 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		//*state = { CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED };
+		*state = { CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED };
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
 
@@ -498,20 +498,20 @@ int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 {
 	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)", audioOut, config.addr(), option.addr());
 
-	//if (option) *option = {};
+	if (option) *option = {};
 
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
 		config->channel = Emu.GetAudioManager().GetInfo().mode.channel;
 		config->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		//*config->reserved = {};
+		*config->reserved = {};
 		config->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		//*config = {};
+		*config = {};
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
