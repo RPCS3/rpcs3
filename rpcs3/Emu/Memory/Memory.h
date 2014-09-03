@@ -333,22 +333,15 @@ public:
 		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
 	}
 
-	template<typename T, typename Td> void WriteData(const T addr, const Td* data)
-	{
-		memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
-	}
+	//template<typename T, typename Td> void WriteData(const T addr, const Td* data)
+	//{
+	//	memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
+	//}
 
-	template<typename T, typename Td> void WriteData(const T addr, const Td data)
-	{
-		*(Td*)GetMemFromAddr<T>(addr) = data;
-	}
-
-	template<typename T> std::string ReadString(const T addr, const u64 len)
-	{
-		std::string ret((const char *)GetMemFromAddr<T>(addr), len);
-
-		return ret;
-	}
+	//template<typename T, typename Td> void WriteData(const T addr, const Td data)
+	//{
+	//	*(Td*)GetMemFromAddr<T>(addr) = data;
+	//}
 
 	template<typename T> std::string ReadString(const T addr)
 	{
@@ -357,7 +350,7 @@ public:
 
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
-		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
+		memcpy((char*)GetMemFromAddr<T>(addr), str.c_str(), str.size() + 1);
 	}
 
 	u32 GetUserMemTotalSize()
@@ -378,16 +371,6 @@ public:
 	bool Free(const u64 addr)
 	{
 		return UserMemory->Free(addr);
-	}
-
-	bool Lock(const u64 addr, const u32 size)
-	{
-		return UserMemory->Lock(addr, size);
-	}
-
-	bool Unlock(const u64 addr, const u32 size)
-	{
-		return UserMemory->Unlock(addr, size);
 	}
 
 	bool Map(const u64 addr, const u32 size);

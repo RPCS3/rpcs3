@@ -377,7 +377,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
-	Memory.WriteData(gcm_info.context_addr, current_context);
+	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	Memory.Write32(context.addr(), gcm_info.context_addr);
 
 	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
@@ -591,8 +591,8 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.m_comp = comp;
 	tile.m_base = base;
 	tile.m_bank = bank;
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_tiles_addr + sizeof(CellGcmTileInfo)* index, tile.Pack());
 
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 
@@ -642,8 +642,7 @@ int cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.m_sRef = sRef;
 	zcull.m_sMask = sMask;
 
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_zculls_addr + sizeof(CellGcmZcullInfo)* index, zcull.Pack());
-
+	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().m_zculls_addr)[index] = zcull.Pack();
 	return CELL_OK;
 }
 
@@ -1149,8 +1148,8 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.m_comp = comp;
 	tile.m_base = base;
 	tile.m_bank = bank;
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_tiles_addr + sizeof(CellGcmTileInfo) * index, tile.Pack());
 
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 

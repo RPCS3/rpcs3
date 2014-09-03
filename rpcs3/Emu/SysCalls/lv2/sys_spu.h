@@ -39,16 +39,15 @@ enum
 
 struct sys_spu_thread_group_attribute
 {
-	be_t<u32> name_len;
-	be_t<u32> name_addr;
-	be_t<int> type;
-	/* struct {} option; */
+	be_t<u32> nsize;
+	vm::bptr<const char> name;
+	be_t<s32> type;
 	be_t<u32> ct; // memory container id
 };
 
 struct sys_spu_thread_attribute
 {
-	be_t<u32> name_addr;
+	vm::bptr<const char> name;
 	be_t<u32> name_len;
 	be_t<u32> option;
 };

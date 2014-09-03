@@ -197,7 +197,12 @@ struct CellVideoOutConfiguration
 	u8 format;
 	u8 aspect;
 	u8 reserved[9];
-	u32 pitch;
+	be_t<u32> pitch;
+};
+
+struct CellVideoOutOption
+{
+	be_t<u32> reserved;
 };
 
 enum CellVideoOutEvent

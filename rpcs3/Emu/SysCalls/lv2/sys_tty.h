@@ -23,5 +23,5 @@ enum
 };
 
 // SysCalls
-s32 sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);
-s32 sys_tty_write(u32 ch, u64 buf_addr, u32 len, u64 pwritelen_addr);
+s32 sys_tty_read(s32 ch, vm::ptr<void> buf, u32 len, vm::ptr<u32> preadlen);
+s32 sys_tty_write(s32 ch, vm::ptr<const void> buf, u32 len, vm::ptr<u32> pwritelen);

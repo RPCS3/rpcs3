@@ -193,9 +193,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNpSns.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTus.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\SC_Keyboard.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\SC_Mouse.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\SC_Pad.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellKb.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
@@ -374,6 +374,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
@@ -397,8 +398,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\SC_Keyboard.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\SC_Mouse.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellKb.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />

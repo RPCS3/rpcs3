@@ -1,18 +1,22 @@
 #pragma once
 
-#define SYS_VM_TEST_INVALID                 0x0000ULL
-#define SYS_VM_TEST_UNUSED                  0x0001ULL
-#define SYS_VM_TEST_ALLOCATED               0x0002ULL
-#define SYS_VM_TEST_STORED                  0x0004ULL
+enum : u64
+{
+	SYS_VM_TEST_INVALID   = 0,
+	SYS_VM_TEST_UNUSED    = 1,
+	SYS_VM_TEST_ALLOCATED = 2,
+	SYS_VM_TEST_STORED    = 4,
+};
 
-struct sys_vm_statistics {
-	u64 vm_crash_ppu;
-	u64 vm_crash_spu;
-	u64 vm_read;
-	u64 vm_write;
-	u32 physical_mem_size;
-	u32 physical_mem_used;
-	u64 timestamp;
+struct sys_vm_statistics
+{
+	be_t<u64> page_fault_ppu; // Number of bad virtual memory accesses from a PPU thread.
+	be_t<u64> page_fault_spu; // Number of bad virtual memory accesses from a SPU thread.
+	be_t<u64> page_in;        // Number of virtual memory backup reading operations.
+	be_t<u64> page_out;       // Number of virtual memory backup writing operations.
+	be_t<u32> pmem_total;     // Total physical memory allocated for the virtual memory area.
+	be_t<u32> pmem_used;      // Physical memory in use by the virtual memory area.
+	be_t<u64> timestamp;
 };
 
 // SysCalls
@@ -27,5 +31,5 @@ s32 sys_vm_flush(u32 addr, u32 size);
 s32 sys_vm_invalidate(u32 addr, u32 size);
 s32 sys_vm_store(u32 addr, u32 size);
 s32 sys_vm_sync(u32 addr, u32 size);
-s32 sys_vm_test(u32 addr, u32 size, u32 result_addr);
-s32 sys_vm_get_statistics(u32 addr, u32 stat_addr);
+s32 sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result);
+s32 sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics> stat);

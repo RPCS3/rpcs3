@@ -137,37 +137,26 @@ int cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	return CELL_OK;
 }
 
-int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr)
+int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
-	cellSysutil->Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state_addr);
+	cellSysutil->Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
-	CellVideoOutState state = {};
-
 	switch(videoOut)
 	{
-		case CELL_VIDEO_OUT_PRIMARY:
-		{
-			state.colorSpace = Emu.GetGSManager().GetColorSpace();
-			state.state = Emu.GetGSManager().GetState();
-			state.displayMode.resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
-			state.displayMode.scanMode = Emu.GetGSManager().GetInfo().mode.scanMode;
-			state.displayMode.conversion = Emu.GetGSManager().GetInfo().mode.conversion;
-			state.displayMode.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
-			state.displayMode.refreshRates = re(Emu.GetGSManager().GetInfo().mode.refreshRates);
-
-			Memory.WriteData(state_addr, state);
-		}
+	case CELL_VIDEO_OUT_PRIMARY:
+		state->state = Emu.GetGSManager().GetState();
+		state->colorSpace = Emu.GetGSManager().GetColorSpace();
+		state->displayMode.resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
+		state->displayMode.scanMode = Emu.GetGSManager().GetInfo().mode.scanMode;
+		state->displayMode.conversion = Emu.GetGSManager().GetInfo().mode.conversion;
+		state->displayMode.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
+		state->displayMode.refreshRates = re(Emu.GetGSManager().GetInfo().mode.refreshRates);
 		return CELL_VIDEO_OUT_SUCCEEDED;
-
-		case CELL_VIDEO_OUT_SECONDARY:
-		{
-			state.colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-			state.state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
-
-			Memory.WriteData(state_addr, state);
-		}
+		
+	case CELL_VIDEO_OUT_SECONDARY:
+		//*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
 
@@ -213,7 +202,7 @@ s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 wa
 
 		if(config.pitch)
 		{
-			Emu.GetGSManager().GetInfo().mode.pitch = re(config.pitch);
+			Emu.GetGSManager().GetInfo().mode.pitch = config.pitch;
 		}
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
@@ -225,27 +214,26 @@ s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 wa
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
+int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option)
 {
 	cellSysutil->Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
-		videoOut, config_addr, option_addr);
+		videoOut, config.addr(), option.addr());
 
-	CellVideoOutConfiguration config = {};
+	//if (option) *option = {};
 
 	switch(videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
-		config.resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
-		config.format = Emu.GetGSManager().GetInfo().mode.format;
-		config.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
-		config.pitch = re(Emu.GetGSManager().GetInfo().mode.pitch);
-
-		Memory.WriteData(config_addr, config);
+		config->resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
+		config->format = Emu.GetGSManager().GetInfo().mode.format;
+		config->aspect = Emu.GetGSManager().GetInfo().mode.aspect;
+		//*config->reserved = {};
+		config->pitch = Emu.GetGSManager().GetInfo().mode.pitch;
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 
 	case CELL_VIDEO_OUT_SECONDARY:
-		Memory.WriteData(config_addr, config);
+		//*config = {}; // ???
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
@@ -371,31 +359,31 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	switch(fs)
 	{
-		case CELL_AUDIO_OUT_FS_32KHZ:
-		case CELL_AUDIO_OUT_FS_44KHZ:
-		case CELL_AUDIO_OUT_FS_48KHZ:
-		case CELL_AUDIO_OUT_FS_88KHZ:
-		case CELL_AUDIO_OUT_FS_96KHZ:
-		case CELL_AUDIO_OUT_FS_176KHZ:
-		case CELL_AUDIO_OUT_FS_192KHZ:
-			break;
+	case CELL_AUDIO_OUT_FS_32KHZ:
+	case CELL_AUDIO_OUT_FS_44KHZ:
+	case CELL_AUDIO_OUT_FS_48KHZ:
+	case CELL_AUDIO_OUT_FS_88KHZ:
+	case CELL_AUDIO_OUT_FS_96KHZ:
+	case CELL_AUDIO_OUT_FS_176KHZ:
+	case CELL_AUDIO_OUT_FS_192KHZ:
+		break;
 
-		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(type)
 	{
-		case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-		case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-		case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
+	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
 
-		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY: return available;
-		case CELL_AUDIO_OUT_SECONDARY: return 0;
+	case CELL_AUDIO_OUT_PRIMARY: return available;
+	case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
 	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
@@ -451,31 +439,26 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 }
 
-int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
+int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
 {
-	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x,deviceIndex=0x%x,state_addr=0x%x)",audioOut,deviceIndex,state_addr);
-	CellAudioOutState state = {};
+	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", audioOut, deviceIndex, state.addr());
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY:
-		{
-			state.state = Emu.GetAudioManager().GetState();
-			state.soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
-			state.soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
-			state.soundMode.fs = Emu.GetAudioManager().GetInfo().mode.fs;
-			state.soundMode.layout = Emu.GetAudioManager().GetInfo().mode.layout;
-
-			Memory.WriteData(state_addr, state);
-		}
+	case CELL_AUDIO_OUT_PRIMARY:
+		state->state = Emu.GetAudioManager().GetState();
+		state->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
+		//*state->reserved = {};
+		state->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
+		state->soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
+		state->soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
+		state->soundMode.fs = Emu.GetAudioManager().GetInfo().mode.fs;
+		state->soundMode.reserved = 0;
+		state->soundMode.layout = Emu.GetAudioManager().GetInfo().mode.layout;
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
-		case CELL_AUDIO_OUT_SECONDARY:
-		{
-			state.state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
-
-			Memory.WriteData(state_addr, state);
-		}
+	case CELL_AUDIO_OUT_SECONDARY:
+		//*state = { CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED };
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
 
@@ -484,7 +467,7 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, u32 state_addr)
 
 int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option, u32 waitForEvent)
 {
-	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, (!)waitForEvent=%d)",
+	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=%d)",
 		audioOut, config.addr(), option.addr(), waitForEvent);
 
 	switch(audioOut)
@@ -511,26 +494,24 @@ int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> confi
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 }
 
-int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
+int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option)
 {
-	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)",
-		audioOut, config_addr, option_addr);
+	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)", audioOut, config.addr(), option.addr());
 
-	CellAudioOutConfiguration config = {};
+	//if (option) *option = {};
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY:
-		config.channel = Emu.GetAudioManager().GetInfo().mode.channel;
-		config.encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		config.downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
-
-		Memory.WriteData(config_addr, config);
+	case CELL_AUDIO_OUT_PRIMARY:
+		config->channel = Emu.GetAudioManager().GetInfo().mode.channel;
+		config->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
+		//*config->reserved = {};
+		config->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		Memory.WriteData(config_addr, config);
+		//*config = {};
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
@@ -540,12 +521,12 @@ int cellAudioOutGetConfiguration(u32 audioOut, u32 config_addr, u32 option_addr)
 
 int cellAudioOutGetNumberOfDevice(u32 audioOut)
 {
-	cellSysutil->Warning("cellAudioOutGetNumberOfDevice(videoOut=%d)",audioOut);
+	cellSysutil->Warning("cellAudioOutGetNumberOfDevice(audioOut=%d)", audioOut);
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY: return 1;
-		case CELL_AUDIO_OUT_SECONDARY: return 0;
+	case CELL_AUDIO_OUT_PRIMARY: return 1;
+	case CELL_AUDIO_OUT_SECONDARY: return 0;
 	}
 
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
@@ -553,8 +534,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%u, deviceIndex=%u, info_addr=0x%x)",
-		audioOut, deviceIndex, info.addr());
+	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%d, deviceIndex=%d, info_addr=0x%x)", audioOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -576,11 +556,11 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 
 	switch(audioOut)
 	{
-		case CELL_AUDIO_OUT_PRIMARY:
-		case CELL_AUDIO_OUT_SECONDARY:
-			break;
+	case CELL_AUDIO_OUT_PRIMARY:
+	case CELL_AUDIO_OUT_SECONDARY:
+		break;
 
-		default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
 	}
 
 	switch(control)

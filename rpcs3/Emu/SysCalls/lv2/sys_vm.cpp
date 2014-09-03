@@ -11,7 +11,7 @@ MemoryContainerInfo* current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)
 {
-	sys_vm.Warning("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
+	sys_vm.Todo("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
 		vsize, psize, cid, flag, policy, addr);
 
 	// Check virtual size.
@@ -65,7 +65,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 
 s32 sys_vm_unmap(u32 addr)
 {
-	sys_vm.Warning("sys_vm_unmap(addr=0x%x)", addr);
+	sys_vm.Todo("sys_vm_unmap(addr=0x%x)", addr);
 
 	// Simply free the memory to unmap.
 	if(!Memory.Free(addr)) return CELL_EINVAL;
@@ -75,7 +75,7 @@ s32 sys_vm_unmap(u32 addr)
 
 s32 sys_vm_append_memory(u32 addr, u32 size)
 {
-	sys_vm.Warning("sys_vm_append_memory(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_append_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (size <= 0))
@@ -97,7 +97,7 @@ s32 sys_vm_append_memory(u32 addr, u32 size)
 
 s32 sys_vm_return_memory(u32 addr, u32 size)
 {
-	sys_vm.Warning("sys_vm_return_memory(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_return_memory(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (size <= 0))
@@ -119,7 +119,7 @@ s32 sys_vm_return_memory(u32 addr, u32 size)
 
 s32 sys_vm_lock(u32 addr, u32 size)
 {
-	sys_vm.Warning("sys_vm_lock(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_lock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -133,15 +133,13 @@ s32 sys_vm_lock(u32 addr, u32 size)
 		return CELL_EBUSY;
 	}
 
-	// The locked memory area keeps allocated and unchanged until sys_vm_unlocked is called.
-	Memory.Lock(addr, size);
-
+	// TODO: The locked memory area keeps allocated and unchanged until sys_vm_unlocked is called.
 	return CELL_OK;
 }
 
 s32 sys_vm_unlock(u32 addr, u32 size)
 {
-	sys_vm.Warning("sys_vm_unlock(addr=0x%x,size=0x%x)", addr, size);
+	sys_vm.Todo("sys_vm_unlock(addr=0x%x,size=0x%x)", addr, size);
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -149,8 +147,7 @@ s32 sys_vm_unlock(u32 addr, u32 size)
 		return CELL_EINVAL;
 	}
 
-	Memory.Unlock(addr, size);
-
+	// TODO: Unlock
 	return CELL_OK;
 }
 
@@ -238,9 +235,9 @@ s32 sys_vm_sync(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-s32 sys_vm_test(u32 addr, u32 size, u32 result_addr)
+s32 sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
 {
-	sys_vm.Todo("sys_vm_test(addr=0x%x,size=0x%x,result_addr=0x%x)", addr, size, result_addr);
+	sys_vm.Todo("sys_vm_test(addr=0x%x, size=0x%x, result_addr=0x%x)", addr, size, result.addr());
 
 	// Check address and size.
 	if((current_ct->addr != addr) || (current_ct->size < size) || (size <= 0))
@@ -252,14 +249,14 @@ s32 sys_vm_test(u32 addr, u32 size, u32 result_addr)
 	// sys_vm_test checks the state of a portion of the virtual memory area.
 
 	// Faking.
-	Memory.Write64(result_addr, SYS_VM_TEST_ALLOCATED);
+	*result = SYS_VM_TEST_ALLOCATED;
 
 	return CELL_OK;
 }
 
-s32 sys_vm_get_statistics(u32 addr, u32 stat_addr)
+s32 sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics> stat)
 {
-	sys_vm.Todo("sys_vm_get_statistics(addr=0x%x,stat_addr=0x%x)", addr, stat_addr);
+	sys_vm.Todo("sys_vm_get_statistics(addr=0x%x, stat_addr=0x%x)", addr, stat.addr());
 
 	// Check address.
 	if(current_ct->addr != addr)
@@ -268,17 +265,12 @@ s32 sys_vm_get_statistics(u32 addr, u32 stat_addr)
 	}
 
 	// TODO
-	// sys_vm_get_statistics collects virtual memory management stats.
-
-	sys_vm_statistics stats;
-	stats.physical_mem_size = current_ct->size;  // Total physical memory allocated for the virtual memory area.
-	stats.physical_mem_used = 0;                 // Physical memory in use by the virtual memory area.
-	stats.timestamp = 0;                         // Current time.
-	stats.vm_crash_ppu = 0;                      // Number of bad virtual memory accesses from a PPU thread.
-	stats.vm_crash_spu = 0;                      // Number of bad virtual memory accesses from a SPU thread.
-	stats.vm_read = 0;                           // Number of virtual memory backup reading operations.
-	stats.vm_write = 0;                          // Number of virtual memory backup writing operations.
-	Memory.WriteData(stat_addr, stats);          // Faking.
-
+	stat->page_fault_ppu = 0;
+	stat->page_fault_spu = 0;
+	stat->page_in = 0;
+	stat->page_out = 0;
+	stat->pmem_total = current_ct->size;
+	stat->pmem_used = 0;
+	stat->timestamp = 0;
 	return CELL_OK;
 }

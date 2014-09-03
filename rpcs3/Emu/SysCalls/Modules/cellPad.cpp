@@ -4,54 +4,9 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "Emu/Io/Pad.h"
+#include "cellPad.h"
 
 extern Module *sys_io;
-
-enum CELL_PAD_ERROR_CODE
-{
-	CELL_PAD_ERROR_FATAL                      = 0x80121101,
-	CELL_PAD_ERROR_INVALID_PARAMETER          = 0x80121102,
-	CELL_PAD_ERROR_ALREADY_INITIALIZED        = 0x80121103,
-	CELL_PAD_ERROR_UNINITIALIZED              = 0x80121104,
-	CELL_PAD_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121105,
-	CELL_PAD_ERROR_DATA_READ_FAILED           = 0x80121106,
-	CELL_PAD_ERROR_NO_DEVICE                  = 0x80121107,
-	CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD        = 0x80121108,
-	CELL_PAD_ERROR_TOO_MANY_DEVICES           = 0x80121109,
-	CELL_PAD_ERROR_EBUSY                      = 0x8012110a,
-};
-
-struct CellPadData
-{
-	be_t<s32> len;
-	be_t<u16> button[CELL_PAD_MAX_CODES];
-};
-
-struct CellPadInfo
-{
-	be_t<u32> max_connect;
-	be_t<u32> now_connect;
-	be_t<u32> system_info;
-	be_t<u16> vendor_id[CELL_MAX_PADS];
-	be_t<u16> product_id[CELL_MAX_PADS];
-	u8 status[CELL_MAX_PADS];
-};
-
-struct CellPadInfo2
-{
-	be_t<u32> max_connect;
-	be_t<u32> now_connect;
-	be_t<u32> system_info;
-	be_t<u32> port_status[CELL_PAD_MAX_PORT_NUM];
-	be_t<u32> port_setting[CELL_PAD_MAX_PORT_NUM];
-	be_t<u32> device_capability[CELL_PAD_MAX_PORT_NUM];
-	be_t<u32> device_type[CELL_PAD_MAX_PORT_NUM];
-};
-
-struct CellCapabilityInfo
-{
-	be_t<u32> info[CELL_PAD_MAX_CAPABILITY_INFO];
-};
 
 int cellPadInit(u32 max_connect)
 {
@@ -99,9 +54,10 @@ int cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-int cellPadGetData(u32 port_no, u32 data_addr)
+int cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
-	sys_io->Log("cellPadGetData[port_no: %d, data_addr: 0x%x]", port_no, data_addr);
+	sys_io->Log("cellPadGetData(port_no=%d, data_addr=0x%x)", port_no, data.addr());
+
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
@@ -110,7 +66,6 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	if(port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
 
 	Pad& pad = pads[port_no];
-	CellPadData data = {};
 
 	u16 d1Initial, d2Initial; 
 	d1Initial = pad.m_digital_1;
@@ -232,7 +187,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	}
 
 	//not sure if this should officially change with capabilities/portsettings :(
-	data.len = CELL_PAD_MAX_CODES;
+	data->len = CELL_PAD_MAX_CODES;
 
 	//report len 0 if nothing changed and if we havent recently cleared buffer
 	if (pad.m_buffer_cleared)
@@ -241,34 +196,32 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	}
 	else if (!btnChanged)
 	{
-		data.len = 0;
+		data->len = 0;
 	}
 
 	//lets still send new data anyway, not sure whats expected still
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
-	data.button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = pad.m_analog_right_x;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = pad.m_analog_right_y;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]  = pad.m_analog_left_x;
-	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]  = pad.m_analog_left_y;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]    = pad.m_press_right;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]     = pad.m_press_left;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_UP]       = pad.m_press_up;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_DOWN]     = pad.m_press_down;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = pad.m_press_triangle;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE]   = pad.m_press_circle;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_CROSS]    = pad.m_press_cross;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE]   = pad.m_press_square;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_L1]       = pad.m_press_L1;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_L2]       = pad.m_press_L2;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_R1]       = pad.m_press_R1;
-	data.button[CELL_PAD_BTN_OFFSET_PRESS_R2]       = pad.m_press_R2;
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_X]       = pad.m_sensor_x;
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Y]       = pad.m_sensor_y;
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Z]       = pad.m_sensor_z;
-	data.button[CELL_PAD_BTN_OFFSET_SENSOR_G]       = pad.m_sensor_g;
-
-	Memory.WriteData(data_addr, data);
+	data->button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
+	data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
+	data->button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = pad.m_analog_right_x;
+	data->button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = pad.m_analog_right_y;
+	data->button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X]  = pad.m_analog_left_x;
+	data->button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y]  = pad.m_analog_left_y;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT]    = pad.m_press_right;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_LEFT]     = pad.m_press_left;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_UP]       = pad.m_press_up;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_DOWN]     = pad.m_press_down;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = pad.m_press_triangle;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE]   = pad.m_press_circle;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_CROSS]    = pad.m_press_cross;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE]   = pad.m_press_square;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_L1]       = pad.m_press_L1;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_L2]       = pad.m_press_L2;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_R1]       = pad.m_press_R1;
+	data->button[CELL_PAD_BTN_OFFSET_PRESS_R2]       = pad.m_press_R2;
+	data->button[CELL_PAD_BTN_OFFSET_SENSOR_X]       = pad.m_sensor_x;
+	data->button[CELL_PAD_BTN_OFFSET_SENSOR_Y]       = pad.m_sensor_y;
+	data->button[CELL_PAD_BTN_OFFSET_SENSOR_Z]       = pad.m_sensor_z;
+	data->button[CELL_PAD_BTN_OFFSET_SENSOR_G]       = pad.m_sensor_g;
 
 	return CELL_OK;
 }
@@ -295,17 +248,16 @@ int cellPadSetActDirect(u32 port_no, u32 param_addr)
 	return CELL_OK;
 }
 
-int cellPadGetInfo(u32 info_addr)
+int cellPadGetInfo(vm::ptr<CellPadInfo> info)
 {
-	sys_io->Log("cellPadGetInfo(info_addr=0x%x)", info_addr);
+	sys_io->Log("cellPadGetInfo(info_addr=0x%x)", info.addr());
+
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
-	CellPadInfo info = {};
-
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	info.max_connect = rinfo.max_connect;
-	info.now_connect = rinfo.now_connect;
-	info.system_info = rinfo.system_info;
+	info->max_connect = rinfo.max_connect;
+	info->now_connect = rinfo.now_connect;
+	info->system_info = rinfo.system_info;
 
 	//Can't have this as const, we need to reset Assign Changes Flag here
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
@@ -315,30 +267,25 @@ int cellPadGetInfo(u32 info_addr)
 		if(i >= pads.size())
 			break;
 
-		info.status[i] = pads[i].m_port_status;
+		info->status[i] = pads[i].m_port_status;
 		pads[i].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info.product_id[i] = 0x0268;
-		info.vendor_id[i] = 0x054C;
+		info->product_id[i] = 0x0268;
+		info->vendor_id[i] = 0x054C;
 	}
-
-	Memory.WriteData(info_addr, info);
 
 	return CELL_OK;
 }
 
-int cellPadGetInfo2(u32 info_addr)
+int cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 {
-	sys_io->Log("cellPadGetInfo2(info_addr=0x%x)", info_addr);
+	sys_io->Log("cellPadGetInfo2(info_addr=0x%x)", info.addr());
+
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
-	CellPadInfo2 info = {};
-	//sys_io->Warning("*** info{}: max_connect=0x%x, now_connect=0x%x, system_info=0x%x, port_status[0]=0x%x, port_setting[0]=0x%x",
-	//	(u32)info.max_connect, (u32)info.now_connect, (u32)info.system_info, (u32)info.port_status[0], (u32)info.port_setting[0]);
-
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	info.max_connect = rinfo.max_connect;
-	info.now_connect = rinfo.now_connect;
-	info.system_info = rinfo.system_info;
+	info->max_connect = rinfo.max_connect;
+	info->now_connect = rinfo.now_connect;
+	info->system_info = rinfo.system_info;
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
@@ -347,21 +294,20 @@ int cellPadGetInfo2(u32 info_addr)
 		if(i >= pads.size())
 			break;
 
-		info.port_status[i] = pads[i].m_port_status;
+		info->port_status[i] = pads[i].m_port_status;
 		pads[i].m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info.port_setting[i] = pads[i].m_port_setting;
-		info.device_capability[i] = pads[i].m_device_capability;
-		info.device_type[i] = pads[i].m_device_type;
+		info->port_setting[i] = pads[i].m_port_setting;
+		info->device_capability[i] = pads[i].m_device_capability;
+		info->device_type[i] = pads[i].m_device_type;
 	}
-
-	Memory.WriteData(info_addr, info);
 
 	return CELL_OK;
 }
 
-int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<be_t<u32>> info_addr)
+int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info)
 {
-	sys_io->Log("cellPadGetCapabilityInfo[port_no: %d, data_addr: 0x%x]", port_no, info_addr.addr());
+	sys_io->Log("cellPadGetCapabilityInfo(port_no=%d, data_addr:=0x%x)", port_no, info.addr());
+
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
@@ -369,12 +315,8 @@ int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<be_t<u32>> info_addr)
 
 	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
-	CellCapabilityInfo data = {};
-
 	//Should return the same as device capability mask, psl1ght has it backwards in pad.h
-	data.info[0] = pads[port_no].m_device_capability;
-
-	Memory.WriteData(info_addr.addr(), data);
+	info->info[0] = pads[port_no].m_device_capability;
 
 	return CELL_OK;
 }
@@ -455,4 +397,22 @@ int cellPadSetSensorMode(u32 port_no, u32 mode)
 		pads[port_no].m_port_setting &= ~CELL_PAD_SETTING_SENSOR_ON;
 
 	return CELL_OK;
+}
+
+void cellPad_init()
+{
+	sys_io->AddFunc(0x1cf98800, cellPadInit);
+	sys_io->AddFunc(0x4d9b75d5, cellPadEnd);
+	sys_io->AddFunc(0x0d5f2c14, cellPadClearBuf);
+	sys_io->AddFunc(0x8b72cda1, cellPadGetData);
+	sys_io->AddFunc(0x6bc09c61, cellPadGetDataExtra);
+	sys_io->AddFunc(0xf65544ee, cellPadSetActDirect);
+	sys_io->AddFunc(0x3aaad464, cellPadGetInfo);
+	sys_io->AddFunc(0xa703a51d, cellPadGetInfo2);
+	sys_io->AddFunc(0x578e3c98, cellPadSetPortSetting);
+	sys_io->AddFunc(0x0e2dfaad, cellPadInfoPressMode);
+	sys_io->AddFunc(0x78200559, cellPadInfoSensorMode);
+	sys_io->AddFunc(0xf83f8182, cellPadSetPressMode);
+	sys_io->AddFunc(0xbe5be3ba, cellPadSetSensorMode);
+	sys_io->AddFunc(0xdbf4c59c, cellPadGetCapabilityInfo);
 }

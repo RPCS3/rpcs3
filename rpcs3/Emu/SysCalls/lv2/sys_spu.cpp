@@ -71,9 +71,9 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	u32 spu_ep = (u32)img->entry_point;
 
 	std::string name = "SPUThread";
-	if (attr->name_addr)
+	if (attr->name)
 	{
-		name = Memory.ReadString(attr->name_addr, attr->name_len);
+		name = std::string(attr->name.get_ptr(), attr->name_len);
 	}
 
 	u64 a1 = arg->arg1;
@@ -101,7 +101,7 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	(*(SPUThread*)&new_thread).group = group_info;
 
 	sys_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		(attr->name_addr ? name.c_str() : ""), (u32) img->segs_addr, ((SPUThread&) new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, id);
+		(attr->name ? attr->name.get_ptr() : ""), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, id);
 
 	return CELL_OK;
 }
@@ -410,7 +410,7 @@ s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, int prio, vm::pt
 
 	if (prio < 16 || prio > 255) return CELL_EINVAL;
 
-	const std::string name = Memory.ReadString(attr->name_addr, attr->name_len);
+	const std::string name(attr->name.get_ptr(), attr->nsize);
 
 	*id = sys_spu.GetNewId(new SpuGroupInfo(name, num, prio, attr->type, attr->ct));
 

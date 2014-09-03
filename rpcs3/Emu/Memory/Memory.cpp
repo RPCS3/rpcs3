@@ -525,19 +525,22 @@ u8* DynamicMemoryBlockBase::GetMem(u64 addr) const
 
 bool DynamicMemoryBlockBase::IsLocked(u64 addr)
 {
-	assert(!__FUNCTION__);
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::IsLocked() not implemented");
+	Emu.Pause();
 	return false;
 }
 
 bool DynamicMemoryBlockBase::Lock(u64 addr, u32 size)
 {
-	assert(!__FUNCTION__);
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::Lock() not implemented");
+	Emu.Pause();
 	return false;
 }
 
 bool DynamicMemoryBlockBase::Unlock(u64 addr, u32 size)
 {
-	assert(!__FUNCTION__);
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::Unlock() not implemented");
+	Emu.Pause();
 	return false;
 }
 
