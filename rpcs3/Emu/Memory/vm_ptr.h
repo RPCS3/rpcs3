@@ -78,7 +78,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<T, lvl, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<T, lvl, AT2>&)addr;
 		}
 		
@@ -191,7 +191,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<T, 1, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<T, 1, AT2>&)addr;
 		}
 
@@ -234,7 +234,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<void, 1, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<void, 1, AT2>&)addr;
 		}
 
@@ -272,7 +272,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<const void, 1, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<const void, 1, AT2>&)addr;
 		}
 
@@ -328,7 +328,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<RT(*)(), 1, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<RT(*)(), 1, AT2>&)addr;
 		}
 
@@ -406,7 +406,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<RT(*)(T...), 1, AT2>() const
 		{
-			std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
 			return (_ptr_base<RT(*)(T...), 1, AT2>&)addr;
 		}
 
@@ -417,7 +417,7 @@ namespace vm
 
 		operator const std::function<RT(T...)>() const
 		{
-			std::remove_const<AT>::type AT addr; addr = m_addr;
+			typename std::remove_const<AT>::type addr; addr = m_addr;
 			return [addr](T... args) -> RT { return make(addr)(args...); };
 		}
 
