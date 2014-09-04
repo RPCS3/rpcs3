@@ -24,7 +24,7 @@ void MemoryBase::InvalidAddress(const char* func, const u64 addr)
 
 void MemoryBase::RegisterPages(u64 addr, u32 size)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
 	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -45,7 +45,7 @@ void MemoryBase::RegisterPages(u64 addr, u32 size)
 
 void MemoryBase::UnregisterPages(u64 addr, u32 size)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
 	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -66,7 +66,7 @@ void MemoryBase::UnregisterPages(u64 addr, u32 size)
 
 u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	u32 index;
 	for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
@@ -84,7 +84,7 @@ u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
 
 void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	for (int i = 0; i < MemoryBlocks.size(); ++i)
 	{
@@ -99,7 +99,7 @@ void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
 
 void MemoryBase::Init(MemoryType type)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	if (m_inited) return;
 	m_inited = true;
@@ -152,7 +152,7 @@ void MemoryBase::Init(MemoryType type)
 
 void MemoryBase::Close()
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	if (!m_inited) return;
 	m_inited = false;
@@ -172,7 +172,7 @@ void MemoryBase::Close()
 void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 {
 	{
-		LV2_LOCK();
+		LV2_LOCK(0);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
 			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
@@ -188,7 +188,7 @@ u32 MemoryBase::ReadMMIO32(u32 addr)
 {
 	u32 res;
 	{
-		LV2_LOCK();
+		LV2_LOCK(0);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
 			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
@@ -203,7 +203,7 @@ u32 MemoryBase::ReadMMIO32(u32 addr)
 
 bool MemoryBase::Map(const u64 addr, const u32 size)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	if ((u32)addr != addr || (u64)addr + (u64)size > 0x100000000ull)
 	{
@@ -224,7 +224,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 
 bool MemoryBase::Unmap(const u64 addr)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	for (u32 i = 0; i < MemoryBlocks.size(); i++)
 	{
@@ -360,7 +360,7 @@ DynamicMemoryBlockBase::DynamicMemoryBlockBase()
 
 const u32 DynamicMemoryBlockBase::GetUsedSize() const
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	u32 size = 0;
 
@@ -389,7 +389,7 @@ bool DynamicMemoryBlockBase::IsMyAddress(const u64 addr)
 
 MemoryBlock* DynamicMemoryBlockBase::SetRange(const u64 start, const u32 size)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	m_max_size = PAGE_4K(size);
 	if (!MemoryBlock::SetRange(start, 0))
@@ -403,7 +403,7 @@ MemoryBlock* DynamicMemoryBlockBase::SetRange(const u64 start, const u32 size)
 
 void DynamicMemoryBlockBase::Delete()
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	m_allocated.clear();
 	m_max_size = 0;
@@ -423,7 +423,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u64 addr, u32 size)
 		return false;
 	}
 
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
@@ -456,7 +456,7 @@ u64 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		exsize = size + align - 1;
 	}
 
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	for (u64 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
 	{
@@ -497,7 +497,7 @@ bool DynamicMemoryBlockBase::Alloc()
 
 bool DynamicMemoryBlockBase::Free(u64 addr)
 {
-	LV2_LOCK();
+	LV2_LOCK(0);
 
 	for (u32 num = 0; num < m_allocated.size(); num++)
 	{

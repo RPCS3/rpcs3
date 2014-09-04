@@ -313,10 +313,10 @@ public:
 		}
 	}
 
-	template<typename T> void WriteString(const T addr, const std::string& str)
-	{
-		memcpy((char*)GetMemFromAddr<T>(addr), str.c_str(), str.size() + 1);
-	}
+	//template<typename T> void WriteString(const T addr, const std::string& str)
+	//{
+	//	memcpy((char*)GetMemFromAddr<T>(addr), str.c_str(), str.size() + 1);
+	//}
 
 	u32 GetUserMemTotalSize()
 	{

@@ -177,7 +177,7 @@ s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
 
 s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
 {
-	sys_fs->Log("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.addr(), nread.addr());
+	sys_fs->Warning("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.addr(), nread.addr());
 
 	vfsDirBase* directory;
 	if(!sys_fs->CheckId(fd, directory))
@@ -186,10 +186,10 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
 	const DirEntryInfo* info = directory->Read();
 	if(info)
 	{
-		*nread = 1;
-		Memory.WriteString(dir.addr() + 2, info->name);
-		dir->d_namlen = info->name.length();
 		dir->d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+		dir->d_namlen = u8(std::min((u32)info->name.length(), (u32)CELL_MAX_FS_FILE_NAME_LENGTH));
+		strcpy_trunc(dir->d_name, info->name);
+		*nread = sizeof(CellFsDirent);
 	}
 	else
 	{
@@ -201,7 +201,7 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
 
 s32 cellFsClosedir(u32 fd)
 {
-	sys_fs->Log("cellFsClosedir(fd=%d)", fd);
+	sys_fs->Warning("cellFsClosedir(fd=%d)", fd);
 
 	if(!Emu.GetIdManager().RemoveID(fd))
 		return CELL_ESRCH;
@@ -252,7 +252,7 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Log("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.addr());
+	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.addr());
 
 	IDType type;
 	vfsStream* file;
@@ -279,7 +279,7 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 {
-	sys_fs->Log("cellFsMkdir(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
+	sys_fs->Warning("cellFsMkdir(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
 
 	const std::string _path = path.get_ptr();
 
@@ -293,7 +293,7 @@ s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 
 s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to)
 {
-	sys_fs->Log("cellFsRename(from='%s' (from_addr=0x%x), to='%s' (to_addr=0x%x))", from.get_ptr(), from.addr(), to.get_ptr(), to.addr());
+	sys_fs->Warning("cellFsRename(from='%s', to='%s')", from.get_ptr(), to.get_ptr());
 
 	std::string _from = from.get_ptr();
 	std::string _to = to.get_ptr();
@@ -343,7 +343,7 @@ s32 cellFsFsync(u32 fd)
 
 s32 cellFsRmdir(vm::ptr<const char> path)
 {
-	sys_fs->Log("cellFsRmdir(path=\"%s\")", path.get_ptr());
+	sys_fs->Warning("cellFsRmdir(path=\"%s\")", path.get_ptr());
 
 	std::string _path = path.get_ptr();
 
@@ -400,7 +400,7 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 
 s32 cellFsFtruncate(u32 fd, u64 size)
 {
-	sys_fs->Log("cellFsFtruncate(fd=%d, size=%lld)", fd, size);
+	sys_fs->Warning("cellFsFtruncate(fd=%d, size=%lld)", fd, size);
 	
 	IDType type;
 	vfsStream* file;
@@ -429,7 +429,7 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 
 s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 {
-	sys_fs->Log("cellFsTruncate(path=\"%s\", size=%lld)", path.get_ptr(), size);
+	sys_fs->Warning("cellFsTruncate(path=\"%s\", size=%lld)", path.get_ptr(), size);
 
 	vfsFile f(path.get_ptr(), vfsReadWrite);
 	if(!f.IsOpened())
@@ -459,7 +459,7 @@ s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsFGetBlockSize(fd=%d, sector_size_addr=0x%x, block_size_addr=0x%x)",
+	sys_fs->Warning("cellFsFGetBlockSize(fd=%d, sector_size_addr=0x%x, block_size_addr=0x%x)",
 		fd, sector_size.addr(), block_size.addr());
 
 	vfsStream* file;
@@ -473,7 +473,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64
 
 s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsGetBlockSize(file='%s', sector_size_addr=0x%x, block_size_addr=0x%x)",
+	sys_fs->Warning("cellFsGetBlockSize(file='%s', sector_size_addr=0x%x, block_size_addr=0x%x)",
 		path.get_ptr(), sector_size.addr(), block_size.addr());
 
 	*sector_size = 4096; // ?
@@ -496,7 +496,7 @@ s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, v
 
 s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<be_t<u32>> data_count)
 {
-	sys_fs->Log("cellFsGetDirectoryEntries(fd=%d, entries_addr=0x%x, entries_size = 0x%x, data_count_addr=0x%x)",
+	sys_fs->Warning("cellFsGetDirectoryEntries(fd=%d, entries_addr=0x%x, entries_size=0x%x, data_count_addr=0x%x)",
 		fd, entries.addr(), entries_size, data_count.addr());
 
 	vfsDirBase* directory;
@@ -506,11 +506,6 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 	const DirEntryInfo* info = directory->Read();
 	if(info)
 	{
-		*data_count = 1;
-		Memory.WriteString(entries.addr()+2, info->name);
-		entries->entry_name.d_namlen = info->name.length();
-		entries->entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
-
 		entries->attribute.st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
@@ -522,6 +517,11 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 		entries->attribute.st_mtime_ = 0; //TODO
 		entries->attribute.st_ctime_ = 0; //TODO
 		entries->attribute.st_blksize = 4096;
+
+		entries->entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+		entries->entry_name.d_namlen = u8(std::min((u32)info->name.length(), (u32)CELL_MAX_FS_FILE_NAME_LENGTH));
+		strcpy_trunc(entries->entry_name.d_name, info->name);
+		*data_count = 1;
 	}
 	else
 	{

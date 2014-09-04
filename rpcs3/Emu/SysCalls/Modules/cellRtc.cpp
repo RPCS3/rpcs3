@@ -71,9 +71,9 @@ int cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
 	return CELL_OK;
 }
 
-int cellRtcFormatRfc2822(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
+int cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc->Log("cellRtcFormatRfc2822(pszDateTime_addr=0x%x, pUtc=0x%x, time_zone=%d)", pszDateTime_addr, pUtc.addr(), iTimeZone);
+	cellRtc->Log("cellRtcFormatRfc2822(pszDateTime_addr=0x%x, pUtc=0x%x, time_zone=%d)", pszDateTime.addr(), pUtc.addr(), iTimeZone);
 
 	// Add time_zone as offset in minutes.
 	rTimeSpan tz = rTimeSpan(0, (long) iTimeZone, 0, 0);
@@ -84,28 +84,28 @@ int cellRtcFormatRfc2822(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc, s32 iT
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
 	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::UTC);
-	Memory.WriteString(pszDateTime_addr, str);
+	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
 }
 
-int cellRtcFormatRfc2822LocalTime(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc)
+int cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc)
 {
-	cellRtc->Log("cellRtcFormatRfc2822LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime_addr, pUtc.addr());
+	cellRtc->Log("cellRtcFormatRfc2822LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime.addr(), pUtc.addr());
 
 	// Get date from ticks.
 	rDateTime date = rDateTime((time_t)pUtc->tick);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
 	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::Local);
-	Memory.WriteString(pszDateTime_addr, str);
+	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
 }
 
-int cellRtcFormatRfc3339(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
+int cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc->Log("cellRtcFormatRfc3339(pszDateTime_addr=0x%x, pUtc=0x%x, iTimeZone=%d)", pszDateTime_addr, pUtc.addr(), iTimeZone);
+	cellRtc->Log("cellRtcFormatRfc3339(pszDateTime_addr=0x%x, pUtc=0x%x, iTimeZone=%d)", pszDateTime.addr(), pUtc.addr(), iTimeZone);
 	
 	// Add time_zone as offset in minutes.
 	rTimeSpan tz = rTimeSpan(0, (long) iTimeZone, 0, 0);
@@ -116,21 +116,21 @@ int cellRtcFormatRfc3339(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc, s32 iT
 
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
 	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::UTC);
-	Memory.WriteString(pszDateTime_addr, str);
+	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
 }
 
-int cellRtcFormatRfc3339LocalTime(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUtc)
+int cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc)
 {
-	cellRtc->Log("cellRtcFormatRfc3339LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime_addr, pUtc.addr());
+	cellRtc->Log("cellRtcFormatRfc3339LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime.addr(), pUtc.addr());
 	
 	// Get date from ticks.
 	rDateTime date = rDateTime((time_t) pUtc->tick);
 	
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
 	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::Local);
-	Memory.WriteString(pszDateTime_addr, str);
+	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
 }

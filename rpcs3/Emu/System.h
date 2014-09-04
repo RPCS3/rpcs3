@@ -175,7 +175,7 @@ public:
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
-#define LV2_LOCK() std::lock_guard<std::recursive_mutex>(Emu.GetCoreMutex())
+#define LV2_LOCK(x) std::lock_guard<std::recursive_mutex> core_lock##x(Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

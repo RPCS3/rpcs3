@@ -36,7 +36,7 @@ int UTF16stoUTF8s(vm::lptrl<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len,
 	}
 
 	*utf8_len = str.size();
-	Memory.WriteString(utf8.addr(), str);
+	memcpy(utf8.get_ptr(), str.c_str(), str.size());
 #endif
 	return ConversionOK;
 }
@@ -305,7 +305,7 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<be_t<u32>> src
 
 	if (target.length() > *dst_len) return DSTExhausted;
 
-	Memory.WriteString(dst.addr(), target);
+	memcpy(dst.get_ptr(), target.c_str(), target.size());
 
 	return ConversionOK;
 #else

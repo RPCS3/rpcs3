@@ -56,7 +56,7 @@ void PPUThread::AddArgv(const std::string& arg)
 	m_stack_point -= arg.length() + 1;
 	m_stack_point = AlignAddr(m_stack_point, 0x10) - 0x10;
 	m_argv_addr.push_back(m_stack_point);
-	Memory.WriteString(m_stack_point, arg);
+	memcpy(vm::get_ptr<char>(m_stack_point), arg.c_str(), arg.size() + 1);
 }
 
 void PPUThread::InitRegs()

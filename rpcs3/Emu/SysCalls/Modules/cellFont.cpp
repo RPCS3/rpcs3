@@ -181,8 +181,8 @@ int cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> 
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	vm::var<const char> f((u32)file.length() + 1, 1);
-	Memory.WriteString(f.addr(), file);
+	vm::var<char> f((u32)file.length() + 1, 1);
+	memcpy(f.get_ptr(), file.c_str(), file.size() + 1);
 	int ret = cellFontOpenFontFile(library, f, 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 	return ret;
