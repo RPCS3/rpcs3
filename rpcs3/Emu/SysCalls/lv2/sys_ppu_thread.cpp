@@ -153,7 +153,7 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname.addr(), threadname.get_ptr());
+		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname.addr(), threadname ? threadname.get_ptr() : "");
 
 	bool is_joinable = false;
 	bool is_interrupt = false;
@@ -184,7 +184,7 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	//new_thread.flags = flags;
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
-	new_thread.SetName(threadname.get_ptr());
+	new_thread.SetName(threadname ? threadname.get_ptr() : "");
 
 	sys_ppu_thread.Notice("*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
 
