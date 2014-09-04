@@ -78,7 +78,7 @@ struct CellPngDecInfo
 struct CellPngDecSrc
 {
 	be_t<u32> srcSelect;          // CellPngDecStreamSrcSel
-	be_t<u32> fileName_addr;      // const char*
+	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	be_t<u32> streamPtr;

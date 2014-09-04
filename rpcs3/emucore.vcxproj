@@ -177,7 +177,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil_SaveData.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
@@ -385,7 +385,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSysutil_SaveData.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVpost.h" />

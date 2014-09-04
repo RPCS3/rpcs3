@@ -30,20 +30,18 @@ struct FsRingBufferConfig
 } fs_config;
 
 
-s32 cellFsOpen(u32 path_addr, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
 {
-	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs->Log("cellFsOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
-		path.c_str(), flags, fd.addr(), arg.addr(), size);
+		path.get_ptr(), flags, fd.addr(), arg.addr(), size);
 
-	const std::string& ppath = path;
-	//ConLog.Warning("path: %s [%s]", ppath.c_str(), path.c_str());
+	const std::string _path = path.get_ptr();
 
 	s32 _oflags = flags;
 	if(flags & CELL_O_CREAT)
 	{
 		_oflags &= ~CELL_O_CREAT;
-		Emu.GetVFS().CreateFile(ppath);
+		Emu.GetVFS().CreateFile(_path);
 	}
 
 	vfsOpenMode o_mode;
@@ -81,7 +79,7 @@ s32 cellFsOpen(u32 path_addr, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32
 		{
 			_oflags &= ~CELL_O_TRUNC;
 			//truncate file before opening it as read/write
-			auto filePtr = Emu.GetVFS().OpenFile(ppath, vfsWrite);
+			auto filePtr = Emu.GetVFS().OpenFile(_path, vfsWrite);
 			delete filePtr;
 		}
 		o_mode = vfsReadWrite;
@@ -90,28 +88,28 @@ s32 cellFsOpen(u32 path_addr, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32
 
 	if(_oflags != 0)
 	{
-		sys_fs->Error("\"%s\" has unknown flags! flags: 0x%08x", ppath.c_str(), flags);
+		sys_fs->Error("\"%s\" has unknown flags! flags: 0x%08x", path.get_ptr(), flags);
 		return CELL_EINVAL;
 	}
 
-	if (!Emu.GetVFS().ExistsFile(ppath))
+	if (!Emu.GetVFS().ExistsFile(_path))
 	{
-		sys_fs->Error("\"%s\" not found! flags: 0x%08x", ppath.c_str(), flags);
+		sys_fs->Error("\"%s\" not found! flags: 0x%08x", path.get_ptr(), flags);
 		return CELL_ENOENT;
 	}
 
-	vfsFileBase* stream = Emu.GetVFS().OpenFile(ppath, o_mode);
+	vfsFileBase* stream = Emu.GetVFS().OpenFile(_path, o_mode);
 
 	if(!stream || !stream->IsOpened())
 	{
 		delete stream;
-		sys_fs->Error("\"%s\" not found! flags: 0x%08x", ppath.c_str(), flags);
+		sys_fs->Error("\"%s\" not found! flags: 0x%08x", path.get_ptr(), flags);
 		return CELL_ENOENT;
 	}
 
 	u32 id = sys_fs->GetNewId(stream, TYPE_FS_FILE);
 	*fd = id;
-	sys_fs->Notice("\"%s\" opened: fd = %d", path.c_str(), id);
+	sys_fs->Notice("\"%s\" opened: fd = %d", path.get_ptr(), id);
 
 	return CELL_OK;
 }
@@ -162,12 +160,11 @@ s32 cellFsClose(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsOpendir(u32 path_addr, vm::ptr<be_t<u32>> fd)
+s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
 {
-	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs->Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.c_str(), fd.addr());
+	sys_fs->Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.get_ptr(), fd.addr());
 	
-	vfsDirBase* dir = Emu.GetVFS().OpenDir(path);
+	vfsDirBase* dir = Emu.GetVFS().OpenDir(path.get_ptr());
 	if(!dir || !dir->IsOpened())
 	{
 		delete dir;
@@ -212,10 +209,11 @@ s32 cellFsClosedir(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsStat(const u32 path_addr, vm::ptr<CellFsStat> sb)
+s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
-	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.c_str(), sb.addr());
+	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.get_ptr(), sb.addr());
+
+	const std::string _path = path.get_ptr();
 
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -230,7 +228,7 @@ s32 cellFsStat(const u32 path_addr, vm::ptr<CellFsStat> sb)
 	sb->st_blksize = 4096;
 
 	{
-		vfsDir dir(path);
+		vfsDir dir(_path);
 		if(dir.IsOpened())
 		{
 			sb->st_mode |= CELL_FS_S_IFDIR;
@@ -239,7 +237,7 @@ s32 cellFsStat(const u32 path_addr, vm::ptr<CellFsStat> sb)
 	}
 
 	{
-		vfsFile f(path);
+		vfsFile f(_path);
 		if(f.IsOpened())
 		{
 			sb->st_mode |= CELL_FS_S_IFREG;
@@ -248,7 +246,7 @@ s32 cellFsStat(const u32 path_addr, vm::ptr<CellFsStat> sb)
 		}
 	}
 
-	sys_fs->Warning("cellFsStat: \"%s\" not found.", path.c_str());
+	sys_fs->Warning("cellFsStat: \"%s\" not found.", path.get_ptr());
 	return CELL_ENOENT;
 }
 
@@ -279,36 +277,32 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return CELL_OK;
 }
 
-s32 cellFsMkdir(u32 path_addr, u32 mode)
+s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 {
-	const std::string& ps3_path = Memory.ReadString(path_addr);
-	sys_fs->Log("cellFsMkdir(path=\"%s\", mode=0x%x)", ps3_path.c_str(), mode);
-	
-	/*vfsDir dir;
-	if(dir.IsExists(ps3_path))
-		return CELL_EEXIST;
-	if(!dir.Create(ps3_path))
-		return CELL_EBUSY;*/
+	sys_fs->Log("cellFsMkdir(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
 
-	if(Emu.GetVFS().ExistsDir(ps3_path))
+	const std::string _path = path.get_ptr();
+
+	if(Emu.GetVFS().ExistsDir(_path))
 		return CELL_EEXIST;
-	if(!Emu.GetVFS().CreateDir(ps3_path))
+	if(!Emu.GetVFS().CreateDir(_path))
 		return CELL_EBUSY;
 
 	return CELL_OK;
 }
 
-s32 cellFsRename(u32 from_addr, u32 to_addr)
+s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to)
 {
-	const std::string& ps3_from = Memory.ReadString(from_addr);
-	const std::string& ps3_to = Memory.ReadString(to_addr);
-	sys_fs->Log("cellFsRename(from='%s' (from_addr=0x%x), to='%s' (to_addr=0x%x))", ps3_from.c_str(), from_addr, ps3_to.c_str(), to_addr);
+	sys_fs->Log("cellFsRename(from='%s' (from_addr=0x%x), to='%s' (to_addr=0x%x))", from.get_ptr(), from.addr(), to.get_ptr(), to.addr());
+
+	std::string _from = from.get_ptr();
+	std::string _to = to.get_ptr();
 
 	{
 		vfsDir dir;
-		if(dir.IsExists(ps3_from))
+		if(dir.IsExists(_from))
 		{
-			if(!dir.Rename(ps3_from, ps3_to))
+			if(!dir.Rename(_from, _to))
 				return CELL_EBUSY;
 
 			return CELL_OK;
@@ -317,9 +311,10 @@ s32 cellFsRename(u32 from_addr, u32 to_addr)
 
 	{
 		vfsFile f;
-		if(f.Exists(ps3_from))
+
+		if(f.Exists(_from))
 		{
-			if(!f.Rename(ps3_from, ps3_to))
+			if(!f.Rename(_from, _to))
 				return CELL_EBUSY;
 
 			return CELL_OK;
@@ -328,10 +323,9 @@ s32 cellFsRename(u32 from_addr, u32 to_addr)
 
 	return CELL_ENOENT;
 }
-s32 cellFsChmod(u32 path_addr, u32 mode)
+s32 cellFsChmod(vm::ptr<const char> path, u32 mode)
 {
-	const std::string& ps3_path = Memory.ReadString(path_addr);
-	sys_fs->Todo("cellFsChmod(path=\"%s\", mode=0x%x)", ps3_path.c_str(), mode);
+	sys_fs->Todo("cellFsChmod(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
 
 	// TODO:
 
@@ -347,33 +341,35 @@ s32 cellFsFsync(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsRmdir(u32 path_addr)
+s32 cellFsRmdir(vm::ptr<const char> path)
 {
-	const std::string& ps3_path = Memory.ReadString(path_addr);
-	sys_fs->Log("cellFsRmdir(path=\"%s\")", ps3_path.c_str());
+	sys_fs->Log("cellFsRmdir(path=\"%s\")", path.get_ptr());
+
+	std::string _path = path.get_ptr();
 
 	vfsDir d;
-	if(!d.IsExists(ps3_path))
+	if(!d.IsExists(_path))
 		return CELL_ENOENT;
 
-	if(!d.Remove(ps3_path))
+	if(!d.Remove(_path))
 		return CELL_EBUSY;
 
 	return CELL_OK;
 }
 
-s32 cellFsUnlink(u32 path_addr)
+s32 cellFsUnlink(vm::ptr<const char> path)
 {
-	const std::string& ps3_path = Memory.ReadString(path_addr);
-	sys_fs->Warning("cellFsUnlink(path=\"%s\")", ps3_path.c_str());
+	sys_fs->Warning("cellFsUnlink(path=\"%s\")", path.get_ptr());
 
-	if (Emu.GetVFS().ExistsDir(ps3_path))
+	std::string _path = path.get_ptr();
+
+	if (Emu.GetVFS().ExistsDir(_path))
 		return CELL_EISDIR;
 
-	if (!Emu.GetVFS().ExistsFile(ps3_path))
+	if (!Emu.GetVFS().ExistsFile(_path))
 		return CELL_ENOENT;
 
-	if (!Emu.GetVFS().RemoveFile(ps3_path))
+	if (!Emu.GetVFS().RemoveFile(_path))
 		return CELL_EACCES;
 	
 	return CELL_OK;
@@ -431,15 +427,14 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 	return CELL_OK;
 }
 
-s32 cellFsTruncate(u32 path_addr, u64 size)
+s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 {
-	const std::string& path = Memory.ReadString(path_addr);
-	sys_fs->Log("cellFsTruncate(path=\"%s\", size=%lld)", path.c_str(), size);
+	sys_fs->Log("cellFsTruncate(path=\"%s\", size=%lld)", path.get_ptr(), size);
 
-	vfsFile f(path, vfsReadWrite);
+	vfsFile f(path.get_ptr(), vfsReadWrite);
 	if(!f.IsOpened())
 	{
-		sys_fs->Warning("cellFsTruncate: \"%s\" not found.", path.c_str());
+		sys_fs->Warning("cellFsTruncate: \"%s\" not found.", path.get_ptr());
 		return CELL_ENOENT;
 	}
 	u64 initialSize = f.GetSize();
@@ -464,7 +459,7 @@ s32 cellFsTruncate(u32 path_addr, u64 size)
 
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsFGetBlockSize(fd=%d, sector_size_addr: 0x%x, block_size_addr: 0x%x)",
+	sys_fs->Log("cellFsFGetBlockSize(fd=%d, sector_size_addr=0x%x, block_size_addr=0x%x)",
 		fd, sector_size.addr(), block_size.addr());
 
 	vfsStream* file;
@@ -476,10 +471,10 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64
 	return CELL_OK;
 }
 
-s32 cellFsGetBlockSize(u32 path_addr, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
+s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
 {
-	sys_fs->Log("cellFsGetBlockSize(file: %s, sector_size_addr: 0x%x, block_size_addr: 0x%x)",
-		Memory.ReadString(path_addr).c_str(), sector_size.addr(), block_size.addr());
+	sys_fs->Log("cellFsGetBlockSize(file='%s', sector_size_addr=0x%x, block_size_addr=0x%x)",
+		path.get_ptr(), sector_size.addr(), block_size.addr());
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
@@ -487,14 +482,10 @@ s32 cellFsGetBlockSize(u32 path_addr, vm::ptr<be_t<u64>> sector_size, vm::ptr<be
 	return CELL_OK;
 }
 
-s32 cellFsGetFreeSize(u32 path_addr, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count)
+s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count)
 {
-	const std::string& ps3_path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
-		ps3_path.c_str(), block_size.addr(), block_count.addr());
-
-	if (ps3_path.empty())
-		return CELL_EINVAL;
+		path.get_ptr(), block_size.addr(), block_count.addr());
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?

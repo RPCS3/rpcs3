@@ -10,22 +10,22 @@
 
 SysCallBase sys_prx("sys_prx");
 
-s32 sys_prx_load_module(u32 path_addr, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	std::string path = Memory.ReadString(path_addr);
-	sys_prx.Todo("sys_prx_load_module(path=\"%s\", flags=0x%llx, pOpt=0x%x)", path.c_str(), flags, pOpt.addr());
+	sys_prx.Todo("sys_prx_load_module(path=\"%s\", flags=0x%llx, pOpt=0x%x)", path.get_ptr(), flags, pOpt.addr());
 
+	std::string _path = path.get_ptr();
 	// Check if the file is SPRX
 	std::string local_path;
-	Emu.GetVFS().GetDevice(path, local_path);
+	Emu.GetVFS().GetDevice(_path, local_path);
 	if (IsSelf(local_path)) {
 		if (!DecryptSelf(local_path+".prx", local_path)) {
 			return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 		}
-		path += ".prx";
+		_path += ".prx";
 	}
 
-	vfsFile f(path);
+	vfsFile f(_path);
 	if (!f.IsOpened()) {
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}

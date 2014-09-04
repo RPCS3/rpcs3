@@ -150,13 +150,10 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, u32 threadname_addr)
+s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
 {
-	std::string threadname = "";
-	if (threadname_addr) threadname = Memory.ReadString(threadname_addr);
-	
 	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname_addr, threadname.c_str());
+		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname.addr(), threadname.get_ptr());
 
 	bool is_joinable = false;
 	bool is_interrupt = false;
@@ -187,7 +184,7 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	//new_thread.flags = flags;
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
-	new_thread.SetName(threadname);
+	new_thread.SetName(threadname.get_ptr());
 
 	sys_ppu_thread.Notice("*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
 
@@ -219,15 +216,15 @@ s32 sys_ppu_thread_get_id(vm::ptr<be_t<u64>> thread_id)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_rename(u64 thread_id, u32 name_addr)
+s32 sys_ppu_thread_rename(u64 thread_id, vm::ptr<const char> name)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x)", thread_id, name_addr);
+	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x('%s'))", thread_id, name.addr(), name.get_ptr());
 
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if (!thr) {
 		return CELL_ESRCH;
 	}
 
-	thr->SetThreadName(Memory.ReadString(name_addr));
+	thr->SetThreadName(name.get_ptr());
 	return CELL_OK;
 }

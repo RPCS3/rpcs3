@@ -69,7 +69,7 @@ int cellPngDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellPng
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName_addr, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 

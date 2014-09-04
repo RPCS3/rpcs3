@@ -188,9 +188,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil_SaveData.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -623,6 +620,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -713,9 +713,6 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSysutil_SaveData.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h">
@@ -1202,6 +1199,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>

@@ -15,7 +15,7 @@
 #include "cellMsgDialog.h"
 #include "cellGame.h"
 #include "cellSysutil.h"
-#include "cellSysutil_SaveData.h"
+#include "cellSaveData.h"
 
 typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
@@ -652,13 +652,13 @@ int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }
 
-int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
+int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%xx, errDialog=%d, funcStat_addr=0x%x, container=%d)",
-		version, dirName_addr, errDialog, funcStat.addr(), container);
+	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%x, errDialog=%d, funcStat_addr=0x%x, container=%d)",
+		version, dirName.addr(), errDialog, funcStat.addr(), container);
 
-	std::string dirName = Memory.ReadString(dirName_addr);
-	if (dirName.size() != 9)
+	std::string dir = dirName.get_ptr();
+	if (dir.size() != 9)
 		return CELL_HDDGAME_ERROR_PARAM;
 
 	vm::var<CellHddGameSystemFileParam> param;
@@ -673,10 +673,10 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellH
 	get->st_ctime__  = 0; // TODO
 	get->st_mtime__  = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
-	memcpy(get->contentInfoPath, ("/dev_hdd0/game/"+dirName).c_str(), CELL_HDDGAME_PATH_MAX);
-	memcpy(get->hddGamePath, ("/dev_hdd0/game/"+dirName+"/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
+	memcpy(get->contentInfoPath, ("/dev_hdd0/game/" + dir).c_str(), CELL_HDDGAME_PATH_MAX);
+	memcpy(get->hddGamePath, ("/dev_hdd0/game/" + dir + "/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
 
-	if (!Emu.GetVFS().ExistsDir(("/dev_hdd0/game/"+dirName).c_str()))
+	if (!Emu.GetVFS().ExistsDir(("/dev_hdd0/game/" + dir).c_str()))
 	{
 		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
 	}
@@ -684,7 +684,7 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellH
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
 
-		vfsFile f(("/dev_hdd0/game/"+dirName+"/PARAM.SFO").c_str());
+		vfsFile f(("/dev_hdd0/game/" + dir + "/PARAM.SFO").c_str());
 		PSFLoader psf(f);
 		if (!psf.Load(false)) {
 			return CELL_HDDGAME_ERROR_BROKEN;
@@ -695,16 +695,16 @@ int cellHddGameCheck(u32 version, u32 dirName_addr, u32 errDialog, vm::ptr<CellH
 		get->getParam.resolution = psf.GetInteger("RESOLUTION");
 		get->getParam.soundFormat = psf.GetInteger("SOUND_FORMAT");
 		std::string title = psf.GetString("TITLE");
-		memcpy(get->getParam.title, title.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE,title.length()+1));
+		strcpy_trunc(get->getParam.title, title);
 		std::string app_ver = psf.GetString("APP_VER");
-		memcpy(get->getParam.dataVersion, app_ver.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_VERSION_SIZE,app_ver.length()+1));
-		memcpy(get->getParam.titleId, dirName.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLEID_SIZE,dirName.length()+1));
+		strcpy_trunc(get->getParam.dataVersion, app_ver);
+		strcpy_trunc(get->getParam.titleId, dir);
 
 		for (u32 i=0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
 			char key [16];
 			sprintf(key, "TITLE_%02d", i);
 			title = psf.GetString(key);
-			memcpy(get->getParam.titleLang[i], title.c_str(), std::min<size_t>(CELL_HDDGAME_SYSP_TITLE_SIZE, title.length() + 1));
+			strcpy_trunc(get->getParam.titleLang[i], title);
 		}
 	}
 

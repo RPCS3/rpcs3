@@ -135,28 +135,26 @@ int cellRtcFormatRfc3339LocalTime(u32 pszDateTime_addr, vm::ptr<CellRtcTick> pUt
 	return CELL_OK;
 }
 
-int cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, u32 pszDateTime_addr)
+int cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::ptr<const char> pszDateTime)
 {
-	cellRtc->Log("cellRtcParseDateTime(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime_addr);
+	cellRtc->Log("cellRtcParseDateTime(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
 
 	// Get date from formatted string.
 	rDateTime date;
-	const std::string& format = Memory.ReadString(pszDateTime_addr);
-	date.ParseDateTime(format);
+	date.ParseDateTime(pszDateTime.get_ptr());
 
 	pUtc->tick = date.GetTicks();
 
 	return CELL_OK;
 }
 
-int cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, u32 pszDateTime_addr)
+int cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::ptr<const char> pszDateTime)
 {
-	cellRtc->Log("cellRtcParseRfc3339(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime_addr);
+	cellRtc->Log("cellRtcParseRfc3339(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
 
 	// Get date from RFC3339 formatted string.
 	rDateTime date;
-	const std::string& format = Memory.ReadString(pszDateTime_addr);
-	date.ParseDateTime(format);
+	date.ParseDateTime(pszDateTime.get_ptr());
 
 	pUtc->tick = date.GetTicks();
 

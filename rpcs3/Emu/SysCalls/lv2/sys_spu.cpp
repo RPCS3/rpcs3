@@ -23,15 +23,14 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 }
 
 //156
-s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, u32 path_addr)
+s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path)
 {
-	const std::string path = Memory.ReadString(path_addr);
-	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path_addr, path.c_str());
+	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path.addr(), path.get_ptr());
 
-	vfsFile f(path);
+	vfsFile f(path.get_ptr());
 	if(!f.IsOpened())
 	{
-		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.c_str());
+		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
 

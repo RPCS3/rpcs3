@@ -117,16 +117,15 @@ int sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_raw_spu_load(int id, u32 path_addr, vm::ptr<be_t<u32>> entry)
+int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<be_t<u32>> entry)
 {
-	const std::string path = Memory.ReadString(path_addr);
-	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
-		id, path_addr, path.c_str(), entry.addr());
+	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path_addr=0x%x('%s'), entry_addr=0x%x)", 
+		id, path.addr(), path.get_ptr(), entry.addr());
 
-	vfsFile f(path);
+	vfsFile f(path.get_ptr());
 	if(!f.IsOpened())
 	{
-		sysPrxForUser->Error("sys_raw_spu_load error: '%s' not found!", path.c_str());
+		sysPrxForUser->Error("sys_raw_spu_load error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
 

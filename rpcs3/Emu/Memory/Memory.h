@@ -313,41 +313,6 @@ public:
 		}
 	}
 
-	void ReadLeft(u8* dst, const u64 addr, const u32 size)
-	{
-		for (u32 i = 0; i < size; ++i) dst[size - 1 - i] = Read8(addr + i);
-	}
-
-	void WriteLeft(const u64 addr, const u32 size, const u8* src)
-	{
-		for (u32 i = 0; i < size; ++i) Write8(addr + i, src[size - 1 - i]);
-	}
-
-	void ReadRight(u8* dst, const u64 addr, const u32 size)
-	{
-		for (u32 i = 0; i < size; ++i) dst[i] = Read8(addr + (size - 1 - i));
-	}
-
-	void WriteRight(const u64 addr, const u32 size, const u8* src)
-	{
-		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
-	}
-
-	//template<typename T, typename Td> void WriteData(const T addr, const Td* data)
-	//{
-	//	memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
-	//}
-
-	//template<typename T, typename Td> void WriteData(const T addr, const Td data)
-	//{
-	//	*(Td*)GetMemFromAddr<T>(addr) = data;
-	//}
-
-	template<typename T> std::string ReadString(const T addr)
-	{
-		return std::string((const char*)GetMemFromAddr<T>(addr));
-	}
-
 	template<typename T> void WriteString(const T addr, const std::string& str)
 	{
 		memcpy((char*)GetMemFromAddr<T>(addr), str.c_str(), str.size() + 1);

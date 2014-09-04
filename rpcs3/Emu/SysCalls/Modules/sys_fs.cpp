@@ -110,11 +110,10 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 }
 	
 
-int cellFsSdataOpen(u32 path_addr, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
+int cellFsSdataOpen(vm::ptr<const char> path, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
 {
-	const std::string& path = Memory.ReadString(path_addr);
 	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
-		path.c_str(), flags, fd.addr(), arg.addr(), size);
+		path.get_ptr(), flags, fd.addr(), arg.addr(), size);
 
 	/*if (flags != CELL_O_RDONLY)
 		return CELL_EINVAL;
@@ -133,7 +132,7 @@ int cellFsSdataOpen(u32 path_addr, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_
 
 	return CELL_OK;*/
 
-	return cellFsOpen(path_addr, flags, fd, arg, size);
+	return cellFsOpen(path, flags, fd, arg, size);
 }
 
 int cellFsSdataOpenByFd(int mself_fd, int flags, vm::ptr<be_t<u32>> sdata_fd, u64 offset, vm::ptr<be_t<u32>> arg, u64 size)

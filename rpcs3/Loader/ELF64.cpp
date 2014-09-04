@@ -420,7 +420,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				{
 					Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(offset + s);
 
-					const std::string& module_name = Memory.ReadString(stub.s_modulename);
+					const std::string module_name = vm::get_ptr<const char>(stub.s_modulename);
 					Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
 					if (module) {
 						//module->SetLoaded();

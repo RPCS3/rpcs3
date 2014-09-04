@@ -171,11 +171,11 @@ enum
 
 struct CellHddGameSystemFileParam
 {
-	u8 title[CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
+	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
 	u8 reserved0[2];
-	u8 dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
 	u8 reserved1[2];
 	be_t<u32> attribute;
 	be_t<u32> parentalLevel;

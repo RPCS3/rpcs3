@@ -2945,7 +2945,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadLeft(CPU.VPR[vd]._u8 + eb, addr, 16 - eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2987,7 +2988,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadRight(CPU.VPR[vd]._u8, addr & ~0xf, eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
 	{
@@ -3043,7 +3045,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
+		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3062,7 +3064,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3113,7 +3115,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadLeft(CPU.VPR[vd]._u8 + eb, addr, 16 - eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3158,7 +3161,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadRight(CPU.VPR[vd]._u8, addr & ~0xf, eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
 	}
 	void DSS(u32 strm, u32 a)
 	{
@@ -3193,7 +3197,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
+		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3209,7 +3213,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void EXTSB(u32 ra, u32 rs, bool rc)
 	{

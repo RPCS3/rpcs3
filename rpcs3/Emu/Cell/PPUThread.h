@@ -516,7 +516,7 @@ union VPR_reg
 		_u64[1] |= (value & 0x1) << bit;
 	}
 
-	void Clear() { memset(this, 0, sizeof(*this)); }
+	void Clear() { _u64[1] = _u64[0] = 0; }
 };
 
 static const s32 MAX_INT_VALUE = 0x7fffffff;

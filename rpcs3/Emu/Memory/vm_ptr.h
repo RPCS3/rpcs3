@@ -58,29 +58,28 @@ namespace vm
 			return make(m_addr - count * sizeof(AT));
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, AT>& operator *()
+		__forceinline _ptr_base<T, lvl - 1, AT>& operator *() const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr);
 		}
 
-		__forceinline const _ptr_base<T, lvl - 1, AT>& operator *() const
-		{
-			return vm::get_ref<const _ptr_base<T, lvl - 1, AT>>(m_addr);
-		}
-
-		__forceinline _ptr_base<T, lvl - 1, AT>& operator [](int index)
+		__forceinline _ptr_base<T, lvl - 1, AT>& operator [](int index) const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
-		}
-
-		__forceinline const _ptr_base<T, lvl - 1, AT>& operator [](int index) const
-		{
-			return vm::get_ref<const _ptr_base<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
 		}
 
 		operator bool() const
 		{
 			return m_addr != 0;
+		}
+
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<T, lvl, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<T, lvl, AT2>&)addr;
 		}
 		
 		AT addr() const
@@ -92,6 +91,8 @@ namespace vm
 		{
 			return (_ptr_base&)addr;
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 	
 	template<typename T, typename AT>
@@ -100,14 +101,9 @@ namespace vm
 		AT m_addr;
 		
 	public:
-		__forceinline T* const operator -> ()
+		__forceinline T* const operator -> () const
 		{
 			return vm::get_ptr<T>(m_addr);
-		}
-
-		__forceinline const T* const operator -> () const
-		{
-			return vm::get_ptr<const T>(m_addr);
 		}
 
 		_ptr_base operator++ (int)
@@ -158,24 +154,14 @@ namespace vm
 			return make(m_addr - count * sizeof(T));
 		}
 
-		__forceinline T& operator *()
+		__forceinline T& operator *() const
 		{
 			return get_ref<T>(m_addr);
 		}
 
-		__forceinline const T& operator *() const
-		{
-			return get_ref<T>(m_addr);
-		}
-
-		__forceinline T& operator [](int index)
+		__forceinline T& operator [](int index) const
 		{
 			return get_ref<T>(m_addr + sizeof(T) * index);
-		}
-
-		__forceinline const T& operator [](int index) const
-		{
-			return get_ref<const T>(m_addr + sizeof(T) * index);
 		}
 		
 		/*
@@ -200,6 +186,15 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<T, 1, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<T, 1, AT2>&)addr;
+		}
+
 		T* const get_ptr() const
 		{
 			return vm::get_ptr<T>(m_addr);
@@ -209,6 +204,8 @@ namespace vm
 		{
 			return (_ptr_base&)addr;
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 
 	template<typename AT>
@@ -232,10 +229,21 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<void, 1, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<void, 1, AT2>&)addr;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 
 	template<typename AT>
@@ -259,10 +267,21 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<const void, 1, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<const void, 1, AT2>&)addr;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 	
 	template<typename RT, typename AT>
@@ -304,6 +323,15 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<RT(*)(), 1, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<RT(*)(), 1, AT2>&)addr;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
@@ -314,6 +342,8 @@ namespace vm
 			const AT addr = m_addr;
 			return [addr]() -> RT { return make(addr)(); };
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 
 	template<typename AT, typename RT, typename ...T>
@@ -371,16 +401,27 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		//typedef typename invert_be_t<AT>::type AT2;
+
+		template<typename AT2>
+		operator const _ptr_base<RT(*)(T...), 1, AT2>() const
+		{
+			std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<RT(*)(T...), 1, AT2>&)addr;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
 		}
 
-		operator std::function<RT(T...)>() const
+		operator const std::function<RT(T...)>() const
 		{
-			const AT addr = m_addr;
+			std::remove_const<AT>::type AT addr; addr = m_addr;
 			return [addr](T... args) -> RT { return make(addr)(args...); };
 		}
+
+		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
 
 	//BE pointer to LE data
@@ -392,6 +433,7 @@ namespace vm
 		}
 
 		using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator=;
+		//using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator const _ptr_base<T, lvl, AT>;
 	};
 
 	//BE pointer to BE data
@@ -403,6 +445,7 @@ namespace vm
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator=;
+		//using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 	};
 
 	//LE pointer to BE data
@@ -414,6 +457,7 @@ namespace vm
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator=;
+		//using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>;
 	};
 
 	//LE pointer to LE data
@@ -425,6 +469,7 @@ namespace vm
 		}
 
 		using _ptr_base<T, lvl, AT>::operator=;
+		//using _ptr_base<T, lvl, AT>::operator const _ptr_base<T, lvl, typename to_be_t<AT>::type>;
 	};
 
 	namespace ps3
@@ -438,6 +483,7 @@ namespace vm
 			}
 
 			using lptrb<T, lvl, AT>::operator=;
+			//using lptrb<T, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 		};
 
 		//default pointer for HLE structures (BE ptrerence to BE data)
@@ -449,6 +495,7 @@ namespace vm
 			}
 
 			using bptrb<T, lvl, AT>::operator=;
+			//using bptrb<T, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 		};
 	}
 

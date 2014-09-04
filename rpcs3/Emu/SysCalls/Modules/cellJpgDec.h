@@ -56,7 +56,7 @@ struct CellJpgDecInfo
 struct CellJpgDecSrc
 {
 	be_t<u32> srcSelect;       // CellJpgDecStreamSrcSel
-	be_t<u32> fileName;        // const char*
+	vm::bptr<const char> fileName;
 	be_t<u64> fileOffset;      // int64_t
 	be_t<u32> fileSize;
 	be_t<u32> streamPtr;

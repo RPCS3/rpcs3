@@ -79,7 +79,7 @@ struct rDateTime
 	void Close();
 	std::string Format(const std::string &format = rDefaultDateTimeFormat, const rTimeZone &tz = Local) const;
 
-	void ParseDateTime(const std::string & format);
+	void ParseDateTime(const char* format);
 
 	u32 GetAsDOS();
 	rDateTime &SetFromDOS(u32 fromdos);

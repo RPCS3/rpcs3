@@ -139,9 +139,9 @@ std::string rDateTime::Format(const std::string &format, const rTimeZone &tz) co
 	return fmt::ToUTF8(static_cast<wxDateTime*>(handle)->Format(fmt::FromUTF8(format),convertTZ(tz)));
 }
 
-void rDateTime::ParseDateTime(const std::string & format)
+void rDateTime::ParseDateTime(const char* format)
 {
-	static_cast<wxDateTime*>(handle)->ParseDateTime(fmt::FromUTF8(format));
+	static_cast<wxDateTime*>(handle)->ParseDateTime(format);
 }
 
 u32 rDateTime::GetAsDOS()
