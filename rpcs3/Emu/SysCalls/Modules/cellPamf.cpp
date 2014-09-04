@@ -181,7 +181,8 @@ int cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<PamfHeader> 
 	{
 		pSelf->fileSize = ((u64)pAddr->data_offset << 11) + ((u64)pAddr->data_size << 11);
 	}
-	pSelf->pAddr = vm::ptr<PamfHeader>::make(pAddr.addr());
+	
+	pSelf->pAddr = pAddr;
 
 	if (attribute & CELL_PAMF_ATTRIBUTE_VERIFY_ON)
 	{
