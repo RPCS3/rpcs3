@@ -127,11 +127,11 @@ void SPURecompilerCore::Compile(u16 pos)
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		if (entry[pos].valid == re(opcode))
+		if (entry[pos].valid == re32(opcode))
 		{
 			excess++;
 		}
-		entry[pos].valid = re(opcode);
+		entry[pos].valid = re32(opcode);
 
 		if (fin) break;
 		CPU.PC += 4;

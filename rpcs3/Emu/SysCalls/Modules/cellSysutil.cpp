@@ -152,7 +152,7 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 		state->displayMode.scanMode = Emu.GetGSManager().GetInfo().mode.scanMode;
 		state->displayMode.conversion = Emu.GetGSManager().GetInfo().mode.conversion;
 		state->displayMode.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
-		state->displayMode.refreshRates = re(Emu.GetGSManager().GetInfo().mode.refreshRates);
+		state->displayMode.refreshRates = Emu.GetGSManager().GetInfo().mode.refreshRates;
 		return CELL_VIDEO_OUT_SUCCEEDED;
 		
 	case CELL_VIDEO_OUT_SECONDARY:

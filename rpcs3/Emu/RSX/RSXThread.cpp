@@ -99,7 +99,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 		{
 			const u16* c_src = (const u16*)src;
 			u16* c_dst = (u16*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
+			for(u32 j=0; j<size; ++j) *c_dst++ = re16(*c_src++);
 		}
 		break;
 
@@ -107,7 +107,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 		{
 			const u32* c_src = (const u32*)src;
 			u32* c_dst = (u32*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
+			for(u32 j=0; j<size; ++j) *c_dst++ = re32(*c_src++);
 		}
 		break;
 		}
@@ -2168,8 +2168,8 @@ void RSXThread::Task()
 
 		u32 put, get;
 		// this code produces only mov + bswap:
-		se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
-		se_t<u32>::func(get, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
+		put = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
+		get = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
 		/*
 		se_t<u32>::func(put, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, put)), 0, 0));
 		se_t<u32>::func(get, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, get)), 0, 0));
