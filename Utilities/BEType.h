@@ -45,18 +45,18 @@ template<typename T> struct se_t<T, 8>
 //template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
 //template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
 
-template<typename T, s64 _value, int size = sizeof(T)> struct const_se_t;
-template<typename T, s64 _value> struct const_se_t<T, _value, 1>
+template<typename T, u64 _value, int size = sizeof(T)> struct const_se_t;
+template<typename T, u64 _value> struct const_se_t<T, _value, 1>
 {
 	static const T value = (T)_value;
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 2>
+template<typename T, u64 _value> struct const_se_t<T, _value, 2>
 {
 	static const T value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 4>
+template<typename T, u64 _value> struct const_se_t<T, _value, 4>
 {
 	static const T value = 
 		((_value >> 24) & 0x000000ff) |
@@ -65,7 +65,7 @@ template<typename T, s64 _value> struct const_se_t<T, _value, 4>
 		((_value << 24) & 0xff000000);
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 8>
+template<typename T, u64 _value> struct const_se_t<T, _value, 8>
 {
 	static const T value = 
 		((_value >> 56) & 0x00000000000000ff) |
@@ -334,10 +334,22 @@ public:
 	typedef const void type;
 };
 
+template<typename T, typename T2 = T>
+struct invert_be_t
+{
+	typedef typename to_be_t<T, T2>::type type;
+};
+
+template<typename T, typename T2>
+struct invert_be_t<be_t<T, T2>>
+{
+	typedef T type;
+};
+
 template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
 template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : public const_se_t<T, value> {};
 
-#define se(t, x) _se<decltype(t), decltype(x), x>::value
+//#define se(t, x) _se<decltype(t), decltype(x), x>::value
 #define se16(x) _se<u16, decltype(x), x>::value
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value

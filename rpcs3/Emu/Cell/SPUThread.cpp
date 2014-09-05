@@ -301,7 +301,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 		lsa += std::max(size, (u32)16);
 
-		if (rec->s & se16(0x8000))
+		if (rec->s.ToBE() & se16(0x8000))
 		{
 			StallStat.PushUncond_OR(1 << tag);
 
