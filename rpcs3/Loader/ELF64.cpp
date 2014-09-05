@@ -355,8 +355,8 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					else if (phdr.p_filesz)
 					{
 						elf64_f.Seek(phdr.p_offset);
-						elf64_f.Read(&Memory[offset + phdr.p_vaddr], phdr.p_filesz);
-						Emu.GetSFuncManager().StaticAnalyse(&Memory[offset + phdr.p_vaddr], (u32)phdr.p_filesz, (u32)phdr.p_vaddr);
+						elf64_f.Read(vm::get_ptr<void>(offset + phdr.p_vaddr), phdr.p_filesz);
+						Emu.GetSFuncManager().StaticAnalyse(vm::get_ptr<void>(offset + phdr.p_vaddr), (u32)phdr.p_filesz, (u32)phdr.p_vaddr);
 					}
 				}
 			break;
@@ -370,7 +370,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				if(!phdr.p_filesz)
 					break;
 
-				const sys_process_param& proc_param = *(sys_process_param*)&Memory[offset + phdr.p_vaddr];
+				auto& proc_param = vm::get_ref<sys_process_param>(offset + phdr.p_vaddr);
 
 				if (proc_param.size < sizeof(sys_process_param)) {
 					LOG_WARNING(LOADER, "Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
@@ -397,7 +397,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				if(!phdr.p_filesz)
 					break;
 
-				sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)&Memory[offset + phdr.p_vaddr];
+				sys_proc_prx_param proc_prx_param = vm::get_ref<sys_proc_prx_param>(offset + phdr.p_vaddr);
 
 
 #ifdef LOADER_DEBUG

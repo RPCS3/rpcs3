@@ -1139,9 +1139,10 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 		{
 			if (sdk_ver > 0x17ffff)
 			{
+				auto data = vm::get_ptr<u64>(queue.addr());
 				for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i++)
 				{
-					if ((u64&)Memory[queue.addr() + i * sizeof(u64)])
+					if (data[i])
 					{
 						return CELL_SYNC_ERROR_STAT;
 					}

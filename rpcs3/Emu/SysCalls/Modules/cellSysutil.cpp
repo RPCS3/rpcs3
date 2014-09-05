@@ -178,31 +178,29 @@ int cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
-s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
 	cellSysutil->Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
-		videoOut, config_addr, option_addr, waitForEvent);
-
-	CellVideoOutConfiguration& config = (CellVideoOutConfiguration&)Memory[config_addr];
+		videoOut, config.addr(), option.addr(), waitForEvent);
 
 	switch(videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
-		if(config.resolutionId)
+		if(config->resolutionId)
 		{
-			Emu.GetGSManager().GetInfo().mode.resolutionId = config.resolutionId;
+			Emu.GetGSManager().GetInfo().mode.resolutionId = config->resolutionId;
 		}
 
-		Emu.GetGSManager().GetInfo().mode.format = config.format;
+		Emu.GetGSManager().GetInfo().mode.format = config->format;
 
-		if(config.aspect)
+		if(config->aspect)
 		{
-			Emu.GetGSManager().GetInfo().mode.aspect = config.aspect;
+			Emu.GetGSManager().GetInfo().mode.aspect = config->aspect;
 		}
 
-		if(config.pitch)
+		if(config->pitch)
 		{
-			Emu.GetGSManager().GetInfo().mode.pitch = config.pitch;
+			Emu.GetGSManager().GetInfo().mode.pitch = config->pitch;
 		}
 
 		return CELL_VIDEO_OUT_SUCCEEDED;

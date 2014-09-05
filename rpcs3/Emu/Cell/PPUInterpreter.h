@@ -2366,7 +2366,7 @@ private:
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = (u32&)Memory[CPU.R_ADDR];
+		CPU.R_VALUE = vm::get_ref<u32>(CPU.R_ADDR);
 		CPU.GPR[rd] = re32((u32)CPU.R_VALUE);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
@@ -2517,7 +2517,7 @@ private:
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = (u64&)Memory[CPU.R_ADDR];
+		CPU.R_VALUE = vm::get_ref<u64>(CPU.R_ADDR);
 		CPU.GPR[rd] = re64(CPU.R_VALUE);
 	}
 	void DCBF(u32 ra, u32 rb)
@@ -2952,7 +2952,7 @@ private:
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u64&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u64>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2960,7 +2960,7 @@ private:
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u32>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
@@ -3055,7 +3055,7 @@ private:
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u32)CPU.GPR[rs];
+		vm::get_ref<u32>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3122,7 +3122,7 @@ private:
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u16>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3203,7 +3203,7 @@ private:
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u16)CPU.GPR[rs];
+		vm::get_ref<u16>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) = (u16)CPU.GPR[rs];
 	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{

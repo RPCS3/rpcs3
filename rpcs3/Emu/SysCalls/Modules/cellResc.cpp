@@ -10,6 +10,8 @@
 
 Module *cellResc = nullptr;
 
+extern s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent);
+
 static const float
 PICTURE_SIZE = (1.0f),
 UV_DELTA_PS = (1.f / 8.f),
@@ -732,7 +734,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
 	videocfg->pitch        = s_rescInternalInstance->m_dstPitch;
 
-	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg.addr(), 0, 0);
+	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg, vm::ptr<CellVideoOutOption>::make(0), 0);
 
 	if (IsPalInterpolate())
 	{

@@ -186,7 +186,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	const u16 pos = (u16)(CPU.PC >> 2);
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);
-	u32* ls = (u32*)&Memory[m_offset];
+	u32* ls = vm::get_ptr<u32>(m_offset);
 
 	if (entry[pos].pointer)
 	{
@@ -252,7 +252,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 	}
 
 	u32 res = pos;
-	res = func(cpu, &Memory[m_offset], imm_table.data(), &g_imm_table);
+	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_imm_table);
 
 	if (res > 0xffff)
 	{

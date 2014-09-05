@@ -41,7 +41,7 @@ void RSXThread::nativeRescale(float width, float height)
 	}
 }
 
-u32 GetAddress(u32 offset, u8 location)
+u32 GetAddress(u32 offset, u32 location)
 {
 	switch(location)
 	{
@@ -1774,11 +1774,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
-			memcpy(&Memory[GetAddress(outOffset, 0)], &Memory[GetAddress(inOffset, 0)], lineLength);
+			memcpy(vm::get_ptr<void>(GetAddress(outOffset, 0)), vm::get_ptr<void>(GetAddress(inOffset, 0)), lineLength);
 		}
 		else
 		{
-			LOG_WARNING(RSX, "NV0039_OFFSET_IN: TODO: offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			LOG_ERROR(RSX, "NV0039_OFFSET_IN: TODO: offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				inOffset, outOffset, inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
 		}
 	}
@@ -1793,7 +1793,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 		else
 		{
-			LOG_WARNING(RSX, "NV0039_OFFSET_OUT: TODO: offset=0x%x", offset);
+			LOG_ERROR(RSX, "NV0039_OFFSET_OUT: TODO: offset=0x%x", offset);
 		}
 	}
 	break;
@@ -1933,8 +1933,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u16 u = ARGS(3);
 		u16 v = ARGS(3) >> 16;
 
-		u8* pixels_src = &Memory[GetAddress(offset, m_context_dma_img_src - 0xfeed0000)];
-		u8* pixels_dst = &Memory[GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000)];
+		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
+		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
 
 		for(u16 y=0; y<m_color_conv_in_h; ++y)
 		{
@@ -2269,7 +2269,7 @@ void RSXThread::Task()
 
 void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 {
-	m_ctrl = (CellGcmControl*)&Memory[ctrlAddress];
+	m_ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
 	m_ioAddress = ioAddress;
 	m_ioSize = ioSize;
 	m_ctrlAddress = ctrlAddress;

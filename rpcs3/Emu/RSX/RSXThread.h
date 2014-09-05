@@ -18,7 +18,7 @@ enum Method
 };
 
 extern u32 methodRegisters[0xffff];
-u32 GetAddress(u32 offset, u8 location);
+u32 GetAddress(u32 offset, u32 location);
 
 struct RSXVertexData
 {

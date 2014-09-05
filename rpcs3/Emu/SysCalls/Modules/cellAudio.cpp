@@ -175,7 +175,7 @@ int cellAudioInit()
 					const u32 position = port.tag % port.block; // old value
 					const u32 buf_addr = m_config.m_buffer + (i * 128 * 1024) + (position * block_size * sizeof(float));
 
-					auto buf = (be_t<float>*)&Memory[buf_addr];
+					auto buf = vm::get_ptr<be_t<float>>(buf_addr);
 
 					static const float k = 1.0f; // may be 1.0f
 					const float m = port.level;

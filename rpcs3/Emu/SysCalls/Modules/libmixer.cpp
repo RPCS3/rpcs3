@@ -22,10 +22,10 @@ u64 mixcount;
 
 std::vector<SSPlayer> ssp;
 
-int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 samples)
+int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
 	libmixer->Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr=0x%x, samples=%d)",
-		aan_handle, aan_port, offset, addr, samples);
+		aan_handle, aan_port, offset, addr.addr(), samples);
 
 	u32 type = aan_port >> 16;
 	u32 port = aan_port & 0xffff;
@@ -58,7 +58,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		// mono upmixing
 		for (u32 i = 0; i < samples; i++)
 		{
-			const float center = *(be_t<float>*)&Memory[addr + i * sizeof(float)];
+			const float center = addr[i];
 			mixdata[i * 8 + 0] += center;
 			mixdata[i * 8 + 1] += center;
 		}		
@@ -68,8 +68,8 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		// stereo upmixing
 		for (u32 i = 0; i < samples; i++)
 		{
-			const float left = *(be_t<float>*)&Memory[addr + i * 2 * sizeof(float)];
-			const float right = *(be_t<float>*)&Memory[addr + (i * 2 + 1) * sizeof(float)];
+			const float left = addr[i * 2 + 0];
+			const float right = addr[i * 2 + 1];
 			mixdata[i * 8 + 0] += left;
 			mixdata[i * 8 + 1] += right;
 		}
@@ -79,12 +79,12 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		// 5.1 upmixing
 		for (u32 i = 0; i < samples; i++)
 		{
-			const float left = *(be_t<float>*)&Memory[addr + i * 6 * sizeof(float)];
-			const float right = *(be_t<float>*)&Memory[addr + (i * 6 + 1) * sizeof(float)];
-			const float center = *(be_t<float>*)&Memory[addr + (i * 6 + 2) * sizeof(float)];
-			const float low_freq = *(be_t<float>*)&Memory[addr + (i * 6 + 3) * sizeof(float)];
-			const float rear_left = *(be_t<float>*)&Memory[addr + (i * 6 + 4) * sizeof(float)];
-			const float rear_right = *(be_t<float>*)&Memory[addr + (i * 6 + 5) * sizeof(float)];
+			const float left = addr[i * 6 + 0];
+			const float right = addr[i * 6 + 1];
+			const float center = addr[i * 6 + 2];
+			const float low_freq = addr[i * 6 + 3];
+			const float rear_left = addr[i * 6 + 4];
+			const float rear_right = addr[i * 6 + 5];
 			mixdata[i * 8 + 0] += left;
 			mixdata[i * 8 + 1] += right;
 			mixdata[i * 8 + 2] += center;
@@ -98,7 +98,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, u32 addr, u32 sampl
 		// 7.1
 		for (u32 i = 0; i < samples * 8; i++)
 		{
-			mixdata[i] += *(be_t<float>*)&Memory[addr + i * sizeof(float)];
+			mixdata[i] += addr[i];
 		}
 	}
 
@@ -435,7 +435,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 				//u64 stamp2 = get_system_time();
 
-				auto buf = (be_t<float>*)&Memory[m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float)];
+				auto buf = vm::get_ptr<be_t<float>>(m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float));
 
 				for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
 				{

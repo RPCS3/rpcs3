@@ -318,19 +318,6 @@ public:
 	bool Map(const u64 addr, const u32 size);
 
 	bool Unmap(const u64 addr);
-
-	template<typename T> u8& operator[] (const T addr)
-	{
-		if ((u32)addr == addr)
-		{
-			return *((u8*)GetBaseAddr() + addr);
-		}
-		else
-		{
-			InvalidAddress(__FUNCTION__, addr);
-			return *(u8*)GetBaseAddr();
-		}
-	}
 };
 
 extern MemoryBase Memory;

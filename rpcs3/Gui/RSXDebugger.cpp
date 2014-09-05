@@ -330,7 +330,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
@@ -344,7 +344,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32

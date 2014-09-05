@@ -380,7 +380,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	Memory.Write32(context.addr(), gcm_info.context_addr);
 
-	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 	ctrl.put = 0;
 	ctrl.get = 0;
 	ctrl.ref = -1;
@@ -510,7 +510,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 		//cellGcmCallback(ctxt.addr(), current + 8 - end);
 		//copied:
  
-		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
@@ -530,7 +530,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 
 	if(ctxt.addr() == gcm_info.context_addr)
 	{
-		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		ctrl.put += 8;
 	}
 
@@ -1164,8 +1164,8 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
-	CellGcmContextData& ctx = (CellGcmContextData&)Memory[context_addr];
-	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+	auto& ctx = vm::get_ref<CellGcmContextData>(context_addr);
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
