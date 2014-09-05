@@ -152,6 +152,12 @@ public:
 
 	be_t& operator = (const be_t& right) = default;
 
+	be_t& operator = (const be_t<const T, const T2>& right)
+	{
+		m_data = right.ToBE();
+		return *this;
+	}
+
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
 	template<typename T1> be_t& operator -= (T1 right) { return *this = T(*this) - right; }
 	template<typename T1> be_t& operator *= (T1 right) { return *this = T(*this) * right; }
