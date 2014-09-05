@@ -156,7 +156,7 @@ void ElementaryStream::push(DemuxerStream& stream, u32 sz, PesHeader& pes)
 
 	u32 data_addr = put + 128 + size;
 	size += sz;
-	memcpy(Memory + data_addr, Memory + stream.addr, sz);
+	memcpy(vm::get_ptr<void>(data_addr), vm::get_ptr<void>(stream.addr), sz);
 	stream.skip(sz);
 
 	auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);

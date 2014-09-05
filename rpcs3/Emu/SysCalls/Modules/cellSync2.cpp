@@ -409,7 +409,7 @@ void cellSync2_init()
 	CallAfter([]()
 	{
 		libsync2 = (u32)Memory.PRXMem.AllocAlign(sizeof(libsync2_data), 4096);
-		memcpy(Memory + libsync2, libsync2_data, sizeof(libsync2_data));
+		memcpy(vm::get_ptr<void>(libsync2), libsync2_data, sizeof(libsync2_data));
 		libsync2_rtoc = libsync2 + 0xF280;
 
 		extern Module* sysPrxForUser;

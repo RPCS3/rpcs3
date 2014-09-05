@@ -388,11 +388,11 @@ int cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 
 int cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u32 size)
 {
-	cellPamf->Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)",	pSelf.addr(), pSelf->stream, pInfo_addr, size);
+	cellPamf->Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)", pSelf.addr(), pSelf->stream, pInfo_addr, size);
 
 	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
-	memset(Memory + pInfo_addr, 0, size);
+	memset(vm::get_ptr<void>(pInfo_addr), 0, size);
 
 	switch (pamfGetStreamType(pSelf, pSelf->stream))
 	{

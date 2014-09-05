@@ -68,8 +68,8 @@ void InitOffsetTable()
 	offsetTable.ioAddress = (u32)Memory.Alloc(3072 * sizeof(u16), 1);
 	offsetTable.eaAddress = (u32)Memory.Alloc(512 * sizeof(u16), 1);
 
-	_sys_memset(offsetTable.ioAddress, 0xFF, 3072 * sizeof(u16));
-	_sys_memset(offsetTable.eaAddress, 0xFF, 512 * sizeof(u16));
+	memset(vm::get_ptr<void>(offsetTable.ioAddress), 0xFF, 3072 * sizeof(u16));
+	memset(vm::get_ptr<void>(offsetTable.eaAddress), 0xFF, 512 * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
@@ -514,7 +514,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
-		memmove(Memory + ctxt->begin, Memory + (ctxt->current - res), res);
+		memmove(vm::get_ptr<void>(ctxt->begin), vm::get_ptr<void>(ctxt->current - res), res);
 
 		ctxt->current = ctxt->begin + res;
 
@@ -1169,7 +1169,7 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	memmove(Memory + ctx.begin, Memory + (ctx.current - res), res);
+	memmove(vm::get_ptr<void>(ctx.begin), vm::get_ptr<void>(ctx.current - res), res);
 
 	ctx.current = ctx.begin + res;
 

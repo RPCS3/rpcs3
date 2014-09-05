@@ -244,13 +244,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(Memory + ea, Memory + (dmac.ls_offset + lsa), size);
+		memcpy(vm::get_ptr<void>(ea), vm::get_ptr<void>(dmac.ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(Memory + (dmac.ls_offset + lsa), Memory + ea, size);
+		memcpy(vm::get_ptr<void>(dmac.ls_offset + lsa), vm::get_ptr<void>(ea), size);
 		return;
 	}
 
@@ -423,7 +423,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				{
 					if (buf[i] != R_DATA[i])
 					{
-						if (InterlockedCompareExchange((volatile u64*)(Memory + (ea + i * 8)), buf[i], R_DATA[i]) != R_DATA[i])
+						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>(ea)[i], buf[i], R_DATA[i]) != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);

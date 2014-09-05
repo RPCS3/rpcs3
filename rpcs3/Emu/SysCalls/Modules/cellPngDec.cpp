@@ -140,7 +140,7 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellPngDecInfo> 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
 		break;
 	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
@@ -205,7 +205,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + png.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), png.size());
+		memmove(png.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), png.size());
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
@@ -241,12 +241,12 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.addr(), image.get(), image_size);
+			memcpy(data.get_ptr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -271,7 +271,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
+				memcpy(&data[dstOffset], output, linesize);
 			}
 			free(output);
 		}

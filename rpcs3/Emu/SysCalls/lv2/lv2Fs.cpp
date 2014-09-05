@@ -595,7 +595,7 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 	// alloc memory
 	fs_config.m_buffer = (u32)Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
-	memset(Memory + fs_config.m_buffer, 0, fs_config.m_alloc_mem_size);
+	memset(vm::get_ptr<void>(fs_config.m_buffer), 0, fs_config.m_alloc_mem_size);
 
 	fs_config.m_fs_status = CELL_FS_ST_INITIALIZED;
 

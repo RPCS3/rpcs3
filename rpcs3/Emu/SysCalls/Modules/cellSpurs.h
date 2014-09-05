@@ -194,11 +194,11 @@ struct CellSpursTracePacket
 };
 
 // Exception handlers.
-//typedef void (*CellSpursGlobalExceptionEventHandler)(vm::ptr<CellSpurs> spurs, const vm::ptr<CellSpursExceptionInfo> info, 
-//													 u32 id, vm::ptr<void> arg);
+//typedef void (*CellSpursGlobalExceptionEventHandler)(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursExceptionInfo> info, 
+//													   u32 id, vm::ptr<void> arg);
 //
 //typedef void (*CellSpursTasksetExceptionEventHandler)(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, 
-//													 u32 idTask, const vm::ptr<CellSpursExceptionInfo> info, vm::ptr<void> arg);
+//													    u32 idTask, vm::ptr<const CellSpursExceptionInfo> info, vm::ptr<void> arg);
 
 struct CellSpursTasksetInfo
 {

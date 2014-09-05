@@ -279,7 +279,7 @@ struct CellWebBrowserConfig2
 	vm::bptr<CellWebBrowserStatusCallback> status_error_cb;
 	vm::bptr<CellWebBrowserNotify> notify_cb;
 	vm::bptr<CellWebBrowserCallback> request_cb;
-	vm::bptr<CellWebBrowserRect> rect;
+	CellWebBrowserRect rect;
 	be_t<float> resolution_factor;
 	be_t<s32> magic_number_;
 };

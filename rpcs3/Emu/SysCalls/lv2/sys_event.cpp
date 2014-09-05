@@ -135,7 +135,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 		eq->sq.m_mutex.unlock();
 		return CELL_OK;
 	}
-	*number = eq->events.pop_all((sys_event_data*)(Memory + event_array.addr()), size);
+	*number = eq->events.pop_all(event_array.get_ptr(), size);
 	eq->owner.unlock(tid);
 	eq->sq.m_mutex.unlock();
 	return CELL_OK;

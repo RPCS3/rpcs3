@@ -80,9 +80,10 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	u64 a3 = arg->arg3;
 	u64 a4 = arg->arg4;
 
-	//copy SPU image:
-	auto spu_offset = Memory.MainMem.AllocAlign(256 * 1024);
-	memcpy(Memory + spu_offset, Memory + (u32)img->segs_addr, 256 * 1024);
+	// Copy SPU image:
+	// TODO: use correct segment info
+	auto spu_offset = Memory.Alloc(256 * 1024, 4096);
+	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//initialize from new place:
@@ -174,8 +175,12 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		// TODO: disconnect all event ports
-
-		Emu.GetCPU().RemoveThread(group_info->list[i]);
+		CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]);
+		if (t)
+		{
+			Memory.Free(((SPUThread*)t)->GetOffset());
+			Emu.GetCPU().RemoveThread(group_info->list[i]);
+		}
 	}
 
 	group_info->m_state = SPU_THREAD_GROUP_STATUS_UNKNOWN;

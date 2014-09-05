@@ -2635,7 +2635,8 @@ private:
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u32*)(Memory + addr), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(addr), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
+			CPU.R_ADDR = 0;
 		}
 		else
 		{
@@ -2692,7 +2693,8 @@ private:
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u64*)(Memory + addr), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(addr), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
+			CPU.R_ADDR = 0;
 		}
 		else
 		{

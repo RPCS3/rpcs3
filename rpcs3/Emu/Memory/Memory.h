@@ -95,19 +95,6 @@ public:
 
 	void UnregisterPages(u64 addr, u32 size);
 
-	template<typename T> u8* GetMemFromAddr(const T addr)
-	{
-		if ((u32)addr == addr)
-		{
-			return (u8*)GetBaseAddr() + addr;
-		}
-		else
-		{
-			InvalidAddress(__FUNCTION__, addr);
-			return (u8*)GetBaseAddr();
-		}
-	}
-
 	u32 RealToVirtualAddr(const void* addr)
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
@@ -332,14 +319,17 @@ public:
 
 	bool Unmap(const u64 addr);
 
-	template<typename T> void* operator + (const T vaddr)
+	template<typename T> u8& operator[] (const T addr)
 	{
-		return GetMemFromAddr<T>(vaddr);
-	}
-
-	template<typename T> u8& operator[] (const T vaddr)
-	{
-		return *GetMemFromAddr<T>(vaddr);
+		if ((u32)addr == addr)
+		{
+			return *((u8*)GetBaseAddr() + addr);
+		}
+		else
+		{
+			InvalidAddress(__FUNCTION__, addr);
+			return *(u8*)GetBaseAddr();
+		}
 	}
 };
 

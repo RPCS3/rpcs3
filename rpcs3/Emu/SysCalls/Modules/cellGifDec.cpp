@@ -79,7 +79,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -161,7 +161,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		memmove(Memory + gif.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), gif.size());
+		memmove(gif.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), gif.size());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
@@ -196,12 +196,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.addr(), image.get(), image_size);
+			memcpy(data.get_ptr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -224,7 +224,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
+				memcpy(&data[dstOffset], output, linesize);
 			}
 			free(output);
 		}

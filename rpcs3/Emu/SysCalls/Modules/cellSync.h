@@ -60,7 +60,7 @@ struct CellSyncRwm
 	be_t<u16> m_readers;
 	be_t<u16> m_writers;
 	be_t<u32> m_size;
-	be_t<u64> m_addr;
+	vm::bptr<void, 1, u64> m_buffer;
 
 	volatile u32& m_data()
 	{
@@ -76,7 +76,7 @@ struct CellSyncQueue
 	be_t<u32> m_v2;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
-	be_t<u64> m_addr;
+	vm::bptr<u8, 1, u64> m_buffer;
 	be_t<u64> reserved;
 
 	volatile u64& m_data()
@@ -107,13 +107,13 @@ struct CellSyncLFQueue
 	be_t<u16> m_h8;      // 0xE
 	be_t<u32> m_size;    // 0x10
 	be_t<u32> m_depth;   // 0x14
-	be_t<u64> m_buffer;  // 0x18
+	vm::bptr<u8, 1, u64> m_buffer; // 0x18
 	u8        m_bs[4];   // 0x20
 	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;      // 0x28
 	be_t<u32> m_sync;    // 0x2C
 	be_t<u16> m_hs[32];  // 0x30
-	be_t<u64> m_eaSignal;// 0x70
+	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;      // 0x78
 	be_t<u32> m_v3;      // 0x7C
 
@@ -159,11 +159,11 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex);
 
 s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count);
 
-s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, u32 buffer_addr, u32 buffer_size);
+s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size);
 
-s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, u32 buffer_addr, u32 size, u32 depth);
+s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth);
 
-s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, u32 buffer_addr, u32 size, u32 depth, CellSyncQueueDirection direction, u32 eaSignal_addr);
+s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal);
 s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
 s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
 s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
