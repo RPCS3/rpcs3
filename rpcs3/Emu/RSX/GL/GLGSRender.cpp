@@ -116,7 +116,7 @@ void GLTexture::Init(RSXTexture& tex)
 	int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
-	const u8 *pixels = const_cast<const u8 *>(Memory.GetMemFromAddr(texaddr));
+	auto pixels = vm::get_ptr<const u8>(texaddr);
 	u8 *unswizzledPixels;
 	static const GLint glRemapStandard[4] = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 	// NOTE: This must be in ARGB order in all forms below.
@@ -2005,14 +2005,14 @@ void GLGSRender::Flip()
 		if (m_read_buffer)
 		{
 			format = GL_BGRA;
-			CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 			if (Memory.IsGoodAddr(addr))
 			{
 				width = buffers[m_gcm_current_buffer].width;
 				height = buffers[m_gcm_current_buffer].height;
-				src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
+				src_buffer = vm::get_ptr<u8>(addr);
 			}
 			else
 			{

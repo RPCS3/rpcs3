@@ -418,7 +418,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 				for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
 				{
-					Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(offset + s);
+					Elf64_StubHeader stub = vm::get_ref<Elf64_StubHeader>(offset + s);
 
 					const std::string module_name = vm::get_ptr<const char>(stub.s_modulename);
 					Module* module = Emu.GetModuleManager().GetModuleByName(module_name);

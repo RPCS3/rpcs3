@@ -94,7 +94,7 @@ using pck_len_t = u32;
 #endif
 
 // Functions
-int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
+int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 {
 	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.addr(), paddrlen.addr());
 	if (!addr) {
@@ -106,8 +106,9 @@ int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> pad
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
-		pck_len_t *_paddrlen = (pck_len_t *)Memory.VirtualToRealAddr(paddrlen.addr());
-		int ret = accept(s, &_addr, _paddrlen);
+		pck_len_t _paddrlen;
+		int ret = accept(s, &_addr, &_paddrlen);
+		*paddrlen = _paddrlen;
 		*g_lastError = getLastError();
 		return ret;
 	}
@@ -217,12 +218,11 @@ int inet_ntop()
 	return CELL_OK;
 }
 
-int sys_net_inet_pton(s32 af, u32 src_addr, u32 dst_addr)
+int sys_net_inet_pton(s32 af, vm::ptr<const char> src, vm::ptr<char> dst)
 {
-	sys_net->Warning("inet_pton(af=%d, src_addr=0x%x, dst_addr=0x%x)", af, src_addr, dst_addr);
-	char *src = (char *)Memory.VirtualToRealAddr(src_addr);
-	char *dst = (char *)Memory.VirtualToRealAddr(dst_addr);
-	return inet_pton(af, src, dst);
+	sys_net->Warning("inet_pton(af=%d, src_addr=0x%x, dst_addr=0x%x)", af, src.addr(), dst.addr());
+
+	return inet_pton(af, src.get_ptr(), dst.get_ptr());
 }
 
 int sys_net_listen(s32 s, s32 backlog)
@@ -233,26 +233,26 @@ int sys_net_listen(s32 s, s32 backlog)
 	return ret;
 }
 
-int sys_net_recv(s32 s, u32 buf_addr, u32 len, s32 flags)
+int sys_net_recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 {
-	sys_net->Warning("recv(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf_addr, len, flags);
-	char *buf = (char *)Memory.VirtualToRealAddr(buf_addr);
-	int ret = recv(s, buf, len, flags);
+	sys_net->Warning("recv(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf.addr(), len, flags);
+
+	int ret = recv(s, buf.get_ptr(), len, flags);
 	*g_lastError = getLastError();
 	return ret;
 }
 
-int sys_net_recvfrom(s32 s, u32 buf_addr, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<be_t<u32>> paddrlen)
+int sys_net_recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 {
 	sys_net->Warning("recvfrom(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr_addr=0x%x, paddrlen=0x%x)",
-		s, buf_addr, len, flags, addr.addr(), paddrlen.addr());
+		s, buf.addr(), len, flags, addr.addr(), paddrlen.addr());
 
-	char *_buf_addr = (char *)Memory.VirtualToRealAddr(buf_addr);
 	sockaddr _addr;
 	memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
-	pck_len_t *_paddrlen = (pck_len_t *) Memory.VirtualToRealAddr(paddrlen.addr());
-	int ret = recvfrom(s, _buf_addr, len, flags, &_addr, _paddrlen);
+	pck_len_t _paddrlen;
+	int ret = recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
+	*paddrlen = _paddrlen;
 	*g_lastError = getLastError();
 	return ret;
 }
@@ -263,11 +263,11 @@ int recvmsg()
 	return CELL_OK;
 }
 
-int sys_net_send(s32 s, u32 buf_addr, u32 len, s32 flags)
+int sys_net_send(s32 s, vm::ptr<const char> buf, u32 len, s32 flags)
 {
-	sys_net->Warning("send(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf_addr, len, flags);
-	char *buf = (char *)Memory.VirtualToRealAddr(buf_addr);
-	int ret = send(s, buf, len, flags);
+	sys_net->Warning("send(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf.addr(), len, flags);
+
+	int ret = send(s, buf.get_ptr(), len, flags);
 	*g_lastError = getLastError();
 	return ret;
 }
@@ -278,25 +278,24 @@ int sendmsg()
 	return CELL_OK;
 }
 
-int sys_net_sendto(s32 s, u32 buf_addr, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
+int sys_net_sendto(s32 s, vm::ptr<const char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 {
 	sys_net->Warning("sendto(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr=0x%x, addrlen=%u)",
-		s, buf_addr, len, flags, addr.addr(), addrlen);
+		s, buf.addr(), len, flags, addr.addr(), addrlen);
 
-	char *_buf_addr = (char *)Memory.VirtualToRealAddr(buf_addr);
 	sockaddr _addr;
 	memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 	_addr.sa_family = addr->sa_family;
-	int ret = sendto(s, _buf_addr, len, flags, &_addr, addrlen);
+	int ret = sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
 	*g_lastError = getLastError();
 	return ret;
 }
 
-int sys_net_setsockopt(s32 s, s32 level, s32 optname, u32 optval_addr, u32 optlen)
+int sys_net_setsockopt(s32 s, s32 level, s32 optname, vm::ptr<const char> optval, u32 optlen)
 {
-	sys_net->Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%u)", s, level, optname, optval_addr, optlen);
-	char *_optval_addr = (char *)Memory.VirtualToRealAddr(optval_addr);
-	int ret = setsockopt(s, level, optname, _optval_addr, optlen);
+	sys_net->Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%u)", s, level, optname, optval.addr(), optlen);
+
+	int ret = setsockopt(s, level, optname, optval.get_ptr(), optlen);
 	*g_lastError = getLastError();
 	return ret;
 }

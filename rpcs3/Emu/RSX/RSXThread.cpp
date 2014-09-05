@@ -84,7 +84,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 
 	for(u32 i=start; i<start + count; ++i)
 	{
-		const u8* src = Memory.GetMemFromAddr(addr) + baseOffset + stride * (i+baseIndex);
+		auto src = vm::get_ptr<const u8>(addr + baseOffset + stride * (i + baseIndex));
 		u8* dst = &data[i * tsize * size];
 
 		switch(tsize)
@@ -1341,7 +1341,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		case 2: m_surface_pitch_a  = ARGS(1);
 		}
 
-		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 		m_width = buffers[m_gcm_current_buffer].width;
 		m_height = buffers[m_gcm_current_buffer].height;
 

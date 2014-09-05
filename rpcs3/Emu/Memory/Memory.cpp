@@ -299,14 +299,14 @@ void MemoryBlock::Init()
 	range_start = 0;
 	range_size = 0;
 
-	mem = Memory.GetMemFromAddr(0);
+	mem = vm::get_ptr<u8>(0);
 }
 
 void MemoryBlock::InitMemory()
 {
 	if (!range_size)
 	{
-		mem = Memory.GetMemFromAddr(range_start);
+		mem = vm::get_ptr<u8>(range_start);
 	}
 	else
 	{

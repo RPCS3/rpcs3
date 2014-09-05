@@ -37,6 +37,8 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::p
 
 	const std::string _path = path.get_ptr();
 
+	LV2_LOCK(0);
+
 	s32 _oflags = flags;
 	if(flags & CELL_O_CREAT)
 	{
@@ -114,10 +116,13 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::p
 	return CELL_OK;
 }
 
-s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nread)
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Log("cellFsRead(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nread_addr=0x%x)",
-		fd, buf_addr, nbytes, nread.addr());
+		fd, buf.addr(), nbytes, nread.addr());
+
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -125,17 +130,20 @@ s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nread)
 
 	// TODO: checks
 
-	const u64 res = nbytes ? file->Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	const u64 res = nbytes ? file->Read(buf.get_ptr(), nbytes) : 0;
 
 	if (nread) *nread = res;
 
 	return CELL_OK;
 }
 
-s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nwrite)
+s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<be_t<u64>> nwrite)
 {
 	sys_fs->Log("cellFsWrite(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nwrite_addr=0x%x)",
-		fd, buf_addr, nbytes, nwrite.addr());
+		fd, buf.addr(), nbytes, nwrite.addr());
+
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -143,7 +151,7 @@ s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nwrite)
 
 	// TODO: checks
 
-	const u64 res = nbytes ? file->Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	const u64 res = nbytes ? file->Write(buf.get_ptr(), nbytes) : 0;
 
 	if (nwrite) *nwrite = res;
 
@@ -154,6 +162,8 @@ s32 cellFsClose(u32 fd)
 {
 	sys_fs->Warning("cellFsClose(fd=%d)", fd);
 
+	LV2_LOCK(0);
+
 	if(!Emu.GetIdManager().RemoveID(fd))
 		return CELL_ESRCH;
 
@@ -163,6 +173,8 @@ s32 cellFsClose(u32 fd)
 s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
 {
 	sys_fs->Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.get_ptr(), fd.addr());
+
+	LV2_LOCK(0);
 	
 	vfsDirBase* dir = Emu.GetVFS().OpenDir(path.get_ptr());
 	if(!dir || !dir->IsOpened())
@@ -178,6 +190,8 @@ s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
 s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.addr(), nread.addr());
+
+	LV2_LOCK(0);
 
 	vfsDirBase* directory;
 	if(!sys_fs->CheckId(fd, directory))
@@ -203,6 +217,8 @@ s32 cellFsClosedir(u32 fd)
 {
 	sys_fs->Warning("cellFsClosedir(fd=%d)", fd);
 
+	LV2_LOCK(0);
+
 	if(!Emu.GetIdManager().RemoveID(fd))
 		return CELL_ESRCH;
 
@@ -212,6 +228,8 @@ s32 cellFsClosedir(u32 fd)
 s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
 	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.get_ptr(), sb.addr());
+
+	LV2_LOCK(0);
 
 	const std::string _path = path.get_ptr();
 
@@ -254,6 +272,8 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.addr());
 
+	LV2_LOCK(0);
+
 	IDType type;
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file, type) || type != TYPE_FS_FILE) {
@@ -281,6 +301,8 @@ s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 {
 	sys_fs->Warning("cellFsMkdir(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
 
+	LV2_LOCK(0);
+
 	const std::string _path = path.get_ptr();
 
 	if(Emu.GetVFS().ExistsDir(_path))
@@ -294,6 +316,8 @@ s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to)
 {
 	sys_fs->Warning("cellFsRename(from='%s', to='%s')", from.get_ptr(), to.get_ptr());
+
+	LV2_LOCK(0);
 
 	std::string _from = from.get_ptr();
 	std::string _to = to.get_ptr();
@@ -327,6 +351,8 @@ s32 cellFsChmod(vm::ptr<const char> path, u32 mode)
 {
 	sys_fs->Todo("cellFsChmod(path=\"%s\", mode=0x%x)", path.get_ptr(), mode);
 
+	LV2_LOCK(0);
+
 	// TODO:
 
 	return CELL_OK;
@@ -336,6 +362,8 @@ s32 cellFsFsync(u32 fd)
 {
 	sys_fs->Todo("cellFsFsync(fd=0x%x)", fd);
 
+	LV2_LOCK(0);
+
 	// TODO:
 
 	return CELL_OK;
@@ -344,6 +372,8 @@ s32 cellFsFsync(u32 fd)
 s32 cellFsRmdir(vm::ptr<const char> path)
 {
 	sys_fs->Warning("cellFsRmdir(path=\"%s\")", path.get_ptr());
+
+	LV2_LOCK(0);
 
 	std::string _path = path.get_ptr();
 
@@ -361,6 +391,8 @@ s32 cellFsUnlink(vm::ptr<const char> path)
 {
 	sys_fs->Warning("cellFsUnlink(path=\"%s\")", path.get_ptr());
 
+	LV2_LOCK(0);
+
 	std::string _path = path.get_ptr();
 
 	if (Emu.GetVFS().ExistsDir(_path))
@@ -377,8 +409,11 @@ s32 cellFsUnlink(vm::ptr<const char> path)
 
 s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 {
-	vfsSeekMode seek_mode;
 	sys_fs->Log("cellFsLseek(fd=%d, offset=0x%llx, whence=0x%x, pos_addr=0x%x)", fd, offset, whence, pos.addr());
+
+	LV2_LOCK(0);
+
+	vfsSeekMode seek_mode;
 	switch(whence)
 	{
 	case CELL_SEEK_SET: seek_mode = vfsSeekSet; break;
@@ -401,6 +436,8 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 s32 cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs->Warning("cellFsFtruncate(fd=%d, size=%lld)", fd, size);
+
+	LV2_LOCK(0);
 	
 	IDType type;
 	vfsStream* file;
@@ -430,6 +467,8 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 {
 	sys_fs->Warning("cellFsTruncate(path=\"%s\", size=%lld)", path.get_ptr(), size);
+
+	LV2_LOCK(0);
 
 	vfsFile f(path.get_ptr(), vfsReadWrite);
 	if(!f.IsOpened())
@@ -462,6 +501,8 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64
 	sys_fs->Warning("cellFsFGetBlockSize(fd=%d, sector_size_addr=0x%x, block_size_addr=0x%x)",
 		fd, sector_size.addr(), block_size.addr());
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -476,6 +517,8 @@ s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size,
 	sys_fs->Warning("cellFsGetBlockSize(file='%s', sector_size_addr=0x%x, block_size_addr=0x%x)",
 		path.get_ptr(), sector_size.addr(), block_size.addr());
 
+	LV2_LOCK(0);
+
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
 
@@ -486,6 +529,8 @@ s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, v
 {
 	sys_fs->Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
 		path.get_ptr(), block_size.addr(), block_count.addr());
+
+	LV2_LOCK(0);
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
@@ -498,6 +543,8 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 {
 	sys_fs->Warning("cellFsGetDirectoryEntries(fd=%d, entries_addr=0x%x, entries_size=0x%x, data_count_addr=0x%x)",
 		fd, entries.addr(), entries_size, data_count.addr());
+
+	LV2_LOCK(0);
 
 	vfsDirBase* directory;
 	if(!sys_fs->CheckId(fd, directory))
@@ -535,6 +582,8 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
 	sys_fs->Warning("cellFsStReadInit(fd=%d, ringbuf_addr=0x%x)", fd, ringbuf.addr());
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -557,6 +606,8 @@ s32 cellFsStReadFinish(u32 fd)
 {
 	sys_fs->Warning("cellFsStReadFinish(fd=%d)", fd);
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -569,6 +620,8 @@ s32 cellFsStReadFinish(u32 fd)
 s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
 	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, ringbuf_addr=0x%x)", fd, ringbuf.addr());
+
+	LV2_LOCK(0);
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -584,6 +637,8 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<be_t<u64>> status)
 {
 	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, status_addr=0x%x)", fd, status.addr());
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -596,6 +651,8 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<be_t<u64>> regid)
 {
 	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, regid_addr=0x%x)", fd, regid.addr());
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -607,6 +664,8 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<be_t<u64>> regid)
 s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
 	sys_fs->Todo("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
+
+	LV2_LOCK(0);
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -621,6 +680,8 @@ s32 cellFsStReadStop(u32 fd)
 {
 	sys_fs->Warning("cellFsStReadStop(fd=%d)", fd);
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -632,6 +693,8 @@ s32 cellFsStReadStop(u32 fd)
 s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 {
 	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.addr());
+
+	LV2_LOCK(0);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -646,6 +709,8 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr, vm::ptr<be_t<u64
 {
 	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr.addr(), size.addr());
 
+	LV2_LOCK(0);
+
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
@@ -655,6 +720,8 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr, vm::ptr<be_t<u64
 s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 {
 	sys_fs->Todo("cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size = 0x%llx)", fd, addr_addr, size);
+
+	LV2_LOCK(0);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -665,6 +732,8 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
 	sys_fs->Todo("cellFsStReadWait(fd=%d, size = 0x%llx)", fd, size);
+
+	LV2_LOCK(0);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
@@ -675,6 +744,8 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void (*)(int xfd, u64 xsize)> func)
 {
 	sys_fs->Todo("cellFsStReadWaitCallback(fd=%d, size = 0x%llx, func_addr = 0x%x)", fd, size, func.addr());
+
+	LV2_LOCK(0);
 
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;

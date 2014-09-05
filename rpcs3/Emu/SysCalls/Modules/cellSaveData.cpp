@@ -326,7 +326,7 @@ int cellSaveDataListSave2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm:
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
@@ -412,7 +412,7 @@ int cellSaveDataListLoad2(u32 version, vm::ptr<CellSaveDataSetList> setList, vm:
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
@@ -496,7 +496,7 @@ int cellSaveDataFixedSave2(u32 version,  vm::ptr<CellSaveDataSetList> setList, v
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
@@ -566,7 +566,7 @@ int cellSaveDataFixedLoad2(u32 version,  vm::ptr<CellSaveDataSetList> setList, v
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
@@ -740,7 +740,7 @@ int cellSaveDataListAutoSave(u32 version, u32 errDialog, vm::ptr<CellSaveDataSet
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName.c_str());
@@ -826,7 +826,7 @@ int cellSaveDataListAutoLoad(u32 version, u32 errDialog, vm::ptr<CellSaveDataSet
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
 	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	CellSaveDataDirList* dirList = (CellSaveDataDirList*)Memory.VirtualToRealAddr(listGet->dirList.addr());
+	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
 
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);

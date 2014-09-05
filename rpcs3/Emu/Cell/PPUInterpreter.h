@@ -3236,7 +3236,7 @@ private:
 	void DCBZ(u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		u8 *const cache_line = Memory.GetMemFromAddr(addr & ~127);
+		auto const cache_line = vm::get_ptr<u8>(addr & ~127);
 		if (cache_line)
 			memset(cache_line, 0, 128);
 		_mm_mfence();

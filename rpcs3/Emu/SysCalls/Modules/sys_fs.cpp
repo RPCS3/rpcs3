@@ -161,34 +161,40 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr
 		}
 	}
 
-	vfsFileBase* orig_file;
-	if(!sys_fs->CheckId(fd, orig_file)) return;
-
-	u64 nbytes = aio->size;
-	u32 buf_addr = aio->buf_addr;
-
 	u32 error = CELL_OK;
-
-	vfsStream& file = *(vfsStream*)orig_file;
-	const u64 old_pos = file.Tell();
-	file.Seek((u64)aio->offset);
-
-	// TODO: use code from cellFsRead or something
-
 	u64 res = 0;
-	if (nbytes != (u32)nbytes)
 	{
-		error = CELL_ENOMEM;
-	}
-	else
-	{
-		res = nbytes ? file.Read(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
-	}
+		LV2_LOCK(0);
 
-	file.Seek(old_pos);
+		vfsFileBase* orig_file;
+		if (!sys_fs->CheckId(fd, orig_file))
+		{
+			sys_fs->Error("Wrong fd (%s)", fd);
+			Emu.Pause();
+			return;
+		}
 
-	sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
-		fd, (u64)aio->offset, buf_addr, (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
+		u64 nbytes = aio->size;
+
+		vfsStream& file = *(vfsStream*)orig_file;
+		const u64 old_pos = file.Tell();
+		file.Seek((u64)aio->offset);
+
+		// TODO: use code from cellFsRead or something
+		if (nbytes != (u32)nbytes)
+		{
+			error = CELL_ENOMEM;
+		}
+		else
+		{
+			res = nbytes ? file.Read(aio->buf.get_ptr(), nbytes) : 0;
+		}
+
+		file.Seek(old_pos);
+
+		sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x [%s])",
+			fd, (u64)aio->offset, aio->buf.addr(), (u64)aio->size, error, res, xid, orig_file->GetPath().c_str());
+	}	
 
 	if (func) // start callback thread
 	{
@@ -201,6 +207,8 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr
 int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
+
+	LV2_LOCK(0);
 
 	if (!aio_init)
 	{
@@ -231,6 +239,8 @@ int cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<vo
 {
 	sys_fs->Todo("cellFsAioWrite(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
 
+	LV2_LOCK(0);
+
 	// TODO:
 
 	return CELL_OK;
@@ -239,6 +249,9 @@ int cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<be_t<u32>> aio_id, vm::ptr<vo
 int cellFsAioInit(vm::ptr<const char> mount_point)
 {
 	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
+
+	LV2_LOCK(0);
+
 	aio_init = true;
 	return CELL_OK;
 }
@@ -246,14 +259,19 @@ int cellFsAioInit(vm::ptr<const char> mount_point)
 int cellFsAioFinish(vm::ptr<const char> mount_point)
 {
 	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x (%s))", mount_point.addr(), mount_point.get_ptr());
+
+	LV2_LOCK(0);
+
 	aio_init = false;
 	return CELL_OK;
 }
 
-int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, vm::ptr<be_t<u64>> nread)
+int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
-		fd, offset, buf_addr, buffer_size, nread.addr());
+		fd, offset, buf.addr(), buffer_size, nread.addr());
+
+	LV2_LOCK(0);
 
 	int ret;
 	vm::var<be_t<u64>> oldPos, newPos;
@@ -261,7 +279,7 @@ int cellFsReadWithOffset(u32 fd, u64 offset, u32 buf_addr, u64 buffer_size, vm::
 	if (ret) return ret;
 	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos);  // Move to the specified offset
 	if (ret) return ret;
-	ret = cellFsRead(fd, buf_addr, buffer_size, nread);    // Read the file
+	ret = cellFsRead(fd, buf, buffer_size, nread);    // Read the file
 	if (ret) return ret;
 	ret = cellFsLseek(fd, oldPos.value(), CELL_SEEK_SET, newPos);  // Return to the old position
 	if (ret) return ret;
@@ -316,5 +334,7 @@ void sys_fs_init()
 
 void sys_fs_load()
 {
+	g_FsAioReadID = 0;
+	g_FsAioReadCur = 0;
 	aio_init = false;
 }

@@ -422,18 +422,11 @@ int cellGameGetLocalWebContentPath()
 	return CELL_OK;
 }
 
-int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
+int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> dirName)
 {
-	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
+	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName.addr());
+
 	std::string errorName;
-	std::string errorMsg;
-	char* dirName = "Unknown";
-
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT && dirName_addr)
-	{
-		dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
-	}
-
 	switch (type)
 	{
 	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
@@ -445,13 +438,19 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	default: return CELL_GAME_ERROR_PARAM;
 	}
 
+	std::string errorMsg;
 	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB\nDirectory name: %s", errorName.c_str(), errNeedSizeKB, dirName);
+		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB", errorName.c_str(), errNeedSizeKB, dirName);
 	}
 	else
 	{
 		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+	}
+
+	if (dirName)
+	{
+		errorMsg += fmt::Format("\nDirectory name: %s", dirName.get_ptr());
 	}
 
 	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);

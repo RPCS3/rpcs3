@@ -449,7 +449,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					for (s32 i = (s32)PC; i < (s32)PC + 4 * 7; i += 4)
 					{
 						dis_asm.dump_pc = i;
-						dis_asm.offset = Memory.GetMemFromAddr(dmac.ls_offset);
+						dis_asm.offset = vm::get_ptr<u8>(dmac.ls_offset);
 						const u32 opcode = Memory.Read32(i + dmac.ls_offset);
 						(*SPU_instr::rrr_list)(&dis_asm, opcode);
 						if (i >= 0 && i < 0x40000)

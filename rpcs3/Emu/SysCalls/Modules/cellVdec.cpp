@@ -482,21 +482,21 @@ u32 vdecOpen(VideoDecoder* data)
 	return vdec_id;
 }
 
-int cellVdecQueryAttr(const vm::ptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+int cellVdecQueryAttr(vm::ptr<const CellVdecType> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec->Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.addr(), attr.addr());
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
-int cellVdecQueryAttrEx(const vm::ptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+int cellVdecQueryAttrEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec->Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.addr(), attr.addr());
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
 
-int cellVdecOpen(const vm::ptr<CellVdecType> type, const vm::ptr<CellVdecResource> res, const vm::ptr<CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
+int cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResource> res, vm::ptr<const CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
@@ -506,7 +506,7 @@ int cellVdecOpen(const vm::ptr<CellVdecType> type, const vm::ptr<CellVdecResourc
 	return CELL_OK;
 }
 
-int cellVdecOpenEx(const vm::ptr<CellVdecTypeEx> type, const vm::ptr<CellVdecResourceEx> res, const vm::ptr<CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
+int cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecResourceEx> res, vm::ptr<const CellVdecCb> cb, vm::ptr<be_t<u32>> handle)
 {
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
@@ -593,7 +593,7 @@ int cellVdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const vm::ptr<CellVdecAuInfo> auInfo)
+int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdecAuInfo> auInfo)
 {
 	cellVdec->Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.addr());
 
@@ -617,9 +617,9 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, const vm::ptr<CellVdec
 	return CELL_OK;
 }
 
-int cellVdecGetPicture(u32 handle, const vm::ptr<CellVdecPicFormat> format, u32 out_addr)
+int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
-	cellVdec->Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, out_addr=0x%x)", handle, format.addr(), out_addr);
+	cellVdec->Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, outBuff_addr=0x%x)", handle, format.addr(), outBuff.addr());
 
 	VideoDecoder* vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
@@ -632,7 +632,7 @@ int cellVdecGetPicture(u32 handle, const vm::ptr<CellVdecPicFormat> format, u32 
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
-	if (out_addr)
+	if (outBuff)
 	{
 		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
 
@@ -656,7 +656,7 @@ int cellVdecGetPicture(u32 handle, const vm::ptr<CellVdecPicFormat> format, u32 
 
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(Memory.GetMemFromAddr(out_addr), buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
 		if (err < 0)
 		{
 			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);

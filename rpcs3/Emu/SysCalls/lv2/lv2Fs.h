@@ -104,7 +104,7 @@ struct CellFsAio
 {
 	be_t<u32> fd;
 	be_t<u64> offset;
-	be_t<u32> buf_addr;
+	vm::bptr<void> buf;
 	be_t<u64> size;
 	be_t<u64> user_data;
 };
@@ -125,8 +125,8 @@ struct CellFsRingBuffer
 
 // SysCalls
 s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size);
-s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nread);
-s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nwrite);
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread);
+s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<be_t<u64>> nwrite);
 s32 cellFsClose(u32 fd);
 s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd);
 s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread);

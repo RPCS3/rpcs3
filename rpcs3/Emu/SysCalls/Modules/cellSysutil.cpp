@@ -787,7 +787,7 @@ int cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 	return CELL_OK;
 }
 
-int cellWebBrowserEstimate2(const vm::ptr<const u8> _config, vm::ptr<be_t<u32>> memSize)
+int cellWebBrowserEstimate2(vm::ptr<const const u8> _config, vm::ptr<be_t<u32>> memSize)
 {
 	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", _config.addr(), memSize.addr());
 

@@ -233,7 +233,7 @@ void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 widt
 	f_image_viewer->Show();
 	wxClientDC dc_canvas(f_image_viewer);
 
-	unsigned char* originalBuffer  = (unsigned char*)Memory.VirtualToRealAddr(addr);
+	unsigned char* originalBuffer  = vm::get_ptr<unsigned char>(addr);
 	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 3);
 	switch(mode)
 	{

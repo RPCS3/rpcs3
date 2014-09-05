@@ -14,7 +14,7 @@ extern "C"
 //Module cellVpost(0x0008, cellVpost_init);
 Module *cellVpost = nullptr;
 
-int cellVpostQueryAttr(const vm::ptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
+int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {
 	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.addr(), attr.addr());
 
@@ -37,7 +37,7 @@ u32 vpostOpen(VpostInstance* data)
 	return id;
 }
 
-int cellVpostOpen(const vm::ptr<CellVpostCfgParam> cfgParam, const vm::ptr<CellVpostResource> resource, vm::ptr<be_t<u32>> handle)
+int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResource> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());
@@ -47,7 +47,7 @@ int cellVpostOpen(const vm::ptr<CellVpostCfgParam> cfgParam, const vm::ptr<CellV
 	return CELL_OK;
 }
 
-int cellVpostOpenEx(const vm::ptr<CellVpostCfgParam> cfgParam, const vm::ptr<CellVpostResourceEx> resource, vm::ptr<be_t<u32>> handle)
+int cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResourceEx> resource, vm::ptr<be_t<u32>> handle)
 {
 	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());
@@ -71,11 +71,11 @@ int cellVpostClose(u32 handle)
 	return CELL_OK;
 }
 
-int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const vm::ptr<CellVpostCtrlParam> ctrlParam,
-				  u32 outPicBuff_addr, vm::ptr<CellVpostPictureInfo> picInfo)
+int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpostCtrlParam> ctrlParam,
+				  vm::ptr<u8> outPicBuff, vm::ptr<CellVpostPictureInfo> picInfo)
 {
 	cellVpost->Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
-		handle, inPicBuff_addr, ctrlParam.addr(), outPicBuff_addr, picInfo.addr());
+		handle, inPicBuff.addr(), ctrlParam.addr(), outPicBuff.addr(), picInfo.addr());
 
 	VpostInstance* vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))
@@ -137,9 +137,9 @@ int cellVpostExec(u32 handle, const u32 inPicBuff_addr, const vm::ptr<CellVpostC
 
 	//u64 stamp2 = get_system_time();
 
-	u8* in_data[4] = { Memory.GetMemFromAddr(inPicBuff_addr), Memory.GetMemFromAddr(inPicBuff_addr + w*h), Memory.GetMemFromAddr(inPicBuff_addr + w*h + w*h / 4), pA.get() };
+	const u8* in_data[4] = { &inPicBuff[0], &inPicBuff[w * h], &inPicBuff[w * h * 5 / 4], pA.get() };
 	int in_line[4] = { w, w/2, w/2, w };
-	u8* out_data[4] = { Memory.GetMemFromAddr(outPicBuff_addr), NULL, NULL, NULL };
+	u8* out_data[4] = { outPicBuff.get_ptr(), NULL, NULL, NULL };
 	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
 
 	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);

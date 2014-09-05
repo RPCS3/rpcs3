@@ -48,7 +48,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	u64 time0 = 0;
 
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = Memory.GetMemFromAddr(CPU.dmac.ls_offset);
+	dis_asm.offset = vm::get_ptr<u8>(CPU.dmac.ls_offset);
 
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);

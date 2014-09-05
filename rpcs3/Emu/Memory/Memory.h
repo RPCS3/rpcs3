@@ -108,11 +108,6 @@ public:
 		}
 	}
 
-	template<typename T> void* VirtualToRealAddr(const T vaddr)
-	{
-		return GetMemFromAddr<T>(vaddr);
-	}
-
 	u32 RealToVirtualAddr(const void* addr)
 	{
 		const u64 res = (u64)addr - (u64)GetBaseAddr();
@@ -312,11 +307,6 @@ public:
 			return *(u128*)GetBaseAddr();
 		}
 	}
-
-	//template<typename T> void WriteString(const T addr, const std::string& str)
-	//{
-	//	memcpy((char*)GetMemFromAddr<T>(addr), str.c_str(), str.size() + 1);
-	//}
 
 	u32 GetUserMemTotalSize()
 	{

@@ -84,7 +84,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
 		break;
 	}
 
@@ -109,7 +109,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	return CELL_OK;
 }
 
-int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
+int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
 {
 	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
@@ -139,7 +139,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellGifD
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
@@ -166,7 +166,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, gif.addr(), gif.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(gif.addr()), gif.size(), nread);
 		break;
 	}
 

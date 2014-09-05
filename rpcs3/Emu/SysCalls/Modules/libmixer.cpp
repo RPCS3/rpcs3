@@ -295,7 +295,7 @@ int cellSSPlayerGetState(u32 handle)
 	return CELL_SSPLAYER_STATE_OFF;
 }
 
-int cellSurMixerCreate(const vm::ptr<CellSurMixerConfig> config)
+int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 {
 	libmixer->Warning("cellSurMixerCreate(config_addr=0x%x)", config.addr());
 

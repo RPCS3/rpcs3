@@ -724,9 +724,9 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	return CELL_OK;
 }
 
-int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
+int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
-	cellAdec->Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer_addr);
+	cellAdec->Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer.addr());
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -752,11 +752,10 @@ int cellAdecGetPcm(u32 handle, u32 outBuffer_addr)
 	float* in_f[2];
 	in_f[0] = (float*)frame->extended_data[0];
 	in_f[1] = (float*)frame->extended_data[1];
-	be_t<float>* out_f = (be_t<float>*)Memory.GetMemFromAddr(outBuffer_addr);
 	for (u32 i = 0; i < af.size / 8; i++)
 	{
-		out_f[i*2] = in_f[0][i];
-		out_f[i*2+1] = in_f[1][i];
+		outBuffer[i * 2 + 0] = in_f[0][i];
+		outBuffer[i * 2 + 1] = in_f[1][i];
 	}
 
 	if (af.data)

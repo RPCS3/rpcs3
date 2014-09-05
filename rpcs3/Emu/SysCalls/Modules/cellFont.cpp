@@ -78,7 +78,7 @@ int cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 
 	font->stbfont = (stbtt_fontinfo*)((u8*)&(font->stbfont) + sizeof(void*)); // hack: use next bytes of the struct
 
-	if (!stbtt_InitFont(font->stbfont, (unsigned char*)Memory.VirtualToRealAddr(fontAddr), 0))
+	if (!stbtt_InitFont(font->stbfont, vm::get_ptr<unsigned char>(fontAddr), 0))
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
 	font->renderer_addr = 0;
@@ -99,7 +99,7 @@ int cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::ptr<const char> f
 
 	u32 fileSize = (u32)f.GetSize();
 	u32 bufferAddr = (u32)Memory.Alloc(fileSize, 1); // Freed in cellFontCloseFont
-	f.Read(Memory.VirtualToRealAddr(bufferAddr), fileSize);
+	f.Read(vm::get_ptr<void>(bufferAddr), fileSize);
 	int ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
 	return ret;
@@ -345,7 +345,7 @@ int cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellF
 	baseLineY = (int)((float)ascent * scale); // ???
 
 	// Move the rendered character to the surface
-	unsigned char* buffer = (unsigned char*)Memory.VirtualToRealAddr(surface->buffer_addr);
+	unsigned char* buffer = vm::get_ptr<unsigned char>(surface->buffer_addr);
 	for (u32 ypos = 0; ypos < (u32)height; ypos++){
 		if ((u32)y + ypos + yoff + baseLineY >= surface->height)
 			break;
