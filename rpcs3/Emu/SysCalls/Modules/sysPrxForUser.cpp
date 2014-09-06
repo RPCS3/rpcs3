@@ -52,9 +52,11 @@ u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 	return (u32)Memory.Alloc(size, align);
 }
 
-void sys_initialize_tls()
+u128 sys_initialize_tls(u128 arg)
 {
 	sysPrxForUser->Log("sys_initialize_tls()");
+
+	return arg;
 }
 
 s64 _sys_process_atexitspawn()

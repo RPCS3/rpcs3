@@ -46,11 +46,11 @@ namespace detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(sizeof(T) == 16, "Wrong argument type for ARG_VECTOR");
+		static_assert(std::is_same<T, u128>::value, "Wrong argument type for ARG_VECTOR");
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T&)CPU.VPR[v_count + 1]._u128;
+			return (T&)CPU.VPR[v_count + 1];
 		}
 	};
 
@@ -69,9 +69,11 @@ namespace detail
 	template<typename T>
 	struct bind_result
 	{
+		static_assert(!std::is_pointer<T>::value, "Invalid function result type: pointer");
+		static_assert(sizeof(T) <= 8, "Invalid function result type");
+
 		static __forceinline void func(PPUThread& CPU, T value)
 		{
-			static_assert(!std::is_pointer<T>::value, "Invalid function result type: pointer");
 			if (std::is_floating_point<T>::value)
 			{
 				CPU.FPR[1] = (double)value;
@@ -80,6 +82,15 @@ namespace detail
 			{
 				(T&)CPU.GPR[3] = value;
 			}
+		}
+	};
+
+	template<>
+	struct bind_result<u128>
+	{
+		static __forceinline void func(PPUThread& CPU, u128 value)
+		{
+			CPU.VPR[2] = value;
 		}
 	};
 
@@ -120,12 +131,13 @@ namespace detail
 		static_assert(!std::is_pointer<T>::value, "Invalid function argument type: pointer");
 		// TODO: check calculations
 		const bool is_float = std::is_floating_point<T>::value;
+		const bool is_vector = std::is_same<T, u128>::value;
 		const bind_arg_type t = is_float
 			? ((f_count >= 12) ? ARG_STACK : ARG_FLOAT)
-			: ((g_count >= 8) ? ARG_STACK : ARG_GENERAL);
-		const int g = g_count + (is_float ? 0 : 1);
+			: (is_vector ? ((v_count >= 12) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 8) ? ARG_STACK : ARG_GENERAL));
+		const int g = g_count + (is_float || is_vector ? 0 : 1);
 		const int f = f_count + (is_float ? 1 : 0);
-		const int v = v_count; // TODO: vector argument support (if possible)
+		const int v = v_count + (is_vector ? 1 : 0);
 		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
 	}
 
