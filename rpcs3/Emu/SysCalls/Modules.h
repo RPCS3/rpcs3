@@ -155,8 +155,8 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.mask = ops[i] >> 32;
 		op.crc = (u32)ops[i];
 		if (op.mask) op.crc &= op.mask;
-		op.mask = re(op.mask);
-		op.crc = re(op.crc);
+		op.mask = re32(op.mask);
+		op.crc = re32(op.crc);
 		sf->ops.push_back(op);
 	}
 	PushNewFuncSub(sf);

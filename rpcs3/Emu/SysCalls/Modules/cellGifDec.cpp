@@ -23,7 +23,7 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
@@ -41,7 +41,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, const vm::ptr<C
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
@@ -79,12 +79,12 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
 		break;
 	}
 
@@ -109,7 +109,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	return CELL_OK;
 }
 
-int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
+int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
 {
 	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
@@ -139,7 +139,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellGifD
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
@@ -161,12 +161,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		memmove(Memory + gif.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), gif.size());
+		memmove(gif.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), gif.size());
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, gif.addr(), gif.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(gif.addr()), gif.size(), nread);
 		break;
 	}
 
@@ -196,12 +196,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.addr(), image.get(), image_size);
+			memcpy(data.get_ptr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -224,7 +224,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
+				memcpy(&data[dstOffset], output, linesize);
 			}
 			free(output);
 		}

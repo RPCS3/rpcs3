@@ -38,7 +38,7 @@ s32 sys_process_exit(s32 errorcode)
 }
 
 void sys_game_process_exitspawn(
-			u32 path_addr,
+			vm::ptr<const char> path,
 			u32 argv_addr,
 			u32 envp_addr,
 			u32 data_addr,
@@ -47,7 +47,7 @@ void sys_game_process_exitspawn(
 			u64 flags )
 {
 	sys_process.Todo("sys_game_process_exitspawn()");
-	sys_process.Warning("path: %s", Memory.ReadString(path_addr).c_str());
+	sys_process.Warning("path: %s", path.get_ptr());
 	sys_process.Warning("argv: 0x%x", argv_addr);
 	sys_process.Warning("envp: 0x%x", envp_addr);
 	sys_process.Warning("data: 0x%x", data_addr);
@@ -55,20 +55,20 @@ void sys_game_process_exitspawn(
 	sys_process.Warning("prio: %d", prio);
 	sys_process.Warning("flags: %d", flags);
 
-	std::string path = Memory.ReadString(path_addr);
+	std::string _path = path.get_ptr();
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	auto argvp = vm::ptr<u32>::make(argv_addr);
+	auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
 	while (argvp && *argvp)
 	{
-		argv.push_back(Memory.ReadString(Memory.Read32(argvp.addr())));
+		argv.push_back(argvp[0].get_ptr());
 		argvp++;
 	}
-	auto envp = vm::ptr<u32>::make(envp_addr);
+	auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
 	while (envp && *envp)
 	{
-		env.push_back(Memory.ReadString(Memory.Read32(envp.addr())));
+		env.push_back(envp[0].get_ptr());
 		envp++;
 	}
 
@@ -86,7 +86,7 @@ void sys_game_process_exitspawn(
 }
 
 void sys_game_process_exitspawn2(
-			u32 path_addr,
+			vm::ptr<const char> path,
 			u32 argv_addr,
 			u32 envp_addr,
 			u32 data_addr,
@@ -95,7 +95,7 @@ void sys_game_process_exitspawn2(
 			u64 flags)
 {
 	sys_process.Todo("sys_game_process_exitspawn2");
-	sys_process.Warning("path: %s", Memory.ReadString(path_addr).c_str());
+	sys_process.Warning("path: %s", path.get_ptr());
 	sys_process.Warning("argv: 0x%x", argv_addr);
 	sys_process.Warning("envp: 0x%x", envp_addr);
 	sys_process.Warning("data: 0x%x", data_addr);
@@ -103,20 +103,20 @@ void sys_game_process_exitspawn2(
 	sys_process.Warning("prio: %d", prio);
 	sys_process.Warning("flags: %d", flags);
 
-	std::string path = Memory.ReadString(path_addr);
+	std::string _path = path.get_ptr();
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	auto argvp = vm::ptr<u32>::make(argv_addr);
+	auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
 	while (argvp && *argvp)
 	{
-		argv.push_back(Memory.ReadString(Memory.Read32(argvp.addr())));
+		argv.push_back(argvp[0].get_ptr());
 		argvp++;
 	}
-	auto envp = vm::ptr<u32>::make(envp_addr);
+	auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
 	while (envp && *envp)
 	{
-		env.push_back(Memory.ReadString(Memory.Read32(envp.addr())));
+		env.push_back(envp[0].get_ptr());
 		envp++;
 	}
 

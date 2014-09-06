@@ -160,7 +160,7 @@ struct CellVideoOutDisplayMode
 	u8 conversion;
 	u8 aspect;
 	u8 reserved[2];
-	u16 refreshRates;
+	be_t<u16> refreshRates;
 };
 
 struct CellVideoOutResolution
@@ -197,7 +197,12 @@ struct CellVideoOutConfiguration
 	u8 format;
 	u8 aspect;
 	u8 reserved[9];
-	u32 pitch;
+	be_t<u32> pitch;
+};
+
+struct CellVideoOutOption
+{
+	be_t<u32> reserved;
 };
 
 enum CellVideoOutEvent

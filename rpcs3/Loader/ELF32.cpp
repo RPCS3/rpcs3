@@ -448,7 +448,7 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 			}
 
 			elf32_f.Seek(phdr_arr[i].p_offset);
-			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
+			elf32_f.Read(vm::get_ptr<void>(phdr_arr[i].p_vaddr + offset), phdr_arr[i].p_filesz);
 		}
 		else if(phdr_arr[i].p_type == 0x00000004)
 		{

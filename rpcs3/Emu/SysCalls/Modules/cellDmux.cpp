@@ -156,7 +156,7 @@ void ElementaryStream::push(DemuxerStream& stream, u32 sz, PesHeader& pes)
 
 	u32 data_addr = put + 128 + size;
 	size += sz;
-	memcpy(Memory + data_addr, Memory + stream.addr, sz);
+	memcpy(vm::get_ptr<void>(data_addr), vm::get_ptr<void>(stream.addr), sz);
 	stream.skip(sz);
 
 	auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
@@ -276,7 +276,7 @@ void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, const vm::ptr<CellCodecEsFilterId> esFilterId,
+void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, vm::ptr<const CellCodecEsFilterId> esFilterId,
 					 const u32 esSpecificInfo_addr, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
@@ -713,7 +713,7 @@ u32 dmuxOpen(Demuxer* data)
 	return dmux_id;
 }
 
-int cellDmuxQueryAttr(const vm::ptr<CellDmuxType> demuxerType, vm::ptr<CellDmuxAttr> demuxerAttr)
+int cellDmuxQueryAttr(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<CellDmuxAttr> demuxerAttr)
 {
 	cellDmux->Warning("cellDmuxQueryAttr(demuxerType_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType.addr(), demuxerAttr.addr());
 
@@ -726,7 +726,7 @@ int cellDmuxQueryAttr(const vm::ptr<CellDmuxType> demuxerType, vm::ptr<CellDmuxA
 	return CELL_OK;
 }
 
-int cellDmuxQueryAttr2(const vm::ptr<CellDmuxType2> demuxerType2, vm::ptr<CellDmuxAttr> demuxerAttr)
+int cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<CellDmuxAttr> demuxerAttr)
 {
 	cellDmux->Warning("cellDmuxQueryAttr2(demuxerType2_addr=0x%x, demuxerAttr_addr=0x%x)", demuxerType2.addr(), demuxerAttr.addr());
 
@@ -739,8 +739,8 @@ int cellDmuxQueryAttr2(const vm::ptr<CellDmuxType2> demuxerType2, vm::ptr<CellDm
 	return CELL_OK;
 }
 
-int cellDmuxOpen(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<CellDmuxResource> demuxerResource, 
-	const vm::ptr<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmuxResource> demuxerResource, 
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen(demuxerType_addr=0x%x, demuxerResource_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.addr(), demuxerResource.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -757,8 +757,8 @@ int cellDmuxOpen(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<CellDmux
 	return CELL_OK;
 }
 
-int cellDmuxOpenEx(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<CellDmuxResourceEx> demuxerResourceEx, 
-	const vm::ptr<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmuxResourceEx> demuxerResourceEx, 
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpenEx(demuxerType_addr=0x%x, demuxerResourceEx_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.addr(), demuxerResourceEx.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -775,8 +775,8 @@ int cellDmuxOpenEx(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<CellDm
 	return CELL_OK;
 }
 
-int cellDmuxOpen2(const vm::ptr<CellDmuxType2> demuxerType2, const vm::ptr<CellDmuxResource2> demuxerResource2, 
-	const vm::ptr<CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+int cellDmuxOpen2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellDmuxResource2> demuxerResource2, 
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType2.addr(), demuxerResource2.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -907,7 +907,7 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 	return CELL_OK;
 }
 
-int cellDmuxQueryEsAttr(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<CellCodecEsFilterId> esFilterId,
+int cellDmuxQueryEsAttr(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellCodecEsFilterId> esFilterId,
 						const u32 esSpecificInfo_addr, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux->Warning("cellDmuxQueryEsAttr(demuxerType_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
@@ -924,7 +924,7 @@ int cellDmuxQueryEsAttr(const vm::ptr<CellDmuxType> demuxerType, const vm::ptr<C
 	return CELL_OK;
 }
 
-int cellDmuxQueryEsAttr2(const vm::ptr<CellDmuxType2> demuxerType2, const vm::ptr<CellCodecEsFilterId> esFilterId,
+int cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellCodecEsFilterId> esFilterId,
 						 const u32 esSpecificInfo_addr, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux->Warning("cellDmuxQueryEsAttr2(demuxerType2_addr=0x%x, esFilterId_addr=0x%x, esSpecificInfo_addr=0x%x, esAttr_addr=0x%x)",
@@ -941,8 +941,8 @@ int cellDmuxQueryEsAttr2(const vm::ptr<CellDmuxType2> demuxerType2, const vm::pt
 	return CELL_OK;
 }
 
-int cellDmuxEnableEs(u32 demuxerHandle, const vm::ptr<CellCodecEsFilterId> esFilterId, 
-					 const vm::ptr<CellDmuxEsResource> esResourceInfo, const vm::ptr<CellDmuxEsCb> esCb,
+int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFilterId, 
+					 vm::ptr<const CellDmuxEsResource> esResourceInfo, vm::ptr<const CellDmuxEsCb> esCb,
 					 const u32 esSpecificInfo_addr, vm::ptr<be_t<u32>> esHandle)
 {
 	cellDmux->Warning("cellDmuxEnableEs(demuxerHandle=%d, esFilterId_addr=0x%x, esResourceInfo_addr=0x%x, esCb_addr=0x%x, "

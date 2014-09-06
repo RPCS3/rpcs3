@@ -16,7 +16,7 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char> dirName)
+int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.addr(), attributes.addr(), size.addr(), dirName.addr());
@@ -50,7 +50,7 @@ int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
-		if (dirName) Memory.WriteString(dirName.addr(), ""); // ???
+		if (dirName) strcpy_trunc(*dirName, ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -59,7 +59,7 @@ int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm
 		std::string titleId = psf.GetString("TITLE_ID");
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
-		if (dirName) Memory.WriteString(dirName.addr(), titleId);
+		if (dirName) strcpy_trunc(*dirName, titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
 	}
@@ -68,7 +68,7 @@ int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm
 		std::string titleId = psf.GetString("TITLE_ID");
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
-		if (dirName) Memory.WriteString(dirName.addr(), titleId); // ???
+		if (dirName) strcpy_trunc(*dirName, titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 	}
@@ -177,7 +177,7 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameContentPermit(vm::ptr<char> contentInfoPath, vm::ptr<char> usrdirPath)
+int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> usrdirPath)
 {
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.addr(), usrdirPath.addr());
@@ -189,8 +189,8 @@ int cellGameContentPermit(vm::ptr<char> contentInfoPath, vm::ptr<char> usrdirPat
 	}
 
 	// TODO: make it better
-	Memory.WriteString(contentInfoPath.addr(), contentInfo);
-	Memory.WriteString(usrdirPath.addr(), usrdir);
+	strcpy_trunc(*contentInfoPath, contentInfo);
+	strcpy_trunc(*usrdirPath, usrdir);
 
 	contentInfo = "";
 	usrdir = "";
@@ -350,9 +350,9 @@ int cellGameGetParamInt(u32 id, vm::ptr<be_t<u32>> value)
 	return CELL_OK;
 }
 
-int cellGameGetParamString(u32 id, u32 buf_addr, u32 bufsize)
+int cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf_addr, bufsize);
+	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/PARAM.SFO");
@@ -393,8 +393,8 @@ int cellGameGetParamString(u32 id, u32 buf_addr, u32 bufsize)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	data.resize(bufsize-1);
-	Memory.WriteString(buf_addr, data.c_str());
+	if (data.size() >= bufsize) data.resize(bufsize - 1);
+	memcpy(buf.get_ptr(), data.c_str(), data.size() + 1);
 	return CELL_OK;
 }
 
@@ -422,18 +422,11 @@ int cellGameGetLocalWebContentPath()
 	return CELL_OK;
 }
 
-int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
+int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> dirName)
 {
-	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName_addr);
+	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName.addr());
+
 	std::string errorName;
-	std::string errorMsg;
-	char* dirName = "Unknown";
-
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT && dirName_addr)
-	{
-		dirName = (char*)Memory.VirtualToRealAddr(dirName_addr);
-	}
-
 	switch (type)
 	{
 	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
@@ -445,13 +438,19 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, u32 dirName_addr)
 	default: return CELL_GAME_ERROR_PARAM;
 	}
 
+	std::string errorMsg;
 	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB\nDirectory name: %s", errorName.c_str(), errNeedSizeKB, dirName);
+		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB", errorName.c_str(), errNeedSizeKB, dirName);
 	}
 	else
 	{
 		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+	}
+
+	if (dirName)
+	{
+		errorMsg += fmt::Format("\nDirectory name: %s", dirName.get_ptr());
 	}
 
 	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);

@@ -116,7 +116,7 @@ void GLTexture::Init(RSXTexture& tex)
 	int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
 
-	const u8 *pixels = const_cast<const u8 *>(Memory.GetMemFromAddr(texaddr));
+	auto pixels = vm::get_ptr<const u8>(texaddr);
 	u8 *unswizzledPixels;
 	static const GLint glRemapStandard[4] = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 	// NOTE: This must be in ARGB order in all forms below.
@@ -1201,6 +1201,8 @@ void GLGSRender::WriteDepthBuffer()
 		LOG_WARNING(RSX, "Bad depth buffer address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
 		return;
 	}
+
+	auto ptr = vm::get_ptr<void>(address);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
 	checkForGlError("WriteDepthBuffer(): glBindBuffer");
 	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
@@ -1208,7 +1210,7 @@ void GLGSRender::WriteDepthBuffer()
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
-		memcpy(&Memory[address], packed, RSXThread::m_width * RSXThread::m_height * 4);
+		memcpy(ptr, packed, RSXThread::m_width * RSXThread::m_height * 4);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		checkForGlError("WriteDepthBuffer(): glUnmapBuffer");
 	}
@@ -1217,9 +1219,9 @@ void GLGSRender::WriteDepthBuffer()
 
 	checkForGlError("WriteDepthBuffer(): glReadPixels");
 	glBindTexture(GL_TEXTURE_2D, g_depth_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, &Memory[address]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, ptr);
 	checkForGlError("WriteDepthBuffer(): glTexImage2D");
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &Memory[address]);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, ptr);
 	checkForGlError("WriteDepthBuffer(): glGetTexImage");
 }
 
@@ -1246,7 +1248,7 @@ void GLGSRender::WriteColorBufferA()
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
-		memcpy(&Memory[address], packed, RSXThread::m_width * RSXThread::m_height * 4);
+		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		checkForGlError("WriteColorBufferA(): glUnmapBuffer");
 	}
@@ -1277,7 +1279,7 @@ void GLGSRender::WriteColorBufferB()
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
-		memcpy(&Memory[address], packed, RSXThread::m_width * RSXThread::m_height * 4);
+		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		checkForGlError("WriteColorBufferB(): glUnmapBuffer");
 	}
@@ -1308,7 +1310,7 @@ void GLGSRender::WriteColorBufferC()
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
-		memcpy(&Memory[address], packed, RSXThread::m_width * RSXThread::m_height * 4);
+		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		checkForGlError("WriteColorBufferC(): glUnmapBuffer");
 	}
@@ -1339,7 +1341,7 @@ void GLGSRender::WriteColorBufferD()
 	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 	if (packed)
 	{
-		memcpy(&Memory[address], packed, RSXThread::m_width * RSXThread::m_height * 4);
+		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		checkForGlError("WriteColorBufferD(): glUnmapBuffer");
 	}
@@ -2005,14 +2007,14 @@ void GLGSRender::Flip()
 		if (m_read_buffer)
 		{
 			format = GL_BGRA;
-			CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 			if (Memory.IsGoodAddr(addr))
 			{
 				width = buffers[m_gcm_current_buffer].width;
 				height = buffers[m_gcm_current_buffer].height;
-				src_buffer = (u8*)Memory.VirtualToRealAddr(addr);
+				src_buffer = vm::get_ptr<u8>(addr);
 			}
 			else
 			{

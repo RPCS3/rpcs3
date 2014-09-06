@@ -68,8 +68,8 @@ void InitOffsetTable()
 	offsetTable.ioAddress = (u32)Memory.Alloc(3072 * sizeof(u16), 1);
 	offsetTable.eaAddress = (u32)Memory.Alloc(512 * sizeof(u16), 1);
 
-	_sys_memset(offsetTable.ioAddress, 0xFF, 3072 * sizeof(u16));
-	_sys_memset(offsetTable.eaAddress, 0xFF, 512 * sizeof(u16));
+	memset(vm::get_ptr<void>(offsetTable.ioAddress), 0xFF, 3072 * sizeof(u16));
+	memset(vm::get_ptr<void>(offsetTable.eaAddress), 0xFF, 512 * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
@@ -377,10 +377,10 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
-	Memory.WriteData(gcm_info.context_addr, current_context);
+	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	Memory.Write32(context.addr(), gcm_info.context_addr);
 
-	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 	ctrl.put = 0;
 	ctrl.get = 0;
 	ctrl.ref = -1;
@@ -434,7 +434,7 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 		return CELL_EINVAL;
 	}
 
-	CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+	auto buffers = vm::get_ptr<CellGcmDisplayInfo>(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
@@ -510,11 +510,11 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 		//cellGcmCallback(ctxt.addr(), current + 8 - end);
 		//copied:
  
-		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
  
 		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
  
-		memmove(Memory + ctxt->begin, Memory + (ctxt->current - res), res);
+		memmove(vm::get_ptr<void>(ctxt->begin), vm::get_ptr<void>(ctxt->current - res), res);
 
 		ctxt->current = ctxt->begin + res;
 
@@ -530,7 +530,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 
 	if(ctxt.addr() == gcm_info.context_addr)
 	{
-		CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		ctrl.put += 8;
 	}
 
@@ -591,8 +591,8 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.m_comp = comp;
 	tile.m_base = base;
 	tile.m_bank = bank;
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_tiles_addr + sizeof(CellGcmTileInfo)* index, tile.Pack());
 
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 
@@ -642,8 +642,7 @@ int cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.m_sRef = sRef;
 	zcull.m_sMask = sMask;
 
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_zculls_addr + sizeof(CellGcmZcullInfo)* index, zcull.Pack());
-
+	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().m_zculls_addr)[index] = zcull.Pack();
 	return CELL_OK;
 }
 
@@ -1149,8 +1148,8 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.m_comp = comp;
 	tile.m_base = base;
 	tile.m_bank = bank;
-	Memory.WriteData(Emu.GetGSManager().GetRender().m_tiles_addr + sizeof(CellGcmTileInfo) * index, tile.Pack());
 
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 
@@ -1165,12 +1164,12 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
-	CellGcmContextData& ctx = (CellGcmContextData&)Memory[context_addr];
-	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+	auto& ctx = vm::get_ref<CellGcmContextData>(context_addr);
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 
 	const s32 res = ctx.current - ctx.begin - ctrl.put;
 
-	memmove(Memory + ctx.begin, Memory + (ctx.current - res), res);
+	memmove(vm::get_ptr<void>(ctx.begin), vm::get_ptr<void>(ctx.current - res), res);
 
 	ctx.current = ctx.begin + res;
 

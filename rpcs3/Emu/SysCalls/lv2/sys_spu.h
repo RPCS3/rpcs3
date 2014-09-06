@@ -39,16 +39,15 @@ enum
 
 struct sys_spu_thread_group_attribute
 {
-	be_t<u32> name_len;
-	be_t<u32> name_addr;
-	be_t<int> type;
-	/* struct {} option; */
+	be_t<u32> nsize;
+	vm::bptr<const char> name;
+	be_t<s32> type;
 	be_t<u32> ct; // memory container id
 };
 
 struct sys_spu_thread_attribute
 {
-	be_t<u32> name_addr;
+	vm::bptr<const char> name;
 	be_t<u32> name_len;
 	be_t<u32> option;
 };
@@ -110,7 +109,7 @@ struct SpuGroupInfo
 
 // SysCalls
 s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
-s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, u32 path_addr);
+s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path);
 s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg);
 s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg);
 s32 sys_spu_thread_group_destroy(u32 id);

@@ -18,10 +18,10 @@ s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, vm::ptr<sys_rwlock_attribut
 
 	switch (attr->attr_protocol.ToBE())
 	{
-	case se(attr->attr_protocol, SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;
-	case se(attr->attr_protocol, SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
-	case se(attr->attr_protocol, SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se(attr->attr_protocol, SYS_SYNC_FIFO): break;
+	case se32(SYS_SYNC_PRIORITY): sys_rwlock.Todo("SYS_SYNC_PRIORITY"); break;
+	case se32(SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_FIFO): break;
 	default: return CELL_EINVAL;
 	}
 

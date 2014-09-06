@@ -316,7 +316,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = *(T*)Memory.VirtualToRealAddr(addr);
+		out = vm::get_ref<T>(addr);
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -328,7 +328,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) + shift > size) return false;
 
-		out = *(T*)Memory.VirtualToRealAddr(addr + shift);
+		out = vm::get_ref<T>(addr + shift);
 		return true;
 	}
 

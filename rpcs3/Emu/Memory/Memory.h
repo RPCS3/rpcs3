@@ -29,7 +29,6 @@ class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;
 	u32 m_pages[0x100000000 / 4096]; // information about every page
-	std::recursive_mutex m_mutex;
 
 public:
 	MemoryBlock* UserMemory;
@@ -60,17 +59,17 @@ public:
 
 	struct : Wrapper32LE
 	{
-		DynamicMemoryBlockLE RAM;
-		DynamicMemoryBlockLE Userspace;
+		DynamicMemoryBlock RAM;
+		DynamicMemoryBlock Userspace;
 	} PSV;
 
 	struct : Wrapper32LE
 	{
-		DynamicMemoryBlockLE Scratchpad;
-		DynamicMemoryBlockLE VRAM;
-		DynamicMemoryBlockLE RAM;
-		DynamicMemoryBlockLE Kernel;
-		DynamicMemoryBlockLE Userspace;
+		DynamicMemoryBlock Scratchpad;
+		DynamicMemoryBlock VRAM;
+		DynamicMemoryBlock RAM;
+		DynamicMemoryBlock Kernel;
+		DynamicMemoryBlock Userspace;
 	} PSP;
 
 	bool m_inited;
@@ -95,24 +94,6 @@ public:
 	void RegisterPages(u64 addr, u32 size);
 
 	void UnregisterPages(u64 addr, u32 size);
-
-	template<typename T> u8* GetMemFromAddr(const T addr)
-	{
-		if ((u32)addr == addr)
-		{
-			return (u8*)GetBaseAddr() + addr;
-		}
-		else
-		{
-			InvalidAddress(__FUNCTION__, addr);
-			return (u8*)GetBaseAddr();
-		}
-	}
-
-	template<typename T> void* VirtualToRealAddr(const T vaddr)
-	{
-		return GetMemFromAddr<T>(vaddr);
-	}
 
 	u32 RealToVirtualAddr(const void* addr)
 	{
@@ -314,53 +295,6 @@ public:
 		}
 	}
 
-	void ReadLeft(u8* dst, const u64 addr, const u32 size)
-	{
-		for (u32 i = 0; i < size; ++i) dst[size - 1 - i] = Read8(addr + i);
-	}
-
-	void WriteLeft(const u64 addr, const u32 size, const u8* src)
-	{
-		for (u32 i = 0; i < size; ++i) Write8(addr + i, src[size - 1 - i]);
-	}
-
-	void ReadRight(u8* dst, const u64 addr, const u32 size)
-	{
-		for (u32 i = 0; i < size; ++i) dst[i] = Read8(addr + (size - 1 - i));
-	}
-
-	void WriteRight(const u64 addr, const u32 size, const u8* src)
-	{
-		for (u32 i = 0; i < size; ++i) Write8(addr + (size - 1 - i), src[i]);
-	}
-
-	template<typename T, typename Td> void WriteData(const T addr, const Td* data)
-	{
-		memcpy(GetMemFromAddr<T>(addr), data, sizeof(Td));
-	}
-
-	template<typename T, typename Td> void WriteData(const T addr, const Td data)
-	{
-		*(Td*)GetMemFromAddr<T>(addr) = data;
-	}
-
-	template<typename T> std::string ReadString(const T addr, const u64 len)
-	{
-		std::string ret((const char *)GetMemFromAddr<T>(addr), len);
-
-		return ret;
-	}
-
-	template<typename T> std::string ReadString(const T addr)
-	{
-		return std::string((const char*)GetMemFromAddr<T>(addr));
-	}
-
-	template<typename T> void WriteString(const T addr, const std::string& str)
-	{
-		strcpy((char*)GetMemFromAddr<T>(addr), str.c_str());
-	}
-
 	u32 GetUserMemTotalSize()
 	{
 		return UserMemory->GetSize();
@@ -381,29 +315,9 @@ public:
 		return UserMemory->Free(addr);
 	}
 
-	bool Lock(const u64 addr, const u32 size)
-	{
-		return UserMemory->Lock(addr, size);
-	}
-
-	bool Unlock(const u64 addr, const u32 size)
-	{
-		return UserMemory->Unlock(addr, size);
-	}
-
-	bool Map(const u64 dst_addr, const u64 src_addr, const u32 size);
+	bool Map(const u64 addr, const u32 size);
 
 	bool Unmap(const u64 addr);
-
-	template<typename T> void* operator + (const T vaddr)
-	{
-		return GetMemFromAddr<T>(vaddr);
-	}
-
-	template<typename T> u8& operator[] (const T vaddr)
-	{
-		return *GetMemFromAddr<T>(vaddr);
-	}
 };
 
 extern MemoryBase Memory;

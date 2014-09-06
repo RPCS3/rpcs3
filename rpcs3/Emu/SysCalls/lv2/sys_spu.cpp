@@ -23,15 +23,14 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 }
 
 //156
-s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, u32 path_addr)
+s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path)
 {
-	const std::string path = Memory.ReadString(path_addr);
-	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path_addr, path.c_str());
+	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path.addr(), path.get_ptr());
 
-	vfsFile f(path);
+	vfsFile f(path.get_ptr());
 	if(!f.IsOpened())
 	{
-		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.c_str());
+		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
 
@@ -71,9 +70,9 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	u32 spu_ep = (u32)img->entry_point;
 
 	std::string name = "SPUThread";
-	if (attr->name_addr)
+	if (attr->name)
 	{
-		name = Memory.ReadString(attr->name_addr, attr->name_len);
+		name = std::string(attr->name.get_ptr(), attr->name_len);
 	}
 
 	u64 a1 = arg->arg1;
@@ -81,9 +80,10 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	u64 a3 = arg->arg3;
 	u64 a4 = arg->arg4;
 
-	//copy SPU image:
-	auto spu_offset = Memory.MainMem.AllocAlign(256 * 1024);
-	memcpy(Memory + spu_offset, Memory + (u32)img->segs_addr, 256 * 1024);
+	// Copy SPU image:
+	// TODO: use correct segment info
+	auto spu_offset = Memory.Alloc(256 * 1024, 4096);
+	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 	//initialize from new place:
@@ -101,7 +101,7 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	(*(SPUThread*)&new_thread).group = group_info;
 
 	sys_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		(attr->name_addr ? name.c_str() : ""), (u32) img->segs_addr, ((SPUThread&) new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, id);
+		(attr->name ? attr->name.get_ptr() : ""), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, id);
 
 	return CELL_OK;
 }
@@ -175,8 +175,12 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	for (u32 i = 0; i < group_info->list.size(); i++)
 	{
 		// TODO: disconnect all event ports
-
-		Emu.GetCPU().RemoveThread(group_info->list[i]);
+		CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]);
+		if (t)
+		{
+			Memory.Free(((SPUThread*)t)->GetOffset());
+			Emu.GetCPU().RemoveThread(group_info->list[i]);
+		}
 	}
 
 	group_info->m_state = SPU_THREAD_GROUP_STATUS_UNKNOWN;
@@ -410,7 +414,7 @@ s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, int prio, vm::pt
 
 	if (prio < 16 || prio > 255) return CELL_EINVAL;
 
-	const std::string name = Memory.ReadString(attr->name_addr, attr->name_len);
+	const std::string name(attr->name.get_ptr(), attr->nsize);
 
 	*id = sys_spu.GetNewId(new SpuGroupInfo(name, num, prio, attr->type, attr->ct));
 

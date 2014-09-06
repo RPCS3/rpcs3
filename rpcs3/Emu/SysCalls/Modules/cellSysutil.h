@@ -171,11 +171,11 @@ enum
 
 struct CellHddGameSystemFileParam
 {
-	u8 title[CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
+	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
 	u8 reserved0[2];
-	u8 dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
 	u8 reserved1[2];
 	be_t<u32> attribute;
 	be_t<u32> parentalLevel;
@@ -214,5 +214,70 @@ struct CellHddGameCBResult
 	be_t<u32> reserved_addr;  // void*
 };
 
-// SysCalls
-s32 cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent);
+typedef s32 CellWebBrowserId;
+typedef void* CellWebBrowserClientSession;
+typedef void(*CellWebBrowserCallback)(s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
+typedef void(*CellWebComponentCallback)(CellWebBrowserId, s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserSystemCallback)(s32 cb_type, vm::ptr<void> usrdata);
+
+typedef void(*CellWebBrowserMIMETypeCallback)(vm::ptr<const char> mimetype, vm::ptr<const char> url, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserErrorCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserStatusCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserNotify)(vm::ptr<const char> message, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
+
+struct CellWebBrowserMimeSet
+{
+	vm::bptr<const char> const type;
+	vm::bptr<const char> const directory;
+};
+
+struct CellWebBrowserPos
+{
+	be_t<s32> x;
+	be_t<s32> y;
+};
+
+struct CellWebBrowserSize
+{
+	be_t<s32> width;
+	be_t<s32> height;
+};
+
+struct CellWebBrowserRect
+{
+	CellWebBrowserPos pos;
+	CellWebBrowserSize size;
+};
+
+struct CellWebBrowserConfig
+{
+	be_t<s32> version;
+	be_t<s32> heap_size;
+	vm::bptr<const CellWebBrowserMimeSet> mimesets;
+	be_t<s32> mimeset_num;
+	be_t<s32> functions;
+	be_t<s32> tab_count;
+	vm::bptr<CellWebBrowserCallback> exit_cb;
+	vm::bptr<CellWebBrowserCallback> download_cb;
+	vm::bptr<CellWebBrowserCallback> navigated_cb;
+};
+
+struct CellWebBrowserConfig2
+{
+	be_t<s32> version;
+	be_t<s32> heap_size;
+	be_t<s32> functions;
+	be_t<s32> tab_count;
+	be_t<s32> size_mode;
+	be_t<s32> view_restriction;
+	vm::bptr<CellWebBrowserMIMETypeCallback> unknown_mimetype_cb;
+	vm::bptr<CellWebBrowserErrorCallback> error_cb;
+	vm::bptr<CellWebBrowserStatusCallback> status_error_cb;
+	vm::bptr<CellWebBrowserNotify> notify_cb;
+	vm::bptr<CellWebBrowserCallback> request_cb;
+	CellWebBrowserRect rect;
+	be_t<float> resolution_factor;
+	be_t<s32> magic_number_;
+};
+

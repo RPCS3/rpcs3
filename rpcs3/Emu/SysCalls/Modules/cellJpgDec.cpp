@@ -47,7 +47,7 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellJpg
 	case se32(CELL_JPGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
@@ -99,12 +99,12 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
 		break;
 	}
 
@@ -147,7 +147,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	return CELL_OK;
 }
 
-int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
+int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
 {
 	cellJpgDec->Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
@@ -168,12 +168,12 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
-		memmove(Memory + jpg.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), jpg.size());
+		memmove(jpg.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), jpg.size());
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, jpg.addr(), jpg.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(jpg.addr()), jpg.size(), nread);
 		break;
 	}
 
@@ -206,12 +206,12 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.addr(), image.get(), image_size);
+			memcpy(data.get_ptr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -236,7 +236,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
+				memcpy(&data[dstOffset], output, linesize);
 			}
 			free(output);
 		}
@@ -278,7 +278,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 	return CELL_OK;
 }
 
-int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
+int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
 	cellJpgDec->Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());

@@ -69,7 +69,7 @@ int cellPngDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellPng
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName_addr, 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if(ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
@@ -140,11 +140,11 @@ int cellPngDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellPngDecInfo> 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + buffer.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), buffer.size());
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
 		break;
 	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, buffer.addr(), buffer.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
 		break;
 	}
 
@@ -184,7 +184,7 @@ int cellPngDecExtReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellPngDecInf
 	return cellPngDecReadHeader(mainHandle, subHandle, info);
 }
 
-int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellPngDecDataCtrlParam> dataCtrlParam, vm::ptr<CellPngDecDataOutInfo> dataOutInfo)
+int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam, vm::ptr<CellPngDecDataOutInfo> dataOutInfo)
 {
 	cellPngDec->Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
@@ -205,12 +205,12 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		memmove(Memory + png.addr(), Memory + subHandle_data->src.streamPtr.ToLE(), png.size());
+		memmove(png.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), png.size());
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
 		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, png.addr(), png.size(), nread);
+		cellFsRead(fd, vm::ptr<void>::make(png.addr()), png.size(), nread);
 		break;
 	}
 
@@ -241,12 +241,12 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				memcpy(Memory + (data.addr() + dstOffset), &image.get()[srcOffset], linesize);
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(Memory + data.addr(), image.get(), image_size);
+			memcpy(data.get_ptr(), image.get(), image_size);
 		}
 	}
 	break;
@@ -271,7 +271,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(Memory + (data.addr() + dstOffset), output, linesize);
+				memcpy(&data[dstOffset], output, linesize);
 			}
 			free(output);
 		}
@@ -308,7 +308,7 @@ int cellPngDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const 
 	return CELL_OK;
 }
 
-int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, const vm::ptr<CellPngDecDataCtrlParam> dataCtrlParam,
+int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo, vm::ptr<CellPngDecCbCtrlDisp> cbCtrlDisp, vm::ptr<CellPngDecDispParam> dispParam)
 {
 	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam=0x%x)",
@@ -319,7 +319,7 @@ int cellPngDecExtDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, con
 	return cellPngDecDecodeData(mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 }
 
-int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellPngDecInParam> inParam, vm::ptr<CellPngDecOutParam> outParam)
+int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellPngDecInParam> inParam, vm::ptr<CellPngDecOutParam> outParam)
 {
 	cellPngDec->Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
@@ -360,7 +360,7 @@ int cellPngDecSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellPngD
 	return CELL_OK;
 }
 
-int cellPngDecExtSetParameter(u32 mainHandle, u32 subHandle, const vm::ptr<CellPngDecInParam> inParam, vm::ptr<CellPngDecOutParam> outParam,
+int cellPngDecExtSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellPngDecInParam> inParam, vm::ptr<CellPngDecOutParam> outParam,
 	vm::ptr<CellPngDecExtInParam> extInParam, vm::ptr<CellPngDecExtOutParam> extOutParam)
 {
 	cellPngDec->Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",

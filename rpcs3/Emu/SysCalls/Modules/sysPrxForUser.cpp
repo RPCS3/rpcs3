@@ -117,16 +117,15 @@ int sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_raw_spu_load(int id, u32 path_addr, vm::ptr<be_t<u32>> entry)
+int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<be_t<u32>> entry)
 {
-	const std::string path = Memory.ReadString(path_addr);
-	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path=0x%x [%s], entry_addr=0x%x)", 
-		id, path_addr, path.c_str(), entry.addr());
+	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path_addr=0x%x('%s'), entry_addr=0x%x)", 
+		id, path.addr(), path.get_ptr(), entry.addr());
 
-	vfsFile f(path);
+	vfsFile f(path.get_ptr());
 	if(!f.IsOpened())
 	{
-		sysPrxForUser->Error("sys_raw_spu_load error: '%s' not found!", path.c_str());
+		sysPrxForUser->Error("sys_raw_spu_load error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
 
@@ -143,83 +142,84 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser->Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.addr());
 
-	memcpy(Memory + (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), Memory + (u32)img->segs_addr, 256 * 1024);
+	// TODO: use segment info
+	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
 	Memory.Write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
 
 	return CELL_OK;
 }
 
-u32 _sys_memset(u32 addr, s32 value, u32 size)
+vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 {
-	sysPrxForUser->Log("_sys_memset(addr=0x%x, value=%d, size=%d)", addr, value, size);
+	sysPrxForUser->Log("_sys_memset(dst_addr=0x%x, value=%d, size=%d)", dst.addr(), value, size);
 
-	memset(Memory + addr, value, size);
-	return addr;
+	memset(dst.get_ptr(), value, size);
+	return dst;
 }
 
-u32 _sys_memcpy(u32 dest, u32 source, u32 size)
+vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::ptr<const void> src, u32 size)
 {
-	sysPrxForUser->Log("_sys_memcpy(dest=0x%x, source=0x%x, size=%d)", dest, source, size);
+	sysPrxForUser->Log("_sys_memcpy(dst_addr=0x%x, src_addr=0x%x, size=%d)", dst.addr(), src.addr(), size);
 
-	memcpy(Memory + dest, Memory + source, size);
+	memcpy(dst.get_ptr(), src.get_ptr(), size);
+	return dst;
+}
+
+s32 _sys_memcmp(vm::ptr<const void> buf1, vm::ptr<const void> buf2, u32 size)
+{
+	sysPrxForUser->Log("_sys_memcmp(buf1_addr=0x%x, buf2_addr=0x%x, size=%d)", buf1.addr(), buf2.addr(), size);
+
+	return memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
+}
+
+s64 _sys_strlen(vm::ptr<const char> str)
+{
+	sysPrxForUser->Log("_sys_strlen(str_addr=0x%x)", str.addr());
+
+	return strlen(str.get_ptr());
+}
+
+s32 _sys_strncmp(vm::ptr<const char> str1, vm::ptr<const char> str2, s32 max)
+{
+	sysPrxForUser->Log("_sys_strncmp(str1_addr=0x%x, str2_addr=0x%x, max=%d)", str1.addr(), str2.addr(), max);
+
+	return strncmp(str1.get_ptr(), str2.get_ptr(), max);
+}
+
+vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
+{
+	sysPrxForUser->Log("_sys_strcat(dest_addr=0x%x, source_addr=0x%x)", dest.addr(), source.addr());
+
+	assert(strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
 	return dest;
 }
 
-s32 _sys_memcmp(u32 addr1, u32 addr2, u32 size)
+vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
 {
-	sysPrxForUser->Log("_sys_memcmp(addr1=0x%x, addr2=0x%x, size=%d)", addr1, addr2, size);
+	sysPrxForUser->Log("_sys_strncat(dest_addr=0x%x, source_addr=0x%x, len=%d)", dest.addr(), source.addr(), len);
 
-	return memcmp(Memory + addr1, Memory + addr2, size);
-}
-
-s64 _sys_strlen(u32 addr)
-{
-	sysPrxForUser->Log("_sys_strlen(addr=0x%x)", addr);
-
-	return strlen((char*)(Memory + addr));
-}
-
-s32 _sys_strncmp(u32 str1, u32 str2, s32 max)
-{
-	sysPrxForUser->Log("_sys_strncmp(str1=0x%x, str2=0x%x, max=%d)", str1, str2, max);
-
-	return strncmp((char*)(Memory + str1), (char*)(Memory + str2), max);
-}
-
-u32 _sys_strcat(u32 dest, u32 source)
-{
-	sysPrxForUser->Log("_sys_strcat(dest=0x%x, source=0x%x)", dest, source);
-
-	assert(Memory.RealToVirtualAddr(strcat((char*)(Memory + dest), (char*)(Memory + source))) == dest);
+	assert(strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
 	return dest;
 }
 
-u32 _sys_strncat(u32 dest, u32 source, u32 len)
+vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::ptr<const char> source)
 {
-	sysPrxForUser->Log("_sys_strncat(dest=0x%x, source=0x%x, len=%d)", dest, source, len);
+	sysPrxForUser->Log("_sys_strcpy(dest_addr=0x%x, source_addr=0x%x)", dest.addr(), source.addr());
 
-	assert(Memory.RealToVirtualAddr(strncat((char*)(Memory + dest), (char*)(Memory + source), len)) == dest);
+	assert(strcpy(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
 	return dest;
 }
 
-u32 _sys_strcpy(u32 dest, u32 source)
+vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
 {
-	sysPrxForUser->Log("_sys_strcpy(dest=0x%x, source=0x%x)", dest, source);
-
-	assert(Memory.RealToVirtualAddr(strcpy((char*)(Memory + dest), (char*)(Memory + source))) == dest);
-	return dest;
-}
-
-u32 _sys_strncpy(u32 dest, u32 source, u32 len)
-{
-	sysPrxForUser->Log("_sys_strncpy(dest=0x%x, source=0x%x, len=%d)", dest, source, len);
+	sysPrxForUser->Log("_sys_strncpy(dest_addr=0x%x, source_addr=0x%x, len=%d)", dest.addr(), source.addr(), len);
 
 	if (!dest || !source)
 	{
-		return 0;
+		return vm::ptr<char>::make(0);
 	}
 
-	assert(Memory.RealToVirtualAddr(strncpy((char*)(Memory + dest), (char*)(Memory + source), len)) == dest);
+	assert(strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
 	return dest;
 }
 
@@ -299,12 +299,12 @@ s64 _sys_spu_printf_detach_thread(u32 arg)
 	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dtcb), Memory.Read32(spu_printf_dtcb + 4), arg);
 }
 
-s32 _sys_printf(u32 arg1)
+s32 _sys_printf(vm::ptr<const char> fmt)
 {
-	sysPrxForUser->Todo("_sys_printf(arg1=0x%x)", arg1);
+	sysPrxForUser->Todo("_sys_printf(fmt_addr=0x%x, ...)", fmt.addr());
 
 	// probably, assertion failed
-	sysPrxForUser->Warning("_sys_printf: \n%s", (char*)(Memory + arg1));
+	sysPrxForUser->Warning("_sys_printf: \n%s", fmt.get_ptr());
 	return CELL_OK;
 }
 

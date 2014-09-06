@@ -65,7 +65,7 @@ struct sys_prx_t
 };
 
 // SysCalls
-s32 sys_prx_load_module(u32 path_addr, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
 s32 sys_prx_load_module_on_memcontainer();
 s32 sys_prx_load_module_by_fd();
 s32 sys_prx_load_module_on_memcontainer_by_fd();

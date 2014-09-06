@@ -24,7 +24,7 @@ void MemoryBase::InvalidAddress(const char* func, const u64 addr)
 
 void MemoryBase::RegisterPages(u64 addr, u32 size)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%llx, size=0x%x)", addr, size);
 	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -45,7 +45,7 @@ void MemoryBase::RegisterPages(u64 addr, u32 size)
 
 void MemoryBase::UnregisterPages(u64 addr, u32 size)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%llx, size=0x%x)", addr, size);
 	for (u64 i = addr / 4096; i < (addr + size) / 4096; i++)
@@ -66,7 +66,7 @@ void MemoryBase::UnregisterPages(u64 addr, u32 size)
 
 u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	u32 index;
 	for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
@@ -84,7 +84,7 @@ u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
 
 void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	for (int i = 0; i < MemoryBlocks.size(); ++i)
 	{
@@ -99,7 +99,7 @@ void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
 
 void MemoryBase::Init(MemoryType type)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	if (m_inited) return;
 	m_inited = true;
@@ -152,7 +152,7 @@ void MemoryBase::Init(MemoryType type)
 
 void MemoryBase::Close()
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
 	if (!m_inited) return;
 	m_inited = false;
@@ -167,24 +167,12 @@ void MemoryBase::Close()
 	RSXIOMem.Delete();
 
 	MemoryBlocks.clear();
-
-//#ifdef _WIN32
-//	if (!VirtualFree(m_base_addr, 0, MEM_RELEASE))
-//	{
-//		LOG_ERROR(MEMORY, "VirtualFree(0x%llx) failed", (u64)m_base_addr);
-//	}
-//#else
-//	if (::munmap(m_base_addr, 0x100000000))
-//	{
-//		LOG_ERROR(MEMORY, "::munmap(0x%llx) failed", (u64)m_base_addr);
-//	}
-//#endif
 }
 
 void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 {
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+		LV2_LOCK(0);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
 			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
@@ -200,7 +188,7 @@ u32 MemoryBase::ReadMMIO32(u32 addr)
 {
 	u32 res;
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+		LV2_LOCK(0);
 
 		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
 			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
@@ -213,35 +201,38 @@ u32 MemoryBase::ReadMMIO32(u32 addr)
 	return res;
 }
 
-bool MemoryBase::Map(const u64 dst_addr, const u64 src_addr, const u32 size)
+bool MemoryBase::Map(const u64 addr, const u32 size)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
-	if (IsGoodAddr(dst_addr) || !IsGoodAddr(src_addr))
+	if ((u32)addr != addr || (u64)addr + (u64)size > 0x100000000ull)
 	{
 		return false;
 	}
+	else
+	{
+		for (u32 i = (u32)addr / 4096; i <= ((u32)addr + size - 1) / 4096; i++)
+		{
+			if (m_pages[i]) return false;
+		}
+	}
 
-	MemoryBlocks.push_back((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
-	LOG_WARNING(MEMORY, "memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
+	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
+	LOG_WARNING(MEMORY, "MemoryBase::Map(0x%llx, 0x%x)", addr, size);
 	return true;
 }
 
 bool MemoryBase::Unmap(const u64 addr)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	LV2_LOCK(0);
 
-	bool result = false;
-	for (uint i = 0; i<MemoryBlocks.size(); ++i)
+	for (u32 i = 0; i < MemoryBlocks.size(); i++)
 	{
-		if (MemoryBlocks[i]->IsMirror())
+		if (MemoryBlocks[i]->GetStartAddr() == addr)
 		{
-			if (MemoryBlocks[i]->GetStartAddr() == addr)
-			{
-				delete MemoryBlocks[i];
-				MemoryBlocks.erase(MemoryBlocks.begin() + i);
-				return true;
-			}
+			delete MemoryBlocks[i];
+			MemoryBlocks.erase(MemoryBlocks.begin() + i);
+			return true;
 		}
 	}
 	return false;
@@ -308,14 +299,14 @@ void MemoryBlock::Init()
 	range_start = 0;
 	range_size = 0;
 
-	mem = Memory.GetMemFromAddr(0);
+	mem = vm::get_ptr<u8>(0);
 }
 
 void MemoryBlock::InitMemory()
 {
 	if (!range_size)
 	{
-		mem = Memory.GetMemFromAddr(range_start);
+		mem = vm::get_ptr<u8>(range_start);
 	}
 	else
 	{
@@ -359,6 +350,198 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 bool MemoryBlock::IsMyAddress(const u64 addr)
 {
 	return mem && addr >= GetStartAddr() && addr < GetEndAddr();
+}
+
+DynamicMemoryBlockBase::DynamicMemoryBlockBase()
+	: MemoryBlock()
+	, m_max_size(0)
+{
+}
+
+const u32 DynamicMemoryBlockBase::GetUsedSize() const
+{
+	LV2_LOCK(0);
+
+	u32 size = 0;
+
+	for (u32 i = 0; i<m_allocated.size(); ++i)
+	{
+		size += m_allocated[i].size;
+	}
+
+	return size;
+}
+
+bool DynamicMemoryBlockBase::IsInMyRange(const u64 addr)
+{
+	return addr >= MemoryBlock::GetStartAddr() && addr < MemoryBlock::GetStartAddr() + GetSize();
+}
+
+bool DynamicMemoryBlockBase::IsInMyRange(const u64 addr, const u32 size)
+{
+	return IsInMyRange(addr) && IsInMyRange(addr + size - 1);
+}
+
+bool DynamicMemoryBlockBase::IsMyAddress(const u64 addr)
+{
+	return IsInMyRange(addr);
+}
+
+MemoryBlock* DynamicMemoryBlockBase::SetRange(const u64 start, const u32 size)
+{
+	LV2_LOCK(0);
+
+	m_max_size = PAGE_4K(size);
+	if (!MemoryBlock::SetRange(start, 0))
+	{
+		assert(0);
+		return nullptr;
+	}
+
+	return this;
+}
+
+void DynamicMemoryBlockBase::Delete()
+{
+	LV2_LOCK(0);
+
+	m_allocated.clear();
+	m_max_size = 0;
+
+	MemoryBlock::Delete();
+}
+
+bool DynamicMemoryBlockBase::AllocFixed(u64 addr, u32 size)
+{
+	size = PAGE_4K(size + (addr & 4095)); // align size
+
+	addr &= ~4095; // align start address
+
+	if (!IsInMyRange(addr, size))
+	{
+		assert(0);
+		return false;
+	}
+
+	LV2_LOCK(0);
+
+	for (u32 i = 0; i<m_allocated.size(); ++i)
+	{
+		if (addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) return false;
+	}
+
+	AppendMem(addr, size);
+
+	return true;
+}
+
+void DynamicMemoryBlockBase::AppendMem(u64 addr, u32 size) /* private */
+{
+	m_allocated.emplace_back(addr, size);
+}
+
+u64 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
+{
+	size = PAGE_4K(size);
+	u32 exsize;
+
+	if (align <= 4096)
+	{
+		align = 0;
+		exsize = size;
+	}
+	else
+	{
+		align &= ~4095;
+		exsize = size + align - 1;
+	}
+
+	LV2_LOCK(0);
+
+	for (u64 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
+	{
+		bool is_good_addr = true;
+
+		for (u32 i = 0; i<m_allocated.size(); ++i)
+		{
+			if ((addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) ||
+				(m_allocated[i].addr >= addr && m_allocated[i].addr < addr + exsize))
+			{
+				is_good_addr = false;
+				addr = m_allocated[i].addr + m_allocated[i].size;
+				break;
+			}
+		}
+
+		if (!is_good_addr) continue;
+
+		if (align)
+		{
+			addr = (addr + (align - 1)) & ~(align - 1);
+		}
+
+		//LOG_NOTICE(MEMORY, "AllocAlign(size=0x%x) -> 0x%llx", size, addr);
+
+		AppendMem(addr, size);
+
+		return addr;
+	}
+
+	return 0;
+}
+
+bool DynamicMemoryBlockBase::Alloc()
+{
+	return AllocAlign(GetSize() - GetUsedSize()) != 0;
+}
+
+bool DynamicMemoryBlockBase::Free(u64 addr)
+{
+	LV2_LOCK(0);
+
+	for (u32 num = 0; num < m_allocated.size(); num++)
+	{
+		if (addr == m_allocated[num].addr)
+		{
+			//LOG_NOTICE(MEMORY, "Free(0x%llx)", addr);
+
+			m_allocated.erase(m_allocated.begin() + num);
+			return true;
+		}
+	}
+
+	LOG_ERROR(MEMORY, "DynamicMemoryBlock::Free(addr=0x%llx): failed", addr);
+	for (u32 i = 0; i < m_allocated.size(); i++)
+	{
+		LOG_NOTICE(MEMORY, "*** Memory Block: addr = 0x%llx, size = 0x%x", m_allocated[i].addr, m_allocated[i].size);
+	}
+	return false;
+}
+
+u8* DynamicMemoryBlockBase::GetMem(u64 addr) const
+{
+	return MemoryBlock::GetMem(addr);
+}
+
+bool DynamicMemoryBlockBase::IsLocked(u64 addr)
+{
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::IsLocked() not implemented");
+	Emu.Pause();
+	return false;
+}
+
+bool DynamicMemoryBlockBase::Lock(u64 addr, u32 size)
+{
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::Lock() not implemented");
+	Emu.Pause();
+	return false;
+}
+
+bool DynamicMemoryBlockBase::Unlock(u64 addr, u32 size)
+{
+	LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::Unlock() not implemented");
+	Emu.Pause();
+	return false;
 }
 
 VirtualMemoryBlock::VirtualMemoryBlock() : MemoryBlock(), m_reserve_size(0)
@@ -465,24 +648,6 @@ u32 VirtualMemoryBlock::UnmapAddress(u64 addr)
 	return 0;
 }
 
-bool VirtualMemoryBlock::Read8(const u64 addr, u8* value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	*value = Memory.Read8(realAddr);
-	return true;
-}
-
-bool VirtualMemoryBlock::Read16(const u64 addr, u16* value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	*value = Memory.Read16(realAddr);
-	return true;
-}
-
 bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
 {
 	u64 realAddr;
@@ -492,66 +657,12 @@ bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
 	return true;
 }
 
-bool VirtualMemoryBlock::Read64(const u64 addr, u64* value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	*value = Memory.Read64(realAddr);
-	return true;
-}
-
-bool VirtualMemoryBlock::Read128(const u64 addr, u128* value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	*value = Memory.Read128(realAddr);
-	return true;
-}
-
-bool VirtualMemoryBlock::Write8(const u64 addr, const u8 value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	Memory.Write8(realAddr, value);
-	return true;
-}
-
-bool VirtualMemoryBlock::Write16(const u64 addr, const u16 value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	Memory.Write16(realAddr, value);
-	return true;
-}
-
 bool VirtualMemoryBlock::Write32(const u64 addr, const u32 value)
 {
 	u64 realAddr;
 	if(!getRealAddr(addr, realAddr))
 		return false;
 	Memory.Write32(realAddr, value);
-	return true;
-}
-
-bool VirtualMemoryBlock::Write64(const u64 addr, const u64 value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	Memory.Write64(realAddr, value);
-	return true;
-}
-
-bool VirtualMemoryBlock::Write128(const u64 addr, const u128 value)
-{
-	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
-		return false;
-	Memory.Write128(realAddr, value);
 	return true;
 }
 

@@ -53,7 +53,7 @@ struct CellGifDecInfo
 struct CellGifDecSrc
 {
 	be_t<u32> srcSelect;
-	be_t<u32> fileName;
+	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u64> fileSize;
 	be_t<u32> streamPtr;

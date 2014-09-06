@@ -330,7 +330,7 @@ struct CellPamfReader
 {
 	//this struct can be used in any way, if it is not accessed directly by virtual CPU
 	//be_t<u64> internalData[16];
-	vm::ptr<PamfHeader> pAddr;
+	vm::ptr<const PamfHeader> pAddr;
 	int stream;
 	u64 fileSize;
 	u32 internalData[28];

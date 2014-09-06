@@ -2366,7 +2366,7 @@ private:
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = (u32&)Memory[CPU.R_ADDR];
+		CPU.R_VALUE = vm::get_ref<u32>(CPU.R_ADDR);
 		CPU.GPR[rd] = re32((u32)CPU.R_VALUE);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
@@ -2517,7 +2517,7 @@ private:
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = (u64&)Memory[CPU.R_ADDR];
+		CPU.R_VALUE = vm::get_ref<u64>(CPU.R_ADDR);
 		CPU.GPR[rd] = re64(CPU.R_VALUE);
 	}
 	void DCBF(u32 ra, u32 rb)
@@ -2635,7 +2635,8 @@ private:
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u32*)(Memory + addr), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(addr), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
+			CPU.R_ADDR = 0;
 		}
 		else
 		{
@@ -2692,7 +2693,8 @@ private:
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange((volatile u64*)(Memory + addr), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(addr), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
+			CPU.R_ADDR = 0;
 		}
 		else
 		{
@@ -2945,11 +2947,12 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadLeft(CPU.VPR[vd]._u8 + eb, addr, 16 - eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u64&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u64>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2957,7 +2960,7 @@ private:
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u32>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
@@ -2987,7 +2990,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadRight(CPU.VPR[vd]._u8, addr & ~0xf, eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
 	{
@@ -3043,7 +3047,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
+		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3051,7 +3055,7 @@ private:
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u32&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u32)CPU.GPR[rs];
+		vm::get_ref<u32>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3062,7 +3066,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3113,11 +3117,12 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadLeft(CPU.VPR[vd]._u8 + eb, addr, 16 - eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]];
+		CPU.GPR[rd] = vm::get_ref<u16>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3158,7 +3163,8 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.ReadRight(CPU.VPR[vd]._u8, addr & ~0xf, eb);
+		CPU.VPR[vd].Clear();
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
 	}
 	void DSS(u32 strm, u32 a)
 	{
@@ -3193,11 +3199,11 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteLeft(addr, 16 - eb, CPU.VPR[vs]._u8 + eb);
+		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
-		(u16&)Memory[ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]] = (u16)CPU.GPR[rs];
+		vm::get_ref<u16>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) = (u16)CPU.GPR[rs];
 	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
@@ -3209,7 +3215,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		Memory.WriteRight(addr - eb, eb, CPU.VPR[vs]._u8);
+		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void EXTSB(u32 ra, u32 rs, bool rc)
 	{
@@ -3232,7 +3238,7 @@ private:
 	void DCBZ(u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		u8 *const cache_line = Memory.GetMemFromAddr(addr & ~127);
+		auto const cache_line = vm::get_ptr<u8>(addr & ~127);
 		if (cache_line)
 			memset(cache_line, 0, 128);
 		_mm_mfence();

@@ -6,26 +6,57 @@
 #define re128(val) u128::byteswap(val)
 
 template<typename T, int size = sizeof(T)> struct se_t;
-template<typename T> struct se_t<T, 1> { static __forceinline void func(T& dst, const T src) { (u8&)dst = (u8&)src; } };
-template<typename T> struct se_t<T, 2> { static __forceinline void func(T& dst, const T src) { (u16&)dst = _byteswap_ushort((u16&)src); } };
-template<typename T> struct se_t<T, 4> { static __forceinline void func(T& dst, const T src) { (u32&)dst = _byteswap_ulong((u32&)src); } };
-template<typename T> struct se_t<T, 8> { static __forceinline void func(T& dst, const T src) { (u64&)dst = _byteswap_uint64((u64&)src); } };
 
-template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
-template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
+template<typename T> struct se_t<T, 1>
+{
+	static __forceinline T func(const T src)
+	{
+		return src;
+	}
+};
 
-template<typename T, s64 _value, int size = sizeof(T)> struct const_se_t;
-template<typename T, s64 _value> struct const_se_t<T, _value, 1>
+template<typename T> struct se_t<T, 2>
+{
+	static __forceinline T func(const T src)
+	{
+		const u16 res = _byteswap_ushort((u16&)src);
+		return (T&)res;
+	}
+};
+
+template<typename T> struct se_t<T, 4>
+{
+	static __forceinline T func(const T src)
+	{
+		const u32 res = _byteswap_ulong((u32&)src);
+		return (T&)res;
+	}
+};
+
+template<typename T> struct se_t<T, 8>
+{
+	static __forceinline T func(const T src)
+	{
+		const u64 res = _byteswap_uint64((u64&)src);
+		return (T&)res;
+	}
+};
+
+//template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
+//template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
+
+template<typename T, u64 _value, int size = sizeof(T)> struct const_se_t;
+template<typename T, u64 _value> struct const_se_t<T, _value, 1>
 {
 	static const T value = (T)_value;
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 2>
+template<typename T, u64 _value> struct const_se_t<T, _value, 2>
 {
 	static const T value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 4>
+template<typename T, u64 _value> struct const_se_t<T, _value, 4>
 {
 	static const T value = 
 		((_value >> 24) & 0x000000ff) |
@@ -34,7 +65,7 @@ template<typename T, s64 _value> struct const_se_t<T, _value, 4>
 		((_value << 24) & 0xff000000);
 };
 
-template<typename T, s64 _value> struct const_se_t<T, _value, 8>
+template<typename T, u64 _value> struct const_se_t<T, _value, 8>
 {
 	static const T value = 
 		((_value >> 56) & 0x00000000000000ff) |
@@ -63,11 +94,7 @@ public:
 
 	T ToLE() const
 	{
-		T res;
-
-		se_t<T, sizeof(T2)>::func(res, m_data);
-
-		return res;
+		return se_t<T, sizeof(T2)>::func(m_data);
 	}
 
 	void FromBE(const T& value)
@@ -77,21 +104,18 @@ public:
 
 	void FromLE(const T& value)
 	{
-		se_t<T, sizeof(T2)>::func(m_data, value);
+		m_data = se_t<T, sizeof(T2)>::func(value);
 	}
 
 	static be_t MakeFromLE(const T value)
 	{
-		be_t res;
-		res.FromLE(value);
-		return res;
+		T data = se_t<T, sizeof(T2)>::func(value);
+		return (be_t&)data;
 	}
 
 	static be_t MakeFromBE(const T value)
 	{
-		be_t res;
-		res.FromBE(value);
-		return res;
+		return (be_t&)value;
 	}
 
 	//template<typename T1>
@@ -103,29 +127,36 @@ public:
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		be_t<T1> res;
-		if (sizeof(T1) < sizeof(T))
+		if (sizeof(T1) > sizeof(T) || std::is_floating_point<T>::value || std::is_floating_point<T1>::value)
 		{
-			res.FromBE(ToBE() >> ((sizeof(T)-sizeof(T1)) * 8));
+			T1 res = se_t<T1, sizeof(T1)>::func(ToLE());
+			return (be_t<T1>&)res;
 		}
-		else if (sizeof(T1) > sizeof(T))
+		else if (sizeof(T1) < sizeof(T))
 		{
-			res.FromLE(ToLE());
+			T1 res = ToBE() >> ((sizeof(T) - sizeof(T1)) * 8);
+			return (be_t<T1>&)res;
 		}
 		else
 		{
-			res.FromBE(ToBE());
+			T1 res = ToBE();
+			return (be_t<T1>&)res;
 		}
-		return res;
 	}
 
 	be_t& operator = (const T& right)
 	{
-		FromLE(right);
+		m_data = se_t<T, sizeof(T2)>::func(right);
 		return *this;
 	}
 
 	be_t& operator = (const be_t& right) = default;
+
+	be_t& operator = (const be_t<const T, const T2>& right)
+	{
+		m_data = right.ToBE();
+		return *this;
+	}
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
 	template<typename T1> be_t& operator -= (T1 right) { return *this = T(*this) - right; }
@@ -169,6 +200,81 @@ public:
 	be_t operator-- (int) { be_t res = *this; *this -= 1; return res; }
 	be_t& operator++ () { *this += 1; return *this; }
 	be_t& operator-- () { *this -= 1; return *this; }
+};
+
+template<typename T, typename T2>
+class be_t<const T, T2>
+{
+	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
+	const T m_data;
+
+public:
+	typedef const T type;
+
+	const T& ToBE() const
+	{
+		return m_data;
+	}
+
+	const T ToLE() const
+	{
+		return se_t<const T, sizeof(T2)>::func(m_data);
+	}
+
+	static be_t MakeFromLE(const T value)
+	{
+		const T data = se_t<const T, sizeof(T2)>::func(value);
+		return (be_t&)data;
+	}
+
+	static be_t MakeFromBE(const T value)
+	{
+		return (be_t&)value;
+	}
+
+	//template<typename T1>
+	operator const T() const
+	{
+		return ToLE();
+	}
+
+	template<typename T1>
+	operator const be_t<T1>() const
+	{
+		if (sizeof(T1) > sizeof(T) || std::is_floating_point<T>::value || std::is_floating_point<T1>::value)
+		{
+			T1 res = se_t<T1, sizeof(T1)>::func(ToLE());
+			return (be_t<T1>&)res;
+		}
+		else if (sizeof(T1) < sizeof(T))
+		{
+			T1 res = ToBE() >> ((sizeof(T) - sizeof(T1)) * 8);
+			return (be_t<T1>&)res;
+		}
+		else
+		{
+			T1 res = ToBE();
+			return (be_t<T1>&)res;
+		}
+	}
+
+	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res; res = ToBE() & right.ToBE(); return (be_t&)res; }
+	template<typename T1> be_t operator | (const be_t<T1>& right) const { const T res; res = ToBE() | right.ToBE(); return (be_t&)res; }
+	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { const T res; res = ToBE() ^ right.ToBE(); return (be_t&)res; }
+
+	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
+	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }
+	template<typename T1> bool operator >  (T1 right) const { return (T1)ToLE() >  right; }
+	template<typename T1> bool operator <  (T1 right) const { return (T1)ToLE() <  right; }
+	template<typename T1> bool operator >= (T1 right) const { return (T1)ToLE() >= right; }
+	template<typename T1> bool operator <= (T1 right) const { return (T1)ToLE() <= right; }
+
+	template<typename T1> bool operator == (const be_t<T1>& right) const { return ToBE() == right.ToBE(); }
+	template<typename T1> bool operator != (const be_t<T1>& right) const { return !(*this == right); }
+	template<typename T1> bool operator >  (const be_t<T1>& right) const { return (T1)ToLE() >  right.ToLE(); }
+	template<typename T1> bool operator <  (const be_t<T1>& right) const { return (T1)ToLE() <  right.ToLE(); }
+	template<typename T1> bool operator >= (const be_t<T1>& right) const { return (T1)ToLE() >= right.ToLE(); }
+	template<typename T1> bool operator <= (const be_t<T1>& right) const { return (T1)ToLE() <= right.ToLE(); }
 };
 
 template<typename T, typename T2 = T>
@@ -234,10 +340,22 @@ public:
 	typedef const void type;
 };
 
+template<typename T, typename T2 = T>
+struct invert_be_t
+{
+	typedef typename to_be_t<T, T2>::type type;
+};
+
+template<typename T, typename T2>
+struct invert_be_t<be_t<T, T2>>
+{
+	typedef T type;
+};
+
 template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
 template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : public const_se_t<T, value> {};
 
-#define se(t, x) _se<decltype(t), decltype(x), x>::value
+//#define se(t, x) _se<decltype(t), decltype(x), x>::value
 #define se16(x) _se<u16, decltype(x), x>::value
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value

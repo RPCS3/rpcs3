@@ -104,7 +104,7 @@ struct CellFsAio
 {
 	be_t<u32> fd;
 	be_t<u64> offset;
-	be_t<u32> buf_addr;
+	vm::bptr<void> buf;
 	be_t<u64> size;
 	be_t<u64> user_data;
 };
@@ -124,27 +124,27 @@ struct CellFsRingBuffer
 };
 
 // SysCalls
-s32 cellFsOpen(u32 path_addr, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size);
-s32 cellFsRead(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nread);
-s32 cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, vm::ptr<be_t<u64>> nwrite);
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size);
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread);
+s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<be_t<u64>> nwrite);
 s32 cellFsClose(u32 fd);
-s32 cellFsOpendir(u32 path_addr, vm::ptr<be_t<u32>> fd);
+s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd);
 s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread);
 s32 cellFsClosedir(u32 fd);
-s32 cellFsStat(u32 path_addr, vm::ptr<CellFsStat> sb);
+s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb);
 s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb);
-s32 cellFsMkdir(u32 path_addr, u32 mode);
-s32 cellFsRename(u32 from_addr, u32 to_addr);
-s32 cellFsChmod(u32 path_addr, u32 mode);
+s32 cellFsMkdir(vm::ptr<const char> path, u32 mode);
+s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to);
+s32 cellFsChmod(vm::ptr<const char> path, u32 mode);
 s32 cellFsFsync(u32 fd);
-s32 cellFsRmdir(u32 path_addr);
-s32 cellFsUnlink(u32 path_addr);
+s32 cellFsRmdir(vm::ptr<const char> path);
+s32 cellFsUnlink(vm::ptr<const char> path);
 s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos);
 s32 cellFsFtruncate(u32 fd, u64 size);
-s32 cellFsTruncate(u32 path_addr, u64 size);
+s32 cellFsTruncate(vm::ptr<const char> path, u64 size);
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size);
-s32 cellFsGetBlockSize(u32 path_addr, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size);
-s32 cellFsGetFreeSize(u32 path_addr, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count);
+s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size);
+s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count);
 s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<be_t<u32>> data_count);
 s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf);
 s32 cellFsStReadFinish(u32 fd);

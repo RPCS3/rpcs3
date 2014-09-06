@@ -15,4 +15,4 @@ struct HeapInfo
 };
 
 // SysCalls
-u32 _sys_memset(u32 addr, s32 value, u32 size);
+vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size);

@@ -41,7 +41,7 @@ void RSXThread::nativeRescale(float width, float height)
 	}
 }
 
-u32 GetAddress(u32 offset, u8 location)
+u32 GetAddress(u32 offset, u32 location)
 {
 	switch(location)
 	{
@@ -84,7 +84,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 
 	for(u32 i=start; i<start + count; ++i)
 	{
-		const u8* src = Memory.GetMemFromAddr(addr) + baseOffset + stride * (i+baseIndex);
+		auto src = vm::get_ptr<const u8>(addr + baseOffset + stride * (i + baseIndex));
 		u8* dst = &data[i * tsize * size];
 
 		switch(tsize)
@@ -99,7 +99,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 		{
 			const u16* c_src = (const u16*)src;
 			u16* c_dst = (u16*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
+			for(u32 j=0; j<size; ++j) *c_dst++ = re16(*c_src++);
 		}
 		break;
 
@@ -107,7 +107,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 		{
 			const u32* c_src = (const u32*)src;
 			u32* c_dst = (u32*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
+			for(u32 j=0; j<size; ++j) *c_dst++ = re32(*c_src++);
 		}
 		break;
 		}
@@ -1341,7 +1341,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		case 2: m_surface_pitch_a  = ARGS(1);
 		}
 
-		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(m_gcm_buffers_addr);
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 		m_width = buffers[m_gcm_current_buffer].width;
 		m_height = buffers[m_gcm_current_buffer].height;
 
@@ -1774,11 +1774,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
-			memcpy(&Memory[GetAddress(outOffset, 0)], &Memory[GetAddress(inOffset, 0)], lineLength);
+			memcpy(vm::get_ptr<void>(GetAddress(outOffset, 0)), vm::get_ptr<void>(GetAddress(inOffset, 0)), lineLength);
 		}
 		else
 		{
-			LOG_WARNING(RSX, "NV0039_OFFSET_IN: TODO: offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			LOG_ERROR(RSX, "NV0039_OFFSET_IN: TODO: offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				inOffset, outOffset, inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
 		}
 	}
@@ -1793,7 +1793,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 		else
 		{
-			LOG_WARNING(RSX, "NV0039_OFFSET_OUT: TODO: offset=0x%x", offset);
+			LOG_ERROR(RSX, "NV0039_OFFSET_OUT: TODO: offset=0x%x", offset);
 		}
 	}
 	break;
@@ -1933,8 +1933,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u16 u = ARGS(3);
 		u16 v = ARGS(3) >> 16;
 
-		u8* pixels_src = &Memory[GetAddress(offset, m_context_dma_img_src - 0xfeed0000)];
-		u8* pixels_dst = &Memory[GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000)];
+		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
+		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
 
 		for(u16 y=0; y<m_color_conv_in_h; ++y)
 		{
@@ -2168,8 +2168,8 @@ void RSXThread::Task()
 
 		u32 put, get;
 		// this code produces only mov + bswap:
-		se_t<u32>::func(put, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
-		se_t<u32>::func(get, std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
+		put = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
+		get = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
 		/*
 		se_t<u32>::func(put, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, put)), 0, 0));
 		se_t<u32>::func(get, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, get)), 0, 0));
@@ -2269,7 +2269,7 @@ void RSXThread::Task()
 
 void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 {
-	m_ctrl = (CellGcmControl*)&Memory[ctrlAddress];
+	m_ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
 	m_ioAddress = ioAddress;
 	m_ioSize = ioSize;
 	m_ctrlAddress = ctrlAddress;

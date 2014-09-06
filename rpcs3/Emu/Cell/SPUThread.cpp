@@ -244,13 +244,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(Memory + ea, Memory + (dmac.ls_offset + lsa), size);
+		memcpy(vm::get_ptr<void>(ea), vm::get_ptr<void>(dmac.ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(Memory + (dmac.ls_offset + lsa), Memory + ea, size);
+		memcpy(vm::get_ptr<void>(dmac.ls_offset + lsa), vm::get_ptr<void>(ea), size);
 		return;
 	}
 
@@ -301,7 +301,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 		lsa += std::max(size, (u32)16);
 
-		if (rec->s & se16(0x8000))
+		if (rec->s.ToBE() & se16(0x8000))
 		{
 			StallStat.PushUncond_OR(1 << tag);
 
@@ -389,8 +389,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			R_ADDR = ea;
 			for (u32 i = 0; i < 16; i++)
 			{
-				R_DATA[i] = *(u64*)&Memory[R_ADDR + i * 8];
-				*(u64*)&Memory[dmac.ls_offset + lsa + i * 8] = R_DATA[i];
+				R_DATA[i] = vm::get_ptr<u64>(R_ADDR)[i];
+				vm::get_ptr<u64>(dmac.ls_offset + lsa)[i] = R_DATA[i];
 			}
 			MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 		}
@@ -404,12 +404,12 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				u64 buf[16];
 				for (u32 i = 0; i < 16; i++)
 				{
-					buf[i] = *(u64*)&Memory[dmac.ls_offset + lsa + i * 8];
+					buf[i] = vm::get_ptr<u64>(dmac.ls_offset + lsa)[i];
 					if (buf[i] != R_DATA[i])
 					{
 						changed++;
 						mask |= (0x3 << (i * 2));
-						if (*(u64*)&Memory[R_ADDR + i * 8] != R_DATA[i])
+						if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -423,7 +423,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				{
 					if (buf[i] != R_DATA[i])
 					{
-						if (InterlockedCompareExchange((volatile u64*)(Memory + (ea + i * 8)), buf[i], R_DATA[i]) != R_DATA[i])
+						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>(ea)[i], buf[i], R_DATA[i]) != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -449,7 +449,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					for (s32 i = (s32)PC; i < (s32)PC + 4 * 7; i += 4)
 					{
 						dis_asm.dump_pc = i;
-						dis_asm.offset = Memory.GetMemFromAddr(dmac.ls_offset);
+						dis_asm.offset = vm::get_ptr<u8>(dmac.ls_offset);
 						const u32 opcode = Memory.Read32(i + dmac.ls_offset);
 						(*SPU_instr::rrr_list)(&dis_asm, opcode);
 						if (i >= 0 && i < 0x40000)
@@ -497,7 +497,7 @@ bool SPUThread::CheckEvents()
 	{
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (*(u64*)&Memory[R_ADDR + i * 8] != R_DATA[i])
+			if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
 			{
 				m_events |= SPU_EVENT_LR;
 				R_ADDR = 0;

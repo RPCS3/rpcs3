@@ -8,7 +8,7 @@ int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& g
 {
 	for(u32 i=0; i<m_buf.size(); ++i)
 	{
-		if(memcmp(&m_buf[i].fp_data[0], &Memory[rsx_fp.addr], m_buf[i].fp_data.size()) != 0) continue;
+		if(memcmp(&m_buf[i].fp_data[0], vm::get_ptr<void>(rsx_fp.addr), m_buf[i].fp_data.size()) != 0) continue;
 
 		gl_fp.SetId(m_buf[i].fp_id);
 		gl_fp.SetShaderText(m_buf[i].fp_shader);
@@ -104,7 +104,7 @@ void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProg
 	new_buf.vp_id = gl_vp.id;
 	new_buf.fp_id = gl_fp.GetId();
 
-	new_buf.fp_data.insert(new_buf.fp_data.end(),&Memory[rsx_fp.addr], &Memory[rsx_fp.addr] + rsx_fp.size);
+	new_buf.fp_data.insert(new_buf.fp_data.end(), vm::get_ptr<u8>(rsx_fp.addr), vm::get_ptr<u8>(rsx_fp.addr + rsx_fp.size));
 	new_buf.vp_data = rsx_vp.data;
 
 	new_buf.vp_shader = gl_vp.shader;

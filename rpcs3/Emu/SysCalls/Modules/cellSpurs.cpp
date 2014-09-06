@@ -41,7 +41,7 @@ s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 #endif
 }
 
-s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<CellSpursAttribute> attr)
+s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
 {
 	cellSpurs->Warning("cellSpursInitializeWithAttribute(spurs_addr=0x%x, spurs_addr=0x%x)", spurs.addr(), attr.addr());
 
@@ -54,7 +54,7 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<Cel
 #endif
 }
 
-s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs2> spurs, const vm::ptr<CellSpursAttribute> attr)
+s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs2> spurs, vm::ptr<const CellSpursAttribute> attr)
 {
 	cellSpurs->Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, spurs_addr=0x%x)", spurs.addr(), attr.addr());
 

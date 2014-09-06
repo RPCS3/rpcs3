@@ -77,7 +77,7 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> pEsF
 u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
 {
 	//TODO: get stream type correctly
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	switch (pAddr->stream_headers[stream].type)
 	{
@@ -94,7 +94,7 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
 u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u8 stream)
 {
 	//TODO: get stream channel correctly
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	switch (pAddr->stream_headers[stream].type)
 	{
@@ -169,7 +169,7 @@ int cellPamfVerify(vm::ptr<PamfHeader> pAddr, u64 fileSize)
 	return CELL_OK;
 }
 
-int cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<PamfHeader> pAddr, u64 fileSize, u32 attribute)
+int cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
 	cellPamf->Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)", pSelf.addr(), pAddr.addr(), fileSize, attribute);
 	
@@ -181,7 +181,6 @@ int cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<PamfHeader> 
 	{
 		pSelf->fileSize = ((u64)pAddr->data_offset << 11) + ((u64)pAddr->data_size << 11);
 	}
-	
 	pSelf->pAddr = pAddr;
 
 	if (attribute & CELL_PAMF_ATTRIBUTE_VERIFY_ON)
@@ -197,7 +196,7 @@ int cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::pt
 {
 	cellPamf->Warning("cellPamfReaderGetPresentationStartTime(pSelf=0x%x, pTimeStamp_addr=0x%x)", pSelf.addr(), pTimeStamp.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	const u32 upper = (u16)pAddr->start_pts_high;
 	pTimeStamp->upper = upper;
 	pTimeStamp->lower = pAddr->start_pts_low;
@@ -208,7 +207,7 @@ int cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<
 {
 	cellPamf->Warning("cellPamfReaderGetPresentationEndTime(pSelf=0x%x, pTimeStamp_addr=0x%x)", pSelf.addr(), pTimeStamp.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	const u32 upper = (u16)pAddr->end_pts_high;
 	pTimeStamp->upper = upper;
 	pTimeStamp->lower = pAddr->end_pts_low;
@@ -219,7 +218,7 @@ int cellPamfReaderGetMuxRateBound(vm::ptr<CellPamfReader> pSelf)
 {
 	cellPamf->Warning("cellPamfReaderGetMuxRateBound(pSelf=0x%x)", pSelf.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	return pAddr->mux_rate_max;
 }
 
@@ -227,7 +226,7 @@ int cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 {
 	cellPamf->Warning("cellPamfReaderGetNumberOfStreams(pSelf=0x%x)", pSelf.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	return pAddr->stream_count;
 }
 
@@ -235,7 +234,7 @@ int cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 s
 {
 	cellPamf->Warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=0x%x, streamType=%d)", pSelf.addr(), streamType);
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	int counts[6] = {0, 0, 0, 0, 0, 0};
 
@@ -266,7 +265,7 @@ int cellPamfReaderSetStreamWithIndex(vm::ptr<CellPamfReader> pSelf, u8 streamInd
 {
 	cellPamf->Warning("cellPamfReaderSetStreamWithIndex(pSelf=0x%x, streamIndex=%d)", pSelf.addr(), streamIndex);
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	if (streamIndex < pAddr->stream_count)
 	{
@@ -284,7 +283,7 @@ int cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 
 {
 	cellPamf->Warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=0x%x, streamType=%d, ch=%d)", pSelf.addr(), streamType, ch);
 	
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	if (streamType > 5)
 	{
@@ -312,7 +311,7 @@ int cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 st
 {
 	cellPamf->Warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=0x%x, streamType=%d, streamIndex=%d)", pSelf.addr(), streamType, streamIndex);
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	u32 found = 0;
 
@@ -389,11 +388,11 @@ int cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 
 int cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u32 size)
 {
-	cellPamf->Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)",	pSelf.addr(), pSelf->stream, pInfo_addr, size);
+	cellPamf->Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)", pSelf.addr(), pSelf->stream, pInfo_addr, size);
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
-	memset(Memory + pInfo_addr, 0, size);
+	memset(vm::get_ptr<void>(pInfo_addr), 0, size);
 
 	switch (pamfGetStreamType(pSelf, pSelf->stream))
 	{
@@ -498,7 +497,7 @@ int cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 {
 	cellPamf->Warning("cellPamfReaderGetNumberOfEp(pSelf=0x%x, stream=%d)", pSelf.addr(), pSelf->stream);
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);	
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);	
 	return pAddr->stream_headers[pSelf->stream].ep_num;
 }
 
@@ -506,7 +505,7 @@ int cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIn
 {
 	cellPamf->Todo("cellPamfReaderGetEpIteratorWithIndex(pSelf=0x%x, stream=%d, epIndex=%d, pIt_addr=0x%x)", pSelf.addr(), pSelf->stream, epIndex, pIt.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	//TODO:
 	return CELL_OK;
 }
@@ -515,7 +514,7 @@ int cellPamfReaderGetEpIteratorWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::
 {
 	cellPamf->Todo("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=0x%x, pTimeStamp_addr=0x%x, pIt_addr=0x%x)", pSelf.addr(), pTimeStamp.addr(), pIt.addr());
 
-	const vm::ptr<PamfHeader> pAddr(pSelf->pAddr);
+	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	//TODO:
 

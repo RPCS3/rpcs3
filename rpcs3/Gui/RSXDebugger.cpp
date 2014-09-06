@@ -330,7 +330,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
@@ -344,7 +344,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
@@ -412,13 +412,13 @@ void RSXDebugger::GetBuffers()
 		if(!Memory.IsGoodAddr(render.m_gcm_buffers_addr))
 			continue;
 
-		CellGcmDisplayInfo* buffers = (CellGcmDisplayInfo*)Memory.GetMemFromAddr(render.m_gcm_buffers_addr);
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
 		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!Memory.IsGoodAddr(RSXbuffer_addr))
 			continue;
 
-		unsigned char* RSXbuffer = (unsigned char*)Memory.VirtualToRealAddr(RSXbuffer_addr);
+		auto RSXbuffer = vm::get_ptr<unsigned char>(RSXbuffer_addr);
 		
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
@@ -470,7 +470,7 @@ void RSXDebugger::GetBuffers()
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = (unsigned char*)Memory.VirtualToRealAddr(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
 
 	u32 width  = render.m_textures[m_cur_texture].GetWidth();
 	u32 height = render.m_textures[m_cur_texture].GetHeight();
