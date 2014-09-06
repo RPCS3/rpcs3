@@ -198,7 +198,7 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 			}
 			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 			{
-				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, Memory.Read32(dmac.ls_offset + lsa));
+				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(dmac.ls_offset + lsa));
 				return;
 			}
 			else
@@ -221,13 +221,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 		{
 		case MFC_PUT_CMD:
 		{
-			Memory.Write32(ea, ReadLS32(lsa));
+			vm::write32(ea, ReadLS32(lsa));
 			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			WriteLS32(lsa, Memory.Read32(ea));
+			WriteLS32(lsa, vm::read32(ea));
 			return;
 		}
 
@@ -450,7 +450,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					{
 						dis_asm.dump_pc = i;
 						dis_asm.offset = vm::get_ptr<u8>(dmac.ls_offset);
-						const u32 opcode = Memory.Read32(i + dmac.ls_offset);
+						const u32 opcode = vm::read32(i + dmac.ls_offset);
 						(*SPU_instr::rrr_list)(&dis_asm, opcode);
 						if (i >= 0 && i < 0x40000)
 						{

@@ -61,8 +61,8 @@ void PPUThread::AddArgv(const std::string& arg)
 
 void PPUThread::InitRegs()
 {
-	const u32 pc = Memory.Read32(entry);
-	const u32 rtoc = Memory.Read32(entry + 4);
+	const u32 pc = vm::read32(entry);
+	const u32 rtoc = vm::read32(entry + 4);
 
 	//ConLog.Write("entry = 0x%x", entry);
 	//ConLog.Write("rtoc = 0x%x", rtoc);
@@ -219,7 +219,7 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 
 u64 PPUThread::GetStackArg(s32 i)
 {
-	return Memory.Read64(GPR[1] + 0x70 + 0x8 * (i - 9));
+	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
 }
 
 u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)

@@ -470,9 +470,7 @@ struct FPRdouble
 
 union VPR_reg
 {
-	//__m128i _m128i;
 	u128 _u128;
-	s128 _s128;
 	u64 _u64[2];
 	s64 _s64[2];
 	u32 _u32[4];

@@ -33,7 +33,7 @@ s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 	
 	// Write back the start address of the allocated area.
 	sys_memory.Log("Memory allocated! [addr: 0x%x, size: 0x%x]", addr, size);
-	Memory.Write32(alloc_addr_addr, addr);
+	vm::write32(alloc_addr_addr, addr);
 
 	return CELL_OK;
 }
@@ -70,7 +70,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 
 	// Write back the start address of the allocated area.
 	sys_memory.Log("Memory allocated! [addr: 0x%x, size: 0x%x]", ct->addr, ct->size);
-	Memory.Write32(alloc_addr_addr, ct->addr);
+	vm::write32(alloc_addr_addr, ct->addr);
 
 	return CELL_OK;
 }

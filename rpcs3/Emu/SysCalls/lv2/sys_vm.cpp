@@ -58,7 +58,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	}
 
 	// Write a pointer for the allocated memory.
-	Memory.Write32(addr, current_ct->addr);
+	vm::write32(addr, current_ct->addr);
 
 	return CELL_OK;
 }

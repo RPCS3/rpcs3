@@ -771,10 +771,10 @@ private:
 		{		
 			float result = CPU.VPR[vb]._f[w] * nScale;
 
-			if (result > S32_MAX)
-				CPU.VPR[vd]._s32[w] = (int)S32_MAX;
-			else if (result < S32_MIN)
-				CPU.VPR[vd]._s32[w] = (int)S32_MIN;
+			if (result > 0x7fffffff)
+				CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
+			else if (result < -pow(2, 31))
+				CPU.VPR[vd]._s32[w] = (int)0x80000000;
 			else // C rounding = Round towards 0
 				CPU.VPR[vd]._s32[w] = (int)result;
 		}
@@ -788,8 +788,8 @@ private:
 			// C rounding = Round towards 0
 			s64 result = (s64)(CPU.VPR[vb]._f[w] * nScale);
 
-			if (result > U32_MAX)
-				CPU.VPR[vd]._u32[w] = (u32)U32_MAX;
+			if (result > 0xffffffffu)
+				CPU.VPR[vd]._u32[w] = 0xffffffffu;
 			else if (result < 0)
 				CPU.VPR[vd]._u32[w] = 0;
 			else
@@ -1061,14 +1061,14 @@ private:
 
 			result += CPU.VPR[vc]._s32[w];
 
-			if (result > S32_MAX)
+			if (result > 0x7fffffff)
 			{
-				saturated = S32_MAX;
+				saturated = 0x7fffffff;
 				CPU.VSCR.SAT = 1;
 			}
-			else if (result < S32_MIN)
+			else if (result < (s64)(s32)0x80000000)
 			{
-				saturated = S32_MIN;
+				saturated = 0x80000000;
 				CPU.VSCR.SAT = 1;
 			}
 			else
@@ -1121,9 +1121,9 @@ private:
 
 			result += CPU.VPR[vc]._u32[w];
 
-			if (result > U32_MAX)
+			if (result > 0xffffffffu)
 			{
-				saturated = U32_MAX;
+				saturated = 0xffffffff;
 				CPU.VSCR.SAT = 1;
 			}
 			else
@@ -2300,8 +2300,8 @@ private:
 	{
 		//const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		//CPU.VPR[vd].Clear();
-		//CPU.VPR[vd]._u8[addr & 0xf] = Memory.Read8(addr);
-		CPU.VPR[vd]._u128 = Memory.Read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		//CPU.VPR[vd]._u8[addr & 0xf] = vm::read8(addr);
+		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2371,11 +2371,11 @@ private:
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = Memory.Read64(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = vm::read64(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LWZX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = vm::read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2449,8 +2449,8 @@ private:
 	{
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
 		//CPU.VPR[vd].Clear();
-		//(u16&)CPU.VPR[vd]._u8[addr & 0xf] = Memory.Read16(addr);
-		CPU.VPR[vd]._u128 = Memory.Read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		//(u16&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read16(addr);
+		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2461,7 +2461,7 @@ private:
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = Memory.Read64(addr);
+		CPU.GPR[rd] = vm::read64(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void DCBST(u32 ra, u32 rb)
@@ -2472,7 +2472,7 @@ private:
 	void LWZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = Memory.Read32(addr);
+		CPU.GPR[rd] = vm::read32(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
@@ -2499,8 +2499,8 @@ private:
 	{
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
 		//CPU.VPR[vd].Clear();
-		//(u32&)CPU.VPR[vd]._u8[addr & 0xf] = Memory.Read32(addr);
-		CPU.VPR[vd]._u128 = Memory.Read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		//(u32&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read32(addr);
+		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
@@ -2527,11 +2527,11 @@ private:
 	}
 	void LBZX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = Memory.Read8(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = vm::read8(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd]._u128 = Memory.Read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2544,7 +2544,7 @@ private:
 		//if(ra == 0 || ra == rd) throw "Bad instruction [LBZUX]";
 
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = Memory.Read8(addr);
+		CPU.GPR[rd] = vm::read8(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void NOR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2556,7 +2556,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
-		Memory.Write8(addr, CPU.VPR[vs]._u8[15 - eb]);
+		vm::write8(addr, CPU.VPR[vs]._u8[15 - eb]);
 	}
 	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2627,7 +2627,7 @@ private:
 	}
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
+		vm::write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.GPR[rs]);
 	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
@@ -2645,31 +2645,31 @@ private:
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u32)CPU.GPR[rs]);
+		vm::write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u32)CPU.GPR[rs]);
 	}
 	void STVEHX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
 		const u8 eb = (addr & 0xf) >> 1;
-		Memory.Write16(addr, CPU.VPR[vs]._u16[7 - eb]);
+		vm::write16(addr, CPU.VPR[vs]._u16[7 - eb]);
 	}
 	void STDUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write64(addr, CPU.GPR[rs]);
+		vm::write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STWUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write32(addr, (u32)CPU.GPR[rs]);
+		vm::write32(addr, (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
 		const u8 eb = (addr & 0xf) >> 2;
-		Memory.Write32(addr, CPU.VPR[vs]._u32[3 - eb]);
+		vm::write32(addr, CPU.VPR[vs]._u32[3 - eb]);
 	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2703,11 +2703,11 @@ private:
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write8((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u8)CPU.GPR[rs]);
+		vm::write8((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u8)CPU.GPR[rs]);
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
-		Memory.Write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
+		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
 	}
 	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2746,7 +2746,7 @@ private:
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write8(addr, (u8)CPU.GPR[rs]);
+		vm::write8(addr, (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -2764,7 +2764,7 @@ private:
 	}
 	void LHZX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = Memory.Read16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = vm::read16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void EQV(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2774,12 +2774,12 @@ private:
 	void ECIWX(u32 rd, u32 ra, u32 rb)
 	{
 		//HACK!
-		CPU.GPR[rd] = Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = vm::read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = Memory.Read16(addr);
+		CPU.GPR[rd] = vm::read16(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void XOR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2793,7 +2793,7 @@ private:
 	}
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -2801,11 +2801,11 @@ private:
 	}
 	void LHAX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.GPR[rd] = (s64)(s16)Memory.Read16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd]._u128 = Memory.Read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
@@ -2821,7 +2821,7 @@ private:
 	void LWAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s32)Memory.Read32(addr);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
@@ -2831,12 +2831,12 @@ private:
 	void LHAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s16)Memory.Read16(addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
-		Memory.Write16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u16)CPU.GPR[rs]);
+		vm::write16(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u16)CPU.GPR[rs]);
 	}
 	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2846,12 +2846,12 @@ private:
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
 		//HACK!
-		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u32)CPU.GPR[rs]);
+		vm::write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u32)CPU.GPR[rs]);
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write16(addr, (u16)CPU.GPR[rs]);
+		vm::write16(addr, (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2906,7 +2906,7 @@ private:
 	}
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
-		Memory.Write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
+		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
 	}
 	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2948,7 +2948,7 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].Clear();
-		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2964,7 +2964,7 @@ private:
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
-		(u32&)CPU.FPR[frd] = Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		(u32&)CPU.FPR[frd] = vm::read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 		CPU.FPR[frd] = (float&)CPU.FPR[frd];
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2991,7 +2991,7 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].Clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i - 16);
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
 	{
@@ -3003,7 +3003,7 @@ private:
 		{
 			if (N > 3)
 			{
-				CPU.GPR[reg] = Memory.Read32(EA);
+				CPU.GPR[reg] = vm::read32(EA);
 				EA += 4;
 				N -= 4;
 			}
@@ -3013,7 +3013,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					buf |= Memory.Read8(EA) <<(N*8) ;
+					buf |= vm::read8(EA) <<(N*8) ;
 					EA = EA + 1;
 				}
 				CPU.GPR[reg] = buf;
@@ -3024,7 +3024,7 @@ private:
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		(u64&)CPU.FPR[frd] = Memory.Read32(addr);
+		(u64&)CPU.FPR[frd] = vm::read32(addr);
 		CPU.FPR[frd] = (float&)CPU.FPR[frd];
 		CPU.GPR[ra] = addr;
 	}
@@ -3034,12 +3034,12 @@ private:
 	}
 	void LFDX(u32 frd, u32 ra, u32 rb)
 	{
-		(u64&)CPU.FPR[frd] = Memory.Read64(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
+		(u64&)CPU.FPR[frd] = vm::read64(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
 	}
 	void LFDUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		(u64&)CPU.FPR[frd] = Memory.Read64(addr);
+		(u64&)CPU.FPR[frd] = vm::read64(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void STVLX(u32 vs, u32 ra, u32 rb)
@@ -3047,7 +3047,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16 - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3059,19 +3059,19 @@ private:
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
-		Memory.Write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.FPR[frs].To32());
+		vm::write32((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), CPU.FPR[frs].To32());
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write32(addr, CPU.FPR[frs].To32());
+		vm::write32(addr, CPU.FPR[frs].To32());
 		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
@@ -3084,7 +3084,7 @@ private:
 		{
 			if (N > 3)
 			{
-				Memory.Write32(EA, (u32)CPU.GPR[reg]);
+				vm::write32(EA, (u32)CPU.GPR[reg]);
 				EA += 4;
 				N -= 4;
 			}
@@ -3094,7 +3094,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					Memory.Write8(EA, (0xFF000000 & buf) >> 24);
+					vm::write8(EA, (0xFF000000 & buf) >> 24);
 					buf <<= 8;
 					EA = EA + 1;
 				}
@@ -3104,12 +3104,12 @@ private:
 	}
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
-		Memory.Write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u64&)CPU.FPR[frs]);
+		vm::write64((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]), (u64&)CPU.FPR[frs]);
 	}
 	void STFDUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		Memory.Write64(addr, (u64&)CPU.FPR[frs]);
+		vm::write64(addr, (u64&)CPU.FPR[frs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
@@ -3118,7 +3118,7 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].Clear();
-		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i);
+		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3164,7 +3164,7 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].Clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = Memory.Read8(addr + i - 16);
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i - 16);
 	}
 	void DSS(u32 strm, u32 a)
 	{
@@ -3199,7 +3199,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16 - eb; ++i) Memory.Write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16 - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3215,7 +3215,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) Memory.Write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void EXTSB(u32 ra, u32 rs, bool rc)
 	{
@@ -3224,7 +3224,7 @@ private:
 	}
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
-		Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u32&)CPU.FPR[frs]);
+		vm::write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], (u32&)CPU.FPR[frs]);
 	}
 	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
@@ -3245,72 +3245,72 @@ private:
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
-		CPU.GPR[rd] = Memory.Read32(ra ? CPU.GPR[ra] + d : d);
+		CPU.GPR[rd] = vm::read32(ra ? CPU.GPR[ra] + d : d);
 	}
 	void LWZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = Memory.Read32(addr);
+		CPU.GPR[rd] = vm::read32(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void LBZ(u32 rd, u32 ra, s32 d)
 	{
-		CPU.GPR[rd] = Memory.Read8(ra ? CPU.GPR[ra] + d : d);
+		CPU.GPR[rd] = vm::read8(ra ? CPU.GPR[ra] + d : d);
 	}
 	void LBZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = Memory.Read8(addr);
+		CPU.GPR[rd] = vm::read8(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void STW(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write32(ra ? CPU.GPR[ra] + d : d, (u32)CPU.GPR[rs]);
+		vm::write32(ra ? CPU.GPR[ra] + d : d, (u32)CPU.GPR[rs]);
 	}
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write32(addr, (u32)CPU.GPR[rs]);
+		vm::write32(addr, (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STB(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write8(ra ? CPU.GPR[ra] + d : d, (u8)CPU.GPR[rs]);
+		vm::write8(ra ? CPU.GPR[ra] + d : d, (u8)CPU.GPR[rs]);
 	}
 	void STBU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write8(addr, (u8)CPU.GPR[rs]);
+		vm::write8(addr, (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LHZ(u32 rd, u32 ra, s32 d)
 	{
-		CPU.GPR[rd] = Memory.Read16(ra ? CPU.GPR[ra] + d : d);
+		CPU.GPR[rd] = vm::read16(ra ? CPU.GPR[ra] + d : d);
 	}
 	void LHZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = Memory.Read16(addr);
+		CPU.GPR[rd] = vm::read16(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void LHA(u32 rd, u32 ra, s32 d)
 	{
-		CPU.GPR[rd] = (s64)(s16)Memory.Read16(ra ? CPU.GPR[ra] + d : d);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(ra ? CPU.GPR[ra] + d : d);
 	}
 	void LHAU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = (s64)(s16)Memory.Read16(addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write16(ra ? CPU.GPR[ra] + d : d, (u16)CPU.GPR[rs]);
+		vm::write16(ra ? CPU.GPR[ra] + d : d, (u16)CPU.GPR[rs]);
 	}
 	void STHU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write16(addr, (u16)CPU.GPR[rs]);
+		vm::write16(addr, (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LMW(u32 rd, u32 ra, s32 d)
@@ -3318,7 +3318,7 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rd; i<32; ++i, addr += 4)
 		{
-			CPU.GPR[i] = Memory.Read32(addr);
+			CPU.GPR[i] = vm::read32(addr);
 		}
 	}
 	void STMW(u32 rs, u32 ra, s32 d)
@@ -3326,65 +3326,65 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rs; i<32; ++i, addr += 4)
 		{
-			Memory.Write32(addr, (u32)CPU.GPR[i]);
+			vm::write32(addr, (u32)CPU.GPR[i]);
 		}
 	}
 	void LFS(u32 frd, u32 ra, s32 d)
 	{
-		const u32 v = Memory.Read32(ra ? CPU.GPR[ra] + d : d);
+		const u32 v = vm::read32(ra ? CPU.GPR[ra] + d : d);
 		CPU.FPR[frd] = (float&)v;
 	}
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		const u32 v = Memory.Read32(addr);
+		const u32 v = vm::read32(addr);
 		CPU.FPR[frd] = (float&)v;
 		CPU.GPR[ra] = addr;
 	}
 	void LFD(u32 frd, u32 ra, s32 d)
 	{
-		(u64&)CPU.FPR[frd] = Memory.Read64(ra ? CPU.GPR[ra] + d : d);
+		(u64&)CPU.FPR[frd] = vm::read64(ra ? CPU.GPR[ra] + d : d);
 	}
 	void LFDU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		(u64&)CPU.FPR[frd] = Memory.Read64(addr);
+		(u64&)CPU.FPR[frd] = vm::read64(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void STFS(u32 frs, u32 ra, s32 d)
 	{
-		Memory.Write32(ra ? CPU.GPR[ra] + d : d, CPU.FPR[frs].To32());
+		vm::write32(ra ? CPU.GPR[ra] + d : d, CPU.FPR[frs].To32());
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write32(addr, CPU.FPR[frs].To32());
+		vm::write32(addr, CPU.FPR[frs].To32());
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)
 	{
-		Memory.Write64(ra ? CPU.GPR[ra] + d : d, (u64&)CPU.FPR[frs]);
+		vm::write64(ra ? CPU.GPR[ra] + d : d, (u64&)CPU.FPR[frs]);
 	}
 	void STFDU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		Memory.Write64(addr, (u64&)CPU.FPR[frs]);
+		vm::write64(addr, (u64&)CPU.FPR[frs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LD(u32 rd, u32 ra, s32 ds)
 	{
-		CPU.GPR[rd] = Memory.Read64(ra ? CPU.GPR[ra] + ds : ds);
+		CPU.GPR[rd] = vm::read64(ra ? CPU.GPR[ra] + ds : ds);
 	}
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		//if(ra == 0 || rt == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.GPR[rd] = Memory.Read64(addr);
+		CPU.GPR[rd] = vm::read64(addr);
 		CPU.GPR[ra] = addr;
 	}
 	void LWA(u32 rd, u32 ra, s32 ds)
 	{
-		CPU.GPR[rd] = (s64)(s32)Memory.Read32(ra ? CPU.GPR[ra] + ds : ds);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(ra ? CPU.GPR[ra] + ds : ds);
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
@@ -3487,13 +3487,13 @@ private:
 	}
 	void STD(u32 rs, u32 ra, s32 d)
 	{
-		Memory.Write64(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
+		vm::write64(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
 	}
 	void STDU(u32 rs, u32 ra, s32 ds)
 	{
 		//if(ra == 0 || rs == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
-		Memory.Write64(addr, CPU.GPR[rs]);
+		vm::write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void MTFSB1(u32 crbd, bool rc)

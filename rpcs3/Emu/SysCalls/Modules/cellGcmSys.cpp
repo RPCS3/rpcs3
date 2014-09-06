@@ -115,7 +115,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 		cellGcmSys->Error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 		return 0;
 	}
-	return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+	return vm::read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
 }
 
 int cellGcmGetCurrentField()
@@ -133,7 +133,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 	cellGcmGetOffsetTable(table);
 
 	// If entry not in use, return NULL
-	u16 entry = Memory.Read16(table->eaAddress + 241 * sizeof(u16));
+	u16 entry = vm::read16(table->eaAddress + 241 * sizeof(u16));
 	if (entry == 0xFFFF) {
 		return 0;
 	}
@@ -194,7 +194,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 			cellGcmSys->Error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
 			return 0;
 		}
-		return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+		return vm::read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
@@ -203,7 +203,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 			return 0;
 		}
 		// TODO: It seems m_report_main_addr is not initialized
-		return Memory.Read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
+		return vm::read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys->Error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
@@ -378,7 +378,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
-	Memory.Write32(context.addr(), gcm_info.context_addr);
+	vm::write32(context.addr(), gcm_info.context_addr);
 
 	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 	ctrl.put = 0;
@@ -524,8 +524,8 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	}
 
 	current = ctxt->current;
-	Memory.Write32(current, 0x3fead | (1 << 18));
-	Memory.Write32(current + 4, id);
+	vm::write32(current, 0x3fead | (1 << 18));
+	vm::write32(current + 4, id);
 	ctxt->current += 8;
 
 	if(ctxt.addr() == gcm_info.context_addr)
@@ -700,7 +700,7 @@ int cellGcmGetCurrentDisplayBufferId(u32 id_addr)
 {
 	cellGcmSys->Warning("cellGcmGetCurrentDisplayBufferId(id_addr=0x%x)", id_addr);
 
-	Memory.Write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
+	vm::write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
 
 	return CELL_OK;
 }
@@ -818,7 +818,7 @@ s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
 	// Address in main memory else check 
 	else
 	{
-		u16 upper12Bits = Memory.Read16(offsetTable.ioAddress + sizeof(u16)*(address >> 20));
+		u16 upper12Bits = vm::read16(offsetTable.ioAddress + sizeof(u16)*(address >> 20));
 
 		// If the address is mapped in IO
 		if (upper12Bits != 0xFFFF) {
@@ -857,7 +857,7 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
 	if (!Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ioOffset, realAddr)) 
 		return CELL_GCM_ERROR_FAILURE;
 
-	Memory.Write64(address, realAddr);
+	vm::write64(address, realAddr);
 
 	return CELL_OK;
 }
@@ -874,8 +874,8 @@ s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
 		// Fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
-			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
+			vm::write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
+			vm::write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
 		}
 	}
 	else
@@ -902,8 +902,8 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 		local_size = 0xf900000; //TODO
 		local_addr = (u32)Memory.RSXFBMem.GetStartAddr();
 		Memory.RSXFBMem.AllocAlign(local_size);
-		Memory.Write32(address, local_addr);
-		Memory.Write32(size, local_size);
+		vm::write32(address, local_addr);
+		vm::write32(size, local_size);
 	}
 	else
 	{
@@ -931,8 +931,8 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			Memory.Write16(offsetTable.ioAddress + ((ea >> 20) + i) * sizeof(u16), (u16)(io >> 20) + i);
-			Memory.Write16(offsetTable.eaAddress + ((io >> 20) + i) * sizeof(u16), (u16)(ea >> 20) + i);
+			vm::write16(offsetTable.ioAddress + ((ea >> 20) + i) * sizeof(u16), (u16)(io >> 20) + i);
+			vm::write16(offsetTable.eaAddress + ((io >> 20) + i) * sizeof(u16), (u16)(ea >> 20) + i);
 		}
 
 		*offset = io;
@@ -977,12 +977,12 @@ s32 cellGcmUnmapEaIoAddress(u64 ea)
 	{
 		u64 io;
 		ea = ea >> 20;
-		io = Memory.Read16(offsetTable.ioAddress + (ea*sizeof(u16)));
+		io = vm::read16(offsetTable.ioAddress + (ea*sizeof(u16)));
 
 		for (u32 i = 0; i<size; i++)
 		{
-			Memory.Write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
-			Memory.Write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
+			vm::write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
+			vm::write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
 		}
 	}
 	else
@@ -1003,12 +1003,12 @@ s32 cellGcmUnmapIoAddress(u64 io)
 	{
 		u64 ea;
 		io = io >> 20;
-		ea = Memory.Read16(offsetTable.eaAddress + (io*sizeof(u16)));
+		ea = vm::read16(offsetTable.eaAddress + (io*sizeof(u16)));
 
 		for (u32 i = 0; i<size; i++)
 		{
-			Memory.Write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
-			Memory.Write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
+			vm::write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
+			vm::write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
 		}
 	}
 	else
@@ -1087,7 +1087,7 @@ int cellGcmSetCursorImageOffset(u32 offset)
 void cellGcmSetDefaultCommandBuffer()
 {
 	cellGcmSys->Warning("cellGcmSetDefaultCommandBuffer()");
-	Memory.Write32(Emu.GetGSManager().GetRender().m_ctxt_addr, gcm_info.context_addr);
+	vm::write32(Emu.GetGSManager().GetRender().m_ctxt_addr, gcm_info.context_addr);
 }
 
 //------------------------------------------------------------------------
@@ -1107,7 +1107,7 @@ int cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, 
 		ctx.addr(), id, label_index, label_value);
 
 	int res = cellGcmSetPrepareFlip(ctx, id);
-	Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
+	vm::write32(Memory.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 

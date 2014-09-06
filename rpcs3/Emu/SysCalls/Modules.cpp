@@ -191,12 +191,12 @@ void Module::PushNewFuncSub(SFunc* func)
 
 void fix_import(Module* module, u32 func, u32 addr)
 {
-	Memory.Write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
-	Memory.Write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	Memory.Write32(addr + 0x8, 0x60000000); /* nop */
+	vm::write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
+	vm::write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
+	vm::write32(addr + 0x8, 0x60000000); /* nop */
 	// leave rtoc saving at 0xC
-	Memory.Write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
-	Memory.Write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
+	vm::write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
+	vm::write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
 
 	module->Load(func);
 }
@@ -211,36 +211,36 @@ void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)
 
 	for (u32 i = lib + start; i < lib + end; i += 24)
 	{
-		u64 addr = Memory.Read64(i);
-		const u64 flag = Memory.Read64(i + 8);
+		u64 addr = vm::read64(i);
+		const u64 flag = vm::read64(i + 8);
 
 		if (flag == 0x10100000001ull)
 		{
 			addr = addr + seg2 + lib;
-			u32 value = Memory.Read32(addr);
-			assert(value == Memory.Read64(i + 16) + seg2);
-			Memory.Write32(addr, value + lib);
+			u32 value = vm::read32(addr);
+			assert(value == vm::read64(i + 16) + seg2);
+			vm::write32(addr, value + lib);
 		}
 		else if (flag == 0x100000001ull)
 		{
 			addr = addr + seg2 + lib;
-			u32 value = Memory.Read32(addr);
-			assert(value == Memory.Read64(i + 16));
-			Memory.Write32(addr, value + lib);
+			u32 value = vm::read32(addr);
+			assert(value == vm::read64(i + 16));
+			vm::write32(addr, value + lib);
 		}
 		else if (flag == 0x10000000001ull)
 		{
 			addr = addr + lib;
-			u32 value = Memory.Read32(addr);
-			assert(value == Memory.Read64(i + 16) + seg2);
-			Memory.Write32(addr, value + lib);
+			u32 value = vm::read32(addr);
+			assert(value == vm::read64(i + 16) + seg2);
+			vm::write32(addr, value + lib);
 		}
 		else if (flag == 1)
 		{
 			addr = addr + lib;
-			u32 value = Memory.Read32(addr);
-			assert(value == Memory.Read64(i + 16));
-			Memory.Write32(addr, value + lib);
+			u32 value = vm::read32(addr);
+			assert(value == vm::read64(i + 16));
+			vm::write32(addr, value + lib);
 		}
 		else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
 		{

@@ -102,7 +102,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const u32 opcode = Memory.Read32(CPU.dmac.ls_offset + pos * 4);
+		const u32 opcode = vm::read32(CPU.dmac.ls_offset + pos * 4);
 		m_enc->do_finalize = false;
 		if (opcode)
 		{

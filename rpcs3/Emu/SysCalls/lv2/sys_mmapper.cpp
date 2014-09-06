@@ -37,7 +37,7 @@ s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 	}
 
 	// Write back the start address of the allocated area.
-	Memory.Write32(alloc_addr, addr);
+	vm::write32(alloc_addr, addr);
 
 	return CELL_OK;
 }
@@ -195,7 +195,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 		return CELL_ENOMEM;
 	
 	// Write back the start address of the allocated area.
-	Memory.Write32(alloc_addr, addr);
+	vm::write32(alloc_addr, addr);
 
 	// Keep track of mapped addresses.
 	mmapper_info_map[mem_id] = addr;
@@ -209,7 +209,7 @@ s32 sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr)
 
 	// Write back the mem ID of the unmapped area.
 	u32 mem_id = mmapper_info_map.find(start_addr)->first;
-	Memory.Write32(mem_id_addr, mem_id);
+	vm::write32(mem_id_addr, mem_id);
 
 	return CELL_OK;
 }

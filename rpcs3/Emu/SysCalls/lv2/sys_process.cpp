@@ -279,7 +279,7 @@ s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5
 s32 sys_process_get_status(u64 unk)
 {
 	sys_process.Todo("sys_process_get_status(unk=0x%llx)", unk);
-	//Memory.Write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
+	//vm::write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }
 

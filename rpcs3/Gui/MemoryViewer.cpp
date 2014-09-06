@@ -202,7 +202,7 @@ void MemoryViewerPanel::ShowMemory()
 
 			if (Memory.IsGoodAddr(addr))
 			{
-				const u8 rmem = Memory.Read8(addr);
+				const u8 rmem = vm::read8(addr);
 				t_mem_hex_str += wxString::Format("%02x ", rmem);
 				const bool isPrintable = rmem >= 32 && rmem <= 126;
 				t_mem_ascii_str += isPrintable ? std::string(1, rmem) : ".";

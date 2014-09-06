@@ -437,7 +437,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					LOG_NOTICE(LOADER, "*** unk1: 0x%x", stub.s_unk1.ToLE());
 					LOG_NOTICE(LOADER, "*** imports: %d", stub.s_imports.ToLE());
 					LOG_NOTICE(LOADER, "*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename.ToLE());
-					LOG_NOTICE(LOADER, "*** nid: 0x%016llx [0x%x]", Memory.Read64(stub.s_nid), stub.s_nid.ToLE());
+					LOG_NOTICE(LOADER, "*** nid: 0x%016llx [0x%x]", vm::read64(stub.s_nid), stub.s_nid.ToLE());
 					LOG_NOTICE(LOADER, "*** text: 0x%x", stub.s_text.ToLE());
 #endif
 					static const u32 section = 4 * 3;
@@ -446,8 +446,8 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 					for(u32 i=0; i<stub.s_imports; ++i)
 					{
-						const u32 nid = Memory.Read32(stub.s_nid + i*4);
-						const u32 text = Memory.Read32(stub.s_text + i*4);
+						const u32 nid = vm::read32(stub.s_nid + i*4);
+						const u32 text = vm::read32(stub.s_text + i*4);
 
 						if (module && !module->Load(nid))
 						{
@@ -462,7 +462,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						LOG_NOTICE(LOADER, "*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
 						LOG_NOTICE(LOADER, "*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
 #endif
-						Memory.Write32(stub.s_text + i*4, (u32)tbl + i*8);
+						vm::write32(stub.s_text + i*4, (u32)tbl + i*8);
 
 						auto out_tbl = vm::ptr<be_t<u32>>::make((u32)tbl + i * 8);
 						out_tbl[0] = (u32)dst + i*section;

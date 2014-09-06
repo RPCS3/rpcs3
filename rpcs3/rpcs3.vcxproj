@@ -209,6 +209,7 @@
     <ClInclude Include="Gui\GameViewer.h" />
     <ClInclude Include="Gui\GLGSFrame.h" />
     <ClInclude Include="Gui\GSFrame.h" />
+    <ClInclude Include="Gui\InstructionEditor.h" />
     <ClInclude Include="Gui\InterpreterDisAsm.h" />
     <ClInclude Include="Gui\KernelExplorer.h" />
     <ClInclude Include="Gui\MainFrame.h" />

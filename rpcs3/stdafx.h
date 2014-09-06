@@ -42,15 +42,10 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-static const u32 U32_MAX = 0xffffffffu;
-
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
-
-static const s32 S32_MIN = (s32)0x80000000u;
-static const s32 S32_MAX = 0x7fffffff;
 
 union u128
 {
@@ -153,95 +148,6 @@ union u128
 		return ret;
 	}
 };
-
-union s128
-{
-	struct
-	{
-		s64 hi;
-		s64 lo;
-	};
-
-	u64 _i64[2];
-	u32 _i32[4];
-	u16 _i16[8];
-	u8  _i8[16];
-
-	operator s64() const { return _i64[0]; }
-	operator s32() const { return _i32[0]; }
-	operator s16() const { return _i16[0]; }
-	operator s8()  const { return _i8[0]; }
-
-	operator bool() const { return _i64[0] != 0 || _i64[1] != 0; }
-
-	static s128 From64(s64 src)
-	{
-		s128 ret = { src, 0 };
-		return ret;
-	}
-
-	static s128 From32(s32 src)
-	{
-		s128 ret;
-		ret._i32[0] = src;
-		ret._i32[1] = 0;
-		ret.hi = 0;
-		return ret;
-	}
-
-	bool operator == (const s128& right) const
-	{
-		return (lo == right.lo) && (hi == right.hi);
-	}
-
-	bool operator != (const s128& right) const
-	{
-		return (lo != right.lo) || (hi != right.hi);
-	}
-};
-
-//TODO: SSE style
-/*
-struct u128
-{
-	__m128 m_val;
-
-	u128 GetValue128()
-	{
-		u128 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
-
-	u64 GetValue64()
-	{
-		u64 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
-
-	u32 GetValue32()
-	{
-		u32 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
-
-	u16 GetValue16()
-	{
-		u16 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
-
-	u8 GetValue8()
-	{
-		u8 ret;
-		_mm_store_ps( (float*)&ret, m_val );
-		return ret;
-	}
-};
-*/
 
 #define AlignAddr(addr, align) (((addr) + ((align) - 1)) & ~((align) - 1))
 

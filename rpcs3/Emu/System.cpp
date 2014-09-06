@@ -345,7 +345,7 @@ void Emulator::Load()
 		//thread.AddArgv("-emu");
 
 		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
-		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
+		vm::write32(m_rsx_callback - 4, m_rsx_callback);
 
 		auto callback_data = vm::ptr<be_t<u32>>::make(m_rsx_callback);
 		callback_data[0] = ADDI(11, 0, 0x3ff);
@@ -366,7 +366,7 @@ void Emulator::Load()
 		ppu_thr_stop_data[0] = SC(4);
 		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		Memory.Write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+		vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 	}
 	break;
 

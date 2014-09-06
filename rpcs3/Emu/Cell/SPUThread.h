@@ -196,7 +196,6 @@ union SPU_GPR_hdr
 	u32 _u32[4];
 	float _f[4];
 	u128 _u128;
-	s128 _i128;
 	__m128 _m128;
 	__m128i _m128i;
 	u64 _u64[2];
@@ -522,17 +521,17 @@ public:
 
 	void StopAndSignal(u32 code);
 
-	u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + m_offset); }
-	u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
-	u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
-	u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
-	u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
+	u8   ReadLS8  (const u32 lsa) const { return vm::read8  (lsa + m_offset); }
+	u16  ReadLS16 (const u32 lsa) const { return vm::read16 (lsa + m_offset); }
+	u32  ReadLS32 (const u32 lsa) const { return vm::read32 (lsa + m_offset); }
+	u64  ReadLS64 (const u32 lsa) const { return vm::read64 (lsa + m_offset); }
+	u128 ReadLS128(const u32 lsa) const { return vm::read128(lsa + m_offset); }
 
-	void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
-	void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
-	void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
-	void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
-	void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
+	void WriteLS8  (const u32 lsa, const u8&   data) const { vm::write8  (lsa + m_offset, data); }
+	void WriteLS16 (const u32 lsa, const u16&  data) const { vm::write16 (lsa + m_offset, data); }
+	void WriteLS32 (const u32 lsa, const u32&  data) const { vm::write32 (lsa + m_offset, data); }
+	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
+	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
