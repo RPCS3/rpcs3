@@ -30,35 +30,48 @@ enum
 
 struct CellSync2MutexAttribute
 {
+	be_t<u32> sdkVersion;
 	be_t<u16> threadTypes;
 	be_t<u16> maxWaiters;
 	bool recursive;
+	u8 padding;
 	char name[CELL_SYNC2_NAME_MAX_LENGTH + 1];
-	u8 reserved[];
+	u8 reserved[86];
 };
+
+static_assert(sizeof(CellSync2MutexAttribute) == 128, "Wrong CellSync2MutexAttribute size");
 
 struct CellSync2CondAttribute
 {
+	be_t<u32> sdkVersion;
 	be_t<u16> maxWaiters;
 	char name[CELL_SYNC2_NAME_MAX_LENGTH + 1];
-	u8 reserved[];
+	u8 reserved[90];
 };
+
+static_assert(sizeof(CellSync2CondAttribute) == 128, "Wrong CellSync2CondAttribute size");
 
 struct CellSync2SemaphoreAttribute
 {
+	be_t<u32> sdkVersion;
 	be_t<u16> threadTypes;
 	be_t<u16> maxWaiters;
 	char name[CELL_SYNC2_NAME_MAX_LENGTH + 1];
-	u8 reserved[];
+	u8 reserved[88];
 };
+
+static_assert(sizeof(CellSync2SemaphoreAttribute) == 128, "Wrong CellSync2SemaphoreAttribute size");
 
 struct CellSync2QueueAttribute
 {
+	be_t<u32> sdkVersion;
 	be_t<u32> threadTypes;
-	be_t<u64> elementSize;
+	be_t<u32> elementSize;
 	be_t<u32> depth;
 	be_t<u16> maxPushWaiters;
 	be_t<u16> maxPopWaiters;
 	char name[CELL_SYNC2_NAME_MAX_LENGTH + 1];
-	u8 reserved[];
+	u8 reserved[76];
 };
+
+static_assert(sizeof(CellSync2QueueAttribute) == 128, "Wrong CellSync2QueueAttribute size");

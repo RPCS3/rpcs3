@@ -15,32 +15,33 @@ u32 libsync2;
 u32 libsync2_rtoc;
 #endif
 
-s64 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr)
+s64 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x16A0, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2MutexAttributeInitialize(attr_addr=0x%x)", attr.addr());
+	cellSync2->Warning("_cellSync2MutexAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
+	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
 						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
 						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
 	attr->maxWaiters = 15;
 	attr->recursive = false;
-	strcpy(attr->name, "CellSync2Mutex");
+	strcpy_trunc(attr->name, "CellSync2Mutex");
 
 	return CELL_OK;
 #endif
 }
 
-s64 cellSync2MutexEstimateBufferSize(vm::ptr<CellSync2MutexAttribute> attr, u64 bufferSize)
+s64 cellSync2MutexEstimateBufferSize(vm::ptr<const CellSync2MutexAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0xC3C, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize=%d)", attr.addr(), bufferSize);
+	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -104,28 +105,29 @@ s64 cellSync2MutexUnlock()
 #endif
 }
 
-s64 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr)
+s64 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x26DC, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2CondAttributeInitialize(attr_addr=0x%x)", attr.addr());
+	cellSync2->Warning("_cellSync2CondAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
+	attr->sdkVersion = sdkVersion;
 	attr->maxWaiters = 15;
-	strcpy(attr->name, "CellSync2Cond");
+	strcpy_trunc(attr->name, "CellSync2Cond");
 
 	return CELL_OK;
 #endif
 }
 
-s64 cellSync2CondEstimateBufferSize(vm::ptr<CellSync2CondAttribute> attr, u64 bufferSize)
+s64 cellSync2CondEstimateBufferSize(vm::ptr<const CellSync2CondAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1B90, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize=%d)", attr.addr(), bufferSize);
+	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -189,31 +191,32 @@ s64 cellSync2CondSignalAll()
 #endif
 }
 
-s64 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> attr)
+s64 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x5644, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2SemaphoreAttributeInitialize(attr_addr=0x%x)", attr.addr());
+	cellSync2->Warning("_cellSync2SemaphoreAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
+	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
 						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
 						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
 	attr->maxWaiters = 1;
-	strcpy(attr->name, "CellSync2Semaphore");
+	strcpy_trunc(attr->name, "CellSync2Semaphore");
 
 	return CELL_OK;
 #endif
 }
 
-s64 cellSync2SemaphoreEstimateBufferSize(vm::ptr<CellSync2SemaphoreAttribute> attr, u64 bufferSize)
+s64 cellSync2SemaphoreEstimateBufferSize(vm::ptr<const CellSync2SemaphoreAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4AC4, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize=%d)", attr.addr(), bufferSize);
+	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -288,14 +291,15 @@ s64 cellSync2SemaphoreGetCount()
 #endif
 }
 
-s64 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr)
+s64 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3C5C, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2QueueAttributeInitialize(attr_addr=0x%x)", attr.addr());
+	cellSync2->Warning("_cellSync2QueueAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
+	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
 						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
 						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
@@ -303,21 +307,21 @@ s64 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr)
 	attr->depth = 1024;
 	attr->maxPushWaiters = 15;
 	attr->maxPopWaiters = 15;
-	strcpy(attr->name, "CellSync2Queue");
+	strcpy_trunc(attr->name, "CellSync2Queue");
 
 	return CELL_OK;
 #endif
 }
 
-s64 cellSync2QueueEstimateBufferSize(vm::ptr<CellSync2QueueAttribute> attr, u64 bufferSize)
+s64 cellSync2QueueEstimateBufferSize(vm::ptr<const CellSync2QueueAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2A98, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize=%d)", attr.addr(), bufferSize);
+	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
-	if (attr->elementSize == 0 || attr->elementSize > 16384 || !attr->elementSize % 16 || attr->depth == 0 || attr->depth > 4294967292 ||
+	if (attr->elementSize == 0 || attr->elementSize > 16384 || attr->elementSize % 16 || attr->depth == 0 || attr->depth > 4294967292 ||
 		attr->maxPushWaiters > 32768 || attr->maxPopWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
 
