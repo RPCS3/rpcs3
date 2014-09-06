@@ -1,5 +1,7 @@
 #pragma once
 
+#include <emmintrin.h>
+
 union u128
 {
 	struct
@@ -18,6 +20,7 @@ union u128
 	s8  _s8[16];
 	float _f[4];
 	double _d[2];
+	__m128 xmm;
 
 	class bit_array_128
 	{

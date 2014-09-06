@@ -52,11 +52,9 @@ u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 	return (u32)Memory.Alloc(size, align);
 }
 
-u128 sys_initialize_tls(u128 arg)
+void sys_initialize_tls()
 {
 	sysPrxForUser->Log("sys_initialize_tls()");
-
-	return arg;
 }
 
 s64 _sys_process_atexitspawn()
@@ -76,7 +74,7 @@ int sys_process_is_stack(u32 p)
 	sysPrxForUser->Log("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
-	return (int)(bool)(p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr());
+	return (p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr()) ? 1 : 0;
 }
 
 s64 sys_prx_exitspawn_with_level()
