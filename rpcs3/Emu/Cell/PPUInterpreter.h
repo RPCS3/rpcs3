@@ -169,7 +169,7 @@ private:
 
 	void MFVSCR(u32 vd) //nf
 	{
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 		CPU.VPR[vd]._u32[0] = CPU.VSCR.VSCR;
 	}
 	void MTVSCR(u32 vb)
@@ -965,8 +965,8 @@ private:
 	}
 	void VMRGHB(u32 vd, u32 va, u32 vb)
 	{
-		VPR_reg VA = CPU.VPR[va];
-		VPR_reg VB = CPU.VPR[vb];
+		u128 VA = CPU.VPR[va];
+		u128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
 			CPU.VPR[vd]._u8[15 - h*2] = VA._u8[15 - h];
@@ -975,8 +975,8 @@ private:
 	}
 	void VMRGHH(u32 vd, u32 va, u32 vb)
 	{
-		VPR_reg VA = CPU.VPR[va];
-		VPR_reg VB = CPU.VPR[vb];
+		u128 VA = CPU.VPR[va];
+		u128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._u16[7 - w*2] = VA._u16[7 - w];
@@ -985,8 +985,8 @@ private:
 	}
 	void VMRGHW(u32 vd, u32 va, u32 vb)
 	{
-		VPR_reg VA = CPU.VPR[va];
-		VPR_reg VB = CPU.VPR[vb];
+		u128 VA = CPU.VPR[va];
+		u128 VB = CPU.VPR[vb];
 		for (uint d = 0; d < 2; d++)
 		{
 			CPU.VPR[vd]._u32[3 - d*2] = VA._u32[3 - d];
@@ -1578,7 +1578,7 @@ private:
 	{
 		u8 nShift = (CPU.VPR[vb]._u8[0] >> 3) & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 
 		for (u8 b = 0; b < 16 - nShift; b++)
 		{
@@ -1711,7 +1711,7 @@ private:
 	{
 		u8 nShift = (CPU.VPR[vb]._u8[0] >> 3) & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 
 		for (u8 b = 0; b < 16 - nShift; b++)
 		{
@@ -1867,7 +1867,7 @@ private:
 	}
 	void VSUMSWS(u32 vd, u32 va, u32 vb)
 	{
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 			
 		s64 sum = CPU.VPR[vb]._s32[3];
 
@@ -2301,7 +2301,7 @@ private:
 		//const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		//CPU.VPR[vd].Clear();
 		//CPU.VPR[vd]._u8[addr & 0xf] = vm::read8(addr);
-		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2450,7 +2450,7 @@ private:
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
 		//CPU.VPR[vd].Clear();
 		//(u16&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read16(addr);
-		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2500,7 +2500,7 @@ private:
 		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
 		//CPU.VPR[vd].Clear();
 		//(u32&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read32(addr);
-		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
@@ -2531,7 +2531,7 @@ private:
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2707,7 +2707,7 @@ private:
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
+		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]);
 	}
 	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2805,7 +2805,7 @@ private:
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd]._u128 = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
@@ -2906,7 +2906,7 @@ private:
 	}
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]._u128);
+		vm::write128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]);
 	}
 	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2947,7 +2947,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
@@ -2990,7 +2990,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i - 16);
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
@@ -3117,7 +3117,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
@@ -3163,7 +3163,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		CPU.VPR[vd].Clear();
+		CPU.VPR[vd].clear();
 		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i - 16);
 	}
 	void DSS(u32 strm, u32 a)
@@ -3993,7 +3993,7 @@ private:
 
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
-		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].ToString(true).c_str(), CPU.VPR[i].ToString().c_str());
+		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].to_hex().c_str(), CPU.VPR[i].to_xyzw().c_str());
 		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR);
 		LOG_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
 		LOG_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);

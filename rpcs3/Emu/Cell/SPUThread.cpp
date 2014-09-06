@@ -63,7 +63,7 @@ void SPUThread::DoReset()
 	PPCThread::DoReset();
 
 	//reset regs
-	memset(GPR, 0, sizeof(SPU_GPR_hdr) * 128);
+	memset(GPR, 0, sizeof(u128) * 128);
 }
 
 void SPUThread::InitRegs()
@@ -533,7 +533,7 @@ u32 SPUThread::GetChannelCount(u32 ch)
 	}
 }
 
-void SPUThread::WriteChannel(u32 ch, const SPU_GPR_hdr& r)
+void SPUThread::WriteChannel(u32 ch, const u128& r)
 {
 	const u32 v = r._u32[3];
 
@@ -861,9 +861,9 @@ void SPUThread::WriteChannel(u32 ch, const SPU_GPR_hdr& r)
 	if (Emu.IsStopped()) LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 }
 
-void SPUThread::ReadChannel(SPU_GPR_hdr& r, u32 ch)
+void SPUThread::ReadChannel(u128& r, u32 ch)
 {
-	r.Reset();
+	r.clear();
 	u32& v = r._u32[3];
 
 	switch (ch)

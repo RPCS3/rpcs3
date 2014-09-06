@@ -483,7 +483,7 @@ private:
 	{
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt].Reset();
+		CPU.GPR[rt].clear();
 		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
 		WRAPPER_END(rt, ra, 0, 0);
 		// TODO
@@ -1945,8 +1945,8 @@ private:
 	//HGT uses signed values.  HLGT uses unsigned values
 	void HGT(u32 rt, s32 ra, s32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
-		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
+		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
 		c.mov(*addr, 0);
 		c.setg(addr->r8());
 		c.neg(*addr);
@@ -1970,10 +1970,10 @@ private:
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
-		c.movsxd(*qw0, cpu_dword(GPR[ra]._i32[0]));
-		c.movsxd(*qw1, cpu_dword(GPR[ra]._i32[2]));
-		c.mov(cpu_qword(GPR[rt]._i64[0]), *qw0);
-		c.mov(cpu_qword(GPR[rt]._i64[1]), *qw1);
+		c.movsxd(*qw0, cpu_dword(GPR[ra]._s32[0]));
+		c.movsxd(*qw1, cpu_dword(GPR[ra]._s32[2]));
+		c.mov(cpu_qword(GPR[rt]._s64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._s64[1]), *qw1);
 		XmmInvalidate(rt);
 		LOG_OPCODE();
 	}
@@ -2660,8 +2660,8 @@ private:
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
-		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
+		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
 		c.mov(*addr, 0);
 		c.sete(addr->r8());
 		c.neg(*addr);
@@ -3322,7 +3322,7 @@ private:
 	}
 	void HGTI(u32 rt, u32 ra, s32 i10)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
 		c.setg(addr->r8());

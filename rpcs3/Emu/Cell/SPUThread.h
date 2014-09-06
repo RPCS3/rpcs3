@@ -191,36 +191,6 @@ public:
 	
 };
 
-union SPU_GPR_hdr
-{
-	u32 _u32[4];
-	float _f[4];
-	u128 _u128;
-	__m128 _m128;
-	__m128i _m128i;
-	u64 _u64[2];
-	s64 _i64[2];
-	s32 _i32[4];
-	u16 _u16[8];
-	s16 _i16[8];
-	u8  _u8[16];
-	s8  _i8[16];
-	double _d[2];
-
-
-	SPU_GPR_hdr() {}
-
-	std::string ToString() const
-	{
-		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
-	}
-
-	void Reset()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-};
-
 union SPU_SNRConfig_hdr
 {
 	u64 value;
@@ -243,7 +213,7 @@ struct SpuGroupInfo;
 class SPUThread : public PPCThread
 {
 public:
-	SPU_GPR_hdr GPR[128]; // General-Purpose Registers
+	u128 GPR[128]; // General-Purpose Registers
 	//FPSCR FPSCR;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
@@ -515,9 +485,9 @@ public:
 
 	u32 GetChannelCount(u32 ch);
 
-	void WriteChannel(u32 ch, const SPU_GPR_hdr& r);
+	void WriteChannel(u32 ch, const u128& r);
 
-	void ReadChannel(SPU_GPR_hdr& r, u32 ch);
+	void ReadChannel(u128& r, u32 ch);
 
 	void StopAndSignal(u32 code);
 
@@ -541,7 +511,7 @@ public:
 	{
 		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().c_str());
+		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].to_hex().c_str());
 
 		return ret;
 	}
