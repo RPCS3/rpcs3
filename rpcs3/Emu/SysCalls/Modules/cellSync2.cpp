@@ -127,7 +127,7 @@ s64 cellSync2CondEstimateBufferSize(vm::ptr<const CellSync2CondAttribute> attr, 
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1B90, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2->Todo("cellSync2CondEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -216,7 +216,7 @@ s64 cellSync2SemaphoreEstimateBufferSize(vm::ptr<const CellSync2SemaphoreAttribu
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4AC4, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2->Todo("cellSync2SemaphoreEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -319,7 +319,7 @@ s64 cellSync2QueueEstimateBufferSize(vm::ptr<const CellSync2QueueAttribute> attr
 	cellSync2->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2A98, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2->Todo("cellSync2QueueEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->elementSize == 0 || attr->elementSize > 16384 || attr->elementSize % 16 || attr->depth == 0 || attr->depth > 4294967292 ||
 		attr->maxPushWaiters > 32768 || attr->maxPopWaiters > 32768)
