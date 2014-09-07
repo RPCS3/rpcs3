@@ -1,5 +1,7 @@
 #include "stdafx.h"
+#include "restore_new.h"
 #include <wx/image.h>
+#include "define_new_memleakdetect.h"
 
 #ifndef _WIN32
 #include <dirent.h>

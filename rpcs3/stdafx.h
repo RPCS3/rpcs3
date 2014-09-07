@@ -10,7 +10,7 @@
 
 #if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
 	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-	#define new DBG_NEW
+	#include "define_new_memleakdetect.h"
 #endif
 
 // This header should be frontend-agnostic, so don't assume wx includes everything
