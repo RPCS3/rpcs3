@@ -1128,7 +1128,7 @@ struct SceNpMatching2InvitationData
 struct SceNpMatching2SignalingOptParam
 {
 	u8 type;
-	//u8 reserved1[1];
+	u8 reserved1[1];
 	be_t<u16> hubMemberId;
 	//u8 reserved2[4];
 };
@@ -1741,7 +1741,7 @@ struct SceNpMatching2SignalingOptParamUpdateInfo
 // Matching2 utility intilization parameters
 struct SceNpMatching2UtilityInitParam
 {
-	//sys_memory_container_t containerId; //TODO: Uncomment this once sys_memory_container_t is implemented
+	be_t<u32> containerId;
 	be_t<u32> requestCbQueueLen;
 	be_t<u32> sessionEventCbQueueLen;;
 	be_t<u32> sessionMsgCbQueueLen;;
@@ -1796,7 +1796,7 @@ struct SceNpScoreRankData
 	be_t<u32> highestRank;
 	be_t<s64> scoreValue;
 	be_t<s32> hasGameData;
-	//u8 pad0[4];
+	u8 pad0[4];
 	CellRtcTick recordDate;
 };
 
@@ -1804,7 +1804,7 @@ struct SceNpScoreRankData
 struct SceNpScorePlayerRankData
 {
 	be_t<s32> hasData;
-	//u8 pad0[4];
+	u8 pad0[4];
 	SceNpScoreRankData rankData;
 };
 
@@ -1864,7 +1864,7 @@ struct SceNpScoreClanRankData
 struct SceNpScoreClanIdRankData
 {
 	be_t<s32> hasData;
-	//u8 pad0[4];
+	u8 pad0[4];
 	SceNpScoreClanRankData rankData;
 };
 
