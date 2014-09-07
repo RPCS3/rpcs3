@@ -109,8 +109,6 @@ public:
 		}
 	}
 
-
-
 	std::string GetTypeString() const { return CPUThreadTypeToString(m_type); }
 
 	virtual std::string GetThreadName() const

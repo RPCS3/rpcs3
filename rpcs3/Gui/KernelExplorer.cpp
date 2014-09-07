@@ -5,7 +5,6 @@
 
 #include "Emu/IdManager.h"
 #include "KernelExplorer.h"
-
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/CPU/CPUThread.h"
 
