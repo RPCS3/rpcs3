@@ -468,59 +468,6 @@ struct FPRdouble
 	static int Cmp(PPCdouble a, PPCdouble b);
 };
 
-union VPR_reg
-{
-	//__m128i _m128i;
-	u128 _u128;
-	s128 _s128;
-	u64 _u64[2];
-	s64 _s64[2];
-	u32 _u32[4];
-	s32 _s32[4];
-	u16 _u16[8];
-	s16 _s16[8];
-	u8  _u8[16];
-	s8  _s8[16];
-	float _f[4];
-	double _d[2];
-
-	VPR_reg() { Clear(); }
-
-	std::string ToString(bool hex = false) const
-	{
-		if(hex) return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
-
-		return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
-	}
-
-	u8 GetBit(u8 bit)
-	{
-		if(bit < 64) return (_u64[0] >> bit) & 0x1;
-
-		return (_u64[1] >> (bit - 64)) & 0x1;
-	}
-
-	void SetBit(u8 bit, u8 value)
-	{
-		if(bit < 64)
-		{
-			_u64[0] &= ~(1 << bit);
-			_u64[0] |= (value & 0x1) << bit;
-
-			return;
-		}
-
-		bit -= 64;
-
-		_u64[1] &= ~(1 << bit);
-		_u64[1] |= (value & 0x1) << bit;
-	}
-
-	void Clear() { _u64[1] = _u64[0] = 0; }
-};
-
-static const s32 MAX_INT_VALUE = 0x7fffffff;
-
 class PPUThread : public PPCThread
 {
 public:
@@ -530,7 +477,7 @@ public:
 	PPCdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
-	VPR_reg VPR[32];
+	u128 VPR[32];
 	u32 vpcr;
 
 	CRhdr CR; //Condition Register
@@ -743,7 +690,7 @@ public:
 
 		for(uint i=0; i<32; ++i) ret += fmt::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += fmt::Format("FPR[%d] = %.6G\n", i, (double)FPR[i]);
-		for(uint i=0; i<32; ++i) ret += fmt::Format("VPR[%d] = 0x%s [%s]\n", i, (const char*)VPR[i].ToString(true).c_str(), (const char*)VPR[i].ToString().c_str());
+		for(uint i=0; i<32; ++i) ret += fmt::Format("VPR[%d] = 0x%s [%s]\n", i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
 		ret += fmt::Format("CR = 0x%08x\n", CR.CR);
 		ret += fmt::Format("LR = 0x%llx\n", LR);
 		ret += fmt::Format("CTR = 0x%llx\n", CTR);

@@ -86,7 +86,7 @@ s32 sys_ppu_thread_detach(u64 thread_id)
 void sys_ppu_thread_get_join_state(u32 isjoinable_addr)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_get_join_state(isjoinable_addr=0x%x)", isjoinable_addr);
-	Memory.Write32(isjoinable_addr, GetCurrentPPUThread().IsJoinable());
+	vm::write32(isjoinable_addr, GetCurrentPPUThread().IsJoinable());
 }
 
 s32 sys_ppu_thread_set_priority(u64 thread_id, s32 prio)
@@ -108,7 +108,7 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
-	Memory.Write32(prio_addr, (s32)thr->GetPrio());
+	vm::write32(prio_addr, (s32)thr->GetPrio());
 
 	return CELL_OK;
 }
@@ -119,8 +119,8 @@ s32 sys_ppu_thread_get_stack_information(u32 info_addr)
 
 	declCPU();
 
-	Memory.Write32(info_addr, (u32)CPU.GetStackAddr());
-	Memory.Write32(info_addr + 4, CPU.GetStackSize());
+	vm::write32(info_addr, (u32)CPU.GetStackAddr());
+	vm::write32(info_addr + 4, CPU.GetStackSize());
 
 	return CELL_OK;
 }
@@ -204,7 +204,7 @@ void sys_ppu_thread_once(vm::ptr<std::atomic<be_t<u32>>> once_ctrl, u32 entry)
 	be_t<u32> old = be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_ONCE_INIT));
 	if (once_ctrl->compare_exchange_weak(old, be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_DONE_INIT))))
 	{
-		GetCurrentPPUThread().FastCall2(Memory.Read32(entry), Memory.Read32(entry + 4));
+		GetCurrentPPUThread().FastCall2(vm::read32(entry), vm::read32(entry + 4));
 	}
 }
 

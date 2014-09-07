@@ -653,7 +653,7 @@ bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
 	u64 realAddr;
 	if (!getRealAddr(addr, realAddr))
 		return false;
-	*value = Memory.Read32(realAddr);
+	*value = vm::read32(realAddr);
 	return true;
 }
 
@@ -662,7 +662,7 @@ bool VirtualMemoryBlock::Write32(const u64 addr, const u32 value)
 	u64 realAddr;
 	if(!getRealAddr(addr, realAddr))
 		return false;
-	Memory.Write32(realAddr, value);
+	vm::write32(realAddr, value);
 	return true;
 }
 

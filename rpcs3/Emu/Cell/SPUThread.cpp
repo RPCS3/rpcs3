@@ -63,7 +63,7 @@ void SPUThread::DoReset()
 	PPCThread::DoReset();
 
 	//reset regs
-	memset(GPR, 0, sizeof(SPU_GPR_hdr) * 128);
+	memset(GPR, 0, sizeof(u128) * 128);
 }
 
 void SPUThread::InitRegs()
@@ -198,7 +198,7 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 			}
 			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 			{
-				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, Memory.Read32(dmac.ls_offset + lsa));
+				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(dmac.ls_offset + lsa));
 				return;
 			}
 			else
@@ -221,13 +221,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 		{
 		case MFC_PUT_CMD:
 		{
-			Memory.Write32(ea, ReadLS32(lsa));
+			vm::write32(ea, ReadLS32(lsa));
 			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			WriteLS32(lsa, Memory.Read32(ea));
+			WriteLS32(lsa, vm::read32(ea));
 			return;
 		}
 
@@ -450,7 +450,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					{
 						dis_asm.dump_pc = i;
 						dis_asm.offset = vm::get_ptr<u8>(dmac.ls_offset);
-						const u32 opcode = Memory.Read32(i + dmac.ls_offset);
+						const u32 opcode = vm::read32(i + dmac.ls_offset);
 						(*SPU_instr::rrr_list)(&dis_asm, opcode);
 						if (i >= 0 && i < 0x40000)
 						{
@@ -533,7 +533,7 @@ u32 SPUThread::GetChannelCount(u32 ch)
 	}
 }
 
-void SPUThread::WriteChannel(u32 ch, const SPU_GPR_hdr& r)
+void SPUThread::WriteChannel(u32 ch, const u128& r)
 {
 	const u32 v = r._u32[3];
 
@@ -861,9 +861,9 @@ void SPUThread::WriteChannel(u32 ch, const SPU_GPR_hdr& r)
 	if (Emu.IsStopped()) LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
 }
 
-void SPUThread::ReadChannel(SPU_GPR_hdr& r, u32 ch)
+void SPUThread::ReadChannel(u128& r, u32 ch)
 {
-	r.Reset();
+	r.clear();
 	u32& v = r._u32[3];
 
 	switch (ch)

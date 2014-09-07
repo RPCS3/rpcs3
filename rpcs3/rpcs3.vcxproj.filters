@@ -182,5 +182,8 @@
     <ClInclude Include="Gui\MsgDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="Gui\InstructionEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

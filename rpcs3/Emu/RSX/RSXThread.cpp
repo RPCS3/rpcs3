@@ -262,7 +262,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if(m_set_semaphore_offset)
 		{
 			m_set_semaphore_offset = false;
-			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
+			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
 		}
 	}
 	break;
@@ -275,7 +275,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			u32 value = ARGS(0);
 			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
 
-			Memory.Write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
+			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
 		}
 	}
 	break;
@@ -883,7 +883,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 					{
 						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
-						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
+						index = vm::read32(m_indexed_array.m_addr + i * 4);
 						*(u32*)&m_indexed_array.m_data[pos] = index;
 						//LOG_WARNING(RSX, "index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
 					}
@@ -893,7 +893,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 					{
 						int pos = (int)m_indexed_array.m_data.size();
 						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
-						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
+						index = vm::read16(m_indexed_array.m_addr + i * 2);
 						//LOG_WARNING(RSX, "index 2: %d", index);
 						*(u16*)&m_indexed_array.m_data[pos] = index;
 					}
@@ -1648,9 +1648,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u64 timestamp = get_system_time() * 1000;
 
 		// TODO: Reports can be written to the main memory or the local memory (controlled by NV4097_SET_CONTEXT_DMA_REPORT)
-		Memory.Write64(m_local_mem_addr + offset + 0x0, timestamp);
-		Memory.Write32(m_local_mem_addr + offset + 0x8, value);
-		Memory.Write32(m_local_mem_addr + offset + 0xc, 0);
+		vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
+		vm::write32(m_local_mem_addr + offset + 0x8, value);
+		vm::write32(m_local_mem_addr + offset + 0xc, 0);
 	}
 	break;
 

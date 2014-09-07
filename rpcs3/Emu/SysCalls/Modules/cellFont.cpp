@@ -555,7 +555,7 @@ int cellFontExtend(u32 a1, u32 a2, u32 a3)
 		{
 			//Something happens
 		}
-		if (Memory.Read32(a3) == 0)
+		if (vm::read32(a3) == 0)
 		{
 			//Something happens
 		}

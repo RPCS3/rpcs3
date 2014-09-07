@@ -74,7 +74,7 @@ int sys_process_is_stack(u32 p)
 	sysPrxForUser->Log("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
-	return (int)(bool)(p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr());
+	return (p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr()) ? 1 : 0;
 }
 
 s64 sys_prx_exitspawn_with_level()
@@ -144,7 +144,7 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 
 	// TODO: use segment info
 	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
-	Memory.Write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
+	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
 
 	return CELL_OK;
 }
@@ -260,7 +260,7 @@ s64 _sys_spu_printf_attach_group(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_agcb), Memory.Read32(spu_printf_agcb + 4), arg);
+	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_agcb), vm::read32(spu_printf_agcb + 4), arg);
 }
 
 s64 _sys_spu_printf_detach_group(u32 arg)
@@ -272,7 +272,7 @@ s64 _sys_spu_printf_detach_group(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dgcb), Memory.Read32(spu_printf_dgcb + 4), arg);
+	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_dgcb), vm::read32(spu_printf_dgcb + 4), arg);
 }
 
 s64 _sys_spu_printf_attach_thread(u32 arg)
@@ -284,7 +284,7 @@ s64 _sys_spu_printf_attach_thread(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_atcb), Memory.Read32(spu_printf_atcb + 4), arg);
+	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_atcb), vm::read32(spu_printf_atcb + 4), arg);
 }
 
 s64 _sys_spu_printf_detach_thread(u32 arg)
@@ -296,7 +296,7 @@ s64 _sys_spu_printf_detach_thread(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(Memory.Read32(spu_printf_dtcb), Memory.Read32(spu_printf_dtcb + 4), arg);
+	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_dtcb), vm::read32(spu_printf_dtcb + 4), arg);
 }
 
 s32 _sys_printf(vm::ptr<const char> fmt)

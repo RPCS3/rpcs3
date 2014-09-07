@@ -547,7 +547,7 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, u32 addr, u32 samples)
 	for (u32 i = 0; i < samples; i++)
 	{
 		// reverse byte order and mix
-		u32 v = Memory.Read32(addr + i * sizeof(float));
+		u32 v = vm::read32(addr + i * sizeof(float));
 		mixdata[i*8+busNo] += (float&)v;
 	}
 

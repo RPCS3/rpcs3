@@ -191,37 +191,6 @@ public:
 	
 };
 
-union SPU_GPR_hdr
-{
-	u32 _u32[4];
-	float _f[4];
-	u128 _u128;
-	s128 _i128;
-	__m128 _m128;
-	__m128i _m128i;
-	u64 _u64[2];
-	s64 _i64[2];
-	s32 _i32[4];
-	u16 _u16[8];
-	s16 _i16[8];
-	u8  _u8[16];
-	s8  _i8[16];
-	double _d[2];
-
-
-	SPU_GPR_hdr() {}
-
-	std::string ToString() const
-	{
-		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
-	}
-
-	void Reset()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-};
-
 union SPU_SNRConfig_hdr
 {
 	u64 value;
@@ -244,7 +213,7 @@ struct SpuGroupInfo;
 class SPUThread : public PPCThread
 {
 public:
-	SPU_GPR_hdr GPR[128]; // General-Purpose Registers
+	u128 GPR[128]; // General-Purpose Registers
 	//FPSCR FPSCR;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
@@ -516,23 +485,23 @@ public:
 
 	u32 GetChannelCount(u32 ch);
 
-	void WriteChannel(u32 ch, const SPU_GPR_hdr& r);
+	void WriteChannel(u32 ch, const u128& r);
 
-	void ReadChannel(SPU_GPR_hdr& r, u32 ch);
+	void ReadChannel(u128& r, u32 ch);
 
 	void StopAndSignal(u32 code);
 
-	u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + m_offset); }
-	u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
-	u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
-	u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
-	u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
+	u8   ReadLS8  (const u32 lsa) const { return vm::read8  (lsa + m_offset); }
+	u16  ReadLS16 (const u32 lsa) const { return vm::read16 (lsa + m_offset); }
+	u32  ReadLS32 (const u32 lsa) const { return vm::read32 (lsa + m_offset); }
+	u64  ReadLS64 (const u32 lsa) const { return vm::read64 (lsa + m_offset); }
+	u128 ReadLS128(const u32 lsa) const { return vm::read128(lsa + m_offset); }
 
-	void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
-	void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
-	void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
-	void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
-	void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
+	void WriteLS8  (const u32 lsa, const u8&   data) const { vm::write8  (lsa + m_offset, data); }
+	void WriteLS16 (const u32 lsa, const u16&  data) const { vm::write16 (lsa + m_offset, data); }
+	void WriteLS32 (const u32 lsa, const u32&  data) const { vm::write32 (lsa + m_offset, data); }
+	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
+	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
@@ -542,7 +511,7 @@ public:
 	{
 		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].ToString().c_str());
+		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].to_hex().c_str());
 
 		return ret;
 	}

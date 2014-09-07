@@ -170,7 +170,7 @@ public:
 					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
 
 				disasm->dump_pc = sh_addr + off;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 
 				arr[id][sh].Add(fmt::FromUTF8(disasm->last_opcode));
 
@@ -395,7 +395,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 			for(u64 addr=sh_addr; addr<sh_addr+sh_size; addr++, vsize++)
 			{
 				disasm->dump_pc = addr;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 				fd.Write("\t");
 				fd.Write(fmt::FromUTF8(disasm->last_opcode));
 			}

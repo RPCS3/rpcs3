@@ -1,5 +1,185 @@
 #pragma once
 
+#include <emmintrin.h>
+
+union u128
+{
+	struct
+	{
+		u64 hi;
+		u64 lo;
+	};
+
+	u64 _u64[2];
+	s64 _s64[2];
+	u32 _u32[4];
+	s32 _s32[4];
+	u16 _u16[8];
+	s16 _s16[8];
+	u8  _u8[16];
+	s8  _s8[16];
+	float _f[4];
+	double _d[2];
+	__m128 xmm;
+
+	class bit_array_128
+	{
+		u64 data[2];
+
+	public:
+		class bit_element
+		{
+			u64& data;
+			const u64 mask;
+
+		public:
+			bit_element(u64& data, const u64 mask)
+				: data(data)
+				, mask(mask)
+			{
+			}
+
+			__forceinline operator bool() const
+			{
+				return (data & mask) != 0;
+			}
+
+			__forceinline bit_element& operator = (const bool right)
+			{
+				if (right)
+				{
+					data |= mask;
+				}
+				else
+				{
+					data &= ~mask;
+				}
+				return *this;
+			}
+
+			__forceinline bit_element& operator = (const bit_element& right)
+			{
+				if (right)
+				{
+					data |= mask;
+				}
+				else
+				{
+					data &= ~mask;
+				}
+				return *this;
+			}
+		};
+
+		bit_element operator [] (u32 index)
+		{
+			assert(index < 128);
+			return bit_element(data[index / 64], 1ull << (index % 64));
+		}
+
+		const bool operator [] (u32 index) const
+		{
+			assert(index < 128);
+			return (data[index / 64] & (1ull << (index % 64))) != 0;
+		}
+
+	} _bit;
+
+	//operator u64() const { return _u64[0]; }
+	//operator u32() const { return _u32[0]; }
+	//operator u16() const { return _u16[0]; }
+	//operator u8()  const { return _u8[0]; }
+
+	//operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
+
+	static u128 from128(u64 hi, u64 lo)
+	{
+		u128 ret = { hi, lo };
+		return ret;
+	}
+
+	static u128 from64(u64 src)
+	{
+		u128 ret = { 0, src };
+		return ret;
+	}
+
+	static u128 from32(u32 src)
+	{
+		u128 ret;
+		ret._u32[0] = src;
+		ret._u32[1] = 0;
+		ret._u32[2] = 0;
+		ret._u32[3] = 0;
+		return ret;
+	}
+
+	static u128 fromBit(u32 bit)
+	{
+		u128 ret;
+		ret._bit[bit] = true;
+		return ret;
+	}
+
+	void setBit(u32 bit)
+	{
+		_bit[bit] = true;
+	}
+
+	bool operator == (const u128& right) const
+	{
+		return (lo == right.lo) && (hi == right.hi);
+	}
+
+	bool operator != (const u128& right) const
+	{
+		return (lo != right.lo) || (hi != right.hi);
+	}
+
+	u128 operator | (const u128& right) const
+	{
+		return from128(hi | right.hi, lo | right.lo);
+	}
+
+	u128 operator & (const u128& right) const
+	{
+		return from128(hi & right.hi, lo & right.lo);
+	}
+
+	u128 operator ^ (const u128& right) const
+	{
+		return from128(hi ^ right.hi, lo ^ right.lo);
+	}
+
+	u128 operator ~ () const
+	{
+		return from128(~hi, ~lo);
+	}
+
+	void clear()
+	{
+		hi = lo = 0;
+	}
+
+	std::string to_hex() const
+	{
+		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+	}
+
+	std::string to_xyzw() const
+	{
+		return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
+	}
+
+	static __forceinline u128 byteswap(const u128 val)
+	{
+		u128 ret;
+		ret.lo = _byteswap_uint64(val.hi);
+		ret.hi = _byteswap_uint64(val.lo);
+		return ret;
+	}
+};
+
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
 #define re64(val) _byteswap_uint64(val)

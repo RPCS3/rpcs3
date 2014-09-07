@@ -1025,7 +1025,7 @@ void syncLFQueueDump(vm::ptr<CellSyncLFQueue> queue)
 	cellSync->Notice("CellSyncLFQueue dump: addr = 0x%x", queue.addr());
 	for (u32 i = 0; i < sizeof(CellSyncLFQueue) / 16; i++)
 	{
-		cellSync->Notice("*** 0x%.16llx 0x%.16llx", Memory.Read64(queue.addr() + i * 16), Memory.Read64(queue.addr() + i * 16 + 8));
+		cellSync->Notice("*** 0x%.16llx 0x%.16llx", vm::read64(queue.addr() + i * 16), vm::read64(queue.addr() + i * 16 + 8));
 	}
 }
 

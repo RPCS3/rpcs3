@@ -40,7 +40,7 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	{
 		for (int i = 0; i < 0x10; i++)
 		{
-			k_licensee[i] = Memory.Read8(k_licensee_addr + i);
+			k_licensee[i] = vm::read8(k_licensee_addr + i);
 			k_licensee_str += fmt::Format("%02x", k_licensee[i]);
 		}
 	}

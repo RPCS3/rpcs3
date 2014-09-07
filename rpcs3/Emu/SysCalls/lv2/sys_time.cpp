@@ -77,8 +77,8 @@ s32 sys_time_get_current_time(u32 sec_addr, u32 nsec_addr)
 
 	u64 time = get_time();
 
-	Memory.Write64(sec_addr, time / timebase_frequency);
-	Memory.Write64(nsec_addr, (time % timebase_frequency) * 1000000000 / (s64)(timebase_frequency));
+	vm::write64(sec_addr, time / timebase_frequency);
+	vm::write64(nsec_addr, (time % timebase_frequency) * 1000000000 / (s64)(timebase_frequency));
 
 	return CELL_OK;
 }
