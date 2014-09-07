@@ -250,6 +250,7 @@
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
+    <ClInclude Include="define_new_memleakdetect.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Decoder.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7DisAsm.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
@@ -416,6 +417,7 @@
     <ClInclude Include="Loader\SELF.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
+    <ClInclude Include="restore_new.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

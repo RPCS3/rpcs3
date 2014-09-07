@@ -4,7 +4,9 @@
 #include "sha1.h"
 #include "key_vault.h"
 #include "unpkg.h"
+#include "restore_new.h"
 #include <wx/progdlg.h>
+#include "define_new_memleakdetect.h"
 
 #include "Utilities/Log.h"
 #include "Utilities/rFile.h"

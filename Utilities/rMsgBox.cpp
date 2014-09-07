@@ -1,5 +1,7 @@
 #include "stdafx.h"
+#include "restore_new.h"
 #include <wx/msgdlg.h>
+#include "define_new_memleakdetect.h"
 #include "rMsgBox.h"
 
 #ifndef QT_UI

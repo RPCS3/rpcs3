@@ -1204,5 +1204,11 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="restore_new.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="define_new_memleakdetect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
