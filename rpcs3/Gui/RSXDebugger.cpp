@@ -1,9 +1,18 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "rpcs3/Ini.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 #include "RSXDebugger.h"
-#include "Emu/GS/sysutil_video.h"
-#include "Emu/GS/GCM.h"
+#include "Emu/RSX/sysutil_video.h"
+#include "Emu/RSX/GSManager.h"
+//#include "Emu/RSX/GCM.h"
 
 #include "MemoryViewer.h"
+
+#include <wx/notebook.h>
 
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;
@@ -259,7 +268,7 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 			u32 offset;
 			if(Memory.IsGoodAddr(m_addr))
 			{
-				u32 cmd = Memory.Read32(m_addr);
+				u32 cmd = vm::read32(m_addr);
 				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
 					|| cmd == CELL_GCM_METHOD_FLAG_RETURN ? 0 : (cmd >> 18) & 0x7ff;
 
@@ -286,17 +295,17 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const mem_ptr_t<gcmBuffer> buffers = render.m_gcm_buffers_addr;
+	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
 
-	if(!buffers.IsGood())
+	if(!buffers)
 		return;
 
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render.m_local_mem_addr + re(buffers[id].offset); \
-		if(Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
-			MemoryViewerPanel::ShowImage(this, addr, 3, re(buffers[id].width), re(buffers[id].height), true); \
+		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
+		if (Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
+			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
 	} \
 
@@ -321,7 +330,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
@@ -335,7 +344,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
 	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
@@ -373,7 +382,7 @@ void RSXDebugger::GetMemory()
 	
 		if (ioAddr && Memory.IsGoodAddr(addr))
 		{
-			u32 cmd = Memory.Read32(addr);
+			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
@@ -403,16 +412,16 @@ void RSXDebugger::GetBuffers()
 		if(!Memory.IsGoodAddr(render.m_gcm_buffers_addr))
 			continue;
 
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(render.m_gcm_buffers_addr);
-		u32 RSXbuffer_addr = render.m_local_mem_addr + re(buffers[bufferId].offset);
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
+		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!Memory.IsGoodAddr(RSXbuffer_addr))
 			continue;
 
-		unsigned char* RSXbuffer = (unsigned char*)Memory.VirtualToRealAddr(RSXbuffer_addr);
+		auto RSXbuffer = vm::get_ptr<unsigned char>(RSXbuffer_addr);
 		
-		u32 width  = re(buffers[bufferId].width);
-		u32 height = re(buffers[bufferId].height);
+		u32 width  = buffers[bufferId].width;
+		u32 height = buffers[bufferId].height;
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 
 		// ABGR to RGB and flip vertically
@@ -437,7 +446,9 @@ void RSXDebugger::GetBuffers()
 
 		wxImage img(width, height, buffer);
 		wxClientDC dc_canvas(pnl);
-		dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		
+		if (img.IsOk())
+			dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
 	}
 
 	// Draw Texture
@@ -459,7 +470,7 @@ void RSXDebugger::GetBuffers()
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = (unsigned char*)Memory.VirtualToRealAddr(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
 
 	u32 width  = render.m_textures[m_cur_texture].GetWidth();
 	u32 height = render.m_textures[m_cur_texture].GetHeight();
@@ -819,7 +830,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	}
 	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 	{
-		mem32_ptr_t args(currentAddr + 4);
+		auto args = vm::ptr<be_t<u32>>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch(cmd & 0x3ffff)

@@ -1,6 +1,15 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/AutoPause.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsDir.h"
+#include "Emu/FS/vfsFile.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
+#include <wx/dir.h>
 
 static const std::string m_class_name = "GameViewer";
 
@@ -34,7 +43,7 @@ public:
 	virtual wxDirTraverseResult OnFile(const wxString& filename)
 	{
 		if (!wxRemoveFile(filename)){
-			ConLog.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+			LOG_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 		}
 		return wxDIR_CONTINUE;
 	}
@@ -98,7 +107,7 @@ void GameViewer::OnColClick(wxListEvent& event)
 void GameViewer::LoadGames()
 {
 	vfsDir dir(m_path);
-	ConLog.Write("path: %s", m_path.c_str());
+	LOG_NOTICE(HLE, "path: %s", m_path.c_str());
 	if(!dir.IsOpened()) return;
 
 	m_games.clear();
@@ -121,9 +130,18 @@ void GameViewer::LoadPSF()
 	m_game_data.clear();
 	for(uint i=0; i<m_games.size(); ++i)
 	{
-		const std::string path = m_path + m_games[i] + "/PARAM.SFO";
 		vfsFile f;
-		if(!f.Open(path))
+		std::string sfo;
+		std::string sfb;
+
+		sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
+
+		if (!f.Open(sfb))
+			sfo = m_path + m_games[i] + "/PARAM.SFO";
+		else
+			sfo = m_path + m_games[i] + "/PS3_GAME/PARAM.SFO";
+
+		if(!f.Open(sfo))
 			continue;
 
 		PSFLoader psf(f);
@@ -140,9 +158,15 @@ void GameViewer::LoadPSF()
 		game.parental_lvl = psf.GetInteger("PARENTAL_LEVEL");
 		game.resolution = psf.GetInteger("RESOLUTION");
 		game.sound_format = psf.GetInteger("SOUND_FORMAT");
+		
 		if(game.serial.length() == 9)
 			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
 
+		if (game.category.substr(0, 2) == "HG")
+			game.category = "HDD Game";
+		else if (game.category.substr(0, 2) == "DG")
+			game.category = "Disc Game";
+			
 		m_game_data.push_back(game);
 	}
 
@@ -183,14 +207,19 @@ void GameViewer::DClick(wxListEvent& event)
 	const std::string& path = m_path + m_game_data[i].root;
 
 	Emu.Stop();
+
+	Debug::AutoPause::getInstance().Reload();
+
 	Emu.GetVFS().Init(path);
 	std::string local_path;
-	if(Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
-	{
-		ConLog.Error("Boot error: elf not found! [%s]", path.c_str());
+	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path)) {
+		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
 		return;
 	}
-	Emu.Run();
+
+	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady()) {
+		Emu.Run();
+	}
 }
 
 void GameViewer::RightClick(wxListEvent& event)
@@ -218,9 +247,9 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	Emu.GetVFS().UnMountAll();
 
-	//TODO: Replace wxWidgetsSpecific filesystem stuff?
-	if (!wxDirExists(fmt::FromUTF8(localPath)))
+	if (!rExists(localPath))
 		return;
+	//TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;
 	wxDir localDir(localPath);
 	localDir.Traverse(deleter);

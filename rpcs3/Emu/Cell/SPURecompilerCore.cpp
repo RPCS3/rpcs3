@@ -1,18 +1,34 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Utilities/rFile.h"
+
+#include "Emu/SysCalls/lv2/sys_time.h"
+
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"
+
+#include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
 static const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
-: m_enc(new SPURecompiler(cpu, *this))
-, inter(new SPUInterpreter(cpu))
-, CPU(cpu)
-, first(true)
+	: m_enc(new SPURecompiler(cpu, *this))
+	, inter(new SPUInterpreter(cpu))
+	, CPU(cpu)
+	, first(true)
 {
 	memset(entry, 0, sizeof(entry));
+	X86CpuInfo inf;
+	X86CpuUtil::detect(&inf);
+	if (!inf.hasFeature(kX86CpuFeatureSse41))
+	{
+		LOG_ERROR(SPU, "SPU JIT requires SSE4.1 instruction set support");
+		Emu.Pause();
+	}
 }
 
 SPURecompilerCore::~SPURecompilerCore()
@@ -32,11 +48,12 @@ void SPURecompilerCore::Compile(u16 pos)
 	u64 time0 = 0;
 
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	dis_asm.offset = vm::get_ptr<u8>(CPU.dmac.ls_offset);
 
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);
 
-	Compiler compiler(&runtime);
+	X86Compiler compiler(&runtime);
 	m_enc->compiler = &compiler;
 	compiler.setLogger(&stringLogger);
 
@@ -45,53 +62,53 @@ void SPURecompilerCore::Compile(u16 pos)
 	u32 excess = 0;
 	entry[start].count = 0;
 
-	GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
+	X86GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
 	compiler.setArg(0, cpu_var);
 	compiler.alloc(cpu_var);
 	m_enc->cpu_var = &cpu_var;
 
-	GpVar ls_var(compiler, kVarTypeIntPtr, "ls");
+	X86GpVar ls_var(compiler, kVarTypeIntPtr, "ls");
 	compiler.setArg(1, ls_var);
 	compiler.alloc(ls_var);
 	m_enc->ls_var = &ls_var;
 
-	GpVar imm_var(compiler, kVarTypeIntPtr, "imm");
+	X86GpVar imm_var(compiler, kVarTypeIntPtr, "imm");
 	compiler.setArg(2, imm_var);
 	compiler.alloc(imm_var);
 	m_enc->imm_var = &imm_var;
 
-	GpVar g_imm_var(compiler, kVarTypeIntPtr, "g_imm");
+	X86GpVar g_imm_var(compiler, kVarTypeIntPtr, "g_imm");
 	compiler.setArg(3, g_imm_var);
 	compiler.alloc(g_imm_var);
 	m_enc->g_imm_var = &g_imm_var;
 
-	GpVar pos_var(compiler, kVarTypeUInt32, "pos");
+	X86GpVar pos_var(compiler, kVarTypeUInt32, "pos");
 	m_enc->pos_var = &pos_var;
-	GpVar addr_var(compiler, kVarTypeUInt32, "addr");
+	X86GpVar addr_var(compiler, kVarTypeUInt32, "addr");
 	m_enc->addr = &addr_var;
-	GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
+	X86GpVar qw0_var(compiler, kVarTypeUInt64, "qw0");
 	m_enc->qw0 = &qw0_var;
-	GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
+	X86GpVar qw1_var(compiler, kVarTypeUInt64, "qw1");
 	m_enc->qw1 = &qw1_var;
-	GpVar qw2_var(compiler, kVarTypeUInt64, "qw2");
+	X86GpVar qw2_var(compiler, kVarTypeUInt64, "qw2");
 	m_enc->qw2 = &qw2_var;
 
 	for (u32 i = 0; i < 16; i++)
 	{
-		m_enc->xmm_var[i].data = new XmmVar(compiler, kVarTypeXmm, fmt::Format("reg_%d", i).c_str());
+		m_enc->xmm_var[i].data = new X86XmmVar(compiler, kX86VarTypeXmm, fmt::Format("reg_%d", i).c_str());
 	}
 
 	compiler.xor_(pos_var, pos_var);
 
 	while (true)
 	{
-		const u32 opcode = Memory.Read32(CPU.dmac.ls_offset + pos * 4);
+		const u32 opcode = vm::read32(CPU.dmac.ls_offset + pos * 4);
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
 			const u64 stamp1 = get_system_time();
 			// disasm for logging:
-			dis_asm.dump_pc = CPU.dmac.ls_offset + pos * 4;
+			dis_asm.dump_pc = pos * 4;
 			(*SPU_instr::rrr_list)(&dis_asm, opcode);
 			compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
 			// compile single opcode:
@@ -110,11 +127,11 @@ void SPURecompilerCore::Compile(u16 pos)
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		if (entry[pos].valid == re(opcode))
+		if (entry[pos].valid == re32(opcode))
 		{
 			excess++;
 		}
-		entry[pos].valid = re(opcode);
+		entry[pos].valid = re32(opcode);
 
 		if (fin) break;
 		CPU.PC += 4;
@@ -136,12 +153,27 @@ void SPURecompilerCore::Compile(u16 pos)
 	entry[start].pointer = compiler.make();
 	compiler.setLogger(nullptr); // crashes without it
 
-	wxFile log;
-	log.Open(wxString::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? wxFile::write : wxFile::write_append);
-	log.Write(wxString::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
-	log.Write(wxString(stringLogger.getString()));
-	log.Write(wxString::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
-		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+	rFile log;
+	log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
+	log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
+	log.Write(std::string(stringLogger.getString()));
+	if (!entry[start].pointer)
+	{
+		LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
+		log.Write("========== FAILED ============\n\n");
+		Emu.Pause();
+	}
+	else
+	{
+		log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+			entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+#ifdef _WIN32
+		//if (!RtlAddFunctionTable(&info, 1, (u64)entry[start].pointer))
+		//{
+		//	LOG_ERROR(Log::SPU, "RtlAddFunctionTable() failed");
+		//}
+#endif
+	}
 	log.Close();
 	m_enc->compiler = nullptr;
 	first = false;
@@ -151,37 +183,40 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 {
 	assert(CPU.dmac.ls_offset == address - CPU.PC);
 	const u64 m_offset = CPU.dmac.ls_offset;
-	const u16 pos = (CPU.PC >> 2);
+	const u16 pos = (u16)(CPU.PC >> 2);
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);
-	u32* ls = (u32*)&Memory[m_offset];
-
-	if (!pos)
-	{
-		ConLog.Error("SPURecompilerCore::DecodeMemory(): ls_addr = 0");
-		Emu.Pause();
-		return 0;
-	}
+	u32* ls = vm::get_ptr<u32>(m_offset);
 
 	if (entry[pos].pointer)
 	{
 		// check data (hard way)
 		bool is_valid = true;
-		/*for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
-		{
-			if (entry[i].valid != ls[i])
-			{
-				is_valid = false;
-				break;
-			}
-		}*/
+		//for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
+		//{
+		//	if (entry[i].valid != ls[i])
+		//	{
+		//		is_valid = false;
+		//		break;
+		//	}
+		//}
 		// invalidate if necessary
 		if (!is_valid)
 		{
-			// TODO
-			ConLog.Error("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
-			Emu.Pause();
-			return 0;
+			for (u32 i = 0; i < 0x10000; i++)
+			{
+				if (entry[i].pointer &&
+					i + (u32)entry[i].count > (u32)pos &&
+					i < (u32)pos + (u32)entry[pos].count)
+				{
+					runtime.release(entry[i].pointer);
+#ifdef _WIN32
+					//RtlDeleteFunctionTable(&entry[i].info);
+#endif
+					entry[i].pointer = nullptr;
+				}
+			}
+			//LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
 		}
 	}
 
@@ -192,18 +227,13 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		did_compile = true;
 		if (entry[pos].valid == 0)
 		{
-			ConLog.Error("SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
+			LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
 			Emu.Pause();
 			return 0;
 		}
 	}
 
-	if (!entry[pos].pointer)
-	{
-		ConLog.Error("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): compilation failed", pos * sizeof(u32));
-		Emu.Pause();
-		return 0;
-	}
+	if (!entry[pos].pointer) return 0;
 
 	typedef u32(*Func)(const void* _cpu, const void* _ls, const void* _imm, const void* _g_imm);
 
@@ -217,15 +247,16 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		//if (pos == 0x19c >> 2)
 		{
 			//Emu.Pause();
-			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+			//for (uint i = 0; i < 128; ++i) LOG_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 		}
 	}
 
 	u32 res = pos;
-	res = func(cpu, &Memory[m_offset], imm_table.data(), &g_imm_table);
+	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_imm_table);
 
 	if (res > 0xffff)
 	{
+		CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
 		CPU.Stop();
 		res = ~res;
 	}
@@ -236,7 +267,7 @@ u8 SPURecompilerCore::DecodeMemory(const u64 address)
 		//if (pos == 0x340 >> 2)
 		{
 			//Emu.Pause();
-			//for (uint i = 0; i < 128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
+			//for (uint i = 0; i < 128; ++i) LOG_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].ToString().c_str());
 		}
 	}
 

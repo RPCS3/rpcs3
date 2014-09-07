@@ -1,25 +1,6 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
-#include "Emu/CPU/CPUDecoder.h"
-#include "Utilities/SMutex.h"
 
-struct reservation_struct
-{
-	SMutex mutex; // mutex for updating reservation_owner and data
-	u32 owner; // id of thread that got reservation
-	u32 addr;
-	u32 size;
-	u32 data32;
-	u64 data64;
-	u128 data[8];
-
-	__forceinline void clear()
-	{
-		owner = 0;
-	}
-};
-
-extern reservation_struct reservation;
+#include "Utilities/Thread.h"
 
 enum CPUThreadType :unsigned char
 {
@@ -40,6 +21,8 @@ enum CPUThreadStatus
 	CPUThread_Step,
 };
 
+class CPUDecoder;
+
 class CPUThread : public ThreadBase
 {
 protected:
@@ -54,7 +37,7 @@ protected:
 	bool m_is_step;
 
 	u64 m_stack_addr;
-	u64 m_stack_size;
+	u32 m_stack_size;
 	u64 m_stack_point;
 
 	u64 m_exit_status;
@@ -68,11 +51,11 @@ public:
 	virtual void CloseStack();
 
 	u64 GetStackAddr() const { return m_stack_addr; }
-	u64 GetStackSize() const { return m_stack_size; }
+	u32 GetStackSize() const { return m_stack_size; }
 	virtual u64 GetFreeStackSize() const=0;
 
 	void SetStackAddr(u64 stack_addr) { m_stack_addr = stack_addr; }
-	void SetStackSize(u64 stack_size) { m_stack_size = stack_size; }
+	void SetStackSize(u32 stack_size) { m_stack_size = stack_size; }
 
 	virtual void SetArg(const uint pos, const u64 arg) = 0;
 
@@ -125,6 +108,11 @@ public:
 	u64 cycle;
 	bool m_is_branch;
 
+	bool m_is_interrupt;
+	bool m_has_interrupt;
+	u64 m_interrupt_arg;
+	u64 m_last_syscall;
+
 protected:
 	CPUThread(CPUThreadType type);
 
@@ -133,7 +121,7 @@ public:
 
 	u32 m_wait_thread_id;
 
-	wxCriticalSection m_cs_sync;
+	std::mutex m_cs_sync;
 	bool m_sync_wait;
 	void Wait(bool wait);
 	void Wait(const CPUThread& thr);
@@ -144,7 +132,7 @@ public:
 	{
 		while(func(ThreadStatus()))
 		{
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
 
@@ -157,16 +145,16 @@ public:
 
 	void SetError(const u32 error);
 
-	static wxArrayString ErrorToString(const u32 error);
-	wxArrayString ErrorToString() { return ErrorToString(m_error); }
+	static std::vector<std::string> ErrorToString(const u32 error);
+	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsOk()		const { return m_error == 0; }
-	bool IsRunning()	const { return m_status == Running; }
-	bool IsPaused()		const { return m_status == Paused; }
-	bool IsStopped()	const { return m_status == Stopped; }
+	bool IsOk()	const { return m_error == 0; }
+	bool IsRunning() const;
+	bool IsPaused() const;
+	bool IsStopped() const;
 
 	bool IsJoinable() const { return m_joinable; }
-	bool IsJoining()  const { return m_joining; }
+	bool IsJoining() const { return m_joining; }
 	void SetJoinable(bool joinable) { m_joinable = joinable; }
 	void SetJoining(bool joining) { m_joining = joining; }
 

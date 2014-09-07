@@ -1,9 +1,12 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/SC_FUNC.h"
 
-void cellSysmodule_init();
-Module cellSysmodule("cellSysmodule", cellSysmodule_init);
+//void cellSysmodule_init();
+//Module cellSysmodule("cellSysmodule", cellSysmodule_init);
+Module *cellSysmodule = nullptr;
 
 enum
 {
@@ -140,19 +143,19 @@ const char *getModuleName(int id) {
 
 int cellSysmoduleInitialize()
 {
-	cellSysmodule.Log("cellSysmoduleInitialize()");
+	cellSysmodule->Log("cellSysmoduleInitialize()");
 	return CELL_OK;
 }
 
 int cellSysmoduleFinalize()
 {
-	cellSysmodule.Log("cellSysmoduleFinalize()");
+	cellSysmodule->Log("cellSysmoduleFinalize()");
 	return CELL_OK;
 }
 
 int cellSysmoduleSetMemcontainer(u32 ct_id)
 {
-	cellSysmodule.Warning("TODO: cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
+	cellSysmodule->Todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
@@ -160,29 +163,27 @@ int cellSysmoduleLoadModule(u16 id)
 {
 	if (id == 0xf054)
 	{
-		cellSysmodule.Error("cellSysmoduleLoadModule: TODO: CELL_SYSMODULE_LIBATRAC3MULTI");
+		cellSysmodule->Todo("cellSysmoduleLoadModule: CELL_SYSMODULE_LIBATRAC3MULTI");
 	}
-	cellSysmodule.Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
-	Module* m = GetModuleById(id);
+	cellSysmodule->Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
 
-	if(!m)
+	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
+	{
+		// CELL_SYSMODULE_ERROR_DUPLICATED shouldn't be returned (it breaks some games)
+		// If some game requires it yet, there probably should be a configurable hack or something.
+		m->Load();
+		return CELL_OK;
+	}
+	else
 	{
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
-
-	if(m->IsLoaded() && id != 0x10) // CELL_SYSMODULE_GCM_SYS and CELL_SYSMODULE_GCM share the same ID
-	{
-		return CELL_SYSMODULE_ERROR_DUPLICATED;
-	}
-
-	m->Load();
-	return CELL_OK;
 }
 
 int cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleUnloadModule(%s)", getModuleName(id));
-	Module* m = GetModuleById(id);
+	cellSysmodule->Warning("cellSysmoduleUnloadModule(%s)", getModuleName(id));
+	Module* m = Emu.GetModuleManager().GetModuleById(id);
 
 	if(!m)
 	{
@@ -200,8 +201,8 @@ int cellSysmoduleUnloadModule(u16 id)
 
 int cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleIsLoaded(%s)", getModuleName(id));
-	Module* m = GetModuleById(id);
+	cellSysmodule->Warning("cellSysmoduleIsLoaded(%s)", getModuleName(id));
+	Module* m = Emu.GetModuleManager().GetModuleById(id);
 
 	if(!m)
 	{
@@ -213,10 +214,10 @@ int cellSysmoduleIsLoaded(u16 id)
 
 void cellSysmodule_init()
 {
-	cellSysmodule.AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
-	cellSysmodule.AddFunc(0x96c07adf, cellSysmoduleFinalize);
-	cellSysmodule.AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);
-	cellSysmodule.AddFunc(0x32267a31, cellSysmoduleLoadModule);
-	cellSysmodule.AddFunc(0x112a5ee9, cellSysmoduleUnloadModule);
-	cellSysmodule.AddFunc(0x5a59e258, cellSysmoduleIsLoaded);
+	cellSysmodule->AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
+	cellSysmodule->AddFunc(0x96c07adf, cellSysmoduleFinalize);
+	cellSysmodule->AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);
+	cellSysmodule->AddFunc(0x32267a31, cellSysmoduleLoadModule);
+	cellSysmodule->AddFunc(0x112a5ee9, cellSysmoduleUnloadModule);
+	cellSysmodule->AddFunc(0x5a59e258, cellSysmoduleIsLoaded);
 }

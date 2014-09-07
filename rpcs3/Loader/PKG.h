@@ -1,12 +1,13 @@
 #pragma once
-#include "Loader.h"
+
+class rFile;
 
 class PKGLoader
 {
-	wxFile& pkg_f;
+	rFile& pkg_f;
 
 public:
-	PKGLoader(wxFile& f);
+	PKGLoader(rFile& f);
 	virtual bool Install(std::string dest);
 	virtual bool Close();
 };

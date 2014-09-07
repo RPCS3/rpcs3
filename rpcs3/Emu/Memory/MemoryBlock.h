@@ -2,6 +2,8 @@
 
 #define PAGE_4K(x) (x + 4095) & ~(4095)
 
+//#include <emmintrin.h>
+
 struct MemInfo
 {
 	u64 addr;
@@ -22,28 +24,26 @@ struct MemBlockInfo : public MemInfo
 {
 	void *mem;
 
-	MemBlockInfo(u64 _addr, u32 _size)
-		: MemInfo(_addr, PAGE_4K(_size))
-		, mem(_aligned_malloc(PAGE_4K(_size), 128))
-	{
-		if(!mem)
-		{
-			ConLog.Error("Not enough free memory.");
-			assert(0);
-		}
-		memset(mem, 0, size);
-	}
+	MemBlockInfo(u64 _addr, u32 _size);
+
+	void Free();
 
 	MemBlockInfo(MemBlockInfo &other) = delete;
-	MemBlockInfo(MemBlockInfo &&other) : MemInfo(other.addr,other.size) ,mem(other.mem)
+
+	MemBlockInfo(MemBlockInfo &&other)
+		: MemInfo(other.addr,other.size)
+		, mem(other.mem)
 	{
 		other.mem = nullptr;
 	}
+
 	MemBlockInfo& operator =(MemBlockInfo &other) = delete;
-	MemBlockInfo& operator =(MemBlockInfo &&other){
+
+	MemBlockInfo& operator =(MemBlockInfo &&other)
+	{
+		this->Free();
 		this->addr = other.addr;
 		this->size = other.size;
-		if (this->mem) _aligned_free(mem);
 		this->mem = other.mem;
 		other.mem = nullptr;
 		return *this;
@@ -51,7 +51,7 @@ struct MemBlockInfo : public MemInfo
 
 	~MemBlockInfo()
 	{
-		if(mem) _aligned_free(mem);
+		Free();
 		mem = nullptr;
 	}
 };
@@ -78,50 +78,26 @@ class MemoryBlock
 protected:
 	u8* mem;
 	u64 range_start;
-	u64 range_size;
+	u32 range_size;
 
 public:
 	MemoryBlock();
 	virtual ~MemoryBlock();
 
 private:
+	MemBlockInfo* mem_inf;
 	void Init();
+	void Free();
 	void InitMemory();
 
 public:
 	virtual void Delete();
 
-	virtual bool IsNULL() { return false; }
-	virtual bool IsMirror() { return false; }
-
 	u64 FixAddr(const u64 addr) const;
-
-	bool GetMemFromAddr(void* dst, const u64 addr, const u32 size);
-	bool SetMemFromAddr(void* src, const u64 addr, const u32 size);
-	bool GetMemFFromAddr(void* dst, const u64 addr);
-	u8* GetMemFromAddr(const u64 addr);
 
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
 	virtual bool IsLocked(const u64 addr) { return false; }
-
-	template <typename T>
-	__forceinline const T FastRead(const u64 addr) const;
-
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
-
-	template <typename T>
-	__forceinline void FastWrite(const u64 addr, const T value);
-
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
 
 	const u64 GetStartAddr() const { return range_start; }
 	const u64 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
@@ -138,74 +114,9 @@ public:
 	virtual bool Unlock(u64 addr, u32 size) { return false; }
 };
 
-class MemoryBlockLE : public MemoryBlock
+class DynamicMemoryBlockBase : public MemoryBlock
 {
-public:
-	virtual bool Read8(const u64 addr, u8* value) override;
-	virtual bool Read16(const u64 addr, u16* value) override;
-	virtual bool Read32(const u64 addr, u32* value) override;
-	virtual bool Read64(const u64 addr, u64* value) override;
-	virtual bool Read128(const u64 addr, u128* value) override;
-
-	virtual bool Write8(const u64 addr, const u8 value) override;
-	virtual bool Write16(const u64 addr, const u16 value) override;
-	virtual bool Write32(const u64 addr, const u32 value) override;
-	virtual bool Write64(const u64 addr, const u64 value) override;
-	virtual bool Write128(const u64 addr, const u128 value) override;
-};
-
-class MemoryMirror : public MemoryBlock
-{
-public:
-	virtual bool IsMirror() { return true; }
-
-	virtual MemoryBlock* SetRange(const u64 start, const u32 size)
-	{
-		range_start = start;
-		range_size = size;
-
-		return this;
-	}
-
-	void SetMemory(u8* memory)
-	{
-		mem = memory;
-	}
-
-	MemoryBlock* SetRange(u8* memory, const u64 start, const u32 size)
-	{
-		SetMemory(memory);
-		return SetRange(start, size);
-	}
-};
-
-class NullMemoryBlock : public MemoryBlock
-{
-public:
-	virtual bool IsNULL() { return true; }
-	virtual bool IsMyAddress(const u64 addr) { return true; }
-
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
-
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
-};
-
-template<typename PT>
-class DynamicMemoryBlockBase : public PT
-{
-	mutable std::mutex m_lock;
 	std::vector<MemBlockInfo> m_allocated; // allocation info
-	std::vector<u8*> m_pages; // real addresses of every 4096 byte pages (array size should be fixed)
-	std::vector<u8*> m_locked; // locked pages should be moved here
-	
 	u32 m_max_size;
 
 public:
@@ -269,28 +180,24 @@ public:
 	// Return the total amount of reserved memory
 	virtual u32 GetReservedAmount();
 
-	virtual bool Read8(const u64 addr, u8* value);
-	virtual bool Read16(const u64 addr, u16* value);
-	virtual bool Read32(const u64 addr, u32* value);
-	virtual bool Read64(const u64 addr, u64* value);
-	virtual bool Read128(const u64 addr, u128* value);
+	bool Read32(const u64 addr, u32* value);
 
-	virtual bool Write8(const u64 addr, const u8 value);
-	virtual bool Write16(const u64 addr, const u16 value);
-	virtual bool Write32(const u64 addr, const u32 value);
-	virtual bool Write64(const u64 addr, const u64 value);
-	virtual bool Write128(const u64 addr, const u128 value);
+	bool Write32(const u64 addr, const u32 value);
 
 	// try to get the real address given a mapped address
 	// return true for success
 	bool getRealAddr(u64 addr, u64& result);
 
+	u64 RealAddr(u64 addr)
+	{
+		u64 realAddr = 0;
+		getRealAddr(addr, realAddr);
+		return realAddr;
+	}
+
 	// return the mapped address given a real address, if not mapped return 0
 	u64 getMappedAddress(u64 realAddress);
 };
 
-#include "DynamicMemoryBlockBase.h"
-
-typedef DynamicMemoryBlockBase<MemoryBlock> DynamicMemoryBlock;
-typedef DynamicMemoryBlockBase<MemoryBlockLE> DynamicMemoryBlockLE;
+typedef DynamicMemoryBlockBase DynamicMemoryBlock;
 

@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "VFS.h"
+#include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
+#include "Ini.h"
+
+#undef CreateFile // TODO: what's wrong with it?
 
 int sort_devices(const void* _a, const void* _b)
 {
@@ -241,9 +245,9 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 	u32 max_eq;
 	s32 max_i=-1;
 
-	wxFileName file_path(fmt::FromUTF8(local_path));
+	rFileName file_path(local_path);
 	file_path.Normalize();
-	std::string mormalized_path = fmt::ToUTF8(file_path.GetFullPath());
+	std::string mormalized_path = file_path.GetFullPath();
 
 	for(u32 i=0; i<m_devices.size(); ++i)
 	{
@@ -287,10 +291,11 @@ void VFS::Init(const std::string& path)
 			continue;
 		}
 		
-		wxString mpath = entry.path;
-		mpath.Replace("$(EmulatorDir)", wxGetCwd());
-		mpath.Replace("$(GameDir)", fmt::FromUTF8(vfsDevice::GetRoot(path)));
-		Mount(entry.mount, fmt::ToUTF8(mpath), dev);
+		std::string mpath = entry.path;
+		// TODO: This shouldn't use current dir
+		fmt::Replace(mpath,"$(EmulatorDir)", ".");
+		fmt::Replace(mpath,"$(GameDir)", vfsDevice::GetRoot(path));
+		Mount(entry.mount, mpath, dev);
 	}
 }
 
@@ -323,8 +328,8 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	}
 	else
 	{
-		count = res.size();
-		entries_count.SaveValue(res.size());
+		count = (int)res.size();
+		entries_count.SaveValue(count);
 	}
 
 	for(int i=0; i<count; ++i)

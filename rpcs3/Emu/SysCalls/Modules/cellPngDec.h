@@ -49,6 +49,7 @@ enum CellPngDecOutputMode
 	CELL_PNGDEC_BOTTOM_TO_TOP = 1,
 };
 
+
 // Structs
 struct CellPngDecDataOutInfo
 {
@@ -77,7 +78,7 @@ struct CellPngDecInfo
 struct CellPngDecSrc
 {
 	be_t<u32> srcSelect;          // CellPngDecStreamSrcSel
-	be_t<u32> fileName_addr;      // const char*
+	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	be_t<u32> streamPtr;
@@ -108,7 +109,59 @@ struct CellPngDecOutParam
 	be_t<u32> useMemorySpace;
 };
 
-//Custom structs
+struct CellPngDecStrmInfo
+{
+	be_t<u32> decodedStrmSize;
+};
+
+struct CellPngDecStrmParam
+{
+	be_t<u32> strmPtr;
+	be_t<u32> strmSize;
+};
+
+struct CellPngDecCbCtrlStrm
+{
+	vm::bptr<void(*)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, u32 cbCtrlStrmArg)> cbCtrlStrmFunc;
+	be_t<u32> cbCtrlStrmArg;
+};
+
+struct CellPngDecCbCtrlDisp
+{
+	be_t<u32> cbCtrlDispFunc_addr;
+	be_t<u32> cbCtrlDispArg;
+};
+
+struct CellPngDecDispParam
+{
+	be_t<u32> nextOutputImage_addr;
+};
+
+struct CellPngDecExtInfo
+{
+	be_t<u64> reserved;
+};
+
+struct CellPngDecExtInParam
+{
+	be_t<u32> bufferMode; // CellPngDecBufferMode
+	be_t<u32> outputCounts;
+	be_t<u32> spuMode; // CellPngDecSpuMode
+};
+
+struct CellPngDecExtOutParam
+{
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputHeight;
+};
+
+struct CellPngDecOpnParam
+{
+	be_t<u32> selectChunk;
+};
+
+
+// Custom structs
 struct CellPngDecSubHandle
 {
 	be_t<u32> fd;

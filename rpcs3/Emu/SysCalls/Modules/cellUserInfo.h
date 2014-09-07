@@ -42,7 +42,7 @@ struct CellUserInfoListSet
 	be_t<u32> title_addr; // (char*)
 	be_t<u32> focus;
 	be_t<u32> fixedListNum;
-	mem_ptr_t<CellUserInfoUserList> fixedList;
+	vm::ptr<CellUserInfoUserList> fixedList;
 	be_t<u32> reserved_addr; // (void*)
 };
 

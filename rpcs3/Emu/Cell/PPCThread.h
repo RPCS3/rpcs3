@@ -1,7 +1,5 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/Cell/PPCDecoder.h"
 
 class PPCThread : public CPUThread
 {

@@ -1,13 +1,15 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
-#include "cellGifDec.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
+#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "cellGifDec.h"
 
-void cellGifDec_init();
-Module cellGifDec(0xf010, cellGifDec_init);
+//void cellGifDec_init();
+//Module cellGifDec(0xf010, cellGifDec_init);
+Module *cellGifDec = nullptr;
 
 int cellGifDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -21,65 +23,49 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, mem32_t subHandle, const mem_ptr_t<CellGifDecSrc> src, mem_ptr_t<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
-	if (!subHandle.IsGood() || !src.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
-	/*
-	vfsStream* stream;
-
-	switch(src->srcSelect)
-	{
-	case CELL_GIFDEC_FILE:
-		stream = Emu.GetVFS().Open(src->fileName.GetString(), vfsRead);
-		stream->Seek(src->fileOffset);
-		src->fileSize;
-	break;
-
-	case CELL_GIFDEC_BUFFER:
-		if(src->streamSize < 5)
-			return CELL_GIFDEC_ERROR_ARG;
-
-		stream = new vfsStreamMemory(src->streamPtr.GetAddr(), src->streamSize);
-	break;
-
-	default:
-		return CELL_GIFDEC_ERROR_ARG;
-	}
-
-	if(!stream->IsOpened())
-	{
-		return CELL_GIFDEC_ERROR_OPEN_FILE;
-	}
-	*/
+	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
 	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
+	current_subHandle->fd = 0;
+	current_subHandle->src = *src;
 
-	// Get file descriptor
-	MemoryAllocator<be_t<u32>> fd;
-	int ret = cellFsOpen(src->fileName, 0, fd, 0, 0);
-	current_subHandle->fd = fd->ToLE();
-	if(ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
+	switch(src->srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		current_subHandle->fileSize = src->streamSize.ToLE();
+		break;
 
-	// Get size of file
-	MemoryAllocator<CellFsStat> sb; // Alloc a CellFsStat struct
-	ret = cellFsFstat(current_subHandle->fd, sb.GetAddr());
-	if(ret != CELL_OK) return ret;
-	current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
+	case se32(CELL_GIFDEC_FILE):
+		// Get file descriptor
+		vm::var<be_t<u32>> fd;
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		current_subHandle->fd = fd->ToLE();
+		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
-	// From now, every u32 subHandle argument is a pointer to a CellPngDecSubHandle struct.
-	subHandle = cellGifDec.GetNewId(current_subHandle);
+		// Get size of file
+		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
+		ret = cellFsFstat(current_subHandle->fd, sb);
+		if (ret != CELL_OK) return ret;
+		current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
+		break;
+	}
+
+	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
+	*subHandle = cellGifDec->GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
 
-int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo> info)
+int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> info)
 {
-	if (!info.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
+		mainHandle, subHandle, info.addr());
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -87,11 +73,20 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	CellGifDecInfo& current_info = subHandle_data->info;
 	
 	//Write the header to buffer
-	MemoryAllocator<u8> buffer(13); // Alloc buffer for GIF header
-	MemoryAllocator<be_t<u64>> pos, nread;
+	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
+	vm::var<be_t<u64>> pos, nread;
 
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, buffer.GetAddr(), buffer.GetSize(), nread);
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
+		break;
+
+	case se32(CELL_GIFDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
+		break;
+	}
 
 	if (*buffer.To<be_t<u32>>(0) != 0x47494638 ||
 		(*buffer.To<u16>(4) != 0x6139 && *buffer.To<u16>(4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
@@ -114,13 +109,13 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, mem_ptr_t<CellGifDecInfo
 	return CELL_OK;
 }
 
-int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGifDecInParam> inParam, mem_ptr_t<CellGifDecOutParam> outParam)
+int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
 {
-	if (!inParam.IsGood() || !outParam.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	CellGifDecInfo& current_info = subHandle_data->info;
@@ -144,15 +139,15 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, const mem_ptr_t<CellGi
 	return CELL_OK;
 }
 
-int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const mem_ptr_t<CellGifDecDataCtrlParam> dataCtrlParam, mem_ptr_t<CellGifDecDataOutInfo> dataOutInfo)
+int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
-	if (!data.IsGood() || !dataCtrlParam.IsGood() || !dataOutInfo.IsGood())
-		return CELL_GIFDEC_ERROR_ARG;
+	cellGifDec->Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -160,32 +155,95 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 	const CellGifDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the GIF file to a buffer
-	MemoryAllocator<unsigned char> gif(fileSize);
-	MemoryAllocator<u64> pos, nread;
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-	cellFsRead(fd, gif.GetAddr(), gif.GetSize(), nread);
+	vm::var<unsigned char[]> gif((u32)fileSize);
+	vm::var<be_t<u64>> pos, nread;
+
+	switch(subHandle_data->src.srcSelect.ToBE())
+	{
+	case se32(CELL_GIFDEC_BUFFER):
+		memmove(gif.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), gif.size());
+		break;
+
+	case se32(CELL_GIFDEC_FILE):
+		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
+		cellFsRead(fd, vm::ptr<void>::make(gif.addr()), gif.size(), nread);
+		break;
+	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	std::shared_ptr<unsigned char> image(stbi_load_from_memory(gif, fileSize, &width, &height, &actual_components, 4));
-	if (!image)	return CELL_GIFDEC_ERROR_STREAM_FORMAT;
+	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
+		(
+			stbi_load_from_memory(gif.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
+			&::free
+		);
 
-	uint image_size = width * height * 4;
+	if (!image)
+		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
+
+	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
+	const char nComponents = 4;
+	uint image_size = width * height * nComponents;
 
 	switch((u32)current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
-		Memory.CopyFromReal(data.GetAddr(), image.get(), image_size);
+	{
+		if (bytesPerLine > width * nComponents) // Check if we need padding
+		{
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * i;
+				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
+			}
+		}
+		else
+		{
+			memcpy(data.get_ptr(), image.get(), image_size);
+		}
+	}
 	break;
 
 	case CELL_GIFDEC_ARGB:
-		for(uint i = 0; i < image_size; i+=4)
+	{
+		if (bytesPerLine > width * nComponents) // Check if we need padding
 		{
-			data += image.get()[i+3];
-			data += image.get()[i+0];
-			data += image.get()[i+1];
-			data += image.get()[i+2];
+			//TODO: find out if we can't do padding without an extra copy
+			const int linesize = std::min(bytesPerLine, width * nComponents);
+			char *output = (char *) malloc(linesize);
+			for (int i = 0; i < height; i++)
+			{
+				const int dstOffset = i * bytesPerLine;
+				const int srcOffset = width * nComponents * i;
+				for (int j = 0; j < linesize; j += nComponents)
+				{
+					output[j + 0] = image.get()[srcOffset + j + 3];
+					output[j + 1] = image.get()[srcOffset + j + 0];
+					output[j + 2] = image.get()[srcOffset + j + 1];
+					output[j + 3] = image.get()[srcOffset + j + 2];
+				}
+				memcpy(&data[dstOffset], output, linesize);
+			}
+			free(output);
 		}
+		else
+		{
+			uint* img = (uint*)new char[image_size];
+			uint* source_current = (uint*)&(image.get()[0]);
+			uint* dest_current = img;
+			for (uint i = 0; i < image_size / nComponents; i++) 
+			{
+				uint val = *source_current;
+				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
+				source_current++;
+				dest_current++;
+			}
+			memcpy(data.get_ptr(), img, image_size); 
+			delete[] img;
+		}
+	}
 	break;
 
 	default:
@@ -200,12 +258,15 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, mem8_ptr_t data, const m
 
 int cellGifDecClose(u32 mainHandle, u32 subHandle)
 {
+	cellGifDec->Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)",
+		mainHandle, subHandle);
+
 	CellGifDecSubHandle* subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	cellGifDec->RemoveId(subHandle);
 
 	return CELL_OK;
 }
@@ -218,17 +279,17 @@ int cellGifDecDestroy(u32 mainHandle)
 
 void cellGifDec_init()
 {
-	cellGifDec.AddFunc(0xb60d42a5, cellGifDecCreate);
-	cellGifDec.AddFunc(0x4711cb7f, cellGifDecExtCreate);
-	cellGifDec.AddFunc(0x75745079, cellGifDecOpen);
-	cellGifDec.AddFunc(0xf0da95de, cellGifDecReadHeader);
-	cellGifDec.AddFunc(0x41a90dc4, cellGifDecSetParameter);
-	cellGifDec.AddFunc(0x44b1bc61, cellGifDecDecodeData);
-	cellGifDec.AddFunc(0x116a7da9, cellGifDecClose);
-	cellGifDec.AddFunc(0xe74b2cb1, cellGifDecDestroy);
+	cellGifDec->AddFunc(0xb60d42a5, cellGifDecCreate);
+	cellGifDec->AddFunc(0x4711cb7f, cellGifDecExtCreate);
+	cellGifDec->AddFunc(0x75745079, cellGifDecOpen);
+	cellGifDec->AddFunc(0xf0da95de, cellGifDecReadHeader);
+	cellGifDec->AddFunc(0x41a90dc4, cellGifDecSetParameter);
+	cellGifDec->AddFunc(0x44b1bc61, cellGifDecDecodeData);
+	cellGifDec->AddFunc(0x116a7da9, cellGifDecClose);
+	cellGifDec->AddFunc(0xe74b2cb1, cellGifDecDestroy);
 	
-	/*cellGifDec.AddFunc(0x17fb83c1, cellGifDecExtOpen);
-	cellGifDec.AddFunc(0xe53f91f2, cellGifDecExtReadHeader);
-	cellGifDec.AddFunc(0x95cae771, cellGifDecExtSetParameter);
-	cellGifDec.AddFunc(0x02e7e03e, cellGifDecExtDecodeData);*/
+	/*cellGifDec->AddFunc(0x17fb83c1, cellGifDecExtOpen);
+	cellGifDec->AddFunc(0xe53f91f2, cellGifDecExtReadHeader);
+	cellGifDec->AddFunc(0x95cae771, cellGifDecExtSetParameter);
+	cellGifDec->AddFunc(0x02e7e03e, cellGifDecExtDecodeData);*/
 }

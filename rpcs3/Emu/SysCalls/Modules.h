@@ -1,7 +1,8 @@
 #pragma once
-
-#define declCPU PPUThread& CPU = GetCurrentPPUThread
-
+#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/IdManager.h"
+#include "ErrorCodes.h"
+#include "LogBase.h"
 
 //TODO
 struct ModuleFunc
@@ -17,7 +18,7 @@ struct ModuleFunc
 
 	~ModuleFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
 
@@ -38,19 +39,22 @@ struct SFunc
 
 	~SFunc()
 	{
-		safe_delete(func);
+		delete func;
 	}
 };
 
-extern std::vector<SFunc *> g_static_funcs_list;
+class StaticFuncManager;
 
-class Module
+class Module : public LogBase
 {
 	std::string m_name;
-	const u16 m_id;
+	u16 m_id;
 	bool m_is_loaded;
 	void (*m_load_func)();
 	void (*m_unload_func)();
+
+	IdManager& GetIdManager() const;
+	void PushNewFuncSub(SFunc* func);
 
 public:
 	std::vector<ModuleFunc*> m_funcs_list;
@@ -58,6 +62,12 @@ public:
 	Module(u16 id, const char* name);
 	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
 	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+
+	Module(Module &other) = delete;
+	Module(Module &&other);
+
+	Module &operator =(Module &other) = delete;
+	Module &operator =(Module &&other);
 
 	~Module();
 
@@ -70,20 +80,10 @@ public:
 	bool IsLoaded() const;
 
 	u16 GetID() const;
-	std::string GetName() const;
+	virtual const std::string& GetName() const override;
 	void SetName(const std::string& name);
 
 public:
-	//TODO: use variadic function templates here to be able to use string references and forward all arguments without copying
-	void Log(const u32 id, std::string fmt, ...);
-	void Log(std::string fmt, ...);
-
-	void Warning(const u32 id, std::string fmt, ...);
-	void Warning(std::string fmt, ...);
-
-	void Error(const u32 id, std::string fmt, ...);
-	void Error(std::string fmt, ...);
-
 	bool CheckID(u32 id) const;
 	template<typename T> bool CheckId(u32 id, T*& data)
 	{
@@ -96,29 +96,33 @@ public:
 		return true;
 	}
 
-	template<typename T> bool CheckId(u32 id, T*& data, u32& attr)
+	template<typename T> bool CheckId(u32 id, T*& data, IDType& type)
 	{
 		ID* id_data;
 
 		if(!CheckID(id, id_data)) return false;
 
 		data = id_data->m_data->get<T>();
-		attr = id_data->m_attr;
+		type = id_data->m_type;
 
 		return true;
 	}
 	bool CheckID(u32 id, ID*& _id) const;
 
 	template<typename T>
-	u32 GetNewId(T* data, u8 flags = 0)
+	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
 	{
-		return Emu.GetIdManager().GetNewID<T>(GetName(), data, flags);
+		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}
 
-	template<typename T> __forceinline void AddFunc(u32 id, T func);
+	bool RemoveId(u32 id);
 
+	template<typename T> __forceinline void AddFunc(u32 id, T func);
+	template<typename T> __forceinline void AddFunc(const char* name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
+
+u32 getFunctionId(const char* name);
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
@@ -127,11 +131,16 @@ __forceinline void Module::AddFunc(u32 id, T func)
 }
 
 template<typename T>
+__forceinline void Module::AddFunc(const char* name, T func)
+{
+	AddFunc(getFunctionId(name), func);
+}
+
+template<typename T>
 __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T func)
 {
 	if (!ops[0]) return;
 
-	//TODO: track down where this is supposed to be deleted
 	SFunc* sf = new SFunc;
 	sf->ptr = (void *)func;
 	sf->func = bind_func(func);
@@ -140,25 +149,29 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	sf->found = 0;
 
 	// TODO: check for self-inclusions, use CRC
-
 	for (u32 i = 0; ops[i]; i++)
 	{
 		SFuncOp op;
 		op.mask = ops[i] >> 32;
-		op.crc = ops[i];
+		op.crc = (u32)ops[i];
 		if (op.mask) op.crc &= op.mask;
-		op.mask = re(op.mask);
-		op.crc = re(op.crc);
+		op.mask = re32(op.mask);
+		op.crc = re32(op.crc);
 		sf->ops.push_back(op);
 	}
-	g_static_funcs_list.push_back(sf);
+	PushNewFuncSub(sf);
 }
 
-bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 num);
-bool UnloadFunc(u32 id);
-void UnloadModules();
-u32 GetFuncNumById(u32 id);
-Module* GetModuleByName(const std::string& name);
-Module* GetModuleById(u16 id);
+void fix_import(Module* module, u32 func, u32 addr);
 
+#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
+
+void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
+
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
+	module->AddFuncSub(group, name ## _table, #name, name)
+
+#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)
+
+#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)

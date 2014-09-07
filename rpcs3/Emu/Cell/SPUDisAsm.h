@@ -2,9 +2,69 @@
 
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Cell/PPCDisAsm.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Gui/DisAsmFrame.h"
-#include "Emu/Memory/Memory.h"
+
+static const char* spu_reg_name[128] =
+{
+	"$LR", "$SP", "$2", "$3", "$4", "$5", "$6", "$7",
+	"$8", "$9", "$10", "$11", "$12", "$13", "$14", "$15",
+	"$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23",
+	"$24", "$25", "$26", "$27", "$28", "$29", "$30", "$31",
+	"$32", "$33", "$34", "$35", "$36", "$37", "$38", "$39",
+	"$40", "$41", "$42", "$43", "$44", "$45", "$46", "$47",
+	"$48", "$49", "$50", "$51", "$52", "$53", "$54", "$55",
+	"$56", "$57", "$58", "$59", "$60", "$61", "$62", "$63",
+	"$64", "$65", "$66", "$67", "$68", "$69", "$70", "$71",
+	"$72", "$73", "$74", "$75", "$76", "$77", "$78", "$79",
+	"$80", "$81", "$82", "$83", "$84", "$85", "$86", "$87",
+	"$88", "$89", "$90", "$91", "$92", "$93", "$94", "$95",
+	"$96", "$97", "$98", "$99", "$100", "$101", "$102", "$103",
+	"$104", "$105", "$106", "$107", "$108", "$109", "$110", "$111",
+	"$112", "$113", "$114", "$115", "$116", "$117", "$118", "$119",
+	"$120", "$121", "$122", "$123", "$124", "$125", "$126", "$127",
+};
+
+static const char* spu_spreg_name[128] =
+{
+	"$sp0", "$sp1", "$sp2", "$sp3", "$sp4", "$sp5", "$sp6", "$sp7",
+	"$sp8", "$sp9", "$sp10", "$sp11", "$sp12", "$sp13", "$sp14", "$sp15",
+	"$sp16", "$sp17", "$sp18", "$sp19", "$sp20", "$sp21", "$sp22", "$sp23",
+	"$sp24", "$sp25", "$sp26", "$sp27", "$sp28", "$sp29", "$sp30", "$sp31",
+	"$sp32", "$sp33", "$sp34", "$sp35", "$sp36", "$sp37", "$sp38", "$sp39",
+	"$sp40", "$sp41", "$sp42", "$sp43", "$sp44", "$sp45", "$sp46", "$sp47",
+	"$sp48", "$sp49", "$sp50", "$sp51", "$sp52", "$sp53", "$sp54", "$sp55",
+	"$sp56", "$sp57", "$sp58", "$sp59", "$sp60", "$sp61", "$sp62", "$sp63",
+	"$sp64", "$sp65", "$sp66", "$sp67", "$sp68", "$sp69", "$sp70", "$sp71",
+	"$sp72", "$sp73", "$sp74", "$sp75", "$sp76", "$sp77", "$sp78", "$sp79",
+	"$sp80", "$sp81", "$sp82", "$sp83", "$sp84", "$sp85", "$sp86", "$sp87",
+	"$sp88", "$sp89", "$sp90", "$sp91", "$sp92", "$sp93", "$sp94", "$sp95",
+	"$sp96", "$sp97", "$sp98", "$sp99", "$sp100", "$sp101", "$sp102", "$sp103",
+	"$sp104", "$sp105", "$sp106", "$sp107", "$sp108", "$sp109", "$sp110", "$sp111",
+	"$sp112", "$sp113", "$sp114", "$sp115", "$sp116", "$sp117", "$sp118", "$sp119",
+	"$sp120", "$sp121", "$sp122", "$sp123", "$sp124", "$sp125", "$sp126", "$sp127",
+};
+
+static const char* spu_ch_name[128] =
+{
+	"$SPU_RdEventStat", "$SPU_WrEventMask", "$SPU_WrEventAck", "$SPU_RdSigNotify1",
+	"$SPU_RdSigNotify2", "$ch5", "$ch6", "$SPU_WrDec", "$SPU_RdDec",
+	"$MFC_WrMSSyncReq", "$ch10", "$SPU_RdEventMask", "$MFC_RdTagMask", "$SPU_RdMachStat",
+	"$SPU_WrSRR0", "$SPU_RdSRR0", "$MFC_LSA", "$MFC_EAH", "$MFC_EAL", "$MFC_Size",
+	"$MFC_TagID", "$MFC_Cmd", "$MFC_WrTagMask", "$MFC_WrTagUpdate", "$MFC_RdTagStat",
+	"$MFC_RdListStallStat", "$MFC_WrListStallAck", "$MFC_RdAtomicStat",
+	"$SPU_WrOutMbox", "$SPU_RdInMbox", "$SPU_WrOutIntrMbox", "$ch31", "$ch32",
+	"$ch33", "$ch34", "$ch35", "$ch36", "$ch37", "$ch38", "$ch39", "$ch40",
+	"$ch41", "$ch42", "$ch43", "$ch44", "$ch45", "$ch46", "$ch47", "$ch48",
+	"$ch49", "$ch50", "$ch51", "$ch52", "$ch53", "$ch54", "$ch55", "$ch56",
+	"$ch57", "$ch58", "$ch59", "$ch60", "$ch61", "$ch62", "$ch63", "$ch64",
+	"$ch65", "$ch66", "$ch67", "$ch68", "$ch69", "$ch70", "$ch71", "$ch72",
+	"$ch73", "$ch74", "$ch75", "$ch76", "$ch77", "$ch78", "$ch79", "$ch80",
+	"$ch81", "$ch82", "$ch83", "$ch84", "$ch85", "$ch86", "$ch87", "$ch88",
+	"$ch89", "$ch90", "$ch91", "$ch92", "$ch93", "$ch94", "$ch95", "$ch96",
+	"$ch97", "$ch98", "$ch99", "$ch100", "$ch101", "$ch102", "$ch103", "$ch104",
+	"$ch105", "$ch106", "$ch107", "$ch108", "$ch109", "$ch110", "$ch111", "$ch112",
+	"$ch113", "$ch114", "$ch115", "$ch116", "$ch117", "$ch118", "$ch119", "$ch120",
+	"$ch121", "$ch122", "$ch123", "$ch124", "$ch125", "$ch126", "$ch127",
+};
 
 class SPUDisAsm 
 	: public SPUOpcodes
@@ -28,7 +88,7 @@ private:
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(max<int>(10 - (int)op.length(), 0),' ');
+		op.append(std::max<int>(10 - (int)op.length(), 0),' ');
 		return op;
 	}
 	void DisAsm(const char* op)
@@ -94,7 +154,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mfspr", spu_reg_name[rt], spu_reg_name[sa]);   // Are SPR mapped on the GPR or are there 128 additional registers ? Yes, there are also 128 SPR making 256 registers total
+		DisAsm("mfspr", spu_reg_name[rt], spu_spreg_name[sa]);
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -218,25 +278,25 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		DisAsm("mtspr", spu_reg_name[rt], spu_reg_name[sa]);
+		DisAsm("mtspr", spu_spreg_name[sa], spu_reg_name[rt]);
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
 		DisAsm("wrch", spu_ch_name[ra], spu_reg_name[rt]);
 	}
-	void BIZ(u32 rt, u32 ra)
+	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("biz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BINZ(u32 rt, u32 ra)
+	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("binz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BIHZ(u32 rt, u32 ra)
+	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bihz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
-	void BIHNZ(u32 rt, u32 ra)
+	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bihnz", spu_reg_name[rt], spu_reg_name[ra]);
 	}
@@ -248,11 +308,11 @@ private:
 	{
 		DisAsm("stqx", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]);
 	}
-	void BI(u32 ra)
+	void BI(u32 intr, u32 ra)
 	{
 		DisAsm("bi", spu_reg_name[ra]);
 	}
-	void BISL(u32 rt, u32 ra)
+	void BISL(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bisl", spu_reg_name[rt], spu_reg_name[ra]);
 	}
@@ -260,7 +320,7 @@ private:
 	{
 		DisAsm("iret", spu_reg_name[ra]);
 	}
-	void BISLED(u32 rt, u32 ra)
+	void BISLED(u32 intr, u32 rt, u32 ra)
 	{
 		DisAsm("bisled", spu_reg_name[rt], spu_reg_name[ra]);
 	}

@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "PPCThread.h"
-#include "Gui/InterpreterDisAsm.h"
+#include "Emu/Memory/Memory.h"
 
 PPCThread* GetCurrentPPCThread()
 {
@@ -37,9 +37,9 @@ void PPCThread::InitStack()
 	/*
 	m_stack_point += m_stack_size - 0x10;
 	m_stack_point &= -0x10;
-	Memory.Write64(m_stack_point, 0);
+	vm::write64(m_stack_point, 0);
 	m_stack_point -= 0x60;
-	Memory.Write64(m_stack_point, m_stack_point + 0x60);
+	vm::write64(m_stack_point, m_stack_point + 0x60);
 	*/
 }
 

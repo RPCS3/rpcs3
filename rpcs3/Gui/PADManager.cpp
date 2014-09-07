@@ -1,4 +1,8 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
 #include "PADManager.h"
 
 PADManager::PADManager(wxWindow* parent)
@@ -285,7 +289,7 @@ void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
 	case id_pad_rstick_up: Ini.PadHandlerRStickUp.SetValue(keyEvent.GetKeyCode()); break;
 
 	case 0: break;
-	default: ConLog.Error("Unknown button ID: %d", m_button_id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
 	}
 
 	UpdateLabel();
@@ -319,7 +323,7 @@ void PADManager::OnButtonClicked(wxCommandEvent &event)
 		case wxID_OK: Ini.Save(); break;
 		case wxID_CANCEL: break;
 
-		default: ConLog.Error("Unknown button ID: %d", event.GetId()); break;
+		default: LOG_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
 		}
 	}
 
@@ -332,7 +336,7 @@ const wxString PADManager::GetKeyName(const u32 keyCode)
 	
 	switch(keyCode)
 	{
-	case WXK_NONE: ConLog.Error("Invalid key code"); keyName = "ERROR!"; break;
+	case WXK_NONE: LOG_ERROR(HLE, "Invalid key code"); keyName = "ERROR!"; break;
 	case WXK_BACK: keyName = "BackSpace"; break;
 	case WXK_TAB: keyName = "Tab"; break;
 	case WXK_RETURN: keyName = "Enter"; break;
@@ -505,7 +509,7 @@ void PADManager::UpdateTimerLabel(const u32 id)
 	case id_pad_rstick_right: b_right_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	case id_pad_rstick_up: b_up_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	
-	default: ConLog.Error("Unknown button ID: %d", id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", id); break;
 	}
 }
 

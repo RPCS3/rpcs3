@@ -1,7 +1,10 @@
 #include "stdafx.h"
-#include "Callback.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 
-#include "Emu/Cell/PPCThread.h"
+#include "Callback.h"
 
 Callback::Callback(u32 slot, u64 addr)
 	: m_addr(addr)
@@ -10,6 +13,7 @@ Callback::Callback(u32 slot, u64 addr)
 	, a2(0)
 	, a3(0)
 	, a4(0)
+	, a5(0)
 	, m_has_data(false)
 	, m_name("Callback")
 {
@@ -40,16 +44,17 @@ bool Callback::HasData() const
 	return m_has_data;
 }
 
-void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4)
+void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4, u64 _a5)
 {
 	a1 = _a1;
 	a2 = _a2;
 	a3 = _a3;
 	a4 = _a4;
+	a5 = _a5;
 	m_has_data = true;
 }
 
-void Callback::Branch(bool wait)
+u64 Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
@@ -63,10 +68,10 @@ again:
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("Callback::Branch() aborted");
-			return;
+			LOG_WARNING(HLE, "Callback::Branch() aborted");
+			return 0;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	std::lock_guard<std::mutex> lock(cb_mutex);
@@ -77,8 +82,8 @@ again:
 	}
 	if (Emu.IsStopped())
 	{
-		ConLog.Warning("Callback::Branch() aborted");
-		return;
+		LOG_WARNING(HLE, "Callback::Branch() aborted");
+		return 0;
 	}
 
 	thr.Stop();
@@ -94,23 +99,26 @@ again:
 	thr.SetArg(2, a3);
 	thr.SetArg(3, a4);
 	thr.Run();
+	((PPUThread&)thr).GPR[7] = a5;
 
 	thr.Exec();
 
 	if (!wait)
 	{
-		return;
+		return 0;
 	}
 
 	while (thr.IsAlive())
 	{
 		if (Emu.IsStopped())
 		{
-			ConLog.Warning("Callback::Branch(true) aborted (end)");
-			return;
+			LOG_WARNING(HLE, "Callback::Branch(true) aborted (end)");
+			return 0;
 		}
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
+
+	return thr.GetExitStatus();
 }
 
 void Callback::SetName(const std::string& name)

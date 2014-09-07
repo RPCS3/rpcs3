@@ -1,18 +1,17 @@
 #include "stdafx.h"
 #include "Thread.h"
 
-#ifdef _WIN32
-__declspec(thread)
-#elif __APPLE__
-__thread
-#else
-thread_local
-#endif
-NamedThreadBase* g_tls_this_thread = nullptr;
+thread_local NamedThreadBase* g_tls_this_thread = nullptr;
+std::atomic<u32> g_thread_count(0);
 
 NamedThreadBase* GetCurrentNamedThread()
 {
 	return g_tls_this_thread;
+}
+
+void SetCurrentNamedThread(NamedThreadBase* value)
+{
+	g_tls_this_thread = value;
 }
 
 std::string NamedThreadBase::GetThreadName() const
@@ -23,6 +22,17 @@ std::string NamedThreadBase::GetThreadName() const
 void NamedThreadBase::SetThreadName(const std::string& name)
 {
 	m_name = name;
+}
+
+void NamedThreadBase::WaitForAnySignal() // wait 1 ms for something
+{
+	std::unique_lock<std::mutex> lock(m_signal_mtx);
+	m_signal_cv.wait_for(lock, std::chrono::milliseconds(1));
+}
+
+void NamedThreadBase::Notify() // wake up waiting thread or nothing
+{
+	m_signal_cv.notify_one();
 }
 
 ThreadBase::ThreadBase(const std::string& name)
@@ -38,7 +48,8 @@ ThreadBase::~ThreadBase()
 	if(IsAlive())
 		Stop(false);
 
-	safe_delete(m_executor);
+	delete m_executor;
+	m_executor = nullptr;
 }
 
 void ThreadBase::Start()
@@ -50,15 +61,16 @@ void ThreadBase::Start()
 	m_destroy = false;
 	m_alive = true;
 
-	m_executor = new std::thread(
-		[this]()
-		{
-			g_tls_this_thread = this;
+	m_executor = new std::thread([this]()
+	{
+		SetCurrentNamedThread(this);
+		g_thread_count++;
 
-			Task();
+		Task();
 
-			m_alive = false;
-		});
+		m_alive = false;
+		g_thread_count--;
+	});
 }
 
 void ThreadBase::Stop(bool wait, bool send_destroy)
@@ -127,17 +139,12 @@ void thread::start(std::function<void()> func)
 	m_thr = std::thread([func, name]()
 	{
 		NamedThreadBase info(name);
-		g_tls_this_thread = &info;
+		SetCurrentNamedThread(&info);
+		g_thread_count++;
 
-		try
-		{
-			func();
-		}
-		catch(...)
-		{
-			ConLog.Error("Crash :(");
-			//std::terminate();
-		}
+		func();
+
+		g_thread_count--;
 	});
 }
 

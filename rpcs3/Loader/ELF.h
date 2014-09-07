@@ -1,7 +1,6 @@
 #pragma once
 #include "ELF64.h"
 #include "ELF32.h"
-#include "Emu/FS/vfsStream.h"
 
 enum ElfClass
 {
@@ -15,15 +14,9 @@ struct Elf_Ehdr
 	u32 e_magic;
 	u8  e_class;
 
-	virtual void Show()
-	{
-	}
+	virtual void Show();
 
-	virtual void Load(vfsStream& f)
-	{
-		e_magic	= Read32(f);
-		e_class	= Read8(f);
-	}
+	virtual void Load(vfsStream& f);
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 

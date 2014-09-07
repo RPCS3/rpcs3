@@ -1,8 +1,6 @@
 #pragma once
 #include "Emu/ARMv7/ARMv7Opcodes.h"
 #include "Emu/CPU/CPUDisAsm.h"
-#include "Gui/DisAsmFrame.h"
-#include "Emu/Memory/Memory.h"
 
 static const char* g_arm_cond_name[16] =
 {
@@ -24,7 +22,7 @@ public:
 protected:
 	virtual u32 DisAsmBranchTarget(const s32 imm)
 	{
-		return dump_pc + imm;
+		return (u32)dump_pc + imm;
 	}
 
 	std::string GetRegsListString(u16 regs_list)

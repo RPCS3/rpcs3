@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/rFile.h"
+
 struct WAVHeader
 {
 	struct RIFFHeader
@@ -55,7 +57,7 @@ class AudioDumper
 {
 private:
 	WAVHeader m_header;
-	wxFile m_output;
+	rFile m_output;
 	
 public:
 	AudioDumper(u8 ch);
@@ -65,5 +67,5 @@ public:
 	void WriteHeader();
 	size_t WriteData(const void* buffer, size_t size);
 	void Finalize();
-	const u8 GetCh() const { return m_header.FMT.NumChannels; }
+	const u8 GetCh() const { return (u8)m_header.FMT.NumChannels; }
 };

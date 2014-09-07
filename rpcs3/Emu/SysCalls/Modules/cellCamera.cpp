@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellCamera_init();
 Module cellCamera(0x0023, cellCamera_init);
@@ -240,3 +239,4 @@ void cellCamera_init()
 	cellCamera.AddFunc(0xa7fd2f5b, cellCameraSetNotifyEventQueue2);
 	cellCamera.AddFunc(0x44673f07, cellCameraRemoveNotifyEventQueue2);
 }
+#endif

@@ -1,4 +1,7 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+
 #include "MemoryViewer.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
@@ -199,7 +202,7 @@ void MemoryViewerPanel::ShowMemory()
 
 			if (Memory.IsGoodAddr(addr))
 			{
-				const u8 rmem = Memory.Read8(addr);
+				const u8 rmem = vm::read8(addr);
 				t_mem_hex_str += wxString::Format("%02x ", rmem);
 				const bool isPrintable = rmem >= 32 && rmem <= 126;
 				t_mem_ascii_str += isPrintable ? std::string(1, rmem) : ".";
@@ -230,7 +233,7 @@ void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 widt
 	f_image_viewer->Show();
 	wxClientDC dc_canvas(f_image_viewer);
 
-	unsigned char* originalBuffer  = (unsigned char*)Memory.VirtualToRealAddr(addr);
+	unsigned char* originalBuffer  = vm::get_ptr<unsigned char>(addr);
 	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 3);
 	switch(mode)
 	{

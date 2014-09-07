@@ -1,7 +1,212 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
+#include "Emu/FS/vfsStream.h"
+#include "Emu/Memory/Memory.h"
 #include "ELF32.h"
 
-void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr)
+void Elf32_Ehdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Magic: %08x", e_magic);
+	LOG_NOTICE(LOADER, "Class: %s", "ELF32");
+	LOG_NOTICE(LOADER, "Data: %s", Ehdr_DataToString(e_data).c_str());
+	LOG_NOTICE(LOADER, "Current Version: %d", e_curver);
+	LOG_NOTICE(LOADER, "OS/ABI: %s", Ehdr_OS_ABIToString(e_os_abi).c_str());
+	LOG_NOTICE(LOADER, "ABI version: %lld", e_abi_ver);
+	LOG_NOTICE(LOADER, "Type: %s", Ehdr_TypeToString(e_type).c_str());
+	LOG_NOTICE(LOADER, "Machine: %s", Ehdr_MachineToString(e_machine).c_str());
+	LOG_NOTICE(LOADER, "Version: %d", e_version);
+	LOG_NOTICE(LOADER, "Entry point address: 0x%x", e_entry);
+	LOG_NOTICE(LOADER, "Program headers offset: 0x%08x", e_phoff);
+	LOG_NOTICE(LOADER, "Section headers offset: 0x%08x", e_shoff);
+	LOG_NOTICE(LOADER, "Flags: 0x%x", e_flags);
+	LOG_NOTICE(LOADER, "Size of this header: %d", e_ehsize);
+	LOG_NOTICE(LOADER, "Size of program headers: %d", e_phentsize);
+	LOG_NOTICE(LOADER, "Number of program headers: %d", e_phnum);
+	LOG_NOTICE(LOADER, "Size of section headers: %d", e_shentsize);
+	LOG_NOTICE(LOADER, "Number of section headers: %d", e_shnum);
+	LOG_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
+#endif
+}
+
+void Elf32_Ehdr::Load(vfsStream& f)
+{
+	e_magic  = Read32(f);
+	e_class  = Read8(f);
+	e_data   = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+
+	if(IsLittleEndian())
+	{
+		e_abi_ver   = Read64LE(f);
+		e_type      = Read16LE(f);
+		e_machine   = Read16LE(f);
+		e_version   = Read32LE(f);
+		e_entry     = Read32LE(f);
+		e_phoff     = Read32LE(f);
+		e_shoff     = Read32LE(f);
+		e_flags     = Read32LE(f);
+		e_ehsize    = Read16LE(f);
+		e_phentsize = Read16LE(f);
+		e_phnum     = Read16LE(f);
+		e_shentsize = Read16LE(f);
+		e_shnum     = Read16LE(f);
+		e_shstrndx  = Read16LE(f);
+	}
+	else
+	{
+		e_abi_ver   = Read64(f);
+		e_type      = Read16(f);
+		e_machine   = Read16(f);
+		e_version   = Read32(f);
+		e_entry     = Read32(f);
+		e_phoff     = Read32(f);
+		e_shoff     = Read32(f);
+		e_flags     = Read32(f);
+		e_ehsize    = Read16(f);
+		e_phentsize = Read16(f);
+		e_phnum     = Read16(f);
+		e_shentsize = Read16(f);
+		e_shnum     = Read16(f);
+		e_shstrndx  = Read16(f);
+	}
+}
+
+void Elf32_Desc::Load(vfsStream& f)
+{
+	revision = Read32(f);
+	ls_size = Read32(f);
+	stack_size = Read32(f);
+	flags = Read32(f);
+}
+
+void Elf32_Desc::LoadLE(vfsStream& f)
+{
+	revision = Read32LE(f);
+	ls_size = Read32LE(f);
+	stack_size = Read32LE(f);
+	flags = Read32LE(f);
+}
+
+void Elf32_Note::Load(vfsStream& f)
+{
+	namesz = Read32(f);
+	descsz = Read32(f);
+	type = Read32(f);
+	f.Read(name, 8);
+
+	if (descsz == 32)
+	{
+		f.Read(desc_text, descsz);
+	}
+	else
+	{
+		desc.Load(f);
+	}
+}
+
+void Elf32_Note::LoadLE(vfsStream& f)
+{
+	namesz = Read32LE(f);
+	descsz = Read32LE(f);
+	type = Read32LE(f);
+	f.Read(name, 8);
+
+	if (descsz == 32)
+	{
+		f.Read(desc_text, descsz);
+	}
+	else
+	{
+		desc.Load(f);
+	}
+}
+
+void Elf32_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read32(f);
+	sh_addr = Read32(f);
+	sh_offset = Read32(f);
+	sh_size = Read32(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read32(f);
+	sh_entsize = Read32(f);
+}
+
+void Elf32_Shdr::LoadLE(vfsStream& f)
+{
+	sh_name = Read32LE(f);
+	sh_type = Read32LE(f);
+	sh_flags = Read32LE(f);
+	sh_addr = Read32LE(f);
+	sh_offset = Read32LE(f);
+	sh_size = Read32LE(f);
+	sh_link = Read32LE(f);
+	sh_info = Read32LE(f);
+	sh_addralign = Read32LE(f);
+	sh_entsize = Read32LE(f);
+}
+
+void Elf32_Shdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Name offset: %x", sh_name);
+	LOG_NOTICE(LOADER, "Type: %d", sh_type);
+	LOG_NOTICE(LOADER, "Addr: %x", sh_addr);
+	LOG_NOTICE(LOADER, "Offset: %x", sh_offset);
+	LOG_NOTICE(LOADER, "Size: %x", sh_size);
+	LOG_NOTICE(LOADER, "EntSize: %d", sh_entsize);
+	LOG_NOTICE(LOADER, "Flags: %x", sh_flags);
+	LOG_NOTICE(LOADER, "Link: %x", sh_link);
+	LOG_NOTICE(LOADER, "Info: %d", sh_info);
+	LOG_NOTICE(LOADER, "Address align: %x", sh_addralign);
+#endif
+}
+
+void Elf32_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_offset = Read32(f);
+	p_vaddr = Read32(f);
+	p_paddr = Read32(f);
+	p_filesz = Read32(f);
+	p_memsz = Read32(f);
+	p_flags = Read32(f);
+	p_align = Read32(f);
+}
+
+void Elf32_Phdr::LoadLE(vfsStream& f)
+{
+	p_type = Read32LE(f);
+	p_offset = Read32LE(f);
+	p_vaddr = Read32LE(f);
+	p_paddr = Read32LE(f);
+	p_filesz = Read32LE(f);
+	p_memsz = Read32LE(f);
+	p_flags = Read32LE(f);
+	p_align = Read32LE(f);
+}
+
+void Elf32_Phdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Type: %s", Phdr_TypeToString(p_type).c_str());
+	LOG_NOTICE(LOADER, "Offset: 0x%08x", p_offset);
+	LOG_NOTICE(LOADER, "Virtual address: 0x%08x", p_vaddr);
+	LOG_NOTICE(LOADER, "Physical address: 0x%08x", p_paddr);
+	LOG_NOTICE(LOADER, "File size: 0x%08x", p_filesz);
+	LOG_NOTICE(LOADER, "Memory size: 0x%08x", p_memsz);
+	LOG_NOTICE(LOADER, "Flags: %s", Phdr_FlagsToString(p_flags).c_str());
+	LOG_NOTICE(LOADER, "Align: 0x%x", p_align);
+#endif
+}
+
+void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -24,7 +229,7 @@ void WriteEhdr(wxFile& f, Elf32_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(wxFile& f, Elf32_Phdr& phdr)
+void WritePhdr(rFile& f, Elf32_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_offset);
@@ -36,7 +241,7 @@ void WritePhdr(wxFile& f, Elf32_Phdr& phdr)
 	Write32(f, phdr.p_align);
 }
 
-void WriteShdr(wxFile& f, Elf32_Shdr& shdr)
+void WriteShdr(rFile& f, Elf32_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -91,7 +296,7 @@ bool ELF32Loader::LoadEhdrInfo()
 	if(!ehdr.CheckMagic()) return false;
 
 	if(ehdr.IsLittleEndian())
-		ConLog.Warning("ELF32 LE");
+		LOG_WARNING(LOADER, "ELF32 LE");
 
 	switch(ehdr.e_machine)
 	{
@@ -104,14 +309,14 @@ bool ELF32Loader::LoadEhdrInfo()
 
 	default:
 		machine = MACHINE_Unknown;
-		ConLog.Error("Unknown elf32 machine: 0x%x", ehdr.e_machine);
+		LOG_ERROR(LOADER, "Unknown elf32 machine: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
 	entry = ehdr.GetEntry();
 	if(entry == 0)
 	{
-		ConLog.Error("elf32 error: entry is null!");
+		LOG_ERROR(LOADER, "elf32 error: entry is null!");
 		return false;
 	}
 
@@ -122,7 +327,7 @@ bool ELF32Loader::LoadPhdrInfo()
 {
 	if(ehdr.e_phoff == 0 && ehdr.e_phnum)
 	{
-		ConLog.Error("LoadPhdr32 error: Program header offset is null!");
+		LOG_ERROR(LOADER, "LoadPhdr32 error: Program header offset is null!");
 		return false;
 	}
 
@@ -136,7 +341,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			phdr_arr.back().Load(elf32_f);
 	}
 
-	if(/*!Memory.IsGoodAddr(entry)*/ entry & 0x1)
+	if(entry & 0x1)
 	{
 		//entry is physical, convert to virtual
 
@@ -147,7 +352,7 @@ bool ELF32Loader::LoadPhdrInfo()
 			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
 			{
 				entry += phdr_arr[i].p_vaddr;
-				ConLog.Warning("virtual entry = 0x%x", entry);
+				LOG_WARNING(LOADER, "virtual entry = 0x%x", entry);
 				break;
 			}
 		}
@@ -171,7 +376,7 @@ bool ELF32Loader::LoadShdrInfo()
 
 	if(ehdr.e_shstrndx >= shdr_arr.size())
 	{
-		ConLog.Warning("LoadShdr32 error: shstrndx too big!");
+		LOG_WARNING(LOADER, "LoadShdr32 error: shstrndx too big!");
 		return true;
 	}
 
@@ -195,9 +400,9 @@ bool ELF32Loader::LoadShdrInfo()
 bool ELF32Loader::LoadEhdrData(u64 offset)
 {
 #ifdef LOADER_DEBUG
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 	ehdr.Show();
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 #endif
 	return true;
 }
@@ -224,8 +429,9 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 			{
-				ConLog.Warning
-				( 
+				LOG_WARNING
+				(
+					LOADER, 
 					"LoadPhdr32 different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
 					phdr_arr[i].p_paddr, phdr_arr[i].p_vaddr
 				);
@@ -233,16 +439,16 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			switch(machine)
 			{
-			case MACHINE_SPU: Memory.MainMem.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
-			case MACHINE_MIPS: Memory.PSPMemory.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
-			case MACHINE_ARM: Memory.PSVMemory.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_SPU: break;
+			case MACHINE_MIPS: Memory.PSP.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
+			case MACHINE_ARM: Memory.PSV.RAM.AllocFixed(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz); break;
 
 			default:
 				continue;
 			}
 
 			elf32_f.Seek(phdr_arr[i].p_offset);
-			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
+			elf32_f.Read(vm::get_ptr<void>(phdr_arr[i].p_vaddr + offset), phdr_arr[i].p_filesz);
 		}
 		else if(phdr_arr[i].p_type == 0x00000004)
 		{
@@ -253,41 +459,41 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 			if(note.type != 1)
 			{
-				ConLog.Error("ELF32: Bad NOTE type (%d)", note.type);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE type (%d)", note.type);
 				break;
 			}
 
 			if(note.namesz != sizeof(note.name))
 			{
-				ConLog.Error("ELF32: Bad NOTE namesz (%d)", note.namesz);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE namesz (%d)", note.namesz);
 				break;
 			}
 
 			if(note.descsz != sizeof(note.desc) && note.descsz != 32)
 			{
-				ConLog.Error("ELF32: Bad NOTE descsz (%d)", note.descsz);
+				LOG_ERROR(LOADER, "ELF32: Bad NOTE descsz (%d)", note.descsz);
 				break;
 			}
 
 			//if(note.desc.flags)
 			//{
-			//	ConLog.Error("ELF32: Bad NOTE flags (0x%x)", note.desc.flags);
+			//	LOG_ERROR(LOADER, "ELF32: Bad NOTE flags (0x%x)", note.desc.flags);
 			//	break;
 			//}
 
 			if(note.descsz == sizeof(note.desc))
 			{
-				ConLog.Warning("name = %s", std::string((const char *)note.name, 8).c_str());
-				ConLog.Warning("ls_size = %d", note.desc.ls_size);
-				ConLog.Warning("stack_size = %d", note.desc.stack_size);
+				LOG_WARNING(LOADER, "name = %s", std::string((const char *)note.name, 8).c_str());
+				LOG_WARNING(LOADER, "ls_size = %d", note.desc.ls_size);
+				LOG_WARNING(LOADER, "stack_size = %d", note.desc.stack_size);
 			}
 			else
 			{
-				ConLog.Warning("desc = '%s'", std::string(note.desc_text, 32).c_str());
+				LOG_WARNING(LOADER, "desc = '%s'", std::string(note.desc_text, 32).c_str());
 			}
 		}
 #ifdef LOADER_DEBUG
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, "");
 #endif
 	}
 
@@ -301,13 +507,13 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		Elf32_Shdr& shdr = shdr_arr[i];
 
 #ifdef LOADER_DEBUG
-		if(i < shdr_name_arr.size()) ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
+		if(i < shdr_name_arr.size()) LOG_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
 		shdr.Show();
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, "");
 #endif
 		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
 		{
-			ConLog.Error("ELF32 ERROR: Relocation");
+			LOG_ERROR(LOADER, "ELF32 ERROR: Relocation");
 			continue;
 		}
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;

@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellHttpUtil_init();
 Module cellHttpUtil(0x0002, cellHttpUtil_init);
@@ -151,3 +150,4 @@ void cellHttpUtil_init()
 	cellHttpUtil.AddFunc(0x83faa354, cellHttpUtilBase64Encoder);
 	cellHttpUtil.AddFunc(0x8e52ee08, cellHttpUtilBase64Decoder);
 }
+#endif

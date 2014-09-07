@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include <wx/dnd.h>
 #include "Emu/HDD/HDD.h"
 
@@ -82,7 +81,7 @@ public:
 	void OnRemove(wxCommandEvent& event);
 	void OnCreateHDD(wxCommandEvent& event);
 
-	void OnClose(wxCloseEvent& event);
+	void OnOk(wxCommandEvent& event);
 	void LoadPaths();
 	void SavePaths();
 };

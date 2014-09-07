@@ -1,5 +1,19 @@
 #include "stdafx.h"
+#include "utils.h"
+#include "aes.h"
 #include "key_vault.h"
+
+SELF_KEY::SELF_KEY(u64 ver, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
+{
+	version = ver;
+	revision = rev;
+	self_type = type;
+	hex_to_bytes(erk, e.c_str());
+	hex_to_bytes(riv, r.c_str());
+	hex_to_bytes(pub, pb.c_str());
+	hex_to_bytes(priv, pr.c_str());
+	curve_type = ct;
+}
 
 KeyVault::KeyVault()
 {
@@ -579,17 +593,17 @@ void KeyVault::LoadSelfUNK7Keys()
 		0x0F);
 }
 
-SELF_KEY KeyVault::GetSelfLV0Key()
+SELF_KEY KeyVault::GetSelfLV0Key() const
 {
 	return sk_LV0_arr[0];
 }
 
-SELF_KEY KeyVault::GetSelfLDRKey()
+SELF_KEY KeyVault::GetSelfLDRKey() const
 {
 	return sk_LDR_arr[0];
 }
 
-SELF_KEY KeyVault::GetSelfLV1Key(u64 version)
+SELF_KEY KeyVault::GetSelfLV1Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -605,7 +619,7 @@ SELF_KEY KeyVault::GetSelfLV1Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfLV2Key(u64 version)
+SELF_KEY KeyVault::GetSelfLV2Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -621,7 +635,7 @@ SELF_KEY KeyVault::GetSelfLV2Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version)
+SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -638,7 +652,7 @@ SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfAPPKey(u16 revision)
+SELF_KEY KeyVault::GetSelfAPPKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -654,7 +668,7 @@ SELF_KEY KeyVault::GetSelfAPPKey(u16 revision)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfUNK7Key(u64 version)
+SELF_KEY KeyVault::GetSelfUNK7Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 
@@ -670,7 +684,7 @@ SELF_KEY KeyVault::GetSelfUNK7Key(u64 version)
 	return key;
 }
 
-SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision)
+SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, "", "", "", "", 0);
 

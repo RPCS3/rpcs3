@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/listctrl.h>
+#include "rpcs3/Ini.h"
 #include "Emu/GameInfo.h"
 
 struct Column
@@ -134,7 +135,7 @@ public:
 
 			if(!col)
 			{
-				ConLog.Error("Columns loaded with error!");
+				LOG_ERROR(HLE, "Columns loaded with error!");
 				return;
 			}
 
@@ -191,7 +192,7 @@ public:
 				{
 					if(m_columns[c1].pos == m_columns[c2].pos)
 					{
-						ConLog.Error("Columns loaded with error!");
+						LOG_ERROR(HLE, "Columns loaded with error!");
 						Init();
 						return;
 					}
@@ -210,7 +211,7 @@ public:
 
 				if(!ishas)
 				{
-					ConLog.Error("Columns loaded with error!");
+					LOG_ERROR(HLE, "Columns loaded with error!");
 					Init();
 					return;
 				}

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/rFile.h"
 #include "vfsDirBase.h"
 
 vfsDirBase::vfsDirBase(vfsDevice* device)
@@ -31,7 +32,7 @@ bool vfsDirBase::IsOpened() const
 
 bool vfsDirBase::IsExists(const std::string& path) const
 {
-	return wxDirExists(fmt::FromUTF8(path));
+	return rExists(path);
 }
 
 const std::vector<DirEntryInfo>& vfsDirBase::GetEntries() const

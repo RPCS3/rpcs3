@@ -1,8 +1,10 @@
 #include "stdafx.h"
-#include "Ini.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/StrFmt.h"
 
-#include <algorithm>
+#include "Ini.h"
 #include <cctype>
+#include <regex>
 
 #define DEF_CONFIG_NAME "./rpcs3.ini"
 
@@ -13,7 +15,7 @@ CSimpleIniCaseA *getIniFile()
 	if (inited == false)
 	{
 		ini.SetUnicode(true);
-		ini.LoadFile(DEF_CONFIG_NAME);
+		ini.LoadFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
 		inited = true;
 	}
 	return &ini;
@@ -21,72 +23,43 @@ CSimpleIniCaseA *getIniFile()
 
 void saveIniFile()
 {
-	getIniFile()->SaveFile(DEF_CONFIG_NAME);
+	getIniFile()->SaveFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
 }
 
-std::pair<int, int> rDefaultSize = { -1, -1 };
 Inis Ini;
 
-static bool StringToBool(const wxString& str)
+static bool StringToBool(const std::string& str)
 {
-	if(
-		!str.CmpNoCase("enable") ||
-		!str.CmpNoCase("e") ||
-		!str.CmpNoCase("1") ||
-		!str.CmpNoCase("true") ||
-		!str.CmpNoCase("t") )
-	{
-		return true;
-	}
-
-	return false;
+	return std::regex_match(str.begin(), str.end(),
+		std::regex("1|e|t|enable|true", std::regex_constants::icase));
 }
 
-static wxString BoolToString(const bool b)
+static inline std::string BoolToString(const bool b)
 {
-	if(b) return "true";
-
-	return "false";
+	return b ? "true" : "false";
 }
 
 //takes a string of format "[number]x[number]" and returns a pair of ints
 //example input would be "123x456" and the returned value would be {123,456}
 static std::pair<int, int> StringToSize(const std::string& str)
 {
-	std::pair<int, int> ret;
-
-	std::string s[2] = { "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x"))
-		{
-			if (++a >= 2) return rDefaultSize;
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 2 && (found = str.find_first_of('x', start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
+		catch (const std::invalid_argument& e) {
+			return std::make_pair(-1, -1);
+		}
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
+	}
+	if (vec.size() < 2 || vec[0] < 0 || vec[1] < 0)
+		return std::make_pair(-1, -1);
 
-		s[a] += str.substr(i, 1);
-	}
-
-	if (s[0].empty() || s[1].empty())
-	{
-		return rDefaultSize;
-	}
-
-	try{
-		ret.first = std::stoi(s[0]);
-		ret.first = std::stoi(s[1]);
-	}
-	catch (const std::invalid_argument &e)
-	{
-		return rDefaultSize;
-	}
-	if (ret.first < 0 || ret.second < 0)
-	{
-		return rDefaultSize;
-	}
-
-	return ret;
+	return std::make_pair(vec[0], vec[1]);
 }
 
 static std::string SizeToString(const std::pair<int, int>& size)
@@ -94,77 +67,25 @@ static std::string SizeToString(const std::pair<int, int>& size)
 	return fmt::Format("%dx%d", size.first, size.second);
 }
 
-static wxPoint StringToPosition(const wxString& str)
-{
-	wxPoint ret;
-
-	wxString s[2] = {wxEmptyString, wxEmptyString};
-
-	for(uint i=0, a=0; i<str.Length(); ++i)
-	{
-		if(!str(i, 1).CmpNoCase("x"))
-		{
-			if(++a >= 2) return wxDefaultPosition;
-			continue;
-		}
-
-		s[a] += str(i, 1);
-	}
-	
-	if(s[0].IsEmpty() || s[1].IsEmpty())
-	{
-		return wxDefaultPosition;
-	}
-
-	s[0].ToLong((long*)&ret.x);
-	s[1].ToLong((long*)&ret.y);
-
-	if(ret.x <= 0 || ret.y <= 0)
-	{
-		return wxDefaultPosition;
-	}
-
-	return ret;
-}
-
 static WindowInfo StringToWindowInfo(const std::string& str)
 {
-	WindowInfo ret = WindowInfo(rDefaultSize, rDefaultSize);
-
-	std::string s[4] = { "", "", "", "" };
-
-	for (uint i = 0, a = 0; i<str.size(); ++i)
-	{
-		if (!fmt::CmpNoCase(str.substr(i, 1), "x") || !fmt::CmpNoCase(str.substr(i, 1), ":"))
-		{
-			if (++a >= 4) return WindowInfo::GetDefault();
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 4 && (found = str.find_first_of("x:", start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
+		catch (const std::invalid_argument& e) {
+			return WindowInfo();
+		}
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
+	}
+	if (vec.size() < 4 || vec[0] <= 0 || vec[1] <= 0 || vec[2] < 0 || vec[3] < 0)
+		return WindowInfo();
 
-		s[a] += str.substr(i, 1);
-	}
-
-	if (s[0].empty() || s[1].empty() || s[2].empty() || s[3].empty())
-	{
-		return WindowInfo::GetDefault();
-	}
-
-	try{
-		ret.size.first = std::stoi(s[0]);
-		ret.size.second = std::stoi(s[1]);
-		ret.position.first = std::stoi(s[2]);
-		ret.position.second = std::stoi(s[3]);
-	}
-	catch (const std::invalid_argument &e)
-	{
-		return WindowInfo::GetDefault();
-	}
-	if (ret.size.first <= 0 || ret.size.second <= 0)
-	{
-		return WindowInfo::GetDefault();
-	}
-
-	return ret;
+	return WindowInfo(std::make_pair(vec[0], vec[1]), std::make_pair(vec[2], vec[3]));
 }
 
 static std::string WindowInfoToString(const WindowInfo& wind)
@@ -177,7 +98,7 @@ static std::string WindowInfoToString(const WindowInfo& wind)
 //Ini
 Ini::Ini()
 {
-		m_Config = getIniFile();
+	m_Config = getIniFile();
 }
 
 Ini::~Ini()
@@ -219,29 +140,24 @@ void Ini::Save(const std::string& section, const std::string& key, WindowInfo va
 int Ini::Load(const std::string& section, const std::string& key, const int def_value)
 {
 	return m_Config->GetLongValue(section.c_str(), key.c_str(), def_value);
-	saveIniFile();
 }
 
 bool Ini::Load(const std::string& section, const std::string& key, const bool def_value)
 {
 	return StringToBool(m_Config->GetValue(section.c_str(), key.c_str(), BoolToString(def_value).c_str()));
-	saveIniFile();
 }
 
 std::pair<int, int> Ini::Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value)
 {
 	return StringToSize(m_Config->GetValue(section.c_str(), key.c_str(), SizeToString(def_value).c_str()));
-	saveIniFile();
 }
 
 std::string Ini::Load(const std::string& section, const std::string& key, const std::string& def_value)
 {
 	return std::string(m_Config->GetValue(section.c_str(), key.c_str(), def_value.c_str()));
-	saveIniFile();
 }
 
 WindowInfo Ini::Load(const std::string& section, const std::string& key, const WindowInfo& def_value)
 {
 	return StringToWindowInfo(m_Config->GetValue(section.c_str(), key.c_str(), WindowInfoToString(def_value).c_str()));
-	saveIniFile();
 }

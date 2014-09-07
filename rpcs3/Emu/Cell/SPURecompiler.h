@@ -1,8 +1,4 @@
 #pragma once
-#include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
 
 #define ASMJIT_STATIC
 
@@ -89,6 +85,9 @@ public:
 		u16 count; // count of instructions compiled from current point (and to be checked)
 		u32 valid; // copy of valid opcode for validation
 		void* pointer; // pointer to executable memory object
+#ifdef _WIN32
+		//_IMAGE_RUNTIME_FUNCTION_ENTRY info;
+#endif
 	};
 
 	SPURecEntry entry[0x10000];
@@ -109,14 +108,14 @@ public:
 #define c (*compiler)
 
 #ifdef _WIN32
-#define cpu_xmm(x) oword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 16) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 16")
-#define cpu_qword(x) qword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 8) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 8")
-#define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
-#define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
-#define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
+#define cpu_xmm(x) oword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 16) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 16")
+#define cpu_qword(x) qword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 8) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 8")
+#define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 4")
+#define cpu_word(x) word_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 2) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 2")
+#define cpu_byte(x) byte_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 1) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 1")
 
-#define g_imm_xmm(x) oword_ptr(*g_imm_var, offsetof(g_imm_table_struct, x))
-#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, offsetof(g_imm_table_struct, x))
+#define g_imm_xmm(x) oword_ptr(*g_imm_var, (s32)offsetof(g_imm_table_struct, x))
+#define g_imm2_xmm(x, y) oword_ptr(*g_imm_var, y, 0, (s32)offsetof(g_imm_table_struct, x))
 #else
 #define cpu_xmm(x) oword_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
 #define cpu_qword(x) qword_ptr(*cpu_var, reinterpret_cast<uintptr_t>(&(((SPUThread*)0)->x)) )
@@ -148,7 +147,7 @@ public:
 	if (#a1[0] == 'r') XmmInvalidate(a1); \
 	if (#a2[0] == 'r') XmmInvalidate(a2); \
 	if (#a3[0] == 'r') XmmInvalidate(a3); \
-	X86X64CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<FnVoid, u32, u32, u32, u32>()); \
+	X86CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
 	call##a0->setArg(0, imm_u(a0)); \
 	call##a0->setArg(1, imm_u(a1)); \
 	call##a0->setArg(2, imm_u(a2)); \
@@ -163,24 +162,24 @@ private:
 	SPURecompilerCore& rec;
 
 public:
-	Compiler* compiler;
+	X86Compiler* compiler;
 	bool do_finalize;
 	// input:
-	GpVar* cpu_var;
-	GpVar* ls_var;
-	GpVar* imm_var;
-	GpVar* g_imm_var;
+	X86GpVar* cpu_var;
+	X86GpVar* ls_var;
+	X86GpVar* imm_var;
+	X86GpVar* g_imm_var;
 	// output:
-	GpVar* pos_var;
+	X86GpVar* pos_var;
 	// temporary:
-	GpVar* addr;
-	GpVar* qw0;
-	GpVar* qw1;
-	GpVar* qw2;
+	X86GpVar* addr;
+	X86GpVar* qw0;
+	X86GpVar* qw1;
+	X86GpVar* qw2;
 
 	struct XmmLink
 	{
-		XmmVar* data;
+		X86XmmVar* data;
 		s8 reg;
 		bool taken;
 		mutable bool got;
@@ -419,9 +418,9 @@ public:
 				return oword_ptr(*imm_var, i * sizeof(__m128i));
 			}
 		}
-		const int shift = rec.imm_table.size() * sizeof(__m128i);
+		const size_t shift = rec.imm_table.size() * sizeof(__m128i);
 		rec.imm_table.push_back(data);
-		return oword_ptr(*imm_var, shift);
+		return oword_ptr(*imm_var, (s32)shift);
 	}
 
 	Mem XmmConst(const __m128& data)
@@ -438,12 +437,12 @@ private:
 			static void STOP(u32 code)
 			{
 				SPUThread& CPU = *(SPUThread*)GetCurrentCPUThread();
-				CPU.DoStop(code);
+				CPU.StopAndSignal(code);
 				LOG2_OPCODE();
 			}
 		};
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
-		X86X64CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<FnVoid, u32>());
+		X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<void, u32>());
 		call->setArg(0, imm_u(code));
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		do_finalize = true;
@@ -471,17 +470,6 @@ private:
 	void MFSPR(u32 rt, u32 sa)
 	{
 		UNIMPLEMENTED();
-		//If register is a dummy register (register labeled 0x0)
-		if(sa == 0x0)
-		{
-			CPU.GPR[rt]._u128.hi = 0x0;
-			CPU.GPR[rt]._u128.lo = 0x0;
-		}
-		else
-		{
-			CPU.GPR[rt]._u128.hi =  CPU.SPR[sa]._u128.hi;
-			CPU.GPR[rt]._u128.lo =  CPU.SPR[sa]._u128.lo;
-		}
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -495,7 +483,7 @@ private:
 	{
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt].Reset();
+		CPU.GPR[rt].clear();
 		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
 		WRAPPER_END(rt, ra, 0, 0);
 		// TODO
@@ -1098,11 +1086,6 @@ private:
 	void MTSPR(u32 rt, u32 sa)
 	{
 		UNIMPLEMENTED();
-		if(sa != 0)
-		{
-			CPU.SPR[sa]._u128.hi = CPU.GPR[rt]._u128.hi;
-			CPU.SPR[sa]._u128.lo = CPU.GPR[rt]._u128.lo;
-		}
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
@@ -1114,7 +1097,7 @@ private:
 
 		/*XmmInvalidate(rt);
 		
-		GpVar v(c, kVarTypeUInt32);
+		X86GpVar v(c, kVarTypeUInt32);
 		c.mov(v, cpu_dword(GPR[rt]._u32[3]));
 		switch (ra)
 		{
@@ -1146,8 +1129,14 @@ private:
 		}
 		}*/
 	}
-	void BIZ(u32 rt, u32 ra)
+	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1158,8 +1147,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BINZ(u32 rt, u32 ra)
+	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1170,8 +1165,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BIHZ(u32 rt, u32 ra)
+	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1182,8 +1183,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BIHNZ(u32 rt, u32 ra)
+	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1197,7 +1204,6 @@ private:
 	void STOPD(u32 rc, u32 ra, u32 rb)
 	{
 		UNIMPLEMENTED();
-		Emu.Pause();
 	}
 	void STQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -1211,16 +1217,29 @@ private:
 			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
 		}
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, *addr), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 0), *qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 8), *qw0);
+
 		LOG_OPCODE();
 	}
-	void BI(u32 ra)
+	void BI(u32 intr, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 
@@ -1228,8 +1247,14 @@ private:
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
-	void BISL(u32 rt, u32 ra)
+	void BISL(u32 intr, u32 rt, u32 ra)
 	{
+		if (intr)
+		{
+			UNIMPLEMENTED();
+			return;
+		}
+
 		XmmInvalidate(rt);
 
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
@@ -1247,9 +1272,8 @@ private:
 	void IRET(u32 ra)
 	{
 		UNIMPLEMENTED();
-		//SetBranch(SRR0);
 	}
-	void BISLED(u32 rt, u32 ra)
+	void BISLED(u32 intr, u32 rt, u32 ra)
 	{
 		UNIMPLEMENTED();
 	}
@@ -1350,12 +1374,19 @@ private:
 			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
 		}
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, *addr));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, *addr, 0, 0));
 		c.mov(*qw1, qword_ptr(*ls_var, *addr, 0, 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
@@ -1408,7 +1439,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(byte_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
+		c.mov(byte_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
 		LOG_OPCODE();
 	}
 	void CHX(u32 rt, u32 ra, u32 rb)
@@ -1429,7 +1460,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(word_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
+		c.mov(word_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
 		LOG_OPCODE();
 	}
 	void CWX(u32 rt, u32 ra, u32 rb)
@@ -1450,7 +1481,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void CDX(u32 rt, u32 ra, u32 rb)
@@ -1471,8 +1502,8 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void ROTQBI(u32 rt, u32 ra, u32 rb)
@@ -1572,7 +1603,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(byte_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
+		c.mov(byte_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
 		LOG_OPCODE();
 	}
 	void CHD(u32 rt, u32 ra, s32 i7)
@@ -1586,7 +1617,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(word_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
+		c.mov(word_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
 		LOG_OPCODE();
 	}
 	void CWD(u32 rt, u32 ra, s32 i7)
@@ -1600,7 +1631,7 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void CDD(u32 rt, u32 ra, s32 i7)
@@ -1614,8 +1645,8 @@ private:
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, offsetof(SPUThread, GPR[rt]._u32[1])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
+		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
 		LOG_OPCODE();
 	}
 	void ROTQBII(u32 rt, u32 ra, s32 i7)
@@ -1914,10 +1945,10 @@ private:
 	//HGT uses signed values.  HLGT uses unsigned values
 	void HGT(u32 rt, s32 ra, s32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
-		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
+		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
 		c.mov(*addr, 0);
-		c.setg(*addr);
+		c.setg(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -1930,7 +1961,7 @@ private:
 		for (u32 i = 0; i < 4; i++)
 		{
 			c.bsr(*addr, cpu_dword(GPR[ra]._u32[i]));
-			c.cmovz(*addr, dword_ptr(*g_imm_var, offsetof(g_imm_table_struct, fsmb_table[0xffff]))); // load 0xffffffff
+			c.cmovz(*addr, dword_ptr(*g_imm_var, (s32)offsetof(g_imm_table_struct, fsmb_table[0xffff]))); // load 0xffffffff
 			c.neg(*addr);
 			c.add(*addr, 31);
 			c.mov(cpu_dword(GPR[rt]._u32[i]), *addr);
@@ -1939,10 +1970,10 @@ private:
 	}
 	void XSWD(u32 rt, u32 ra)
 	{
-		c.movsxd(*qw0, cpu_dword(GPR[ra]._i32[0]));
-		c.movsxd(*qw1, cpu_dword(GPR[ra]._i32[2]));
-		c.mov(cpu_qword(GPR[rt]._i64[0]), *qw0);
-		c.mov(cpu_qword(GPR[rt]._i64[1]), *qw1);
+		c.movsxd(*qw0, cpu_dword(GPR[ra]._s32[0]));
+		c.movsxd(*qw1, cpu_dword(GPR[ra]._s32[2]));
+		c.mov(cpu_qword(GPR[rt]._s64[0]), *qw0);
+		c.mov(cpu_qword(GPR[rt]._s64[1]), *qw1);
 		XmmInvalidate(rt);
 		LOG_OPCODE();
 	}
@@ -1960,7 +1991,7 @@ private:
 		for (u32 i = 0; i < 8; i++)
 		{
 			c.movzx(*addr, cpu_word(GPR[ra]._u16[i]));
-			c.movzx(*addr, word_ptr(*g_imm_var, *addr, 1, offsetof(g_imm_table_struct, cntb_table[0])));
+			c.movzx(*addr, word_ptr(*g_imm_var, *addr, 1, (s32)offsetof(g_imm_table_struct, cntb_table[0])));
 			c.mov(cpu_word(GPR[rt]._u16[i]), addr->r16());
 		}*/
 		const XmmLink& va = XmmGet(ra, rt);
@@ -2051,18 +2082,7 @@ private:
 	}
 	void DFCGT(u32 rt, u32 ra, u32 rb)
 	{
-		// reverted less-than
-		const XmmLink& vb = XmmGet(rb, rt);
-		if (const XmmLink* va = XmmRead(ra))
-		{
-			c.cmppd(vb.get(), va->read(), 1);
-		}
-		else
-		{
-			c.cmppd(vb.get(), cpu_xmm(GPR[ra]), 1);
-		}
-		XmmFinalize(vb, rt);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
@@ -2192,15 +2212,7 @@ private:
 	}
 	void DFCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		// reverted less-than
-		const XmmLink& vb = XmmGet(rb, rt);
-		const XmmLink& va = XmmGet(ra);
-		c.andpd(vb.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.andpd(va.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.cmppd(vb.get(), va.get(), 1);
-		XmmFinalize(vb, rt);
-		XmmFinalize(va);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
@@ -2297,7 +2309,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._u32[3]));
 		c.mov(*addr, 0);
-		c.seta(*addr);
+		c.seta(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -2462,7 +2474,11 @@ private:
 	}
 	void FSCRRD(u32 rt)
 	{
-		UNIMPLEMENTED();
+		// zero (hack)
+		const XmmLink& v0 = XmmAlloc(rt);
+		c.pxor(v0.get(), v0.get());
+		XmmFinalize(v0, rt);
+		LOG_OPCODE();
 	}
 	void FESD(u32 rt, u32 ra)
 	{
@@ -2482,62 +2498,12 @@ private:
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		UNIMPLEMENTED();
+		// nop (not implemented)
+		LOG_OPCODE();
 	}
-	void DFTSV(u32 rt, u32 ra, s32 i7) //nf
+	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{
-		WRAPPER_BEGIN(rt, ra, i7, zz);
-		const u64 DoubleExpMask = 0x7ff0000000000000;
-		const u64 DoubleFracMask = 0x000fffffffffffff;
-		const u64 DoubleSignMask = 0x8000000000000000;
-		const SPU_GPR_hdr temp = CPU.GPR[ra];
-		CPU.GPR[rt].Reset();
-		if (i7 & 1) //Negative Denorm Check (-, exp is zero, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == DoubleSignMask)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 2) //Positive Denorm Check (+, exp is zero, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & (DoubleSignMask | DoubleExpMask)) == 0)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 4) //Negative Zero Check (-, exp is zero, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == DoubleSignMask)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 8) //Positive Zero Check (+, exp is zero, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == 0)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 16) //Negative Infinity Check (-, exp is 0x7ff, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == (DoubleSignMask | DoubleExpMask))
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 32) //Positive Infinity Check (+, exp is 0x7ff, frac is zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] == DoubleExpMask)
-					CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		if (i7 & 64) //Not-a-Number Check (any sign, exp is 0x7ff, frac is non-zero)
-			for (int i = 0; i < 2; i++)
-			{
-				if (temp._u64[i] & DoubleFracMask)
-					if ((temp._u64[i] & DoubleExpMask) == DoubleExpMask)
-						CPU.GPR[rt]._u64[i] = 0xffffffffffffffff;
-			}
-		WRAPPER_END(rt, ra, i7, 0);
+		UNIMPLEMENTED();
 	}
 	void FCEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -2556,18 +2522,7 @@ private:
 	}
 	void DFCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		// compare equal
-		const XmmLink& vb = XmmGet(rb, rt);
-		if (const XmmLink* va = XmmRead(ra))
-		{
-			c.cmppd(vb.get(), va->read(), 0);
-		}
-		else
-		{
-			c.cmppd(vb.get(), cpu_xmm(GPR[ra]), 0);
-		}
-		XmmFinalize(vb, rt);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void MPY(u32 rt, u32 ra, u32 rb)
 	{
@@ -2651,14 +2606,7 @@ private:
 	}
 	void DFCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		const XmmLink& vb = XmmGet(rb, rt);
-		const XmmLink& va = XmmGet(ra);
-		c.andpd(vb.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.andpd(va.get(), XmmConst(_mm_set_epi32(0x7fffffff, 0xffffffff, 0x7fffffff, 0xffffffff))); // abs
-		c.cmppd(vb.get(), va.get(), 0); // ==
-		XmmFinalize(vb, rt);
-		XmmFinalize(va);
-		LOG_OPCODE();
+		UNIMPLEMENTED();
 	}
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
@@ -2712,10 +2660,10 @@ private:
 	}
 	void HEQ(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
-		c.cmp(*addr, cpu_dword(GPR[rb]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
+		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
 		c.mov(*addr, 0);
-		c.sete(*addr);
+		c.sete(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -2729,9 +2677,9 @@ private:
 		const XmmLink& va = XmmGet(ra, rt);
 		if (i8 != 173)
 		{
-			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps((float)pow(2, 173 - (i8 & 0xff))))); // scale
 		}
-		c.maxps(va.get(), XmmConst(_mm_set1_ps(-pow(2, 31)))); // saturate
+		c.maxps(va.get(), XmmConst(_mm_set1_ps((float)-pow(2, 31)))); // saturate
 		c.minps(va.get(), XmmConst(_mm_set1_ps((float)0x7fffffff)));
 		c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
 		XmmFinalize(va, rt);
@@ -2742,13 +2690,13 @@ private:
 		const XmmLink& va = XmmGet(ra, rt);
 		if (i8 != 173)
 		{
-			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, 173 - (i8 & 0xff))))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps((float)pow(2, 173 - (i8 & 0xff))))); // scale
 		}
 		c.maxps(va.get(), XmmConst(_mm_set1_ps(0.0f))); // saturate
 		c.minps(va.get(), XmmConst(_mm_set1_ps((float)0xffffffff)));
 		const XmmLink& v1 = XmmCopy(va);
-		c.cmpps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 31))), 5); // generate mask of big values
-		c.andps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 32)))); // generate correction component
+		c.cmpps(v1.get(), XmmConst(_mm_set1_ps((float)pow(2, 31))), 5); // generate mask of big values
+		c.andps(v1.get(), XmmConst(_mm_set1_ps((float)pow(2, 32)))); // generate correction component
 		c.subps(va.get(), v1.get()); // subtract correction component
 		c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
 		XmmFinalize(va, rt);
@@ -2761,7 +2709,7 @@ private:
 		c.cvtdq2ps(va.get(), va.get()); // convert to floats
 		if (i8 != 155)
 		{
-			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps((float)pow(2, (i8 & 0xff) - 155)))); // scale
 		}
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
@@ -2772,11 +2720,11 @@ private:
 		const XmmLink& v1 = XmmCopy(va);
 		c.cvtdq2ps(va.get(), va.get()); // convert to floats
 		c.psrad(v1.get(), 32); // generate mask from sign bit
-		c.andps(v1.get(), XmmConst(_mm_set1_ps(pow(2, 32)))); // generate correction component
+		c.andps(v1.get(), XmmConst(_mm_set1_ps((float)pow(2, 32)))); // generate correction component
 		c.addps(va.get(), v1.get()); // add correction component
 		if (i8 != 155)
 		{
-			c.mulps(va.get(), XmmConst(_mm_set1_ps(pow(2, (i8 & 0xff) - 155)))); // scale
+			c.mulps(va.get(), XmmConst(_mm_set1_ps((float)pow(2, (i8 & 0xff) - 155)))); // scale
 		}
 		XmmFinalize(va, rt);
 		XmmFinalize(v1);
@@ -2798,12 +2746,19 @@ private:
 	void STQA(u32 rt, s32 i16)
 	{
 		const u32 lsa = (i16 << 2) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, lsa), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, lsa), *qw1);
 		c.mov(qword_ptr(*ls_var, lsa + 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRNZ(u32 rt, s32 i16)
@@ -2842,12 +2797,19 @@ private:
 	void STQR(u32 rt, s32 i16)
 	{
 		const u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, lsa), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, lsa), *qw1);
 		c.mov(qword_ptr(*ls_var, lsa + 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRA(s32 i16)
@@ -2863,12 +2825,19 @@ private:
 		XmmInvalidate(rt);
 
 		const u32 lsa = (i16 << 2) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, lsa));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void BRASL(u32 rt, s32 i16)
@@ -2931,12 +2900,19 @@ private:
 		XmmInvalidate(rt);
 
 		const u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, lsa));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, lsa));
 		c.mov(*qw1, qword_ptr(*ls_var, lsa + 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void IL(u32 rt, s32 i16)
@@ -3265,12 +3241,19 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (i10) c.add(*addr, i10);
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmGet(rt);
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		c.movdqa(oword_ptr(*ls_var, *addr), vt.get());
+		XmmFinalize(vt);*/
+
 		c.mov(*qw0, cpu_qword(GPR[rt]._u64[0]));
 		c.mov(*qw1, cpu_qword(GPR[rt]._u64[1]));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 0), *qw1);
 		c.mov(qword_ptr(*ls_var, *addr, 0, 8), *qw0);
+
 		LOG_OPCODE();
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) // i10 is shifted left by 4 while decoding
@@ -3280,12 +3263,19 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		if (i10) c.add(*addr, i10);
 		c.and_(*addr, 0x3fff0);
+
+		/*const XmmLink& vt = XmmAlloc(rt);
+		c.movdqa(vt.get(), oword_ptr(*ls_var, *addr));
+		c.pshufb(vt.get(), XmmConst(_mm_set_epi32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f)));
+		XmmFinalize(vt, rt);*/
+
 		c.mov(*qw0, qword_ptr(*ls_var, *addr, 0, 0));
 		c.mov(*qw1, qword_ptr(*ls_var, *addr, 0, 8));
 		c.bswap(*qw0);
 		c.bswap(*qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[0]), *qw1);
 		c.mov(cpu_qword(GPR[rt]._u64[1]), *qw0);
+
 		LOG_OPCODE();
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
@@ -3332,10 +3322,10 @@ private:
 	}
 	void HGTI(u32 rt, u32 ra, s32 i10)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._i32[3]));
+		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.setg(*addr);
+		c.setg(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3401,7 +3391,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.seta(*addr);
+		c.seta(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3452,7 +3442,7 @@ private:
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
 		c.mov(*addr, 0);
-		c.sete(*addr);
+		c.sete(addr->r8());
 		c.neg(*addr);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
 		c.xor_(*pos_var, *addr);
@@ -3784,12 +3774,12 @@ private:
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
 	{
-		UNK(fmt::Format("(SPURecompiler) Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+		UNK(fmt::Format("Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 
 	void UNK(const std::string& err)
 	{
-		ConLog.Error(err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOG_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
 		c.mov(cpu_qword(PC), (u32)CPU.PC);
 		do_finalize = true;
 		Emu.Pause();

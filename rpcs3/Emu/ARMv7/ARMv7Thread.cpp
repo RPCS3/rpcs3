@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 #include "ARMv7Thread.h"
 #include "ARMv7Decoder.h"
 #include "ARMv7DisAsm.h"
@@ -13,7 +18,7 @@ void ARMv7Thread::InitRegs()
 	memset(GPR, 0, sizeof(GPR[0]) * 15);
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
-	SP = m_stack_point;
+	SP = (u32)m_stack_point;
 }
 
 void ARMv7Thread::InitStack()

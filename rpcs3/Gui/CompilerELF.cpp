@@ -1,7 +1,9 @@
-#include "stdafx.h"
-#include "CompilerELF.h"
+#include "stdafx_gui.h"
+#include "Utilities/rMsgBox.h"
+
 #include "Emu/Cell/PPUProgramCompiler.h"
 using namespace PPU_opcodes;
+#include "CompilerELF.h"
 
 enum CompilerIDs
 {
@@ -386,7 +388,7 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 		"All Files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	if(ctrl.ShowModal() == rID_CANCEL) return;
 	LoadElf(fmt::ToUTF8(ctrl.GetPath()));
 }
 

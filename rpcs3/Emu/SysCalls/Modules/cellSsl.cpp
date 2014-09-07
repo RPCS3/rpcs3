@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellSsl_init();
 Module cellSsl(0x0003, cellSsl_init);
@@ -108,3 +107,4 @@ void cellSsl_init()
 	cellSsl.AddFunc(0x006c4900, cellSslCertGetNameEntryInfo);
 	cellSsl.AddFunc(0x5e9253ca, cellSslCertGetMd5Fingerprint);
 }
+#endif

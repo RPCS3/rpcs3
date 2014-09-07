@@ -1,14 +1,18 @@
 #pragma once
 
 #include "Gui/Debugger.h"
-#include "Gui/GameViewer.h"
+#include "Gui/ConLogFrame.h"
+#include "Gui/FrameBase.h"
 
 #include <wx/aui/aui.h>
+
+class GameViewer;
 
 class MainFrame : public FrameBase
 {
 	DebuggerPanel* m_debugger_frame;
 	GameViewer* m_game_viewer;
+	LogFrame * m_log_frame;
 	wxAuiManager m_aui_mgr;
 	bool m_sys_menu_opened;
 
@@ -34,7 +38,10 @@ private:
 	void ConfigPad(wxCommandEvent& event);
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);
+	void ConfigAutoPause(wxCommandEvent& event);
+	void ConfigSaveData(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
+	void OpenKernelExplorer(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);
 	void OpenRSXDebugger(wxCommandEvent& evt);
 	void OpenFnIdGenerator(wxCommandEvent& evt);

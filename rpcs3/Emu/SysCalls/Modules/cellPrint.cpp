@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellPrint_init();
 Module cellPrint(0xf02a, cellPrint_init);
@@ -105,3 +104,4 @@ void cellPrint_init()
 	cellPrint.AddFunc(0x0d44f661, cellPrintEndPage);
 	cellPrint.AddFunc(0x0a373522, cellPrintSendBand);
 }
+#endif

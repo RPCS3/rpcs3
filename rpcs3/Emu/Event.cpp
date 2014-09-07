@@ -1,9 +1,10 @@
 #include "stdafx.h"
-#include "event.h"
+#include "Emu/Memory/Memory.h"
+//#include "Emu/System.h"
+#include "Event.h"
 
 void EventManager::Init()
 {
-	
 }
 
 void EventManager::Clear()
@@ -14,7 +15,7 @@ void EventManager::Clear()
 bool EventManager::CheckKey(u64 key)
 {
 	if (!key) return true;
-	SMutexLocker lock(m_lock);
+	std::lock_guard<std::mutex> lock(m_lock);
 
 	return key_map.find(key) != key_map.end();
 }
@@ -22,7 +23,7 @@ bool EventManager::CheckKey(u64 key)
 bool EventManager::RegisterKey(EventQueue* data, u64 key)
 {
 	if (!key) return true;
-	SMutexLocker lock(m_lock);
+	std::lock_guard<std::mutex> lock(m_lock);
 
 	if (key_map.find(key) != key_map.end()) return false;
 
@@ -40,7 +41,7 @@ bool EventManager::GetEventQueue(u64 key, EventQueue*& data)
 {
 	data = nullptr;
 	if (!key) return false;
-	SMutexLocker lock(m_lock);
+	std::lock_guard<std::mutex> lock(m_lock);
 
 	auto f = key_map.find(key);
 	if (f != key_map.end())
@@ -54,7 +55,7 @@ bool EventManager::GetEventQueue(u64 key, EventQueue*& data)
 bool EventManager::UnregisterKey(u64 key)
 {
 	if (!key) return false;
-	SMutexLocker lock(m_lock);
+	std::lock_guard<std::mutex> lock(m_lock);
 
 	auto f = key_map.find(key);
 	if (f != key_map.end())
@@ -68,7 +69,7 @@ bool EventManager::UnregisterKey(u64 key)
 bool EventManager::SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3)
 {
 	if (!key) return false;
-	SMutexLocker lock(m_lock);
+	std::lock_guard<std::mutex> lock(m_lock);
 
 	auto f = key_map.find(key);
 	if (f == key_map.end())

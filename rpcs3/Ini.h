@@ -1,7 +1,7 @@
 #pragma once
 
 #include <utility>
-#include "../Utilities/simpleini/SimpleIni.h"
+#include "Utilities/simpleini/SimpleIni.h"
 
 //TODO: make thread safe/remove static singleton
 CSimpleIniCaseA *getIniFile();
@@ -17,12 +17,6 @@ struct WindowInfo
 		: size(_size)
 		, position(_position)
 	{
-	}
-
-	//TODO: remove
-	static WindowInfo GetDefault()
-	{
-		return WindowInfo({ -1, -1 }, { -1, -1 });
 	}
 };
 
@@ -70,7 +64,7 @@ template<typename T> struct IniEntry : public Ini
 		m_value = value;
 	}
 
-	T GetValue()
+	T GetValue() const
 	{
 		return m_value;
 	}
@@ -105,7 +99,6 @@ public:
 	// Core
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<u8> SPUDecoderMode;
-	IniEntry<bool> CPUIgnoreRWErrors;
 
 	// Graphics
 	IniEntry<u8> GSRenderMode;
@@ -115,7 +108,6 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<bool> SkipPamf;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -152,18 +144,16 @@ public:
 	IniEntry<int> PadHandlerRStickUp;
 
 	// HLE/Miscs
+	IniEntry<bool> HLELogging;
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
+	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
-	IniEntry<bool> HLEHideDebugConsole;
 
-	// ConLog
-	IniEntry<bool> LogAllSysCalls;
-	IniEntry<bool> LogWrite;
-	IniEntry<bool> LogWarning;
-	IniEntry<bool> LogError;
-	IniEntry<bool> LogSuccess;
+	//Auto Pause
+	IniEntry<bool> DBGAutoPauseSystemCall;
+	IniEntry<bool> DBGAutoPauseFunctionCall;
 
 	// Language
 	IniEntry<u8> SysLanguage;
@@ -177,7 +167,6 @@ public:
 
 		// Core
 		CPUDecoderMode.Init("CPU_DecoderMode", path);
-		CPUIgnoreRWErrors.Init("CPU_IgnoreRWErrors", path);
 		SPUDecoderMode.Init("CPU_SPUDecoderMode", path);
 
 		// Graphics
@@ -188,7 +177,6 @@ public:
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
-		SkipPamf.Init("GS_SkipPamf", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -225,18 +213,16 @@ public:
 		PadHandlerRStickUp.Init("ControlSetings_PadHandlerRStickUp", path);
 
 		// HLE/Misc
+		HLELogging.Init("HLE_HLELogging", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
-		HLEHideDebugConsole.Init("HLE_HLEHideDebugConsole", path);
+		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
 
-		// ConLog
-		LogAllSysCalls.Init("Log_LogAllSysCalls", path);
-		LogWrite.Init("Log_LogWrite", path);
-		LogWarning.Init("Log_LogWarning", path);
-		LogError.Init("Log_LogError", path);
-		LogSuccess.Init("Log_LogSuccess", path);
+		// Auto Pause
+		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
+		DBGAutoPauseSystemCall.Init("DBG_AutoPauseSystemCall", path);
 
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
@@ -246,7 +232,6 @@ public:
 	{
 		// Core
 		CPUDecoderMode.Load(2);
-		CPUIgnoreRWErrors.Load(true);
 		SPUDecoderMode.Load(1);
 
 		// Graphics
@@ -257,7 +242,6 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
-		SkipPamf.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -294,18 +278,16 @@ public:
 		PadHandlerRStickUp.Load(366); //WXK_PAGEUP
 
 		// HLE/Miscs
+		HLELogging.Load(false);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
-		HLEHideDebugConsole.Load(false);
-		HLEAlwaysStart.Load(false);
+		HLELogLvl.Load(3);
+		HLEAlwaysStart.Load(true);
 
-		// ConLog
-		LogAllSysCalls.Load(false);
-		LogWrite.Load(true);
-		LogWarning.Load(false);
-		LogError.Load(true);
-		LogSuccess.Load(true);
+		//Auto Pause
+		DBGAutoPauseFunctionCall.Load(false);
+		DBGAutoPauseSystemCall.Load(false);
 
 		// Language
 		SysLanguage.Load(1);
@@ -316,7 +298,6 @@ public:
 	{
 		// CPU/SPU
 		CPUDecoderMode.Save();
-		CPUIgnoreRWErrors.Save();
 		SPUDecoderMode.Save();
 
 		// Graphics
@@ -327,7 +308,6 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
-		SkipPamf.Save();
 
 		// Audio 
 		AudioOutMode.Save();
@@ -364,18 +344,16 @@ public:
 		PadHandlerRStickUp.Save();
 
 		// HLE/Miscs
+		HLELogging.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
-		HLEHideDebugConsole.Save();
+		HLELogLvl.Save();
 		HLEAlwaysStart.Save();
 
-		// ConLog
-		LogAllSysCalls.Save();
-		LogWrite.Save();
-		LogWarning.Save();
-		LogError.Save();
-		LogSuccess.Save();
+		//Auto Pause
+		DBGAutoPauseFunctionCall.Save();
+		DBGAutoPauseSystemCall.Save();
 
 		// Language
 		SysLanguage.Save();

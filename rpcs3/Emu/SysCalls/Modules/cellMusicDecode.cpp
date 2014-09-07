@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellMusicDecode_init();
 Module cellMusicDecode(0x004f, cellMusicDecode_init);
@@ -98,3 +97,4 @@ void cellMusicDecode_init()
 	cellMusicDecode.AddFunc(0xb84f5c81, cellMusicDecodeSetSelectionContext);
 	cellMusicDecode.AddFunc(0x58ab1999, cellMusicDecodeGetContentsId);
 }
+#endif

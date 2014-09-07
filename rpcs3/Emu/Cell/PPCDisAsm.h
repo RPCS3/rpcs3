@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Emu/CPU/CPUDisAsm.h"
-#include "Gui/DisAsmFrame.h"
-#include "Emu/Memory/Memory.h"
 
 class PPCDisAsm : public CPUDisAsm
 {

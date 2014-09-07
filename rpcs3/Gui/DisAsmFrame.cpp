@@ -1,8 +1,11 @@
-#include "stdafx.h"
-#include "DisAsmFrame.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Cell/PPCThread.h"
 #include "Emu/System.h"
+#include "DisAsmFrame.h"
+#include "Emu/FS/vfsLocalFile.h"
+#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/Cell/PPCThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -148,7 +151,7 @@ public:
 
 	virtual void Task()
 	{
-		ConLog.Write("Start dump in thread %d!", (int)id);
+		LOG_NOTICE(HLE, "Start dump in thread %d!", (int)id);
 		const u32 max_value = prog_dial->GetMaxValue(id);
 		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
@@ -167,7 +170,7 @@ public:
 					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
 
 				disasm->dump_pc = sh_addr + off;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 
 				arr[id][sh].Add(fmt::FromUTF8(disasm->last_opcode));
 
@@ -176,14 +179,14 @@ public:
 			}
 		}
 
-		ConLog.Write("Finish dump in thread %d!", (int)id);
+		LOG_NOTICE(HLE, "Finish dump in thread %d!", (int)id);
 
 		*done = true;
 	}
 
 	void OnExit()
 	{
-		ConLog.Write("CleanUp dump thread (%d)!", (int)id);
+		LOG_NOTICE(HLE, "CleanUp dump thread (%d)!", (int)id);
 		safe_delete(decoder);
 	}
 };
@@ -216,10 +219,11 @@ struct WaitDumperThread : public ThreadBase
 	{
 		for(uint i=0; i<cores; i++)
 		{
-			while(done[i] == false) Sleep(1);
+			while(done[i] == false)
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
-		ConLog.Write("Saving dump is started!");
+		LOG_NOTICE(HLE, "Saving dump is started!");
 		const uint length_for_core = prog_dial.GetMaxValue(0);
 		const uint length = length_for_core * cores;
 		prog_dial.Close();
@@ -262,7 +266,7 @@ struct WaitDumperThread : public ThreadBase
 			fd.Write(wxString::Format("End of section header %d\n\n", sh));
 		}
 		
-		ConLog.Write("CleanUp dump saving!");
+		LOG_NOTICE(HLE, "CleanUp dump saving!");
 
 		for(uint c=0; c<cores; ++c)
 		{
@@ -294,13 +298,13 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	vfsLocalFile& f_elf = *new vfsLocalFile(nullptr);
 	f_elf.Open(Emu.m_path);
 
-	ConLog.Write("path: %s", Emu.m_path.c_str());
+	LOG_NOTICE(HLE, "path: %s", Emu.m_path.c_str());
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
 
 	if(!ehdr.CheckMagic())
 	{
-		ConLog.Error("Corrupted ELF!");
+		LOG_ERROR(HLE, "Corrupted ELF!");
 		return;
 	}
 	std::vector<std::string> name_arr;
@@ -334,7 +338,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		if(l_elf32->shdr_arr.size() <= 0) return;
 	break;
 
-	default: ConLog.Error("Corrupted ELF!"); return;
+	default: LOG_ERROR(HLE, "Corrupted ELF!"); return;
 	}
 
 	PPCDisAsm* disasm;
@@ -391,7 +395,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 			for(u64 addr=sh_addr; addr<sh_addr+sh_size; addr++, vsize++)
 			{
 				disasm->dump_pc = addr;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 				fd.Write("\t");
 				fd.Write(fmt::FromUTF8(disasm->last_opcode));
 			}

@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellPhotoDecode_init();
 Module cellPhotoDecode(0xf02e, cellPhotoDecode_init);
@@ -64,3 +63,4 @@ void cellPhotoDecode_init()
 	cellPhotoDecode.AddFunc(0xad7d8f38, cellPhotoDecodeFinalize);
 	cellPhotoDecode.AddFunc(0x28b22e44, cellPhotoDecodeFromFile);
 }
+#endif 

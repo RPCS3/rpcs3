@@ -1,17 +1,25 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
 #include "MainFrame.h"
-#include "CompilerELF.h"
-#include "MemoryViewer.h"
-#include "RSXDebugger.h"
-#include "PADManager.h"
-#include "FnIdGenerator.h"
 
 #include "git-version.h"
 #include "Ini.h"
-#include "Emu/GS/sysutil_video.h"
+#include "Emu/RSX/sysutil_video.h"
+#include "Gui/PADManager.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"
+#include "Gui/GameViewer.h"
+#include "Gui/CompilerELF.h"
+#include "Gui/AutoPauseManager.h"
+#include "Gui/SaveDataUtility.h"
+#include "Gui/KernelExplorer.h"
+#include "Gui/MemoryViewer.h"
+#include "Gui/RSXDebugger.h"
+
 #include <wx/dynlib.h>
 
 #include "Loader/PKG.h"
@@ -33,13 +41,14 @@ enum IDs
 	id_config_pad,
 	id_config_vfs_manager,
 	id_config_vhdd_manager,
+	id_config_autopause_manager,
+	id_config_savedata_manager,
 	id_tools_compiler,
+	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
-	id_tools_fnid_generator,
 	id_help_about,
 	id_update_dbg,
-	id_boot_game_and_run,
 };
 
 wxString GetPaneName()
@@ -65,11 +74,10 @@ MainFrame::MainFrame()
 
 	wxMenu* menu_boot = new wxMenu();
 	menubar->Append(menu_boot, "Boot");
+	menu_boot->Append(id_boot_elf, "Boot ELF / SELF file");
 	menu_boot->Append(id_boot_game, "Boot game");
-	menu_boot->Append(id_boot_game_and_run, "Boot game and start");
-	menu_boot->Append(id_install_pkg, "Install PKG");
 	menu_boot->AppendSeparator();
-	menu_boot->Append(id_boot_elf, "Boot (S)ELF");
+	menu_boot->Append(id_install_pkg, "Install PKG");
 
 	wxMenu* menu_sys = new wxMenu();
 	menubar->Append(menu_sys, "System");
@@ -84,15 +92,18 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_emu, "Settings");
 	menu_conf->Append(id_config_pad, "PAD Settings");
 	menu_conf->AppendSeparator();
+	menu_conf->Append(id_config_autopause_manager, "Auto Pause Settings");
+	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
+	menu_conf->Append(id_config_savedata_manager, "Save Data Utility");
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
 	menu_tools->Append(id_tools_compiler, "ELF Compiler");
-	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer");
-	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger");
-	menu_tools->Append(id_tools_fnid_generator, "FunctionID Generator");
+	menu_tools->Append(id_tools_kernel_explorer, "Kernel Explorer")->Enable(false);
+	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer")->Enable(false);
+	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger")->Enable(false);
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "Help");
@@ -103,16 +114,16 @@ MainFrame::MainFrame()
 	// Panels
 	m_game_viewer = new GameViewer(this);
 	m_debugger_frame = new DebuggerPanel(this);
-	ConLogFrame = new LogFrame(this);
+	m_log_frame = new LogFrame(this);
 
-	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
+	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
+	AddPane(m_log_frame, "Log", wxAUI_DOCK_BOTTOM);
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
 	// Events
-	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
-	Bind(wxEVT_MENU, &MainFrame::BootGameAndRun, this, id_boot_game_and_run);
-	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
 	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
+	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
+	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
 
 	Bind(wxEVT_MENU, &MainFrame::Pause, this, id_sys_pause);
 	Bind(wxEVT_MENU, &MainFrame::Stop, this, id_sys_stop);
@@ -123,11 +134,13 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigPad, this, id_config_pad);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
+	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
-	Bind(wxEVT_MENU, &MainFrame::OpenFnIdGenerator, this, id_tools_fnid_generator);
 
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
@@ -185,7 +198,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
-		ConLog.Success("Game: boot done.");
+		LOG_SUCCESS(HLE, "Game: boot done.");
 
 		if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
 		{
@@ -194,44 +207,10 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
 	}
 }
 
-void MainFrame::BootGameAndRun(wxCommandEvent& WXUNUSED(event))
-{
-	bool stopped = false;
-
-	if (Emu.IsRunning())
-	{
-		Emu.Pause();
-		stopped = true;
-	}
-
-	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
-
-	if (ctrl.ShowModal() == wxID_CANCEL)
-	{
-		if (stopped) Emu.Resume();
-		return;
-	}
-
-	Emu.Stop();
-
-	if (Emu.BootGame(ctrl.GetPath().ToStdString()))
-	{
-		ConLog.Success("Game: boot done.");
-	}
-	else
-	{
-		ConLog.Error("PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
-	}
-
-	if (Emu.IsReady())
-	{
-		Emu.Run();
-	}
-}
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
@@ -254,18 +233,18 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	wxString filePath = ctrl.GetPath();
-	wxFile pkg_f(filePath, wxFile::read); // TODO: Use VFS to install PKG files
+	std::string filePath = ctrl.GetPath().ToStdString();
+	rFile pkg_f(filePath, rFile::read); // TODO: Use VFS to install PKG files
 
 	if (pkg_f.IsOpened())
 	{
 		PKGLoader pkg(pkg_f);
 		pkg.Install("/dev_hdd0/game/");
 		pkg.Close();
-	}
 
-	// Refresh game list
-	m_game_viewer->Refresh();
+		// Refresh game list
+		m_game_viewer->Refresh();
+	}
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
@@ -293,14 +272,18 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("(S)ELF: booting...");
+	LOG_NOTICE(HLE, "(S)ELF: booting...");
 
 	Emu.Stop();
-
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	ConLog.Success("(S)ELF: boot done.");
+	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
+	
+	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+	{
+		Emu.Run();
+	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
@@ -391,6 +374,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
+	// HLE / Misc.
+	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
+
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
 
@@ -403,28 +389,30 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
+	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
-	wxCheckBox* chbox_cpu_ignore_rwerrors = new wxCheckBox(p_cpu, wxID_ANY, "Ignore Read/Write errors");
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_skip_pamf			  = new wxCheckBox(p_graphics, wxID_ANY, "Skip Pamf");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
-	wxCheckBox* chbox_audio_conv		  = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
+	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
+	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
-	wxCheckBox* chbox_hle_exitonstop	  = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
-	wxCheckBox* chbox_hle_hide_debug_console = new wxCheckBox(p_hle, wxID_ANY, "Hide Debug Console");
-	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
+	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
 
-	//cbox_cpu_decoder->Append("DisAsm");
-	cbox_cpu_decoder->Append("Interpreter & DisAsm");
-	cbox_cpu_decoder->Append("Interpreter");
+	//Auto Pause
+	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
-	cbox_spu_decoder->Append("Interpreter");
-	cbox_spu_decoder->Append("Recompiler");
+	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
+	cbox_cpu_decoder->Append("PPU Interpreter");
+
+	cbox_spu_decoder->Append("SPU Interpreter");
+	cbox_spu_decoder->Append("SPU JIT (asmjit)");
 
 	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
 	{
@@ -456,6 +444,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
 
+	cbox_hle_loglvl->Append("All");
+	cbox_hle_loglvl->Append("Success");
+	cbox_hle_loglvl->Append("Warnings");
+	cbox_hle_loglvl->Append("Errors");
+	cbox_hle_loglvl->Append("Nothing");
+
 	cbox_sys_lang->Append("Japanese");
 	cbox_sys_lang->Append("English (US)");
 	cbox_sys_lang->Append("French");
@@ -475,21 +469,22 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_sys_lang->Append("Polish");
 	cbox_sys_lang->Append("English (UK)");
 
-
 	// Get values from .ini
-	chbox_cpu_ignore_rwerrors->SetValue(Ini.CPUIgnoreRWErrors.GetValue());
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_skip_pamf	         ->SetValue(Ini.SkipPamf.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
-	chbox_audio_conv		 ->SetValue(Ini.AudioConvertToU16.GetValue());
+	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
+	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
-	chbox_hle_hide_debug_console->SetValue(Ini.HLEHideDebugConsole.GetValue());
 	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
+
+	//Auto Pause related
+	chbox_dbg_ap_systemcall  ->SetValue(Ini.DBGAutoPauseSystemCall.GetValue());
+	chbox_dbg_ap_functioncall->SetValue(Ini.DBGAutoPauseFunctionCall.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
@@ -500,14 +495,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out       ->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
-
-	// Enable / Disable parameters
+	// Enable/Disable parameters
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_audio_conv->Enable(Emu.IsStopped());
+	chbox_hle_logging->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
-
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -522,11 +517,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
 	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_cpu_decoder->Add(chbox_cpu_ignore_rwerrors, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
@@ -536,7 +532,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics->Add(chbox_skip_pamf, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
@@ -550,12 +545,16 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// HLE / Misc.
-	s_subpanel_hle->AddSpacer(15);
+	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_hide_debug_console, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	//Auto Pause
+	s_subpanel_hle->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -579,7 +578,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
-		Ini.CPUIgnoreRWErrors.SetValue(chbox_cpu_ignore_rwerrors->GetValue());
 		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection() + 1);
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
@@ -588,19 +586,23 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
-		Ini.SkipPamf.SetValue(chbox_skip_pamf->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
+		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
+		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
-		Ini.HLEHideDebugConsole.SetValue(chbox_hle_hide_debug_console->GetValue());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
+
+		//Auto Pause
+		Ini.DBGAutoPauseFunctionCall.SetValue(chbox_dbg_ap_functioncall->GetValue());
+		Ini.DBGAutoPauseSystemCall.SetValue(chbox_dbg_ap_systemcall->GetValue());
 
 		Ini.Save();
 	}
@@ -623,9 +625,24 @@ void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 	VHDDManagerDialog(this).ShowModal();
 }
 
+void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
+{
+	AutoPauseManagerDialog(this).ShowModal();
+}
+
+void MainFrame::ConfigSaveData(wxCommandEvent& event)
+{
+	SaveDataListDialog(this, true).ShowModal();
+}
+
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 {
 	(new CompilerELF(this)) -> Show();
+}
+
+void MainFrame::OpenKernelExplorer(wxCommandEvent& WXUNUSED(event))
+{
+	(new KernelExplorer(this)) -> Show();
 }
 
 void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
@@ -636,11 +653,6 @@ void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 {
 	(new RSXDebugger(this)) -> Show();
-}
-
-void MainFrame::OpenFnIdGenerator(wxCommandEvent& WXUNUSED(event))
-{
-	FnIdGenerator(this).ShowModal();
 }
 
 
@@ -703,6 +715,14 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 			default:
 				return;
 		}
+
+		if (event.GetId() == DID_STOPPED_EMU)
+		{
+			if (Ini.HLEExitOnStop.GetValue())
+			{
+				wxGetApp().Exit();
+			}
+		}
 	}
 	else
 	{
@@ -711,20 +731,32 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 		is_ready = Emu.IsReady();
 	}
 
+	// Update menu items based on the state of the emulator
 	wxMenuBar& menubar( *GetMenuBar() );
+
+	// Emulation
 	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
-	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
-	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + E" : "Resume\tCtrl + E");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
-	//send_exit.Enable(false);
-	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
 
+	// PS3 Commands
+	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
+	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
+	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
 	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
+
+	// Tools
+	wxMenuItem& kernel_explorer = *menubar.FindItem(id_tools_kernel_explorer);
+	wxMenuItem& memory_viewer = *menubar.FindItem(id_tools_memory_viewer);
+	wxMenuItem& rsx_debugger = *menubar.FindItem(id_tools_rsx_debugger);
+	kernel_explorer.Enable(!is_stopped);
+	memory_viewer.Enable(!is_stopped);
+	rsx_debugger.Enable(!is_stopped);
+
 
 	//m_aui_mgr.Update();
 

@@ -1,10 +1,16 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+
+#include "VFS.h"
 #include "vfsDir.h"
 
 vfsDir::vfsDir()
 	: vfsDirBase(nullptr)
 	, m_stream(nullptr)
 {
+	// TODO: proper implementation
+	// m_stream is nullptr here. So open root until a proper dir is given
+	Open("/");
 }
 
 vfsDir::vfsDir(const std::string& path)
@@ -30,7 +36,7 @@ bool vfsDir::Create(const std::string& path)
 
 bool vfsDir::IsExists(const std::string& path) const
 {
-	return m_stream->IsExists(path); // Crash (Access violation reading location 0x0000000000000000)
+	return m_stream->IsExists(path);
 }
 
 const std::vector<DirEntryInfo>& vfsDir::GetEntries() const

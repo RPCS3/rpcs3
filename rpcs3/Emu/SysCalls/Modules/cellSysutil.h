@@ -1,5 +1,16 @@
 #pragma once
 
+enum
+{
+	CELL_SYSUTIL_ERROR_TYPE   = 0x8002b101,
+	CELL_SYSUTIL_ERROR_VALUE  = 0x8002b102,
+	CELL_SYSUTIL_ERROR_SIZE   = 0x8002b103,
+	CELL_SYSUTIL_ERROR_NUM    = 0x8002b104,
+	CELL_SYSUTIL_ERROR_BUSY   = 0x8002b105,
+	CELL_SYSUTIL_ERROR_STATUS = 0x8002b106,
+	CELL_SYSUTIL_ERROR_MEMORY = 0x8002b107,
+};
+
 // Parameter IDs
 enum
 {
@@ -103,17 +114,6 @@ enum
 	CELL_SYSUTIL_PAD_RUMBLE_ON   = 1,
 };
 
-
-enum
-{
-	CELL_MSGDIALOG_BUTTON_NONE      = -1,
-	CELL_MSGDIALOG_BUTTON_INVALID   = 0,
-	CELL_MSGDIALOG_BUTTON_OK        = 1,
-	CELL_MSGDIALOG_BUTTON_YES       = 1,
-	CELL_MSGDIALOG_BUTTON_NO        = 2,
-	CELL_MSGDIALOG_BUTTON_ESCAPE    = 3,
-};
-
 enum
 {
 	CELL_SYSCACHE_RET_OK_CLEARED      = 0,
@@ -128,19 +128,6 @@ enum
 	CELL_SYSCACHE_ERROR_PARAM         = 0x8002bc03,
 	CELL_SYSCACHE_ERROR_NOTMOUNTED    = 0x8002bc04, // We don't really need to simulate the mounting, so this is probably useless
 };
-
-enum CellMsgDialogType
-{
-	CELL_MSGDIALOG_DIALOG_TYPE_ERROR  = 0x00000000,
-	CELL_MSGDIALOG_DIALOG_TYPE_NORMAL = 0x00000001,
-
-	CELL_MSGDIALOG_BUTTON_TYPE_NONE   = 0x00000000,
-	CELL_MSGDIALOG_BUTTON_TYPE_YESNO  = 0x00000010,
-
-	CELL_MSGDIALOG_DEFAULT_CURSOR_YES = 0x00000000,
-	CELL_MSGDIALOG_DEFAULT_CURSOR_NO  = 0x00000100,
-};
-
 
 // cellSysutil: cellHddGame
 enum
@@ -184,11 +171,11 @@ enum
 
 struct CellHddGameSystemFileParam
 {
-	u8 title[CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
-	u8 titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
+	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
 	u8 reserved0[2];
-	u8 dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
 	u8 reserved1[2];
 	be_t<u32> attribute;
 	be_t<u32> parentalLevel;
@@ -215,7 +202,7 @@ struct CellHddGameStatGet
 
 struct CellHddGameStatSet
 {
-	mem_beptr_t<CellHddGameSystemFileParam> setParam;
+	vm::bptr<CellHddGameSystemFileParam> setParam;
 	be_t<u32> reserved_addr;  // void*
 };
 
@@ -226,3 +213,71 @@ struct CellHddGameCBResult
 	be_t<u32> invalidMsg_addr;  // char*
 	be_t<u32> reserved_addr;  // void*
 };
+
+typedef s32 CellWebBrowserId;
+typedef void* CellWebBrowserClientSession;
+typedef void(*CellWebBrowserCallback)(s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
+typedef void(*CellWebComponentCallback)(CellWebBrowserId, s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserSystemCallback)(s32 cb_type, vm::ptr<void> usrdata);
+
+typedef void(*CellWebBrowserMIMETypeCallback)(vm::ptr<const char> mimetype, vm::ptr<const char> url, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserErrorCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserStatusCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserNotify)(vm::ptr<const char> message, vm::ptr<void> usrdata);
+typedef void(*CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
+
+struct CellWebBrowserMimeSet
+{
+	vm::bptr<const char> const type;
+	vm::bptr<const char> const directory;
+};
+
+struct CellWebBrowserPos
+{
+	be_t<s32> x;
+	be_t<s32> y;
+};
+
+struct CellWebBrowserSize
+{
+	be_t<s32> width;
+	be_t<s32> height;
+};
+
+struct CellWebBrowserRect
+{
+	CellWebBrowserPos pos;
+	CellWebBrowserSize size;
+};
+
+struct CellWebBrowserConfig
+{
+	be_t<s32> version;
+	be_t<s32> heap_size;
+	vm::bptr<const CellWebBrowserMimeSet> mimesets;
+	be_t<s32> mimeset_num;
+	be_t<s32> functions;
+	be_t<s32> tab_count;
+	vm::bptr<CellWebBrowserCallback> exit_cb;
+	vm::bptr<CellWebBrowserCallback> download_cb;
+	vm::bptr<CellWebBrowserCallback> navigated_cb;
+};
+
+struct CellWebBrowserConfig2
+{
+	be_t<s32> version;
+	be_t<s32> heap_size;
+	be_t<s32> functions;
+	be_t<s32> tab_count;
+	be_t<s32> size_mode;
+	be_t<s32> view_restriction;
+	vm::bptr<CellWebBrowserMIMETypeCallback> unknown_mimetype_cb;
+	vm::bptr<CellWebBrowserErrorCallback> error_cb;
+	vm::bptr<CellWebBrowserStatusCallback> status_error_cb;
+	vm::bptr<CellWebBrowserNotify> notify_cb;
+	vm::bptr<CellWebBrowserCallback> request_cb;
+	CellWebBrowserRect rect;
+	be_t<float> resolution_factor;
+	be_t<s32> magic_number_;
+};
+

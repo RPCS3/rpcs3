@@ -1,9 +1,5 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <ostream>
-#include <sstream>
-#include <cstdio>
+class wxString;
 
 #if defined(_MSC_VER)
 #define snprintf _snprintf
@@ -17,6 +13,38 @@ namespace fmt{
 	struct empty_t{};
 
 	extern const string placeholder;
+
+	template <typename T>
+	std::string AfterLast(const std::string& source, T searchstr)
+	{
+		size_t search_pos = source.rfind(searchstr);
+		search_pos = search_pos == std::string::npos ? 0 : search_pos;
+		return source.substr(search_pos);
+	}
+
+	template <typename T>
+	std::string BeforeLast(const std::string& source, T searchstr)
+	{
+		size_t search_pos = source.rfind(searchstr);
+		search_pos = search_pos == std::string::npos ? 0 : search_pos;
+		return source.substr(0, search_pos);
+	}
+
+	template <typename T>
+	std::string AfterFirst(const std::string& source, T searchstr)
+	{
+		size_t search_pos = source.find(searchstr);
+		search_pos = search_pos == std::string::npos ? 0 : search_pos;
+		return source.substr(search_pos);
+	}
+
+	template <typename T>
+	std::string BeforeFirst(const std::string& source, T searchstr)
+	{
+		size_t search_pos = source.find(searchstr);
+		search_pos = search_pos == std::string::npos ? 0 : search_pos;
+		return source.substr(0, search_pos);
+	}
 
 	// write `fmt` from `pos` to the first occurence of `fmt::placeholder` to
 	// the stream `os`. Then write `arg` to to the stream. If there's no
@@ -76,7 +104,7 @@ namespace fmt{
 
 	//wrapper to deal with advance sprintf formating options with automatic length finding
 	template<typename  ... Args>
-	string Format(const string &fmt, Args&& ... parameters)
+	string Format(const string &fmt, Args ... parameters)
 	{
 		size_t length = 256;
 		string str;
@@ -84,10 +112,14 @@ namespace fmt{
 		for (;;)
 		{
 			std::vector<char> buffptr(length);
+#if !defined(_MSC_VER)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
 			size_t printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
 #pragma clang diagnostic pop
+#else
+			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt.c_str(), std::forward<Args>(parameters)...);
+#endif
 			if (printlen < length)
 			{
 				str = string(buffptr.data(), printlen);
@@ -96,6 +128,57 @@ namespace fmt{
 			length *= 2;
 		}
 		return str;
+	}
+
+	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
+	std::string replace_all(std::string src, const std::string& from, const std::string& to);
+
+	template<size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::string>(&list)[list_size])
+	{
+		for (size_t pos = 0; pos < src.length(); ++pos)
+		{
+			for (size_t i = 0; i < list_size; ++i)
+			{
+				const size_t comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+					continue;
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + std::string(src.c_str() + pos + comp_length);
+					pos += list[i].second.length() - 1;
+					break;
+				}
+			}
+		}
+
+		return src;
+	}
+
+	template<size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>>(&list)[list_size])
+	{
+		for (size_t pos = 0; pos < src.length(); ++pos)
+		{
+			for (size_t i = 0; i < list_size; ++i)
+			{
+				const size_t comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+					continue;
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + std::string(src.c_str() + pos + comp_length);
+					pos += list[i].second().length() - 1;
+					break;
+				}
+			}
+		}
+
+		return src;
 	}
 
 	//convert a wxString to a std::string encoded in utf8
@@ -110,4 +193,9 @@ namespace fmt{
 	//WARNING: not fully compatible with CmpNoCase from wxString
 	int CmpNoCase(const std::string& a, const std::string& b);
 
+	//TODO: remove this after every snippet that uses it is gone
+	//WARNING: not fully compatible with Replace from wxString
+	void Replace(std::string &str, const std::string &searchterm, const std::string& replaceterm);
+
+	std::vector<std::string> rSplit(const std::string& source, const std::string& delim);
 }

@@ -1,5 +1,25 @@
 #pragma once
 
+#ifdef _WIN32
+#define thread_local __declspec(thread)
+#elif __APPLE__
+#define thread_local __thread
+#endif
+
+#ifdef _WIN32
+#define __noinline __declspec(noinline)
+#else
+#define __noinline __attribute__((noinline))
+#endif
+
+template<size_t size>
+void strcpy_trunc(char (&dst)[size], const std::string& src)
+{
+	const size_t count = (src.size() >= size) ? size - 1 /* truncation */ : src.size();
+	memcpy(dst, src.c_str(), count);
+	dst[count] = 0;
+}
+
 #if defined(__GNUG__)
 #include <cmath>
 #include <stdlib.h>
@@ -14,8 +34,6 @@
 #define _byteswap_ushort(x) __builtin_bswap16(x)
 #define _byteswap_ulong(x) __builtin_bswap32(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
-#define Sleep(x) usleep(x * 1000)
-#define mkdir(x) mkdir(x, 0777)
 #define INFINITE 0xFFFFFFFF
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
@@ -47,10 +65,10 @@ inline int64_t  __mulh(int64_t a, int64_t b)
 	return result;
 }
 
-#ifndef __APPLE__
-#define _aligned_malloc(size,alignment) memalign(alignment,size)
-#else
+
 void * _aligned_malloc(size_t size, size_t alignment);
+
+#ifdef __APPLE__
 int clock_gettime(int foo, struct timespec *ts);
 #define wxIsNaN(x) ((x) != (x))
 
@@ -58,9 +76,20 @@ int clock_gettime(int foo, struct timespec *ts);
 #define CLOCK_MONOTONIC 0
 #endif /* !CLOCK_MONOTONIC */
 
-#endif /* !__APPLE__ */
+#endif /* __APPLE__ */
 
 #define _aligned_free free
 
 #define DWORD int32_t
+#endif
+
+#ifndef InterlockedCompareExchange
+static __forceinline uint32_t InterlockedCompareExchange(volatile uint32_t* dest, uint32_t exch, uint32_t comp)
+{
+	return _InterlockedCompareExchange((volatile long*)dest, exch, comp);
+}
+static __forceinline uint64_t InterlockedCompareExchange(volatile uint64_t* dest, uint64_t exch, uint64_t comp)
+{
+	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp);
+}
 #endif

@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Emu/System.h"
+#include "rpcs3/Ini.h"
+
 #include "OpenALThread.h"
 
 ALenum g_last_al_error = AL_NO_ERROR;
@@ -13,7 +17,7 @@ void printAlError(ALenum err, const char* situation)
 {
 	if(err != AL_NO_ERROR)
 	{
-		ConLog.Error("%s: OpenAL error 0x%04x", situation, err);
+		LOG_ERROR(HLE, "%s: OpenAL error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }
@@ -22,7 +26,7 @@ void printAlcError(ALCenum err, const char* situation)
 {
 	if(err != ALC_NO_ERROR)
 	{
-		ConLog.Error("%s: OpenALC error 0x%04x", situation, err);
+		LOG_ERROR(HLE, "%s: OpenALC error 0x%04x", situation, err);
 		Emu.Pause();
 	}
 }
@@ -132,7 +136,7 @@ void OpenALThread::AddData(const void* src, ALsizei size)
 
 		int bsize = size < m_buffer_size ? size : m_buffer_size;
 		if (!AddBlock(buffer, bsize, bsrc))
-			ConLog.Error("OpenALThread::AddBlock: invalid block size: %d", bsize);
+			LOG_ERROR(HLE, "OpenALThread::AddBlock: invalid block size: %d", bsize);
 
 		alSourceQueueBuffers(m_source, 1, &buffer);
 		checkForAlError("alSourceQueueBuffers");

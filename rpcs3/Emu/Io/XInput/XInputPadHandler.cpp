@@ -1,7 +1,7 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
 #if defined (_WIN32)
+#include "Utilities/Log.h"
 #include "XInputPadHandler.h"
-#include <cstring>
 
 namespace {
 	const DWORD THREAD_TIMEOUT = 1000;
@@ -111,7 +111,7 @@ void XInputPadHandler::Close()
 		{
 			active = false;
 			if (WaitForSingleObject(thread, THREAD_TIMEOUT) != WAIT_OBJECT_0)
-				ConLog.Error("XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
+				LOG_ERROR(HLE, "XInput thread could not stop within %d milliseconds", THREAD_TIMEOUT);
 			thread = nullptr;
 		}
 

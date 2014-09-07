@@ -1,4 +1,8 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/FS/VFS.h"
 #include "VFSManager.h"
 
 VFSEntrySettingsDialog::VFSEntrySettingsDialog(wxWindow* parent, VFSManagerEntry& entry)
@@ -116,8 +120,14 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 {
 	m_list = new wxListView(this);
 
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK));
+	s_btns->AddSpacer(30);
+	s_btns->Add(new wxButton(this, wxID_CANCEL));
+
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 	s_main->Add(m_list, 1, wxEXPAND);
+       s_main->Add(s_btns,  0, wxALL | wxCENTER, 10);
 
 	SetSizerAndFit(s_main);
 	SetSize(800, 600);
@@ -129,10 +139,10 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 
 	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VFSManagerDialog::OnEntryConfig, this);
 	m_list->Bind(wxEVT_RIGHT_DOWN, &VFSManagerDialog::OnRightClick, this);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnAdd, this, id_add);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnRemove, this, id_remove);
-	Bind(wxEVT_MENU,         &VFSManagerDialog::OnEntryConfig, this, id_config);
-	Bind(wxEVT_CLOSE_WINDOW, &VFSManagerDialog::OnClose, this);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnAdd, this, id_add);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnRemove, this, id_remove);
+	Bind(wxEVT_MENU,   &VFSManagerDialog::OnEntryConfig, this, id_config);
+	Bind(wxEVT_BUTTON, &VFSManagerDialog::OnOK, this, wxID_OK);
 
 	LoadEntries();
 	UpdateList();
@@ -204,7 +214,7 @@ void VFSManagerDialog::OnRemove(wxCommandEvent& event)
 	UpdateList();
 }
 
-void VFSManagerDialog::OnClose(wxCloseEvent& event)
+void VFSManagerDialog::OnOK(wxCommandEvent& event)
 {
 	SaveEntries();
 	event.Skip();

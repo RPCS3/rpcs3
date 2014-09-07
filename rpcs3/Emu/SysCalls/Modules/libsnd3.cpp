@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void libsnd3_init();
 Module libsnd3("libsnd3", libsnd3_init);
@@ -325,3 +324,4 @@ void libsnd3_init()
 {
 
 }
+#endif

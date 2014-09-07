@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Emu/FS/vfsStream.h"
 #include "PSF.h"
 
 PSFLoader::PSFLoader(vfsStream& f) : psf_f(f)
@@ -42,7 +44,7 @@ bool PSFLoader::LoadHeader()
 	if(!m_header.CheckMagic())
 		return false;
 
-	if(m_show_log) ConLog.Write("PSF version: %x", m_header.psf_version);
+	if(m_show_log) LOG_NOTICE(LOADER, "PSF version: %x", m_header.psf_version);
 
 	m_psfindxs.clear();
 	m_entries.clear();

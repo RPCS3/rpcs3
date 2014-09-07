@@ -360,7 +360,7 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-typedef mem_func_ptr_t<int (*)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg)> CellAdecCbMsg;
+typedef s32(*CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg);
 
 struct CellAdecCb
 {
@@ -1076,6 +1076,7 @@ public:
 	volatile bool is_running;
 	volatile bool is_finished;
 	bool just_started;
+	bool just_finished;
 
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
@@ -1116,65 +1117,7 @@ public:
 
 	CPUThread* adecCb;
 
-	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
-		: type(type)
-		, memAddr(addr)
-		, memSize(size)
-		, memBias(0)
-		, cbFunc(func)
-		, cbArg(arg)
-		, adecCb(nullptr)
-		, is_running(false)
-		, is_finished(false)
-		, just_started(false)
-		, ctx(nullptr)
-		, fmt(nullptr)
-	{
-		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
-		if (!codec)
-		{
-			ConLog.Error("AudioDecoder(): avcodec_find_decoder(ATRAC3P) failed");
-			Emu.Pause();
-			return;
-		}
-		fmt = avformat_alloc_context();
-		if (!fmt)
-		{
-			ConLog.Error("AudioDecoder(): avformat_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-		io_buf = (u8*)av_malloc(4096);
-		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, adecRead, NULL, NULL);
-		if (!fmt->pb)
-		{
-			ConLog.Error("AudioDecoder(): avio_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-	}
+	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg);
 
-	~AudioDecoder()
-	{
-		if (ctx)
-		{
-			for (u32 i = frames.GetCount() - 1; ~i; i--)
-			{
-				AdecFrame& af = frames.Peek(i);
-				av_frame_unref(af.data);
-				av_frame_free(&af.data);
-			}
-			avcodec_close(ctx);
-			avformat_close_input(&fmt);
-		}
-		if (fmt)
-		{
-			if (io_buf)
-			{
-				av_free(io_buf);
-			}
-			if (fmt->pb) av_free(fmt->pb);
-			avformat_free_context(fmt);
-		}
-	}
+	~AudioDecoder();
 };
