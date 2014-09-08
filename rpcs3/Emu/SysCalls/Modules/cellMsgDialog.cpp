@@ -127,19 +127,12 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 			callback.async((s32)status, userData); // TODO: this callback should be registered
 
-		CallAfter([&m_signal]()
+		CallAfter([]()
 		{
 			MsgDialogDestroy();
 
-			m_signal = false;
+			g_msg_dialog_state = msgDialogNone;
 		});
-
-		while (m_signal)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-
-		g_msg_dialog_state = msgDialogNone;
 	});
 	t.detach();
 

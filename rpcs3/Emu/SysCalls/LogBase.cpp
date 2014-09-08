@@ -34,21 +34,21 @@ void LogBase::LogOutput(LogType type, const u32 id, const char* info, const std:
 hle::error::error(s32 errorCode, const char* errorText)
 	: code(errorCode)
 	, base(nullptr)
-	, text(errorText)
+	, text(errorText ? errorText : "")
 {
 }
 
 hle::error::error(s32 errorCode, const LogBase& errorBase, const char* errorText)
 	: code(errorCode)
 	, base(&errorBase)
-	, text(errorText)
+	, text(errorText ? errorText : "")
 {
 }
 
 hle::error::error(s32 errorCode, const LogBase* errorBase, const char* errorText)
 	: code(errorCode)
 	, base(errorBase)
-	, text(errorText)
+	, text(errorText ? errorText : "")
 {
 }
 
