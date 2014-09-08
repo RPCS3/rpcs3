@@ -97,9 +97,9 @@ struct CellPngDecThreadInParam
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> spuThreadPriority;
 	vm::bptr<CellPngDecCbControlMalloc> cbCtrlMallocFunc;
-	be_t<vm::ptr<void>> cbCtrlMallocArg; // rough attempt (it's hard to pass vm::bptr as vm::ptr in function argument)
+	vm::bptr<void> cbCtrlMallocArg;
 	vm::bptr<CellPngDecCbControlFree> cbCtrlFreeFunc;
-	be_t<vm::ptr<void>> cbCtrlFreeArg;
+	vm::bptr<void> cbCtrlFreeArg;
 };
 
 struct CellPngDecExtThreadInParam
