@@ -221,7 +221,7 @@ s32 cellPngDecGetTextChunk(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u32> textInfoNum,
-	vm::ptr<CellPngTextInfo, 2> textInfo);
+	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo);
 
 s32 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte);
 
@@ -256,7 +256,7 @@ s32 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHa
 s32 cellPngDecGetUnknownChunks(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
-	vm::ptr<CellPngUnknownChunk, 2> unknownChunk,
+	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
 	vm::ptr<u32> unknownChunkNumber);
 
 
@@ -380,23 +380,7 @@ s32 cellPngDecExtDecodeData(
 	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp,
 	vm::ptr<CellPngDecDispParam> dispParam);
 
-//// Custom structs
-//struct CellPngDecSubHandle
-//{
-//	be_t<u32> fd;
-//	be_t<u64> fileSize;
-//	CellPngDecInfo info;
-//	CellPngDecOutParam outParam;
-//	CellPngDecSrc src;
-//};
-//
-//struct CellPngDecMainHandle
-//{
-//	be_t<u32> mainHandle;
-//	be_t<u32> threadInParam;
-//	be_t<u32> threadOutParam;
-//};
-
+// Custom structs
 struct PngDecoder
 {
 	vm::ptr<CellPngDecCbControlMalloc> malloc;
