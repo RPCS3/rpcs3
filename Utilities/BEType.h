@@ -438,9 +438,9 @@ public:
 		}
 	}
 
-	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res; res = ToBE() & right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator | (const be_t<T1>& right) const { const T res; res = ToBE() | right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { const T res; res = ToBE() ^ right.ToBE(); return (be_t&)res; }
+	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res = ToBE() & right.ToBE(); return (be_t&)res; }
+	template<typename T1> be_t operator | (const be_t<T1>& right) const { const T res = ToBE() | right.ToBE(); return (be_t&)res; }
+	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { const T res = ToBE() ^ right.ToBE(); return (be_t&)res; }
 
 	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
 	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "Emu/FS/vfsFile.h"
@@ -299,12 +300,26 @@ s64 _sys_spu_printf_detach_thread(u32 arg)
 	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_dtcb), vm::read32(spu_printf_dtcb + 4), arg);
 }
 
+s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt, u32 a1, u32 a2) // va_args...
+{
+	sysPrxForUser->Todo("_sys_snprintf(dst_addr=0x%x, count=%d, fmt_addr=0x%x['%s'], ...)", dst.addr(), count, fmt.addr(), fmt.get_ptr());
+
+	if (std::string(fmt.get_ptr()) == "%s_%08x")
+	{
+		return snprintf(dst.get_ptr(), count, fmt.get_ptr(), vm::get_ptr<char>(a1), a2);
+	}
+
+	Emu.Pause();
+	return 0;
+}
+
 s32 _sys_printf(vm::ptr<const char> fmt)
 {
 	sysPrxForUser->Todo("_sys_printf(fmt_addr=0x%x, ...)", fmt.addr());
 
 	// probably, assertion failed
 	sysPrxForUser->Warning("_sys_printf: \n%s", fmt.get_ptr());
+	Emu.Pause();
 	return CELL_OK;
 }
 
@@ -395,7 +410,6 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_strncat);
 	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
-	sysPrxForUser->AddFunc(0xe75c40f2, _unnamed_E75C40F2); // real name is unknown
 
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_initialize);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_finalize);
@@ -404,7 +418,10 @@ void sysPrxForUser_init()
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_attach_thread);
 	REG_FUNC(sysPrxForUser, _sys_spu_printf_detach_thread);
 
+	REG_FUNC(sysPrxForUser, _sys_snprintf);
+
 	REG_FUNC(sysPrxForUser, _sys_printf);
+	sysPrxForUser->AddFunc(0xe75c40f2, _unnamed_E75C40F2); // real name is unknown
 }
 
 void sysPrxForUser_load()

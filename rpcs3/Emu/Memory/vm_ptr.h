@@ -238,6 +238,13 @@ namespace vm
 			return (_ptr_base<void, 1, AT2>&)addr;
 		}
 
+		template<typename AT2>
+		operator const _ptr_base<const void, 1, AT2>() const
+		{
+			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			return (_ptr_base<const void, 1, AT2>&)addr;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
@@ -352,15 +359,20 @@ namespace vm
 		AT m_addr;
 
 		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
+		static_assert(!std::is_same<RT, u128>::value, "TODO: Unsupported callback result type (vector)");
 
 		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
+		static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
 
 		template<typename TT>
 		struct _func_arg
 		{
 			static_assert(!std::is_floating_point<TT>::value, "TODO: Unsupported callback argument type (floating point)");
+			static_assert(!std::is_same<TT, u128>::value, "TODO: Unsupported callback argument type (vector)");
 
+			static_assert(sizeof(TT) <= 8, "Invalid callback argument type");
 			static_assert(!std::is_pointer<TT>::value, "Invalid callback argument type (pointer)");
+			static_assert(!std::is_reference<TT>::value, "Invalid callback argument type (reference)");
 
 			__forceinline static u64 get_value(const TT& arg)
 			{

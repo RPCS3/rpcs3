@@ -377,6 +377,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellPng.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
