@@ -174,7 +174,7 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 	// TODO: check values
 	attr->decoderVerLower = 0x280000; // from dmux
 	attr->decoderVerUpper = 0x260000;
-	attr->memSize = 4194304; // 4MB
+	attr->memSize = 4 * 1024 * 1024; // 4 MB
 	attr->cmdDepth = 16;
 	return CELL_OK;
 }

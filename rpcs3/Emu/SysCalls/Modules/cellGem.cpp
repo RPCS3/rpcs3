@@ -130,7 +130,7 @@ s32 cellGemGetMemorySize(be_t<s32> max_connect)
 	if (max_connect > CELL_GEM_MAX_NUM)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 
-	return 1048576 * max_connect; // 1MB * max_connect
+	return 1024 * 1024 * max_connect; // 1 MB * max_connect
 }
 
 int cellGemGetRGB()

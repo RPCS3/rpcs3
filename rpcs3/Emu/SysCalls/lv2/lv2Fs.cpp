@@ -534,7 +534,7 @@ s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, v
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
-	*block_count = 10485760; // ?
+	*block_count = 10 * 1024 * 1024; // ?
 
 	return CELL_OK;
 }
@@ -589,9 +589,13 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 	fs_config.m_ring_buffer = *ringbuf;
 
-	if(ringbuf->ringbuf_size < 0x40000000) // If the size is less than 1MB
-		fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 65535) / (65536)) * (65536);
-	fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 1048575) / (1048576)) * (1048576);
+    // If the size is less than 1MB
+	if(ringbuf->ringbuf_size < 0x40000000) {
+		fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
+    }
+    else {
+	    fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+    }
 
 	// alloc memory
 	fs_config.m_buffer = (u32)Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
