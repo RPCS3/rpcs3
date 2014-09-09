@@ -664,7 +664,7 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	vm::var<CellHddGameStatGet> get;
 	vm::var<CellHddGameStatSet> set;
 
-	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	get->hddFreeSizeKB = 40 * 1048576; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->st_atime__  = 0; // TODO
@@ -711,8 +711,8 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	funcStat(result, get, set);
 
 	/*
-	if (result->result != CELL_HDDGAME_CBRESULT_OK &&		// error on compiling in MVS. Needs to use LE byte order?
-		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
+		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL) // Error in compiling in MVS. Need to use LE byte order?
 		return CELL_HDDGAME_ERROR_CBRESULT;
 	*/
 
@@ -794,7 +794,7 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
-	*memSize = 1024 * 1024 * 1; // 1 MB
+	*memSize = 1048576; // 1 MB
 	return CELL_OK;
 }
 
