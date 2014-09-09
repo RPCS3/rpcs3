@@ -186,11 +186,16 @@ void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, P
 
 void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
     // Create the unit test function
-    auto function = cast<Function>(m_module->getOrInsertFunction(name, Type::getVoidTy(m_llvm_context), (Type *)nullptr));
-    auto block    = BasicBlock::Create(m_llvm_context, "start", function);
-    m_ir_builder.SetInsertPoint(block);
+    auto function = cast<Function>(s_module->getOrInsertFunction(name, s_ir_builder->getVoidTy(), s_ir_builder->getInt8Ty()->getPointerTo(), nullptr));
+    s_state_ptr = function->arg_begin();
+    s_state_ptr->setName("state");
+
+    auto block = BasicBlock::Create(*s_llvm_context, "start", function);
+    s_ir_builder->SetInsertPoint(block);
+
     test_case();
-    m_ir_builder.CreateRetVoid();
+    
+    s_ir_builder->CreateRetVoid();
     verifyFunction(*function);
 
     // Print the IR
@@ -201,14 +206,14 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
 
     // Generate the function
     MachineCodeInfo mci;
-    m_execution_engine->runJITOnFunction(function, &mci);
+    s_execution_engine->runJITOnFunction(function, &mci);
 
     // Disassember the generated function
     LOG_NOTICE(PPU, "[UT %s] Disassembly:", name);
     for (uint64_t pc = 0; pc < mci.size();) {
         char str[1024];
 
-        auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
+        auto size = LLVMDisasmInstruction(s_disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
         LOG_NOTICE(PPU, "[UT %s] %p: %s.", name, (uint8_t *)mci.address() + pc, str);
         pc += size;
     }
@@ -216,7 +221,8 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     // Run the test
     input();
     std::vector<GenericValue> args;
-    m_execution_engine->runFunction(function, args);
+    args.push_back(GenericValue(&m_ppu));
+    s_execution_engine->runFunction(function, args);
 
     // Verify results
     std::string msg;
@@ -227,7 +233,7 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
         LOG_ERROR(PPU, "[UT %s] Test failed. %s", name, msg.c_str());
     }
 
-    m_execution_engine->freeMachineCodeForFunction(function);
+    s_execution_engine->freeMachineCodeForFunction(function);
 }
 
 void PPULLVMRecompiler::RunAllTests() {

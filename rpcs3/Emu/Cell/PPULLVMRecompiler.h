@@ -437,64 +437,13 @@ private:
     /// PPU instruction decoder
     PPUDecoder m_decoder;
 
+    /// PPU Interpreter
+    PPUInterpreter m_interpreter;
+
     /// A flag used to detect branch instructions.
     /// This is set to false at the start of compilation of a block.
     /// When a branch instruction is encountered, this is set to true by the decode function.
     bool m_hit_branch_instruction;
-
-    /// LLVM context
-    llvm::LLVMContext m_llvm_context;
-
-    /// LLVM IR builder
-    llvm::IRBuilder<> m_ir_builder;
-
-    /// Module to which all generated code is output to
-    llvm::Module * m_module;
-
-    /// Function in m_module that corresponds to ExecuteThisCall
-    llvm::Function * m_execute_this_call_fn;
-
-    /// A comment metadata node for m_execute_this_call_fn
-    llvm::MDNode * m_execute_this_call_fn_comment_md_node;
-
-    /// Global variable in m_module that corresponds to m_ppu.GPR
-    llvm::GlobalVariable * m_pc;
-
-    /// Global variable in m_module that corresponds to m_ppu.GPR
-    llvm::GlobalVariable * m_gpr;
-
-    /// Global variable in m_module that corresponds to m_ppu.CR
-    llvm::GlobalVariable * m_cr;
-
-    /// Global variable in m_module that corresponds to m_ppu.XER
-    llvm::GlobalVariable * m_xer;
-
-    /// Global variable in m_module that corresponds to m_ppu.VPR
-    llvm::GlobalVariable * m_vpr;
-
-    /// Global variable in m_module that corresponds to m_ppu.VSCR
-    llvm::GlobalVariable * m_vscr;
-
-    /// JIT execution engine
-    llvm::ExecutionEngine * m_execution_engine;
-
-    /// Disassembler
-    LLVMDisasmContextRef m_disassembler;
-
-    /// PPU Interpreter
-    PPUInterpreter m_interpreter;
-
-    /// Time spent compiling
-    std::chrono::duration<double> m_compilation_time;
-
-    /// Time spent executing
-    std::chrono::duration<double> m_execution_time;
-
-    /// Contains the number of times the interpreter was invoked for an instruction
-    std::map<std::string, u64> m_interpreter_invocation_stats;
-
-    /// List of std::function pointers created by ThisCall()
-    std::list<std::function<void()> *> m_this_call_ptrs_list;
 
     /// Get a bit
     llvm::Value * GetBit(llvm::Value * val, u32 n);
@@ -517,13 +466,19 @@ private:
     /// Set a nibble
     llvm::Value * SetNibble(llvm::Value * val, u32 n, llvm::Value * b0, llvm::Value * b1, llvm::Value * b2, llvm::Value * b3, bool doClear = true);
 
-    /// Load GPR and convert it to an i64
+    /// Load PC
+    llvm::Value * GetPc();
+
+    /// Set PC
+    void SetPc(llvm::Value * val_i64);
+
+    /// Load GPR
     llvm::Value * GetGpr(u32 r);
 
-    /// Set GPR to specified value
+    /// Set GPR
     void SetGpr(u32 r, llvm::Value * val_x64);
 
-    /// Load CR and convert it to an i32
+    /// Load CR
     llvm::Value * GetCr();
 
     /// Load CR and get field CRn
@@ -565,6 +520,12 @@ private:
     /// Set the SO bit of XER
     void SetXerSo(llvm::Value * so);
 
+    /// Load VSCR
+    llvm::Value * GetVscr();
+
+    /// Set VSCR
+    void SetVscr(llvm::Value * val_x32);
+
     /// Load VR and convert it to an integer vector
     llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
 
@@ -577,9 +538,67 @@ private:
     /// Set VR to the specified value
     void SetVr(u32 vr, llvm::Value * val_x128);
 
+    /// Test an instruction against the interpreter
+    template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
+    void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args);
+
+    /// Excute a test
+    void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
+
+    /// Execute all tests
+    void RunAllTests();
+
     /// Call a member function
     template<class F, class C, class... Args>
     void ThisCall(const char * name, F function, C * this_ptr, Args... args);
+
+    /// Number of instances
+    static u32 s_num_instances;
+
+    /// Map from address to compiled code
+    static std::map<u64, void *> s_address_to_code_map;
+
+    /// Mutex for s_address_to_code_map
+    static std::mutex s_address_to_code_map_mutex;
+
+    /// LLVM mutex
+    static std::mutex s_llvm_mutex;
+
+    /// LLVM context
+    static llvm::LLVMContext * s_llvm_context;
+
+    /// LLVM IR builder
+    static llvm::IRBuilder<> * s_ir_builder;
+
+    /// Module to which all generated code is output to
+    static llvm::Module * s_module;
+
+    /// Function in m_module that corresponds to ExecuteThisCall
+    static llvm::Function * s_execute_this_call_fn;
+
+    /// A metadata node for s_execute_this_call_fn that records the function name and args
+    static llvm::MDNode * s_execute_this_call_fn_name_and_args_md_node;
+
+    /// JIT execution engine
+    static llvm::ExecutionEngine * s_execution_engine;
+
+    /// Disassembler
+    static LLVMDisasmContextRef s_disassembler;
+
+    /// The pointer to the PPU state
+    static llvm::Value * s_state_ptr;
+
+    /// Time spent compiling
+    static std::chrono::duration<double> s_compilation_time;
+
+    /// Time spent executing
+    static std::chrono::duration<double> s_execution_time;
+
+    /// Contains the number of times the interpreter was invoked for an instruction
+    static std::map<std::string, u64> s_interpreter_invocation_stats;
+
+    /// List of std::function pointers created by ThisCall()
+    static std::list<std::function<void()> *> s_this_call_ptrs_list;
 
     /// Execute a this call
     static void ExecuteThisCall(std::function<void()> * function);
@@ -590,16 +609,6 @@ private:
 
     /// Terminator for ArgsToString(T arg1, Args... args);
     static std::string ArgsToString();
-
-    /// Test an instruction against the interpreter
-    template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-    void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args);
-
-    /// Excute a test
-    void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
-
-    /// Execute all tests
-    void RunAllTests();
 };
 
 #endif // PPU_LLVM_RECOMPILER_H
