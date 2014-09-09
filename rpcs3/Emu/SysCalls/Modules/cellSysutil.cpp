@@ -709,9 +709,12 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	// TODO ?
 
 	funcStat(result, get, set);
+
+	/*
 	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
-		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL) // Error in compiling in MVS. Need to use LE byte order?
 		return CELL_HDDGAME_ERROR_CBRESULT;
+	*/
 
 	// TODO ?
 
