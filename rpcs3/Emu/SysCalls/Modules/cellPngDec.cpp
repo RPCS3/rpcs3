@@ -18,7 +18,8 @@ u32 libpngdec;
 u32 libpngdec_rtoc;
 #endif
 
-u32 pngDecCreate(
+s32 pngDecCreate(
+	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> param,
 	vm::ptr<const CellPngDecExtThreadInParam> ext = {})
 {
@@ -27,7 +28,7 @@ u32 pngDecCreate(
 
 	if (!dec)
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_FATAL, "Memory allocation failed");
+		return CELL_PNGDEC_ERROR_FATAL;
 	}
 
 	// initialize decoder
@@ -41,20 +42,26 @@ u32 pngDecCreate(
 	}
 	
 	// use virtual memory address as a handle
-	return dec.addr();
+	*mainHandle = dec.addr();
+
+	return CELL_OK;
 }
 
-void pngDecDestroy(CellPngDecMainHandle dec)
+s32 pngDecDestroy(CellPngDecMainHandle dec)
 {
 	if (!Memory.Free(dec.addr()))
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_FATAL, "Memory deallocation failed");
+		return CELL_PNGDEC_ERROR_FATAL;
 	}
+
+	return CELL_OK;
 }
 
-u32 pngDecOpen(
+s32 pngDecOpen(
 	CellPngDecMainHandle dec,
+	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
+	vm::ptr<CellPngDecOpnInfo> openInfo,
 	vm::ptr<const CellPngDecCbCtrlStrm> cb = {},
 	vm::ptr<const CellPngDecOpnParam> param = {})
 {
@@ -63,7 +70,7 @@ u32 pngDecOpen(
 
 	if (!stream)
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_FATAL, "Memory allocation failed");
+		return CELL_PNGDEC_ERROR_FATAL;
 	}
 	
 	// initialize stream
@@ -102,19 +109,26 @@ u32 pngDecOpen(
 	}
 
 	// use virtual memory address as a handle
-	return stream.addr();
+	*subHandle = stream.addr();
+
+	// set memory info
+	openInfo->initSpaceAllocated = 4096;
+
+	return CELL_OK;
 }
 
-void pngDecClose(CellPngDecSubHandle stream)
+s32 pngDecClose(CellPngDecSubHandle stream)
 {
 	cellFsClose(stream->fd);
 	if (!Memory.Free(stream.addr()))
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_FATAL, "Memory deallocation failed");
+		return CELL_PNGDEC_ERROR_FATAL;
 	}
+
+	return CELL_OK;
 }
 
-void pngReadHeader(
+s32 pngReadHeader(
 	CellPngDecSubHandle stream,
 	vm::ptr<CellPngDecInfo> info,
 	vm::ptr<CellPngDecExtInfo> extInfo = {})
@@ -123,7 +137,7 @@ void pngReadHeader(
 
 	if (stream->fileSize < 29)
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_HEADER, "The file is smaller than the length of a PNG header");
+		return CELL_PNGDEC_ERROR_HEADER; // The file is smaller than the length of a PNG header
 	}
 
 	//Write the header to buffer
@@ -146,7 +160,7 @@ void pngReadHeader(
 		buffer_32[1].ToBE() != se32(0x0D0A1A0A) ||  // Error: The first 8 bytes are not a valid PNG signature
 		buffer_32[3].ToBE() != se32(0x49484452))   // Error: The PNG file does not start with an IHDR chunk
 	{
-		throw hle::error(CELL_PNGDEC_ERROR_HEADER, "Invalid PNG header");
+		return CELL_PNGDEC_ERROR_HEADER;
 	}
 
 	switch (buffer[25])
@@ -156,7 +170,9 @@ void pngReadHeader(
 	case 3: current_info.colorSpace = CELL_PNGDEC_PALETTE;         current_info.numComponents = 1; break;
 	case 4: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA; current_info.numComponents = 2; break;
 	case 6: current_info.colorSpace = CELL_PNGDEC_RGBA;            current_info.numComponents = 4; break;
-	default: throw hle::error(CELL_PNGDEC_ERROR_HEADER, "Unknown color space (%d)");  return;
+	default:
+		cellPngDec->Error("cellPngDecDecodeData: Unsupported color space (%d)", (u32)buffer[25]);
+		return CELL_PNGDEC_ERROR_HEADER;
 	}
 
 	current_info.imageWidth = buffer_32[4];
@@ -166,9 +182,16 @@ void pngReadHeader(
 	current_info.chunkInformation = 0; // Unimplemented
 
 	*info = current_info;
+
+	if (extInfo)
+	{
+		extInfo->reserved = 0;
+	}
+
+	return CELL_OK;
 }
 
-void pngDecSetParameter(
+s32 pngDecSetParameter(
 	CellPngDecSubHandle stream,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam,
@@ -195,7 +218,9 @@ void pngDecSetParameter(
 	case CELL_PNGDEC_RGBA:
 	case CELL_PNGDEC_ARGB:            current_outParam.outputComponents = 4; break;
 
-	default: throw hle::error(CELL_PNGDEC_ERROR_ARG, fmt::Format("Unknown color space (%d)", (u32)current_outParam.outputColorSpace).c_str());
+	default:
+		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		return CELL_PNGDEC_ERROR_ARG;
 	}
 
 	current_outParam.outputBitDepth = inParam->outputBitDepth;
@@ -203,9 +228,11 @@ void pngDecSetParameter(
 	current_outParam.useMemorySpace = 0; // Unimplemented
 
 	*outParam = current_outParam;
+
+	return CELL_OK;
 }
 
-void pngDecodeData(
+s32 pngDecodeData(
 	CellPngDecSubHandle stream,
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
@@ -242,7 +269,11 @@ void pngDecodeData(
 		stbi_load_from_memory(png.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
 		&::free
 		);
-	if (!image)	throw hle::error(CELL_PNGDEC_ERROR_STREAM_FORMAT);
+	if (!image)
+	{
+		cellPngDec->Error("pngDecodeData: stbi_load_from_memory failed");
+		return CELL_PNGDEC_ERROR_STREAM_FORMAT;
+	}
 
 	const bool flip = current_outParam.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
 	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
@@ -317,14 +348,17 @@ void pngDecodeData(
 	case CELL_PNGDEC_GRAYSCALE:
 	case CELL_PNGDEC_PALETTE:
 	case CELL_PNGDEC_GRAYSCALE_ALPHA:
-		cellPngDec->Error("cellPngDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
 		break;
 
 	default:
-		throw hle::error(CELL_PNGDEC_ERROR_ARG);
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		return CELL_PNGDEC_ERROR_ARG;
 	}
 
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_FINISH;
+
+	return CELL_OK;
 }
 
 s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam)
@@ -336,16 +370,8 @@ s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInPa
 	cellPngDec->Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x)",
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr());
 
-	try
-	{
-		// create decoder
-		*mainHandle = pngDecCreate(threadInParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
+	// create decoder
+	if (s32 res = pngDecCreate(mainHandle, threadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;
@@ -368,16 +394,8 @@ s32 cellPngDecExtCreate(
 	cellPngDec->Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x, extThreadInParam_addr=0x%x, extThreadOutParam_addr=0x%x)",
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr(), extThreadInParam.addr(), extThreadOutParam.addr());
 
-	try
-	{
-		// create decoder
-		*mainHandle = pngDecCreate(threadInParam, extThreadInParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
+	// create decoder
+	if (s32 res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;
@@ -396,17 +414,8 @@ s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle)
 #else
 	cellPngDec->Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle.addr());
 
-	try
-	{
-		pngDecDestroy(mainHandle);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	// destroy decoder
+	return pngDecDestroy(mainHandle);
 #endif
 }
 
@@ -423,21 +432,8 @@ s32 cellPngDecOpen(
 	cellPngDec->Warning("cellPngDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr());
 
-	try
-	{
-		// create stream handle
-		*subHandle = pngDecOpen(mainHandle, src);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	// set memory info
-	openInfo->initSpaceAllocated = 4096;
-
-	return CELL_OK;
+	// create stream handle
+	return pngDecOpen(mainHandle, subHandle, src, openInfo);
 #endif
 }
 
@@ -456,21 +452,8 @@ s32 cellPngDecExtOpen(
 	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x, cbCtrlStrm_addr=0x%x, opnParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr(), cbCtrlStrm.addr(), opnParam.addr());
 
-	try
-	{
-		// create stream handle
-		*subHandle = pngDecOpen(mainHandle, src, cbCtrlStrm, opnParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	// set memory info
-	openInfo->initSpaceAllocated = 4096;
-
-	return CELL_OK;
+	// create stream handle
+	return pngDecOpen(mainHandle, subHandle, src, openInfo, cbCtrlStrm, opnParam);
 #endif
 }
 
@@ -482,17 +465,7 @@ s32 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHand
 #else
 	cellPngDec->Warning("cellPngDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle.addr(), subHandle.addr());
 
-	try
-	{
-		pngDecClose(subHandle);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngDecClose(subHandle);
 #endif
 }
 
@@ -505,17 +478,7 @@ s32 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle su
 	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), info.addr());
 
-	try
-	{
-		pngReadHeader(subHandle, info);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngReadHeader(subHandle, info);
 #endif
 }
 
@@ -532,17 +495,7 @@ s32 cellPngDecExtReadHeader(
 	cellPngDec->Warning("cellPngDecExtReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x, extInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), info.addr(), extInfo.addr());
 
-	try
-	{
-		pngReadHeader(subHandle, info, extInfo);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngReadHeader(subHandle, info, extInfo);
 #endif
 }
 
@@ -559,17 +512,7 @@ s32 cellPngDecSetParameter(
 	cellPngDec->Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr());
 
-	try
-	{
-		pngDecSetParameter(subHandle, inParam, outParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngDecSetParameter(subHandle, inParam, outParam);
 #endif
 }
 
@@ -588,17 +531,7 @@ s32 cellPngDecExtSetParameter(
 	cellPngDec->Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",
 		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr(), extInParam.addr(), extOutParam.addr());
 
-	try
-	{
-		pngDecSetParameter(subHandle, inParam, outParam, extInParam, extOutParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngDecSetParameter(subHandle, inParam, outParam, extInParam, extOutParam);
 #endif
 }
 
@@ -616,17 +549,7 @@ s32 cellPngDecDecodeData(
 	cellPngDec->Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
-	try
-	{
-		pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo);
 #endif
 }
 
@@ -646,17 +569,7 @@ s32 cellPngDecExtDecodeData(
 	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr(), cbCtrlDisp.addr(), dispParam.addr());
 
-	try
-	{
-		pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
-	}
-	catch (hle::error& e)
-	{
-		e.print(__FUNCTION__);
-		return e.code;
-	}
-
-	return CELL_OK;
+	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 #endif
 }
 
