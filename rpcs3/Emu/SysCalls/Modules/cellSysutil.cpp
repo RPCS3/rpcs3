@@ -664,7 +664,7 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	vm::var<CellHddGameStatGet> get;
 	vm::var<CellHddGameStatSet> set;
 
-	get->hddFreeSizeKB = 419430400; // 40 MB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	get->hddFreeSizeKB = 40 * 1048576; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->st_atime__  = 0; // TODO
