@@ -11,10 +11,10 @@
 wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);
 
 //amount of memory in bytes used to buffer log messages for the gui
-const int BUFFER_MAX_SIZE = 1024 * 1024; 
+const int BUFFER_MAX_SIZE = 1048576; // 1MB
 
 //amount of characters in the TextCtrl text-buffer for the emulation log
-const int GUI_BUFFER_MAX_SIZE = 1024 * 1024;
+const int GUI_BUFFER_MAX_SIZE = 1048576; // 1MB
 
 enum
 {

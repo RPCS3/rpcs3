@@ -609,7 +609,7 @@ int cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 	// TODO: check values
 	attr->adecVerLower = 0x280000; // from dmux
 	attr->adecVerUpper = 0x260000;
-	attr->workMemSize = 4 * 1024 * 1024;
+	attr->workMemSize = 4194304; // 4MB
 
 	return CELL_OK;
 }
