@@ -70,6 +70,10 @@ enum cellFsStStatus
 	CELL_FS_ST_PROGRESS        = 0x0200,
 };
 
+enum cellFsErrors
+{
+	CELL_FS_ERANGE = 34
+};
 
 #pragma pack(push, 4)
 

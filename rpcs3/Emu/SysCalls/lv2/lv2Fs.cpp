@@ -696,15 +696,20 @@ s32 cellFsStReadStop(u32 fd)
 
 s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 {
-	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.addr());
+	sys_fs->Warning("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr=0x%x)", fd, buf_addr, size, rsize.addr());
 
 	LV2_LOCK(0);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
+	// TODO: use ringbuffer (fs_config)
 	fs_config.m_regid += size;
-	*rsize = fs_config.m_regid;
+
+	if (file->Eof())
+		return CELL_FS_ERANGE;
+
+	*rsize = file->Read(vm::get_ptr<void>(buf_addr), size);
 
 	return CELL_OK;
 }
