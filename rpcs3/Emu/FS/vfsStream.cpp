@@ -50,9 +50,15 @@ u64 vfsStream::Seek(s64 offset, vfsSeekMode mode)
 {
 	switch(mode)
 	{
-	case vfsSeekSet: m_pos = offset; break;
-	case vfsSeekCur: m_pos += offset; break;
-	case vfsSeekEnd: m_pos = GetSize() + offset; break;
+	case vfsSeekSet:
+		m_pos = offset;
+	break;
+	case vfsSeekCur:
+		m_pos += offset;
+	break;
+	case vfsSeekEnd:
+		m_pos = GetSize() + offset;
+	break;
 	}
 
 	return m_pos;

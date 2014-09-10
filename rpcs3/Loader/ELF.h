@@ -1,6 +1,7 @@
 #pragma once
-#include "ELF64.h"
-#include "ELF32.h"
+#include "Loader.h"
+
+class vfsStream;
 
 enum ElfClass
 {
@@ -34,14 +35,17 @@ struct Elf_Ehdr
 
 class ELFLoader : public LoaderBase
 {
-	vfsStream& elf_f;
-	LoaderBase* loader;
+	vfsStream& m_elf_file;
+	LoaderBase* m_loader;
 
 public:
 	Elf_Ehdr ehdr;
 
 	ELFLoader(vfsStream& f);
-	virtual ~ELFLoader() {Close();}
+	virtual ~ELFLoader() 
+	{
+		Close();
+	}
 
 	virtual bool LoadInfo();
 	virtual bool LoadData(u64 offset = 0);

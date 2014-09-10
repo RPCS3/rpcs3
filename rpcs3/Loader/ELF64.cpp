@@ -372,13 +372,16 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 				auto& proc_param = vm::get_ref<sys_process_param>(offset + phdr.p_vaddr);
 
-				if (proc_param.size < sizeof(sys_process_param)) {
+				if (proc_param.size < sizeof(sys_process_param)) 
+				{
 					LOG_WARNING(LOADER, "Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
 				}
-				if (proc_param.magic != 0x13bcc5f6) {
+				if (proc_param.magic != 0x13bcc5f6) 
+				{
 					LOG_ERROR(LOADER, "Bad magic! [0x%x]", proc_param.magic);
 				}
-				else {				
+				else 
+				{
 #ifdef LOADER_DEBUG
 					sys_process_param_info& info = Emu.GetInfo().GetProcParam();
 					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version.ToLE());
