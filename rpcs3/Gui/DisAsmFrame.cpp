@@ -104,6 +104,8 @@ void DisAsmFrame::Resume()
 
 #include <Utilities/MTProgressDialog.h>
 #include "Loader/ELF.h"
+#include "Loader/ELF32.h"
+#include "Loader/ELF64.h"
 std::vector<Elf64_Shdr>* shdr_arr_64 = NULL;
 std::vector<Elf32_Shdr>* shdr_arr_32 = NULL;
 ELF64Loader* l_elf64 = NULL;
