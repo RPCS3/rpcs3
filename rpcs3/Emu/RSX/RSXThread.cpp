@@ -1117,6 +1117,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
+	case NV4097_SET_TWO_SIDE_LIGHT_EN:
+	{
+		m_set_two_side_light_enable = ARGS(0) ? true : false;
+	}
+	break;
+
 	case NV4097_SET_STENCIL_MASK:
 	{
 		m_set_stencil_mask = true;
