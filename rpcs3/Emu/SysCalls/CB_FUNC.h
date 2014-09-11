@@ -21,15 +21,33 @@ namespace vm
 		}
 	};
 
-	template<typename AT, typename RT, typename... T>
-	RT _ptr_base<RT(*)(T...), 1, AT>::operator ()(T... args) const
+	template<typename RT>
+	struct _func_res
 	{
 		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
 		static_assert(!std::is_same<RT, u128>::value, "TODO: Unsupported callback result type (vector)");
 
+		static_assert(sizeof(RT) <= 8, "Invalid callback result type");
 		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
 		static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
 
-		return (RT)GetCurrentPPUThread().FastCall(vm::read32(m_addr), vm::read32(m_addr + 4), _func_arg<T>::get_value(args)...);
+		__forceinline static RT get_value(const u64 res)
+		{
+			return (RT&)res;
+		}
+	};
+
+	template<>
+	struct _func_res<void>
+	{
+		__forceinline static void get_value(const u64 res)
+		{
+		}
+	};
+
+	template<typename AT, typename RT, typename... T>
+	RT _ptr_base<RT(*)(T...), 1, AT>::operator ()(T... args) const
+	{
+		return _func_res<RT>::get_value(GetCurrentPPUThread().FastCall(vm::read32(m_addr), vm::read32(m_addr + 4), _func_arg<T>::get_value(args)...));
 	}
 }
