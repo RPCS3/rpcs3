@@ -5,7 +5,6 @@
 #include "Emu/System.h"
 #include "RSXThread.h"
 
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 

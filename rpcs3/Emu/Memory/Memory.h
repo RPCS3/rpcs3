@@ -115,7 +115,7 @@ public:
 		{
 			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 			{
-				if (m_pages[i] != 0) return false; // TODO: define page parameters
+				if (!m_pages[i]) return false; // TODO: define page parameters
 			}
 			return true;
 		}
