@@ -288,6 +288,7 @@ public:
 	bool m_set_stencil_zpass;
 	u32 m_stencil_zpass;
 	bool m_set_two_sided_stencil_test_enable;
+	bool m_set_two_side_light_enable;
 	bool m_set_back_stencil_mask;
 	u32 m_back_stencil_mask;
 	bool m_set_back_stencil_func;
@@ -462,6 +463,7 @@ protected:
 		m_set_point_sprite_control = false;
 		m_set_specular = false;
 		m_set_two_sided_stencil_test_enable = false;
+		m_set_two_side_light_enable = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
 		m_set_poly_offset_fill = false;
@@ -551,6 +553,7 @@ protected:
 		m_set_blend_color = false;
 		m_set_stencil_test = false;
 		m_set_two_sided_stencil_test_enable = false;
+		m_set_two_side_light_enable = false;
 		m_set_stencil_mask = false;
 		m_set_stencil_func = false;
 		m_set_stencil_func_ref = false;
