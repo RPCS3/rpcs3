@@ -2298,10 +2298,9 @@ private:
 	}
 	void LVEBX(u32 vd, u32 ra, u32 rb)
 	{
-		//const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		//CPU.VPR[vd].Clear();
-		//CPU.VPR[vd]._u8[addr & 0xf] = vm::read8(addr);
-		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		CPU.VPR[vd]._u8[15 - (addr & 0xf)] = vm::read8(addr);
+		// check LVEWX comments
 	}
 	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2447,10 +2446,9 @@ private:
 	}
 	void LVEHX(u32 vd, u32 ra, u32 rb)
 	{
-		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
-		//CPU.VPR[vd].Clear();
-		//(u16&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read16(addr);
-		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
+		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(addr);
+		// check LVEWX comments
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2497,10 +2495,11 @@ private:
 	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
-		//const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
-		//CPU.VPR[vd].Clear();
-		//(u32&)CPU.VPR[vd]._u8[addr & 0xf] = vm::read32(addr);
-		CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
+		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(addr);
+		// It's not very good idea to implement it using read128(),
+		// because it can theoretically read RawSPU 32-bit MMIO register (read128() will fail)
+		//CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
@@ -2964,8 +2963,7 @@ private:
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
-		(u32&)CPU.FPR[frd] = vm::read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]);
-		CPU.FPR[frd] = (float&)CPU.FPR[frd];
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]).ToLE();
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
