@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "rpcs3/Ini.h"
-
+#include "Emu/Memory/Memory.h"
 #include "sysutil_video.h"
 
 #include "GSManager.h"

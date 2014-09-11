@@ -28,7 +28,7 @@ enum
 };
 
 // Consts
-enum CellPngDecColorSpace
+enum CellPngDecColorSpace : u32
 {
 	CELL_PNGDEC_GRAYSCALE       = 1,
 	CELL_PNGDEC_RGB             = 2,
@@ -44,43 +44,43 @@ enum CellPngDecSpuThreadEna : u32
 	CELL_PNGDEC_SPU_THREAD_ENABLE  = 1,
 };
 
-enum CellPngDecStreamSrcSel
+enum CellPngDecStreamSrcSel : u32
 {
 	CELL_PNGDEC_FILE   = 0,
 	CELL_PNGDEC_BUFFER = 1,
 };
 
-enum CellPngDecInterlaceMode
+enum CellPngDecInterlaceMode : u32
 {
 	CELL_PNGDEC_NO_INTERLACE = 0,
 	CELL_PNGDEC_ADAM7_INTERLACE = 1,
 };
 
-enum CellPngDecOutputMode
+enum CellPngDecOutputMode : u32
 {
 	CELL_PNGDEC_TOP_TO_BOTTOM = 0,
 	CELL_PNGDEC_BOTTOM_TO_TOP = 1,
 };
 
-enum CellPngDecPackFlag
+enum CellPngDecPackFlag : u32
 {
 	CELL_PNGDEC_1BYTE_PER_NPIXEL = 0,
 	CELL_PNGDEC_1BYTE_PER_1PIXEL = 1,
 };
 
-enum CellPngDecAlphaSelect
+enum CellPngDecAlphaSelect : u32
 {
 	CELL_PNGDEC_STREAM_ALPHA = 0,
 	CELL_PNGDEC_FIX_ALPHA    = 1,
 };
 
-enum CellPngDecCommand
+enum CellPngDecCommand : u32
 {
 	CELL_PNGDEC_CONTINUE = 0,
 	CELL_PNGDEC_STOP     = 1,
 };
 
-enum CellPngDecDecodeStatus
+enum CellPngDecDecodeStatus : u32
 {
 	CELL_PNGDEC_DEC_STATUS_FINISH = 0,
 	CELL_PNGDEC_DEC_STATUS_STOP   = 1,

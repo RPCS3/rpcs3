@@ -7,6 +7,7 @@
 
 #include "git-version.h"
 #include "Ini.h"
+#include "Emu/Syscalls/Modules/cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Gui/PADManager.h"
 #include "Gui/VHDDManager.h"
@@ -309,12 +310,12 @@ void MainFrame::Stop(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::SendExit(wxCommandEvent& event)
 {
-	Emu.GetCallbackManager().m_exit_callback.Handle(0x0101, 0);
+	sysutilSendSystemCommand(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
 }
 
 void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 {
-	Emu.GetCallbackManager().m_exit_callback.Handle(m_sys_menu_opened ? 0x0132 : 0x0131, 0);
+	sysutilSendSystemCommand(m_sys_menu_opened ? CELL_SYSUTIL_SYSTEM_MENU_CLOSE : CELL_SYSUTIL_SYSTEM_MENU_OPEN, 0);
 	m_sys_menu_opened = !m_sys_menu_opened;
 	wxCommandEvent ce;
 	UpdateUI(ce);
@@ -744,7 +745,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	// PS3 Commands
 	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
 	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
-	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.size();
+	bool enable_commands = !is_stopped;
 	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);

@@ -365,6 +365,7 @@ s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInPa
 {
 #ifdef PRX_DEBUG
 	cellPngDec->Warning("%s()", __FUNCTION__);
+	const_cast<CellPngDecThreadInParam&>(*threadInParam).spuThreadEnable = CELL_PNGDEC_SPU_THREAD_DISABLE; // hack
 	return GetCurrentPPUThread().FastCall2(libpngdec + 0x295C, libpngdec_rtoc);
 #else
 	cellPngDec->Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x)",

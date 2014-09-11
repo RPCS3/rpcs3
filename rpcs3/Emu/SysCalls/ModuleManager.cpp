@@ -58,6 +58,7 @@ extern Module *cellSync2;
 extern void cellSysmodule_init();
 extern Module *cellSysmodule;
 extern void cellSysutil_init();
+extern void cellSysutil_load();
 extern Module *cellSysutil;
 extern void cellSysutilAp_init();
 extern Module *cellSysutilAp;
@@ -266,7 +267,7 @@ void ModuleManager::init()
 		cellSync2 = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0055, cellSync2_init);
 		cellSysutil = static_cast <Module*>(&(m_mod_init.back())) + 1;
-		m_mod_init.emplace_back(0x0015, cellSysutil_init);
+		m_mod_init.emplace_back(0x0015, cellSysutil_init, cellSysutil_load, nullptr);
 		cellSysutilAp = static_cast <Module*>(&(m_mod_init.back())) + 1;
 		m_mod_init.emplace_back(0x0039, cellSysutilAp_init);
 		cellSysmodule = static_cast <Module*>(&(m_mod_init.back())) + 1;

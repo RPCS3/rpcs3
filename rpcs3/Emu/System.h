@@ -16,7 +16,7 @@ class MouseManager;
 class IdManager;
 class GSManager;
 class AudioManager;
-struct CallbackManager;
+class CallbackManager;
 class CPUThread;
 class EventManager;
 class ModuleManager;
@@ -96,7 +96,6 @@ class Emulator
 	GSManager* m_gs_manager;
 	AudioManager* m_audio_manager;
 	CallbackManager* m_callback_manager;
-	CPUThread* m_ppu_callback_thr;
 	EventManager* m_event_manager;
 	StaticFuncManager* m_sfunc_manager;
 	ModuleManager* m_module_manager;
@@ -131,7 +130,6 @@ public:
 	VFS&              GetVFS()             { return *m_vfs; }
 	std::vector<u64>& GetBreakPoints()     { return m_break_points; }
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
-	CPUThread&        GetCallbackThread()  { return *m_ppu_callback_thr; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }

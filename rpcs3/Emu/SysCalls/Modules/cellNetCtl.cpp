@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "cellSysutil.h"
 #include "cellNetCtl.h"
 
 //void cellNetCtl_init();
@@ -56,7 +57,7 @@ int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 	cellNetCtl->Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
 
 	// TODO: Actually sign into PSN
-	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	return CELL_OK;
 }
 
@@ -71,7 +72,7 @@ int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 {
 	cellNetCtl->Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
 
-	Emu.GetCallbackManager().m_exit_callback.Handle(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
+	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 	return CELL_OK;
 }
 

@@ -79,7 +79,7 @@ enum
 	CELL_MSGDIALOG_BUTTON_ESCAPE  = 3,
 };
 
-typedef void(*CellMsgDialogCallback)(int buttonType, u32 userData);
+typedef void(*CellMsgDialogCallback)(s32 buttonType, u32 userData);
 
 int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam);
 int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam);

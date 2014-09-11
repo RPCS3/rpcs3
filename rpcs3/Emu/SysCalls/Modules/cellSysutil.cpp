@@ -1,9 +1,11 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/DbgCommand.h"
+#include "Emu/SysCalls/Callback.h"
 
+#include "Emu/DbgCommand.h"
 #include "rpcs3/Ini.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/PSF.h"
@@ -303,46 +305,85 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-int cellSysutilCheckCallback()
+struct sys_callback
+{
+	vm::ptr<CellSysutilCallback> func;
+	vm::ptr<void> arg;
+
+} g_sys_callback[4];
+
+void sysutilSendSystemCommand(u64 status, u64 param)
+{
+	// TODO: check it and find the source of the return value (not sure that void becomes CELL_OK)
+	for (auto& cb : g_sys_callback)
+	{
+		if (cb.func)
+		{
+			Emu.GetCallbackManager().Register([=]() -> s32
+			{
+				cb.func(status, param, cb.arg);
+				return CELL_OK;
+			});
+		}
+	}
+}
+
+s32 cellSysutilCheckCallback()
 {
 	cellSysutil->Log("cellSysutilCheckCallback()");
 
-	Emu.GetCallbackManager().m_exit_callback.Check();
+	s32 res;
+	u32 count = 0;
 
-	CPUThread& thr = Emu.GetCallbackThread();
-
-	while (thr.IsAlive())
+	while (Emu.GetCallbackManager().Check(res))
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		count++;
+
 		if (Emu.IsStopped())
 		{
 			cellSysutil->Warning("cellSysutilCheckCallback() aborted");
-			break;
+			return CELL_OK;
 		}
+
+		if (res)
+		{
+			return res;
+		}
+	}
+
+	if (!count && !g_sys_callback[0].func && !g_sys_callback[1].func && !g_sys_callback[2].func && !g_sys_callback[3].func)
+	{
+		LOG_WARNING(TTY, "System warning: no callback registered\n");
 	}
 
 	return CELL_OK;
 }
 
-int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
+s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
 {
-	cellSysutil->Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
+	cellSysutil->Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%x, userdata=0x%x)", slot, func.addr(), userdata.addr());
 
-	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
+	if ((u32)slot > 3)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
 
-	SendDbgCommand(DID_REGISTRED_CALLBACK);
-
+	g_sys_callback[slot].func = func;
+	g_sys_callback[slot].arg = userdata;
 	return CELL_OK;
 }
 
-int cellSysutilUnregisterCallback(int slot)
+s32 cellSysutilUnregisterCallback(s32 slot)
 {
 	cellSysutil->Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 
-	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
+	if ((u32)slot > 3)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
 
-	SendDbgCommand(DID_UNREGISTRED_CALLBACK);
-
+	g_sys_callback[slot].func.set(0);
+	g_sys_callback[slot].arg.set(0);
 	return CELL_OK;
 }
 
@@ -886,4 +927,13 @@ void cellSysutil_init()
 
 	cellSysutil->AddFunc(0xe7951dee, cellGameDataCheckCreate);
 	cellSysutil->AddFunc(0xc9645c41, cellGameDataCheckCreate2);
+}
+
+void cellSysutil_load()
+{
+	for (auto& v : g_sys_callback)
+	{
+		v.func.set(0);
+		v.arg.set(0);
+	}
 }

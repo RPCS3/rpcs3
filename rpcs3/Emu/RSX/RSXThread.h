@@ -150,10 +150,10 @@ public:
 	SSemaphore m_sem_flush;
 	SSemaphore m_sem_flip;
 	u64 m_last_flip_time;
-	Callback m_flip_handler;
-	Callback m_user_handler;
+	vm::ptr<void(*)(const u32)> m_flip_handler;
+	vm::ptr<void(*)(const u32)> m_user_handler;
 	u64 m_vblank_count;
-	Callback m_vblank_handler;
+	vm::ptr<void(*)(const u32)> m_vblank_handler;
 
 public:
 	// Dither
@@ -444,6 +444,9 @@ protected:
 		, m_gcm_current_buffer(0)
 		, m_read_buffer(true)
 	{
+		m_flip_handler.set(0);
+		m_vblank_handler.set(0);
+		m_user_handler.set(0);
 		m_set_depth_test = false;
 		m_set_alpha_test = false;
 		m_set_depth_bounds_test = false;

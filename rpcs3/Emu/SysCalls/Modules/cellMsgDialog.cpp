@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"
@@ -104,6 +105,8 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		volatile bool m_signal = false;
 		CallAfter([type, msg, &status, &m_signal]()
 		{
+			if (Emu.IsStopped()) return;
+
 			MsgDialogCreate(type, msg.c_str(), status);
 
 			m_signal = true;
@@ -111,6 +114,11 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 		while (!m_signal)
 		{
+			if (Emu.IsStopped())
+			{
+				cellSysutil->Warning("MsgDialog thread aborted");
+				return;
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
@@ -125,7 +133,13 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
-			callback.async((s32)status, userData); // TODO: this callback should be registered
+		{
+			Emu.GetCallbackManager().Register([callback, status, userData]() -> s32
+			{
+				callback((s32)status, userData);
+				return CELL_OK;
+			});
+		}
 
 		CallAfter([]()
 		{

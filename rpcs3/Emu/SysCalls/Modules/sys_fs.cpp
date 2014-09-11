@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
@@ -198,7 +199,10 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr
 
 	if (func) // start callback thread
 	{
-		func.async(aio, error, xid, res);
+		Emu.GetCallbackManager().Async([func, aio, error, xid, res]()
+		{
+			func(aio, error, xid, res);
+		});
 	}
 
 	g_FsAioReadCur++;

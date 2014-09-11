@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "RSXThread.h"
 #include "RSXTexture.h"
 

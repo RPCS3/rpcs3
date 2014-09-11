@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Log.h"
 #include "Thread.h"
 
 thread_local NamedThreadBase* g_tls_this_thread = nullptr;
@@ -66,7 +67,18 @@ void ThreadBase::Start()
 		SetCurrentNamedThread(this);
 		g_thread_count++;
 
-		Task();
+		try
+		{
+			Task();
+		}
+		catch (const char* e)
+		{
+			LOG_ERROR(HLE, "%s: %s", GetThreadName().c_str(), e);
+		}
+		catch (const std::string& e)
+		{
+			LOG_ERROR(HLE, "%s: %s", GetThreadName().c_str(), e.c_str());
+		}
 
 		m_alive = false;
 		g_thread_count--;
@@ -142,7 +154,18 @@ void thread::start(std::function<void()> func)
 		SetCurrentNamedThread(&info);
 		g_thread_count++;
 
-		func();
+		try
+		{
+			func();
+		}
+		catch (const char* e)
+		{
+			LOG_ERROR(HLE, "%s: %s", name.c_str(), e);
+		}
+		catch (const std::string& e)
+		{
+			LOG_ERROR(HLE, "%s: %s", name.c_str(), e.c_str());
+		}
 
 		g_thread_count--;
 	});

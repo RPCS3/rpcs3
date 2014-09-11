@@ -87,6 +87,11 @@ namespace vm
 			return m_addr;
 		}
 
+		void set(const AT value)
+		{
+			m_addr = value;
+		}
+
 		static _ptr_base make(AT addr)
 		{
 			return (_ptr_base&)addr;
@@ -181,6 +186,11 @@ namespace vm
 			return m_addr;
 		}
 
+		void set(const AT value)
+		{
+			m_addr = value;
+		}
+
 		operator bool() const
 		{
 			return m_addr != 0;
@@ -217,6 +227,11 @@ namespace vm
 		AT addr() const
 		{
 			return m_addr;
+		}
+
+		void set(const AT value)
+		{
+			m_addr = value;
 		}
 
 		void* const get_ptr() const
@@ -264,6 +279,11 @@ namespace vm
 			return m_addr;
 		}
 
+		void set(const AT value)
+		{
+			m_addr = value;
+		}
+
 		const void* const get_ptr() const
 		{
 			return vm::get_ptr<const void>(m_addr);
@@ -290,122 +310,25 @@ namespace vm
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
 	};
-	
-	template<typename RT, typename AT>
-	class _ptr_base<RT(*)(), 1, AT>
-	{
-		AT m_addr;
-
-		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
-
-		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
-
-		__forceinline RT call_func(bool is_async) const
-		{
-			Callback cb;
-			cb.SetAddr(m_addr);
-			return (RT)cb.Branch(!is_async);
-		}
-
-	public:
-		typedef RT(*type)();
-
-		__forceinline RT operator()() const
-		{
-			return call_func(false);
-		}
-
-		__forceinline void async() const
-		{
-			call_func(true);
-		}
-
-		AT addr() const
-		{
-			return m_addr;
-		}
-
-		operator bool() const
-		{
-			return m_addr != 0;
-		}
-
-		//typedef typename invert_be_t<AT>::type AT2;
-
-		template<typename AT2>
-		operator const _ptr_base<RT(*)(), 1, AT2>() const
-		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
-			return (_ptr_base<RT(*)(), 1, AT2>&)addr;
-		}
-
-		static _ptr_base make(AT addr)
-		{
-			return (_ptr_base&)addr;
-		}
-
-		operator std::function<RT()>() const
-		{
-			const AT addr = m_addr;
-			return [addr]() -> RT { return make(addr)(); };
-		}
-
-		_ptr_base& operator = (const _ptr_base& right) = default;
-	};
 
 	template<typename AT, typename RT, typename ...T>
 	class _ptr_base<RT(*)(T...), 1, AT>
 	{
 		AT m_addr;
 
-		static_assert(!std::is_floating_point<RT>::value, "TODO: Unsupported callback result type (floating point)");
-		static_assert(!std::is_same<RT, u128>::value, "TODO: Unsupported callback result type (vector)");
-
-		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
-		static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
-
-		template<typename TT>
-		struct _func_arg
-		{
-			static_assert(!std::is_floating_point<TT>::value, "TODO: Unsupported callback argument type (floating point)");
-			static_assert(!std::is_same<TT, u128>::value, "TODO: Unsupported callback argument type (vector)");
-
-			static_assert(sizeof(TT) <= 8, "Invalid callback argument type");
-			static_assert(!std::is_pointer<TT>::value, "Invalid callback argument type (pointer)");
-			static_assert(!std::is_reference<TT>::value, "Invalid callback argument type (reference)");
-
-			__forceinline static u64 get_value(const TT& arg)
-			{
-				u64 res = 0;
-				(TT&)res = arg;
-				return res;
-			}
-		};
-
-		__forceinline RT call_func(bool is_async, T... args) const
-		{
-			Callback cb;
-			cb.SetAddr(m_addr);
-			cb.Handle(_func_arg<T>::get_value(args)...);
-			return (RT)cb.Branch(!is_async);
-		}
-
 	public:
 		typedef RT(*type)(T...);
 
-		__forceinline RT operator()(T... args) const
-		{
-			return call_func(false, args...);
-		}
-
-		__forceinline void async(T... args) const
-		{
-			call_func(true, args...);
-		}
+		RT operator()(T... args) const; // defined in Callback.h (CB_FUNC.h)
 
 		AT addr() const
 		{
 			return m_addr;
+		}
+
+		void set(const AT value)
+		{
+			m_addr = value;
 		}
 
 		operator bool() const
